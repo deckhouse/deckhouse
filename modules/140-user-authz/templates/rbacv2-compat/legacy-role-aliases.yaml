@@ -245,7 +245,10 @@
 {{- /* The RoleBindings of a ClusterRoleBinding to an old manage role. The previous release made
   d8:use:<use-role>:binding:<binding> to d8:use:role:<use-role> in the namespace of every capability
   of the manage kind the role aggregated, viewer for a viewer and user for a manager, and
-  user-authz-controller keeps making them for the aliases: an alias carries that kind and use role.
+  user-authz-controller keeps making them for the aliases: an alias carries that kind and a use role.
+  The use role of a manager alias is viewer, the same as the projection of the current manager
+  roles, so that an old and a migrated binding of one subject give the same access; the previous
+  release projected a manager to user, and the controller replaces those RoleBindings.
   The namespaces must stay those of the previous release, and the alias of a merged or renamed
   subsystem aggregates modules the old role did not, so the controller takes them from the selectors
   of the use-binding-selectors annotation instead of the aggregation rule. These select the system
@@ -259,9 +262,10 @@
   modules with a subsystem of their own. user-authz-controller reads the annotation
   only on a ClusterRole of Deckhouse named d8:manage:* that carries rbac.deckhouse.io/deprecated, as
   every alias does. It also keeps every RoleBinding the previous release made for a binding while the
-  binding refers to the alias, in a namespace the selectors no longer reach too. */ -}}
+  binding refers to the alias, in a namespace the selectors no longer reach too, and replaces one
+  the previous release made under user by one under viewer there as well. */ -}}
 {{- $oldSubsystems := list "deckhouse" "infrastructure" "kubernetes" "networking" "observability" "security" "storage" -}}
-{{- $oldUseRole := dict "viewer" "viewer" "manager" "user" -}}
+{{- $oldUseRole := dict "viewer" "viewer" "manager" "viewer" -}}
 {{- range $alias := $aliases -}}
   {{- $parts := splitList ":" $alias.name -}}
   {{- $subsystem := index $parts 2 -}}

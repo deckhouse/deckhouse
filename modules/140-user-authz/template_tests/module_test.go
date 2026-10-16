@@ -152,7 +152,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(systemRole.Exists()).To(BeTrue())
 			Expect(systemRole.Field(`metadata.labels.rbac\.deckhouse\.io/kind`).String()).To(Equal("role"))
 			Expect(systemRole.Field(`metadata.labels.rbac\.deckhouse\.io/scope`).String()).To(Equal("system"))
-			Expect(systemRole.Field(`metadata.labels.rbac\.deckhouse\.io/use-role`).String()).To(Equal("admin"))
+			Expect(systemRole.Field(`metadata.labels.rbac\.deckhouse\.io/use-role`).String()).To(Equal("viewer"))
 			Expect(systemRole.Field("aggregationRule.clusterRoleSelectors").Array()).ToNot(BeEmpty())
 
 			subsystemRole := f.KubernetesGlobalResource("ClusterRole", "d8:subsystem:network:viewer")
@@ -575,9 +575,10 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			}
 
 			// An alias carries the labels the previous release put on the role: the manage kind and
-			// the use role, viewer for a viewer and user for a manager.
+			// the use role. The projection of a manager is viewer, as on the current roles, so an
+			// old and a migrated binding of one subject give the same access.
 			for _, subsystem := range []string{"all", "deckhouse", "infrastructure", "kubernetes", "networking", "observability", "security", "storage"} {
-				for level, useRole := range map[string]string{"viewer": "viewer", "manager": "user"} {
+				for level, useRole := range map[string]string{"viewer": "viewer", "manager": "viewer"} {
 					name := "d8:manage:" + subsystem + ":" + level
 					alias := f.KubernetesGlobalResource("ClusterRole", name)
 					Expect(alias.Field(`metadata.labels.rbac\.deckhouse\.io/kind`).String()).To(Equal("manage"), name)

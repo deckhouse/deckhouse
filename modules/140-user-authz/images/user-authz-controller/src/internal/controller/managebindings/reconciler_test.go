@@ -961,6 +961,53 @@ func TestReconcile_LegacyAliasKeepsItsRoleBindingsWhileTheBindingStays(t *testin
 	mustNotExist(t, c, "d8-istio", "d8:use:user:binding:netmgr")
 }
 
+// A manager alias projects viewer where the previous release projected user. Its kept RoleBindings
+// d8:use:user:* are replaced by d8:use:viewer:*, in the namespaces its selectors reach and in those
+// only the kept RoleBindings hold, such as that of a module that moved to the labels of the current
+// scheme, so its subjects keep read access everywhere the previous release gave them access.
+func TestReconcile_LoweredAliasReplacesItsKeptRoleBindings(t *testing.T) {
+	t.Parallel()
+	c := reconcileWith(t,
+		legacyAlias(t, "d8:manage:networking:manager", "viewer",
+			map[string]string{"rbac.deckhouse.io/aggregate-to-network-as": "manager"},
+			formerModules("network", "manager", "cni-cilium"),
+		),
+		moduleCapability("cni-cilium", "network", "manager", "d8-cni-cilium"),
+		manageBinding("netmgr", "d8:manage:networking:manager"),
+		legacyUseBinding("user", "netmgr", "d8-cni-cilium"),
+		// ingress-nginx moved to the labels of the current scheme at the upgrade
+		legacyUseBinding("user", "netmgr", "d8-ingress-nginx"),
+	)
+
+	want := []string{
+		"d8-cni-cilium/d8:use:viewer:binding:netmgr -> d8:use:role:viewer",
+		"d8-ingress-nginx/d8:use:viewer:binding:netmgr -> d8:use:role:viewer",
+	}
+	if got := useBindingsOf(t, c); !slices.Equal(got, want) {
+		t.Errorf("use bindings = %v, want %v", got, want)
+	}
+}
+
+// A kept RoleBinding is never raised: a d8:use:viewer:* RoleBinding in a namespace only the kept
+// RoleBindings hold does not become d8:use:user:* when the alias projects user.
+func TestReconcile_KeptRoleBindingIsNeverRaised(t *testing.T) {
+	t.Parallel()
+	c := reconcileWith(t,
+		legacyAlias(t, "d8:manage:networking:manager", "user",
+			map[string]string{"rbac.deckhouse.io/aggregate-to-network-as": "manager"},
+			formerModules("network", "manager", "cni-cilium"),
+		),
+		moduleCapability("cni-cilium", "network", "manager", "d8-cni-cilium"),
+		manageBinding("netmgr", "d8:manage:networking:manager"),
+		legacyUseBinding("viewer", "netmgr", "d8-ingress-nginx"),
+	)
+
+	want := []string{"d8-cni-cilium/d8:use:user:binding:netmgr -> d8:use:role:user"}
+	if got := useBindingsOf(t, c); !slices.Equal(got, want) {
+		t.Errorf("use bindings = %v, want %v", got, want)
+	}
+}
+
 // A ClusterRoleBinding deleted and created again under the same name, here on another alias with
 // the same use role, does not take over the RoleBindings its predecessor kept outside the selectors
 // of its own alias. The reconciler and the hook of the previous release create a RoleBinding only

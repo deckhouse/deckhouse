@@ -398,7 +398,7 @@ In [multi-tenancy](configuration.html#parameters-enablemultitenancy) mode (`user
 
 Configuration options:
 
-- **Allow access to all namespaces, including system namespaces** (`kube-*`, `d8-*`, `default`, `antiopa`, `loghouse`). To allow access to all namespaces, including system namespaces,  set `spec.namespaceSelector.matchAny: true`. If the `namespaceSelector` parameter is specified, the values of the deprecated `limitNamespaces` and `allowAccessToSystemNamespaces` parameters are **ignored**.
+- **Allow access to all namespaces, including system namespaces** (`kube-*`, `d8-*`, `default`, `antiopa`, `loghouse`). To allow access to all namespaces, including system namespaces,  set `spec.namespaceSelector.matchAny: true`. If the `namespaceSelector` parameter is specified, the values of the deprecated `limitNamespaces` and `allowAccessToSystemNamespaces` parameters are **ignored**. Access to the system namespaces with the `Admin` or `ClusterAdmin` level is equivalent to a cluster administrator: those namespaces hold the ServiceAccounts of the platform (see [Access of system and subsystem roles to the namespaces of the modules](./#access-of-system-and-subsystem-roles-to-the-namespaces-of-the-modules)).
 
   Example:
 

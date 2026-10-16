@@ -439,8 +439,8 @@ type projection struct {
 
 // project adds to expected the RoleBindings that p makes for every ClusterRoleBinding to role: one
 // per namespace the resolver finds for it, and one in the namespace of every RoleBinding p keeps for
-// the binding that has the name and the roleRef build gives it there and is not older than the
-// binding.
+// the binding that is not older than the binding and that build made under the use role of the role
+// or under a higher one (keptUseRole).
 func (r *Reconciler) project(
 	ctx context.Context,
 	role *rbacv1.ClusterRole,
@@ -463,18 +463,44 @@ func (r *Reconciler) project(
 			expected[client.ObjectKeyFromObject(rb)] = rb
 		}
 		for _, existing := range p.kept[binding.Name] {
-			rb := p.build(binding, useRole, existing.Namespace)
-			isSameName := existing.Name == rb.Name
-			isSameRole := reflect.DeepEqual(existing.RoleRef, rb.RoleRef)
 			// The reconciler and the hook of the previous release create a RoleBinding only once its
 			// ClusterRoleBinding exists, so an older one was made for a predecessor under the same name.
-			isMadeForBinding := !existing.CreationTimestamp.Before(&binding.CreationTimestamp)
-			if isSameName && isSameRole && isMadeForBinding {
+			if existing.CreationTimestamp.Before(&binding.CreationTimestamp) {
+				continue
+			}
+			if keptUseRole(p, binding, existing, useRole) {
+				rb := p.build(binding, useRole, existing.Namespace)
 				expected[client.ObjectKeyFromObject(rb)] = rb
 			}
 		}
 	}
 	return nil
+}
+
+// legacyUseRoleRank orders the use roles of the previous scheme, d8:use:role:<use-role>.
+var legacyUseRoleRank = map[string]int{"viewer": 0, "user": 1, "manager": 2, "admin": 3}
+
+// keptUseRole reports whether a RoleBinding p keeps for binding goes on under useRole in its
+// namespace. It does when it is the RoleBinding build gives the binding there under useRole, or under
+// a higher use role of the previous scheme: an alias may lower the projection of the previous release,
+// as a manager alias projects viewer where that release projected user, and the RoleBinding is then
+// replaced by the lower one rather than dropped, so the subjects keep read access there. A projection
+// is never raised, so a kept namespace never gets more than the previous release gave it.
+func keptUseRole(p projection, binding *rbacv1.ClusterRoleBinding, existing *rbacv1.RoleBinding, useRole string) bool {
+	madeUnder, ok := strings.CutPrefix(existing.RoleRef.Name, legacyUseRolePrefix)
+	if !ok {
+		return false
+	}
+	made := p.build(binding, madeUnder, existing.Namespace)
+	if existing.Name != made.Name || !reflect.DeepEqual(existing.RoleRef, made.RoleRef) {
+		return false
+	}
+	if madeUnder == useRole {
+		return true
+	}
+	from, isKnownFrom := legacyUseRoleRank[madeUnder]
+	to, isKnownTo := legacyUseRoleRank[useRole]
+	return isKnownFrom && isKnownTo && to < from
 }
 
 // legacyProjections indexes the automated RoleBindings named the way the previous release named
@@ -483,8 +509,9 @@ func (r *Reconciler) project(
 // these RoleBindings even where the selectors of the role no longer reach, as when a module released
 // on its own moves to the labels of the current scheme at the upgrade, so its subjects lose no rights
 // the previous release gave them. They go with the ClusterRoleBinding, or once it binds no such role.
-// project keeps only a RoleBinding with the roleRef it would give it, so the reconciler never
-// recreates one under another role, and only one that is not older than the ClusterRoleBinding, so
+// project keeps only a RoleBinding with the roleRef it would give it or with a higher one, which it
+// replaces by the lower one, so the reconciler never raises one, and only one that is not older than
+// the ClusterRoleBinding, so
 // a ClusterRoleBinding created again under the same name does not take over the RoleBindings of its
 // predecessor.
 func legacyProjections(items []rbacv1.RoleBinding) map[string][]*rbacv1.RoleBinding {
