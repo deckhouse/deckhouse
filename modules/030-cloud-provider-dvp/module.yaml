@@ -2,7 +2,7 @@ name: cloud-provider-dvp
 critical: true
 weight: 30
 subsystems:
-  - infrastructure
+  - cluster
 namespace: d8-cloud-provider-dvp
 stage: General Availability
 descriptions:

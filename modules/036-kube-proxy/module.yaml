@@ -3,7 +3,7 @@ stage: General Availability
 critical: true
 weight: 36
 subsystems:
-  - networking
+  - network
 namespace: kube-system
 descriptions:
   en: Manages kube-proxy components for service networking and load balancing in the cluster. Replaces kubeadm's kube-proxy with a custom implementation.

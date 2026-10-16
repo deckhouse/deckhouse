@@ -1,7 +1,7 @@
 name: multitenancy-manager
 stage: Preview
 subsystems:
-  - deckhouse
+  - iam
 namespace: d8-multitenancy-manager
 descriptions:
   en: Enables creation of isolated projects in a cluster. Projects provide resource quotas, network isolation, and security features beyond standard namespaces.

@@ -1,5 +1,7 @@
 name: namespace-configurator
 stage: General Availability
+subsystems:
+  - iam
 namespace: d8-system
 descriptions:
   en: Automatically assigns annotations and labels to namespaces based on configuration patterns. Monitors namespaces and applies labels and annotations from configuration to matching namespaces.

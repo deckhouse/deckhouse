@@ -155,6 +155,8 @@ aggregationRule:
 rules: []
 ```
 
+Значения без префикса `custom.` зарезервированы за capabilities, которые поставляет Deckhouse, и ClusterRole пользователя с таким значением отклоняется, поэтому эти селекторы выбирают только capabilities модуля.
+
 Выдайте роль через RoleBinding в нужном неймспейсе или через [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) на весь проект. Пользователь получит доступ только к ресурсам модуля — стандартные ресурсы Kubernetes ему видны не будут.
 
 {% alert level="info" %}
@@ -408,7 +410,7 @@ d8 k get clusterauthorizationrule -o json | jq -r '.items[] | select((.spec.limi
 ### Создание новой роли подсистемы
 
 Предположим, что текущие подсистемы не подходят под ролевое распределение в компании и требуется создать новую [подсистему](./#подсистемы-ролевой-модели),
-которая будет включать в себя роли из подсистемы `deckhouse`, подсистемы `kubernetes` и модуля user-authn.
+которая будет включать в себя роли из подсистемы `cluster`, подсистемы `network` и модуля user-authn.
 
 Для решения этой задачи создайте следующую роль:
 
@@ -425,9 +427,9 @@ metadata:
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
-        rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+        rbac.deckhouse.io/aggregate-to-cluster-as: manager
     - matchLabels:
-        rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+        rbac.deckhouse.io/aggregate-to-network-as: manager
     - matchLabels:
         rbac.deckhouse.io/scope: system
         module: user-authn
@@ -466,10 +468,10 @@ rules: []
 
 Далее указаны селекторы, именно они реализуют агрегацию:
 
-- агрегирует роль менеджера из подсистемы `deckhouse`:
+- агрегирует роль менеджера из подсистемы `cluster`:
 
   ```yaml
-  rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+  rbac.deckhouse.io/aggregate-to-cluster-as: manager
   ```
 
 - агрегирует все системные (scope `system`) capabilities модуля `user-authn`:
@@ -479,7 +481,7 @@ rules: []
    module: user-authn
   ```
 
-Таким образом роль получает права от подсистем `deckhouse`, `kubernetes` и от модуля `user-authn`.
+Таким образом роль получает права от подсистем `cluster`, `network` и от модуля `user-authn`.
 
 Особенности:
 
@@ -512,9 +514,9 @@ rbac.deckhouse.io/aggregate-to-mycustom-as: manager
  aggregationRule:
    clusterRoleSelectors:
      - matchLabels:
-         rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+         rbac.deckhouse.io/aggregate-to-cluster-as: manager
      - matchLabels:
-         rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+         rbac.deckhouse.io/aggregate-to-network-as: manager
      - matchLabels:
          rbac.deckhouse.io/scope: system
          module: user-authn
@@ -557,19 +559,19 @@ Capability добавит свои права в роль подсистемы, 
 
 Если необходимо расширить существующую роль, нужно выполнить те же шаги, что и в пункте выше, но изменив лейблы и название роли.
 
-Пример для расширения роли менеджера из подсистемы `deckhouse` (`d8:subsystem:deckhouse:manager`):
+Пример для расширения роли менеджера из подсистемы `cluster` (`d8:subsystem:cluster:manager`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+    rbac.deckhouse.io/aggregate-to-cluster-as: manager
     rbac.deckhouse.io/kind: custom-capability
     rbac.deckhouse.io/scope: subsystem
-    rbac.deckhouse.io/subsystem: deckhouse
-    rbac.deckhouse.io/capability: "custom.subsystem-capability.deckhouse.superresource_view"
-  name: d8:custom:subsystem-capability:deckhouse:superresource:view
+    rbac.deckhouse.io/subsystem: cluster
+    rbac.deckhouse.io/capability: "custom.subsystem-capability.cluster.superresource_view"
+  name: d8:custom:subsystem-capability:cluster:superresource:view
 rules:
 - apiGroups:
   - mygroup.io
@@ -581,7 +583,7 @@ rules:
   - watch
 ```
 
-Таким образом новая capability расширит роль `d8:subsystem:deckhouse:manager`.
+Таким образом новая capability расширит роль `d8:subsystem:cluster:manager`.
 
 ### Расширение подсистемных ролей с добавлением нового неймспейса
 
@@ -598,12 +600,12 @@ rules:
  kind: ClusterRole
  metadata:
    labels:
-     rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+     rbac.deckhouse.io/aggregate-to-cluster-as: manager
      rbac.deckhouse.io/kind: custom-capability
      rbac.deckhouse.io/scope: subsystem
-     rbac.deckhouse.io/subsystem: deckhouse
+     rbac.deckhouse.io/subsystem: cluster
      rbac.deckhouse.io/namespace: namespace
-   name: d8:custom:subsystem-capability:deckhouse:superresource:view
+   name: d8:custom:subsystem-capability:cluster:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -789,6 +791,9 @@ d8 k get clusterroles -o json | jq -r '
 | Селектор агрегации: `rbac.deckhouse.io/kind: manage` + `rbac.deckhouse.io/aggregate-to-<подсистема>-as: <уровень>` | Только `rbac.deckhouse.io/aggregate-to-<подсистема>-as: <уровень>` |
 | Селектор для use-прав: `rbac.deckhouse.io/kind: use` + `rbac.deckhouse.io/aggregate-to-kubernetes-as: <уровень>` | `rbac.deckhouse.io/aggregate-to-namespace-as: <уровень>` |
 | Селектор по модулю: `rbac.deckhouse.io/kind: manage` + `module: <модуль>` | `rbac.deckhouse.io/scope: system` + `module: <модуль>` |
+| Лейблы подсистем `deckhouse`, `infrastructure` и `kubernetes` (`rbac.deckhouse.io/aggregate-to-deckhouse-as` и другие) | Один лейбл подсистемы `cluster`, `rbac.deckhouse.io/aggregate-to-cluster-as` |
+| Лейбл подсистемы `networking`, `rbac.deckhouse.io/aggregate-to-networking-as` | `rbac.deckhouse.io/aggregate-to-network-as` |
+| Модули `user-authz`, `user-authn` и `multitenancy-manager` с лейблами подсистем `security` и `deckhouse` | Лейбл подсистемы `iam`, `rbac.deckhouse.io/aggregate-to-iam-as` |
 
 Имена встроенных capabilities также изменились (без псевдонимов):
 
@@ -831,7 +836,7 @@ d8 k get clusterroles -o json | jq -r '
 В старой схеме лейбл `rbac.deckhouse.io/aggregate-to-all-as: <LEVEL>` означал одно из двух, в зависимости от лейбла вида рядом с ним.
 С `rbac.deckhouse.io/kind: use` он расширял роли `d8:use:role:<LEVEL>` во всех неймспейсах. Им соответствует `d8:namespace:<LEVEL>`, которая выбирает `rbac.deckhouse.io/aggregate-to-namespace-as: <LEVEL>`, поэтому перенесите такие права в capability неймспейса, как описано в разделе [Замена capability](#замена-capability).
 С `rbac.deckhouse.io/kind: manage` роль с этим лейблом расширяла `d8:manage:all:<LEVEL>`, и дальше этот раздел о ней.
-Ни одна встроенная роль этот лейбл больше не выбирает.
+Ни одна роль новой модели этот лейбл не выбирает. Его выбирают только устаревшие псевдонимы `d8:manage:all:<LEVEL>` и `d8:use:role:<LEVEL>`, в зависимости от лейбла вида рядом с ним, пока их не удалят.
 Псевдоним `d8:manage:all:<LEVEL>` и роль `d8:system:<LEVEL>` выбирают лейбл `rbac.deckhouse.io/aggregate-to-system-as: <LEVEL>`, а вебхук `rbacv2-cluster-roles.deckhouse.io` допускает этот лейбл только на кастомной capability.
 Поэтому кастомная роль не может расширить эти роли, и субъекты, которые получали старую роль через них, получают новую роль только через собственный объект ClusterRoleBinding.
 
@@ -920,10 +925,8 @@ rules: []
 Старая capability с лейблом `rbac.deckhouse.io/namespace: <NAMESPACE>` давала субъектам агрегирующих её ролей объекты RoleBinding в этом неймспейсе, неймспейсе модуля. Deckhouse читает этот лейбл только на объектах ClusterRole с `rbac.deckhouse.io/scope: system` или `subsystem`, поэтому старая capability таких объектов RoleBinding больше не даёт. Перенесите лейбл на её замену, системную capability или capability подсистемы, и Deckhouse создаст их снова.
 
 Capability с лейблами `rbac.deckhouse.io/kind: use` и `rbac.deckhouse.io/aggregate-to-kubernetes-as: <LEVEL>` расширяла роли `d8:use:role:<LEVEL>`.
-Теперь она ничего к ним не добавляет, потому что `d8:namespace:<LEVEL>` и псевдонимы `d8:use:role:<LEVEL>` выбирают лейбл `rbac.deckhouse.io/aggregate-to-namespace-as`.
-На уровнях `viewer` и `manager` её лейбл вместо этого выбирают роли `d8:subsystem:kubernetes:<LEVEL>`, какое бы значение ни было у её лейбла `rbac.deckhouse.io/kind`.
-Через них её правила попадают в `d8:system:<LEVEL>` и в роли более высоких уровней, и их субъекты получают права этой capability во всех неймспейсах.
-Замените такую capability в первую очередь. Например, следующие команды создают её аналог для namespace-ролей:
+Её выбирают только устаревшие псевдонимы `d8:use:role:<LEVEL>`, пока их не удалят. `d8:namespace:<LEVEL>` и `d8:project:<LEVEL>` выбирают лейбл `rbac.deckhouse.io/aggregate-to-namespace-as`, поэтому RoleBinding, переведённый на новую роль, не получает правил этой capability. Такую capability называет алерт `D8UserAuthzLegacyUseCapability`.
+Замените её до того, как переводить объекты RoleBinding на новые роли. Например, следующие команды создают её аналог для namespace-ролей:
 
 ```shell
 OLD_CAPABILITY=<OLD_CAPABILITY_NAME>
@@ -944,7 +947,7 @@ d8 k apply -f new-capability.json
 d8 k delete clusterrole "$OLD_CAPABILITY"
 ```
 
-После удаления её права пропадают и из ролей `d8:subsystem:kubernetes:<LEVEL>`.
+Псевдонимы `d8:use:role:<LEVEL>` собирают и новую capability, поэтому после удаления старой их субъекты ничего не теряют.
 
 ### Замороженные роли
 
@@ -968,13 +971,23 @@ d8 k delete clusterrole "$OLD_CAPABILITY"
 
   Старые объекты удаляются, только если все новые уже есть, и после сбоя команды можно запустить снова.
 
-* Если на роли остался лейбл `rbac.deckhouse.io/aggregate-to-all-as`, её называет алерт `D8UserAuthzForeignAggregationLabel`. Ни одна встроенная роль этот лейбл больше не выбирает, поэтому удалите его:
+* Если на роли остался лейбл `rbac.deckhouse.io/aggregate-to-all-as`, её называет алерт `D8UserAuthzForeignAggregationLabel`, а вебхук `rbacv2-cluster-roles.deckhouse.io` отклоняет любое изменение роли, которое сохраняет лейбл, в том числе повторное применение её манифеста.
+  Ни одна роль новой модели этот лейбл не выбирает. Устаревший псевдоним `d8:manage:all:<LEVEL>` ещё выбирает его на роли с `rbac.deckhouse.io/kind: manage`, а устаревший псевдоним `d8:use:role:<LEVEL>` на роли с `rbac.deckhouse.io/kind: use`, пока псевдонимы не удалят.
+
+  С `rbac.deckhouse.io/kind: manage` субъекты `d8:manage:all:<LEVEL>` сохраняют роль через объекты ClusterRoleBinding, которые для них создала заморозка, поэтому удалите лейбл:
 
   ```shell
   d8 k label clusterrole <ROLE_NAME> rbac.deckhouse.io/aggregate-to-all-as-
   ```
 
+  С `rbac.deckhouse.io/kind: use` роль даёт свои правила субъектам каждого объекта RoleBinding на `d8:use:role:<LEVEL>` через этот лейбл, а заморозка не создала для них привязок. Если удалить лейбл, они потеряют эти правила.
+  Сначала создайте capability неймспейса с правилами роли, как описано в разделе [Замена capability](#замена-capability). Её собирают и `d8:namespace:<LEVEL>`, и псевдоним `d8:use:role:<LEVEL>`. Проверьте права субъектов и только потом удалите лейбл с роли или удалите роль.
+
 * Замороженная роль не получает права на ресурсы, добавленные позже, например на ресурсы нового модуля. Чтобы они появились, замените её ролью новой схемы, как описано в разделе [Починка роли](#починка-роли).
+
+RoleBinding, которые прошлый релиз создал в неймспейсах модулей для привязки к кастомной роли с лейблами `rbac.deckhouse.io/kind: manage` и `rbac.deckhouse.io/use-role`, при обновлении удаляются. Когда у новой роли есть лейблы `rbac.deckhouse.io/scope: system` или `subsystem` и `rbac.deckhouse.io/use-role`, а привязка ссылается на неё, они появляются снова как `d8:namespace:<уровень>:binding:<имя ClusterRoleBinding>`, но только в неймспейсах модулей, которые уже несут новые лейблы и системные capabilities которых агрегирует новая роль. Модуль, который ещё несёт старые лейблы, например `rbac.deckhouse.io/kind: manage`, не получает такой RoleBinding, пока не перейдёт на новые.
+До этого создайте в неймспейсе этого модуля для субъектов привязки RoleBinding на `d8:namespace:<уровень>` и на каждую ClusterRole этого модуля, которую называет алерт `D8UserAuthzLegacyUseCapability`. Ни одна из этих ролей не является псевдонимом, поэтому такие RoleBinding следующий релиз не держат, а вебхук, который проверяет RoleBinding в неймспейсах проектов, неймспейс модуля не проверяет. Удалите их, когда у модуля появятся новые лейблы и контроллер создаст там свою RoleBinding.
+RoleBinding на `d8:use:role:<уровень>` тоже даёт эти права, но о ней сообщает алерт `D8UserAuthzDeprecatedRBACv2RoleInUse`, и она держит релиз, который удаляет псевдонимы.
 
 ### Примеры
 
@@ -1024,9 +1037,7 @@ d8 k delete clusterrole "$OLD_CAPABILITY"
   aggregationRule:
     clusterRoleSelectors:
       - matchLabels:
-          rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
-      - matchLabels:
-          rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+          rbac.deckhouse.io/aggregate-to-cluster-as: manager
       - matchLabels:
           rbac.deckhouse.io/scope: system
           module: user-authn
@@ -1040,7 +1051,8 @@ d8 k delete clusterrole "$OLD_CAPABILITY"
 - `rbac.deckhouse.io/level: subsystem` → `rbac.deckhouse.io/scope: subsystem`;
 - лейбл `rbac.deckhouse.io/aggregate-to-all-as` удалён, субъекты `d8:system:manager` получают роль через ClusterRoleBinding, см. [Роли в составе системных ролей](#роли-в-составе-системных-ролей);
 - из селекторов агрегации убран лейбл `rbac.deckhouse.io/kind: manage`;
-- выборка всех системных прав модуля теперь выполняется по `rbac.deckhouse.io/scope: system` + `module: <модуль>`.
+- выборка всех системных прав модуля теперь выполняется по `rbac.deckhouse.io/scope: system` + `module: <модуль>`;
+- подсистемы `deckhouse` и `kubernetes` теперь входят в подсистему `cluster`, поэтому два их селектора стали одним. Он выбирает всю подсистему `cluster`, а она шире двух прежних. Чтобы роль осталась такой же узкой, как раньше, выбирайте вместо него системные capabilities нужных модулей по `module: <модуль>` и `rbac.deckhouse.io/scope: system`.
 
 #### Кастомная capability до и после
 
@@ -1103,7 +1115,7 @@ d8 k delete clusterrole "$OLD_CAPABILITY"
 | `rbac.deckhouse.io/use-role` | Уровень use-роли | Уровень namespace-роли | Какая namespace-роль автоматически выдаётся обладателю системной/подсистемной роли в системных неймспейсах её модулей (через автоматически создаваемые объекты RoleBinding) |
 | `rbac.deckhouse.io/aggregate-to-all-as` | `<уровень>` | С `rbac.deckhouse.io/kind: manage` заменён лейблом `rbac.deckhouse.io/aggregate-to-system-as` на кастомной capability, который кастомная роль нести не может. С `rbac.deckhouse.io/kind: use` заменён лейблом `rbac.deckhouse.io/aggregate-to-namespace-as` на кастомной capability | Агрегация объекта в общесистемную роль (`d8:system:<уровень>`) |
 | `rbac.deckhouse.io/aggregate-to-<подсистема>-as` | Использовался в селекторах вместе с `rbac.deckhouse.io/kind: manage` | Используется в селекторах сам по себе | Агрегация объекта в подсистемную роль указанного уровня |
-| `rbac.deckhouse.io/aggregate-to-kubernetes-as` | `<уровень>` (для use-прав) | По-прежнему для **подсистемы** kubernetes (`d8:subsystem:kubernetes:*`). Старый use-смысл переехал на `aggregate-to-namespace-as` | Агрегация в `d8:subsystem:kubernetes:<уровень>` |
+| `rbac.deckhouse.io/aggregate-to-kubernetes-as` | `<уровень>` (для use- и manage-прав) | Не используется. Подсистема kubernetes входит в подсистему `cluster` (`aggregate-to-cluster-as`), а старый use-смысл переехал на `aggregate-to-namespace-as` | Агрегация в старые роли `d8:manage:kubernetes:<уровень>` и `d8:use:role:<уровень>:kubernetes` |
 | `rbac.deckhouse.io/namespace` | Неймспейс | Без изменений | Дополнительный неймспейс, в котором обладателям роли автоматически создаётся RoleBinding |
 | `rbac.deckhouse.io/capability` | — | Уникальное имя capability (например, `system-capability.deckhouse.view`) | Машиночитаемый идентификатор встроенной capability |
 | `rbac.deckhouse.io/deprecated` | — | `"true"` на ролях-псевдонимах | Роль устарела и будет удалена; переведите привязки на новую роль |
@@ -1167,6 +1179,8 @@ EOF
 
 Право создавать WhoCan-запросы даёт кластерная роль `d8:user-authz:who-can-checker`. Она никому не выдана по умолчанию: результат запроса раскрывает субъекты доступа во всех неймспейсах, поэтому выдавайте её только доверенным администраторам через ClusterRoleBinding.
 
+Это право есть и у менеджеров подсистем `iam` и `security`. Его даёт capability `d8:subsystem-capability:iam:inspect_access` ролей `d8:subsystem:iam:manager` и `d8:subsystem:security:manager`, поэтому оно есть и у ролей выше них (`d8:subsystem:iam:superadmin`, `d8:subsystem:security:superadmin`, `d8:system:manager` и `d8:system:superadmin`).
+
 ## Как узнать, что разрешено конкретному пользователю, группе или ServiceAccount'у?
 
 При включённом режиме мультитенантности ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)) доступен ресурс SubjectAccessReport — обратная сторона WhoCan. Он отвечает на вопрос «что разрешено этому субъекту» и сразу возвращает отчёт: какие роли и через какие привязки выданы, какие действия и над какими ресурсами разрешены в кластере и в каждом неймспейсе, и откуда взялось каждое право.
@@ -1197,6 +1211,8 @@ EOF
 Отчёт строится по данным RBAC. Ограничения admission-вебхуков не сворачиваются в строки RBAC — они помечаются в `status.scopes[].caveat`. Например, изменение и удаление системных ресурсов запрещено ниже уровня `superadmin` — кроме администраторов кластера (`cluster-admin`, `user-authz:super-admin` и bypass-групп). Если права субъекта ограничены ресурсом ClusterAuthorizationRule, об этом сообщается в `status.notes`.
 
 Право строить отчёт о **другом** субъекте даёт кластерная роль `d8:user-authz:subject-access-checker`. Как и `who-can-checker`, она намеренно никому не выдана по умолчанию: отчёт раскрывает полную карту прав субъекта, включая чужие неймспейсы. Отчёт о самом себе доступен любому аутентифицированному пользователю и не требует дополнительных прав.
+
+Это право есть и у менеджеров подсистем `iam` и `security`. Его даёт capability `d8:subsystem-capability:iam:inspect_access` ролей `d8:subsystem:iam:manager` и `d8:subsystem:security:manager`, поэтому оно есть и у ролей выше них (`d8:subsystem:iam:superadmin`, `d8:subsystem:security:superadmin`, `d8:system:manager` и `d8:system:superadmin`).
 
 ## Как пользователю увидеть список доступных ему неймспейсов?
 

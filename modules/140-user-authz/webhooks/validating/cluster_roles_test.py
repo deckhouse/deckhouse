@@ -209,7 +209,7 @@ class TestClusterRolesValidation(unittest.TestCase):
                 labels={"rbac.deckhouse.io/kind": "custom-capability"},
                 selector_labels=[
                     {"rbac.deckhouse.io/aggregate-to-project-as": "admin"},
-                    {"rbac.deckhouse.io/aggregate-to-networking-as": "manager"},
+                    {"rbac.deckhouse.io/aggregate-to-network-as": "manager"},
                 ],
             )
         )
@@ -607,6 +607,31 @@ class TestTenantRoleStaysWithinItsWorld(unittest.TestCase):
         out = self._run("project", {"rbac.deckhouse.io/aggregate-to-security-as": "viewer"})
         tests.assert_validation_deny(self, out, self._deny_msg("project", 'the "security" lineage'))
 
+    def test_tenant_role_may_not_take_a_subsystem_lineage(self):
+        """
+        Every subsystem of the role model, the old ones that the aliases still collect, and the all
+        lineage of the previous scheme, which the aliases of d8:manage:all and d8:use:role collect.
+        """
+        for lineage in (
+            "iam",
+            "security",
+            "cluster",
+            "delivery",
+            "network",
+            "storage",
+            "observability",
+            "managed-services",
+            "deckhouse",
+            "infrastructure",
+            "kubernetes",
+            "networking",
+            "all",
+        ):
+            for scope, name in (("project", "d8:custom:project:role-a"), ("namespace", "d8:custom:namespace:role-a")):
+                with self.subTest(lineage=lineage, scope=scope):
+                    out = self._run(scope, {f"rbac.deckhouse.io/aggregate-to-{lineage}-as": "manager"}, name=name)
+                    tests.assert_validation_deny(self, out, self._deny_msg(scope, f'the "{lineage}" lineage', name=name))
+
     def test_tenant_role_takes_a_tenant_lineage(self):
         out = self._run("project", {"rbac.deckhouse.io/aggregate-to-namespace-as": "admin"})
         tests.assert_validation_allowed(self, out, None)
@@ -621,6 +646,20 @@ class TestTenantRoleStaysWithinItsWorld(unittest.TestCase):
     def test_cluster_role_takes_cluster_capabilities(self):
         out = self._run("system", {CAPABILITY: "system-capability.deckhouse.manage"}, name="d8:custom:system:role-a")
         tests.assert_validation_allowed(self, out, None)
+
+    def test_cluster_role_takes_the_capabilities_of_a_module_on_the_previous_scheme(self):
+        """
+        The D8UserAuthzRetiredAggregationLabel alert tells to select the capabilities of a module of
+        the previous scheme by the module and the manage kind, with the old lineage at a level for a
+        role that only views, because they carry no capability label.
+        """
+        for selector in (
+            {"module": "ingress-nginx", "rbac.deckhouse.io/kind": "manage"},
+            {"module": "ingress-nginx", "rbac.deckhouse.io/kind": "manage", "rbac.deckhouse.io/aggregate-to-networking-as": "viewer"},
+        ):
+            with self.subTest(selector=selector):
+                out = self._run("system", selector, name="d8:custom:system:ingress-nginx")
+                tests.assert_validation_allowed(self, out, None)
 
     def test_role_without_a_scope_is_treated_as_tenant(self):
         """It is bindable by a project role binding, so it is judged by the stricter rule."""
@@ -856,17 +895,35 @@ class TestPlatformLineageLabelOnObject(unittest.TestCase):
         out = self.run_hook(
             binding_context(
                 "my-role",
-                labels={"rbac.deckhouse.io/aggregate-to-networking-as": "manager"},
+                labels={"rbac.deckhouse.io/aggregate-to-network-as": "manager"},
                 rules=SOME_RULES,
             )
         )
         tests.assert_validation_deny(
             self,
             out,
-            'ClusterRole "my-role" carries the aggregation label of the "networking" lineage but is not '
+            'ClusterRole "my-role" carries the aggregation label of the "network" lineage but is not '
             'labeled "rbac.deckhouse.io/kind: custom-capability": only a custom capability may aggregate '
             "into a platform role.",
         )
+
+    def test_plain_role_with_a_lineage_label_of_the_role_model_is_denied(self):
+        for lineage in ("iam", "cluster", "delivery", "network", "managed-services"):
+            with self.subTest(lineage=lineage):
+                out = self.run_hook(
+                    binding_context(
+                        "my-role",
+                        labels={f"rbac.deckhouse.io/aggregate-to-{lineage}-as": "manager"},
+                        rules=SOME_RULES,
+                    )
+                )
+                tests.assert_validation_deny(
+                    self,
+                    out,
+                    f'ClusterRole "my-role" carries the aggregation label of the "{lineage}" lineage but is not '
+                    'labeled "rbac.deckhouse.io/kind: custom-capability": only a custom capability may aggregate '
+                    "into a platform role.",
+                )
 
     def test_custom_role_with_lineage_label_on_itself_is_denied(self):
         # A custom role aggregates capabilities through selectors; carrying the lineage label on
@@ -901,6 +958,95 @@ class TestPlatformLineageLabelOnObject(unittest.TestCase):
                 rules=SOME_RULES,
             )
         )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_use_capability_of_the_previous_scheme_is_denied(self):
+        # The d8:use:role:* aliases collect "kind: use" with the kubernetes lineage for the bindings
+        # to the old names. The kubernetes lineage is a system lineage here, so a user can no longer
+        # create or relabel such an object, and the aliases collect only what the previous release
+        # and the modules released on their own left behind.
+        out = self.run_hook(
+            binding_context(
+                "custom:use:capability:mycustom:superresource:view",
+                labels={
+                    "rbac.deckhouse.io/kind": "use",
+                    "rbac.deckhouse.io/aggregate-to-kubernetes-as": "user",
+                },
+                rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_deny(
+            self,
+            out,
+            'ClusterRole "custom:use:capability:mycustom:superresource:view" carries the aggregation label of '
+            'the "kubernetes" lineage but is not labeled "rbac.deckhouse.io/kind: custom-capability": only a '
+            "custom capability may aggregate into a platform role.",
+        )
+
+    def test_objects_of_the_previous_scheme_on_the_all_lineage_are_denied(self):
+        # The d8:use:role:<level> aliases collect "kind: use" with aggregate-to-all-as, the label of
+        # the use roles of the modules with a subsystem of their own, and d8:manage:all:<level>
+        # collects "kind: manage" with it. A user can create neither, so the aliases collect only
+        # what the previous release and the modules left behind.
+        for kind, level in (("use", "admin"), ("manage", "manager")):
+            with self.subTest(kind=kind):
+                out = self.run_hook(
+                    binding_context(
+                        f"custom:{kind}:all",
+                        labels={
+                            "rbac.deckhouse.io/kind": kind,
+                            "rbac.deckhouse.io/aggregate-to-all-as": level,
+                        },
+                        rules=SOME_RULES,
+                    )
+                )
+                tests.assert_validation_deny(
+                    self,
+                    out,
+                    f'ClusterRole "custom:{kind}:all" carries the aggregation label of the "all" lineage but is not '
+                    'labeled "rbac.deckhouse.io/kind: custom-capability": only a custom capability may aggregate '
+                    "into a platform role.",
+                )
+
+    def test_custom_subsystem_role_of_the_previous_release_is_frozen(self):
+        # The FAQ of the previous release labelled a custom subsystem role with aggregate-to-all-as, so
+        # d8:manage:all:<level> collects it. Such a role stays as it is: an update that keeps the label
+        # is denied, one that drops it is allowed.
+        old = _cr(
+            "custom:manage:mycustom:manager",
+            labels={
+                "rbac.deckhouse.io/use-role": "admin",
+                "rbac.deckhouse.io/kind": "manage",
+                "rbac.deckhouse.io/level": "subsystem",
+                "rbac.deckhouse.io/subsystem": "custom",
+                "rbac.deckhouse.io/aggregate-to-all-as": "manager",
+            },
+            aggregation={
+                "clusterRoleSelectors": [
+                    {"matchLabels": {"rbac.deckhouse.io/kind": "manage", "rbac.deckhouse.io/aggregate-to-mycustom-as": "manager"}}
+                ]
+            },
+        )
+        relabelled = _cr(
+            old["metadata"]["name"],
+            labels={**old["metadata"]["labels"], "team": "ops"},
+            aggregation=old["aggregationRule"],
+        )
+        out = self.run_hook(update_binding_context(old, relabelled))
+        tests.assert_validation_deny(
+            self,
+            out,
+            'ClusterRole "custom:manage:mycustom:manager" carries the aggregation label of the "all" lineage but is '
+            'not labeled "rbac.deckhouse.io/kind: custom-capability": only a custom capability may aggregate into '
+            "a platform role.",
+        )
+
+        released = _cr(
+            old["metadata"]["name"],
+            labels={k: v for k, v in old["metadata"]["labels"].items() if k != "rbac.deckhouse.io/aggregate-to-all-as"},
+            aggregation=old["aggregationRule"],
+        )
+        out = self.run_hook(update_binding_context(old, released))
         tests.assert_validation_allowed(self, out, None)
 
     def test_foreign_aggregation_label_is_not_ours(self):
@@ -960,6 +1106,233 @@ class TestCustomCapabilityDoesNotAggregate(unittest.TestCase):
             )
         )
         tests.assert_validation_allowed(self, out, None)
+
+
+class TestSubsystemList(unittest.TestCase):
+    """The subsystems of the role model are the system side. So are the subsystems of the legacy scheme
+    that the model renamed or merged: no role of the model aggregates them, but the system capabilities
+    of a module that has not migrated still carry them."""
+
+    SUBSYSTEMS = ("iam", "security", "cluster", "delivery", "network", "storage", "observability", "managed-services")
+    LEGACY_ONLY = ("deckhouse", "infrastructure", "kubernetes", "networking", "all")
+
+    def run_hook(self, ctx):
+        return hook.testrun(cluster_roles.main, [ctx])
+
+    def test_the_lineages_are_the_system_and_the_subsystems(self):
+        self.assertEqual(cluster_roles.SYSTEM_LINEAGES, {"system", *self.SUBSYSTEMS})
+        self.assertEqual(cluster_roles.LEGACY_SYSTEM_LINEAGES, set(self.LEGACY_ONLY))
+
+    def test_plain_role_with_the_label_of_a_subsystem_is_denied(self):
+        for subsystem in self.SUBSYSTEMS + self.LEGACY_ONLY:
+            with self.subTest(subsystem=subsystem):
+                out = self.run_hook(binding_context("my-role", labels={f"rbac.deckhouse.io/aggregate-to-{subsystem}-as": "manager"}, rules=SOME_RULES))
+                tests.assert_validation_deny(
+                    self,
+                    out,
+                    f'ClusterRole "my-role" carries the aggregation label of the "{subsystem}" lineage but is not labeled '
+                    '"rbac.deckhouse.io/kind: custom-capability": only a custom capability may aggregate into a platform role.',
+                )
+
+    def test_namespace_role_must_not_aggregate_a_subsystem(self):
+        for subsystem in self.SUBSYSTEMS + self.LEGACY_ONLY:
+            with self.subTest(subsystem=subsystem):
+                out = self.run_hook(binding_context(
+                    "d8:custom:namespace:role-a",
+                    labels={"rbac.deckhouse.io/kind": "custom-role", "rbac.deckhouse.io/scope": "namespace"},
+                    selector_labels=[{f"rbac.deckhouse.io/aggregate-to-{subsystem}-as": "viewer"}],
+                ))
+                tests.assert_validation_deny(
+                    self,
+                    out,
+                    f'ClusterRole "d8:custom:namespace:role-a" with "rbac.deckhouse.io/scope: namespace" must not aggregate '
+                    f'the "{subsystem}" lineage: a role granted in a namespace or a project may only aggregate namespace and project capabilities.',
+                )
+
+    def test_project_role_must_not_aggregate_a_legacy_subsystem(self):
+        # The system capability of a module that has not migrated, such as d8:manage:permission:module:<module>:edit
+        # with aggregate-to-infrastructure-as, would otherwise travel into a project.
+        for subsystem in self.LEGACY_ONLY:
+            with self.subTest(subsystem=subsystem):
+                out = self.run_hook(binding_context(
+                    "d8:custom:project:role-a",
+                    labels={"rbac.deckhouse.io/kind": "custom-role", "rbac.deckhouse.io/scope": "project"},
+                    selector_labels=[{f"rbac.deckhouse.io/aggregate-to-{subsystem}-as": "manager"}],
+                ))
+                tests.assert_validation_deny(
+                    self,
+                    out,
+                    f'ClusterRole "d8:custom:project:role-a" with "rbac.deckhouse.io/scope: project" must not aggregate '
+                    f'the "{subsystem}" lineage: a role granted in a namespace or a project may only aggregate namespace and project capabilities.',
+                )
+
+    def test_label_of_a_custom_lineage_is_neutral(self):
+        out = self.run_hook(binding_context("my-role", labels={"rbac.deckhouse.io/aggregate-to-mycustom-as": "manager"}, rules=SOME_RULES))
+        tests.assert_validation_allowed(self, out, None)
+
+
+def with_subsystems(ctx, *subsystems):
+    """The binding context with the subsystem roles the snapshot holds."""
+    ctx.snapshots = {cluster_roles.SUBSYSTEM_ROLES_SNAPSHOT: [{"filterResult": {"subsystem": s}} for s in subsystems]}
+    return ctx
+
+
+class TestSubsystemOfAModule(unittest.TestCase):
+    """A module the DKP subsystem table puts in none of the platform's subsystems may ship a subsystem of
+    its own with its d8:subsystem roles; its lineage is then as much the system side as the platform's."""
+
+    # The snapshot itself, its name, label selector and jqFilter, is a context binding of
+    # templates/rbacv2-cluster-roles-validation-webhook.yaml, checked in template_tests/validation_webhooks_test.go.
+
+    def run_hook(self, ctx):
+        return hook.testrun(cluster_roles.main, [ctx])
+
+    def test_aggregation_label_of_a_module_subsystem_is_the_platforms(self):
+        labels = {"rbac.deckhouse.io/aggregate-to-example-as": "manager"}
+
+        out = self.run_hook(with_subsystems(binding_context("sneaks-into-example", labels=labels, rules=SOME_RULES), "example"))
+        tests.assert_validation_deny(
+            self,
+            out,
+            'ClusterRole "sneaks-into-example" carries the aggregation label of the "example" lineage but is not labeled '
+            '"rbac.deckhouse.io/kind: custom-capability": only a custom capability may aggregate into a platform role.',
+        )
+
+        # Without the subsystem role in the cluster the lineage is nobody's, and neutral.
+        out = self.run_hook(binding_context("sneaks-into-example", labels=labels, rules=SOME_RULES))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_namespace_role_must_not_aggregate_a_module_subsystem(self):
+        out = self.run_hook(with_subsystems(binding_context(
+            "d8:custom:namespace:example-nodes",
+            labels={"rbac.deckhouse.io/kind": "custom-role", "rbac.deckhouse.io/scope": "namespace"},
+            selector_labels=[{"rbac.deckhouse.io/aggregate-to-example-as": "manager"}],
+        ), "example"))
+        tests.assert_validation_deny(
+            self,
+            out,
+            'ClusterRole "d8:custom:namespace:example-nodes" with "rbac.deckhouse.io/scope: namespace" must not aggregate '
+            'the "example" lineage: a role granted in a namespace or a project may only aggregate namespace and project capabilities.',
+        )
+
+    def test_subsystem_roles_of_the_platform_change_nothing(self):
+        # user-authz ships the d8:subsystem:<name>:<level> roles of every platform subsystem, so the
+        # snapshot repeats lineages the webhook already knows.
+        ctx = with_subsystems(binding_context("my-role", labels={"rbac.deckhouse.io/aggregate-to-mycustom-as": "manager"}, rules=SOME_RULES), "cluster", "iam")
+        self.assertEqual(cluster_roles._system_lineages(DotMap(ctx.toDict())), cluster_roles.SYSTEM_LINEAGES | cluster_roles.LEGACY_SYSTEM_LINEAGES)
+        tests.assert_validation_allowed(self, self.run_hook(ctx), None)
+
+
+class TestBuiltInCapabilityValueIsReserved(unittest.TestCase):
+    """
+    A role selects a capability by its capability label, and the aggregation controller takes every
+    ClusterRole that carries the value. A value without the custom. prefix on an object a user writes
+    would pour that object's rules into every role that selects the built-in capability.
+    """
+
+    SECRETS = [{"apiGroups": [""], "resources": ["secrets"], "verbs": ["get", "list"]}]
+
+    def run_hook(self, ctx):
+        return hook.testrun(cluster_roles.main, [ctx])
+
+    def deny_message(self, name, value):
+        return (
+            f'ClusterRole "{name}" must not carry "rbac.deckhouse.io/capability: {value}": '
+            'the values without the "custom." prefix are reserved for Deckhouse built-in capabilities.'
+        )
+
+    def test_custom_capability_with_a_built_in_value_is_denied(self):
+        name = "d8:custom:namespace-capability:spoof"
+        out = self.run_hook(
+            binding_context(
+                name,
+                labels={
+                    "rbac.deckhouse.io/kind": "custom-capability",
+                    "rbac.deckhouse.io/scope": "namespace",
+                    "rbac.deckhouse.io/capability": "namespace-capability.cert-manager.view",
+                },
+                rules=self.SECRETS,
+            )
+        )
+        tests.assert_validation_deny(self, out, self.deny_message(name, "namespace-capability.cert-manager.view"))
+
+    def test_role_without_a_kind_with_a_built_in_value_is_denied(self):
+        out = self.run_hook(
+            binding_context(
+                "anything",
+                labels={"rbac.deckhouse.io/capability": "namespace-capability.cert-manager.view"},
+                rules=self.SECRETS,
+            )
+        )
+        tests.assert_validation_deny(self, out, self.deny_message("anything", "namespace-capability.cert-manager.view"))
+
+    def test_update_that_adds_a_built_in_value_is_denied(self):
+        old = _cr("anything", rules=self.SECRETS)
+        new = _cr("anything", labels={"rbac.deckhouse.io/capability": "system-capability.user-authz.edit"}, rules=self.SECRETS)
+        out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_deny(self, out, self.deny_message("anything", "system-capability.user-authz.edit"))
+
+    def test_update_that_keeps_a_built_in_value_is_allowed(self):
+        """An object written before the check existed is applied again, with new rules and labels."""
+        labels = {"rbac.deckhouse.io/capability": "namespace-capability.cert-manager.view"}
+        old = _cr("anything", labels=labels, rules=self.SECRETS)
+        new = _cr("anything", labels={**labels, "team": "a"}, rules=SOME_RULES)
+        tests.assert_validation_allowed(self, self.run_hook(update_binding_context(old, new)), None)
+
+    def test_update_that_changes_a_built_in_value_is_denied(self):
+        old = _cr("anything", labels={"rbac.deckhouse.io/capability": "namespace-capability.cert-manager.view"}, rules=self.SECRETS)
+        new = _cr("anything", labels={"rbac.deckhouse.io/capability": "system-capability.user-authz.edit"}, rules=self.SECRETS)
+        out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_deny(self, out, self.deny_message("anything", "system-capability.user-authz.edit"))
+
+    def test_update_that_turns_a_custom_value_into_a_built_in_one_is_denied(self):
+        old = _cr("anything", labels={"rbac.deckhouse.io/capability": "custom.namespace-capability.team.view"}, rules=self.SECRETS)
+        new = _cr("anything", labels={"rbac.deckhouse.io/capability": "namespace-capability.cert-manager.view"}, rules=self.SECRETS)
+        out = self.run_hook(update_binding_context(old, new))
+        tests.assert_validation_deny(self, out, self.deny_message("anything", "namespace-capability.cert-manager.view"))
+
+    def test_custom_value_is_allowed(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:namespace-capability:team-view",
+                labels={
+                    "rbac.deckhouse.io/kind": "custom-capability",
+                    "rbac.deckhouse.io/scope": "namespace",
+                    "rbac.deckhouse.io/capability": "custom.namespace-capability.team.view",
+                },
+                rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_selecting_built_in_values_is_allowed(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:namespace:cert-manager-only",
+                labels={
+                    "rbac.deckhouse.io/kind": "custom-role",
+                    "rbac.deckhouse.io/scope": "namespace",
+                    "rbac.deckhouse.io/delegatable": "true",
+                },
+                selector_labels=[{"rbac.deckhouse.io/capability": "namespace-capability.cert-manager.view"}],
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_display_annotations_on_a_built_in_capability_are_allowed(self):
+        labels = {
+            "heritage": "deckhouse",
+            "rbac.deckhouse.io/kind": "capability",
+            "rbac.deckhouse.io/capability": "namespace-capability.cert-manager.view",
+        }
+        old = _cr("d8:namespace-capability:cert-manager:view", labels=labels, rules=SOME_RULES)
+        new = _cr(
+            "d8:namespace-capability:cert-manager:view",
+            labels=labels,
+            annotations={"custom.meta.deckhouse.io/title": "Certificates, read"},
+            rules=SOME_RULES,
+        )
+        tests.assert_validation_allowed(self, self.run_hook(update_binding_context(old, new)), None)
 
 
 if __name__ == "__main__":

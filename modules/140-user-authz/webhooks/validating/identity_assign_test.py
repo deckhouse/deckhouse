@@ -39,10 +39,18 @@ def catalog(*entries):
     return {e.name: e for e in entries}
 
 
+# The range of the old d8:manage:security:manager, which its compatibility alias keeps.
 SECURITY_LABELS = {
     "can-assign-basic-max": "ClusterAdmin",
     "can-assign-scope": "subsystem",
     "can-assign-subsystem": "security",
+    "can-assign-max-level": "admin",
+}
+# The range of d8:subsystem:iam:manager: the IAM subsystem assigns the roles.
+IAM_LABELS = {
+    "can-assign-basic-max": "ClusterAdmin",
+    "can-assign-scope": "subsystem",
+    "can-assign-subsystem": "iam",
     "can-assign-max-level": "admin",
 }
 
@@ -80,11 +88,14 @@ def default_catalog():
         entry("d8:subsystem:security:superadmin", rules=STAR_ALL),
         entry("d8:system:superadmin", rules=STAR_ALL),
         entry("d8:namespace:admin", rules=USERS_EDIT),
-        # the granular catalog: the ranges live on the system and subsystem managers
+        # the granular catalog: the ranges live on the system and IAM managers
         entry("d8:system:manager", rules=CAR_EDIT + USERS_EDIT, labels=SYSTEM_MANAGER_LABELS),
-        entry("d8:subsystem:security:manager", rules=CAR_EDIT + USERS_EDIT, labels=SECURITY_LABELS),
+        entry("d8:subsystem:iam:manager", rules=CAR_EDIT + USERS_EDIT, labels=IAM_LABELS),
+        entry("d8:subsystem:iam:viewer", rules=[]),
+        entry("d8:subsystem:iam:superadmin", rules=STAR_ALL),
+        entry("d8:subsystem:security:manager", rules=[]),
         entry("d8:subsystem:security:viewer", rules=[]),
-        entry("d8:subsystem:networking:manager", rules=[]),
+        entry("d8:subsystem:network:manager", rules=[]),
         entry("d8:namespace:superadmin", rules=STAR_ALL),
         entry("d8:system-capability:user-authz:edit", rules=CAR_EDIT),
     )
@@ -152,63 +163,87 @@ class TestDescribeAndRange(unittest.TestCase):
         self.assertEqual(assign.can_assign(actor, ["d8:system:superadmin"], cat),
                          ["d8:system:superadmin"])
 
-    def test_granular_security_manager_range(self):
+    def test_granular_iam_manager_range(self):
         cat = default_catalog()
-        actor = ["d8:subsystem:security:manager"]
+        actor = ["d8:subsystem:iam:manager"]
         # basic levels up to ClusterAdmin
         self.assertIsNone(assign.can_assign(actor, ["user-authz:cluster-admin"], cat))
         self.assertEqual(assign.can_assign(actor, ["user-authz:super-admin"], cat), ["user-authz:super-admin"])
-        # security roles up to the manager level, nothing outside the subsystem
-        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:security:viewer"], cat))
-        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:security:manager"], cat))
-        self.assertEqual(assign.can_assign(actor, ["d8:subsystem:security:superadmin"], cat),
-                         ["d8:subsystem:security:superadmin"])
-        self.assertEqual(assign.can_assign(actor, ["d8:subsystem:networking:manager"], cat),
-                         ["d8:subsystem:networking:manager"])
+        # IAM roles up to the manager level, nothing outside the subsystem
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:iam:viewer"], cat))
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:iam:manager"], cat))
+        self.assertEqual(assign.can_assign(actor, ["d8:subsystem:iam:superadmin"], cat),
+                         ["d8:subsystem:iam:superadmin"])
+        self.assertEqual(assign.can_assign(actor, ["d8:subsystem:security:manager"], cat),
+                         ["d8:subsystem:security:manager"])
+        self.assertEqual(assign.can_assign(actor, ["d8:subsystem:network:manager"], cat),
+                         ["d8:subsystem:network:manager"])
         # disasters stay out of reach
         self.assertEqual(assign.can_assign(actor, ["cluster-admin"], cat), ["cluster-admin"])
         self.assertEqual(assign.can_assign(actor, ["d8:system:superadmin"], cat), ["d8:system:superadmin"])
         self.assertEqual(assign.can_assign(actor, ["d8:namespace:superadmin"], cat), ["d8:namespace:superadmin"])
 
+    def test_granular_security_manager_assigns_nothing(self):
+        # the range moved to the IAM subsystem: the security manager assigns only what it covers
+        cat = default_catalog()
+        actor = ["d8:subsystem:security:manager"]
+        self.assertEqual(assign.can_assign(actor, ["user-authz:user"], cat), ["user-authz:user"])
+        self.assertEqual(assign.can_assign(actor, ["d8:subsystem:security:viewer"], cat),
+                         ["d8:subsystem:security:viewer"])
+
+    def test_security_alias_keeps_the_old_security_range(self):
+        # a subject still bound to d8:manage:security:manager assigns what it assigned before the
+        # IAM subsystem took the range over: the security roles, old and new names, up to manager
+        cat = default_catalog()
+        actor = ["d8:manage:security:manager"]
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:security:manager"], cat))
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:security:viewer"], cat))
+        self.assertEqual(assign.can_assign(actor, ["d8:subsystem:iam:viewer"], cat),
+                         ["d8:subsystem:iam:viewer"])
+
     def test_granular_system_manager_range(self):
         cat = default_catalog()
         actor = ["d8:system:manager"]
         self.assertIsNone(assign.can_assign(actor, ["user-authz:cluster-admin"], cat))
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:iam:manager"], cat))
         self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:security:manager"], cat))
-        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:networking:manager"], cat))
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:network:manager"], cat))
         self.assertIsNone(assign.can_assign(actor, ["d8:system:manager"], cat))
         self.assertEqual(assign.can_assign(actor, ["d8:system:superadmin"], cat), ["d8:system:superadmin"])
         self.assertEqual(assign.can_assign(actor, ["user-authz:super-admin"], cat), ["user-authz:super-admin"])
 
-    def test_security_superadmin_range_stays_inside_its_subsystem(self):
+    def test_iam_superadmin_range_stays_inside_its_subsystem(self):
         cat = default_catalog()
-        cat["d8:subsystem:security:superadmin"] = entry("d8:subsystem:security:superadmin", rules=[], labels={
+        cat["d8:subsystem:iam:superadmin"] = entry("d8:subsystem:iam:superadmin", rules=[], labels={
             "can-assign-basic-max": "SuperAdmin",
             "can-assign-scope": "subsystem",
-            "can-assign-subsystem": "security",
+            "can-assign-subsystem": "iam",
             "can-assign-max-level": "superadmin",
         })
-        cat["d8:subsystem:networking:superadmin"] = entry("d8:subsystem:networking:superadmin", rules=[])
-        actor = ["d8:subsystem:security:superadmin"]
+        cat["d8:subsystem:network:superadmin"] = entry("d8:subsystem:network:superadmin", rules=[])
+        actor = ["d8:subsystem:iam:superadmin"]
         # the basic disasters are within reach of any superadmin range
         self.assertIsNone(assign.can_assign(actor, ["user-authz:super-admin"], cat))
         self.assertIsNone(assign.can_assign(actor, ["cluster-admin"], cat))
         # its own subsystem up to superadmin
-        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:security:superadmin"], cat))
-        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:security:manager"], cat))
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:iam:superadmin"], cat))
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:iam:manager"], cat))
         # superadmin roles of another scope are not
         self.assertEqual(assign.can_assign(actor, ["d8:system:superadmin"], cat), ["d8:system:superadmin"])
-        self.assertEqual(assign.can_assign(actor, ["d8:subsystem:networking:superadmin"], cat),
-                         ["d8:subsystem:networking:superadmin"])
+        self.assertEqual(assign.can_assign(actor, ["d8:subsystem:security:superadmin"], cat),
+                         ["d8:subsystem:security:superadmin"])
+        self.assertEqual(assign.can_assign(actor, ["d8:subsystem:network:superadmin"], cat),
+                         ["d8:subsystem:network:superadmin"])
         self.assertEqual(assign.can_assign(actor, ["d8:namespace:superadmin"], cat), ["d8:namespace:superadmin"])
 
     def test_system_superadmin_range_reaches_every_superadmin_role(self):
         cat = default_catalog()
         cat["d8:system:superadmin"] = entry("d8:system:superadmin", rules=[], labels=SUPER_LABELS)
-        cat["d8:subsystem:networking:superadmin"] = entry("d8:subsystem:networking:superadmin", rules=[])
+        cat["d8:subsystem:network:superadmin"] = entry("d8:subsystem:network:superadmin", rules=[])
         actor = ["d8:system:superadmin"]
         for target in ["cluster-admin", "user-authz:super-admin", "d8:system:superadmin",
-                       "d8:subsystem:security:superadmin", "d8:subsystem:networking:superadmin",
+                       "d8:subsystem:iam:superadmin", "d8:subsystem:security:superadmin",
+                       "d8:subsystem:network:superadmin",
                        "d8:namespace:superadmin"]:
             self.assertIsNone(assign.can_assign(actor, [target], cat), target)
 
@@ -786,7 +821,7 @@ class TestTargetOwnership(unittest.TestCase):
 
     def test_range_assigner_reaches_the_custom_aggregate_of_a_rule(self):
         # The identity a DexProvider or a UserOperation targets carries both bindings of its rule.
-        manager = "d8:subsystem:security:manager"
+        manager = "d8:subsystem:iam:manager"
         targets = ["user-authz:editor", "user-authz:editor:custom"]
         for rules in ([], [{"apiGroups": ["example.io"], "resources": ["widgets"], "verbs": ["get"]}]):
             with self.subTest(rules=rules):
@@ -807,7 +842,7 @@ class TestTargetOwnership(unittest.TestCase):
     def test_forged_custom_aggregate_is_leftover(self):
         cat = default_catalog()
         cat["user-authz:editor:custom"] = entry("user-authz:editor:custom", heritage=False)
-        self.assertEqual(assign.can_assign(["d8:subsystem:security:manager"], ["user-authz:editor:custom"], cat),
+        self.assertEqual(assign.can_assign(["d8:subsystem:iam:manager"], ["user-authz:editor:custom"], cat),
                          ["user-authz:editor:custom"])
 
 

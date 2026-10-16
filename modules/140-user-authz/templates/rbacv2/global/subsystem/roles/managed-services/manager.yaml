@@ -1,0 +1,27 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem:managed-services:manager
+  annotations:
+    en.meta.deckhouse.io/title: "Managed Services: Manager"
+    ru.meta.deckhouse.io/title: "Управление подсистемы управляемых сервисов"
+    en.meta.deckhouse.io/description: "Management of the Managed Services subsystem configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией подсистемы управляемых сервисов."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/use-role: admin
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: managed-services
+    rbac.deckhouse.io/aggregate-to-managed-services-as: superadmin
+    rbac.deckhouse.io/aggregate-to-system-as: manager
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-managed-services-as: manager
+      matchExpressions:
+        - key: rbac.deckhouse.io/kind
+          operator: NotIn
+          values:
+            - use

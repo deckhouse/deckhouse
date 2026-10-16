@@ -16,6 +16,7 @@
 
 Требуется миграция шаблонов ролей написанных под rbac v2.
 Для автоматизации написан скрипт, который нужно выполнить в корне с проектом модуля.
+Сначала укажите подсистему модуля в поле `subsystems` файла `module.yaml` ([Подсистемы](#подсистемы)).
 
 ```shell
 # В репозитории модуля:
@@ -72,8 +73,8 @@ RBACv2 сохраняет то же деление, но убирает два �
 
 - оба вида объектов теперь называются одинаково — **capability** (лейбл `rbac.deckhouse.io/kind:  capability` вместо `use`/`manage`);
 - вместо вида объекта у каждой capability есть **область** (лейбл `rbac.deckhouse.io/scope`)
-  - `namespace` — это то же самое, что раньше было `use`;
-  - `system` или имя подсистемы модуля (`kubernetes`, `networking` и так далее) — то же самое, что раньше было `manage`.
+  - `namespace` заменяет прежний `use`;
+  - `system` заменяет прежний `manage`, а подсистему, в которую агрегируется такая capability, называет лейбл линии `rbac.deckhouse.io/aggregate-to-<подсистема>-as` (`cluster`, `network` и так далее).
 
 Capability — это всё тот же обычный `ClusterRole` (стандартный ресурс Kubernetes) с правилами, только с другими лейблами и именем.
 Итоговые **роли** (`d8:namespace:viewer`, `d8:system:manager` и подобные) модуль не должен генерировать: их создают `user-authz` и `multitenancy-manager`. Роль — это пустой `ClusterRole`, в котором
@@ -100,7 +101,7 @@ Capability — это всё тот же обычный `ClusterRole` (стан�
 | Область                                                                                                           | Уровни                                             | Выдаётся через                    | Что кладёт туда модуль                                              |
 | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------- |
 | `namespace`                                                                                                       | `viewer`, `user`, `manager`, `admin`, `superadmin` | `RoleBinding` в пространстве имён | Ресурсы модуля внутри пространства имён — то, с чем работает пользователь проекта |
-| `<подсистема>`: `deckhouse`, `infrastructure`, `kubernetes`, `networking`, `observability`, `security`, `storage` | `viewer`, `manager`, `superadmin`                  | `ClusterRoleBinding`              | Кластерные ресурсы модуля и его `ModuleConfig`                      |
+| `<подсистема>`, одна из [восьми подсистем платформы](#подсистемы) или [своя подсистема модуля](#своя-подсистема-модуля) | `viewer`, `manager`, `superadmin`                  | `ClusterRoleBinding`              | Кластерные ресурсы модуля и его `ModuleConfig`                      |
 | `system`                                                                                                          | `viewer`, `manager`, `superadmin`                  | `ClusterRoleBinding`              | Напрямую ничего: системные роли агрегируют подсистемные             |
 | `project`                                                                                                         | `viewer`, `user`, `manager`, `admin`, `superadmin` | `ProjectRoleBinding`              | Ресурсы структуры проекта (только multitenancy-manager)             |
 
@@ -110,6 +111,79 @@ Capability — это всё тот же обычный `ClusterRole` (стан�
 
 Миграция переносит namespace-уровень из подсистемы `kubernetes`, где он раньше жил вместе с `manage`,
 в отдельную область `namespace`, которой он и принадлежит по смыслу.
+
+### Подсистемы
+
+В ролевой модели восемь подсистем. Это `iam`, `security`, `cluster`, `delivery`, `network`, `storage`,
+`observability` и `managed-services`. Роли `d8:subsystem:<подсистема>:{viewer,manager,superadmin}` каждой
+из них выпускает user-authz, поэтому модуль не выпускает роли подсистем платформы.
+
+Таблица подсистем DKP, внутренний документ, относит каждый модуль DKP к одной из них. Перед запуском
+скрипта укажите в поле `subsystems` файла `module.yaml` подсистему модуля из этой таблицы, скрипт её
+читает.
+
+В прежней схеме было семь подсистем. Каждая перешла в подсистему ролевой модели.
+
+| Подсистема прежней схемы                    | Подсистема ролевой модели                                       |
+| ------------------------------------------- | --------------------------------------------------------------- |
+| `deckhouse`, `infrastructure`, `kubernetes` | `cluster`                                                       |
+| `networking`                                | `network`                                                       |
+| `observability`, `security`, `storage`      | та же                                                           |
+| своя подсистема модуля (`virtualization`)   | та, которую модулю даёт таблица (у virtualization это `cluster`) |
+
+`iam`, `delivery` и `managed-services` новые. Линию прежней подсистемы не агрегирует ни одна роль модели,
+и периода, когда на capability висят оба лейбла, нет. Capability, оставшаяся на прежней линии, не попадает
+ни в одну роль, поэтому скрипт переводит каждую линию подсистемы у system-capability. Если `module.yaml`
+называет одну подсистему ролевой модели, все такие линии переходят в неё, какую бы подсистему они ни
+называли раньше. Так скрипт делает переносы из таблицы подсистем DKP, например local-path-provisioner из
+`infrastructure` в `storage` и user-authz из `security` в `iam`. Если `module.yaml` не называет ни одной
+из них или называет несколько, скрипт переводит линии прежних подсистем по таблице выше и сообщает о
+линии, которую `module.yaml` не объявляет. Поле `subsystems` в `rbac.yaml`, если оно есть, скрипт, как и
+dmt, читает вместо `module.yaml`.
+
+### Своя подсистема модуля
+
+Восемь подсистем покрывают платформу. Модуль, который таблица подсистем DKP не относит ни к одной из них,
+может держать свою подсистему. Сейчас таблица относит каждый модуль DKP к одной из восьми, так что это
+оставлено для модуля не из DKP, и вебхук и правило `contract` в `dmt` защищают такую подсистему, пока
+модель ролей её допускает.
+
+- `module.yaml` объявляет подсистему в `subsystems` (`subsystems: [<имя>]`).
+- Роли подсистемы `d8:subsystem:<имя>:{viewer,manager,superadmin}` модуль выпускает сам, по образцу ролей
+  user-authz (`templates/rbacv2/global/subsystem/roles/cluster/`):
+
+  ```yaml
+  metadata:
+    name: d8:subsystem:<имя>:manager
+    annotations: {en|ru.meta.deckhouse.io/title|description: ...}
+    labels:
+      rbac.deckhouse.io/kind: role
+      rbac.deckhouse.io/scope: subsystem
+      rbac.deckhouse.io/subsystem: <имя>
+      rbac.deckhouse.io/use-role: admin                     # viewer: viewer, superadmin: superadmin
+      rbac.deckhouse.io/aggregate-to-<имя>-as: superadmin   # лестница; у viewer — manager, у superadmin нет
+      rbac.deckhouse.io/aggregate-to-system-as: manager     # в d8:system:<уровень>
+  aggregationRule:
+    clusterRoleSelectors:
+      - matchLabels: {rbac.deckhouse.io/aggregate-to-<имя>-as: manager}
+        # use-capability прошлой схемы даёт права в неймспейсе, кластерная роль её не берёт
+        matchExpressions: [{key: rbac.deckhouse.io/kind, operator: NotIn, values: [use]}]
+  ```
+
+- Его system-capabilities `d8:system-capability:<модуль>:<действие>` агрегируются лейблом
+  `rbac.deckhouse.io/aggregate-to-<имя>-as`, как в любую подсистему.
+
+Вебхук `rbacv2-cluster-roles` читает роли подсистем в кластере, поэтому линия такой подсистемы защищена так
+же, как платформенная. Объект, который не является capability модели, не может нести её лейбл агрегации,
+а роль, выдаваемая в пространстве имён или проекте, не может её агрегировать. Правило `contract` в `dmt`
+принимает подсистему, которую объявляет `module.yaml` модуля. Другой модуль агрегироваться в неё не может,
+потому что для линтера это чужая подсистема.
+
+Модуль, который таблица относит к подсистеме платформы, не выпускает роли подсистемы даже временно. Два
+Helm-релиза не могут владеть одним объектом, поэтому роль `d8:subsystem:cluster:*` в чарте модуля
+конфликтует с ролью user-authz. У модуля virtualization в прежней схеме была своя подсистема, теперь он в
+`cluster`. Его system-capabilities агрегируются лейблом `rbac.deckhouse.io/aggregate-to-cluster-as`, а
+`d8:subsystem:cluster:*` выпускает user-authz.
 
 ## Переименование объектов и лейблов
 
@@ -126,7 +200,7 @@ Capability — это всё тот же обычный `ClusterRole` (стан�
 | —                                                                                                                       | `rbac.deckhouse.io/scope: namespace` (было `use`) или `system` (было `manage`)                                                                                         |
 | —                                                                                                                       | `rbac.deckhouse.io/capability: "<область>-capability.<модуль>.<действие>"` — глобально уникален; именно по нему кастомная роль и консоль выбирают ровно эту capability |
 | `rbac.deckhouse.io/aggregate-to-kubernetes-as: <уровень>` на объекте `use` (и второй такой же лейбл рядом, если он был) | один лейбл `rbac.deckhouse.io/aggregate-to-namespace-as: <уровень>`, уровень тот же                                                                                    |
-| `rbac.deckhouse.io/aggregate-to-<подсистема>-as: <уровень>` на объекте `manage`                                         | остаётся как есть, в том числе несколько сразу                                                                                                                         |
+| `rbac.deckhouse.io/aggregate-to-<подсистема>-as: <уровень>` на объекте `manage`                                         | тот же лейбл [подсистемы ролевой модели](#подсистемы), в которую перешла подсистема, уровень тот же, несколько сразу сохраняются; два, попавшие в одну подсистему, сливаются в один |
 | `rbac.deckhouse.io/level: module`                                                                                       | удаляется, его никто не читает                                                                                                                                         |
 | `rbac.deckhouse.io/namespace: d8-<модуль>`                                                                              | остаётся — но читается только на объектах с областью `system` или `subsystem`                                                                                          |
 
@@ -162,7 +236,7 @@ Capability — это всё тот же обычный `ClusterRole` (стан�
     — capability попадала в обе подсистемы.
    Скрипт оставляет только один из них (`aggregate-to-namespace-as`), потому что namespace-правам в
    подсистемной области делать нечего. Если модулю на самом деле нужна ещё и отдельная кластерная часть
-   в `networking`, её нужно вынести в отдельную system-capability, а не пытаться сохранить второй
+   в `network`, её нужно вынести в отдельную system-capability, а не пытаться сохранить второй
    лейбл на namespace-capability.
 4. **Формулировки.** Заголовки и описания, которые сгенерировал скрипт, следуют общей для платформы
    конвенции и называют модуль по имени. Прочитайте их один раз — именно их консоль показывает рядом с
@@ -191,29 +265,83 @@ Capability — это всё тот же обычный `ClusterRole` (стан�
    алиас без неё игнорируется с предупреждением в логе. Так же работает и следующее переименование роли
    `d8:<модуль>:<имя>`: у алиаса может быть любое имя `d8:`, кроме семейств ролей самой платформы
    (`d8:system:`, `d8:subsystem:`, `d8:namespace:`, `d8:project:`, `d8:custom:`, `d8:dict`).
-7. **Своя подсистема модуля.** Модуль, который объявляет её в `module.yaml` (`subsystems: [virtualization]`), называл
-   свои объекты по ней:
+7. **Своя подсистема модуля.** Модуль, у которого в прежней схеме была своя подсистема (`subsystems: [virtualization]`),
+   называл свои объекты по ней:
    - `d8:use:capability:<модуль>:<действие>`;
    - `d8:manage:permission:subsystem:<модуль>:<действие>`;
    - namespace-роли `d8:use:role:<уровень>:<модуль>`;
    - подсистемные роли `d8:manage:<подсистема>:<уровень>`.
 
-   Все они висели на линии подсистемы, а различались лейблом `rbac.deckhouse.io/kind`. Скрипт мигрирует их так:
+   Все они висели на линии подсистемы, а различались лейблом `rbac.deckhouse.io/kind`. Куда они попадут, решает
+   `module.yaml`. Пока он объявляет свою подсистему модуля, подсистема остаётся за модулем. Когда вместо неё он
+   объявляет одну подсистему платформы (`subsystems: [cluster]`), модуль переезжает в неё. Скрипт мигрирует их так:
    - use-capability становится namespace-capability: уровень переносится с линии подсистемы на
      `aggregate-to-namespace-as`, а сам лейбл линии снимается. Роли подсистемы в 1.78 выбирают только по нему, и
      namespace-capability с этим лейблом влила бы свои правила в кластерную роль;
-   - manage-permission становится system-capability и сохраняет линию подсистемы;
-   - `d8:manage:<подсистема>:<уровень>` становится ролью подсистемы `d8:subsystem:<подсистема>:<уровень>`: kind `role`,
-     scope `subsystem`, `aggregate-to-all-as` заменён на `aggregate-to-system-as`, селектор только по линии;
+   - manage-permission становится system-capability на линии своей подсистемы модуля или подсистемы платформы,
+     в которую модуль переехал;
+   - `d8:manage:<подсистема>:<уровень>` становится ролью подсистемы `d8:subsystem:<подсистема>:<уровень>` (kind `role`,
+     scope `subsystem`, `aggregate-to-all-as` заменён на `aggregate-to-system-as`, селектор только по линии), пока
+     подсистема остаётся за модулем. Когда модуль переезжает в подсистему платформы, у роли нет пары, потому что роли
+     этой подсистемы выпускает user-authz, и она остаётся только в legacy-ветке гейта;
    - у namespace-роли модуля в 1.78 пары нет — capabilities собирает `d8:namespace:<уровень>`, — поэтому она остаётся
-     только в legacy-ветке гейта, а с `--replace` скрипт оставляет её вам на удаление. Если на это имя есть
-     привязки, сохраните его алиасом.
+     только в legacy-ветке гейта, а с `--replace` скрипт оставляет её вам на удаление.
+
+   Если на имя роли без пары есть привязки, сохраните его алиасом в `templates/rbacv2-compat/`, как в пункте 6. Алиас
+   даёт не больше прав, чем давала роль. Он выбирает capabilities модуля по его лейблу `module`,
+   `rbac.deckhouse.io/kind: capability` и лейблу линии на каждом уровне до своего включительно. Селекторы скрипт
+   называет в отчёте. Остальное зависит от того, где роль выдаётся.
+   - Алиас namespace-роли, `d8:use:role:<уровень>:<модуль>` или `d8:use:<модуль>:superadmin`, несёт лейбл
+     `rbac.deckhouse.io/delegatable: "true"` и аннотацию `rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"`,
+     как алиасы `d8:use:role:*` у user-authz. RoleBinding на него внутри неймспейса проекта продолжает работать, а новый
+     ProjectRoleBinding или ClusterProjectRoleBinding на него отклоняется.
+   - Алиас роли подсистемы, `d8:manage:<модуль>:<уровень>`, не несёт ни того, ни другого. Он выдаётся через
+     ClusterRoleBinding и в проект не попадает.
+
+   В чарте, который сохраняет legacy-ветку, оберните алиас в гейт,
+   `{{- if eq (include "<module>.rbacv2_new_scheme" .) "true" }}`, потому что ниже 1.78 legacy-ветка по-прежнему
+   рендерит роль под тем же именем.
+
+   ```yaml
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: ClusterRole
+   metadata:
+     name: d8:use:role:user:mymodule
+     annotations:
+       en.meta.deckhouse.io/title: "Deprecated: d8:use:role:user:mymodule"   # и ещё три
+       rbac.deckhouse.io/deprecated-replaced-by: d8:namespace:user
+       rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"
+     labels:
+       heritage: deckhouse
+       module: mymodule
+       rbac.deckhouse.io/deprecated: "true"
+       rbac.deckhouse.io/delegatable: "true"
+   aggregationRule:
+     clusterRoleSelectors:
+       - matchLabels: {module: mymodule, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/aggregate-to-namespace-as: viewer}
+       - matchLabels: {module: mymodule, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/aggregate-to-namespace-as: user}
+   ---
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: ClusterRole
+   metadata:
+     name: d8:manage:mymodule:viewer
+     annotations:
+       en.meta.deckhouse.io/title: "Deprecated: d8:manage:mymodule:viewer"   # и ещё три
+       rbac.deckhouse.io/deprecated-replaced-by: d8:subsystem:cluster:viewer
+     labels:
+       heritage: deckhouse
+       module: mymodule
+       rbac.deckhouse.io/deprecated: "true"
+   aggregationRule:
+     clusterRoleSelectors:
+       - matchLabels: {module: mymodule, rbac.deckhouse.io/kind: capability, rbac.deckhouse.io/scope: system, rbac.deckhouse.io/aggregate-to-cluster-as: viewer}
+   ```
 
    Кроме того, скрипт сообщает о маркере длиннее 63 символов: такой лейбл API-сервер отклонит, поэтому действие нужно
-   сократить. Имя с сегментом `subsystem:` мигрируется, только если подсистему объявляет `module.yaml` модуля.
-   Шаблон, который пишет лейблы через `helm_lib_module_labels`, скрипт относит к модулю своего чарта (имя из
-   `Chart.yaml`). Нераспознанную use-capability, на которой остался лейбл подсистемы, скрипт выводит в отчёт, её нужно
-   мигрировать вручную.
+   сократить. Имя с сегментом `subsystem:` мигрируется, только если подсистема своя для модуля: её объявляет
+   `module.yaml` сверх подсистем платформы или она названа по имени модуля. Шаблон, который пишет лейблы через
+   `helm_lib_module_labels`, скрипт относит к модулю своего чарта (имя из `Chart.yaml`). Нераспознанную
+   use-capability, на которой остался лейбл подсистемы, скрипт выводит в отчёт, её нужно мигрировать вручную.
 
 ## Полный пример
 
@@ -260,8 +388,8 @@ rules:
     verbs: ["get", "list", "watch"]
 ```
 
-А это конфигурация модуля — она остаётся в той же подсистемной области, в которой была раньше, меняются
-только имя и лейблы:
+А это конфигурация модуля. Её линия переходит в подсистему ролевой модели, которая приняла прежнюю, из
+`networking` в `network`:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -270,7 +398,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: mymodule
-    rbac.deckhouse.io/aggregate-to-networking-as: manager
+    rbac.deckhouse.io/aggregate-to-network-as: manager
     rbac.deckhouse.io/kind: capability
     rbac.deckhouse.io/capability: "system-capability.mymodule.edit"
     rbac.deckhouse.io/scope: system
@@ -297,7 +425,8 @@ rules:
 прежней схемы и отдельно перечисляет то, что не решился тронуть. Чтобы вы понимали, насколько ему можно
 доверять: на всех модулях платформы он воспроизвёл вручную сделанную миграцию побайтово в 93 файлах из
 95. В оставшихся двух отличие — не ошибка скрипта, а решение о том, куда отнести правило, которое
-скрипт принять не может (см. следующий раздел).
+скрипт принять не может (см. следующий раздел). Ещё одно отличие касается линий подсистем: скрипт
+переводит их в подсистемы ролевой модели.
 
 ```shell
 ./rbacv2-migrate-module.sh -n PATH          # только диф
@@ -305,7 +434,12 @@ rules:
 ./rbacv2-migrate-module.sh --replace PATH   # только новая модель
 ```
 
-Скрипт идемпотентен: уже мигрированный файл он отметит как нетронутый. Файлы он не переименовывает,
+Скрипт идемпотентен: уже мигрированный файл он отметит как нетронутый. В файле, мигрированном до того,
+как подсистемы ролевой модели были утверждены, скрипт переводит линии подсистем, а в файле с флагом меняет
+только новую ветку. Если прежний запуск написал `d8:subsystem:<модуль>:<уровень>` для модуля, который
+`module.yaml` теперь относит к подсистеме платформы, скрипт сообщает, что эту роль нужно убрать, а в файле
+с флагом убрать только новую ветку. Он же называет алиас, который нужен выпущенному имени
+`d8:manage:<модуль>:<уровень>` ([пункт 7](#что-стоит-проверить-руками)). Файлы он не переименовывает,
 поэтому диф остаётся читаемым.
 
 ### Как отдавать обе модели из одной ветки
@@ -337,10 +471,12 @@ user-agent. Модуль, поставляемый как `ModulePackage`, по�
 - отвечает оно `true`, и это выбор направления ошибки, а не ставка на более вероятную ветку. В файле
   версии лежит `CI_COMMIT_TAG`, поэтому сборка с любой ветки говорит `dev`, и dev-стенд, собранный с
   `release-1.77`, неотличим от собранного с `main`. Из двух способов ошибиться опасен только один:
-  новый объект на кластере 1.77 инертен, потому что там никто не выбирает `aggregate-to-namespace-as`,
-  и права модуля просто отсутствуют; объект прежней схемы на кластере 1.78 по-прежнему агрегируется в
-  `d8:subsystem:kubernetes:<уровень>`, который выдаётся через `ClusterRoleBinding`, так что правила,
-  рассчитанные на одно пространство имён, становятся кластерными. Dev-стенду на релизной ветке ниже
+  новый объект на кластере прежней схемы инертен, потому что там никто не выбирает
+  `aggregate-to-namespace-as`, и права модуля просто отсутствуют; use-capability прежней схемы на
+  кластере с ролевой моделью и линией подсистемы,
+  которую ролевая модель сохранила (`observability`, `security`, `storage`), агрегируется в
+  `d8:subsystem:<подсистема>:<уровень>`, который выдаётся через `ClusterRoleBinding`, так что правила,
+  рассчитанные на один неймспейс, становятся кластерными. Dev-стенду на релизной ветке ниже
   1.78, которому нужны объекты прежней схемы, достаточно поменять в хелпере `true` на `false` в своей
   сборке;
 - сравнение идёт только по мажорной и минорной части, потому что semver ставит `1.78.0-rc.1` ниже
@@ -395,22 +531,32 @@ grep -rn 'rbac.deckhouse.io/kind: \(use\|manage\)\|d8:use:capability\|d8:manage:
 d8 k get clusterrole d8:namespace:viewer -o json | jq '[.rules[] | select(.apiGroups[] == "mygroup.io")]'
 
 # Права на конфигурацию доехали до подсистемной роли.
-d8 k get clusterrole d8:subsystem:networking:manager -o json | jq '[.rules[] | select(.resourceNames[]? == "mymodule")]'
+d8 k get clusterrole d8:subsystem:network:manager -o json | jq '[.rules[] | select(.resourceNames[]? == "mymodule")]'
 ```
 
 ## Чего алиасы совместимости не несут
 
-Старые имена ролей живут один релиз как агрегирующие алиасы, поэтому привязка к `d8:manage:*` или
-`d8:use:role:*` продолжает выдавать то, что агрегирует новая роль. Две вещи не возвращаются:
+Старые имена ролей живут один релиз как агрегирующие алиасы. Привязка к `d8:manage:*` или
+`d8:use:role:*` сохраняет то, что давала старая роль, и это может быть уже, чем роль, которая её заменяет.
+`d8:manage:deckhouse:*`, `d8:manage:infrastructure:*` и `d8:manage:kubernetes:*` выбирают только
+capabilities модулей, которые были в этих подсистемах, а `d8:subsystem:cluster:*` охватывает всю
+подсистему `cluster`. `d8:manage:security:*` по-прежнему даёт права на user-authn и user-authz, которые
+переехали в `iam`. `d8:manage:networking:*` и `d8:manage:storage:*` выбирают линию `network` и `storage`
+без keepalived и local-path-provisioner, которые пришли в эти подсистемы из `infrastructure`. Алиасы
+`deckhouse`, `infrastructure`, `kubernetes` и `networking` и `d8:manage:all:*` выбирают ещё и старую линию
+своей подсистемы, которую может по-прежнему нести модуль с собственным циклом выпуска. Алиасы, которые
+модуль оставляет для своих ролей, тоже узкие ([пункт 7](#что-стоит-проверить-руками)).
 
-- **Проекция в неймспейсы.** ClusterRoleBinding на алиас `d8:manage:*` больше не порождает RoleBinding,
-  которые разносили его по неймспейсам модулей, а созданные прошлым релизом удаляются. Кластерные права
-  остаются; логи, `describe` и `exec` внутри неймспейсов `d8-*` — нет. Пересоздание привязки на новое имя
-  возвращает их.
-- **`serviceaccounts/token` и `impersonate`**, которые переехали с admin на superadmin намеренно.
+ClusterRoleBinding на алиас `d8:manage:*` сохраняет RoleBinding, которые прошлый релиз создал для него в
+неймспейсах модулей старой подсистемы, `d8:use:<роль>:binding:<имя>` на `d8:use:role:<роль>`, и
+user-authz-controller поддерживает их, как и раньше. Пересоздание привязки на новое имя заменяет их на
+RoleBinding на namespace-роль новой роли в неймспейсах модулей новой подсистемы.
+
+Не возвращаются только `serviceaccounts/token` и `impersonate`, которые переехали с admin на superadmin
+намеренно.
 
 Проверьте и собственную документацию: примеры с `d8:manage:*` или `d8:use:role:*` работают только этот релиз.
-Алиасы `d8:use:role:*` делегируемы, поэтому обычный RoleBinding на такой алиас внутри неймспейса проекта продолжает работать; отклоняется новый ProjectRoleBinding или ClusterProjectRoleBinding на старое имя — алиас несёт аннотацию `rbac.deckhouse.io/disabled-for-direct-use-in-projects`.
+Алиасы `d8:use:role:*` делегируемы, поэтому обычный RoleBinding на такой алиас внутри неймспейса проекта продолжает работать; отклоняется новый ProjectRoleBinding или ClusterProjectRoleBinding на старое имя, потому что алиас несёт аннотацию `rbac.deckhouse.io/disabled-for-direct-use-in-projects`. Алиасы, которые модуль оставляет для своих namespace-ролей, несут тот же лейбл и ту же аннотацию (см. [пункт 7](#что-стоит-проверить-руками)).
 
 ## Перед обновлением: роли с платформенным лейблом агрегации
 
@@ -437,15 +583,15 @@ d8 k get clusterroles -o json | jq -r '.items[]
 ## Что будет, если модуль не мигрировать
 
 Старые объекты никто не отвергнет и ничего не залогирует — они останутся валидными Kubernetes-объектами.
-Изменится не их валидность, а то, что читает по их лейблам остальная платформа. Три следствия, и все
-три проверены на живом кластере.
+Изменится не их валидность, а то, что читает по их лейблам остальная платформа. Три следствия.
 
-- **`use`-capability выдаётся на весь кластер вместо пространства имён.** Лейбл
-  `aggregate-to-kubernetes-as` теперь принадлежит не namespace-уровню, а кластерной подсистеме
-  `kubernetes`. Поэтому namespace-правила модуля попадают в `d8:subsystem:kubernetes:*` и, вверх по
-  цепочке агрегации, в `d8:system:*` — их получает каждый обладатель этих ролей во всём кластере. А в
-  `d8:namespace:*` этих правил больше нет вовсе, так что тенанты теряют доступ, который у них раньше
-  был.
+- **`use`-capability выдаётся на весь кластер вместо неймспейса или не выдаётся вовсе.** Её лейбл линии
+  теперь принадлежит кластерной подсистеме или никому. С лейблом подсистемы, которую ролевая модель
+  сохранила (`observability`, `security`, `storage`), namespace-правила модуля попадают в
+  `d8:subsystem:<подсистема>:*` и, вверх по цепочке агрегации, в `d8:system:*`, их получает каждый
+  обладатель этих ролей во всём кластере. Лейбл `deckhouse`, `infrastructure`, `kubernetes` или
+  `networking` не выбирает ни одна роль модели. В обоих случаях в `d8:namespace:*` этих правил больше
+  нет, так что тенанты теряют доступ, который у них раньше был.
 - **`use`-capability уровня `user` или `admin` исчезает совсем.** В подсистемных областях таких уровней
   нет, поэтому такую capability никто не выбирает, и её правила не достаются никому.
 - **Автоматический `RoleBinding` в пространстве имён модуля перестаёт создаваться.** Есть хук, который
@@ -453,7 +599,9 @@ d8 k get clusterroles -o json | jq -r '.items[]
   Он смотрит только на объекты с лейблом `rbac.deckhouse.io/scope: system` или `subsystem`. Без него
   лейбл `rbac.deckhouse.io/namespace` для хука просто не существует, и привязка не создаётся.
 
-`manage`-capability в этом смысле безопаснее: она продолжает агрегироваться в ту же подсистемную роль,
-то есть права никуда не переезжают. Но она остаётся невидимой для консоли и для permission browser —
-они отличают роли от capabilities и capabilities друг от друга именно по лейблам
-`rbac.deckhouse.io/kind` и `rbac.deckhouse.io/scope`, которых на немигрированном объекте нет.
+`manage`-capability на `observability`, `security` или `storage` в этом смысле безопаснее: она продолжает
+агрегироваться в ту же подсистемную роль, то есть права никуда не переезжают. Но она остаётся невидимой
+для консоли и для permission browser — они отличают роли от capabilities и capabilities друг от друга
+именно по лейблам `rbac.deckhouse.io/kind` и `rbac.deckhouse.io/scope`, которых на немигрированном
+объекте нет. На `deckhouse`, `infrastructure`, `kubernetes` или `networking` она не попадает ни в одну
+роль, и её права пропадают, пока модуль не переведёт её в [подсистему ролевой модели](#подсистемы).

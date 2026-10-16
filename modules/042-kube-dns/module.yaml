@@ -3,7 +3,7 @@ stage: General Availability
 critical: true
 weight: 42
 subsystems:
-  - networking
+  - network
 namespace: kube-system
 descriptions:
   en: Installs CoreDNS components for managing DNS in the Kubernetes cluster. Deletes all previously installed kubeadm Deployments, ConfigMaps and RBAC for CoreDNS.

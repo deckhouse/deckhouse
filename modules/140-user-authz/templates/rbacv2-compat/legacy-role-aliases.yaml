@@ -10,11 +10,21 @@
   These aliases keep the OLD names alive for exactly one release. Each alias is an empty ClusterRole
   whose aggregationRule reuses the NEW role's selector, so it aggregates the same capabilities as
   its new-model counterpart (roleRef is immutable, so we cannot rewrite their bindings for them).
-  That is not identical to pre-upgrade rights — see the NOTE below. The d8:use:role:* aliases are
+  The aliases of the subsystems the new subsystem list merged or renamed select the capabilities of
+  their former modules and the old lineage of the subsystem instead, and the d8:use:role:* aliases
+  also select the use capabilities and the module use roles of the previous scheme, see below. That is not
+  identical to pre-upgrade rights — see the NOTE below. The d8:use:role:* aliases are
   `delegatable` (see below), so a plain RoleBinding to them inside a project namespace keeps working;
   what is refused is a new ProjectRoleBinding/ClusterProjectRoleBinding to an old name, through the
   rbac.deckhouse.io/disabled-for-direct-use-in-projects annotation. Aliases carry
   rbac.deckhouse.io/deprecated so the deprecation hook/alert and the console can flag them.
+
+  The d8:manage:* aliases also keep the RoleBindings the previous release made for a
+  ClusterRoleBinding to them, d8:use:<use-role>:binding:<binding> to d8:use:role:<use-role> in the
+  namespaces of the modules of the old subsystem: they carry the labels that release put on the old
+  roles (rbac.deckhouse.io/kind: manage and rbac.deckhouse.io/use-role), which user-authz-controller
+  reads, and the selectors of those namespaces in the user-authz.deckhouse.io/use-binding-selectors
+  annotation, see below.
 
   NOTE (intentional, not a bug): the role model moved serviceaccounts/token:create and impersonate from admin
   to superadmin. The d8:use:role:admin -> d8:namespace:admin alias therefore no longer grants those two
@@ -30,16 +40,260 @@
 */ -}}
 {{- $aliases := list -}}
 
-{{- /* d8:manage:all:<level> -> system lineage */ -}}
+{{- /* A selector is a dict whose "labels" are its matchLabels and whose optional "notIn" maps a
+  label key to the values a NotIn expression excludes. */ -}}
+
+{{- /* The levels an alias that selects capabilities by module or by an old lineage aggregates: the
+  old manager role got the viewer capabilities through the viewer role, which such an alias cannot
+  reuse. */ -}}
+{{- $levelsUpTo := dict "viewer" (list "viewer") "manager" (list "viewer" "manager") -}}
+
+{{- /* The lineages of the subsystems the new list merged into cluster or renamed. No module of this
+  repository carries them any more, the RBACv2 template contract test sees to that, and no role of
+  the new model collects them. A module released on its own and a custom capability may still carry
+  one, and the old roles collected it, so the aliases of these roles and d8:manage:all:<level> select
+  these lineages too: a binding to an old name keeps those capabilities for the compatibility
+  release. */ -}}
+{{- $retiredLineages := list "deckhouse" "infrastructure" "kubernetes" "networking" -}}
+{{- /* Every selector of a d8:manage:* alias by a lineage leaves out rbac.deckhouse.io/kind: use, as
+  the d8:system:* and d8:subsystem:* roles do. The old scheme labelled its namespace-level use
+  capabilities with an aggregation label too, aggregate-to-kubernetes-as, and the old manage roles
+  never took them. A use capability that carries the label of a subsystem would otherwise give its
+  namespace rules in every namespace. */ -}}
+{{- $notUse := dict "rbac.deckhouse.io/kind" (list "use") -}}
+
+{{- /* The descriptions send a holder of an old role to a new role of another subsystem for the
+  modules that moved there. Such a role covers the whole subsystem, so the description says that it
+  grants more and names the narrow way, a custom role that selects the capabilities of the modules. */ -}}
+{{- $narrowEn := " A custom role that selects the system capabilities of these modules by rbac.deckhouse.io/capability grants only their rights." -}}
+{{- $narrowRu := " Только их права даёт собственная роль, которая выбирает системные capabilities этих модулей по лейблу rbac.deckhouse.io/capability." -}}
+
+{{- /* d8:manage:all:<level> -> system lineage, plus the retired lineages.
+
+  The previous d8:manage:all:<level> selected rbac.deckhouse.io/kind: manage with
+  rbac.deckhouse.io/aggregate-to-all-as at its level. Besides the platform subsystem roles, which are
+  aliases now and do not carry the label, that took the subsystem roles of the modules with a
+  subsystem of their own, such as d8:manage:virtualization:<level>, which a module released on its
+  own may still ship on the labels of the previous scheme. The alias selects them too, and so does
+  its projection below, so a binding to it keeps their rights and the RoleBinding in their
+  namespaces. The rbacv2-cluster-roles webhook guards the all lineage, so a user can create no new
+  object of this kind. */ -}}
 {{- range $level := list "viewer" "manager" -}}
-  {{- $aliases = append $aliases (dict "name" (printf "d8:manage:all:%s" $level) "selector" "aggregate-to-system-as" "level" $level "target" (printf "d8:system:%s" $level)) -}}
+  {{- $selectors := list (dict "labels" (dict "rbac.deckhouse.io/aggregate-to-system-as" $level) "notIn" $notUse) -}}
+  {{- range $lineage := $retiredLineages -}}
+    {{- range $lower := index $levelsUpTo $level -}}
+      {{- $selectors = append $selectors (dict "labels" (dict (printf "rbac.deckhouse.io/aggregate-to-%s-as" $lineage) $lower) "notIn" $notUse) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $selectors = append $selectors (dict "labels" (dict "rbac.deckhouse.io/kind" "manage" "rbac.deckhouse.io/aggregate-to-all-as" $level)) -}}
+  {{- $aliases = append $aliases (dict "name" (printf "d8:manage:all:%s" $level) "selectors" $selectors "target" (printf "d8:system:%s" $level)) -}}
 {{- end -}}
 
-{{- /* d8:manage:<subsystem>:<level> -> subsystem lineage */ -}}
-{{- range $subsystem := list "deckhouse" "infrastructure" "kubernetes" "networking" "observability" "security" "storage" -}}
+{{- /* d8:manage:<subsystem>:<level> of a subsystem the new list kept under its name or renamed ->
+  lineage of the new subsystem. networking became network, and its alias selects the old networking
+  lineage as well. */ -}}
+{{- /* The modules that joined such a subsystem from one the new list merged into cluster. The alias
+  of the old role leaves them out, so a binding to the old name does not widen on upgrade. It then
+  selects the capabilities of the lineage at its level and below, because the viewer role of the
+  subsystem aggregates the capabilities of these modules too. */ -}}
+{{- $joined := dict "network" (list "keepalived") "storage" (list "local-path-provisioner") -}}
+{{- range $pair := list (list "networking" "network") (list "observability" "observability") (list "security" "security") (list "storage" "storage") -}}
+  {{- $subsystem := index $pair 0 -}}
+  {{- $target := index $pair 1 -}}
+  {{- $joinedModules := index $joined $target | default list -}}
   {{- range $level := list "viewer" "manager" -}}
-    {{- $aliases = append $aliases (dict "name" (printf "d8:manage:%s:%s" $subsystem $level) "selector" (printf "aggregate-to-%s-as" $subsystem) "level" $level "target" (printf "d8:subsystem:%s:%s" $subsystem $level)) -}}
+    {{- $lineageLabel := printf "rbac.deckhouse.io/aggregate-to-%s-as" $target -}}
+    {{- $selectors := list -}}
+    {{- if $joinedModules -}}
+      {{- range $lower := index $levelsUpTo $level -}}
+        {{- $selectors = append $selectors (dict "labels" (dict $lineageLabel $lower) "notIn" (dict "module" $joinedModules "rbac.deckhouse.io/kind" (list "role" "use"))) -}}
+      {{- end -}}
+    {{- else -}}
+      {{- $selectors = append $selectors (dict "labels" (dict $lineageLabel $level) "notIn" $notUse) -}}
+    {{- end -}}
+    {{- if has $subsystem $retiredLineages -}}
+      {{- range $lower := index $levelsUpTo $level -}}
+        {{- $selectors = append $selectors (dict "labels" (dict (printf "rbac.deckhouse.io/aggregate-to-%s-as" $subsystem) $lower) "notIn" $notUse) -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $alias := dict "name" (printf "d8:manage:%s:%s" $subsystem $level) "target" (printf "d8:subsystem:%s:%s" $target $level) -}}
+    {{- if $joinedModules -}}
+      {{- $_ := set $alias "alsoEn" (printf " The new role also grants rights for %s, which this one does not." (join ", " $joinedModules)) -}}
+      {{- $_ := set $alias "alsoRu" (printf " Новая роль даёт и права на %s, которых нет у этой." (join ", " $joinedModules)) -}}
+    {{- end -}}
+    {{- if eq $subsystem "security" -}}
+      {{- /* user-authz and user-authn moved from security to iam. The old security role keeps
+        their system capabilities, so a binding to it keeps managing authentication and
+        authorization. */ -}}
+      {{- range $module := list "user-authn" "user-authz" -}}
+        {{- range $lower := index $levelsUpTo $level -}}
+          {{- $selectors = append $selectors (dict "labels" (dict "module" $module "rbac.deckhouse.io/kind" "capability" "rbac.deckhouse.io/scope" "system" "rbac.deckhouse.io/aggregate-to-iam-as" $lower)) -}}
+        {{- end -}}
+      {{- end -}}
+      {{- $_ := set $alias "alsoEn" (printf " Rights for user-authn, user-authz come with d8:subsystem:iam:%s, which grants more.%s" $level $narrowEn) -}}
+      {{- $_ := set $alias "alsoRu" (printf " Права на user-authn, user-authz даёт d8:subsystem:iam:%s, которая даёт больше прав.%s" $level $narrowRu) -}}
+    {{- end -}}
+    {{- $_ := set $alias "selectors" $selectors -}}
+    {{- $aliases = append $aliases $alias -}}
   {{- end -}}
+{{- end -}}
+
+{{- /* d8:manage:<subsystem>:<level> of deckhouse, infrastructure and kubernetes. The new list
+  merged them into cluster, which also took modules over from elsewhere, and moved some of their
+  modules to other subsystems. An alias selecting the whole cluster lineage would widen every
+  existing binding on upgrade, so it selects the system capabilities of the modules of this
+  repository that were in the subsystem, each by the lineage of the subsystem the module is in now,
+  the subsystem capabilities of user-authz that aggregated into it, and the old lineage of the
+  subsystem, which modules released on their own and custom capabilities may still carry. A module
+  that ships no capabilities is not listed. The modules of the other old subsystems are listed too:
+  the RoleBindings of every alias reach the namespaces of the modules of its old subsystem, below. */ -}}
+{{- $formerModules := dict
+  "deckhouse" (dict
+    "deckhouse" "cluster"
+    "multitenancy-manager" "iam")
+  "infrastructure" (dict
+    "chrony" "cluster"
+    "cloud-provider-aws" "cluster"
+    "cloud-provider-azure" "cluster"
+    "cloud-provider-dvp" "cluster"
+    "cloud-provider-dynamix" "cluster"
+    "cloud-provider-gcp" "cluster"
+    "cloud-provider-huaweicloud" "cluster"
+    "cloud-provider-openstack" "cluster"
+    "cloud-provider-vcd" "cluster"
+    "cloud-provider-vsphere" "cluster"
+    "cloud-provider-yandex" "cluster"
+    "cloud-provider-zvirt" "cluster"
+    "csi-vsphere" "cluster"
+    "descheduler" "cluster"
+    "istio" "network"
+    "keepalived" "network"
+    "local-path-provisioner" "storage"
+    "node-manager" "cluster"
+    "terraform-manager" "cluster"
+    "vertical-pod-autoscaler" "cluster")
+  "kubernetes" (dict
+    "control-plane-manager" "cluster"
+    "kube-dns" "network"
+    "kube-proxy" "network")
+  "networking" (dict
+    "cilium-hubble" "network"
+    "cni-cilium" "network"
+    "cni-flannel" "network"
+    "cni-simple-bridge" "network"
+    "istio" "network"
+    "kube-dns" "network"
+    "kube-proxy" "network"
+    "metallb" "network"
+    "network-gateway" "network"
+    "network-policy-engine" "network"
+    "node-local-dns" "network"
+    "openvpn" "network")
+  "observability" (dict
+    "okmeter" "observability")
+  "security" (dict
+    "admission-policy-engine" "security"
+    "cert-manager" "security"
+    "secret-copier" "security"
+    "user-authn" "iam"
+    "user-authz" "iam")
+  "storage" (dict)
+-}}
+{{- $formerCapabilities := dict
+  "deckhouse" (list)
+  "infrastructure" (list "cluster")
+  "kubernetes" (list "cluster" "network" "security" "storage")
+-}}
+{{- $capabilityAction := dict "viewer" "view_resources" "manager" "manage_resources" -}}
+{{- range $subsystem := list "deckhouse" "infrastructure" "kubernetes" -}}
+  {{- range $level := list "viewer" "manager" -}}
+    {{- $selectors := list -}}
+    {{- range $module, $lineage := index $formerModules $subsystem -}}
+      {{- range $lower := index $levelsUpTo $level -}}
+        {{- $selectors = append $selectors (dict "labels" (dict "module" $module "rbac.deckhouse.io/kind" "capability" "rbac.deckhouse.io/scope" "system" (printf "rbac.deckhouse.io/aggregate-to-%s-as" $lineage) $lower)) -}}
+      {{- end -}}
+    {{- end -}}
+    {{- range $capabilitySubsystem := index $formerCapabilities $subsystem -}}
+      {{- range $lower := index $levelsUpTo $level -}}
+        {{- $selectors = append $selectors (dict "labels" (dict "module" "user-authz" "rbac.deckhouse.io/kind" "capability" "rbac.deckhouse.io/capability" (printf "subsystem-capability.%s.%s" $capabilitySubsystem (index $capabilityAction $lower)))) -}}
+      {{- end -}}
+    {{- end -}}
+    {{- range $lower := index $levelsUpTo $level -}}
+      {{- $selectors = append $selectors (dict "labels" (dict (printf "rbac.deckhouse.io/aggregate-to-%s-as" $subsystem) $lower) "notIn" $notUse) -}}
+    {{- end -}}
+    {{- /* The description names the role of every other subsystem a former module is in now. */ -}}
+    {{- $moved := dict -}}
+    {{- range $module, $lineage := index $formerModules $subsystem -}}
+      {{- if ne $lineage "cluster" -}}
+        {{- $_ := set $moved $lineage (append (index $moved $lineage | default list) $module) -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $alsoEn := " The new role covers the whole cluster subsystem and grants more than this one." -}}
+    {{- $alsoRu := " Новая роль охватывает всю подсистему cluster и даёт больше прав, чем эта." -}}
+    {{- range $lineage, $modules := $moved -}}
+      {{- $alsoEn = printf "%s Rights for %s come with d8:subsystem:%s:%s, which grants more as well." $alsoEn (join ", " $modules) $lineage $level -}}
+      {{- $alsoRu = printf "%s Права на %s даёт d8:subsystem:%s:%s, которая тоже даёт больше прав." $alsoRu (join ", " $modules) $lineage $level -}}
+    {{- end -}}
+    {{- if $moved -}}
+      {{- $alsoEn = printf "%s%s" $alsoEn $narrowEn -}}
+      {{- $alsoRu = printf "%s%s" $alsoRu $narrowRu -}}
+    {{- end -}}
+    {{- $aliases = append $aliases (dict "name" (printf "d8:manage:%s:%s" $subsystem $level) "selectors" $selectors "target" (printf "d8:subsystem:cluster:%s" $level) "alsoEn" $alsoEn "alsoRu" $alsoRu) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* The RoleBindings of a ClusterRoleBinding to an old manage role. The previous release made
+  d8:use:<use-role>:binding:<binding> to d8:use:role:<use-role> in the namespace of every capability
+  of the manage kind the role aggregated, viewer for a viewer and user for a manager, and
+  user-authz-controller keeps making them for the aliases: an alias carries that kind and use role.
+  The namespaces must stay those of the previous release, and the alias of a merged or renamed
+  subsystem aggregates modules the old role did not, so the controller takes them from the selectors
+  of the use-binding-selectors annotation instead of the aggregation rule. These select the system
+  capabilities of the modules of this repository that were in the old subsystem, by the lineage
+  each is on now, and the capabilities of the previous scheme on the old lineage, which modules
+  released on their own may still carry. The controller follows the ClusterRoles of Deckhouse only,
+  so a custom capability on that lineage adds no namespace. A module released on its own that
+  already ships the current scheme was not reached by the old role and is left out. The old subsystem
+  roles reached the capabilities of their level and below, and d8:manage:all:<level> those of its
+  level only, through the subsystem roles of that level, which include the subsystem roles of the
+  modules with a subsystem of their own. user-authz-controller reads the annotation
+  only on a ClusterRole of Deckhouse named d8:manage:* that carries rbac.deckhouse.io/deprecated, as
+  every alias does. It also keeps every RoleBinding the previous release made for a binding while the
+  binding refers to the alias, in a namespace the selectors no longer reach too. */ -}}
+{{- $oldSubsystems := list "deckhouse" "infrastructure" "kubernetes" "networking" "observability" "security" "storage" -}}
+{{- $oldUseRole := dict "viewer" "viewer" "manager" "user" -}}
+{{- range $alias := $aliases -}}
+  {{- $parts := splitList ":" $alias.name -}}
+  {{- $subsystem := index $parts 2 -}}
+  {{- $level := index $parts 3 -}}
+  {{- $subsystems := list $subsystem -}}
+  {{- $levels := index $levelsUpTo $level -}}
+  {{- if eq $subsystem "all" -}}
+    {{- $subsystems = $oldSubsystems -}}
+    {{- $levels = list $level -}}
+  {{- end -}}
+  {{- $byLineage := dict -}}
+  {{- range $old := $subsystems -}}
+    {{- range $module, $lineage := index $formerModules $old -}}
+      {{- $_ := set $byLineage $lineage (append (index $byLineage $lineage | default list) $module | uniq | sortAlpha) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $projection := list -}}
+  {{- range $lineage, $modules := $byLineage -}}
+    {{- range $lower := $levels -}}
+      {{- $projection = append $projection (dict "matchLabels" (dict "rbac.deckhouse.io/kind" "capability" "rbac.deckhouse.io/scope" "system" (printf "rbac.deckhouse.io/aggregate-to-%s-as" $lineage) $lower) "matchExpressions" (list (dict "key" "module" "operator" "In" "values" $modules))) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- range $old := $subsystems -}}
+    {{- range $lower := $levels -}}
+      {{- $projection = append $projection (dict "matchLabels" (dict "rbac.deckhouse.io/kind" "manage" (printf "rbac.deckhouse.io/aggregate-to-%s-as" $old) $lower)) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if eq $subsystem "all" -}}
+    {{- $projection = append $projection (dict "matchLabels" (dict "rbac.deckhouse.io/kind" "manage" "rbac.deckhouse.io/aggregate-to-all-as" $level)) -}}
+  {{- end -}}
+  {{- $_ := set $alias "projection" $projection -}}
+  {{- $_ := set $alias "useRole" (index $oldUseRole $level) -}}
 {{- end -}}
 
 {{- /* d8:use:role:<level> and the kubernetes-suffixed variant -> namespace lineage.
@@ -60,20 +314,52 @@
   webhooks refuse it and name the new role -- while an existing plain RoleBinding keeps working, which
   is the whole point of the alias. The annotation is read by the project role binding webhooks only.
 */ -}}
+{{- /*
+  The previous release collected into d8:use:role:<level> the use capabilities of that level and of
+  the levels below, rbac.deckhouse.io/kind: use with the kubernetes lineage, through the
+  d8:use:role:<level>:kubernetes chain. Modules released on their own still ship such capabilities,
+  for example the view and edit capabilities of log-shipper, so both aliases of a level select them
+  next to the namespace lineage, and a RoleBinding to an old name keeps their rights for the
+  compatibility release. d8:namespace:<level> does not select them. The kind is part of the selector:
+  the old manage roles never took these capabilities, the rbacv2-cluster-roles webhook guards the
+  kubernetes lineage, so a user can create no new object of this kind, and a custom capability of the
+  current scheme is not collected.
+
+  The previous d8:use:role:<level> itself selected kind use with aggregate-to-all-as at its level.
+  The d8:use:role:<level>:kubernetes roles carried that label, and they are aliases now. The use roles
+  of the modules with a subsystem of their own still carry it, such as
+  d8:use:role:<level>:virtualization, which collect the use capabilities of the module, so
+  d8:use:role:<level> selects them too, and a RoleBinding to it keeps their rights. The kubernetes
+  variant does not, as the old role did not. The webhook guards the all lineage as well, so a user
+  can create no new object of this kind.
+*/ -}}
+{{- $useLevelsUpTo := dict
+  "viewer" (list "viewer")
+  "user" (list "viewer" "user")
+  "manager" (list "viewer" "user" "manager")
+  "admin" (list "viewer" "user" "manager" "admin")
+-}}
 {{- range $level := list "viewer" "user" "manager" "admin" -}}
-  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level) "delegatable" true "disabledForProjects" true) -}}
-  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s:kubernetes" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level) "delegatable" true "disabledForProjects" true) -}}
+  {{- $selectors := list (dict "labels" (dict "rbac.deckhouse.io/aggregate-to-namespace-as" $level)) -}}
+  {{- range $lower := index $useLevelsUpTo $level -}}
+    {{- $selectors = append $selectors (dict "labels" (dict "rbac.deckhouse.io/kind" "use" "rbac.deckhouse.io/aggregate-to-kubernetes-as" $lower)) -}}
+  {{- end -}}
+  {{- $moduleUseRoles := dict "labels" (dict "rbac.deckhouse.io/kind" "use" "rbac.deckhouse.io/aggregate-to-all-as" $level) -}}
+  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s" $level) "selectors" (append $selectors $moduleUseRoles) "target" (printf "d8:namespace:%s" $level) "delegatable" true "disabledForProjects" true) -}}
+  {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s:kubernetes" $level) "selectors" $selectors "target" (printf "d8:namespace:%s" $level) "delegatable" true "disabledForProjects" true) -}}
 {{- end -}}
 
 {{- /*
-  The can-assign ranges of the identity-assign webhook live on the new roles as labels, and
-  aggregation copies rules, not labels. An alias therefore repeats the range of its target, so a
-  subject still bound to the old name keeps the right to assign roles for the compatibility release,
-  not only the rights the target aggregates.
+  The can-assign ranges of the identity-assign webhook live on the roles as labels, and aggregation
+  copies rules, not labels. An alias therefore carries the range the old role had, so a subject
+  still bound to the old name keeps the right to assign roles for the compatibility release, not
+  only the rights the alias aggregates. The ranges are keyed by the old name: the range of the
+  security manager moved to d8:subsystem:iam:manager, while d8:manage:security:manager keeps
+  assigning the security roles it assigned before.
 */ -}}
 {{- $canAssign := dict
-  "d8:system:manager" (dict "user-authz.deckhouse.io/can-assign-basic-max" "ClusterAdmin" "user-authz.deckhouse.io/can-assign-scope" "system" "user-authz.deckhouse.io/can-assign-max-level" "admin")
-  "d8:subsystem:security:manager" (dict "user-authz.deckhouse.io/can-assign-basic-max" "ClusterAdmin" "user-authz.deckhouse.io/can-assign-scope" "subsystem" "user-authz.deckhouse.io/can-assign-subsystem" "security" "user-authz.deckhouse.io/can-assign-max-level" "admin")
+  "d8:manage:all:manager" (dict "user-authz.deckhouse.io/can-assign-basic-max" "ClusterAdmin" "user-authz.deckhouse.io/can-assign-scope" "system" "user-authz.deckhouse.io/can-assign-max-level" "admin")
+  "d8:manage:security:manager" (dict "user-authz.deckhouse.io/can-assign-basic-max" "ClusterAdmin" "user-authz.deckhouse.io/can-assign-scope" "subsystem" "user-authz.deckhouse.io/can-assign-subsystem" "security" "user-authz.deckhouse.io/can-assign-max-level" "admin")
 -}}
 
 {{- range $alias := $aliases }}
@@ -85,17 +371,24 @@ metadata:
   annotations:
     en.meta.deckhouse.io/title: "Deprecated: {{ $alias.name }}"
     ru.meta.deckhouse.io/title: "Устарело: {{ $alias.name }}"
-    en.meta.deckhouse.io/description: "Deprecated RBACv2 role kept for one release for backward compatibility. Migrate bindings to {{ $alias.target }}."
-    ru.meta.deckhouse.io/description: "Устаревшая роль RBACv2, оставленная на один релиз для обратной совместимости. Переведите привязки на {{ $alias.target }}."
+    en.meta.deckhouse.io/description: "Deprecated RBACv2 role kept for one release for backward compatibility. Migrate bindings to {{ $alias.target }}.{{ $alias.alsoEn | default "" }}"
+    ru.meta.deckhouse.io/description: "Устаревшая роль RBACv2, оставленная на один релиз для обратной совместимости. Переведите привязки на {{ $alias.target }}.{{ $alias.alsoRu | default "" }}"
     rbac.deckhouse.io/deprecated-replaced-by: {{ $alias.target | quote }}
     {{- if $alias.disabledForProjects }}
     rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"
+    {{- end }}
+    {{- with $alias.projection }}
+    user-authz.deckhouse.io/use-binding-selectors: {{ . | toJson | quote }}
     {{- end }}
   labels:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/deprecated: "true"
-    {{- range $key, $value := (index $canAssign $alias.target | default dict) }}
+    {{- with $alias.useRole }}
+    rbac.deckhouse.io/kind: manage
+    rbac.deckhouse.io/use-role: {{ . | quote }}
+    {{- end }}
+    {{- range $key, $value := (index $canAssign $alias.name | default dict) }}
     {{ $key }}: {{ $value | quote }}
     {{- end }}
     {{- if $alias.delegatable }}
@@ -103,6 +396,21 @@ metadata:
     {{- end }}
 aggregationRule:
   clusterRoleSelectors:
+    {{- range $selector := $alias.selectors }}
     - matchLabels:
-        rbac.deckhouse.io/{{ $alias.selector }}: {{ $alias.level | quote }}
+        {{- range $key, $value := $selector.labels }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- with $selector.notIn }}
+      matchExpressions:
+        {{- range $key, $values := . }}
+        - key: {{ $key | quote }}
+          operator: NotIn
+          values:
+            {{- range $value := $values }}
+            - {{ $value | quote }}
+            {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
 {{- end }}

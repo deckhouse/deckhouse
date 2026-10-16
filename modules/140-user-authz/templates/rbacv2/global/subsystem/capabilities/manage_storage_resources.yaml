@@ -14,7 +14,7 @@ metadata:
     rbac.deckhouse.io/capability: "subsystem-capability.storage.manage_resources"
     rbac.deckhouse.io/scope: subsystem
     rbac.deckhouse.io/subsystem: storage
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/aggregate-to-cluster-as: manager
     rbac.deckhouse.io/aggregate-to-storage-as: manager
 rules:
   - apiGroups:

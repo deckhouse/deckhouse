@@ -14,7 +14,7 @@ metadata:
     rbac.deckhouse.io/capability: "subsystem-capability.storage.view_resources"
     rbac.deckhouse.io/scope: subsystem
     rbac.deckhouse.io/subsystem: storage
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
+    rbac.deckhouse.io/aggregate-to-cluster-as: viewer
     rbac.deckhouse.io/aggregate-to-storage-as: viewer
 rules:
   - apiGroups:

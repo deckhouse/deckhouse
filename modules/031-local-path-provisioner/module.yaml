@@ -3,7 +3,7 @@ stage: General Availability
 weight: 31
 critical: true
 subsystems:
-  - infrastructure
+  - storage
 namespace: d8-local-path-provisioner
 descriptions:
   en: Provides local storage on Kubernetes nodes using HostPath volumes. Creates StorageClass resources for managing local storage provisioning.

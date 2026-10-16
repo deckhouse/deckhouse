@@ -2,7 +2,7 @@ name: chrony
 critical: true
 weight: 470
 subsystems:
-  - infrastructure
+  - cluster
 namespace: d8-chrony
 stage: General Availability
 descriptions:

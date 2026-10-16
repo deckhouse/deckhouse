@@ -33,12 +33,16 @@ legacy one below it. Drop the legacy branch only if the module's `module.yaml` a
 1.78 or newer, or the person running you says so.
 
 **Mistakes here are silent.** Nothing rejects these objects at apply time and nothing is logged: the
-labels are simply read by different code now. Three things happen to a module that gets this wrong,
+labels are simply read by different code now. Four things happen to a module that gets this wrong,
 all of them without a single error message:
 
-- a namespaced capability that keeps `aggregate-to-kubernetes-as` lands in the cluster-wide
-  `d8:subsystem:kubernetes:*` roles, so its rules are granted across the whole cluster while the
-  tenants who used to have them in their namespace lose them;
+- a namespaced capability that keeps the label of a subsystem the role model kept (`observability`,
+  `security`, `storage`) lands in the cluster-wide `d8:subsystem:<subsystem>:*` roles, so its rules are
+  granted across the whole cluster, and one that keeps the label of a legacy subsystem
+  (`aggregate-to-kubernetes-as`) lands in no role; either way the tenants who used to have the rules in
+  their namespace lose them;
+- a cluster-level capability that keeps the label of a legacy subsystem (`deckhouse`,
+  `infrastructure`, `kubernetes`, `networking`) lands in no role at all;
 - a namespaced capability at the `user` or `admin` level disappears entirely, because the subsystem
   lineages have no such levels and nothing selects the object;
 - without `rbac.deckhouse.io/scope`, the automatic `RoleBinding` in the module's own namespace stops
@@ -53,7 +57,8 @@ Change only:
 - files under `**/templates/rbacv2/**`;
 - inside those files, only `metadata` (the object name, the `rbac.deckhouse.io/*` labels, the i18n
   annotations) — and `rules`, only when you move a rule between tiers as decided below;
-- one new file, `templates/_rbacv2_compat.tpl`, holding the version gate.
+- one new file, `templates/_rbacv2_compat.tpl`, holding the version gate;
+- files under `templates/rbacv2-compat/`, only for the aliases the person running you asks for (Step 3c).
 
 Do not:
 
@@ -80,6 +85,9 @@ grep -rn 'rbacv2_new_scheme' --include='*.yaml' --include='*.tpl' .
 
 # Does the module already require 1.78 or newer? Then the legacy branch is dead weight.
 grep -n 'deckhouse:' module.yaml 2>/dev/null
+
+# Which subsystem does module.yaml declare? It must be the module's subsystem in the DKP subsystems table.
+grep -n -A3 '^subsystems' module.yaml 2>/dev/null
 
 # Are the labels templated through helm_lib_module_labels?
 grep -rln 'helm_lib_module_labels' --include='*.yaml' . | grep 'templates/rbacv2'
@@ -112,11 +120,34 @@ object twice per reconcile, leaving the role empty in between.
 | Lineage | Levels | Granted with | What a module puts there |
 |---------|--------|--------------|--------------------------|
 | `namespace` | `viewer`, `user`, `manager`, `admin`, `superadmin` | `RoleBinding` | The module's namespaced resources — what a tenant works with |
-| a subsystem: `deckhouse`, `infrastructure`, `kubernetes`, `networking`, `observability`, `security`, `storage` | `viewer`, `manager`, `superadmin` | `ClusterRoleBinding` | The module's cluster-scoped resources and its `ModuleConfig` |
+| a subsystem, one of the eight the platform ships (see below), or one of the module's own that its `module.yaml` declares and whose `d8:subsystem:<name>:*` roles the module ships (see RBACV2_MODULE_MIGRATION.md, "A subsystem of the module's own") | `viewer`, `manager`, `superadmin` | `ClusterRoleBinding` | The module's cluster-scoped resources and its `ModuleConfig` |
 
 The legacy scheme had the same two tiers under different names: `use` for what happens inside a
 namespace, `manage` for the module's own configuration. What changes is that the namespace tier
 moves off the `kubernetes` subsystem onto the `namespace` lineage, where a `RoleBinding` can reach it.
+
+### The subsystems
+
+The role model has eight subsystems. They are `iam`, `security`, `cluster`, `delivery`, `network`,
+`storage`, `observability` and `managed-services`. The `d8:subsystem:<subsystem>:*` roles of all of them
+come from user-authz, and the module never ships one of those. The DKP subsystems table, an internal
+document, puts every DKP module in one of them, and `subsystems` in `module.yaml` must name that one.
+If it does not, or names a legacy subsystem, report it and ask; do not guess the module's subsystem.
+
+The seven legacy subsystems went to the following ones.
+
+| Legacy subsystem | Subsystem of the role model |
+|------------------|-----------------------------|
+| `deckhouse`, `infrastructure`, `kubernetes` | `cluster` |
+| `networking` | `network` |
+| `observability`, `security`, `storage` | the same |
+| a subsystem of the module's own (`virtualization`) | the one `module.yaml` declares (`cluster` for virtualization) |
+
+No role of the model aggregates a legacy lineage, and a capability never carries the legacy label and
+the new one together. A module that had a subsystem of its own named its objects after the module
+(`d8:manage:permission:subsystem:<module>:<action>`, `aggregate-to-<module>-as`). If `module.yaml`
+now declares a platform subsystem instead, the module's system capabilities move to that subsystem's
+lineage, and its roles `d8:manage:<module>:<level>` have no counterpart (Step 3c).
 
 ## Step 3. The mechanical rewrite
 
@@ -130,7 +161,7 @@ Per file, rename the object and fix the labels:
 | — | `rbac.deckhouse.io/scope: namespace` (was `use`) or `system` (was `manage`) |
 | — | `rbac.deckhouse.io/capability: "<scope>-capability.<module>.<action>"` |
 | `rbac.deckhouse.io/aggregate-to-kubernetes-as: <level>` on a `use` object | `rbac.deckhouse.io/aggregate-to-namespace-as: <level>`, same level |
-| `rbac.deckhouse.io/aggregate-to-<subsystem>-as: <level>` on a `manage` object | unchanged, including several at once |
+| `rbac.deckhouse.io/aggregate-to-<subsystem>-as: <level>` on a `manage` object | when `module.yaml` declares one subsystem of the role model, the label of that subsystem, same level, whichever subsystem the old label named; otherwise the label of the subsystem of the role model that took the legacy one over (Step 2), same level, and report a label of a subsystem `module.yaml` does not declare. Two labels that land on one subsystem are merged into one and reported. An `rbac.yaml` that lists `subsystems` takes the place of `module.yaml` here |
 | `rbac.deckhouse.io/level: module` | delete it, nothing reads it |
 | `rbac.deckhouse.io/namespace: d8-<module>` | keep on `system`, delete on `namespace` (it is only read on `system`/`subsystem` objects) |
 
@@ -205,7 +236,7 @@ added as plain YAML next to the name:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  {{- include "helm_lib_module_labels" (list . (dict "rbac.deckhouse.io/capability" "system-capability.mymodule.edit" "rbac.deckhouse.io/aggregate-to-networking-as" "manager" "rbac.deckhouse.io/kind" "capability" "rbac.deckhouse.io/scope" "system" "rbac.deckhouse.io/namespace" "d8-mymodule")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "rbac.deckhouse.io/capability" "system-capability.mymodule.edit" "rbac.deckhouse.io/aggregate-to-network-as" "manager" "rbac.deckhouse.io/kind" "capability" "rbac.deckhouse.io/scope" "system" "rbac.deckhouse.io/namespace" "d8-mymodule")) | nindent 2 }}
   name: d8:system-capability:mymodule:edit
   annotations:
     en.meta.deckhouse.io/title: "Module mymodule: edit configuration"
@@ -246,11 +277,12 @@ Copy it as it is. Six things in it are not decoration:
 - It answers `true`, and that is about the direction of failure rather than about which branch is
   likelier. The version file holds `CI_COMMIT_TAG`, so a build off any branch says `dev`: a dev stand
   built from `release-1.77` looks exactly like one built from `main`. Of the two ways to be wrong
-  there, only one is dangerous — the new object on a 1.77 cluster is inert, because nothing there
-  selects `aggregate-to-namespace-as`, and the module's permissions are merely missing; the legacy
-  object on a 1.78 cluster is still aggregated by `d8:subsystem:kubernetes:<level>`, which is granted
-  through a `ClusterRoleBinding`, so rules meant for one namespace become cluster-wide. One direction
-  loses access, the other hands it out.
+  there, only one is dangerous. The new object on a cluster of the legacy scheme is inert, because
+  nothing there selects `aggregate-to-namespace-as`, and the module's permissions are merely missing; a
+  legacy use capability on a cluster of the role model that carries the lineage of a subsystem the role model kept
+  (`observability`, `security`, `storage`) is aggregated by `d8:subsystem:<subsystem>:<level>`, which
+  is granted through a `ClusterRoleBinding`, so rules meant for one namespace become cluster-wide. One
+  direction loses access, the other hands it out.
 - The comparison is on major and minor only. Semver orders `1.78.0-rc.1` **below** `1.78.0`, so
   comparing the raw string would serve a release candidate of 1.78 the legacy object.
 - The regex uses `[.]` rather than `\.`: a backslash escape inside a Go template string literal is a
@@ -273,6 +305,45 @@ Then wrap each migrated file, new object first:
 
 The legacy object keeps its old name, labels and rules verbatim — it is what the cluster below 1.78
 reads. Do not "fix" it, and do not leave a file where both branches carry the same object.
+
+A file that already carries the gate was migrated before. If its new branch still names a legacy
+subsystem (`aggregate-to-infrastructure-as`), move that label as in Step 3 in the new branch only, and
+leave the legacy branch as it is. If its new branch holds `d8:subsystem:<module>:<level>` and
+`module.yaml` now puts the module in a platform subsystem, empty the new branch, keep the gate and the
+legacy branch, and treat the legacy name `d8:manage:<module>:<level>` as Step 3c says.
+
+## Step 3c. Roles of the module
+
+A role of the module is an `aggregationRule` and no rules. A namespace role of the module
+(`d8:use:role:<level>:<module>`, `d8:use:<module>:superadmin`) has no counterpart in the role model,
+since `d8:namespace:<level>` gathers the namespace capabilities. A subsystem role of the module
+(`d8:manage:<module>:<level>`) keeps one while `module.yaml` declares the module's own subsystem, and
+then it becomes `d8:subsystem:<module>:<level>` (see RBACV2_MODULE_MIGRATION.md, "A subsystem of the
+module's own"). Once `module.yaml` puts the module in a platform subsystem, the role has no counterpart
+either, since `d8:subsystem:<subsystem>:<level>` of user-authz gathers the system capabilities. A role
+with no counterpart stays in the legacy branch of the gate only. Do not decide on your own whether its
+old name stays; report the role and ask. If the person running you wants the name kept, write it as an
+alias in `templates/rbacv2-compat/`, one ClusterRole per old name:
+
+- an empty `ClusterRole` with the old name, no `rules` key, the label `rbac.deckhouse.io/deprecated: "true"`,
+  the annotation `rbac.deckhouse.io/deprecated-replaced-by: <new role>`, and the four i18n annotations
+  (`Deprecated: <old name>`);
+- selectors that grant no more than the role did, by `module: <module>`, `rbac.deckhouse.io/kind: capability`
+  and the lineage label, one selector per level up to the role's own;
+- for a namespace role (`d8:use:role:<level>:<module>`, `d8:use:<module>:superadmin`, replaced by
+  `d8:namespace:<level>`), the selector label is `rbac.deckhouse.io/aggregate-to-namespace-as`, and the
+  alias also carries the label `rbac.deckhouse.io/delegatable: "true"` and the annotation
+  `rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"`, so a RoleBinding to it inside a
+  project namespace keeps working and a new ProjectRoleBinding to it is refused;
+- for a subsystem role (`d8:manage:<module>:<level>`, replaced by `d8:subsystem:<subsystem>:<level>`),
+  the selector adds `rbac.deckhouse.io/scope: system` and uses
+  `rbac.deckhouse.io/aggregate-to-<subsystem>-as`, and the alias carries neither
+  `rbac.deckhouse.io/delegatable` nor `rbac.deckhouse.io/disabled-for-direct-use-in-projects`.
+
+`templates/rbacv2-compat/` is outside the version gate, while the legacy branch still renders the role
+under the old name below the version the gate checks. Wrap each alias in the gate
+(`{{- if eq (include "<module>.rbacv2_new_scheme" .) "true" }}` ... `{{- end }}`), or the two objects
+collide on those clusters. With the legacy branch dropped the alias needs no gate.
 
 ## Step 4. The three decisions
 
@@ -332,7 +403,13 @@ git diff --name-only
 
 The first render must list only `d8:use:capability:*` and `d8:manage:permission:*`, the second and
 the third only `d8:namespace-capability:*` and `d8:system-capability:*`. A render that fails on
-`dev` means the gate was not copied as written.
+`dev` means the gate was not copied as written. The second render must also carry no legacy subsystem
+label:
+
+```shell
+helm template . --set global.deckhouseVersion=v1.78.0 --set global.enabledModules='{}' \
+  | grep 'aggregate-to-\(deckhouse\|infrastructure\|kubernetes\|networking\)-as'
+```
 
 The module's own template tests are the one thing outside `templates/` the gate does break, and they
 break silently in the sense that matters: a test that looks up a ClusterRole by name now finds it
@@ -361,8 +438,9 @@ And every migrated object satisfies the contract the platform tests
   role is the other way round and carries no `rules` key at all);
 - it carries a unique `rbac.deckhouse.io/capability` marker, at most 63 characters;
 - it carries at least one `rbac.deckhouse.io/aggregate-to-<lineage>-as` label, whose lineage is
-  `namespace`, `system`, `project` or a subsystem, and whose level is one of `viewer`, `user`,
-  `manager`, `admin`, `superadmin`;
+  `namespace`, `system`, `project` or one of the eight subsystems, and whose level is one of `viewer`,
+  `user`, `manager`, `admin`, `superadmin`;
+- no legacy subsystem label is left on it (`deckhouse`, `infrastructure`, `kubernetes`, `networking`);
 - `rbac.deckhouse.io/delegatable` appears on no capability at all.
 
 ## Step 6. Report
@@ -384,6 +462,9 @@ Dropped lineages: <n>
 
 Open questions: <n>
   <path> — <what you could not decide and what you need to know>
+
+Roles of the module: <n>
+  <path> — <old name>, no counterpart; alias <asked for and written | not wanted>
 
 Gate: <written|dropped, because the module requires 1.78+>
 

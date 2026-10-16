@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: control-plane-manager
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/aggregate-to-cluster-as: manager
     rbac.deckhouse.io/kind: capability
     rbac.deckhouse.io/capability: "system-capability.control-plane-manager.edit"
     rbac.deckhouse.io/scope: system

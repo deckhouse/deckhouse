@@ -109,6 +109,24 @@ rules:
       - delete
       - deletecollection
   - apiGroups:
+      - gateway.networking.k8s.io
+    resources:
+      - backendtlspolicies
+      - gateways
+      - grpcroutes
+      - httproutes
+      - listenersets
+      - referencegrants
+      - tcproutes
+      - tlsroutes
+      - udproutes
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+      - deletecollection
+  - apiGroups:
       - authorization.k8s.io
     resources:
       - localsubjectaccessreviews

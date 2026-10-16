@@ -3,7 +3,7 @@ critical: true
 weight: 38
 stage: Preview
 subsystems:
-  - infrastructure
+  - cluster
 namespace: d8-system
 disable:
   confirmation: true

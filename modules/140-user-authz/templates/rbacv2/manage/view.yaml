@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authz
-    rbac.deckhouse.io/aggregate-to-security-as: viewer
+    rbac.deckhouse.io/aggregate-to-iam-as: viewer
     rbac.deckhouse.io/kind: capability
     rbac.deckhouse.io/capability: "system-capability.user-authz.view"
     rbac.deckhouse.io/scope: system

@@ -2,7 +2,7 @@ name: node-manager
 critical: true
 weight: 40
 subsystems:
-  - infrastructure
+  - cluster
 namespace: d8-cloud-instance-manager
 descriptions:
   en: Manages nodes in the Kubernetes cluster as a related group. Configures and updates cluster nodes, manages cluster scaling in the cloud, and manages local users on nodes.

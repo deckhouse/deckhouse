@@ -1,4 +1,6 @@
 name: deckhouse-tools
+subsystems:
+  - cluster
 namespace: d8-system
 stage: General Availability
 descriptions:

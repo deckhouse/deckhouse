@@ -1,9 +1,9 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:subsystem-capability:networking:view_resources
+  name: d8:subsystem-capability:network:view_resources
   annotations:
-    en.meta.deckhouse.io/title: "Networking: view cluster resources"
+    en.meta.deckhouse.io/title: "Network: view cluster resources"
     ru.meta.deckhouse.io/title: "Сеть: просмотр кластерных ресурсов"
     en.meta.deckhouse.io/description: "Read-only access to cluster-scoped networking resources."
     ru.meta.deckhouse.io/description: "Доступ только на чтение к кластерным сетевым ресурсам."
@@ -11,11 +11,11 @@ metadata:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/kind: capability
-    rbac.deckhouse.io/capability: "subsystem-capability.networking.view_resources"
+    rbac.deckhouse.io/capability: "subsystem-capability.network.view_resources"
     rbac.deckhouse.io/scope: subsystem
-    rbac.deckhouse.io/subsystem: networking
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
-    rbac.deckhouse.io/aggregate-to-networking-as: viewer
+    rbac.deckhouse.io/subsystem: network
+    rbac.deckhouse.io/aggregate-to-cluster-as: viewer
+    rbac.deckhouse.io/aggregate-to-network-as: viewer
 rules:
   - apiGroups:
       - networking.k8s.io

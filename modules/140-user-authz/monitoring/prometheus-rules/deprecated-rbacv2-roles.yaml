@@ -28,13 +28,20 @@
         # Recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*).
         ```
 
-        A ClusterRoleBinding to a deprecated `d8:manage:*` name keeps its cluster-scoped rights, but no longer receives the RoleBindings that used to project it into the module namespaces (`d8-cloud-provider-*`, `d8-monitoring` and the rest): the ones created by the previous release are removed. Reading logs, describing pods and `exec` inside those namespaces come back when the binding is recreated on the new role name.
+        {{ if match "^user-authz:[^:]+:additional-role:" $labels.binding_name }}`user-authz-controller` renders this binding from `spec.additionalRoles` of the ClusterAuthorizationRule `{{ reReplaceAll "^user-authz:([^:]+):additional-role:.*$" "$1" $labels.binding_name }}` and creates it again when it is deleted. Replace `{{ $labels.role_name }}` with the new role name in `spec.additionalRoles` of that ClusterAuthorizationRule instead.{{ else }}If a project template renders this binding, replace the role name in the ProjectTemplate instead, because `multitenancy-manager` renders the binding again from it.{{ end }}{{ if match "^d8:manage:security:" $labels.role_name }}{{ $level := reReplaceAll "^d8:manage:security:" "" $labels.role_name }}
+
+        In the new model the rights for `user-authn` and `user-authz`{{ if eq $level "manager" }} and the right to assign roles{{ end }} come with `d8:subsystem:iam:{{ $level }}`, not with `d8:subsystem:security:{{ $level }}`. To keep them, replace this binding with two bindings with the same subjects, one to `d8:subsystem:iam:{{ $level }}` and one to `d8:subsystem:security:{{ $level }}`. `d8:subsystem:iam:{{ $level }}` also grants the rights for `multitenancy-manager`.{{ end }}
+
+        The list of subsystems changed as well. `deckhouse`, `infrastructure` and `kubernetes` were merged into `cluster`, `networking` became `network`, the `user-authz` and `user-authn` modules moved from `security` to `iam`, and `multitenancy-manager` moved from `deckhouse` to `iam`. The aliases of the old subsystem roles select the capabilities of the modules these roles covered, and the old subsystem labels that modules released on their own may still carry.
+        The capabilities themselves changed in this release, so the rights of the binding are close to the ones it had before the upgrade, not the same. The replacement `d8:subsystem:cluster:<level>` covers the whole `cluster` subsystem and grants more, and so do the roles of the other subsystems that the description of the alias names, so check which roles the subjects of the binding need. The [user-authz documentation](https://deckhouse.io/modules/user-authz/#the-subsystem-list-of-the-aliases) lists the remaining differences.
+
+        A ClusterRoleBinding to a deprecated `d8:manage:*` name also keeps the RoleBindings `d8:use:<use role>:binding:<name>` that the previous release created for it in the namespaces of the modules of its old subsystem (`d8-cloud-provider-*`, `d8-monitoring` and the rest). The use role is `viewer` for a `viewer` alias and `user` for a `manager` alias. When the binding is recreated on the new role name, they are replaced by RoleBindings to the namespace role of the new role in the namespaces of the modules of the new subsystem.
 
         Note: the new `d8:namespace:admin` no longer grants `serviceaccounts/token` creation or impersonation — these disaster-grade actions now require a `superadmin` role by design.
 
-  # Bindings to the old name of a role a module renamed and keeps as an alias. The alias grants what
-  # the new role grants, and the module, not a release of the platform, removes it: the binding does
-  # not hold the release.
+  # Bindings to the old name of a role a module renamed and keeps as an alias. The alias keeps the
+  # binding working, and the module, not a release of the platform, removes it: the binding does not
+  # hold the release.
   - alert: D8UserAuthzDeprecatedRBACv2ModuleRoleInUse
     expr: |
       max by (binding_kind, binding_name, namespace, role_name, replaced_by) (d8_rbacv2_deprecated_role_in_use{aliased="module"}) > 0
@@ -53,16 +60,17 @@
       description: |-
         The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} references `{{ $labels.role_name }}`, the old name of a role that a module renamed to `{{ $labels.replaced_by }}`.
 
-        The module keeps the old name as a compatibility alias, so the binding still grants what the new role grants. The module removes the alias in one of its own releases; the Deckhouse release is not held back by this binding. See the documentation of the module for when.
+        The module keeps the old name as a compatibility alias, so the binding keeps working. The alias may grant less than `{{ $labels.replaced_by }}`, for example when the module moved into a wider subsystem and the alias kept the rights of the old role, so check what the subjects of the binding need before recreating it. The module removes the alias in one of its own releases; the Deckhouse release is not held back by this binding. See the documentation of the module for when.
 
         Recreate the binding on the new name. Because `roleRef` is immutable, delete and recreate the binding pointing at `{{ $labels.replaced_by }}`:
         ```bash
         d8 k get {{ $labels.binding_kind | toLower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
         ```
 
-  # Bindings to a deprecated CAPABILITY name — capabilities are aggregation building blocks, were never
-  # meant to be bound directly and have NO compat alias, so the binding already grants nothing. Higher
-  # urgency than the aliased-role case.
+  # Bindings to a legacy name that no ClusterRole has, mostly a CAPABILITY name, or a role of the
+  # previous scheme that a module no longer ships. Capabilities are aggregation building blocks, were
+  # never meant to be bound directly and have NO compat alias. The binding already grants nothing.
+  # Higher urgency than the aliased-role case.
   - alert: D8UserAuthzDeprecatedRBACv2CapabilityInUse
     expr: |
       max by (binding_kind, binding_name, namespace, role_name) (d8_rbacv2_deprecated_role_in_use{aliased="false"}) > 0
@@ -82,6 +90,8 @@
         The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} binds the deprecated RBACv2 capability `{{ $labels.role_name }}` directly.
 
         Capabilities (`d8:manage:permission:*`, `d8:use:capability:*`) are aggregation building blocks — they are meant to be composed into the `d8:{system,subsystem,namespace,project}:*` roles, not bound directly. They were renamed and have NO compatibility alias, so this binding **already grants nothing** after the upgrade.
+
+        No ClusterRole named `{{ $labels.role_name }}` exists in the cluster. The alert also names a binding to an old role name that a module no longer ships, for example after the module moved to the new role names.
 
         Recreate the binding against the appropriate new role (or a custom role aggregating the new capability). Because `roleRef` is immutable, delete and recreate the binding:
         ```bash

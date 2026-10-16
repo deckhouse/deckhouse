@@ -19,3 +19,8 @@ aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
         rbac.deckhouse.io/aggregate-to-storage-as: superadmin
+      matchExpressions:
+        - key: rbac.deckhouse.io/kind
+          operator: NotIn
+          values:
+            - use

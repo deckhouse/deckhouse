@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: multitenancy-manager
-    rbac.deckhouse.io/aggregate-to-deckhouse-as: viewer
+    rbac.deckhouse.io/aggregate-to-iam-as: viewer
     rbac.deckhouse.io/kind: capability
     rbac.deckhouse.io/capability: "system-capability.multitenancy-manager.view"
     rbac.deckhouse.io/scope: system

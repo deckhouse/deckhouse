@@ -1,11 +1,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:subsystem:networking:viewer
+  name: d8:subsystem:network:viewer
   annotations:
-    en.meta.deckhouse.io/title: "Networking: Viewer"
+    en.meta.deckhouse.io/title: "Network: Viewer"
     ru.meta.deckhouse.io/title: "Просмотр подсистемы сети"
-    en.meta.deckhouse.io/description: "Read-only access to the Networking subsystem configuration."
+    en.meta.deckhouse.io/description: "Read-only access to the Network subsystem configuration."
     ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации подсистемы сети."
   labels:
     heritage: deckhouse
@@ -13,10 +13,15 @@ metadata:
     rbac.deckhouse.io/use-role: viewer
     rbac.deckhouse.io/kind: role
     rbac.deckhouse.io/scope: subsystem
-    rbac.deckhouse.io/subsystem: networking
-    rbac.deckhouse.io/aggregate-to-networking-as: manager
+    rbac.deckhouse.io/subsystem: network
+    rbac.deckhouse.io/aggregate-to-network-as: manager
     rbac.deckhouse.io/aggregate-to-system-as: viewer
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
-        rbac.deckhouse.io/aggregate-to-networking-as: viewer
+        rbac.deckhouse.io/aggregate-to-network-as: viewer
+      matchExpressions:
+        - key: rbac.deckhouse.io/kind
+          operator: NotIn
+          values:
+            - use

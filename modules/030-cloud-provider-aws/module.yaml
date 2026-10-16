@@ -2,7 +2,7 @@ name: cloud-provider-aws
 critical: true
 weight: 30
 subsystems:
-  - infrastructure
+  - cluster
 namespace: d8-cloud-provider-aws
 stage: General Availability
 descriptions:

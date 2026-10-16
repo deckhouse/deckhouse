@@ -1,6 +1,6 @@
 name: vertical-pod-autoscaler
 subsystems:
-  - infrastructure
+  - cluster
 namespace: kube-system
 requirements:
   modules:

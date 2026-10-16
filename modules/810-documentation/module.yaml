@@ -3,6 +3,8 @@ stage: General Availability
 descriptions:
   en: Creates a documentation web UI for the Deckhouse Platform version currently used in a cluster.
   ru: Создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Platform.
+subsystems:
+  - cluster
 namespace: d8-system
 accessibility:
   editions:

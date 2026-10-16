@@ -155,6 +155,8 @@ aggregationRule:
 rules: []
 ```
 
+Values without the `custom.` prefix are reserved for the capabilities Deckhouse ships, and a ClusterRole a user writes with such a value is refused, so these selectors pick only the capabilities of the module.
+
 Grant the role via a RoleBinding in the desired namespace or via a [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) across the whole project. The user will get access only to the module's resources — the standard Kubernetes resources will not be visible to them.
 
 {% alert level="info" %}
@@ -408,7 +410,7 @@ thus providing easy ways to enhance the model with custom roles.
 ### Creating a new role subsystem
 
 Suppose that the current subsystems do not fit the role distribution in the company. You need to create a new [subsystem](./#subsystems-of-the-role-based-model)
-that includes roles from the `deckhouse` subsystem, the `kubernetes` subsystem and the user-authn module.
+that includes roles from the `cluster` subsystem, the `network` subsystem and the user-authn module.
 
 To meet this need, create the following role:
 
@@ -425,9 +427,9 @@ metadata:
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
-        rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+        rbac.deckhouse.io/aggregate-to-cluster-as: manager
     - matchLabels:
-        rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+        rbac.deckhouse.io/aggregate-to-network-as: manager
     - matchLabels:
         rbac.deckhouse.io/scope: system
         module: user-authn
@@ -466,10 +468,10 @@ The labels for the new role listed at the top suggest that:
 
 Then there are selectors that implement aggregation:
 
-- This one aggregates the manager role from the `deckhouse` subsystem:
+- This one aggregates the manager role from the `cluster` subsystem:
 
   ```yaml
-  rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+  rbac.deckhouse.io/aggregate-to-cluster-as: manager
   ```
 
 - This one aggregates all the system-scope capabilities defined for the `user-authn` module:
@@ -479,7 +481,7 @@ Then there are selectors that implement aggregation:
    module: user-authn
   ```
 
-This way, your role will combine the permissions of the `deckhouse` subsystem, `kubernetes` subsystem, and the `user-authn` module.
+This way, your role will combine the permissions of the `cluster` subsystem, `network` subsystem, and the `user-authn` module.
 
 Notes:
 
@@ -512,9 +514,9 @@ This selector would enable capabilities to be aggregated to a new subsystem by s
  aggregationRule:
    clusterRoleSelectors:
      - matchLabels:
-         rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+         rbac.deckhouse.io/aggregate-to-cluster-as: manager
      - matchLabels:
-         rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+         rbac.deckhouse.io/aggregate-to-network-as: manager
      - matchLabels:
          rbac.deckhouse.io/scope: system
          module: user-authn
@@ -557,19 +559,19 @@ Notes:
 
 To extend an existing role, follow the procedure outlined in the section above. Be sure to change the labels and the role name!
 
-For example, here's how you can extend the manager role from the `deckhouse` (`d8:subsystem:deckhouse:manager`) subsystem:
+For example, here's how you can extend the manager role from the `cluster` (`d8:subsystem:cluster:manager`) subsystem:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
-    rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+    rbac.deckhouse.io/aggregate-to-cluster-as: manager
     rbac.deckhouse.io/kind: custom-capability
     rbac.deckhouse.io/scope: subsystem
-    rbac.deckhouse.io/subsystem: deckhouse
-    rbac.deckhouse.io/capability: "custom.subsystem-capability.deckhouse.superresource_view"
-  name: d8:custom:subsystem-capability:deckhouse:superresource:view
+    rbac.deckhouse.io/subsystem: cluster
+    rbac.deckhouse.io/capability: "custom.subsystem-capability.cluster.superresource_view"
+  name: d8:custom:subsystem-capability:cluster:superresource:view
 rules:
 - apiGroups:
   - mygroup.io
@@ -581,7 +583,7 @@ rules:
   - watch
 ```
 
-This way, the new capability will extend the `d8:subsystem:deckhouse:manager` role.
+This way, the new capability will extend the `d8:subsystem:cluster:manager` role.
 
 ### Extending subsystem roles and adding a new namespace
 
@@ -598,12 +600,12 @@ This label instructs `user-authz-controller` to create a RoleBinding with the na
  kind: ClusterRole
  metadata:
    labels:
-     rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+     rbac.deckhouse.io/aggregate-to-cluster-as: manager
      rbac.deckhouse.io/kind: custom-capability
      rbac.deckhouse.io/scope: subsystem
-     rbac.deckhouse.io/subsystem: deckhouse
+     rbac.deckhouse.io/subsystem: cluster
      rbac.deckhouse.io/namespace: namespace
-   name: d8:custom:subsystem-capability:deckhouse:superresource:view
+   name: d8:custom:subsystem-capability:cluster:superresource:view
  rules:
  - apiGroups:
    - mygroup.io
@@ -790,6 +792,9 @@ Mapping between the old and the new scheme:
 | Aggregation selector: `rbac.deckhouse.io/kind: manage` + `rbac.deckhouse.io/aggregate-to-<subsystem>-as: <level>` | Only `rbac.deckhouse.io/aggregate-to-<subsystem>-as: <level>` |
 | Selector for use permissions: `rbac.deckhouse.io/kind: use` + `rbac.deckhouse.io/aggregate-to-kubernetes-as: <level>` | `rbac.deckhouse.io/aggregate-to-namespace-as: <level>` |
 | Per-module selector: `rbac.deckhouse.io/kind: manage` + `module: <module>` | `rbac.deckhouse.io/scope: system` + `module: <module>` |
+| Labels of the `deckhouse`, `infrastructure` and `kubernetes` subsystems (`rbac.deckhouse.io/aggregate-to-deckhouse-as` and the others) | One label of the `cluster` subsystem, `rbac.deckhouse.io/aggregate-to-cluster-as` |
+| Label of the `networking` subsystem, `rbac.deckhouse.io/aggregate-to-networking-as` | `rbac.deckhouse.io/aggregate-to-network-as` |
+| The `user-authz`, `user-authn` and `multitenancy-manager` modules with the labels of the `security` and `deckhouse` subsystems | The label of the `iam` subsystem, `rbac.deckhouse.io/aggregate-to-iam-as` |
 
 The names of the built-in capabilities changed as well (no aliases):
 
@@ -832,7 +837,7 @@ Otherwise, the next apply creates the old objects again.
 In the old scheme, the `rbac.deckhouse.io/aggregate-to-all-as: <LEVEL>` label meant one of two things, depending on the kind label next to it.
 With `rbac.deckhouse.io/kind: use`, it extended the `d8:use:role:<LEVEL>` roles in every namespace. Their counterpart is `d8:namespace:<LEVEL>`, which selects `rbac.deckhouse.io/aggregate-to-namespace-as: <LEVEL>`, so move such permissions into a namespace capability as described in [Replacing a capability](#replacing-a-capability).
 With `rbac.deckhouse.io/kind: manage`, a role with this label extended `d8:manage:all:<LEVEL>`, and the rest of this section is about it.
-No built-in role selects this label any longer.
+No role of the new model selects this label. Only the deprecated `d8:manage:all:<LEVEL>` and `d8:use:role:<LEVEL>` aliases still select it, depending on the kind label next to it, until they are removed.
 The `d8:manage:all:<LEVEL>` alias and the `d8:system:<LEVEL>` role select `rbac.deckhouse.io/aggregate-to-system-as: <LEVEL>`, and the `rbacv2-cluster-roles.deckhouse.io` webhook admits this label only on a custom capability.
 A custom role therefore cannot extend these roles, and the subjects that got the old role through them get the new role only through a ClusterRoleBinding of their own.
 
@@ -921,10 +926,8 @@ Each new capability also gets the `rbac.deckhouse.io/kind: custom-capability` la
 An old capability with the `rbac.deckhouse.io/namespace: <NAMESPACE>` label gave the subjects of the roles that aggregate it RoleBinding objects in that namespace, the namespace of a module. Deckhouse reads this label only on ClusterRoles with `rbac.deckhouse.io/scope: system` or `subsystem`, so the old capability gives no such RoleBinding objects any more. Copy the label to its replacement, a system or subsystem capability, and Deckhouse creates them again.
 
 A capability with the `rbac.deckhouse.io/kind: use` and `rbac.deckhouse.io/aggregate-to-kubernetes-as: <LEVEL>` labels extended the `d8:use:role:<LEVEL>` roles.
-It adds nothing to them any longer, because `d8:namespace:<LEVEL>` and the `d8:use:role:<LEVEL>` aliases select `rbac.deckhouse.io/aggregate-to-namespace-as`.
-At the `viewer` and `manager` levels, the `d8:subsystem:kubernetes:<LEVEL>` roles select its label instead, whatever its `rbac.deckhouse.io/kind` label.
-Through them, its rules reach `d8:system:<LEVEL>` and the roles of the higher levels, whose subjects get the permissions of the capability in every namespace.
-Replace such a capability before the others. For example, the following commands create its counterpart for the namespace roles:
+Only the deprecated `d8:use:role:<LEVEL>` aliases still select it, until they are removed. `d8:namespace:<LEVEL>` and `d8:project:<LEVEL>` select `rbac.deckhouse.io/aggregate-to-namespace-as`, so a RoleBinding moved to a new role does not get the rules of the capability. The `D8UserAuthzLegacyUseCapability` alert names such a capability.
+Replace it before you move the RoleBinding objects to the new roles. For example, the following commands create its counterpart for the namespace roles:
 
 ```shell
 OLD_CAPABILITY=<OLD_CAPABILITY_NAME>
@@ -945,7 +948,7 @@ Check the permissions of the subjects of the namespace roles, and then delete th
 d8 k delete clusterrole "$OLD_CAPABILITY"
 ```
 
-Deleting it also removes its permissions from the `d8:subsystem:kubernetes:<LEVEL>` roles.
+The `d8:use:role:<LEVEL>` aliases collect the new capability as well, so deleting the old one takes nothing away from their subjects.
 
 ### Roles frozen earlier
 
@@ -969,13 +972,23 @@ A role frozen before the built-in capabilities got the new labels, by removing i
 
   The old objects are deleted only when all the new ones exist, and the commands can be run again after a failure.
 
-* If the role still carries the `rbac.deckhouse.io/aggregate-to-all-as` label, the `D8UserAuthzForeignAggregationLabel` alert names it. No built-in role selects this label any longer, so remove it:
+* If the role still carries the `rbac.deckhouse.io/aggregate-to-all-as` label, the `D8UserAuthzForeignAggregationLabel` alert names it, and the `rbacv2-cluster-roles.deckhouse.io` webhook refuses every update of the role that keeps the label, a new apply of its manifest included.
+  No role of the new model selects this label. The deprecated `d8:manage:all:<LEVEL>` alias still selects it on a role with `rbac.deckhouse.io/kind: manage`, and the deprecated `d8:use:role:<LEVEL>` alias on a role with `rbac.deckhouse.io/kind: use`, until the aliases are removed.
+
+  With `rbac.deckhouse.io/kind: manage`, the subjects of `d8:manage:all:<LEVEL>` keep the role through the ClusterRoleBinding objects that the freeze created for them, so remove the label:
 
   ```shell
   d8 k label clusterrole <ROLE_NAME> rbac.deckhouse.io/aggregate-to-all-as-
   ```
 
+  With `rbac.deckhouse.io/kind: use`, the role gives its rules to the subjects of every RoleBinding to `d8:use:role:<LEVEL>` through this label, and the freeze created no binding for them. Removing the label takes these rules away from them.
+  First create a namespace capability with the rules of the role as described in [Replacing a capability](#replacing-a-capability). Both `d8:namespace:<LEVEL>` and the `d8:use:role:<LEVEL>` alias collect it. Check the permissions of the subjects, and only then remove the label from the role or delete the role.
+
 * A frozen role does not gain permissions for resources added later, such as the resources of a new module. To get them, replace it with a role of the new scheme as described in [Repairing a role](#repairing-a-role).
+
+The RoleBindings that the previous release created in the module namespaces for a binding to a custom role with `rbac.deckhouse.io/kind: manage` and `rbac.deckhouse.io/use-role` are removed on the upgrade. Once the new role carries `rbac.deckhouse.io/scope: system` or `subsystem` and `rbac.deckhouse.io/use-role` and the binding refers to it, they come back as `d8:namespace:<level>:binding:<ClusterRoleBinding name>`, but only in the namespaces of the modules that already carry the new labels and whose system capabilities the new role aggregates. A module that still carries the old labels, such as `rbac.deckhouse.io/kind: manage`, gets no such RoleBinding until it moves to the new ones.
+Until then, create RoleBinding objects in the namespace of that module for the subjects of the binding: one to `d8:namespace:<level>` and one to each ClusterRole of the module that the `D8UserAuthzLegacyUseCapability` alert names. None of these roles is an alias, so the RoleBinding objects do not hold the next release, and the webhook that checks RoleBinding objects in project namespaces does not check the namespace of a module. Delete them once the module carries the new labels and the controller creates its own RoleBinding there.
+A RoleBinding to `d8:use:role:<level>` gives these rights as well, but the `D8UserAuthzDeprecatedRBACv2RoleInUse` alert reports it, and it holds the release that removes the aliases.
 
 ### Examples
 
@@ -1025,9 +1038,7 @@ The following is a configuration example of a role combining the permissions of 
   aggregationRule:
     clusterRoleSelectors:
       - matchLabels:
-          rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
-      - matchLabels:
-          rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+          rbac.deckhouse.io/aggregate-to-cluster-as: manager
       - matchLabels:
           rbac.deckhouse.io/scope: system
           module: user-authn
@@ -1042,6 +1053,7 @@ What changed:
 - The `rbac.deckhouse.io/aggregate-to-all-as` label is removed. The subjects of `d8:system:manager` get the role through a ClusterRoleBinding, see [Roles aggregated into the system roles](#roles-aggregated-into-the-system-roles)
 - The `rbac.deckhouse.io/kind: manage` label is removed from the aggregation selectors
 - All system permissions of a module are now selected with `rbac.deckhouse.io/scope: system` + `module: <module>`
+- The `deckhouse` and `kubernetes` subsystems are part of the `cluster` subsystem now, so their two selectors became one. It selects the whole `cluster` subsystem, which is wider than the two old ones. To keep the role as narrow as before, select the system capabilities of the modules you need by `module: <module>` and `rbac.deckhouse.io/scope: system` instead
 
 #### Custom capability before and after
 
@@ -1104,7 +1116,7 @@ Labels on ClusterRole objects:
 | `rbac.deckhouse.io/use-role` | A use-role level | A namespace-role level | Defines which namespace role is automatically granted to the holder of a system/subsystem role in the system namespaces of its modules (via automatically created RoleBinding objects) |
 | `rbac.deckhouse.io/aggregate-to-all-as` | `<level>` | With `rbac.deckhouse.io/kind: manage`, replaced by `rbac.deckhouse.io/aggregate-to-system-as` on a custom capability, which a custom role cannot carry. With `rbac.deckhouse.io/kind: use`, replaced by `rbac.deckhouse.io/aggregate-to-namespace-as` on a custom capability | Aggregates the object into the system-wide role (`d8:system:<level>`) |
 | `rbac.deckhouse.io/aggregate-to-<subsystem>-as` | Used in selectors together with `rbac.deckhouse.io/kind: manage` | Used in selectors on its own | Aggregates the object into the subsystem role of the given level |
-| `rbac.deckhouse.io/aggregate-to-kubernetes-as` | `<level>` (for use permissions) | Still used for the kubernetes **subsystem** (`d8:subsystem:kubernetes:*`). The old *use*-role meaning moved to `aggregate-to-namespace-as` | Aggregates into `d8:subsystem:kubernetes:<level>` |
+| `rbac.deckhouse.io/aggregate-to-kubernetes-as` | `<level>` (for use and manage permissions) | Not used. The kubernetes subsystem is part of the `cluster` subsystem (`aggregate-to-cluster-as`), and the old *use*-role meaning moved to `aggregate-to-namespace-as` | Aggregated into the old `d8:manage:kubernetes:<level>` and `d8:use:role:<level>:kubernetes` roles |
 | `rbac.deckhouse.io/namespace` | Namespace | Unchanged | An additional namespace where a RoleBinding is automatically created for the role holders |
 | `rbac.deckhouse.io/capability` | — | A unique capability name (for example, `system-capability.deckhouse.view`) | A machine-readable identifier of a built-in capability |
 | `rbac.deckhouse.io/deprecated` | — | `"true"` on alias roles | The role is deprecated and will be removed; migrate the bindings to the new role |
@@ -1168,6 +1180,8 @@ The answer is returned in the `status` field (`users`, `groups`, `serviceAccount
 
 The right to create WhoCan queries is granted by the `d8:user-authz:who-can-checker` cluster role. It is not bound to anyone by default: the query result discloses access subjects across all namespaces, so grant it only to trusted administrators via a ClusterRoleBinding.
 
+The managers of the `iam` and `security` subsystems have this right as well. It comes with the `d8:subsystem-capability:iam:inspect_access` capability of `d8:subsystem:iam:manager` and `d8:subsystem:security:manager`, and so the roles above them have it too (`d8:subsystem:iam:superadmin`, `d8:subsystem:security:superadmin`, `d8:system:manager` and `d8:system:superadmin`).
+
 ## How do I find out what a specific user, group, or ServiceAccount is allowed to do?
 
 With the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), the SubjectAccessReport resource is available — the counterpart of WhoCan. It answers the question "what is this subject allowed to do" and returns a ready-made report: which roles are granted through which bindings, which actions on which resources are allowed cluster-wide and in every namespace, and where each permission comes from.
@@ -1198,6 +1212,8 @@ Report specifics:
 The report is built from RBAC data. Admission webhook restrictions are not folded into the RBAC rows; they are flagged in `status.scopes[].caveat`. For example, editing and deleting system resources is denied below the `superadmin` level — except for cluster administrators (`cluster-admin`, `user-authz:super-admin`, and the bypass groups). If the subject's permissions are limited by a ClusterAuthorizationRule, this is reported in `status.notes`.
 
 The right to build a report about **another** subject is granted by the `d8:user-authz:subject-access-checker` cluster role. Like `who-can-checker`, it is intentionally not bound to anyone by default: the report discloses the full permission map of the subject, including other namespaces. A report about oneself is available to every authenticated user and requires no extra permissions.
+
+The managers of the `iam` and `security` subsystems have this right as well. It comes with the `d8:subsystem-capability:iam:inspect_access` capability of `d8:subsystem:iam:manager` and `d8:subsystem:security:manager`, and so the roles above them have it too (`d8:subsystem:iam:superadmin`, `d8:subsystem:security:superadmin`, `d8:system:manager` and `d8:system:superadmin`).
 
 ## How does a user see the list of namespaces available to them?
 

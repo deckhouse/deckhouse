@@ -1,0 +1,27 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem:cluster:manager
+  annotations:
+    en.meta.deckhouse.io/title: "Cluster: Manager"
+    ru.meta.deckhouse.io/title: "Управление подсистемы кластера"
+    en.meta.deckhouse.io/description: "Management of the Cluster subsystem configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией подсистемы кластера."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/use-role: admin
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: cluster
+    rbac.deckhouse.io/aggregate-to-cluster-as: superadmin
+    rbac.deckhouse.io/aggregate-to-system-as: manager
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-cluster-as: manager
+      matchExpressions:
+        - key: rbac.deckhouse.io/kind
+          operator: NotIn
+          values:
+            - use

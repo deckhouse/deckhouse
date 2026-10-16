@@ -235,7 +235,7 @@ StaticInstance, находящийся в состоянии `Pending` можн�
 
 Незамаскированные значения доступны контроллеру [CAPS](./#cluster-api-provider-static), которому они необходимы для подключения к узлу по SSH, а также пользователям с уровнем доступа [`SuperAdmin`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-current.html#высокоуровневые-роли-используемые-для-реализации-модели) и участникам группы [`kubeadm:cluster-admins`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/cluster-admin-access-model.html).
 
-Роли [`d8:manage:infrastructure:viewer`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#подсистемы-ролевой-модели) и [`d8:manage:infrastructure:manager`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#подсистемы-ролевой-модели) позволяют читать ресурс SSHCredentials, но не предоставляют доступ к SSH-ключу и sudo-паролю.
+Роли [`d8:subsystem:cluster:viewer`](/modules/user-authz/#подсистемы-ролевой-модели) и [`d8:subsystem:cluster:manager`](/modules/user-authz/#подсистемы-ролевой-модели) позволяют читать ресурс SSHCredentials, но не предоставляют доступ к SSH-ключу и sudo-паролю.
 
 Чтобы проверить, может ли пользователь читать конфиденциальные данные SSHCredentials, выполните:
 

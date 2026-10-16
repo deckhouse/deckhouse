@@ -28,7 +28,7 @@ The module creates special aggregated cluster roles (ClusterRole). By using thes
 
 - Manage access to modules of a specific [subsystem](#subsystems-of-the-role-based-model).
 
-  For example, you can use the `d8:subsystem:networking:manager` role in ClusterRoleBinding to allow a network administrator to configure *network* modules (such as `cni-cilium`, `ingress-nginx`, `istio`, etc.).
+  For example, you can use the `d8:subsystem:network:manager` role in ClusterRoleBinding to allow a network administrator to configure *network* modules (such as `cni-cilium`, `ingress-nginx`, `istio`, etc.).
 - Manage access to *user* resources of modules within namespaces.
 
   For example, the `d8:namespace:manager` role in RoleBinding enables deleting/creating/editing the [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) resource in the namespace. At the same time, it does not grant access to the cluster-wide [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig) and [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resources of the `log-shipper` module, nor does it allow configuration of the `log-shipper` module itself.
@@ -87,9 +87,9 @@ Namespace roles are intended to assign rights to a user **in a specific namespac
 The namespace role defines permissions for accessing namespaced resources of modules and standard namespaced resources of Kubernetes (Pod, Deployment, Secret, ConfigMap, etc.).
 
 The module creates the following namespace roles:
-- `d8:namespace:viewer` — allows viewing standard Kubernetes resources (except for Secrets and RBAC resources), pod logs and metrics in a specific namespace, as well as authenticating in the cluster;
+- `d8:namespace:viewer` — allows viewing standard Kubernetes resources (except for Secrets and RBAC resources), Gateway API resources, pod logs and metrics in a specific namespace, as well as authenticating in the cluster;
 - `d8:namespace:user` — in addition to the role `d8:namespace:viewer` it allows viewing secrets in a specific namespace, connecting to pods (`kubectl exec`, `kubectl attach`), deleting pods (but not creating or modifying them), executing `kubectl port-forward` and `kubectl proxy`, as well as changing the number of replicas of controllers;
-- `d8:namespace:manager` — in addition to the role `d8:namespace:user` it allows managing module resources (for example, Certificate, PodLoggingConfig, etc.) and standard namespaced Kubernetes resources (Pod, Deployment, ConfigMap, Secret, Service, Ingress, NetworkPolicy, CronJob, etc.) in a specific namespace;
+- `d8:namespace:manager` — in addition to the role `d8:namespace:user` it allows managing module resources (for example, Certificate, PodLoggingConfig, etc.) and standard namespaced Kubernetes resources (Pod, Deployment, ConfigMap, Secret, Service, Ingress, NetworkPolicy, CronJob, etc.), as well as Gateway API resources (Gateway, ListenerSet, HTTPRoute, GRPCRoute, ReferenceGrant, etc.) in a specific namespace;
 - `d8:namespace:admin` — in addition to the role `d8:namespace:manager` it allows managing the resources ResourceQuota, LimitRange, ServiceAccount, Role, RoleBinding in a specific namespace;
 - `d8:namespace:superadmin` — in addition to the role `d8:namespace:admin` it allows security-sensitive operations: minting ServiceAccount tokens, making requests on behalf of ServiceAccounts, and managing [system resources placed in the namespace](#admin-level-restrictions-and-superadmin-rights) (for example, Dex pods or pods/PVCs of virtual machines).
 
@@ -131,12 +131,12 @@ They grant access only to system namespaces (starting with `d8-` or `kube-`), an
 Whether a role lets you grant access to other people is described in [Who can assign roles](#who-can-assign-roles).
 {% endalert %}
 
-System and subsystem roles are intended for assigning rights to manage the entire platform or a part of it (the [subsystem](#subsystems-of-the-role-based-model)), but not the users applications themselves. The subsystem role, for example, can allow a security administrator to manage security modules (responsible for the security functions of the cluster). Thus, the security administrator will be able to configure authentication, authorization, security policies, etc., but will not be able to manage other cluster functions (such as network and monitoring settings) or change settings in the namespaces of users applications.
+System and subsystem roles are intended for assigning rights to manage the entire platform or a part of it (the [subsystem](#subsystems-of-the-role-based-model)), but not the users applications themselves. The subsystem role, for example, can allow a security administrator to manage security modules (responsible for the security functions of the cluster). Thus, the security administrator will be able to configure security policies, certificate issuance, etc., but will not be able to manage other cluster functions (such as access management, network and monitoring settings) or change settings in the namespaces of users applications.
 
 {% alert level="warning" %}
-A system/subsystem role limits which modules and namespaces a subject can address, but it does not limit the privileges a subject can obtain through the modules it is allowed to manage. This matters most for the `security` subsystem: the right to manage authentication and authorization is equivalent to full control over the cluster.
+A system/subsystem role limits which modules and namespaces a subject can address, but it does not limit the privileges a subject can obtain through the modules it is allowed to manage. This matters most for the `iam` subsystem, because the right to manage authentication and authorization is equivalent to full control over the cluster.
 
-A subject that can manage the `user-authn` module can register an identity provider or reset the credentials of any local user. A subject that can manage the `user-authz` module can modify authorization rules. In both cases, they can obtain an identity with any privileges, including cluster administrator, so treat a `security` subsystem role as a cluster administrator role when planning access.
+A subject that can manage the `user-authn` module can register an identity provider or reset the credentials of any local user. A subject that can manage the `user-authz` module can modify authorization rules. In both cases, they can obtain an identity with any privileges, including cluster administrator, so treat an `iam` subsystem role as a cluster administrator role when planning access.
 {% endalert %}
 
 The system/subsystem role defines access rights:
@@ -169,7 +169,7 @@ Creating a User for an email that already carries a grant, writing or deleting a
 
 Connecting a DexProvider is measured the same way against the identities the provider can assert: [`spec.allowedIdentities`](/modules/user-authn/cr.html#dexprovider-v1-spec-allowedidentities) (emails, email domains, groups) and the provider's own group filters bound that set, and only the roles already granted inside it count. A provider without an email limit can assert every email, including the ones that hold SuperAdmin, so writing it requires SuperAdmin. Basic Authentication of an OIDC or a Crowd provider bypasses Dex and its limits, so such a provider counts as one without an email limit, and an OIDC one also without a group limit; a Crowd provider keeps only `crowd.groups` on the group axis. Details and the list of changes admitted without a check are in the user-authn module documentation.
 
-The ClusterAuthorizationRule `spec.accessLevel` field is a [basic-model](#basic-role-based-model) level: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. A `security` subsystem manager can assign any of those except `SuperAdmin`. That manager also cannot assign the Kubernetes `cluster-admin` ClusterRole. Within the granular model the security manager assigns the `security` subsystem roles up to `d8:subsystem:security:manager`.
+The ClusterAuthorizationRule `spec.accessLevel` field is a [basic-model](#basic-role-based-model) level: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. An `iam` subsystem manager can assign any of those except `SuperAdmin`. That manager also cannot assign the Kubernetes `cluster-admin` ClusterRole. Within the granular model the IAM manager assigns the `iam` subsystem roles up to `d8:subsystem:iam:manager`.
 
 A requester with every permission across the cluster counts as SuperAdmin in these checks and can assign any role, including `SuperAdmin` and `cluster-admin`. For example, a subject of the Kubernetes `cluster-admin` ClusterRole has such permissions if the role is granted by a ClusterRoleBinding or by a ClusterAuthorizationRule without `namespaceSelector` and `limitNamespaces`. If multitenancy mode is enabled, such a rule reaches the system namespaces only with `namespaceSelector.matchAny: true` (or the deprecated `allowAccessToSystemNamespaces: true`).
 Permissions from a ClusterAuthorizationRule with `namespaceSelector` or `limitNamespaces` do not count toward this, even if the rule grants `cluster-admin`. Any non-empty `limitNamespaces` counts as a limit on purpose, even if its entries match every namespace, such as `.*` together with `allowAccessToSystemNamespaces: true`. Such a rule still counts through its `accessLevel`. For example, `accessLevel: SuperAdmin` gives the SuperAdmin range whatever the namespace limits of the rule.
@@ -216,11 +216,13 @@ The `d8:dict` role is independent of the `multitenancy-manager` cluster-wide res
 
 Each DP module belongs to a specific subsystem. For each subsystem, there is a set of roles with different levels of access. Roles are updated automatically when the module is enabled or disabled.
 
-For example, for the `networking` subsystem, there are the following subsystem roles that can be used in `ClusterRoleBinding`:
+The subsystems of the platform are `iam`, `security`, `cluster`, `delivery`, `network`, `storage`, `observability` and `managed-services`.
 
-- `d8:subsystem:networking:viewer`;
-- `d8:subsystem:networking:manager`;
-- `d8:subsystem:networking:superadmin`.
+For example, for the `network` subsystem, there are the following subsystem roles that can be used in `ClusterRoleBinding`:
+
+- `d8:subsystem:network:viewer`;
+- `d8:subsystem:network:manager`;
+- `d8:subsystem:network:superadmin`.
 
 The scope of a role depends on which subsystem it belongs to:
 
@@ -252,7 +254,7 @@ Labels the role model uses on ClusterRole objects:
 |-------|----------|---------|
 | `rbac.deckhouse.io/kind` | All role model objects | Object type: `role` or `capability` — built-in (reserved), `custom-role` or `custom-capability` — user-defined. An object without this label is refused if it carries the aggregation label of a platform scope. |
 | `rbac.deckhouse.io/scope` | Roles and capabilities | Scope: `namespace`, `project`, `subsystem`, `system`. |
-| `rbac.deckhouse.io/subsystem` | Subsystem objects | The subsystem name (for example, `networking`) — only with `scope: subsystem`. |
+| `rbac.deckhouse.io/subsystem` | Subsystem objects | The subsystem name (for example, `network`) — only with `scope: subsystem`. |
 | `rbac.deckhouse.io/aggregate-to-<scope>-as: <level>` | Capabilities and lower-level roles | The aggregation rule: includes the object into the role of the given scope and level. `<scope>` is `system`, `namespace`, `project`, or a subsystem name; `<level>` is `viewer`, `user`, `manager`, `admin`, `superadmin`. These are exactly the labels referenced by `aggregationRule` selectors. |
 | `rbac.deckhouse.io/capability` | Capabilities | The globally unique name of the capability (for example, `namespace-capability.kubernetes.view_logs`) — used to include the capability into a [custom role](faq.html#creating-a-custom-namespace-or-project-role) selectively. |
 | `rbac.deckhouse.io/use-role: <level>` | System and subsystem roles | Which namespace-role level the holder of this role automatically gets in the system namespaces of its subsystem. On the built-in roles: `viewer` → `viewer`, `manager` → `admin`, `superadmin` → `superadmin`. The access is granted by automatically created RoleBinding objects (labelled `rbac.deckhouse.io/automated: "true"`). |
@@ -330,30 +332,74 @@ This is the only allowed modification of built-in roles: changing their rules, a
 
 ### Deprecated role names
 
-The previous role names of the granular model (`d8:manage:<subsystem>:<level>`, `d8:manage:all:<level>`, and `d8:use:role:<level>`) are deprecated and will be removed in the next release. For backward compatibility they are temporarily kept as alias roles: a binding to an alias aggregates the **new** role's capabilities. That is not identical to pre-upgrade rights: `d8:use:role:admin` no longer grants ServiceAccount token minting or impersonation (those moved to `superadmin`); aliases are not `delegatable`, so new project RoleBindings to the old names are rejected; `d8:manage:*` ClusterRoleBindings no longer drive the automated namespace RoleBindings.
+The previous role names of the granular model (`d8:manage:<subsystem>:<level>`, `d8:manage:all:<level>`, and `d8:use:role:<level>`) are deprecated and will be removed in the next release. For backward compatibility they are temporarily kept as alias roles. A binding to an alias aggregates the **new** role's capabilities, except where the list of subsystems changed (see [below](#the-subsystem-list-of-the-aliases)).
+The rights of an alias are not identical to the pre-upgrade ones. `d8:use:role:admin` no longer grants ServiceAccount token minting or impersonation, which moved to `superadmin`. The `d8:manage:*` aliases are not `delegatable`. The `d8:use:role:*` aliases are, so a RoleBinding to them inside a project namespace keeps working, but a new ProjectRoleBinding or ClusterProjectRoleBinding to an old name is refused.
+
+A ClusterRoleBinding to a `d8:manage:*` alias keeps the RoleBindings that the previous release created for it in the namespaces of the modules of the old subsystem. For a `viewer` alias they are named `d8:use:viewer:binding:<ClusterRoleBinding name>` and refer to `d8:use:role:viewer`, for a `manager` alias `d8:use:user:binding:<ClusterRoleBinding name>` and `d8:use:role:user`. They bind the subjects of the ClusterRoleBinding and are kept in sync as before.
+The namespaces are those of the platform modules that were in the old subsystem and of the capabilities of modules that still carry the old labels, `rbac.deckhouse.io/kind: manage` together with the aggregation label of the old subsystem. For `d8:manage:all:<level>` they also include the namespaces that the subsystem roles of the modules with a subsystem of their own reach at its level, for example `d8-virtualization`. A binding to an alias therefore gets no RoleBinding in the namespace of a module that joined the subsystem later or of a module released on its own that already carries the new labels. A ClusterRole created by a user adds no namespace, whatever labels it carries.
+The RoleBindings that the previous release created for the binding stay while the binding refers to the old name, even in a namespace that is no longer among these, for example when a module released on its own moves to the new labels. A ClusterRoleBinding that is deleted and created again under the same name keeps them only in these namespaces.
+When you recreate the binding on a new role name, these RoleBindings are replaced by `d8:namespace:<level>:binding:<ClusterRoleBinding name>` ones in the namespaces of the modules of the new subsystem, with the namespace role of the new role (`admin` for a `manager` role).
+The RoleBindings that the previous release created for a binding to a custom role of the previous scheme with `rbac.deckhouse.io/kind: manage`, such as `custom:manage:mycustom:manager`, are removed on the upgrade, because `user-authz-controller` keeps such RoleBindings for the roles of Deckhouse only. They come back as `d8:namespace:<level>:binding:<ClusterRoleBinding name>` once the role is recreated as a `d8:custom:*` role with `rbac.deckhouse.io/scope: system` or `subsystem` and `rbac.deckhouse.io/use-role` and the binding refers to the new role, but only in the namespaces of the modules that already carry the new labels. A module that still carries the old labels gets no such RoleBinding until it moves to the new ones.
+Until then, create RoleBinding objects in the namespace of that module for the subjects of the binding: one to `d8:namespace:<level>` and one to each ClusterRole of the module that the `D8UserAuthzLegacyUseCapability` alert names. None of these roles is an alias, so the RoleBinding objects do not hold the next release, and the webhook that checks RoleBinding objects in project namespaces does not check the namespace of a module. Delete them once the module carries the new labels and the controller creates its own RoleBinding there.
+A RoleBinding to `d8:use:role:<level>` gives these rights as well, but the `D8UserAuthzDeprecatedRBACv2RoleInUse` alert reports it, and it holds the release that removes the aliases.
 
 Name mapping:
 
 | Deprecated name | New name |
 |-----------------|----------|
 | `d8:manage:all:<level>` | `d8:system:<level>` |
-| `d8:manage:<subsystem>:<level>` | `d8:subsystem:<subsystem>:<level>` |
+| `d8:manage:deckhouse:<level>`, `d8:manage:infrastructure:<level>`, `d8:manage:kubernetes:<level>` | `d8:subsystem:cluster:<level>`, which grants more. The modules that moved to other subsystems come with the roles of those subsystems |
+| `d8:manage:networking:<level>` | `d8:subsystem:network:<level>`, which also grants the rights for `keepalived` |
+| `d8:manage:security:<level>` | `d8:subsystem:security:<level>` together with `d8:subsystem:iam:<level>`, which grants the rights for `user-authz` and `user-authn` and more |
+| `d8:manage:observability:<level>` | `d8:subsystem:observability:<level>` |
+| `d8:manage:storage:<level>` | `d8:subsystem:storage:<level>`, which also grants the rights for `local-path-provisioner` |
 | `d8:use:role:<level>` | `d8:namespace:<level>` |
 | `d8:use:role:<level>:kubernetes` | `d8:namespace:<level>` (full namespace role, not kubernetes-only) |
+
+<div style="height: 0;" id="the-subsystem-list-of-the-aliases"></div>
+
+The list of subsystems changed together with the role names. `deckhouse`, `infrastructure` and `kubernetes` were merged into `cluster`, which also took over modules from other subsystems, `networking` was renamed to `network`, and `user-authz`, `user-authn` and `multitenancy-manager` moved to `iam`.
+
+The aliases of the `deckhouse`, `infrastructure` and `kubernetes` roles therefore do not aggregate the whole `cluster` subsystem. They select the capabilities of the platform modules that were in the old subsystem, wherever those modules are now. `d8:subsystem:cluster:<level>` grants more, so when you recreate such a binding, check which subsystem roles its subjects need.
+The alias of `d8:manage:security:<level>` also keeps the rights for `user-authz` and `user-authn`, which now come with `d8:subsystem:iam:<level>`. That role also grants the rights for `multitenancy-manager` and, at the `manager` level, the right to assign roles, which `d8:subsystem:security:<level>` does not grant.
+So a binding to `d8:manage:security:<level>` is replaced by two bindings with the same subjects, to `d8:subsystem:iam:<level>` and to `d8:subsystem:security:<level>`. The `rbac.deckhouse.io/deprecated-replaced-by` annotation of the alias names only the second one.
+The aliases of `networking` and `storage` leave out `keepalived` and `local-path-provisioner`, which moved to `network` and `storage` from `infrastructure`, so the new roles grant more than these aliases.
+
+The `rbac.deckhouse.io/deprecated-replaced-by` annotation of an alias names its main replacement, and the description of the alias names the roles of the other subsystems its modules moved to. These roles cover whole subsystems. To grant the rights for some modules only, create a custom role that selects their system capabilities by the `rbac.deckhouse.io/capability` label, for example `system-capability.multitenancy-manager.view` (see [How do I extend a role or create a new one?](faq.html#how-do-i-extend-a-role-or-create-a-new-one)).
+
+The aliases of the `deckhouse`, `infrastructure`, `kubernetes` and `networking` roles and `d8:manage:all:<level>` also select the labels of these old subsystems, such as `rbac.deckhouse.io/aggregate-to-deckhouse-as`. Modules released on their own and custom capabilities may still carry them. No role of the new model collects these labels, so such capabilities reach the holders of the old names only, and the `D8UserAuthzRetiredAggregationLabel` alert names them. A module released on its own that has moved to its new subsystem is no longer selected by the alias of its old one.
+`d8:manage:all:<level>` also selects `rbac.deckhouse.io/kind: manage` together with `rbac.deckhouse.io/aggregate-to-all-as` at its level, as the previous release did. Modules with a subsystem of their own carry this label on their subsystem roles, for example `d8:manage:virtualization:<level>`, until they move to the new labels.
+
+The `d8:use:role:<level>` and `d8:use:role:<level>:kubernetes` aliases also select the use capabilities of the previous release, `rbac.deckhouse.io/kind: use` together with `rbac.deckhouse.io/aggregate-to-kubernetes-as` at the level of the alias or below. Modules released on their own and custom capabilities may still carry them, for example the `log-shipper` capabilities for PodLoggingConfig objects.
+`d8:use:role:<level>` also selects `rbac.deckhouse.io/kind: use` together with `rbac.deckhouse.io/aggregate-to-all-as` at its own level, as the previous release did. Modules with a subsystem of their own carry this label on their use roles, for example `d8:use:role:<level>:virtualization`.
+`d8:namespace:<level>` does not select them, so a RoleBinding to an old name keeps these rights, and a RoleBinding to the new name gets them only once the module or the capability carries `rbac.deckhouse.io/aggregate-to-namespace-as`. The `D8UserAuthzLegacyUseCapability` alert names the use capabilities with `rbac.deckhouse.io/aggregate-to-kubernetes-as` and the use roles with `rbac.deckhouse.io/aggregate-to-all-as`.
+The alert also names a ClusterRole with `rbac.deckhouse.io/kind: use` and the aggregation label of the system scope, of a built-in subsystem, or of `deckhouse`, `infrastructure` or `networking`. No role collects such a ClusterRole, so only a binding to the ClusterRole itself gives its rules.
+The `rbacv2-cluster-roles.deckhouse.io` webhook does not let a user create such a ClusterRole, and lets a user change one left from the previous release only by removing the aggregation label from it.
+
+Until a module carries the new labels, create a RoleBinding to the ClusterRole that `D8UserAuthzLegacyUseCapability` names, such as `d8:use:role:<level>:virtualization` or the use capability itself, for the subjects that need these rights, in the namespace where they have their RoleBinding to `d8:namespace:<level>`. Neither role is an alias, so these RoleBinding objects do not hold the next release.
+In a project namespace, the `cluster-objects-grants-validator.multitenancy.deckhouse.io` webhook admits such a RoleBinding only if the ClusterRole has the `rbac.deckhouse.io/delegatable: "true"` label, and the use capabilities of the previous release do not have it.
+Where the webhook refuses it, keep the RoleBinding on the old name. It keeps these rights, but it holds the release that removes the aliases, so update the module before that release and then move the RoleBinding to `d8:namespace:<level>`.
+
+Within the modules it covers, a binding to an old name gets their capabilities as they are in this release. These differ from the previous release, because the modules added resources to them. For example, the `multitenancy-manager` capabilities include the ProjectRoleBinding, ClusterProjectRoleBinding and ProjectNamespace objects, and the `iam` and `security` managers can inspect the access of any subject.
 
 {% alert level="warning" %}
 The deprecated `d8:use:role:admin` role maps to `d8:namespace:admin` and, just like it, [no longer grants](#admin-level-restrictions-and-superadmin-rights) the right to mint ServiceAccount tokens or impersonate ServiceAccounts — that now requires the `superadmin` level.
 {% endalert %}
 
-As long as bindings to the deprecated names remain in the cluster, the `D8UserAuthzDeprecatedRBACv2RoleInUse` (a binding to an alias role) and `D8UserAuthzDeprecatedRBACv2CapabilityInUse` (a binding to a deprecated capability that no longer grants access) alerts fire. The release that removes the aliases carries the `deprecatedRBACv2BindingsCount` release requirement: the upgrade stays pending, with the offending bindings listed in the `DeckhouseRelease` status, until every binding to an alias role is recreated on a new role name. A binding to a deprecated capability does not hold the release: removing the aliases changes nothing for it.
+As long as bindings to the deprecated names remain in the cluster, the `D8UserAuthzDeprecatedRBACv2RoleInUse` (a binding to an alias role) and `D8UserAuthzDeprecatedRBACv2CapabilityInUse` (a binding to a deprecated name that no ClusterRole has, such as a capability of the previous release, so the binding grants nothing) alerts fire. The release that removes the aliases carries the `deprecatedRBACv2BindingsCount` release requirement: the upgrade stays pending, with the offending bindings listed in the `DeckhouseRelease` status, until every binding to an alias role is recreated on a new role name. A binding that grants nothing does not hold the release: removing the aliases changes nothing for it.
+An alias role here is a ClusterRole of the `user-authz` module with the `rbac.deckhouse.io/deprecated` label. A module released on its own may still ship roles and capabilities of the previous release under the deprecated names, such as `d8:manage:virtualization:<level>`, `d8:use:role:<level>:virtualization` or `d8:manage:permission:module:ingress-nginx:edit`. A binding to such a ClusterRole keeps working, raises neither alert and does not hold the release.
+The alerts and the release requirement leave out the RoleBindings that `user-authz-controller` keeps for a ClusterRoleBinding to an alias, because these follow the ClusterRoleBinding.
 
 A module that renames a role of its own keeps the old name the same way: a ClusterRole labelled `rbac.deckhouse.io/deprecated` in the module's `templates/rbacv2-compat/`, with the new name in the `rbac.deckhouse.io/deprecated-replaced-by` annotation. A binding to such an alias raises `D8UserAuthzDeprecatedRBACv2ModuleRoleInUse`, which names the new role, and does not hold the Deckhouse release: the module removes the alias in a release of its own. The annotation is required (an alias without it is ignored), and the alias may have any `d8:` name except the platform's own role families (`d8:system:`, `d8:subsystem:`, `d8:namespace:`, `d8:project:`, `d8:custom:`, `d8:dict`), the reserved prefixes `d8:binding:` and `d8:prb:`, and the previous platform names `d8:manage:` and `d8:use:`.
 
-Migrate your existing RoleBinding and ClusterRoleBinding objects to the new role names. You can find bindings that still use the deprecated names with the command:
+Migrate your existing RoleBinding and ClusterRoleBinding objects to the new role names.
+A ClusterRoleBinding named `user-authz:<rule>:additional-role:<role>` is rendered by `user-authz-controller` from `spec.additionalRoles` of the ClusterAuthorizationRule `<rule>`, and the controller creates it again when it is deleted. So change the role name in `spec.additionalRoles` of that rule, not the binding.
+A binding that a project template renders is changed in the ProjectTemplate the same way, because `multitenancy-manager` renders it again from the template.
+You can find bindings that still use the deprecated names, without the RoleBindings that `user-authz-controller` keeps for them, with the command:
 
 ```shell
 d8 k get clusterrolebindings,rolebindings -A -o json \
-  | jq -r '.items[] | select(.roleRef.name | test("^d8:(manage|use):")) | "\(.kind) \(.metadata.namespace // "-") \(.metadata.name) -> \(.roleRef.name)"'
+  | jq -r '.items[] | select(.roleRef.name | test("^d8:(manage|use):")) | select(.metadata.labels["rbac.deckhouse.io/automated"] != "true") | "\(.kind) \(.metadata.namespace // "-") \(.metadata.name) -> \(.roleRef.name)"'
 ```
 
 <div style="height: 0;" id="the-obsolete-role-based-model"></div>

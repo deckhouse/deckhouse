@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: cloud-provider-dvp
-    rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
+    rbac.deckhouse.io/aggregate-to-cluster-as: viewer
     rbac.deckhouse.io/kind: capability
     rbac.deckhouse.io/capability: "system-capability.cloud-provider-dvp.view"
     rbac.deckhouse.io/scope: system

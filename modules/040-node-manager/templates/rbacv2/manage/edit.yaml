@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: node-manager
-    rbac.deckhouse.io/aggregate-to-infrastructure-as: manager
+    rbac.deckhouse.io/aggregate-to-cluster-as: manager
     rbac.deckhouse.io/kind: capability
     rbac.deckhouse.io/capability: "system-capability.node-manager.edit"
     rbac.deckhouse.io/scope: system

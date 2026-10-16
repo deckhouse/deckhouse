@@ -14,7 +14,7 @@ metadata:
     rbac.deckhouse.io/capability: "subsystem-capability.security.view_resources"
     rbac.deckhouse.io/scope: subsystem
     rbac.deckhouse.io/subsystem: security
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: viewer
+    rbac.deckhouse.io/aggregate-to-cluster-as: viewer
     rbac.deckhouse.io/aggregate-to-security-as: viewer
 rules:
   - apiGroups:

@@ -1,11 +1,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: d8:subsystem:networking:manager
+  name: d8:subsystem:network:manager
   annotations:
-    en.meta.deckhouse.io/title: "Networking: Manager"
+    en.meta.deckhouse.io/title: "Network: Manager"
     ru.meta.deckhouse.io/title: "Управление подсистемы сети"
-    en.meta.deckhouse.io/description: "Management of the Networking subsystem configuration."
+    en.meta.deckhouse.io/description: "Management of the Network subsystem configuration."
     ru.meta.deckhouse.io/description: "Управление конфигурацией подсистемы сети."
   labels:
     heritage: deckhouse
@@ -13,10 +13,15 @@ metadata:
     rbac.deckhouse.io/use-role: admin
     rbac.deckhouse.io/kind: role
     rbac.deckhouse.io/scope: subsystem
-    rbac.deckhouse.io/subsystem: networking
-    rbac.deckhouse.io/aggregate-to-networking-as: superadmin
+    rbac.deckhouse.io/subsystem: network
+    rbac.deckhouse.io/aggregate-to-network-as: superadmin
     rbac.deckhouse.io/aggregate-to-system-as: manager
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
-        rbac.deckhouse.io/aggregate-to-networking-as: manager
+        rbac.deckhouse.io/aggregate-to-network-as: manager
+      matchExpressions:
+        - key: rbac.deckhouse.io/kind
+          operator: NotIn
+          values:
+            - use

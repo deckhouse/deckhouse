@@ -47,7 +47,7 @@ The user will be able to:
 The example uses the [granular role-based model](./#granular-role-based-model).
 {% endalert %}
 
-To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:subsystem:networking:manager` in ClusterRoleBinding.
+To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:subsystem:network:manager` in ClusterRoleBinding.
 
 Example of assigning rights to a network administrator (User `jane.doe@example.com`):
 
@@ -62,27 +62,30 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:subsystem:networking:manager
+  name: d8:subsystem:network:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
 {% offtopic title="The rights that the user will get" %}
-The rights that the user will get will be limited to the following list of DP module namespaces from the `networking` subsystem (the actual list depends on the list of modules included in the cluster):
+The rights that the user will get will be limited to the following list of DP module namespaces from the `network` subsystem (the actual list depends on the list of modules included in the cluster):
 
 - `d8-cni-cilium`
 - `d8-cni-flannel`
 - `d8-cni-simple-bridge`
 - `d8-ingress-nginx`
 - `d8-istio`
+- `d8-keepalived`
 - `d8-metallb`
+- `d8-monitoring`
 - `d8-network-gateway`
 - `d8-openvpn`
+- `d8-service-with-healthchecks`
 - `d8-static-routing-manager`
 - `d8-system`
 - `kube-system`
 
 The user will be able to:
-- View, modify, delete, and create *standard* Kubernetes resources in the module namespace from the `networking` subsystem.
+- View, modify, delete, and create *standard* Kubernetes resources in the module namespace from the `network` subsystem.
 
   Example of resources that the user will be able to manage (the list is not exhaustive):
   - `Certificate`
@@ -115,7 +118,7 @@ The user will be able to:
   - `VerticalPodAutoscaler`
   - `VolumeSnapshot`
 
-- View, modify, delete, and create the following resources in the modules namespace from the `networking` subsystem:
+- View, modify, delete, and create the following resources in the modules namespace from the `network` subsystem:
 
   A list of resources that the user will be able to manage:
   - `EgressGateway`
@@ -127,28 +130,32 @@ The user will be able to:
   - `IPRuleSet`
   - `IstioFederation`
   - `IstioMulticluster`
+  - `KeepalivedInstance`
   - `RoutingTable`
 
-- Modify the configuration of modules (view, change, delete, and create moduleConfig resources) from the `networking` subsystem.
+- Modify the configuration of modules (view, change, delete, and create moduleConfig resources) from the `network` subsystem.
 
   List of modules that the user will be able to manage:
   - `cilium-hubble`
   - `cni-cilium`
   - `cni-flannel`
   - `cni-simple-bridge`
-  - `flow-schema`
   - `ingress-nginx`
   - `istio`
+  - `keepalived`
   - `kube-dns`
   - `kube-proxy`
   - `metallb`
+  - `monitoring-ping`
   - `network-gateway`
   - `network-policy-engine`
   - `node-local-dns`
   - `openvpn`
+  - `sdn`
+  - `service-with-healthchecks`
   - `static-routing-manager`
   
-- Execute the following commands with pods and services in the modules namespace from the `networking` subsystem:
+- Execute the following commands with pods and services in the modules namespace from the `network` subsystem:
   - `kubectl attach`
   - `kubectl exec`
   - `kubectl port-forward`

@@ -1,6 +1,6 @@
 name: descheduler
 subsystems:
-- infrastructure
+- cluster
 namespace: d8-descheduler
 descriptions:
   en: Analyzes the cluster state every 15 minutes and performs pod eviction according to conditions described in active strategies. Evicted pods are rescheduled considering the current cluster state.

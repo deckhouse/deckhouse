@@ -1,7 +1,7 @@
 name: istio
 stage: General Availability
 subsystems:
-  - networking
+  - network
 namespace: d8-istio
 requirements:
   deckhouse: ">= 1.72.0"

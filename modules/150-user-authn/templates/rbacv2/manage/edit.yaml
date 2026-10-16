@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authn
-    rbac.deckhouse.io/aggregate-to-security-as: manager
+    rbac.deckhouse.io/aggregate-to-iam-as: manager
     rbac.deckhouse.io/kind: capability
     rbac.deckhouse.io/capability: "system-capability.user-authn.edit"
     rbac.deckhouse.io/scope: system

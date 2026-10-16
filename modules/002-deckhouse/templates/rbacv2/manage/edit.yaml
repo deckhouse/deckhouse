@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: deckhouse
-    rbac.deckhouse.io/aggregate-to-deckhouse-as: manager
+    rbac.deckhouse.io/aggregate-to-cluster-as: manager
     rbac.deckhouse.io/kind: capability
     rbac.deckhouse.io/capability: "system-capability.deckhouse.edit"
     rbac.deckhouse.io/scope: system

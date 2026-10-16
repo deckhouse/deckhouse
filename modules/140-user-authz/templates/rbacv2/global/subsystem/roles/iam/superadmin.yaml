@@ -1,0 +1,33 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem:iam:superadmin
+  annotations:
+    en.meta.deckhouse.io/title: "IAM: Superadmin"
+    ru.meta.deckhouse.io/title: "Суперадминистратор подсистемы IAM"
+    en.meta.deckhouse.io/description: "Full control over the IAM subsystem, including its system resources."
+    ru.meta.deckhouse.io/description: "Полный контроль над подсистемой IAM, включая её системные ресурсы."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/use-role: superadmin
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: iam
+    rbac.deckhouse.io/aggregate-to-system-as: superadmin
+    # can-assign range of the identity-assign webhook: the IAM superadmin assigns the basic
+    # levels up to SuperAdmin (and therefore cluster-admin) and the IAM subsystem roles up to
+    # superadmin; superadmin roles of other scopes stay out of its range.
+    user-authz.deckhouse.io/can-assign-basic-max: SuperAdmin
+    user-authz.deckhouse.io/can-assign-scope: subsystem
+    user-authz.deckhouse.io/can-assign-subsystem: iam
+    user-authz.deckhouse.io/can-assign-max-level: superadmin
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-iam-as: superadmin
+      matchExpressions:
+        - key: rbac.deckhouse.io/kind
+          operator: NotIn
+          values:
+            - use

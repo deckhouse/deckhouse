@@ -176,7 +176,7 @@ modules:
       use: null
     namespace: d8-chrony
     subsystems:
-    - infrastructure
+    - cluster
   cilium-hubble:
     capabilities:
       manage:
@@ -208,7 +208,7 @@ modules:
       use: null
     namespace: d8-cni-cilium
     subsystems:
-    - networking
+    - network
   cloud-provider-aws:
     capabilities:
       manage:
@@ -240,7 +240,7 @@ modules:
       use: null
     namespace: d8-cloud-provider-aws
     subsystems:
-    - infrastructure
+    - cluster
   cloud-provider-azure:
     capabilities:
       manage:
@@ -272,7 +272,7 @@ modules:
       use: null
     namespace: d8-cloud-provider-azure
     subsystems:
-    - infrastructure
+    - cluster
   cloud-provider-dynamix:
     capabilities:
       manage:
@@ -304,7 +304,7 @@ modules:
       use: null
     namespace: d8-cloud-provider-dynamix
     subsystems:
-    - infrastructure
+    - cluster
   cloud-provider-gcp:
     capabilities:
       manage:
@@ -336,7 +336,7 @@ modules:
       use: null
     namespace: d8-cloud-provider-gcp
     subsystems:
-    - infrastructure
+    - cluster
   cloud-provider-huaweicloud:
     capabilities:
       manage:
@@ -368,7 +368,7 @@ modules:
       use: null
     namespace: d8-cloud-provider-huaweicloud
     subsystems:
-    - infrastructure
+    - cluster
   cloud-provider-openstack:
     capabilities:
       manage:
@@ -400,7 +400,7 @@ modules:
       use: null
     namespace: d8-cloud-provider-openstack
     subsystems:
-    - infrastructure
+    - cluster
   cloud-provider-vcd:
     capabilities:
       manage:
@@ -432,7 +432,7 @@ modules:
       use: null
     namespace: d8-cloud-provider-vcd
     subsystems:
-    - infrastructure
+    - cluster
   cloud-provider-vsphere:
     capabilities:
       manage:
@@ -464,7 +464,7 @@ modules:
       use: null
     namespace: d8-cloud-provider-vsphere
     subsystems:
-    - infrastructure
+    - cluster
   cloud-provider-yandex:
     capabilities:
       manage:
@@ -496,7 +496,7 @@ modules:
       use: null
     namespace: d8-cloud-provider-yandex
     subsystems:
-    - infrastructure
+    - cluster
   cloud-provider-zvirt:
     capabilities:
       manage:
@@ -528,7 +528,7 @@ modules:
       use: null
     namespace: d8-cloud-provider-zvirt
     subsystems:
-    - infrastructure
+    - cluster
   cni-cilium:
     capabilities:
       manage:
@@ -560,7 +560,7 @@ modules:
       use: null
     namespace: d8-cni-cilium
     subsystems:
-    - networking
+    - network
   cni-flannel:
     capabilities:
       manage:
@@ -592,7 +592,7 @@ modules:
       use: null
     namespace: d8-cni-flannel
     subsystems:
-    - networking
+    - network
   cni-simple-bridge:
     capabilities:
       manage:
@@ -624,7 +624,7 @@ modules:
       use: null
     namespace: d8-cni-simple-bridge
     subsystems:
-    - networking
+    - network
   control-plane-manager:
     capabilities:
       manage:
@@ -674,7 +674,7 @@ modules:
       use: null
     namespace: kube-system
     subsystems:
-    - kubernetes
+    - cluster
   deckhouse:
     capabilities:
       manage:
@@ -717,7 +717,7 @@ modules:
       use: null
     namespace: d8-system
     subsystems:
-    - deckhouse
+    - cluster
   descheduler:
     capabilities:
       manage:
@@ -767,7 +767,7 @@ modules:
       use: null
     namespace: d8-descheduler
     subsystems:
-    - infrastructure
+    - cluster
   extended-monitoring:
     capabilities:
       manage:
@@ -800,39 +800,6 @@ modules:
     namespace: d8-monitoring
     subsystems:
     - observability
-  flow-schema:
-    capabilities:
-      manage:
-      - name: d8:manage:permission:module:flow-schema:view
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - flow-schema
-          resources:
-          - moduleconfigs
-          verbs:
-          - get
-          - list
-          - watch
-      - name: d8:manage:permission:module:flow-schema:edit
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - flow-schema
-          resources:
-          - moduleconfigs
-          verbs:
-          - create
-          - update
-          - patch
-          - delete
-      use: null
-    namespace: d8-system
-    subsystems:
-    - kubernetes
-    - networking
   ingress-nginx:
     capabilities:
       manage:
@@ -882,7 +849,7 @@ modules:
       use: null
     namespace: d8-ingress-nginx
     subsystems:
-    - networking
+    - network
   istio:
     capabilities:
       manage:
@@ -936,8 +903,7 @@ modules:
       use: null
     namespace: d8-istio
     subsystems:
-    - infrastructure
-    - networking
+    - network
   keepalived:
     capabilities:
       manage:
@@ -987,7 +953,7 @@ modules:
       use: null
     namespace: d8-keepalived
     subsystems:
-    - infrastructure
+    - network
   kube-dns:
     capabilities:
       manage:
@@ -1019,8 +985,7 @@ modules:
       use: null
     namespace: kube-system
     subsystems:
-    - kubernetes
-    - networking
+    - network
   kube-proxy:
     capabilities:
       manage:
@@ -1052,8 +1017,7 @@ modules:
       use: null
     namespace: kube-system
     subsystems:
-    - kubernetes
-    - networking
+    - network
   local-path-provisioner:
     capabilities:
       manage:
@@ -1103,7 +1067,7 @@ modules:
       use: null
     namespace: d8-local-path-provisioner
     subsystems:
-    - infrastructure
+    - storage
   log-shipper:
     capabilities:
       manage:
@@ -1209,7 +1173,7 @@ modules:
       use: null
     namespace: d8-metallb
     subsystems:
-    - networking
+    - network
   monitoring-custom:
     capabilities:
       manage:
@@ -1337,7 +1301,7 @@ modules:
       use: null
     namespace: d8-monitoring
     subsystems:
-    - observability
+    - network
   multitenancy-manager:
     capabilities:
       manage:
@@ -1388,7 +1352,7 @@ modules:
       use: null
     namespace: d8-multitenancy-manager
     subsystems:
-    - deckhouse
+    - iam
   network-gateway:
     capabilities:
       manage:
@@ -1420,7 +1384,7 @@ modules:
       use: null
     namespace: d8-network-gateway
     subsystems:
-    - networking
+    - network
   network-policy-engine:
     capabilities:
       manage:
@@ -1452,7 +1416,7 @@ modules:
       use: null
     namespace: d8-system
     subsystems:
-    - networking
+    - network
   node-local-dns:
     capabilities:
       manage:
@@ -1484,7 +1448,7 @@ modules:
       use: null
     namespace: kube-system
     subsystems:
-    - networking
+    - network
   node-manager:
     capabilities:
       manage:
@@ -1546,7 +1510,7 @@ modules:
       use: null
     namespace: d8-cloud-instance-manager
     subsystems:
-    - infrastructure
+    - cluster
   okmeter:
     capabilities:
       manage:
@@ -1610,7 +1574,7 @@ modules:
       use: null
     namespace: d8-openvpn
     subsystems:
-    - networking
+    - network
   operator-prometheus:
     capabilities:
       manage:
@@ -1735,38 +1699,6 @@ modules:
     namespace: d8-operator-trivy
     subsystems:
     - security
-  priority-class:
-    capabilities:
-      manage:
-      - name: d8:manage:permission:module:priority-class:view
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - priority-class
-          resources:
-          - moduleconfigs
-          verbs:
-          - get
-          - list
-          - watch
-      - name: d8:manage:permission:module:priority-class:edit
-        rules:
-        - apiGroups:
-          - deckhouse.io
-          resourceNames:
-          - priority-class
-          resources:
-          - moduleconfigs
-          verbs:
-          - create
-          - update
-          - patch
-          - delete
-      use: null
-    namespace: d8-system
-    subsystems:
-    - kubernetes
   prometheus:
     capabilities:
       manage:
@@ -2068,7 +2000,7 @@ modules:
       use: null
     namespace: d8-static-routing-manager
     subsystems:
-    - networking
+    - network
   terraform-manager:
     capabilities:
       manage:
@@ -2100,7 +2032,7 @@ modules:
       use: null
     namespace: d8-system
     subsystems:
-    - infrastructure
+    - cluster
   upmeter:
     capabilities:
       manage:
@@ -2232,7 +2164,7 @@ modules:
           - deletecollection
     namespace: d8-user-authn
     subsystems:
-    - security
+    - iam
   user-authz:
     capabilities:
       manage:
@@ -2304,7 +2236,7 @@ modules:
           - deletecollection
     namespace: ""
     subsystems:
-    - security
+    - iam
   vertical-pod-autoscaler:
     capabilities:
       manage:
@@ -2336,40 +2268,67 @@ modules:
       use: null
     namespace: kube-system
     subsystems:
-    - infrastructure
+    - cluster
 subsystems:
-  deckhouse:
+  iam:
     modules:
-    - deckhouse
     - multitenancy-manager
+    - namespace-configurator
+    - user-authn
+    - user-authz
     namespaces:
     - d8-multitenancy-manager
     - d8-system
-  infrastructure:
+    - d8-user-authn
+  security:
     modules:
+    - admission-policy-engine
+    - cert-manager
+    - neuvector
+    - operator-trivy
+    - runtime-audit-engine
+    - secret-copier
+    - secrets-store-integration
+    namespaces:
+    - d8-admission-policy-engine
+    - d8-cert-manager
+    - d8-operator-trivy
+    - d8-runtime-audit-engine
+  cluster:
+    modules:
+    - chrony
+    - cloud-provider-aws
+    - cloud-provider-azure
+    - cloud-provider-dvp
     - cloud-provider-dynamix
+    - cloud-provider-gcp
     - cloud-provider-huaweicloud
     - cloud-provider-openstack
     - cloud-provider-vcd
-    - keepalived
     - cloud-provider-vsphere
-    - cloud-provider-zvirt
-    - cloud-provider-aws
-    - cloud-provider-azure
-    - cloud-provider-gcp
     - cloud-provider-yandex
-    - local-path-provisioner
-    - node-manager
-    - terraform-manager
-    - istio
-    - vertical-pod-autoscaler
+    - cloud-provider-zvirt
+    - commander-agent
+    - console
+    - control-plane-manager
+    - csi-vsphere
+    - dashboard
+    - deckhouse
+    - deckhouse-tools
     - descheduler
-    - chrony
+    - documentation
+    - node-manager
+    - registry
+    - registry-packages-proxy
+    - terraform-manager
+    - vertical-pod-autoscaler
+    - virtualization
     namespaces:
     - d8-chrony
     - d8-cloud-instance-manager
     - d8-cloud-provider-aws
     - d8-cloud-provider-azure
+    - d8-cloud-provider-dvp
     - d8-cloud-provider-dynamix
     - d8-cloud-provider-gcp
     - d8-cloud-provider-huaweicloud
@@ -2378,66 +2337,84 @@ subsystems:
     - d8-cloud-provider-vsphere
     - d8-cloud-provider-yandex
     - d8-cloud-provider-zvirt
+    - d8-csi-vsphere
     - d8-descheduler
-    - d8-istio
-    - d8-keepalived
-    - d8-local-path-provisioner
-    - d8-monitoring
     - d8-system
     - kube-system
-  kubernetes:
+  delivery:
     modules:
-    - priority-class
-    - flow-schema
-    - kube-proxy
-    - control-plane-manager
-    - kube-dns
-    namespaces:
-    - d8-system
-    - kube-system
-  networking:
+    - delivery-kit
+    - operator-argo
+    - pod-reloader
+    namespaces: []
+  network:
     modules:
-    - node-local-dns
-    - static-routing-manager
-    - network-gateway
-    - metallb
-    - flow-schema
+    - cilium-hubble
     - cni-cilium
     - cni-flannel
     - cni-simple-bridge
-    - kube-proxy
-    - kube-dns
-    - network-policy-engine
-    - istio
     - ingress-nginx
-    - cilium-hubble
+    - istio
+    - keepalived
+    - kube-dns
+    - kube-proxy
+    - metallb
+    - monitoring-ping
+    - network-gateway
+    - network-policy-engine
+    - node-local-dns
     - openvpn
+    - sdn
+    - service-with-healthchecks
+    - static-routing-manager
     namespaces:
     - d8-cni-cilium
     - d8-cni-flannel
     - d8-cni-simple-bridge
     - d8-ingress-nginx
     - d8-istio
+    - d8-keepalived
     - d8-metallb
+    - d8-monitoring
     - d8-network-gateway
     - d8-openvpn
+    - d8-service-with-healthchecks
     - d8-static-routing-manager
     - d8-system
     - kube-system
+  storage:
+    modules:
+    - csi-ceph
+    - csi-hpe
+    - csi-huawei
+    - csi-netapp
+    - csi-nfs
+    - csi-s3
+    - csi-scsi-generic
+    - csi-yadro-tatlin-unified
+    - local-path-provisioner
+    - sds-local-volume
+    - sds-node-configurator
+    - sds-replicated-volume
+    - snapshot-controller
+    - storage-volume-data-manager
+    namespaces:
+    - d8-local-path-provisioner
   observability:
     modules:
+    - extended-monitoring
+    - log-shipper
+    - loki
+    - monitoring-custom
+    - monitoring-deckhouse
+    - monitoring-kubernetes
+    - monitoring-kubernetes-control-plane
+    - observability
+    - okmeter
     - operator-prometheus
     - prometheus
     - prometheus-metrics-adapter
     - prometheus-pushgateway
-    - extended-monitoring
-    - monitoring-custom
-    - monitoring-deckhouse
-    - monitoring-kubernetes
-    - monitoring-ping
-    - log-shipper
-    - dashboard
-    - okmeter
     - upmeter
     namespaces:
     - d8-log-shipper
@@ -2446,18 +2423,8 @@ subsystems:
     - d8-operator-prometheus
     - d8-upmeter
     - kube-prometheus-pushgateway
-  security:
+  managed-services:
     modules:
-    - operator-trivy
-    - runtime-audit-engine
-    - admission-policy-engine
-    - cert-manager
-    - user-authz
-    - user-authn
-    - secret-copier
-    namespaces:
-    - d8-admission-policy-engine
-    - d8-cert-manager
-    - d8-operator-trivy
-    - d8-runtime-audit-engine
-    - d8-user-authn
+    - managed-memcached
+    - managed-postgres
+    namespaces: []

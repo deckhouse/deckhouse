@@ -1,7 +1,7 @@
 name: network-policy-engine
 stage: General Availability
 subsystems:
-  - networking
+  - network
 namespace: d8-system
 descriptions:
   en: Manages network policies in the cluster. Do not use if the cilium module is enabled because it already has network policy management.

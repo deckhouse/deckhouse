@@ -4801,6 +4801,8 @@ alerts:
 
         Capabilities (`d8:manage:permission:*`, `d8:use:capability:*`) are aggregation building blocks — they are meant to be composed into the `d8:{system,subsystem,namespace,project}:*` roles, not bound directly. They were renamed and have NO compatibility alias, so this binding **already grants nothing** after the upgrade.
 
+        No ClusterRole named `{{ $labels.role_name }}` exists in the cluster. The alert also names a binding to an old role name that a module no longer ships, for example after the module moved to the new role names.
+
         Recreate the binding against the appropriate new role (or a custom role aggregating the new capability). Because `roleRef` is immutable, delete and recreate the binding:
         ```bash
         d8 k get {{ $labels.binding_kind | toLower }} {{ $labels.binding_name }}{{ if $labels.namespace }} -n {{ $labels.namespace }}{{ end }} -o yaml
@@ -4817,7 +4819,7 @@ alerts:
       description: |-
         The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} references `{{ $labels.role_name }}`, the old name of a role that a module renamed to `{{ $labels.replaced_by }}`.
 
-        The module keeps the old name as a compatibility alias, so the binding still grants what the new role grants. The module removes the alias in one of its own releases; the Deckhouse release is not held back by this binding. See the documentation of the module for when.
+        The module keeps the old name as a compatibility alias, so the binding keeps working. The alias may grant less than `{{ $labels.replaced_by }}`, for example when the module moved into a wider subsystem and the alias kept the rights of the old role, so check what the subjects of the binding need before recreating it. The module removes the alias in one of its own releases; the Deckhouse release is not held back by this binding. See the documentation of the module for when.
 
         Recreate the binding on the new name. Because `roleRef` is immutable, delete and recreate the binding pointing at `{{ $labels.replaced_by }}`:
         ```bash
@@ -4843,7 +4845,14 @@ alerts:
         # Recreate it with roleRef.name set to the new role (d8:system:*, d8:subsystem:*, or d8:namespace:*).
         ```
 
-        A ClusterRoleBinding to a deprecated `d8:manage:*` name keeps its cluster-scoped rights, but no longer receives the RoleBindings that used to project it into the module namespaces (`d8-cloud-provider-*`, `d8-monitoring` and the rest): the ones created by the previous release are removed. Reading logs, describing pods and `exec` inside those namespaces come back when the binding is recreated on the new role name.
+        {{ if match "^user-authz:[^:]+:additional-role:" $labels.binding_name }}`user-authz-controller` renders this binding from `spec.additionalRoles` of the ClusterAuthorizationRule `{{ reReplaceAll "^user-authz:([^:]+):additional-role:.*$" "$1" $labels.binding_name }}` and creates it again when it is deleted. Replace `{{ $labels.role_name }}` with the new role name in `spec.additionalRoles` of that ClusterAuthorizationRule instead.{{ else }}If a project template renders this binding, replace the role name in the ProjectTemplate instead, because `multitenancy-manager` renders the binding again from it.{{ end }}{{ if match "^d8:manage:security:" $labels.role_name }}{{ $level := reReplaceAll "^d8:manage:security:" "" $labels.role_name }}
+
+        In the new model the rights for `user-authn` and `user-authz`{{ if eq $level "manager" }} and the right to assign roles{{ end }} come with `d8:subsystem:iam:{{ $level }}`, not with `d8:subsystem:security:{{ $level }}`. To keep them, replace this binding with two bindings with the same subjects, one to `d8:subsystem:iam:{{ $level }}` and one to `d8:subsystem:security:{{ $level }}`. `d8:subsystem:iam:{{ $level }}` also grants the rights for `multitenancy-manager`.{{ end }}
+
+        The list of subsystems changed as well. `deckhouse`, `infrastructure` and `kubernetes` were merged into `cluster`, `networking` became `network`, the `user-authz` and `user-authn` modules moved from `security` to `iam`, and `multitenancy-manager` moved from `deckhouse` to `iam`. The aliases of the old subsystem roles select the capabilities of the modules these roles covered, and the old subsystem labels that modules released on their own may still carry.
+        The capabilities themselves changed in this release, so the rights of the binding are close to the ones it had before the upgrade, not the same. The replacement `d8:subsystem:cluster:<level>` covers the whole `cluster` subsystem and grants more, and so do the roles of the other subsystems that the description of the alias names, so check which roles the subjects of the binding need. The [user-authz documentation](https://deckhouse.io/modules/user-authz/#the-subsystem-list-of-the-aliases) lists the remaining differences.
+
+        A ClusterRoleBinding to a deprecated `d8:manage:*` name also keeps the RoleBindings `d8:use:<use role>:binding:<name>` that the previous release created for it in the namespaces of the modules of its old subsystem (`d8-cloud-provider-*`, `d8-monitoring` and the rest). The use role is `viewer` for a `viewer` alias and `user` for a `manager` alias. When the binding is recreated on the new role name, they are replaced by RoleBindings to the namespace role of the new role in the namespaces of the modules of the new subsystem.
 
         Note: the new `d8:namespace:admin` no longer grants `serviceaccounts/token` creation or impersonation — these disaster-grade actions now require a `superadmin` role by design.
       summary: |
@@ -4856,7 +4865,7 @@ alerts:
       module: user-authz
       edition: ce
       description: |-
-        The ClusterRole `{{ $labels.name }}` carries the `rbac.deckhouse.io/aggregate-to-{{ $labels.lineage }}-as` label but is not labelled `rbac.deckhouse.io/kind: custom-capability`{{ if $labels.kind }} (its kind label is `{{ $labels.kind }}`){{ end }}. The aggregation controller reads nothing but that label, so it merges the rules of this role into {{ if eq $labels.lineage "system" "namespace" "project" }}the platform `d8:{{ $labels.lineage }}:*` roles{{ else if eq $labels.lineage "all" }}every custom role that selects the label, because no built-in role selects this label of the old scheme any longer{{ else }}the `d8:subsystem:{{ $labels.lineage }}:*` roles, if a subsystem has this name, and into every custom role that selects the label{{ end }}. Every holder of these roles in the cluster gets the rules, outside the role model's contract.
+        The ClusterRole `{{ $labels.name }}` carries the `rbac.deckhouse.io/aggregate-to-{{ $labels.lineage }}-as` label but is not labelled `rbac.deckhouse.io/kind: custom-capability`{{ if $labels.kind }} (its kind label is `{{ $labels.kind }}`){{ end }}. The aggregation controller reads nothing but that label, so it merges the rules of this role into {{ if eq $labels.lineage "system" "namespace" "project" }}the platform `d8:{{ $labels.lineage }}:*` roles{{ else if eq $labels.lineage "all" }}the deprecated `d8:manage:all:*` and `d8:use:role:*` roles and every custom role that selects the label{{ else }}the `d8:subsystem:{{ $labels.lineage }}:*` roles, if a subsystem has this name, and into every custom role that selects the label{{ end }}. Every holder of these roles in the cluster gets the rules, outside the role model's contract.
 
         For the aggregation label of the system scope, of the namespace or project scope, or of a built-in subsystem, the `rbacv2-cluster-roles.deckhouse.io` webhook refuses such an object, and every `UPDATE` of this role, including a GitOps re-apply, is denied until it is fixed. Choose one:
 
@@ -4938,6 +4947,30 @@ alerts:
         The custom role {{ $labels.name }} has lost access it gave through the labels of an earlier role model.
       severity: "7"
       markupFormat: markdown
+    - name: D8UserAuthzLegacyUseCapability
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/retired-aggregation-label.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The ClusterRole `{{ $labels.name }}`{{ if $labels.module }} of the `{{ $labels.module }}` module{{ end }} carries the `rbac.deckhouse.io/kind: use` and `rbac.deckhouse.io/aggregate-to-{{ $labels.lineage }}-as: {{ $labels.level }}` labels{{ if eq $labels.lineage "all" }} of the use roles that a module with a subsystem of its own shipped in the previous scheme{{ else if eq $labels.lineage "kubernetes" }} of a use capability of the previous scheme{{ else }}. `rbac.deckhouse.io/kind: use` is the label of a use capability of the previous scheme{{ end }}. {{ if $labels.module }}The module{{ else }}The capability{{ end }} is still on that scheme.
+
+        {{ if or (eq $labels.lineage "kubernetes") (eq $labels.lineage "all") }}The `d8:namespace:*` and `d8:project:*` roles do not collect this label. Only the deprecated `d8:use:role:*` aliases still collect it, and they will be removed in the next release. A RoleBinding moved from `d8:use:role:{{ $labels.level }}` to `d8:namespace:{{ $labels.level }}` and a project role therefore do not get the rules of this ClusterRole.{{ else }}No role collects a ClusterRole with `rbac.deckhouse.io/kind: use` and this label. The `d8:system:*` and `d8:subsystem:*` roles and the deprecated `d8:manage:*` aliases leave out `rbac.deckhouse.io/kind: use`, and the `d8:namespace:*`, `d8:project:*` and `d8:use:role:*` roles do not select this label. Only a binding to this ClusterRole itself gives its rules.{{ end }}
+
+        Choose one:
+
+        * If the ClusterRole belongs to a module, update the module to a release that labels its namespace capabilities with `rbac.deckhouse.io/kind: capability` and `rbac.deckhouse.io/aggregate-to-namespace-as`. Until then, give the subjects that need these rules a RoleBinding to `{{ $labels.name }}` in their namespace, next to their RoleBinding to the `d8:namespace:*` role of their level. Neither role is a deprecated alias, so these RoleBinding objects do not hold the next release. In a project namespace, the `cluster-objects-grants-validator.multitenancy.deckhouse.io` webhook admits a RoleBinding to `{{ $labels.name }}` only if the ClusterRole has the `rbac.deckhouse.io/delegatable: "true"` label{{ if ne $labels.lineage "all" }}, which the use capabilities of the previous scheme do not have{{ end }}.{{ if or (eq $labels.lineage "kubernetes") (eq $labels.lineage "all") }} Where the webhook refuses it, keep the RoleBinding to the `d8:use:role:*` alias: it keeps these rules, but the `D8UserAuthzDeprecatedRBACv2RoleInUse` alert reports it, and the next release, which removes the aliases, stays pending until the module is updated and the RoleBinding is moved to the `d8:namespace:*` role.{{ else }} Where the webhook refuses it, the subjects get these rules only once the module is updated.{{ end }}
+        * If it is a custom capability, replace it with `d8:custom:namespace-capability:<NAME>` with the same rules and the `rbac.deckhouse.io/kind: custom-capability`, `rbac.deckhouse.io/scope: namespace` and `rbac.deckhouse.io/aggregate-to-namespace-as: {{ $labels.level }}` labels. For the commands, refer to the [corresponding section](https://deckhouse.io/modules/user-authz/faq.html#replacing-a-capability) in the `user-authz` module FAQ.
+
+        List every such ClusterRole:
+
+        ```bash
+        d8 k get clusterroles -l rbac.deckhouse.io/kind=use -o json | jq -r '.items[] | select(.metadata.labels | keys | map(capture("^rbac\\.deckhouse\\.io/aggregate-to-(?<lineage>.+)-as$").lineage) | any(IN("kubernetes", "all", "system", "iam", "security", "cluster", "delivery", "network", "storage", "observability", "managed-services", "deckhouse", "infrastructure", "networking"))) | .metadata.name'
+        ```
+      summary: |
+        ClusterRole {{ $labels.name }} carries the use labels of the previous scheme, which the namespace and project roles do not collect.
+      severity: "7"
+      markupFormat: markdown
     - name: D8UserAuthzPermissionBrowserUnavailable
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.tpl
       moduleUrl: 140-user-authz
@@ -4996,6 +5029,33 @@ alerts:
         ```
       summary: |
         Rendering the user-authz module templates repeatedly takes more than 30 seconds.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzRetiredAggregationLabel
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/retired-aggregation-label.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The ClusterRole `{{ $labels.name }}`{{ if $labels.module }} of the `{{ $labels.module }}` module{{ end }} carries the `rbac.deckhouse.io/aggregate-to-{{ $labels.lineage }}-as` label.
+
+        The role model has no `{{ $labels.lineage }}` subsystem any more. `deckhouse`, `infrastructure` and `kubernetes` were merged into `cluster`, and `networking` was renamed to `network`. No `d8:system:*` or `d8:subsystem:*` role collects this label, so the holders of these roles do not get the rules of this ClusterRole. Only the deprecated `d8:manage:*` aliases still collect it, and they will be removed in the next release.
+
+        Choose one:
+
+        * If the ClusterRole belongs to a module, update the module to a release that labels its capabilities with the lineage of its new subsystem. For most modules of the old subsystem that is `rbac.deckhouse.io/aggregate-to-{{ $labels.replaced_by }}-as`. The subsystem of each module is listed in the [user-authz documentation](https://deckhouse.io/modules/user-authz/#subsystems-of-the-role-based-model).
+        * If it is a custom capability, replace the label with `rbac.deckhouse.io/aggregate-to-{{ $labels.replaced_by }}-as` or with the label of the subsystem the capability belongs to now.
+
+        Until then, a subject bound to a new role gets the rules of such a capability of a module only through a custom role. Create a `d8:custom:system:<NAME>` ClusterRole with the `rbac.deckhouse.io/kind: custom-role` and `rbac.deckhouse.io/scope: system` labels and bind it to the subjects with a ClusterRoleBinding.
+        A capability of the previous scheme has no `rbac.deckhouse.io/capability` label, so the role selects the capabilities of the module by the `module: {{ if $labels.module }}{{ $labels.module }}{{ else }}<MODULE>{{ end }}` and `rbac.deckhouse.io/kind: manage` labels. Such a selector takes the capabilities of every level, so add `rbac.deckhouse.io/aggregate-to-{{ $labels.lineage }}-as: viewer` to it for a role that only views. The `D8UserAuthzLegacyRBACv2CustomRoleFound` alert names this role, because it selects by a label of the previous scheme. Once the module carries the new labels, select its capabilities by their `rbac.deckhouse.io/capability` label instead. A capability that already carries `rbac.deckhouse.io/kind: capability` is selected by its `rbac.deckhouse.io/capability` label right away.
+
+        List every such ClusterRole:
+
+        ```bash
+        d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.labels["rbac.deckhouse.io/kind"] // "") != "use") | select((.metadata.labels // {}) | keys | any(IN("rbac.deckhouse.io/aggregate-to-deckhouse-as", "rbac.deckhouse.io/aggregate-to-infrastructure-as", "rbac.deckhouse.io/aggregate-to-kubernetes-as", "rbac.deckhouse.io/aggregate-to-networking-as"))) | .metadata.name'
+        ```
+      summary: |
+        ClusterRole {{ $labels.name }} aggregates by the label of the retired {{ $labels.lineage }} subsystem.
       severity: "7"
       markupFormat: markdown
     - name: D8UserAuthzRuleNeedsMultiTenancy

@@ -2,7 +2,7 @@ name: cloud-provider-gcp
 critical: true
 weight: 30
 subsystems:
-  - infrastructure
+  - cluster
 namespace: d8-cloud-provider-gcp
 stage: General Availability
 descriptions:

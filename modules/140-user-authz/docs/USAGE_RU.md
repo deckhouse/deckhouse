@@ -47,7 +47,7 @@ roleRef:
 Пример использует [гранулярную ролевую модель](./#гранулярная-ролевая-модель).
 {% endalert %}
 
-Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте роль `d8:subsystem:networking:manager` в ClusterRoleBinding.
+Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте роль `d8:subsystem:network:manager` в ClusterRoleBinding.
 
 Пример назначения прав сетевому администратору (User `jane.doe@example.com`):
 
@@ -62,26 +62,29 @@ subjects:
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
-  name: d8:subsystem:networking:manager
+  name: d8:subsystem:network:manager
   apiGroup: rbac.authorization.k8s.io
 ```
 
 {% offtopic title="Список прав, которые получит пользователь" %}
-Права, которые получит пользователь, будут ограничены следующим списком пространств имён модулей DP из подсистемы `networking` (фактический список зависит от списка включённых в кластере модулей):
+Права, которые получит пользователь, будут ограничены следующим списком неймспейсов модулей DP из подсистемы `network` (фактический список зависит от списка включённых в кластере модулей):
 - `d8-cni-cilium`;
 - `d8-cni-flannel`;
 - `d8-cni-simple-bridge`;
 - `d8-ingress-nginx`;
 - `d8-istio`;
+- `d8-keepalived`;
 - `d8-metallb`;
+- `d8-monitoring`;
 - `d8-network-gateway`;
 - `d8-openvpn`;
+- `d8-service-with-healthchecks`;
 - `d8-static-routing-manager`;
 - `d8-system`;
 - `kube-system`.
 
 Пользователю будут доступны следующие права:
-- Просмотр, изменение, удаление и создание *стандартных* ресурсов Kubernetes в пространстве имён модулей из подсистемы `networking`.
+- Просмотр, изменение, удаление и создание *стандартных* ресурсов Kubernetes в неймспейсах модулей из подсистемы `network`.
 
   Пример ресурсов, которыми сможет управлять пользователь (список не полный):
   - `Certificate`;
@@ -114,7 +117,7 @@ roleRef:
   - `VerticalPodAutoscaler`;
   - `VolumeSnapshot`.
 
-- Просмотр, изменение, удаление и создание ресурсов в пространстве имён модулей из подсистемы `networking`.
+- Просмотр, изменение, удаление и создание ресурсов в неймспейсах модулей из подсистемы `network`.
 
   Список ресурсов, которыми сможет управлять пользователь:
   - `EgressGateway`;
@@ -126,28 +129,32 @@ roleRef:
   - `IPRuleSet`;
   - `IstioFederation`;
   - `IstioMulticluster`;
+  - `KeepalivedInstance`;
   - `RoutingTable`.
 
-- Изменение конфигурации модулей (просмотр, изменение, удаление и создание ресурсов moduleConfig) из подсистемы `networking`.
+- Изменение конфигурации модулей (просмотр, изменение, удаление и создание ресурсов moduleConfig) из подсистемы `network`.
 
   Список модулей, которыми сможет управлять пользователь:
   - `cilium-hubble`;
   - `cni-cilium`;
   - `cni-flannel`;
   - `cni-simple-bridge`;
-  - `flow-schema`;
   - `ingress-nginx`;
   - `istio`;
+  - `keepalived`;
   - `kube-dns`;
   - `kube-proxy`;
   - `metallb`;
+  - `monitoring-ping`;
   - `network-gateway`;
   - `network-policy-engine`;
   - `node-local-dns`;
   - `openvpn`;
+  - `sdn`;
+  - `service-with-healthchecks`;
   - `static-routing-manager`.
 
-- Выполнение следующих команд к подам и сервисам в пространстве имён модулей из подсистемы `networking`:
+- Выполнение следующих команд к подам и сервисам в неймспейсах модулей из подсистемы `network`:
   - `kubectl attach`;
   - `kubectl exec`;
   - `kubectl port-forward`;

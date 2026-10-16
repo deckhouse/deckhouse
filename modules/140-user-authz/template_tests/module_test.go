@@ -17,14 +17,19 @@ limitations under the License.
 package template_tests
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
@@ -150,10 +155,25 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(systemRole.Field(`metadata.labels.rbac\.deckhouse\.io/use-role`).String()).To(Equal("admin"))
 			Expect(systemRole.Field("aggregationRule.clusterRoleSelectors").Array()).ToNot(BeEmpty())
 
-			subsystemRole := f.KubernetesGlobalResource("ClusterRole", "d8:subsystem:networking:viewer")
+			subsystemRole := f.KubernetesGlobalResource("ClusterRole", "d8:subsystem:network:viewer")
 			Expect(subsystemRole.Exists()).To(BeTrue())
 			Expect(subsystemRole.Field(`metadata.labels.rbac\.deckhouse\.io/scope`).String()).To(Equal("subsystem"))
-			Expect(subsystemRole.Field(`metadata.labels.rbac\.deckhouse\.io/subsystem`).String()).To(Equal("networking"))
+			Expect(subsystemRole.Field(`metadata.labels.rbac\.deckhouse\.io/subsystem`).String()).To(Equal("network"))
+
+			// One subsystem role per subsystem of the list, and none of the subsystems it replaced.
+			for _, subsystem := range []string{"iam", "security", "cluster", "delivery", "network", "storage", "observability", "managed-services"} {
+				for _, level := range []string{"viewer", "manager", "superadmin"} {
+					name := "d8:subsystem:" + subsystem + ":" + level
+					role := f.KubernetesGlobalResource("ClusterRole", name)
+					Expect(role.Exists()).To(BeTrue(), "expected ClusterRole %s to be rendered", name)
+					Expect(role.Field(`metadata.labels.rbac\.deckhouse\.io/subsystem`).String()).To(Equal(subsystem), name)
+					lineage := `aggregationRule.clusterRoleSelectors.0.matchLabels.rbac\.deckhouse\.io/aggregate-to-` + subsystem + `-as`
+					Expect(role.Field(lineage).String()).To(Equal(level), name)
+				}
+			}
+			for _, subsystem := range []string{"deckhouse", "infrastructure", "kubernetes", "networking"} {
+				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:subsystem:"+subsystem+":manager").Exists()).To(BeFalse(), subsystem)
+			}
 
 			for _, name := range []string{
 				"d8:namespace:viewer", "d8:namespace:user", "d8:namespace:manager", "d8:namespace:admin", "d8:namespace:superadmin",
@@ -182,7 +202,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			legacyManage := f.KubernetesGlobalResource("ClusterRole", "d8:manage:all:manager")
 			Expect(legacyManage.Exists()).To(BeTrue())
 			Expect(legacyManage.Field(`metadata.labels.rbac\.deckhouse\.io/deprecated`).String()).To(Equal("true"))
-			// an alias repeats the can-assign range of its target, so holders of the old name keep
+			// an alias carries the can-assign range of the old role, so holders of the old name keep
 			// the right to assign roles for the compatibility release
 			Expect(legacyManage.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-scope`).String()).To(Equal("system"))
 			Expect(legacyManage.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-max-level`).String()).To(Equal("admin"))
@@ -190,7 +210,11 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(legacySecurity.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-subsystem`).String()).To(Equal("security"))
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:all:viewer").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-basic-max`).Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:system:superadmin").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-max-level`).String()).To(Equal("superadmin"))
-			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:subsystem:security:superadmin").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-subsystem`).String()).To(Equal("security"))
+			// the range of assigning roles belongs to the IAM subsystem, the security roles carry none
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:subsystem:iam:manager").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-subsystem`).String()).To(Equal("iam"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:subsystem:iam:superadmin").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-subsystem`).String()).To(Equal("iam"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:subsystem:security:manager").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-subsystem`).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:subsystem:security:superadmin").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-subsystem`).Exists()).To(BeFalse())
 			legacyUse := f.KubernetesGlobalResource("ClusterRole", "d8:use:role:admin")
 			Expect(legacyUse.Exists()).To(BeTrue())
 			Expect(legacyUse.Field(`metadata.labels.rbac\.deckhouse\.io/deprecated`).String()).To(Equal("true"))
@@ -204,6 +228,665 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 			// d8:use:dict has no alias: its bindings are migrated to d8:dict by the dict-bindings hook.
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:use:dict").Exists()).To(BeFalse())
+		})
+
+		It("Should keep the rights of the old subsystems in their aliases", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// selectors renders the clusterRoleSelectors of a role as "key=value,key notin (value)"
+			// strings, the requirements sorted.
+			selectors := func(name string) []string {
+				var out []string
+				for _, selector := range f.KubernetesGlobalResource("ClusterRole", name).Field("aggregationRule.clusterRoleSelectors").Array() {
+					var pairs []string
+					for key, value := range selector.Get("matchLabels").Map() {
+						pairs = append(pairs, key+"="+value.String())
+					}
+					for _, expression := range selector.Get("matchExpressions").Array() {
+						var values []string
+						for _, value := range expression.Get("values").Array() {
+							values = append(values, value.String())
+						}
+						pairs = append(pairs, expression.Get("key").String()+" "+strings.ToLower(expression.Get("operator").String())+" ("+strings.Join(values, ",")+")")
+					}
+					sort.Strings(pairs)
+					out = append(out, strings.Join(pairs, ","))
+				}
+				return out
+			}
+			// retiredSelector selects the old lineage of a subsystem, without the use capabilities of
+			// the old scheme.
+			retiredSelector := func(lineage, level string) string {
+				return "rbac.deckhouse.io/aggregate-to-" + lineage + "-as=" + level + ",rbac.deckhouse.io/kind notin (use)"
+			}
+			// narrowSelector selects the capabilities of a lineage without the modules that joined it.
+			narrowSelector := func(lineage, level, joined string) string {
+				return "module notin (" + joined + "),rbac.deckhouse.io/aggregate-to-" + lineage + "-as=" + level + ",rbac.deckhouse.io/kind notin (role,use)"
+			}
+			// lineageSelector selects a lineage of the new model, without the use capabilities of the old
+			// scheme.
+			lineageSelector := func(lineage, level string) string {
+				return "rbac.deckhouse.io/aggregate-to-" + lineage + "-as=" + level + ",rbac.deckhouse.io/kind notin (use)"
+			}
+			moduleSelector := func(module, lineage, level string) string {
+				return "module=" + module + ",rbac.deckhouse.io/aggregate-to-" + lineage + "-as=" + level +
+					",rbac.deckhouse.io/kind=capability,rbac.deckhouse.io/scope=system"
+			}
+			capabilitySelector := func(capability string) string {
+				return "module=user-authz,rbac.deckhouse.io/capability=" + capability + ",rbac.deckhouse.io/kind=capability"
+			}
+
+			// deckhouse, infrastructure and kubernetes were merged into cluster: their aliases select
+			// the capabilities of their former modules, wherever the modules are now, and never the
+			// whole cluster lineage, so a binding to an old name does not widen on upgrade.
+			for _, name := range []string{
+				"d8:manage:deckhouse:viewer", "d8:manage:deckhouse:manager",
+				"d8:manage:infrastructure:viewer", "d8:manage:infrastructure:manager",
+				"d8:manage:kubernetes:viewer", "d8:manage:kubernetes:manager",
+			} {
+				level := name[strings.LastIndex(name, ":")+1:]
+				alias := f.KubernetesGlobalResource("ClusterRole", name)
+				Expect(alias.Field(`metadata.annotations.rbac\.deckhouse\.io/deprecated-replaced-by`).String()).To(Equal("d8:subsystem:cluster:"+level), name)
+				Expect(alias.Field(`metadata.labels.rbac\.deckhouse\.io/delegatable`).Exists()).To(BeFalse(), name)
+				Expect(selectors(name)).NotTo(ContainElement("rbac.deckhouse.io/aggregate-to-cluster-as="+level), name)
+			}
+			Expect(selectors("d8:manage:deckhouse:viewer")).To(ConsistOf(
+				moduleSelector("deckhouse", "cluster", "viewer"),
+				moduleSelector("multitenancy-manager", "iam", "viewer"),
+				retiredSelector("deckhouse", "viewer"),
+			))
+			Expect(selectors("d8:manage:deckhouse:manager")).To(ConsistOf(
+				moduleSelector("deckhouse", "cluster", "viewer"),
+				moduleSelector("deckhouse", "cluster", "manager"),
+				moduleSelector("multitenancy-manager", "iam", "viewer"),
+				moduleSelector("multitenancy-manager", "iam", "manager"),
+				retiredSelector("deckhouse", "viewer"),
+				retiredSelector("deckhouse", "manager"),
+			))
+			infrastructure := selectors("d8:manage:infrastructure:manager")
+			Expect(infrastructure).To(HaveLen(44))
+			Expect(infrastructure).To(ContainElements(
+				retiredSelector("infrastructure", "viewer"),
+				retiredSelector("infrastructure", "manager"),
+				moduleSelector("node-manager", "cluster", "viewer"),
+				moduleSelector("node-manager", "cluster", "manager"),
+				moduleSelector("cloud-provider-zvirt", "cluster", "manager"),
+				moduleSelector("istio", "network", "manager"),
+				moduleSelector("keepalived", "network", "manager"),
+				moduleSelector("local-path-provisioner", "storage", "manager"),
+				moduleSelector("csi-vsphere", "cluster", "manager"),
+				capabilitySelector("subsystem-capability.cluster.view_resources"),
+				capabilitySelector("subsystem-capability.cluster.manage_resources"),
+			))
+			Expect(infrastructure).NotTo(ContainElement(capabilitySelector("subsystem-capability.network.manage_resources")))
+			Expect(selectors("d8:manage:kubernetes:viewer")).To(ConsistOf(
+				moduleSelector("control-plane-manager", "cluster", "viewer"),
+				moduleSelector("kube-dns", "network", "viewer"),
+				moduleSelector("kube-proxy", "network", "viewer"),
+				capabilitySelector("subsystem-capability.cluster.view_resources"),
+				capabilitySelector("subsystem-capability.network.view_resources"),
+				capabilitySelector("subsystem-capability.security.view_resources"),
+				capabilitySelector("subsystem-capability.storage.view_resources"),
+				retiredSelector("kubernetes", "viewer"),
+			))
+
+			// security keeps the user-authz and user-authn capabilities that moved to iam
+			Expect(selectors("d8:manage:security:manager")).To(ConsistOf(
+				lineageSelector("security", "manager"),
+				moduleSelector("user-authn", "iam", "viewer"),
+				moduleSelector("user-authn", "iam", "manager"),
+				moduleSelector("user-authz", "iam", "viewer"),
+				moduleSelector("user-authz", "iam", "manager"),
+			))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:security:manager").
+				Field(`metadata.annotations.rbac\.deckhouse\.io/deprecated-replaced-by`).String()).To(Equal("d8:subsystem:security:manager"))
+
+			// a description that sends the holder to the role of another subsystem says that the role
+			// grants more and names the narrow way
+			for name, hint := range map[string]string{
+				"d8:manage:security:viewer":    "Rights for user-authn, user-authz come with d8:subsystem:iam:viewer, which grants more.",
+				"d8:manage:deckhouse:viewer":   "Rights for multitenancy-manager come with d8:subsystem:iam:viewer, which grants more as well.",
+				"d8:manage:kubernetes:manager": "Rights for kube-dns, kube-proxy come with d8:subsystem:network:manager, which grants more as well.",
+			} {
+				for _, annotation := range []string{`en\.meta\.deckhouse\.io/description`, `ru\.meta\.deckhouse\.io/description`} {
+					Expect(f.KubernetesGlobalResource("ClusterRole", name).Field("metadata.annotations."+annotation).String()).To(ContainSubstring("rbac.deckhouse.io/capability"), name)
+				}
+				Expect(f.KubernetesGlobalResource("ClusterRole", name).Field(`metadata.annotations.en\.meta\.deckhouse\.io/description`).String()).To(ContainSubstring(hint), name)
+			}
+
+			// networking was renamed to network, and its alias selects the old lineage as well; the
+			// other subsystems kept their names
+			// keepalived joined network from infrastructure, and local-path-provisioner joined storage,
+			// so the aliases of the old roles leave them out
+			Expect(selectors("d8:manage:networking:manager")).To(ConsistOf(
+				narrowSelector("network", "viewer", "keepalived"),
+				narrowSelector("network", "manager", "keepalived"),
+				retiredSelector("networking", "viewer"),
+				retiredSelector("networking", "manager"),
+			))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:networking:manager").
+				Field(`metadata.annotations.rbac\.deckhouse\.io/deprecated-replaced-by`).String()).To(Equal("d8:subsystem:network:manager"))
+			Expect(selectors("d8:manage:storage:viewer")).To(ConsistOf(narrowSelector("storage", "viewer", "local-path-provisioner")))
+			Expect(selectors("d8:manage:storage:manager")).To(ConsistOf(
+				narrowSelector("storage", "viewer", "local-path-provisioner"),
+				narrowSelector("storage", "manager", "local-path-provisioner"),
+			))
+			Expect(selectors("d8:manage:observability:manager")).To(ConsistOf(lineageSelector("observability", "manager")))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:storage:viewer").
+				Field(`metadata.annotations.en\.meta\.deckhouse\.io/description`).String()).To(ContainSubstring("also grants rights for local-path-provisioner"))
+			// all also keeps the subsystem roles of the modules with a subsystem of their own, which
+			// carry the manage kind and aggregate-to-all-as, as the previous all role selected them
+			Expect(selectors("d8:manage:all:manager")).To(ConsistOf(
+				lineageSelector("system", "manager"),
+				"rbac.deckhouse.io/aggregate-to-all-as=manager,rbac.deckhouse.io/kind=manage",
+				retiredSelector("deckhouse", "viewer"),
+				retiredSelector("deckhouse", "manager"),
+				retiredSelector("infrastructure", "viewer"),
+				retiredSelector("infrastructure", "manager"),
+				retiredSelector("kubernetes", "viewer"),
+				retiredSelector("kubernetes", "manager"),
+				retiredSelector("networking", "viewer"),
+				retiredSelector("networking", "manager"),
+			))
+		})
+
+		It("Should keep in the aliases the capabilities that still carry the lineage of an old subsystem", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// selects reports whether a selector of the role matches an object with the given labels,
+			// the way the aggregation controller matches it.
+			selects := func(name string, objectLabels map[string]string) bool {
+				for _, raw := range f.KubernetesGlobalResource("ClusterRole", name).Field("aggregationRule.clusterRoleSelectors").Array() {
+					var selector metav1.LabelSelector
+					Expect(json.Unmarshal([]byte(raw.Raw), &selector)).To(Succeed(), name)
+					parsed, err := metav1.LabelSelectorAsSelector(&selector)
+					Expect(err).ShouldNot(HaveOccurred(), name)
+					if parsed.Matches(labels.Set(objectLabels)) {
+						return true
+					}
+				}
+				return false
+			}
+			// oldCapability has the labels of a capability of the previous release, the way a module
+			// released on its own still ships it.
+			oldCapability := func(module, lineage, level string) map[string]string {
+				return map[string]string{
+					"heritage":                "deckhouse",
+					"module":                  module,
+					"rbac.deckhouse.io/kind":  "manage",
+					"rbac.deckhouse.io/level": "module",
+					"rbac.deckhouse.io/aggregate-to-" + lineage + "-as": level,
+				}
+			}
+
+			// A module of the network table still on the networking lineage, such as ingress-nginx.
+			ingressView := oldCapability("ingress-nginx", "networking", "viewer")
+			ingressEdit := oldCapability("ingress-nginx", "networking", "manager")
+			for _, name := range []string{"d8:manage:networking:viewer", "d8:manage:all:viewer"} {
+				Expect(selects(name, ingressView)).To(BeTrue(), name)
+				Expect(selects(name, ingressEdit)).To(BeFalse(), name)
+			}
+			for _, name := range []string{"d8:manage:networking:manager", "d8:manage:all:manager"} {
+				Expect(selects(name, ingressView)).To(BeTrue(), name)
+				Expect(selects(name, ingressEdit)).To(BeTrue(), name)
+			}
+
+			// A module still on the infrastructure lineage, such as loki or storage-foundation.
+			lokiEdit := oldCapability("loki", "infrastructure", "manager")
+			Expect(selects("d8:manage:infrastructure:manager", lokiEdit)).To(BeTrue())
+			Expect(selects("d8:manage:infrastructure:viewer", lokiEdit)).To(BeFalse())
+			Expect(selects("d8:manage:all:manager", lokiEdit)).To(BeTrue())
+			Expect(selects("d8:manage:deckhouse:manager", lokiEdit)).To(BeFalse())
+
+			// A capability of the new scheme that kept the old lineage.
+			snapshotView := map[string]string{
+				"heritage":                "deckhouse",
+				"module":                  "snapshot-controller",
+				"rbac.deckhouse.io/kind":  "capability",
+				"rbac.deckhouse.io/scope": "system",
+				"rbac.deckhouse.io/aggregate-to-infrastructure-as": "viewer",
+			}
+			Expect(selects("d8:manage:infrastructure:viewer", snapshotView)).To(BeTrue())
+
+			// A customer extension of d8:manage:deckhouse:manager the way the previous release
+			// documented it.
+			extension := map[string]string{
+				"rbac.deckhouse.io/kind":                      "manage",
+				"rbac.deckhouse.io/aggregate-to-deckhouse-as": "manager",
+			}
+			Expect(selects("d8:manage:deckhouse:manager", extension)).To(BeTrue())
+			Expect(selects("d8:manage:deckhouse:viewer", extension)).To(BeFalse())
+			Expect(selects("d8:manage:all:manager", extension)).To(BeTrue())
+
+			// The subsystem role of a module with a subsystem of its own, the way virtualization
+			// ships it on the labels of the previous scheme. The previous all role of its level
+			// selected it, and so does the alias; no alias of a subsystem role does.
+			virtualizationManager := map[string]string{
+				"heritage":                    "deckhouse",
+				"module":                      "virtualization",
+				"rbac.deckhouse.io/kind":      "manage",
+				"rbac.deckhouse.io/level":     "subsystem",
+				"rbac.deckhouse.io/subsystem": "virtualization",
+				"rbac.deckhouse.io/use-role":  "user",
+				"rbac.deckhouse.io/aggregate-to-virtualization-as": "superadmin",
+				"rbac.deckhouse.io/aggregate-to-all-as":            "manager",
+			}
+			Expect(selects("d8:manage:all:manager", virtualizationManager)).To(BeTrue())
+			for _, name := range []string{"d8:manage:all:viewer", "d8:manage:networking:manager", "d8:manage:kubernetes:manager", "d8:system:manager"} {
+				Expect(selects(name, virtualizationManager)).To(BeFalse(), name)
+			}
+			Expect(selects("d8:manage:all:manager", map[string]string{
+				"rbac.deckhouse.io/kind":                "use",
+				"rbac.deckhouse.io/aggregate-to-all-as": "manager",
+			})).To(BeFalse(), "a use role of the previous scheme")
+
+			// A module that joined network or storage from infrastructure is left out of the alias of
+			// the old role, the other modules of the lineage and the custom capabilities stay.
+			newCapability := func(module, lineage, level string) map[string]string {
+				return map[string]string{
+					"heritage":                "deckhouse",
+					"module":                  module,
+					"rbac.deckhouse.io/kind":  "capability",
+					"rbac.deckhouse.io/scope": "system",
+					"rbac.deckhouse.io/aggregate-to-" + lineage + "-as": level,
+				}
+			}
+			Expect(selects("d8:manage:networking:manager", newCapability("keepalived", "network", "manager"))).To(BeFalse())
+			Expect(selects("d8:manage:networking:manager", newCapability("keepalived", "network", "viewer"))).To(BeFalse())
+			Expect(selects("d8:manage:networking:manager", newCapability("cni-cilium", "network", "manager"))).To(BeTrue())
+			Expect(selects("d8:manage:networking:manager", newCapability("cni-cilium", "network", "viewer"))).To(BeTrue())
+			Expect(selects("d8:manage:storage:viewer", newCapability("local-path-provisioner", "storage", "viewer"))).To(BeFalse())
+			Expect(selects("d8:manage:storage:viewer", map[string]string{
+				"rbac.deckhouse.io/kind":                    "custom-capability",
+				"rbac.deckhouse.io/aggregate-to-storage-as": "viewer",
+			})).To(BeTrue())
+			Expect(selects("d8:subsystem:network:manager", newCapability("keepalived", "network", "manager"))).To(BeTrue())
+			// The subsystem viewer role aggregates keepalived, so the alias does not take it in.
+			Expect(selects("d8:manage:networking:manager", map[string]string{
+				"heritage":               "deckhouse",
+				"module":                 "user-authz",
+				"rbac.deckhouse.io/kind": "role",
+				"rbac.deckhouse.io/aggregate-to-network-as": "manager",
+			})).To(BeFalse())
+
+			// The use capabilities of the old scheme granted namespace-level rights through
+			// aggregate-to-kubernetes-as, and no manage role took them.
+			useCapability := map[string]string{
+				"heritage":               "deckhouse",
+				"module":                 "cert-manager",
+				"rbac.deckhouse.io/kind": "use",
+				"rbac.deckhouse.io/aggregate-to-kubernetes-as": "manager",
+			}
+			for _, name := range []string{"d8:manage:kubernetes:manager", "d8:manage:all:manager"} {
+				Expect(selects(name, useCapability)).To(BeFalse(), name)
+			}
+
+			// The roles of the new model collect none of the old lineages.
+			for _, name := range []string{
+				"d8:system:viewer", "d8:system:manager",
+				"d8:subsystem:cluster:viewer", "d8:subsystem:cluster:manager",
+				"d8:subsystem:network:viewer", "d8:subsystem:network:manager",
+			} {
+				for _, object := range []map[string]string{ingressView, ingressEdit, lokiEdit, snapshotView, extension} {
+					Expect(selects(name, object)).To(BeFalse(), name)
+				}
+			}
+		})
+
+		It("Should project the bindings to the old manage roles into the namespaces the previous release did", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// projects reports whether a selector of the use-binding-selectors annotation of the role
+			// matches an object with the given labels, the way user-authz-controller matches it. Every
+			// selector names the kind of what it selects, so none can select every ClusterRole.
+			projects := func(name string, objectLabels map[string]string) bool {
+				raw := f.KubernetesGlobalResource("ClusterRole", name).Field(`metadata.annotations.user-authz\.deckhouse\.io/use-binding-selectors`)
+				Expect(raw.Exists()).To(BeTrue(), name)
+				var selectors []metav1.LabelSelector
+				Expect(json.Unmarshal([]byte(raw.String()), &selectors)).To(Succeed(), name)
+				Expect(selectors).NotTo(BeEmpty(), name)
+				for i := range selectors {
+					Expect(selectors[i].MatchLabels).To(HaveKey("rbac.deckhouse.io/kind"), name)
+					parsed, err := metav1.LabelSelectorAsSelector(&selectors[i])
+					Expect(err).ShouldNot(HaveOccurred(), name)
+					if parsed.Matches(labels.Set(objectLabels)) {
+						return true
+					}
+				}
+				return false
+			}
+			newCapability := func(module, lineage, level string) map[string]string {
+				return map[string]string{
+					"heritage":                "deckhouse",
+					"module":                  module,
+					"rbac.deckhouse.io/kind":  "capability",
+					"rbac.deckhouse.io/scope": "system",
+					"rbac.deckhouse.io/aggregate-to-" + lineage + "-as": level,
+				}
+			}
+			oldCapability := func(module, lineage, level string) map[string]string {
+				return map[string]string{
+					"heritage":                "deckhouse",
+					"module":                  module,
+					"rbac.deckhouse.io/kind":  "manage",
+					"rbac.deckhouse.io/level": "module",
+					"rbac.deckhouse.io/aggregate-to-" + lineage + "-as": level,
+				}
+			}
+
+			// An alias carries the labels the previous release put on the role: the manage kind and
+			// the use role, viewer for a viewer and user for a manager.
+			for _, subsystem := range []string{"all", "deckhouse", "infrastructure", "kubernetes", "networking", "observability", "security", "storage"} {
+				for level, useRole := range map[string]string{"viewer": "viewer", "manager": "user"} {
+					name := "d8:manage:" + subsystem + ":" + level
+					alias := f.KubernetesGlobalResource("ClusterRole", name)
+					Expect(alias.Field(`metadata.labels.rbac\.deckhouse\.io/kind`).String()).To(Equal("manage"), name)
+					Expect(alias.Field(`metadata.labels.rbac\.deckhouse\.io/use-role`).String()).To(Equal(useRole), name)
+					Expect(alias.Field(`metadata.labels.rbac\.deckhouse\.io/scope`).Exists()).To(BeFalse(), name)
+				}
+			}
+			// The other roles are projected the current way, or not at all.
+			for _, name := range []string{"d8:use:role:viewer", "d8:use:role:admin:kubernetes", "d8:subsystem:network:manager", "d8:system:viewer"} {
+				role := f.KubernetesGlobalResource("ClusterRole", name)
+				Expect(role.Field(`metadata.annotations.user-authz\.deckhouse\.io/use-binding-selectors`).Exists()).To(BeFalse(), name)
+				Expect(role.Field(`metadata.labels.rbac\.deckhouse\.io/kind`).String()).NotTo(Equal("manage"), name)
+			}
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:use:role:viewer").Field(`metadata.labels.rbac\.deckhouse\.io/use-role`).Exists()).To(BeFalse())
+
+			// networking: the modules of this repository that were in it, wherever they are now, and
+			// the old lineage of the modules released on their own. keepalived joined network from
+			// infrastructure, and a module already relabelled to network was not in the previous
+			// projection, which took the manage kind only.
+			Expect(projects("d8:manage:networking:viewer", newCapability("cni-cilium", "network", "viewer"))).To(BeTrue())
+			Expect(projects("d8:manage:networking:viewer", newCapability("cni-cilium", "network", "manager"))).To(BeFalse())
+			Expect(projects("d8:manage:networking:manager", newCapability("cni-cilium", "network", "viewer"))).To(BeTrue())
+			Expect(projects("d8:manage:networking:manager", newCapability("cni-cilium", "network", "manager"))).To(BeTrue())
+			Expect(projects("d8:manage:networking:manager", newCapability("istio", "network", "manager"))).To(BeTrue())
+			Expect(projects("d8:manage:networking:manager", newCapability("keepalived", "network", "manager"))).To(BeFalse())
+			Expect(projects("d8:manage:networking:manager", newCapability("sdn", "network", "manager"))).To(BeFalse())
+			Expect(projects("d8:manage:networking:viewer", oldCapability("ingress-nginx", "networking", "viewer"))).To(BeTrue())
+			Expect(projects("d8:manage:networking:viewer", oldCapability("ingress-nginx", "networking", "manager"))).To(BeFalse())
+			Expect(projects("d8:manage:networking:manager", oldCapability("ingress-nginx", "networking", "manager"))).To(BeTrue())
+
+			// infrastructure keeps the modules that moved to cluster, network and storage, and the
+			// old lineage; a capability of the current scheme that kept the old lineage was not in
+			// the previous projection either.
+			for _, object := range []map[string]string{
+				newCapability("node-manager", "cluster", "viewer"),
+				newCapability("istio", "network", "viewer"),
+				newCapability("keepalived", "network", "viewer"),
+				newCapability("local-path-provisioner", "storage", "viewer"),
+				oldCapability("loki", "infrastructure", "viewer"),
+			} {
+				Expect(projects("d8:manage:infrastructure:viewer", object)).To(BeTrue(), object["module"])
+			}
+			for _, object := range []map[string]string{
+				newCapability("control-plane-manager", "cluster", "viewer"),
+				newCapability("csi-nfs", "storage", "viewer"),
+				newCapability("snapshot-controller", "infrastructure", "viewer"),
+				oldCapability("ingress-nginx", "networking", "viewer"),
+			} {
+				Expect(projects("d8:manage:infrastructure:viewer", object)).To(BeFalse(), object["module"])
+			}
+			Expect(projects("d8:manage:kubernetes:manager", newCapability("control-plane-manager", "cluster", "manager"))).To(BeTrue())
+			Expect(projects("d8:manage:kubernetes:manager", newCapability("kube-proxy", "network", "manager"))).To(BeTrue())
+			Expect(projects("d8:manage:kubernetes:manager", newCapability("node-manager", "cluster", "manager"))).To(BeFalse())
+			Expect(projects("d8:manage:deckhouse:manager", newCapability("multitenancy-manager", "iam", "manager"))).To(BeTrue())
+			Expect(projects("d8:manage:deckhouse:manager", map[string]string{
+				"rbac.deckhouse.io/kind":                      "manage",
+				"rbac.deckhouse.io/aggregate-to-deckhouse-as": "manager",
+				"rbac.deckhouse.io/namespace":                 "custom-ns",
+			})).To(BeTrue(), "a capability of the previous scheme that extended the role into a namespace")
+
+			// security keeps user-authz and user-authn, which moved to iam, and not the rest of iam.
+			Expect(projects("d8:manage:security:manager", newCapability("cert-manager", "security", "manager"))).To(BeTrue())
+			Expect(projects("d8:manage:security:manager", newCapability("user-authn", "iam", "manager"))).To(BeTrue())
+			Expect(projects("d8:manage:security:manager", newCapability("multitenancy-manager", "iam", "manager"))).To(BeFalse())
+			Expect(projects("d8:manage:security:manager", newCapability("operator-trivy", "security", "manager"))).To(BeFalse())
+			Expect(projects("d8:manage:security:manager", oldCapability("operator-trivy", "security", "manager"))).To(BeTrue())
+
+			// observability and storage kept their names: the old lineage with the manage kind.
+			Expect(projects("d8:manage:observability:viewer", newCapability("okmeter", "observability", "viewer"))).To(BeTrue())
+			Expect(projects("d8:manage:observability:viewer", oldCapability("prometheus", "observability", "viewer"))).To(BeTrue())
+			Expect(projects("d8:manage:observability:viewer", newCapability("prometheus", "observability", "viewer"))).To(BeFalse())
+			Expect(projects("d8:manage:storage:viewer", oldCapability("sds-node-configurator", "storage", "viewer"))).To(BeTrue())
+			Expect(projects("d8:manage:storage:viewer", newCapability("csi-nfs", "storage", "viewer"))).To(BeFalse())
+			Expect(projects("d8:manage:storage:viewer", newCapability("local-path-provisioner", "storage", "viewer"))).To(BeFalse())
+
+			// all: every module of this repository and every old lineage, at the level of the role
+			// only, as the previous release reached the capabilities through the subsystem roles of
+			// that level.
+			for _, object := range []map[string]string{
+				newCapability("deckhouse", "cluster", "viewer"),
+				newCapability("node-manager", "cluster", "viewer"),
+				newCapability("cni-cilium", "network", "viewer"),
+				newCapability("keepalived", "network", "viewer"),
+				newCapability("local-path-provisioner", "storage", "viewer"),
+				newCapability("user-authn", "iam", "viewer"),
+				newCapability("multitenancy-manager", "iam", "viewer"),
+				newCapability("cert-manager", "security", "viewer"),
+				newCapability("okmeter", "observability", "viewer"),
+				oldCapability("loki", "infrastructure", "viewer"),
+				oldCapability("ingress-nginx", "networking", "viewer"),
+				oldCapability("prometheus", "observability", "viewer"),
+				oldCapability("sds-node-configurator", "storage", "viewer"),
+			} {
+				Expect(projects("d8:manage:all:viewer", object)).To(BeTrue(), object["module"])
+			}
+			for _, object := range []map[string]string{
+				newCapability("node-manager", "cluster", "manager"),
+				newCapability("csi-nfs", "storage", "viewer"),
+				newCapability("virtualization", "cluster", "viewer"),
+				oldCapability("ingress-nginx", "networking", "manager"),
+			} {
+				Expect(projects("d8:manage:all:viewer", object)).To(BeFalse(), object["module"])
+			}
+			Expect(projects("d8:manage:all:manager", newCapability("node-manager", "cluster", "manager"))).To(BeTrue())
+			Expect(projects("d8:manage:all:manager", oldCapability("ingress-nginx", "networking", "manager"))).To(BeTrue())
+
+			// all also reaches the namespaces of the modules with a subsystem of their own through
+			// their subsystem roles of its level, as the previous release did, and the controller
+			// follows those roles to their capabilities.
+			ownSubsystemRole := func(level string) map[string]string {
+				return map[string]string{
+					"heritage":                              "deckhouse",
+					"module":                                "virtualization",
+					"rbac.deckhouse.io/kind":                "manage",
+					"rbac.deckhouse.io/level":               "subsystem",
+					"rbac.deckhouse.io/subsystem":           "virtualization",
+					"rbac.deckhouse.io/aggregate-to-all-as": level,
+				}
+			}
+			Expect(projects("d8:manage:all:viewer", ownSubsystemRole("viewer"))).To(BeTrue())
+			Expect(projects("d8:manage:all:viewer", ownSubsystemRole("manager"))).To(BeFalse())
+			Expect(projects("d8:manage:all:manager", ownSubsystemRole("manager"))).To(BeTrue())
+			Expect(projects("d8:manage:networking:manager", ownSubsystemRole("manager"))).To(BeFalse())
+
+			// The use capabilities of the previous scheme carried no namespace and were never part
+			// of the projection.
+			Expect(projects("d8:manage:kubernetes:viewer", map[string]string{
+				"heritage":               "deckhouse",
+				"module":                 "log-shipper",
+				"rbac.deckhouse.io/kind": "use",
+				"rbac.deckhouse.io/aggregate-to-kubernetes-as": "viewer",
+			})).To(BeFalse())
+		})
+
+		It("Should keep in the use aliases the use capabilities of the previous scheme", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// selectors renders the clusterRoleSelectors of a role as sorted "key=value" strings.
+			selectors := func(name string) []string {
+				var out []string
+				for _, selector := range f.KubernetesGlobalResource("ClusterRole", name).Field("aggregationRule.clusterRoleSelectors").Array() {
+					Expect(selector.Get("matchExpressions").Exists()).To(BeFalse(), name)
+					var pairs []string
+					for key, value := range selector.Get("matchLabels").Map() {
+						pairs = append(pairs, key+"="+value.String())
+					}
+					sort.Strings(pairs)
+					out = append(out, strings.Join(pairs, ","))
+				}
+				return out
+			}
+			// selects reports whether a selector of the role matches an object with the given labels.
+			selects := func(name string, objectLabels map[string]string) bool {
+				for _, raw := range f.KubernetesGlobalResource("ClusterRole", name).Field("aggregationRule.clusterRoleSelectors").Array() {
+					var selector metav1.LabelSelector
+					Expect(json.Unmarshal([]byte(raw.Raw), &selector)).To(Succeed(), name)
+					parsed, err := metav1.LabelSelectorAsSelector(&selector)
+					Expect(err).ShouldNot(HaveOccurred(), name)
+					if parsed.Matches(labels.Set(objectLabels)) {
+						return true
+					}
+				}
+				return false
+			}
+			oldUse := func(lineage, level string) string {
+				return "rbac.deckhouse.io/aggregate-to-" + lineage + "-as=" + level + ",rbac.deckhouse.io/kind=use"
+			}
+
+			// The previous release collected the use capabilities of a level and of the levels below
+			// it through the d8:use:role:<level>:kubernetes chain, by kind use and the kubernetes
+			// lineage. Both aliases of a level keep them next to the namespace lineage.
+			// d8:use:role:<level> also selected kind use with aggregate-to-all-as at its level, which
+			// the use roles of the modules with a subsystem of their own carry, and keeps that too;
+			// the kubernetes variant did not.
+			levels := []string{"viewer", "user", "manager", "admin"}
+			for i, level := range levels {
+				want := []string{"rbac.deckhouse.io/aggregate-to-namespace-as=" + level}
+				for _, lower := range levels[:i+1] {
+					want = append(want, oldUse("kubernetes", lower))
+				}
+				Expect(selectors("d8:use:role:"+level+":kubernetes")).To(ConsistOf(want), level)
+				Expect(selectors("d8:use:role:"+level)).To(ConsistOf(append(want, oldUse("all", level))), level)
+			}
+
+			// The use role of virtualization for its user level, as the module ships it on the labels of
+			// the previous scheme.
+			virtualizationUser := map[string]string{
+				"heritage":               "deckhouse",
+				"module":                 "virtualization",
+				"rbac.deckhouse.io/kind": "use",
+				"rbac.deckhouse.io/aggregate-to-virtualization-as": "manager",
+				"rbac.deckhouse.io/aggregate-to-all-as":            "user",
+			}
+			Expect(selects("d8:use:role:user", virtualizationUser)).To(BeTrue())
+			for _, name := range []string{"d8:use:role:user:kubernetes", "d8:use:role:viewer", "d8:use:role:manager", "d8:use:role:admin", "d8:namespace:user"} {
+				Expect(selects(name, virtualizationUser)).To(BeFalse(), name)
+			}
+
+			// A use capability of a module released on its own, such as log-shipper, and a custom
+			// one of the previous release.
+			logShipperView := map[string]string{
+				"heritage":               "deckhouse",
+				"module":                 "log-shipper",
+				"rbac.deckhouse.io/kind": "use",
+				"rbac.deckhouse.io/aggregate-to-kubernetes-as": "viewer",
+			}
+			logShipperEdit := map[string]string{
+				"heritage":               "deckhouse",
+				"module":                 "log-shipper",
+				"rbac.deckhouse.io/kind": "use",
+				"rbac.deckhouse.io/aggregate-to-kubernetes-as": "manager",
+			}
+			customView := map[string]string{
+				"rbac.deckhouse.io/kind":                       "use",
+				"rbac.deckhouse.io/aggregate-to-kubernetes-as": "viewer",
+			}
+			for _, name := range []string{"d8:use:role:viewer", "d8:use:role:viewer:kubernetes", "d8:use:role:user", "d8:use:role:admin:kubernetes"} {
+				Expect(selects(name, logShipperView)).To(BeTrue(), name)
+				Expect(selects(name, customView)).To(BeTrue(), name)
+			}
+			for _, name := range []string{"d8:use:role:viewer", "d8:use:role:user:kubernetes"} {
+				Expect(selects(name, logShipperEdit)).To(BeFalse(), name)
+			}
+			for _, name := range []string{"d8:use:role:manager", "d8:use:role:admin"} {
+				Expect(selects(name, logShipperEdit)).To(BeTrue(), name)
+			}
+
+			// What the previous use roles did not collect stays out: a manage capability on the
+			// kubernetes lineage, the networking lineage that the use capabilities of cni-cilium
+			// carried as well, a custom capability of the current scheme on the kubernetes lineage,
+			// kind use with aggregate-to-all-as of a level below, which the use role of that level
+			// collected instead, and a manage or custom object with aggregate-to-all-as.
+			for _, object := range []map[string]string{
+				{"rbac.deckhouse.io/kind": "manage", "rbac.deckhouse.io/aggregate-to-kubernetes-as": "viewer"},
+				{"rbac.deckhouse.io/kind": "use", "rbac.deckhouse.io/aggregate-to-networking-as": "viewer"},
+				{"rbac.deckhouse.io/kind": "custom-capability", "rbac.deckhouse.io/aggregate-to-kubernetes-as": "viewer"},
+				{"rbac.deckhouse.io/kind": "use", "rbac.deckhouse.io/aggregate-to-all-as": "viewer"},
+				{"rbac.deckhouse.io/kind": "manage", "rbac.deckhouse.io/aggregate-to-all-as": "admin"},
+				{"rbac.deckhouse.io/kind": "custom-capability", "rbac.deckhouse.io/aggregate-to-all-as": "admin"},
+			} {
+				Expect(selects("d8:use:role:admin", object)).To(BeFalse(), "%v", object)
+			}
+
+			// The roles of the new model do not take them.
+			for _, name := range []string{"d8:namespace:viewer", "d8:namespace:user", "d8:namespace:admin"} {
+				Expect(f.KubernetesGlobalResource("ClusterRole", name).Exists()).To(BeTrue(), name)
+				Expect(selects(name, logShipperView)).To(BeFalse(), name)
+				Expect(selects(name, customView)).To(BeFalse(), name)
+			}
+		})
+
+		It("Should leave the use capabilities out of the cluster-wide roles", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// selects reports whether a selector of the role matches an object with the given labels.
+			selects := func(name string, objectLabels map[string]string) bool {
+				role := f.KubernetesGlobalResource("ClusterRole", name)
+				Expect(role.Exists()).To(BeTrue(), name)
+				for _, raw := range role.Field("aggregationRule.clusterRoleSelectors").Array() {
+					var selector metav1.LabelSelector
+					Expect(json.Unmarshal([]byte(raw.Raw), &selector)).To(Succeed(), name)
+					parsed, err := metav1.LabelSelectorAsSelector(&selector)
+					Expect(err).ShouldNot(HaveOccurred(), name)
+					if parsed.Matches(labels.Set(objectLabels)) {
+						return true
+					}
+				}
+				return false
+			}
+			// onLineage has the labels of an object of the given kind with the aggregation label of a
+			// lineage, the way a module released on its own or a custom object may carry it.
+			onLineage := func(kind, lineage, level string) map[string]string {
+				return map[string]string{
+					"heritage":               "deckhouse",
+					"module":                 "some-module",
+					"rbac.deckhouse.io/kind": kind,
+					"rbac.deckhouse.io/aggregate-to-" + lineage + "-as": level,
+				}
+			}
+
+			// A use capability gives rules in a namespace. With the label of a subsystem or of the
+			// system scope it would give them in every namespace, so no cluster-wide role takes it,
+			// while a capability of the same lineage is taken.
+			for _, subsystem := range []string{"iam", "security", "cluster", "delivery", "network", "storage", "observability", "managed-services"} {
+				for _, level := range []string{"viewer", "manager", "superadmin"} {
+					name := "d8:subsystem:" + subsystem + ":" + level
+					Expect(selects(name, onLineage("use", subsystem, level))).To(BeFalse(), name)
+					Expect(selects(name, onLineage("capability", subsystem, level))).To(BeTrue(), name)
+				}
+			}
+			for _, level := range []string{"viewer", "manager", "superadmin"} {
+				name := "d8:system:" + level
+				Expect(selects(name, onLineage("use", "system", level))).To(BeFalse(), name)
+				Expect(selects(name, onLineage("capability", "system", level))).To(BeTrue(), name)
+			}
+
+			// The aliases of the old roles leave it out too, by the lineage of the new subsystem and
+			// by the old one.
+			for name, lineage := range map[string]string{
+				"d8:manage:all:manager":           "system",
+				"d8:manage:security:manager":      "security",
+				"d8:manage:observability:manager": "observability",
+				"d8:manage:storage:manager":       "storage",
+				"d8:manage:networking:manager":    "network",
+				"d8:manage:kubernetes:manager":    "kubernetes",
+			} {
+				Expect(selects(name, onLineage("use", lineage, "manager"))).To(BeFalse(), name)
+				Expect(selects(name, onLineage("capability", lineage, "manager"))).To(BeTrue(), name)
+			}
 		})
 
 		It("Should create aggregated custom ClusterRoles with cascading selectors and no rules of their own", func() {
@@ -849,10 +1532,23 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			f.HelmRender()
 		})
 
+		It("Should let the IAM and security managers inspect the access of any subject", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// inspect_access moved to iam with user-authz and stays with the security manager, who
+			// audits access
+			capability := f.KubernetesGlobalResource("ClusterRole", "d8:subsystem-capability:iam:inspect_access")
+			Expect(capability.Exists()).To(BeTrue())
+			Expect(capability.Field(`metadata.labels.rbac\.deckhouse\.io/aggregate-to-iam-as`).String()).To(Equal("manager"))
+			Expect(capability.Field(`metadata.labels.rbac\.deckhouse\.io/aggregate-to-security-as`).String()).To(Equal("manager"))
+			Expect(capability.Field(`metadata.labels.rbac\.deckhouse\.io/capability`).String()).To(Equal("subsystem-capability.iam.inspect_access"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:subsystem-capability:security:inspect_access").Exists()).To(BeFalse())
+		})
+
 		It("view_resources should not grant any node subresource", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			cr := f.KubernetesGlobalResource("ClusterRole", "d8:subsystem-capability:kubernetes:view_resources")
+			cr := f.KubernetesGlobalResource("ClusterRole", "d8:subsystem-capability:cluster:view_resources")
 			Expect(cr.Exists()).To(BeTrue())
 
 			rules := cr.Field("rules").String()
@@ -865,6 +1561,75 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(rules).NotTo(ContainSubstring("nodes/log"))
 			Expect(rules).NotTo(ContainSubstring("nodes/metrics"))
 			Expect(rules).NotTo(ContainSubstring("nodes/stats"))
+		})
+	})
+
+	// The access levels grant the namespaced Gateway API resources, read from User and write from
+	// Editor up. The namespace capabilities grant them at the matching levels: view_resources
+	// aggregates into d8:namespace:viewer and manage_resources into d8:namespace:manager, and the
+	// higher namespace and project roles aggregate those in turn.
+	Context("RBACv2 namespace capabilities", func() {
+		gatewayAPIResources := []string{
+			"backendtlspolicies", "gateways", "grpcroutes", "httproutes", "listenersets",
+			"referencegrants", "tcproutes", "tlsroutes", "udproutes",
+		}
+
+		asStrings := func(values gjson.Result) []string {
+			out := []string{}
+			for _, value := range values.Array() {
+				out = append(out, value.String())
+			}
+			return out
+		}
+
+		// gatewayAPIRules returns the rules of the ClusterRole that name the Gateway API group.
+		gatewayAPIRules := func(name string) []gjson.Result {
+			role := f.KubernetesGlobalResource("ClusterRole", name)
+			Expect(role.Exists()).To(BeTrue(), "expected ClusterRole %s to be rendered", name)
+			out := []gjson.Result{}
+			for _, rule := range role.Field("rules").Array() {
+				for _, group := range rule.Get("apiGroups").Array() {
+					if group.String() == "gateway.networking.k8s.io" {
+						out = append(out, rule)
+						break
+					}
+				}
+			}
+			return out
+		}
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
+			f.ValuesSet("global.deckhouseEdition", "EE")
+			f.HelmRender()
+		})
+
+		It("view_resources should grant viewers read access to the namespaced Gateway API resources", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			name := "d8:namespace-capability:kubernetes:view_resources"
+			role := f.KubernetesGlobalResource("ClusterRole", name)
+			Expect(role.Field(`metadata.labels.rbac\.deckhouse\.io/aggregate-to-namespace-as`).String()).To(Equal("viewer"))
+
+			rules := gatewayAPIRules(name)
+			Expect(rules).To(HaveLen(1))
+			Expect(asStrings(rules[0].Get("apiGroups"))).To(ConsistOf("gateway.networking.k8s.io"))
+			Expect(asStrings(rules[0].Get("resources"))).To(ConsistOf(gatewayAPIResources))
+			Expect(asStrings(rules[0].Get("verbs"))).To(ConsistOf("get", "list", "watch"))
+		})
+
+		It("manage_resources should grant managers write access to the namespaced Gateway API resources", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			name := "d8:namespace-capability:kubernetes:manage_resources"
+			role := f.KubernetesGlobalResource("ClusterRole", name)
+			Expect(role.Field(`metadata.labels.rbac\.deckhouse\.io/aggregate-to-namespace-as`).String()).To(Equal("manager"))
+
+			rules := gatewayAPIRules(name)
+			Expect(rules).To(HaveLen(1))
+			Expect(asStrings(rules[0].Get("apiGroups"))).To(ConsistOf("gateway.networking.k8s.io"))
+			Expect(asStrings(rules[0].Get("resources"))).To(ConsistOf(gatewayAPIResources))
+			Expect(asStrings(rules[0].Get("verbs"))).To(ConsistOf("create", "update", "patch", "delete", "deletecollection"))
 		})
 	})
 

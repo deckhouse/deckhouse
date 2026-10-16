@@ -1,0 +1,34 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem:iam:manager
+  annotations:
+    en.meta.deckhouse.io/title: "IAM: Manager"
+    ru.meta.deckhouse.io/title: "Управление подсистемы IAM"
+    en.meta.deckhouse.io/description: "Management of the IAM subsystem configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией подсистемы IAM."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/use-role: admin
+    rbac.deckhouse.io/kind: role
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: iam
+    rbac.deckhouse.io/aggregate-to-iam-as: superadmin
+    rbac.deckhouse.io/aggregate-to-system-as: manager
+    # can-assign range of the identity-assign webhook: the IAM manager assigns basic access
+    # levels up to ClusterAdmin and IAM subsystem roles up to the manager level, but no
+    # superadmin role, cluster-admin or SuperAdmin.
+    user-authz.deckhouse.io/can-assign-basic-max: ClusterAdmin
+    user-authz.deckhouse.io/can-assign-scope: subsystem
+    user-authz.deckhouse.io/can-assign-subsystem: iam
+    user-authz.deckhouse.io/can-assign-max-level: admin
+aggregationRule:
+  clusterRoleSelectors:
+    - matchLabels:
+        rbac.deckhouse.io/aggregate-to-iam-as: manager
+      matchExpressions:
+        - key: rbac.deckhouse.io/kind
+          operator: NotIn
+          values:
+            - use

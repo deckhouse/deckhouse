@@ -280,7 +280,7 @@ Additionally, kube-apiserver protects this data as follows:
 
 Unmasked values are available to the [CAPS](./#cluster-api-provider-static) controller, which needs them to connect to the node over SSH, as well as to users with the [`SuperAdmin`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-current.html#high-level-roles-used-in-the-current-model) access level and members of the [`kubeadm:cluster-admins`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/cluster-admin-access-model.html) group.
 
-The [`d8:manage:infrastructure:viewer`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#role-model-subsystems) and [`d8:manage:infrastructure:manager`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#role-model-subsystems) roles allow reading the SSHCredentials resource, but do not grant access to the SSH key or the sudo password.
+The [`d8:subsystem:cluster:viewer`](/modules/user-authz/#subsystems-of-the-role-based-model) and [`d8:subsystem:cluster:manager`](/modules/user-authz/#subsystems-of-the-role-based-model) roles allow reading the SSHCredentials resource, but do not grant access to the SSH key or the sudo password.
 
 To check whether a user can read sensitive SSHCredentials data, run:
 

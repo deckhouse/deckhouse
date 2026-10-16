@@ -569,6 +569,42 @@ var _ = Describe("Module :: user-authz :: helm template :: validation webhooks",
 		})
 	})
 
+	Context("rbacv2-cluster-roles", func() {
+		const webhook = "user-authz-rbacv2-cluster-roles"
+
+		// A module the DKP subsystem table puts in none of the platform's subsystems may ship its own
+		// d8:subsystem:<name>:<level> roles; the hook takes their subsystems for system-side lineages.
+		It("Should read the subsystem roles into the snapshot the hook reads", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			snapshot := pythonConstant(moduleDir, "webhooks/validating/cluster_roles.py", "SUBSYSTEM_ROLES_SNAPSHOT")
+			Expect(resource(webhook).Field("context.#.name").Value()).To(Equal([]interface{}{snapshot}))
+
+			roles := binding(webhook, snapshot)
+			Expect(roles["apiVersion"]).To(Equal("rbac.authorization.k8s.io/v1"))
+			Expect(roles["kind"]).To(Equal("ClusterRole"))
+			Expect(roles["labelSelector"]).To(Equal(map[string]interface{}{
+				"matchLabels": map[string]interface{}{
+					"rbac.deckhouse.io/kind":  "role",
+					"rbac.deckhouse.io/scope": "subsystem",
+				},
+			}))
+		})
+
+		It("Should keep the subsystem of a subsystem role", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			snapshot := pythonConstant(moduleDir, "webhooks/validating/cluster_roles.py", "SUBSYSTEM_ROLES_SNAPSHOT")
+			out := jq(webhook, snapshot, map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"name":   "d8:subsystem:example:manager",
+					"labels": map[string]interface{}{"rbac.deckhouse.io/subsystem": "example"},
+				},
+			})
+			Expect(out).To(Equal(map[string]interface{}{"subsystem": "example"}))
+		})
+	})
+
 	Context("system-roles", func() {
 		It("Should validate creates and updates of the ClusterRoles marked as installed by the platform", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())

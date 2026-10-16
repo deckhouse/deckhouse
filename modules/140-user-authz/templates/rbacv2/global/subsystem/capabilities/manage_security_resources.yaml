@@ -14,7 +14,7 @@ metadata:
     rbac.deckhouse.io/capability: "subsystem-capability.security.manage_resources"
     rbac.deckhouse.io/scope: subsystem
     rbac.deckhouse.io/subsystem: security
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/aggregate-to-cluster-as: manager
     rbac.deckhouse.io/aggregate-to-security-as: manager
 rules:
   - apiGroups:

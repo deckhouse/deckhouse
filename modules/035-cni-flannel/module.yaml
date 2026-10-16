@@ -3,7 +3,7 @@ stage: General Availability
 critical: true
 weight: 35
 subsystems:
-  - networking
+  - network
 namespace: d8-cni-flannel
 descriptions:
   en: Provides a network between multiple nodes in a cluster using the flannel module.

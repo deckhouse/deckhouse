@@ -3,7 +3,7 @@ critical: true
 weight: 2
 stage: General Availability
 subsystems:
-  - deckhouse
+  - cluster
 namespace: d8-system
 disable:
   confirmation: true

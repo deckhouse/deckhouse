@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: cilium-hubble
-    rbac.deckhouse.io/aggregate-to-networking-as: viewer
+    rbac.deckhouse.io/aggregate-to-network-as: viewer
     rbac.deckhouse.io/kind: capability
     rbac.deckhouse.io/capability: "system-capability.cilium-hubble.view"
     rbac.deckhouse.io/scope: system

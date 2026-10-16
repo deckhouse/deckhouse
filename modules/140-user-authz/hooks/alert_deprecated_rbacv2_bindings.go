@@ -23,9 +23,16 @@ limitations under the License.
 // The bindings to an aliased name are published as a release requirement value: the release that
 // removes the aliases carries the deprecatedRBACv2BindingsCount requirement
 // (modules/140-user-authz/requirements) and stays Pending while such a binding is still in the
-// cluster, so nobody loses access by upgrading with it in place. A binding to a capability name has no
-// alias to lose -- removing the aliases changes nothing for it -- so it raises its alert but does not
-// hold the release.
+// cluster, so nobody loses access by upgrading with it in place. A binding to a legacy name that no
+// ClusterRole has, such as a capability of the previous scheme, has no alias to lose -- removing the
+// aliases changes nothing for it -- so it raises its alert but does not hold the release.
+//
+// Whether a legacy name is an alias of the platform is read from the ClusterRole of that name, not
+// from the name: modules released on their own still ship roles and capabilities of the previous
+// scheme under the same families, such as d8:manage:virtualization:manager,
+// d8:use:role:user:virtualization or d8:manage:permission:module:ingress-nginx:edit. A binding to such a
+// role works, and no release of the platform removes the role, so it raises no alert and does not hold
+// the release.
 //
 // A module that renames a role of its own keeps the old name as an alias the same way, in its own
 // templates/rbacv2-compat/: a ClusterRole labelled rbac.deckhouse.io/deprecated with the new name in
@@ -78,16 +85,18 @@ const (
 // Legacy RBACv2 name families replaced by the new model. Two tiers matter for the operator:
 //
 //   - ALIASED (roles): d8:manage:<all|subsystem>:<level> and d8:use:role:<level>[:kubernetes] are kept
-//     alive for one release by the compat aliases (templates/rbacv2-compat/). A binding to these
-//     still authorizes the *new* role's capabilities (admin lost token/impersonate; manage CRBs no
-//     longer drive automated namespace RoleBindings). The alert nudges the operator to migrate
-//     before the aliases are removed.
+//     alive for one release by the compat aliases (templates/rbacv2-compat/), ClusterRoles of
+//     user-authz labelled rbac.deckhouse.io/deprecated. A binding to these still authorizes the *new*
+//     role's capabilities (admin lost token/impersonate), except for the subsystems merged into
+//     cluster, whose aliases keep the capabilities of their former modules. A ClusterRoleBinding to a
+//     d8:manage:* alias keeps the RoleBindings the previous release projected into the module
+//     namespaces (d8:use:<role>:binding:<name>); those follow it and are not reported. The alert
+//     nudges the operator to migrate before the aliases are removed.
 //
-//   - NOT ALIASED (capabilities): d8:manage:permission:* and d8:use:capability:* are aggregation
-//     building blocks that were never meant to be bound directly and have NO compat alias. A binding
-//     to these no longer grants access after the upgrade — the alert flags it as needing an immediate
-//     fix. (d8:manage:permission:* is a subset of the d8:manage: prefix, so it is matched there and
-//     then reclassified as a capability below.)
+//   - NOT ALIASED: a legacy name that no ClusterRole has. The capabilities of the platform,
+//     d8:manage:permission:* and d8:use:capability:*, are aggregation building blocks that were never
+//     meant to be bound directly and have NO compat alias. A binding to such a name no longer grants
+//     access after the upgrade. The alert flags it as needing an immediate fix.
 //
 // d8:use:dict is intentionally absent: user-authz-controller migrates its bindings to d8:dict.
 var deprecatedRoleNamePrefixes = []string{
@@ -110,24 +119,6 @@ var platformRoleNamePrefixes = []string{
 	"d8:prb:",
 }
 
-// capabilityNamePrefixes are the deprecated names that are capabilities (no compat alias). A binding
-// to one of these does NOT keep working after the upgrade.
-var capabilityNamePrefixes = []string{
-	"d8:manage:permission:",
-	"d8:use:capability:",
-}
-
-// aliasedForOneRelease reports whether a deprecated role name is kept working by a compat alias (a
-// role) as opposed to a capability that has no alias and stops granting access after the upgrade.
-func aliasedForOneRelease(name string) bool {
-	for _, prefix := range capabilityNamePrefixes {
-		if strings.HasPrefix(name, prefix) {
-			return false
-		}
-	}
-	return true
-}
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/user-authz/deprecated-rbacv2-bindings",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -144,8 +135,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterDeprecatedRoleBinding,
 		},
 		{
+			// The ClusterRoles under the legacy name families: the aliases of the platform, and the
+			// roles and capabilities of the previous scheme that modules released on their own still
+			// ship.
+			Name:       "legacy_name_clusterroles",
+			ApiVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRole",
+			FilterFunc: filterLegacyNameClusterRole,
+		},
+		{
 			// The aliases modules keep for their renamed roles; the platform's own aliases are
-			// user-authz's and are told apart by name above.
+			// user-authz's and come with the snapshot above.
 			Name:       "module_rbacv2_aliases",
 			ApiVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRole",
@@ -170,6 +170,24 @@ func filterModuleAlias(obj *unstructured.Unstructured) (go_hook.FilterResult, er
 	return &moduleAlias{Name: obj.GetName(), ReplacedBy: obj.GetAnnotations()[replacedByAnnotation]}, nil
 }
 
+// legacyNameRole is a ClusterRole under a legacy name family. PlatformAlias is set for an alias of
+// the platform, a ClusterRole of user-authz labelled rbac.deckhouse.io/deprecated.
+type legacyNameRole struct {
+	Name          string `json:"name"`
+	PlatformAlias bool   `json:"platform_alias"`
+}
+
+func filterLegacyNameClusterRole(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	if !deprecatedRoleName(obj.GetName()) {
+		return nil, nil
+	}
+	labels := obj.GetLabels()
+	return &legacyNameRole{
+		Name:          obj.GetName(),
+		PlatformAlias: labels["module"] == "user-authz" && labels[deprecatedLabel] == "true",
+	}, nil
+}
+
 // deprecatedBinding is the minimal projection of a binding that still references a deprecated role.
 // The FilterFunc returns nil for every other binding, so the snapshot only holds the offenders — the
 // hook never keeps the full set of cluster bindings in memory.
@@ -178,11 +196,6 @@ type deprecatedBinding struct {
 	BindingName string `json:"binding_name"`
 	Namespace   string `json:"namespace"`
 	RoleName    string `json:"role_name"`
-	// Aliased is "true" when the referenced name is still served by a one-release compat alias (a
-	// role) and "false" when it is a capability with no alias (the binding no longer grants access).
-	// The hook sets "module" when a module keeps the name as an alias of a role of its own. It is
-	// empty for a name outside the legacy families, which only a module alias can make deprecated.
-	Aliased string `json:"aliased"`
 }
 
 func deprecatedRoleName(name string) bool {
@@ -215,15 +228,6 @@ func watchedRoleName(name string) bool {
 	return deprecatedRoleName(name) || moduleAliasCandidate(name)
 }
 
-// aliasedLabel classifies a binding target: a legacy name by its family, any other candidate is left
-// for the hook to match against the module aliases.
-func aliasedLabel(name string) string {
-	if deprecatedRoleName(name) {
-		return boolLabel(aliasedForOneRelease(name))
-	}
-	return ""
-}
-
 func filterDeprecatedClusterRoleBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	binding := new(rbacv1.ClusterRoleBinding)
 	if err := sdk.FromUnstructured(obj, binding); err != nil {
@@ -236,8 +240,15 @@ func filterDeprecatedClusterRoleBinding(obj *unstructured.Unstructured) (go_hook
 		BindingKind: "ClusterRoleBinding",
 		BindingName: binding.Name,
 		RoleName:    binding.RoleRef.Name,
-		Aliased:     aliasedLabel(binding.RoleRef.Name),
 	}, nil
+}
+
+// isProjectedRoleBinding reports whether a RoleBinding is one user-authz-controller projects from a
+// ClusterRoleBinding into a module namespace (d8:use:<role>:binding:<name> for a binding to an old
+// d8:manage:* name). It follows its ClusterRoleBinding, which is reported itself, and the controller
+// deletes such a RoleBinding as soon as nothing projects it, so it is not a binding to migrate.
+func isProjectedRoleBinding(binding *rbacv1.RoleBinding) bool {
+	return binding.Labels["heritage"] == "deckhouse" && binding.Labels["rbac.deckhouse.io/automated"] == "true"
 }
 
 func filterDeprecatedRoleBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -245,7 +256,7 @@ func filterDeprecatedRoleBinding(obj *unstructured.Unstructured) (go_hook.Filter
 	if err := sdk.FromUnstructured(obj, binding); err != nil {
 		return nil, err
 	}
-	if binding.RoleRef.Kind != "ClusterRole" || !watchedRoleName(binding.RoleRef.Name) {
+	if binding.RoleRef.Kind != "ClusterRole" || !watchedRoleName(binding.RoleRef.Name) || isProjectedRoleBinding(binding) {
 		return nil, nil
 	}
 	return &deprecatedBinding{
@@ -253,15 +264,30 @@ func filterDeprecatedRoleBinding(obj *unstructured.Unstructured) (go_hook.Filter
 		BindingName: binding.Name,
 		Namespace:   binding.Namespace,
 		RoleName:    binding.RoleRef.Name,
-		Aliased:     aliasedLabel(binding.RoleRef.Name),
 	}, nil
 }
 
-func boolLabel(v bool) string {
-	if v {
-		return aliasedByPlatform
+// aliasedLabel classifies the role a binding refers to, by the module aliases and the ClusterRoles
+// under the legacy names: "module" for an alias a module keeps, "true" for an alias of the platform,
+// "false" for a legacy name that no ClusterRole has, so the binding grants nothing. It returns ""
+// for a role to leave alone: a role outside the legacy families that no module keeps as an alias,
+// and a role or capability of the previous scheme that a module still ships under a legacy name.
+func aliasedLabel(name string, moduleAliases map[string]string, legacyRoles map[string]bool) string {
+	if _, ok := moduleAliases[name]; ok {
+		return aliasedByModule
 	}
-	return notAliased
+	if !deprecatedRoleName(name) {
+		return ""
+	}
+	platformAlias, exists := legacyRoles[name]
+	switch {
+	case !exists:
+		return notAliased
+	case platformAlias:
+		return aliasedByPlatform
+	default:
+		return ""
+	}
 }
 
 // describe names a binding the way the requirement error shows it:
@@ -281,6 +307,15 @@ func (b deprecatedBinding) describe() string {
 func handleDeprecatedRBACv2Bindings(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(deprecatedRBACv2Metric)
 
+	legacyRoles := map[string]bool{}
+
+	for role, err := range sdkobjectpatch.SnapshotIter[legacyNameRole](input.Snapshots.Get("legacy_name_clusterroles")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'legacy_name_clusterroles' snapshot: %w", err)
+		}
+		legacyRoles[role.Name] = role.PlatformAlias
+	}
+
 	replacedBy := map[string]string{}
 
 	for alias, err := range sdkobjectpatch.SnapshotIter[moduleAlias](input.Snapshots.Get("module_rbacv2_aliases")) {
@@ -289,7 +324,7 @@ func handleDeprecatedRBACv2Bindings(_ context.Context, input *go_hook.HookInput)
 		}
 
 		// Without the new name the alert could not say what to bind instead: such an alias is not
-		// trusted, and a binding to it keeps the classification of its name.
+		// trusted, and a binding to it is judged as a binding to any other role of the module.
 		if alias.ReplacedBy == "" {
 			input.Logger.Warn("ignoring an RBACv2 alias of a module without the replaced-by annotation",
 				"cluster_role", alias.Name, "annotation", replacedByAnnotation)
@@ -305,18 +340,13 @@ func handleDeprecatedRBACv2Bindings(_ context.Context, input *go_hook.HookInput)
 			if err != nil {
 				return fmt.Errorf("failed to iterate over '%s' snapshot: %w", snapshotName, err)
 			}
-			replacement, moduleAliased := replacedBy[binding.RoleName]
-			switch {
-			case moduleAliased:
-				binding.Aliased = aliasedByModule
-			case binding.Aliased == "":
-				// A d8: name outside the legacy families that no module keeps as an alias: a
-				// current role.
+			aliased := aliasedLabel(binding.RoleName, replacedBy, legacyRoles)
+			if aliased == "" {
 				continue
 			}
 
 			// Only a binding to an alias of the platform loses access when the platform removes them.
-			if binding.Aliased == aliasedByPlatform {
+			if aliased == aliasedByPlatform {
 				described = append(described, binding.describe())
 			}
 
@@ -327,8 +357,8 @@ func handleDeprecatedRBACv2Bindings(_ context.Context, input *go_hook.HookInput)
 					"binding_name": binding.BindingName,
 					"namespace":    binding.Namespace,
 					"role_name":    binding.RoleName,
-					"aliased":      binding.Aliased,
-					"replaced_by":  replacement,
+					"aliased":      aliased,
+					"replaced_by":  replacedBy[binding.RoleName],
 				},
 				metrics.WithGroup(deprecatedRBACv2Metric),
 			)

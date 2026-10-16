@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: network-policy-engine
-    rbac.deckhouse.io/aggregate-to-networking-as: manager
+    rbac.deckhouse.io/aggregate-to-network-as: manager
     rbac.deckhouse.io/kind: capability
     rbac.deckhouse.io/capability: "system-capability.network-policy-engine.edit"
     rbac.deckhouse.io/scope: system

@@ -20,6 +20,20 @@ validationObject:
     operations:  ["CREATE", "UPDATE"]
     resources:   ["clusterroles"]
     scope:       "Cluster"
+context:
+  # The subsystem roles in the cluster: the webhook takes the subsystem of each one for a system-side
+  # lineage, so a subsystem a module ships its d8:subsystem:<name>:<level> roles for is one too.
+  # The name is SUBSYSTEM_ROLES_SNAPSHOT of webhooks/validating/cluster_roles.py.
+  - name: subsystem_roles
+    kubernetes:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      labelSelector:
+        matchLabels:
+          rbac.deckhouse.io/kind: role
+          rbac.deckhouse.io/scope: subsystem
+      jqFilter: |
+        {"subsystem": .metadata.labels["rbac.deckhouse.io/subsystem"]}
 handler:
   # The code of the hook is webhooks/validating/cluster_roles.py, where its unit tests import it.
   python: |

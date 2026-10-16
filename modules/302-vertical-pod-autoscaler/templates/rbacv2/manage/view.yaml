@@ -5,7 +5,7 @@ metadata:
   labels:
     heritage: deckhouse
     module: vertical-pod-autoscaler
-    rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
+    rbac.deckhouse.io/aggregate-to-cluster-as: viewer
     rbac.deckhouse.io/kind: capability
     rbac.deckhouse.io/capability: "system-capability.vertical-pod-autoscaler.view"
     rbac.deckhouse.io/scope: system
