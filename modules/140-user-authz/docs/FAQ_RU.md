@@ -420,7 +420,7 @@ kind: ClusterRole
 metadata:
   name: d8:custom:mycustom:manager
   labels:
-    rbac.deckhouse.io/use-role: admin
+    rbac.deckhouse.io/use-role: viewer
     rbac.deckhouse.io/kind: custom-role
     rbac.deckhouse.io/scope: subsystem
     rbac.deckhouse.io/subsystem: mycustom
@@ -438,10 +438,10 @@ rules: []
 
 В начале указаны лейблы для новой роли:
 
-- показывает, какую namespace-роль `user-authz-controller` использует при создании RoleBinding в неймспейсах модулей:
+- показывает, какую namespace-роль `user-authz-controller` выдаёт субъектам роли в неймспейсах модулей; собственная роль проецируется не выше `viewer`:
 
   ```yaml
-  rbac.deckhouse.io/use-role: admin
+  rbac.deckhouse.io/use-role: viewer
   ```
 
 - показывает, что роль является кастомной (кастомные роли не определяют собственных правил, а только агрегируют capabilities):
@@ -486,7 +486,7 @@ rules: []
 Особенности:
 
 * кастомные роли и capabilities должны иметь префикс имени `d8:custom:` (остальное пространство имён `d8:` зарезервировано за встроенными объектами DP). Имя должно согласовываться с объявленной областью: подсистемная роль — `d8:custom:<подсистема>:<имя>` (сегмент — сама подсистема, как в примере выше), namespace- или проектная роль — `d8:custom:namespace:<имя>` и `d8:custom:project:<имя>`, capability — `d8:custom:<область>-capability:<имя>`. Имя, расходящееся с лейблом `rbac.deckhouse.io/scope`, будет отклонено;
-* RoleBinding с namespace-ролью (`d8:namespace:<уровень>`) будут созданы в неймспейсах модулей агрегированных подсистем, уровень задаётся лейблом `rbac.deckhouse.io/use-role`;
+* RoleBinding с namespace-ролью (`d8:namespace:<уровень>`) будут созданы в неймспейсах модулей агрегированных подсистем, уровень задаётся лейблом `rbac.deckhouse.io/use-role`, для собственной роли — не выше `viewer`. Без лейбла такие RoleBinding не создаются;
 * кастомную роль нельзя агрегировать в `d8:system:<уровень>`, потому что лейбл `rbac.deckhouse.io/aggregate-to-system-as` может нести только кастомная capability. Чтобы выдать роль обладателям `d8:system:manager`, привяжите её к ним через ClusterRoleBinding.
 
 ### Расширение пользовательской роли
@@ -507,7 +507,7 @@ rbac.deckhouse.io/aggregate-to-mycustom-as: manager
  metadata:
    name: d8:custom:mycustom:manager
    labels:
-     rbac.deckhouse.io/use-role: admin
+     rbac.deckhouse.io/use-role: viewer
      rbac.deckhouse.io/kind: custom-role
      rbac.deckhouse.io/scope: subsystem
      rbac.deckhouse.io/subsystem: mycustom
@@ -587,39 +587,25 @@ rules:
 
 ### Расширение подсистемных ролей с добавлением нового неймспейса
 
-Если необходимо добавить новый неймспейс (чтобы `user-authz-controller` создал в нём RoleBinding с namespace-ролью), потребуется добавить лишь один лейбл:
+Неймспейсы, в которых обладатели системной или подсистемной роли получают RoleBinding с namespace-ролью, — это неймспейсы её модулей: `user-authz-controller` берёт их из лейбла `rbac.deckhouse.io/namespace` системных capabilities, которые поставляет Deckhouse, с именем на `d8:` и лейблом `heritage: deckhouse`. На собственной capability лейбл игнорируется: она добавляет свои правила ролям, которые её агрегируют, но не добавляет неймспейс.
+
+Чтобы дать субъектам такой роли доступ к другому неймспейсу, привяжите их там к namespace-роли через RoleBinding:
 
 ```yaml
-"rbac.deckhouse.io/namespace": namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cluster-managers-viewer
+  namespace: my-namespace
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:namespace:viewer
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: cluster-managers
 ```
-
-Этот лейбл сообщает `user-authz-controller`, что в этом неймспейсе нужно создать RoleBinding с namespace-ролью:
-
- ```yaml
- apiVersion: rbac.authorization.k8s.io/v1
- kind: ClusterRole
- metadata:
-   labels:
-     rbac.deckhouse.io/aggregate-to-cluster-as: manager
-     rbac.deckhouse.io/kind: custom-capability
-     rbac.deckhouse.io/scope: subsystem
-     rbac.deckhouse.io/subsystem: cluster
-     rbac.deckhouse.io/namespace: namespace
-   name: d8:custom:subsystem-capability:cluster:superresource:view
- rules:
- - apiGroups:
-   - mygroup.io
-   resources:
-   - mysuperresources
-   verbs:
-   - get
-   - list
-   - watch
- ```
-
-Компонент `user-authz-controller` отслеживает ClusterRoleBinding и при создании биндинга анализирует все системные и подсистемные роли, чтобы найти все объединённые в них capabilities с помощью проверки правила агрегации. Затем он берёт неймспейс из лейбла `rbac.deckhouse.io/namespace` и создаёт RoleBinding с namespace-ролью в этом неймспейсе.
-
-`user-authz-controller` отслеживает только объекты с лейблом `rbac.deckhouse.io/scope: system` или `subsystem`. Capability без этого лейбла всё так же отдаёт свои правила роли через агрегацию, но её лейбл `rbac.deckhouse.io/namespace` не будет прочитан, и RoleBinding в неймспейсе не появится.
 
 ### Расширение существующих namespace-ролей
 
@@ -810,7 +796,7 @@ d8 k get clusterroles -o json | jq -r '
 1. Создайте рядом со старой ролью роль новой схемы с префиксом имени `d8:custom:`, лейблом `rbac.deckhouse.io/kind: custom-role` и селекторами агрегации новой схемы, без `rbac.deckhouse.io/kind`. См. [пример «до и после»](#кастомная-роль-до-и-после). Селектор по лейблу агрегации линейки, которую не собирает ни одна встроенная роль, замените, как описано в разделе [Селекторы по линейке, которую не собирает ни одна встроенная роль](#селекторы-по-линейке-которую-не-собирает-ни-одна-встроенная-роль). Выберите область действия роли и назовите её соответственно:
 
    - Роль с лейблом `rbac.deckhouse.io/use-role` или с лейблом `rbac.deckhouse.io/level: subsystem` или `all` получает лейблы `rbac.deckhouse.io/scope: subsystem` и `rbac.deckhouse.io/subsystem: <SUBSYSTEM>` с именем `d8:custom:<SUBSYSTEM>:<NAME>` или лейбл `rbac.deckhouse.io/scope: system` с именем `d8:custom:system:<NAME>`.
-     Сохраните на ней лейбл `rbac.deckhouse.io/use-role`. Тогда для субъектов её объектов ClusterRoleBinding Deckhouse создаёт объекты RoleBinding на роль `d8:namespace:*`, которую называет этот лейбл, в неймспейсах модулей, системные capabilities которых агрегирует роль.
+     Поставьте на ней лейбл `rbac.deckhouse.io/use-role: viewer`. Тогда для субъектов её объектов ClusterRoleBinding Deckhouse создаёт объекты RoleBinding на `d8:namespace:viewer` в неймспейсах модулей, системные capabilities которых агрегирует роль: собственная роль проецируется не выше `viewer`, большее значение вебхук отклоняет. Без лейбла роль в эти неймспейсы не проецируется совсем.
      Вебхук `rbacv2-cluster-roles.deckhouse.io` отклоняет кастомную роль без лейбла `rbac.deckhouse.io/scope`, селекторы которой называют лейбл агрегации подсистемы или системной области, например `rbac.deckhouse.io/aggregate-to-deckhouse-as`.
    - Namespace- или проектная роль, которую вы выдаёте через RoleBinding, получает лейблы `rbac.deckhouse.io/scope: namespace` и `rbac.deckhouse.io/delegatable: "true"` с именем `d8:custom:namespace:<NAME>`. См. [Создание собственной namespace- или проектной роли](#создание-собственной-namespace--или-проектной-роли).
 
@@ -922,7 +908,7 @@ rules: []
 
 Каждая новая capability также получает лейбл `rbac.deckhouse.io/kind: custom-capability`.
 
-Старая capability с лейблом `rbac.deckhouse.io/namespace: <NAMESPACE>` давала субъектам агрегирующих её ролей объекты RoleBinding в этом неймспейсе, неймспейсе модуля. Deckhouse читает этот лейбл только на объектах ClusterRole с `rbac.deckhouse.io/scope: system` или `subsystem`, поэтому старая capability таких объектов RoleBinding больше не даёт. Перенесите лейбл на её замену, системную capability или capability подсистемы, и Deckhouse создаст их снова.
+Старая capability с лейблом `rbac.deckhouse.io/namespace: <NAMESPACE>` давала субъектам агрегирующих её ролей объекты RoleBinding в этом неймспейсе, неймспейсе модуля. Deckhouse читает этот лейбл только на ClusterRole, которые поставляет сам, поэтому ни старая capability, ни её собственная замена таких объектов RoleBinding не дают. Чтобы сохранить доступ в этом неймспейсе, привяжите субъектов там к namespace-роли через RoleBinding, см. [Расширение подсистемных ролей с добавлением нового неймспейса](#расширение-подсистемных-ролей-с-добавлением-нового-неймспейса).
 
 Capability с лейблами `rbac.deckhouse.io/kind: use` и `rbac.deckhouse.io/aggregate-to-kubernetes-as: <LEVEL>` расширяла роли `d8:use:role:<LEVEL>`.
 Её выбирают только устаревшие псевдонимы `d8:use:role:<LEVEL>`, пока их не удалят. `d8:namespace:<LEVEL>` и `d8:project:<LEVEL>` выбирают лейбл `rbac.deckhouse.io/aggregate-to-namespace-as`, поэтому RoleBinding, переведённый на новую роль, не получает правил этой capability. Такую capability называет алерт `D8UserAuthzLegacyUseCapability`.
@@ -1030,7 +1016,7 @@ RoleBinding на `d8:use:role:<уровень>` тоже даёт эти пра�
   metadata:
     name: d8:custom:mycustom:manager
     labels:
-      rbac.deckhouse.io/use-role: admin
+      rbac.deckhouse.io/use-role: viewer
       rbac.deckhouse.io/kind: custom-role
       rbac.deckhouse.io/scope: subsystem
       rbac.deckhouse.io/subsystem: mycustom
@@ -1112,11 +1098,11 @@ RoleBinding на `d8:use:role:<уровень>` тоже даёт эти пра�
 | `rbac.deckhouse.io/level` | `all` \| `subsystem` \| `module` | Удалён | Старый уровень роли; заменён лейблом `scope` |
 | `rbac.deckhouse.io/scope` | — | `system` \| `subsystem` \| `namespace` | Область действия роли или capability |
 | `rbac.deckhouse.io/subsystem` | Имя подсистемы | Без изменений | Подсистема роли; используется при `scope: subsystem` |
-| `rbac.deckhouse.io/use-role` | Уровень use-роли | Уровень namespace-роли | Какая namespace-роль автоматически выдаётся обладателю системной/подсистемной роли в системных неймспейсах её модулей (через автоматически создаваемые объекты RoleBinding) |
+| `rbac.deckhouse.io/use-role` | Уровень use-роли | Уровень namespace-роли | Какая namespace-роль автоматически выдаётся обладателю системной/подсистемной роли в системных неймспейсах её модулей (через автоматически создаваемые объекты RoleBinding); для собственной роли — не выше `viewer` |
 | `rbac.deckhouse.io/aggregate-to-all-as` | `<уровень>` | С `rbac.deckhouse.io/kind: manage` заменён лейблом `rbac.deckhouse.io/aggregate-to-system-as` на кастомной capability, который кастомная роль нести не может. С `rbac.deckhouse.io/kind: use` заменён лейблом `rbac.deckhouse.io/aggregate-to-namespace-as` на кастомной capability | Агрегация объекта в общесистемную роль (`d8:system:<уровень>`) |
 | `rbac.deckhouse.io/aggregate-to-<подсистема>-as` | Использовался в селекторах вместе с `rbac.deckhouse.io/kind: manage` | Используется в селекторах сам по себе | Агрегация объекта в подсистемную роль указанного уровня |
 | `rbac.deckhouse.io/aggregate-to-kubernetes-as` | `<уровень>` (для use- и manage-прав) | Не используется. Подсистема kubernetes входит в подсистему `cluster` (`aggregate-to-cluster-as`), а старый use-смысл переехал на `aggregate-to-namespace-as` | Агрегация в старые роли `d8:manage:kubernetes:<уровень>` и `d8:use:role:<уровень>:kubernetes` |
-| `rbac.deckhouse.io/namespace` | Неймспейс | Без изменений | Дополнительный неймспейс, в котором обладателям роли автоматически создаётся RoleBinding |
+| `rbac.deckhouse.io/namespace` | Неймспейс | Без изменений | Дополнительный неймспейс, в котором обладателям роли автоматически создаётся RoleBinding; читается только на capabilities, которые поставляет Deckhouse, на собственной игнорируется |
 | `rbac.deckhouse.io/capability` | — | Уникальное имя capability (например, `system-capability.deckhouse.view`) | Машиночитаемый идентификатор встроенной capability |
 | `rbac.deckhouse.io/deprecated` | — | `"true"` на ролях-псевдонимах | Роль устарела и будет удалена; переведите привязки на новую роль |
 | `module` | Имя модуля | Без изменений | Принадлежность встроенного объекта модулю DP; удобен в селекторах агрегации вместе со `scope` |

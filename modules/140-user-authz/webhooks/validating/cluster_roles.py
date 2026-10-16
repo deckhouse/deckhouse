@@ -41,6 +41,12 @@ CAPABILITY_SELECTOR_LABEL = "rbac.deckhouse.io/capability"
 # must never travel into a project through a delegatable custom role.
 TENANT_CAPABILITY_SCOPES = {"namespace-capability", "project-capability"}
 SCOPE_LABEL = "rbac.deckhouse.io/scope"
+# The namespace level a system or subsystem role projects its subjects to in the namespaces of its
+# modules. On a custom role it is viewer at most: those namespaces hold the ServiceAccounts of the
+# platform, and user-authz-controller projects a role that is not built in as viewer whatever the
+# label says; the webhook keeps the label honest.
+USE_ROLE_LABEL = "rbac.deckhouse.io/use-role"
+MAX_CUSTOM_USE_ROLE = "viewer"
 SUBSYSTEM_LABEL = "rbac.deckhouse.io/subsystem"
 # The segment a custom object's name must carry for a given scope: "d8:custom:<segment>:<name>".
 # A subsystem role is the exception -- its segment is the subsystem id, so it is checked separately.
@@ -324,6 +330,26 @@ def validation_error(ctx: DotMap) -> Optional[str]:
             f'ClusterRole "{name}" carries the aggregation label of the '
             f'"{", ".join(sorted(platform_lineages))}" lineage but is not labeled '
             f'"{KIND_LABEL}: custom-capability": only a custom capability may aggregate into a platform role.'
+        )
+
+    # A system or subsystem role not built into the platform is projected into the namespaces of its
+    # modules as viewer at most, whatever its name and kind: user-authz-controller takes every
+    # ClusterRole with such a scope label for a manage role (ManageRoleSelector) and caps the ones that
+    # are not built in, so the label is checked on the same set. Without the label a role is not
+    # projected at all. The d8:commander: roles are Commander's, as their names are above.
+    use_role = labels.get(USE_ROLE_LABEL)
+    if (
+        labels.get(SCOPE_LABEL) in ("system", "subsystem")
+        and use_role is not None
+        and use_role != MAX_CUSTOM_USE_ROLE
+        and not name.startswith("d8:commander:")
+    ):
+        return (
+            f'ClusterRole "{name}" must not carry "{USE_ROLE_LABEL}: {use_role}": a system or subsystem role '
+            f'that is not built into the platform is projected into the namespaces of its modules as '
+            f'"{MAX_CUSTOM_USE_ROLE}" at most, because those namespaces hold the ServiceAccounts of the platform. '
+            f'Set "{USE_ROLE_LABEL}: {MAX_CUSTOM_USE_ROLE}"; without the label the role is not projected '
+            "into those namespaces at all."
         )
 
     # The rest applies to anything that presents itself as a custom object -- by its framework label

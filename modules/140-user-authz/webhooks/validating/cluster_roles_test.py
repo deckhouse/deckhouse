@@ -25,6 +25,15 @@ from dotmap import DotMap
 cluster_roles = load_validation_webhook(Path(__file__).parent / "cluster_roles.py")
 
 
+# The tail of the refusal of a use-role label above viewer on a system or subsystem role.
+DENY_USE_ROLE_TAIL = (
+    'a system or subsystem role that is not built into the platform is projected into the namespaces of its '
+    'modules as "viewer" at most, because those namespaces hold the ServiceAccounts of the platform. '
+    'Set "rbac.deckhouse.io/use-role: viewer"; without the label the role is not projected into those '
+    "namespaces at all."
+)
+
+
 def binding_context(name, labels=None, rules=None, selector_labels=None, annotations=None):
     object_ = {
         "apiVersion": "rbac.authorization.k8s.io/v1",
@@ -180,6 +189,92 @@ class TestClusterRolesValidation(unittest.TestCase):
             'ClusterRole "d8:custom:namespace:developer" with "rbac.deckhouse.io/kind: custom-role" '
             "must define aggregationRule.clusterRoleSelectors.",
         )
+
+    def test_custom_role_projection_above_viewer_is_denied(self):
+        for use_role in ("user", "manager", "admin", "superadmin", "backup-agent"):
+            with self.subTest(use_role=use_role):
+                out = self.run_hook(
+                    binding_context(
+                        "d8:custom:security:auditor",
+                        labels={
+                            "rbac.deckhouse.io/kind": "custom-role",
+                            "rbac.deckhouse.io/scope": "subsystem",
+                            "rbac.deckhouse.io/subsystem": "security",
+                            "rbac.deckhouse.io/use-role": use_role,
+                        },
+                        selector_labels=[{"rbac.deckhouse.io/aggregate-to-security-as": "viewer"}],
+                    )
+                )
+                tests.assert_validation_deny(
+                    self,
+                    out,
+                    f'ClusterRole "d8:custom:security:auditor" must not carry "rbac.deckhouse.io/use-role: {use_role}": '
+                    + DENY_USE_ROLE_TAIL,
+                )
+
+    def test_custom_role_projection_as_viewer_is_allowed(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:security:auditor",
+                labels={
+                    "rbac.deckhouse.io/kind": "custom-role",
+                    "rbac.deckhouse.io/scope": "subsystem",
+                    "rbac.deckhouse.io/subsystem": "security",
+                    "rbac.deckhouse.io/use-role": "viewer",
+                },
+                selector_labels=[{"rbac.deckhouse.io/aggregate-to-security-as": "viewer"}],
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_custom_capability_with_a_projection_label_is_denied(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:custom:system-capability:x",
+                labels={
+                    "rbac.deckhouse.io/kind": "custom-capability",
+                    "rbac.deckhouse.io/scope": "system",
+                    "rbac.deckhouse.io/use-role": "admin",
+                },
+                rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_deny(
+            self,
+            out,
+            'ClusterRole "d8:custom:system-capability:x" must not carry "rbac.deckhouse.io/use-role: admin": '
+            + DENY_USE_ROLE_TAIL,
+        )
+
+    def test_projection_label_is_checked_by_scope_whatever_the_name(self):
+        # user-authz-controller projects every ClusterRole with a system or subsystem scope label,
+        # whatever its name and kind, so a role without the custom kind is held to the same limit.
+        out = self.run_hook(
+            binding_context(
+                "evil",
+                labels={"rbac.deckhouse.io/scope": "subsystem", "rbac.deckhouse.io/use-role": "superadmin"},
+                selector_labels=[{"rbac.deckhouse.io/aggregate-to-security-as": "viewer"}],
+            )
+        )
+        tests.assert_validation_deny(
+            self, out, 'ClusterRole "evil" must not carry "rbac.deckhouse.io/use-role: superadmin": ' + DENY_USE_ROLE_TAIL
+        )
+
+    def test_projection_label_without_a_manage_scope_is_not_checked(self):
+        out = self.run_hook(
+            binding_context("reader", labels={"rbac.deckhouse.io/use-role": "admin"}, rules=SOME_RULES)
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_commander_role_projection_label_is_left_to_commander(self):
+        out = self.run_hook(
+            binding_context(
+                "d8:commander:operator",
+                labels={"rbac.deckhouse.io/scope": "system", "rbac.deckhouse.io/use-role": "admin"},
+                rules=SOME_RULES,
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
 
     def test_custom_role_lineage_mixing_is_forbidden(self):
         out = self.run_hook(

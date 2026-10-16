@@ -420,7 +420,7 @@ kind: ClusterRole
 metadata:
   name: d8:custom:mycustom:manager
   labels:
-    rbac.deckhouse.io/use-role: admin
+    rbac.deckhouse.io/use-role: viewer
     rbac.deckhouse.io/kind: custom-role
     rbac.deckhouse.io/scope: subsystem
     rbac.deckhouse.io/subsystem: mycustom
@@ -438,10 +438,10 @@ rules: []
 
 The labels for the new role listed at the top suggest that:
 
-- `user-authz-controller` will use this namespace role when creating RoleBinding objects in the module namespaces:
+- The namespace role `user-authz-controller` gives the subjects of the role in the module namespaces; a custom role is projected as `viewer` at most:
 
   ```yaml
-  rbac.deckhouse.io/use-role: admin
+  rbac.deckhouse.io/use-role: viewer
   ```
 
 - The role is a custom role (custom roles never define their own rules, they only aggregate capabilities):
@@ -486,7 +486,7 @@ This way, your role will combine the permissions of the `cluster` subsystem, `ne
 Notes:
 
 * Custom roles and capabilities must be named with the `d8:custom:` prefix (the rest of the `d8:` prefix space is reserved for DP built-in objects). The name must agree with the declared scope: a subsystem role is `d8:custom:<subsystem>:<name>` (the segment is the subsystem itself, as in the example above), a namespace or project role is `d8:custom:namespace:<name>` or `d8:custom:project:<name>`, and a capability is `d8:custom:<scope>-capability:<name>`. A name that disagrees with the `rbac.deckhouse.io/scope` label is rejected.
-* RoleBindings with a namespace role (`d8:namespace:<level>`) will be created in the namespaces of the aggregated subsystems' modules, the level is specified by the `rbac.deckhouse.io/use-role` label.
+* RoleBindings with a namespace role (`d8:namespace:<level>`) will be created in the namespaces of the aggregated subsystems' modules, the level is specified by the `rbac.deckhouse.io/use-role` label, `viewer` at most for a custom role. Without the label no such RoleBinding is created.
 * A custom role cannot be aggregated into `d8:system:<level>`, because only a custom capability may carry the `rbac.deckhouse.io/aggregate-to-system-as` label. To give the role to the holders of `d8:system:manager`, bind it to them with a ClusterRoleBinding.
 
 ### Extending the custom role
@@ -507,7 +507,7 @@ This selector would enable capabilities to be aggregated to a new subsystem by s
  metadata:
    name: d8:custom:mycustom:manager
    labels:
-     rbac.deckhouse.io/use-role: admin
+     rbac.deckhouse.io/use-role: viewer
      rbac.deckhouse.io/kind: custom-role
      rbac.deckhouse.io/scope: subsystem
      rbac.deckhouse.io/subsystem: mycustom
@@ -587,39 +587,25 @@ This way, the new capability will extend the `d8:subsystem:cluster:manager` role
 
 ### Extending subsystem roles and adding a new namespace
 
-If you need to add a new namespace (so that `user-authz-controller` creates a namespace role binding in it), you only need to add one label:
+The namespaces where the holders of a system or subsystem role get a RoleBinding with the namespace role are the namespaces of its modules: `user-authz-controller` takes them from the `rbac.deckhouse.io/namespace` label of the system capabilities Deckhouse ships, which have a `d8:` name and the `heritage: deckhouse` label. On a custom capability the label is ignored: the capability adds its rules to the roles that aggregate it, but no namespace.
+
+To give the subjects of such a role access to another namespace, bind them to a namespace role there with a RoleBinding:
 
 ```yaml
-"rbac.deckhouse.io/namespace": namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cluster-managers-viewer
+  namespace: my-namespace
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:namespace:viewer
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: cluster-managers
 ```
-
-This label instructs `user-authz-controller` to create a RoleBinding with the namespace role in this namespace:
-
- ```yaml
- apiVersion: rbac.authorization.k8s.io/v1
- kind: ClusterRole
- metadata:
-   labels:
-     rbac.deckhouse.io/aggregate-to-cluster-as: manager
-     rbac.deckhouse.io/kind: custom-capability
-     rbac.deckhouse.io/scope: subsystem
-     rbac.deckhouse.io/subsystem: cluster
-     rbac.deckhouse.io/namespace: namespace
-   name: d8:custom:subsystem-capability:cluster:superresource:view
- rules:
- - apiGroups:
-   - mygroup.io
-   resources:
-   - mysuperresources
-   verbs:
-   - get
-   - list
-   - watch
- ```
-
-`user-authz-controller` watches ClusterRoleBinding objects and, when a binding is created, analyzes all system and subsystem roles to find the aggregated capabilities via the aggregation rule. It then reads the namespace from the `rbac.deckhouse.io/namespace` label and creates a RoleBinding with the namespace role in that namespace.
-
-`user-authz-controller` watches only objects with the `rbac.deckhouse.io/scope: system` or `subsystem` label. A capability without that label still contributes its rules to the role through aggregation, but its `rbac.deckhouse.io/namespace` label is never read, and no RoleBinding appears in the namespace.
 
 ### Extending the existing namespace roles
 
@@ -811,7 +797,7 @@ Keep the order of the steps, so that the old role and its bindings stay in place
 1. Create a role of the new scheme next to the old one, with the `d8:custom:` name prefix, the `rbac.deckhouse.io/kind: custom-role` label, and the aggregation selectors of the new scheme, without `rbac.deckhouse.io/kind`. See the [before and after example](#custom-role-before-and-after). Replace a selector by the aggregation label of a lineage that no built-in role collects as described in [Selectors by a lineage no built-in role collects](#selectors-by-a-lineage-no-built-in-role-collects). Choose the scope of the role, and name it accordingly:
 
    - A role with the `rbac.deckhouse.io/use-role` label, or with the `rbac.deckhouse.io/level: subsystem` or `all` label, gets `rbac.deckhouse.io/scope: subsystem` and `rbac.deckhouse.io/subsystem: <SUBSYSTEM>` with the name `d8:custom:<SUBSYSTEM>:<NAME>`, or `rbac.deckhouse.io/scope: system` with the name `d8:custom:system:<NAME>`.
-     Keep the `rbac.deckhouse.io/use-role` label on it. For the subjects of its ClusterRoleBinding objects, Deckhouse then creates RoleBinding objects to the `d8:namespace:*` role that this label names, in the namespaces of the modules whose system capabilities the role aggregates.
+     Set the `rbac.deckhouse.io/use-role` label on it to `viewer`. For the subjects of its ClusterRoleBinding objects, Deckhouse then creates RoleBinding objects to `d8:namespace:viewer` in the namespaces of the modules whose system capabilities the role aggregates: a custom role is projected as `viewer` at most, and the webhook refuses a higher value. Without the label the role is not projected into those namespaces at all.
      The `rbacv2-cluster-roles.deckhouse.io` webhook refuses a custom role without the `rbac.deckhouse.io/scope` label whose selectors name the aggregation label of a subsystem or of the system scope, such as `rbac.deckhouse.io/aggregate-to-deckhouse-as`.
    - A namespace or project role that you bind with a RoleBinding gets `rbac.deckhouse.io/scope: namespace` and `rbac.deckhouse.io/delegatable: "true"` with the name `d8:custom:namespace:<NAME>`. See [Creating a custom namespace or project role](#creating-a-custom-namespace-or-project-role).
 
@@ -923,7 +909,7 @@ The labels of the old capability define the new one:
 
 Each new capability also gets the `rbac.deckhouse.io/kind: custom-capability` label.
 
-An old capability with the `rbac.deckhouse.io/namespace: <NAMESPACE>` label gave the subjects of the roles that aggregate it RoleBinding objects in that namespace, the namespace of a module. Deckhouse reads this label only on ClusterRoles with `rbac.deckhouse.io/scope: system` or `subsystem`, so the old capability gives no such RoleBinding objects any more. Copy the label to its replacement, a system or subsystem capability, and Deckhouse creates them again.
+An old capability with the `rbac.deckhouse.io/namespace: <NAMESPACE>` label gave the subjects of the roles that aggregate it RoleBinding objects in that namespace, the namespace of a module. Deckhouse reads this label only on the ClusterRoles it ships, so neither the old capability nor its custom replacement gives such RoleBinding objects. To keep the access in that namespace, bind the subjects to a namespace role there with a RoleBinding, see [Extending subsystem roles and adding a new namespace](#extending-subsystem-roles-and-adding-a-new-namespace).
 
 A capability with the `rbac.deckhouse.io/kind: use` and `rbac.deckhouse.io/aggregate-to-kubernetes-as: <LEVEL>` labels extended the `d8:use:role:<LEVEL>` roles.
 Only the deprecated `d8:use:role:<LEVEL>` aliases still select it, until they are removed. `d8:namespace:<LEVEL>` and `d8:project:<LEVEL>` select `rbac.deckhouse.io/aggregate-to-namespace-as`, so a RoleBinding moved to a new role does not get the rules of the capability. The `D8UserAuthzLegacyUseCapability` alert names such a capability.
@@ -1031,7 +1017,7 @@ The following is a configuration example of a role combining the permissions of 
   metadata:
     name: d8:custom:mycustom:manager
     labels:
-      rbac.deckhouse.io/use-role: admin
+      rbac.deckhouse.io/use-role: viewer
       rbac.deckhouse.io/kind: custom-role
       rbac.deckhouse.io/scope: subsystem
       rbac.deckhouse.io/subsystem: mycustom
@@ -1113,11 +1099,11 @@ Labels on ClusterRole objects:
 | `rbac.deckhouse.io/level` | `all` \| `subsystem` \| `module` | Removed | The old role level; replaced by the `scope` label |
 | `rbac.deckhouse.io/scope` | — | `system` \| `subsystem` \| `namespace` | The scope of a role or capability |
 | `rbac.deckhouse.io/subsystem` | Subsystem name | Unchanged | The role's subsystem; used with `scope: subsystem` |
-| `rbac.deckhouse.io/use-role` | A use-role level | A namespace-role level | Defines which namespace role is automatically granted to the holder of a system/subsystem role in the system namespaces of its modules (via automatically created RoleBinding objects) |
+| `rbac.deckhouse.io/use-role` | A use-role level | A namespace-role level | Defines which namespace role is automatically granted to the holder of a system/subsystem role in the system namespaces of its modules (via automatically created RoleBinding objects); `viewer` at most for a custom role |
 | `rbac.deckhouse.io/aggregate-to-all-as` | `<level>` | With `rbac.deckhouse.io/kind: manage`, replaced by `rbac.deckhouse.io/aggregate-to-system-as` on a custom capability, which a custom role cannot carry. With `rbac.deckhouse.io/kind: use`, replaced by `rbac.deckhouse.io/aggregate-to-namespace-as` on a custom capability | Aggregates the object into the system-wide role (`d8:system:<level>`) |
 | `rbac.deckhouse.io/aggregate-to-<subsystem>-as` | Used in selectors together with `rbac.deckhouse.io/kind: manage` | Used in selectors on its own | Aggregates the object into the subsystem role of the given level |
 | `rbac.deckhouse.io/aggregate-to-kubernetes-as` | `<level>` (for use and manage permissions) | Not used. The kubernetes subsystem is part of the `cluster` subsystem (`aggregate-to-cluster-as`), and the old *use*-role meaning moved to `aggregate-to-namespace-as` | Aggregated into the old `d8:manage:kubernetes:<level>` and `d8:use:role:<level>:kubernetes` roles |
-| `rbac.deckhouse.io/namespace` | Namespace | Unchanged | An additional namespace where a RoleBinding is automatically created for the role holders |
+| `rbac.deckhouse.io/namespace` | Namespace | Unchanged | An additional namespace where a RoleBinding is automatically created for the role holders; read only on the capabilities Deckhouse ships, ignored on a custom one |
 | `rbac.deckhouse.io/capability` | — | A unique capability name (for example, `system-capability.deckhouse.view`) | A machine-readable identifier of a built-in capability |
 | `rbac.deckhouse.io/deprecated` | — | `"true"` on alias roles | The role is deprecated and will be removed; migrate the bindings to the new role |
 | `module` | Module name | Unchanged | Marks a built-in object as belonging to a DP module; handy in aggregation selectors together with `scope` |

@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -50,6 +51,7 @@ var testUser = []rbacv1.Subject{{Kind: "User", APIGroup: rbacv1.GroupName, Name:
 func systemRole(name, scope, lineage string) *rbacv1.ClusterRole {
 	role := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{
+			labelHeritage:            "deckhouse",
 			LabelUseRole:             "admin",
 			"rbac.deckhouse.io/kind": "role",
 			LabelScope:               scope,
@@ -71,6 +73,7 @@ func systemRole(name, scope, lineage string) *rbacv1.ClusterRole {
 // carries the labels in carries, so higher tiers can aggregate it.
 func roleWith(name, scope, useRole string, selects, carries map[string]string) *rbacv1.ClusterRole {
 	roleLabels := map[string]string{
+		labelHeritage:            "deckhouse",
 		LabelUseRole:             useRole,
 		"rbac.deckhouse.io/kind": "role",
 		LabelScope:               scope,
@@ -90,8 +93,10 @@ func roleWith(name, scope, useRole string, selects, carries map[string]string) *
 
 // systemCapability builds the leaf of the graph: a module capability of the system scope that
 // carries the module namespace and aggregates into the manager of its subsystem.
+// systemCapability is the system capability of a module as Deckhouse renders it, heritage included.
 func systemCapability(name, subsystem, namespace string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{
+		labelHeritage:            "deckhouse",
 		"rbac.deckhouse.io/kind": "capability",
 		LabelScope:               ScopeSystem,
 		LabelNamespace:           namespace,
@@ -237,7 +242,7 @@ func newClient(t *testing.T, objs ...client.Object) client.Client {
 func reconcileOnce(t *testing.T, c client.Client) {
 	t.Helper()
 	// The fake client holds every ClusterRole, so it serves as the cache of the previous scheme too.
-	r := New(c, c, metrics.New(), logr.Discard())
+	r := New(c, c, events.NewFakeRecorder(64), metrics.New(), logr.Discard())
 	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: client.ObjectKey{Name: RequestName}}); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
@@ -544,10 +549,12 @@ func TestRoleRefIndexValue(t *testing.T) {
 }
 
 // Manage roles are recognised by their scope label, not by their name: user-created roles of the
-// legacy scheme are named custom:*, and the hook this reconciler replaces projected them too.
+// legacy scheme are named custom:*, and the hook this reconciler replaces projected them too. Such a
+// role is not built into the platform, so it is projected as viewer.
 func TestReconcile_CustomNamedManageRoleIsProjected(t *testing.T) {
 	t.Parallel()
 	role := systemRole("custom:manage:others:manager", ScopeSubsystem, "others")
+	delete(role.Labels, labelHeritage)
 	c := reconcileWith(t,
 		systemCapability("d8:system-capability:test:edit", "others", "test-ns"),
 		role,
@@ -556,13 +563,157 @@ func TestReconcile_CustomNamedManageRoleIsProjected(t *testing.T) {
 		manageBinding("unrelated", "cluster-admin"),
 	)
 
-	mustExist(t, c, "test-ns", "d8:namespace:admin:binding:custom-binding")
+	mustExist(t, c, "test-ns", "d8:namespace:viewer:binding:custom-binding")
 	list := &rbacv1.RoleBindingList{}
 	if err := c.List(t.Context(), list); err != nil {
 		t.Fatal(err)
 	}
 	if len(list.Items) != 1 {
 		t.Fatalf("use bindings = %d, want only the projection of the custom-named manage role", len(list.Items))
+	}
+}
+
+// A role that is not built into the platform (no heritage: deckhouse) is projected as viewer
+// whatever its use-role label says, with an event on the role and a metric naming it; a built-in
+// role with the same label keeps its projection.
+func TestReconcile_CustomRoleProjectionIsCappedAtViewer(t *testing.T) {
+	t.Parallel()
+	custom := systemRole("d8:custom:others:operator", ScopeSubsystem, "others")
+	delete(custom.Labels, labelHeritage)
+	custom.Labels[LabelUseRole] = "superadmin"
+	m := metrics.New()
+	recorder := events.NewFakeRecorder(64)
+	c := newClient(t,
+		systemCapability("d8:system-capability:test:edit", "others", "test-ns"),
+		custom,
+		manageBinding("custom-binding", "d8:custom:others:operator"),
+		systemRole("d8:subsystem:others:manager", ScopeSubsystem, "others"),
+		manageBinding("builtin-binding", "d8:subsystem:others:manager"),
+	)
+	if _, err := New(c, c, recorder, m, logr.Discard()).Reconcile(t.Context(), reconcile.Request{NamespacedName: client.ObjectKey{Name: RequestName}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	rb := mustExist(t, c, "test-ns", "d8:namespace:viewer:binding:custom-binding")
+	if rb.RoleRef.Name != "d8:namespace:viewer" {
+		t.Errorf("roleRef = %s, want d8:namespace:viewer", rb.RoleRef.Name)
+	}
+	mustNotExist(t, c, "test-ns", "d8:namespace:superadmin:binding:custom-binding")
+	mustExist(t, c, "test-ns", "d8:namespace:admin:binding:builtin-binding")
+
+	select {
+	case event := <-recorder.Events:
+		if !strings.Contains(event, ReasonProjectionCapped) || !strings.Contains(event, "superadmin") {
+			t.Errorf("event = %q, want the %s reason naming the ignored level", event, ReasonProjectionCapped)
+		}
+	default:
+		t.Error("no event on the capped role")
+	}
+
+	expected := `
+# HELP d8_user_authz_projection_capped Roles not built into the platform whose projection into the namespaces of the modules is limited to viewer (1 per role).
+# TYPE d8_user_authz_projection_capped gauge
+d8_user_authz_projection_capped{role="d8:custom:others:operator"} 1
+# HELP d8_user_authz_projections RoleBindings the holders of system and subsystem roles get in the namespaces of the modules, by namespace level.
+# TYPE d8_user_authz_projections gauge
+d8_user_authz_projections{level="admin"} 1
+d8_user_authz_projections{level="viewer"} 1
+`
+	if err := testutil.CollectAndCompare(m, strings.NewReader(expected), "d8_user_authz_projection_capped", "d8_user_authz_projections"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// The heritage label alone does not make a role built into the platform: the user-authz:* roles carry
+// it without a d8: name, and an UPDATE of such a role passes the system-roles webhook. A role like
+// that labelled as a subsystem role with use-role superadmin is still projected as viewer.
+func TestReconcile_HeritageRoleWithoutTheDeckhouseNameIsCapped(t *testing.T) {
+	t.Parallel()
+	role := systemRole("user-authz:admin", ScopeSubsystem, "others")
+	role.Labels[LabelUseRole] = "superadmin"
+	c := reconcileWith(t,
+		systemCapability("d8:system-capability:test:edit", "others", "test-ns"),
+		role,
+		manageBinding("binding", "user-authz:admin"),
+	)
+
+	mustExist(t, c, "test-ns", "d8:namespace:viewer:binding:binding")
+	mustNotExist(t, c, "test-ns", "d8:namespace:superadmin:binding:binding")
+}
+
+// A capped role that nothing binds gets no event: the event says what its subjects get, and it has
+// none. Neither is it in the metric of capped roles.
+func TestReconcile_UnboundCappedRoleGetsNoEvent(t *testing.T) {
+	t.Parallel()
+	custom := systemRole("d8:custom:others:operator", ScopeSubsystem, "others")
+	delete(custom.Labels, labelHeritage)
+	custom.Labels[LabelUseRole] = "superadmin"
+	m := metrics.New()
+	recorder := events.NewFakeRecorder(64)
+	c := newClient(t,
+		systemCapability("d8:system-capability:test:edit", "others", "test-ns"),
+		custom,
+	)
+	if _, err := New(c, c, recorder, m, logr.Discard()).Reconcile(t.Context(), reconcile.Request{NamespacedName: client.ObjectKey{Name: RequestName}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if len(recorder.Events) != 0 {
+		t.Errorf("events = %d, want none for a role nothing binds", len(recorder.Events))
+	}
+	if got := testutil.CollectAndCount(m, "d8_user_authz_projection_capped"); got != 0 {
+		t.Errorf("capped roles in the metric = %d, want 0", got)
+	}
+}
+
+// Only a ClusterRole of Deckhouse names a namespace of the projection. A capability a user creates
+// with the namespace label adds nothing, neither to a custom role nor to a built-in one that
+// aggregates it, here d8:subsystem:others:superadmin, which is not capped.
+func TestReconcile_CustomCapabilityAddsNoNamespace(t *testing.T) {
+	t.Parallel()
+	customCapability := func(name, level, namespace string) *rbacv1.ClusterRole {
+		return &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{
+			"rbac.deckhouse.io/kind": "capability",
+			LabelScope:               ScopeSystem,
+			LabelNamespace:           namespace,
+			"rbac.deckhouse.io/aggregate-to-others-as": level,
+		}}}
+	}
+	superadmin := systemRole("d8:subsystem:others:superadmin", ScopeSubsystem, "others")
+	superadmin.Labels[LabelUseRole] = "superadmin"
+	superadmin.AggregationRule.ClusterRoleSelectors[0].MatchLabels["rbac.deckhouse.io/aggregate-to-others-as"] = "superadmin"
+	c := reconcileWith(t,
+		systemCapability("d8:system-capability:test:edit", "others", "test-ns"),
+		customCapability("d8:custom:system-capability:kube", "manager", "kube-system"),
+		customCapability("d8:custom:system-capability:widen", "superadmin", "other-project"),
+		systemRole("d8:subsystem:others:manager", ScopeSubsystem, "others"),
+		manageBinding("manager", "d8:subsystem:others:manager"),
+		superadmin,
+		manageBinding("superadmin", "d8:subsystem:others:superadmin"),
+	)
+
+	mustExist(t, c, "test-ns", "d8:namespace:admin:binding:manager")
+	mustNotExist(t, c, "kube-system", "d8:namespace:admin:binding:manager")
+	mustNotExist(t, c, "other-project", "d8:namespace:superadmin:binding:superadmin")
+}
+
+// A custom role that asks for viewer is projected without an event: nothing is capped.
+func TestReconcile_CustomRoleAskingForViewerIsNotCapped(t *testing.T) {
+	t.Parallel()
+	custom := systemRole("d8:custom:others:reader", ScopeSubsystem, "others")
+	delete(custom.Labels, labelHeritage)
+	custom.Labels[LabelUseRole] = "viewer"
+	recorder := events.NewFakeRecorder(64)
+	c := newClient(t,
+		systemCapability("d8:system-capability:test:edit", "others", "test-ns"),
+		custom,
+		manageBinding("custom-binding", "d8:custom:others:reader"),
+	)
+	if _, err := New(c, c, recorder, metrics.New(), logr.Discard()).Reconcile(t.Context(), reconcile.Request{NamespacedName: client.ObjectKey{Name: RequestName}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	mustExist(t, c, "test-ns", "d8:namespace:viewer:binding:custom-binding")
+	if len(recorder.Events) != 0 {
+		t.Errorf("events = %d, want none", len(recorder.Events))
 	}
 }
 
@@ -621,7 +772,7 @@ func TestReconcile_ReportsMetrics(t *testing.T) {
 		manageBinding("test", "d8:subsystem:others:manager"),
 		automatedUseBinding("d8:use:admin:binding:orphan", "test-ns"),
 	)
-	if _, err := New(c, c, m, logr.Discard()).Reconcile(t.Context(), reconcile.Request{NamespacedName: client.ObjectKey{Name: RequestName}}); err != nil {
+	if _, err := New(c, c, events.NewFakeRecorder(64), m, logr.Discard()).Reconcile(t.Context(), reconcile.Request{NamespacedName: client.ObjectKey{Name: RequestName}}); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
 

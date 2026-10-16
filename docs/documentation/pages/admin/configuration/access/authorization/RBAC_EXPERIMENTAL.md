@@ -314,6 +314,8 @@ This way the new role will extend the `d8:manage:deckhouse` role.
 
 ## Extending manage-subsystem roles and adding a namespace
 
+> **Note.** In the current role model the `rbac.deckhouse.io/namespace` label is read only on the ClusterRoles Deckhouse ships; on a role you create it is ignored. To give access to another namespace, bind the subjects to a namespace role there with a RoleBinding.
+
 To add a new namespace for creating a use role in it via the hook, you would need only one label:
 
 ```yaml

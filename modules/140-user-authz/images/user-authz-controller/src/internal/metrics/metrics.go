@@ -102,6 +102,13 @@ type Collector struct {
 	descRules        *prometheus.Desc
 	descInvalid      *prometheus.Desc
 	descInvalidTotal *prometheus.Desc
+
+	// projections is the number of RoleBindings the manage reconciler projects, by namespace level;
+	// capped names the roles whose projection it limited to viewer.
+	projections     map[string]int
+	capped          []string
+	descProjections *prometheus.Desc
+	descCapped      *prometheus.Desc
 }
 
 // Default is the process-wide collector the reconcilers use.
@@ -110,8 +117,10 @@ var Default = New()
 // New constructs an empty Collector.
 func New() *Collector {
 	return &Collector{
-		observed: make(map[string]map[string]Observation),
-		invalid:  make(map[string]invalidRule),
+		observed:    make(map[string]map[string]Observation),
+		invalid:     make(map[string]invalidRule),
+		projections: make(map[string]int),
+		capped:      []string{},
 		applyTotal: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace,
 			Name:      "bindings_apply_total",
@@ -129,6 +138,25 @@ func New() *Collector {
 			"Rules whose bindings cannot be applied (1 per rule, at most MaxInvalidSeries rules), with the reason of the Ready=False condition.", []string{"kind", "name", "rule_namespace", "reason"}, nil),
 		descInvalidTotal: prometheus.NewDesc(namespace+"_authorization_rules_invalid",
 			"Number of rules whose bindings cannot be applied, by kind and reason of the Ready=False condition.", []string{"kind", "reason"}, nil),
+		descProjections: prometheus.NewDesc(namespace+"_projections",
+			"RoleBindings the holders of system and subsystem roles get in the namespaces of the modules, by namespace level.", []string{"level"}, nil),
+		descCapped: prometheus.NewDesc(namespace+"_projection_capped",
+			"Roles not built into the platform whose projection into the namespaces of the modules is limited to viewer (1 per role).", []string{"role"}, nil),
+	}
+}
+
+// SetProjections records the number of projected RoleBindings per namespace level and the roles
+// whose projection was capped, replacing the previous values.
+func (c *Collector) SetProjections(byLevel map[string]int, capped []string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.projections = maps.Clone(byLevel)
+	if c.projections == nil {
+		c.projections = make(map[string]int)
+	}
+	c.capped = slices.Clone(capped)
+	if c.capped == nil {
+		c.capped = []string{}
 	}
 }
 
@@ -200,6 +228,8 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.descRules
 	ch <- c.descInvalid
 	ch <- c.descInvalidTotal
+	ch <- c.descProjections
+	ch <- c.descCapped
 }
 
 // Collect implements prometheus.Collector: the observations are summed per kind.
@@ -236,5 +266,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	}
 	for kr, n := range totals {
 		ch <- prometheus.MustNewConstMetric(c.descInvalidTotal, prometheus.GaugeValue, float64(n), kr.kind, kr.reason)
+	}
+
+	for _, level := range slices.Sorted(maps.Keys(c.projections)) {
+		ch <- prometheus.MustNewConstMetric(c.descProjections, prometheus.GaugeValue, float64(c.projections[level]), level)
+	}
+	for _, role := range slices.Sorted(slices.Values(c.capped)) {
+		ch <- prometheus.MustNewConstMetric(c.descCapped, prometheus.GaugeValue, 1, role)
 	}
 }

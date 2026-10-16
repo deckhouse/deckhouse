@@ -19,8 +19,9 @@ limitations under the License.
 //
 // A system or subsystem role carries the label rbac.deckhouse.io/use-role naming the namespace role
 // its subjects get in the namespaces of the modules it manages. Those namespaces are found through
-// the role's aggregation rule: every ClusterRole matched by the selectors contributes the namespace
-// in its rbac.deckhouse.io/namespace label (the system capabilities of the modules carry it), and
+// the role's aggregation rule: every ClusterRole of Deckhouse matched by the selectors contributes the
+// namespace in its rbac.deckhouse.io/namespace label (the system capabilities of the modules carry it;
+// a ClusterRole a user creates adds no namespace, see isDeckhouseRole), and
 // roles that aggregate further are followed to any depth (subsystem roles aggregating capabilities,
 // system roles aggregating subsystems, superadmin roles aggregating managers). For each such
 // ClusterRoleBinding and each namespace a RoleBinding d8:namespace:<use-role>:binding:<binding> is
@@ -60,11 +61,13 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -109,6 +112,13 @@ const (
 	// selectors (a JSON list of metav1.LabelSelector) whose ClusterRoles give the namespaces of its
 	// RoleBindings.
 	AnnotationUseBindingSelectors = "user-authz.deckhouse.io/use-binding-selectors"
+
+	// viewerLevel is the namespace level a role not built into the platform projects at most: the
+	// namespaces of the modules hold the ServiceAccounts of the platform, and the use-role label of a
+	// custom role is set by its author.
+	viewerLevel = "viewer"
+	// ReasonProjectionCapped is the reason of the event on a role whose projection was limited.
+	ReasonProjectionCapped = "ProjectionCapped"
 
 	useRolePrefix         = "d8:namespace:"
 	legacyBindingPrefix   = "d8:use:"
@@ -173,14 +183,22 @@ type Reconciler struct {
 	client client.Client
 	// legacy reads the ClusterRoles of the previous scheme (LegacyRoleSelector), which the cache
 	// behind client does not hold.
-	legacy  client.Reader
-	metrics *metrics.Collector
-	log     logr.Logger
+	legacy   client.Reader
+	recorder events.EventRecorder
+	metrics  *metrics.Collector
+	log      logr.Logger
 }
 
-// New constructs a Reconciler. legacy reads the ClusterRoles of the previous scheme.
-func New(c client.Client, legacy client.Reader, m *metrics.Collector, log logr.Logger) *Reconciler {
-	return &Reconciler{client: c, legacy: legacy, metrics: m, log: log}
+// New constructs a Reconciler. legacy reads the ClusterRoles of the previous scheme; recorder gets
+// the events on the roles whose projection is limited.
+func New(
+	c client.Client,
+	legacy client.Reader,
+	recorder events.EventRecorder,
+	m *metrics.Collector,
+	log logr.Logger,
+) *Reconciler {
+	return &Reconciler{client: c, legacy: legacy, recorder: recorder, metrics: m, log: log}
 }
 
 // RoleRefIndexValue is the indexer of RoleRefIndexField: the name of the referenced ClusterRole.
@@ -244,7 +262,8 @@ func Register(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.Add(legacy); err != nil {
 		return fmt.Errorf("add the cache of the clusterroles of the previous scheme: %w", err)
 	}
-	r := New(mgr.GetClient(), legacy, metrics.Default, mgr.GetLogger().WithName("manage-bindings"))
+	recorder := mgr.GetEventRecorder("user-authz-controller")
+	r := New(mgr.GetClient(), legacy, recorder, metrics.Default, mgr.GetLogger().WithName("manage-bindings"))
 	if err := r.SetupWithManager(mgr, legacy); err != nil {
 		return fmt.Errorf("setup manage-bindings controller: %w", err)
 	}
@@ -344,8 +363,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	}
 
 	expected := make(map[client.ObjectKey]*rbacv1.RoleBinding)
+	capped := []string{}
 	for i := range roles.Items {
-		if err := r.project(ctx, &roles.Items[i], current, expected); err != nil {
+		if err := r.project(ctx, &roles.Items[i], current, expected, &capped); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -353,10 +373,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		if !isLegacyManageRole(&legacyRoles.Items[i]) {
 			continue
 		}
-		if err := r.project(ctx, &legacyRoles.Items[i], legacy, expected); err != nil {
+		if err := r.project(ctx, &legacyRoles.Items[i], legacy, expected, &capped); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
+	r.metrics.SetProjections(projectionsByLevel(expected), capped)
 
 	var (
 		errs  []error
@@ -418,7 +439,7 @@ func ofDeckhouse(lists ...[]rbacv1.ClusterRole) []rbacv1.ClusterRole {
 	var out []rbacv1.ClusterRole
 	for _, list := range lists {
 		for i := range list {
-			if strings.HasPrefix(list[i].Name, deckhousePrefix) && list[i].Labels[labelHeritage] == "deckhouse" {
+			if isDeckhouseRole(&list[i]) {
 				out = append(out, list[i])
 			}
 		}
@@ -446,15 +467,39 @@ func (r *Reconciler) project(
 	role *rbacv1.ClusterRole,
 	p projection,
 	expected map[client.ObjectKey]*rbacv1.RoleBinding,
+	capped *[]string,
 ) error {
 	useRole, namespaces := p.resolver.UseRoleAndNamespaces(role.Name)
 	if useRole == "" || (len(namespaces) == 0 && len(p.kept) == 0) {
 		return nil
 	}
+	// The label of a custom role is set by its author, who must not be able to hand the
+	// ServiceAccounts of the modules to the subjects of the role through it. The rbacv2-cluster-roles
+	// webhook refuses such a label; a role that carries one from before is projected as viewer and
+	// says so on the role, once it is bound.
+	labelled := useRole
+	isCapped := !isDeckhouseRole(role) && useRole != viewerLevel
+	if isCapped {
+		useRole = viewerLevel
+	}
 
 	bindings := &rbacv1.ClusterRoleBindingList{}
 	if err := r.client.List(ctx, bindings, client.MatchingFields{RoleRefIndexField: role.Name}); err != nil {
 		return fmt.Errorf("list clusterrolebindings of %s: %w", role.Name, err)
+	}
+	if isCapped && len(bindings.Items) != 0 {
+		r.recorder.Eventf(
+			role,
+			nil,
+			corev1.EventTypeWarning,
+			ReasonProjectionCapped,
+			"Reconcile",
+			"the role is not built into the platform, so its subjects get %q in the namespaces of its modules; the label %s: %s is ignored",
+			viewerLevel,
+			LabelUseRole,
+			labelled,
+		)
+		*capped = append(*capped, role.Name)
 	}
 	for i := range bindings.Items {
 		binding := &bindings.Items[i]
@@ -501,6 +546,26 @@ func keptUseRole(p projection, binding *rbacv1.ClusterRoleBinding, existing *rba
 	from, isKnownFrom := legacyUseRoleRank[madeUnder]
 	to, isKnownTo := legacyUseRoleRank[useRole]
 	return isKnownFrom && isKnownTo && to < from
+}
+
+// isDeckhouseRole reports whether role is a ClusterRole Deckhouse renders: named d8:* and labelled
+// heritage: deckhouse. The heritage label alone is not enough, see ofDeckhouse: an UPDATE of a
+// ClusterRole that already has it passes the system-roles webhook, and the user-authz:* roles have it
+// without a d8: name, while the rbacv2-cluster-roles webhook lets nobody but Deckhouse write a
+// ClusterRole under d8: on any build, apart from d8:custom: and d8:commander:, which their writers
+// cannot label heritage: deckhouse.
+func isDeckhouseRole(role *rbacv1.ClusterRole) bool {
+	return strings.HasPrefix(role.Name, deckhousePrefix) && role.Labels[labelHeritage] == "deckhouse"
+}
+
+// projectionsByLevel counts the expected RoleBindings by the namespace level of their role.
+func projectionsByLevel(expected map[client.ObjectKey]*rbacv1.RoleBinding) map[string]int {
+	byLevel := make(map[string]int)
+	for _, rb := range expected {
+		level := strings.TrimPrefix(strings.TrimPrefix(rb.RoleRef.Name, useRolePrefix), legacyUseRolePrefix)
+		byLevel[level]++
+	}
+	return byLevel
 }
 
 // legacyProjections indexes the automated RoleBindings named the way the previous release named
@@ -741,7 +806,10 @@ func (r *Resolver) collect(roleName string, visited, set map[string]struct{}) {
 			continue
 		}
 		visited[name] = struct{}{}
-		if namespace, ok := candidate.Labels[LabelNamespace]; ok {
+		// Only a ClusterRole of Deckhouse names a namespace: a capability a user creates with the label
+		// would otherwise add any namespace, kube-system or that of another project, to every role
+		// that aggregates it, a built-in superadmin role among them.
+		if namespace, ok := candidate.Labels[LabelNamespace]; ok && isDeckhouseRole(candidate) {
 			set[namespace] = struct{}{}
 		}
 		r.collect(name, visited, set)
