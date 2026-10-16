@@ -1,3 +1,18 @@
+basic-auth:
+    - version: 2
+      description:
+        en: |
+            * Delete the `locations[].whitelist` values that are not an IPv4 or IPv6 address or subnet, such as `all`. A location left without addresses requires a password, and a location without `users` denies every request.
+            * Delete the locations whose value is neither `/` nor a single path segment, and the `htpasswd` and `/htpasswd` locations.
+            * Delete the repeated locations that differ only in the leading `/`. The first one is kept.
+        ru: |
+            * Удалите из `locations[].whitelist` значения, которые не являются IPv4- или IPv6-адресом или подсетью, например `all`. Location без оставшихся адресов требует пароль, а location без `users` отклоняет все запросы.
+            * Удалите location, значение которых не является `/` или одним сегментом пути, а также location `htpasswd` и `/htpasswd`.
+            * Удалите повторы location, которые отличаются только начальным `/`. Остаётся первый из них.
+      conversions:
+        - if .locations != null then .locations |= map(if .whitelist != null then (.whitelist |= map(select(type == "string" and (test("^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(/0*(3[0-2]|[12]?[0-9]))?$") or test("^(([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:)|([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])|:)|([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])|:)|([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]))|:)|([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]))|:)|([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]))|:)|([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]))|:)|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9]))|:)))(/0*(12[0-8]|1[01][0-9]|[1-9]?[0-9]))?$"))))) | (if (.whitelist | length) == 0 then del(.whitelist) else . end) else . end) end
+        - if .locations != null then .locations |= map(select((.location | type) == "string" and (.location | test("^(/|/?[a-zA-Z0-9_-][a-zA-Z0-9._-]*)$")) and ((.location | test("^/?htpasswd$")) | not))) end
+        - if .locations != null then .locations |= reduce .[] as $l ([]; if any(.[]; (.location | ltrimstr("/")) == ($l.location | ltrimstr("/"))) then . else . + [$l] end) end
 cilium-hubble:
     - version: 2
       conversions:
