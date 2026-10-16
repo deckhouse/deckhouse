@@ -186,72 +186,88 @@ func TestCheckLocalhostScript(t *testing.T) {
 func TestCheckDeckhouseUserScript(t *testing.T) {
 	script := renderPreflightScript(t, "check_deckhouse_user.sh")
 
+	idStub := `
+if [ "$1" = "-u" ] && [ "$2" = "deckhouse" ] && [ -n "${TEST_DECKHOUSE_UID:-}" ]; then
+  printf '%s\n' "$TEST_DECKHOUSE_UID"
+  exit 0
+fi
+if [ "$1" = "-g" ] && [ "$2" = "deckhouse" ] && [ -n "${TEST_DECKHOUSE_PRIMARY_GID:-}" ]; then
+  printf '%s\n' "$TEST_DECKHOUSE_PRIMARY_GID"
+  exit 0
+fi
+exit 1
+`
+	getentStub := `
+case "$1:$2" in
+  group:deckhouse)
+    [ -n "${TEST_DECKHOUSE_GID:-}" ] || exit 2
+    printf 'deckhouse:x:%s:\n' "$TEST_DECKHOUSE_GID"
+    ;;
+  passwd:64535)
+    [ -n "${TEST_UID_OWNER:-}" ] || exit 2
+    printf '%s:x:64535:64535::/home/%s:/sbin/nologin\n' "$TEST_UID_OWNER" "$TEST_UID_OWNER"
+    ;;
+  group:64535)
+    [ -n "${TEST_GID_OWNER:-}" ] || exit 2
+    printf '%s:x:64535:\n' "$TEST_GID_OWNER"
+    ;;
+  *) exit 2 ;;
+esac
+`
+	sudoStub := `
+if [ "${TEST_HAS_SUDO:-}" = "true" ]; then
+  printf '    (ALL) ALL\n'
+fi
+`
+
 	tests := []struct {
-		name     string
-		id       string // stubbed `id`
-		getent   string // stubbed `getent`
-		sudo     string // stubbed `sudo`
-		wantCode int
-		wantOut  string
+		name         string
+		uid          string
+		primaryGID   string
+		groupGID     string
+		uidOwner     string
+		gidOwner     string
+		hasSudo      bool
+		wantCode     int
+		outputSubstr string
 	}{
-		{
-			name:     "the node has no deckhouse account",
-			id:       `exit 1`,
-			getent:   `exit 2`,
-			sudo:     `exit 1`,
-			wantCode: 0,
-		},
-		{
-			name:     "the account is the one Deckhouse creates",
-			id:       `echo 64535`,
-			getent:   `echo "deckhouse:x:64535:"`,
-			sudo:     `exit 1`,
-			wantCode: 0,
-		},
-		{
-			// A user of that name from something else entirely, with a different id.
-			name:     "an unrelated account holds the name",
-			id:       `echo 1001`,
-			getent:   `echo "deckhouse:x:1001:"`,
-			wantCode: 1,
-			wantOut:  "uid=1001, gid=1001 (expected 64535)",
-		},
-		{
-			// Half-cleaned: the user was removed and the group left behind.
-			name:     "the group is left over on its own",
-			id:       `exit 1`,
-			getent:   `echo "deckhouse:x:64535:"`,
-			wantCode: 1,
-			wantOut:  "unexpected id",
-		},
-		{
-			name:     "the account has sudo rights",
-			id:       `echo 64535`,
-			getent:   `echo "deckhouse:x:64535:"`,
-			sudo:     `echo "(ALL) NOPASSWD: ALL"`,
-			wantCode: 1,
-			wantOut:  "security risk",
-		},
+		{name: "account and IDs are available"},
+		{name: "compatible account exists", uid: "64535", primaryGID: "64535", groupGID: "64535", uidOwner: "deckhouse", gidOwner: "deckhouse"},
+		{name: "user has an unexpected UID", uid: "1000", primaryGID: "64535", groupGID: "64535", gidOwner: "deckhouse", wantCode: 1, outputSubstr: "uid=1000, primary_gid=64535, group_gid=64535 (expected 64535)"},
+		{name: "user has an unexpected primary GID", uid: "64535", primaryGID: "1000", groupGID: "64535", uidOwner: "deckhouse", gidOwner: "deckhouse", wantCode: 1, outputSubstr: "primary_gid=1000"},
+		{name: "group has an unexpected GID", uid: "64535", primaryGID: "64535", groupGID: "1000", uidOwner: "deckhouse", wantCode: 1, outputSubstr: "group_gid=1000"},
+		{name: "UID is owned by another user", uidOwner: "other-user", wantCode: 1, outputSubstr: "UID 64535 is already assigned to user other-user"},
+		{name: "GID is owned by another group", gidOwner: "other-group", wantCode: 1, outputSubstr: "GID 64535 is already assigned to group other-group"},
+		{name: "only user exists", uid: "64535", primaryGID: "64535", uidOwner: "deckhouse", wantCode: 1, outputSubstr: "unexpected id"},
+		{name: "only group exists", groupGID: "64535", gidOwner: "deckhouse", wantCode: 1, outputSubstr: "unexpected id"},
+		{name: "user has sudo privileges", uid: "64535", primaryGID: "64535", groupGID: "64535", uidOwner: "deckhouse", gidOwner: "deckhouse", hasSudo: true, wantCode: 1, outputSubstr: "has sudo privileges"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sudo := tt.sudo
-			if sudo == "" {
-				sudo = `exit 1`
+			hasSudo := "false"
+			if tt.hasSudo {
+				hasSudo = "true"
 			}
 
 			stubs := append([]stub{
-				{name: "id", body: tt.id},
-				{name: "getent", body: tt.getent},
-				{name: "sudo", body: sudo},
+				{name: "id", body: idStub},
+				{name: "getent", body: getentStub},
+				{name: "sudo", body: sudoStub},
 			}, passthrough(t, "cut", "grep")...)
 
-			out, code := runScript(t, script, stubs...)
+			out, code := runScriptWithEnv(t, script, []string{
+				"TEST_DECKHOUSE_UID=" + tt.uid,
+				"TEST_DECKHOUSE_PRIMARY_GID=" + tt.primaryGID,
+				"TEST_DECKHOUSE_GID=" + tt.groupGID,
+				"TEST_UID_OWNER=" + tt.uidOwner,
+				"TEST_GID_OWNER=" + tt.gidOwner,
+				"TEST_HAS_SUDO=" + hasSudo,
+			}, stubs...)
 
 			assert.Equal(t, tt.wantCode, code, "output: %s", out)
-			if tt.wantOut != "" {
-				assert.Contains(t, out, tt.wantOut)
+			if tt.outputSubstr != "" {
+				assert.Contains(t, out, tt.outputSubstr)
 			}
 			if tt.wantCode != 0 {
 				// What it found, and nothing else. The way out belongs to the report dhctl

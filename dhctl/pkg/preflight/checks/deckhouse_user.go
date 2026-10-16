@@ -36,7 +36,7 @@ type DeckhouseUserCheck struct {
 const DeckhouseUserCheckName preflight.CheckName = "deckhouse-user"
 
 func (DeckhouseUserCheck) Description() string {
-	return "no conflicting deckhouse user or group on the node"
+	return "no conflicts involving the deckhouse user, group, or UID/GID 64535 on the node"
 }
 
 func (DeckhouseUserCheck) Phase() preflight.Phase {
@@ -86,11 +86,15 @@ func deckhouseUserFailure(nodeInterface libcon.Interface, out []byte, err error)
 	return preflight.Permanent(&preflight.Failure{
 		Checked:  fmt.Sprintf("the deckhouse user and group on %s", hostPhrase(nodeInterface)),
 		Observed: observed,
-		Expected: "no deckhouse user or group, or the pair Deckhouse creates itself (uid and gid 64535, no sudo)",
-		Fix: "if this node ran Deckhouse before, run:\n" +
+		Expected: "either the deckhouse user and group are absent and UID/GID 64535 are free, " +
+			"or both exist, the user has UID and primary GID 64535, the group has GID 64535, " +
+			"and the user has no sudo privileges",
+		Fix: "if this is a static node that was previously part of a Deckhouse cluster and the cleanup script is present, " +
+			"use it only if the node's local cluster data can be safely deleted; it removes local Kubernetes, containerd, and etcd data and reboots the server:\n" +
 			"    sudo bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing\n" +
-			"otherwise remove the account by hand:\n" +
-			"    sudo userdel deckhouse && sudo groupdel deckhouse",
+			"otherwise, recreate the node or inspect and correct the conflicting account or ID:\n" +
+			"    getent passwd deckhouse; getent group deckhouse\n" +
+			"    getent passwd 64535; getent group 64535",
 		Err: err,
 	})
 }

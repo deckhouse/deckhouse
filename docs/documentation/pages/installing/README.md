@@ -628,7 +628,7 @@ List of checks performed by the installer before starting Deckhouse Platform ins
      - Port `22/TCP` between the host running the installer and the server.
      - No port conflicts with those used by the installation process.
    - The server (VM) has the correct time.
-   - The user `deckhouse` must not exist on the server (VM).
+   - The server (VM) has no conflicts with the local `deckhouse` system user and group: the user and group are either absent, or the user has UID and primary GID `64535`, the group has GID `64535`, the user has no `sudo` privileges, and UID/GID `64535` are not assigned to other accounts. For details, see [The local `deckhouse` system user](#the-local-deckhouse-system-user).
    - The address spaces for Pods (`podSubnetCIDR`), services (`serviceSubnetCIDR`), and internal network (`internalNetworkCIDRs`) do not intersect.
 
 1. Checks for cloud cluster installation:
@@ -676,7 +676,7 @@ Node checks (the `PostInfraPreflights` phase):
 - `--preflight-skip-check=static-instances-ssh-access`: Skip the check for SSH access to StaticInstances.
 - `--preflight-skip-check=sudo-installed`: Skip the check that `sudo` is installed on the node.
 - `--preflight-skip-check=sudo-allowed`: Skip the check for `sudo` privileges.
-- `--preflight-skip-check=deckhouse-user`: Skip the `deckhouse` user existence check.
+- `--preflight-skip-check=deckhouse-user`: Skip checks of the `deckhouse` user and group, including their UID/GID, conflicts with UID/GID `64535`, and whether the `deckhouse` user has `sudo` privileges.
 - `--preflight-skip-check=node-system-requirements`: Skip the check for meeting system requirements.
 - `--preflight-skip-check=python-modules`: Skip the check for Python installation.
 - `--preflight-skip-check=ports-availability`: Skip the check for the availability of required ports.
@@ -744,6 +744,18 @@ Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For exa
 {% endalert %}
 
 {% endofftopic %}
+
+### The local `deckhouse` system user
+
+DP components use UID/GID `64535` to run unprivileged processes and access their files on the node. The local `deckhouse` user and group reserve these identifiers for DP and let the OS display the `deckhouse` name instead of numeric UID/GID values in tools such as `ps`, `top`, and `ls`. Processes owned by `deckhouse` in `ps` or `top` output are expected: they belong to DP components, not to user sessions.
+
+If the account does not exist, bashible creates it with the `/sbin/nologin` shell, without a password or `sudo` privileges. `/etc/passwd` lists the system default home directory for the user (usually `/home/deckhouse`). Bashible creates this directory separately as the base directory for the home directories of users defined by `NodeUser` resources; the `deckhouse` system account itself is not intended for login or storing user files. The account must not be provided through AD or LDAP.
+
+The `deckhouse` name and UID/GID `64535` are reserved for DP and are not configurable. Do not delete or rename the user or group, change their UID/GID, or grant the user `sudo` privileges. The preflight check accepts an absent user and group, or an existing pair where the user has UID and primary GID `64535`, the group has GID `64535`, and the user has no `sudo` privileges. Installation fails if the name is used with different IDs or UID/GID `64535` are assigned to other accounts.
+
+The `--preflight-skip-check=deckhouse-user` flag disables the check but does not resolve the conflict. If the `deckhouse` user or group exists with different IDs, bashible does not modify it and logs a warning. If UID/GID `64535` are assigned to another account, bashible cannot create the `deckhouse` user or group. Nor does bashible revoke `sudo` privileges from an existing user.
+
+If the conflict was left by a previous DP installation on a static node, perform [manual cleanup of the static node](../admin/configuration/platform-scaling/node/bare-metal-node.html#manual-cleanup-of-a-static-node). This is a destructive operation: the cleanup script removes the services, configuration, and local Kubernetes, containerd, and etcd data created by DP, as well as DP accounts, and then reboots the server. Run the cleanup only on a node prepared for redeployment. In all other cases, resolve the conflict manually or recreate the node.
 
 ### Aborting the installation
 

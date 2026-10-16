@@ -101,7 +101,7 @@ func TestChecker_CheckDeckhouseUser(t *testing.T) {
 // diagnosis was thrown away before anyone saw it.
 func TestDeckhouseUserFailureTellsTheOperatorWhatToRun(t *testing.T) {
 	node := newFakeNode().onScript("check_deckhouse_user.sh").
-		printsAndExits("deckhouse user or group exists with unexpected id: uid=1001, gid=1001 (expected 64535)", 1)
+		printsAndExits("deckhouse user or group exists with unexpected id: uid=1001, primary_gid=1001, group_gid=1001 (expected 64535)", 1)
 
 	check := DeckhouseUserCheck{
 		NodeInterface: FixedNodeInterface(node),
@@ -114,9 +114,11 @@ func TestDeckhouseUserFailureTellsTheOperatorWhatToRun(t *testing.T) {
 	require.ErrorAs(t, err, &failure)
 	assert.Contains(t, failure.Observed, "uid=1001", "what the node found is the node's to say")
 	assert.Contains(t, failure.Expected, "64535")
+	assert.Contains(t, failure.Fix, "static node")
+	assert.Contains(t, failure.Fix, "reboots the server")
 	assert.Contains(t, failure.Fix, "cleanup_static_node.sh",
 		"the cleanup script's path is the one step an operator cannot guess")
-	assert.Contains(t, failure.Fix, "userdel deckhouse")
+	assert.Contains(t, failure.Fix, "getent passwd 64535")
 
 	// A leftover account does not remove itself between attempts.
 	assert.True(t, isPermanent(err))

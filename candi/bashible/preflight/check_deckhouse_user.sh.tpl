@@ -25,14 +25,25 @@ fail() {
 }
 
 uid="$(id -u deckhouse 2>/dev/null || true)"
-gid="$(getent group deckhouse | cut -d: -f3 || true)"
+primary_gid="$(id -g deckhouse 2>/dev/null || true)"
+group_gid="$(getent group deckhouse | cut -d: -f3 || true)"
+uid_owner="$(getent passwd "$EXPECTED_ID" | cut -d: -f1 || true)"
+gid_owner="$(getent group "$EXPECTED_ID" | cut -d: -f1 || true)"
 
-if [ -z "$uid" ] && [ -z "$gid" ]; then
+if [ -n "$uid_owner" ] && [ "$uid_owner" != "deckhouse" ]; then
+    fail "UID ${EXPECTED_ID} is already assigned to user ${uid_owner}"
+fi
+
+if [ -n "$gid_owner" ] && [ "$gid_owner" != "deckhouse" ]; then
+    fail "GID ${EXPECTED_ID} is already assigned to group ${gid_owner}"
+fi
+
+if [ -z "$uid" ] && [ -z "$group_gid" ]; then
     exit 0
 fi
 
-if [ "$uid" != "$EXPECTED_ID" ] || [ "$gid" != "$EXPECTED_ID" ]; then
-    fail "deckhouse user or group exists with unexpected id: uid=${uid}, gid=${gid} (expected ${EXPECTED_ID})"
+if [ "$uid" != "$EXPECTED_ID" ] || [ "$primary_gid" != "$EXPECTED_ID" ] || [ "$group_gid" != "$EXPECTED_ID" ]; then
+    fail "deckhouse user or group exists with unexpected id: uid=${uid}, primary_gid=${primary_gid}, group_gid=${group_gid} (expected ${EXPECTED_ID})"
 fi
 
 if sudo -l -U deckhouse 2>/dev/null | grep -q "(ALL"; then
