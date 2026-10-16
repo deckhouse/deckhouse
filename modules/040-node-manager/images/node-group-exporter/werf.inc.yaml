@@ -1,16 +1,10 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
-  stageDependencies:
-    install:
-    - '**/*'
-shell:
-  install:
-  - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
@@ -29,14 +23,12 @@ shell:
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download -x
-  setup:
-  - cd /src
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o node-group-exporter ./cmd/main.go
   - chown 64535:64535 /src/node-group-exporter
   - chmod 0700 /src/node-group-exporter
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/node-group-exporter
