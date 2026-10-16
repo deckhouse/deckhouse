@@ -1,3 +1,6 @@
+{{- include "ape.only_ready_constraints" (list . (include "ape.security_policy_constraints" .)) }}
+
+{{- define "ape.security_policy_constraints" }}
 {{- $context := . }}
 
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
@@ -80,6 +83,7 @@
 {{- end }}
 
 {{- end }} # end if bootstrapped
+{{- end }}
 
 {{- define "allow_privileged" }}
   {{- $context := index . 0 }}

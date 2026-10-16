@@ -33,6 +33,9 @@ allowedLocalhostFiles:
   - "*"
 {{- end }}
 
+{{- include "ape.only_ready_constraints" (list . (include "ape.pss_restricted_constraints" .)) }}
+
+{{- define "ape.pss_restricted_constraints" }}
 {{- $context := . }}
 
 {{- range $enforcementAction := .Values.admissionPolicyEngine.internal.podSecurityStandards.enforcementActions }}
@@ -52,4 +55,5 @@ allowedLocalhostFiles:
   {{- $parameters := fromYaml (include "pss_restricted_params_allowed_seccomp_profiles" .) }}
   {{- include "pod_security_standard_restricted" (list $context "D8AllowedSeccompProfiles" $enforcementAction $parameters) }}
 
+{{- end }}
 {{- end }}

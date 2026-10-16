@@ -55,6 +55,20 @@ admissionPolicyEngine:
 			f.HelmRender()
 		})
 
+		It("must leave a lost node after 30 seconds", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			dp := f.KubernetesResource("Deployment", nsName, "gatekeeper-controller-manager")
+			// Kubernetes uses the first matching toleration, so each key must appear exactly once, and no
+			// key-less toleration may match every taint.
+			Expect(dp.Field(`spec.template.spec.tolerations.#(key=="")#`).Array()).To(BeEmpty())
+			for _, key := range []string{"node.kubernetes.io/not-ready", "node.kubernetes.io/unreachable"} {
+				tolerations := dp.Field(`spec.template.spec.tolerations.#(key=="` + key + `")#`).Array()
+				Expect(tolerations).To(HaveLen(1), key)
+				Expect(tolerations[0].Get("effect").String()).To(Equal("NoExecute"), key)
+				Expect(tolerations[0].Get("tolerationSeconds").Int()).To(BeEquivalentTo(30), key)
+			}
+		})
+
 		It("must keep webhook Gatekeeper on system nodes", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 

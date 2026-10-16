@@ -544,3 +544,32 @@ spec:
     werf.io/delete-dependency-validating-webhook: state=absent,kind=ValidatingWebhookConfiguration,name=d8-admission-policy-engine-config
     werf.io/delete-dependency-mutating-webhook: state=absent,kind=MutatingWebhookConfiguration,name=d8-admission-policy-engine-config
 {{- end }}
+
+{{- /*
+  ape.only_ready_constraints prints the YAML documents of a rendered stream, dropping every Gatekeeper
+  constraint whose kind is not in internal.readyConstraintKinds.
+
+  Gatekeeper creates the CRD of a constraint kind from its ConstraintTemplate, which is part of the same
+  release, and a constraint of a kind without an established CRD fails the whole release. The filter lets the
+  constraints of a template that is not ready yet wait for it, while every other constraint and both
+  webhook configurations stay. Without the value, as in a render without the bootstrap hook (tests,
+  linters), nothing is dropped.
+
+  Usage: include "ape.only_ready_constraints" (list . (include "<RENDERING_TEMPLATE>" .))
+*/ -}}
+{{- define "ape.only_ready_constraints" }}
+  {{- $context := index . 0 }}
+  {{- $rendered := index . 1 }}
+  {{- $internal := $context.Values.admissionPolicyEngine.internal }}
+  {{- $filter := hasKey $internal "readyConstraintKinds" }}
+  {{- $ready := $internal.readyConstraintKinds | default list }}
+  {{- range $doc := splitList "\n---" $rendered }}
+    {{- if trim $doc }}
+      {{- $isConstraint := regexMatch "(?m)^apiVersion: *constraints\\.gatekeeper\\.sh/" $doc }}
+      {{- $kind := regexFind "(?m)^kind: *[A-Za-z0-9]+" $doc | trimPrefix "kind:" | trim }}
+      {{- if or (not $filter) (not $isConstraint) (has $kind $ready) }}
+{{ printf "---%s" $doc }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

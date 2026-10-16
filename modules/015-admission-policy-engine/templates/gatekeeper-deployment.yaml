@@ -102,6 +102,16 @@ spec:
             topologyKey: kubernetes.io/hostname
         {{- end }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-no-csi") | nindent 6 }}
+      # Pod admission of the whole cluster waits for this webhook: leave a lost node after 30 seconds
+      # instead of the default 300, so the pod is recreated on a live node sooner.
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 30
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 30
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       automountServiceAccountToken: true

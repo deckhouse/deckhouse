@@ -10,9 +10,11 @@
       annotations:
         plk_protocol_version: "1"
         plk_markup_format: markdown
-        summary: Admission-policy-engine module hasn't been bootstrapped for 10 minutes.
+        summary: Not every ConstraintTemplate of the admission-policy-engine module is ready for 10 minutes.
         description: |-
-          The admission-policy-engine module couldn't bootstrap.
+          Some ConstraintTemplates of the admission-policy-engine module are missing or not processed by Gatekeeper. The constraints of a template are applied only once Gatekeeper has established its CRD.
+
+          On a new installation, the module also renders no webhooks and no policies until every template is ready. In a cluster where the module has already worked, the webhooks and the constraints of the other templates stay in effect.
           
           Steps to troubleshoot:
           

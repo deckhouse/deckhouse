@@ -72,6 +72,9 @@ allowedLocalhostFiles:
 allowedHostPaths: []
 {{- end }}
 
+{{- include "ape.only_ready_constraints" (list . (include "ape.pss_baseline_constraints" .)) }}
+
+{{- define "ape.pss_baseline_constraints" }}
 {{- $context := . }}
 
 {{- $knownList := list }} # Host Networking
@@ -114,4 +117,5 @@ allowedHostPaths: []
   {{- $parameters := fromYaml (include "pss_baseline_params_allowed_seccomp_profiles" .) }} # Seccomp Profiles
   {{- include "pod_security_standard_baseline" (list $context "D8AllowedSeccompProfiles" $enforcementAction $parameters) }}
 
+{{- end }}
 {{- end }}

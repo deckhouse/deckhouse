@@ -9,6 +9,14 @@ properties:
       bootstrapped:
         type: boolean
         default: false
+      readyConstraintKinds:
+        type: array
+        description: |
+          Kinds of Gatekeeper constraints whose ConstraintTemplates exist and whose CRDs are established.
+          Only constraints of these kinds are rendered. The bootstrap hook always sets the value; without it, as in a render
+          without the hook (tests, linters), every constraint is rendered.
+        items:
+          type: string
       podSecurityStandards:
         default: {}
         type: object

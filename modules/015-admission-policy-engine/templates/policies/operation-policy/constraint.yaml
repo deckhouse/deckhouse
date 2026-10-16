@@ -1,3 +1,6 @@
+{{- include "ape.only_ready_constraints" (list . (include "ape.operation_policy_constraints" .)) }}
+
+{{- define "ape.operation_policy_constraints" }}
 {{- $context := . }}
 
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
@@ -56,6 +59,7 @@
 {{- end }}
 
 {{- end }} # end if bootstrapped
+{{- end }}
 
 {{- define "allowed_repos_policy" }}
   {{- $context := index . 0 }}
