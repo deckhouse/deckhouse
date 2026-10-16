@@ -12,6 +12,9 @@ spec:
     spec:
       zoneID: {{ .zoneName | quote }}
       platformID: {{ .nodeGroup.instanceClass.platformID | default "standard-v3" | quote }}
+{{- if .nodeGroup.instanceClass.preemptible }}
+      preemptible: true
+{{- end }}
       resources:
         cores: {{ .nodeGroup.instanceClass.cores }}
         coreFraction: {{ .nodeGroup.instanceClass.coreFraction | default 100 }}

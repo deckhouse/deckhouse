@@ -69,3 +69,18 @@ of the ones CAPY sets itself (`yandex.cloud/managed-by`, `yandex.cloud/folder-id
 `yandex.cloud/capy-*`). A label whose key collides with a CAPY label is ignored
 and logged with a `WARNING:` message, so a user label can never change how CAPY
 identifies its instances. Labels are applied on instance creation only.
+
+## 008-support-preemptible-machines.patch
+
+Pulls in the runtime and API changes from upstream PR
+`yandex-cloud/cluster-api-provider-yandex#50`: adds `YandexMachine.spec.preemptible`
+(`*bool`, default `false`) with its deepcopy, and always sets
+`compute.SchedulingPolicy` on the instance create request in `GetInstanceReq`, so
+a `YandexMachine` with `spec.preemptible: true` is created as a preemptible
+Yandex Cloud VM. When the field is omitted or `false`, the VM is a regular one.
+
+This patch intentionally excludes upstream's test, CRD and `templates/` changes:
+the test is not exercised by any test gate on this source tree (only `go build`
+runs on it), Deckhouse ships its own preserve-unknown-fields CRD stub for
+`YandexMachine`/`YandexMachineTemplate`, and the `templates/` files are
+upstream's own `clusterctl`/e2e example manifests, never read by Deckhouse.

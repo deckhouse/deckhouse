@@ -710,6 +710,105 @@ spec:
         matchLabels:
           node-group: worker
 `
+
+	nodeManagerYandexCAPI = `
+internal:
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  machineDeployments: {}
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  cloudProvider:
+    type: yandex
+    machineClassKind: YandexMachineClass
+    capiClusterKind: YandexCluster
+    capiClusterAPIVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    capiClusterName: yandex
+    capiMachineTemplateKind: YandexMachineTemplate
+    capiMachineTemplateAPIVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    yandex:
+      sshKey: ssh-rsa AAAA
+      nodeNetworkCIDR: 10.0.0.0/24
+      shouldAssignPublicIPAddress: false
+      zoneToSubnetIdMap:
+        zonea: subnet-a
+      labels:
+        team: infra
+      instanceClassDefaults:
+        imageID: fd8defaultimage
+  nodeGroups:
+  - name: nopreempt
+    instanceClass:
+      platformID: standard-v3
+      cores: 2
+      memory: 4096
+      diskType: network-ssd
+      imageID: fd8imageid
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.32"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: YandexInstanceClass
+        name: nopreempt
+      maxPerZone: 1
+      minPerZone: 1
+      zones:
+      - zonea
+  - name: preemptfalse
+    instanceClass:
+      platformID: standard-v3
+      cores: 2
+      memory: 4096
+      diskType: network-ssd
+      imageID: fd8imageid
+      preemptible: false
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.32"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: YandexInstanceClass
+        name: preemptfalse
+      maxPerZone: 1
+      minPerZone: 1
+      zones:
+      - zonea
+  - name: preempttrue
+    instanceClass:
+      platformID: standard-v3
+      cores: 2
+      memory: 4096
+      diskType: network-ssd
+      imageID: fd8imageid
+      preemptible: true
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.32"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: YandexInstanceClass
+        name: preempttrue
+      maxPerZone: 1
+      minPerZone: 1
+      zones:
+      - zonea
+  machineControllerManagerEnabled: true
+`
 )
 
 const (
@@ -719,12 +818,15 @@ const (
 	vsphereCIMSymlink   = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
 	vcdCAPIPath         = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
 	vcdCAPISymlink      = "/deckhouse/modules/040-node-manager/capi/vcd"
+	yandexCAPIPath      = "/deckhouse/modules/030-cloud-provider-yandex/capi"
+	yandexCAPISymlink   = "/deckhouse/modules/040-node-manager/capi/yandex"
 )
 
 var nodeManagerAWSSpot = strings.Replace(nodeManagerAWS, "      instanceType: t2.medium\n", "      instanceType: t2.medium\n      spot: true\n", 1)
 
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
+	yandexCAPISymlinkCreated := false
 
 	BeforeSuite(func() {
 		err := os.Symlink(openstackCIMPath, openstackCIMSymlink)
@@ -733,6 +835,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		err = os.Symlink(vcdCAPIPath, vcdCAPISymlink)
 		Expect(err).ShouldNot(HaveOccurred())
+		// capi/yandex is linked by CI prebuild, not committed; only remove what this suite created.
+		if _, statErr := os.Lstat(yandexCAPISymlink); os.IsNotExist(statErr) {
+			Expect(os.Symlink(yandexCAPIPath, yandexCAPISymlink)).To(Succeed())
+			yandexCAPISymlinkCreated = true
+		}
 	})
 
 	AfterSuite(func() {
@@ -742,6 +849,9 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		err = os.Remove(vcdCAPISymlink)
 		Expect(err).ShouldNot(HaveOccurred())
+		if yandexCAPISymlinkCreated {
+			Expect(os.Remove(yandexCAPISymlink)).To(Succeed())
+		}
 	})
 
 	BeforeEach(func() {
@@ -1213,6 +1323,81 @@ ccc: ddd
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
 			assertBashibleAPIServerTLS(f)
+		})
+
+		Context("Yandex CAPI machine templates", func() {
+			// Goldens captured on release-1.77 a0106118ef before the preemptible template change.
+			const (
+				noPreemptChecksum    = "84ae5d12bcbfc2173a477d226aba3398ee30b7b4906f915402087e4e351dbd47"
+				preemptFalseChecksum = "f4a19a8ce6350ad71d5827c17a123b945c2feb8577ee63439533f4fc4bc0f14d"
+				preemptTrueChecksum  = "b9652e54c382bc0572af5f88c69037b4128109b2e56d1243a2fd9204f28d8b05"
+			)
+
+			baseSpec := `
+zoneID: zonea
+platformID: standard-v3
+resources:
+  cores: 2
+  coreFraction: 100
+  memory: 4096Mi
+  gpus: 0
+bootDisk:
+  typeID: network-ssd
+  size: 50Gi
+  imageID: fd8imageid
+networkInterfaces:
+- subnetID: subnet-a
+  hasPublicIP: false
+labels:
+  team: infra
+metadata:
+  ssh-keys: 'user:ssh-rsa AAAA'
+  node-network-cidr: 10.0.0.0/24
+`
+
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerYandexCAPI)
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"nopreempt": "t1", "preemptfalse": "t2", "preempttrue": "t3"})
+				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			// The name node-controller derives is sha256(clusterUUID+zone+checksum)[:8]; it must not move.
+			templateName := func(ng, checksum string) string {
+				sum := sha256.Sum256([]byte("f49dd1c3-a63a-4565-a06c-625e35587eab" + "zonea" + checksum))
+				return ng + "-" + hex.EncodeToString(sum[:])[:8]
+			}
+
+			cases := []struct {
+				ng, golden, preemptible string
+			}{
+				{"nopreempt", noPreemptChecksum, ""},
+				{"preemptfalse", preemptFalseChecksum, ""},
+				{"preempttrue", preemptTrueChecksum, "preemptible: true\n"},
+			}
+
+			for _, c := range cases {
+				It("keeps checksum and template name unchanged for "+c.ng, func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					checksums := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "d8-node-manager-capi-instance-class-checksum")
+					Expect(checksums.Exists()).To(BeTrue())
+					Expect(checksums.Field("data." + c.ng).String()).To(Equal(c.golden))
+
+					tpl := f.KubernetesResource("YandexMachineTemplate", "d8-cloud-instance-manager", templateName(c.ng, c.golden))
+					Expect(tpl.Exists()).To(BeTrue())
+					Expect(tpl.Field("metadata.annotations.checksum/instance-class").String()).To(Equal(c.golden))
+				})
+
+				It("renders spec.template.spec.preemptible only when true for "+c.ng, func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					tpl := f.KubernetesResource("YandexMachineTemplate", "d8-cloud-instance-manager", templateName(c.ng, c.golden))
+					Expect(tpl.Exists()).To(BeTrue())
+					Expect(tpl.Field("spec.template.spec").String()).To(MatchYAML(baseSpec + c.preemptible))
+				})
+			}
 		})
 
 		Context("split mode with only CAPI autoscaler enabled", func() {
