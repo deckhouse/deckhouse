@@ -19,9 +19,13 @@ package provider
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -31,7 +35,14 @@ import (
 
 // LDAPConfig groups NewLDAP parameters to avoid the boolean-parameter parade.
 type LDAPConfig struct {
-	URL                  string
+	// URL is the public address of Dex, its issuer.
+	URL string
+	// DexURL is where the provider sends its requests, the Dex Service inside the cluster. Empty
+	// means URL.
+	DexURL string
+	// CAFile is the PEM bundle of the CA that issued the certificate of Dex. It is required: the
+	// certificate of the Dex Service is internal, and the check of the credentials rests on it.
+	CAFile               string
 	ClientID             string
 	ClientSecret         string
 	Scopes               []string
@@ -48,6 +59,14 @@ type LDAPProvider struct {
 }
 
 func NewLDAP(ctx context.Context, cfg LDAPConfig) (Provider, error) {
+	if cfg.URL == "" {
+		return nil, errors.New("the issuer URL of Dex is empty")
+	}
+	tlsConfig, err := dexTLSConfig(cfg.CAFile)
+	if err != nil {
+		return nil, err
+	}
+
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
@@ -60,16 +79,26 @@ func NewLDAP(ctx context.Context, cfg LDAPConfig) (Provider, error) {
 			IdleConnTimeout:       30 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
+			TLSClientConfig:       tlsConfig,
 		},
 	}
 
-	oidcProvider, err := oidc.NewProvider(oidc.ClientContext(ctx, httpClient), cfg.URL)
-	if err != nil {
-		return nil, fmt.Errorf("create LDAP OIDC provider %q: %w", cfg.URL, err)
+	// The endpoints are not discovered: Dex serves them at fixed paths under the issuer, and the
+	// discovery document would name them at the public address, which a pod cannot always reach.
+	// Only the token and userinfo endpoints are used. The ID token is not verified: Dex answers the
+	// password grant over a connection whose certificate is checked against CAFile, and that answer
+	// is the check of the credentials.
+	base := cfg.URL
+	if cfg.DexURL != "" {
+		base = cfg.DexURL
 	}
+	base = strings.TrimSuffix(base, "/")
+	providerConfig := oidc.ProviderConfig{
+		IssuerURL:   cfg.URL,
+		TokenURL:    base + "/token",
+		UserInfoURL: base + "/userinfo",
+	}
+	oidcProvider := providerConfig.NewProvider(oidc.ClientContext(ctx, httpClient))
 
 	oauthCfg := oauth2.Config{
 		ClientID:     cfg.ClientID,
@@ -124,4 +153,22 @@ func (p *LDAPProvider) ValidateCredentials(ctx context.Context, login, password 
 	}
 
 	return claims.Groups, nil
+}
+
+// dexTLSConfig verifies the certificate of Dex against the CA in caFile.
+func dexTLSConfig(caFile string) (*tls.Config, error) {
+	if caFile == "" {
+		return nil, errors.New("the CA of Dex is not set")
+	}
+	cfg := &tls.Config{MinVersion: tls.VersionTLS12}
+	pem, err := os.ReadFile(caFile)
+	if err != nil {
+		return nil, fmt.Errorf("read the CA of Dex: %w", err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(pem) {
+		return nil, fmt.Errorf("no certificate in the CA of Dex %q", caFile)
+	}
+	cfg.RootCAs = pool
+	return cfg, nil
 }

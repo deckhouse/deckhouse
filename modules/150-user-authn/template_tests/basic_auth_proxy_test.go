@@ -148,6 +148,28 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 		})
 	}
 
+	// A pod cannot always reach the public address of Dex (no hairpin NAT), and the proxy crashed
+	// on start when it could not: requests go to the Dex Service, and its certificate is verified.
+	Context("With an LDAP provider", func() {
+		BeforeEach(func() {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", ldapProvider)
+			hec.HelmRender()
+		})
+
+		It("Should send the requests to the Dex Service and verify its certificate with the Dex CA", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			args := hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy").
+				Field("spec.template.spec.containers.0.args").AsStringSlice()
+			Expect(args).To(ContainElement("--ldap-base-url=https://dex.example.com/"))
+			Expect(args).To(ContainElement("--ldap-dex-url=https://dex.d8-user-authn/"))
+			Expect(args).To(ContainElement("--ldap-ca-file=/etc/certs/dex-ca.crt"))
+
+			secret := hec.KubernetesResource("Secret", "d8-user-authn", "basic-auth-cert")
+			Expect(secret.Field(`data.dex-ca\.crt`).String()).To(Equal("cGxhaW5zdHJpbmc="))
+		})
+	})
+
 	Context("With an OIDC provider", func() {
 		BeforeEach(func() {
 			hec.ValuesSetFromYaml("userAuthn.internal.providers", oidcProvider)

@@ -144,6 +144,9 @@ spec:
         {{- end }}
         {{- if eq $type "LDAP" }}
         - --ldap-base-url=https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
+        {{- /* Requests go to the Dex Service: a pod cannot always reach the public address. */}}
+        - --ldap-dex-url=https://dex.d8-{{ .Chart.Name }}/
+        - --ldap-ca-file=/etc/certs/dex-ca.crt
         - --ldap-client-id=kubernetes
         - {{ printf "--ldap-client-secret=%s" .Values.userAuthn.internal.kubernetesDexClientAppSecret | quote }}
         - --ldap-include-user-info-claims=true

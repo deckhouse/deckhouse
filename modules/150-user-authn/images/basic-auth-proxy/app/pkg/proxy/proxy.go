@@ -84,6 +84,8 @@ type Handler struct {
 	OIDCGetUserInfo          bool
 
 	LDAPBaseURL              string
+	LDAPDexURL               string
+	LDAPCAFile               string
 	LDAPClientID             string
 	LDAPClientSecret         string
 	LDAPScopes               []string
@@ -306,6 +308,8 @@ func (h *Handler) initProvider(ctx context.Context) error {
 	case h.LDAPBaseURL != "":
 		p, err := provider.NewLDAP(ctx, provider.LDAPConfig{
 			URL:                  h.LDAPBaseURL,
+			DexURL:               h.LDAPDexURL,
+			CAFile:               h.LDAPCAFile,
 			ClientID:             h.LDAPClientID,
 			ClientSecret:         h.LDAPClientSecret,
 			Scopes:               h.LDAPScopes,
@@ -317,6 +321,9 @@ func (h *Handler) initProvider(ctx context.Context) error {
 		}
 		h.provider = p
 		h.logger.Printf("-- LDAP OIDC URL: %s", h.LDAPBaseURL)
+		if h.LDAPDexURL != "" {
+			h.logger.Printf("-- LDAP requests sent to: %s", h.LDAPDexURL)
+		}
 
 	default:
 		return fmt.Errorf("no auth provider configured")

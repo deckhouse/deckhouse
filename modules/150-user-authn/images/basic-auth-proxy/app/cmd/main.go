@@ -71,6 +71,8 @@ func main() {
 	rootCmd.PersistentFlags().BoolVar(&handler.LDAPBasicAuthUnsupported, "ldap-basic-auth-unsupported", false, "basicAuthUnsupported option for LDAP OIDC provider")
 	rootCmd.PersistentFlags().BoolVar(&handler.LDAPGetUserInfo, "ldap-include-user-info-claims", false, "include user information claims from LDAP OIDC provider")
 	rootCmd.PersistentFlags().StringVar(&handler.LDAPBaseURL, "ldap-base-url", "", "URL of LDAP OIDC provider (Dex)")
+	rootCmd.PersistentFlags().StringVar(&handler.LDAPDexURL, "ldap-dex-url", "", "URL of Dex inside the cluster to send requests to; --ldap-base-url stays the issuer")
+	rootCmd.PersistentFlags().StringVar(&handler.LDAPCAFile, "ldap-ca-file", "", "PEM file with the CA that verifies the certificate of Dex")
 	rootCmd.PersistentFlags().StringVar(&handler.LDAPClientID, "ldap-client-id", "", "clientID of LDAP OIDC application")
 	rootCmd.PersistentFlags().StringVar(&handler.LDAPClientSecret, "ldap-client-secret", "", "clientSecret of LDAP OIDC application")
 	rootCmd.PersistentFlags().StringArrayVar(&handler.LDAPScopes, "ldap-scope", nil, "Scopes passed from LDAP OIDC provider settings")
