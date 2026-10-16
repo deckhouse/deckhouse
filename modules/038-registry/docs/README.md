@@ -107,6 +107,10 @@ Use a separate disk for the cache directory and for etcd data. Sharing one
 disk degrades etcd while the cache is being filled.
 {% endalert %}
 
+##### The expected image set
+
+The cache holds the expected image set: the images of the deployed DP release and of the previous one (for a rollback), the images of the modules the cluster runs, and the catalogue of modules the module sources offer. Updates the cluster lists as pending — of DP and of modules — are copied too, ahead of time: the replicas receive an update before it is deployed, in an air-gapped cluster as soon as `d8 mirror push` has put it into the store. An update the source does not hold yet does not hold the cache back; it is copied when it is deployed at the latest. The replicas copy only while one of them is short of the set or a pending update has appeared; after that, nothing is copied until the set changes again.
+
 ##### Leader election
 
 Only a replica that already holds the whole expected image set can become the leader. The replica currently holding the lease steps aside once the expected set appears on another replica. A replica that does not hold the full expected image set cannot become the leader.
@@ -134,7 +138,11 @@ Before enabling the `registry` module to manage the pull paths for container ima
   [`defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri)
   parameter in ClusterConfiguration.
 - The cluster is fully managed by DP. The module does not work in Managed Kubernetes.
-- The in-cluster cache uses disks on the control-plane nodes and is supported on static clusters.
+- The in-cluster cache uses disks on the control-plane nodes, in static and cloud clusters alike. In a cloud
+  cluster that is the control-plane node's root disk unless another one is mounted at the cache directory
+  (`/var/lib/deckhouse/registry` when the master NodeGroup has `systemType: Immutable`, `/opt/deckhouse/registry`
+  otherwise), so size that disk for [`storage.size`](configuration.html#parameters-storage-size) on top of what the node
+  itself uses.
 
 ## The previous implementation
 

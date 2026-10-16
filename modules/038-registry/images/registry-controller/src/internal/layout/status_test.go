@@ -497,3 +497,117 @@ func TestStoreWritable(t *testing.T) {
 		assert.Contains(t, condition.Message, "dedicated disk")
 	})
 }
+
+func TestFollowersBehind(t *testing.T) {
+	full := func(r registryv1alpha1.StorageReplicaStatus, set string) registryv1alpha1.StorageReplicaStatus {
+		r.VerifiedSet = set
+		return r
+	}
+	masters := []string{"master-0", "master-1", "master-2"}
+
+	tests := []struct {
+		name     string
+		replicas []registryv1alpha1.StorageReplicaStatus
+		holder   string
+		nodes    []string
+		want     bool
+	}{
+		{
+			name: "every follower holds the leader's set",
+			replicas: []registryv1alpha1.StorageReplicaStatus{
+				full(leader("master-0", true, 414), "a"),
+				full(follower("master-1", true, 414, "master-0"), "a"),
+				full(follower("master-2", true, 414, "master-0"), "a"),
+			},
+			holder: "master-0", nodes: masters, want: false,
+		},
+		{
+			// The lease moved to master-1. The set did not change, but the new leader may hold what
+			// was pushed to it, and the followers have not copied from it: master-2 replicated from
+			// the previous leader, master-0 led and replicated from nobody. Seen in multimaster-airgap.
+			name: "the lease moved and the followers replicated from the previous leader",
+			replicas: []registryv1alpha1.StorageReplicaStatus{
+				full(follower("master-0", true, 414, ""), "a"),
+				full(leader("master-1", true, 426), "a"),
+				full(follower("master-2", true, 414, "master-0"), "a"),
+			},
+			holder: "master-1", nodes: masters, want: true,
+		},
+		{
+			name: "after the lease moved, every follower replicated from the new leader",
+			replicas: []registryv1alpha1.StorageReplicaStatus{
+				full(follower("master-0", true, 426, "master-1"), "a"),
+				full(leader("master-1", true, 426), "a"),
+				full(follower("master-2", true, 426, "master-1"), "a"),
+			},
+			holder: "master-1", nodes: masters, want: false,
+		},
+		{
+			name: "a follower is still replicating",
+			replicas: []registryv1alpha1.StorageReplicaStatus{
+				full(leader("master-0", true, 414), "a"),
+				full(follower("master-1", true, 414, "master-0"), "a"),
+				follower("master-2", false, 120, "master-0"),
+			},
+			holder: "master-0", nodes: masters, want: true,
+		},
+		{
+			// A release or a module changed the set: the leader verifies the new one, the followers
+			// were full against the old.
+			name: "the followers are full against a set the leader has moved past",
+			replicas: []registryv1alpha1.StorageReplicaStatus{
+				full(leader("master-0", true, 430), "b"),
+				full(follower("master-1", true, 414, "master-0"), "a"),
+				full(follower("master-2", true, 414, "master-0"), "a"),
+			},
+			holder: "master-0", nodes: masters, want: true,
+		},
+		{
+			name: "the leader is still filling",
+			replicas: []registryv1alpha1.StorageReplicaStatus{
+				leader("master-0", false, 200),
+				full(follower("master-1", true, 414, "master-0"), "a"),
+			},
+			holder: "master-0", nodes: masters[:2], want: true,
+		},
+		{
+			name: "a new master has not reported yet",
+			replicas: []registryv1alpha1.StorageReplicaStatus{
+				full(leader("master-0", true, 414), "a"),
+				full(follower("master-1", true, 414, "master-0"), "a"),
+			},
+			holder: "master-0", nodes: masters, want: true,
+		},
+		{
+			// The entry of a master that is gone stays in the status, and would otherwise keep every
+			// follower replicating for as long as the cluster runs.
+			name: "an entry left behind by a master that is gone",
+			replicas: []registryv1alpha1.StorageReplicaStatus{
+				full(leader("master-0", true, 414), "a"),
+				full(follower("master-1", true, 414, "master-0"), "a"),
+				follower("master-9", false, 10, "master-0"),
+			},
+			holder: "master-0", nodes: masters[:2], want: false,
+		},
+		{
+			name: "a single master has no followers",
+			replicas: []registryv1alpha1.StorageReplicaStatus{
+				leader("master-0", false, 10),
+			},
+			holder: "master-0", nodes: masters[:1], want: false,
+		},
+		{
+			name: "no leader, nothing to replicate from",
+			replicas: []registryv1alpha1.StorageReplicaStatus{
+				follower("master-1", false, 10, ""),
+			},
+			holder: "", nodes: masters, want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, FollowersBehind(tt.replicas, tt.holder, tt.nodes))
+		})
+	}
+}

@@ -19,10 +19,13 @@ package fill
 import (
 	"archive/tar"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -91,6 +94,10 @@ type Release struct {
 	// platform's images alone, cut off from its upstream, and missing every image its modules run.
 	Modules []ModuleRef
 
+	// Pending are the platform versions the cluster is about to update to. Copied ahead of time by
+	// Optional, not part of the set Discover lists — see OptionalDiscoverer.
+	Pending []string
+
 	// CatalogueUnavailable is told when the source refuses to list the modules repository, which is a
 	// degradation and not a failure — see ModuleCatalogue. Optional: nil means the reason is dropped,
 	// which is why the loop sets it to a log line.
@@ -135,7 +142,7 @@ func (r Release) Discover(
 		// The release's own image, by tag.
 		add(platform.Tag(version))
 
-		declared, from, err := r.declaredImages(ctx, platform, installers, puller, version)
+		declared, err := r.declaredImages(ctx, platform, installers, puller, version)
 		if err != nil {
 			return nil, fmt.Errorf("reading the image set of %s: %w", version, err)
 		}
@@ -148,19 +155,17 @@ func (r Release) Discover(
 		// (`401 Unauthorized` on `<path>/install`), so on some clusters the set
 		// contained a reference that could never be copied — the fill never completed, the upstream was
 		// never dropped, and no follower ever replicated. On others it silently did contain it, which
-		// meant two clusters of the same version disagreed about what "the whole set" was.
-		//
-		// `from` still names where the set was read, and that stays: reading the installer is a pull
-		// from the upstream, not something the store has to hold.
-		_ = from
+		// meant two clusters of the same version disagreed about what "the whole set" was. Reading the
+		// installer is a pull from the upstream, not something the store has to hold.
 
 		for _, reference := range declared {
 			add(reference)
 		}
 	}
 
-	// The modules the cluster keeps, in the same set and deduplicated against it.
-	moduleReferences, err := ModuleReferences(ctx, source, puller, r.Modules)
+	// The modules the cluster keeps, in the same set and deduplicated against it. Not the ones it is
+	// about to update to: those are Optional.
+	moduleReferences, err := ModuleReferences(ctx, source, puller, keptModules(r.Modules, false))
 	if err != nil {
 		return nil, err
 	}
@@ -180,8 +185,10 @@ func (r Release) Discover(
 	}
 
 	// And the catalogues of the other sources the cluster installs modules from, which a source
-	// repointed at the store after the move to air-gap lists to know what it offers.
-	sourceCatalogues, err := SourceCatalogues(ctx, source, r.Modules, r.CatalogueUnavailable)
+	// repointed at the store after the move to air-gap lists to know what it offers. Of the modules it
+	// keeps: a source only a pending update comes from is Optional's, so that a source failing to answer
+	// for an update does not fail the copy of the set the cluster runs.
+	sourceCatalogues, err := SourceCatalogues(ctx, source, keptModules(r.Modules, false), r.CatalogueUnavailable)
 	if err != nil {
 		return nil, err
 	}
@@ -192,11 +199,155 @@ func (r Release) Discover(
 	return references, nil
 }
 
-// declaredImages reads the image set a version declares out of its installer.
-// declaredImages enumerates one version's image set, and says which image it was read out of.
+// AheadPart is one piece of what is ahead of the set, held or missed as a whole: the next platform
+// version, or one pending module update.
+//
+// In pieces because a replica holds them in pieces. One pending module whose source cannot be read, or
+// whose package never made it into a bundle, is no reason for a replica to go without the platform
+// release beside it — and counted as one, it was: a leader short of that module held nothing ahead,
+// and its followers, which copy only what their leader holds, copied nothing ahead either.
+type AheadPart struct {
+	// Key identifies the part to every replica — see PlatformPart and ModulePart.
+	Key string
+	// What names it in a log line.
+	What string
+	// References are its images, enumerated like the set's.
+	References []name.Reference
+	// Err is why it could not be enumerated. A part with one is missed whatever else happens.
+	Err error
+}
+
+// PlatformPart is the key of the next platform version as a part of what is ahead of the set.
+func PlatformPart(version string) string { return partKey("platform " + version) }
+
+// ModulePart is the key of one pending module update as a part of what is ahead of the set.
+func ModulePart(module ModuleRef) string {
+	return partKey("module " + module.Name + "@" + module.Version + "<" + strings.TrimRight(module.Source.Repository, "/"))
+}
+
+func partKey(text string) string {
+	sum := sha256.Sum256([]byte(text))
+	return hex.EncodeToString(sum[:8])
+}
+
+// PartedDiscoverer is an OptionalDiscoverer that hands over what is ahead of the set part by part.
+type PartedDiscoverer interface {
+	// OptionalParts enumerates the parts want accepts, and only those: a part not wanted is not read
+	// at all, which for the platform release is reading its image. A nil want accepts every part.
+	OptionalParts(ctx context.Context, source Registry, puller *remote.Puller, want func(key string) bool) []AheadPart
+}
+
+// OptionalParts is what is about to be needed, part by part: the next platform version and each
+// pending module update, with the catalogue of a source only an update comes from inside that update.
+//
+// The next version only, not every pending one. Updates are applied one at a time, so the next is the
+// one the cluster can use; and on a cluster that holds updates back — Manual mode, three minor releases
+// pending — copying all of them filled the store with what nothing would deploy for weeks, until the
+// set itself, changed by a patch or a module, was refused for the room. The rest follow as each one
+// becomes the next.
+//
+// Absent at the source is not an error of a module part: ModuleReferences counts a package it cannot
+// find yet as nothing to read, and the package itself, in the part's references, is what the copy then
+// misses.
+func (r Release) OptionalParts(
+	ctx context.Context, source Registry, puller *remote.Puller, want func(key string) bool,
+) []AheadPart {
+	wanted := func(key string) bool { return want == nil || want(key) }
+	var parts []AheadPart
+
+	if version := NextPending(r.Pending); version != "" && wanted(PlatformPart(version)) {
+		part := AheadPart{Key: PlatformPart(version), What: "release " + version}
+		if registry, err := parseRegistry(source); err != nil {
+			part.Err = err
+		} else {
+			platform := registry.Repo(source.Repository)
+			installers := registry.Repo(source.Repository, installerRepository)
+			if declared, err := r.declaredImages(ctx, platform, installers, puller, version); err != nil {
+				part.Err = err
+			} else {
+				part.References = append([]name.Reference{platform.Tag(version)}, declared...)
+			}
+		}
+		parts = append(parts, part)
+	}
+
+	kept := map[string]bool{}
+	for _, module := range keptModules(r.Modules, false) {
+		kept[module.Source.Name] = true
+	}
+	for _, module := range keptModules(r.Modules, true) {
+		if !wanted(ModulePart(module)) {
+			continue
+		}
+		part := AheadPart{Key: ModulePart(module), What: "module " + module.Name + " " + module.Version}
+		if found, err := ModuleReferences(ctx, source, puller, []ModuleRef{module}); err != nil {
+			part.Err = err
+		} else {
+			part.References = found
+		}
+		// The catalogue of a source only this update comes from — see Discover.
+		if !module.FromPlatform() && !kept[module.Source.Name] {
+			catalogue, err := SourceCatalogues(ctx, source, []ModuleRef{module}, r.CatalogueUnavailable)
+			if err != nil {
+				part.Err = errors.Join(part.Err, err)
+			}
+			part.References = append(part.References, catalogue...)
+		}
+		parts = append(parts, part)
+	}
+	return parts
+}
+
+// Optional is OptionalParts flattened: every reference of every part, and an error naming each part
+// that could not be enumerated.
+func (r Release) Optional(
+	ctx context.Context, source Registry, puller *remote.Puller,
+) ([]name.Reference, error) {
+	seen := make(map[string]struct{})
+	var references []name.Reference
+	var missed []error
+	for _, part := range r.OptionalParts(ctx, source, puller, nil) {
+		if part.Err != nil {
+			missed = append(missed, fmt.Errorf("%s: %w", part.What, part.Err))
+			continue
+		}
+		for _, reference := range part.References {
+			if _, already := seen[reference.String()]; already {
+				continue
+			}
+			seen[reference.String()] = struct{}{}
+			references = append(references, reference)
+		}
+	}
+	return references, errors.Join(missed...)
+}
+
+// NextPending is the update the cluster applies next: the oldest of the pending versions, which the
+// releases list oldest first.
+func NextPending(pending []string) string {
+	for _, version := range pending {
+		if version != "" {
+			return version
+		}
+	}
+	return ""
+}
+
+// keptModules is the modules the cluster runs (pending false) or is about to update to (true).
+func keptModules(modules []ModuleRef, pending bool) []ModuleRef {
+	var kept []ModuleRef
+	for _, module := range modules {
+		if module.Pending == pending {
+			kept = append(kept, module)
+		}
+	}
+	return kept
+}
+
+// declaredImages enumerates one version's image set, read out of the platform image or its installer.
 func (r Release) declaredImages(
 	ctx context.Context, platform, installers name.Repository, puller *remote.Puller, version string,
-) ([]name.Reference, string, error) {
+) ([]name.Reference, error) {
 	// The platform's own image first, the installer only if that fails. Both carry the same
 	// account of the set; the difference is that the first is the image this cluster runs, so it is
 	// present by definition and reachable with the credentials already in use, while the second
@@ -212,7 +363,7 @@ func (r Release) declaredImages(
 			// Both named, because the two failures mean different things and the operator needs
 			// to see which one to act on: the platform image is expected to be there, and the
 			// installer is expected to be permitted.
-			return nil, "", fmt.Errorf(
+			return nil, fmt.Errorf(
 				"the image set could not be read from %s (%w) nor from %s (%w)",
 				source, err, installer, fallbackErr)
 		}
@@ -231,7 +382,7 @@ func (r Release) declaredImages(
 		for _, digest := range digests {
 			parsed, err := v1.NewHash(digest)
 			if err != nil {
-				return nil, "", fmt.Errorf("%q is not a digest: %w", digest, err)
+				return nil, fmt.Errorf("%q is not a digest: %w", digest, err)
 			}
 			references = append(references, platform.Digest(parsed.String()))
 		}
@@ -239,10 +390,10 @@ func (r Release) declaredImages(
 		// Refused rather than treated as an empty set. An image this cannot be read out of
 		// means the assumption this whole enumeration rests on has stopped holding, and
 		// reporting "nothing to copy" would make an empty cache look complete.
-		return nil, "", fmt.Errorf("%s declares no image set", source)
+		return nil, fmt.Errorf("%s declares no image set", source)
 	}
 
-	return references, source.String(), nil
+	return references, nil
 }
 
 // imageSet reads the account of the image set out of one image.

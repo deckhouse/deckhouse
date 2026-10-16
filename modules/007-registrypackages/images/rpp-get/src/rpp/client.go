@@ -21,11 +21,15 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -39,6 +43,10 @@ type Config struct {
 	Force          bool
 	TempDir        string
 	InstalledStore string
+	// Rediscover, when set, asks again where the proxy is. The proxy runs on the masters and
+	// moves when its Deployment rolls, which happens while masters join: a node that keeps the
+	// addresses it started with waits on a port nobody listens on any more.
+	Rediscover func(ctx context.Context) (endpoints []string, token string, err error)
 }
 
 type packageRef struct {
@@ -65,15 +73,27 @@ type Client struct {
 	httpClient     *httpClient
 	logger         *log.Logger
 	resultRecorder *ResultRecorder
+
+	// mu guards the endpoints, the token and httpClient, which a rediscovery replaces while
+	// other workers fetch.
+	mu sync.RWMutex
+	// rediscoverMu lets one worker at a time ask, and no more often than once a retry delay.
+	rediscoverMu sync.Mutex
+	rediscovered time.Time
+	// canRediscover says whether Rediscover is set, for shouldRetryFetch to read without waiting
+	// behind a rediscovery in flight.
+	canRediscover atomic.Bool
 }
 
 func NewClient(cfg Config, logger *log.Logger, recorder *ResultRecorder) *Client {
-	return &Client{
+	c := &Client{
 		cfg:            cfg,
 		httpClient:     newHTTPClient(cfg),
 		logger:         logger,
 		resultRecorder: recorder,
 	}
+	c.canRediscover.Store(cfg.Rediscover != nil)
+	return c
 }
 
 type InstallStatus struct {
@@ -104,9 +124,61 @@ func (c *Client) Classify(packages []string) ([]InstallStatus, error) {
 }
 
 func (c *Client) UpdateAuth(endpoints []string, token string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.cfg.Endpoints = endpoints
 	c.cfg.Token = token
 	c.httpClient = newHTTPClient(c.cfg)
+}
+
+// SetRediscover makes a failed fetch ask again where the proxy is before the next attempt.
+func (c *Client) SetRediscover(rediscover func(ctx context.Context) ([]string, string, error)) {
+	c.rediscoverMu.Lock()
+	defer c.rediscoverMu.Unlock()
+	c.cfg.Rediscover = rediscover
+	c.canRediscover.Store(rediscover != nil)
+}
+
+func (c *Client) http() *httpClient {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.httpClient
+}
+
+// rediscover replaces the endpoints and the token with what the cluster says now. A failure
+// keeps the ones in use: the cluster may be as unreachable as the proxy, and they may still work.
+// It reports whether the cluster answered with the very endpoints and token in use.
+func (c *Client) rediscover(ctx context.Context, ref packageRef) bool {
+	// Another worker asking already: this one goes on with what there is rather than wait behind a
+	// request to the API server. Its next failure will find the answer in place, or ask itself.
+	if !c.rediscoverMu.TryLock() {
+		return false
+	}
+	defer c.rediscoverMu.Unlock()
+
+	if c.cfg.Rediscover == nil || (!c.rediscovered.IsZero() && time.Since(c.rediscovered) < c.cfg.RetryDelay) {
+		return false
+	}
+	c.rediscovered = time.Now()
+
+	endpoints, token, err := c.cfg.Rediscover(ctx)
+	c.mu.RLock()
+	current, currentToken := c.cfg.Endpoints, c.cfg.Token
+	c.mu.RUnlock()
+	switch {
+	case err != nil:
+		c.logf(ref, "could not ask again where registry-packages-proxy is, keeping %v: %v", current, err)
+		return false
+	case len(endpoints) == 0:
+		c.logf(ref, "no registry-packages-proxy is running now, keeping %v", current)
+		return false
+	case slices.Equal(endpoints, current) && token == currentToken:
+		return true
+	}
+
+	c.logf(ref, "registry-packages-proxy endpoints changed: %v -> %v", current, endpoints)
+	c.UpdateAuth(endpoints, token)
+	return false
 }
 
 // installWorkerCount caps install parallelism at runtime.NumCPU because install
@@ -321,8 +393,15 @@ func (c *Client) fetchArchive(ctx context.Context, ref packageRef) error {
 		return ref.wrapErr("create fetched store", err)
 	}
 
-	if err := c.retry(ctx, ref, c.cfg.Retries, shouldRetryFetch, func() error {
-		return c.downloadOnce(ctx, ref)
+	failed, unchanged := false, false
+	shouldRetry := func(err error) bool { return c.shouldRetryFetch(err, unchanged) }
+	if err := c.retry(ctx, ref, c.cfg.Retries, shouldRetry, func() error {
+		if failed {
+			unchanged = c.rediscover(ctx, ref)
+		}
+		err := c.downloadOnce(ctx, ref)
+		failed = err != nil
+		return err
 	}); err != nil {
 		return ref.errorf("fetch %s: %w", ref.digest, err)
 	}
@@ -332,7 +411,7 @@ func (c *Client) fetchArchive(ctx context.Context, ref packageRef) error {
 
 func (c *Client) downloadOnce(ctx context.Context, ref packageRef) error {
 	start := time.Now()
-	response, err := c.httpClient.Get(ctx, ref.digest)
+	response, err := c.http().Get(ctx, ref.digest)
 	if err != nil {
 		return err
 	}
@@ -595,6 +674,33 @@ func (c *Client) writeResult(action, packageName string) error {
 	}
 
 	return nil
+}
+
+// shouldRetryFetch is shouldRetryFetch, plus a refusal of the credentials when they can be asked for
+// again.
+//
+// The proxy's kube-rbac-proxy answers 401 whenever it cannot review the token, and that includes the
+// minutes the API server is unreachable from it while masters join: a joining master's whole budget of
+// install attempts ran out inside one such minute (scenarios, job 7318483), and nothing ran cloud-init
+// again. When the endpoints and the token came from the cluster, the next attempt asks for both anew —
+// see rediscover — so a 401 is worth that attempt. When they were given, asking again changes nothing,
+// and a 401 stays the final answer it is for a token that is simply wrong.
+//
+// So does a 401 that follows the cluster giving back the endpoints and the token already in use: there is
+// nothing new to try, and a token that is simply wrong would otherwise hold every attempt of every install
+// attempt, some twenty-five minutes, before the step fails. The series ends there; the install attempts
+// around it, each with a series and a fresh question of its own, still give a proxy that cannot review
+// tokens about a minute and a half.
+func (c *Client) shouldRetryFetch(err error, rediscoveredUnchanged bool) bool {
+	if shouldRetryFetch(err) {
+		return true
+	}
+	canAskAgain := c.canRediscover.Load() && !rediscoveredUnchanged
+
+	// 401 and not 403: a proxy that cannot review the token answers 401, while 403 is a token it
+	// reviewed and refused, which another attempt — up to the half hour all of them take — will not change.
+	var statusErr *httpStatusError
+	return canAskAgain && errors.As(err, &statusErr) && statusErr.statusCode == http.StatusUnauthorized
 }
 
 func shouldRetryInstall(err error) bool {

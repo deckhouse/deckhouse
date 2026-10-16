@@ -49,6 +49,10 @@ type cliConfig struct {
 	rppEndpoints           string
 	rppToken               string
 	kubeAPIServerEndpoints string
+
+	// kubeClient is set when the endpoints came from the cluster, which can be asked again.
+	kubeClient    func(attempt int) (kube.Client, error)
+	rediscoveries int
 }
 
 func defaultConfig() config {
@@ -162,27 +166,60 @@ func resolveKubeAPIServerEndpoints(value string) (string, bool) {
 }
 
 func (c *cliConfig) resolveFromKube(ctx context.Context) error {
+	clientFn, err := c.newKubeClientFn()
+	if err != nil {
+		return err
+	}
+	c.kubeClient = clientFn
+	return c.retryKubeFetch(ctx, clientFn)
+}
+
+func (c *cliConfig) newKubeClientFn() (func(attempt int) (kube.Client, error), error) {
 	kubeClient, err := kube.NewKubeletClient()
 	if err != nil && !errors.Is(err, kube.ErrNoConfig) {
-		return fmt.Errorf("init kube client from kubelet config: %w", err)
+		return nil, fmt.Errorf("init kube client from kubelet config: %w", err)
 	}
 	if err == nil {
 		log.Printf("rpp endpoints not provided via flag or env, querying kube-apiserver via kubelet config for pods app=registry-packages-proxy in d8-cloud-instance-manager")
-		return c.retryKubeFetch(ctx, func(_ int) (kube.Client, error) {
+		return func(_ int) (kube.Client, error) {
 			return kubeClient, nil
-		})
+		}, nil
 	}
 
 	apiServerEndpoints := parseEndpoints(c.kubeAPIServerEndpoints)
 	if len(apiServerEndpoints) == 0 {
-		return errNoBootstrapAPIServerEndpoints
+		return nil, errNoBootstrapAPIServerEndpoints
 	}
 
 	log.Printf("rpp endpoints not provided and no kubelet config found, querying kube-apiserver directly via bootstrap endpoints %v for pods app=registry-packages-proxy in d8-cloud-instance-manager", apiServerEndpoints)
-	return c.retryKubeFetch(ctx, func(attempt int) (kube.Client, error) {
+	return func(attempt int) (kube.Client, error) {
 		endpoint := apiServerEndpoints[(attempt-1)%len(apiServerEndpoints)]
 		return kube.NewBootstrapClient(endpoint)
-	})
+	}, nil
+}
+
+// rediscover asks the cluster once where the proxy is now. Nil when the endpoints were given
+// by flag or env: those are what the caller wants used.
+func (c *cliConfig) rediscover() func(ctx context.Context) ([]string, string, error) {
+	if c.kubeClient == nil {
+		return nil
+	}
+	return func(ctx context.Context) ([]string, string, error) {
+		c.rediscoveries++
+		client, err := c.kubeClient(c.rediscoveries)
+		if err != nil {
+			return nil, "", fmt.Errorf("init kube client: %w", err)
+		}
+		endpoints, err := client.GetRPPEndpoints(ctx)
+		if err != nil {
+			return nil, "", fmt.Errorf("get endpoints from kube: %w", err)
+		}
+		token, err := client.GetRPPToken(ctx)
+		if err != nil {
+			return nil, "", fmt.Errorf("get token from kube: %w", err)
+		}
+		return endpoints, token, nil
+	}
 }
 
 func (c *cliConfig) retryKubeFetch(ctx context.Context, clientFn func(attempt int) (kube.Client, error)) error {
@@ -199,6 +236,8 @@ func (c *cliConfig) retryKubeFetch(ctx context.Context, clientFn func(attempt in
 		if err != nil {
 			return fmt.Errorf("init kube client: %w", err)
 		}
+		// Remembered, so that asking again later starts from the next API server rather than the first.
+		c.rediscoveries = attempt
 		if err := c.fetchFromKube(ctx, client); err != nil {
 			lastErr = err
 			if !kube.ShouldRetry(lastErr) {

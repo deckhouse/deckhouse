@@ -188,18 +188,45 @@ func moduleVersionTag(version string) string {
 // registry.d8-system.svc only resolves inside the cluster, yet the built-in "deckhouse"
 // ModuleSource is templated from that address in Direct/Proxy mode. The upstream registry serves
 // the same content at a reachable host under the same path, as GetRegistryDataPreferUpstream does.
+//
+// In the cluster the address does resolve, and that was taken to mean it could be used as it stands —
+// with what the ModuleSource carries, which for the built-in source is no authority and no account. In
+// the pod network that address is the store, which wants both: a provider module installed from a
+// source, read by the infrastructure converger, failed with `x509: certificate signed by unknown
+// authority`. So in the cluster too the source is read the way the registry module says: through the
+// upstream when there is one, and from the store with the store's own authority and account when the
+// cluster is air-gapped.
 func useUpstreamRegistry(ctx context.Context, kubeCl *client.KubernetesClient, src *ModuleSource, inCluster bool) error {
 	repo := src.Spec.Registry.Repo
-	if inCluster || !strings.HasPrefix(repo, registry_const.Host) {
+	if !strings.HasPrefix(repo, registry_const.Host) {
 		return nil
 	}
 
-	upstream, found, err := registrydata.GetUpstreamRegistryData(ctx, kubeCl)
+	var (
+		upstream *image.RegistryConfig
+		found    bool
+		err      error
+	)
+	if inCluster {
+		upstream, found, err = registrydata.InClusterRegistry(ctx, kubeCl)
+	} else {
+		upstream, found, err = registrydata.GetUpstreamRegistryData(ctx, kubeCl)
+	}
 	if err != nil {
 		return fmt.Errorf("get upstream registry for ModuleSource %q: %w", src.GetName(), err)
 	}
 	if !found {
 		// Local mode publishes nothing upstream; failing on the pull names the host better.
+		return nil
+	}
+
+	if strings.HasPrefix(upstream.GetRegistry(), registry_const.Host) {
+		// The store itself: the same address, read with its authority and account.
+		conf, err := image.NewRegistryConfig(upstream.GetScheme(), repo, upstream.GetUsername(), upstream.GetPassword(), upstream.GetCA())
+		if err != nil {
+			return fmt.Errorf("store registry config for ModuleSource %q: %w", src.GetName(), err)
+		}
+		src.conf = conf
 		return nil
 	}
 

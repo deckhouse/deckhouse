@@ -79,12 +79,30 @@ type apiClient struct {
 }
 
 type podListResponse struct {
-	Items []struct {
-		Status struct {
-			Phase string `json:"phase"`
-			PodIP string `json:"podIP"`
-		} `json:"status"`
-	} `json:"items"`
+	Items []rppPod `json:"items"`
+}
+
+type rppPod struct {
+	Metadata struct {
+		DeletionTimestamp *string `json:"deletionTimestamp"`
+	} `json:"metadata"`
+	Status struct {
+		Phase      string `json:"phase"`
+		PodIP      string `json:"podIP"`
+		Conditions []struct {
+			Type   string `json:"type"`
+			Status string `json:"status"`
+		} `json:"conditions"`
+	} `json:"status"`
+}
+
+func (p rppPod) ready() bool {
+	for _, condition := range p.Status.Conditions {
+		if condition.Type == "Ready" {
+			return condition.Status == "True"
+		}
+	}
+	return false
 }
 
 type secretResponse struct {
@@ -157,18 +175,33 @@ func (c *apiClient) GetRPPEndpoints(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	endpoints := make([]string, 0, len(response.Items))
-	for _, pod := range response.Items {
-		if pod.Status.Phase == "Running" && strings.TrimSpace(pod.Status.PodIP) != "" {
-			endpoints = append(endpoints, net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(defaultRPPPort)))
-		}
-	}
-
+	endpoints := rppEndpoints(response.Items)
 	if len(endpoints) == 0 {
 		return nil, errNoEndpoints
 	}
 
 	return endpoints, nil
+}
+
+// rppEndpoints prefers the proxies that are ready. While the Deployment rolls none may be, and a
+// running one is then worth trying. A terminating one never is: it is about to close the port.
+func rppEndpoints(pods []rppPod) []string {
+	var ready, running []string
+	for _, pod := range pods {
+		if pod.Metadata.DeletionTimestamp != nil || pod.Status.Phase != "Running" || strings.TrimSpace(pod.Status.PodIP) == "" {
+			continue
+		}
+		endpoint := net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(defaultRPPPort))
+		running = append(running, endpoint)
+		if pod.ready() {
+			ready = append(ready, endpoint)
+		}
+	}
+
+	if len(ready) > 0 {
+		return ready
+	}
+	return running
 }
 
 func (c *apiClient) GetRPPToken(ctx context.Context) (string, error) {

@@ -204,16 +204,19 @@ rules:
   # Deleting what the previous implementation left serving the in-cluster address, once the node
   # agent serves it instead — see internal/controller/layout/legacy_cleanup.go.
   #
-  # `delete` and nothing else, by name and nothing wider. These four objects outlive the upgrade on
-  # purpose (`helm.sh/resource-policy: keep` in the release before this one), so somebody has to
-  # remove them, and this controller is the only party that knows when every node has stopped
-  # depending on them. It has no reason to read, list or modify them — the decision is made from
-  # RegistryNode statuses it already owns — so `delete` is the whole grant, name-scoped: a blanket
-  # delete on Services in this namespace would let a bug here take out the storage's own Service.
+  # By name and nothing wider. These four objects outlive the upgrade on purpose
+  # (`helm.sh/resource-policy: keep` in the release before this one), so somebody has to remove
+  # them, and this controller is the only party that knows when every node has stopped depending
+  # on them.
+  #
+  # The Service is also READ, because its name is shared: the storage's own headless Service is
+  # `registry` too. Deleted by name alone it went on every reconciliation — the in-cluster name
+  # stopped resolving, and an air-gapped cluster's infrastructure converger with it — so the
+  # controller looks at what it selects first and takes only the previous implementation's.
   - apiGroups: [""]
     resources: ["services"]
     resourceNames: ["registry"]
-    verbs: ["delete"]
+    verbs: ["get", "delete"]
   - apiGroups: ["apps"]
     resources: ["deployments"]
     resourceNames: ["registry-incluster-proxy"]

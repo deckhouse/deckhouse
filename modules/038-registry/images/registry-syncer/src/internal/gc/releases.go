@@ -19,6 +19,7 @@ package gc
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,11 +42,12 @@ var releaseGVK = schema.GroupVersionKind{
 	Kind:    "DeckhouseReleaseList",
 }
 
-// Phases a release can be in. Only these two matter here: one says what the cluster runs, the
-// other what it ran before.
+// Phases a release can be in. These three matter here: what the cluster runs, what it ran before,
+// and what it is about to run.
 const (
 	phaseDeployed   = "Deployed"
 	phaseSuperseded = "Superseded"
+	phasePending    = "Pending"
 )
 
 // FromCluster reads what the cluster is running.
@@ -78,6 +80,8 @@ func FromCluster(ctx context.Context, c client.Client) (Releases, error) {
 		switch phase {
 		case phaseDeployed:
 			releases.Deployed = version
+		case phasePending:
+			releases.Pending = append(releases.Pending, version)
 		case phaseSuperseded:
 			// The most recent of them, which is not the same as the last one listed: the API
 			// returns them in name order, and names are versions as strings — where v1.9.0
@@ -87,6 +91,21 @@ func FromCluster(ctx context.Context, c client.Client) (Releases, error) {
 			}
 		}
 	}
+
+	// By version, oldest first, for the same reason as Previous above: as strings v1.10.0 sorts before
+	// v1.9.0. One that is not a version goes last, in name order among its kind.
+	sort.SliceStable(releases.Pending, func(i, j int) bool {
+		_, errI := parse(normalize(releases.Pending[i]))
+		_, errJ := parse(normalize(releases.Pending[j]))
+		switch {
+		case errI != nil && errJ != nil:
+			return releases.Pending[i] < releases.Pending[j]
+		case errI != nil || errJ != nil:
+			return errJ != nil
+		}
+		newer, _ := isNewer(normalize(releases.Pending[j]), normalize(releases.Pending[i]))
+		return newer
+	})
 
 	if releases.Deployed == "" {
 		// No release object says what the cluster runs, so the cluster itself is asked.
@@ -245,7 +264,10 @@ func ModulesFromCluster(ctx context.Context, c client.Client) ([]fill.ModuleRef,
 	for i := range list.Items {
 		item := &list.Items[i]
 
-		if phase, _, _ := unstructured.NestedString(item.Object, "status", "phase"); phase != phaseDeployed {
+		// Pending as well as deployed, for the reason Releases.Pending gives: a module update has to
+		// reach every replica before it is applied, not after.
+		phase, _, _ := unstructured.NestedString(item.Object, "status", "phase")
+		if phase != phaseDeployed && phase != phasePending {
 			continue
 		}
 
@@ -264,10 +286,46 @@ func ModulesFromCluster(ctx context.Context, c client.Client) ([]fill.ModuleRef,
 			Name:    name,
 			Version: registryTag(version),
 			Source:  sources[item.GetLabels()[moduleSourceLabel]],
+			Pending: phase == phasePending,
 		})
 	}
 
 	return modules, nil
+}
+
+// CatalogueFromCluster is what every ModuleSource says it offers, as "<source>/<module>", sorted.
+//
+// The module catalogue is part of the set — it is how an air-gapped cluster learns which modules it
+// can install — and a `d8 mirror push` of a new module changes it on the leader alone. Read from the
+// API rather than from a registry so that every replica computes the same answer: the sources list
+// what they found in the store the platform reads, which is the leader's. An absent CRD is an empty
+// catalogue.
+func CatalogueFromCluster(ctx context.Context, c client.Client) ([]string, error) {
+	list := &unstructured.UnstructuredList{}
+	list.SetGroupVersionKind(moduleSourceGVK)
+	if err := c.List(ctx, list); err != nil {
+		if meta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("listing the module sources: %w", err)
+	}
+
+	var catalogue []string
+	for i := range list.Items {
+		item := &list.Items[i]
+		modules, _, _ := unstructured.NestedSlice(item.Object, "status", "modules")
+		for _, module := range modules {
+			fields, ok := module.(map[string]any)
+			if !ok {
+				continue
+			}
+			if name, _ := fields["name"].(string); name != "" {
+				catalogue = append(catalogue, item.GetName()+"/"+name)
+			}
+		}
+	}
+	sort.Strings(catalogue)
+	return catalogue, nil
 }
 
 // moduleSources reads what every ModuleSource says about where its modules are, by name. Empty when

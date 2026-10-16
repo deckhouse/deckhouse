@@ -306,47 +306,6 @@ function uptime_has_increased() {
   (( 10#$stored_uptime < 10#$actual_uptime ))
 }
 
-# curl request to get list of pods with labelSelector
-# $1 namespace
-# $2 labelSelector
-# $3 token
-function get_pods() {
-  local namespace=$1
-  local labelSelector=$2
-  local token=$3
-
-  while true; do
-    for server in {{ .clusterMasterKubeAPIEndpoints | join " " }}; do
-      url="https://$server/api/v1/namespaces/$namespace/pods?labelSelector=$labelSelector"
-      if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
-      then
-      return 0
-      else
-        >&2 echo "Failed to list pods in $namespace from $server"
-      fi
-    done
-    sleep 10
-  done
-}
-
-function get_rpp_address() {
-  if [ -f /var/lib/bashible/bootstrap-token ]; then
-    local token="$(</var/lib/bashible/bootstrap-token)"
-    local namespace="d8-cloud-instance-manager"
-    local labelSelector="app%3Dregistry-packages-proxy"
-
-    rpp_ips=$(get_pods $namespace $labelSelector $token | jq -r '.items[] | select(.status.phase == "Running") | .status.podIP')
-    port=4219
-    ips_csv=$(echo "$rpp_ips" | grep -v '^[[:space:]]*$' | sed "s/$/:$port/" | tr '\n' ',' | sed 's/,$//')
-    echo "$ips_csv"
-  fi
-}
-
-function get_rpp_token() {
-  local rpp_token="$(get_secret "registry-packages-proxy-token" | jq -r '.data.token' |base64 -d)"
-  echo "${rpp_token}"
-}
-
 function main() {
   export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
   export HOME="/var/lib/bashible"
@@ -398,18 +357,11 @@ function main() {
   bb-discover-node-name
   export D8_NODE_HOSTNAME=$(bb-d8-node-name)
 
-{{ if eq .runType "Normal" }}
-  {{- if .packagesProxy }}
-  rpp_addr="$(get_rpp_address)"
-  if [[ -n $rpp_addr ]]; then
-    export PACKAGES_PROXY_ADDRESSES="${rpp_addr}"
-  fi
-  rpp_token="$(get_rpp_token)"
-  if [[ -n $rpp_token ]]; then
-    export PACKAGES_PROXY_TOKEN="${rpp_token}"
-  fi
-  {{- end }}
-{{- end }}
+{{- /*
+  A Normal run leaves the proxy addresses to rpp-get, which asks the cluster where the proxy runs
+  and asks again when it stops answering there. A list exported here would last the whole run,
+  and a joining master's first run outlives the proxy's roll onto the new masters.
+*/}}
 
   if test -f /etc/kubernetes/kubelet.conf ; then
     if tmp="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
@@ -555,7 +507,10 @@ function main() {
 
     span_ctx=$(bb-telemetry-start-span "$step_base" "${BB_TELEMETRY_PARENT_SPAN_ID:-}")
 
-    until /bin/bash --noprofile --norc -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee "$per_step_log" >&2)
+    # 200>&-: the step does not get the descriptor holding /var/lock/bashible. A step that leaves a
+    # process running in the background (the registry igniter does) would otherwise hold the lock
+    # after this run exits, and every later run would fail on "Cannot acquire lockfile".
+    until /bin/bash --noprofile --norc -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 200>&- 2> >(tee "$per_step_log" >&2)
     do
       # Publish the failing step's own stderr: bb-event-error-create and
       # bb-bashible-ready-steps-failed read $step_log, which otherwise still

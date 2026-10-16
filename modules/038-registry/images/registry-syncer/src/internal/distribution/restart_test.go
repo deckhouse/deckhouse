@@ -167,3 +167,21 @@ func TestMatchesProcess(t *testing.T) {
 		})
 	}
 }
+
+// A restart and the news are two signals, because the registry must tell them apart: SIGTERM is a stop
+// it obeys whatever is on disk, SIGHUP the news it ignores once it serves.
+func TestRestartAndWakeSendDifferentSignals(t *testing.T) {
+	var sent []syscall.Signal
+	restarter := &SignalRestarter{
+		ProcessName: "registry",
+		ProcDir:     fakeProc(t, map[int]string{7: "/registry\x00serve\x00"}),
+		signal: func(_ int, sig syscall.Signal) error {
+			sent = append(sent, sig)
+			return nil
+		},
+	}
+
+	require.NoError(t, restarter.Restart())
+	require.NoError(t, restarter.Wake())
+	assert.Equal(t, []syscall.Signal{syscall.SIGTERM, syscall.SIGHUP}, sent)
+}

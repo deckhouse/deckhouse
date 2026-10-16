@@ -92,11 +92,52 @@ func (r *Reconciler) removeLegacyPullPath(ctx context.Context, nodes []registryv
 	}
 
 	for _, obj := range legacyPullPathObjects {
+		if service, isService := obj.(*corev1.Service); isService {
+			if err := r.removeLegacyService(ctx, service.Name); err != nil {
+				return err
+			}
+			continue
+		}
 		if err := r.Client.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("removing the previous implementation's %T %s: %w",
 				obj, obj.GetName(), err)
 		}
 	}
 
+	return nil
+}
+
+// legacyServiceSelector is what the previous implementation's Service selected: its in-cluster proxy.
+const legacyServiceSelector = "registry-service"
+
+// removeLegacyService deletes the Service of that name only if it is the previous implementation's.
+//
+// The name is shared: this implementation's store is published under `registry` too, a headless
+// Service over the storage replicas, because that is the name every image reference is built from.
+// Deleted by name, as it was, the store's own Service went on every reconciliation — and with it the
+// in-cluster name, for everything that dials it rather than going through a node agent. Measured in
+// an air-gapped cluster: the infrastructure converger failing on `lookup registry.d8-system.svc: no
+// such host`, and, in the moments Helm had put the Service back, on the certificate behind it.
+//
+// Told apart by what it selects, which is what makes it the previous implementation's: its in-cluster
+// proxy, not the storage. Deleted on that exact object, so one replaced in between is left alone.
+func (r *Reconciler) removeLegacyService(ctx context.Context, name string) error {
+	service := &corev1.Service{}
+	err := r.Client.Get(ctx, client.ObjectKey{Name: name, Namespace: Namespace}, service)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("reading the Service %s: %w", name, err)
+	}
+	if service.Spec.Selector["component"] != legacyServiceSelector {
+		return nil
+	}
+
+	uid, version := service.UID, service.ResourceVersion
+	err = r.Client.Delete(ctx, service, client.Preconditions{UID: &uid, ResourceVersion: &version})
+	if err != nil && !apierrors.IsNotFound(err) && !apierrors.IsConflict(err) {
+		return fmt.Errorf("removing the previous implementation's Service %s: %w", name, err)
+	}
 	return nil
 }

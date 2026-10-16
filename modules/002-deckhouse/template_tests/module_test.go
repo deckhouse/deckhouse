@@ -306,6 +306,12 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			// belongs to the one party that has to connect. See `utils.Dial`.
 			Expect(string(fetchRegistry)).ToNot(ContainSubstring(constant.ProxyHost))
 
+			// The authority is rendered even when there is none, so the one the installer wrote is
+			// replaced rather than kept: the store has its own, and Helm leaves a key alone that it
+			// never set.
+			Expect(secret.Field("data").Map()).To(HaveKey("ca"))
+			Expect(secret.Field("data").Map()).To(HaveKey("path"), "a path the installer wrote has to be Helm's to clear as well")
+
 			// And the field that names the registry as seen from OUTSIDE the cluster keeps
 			// doing that, whatever the module does to the pull path.
 			//
@@ -336,6 +342,16 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			deployment := f.KubernetesResource("Deployment", "d8-system", "deckhouse")
 			Expect(deployment.Field("spec.template.spec.containers.0.image").String()).
 				ToNot(ContainSubstring(constant.ProxyHost))
+		})
+
+		It("renders an empty path for a registry serving from its root, clearing the one it replaces", func() {
+			f.ValuesSet("global.modulesImages.registry.path", "")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			secret := f.KubernetesResource("Secret", "d8-system", "deckhouse-registry")
+			Expect(secret.Field("data").Map()).To(HaveKey("path"))
+			Expect(secret.Field("data.path").String()).To(BeEmpty())
 		})
 
 		// Without this the move is rendered and never applied. The annotation exists because

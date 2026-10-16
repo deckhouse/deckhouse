@@ -232,6 +232,115 @@ spec:
 				})
 		})
 	})
+
+	// Settings the installer derives from the registry ModuleConfig stay out of the deckhouse one:
+	// the cluster is the current implementation's, and that section is the previous one's. Written,
+	// it carried the upstream credential, and for a bundle installation — mode Local — it made every
+	// later edit of the deckhouse ModuleConfig in a cloud cluster fail admission.
+	t.Run("ModuleConfig registry -> no registry section", func(t *testing.T) {
+		deckhouseSettings := func(t *testing.T, registryMC string) SettingsValues {
+			metaConfig := generateMetaConfig(t, tpl, map[string]any{
+				"enableCRI": true,
+				"manifests": []string{registryMC},
+			}, false)
+			require.True(t, metaConfig.Registry.FromRegistryModule)
+
+			installConfig, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig, &options.New().Global)
+			require.NoError(t, err)
+			for _, mc := range installConfig.ModuleConfigs {
+				if mc.GetName() == "deckhouse" {
+					return mc.Spec.Settings
+				}
+			}
+			require.Fail(t, "no deckhouse ModuleConfig")
+			return nil
+		}
+		expect := SettingsValues{"bundle": "Default", "logLevel": "Info"}
+
+		t.Run("Managed with an upstream", func(t *testing.T) {
+			require.Equal(t, expect, deckhouseSettings(t, `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    mode: Managed
+    primary:
+      upstream:
+        host: r.example.com
+        path: /test
+        auth:
+          username: test-user
+          password: test-password
+    storage:
+      cache: true
+`))
+		})
+		t.Run("a registry section the user wrote is dropped", func(t *testing.T) {
+			metaConfig := generateMetaConfig(t, tpl, map[string]any{
+				"enableCRI": true,
+				"manifests": []string{`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    mode: Managed
+    storage:
+      cache: true
+`, `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  version: 1
+  settings:
+    bundle: Default
+    logLevel: Info
+    registry:
+      mode: Direct
+      direct:
+        imagesRepo: r.example.com/test
+        scheme: HTTPS
+        license: a-license-that-must-not-reach-the-cluster
+`},
+			}, false)
+			require.True(t, metaConfig.Registry.FromRegistryModule)
+
+			installConfig, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig, &options.New().Global)
+			require.NoError(t, err)
+			for _, mc := range installConfig.ModuleConfigs {
+				if mc.GetName() == "deckhouse" {
+					require.NotContains(t, mc.Spec.Settings, "registry")
+					return
+				}
+			}
+			require.Fail(t, "no deckhouse ModuleConfig")
+		})
+		t.Run("Managed from a bundle", func(t *testing.T) {
+			require.Equal(t, expect, deckhouseSettings(t, `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: registry
+spec:
+  enabled: true
+  version: 1
+  settings:
+    mode: Managed
+    storage:
+      cache: true
+`))
+		})
+	})
 }
 
 func TestModuleDeckhouseConfigOverridesAndMc(t *testing.T) {

@@ -26,11 +26,13 @@ import (
 	"log"
 	"log/slog"
 	"net"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -56,6 +58,8 @@ import (
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/registry-syncer/internal/distribution"
+	"github.com/deckhouse/registry-syncer/internal/fill"
+	"github.com/deckhouse/registry-syncer/internal/gc"
 	"github.com/deckhouse/registry-syncer/internal/report"
 )
 
@@ -198,6 +202,8 @@ func newLoop(
 		},
 		Publisher:  &report.Publisher{Client: fakeClient},
 		Leadership: fixedLeadership(isLeader),
+		// A test registry is up before the pass starts, and one that is not is meant to stay down.
+		RegistryWait: 200 * time.Millisecond,
 	}
 	return loop, fakeClient, restarter
 }
@@ -626,8 +632,11 @@ func TestOnceReplicatesFromTheLeader(t *testing.T) {
 	// so replication is the only way the content can reach it.
 	// Two declared digests, plus the release and its installer — the same four things the leader's
 	// own fill puts in, which is what makes a takeover free.
+	// NeedSync, because this follower holds nothing yet: the controller raises it while any replica
+	// is short of what the leader holds.
 	storage := storageWith(registryv1alpha1.RegistryStorageSpec{
-		Source: &registryv1alpha1.StorageSource{ExpectedDigests: 4},
+		Source:   &registryv1alpha1.StorageSource{ExpectedDigests: 4},
+		NeedSync: true,
 	})
 	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{{
 		Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader,
@@ -1019,7 +1028,10 @@ func TestOnceWhilePublishingWithAnUnreadableStore(t *testing.T) {
 		Publish:  true,
 		NeedSync: true,
 	}))
-	loop.LocalAddress = "127.0.0.1:1"
+	// A registry that answers, so that the pass gets as far as the store: one that is down is said as
+	// itself — see TestAPassReportsARegistryThatStaysDown — and is not what this is about.
+	loop.LocalAddress = startRegistry(t)
+	loop.WriteAddress = loop.LocalAddress
 	// A store that cannot be read at all: the path is a file where a directory has to be. Distinct
 	// from a store that is merely empty, which is an honest zero — this one is an absence of
 	// evidence, and an absence of evidence must not read as an empty store that happens to satisfy
@@ -1327,7 +1339,7 @@ func TestAPassUnderWayReportsItselfAndClearsTheOldError(t *testing.T) {
 	loop.Publisher = &report.Publisher{Client: c}
 
 	state := report.State{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader}
-	onProgress := loop.progress(context.Background(), state, "", "fill")
+	onProgress := loop.progress(context.Background(), state, "fill")
 
 	onProgress(1, 459)
 	replica := replicaOf(t, c, "master-0")
@@ -1374,7 +1386,7 @@ func TestAFullLeaderReverifiesWhenTheSetMoves(t *testing.T) {
 		// here, because the upstream holds nothing of v1.70.1.
 		{name: "the set moved", verifiedSet: "a set from before", wantFull: false},
 		// Found full against this very set: nothing to do, nothing withdrawn.
-		{name: "the set is the same", verifiedSet: SetKey("v1.70.1", "", nil), wantFull: true},
+		{name: "the set is the same", verifiedSet: SetKey(gc.Releases{Deployed: "v1.70.1", Previous: ""}, nil, nil), wantFull: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			storage := storageWith(registryv1alpha1.RegistryStorageSpec{
@@ -1397,6 +1409,11 @@ func TestAFullLeaderReverifiesWhenTheSetMoves(t *testing.T) {
 			loop.Publisher = &report.Publisher{Client: c}
 			loop.LocalAddress = local
 			loop.WriteAddress = local
+			if tc.wantFull {
+				// A leader that is full holds the release it was found full against; an idle pass reads
+				// the store again and would rightly find one without it incomplete.
+				pushImage(t, local, "system/deckhouse:v1.70.1")
+			}
 
 			require.NoError(t, loop.once(context.Background()))
 
@@ -1428,7 +1445,7 @@ func TestAFollowerSaysWhichSetItIsFullFor(t *testing.T) {
 	pushImage(t, leaderStorage, "system/deckhouse:v1.76.6")
 	pushInstaller(t, leaderStorage, "system/deckhouse/install:v1.76.6", []string{one})
 
-	storage := storageWith(registryv1alpha1.RegistryStorageSpec{})
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{NeedSync: true})
 	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{{
 		Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, Address: leaderStorage,
 	}}
@@ -1445,7 +1462,7 @@ func TestAFollowerSaysWhichSetItIsFullFor(t *testing.T) {
 
 	replica := replicaOf(t, c, "master-0")
 	require.True(t, replica.Full)
-	assert.Equal(t, SetKey("v1.76.6", "", nil), replica.VerifiedSet)
+	assert.Equal(t, SetKey(gc.Releases{Deployed: "v1.76.6", Previous: ""}, nil, nil), replica.VerifiedSet)
 }
 
 // TestAFailingPassKeepsTheErrorItInherited: the copier reports after every reference, failed ones too,
@@ -1460,7 +1477,7 @@ func TestAFailingPassKeepsTheErrorItInherited(t *testing.T) {
 	loop, c, _ := newLoop(t, true, storage)
 	loop.Publisher.Name = registryv1alpha1.SingletonName
 
-	progress := loop.progress(context.Background(), report.State{Node: "master-0"}, "", "fill")
+	progress := loop.progress(context.Background(), report.State{Node: "master-0"}, "fill")
 
 	progress(0, 3) // the first reference failed
 	progress(0, 3) // and the second
@@ -1469,4 +1486,627 @@ func TestAFailingPassKeepsTheErrorItInherited(t *testing.T) {
 
 	progress(1, 3) // something landed
 	assert.Empty(t, replicaOf(t, c, "master-0").Error)
+}
+
+// TestAPassWaitsForItsOwnRegistry is the start of a fill on a fresh cluster: the syncer restarts the
+// registry and begins a pass before it listens again. That pass used to fail every reference on
+// "connection refused" and publish it as the replica's error. It now waits for the registry and fills.
+func TestAPassWaitsForItsOwnRegistry(t *testing.T) {
+	upstream := startRegistry(t)
+	local := startRegistry(t)
+	one := pushDigest(t, upstream, "deckhouse/ee")
+	pushImage(t, upstream, "deckhouse/ee:v1.70.1")
+	pushInstaller(t, upstream, "deckhouse/ee/install:v1.70.1", []string{one})
+
+	// The replica's registry, opening its port a moment after the pass begins.
+	address := delayedProxy(t, local, 300*time.Millisecond)
+
+	loop, c, _ := newLoop(t, true, storageWith(registryv1alpha1.RegistryStorageSpec{
+		Upstream: &registryv1alpha1.Upstream{
+			Endpoint: registryv1alpha1.Endpoint{
+				Scheme: registryv1alpha1.SchemeHTTP, Host: upstream, Path: "/deckhouse/ee",
+			},
+		},
+		NeedSync: true,
+	}), deployedRelease("v1.70.1"))
+	loop.LocalAddress = address
+	loop.WriteAddress = address
+	loop.RegistryWait = 5 * time.Second
+
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.Empty(t, replica.Error, "a registry still starting is not a failed copy")
+	assert.True(t, replica.Full)
+}
+
+// TestAPassReportsARegistryThatStaysDown is the other half: a registry that never listens is said once,
+// as itself, rather than as every reference of the set failing.
+func TestAPassReportsARegistryThatStaysDown(t *testing.T) {
+	upstream := startRegistry(t)
+	one := pushDigest(t, upstream, "deckhouse/ee")
+	pushImage(t, upstream, "deckhouse/ee:v1.70.1")
+	pushInstaller(t, upstream, "deckhouse/ee/install:v1.70.1", []string{one})
+
+	loop, c, _ := newLoop(t, true, storageWith(registryv1alpha1.RegistryStorageSpec{
+		Upstream: &registryv1alpha1.Upstream{
+			Endpoint: registryv1alpha1.Endpoint{
+				Scheme: registryv1alpha1.SchemeHTTP, Host: upstream, Path: "/deckhouse/ee",
+			},
+		},
+		NeedSync: true,
+	}), deployedRelease("v1.70.1"))
+	loop.LocalAddress = closedAddress(t)
+	loop.WriteAddress = loop.LocalAddress
+
+	// The first pass that finds it down says nothing: the wrapper walks the whole store before it opens
+	// a port, after every restart the configuration causes, and that is not a failure.
+	require.NoError(t, loop.once(context.Background()))
+	assert.Empty(t, replicaOf(t, c, "master-0").Error, "a registry that has just gone quiet may be starting")
+
+	// Down for longer than a start takes, it is.
+	loop.registryDownSince.Store(time.Now().Add(-registryDownReported).UnixNano())
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.False(t, replica.Full)
+	assert.Contains(t, replica.Error, "registry is not listening")
+	assert.NotContains(t, replica.Error, "references could not be copied")
+}
+
+// closedAddress is an address nothing listens on: taken, then released.
+// delayedProxy forwards a fresh address to target, opening it only after delay.
+func delayedProxy(t *testing.T, target string, delay time.Duration) string {
+	t.Helper()
+	address := closedAddress(t)
+	go func() {
+		time.Sleep(delay)
+		listener, err := net.Listen("tcp", address)
+		if err != nil {
+			return
+		}
+		t.Cleanup(func() { _ = listener.Close() })
+		for {
+			in, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer in.Close()
+				out, err := net.Dial("tcp", target)
+				if err != nil {
+					return
+				}
+				defer out.Close()
+				go func() { _, _ = io.Copy(out, in) }()
+				_, _ = io.Copy(in, out)
+			}()
+		}
+	}()
+	return address
+}
+
+// TestAFullReplicaWaitsOutTheOthers: needSync is up because some other replica is behind, and this
+// one already holds the set it was last found full against. It does not go to the leader — the
+// leader here answers nothing, so a pass would show up as an error — and keeps reporting itself full.
+func TestAFullReplicaWaitsOutTheOthers(t *testing.T) {
+	followerStorage := startRegistry(t)
+	set := SetKey(gc.Releases{Deployed: "v1.76.6", Previous: ""}, nil, nil)
+
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{NeedSync: true})
+	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedSet: set,
+			Address: closedAddress(t)},
+		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleFollower, Full: true, VerifiedSet: set,
+			VerifiedDigests: 3, Source: "master-1"},
+	}
+
+	loop, _, _ := newLoop(t, false, nil)
+	c := releaseAwareClient(t, storage, deployedRelease("v1.76.6"))
+	loop.Client = c
+	loop.Publisher = &report.Publisher{Client: c}
+	loop.LocalAddress = followerStorage
+	loop.WriteAddress = followerStorage
+	loop.ReportedAddress = followerStorage
+	// Checked a moment ago. Otherwise this pass is the first idle one and reads the store — and a store
+	// whose set cannot be read leaves the report alone, which made this test pass whatever the pass did.
+	loop.lastStoreCheck.Store(time.Now().UnixNano())
+
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.Empty(t, replica.Error, "a full replica does not copy, so the unreachable leader is never asked")
+	assert.True(t, replica.Full)
+	assert.Equal(t, set, replica.VerifiedSet)
+}
+
+// TestAnIdleReplicaFindsWhatItsStoreLost: every replica holds the set, so needSync is down and
+// nothing is copied. This one's disk has since lost an image. The idle pass reads the store again,
+// reports it as not full and no longer full for the set — which is what makes the controller raise
+// needSync — and does it once per recheck, not on every pass.
+func TestAnIdleReplicaFindsWhatItsStoreLost(t *testing.T) {
+	local := startRegistry(t)
+	one := pushDigest(t, local, "system/deckhouse")
+	two := pushDigest(t, local, "system/deckhouse")
+	pushImage(t, local, "system/deckhouse:v1.76.6")
+	pushInstaller(t, local, "system/deckhouse/install:v1.76.6", []string{one, two})
+	set := SetKey(gc.Releases{Deployed: "v1.76.6", Previous: ""}, nil, nil)
+
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{})
+	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedSet: set,
+			Address: closedAddress(t)},
+		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleFollower, Full: true, VerifiedSet: set,
+			VerifiedDigests: 3, Source: "master-1"},
+	}
+
+	loop, _, _ := newLoop(t, false, nil)
+	c := releaseAwareClient(t, storage, deployedRelease("v1.76.6"))
+	loop.Client = c
+	loop.Publisher = &report.Publisher{Client: c}
+	loop.LocalAddress = local
+	loop.WriteAddress = local
+	loop.ReportedAddress = local
+	loop.DataDir = t.TempDir()
+
+	// The release resolves, and `two` is gone from the disk.
+	release := resolveTag(t, local, "system/deckhouse", "v1.76.6")
+	heldOnDisk(t, loop.DataDir, one, release)
+	tagOnDisk(t, loop.DataDir, "v1.76.6", release)
+
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.False(t, replica.Full, "the store lost an image, and the replica says so")
+	assert.Empty(t, replica.VerifiedSet, "so it is no longer full for the set, and the controller sees it behind")
+	assert.Empty(t, replica.Error, "a store short of an image is not a failure of the pass")
+
+	// Put back, and not read again until the recheck is due.
+	heldOnDisk(t, loop.DataDir, two)
+	require.NoError(t, loop.once(context.Background()))
+	assert.False(t, replicaOf(t, c, "master-0").Full, "an idle pass between rechecks reads nothing")
+
+	loop.lastStoreCheck.Store(time.Now().Add(-storeRecheck).UnixNano())
+	loop.surveyedAt = time.Time{}
+	require.NoError(t, loop.once(context.Background()))
+	replica = replicaOf(t, c, "master-0")
+	assert.True(t, replica.Full, "the recheck finds it complete again")
+	// But it gives no fingerprint back: what it reads is the set the cluster runs, not what is pending,
+	// so only a pass that copies may say "full for this set". The replica stays behind for the controller,
+	// which raises needSync, and the replication that follows verifies the whole set and stamps it.
+	assert.Empty(t, replica.VerifiedSet, "a recheck takes a fingerprint away and never awards one")
+}
+
+// TestARecheckDoesNotVouchForASetItDidNotRead is the review's finding on the recheck: an idle follower
+// that last replicated an older set, while the leader holds the current one. Its disk happens to hold
+// everything the current set needs, and the recheck finds it so; stamped with the current fingerprint,
+// the follower would look caught up without a replication ever saying so, and needSync would stay
+// down. Only a copying pass gives a fingerprint.
+func TestARecheckDoesNotVouchForASetItDidNotRead(t *testing.T) {
+	storage := startRegistry(t)
+	running := pushDigest(t, storage, "system/deckhouse")
+	pushImage(t, storage, "system/deckhouse:v1.76.6")
+	pushInstaller(t, storage, "system/deckhouse/install:v1.76.6", []string{running})
+
+	before := SetKey(gc.Releases{Deployed: "v1.76.5"}, nil, nil)
+
+	state := storageWith(registryv1alpha1.RegistryStorageSpec{})
+	state.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true,
+			VerifiedSet: SetKey(gc.Releases{Deployed: "v1.76.6"}, nil, nil),
+			Address:     closedAddress(t)},
+		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleFollower, Full: true, VerifiedSet: before,
+			Source: "master-1"},
+	}
+
+	loop, _, _ := newLoop(t, false, nil)
+	c := releaseAwareClient(t, state, deployedRelease("v1.76.6"))
+	loop.Client = c
+	loop.Publisher = &report.Publisher{Client: c}
+	loop.LocalAddress = storage
+	loop.WriteAddress = storage
+	loop.ReportedAddress = storage
+	loop.DataDir = t.TempDir()
+
+	// Everything the running set needs is on the disk.
+	release := resolveTag(t, storage, "system/deckhouse", "v1.76.6")
+	heldOnDisk(t, loop.DataDir, running, release)
+	tagOnDisk(t, loop.DataDir, "v1.76.6", release)
+
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	require.True(t, replica.Full, "the recheck found the running set complete")
+	assert.Equal(t, before, replica.VerifiedSet,
+		"the follower stays full for the set it verified, so the controller sees it behind the leader")
+}
+
+// TestAnUpdateReachesTheFollowersBeforeItIsDeployed is the air-gapped update. `d8 mirror push` put
+// the next release onto the leader and the cluster lists it as pending. The leader holds it — its
+// AheadSet says so — and the follower, full for the set and idle, copies it from the leader and says
+// it holds it too, before anything was deployed. Counted only once deployed, the update stayed on the
+// leader alone through the whole update; counted in the set, a follower that had copied the set and
+// not yet the update reported both.
+func TestAnUpdateReachesTheFollowersBeforeItIsDeployed(t *testing.T) {
+	leaderStorage := startRegistry(t)
+	followerStorage := startRegistry(t)
+
+	running := pushDigest(t, leaderStorage, "system/deckhouse")
+	pushImage(t, leaderStorage, "system/deckhouse:v1.76.6")
+	pushInstaller(t, leaderStorage, "system/deckhouse/install:v1.76.6", []string{running})
+
+	update := pushDigest(t, leaderStorage, "system/deckhouse")
+	pushImage(t, leaderStorage, "system/deckhouse:v1.77.0")
+	pushInstaller(t, leaderStorage, "system/deckhouse/install:v1.77.0", []string{update})
+
+	pending := deployedRelease("v1.77.0")
+	pending.Object["status"] = map[string]any{"phase": "Pending"}
+
+	set := SetKey(gc.Releases{Deployed: "v1.76.6"}, nil, nil)
+	ahead := AheadKey(gc.Releases{Deployed: "v1.76.6", Pending: []string{"v1.77.0"}}, nil)
+
+	// Nobody asks for a copy: the set is held everywhere.
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{})
+	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedSet: set,
+			AheadSet: ahead, Address: leaderStorage},
+		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleFollower, Full: true, VerifiedSet: set,
+			Source: "master-1"},
+	}
+
+	loop, _, _ := newLoop(t, false, nil)
+	c := releaseAwareClient(t, storage, deployedRelease("v1.76.6"), pending)
+	loop.Client = c
+	loop.Publisher = &report.Publisher{Client: c}
+	loop.LocalAddress = followerStorage
+	loop.WriteAddress = followerStorage
+	loop.ReportedAddress = followerStorage
+	// The store check is not what this is about.
+	loop.lastStoreCheck.Store(time.Now().UnixNano())
+
+	gotSet, gotAhead, err := CurrentKeys(context.Background(), c)
+	require.NoError(t, err)
+	require.Equal(t, set, gotSet, "the pending release is not part of the set")
+	require.Equal(t, ahead, gotAhead, "it is what is ahead of it")
+
+	require.NoError(t, loop.once(context.Background()))
+	// The copy ahead runs in the background, and the next pass says what it found.
+	loop.waitAhead()
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.True(t, replica.Full)
+	assert.Equal(t, set, replica.VerifiedSet)
+	assert.Equal(t, ahead, replica.AheadSet, "the follower holds what is ahead, as the leader does")
+	assert.Equal(t, resolveTag(t, leaderStorage, "system/deckhouse", "v1.77.0"),
+		resolveTag(t, followerStorage, "system/deckhouse", "v1.77.0"),
+		"the update is on the follower, not only on the leader")
+}
+
+// TestAFollowerWaitsForALeaderThatHoldsTheUpdate: a leader that does not hold what is ahead yet has
+// nothing whole to give, and the follower does not copy from it — it would only miss what the leader
+// misses — nor claim to hold it.
+func TestAFollowerWaitsForALeaderThatHoldsTheUpdate(t *testing.T) {
+	leaderStorage := startRegistry(t)
+	followerStorage := startRegistry(t)
+
+	running := pushDigest(t, leaderStorage, "system/deckhouse")
+	pushImage(t, leaderStorage, "system/deckhouse:v1.76.6")
+	pushInstaller(t, leaderStorage, "system/deckhouse/install:v1.76.6", []string{running})
+
+	pending := deployedRelease("v1.77.0")
+	pending.Object["status"] = map[string]any{"phase": "Pending"}
+	set := SetKey(gc.Releases{Deployed: "v1.76.6"}, nil, nil)
+
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{})
+	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedSet: set,
+			Address: leaderStorage},
+		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleFollower, Full: true, VerifiedSet: set,
+			Source: "master-1"},
+	}
+
+	loop, _, _ := newLoop(t, false, nil)
+	c := releaseAwareClient(t, storage, deployedRelease("v1.76.6"), pending)
+	loop.Client = c
+	loop.Publisher = &report.Publisher{Client: c}
+	loop.LocalAddress = followerStorage
+	loop.WriteAddress = followerStorage
+	loop.ReportedAddress = followerStorage
+	loop.lastStoreCheck.Store(time.Now().UnixNano())
+
+	require.NoError(t, loop.once(context.Background()))
+	assert.False(t, loop.Filling(), "no copy ahead from a leader short of the update")
+	assert.Empty(t, replicaOf(t, c, "master-0").AheadSet)
+}
+
+// TestAnAirGappedLeaderHoldsWhatWasPushedOntoIt: with no upstream there is nothing to copy ahead from,
+// and the leader checks its own store instead. Pushed, the update is held, and the followers can take
+// it from there.
+func TestAnAirGappedLeaderHoldsWhatWasPushedOntoIt(t *testing.T) {
+	store := startRegistry(t)
+
+	running := pushDigest(t, store, "system/deckhouse")
+	pushImage(t, store, "system/deckhouse:v1.76.6")
+	pushInstaller(t, store, "system/deckhouse/install:v1.76.6", []string{running})
+
+	pending := deployedRelease("v1.77.0")
+	pending.Object["status"] = map[string]any{"phase": "Pending"}
+	set := SetKey(gc.Releases{Deployed: "v1.76.6"}, nil, nil)
+	ahead := AheadKey(gc.Releases{Deployed: "v1.76.6", Pending: []string{"v1.77.0"}}, nil)
+
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{})
+	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedSet: set},
+	}
+
+	loop, _, _ := newLoop(t, true, nil)
+	c := releaseAwareClient(t, storage, deployedRelease("v1.76.6"), pending)
+	loop.Client = c
+	loop.Publisher = &report.Publisher{Client: c}
+	loop.LocalAddress = store
+	loop.WriteAddress = store
+	loop.ReportedAddress = store
+	loop.DataDir = t.TempDir()
+	loop.lastStoreCheck.Store(time.Now().UnixNano())
+
+	// The set the cluster runs is on the disk, which is what an air-gapped leader is counted full by.
+	release := resolveTag(t, store, "system/deckhouse", "v1.76.6")
+	heldOnDisk(t, loop.DataDir, running, release)
+	tagOnDisk(t, loop.DataDir, "v1.76.6", release)
+
+	pass := func() {
+		require.NoError(t, loop.once(context.Background()))
+		loop.waitAhead()
+		require.NoError(t, loop.once(context.Background()))
+	}
+
+	// Not pushed yet: missed, and not tried again at once.
+	pass()
+	assert.Empty(t, replicaOf(t, c, "master-0").AheadSet, "an update that is not there is not held")
+
+	update := pushDigest(t, store, "system/deckhouse")
+	pushImage(t, store, "system/deckhouse:v1.77.0")
+	pushInstaller(t, store, "system/deckhouse/install:v1.77.0", []string{update})
+
+	pass()
+	assert.Empty(t, replicaOf(t, c, "master-0").AheadSet, "a miss waits before the store is checked again")
+
+	loop.aheadMu.Lock()
+	loop.aheadMissedAt = time.Now().Add(-aheadRetry)
+	loop.aheadMu.Unlock()
+	pass()
+	assert.Equal(t, ahead, replicaOf(t, c, "master-0").AheadSet, "pushed, it is held")
+}
+
+// TestAPendingUpdateTheSourceDoesNotHoldDoesNotKeepTheFillGoing is what a live cluster showed once
+// pending releases joined the set: a module update listed as pending, its package not in the source
+// (the platform itself could not download it). Counted in the set, it left every replica one short
+// for good — needSync up forever, the leader refilling and the followers replicating every pass. It is
+// copied ahead of time now, outside completeness: the leader is full, and the miss is only logged.
+func TestAPendingUpdateTheSourceDoesNotHoldDoesNotKeepTheFillGoing(t *testing.T) {
+	upstream := startRegistry(t)
+	local := startRegistry(t)
+
+	one := pushDigest(t, upstream, "deckhouse/ee")
+	pushImage(t, upstream, "deckhouse/ee:v1.70.1")
+	pushInstaller(t, upstream, "deckhouse/ee/install:v1.70.1", []string{one})
+
+	pendingModule := &unstructured.Unstructured{Object: map[string]any{
+		"spec":   map[string]any{"moduleName": "snapshot-controller", "version": "0.1.21"},
+		"status": map[string]any{"phase": "Pending"},
+	}}
+	pendingModule.SetGroupVersionKind(schema.GroupVersionKind{
+		Group: "deckhouse.io", Version: "v1alpha1", Kind: "ModuleRelease",
+	})
+	pendingModule.SetName("snapshot-controller-v0.1.21")
+
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{
+		Upstream: &registryv1alpha1.Upstream{
+			Endpoint: registryv1alpha1.Endpoint{
+				Scheme: registryv1alpha1.SchemeHTTP, Host: upstream, Path: "/deckhouse/ee",
+			},
+		},
+		NeedSync: true,
+	})
+
+	loop, _, _ := newLoop(t, true, nil)
+	c := releaseAwareClient(t, storage, deployedRelease("v1.70.1"), pendingModule)
+	loop.Client = c
+	loop.Publisher = &report.Publisher{Client: c}
+	loop.LocalAddress = local
+	loop.WriteAddress = local
+
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.True(t, replica.Full, "an update the source does not hold yet does not hold back the set")
+	assert.Empty(t, replica.Error)
+
+	key, err := CurrentSetKey(context.Background(), c)
+	require.NoError(t, err)
+	assert.Equal(t, key, replica.VerifiedSet, "full against the set, which the update is not part of")
+
+	// And the update is not claimed: the copy ahead missed it, so nobody takes it for held.
+	loop.waitAhead()
+	require.NoError(t, loop.once(context.Background()))
+	assert.Empty(t, replicaOf(t, c, "master-0").AheadSet, "a missed update is not held")
+}
+
+// TestAReplicaThatLostTheReleaseIsNotFull: the release is what the set is read out of, so a store
+// without it cannot even enumerate the set. That used to keep the last report — full — for good, and
+// nothing asked for the release to be copied back. Absent is an answer: not full, so the controller
+// sees the replica behind.
+func TestAReplicaThatLostTheReleaseIsNotFull(t *testing.T) {
+	empty := startRegistry(t)
+	set := SetKey(gc.Releases{Deployed: "v1.76.6"}, nil, nil)
+
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{})
+	storage.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{
+		{Node: "master-1", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedSet: set,
+			Address: closedAddress(t)},
+		{Node: "master-0", Role: registryv1alpha1.ReplicaRoleFollower, Full: true, VerifiedSet: set,
+			VerifiedDigests: 3, Source: "master-1"},
+	}
+
+	loop, _, _ := newLoop(t, false, nil)
+	c := releaseAwareClient(t, storage, deployedRelease("v1.76.6"))
+	loop.Client = c
+	loop.Publisher = &report.Publisher{Client: c}
+	loop.LocalAddress = empty
+	loop.WriteAddress = empty
+	loop.ReportedAddress = empty
+	loop.DataDir = t.TempDir()
+
+	require.NoError(t, loop.once(context.Background()))
+
+	replica := replicaOf(t, c, "master-0")
+	assert.False(t, replica.Full, "a store without the release is not full")
+	assert.Empty(t, replica.VerifiedSet, "so the controller sees it behind and raises needSync")
+	assert.Empty(t, replica.Error, "and it is not a failure of the pass")
+}
+
+// TestALeaderSaysItIsFullBeforeItCopiesAhead is the review's finding on the copy ahead: run inside the
+// fill, a pending release copied at the background pace held the report of a store already complete for
+// the set — the storage read Filling and the upstream could not be dropped for as long as that took. The
+// pass now publishes what it found first, and copies ahead after.
+//
+// Told apart by the upstream itself: the first request it gets for the pending release looks at what
+// the leader has published by then.
+func TestALeaderSaysItIsFullBeforeItCopiesAhead(t *testing.T) {
+	var c client.Client
+	var asked atomic.Bool
+	var fullWhenAsked atomic.Bool
+	inner := registry.New(registry.Logger(log.New(io.Discard, "", 0)))
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "v1.70.2") && c != nil && !asked.Swap(true) {
+			storage := &registryv1alpha1.RegistryStorage{}
+			if err := c.Get(r.Context(), types.NamespacedName{Name: registryv1alpha1.SingletonName}, storage); err == nil {
+				for _, replica := range storage.Status.Replicas {
+					if replica.Node == "master-0" && replica.Full {
+						fullWhenAsked.Store(true)
+					}
+				}
+			}
+		}
+		inner.ServeHTTP(w, r)
+	}))
+	t.Cleanup(server.Close)
+	parsed, err := url.Parse(server.URL)
+	require.NoError(t, err)
+	upstream := parsed.Host
+	local := startRegistry(t)
+
+	running := pushDigest(t, upstream, "deckhouse/ee")
+	pushImage(t, upstream, "deckhouse/ee:v1.70.1")
+	pushInstaller(t, upstream, "deckhouse/ee/install:v1.70.1", []string{running})
+	update := pushDigest(t, upstream, "deckhouse/ee")
+	pushImage(t, upstream, "deckhouse/ee:v1.70.2")
+	pushInstaller(t, upstream, "deckhouse/ee/install:v1.70.2", []string{update})
+
+	pending := deployedRelease("v1.70.2")
+	pending.Object["status"] = map[string]any{"phase": "Pending"}
+
+	storage := storageWith(registryv1alpha1.RegistryStorageSpec{
+		Upstream: &registryv1alpha1.Upstream{
+			Endpoint: registryv1alpha1.Endpoint{
+				Scheme: registryv1alpha1.SchemeHTTP, Host: upstream, Path: "/deckhouse/ee",
+			},
+		},
+		NeedSync: true,
+	})
+
+	loop, _, _ := newLoop(t, true, nil)
+	c = releaseAwareClient(t, storage, deployedRelease("v1.70.1"), pending)
+	loop.Client = c
+	loop.Publisher = &report.Publisher{Client: c}
+	loop.LocalAddress = local
+	loop.WriteAddress = local
+
+	require.NoError(t, loop.once(context.Background()))
+	loop.waitAhead()
+
+	require.True(t, asked.Load(), "the pending release was never copied ahead")
+	assert.True(t, fullWhenAsked.Load(), "the copy ahead started before the leader said it is full for the set")
+	assert.True(t, replicaOf(t, c, "master-0").Full)
+}
+
+// setThenAhead discovers one reference as the set and another as ahead of it.
+type setThenAhead struct{ set, ahead name.Reference }
+
+func (d setThenAhead) Discover(context.Context, fill.Registry, *remote.Puller) ([]name.Reference, error) {
+	return []name.Reference{d.set}, nil
+}
+
+func (d setThenAhead) Optional(context.Context, fill.Registry, *remote.Puller) ([]name.Reference, error) {
+	return []name.Reference{d.ahead}, nil
+}
+
+// TestACopyAheadGivesWayToTheSetAndResumes is the A/B against main on harbor: the copy ahead, run inside
+// the pass, held the next one back for minutes on an upstream slow to answer, and the cluster converged a
+// quarter of an hour later. In the background now, it stops for a pass that has to copy the set, and
+// resumes afterwards from where it can.
+func TestACopyAheadGivesWayToTheSetAndResumes(t *testing.T) {
+	release := make(chan struct{})
+	var held atomic.Int32
+	var armed atomic.Bool // only once the images are in: pushing them goes through the same handler
+	inner := registry.New(registry.Logger(log.New(io.Discard, "", 0)))
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if armed.Load() && strings.Contains(r.URL.Path, "/pending/") {
+			held.Add(1)
+			select {
+			case <-release:
+			case <-r.Context().Done():
+				return
+			}
+		}
+		inner.ServeHTTP(w, r)
+	}))
+	t.Cleanup(server.Close)
+	parsed, err := url.Parse(server.URL)
+	require.NoError(t, err)
+	source, destination := parsed.Host, startRegistry(t)
+	pushImage(t, source, "platform:v1")
+	pushImage(t, source, "pending:v2")
+
+	set, err := name.ParseReference(source+"/platform:v1", name.Insecure)
+	require.NoError(t, err)
+	ahead, err := name.ParseReference(source+"/pending:v2", name.Insecure)
+	require.NoError(t, err)
+
+	copier := &fill.Copier{
+		Source:        fill.Registry{Address: source, Insecure: true},
+		Destination:   fill.Registry{Address: destination, Insecure: true},
+		Discover:      setThenAhead{set: set, ahead: ahead},
+		SeparateAhead: true,
+	}
+	_, err = copier.Run(context.Background())
+	require.NoError(t, err)
+
+	armed.Store(true)
+	loop := &Loop{Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	loop.startAhead(context.Background(), copier.RunAhead, "pending", "leader")
+	require.Eventually(t, func() bool { return held.Load() > 0 }, 5*time.Second, 10*time.Millisecond,
+		"the copy ahead never reached the slow upstream")
+	assert.True(t, loop.Filling(), "a copy ahead in progress holds the collection off like a fill")
+
+	stopped := make(chan struct{})
+	go func() { loop.stopAhead(); close(stopped) }()
+	select {
+	case <-stopped:
+	case <-time.After(5 * time.Second):
+		t.Fatal("a pass that has to copy the set waited for the copy ahead")
+	}
+	assert.False(t, loop.Filling())
+
+	// An idle pass starts it again, finding it not held.
+	close(release)
+	loop.startAhead(context.Background(), copier.RunAhead, "pending", "leader")
+	loop.waitAhead()
+
+	tag, err := name.NewTag(destination+"/pending:v2", name.Insecure)
+	require.NoError(t, err)
+	_, err = remote.Head(tag)
+	assert.NoError(t, err, "the copy ahead was started again and went through")
+	assert.False(t, loop.Filling())
 }

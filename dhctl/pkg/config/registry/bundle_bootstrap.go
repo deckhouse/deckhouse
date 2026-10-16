@@ -266,7 +266,7 @@ func (in BundleBootstrapInputs) Resolve(
 	case in.CacheEnabled && !in.UpstreamConfigured:
 		// A cache with nothing to fill it from over the network is an installation from a bundle.
 		return &module_config.DeckhouseSettings{Mode: constant.ModeLocal},
-			[]ProviderOption{WithBundleBootstrap(), WithStore()}
+			[]ProviderOption{WithBundleBootstrap(), WithStore(), WithSettingsFromRegistryModule()}
 
 	case in.Upstream != nil:
 		// The registry the module was told to use, used by the installer as well.
@@ -295,9 +295,9 @@ func (in BundleBootstrapInputs) Resolve(
 		// installation is not finished without — and the store is what the installer has to wait
 		// for, because nothing else reports on it any more.
 		if in.CacheEnabled {
-			return &settings, []ProviderOption{WithStore(), WithAgent()}
+			return &settings, []ProviderOption{WithStore(), WithAgent(), WithSettingsFromRegistryModule()}
 		}
-		return &settings, []ProviderOption{WithAgent()}
+		return &settings, []ProviderOption{WithAgent(), WithSettingsFromRegistryModule()}
 	}
 
 	return deckhouseSettings, nil

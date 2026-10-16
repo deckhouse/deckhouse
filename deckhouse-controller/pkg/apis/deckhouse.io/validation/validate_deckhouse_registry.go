@@ -50,12 +50,16 @@ func RegistrySecretHandler() http.Handler {
 			}
 		}
 
+		address := string(secret.Data["address"])
+		if strings.TrimSpace(address) == "" {
+			return rejectRes("Field 'address' cannot be empty or whitespace.")
+		}
+
+		// An empty path is a registry serving from its root, which both the installer's `imagesRepo` and
+		// the registry module's upstream allow. Refusing it refused the platform's own render of this
+		// secret once a cluster moved to such a registry, and failed the whole release with it.
 		for _, field := range []string{"address", "path"} {
-			val := string(secret.Data[field])
-			if strings.TrimSpace(val) == "" {
-				return rejectRes(fmt.Sprintf("Field '%s' cannot be empty or whitespace.", field))
-			}
-			if containsWhitespace(val) {
+			if containsWhitespace(string(secret.Data[field])) {
 				return rejectRes(fmt.Sprintf("Field '%s' contains spaces or newlines.", field))
 			}
 		}

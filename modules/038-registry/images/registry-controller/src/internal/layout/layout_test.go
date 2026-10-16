@@ -836,3 +836,42 @@ func TestAgentsArePointedAtTheLeader(t *testing.T) {
 		assert.Len(t, backend.Mirrors, 2)
 	})
 }
+
+// TestComputeNeedSyncWaitsForTheFollowers: one switch for every replica. A full leader with a
+// follower behind keeps it up, in a cluster with an upstream and in an air-gapped one alike — the
+// followers have no other way to learn that there is something to copy.
+func TestComputeNeedSyncWaitsForTheFollowers(t *testing.T) {
+	cache := registryv1alpha1.RegistryConfigSpec{
+		Mode:    registryv1alpha1.ModeManaged,
+		Primary: registryv1alpha1.PrimarySource{Upstream: testUpstream("registry.deckhouse.io")},
+		Storage: registryv1alpha1.StorageConfig{Cache: true, Size: "50Gi", Source: testSource()},
+	}
+	airGap := cache
+	airGap.Primary = registryv1alpha1.PrimarySource{}
+
+	for _, tt := range []struct {
+		name            string
+		config          registryv1alpha1.RegistryConfigSpec
+		leaderFull      bool
+		followersBehind bool
+		want            bool
+	}{
+		{name: "leader filling", config: cache, want: true},
+		{name: "leader full, followers behind", config: cache, leaderFull: true, followersBehind: true, want: true},
+		{name: "everyone full", config: cache, leaderFull: true, want: false},
+		{name: "air-gapped, followers behind", config: airGap, leaderFull: true, followersBehind: true, want: true},
+		{name: "air-gapped, everyone full", config: airGap, leaderFull: true, want: false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Compute(Inputs{
+				Config:          tt.config,
+				LeaderFull:      tt.leaderFull,
+				FollowersBehind: tt.followersBehind,
+				Nodes:           []string{"master-0"},
+				StorageAccess:   testAccess(),
+			})
+			require.NotNil(t, got.Storage)
+			assert.Equal(t, tt.want, got.Storage.NeedSync)
+		})
+	}
+}

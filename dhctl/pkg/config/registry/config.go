@@ -80,6 +80,10 @@ type ConfigProvider struct {
 	// agentOwnsRuntime records that the first master is installed with the node agent on it.
 	// See ModeModel.AgentOwnsRuntime for why that is what makes the rest of the nodes possible.
 	agentOwnsRuntime bool
+
+	// fromRegistryModule records that deckhouseSettings were derived from the registry ModuleConfig
+	// rather than written by the user into the deckhouse one. See WithSettingsFromRegistryModule.
+	fromRegistryModule bool
 }
 
 // ProviderOption adjusts a ConfigProvider at construction.
@@ -122,6 +126,18 @@ func WithStore() ProviderOption {
 // how a worker joins without ever touching the upstream itself.
 func WithAgent() ProviderOption {
 	return func(p *ConfigProvider) { p.agentOwnsRuntime = true }
+}
+
+// WithSettingsFromRegistryModule marks the deckhouse settings as derived from the registry
+// ModuleConfig: the installer needs them to reach the registry, and nothing in the cluster does.
+//
+// So they are not written into the deckhouse ModuleConfig. Written there they were the previous
+// implementation's configuration in a cluster the current one owns: read by nothing, carrying the
+// upstream credential in a ModuleConfig, and — for an installation from a bundle, where the mode is
+// Local — refusing every later edit of that ModuleConfig in a cloud cluster, whose admission policy
+// rejects Local and Proxy there.
+func WithSettingsFromRegistryModule() ProviderOption {
+	return func(p *ConfigProvider) { p.fromRegistryModule = true }
 }
 
 // IsLocal returns true when the bootstrap registry mode is Local.
@@ -197,6 +213,7 @@ func (p *ConfigProvider) Config(defaultCRI constant.CRIType, isStatic, hasCluste
 		config.BundleBootstrap = p.bundleBootstrap
 		config.StoreExpected = p.storeExpected
 		config.AgentOwnsRuntime = p.agentOwnsRuntime
+		config.FromRegistryModule = p.fromRegistryModule
 
 	case p.initConfig != nil:
 		if err := config.useInitConfig(*p.initConfig); err != nil {
@@ -230,6 +247,10 @@ type Config struct {
 	// AgentOwnsRuntime records that the first master comes up with the node agent on it, installed
 	// from the installer's own packages proxy. See WithAgent.
 	AgentOwnsRuntime bool
+
+	// FromRegistryModule records that DeckhouseSettings were derived from the registry ModuleConfig,
+	// and so are not written into the deckhouse one. See WithSettingsFromRegistryModule.
+	FromRegistryModule bool
 }
 
 // useDefault configures the registry with default CE settings.

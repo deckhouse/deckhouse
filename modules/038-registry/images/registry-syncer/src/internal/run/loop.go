@@ -18,6 +18,9 @@ package run
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net"
@@ -105,6 +108,23 @@ type Loop struct {
 	// writes. Filling the cache is what the cache is for; reclaiming is housekeeping.
 	filling atomic.Bool
 
+	// The copy ahead, run in the background — see considerAhead. aheadMu guards the fields after it;
+	// aheadRunning is read by Filling without it.
+	aheadMu sync.Mutex
+	// The copy in progress: how to stop it, when it has, and what it was started under — see aheadScope.
+	aheadCancel context.CancelFunc
+	aheadDone   chan struct{}
+	aheadScope  string
+	// aheadHeld is the parts of what is ahead of the set a copy here left whole — see AheadKey;
+	// aheadMissedFor the parts the last copy was for and missed something of, and when — see aheadRetry.
+	// aheadForgotten: the collection took what is ahead of the set back, so what this replica reported
+	// before no longer stands — see ForgetAhead.
+	aheadHeld      map[string]bool
+	aheadMissedFor string
+	aheadMissedAt  time.Time
+	aheadForgotten bool
+	aheadRunning   atomic.Bool
+
 	// writes serialises this replica's own writes to the cache against the garbage collection.
 	//
 	// Inside the storage pod the syncer is the only writer, so "the store must not be written to
@@ -145,6 +165,10 @@ type Loop struct {
 	// knowledge — which on a store that is filling is the difference between "wait" and "go ahead".
 	complete atomic.Bool
 
+	// copiesNothing is whether the last pass found nothing for this replica to copy from — see OwesCopy.
+	// The zero value owes, so a process that has not decided yet holds a collection back.
+	copiesNothing atomic.Bool
+
 	// desired is the last desired state that was read, so that a component on another
 	// schedule — the garbage collection — can act on the same instruction without racing
 	// this loop for it.
@@ -161,6 +185,26 @@ type Loop struct {
 
 	// started is when Run began, and the zero time — which is long ago — outside it.
 	started time.Time
+
+	// RegistryWait is how long a pass waits for this replica's registry to listen before it leaves
+	// the copy to the next pass. Zero means localRegistryWait.
+	RegistryWait time.Duration
+
+	// CopyPacer bounds how fast the copy ahead of the set reads from its source. Nil copies as fast as
+	// the source answers. Copying the set itself — the fill and the replication — is not paced: see
+	// fill.Copier.Ahead and fill.Pacer.
+	CopyPacer *fill.Pacer
+
+	// StoreRecheck is how often an idle replica reads its own store again. Zero means storeRecheck.
+	// See recheckStore.
+	StoreRecheck time.Duration
+
+	// lastStoreCheck is when recheckStore last read the store, in Unix nanoseconds.
+	lastStoreCheck atomic.Int64
+
+	// registryDownSince is when this replica's registry was first found not listening, in Unix
+	// nanoseconds, and zero while it listens. See registryDownReported.
+	registryDownSince atomic.Int64
 }
 
 // surveyStore reads the store, at most once a minute.
@@ -287,19 +331,30 @@ func (l *Loop) announceStart(ctx context.Context, state report.State, stated int
 //
 // A failure leaves the branch's numbers alone rather than zeroing them: a count a pass out of date
 // beats no count, and zero in these fields reads as an emptied store.
-func (l *Loop) reportHeld(ctx context.Context, state *report.State) {
+func (l *Loop) reportHeld(ctx context.Context, state *report.State) bool {
 	declared, deployed, err := l.declaredSet(ctx)
+	if err != nil && l.releaseAbsent(ctx) {
+		// The set is read out of the release image, and this store does not hold it: the most
+		// incomplete a store can be, not a reason to keep the last report. Kept, it stood: a replica
+		// that lost the release's tag went on reporting itself full, needSync stayed down, and nothing
+		// ever copied the release back — in an air-gapped cluster, the one place it can come from is
+		// the leader, and only through a replication that this report never asked for.
+		l.Log.Warn("the store does not hold the release the set is read out of, so this replica is not complete",
+			"error", err.Error())
+		state.Full = false
+		return true
+	}
 	if err != nil {
 		l.Log.Warn("cannot tell what the cluster needs, so the status keeps what this pass copied",
 			"error", err.Error())
-		return
+		return false
 	}
 
 	survey, err := l.surveyStore(declared, deployed)
 	if err != nil {
 		l.Log.Warn("cannot read the store, so the status keeps what this pass copied",
 			"error", err.Error())
-		return
+		return false
 	}
 
 	state.VerifiedDigests = survey.Declared
@@ -333,6 +388,7 @@ func (l *Loop) reportHeld(ctx context.Context, state *report.State) {
 			"held", survey.Declared, "declared", len(declared), "missing_tags", survey.MissingTags)
 	}
 	state.Full = full
+	return true
 }
 
 // Filling reports whether this replica is filling its store right now.
@@ -341,10 +397,20 @@ func (l *Loop) reportHeld(ctx context.Context, state *report.State) {
 // across the work: the question is asked once, at one instant, and a stale "yes" merely postpones
 // housekeeping by a minute while a stale "no" would only be possible if the fill had already
 // finished.
-func (l *Loop) Filling() bool { return l.filling.Load() }
+func (l *Loop) Filling() bool { return l.filling.Load() || l.aheadRunning.Load() }
 
 // Complete reports whether this replica held the whole expected set as of its last pass.
 func (l *Loop) Complete() bool { return l.complete.Load() }
+
+// OwesCopy reports whether this replica's last pass was one that copies: a fill or a replication.
+//
+// needSync is one switch for every replica, and it can stay up for a reason this replica can do
+// nothing about. An air-gapped leader has no source to fill from — it counts what was pushed — and
+// while it is short of the set, needSync stays up for the followers' sake. Read as "a fill is owed
+// here", that held its collection back with no end: a store over its budget could not be reclaimed,
+// could not take the rest of the set, and could not become full. A collection waits for the copy this
+// replica makes, not for one nobody will.
+func (l *Loop) OwesCopy() bool { return !l.copiesNothing.Load() }
 
 // PauseWrites keeps this replica from writing to its cache until the returned function is called.
 //
@@ -401,7 +467,7 @@ const progressEvery = 30 * time.Second
 // never before, since the copier calls this after every reference, failed ones included — which means
 // the set could be read and the destination written: whatever failed the previous pass is behind this
 // one, and the error it left in the status stops holding the storage at Failed.
-func (l *Loop) progress(ctx context.Context, state report.State, source, what string) func(done, total int32) {
+func (l *Loop) progress(ctx context.Context, state report.State, what string) func(done, total int32) {
 	var published time.Time
 	return func(done, total int32) {
 		l.Log.Debug(what+" progress", "done", done, "total", total)
@@ -418,7 +484,7 @@ func (l *Loop) progress(ctx context.Context, state report.State, source, what st
 		published = time.Now()
 
 		update := report.State{
-			Node: state.Node, Role: state.Role, Address: state.Address, Source: source,
+			Node: state.Node, Role: state.Role, Address: state.Address,
 			VerifiedDigests: done, DeclaredDigests: total,
 		}
 		if err := l.Publisher.PublishProgress(ctx, update); err != nil && ctx.Err() == nil {
@@ -605,14 +671,21 @@ func (l *Loop) once(ctx context.Context) error {
 	// Which set a full report would be about. Every replica says, so that whoever decides who may
 	// lead compares reports about the same set — see MayLead. Only the leader with an upstream acts
 	// on a change of it — see Reverify.
-	var setKey string
-	if key, err := l.setKey(ctx); err != nil {
+	var setKey, aheadKey string
+	keysKnown := false
+	if set, ahead, err := l.keys(ctx); err != nil {
 		l.Log.Warn("cannot tell which set the cluster needs, so this pass reports no set with its count",
 			"error", err.Error())
 	} else {
-		setKey = key
+		setKey, aheadKey, keysKnown = set, ahead, true
 	}
-	reverified, withdraw := Reverify(action, isLeader, spec, l.reportedVerifiedSet(ctx), setKey)
+	reported, reportedSource, reportedAhead := l.reportedSets(ctx)
+
+	// A copy ahead started under another arrangement reads from where this replica no longer should: an
+	// upstream the cluster has dropped or whose account has changed, a leader that is not the leader
+	// any more, or the upstream of a replica that now follows.
+	l.stopAheadOutside(aheadScope(spec, isLeader, leader))
+	reverified, withdraw := Reverify(action, isLeader, spec, reported, setKey)
 	if withdraw {
 		l.Log.Info("the set the cluster needs changed since the store was found full; " +
 			"withdrawing that and verifying the store against the new one")
@@ -621,8 +694,64 @@ func (l *Loop) once(ctx context.Context) error {
 			// anyway at least replaces it at the end of the pass.
 			l.Log.Warn("withdrawing the full report failed", "error", err.Error())
 		}
+		// Withdrawn, so not to be put back: a pass that ends up doing nothing — its registry not listening
+		// — would otherwise have its store check restamp the very set this pass took away.
+		reported = ""
 	}
 	action = reverified
+
+	// needSync is one switch for every replica, and it stays up until the last of them holds the set.
+	// A replica that already does — found full against this very set on its last pass — has nothing
+	// to copy while it waits for the others, and a pass would only confirm that, at the price of
+	// enumerating the set (the platform image read to its end, per version) and asking for every
+	// manifest of it.
+	if AlreadyHeld(action, setKey, reported, reportedSource, leader) {
+		action = ActionNone
+	}
+	// Decided here, before a registry that is not listening turns the pass into nothing: that copy is
+	// still owed, only postponed.
+	copies := action == ActionFill || action == ActionReplicate
+	l.copiesNothing.Store(!copies)
+	if !copies {
+		// A silence is timed across the passes that wanted the registry and could not have it. One that
+		// wanted nothing ends the series: left standing, a silence days old made the next ordinary
+		// restart of the registry an error at once, without the grace it is given.
+		l.registryDownSince.Store(0)
+	}
+
+	// The fill and the replication go through this replica's own registry, which is not listening
+	// for a while after it restarts: the configuration applied above may have just restarted it, and
+	// the wrapper walks the whole store before it opens a port. A pass started in that window failed
+	// every reference on "connection refused" and published it as the replica's error — on a fresh
+	// cluster, "432 of 432 references could not be copied" at the very start of the fill. So the pass
+	// waits for the registry, which covers a restart. One that stays down past that is reported as
+	// what it is, once, and the copy is left to the next pass; the rest of the pass still runs.
+	if action == ActionFill || action == ActionReplicate {
+		// The set first: a copy ahead in progress gives way to a pass that has to copy it, and is
+		// resumed once the store is complete again.
+		l.stopAhead()
+		if err := l.awaitLocalRegistry(ctx); err != nil {
+			l.Log.Warn("this replica's registry is not listening, so the copy waits for the next pass",
+				"error", err.Error())
+			action = ActionNone
+			// Reported only once it has been down for a while. The wrapper walks the whole store before it
+			// opens a port, after every restart the configuration causes, and on a large store that takes
+			// longer than one wait: reported at once, every such restart turned the storage Failed.
+			since := l.registryDownSince.Load()
+			if since == 0 {
+				since = time.Now().UnixNano()
+				l.registryDownSince.Store(since)
+			}
+			if time.Since(time.Unix(0, since)) >= registryDownReported {
+				state.Error = fmt.Sprintf("this replica's registry is not listening: %v", err)
+			}
+		} else {
+			l.registryDownSince.Store(0)
+		}
+	}
+
+	// What is ahead of the set, copied once this pass has said what it found — see copyAhead.
+	var ahead *fill.Copier
 
 	switch action {
 	case ActionFill:
@@ -634,7 +763,7 @@ func (l *Loop) once(ctx context.Context) error {
 			// a collection does not start while a fill is owed — see gc.Plan.FillPending.
 			done := l.PauseWrites()
 			defer done()
-			l.applyFill(ctx, spec, stated, &state)
+			ahead = l.applyFill(ctx, spec, stated, &state)
 		}()
 		l.filling.Store(false)
 		// What the fill moved is logged; what the replica HOLDS of the declared set is published.
@@ -647,7 +776,7 @@ func (l *Loop) once(ctx context.Context) error {
 		func() {
 			done := l.PauseWrites()
 			defer done()
-			l.applyReplicate(ctx, leader, &state)
+			ahead = l.applyReplicate(ctx, leader, &state)
 		}()
 		l.filling.Store(false)
 		// The same correction as above, and the branch it matters most on: a follower enumerates
@@ -662,6 +791,7 @@ func (l *Loop) once(ctx context.Context) error {
 		if err := l.carryOverCount(ctx, &state); err != nil {
 			return err
 		}
+		l.recheckStore(ctx, &state, reported)
 	}
 
 	// While the write endpoint is open, the store has the last word on how much it
@@ -736,7 +866,327 @@ func (l *Loop) once(ctx context.Context) error {
 	// fill would, published at its end, put back what the store watcher had long since replaced.
 	state.Store = l.measureStore(spec)
 
-	return l.Publisher.Publish(ctx, state)
+	// What is ahead of the set, held as of the last copy that went through — or, unknown this pass, as
+	// reported last.
+	state.AheadSet = reportedAhead
+	if keysKnown {
+		state.AheadSet = l.heldAhead(aheadKey, reportedAhead)
+	}
+
+	err = l.Publisher.Publish(ctx, state)
+	if keysKnown {
+		l.considerAhead(ctx, spec, isLeader, leader, aheadKey, state, ahead)
+	}
+	return err
+}
+
+// aheadRetry is how soon a copy ahead that missed something is tried again for the same updates.
+const aheadRetry = 10 * time.Minute
+
+// aheadRoom is the share of the store a copy ahead leaves free: none starts into a store fuller than
+// that.
+const aheadRoom = 5 // one fifth
+
+// considerAhead starts a copy of what is ahead of the set — the next platform release, the pending
+// module versions — in the background, if this replica does not hold it yet and can get it.
+//
+// In the background because it is background work: run inside the pass, at the background pace and
+// through an upstream that may be slow to answer, it held the next pass back — on a harbor stand two
+// minutes once and four and a half once more, chasing one reference the cold mirror did not have, while
+// the set had grown and waited to be copied. The cluster converges on the set, not on what is ahead of
+// it, and converged a quarter of an hour later than the same run on main.
+//
+// Only from a store complete for the set: until it is, the next pass copies the set, and that is what
+// the cluster is waiting for. Held is decided by the copy itself — see AheadKey — so a copy stopped by
+// a pass that copies the set, cut short by a restart, or missing what its source does not have yet
+// leaves it unheld, and an idle pass starts it again; one that missed something waits aheadRetry
+// first, so as not to read a whole release every half a minute for an image nobody has published.
+//
+// Where it is copied from is the replica's own business. The leader with an upstream copies from it.
+// An air-gapped leader has nothing to copy from — what is ahead was pushed onto it, or was not — so it
+// checks its own store, and holds what it finds. A follower copies from a leader that holds the same
+// updates, and only them: copying a part the leader is short of would only miss what the leader misses.
+//
+// Part by part — see AheadKey. A replica copies the parts it lacks, a follower those of them its leader
+// holds, and a part missed stays missed alone: one module whose source cannot be read no longer keeps
+// the platform release beside it off every follower.
+func (l *Loop) considerAhead(
+	ctx context.Context, spec *registryv1alpha1.RegistryStorageSpec, isLeader bool, leader *Leader,
+	current string, state report.State, passCopier *fill.Copier,
+) {
+	if current == "" || !state.Full || state.Error != "" {
+		return
+	}
+	held := splitParts(state.AheadSet)
+	var copyable map[string]bool
+	if !isLeader {
+		if leader == nil {
+			return
+		}
+		copyable = splitParts(leader.AheadSet)
+	}
+	var want []string
+	for part := range splitParts(current) {
+		if !held[part] && (copyable == nil || copyable[part]) {
+			want = append(want, part)
+		}
+	}
+	if len(want) == 0 {
+		return
+	}
+	key := joinParts(want)
+	wanted := splitParts(key)
+
+	l.aheadMu.Lock()
+	running := l.aheadCancel != nil
+	missedLately := l.aheadMissedFor == key && time.Since(l.aheadMissedAt) < aheadRetry
+	l.aheadMu.Unlock()
+	if running || missedLately {
+		return
+	}
+
+	checking := isLeader && spec.Upstream == nil
+	if !checking && !roomAhead(state.Store) {
+		l.Log.Info("the store is too full to copy ahead of the set, so the updates are left for when they "+
+			"are deployed", "retry_in", aheadRetry.String())
+		l.missedAhead(key)
+		return
+	}
+
+	copier, run := passCopier, (*fill.Copier).RunAhead
+	if copier == nil {
+		built, err := l.aheadCopier(ctx, spec, isLeader, leader)
+		if err != nil {
+			l.Log.Warn("cannot copy ahead of the set", "error", err.Error(), "retry_in", aheadRetry.String())
+			l.missedAhead(key)
+			return
+		}
+		copier, run = built, (*fill.Copier).CopyAhead
+	}
+	copier.AheadWant = func(part string) bool { return wanted[part] }
+	if !checking {
+		copier.AheadRoom = func() bool { return roomAhead(l.measureStore(spec)) }
+	}
+	l.startAhead(ctx, func(ctx context.Context) fill.Report { return run(copier, ctx) }, key,
+		aheadScope(spec, isLeader, leader))
+}
+
+// roomAhead reports whether a store has room for what is ahead of the set: writable, and with a fifth
+// of its budget — or of its filesystem, without one — still free. Unmeasured is room: the store refuses
+// writes itself when it has none, and the copy ahead stops at the first refusal.
+//
+// The set comes first, and the room it may need is the room a copy ahead would take. A store filled
+// ahead to its last byte refused the next change of the set — a patch, a module enabled — and the
+// storage went Failed with an upstream that could not be dropped, over updates nothing had deployed.
+func roomAhead(store *registryv1alpha1.StoreUsage) bool {
+	if store == nil {
+		return true
+	}
+	if !store.Writable {
+		return false
+	}
+	room := store.FilesystemFreeBytes - store.ReserveBytes
+	whole := store.FilesystemCapacityBytes
+	if store.BudgetBytes > 0 {
+		room = min(room, store.BudgetBytes-store.UsedBytes)
+		whole = store.BudgetBytes
+	}
+	return whole <= 0 || room >= whole/aheadRoom
+}
+
+// missedAhead records a copy ahead for key that did not go through, so that the next waits aheadRetry.
+func (l *Loop) missedAhead(key string) {
+	l.aheadMu.Lock()
+	defer l.aheadMu.Unlock()
+	l.aheadMissedFor, l.aheadMissedAt = key, time.Now()
+}
+
+// heldAhead is the parts of what is ahead of the set this replica holds, of the current ones: those a
+// copy here left whole, and those it reported before a restart. Parts no longer pending fall away.
+func (l *Loop) heldAhead(current, reported string) string {
+	parts := splitParts(current)
+	l.aheadMu.Lock()
+	defer l.aheadMu.Unlock()
+	for part := range l.aheadHeld {
+		if !parts[part] {
+			delete(l.aheadHeld, part)
+		}
+	}
+	if l.aheadForgotten {
+		reported = ""
+	}
+	before := splitParts(reported)
+	var held []string
+	for part := range parts {
+		if l.aheadHeld[part] || before[part] {
+			held = append(held, part)
+		}
+	}
+	return joinParts(held)
+}
+
+// ForgetAhead drops what this replica holds ahead of the set: the collection has taken it back — see
+// gc.Collector.ReleaseAhead — and saying otherwise would send its followers to copy what it no longer
+// has. Copied again, part by part, once the store has room.
+func (l *Loop) ForgetAhead() {
+	l.aheadMu.Lock()
+	defer l.aheadMu.Unlock()
+	l.aheadHeld = nil
+	l.aheadForgotten = true
+}
+
+// RoomAhead reports whether this replica's store has room for what is ahead of the set — see roomAhead.
+func (l *Loop) RoomAhead() bool {
+	spec := l.Desired()
+	if spec == nil {
+		return true
+	}
+	return roomAhead(l.measureStore(spec))
+}
+
+// aheadScope is what a copy ahead is started under: the role, and where it reads from — the leader it
+// follows, or the upstream with its account and authority.
+func aheadScope(spec *registryv1alpha1.RegistryStorageSpec, isLeader bool, leader *Leader) string {
+	if !isLeader {
+		if leader == nil {
+			return "follower"
+		}
+		return "follower of " + leader.Node + " at " + leader.Address
+	}
+	if spec == nil || spec.Upstream == nil {
+		return "leader"
+	}
+	encoded, _ := json.Marshal(spec.Upstream)
+	sum := sha256.Sum256(encoded)
+	return "leader of " + hex.EncodeToString(sum[:8])
+}
+
+// aheadCopier builds a copy of what is ahead of the set for a replica that copies nothing else this
+// pass. See considerAhead for where each role copies it from.
+func (l *Loop) aheadCopier(
+	ctx context.Context, spec *registryv1alpha1.RegistryStorageSpec, isLeader bool, leader *Leader,
+) (*fill.Copier, error) {
+	releases, err := gc.FromCluster(ctx, l.Client)
+	if err != nil {
+		return nil, err
+	}
+	modules, err := gc.ModulesFromCluster(ctx, l.Client)
+	if err != nil {
+		return nil, err
+	}
+	if isLeader && spec.Upstream != nil {
+		return l.copier(spec, releases, modules)
+	}
+
+	destination, err := l.writeRegistry()
+	if err != nil {
+		return nil, err
+	}
+	discover := fill.Release{
+		Versions: versionsOf(releases), Pending: releases.Pending, Modules: modules,
+		CatalogueUnavailable: func(err error) {
+			l.Log.Warn("the module catalogue cannot be listed, so an air-gapped cluster will not be "+
+				"able to enumerate modules", "error", err.Error())
+		},
+	}
+	if isLeader {
+		// Read from the store it is checked into: what is there is skipped as present, and what is not
+		// is a miss, absent at a source that is the store itself.
+		return &fill.Copier{Source: destination, Destination: destination, Discover: discover, StoreDir: l.dataDir()}, nil
+	}
+
+	local, err := l.localRegistry()
+	if err != nil {
+		return nil, err
+	}
+	ahead := local
+	ahead.Address = leader.Address
+	if ahead.Options, err = fill.PacedRegistryOptions(l.LocalCA, l.LocalUser, l.LocalPassword, l.CopyPacer); err != nil {
+		return nil, err
+	}
+	return &fill.Copier{Source: ahead, Ahead: &ahead, Destination: destination, Discover: discover, StoreDir: l.dataDir()}, nil
+}
+
+// startAhead runs a copy ahead for key in the background.
+func (l *Loop) startAhead(ctx context.Context, run func(context.Context) fill.Report, key, scope string) {
+	l.stopAhead()
+
+	l.aheadMu.Lock()
+	defer l.aheadMu.Unlock()
+	aheadCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	l.aheadCancel, l.aheadDone, l.aheadScope = cancel, done, scope
+	l.aheadRunning.Store(true)
+
+	go func() {
+		defer close(done)
+		defer l.aheadRunning.Store(false)
+
+		release := l.PauseWrites()
+		report := run(aheadCtx)
+		release()
+
+		stopped := aheadCtx.Err() != nil
+		switch {
+		case len(report.AheadMissed) > 0 && !stopped:
+			// Said with what was missed: a release that never arrives looks, from outside, like one
+			// that was never asked for.
+			l.Log.Warn("copied ahead of the set, with some of it missing", "copied", report.AheadCopied,
+				"missed", len(report.AheadMissed), "first_missed", report.AheadMissed[0],
+				"retry_in", aheadRetry.String())
+		case report.AheadCopied > 0 || stopped:
+			l.Log.Info("copied ahead of the set", "copied", report.AheadCopied, "stopped", stopped)
+		}
+
+		l.aheadMu.Lock()
+		defer l.aheadMu.Unlock()
+		if l.aheadDone == done {
+			l.aheadCancel, l.aheadDone, l.aheadScope = nil, nil, ""
+		}
+		// Whole is whole, stopped or not; what was missed waits aheadRetry, unless it was only stopped.
+		if l.aheadHeld == nil {
+			l.aheadHeld = map[string]bool{}
+		}
+		for _, part := range report.AheadHeld {
+			l.aheadHeld[part] = true
+		}
+		if !stopped && len(report.AheadMissed) > 0 {
+			l.aheadMissedFor, l.aheadMissedAt = key, time.Now()
+		}
+		cancel()
+	}()
+}
+
+// stopAhead stops a copy ahead in progress and waits until it has.
+func (l *Loop) stopAhead() {
+	l.aheadMu.Lock()
+	cancel, done := l.aheadCancel, l.aheadDone
+	l.aheadMu.Unlock()
+	if cancel == nil {
+		return
+	}
+	cancel()
+	<-done
+}
+
+// stopAheadOutside stops a copy ahead started under a scope other than this one.
+func (l *Loop) stopAheadOutside(scope string) {
+	l.aheadMu.Lock()
+	other := l.aheadCancel != nil && l.aheadScope != scope
+	l.aheadMu.Unlock()
+	if other {
+		l.stopAhead()
+	}
+}
+
+// waitAhead waits for a copy ahead in progress to finish on its own.
+func (l *Loop) waitAhead() {
+	l.aheadMu.Lock()
+	done := l.aheadDone
+	l.aheadMu.Unlock()
+	if done != nil {
+		<-done
+	}
 }
 
 // recountFromStore replaces this pass's accounting with what the storage actually
@@ -765,7 +1215,7 @@ func (l *Loop) recountFromStore(ctx context.Context, state *report.State) {
 
 func (l *Loop) applyFill(
 	ctx context.Context, spec *registryv1alpha1.RegistryStorageSpec, stated int32, state *report.State,
-) {
+) *fill.Copier {
 	// What the cluster runs, and what it ran before it.
 	//
 	// The same pair the collector keeps, so that the fill puts in what the collector would
@@ -778,21 +1228,22 @@ func (l *Loop) applyFill(
 		l.Log.Error("cannot tell what the cluster runs, so there is nothing to fill towards",
 			"error", err.Error())
 		state.Error = err.Error()
-		return
+		return nil
 	}
 
 	modules, err := gc.ModulesFromCluster(ctx, l.Client)
 	if err != nil {
 		state.Error = err.Error()
-		return
+		return nil
 	}
 
 	copier, err := l.copier(spec, releases, modules)
 	if err != nil {
 		state.Error = err.Error()
-		return
+		return nil
 	}
-	copier.OnProgress = l.progress(ctx, *state, "", "fill")
+	copier.OnProgress = l.progress(ctx, *state, "fill")
+	copier.SeparateAhead = true
 
 	// `stated` is logged and nothing more. It is what an operator counted in a bundle, and by the
 	// owner's rule it may not enter the decision — the fill is judged against the set the run
@@ -806,7 +1257,7 @@ func (l *Loop) applyFill(
 	if err != nil {
 		state.Error = err.Error()
 		state.VerifiedDigests = result.Written
-		return
+		return nil
 	}
 
 	state.VerifiedDigests = result.Written
@@ -820,6 +1271,7 @@ func (l *Loop) applyFill(
 
 	l.Log.Info("the fill finished",
 		"written", result.Written, "skipped", result.Skipped, "failed", len(result.Failed), "full", state.Full)
+	return copier
 }
 
 // applyReplicate copies the leader's content into this replica.
@@ -829,22 +1281,36 @@ func (l *Loop) applyFill(
 // and nothing that grants more than a pull.
 func (l *Loop) applyReplicate(
 	ctx context.Context, leader *Leader, state *report.State,
-) {
+) *fill.Copier {
 	local, err := l.localRegistry()
 	if err != nil {
 		state.Error = err.Error()
-		return
+		return nil
 	}
 
 	source := local
 	source.Address = leader.Address
+	// Not paced, like the leader's own fill of the set, and for the same reason one step further on: a
+	// follower without the set is a replica the cluster cannot fall back on, and in an air-gapped
+	// cluster there is nothing else to fall back on. Paced, two followers of a fresh dhctl-airgap
+	// cluster took half an hour to copy 13 GB from their leader, where the scenario — and main, which
+	// never paced it — expects minutes. What is ahead of the set is paced, as on the leader.
+	if source.Options, err = fill.RegistryOptions(l.LocalCA, l.LocalUser, l.LocalPassword); err != nil {
+		state.Error = err.Error()
+		return nil
+	}
+	ahead := source
+	if ahead.Options, err = fill.PacedRegistryOptions(l.LocalCA, l.LocalUser, l.LocalPassword, l.CopyPacer); err != nil {
+		state.Error = err.Error()
+		return nil
+	}
 
 	// Written through the instance that does not proxy — see writeRegistry. A follower filling
 	// through the serving one skips every layer for the same reason a leader does.
 	destination, err := l.writeRegistry()
 	if err != nil {
 		state.Error = err.Error()
-		return
+		return nil
 	}
 
 	// What to copy is read out of the releases, exactly as the leader's own fill reads it, and not
@@ -865,15 +1331,10 @@ func (l *Loop) applyReplicate(
 		l.Log.Error("cannot tell what the cluster runs, so there is nothing to replicate towards",
 			"error", err.Error())
 		state.Error = err.Error()
-		return
+		return nil
 	}
 
-	versions := make([]string, 0, 2)
-	for _, version := range []string{releases.Deployed, releases.Previous} {
-		if version != "" {
-			versions = append(versions, version)
-		}
-	}
+	versions := versionsOf(releases)
 
 	// The same modules the count and the fill enumerate: a follower that copied less than the leader
 	// holds would report itself incomplete forever, and one that copied more would look for images
@@ -883,7 +1344,7 @@ func (l *Loop) applyReplicate(
 	modules, err := gc.ModulesFromCluster(ctx, l.Client)
 	if err != nil {
 		state.Error = err.Error()
-		return
+		return nil
 	}
 
 	l.Log.Info("replicating from the leader",
@@ -894,7 +1355,7 @@ func (l *Loop) applyReplicate(
 		Source:      source,
 		Destination: destination,
 		Discover: fill.Release{
-			Versions: versions, Modules: modules,
+			Versions: versions, Pending: releases.Pending, Modules: modules,
 			CatalogueUnavailable: func(err error) {
 				l.Log.Warn("the module catalogue cannot be listed, so an air-gapped cluster will not be "+
 					"able to enumerate modules", "error", err.Error())
@@ -902,8 +1363,14 @@ func (l *Loop) applyReplicate(
 		},
 		// So that an image the store holds without its layers is copied rather than skipped: the
 		// registry answers "present" for those, and a follower would otherwise never repair itself.
-		StoreDir:   l.dataDir(),
-		OnProgress: l.progress(ctx, *state, leader.Node, "replication"),
+		StoreDir: l.dataDir(),
+		// No source in the progress. It used to name the leader from the first reference on, and an
+		// entry already full for the set with the new leader as its source reads, to the controller,
+		// as a replication that finished: a pass cut short — the StatefulSet rolling — left a follower
+		// that never copied from the leader it names. The source goes in with the final report alone.
+		OnProgress:    l.progress(ctx, *state, "replication"),
+		SeparateAhead: true,
+		Ahead:         &ahead,
 	}
 
 	result, err := copier.Run(ctx)
@@ -912,7 +1379,7 @@ func (l *Loop) applyReplicate(
 
 	if err != nil {
 		state.Error = err.Error()
-		return
+		return nil
 	}
 
 	state.Full = result.Complete()
@@ -930,6 +1397,7 @@ func (l *Loop) applyReplicate(
 		"written", result.Written, "skipped", result.Skipped,
 		"pending_on_the_leader", len(result.Pending),
 		"failed", len(result.Failed), "full", state.Full)
+	return copier
 }
 
 // currentLeader reads who to replicate from out of the reports.
@@ -957,7 +1425,8 @@ func (l *Loop) currentLeader(ctx context.Context) (*Leader, error) {
 			Address: replica.Address,
 			// A replica that both claims completeness and reports a failure is not
 			// trustworthy enough to copy a whole set from.
-			Full: replica.Full && replica.Error == "",
+			Full:     replica.Full && replica.Error == "",
+			AheadSet: replica.AheadSet,
 		}, nil
 	}
 	return nil, nil
@@ -1044,6 +1513,8 @@ func (l *Loop) applyCatalogue(ctx context.Context, state *report.State) {
 }
 
 // versionsOf is the pair the store is kept for: what the cluster runs, and what it would roll back to.
+// versionsOf is the platform versions the set is made of. Not the pending ones: those are copied ahead
+// of time, outside the set — see fill.Release.Optional.
 func versionsOf(releases gc.Releases) []string {
 	versions := make([]string, 0, 2)
 	for _, version := range []string{releases.Deployed, releases.Previous} {
@@ -1067,39 +1538,55 @@ func versionsOf(releases gc.Releases) []string {
 // controller asks for a fill again — and since eligibility to lead depends on being full, the lease
 // travels with it and the whole thing reads as flapping leader election.
 // setKey is the fingerprint of the set the cluster needs now — see SetKey.
-func (l *Loop) setKey(ctx context.Context) (string, error) {
-	return CurrentSetKey(ctx, l.Client)
+func (l *Loop) keys(ctx context.Context) (string, string, error) {
+	return CurrentKeys(ctx, l.Client)
 }
 
 // CurrentSetKey is the fingerprint of the set the cluster needs now, read from the API server: what
 // a replica's Full is compared against, both by the replica reporting it and by every replica
 // deciding who may lead.
 func CurrentSetKey(ctx context.Context, c client.Client) (string, error) {
+	set, _, err := CurrentKeys(ctx, c)
+	return set, err
+}
+
+// CurrentKeys is CurrentSetKey and, beside it, the AheadKey of what is pending now.
+func CurrentKeys(ctx context.Context, c client.Client) (string, string, error) {
 	releases, err := gc.FromCluster(ctx, c)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	modules, err := gc.ModulesFromCluster(ctx, c)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return SetKey(releases.Deployed, releases.Previous, modules), nil
+	catalogue, err := gc.CatalogueFromCluster(ctx, c)
+	if err != nil {
+		return "", "", err
+	}
+	return SetKey(releases, modules, catalogue), AheadKey(releases, modules), nil
 }
 
-// reportedVerifiedSet is the fingerprint this replica last reported Full against, read back from the
-// status so that it survives a restart. Empty when it cannot be read, which Reverify treats as "not
-// verified" — the one direction that costs a pass rather than a wrong answer.
-func (l *Loop) reportedVerifiedSet(ctx context.Context) string {
+// reportedSets is the fingerprint this replica last reported Full against, read back from the status
+// so that it survives a restart, with the replica it was replicated from — and the AheadSet it last
+// reported. Empty when it cannot be read, which Reverify and AlreadyHeld treat as "not verified" — the
+// one direction that costs a pass rather than a wrong answer.
+func (l *Loop) reportedSets(ctx context.Context) (string, string, string) {
 	storage := &registryv1alpha1.RegistryStorage{}
 	if err := l.Client.Get(ctx, types.NamespacedName{Name: registryv1alpha1.SingletonName}, storage); err != nil {
-		return ""
+		return "", "", ""
 	}
 	for i := range storage.Status.Replicas {
-		if storage.Status.Replicas[i].Node == l.Node && storage.Status.Replicas[i].Full {
-			return storage.Status.Replicas[i].VerifiedSet
+		replica := &storage.Status.Replicas[i]
+		if replica.Node != l.Node {
+			continue
 		}
+		if !replica.Full {
+			return "", "", replica.AheadSet
+		}
+		return replica.VerifiedSet, replica.Source, replica.AheadSet
 	}
-	return ""
+	return "", "", ""
 }
 
 func (l *Loop) carryOverCount(ctx context.Context, state *report.State) error {
@@ -1172,7 +1659,16 @@ func (l *Loop) copier(
 	// form, kept serving images: see Auth.BasicCredentials.
 	username, password := spec.Upstream.Auth.BasicCredentials()
 
+	// The set is read unpaced and only what is ahead of it through the pacer — see Copier.Ahead. Paced,
+	// the set itself kept the nodes on the upstream for as long as the pacer took to copy it: some
+	// 12 minutes for 11.8 GB at the default rate, during which a cold proxy-cache upstream failed
+	// the pulls and the platform stood still. The harbor unit converged in 36 minutes of its 45 where
+	// the same build without the pacer took 27, and on the next run did not converge at all.
 	upstreamOptions, err := fill.RegistryOptions(spec.Upstream.CA, username, password)
+	if err != nil {
+		return nil, fmt.Errorf("upstream: %w", err)
+	}
+	aheadOptions, err := fill.PacedRegistryOptions(spec.Upstream.CA, username, password, l.CopyPacer)
 	if err != nil {
 		return nil, fmt.Errorf("upstream: %w", err)
 	}
@@ -1185,12 +1681,7 @@ func (l *Loop) copier(
 		return nil, err
 	}
 
-	versions := make([]string, 0, 2)
-	for _, version := range []string{releases.Deployed, releases.Previous} {
-		if version != "" {
-			versions = append(versions, version)
-		}
-	}
+	versions := versionsOf(releases)
 
 	upstream := fill.Registry{
 		Address:    spec.Upstream.Host,
@@ -1198,24 +1689,55 @@ func (l *Loop) copier(
 		Options:    upstreamOptions,
 	}
 
+	ahead := upstream
+	ahead.Options = aheadOptions
+
 	// Where each module is read from: the upstream, its own ModuleSource's registry, or — for a source
 	// already pointed at this store — the store itself, through the listener that does not proxy, so
 	// that what is checked is what the store holds.
-	modules, err = fill.ResolveOrigins(modules, upstream, local)
-	if err != nil {
+	//
+	// The modules the cluster runs strictly: one whose source cannot be read is a set that cannot be
+	// copied. The updates it is about to apply one at a time and paced, as everything ahead of the set
+	// is: a source that cannot be read for an update leaves that update out of the copy ahead — which
+	// then misses it, and is tried again — instead of failing the copy of the set the cluster runs.
+	var kept, pending []fill.ModuleRef
+	for _, module := range modules {
+		if module.Pending {
+			pending = append(pending, module)
+		} else {
+			kept = append(kept, module)
+		}
+	}
+	if kept, err = fill.ResolveOrigins(kept, upstream, local); err != nil {
 		return nil, err
 	}
+	var updates []fill.ModuleRef
+	var unread []string
+	for _, module := range pending {
+		resolved, err := fill.ResolvePacedOrigins([]fill.ModuleRef{module}, ahead, local, l.CopyPacer)
+		if err != nil {
+			l.Log.Warn("the source of a pending module update cannot be read, so it is not copied ahead",
+				"module", module.Name, "version", module.Version, "error", err.Error())
+			unread = append(unread, module.Name+"@"+module.Version+": "+err.Error())
+			continue
+		}
+		updates = append(updates, resolved...)
+	}
+	modules = append(append([]fill.ModuleRef{}, kept...), updates...)
 
 	return &fill.Copier{
 		Source:      upstream,
-		Routes:      fill.Routes(modules, local),
+		Ahead:       &ahead,
+		Routes:      fill.Routes(kept, local),
+		AheadRoutes: fill.Routes(updates, local),
+		AheadUnread: unread,
 		Destination: local,
 		// Read out of the releases themselves rather than by listing the upstream. Listing
 		// somebody else's registry is a privilege of its own, which credentials scoped to
 		// pulling — all a license grants — are refused for; and "everything the upstream
 		// holds" is not a set a cache can be complete with respect to anyway.
 		Discover: fill.Release{
-			Versions: versions, Modules: modules,
+			Versions: versions, Pending: releases.Pending, Modules: modules,
 			CatalogueUnavailable: func(err error) {
 				l.Log.Warn("the module catalogue cannot be listed, so an air-gapped cluster will not be "+
 					"able to enumerate modules", "error", err.Error())
@@ -1261,6 +1783,111 @@ func (l *Loop) storeStarting(ctx context.Context) bool {
 	l.Log.Info("this replica's registry does not answer yet; the pass waits for it instead of reporting its start as a failure",
 		"address", l.LocalAddress, "error", err.Error())
 	return true
+}
+
+// releaseAbsent reports whether this replica's own store answers that it does not hold the deployed
+// release — the image the set is read out of.
+func (l *Loop) releaseAbsent(ctx context.Context) bool {
+	releases, err := gc.FromCluster(ctx, l.Client)
+	if err != nil || releases.Deployed == "" {
+		return false
+	}
+	local, err := l.localRegistry()
+	if err != nil {
+		return false
+	}
+	return fill.ReleaseAbsent(ctx, local, releases.Deployed)
+}
+
+// storeRecheck is how often an idle replica reads its own store again, unless Loop.StoreRecheck says
+// otherwise.
+const storeRecheck = 6 * time.Hour
+
+// recheckStore re-reads what the store holds on an idle pass, once in a while.
+//
+// Nothing is copied while every replica holds the set, so nothing else would notice a store that
+// lost part of it — a disk replaced or cleaned by hand, a directory restored from an old copy: the
+// replica would go on reporting the last pass that did copy. Read again here, from this replica's
+// own disk and registry — no upstream, no leader — and reported as found; a replica that is no
+// longer complete makes the controller raise needSync, and the copy that follows repairs it.
+//
+// Not on every pass, because reading the set means reading the platform image to its end, and an
+// idle cluster has no reason to spend that every half a minute. The first idle pass of a process
+// does it, which covers a restart; after that, every StoreRecheck. A reading that fails changes
+// nothing and is tried again on the next pass.
+//
+// It can take a fingerprint away and never gives one: a reading that finds the store complete says
+// what is on the disk now, not that a pass copied the set the fingerprint names — a follower reads its
+// own disk, and only a replication says it holds what its leader holds. The fingerprint stays whatever
+// the last copying pass made it, or goes.
+func (l *Loop) recheckStore(ctx context.Context, state *report.State, reported string) {
+	every := l.StoreRecheck
+	if every <= 0 {
+		every = storeRecheck
+	}
+	if last := l.lastStoreCheck.Load(); last != 0 && time.Since(time.Unix(0, last)) < every {
+		return
+	}
+	// Counted as a check whether or not it could read the store, so that a reading that fails is tried
+	// again in storeRecheckRetry rather than on every pass of the loop.
+	l.lastStoreCheck.Store(time.Now().Add(min(storeRecheckRetry, every) - every).UnixNano())
+	if !l.reportHeld(ctx, state) {
+		return
+	}
+	l.lastStoreCheck.Store(time.Now().UnixNano())
+
+	state.VerifiedSet = ""
+	if state.Full && state.Error == "" {
+		state.VerifiedSet = reported
+	}
+}
+
+// registryDownReported is how long this replica's registry may stay silent before the status says so.
+const registryDownReported = 5 * time.Minute
+
+// storeRecheckRetry is how soon a store check that could not read the store is tried again.
+const storeRecheckRetry = 10 * time.Minute
+
+// localRegistryWait is how long a pass waits for this replica's registry to open its ports, unless
+// Loop.RegistryWait says otherwise.
+const localRegistryWait = 20 * time.Second
+
+// awaitLocalRegistry waits until both of this replica's listeners accept a connection: the serving
+// one, which a follower and the set enumeration read through, and the write endpoint the copy lands
+// on. A connection is the whole question — a registry that answers at all answers the copy's own
+// errors properly, while one that is not listening fails every reference the same way.
+func (l *Loop) awaitLocalRegistry(ctx context.Context) error {
+	if l.LocalAddress == "" {
+		return nil
+	}
+	write, err := l.writeRegistry()
+	if err != nil {
+		return err
+	}
+
+	wait := l.RegistryWait
+	if wait <= 0 {
+		wait = localRegistryWait
+	}
+	ctx, cancel := context.WithTimeout(ctx, wait)
+	defer cancel()
+
+	var dialer net.Dialer
+	for _, address := range []string{l.LocalAddress, write.Address} {
+		for {
+			connection, err := dialer.DialContext(ctx, "tcp", address)
+			if err == nil {
+				_ = connection.Close()
+				break
+			}
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("%s: %w", address, err)
+			case <-time.After(time.Second):
+			}
+		}
+	}
+	return nil
 }
 
 func (l *Loop) localRegistry() (fill.Registry, error) {

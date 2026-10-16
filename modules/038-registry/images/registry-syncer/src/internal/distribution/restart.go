@@ -60,7 +60,10 @@ type SignalRestarter struct {
 	signal func(pid int, sig syscall.Signal) error
 }
 
-var _ Restarter = (*SignalRestarter)(nil)
+var (
+	_ Restarter = (*SignalRestarter)(nil)
+	_ Waker     = (*SignalRestarter)(nil)
+)
 
 // Restart signals every matching process.
 //
@@ -69,13 +72,27 @@ var _ Restarter = (*SignalRestarter)(nil)
 // configuration nobody rewrote. A pod that briefly holds an old process beside a new one is exactly
 // the case where signalling only the first would be wrong.
 func (s *SignalRestarter) Restart() error {
-	procDir := s.ProcDir
-	if procDir == "" {
-		procDir = "/proc"
-	}
 	signalNumber := s.Signal
 	if signalNumber == 0 {
 		signalNumber = syscall.SIGTERM
+	}
+	return s.send(signalNumber)
+}
+
+// Wake tells a registry still waiting for its first configuration that the configuration is there.
+//
+// SIGHUP, never the restart's signal: the registry reads SIGTERM as a stop whatever is on disk, so
+// that the kubelet's own SIGTERM is never mistaken for this news, and keeps SIGHUP ignored once it
+// serves, so that this news arriving a moment after the registry found the files on its own does
+// not kill it. See awaitConfig in the registry image.
+func (s *SignalRestarter) Wake() error {
+	return s.send(syscall.SIGHUP)
+}
+
+func (s *SignalRestarter) send(signalNumber syscall.Signal) error {
+	procDir := s.ProcDir
+	if procDir == "" {
+		procDir = "/proc"
 	}
 
 	pids, err := s.find(procDir)
@@ -90,13 +107,13 @@ func (s *SignalRestarter) Restart() error {
 		return fmt.Errorf("%w: no process named %q in %s", ErrNoProcess, s.ProcessName, procDir)
 	}
 
-	send := s.signal
-	if send == nil {
-		send = syscall.Kill
+	kill := s.signal
+	if kill == nil {
+		kill = syscall.Kill
 	}
 
 	for _, pid := range pids {
-		if err := send(pid, signalNumber); err != nil {
+		if err := kill(pid, signalNumber); err != nil {
 			return fmt.Errorf("signalling process %d: %w", pid, err)
 		}
 	}

@@ -213,6 +213,25 @@ func TestRegistrySecretHandler(t *testing.T) {
 			wantAllowed: true,
 		},
 		{
+			name: "empty path allowed",
+			secret: createSecret("d8-system", "deckhouse-registry", map[string][]byte{
+				"address":           []byte("registry.example.com"),
+				"path":              []byte(""),
+				".dockerconfigjson": validDockerCfgJSON,
+			}),
+			wantAllowed: true,
+		},
+		{
+			name: "path contains whitespace rejected",
+			secret: createSecret("d8-system", "deckhouse-registry", map[string][]byte{
+				"address":           []byte("registry.example.com"),
+				"path":              []byte("/deckhouse/ ee"),
+				".dockerconfigjson": validDockerCfgJSON,
+			}),
+			wantAllowed: false,
+			wantMessage: "Field 'path' contains spaces",
+		},
+		{
 			name: "valid secret passes",
 			secret: createSecret("d8-system", "deckhouse-registry", map[string][]byte{
 				"address":           []byte("registry.example.com"),

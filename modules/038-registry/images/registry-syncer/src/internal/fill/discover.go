@@ -35,6 +35,16 @@ type Discoverer interface {
 	Discover(ctx context.Context, source Registry, puller *remote.Puller) ([]name.Reference, error)
 }
 
+// OptionalDiscoverer is a Discoverer with a second part: what a copy brings in ahead of time without
+// counting on it.
+//
+// The copy takes it after everything Discover listed, and what it cannot get — absent at the source,
+// refused, or with the store full — is logged and does not make the copy incomplete. Completeness is
+// about what the cluster needs now; this is what it is about to need.
+type OptionalDiscoverer interface {
+	Optional(ctx context.Context, source Registry, puller *remote.Puller) ([]name.Reference, error)
+}
+
 // Catalogue asks the source registry what it holds.
 //
 // For copies where the source is one of our own replicas: the registry is ours, so listing it

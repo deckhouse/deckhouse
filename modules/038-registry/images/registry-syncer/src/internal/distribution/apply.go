@@ -42,6 +42,16 @@ type Restarter interface {
 	Restart() error
 }
 
+// Waker is a Restarter that can also wake a registry still waiting for its first configuration.
+//
+// A different call because it is a different message, and the registry must be able to tell the two
+// apart: a restart is a stop the kubelet follows with a start, and the registry obeys a stop at once,
+// while it is waiting as much as while it serves — or the kubelet's own stop of a deleted pod would be
+// taken for news. Optional, so that a Restarter without it is signalled the way it always was.
+type Waker interface {
+	Wake() error
+}
+
 // Applier keeps the rendered configuration on disk in step with the desired
 // state, and restarts the registry when it actually changed.
 type Applier struct {
@@ -106,6 +116,11 @@ func (a *Applier) apply(spec *registryv1alpha1.RegistryStorageSpec, options Opti
 		return false, err
 	}
 
+	// Before anything is written: a registry finding either file missing is waiting for both rather
+	// than serving, so what it needs from this pass is the news that they are there, not a restart.
+	// The two files are never removed, so a registry that found them both is serving them.
+	waiting := !exists(a.ConfigPath) || !exists(a.WrapperPath())
+
 	caChanged, err := a.writeUpstreamCA(spec)
 	if err != nil {
 		return false, err
@@ -142,7 +157,11 @@ func (a *Applier) apply(spec *registryv1alpha1.RegistryStorageSpec, options Opti
 	}
 
 	if a.Restarter != nil {
-		switch err := a.Restarter.Restart(); {
+		signal := a.Restarter.Restart
+		if waker, ok := a.Restarter.(Waker); ok && waiting {
+			signal = waker.Wake
+		}
+		switch err := signal(); {
 		case errors.Is(err, ErrNoProcess):
 			// There was no process to signal, so there is no stale configuration being served
 			// either: whatever starts next reads the file that was just written. Reported and
@@ -190,6 +209,11 @@ func (a *Applier) writeUpstreamCA(spec *registryv1alpha1.RegistryStorageSpec) (b
 		return false, fmt.Errorf("writing the upstream certificate authority: %w", err)
 	}
 	return changed, nil
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // writeIfChanged writes content atomically, and only when it differs from what is

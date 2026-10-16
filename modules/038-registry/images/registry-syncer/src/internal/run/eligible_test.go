@@ -114,7 +114,9 @@ func TestMayLead(t *testing.T) {
 // an empty replica holding the lease while a full one follows it — the leader cannot fill,
 // the follower has nothing to copy from, and nothing recovers on its own.
 func TestAirGapCannotGetStuck(t *testing.T) {
-	airGap := &registryv1alpha1.RegistryStorageSpec{}
+	// NeedSync, because a replica — master-0 — is short of what the leader holds: the controller
+	// keeps it raised until every replica holds the set (FollowersBehind).
+	airGap := &registryv1alpha1.RegistryStorageSpec{NeedSync: true}
 
 	// `d8 mirror push` landed on master-1, which is not the current lease-holder.
 	replicas := []registryv1alpha1.StorageReplicaStatus{

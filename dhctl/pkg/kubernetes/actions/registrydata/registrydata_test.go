@@ -261,3 +261,83 @@ func TestAManagedClusterIsReadFromTheResourceEverywhere(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, upstream, conf.GetRegistry())
 }
+
+// TestAnAirGappedClusterIsReadFromTheStoreInTheCluster: no upstream, so the infrastructure converger in
+// the pod network reads the cluster's own store — and has to with the store's authority and its
+// read-only account. `deckhouse-registry` carries the installer's authority and no account, and was
+// what failed every converge with `x509: certificate signed by unknown authority`.
+func TestAnAirGappedClusterIsReadFromTheStoreInTheCluster(t *testing.T) {
+	const mirror = "registry.d8-system.svc:5001/system/deckhouse"
+
+	kubeCl := client.NewFakeKubernetesClient()
+	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "registryconfigs"}
+	_, err := kubeCl.Dynamic().Resource(gvr).Create(t.Context(), &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "RegistryConfig",
+		"metadata":   map[string]interface{}{"name": registryConfigResourceName},
+		"spec":       map[string]interface{}{"mode": "Managed", "storage": map[string]interface{}{"cache": true}},
+	}}, metav1.CreateOptions{})
+	require.NoError(t, err)
+	createDeckhouseRegistrySecret(t, kubeCl, mirror)
+
+	t.Run("without the store's access secret, as before", func(t *testing.T) {
+		conf, _, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, true)
+		require.NoError(t, err)
+		require.Equal(t, mirror, conf.GetRegistry())
+		require.NotEqual(t, "registry-ro", conf.GetUsername(), "read from deckhouse-registry, as before")
+	})
+
+	_, err = kubeCl.CoreV1().Secrets(d8RppSecretNamespace).Create(t.Context(), &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: storeAccessSecret, Namespace: d8RppSecretNamespace},
+		Data: map[string][]byte{
+			"username": []byte("registry-ro"), "password": []byte("fake-password"), "ca.crt": []byte(testCA),
+		},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Run("with it, the store's own authority and account", func(t *testing.T) {
+		conf, b64dc, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, true)
+		require.NoError(t, err)
+		require.Equal(t, mirror, conf.GetRegistry())
+		require.Equal(t, "registry-ro", conf.GetUsername())
+		require.Equal(t, testCA, conf.GetCA())
+
+		dockerCfg, err := image.DecodeDockerConfig(b64dc)
+		require.NoError(t, err)
+		fromCfg, err := image.RegistryConfigFromDockerConfig(dockerCfg, "HTTPS", mirror)
+		require.NoError(t, err)
+		require.Equal(t, "registry-ro", fromCfg.GetUsername(), "lazy pulls find the account under the store's host")
+	})
+
+	t.Run("out of the cluster it stays on the path through the node", func(t *testing.T) {
+		conf, _, err := GetRegistryDataPreferUpstream(t.Context(), kubeCl, false)
+		require.NoError(t, err)
+		require.NotEqual(t, "registry-ro", conf.GetUsername(),
+			"the store's account is for the pod network, not for a caller over SSH")
+	})
+}
+
+// testCA stands for the store's authority; nothing here parses it.
+const testCA = "-----BEGIN CERTIFICATE-----\nfake-registry-storage-ca\n-----END CERTIFICATE-----\n"
+
+// TestJoinHostPath: the path comes from the resource as an operator typed it, and every spelling the
+// module accepts has to name the same repository the module pulls from.
+func TestJoinHostPath(t *testing.T) {
+	const host = "registry.deckhouse.io"
+
+	tests := []struct {
+		name, path, want string
+	}{
+		{name: "no path", path: "", want: host},
+		{name: "root only", path: "/", want: host},
+		{name: "the usual spelling", path: "/deckhouse/ee", want: host + "/deckhouse/ee"},
+		{name: "no leading slash, a trailing one", path: "deckhouse/ee/", want: host + "/deckhouse/ee"},
+		{name: "doubled slashes around", path: "//x//", want: host + "/x"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, joinHostPath(host, tt.path))
+		})
+	}
+}

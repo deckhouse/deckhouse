@@ -208,6 +208,9 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		Registry.
 		DeckhouseSettings.
 		ToMap()
+	// Not when the settings came from the registry ModuleConfig: the cluster is then the current
+	// implementation's, and the deckhouse ModuleConfig's registry section belongs to the previous one.
+	writeRegistry := !metaConfig.Registry.LegacyMode && !metaConfig.Registry.FromRegistryModule
 
 	schemasStore := NewSchemaStore(globalOptions)
 
@@ -228,8 +231,14 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		if ok {
 			bundle = bundleRaw.(string)
 		}
-		if !metaConfig.Registry.LegacyMode {
+		if writeRegistry {
 			mc.Spec.Settings["registry"] = registry
+		}
+		if metaConfig.Registry.FromRegistryModule {
+			// A section the user wrote here is dropped for the same reason none is written: the
+			// registry ModuleConfig is what configures this cluster, and this one would carry the
+			// upstream's credentials into the cluster beside it for nothing to read.
+			delete(mc.Spec.Settings, "registry")
 		}
 	}
 
@@ -238,7 +247,7 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 			"bundle":   bundle,
 			"logLevel": logLevel,
 		}
-		if !metaConfig.Registry.LegacyMode {
+		if writeRegistry {
 			settings["registry"] = registry
 		}
 		deckhouseCm, err = buildModuleConfig(ctx, schemasStore, "deckhouse", true, settings)

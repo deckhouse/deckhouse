@@ -77,6 +77,16 @@ type Collector struct {
 
 	// DryRun decides what would go without touching anything.
 	DryRun bool
+
+	// ReleaseAhead gives back what is ahead of the set: a newer release, and the images of pending
+	// module updates, are collected like anything else the cluster has moved past.
+	//
+	// For a store short of room whose upstream holds all of it again. What is ahead of the set was
+	// protected without condition, so room it had taken stayed taken: the copy ahead stops at a room
+	// limit, but a collection did not give back what it had already put in, and the next change of the
+	// set met a store with no room for it. Never in air-gap — there it was pushed, and nothing could
+	// bring it back.
+	ReleaseAhead bool
 }
 
 // Sweeper reclaims unreachable blobs.
@@ -197,6 +207,9 @@ func (c *Collector) Run(ctx context.Context) (Report, error) {
 			decision = Decision{Reason: ReasonForeignVersionSpace}
 		default:
 			decision = Judge(tag.TagStr(), keep, c.Releases.Deployed)
+			if c.ReleaseAhead && decision.Reason == ReasonNewerRelease {
+				decision = Decision{Delete: true, Reason: ReasonReleasedAhead}
+			}
 		}
 		if !decision.Delete {
 			report.Kept[decision.Reason]++
@@ -457,6 +470,31 @@ func (c *Collector) declaredDigests(ctx context.Context, versions []string) (map
 		if err := c.addDigests(ctx, puller, references, keep); err != nil {
 			return nil, err
 		}
+	}
+
+	// And the modules the cluster is about to update to. Discover counts only the modules it runs, so
+	// what the fill copied ahead for a pending module release — or what `d8 mirror push` brought for
+	// it — was unclaimed here and went at the next collection, before the update could use it. The
+	// pending platform versions need nothing of the kind: they are tags newer than the deployed one,
+	// kept as such, and their sets are read above with the other kept versions.
+	//
+	// A pending module the store does not hold is no error — it claims nothing, and nothing of it is
+	// there to delete. One whose set is there and cannot be read is: its images cannot be told apart from
+	// anything else, and in an air-gapped cluster what was pushed for it comes back only with another
+	// `d8 mirror push`. So nothing is deleted at all; the modules are read one at a time, and one that
+	// cannot be read no longer takes the others' protection with it.
+	if c.ReleaseAhead {
+		return keep, nil
+	}
+	pending, err := fill.Release{Modules: c.Modules}.Optional(ctx, source, puller)
+	if err != nil {
+		return nil, fmt.Errorf("the image set of a pending module could not be read, so nothing can be "+
+			"judged safe to delete: %w", err)
+	}
+	for _, reference := range pending {
+		// One at a time and never fatal: a pending module the copy ahead missed is simply not in the
+		// store, and that must not stop the collection of everything else.
+		_ = c.addDigests(ctx, puller, []name.Reference{reference}, keep)
 	}
 	return keep, nil
 }

@@ -17,8 +17,11 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"os"
 	"testing"
+
+	"rpp-get/kube"
 )
 
 func TestParseConfig(t *testing.T) {
@@ -256,5 +259,50 @@ func TestResolveKubeAPIServerEndpointsFlagTakesPrecedenceOverEnv(t *testing.T) {
 	}
 	if value != "10.0.0.9:6443" {
 		t.Errorf("resolveKubeAPIServerEndpoints: value = %q, want %q", value, "10.0.0.9:6443")
+	}
+}
+
+type fakeKubeClient struct {
+	endpoints []string
+	token     string
+}
+
+func (f fakeKubeClient) GetRPPEndpoints(context.Context) ([]string, error) { return f.endpoints, nil }
+func (f fakeKubeClient) GetRPPToken(context.Context) (string, error)       { return f.token, nil }
+
+func TestEndpointsGivenByEnvAreNotRediscovered(t *testing.T) {
+	t.Setenv("PACKAGES_PROXY_ADDRESSES", "1.2.3.4:4219")
+	t.Setenv("PACKAGES_PROXY_TOKEN", "token")
+
+	cli := cliConfig{config: defaultConfig()}
+	cli.mode = modeInstall
+	if err := cli.resolve(context.Background()); err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	if cli.rediscover() != nil {
+		t.Fatal("rediscover is set for endpoints the caller gave")
+	}
+}
+
+func TestRediscoveryAsksTheNextAPIServerEachTime(t *testing.T) {
+	var asked []int
+	cli := cliConfig{config: defaultConfig()}
+	cli.kubeClient = func(attempt int) (kube.Client, error) {
+		asked = append(asked, attempt)
+		return fakeKubeClient{endpoints: []string{"10.0.0.2:4219", "10.0.0.3:4219"}, token: "token"}, nil
+	}
+
+	rediscover := cli.rediscover()
+	for range 2 {
+		endpoints, token, err := rediscover(context.Background())
+		if err != nil {
+			t.Fatalf("rediscover: %v", err)
+		}
+		if len(endpoints) != 2 || token != "token" {
+			t.Fatalf("rediscover = %v, %q", endpoints, token)
+		}
+	}
+	if len(asked) != 2 || asked[0] == asked[1] {
+		t.Fatalf("attempts passed to the client = %v, want two different ones", asked)
 	}
 }

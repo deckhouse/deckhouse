@@ -97,6 +97,10 @@ type State struct {
 	// VerifiedSet is the fingerprint of the set Full was found against — see the field of the same
 	// name on the CRD. Empty unless Full is.
 	VerifiedSet string
+
+	// AheadSet is the fingerprint of what is ahead of the set this replica holds as well — see the
+	// field of the same name on the CRD.
+	AheadSet string
 }
 
 // Publisher writes a replica's own entry.
@@ -341,6 +345,7 @@ func Merge(replicas *[]registryv1alpha1.StorageReplicaStatus, state State) bool 
 		Error:           state.Error,
 		Store:           state.Store,
 		VerifiedSet:     state.VerifiedSet,
+		AheadSet:        state.AheadSet,
 	}
 
 	// At most one replica may carry the leader's role, and the one publishing it now is the one

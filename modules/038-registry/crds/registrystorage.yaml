@@ -242,7 +242,9 @@ spec:
                 needSync:
                   type: boolean
                   description: |
-                    How the controller hands the syncer a fill or replication task.
+                    How the controller hands the syncers a fill or replication task.
+
+                    Set while any replica is short of the expected set: the leader filling from the upstream, or a follower that has not caught up with the leader. Cleared once every replica holds the set; nothing is copied until the set changes again.
             status:
               type: object
               properties:
@@ -407,6 +409,12 @@ spec:
                           A fingerprint of the set this replica was last found `full` against: the platform's versions and the modules the cluster keeps, each with its version and source.
 
                           `full` is only as good as the set it was measured against, and the set moves — a module is installed, the platform is updated. Every replica reports it with its `full`. The leader compares its own with the set the cluster needs now; when they differ it takes `full` back and verifies before an air-gap transition may rely on it. A `full` for another set counts for nothing when the replicas decide who may lead. Empty when `full` is not set.
+                      aheadSet:
+                        type: string
+                        description: |
+                          The parts of what is ahead of the set that this replica holds as well — the platform version the cluster updates to next, and each module update it is about to apply — as their keys, sorted and comma-separated.
+
+                          A part is reported once a copy ahead left it whole. Separate from `verifiedSet` because it is copied separately — after the set, in the background, best-effort — and by part, so that one module that never arrives does not keep the rest from counting. A follower copies the parts its leader holds and it does not, so an update brought to the leader alone, such as one pushed with `d8 mirror push`, reaches the other replicas. Empty when nothing is pending or nothing pending has been copied.
                       store:
                         type: object
                         description: |

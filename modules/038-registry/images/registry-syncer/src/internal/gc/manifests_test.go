@@ -35,6 +35,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/registry-syncer/internal/fill"
 )
 
 // pushHeld puts an image in by digest and records the manifest revision on disk, which is how the
@@ -273,4 +275,163 @@ func TestRunCollectsOnAClusterRunningATag(t *testing.T) {
 	assert.True(t, exists(t, target, "system/deckhouse:v1.70.0"))
 	assert.True(t, exists(t, target, "system/deckhouse:pr21788"))
 	assert.Positive(t, report.Kept[ReasonUnorderable])
+}
+
+// pushModulePackage puts in a module release the way the store keeps it: a tag under modules/<name>
+// whose image carries the flat account of the module's own images.
+func pushModulePackage(t *testing.T, target store, module, version string, digests []string) {
+	t.Helper()
+
+	byImage := make(map[string]string, len(digests))
+	for i, digest := range digests {
+		byImage[fmt.Sprintf("image%d", i)] = digest
+	}
+	encoded, err := json.Marshal(byImage)
+	require.NoError(t, err)
+
+	var archive bytes.Buffer
+	writer := tar.NewWriter(&archive)
+	require.NoError(t, writer.WriteHeader(&tar.Header{Name: "images_digests.json", Mode: 0o644, Size: int64(len(encoded))}))
+	_, err = writer.Write(encoded)
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	layer, err := tarball.LayerFromReader(bytes.NewReader(archive.Bytes()))
+	require.NoError(t, err)
+	image, err := mutate.AppendLayers(empty.Image, layer)
+	require.NoError(t, err)
+
+	repository := "system/deckhouse/modules/" + module
+	push(t, target, repository+":"+version)
+	tag, err := name.NewTag(target.Address+"/"+repository+":"+version, name.Insecure)
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(tag, image))
+}
+
+// TestRunKeepsWhatAPendingModuleUpdateWouldNeed is the module half of the rule above. The fill copies a
+// pending module release ahead — or `d8 mirror push` brings it — so that the update finds it in the
+// store; collected as undeclared, it was gone before the update could start, and in an air-gapped
+// cluster nothing could bring it back.
+func TestRunKeepsWhatAPendingModuleUpdateWouldNeed(t *testing.T) {
+	target := startRegistry(t)
+
+	current := pushHeld(t, target, "system/deckhouse")
+	running := pushHeld(t, target, "system/deckhouse/modules/console")
+	pending := pushHeld(t, target, "system/deckhouse/modules/console")
+	dropped := pushHeld(t, target, "system/deckhouse/modules/console")
+
+	push(t, target, "system/deckhouse:v1.76.6")
+	pushInstaller(t, target, "v1.76.6", []string{current})
+	pushModulePackage(t, target, "console", "v1.65.2", []string{running})
+	pushModulePackage(t, target, "console", "v1.66.2", []string{pending})
+
+	collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, &countingSweeper{})
+	collector.Modules = []fill.ModuleRef{
+		{Name: "console", Version: "v1.65.2"},
+		{Name: "console", Version: "v1.66.2", Pending: true},
+	}
+
+	_, err := collector.Run(context.Background())
+	require.NoError(t, err)
+
+	assert.True(t, holds(t, target, "system/deckhouse/modules/console", running))
+	assert.True(t, holds(t, target, "system/deckhouse/modules/console", pending),
+		"an image of a pending module release has to survive until the update uses it")
+	assert.False(t, holds(t, target, "system/deckhouse/modules/console", dropped))
+}
+
+// TestAPendingModuleUpdateThatCannotBeReadStopsTheCollection: one pending module whose set is in the
+// store and cannot be read used to take every pending module's protection with it. Read one at a time
+// now: one that is not there claims nothing and stops nothing; one that is there and unreadable stops
+// the collection, since its images cannot be told apart from anything else.
+func TestAPendingModuleUpdateThatCannotBeReadStopsTheCollection(t *testing.T) {
+	target := startRegistry(t)
+
+	current := pushHeld(t, target, "system/deckhouse")
+	running := pushHeld(t, target, "system/deckhouse/modules/console")
+	pending := pushHeld(t, target, "system/deckhouse/modules/console")
+	dropped := pushHeld(t, target, "system/deckhouse/modules/console")
+
+	push(t, target, "system/deckhouse:v1.76.6")
+	pushInstaller(t, target, "v1.76.6", []string{current})
+	pushModulePackage(t, target, "console", "v1.65.2", []string{running})
+	pushModulePackage(t, target, "console", "v1.66.2", []string{pending})
+
+	collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, &countingSweeper{})
+	collector.Modules = []fill.ModuleRef{
+		{Name: "console", Version: "v1.65.2"},
+		{Name: "console", Version: "v1.66.2", Pending: true},
+		// Not in the store: nothing to protect, nothing to stop for.
+		{Name: "absent", Version: "v0.1.0", Pending: true},
+	}
+	_, err := collector.Run(context.Background())
+	require.NoError(t, err)
+	assert.True(t, holds(t, target, "system/deckhouse/modules/console", pending))
+	assert.False(t, holds(t, target, "system/deckhouse/modules/console", dropped))
+
+	// And one that is there and cannot be read.
+	broken := pushHeld(t, target, "system/deckhouse/modules/console")
+	pushUnreadablePackage(t, target, "broken", "v1.0.0")
+	collector.Modules = append(collector.Modules, fill.ModuleRef{Name: "broken", Version: "v1.0.0", Pending: true})
+	_, err = collector.Run(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "broken")
+	assert.True(t, holds(t, target, "system/deckhouse/modules/console", broken), "nothing is deleted")
+}
+
+// pushUnreadablePackage puts in a module package whose image set is not the map a package declares.
+func pushUnreadablePackage(t *testing.T, target store, module, version string) {
+	t.Helper()
+
+	encoded, err := json.Marshal([]string{"not", "a", "map"})
+	require.NoError(t, err)
+	var archive bytes.Buffer
+	writer := tar.NewWriter(&archive)
+	require.NoError(t, writer.WriteHeader(&tar.Header{Name: "images_digests.json", Mode: 0o644, Size: int64(len(encoded))}))
+	_, err = writer.Write(encoded)
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	layer, err := tarball.LayerFromReader(bytes.NewReader(archive.Bytes()))
+	require.NoError(t, err)
+	image, err := mutate.AppendLayers(empty.Image, layer)
+	require.NoError(t, err)
+	tag, err := name.NewTag(target.Address+"/system/deckhouse/modules/"+module+":"+version, name.Insecure)
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(tag, image))
+}
+
+// TestRunGivesBackWhatIsAheadWhenShortOfRoom: with ReleaseAhead — a store short of room, an upstream that
+// holds it all again — a newer release and the images of a pending module update are collected like
+// anything else the cluster has moved past. Without it they stay; see the tests above.
+func TestRunGivesBackWhatIsAheadWhenShortOfRoom(t *testing.T) {
+	target := startRegistry(t)
+
+	current := pushHeld(t, target, "system/deckhouse")
+	newer := pushHeld(t, target, "system/deckhouse")
+	running := pushHeld(t, target, "system/deckhouse/modules/console")
+	pending := pushHeld(t, target, "system/deckhouse/modules/console")
+
+	push(t, target, "system/deckhouse:v1.76.6")
+	pushInstaller(t, target, "v1.76.6", []string{current})
+	push(t, target, "system/deckhouse:v1.77.0")
+	pushInstaller(t, target, "v1.77.0", []string{newer})
+	pushModulePackage(t, target, "console", "v1.65.2", []string{running})
+	pushModulePackage(t, target, "console", "v1.66.2", []string{pending})
+
+	collector := newCollector(t, target, Releases{Deployed: "v1.76.6", Pending: []string{"v1.77.0"}}, &countingSweeper{})
+	collector.Modules = []fill.ModuleRef{
+		{Name: "console", Version: "v1.65.2"},
+		{Name: "console", Version: "v1.66.2", Pending: true},
+	}
+	collector.ReleaseAhead = true
+
+	report, err := collector.Run(context.Background())
+	require.NoError(t, err)
+
+	assert.True(t, holds(t, target, "system/deckhouse", current), "the set the cluster runs stays")
+	assert.True(t, holds(t, target, "system/deckhouse/modules/console", running))
+	assert.False(t, holds(t, target, "system/deckhouse", newer), "the newer release is given back")
+	assert.False(t, holds(t, target, "system/deckhouse/modules/console", pending), "and so is the module update")
+	assert.Positive(t, report.Kept[ReasonCurrentRelease])
 }

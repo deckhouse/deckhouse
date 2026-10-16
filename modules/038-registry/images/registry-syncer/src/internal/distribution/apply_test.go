@@ -432,3 +432,45 @@ func TestApplyToleratesAMissingRegistryProcess(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "restarting the registry")
 }
+
+type wakingRestarter struct {
+	countingRestarter
+	wakes int
+}
+
+func (w *wakingRestarter) Wake() error {
+	w.wakes++
+	return w.err
+}
+
+// The first configuration finds the registry waiting for it, and wakes it: a restart there is a stop,
+// which the registry obeys whatever is on disk. Every change after that is a restart, because the
+// registry is then serving the previous configuration.
+func TestApplyWakesAWaitingRegistryAndRestartsAServingOne(t *testing.T) {
+	restarter := &wakingRestarter{}
+	applier := newApplier(t, restarter)
+
+	_, err := applier.Apply(upstreamSpec("registry.deckhouse.io", ""))
+	require.NoError(t, err)
+	assert.Equal(t, 1, restarter.wakes)
+	assert.Equal(t, 0, restarter.restarts)
+
+	_, err = applier.Apply(upstreamSpec("mirror.example.com", ""))
+	require.NoError(t, err)
+	assert.Equal(t, 1, restarter.wakes)
+	assert.Equal(t, 1, restarter.restarts)
+}
+
+// Either file missing is a registry still waiting: it starts only on both.
+func TestApplyWakesWhileEitherFileIsMissing(t *testing.T) {
+	restarter := &wakingRestarter{}
+	applier := newApplier(t, restarter)
+
+	require.NoError(t, os.MkdirAll(filepath.Dir(applier.ConfigPath), 0o755))
+	require.NoError(t, os.WriteFile(applier.ConfigPath, []byte("stale"), 0o600))
+
+	_, err := applier.Apply(upstreamSpec("registry.deckhouse.io", ""))
+	require.NoError(t, err)
+	assert.Equal(t, 1, restarter.wakes, "the registry waits for its own half as well")
+	assert.Equal(t, 0, restarter.restarts)
+}

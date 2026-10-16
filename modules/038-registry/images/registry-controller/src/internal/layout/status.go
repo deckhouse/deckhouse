@@ -193,6 +193,49 @@ func referencesClear(upstream *registryv1alpha1.Upstream, references *int32) boo
 	return references != nil && *references == 0
 }
 
+// FollowersBehind reports whether a replica that should follow the leader does not hold what the
+// leader holds: it has not reported, is not full, failed, was found full against a different set
+// than the leader was, or last replicated from a replica that no longer leads. That is what keeps
+// the followers replicating, and nothing else does.
+//
+// The last one is about the lease moving. Leader and follower can agree on the set and still differ
+// in what they hold: a push lands on the leader alone, so the replica that leads now may hold what
+// its predecessor never had. A follower copies once from the new leader — mostly skipped, only that
+// difference is written — and reports it as its source.
+//
+// storageNodes are the nodes a replica is expected on. A replica is expected exactly there, and only
+// there: an entry outlives its pod — nothing removes it when a master goes — and a departed replica
+// counted as behind would keep every follower replicating forever. A master with no entry yet is
+// counted, because that is a new replica, and it has to start somewhere.
+//
+// No leader, nothing to replicate from: false.
+func FollowersBehind(
+	replicas []registryv1alpha1.StorageReplicaStatus, leaseHolder string, storageNodes []string,
+) bool {
+	leader := leaseHolderReport(replicas, leaseHolder)
+	if leader == nil {
+		return false
+	}
+
+	reports := make(map[string]*registryv1alpha1.StorageReplicaStatus, len(replicas))
+	for i := range replicas {
+		reports[replicas[i].Node] = &replicas[i]
+	}
+
+	for _, node := range storageNodes {
+		if node == leader.Node {
+			continue
+		}
+		replica, reported := reports[node]
+		if !reported || !replica.Full || replica.Error != "" ||
+			leader.VerifiedSet == "" || replica.VerifiedSet != leader.VerifiedSet ||
+			replica.Source != leader.Node {
+			return true
+		}
+	}
+	return false
+}
+
 // LeaderAddress is where the leading replica answers, or "" when there is no usable leader.
 //
 // Agents are pointed at the leader first, and the rest of the replicas become its mirrors. Which

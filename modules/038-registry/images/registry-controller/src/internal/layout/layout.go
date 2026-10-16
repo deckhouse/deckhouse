@@ -126,6 +126,10 @@ type Inputs struct {
 	// see SafeToDropUpstream.
 	UpstreamReferences *int32
 
+	// FollowersBehind reports that a replica other than the leader does not hold what the leader
+	// holds yet. See FollowersBehind in status.go.
+	FollowersBehind bool
+
 	// Nodes are the names of the cluster nodes that need an agent layout.
 	Nodes []string
 
@@ -301,10 +305,17 @@ func compute(in Inputs) Desired {
 		// StoreIsAuthority in the syncer is derived from this, so that how completeness is measured
 		// does not change on clusters that merely cache.
 		AirGapRequested: wantAirGap,
-		// Filling the leader is a task only when there is something to fill it
-		// from. Replication to the followers is driven by the leader itself, not by
-		// this flag.
-		NeedSync: heldUpstream != nil && !in.LeaderFull,
+		// The one switch for copying, for every replica. The leader fills while it is short of the
+		// set and there is something to fill it from; the followers replicate while any of them is
+		// short of what the leader holds. A change of the set — a release, a module — takes the
+		// leader's full report away and so raises it again; once every replica holds the set, it
+		// drops and nobody copies anything.
+		//
+		// The followers used to replicate on every pass regardless, with nothing to tell them they
+		// were done: measured on three masters, a full follower ran a pass every half a minute that
+		// skipped every reference of the set, at most of a core per follower for as long as the
+		// cluster ran.
+		NeedSync: (heldUpstream != nil && !in.LeaderFull) || in.FollowersBehind,
 		// Resolved here rather than left to each replica, so that every replica agrees on
 		// when its turn comes round: three replicas reading the same instruction queue
 		// behind one lease, and three replicas each picking their own hour, are different

@@ -249,6 +249,9 @@ func (s *Server) forward(writer http.ResponseWriter, request *http.Request) {
 			(response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden)
 		if refusedOurs {
 			lastStatus = response.StatusCode
+			// The request as it reached the target, so the token forgotten is the one it
+			// refused and not one obtained since by a request running alongside.
+			s.auth.forget(target, response.Request.Header.Get("Authorization"))
 			s.markFailing(target.Name)
 			s.failover(target.Name, metrics.ReasonUnauthorized)
 			_ = response.Body.Close()

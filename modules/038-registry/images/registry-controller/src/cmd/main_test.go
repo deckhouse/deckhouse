@@ -96,3 +96,21 @@ func TestManagerElectsALeader(t *testing.T) {
 	assert.True(t, opts.LeaderElectionReleaseOnCancel,
 		"the lease must be handed over on shutdown rather than waited out")
 }
+
+// TestServicesAreNotCached: the legacy cleanup reads the `registry` Service by name, and that grant is
+// name-scoped like the secrets'. Read through the cache, it started a cluster-wide Service informer
+// that RBAC refused; it never synced, and the layout reconciliation stopped — on a live cluster,
+// needSync left up with every replica full.
+func TestServicesAreNotCached(t *testing.T) {
+	opts := clientOptions()
+
+	require.NotNil(t, opts.Cache)
+
+	var found bool
+	for _, object := range opts.Cache.DisableFor {
+		if _, ok := object.(*corev1.Service); ok {
+			found = true
+		}
+	}
+	assert.True(t, found, "the Service must be read uncached: its grant is name-scoped")
+}

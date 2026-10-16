@@ -152,6 +152,8 @@ func main() {
 		registryBinary string
 		processName    string
 		interval       time.Duration
+		copyRateMiB    int
+		storeRecheck   time.Duration
 		logLevel       string
 	)
 
@@ -181,6 +183,12 @@ func main() {
 		"The executable of the serving process, signalled when the configuration changes.")
 	flag.DurationVar(&interval, "interval", 30*time.Second,
 		"How often the desired state is re-read.")
+	flag.IntVar(&copyRateMiB, "copy-rate-mib", defaultCopyRateMiB,
+		"How fast, in MiB/s, the copy of pending updates may read from its source; 0 for no limit. "+
+			"Copying the set the cluster runs — the leader's fill and the followers' replication — and pulls "+
+			"by the nodes are not limited.")
+	flag.DurationVar(&storeRecheck, "store-recheck", 6*time.Hour,
+		"How often an idle replica reads its own store again, to find what it may have lost.")
 	flag.StringVar(&logLevel, "log-level", "info", "Log level: debug, info, warn or error.")
 	flag.Parse()
 
@@ -215,6 +223,8 @@ func main() {
 		registryBinary: registryBinary,
 		processName:    processName,
 		interval:       interval,
+		copyRateMiB:    copyRateMiB,
+		storeRecheck:   storeRecheck,
 	}); err != nil {
 		log.Error("the syncer stopped", "error", err.Error())
 		os.Exit(1)
@@ -234,7 +244,18 @@ type options struct {
 	registryBinary string
 	processName    string
 	interval       time.Duration
+	copyRateMiB    int
+	storeRecheck   time.Duration
 }
+
+// defaultCopyRateMiB bounds the background copy to what a control-plane node can spare while it
+// runs etcd and the API server: measured at 0.02-0.05 of a core per MiB/s, so about half a core.
+// A pending release, some 15 GiB, still arrives in under 20 minutes.
+//
+// Background is the copy ahead, not the copy of the set the cluster runs — the leader's fill or a
+// follower's replication: until a store holds that, a node pulls through the upstream, and a follower
+// without it is a replica the cluster cannot fall back on.
+const defaultCopyRateMiB = 16
 
 func serve(ctx context.Context, log *slog.Logger, opts options) error {
 	restConfig, err := ctrl.GetConfig()
@@ -309,6 +330,8 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 		LocalUser:       os.Getenv("REGISTRY_LOCAL_USER"),
 		LocalPassword:   os.Getenv("REGISTRY_LOCAL_PASSWORD"),
 		Interval:        opts.interval,
+		CopyPacer:       fill.NewPacer(opts.copyRateMiB << 20),
+		StoreRecheck:    opts.storeRecheck,
 	}
 
 	tracker := &leadership{}
@@ -539,7 +562,8 @@ func startCollector(
 			// A fill the cluster has asked for and this replica has not finished is a reason to
 			// collect nothing: the store cannot be compared with anything while the set is still
 			// going in, and the reclamation would refuse the writes that fill is made of.
-			pending := spec.NeedSync && !loop.Complete()
+			// Only a copy this replica makes, though: see Loop.OwesCopy.
+			pending := spec.NeedSync && !loop.Complete() && loop.OwesCopy()
 
 			if spec.GarbageCollection == nil {
 				// Read, and it says nothing about collecting.
@@ -623,8 +647,17 @@ func startCollector(
 					Path:       opts.registryBinary,
 					ConfigPath: opts.configPath,
 				},
+				// What is ahead of the set is given back when the store is short of room and the upstream
+				// holds it again — see gc.Collector.ReleaseAhead.
+				ReleaseAhead: hasUpstream(loop.Desired()) && !loop.RoomAhead(),
+			}
+			if collector.ReleaseAhead {
+				log.Info("the store is short of room, so what is ahead of the set is collected too")
 			}
 			report, err := collector.Run(ctx)
+			if collector.ReleaseAhead && len(report.Deleted) > 0 {
+				loop.ForgetAhead()
+			}
 			collected.Reclaimed.Add(float64(len(report.Deleted)))
 			return report, err
 		},
@@ -696,4 +729,9 @@ func signalContext() context.Context {
 	}()
 
 	return ctx
+}
+
+// hasUpstream reports whether the storage is configured with an upstream to fetch from again.
+func hasUpstream(spec *registryv1alpha1.RegistryStorageSpec) bool {
+	return spec != nil && spec.Upstream != nil
 }

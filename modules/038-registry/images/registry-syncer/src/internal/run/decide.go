@@ -27,6 +27,7 @@ import (
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 
 	"github.com/deckhouse/registry-syncer/internal/fill"
+	"github.com/deckhouse/registry-syncer/internal/gc"
 )
 
 // Action is the work a replica does on one pass, beyond keeping the registry
@@ -85,6 +86,10 @@ type Leader struct {
 	// design promises: followers fill AHEAD of time, and while the leader was still filling they
 	// did nothing at all, holding nothing if it died meanwhile.
 	Full bool
+
+	// AheadSet is the parts of what is ahead of the set the leader holds — see AheadKey. A follower
+	// copies those of them it lacks, and only those: a part its leader is short of would only be missed.
+	AheadSet string
 }
 
 // Usable reports whether this leader can be replicated from.
@@ -108,14 +113,20 @@ func Decide(spec *registryv1alpha1.RegistryStorageSpec, isLeader bool, leader *L
 	}
 
 	if !isLeader {
-		if leader.Usable() {
-			// Fill from the leader now, not on a cache miss. This is what makes a leader
-			// change cheap, and in an air-gapped cluster it is the only way a follower
-			// gets the content at all.
-			return ActionReplicate
+		if !leader.Usable() {
+			// No leader worth copying from yet, so report what is already here.
+			return ActionCountCatalogue
 		}
-		// No leader worth copying from yet, so report what is already here.
-		return ActionCountCatalogue
+		if !spec.NeedSync {
+			// The controller raises it while any replica is short of what the leader holds, and
+			// drops it once every one holds it. A follower that replicated regardless found the
+			// whole set already present on every pass, at a cost — see Compute in the controller.
+			return ActionNone
+		}
+		// Fill from the leader now, not on a cache miss. This is what makes a leader
+		// change cheap, and in an air-gapped cluster it is the only way a follower
+		// gets the content at all.
+		return ActionReplicate
 	}
 
 	if spec.Upstream == nil {
@@ -173,22 +184,94 @@ func Role(isLeader bool) registryv1alpha1.ReplicaRole {
 	return registryv1alpha1.ReplicaRoleFollower
 }
 
-// SetKey is a fingerprint of the set the cluster needs: the platform's versions, and every module it
-// keeps with its version and where it comes from.
+// SetKey is a fingerprint of the set the cluster needs: the platform's versions — deployed and
+// previous — every module it keeps with its version and where it comes from, and the module catalogue
+// its sources offer.
 //
 // Only what the set is made of, never what it resolves to. Reading the set out of the releases means
-// pulling images; this is two lists from the API server, cheap enough for every pass, and it moves
+// pulling images; this is a few lists from the API server, cheap enough for every pass, and it moves
 // exactly when the set can: a module installed, removed, updated or moved to another source, the
-// platform updated or rolled back.
-func SetKey(deployed, previous string, modules []fill.ModuleRef) string {
+// platform updated or rolled back, a module pushed into the catalogue. Every move takes the leader's
+// full report away and so raises needSync until every replica holds the new set.
+//
+// What is pending is not in it — see AheadKey. A replica found full for this key holds the set and
+// nothing more is claimed: counting the pending versions in made a follower that had copied the set,
+// and not yet the release copied ahead of it, report itself as holding both.
+//
+// The catalogue is counted since this fingerprint was first released, and every cluster has one,
+// through the source `deckhouse`. So after that upgrade each replica reads a fingerprint other than
+// the one it reported: its Full is withdrawn once and verified again, which copies only what is
+// missing — and while the StatefulSet rolls, a leader still on the old version may fill on every pass
+// until it is replaced. Once, and harmless; not a fingerprint that stays the same.
+func SetKey(releases gc.Releases, modules []fill.ModuleRef, catalogue []string) string {
 	lines := make([]string, 0, len(modules))
 	for _, module := range modules {
+		if module.Pending {
+			continue
+		}
 		lines = append(lines, module.Name+"@"+module.Version+"<"+strings.TrimRight(module.Source.Repository, "/"))
 	}
 	sort.Strings(lines)
 
-	sum := sha256.Sum256([]byte("platform " + deployed + " " + previous + "\n" + strings.Join(lines, "\n")))
+	text := "platform " + releases.Deployed + " " + releases.Previous + "\n" + strings.Join(lines, "\n")
+	if len(catalogue) > 0 {
+		offered := append([]string(nil), catalogue...)
+		sort.Strings(offered)
+		text += "\ncatalogue " + strings.Join(offered, " ")
+	}
+
+	sum := sha256.Sum256([]byte(text))
 	return hex.EncodeToString(sum[:16])
+}
+
+// AheadKey is what is ahead of the set, by its parts: the key of the platform version the cluster
+// updates to next and of each module update it is about to apply — see fill.AheadPart — sorted and
+// joined by commas. Empty when nothing is pending.
+//
+// Its own field beside VerifiedSet, because it is held on its own terms. The set is copied by a pass,
+// and a pass that ends full holds it; what is ahead of it is copied afterwards, in the background,
+// best-effort, and may be stopped, cut short by a restart, or miss what the source does not have yet. A
+// replica reports each part once a copy left it whole — see Loop.heldAhead — and a follower copies the
+// parts its leader holds, so a release pushed onto an air-gapped leader reaches every follower even
+// while a module beside it never arrives.
+func AheadKey(releases gc.Releases, modules []fill.ModuleRef) string {
+	var parts []string
+	if next := fill.NextPending(releases.Pending); next != "" {
+		parts = append(parts, fill.PlatformPart(next))
+	}
+	for _, module := range modules {
+		if module.Pending {
+			parts = append(parts, fill.ModulePart(module))
+		}
+	}
+	return joinParts(parts)
+}
+
+// joinParts is part keys as AheadKey and AheadSet carry them: sorted, without repeats, comma-joined.
+func joinParts(parts []string) string {
+	unique := map[string]struct{}{}
+	for _, part := range parts {
+		if part != "" {
+			unique[part] = struct{}{}
+		}
+	}
+	sorted := make([]string, 0, len(unique))
+	for part := range unique {
+		sorted = append(sorted, part)
+	}
+	sort.Strings(sorted)
+	return strings.Join(sorted, ",")
+}
+
+// splitParts is joinParts undone, as a set.
+func splitParts(joined string) map[string]bool {
+	parts := map[string]bool{}
+	for _, part := range strings.Split(joined, ",") {
+		if part != "" {
+			parts[part] = true
+		}
+	}
+	return parts
 }
 
 // Reverify turns a leader's "nothing to do" into a verification when the set has moved since it was
@@ -212,4 +295,30 @@ func Reverify(action Action, isLeader bool, spec *registryv1alpha1.RegistryStora
 		return action, false
 	}
 	return ActionFill, true
+}
+
+// AlreadyHeld reports that a copy the pass is about to make would only confirm what this replica
+// last reported: it was found full against this very set — and, for a follower, while replicating
+// from the replica that leads now.
+//
+// needSync is one switch for every replica and stays up until the last of them holds the set, so a
+// replica that already does would otherwise enumerate the set again on every pass while it waits.
+//
+// The leader is part of the answer because a follower holds what its leader held, not only what the
+// set names: a push lands on the leader alone, and after the lease moves the new leader may hold what
+// the old one never had. A follower that last replicated from another replica copies once from the
+// one that leads now — the controller raises needSync for exactly that, see FollowersBehind — and
+// skipping it here would hold needSync up for good.
+func AlreadyHeld(action Action, setKey, reportedSet, reportedSource string, leader *Leader) bool {
+	if setKey == "" || reportedSet != setKey {
+		return false
+	}
+	switch action {
+	case ActionFill:
+		return true
+	case ActionReplicate:
+		return leader != nil && reportedSource == leader.Node
+	default:
+		return false
+	}
 }

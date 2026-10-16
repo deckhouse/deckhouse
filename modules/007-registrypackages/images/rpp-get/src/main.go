@@ -126,19 +126,16 @@ func run(ctx context.Context, logger *log.Logger) error {
 		logger.Printf("resolving rpp endpoints because %d package(s) need installation: %s",
 			len(missing), strings.Join(missing, ", "))
 
-		if err := cfg.resolve(ctx); err != nil {
+		if err := resolveInto(ctx, &cfg, client); err != nil {
 			return err
 		}
-		client.UpdateAuth(cfg.endpoints, cfg.token)
 
 		return client.InstallMissing(ctx, statuses)
 	}
 
-	if err := cfg.resolve(ctx); err != nil {
+	if err := resolveInto(ctx, &cfg, client); err != nil {
 		return err
 	}
-
-	client.UpdateAuth(cfg.endpoints, cfg.token)
 
 	switch cfg.mode {
 	case modeFetch:
@@ -150,4 +147,15 @@ func run(ctx context.Context, logger *log.Logger) error {
 	default:
 		panic(fmt.Sprintf("unsupported mode %q", cfg.mode))
 	}
+}
+
+func resolveInto(ctx context.Context, cfg *cliConfig, client *rpp.Client) error {
+	if err := cfg.resolve(ctx); err != nil {
+		return err
+	}
+	client.UpdateAuth(cfg.endpoints, cfg.token)
+	if rediscover := cfg.rediscover(); rediscover != nil {
+		client.SetRediscover(rediscover)
+	}
+	return nil
 }

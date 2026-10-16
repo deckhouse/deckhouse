@@ -1432,3 +1432,73 @@ func TestTheUpstreamServesWhatTheClusterNamesInCluster(t *testing.T) {
 	require.Equal(t, "registry.deckhouse.io/system/deckhouse-extra",
 		upstreamRepository(upstream, "registry.d8-system.svc:5001/system/deckhouse-extra"))
 }
+
+// TestAProviderFromASourceIsReadInTheClusterTheWayTheModuleSays: the built-in source names the
+// in-cluster store with no authority and no account, which the infrastructure converger in the pod
+// network cannot read the store with. So in the cluster the source is read through the upstream the
+// registry module names, or — air-gapped — from the store with the store's own authority and account.
+func TestAProviderFromASourceIsReadInTheClusterTheWayTheModuleSays(t *testing.T) {
+	newCluster := func(t *testing.T) *client.KubernetesClient {
+		kubeCl := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
+			ModuleGVR:       "ModuleList",
+			ModuleSourceGVR: "ModuleSourceList",
+		})
+		for _, o := range []testClusterObject{
+			testModuleObject("dev", "1.2.3"),
+			testModuleSourceObject(t, registry_const.HostWithPath+"/modules"),
+		} {
+			_, err := kubeCl.Dynamic().Resource(o.gvr).Create(t.Context(), &unstructured.Unstructured{Object: o.obj}, metav1.CreateOptions{})
+			require.NoError(t, err)
+		}
+		return kubeCl
+	}
+	registryConfig := func(t *testing.T, kubeCl *client.KubernetesClient, primary map[string]interface{}) {
+		gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "registryconfigs"}
+		spec := map[string]interface{}{"mode": "Managed", "storage": map[string]interface{}{"cache": true}}
+		if primary != nil {
+			spec["primary"] = primary
+		}
+		_, err := kubeCl.Dynamic().Resource(gvr).Create(t.Context(), &unstructured.Unstructured{Object: map[string]interface{}{
+			"apiVersion": "deckhouse.io/v1alpha1", "kind": "RegistryConfig",
+			"metadata": map[string]interface{}{"name": "registry"}, "spec": spec,
+		}}, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+
+	t.Run("through the upstream when there is one", func(t *testing.T) {
+		kubeCl := newCluster(t)
+		registryConfig(t, kubeCl, map[string]interface{}{"upstream": map[string]interface{}{
+			"host": "upstream.example.io", "path": "/deckhouse/ee", "scheme": "HTTPS",
+			"auth": map[string]interface{}{"username": "user", "password": "fake-password"},
+		}})
+
+		md, err := moduleDocsFromCluster(t.Context(), kubeCl, "dvp", true)
+		require.NoError(t, err)
+		conf, err := md.Sources[0].RegistryConfig()
+		require.NoError(t, err)
+		require.Equal(t, "upstream.example.io/deckhouse/ee/modules", conf.GetRegistry())
+		require.Equal(t, "user", conf.GetUsername())
+	})
+
+	t.Run("from the store with its own authority when air-gapped", func(t *testing.T) {
+		kubeCl := newCluster(t)
+		registryConfig(t, kubeCl, nil)
+		_, err := kubeCl.CoreV1().Secrets("d8-system").Create(t.Context(), &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "registry-storage-access", Namespace: "d8-system"},
+			Data: map[string][]byte{
+				"username": []byte("registry-ro"), "password": []byte("fake-password"),
+				"ca.crt": []byte("-----BEGIN CERTIFICATE-----\nfake-registry-storage-ca\n-----END CERTIFICATE-----\n"),
+			},
+		}, metav1.CreateOptions{})
+		require.NoError(t, err)
+
+		md, err := moduleDocsFromCluster(t.Context(), kubeCl, "dvp", true)
+		require.NoError(t, err)
+		require.Equal(t, registry_const.HostWithPath+"/modules", md.Sources[0].Spec.Registry.Repo,
+			"the store is the only place left to read it from")
+		conf, err := md.Sources[0].RegistryConfig()
+		require.NoError(t, err)
+		require.Equal(t, "registry-ro", conf.GetUsername())
+		require.Contains(t, conf.GetCA(), "fake-registry-storage-ca")
+	})
+}

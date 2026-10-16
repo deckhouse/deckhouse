@@ -33,8 +33,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
@@ -60,16 +60,7 @@ type Registry struct {
 // RegistryOptions builds the options for a registry, given its certificate
 // authority and credentials.
 func RegistryOptions(certificateAuthority, username, password string) ([]remote.Option, error) {
-	roundTripper, err := roundTripper(certificateAuthority)
-	if err != nil {
-		return nil, err
-	}
-
-	options := []remote.Option{remote.WithTransport(roundTripper)}
-	if username != "" || password != "" {
-		options = append(options, remote.WithAuth(&authn.Basic{Username: username, Password: password}))
-	}
-	return options, nil
+	return PacedRegistryOptions(certificateAuthority, username, password, nil)
 }
 
 // Report is the outcome of a fill, and the input to the replica status.
@@ -110,6 +101,15 @@ type Report struct {
 	// replication only happens from a leader that reads as full. The set is knowable without
 	// being told, and here it is known.
 	Total int32
+
+	// AheadCopied and AheadMissed account for the part copied ahead of time — see
+	// OptionalDiscoverer. Neither enters Complete.
+	AheadCopied int32
+	AheadMissed []string
+
+	// AheadHeld are the parts of what is ahead of the set this run left whole in the destination —
+	// see AheadPart. Only from a PartedDiscoverer.
+	AheadHeld []string
 }
 
 // Complete reports whether the run put in place every image the cluster needs.
@@ -138,6 +138,30 @@ type Copier struct {
 	Source      Registry
 	Destination Registry
 
+	// Ahead is Source as the copy ahead reads it — see copyAhead. Nil reads it through Source.
+	//
+	// Separate because the two halves of a fill are not the same kind of work. The set is what the
+	// cluster is waiting for: until the store holds it, every node pulls through the upstream, and an
+	// upstream slower than a pull's patience — a proxy cache still cold — fails the pull outright.
+	// What is ahead of the set is not needed yet, and on a running cluster it is a whole release
+	// copied in the background beside etcd. So the caller paces this one and not Source.
+	Ahead *Registry
+
+	// SeparateAhead leaves the copy ahead out of Run, for RunAhead to do after the caller has
+	// published what Run found.
+	//
+	// The set is what completeness is about, and what is ahead of it is not: run inside Run, the copy
+	// ahead — a whole pending release, paced — held the pass, and with it the report of a store that
+	// was already complete. For as long as that took the storage read Filling and the upstream could
+	// not be dropped, which is the opposite of "best-effort".
+	SeparateAhead bool
+
+	// What Run left for RunAhead: the set it copied, and the clients it copied it with.
+	required          []name.Reference
+	sourcePuller      *remote.Puller
+	destinationPuller *remote.Puller
+	pusher            *remote.Pusher
+
 	// Discover decides what the copy consists of. Required, and required to be chosen at
 	// the call site: see Discoverer.
 	Discover Discoverer
@@ -154,6 +178,33 @@ type Copier struct {
 
 	// routes are Routes with their clients, by repository, built by Run.
 	routes map[string]route
+
+	// AheadRoutes are Routes for what is ahead of the set: the pending updates of modules read from
+	// somewhere other than Source. Consulted before Routes by the copy ahead, and by nothing else.
+	//
+	// Their own, for the reason Ahead is: they are paced, and the set must not be. And they cannot share
+	// Routes' map — a module being updated reads its pending version from the very repository its
+	// running one comes from, and one route per repository would pace the set or leave the update
+	// unpaced, whichever came last.
+	AheadRoutes []Route
+
+	// AheadUnread is what is ahead of the set that the caller could not even set up a read of — a
+	// pending module whose source cannot be read. Reported as missed by every copy ahead, so that a copy
+	// without it is not taken for one that went through.
+	AheadUnread []string
+
+	// AheadWant picks the parts of what is ahead of the set this copy is for — see AheadPart. Nil copies
+	// every part.
+	AheadWant func(key string) bool
+
+	// AheadRoom tells whether the destination still has room for what is ahead of the set. Asked as the
+	// copy goes, at most every aheadRoomEvery, and the copy stops on the first no. Nil never stops it.
+	//
+	// Asked as it goes and not only before it starts: a release takes more than the room a start-time
+	// check leaves, and what is ahead of the set may not take the room the set needs next.
+	AheadRoom func() bool
+
+	aheadRoutes map[string]route
 
 	// StoreDir is the destination's data directory, when the destination is this replica's own
 	// store — which it always is here.
@@ -177,41 +228,9 @@ type Copier struct {
 func (c *Copier) Run(ctx context.Context) (Report, error) {
 	report := Report{}
 
-	sourcePuller, err := remote.NewPuller(c.Source.Options...)
-	if err != nil {
-		return report, fmt.Errorf("building the source client: %w", err)
-	}
-	destinationPuller, err := remote.NewPuller(c.Destination.Options...)
-	if err != nil {
-		return report, fmt.Errorf("building the destination client: %w", err)
-	}
-	pusher, err := remote.NewPusher(c.Destination.Options...)
-	if err != nil {
-		return report, fmt.Errorf("building the destination pusher: %w", err)
-	}
-
-	sourceRegistry, err := parseRegistry(c.Source)
+	sourcePuller, destinationPuller, pusher, err := c.prepare()
 	if err != nil {
 		return report, err
-	}
-	c.routes = make(map[string]route, len(c.Routes))
-	for _, r := range c.Routes {
-		parsed, err := parseRegistry(r.From)
-		if err != nil {
-			return report, err
-		}
-		puller, err := remote.NewPuller(r.From.Options...)
-		if err != nil {
-			return report, fmt.Errorf("building the client for %s: %w", r.From.Address, err)
-		}
-		from := strings.Trim(r.From.Repository, "/")
-		c.routes[parsed.RegistryStr()+"/"+from] = route{
-			puller: puller,
-			into:   r.Into,
-			// Read from inside the source itself: the platform reads the very same repository and
-			// needs it at the platform's own path as well. See targets.
-			alsoAsSource: parsed.RegistryStr() == sourceRegistry.RegistryStr() && c.underSource(from),
-		}
 	}
 
 	if c.Discover == nil {
@@ -257,12 +276,221 @@ func (c *Copier) Run(ctx context.Context) (Report, error) {
 		}
 	}
 
+	if c.SeparateAhead {
+		c.required, c.sourcePuller, c.destinationPuller, c.pusher = references, sourcePuller, destinationPuller, pusher
+		return report, nil
+	}
+	c.copyAhead(ctx, sourcePuller, destinationPuller, pusher, references, &report)
 	return report, nil
+}
+
+// prepare builds the clients a copy reads and writes with, and the routes with theirs.
+func (c *Copier) prepare() (*remote.Puller, *remote.Puller, *remote.Pusher, error) {
+	sourcePuller, err := remote.NewPuller(c.Source.Options...)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("building the source client: %w", err)
+	}
+	destinationPuller, err := remote.NewPuller(c.Destination.Options...)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("building the destination client: %w", err)
+	}
+	pusher, err := remote.NewPusher(c.Destination.Options...)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("building the destination pusher: %w", err)
+	}
+
+	sourceRegistry, err := parseRegistry(c.Source)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	build := func(routes []Route) (map[string]route, error) {
+		built := make(map[string]route, len(routes))
+		for _, r := range routes {
+			parsed, err := parseRegistry(r.From)
+			if err != nil {
+				return nil, err
+			}
+			puller, err := remote.NewPuller(r.From.Options...)
+			if err != nil {
+				return nil, fmt.Errorf("building the client for %s: %w", r.From.Address, err)
+			}
+			from := strings.Trim(r.From.Repository, "/")
+			built[parsed.RegistryStr()+"/"+from] = route{
+				puller: puller,
+				into:   r.Into,
+				// Read from inside the source itself: the platform reads the very same repository and
+				// needs it at the platform's own path as well. See targets.
+				alsoAsSource: parsed.RegistryStr() == sourceRegistry.RegistryStr() && c.underSource(from),
+			}
+		}
+		return built, nil
+	}
+	if c.routes, err = build(c.Routes); err != nil {
+		return nil, nil, nil, err
+	}
+	if c.aheadRoutes, err = build(c.AheadRoutes); err != nil {
+		return nil, nil, nil, err
+	}
+	return sourcePuller, destinationPuller, pusher, nil
+}
+
+// RunAhead copies what is ahead of the set, after a Run with SeparateAhead. Nothing when Run did not
+// get as far as the set, or was not told to leave this for later.
+func (c *Copier) RunAhead(ctx context.Context) Report {
+	report := Report{}
+	if c.sourcePuller == nil {
+		return report
+	}
+	c.copyAhead(ctx, c.sourcePuller, c.destinationPuller, c.pusher, c.required, &report)
+	return report
+}
+
+// CopyAhead copies what is ahead of the set without copying the set first: for a store already
+// complete for it, where nothing but the copy ahead is left to do. What the set holds is skipped as
+// already present rather than by name.
+func (c *Copier) CopyAhead(ctx context.Context) Report {
+	report := Report{}
+	sourcePuller, destinationPuller, pusher, err := c.prepare()
+	if err != nil {
+		report.AheadMissed = append(report.AheadMissed, err.Error())
+		return report
+	}
+	c.copyAhead(ctx, sourcePuller, destinationPuller, pusher, nil, &report)
+	return report
+}
+
+// copyAhead copies what the Discoverer offers beyond the set, if it offers anything: after the set,
+// and without a word in completeness — see OptionalDiscoverer.
+func (c *Copier) copyAhead(
+	ctx context.Context, sourcePuller, destinationPuller *remote.Puller, pusher *remote.Pusher,
+	required []name.Reference, report *Report,
+) {
+	optional, ok := c.Discover.(OptionalDiscoverer)
+	if !ok {
+		return
+	}
+	report.AheadMissed = append(report.AheadMissed, c.AheadUnread...)
+	source := c.Source
+	if c.Ahead != nil {
+		puller, err := remote.NewPuller(c.Ahead.Options...)
+		if err != nil {
+			report.AheadMissed = append(report.AheadMissed, "building the client: "+err.Error())
+			return
+		}
+		source, sourcePuller = *c.Ahead, puller
+	}
+	if parted, ok := c.Discover.(PartedDiscoverer); ok {
+		c.copyAheadParts(ctx, parted, source, sourcePuller, destinationPuller, pusher, required, report)
+		return
+	}
+	// What could be enumerated is copied, and what could not is a miss: one module whose source does not
+	// answer is no reason to leave the platform release behind.
+	references, err := optional.Optional(ctx, source, sourcePuller)
+	if err != nil {
+		report.AheadMissed = append(report.AheadMissed, "enumerating: "+err.Error())
+	}
+
+	inSet := make(map[string]struct{}, len(required))
+	for _, reference := range required {
+		inSet[reference.String()] = struct{}{}
+	}
+	for _, reference := range references {
+		if _, already := inSet[reference.String()]; already {
+			continue
+		}
+		if ctx.Err() != nil {
+			return
+		}
+		_, err := c.copyOneVia(ctx, c.aheadTargets, sourcePuller, destinationPuller, pusher, reference)
+		switch {
+		case err != nil && destinationFull(err):
+			// The set comes first: what is ahead of it is not worth the room the set may need.
+			report.AheadMissed = append(report.AheadMissed, reference.String()+": the store is full")
+			return
+		case err != nil:
+			report.AheadMissed = append(report.AheadMissed, reference.String())
+		default:
+			report.AheadCopied++
+		}
+	}
+}
+
+// aheadRoomEvery is how often a copy ahead asks whether the destination still has room — see AheadRoom.
+const aheadRoomEvery = 30 * time.Second
+
+// copyAheadParts is copyAhead part by part: what each part needs, and which parts it left whole.
+func (c *Copier) copyAheadParts(
+	ctx context.Context, parted PartedDiscoverer, source Registry,
+	sourcePuller, destinationPuller *remote.Puller, pusher *remote.Pusher,
+	required []name.Reference, report *Report,
+) {
+	inSet := make(map[string]struct{}, len(required))
+	for _, reference := range required {
+		inSet[reference.String()] = struct{}{}
+	}
+	copied := map[string]struct{}{}
+
+	var askedAt time.Time
+	room := func() bool {
+		if c.AheadRoom == nil || time.Since(askedAt) < aheadRoomEvery {
+			return true
+		}
+		askedAt = time.Now()
+		return c.AheadRoom()
+	}
+
+	for _, part := range parted.OptionalParts(ctx, source, sourcePuller, c.AheadWant) {
+		if part.Err != nil {
+			report.AheadMissed = append(report.AheadMissed, part.What+": "+part.Err.Error())
+			continue
+		}
+		whole := true
+		for _, reference := range part.References {
+			key := reference.String()
+			if _, already := inSet[key]; already {
+				continue
+			}
+			if _, already := copied[key]; already {
+				continue
+			}
+			if ctx.Err() != nil {
+				return
+			}
+			if !room() {
+				report.AheadMissed = append(report.AheadMissed, part.What+": the store has too little room left for it")
+				return
+			}
+			_, err := c.copyOneVia(ctx, c.aheadTargets, sourcePuller, destinationPuller, pusher, reference)
+			switch {
+			case err != nil && destinationFull(err):
+				// The set comes first: what is ahead of it is not worth the room the set may need.
+				report.AheadMissed = append(report.AheadMissed, key+": the store is full")
+				return
+			case err != nil:
+				report.AheadMissed = append(report.AheadMissed, key)
+				whole = false
+			default:
+				report.AheadCopied++
+				copied[key] = struct{}{}
+			}
+		}
+		if whole {
+			report.AheadHeld = append(report.AheadHeld, part.Key)
+		}
+	}
 }
 
 func (c *Copier) copyOne(
 	ctx context.Context, sourcePuller, destinationPuller *remote.Puller, pusher *remote.Pusher,
 	source name.Reference,
+) (bool, error) {
+	return c.copyOneVia(ctx, c.targets, sourcePuller, destinationPuller, pusher, source)
+}
+
+// copyOneVia is copyOne with the routes chosen by targets.
+func (c *Copier) copyOneVia(
+	ctx context.Context, targets func(*remote.Puller, name.Reference) []route,
+	sourcePuller, destinationPuller *remote.Puller, pusher *remote.Pusher, source name.Reference,
 ) (bool, error) {
 	destinationRegistry, err := c.registry(c.Destination)
 	if err != nil {
@@ -270,7 +498,7 @@ func (c *Copier) copyOne(
 	}
 
 	written := false
-	for _, target := range c.targets(sourcePuller, source) {
+	for _, target := range targets(sourcePuller, source) {
 		wrote, err := c.copyTo(ctx, target.puller, target.into, destinationRegistry, destinationPuller, pusher, source)
 		if err != nil {
 			return written, err
@@ -477,8 +705,20 @@ type route struct {
 // so once the upstream was gone, the platform's catalogue answered NAME_UNKNOWN. The same content in
 // both places is the price, and it is the upstream's own build in each.
 func (c *Copier) targets(sourcePuller *remote.Puller, reference name.Reference) []route {
+	return c.targetsIn(c.routes, sourcePuller, reference)
+}
+
+// aheadTargets is targets for the copy ahead: its own routes first — see AheadRoutes — then the set's.
+func (c *Copier) aheadTargets(sourcePuller *remote.Puller, reference name.Reference) []route {
+	if _, found := c.aheadRoutes[reference.Context().RegistryStr()+"/"+reference.Context().RepositoryStr()]; found {
+		return c.targetsIn(c.aheadRoutes, sourcePuller, reference)
+	}
+	return c.targets(sourcePuller, reference)
+}
+
+func (c *Copier) targetsIn(routes map[string]route, sourcePuller *remote.Puller, reference name.Reference) []route {
 	repository := reference.Context().RepositoryStr()
-	r, found := c.routes[reference.Context().RegistryStr()+"/"+repository]
+	r, found := routes[reference.Context().RegistryStr()+"/"+repository]
 	asSource := route{puller: sourcePuller, into: c.rewriteRepository(repository)}
 	switch {
 	case !found:
@@ -547,6 +787,21 @@ func destinationFull(err error) bool {
 		return false
 	}
 	return transportError.StatusCode == http.StatusInsufficientStorage
+}
+
+// ReleaseAbsent reports whether source answers that it does not hold the platform release tagged
+// version — not that it failed to answer, which reads as false.
+func ReleaseAbsent(ctx context.Context, source Registry, version string) bool {
+	registry, err := parseRegistry(source)
+	if err != nil {
+		return false
+	}
+	puller, err := remote.NewPuller(source.Options...)
+	if err != nil {
+		return false
+	}
+	_, err = puller.Head(ctx, registry.Repo(source.Repository).Tag(version))
+	return err != nil && absentAtSource(err)
 }
 
 func absentAtSource(err error) bool {

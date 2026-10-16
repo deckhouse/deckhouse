@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -53,6 +55,11 @@ import (
 func GetRegistryDataPreferUpstream(ctx context.Context, kubeCl *client.KubernetesClient, inCluster bool) (*image.RegistryConfig, string, error) {
 	if inCluster {
 		if conf, dockerCfg, found, err := registryDataFromConfigResource(ctx, kubeCl); err != nil {
+			return nil, "", err
+		} else if found {
+			return conf, dockerCfg, nil
+		}
+		if conf, dockerCfg, found, err := registryDataFromStore(ctx, kubeCl); err != nil {
 			return nil, "", err
 		} else if found {
 			return conf, dockerCfg, nil
@@ -187,7 +194,7 @@ func registryDataFromConfigResource(
 		}
 	}
 
-	conf, err := image.NewRegistryConfig(scheme, host+path, username, password, ca)
+	conf, err := image.NewRegistryConfig(scheme, joinHostPath(host, path), username, password, ca)
 	if err != nil {
 		return nil, "", false, fmt.Errorf("build registry config from RegistryConfig: %w", err)
 	}
@@ -197,6 +204,82 @@ func registryDataFromConfigResource(
 		return nil, "", false, fmt.Errorf("build registry dockercfg from RegistryConfig: %w", err)
 	}
 
+	return conf, base64.StdEncoding.EncodeToString(dockerCfg), true, nil
+}
+
+// joinHostPath names a repository by its host and path the way the module itself does
+// (Endpoint.Address in go_lib/registry/apis, a module dhctl does not depend on): `path` is what an
+// operator typed, and `/`, `deckhouse/ee/` or no leading slash are all accepted there, while a bare
+// concatenation turns them into `host/`, `hostdeckhouse/ee/` and the like.
+func joinHostPath(host, path string) string {
+	if path = strings.Trim(path, "/"); path == "" {
+		return host
+	}
+	return host + "/" + path
+}
+
+// InClusterRegistry is what a process in the pod network reads the platform's registry through, when
+// the registry module says: the upstream from its RegistryConfig, or, in an air-gapped cluster, the
+// in-cluster store with the store's own authority and read-only account. `found` is false, without an
+// error and without waiting, where neither applies — a cluster on the previous implementation — and
+// the caller keeps what it had.
+func InClusterRegistry(ctx context.Context, kubeCl *client.KubernetesClient) (*image.RegistryConfig, bool, error) {
+	if conf, _, found, err := registryDataFromConfigResource(ctx, kubeCl); err != nil || found {
+		return conf, found, err
+	}
+	conf, _, found, err := registryDataFromStore(ctx, kubeCl)
+	return conf, found, err
+}
+
+// storeAccessSecret is where the registry module publishes how to read its in-cluster store: the
+// store's certificate authority and a read-only account.
+const storeAccessSecret = "registry-storage-access"
+
+// registryDataFromStore is the in-cluster store, read the way the store expects: with its own
+// authority and its read-only account.
+//
+// The case it exists for is an air-gapped cluster, where the module's configuration names no upstream.
+// `deckhouse-registry` then names the store's address too, but with neither of the two things this
+// process needs to read it: on a node that address is the agent, which needs no account, and the
+// authority the secret carries is the one the installer generated, not the store's. Measured on such a
+// cluster: the infrastructure converger failing on `x509: certificate signed by unknown authority`
+// against `registry.d8-system.svc:5001`, every run.
+//
+// `found` is false, without an error, wherever the store cannot be read this way — no cache, a cluster
+// on the previous implementation, or a role that predates this read — and the caller falls back to
+// `deckhouse-registry` as before.
+func registryDataFromStore(ctx context.Context, kubeCl *client.KubernetesClient) (*image.RegistryConfig, string, bool, error) {
+	secret, err := kubeCl.CoreV1().Secrets(d8RppSecretNamespace).Get(ctx, storeAccessSecret, metav1.GetOptions{})
+	switch {
+	case apierrors.IsNotFound(err):
+		return nil, "", false, nil
+	case apierrors.IsForbidden(err):
+		// Said, because what follows is `deckhouse-registry`, and in an air-gapped cluster that ends in
+		// an unknown-authority error against the store's address with nothing pointing back here.
+		dhlog.FromContext(ctx).WarnContext(ctx, "the in-cluster registry's read-only access cannot be read; "+
+			"falling back to deckhouse-registry, which cannot verify the store's certificate", "secret", storeAccessSecret, "error", err)
+		return nil, "", false, nil
+	case err != nil:
+		return nil, "", false, fmt.Errorf("%w: reading %s: %w", ErrRegistryDataTransient, storeAccessSecret, err)
+	}
+
+	username, password := string(secret.Data["username"]), string(secret.Data["password"])
+	ca := string(secret.Data["ca.crt"])
+	if username == "" || password == "" || ca == "" {
+		dhlog.FromContext(ctx).WarnContext(ctx, "the in-cluster registry's read-only access is incomplete; "+
+			"falling back to deckhouse-registry, which cannot verify the store's certificate", "secret", storeAccessSecret)
+		return nil, "", false, nil
+	}
+
+	conf, err := image.NewRegistryConfig(strings.ToUpper(registry_const.Scheme), registry_const.HostWithPath,
+		username, password, ca)
+	if err != nil {
+		return nil, "", false, fmt.Errorf("build registry config from %s: %w", storeAccessSecret, err)
+	}
+	dockerCfg, err := helpers.DockerCfgFromCreds(username, password, registry_const.Host)
+	if err != nil {
+		return nil, "", false, fmt.Errorf("build registry dockercfg from %s: %w", storeAccessSecret, err)
+	}
 	return conf, base64.StdEncoding.EncodeToString(dockerCfg), true, nil
 }
 

@@ -44,6 +44,16 @@ type Releases struct {
 	// have to re-download the release it rolls back to. Empty when the cluster has never
 	// updated.
 	Previous string
+
+	// Pending are the versions the cluster knows of and has not deployed yet: an update waiting
+	// for its window or its approval. Sorted.
+	//
+	// Part of the set because an update has to be in every replica BEFORE it is deployed. In an
+	// air-gapped cluster it arrives by `d8 mirror push` onto the leader alone; counted only once
+	// deployed, it stayed there alone through the whole update, and a leader lost in that window
+	// left no replica holding the set — so none could lead, and with no upstream nothing could
+	// fill one. With an upstream the same thing is a prefetch: the update is pulled from the cache.
+	Pending []string
 }
 
 // Keep is the set of versions a run must not touch.
@@ -106,6 +116,7 @@ const (
 	ReasonPreviousRelease = "belongs to the previous release, kept for a rollback"
 	ReasonNotAVersion     = "not a version tag, so what it means is unknown"
 	ReasonNewerRelease    = "newer than the deployed release, so it is an update in progress"
+	ReasonReleasedAhead   = "newer than the deployed release, given back for room: the upstream holds it"
 	ReasonSuperseded      = "belongs to a release the cluster has moved past"
 	ReasonUnorderable     = "cannot be compared with the deployed release, so it is not known to be old"
 

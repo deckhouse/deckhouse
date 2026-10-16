@@ -75,7 +75,9 @@ func init() {
 func clientOptions() client.Options {
 	return client.Options{
 		Cache: &client.CacheOptions{
-			DisableFor: []client.Object{&corev1.Secret{}, &coordinationv1.Lease{}},
+			// The Service is read by name for the same reason as the secrets: the grant is
+			// name-scoped, so an informer for it would be refused and never sync.
+			DisableFor: []client.Object{&corev1.Secret{}, &coordinationv1.Lease{}, &corev1.Service{}},
 		},
 	}
 }

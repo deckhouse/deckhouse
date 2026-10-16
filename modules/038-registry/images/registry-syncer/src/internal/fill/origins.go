@@ -44,6 +44,13 @@ import (
 // For the cluster to pull a source's modules from the store once the upstream is gone, the source is
 // repointed at its path there — `<store>/module-sources/<name>` — before going air-gap.
 func ResolveOrigins(modules []ModuleRef, upstream, local Registry) ([]ModuleRef, error) {
+	return ResolvePacedOrigins(modules, upstream, local, nil)
+}
+
+// ResolvePacedOrigins is ResolveOrigins with every ModuleSource's registry read through pacer, for what
+// is copied ahead of the set — see Copier.AheadRoutes. The upstream is read as passed, so the caller
+// passes it paced as well.
+func ResolvePacedOrigins(modules []ModuleRef, upstream, local Registry, pacer *Pacer) ([]ModuleRef, error) {
 	upstreamModules := normalizedRepository(upstream.Address + "/" + upstream.Repository + "/" + modulesRepository)
 	storeRoot := normalizedRepository(constant.Host + constant.Path)
 
@@ -84,7 +91,7 @@ func ResolveOrigins(modules []ModuleRef, upstream, local Registry) ([]ModuleRef,
 		default:
 			origin, found := origins[module.Source.Name]
 			if !found {
-				built, err := sourceRegistry(module.Source)
+				built, err := sourceRegistry(module.Source, pacer)
 				if err != nil {
 					return nil, fmt.Errorf("module %s from source %s: %w", module.Name, module.Source.Name, err)
 				}
@@ -153,7 +160,7 @@ func Routes(modules []ModuleRef, destination Registry) []Route {
 }
 
 // sourceRegistry is a ModuleSource's registry as the fill talks to it.
-func sourceRegistry(source ModuleSource) (Registry, error) {
+func sourceRegistry(source ModuleSource, pacer *Pacer) (Registry, error) {
 	repo := strings.TrimRight(strings.TrimSpace(source.Repository), "/")
 	lower := strings.ToLower(repo)
 	for _, scheme := range []string{"https://", "http://"} {
@@ -181,7 +188,7 @@ func sourceRegistry(source ModuleSource) (Registry, error) {
 		}
 	}
 
-	options, err := RegistryOptions(source.CA, username, password)
+	options, err := PacedRegistryOptions(source.CA, username, password, pacer)
 	if err != nil {
 		return Registry{}, err
 	}

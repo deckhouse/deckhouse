@@ -83,6 +83,19 @@ func run(arguments []string) error {
 
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 
+	// Serving waits for its configuration rather than crashing without it: see awaitConfig. A
+	// collection is run by hand or by the syncer, both after the configuration exists.
+	if command == "serve" {
+		switch err := awaitConfig(log, registryConfig, *wrapperPath); {
+		case errors.Is(err, errStopped):
+			// Asked to stop, and stopped: an exit status of failure would be a crash in the pod's
+			// events for a pod that was merely deleted before its configuration arrived.
+			return nil
+		case err != nil:
+			return err
+		}
+	}
+
 	settings, err := parse(registryConfig)
 	if err != nil {
 		return err

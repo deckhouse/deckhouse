@@ -168,9 +168,13 @@ func Resolve(
 
 	// A registry the cluster was given credentials for, named by its own address.
 	//
-	// This is what a control-plane image reference looks like: etcd and kube-apiserver name
-	// the upstream directly, on purpose, so the control plane does not depend on the
-	// in-cluster registry being up.
+	// This is what a control-plane image reference looked like before the image address was
+	// published, and what it still is on a node that has not re-rendered since: etcd and
+	// kube-apiserver naming the upstream directly. Once `registry-image-address` exists the
+	// control-plane manager renders them from the in-cluster address like everything else; the
+	// primary image set under the upstream's own name is caught by the branch above and goes
+	// through the cache, so what reaches this branch is the rest of what the cluster holds
+	// credentials for.
 	//
 	// Only the agent can authenticate those pulls. It owns the runtime's whole registry
 	// configuration — everything arrives through one `_default` drop-in — so the

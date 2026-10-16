@@ -589,40 +589,6 @@ get_phase2() {
 }
 {{- end }}
 
-{{- define "bb-rpp-endpoints" -}}
-function get_pods() {
-  local namespace=$1
-  local labelSelector=$2
-  local token=$3
-
-  while true; do
-    for server in {{ .clusterMasterKubeAPIEndpoints | join " " }}; do
-      url="https://$server/api/v1/namespaces/$namespace/pods?labelSelector=$labelSelector"
-      if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
-      then
-      return 0
-      else
-        >&2 echo "Failed to list pods in $namespace from $server"
-      fi
-    done
-    sleep 10
-  done
-}
-
-function get_rpp_address() {
-  if [ -f /var/lib/bashible/bootstrap-token ]; then
-    local token="$(</var/lib/bashible/bootstrap-token)"
-    local namespace="d8-cloud-instance-manager"
-    local labelSelector="app%3Dregistry-packages-proxy"
-
-    rpp_ips=$(get_pods $namespace $labelSelector $token | jq -r '.items[] | select(.status.phase == "Running") | .status.podIP')
-    port=4282
-    ips_csv=$(echo "$rpp_ips" | grep -v '^[[:space:]]*$' | sed "s/$/:$port/" | tr '\n' ',' | sed 's/,$//')
-    echo "$ips_csv"
-  fi
-}
-{{- end }}
-
 {{- define "bb-telemetry" -}}
 bb-telemetry-start-span() {
   [[ "${DHCTL_TELEMETRY_ENABLED-}" != "true" ]] && return

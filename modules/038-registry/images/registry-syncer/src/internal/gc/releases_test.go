@@ -67,6 +67,7 @@ func TestFromCluster(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "v1.76.6", releases.Deployed)
 	assert.Equal(t, "v1.75.0", releases.Previous)
+	assert.Equal(t, []string{"v1.77.0"}, releases.Pending, "an update waiting to be deployed is part of the set")
 }
 
 // TestFromClusterPicksTheMostRecentSuperseded is the ordering trap: the API returns objects in
@@ -314,4 +315,60 @@ func TestWithoutSourcesEveryModuleIsKept(t *testing.T) {
 	modules, err := ModulesFromCluster(context.Background(), c)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"console@v1.2.0<", "sds-node-configurator@v0.7.5<"}, names(modules))
+}
+
+// TestAPendingModuleUpdateIsPartOfTheSet: a module update waiting for its window has to be in every
+// replica before it is applied, the same as a platform update.
+func TestAPendingModuleUpdateIsPartOfTheSet(t *testing.T) {
+	c := moduleClient(t, false,
+		moduleRelease("console-v1.2.0", "console", "1.2.0", "Deployed", ""),
+		moduleRelease("console-v1.3.0", "console", "1.3.0", "Pending", ""),
+		moduleRelease("console-v1.1.0", "console", "1.1.0", "Superseded", ""),
+	)
+
+	modules, err := ModulesFromCluster(context.Background(), c)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"console@v1.2.0<", "console@v1.3.0<"}, names(modules))
+}
+
+// TestTheCatalogueIsWhatTheSourcesOffer: read from the sources' status, so that every replica gets
+// the same answer however far behind its own store is.
+func TestTheCatalogueIsWhatTheSourcesOffer(t *testing.T) {
+	offering := func(name string, modules ...string) *unstructured.Unstructured {
+		source := moduleSource(name, "registry.d8-system.svc:5001/system/deckhouse/modules")
+		listed := make([]any, 0, len(modules))
+		for _, module := range modules {
+			listed = append(listed, map[string]any{"name": module, "version": "v1.0.0"})
+		}
+		source.Object["status"] = map[string]any{"modules": listed}
+		return source
+	}
+	c := moduleClient(t, true,
+		offering("deckhouse", "console", "stronghold"),
+		offering("vendor", "virtualization"),
+		moduleSource("empty", "registry.example.com/modules"),
+	)
+
+	catalogue, err := CatalogueFromCluster(context.Background(), c)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"deckhouse/console", "deckhouse/stronghold", "vendor/virtualization"}, catalogue)
+
+	none, err := CatalogueFromCluster(context.Background(), moduleClient(t, false))
+	require.NoError(t, err, "a cluster without ModuleSource offers nothing, which is not an error")
+	assert.Empty(t, none)
+}
+
+// TestPendingVersionsAreInVersionOrder: the review's finding — sorted as strings, v1.10.0 came before
+// v1.9.0, and the order is what the set's fingerprint is built from.
+func TestPendingVersionsAreInVersionOrder(t *testing.T) {
+	c := releaseClient(t,
+		release("v1-69-0", "v1.69.0", phaseDeployed),
+		release("v1-70-10", "v1.70.10", "Pending"),
+		release("v1-70-9", "v1.70.9", "Pending"),
+		release("not-a-version", "not-a-version", "Pending"),
+		release("v1-71-0", "v1.71.0", "Pending"),
+	)
+	got, err := FromCluster(context.Background(), c)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"v1.70.9", "v1.70.10", "v1.71.0", "not-a-version"}, got.Pending)
 }

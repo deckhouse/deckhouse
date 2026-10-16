@@ -70,8 +70,10 @@ type RegistryStorageSpec struct {
 	// +optional
 	Auth string `json:"auth,omitempty"`
 
-	// NeedSync is how the controller hands the syncer a fill or replication
-	// task.
+	// NeedSync is how the controller hands the syncers a fill or replication task. It is up while
+	// any replica is short of the set: the leader filling from the upstream, or a follower that has
+	// not caught up with the leader. It drops once every replica holds the set, and nothing is
+	// copied until the set changes again.
 	// +optional
 	NeedSync bool `json:"needSync,omitempty"`
 
@@ -239,6 +241,18 @@ type StorageReplicaStatus struct {
 	// is not set.
 	// +optional
 	VerifiedSet string `json:"verifiedSet,omitempty"`
+
+	// AheadSet is the parts of what is ahead of the set that this replica holds as well — the platform
+	// version the cluster updates to next, and each module update it is about to apply — as their keys,
+	// sorted and comma-separated.
+	//
+	// A part is reported once a copy ahead left it whole, and stays while it is pending. Separate from
+	// VerifiedSet because it is copied separately — after the set, in the background, best-effort — and
+	// so is held separately; by part, so that one module that never arrives does not keep the rest from
+	// counting. A follower copies the parts its leader holds and it does not, which is how an update
+	// brought to the leader alone reaches the other replicas.
+	// +optional
+	AheadSet string `json:"aheadSet,omitempty"`
 
 	// VerifiedDigests is how many digests OF THE SET were confirmed present.
 	//

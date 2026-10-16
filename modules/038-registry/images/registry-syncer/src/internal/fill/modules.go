@@ -72,6 +72,12 @@ type ModuleRef struct {
 	// copy's source, under its `modules` repository. Wherever it is read from, the store keeps it
 	// under its own `modules/<name>` — see ResolveOrigins.
 	Origin *Registry
+
+	// Pending marks a version the cluster is about to update the module to rather than one it runs.
+	// Copied ahead of time, but not part of what completeness is judged on: a pending release can
+	// name a package its source does not hold yet, and that must not keep every replica copying.
+	// See Release.Optional.
+	Pending bool
 }
 
 // FromPlatform tells a module of the platform's own source, which the store keeps under the

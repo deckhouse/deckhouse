@@ -24,6 +24,7 @@ import (
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 
 	"github.com/deckhouse/registry-syncer/internal/fill"
+	"github.com/deckhouse/registry-syncer/internal/gc"
 )
 
 func passThrough(needSync bool) *registryv1alpha1.RegistryStorageSpec {
@@ -99,7 +100,7 @@ func TestDecide(t *testing.T) {
 		},
 		{
 			name:     "a follower whose leader is still filling",
-			spec:     &registryv1alpha1.RegistryStorageSpec{},
+			spec:     passThrough(true),
 			isLeader: false,
 			leader:   &Leader{Node: "master-1", Address: "10.0.0.1:5001", Full: false},
 			// Replicated from anyway: whatever the leader holds is worth having, and what it does
@@ -116,12 +117,28 @@ func TestDecide(t *testing.T) {
 		},
 		{
 			name:     "an air-gapped follower with a complete leader",
-			spec:     &registryv1alpha1.RegistryStorageSpec{},
+			spec:     &registryv1alpha1.RegistryStorageSpec{NeedSync: true},
 			isLeader: false,
 			leader:   &Leader{Node: "master-0", Address: "10.0.0.1:5001", Full: true},
 			// The only way content reaches a follower in air-gap: there is no upstream
 			// for it to fall back on, ever.
 			want: ActionReplicate,
+		},
+		{
+			// The steady state: every replica holds the set, so the controller asks for nothing.
+			// Replicating anyway found every reference already present, every half a minute.
+			name:     "a follower when no replica is behind",
+			spec:     passThrough(false),
+			isLeader: false,
+			leader:   &Leader{Node: "master-0", Address: "10.0.0.1:5001", Full: true},
+			want:     ActionNone,
+		},
+		{
+			name:     "an air-gapped follower when no replica is behind",
+			spec:     &registryv1alpha1.RegistryStorageSpec{},
+			isLeader: false,
+			leader:   &Leader{Node: "master-0", Address: "10.0.0.1:5001", Full: true},
+			want:     ActionNone,
 		},
 		{
 			name:     "no spec at all",
@@ -260,16 +277,16 @@ func TestSetKeyMovesExactlyWithTheSet(t *testing.T) {
 		{Name: "console", Version: "v1.2.0", Source: fill.ModuleSource{Repository: "registry.d8-system.svc:5001/system/deckhouse/modules"}},
 		{Name: "pushgateway", Version: "v1.0.2", Source: fill.ModuleSource{Repository: "registry.deckhouse.io/deckhouse/ce/modules"}},
 	}
-	base := SetKey("v1.70.1", "v1.69.3", modules)
+	base := SetKey(gc.Releases{Deployed: "v1.70.1", Previous: "v1.69.3"}, modules, nil)
 
 	reordered := []fill.ModuleRef{modules[1], modules[0]}
-	assert.Equal(t, base, SetKey("v1.70.1", "v1.69.3", reordered), "the order modules are listed in is not the set")
+	assert.Equal(t, base, SetKey(gc.Releases{Deployed: "v1.70.1", Previous: "v1.69.3"}, reordered, nil), "the order modules are listed in is not the set")
 
 	moved := func(mutate func([]fill.ModuleRef) []fill.ModuleRef) string {
 		copied := append([]fill.ModuleRef(nil), modules...)
-		return SetKey("v1.70.1", "v1.69.3", mutate(copied))
+		return SetKey(gc.Releases{Deployed: "v1.70.1", Previous: "v1.69.3"}, mutate(copied), nil)
 	}
-	assert.NotEqual(t, base, SetKey("v1.71.0", "v1.70.1", modules), "the platform updated")
+	assert.NotEqual(t, base, SetKey(gc.Releases{Deployed: "v1.71.0", Previous: "v1.70.1"}, modules, nil), "the platform updated")
 	assert.NotEqual(t, base, moved(func(m []fill.ModuleRef) []fill.ModuleRef { m[1].Version = "v1.0.3"; return m }),
 		"a module updated")
 	assert.NotEqual(t, base, moved(func(m []fill.ModuleRef) []fill.ModuleRef {
@@ -309,4 +326,67 @@ func TestReverify(t *testing.T) {
 			assert.Equal(t, tc.withdraw, withdraw)
 		})
 	}
+}
+
+// TestSetKeyIsTheSetAndAheadKeyWhatIsAboutToArrive: a module pushed into the catalogue changes the
+// set, so it takes the leader's full report away and raises needSync. An update waiting to be deployed
+// does not: it is ahead of the set, and moves AheadKey instead — the next version only, and every
+// module update. Nothing offered, the set's fingerprint is the one it always was; nothing pending, there
+// is nothing ahead.
+func TestSetKeyIsTheSetAndAheadKeyWhatIsAboutToArrive(t *testing.T) {
+	deployed := gc.Releases{Deployed: "v1.76.6", Previous: "v1.75.0"}
+	base := SetKey(deployed, nil, nil)
+	assert.Empty(t, AheadKey(deployed, nil), "nothing pending, nothing ahead")
+
+	pending := deployed
+	pending.Pending = []string{"v1.77.0"}
+	assert.Equal(t, base, SetKey(pending, nil, nil), "an update is not the set the cluster runs")
+	next := AheadKey(pending, nil)
+	assert.NotEmpty(t, next, "an update arrived")
+
+	further := deployed
+	further.Pending = []string{"v1.77.0", "v1.78.0"}
+	assert.Equal(t, next, AheadKey(further, nil), "only the next version is copied ahead, so only it counts")
+
+	update := []fill.ModuleRef{{Name: "console", Version: "v1.2.0", Pending: true}}
+	assert.Equal(t, base, SetKey(deployed, update, nil), "nor is a module update")
+	assert.NotEqual(t, next, AheadKey(pending, update), "but it is ahead of the set")
+	assert.NotEmpty(t, AheadKey(deployed, update))
+
+	withModule := SetKey(deployed, nil, []string{"deckhouse/console", "deckhouse/virtualization"})
+	assert.NotEqual(t, base, withModule, "a module was pushed into the catalogue")
+	assert.NotEqual(t, withModule, SetKey(deployed, nil, []string{"deckhouse/console"}))
+	assert.Equal(t, base, SetKey(deployed, nil, []string{}), "nothing offered: as before")
+}
+
+func TestAlreadyHeld(t *testing.T) {
+	leader := &Leader{Node: "master-1"}
+
+	tests := []struct {
+		name           string
+		action         Action
+		reportedSet    string
+		reportedSource string
+		leader         *Leader
+		want           bool
+	}{
+		{name: "a leader found full against this set", action: ActionFill, reportedSet: "a", want: true},
+		{name: "a leader found full against another set", action: ActionFill, reportedSet: "b", want: false},
+		{name: "a follower that replicated this set from the leader", action: ActionReplicate,
+			reportedSet: "a", reportedSource: "master-1", leader: leader, want: true},
+		// The lease moved: copying once from the new leader is what needSync was raised for.
+		{name: "a follower that replicated this set from the previous leader", action: ActionReplicate,
+			reportedSet: "a", reportedSource: "master-0", leader: leader, want: false},
+		{name: "a former leader, which replicated from nobody", action: ActionReplicate,
+			reportedSet: "a", reportedSource: "", leader: leader, want: false},
+		{name: "a follower with no leader to name", action: ActionReplicate,
+			reportedSet: "a", reportedSource: "master-1", want: false},
+		{name: "nothing to copy anyway", action: ActionNone, reportedSet: "a", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, AlreadyHeld(tt.action, "a", tt.reportedSet, tt.reportedSource, tt.leader))
+		})
+	}
+	assert.False(t, AlreadyHeld(ActionFill, "", "", "", nil), "a set that could not be read is never held")
 }
