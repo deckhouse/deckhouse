@@ -1,0 +1,43 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem-capability:security:manage_admission_resources
+  annotations:
+    en.meta.deckhouse.io/title: "Security: manage admission webhooks and policies"
+    ru.meta.deckhouse.io/title: "Безопасность: управление вебхуками и политиками допуска"
+    en.meta.deckhouse.io/description: "Manage admission webhook configurations and validating admission policies, including the webhook configuration of the Deckhouse modules."
+    ru.meta.deckhouse.io/description: "Управление конфигурациями вебхуков допуска и политиками ValidatingAdmissionPolicy, включая конфигурацию вебхуков модулей Deckhouse."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "subsystem-capability.security.manage_admission_resources"
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: security
+    rbac.deckhouse.io/aggregate-to-cluster-as: superadmin
+    rbac.deckhouse.io/aggregate-to-security-as: superadmin
+rules:
+  # A mutating webhook can change any object the platform creates, including its own pods, and a
+  # deleted webhook or policy switches off what it enforces, so these are written at the superadmin
+  # level, not by the managers.
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - mutatingwebhookconfigurations
+      - validatingadmissionpolicies
+      - validatingadmissionpolicybindings
+      - validatingwebhookconfigurations
+    verbs:
+      - create
+      - update
+      - patch
+      - delete
+  # No controller serves this subresource. The admission policy that protects the webhook configuration
+  # of the Deckhouse modules (templates/webhook-handler-configuration-policy.yaml) checks exactly this
+  # permission.
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - validatingwebhookconfigurations/deckhouse-webhook-handler
+    verbs:
+      - update

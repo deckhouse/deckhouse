@@ -60,6 +60,12 @@ validationObject:
     operations:  ["CREATE", "UPDATE"]
     resources:   ["clusterroles"]
     scope:       "Cluster"
+  # Turning multi-tenancy off in the user-authz ModuleConfig opens the system namespaces to every rule.
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["UPDATE", "DELETE"]
+    resources:   ["moduleconfigs"]
+    scope:       "Cluster"
 context:
   # The jqFilter programs build "<namespace>:<name>" without the \( interpolation: webhook-operator
   # renders them into a plain Python string, where a backslash is an escape sequence.

@@ -1265,6 +1265,330 @@ class TestDexDenyMessage(unittest.TestCase):
         self.assertIn("spec.allowedIdentities", msg)
         self.assertIn("SuperAdmin", msg)
 
+class TestBasicRangeIncludes(unittest.TestCase):
+    """A can-assign range covers the basic levels its basic-max includes (the README), not everything
+    that sorts below it: ClusterEditor does not include Admin."""
+
+    @staticmethod
+    def catalog(basic_max):
+        uncovered = [{"apiGroups": ["example.io"], "resources": ["things"], "verbs": ["create"]}]
+        entries = [
+            {"filterResult": {"name": role, "rules": uncovered, "accessLevel": "", "labels": {"heritage": "deckhouse"}}}
+            for role in assign.BASIC_LEVEL_ROLE.values()
+        ]
+        entries.append({"filterResult": {"name": "d8:test:manager", "rules": [], "accessLevel": "", "labels": {
+            "heritage": "deckhouse", "user-authz.deckhouse.io/can-assign-basic-max": basic_max}}})
+        return assign.load_catalog({assign.CROLE_SNAP: entries})
+
+    def test_cluster_editor_range(self):
+        catalog = self.catalog("ClusterEditor")
+        for level, covered in (("User", True), ("PrivilegedUser", True), ("Editor", True), ("Admin", False),
+                               ("ClusterEditor", True), ("ClusterAdmin", False), ("SuperAdmin", False)):
+            with self.subTest(level=level):
+                leftover = assign.can_assign(["d8:test:manager"], [assign.BASIC_LEVEL_ROLE[level]], catalog)
+                self.assertEqual(leftover is None, covered)
+
+    def test_cluster_admin_range_covers_everything_below_superadmin(self):
+        catalog = self.catalog("ClusterAdmin")
+        for level in ("User", "PrivilegedUser", "Editor", "Admin", "ClusterEditor", "ClusterAdmin"):
+            with self.subTest(level=level):
+                self.assertIsNone(assign.can_assign(["d8:test:manager"], [assign.BASIC_LEVEL_ROLE[level]], catalog))
+
+    def test_every_level_includes_itself_and_what_it_includes(self):
+        for level, included in assign.BASIC_INCLUDES.items():
+            self.assertIn(level, included)
+            for lower in included:
+                self.assertLessEqual(assign.BASIC_INCLUDES[lower], included, (level, lower))
+
+    def test_union_of_incomparable_ranges_errs_on_the_strict_side(self):
+        self.assertEqual(assign._wider_basic("Admin", "ClusterEditor"), "ClusterEditor")
+        self.assertEqual(assign._wider_basic("ClusterEditor", "Admin"), "ClusterEditor")
+        self.assertEqual(assign._wider_basic("ClusterEditor", "ClusterAdmin"), "ClusterAdmin")
+        self.assertEqual(assign._wider_basic(None, "Editor"), "Editor")
+
+
+class TestSystemNamespaceReach(unittest.TestCase):
+    def snaps(self, multitenancy=True, cars=None, users=None, groups=None):
+        out = {assign.CAR_SNAP: cars or [], assign.USER_SNAP: users or [], assign.GROUP_SNAP: groups or []}
+        if multitenancy is not None:
+            out[assign.MT_STATE_SNAP] = [{"filterResult": {"enableMultiTenancy": multitenancy}}]
+        return out
+
+    def reaches(self, spec, **kw):
+        return assign.car_reaches_system_namespaces(spec, self.snaps(**kw))
+
+    def test_multitenancy_off_or_unknown_reaches(self):
+        self.assertTrue(self.reaches({}, multitenancy=False))
+        self.assertTrue(self.reaches({}, multitenancy=None))
+
+    def test_plain_rule_and_limit_namespaces_do_not_reach(self):
+        self.assertFalse(self.reaches({}))
+        self.assertFalse(self.reaches({"limitNamespaces": ["d8-.*"]}))
+
+    def test_allow_access_and_match_any_reach(self):
+        self.assertTrue(self.reaches({"allowAccessToSystemNamespaces": True}))
+        self.assertTrue(self.reaches({"namespaceSelector": {"matchAny": True}}))
+
+    def test_label_selector_reaches_unless_it_names_application_namespaces(self):
+        def selector(sel):
+            return {"namespaceSelector": {"labelSelector": sel}}
+        name = "kubernetes.io/metadata.name"
+        # a label may be put on a system namespace later, or come with a new one
+        self.assertTrue(self.reaches(selector({"matchLabels": {"team": "a"}})))
+        self.assertTrue(self.reaches(selector({})))
+        self.assertTrue(self.reaches(selector({"matchExpressions": [{"key": name, "operator": "NotIn", "values": ["d8-system"]}]})))
+        self.assertTrue(self.reaches(selector({"matchLabels": {name: "d8-system"}})))
+        self.assertTrue(self.reaches(selector({"matchExpressions": [{"key": name, "operator": "In", "values": ["app", "kube-system"]}]})))
+        # the API server sets this label to the name, so a selector by it names its namespaces
+        self.assertFalse(self.reaches(selector({"matchLabels": {name: "app"}})))
+        self.assertFalse(self.reaches(selector({"matchExpressions": [{"key": name, "operator": "In", "values": ["app", "web"]}],
+                                                "matchLabels": {"team": "a"}})))
+
+    def test_namespace_selector_ignores_allow_access(self):
+        spec = {"namespaceSelector": {"labelSelector": {"matchLabels": {"kubernetes.io/metadata.name": "app"}}},
+                "allowAccessToSystemNamespaces": True}
+        self.assertFalse(self.reaches(spec))
+
+    def test_system_namespace_names(self):
+        for name in ("d8-system", "kube-system", "default", "upmeter-probe", "antiopa", "loghouse", None):
+            self.assertTrue(assign.is_system_namespace_name(name), name)
+        for name in ("app", "d8system", "kubernetes-apps"):
+            self.assertFalse(assign.is_system_namespace_name(name), name)
+
+
+class TestSharedSubjects(unittest.TestCase):
+    """The authorization webhook joins the rules of a subject, so a rule without namespace fields works in
+    the system namespaces once another rule lets one of its subjects in."""
+
+    REACHING = {"filterResult": {"name": "ops-system", "accessLevel": "User", "additionalRoles": [],
+                                 "allowAccessToSystemNamespaces": True, "namespaceSelector": None,
+                                 "userSubjects": ["ops@corp"], "groupSubjects": ["ops"], "saSubjects": ["d8-x:robot"]}}
+
+    def snaps(self, cars=None, groups=None, users=None):
+        return {assign.CAR_SNAP: cars if cars is not None else [self.REACHING], assign.GROUP_SNAP: groups or [],
+                assign.USER_SNAP: users or [], assign.MT_STATE_SNAP: [{"filterResult": {"enableMultiTenancy": True}}]}
+
+    def shares(self, subjects, user_info=None, **kw):
+        return assign.car_shares_subjects_with_a_reaching_rule({"subjects": subjects}, self.snaps(**kw), user_info)
+
+    @staticmethod
+    def group(name, *members):
+        return {"filterResult": {"name": name, "members": [{"kind": kind, "name": member} for kind, member in members]}}
+
+    @staticmethod
+    def user(name, email):
+        return {"filterResult": {"name": name, "email": email, "groups": []}}
+
+    def test_direct_subjects(self):
+        self.assertTrue(self.shares([{"kind": "Group", "name": "ops"}]))
+        self.assertTrue(self.shares([{"kind": "User", "name": "ops@corp"}]))
+        self.assertTrue(self.shares([{"kind": "ServiceAccount", "namespace": "d8-x", "name": "robot"}]))
+        self.assertFalse(self.shares([{"kind": "Group", "name": "devs"}]))
+
+    def test_local_group_membership(self):
+        groups = [{"filterResult": {"name": "ops", "members": [{"kind": "User", "name": "dev@corp"}]}}]
+        self.assertTrue(self.shares([{"kind": "User", "name": "dev@corp"}], groups=groups))
+
+    def test_rule_that_does_not_reach_is_not_shared(self):
+        quiet = {"filterResult": {**self.REACHING["filterResult"], "allowAccessToSystemNamespaces": False}}
+        self.assertFalse(self.shares([{"kind": "Group", "name": "ops"}], cars=[quiet]))
+
+    def test_members_of_a_group_and_its_nesting(self):
+        # The rule is for devs; each case has a request that also carries ops.
+        u = self.user("u", "u@corp")
+        cases = {
+            "a member of devs and ops": ([self.group("devs", ("User", "u")), self.group("ops", ("User", "u"))], [u]),
+            "devs nested in ops": ([self.group("ops", ("Group", "devs")), self.group("devs")], []),
+            "a group nested in devs nested in ops": (
+                [self.group("ops", ("Group", "devs")), self.group("devs", ("Group", "team")), self.group("team")], []),
+            "a group nested in devs and in ops": (
+                [self.group("devs", ("Group", "team")), self.group("ops", ("Group", "team")), self.group("team")], []),
+        }
+        for name, (groups, users) in cases.items():
+            with self.subTest(name):
+                self.assertTrue(self.shares([{"kind": "Group", "name": "devs"}], groups=groups, users=users))
+        # ops nested in a reaching top: a rule for ops reaches through top
+        top = {"filterResult": {**self.REACHING["filterResult"], "groupSubjects": ["top"], "userSubjects": [],
+                                "saSubjects": []}}
+        self.assertTrue(self.shares([{"kind": "Group", "name": "ops"}], cars=[top],
+                                    groups=[self.group("top", ("Group", "ops")), self.group("ops")]))
+        # a member of ops only is not a request the rule for devs applies to
+        self.assertFalse(self.shares([{"kind": "Group", "name": "devs"}], users=[u],
+                                     groups=[self.group("devs"), self.group("ops", ("User", "u"))]))
+
+    def test_a_user_subject_by_email(self):
+        # A rule names a local user by email, and the User object goes by another name: its groups count.
+        u = self.user("u", "u@corp")
+        self.assertTrue(self.shares([{"kind": "User", "name": "u@corp"}], users=[u],
+                                    groups=[self.group("ops", ("User", "u"))]))
+        self.assertTrue(self.shares([{"kind": "User", "name": "U@Corp"}], users=[u],
+                                    groups=[self.group("ops", ("User", "u"))]))
+        top = {"filterResult": {**self.REACHING["filterResult"], "groupSubjects": ["top"], "userSubjects": [],
+                                "saSubjects": []}}
+        self.assertTrue(self.shares([{"kind": "User", "name": "u@corp"}], cars=[top], users=[u],
+                                    groups=[self.group("top", ("Group", "team")), self.group("team", ("User", "u"))]))
+        self.assertFalse(self.shares([{"kind": "User", "name": "u@corp"}], users=[u],
+                                     groups=[self.group("devs", ("User", "u"))]))
+
+    def test_groups_from_the_user_spec(self):
+        # user-authn puts the groups of the User spec into the token too.
+        ops_user = {"filterResult": {"name": "o", "email": "ops@corp", "groups": ["devs"]}}
+        self.assertTrue(self.shares([{"kind": "Group", "name": "devs"}], users=[ops_user]))
+        self.assertFalse(self.shares([{"kind": "Group", "name": "qa"}], users=[ops_user]))
+
+    def test_the_requester(self):
+        mine = [{"kind": "User", "name": "me@corp"}]
+        idp = {"username": "me@corp", "groups": ["ops", "system:authenticated"]}
+        self.assertTrue(self.shares(mine, user_info=idp))
+        self.assertTrue(self.shares([{"kind": "Group", "name": "idp-team"}],
+                                    user_info={"username": "ops@corp", "groups": ["idp-team"]}))
+        # a requester the rule does not apply to brings nothing
+        self.assertFalse(self.shares([{"kind": "User", "name": "peer@corp"}], user_info=idp))
+        self.assertFalse(self.shares(mine, user_info={"username": "me@corp", "groups": ["devs"]}))
+
+    def test_implicit_groups(self):
+        everyone = {"filterResult": {**self.REACHING["filterResult"], "groupSubjects": ["system:authenticated"],
+                                     "userSubjects": [], "saSubjects": []}}
+        robots = {"filterResult": {**everyone["filterResult"], "groupSubjects": ["system:serviceaccounts:apps"]}}
+        self.assertTrue(self.shares([{"kind": "User", "name": "peer@corp"}], cars=[everyone]))
+        self.assertTrue(self.shares([{"kind": "Group", "name": "idp-team"}], cars=[everyone]))
+        self.assertTrue(self.shares([{"kind": "ServiceAccount", "namespace": "apps", "name": "ci"}], cars=[robots]))
+        self.assertFalse(self.shares([{"kind": "ServiceAccount", "namespace": "other", "name": "ci"}], cars=[robots]))
+        self.assertFalse(self.shares([{"kind": "User", "name": "peer@corp"}], cars=[robots]))
+
+    def rule(self, **subjects):
+        return {"filterResult": {**self.REACHING["filterResult"], "userSubjects": [], "groupSubjects": [],
+                                 "saSubjects": [], **subjects}}
+
+    def test_virtual_group_subjects(self):
+        # A rule for a group that every request of a kind carries applies to each such request, so it joins
+        # with every reaching rule that lets one of them in.
+        everyone = [{"kind": "Group", "name": "system:authenticated"}]
+        all_sas = [{"kind": "Group", "name": "system:serviceaccounts"}]
+        apps_sas = [{"kind": "Group", "name": "system:serviceaccounts:apps"}]
+        user = self.rule(userSubjects=["u@corp"])
+        idp_group = self.rule(groupSubjects=["idp-team"])
+        apps_bot = self.rule(saSubjects=["apps:bot"])
+        other_bot = self.rule(saSubjects=["other:bot"])
+        cases = [
+            (everyone, user, True), (everyone, idp_group, True), (everyone, apps_bot, True),
+            (everyone, self.rule(), False),
+            (all_sas, apps_bot, True), (all_sas, other_bot, True),
+            (all_sas, self.rule(groupSubjects=["system:serviceaccounts:apps"]), True),
+            (all_sas, self.rule(userSubjects=["system:serviceaccount:apps:bot"]), True),
+            (all_sas, user, False), (all_sas, idp_group, False),
+            (apps_sas, apps_bot, True), (apps_sas, self.rule(groupSubjects=["system:serviceaccounts"]), True),
+            (apps_sas, self.rule(groupSubjects=["system:serviceaccounts:apps"]), True),
+            (apps_sas, self.rule(groupSubjects=["system:authenticated"]), True),
+            (apps_sas, other_bot, False), (apps_sas, self.rule(groupSubjects=["system:serviceaccounts:other"]), False),
+            (apps_sas, user, False),
+        ]
+        for subjects, reaching, shared in cases:
+            with self.subTest(subjects=subjects[0]["name"], reaching=reaching["filterResult"]):
+                self.assertEqual(self.shares(subjects, cars=[reaching]), shared)
+
+    def test_service_account_usernames(self):
+        # The authorization webhook and RBAC match a User named system:serviceaccount:<ns>:<name> to that
+        # ServiceAccount.
+        as_user = [{"kind": "User", "name": "system:serviceaccount:app:bot"}]
+        as_sa = [{"kind": "ServiceAccount", "namespace": "app", "name": "bot"}]
+        self.assertTrue(self.shares(as_user, cars=[self.rule(saSubjects=["app:bot"])]))
+        self.assertTrue(self.shares(as_sa, cars=[self.rule(userSubjects=["system:serviceaccount:app:bot"])]))
+        self.assertFalse(self.shares(as_user, cars=[self.rule(saSubjects=["app:other"])]))
+        self.assertFalse(self.shares([{"kind": "User", "name": "bot@corp"}], cars=[self.rule(saSubjects=["app:bot"])]))
+
+    def test_no_reaching_rule_skips_the_walk(self):
+        quiet = {"filterResult": {**self.REACHING["filterResult"], "allowAccessToSystemNamespaces": False}}
+        self.assertFalse(self.shares([{"kind": "Group", "name": "system:authenticated"}], cars=[quiet]))
+
+
+class TestTargetGroupsRoles(unittest.TestCase):
+    """The roles of several groups at once are the roles of each of them."""
+
+    def test_same_as_collect_roles_for_identity(self):
+        def car(name, groups, level="Editor"):
+            return {"filterResult": {"name": name, "accessLevel": level, "additionalRoles": [],
+                                     "allowAccessToSystemNamespaces": False, "namespaceSelector": None,
+                                     "userSubjects": [], "groupSubjects": groups, "saSubjects": []}}
+        snaps = {
+            assign.CAR_SNAP: [car("a", ["devs"]), car("b", ["ops", "devs"], "Admin"), car("c", ["qa"], "User"),
+                              {"filterResult": {**car("reach", ["devs"])["filterResult"],
+                                                "allowAccessToSystemNamespaces": True}}],
+            assign.AR_SNAP: [{"filterResult": {"name": "ar", "namespace": "x", "accessLevel": "PrivilegedUser",
+                                               "groupSubjects": ["ops"], "userSubjects": [], "saSubjects": []}},
+                             # an AR level above the cap of a namespaced rule
+                             {"filterResult": {"name": "ar-high", "namespace": "x", "accessLevel": "ClusterAdmin",
+                                               "groupSubjects": ["qa"], "userSubjects": [], "saSubjects": []}}],
+            assign.CRB_SNAP: [{"filterResult": {"name": "crb", "role": "d8:system:viewer", "groupSubjects": ["devs"]}}],
+            assign.CPRB_SNAP: [{"filterResult": {"name": "cprb", "role": "d8:project:manager", "groupSubjects": ["ops"]}}],
+            assign.PRB_SNAP: [{"filterResult": {"name": "prb", "role": "d8:project:user", "groupSubjects": ["ops"]}}],
+            assign.MT_STATE_SNAP: [{"filterResult": {"enableMultiTenancy": True}}],
+        }
+        def one(group):
+            return set(assign.collect_roles_for_identity(snaps, "group", group, lowercase_user=False, as_target=True))
+        for group in ("devs", "ops", "qa", "nobody"):
+            with self.subTest(group=group):
+                self.assertEqual(set(assign.target_groups_roles(snaps, [group])), one(group))
+        self.assertIn("d8:project:manager", one("ops"))
+        self.assertIn("user-authz:admin", one("qa"), "an AuthorizationRule level is capped")
+        self.assertEqual(set(assign.target_groups_roles(snaps, ["devs", "ops", "qa", "nobody"])),
+                         one("devs") | one("ops") | one("qa"))
+        self.assertEqual(assign.target_groups_roles(snaps, []), [])
+
+
+class TestGroupMembersReachSystemNamespaces(unittest.TestCase):
+    """A new member of a group takes the rules of the group and of the groups above it, joined with its own."""
+
+    REACHING = TestSharedSubjects.REACHING
+    EDITOR = {"filterResult": {"name": "devs-edit", "accessLevel": "Editor", "additionalRoles": [],
+                               "allowAccessToSystemNamespaces": False, "namespaceSelector": None,
+                               "userSubjects": [], "groupSubjects": ["devs"], "saSubjects": []}}
+
+    def reaches(self, members, *, cars=None, groups=None, users=None, group="devs"):
+        snaps = {assign.CAR_SNAP: cars if cars is not None else [self.REACHING, self.EDITOR],
+                 assign.GROUP_SNAP: groups or [], assign.USER_SNAP: users or [],
+                 assign.MT_STATE_SNAP: [{"filterResult": {"enableMultiTenancy": True}}]}
+        return assign.group_members_reach_system_namespaces(snaps, group, members)
+
+    def test_cases(self):
+        ops_user = TestSharedSubjects.user("o", "ops@corp")
+        plain_user = TestSharedSubjects.user("p", "peer@corp")
+        group = TestSharedSubjects.group
+        self.assertTrue(self.reaches([("User", "o")], users=[ops_user]))
+        self.assertTrue(self.reaches([("Group", "ops")], groups=[group("ops")]))
+        self.assertTrue(self.reaches([("Group", "team")], groups=[group("team"), group("ops", ("Group", "team"))]))
+        self.assertFalse(self.reaches([("User", "p")], users=[plain_user]))
+        # a group without rules of its own gives the rules of the group above it
+        self.assertTrue(self.reaches([("User", "o")], users=[ops_user], group="team",
+                                     groups=[group("devs", ("Group", "team"))]))
+        # no rule for the group or above: nothing joins
+        self.assertFalse(self.reaches([("User", "o")], users=[ops_user], cars=[self.REACHING]))
+
+
+class TestTurnsMultitenancyOff(unittest.TestCase):
+    def snaps(self, state=True):
+        return {} if state is None else {assign.MT_STATE_SNAP: [{"filterResult": {"enableMultiTenancy": state}}]}
+
+    def test_cases(self):
+        on = {"enableMultiTenancy": True}
+        off = {"enableMultiTenancy": False}
+        cases = [
+            ("UPDATE", on, off, True, True),
+            ("UPDATE", on, {}, True, True),          # removing the field falls back to the edition default
+            ("UPDATE", {}, off, True, True),
+            ("UPDATE", {}, {}, True, False),          # an unrelated edit
+            ("UPDATE", off, on, True, False),
+            ("UPDATE", on, on, True, False),
+            ("DELETE", on, {}, True, True),
+            ("DELETE", {}, {}, True, True),           # the edition default may be on
+            ("UPDATE", on, off, False, False),        # already off: nothing to open
+            ("UPDATE", on, off, None, True),
+        ]
+        for operation, old, new, state, want in cases:
+            with self.subTest(operation=operation, old=old, new=new, state=state):
+                self.assertEqual(assign.turns_multitenancy_off(operation, old, new, self.snaps(state)), want)
+
+
 
 if __name__ == "__main__":
     unittest.main()

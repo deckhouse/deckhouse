@@ -16,13 +16,14 @@ metadata:
     rbac.deckhouse.io/subsystem: iam
     rbac.deckhouse.io/aggregate-to-iam-as: superadmin
     rbac.deckhouse.io/aggregate-to-system-as: manager
-    # can-assign range of the identity-assign webhook: the IAM manager assigns basic access
-    # levels up to ClusterAdmin and IAM subsystem roles up to the manager level, but no
-    # superadmin role, cluster-admin or SuperAdmin.
-    user-authz.deckhouse.io/can-assign-basic-max: ClusterAdmin
+    # can-assign range of the identity-assign webhook: the IAM manager assigns the basic access
+    # levels ClusterEditor includes (User, PrivilegedUser, Editor, ClusterEditor), but no Admin,
+    # ClusterAdmin or SuperAdmin and no access to the system namespaces, and IAM subsystem roles up to
+    # the manager level, but no superadmin role or cluster-admin.
+    user-authz.deckhouse.io/can-assign-basic-max: ClusterEditor
     user-authz.deckhouse.io/can-assign-scope: subsystem
     user-authz.deckhouse.io/can-assign-subsystem: iam
-    user-authz.deckhouse.io/can-assign-max-level: admin
+    user-authz.deckhouse.io/can-assign-max-level: manager
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:

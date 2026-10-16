@@ -205,9 +205,18 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			// an alias carries the can-assign range of the old role, so holders of the old name keep
 			// the right to assign roles for the compatibility release
 			Expect(legacyManage.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-scope`).String()).To(Equal("system"))
-			Expect(legacyManage.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-max-level`).String()).To(Equal("admin"))
+			// a manager assigns up to the manager level and ClusterEditor, the old names as the new ones
+			Expect(legacyManage.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-max-level`).String()).To(Equal("manager"))
+			Expect(legacyManage.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-basic-max`).String()).To(Equal("ClusterEditor"))
 			legacySecurity := f.KubernetesGlobalResource("ClusterRole", "d8:manage:security:manager")
 			Expect(legacySecurity.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-subsystem`).String()).To(Equal("security"))
+			Expect(legacySecurity.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-max-level`).String()).To(Equal("manager"))
+			Expect(legacySecurity.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-basic-max`).String()).To(Equal("ClusterEditor"))
+			for _, manager := range []string{"d8:system:manager", "d8:subsystem:iam:manager"} {
+				role := f.KubernetesGlobalResource("ClusterRole", manager)
+				Expect(role.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-max-level`).String()).To(Equal("manager"), manager)
+				Expect(role.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-basic-max`).String()).To(Equal("ClusterEditor"), manager)
+			}
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:all:viewer").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-basic-max`).Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:system:superadmin").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-max-level`).String()).To(Equal("superadmin"))
 			// the range of assigning roles belongs to the IAM subsystem, the security roles carry none
@@ -1220,6 +1229,63 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	// them from the API - so the setup quietly became empty and the two tests rendered the
 	// defaults, twice, under names that promised otherwise. What is still true and worth pinning
 	// is what multi-tenancy being off does to the render, so that is what this checks, once.
+	Context("Protecting the webhook configuration of the Deckhouse modules", func() {
+		const policyName = "webhook-handler-configuration.user-authz.deckhouse.io"
+
+		It("Should not render the policy without ValidatingAdmissionPolicy in the cluster", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", policyName).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", policyName).Exists()).To(BeFalse())
+		})
+
+		It("Should leave the configuration to webhook-handler, the platform components and the superadmins", func() {
+			f.HelmRender(WithAPIVersions(
+				"admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy",
+				"admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding",
+			))
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", policyName)
+			Expect(policy.Exists()).To(BeTrue())
+			Expect(policy.Field("metadata.labels.heritage").String()).To(Equal("deckhouse"))
+			Expect(policy.Field("spec.failurePolicy").String()).To(Equal("Fail"))
+			rule := policy.Field("spec.matchConstraints.resourceRules.0")
+			Expect(rule.Get("apiGroups").String()).To(MatchJSON(`["admissionregistration.k8s.io"]`))
+			Expect(rule.Get("operations").String()).To(MatchJSON(`["CREATE","UPDATE","DELETE"]`))
+			Expect(rule.Get("resources").String()).To(MatchJSON(`["validatingwebhookconfigurations"]`))
+
+			// shell-operator names the configurations <name>-<configurationId>, "-hooks" by default.
+			conditions := policy.Field("spec.matchConditions").String()
+			Expect(conditions).To(ContainSubstring(`request.name.startsWith(\"d8-deckhouse-validating-webhook-handler-\")`))
+			Expect(conditions).To(ContainSubstring(`system:serviceaccounts:d8-system`))
+			Expect(conditions).To(ContainSubstring(`dhctl`))
+			Expect(policy.Field("spec.validations.0.expression").String()).To(Equal(
+				`authorizer.group("admissionregistration.k8s.io").resource("validatingwebhookconfigurations")` +
+					`.subresource("deckhouse-webhook-handler").name(request.name).check("update").allowed()`))
+
+			binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", policyName)
+			Expect(binding.Field("spec.policyName").String()).To(Equal(policyName))
+			Expect(binding.Field("spec.validationActions").String()).To(MatchJSON(`["Deny"]`))
+
+			// The superadmins hold the permission the policy checks, and the managers no longer write
+			// admission webhooks and policies at all: the policy and its binding are not subject to
+			// admission, so only RBAC keeps them.
+			admission := f.KubernetesGlobalResource("ClusterRole", "d8:subsystem-capability:security:manage_admission_resources")
+			Expect(admission.Exists()).To(BeTrue())
+			Expect(admission.Field("metadata.labels.rbac\\.deckhouse\\.io/aggregate-to-security-as").String()).To(Equal("superadmin"))
+			Expect(admission.Field("metadata.labels.rbac\\.deckhouse\\.io/aggregate-to-cluster-as").String()).To(Equal("superadmin"))
+			Expect(admission.Field("rules").String()).To(ContainSubstring(`validatingwebhookconfigurations/deckhouse-webhook-handler`))
+			Expect(admission.Field("rules.0.resources").String()).To(MatchJSON(
+				`["mutatingwebhookconfigurations","validatingadmissionpolicies","validatingadmissionpolicybindings","validatingwebhookconfigurations"]`))
+
+			manage := f.KubernetesGlobalResource("ClusterRole", "d8:subsystem-capability:security:manage_resources")
+			Expect(manage.Exists()).To(BeTrue())
+			Expect(manage.Field("metadata.labels.rbac\\.deckhouse\\.io/aggregate-to-security-as").String()).To(Equal("manager"))
+			Expect(manage.Field("rules").String()).NotTo(ContainSubstring("admissionregistration.k8s.io"))
+		})
+	})
+
 	Context("With multi-tenancy off", func() {
 		BeforeEach(func() {
 			f.HelmRender()

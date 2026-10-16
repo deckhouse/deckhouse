@@ -260,10 +260,12 @@ var _ = Describe("Module :: user-authz :: helm template :: validation webhooks",
 				}
 			}
 			Expect(resources).To(ConsistOf(
-				"clusterauthorizationrules", "clusterroles", "dexproviders", "groups", "useroperations", "users",
+				"clusterauthorizationrules", "clusterroles", "dexproviders", "groups", "moduleconfigs", "useroperations", "users",
 			))
 			Expect(rulesFor("useroperations")).To(Equal([]string{"CREATE"}))
 			Expect(rulesFor("clusterauthorizationrules")).To(Equal([]string{"CREATE", "DELETE", "UPDATE"}))
+			// Turning multi-tenancy off in the user-authz ModuleConfig opens the system namespaces.
+			Expect(rulesFor("moduleconfigs")).To(Equal([]string{"DELETE", "UPDATE"}))
 		})
 
 		It("Should read the snapshots the kernel uses", func() {

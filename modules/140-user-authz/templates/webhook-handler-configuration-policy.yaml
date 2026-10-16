@@ -1,0 +1,49 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $policyName := "webhook-handler-configuration.user-authz.deckhouse.io" }}
+{{- /* shell-operator names each configuration <VALIDATING_WEBHOOK_CONFIGURATION_NAME>-<configurationId>, "hooks" by default. */}}
+{{- $configurationPrefix := "d8-deckhouse-validating-webhook-handler-" }}
+---
+# webhook-handler of the deckhouse module registers the validating webhooks of the modules, identity-assign
+# among them, in ValidatingWebhookConfigurations it names d8-deckhouse-validating-webhook-handler-<id>.
+# shell-operator creates them without labels, so the heritage policy of the deckhouse module does not
+# cover them, and removing one or its webhooks would switch off what they enforce, such as the limits of
+# what the managers assign. The policy leaves them to webhook-handler and the platform components, which
+# the usual exclusions cover, and to the superadmins. The policy and its binding are not subject to
+# admission at all, so it holds only together with RBAC: only the superadmins write admission webhooks
+# and policies (d8:subsystem-capability:security:manage_admission_resources).
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authz")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["admissionregistration.k8s.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["validatingwebhookconfigurations"]
+  matchConditions:
+    - name: 'webhook-handler-configurations'
+      expression: 'request.name.startsWith({{ $configurationPrefix | quote }})'
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
+    - name: 'exclude-users'
+      expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+  validations:
+    # Authority is a dedicated permission on a subresource that no controller serves: the superadmins
+    # hold it, and so does every role that grants every verb on everything.
+    - expression: 'authorizer.group("admissionregistration.k8s.io").resource("validatingwebhookconfigurations").subresource("deckhouse-webhook-handler").name(request.name).check("update").allowed()'
+      reason: Forbidden
+      messageExpression: '"the ValidatingWebhookConfiguration " + request.name + " holds the webhooks of the Deckhouse modules and may be created, changed or deleted only by webhook-handler or a superadmin"'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authz")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+{{- end }}

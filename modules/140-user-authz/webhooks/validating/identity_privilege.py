@@ -67,11 +67,13 @@ def validation_error(ctx: DotMap) -> Optional[str]:
     if kind == "group":
         return validate_group(req, ctx.snapshots, actor, catalog, full_access)
     if kind == "clusterauthorizationrule":
-        return validate_car(req, actor, catalog, full_access)
+        return validate_car(req, ctx.snapshots, actor, catalog, full_access)
     if kind == "useroperation":
         return validate_useroperation(req, ctx.snapshots, actor, catalog, full_access)
     if kind == "dexprovider":
         return validate_dexprovider(req, ctx.snapshots, actor, catalog, full_access)
+    if kind == "moduleconfig":
+        return validate_moduleconfig(req, ctx.snapshots, actor, catalog, full_access)
     return None
 
 
@@ -132,50 +134,87 @@ def validate_group(req, snapshots, actor: List[str], catalog: dict,
     if req.operation in ("UPDATE", "DELETE"):
         names.append(old_spec.get("name"))
 
-    targets: List[str] = []
-    seen = set()
-    display = ""
-    for name in names:
-        if not isinstance(name, str) or not name:
-            continue
-        if not display:
-            display = name
-        for role in assign.target_group_roles(snapshots, name):
-            if role not in seen:
-                seen.add(role)
-                targets.append(role)
+    # A member gets the roles of the group and of every group above it.
+    names = [name for name in names if isinstance(name, str) and name]
+    display = names[0] if names else ""
+    targets = assign.target_groups_roles(snapshots, assign._ancestor_groups(assign._group_by_name(snapshots), names))
 
     if not targets:
         return None
     rng = assign.actor_range(actor, catalog, full_access=full_access)
     leftover = assign.can_assign(actor, targets, catalog, full_access=full_access)
-    if leftover is None:
+    if leftover is not None:
+        return assign.deny_message("groups.deckhouse.io", ".spec.name", display, leftover, rng)
+
+    # A new member already let into the system namespaces by another rule takes the rules of the group
+    # there too, which is a ClusterAdmin assignment, as for a ClusterAuthorizationRule (validate_car). An
+    # actor who may assign ClusterAdmin skips the walk.
+    # A rename gives every member the rules of the new name, as an addition would.
+    group_name = new_spec.get("name")
+    added = set(assign._member_refs(new_spec))
+    if req.operation == "UPDATE" and old_spec.get("name") == group_name:
+        added -= set(assign._member_refs(old_spec))
+    if req.operation == "DELETE" or not isinstance(group_name, str) or not group_name or not added:
         return None
-    return assign.deny_message("groups.deckhouse.io", ".spec.name", display, leftover, rng)
+    system_role = assign.BASIC_LEVEL_ROLE[assign.SYSTEM_NAMESPACES_LEVEL]
+    if assign.can_assign(actor, [system_role], catalog, full_access=full_access) is None:
+        return None
+    if assign.group_members_reach_system_namespaces(snapshots, group_name, sorted(added)):
+        return assign.deny_group_system_namespaces_message(display, rng)
+    return None
 
 
-def validate_car(req, actor: List[str], catalog: dict, full_access: bool) -> Optional[str]:
+def validate_car(req, snapshots, actor: List[str], catalog: dict, full_access: bool) -> Optional[str]:
     new_spec = _spec(req.object)
     old_spec = _spec(req.oldObject)
     if req.operation == "DELETE":
-        targets = assign.car_target_roles(old_spec)
+        specs = [old_spec]
         obj = req.oldObject
     elif req.operation == "UPDATE":
-        targets = []
-        seen = set()
-        for name in assign.car_target_roles(old_spec) + assign.car_target_roles(new_spec):
-            if name not in seen:
-                seen.add(name)
-                targets.append(name)
+        specs = [old_spec, new_spec]
         obj = req.object
     else:
-        targets = assign.car_target_roles(new_spec)
+        specs = [new_spec]
         obj = req.object
+    targets = []
+    for spec in specs:
+        for name in assign.car_target_roles(spec):
+            if name not in targets:
+                targets.append(name)
     leftover = assign.can_assign(actor, targets, catalog, full_access=full_access)
-    if leftover is None:
+    if leftover is not None:
+        rng = assign.actor_range(actor, catalog, full_access=full_access)
+        return assign.deny_car_message(_meta_name(obj) or "obj", leftover, rng)
+    # Opening the system namespaces is a ClusterAdmin assignment, whatever the access level of the rule:
+    # by its own fields, or because a request it applies to, the requester's own among them, is already
+    # let into them by another rule, which the authorization webhook joins with this one. An actor who may
+    # assign ClusterAdmin skips the walk.
+    system_role = assign.BASIC_LEVEL_ROLE[assign.SYSTEM_NAMESPACES_LEVEL]
+    if assign.can_assign(actor, [system_role], catalog, full_access=full_access) is None:
+        return None
+    if any(assign.car_reaches_system_namespaces(spec, snapshots)
+           or assign.car_shares_subjects_with_a_reaching_rule(spec, snapshots, req.userInfo)
+           for spec in specs):
+        rng = assign.actor_range(actor, catalog, full_access=full_access)
+        return assign.deny_car_system_namespaces_message(_meta_name(obj) or "obj", rng)
+    return None
+
+
+def validate_moduleconfig(req, snapshots, actor: List[str], catalog: dict,
+                          full_access: bool) -> Optional[str]:
+    """Turning multi-tenancy off opens the system namespaces to every ClusterAuthorizationRule."""
+    obj = req.oldObject if req.operation == "DELETE" else req.object
+    if _meta_name(obj) != "user-authz":
+        return None
+    old_settings = _spec(req.oldObject).get("settings")
+    new_settings = _spec(req.object).get("settings")
+    if not assign.turns_multitenancy_off(req.operation, old_settings, new_settings, snapshots):
+        return None
+    system_role = assign.BASIC_LEVEL_ROLE[assign.SYSTEM_NAMESPACES_LEVEL]
+    if assign.can_assign(actor, [system_role], catalog, full_access=full_access) is None:
         return None
     rng = assign.actor_range(actor, catalog, full_access=full_access)
-    return assign.deny_car_message(_meta_name(obj) or "obj", leftover, rng)
+    return assign.deny_multitenancy_off_message(rng)
 
 
 def validate_clusterrole(req) -> Optional[str]:

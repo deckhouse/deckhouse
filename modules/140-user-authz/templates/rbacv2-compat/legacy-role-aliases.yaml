@@ -359,11 +359,12 @@
   still bound to the old name keeps the right to assign roles for the compatibility release, not
   only the rights the alias aggregates. The ranges are keyed by the old name: the range of the
   security manager moved to d8:subsystem:iam:manager, while d8:manage:security:manager keeps
-  assigning the security roles it assigned before.
+  assigning the security roles it assigned before. A manager assigns up to the manager level and
+  ClusterEditor, with no access to the system namespaces, as the current manager roles do.
 */ -}}
 {{- $canAssign := dict
-  "d8:manage:all:manager" (dict "user-authz.deckhouse.io/can-assign-basic-max" "ClusterAdmin" "user-authz.deckhouse.io/can-assign-scope" "system" "user-authz.deckhouse.io/can-assign-max-level" "admin")
-  "d8:manage:security:manager" (dict "user-authz.deckhouse.io/can-assign-basic-max" "ClusterAdmin" "user-authz.deckhouse.io/can-assign-scope" "subsystem" "user-authz.deckhouse.io/can-assign-subsystem" "security" "user-authz.deckhouse.io/can-assign-max-level" "admin")
+  "d8:manage:all:manager" (dict "user-authz.deckhouse.io/can-assign-basic-max" "ClusterEditor" "user-authz.deckhouse.io/can-assign-scope" "system" "user-authz.deckhouse.io/can-assign-max-level" "manager")
+  "d8:manage:security:manager" (dict "user-authz.deckhouse.io/can-assign-basic-max" "ClusterEditor" "user-authz.deckhouse.io/can-assign-scope" "subsystem" "user-authz.deckhouse.io/can-assign-subsystem" "security" "user-authz.deckhouse.io/can-assign-max-level" "manager")
 -}}
 
 {{- range $alias := $aliases }}

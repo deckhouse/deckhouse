@@ -53,6 +53,8 @@ def default_croles():
         clusterrole("user-authz:editor", [{"apiGroups": ["apps"], "resources": ["deployments"],
                                            "verbs": ["create", "update", "patch", "delete"]}]),
         clusterrole("user-authz:admin", USERS_EDIT + CAR_EDIT),
+        clusterrole("user-authz:cluster-editor", [{"apiGroups": ["apps"], "resources": ["daemonsets"],
+                                                   "verbs": ["create", "update", "patch", "delete"]}]),
         clusterrole("user-authz:cluster-admin", STAR,
                     {"can-assign-basic-max": "ClusterAdmin"}),
         clusterrole("user-authz:super-admin", STAR_ALL, {
@@ -63,15 +65,15 @@ def default_croles():
         # The default Kubernetes ClusterRole: every rule, no can-assign labels, no heritage label.
         clusterrole("cluster-admin", STAR_ALL, heritage=False),
         clusterrole("d8:manage:security:manager", CAR_EDIT + USERS_EDIT, {
-            "can-assign-basic-max": "ClusterAdmin",
+            "can-assign-basic-max": "ClusterEditor",
             "can-assign-scope": "subsystem",
             "can-assign-subsystem": "security",
-            "can-assign-max-level": "admin",
+            "can-assign-max-level": "manager",
         }),
         clusterrole("d8:manage:all:manager", STAR_ALL, {
-            "can-assign-basic-max": "ClusterAdmin",
+            "can-assign-basic-max": "ClusterEditor",
             "can-assign-scope": "system",
-            "can-assign-max-level": "admin",
+            "can-assign-max-level": "manager",
         }),
         clusterrole("d8:manage:permission:module:user-authz:edit", CAR_EDIT, {
             "can-assign-basic-max": "ClusterAdmin",
@@ -115,6 +117,20 @@ def snapshots(privileged_email=PRIVILEGED_EMAIL, privileged_group=PRIVILEGED_GRO
         assign.CROLE_SNAP: default_croles(),
         assign.USER_SNAP: [],
         assign.GROUP_SNAP: [],
+    }
+
+
+def manager_snaps():
+    """The security manager bound through a ClusterRoleBinding, with multi-tenancy on."""
+    return {
+        assign.CRB_SNAP: [{"filterResult": {
+            "name": "sec",
+            "role": "d8:manage:security:manager",
+            "userSubjects": [SECURITY],
+            "groupSubjects": [],
+            "saSubjects": [],
+        }}],
+        assign.MT_STATE_SNAP: [{"filterResult": {"enableMultiTenancy": True}}],
     }
 
 
@@ -469,19 +485,20 @@ class TestIdentityAssignHook(unittest.TestCase):
             username=SECURITY, extra_snaps=extra))
         self.assertFalse(out.validations.data[0]["allowed"])
 
-    def test_security_manager_can_delete_clusteradmin_car(self):
-        extra = {assign.CRB_SNAP: [{"filterResult": {
-            "name": "sec",
-            "role": "d8:manage:security:manager",
-            "userSubjects": [SECURITY],
-            "groupSubjects": [],
-            "saSubjects": [],
-        }}]}
+    def test_security_manager_cannot_delete_clusteradmin_car(self):
         out = self.run_hook(ctx(
             "ClusterAuthorizationRule", "DELETE", None,
             old_spec={"accessLevel": "ClusterAdmin",
                       "subjects": [{"kind": "User", "name": "peer@corp"}]},
-            username=SECURITY, extra_snaps=extra))
+            username=SECURITY, extra_snaps=manager_snaps()))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_security_manager_can_delete_clustereditor_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "ClusterEditor",
+                      "subjects": [{"kind": "User", "name": "peer@corp"}]},
+            username=SECURITY, extra_snaps=manager_snaps()))
         tests.assert_validation_allowed(self, out, None)
 
     def test_deckhouse_sa_can_delete_superadmin_car(self):
@@ -574,20 +591,296 @@ class TestIdentityAssignHook(unittest.TestCase):
         self.assertFalse(out.validations.data[0]["allowed"])
         self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
 
-    def test_crb_security_manager_can_write_clusteradmin_car(self):
-        extra = {assign.CRB_SNAP: [{"filterResult": {
-            "name": "sec",
-            "role": "d8:manage:security:manager",
-            "userSubjects": [SECURITY],
-            "groupSubjects": [],
-            "saSubjects": [],
-        }}]}
+    def test_crb_security_manager_cannot_write_clusteradmin_car(self):
+        # A manager assigns up to ClusterEditor, not ClusterAdmin.
         out = self.run_hook(ctx(
             "ClusterAuthorizationRule", "CREATE",
             {"accessLevel": "ClusterAdmin",
              "subjects": [{"kind": "User", "name": "peer@corp"}]},
-            username=SECURITY, extra_snaps=extra))
+            username=SECURITY, extra_snaps=manager_snaps()))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:cluster-admin", out.validations.data[0]["message"])
+
+    def test_crb_security_manager_writes_clustereditor_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "CREATE",
+            {"accessLevel": "ClusterEditor",
+             "subjects": [{"kind": "User", "name": "peer@corp"}]},
+            username=SECURITY, extra_snaps=manager_snaps()))
         tests.assert_validation_allowed(self, out, None)
+
+    def test_manager_cannot_open_the_system_namespaces(self):
+        # Opening the system namespaces is a ClusterAdmin assignment, whatever the access level.
+        opening = {
+            "allowAccessToSystemNamespaces": {"allowAccessToSystemNamespaces": True},
+            "matchAny": {"namespaceSelector": {"matchAny": True}},
+            "label of d8-system": {"namespaceSelector": {"labelSelector": {
+                "matchLabels": {"kubernetes.io/metadata.name": "d8-system"}}}},
+            "label that no namespace has yet": {"namespaceSelector": {"labelSelector": {"matchLabels": {"team": "a"}}}},
+            "NotIn": {"namespaceSelector": {"labelSelector": {"matchExpressions": [
+                {"key": "team", "operator": "NotIn", "values": ["a"]}]}}},
+            "empty labelSelector": {"namespaceSelector": {"labelSelector": {}}},
+        }
+        for name, scope in opening.items():
+            with self.subTest(name):
+                for username, allowed in ((SECURITY, False), (CLUSTER_ADMIN, True), (SUPERADMIN, True)):
+                    spec = {"accessLevel": "Editor", "subjects": [{"kind": "User", "name": "peer@corp"}], **scope}
+                    out = self.run_hook(ctx("ClusterAuthorizationRule", "CREATE", spec,
+                                            username=username, extra_snaps=manager_snaps()))
+                    self.assertEqual(out.validations.data[0]["allowed"], allowed, username)
+                    if not allowed:
+                        self.assertIn("opens the system namespaces", out.validations.data[0]["message"])
+
+    def test_manager_writes_a_rule_for_application_namespaces(self):
+        named = {"matchExpressions": [{"key": "kubernetes.io/metadata.name", "operator": "In", "values": ["app-a"]}]}
+        for scope in ({}, {"namespaceSelector": {"labelSelector": named}}, {"limitNamespaces": ["app-.*"]}):
+            with self.subTest(scope=scope):
+                spec = {"accessLevel": "Editor", "subjects": [{"kind": "User", "name": "peer@corp"}], **scope}
+                out = self.run_hook(ctx("ClusterAuthorizationRule", "CREATE", spec,
+                                        username=SECURITY, extra_snaps=manager_snaps()))
+                tests.assert_validation_allowed(self, out, None)
+
+    def test_manager_cannot_open_the_system_namespaces_without_multitenancy(self):
+        # With multi-tenancy off, or its state unknown, every rule reaches every namespace.
+        for state in (False, None):
+            with self.subTest(state=state):
+                snaps = manager_snaps()
+                snaps[assign.MT_STATE_SNAP] = [] if state is None else [{"filterResult": {"enableMultiTenancy": False}}]
+                spec = {"accessLevel": "Editor", "subjects": [{"kind": "User", "name": "peer@corp"}]}
+                out = self.run_hook(ctx("ClusterAuthorizationRule", "CREATE", spec,
+                                        username=SECURITY, extra_snaps=snaps))
+                self.assertFalse(out.validations.data[0]["allowed"])
+
+    # A rule that opens the system namespaces makes its identities ClusterAdmin targets on every path.
+    OPS_CAR = {"filterResult": {
+        "name": "ops-system", "accessLevel": "Editor", "additionalRoles": [], "namespaceSelector": None,
+        "limitNamespaces": [], "allowAccessToSystemNamespaces": True,
+        "userSubjects": ["ops@corp"], "groupSubjects": ["ops"], "saSubjects": [],
+    }}
+
+    def ops_snaps(self):
+        snaps = manager_snaps()
+        snaps[assign.CAR_SNAP] = [self.OPS_CAR]
+        return snaps
+
+    def test_manager_cannot_join_a_group_that_reaches_the_system_namespaces(self):
+        for username, allowed in ((SECURITY, False), (SUPERADMIN, True)):
+            with self.subTest(username=username):
+                out = self.run_hook(ctx("Group", "UPDATE",
+                                        {"name": "ops", "members": [{"kind": "User", "name": "sec"}]},
+                                        old_spec={"name": "ops", "members": []},
+                                        username=username, extra_snaps=self.ops_snaps()))
+                self.assertEqual(out.validations.data[0]["allowed"], allowed)
+
+    def test_manager_cannot_create_a_user_for_an_email_that_reaches_the_system_namespaces(self):
+        out = self.run_hook(ctx("User", "CREATE", {"email": "ops@corp"},
+                                username=SECURITY, extra_snaps=self.ops_snaps()))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:cluster-admin", out.validations.data[0]["message"])
+
+    def test_manager_cannot_reset_a_user_that_reaches_the_system_namespaces(self):
+        snaps = self.ops_snaps()
+        snaps[assign.USER_SNAP] = [{"filterResult": {"name": "ops", "email": "ops@corp", "groups": []}}]
+        out = self.run_hook(ctx("UserOperation", "CREATE", {"user": "ops", "type": "ResetPassword"},
+                                username=SECURITY, extra_snaps=snaps))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_manager_cannot_connect_a_provider_that_asserts_an_identity_in_the_system_namespaces(self):
+        provider = {"type": "OIDC", "displayName": "ops", "oidc": {"issuer": "https://idp", "clientID": "a"},
+                    "allowedIdentities": {"emails": ["ops@corp"], "groups": ["nobody"]}}
+        out = self.run_hook(ctx("DexProvider", "CREATE", provider, username=SECURITY, extra_snaps=self.ops_snaps()))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_manager_cannot_add_a_rule_for_a_subject_already_in_the_system_namespaces(self):
+        # The authorization webhook joins the rules of a subject: this Editor rule would work there too.
+        for subjects in ([{"kind": "Group", "name": "ops"}], [{"kind": "User", "name": "ops@corp"}]):
+            with self.subTest(subjects=subjects):
+                out = self.run_hook(ctx("ClusterAuthorizationRule", "CREATE",
+                                        {"accessLevel": "Editor", "subjects": subjects},
+                                        username=SECURITY, extra_snaps=self.ops_snaps()))
+                self.assertFalse(out.validations.data[0]["allowed"])
+                self.assertIn("opens the system namespaces", out.validations.data[0]["message"])
+
+    @staticmethod
+    def group_snap(name, *members):
+        return {"filterResult": {"name": name, "members": [{"kind": kind, "name": m} for kind, m in members]}}
+
+    def test_manager_cannot_add_a_rule_that_joins_a_reaching_rule_through_groups(self):
+        # The authorization webhook joins the rules of a request: of its user and of every group in its token.
+        u = {"filterResult": {"name": "u", "email": "u@corp", "groups": []}}
+        cases = {
+            "a member of devs is in ops": ([self.group_snap("devs", ("User", "u")), self.group_snap("ops", ("User", "u"))],
+                                           [u], "devs"),
+            "devs is nested in ops": ([self.group_snap("ops", ("Group", "devs")), self.group_snap("devs")], [], "devs"),
+            "ops is nested in top": ([self.group_snap("top", ("Group", "ops")), self.group_snap("ops")], [], "ops"),
+        }
+        top_car = {"filterResult": {**self.OPS_CAR["filterResult"], "name": "top-system",
+                                    "userSubjects": [], "groupSubjects": ["top"]}}
+        for name, (groups, users, target) in cases.items():
+            with self.subTest(name):
+                snaps = self.ops_snaps()
+                snaps[assign.CAR_SNAP] = [top_car] if target == "ops" else [self.OPS_CAR]
+                snaps[assign.GROUP_SNAP] = groups
+                snaps[assign.USER_SNAP] = users
+                for username, allowed in ((SECURITY, False), (SUPERADMIN, True)):
+                    out = self.run_hook(ctx("ClusterAuthorizationRule", "CREATE",
+                                            {"accessLevel": "Editor", "subjects": [{"kind": "Group", "name": target}]},
+                                            username=username, extra_snaps=snaps))
+                    self.assertEqual(out.validations.data[0]["allowed"], allowed, username)
+
+    def test_manager_cannot_add_a_rule_that_joins_a_reaching_rule_of_their_own(self):
+        cases = {
+            "an IdP group of the manager reaches": (
+                [{"kind": "User", "name": SECURITY}], ["ops"], self.OPS_CAR),
+            "the manager reaches, the rule is for an IdP group of theirs": (
+                [{"kind": "Group", "name": "idp-team"}], ["idp-team"],
+                {"filterResult": {**self.OPS_CAR["filterResult"], "userSubjects": [SECURITY], "groupSubjects": []}}),
+            "every authenticated request reaches": (
+                [{"kind": "User", "name": SECURITY}], [],
+                {"filterResult": {**self.OPS_CAR["filterResult"], "userSubjects": [],
+                                  "groupSubjects": ["system:authenticated"]}}),
+        }
+        for name, (subjects, token_groups, reaching) in cases.items():
+            with self.subTest(name):
+                snaps = manager_snaps()
+                snaps[assign.CAR_SNAP] = [reaching]
+                out = self.run_hook(ctx("ClusterAuthorizationRule", "CREATE",
+                                        {"accessLevel": "Editor", "subjects": subjects},
+                                        username=SECURITY, groups=token_groups, extra_snaps=snaps))
+                self.assertFalse(out.validations.data[0]["allowed"])
+                self.assertIn("opens the system namespaces", out.validations.data[0]["message"])
+
+    def test_manager_cannot_add_a_rule_for_a_virtual_group_that_joins_a_reaching_rule(self):
+        # A rule for system:authenticated or system:serviceaccounts[:<namespace>] applies to every such request.
+        def reaching(**subjects):
+            return {"filterResult": {**self.OPS_CAR["filterResult"], "accessLevel": "User", "userSubjects": [],
+                                     "groupSubjects": [], "saSubjects": [], **subjects}}
+        local_user = {"filterResult": {"name": "u", "email": "u@corp", "groups": []}}
+        cases = {
+            "every request, a local user reaches": (
+                [{"kind": "Group", "name": "system:authenticated"}], reaching(userSubjects=["u@corp"]), [local_user]),
+            "every request, an IdP group reaches": (
+                [{"kind": "Group", "name": "system:authenticated"}], reaching(groupSubjects=["idp-team"]), []),
+            "the ServiceAccounts of app, app/bot reaches": (
+                [{"kind": "Group", "name": "system:serviceaccounts:app"}], reaching(saSubjects=["app:bot"]), []),
+            "every ServiceAccount, app/bot reaches": (
+                [{"kind": "Group", "name": "system:serviceaccounts"}], reaching(saSubjects=["app:bot"]), []),
+            "app/bot named as a User, the ServiceAccount reaches": (
+                [{"kind": "User", "name": "system:serviceaccount:app:bot"}], reaching(saSubjects=["app:bot"]), []),
+            "app/bot, the ServiceAccount named as a User reaches": (
+                [{"kind": "ServiceAccount", "namespace": "app", "name": "bot"}],
+                reaching(userSubjects=["system:serviceaccount:app:bot"]), []),
+        }
+        for name, (subjects, reaching_car, users) in cases.items():
+            with self.subTest(name):
+                snaps = manager_snaps()
+                snaps[assign.CAR_SNAP] = [reaching_car]
+                snaps[assign.USER_SNAP] = users
+                for username, allowed in ((SECURITY, False), (SUPERADMIN, True)):
+                    out = self.run_hook(ctx("ClusterAuthorizationRule", "CREATE",
+                                            {"accessLevel": "Editor", "subjects": subjects},
+                                            username=username, extra_snaps=snaps))
+                    self.assertEqual(out.validations.data[0]["allowed"], allowed, username)
+                    if not allowed:
+                        self.assertIn("opens the system namespaces", out.validations.data[0]["message"])
+
+    def test_manager_cannot_add_a_reaching_member_to_a_group_with_rules(self):
+        editor = {"filterResult": {**self.OPS_CAR["filterResult"], "name": "devs-edit",
+                                   "allowAccessToSystemNamespaces": False, "userSubjects": [],
+                                   "groupSubjects": ["devs"]}}
+        ops_user = {"filterResult": {"name": "o", "email": "ops@corp", "groups": []}}
+        peer = {"filterResult": {"name": "p", "email": "peer@corp", "groups": []}}
+        cases = {
+            "a user with a reaching rule": ("UPDATE", [{"kind": "User", "name": "o"}], False),
+            "a group with a reaching rule": ("UPDATE", [{"kind": "Group", "name": "ops"}], False),
+            "a new group with a reaching member": ("CREATE", [{"kind": "User", "name": "o"}], False),
+            "a user without one": ("UPDATE", [{"kind": "User", "name": "p"}], True),
+        }
+        for name, (operation, members, allowed) in cases.items():
+            with self.subTest(name):
+                snaps = manager_snaps()
+                snaps[assign.CAR_SNAP] = [self.OPS_CAR, editor]
+                snaps[assign.USER_SNAP] = [ops_user, peer]
+                snaps[assign.GROUP_SNAP] = [self.group_snap("ops")]
+                old = None if operation == "CREATE" else {"name": "devs", "members": []}
+                out = self.run_hook(ctx("Group", operation, {"name": "devs", "members": members}, old_spec=old,
+                                        username=SECURITY, extra_snaps=snaps))
+                self.assertEqual(out.validations.data[0]["allowed"], allowed)
+                if not allowed:
+                    self.assertIn("lets into the system namespaces", out.validations.data[0]["message"])
+        # a member that was already there is not added by the write
+        snaps = manager_snaps()
+        snaps[assign.CAR_SNAP] = [self.OPS_CAR, editor]
+        snaps[assign.USER_SNAP] = [ops_user]
+        kept = [{"kind": "User", "name": "o"}]
+        out = self.run_hook(ctx("Group", "UPDATE", {"name": "devs", "members": kept, "x": 1},
+                                old_spec={"name": "devs", "members": kept}, username=SECURITY, extra_snaps=snaps))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_manager_cannot_rename_a_group_onto_a_name_with_rules(self):
+        # A rename gives every member the rules of the new name: here u, whom another rule lets into the
+        # system namespaces, would get the Editor rule of devs there too.
+        reaching = {"filterResult": {**self.OPS_CAR["filterResult"], "accessLevel": "User",
+                                     "userSubjects": ["u@corp"], "groupSubjects": []}}
+        editors = {"filterResult": {**self.OPS_CAR["filterResult"], "name": "devs-edit",
+                                    "allowAccessToSystemNamespaces": False, "userSubjects": [],
+                                    "groupSubjects": ["devs"]}}
+        snaps = manager_snaps()
+        snaps[assign.CAR_SNAP] = [reaching, editors]
+        snaps[assign.USER_SNAP] = [{"filterResult": {"name": "u", "email": "u@corp", "groups": []}}]
+        members = [{"kind": "User", "name": "u"}]
+        for old_name, username, allowed in (("tmp", SECURITY, False), ("tmp", SUPERADMIN, True), ("devs", SECURITY, True)):
+            with self.subTest(old_name=old_name, username=username):
+                out = self.run_hook(ctx("Group", "UPDATE", {"name": "devs", "members": members},
+                                        old_spec={"name": old_name, "members": members},
+                                        username=username, extra_snaps=snaps))
+                self.assertEqual(out.validations.data[0]["allowed"], allowed)
+
+    def test_manager_cannot_join_a_group_nested_in_a_privileged_one(self):
+        # A member of devs is a member of admins too, and gets the rules of both.
+        admins = {"filterResult": {**self.OPS_CAR["filterResult"], "name": "admins", "accessLevel": "ClusterAdmin",
+                                   "allowAccessToSystemNamespaces": False, "userSubjects": [],
+                                   "groupSubjects": ["admins"]}}
+        snaps = manager_snaps()
+        snaps[assign.CAR_SNAP] = [admins]
+        snaps[assign.GROUP_SNAP] = [self.group_snap("admins", ("Group", "devs"))]
+        out = self.run_hook(ctx("Group", "UPDATE", {"name": "devs", "members": [{"kind": "User", "name": "sec"}]},
+                                old_spec={"name": "devs", "members": []}, username=SECURITY, extra_snaps=snaps))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:cluster-admin", out.validations.data[0]["message"])
+
+    def test_manager_cannot_turn_multitenancy_off(self):
+        def mc(settings):
+            return {"apiVersion": "deckhouse.io/v1alpha1", "kind": "ModuleConfig",
+                    "metadata": {"name": "user-authz"}, "spec": {"version": 1, "settings": settings}}
+        for username, allowed in ((SECURITY, False), (CLUSTER_ADMIN, True), (SUPERADMIN, True)):
+            with self.subTest(username=username):
+                c = ctx("ModuleConfig", "UPDATE", {}, username=username, extra_snaps=manager_snaps())
+                c.review.request.object = DotMap(mc({"enableMultiTenancy": False}))
+                c.review.request.oldObject = DotMap(mc({"enableMultiTenancy": True}))
+                out = self.run_hook(c)
+                self.assertEqual(out.validations.data[0]["allowed"], allowed, username)
+                if not allowed:
+                    self.assertIn("turning multi-tenancy off", out.validations.data[0]["message"])
+        # turning it on, an unrelated edit and another ModuleConfig are not checked
+        for name, old, new in (("user-authz", {"enableMultiTenancy": False}, {"enableMultiTenancy": True}),
+                               ("user-authz", {"x": 1}, {"x": 2}),
+                               ("prometheus", {"enableMultiTenancy": True}, {"enableMultiTenancy": False})):
+            with self.subTest(name=name, old=old, new=new):
+                c = ctx("ModuleConfig", "UPDATE", {}, username=SECURITY, extra_snaps=manager_snaps())
+                obj, prev = mc(new), mc(old)
+                obj["metadata"]["name"] = prev["metadata"]["name"] = name
+                c.review.request.object = DotMap(obj)
+                c.review.request.oldObject = DotMap(prev)
+                tests.assert_validation_allowed(self, self.run_hook(c), None)
+
+    def test_manager_cannot_take_a_rule_out_of_the_system_namespaces(self):
+        # An UPDATE is measured on both sides, so narrowing a rule that opens them is refused too.
+        spec = {"accessLevel": "Editor", "subjects": [{"kind": "User", "name": "peer@corp"}]}
+        out = self.run_hook(ctx("ClusterAuthorizationRule", "UPDATE", spec,
+                                old_spec={**spec, "allowAccessToSystemNamespaces": True},
+                                username=SECURITY, extra_snaps=manager_snaps()))
+        self.assertFalse(out.validations.data[0]["allowed"])
 
     def test_crb_security_manager_cannot_write_superadmin_car(self):
         extra = {assign.CRB_SNAP: [{"filterResult": {

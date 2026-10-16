@@ -17,18 +17,10 @@ metadata:
     rbac.deckhouse.io/aggregate-to-cluster-as: manager
     rbac.deckhouse.io/aggregate-to-security-as: manager
 rules:
-  - apiGroups:
-      - admissionregistration.k8s.io
-    resources:
-      - mutatingwebhookconfigurations
-      - validatingadmissionpolicies
-      - validatingadmissionpolicybindings
-      - validatingwebhookconfigurations
-    verbs:
-      - create
-      - update
-      - patch
-      - delete
+  # Admission webhooks and policies are written at the superadmin level only
+  # (manage_security_admission_resources.yaml): a mutating webhook can change any object the platform
+  # creates, including its own pods, and a deleted webhook or policy switches off what it enforces,
+  # such as the limits of what the managers assign.
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:

@@ -30,7 +30,7 @@
 # everything, such as a subject of the default cluster-admin ClusterRole, holds
 # the SuperAdmin range.
 
-from typing import Any, Iterable, List, NamedTuple, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Set, Tuple
 
 LABEL_BASIC_MAX = "user-authz.deckhouse.io/can-assign-basic-max"
 LABEL_SCOPE = "user-authz.deckhouse.io/can-assign-scope"
@@ -81,6 +81,25 @@ BASIC_ORDER = {
     "ClusterAdmin": 60,
     "SuperAdmin": 70,
 }
+
+# The basic levels each basic level includes, itself among them (the role descriptions of the basic
+# model in the README). A can-assign range covers what its basic-max includes, not everything that sorts
+# below it: ClusterEditor is Editor with some cluster-wide objects and does not include Admin, the
+# management of a namespace, although Admin sorts below it in BASIC_ORDER.
+BASIC_INCLUDES = {
+    "User": frozenset({"User"}),
+    "PrivilegedUser": frozenset({"User", "PrivilegedUser"}),
+    "Editor": frozenset({"User", "PrivilegedUser", "Editor"}),
+    "Admin": frozenset({"User", "PrivilegedUser", "Editor", "Admin"}),
+    "ClusterEditor": frozenset({"User", "PrivilegedUser", "Editor", "ClusterEditor"}),
+    "ClusterAdmin": frozenset({"User", "PrivilegedUser", "Editor", "Admin", "ClusterEditor", "ClusterAdmin"}),
+    "SuperAdmin": frozenset(BASIC_ORDER),
+}
+
+# Access to the system namespaces through a ClusterAuthorizationRule is assigned as the ClusterAdmin
+# level: the system namespaces hold the ServiceAccounts of the platform, and a requester whose range
+# stops below ClusterAdmin, such as the system or the iam manager, must not open them to anyone.
+SYSTEM_NAMESPACES_LEVEL = "ClusterAdmin"
 
 RBACV2_LEVELS = ("viewer", "user", "manager", "admin", "superadmin")
 RBACV2_ORDER = {name: i for i, name in enumerate(RBACV2_LEVELS)}
@@ -271,7 +290,11 @@ def load_catalog(snapshots: Any) -> dict:
     return catalog
 
 
-def _fr_role_names(fr: dict, *, namespaced: bool) -> List[str]:
+def _fr_role_names(fr: dict, *, namespaced: bool, snapshots: Any = None) -> List[str]:
+    """The roles a ClusterAuthorizationRule or AuthorizationRule snapshot grants. With snapshots, a
+    ClusterAuthorizationRule that opens the system namespaces also grants the ClusterAdmin role, because
+    that is what reaching them amounts to (SYSTEM_NAMESPACES_LEVEL): this is for the roles an identity
+    already carries as a target, never for the range of a requester."""
     names = []
     cap = AR_ACCESS_LEVEL_CAP if namespaced else None
     basic = basic_role_for_level(fr.get("accessLevel"), cap=cap)
@@ -283,6 +306,10 @@ def _fr_role_names(fr: dict, *, namespaced: bool) -> List[str]:
     for role in _list(fr.get("additionalRoles")):
         if isinstance(role, str) and role:
             names.append(role)
+    if snapshots is not None and car_reaches_system_namespaces(fr, snapshots, unknown_reaches=False):
+        system_role = BASIC_LEVEL_ROLE[SYSTEM_NAMESPACES_LEVEL]
+        if system_role not in names:
+            names.append(system_role)
     return names
 
 
@@ -295,8 +322,10 @@ def _match_user_subject(subjects: Sequence[str], email: str, *, lowercase_needle
 
 def collect_roles_for_identity(snapshots: Any, kind: str, name: str, *,
                                lowercase_user: bool,
-                               include_namespaced: bool = True) -> List[str]:
-    """Role names already attached to this token identity via CAR / AR / CRB."""
+                               include_namespaced: bool = True,
+                               as_target: bool = False) -> List[str]:
+    """Role names already attached to this token identity via CAR / AR / CRB. As a target, a
+    ClusterAuthorizationRule that opens the system namespaces counts as ClusterAdmin (_fr_role_names)."""
     if not isinstance(name, str) or not name:
         return []
 
@@ -330,7 +359,7 @@ def collect_roles_for_identity(snapshots: Any, kind: str, name: str, *,
             else:
                 ok = name in subjects
             if ok:
-                for role in _fr_role_names(fr, namespaced=namespaced):
+                for role in _fr_role_names(fr, namespaced=namespaced, snapshots=snapshots if as_target else None):
                     add(role)
 
     # The granular model grants roles through ClusterRoleBindings and, across the namespaces of a
@@ -417,6 +446,297 @@ def car_is_namespace_limited(fr: dict, *, multitenancy: Optional[bool]) -> bool:
     if fr.get("namespaceSelector") is not None or bool(_list(fr.get("limitNamespaces"))):
         return True
     return multitenancy is not False and fr.get("allowAccessToSystemNamespaces") is not True
+
+
+# The label the API server sets on every namespace to its name; nobody can change it.
+NAMESPACE_NAME_LABEL = "kubernetes.io/metadata.name"
+
+
+def is_system_namespace_name(name: Any) -> bool:
+    """Whether a namespace name is a system one: those a rule without allowAccessToSystemNamespaces does
+    not open (go_lib/user-authz/rules/system.go: kube-*, d8-*, default, antiopa, loghouse) and upmeter-*,
+    which multitenancy-manager never turns into a project either."""
+    if not isinstance(name, str):
+        return True
+    return name.startswith(("kube-", "d8-", "upmeter-")) or name in ("default", "antiopa", "loghouse")
+
+
+def _selector_names_only_applications(selector: Any) -> bool:
+    """Whether a label selector can match only namespaces it names by kubernetes.io/metadata.name, none of
+    them a system one. Any other selector may match a system namespace, now or once someone labels one or
+    a module adds one, so only this form is known not to reach them."""
+    selector = _dict(selector)
+    named = _dict(selector.get("matchLabels")).get(NAMESPACE_NAME_LABEL)
+    if isinstance(named, str):
+        return not is_system_namespace_name(named)
+    for expression in _list(selector.get("matchExpressions")):
+        expression = _dict(expression)
+        if expression.get("key") == NAMESPACE_NAME_LABEL and expression.get("operator") == "In":
+            values = _list(expression.get("values"))
+            if values and not any(is_system_namespace_name(v) for v in values):
+                return True
+    return False
+
+
+def car_reaches_system_namespaces(spec: Any, snapshots: Any, *, unknown_reaches: bool = True) -> bool:
+    """Whether a ClusterAuthorizationRule, by its own fields, opens a system namespace.
+
+    With multi-tenancy off, or its state unknown, a rule reaches every namespace. With it on,
+    namespaceSelector decides alone when it is set, as the authorization webhook decides: matchAny opens
+    every namespace, and a labelSelector opens the namespaces it matches, system ones included, so it
+    counts as reaching them unless it names its namespaces by kubernetes.io/metadata.name. Without
+    namespaceSelector, only allowAccessToSystemNamespaces opens them: limitNamespaces never does.
+    A spec and a ClusterAuthorizationRule snapshot have these fields under the same names.
+
+    The state of multi-tenancy is unknown only until the chart renders its ConfigMap. A rule being written
+    is then taken to reach every namespace; an existing rule weighed as the roles of its identities is
+    taken as with multi-tenancy on (unknown_reaches=False), the side car_is_namespace_limited takes too.
+    """
+    spec = _dict(spec)
+    state = multitenancy_state(snapshots)
+    if state is False or (state is None and unknown_reaches):
+        return True
+    if spec.get("namespaceSelector") is not None:
+        selector = _dict(spec.get("namespaceSelector"))
+        if selector.get("matchAny"):
+            return True
+        return not _selector_names_only_applications(selector.get("labelSelector"))
+    return spec.get("allowAccessToSystemNamespaces") is True
+
+
+def car_spec_subjects(spec: Any) -> Dict[str, Set[str]]:
+    """The subjects of a ClusterAuthorizationRule spec, keyed as in its snapshot."""
+    out: Dict[str, Set[str]] = {"userSubjects": set(), "groupSubjects": set(), "saSubjects": set()}
+    for subject in _list(_dict(spec).get("subjects")):
+        subject = _dict(subject)
+        name, kind = subject.get("name"), subject.get("kind")
+        if not isinstance(name, str) or not name:
+            continue
+        if kind == "User":
+            out["userSubjects"].add(name)
+        elif kind == "Group":
+            out["groupSubjects"].add(name)
+        elif kind == "ServiceAccount":
+            out["saSubjects"].add(f"{subject.get('namespace') or ''}:{name}")
+    return out
+
+
+AUTHENTICATED_GROUP = "system:authenticated"
+SERVICE_ACCOUNTS_GROUP = "system:serviceaccounts"
+SERVICE_ACCOUNTS_NAMESPACE_PREFIX = SERVICE_ACCOUNTS_GROUP + ":"
+# covered_identities keys beside the subject keys of a snapshot: whether every authenticated request is
+# covered, and the namespaces whose every ServiceAccount is ("" for every namespace).
+EVERYONE = "everyone"
+SA_NAMESPACES = "saNamespaces"
+
+
+class _Directory:
+    """The Group and User snapshots of a request, indexed once for the walks of covered_identities."""
+
+    def __init__(self, snapshots: Any):
+        self.groups = _group_by_name(snapshots)
+        self.parents: Dict[str, List[str]] = {}
+        self.children: Dict[str, List[str]] = {}
+        self.direct_groups: Dict[str, List[str]] = {}
+        self.user_members: Dict[str, List[str]] = {}
+        for name, fr in self.groups.items():
+            for kind, member in _member_refs(fr):
+                if kind == "Group":
+                    self.parents.setdefault(member, []).append(name)
+                    self.children.setdefault(name, []).append(member)
+                else:
+                    self.direct_groups.setdefault(member, []).append(name)
+                    self.user_members.setdefault(name, []).append(member)
+        self.by_name: Dict[str, List[dict]] = {}
+        self.by_email: Dict[str, List[dict]] = {}
+        self.by_spec_group: Dict[str, List[dict]] = {}
+        for fr in iter_filter_results(snapshots, USER_SNAP):
+            name = fr.get("name") if isinstance(fr.get("name"), str) else ""
+            email = fr.get("email") if isinstance(fr.get("email"), str) else ""
+            if name:
+                self.by_name.setdefault(name, []).append(fr)
+            if email:
+                self.by_email.setdefault(email.lower(), []).append(fr)
+            for group in _list(fr.get("groups")):
+                if isinstance(group, str) and group:
+                    self.by_spec_group.setdefault(group, []).append(fr)
+
+    @staticmethod
+    def _walk(edges: Dict[str, List[str]], seeds: Iterable[str]) -> List[str]:
+        found: List[str] = []
+        seen: Set[str] = set()
+        for seed in seeds:
+            if isinstance(seed, str) and seed and seed not in seen:
+                seen.add(seed)
+                found.append(seed)
+        i = 0
+        while i < len(found):
+            for nxt in edges.get(found[i], []):
+                if nxt not in seen:
+                    seen.add(nxt)
+                    found.append(nxt)
+            i += 1
+        return found
+
+    def ancestors(self, seeds: Iterable[str]) -> List[str]:
+        """Seeds and the groups above them, as _ancestor_groups."""
+        return self._walk(self.parents, seeds)
+
+    def descendants(self, seeds: Iterable[str]) -> List[str]:
+        """Seeds and the groups nested in them, at any depth."""
+        return self._walk(self.children, seeds)
+
+    def membership(self, name: str) -> List[str]:
+        """The groups of the User object of this name, as membership_groups: the groups that list it, the
+        groups of its spec and every group above them."""
+        seeds = list(self.direct_groups.get(name, []))
+        for fr in self.by_name.get(name, [])[:1]:
+            seeds.extend(g for g in _list(fr.get("groups")) if isinstance(g, str) and g)
+        return self.ancestors(seeds)
+
+
+def _subject_keys(users: Iterable[str], groups: Iterable[str], sas: Iterable[str]) -> Dict[str, Set[str]]:
+    """Subjects keyed as in a snapshot. A User named system:serviceaccount:<namespace>:<name> is that
+    ServiceAccount: the authorization webhook and RBAC match such a username to it."""
+    users, groups, sas = set(users), set(groups), set(sas)
+    for user in list(users):
+        key = sa_key(user)
+        if key:
+            sas.add(key)
+    return {"userSubjects": users, "groupSubjects": groups, "saSubjects": sas}
+
+
+def covered_identities(snapshots: Any, subjects: Dict[str, Set[str]], user_info: Any = None,
+                       directory: Optional[_Directory] = None) -> Dict[str, Any]:
+    """Every username, group and ServiceAccount a request can carry when a rule with these subjects applies
+    to it. The authorization webhook joins all the rules of the username, the groups and the ServiceAccount
+    of a request, so another rule applies to such a request too when it names one of them (_names_one_of).
+
+    Requests are known for the local Users: the Users the subjects name and the members of their groups at
+    any depth, with the groups user-authn puts into their tokens, every group they are in and its parents. A
+    group subject also stands for the members it may get later, so the groups nested in it count with their
+    parents. The requester is known by its username and the groups of its token (user_info). Every
+    authenticated request carries system:authenticated, a ServiceAccount also system:serviceaccounts and
+    system:serviceaccounts:<namespace>, so a rule for one of these groups applies to every such request
+    (EVERYONE, SA_NAMESPACES). The groups an identity provider asserts for other users are not known here.
+    """
+    directory = directory or _Directory(snapshots)
+    named = _subject_keys(subjects["userSubjects"], subjects["groupSubjects"], subjects["saSubjects"])
+    subject_users, subject_groups, subject_sas = named["userSubjects"], named["groupSubjects"], named["saSubjects"]
+
+    lowered = {u.lower() for u in subject_users}
+    users = set(subject_users) | lowered
+    nested = directory.descendants(subject_groups)
+    groups = set(directory.ancestors(nested))
+    sas = set(subject_sas)
+
+    for user in subject_users:
+        groups.update(directory.membership(user))
+    covered: Dict[int, dict] = {}
+    for email in lowered:
+        for fr in directory.by_email.get(email, []):
+            covered[id(fr)] = fr
+    for group in nested:
+        for name in directory.user_members.get(group, []):
+            for fr in directory.by_name.get(name, []):
+                covered[id(fr)] = fr
+        for fr in directory.by_spec_group.get(group, []):
+            covered[id(fr)] = fr
+    for fr in covered.values():
+        email = fr.get("email") if isinstance(fr.get("email"), str) else ""
+        if email:
+            users.update({email, email.lower()})
+        name = fr.get("name") if isinstance(fr.get("name"), str) else ""
+        groups.update(directory.ancestors(
+            directory.direct_groups.get(name, []) + [g for g in _list(fr.get("groups")) if isinstance(g, str) and g]))
+
+    info = _dict(user_info)
+    username = info.get("username") if isinstance(info.get("username"), str) else ""
+    token_groups = {g for g in _list(info.get("groups")) if isinstance(g, str) and g}
+    sa = sa_key(username) or ""
+    if username and (username in subject_users or username.lower() in lowered
+                     or token_groups & subject_groups or (sa and sa in subject_sas)):
+        users.add(username)
+        groups.update(token_groups)
+        if sa:
+            sas.add(sa)
+
+    sa_namespaces: Set[str] = set()
+    if SERVICE_ACCOUNTS_GROUP in subject_groups:
+        sa_namespaces.add("")
+    sa_namespaces.update(g[len(SERVICE_ACCOUNTS_NAMESPACE_PREFIX):] for g in subject_groups
+                         if g.startswith(SERVICE_ACCOUNTS_NAMESPACE_PREFIX))
+    if users or groups:
+        groups.add(AUTHENTICATED_GROUP)
+    if sa_namespaces:
+        groups.update({AUTHENTICATED_GROUP, SERVICE_ACCOUNTS_GROUP})
+    for key in sas:
+        namespace = key.partition(":")[0]
+        groups.update({AUTHENTICATED_GROUP, SERVICE_ACCOUNTS_GROUP, f"{SERVICE_ACCOUNTS_NAMESPACE_PREFIX}{namespace}"})
+    return {"userSubjects": users, "groupSubjects": groups, "saSubjects": sas,
+            EVERYONE: AUTHENTICATED_GROUP in subject_groups, SA_NAMESPACES: sa_namespaces}
+
+
+def _names_one_of(fr: dict, identities: Dict[str, Any]) -> bool:
+    """Whether a rule snapshot names one of the identities as its subject (covered_identities)."""
+    rule = _subject_keys(_subjects(fr, "userSubjects"), _subjects(fr, "groupSubjects"), _subjects(fr, "saSubjects"))
+    if any(rule[key] & identities[key] for key in ("userSubjects", "groupSubjects", "saSubjects")):
+        return True
+    if identities.get(EVERYONE) and any(rule.values()):
+        return True
+    namespaces = identities.get(SA_NAMESPACES) or set()
+    if not namespaces:
+        return False
+    every = "" in namespaces
+    if any(every or key.partition(":")[0] in namespaces for key in rule["saSubjects"]):
+        return True
+    return any(group.startswith(SERVICE_ACCOUNTS_NAMESPACE_PREFIX)
+               and (every or group[len(SERVICE_ACCOUNTS_NAMESPACE_PREFIX):] in namespaces)
+               for group in rule["groupSubjects"])
+
+
+def _reaching_rules(snapshots: Any) -> List[dict]:
+    return [fr for fr in iter_filter_results(snapshots, CAR_SNAP) if car_reaches_system_namespaces(fr, snapshots)]
+
+
+def car_shares_subjects_with_a_reaching_rule(spec: Any, snapshots: Any, user_info: Any = None) -> bool:
+    """Whether a request the rule applies to is also let into the system namespaces by an existing
+    ClusterAuthorizationRule (covered_identities). The authorization webhook joins all the rules of a
+    request, allowAccessToSystemNamespaces and the selectors by OR, so the rule then works in the system
+    namespaces too."""
+    reaching = _reaching_rules(snapshots)
+    if not reaching:
+        return False
+    identities = covered_identities(snapshots, car_spec_subjects(spec), user_info)
+    return any(_names_one_of(fr, identities) for fr in reaching)
+
+
+def group_members_reach_system_namespaces(snapshots: Any, group_name: str, members: Iterable[Tuple[str, str]]) -> bool:
+    """Whether a Group gives its new members a ClusterAuthorizationRule while one of them is already let into
+    the system namespaces by another rule, which the authorization webhook joins with it. A member gets the
+    rules of the group and of every group above it; a Group member passes them on to its own members at any
+    depth (covered_identities)."""
+    directory = _Directory(snapshots)
+    above = set(directory.ancestors([group_name]))
+    if not any(above & set(_subjects(fr, "groupSubjects")) for fr in iter_filter_results(snapshots, CAR_SNAP)):
+        return False
+    reaching = _reaching_rules(snapshots)
+    if not reaching:
+        return False
+    for kind, name in members:
+        subjects: Dict[str, Set[str]] = {"userSubjects": set(), "groupSubjects": set(), "saSubjects": set()}
+        if kind == "Group":
+            subjects["groupSubjects"].add(name)
+        else:
+            record = (directory.by_name.get(name) or [{}])[0]
+            email = record.get("email")
+            if not isinstance(email, str) or not email:
+                continue
+            subjects["userSubjects"].add(email)
+        identities = covered_identities(snapshots, subjects, directory=directory)
+        if any(_names_one_of(fr, identities) for fr in reaching):
+            return True
+    return False
 
 
 def rule_of_binding(name: Any) -> str:
@@ -589,15 +909,41 @@ def target_user_roles(snapshots: Any, email: str, groups: Optional[Iterable[str]
                 seen.add(role)
                 found.append(role)
 
-    add_all(collect_roles_for_identity(snapshots, "user", email, lowercase_user=True))
+    add_all(collect_roles_for_identity(snapshots, "user", email, lowercase_user=True, as_target=True))
     for group in _list(groups):
         if isinstance(group, str) and group:
-            add_all(collect_roles_for_identity(snapshots, "group", group, lowercase_user=False))
+            add_all(collect_roles_for_identity(snapshots, "group", group, lowercase_user=False, as_target=True))
     return found
 
 
 def target_group_roles(snapshots: Any, group_name: str) -> List[str]:
-    return collect_roles_for_identity(snapshots, "group", group_name, lowercase_user=False)
+    return target_groups_roles(snapshots, [group_name])
+
+
+def target_groups_roles(snapshots: Any, group_names: Iterable[str]) -> List[str]:
+    """The roles of the groups as a target, as collect_roles_for_identity gives them for one group, in one
+    pass over the rules and the bindings."""
+    names = {g for g in group_names if isinstance(g, str) and g}
+    found: List[str] = []
+    if not names:
+        return found
+    seen: Set[str] = set()
+
+    def add(role: Any) -> None:
+        if isinstance(role, str) and role and role not in seen:
+            seen.add(role)
+            found.append(role)
+
+    for snap_name, namespaced in ((CAR_SNAP, False), (AR_SNAP, True)):
+        for fr in iter_filter_results(snapshots, snap_name):
+            if names.intersection(_subjects(fr, "groupSubjects")):
+                for role in _fr_role_names(fr, namespaced=namespaced, snapshots=snapshots):
+                    add(role)
+    for snap_name in (CRB_SNAP, CPRB_SNAP, PRB_SNAP):
+        for fr in iter_filter_results(snapshots, snap_name):
+            if names.intersection(_subjects(fr, "groupSubjects")):
+                add(fr.get("role"))
+    return found
 
 
 # --- DexProvider: the identity space a provider can assert ---------------------
@@ -761,7 +1107,7 @@ def _grant_roles(snapshots: Any, key: str, wanted) -> List[str]:
     for snap_name, namespaced in ((CAR_SNAP, False), (AR_SNAP, True)):
         for fr in iter_filter_results(snapshots, snap_name):
             if any(wanted(s) for s in _subjects(fr, key)):
-                add(_fr_role_names(fr, namespaced=namespaced))
+                add(_fr_role_names(fr, namespaced=namespaced, snapshots=snapshots))
     for fr in iter_filter_results(snapshots, CRB_SNAP):
         if any(wanted(s) for s in _subjects(fr, key)):
             role = fr.get("role")
@@ -995,6 +1341,17 @@ def _range_from_entry(entry: CatalogEntry) -> Optional[AssignRange]:
     return AssignRange(basic_max=basic_max, scope=scope, subsystems=subsystems, max_level=max_level)
 
 
+def _wider_basic(current: Optional[str], candidate: str) -> str:
+    """The basic-max of the union of two ranges. A level that includes the other wins; of two that do
+    not include each other (Admin and ClusterEditor) the one that sorts higher stays, which leaves the
+    other out and errs on the strict side. No platform role ranges over either of them alone."""
+    if current is None or BASIC_INCLUDES[candidate] >= BASIC_INCLUDES[current]:
+        return candidate
+    if BASIC_INCLUDES[current] >= BASIC_INCLUDES[candidate]:
+        return current
+    return candidate if BASIC_ORDER[candidate] > BASIC_ORDER[current] else current
+
+
 def merge_ranges(entries: Iterable[CatalogEntry]) -> AssignRange:
     basic_max = None
     max_level = None
@@ -1004,8 +1361,8 @@ def merge_ranges(entries: Iterable[CatalogEntry]) -> AssignRange:
         rng = _range_from_entry(entry)
         if rng is None:
             continue
-        if rng.basic_max and BASIC_ORDER[rng.basic_max] >= BASIC_ORDER.get(basic_max, 0):
-            basic_max = rng.basic_max
+        if rng.basic_max:
+            basic_max = _wider_basic(basic_max, rng.basic_max)
         if rng.max_level and RBACV2_ORDER[rng.max_level] >= RBACV2_ORDER.get(max_level, -1):
             max_level = rng.max_level
         if rng.scope == "system":
@@ -1060,7 +1417,7 @@ def role_in_range(name: str, entry: Optional[CatalogEntry], rng: AssignRange) ->
 
     basic = basic_level_of(name, entry)
     if basic and rng.basic_max:
-        if BASIC_ORDER[basic] <= BASIC_ORDER[rng.basic_max]:
+        if basic in BASIC_INCLUDES[rng.basic_max]:
             return True
 
     desc = describe_role(name, entry.labels)
@@ -1250,6 +1607,49 @@ def deny_car_message(name: str, leftover: Sequence[str], rng: AssignRange) -> st
     return (
         f'clusterauthorizationrules.deckhouse.io "{name}" grants roles [{roles}], '
         f"which are outside the requester's can-assign range ({range_summary(rng)})"
+    )
+
+
+def deny_car_system_namespaces_message(name: str, rng: AssignRange) -> str:
+    return (
+        f'clusterauthorizationrules.deckhouse.io "{name}" opens the system namespaces '
+        "(allowAccessToSystemNamespaces, namespaceSelector.matchAny, a labelSelector that does not name its "
+        "namespaces by kubernetes.io/metadata.name, a subject that another rule already lets into them, "
+        "or multi-tenancy off), which is a ClusterAdmin assignment outside the requester's can-assign range "
+        f"({range_summary(rng)}). Limit the rule to named namespaces of applications or ask a ClusterAdmin "
+        "or a SuperAdmin"
+    )
+
+
+def deny_group_system_namespaces_message(name: str, rng: AssignRange) -> str:
+    return (
+        f'groups.deckhouse.io "{name}" adds a member that a ClusterAuthorizationRule already lets into the '
+        "system namespaces, so the rules of the group work there too, which is a ClusterAdmin assignment "
+        f"outside the requester's can-assign range ({range_summary(rng)}). Ask a ClusterAdmin or a SuperAdmin"
+    )
+
+
+def turns_multitenancy_off(operation: str, old_settings: Any, new_settings: Any, snapshots: Any) -> bool:
+    """Whether a write of the user-authz ModuleConfig may turn multi-tenancy off. With it off, every
+    ClusterAuthorizationRule reaches every namespace, the system ones included. A write that leaves
+    enableMultiTenancy as it was, absent before and after, changes nothing (the edition default stays);
+    one that sets it to anything but true, removes it, or deletes the ModuleConfig may turn it off. Only
+    a cluster with multi-tenancy on, or its state unknown, has anything to lose."""
+    if multitenancy_state(snapshots) is False:
+        return False
+    old, new = _dict(old_settings), _dict(new_settings)
+    if operation == "DELETE":
+        return "enableMultiTenancy" in old or multitenancy_state(snapshots) is True
+    if "enableMultiTenancy" in new:
+        return new.get("enableMultiTenancy") is not True
+    return "enableMultiTenancy" in old
+
+
+def deny_multitenancy_off_message(rng: AssignRange) -> str:
+    return (
+        'moduleconfigs.deckhouse.io "user-authz": turning multi-tenancy off makes every '
+        "ClusterAuthorizationRule reach the system namespaces, which is a ClusterAdmin assignment outside "
+        f"the requester's can-assign range ({range_summary(rng)}). Ask a ClusterAdmin or a SuperAdmin"
     )
 
 
