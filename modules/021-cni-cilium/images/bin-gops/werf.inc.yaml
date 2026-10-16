@@ -5,29 +5,30 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
+- url: {{ $.SOURCE_REPO }}/google/gops.git
+  tag: v{{ include "get_oss_version_by_id" (list "gops" $ ) }}
+  add: /
+  to: /src/gops
+  stageDependencies:
+    install: ['**/*']
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ include "get_oss_version_by_id" (list "gops" $ ) }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src/gops
   - cd /src/gops
   - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
-  - rm -rf /src/gops/.git
 ---
 image: {{ .ModuleName }}/gops-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

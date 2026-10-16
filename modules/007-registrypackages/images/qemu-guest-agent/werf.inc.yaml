@@ -20,7 +20,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext
 from: scratch
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
   add: /out
   to: /
   includePaths:

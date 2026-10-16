@@ -1,9 +1,15 @@
 {{- $chronyExproterVersion := "0.14.0"}}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
+- url: {{ $.SOURCE_REPO }}/SuperQ/chrony_exporter.git
+  tag: v{{$chronyExproterVersion}}
+  add: /
+  to: /src/chrony_exporter
+  stageDependencies:
+    install: ['**/*']
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
   includePaths:
@@ -11,16 +17,11 @@ git:
   stageDependencies:
     install:
     - '**/*.patch'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - cd /src
-  - git clone --depth 1 --branch v{{$chronyExproterVersion}} $(cat /run/secrets/SOURCE_REPO)/SuperQ/chrony_exporter.git chrony_exporter
   - cd /src/chrony_exporter
   - git apply /patches/chrony_exporter/*.patch --verbose
-  - rm -rf /src/chrony_exporter/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
@@ -28,11 +29,11 @@ final: false
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/chrony_exporter
   to: /chrony_exporter
   before: install
-- image: common/promu-artifact
+- from: common/promu-artifact
   add: /src/promu
   to: /bin/promu
   before: install
@@ -46,9 +47,9 @@ shell:
   - promu build
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /chrony_exporter/chrony_exporter
   to: /bin/chrony_exporter
   before: install

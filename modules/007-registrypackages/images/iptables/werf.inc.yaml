@@ -20,7 +20,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: scratch
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
   to: /
   includePaths:
@@ -65,24 +65,26 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-from: {{ index $.Images "builder/src" }}
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - git clone -b libmnl-{{ $libmnl_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/netfilter/libmnl /src/libmnl
-  - rm -rf /src/libmnl/.git
-  - git clone -b libnftnl-{{ $libnftnl_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/netfilter/libnftnl /src/libnftnl
-  - rm -rf /src/libnftnl/.git
-  - git clone -b v{{ $iptables_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/netfilter/iptables /src/iptables
-  - rm -rf /src/iptables/.git
+from: common/src-artifact
+git:
+- url: {{ $.SOURCE_REPO }}/netfilter/libmnl
+  tag: libmnl-{{ $libmnl_version }}
+  add: /
+  to: /src/libmnl
+- url: {{ $.SOURCE_REPO }}/netfilter/libnftnl
+  tag: libnftnl-{{ $libnftnl_version }}
+  add: /
+  to: /src/libnftnl
+- url: {{ $.SOURCE_REPO }}/netfilter/iptables
+  tag: v{{ $iptables_version }}
+  add: /
+  to: /src/iptables
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-static-artifact
 final: false
 from: {{ index $.Images "builder/distroless" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

@@ -7,6 +7,18 @@ image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
 final: false
 from: {{ index $.Images "builder/src" }}
 git:
+- url: {{ .SOURCE_REPO }}/cesanta/docker_auth.git
+  tag: {{ $docker_auth_version }}
+  add: /
+  to: /src/docker_auth
+  stageDependencies:
+    install: ['**/*']
+- url: {{ .SOURCE_REPO }}/distribution/distribution.git
+  tag: v{{ $docker_version }}
+  add: /
+  to: /src/distribution
+  stageDependencies:
+    install: ['**/*']
 - add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /src/scripts
   stageDependencies:
@@ -17,22 +29,15 @@ git:
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $docker_auth_version }} {{ .SOURCE_REPO }}/cesanta/docker_auth.git /src/docker_auth
   - cd /src/docker_auth
   - git apply /patches/docker_auth/*.patch --verbose
-  - git clone --depth 1 --branch v{{ $docker_version }} {{ .SOURCE_REPO }}/distribution/distribution.git /src/distribution
-  - rm -rf /src/docker_auth/.git
-  - rm -rf /src/distribution/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
 from: scratch
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -54,7 +59,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
 final: false
 from: {{ index $.Images "builder/golang" }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install

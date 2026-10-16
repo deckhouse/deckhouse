@@ -90,7 +90,7 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
@@ -98,37 +98,31 @@ git:
   includePaths:
   - binary_replace.sh
   - check-n-cleaning-iptables.sh
-  stageDependencies:
-    install:
-    - '**/*.sh'
-shell:
-  install:
-  - cd /src
 ---
 image: {{ .ModuleName }}/agent-binaries-artifact
-fromImage: {{ .ModuleName }}/base-cilium-dev
+from: {{ .ModuleName }}/base-cilium-dev
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/check-n-cleaning-iptables.sh
   to: /check-n-cleaning-iptables.sh
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/binary_replace.sh
   to: /binary_replace.sh
   before: install
-- image: registrypackages/iptables-static-artifact
+- from: registrypackages/iptables-static-artifact
   add: /
   to: /sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: install
-- image: common/iptables-wrapper
+- from: common/iptables-wrapper
   add: /iptables-wrapper
   to: /usr/sbin/iptables-wrapper
   before: install
-- image: {{ .ModuleName }}/cilium-artifact
+- from: {{ .ModuleName }}/cilium-artifact
   add: /tmp/install
   to: /
   before: install
@@ -143,19 +137,19 @@ import:
   - var/lib/cilium/bpf
   - usr/bin/hubble
   - etc/bash_completion.d/hubble
-- image: {{ .ModuleName }}/bpftool-artifact
+- from: {{ .ModuleName }}/bpftool-artifact
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
   before: install
-- image: {{ .ModuleName }}/gops-artifact
+- from: {{ .ModuleName }}/gops-artifact
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install
-- image: {{ .ModuleName }}/cni-plugins-artifact
+- from: {{ .ModuleName }}/cni-plugins-artifact
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
   before: install
-- image: {{ .ModuleName }}/cilium-envoy-artifact
+- from: {{ .ModuleName }}/cilium-envoy-artifact
   add: /tmp/install/usr
   to: /usr
   before: install
@@ -163,18 +157,18 @@ import:
   - bin/cilium-envoy
   - bin/cilium-envoy-starter
   - lib/libcilium.so
-- image: {{ .ModuleName }}/llvm-artifact
+- from: {{ .ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin
   before: install
   includePaths:
   - clang
   - llc
-- image: {{ .ModuleName }}/llvm-artifact
+- from: {{ .ModuleName }}/llvm-artifact
   add: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
   to: /usr/lib/llvm-19.1/lib64/libLLVM.so.19.1
   before: install
-- image: common/distroless
+- from: common/distroless
   add: /etc/group
   to: /from_common_distroless/group
   before: install
@@ -207,7 +201,7 @@ import:
   before: setup
   add: /usr/bin/true
   to: /usr/bin/true
-- image: {{ .ModuleName }}/agent-pm-artifact
+- from: {{ .ModuleName }}/agent-pm-artifact
   before: setup
   add: /relocate-pm
   to: /relocate
@@ -319,9 +313,11 @@ import:
   to: /usr/lib64/libdl.so.2
   before: install
 - from: {{ .ModuleName }}/glibc-artifact
-  add: /out/usr/lib/libtinfo*
-  to: /usr/lib64/
+  add: /out/usr/lib
+  to: /usr/lib64
   before: install
+  includePaths:
+  - libtinfo*
 - from: {{ index $.Images "tools/elfutils-elfutils-0.193" }}
   add: /usr/lib
   to: /usr/lib64
@@ -331,7 +327,7 @@ import:
   - libelf.so
   - libelf.so.1
   - libelf-0.193.so
-- image: common/pause
+- from: common/pause
   add: /pause
   to: /pause
   before: setup
@@ -565,9 +561,9 @@ shell:
 # New Main Agent Image (Distroless)
 ---
 image: {{ .ModuleName }}/agent-distroless
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/agent-binaries-artifact
+- from: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate
   to: /
   before: install

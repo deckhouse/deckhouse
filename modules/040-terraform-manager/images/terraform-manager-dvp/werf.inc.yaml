@@ -7,7 +7,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}
 # The base is pinned directly instead of being looked up in candi's
 # terraform_versions.yml: DVP's settings (useOpentofu included) live in its own
 # bundle, so candi carries no dvp entry to look up.
-fromImage: terraform-manager/base-terraform-manager-opentofu
+from: terraform-manager/base-terraform-manager-opentofu
 
 {{ include "image_spec_for_infrastructure_manager" . }}
 {{- end }}

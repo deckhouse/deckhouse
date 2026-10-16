@@ -19,66 +19,66 @@
 # Based on https://github.com/istio/istio/blob/1.29.6/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.29.6/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
   to: /var/lib/istio/envoy/envoy_bootstrap_tmpl.json
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
   add: /src/istio/out/pilot-agent
   to: /usr/local/bin/pilot-agent
   owner: 1337
   group: 1337
   after: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
   add: /src/proxy/bin/envoy
   to: /usr/local/bin/envoy
   owner: 1337
   group: 1337
   after: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/libc.so.6
   to: /lib64/libc.so.6
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/libm.so.6
   to: /lib64/libm.so.6
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/librt.so.1
   to: /lib64/librt.so.1
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/libdl.so.2
   to: /lib64/libdl.so.2
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/libpthread.so.0
   to: /lib64/libpthread.so.0
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/libresolv.so.2
   to: /lib64/libresolv.so.2
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
   add: /out/lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
   before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-pm-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-pm-artifact
   add: /relocate-pm
   to: /
   before: setup
-- image: registrypackages/iptables-static-artifact
+- from: registrypackages/iptables-static-artifact
   add: /
   to: /sbin
   includePaths:
   - xtables-legacy-multi
   - xtables-nft-multi
   before: setup
-- image: common/iptables-wrapper
+- from: common/iptables-wrapper
   add: /iptables-wrapper
   to: /sbin/iptables-wrapper
   before: setup
@@ -97,7 +97,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
+- from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio
   to: /src/istio
   before: setup
@@ -135,10 +135,14 @@ shell:
   - chown 1337:1337 /src/istio/out/pilot-agent
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-envoy-artifact
-fromImage: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
+from: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /git-sources.json
+  to: /src/proxy-git-sources.json
+  before: install
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/proxy
   to: /src/proxy
   before: install
@@ -185,6 +189,18 @@ shell:
     build --config=release
     EOF
   - go mod download
+  - |
+    BUILD_SCM_REVISION="$(python3 - /src/proxy {{ $istioVersion }} <<'PY'
+    import json, re, sys
+    with open("/src/proxy-git-sources.json") as metadata:
+        sources = json.load(metadata)
+    matches = [s for s in sources if s["to"] == sys.argv[1] and s["tag"] == sys.argv[2]]
+    if len(matches) != 1 or not re.fullmatch(r"[0-9a-f]{40}", matches[0]["commit"]):
+        sys.exit("Expected exactly one Git source with a full commit SHA for " + sys.argv[1])
+    print(matches[0]["commit"])
+    PY
+    )" || exit 1
+    export BUILD_SCM_REVISION BUILD_SCM_STATUS=Clean
   - bazel build //:envoy
   # done while ${BAZEL_OUTPUT_BASE} is still in scope - each werf stage is a
   # separate shell, so it is empty in setup
@@ -199,16 +215,37 @@ from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
+git:
+- url: {{ $.SOURCE_REPO }}/llvm/llvm-project.git
+  tag: {{ $llvmRev }}
+  add: /
+  to: /src/llvm
+- url: {{ $.SOURCE_REPO }}/grpc/grpc-go.git
+  tag: cmd/protoc-gen-go-grpc/v1.3.0
+  add: /
+  to: /src/grpc-go
+- url: {{ $.SOURCE_REPO }}/protocolbuffers/protobuf-go.git
+  tag: v1.30.0
+  add: /
+  to: /src/protobuf-go
+- url: {{ $.SOURCE_REPO }}/mitchellh/protoc-gen-go-json.git
+  tag: v1.1.0
+  add: /
+  to: /src/protoc-gen-go-json
+- url: {{ $.SOURCE_REPO }}/pseudomuto/protoc-gen-doc.git
+  tag: v1.5.1
+  add: /
+  to: /src/protoc-gen-doc
 from: {{ index $.Images "builder/golang-bookworm" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-golang-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-golang-artifact
   add: /usr/local/go
   to: /usr/local/go
   before: install
-- image: common/alt-p11-artifact
+- from: common/alt-p11-artifact
   add: /root/.ssh
   to: /root/.ssh
   before: install
@@ -245,13 +282,11 @@ shell:
   - mkdir -p /tmp/ccache-dir
 {{- end }}
   - export CCACHE_DIR="/tmp/ccache-dir"
-  - git clone --depth 1 --branch "{{ $llvmRev }}" $(cat /run/secrets/SOURCE_REPO)/llvm/llvm-project.git /src/llvm
   - cd /src/llvm
   - rm -rf clang-tools-extra/clangd/clients/clangd-vscode
   - rm -rf llvm/utils/git/requirements.txt
   - rm -rf mlir/utils/vscode/package-lock.json
   - rm -rf third-party/benchmark/requirements.txt
-  - rm -rf .git
   - mkdir -p /src/llvm/llvm/build
   - cd /src/llvm/llvm/build
   - |
@@ -287,10 +322,6 @@ shell:
   - git archive --remote "$(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoyproxy_deps.git" HEAD "protoc/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" | tar -C /tmp -xvf -
   - unzip /tmp/protoc/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip -x readme.txt -d /usr/local && rm -r /tmp/protoc
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
-  - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.3.0 $(cat /run/secrets/SOURCE_REPO)/grpc/grpc-go.git /src/grpc-go
-  - git clone --depth 1 --branch v1.30.0 $(cat /run/secrets/SOURCE_REPO)/protocolbuffers/protobuf-go.git /src/protobuf-go
-  - git clone --depth 1 --branch v1.1.0 $(cat /run/secrets/SOURCE_REPO)/mitchellh/protoc-gen-go-json.git /src/protoc-gen-go-json
-  - git clone --depth 1 --branch v1.5.1 $(cat /run/secrets/SOURCE_REPO)/pseudomuto/protoc-gen-doc.git /src/protoc-gen-doc
   - cd /src/grpc-go/cmd/protoc-gen-go-grpc && go install
   - cd /src/protobuf-go/cmd/protoc-gen-go && go install
   - cd /src/protoc-gen-go-json && go install
@@ -309,15 +340,16 @@ imageSpec:
     env: {"GOROOT": "/usr/local/go", "GOPATH": "/go", "PATH": "${PATH}:${GOROOT}/bin:${GOPATH}/bin", "GOOS": "linux", "GOARCH": "amd64"}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+git:
+- url: {{ $.SOURCE_REPO }}/istio/proxy.git
+  tag: {{ $istioVersion }}
+  add: /
+  to: /src/proxy
+from: common/src-artifact
 final: false
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
-  install:
-  - git clone --depth 1 --branch {{ $istioVersion }} $(cat /run/secrets/SOURCE_REPO)/istio/proxy.git /src/proxy
-  - cd /src/proxy/
+  setup:
+  - printf '%s\n' "${WERF_GIT_SOURCES:?}" > /git-sources.json
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
 final: false

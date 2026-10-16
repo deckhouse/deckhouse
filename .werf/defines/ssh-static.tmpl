@@ -7,21 +7,19 @@
 
 ---
 image: ssh-static-src-artifact
+git:
+- url: {{ $.SOURCE_REPO }}/openssh/openssh-portable
+  tag: V_9_9_P1
+  add: /
+  to: /src
 final: false
-fromImage: common/src-artifact
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - git clone -b V_9_9_P1 --single-branch --depth=1 $(cat /run/secrets/SOURCE_REPO)/openssh/openssh-portable /src
-  - rm -rf /src/.git
+from: common/src-artifact
 ---
 image: ssh-static
 final: false
 from: {{ index $.Images "builder/alpine-3.21" }}
 import:
-- image: ssh-static-src-artifact
+- from: ssh-static-src-artifact
   add: /src
   to: /src
   before: install

@@ -1,3 +1,4 @@
+{{- $protocGenGoJsonVersion := "v1.6.0" }}
 {{- $protocVersion := "35.1" }}
 {{- $bazelVersions := "7.7.1" }}
 #
@@ -27,6 +28,25 @@ from: {{ index $.Images "builder/golang" }}
 final: false
 ---
 image: {{ .ModuleName }}/base-cilium-dev
+git:
+- url: {{ $.SOURCE_REPO }}/grpc/grpc-go.git
+  tag: cmd/protoc-gen-go-grpc/v1.6.2
+  add: /
+  to: /src/grpc-go
+- url: {{ $.SOURCE_REPO }}/protocolbuffers/protobuf-go.git
+  tag: v1.36.11
+  add: /
+  to: /src/protobuf-go
+- url: {{ $.SOURCE_REPO }}/mfridman/protoc-gen-go-json.git
+  tag: {{ $protocGenGoJsonVersion }}
+  add: /
+  to: /src/protoc-gen-go-json
+- url: {{ $.SOURCE_REPO }}/pseudomuto/protoc-gen-doc.git
+  tag: v1.5.1
+  add: /
+  to: /src/protoc-gen-doc
+- add: /modules/021-cni-cilium/images/base-cilium-dev/patches
+  to: /patches
 from: {{ index $.Images "builder/alt" }}
 final: false
 mount:
@@ -34,12 +54,12 @@ mount:
 - from: tmp_dir
   to: /root/.cache/bazel
 import:
-- image: {{ .ModuleName }}/golang-artifact
+- from: {{ .ModuleName }}/golang-artifact
   add: /usr/local/go
   to: /usr/local/go
   before: install
 {{- if eq $.SVACE_ENABLED "true" }}
-- image: {{ .ModuleName }}/golang-artifact
+- from: {{ .ModuleName }}/golang-artifact
   add: /
   to: /
   includePaths:
@@ -48,10 +68,10 @@ import:
   before: install
 {{- end }}
 secrets:
-- id: GOPROXY
-  value: {{ .GOPROXY }}
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
@@ -102,13 +122,11 @@ shell:
   - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
   # Install protoc plugins
-  - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.6.2 $(cat /run/secrets/SOURCE_REPO)/grpc/grpc-go.git /src/grpc-go
-  - git clone --depth 1 --branch v1.36.11 $(cat /run/secrets/SOURCE_REPO)/protocolbuffers/protobuf-go.git /src/protobuf-go
-  - git clone --depth 1 --branch v1.6.0 $(cat /run/secrets/SOURCE_REPO)/mfridman/protoc-gen-go-json.git /src/protoc-gen-go-json
-  - git clone --depth 1 --branch v1.5.1 $(cat /run/secrets/SOURCE_REPO)/pseudomuto/protoc-gen-doc.git /src/protoc-gen-doc
   - cd /src/grpc-go/cmd/protoc-gen-go-grpc && go install
   - cd /src/protobuf-go/cmd/protoc-gen-go && go install
-  - cd /src/protoc-gen-go-json && go install
+  - cd /src/protoc-gen-go-json
+  - git apply /patches/001-protoc-gen-go-json-version.patch
+  - go install -ldflags="-X main.buildVersion={{ $protocGenGoJsonVersion }}"
   - cd /src/protoc-gen-doc/cmd/protoc-gen-doc && go install
   - cd ~
   - rm -rf /src

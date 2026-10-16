@@ -22,7 +22,7 @@ image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}"
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
     add: /src/cfssl
     to: /src
     before: install
@@ -46,14 +46,14 @@ shell:
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}"
 from: scratch
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
     add: /src/scripts
     to: /
     includePaths:
     - install
     - uninstall
     before: setup
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}"
     add: /
     to: /
     includePaths:

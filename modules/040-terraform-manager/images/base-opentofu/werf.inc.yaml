@@ -2,7 +2,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: scratch
 import:
-- image: opentofu
+- from: opentofu
   add: /opentofu/opentofu
   to: /opentofu
   before: setup

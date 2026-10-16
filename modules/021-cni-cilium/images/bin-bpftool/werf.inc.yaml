@@ -15,25 +15,25 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
+git:
+- url: {{ .SOURCE_REPO }}/bpf/bpf-next.git
+  commit: {{ $bpftoolRev }}
+  add: /
+  to: /src/linux
+  stageDependencies:
+    install: ['**/*']
 shell:
   install:
-  - git clone $(cat /run/secrets/SOURCE_REPO)/bpf/bpf-next.git /src/linux
-  - cd /src/linux
-  - git checkout {{ $bpftoolRev }}
   # CSE
   - rm -rf /src/linux/drivers/gpu/drm/ci
-  - rm -rf /src/linux/.git
 ---
 image: {{ .ModuleName }}/bpftool-artifact
-fromImage: {{ .ModuleName }}/base-cilium-dev
+from: {{ .ModuleName }}/base-cilium-dev
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

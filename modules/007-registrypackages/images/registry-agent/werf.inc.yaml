@@ -14,7 +14,7 @@ The image itself is built in the module (registry/registry-agent); this only wra
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: scratch
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
   to: /
   includePaths:
@@ -36,7 +36,7 @@ git:
     setup:
     - '**/*'
 import:
-- image: common/crane
+- from: common/crane
   add: /crane
   to: /crane
   before: setup
@@ -44,7 +44,7 @@ import:
   add: /usr/bin/jq
   before: setup
 dependencies:
-- image: registry/registry-agent
+- from: registry/registry-agent
   before: setup
   imports:
   - type: ImageDigest

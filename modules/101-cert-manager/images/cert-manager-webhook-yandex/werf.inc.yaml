@@ -1,9 +1,9 @@
 {{- $commit := include "get_oss_version_by_id" (list "cert-manager-webhook-yandex" $) -}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /webhook
   to: /webhook
   before: setup
@@ -14,30 +14,31 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 git:
+# 3p mirror: yandex-cloud/cert-manager-webhook-yandex
+- url: {{ $.SOURCE_REPO }}/yandex-cloud/cert-manager-webhook-yandex.git
+  commit: {{ $commit }}
+  add: /
+  to: /src
+  stageDependencies:
+    install: ['**/*']
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  # 3p mirror: yandex-cloud/cert-manager-webhook-yandex @ {{ $commit }}
-  - git clone $(cat /run/secrets/SOURCE_REPO)/yandex-cloud/cert-manager-webhook-yandex.git /src
   - cd /src
-  - git checkout {{ $commit }}
   - git apply /patches/*.patch --verbose
-  - rm -rf .git deploy testdata scripts
+  - rm -rf deploy testdata scripts
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ index $.Images "builder/golang" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

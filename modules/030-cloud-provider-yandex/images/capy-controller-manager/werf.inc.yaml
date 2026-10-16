@@ -8,7 +8,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /src/manager
   to: /capy-controller-manager
   before: setup
@@ -19,31 +19,32 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
 from: {{ index $.Images "builder/src" }}
-{{- if $patch }}
 git:
+  - url: {{ $.SOURCE_REPO }}/yandex-cloud/cluster-api-provider-yandex.git
+    tag: {{ $version }}
+    add: /
+    to: /src
+    stageDependencies:
+      install: ['**/*']
+{{- if $patch }}
   - add: {{ $patches }}/patches
     to: /patches
     stageDependencies:
       install:
         - '**/*'
 {{- end }}
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/yandex-cloud/cluster-api-provider-yandex.git /src
   - cd /src
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}
-  - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ index $.Images "builder/golang" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

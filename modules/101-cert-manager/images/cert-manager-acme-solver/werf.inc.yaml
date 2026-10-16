@@ -1,7 +1,7 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/cert-manager-controller-artifact
+- from: {{ $.ModuleName }}/cert-manager-controller-artifact
   add: /acmesolver-linux-amd64
   to: /bin/acmesolver
   before: setup

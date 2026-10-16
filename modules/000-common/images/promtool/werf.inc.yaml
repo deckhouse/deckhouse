@@ -1,9 +1,15 @@
 {{- $prometheusVersion := "v2.55.1" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
+- url: {{ $.SOURCE_REPO }}/prometheus/prometheus.git
+  tag: {{ $prometheusVersion }}
+  add: /
+  to: /src/prometheus
+  stageDependencies:
+    install: ['**/*']
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
   includePaths:
@@ -11,25 +17,20 @@ git:
   stageDependencies:
     install:
     - '**/*.patch'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $prometheusVersion }} $(cat /run/secrets/SOURCE_REPO)/prometheus/prometheus.git /src/prometheus
   - cd /src/prometheus
   - git apply /patches/*.patch --verbose
-  - rm -rf /src/prometheus/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang-1.25" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/prometheus
   to: /src
   before: install
-- image: common/promu-artifact
+- from: common/promu-artifact
   add: /src/promu
   to: /bin/promu
   before: install

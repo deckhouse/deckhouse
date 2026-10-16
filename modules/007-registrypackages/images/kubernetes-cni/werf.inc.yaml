@@ -9,6 +9,18 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
 from: {{ index $.Images "builder/src" }}
 git:
+- url: {{ $.SOURCE_REPO }}/containernetworking/plugins.git
+  tag: v{{ $cni_version }}
+  add: /
+  to: /src/plugins
+  stageDependencies:
+    install: ['**/*']
+- url: {{ $.SOURCE_REPO }}/flannel-io/cni-plugin.git
+  tag: v{{ $cni_flannel_version }}
+  add: /
+  to: /src/cni-plugin
+  stageDependencies:
+    install: ['**/*']
 - add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
@@ -19,24 +31,17 @@ git:
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $cni_version }} $(cat /run/secrets/SOURCE_REPO)/containernetworking/plugins.git /src/plugins
   - cd /src/plugins
   - git apply /patches/plugins/*.patch --verbose
-  - rm -rf .git
-  - git clone --depth 1 --branch v{{ $cni_flannel_version }} $(cat /run/secrets/SOURCE_REPO)/flannel-io/cni-plugin.git /src/cni-plugin
   - cd /src/cni-plugin
   - git apply /patches/cni-plugins/*.patch --verbose
-  - rm -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: scratch
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -77,7 +82,7 @@ from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
@@ -107,7 +112,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_version }}
 from: scratch
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
   add: /out
   to: /
   includePaths:
@@ -126,7 +131,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
 final: false
 from: {{ index $.Images "builder/distroless" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
   add: /
   to: /sysext/opt/deckhouse/bin
   includePaths:

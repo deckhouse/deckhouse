@@ -1,8 +1,8 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
+- from: {{ .ModuleName }}/vertical-pod-autoscaler-artifact
   add: /updater
   to: /updater
   before: setup

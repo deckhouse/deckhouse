@@ -19,24 +19,26 @@
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
-    {{- if $patch }}
 git:
+- url: {{ $.SOURCE_REPO }}/gardener/autoscaler.git
+  tag: {{ $clusterAutoscalerVersion }}
+  add: /
+  to: /tmp/autoscaler
+  stageDependencies:
+    install: ['**/*']
+    {{- if $patch }}
 - add: {{ $patches }}/patches/{{ $patch_version }}
   to: /patches
   stageDependencies:
     install:
     - '**/*'
     {{- end }}
-secrets:
-- id: SOURCE_REPO
-  value: {{ $.SOURCE_REPO }}
 shell:
   install:
   - mkdir -p /tmp/autoscaler
   - cd /tmp/autoscaler
-  - git clone --depth 1 --branch {{ $clusterAutoscalerVersion }} $(cat /run/secrets/SOURCE_REPO)/gardener/autoscaler.git .
     {{- if $patch }}
   - git apply /patches/*.patch --verbose
     {{- end }}
@@ -48,7 +50,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -66,9 +68,9 @@ shell:
   - echo "{{ trimPrefix "v" $clusterAutoscalerVersion }}-flant" > VERSION
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src
   to: /
   includePaths:

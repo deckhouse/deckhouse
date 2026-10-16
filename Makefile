@@ -1,4 +1,5 @@
 export PATH := $(abspath bin/):${PATH}
+export WERF_BUILD_REPORT_OPERATIONS=true
 
 FORMATTING_BEGIN_YELLOW = \033[0;33m
 FORMATTING_BEGIN_BLUE = \033[36m
@@ -315,7 +316,7 @@ docs: bin/werf ## Run containers with the documentation.
 	@echo "Building documentation containers..."
 	@echo -n "werf: "; bin/werf version
 	@$(MAKE) -C docs/site free-port-80
-	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
+	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
 	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access documentation..."
 
 .PHONY: docs-generate-pdf
@@ -334,7 +335,7 @@ docs-external-module: yq bin/werf ## Build an external module docs and run the l
 	@echo "Building documentation containers..."
 	@echo -n "werf: "; bin/werf version
 	@$(MAKE) -C docs/site free-port-80
-	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
+	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
 	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access documentation..."
 
 .PHONY: docs-external-module-clean
@@ -347,7 +348,7 @@ docs-dev: bin/werf ## Run containers with the documentation in the dev mode (all
 	@echo "Building documentation containers (dev mode)..."
 	@echo -n "werf: "; bin/werf version;
 	@$(MAKE) -C docs/site free-port-80
-	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
+	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local"
 	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access documentation..."
 
 .PHONY: docs-down
@@ -543,6 +544,7 @@ set-build-envs:
   endif
 
 	export WERF_REPO := $(DEV_REGISTRY_PATH)
+	export WERF_META_REPO := $(WERF_REPO)/meta
 	export REGISTRY_SUFFIX := $(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO := --secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
 

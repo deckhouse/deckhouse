@@ -1,17 +1,12 @@
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
     to: /src
     excludePaths:
       - '**/*.md'
-    stageDependencies:
-      install:
-        - go.mod
-        - go.sum
-        - '**/*.go'
   # The API types are shared with the storage syncer and with the agent, whose
   # node-delivery package lives in modules/007-registrypackages. They sit in
   # go_lib so that all three link the same package instead of keeping three
@@ -22,24 +17,16 @@ git:
       - '**/*.go'
       - '**/*.mod'
       - '**/*.sum'
-    stageDependencies:
-      install:
-        - '**/*.go'
-        - go.mod
-        - go.sum
-shell:
-  install:
-    - set -e
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
     add: /src
     to: /src
     before: install
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
     add: /go_lib/registry
     to: /go_lib/registry
     before: install
@@ -64,9 +51,9 @@ shell:
     - chmod 0755 /registry-controller
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
-fromImage: common/distroless
+from: common/distroless
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /registry-controller
     to: /registry-controller
     before: setup

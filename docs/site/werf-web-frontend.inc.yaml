@@ -115,19 +115,19 @@ git:
     setup: ['**/*']
 {{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
 import:
-  - image: site-external-artifacts
+  - from: site-external-artifacts
     add: /data/topnav.json
     to: /srv/jekyll-data/site/_data/topnav.json
     before: setup
-  - image: site-external-artifacts
+  - from: site-external-artifacts
     add: /data/topnav-l2-products.json
     to: /srv/jekyll-data/site/_data/topnav-l2-products.json
     before: setup
-  - image: site-external-artifacts
+  - from: site-external-artifacts
     add: /data/footer.json
     to: /srv/jekyll-data/site/_data/footer.json
     before: setup
-  - image: site-external-artifacts
+  - from: site-external-artifacts
     add: /data/copyright.json
     to: /srv/jekyll-data/site/_data/copyright.json
     before: setup
@@ -166,7 +166,7 @@ git:
   to: /scripts/channels-convert.sh
 {{- end }}
 import:
-- image: web-frontend-artifact
+- from: web-frontend-artifact
   add: /app/_site
   to: /app
   before: setup
@@ -182,14 +182,14 @@ import:
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: setup
-- image: {{ .ModuleName }}/modules-embedded/static-artifact
+- from: {{ .ModuleName }}/modules-embedded/static-artifact
   add: /app/_site/
   to: /app/embedded-modules
   before: setup
   includePaths:
   - en
   - ru
-- image: {{ .ModuleName }}/{{ .ImageName }}/static
+- from: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site
   to: /app/dkp-docs
   before: setup
@@ -197,7 +197,7 @@ import:
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) . }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-documentation-static.inc.yaml" .ModulePath)) . }}
 {{- else }}
-- image: nginx-artifact
+- from: nginx-artifact
   add: /out
   to: /
   before: setup

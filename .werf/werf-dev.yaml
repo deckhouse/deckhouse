@@ -1,6 +1,6 @@
 ---
 image: dev-prebuild
-fromImage: common-base
+from: common-base
 git:
 - add: /
   to: /deckhouse
@@ -13,14 +13,12 @@ git:
 {{- include "exclude_modules_dir_from_images" .  | nindent 2}}
 {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
 {{ include "dev_prebuild_git_shell_operator" . }}
-{{ .Files.Get (printf "tools/build_includes/modules-with-exclude-%s.yaml" .Env) }}
-{{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
-{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/modules-with-exclude-%s.yaml" .Env) | include "git_without_install_dependencies" }}
+{{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) | include "git_without_install_dependencies" }}
+{{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) | include "git_without_install_dependencies" }}
 import:
 {{ include "dev_prebuild_images_imports" (dict "Images" .Images "Env" .Env) }}
 shell:
-  install:
-  - set -e
   setup:
   - |
 {{- range $key := list "default" "managed" "minimal" }}

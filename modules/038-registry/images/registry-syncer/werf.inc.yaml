@@ -1,17 +1,12 @@
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
     to: /src
     excludePaths:
       - '**/*.md'
-    stageDependencies:
-      install:
-        - go.mod
-        - go.sum
-        - '**/*.go'
   # The API types are shared with the controller and with the node agent, so all
   # three link the same package instead of keeping three copies in step.
   - add: /{{ $.ModulePath }}go_lib/registry
@@ -20,24 +15,16 @@ git:
       - '**/*.go'
       - '**/*.mod'
       - '**/*.sum'
-    stageDependencies:
-      install:
-        - '**/*.go'
-        - go.mod
-        - go.sum
-shell:
-  install:
-    - set -e
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
     add: /src
     to: /src
     before: install
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
     add: /go_lib/registry
     to: /go_lib/registry
     before: install
@@ -62,9 +49,9 @@ shell:
     - chmod 0755 /registry-syncer
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
-fromImage: common/distroless
+from: common/distroless
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+  - from: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /registry-syncer
     to: /registry-syncer
     before: setup
@@ -75,7 +62,7 @@ import:
   # store layout is distribution's, and the cost of misunderstanding it is deleting a blob
   # that is still referenced. It runs here because this is the process that decides what to
   # delete, and because it needs the data directory that this pod already mounts.
-  - image: "{{ $.ModuleName }}/docker-distribution-artifact"
+  - from: "{{ $.ModuleName }}/docker-distribution-artifact"
     add: /registry
     to: /registry
     before: setup

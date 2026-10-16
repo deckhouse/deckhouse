@@ -1,14 +1,35 @@
+{{- define "git_without_install_dependencies" }}
+{{- $config := printf "git:\n%s" . | fromYaml }}
+{{- if $config.git }}
+{{- $entries := list }}
+{{- range $rawEntry := $config.git }}
+{{- $entry := $rawEntry | toYaml | fromYaml }}
+{{- if $entry.stageDependencies }}
+{{- $dependencies := $entry.stageDependencies | toYaml | fromYaml }}
+{{- $_ := unset $dependencies "install" }}
+{{- if $dependencies }}
+{{- $_ := set $entry "stageDependencies" $dependencies }}
+{{- else }}
+{{- $_ := unset $entry "stageDependencies" }}
+{{- end }}
+{{- end }}
+{{- $entries = append $entries $entry }}
+{{- end }}
+{{- toYaml $entries }}
+{{- end }}
+{{- end }}
+
 # render imports for candi images
 # . is dict with next params
 #   Env - werf env
 {{- define "candi_generic_imports" }}
 {{- $context := . -}}
 
-- image: dev/candi
+- from: dev/candi
   add: /deckhouse
   to: /deckhouse
   before: setup
-- image: dev-prebuild
+- from: dev-prebuild
   add: /deckhouse
   to: /deckhouse
   includePaths:
@@ -17,7 +38,7 @@
   - global-hooks/openapi/config-values.yaml
   - candi/terraform_versions.yml
   after: setup
-- image: version-map-artifact
+- from: version-map-artifact
   add: /version_map_{{ $context.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   before: setup

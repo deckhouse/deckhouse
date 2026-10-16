@@ -2,35 +2,33 @@
 {{- if ne $.Env "CSE" }}
 
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 fromCacheVersion: "2025.04.29.4"
 imageSpec:
   config:
     env: { "WORKDIR": "/" }
     entrypoint: ["/machine-controller-manager"]
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/machine-controller-manager
   to: /machine-controller-manager
   before: setup
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+git:
+- url: {{ $.SOURCE_REPO }}/deckhouse/mcm.git
+  tag: {{ $mcmVersion }}-flant.26
+  add: /
+  to: /src
 fromCacheVersion: "2026.07.21.1"
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - git clone --depth 1 --branch {{ $mcmVersion }}-flant.26 $(cat /run/secrets/SOURCE_REPO)/deckhouse/mcm.git /src
-  - rm -rf /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

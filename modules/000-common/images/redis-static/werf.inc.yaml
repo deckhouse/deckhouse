@@ -1,21 +1,23 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+git:
+- url: {{ $.SOURCE_REPO }}/redis/redis.git
+  tag: 7.4.0
+  add: /
+  to: /src
+  stageDependencies:
+    install: ['**/*']
+from: common/src-artifact
 final: false
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --branch 7.4.0 --depth 1 $(cat /run/secrets/SOURCE_REPO)/redis/redis.git /src
   - rm -r /src/utils/req-res-validator/requirements.txt
-  - rm -r /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/alpine" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -36,9 +38,9 @@ shell:
   - chmod 0700 /src/src/redis-server
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ .ImageName }}-artifact
   add: /src/src/redis-server
   to: /redis-server
   before: setup

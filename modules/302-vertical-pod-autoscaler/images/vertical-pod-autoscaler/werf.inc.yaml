@@ -1,20 +1,22 @@
 {{- $vpaVersion := include "get_oss_version_by_id" (list "autoscaler" $ )  -}}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
+- url: {{ $.SOURCE_REPO }}/kubernetes/autoscaler.git
+  tag: vertical-pod-autoscaler-{{ $vpaVersion }}
+  add: /
+  to: /src/autoscaler
+  stageDependencies:
+    install: ['**/*']
 - add: /{{ $.ModulePath }}/modules/302-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
       - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 -b vertical-pod-autoscaler-{{ $vpaVersion }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/autoscaler.git /src/autoscaler
     - cd /src/autoscaler
     - git apply /patches/*.patch --verbose
     - mv vertical-pod-autoscaler /src/vertical-pod-autoscaler
@@ -24,7 +26,7 @@ image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-  - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  - from: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install

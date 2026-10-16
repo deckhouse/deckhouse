@@ -2,7 +2,7 @@
 image: dev/install-standalone
 from: scratch
 import:
-- image: dhctl
+- from: dhctl
   add: /dhctl/bin/dhctl
   to: /dhctl
   before: setup

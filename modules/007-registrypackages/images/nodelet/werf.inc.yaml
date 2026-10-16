@@ -32,7 +32,7 @@ from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -50,7 +50,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
 final: false
 from: {{ index $.Images "builder/distroless" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /nodelet
   to: /sysext/usr/bin/nodelet
   before: install
@@ -86,7 +86,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext
 from: scratch
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
   add: /out
   to: /
   includePaths:
@@ -111,7 +111,7 @@ git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /nodelet
   to: /nodelet
   before: setup
@@ -119,7 +119,7 @@ import:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-package-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-package-artifact
   add: /
   to: /
   includePaths:

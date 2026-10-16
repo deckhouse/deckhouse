@@ -3,7 +3,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/entrypoint
   to: /src
   before: install
@@ -22,7 +22,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/flannel
   to: /src
   before: install
@@ -41,9 +41,15 @@ shell:
   - make dist/flanneld
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
+- url: {{ $.SOURCE_REPO }}/flannel-io/flannel.git
+  tag: v{{ include "get_oss_version_by_id" (list "flannel" $ ) }}
+  add: /
+  to: /src/flannel
+  stageDependencies:
+    install: ['**/*']
 - add: /{{ .ModulePath }}modules/035-{{ .ModuleName }}/images/flanneld/entrypoint
   to: /src/entrypoint
   stageDependencies:
@@ -54,24 +60,20 @@ git:
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - mkdir -p /src/flannel
   - cd /src/flannel
-  - git clone --depth 1 --branch v{{ include "get_oss_version_by_id" (list "flannel" $ ) }} $(cat /run/secrets/SOURCE_REPO)/flannel-io/flannel.git . && rm -rf /src/flannel/.git
   - git apply /patches/*.patch --verbose
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/dist/flanneld
   to: /opt/bin/flanneld
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
   add: /entrypoint
   to: /entrypoint
   before: setup

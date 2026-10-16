@@ -1,0 +1,16 @@
+diff --git a/main.go b/main.go
+--- a/main.go
++++ b/main.go
+@@ -59,7 +59,12 @@
+ 	return nil
+ }
+ 
++var buildVersion string
++
+ func version() string {
++	if buildVersion != "" {
++		return buildVersion
++	}
+ 	info, ok := debug.ReadBuildInfo()
+ 	if !ok || info.Main.Version == "" {
+ 		return "(devel)"

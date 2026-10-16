@@ -29,11 +29,11 @@ import:
   and come in with everything else; the wheel import below keeps the runtime, the libraries
   and the loader, which live in directories nothing else writes.
 */}}
-- image: {{ .ModuleName }}/{{ .ImageName }}-tools-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-tools-artifact
   add: /relocate/bin
   to: /bin
   before: install
-- image: {{ .ModuleName }}/{{ .ImageName }}-tools-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-tools-artifact
   add: /relocate/usr/bin
   to: /usr/bin
   before: install
@@ -48,13 +48,13 @@ import:
   shell_lib.sh and frameworks stay: shell_lib/hook.sh overrides
   frameworks/shell/hook.sh#hook::run and PYTHONPATH points at /frameworks/python.
 */}}
-- image: {{ .ModuleName }}/{{ .ImageName }}-shell-operator-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-shell-operator-src-artifact
   add: /src/shell_lib.sh
   to: /shell_lib.sh
   owner: "64535"
   group: "64535"
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-shell-operator-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-shell-operator-src-artifact
   add: /src/frameworks
   to: /frameworks
   owner: "64535"
@@ -62,23 +62,23 @@ import:
   before: setup
 {{- $k8sVersion := index (index .k8sVersions 0) "kubectl" }}
 {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
-- image: common/kubernetes-artifact-{{ $image_version }}
+- from: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
   to: /usr/bin/kubectl
   before: setup
-- image: common/promtool-artifact
+- from: common/promtool-artifact
   add: /promtool
   to: /usr/local/bin/promtool
   before: setup
-- image: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
+- from: {{ $.ModuleName }}/{{ .ImageName }}-label-converter-artifact
   add: /label-converter
   to: /usr/local/bin/label-converter
   before: setup
-- image: {{ $.ModuleName }}/{{ .ImageName }}-webhook-operator-artifact
+- from: {{ $.ModuleName }}/{{ .ImageName }}-webhook-operator-artifact
   add: /webhook-operator
   to: /
   before: setup
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
   add: /
   to: /
   before: install
@@ -102,32 +102,14 @@ git:
     - '**/*_test*.py'
     - '**/*_test.go'
     - '**/testdata'
-  stageDependencies:
-    install:
-      - '**/*'
 - add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/src/entrypoint.sh
   to: /entrypoint.sh
-  stageDependencies:
-    install:
-      - '**/*'
 - add: /{{ .ModulePath }}shell_lib/semver.sh
   to: /{{ .ModulePath }}frameworks/shell/semver.sh
-  stageDependencies:
-    install:
-      - '**/*'
 - add: /{{ .ModulePath }}python_lib
   to: /frameworks/python
-  stageDependencies:
-    install:
-      - '**/*'
 - add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/operator/internal/controller/templates
   to: /internal/controller/templates
-  stageDependencies:
-    install:
-      - '**/*'
-shell:
-  install:
-  - set -e
 imageSpec:
   config:
     env: {"PYTHONPATH": "/frameworks/python"}
@@ -135,7 +117,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/label-converter
   to: /src
@@ -143,14 +125,6 @@ git:
   - '**/*.go'
   - '**/go.mod'
   - '**/go.sum'
-  stageDependencies:
-    install:
-    - '**/*.go'
-    - '**/go.mod'
-    - '**/go.sum'
-shell:
-  install:
-  - set -e
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-artifact
 final: false
@@ -158,7 +132,7 @@ from: {{ index $.Images "builder/golang" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
   add: /src
   to: /src
   before: install
@@ -183,7 +157,7 @@ git:
     install:
     - '**/*'
 import:
-- image: common/wheel-artifact
+- from: common/wheel-artifact
   add: /wheels
   to: /wheels
   before: install
@@ -198,7 +172,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-webhook-operator-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-webhook-operator-src-artifact
+  - from: {{ $.ModuleName }}/{{ $.ImageName }}-webhook-operator-src-artifact
     add: /src
     to: /operator
     before: install
@@ -217,11 +191,8 @@ shell:
     - chmod 0700 /webhook-operator
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-webhook-operator-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
-shell:
-  install:
-  - set -e
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/operator
   to: /src
@@ -229,9 +200,6 @@ git:
   - '**/*.go'
   - '**/*.mod'
   - '**/*.sum'
-  stageDependencies:
-    install:
-    - '**/*'
 ---
 {{- /*
   Everything the image needs besides its own binaries, in one artifact. pm builds all ten
@@ -249,7 +217,7 @@ from: {{ index $.Images "builder/distroless" }}
   into a directory this artifact does not touch.
 */}}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-wheel-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-wheel-artifact
   add: /usr/bin
   to: /python-bin
   includePaths:
@@ -326,12 +294,10 @@ shell:
   Moved here from modules/000-common/images/shell-operator, which had this one importer.
 */}}
 image: {{ .ModuleName }}/{{ .ImageName }}-shell-operator-src-artifact
+git:
+- url: {{ $.SOURCE_REPO }}/flant/shell-operator.git
+  tag: {{ $shellOperatorVersion }}
+  add: /
+  to: /src
 final: false
 from: {{ index $.Images "builder/src" }}
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - git clone --branch {{ $shellOperatorVersion }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/flant/shell-operator.git /src
-  - rm -r /src/.git

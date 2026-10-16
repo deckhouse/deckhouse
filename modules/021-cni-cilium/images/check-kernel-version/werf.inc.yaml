@@ -1,16 +1,16 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: common/check-kernel-version
+- from: common/check-kernel-version
   add: /check-kernel-version
   to: /check-kernel-version
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
   add: /relocate/bin/true
   to: /bin/true
   before: setup
-- image: common/pause
+- from: common/pause
   add: /pause
   to: /pause
   before: install
@@ -21,7 +21,7 @@ imageSpec:
 {{- $binaries := "/bin/true" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
-fromImage: common/relocate-artifact
+from: common/relocate-artifact
 final: false
 shell:
  setup:

@@ -26,13 +26,13 @@ imageSpec:
     workingDir: "/app"
 from: scratch
 import:
-  - image: web-router-artifact
+  - from: web-router-artifact
     add: /go/src/app/server
     to: /app/server
     before: setup
     owner: "64535"
     group: "64535"
-  - image: web-frontend-artifact
+  - from: web-frontend-artifact
     add: /app/_site
     to: /app/root
     before: setup

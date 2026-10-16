@@ -1,16 +1,16 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /kube-rbac-proxy
   to: /kube-rbac-proxy
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-coreutils-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-coreutils-artifact
   add: /coreutils/usr/bin/true
   to: /bin/true
   before: setup
-- image: common/pause
+- from: common/pause
   add: /pause
   to: /pause
   before: install
@@ -21,29 +21,30 @@ imageSpec:
     expose: ["8080"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
+- url: {{ $.SOURCE_REPO }}/brancz/kube-rbac-proxy.git
+  tag: v0.11.0
+  add: /
+  to: /src
+  stageDependencies:
+    install: ['**/*']
 - add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v0.11.0 $(cat /run/secrets/SOURCE_REPO)/brancz/kube-rbac-proxy.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
-  - rm -r .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
   before: install

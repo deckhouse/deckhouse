@@ -1,23 +1,27 @@
 {{- if eq $.Env "FE" }}
+{{- $golangciLintVersion := "v2.14.0" }}
 ---
 image: golangci-lint-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
+git:
+- url: {{ .SOURCE_REPO }}/golangci/golangci-lint
+  tag: {{ $golangciLintVersion }}
+  add: /
+  to: /golangci-lint
+  stageDependencies:
+    install: ['**/*']
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
   - pm install git ssh-static coreutils
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
-  - export GOLANGCI_LINT_VERSION=v2.14.0
-  - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/golangci/golangci-lint --branch $GOLANGCI_LINT_VERSION
-  - cd golangci-lint/
+  - export GOLANGCI_LINT_VERSION={{ $golangciLintVersion }}
+  - cd /golangci-lint
   - CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w -extldflags '-static' -X 'main.version=${GOLANGCI_LINT_VERSION}' -X 'main.date=$(date -u +%Y-%m-%d)'" -o /usr/local/bin/golangci-lint cmd/golangci-lint/main.go
-  - rm -rf /golangci-lint/.git
 ---
 {{- end }}

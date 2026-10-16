@@ -36,7 +36,7 @@
           "binaries" "/usr/bin/curl /usr/bin/bash:/bin/bash /usr/bin/echo") }}
 
   and in that image's import list:
-    - image: <the same name>
+    - from: <the same name>
       add: /relocate-pm
       to: /
       before: install

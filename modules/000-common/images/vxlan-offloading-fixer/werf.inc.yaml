@@ -1,30 +1,25 @@
 {{- $version := "6.11" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
+- url: {{ $.SOURCE_REPO }}/netfilter/libmnl
+  tag: libmnl-1.0.5
+  add: /
+  to: /src/libmnl
+- url: {{ $.SOURCE_REPO }}/ethtool/ethtool.git
+  tag: v{{ $version }}
+  add: /
+  to: /src/ethtool
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
   to: /src/vxlan-offloading-fixer
-  stageDependencies:
-    install:
-    - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - cd /src
-  - git clone -b libmnl-1.0.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/netfilter/libmnl ./libmnl
-  - rm -r libmnl/.git
-  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/ethtool/ethtool.git ./ethtool
-  - rm -r ethtool/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-ethtool-artifact
 from: {{ index $.Images "builder/distroless" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -58,7 +53,7 @@ final: false
 mount:
 {{ include "mount points for golang builds" . }}
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/vxlan-offloading-fixer
   to: /src
   before: install
@@ -73,17 +68,17 @@ shell:
   - chmod 0755 /tmp/vxlan-offloading-fixer
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: common/distroless
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-ethtool-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-ethtool-artifact
   add: /ethtool
   to: /ethtool
   before: setup
-- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /tmp/vxlan-offloading-fixer
   to: /vxlan-offloading-fixer
   before: setup
-- image: common/pause
+- from: common/pause
   add: /pause
   to: /pause
   before: install

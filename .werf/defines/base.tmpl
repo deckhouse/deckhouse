@@ -4,13 +4,13 @@
 #   CandiVersionMap - dict CandiVersionMap from werf.yaml
 {{- define "base components imports" }}
 {{- $context := . -}}
-- image: common-base-artifact
+- from: common-base-artifact
   add: /usr/bin/semver
   to: /usr/bin/semver
   before: setup
   {{- range $k8s := $context.k8sVersions }}
     {{- $image_version := printf "%s.%d" $k8s.kubectl (index $context.CandiVersionMap "k8s" $k8s.kubectl "patch") | replace "." "-" }}
-- image: common/kubernetes-artifact-{{ $image_version }}
+- from: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
   to: /usr/bin/kubectl-{{ $k8s.kubectl }}
   before: setup
@@ -81,11 +81,11 @@ image: common-base
 from: {{ index $.Images "base/distroless" }}
 import:
 {{ include "base components imports" (dict "Images" $context.Images "k8sVersions" $context.k8sVersions "CandiVersionMap" $context.CandiVersionMap ) }}
-- image: common-base-pm-artifact
+- from: common-base-pm-artifact
   add: /relocate-pm
   to: /
   before: install
-- image: common-base-artifact
+- from: common-base-artifact
   add: /
   to: /
   excludePaths:

@@ -71,7 +71,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
   add: /src
   to: /src
   before: install
@@ -109,7 +109,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 from: scratch
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /out
   to: /
   includePaths:
@@ -123,11 +123,11 @@ import:
   - containerd.service
   before: setup
 {{- if and (eq $.Env "CSE") $is_v2 }}
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
   add: /pidumount
   before: setup
 {{- end }}
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-runc-artifact-{{ $runc_version }}
   add: /out/runc
   to: /runc
   before: setup
@@ -181,7 +181,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
@@ -229,7 +229,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-pidumount-src-artifact
   add: /src
   before: install
 secrets:
@@ -261,7 +261,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
 from: {{ index $.Images "builder/distroless" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
   add: /
   to: /sysext/opt/deckhouse/bin
   includePaths:
@@ -273,7 +273,7 @@ import:
   before: install
 # pause is the first pull of every pod, so it ships here and containerd.service
 # imports it on start, at the path the bashible unit uses.
-- image: {{ $.ModuleName }}/pause-artifact
+- from: {{ $.ModuleName }}/pause-artifact
   add: /
   to: /sysext/opt/deckhouse/images
   includePaths:
@@ -286,7 +286,7 @@ import:
 # ships with the extension rather than being asked for per cluster because the
 # alternative, an extension the registry module requests, is fetched through
 # registry-packages-proxy, which reaches the registry through this very agent.
-- image: {{ $.ModuleName }}/registry-agent-artifact
+- from: {{ $.ModuleName }}/registry-agent-artifact
   add: /
   to: /sysext/opt/deckhouse/images
   includePaths:
@@ -322,7 +322,7 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_version }}
 from: scratch
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
   add: /out
   to: /
   includePaths:

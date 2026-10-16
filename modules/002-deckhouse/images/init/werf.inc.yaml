@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/init
+from: common/init
 import:
 {{- include "image mount points" . }}
 ---

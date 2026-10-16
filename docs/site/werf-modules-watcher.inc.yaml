@@ -21,7 +21,7 @@ imageSpec:
   config:
     workingDir: "/app"
 import:
-  - image: registry-modules-watcher-artifact
+  - from: registry-modules-watcher-artifact
     add: /go/src/app/registry-modules-watcher
     to: /app/registry-modules-watcher
     before: setup

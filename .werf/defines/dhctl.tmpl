@@ -7,38 +7,16 @@
 
 image: dhctl-src-artifact
 final: false
-fromImage: common/src-artifact
+from: common/src-artifact
 git:
 - add: {{ printf "%s/dhctl" $prefix }}
   to: /src/dhctl
-  stageDependencies:
-    install:
-    - "**/*.go"
-    - Makefile
-    - go.sum
-    - go.mod
 - add: {{ printf "%s/go_lib" $prefix }}
   to: /src/go_lib
-  stageDependencies:
-    install:
-      - "**/*.go"
 - add: {{ printf "%s/pkg/log" $prefix }}
   to: /src/pkg/log
-  stageDependencies:
-    install:
-      - go.mod
-      - go.sum
-      - "**/*.go"
 - add: {{ printf "%s/pkg/deckhouse-registry" $prefix }}
   to: /src/pkg/deckhouse-registry
-  stageDependencies:
-    install:
-      - go.mod
-      - go.sum
-      - "**/*.go"
-shell:
-  install:
-  - cd /src
 
 {{- end }}
 
@@ -56,14 +34,14 @@ image: dhctl
 image: dhctl-base
 {{- end }}
 final: false
-fromImage: base-for-go
+from: base-for-go
 import:
-- image: dhctl-src-artifact
+- from: dhctl-src-artifact
   add: /src
   to: /
   before: install
 {{- if $context.includeImagesDigests }}
-- image: images-digests
+- from: images-digests
   add: /images_digests.json
   to: /images_digests.json
   before: install

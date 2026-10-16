@@ -3,34 +3,35 @@
 # Based on https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile (builder stage)
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
+- url: {{ $.SOURCE_REPO }}/cilium/cilium.git
+  tag: v{{ include "get_oss_version_by_id" (list "cilium" $ ) }}
+  add: /
+  to: /src/cilium
+  stageDependencies:
+    install: ['**/*']
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ include "get_oss_version_by_id" (list "cilium" $ ) }} $(cat /run/secrets/SOURCE_REPO)/cilium/cilium.git /src/cilium
   - cd /src/cilium
   - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
   - rm -rf Documentation
-  - rm -rf /src/cilium/.git
 ---
 image: {{ .ModuleName }}/cilium-artifact
-fromImage: {{ .ModuleName }}/base-cilium-dev
+from: {{ .ModuleName }}/base-cilium-dev
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
-- image: {{ .ModuleName }}/llvm-artifact
+- from: {{ .ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin
   before: install
@@ -38,15 +39,15 @@ import:
   - clang
   - llc
   - llvm-objcopy
-- image: {{ .ModuleName }}/bpftool-artifact
+- from: {{ .ModuleName }}/bpftool-artifact
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
   before: install
-- image: {{ .ModuleName }}/cni-plugins-artifact
+- from: {{ .ModuleName }}/cni-plugins-artifact
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
   before: install
-- image: {{ .ModuleName }}/gops-artifact
+- from: {{ .ModuleName }}/gops-artifact
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install

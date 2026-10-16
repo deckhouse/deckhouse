@@ -18,32 +18,34 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+from: common/src-artifact
 final: false
 git:
+- url: {{ .SOURCE_REPO }}/cilium/proxy.git
+  commit: {{ $ciliumProxyRev }}
+  add: /
+  to: /src/proxy
+  stageDependencies:
+    install: ['**/*']
+- url: {{ .SOURCE_REPO }}/envoyproxy/envoy.git
+  commit: {{ $envoySHA }}
+  add: /
+  to: /src/envoy
+  stageDependencies:
+    install: ['**/*']
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone $(cat /run/secrets/SOURCE_REPO)/cilium/proxy.git /src/proxy
   - cd /src/proxy
-  - git checkout {{ $ciliumProxyRev }}
   - ls /patches/proxy/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/proxy/*.patch
-  - rm -rf /src/proxy/.git
-  #
-  - git clone $(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoy.git /src/envoy
   - cd /src/envoy
-  - git checkout {{ $envoySHA }}
   - ls /patches/envoy/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/envoy/*.patch
   # original cilium patches
   - git apply --verbose /src/proxy/patches/*.patch
-  - rm -rf /src/envoy/.git
 ---
 image: {{ .ModuleName }}/glibc-artifact
 final: false
@@ -53,10 +55,10 @@ shell:
   - pm install libatomic@15.2 libc@2.43 ncurses -d /out
 ---
 image: {{ .ModuleName }}/cilium-envoy-artifact
-fromImage: {{ .ModuleName }}/base-cilium-dev
+from: {{ .ModuleName }}/base-cilium-dev
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
@@ -89,9 +91,11 @@ import:
   to: /usr/lib64/libdl.so.2
   before: install
 - from: {{ .ModuleName }}/glibc-artifact
-  add: /out/usr/lib/libtinfo*
-  to: /usr/lib64/
+  add: /out/usr/lib
+  to: /usr/lib64
   before: install
+  includePaths:
+  - libtinfo*
 mount:
 {{ include "mount points for golang builds" . }}
 - from: tmp_dir
