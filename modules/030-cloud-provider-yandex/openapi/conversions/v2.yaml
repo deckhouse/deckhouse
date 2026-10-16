@@ -27,16 +27,16 @@ conversions:
   - if .ccm.disabled == null then .ccm.disabled = false end
 description:
   ru: |
-    Переход на новую схему ModuleConfig для cloud-provider-yandex.
-    Добавлены секции `provider`, `nodes`, `storage` и `ccm` с обязательными полями.
-    Поля `provider.parameters.cloudID` / `provider.parameters.folderID` / `nodes.parameters.layout` / `nodes.parameters.nodeNetworkCIDR` / `nodes.parameters.sshPublicKey` получают placeholder-значения — замените их реальными значениями вручную.
-    Поле `storageClass.exclude` заменено на `storage.parameters.excludedStorageClasses`.
-    Поле `storageClass.default` удалено. Вместо этого параметра используйте глобальный параметр `global.defaultClusterStorageClass`.
-    Поле `additionalExternalNetworkIDs` перемещено в `ccm.parameters.additionalExternalNetworkIDs`.
+    Настройки сгруппированы по параметрам [`provider`](configuration.html#parameters-provider), [`nodes`](configuration.html#parameters-nodes), [`storage`](configuration.html#parameters-storage) и [`ccm`](configuration.html#parameters-ccm). Конверсия выполняет следующее:
+
+    - Параметры [`cloudID`](configuration.html#parameters-provider-parameters-cloudid), [`folderID`](configuration.html#parameters-provider-parameters-folderid), [`layout`](configuration.html#parameters-nodes-parameters-layout), [`nodeNetworkCIDR`](configuration.html#parameters-nodes-parameters-nodenetworkcidr) и [`sshPublicKey`](configuration.html#parameters-nodes-parameters-sshpublickey) нужно заполнить вручную.
+    - Параметр `storageClass.exclude` переименован в [`excludedStorageClasses`](configuration.html#parameters-storage-parameters-excludedstorageclasses), а `storageClass.provision` в [`provisionedStorageClasses`](configuration.html#parameters-storage-parameters-provisionedstorageclasses).
+    - Параметр `storageClass.default` удалён. Задайте StorageClass по умолчанию глобальным параметром [`defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
+    - Параметр `additionalExternalNetworkIDs` перенесён в [`ccm.parameters.additionalExternalNetworkIDs`](configuration.html#parameters-ccm-parameters-additionalexternalnetworkids).
   en: |
-    Migration to the new ModuleConfig schema for cloud-provider-yandex.
-    Sections `provider`, `nodes`, `storage` and `ccm` with required fields are added.
-    Fields `provider.parameters.cloudID` / `provider.parameters.folderID` / `nodes.parameters.layout` / `nodes.parameters.nodeNetworkCIDR` / `nodes.parameters.sshPublicKey` get placeholder values — update them manually.
-    Field `storageClass.exclude` is replaced with `storage.parameters.excludedStorageClasses`.
-    Field `storageClass.default` is removed. Use the global `global.defaultClusterStorageClass` parameter instead.
-    Field `additionalExternalNetworkIDs` is moved to `ccm.parameters.additionalExternalNetworkIDs`.
+    The settings are grouped under the [`provider`](configuration.html#parameters-provider), [`nodes`](configuration.html#parameters-nodes), [`storage`](configuration.html#parameters-storage), and [`ccm`](configuration.html#parameters-ccm) parameters. The conversion does the following:
+
+    - The [`cloudID`](configuration.html#parameters-provider-parameters-cloudid), [`folderID`](configuration.html#parameters-provider-parameters-folderid), [`layout`](configuration.html#parameters-nodes-parameters-layout), [`nodeNetworkCIDR`](configuration.html#parameters-nodes-parameters-nodenetworkcidr), and [`sshPublicKey`](configuration.html#parameters-nodes-parameters-sshpublickey) parameters have to be filled in manually.
+    - The `storageClass.exclude` parameter is renamed to [`excludedStorageClasses`](configuration.html#parameters-storage-parameters-excludedstorageclasses), and `storageClass.provision` to [`provisionedStorageClasses`](configuration.html#parameters-storage-parameters-provisionedstorageclasses).
+    - The `storageClass.default` parameter is removed. Set the default StorageClass with the global [`defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) parameter.
+    - The `additionalExternalNetworkIDs` parameter is moved to [`ccm.parameters.additionalExternalNetworkIDs`](configuration.html#parameters-ccm-parameters-additionalexternalnetworkids).

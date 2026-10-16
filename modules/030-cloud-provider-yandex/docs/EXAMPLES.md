@@ -12,23 +12,66 @@ kind: ModuleConfig
 metadata:
   name: cloud-provider-yandex
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
-    additionalExternalNetworkIDs:
-    - enp6t4snovl2ko4p15em
+    provider:
+      parameters:
+        cloudID: b1g0ldjdpa8rtm2ru3s4
+        folderID: b1gq1vn5jqk0tmh4u7bp
+    nodes:
+      parameters:
+        layout: Standard
+        nodeNetworkCIDR: 10.241.32.0/20
+        sshPublicKey: ssh-rsa AAAAB3Nza...
+        zones:
+          - ru-central1-a
+          - ru-central1-b
+        labels:
+          billing: prod
+        externalSubnetIDs:
+          worker:
+            - e2lu8r1tbbtryhdpa9ro
+        externalIPAddresses:
+          worker:
+            - Auto
+    storage:
+      parameters:
+        excludedStorageClasses:
+          - network-hdd
+        provisionedStorageClasses:
+          - name: network-ssd-64k
+            type: network-ssd
+            blockSize: 64Ki
+    ccm:
+      parameters:
+        additionalExternalNetworkIDs:
+          - enp6t4snovl2ko4p15em
+        additionalInternalNetworkIDs:
+          - enpmhcdmtvs6ptdq3mkt
 ```
 
-## An example of the `YandexInstanceClass` custom resource
+The service account key is not stored in this resource, it is set in a [separate Secret](environment.html#credentials-secret).
+
+## An example of the YandexInstanceClass custom resource
+
+YandexInstanceClass describes the virtual machines that DP provisions for a node group. Only two parameters are required, [`cores`](cr.html#yandexinstanceclass-v1-spec-cores) and [`memory`](cr.html#yandexinstanceclass-v1-spec-memory). The other parameters are optional.
+
+The example below also sets the OS image, the disk type and size, the share of a vCPU, and the network interface mode:
 
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: YandexInstanceClass
 metadata:
-  name: test
+  name: worker
 spec:
   cores: 4
   memory: 8192
+  coreFraction: 50
+  imageID: fd8bhu2b2bsbnqkhhd2k
+  diskType: network-ssd
+  diskSizeGB: 50
+  networkType: SoftwareAccelerated
 ```
 
 ## LoadBalancer
@@ -45,7 +88,7 @@ The following annotations are supported by Yandex Cloud Controller Manager:
 1. `yandex.cpi.flant.com/listener-subnet-id` — sets the SubnetID for the Listeners of the LB created for this Service. Overrides the corresponding default value.
 1. `yandex.cpi.flant.com/listener-address-ipv4` — sets a predefined IPv4 address for the Listeners (supported for both internal and external LBs).
 1. `yandex.cpi.flant.com/loadbalancer-external` — enables creation of an external LB for this Service (use it when you need to explicitly create an external load balancer). Overrides the default behavior.
-1. `yandex.cpi.flant.com/target-group-name-prefix` — specifies the name prefix of the target group used by the LoadBalancer. The annotation on the Service identifies the target group but does not select nodes. To include nodes in the target group, set the same annotation value in [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) in the NodeGroup. Yandex Cloud Controller Manager includes all suitable nodes carrying this annotation value, regardless of their NodeGroup. The target group name is formed as `<ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>`. For details, see [Using a separate target group for a NodeGroup](faq.html#using-a-separate-target-group-for-a-nodegroup).
+1. `yandex.cpi.flant.com/target-group-name-prefix` — specifies the name prefix of the target group used by the LoadBalancer. The annotation on the Service identifies the target group but does not select nodes. To include nodes in the target group, set the same annotation value in [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) in the NodeGroup. Yandex Cloud Controller Manager includes all suitable nodes carrying this annotation value, regardless of their NodeGroup. The target group name is formed as `<ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>`. For details, see ["Using a separate target group for a NodeGroup"](faq.html#using-a-separate-target-group-for-a-nodegroup).
 
 If separate target groups are created for the control plane or master nodes, add the label `node.kubernetes.io/exclude-from-external-load-balancers: ""` to the master nodes. This prevents the controller from automatically adding master nodes to new target groups for load balancers.
 

@@ -18,5 +18,12 @@ description: "Управление облачными ресурсами в Deck
 - Автоматическое включение CNI для новых кластеров. Начиная с DP 1.76 по умолчанию используется [`cni-cilium`](/modules/cni-cilium/).
 
 {% alert level="warning" %}
-Модуль находится в процессе миграции управления CloudEphemeral-узлами с Machine Controller Manager (MCM) на Cluster API (CAPI). Существующие [NodeGroup](/modules/node-manager/cr.html#nodegroup) продолжают использовать MCM, а новые по умолчанию создаются с использованием CAPI. Порядок миграции существующих групп — в разделе [«Как мигрировать группы узлов на Cluster API (CAPI)»](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-группы-узлов-на-cluster-api-capi).
+Если кластер был установлен со схемой [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration), необходима миграция на конфигурацию через ModuleConfig.
+Пока миграция не выполнена, срабатывает [алерт `D8CloudProviderYandexCloudMigrationPending`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#cloud-provider-yandex-d8cloudprovideryandexcloudmigrationpending), а обновление Deckhouse Platform может блокироваться.
+
+Порядок миграции описан в разделе [«Как мигрировать облачный провайдер на конфигурацию через ModuleConfig»](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec).
+{% endalert %}
+
+{% alert level="warning" %}
+Модуль находится в процессе миграции управления CloudEphemeral-узлами с Machine Controller Manager (MCM) на Cluster API (CAPI). Существующие [NodeGroup](/modules/node-manager/cr.html#nodegroup) продолжают использовать MCM, а новые по умолчанию создаются с использованием CAPI. Порядок миграции существующих групп описан в разделе [«Как мигрировать группы узлов на Cluster API (CAPI)»](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-группы-узлов-на-cluster-api-capi).
 {% endalert %}

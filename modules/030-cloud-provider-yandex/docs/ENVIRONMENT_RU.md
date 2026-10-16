@@ -1,6 +1,6 @@
 ---
 title: "Cloud provider — Yandex Cloud: подготовка окружения"
-description: "Настройка Yandex Cloud для работы облачного провайдера Deckhouse."
+description: "Настройка Yandex Cloud для работы облачного провайдера Deckhouse Platform."
 ---
 
 {% include notice_envinronment.liquid %}
@@ -22,8 +22,8 @@ description: "Настройка Yandex Cloud для работы облачно
    В ответ вернутся параметры пользователя:
 
    ```console
-   id: <userID>
-   folder_id: <folderID>
+   id: <USER_ID>
+   folder_id: <FOLDER_ID>
    created_at: "YYYY-MM-DDTHH:MM:SSZ"
    name: deckhouse
    ```
@@ -31,9 +31,9 @@ description: "Настройка Yandex Cloud для работы облачно
 1. Назначьте необходимые роли вновь созданному пользователю для своего облака:
 
    ```shell
-   yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
-   yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
-   yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
+   yc resource-manager folder add-access-binding --id <FOLDER_ID> --role compute.editor --subject serviceAccount:<USER_ID>
+   yc resource-manager folder add-access-binding --id <FOLDER_ID> --role vpc.admin --subject serviceAccount:<USER_ID>
+   yc resource-manager folder add-access-binding --id <FOLDER_ID> --role load-balancer.editor --subject serviceAccount:<USER_ID>
    ```
 
 1. Создайте JSON-файл с параметрами авторизации пользователя в облаке. В дальнейшем с помощью этих данных будет происходить авторизация в облаке:
@@ -42,9 +42,45 @@ description: "Настройка Yandex Cloud для работы облачно
    yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
    ```
 
-> Может потребоваться увеличение [квот](#квоты).
->
-> При необходимости [зарезервируйте](faq.html#как-зарезервировать-публичный-ip-адрес) публичный IP-адрес.
+{% alert level="info" %}
+Для нового кластера может потребоваться увеличение [квот](#квоты). При необходимости также зарезервируйте публичный IP-адрес, как описано в разделе [«Резервирование публичного IP-адреса»](faq.html#резервирование-публичного-ip-адреса).
+{% endalert %}
+
+## Секрет с учётными данными
+
+Ключ сервисного аккаунта хранится не в [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig), а в отдельном секрете. Провайдер читает его при запуске компонентов, которые обращаются к API Yandex Cloud.
+
+Секрет создаётся при установке кластера вместе с остальными ресурсами первичной конфигурации. Если провайдер подключается к уже работающему кластеру, секрет применяется после того, как модуль создаст неймспейс. Секрет должен отвечать следующим требованиям:
+
+- имя `d8-credentials`, неймспейс `d8-cloud-provider-yandex`;
+- тип `cloud-provider.deckhouse.io/credentials`;
+- поле `authScheme` со значением `serviceAccount`;
+- поле `secret` с содержимым JSON-ключа сервисного аккаунта.
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials
+  namespace: d8-cloud-provider-yandex
+type: cloud-provider.deckhouse.io/credentials
+stringData:
+  authScheme: serviceAccount
+  secret: |
+    <SERVICE_ACCOUNT_JSON>
+```
+
+Замените `<SERVICE_ACCOUNT_JSON>` на содержимое файла `deckhouse-sa-key.json`.
+
+Чтобы сменить учётные данные, обновите поле `secret`:
+
+```shell
+d8 k -n d8-cloud-provider-yandex edit secret d8-credentials
+```
+
+В [схеме размещения WithNATInstance](layouts.html#withnatinstance) API-ключ для мониторинга NAT-инстанса хранится во втором секрете `d8-credentials-exporter` в том же неймспейсе. У него поле `authScheme` со значением `apiToken`, а ключ записан в поле `secret`.
+
+В кластерах, переведённых на ModuleConfig, ключ сервисного аккаунта переносится в секрет `d8-credentials` из параметра [`provider.serviceAccountJSON`](cluster_configuration.html#yandexclusterconfiguration-provider-serviceaccountjson) ресурса [YandexClusterConfiguration](cluster_configuration.html#yandexclusterconfiguration). API-ключ мониторинга переносится в секрет `d8-credentials-exporter` из параметра [`withNATInstance.exporterAPIKey`](cluster_configuration.html#yandexclusterconfiguration-withnatinstance-exporterapikey).
 
 ## Квоты
 
@@ -69,15 +105,23 @@ description: "Настройка Yandex Cloud для работы облачно
 
 ### Настройка групп безопасности
 
-При создании [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud создаёт [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию для всех подключенных сетей, включая сеть кластера Deckhouse Platform. Эта группа безопасности по умолчанию содержит правила разрешающие любой входящий и исходящий трафик и применяется для всех подсетей облачной сети, если на объект (интерфейс ВМ) явно не назначена другая группа безопасности.
+Для каждой [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network) Yandex Cloud создаёт [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию, в том числе для сети кластера. Эта группа разрешает любой входящий и исходящий трафик и применяется к тем сетевым интерфейсам виртуальных машин, которым не назначена другая группа.
 
-{% alert level="danger" %}
-Не удаляйте правила по умолчанию, разрешающие любой трафик, до того как закончите настройку правил группы безопасности. Это может нарушить работоспособность кластера.
+Ограничить трафик кластера можно правилами этой группы. Назначить узлам другую группу безопасности нельзя, параметров для этого нет ни в настройках модуля, ни в ресурсе YandexInstanceClass.
+
+{% alert level="warning" %}
+Не назначайте группы безопасности узлам вручную в консоли Yandex Cloud. Команда `dhctl converge` приводит виртуальные машины к состоянию, описанному в конфигурации кластера, и может снять такую привязку.
 {% endalert %}
 
-Ниже приведены общие рекомендации по настройке группы безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Пожалуйста, ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
+{% alert level="danger" %}
+Не удаляйте правила, разрешающие любой трафик, пока не настроите остальные правила группы. Иначе группа заблокирует трафик между узлами и компоненты кластера потеряют связь друг с другом.
+{% endalert %}
 
-Если в кластере используется `cilium` в режиме VXLAN, убедитесь, что группы безопасности разрешают межузловой UDP-трафик на портах, необходимых Cilium. Подробнее см. [раздел «Сетевое взаимодействие компонентов платформы»](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html).
+Ошибки в правилах нарушают работу кластера. Перед настройкой правил в production-кластере изучите [особенности работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud.
+
+Если в кластере используется `cilium` в режиме VXLAN, убедитесь, что группа безопасности разрешает межузловой UDP-трафик на портах, необходимых Cilium. Эти порты перечислены в разделе [«Сетевое взаимодействие компонентов платформы»](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html).
+
+Чтобы настроить правила группы безопасности:
 
 1. Определите облачную сеть, в которой работает кластер Deckhouse Platform.
 
@@ -95,7 +139,7 @@ description: "Настройка Yandex Cloud для работы облачно
      jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
    ```
 
-1. В консоли Yandex Cloud выберите сервис Virtual Private Cloud и перейдите в раздел *Группы безопасности*. У вас должна отображаться одна группа безопасности с пометкой `Default`.
+1. В консоли Yandex Cloud выберите сервис Virtual Private Cloud и перейдите в раздел «Группы безопасности». У вас должна отображаться одна группа безопасности с пометкой `Default`.
 
    ![Группа безопасности по умолчанию](images/sg-ru-default.png)
 
@@ -132,7 +176,7 @@ description: "Настройка Yandex Cloud для работы облачно
 1. [Назначьте](https://cloud.yandex.ru/ru/docs/iam/operations/sa/assign-role-for-sa) сервисному аккаунту [роли](https://cloud.yandex.com/ru/docs/lockbox/security/#service-roles) `lockbox.editor`, `lockbox.payloadViewer` и `kms.keys.encrypterDecrypter` для доступа ко всем секретам каталога:
 
    ```shell
-   folder_id=<идентификатор каталога>
+   folder_id=<FOLDER_ID>
    yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role lockbox.editor
    yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role lockbox.payloadViewer
    yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role kms.keys.encrypterDecrypter
@@ -166,9 +210,9 @@ description: "Настройка Yandex Cloud для работы облачно
 
 1. Создайте хранилище секретов [SecretStore](https://external-secrets.io/latest/api/secretstore/), содержащее секрет `sa-creds`:
 
-   ```console
+   ```shell
    d8 k -n external-secrets apply -f - <<EOF
-   
+
    apiVersion: external-secrets.io/v1alpha1
    kind: SecretStore
    metadata:
@@ -185,21 +229,35 @@ description: "Настройка Yandex Cloud для работы облачно
 
    Где:
 
-   - `sa-creds` — название `Secret`, содержащий авторизованный ключ. Этот секрет должен появиться после установки Helm-чарта.
+   - `sa-creds` — название Secret, содержащий авторизованный ключ. Этот секрет должен появиться после установки Helm-чарта.
    - `key` — название ключа в поле `.data` секрета выше.
 
 #### Проверка работоспособности
 
-1. Проверьте статус External Secrets Operator и созданного хранилища секретов:
+1. Проверьте статус External Secrets Operator:
+
+   ```shell
+   d8 k -n external-secrets get po
+   ```
+
+   Пример вывода:
 
    ```console
-   $ d8 k -n external-secrets get po
    NAME                                                READY   STATUS    RESTARTS   AGE
    external-secrets-55f78c44cf-dbf6q                   1/1     Running   0          77m
    external-secrets-cert-controller-78cbc7d9c8-rszhx   1/1     Running   0          77m
    external-secrets-webhook-6d7b66758-s7v9c            1/1     Running   0          77m
+   ```
 
-   $ d8 k -n external-secrets get secretstores.external-secrets.io 
+1. Проверьте состояние созданного хранилища секретов:
+
+   ```shell
+   d8 k -n external-secrets get secretstores.external-secrets.io
+   ```
+
+   Пример вывода:
+
+   ```console
    NAME           AGE   STATUS
    secret-store   69m   Valid
    ```
@@ -212,7 +270,7 @@ description: "Настройка Yandex Cloud для работы облачно
 
 1. Создайте объект [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/), указывающий на секрет `lockbox-secret` в хранилище `secret-store`:
 
-   ```console
+   ```shell
    d8 k -n external-secrets apply -f - <<EOF
 
    apiVersion: external-secrets.io/v1alpha1
@@ -229,7 +287,7 @@ description: "Настройка Yandex Cloud для работы облачно
      data:
      - secretKey: password
        remoteRef:
-         key: <ИДЕНТИФИКАТОР_СЕКРЕТА>
+         key: <SECRET_ID>
          property: password
    EOF
    ```
@@ -261,9 +319,9 @@ description: "Настройка Yandex Cloud для работы облачно
 
 1. [Создайте сервисный аккаунт](https://cloud.yandex.com/ru/docs/iam/operations/sa/create) с ролью `monitoring.editor`.
 1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
-1. Создайте ресурс `PrometheusRemoteWrite`:
+1. Создайте ресурс PrometheusRemoteWrite:
 
-   ```console
+   ```shell
    d8 k apply -f - <<EOF
 
    apiVersion: deckhouse.io/v1
@@ -271,15 +329,15 @@ description: "Настройка Yandex Cloud для работы облачно
    metadata:
      name: yc-remote-write
    spec:
-     url: <URL_ЗАПИСИ_МЕТРИК>
-     bearerToken: <API_КЛЮЧ>
+     url: <URL_TO_WRITE_METRICS>
+     bearerToken: <API_KEY>
    EOF
    ```
 
    Где:
 
-   - `<URL_ЗАПИСИ_МЕТРИК>` — URL со страницы Yandex Monitoring/Prometheus/Запись метрик.
-   - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
+   - `<URL_TO_WRITE_METRICS>` — URL со страницы Yandex Monitoring/Prometheus/Запись метрик.
+   - `<API_KEY>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
    Также вы можете указать дополнительные параметры в соответствии [с документацией](/modules/prometheus/cr.html#prometheusremotewrite).
 
@@ -291,7 +349,7 @@ description: "Настройка Yandex Cloud для работы облачно
 1. [Создайте API-ключ](https://cloud.yandex.ru/ru/docs/iam/operations/api-key/create) для сервисного аккаунта.
 1. Создайте ресурс GrafanaAdditionalDatasource:
 
-   ```console
+   ```shell
    d8 k apply -f - <<EOF
 
    apiVersion: deckhouse.io/v1
@@ -301,21 +359,21 @@ description: "Настройка Yandex Cloud для работы облачно
    spec:
      type: prometheus
      access: Proxy
-     url: <URL_ЧТЕНИЕ_МЕТРИК_ЧЕРЕЗ_GRAFANA>
+     url: <URL_READING_METRICS_WITH_GRAFANA>
      basicAuth: false
      jsonData:
        timeInterval: 30s
        httpMethod: POST
        httpHeaderName1: Authorization
      secureJsonData:
-       httpHeaderValue1: Bearer <API_КЛЮЧ>
+       httpHeaderValue1: Bearer <API_KEY>
    EOF
    ```
 
    Где:
 
-   - `<URL_ЧТЕНИЕ_МЕТРИК_ЧЕРЕЗ_GRAFANA>` — URL со страницы Yandex Monitoring/Prometheus/Чтение метрик через Grafana.
-   - `<API_КЛЮЧ>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
+   - `<URL_READING_METRICS_WITH_GRAFANA>` — URL со страницы Yandex Monitoring/Prometheus/Чтение метрик через Grafana.
+   - `<API_KEY>` — API-ключ, созданный на предыдущем шаге. Например, `AQVN1HHJReSrfo9jU3aopsXrJyfq_UHs********`.
 
    Также вы можете указать дополнительные параметры в соответствии [с документацией](/modules/prometheus/cr.html#grafanaadditionaldatasource).
 

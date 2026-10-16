@@ -4,7 +4,7 @@ title: "Cloud provider — Yandex Cloud: FAQ"
 
 ## Настройка INTERNAL LoadBalancer
 
-Для настройки INTERNAL LoadBalancer'а установите аннотацию для сервиса:
+Для настройки внутреннего балансировщика нагрузки установите аннотацию для сервиса:
 
 ```yaml
 yandex.cpi.flant.com/listener-subnet-id: SubnetID
@@ -131,8 +131,8 @@ DP намеренно не учитывает параметр `networkType` п�
 
 ## Назначение произвольного StorageClass используемого по умолчанию
 
-Чтобы назначить произвольный StorageClass используемым по умолчанию для ваших PVC, укажите его имя в параметре [defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) модуля `global`.
-Обратите внимание, что после этого аннотация `storageclass.kubernetes.io/is-default-class='true'` снимется со StorageClass'а, который ранее был указан как используемый по умолчанию.
+Чтобы назначить произвольный StorageClass используемым по умолчанию для ваших PVC, укажите его имя в глобальном параметре [`defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
+После этого DP снимает аннотацию `storageclass.kubernetes.io/is-default-class='true'` со StorageClass, который был указан как используемый по умолчанию раньше.
 
 ```shell
 d8 k edit mc global
@@ -159,14 +159,14 @@ d8 k edit mc global
 1. Получите имя StorageClass, используемого PVC:
 
    ```shell
-   d8 k -n <НЕЙМСПЕЙС> get pvc <ИМЯ_PVC> \
+   d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
      -o jsonpath='{.spec.storageClassName}{"\n"}'
    ```
 
    Где:
 
-   - `<НЕЙМСПЕЙС>` — неймспейс, в котором находится PVC;
-   - `<ИМЯ_PVC>` — имя PVC, размер которого необходимо увеличить.
+   - `<NAMESPACE>` — неймспейс, в котором находится PVC;
+   - `<PVC_NAME>` — имя PVC, размер которого необходимо увеличить.
 
    Например:
 
@@ -186,11 +186,11 @@ d8 k edit mc global
 1. Убедитесь, что StorageClass разрешает увеличение томов:
 
    ```shell
-   d8 k get storageclass <ИМЯ_STORAGECLASS> \
+   d8 k get storageclass <STORAGECLASS_NAME> \
      -o jsonpath='{.allowVolumeExpansion}{"\n"}'
    ```
 
-   Где `<ИМЯ_STORAGECLASS>` — имя StorageClass, полученное на предыдущем шаге.
+   Где `<STORAGECLASS_NAME>` — имя StorageClass, полученное на предыдущем шаге.
 
    Например:
 
@@ -208,7 +208,7 @@ d8 k edit mc global
 1. Проверьте текущее состояние и размер PVC:
 
    ```shell
-   d8 k -n <НЕЙМСПЕЙС> get pvc <ИМЯ_PVC>
+   d8 k -n <NAMESPACE> get pvc <PVC_NAME>
    ```
 
    Например:
@@ -236,7 +236,7 @@ d8 k edit mc global
 1. Увеличьте размер PVC:
 
    ```shell
-   d8 k -n <НЕЙМСПЕЙС> edit pvc <ИМЯ_PVC>
+   d8 k -n <NAMESPACE> edit pvc <PVC_NAME>
    ```
 
    Например:
@@ -265,13 +265,13 @@ d8 k edit mc global
 1. Дождитесь увеличения PVC:
 
    ```shell
-   d8 k -n <НЕЙМСПЕЙС> get pvc <ИМЯ_PVC> --watch
+   d8 k -n <NAMESPACE> get pvc <PVC_NAME> --watch
    ```
 
    Где:
 
-   - `<НЕЙМСПЕЙС>` — неймспейс, в котором находится PVC;
-   - `<ИМЯ_PVC>` — имя PVC, размер которого увеличивается.
+   - `<NAMESPACE>` — неймспейс, в котором находится PVC;
+   - `<PVC_NAME>` — имя PVC, размер которого увеличивается.
 
    Например:
 
@@ -302,7 +302,7 @@ d8 k edit mc global
 1. Проверьте события PVC:
 
    ```shell
-   d8 k -n <НЕЙМСПЕЙС> describe pvc <ИМЯ_PVC>
+   d8 k -n <NAMESPACE> describe pvc <PVC_NAME>
    ```
 
    Например:
@@ -334,15 +334,15 @@ d8 k edit mc global
 1. Проверьте размер файловой системы внутри пода:
 
    ```shell
-   d8 k -n <НЕЙМСПЕЙС> exec <ИМЯ_ПОДА> -- \
-     df -hT <ТОЧКА_МОНТИРОВАНИЯ>
+   d8 k -n <NAMESPACE> exec <POD_NAME> -- \
+     df -hT <MOUNT_PATH>
    ```
 
    Где:
 
-   - `<НЕЙМСПЕЙС>` — неймспейс, в котором находится под;
-   - `<ИМЯ_ПОДА>` — имя пода, использующего PVC;
-   - `<ТОЧКА_МОНТИРОВАНИЯ>` — путь внутри контейнера, в который смонтирован PVC.
+   - `<NAMESPACE>` — неймспейс, в котором находится под;
+   - `<POD_NAME>` — имя пода, использующего PVC;
+   - `<MOUNT_PATH>` — путь внутри контейнера, в который смонтирован PVC.
 
    Например:
 
@@ -369,7 +369,7 @@ d8 k edit mc global
 `nodeNetworkCIDR` кластера можно узнать, воспользовавшись следующей командой:
 
 ```shell
-d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
+d8 k get mc cloud-provider-yandex -o jsonpath='{.spec.settings.nodes.parameters.nodeNetworkCIDR}{"\n"}'
 ```
 
 ## Создание кластера в новом VPC и развертывание bastion-хост для доступа к узлам

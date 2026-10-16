@@ -18,11 +18,11 @@ Deckhouse Platform is transitioning from a single `<PROVIDER>ClusterConfiguratio
 Migration is mandatory. This is not an optional step: support for `<PROVIDER>ClusterConfiguration` will be removed. Until the migration is completed, DP upgrades may be blocked.
 {% endalert %}
 
-The migration is safe. It implies the applying of automatically prepared DP resources **does not cause nodes to be recreated**. However, explicit administrator action is required — the resources must be reviewed and applied manually.
+The migration is safe. It implies the applying of automatically prepared DP resources **does not cause nodes to be recreated**. However, explicit administrator action is required, as the resources have to be reviewed and applied manually.
 
 ## How to migrate
 
-1. Wait for the migration alert (for DVP — `D8CloudProviderDVPMigrationPending`). It means the module has detected the legacy configuration and prepared manifests for the transition.
+1. Wait for the migration alert. Each provider has its own, for example, [`D8CloudProviderDVPMigrationPending`](reference/alerts.html#cloud-provider-dvp-d8cloudproviderdvpmigrationpending) for DVP and [`D8CloudProviderYandexCloudMigrationPending`](reference/alerts.html#cloud-provider-yandex-d8cloudprovideryandexcloudmigrationpending) for Yandex Cloud. The alert means the module has detected the legacy configuration and prepared manifests for the transition.
 
 1. Review the prepared resources in the `d8-migration-resources` Secret in the `d8-cloud-provider-<PROVIDER>` namespace:
 

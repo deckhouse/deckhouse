@@ -38,25 +38,26 @@ Otherwise, volume provisioning will fail.
 
 If certain disk types won’t be used in the cluster,
 you can disable automatic creation of the corresponding StorageClass objects
-using the [`settings.storageClass.exclude`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-exclude) parameter in the ModuleConfig resource:
+using the [`settings.storage.parameters.excludedStorageClasses`](/modules/cloud-provider-yandex/configuration.html#parameters-storage-parameters-excludedstorageclasses) parameter in the ModuleConfig resource:
 
 ```yaml
 settings:
-  storageClass:
-    exclude:
-    - network-ssd-.*
-    - network-hdd
+  storage:
+    parameters:
+      excludedStorageClasses:
+        - network-ssd-.*
+        - network-hdd
 ```
 
 In this example, DP will not create StorageClass resources for any `network-ssd` or `network-hdd` disks.
 
 ### Creating additional StorageClasses and block size
 
-The [`settings.storageClass.provision`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision) parameter lets you create additional StorageClasses or override the parameters of StorageClasses created by DP by default.
+The [`settings.storage.parameters.provisionedStorageClasses`](/modules/cloud-provider-yandex/configuration.html#parameters-storage-parameters-provisionedstorageclasses) parameter lets you create additional StorageClasses or override the parameters of StorageClasses created by DP by default.
 
-Use the [`blockSize`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision-blocksize) parameter to set the [block size](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize) for provisioned disks. The block size determines the maximum disk size: `8Ti` for `4Ki`, and it doubles with each next block size up to `256Ti` for `128Ki`.
+Use the [`blockSize`](/modules/cloud-provider-yandex/configuration.html#parameters-storage-parameters-provisionedstorageclasses-blocksize) parameter to set the [block size](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize) for provisioned disks. The block size determines the maximum disk size. It is `8Ti` for `4Ki` and doubles with each next block size, up to `256Ti` for `128Ki`.
 
-An example StorageClass with the `64Ki` block size:
+Example configuration of the `cloud-provider-yandex` module with an additional StorageClass configured with a block size of `64Ki`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -64,13 +65,24 @@ kind: ModuleConfig
 metadata:
   name: cloud-provider-yandex
 spec:
-  version: 1
+  version: 2
+  enabled: true
   settings:
-    storageClass:
-      provision:
-      - name: network-ssd-64k
-        type: network-ssd
-        blockSize: 64Ki
+    provider:
+      parameters:
+        cloudID: <CLOUD_ID>
+        folderID: <FOLDER_ID>
+    nodes:
+      parameters:
+        layout: Standard
+        nodeNetworkCIDR: 192.168.12.0/24
+        sshPublicKey: <SSH_PUBLIC_KEY>
+    storage:
+      parameters:
+        provisionedStorageClasses:
+          - name: network-ssd-64k
+            type: network-ssd
+            blockSize: 64Ki
 ```
 
 {% alert level="warning" %}
@@ -342,7 +354,7 @@ To do this, add the following annotation to the Service object:
 ```yaml
 metadata:
   annotations:
-    yandex.cpi.flant.com/listener-subnet-id: <SubnetID>
+    yandex.cpi.flant.com/listener-subnet-id: <SUBNET_ID>
 ```
 
 `SubnetID` refers to the ID of the subnet where the internal listener for the Yandex LoadBalancer will be created.
@@ -458,7 +470,7 @@ Node recreation occurs only when:
 
 This behavior helps prevent unnecessary operations and node idling, but it means you must manually recreate VMs if needed.
 
-If you change the [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) resource (for example, change provider settings, layout, subnets, etc.),
+If you change the [provider settings](/modules/cloud-provider-yandex/configuration.html) in the `cloud-provider-yandex` [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) (for example, the provider parameters, the layout, or the subnets),
 run the following command to apply the changes:
 
 ```shell
@@ -488,14 +500,13 @@ To manually connect a VM as a CloudStatic node, follow these steps:
 1. Retrieve the current `nodeNetworkCIDR` value from the cluster:
 
    ```shell
-   kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | \
-     jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
+   d8 k get mc cloud-provider-yandex -o jsonpath='{.spec.settings.nodes.parameters.nodeNetworkCIDR}{"\n"}'
    ```
 
    Expected output:
 
    ```console
-   nodeNetworkCIDR: 192.168.12.13/24
+   192.168.12.0/24
    ```
 
    Copy this value and use it in the VM metadata as `value`.
@@ -504,7 +515,7 @@ To manually connect a VM as a CloudStatic node, follow these steps:
 
    ```yaml
    key: node-network-cidr
-   value: <nodeNetworkCIDR from the cluster>
+   value: <NODE_NETWORK_CIDR>
    ```
 
-   The `node-network-cidr` parameter must match the value specified in the YandexClusterConfiguration resource under [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr).
+   The `node-network-cidr` parameter must match the value of the [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) parameter in the ModuleConfig.

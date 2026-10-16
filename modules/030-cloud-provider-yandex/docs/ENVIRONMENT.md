@@ -1,6 +1,6 @@
 ---
 title: "Cloud provider — Yandex Cloud: Preparing environment"
-description: "Configuring Yandex Cloud for Deckhouse cloud provider operation."
+description: "Configuring Yandex Cloud for the Deckhouse Platform cloud provider."
 ---
 
 {% include notice_envinronment.liquid %}
@@ -22,8 +22,8 @@ You need to create a service account with the editor role with the cloud provide
    The command output will contain its parameters:
 
    ```console
-   id: <userID>
-   folder_id: <folderID>
+   id: <USER_ID>
+   folder_id: <FOLDER_ID>
    created_at: "YYYY-MM-DDTHH:MM:SSZ"
    name: deckhouse
    ```
@@ -31,9 +31,9 @@ You need to create a service account with the editor role with the cloud provide
 1. Assign the required roles to the newly created user for your cloud:
 
    ```shell
-   yc resource-manager folder add-access-binding --id <folderID> --role compute.editor --subject serviceAccount:<userID>
-   yc resource-manager folder add-access-binding --id <folderID> --role vpc.admin --subject serviceAccount:<userID>
-   yc resource-manager folder add-access-binding --id <folderID> --role load-balancer.editor --subject serviceAccount:<userID>
+   yc resource-manager folder add-access-binding --id <FOLDER_ID> --role compute.editor --subject serviceAccount:<USER_ID>
+   yc resource-manager folder add-access-binding --id <FOLDER_ID> --role vpc.admin --subject serviceAccount:<USER_ID>
+   yc resource-manager folder add-access-binding --id <FOLDER_ID> --role load-balancer.editor --subject serviceAccount:<USER_ID>
    ```
 
 1. Create a JSON file containing the parameters for user authorization in the cloud. These parameters will be used to log in to the cloud:
@@ -42,9 +42,45 @@ You need to create a service account with the editor role with the cloud provide
    yc iam key create --service-account-name deckhouse --output deckhouse-sa-key.json
    ```
 
-> You may need to increase [quotas](#quotas).
->
-> [Reserve](faq.html#how-to-reserve-a-public-ip-address) a public IP address if necessary.
+{% alert level="info" %}
+A new cluster may require increased [quotas](#quotas). If necessary, also reserve a public IP address as described in ["Reserving a public IP address"](faq.html#reserving-a-public-ip-address).
+{% endalert %}
+
+## Credentials Secret
+
+The service account key is stored in a separate Secret rather than in [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig). The provider reads it when starting the components that access the Yandex Cloud API.
+
+The Secret is created during cluster installation together with the other resources of the initial configuration. If the provider is connected to a running cluster, the Secret is applied after the module creates the namespace. The Secret must meet the following requirements:
+
+- The name is `d8-credentials` and the namespace is `d8-cloud-provider-yandex`.
+- The type is `cloud-provider.deckhouse.io/credentials`.
+- The `authScheme` field is set to `serviceAccount`.
+- The `secret` field contains the service account key in JSON.
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials
+  namespace: d8-cloud-provider-yandex
+type: cloud-provider.deckhouse.io/credentials
+stringData:
+  authScheme: serviceAccount
+  secret: |
+    <SERVICE_ACCOUNT_JSON>
+```
+
+Replace `<SERVICE_ACCOUNT_JSON>` with the contents of the `deckhouse-sa-key.json` file.
+
+To change the credentials, update the `secret` field:
+
+```shell
+d8 k -n d8-cloud-provider-yandex edit secret d8-credentials
+```
+
+In the ["WithNATInstance layout"](layouts.html#withnatinstance), the API key for monitoring the NAT instance is stored in a second Secret, `d8-credentials-exporter`, in the same namespace. Its `authScheme` field is set to `apiToken` and the key is placed in the `secret` field.
+
+In clusters migrated to ModuleConfig, the service account key moves to the `d8-credentials` Secret from the [`provider.serviceAccountJSON`](cluster_configuration.html#yandexclusterconfiguration-provider-serviceaccountjson) parameter of the [YandexClusterConfiguration](cluster_configuration.html#yandexclusterconfiguration) resource. The monitoring API key moves to the `d8-credentials-exporter` Secret from the [`withNATInstance.exporterAPIKey`](cluster_configuration.html#yandexclusterconfiguration-withnatinstance-exporterapikey) parameter.
 
 ## Quotas
 
@@ -62,20 +98,28 @@ Recommended quotas for a new cluster:
 {% alert level="warning" %}
 Starting with DP version 1.77, Yandex Cloud uses the `cilium` CNI by default for new clusters. Existing clusters keep the current CNI configuration.
 
-New clusters require Linux kernel version 5.8 or newer on all nodes. Make sure firewalls or security groups allow inter-node UDP traffic for Cilium VXLAN. For details, see the [installation requirements](/products/kubernetes-platform/documentation/v1/installing/), [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html), and the [`cni-cilium` module documentation](/modules/cni-cilium/).
+New clusters require Linux kernel version 5.8 or newer on all nodes. Make sure firewalls or security groups allow inter-node UDP traffic for Cilium VXLAN. For details, see the [installation requirements](/products/kubernetes-platform/documentation/v1/installing/), ["Network interaction of the platform components"](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html), and the [`cni-cilium` module documentation](/modules/cni-cilium/).
 {% endalert %}
 
 ### Configuring security groups
 
-When creating [a cloud network](https://cloud.yandex.com/en/docs/vpc/concepts/network#network), Yandex Cloud creates [a default security group](https://cloud.yandex.com/en/docs/vpc/concepts/security-groups) for all networks, including the Deckhouse Platform cluster network. The default security group contains rules that allow for any traffic to pass in any direction (inbound and outbound) and applies to all subnets within the cloud network, unless an object (VM interface) is explicitly assigned to a different security group. You can change the default security group rules if you need to control traffic in your cluster.
+For every [cloud network](https://cloud.yandex.com/en/docs/vpc/concepts/network#network), Yandex Cloud creates a [default security group](https://cloud.yandex.com/en/docs/vpc/concepts/security-groups), including for the cluster network. That group allows any inbound and outbound traffic and applies to the virtual machine network interfaces that are not assigned another group.
 
-{% alert level="danger" %}
-Do not delete the default rules that allow for traffic to pass in any direction before finishing configuring all the other rules for the security group. Doing so may disrupt the performance of the cluster.
+You can restrict the cluster traffic with the rules of that group. Assigning another security group to the nodes is not possible, as neither the module settings nor the YandexInstanceClass resource have parameters for that.
+
+{% alert level="warning" %}
+Do not assign security groups to the nodes manually in the Yandex Cloud console. The `dhctl converge` command brings the virtual machines to the state described in the cluster configuration and may remove such an assignment.
 {% endalert %}
 
-This section provides general guidelines for setting up a security group. Incorrect configuration of security groups may affect the performance of the cluster. Please consult [security group usage details](https://cloud.yandex.com/en/docs/vpc/concepts/security-groups#security-groups-notes) in Yandex Cloud before using it in production environments.
+{% alert level="danger" %}
+Do not delete the rules that allow any traffic until you have configured the other rules of the group. Otherwise, the group blocks the traffic between the nodes and the cluster components lose connection to each other.
+{% endalert %}
 
-If the cluster uses `cilium` in VXLAN mode, make sure security groups allow inter-node UDP traffic on the ports required for Cilium. For details, see [Network interaction of the platform components](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html).
+Errors in the rules disrupt the cluster. Before configuring the rules in a production cluster, consult the [security group usage details](https://cloud.yandex.com/en/docs/vpc/concepts/security-groups#security-groups-notes) in Yandex Cloud.
+
+If the cluster uses `cilium` in VXLAN mode, make sure the security group allows inter-node UDP traffic on the ports required for Cilium. These ports are listed in ["Network interaction of the platform components"](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html).
+
+To configure the rules of the security group:
 
 1. Find out in which cloud network the Deckhouse Platform cluster is running.
 
@@ -93,7 +137,7 @@ If the cluster uses `cilium` in VXLAN mode, make sure security groups allow inte
      jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
    ```
 
-1. In the Yandex Cloud console, select the Virtual Private Cloud service and navigate to the _Security Groups_ section. You should see a single security group labeled `Default`.
+1. In the Yandex Cloud console, select the Virtual Private Cloud service and navigate to the "Security Groups" section. You should see a single security group labeled `Default`.
 
    ![The default security group](images/sg-en-default.png)
 
@@ -130,7 +174,7 @@ The instructions below are meant to be viewed as a _Quick Start_ guide. To use i
 1. [Assign](https://cloud.yandex.com/en/docs/iam/operations/sa/assign-role-for-sa) `lockbox.editor`, `lockbox.payloadViewer`, and `kms.keys.encrypterDecrypter` [roles](https://cloud.yandex.com/en/docs/lockbox/security/#service-roles) to a service account to access all catalog secrets:
 
    ```shell
-   folder_id=<folder id>
+   folder_id=<FOLDER_ID>
    yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role lockbox.editor
    yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role lockbox.payloadViewer
    yc resource-manager folder add-access-binding --id=${folder_id} --service-account-name eso-service-account --role kms.keys.encrypterDecrypter
@@ -163,7 +207,7 @@ The instructions below are meant to be viewed as a _Quick Start_ guide. To use i
 
 1. Create a [SecretStore](https://external-secrets.io/latest/api/secretstore/) with the `sa-creds` secret in it:
 
-   ```console
+   ```shell
    d8 k -n external-secrets apply -f - <<EOF
 
    apiVersion: external-secrets.io/v1alpha1
@@ -181,21 +225,35 @@ The instructions below are meant to be viewed as a _Quick Start_ guide. To use i
    ```
 
    Where:
-   - `sa-creds` — the name of the `Secret` that contains the authorized key. This secret should show up after the Helm chart has been installed.
+   - `sa-creds` — the name of the Secret that contains the authorized key. This secret should show up after the Helm chart has been installed.
    - `key` — the name of the key in the `.data` field of the secret above.
 
 #### Checking that everything works as expected
 
-1. Check the status of the External Secrets Operator and the secrets store you created:
+1. Check the status of the External Secrets Operator:
+
+   ```shell
+   d8 k -n external-secrets get po
+   ```
+
+   An example of the output:
 
    ```console
-   $ d8 k -n external-secrets get po
    NAME                                                READY   STATUS    RESTARTS   AGE
    external-secrets-55f78c44cf-dbf6q                   1/1     Running   0          77m
    external-secrets-cert-controller-78cbc7d9c8-rszhx   1/1     Running   0          77m
    external-secrets-webhook-6d7b66758-s7v9c            1/1     Running   0          77m
+   ```
 
-   $ d8 k -n external-secrets get secretstores.external-secrets.io
+1. Check the state of the secrets store you created:
+
+   ```shell
+   d8 k -n external-secrets get secretstores.external-secrets.io
+   ```
+
+   An example of the output:
+
+   ```console
    NAME           AGE   STATUS
    secret-store   69m   Valid
    ```
@@ -207,7 +265,7 @@ The instructions below are meant to be viewed as a _Quick Start_ guide. To use i
 
 1. Create an [ExternalSecret](https://external-secrets.io/latest/api/externalsecret/) object that refers to the `lockbox-secret` secret in the `secret-store`:
 
-   ```console
+   ```shell
    d8 k -n external-secrets apply -f - <<EOF
 
    apiVersion: external-secrets.io/v1alpha1
@@ -257,7 +315,7 @@ This integration lets you use [the Yandex Managed Service for Prometheus](https:
 1. [Create an API key](https://cloud.yandex.com/en/docs/iam/operations/api-key/create) for the service account.
 1. Create a PrometheusRemoteWrite resource:
 
-   ```console
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: deckhouse.io/v1
    kind: PrometheusRemoteWrite
@@ -283,7 +341,7 @@ More details about this feature can be found [in Yandex Cloud documentation](htt
 1. [Create an API key](https://cloud.yandex.com/en/docs/iam/operations/api-key/create) for the service account.
 1. Create a GrafanaAdditionalDatasource resource:
 
-   ```console
+   ```shell
    d8 k apply -f - <<EOF
 
    apiVersion: deckhouse.io/v1

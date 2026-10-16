@@ -5,8 +5,7 @@ permalink: en/admin/integrations/public/yandex/layout.html
 
 ## Layouts
 
-This section describes the possible node placement layouts in Yandex Cloud infrastructure
-and the related configuration options.
+This section describes the possible node placement layouts in Yandex Cloud infrastructure and the related configuration options. The layout is specified by the [`layout`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-layout) parameter in the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module.
 The selected layout affects networking behavior, availability of public IP addresses, outgoing traffic routing,
 and how nodes are accessed.
 
@@ -30,71 +29,35 @@ If the master node is not directly accessible, run the installation with the `--
 Example layout configuration:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-layout: Standard
-sshPublicKey: "<SSH_PUBLIC_KEY>"
-nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: <EXISTING_NETWORK_ID>
-provider:
-  cloudID: <CLOUD_ID>
-  folderID: <FOLDER_ID>
-  serviceAccountJSON: |
-    {
-    "id": "id",
-    "service_account_id": "service_account_id",
-    "key_algorithm": "RSA_2048",
-    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
-    }
-masterNodeGroup:
-  replicas: 3
-  zones:
-  - ru-central1-a
-  - ru-central1-b
-  - ru-central1-d
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    # Optional: uncomment to assign public IP addresses to master nodes.
-    # externalIPAddresses:
-    # - "<ZONE_A_EXTERNAL_IP_MASTER_1>"
-    # - "Auto"
-    # - "Auto"
-    # externalSubnetIDs:
-    # - <ZONE_A_SUBNET_ID>
-    # - <ZONE_B_SUBNET_ID>
-    # - <ZONE_D_SUBNET_ID>
-    additionalLabels:
-      takes: priority
-nodeGroups:
-- name: worker
-  replicas: 2
-  zones:
-  - ru-central1-a
-  - ru-central1-b
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    coreFraction: 50
-    # Optional: uncomment to assign public IP addresses to worker nodes.
-    # externalIPAddresses:
-    # - "Auto"
-    # - "Auto"
-    # externalSubnetIDs:
-    # - <ZONE_A_SUBNET_ID>
-    # - <ZONE_B_SUBNET_ID>
-    additionalLabels:
-      role: example
-labels:
-  billing: prod
-dhcpOptions:
-  domainName: test.local
-  domainNameServers:
-  - <DNS_SERVER_1>
-  - <DNS_SERVER_2>
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        cloudID: <CLOUD_ID>
+        folderID: <FOLDER_ID>
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: <SSH_PUBLIC_KEY>
+        nodeNetworkCIDR: 192.168.12.0/24
+        existingNetworkID: <EXISTING_NETWORK_ID>
+        zones:
+          - ru-central1-a
+          - ru-central1-b
+          - ru-central1-d
+        labels:
+          billing: prod
+        dhcpOptions:
+          domainName: test.local
+          domainNameServers:
+            - <DNS_SERVER_1>
+            - <DNS_SERVER_2>
 ```
 
 ### WithoutNAT
@@ -102,7 +65,7 @@ dhcpOptions:
 In this layout, no form of NAT is used, and each node is assigned a public IP address.
 
 {% alert level="warning" %}
-DP does not support security groups, so all cluster nodes will be accessible without connection restrictions.
+DP does not assign security groups to the nodes, so in this layout the nodes are accessible from the outside without restrictions. To restrict the traffic, use the rules of the default group as described in ["Configuring security groups in Yandex Cloud"](#configuring-security-groups-in-yandex-cloud).
 {% endalert %}
 
 ![WithoutNAT layout in Yandex Cloud](../../../../images/cloud-provider-yandex/yandex-withoutnat.png)
@@ -111,63 +74,49 @@ DP does not support security groups, so all cluster nodes will be accessible wit
 Example layout configuration:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-layout: WithoutNAT
-provider:
-  cloudID: <CLOUD_ID>
-  folderID: <FOLDER_ID>
-  serviceAccountJSON: |
-    {
-    "id": "id",
-    "service_account_id": "service_account_id",
-    "key_algorithm": "RSA_2048",
-    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
-    }    
-masterNodeGroup:
-  replicas: 3
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    externalIPAddresses:
-    - "Auto"
-    - "Auto"
-    - "Auto"
-    externalSubnetIDs:
-    - <ZONE_A_SUBNET_ID>
-    - <ZONE_B_SUBNET_ID>
-    - <ZONE_D_SUBNET_ID>
-    zones:
-    - ru-central1-a
-    - ru-central1-b
-    - ru-central1-d
-nodeGroups:
-- name: worker
-  replicas: 2
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    coreFraction: 50
-    externalIPAddresses:
-    - "<ZONE_A_EXTERNAL_IP_WORKER_1>"
-    - "Auto"
-    externalSubnetIDs:
-    - <ZONE_A_SUBNET_ID>
-    - <ZONE_B_SUBNET_ID>
-    zones:
-    - ru-central1-a
-    - ru-central1-b
-sshPublicKey: "<SSH_PUBLIC_KEY>"
-nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: <EXISTING_NETWORK_ID>
-dhcpOptions:
-  domainName: test.local
-  domainNameServers:
-  - <DNS_SERVER_1>
-  - <DNS_SERVER_2>
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        cloudID: <CLOUD_ID>
+        folderID: <FOLDER_ID>
+    nodes:
+      parameters:
+        layout: WithoutNAT
+        sshPublicKey: <SSH_PUBLIC_KEY>
+        nodeNetworkCIDR: 192.168.12.0/24
+        existingNetworkID: <EXISTING_NETWORK_ID>
+        zones:
+          - ru-central1-a
+          - ru-central1-b
+          - ru-central1-d
+        externalIPAddresses:
+          master:
+            - Auto
+            - Auto
+            - Auto
+          worker:
+            - <ZONE_A_EXTERNAL_IP_WORKER_1>
+            - Auto
+        externalSubnetIDs:
+          master:
+            - <ZONE_A_SUBNET_ID>
+            - <ZONE_B_SUBNET_ID>
+            - <ZONE_D_SUBNET_ID>
+          worker:
+            - <ZONE_A_SUBNET_ID>
+            - <ZONE_B_SUBNET_ID>
+        dhcpOptions:
+          domainName: test.local
+          domainNameServers:
+            - <DNS_SERVER_1>
+            - <DNS_SERVER_2>
 ```
 
 ### WithNATInstance
@@ -176,15 +125,15 @@ In this layout, a NAT instance is created in a separate subnet,
 and the route tables of the zone subnets are updated with a `0.0.0.0/0` route using the NAT instance as the next hop.
 The subnet is isolated to prevent routing loops and must not overlap with any other networks used in the cluster.
 
-To place the NAT instance in an existing subnet, use the [`withNATInstance.internalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetid) parameter.
+To place the NAT instance in an existing subnet, use the [`withNATInstance.internalSubnetID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-withnatinstance-internalsubnetid) parameter.
 The instance will be created in the zone corresponding to this subnet.
 
-If you need to create a new subnet, specify the [`withNATInstance.internalSubnetCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetcidr) parameter.
+If you need to create a new subnet, specify the [`withNATInstance.internalSubnetCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-withnatinstance-internalsubnetcidr) parameter.
 The NAT instance will be placed in this subnet.
 
-> One of the following parameters is required: `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR`.
+Set one of the two parameters, `withNATInstance.internalSubnetID` or `withNATInstance.internalSubnetCIDR`.
 
-If [`withNATInstance.externalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-externalsubnetid) is also specified,
+If [`withNATInstance.externalSubnetID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-withnatinstance-externalsubnetid) is also specified,
 the NAT instance will be connected to that subnet via a secondary network interface.
 
 ![WithNATInstance layout in Yandex Cloud](../../../../images/cloud-provider-yandex/yandex-withnatinstance.png)
@@ -193,50 +142,35 @@ the NAT instance will be connected to that subnet via a secondary network interf
 Example layout configuration:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-layout: WithNATInstance
-withNATInstance:
-  natInstanceExternalAddress: <NAT_INSTANCE_EXTERNAL_ADDRESS>
-  internalSubnetID: <INTERNAL_SUBNET_ID>
-  externalSubnetID: <EXTERNAL_SUBNET_ID>
-provider:
-  cloudID: <CLOUD_ID>
-  folderID: <FOLDER_ID>
-  serviceAccountJSON: |
-    {
-    "id": "id",
-    "service_account_id": "service_account_id",
-    "key_algorithm": "RSA_2048",
-    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
-    }    
-masterNodeGroup:
-  replicas: 1
-  zones:
-  - ru-central1-a
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-nodeGroups:
-- name: worker
-  replicas: 1
-  zones:
-  - ru-central1-a
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    coreFraction: 50
-sshPublicKey: "<SSH_PUBLIC_KEY>"
-nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: <EXISTING_NETWORK_ID>
-dhcpOptions:
-  domainName: test.local
-  domainNameServers:
-  - <DNS_SERVER_1>
-  - <DNS_SERVER_2>
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        cloudID: <CLOUD_ID>
+        folderID: <FOLDER_ID>
+    nodes:
+      parameters:
+        layout: WithNATInstance
+        sshPublicKey: <SSH_PUBLIC_KEY>
+        nodeNetworkCIDR: 192.168.12.0/24
+        existingNetworkID: <EXISTING_NETWORK_ID>
+        zones:
+          - ru-central1-a
+        withNATInstance:
+          natInstanceExternalAddress: <NAT_INSTANCE_EXTERNAL_ADDRESS>
+          internalSubnetID: <INTERNAL_SUBNET_ID>
+          externalSubnetID: <EXTERNAL_SUBNET_ID>
+        dhcpOptions:
+          domainName: test.local
+          domainNameServers:
+            - <DNS_SERVER_1>
+            - <DNS_SERVER_2>
 ```
 
 {% alert level="info" %}
@@ -246,98 +180,123 @@ The NAT instance is not automatically used by the `dhctl` installer as a bastion
 
 If the master node does not have a public IP address or is not directly accessible, run the installation with the `--ssh-bastion-host` and `--ssh-bastion-user` parameters.
 
-If you need to connect to the master node directly using a public IP address, specify the [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) and [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) parameters for it. Keep in mind that the interface from the network specified in `externalSubnetIDs` will be used as the node's default gateway.
+If you need to connect directly to a master node using a public IP address, specify the [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses) and [`externalSubnetIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalsubnetids) parameters in the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module. Note that the interface connected to the network specified in `externalSubnetIDs` will be used as the node's default gateway.
 {% endalert %}
 
-## Defining the YandexClusterConfiguration
+## Configuration
 
-To integrate DP with Yandex Cloud, you need to describe the cluster infrastructure
-using the YandexClusterConfiguration resource.
+The Yandex Cloud provider parameters are defined in four resources:
 
-[YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) is a custom resource (CR) that defines the parameters for integrating with Yandex Cloud.
-DP uses this resource to:
+- The [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module defines the [layout](#layouts), the [network parameters](#network-parameters-and-security), and the cloud and folder IDs.
+- The `d8-credentials` Secret in the `d8-cloud-provider-yandex` namespace stores the service account key. Its format is described in ["Credentials Secret"](authorization.html#credentials-secret).
+- [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) describes the virtual machine parameters.
+- [NodeGroup](/modules/node-manager/cr.html#nodegroup) describes the node groups and refers to an instance class. The master node group is described by the same resource with the [`CloudPermanent`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html) type.
 
-- Deploy master and worker nodes in the cloud.
-- Define the network layout.
-- Connect to the Yandex Cloud API using an authorization JSON key.
-- Configure subnets, public IP addresses, VM resources, and more.
-
-Required fields:
-
-- `apiVersion`: Must be `deckhouse.io/v1`.
-- `kind`: Must be `YandexClusterConfiguration`.
-
-Example resource header:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-```
-
-To edit this resource in a running cluster, execute the following command:
+To change the provider settings in a running cluster, edit the ModuleConfig:
 
 ```shell
-d8 system edit provider-cluster-configuration
+d8 k edit mc cloud-provider-yandex
 ```
 
-After making changes, apply them using the following command:
+After changing the node parameters, run the following command:
 
 ```shell
 dhctl converge
 ```
 
+{% alert level="warning" %}
+If the cluster was installed with the [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) schema, it must be migrated to the ModuleConfig-based configuration. Until the migration is complete, the [`D8CloudProviderYandexCloudMigrationPending`](../../../../reference/alerts.html#cloud-provider-yandex-d8cloudprovideryandexcloudmigrationpending) alert fires and a Deckhouse Platform update can be blocked.
+
+For instructions, see ["How to migrate a cloud provider to ModuleConfig-based configuration?"](../../../../faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig-based-configurat).
+
+If the module settings had the `storageClass.default` parameter, set the default StorageClass with the global [`defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) parameter after the migration. The conversion does not carry this value over.
+{% endalert %}
+
 ### Configuration example
 
-Below is a minimal example of a YandexClusterConfiguration resource
-that defines a cluster with one master group and one worker node group.
-It uses the Standard layout and includes basic compute resource parameters,
-an SSH public key, and cloud and folder identifiers:
+Below is a minimal configuration of a cluster with the Standard layout, one master node, and one group of worker nodes:
 
 ```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        cloudID: <CLOUD_ID>
+        folderID: <FOLDER_ID>
+    nodes:
+      parameters:
+        layout: Standard
+        nodeNetworkCIDR: 10.241.32.0/20
+        sshPublicKey: <SSH_PUBLIC_KEY>
+        labels:
+          billing: prod
+---
 apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-layout: Standard
-nodeNetworkCIDR: 127.0.0.1/8
-labels:
-  label-2: b
-sshPublicKey: "<SSH_PUBLIC_KEY>"
-masterNodeGroup:
-  replicas: 1
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: fd8nb7ecsbvj76dfaa8b
-nodeGroups:
-- name: worker
-  replicas: 1
-  zones:
-  - ru-central1-a
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: fd8nb7ecsbvj76dfaa8b
-    coreFraction: 50
-    externalIPAddresses:
-    - 198.51.100.5
-    - Auto
-provider:
-  cloudID: "<CLOUD_ID>"
-  folderID: "<FOLDER_ID>"
-  serviceAccountJSON: |
-    {
-    "id": "id",
-    "service_account_id": "service_account_id",
-    "key_algorithm": "RSA_2048",
-    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
-    }
+kind: YandexInstanceClass
+metadata:
+  name: master
+spec:
+  cores: 4
+  memory: 8192
+  imageID: <IMAGE_ID>
+  etcdDiskSizeGB: 10
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: master
+    minPerZone: 1
+    maxPerZone: 1
+---
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: worker
+spec:
+  cores: 4
+  memory: 8192
+  coreFraction: 50
+  imageID: <IMAGE_ID>
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: worker
+    minPerZone: 1
+    maxPerZone: 3
+    zones:
+      - ru-central1-a
 ```
 
-- The master group consists of a single node, with no explicit zone specified.
-- The worker group includes one node located in the `ru-central1-a` zone, with two external IP addresses:
-  one manually specified (`198.51.100.5`), the other automatically allocated (`Auto`).
-- The `serviceAccountJSON` field is specified for accessing the Yandex Cloud API.
-- The configuration uses the `127.0.0.1/8` CIDR subnet and includes a cluster-level label `label-2: b`.
+Where:
+
+- `CLOUD_ID` and `FOLDER_ID` are the Yandex Cloud cloud and folder identifiers, specified by the [`cloudID`](/modules/cloud-provider-yandex/configuration.html#parameters-provider-parameters-cloudid) and [`folderID`](/modules/cloud-provider-yandex/configuration.html#parameters-provider-parameters-folderid) parameters in the `provider.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module. For instructions on obtaining these identifiers, see ["Connecting and authorizing in Yandex Cloud"](authorization.html).
+- `SSH_PUBLIC_KEY` is the public SSH key used to access nodes, specified by the [`sshPublicKey`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-sshpublickey) parameter in the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module.
+- `IMAGE_ID` is the operating system image ID used to create virtual machines, specified by the [`imageID`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-imageid) parameter of the YandexInstanceClass resource. If the parameter is not set, the image of the `master` node group instance class is used.
+
+The YandexInstanceClass resource for the `master` node group must specify the [`etcdDiskSizeGB`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-etcddisksizegb) parameter, which defines the size of a separate disk for etcd. This parameter must not be specified for other node groups.
+
+The rest of the parameters are described in the [module settings](/modules/cloud-provider-yandex/configuration.html) and in the [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) resource description.
+
+The service account key is not stored in ModuleConfig. It is defined in a [separate Secret](authorization.html#credentials-secret).
 
 ## Network parameters and security
 
@@ -346,71 +305,97 @@ in a DP cluster deployed in Yandex Cloud.
 
 ### Internal node addressing
 
-The [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr) parameter defines the IP address range for splitting between availability zones
-and applying to the internal node interfaces.
+The [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) parameter defines the IP address range that is split between availability zones
+and applied to the internal node interfaces. The parameter belongs to the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module:
 
 ```yaml
-nodeNetworkCIDR: 192.168.12.13/24
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  settings:
+    nodes:
+      parameters:
+        nodeNetworkCIDR: 192.168.12.0/24
 ```
 
-Depending on the selected layout (Standard or WithNATInstance),
-this subnet will be automatically divided into three equal parts for each availability zone:
+DP divides this subnet into four equal parts and creates one internal subnet from each of them in every availability zone:
 
 - ru-central1-a
 - ru-central1-b
+- ru-central1-e
 - ru-central1-d
 
-Each part will be used as a separate internal subnet to which the nodes created in the corresponding zone will be connected.
+The nodes of the matching zone are connected to the created subnet. The division happens in every layout. When the [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) parameter is set, DP creates no subnets and uses the ones listed there.
 
 {% alert level="info" %}
-If you plan to use the same subnet across multiple clusters (for example, with [`cni-simple-bridge`](/modules/cni-simple-bridge/)),
-keep in mind the limitation: one cluster = one routing table = one subnet.
-It impossible to deploy two clusters using `cni-simple-bridge` in the same subnet.
-If you need to reuse subnets across clusters, use [`cni-cilium`](/modules/cni-cilium/).
+A subnet accepts only one route table, so two clusters with the [`cni-simple-bridge`](/modules/cni-simple-bridge/) module cannot use the same subnets.
+To deploy such clusters in shared subnets, use the [`cni-cilium`](/modules/cni-cilium/) module.
 {% endalert %}
 
 ### Assigning external IP addresses and outgoing traffic
 
-The `externalSubnetIDs` parameter is specified in the [`masterNodeGroup.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) and [`nodeGroups.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-externalsubnetids) sections.
-It is an array of Yandex Cloud subnet IDs used to attach external network interfaces to nodes.
-This parameter is required when:
+The [`externalSubnetIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalsubnetids) parameter belongs to the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module and is set per node group:
 
-- Assigning a public IP address.
-- Defining a default route for outgoing traffic from nodes.
-- Using `Auto` values in the `externalIPAddresses` field.
+- the key is the node group name;
+- the value is the list of Yandex Cloud subnet IDs that the external network interfaces of that group's nodes are attached to, in the order of the zones.
+
+The parameter is required when you need to:
+
+- assign a public IP address;
+- define a default route for outgoing traffic from nodes;
+- use the `Auto` value in the [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses) parameter.
 
 Example:
 
 ```yaml
-externalSubnetIDs:
-  - <RU-CENTRAL1-A-SUBNET-ID>
-  - <RU-CENTRAL1-B-SUBNET-ID>
-  - <RU-CENTRAL1-D-SUBNET-ID>
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  settings:
+    nodes:
+      parameters:
+        externalSubnetIDs:
+          worker:
+            - <RU_CENTRAL1_A_SUBNET_ID>
+            - <RU_CENTRAL1_B_SUBNET_ID>
+            - <RU_CENTRAL1_D_SUBNET_ID>
 ```
 
-{% alert level="info" %}
-The `externalSubnetIDs` parameter is required for the automatic assignment of public IPs
-using `externalIPAddresses: ["Auto", ...]`.
-{% endalert %}
+The [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses) parameter in the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module specifies a list of external IP addresses for each node group in the order of their availability zones.
 
 ### DNS and DHCP settings for internal networks
 
-The [`dhcpOptions`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-dhcpoptions) parameter lets you set the DHCP server configuration
-applied to all subnets created within the DP cluster in Yandex Cloud.
+The [`dhcpOptions`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-dhcpoptions) parameter sets the DHCP server configuration
+applied to all subnets created within the DP cluster in Yandex Cloud. The parameter belongs to the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module.
 
 Available fields:
 
-- `domainName`: The search domain to be set in the network configuration.
-- `domainNameServers`: An array of IP addresses of DNS servers to be used as recursive resolvers.
+- `domainName`: The search domain set in the network configuration.
+- `domainNameServers`: An array of IP addresses of DNS servers used as recursive resolvers.
 
 Example:
 
 ```yaml
-dhcpOptions:
-  domainName: test.local
-  domainNameServers:
-  - 192.168.0.2
-  - 192.168.0.3
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  settings:
+    nodes:
+      parameters:
+        dhcpOptions:
+          domainName: test.local
+          domainNameServers:
+            - 192.168.0.2
+            - 192.168.0.3
 ```
 
 {% alert level="info" %}
@@ -420,8 +405,8 @@ Otherwise, service disruptions may occur.
 
 After updating `dhcpOptions`:
 
-- Force renew the `DHCP lease` on all VMs.
-- Restart all pods with `hostNetwork: true`, such as `kube-dns`, to refresh the `resolv.conf` contents.
+- force renew the DHCP lease on all VMs;
+- restart the components running in the node network (`hostNetwork: true`), including `kube-dns`, to refresh the `resolv.conf` contents.
 
 You can apply changes using the following command:
 
@@ -429,33 +414,39 @@ You can apply changes using the following command:
 netplan apply
 ```
 
-or another appropriate method depending on your system (such as `systemd-networkd`, `dhclient`, etc.).
+or another method used in your system, for example `systemd-networkd` or `dhclient`.
 
 ### Using pre-existing subnets
 
-The [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) parameter lets you specify mappings
-between availability zones and pre-created subnets in Yandex Cloud.
-This is important if you don’t want DP to automatically create subnets and prefer to use existing ones.
+The [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) parameter maps
+availability zones to pre-created subnets in Yandex Cloud.
+Set it when DP has to use existing subnets instead of creating new ones. The parameter belongs to the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module.
 
 Example:
 
 ```yaml
-existingZoneToSubnetIDMap:
-  ru-central1-a: e2lu8r1tbbtryhdpa9ro
-  ru-central1-b: e2lu8r1tbbtryhdpa9ro
-  ru-central1-d: e2lu8r1tbbtryhdpa9ro
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  settings:
+    nodes:
+      parameters:
+        existingZoneToSubnetIDMap:
+          ru-central1-a: e2lu8r1tbbtryhdpa9ro
+          ru-central1-b: e2lu8r1tbbtryhdpa9ro
+          ru-central1-d: e2lu8r1tbbtryhdpa9ro
 ```
 
 {% alert level="info" %}
-DP creates a routing table automatically but does not associate it with subnets.
-You need to do that manually via the Yandex Cloud interface.
+DP creates a route table but does not associate it with the subnets. Associate the table manually in the Yandex Cloud interface.
 {% endalert %}
 
 ### Additional external networks
 
-DP allows you to explicitly specify a list of additional external networks
-whose IP addresses will be treated as public (external IPs).
-This is configured via the [`settings.additionalExternalNetworkIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-additionalexternalnetworkids) parameter in the ModuleConfig resource.
+The [`additionalExternalNetworkIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-ccm-parameters-additionalexternalnetworkids) parameter defines a list of additional external networks whose addresses DP treats as public. The parameter belongs to the `ccm.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module.
 
 This is useful when:
 
@@ -471,34 +462,37 @@ kind: ModuleConfig
 metadata:
   name: cloud-provider-yandex
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
-    additionalExternalNetworkIDs:
-      - enp6t4sno
+    ccm:
+      parameters:
+        additionalExternalNetworkIDs:
+          - enp6t4sno
 ```
 
-If this parameter is not set, DP will only use the subnets explicitly specified in the YandexClusterConfiguration
+If this parameter is not set, DP will only use the subnets explicitly specified in the module settings
 (for example, via `externalSubnetIDs`) to determine whether an IP is public.
 
 ## Configuring security groups in Yandex Cloud
 
-When a [cloud network](https://yandex.cloud/en/docs/vpc/concepts/network#network) is created,
-Yandex Cloud automatically adds a default [security group](https://yandex.cloud/en/docs/vpc/concepts/security-groups)
-for all attached networks, including the one used by the DP cluster.
-This default group includes rules that allow all incoming and outgoing traffic.
-It applies to all subnets in the cloud network unless a different security group is explicitly assigned to a VM interface.
+For every [cloud network](https://yandex.cloud/en/docs/vpc/concepts/network#network), Yandex Cloud creates a default [security group](https://yandex.cloud/en/docs/vpc/concepts/security-groups), including for the cluster network. That group allows any inbound and outbound traffic and applies to the virtual machine network interfaces that are not assigned another group.
 
-{% alert level="danger" %}
-Do not remove the default rules allowing all traffic until your security group configuration is fully completed.
-Doing so may disrupt cluster functionality.
+You can restrict the cluster traffic with the rules of that group. Assigning another security group to the nodes is not possible, as neither the module settings nor the YandexInstanceClass resource have parameters for that.
+
+{% alert level="warning" %}
+Do not assign security groups to the nodes manually in the Yandex Cloud console. The `dhctl converge` command brings the virtual machines to the state described in the cluster configuration and may remove such an assignment.
 {% endalert %}
 
-Below are general guidelines for configuring security groups.
-Incorrectly configured security group rules may negatively impact on cluster operation.
-Read through the [security group specifics in Yandex Cloud](https://yandex.cloud/en/docs/vpc/concepts/security-groups#security-groups-notes) before using them in production environments.
+{% alert level="danger" %}
+Do not delete the rules that allow any traffic until you have configured the other rules of the group. Otherwise, the group blocks the traffic between the nodes and the cluster components lose connection to each other.
+{% endalert %}
 
-If the cluster uses Cilium with pod traffic tunneling over VXLAN, allow UDP traffic between nodes on the ports listed in [Network interaction of the platform components](../../../../reference/network_interaction.html).
+Errors in the rules disrupt the cluster. Before configuring the rules in a production cluster, consult the [security group usage details](https://yandex.cloud/en/docs/vpc/concepts/security-groups#security-groups-notes) in Yandex Cloud.
+
+If the cluster uses Cilium with pod traffic tunneling over VXLAN, allow UDP traffic between nodes on the ports listed in ["Network interaction of the platform components"](../../../../reference/network_interaction.html).
+
+To configure the rules of the security group:
 
 1. Identify the cloud network used by the DP cluster.
 
@@ -516,15 +510,20 @@ If the cluster uses Cilium with pod traffic tunneling over VXLAN, allow UDP traf
      jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
    ```
 
-1. In the Yandex Cloud Console, go to the Virtual Private Cloud service and open the Security Groups section.
-   You should see a security group marked `Default`.
+1. In the Yandex Cloud Console, go to the Virtual Private Cloud service and open the "Security Groups" section. You should see a security group marked `Default`.
+
+   ![The default security group](../../../../images/cloud-provider-yandex/sg-en-default.png)
+
 1. Create rules according to the [Yandex Cloud instructions](https://yandex.cloud/en/docs/managed-kubernetes/operations/connect/security-groups#rules-internal).
-1. Delete the rule that allows all **incoming** traffic and save your changes.
+
+   ![Rules for the security group](../../../../images/cloud-provider-yandex/sg-en-rules.png)
+
+1. Delete the rule that allows all **inbound** traffic (it is already deleted in the screenshot above) and save your changes.
 
 ## Configuring access via bastion host
 
 To connect to nodes located in private subnets (for example, when using the Standard or WithNATInstance layout),
-you can use a bastion host — an intermediary VM with a public IP address that provides SSH access to the nodes.
+you can use a bastion host, an intermediary VM with a public IP address that provides SSH access to the nodes.
 
 To configure access, follow these steps:
 
@@ -550,7 +549,7 @@ To configure access, follow these steps:
      --public-address 178.154.226.159
    ```
 
-   > Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+   Replace `<SSH_PUBLIC_KEY_FILE>` with the name of the public key, for example `id_rsa.pub` for an RSA key or `id_ed25519.pub` for an ED25519 key.
 
    Ensure the IP address specified in `--public-address` is accessible from your network and is correct.
 
@@ -560,6 +559,8 @@ To configure access, follow these steps:
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
      --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
    ```
+
+   Replace `<SSH_PRIVATE_KEY_FILE>` with the name of the private key, for example `id_rsa` for an RSA key or `id_ed25519` for an ED25519 key.
 
    Where:
 

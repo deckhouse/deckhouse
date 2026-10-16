@@ -12,14 +12,14 @@ description: Подготовка к гибридной интеграции с 
 
 В разделе описаны два способа добавления узлов:
 
-- **Автоматическое создание узлов в Yandex Cloud**. DP создаёт виртуальные машины через API Yandex Cloud. Параметры ВМ задаются ресурсом [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass), а требуемое количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudEphemeral`.
+- **Автоматическое создание узлов в Yandex Cloud**. DP создаёт виртуальные машины через API Yandex Cloud. Параметры ВМ задаются ресурсом [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass), а количество узлов и зоны размещения задаются ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudEphemeral`.
 - **Подключение вручную созданных узлов через bootstrap-скрипт**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudStatic`.
 
 ## Предварительные требования
 
 Перед началом убедитесь, что выполнены следующие условия:
 
-- Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
+- Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype), а его узлы отвечают [минимальным системным требованиям](/products/kubernetes-platform/guides/hardware-requirements.html).
 - Между сетью статических узлов и VPC Yandex Cloud настроена [сетевая связность](./overview.html#общие-сетевые-требования). Добавляемые узлы Yandex Cloud должны иметь доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов должен быть выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 - Выполнены требования из раздела [«Подключение и авторизация в Yandex Cloud»](../public/yandex/authorization.html):
   - подготовлен сервисный аккаунт;
@@ -63,13 +63,15 @@ description: Подготовка к гибридной интеграции с 
    export NETWORK_ID="<NETWORK_ID>"
    export SUBNET_ID="<SUBNET_ID>"
    export ZONE="<ZONE>"
+   export ROUTE_TABLE_ID="<ROUTE_TABLE_ID>"
    ```
 
    Где:
 
    - `NETWORK_ID` — ID VPC-сети;
    - `SUBNET_ID` — ID подсети, в которой будут создаваться узлы;
-   - `ZONE` — зона доступности, соответствующая выбранной подсети, например `ru-central1-a`.
+   - `ZONE` — зона доступности, соответствующая выбранной подсети, например `ru-central1-a`;
+   - `ROUTE_TABLE_ID` — ID таблицы маршрутизации, привязанной к подсети. Он есть в колонке `ROUTE TABLE ID` вывода `yc vpc subnet list`.
 
    Подробнее в разделе [«Подключение и авторизация в Yandex Cloud»](../public/yandex/authorization.html).
 
@@ -94,7 +96,7 @@ description: Подготовка к гибридной интеграции с 
      --subject "serviceAccount:${SA_ID}"
    ```
 
-   Роль `editor` нужна для создания и управления облачными ресурсами, а `vpc.admin` — для работы с сетевыми ресурсами VPC.
+   Роль `editor` нужна для создания облачных ресурсов и управления ими, а роль `vpc.admin` даёт доступ к сетевым ресурсам VPC.
 
 1. Создайте ключ сервисного аккаунта и сохраните его в JSON-файл:
 
@@ -146,125 +148,85 @@ description: Подготовка к гибридной интеграции с 
    yc vpc subnet list --folder-id "$FOLDER_ID"
    ```
 
-1. Создайте файл с конфигурацией провайдера. Например, `cloud-provider-cluster-configuration.yaml`:
+1. Создайте манифест [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) для модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/). Например, `yandex-module-config.yaml`:
 
    ```shell
-   cat > cloud-provider-cluster-configuration.yaml <<EOF
-   apiVersion: deckhouse.io/v1
-   kind: YandexClusterConfiguration
-   layout: WithoutNAT
-   masterNodeGroup:
-     replicas: 1
-     instanceClass:
-       cores: 4
-       memory: 8192
-       imageID: ${IMAGE_ID}
-       diskSizeGB: 100
-       platform: standard-v3
-       externalIPAddresses:
-         - "Auto"
-   nodeNetworkCIDR: ${NODE_NETWORK_CIDR}
-   existingNetworkID: empty
-   provider:
-     cloudID: ${CLOUD_ID}
-     folderID: ${FOLDER_ID}
-     serviceAccountJSON: '${SERVICE_ACCOUNT_JSON}'
-   sshPublicKey: '${SSH_PUBLIC_KEY}'
-   EOF
-   ```
-
-   В манифест автоматически подставляются значения переменных окружения, заданных на предыдущих шагах: `CLOUD_ID`, `FOLDER_ID`, `IMAGE_ID`, `NODE_NETWORK_CIDR`, `SERVICE_ACCOUNT_JSON` и `SSH_PUBLIC_KEY`.
-
-   {% alert level="info" %}
-   В гибридном сценарии, когда control plane уже развёрнут как статический кластер, секция `masterNodeGroup` не приводит к созданию master-узлов в Yandex Cloud, но остаётся частью конфигурации провайдера.
-   {% endalert %}
-
-1. Создайте файл с discovery-данными Yandex Cloud. Например, `cloud-provider-discovery-data.json`:
-
-   ```shell
-   cat > cloud-provider-discovery-data.json <<EOF
-   {
-     "apiVersion": "deckhouse.io/v1",
-     "defaultLbTargetGroupNetworkId": "empty",
-     "internalNetworkIDs": [
-       "${NETWORK_ID}"
-     ],
-     "kind": "YandexCloudDiscoveryData",
-     "monitoringAPIKey": "",
-     "region": "ru-central1",
-     "routeTableID": "empty",
-     "shouldAssignPublicIPAddress": false,
-     "zoneToSubnetIdMap": {
-       "${ZONE}": "${SUBNET_ID}"
-     },
-     "zones": [
-       "${ZONE}"
-     ]
-   }
-   EOF
-   ```
-
-   В файл автоматически подставляются значения переменных окружения, заданных на предыдущих шагах: `NETWORK_ID`, `SUBNET_ID` и `ZONE`.
-
-   Параметр `shouldAssignPublicIPAddress` управляет назначением публичных IP-адресов создаваемым узлам. В примере указано значение `false`, поэтому создаваемые узлы будут получать только внутренние IP-адреса.
-
-   {% alert level="warning" %}
-   Если `shouldAssignPublicIPAddress` установлен в `false`, создаваемые узлы должны иметь доступ к хранилищу образов и внешним сервисам через NAT Gateway, NAT-инстанс, прокси или другой egress-механизм. Для зон, в которых подсети отсутствуют, допустимо использовать значение `empty`.
-   {% endalert %}
-
-1. Закодируйте файлы `cloud-provider-cluster-configuration.yaml` и `cloud-provider-discovery-data.json` в Base64:
-
-   ```shell
-   export CLUSTER_CONFIGURATION_B64="$(base64 -w0 cloud-provider-cluster-configuration.yaml)"
-   export DISCOVERY_DATA_B64="$(base64 -w0 cloud-provider-discovery-data.json)"
-   ```
-
-1. Создайте манифест с секретом `d8-provider-cluster-configuration` и ModuleConfig для включения и настройки модуля `cloud-provider-yandex`:
-
-   ```shell
-   cat > yandex-provider-secret-and-mc.yaml <<EOF
-   apiVersion: v1
-   kind: Secret
-   metadata:
-     labels:
-       name: d8-provider-cluster-configuration
-     name: d8-provider-cluster-configuration
-     namespace: kube-system
-   type: Opaque
-   data:
-     cloud-provider-cluster-configuration.yaml: ${CLUSTER_CONFIGURATION_B64}
-     cloud-provider-discovery-data.json: ${DISCOVERY_DATA_B64}
-   ---
+   cat > yandex-module-config.yaml <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
      name: cloud-provider-yandex
    spec:
-     version: 1
+     version: 2
      enabled: true
      settings:
-       storageClass:
-         default: network-ssd
+       provider:
+         parameters:
+           cloudID: ${CLOUD_ID}
+           folderID: ${FOLDER_ID}
+       nodes:
+         parameters:
+           layout: WithoutNAT
+           nodeNetworkCIDR: ${NODE_NETWORK_CIDR}
+           sshPublicKey: '${SSH_PUBLIC_KEY}'
+           existingNetworkID: ${NETWORK_ID}
+           existingRouteTableID: ${ROUTE_TABLE_ID}
+           existingZoneToSubnetIDMap:
+             ${ZONE}: ${SUBNET_ID}
+           zones:
+             - ${ZONE}
    EOF
    ```
 
-1. Скопируйте файл `yandex-provider-secret-and-mc.yaml` на master-узел кластера. Примените манифест:
+   В манифест автоматически подставляются значения переменных окружения, заданных на предыдущих шагах: `CLOUD_ID`, `FOLDER_ID`, `NODE_NETWORK_CIDR`, `SSH_PUBLIC_KEY`, `NETWORK_ID`, `ZONE` и `SUBNET_ID`.
+
+   Параметры [`existingNetworkID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingnetworkid), [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) и [`existingRouteTableID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingroutetableid) описывают уже созданные ресурсы Yandex Cloud, потому что в гибридном кластере DP не создаёт сеть, подсети и таблицу маршрутизации. Таблица маршрутизации обязательна, так как cloud-controller-manager создаёт в ней маршруты до подсетей подов и не запускается с пустым значением.
+
+   Схема размещения задаётся параметром [`layout`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-layout), её варианты описаны в разделе [«Конфигурация и схемы размещения»](../public/yandex/layout.html#схемы-размещения).
+
+1. Скопируйте файл `yandex-module-config.yaml` на master-узел кластера. Примените манифест:
 
    ```shell
-   d8 k apply -f yandex-provider-secret-and-mc.yaml
+   d8 k apply -f yandex-module-config.yaml
    ```
+
+   Пока DP включает модуль, валидирующие вебхуки DP и провайдера могут быть недоступны, и команда завершится ошибкой `failed calling webhook`. Это временное состояние, повторите команду через полминуты. То же относится к следующему шагу с секретом.
+
+1. Дождитесь, пока модуль создаст неймспейс `d8-cloud-provider-yandex`:
+
+   ```shell
+   d8 k get namespace d8-cloud-provider-yandex
+   ```
+
+1. Создайте секрет с ключом сервисного аккаунта:
+
+   ```shell
+   d8 k create -f - <<EOF
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: d8-credentials
+     namespace: d8-cloud-provider-yandex
+   type: cloud-provider.deckhouse.io/credentials
+   stringData:
+     authScheme: serviceAccount
+     secret: '${SERVICE_ACCOUNT_JSON}'
+   EOF
+   ```
+
+   Формат секрета описан в разделе [«Секрет с учётными данными»](../public/yandex/authorization.html#секрет-с-учётными-данными).
 
 1. Дождитесь включения модуля `cloud-provider-yandex` и появления кастомного ресурса YandexInstanceClass:
 
    ```shell
-   d8 k get module cloud-provider-dvp -o wide
+   d8 k get module cloud-provider-yandex -o wide
    d8 k get crd yandexinstanceclasses.deckhouse.io
    ```
 
 1. Создайте файл с манифестами [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup). Например, `yandex-instanceclass-nodegroup.yaml`:
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha1
+   apiVersion: deckhouse.io/v1
    kind: YandexInstanceClass
    metadata:
      name: yc-worker
@@ -297,7 +259,9 @@ description: Подготовка к гибридной интеграции с 
    - `mainSubnet` — ID подсети, из которой создаваемые узлы должны иметь доступ к статическим узлам кластера;
    - NodeGroup описывает группу узлов, которую DP должен поддерживать в кластере;
    - `nodeType: CloudEphemeral` означает, что узлы будут создаваться автоматически через облачного провайдера;
-   - `cloudInstances.zones` должен содержать зоны из списка `zones` в `cloud-provider-discovery-data.json`.
+   - `cloudInstances.zones` должен содержать зоны из списка `zones` в настройках модуля.
+
+   В схеме размещения `WithoutNAT` создаваемые узлы получают публичный IP-адрес. Чтобы узлы группы работали только с внутренними адресами, задайте в YandexInstanceClass параметр [`assignPublicIPAddress: false`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-assignpublicipaddress) и обеспечьте им выход в интернет другим способом, например через NAT-шлюз подсети.
 
 1. Примените манифест:
 

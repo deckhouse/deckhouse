@@ -1,9 +1,9 @@
 ---
 title: "Cloud provider — Yandex Cloud: схемы размещения"
-description: "Описание схем размещения и взаимодействия ресурсов в Yandex Cloud при работе облачного провайдера Deckhouse."
+description: "Описание схем размещения и взаимодействия ресурсов в Yandex Cloud при работе облачного провайдера Deckhouse Platform."
 ---
 
-Поддерживаются три схемы размещения. Ниже подробнее о каждой их них.
+Поддерживаются три схемы размещения. Схема размещения задаётся параметром [`layout`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-layout) в секции ресурса ModuleConfig модуля. Ниже подробнее о каждой их них.
 
 ## Standard
 
@@ -22,78 +22,44 @@ description: "Описание схем размещения и взаимоде
 Пример конфигурации схемы размещения:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-layout: Standard
-sshPublicKey: "<SSH_PUBLIC_KEY>"
-nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: <EXISTING_NETWORK_ID>
-provider:
-  cloudID: <CLOUD_ID>
-  folderID: <FOLDER_ID>
-  serviceAccountJSON: |
-    {
-    "id": "id",
-    "service_account_id": "service_account_id",
-    "key_algorithm": "RSA_2048",
-    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
-    }
-masterNodeGroup:
-  replicas: 3
-  zones:
-  - ru-central1-a
-  - ru-central1-b
-  - ru-central1-d
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    # Опционально: раскомментируйте, чтобы назначить master-узлам публичные IP-адреса.
-    # externalIPAddresses:
-    # - "<ZONE_A_EXTERNAL_IP_MASTER_1>"
-    # - "Auto"
-    # - "Auto"
-    # externalSubnetIDs:
-    # - <ZONE_A_SUBNET_ID>
-    # - <ZONE_B_SUBNET_ID>
-    # - <ZONE_D_SUBNET_ID>
-    additionalLabels:
-      takes: priority
-nodeGroups:
-- name: worker
-  replicas: 2
-  zones:
-  - ru-central1-a
-  - ru-central1-b
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    coreFraction: 50
-    # Опционально: раскомментируйте, чтобы назначить worker-узлам публичные IP-адреса.
-    # externalIPAddresses:
-    # - "Auto"
-    # - "Auto"
-    # externalSubnetIDs:
-    # - <ZONE_A_SUBNET_ID>
-    # - <ZONE_B_SUBNET_ID>
-    additionalLabels:
-      role: example
-labels:
-  billing: prod
-dhcpOptions:
-  domainName: test.local
-  domainNameServers:
-  - <DNS_SERVER_1>
-  - <DNS_SERVER_2>
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        cloudID: <CLOUD_ID>
+        folderID: <FOLDER_ID>
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: <SSH_PUBLIC_KEY>
+        nodeNetworkCIDR: 192.168.12.0/24
+        existingNetworkID: <EXISTING_NETWORK_ID>
+        zones:
+          - ru-central1-a
+          - ru-central1-b
+          - ru-central1-d
+        labels:
+          billing: prod
+        dhcpOptions:
+          domainName: test.local
+          domainNameServers:
+            - <DNS_SERVER_1>
+            - <DNS_SERVER_2>
 ```
 
 ## WithoutNAT
 
 В данной схеме размещения NAT (любого вида) не используется, а каждому узлу выдается публичный IP-адрес.
 
-> **Внимание.** В модуле `cloud-provider-yandex` нет поддержки групп безопасности (security group), поэтому все узлы кластера будут доступны без ограничения подключения.
+{% alert level="warning" %}
+Модуль `cloud-provider-yandex` не назначает узлам группы безопасности, поэтому в этой схеме размещения узлы доступны извне без ограничений. Ограничить трафик можно правилами группы по умолчанию, как описано в разделе [«Настройка групп безопасности»](environment.html#настройка-групп-безопасности).
+{% endalert %}
 
 ![Схема размещения WithoutNAT в Yandex Cloud](images/yandex-withoutnat.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10557&t=IvETjbByf1MSQzcm-0 --->
@@ -101,68 +67,54 @@ dhcpOptions:
 Пример конфигурации схемы размещения:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-layout: WithoutNAT
-provider:
-  cloudID: <CLOUD_ID>
-  folderID: <FOLDER_ID>
-  serviceAccountJSON: |
-    {
-    "id": "id",
-    "service_account_id": "service_account_id",
-    "key_algorithm": "RSA_2048",
-    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
-    }    
-masterNodeGroup:
-  replicas: 3
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    externalIPAddresses:
-    - "Auto"
-    - "Auto"
-    - "Auto"
-    externalSubnetIDs:
-    - <ZONE_A_SUBNET_ID>
-    - <ZONE_B_SUBNET_ID>
-    - <ZONE_D_SUBNET_ID>
-    zones:
-    - ru-central1-a
-    - ru-central1-b
-    - ru-central1-d
-nodeGroups:
-- name: worker
-  replicas: 2
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    coreFraction: 50
-    externalIPAddresses:
-    - "<ZONE_A_EXTERNAL_IP_WORKER_1>"
-    - "Auto"
-    externalSubnetIDs:
-    - <ZONE_A_SUBNET_ID>
-    - <ZONE_B_SUBNET_ID>
-    zones:
-    - ru-central1-a
-    - ru-central1-b
-sshPublicKey: "<SSH_PUBLIC_KEY>"
-nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: <EXISTING_NETWORK_ID>
-dhcpOptions:
-  domainName: test.local
-  domainNameServers:
-  - <DNS_SERVER_1>
-  - <DNS_SERVER_2>
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        cloudID: <CLOUD_ID>
+        folderID: <FOLDER_ID>
+    nodes:
+      parameters:
+        layout: WithoutNAT
+        sshPublicKey: <SSH_PUBLIC_KEY>
+        nodeNetworkCIDR: 192.168.12.0/24
+        existingNetworkID: <EXISTING_NETWORK_ID>
+        zones:
+          - ru-central1-a
+          - ru-central1-b
+          - ru-central1-d
+        externalIPAddresses:
+          master:
+            - Auto
+            - Auto
+            - Auto
+          worker:
+            - <ZONE_A_EXTERNAL_IP_WORKER_1>
+            - Auto
+        externalSubnetIDs:
+          master:
+            - <ZONE_A_SUBNET_ID>
+            - <ZONE_B_SUBNET_ID>
+            - <ZONE_D_SUBNET_ID>
+          worker:
+            - <ZONE_A_SUBNET_ID>
+            - <ZONE_B_SUBNET_ID>
+        dhcpOptions:
+          domainName: test.local
+          domainNameServers:
+            - <DNS_SERVER_1>
+            - <DNS_SERVER_2>
 ```
 
 ## WithNATInstance
 
-В данной схеме размещения в отдельной подсети создается NAT-инстанс, а в таблицу маршрутизации подсетей зон добавляется правило с маршрутом на 0.0.0.0/0 с NAT-инстансом в качестве nexthop'а.
+В данной схеме размещения в отдельной подсети создаётся NAT-инстанс, а в таблицу маршрутизации подсетей зон добавляется правило с маршрутом на `0.0.0.0/0` с NAT-инстансом в качестве nexthop.
 Подсеть выделяется для предотвращения петли маршрутизации и не должна пересекаться с другими сетями, используемыми в кластере.
 
 Для размещения NAT-инстанса в существующей подсети используйте параметр `withNATInstance.internalSubnetID` — инстанс будет создан в зоне, соответствующей этой подсети.
@@ -183,50 +135,35 @@ dhcpOptions:
 Пример конфигурации схемы размещения:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-layout: WithNATInstance
-withNATInstance:
-  natInstanceExternalAddress: <NAT_INSTANCE_EXTERNAL_ADDRESS>
-  internalSubnetID: <INTERNAL_SUBNET_ID>
-  externalSubnetID: <EXTERNAL_SUBNET_ID>
-provider:
-  cloudID: <CLOUD_ID>
-  folderID: <FOLDER_ID>
-  serviceAccountJSON: |
-    {
-    "id": "id",
-    "service_account_id": "service_account_id",
-    "key_algorithm": "RSA_2048",
-    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
-    }    
-masterNodeGroup:
-  replicas: 1
-  zones:
-  - ru-central1-a
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-nodeGroups:
-- name: worker
-  replicas: 1
-  zones:
-  - ru-central1-a
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    coreFraction: 50
-sshPublicKey: "<SSH_PUBLIC_KEY>"
-nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: <EXISTING_NETWORK_ID>
-dhcpOptions:
-  domainName: test.local
-  domainNameServers:
-  - <DNS_SERVER_1>
-  - <DNS_SERVER_2>
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        cloudID: <CLOUD_ID>
+        folderID: <FOLDER_ID>
+    nodes:
+      parameters:
+        layout: WithNATInstance
+        sshPublicKey: <SSH_PUBLIC_KEY>
+        nodeNetworkCIDR: 192.168.12.0/24
+        existingNetworkID: <EXISTING_NETWORK_ID>
+        zones:
+          - ru-central1-a
+        withNATInstance:
+          natInstanceExternalAddress: <NAT_INSTANCE_EXTERNAL_ADDRESS>
+          internalSubnetID: <INTERNAL_SUBNET_ID>
+          externalSubnetID: <EXTERNAL_SUBNET_ID>
+        dhcpOptions:
+          domainName: test.local
+          domainNameServers:
+            - <DNS_SERVER_1>
+            - <DNS_SERVER_2>
 ```
 
 {% alert level="info" %}
@@ -236,5 +173,5 @@ NAT-инстанс не используется инсталлятором `dhc
 
 Если master-узел не имеет публичного IP-адреса или недоступен напрямую, запускайте установку с параметрами `--ssh-bastion-host` и `--ssh-bastion-user`.
 
-Если необходимо подключаться к master-узлу напрямую по публичному IP-адресу, укажите для него параметры [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) и [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids). Учитывайте, что интерфейс из сети, указанной в `externalSubnetIDs`, будет использоваться как шлюз по умолчанию для узла.
+Если необходимо подключаться к master-узлу напрямую по публичному IP-адресу, укажите для него параметры [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses) и [`externalSubnetIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalsubnetids) в секции `nodes.parameters` ресурса ModuleConfig модуля `cloud-provider-yandex`. Учитывайте, что интерфейс из сети, указанной в `externalSubnetIDs`, будет использоваться как шлюз по умолчанию для узла.
 {% endalert %}

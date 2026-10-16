@@ -18,5 +18,12 @@ Features of the `cloud-provider-yandex` module:
 - Enabling CNI for new clusters automatically. Starting with DP 1.76, [`cni-cilium`](/modules/cni-cilium/) is used by default.
 
 {% alert level="warning" %}
-The module is migrating CloudEphemeral node management from Machine Controller Manager (MCM) to Cluster API (CAPI). Existing [NodeGroups](/modules/node-manager/cr.html#nodegroup) continue to use MCM, while new ones are created with CAPI by default. For migrating existing groups, see [How to migrate node groups to Cluster API (CAPI)](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-node-groups-to-cluster-api-capi).
+If the cluster was installed with the [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) schema, it must be migrated to the ModuleConfig-based configuration.
+Until the migration is complete, the [`D8CloudProviderYandexCloudMigrationPending`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#cloud-provider-yandex-d8cloudprovideryandexcloudmigrationpending) alert fires and a Deckhouse Platform update can be blocked.
+
+The migration procedure is described in ["How to migrate a cloud provider to ModuleConfig-based configuration"](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig-based-configurat).
+{% endalert %}
+
+{% alert level="warning" %}
+The module is migrating CloudEphemeral node management from Machine Controller Manager (MCM) to Cluster API (CAPI). Existing [NodeGroups](/modules/node-manager/cr.html#nodegroup) continue to use MCM, while new ones are created with CAPI by default. For migrating existing groups, see ["How to migrate node groups to Cluster API (CAPI)"](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-node-groups-to-cluster-api-capi).
 {% endalert %}

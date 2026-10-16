@@ -14,7 +14,7 @@ The annotation links the LoadBalancer with the appropriate Subnet.
 
 ## Using a separate target group for a NodeGroup
 
-By default, Yandex Cloud Controller Manager adds all suitable cluster nodes to the default target group. To assign nodes to a separate target group, use the `yandex.cpi.flant.com/target-group-name-prefix` annotation. The annotation is described in the [Service annotations](/modules/cloud-provider-yandex/examples.html#service-annotations) section.
+By default, Yandex Cloud Controller Manager adds all suitable cluster nodes to the default target group. To assign nodes to a separate target group, use the `yandex.cpi.flant.com/target-group-name-prefix` annotation. The annotation is described in the ["Service annotations"](/modules/cloud-provider-yandex/examples.html#service-annotations) section.
 
 1. In the NodeGroup whose nodes should be included in a separate target group, specify the `yandex.cpi.flant.com/target-group-name-prefix` annotation in the [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) parameter. For example:
 
@@ -131,8 +131,8 @@ If you changed `networkType` in an MCM-based cluster and want the new value to a
 
 ## Setting a custom StorageClass as default
 
-Specify the StorageClass name in the [defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) parameter in the `global` module settings.
-Note that after doing so, the `storageclass.kubernetes.io/is-default-class='true'` annotation will be removed from the StorageClass that was previously set as the default one.
+Specify the StorageClass name in the global [`defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) parameter.
+After that, DP removes the `storageclass.kubernetes.io/is-default-class='true'` annotation from the StorageClass that was set as the default one before.
 
 ```shell
 d8 k edit mc global
@@ -369,7 +369,7 @@ For VMs that you want to add to the cluster as nodes, add the `node-network-cidr
 You can find out the `nodeNetworkCIDR` of the cluster using the command below:
 
 ```shell
-d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
+d8 k get mc cloud-provider-yandex -o jsonpath='{.spec.settings.nodes.parameters.nodeNetworkCIDR}{"\n"}'
 ```
 
 ## Creating a cluster in a new VPC and setting up a bastion host to access the nodes

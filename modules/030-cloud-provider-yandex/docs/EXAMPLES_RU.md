@@ -12,23 +12,66 @@ kind: ModuleConfig
 metadata:
   name: cloud-provider-yandex
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
-    additionalExternalNetworkIDs:
-    - enp6t4snovl2ko4p15em
+    provider:
+      parameters:
+        cloudID: b1g0ldjdpa8rtm2ru3s4
+        folderID: b1gq1vn5jqk0tmh4u7bp
+    nodes:
+      parameters:
+        layout: Standard
+        nodeNetworkCIDR: 10.241.32.0/20
+        sshPublicKey: ssh-rsa AAAAB3Nza...
+        zones:
+          - ru-central1-a
+          - ru-central1-b
+        labels:
+          billing: prod
+        externalSubnetIDs:
+          worker:
+            - e2lu8r1tbbtryhdpa9ro
+        externalIPAddresses:
+          worker:
+            - Auto
+    storage:
+      parameters:
+        excludedStorageClasses:
+          - network-hdd
+        provisionedStorageClasses:
+          - name: network-ssd-64k
+            type: network-ssd
+            blockSize: 64Ki
+    ccm:
+      parameters:
+        additionalExternalNetworkIDs:
+          - enp6t4snovl2ko4p15em
+        additionalInternalNetworkIDs:
+          - enpmhcdmtvs6ptdq3mkt
 ```
 
-## Пример custom resource `YandexInstanceClass`
+Ключ сервисного аккаунта в этом ресурсе не хранится, он задаётся [отдельным секретом](environment.html#секрет-с-учётными-данными).
+
+## Пример кастомного ресурса YandexInstanceClass
+
+YandexInstanceClass описывает виртуальные машины, которые DP заказывает для группы узлов. Обязательны только два параметра, [`cores`](cr.html#yandexinstanceclass-v1-spec-cores) и [`memory`](cr.html#yandexinstanceclass-v1-spec-memory). Остальные параметры можно не задавать.
+
+В примере ниже дополнительно заданы образ ОС, тип и размер диска, доля вычислительной мощности ядра и режим работы сетевого интерфейса:
 
 ```yaml
 apiVersion: deckhouse.io/v1
 kind: YandexInstanceClass
 metadata:
-  name: test
+  name: worker
 spec:
   cores: 4
   memory: 8192
+  coreFraction: 50
+  imageID: fd8bhu2b2bsbnqkhhd2k
+  diskType: network-ssd
+  diskSizeGB: 50
+  networkType: SoftwareAccelerated
 ```
 
 ## LoadBalancer
@@ -42,8 +85,8 @@ spec:
 В Yandex Cloud Controller Manager поддерживаются следующие аннотации:
 
 1. `yandex.cpi.flant.com/target-group-network-id` — указывает NetworkID, в котором будет создана целевая группа для данного Service. Переопределяет соответствующее значение по умолчанию.
-1. `yandex.cpi.flant.com/listener-subnet-id` — задаёт SubnetID для Listener’ов создаваемого LB для данного Service. Переопределяет соответствующее значение по умолчанию.
-1. `yandex.cpi.flant.com/listener-address-ipv4` — задаёт предопределённый IPv4-адрес для Listener’ов (поддерживаются и внутренние, и внешние LB).
+1. `yandex.cpi.flant.com/listener-subnet-id` — задаёт SubnetID для слушателей (listeners) создаваемого балансировщика для данного Service. Переопределяет соответствующее значение по умолчанию.
+1. `yandex.cpi.flant.com/listener-address-ipv4` — задаёт предопределённый IPv4-адрес для слушателей (поддерживаются и внутренние, и внешние LB).
 1. `yandex.cpi.flant.com/loadbalancer-external` — включает создание внешнего (external) LB для данного Service (используйте, если нужно явно создать внешний балансировщик). Переопределяет поведение по умолчанию.
 1. `yandex.cpi.flant.com/target-group-name-prefix` — задаёт префикс имени целевой группы, которую использует LoadBalancer. Аннотация на Service определяет целевую группу, но не выбирает узлы. Чтобы включить узлы в целевую группу, задайте аннотацию с тем же значением в параметре [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) ресурса NodeGroup. Yandex Cloud Controller Manager включает в целевую группу все подходящие узлы с таким значением аннотации независимо от их NodeGroup. Имя целевой группы формируется как `<ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>`. Подробнее — в разделе [«Использование отдельной целевой группы для NodeGroup»](faq.html#использование-отдельной-целевой-группы-для-nodegroup).
 
@@ -53,7 +96,7 @@ spec:
 
 ### Проверки состояния целевой группы
 
-Параметры healthcheck’ов (для создаваемых целевых групп балансировщика):
+Параметры проверок состояния для создаваемых целевых групп балансировщика:
 
 1. `yandex.cpi.flant.com/healthcheck-interval-seconds` — как часто запускать проверку, в секундах (по умолчанию 2).
 1. `yandex.cpi.flant.com/healthcheck-timeout-seconds` — сколько ждать ответа от эндпоинта, в секундах. Если за это время ответ не получен, проверка считается неуспешной (по умолчанию 1).

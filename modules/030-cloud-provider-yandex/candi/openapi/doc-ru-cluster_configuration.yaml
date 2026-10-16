@@ -2,6 +2,8 @@ apiVersions:
 - apiVersion: deckhouse.io/v1
   openAPISpec:
     description: |
+      > **Внимание.** Ресурс устарел. Конфигурация облачного провайдера задаётся ресурсом ModuleConfig модуля `cloud-provider-yandex`. Переведите кластер на ModuleConfig, как описано в разделе [«Как мигрировать облачный провайдер на конфигурацию через ModuleConfig»](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec).
+
       Описывает конфигурацию облачного кластера в Yandex Cloud.
 
       Используется облачным провайдером, если управляющий слой (control plane) кластера размещен в облаке.

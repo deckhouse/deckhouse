@@ -33,25 +33,26 @@ DP автоматически создает ресурсы StorageClass для 
 
 ### Исключение ненужных StorageClass
 
-Если в кластере не планируется использовать определённые типы дисков, можно отключить автоматическое создание соответствующих StorageClass. Это делается с помощью [параметра `settings.storageClass.exclude`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-exclude) в ресурсе ModuleConfig:
+Если в кластере не планируется использовать определённые типы дисков, можно отключить автоматическое создание соответствующих StorageClass. Это делается с помощью [параметра `settings.storage.parameters.excludedStorageClasses`](/modules/cloud-provider-yandex/configuration.html#parameters-storage-parameters-excludedstorageclasses) в ресурсе ModuleConfig:
 
 ```yaml
 settings:
-  storageClass:
-    exclude:
-    - network-ssd-.*
-    - network-hdd
+  storage:
+    parameters:
+      excludedStorageClasses:
+        - network-ssd-.*
+        - network-hdd
 ```
 
 В приведённом примере DP не создаст StorageClass для всех `network-ssd` дисков и для `network-hdd`.
 
 ### Создание дополнительных StorageClass и размер блока
 
-Параметр [`settings.storageClass.provision`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision) позволяет создавать дополнительные StorageClass или переопределять параметры StorageClass, создаваемых DP по умолчанию.
+Параметр [`settings.storage.parameters.provisionedStorageClasses`](/modules/cloud-provider-yandex/configuration.html#parameters-storage-parameters-provisionedstorageclasses) позволяет создавать дополнительные StorageClass или переопределять параметры StorageClass, создаваемых DP по умолчанию.
 
-С помощью параметра [`blockSize`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision-blocksize) можно задать [размер блока](https://cloud.yandex.ru/docs/compute/operations/disk-create/empty-disk-blocksize) для создаваемых дисков. От размера блока зависит максимальный размер диска: для значения `4Ki` максимальный размер составляет `8Ti`, а при каждом последующем увеличении размера блока удваивается — вплоть до `256Ti` при `128Ki`.
+С помощью параметра [`blockSize`](/modules/cloud-provider-yandex/configuration.html#parameters-storage-parameters-provisionedstorageclasses-blocksize) можно задать [размер блока](https://cloud.yandex.ru/docs/compute/operations/disk-create/empty-disk-blocksize) для создаваемых дисков. От размера блока зависит максимальный размер диска. Для значения `4Ki` он составляет `8Ti` и удваивается с каждым следующим размером блока, вплоть до `256Ti` при `128Ki`.
 
-Пример StorageClass с размером блока `64Ki`:
+Пример конфигурации модуля `cloud-provider-yandex` с дополнительным StorageClass, для которого задан размер блока `64Ki`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -59,13 +60,24 @@ kind: ModuleConfig
 metadata:
   name: cloud-provider-yandex
 spec:
-  version: 1
+  version: 2
+  enabled: true
   settings:
-    storageClass:
-      provision:
-      - name: network-ssd-64k
-        type: network-ssd
-        blockSize: 64Ki
+    provider:
+      parameters:
+        cloudID: <CLOUD_ID>
+        folderID: <FOLDER_ID>
+    nodes:
+      parameters:
+        layout: Standard
+        nodeNetworkCIDR: 192.168.12.0/24
+        sshPublicKey: <SSH_PUBLIC_KEY>
+    storage:
+      parameters:
+        provisionedStorageClasses:
+          - name: network-ssd-64k
+            type: network-ssd
+            blockSize: 64Ki
 ```
 
 {% alert level="warning" %}
@@ -82,7 +94,7 @@ spec:
 d8 k edit mc global
 ```
 
-Если параметр `defaultClusterStorageClass` не указан, платформа будет определять StorageClass, используемый по умолчанию, в следующем порядке:
+Если параметр `defaultClusterStorageClass` не указан, DP определяет StorageClass, используемый по умолчанию, в следующем порядке:
 
 - StorageClass с аннотацией `storageclass.kubernetes.io/is-default-class='true'` (если такой имеется в кластере).
 - Первый StorageClass по алфавиту среди тех, что автоматически создаются облачным провайдером.
@@ -109,14 +121,14 @@ d8 k edit mc global
 1. Получите имя StorageClass, используемого PVC:
 
    ```shell
-   d8 k -n <НЕЙМСПЕЙС> get pvc <ИМЯ_PVC> \
+   d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
      -o jsonpath='{.spec.storageClassName}{"\n"}'
    ```
 
    Где:
 
-   - `<НЕЙМСПЕЙС>` — неймспейс, в котором находится PVC;
-   - `<ИМЯ_PVC>` — имя PVC, размер которого необходимо увеличить.
+   - `<NAMESPACE>` — неймспейс, в котором находится PVC;
+   - `<PVC_NAME>` — имя PVC, размер которого необходимо увеличить.
 
    Например:
 
@@ -136,11 +148,11 @@ d8 k edit mc global
 1. Убедитесь, что StorageClass разрешает увеличение томов:
 
    ```shell
-   d8 k get storageclass <ИМЯ_STORAGECLASS> \
+   d8 k get storageclass <STORAGECLASS_NAME> \
      -o jsonpath='{.allowVolumeExpansion}{"\n"}'
    ```
 
-   Где `<ИМЯ_STORAGECLASS>` — имя StorageClass, полученное на предыдущем шаге.
+   Где `<STORAGECLASS_NAME>` — имя StorageClass, полученное на предыдущем шаге.
 
    Например:
 
@@ -158,7 +170,7 @@ d8 k edit mc global
 1. Проверьте текущее состояние и размер PVC:
 
    ```shell
-   d8 k -n <НЕЙМСПЕЙС> get pvc <ИМЯ_PVC>
+   d8 k -n <NAMESPACE> get pvc <PVC_NAME>
    ```
 
    Например:
@@ -186,7 +198,7 @@ d8 k edit mc global
 1. Увеличьте размер PVC:
 
    ```shell
-   d8 k -n <НЕЙМСПЕЙС> edit pvc <ИМЯ_PVC>
+   d8 k -n <NAMESPACE> edit pvc <PVC_NAME>
    ```
 
    Например:
@@ -215,13 +227,13 @@ d8 k edit mc global
 1. Дождитесь увеличения PVC:
 
    ```shell
-   d8 k -n <НЕЙМСПЕЙС> get pvc <ИМЯ_PVC> --watch
+   d8 k -n <NAMESPACE> get pvc <PVC_NAME> --watch
    ```
 
    Где:
 
-   - `<НЕЙМСПЕЙС>` — неймспейс, в котором находится PVC;
-   - `<ИМЯ_PVC>` — имя PVC, размер которого увеличивается.
+   - `<NAMESPACE>` — неймспейс, в котором находится PVC;
+   - `<PVC_NAME>` — имя PVC, размер которого увеличивается.
 
    Например:
 
@@ -252,7 +264,7 @@ d8 k edit mc global
 1. Проверьте события PVC:
 
    ```shell
-   d8 k -n <НЕЙМСПЕЙС> describe pvc <ИМЯ_PVC>
+   d8 k -n <NAMESPACE> describe pvc <PVC_NAME>
    ```
 
    Например:
@@ -284,15 +296,15 @@ d8 k edit mc global
 1. Проверьте размер файловой системы внутри пода:
 
    ```shell
-   d8 k -n <НЕЙМСПЕЙС> exec <ИМЯ_ПОДА> -- \
-     df -hT <ТОЧКА_МОНТИРОВАНИЯ>
+   d8 k -n <NAMESPACE> exec <POD_NAME> -- \
+     df -hT <MOUNT_PATH>
    ```
 
    Где:
 
-   - `<НЕЙМСПЕЙС>` — неймспейс, в котором находится под;
-   - `<ИМЯ_ПОДА>` — имя пода, использующего PVC;
-   - `<ТОЧКА_МОНТИРОВАНИЯ>` — путь внутри контейнера, в который смонтирован PVC.
+   - `<NAMESPACE>` — неймспейс, в котором находится под;
+   - `<POD_NAME>` — имя пода, использующего PVC;
+   - `<MOUNT_PATH>` — путь внутри контейнера, в который смонтирован PVC.
 
    Например:
 
@@ -334,10 +346,10 @@ DP автоматически подписывается на Kubernetes-объ�
 ```yaml
 metadata:
   annotations:
-    yandex.cpi.flant.com/listener-subnet-id: <SubnetID>
+    yandex.cpi.flant.com/listener-subnet-id: <SUBNET_ID>
 ```
 
-Значение `SubnetID` — это ID подсети, в которой будет создан внутренний слушатель Yandex LoadBalancer. Использование этой аннотации даёт возможность контролировать сетевую доступность балансировщика, ограничивая его только внутренними адресами.
+Значение `SubnetID` — это ID подсети, в которой будет создан внутренний слушатель (listener) Yandex LoadBalancer. Использование этой аннотации даёт возможность контролировать сетевую доступность балансировщика, ограничивая его только внутренними адресами.
 
 > Поведение по умолчанию (внешний или внутренний LB) зависит от конфигурации кластера. Для явного выбора типа используйте аннотацию `yandex.cpi.flant.com/loadbalancer-external`.
 
@@ -348,8 +360,8 @@ metadata:
 В Yandex Cloud Controller Manager поддерживаются следующие аннотации:
 
 1. `yandex.cpi.flant.com/target-group-network-id` — указывает NetworkID, в котором будет создана целевая группа для данного Service. Переопределяет соответствующее значение по умолчанию.
-1. `yandex.cpi.flant.com/listener-subnet-id` — задаёт SubnetID для Listener’ов создаваемого LB для данного Service. Переопределяет соответствующее значение по умолчанию.
-1. `yandex.cpi.flant.com/listener-address-ipv4` — задаёт предопределённый IPv4-адрес для Listener’ов (поддерживаются и внутренние, и внешние LB).
+1. `yandex.cpi.flant.com/listener-subnet-id` — задаёт SubnetID для слушателей создаваемого балансировщика для данного Service. Переопределяет соответствующее значение по умолчанию.
+1. `yandex.cpi.flant.com/listener-address-ipv4` — задаёт предопределённый IPv4-адрес для слушателей (поддерживаются и внутренние, и внешние LB).
 1. `yandex.cpi.flant.com/loadbalancer-external` — включает создание внешнего (external) LB для данного Service (используйте, если нужно явно создать внешний балансировщик). Переопределяет поведение по умолчанию.
 1. `yandex.cpi.flant.com/target-group-name-prefix` — задаёт префикс имени целевой группы, которую использует LoadBalancer. Аннотация на Service определяет целевую группу, но не выбирает узлы. Чтобы включить узлы в целевую группу, задайте аннотацию с тем же значением в параметре [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) ресурса NodeGroup. Yandex Cloud Controller Manager включает в целевую группу все подходящие узлы с таким значением аннотации независимо от их NodeGroup. Имя целевой группы формируется как `<ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>`.
 
@@ -432,7 +444,7 @@ Yandex Cloud не позволяет одному целевому ресурс�
 
 #### Проверки состояния целевой группы
 
-Параметры healthcheck’ов (для создаваемых целевых групп балансировщика):
+Параметры проверок состояния для создаваемых целевых групп балансировщика:
 
 1. `yandex.cpi.flant.com/healthcheck-interval-seconds` — как часто запускать проверку, в секундах (по умолчанию 2).
 1. `yandex.cpi.flant.com/healthcheck-timeout-seconds` — сколько ждать ответа от эндпоинта, в секундах. Если за это время ответ не получен, проверка считается неуспешной (по умолчанию 1).
@@ -449,7 +461,7 @@ DP не пересоздаёт уже существующие объекты Ma
 
 Это поведение помогает избежать лишних операций и простоя существующих узлов, однако требует ручного вмешательства при необходимости пересоздать машины.
 
-Если вы изменили [объект YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) (например, изменили параметры провайдера, схемы размещения, подсетей и т.д.), чтобы изменения вступили в силу, выполните команду:
+Если вы изменили [настройки провайдера](/modules/cloud-provider-yandex/configuration.html) в [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) `cloud-provider-yandex` (например, параметры провайдера, схемы размещения или подсетей), чтобы изменения вступили в силу, выполните команду:
 
 ```shell
 dhctl converge
@@ -476,14 +488,13 @@ DP позволяет подключать существующие виртуа
 1. Узнать актуальное значение `nodeNetworkCIDR` из кластера:
 
    ```shell
-   d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | \
-     jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
+   d8 k get mc cloud-provider-yandex -o jsonpath='{.spec.settings.nodes.parameters.nodeNetworkCIDR}{"\n"}'
    ```
 
    Результатом будет строка вида:
 
    ```console
-   nodeNetworkCIDR: 192.168.12.13/24
+   192.168.12.0/24
    ```
 
    Это значение необходимо скопировать и указать как `value` в метаданных виртуальной машины.
@@ -492,7 +503,7 @@ DP позволяет подключать существующие виртуа
 
    ```yaml
    key: node-network-cidr
-   value: <nodeNetworkCIDR из кластера>
+   value: <NODE_NETWORK_CIDR>
    ```
 
-   Параметр `node-network-cidr` должен совпадать с тем значением, которое указано в объекте YandexClusterConfiguration, [поле `nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr).
+   Параметр `node-network-cidr` должен совпадать со значением параметра [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) в ModuleConfig.

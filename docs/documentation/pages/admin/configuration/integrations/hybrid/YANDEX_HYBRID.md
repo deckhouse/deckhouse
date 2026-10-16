@@ -18,9 +18,9 @@ This section describes two ways to add nodes:
 
 Before you begin, make sure that the following conditions are met:
 
-- The cluster was created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter.
-- [Network connectivity](./overview.html#general-network-requirements) is configured between the network of static nodes and the Yandex Cloud VPC. Yandex Cloud nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the [Network interaction](../../../../reference/network_interaction.html) and [Network policy configuration](../../configuration/network/policy/configuration.html) sections. When using Cilium with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
-- The requirements from the [Connection and authorization in Yandex Cloud](../public/yandex/authorization.html) section are met:
+- The cluster was created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter, and its nodes meet the [minimum system requirements](/products/kubernetes-platform/guides/hardware-requirements.html).
+- ["Network connectivity"](./overview.html#general-network-requirements) is configured between the network of static nodes and the Yandex Cloud VPC. Yandex Cloud nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the ["Network interaction"](../../../../reference/network_interaction.html) and ["Network policy configuration"](../../configuration/network/policy/configuration.html) sections. When using Cilium with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
+- The requirements from the ["Connection and authorization in Yandex Cloud"](../public/yandex/authorization.html) section are met:
   - A service account is prepared.
   - A folder where resources will be created is selected.
   - The required roles and access to the VPC being used are configured.
@@ -62,15 +62,17 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    export NETWORK_ID="<NETWORK_ID>"
    export SUBNET_ID="<SUBNET_ID>"
    export ZONE="<ZONE>"
+   export ROUTE_TABLE_ID="<ROUTE_TABLE_ID>"
    ```
 
    Where:
 
    - `NETWORK_ID` — VPC network ID;
    - `SUBNET_ID` — ID of the subnet where nodes will be created;
-   - `ZONE` — availability zone that corresponds to the selected subnet, for example `ru-central1-a`.
+   - `ZONE` — availability zone that corresponds to the selected subnet, for example `ru-central1-a`;
+   - `ROUTE_TABLE_ID` — ID of the route table attached to the subnet. It is shown in the `ROUTE TABLE ID` column of the `yc vpc subnet list` output.
 
-   For details, see [Connecting and authorizing in Yandex Cloud](../public/yandex/authorization.html).
+   For details, see ["Connecting and authorizing in Yandex Cloud"](../public/yandex/authorization.html).
 
 1. Create a service account in the required Yandex Cloud folder and assign permissions to it:
 
@@ -93,7 +95,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
      --subject "serviceAccount:${SA_ID}"
    ```
 
-   The `editor` role is required to create and manage cloud resources, and `vpc.admin` is required to work with VPC network resources.
+   The `editor` role is required to create and manage cloud resources, and the `vpc.admin` role grants access to VPC network resources.
 
 1. Create a service account key and save it to a JSON file:
 
@@ -145,118 +147,78 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    yc vpc subnet list --folder-id "$FOLDER_ID"
    ```
 
-1. Create a provider configuration file. For example, `cloud-provider-cluster-configuration.yaml`:
+1. Create the [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) manifest for the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module. For example, `yandex-module-config.yaml`:
 
    ```shell
-   cat > cloud-provider-cluster-configuration.yaml <<EOF
-   apiVersion: deckhouse.io/v1
-   kind: YandexClusterConfiguration
-   layout: WithoutNAT
-   masterNodeGroup:
-     replicas: 1
-     instanceClass:
-       cores: 4
-       memory: 8192
-       imageID: ${IMAGE_ID}
-       diskSizeGB: 100
-       platform: standard-v3
-       externalIPAddresses:
-         - "Auto"
-   nodeNetworkCIDR: ${NODE_NETWORK_CIDR}
-   existingNetworkID: empty
-   provider:
-     cloudID: ${CLOUD_ID}
-     folderID: ${FOLDER_ID}
-     serviceAccountJSON: '${SERVICE_ACCOUNT_JSON}'
-   sshPublicKey: '${SSH_PUBLIC_KEY}'
-   EOF
-   ```
-
-   The manifest automatically uses the values of the environment variables set in the previous steps: `CLOUD_ID`, `FOLDER_ID`, `IMAGE_ID`, `NODE_NETWORK_CIDR`, `SERVICE_ACCOUNT_JSON`, and `SSH_PUBLIC_KEY`.
-
-   {% alert level="info" %}
-   In a hybrid scenario where the control plane is already deployed as a static cluster, the `masterNodeGroup` section does not create master nodes in Yandex Cloud, but remains part of the provider configuration.
-   {% endalert %}
-
-1. Create a file with Yandex Cloud discovery data. For example, `cloud-provider-discovery-data.json`:
-
-   ```shell
-   cat > cloud-provider-discovery-data.json <<EOF
-   {
-     "apiVersion": "deckhouse.io/v1",
-     "defaultLbTargetGroupNetworkId": "empty",
-     "internalNetworkIDs": [
-       "${NETWORK_ID}"
-     ],
-     "kind": "YandexCloudDiscoveryData",
-     "monitoringAPIKey": "",
-     "region": "ru-central1",
-     "routeTableID": "empty",
-     "shouldAssignPublicIPAddress": false,
-     "zoneToSubnetIdMap": {
-       "${ZONE}": "${SUBNET_ID}"
-     },
-     "zones": [
-       "${ZONE}"
-     ]
-   }
-   EOF
-   ```
-
-   The file automatically uses the values of the environment variables set in the previous steps: `NETWORK_ID`, `SUBNET_ID`, and `ZONE`.
-
-   The `shouldAssignPublicIPAddress` parameter controls whether public IP addresses are assigned to the nodes being created. In this example, it is set to `false`, so the created nodes will receive only internal IP addresses.
-
-   {% alert level="warning" %}
-   If `shouldAssignPublicIPAddress` is set to `false`, the created nodes must have access to the image registry and external services through a NAT Gateway, NAT instance, proxy, or another egress mechanism. For zones where no subnets are available, the `empty` value is allowed.
-   {% endalert %}
-
-1. Encode the `cloud-provider-cluster-configuration.yaml` and `cloud-provider-discovery-data.json` files in Base64:
-
-   ```shell
-   export CLUSTER_CONFIGURATION_B64="$(base64 -w0 cloud-provider-cluster-configuration.yaml)"
-   export DISCOVERY_DATA_B64="$(base64 -w0 cloud-provider-discovery-data.json)"
-   ```
-
-1. Create a manifest with the `d8-provider-cluster-configuration` secret and ModuleConfig to enable and configure the `cloud-provider-yandex` module:
-
-   ```shell
-   cat > yandex-provider-secret-and-mc.yaml <<EOF
-   apiVersion: v1
-   kind: Secret
-   metadata:
-     labels:
-       name: d8-provider-cluster-configuration
-     name: d8-provider-cluster-configuration
-     namespace: kube-system
-   type: Opaque
-   data:
-     cloud-provider-cluster-configuration.yaml: ${CLUSTER_CONFIGURATION_B64}
-     cloud-provider-discovery-data.json: ${DISCOVERY_DATA_B64}
-   ---
+   cat > yandex-module-config.yaml <<EOF
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
      name: cloud-provider-yandex
    spec:
-     version: 1
+     version: 2
      enabled: true
      settings:
-       storageClass:
-         default: network-ssd
+       provider:
+         parameters:
+           cloudID: ${CLOUD_ID}
+           folderID: ${FOLDER_ID}
+       nodes:
+         parameters:
+           layout: WithoutNAT
+           nodeNetworkCIDR: ${NODE_NETWORK_CIDR}
+           sshPublicKey: '${SSH_PUBLIC_KEY}'
+           existingNetworkID: ${NETWORK_ID}
+           existingRouteTableID: ${ROUTE_TABLE_ID}
+           existingZoneToSubnetIDMap:
+             ${ZONE}: ${SUBNET_ID}
+           zones:
+             - ${ZONE}
    EOF
    ```
 
-1. Copy the `yandex-provider-secret-and-mc.yaml` file to the cluster master node. Apply the manifest:
+   The manifest automatically uses the values of the environment variables set in the previous steps: `CLOUD_ID`, `FOLDER_ID`, `NODE_NETWORK_CIDR`, `SSH_PUBLIC_KEY`, `NETWORK_ID`, `ZONE`, and `SUBNET_ID`.
+
+   The [`existingNetworkID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingnetworkid), [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap), and [`existingRouteTableID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingroutetableid) parameters describe the Yandex Cloud resources that already exist, because in a hybrid cluster DP does not create the network, the subnets, or the route table. The route table is required because the cloud controller manager creates the pod subnet routes in it and does not start with an empty value.
+
+   The layout is set by the [`layout`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-layout) parameter. The available layouts are described in ["Configuration and layouts"](../public/yandex/layout.html#layouts).
+
+1. Copy the `yandex-module-config.yaml` file to the cluster master node. Apply the manifest:
 
    ```shell
-   d8 k apply -f yandex-provider-secret-and-mc.yaml
+   d8 k apply -f yandex-module-config.yaml
    ```
+
+   While DP is enabling the module, the validating webhooks of DP and the provider may be unavailable, and the command fails with `failed calling webhook`. This state is temporary, repeat the command in half a minute. The same applies to the next step with the Secret.
+
+1. Wait until the module creates the `d8-cloud-provider-yandex` namespace:
+
+   ```shell
+   d8 k get namespace d8-cloud-provider-yandex
+   ```
+
+1. Create the Secret with the service account key:
+
+   ```shell
+   d8 k create -f - <<EOF
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: d8-credentials
+     namespace: d8-cloud-provider-yandex
+   type: cloud-provider.deckhouse.io/credentials
+   stringData:
+     authScheme: serviceAccount
+     secret: '${SERVICE_ACCOUNT_JSON}'
+   EOF
+   ```
+
+   The Secret format is described in ["Credentials Secret"](../public/yandex/authorization.html#credentials-secret).
 
 1. Wait until the `cloud-provider-yandex` module is enabled and the YandexInstanceClass resource appears:
 
    ```shell
-   d8 k get module cloud-provider-dvp -o wide
+   d8 k get module cloud-provider-yandex -o wide
    d8 k get crd yandexinstanceclasses.deckhouse.io
    ```
 
@@ -296,7 +258,9 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    - `mainSubnet` — ID of the subnet from which the created nodes must have access to the static cluster nodes;
    - NodeGroup describes the node group that DP must maintain in the cluster;
    - `nodeType: CloudEphemeral` means that nodes will be created automatically through the cloud provider;
-   - `cloudInstances.zones` must contain zones from the `zones` list in `cloud-provider-discovery-data.json`.
+   - `cloudInstances.zones` must contain zones from the `zones` list in the module settings.
+
+   In the `WithoutNAT` layout, the created nodes get a public IP address. To keep the nodes of the group on internal addresses only, set the [`assignPublicIPAddress: false`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-assignpublicipaddress) parameter in the YandexInstanceClass and provide the nodes with another way out to the internet, for example through a subnet NAT gateway.
 
 1. Apply the manifest:
 

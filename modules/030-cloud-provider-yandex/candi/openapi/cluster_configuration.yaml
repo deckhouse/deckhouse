@@ -4,6 +4,8 @@ apiVersions:
   openAPISpec:
     type: object
     description: |
+      > **Warning.** The resource is deprecated. The cloud provider configuration is set in the ModuleConfig resource of the `cloud-provider-yandex` module. Migrate the cluster to ModuleConfig as described in ["How to migrate a cloud provider to ModuleConfig-based configuration"](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig-based-configurat).
+
       Describes the configuration of a cloud cluster in Yandex Cloud.
 
       Used by the cloud provider if a cluster's control plane is hosted in the cloud.

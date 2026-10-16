@@ -6,7 +6,7 @@ lang: ru
 
 ## Схемы размещения
 
-Данный раздел описывает возможные схемы размещения узлов кластера в инфраструктуре Yandex Cloud и связанные с ними настройки. От выбора схемы (layout) зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам.
+Данный раздел описывает возможные схемы размещения узлов кластера в инфраструктуре Yandex Cloud и связанные с ними настройки. От выбора схемы зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам. Схема размещения задаётся параметром [`layout`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-layout) в ресурсе ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/).
 
 ### Standard
 
@@ -25,71 +25,35 @@ lang: ru
 Пример конфигурации схемы размещения:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-layout: Standard
-sshPublicKey: "<SSH_PUBLIC_KEY>"
-nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: <EXISTING_NETWORK_ID>
-provider:
-  cloudID: <CLOUD_ID>
-  folderID: <FOLDER_ID>
-  serviceAccountJSON: |
-    {
-    "id": "id",
-    "service_account_id": "service_account_id",
-    "key_algorithm": "RSA_2048",
-    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
-    }
-masterNodeGroup:
-  replicas: 3
-  zones:
-  - ru-central1-a
-  - ru-central1-b
-  - ru-central1-d
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    # Опционально: раскомментируйте, чтобы назначить master-узлам публичные IP-адреса.
-    # externalIPAddresses:
-    # - "<ZONE_A_EXTERNAL_IP_MASTER_1>"
-    # - "Auto"
-    # - "Auto"
-    # externalSubnetIDs:
-    # - <ZONE_A_SUBNET_ID>
-    # - <ZONE_B_SUBNET_ID>
-    # - <ZONE_D_SUBNET_ID>
-    additionalLabels:
-      takes: priority
-nodeGroups:
-- name: worker
-  replicas: 2
-  zones:
-  - ru-central1-a
-  - ru-central1-b
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    coreFraction: 50
-    # Опционально: раскомментируйте, чтобы назначить worker-узлам публичные IP-адреса.
-    # externalIPAddresses:
-    # - "Auto"
-    # - "Auto"
-    # externalSubnetIDs:
-    # - <ZONE_A_SUBNET_ID>
-    # - <ZONE_B_SUBNET_ID>
-    additionalLabels:
-      role: example
-labels:
-  billing: prod
-dhcpOptions:
-  domainName: test.local
-  domainNameServers:
-  - <DNS_SERVER_1>
-  - <DNS_SERVER_2>
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        cloudID: <CLOUD_ID>
+        folderID: <FOLDER_ID>
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: <SSH_PUBLIC_KEY>
+        nodeNetworkCIDR: 192.168.12.0/24
+        existingNetworkID: <EXISTING_NETWORK_ID>
+        zones:
+          - ru-central1-a
+          - ru-central1-b
+          - ru-central1-d
+        labels:
+          billing: prod
+        dhcpOptions:
+          domainName: test.local
+          domainNameServers:
+            - <DNS_SERVER_1>
+            - <DNS_SERVER_2>
 ```
 
 ### WithoutNAT
@@ -97,7 +61,7 @@ dhcpOptions:
 В данной схеме размещения NAT (любого вида) не используется, а каждому узлу выдается публичный IP-адрес.
 
 {% alert level="warning" %}
-В DP нет поддержки групп безопасности (security group), поэтому все узлы кластера будут доступны без ограничения подключения.
+Deckhouse Platform (DP) не назначает узлам группы безопасности, поэтому в этой схеме размещения узлы доступны извне без ограничений. Ограничить трафик можно правилами группы по умолчанию, как описано в разделе [«Настройка групп безопасности в Yandex Cloud»](#настройка-групп-безопасности-в-yandex-cloud).
 {% endalert %}
 
 ![Схема размещения WithoutNAT в Yandex Cloud](../../../../images/cloud-provider-yandex/yandex-withoutnat.png)
@@ -106,77 +70,63 @@ dhcpOptions:
 Пример конфигурации схемы размещения:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-layout: WithoutNAT
-provider:
-  cloudID: <CLOUD_ID>
-  folderID: <FOLDER_ID>
-  serviceAccountJSON: |
-    {
-    "id": "id",
-    "service_account_id": "service_account_id",
-    "key_algorithm": "RSA_2048",
-    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
-    }    
-masterNodeGroup:
-  replicas: 3
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    externalIPAddresses:
-    - "Auto"
-    - "Auto"
-    - "Auto"
-    externalSubnetIDs:
-    - <ZONE_A_SUBNET_ID>
-    - <ZONE_B_SUBNET_ID>
-    - <ZONE_D_SUBNET_ID>
-    zones:
-    - ru-central1-a
-    - ru-central1-b
-    - ru-central1-d
-nodeGroups:
-- name: worker
-  replicas: 2
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    coreFraction: 50
-    externalIPAddresses:
-    - "<ZONE_A_EXTERNAL_IP_WORKER_1>"
-    - "Auto"
-    externalSubnetIDs:
-    - <ZONE_A_SUBNET_ID>
-    - <ZONE_B_SUBNET_ID>
-    zones:
-    - ru-central1-a
-    - ru-central1-b
-sshPublicKey: "<SSH_PUBLIC_KEY>"
-nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: <EXISTING_NETWORK_ID>
-dhcpOptions:
-  domainName: test.local
-  domainNameServers:
-  - <DNS_SERVER_1>
-  - <DNS_SERVER_2>
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        cloudID: <CLOUD_ID>
+        folderID: <FOLDER_ID>
+    nodes:
+      parameters:
+        layout: WithoutNAT
+        sshPublicKey: <SSH_PUBLIC_KEY>
+        nodeNetworkCIDR: 192.168.12.0/24
+        existingNetworkID: <EXISTING_NETWORK_ID>
+        zones:
+          - ru-central1-a
+          - ru-central1-b
+          - ru-central1-d
+        externalIPAddresses:
+          master:
+            - Auto
+            - Auto
+            - Auto
+          worker:
+            - <ZONE_A_EXTERNAL_IP_WORKER_1>
+            - Auto
+        externalSubnetIDs:
+          master:
+            - <ZONE_A_SUBNET_ID>
+            - <ZONE_B_SUBNET_ID>
+            - <ZONE_D_SUBNET_ID>
+          worker:
+            - <ZONE_A_SUBNET_ID>
+            - <ZONE_B_SUBNET_ID>
+        dhcpOptions:
+          domainName: test.local
+          domainNameServers:
+            - <DNS_SERVER_1>
+            - <DNS_SERVER_2>
 ```
 
 ### WithNATInstance
 
-В данной схеме размещения в отдельной подсети создается NAT-инстанс, а в таблицу маршрутизации подсетей зон добавляется правило с маршрутом на `0.0.0.0/0` с NAT-инстансом в качестве nexthop'а.
+В данной схеме размещения в отдельной подсети создается NAT-инстанс, а в таблицу маршрутизации подсетей зон добавляется правило с маршрутом на `0.0.0.0/0` с NAT-инстансом в качестве nexthop.
 Подсеть выделяется для предотвращения петли маршрутизации и не должна пересекаться с другими сетями, используемыми в кластере.
 
-Для размещения NAT-инстанса в существующей подсети используйте [параметр `withNATInstance.internalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetid) — инстанс будет создан в зоне, соответствующей этой подсети.
+Для размещения NAT-инстанса в существующей подсети используйте [параметр `withNATInstance.internalSubnetID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-withnatinstance-internalsubnetid). Инстанс создаётся в зоне, которой принадлежит эта подсеть.
 
-Если необходимо создать новую подсеть, укажите [параметр `withNATInstance.internalSubnetCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-internalsubnetcidr) — в ней будет размещён NAT-инстанс.
+Если необходимо создать новую подсеть, укажите [параметр `withNATInstance.internalSubnetCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-withnatinstance-internalsubnetcidr). NAT-инстанс размещается в созданной подсети.
 
-> Обязателен один из параметров: `withNATInstance.internalSubnetID` или `withNATInstance.internalSubnetCIDR`.
+Задайте один из двух параметров, `withNATInstance.internalSubnetID` или `withNATInstance.internalSubnetCIDR`.
 
-Если также указан [`withNATInstance.externalSubnetID`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-withnatinstance-externalsubnetid), NAT-инстанс будет подключён к этой подсети через вторичный сетевой интерфейс.
+Если также указан [`withNATInstance.externalSubnetID`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-withnatinstance-externalsubnetid), NAT-инстанс будет подключён к этой подсети через вторичный сетевой интерфейс.
 
 ![Схема размещения WithNATInstance в Yandex Cloud](../../../../images/cloud-provider-yandex/yandex-withnatinstance.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1oVpZ_ldcuNxPnGCkx0dRtcAdL7BSEEvmsvbG8Aif1pE/edit --->
@@ -184,50 +134,35 @@ dhcpOptions:
 Пример конфигурации схемы размещения:
 
 ```yaml
-apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-layout: WithNATInstance
-withNATInstance:
-  natInstanceExternalAddress: <NAT_INSTANCE_EXTERNAL_ADDRESS>
-  internalSubnetID: <INTERNAL_SUBNET_ID>
-  externalSubnetID: <EXTERNAL_SUBNET_ID>
-provider:
-  cloudID: <CLOUD_ID>
-  folderID: <FOLDER_ID>
-  serviceAccountJSON: |
-    {
-    "id": "id",
-    "service_account_id": "service_account_id",
-    "key_algorithm": "RSA_2048",
-    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
-    }    
-masterNodeGroup:
-  replicas: 1
-  zones:
-  - ru-central1-a
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-nodeGroups:
-- name: worker
-  replicas: 1
-  zones:
-  - ru-central1-a
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: <IMAGE_ID>
-    coreFraction: 50
-sshPublicKey: "<SSH_PUBLIC_KEY>"
-nodeNetworkCIDR: 192.168.12.13/24
-existingNetworkID: <EXISTING_NETWORK_ID>
-dhcpOptions:
-  domainName: test.local
-  domainNameServers:
-  - <DNS_SERVER_1>
-  - <DNS_SERVER_2>
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        cloudID: <CLOUD_ID>
+        folderID: <FOLDER_ID>
+    nodes:
+      parameters:
+        layout: WithNATInstance
+        sshPublicKey: <SSH_PUBLIC_KEY>
+        nodeNetworkCIDR: 192.168.12.0/24
+        existingNetworkID: <EXISTING_NETWORK_ID>
+        zones:
+          - ru-central1-a
+        withNATInstance:
+          natInstanceExternalAddress: <NAT_INSTANCE_EXTERNAL_ADDRESS>
+          internalSubnetID: <INTERNAL_SUBNET_ID>
+          externalSubnetID: <EXTERNAL_SUBNET_ID>
+        dhcpOptions:
+          domainName: test.local
+          domainNameServers:
+            - <DNS_SERVER_1>
+            - <DNS_SERVER_2>
 ```
 
 {% alert level="info" %}
@@ -237,92 +172,123 @@ NAT-инстанс не используется инсталлятором `dhc
 
 Если master-узел не имеет публичного IP-адреса или недоступен напрямую, запускайте установку с параметрами `--ssh-bastion-host` и `--ssh-bastion-user`.
 
-Если необходимо подключаться к master-узлу напрямую по публичному IP-адресу, укажите для него параметры [`externalIPAddresses`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) и [`externalSubnetIDs`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids). Учитывайте, что интерфейс из сети, указанной в `externalSubnetIDs`, будет использоваться как шлюз по умолчанию для узла.
+Если необходимо подключаться к master-узлу напрямую по публичному IP-адресу, укажите для него параметры [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses) и [`externalSubnetIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalsubnetids) в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/). Учитывайте, что интерфейс из сети, указанной в `externalSubnetIDs`, будет использоваться как шлюз по умолчанию для узла.
 {% endalert %}
 
-## Назначение YandexClusterConfiguration
+## Конфигурация
 
-Для интеграции Deckhouse Platform с Yandex Cloud необходимо описать инфраструктуру кластера с помощью ресурса YandexClusterConfiguration.
+Параметры облачного провайдера Yandex Cloud задаются в четырёх ресурсах:
 
-[YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — это объект Custom Resource (CR), описывающий параметры интеграции с облаком Yandex Cloud. Он используется DP для:
+- [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) задаёт [схему размещения](#схемы-размещения), [сетевые параметры](#сетевые-параметры-и-безопасность) и идентификаторы облака и каталога;
+- секрет `d8-credentials` в неймспейсе `d8-cloud-provider-yandex` хранит ключ сервисного аккаунта, его формат описан в разделе [«Секрет с учётными данными»](authorization.html#секрет-с-учётными-данными);
+- [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) описывает параметры виртуальных машин;
+- [NodeGroup](/modules/node-manager/cr.html#nodegroup) описывает группы узлов и ссылается на инстанс-класс. Группа master-узлов описывается такой же группой с типом [`CloudPermanent`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html).
 
-- размещения master и worker-узлов в облаке;
-- задания схемы сетевого взаимодействия;
-- подключения к API Yandex Cloud с использованием JSON-ключа авторизации;
-- настройки подсетей, публичных IP, ресурсов виртуальных машин и др.
-
-Обязательные поля:
-
-- `apiVersion` — должен быть `deckhouse.io/v1`;
-- `kind` — всегда `YandexClusterConfiguration`.
-
-Пример заголовка ресурса:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-```
-
-Чтобы отредактировать этот ресурс в работающем кластере, выполните команду:
+Чтобы изменить настройки провайдера в работающем кластере, отредактируйте ModuleConfig:
 
 ```shell
-d8 system edit provider-cluster-configuration
+d8 k edit mc cloud-provider-yandex
 ```
 
-После внесения изменений их необходимо применить с помощью команды:
+После изменения параметров узлов выполните команду:
 
 ```shell
 dhctl converge
 ```
 
+{% alert level="warning" %}
+Если кластер был установлен со схемой [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration), необходима миграция на конфигурацию через ModuleConfig. Пока миграция не выполнена, срабатывает [алерт `D8CloudProviderYandexCloudMigrationPending`](../../../../reference/alerts.html#cloud-provider-yandex-d8cloudprovideryandexcloudmigrationpending), а обновление Deckhouse Platform может блокироваться.
+
+Инструкция приведена в разделе [«Как мигрировать облачный провайдер на конфигурацию через ModuleConfig?»](../../../../faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec).
+
+Если в настройках модуля был задан параметр `storageClass.default`, после миграции укажите StorageClass по умолчанию глобальным параметром [`defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass). Конверсия это значение не переносит.
+{% endalert %}
+
 ### Пример конфигурации
 
-Ниже приведён пример минимальной конфигурации ресурса YandexClusterConfiguration, описывающей кластер с одной master-группой и одной группой рабочих узлов. Конфигурация использует схему размещения Standard, заданы базовые параметры вычислительных ресурсов, публичный ключ SSH, а также идентификаторы облака и каталога:
+Ниже приведён пример минимальной конфигурации кластера со схемой размещения Standard, одним master-узлом и одной группой рабочих узлов:
 
 ```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        cloudID: <CLOUD_ID>
+        folderID: <FOLDER_ID>
+    nodes:
+      parameters:
+        layout: Standard
+        nodeNetworkCIDR: 10.241.32.0/20
+        sshPublicKey: <SSH_PUBLIC_KEY>
+        labels:
+          billing: prod
+---
 apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-layout: Standard
-nodeNetworkCIDR: 127.0.0.1/8
-labels:
-  label-2: b
-sshPublicKey: "<SSH_PUBLIC_KEY>"
-masterNodeGroup:
-  replicas: 1
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: fd8nb7ecsbvj76dfaa8b
-nodeGroups:
-- name: worker
-  replicas: 1
-  zones:
-  - ru-central1-a
-  instanceClass:
-    cores: 4
-    memory: 8192
-    imageID: fd8nb7ecsbvj76dfaa8b
-    coreFraction: 50
-    externalIPAddresses:
-    - 198.51.100.5
-    - Auto
-provider:
-  cloudID: "<CLOUD_ID>"
-  folderID: "<FOLDER_ID>"
-  serviceAccountJSON: |
-    {
-    "id": "id",
-    "service_account_id": "service_account_id",
-    "key_algorithm": "RSA_2048",
-    "public_key": "-----BEGIN PUBLIC KEY-----\nMIIwID....AQAB\n-----END PUBLIC KEY-----\n",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....1ZPJeBLt+\n-----END PRIVATE KEY-----\n"
-    }
+kind: YandexInstanceClass
+metadata:
+  name: master
+spec:
+  cores: 4
+  memory: 8192
+  imageID: <IMAGE_ID>
+  etcdDiskSizeGB: 10
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: master
+    minPerZone: 1
+    maxPerZone: 1
+---
+apiVersion: deckhouse.io/v1
+kind: YandexInstanceClass
+metadata:
+  name: worker
+spec:
+  cores: 4
+  memory: 8192
+  coreFraction: 50
+  imageID: <IMAGE_ID>
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: YandexInstanceClass
+      name: worker
+    minPerZone: 1
+    maxPerZone: 3
+    zones:
+      - ru-central1-a
 ```
 
-- Master-группа состоит из одного узла без явного указания зоны.
-- Worker-группа содержит один узел, размещённый в зоне `ru-central1-a`, с двумя внешними IP-адресами: один задан вручную (`198.51.100.5`), второй заказан автоматически (`Auto`).
-- Указан ключ `serviceAccountJSON`, необходимый для подключения к API Yandex Cloud.
-- Используется CIDR-подсеть `127.0.0.1/8` и добавлен label `label-2: b` на уровне кластера.
+Где:
+
+- `CLOUD_ID` и `FOLDER_ID` — идентификаторы облака и каталога Yandex Cloud, задаваемые параметрами [`cloudID`](/modules/cloud-provider-yandex/configuration.html#parameters-provider-parameters-cloudid) и [`folderID`](/modules/cloud-provider-yandex/configuration.html#parameters-provider-parameters-folderid) в секции `provider.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/). Их получение описано в разделе [«Подключение и авторизация в Yandex Cloud»](authorization.html);
+- `SSH_PUBLIC_KEY` — публичный SSH-ключ для доступа к узлам, задаваемый параметром [`sshPublicKey`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-sshpublickey) в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/);
+- `IMAGE_ID` — идентификатор образа операционной системы, из которого создаются виртуальные машины, задаваемый параметром [`imageID`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-imageid) ресурса YandexInstanceClass. Если параметр не задан, используется образ из инстанс-класса группы `master`.
+
+В ресурсе YandexInstanceClass для группы `master` необходимо указать параметр [`etcdDiskSizeGB`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-etcddisksizegb), который задаёт размер отдельного диска под etcd. Для остальных групп узлов этот параметр указывать нельзя.
+
+Остальные параметры описаны в [настройках модуля](/modules/cloud-provider-yandex/configuration.html) и в описании ресурса [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+
+Ключ сервисного аккаунта в ModuleConfig не хранится, он задаётся [отдельным секретом](authorization.html#секрет-с-учётными-данными).
 
 ## Сетевые параметры и безопасность
 
@@ -330,62 +296,94 @@ provider:
 
 ### Внутренняя адресация узлов кластера
 
-[Параметр `nodeNetworkCIDR`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodenetworkcidr) используется для задания диапазона IP-адресов, который будет распределён между зонами доступности и применён к внутренним интерфейсам узлов.
+[Параметр `nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) задаёт диапазон IP-адресов, который распределяется между зонами доступности и применяется к внутренним интерфейсам узлов. Параметр задаётся в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/):
 
 ```yaml
-nodeNetworkCIDR: 192.168.12.13/24
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  settings:
+    nodes:
+      parameters:
+        nodeNetworkCIDR: 192.168.12.0/24
 ```
 
-В зависимости от выбранной схемы размещения (Standard или WithNATInstance), эта подсеть будет автоматически разделена на три равные части для каждой зоны размещения:
+Платформа делит эту подсеть на четыре равные части и создаёт из них по одной внутренней подсети в каждой зоне доступности:
 
 - ru-central1-a
 - ru-central1-b
+- ru-central1-e
 - ru-central1-d
 
-Каждая из этих частей будет использоваться как отдельная внутренняя подсеть (subnet), к которой будут подключены узлы, создаваемые в соответствующей зоне.
+К созданной подсети подключаются узлы соответствующей зоны. Деление выполняется во всех схемах размещения. Если задан [параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap), DP подсети не создаёт и использует указанные в нём.
 
 {% alert level="info" %}
-В случае, если вы планируете использовать одну и ту же подсеть в нескольких кластерах (например, с [`cni-simple-bridge`](/modules/cni-simple-bridge/)), необходимо учитывать ограничения: один кластер = одна таблица маршрутизации = одна подсеть. Разворачивание двух кластеров в одних и тех же подсетях с `cni-simple-bridge` невозможно. Если требуется использовать одинаковые подсети — используйте [`cni-cilium`](/modules/cni-cilium/).
+К подсети привязывается только одна таблица маршрутизации, поэтому два кластера с модулем [`cni-simple-bridge`](/modules/cni-simple-bridge/) не могут использовать одни и те же подсети. Чтобы развернуть такие кластеры в общих подсетях, используйте модуль [`cni-cilium`](/modules/cni-cilium/).
 {% endalert %}
 
 ### Назначение внешних IP-адресов и исходящего трафика
 
-Параметр `externalSubnetIDs` указывается в секциях [`masterNodeGroup.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalsubnetids) и [`nodeGroups.instanceClass`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-nodegroups-instanceclass-externalsubnetids) и представляет собой массив идентификаторов подсетей Yandex Cloud, в которые будут подключены внешние сетевые интерфейсы узлов. Этот параметр обязателен, если требуется:
+[Параметр `externalSubnetIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalsubnetids) задаётся в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) отдельно для каждой группы узлов:
 
-- Назначение публичного IP-адреса;
-- Определение маршрута по умолчанию для исходящего трафика с узлов;
-- Использование значений `"Auto"` в поле `externalIPAddresses`.
+- ключ — имя группы узлов;
+- значение — список идентификаторов подсетей Yandex Cloud, в которые подключаются внешние сетевые интерфейсы узлов этой группы, в порядке зон размещения.
+
+Параметр обязателен, если требуется:
+
+- назначить публичный IP-адрес;
+- определить маршрут по умолчанию для исходящего трафика с узлов;
+- использовать значение `Auto` в параметре [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses).
 
 Пример:
 
 ```yaml
-externalSubnetIDs:
-  - <RU-CENTRAL1-A-SUBNET-ID>
-  - <RU-CENTRAL1-B-SUBNET-ID>
-  - <RU-CENTRAL1-D-SUBNET-ID>
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  settings:
+    nodes:
+      parameters:
+        externalSubnetIDs:
+          worker:
+            - <RU_CENTRAL1_A_SUBNET_ID>
+            - <RU_CENTRAL1_B_SUBNET_ID>
+            - <RU_CENTRAL1_D_SUBNET_ID>
 ```
 
-{% alert level="info" %}
-Параметр `externalSubnetIDs` обязателен для корректной работы автоматического назначения публичных IP через `externalIPAddresses: ["Auto", ...]`.
-{% endalert %}
+Параметр [`externalIPAddresses`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalipaddresses) в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) задаёт список внешних IP-адресов для каждой группы узлов в порядке зон размещения.
 
 ### Настройка DNS и DHCP для внутренних сетей
 
-[Параметр `dhcpOptions`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-dhcpoptions) позволяет задать настройки DHCP-сервера, которые будут применены ко всем подсетям, создаваемым в рамках кластера Deckhouse Platform в Yandex Cloud.
+[Параметр `dhcpOptions`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-dhcpoptions) задаёт настройки DHCP-сервера, которые применяются ко всем подсетям, создаваемым в кластере Deckhouse Platform в Yandex Cloud. Параметр задаётся в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/).
 
 Доступные поля:
 
-- `domainName` — поисковый домен (search domain), который будет установлен в конфигурации сети.
-- `domainNameServers` — массив IP-адресов DNS-серверов, которые будут использоваться как рекурсивные резолверы.
+- `domainName` — поисковый домен (search domain), который устанавливается в конфигурации сети.
+- `domainNameServers` — массив IP-адресов DNS-серверов, которые используются как рекурсивные резолверы.
 
 Пример:
 
 ```yaml
-dhcpOptions:
-  domainName: test.local
-  domainNameServers:
-  - 192.168.0.2
-  - 192.168.0.3
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  settings:
+    nodes:
+      parameters:
+        dhcpOptions:
+          domainName: test.local
+          domainNameServers:
+            - 192.168.0.2
+            - 192.168.0.3
 ```
 
 {% alert level="info" %}
@@ -394,8 +392,8 @@ dhcpOptions:
 
 После внесения изменений в `dhcpOptions`:
 
-- Принудительно обновите `DHCP lease` на всех виртуальных машинах;
-- Перезапустите все поды с `hostNetwork: true` — в частности, `kube-dns`, чтобы пересчитать содержимое `resolv.conf`.
+- принудительно обновите DHCP lease на всех виртуальных машинах;
+- перезапустите компоненты, работающие в сети узла (`hostNetwork: true`), в том числе `kube-dns`, чтобы пересчитать содержимое `resolv.conf`.
 
 Для применения изменений можно использовать:
 
@@ -403,28 +401,37 @@ dhcpOptions:
 netplan apply
 ```
 
-или другой способ, соответствующий вашей системе (например, `systemd-networkd`, `dhclient` и т.д.).
+или другой способ, принятый в вашей системе, например `systemd-networkd` или `dhclient`.
 
 ### Использование заранее созданных подсетей
 
-[Параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) позволяет указать соответствия между зонами доступности и ранее созданными подсетями в Yandex Cloud. Это особенно важно, если вы не хотите, чтобы DP автоматически создавал подсети, а хотите использовать существующие.
+[Параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) задаёт соответствие между зонами доступности и ранее созданными подсетями в Yandex Cloud. Укажите его, если DP должна использовать готовые подсети, а не создавать новые. Параметр задаётся в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/).
 
 Пример использования:
 
 ```yaml
-existingZoneToSubnetIDMap:
-  ru-central1-a: e2lu8r1tbbtryhdpa9ro
-  ru-central1-b: e2lu8r1tbbtryhdpa9ro
-  ru-central1-d: e2lu8r1tbbtryhdpa9ro
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  settings:
+    nodes:
+      parameters:
+        existingZoneToSubnetIDMap:
+          ru-central1-a: e2lu8r1tbbtryhdpa9ro
+          ru-central1-b: e2lu8r1tbbtryhdpa9ro
+          ru-central1-d: e2lu8r1tbbtryhdpa9ro
 ```
 
 {% alert level="info" %}
-DP автоматически создаёт таблицу маршрутизации и не привязывает её к подсетям — это необходимо сделать вручную через интерфейс Yandex Cloud.
+Платформа создаёт таблицу маршрутизации, но не привязывает её к подсетям. Привяжите таблицу вручную в интерфейсе Yandex Cloud.
 {% endalert %}
 
 ### Дополнительные внешние сети
 
-DP позволяет явно указать список дополнительных внешних сетей, IP-адреса из которых будут интерпретироваться как публичные (External IP). Это задаётся в [параметре `settings.additionalExternalNetworkIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-additionalexternalnetworkids) в ресурсе ModuleConfig.
+[Параметр `additionalExternalNetworkIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-ccm-parameters-additionalexternalnetworkids) задаёт список дополнительных внешних сетей, адреса из которых DP считает публичными. Параметр задаётся в секции `ccm.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/).
 
 Эта настройка полезна, если:
 
@@ -440,26 +447,36 @@ kind: ModuleConfig
 metadata:
   name: cloud-provider-yandex
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
-    additionalExternalNetworkIDs:
-      - enp6t4sno
+    ccm:
+      parameters:
+        additionalExternalNetworkIDs:
+          - enp6t4sno
 ```
 
-Если параметр не задан, DP будет использовать только те подсети, что явно указаны в YandexClusterConfiguration (например, через `externalSubnetIDs`), чтобы определять публичность IP.
+Если параметр не задан, DP будет использовать только те подсети, что явно указаны в настройках модуля (например, через `externalSubnetIDs`), чтобы определять публичность IP.
 
 ## Настройка групп безопасности в Yandex Cloud
 
-При создании [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network), Yandex Cloud добавляет [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию для всех подключенных сетей, включая сеть кластера Deckhouse Platform. Эта группа безопасности по умолчанию содержит правила разрешающие любой входящий и исходящий трафик и применяется для всех подсетей облачной сети, если на объект (интерфейс ВМ) явно не назначена другая группа безопасности.
+Для каждой [облачной сети](https://cloud.yandex.ru/ru/docs/vpc/concepts/network#network) Yandex Cloud создаёт [группу безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups) по умолчанию, в том числе для сети кластера. Эта группа разрешает любой входящий и исходящий трафик и применяется к тем сетевым интерфейсам виртуальных машин, которым не назначена другая группа.
 
-{% alert level="danger" %}
-Не удаляйте правила по умолчанию, разрешающие любой трафик, до того как закончите настройку правил группы безопасности. Это может нарушить работоспособность кластера.
+Ограничить трафик кластера можно правилами этой группы. Назначить узлам другую группу безопасности нельзя, параметров для этого нет ни в настройках модуля, ни в ресурсе YandexInstanceClass.
+
+{% alert level="warning" %}
+Не назначайте группы безопасности узлам вручную в консоли Yandex Cloud. Команда `dhctl converge` приводит виртуальные машины к состоянию, описанному в конфигурации кластера, и может снять такую привязку.
 {% endalert %}
 
-Ниже приведены общие рекомендации по настройке групп безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
+{% alert level="danger" %}
+Не удаляйте правила, разрешающие любой трафик, пока не настроите остальные правила группы. Иначе группа заблокирует трафик между узлами и компоненты кластера потеряют связь друг с другом.
+{% endalert %}
+
+Ошибки в правилах нарушают работу кластера. Перед настройкой правил в production-кластере изучите [особенности работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud.
 
 Если в кластере используется Cilium с туннелированием трафика подов через VXLAN, разрешите UDP-трафик между узлами на портах, которые перечислены в разделе [«Сетевое взаимодействие компонентов платформы»](../../../../reference/network_interaction.html).
+
+Чтобы настроить правила группы безопасности:
 
 1. Определите облачную сеть, в которой работает кластер Deckhouse Platform.
 
@@ -477,7 +494,7 @@ spec:
      jq -r '.data."cluster-configuration.yaml"' | base64 -d | grep prefix | cut -d: -f2
    ```
 
-1. В консоли Yandex Cloud выберите сервис Virtual Private Cloud и перейдите в раздел *Группы безопасности*. У вас должна отображаться одна группа безопасности с пометкой `Default`.
+1. В консоли Yandex Cloud выберите сервис Virtual Private Cloud и перейдите в раздел «Группы безопасности». У вас должна отображаться одна группа безопасности с пометкой `Default`.
 
    ![Группа безопасности по умолчанию](../../../../images/cloud-provider-yandex/sg-ru-default.png)
 
@@ -489,7 +506,7 @@ spec:
 
 ## Настройка доступа через bastion-хост
 
-Для подключения к узлам, находящимся в приватных подсетях (например, при использовании схемы размещения Standard или WithNATInstance), используется bastion-хост — промежуточная машина с публичным IP, через которую осуществляется SSH-доступ к узлам.
+Для подключения к узлам, находящимся в приватных подсетях (например, при использовании схемы размещения Standard или WithNATInstance), используется bastion-хост, промежуточная машина с публичным IP-адресом, через которую выполняется SSH-доступ к узлам.
 
 Для настройки доступа выполните следующие шаги:
 
@@ -514,7 +531,7 @@ spec:
      --public-address 178.154.226.159
    ```
 
-   > Замените здесь `<SSH_PUBLIC_KEY_FILE>` на имя вашего публичного ключа. Например, для ключа с RSA-шифрованием это будет `id_rsa.pub`, а для ключа с ED25519-шифрованием `id_ed25519.pub`.
+   Замените `<SSH_PUBLIC_KEY_FILE>` на имя публичного ключа, например `id_rsa.pub` для ключа RSA или `id_ed25519.pub` для ключа ED25519.
 
    Убедитесь, что IP-адрес из параметра `--public-address` доступен из вашей сети и указан корректно.
 
@@ -525,7 +542,7 @@ spec:
      --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
    ```
 
-   > Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
+   Замените `<SSH_PRIVATE_KEY_FILE>` на имя приватного ключа, например `id_rsa` для ключа RSA или `id_ed25519` для ключа ED25519.
 
    Здесь:
 

@@ -63,7 +63,7 @@ type YandexInstanceClassSpec struct {
 
 	// Percent of reserved CPU capacity on a Yandex Compute Instance.
 	//
-	// [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+	// [More about performance levels](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels).
 	// +deckhouse:ru:description:value="Базовый уровень производительности каждого ядра CPU у создаваемых виртуальных машин."
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="[Подробнее об уровнях производительности](https://cloud.yandex.ru/docs/compute/concepts/performance-levels)."
@@ -87,10 +87,10 @@ type YandexInstanceClassSpec struct {
 
 	// Image ID to use while provisioning Yandex Compute Instances.
 	//
-	// The [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) parameter will be used by default.
+	// If the parameter is not set, the image of the instance class of the `master` node group is used. In a cluster that has not been migrated to the ModuleConfig settings, the [`masterNodeGroup.instanceClass.imageID`](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) parameter of the YandexClusterConfiguration resource is used instead.
 	// +deckhouse:ru:description:value="Идентификатор образа, который будет установлен в заказанные виртуальные машины."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="По умолчанию используется образ, указанный в параметре [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid)."
+	// +deckhouse:ru:description:value="Если параметр не задан, используется образ из инстанс-класса группы узлов `master`. В кластере, не переведённом на настройки через ModuleConfig, вместо него используется параметр [`masterNodeGroup.instanceClass.imageID`](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) ресурса YandexClusterConfiguration."
 	// +deckhouse:XDocExamples:value="fd83ica41cade1mj35sr"
 	// +optional
 	ImageID string `json:"imageID,omitempty"`
@@ -145,12 +145,12 @@ type YandexInstanceClassSpec struct {
 
 	// Subnet ID that VirtualMachines' primary NIC will connect to.
 	//
-	// If the parameter is not specified, the main network is determined automatically according to the following logic:
-	// if a list of networks is set in the [existingZoneToSubnetIDMap](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) parameter,
-	// then the network is selected from the specified list; otherwise, the created Deckhouse network is used.
+	// If the parameter is not specified, Deckhouse Platform selects the network.
+	// When the [`existingZoneToSubnetIDMap`](configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) parameter is set, the network is taken from it,
+	// otherwise the network created during the cluster deployment is used.
 	// +deckhouse:ru:description:value="Имя основной сети (ID), к которой будет подключен основной сетевой интерфейс виртуальной машины."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Если параметр не задан, то основная сеть определяется автоматически согласно следующей логике: если задан список сетей в параметре [existingZoneToSubnetIDMap](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap), то сеть определяется из указанного списка, иначе используется созданная Deckhouse сеть."
+	// +deckhouse:ru:description:value="Если параметр не задан, сеть выбирает Deckhouse Platform. Когда задан параметр [`existingZoneToSubnetIDMap`](configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap), сеть берётся из него, иначе используется сеть, созданная при развёртывании кластера."
 	// +deckhouse:XDocExamples:value="e9bnc7g9mu9mper9clk4"
 	// +optional
 	MainSubnet string `json:"mainSubnet,omitempty"`

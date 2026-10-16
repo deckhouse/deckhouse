@@ -88,13 +88,13 @@ spec:
                 description: |
                   Идентификатор образа, который будет установлен в заказанные виртуальные машины.
 
-                  По умолчанию используется образ, указанный в параметре [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid).
+                  Если параметр не задан, используется образ из инстанс-класса группы узлов `master`. В кластере, не переведённом на настройки через ModuleConfig, вместо него используется параметр [`masterNodeGroup.instanceClass.imageID`](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) ресурса YandexClusterConfiguration.
                 type: string
               mainSubnet:
                 description: |
                   Имя основной сети (ID), к которой будет подключен основной сетевой интерфейс виртуальной машины.
 
-                  Если параметр не задан, то основная сеть определяется автоматически согласно следующей логике: если задан список сетей в параметре [existingZoneToSubnetIDMap](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap), то сеть определяется из указанного списка, иначе используется созданная Deckhouse сеть.
+                  Если параметр не задан, сеть выбирает Deckhouse Platform. Когда задан параметр [`existingZoneToSubnetIDMap`](configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap), сеть берётся из него, иначе используется сеть, созданная при развёртывании кластера.
                 type: string
               memory:
                 description: |
@@ -179,13 +179,13 @@ spec:
                 description: |
                   Идентификатор образа, который будет установлен в заказанные виртуальные машины.
 
-                  По умолчанию используется образ, указанный в параметре [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid).
+                  Если параметр не задан, используется образ из инстанс-класса группы узлов `master`. В кластере, не переведённом на настройки через ModuleConfig, вместо него используется параметр [`masterNodeGroup.instanceClass.imageID`](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) ресурса YandexClusterConfiguration.
                 type: string
               mainSubnet:
                 description: |
                   Имя основной сети (ID), к которой будет подключен основной сетевой интерфейс виртуальной машины.
 
-                  Если параметр не задан, то основная сеть определяется автоматически согласно следующей логике: если задан список сетей в параметре [existingZoneToSubnetIDMap](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap), то сеть определяется из указанного списка, иначе используется созданная Deckhouse сеть.
+                  Если параметр не задан, сеть выбирает Deckhouse Platform. Когда задан параметр [`existingZoneToSubnetIDMap`](configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap), сеть берётся из него, иначе используется сеть, созданная при развёртывании кластера.
                 type: string
               memory:
                 description: |

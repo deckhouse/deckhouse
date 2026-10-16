@@ -84,7 +84,7 @@ spec:
                 description: |-
                   Percent of reserved CPU capacity on a Yandex Compute Instance.
 
-                  [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+                  [More about performance levels](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels).
                 enum:
                 - 5
                 - 20
@@ -137,7 +137,7 @@ spec:
                 description: |-
                   Image ID to use while provisioning Yandex Compute Instances.
 
-                  The [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) parameter will be used by default.
+                  If the parameter is not set, the image of the instance class of the `master` node group is used. In a cluster that has not been migrated to the ModuleConfig settings, the [`masterNodeGroup.instanceClass.imageID`](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) parameter of the YandexClusterConfiguration resource is used instead.
                 type: string
                 x-doc-examples:
                 - fd83ica41cade1mj35sr
@@ -145,9 +145,9 @@ spec:
                 description: |-
                   Subnet ID that VirtualMachines' primary NIC will connect to.
 
-                  If the parameter is not specified, the main network is determined automatically according to the following logic:
-                  if a list of networks is set in the [existingZoneToSubnetIDMap](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) parameter,
-                  then the network is selected from the specified list; otherwise, the created Deckhouse network is used.
+                  If the parameter is not specified, Deckhouse Platform selects the network.
+                  When the [`existingZoneToSubnetIDMap`](configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) parameter is set, the network is taken from it,
+                  otherwise the network created during the cluster deployment is used.
                 type: string
                 x-doc-examples:
                 - e9bnc7g9mu9mper9clk4
@@ -257,7 +257,7 @@ spec:
                 description: |-
                   Percent of reserved CPU capacity on a Yandex Compute Instance.
 
-                  [Details...](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels)
+                  [More about performance levels](https://cloud.yandex.com/en/docs/compute/concepts/performance-levels).
                 enum:
                 - 5
                 - 20
@@ -304,7 +304,7 @@ spec:
                 description: |-
                   Image ID to use while provisioning Yandex Compute Instances.
 
-                  The [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) parameter will be used by default.
+                  If the parameter is not set, the image of the instance class of the `master` node group is used. In a cluster that has not been migrated to the ModuleConfig settings, the [`masterNodeGroup.instanceClass.imageID`](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid) parameter of the YandexClusterConfiguration resource is used instead.
                 type: string
                 x-doc-examples:
                 - fd83ica41cade1mj35sr
@@ -312,9 +312,9 @@ spec:
                 description: |-
                   Subnet ID that VirtualMachines' primary NIC will connect to.
 
-                  If the parameter is not specified, the main network is determined automatically according to the following logic:
-                  if a list of networks is set in the [existingZoneToSubnetIDMap](cluster_configuration.html#yandexclusterconfiguration-existingzonetosubnetidmap) parameter,
-                  then the network is selected from the specified list; otherwise, the created Deckhouse network is used.
+                  If the parameter is not specified, Deckhouse Platform selects the network.
+                  When the [`existingZoneToSubnetIDMap`](configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) parameter is set, the network is taken from it,
+                  otherwise the network created during the cluster deployment is used.
                 type: string
                 x-doc-examples:
                 - e9bnc7g9mu9mper9clk4

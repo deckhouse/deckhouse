@@ -25,21 +25,6 @@ var (
 	_ cpapi.ModuleSettingsObject = (*ModuleConfigSettings)(nil)
 )
 
-// Describes the configuration of the cloud-provider-yandex module.
-//
-// Run the following command to change the configuration in a running cluster:
-//
-// ```shell
-// d8 k edit moduleconfig cloud-provider-yandex
-// ```
-//
-// +deckhouse:ru:description:value="Описывает конфигурацию модуля cloud-provider-yandex."
-// +deckhouse:ru:description:value=
-// +deckhouse:ru:description:value="Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:"
-// +deckhouse:ru:description:value=
-// +deckhouse:ru:description:value="```shell"
-// +deckhouse:ru:description:value="d8 k edit moduleconfig cloud-provider-yandex"
-// +deckhouse:ru:description:value="```"
 // +deckhouse:XDocSearch=ModuleConfig
 // +deckhouse:XConfigVersion=2
 // +deckhouse:DisableAdditionalProperties=true
@@ -52,29 +37,71 @@ type ModuleConfigSettings struct {
 	CCM CCM `json:"ccm,omitempty"`
 }
 
+// Yandex Cloud connection settings.
+//
+// The provider reads the service account key from the `d8-credentials` Secret.
+// +deckhouse:ru:description:value="Настройки подключения к Yandex Cloud."
+// +deckhouse:ru:description:value=
+// +deckhouse:ru:description:value="Ключ сервисного аккаунта провайдер читает из секрета `d8-credentials`."
 // +deckhouse:DisableAdditionalProperties=true
 type Provider struct {
 	Parameters ProviderParameters `json:"parameters"`
 }
 
+// Nodes subsystem settings.
+//
+// The subsystem describes the infrastructure the cluster nodes are created in, including the layout, the networks, the zones, and the SSH key.
+// +deckhouse:ru:description:value="Настройки подсистемы узлов."
+// +deckhouse:ru:description:value=
+// +deckhouse:ru:description:value="Подсистема описывает инфраструктуру, в которой создаются узлы кластера, включая схему размещения, сети, зоны и публичный SSH-ключ."
 // +deckhouse:DisableAdditionalProperties=true
 type Nodes struct {
+	// Disables the nodes subsystem.
+	//
+	// When set to `true`, the cluster creates no nodes in Yandex Cloud, and the cloud controller manager does not start either.
+	// +deckhouse:ru:description:value="Отключает подсистему узлов."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="При значении `true` кластер не создаёт узлы в Yandex Cloud, а cloud controller manager не запускается."
 	// +kubebuilder:default=false
 	// +optional
 	Disabled   bool            `json:"disabled,omitempty"`
 	Parameters NodesParameters `json:"parameters"`
 }
 
+// Storage subsystem settings.
+//
+// The subsystem provides the CSI driver and the StorageClasses for Yandex Cloud disk types.
+// +deckhouse:ru:description:value="Настройки подсистемы хранения данных."
+// +deckhouse:ru:description:value=
+// +deckhouse:ru:description:value="Подсистема отвечает за CSI-драйвер и StorageClass для типов дисков Yandex Cloud."
 // +deckhouse:DisableAdditionalProperties=true
 type Storage struct {
+	// Disables the storage subsystem.
+	//
+	// When set to `true`, disk provisioning in the cluster is unavailable.
+	// +deckhouse:ru:description:value="Отключает подсистему хранения данных."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="При значении `true` заказ дисков в кластере недоступен."
 	// +kubebuilder:default=false
 	// +optional
 	Disabled   bool              `json:"disabled,omitempty"`
 	Parameters StorageParameters `json:"parameters"`
 }
 
+// Cloud Controller Manager (CCM) subsystem settings.
+//
+// CCM creates Network Load Balancers and target groups for Service objects of the `LoadBalancer` type, maintains routes to pod subnets in the route table, and keeps node metadata up to date.
+// +deckhouse:ru:description:value="Настройки подсистемы Cloud Controller Manager (CCM)."
+// +deckhouse:ru:description:value=
+// +deckhouse:ru:description:value="CCM создаёт Network Load Balancer и целевые группы для Service с типом `LoadBalancer`, поддерживает маршруты до подсетей подов в таблице маршрутизации и обновляет метаданные узлов."
 // +deckhouse:DisableAdditionalProperties=true
 type CCM struct {
+	// Disables the Cloud Controller Manager.
+	//
+	// When set to `true`, the cluster does not manage load balancers and routes in Yandex Cloud.
+	// +deckhouse:ru:description:value="Отключает Cloud Controller Manager."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="При значении `true` кластер не управляет балансировщиками нагрузки и маршрутами в Yandex Cloud."
 	// +kubebuilder:default=false
 	// +optional
 	Disabled   bool          `json:"disabled,omitempty"`
@@ -93,6 +120,8 @@ type ProviderParameters struct {
 	FolderID string `json:"folderID"`
 }
 
+// Parameters of the nodes subsystem.
+// +deckhouse:ru:description:value="Параметры подсистемы узлов."
 // +deckhouse:DisableAdditionalProperties=true
 type NodesParameters struct {
 	// A public key for accessing nodes.
@@ -101,10 +130,10 @@ type NodesParameters struct {
 	SSHPublicKey string `json:"sshPublicKey"`
 	// The way resources are located in the cloud.
 	//
-	// [Read more](https://deckhouse.io/modules/cloud-provider-yandex/layouts.html) about possible provider layouts.
+	// The available layouts are described in ["Layouts"](layouts.html).
 	// +deckhouse:ru:description:value="Название схемы размещения."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="[Подробнее](https://deckhouse.ru/modules/cloud-provider-yandex/layouts.html) о возможных схемах размещения провайдера."
+	// +deckhouse:ru:description:value="Доступные схемы размещения описаны в разделе [«Схемы размещения»](layouts.html)."
 	// +kubebuilder:validation:Enum=Standard;WithoutNAT;WithNATInstance
 	Layout string `json:"layout"`
 	// This subnet will be split into **three** equal parts.
@@ -124,28 +153,28 @@ type NodesParameters struct {
 	ExistingNetworkID string `json:"existingNetworkID,omitempty"`
 	// One or more pre-existing subnets mapped to respective zone.
 	//
-	// **Warning.** When using `cni-simple-bridge`, DKP creates a route table that must be manually associated with the specified subnets. Only one route table can be associated with a subnet, so multiple clusters using `cni-simple-bridge` cannot be deployed in the same subnets. Starting with DKP 1.76, new clusters in Yandex Cloud use `cni-cilium` in `VXLAN` mode by default. In this mode, pod traffic routing does not depend on Yandex Cloud route tables.
+	// **Warning.** With the [`cni-simple-bridge`](/modules/cni-simple-bridge/) module, DP creates a route table that has to be associated with the listed subnets manually. A subnet accepts only one route table, so two clusters using `cni-simple-bridge` cannot share subnets. Starting with DP 1.76, new clusters in Yandex Cloud use the [`cni-cilium`](/modules/cni-cilium/) module in [VXLAN](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode, where pod traffic routing does not depend on Yandex Cloud route tables.
 	// +deckhouse:ru:description:value="Одна или несколько ранее существовавших подсетей, сопоставленных с соответствующей зоной."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="**Внимание.** При использовании `cni-simple-bridge` DKP создаст таблицу маршрутизации, которую необходимо вручную привязать к указанным подсетям. К одной подсети можно привязать только одну таблицу маршрутизации, поэтому невозможно развернуть несколько кластеров с `cni-simple-bridge` в одних и тех же подсетях. Начиная с DKP 1.76 для новых кластеров в Yandex Cloud по умолчанию используется `cni-cilium` в режиме `VXLAN`. В этом режиме маршрутизация трафика подов не зависит от таблиц маршрутизации Yandex Cloud."
+	// +deckhouse:ru:description:value="**Внимание.** С модулем [`cni-simple-bridge`](/modules/cni-simple-bridge/) DP создаёт таблицу маршрутизации, которую нужно вручную привязать к перечисленным подсетям. К подсети привязывается только одна таблица маршрутизации, поэтому два кластера с `cni-simple-bridge` не могут использовать одни и те же подсети. Начиная с DP 1.76 новые кластеры в Yandex Cloud используют модуль [`cni-cilium`](/modules/cni-cilium/) в режиме [VXLAN](/modules/cni-cilium/configuration.html#parameters-tunnelmode), в котором маршрутизация трафика подов не зависит от таблиц маршрутизации Yandex Cloud."
 	// +optional
 	ExistingZoneToSubnetIDMap map[string]string `json:"existingZoneToSubnetIDMap,omitempty"`
 	// The ID of the existing route table associated with the subnets.
 	//
-	// Required in clusters where DKP does not create the infrastructure itself (for example, a
-	// cluster with static master nodes that adds ephemeral nodes in Yandex Cloud): the value is
-	// normally produced by the infrastructure run and has to be supplied explicitly otherwise.
+	// Normally the value is produced when DP creates the infrastructure. Set the parameter explicitly
+	// in a cluster where DP does not create the infrastructure, for example in a cluster with static
+	// master nodes that adds ephemeral nodes in Yandex Cloud.
 	// +deckhouse:ru:description:value="ID существующей таблицы маршрутизации, привязанной к подсетям."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Обязателен в кластерах, где DKP не создаёт инфраструктуру самостоятельно (например, кластер со статичными master-узлами, в который добавляются эфемерные узлы в Yandex Cloud): значение обычно формируется запуском инфраструктуры, и его нужно указать явно, если такого запуска нет."
+	// +deckhouse:ru:description:value="Обычно значение формируется, когда DP создаёт инфраструктуру. Задайте параметр явно в кластере, где DP инфраструктуру не создаёт, например в кластере со статичными master-узлами, в который добавляются эфемерные узлы в Yandex Cloud."
 	// +optional
 	ExistingRouteTableID string `json:"existingRouteTableID,omitempty"`
 	// A list of DHCP parameters to use for all subnets.
 	//
-	// Note that setting dhcpOptions may lead to [problems](https://deckhouse.io/modules/cloud-provider-yandex/faq.html#dhcpoptions-related-problems-and-ways-to-address-them).
+	// Setting the parameter can disrupt name resolution on the nodes. The symptoms and the ways to address them are described in [DHCPOptions-related problems and ways to address them](faq.html#dhcpoptions-related-problems-and-ways-to-address-them).
 	// +deckhouse:ru:description:value="Список DHCP-опций, которые будут установлены на все подсети."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="[Возможные проблемы](https://deckhouse.ru/modules/cloud-provider-yandex/faq.html#проблемы-dhcpoptions-и-пути-их-решения) при использовании."
+	// +deckhouse:ru:description:value="Параметр может нарушить разрешение имён на узлах. Признаки и способы решения описаны в разделе [«Проблемы DHCPOptions и пути их решения»](faq.html#проблемы-dhcpoptions-и-пути-их-решения)."
 	// +optional
 	DHCPOptions DHCPOptions `json:"dhcpOptions,omitempty"`
 	// External IP addresses per node group name.
@@ -153,8 +182,8 @@ type NodesParameters struct {
 	// The key is the node group name (e.g., `system`, `master`, `worker`), and the value is the list of external IP addresses for nodes in that group, listed in the order of the zones where nodes will be created.
 	//
 	// The following values can be specified in the list:
-	// - IP address from an additional external network for the corresponding zone (parameter `externalSubnetIDs`);
-	// - [reserved public IP address](faq.html#how-to-reserve-a-public-ip-address), if the list of additional external networks is not defined (parameter `externalSubnetIDs`);
+	// - IP address from an additional external network for the corresponding zone, listed in the [`externalSubnetIDs`](#parameters-nodes-parameters-externalsubnetids) parameter;
+	// - [reserved public IP address](faq.html#reserving-a-public-ip-address), if the [`externalSubnetIDs`](#parameters-nodes-parameters-externalsubnetids) parameter is not set;
 	// - `Auto`, to order a public IP address in the corresponding zone.
 	//
 	// +deckhouse:ru:description:value="Внешние IP-адреса для каждой группы узлов."
@@ -162,8 +191,8 @@ type NodesParameters struct {
 	// +deckhouse:ru:description:value="Ключ — имя группы узлов (например, `system`, `master`, `worker`), значение — список внешних IP-адресов для узлов этой группы, перечисленных в порядке зон, в которых будут создаваться узлы."
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="В списке можно указывать следующие значения:"
-	// +deckhouse:ru:description:value="- IP-адрес из дополнительной внешней сети для соответствующей зоны (параметр `externalSubnetIDs`);"
-	// +deckhouse:ru:description:value="- [зарезервированный публичный IP-адрес](faq.html#как-зарезервировать-публичный-ip-адрес), если список дополнительных внешних сетей не определён (параметр `externalSubnetIDs`);"
+	// +deckhouse:ru:description:value="- IP-адрес из дополнительной внешней сети для соответствующей зоны, перечисленной в параметре [`externalSubnetIDs`](#parameters-nodes-parameters-externalsubnetids);"
+	// +deckhouse:ru:description:value="- [зарезервированный публичный IP-адрес](faq.html#резервирование-публичного-ip-адреса), если параметр [`externalSubnetIDs`](#parameters-nodes-parameters-externalsubnetids) не задан;"
 	// +deckhouse:ru:description:value="- `Auto` — для заказа публичного IP-адреса в соответствующей зоне."
 	// +deckhouse:validation:AdditionalProperties:items:Pattern=`^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})|(Auto)$`
 	// +optional
@@ -184,8 +213,8 @@ type NodesParameters struct {
 	// +deckhouse:ru:description:value="Если поменять лейблы в рабочем кластере, после применения изменений необходимо пересоздать все машины."
 	// +optional
 	Labels map[string]string `json:"labels,omitempty"`
-	// The globally restricted set of zones that this cloud provider works with.
-	// +deckhouse:ru:description:value="Глобальное ограничение набора зон, с которыми работает данный cloud-провайдер."
+	// Limits the zones the cluster creates nodes in. When the parameter is not set, every zone covered by the cluster subnets is used.
+	// +deckhouse:ru:description:value="Ограничивает набор зон, в которых создаются узлы кластера. Если параметр не задан, используются все зоны, которые покрывают подсети кластера."
 	// +kubebuilder:validation:UniqueItems=true
 	// +kubebuilder:validation:items:Enum=ru-central1-a;ru-central1-b;ru-central1-d;ru-central1-e
 	// +optional
@@ -195,8 +224,8 @@ type NodesParameters struct {
 // DHCPOptions defines DHCP parameters to use for all subnets.
 // +deckhouse:DisableAdditionalProperties=true
 type DHCPOptions struct {
-	// The name of the search domain.
-	// +deckhouse:ru:description:value="Search-домен."
+	// Domain appended to an incomplete host name when the node resolves it.
+	// +deckhouse:ru:description:value="Домен, который узел добавляет к неполному имени хоста при разрешении имён."
 	// +optional
 	DomainName string `json:"domainName,omitempty"`
 	// A list of recursive DNS addresses.
@@ -216,26 +245,26 @@ type NATInstanceParameters struct {
 	// +deckhouse:ru:description:value="ID подсети для внутреннего интерфейса."
 	// +optional
 	InternalSubnetID string `json:"internalSubnetID,omitempty"`
-	// CIDR of an automatically created subnet for the internal interface. Overrides `internalSubnetID` parameter.
-	// +deckhouse:ru:description:value="CIDR автоматически создаваемой подсети для внутреннего интерфейса. Если указан вместе с `internalSubnetID`, `internalSubnetCIDR` имеет приоритет."
+	// CIDR of an automatically created subnet for the internal interface. Takes precedence over the [`internalSubnetID`](#parameters-nodes-parameters-withnatinstance-internalsubnetid) parameter.
+	// +deckhouse:ru:description:value="CIDR автоматически создаваемой подсети для внутреннего интерфейса. Имеет приоритет над параметром [`internalSubnetID`](#parameters-nodes-parameters-withnatinstance-internalsubnetid)."
 	// +optional
 	InternalSubnetCIDR string `json:"internalSubnetCIDR,omitempty"`
-	// A [reserved external IP address](https://deckhouse.io/modules/cloud-provider-yandex/faq.html#how-to-reserve-a-public-ip-address) (or `externalSubnetID` address if specified).
-	// +deckhouse:ru:description:value="Внешний [зарезервированный IP-адрес](https://deckhouse.ru/modules/cloud-provider-yandex/faq.html#как-зарезервировать-публичный-ip-адрес) или адрес из `externalSubnetID` при указании опции."
+	// A [reserved external IP address](faq.html#reserving-a-public-ip-address). When the [`externalSubnetID`](#parameters-nodes-parameters-withnatinstance-externalsubnetid) parameter is set, specify an address from that subnet.
+	// +deckhouse:ru:description:value="Внешний [зарезервированный IP-адрес](faq.html#резервирование-публичного-ip-адреса). Если задан параметр [`externalSubnetID`](#parameters-nodes-parameters-withnatinstance-externalsubnetid), укажите адрес из этой подсети."
 	// +kubebuilder:validation:Pattern=`^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$`
 	// +optional
 	NATInstanceExternalAddress string `json:"natInstanceExternalAddress,omitempty"`
-	// Consider using automatically generated address instead.
-	// +deckhouse:ru:description:value="Лучше не использовать эту опцию, а использовать автоматически назначаемые адреса."
+	// Internal IP address of the NAT instance. To let Yandex Cloud assign the address, leave this parameter unset.
+	// +deckhouse:ru:description:value="Внутренний IP-адрес NAT-инстанса. Чтобы адрес назначил Yandex Cloud, не задавайте этот параметр."
 	// +kubebuilder:validation:Pattern=`^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$`
 	// +optional
 	NATInstanceInternalAddress string `json:"natInstanceInternalAddress,omitempty"`
 	// Computing resources that are allocated to the NAT instance. If not specified, the default values will be used.
 	//
-	// > **Warning.** If these parameters are changed, `terraform-auto-converger` will automatically restart NAT-instance if [autoConvergerEnabled](../terraform-manager/configuration.html#parameters-autoconvergerenabled) is set to `true`. This may result in a temporary interruption of network traffic in the cluster.
-	// +deckhouse:ru:description:value="Вычислительные ресурсы, выделяемые для NAT-инстанса. Если параметр не указан, будут использоваться значения по умолчанию."
+	// **Warning.** When these parameters change, the [`terraform-manager`](/modules/terraform-manager/) module restarts the NAT instance automatically if the [`autoConvergerEnabled`](/modules/terraform-manager/configuration.html#parameters-autoconvergerenabled) parameter is set to `true`. The restart interrupts cluster network traffic for a short time.
+	// +deckhouse:ru:description:value="Вычислительные ресурсы, выделяемые для NAT-инстанса. Если параметр не указан, используются значения по умолчанию."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="> **Внимание.** При изменении этих параметров, `terraform-auto-converger` перезапустит машину NAT-инстанса автоматически, если включена настройка [autoConvergerEnabled](../terraform-manager/configuration.html#parameters-autoconvergerenabled). Это может привести к временному прерыванию трафика в кластере."
+	// +deckhouse:ru:description:value="**Внимание.** При изменении этих параметров модуль [`terraform-manager`](/modules/terraform-manager/) перезапускает NAT-инстанс автоматически, если параметр [`autoConvergerEnabled`](/modules/terraform-manager/configuration.html#parameters-autoconvergerenabled) имеет значение `true`. Перезапуск на короткое время прерывает сетевой трафик в кластере."
 	// +optional
 	NATInstanceResources NATInstanceResources `json:"natInstanceResources,omitempty"`
 }
@@ -259,26 +288,28 @@ type NATInstanceResources struct {
 	Platform string `json:"platform,omitempty"`
 }
 
+// Parameters of the storage subsystem.
+// +deckhouse:ru:description:value="Параметры подсистемы хранения данных."
 // +deckhouse:DisableAdditionalProperties=true
 type StorageParameters struct {
 	// Defines additional StorageClasses or overrides the parameters of the ones created by default.
 	//
 	// A StorageClass created by default is overridden when its name matches the `name` field exactly.
-	// +deckhouse:ru:description:value="Определяет дополнительные StorageClass'ы или переопределяет параметры создаваемых по умолчанию."
+	// +deckhouse:ru:description:value="Определяет дополнительные StorageClass или переопределяет параметры создаваемых по умолчанию."
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="Создаваемый по умолчанию StorageClass переопределяется, если его имя точно совпадает со значением поля `name`."
 	// +optional
 	ProvisionedStorageClasses []ProvisionedStorageClass `json:"provisionedStorageClasses,omitempty"`
 	// List of StorageClasses to exclude from use in the cluster.
 	//
-	// Each item is a regular expression matched against the whole StorageClass name: `network-ssd` excludes only the `network-ssd` StorageClass, while `network-ssd.*` excludes every StorageClass whose name starts with `network-ssd`.
+	// Each item is a regular expression matched against the whole StorageClass name. For example, `network-ssd` excludes only the `network-ssd` StorageClass, and `network-ssd.*` excludes every StorageClass whose name starts with `network-ssd`.
 	//
-	// The list is applied after `provisionedStorageClasses`, so it also filters out the StorageClasses defined there.
-	// +deckhouse:ru:description:value="Список StorageClass'ов, исключаемых из использования в кластере."
+	// The list is applied after [`provisionedStorageClasses`](#parameters-storage-parameters-provisionedstorageclasses), so it also filters out the StorageClass defined there.
+	// +deckhouse:ru:description:value="Список StorageClass, исключаемых из использования в кластере."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Каждый элемент — регулярное выражение, которое сопоставляется с именем StorageClass целиком: `network-ssd` исключает только StorageClass `network-ssd`, а `network-ssd.*` — все StorageClass'ы, имя которых начинается с `network-ssd`."
+	// +deckhouse:ru:description:value="Каждый элемент задаёт регулярное выражение, которое сопоставляется с именем StorageClass целиком. Например, `network-ssd` исключает только StorageClass `network-ssd`, а `network-ssd.*` исключает все StorageClass, имя которых начинается с `network-ssd`."
 	// +deckhouse:ru:description:value=
-	// +deckhouse:ru:description:value="Список применяется после `provisionedStorageClasses`, поэтому исключает и определённые в нём StorageClass'ы."
+	// +deckhouse:ru:description:value="Список применяется после параметра [`provisionedStorageClasses`](#parameters-storage-parameters-provisionedstorageclasses), поэтому исключает и заданные в нём StorageClass."
 	// +optional
 	ExcludedStorageClasses []string `json:"excludedStorageClasses,omitempty"`
 }
@@ -286,7 +317,7 @@ type StorageParameters struct {
 // +deckhouse:DisableAdditionalProperties=true
 type ProvisionedStorageClass struct {
 	// The name of the StorageClass to create.
-	// +deckhouse:ru:description:value="Имя создаваемого StorageClass'а."
+	// +deckhouse:ru:description:value="Имя создаваемого StorageClass."
 	Name string `json:"name" yaml:"name"`
 	// The disk type.
 	// +deckhouse:ru:description:value="Тип диска."
@@ -315,6 +346,8 @@ type ProvisionedStorageClass struct {
 	BlockSize string `json:"blockSize,omitempty" yaml:"blockSize,omitempty"`
 }
 
+// Parameters of the Cloud Controller Manager subsystem.
+// +deckhouse:ru:description:value="Параметры подсистемы Cloud Controller Manager."
 // +deckhouse:DisableAdditionalProperties=true
 type CCMParameters struct {
 	// Additional external network IDs to be recognized as external networks by the CCM.
