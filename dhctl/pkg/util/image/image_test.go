@@ -44,7 +44,7 @@ import (
 
 func TestDecodeDockerConfig(t *testing.T) {
 	dummyAuth := make(map[string]authEntry)
-	dummyAuth["docker.io"] = authEntry{Auth: "dGVzdDp0ZXN0LXRlc3QtdGVzdA=="}
+	dummyAuth["docker.io"] = authEntry{Auth: "dXNlcm5hbWU6cGFzc3dvcmQ="}
 	t.Run("Docker config", func(t *testing.T) {
 		cases := []struct {
 			title    string
@@ -55,8 +55,8 @@ func TestDecodeDockerConfig(t *testing.T) {
 		}{
 			{
 				title: "Valid config, success",
-				// {"auths":{"docker.io":{"auth":"dGVzdDp0ZXN0LXRlc3QtdGVzdA=="}}}
-				input:    "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRHVnpkRHAwWlhOMExYUmxjM1F0ZEdWemRBPT0ifX19",
+				// {"auths":{"docker.io":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}
+				input:    "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRYTmxjbTVoYldVNmNHRnpjM2R2Y21RPSJ9fX0=",
 				expected: &dockerConfig{Auths: dummyAuth},
 				wantErr:  false,
 			},
@@ -104,20 +104,20 @@ func TestRegistryConfigFromDockerConfig(t *testing.T) {
 		}{
 			{
 				title: "Valid config, success",
-				// {"auths":{"docker.io":{"auth":"dGVzdDp0ZXN0LXRlc3QtdGVzdA=="}}}
-				encodedConfig: "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRHVnpkRHAwWlhOMExYUmxjM1F0ZEdWemRBPT0ifX19",
+				// {"auths":{"docker.io":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}
+				encodedConfig: "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRYTmxjbTVoYldVNmNHRnpjM2R2Y21RPSJ9fX0=",
 				registry:      "docker.io",
 				scheme:        "HTTPS",
-				expected:      &RegistryConfig{registry: "docker.io", scheme: "HTTPS", username: "test", password: "test-test-test"},
+				expected:      &RegistryConfig{registry: "docker.io", scheme: "HTTPS", username: "username", password: "password"},
 				wantErr:       false,
 			},
 			{
 				title: "Valid config, registry with path, success",
-				// {"auths":{"docker.io":{"auth":"dGVzdDp0ZXN0LXRlc3QtdGVzdA=="}}}
-				encodedConfig: "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRHVnpkRHAwWlhOMExYUmxjM1F0ZEdWemRBPT0ifX19",
+				// {"auths":{"docker.io":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}
+				encodedConfig: "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRYTmxjbTVoYldVNmNHRnpjM2R2Y21RPSJ9fX0=",
 				registry:      "docker.io/any/path",
 				scheme:        "HTTPS",
-				expected:      &RegistryConfig{registry: "docker.io/any/path", scheme: "HTTPS", username: "test", password: "test-test-test"},
+				expected:      &RegistryConfig{registry: "docker.io/any/path", scheme: "HTTPS", username: "username", password: "password"},
 				wantErr:       false,
 			},
 			{
@@ -131,8 +131,8 @@ func TestRegistryConfigFromDockerConfig(t *testing.T) {
 			},
 			{
 				title: "Invalid scheme, failure",
-				// {"auths":{"docker.io":{"auth":"dGVzdDp0ZXN0LXRlc3QtdGVzdA=="}}}
-				encodedConfig: "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRHVnpkRHAwWlhOMExYUmxjM1F0ZEdWemRBPT0ifX19",
+				// {"auths":{"docker.io":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}
+				encodedConfig: "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRYTmxjbTVoYldVNmNHRnpjM2R2Y21RPSJ9fX0=",
 				registry:      "docker.io",
 				scheme:        "SCHEME",
 				wantErr:       true,
@@ -140,8 +140,8 @@ func TestRegistryConfigFromDockerConfig(t *testing.T) {
 			},
 			{
 				title: "Invalid config, lack registry, failure",
-				// {"auths":{"docker.io":{"auth":"dGVzdDp0ZXN0LXRlc3QtdGVzdA=="}}}
-				encodedConfig: "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRHVnpkRHAwWlhOMExYUmxjM1F0ZEdWemRBPT0ifX19",
+				// {"auths":{"docker.io":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}
+				encodedConfig: "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRYTmxjbTVoYldVNmNHRnpjM2R2Y21RPSJ9fX0=",
 				registry:      "registry.io",
 				scheme:        "HTTPS",
 				wantErr:       true,
@@ -149,17 +149,17 @@ func TestRegistryConfigFromDockerConfig(t *testing.T) {
 			},
 			{
 				title: "Invalid auth, failure",
-				// {"auths":{"docker.io":{"auth":"dGVzdDp0ZXN0LXRlc3Q"}}}
-				encodedConfig: "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRHVnpkRHAwWlhOMExYUmxjM1EifX19",
+				// {"auths":{"docker.io":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ"}}}
+				encodedConfig: "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRYTmxjbTVoYldVNmNHRnpjM2R2Y21RIn19fQ==",
 				registry:      "docker.io",
 				scheme:        "HTTPS",
 				wantErr:       true,
-				err:           "decoding auth field: illegal base64 data at input byte 16",
+				err:           "decoding auth field: illegal base64 data at input byte 20",
 			},
 			{
 				title: "Invalid auth format, failure",
-				// {"auths":{"docker.io":{"auth":"dGVzdC10ZXN0LXRlc3QtdGVzdA=="}}}
-				encodedConfig: "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRHVnpkQzEwWlhOMExYUmxjM1F0ZEdWemRBPT0ifX19",
+				// {"auths":{"docker.io":{"auth":"dGVzdC12YWx1ZQ=="}}}
+				encodedConfig: "eyJhdXRocyI6eyJkb2NrZXIuaW8iOnsiYXV0aCI6ImRHVnpkQzEyWVd4MVpRPT0ifX19",
 				registry:      "docker.io",
 				scheme:        "HTTPS",
 				wantErr:       true,
@@ -325,8 +325,8 @@ func TestRegistryConfig(t *testing.T) {
 
 func TestGetRegistries(t *testing.T) {
 	dummyAuth := make(map[string]authEntry)
-	dummyAuth["docker.io"] = authEntry{Auth: "dGVzdDp0ZXN0LXRlc3QtdGVzdA=="}
-	dummyAuth["registry.io"] = authEntry{Auth: "dGVzdDp0ZXN0LXRlc3QtdGVzdA=="}
+	dummyAuth["docker.io"] = authEntry{Auth: "dXNlcm5hbWU6cGFzc3dvcmQ="}
+	dummyAuth["registry.io"] = authEntry{Auth: "dXNlcm5hbWU6cGFzc3dvcmQ="}
 	dc := &dockerConfig{Auths: dummyAuth}
 	registries := dc.GetRegistries()
 	require.Contains(t, registries, "docker.io")

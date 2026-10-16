@@ -46,7 +46,7 @@ metadata:
   name: joe
 spec:
   email: joe@example.com # Used in RoleBinding and ClusterRoleBinding to assign user permissions
-  password: 'JDJ5JDEwJG5qNFZUWW9vVHBQZUsxV1ZaNWtOcnVzTXhDb3ZHcWNFLnhxSHhoMUM0aG9zVVJubUJkZjJ5'
+  password: 'JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H'
   ttl: 24h # (Optional) Sets the lifetime of the user account
 ```
 

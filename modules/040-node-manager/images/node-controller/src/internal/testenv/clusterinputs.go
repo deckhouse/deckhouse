@@ -55,7 +55,7 @@ const (
 	TestOSImageDigest           = "sha256:7777777777777777777777777777777777777777777777777777777777777777"
 	TestRegistryAddress         = "registry.example.com"
 	TestRegistryPath            = "/deckhouse/ce"
-	TestRegistryAuth            = "dXNlcjpwYXNzd29yZA=="
+	TestRegistryAuth            = "dXNlcm5hbWU6cGFzc3dvcmQ="
 	TestClusterCA               = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
 )
 

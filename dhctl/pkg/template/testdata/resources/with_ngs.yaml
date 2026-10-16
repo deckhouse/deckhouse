@@ -127,7 +127,7 @@ spec:
   isSudoer: true
   nodeGroups:
   - '*'
-  passwordHash: dGVzdHRlc3R0ZXN0Cg==
+  passwordHash: dGVzdC12YWx1ZQ==
   sshPublicKeys:
   - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICSvjHvdJYYTUvBWCGYLqxGIPE5xktnYdTRpVsAxcbQE root@b6138135c8e1
   uid: 1234

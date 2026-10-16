@@ -470,9 +470,9 @@ positive:
           dhcpOptions: {}
       internal:
         capyControllerManagerWebhookCert:
-          crt: YjY0ZW5jX3N0cmluZwo= # gitleaks:allow
-          key: YjY0ZW5jX3N0cmluZwo= # gitleaks:allow
-          ca: YjY0ZW5jX3N0cmluZwo= # gitleaks:allow
+          crt: dGVzdC12YWx1ZQ==
+          key: dGVzdC12YWx1ZQ==
+          ca: dGVzdC12YWx1ZQ==
 
     # ==========================================
     # Internal: minimal providerClusterConfiguration
@@ -724,9 +724,9 @@ positive:
           - name: slow
             type: network-hdd
         capyControllerManagerWebhookCert:
-          crt: YjY0ZW5jX3N0cmluZwo= # gitleaks:allow
-          key: YjY0ZW5jX3N0cmluZwo= # gitleaks:allow
-          ca: YjY0ZW5jX3N0cmluZwo= # gitleaks:allow
+          crt: dGVzdC12YWx1ZQ==
+          key: dGVzdC12YWx1ZQ==
+          ca: dGVzdC12YWx1ZQ==
 
     # ==========================================
     # Internal: cniSecretData
@@ -742,7 +742,7 @@ positive:
           nodeNetworkCIDR: 10.0.0.0/16
           sshPublicKey: ssh-rsa AAAA...
       internal:
-        cniSecretData: "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV3b2dJQ0p0YjJSbElqb2dJbFpZVEVGT0lpd0tJQ0FpYldGemNYVmxjbUZrWlUxdlpHVWlPaUFpUWxCR0lncDkK" # gitleaks:allow
+        cniSecretData: "dGVzdC12YWx1ZQ=="
 
     # ==========================================
     # Hybrid cluster: infrastructure is not created by DKP

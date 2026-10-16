@@ -125,7 +125,7 @@ func restoreTemplateLibRegoTests(moved [][2]string) error {
 }
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
-	f := SetupHelmConfig(`{"admissionPolicyEngine": {"podSecurityStandards": {}, "internal": {"ratify": {"imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey2"]}], "webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
+	f := SetupHelmConfig(`{"admissionPolicyEngine": {"podSecurityStandards": {}, "internal": {"ratify": {"imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey2"]}], "webhook": {"key": "dGVzdC12YWx1ZQ==", "crt": "dGVzdC12YWx1ZQ==" , "ca": "dGVzdC12YWx1ZQ=="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
 	{
 		"metadata": {
 			"name": "foo"
@@ -264,7 +264,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 ],
 	trackedConstraintResources: [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]},{"apiGroups": [""],"resources": ["pods/exec","pods/attach"],"operations": ["CONNECT"]}],
 	trackedMutateResources: [{"apiGroups":[""],"resources":["pods"]}],
-	webhook: {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
+	webhook: {ca: dGVzdC12YWx1ZQ==, crt: dGVzdC12YWx1ZQ==, key: dGVzdC12YWx1ZQ==}}}}`)
 
 	checkVWC := func(f *Config, webhooksCount int, rules ...string) {
 		vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")

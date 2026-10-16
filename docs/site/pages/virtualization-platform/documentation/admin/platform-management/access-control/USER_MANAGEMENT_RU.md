@@ -44,7 +44,7 @@ metadata:
   name: joe
 spec:
   email: joe@example.com # Используется в RoleBinding, ClusterRoleBinding для назначения прав пользователю.
-  password: 'JDJ5JDEwJG5qNFZUWW9vVHBQZUsxV1ZaNWtOcnVzTXhDb3ZHcWNFLnhxSHhoMUM0aG9zVVJubUJkZjJ5'
+  password: 'JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H'
   ttl: 24h # (Опционально) задает срок жизни учетной записи.
 ```
 

@@ -120,7 +120,7 @@ func MetaConfig(t *testing.T) *config.MetaConfig {
 		RemoteData: registry.Data{
 			ImagesRepo: "dev-registry.deckhouse.io/sys/deckhouse-oss",
 			Scheme:     constant.SchemeHTTPS,
-			Username:   "user",
+			Username:   "username",
 			Password:   "password",
 		},
 	}

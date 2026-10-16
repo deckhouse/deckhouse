@@ -94,7 +94,7 @@ func referencingLayout() *registryv1alpha1.RegistryNodeSpec {
 func TestResolveFillsInEveryReference(t *testing.T) {
 	secret := authSecret(map[string]string{
 		constant.AuthKeyStorage:  "cm86c2VjcmV0",
-		constant.AuthKeyUpstream: "bGljZW5zZS10b2tlbjprZXk=",
+		constant.AuthKeyUpstream: "dXNlcm5hbWU6cGFzc3dvcmQ=",
 	})
 	kubeClient := clientWithSecrets(t, secret)
 	resolver := &Resolver{Namespace: testNamespace}
@@ -105,7 +105,7 @@ func TestResolveFillsInEveryReference(t *testing.T) {
 	storage := spec.Backends[0]
 	assert.Equal(t, "cm86c2VjcmV0", storage.Endpoint.Auth.Auth)
 	assert.Equal(t, "cm86c2VjcmV0", storage.Mirrors[0].Auth.Auth)
-	assert.Equal(t, "bGljZW5zZS10b2tlbjprZXk=", spec.Backends[1].Endpoint.Auth.Auth)
+	assert.Equal(t, "dXNlcm5hbWU6cGFzc3dvcmQ=", spec.Backends[1].Endpoint.Auth.Auth)
 
 	// The reference is gone once it is resolved, so nothing downstream can mistake a
 	// resolved credential for one still needing a lookup.
@@ -153,7 +153,7 @@ func TestTheCachedLayoutIsTheResolvedOne(t *testing.T) {
 	}
 	secret := authSecret(map[string]string{
 		constant.AuthKeyStorage:  "cm86c2VjcmV0",
-		constant.AuthKeyUpstream: "bGljZW5zZS10b2tlbjprZXk=",
+		constant.AuthKeyUpstream: "dXNlcm5hbWU6cGFzc3dvcmQ=",
 	})
 
 	cachePath := filepath.Join(t.TempDir(), "layout.json")
@@ -203,7 +203,7 @@ func TestTheResolverFollowsTheSourcesClient(t *testing.T) {
 	}
 	secret := authSecret(map[string]string{
 		constant.AuthKeyStorage:  "cm86c2VjcmV0",
-		constant.AuthKeyUpstream: "bGljZW5zZS10b2tlbjprZXk=",
+		constant.AuthKeyUpstream: "dXNlcm5hbWU6cGFzc3dvcmQ=",
 	})
 
 	// As the agent starts on a node that has not finished its TLS bootstrap: no client yet.

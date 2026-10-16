@@ -119,8 +119,8 @@ metadata:
   name: kubernetes-api-ca-key-pair
   namespace: kube-system
 data:
-  tls.crt: dHJ1ZWNlcnQ=
-  tls.key: dHJ1ZWNlcnQ=
+  tls.crt: dGVzdC12YWx1ZQ==
+  tls.key: dGVzdC12YWx1ZQ==
 `))
 			f.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.enabled", true)
 			f.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "SelfSigned")
@@ -130,8 +130,8 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(f.ValuesGet("controlPlaneManager.internal.selfSignedCA.cert").String()).To(Equal("truecert"))
-			Expect(f.ValuesGet("controlPlaneManager.internal.selfSignedCA.key").String()).To(Equal("truecert"))
+			Expect(f.ValuesGet("controlPlaneManager.internal.selfSignedCA.cert").String()).To(Equal("test-value"))
+			Expect(f.ValuesGet("controlPlaneManager.internal.selfSignedCA.key").String()).To(Equal("test-value"))
 		})
 
 	})

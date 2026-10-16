@@ -47,7 +47,7 @@ apiVersions:
             description: |
               A Base64-encoded string from the Docker client configuration file (in Linux it is usually `$HOME/.docker/config.json`), for accessing a third-party container registry.
 
-              For example, to access the container registry `registry.company.my` under the user `user` with the password `P@ssw0rd` it will be `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY2pwUVFITnpkekJ5WkFvPSJ9fX0K` (string `{"auths":{"registry.company.my":{"auth":"dXNlcjpQQHNzdzByZAo="}}}` in Base64).
+              For example, to access the container registry `registry.company.my` under the user `username` with the password `password` it will be `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY201aGJXVTZjR0Z6YzNkdmNtUT0ifX19Cg==` (string `{"auths":{"registry.company.my":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}` in Base64).
             minLength: 1
             x-doc-default: ""
             x-examples:

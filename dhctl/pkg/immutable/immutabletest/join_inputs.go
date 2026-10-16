@@ -34,7 +34,7 @@ const (
 	BootstrapTokenSecretName = "bootstrap-token-abcdef"
 
 	// BootstrapToken is the token those fixtures publish.
-	BootstrapToken = "abcdef.0123456789abcdef" // gitleaks:allow, the shape of a bootstrap token, not one
+	BootstrapToken = "abcdef.0123456789abcdef"
 )
 
 // CreateBootstrapToken publishes the master group's token, one of the three things

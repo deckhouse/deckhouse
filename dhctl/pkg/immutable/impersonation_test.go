@@ -51,7 +51,7 @@ users:
 func completedForImpersonation(t *testing.T) []byte {
 	t.Helper()
 
-	complete, err := withClientKey([]byte(impersonationCollected), "-----BEGIN EC PRIVATE KEY-----\ntest\n-----END EC PRIVATE KEY-----\n")
+	complete, err := withClientKey([]byte(impersonationCollected), "-----BEGIN EC PRIVATE KEY-----\nZGVja2hvdXNlLXRlc3QtcHJpdmF0ZS1rZXktbm90LWEtcmVhbC1zZWNyZXQtMDEyMzQ1Njc4OWFiY2RlZg==\n-----END EC PRIVATE KEY-----\n")
 	require.NoError(t, err)
 	return complete
 }

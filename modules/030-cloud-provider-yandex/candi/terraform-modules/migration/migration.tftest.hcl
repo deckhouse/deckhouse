@@ -1173,14 +1173,14 @@ run "state_b_credentials_from_base64_data" {
         apiVersion = "v1"
         kind       = "Secret"
         metadata   = { name = "d8-credentials", namespace = "d8-cloud-provider-yandex" }
-        data       = { authScheme = "c2VydmljZUFjY291bnQ=", secret = "eyJpZCI6InNhLWI2NCJ9" } // gitleaks:allow
+        data       = { authScheme = "c2VydmljZUFjY291bnQ=", secret = "dGVzdC12YWx1ZQ==" }
         type       = "cloud-provider.deckhouse.io/credentials"
       }
       "d8-cloud-provider-yandex/d8-credentials-exporter" = {
         apiVersion = "v1"
         kind       = "Secret"
         metadata   = { name = "d8-credentials-exporter", namespace = "d8-cloud-provider-yandex" }
-        data       = { authScheme = "YXBpVG9rZW4=", secret = "ZXhwb3J0ZXItYjY0" } // gitleaks:allow
+        data       = { authScheme = "YXBpVG9rZW4=", secret = "ZXhwb3J0ZXItYjY0" }
         type       = "cloud-provider.deckhouse.io/credentials"
       }
     }
@@ -1201,7 +1201,7 @@ run "state_b_credentials_from_base64_data" {
   }
 
   assert {
-    condition     = base64decode(nonsensitive(output.secrets)["d8-cloud-provider-yandex/d8-credentials"].data.secret) == "{\"id\":\"sa-b64\"}"
+    condition     = base64decode(nonsensitive(output.secrets)["d8-cloud-provider-yandex/d8-credentials"].data.secret) == "test-value"
     error_message = "expected a Secret carrying base64 data to pass through unchanged"
   }
 

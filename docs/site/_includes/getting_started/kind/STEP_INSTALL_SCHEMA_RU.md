@@ -59,7 +59,7 @@ Run 'kind delete cluster --name d8' to remove cluster.
 Provide following credentials to access Grafana at http://grafana.127.0.0.1.sslip.io/ :
 
     Username: admin
-    Password: LlF7X67BvgRO74LNWXHi
+    Password: dh-test-secret-0123456789abcdef
 
 The information above is saved to /home/user/.kind-d8/info.txt file.
 

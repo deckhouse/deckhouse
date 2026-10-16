@@ -66,7 +66,7 @@ d8 k get module csi-huawei -w
     urls: 
       - https://192.168.128.101:8088 
     login: "admin"
-    password: "ivkerg43grdsf_"
+    password: "dh-test-secret-0123456789abcdef"
     protocol: ISCSI
     portals:
       - 10.240.0.101

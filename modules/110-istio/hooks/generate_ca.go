@@ -132,7 +132,7 @@ const invalidCAMetric = "d8_istio_ca_material_invalid"
 // successful first resolution). It surfaces a silently-degraded rotation that
 // would otherwise only appear in logs. The `source` label is the current
 // secretRef marker.
-const secretRefUnresolvedMetric = "d8_istio_ca_secretref_unresolved" // gitleaks:allow
+const secretRefUnresolvedMetric = "d8_istio_ca_secretref_unresolved"
 
 // setInvalidCAMetric records that invalid CA material is being published as-is.
 func setInvalidCAMetric(input *go_hook.HookInput, source string) {

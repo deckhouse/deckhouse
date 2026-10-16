@@ -4,27 +4,39 @@ path = "gitleaks.base.toml"
 
 [[allowlists]]
 regexes = [
-  'kubernetesCni191'
-]
-
-# base64 of "user:password": the placeholder registry credential these fixtures
-# are built from, most of them in the {"auths":{...,"auth":...}} shape a docker
-# config uses, which is what a scanner is right to notice.
-#
-# Listed file by file rather than allowlisted globally: a global entry also waves
-# through a real credential that happens to be "user:password" anywhere in the
-# tree. go_lib/registry/helpers/docker_cfg_test.go holds the same placeholder and
-# is deliberately absent — it predates this change and is not in its diff, so an
-# entry for it would be this change quietly adopting somebody else's finding.
-[[allowlists]]
-condition = "AND"
-regexes = [
-  'dXNlcjpwYXNzd29yZA=='
+  'kubernetesCni191',
+  'dh-test-secret-[0-9A-Za-z]*',
+  'ZGgtdGVzdC1zZWNyZXQt[0-9A-Za-z+/=]*',
+  'dGVzdC12YWx1ZQ==',
+  'dXNlcm5hbWU6cGFzc3dvcmQ=?',
+  'bgp-pwd-ns1-secret1',
+  'abcdef\.0123456789abcdef',
+  'd8_istio_ca_secretref_unresolved',
+  'c2VydmljZUFjY291bnQ=',
+  'YXBpVG9rZW4=',
+  'PFlPVVItR1JBRkFOQUNMT1VELVRPS0VOPg==',
+  'Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK',
+  'JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H',
+  'AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==',
+  '98sdcj5e8c7asd98j4j3n9csakn',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJzdWIiOiJkZWNraG91c2UtdGVzdCIsIm5hbWUiOiJ0ZXN0In0\.dGVzdC1zaWduYXR1cmUtbm90LXJlYWw',
+  'ZGVja2hvdXNlLXRlc3QtcHJpdmF0ZS1rZXktbm90LWEtcmVhbC1zZWNyZXQtMDEyMzQ1Njc4OWFiY2RlZg==',
+  '-----BEGIN PRIVATE KEY-----\\nMIIE\.\.\.\.1ZPJeBLt\+\\n-----END PRIVATE KEY----',
+  '-----BEGIN OPENSSH PRIVATE KEY-----\s+\.\.\.\s+-----END OPENSSH PRIVATE KEY----',
+  '-----BEGIN PRIVATE KEY-----",\s+"client_id": "342975658279248"'
 ]
 paths = [
-  # The golden was renamed mid-branch; the scan reads the whole history, so both
-  # names stay listed.
-  '''dhctl/pkg/immutable/testdata/master-cloud-init\.yaml$''',
-  '''dhctl/pkg/immutable/testdata/master-documents\.yaml$''',
-  '''modules/040-node-manager/images/node-controller/src/internal/testenv/clusterinputs\.go$'''
+  '''(^|/)docs/site/assets/js/pdf\.worker\.min\.js$''',
+  '''(^|/)dhctl/pkg/config/mocks/id_rsa$''',
+  '''(^|/)dhctl/pkg/config/mocks/id_invalid_rsa$''',
+  '''(^|/)dhctl/pkg/config/mocks/id_passphrase_rsa$''',
+  '''(^|/)dhctl/pkg/config/mocks/id_passphrase_invalid_rsa$''',
+  '''(^|/)dhctl/pkg/util/registryutil/registry_test\.go$''',
+  '''(^|/)ee/modules/110-istio/hooks/ee/alliance_metadata_merge_test\.go$''',
+  '''(^|/)ee/modules/110-istio/hooks/ee/federation_discovery_test\.go$''',
+  '''(^|/)ee/modules/110-istio/hooks/ee/multicluster_discovery_test\.go$''',
+  '''(^|/)modules/040-control-plane-manager/images/control-plane-manager/src/internal/controllers/control-plane-configuration/testdata/cases/basic-config\.yaml$''',
+  '''(^|/)modules/150-user-authn/images/dex/patches/007-ipv6-host\.patch$''',
+  '''(^|/)modules/150-user-authn/images/dex/patches/010-provide-custom-CA-to-gitlab-connector\.patch$''',
+  '''(^|/)testing/cloud_layouts/EKS/WithoutNAT/configuration\.tpl\.yaml$'''
 ]

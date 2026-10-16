@@ -138,14 +138,14 @@ func TestReadAuthConfig(t *testing.T) {
 		auths := `{
 	"auths": {
 		"registry.invalid.com:8032/modules": {
-			"auth": "aW52YWxpZDppbnZhbGlk"
+			"auth": "dXNlcm5hbWU6cGFzc3dvcmQ="
 		},
 		"registry.example.com:8032/modules": {
 			"auth": "dmFsaWQ6dmFsaWQ=",
 			"email": "valid@example.com"
 		},
 		"another.registry.com": {
-			"auth": "YW5vdGhlcjphbm90aGVy"
+			"auth": "dXNlcm5hbWU6cGFzc3dvcmQ="
 		}
 	}
 }`

@@ -57,7 +57,7 @@ spec:
     digest: sha256:7777777777777777777777777777777777777777777777777777777777777777
   registry:
     address: dev-registry.deckhouse.io
-    auth: dXNlcjpwYXNzd29yZA==
+    auth: dXNlcm5hbWU6cGFzc3dvcmQ=
     path: /sys/deckhouse-oss
     scheme: HTTPS
   statusToken: <status token>

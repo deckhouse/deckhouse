@@ -48,10 +48,10 @@ func FuzzDecodeCertificate(f *testing.F) {
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\nProc-Type: 4,ENCRYPTED\n\nAAAA\n-----END CERTIFICATE-----\n"))
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n" +
 		"-----BEGIN CERTIFICATE-----\nBBBB\n-----END CERTIFICATE-----\n"))
-	f.Add([]byte("-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n"))         // gitleaks:allow
-	f.Add([]byte("-----BEGIN RSA PRIVATE KEY-----\nAAAA\n-----END RSA PRIVATE KEY-----\n")) // gitleaks:allow
-	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n"))   // gitleaks:allow
-	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END CERTIFICATE-----\n"))      // gitleaks:allow
+	f.Add([]byte("-----BEGIN PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END PRIVATE KEY-----\n"))
+	f.Add([]byte("-----BEGIN RSA PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END RSA PRIVATE KEY-----\n"))
+	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END EC PRIVATE KEY-----\n"))
+	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END CERTIFICATE-----\n"))
 	f.Add([]byte("-----BEGIN X-----\nAAAA\n-----END X-----\n"))
 	f.Add([]byte("not pem at all"))
 	f.Add([]byte(""))
@@ -87,10 +87,10 @@ func FuzzDecodePrivateKey(f *testing.F) {
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\nProc-Type: 4,ENCRYPTED\n\nAAAA\n-----END CERTIFICATE-----\n"))
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n" +
 		"-----BEGIN CERTIFICATE-----\nBBBB\n-----END CERTIFICATE-----\n"))
-	f.Add([]byte("-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n"))         // gitleaks:allow
-	f.Add([]byte("-----BEGIN RSA PRIVATE KEY-----\nAAAA\n-----END RSA PRIVATE KEY-----\n")) // gitleaks:allow
-	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n"))   // gitleaks:allow
-	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END CERTIFICATE-----\n"))      // gitleaks:allow
+	f.Add([]byte("-----BEGIN PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END PRIVATE KEY-----\n"))
+	f.Add([]byte("-----BEGIN RSA PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END RSA PRIVATE KEY-----\n"))
+	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END EC PRIVATE KEY-----\n"))
+	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END CERTIFICATE-----\n"))
 	f.Add([]byte("-----BEGIN X-----\nAAAA\n-----END X-----\n"))
 	f.Add([]byte("not pem at all"))
 	f.Add([]byte(""))
@@ -123,34 +123,34 @@ func FuzzDecodeCertKey(f *testing.F) {
 	// other half: a certificate with no key, a key with no certificate, the two
 	// swapped, and both malformed at once.
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"),
-		[]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+		[]byte("-----BEGIN EC PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END EC PRIVATE KEY-----\n"))
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"), []byte(""))
-	f.Add([]byte(""), []byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+	f.Add([]byte(""), []byte("-----BEGIN EC PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END EC PRIVATE KEY-----\n"))
 	f.Add([]byte(""), []byte(""))
-	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n"), // gitleaks:allow
+	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END EC PRIVATE KEY-----\n"),
 		[]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"))
-	f.Add([]byte("-----BEGIN CERTIFICATE-----"), []byte("-----BEGIN EC PRIVATE KEY-----")) // gitleaks:allow
+	f.Add([]byte("-----BEGIN CERTIFICATE-----"), []byte("-----BEGIN EC PRIVATE KEY-----"))
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\n!!!!\n-----END CERTIFICATE-----\n"),
-		[]byte("-----BEGIN EC PRIVATE KEY-----\n!!!!\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+		[]byte("-----BEGIN EC PRIVATE KEY-----\ndh-test-secret-!!!!\n-----END EC PRIVATE KEY-----\n"))
 	f.Add([]byte("not pem"), []byte("not pem"))
 	f.Add([]byte("x"), []byte("y"))
 	f.Add([]byte("\x00"), []byte("\x00"))
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"), []byte("not pem"))
-	f.Add([]byte("not pem"), []byte("-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n")) // gitleaks:allow
+	f.Add([]byte("not pem"), []byte("-----BEGIN PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END PRIVATE KEY-----\n"))
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"+
 		"-----BEGIN CERTIFICATE-----\nBBBB\n-----END CERTIFICATE-----\n"),
-		[]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+		[]byte("-----BEGIN EC PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END EC PRIVATE KEY-----\n"))
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"),
-		[]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n"+
-			"-----BEGIN EC PRIVATE KEY-----\nBBBB\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+		[]byte("-----BEGIN EC PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END EC PRIVATE KEY-----\n"+
+			"-----BEGIN EC PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtYmJiYmJiYmJi\n-----END EC PRIVATE KEY-----\n"))
 	f.Add([]byte("-----BEGIN X-----\nAAAA\n-----END X-----\n"),
 		[]byte("-----BEGIN Y-----\nAAAA\n-----END Y-----\n"))
 	f.Add([]byte("\n"), []byte("\n"))
 	f.Add([]byte("  -----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"),
-		[]byte("  -----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+		[]byte("  -----BEGIN EC PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END EC PRIVATE KEY-----\n"))
 	f.Add([]byte(strings.Repeat("A", 4096)), []byte(strings.Repeat("B", 4096)))
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\r\nAAAA\r\n-----END CERTIFICATE-----\r\n"),
-		[]byte("-----BEGIN EC PRIVATE KEY-----\r\nAAAA\r\n-----END EC PRIVATE KEY-----\r\n")) // gitleaks:allow
+		[]byte("-----BEGIN EC PRIVATE KEY-----\r\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\r\n-----END EC PRIVATE KEY-----\r\n"))
 	f.Add([]byte("junk"), []byte("junk"))
 
 	f.Fuzz(func(t *testing.T, certPEM, keyPEM []byte) {
@@ -186,8 +186,8 @@ func FuzzValidateCertWithCAChain(f *testing.F) {
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\nProc-Type: 4,ENCRYPTED\n\nAAAA\n-----END CERTIFICATE-----\n"))
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n" +
 		"-----BEGIN CERTIFICATE-----\nBBBB\n-----END CERTIFICATE-----\n"))
-	f.Add([]byte("-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n"))       // gitleaks:allow
-	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+	f.Add([]byte("-----BEGIN PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END PRIVATE KEY-----\n"))
+	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4\n-----END EC PRIVATE KEY-----\n"))
 	f.Add([]byte("-----BEGIN X-----\nAAAA\n-----END X-----\n"))
 	f.Add([]byte("not pem at all"))
 	f.Add([]byte(""))

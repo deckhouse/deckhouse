@@ -42,9 +42,9 @@ admissionPolicyEngine:
     bootstrapped: true
     ratify:
       webhook:
-        key: YjY0ZW5jX3N0cmluZwo=
-        crt: YjY0ZW5jX3N0cmluZwo=
-        ca: YjY0ZW5jX3N0cmluZwo=
+        key: dGVzdC12YWx1ZQ==
+        crt: dGVzdC12YWx1ZQ==
+        ca: dGVzdC12YWx1ZQ==
     podSecurityStandards:
       enforcementActions:
         - deny
@@ -156,9 +156,9 @@ admissionPolicyEngine:
         resources:
           - ingresses
     webhook:
-      ca: YjY0ZW5jX3N0cmluZwo=
-      crt: YjY0ZW5jX3N0cmluZwo=
-      key: YjY0ZW5jX3N0cmluZwo=
+      ca: dGVzdC12YWx1ZQ==
+      crt: dGVzdC12YWx1ZQ==
+      key: dGVzdC12YWx1ZQ==
 `)
 
 	Context("Cluster with operation policies", func() {

@@ -84,7 +84,7 @@ spec:
 ---
 key: |
   -----BEGIN RSA PRIVATE KEY-----
-  MIIEpAIBAAKCAQEAvxymRHZIsjIXvxM7X/S8th4CH+3HgWa19HTPG8tOuAvEfBIt
+  ZGVja2hvdXNlLXRlc3QtcHJpdmF0ZS1rZXktbm90LWEtcmVhbC1zZWNyZXQtMDEyMzQ1Njc4OWFiY2RlZg==
   -----END RSA PRIVATE KEY-----
 ---
 ---
@@ -97,7 +97,7 @@ kind: ModuleConfig
 			},
 			out: `key: |
   -----BEGIN RSA PRIVATE KEY-----
-  MIIEpAIBAAKCAQEAvxymRHZIsjIXvxM7X/S8th4CH+3HgWa19HTPG8tOuAvEfBIt
+  ZGVja2hvdXNlLXRlc3QtcHJpdmF0ZS1rZXktbm90LWEtcmVhbC1zZWNyZXQtMDEyMzQ1Njc4OWFiY2RlZg==
   -----END RSA PRIVATE KEY-----
 ---
 apiVersion: deckhouse.io/v1alpha1

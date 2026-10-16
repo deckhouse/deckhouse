@@ -21,7 +21,7 @@ apiVersions:
             description: |
               Строка авторизации из файла конфигурации Docker-клиента (в Linux обычно это `$HOME/.docker/config.json`) для доступа к стороннему container registry, закодированная в Base64.
 
-              Например, для доступа к container registry `registry.company.my` под пользователем `user` с паролем `P@ssw0rd` это будет `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY2pwUVFITnpkekJ5WkFvPSJ9fX0K` (строка `{"auths":{"registry.company.my":{"auth":"dXNlcjpQQHNzdzByZAo="}}}` в Base64).
+              Например, для доступа к container registry `registry.company.my` под пользователем `username` с паролем `password` это будет `eyJhdXRocyI6eyJyZWdpc3RyeS5jb21wYW55Lm15Ijp7ImF1dGgiOiJkWE5sY201aGJXVTZjR0Z6YzNkdmNtUT0ifX19Cg==` (строка `{"auths":{"registry.company.my":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}` в Base64).
           registryCA:
             description: |
               Корневой сертификат, которым можно проверить сертификат container registry при работе по HTTPS (если registry использует самоподписанные SSL-сертификаты).

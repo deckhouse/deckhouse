@@ -51,7 +51,7 @@ metadata:
   namespace: d8-istio
 type: Opaque
 data:
-  key: "NVo4ZFFlT2l1RkpRTllQa2duMmh1bEE0M3FuRzZ0SGI=" # 5Z8dQeOiuFJQNYPkgn2hulA43qnG6tHb
+  key: "ZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4OWFiY2RlZjA=" # dh-test-secret-0123456789abcdef0
 `))
 			f.RunHook()
 		})
@@ -59,7 +59,7 @@ data:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
 
-			Expect(f.ValuesGet("istio.internal.kialiSigningKey").String()).To(Equal("5Z8dQeOiuFJQNYPkgn2hulA43qnG6tHb"))
+			Expect(f.ValuesGet("istio.internal.kialiSigningKey").String()).To(Equal("dh-test-secret-0123456789abcdef0"))
 		})
 	})
 
@@ -74,7 +74,7 @@ metadata:
   namespace: d8-istio
 type: Opaque
 data:
-  key: "d3Jvbmcta2V5" # "wrong-key", not 32 bytes len
+  key: "dGVzdC12YWx1ZQ==" # "test-value", not 32 bytes len
 `))
 			f.RunHook()
 		})

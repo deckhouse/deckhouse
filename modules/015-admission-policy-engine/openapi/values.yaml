@@ -33,13 +33,13 @@ properties:
         properties:
           crt:
             type: string
-            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+            x-examples: ["dGVzdC12YWx1ZQ=="]
           key:
             type: string
-            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+            x-examples: ["dGVzdC12YWx1ZQ=="]
           ca:
             type: string
-            x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+            x-examples: ["dGVzdC12YWx1ZQ=="]
       trackedConstraintResources:
         type: array
         default: []
@@ -117,10 +117,10 @@ properties:
             properties:
               crt:
                 type: string
-                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+                x-examples: ["dGVzdC12YWx1ZQ=="]
               key:
                 type: string
-                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+                x-examples: ["dGVzdC12YWx1ZQ=="]
               ca:
                 type: string
-                x-examples: ["YjY0ZW5jX3N0cmluZwo="]
+                x-examples: ["dGVzdC12YWx1ZQ=="]

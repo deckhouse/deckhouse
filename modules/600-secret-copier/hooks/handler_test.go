@@ -189,7 +189,7 @@ metadata:
   labels:
     secret-copier.deckhouse.io/enabled: ""
 data:
-  supersecret: b2xkX3MyX2RhdGE=
+  supersecret: dGVzdC12YWx1ZQ==
 `
 	)
 

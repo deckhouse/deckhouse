@@ -116,7 +116,7 @@ metadata:
     name: credentials
 data:
   client-secret: dGVzdA==
-  cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0
+  cookie-secret: ZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4
 ---
 apiVersion: deckhouse.io/v2alpha1
 kind: DexAuthenticator
@@ -170,7 +170,7 @@ spec:
   "allowAccessToKubernetes": true,
   "encodedName": "orsxg5bnorsxg5bnmrsxqllbov2gqzlooruwgylun5zmx4u44scceizf",
   "credentials": {
-    "cookieSecret": "testNexttestNexttestNext",
+    "cookieSecret": "dh-test-secret-012345678",
     "appDexSecret": "test"
   }
 }]`))
@@ -191,7 +191,7 @@ metadata:
     name: credentials
 data:
   client-secret: dGVzdA==
-  cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0
+  cookie-secret: ZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4
 ---
 apiVersion: deckhouse.io/v2alpha1
 kind: DexAuthenticator
@@ -229,7 +229,7 @@ spec:
   "allowAccessToKubernetes": true,
   "encodedName": "orsxg5bnmq4c2zdbonuge33bojsc2zdfpawwc5lunbsw45djmnqxi33szpzjzzeeeirsk",
   "credentials": {
-    "cookieSecret": "testNexttestNexttestNext",
+    "cookieSecret": "dh-test-secret-012345678",
     "appDexSecret": "test"
   }
 }]`))
@@ -250,7 +250,7 @@ metadata:
     name: credentials
 data:
   client-secret: dGVzdA==
-  cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0
+  cookie-secret: ZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4
 ---
 apiVersion: deckhouse.io/v2alpha1
 kind: DexAuthenticator
@@ -275,7 +275,7 @@ metadata:
     name: credentials
 data:
   client-secret: dGVzdA==
-  cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0
+  cookie-secret: ZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4
 `))
 			f.RunHook()
 		})
@@ -300,7 +300,7 @@ data:
   "allowAccessToKubernetes": true,
   "encodedName": "orsxg5bnmq4c23lpnzuxi33snfxgollemv4c2ylvorugk3tunfrwc5dpolf7fhheqqrcgji",
   "credentials": {
-    "cookieSecret": "testNexttestNexttestNext",
+    "cookieSecret": "dh-test-secret-012345678",
     "appDexSecret": "test"
   }
 }]`))
@@ -433,7 +433,7 @@ spec:
 
 	DescribeTable("The client secret of an existing DexAuthenticator",
 		func(in inputDexAuthenticatorClientSecret) {
-			const cookieSecret = "testNexttestNexttestNext"
+			const cookieSecret = "dh-test-secret-012345678"
 
 			clientSecretData := ""
 			if !in.omitExisting {
@@ -710,8 +710,8 @@ metadata:
     app: dex-authenticator
     name: credentials
 data:
-  client-secret: dGVzdA== # gitleaks:allow
-  cookie-secret: dGVzdE5leHR0ZXN0TmV4dHRlc3ROZXh0 # gitleaks:allow
+  client-secret: dGVzdA==
+  cookie-secret: ZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4
 `, secret)
 	}
 
@@ -725,7 +725,7 @@ data:
 			f.RunHook()
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs.0.credentials.appDexSecret").String()).To(Equal("test"))
-			Expect(f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs.0.credentials.cookieSecret").String()).To(Equal("testNexttestNexttestNext"))
+			Expect(f.ValuesGet("userAuthn.internal.dexAuthenticatorCRDs.0.credentials.cookieSecret").String()).To(Equal("dh-test-secret-012345678"))
 		},
 		Entry("under the truncated name the template writes", secretName),
 		Entry("under the full name of a Secret written before names were truncated", "dex-authenticator-"+name),

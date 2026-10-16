@@ -232,7 +232,7 @@ kind: Secret
 metadata:
   name: secret
 data:
-  secret-file: dmFsdWUtMg0KDQo=
+  secret-file: dGVzdC12YWx1ZQ==
 `),
 		createTestForResource("configmap", `
 apiVersion: v1

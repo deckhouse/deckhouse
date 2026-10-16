@@ -15,11 +15,11 @@
 # bashible: parallel-group=install-systemd-units
 
 {{- $moduleKey := "nodeManager" }}
-{{- $inhibitorImageKey := "d8ShutdownInhibitor" }}
+{{- $inhibitorImageName := "d8ShutdownInhibitor" }}
 {{- $inhibitorPkgName := "d8-shutdown-inhibitor" }}
 
 {{- $imagePresent := true }}
-{{- $inhibitorDigest := dig $moduleKey $inhibitorImageKey "<missing>" .images }}
+{{- $inhibitorDigest := dig $moduleKey $inhibitorImageName "<missing>" .images }}
 {{- $inhibitorPackage := "" }}
 {{- if ne $inhibitorDigest "<missing>" }}
 {{    $inhibitorPackage = printf "%s:%s" $inhibitorPkgName $inhibitorDigest }}

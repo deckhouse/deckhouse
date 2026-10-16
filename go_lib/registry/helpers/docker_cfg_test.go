@@ -244,11 +244,11 @@ func TestCredsFromDockerCfg(t *testing.T) {
 		{
 			name: "base64 auth with padding",
 			input: input{
-				config: `{"auths":{"registry.io":{"auth": "dXNlcjpwYXNzd29yZA=="}}}`, // user:password
+				config: `{"auths":{"registry.io":{"auth": "dXNlcm5hbWU6cGFzc3dvcmQ="}}}`, // username:password
 				host:   "registry.io",
 			},
 			expected: expected{
-				username: "user",
+				username: "username",
 				password: "password",
 			},
 		},

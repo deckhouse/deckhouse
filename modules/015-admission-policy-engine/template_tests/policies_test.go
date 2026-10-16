@@ -50,17 +50,17 @@ admissionPolicyEngine:
   internal:
     ratify:
       webhook:
-        ca: YjY0ZW5jX3N0cmluZwo=
-        crt: YjY0ZW5jX3N0cmluZwo=
-        key: YjY0ZW5jX3N0cmluZwo=
+        ca: dGVzdC12YWx1ZQ==
+        crt: dGVzdC12YWx1ZQ==
+        key: dGVzdC12YWx1ZQ==
     podSecurityStandards:
       enforcementActions:
         - deny
     bootstrapped: true
     webhook:
-      ca: YjY0ZW5jX3N0cmluZwo=
-      crt: YjY0ZW5jX3N0cmluZwo=
-      key: YjY0ZW5jX3N0cmluZwo=
+      ca: dGVzdC12YWx1ZQ==
+      crt: dGVzdC12YWx1ZQ==
+      key: dGVzdC12YWx1ZQ==
     trackedConstraintResources: []
     trackedMutateResources: []
   podSecurityStandards:
@@ -336,13 +336,13 @@ internal:
   bootstrapped: true
   ratify:
     webhook:
-      ca: YjY0ZW5jX3N0cmluZwo=
-      crt: YjY0ZW5jX3N0cmluZwo=
-      key: YjY0ZW5jX3N0cmluZwo=
+      ca: dGVzdC12YWx1ZQ==
+      crt: dGVzdC12YWx1ZQ==
+      key: dGVzdC12YWx1ZQ==
   webhook:
-    ca: YjY0ZW5jX3N0cmluZwo=
-    crt: YjY0ZW5jX3N0cmluZwo=
-    key: YjY0ZW5jX3N0cmluZwo=
+    ca: dGVzdC12YWx1ZQ==
+    crt: dGVzdC12YWx1ZQ==
+    key: dGVzdC12YWx1ZQ==
   trackedConstraintResources: []
   trackedMutateResources: []
 `, tc.defaultPolicy, tc.enforcementAction, formatEnforcementActionsYAML(tc.enforcementActions))
@@ -406,13 +406,13 @@ internal:
   bootstrapped: true
   ratify:
     webhook:
-      ca: YjY0ZW5jX3N0cmluZwo=
-      crt: YjY0ZW5jX3N0cmluZwo=
-      key: YjY0ZW5jX3N0cmluZwo=
+      ca: dGVzdC12YWx1ZQ==
+      crt: dGVzdC12YWx1ZQ==
+      key: dGVzdC12YWx1ZQ==
   webhook:
-    ca: YjY0ZW5jX3N0cmluZwo=
-    crt: YjY0ZW5jX3N0cmluZwo=
-    key: YjY0ZW5jX3N0cmluZwo=
+    ca: dGVzdC12YWx1ZQ==
+    crt: dGVzdC12YWx1ZQ==
+    key: dGVzdC12YWx1ZQ==
   trackedConstraintResources: []
   trackedMutateResources: []
 `, tc.defaultPolicy, tc.enforcementAction, formatEnforcementActionsYAML(tc.enforcementActions))
