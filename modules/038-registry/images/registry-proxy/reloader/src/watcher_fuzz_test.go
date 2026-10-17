@@ -224,8 +224,8 @@ func TestNginxMasterSelection(t *testing.T) {
 		master  bool
 	}{
 		// The master, before and after nginx rewrites its process title.
-		{cmdline: "nginx: master process /opt/nginx-static/sbin/nginx -g daemon off;", master: true},
-		{cmdline: "/opt/nginx-static/sbin/nginx -g daemon off;", master: true},
+		{cmdline: "nginx: master process /usr/sbin/nginx -g daemon off;", master: true},
+		{cmdline: "/usr/sbin/nginx -g daemon off;", master: true},
 		{cmdline: "nginx", master: true},
 
 		// A worker. SIGHUP here means "shut down gracefully", not "reload".
@@ -234,7 +234,7 @@ func TestNginxMasterSelection(t *testing.T) {
 
 		// The check this reloader spawns itself, and the other one-shot forms.
 		{cmdline: "nginx -t -c /etc/nginx/config/nginx_new.conf -e /dev/stderr"},
-		{cmdline: "/opt/nginx-static/sbin/nginx -s reload"},
+		{cmdline: "/usr/sbin/nginx -s reload"},
 		{cmdline: "nginx -v"},
 
 		// Processes that merely mention the word.
@@ -288,7 +288,7 @@ func (p fakeProcess) SendSignal(process.Signal) error {
 // nginx serves the old configuration until something restarts it, which is the
 // TM-21 outcome the master-selection check above exists to prevent.
 func TestSignalNginxMasterSkipsUnreadableProcesses(t *testing.T) {
-	master := "nginx: master process /opt/nginx-static/sbin/nginx -g daemon off;"
+	master := "nginx: master process /usr/sbin/nginx -g daemon off;"
 
 	cases := []struct {
 		name      string
@@ -353,7 +353,7 @@ func TestSignalNginxMasterReportsSignalFailure(t *testing.T) {
 	var signalled []string
 	processes := []signalTarget{
 		fakeProcess{
-			cmdline:   "nginx: master process /opt/nginx-static/sbin/nginx -g daemon off;",
+			cmdline:   "nginx: master process /usr/sbin/nginx -g daemon off;",
 			signalErr: fs.ErrPermission,
 			signalled: &signalled,
 		},

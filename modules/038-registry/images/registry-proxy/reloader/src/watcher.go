@@ -160,7 +160,7 @@ func signalNginxMaster(processes []signalTarget) error {
 // "nginx: master process <path> ..." and a worker as "nginx: worker process".
 // The bare executable form is accepted too, for the window before the title is
 // rewritten: the container entrypoint is
-// ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"].
+// ["/usr/sbin/nginx", "-g", "daemon off;"].
 func isNginxMasterCmdline(cmdline string) bool {
 	if strings.HasPrefix(cmdline, "nginx: master process") {
 		return true

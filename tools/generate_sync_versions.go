@@ -28,4 +28,4 @@ package main
 //go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --repo-root .. --module modules/030-cloud-provider-dvp
 //go:generate /bin/bash sync_versions/sync_terraform_versions_with_oss.sh --repo-root .. --module modules/030-cloud-provider-yandex
 
-//go:generate /bin/bash sync_versions/sync_oss_versions.sh --repo-root .. --source-module modules/030-cloud-provider-aws --source-id ccm-aws --target-module modules/007-registrypackages --target-id ecr-credential-provider-aws
+//go:generate /bin/bash sync_versions/sync_oss_versions.sh --repo-root .. --source-module modules/030-cloud-provider-aws --source-id ccm-aws --target-module images/platform/registrypackages --target-id ecr-credential-provider-aws

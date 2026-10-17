@@ -1,0 +1,47 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+from: {{ index $.Images "builder/src" }}
+git:
+- add: /{{ $.ImagePath }}/scripts
+  to: /src/scripts
+- add: /{{ $.ImagePath }}/src
+  to: /src/rpp-get
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: scratch
+import:
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - rpp-get
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "rpp-get": "0.0.1" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+final: false
+from: {{ index $.Images "builder/golang" }}
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src/rpp-get && GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-w -s" -o /rpp-get .
+  - mv /src/scripts/* /

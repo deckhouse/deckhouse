@@ -14,6 +14,13 @@
   {{- range $_, $edition := $.Editions }}
     {{- if not $edition.skipCollectImages }}
       {{ $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles ($.Files.Glob (printf "%s/*/images/*/{Dockerfile,werf.inc.yaml}" $edition.modulesDir)) }}
+      {{- /* the edition's images/ sits next to its modules/: images/ for CE, ee/cse/images/ for CSE */}}
+      {{- $imagesDir := "images" }}
+      {{- if ne (dir $edition.modulesDir) "." }}
+        {{- $imagesDir = printf "%s/images" (dir $edition.modulesDir) }}
+      {{- end }}
+      {{- $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles ($.Files.Glob (printf "%s/*/*/{Dockerfile,werf.inc.yaml}" $imagesDir)) }}
+      {{- $ModulesImagesBuildFiles = merge $ModulesImagesBuildFiles ($.Files.Glob (printf "%s/*/*/*/{Dockerfile,werf.inc.yaml}" $imagesDir)) }}
     {{- end }}
     # fill in "$_" data for assembly
     {{- if eq $.Env $edition.name }}
@@ -36,6 +43,18 @@
     {{- end }}
    {{- end }}
 
+  {{- /*
+    Images outside the modules, collected above from each edition's images/ directory.
+
+    images/<scope>/<image> holds images that used to live in modules/000-common/images, and
+    images/<scope>/<namespace>/<image> those of a former pseudo-module such as
+    registrypackages, grouped by the area they serve. The scope only places the files: an
+    image is still built and published as common/<image> or <namespace>/<image>, so that its
+    key in images_digests.json, which helm_lib, bashible and external modules read, stays the
+    same.
+  */}}
+  {{- $RootImagesModuleName := "common" }}
+
    {{- range $path, $content := $ModulesImagesBuildFiles  }}
     {{- $ctx := dict }}
     {{- if regexMatch "/werf.inc.yaml$" $path }}
@@ -43,8 +62,37 @@
     {{- else }}
       {{- $_ := set $ctx "ImageInstructionType" "Dockerfile" }}
     {{- end }}
-    {{- $ImageData := regexReplaceAll "^(.*)modules/([0-9]+)-([a-z0-9-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
-    {{- $moduleName := $ImageData._2 }}
+    {{- $modulePath := "" }}
+    {{- $modulePriority := "" }}
+    {{- $moduleName := "" }}
+    {{- $imageName := "" }}
+    {{- $imagePath := "" }}
+    {{- $ossYamlPath := "" }}
+    {{- if regexMatch "^(.*)modules/([0-9]+)-([a-z0-9-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path }}
+      {{- $ImageData := regexReplaceAll "^(.*)modules/([0-9]+)-([a-z0-9-]+)/images/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
+      {{- $modulePath = $ImageData._0 }}
+      {{- $modulePriority = $ImageData._1 }}
+      {{- $moduleName = $ImageData._2 }}
+      {{- $imageName = $ImageData._3 }}
+      {{- $imagePath = printf "%smodules/%s-%s/images/%s" $modulePath $modulePriority $moduleName $imageName }}
+      {{- $ossYamlPath = printf "%s/modules/%s-%s/oss.yaml" $modulePath $modulePriority $moduleName }}
+    {{- else if regexMatch "^((?:ee/(?:[a-z-]+/)?)?)images/([a-z0-9-]+)/([a-z0-9-]+)/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path }}
+      {{- /* images/<scope>/<namespace>/<image> */}}
+      {{- $ImageData := regexReplaceAll "^((?:ee/(?:[a-z-]+/)?)?)images/([a-z0-9-]+)/([a-z0-9-]+)/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}#${4}" | split "#" }}
+      {{- $modulePath = $ImageData._0 }}
+      {{- $moduleName = $ImageData._2 }}
+      {{- $imageName = $ImageData._3 }}
+      {{- $imagePath = printf "%simages/%s/%s/%s" $modulePath $ImageData._1 $moduleName $imageName }}
+      {{- $ossYamlPath = printf "%simages/%s/%s/oss.yaml" $modulePath $ImageData._1 $moduleName }}
+    {{- else }}
+      {{- /* images/<scope>/<image> */}}
+      {{- $ImageData := regexReplaceAll "^((?:ee/(?:[a-z-]+/)?)?)images/([a-z0-9-]+)/([0-9a-z-_]+)/(Dockerfile|werf.inc.yaml)$" $path "${1}#${2}#${3}" | split "#" }}
+      {{- $modulePath = $ImageData._0 }}
+      {{- $moduleName = $RootImagesModuleName }}
+      {{- $imageName = $ImageData._2 }}
+      {{- $imagePath = printf "%simages/%s/%s" $modulePath $ImageData._1 $imageName }}
+      {{- $ossYamlPath = printf "%simages/%s/oss.yaml" $modulePath $ImageData._1 }}
+    {{- end }}
     # exclude modules and images from editions
     {{- if hasKey $ExcludedModulesDict $moduleName }}
       {{- continue -}}
@@ -55,11 +103,13 @@
 
     {{- $_ := set $ctx "CandiVersionMap" $.CandiVersionMap }}
     {{- $_ := set $ctx "k8sVersions" $Root.k8sVersions }}
-    {{- $_ := set $ctx "ModulePath" $ImageData._0 }}
-    {{- $_ := set $ctx "ModulePriority" $ImageData._1 }}
+    {{- $_ := set $ctx "ModulePath" $modulePath }}
+    {{- $_ := set $ctx "ModulePriority" $modulePriority }}
     {{- $_ := set $ctx "ModuleName" $moduleName }}
-    {{- $_ := set $ctx "OssYamlPath" (printf "%s/modules/%s-%s/oss.yaml" $ctx.ModulePath $ctx.ModulePriority $ctx.ModuleName) }}
-    {{- $_ := set $ctx "ImageName" $ImageData._3 }}
+    {{- $_ := set $ctx "OssYamlPath" $ossYamlPath }}
+    {{- $_ := set $ctx "ImageName" $imageName }}
+    {{- /* the image directory relative to the repository root, wherever the image lives */}}
+    {{- $_ := set $ctx "ImagePath" $imagePath }}
     {{- $_ := set $ctx "ImageBuildData" $content }}
     {{- $_ := set $ctx "Files" $Root.Files }}
     {{- $_ := set $ctx "Env" $Root.Env }}

@@ -1,0 +1,44 @@
+{{- if ne $.Env "CSE" }}
+{{- $version := include "get_oss_version_by_id" (list "amazon-ec2-utils" $ )  -}}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+from: {{ index $.Images "builder/src" }}
+git:
+- url: {{ $.SOURCE_REPO }}/amazonlinux/amazon-ec2-utils.git
+  tag: v{{ $version }}
+  add: /
+  to: /src/amazon-ec2-utils
+  stageDependencies:
+    install: ['**/*']
+- add: /{{ $.ImagePath }}/scripts
+  to: /src/scripts
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - cp /src/amazon-ec2-utils/ebsnvme-id /ebsnvme-id
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: scratch
+import:
+# ebsnvme-id is a symlink upstream since v2.3.0: import the copy made in the src stage, not the link
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /ebsnvme-id
+  to: /ebsnvme-id
+  before: setup
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/scripts
+  to: /
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "growpart": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+{{- end }}

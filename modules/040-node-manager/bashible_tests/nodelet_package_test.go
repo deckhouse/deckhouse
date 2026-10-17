@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const nodeletPackage = "modules/007-registrypackages/images/nodelet/scripts"
+const nodeletPackage = "images/platform/registrypackages/nodelet/scripts"
 
 func TestTheNodeletPackageNeverStartsTheAgent(t *testing.T) {
 	chdirToRepositoryRoot(t)

@@ -164,40 +164,10 @@ Each Go image contains `Taskfile.yml` in its Go module directory and sets
 The distribution image selects `. ./registry ./registry/handlers ./registry/proxy`;
 docker-auth selects `./server` from its `auth_server` Go module.
 
-`common/nginx-static-fuzz` builds the same Nginx fork as the production base of
-`registry/registry-proxy`, using the `deckhouse-fuzzing` branch of the
-`nginx/nginx` mirror. It uses the pinned `fuzz-afl` base and builds
-`nginx_conf_parse` in `/out/fuzz/bin` and its LLVM coverage variant in
-`/out/fuzz/coverage/bin`. The AFL target uses the stock AFL++ driver,
-automatically linked by `afl-clang-fast` for `-fsanitize=fuzzer`.
-`AFL_FUZZER_LOOPCOUNT=1` limits each fork child to one callback, isolating Nginx
-module globals between inputs. The coverage target uses LLVM's stock libFuzzer
-driver and executes each file in a separate process.
-The image patches the harness to keep the input configuration in an anonymous
-Linux `memfd`, which the kernel releases even after a crash or timeout. The
-private include prefix is removed immediately after initialization; per-input
-configuration files and directories do not accumulate on disk.
-`fuzz:run` passes ASan/LSan options to Nginx through `AFL_TARGET_ENV` and removes
-these variables from the `afl-fuzz` process. This satisfies AFL's startup checks
-while keeping sanitizer checks and LSan suppression symbolization in the target.
-`Taskfile.yml` in `/src/nginx` provides `fuzz:list`, `fuzz:run`, `fuzz:minimize`,
-`fuzz:replay`, `fuzz:casr` and `fuzz:coverage`. `fuzz:replay` runs one
-`afl-showmap -Z` forkserver for the non-empty inputs in the flat corpus
-supplied in `FUZZ_INPUT_DIR` (or `FUZZ_CORPUS_DIR`). Both directory mode and
-the AFL++ 5.03c driver skip zero-byte files. Each empty seed is therefore replayed
-separately by `/out/fuzz/replay/bin/nginx_conf_parse`: the same AFL-instrumented
-Nginx objects linked with LLVM's stock libFuzzer driver. It executes the empty
-input once, with libFuzzer's crash signal handlers disabled so `afl-showmap`
-observes crashes directly. `-detect_leaks=0` disables libFuzzer's extra callback
-for leak checks in replay and coverage; LeakSanitizer remains enabled at process
-exit through `ASAN_OPTIONS=detect_leaks=1`. Every input's map is preserved in
-`FUZZ_ARTIFACT_DIR/maps` for the shared replay to validate. Missing or empty
-maps, crashes and timeouts fail the task even when the last input succeeds.
-The fork's seeds in `/src/nginx/fuzz/corpus` are the default for local replay;
-without `FUZZ_ARTIFACT_DIR`, maps are kept in a new directory under `/tmp`. `task fuzz:stream` runs the fork's existing client and
-upstream direction checks against a real Nginx; these are not separate AFL
-targets. This image is also intermediate (`final: false`) and discovered by
-its `-fuzz` suffix.
+Nginx is not fuzzed in CI. `registry/registry-proxy` takes nginx from the
+container-factory `nginx` package, so the fork on the `deckhouse-fuzzing` branch no
+longer matches what ships; its harnesses are run locally (see
+[Running them](#running-them)).
 The `build_fuzz` job discovers all images by their `-fuzz` suffix, builds and
 publishes them, and produces the replay matrix. The separate `replay_fuzz` jobs
 restore the S3 corpus and replay Go targets with `go test -run` and AFL targets

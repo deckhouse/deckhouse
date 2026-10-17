@@ -40,7 +40,7 @@ spec:
         lifecycle:
           preStop:
             exec:
-              command: ["/opt/nginx-static/sbin/nginx", "-s", "quit"]
+              command: ["/usr/sbin/nginx", "-s", "quit"]
         livenessProbe:
           httpGet:
             path: /healthz

@@ -1,0 +1,24 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ index $.Images "base/distroless" }}
+import:
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /out
+  to: /
+  before: install
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/redis-server"]
+    # The image carries no glibc locale data, so any LANG/LC_* value other than "C"
+    # makes redis fail on startup with "Failed to configure LOCALE for invalid locale name."
+    env:
+      LANG: "C"
+      LC_ALL: "C"
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ index $.Images "builder/distroless" }}
+final: false
+shell:
+  beforeInstall:
+  - pm install redis -d /out
+  - rm -f /out/usr/bin/redis-cli

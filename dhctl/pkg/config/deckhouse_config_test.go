@@ -83,6 +83,28 @@ func generateMetaConfigForDeckhouseConfigTestWithErr(t *testing.T, data map[stri
 	return generateMetaConfig(t, configOverridesTemplate, data, true)
 }
 
+// moduleWithoutSpec names a module the schema store knows but holds no
+// openapi/config-values.yaml for. The repository has no such module of its own any more,
+// so registerModuleWithoutSpec adds one to the store, the way loading a module directory
+// without openapi does. The store is a process-wide singleton, so this cannot be done with
+// a modules directory of the test's own.
+const moduleWithoutSpec = "no-spec"
+
+func registerModuleWithoutSpec(t *testing.T) {
+	t.Helper()
+
+	st := NewSchemaStore(&options.New().Global)
+	st.mu.Lock()
+	st.modulesCache[moduleWithoutSpec] = struct{}{}
+	st.mu.Unlock()
+
+	t.Cleanup(func() {
+		st.mu.Lock()
+		delete(st.modulesCache, moduleWithoutSpec)
+		st.mu.Unlock()
+	})
+}
+
 func TestModuleDeckhouseConfigRegistryOverrides(t *testing.T) {
 	tpl := `
 {{ with .enableCRI }}
@@ -517,12 +539,13 @@ spec:
 	})
 
 	t.Run("Module without spec file should ok without settings", func(t *testing.T) {
+		registerModuleWithoutSpec(t)
 		metaConfig := generateMetaConfigForDeckhouseConfigTest(t, map[string]any{
 			"moduleConfigs": `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: registrypackages
+  name: ` + moduleWithoutSpec + `
 spec:
   enabled: true
 `,
@@ -537,12 +560,13 @@ spec:
 	})
 
 	t.Run("Module without spec file should fail with settings", func(t *testing.T) {
+		registerModuleWithoutSpec(t)
 		metaConfig := generateMetaConfigForDeckhouseConfigTestWithErr(t, map[string]any{
 			"moduleConfigs": `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: registrypackages
+  name: ` + moduleWithoutSpec + `
 spec:
   enabled: true
   version: 1

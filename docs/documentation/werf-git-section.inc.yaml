@@ -3,7 +3,7 @@
   to: /srv/jekyll-data/documentation/_data/version_map.yml
   stageDependencies:
     setup: ['**/*']
-- add: /modules/000-common/images/kubernetes/conformance
+- add: /images/kubernetes/kubernetes/conformance
   to: /srv/jekyll-data/documentation/assets/conformance
   stageDependencies:
     setup: ['**/*']

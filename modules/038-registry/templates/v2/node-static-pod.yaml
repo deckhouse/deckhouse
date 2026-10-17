@@ -16,7 +16,7 @@
 
   The image. `deckhouse.local/images:registry-agent` is local: the containerd system
   extension ships it as an OCI archive and imports it on every boot
-  (modules/007-registrypackages/images/containerd). It cannot be a reference the runtime
+  (images/platform/registrypackages/containerd). It cannot be a reference the runtime
   would pull, because on this node the runtime has no registry configured until this very
   pod writes one — registry.d is under /run and starts every boot empty.
 

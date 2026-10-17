@@ -33,18 +33,22 @@ import:
   add: /src/chrony_exporter
   to: /chrony_exporter
   before: install
-- from: common/promu-artifact
-  add: /src/promu
-  to: /bin/promu
-  before: install
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=1 GOOS=linux GOARCH=amd64
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - cd /chrony_exporter
-  - promu build
+  # The same version stamp promu put in from .promu.yml. The source is cloned without .git,
+  # so promu reported the revision and branch as "non-git" too.
+  - |
+    go build -trimpath -ldflags="-s -w \
+      -X github.com/prometheus/common/version.Version=$(cat VERSION) \
+      -X github.com/prometheus/common/version.Revision=non-git \
+      -X github.com/prometheus/common/version.Branch=non-git \
+      -X github.com/prometheus/common/version.BuildUser=root@unknown" \
+      -o chrony_exporter .
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: common/distroless

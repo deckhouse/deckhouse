@@ -1,7 +1,7 @@
 # add mount points from file mount_points.yaml in the build dir
 
 {{- define "image mount points" }}
-  {{- $mountPoints := ($.Files.Get (printf "%smodules/%s-%s/images/%s/mount-points.yaml" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) | fromYaml) }}
+  {{- $mountPoints := ($.Files.Get (printf "%s/mount-points.yaml" $.ImagePath) | fromYaml) }}
   {{- range $v := $mountPoints.dirs }}
 - from: werf-mountpoints
   add: /tools/mounts/mountdir

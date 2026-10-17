@@ -58,10 +58,10 @@ spec:
         type: RuntimeDefault
     image: {{ $registry_proxy_image }}
     imagePullPolicy: IfNotPresent
-    command: ["/opt/nginx-static/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf", "-g", "daemon off;"]
+    command: ["/usr/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf", "-g", "daemon off;"]
     env:
     - name: PATH
-      value: /opt/nginx-static/sbin
+      value: /usr/sbin
     volumeMounts:
     - mountPath: /etc/nginx/config
       name: registry-proxy-conf
@@ -89,7 +89,7 @@ spec:
         type: RuntimeDefault
     env:
     - name: PATH
-      value: /opt/nginx-static/sbin
+      value: /usr/sbin
     volumeMounts:
     - mountPath: /etc/nginx/config
       name: registry-proxy-conf

@@ -1,0 +1,52 @@
+{{- $version := "08.04.25" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: scratch
+import:
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - pause.tar
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "pause": "{{ $version }}" }
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ index $.Images "builder/distroless" }}
+final: false
+git:
+- add: /{{ $.ImagePath }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
+dependencies:
+- from: common/pause
+  before: setup
+  imports:
+  - type: ImageDigest
+    targetEnv: IMAGE_DIGEST
+  - type: ImageRepo
+    targetEnv: IMAGE_REPO
+secrets:
+- id: REGISTRY_USER
+  env: REGISTRY_USER
+- id: REGISTRY_PASSWORD
+  env: REGISTRY_PASSWORD
+shell:
+  beforeInstall:
+  - pm install crane jq tar coreutils
+  setup:
+  # The login is kept out of $HOME, which builder/distroless does not promise to set.
+  - export DOCKER_CONFIG=/tmp/docker-config
+  - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
+  - crane auth login --password "$(cat /run/secrets/REGISTRY_PASSWORD)" --username "$(cat /run/secrets/REGISTRY_USER)" "${IMAGE_REPO%%/*}"
+  - crane pull --format oci $IMAGE_REPO@$IMAGE_DIGEST $param /tmp/image
+  - rm -rf "$DOCKER_CONFIG"
+  - jq '.manifests[0].annotations = {"org.opencontainers.image.ref.name":"deckhouse.local/images:pause"}' /tmp/image/index.json > /tmp/index.updated.json && mv /tmp/index.updated.json /tmp/image/index.json
+  - tar -C /tmp/image -cf /pause.tar .
+  - rm -rf /tmp/image

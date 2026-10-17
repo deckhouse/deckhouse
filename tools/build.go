@@ -301,9 +301,6 @@ func writeSections(settings writeSettings) {
 		log.Fatalf("globbing: %v", err)
 	}
 	addNewFileEntry := func(file string) {
-		if strings.Contains(file, "ee/modules/000-common") {
-			return
-		}
 		// remove /ee/modules/040-node-manager/templates/nvidia-gpu in CSE
 		if strings.Contains(file, "/ee/modules/040-node-manager/templates/nvidia-gpu") && settings.Edition == "CSE" {
 			return

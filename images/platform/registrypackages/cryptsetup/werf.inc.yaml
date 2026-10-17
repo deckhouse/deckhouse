@@ -1,0 +1,43 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: scratch
+import:
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - opt/deckhouse
+  - install
+  - uninstall
+  before: install
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ index $.Images "builder/distroless" }}
+final: false
+git:
+- add: /{{ $.ImagePath }}/scripts
+  to: /
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  beforeInstall:
+  - pm install file findutils patchelf
+  install:
+  - pm install -n cryptsetup -d /src
+  - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+  - cp -pr /src/usr/sbin/integritysetup /opt/deckhouse/bin
+  - cp -pr /src/usr/sbin/veritysetup /opt/deckhouse/bin
+  - cp -pr /src/usr/sbin/cryptsetup /opt/deckhouse/bin
+  - cp -pr /src/usr/lib/*.so* /opt/deckhouse/lib
+  - cp -pr /src/usr/lib64/*.so* /opt/deckhouse/lib
+  - cp -pr /src/lib64/* /opt/deckhouse/lib
+  {{- include "relocate_and_verify" (dict "smoke" (list "/opt/deckhouse/bin/cryptsetup --version" "/opt/deckhouse/bin/veritysetup --version" "/opt/deckhouse/bin/integritysetup --version")) | nindent 2 }}

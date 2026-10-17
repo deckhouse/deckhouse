@@ -1,0 +1,34 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ index $.Images "base/distroless" }}
+import:
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /pause-linux-amd64
+  to: /pause
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/pause"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+from: {{ index $.Images "builder/src" }}
+final: false
+git:
+- add: /{{ $.ImagePath }}/src
+  to: /src
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ index $.Images "builder/distroless" }}
+final: false
+import:
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  - pm install build-base
+  install:
+  - cd /src
+  - gcc -Os -Wall -Werror -static -o /pause-linux-amd64 pause.c
+  - strip /pause-linux-amd64

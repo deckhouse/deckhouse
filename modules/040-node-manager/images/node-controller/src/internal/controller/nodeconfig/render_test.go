@@ -1103,7 +1103,7 @@ func TestTheEngineContainerdUnitImportsPauseLikeBashible(t *testing.T) {
 		return lines
 	}
 
-	const dir = "007-registrypackages/images/containerd/"
+	const dir = "../images/platform/registrypackages/containerd/"
 	bashible := pauseLines(read(dir + "scripts/containerd.service"))
 	require.NotEmpty(t, bashible, "the bashible unit no longer imports pause")
 	require.Equal(t, bashible, pauseLines(read(dir+"sysext/sysext-containerd.service")))

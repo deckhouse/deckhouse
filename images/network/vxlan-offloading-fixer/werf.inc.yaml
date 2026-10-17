@@ -1,0 +1,51 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+from: {{ index $.Images "builder/src" }}
+final: false
+git:
+- add: /{{ $.ImagePath }}/src
+  to: /src/vxlan-offloading-fixer
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ index $.Images "builder/golang" }}
+final: false
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/vxlan-offloading-fixer
+  to: /src
+  before: install
+shell:
+  install:
+  - export "CGO_ENABLED=0"
+  - export "GOOS=linux"
+  - export "GOARCH=amd64"
+  - cd /src
+  - go build -o /tmp/vxlan-offloading-fixer main.go
+  - chown 64535:64535 /tmp/vxlan-offloading-fixer
+  - chmod 0755 /tmp/vxlan-offloading-fixer
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ index $.Images "base/distroless" }}
+import:
+- from: {{ .ModuleName }}/{{ .ImageName }}-pm-artifact
+  add: /relocate-pm
+  to: /
+  before: setup
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /tmp/vxlan-offloading-fixer
+  to: /vxlan-offloading-fixer
+  before: setup
+- from: common/pause
+  add: /pause
+  to: /pause
+  before: install
+imageSpec:
+  config:
+    entrypoint: ["/vxlan-offloading-fixer"]
+{{- include "pm_binaries_artifact" (dict
+      "Images" $.Images
+      "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
+      "packages" "ethtool"
+      "binaries" "/usr/sbin/ethtool:/ethtool") }}

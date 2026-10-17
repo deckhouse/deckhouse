@@ -1,4 +1,5 @@
 {{- $shellOperatorVersion := "v1.20.6" }}
+{{- $prometheusVersion := "v2.55.1" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
@@ -66,7 +67,7 @@ import:
   add: /src/_output/bin/kubectl
   to: /usr/bin/kubectl
   before: setup
-- from: common/promtool-artifact
+- from: {{ .ModuleName }}/{{ .ImageName }}-promtool-artifact
   add: /promtool
   to: /usr/local/bin/promtool
   before: setup
@@ -301,3 +302,59 @@ git:
   to: /src
 final: false
 from: {{ index $.Images "builder/src" }}
+---
+{{- /*
+  Moved here from modules/000-common/images/promtool, which had this one importer. promtool
+  validates the Prometheus rules the hooks receive.
+*/}}
+image: {{ .ModuleName }}/{{ .ImageName }}-promtool-src-artifact
+final: false
+from: {{ index $.Images "builder/src" }}
+git:
+- url: {{ $.SOURCE_REPO }}/prometheus/prometheus.git
+  tag: {{ $prometheusVersion }}
+  add: /
+  to: /src
+  stageDependencies:
+    install: ['**/*']
+- add: /{{ $.ImagePath }}/patches/promtool
+  to: /patches
+  includePaths:
+  - '*.patch'
+  stageDependencies:
+    install:
+    - '*.patch'
+shell:
+  install:
+  - cd /src
+  - git apply /patches/*.patch --verbose
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-promtool-artifact
+final: false
+from: {{ index $.Images "builder/golang-1.25" }}
+import:
+- from: {{ .ModuleName }}/{{ .ImageName }}-promtool-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - cd /src
+  # The version stamp promu info used to supply: VERSION is where promu read it from, and
+  # with .git removed promu reported the revision as "non-git".
+  - |
+    go build -tags "netgo,stringlabels" -ldflags="\
+      -X github.com/prometheus/common/version.Version=$(cat VERSION) \
+      -X github.com/prometheus/common/version.Revision=non-git \
+      -X github.com/prometheus/common/version.Branch=HEAD \
+      -X github.com/prometheus/common/version.BuildUser=root@unknown \
+      -extldflags '-static'" \
+      -o /promtool ./cmd/promtool
+  - chown 64535:64535 /promtool
+  - chmod 0700 /promtool

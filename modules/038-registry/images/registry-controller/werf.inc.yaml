@@ -8,7 +8,7 @@ git:
     excludePaths:
       - '**/*.md'
   # The API types are shared with the storage syncer and with the agent, whose
-  # node-delivery package lives in modules/007-registrypackages. They sit in
+  # node-delivery package lives in images/platform/registrypackages. They sit in
   # go_lib so that all three link the same package instead of keeping three
   # copies in step.
   - add: /{{ $.ModulePath }}go_lib/registry

@@ -1,16 +1,24 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/nginx-static
+from: {{ index $.Images "base/distroless" }}
 git:
 - add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/nginx.conf
-  to: /opt/nginx-static/conf/nginx.conf
+  to: /usr/conf/nginx.conf
 import:
+  - from: {{ .ModuleName }}/{{ .ImageName }}-nginx-artifact
+    add: /relocate-pm/usr/sbin/nginx
+    to: /usr/sbin/nginx
+    before: setup
+  - from: {{ .ModuleName }}/{{ .ImageName }}-nginx-artifact
+    add: /relocate-pm/usr/conf/mime.types
+    to: /usr/conf/mime.types
+    before: setup
   - from: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /app
     to: /app
     before: setup
 imageSpec:
   config:
-    entrypoint: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
+    entrypoint: [ "/usr/sbin/nginx", "-g", "daemon off;" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
@@ -106,3 +114,16 @@ shell:
   - chown 64535:64535 /app
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}
+{{- include "pm_binaries_artifact" (dict
+      "Images" $.Images
+      "name" (printf "%s/%s-nginx-artifact" $.ModuleName $.ImageName)
+      "packages" "nginx"
+      "binaries" "/usr/sbin/nginx"
+      "post" `mkdir -p "$out/usr/conf"
+cp /out/usr/conf/mime.types "$out/usr/conf/mime.types"
+# Only the binary and mime.types are imported, so a pm nginx that stops being static
+# would arrive without its libraries.
+if patchelf --print-interpreter "$out/usr/sbin/nginx" >/dev/null 2>&1; then
+  echo "FATAL: nginx from pm is no longer statically linked" >&2
+  exit 1
+fi`) }}

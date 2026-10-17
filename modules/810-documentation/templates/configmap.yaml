@@ -19,7 +19,7 @@ data:
     }
 
     http {
-      include       /opt/nginx-static/conf/mime.types;
+      include       /usr/conf/mime.types;
       default_type  application/octet-stream;
 
       # Add MIME type for ES modules (.mjs files)
@@ -170,7 +170,7 @@ data:
     }
 
     http {
-      include       /opt/nginx-static/conf/mime.types;
+      include       /usr/conf/mime.types;
       default_type  application/octet-stream;
 
       # Add MIME type for ES modules (.mjs files)

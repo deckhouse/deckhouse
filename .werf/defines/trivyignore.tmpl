@@ -14,6 +14,8 @@
     {{- $trivyIgnorePath = "/dhctl/.trivyignore.yaml" }}
   {{- else if eq $imageName "bundle" }}
     {{- $trivyIgnorePath = "/.trivyignore.yaml" }}
+  {{- else if hasKey $context "ImagePath" }}
+    {{- $trivyIgnorePath = (printf "/%s/.trivyignore.yaml" $context.ImagePath) }}
   {{- else if hasKey $context "ModulePriority" }}
     {{- $trivyIgnorePath = (printf "/%smodules/%s-%s/images/%s/.trivyignore.yaml" $context.ModulePath $context.ModulePriority $context.ModuleName $context.ImageName) }}
   {{- else }}

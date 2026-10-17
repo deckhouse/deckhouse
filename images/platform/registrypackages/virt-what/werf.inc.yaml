@@ -1,0 +1,57 @@
+{{- $version := include "get_oss_version_by_id" (list "virt-what" $ )  -}}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+from: {{ index $.Images "builder/src" }}
+git:
+- url: {{ $.SOURCE_REPO }}/virt-what.git
+  tag: v{{ $version }}
+  add: /
+  to: /src/virt-what
+- add: /{{ $.ImagePath }}/scripts
+  to: /src/scripts
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: scratch
+import:
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - virt-what
+  - virt-what-cpuid-helper
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "virt-what": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ index $.Images "builder/alpine" }}
+import:
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make autoconf pkgconf automake build-base
+  setup:
+  - cd /src/virt-what
+  - autoreconf -fi
+  - autoconf
+  - LDFLAGS="-static" ./configure
+  - make
+  - strip ./virt-what-cpuid-helper
+  - mv ./virt-what /virt-what && mv ./virt-what-cpuid-helper /virt-what-cpuid-helper
+  - mv /src/scripts/* /
+  - chmod +x /virt-what-cpuid-helper /virt-what  /install /uninstall

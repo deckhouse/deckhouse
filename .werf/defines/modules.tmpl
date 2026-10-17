@@ -2,7 +2,7 @@
   {{- if eq .ImageInstructionType "Dockerfile" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-context: {{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}
+context: {{ .ImagePath }}
 dockerfile: Dockerfile
 ssh: default
 secrets:

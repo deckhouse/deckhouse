@@ -19,7 +19,7 @@ limitations under the License.
 // The package lives in go_lib rather than inside a module because three
 // separate Go modules consume it: the controller and the syncer
 // (modules/038-registry) and the agent (image built in modules/038-registry,
-// packaged for node delivery in modules/007-registrypackages).
+// packaged for node delivery in images/platform/registrypackages).
 //
 // +kubebuilder:object:generate=true
 // +groupName=deckhouse.io

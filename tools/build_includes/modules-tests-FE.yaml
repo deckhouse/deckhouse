@@ -21,17 +21,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/007-registrypackages
-  to: /deckhouse/modules/007-registrypackages
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/015-admission-policy-engine
   to: /deckhouse/modules/015-admission-policy-engine
   excludePaths:

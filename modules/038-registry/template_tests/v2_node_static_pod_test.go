@@ -124,7 +124,7 @@ var _ = Describe("Module :: registry :: helm template :: v2 node static pod", fu
 
 			// The runtime has no registry configured until this pod writes one, so an
 			// image it had to pull could never arrive. The extension imports this ref on
-			// every boot: modules/007-registrypackages/images/containerd.
+			// every boot: images/platform/registrypackages/containerd.
 			Expect(container()["image"]).To(Equal("deckhouse.local/images:registry-agent"))
 			Expect(container()["imagePullPolicy"]).To(Equal("IfNotPresent"))
 		})

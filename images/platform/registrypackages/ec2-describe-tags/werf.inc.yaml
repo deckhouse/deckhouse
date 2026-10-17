@@ -1,0 +1,54 @@
+{{- if ne $.Env "CSE" }}
+{{- $version := include "get_oss_version_by_id" (list "ec2-describe-tags" $ )  -}}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+final: false
+from: {{ index $.Images "builder/src" }}
+git:
+- url: {{ $.SOURCE_REPO }}/flant/go-ec2-describe-tags.git
+  tag: {{ $version }}
+  add: /
+  to: /src/go-ec2-describe-tags
+- add: /{{ $.ImagePath }}/scripts
+  to: /src/scripts
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: scratch
+import:
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - ec2_describe_tags
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "ec2-describe-tags": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ index $.Images "builder/golang" }}
+import:
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  setup:
+    - cd /src/go-ec2-describe-tags
+    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /ec2_describe_tags
+    - mv /src/scripts/* /
+{{- end }}

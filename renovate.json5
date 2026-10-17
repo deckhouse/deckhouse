@@ -24,8 +24,8 @@
       "enabled": false
     },
     {
-      "description": "Group 000-common dependency updates",
-      "matchFileNames": ["**/modules/000-common/**"],
+      "description": "Group 000-common dependency updates, with the images that left it for images/<scope>",
+      "matchFileNames": ["**/modules/000-common/**", "images/**", "ee/images/**"],
       "groupName": "000-common dependencies",
       "groupSlug": "000-common"
     },
@@ -36,10 +36,10 @@
       "groupSlug": "002-deckhouse"
     },
     {
-      "description": "Group 007-registrypackages dependency updates",
-      "matchFileNames": ["**/modules/007-registrypackages/**"],
-      "groupName": "007-registrypackages dependencies",
-      "groupSlug": "007-registrypackages"
+      "description": "Group registrypackages dependency updates (former 007-registrypackages, now images/platform/registrypackages)",
+      "matchFileNames": ["images/platform/registrypackages/**", "ee/*/images/platform/registrypackages/**"],
+      "groupName": "registrypackages dependencies",
+      "groupSlug": "registrypackages"
     },
     {
       "description": "Group 015-admission-policy-engine dependency updates",

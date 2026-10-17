@@ -14,6 +14,8 @@
     {{- $knownVulnPath = "/dhctl/known_vulnerabilities.vex" }}
   {{- else if eq $imageName "bundle" }}
     {{- $knownVulnPath = "/known_vulnerabilities.vex" }}
+  {{- else if hasKey $context "ImagePath" }}
+    {{- $knownVulnPath = (printf "/%s/known_vulnerabilities.vex" $context.ImagePath) }}
   {{- else if hasKey $context "ModulePriority" }}
     {{- $knownVulnPath = (printf "/%smodules/%s-%s/images/%s/known_vulnerabilities.vex" $context.ModulePath $context.ModulePriority $context.ModuleName $context.ImageName) }}
   {{- else }}
