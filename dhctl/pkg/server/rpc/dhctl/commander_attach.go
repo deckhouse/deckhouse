@@ -60,8 +60,9 @@ func (p *attachParams) loggerOptions(ctx context.Context) logger.Options {
 }
 
 func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
-	ctx, cancel := operationCtx(server)
-	defer cancel()
+	op := newOperation(server)
+	defer op.close()
+	ctx := op.ctx
 
 	logger.L(ctx).Info("started")
 
@@ -82,7 +83,7 @@ func (s *Service) CommanderAttach(server pb.DHCTL_CommanderAttachServer) error {
 	}
 
 	startReceiver[*pb.CommanderAttachRequest, *pb.CommanderAttachResponse](server, receiveCh, doneCh, internalErrCh)
-	startSender[*pb.CommanderAttachRequest, *pb.CommanderAttachResponse](server, sendCh, internalErrCh)
+	startOperationSender[*pb.CommanderAttachRequest, *pb.CommanderAttachResponse](op, server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -108,7 +109,7 @@ connectionProcessor:
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				go func() {
+				op.Go(func() {
 					result := s.commanderAttachSafe(ctx, &attachParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
@@ -116,7 +117,7 @@ connectionProcessor:
 						sendCh:       sendCh,
 					})
 					_ = sendResponse(server.Context(), sendCh, &pb.CommanderAttachResponse{Message: &pb.CommanderAttachResponse_Result{Result: result}})
-				}()
+				})
 
 			case *pb.CommanderAttachRequest_Continue:
 				err := f.Event("toNextPhase")
@@ -137,7 +138,7 @@ connectionProcessor:
 				}
 
 			case *pb.CommanderAttachRequest_Cancel:
-				cancel()
+				op.cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
