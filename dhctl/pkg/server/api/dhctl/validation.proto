@@ -28,6 +28,13 @@ message ValidateOptions {
 message ValidateResourcesRequest {
   string config = 1;
   ValidateOptions opts = 2;
+  // Full configuration: all config documents the client has for this
+  // cluster (init config, cluster config, provider-specific config,
+  // resources, etc.), combined into one multi-document YAML string. Gives
+  // the validator complete context beyond the single `config` doc being
+  // validated. Empty means the client is an older version that doesn't
+  // support this field.
+  string full_config = 3;
 }
 
 message ValidateResourcesResponse {
@@ -37,6 +44,7 @@ message ValidateResourcesResponse {
 message ValidateInitConfigRequest {
   string config = 1;
   ValidateOptions opts = 2;
+  string full_config = 3;
 }
 
 message ValidateInitConfigResponse {
@@ -46,6 +54,7 @@ message ValidateInitConfigResponse {
 message ValidateClusterConfigRequest {
   string config = 1;
   ValidateOptions opts = 2;
+  string full_config = 3;
 }
 
 message ValidateClusterConfigResponse {
@@ -56,6 +65,7 @@ message ValidateClusterConfigResponse {
 message ValidateStaticClusterConfigRequest {
   string config = 1;
   ValidateOptions opts = 2;
+  string full_config = 3;
 }
 
 message ValidateStaticClusterConfigResponse {
@@ -66,6 +76,7 @@ message ValidateProviderSpecificClusterConfigRequest {
   string config = 1;
   string cluster_config = 2;
   ValidateOptions opts = 3;
+  string full_config = 4;
 }
 
 message ValidateProviderSpecificClusterConfigResponse {
@@ -77,6 +88,7 @@ message ValidateChangesRequest {
   string old_config = 2;
   string new_config = 3;
   ValidateOptions opts = 4;
+  string full_config = 5;
 }
 
 message ValidateChangesResponse {
@@ -86,6 +98,7 @@ message ValidateChangesResponse {
 message ParseConnectionConfigRequest {
   string config = 1;
   ValidateOptions opts = 2;
+  string full_config = 3;
 }
 
 message ParseConnectionConfigResponse {
@@ -105,6 +118,7 @@ message ConfigExtenderRequest {
   string config = 1;
   // Which single extension kind to compute.
   ConfigExtensionKind kind = 2;
+  string full_config = 3;
 }
 
 // ConfigExtenderResponse returns the recommended config for the requested kind
