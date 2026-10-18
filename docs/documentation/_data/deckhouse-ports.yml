@@ -81,6 +81,11 @@ groups:
     description:
       en: "Deckhouse controller metrics"
       ru: "Метрики контроллера Deckhouse"
+  - ports: "5001"
+    protocol: TCP
+    description:
+      en: "`registry` module traffic for transferring images between nodes. Used from DP version 1.75 to 1.77. Since version 1.78, the port is not used."
+      ru: "Трафик модуля `registry` для передачи образов между машинами. Использовался с версии DP 1.75 до 1.77. Начиная с версии 1.78 порт не используется."
 
 - group: NodesToNodes
   description:
