@@ -1543,18 +1543,45 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// The object of a node that is not CloudEphemeral carries what the machine was
-	// started with, so the node registers it and this controller completes it.
-	It("leaves the first NodeConfig of a static bashible node to the node", func(ctx context.Context) {
+	// A bashible node's document is the render alone, so the cluster creates it for a
+	// master too. Its agent registers the object only once, at start: a deleted object
+	// comes back from this controller or not at all.
+	It("creates the NodeConfig of a bashible master and brings it back when deleted", func(ctx context.Context) {
+		ngName := testenv.UniqueName("master-mutable")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, managedByBashible(deckhousev1.NodeTypeCloudPermanent))
+		nodeName := testenv.UniqueName("master")
+		node := &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: nodeName,
+				Labels: map[string]string{
+					nodecommon.NodeGroupLabel: ngName,
+					controlPlaneRoleLabel:     "",
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, node)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, node) })
+
+		var created *internalv1alpha1.NodeConfig
+		Eventually(func(g Gomega) {
+			created = getNodeConfig(ctx, g, nodeName)
+			g.Expect(created.Spec.SystemType).To(Equal(internalv1alpha1.SystemTypeMutable))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("deleting the object, as a release without bashible NodeConfigs does")
+		Expect(k8sClient.Delete(ctx, created)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).UID).NotTo(Equal(created.UID))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// The first master's agent registers its seed before Deckhouse runs, and this
+	// controller completes the object it finds.
+	It("completes the seed a bashible node registered", func(ctx context.Context) {
 		ngName := testenv.UniqueName("static-mutable")
 		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, managedByBashible(deckhousev1.NodeTypeStatic))
 		nodeName := testenv.UniqueName("node")
-		createNode(ctx, nodeName, ngName)
-
-		Consistently(func(g Gomega) {
-			err := k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, &internalv1alpha1.NodeConfig{})
-			g.Expect(apierrors.IsNotFound(err)).To(BeTrue(), "the controller created the object of a static node")
-		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 
 		By("the agent registering the seed it was started with")
 		// What the first master's seed carries: the installer's proxy, gone once dhctl
@@ -1573,6 +1600,8 @@ var _ = Describe("NodeConfig controller", func() {
 			},
 		}}
 		Expect(k8sClient.Create(ctx, seed)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, seed) })
+		createNode(ctx, nodeName, ngName)
 
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)

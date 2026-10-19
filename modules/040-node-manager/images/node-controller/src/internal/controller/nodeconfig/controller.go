@@ -429,11 +429,9 @@ func (r *Reconciler) unchanged(ctx context.Context, desired *internalv1alpha1.No
 	return cached
 }
 
-// create gives a node its first NodeConfig. Only a CloudEphemeral payload is
-// rendered by this controller: for any other node the object carries
-// bootstrap-only fields nothing here can reproduce, so its own is waited for.
+// create gives a node its first NodeConfig.
 func (r *Reconciler) create(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, desired *internalv1alpha1.NodeConfig, logger logr.Logger, p *pass) (*internalv1alpha1.NodeConfig, error) {
-	if isControlPlaneNode(node) || ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
+	if nodePublishesFirstObject(ng, node) {
 		logger.V(1).Info("waiting for the payload-provisioned node to publish its own NodeConfig", "node", desired.Name)
 		return nil, nil
 	}
@@ -452,6 +450,17 @@ func (r *Reconciler) create(ctx context.Context, ng *v1.NodeGroup, node *corev1.
 	}
 	r.recordClampedSettings(ng)
 	return desired, nil
+}
+
+// nodePublishesFirstObject reports whether the first object must come from the node. An
+// Engine node other than CloudEphemeral carries bootstrap-only fields nothing here can
+// reproduce. A bashible node's document is the render alone, and its agent never registers
+// one: this controller is the object's only writer.
+func nodePublishesFirstObject(ng *v1.NodeGroup, node *corev1.Node) bool {
+	if IsMutable(ng) {
+		return false
+	}
+	return isControlPlaneNode(node) || ng.Spec.NodeType != v1.NodeTypeCloudEphemeral
 }
 
 // patch applies the rendered spec onto the object the slot was granted against.

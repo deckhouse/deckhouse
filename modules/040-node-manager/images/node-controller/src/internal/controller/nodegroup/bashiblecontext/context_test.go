@@ -18,6 +18,7 @@ package bashiblecontext
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,7 +38,11 @@ var mandatoryInputKeys = []string{
 }
 
 func TestBuild_MandatoryFieldsAlwaysPresent(t *testing.T) {
-	// Empty cluster: only the mandatory (unconditional) keys must appear.
+	// Empty cluster: only the mandatory (unconditional) keys must appear. The process has a
+	// service-account CA, as a CI runner pod does, and the service must not read it.
+	hostCAFiles := RootCAFiles
+	RootCAFiles = []string{filepath.Join("testdata", "ca.crt")}
+	t.Cleanup(func() { RootCAFiles = hostCAFiles })
 	s := newService(t, endpointSlice([]string{"10.0.0.1"}, "https", 6443))
 	input, err := s.Build(context.Background(), Globals{}, nil, testRegistry(t, s))
 	require.NoError(t, err)

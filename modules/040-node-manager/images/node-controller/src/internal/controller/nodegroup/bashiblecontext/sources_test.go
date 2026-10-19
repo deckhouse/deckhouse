@@ -48,7 +48,8 @@ func newScheme(t *testing.T) *runtime.Scheme {
 func newService(t *testing.T, objs ...client.Object) *Service {
 	t.Helper()
 	c := fake.NewClientBuilder().WithScheme(newScheme(t)).WithObjects(objs...).Build()
-	return &Service{Client: c}
+	// Never the host's service-account CA: a CI runner pod has one.
+	return &Service{Client: c, RootCAFile: filepath.Join(t.TempDir(), "absent.crt")}
 }
 
 func secret(ns, name string, data map[string][]byte) *corev1.Secret {
