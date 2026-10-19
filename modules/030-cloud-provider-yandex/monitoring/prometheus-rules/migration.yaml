@@ -25,3 +25,45 @@
 
           After applying the resources, the alert will disappear automatically once the module
           detects that all required resources are in place.
+
+          After the migration is complete, the legacy `YandexProviderClusterConfiguration` secret is no longer needed
+          and can be deleted manually:
+
+          1. Make sure the cloud discovery data is stored outside the legacy secret. The module reads it from the
+             `d8-candi-cloud-provider-discovery-data` Secret first and uses the legacy secret only as a fallback,
+             so the following command must print a non-empty value:
+
+             ```bash
+             d8 k -n d8-cloud-provider-yandex get secret d8-candi-cloud-provider-discovery-data -o jsonpath='{.data.cloud-provider-discovery-data\.json}'
+             ```
+
+             If it prints nothing, the discovery data exists only in the legacy secret, and deleting that secret
+             would lose it. Copy the payload over — the key holds exactly the same discovery data dhctl recorded
+             from the infrastructure run:
+
+             ```bash
+             d8 k -n kube-system get secret d8-provider-cluster-configuration \
+               -o jsonpath='{.data.cloud-provider-discovery-data\.json}' | base64 -d > /tmp/yandex-discovery.json
+
+             d8 k -n d8-cloud-provider-yandex create secret generic d8-candi-cloud-provider-discovery-data \
+               --from-file=cloud-provider-discovery-data.json=/tmp/yandex-discovery.json \
+               --dry-run=client -o yaml | d8 k apply -f -
+             ```
+
+          2. Back up the secret. It contains cloud credentials and discovery data, so store the file securely:
+
+             ```bash
+             d8 k -n kube-system get secret d8-provider-cluster-configuration -o yaml > d8-provider-cluster-configuration-backup.yaml
+             ```
+
+          3. Allow the deletion. The secret is protected by an admission webhook and cannot be deleted without the annotation:
+
+             ```bash
+             d8 k -n kube-system annotate secret d8-provider-cluster-configuration deckhouse.io/allow-delete=true
+             ```
+
+          4. Delete the secret:
+
+             ```bash
+             d8 k -n kube-system delete secret d8-provider-cluster-configuration
+             ```
