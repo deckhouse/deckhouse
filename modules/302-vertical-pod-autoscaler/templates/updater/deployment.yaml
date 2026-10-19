@@ -70,6 +70,9 @@ spec:
         - --updater-interval={{ printf "%vs" $.Values.global.discovery.prometheusScrapeInterval }}
         - --v={{ include "vpa_verbosity" . }}
         - --in-place-skip-disruption-budget
+        env:
+        - name: VPA_DEFAULT_UPDATE_MODE
+          value: {{ include "vpa_default_update_mode" . | quote }}
         ports:
         - containerPort: 8943
           name: http-metrics

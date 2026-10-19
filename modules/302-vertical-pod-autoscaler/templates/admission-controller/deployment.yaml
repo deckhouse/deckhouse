@@ -75,6 +75,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: VPA_DEFAULT_UPDATE_MODE
+          value: {{ include "vpa_default_update_mode" . | quote }}
         volumeMounts:
           - name: tls-certs
             mountPath: "/etc/tls-certs"

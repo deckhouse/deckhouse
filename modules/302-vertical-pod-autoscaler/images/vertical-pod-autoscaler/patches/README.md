@@ -25,3 +25,12 @@ Adds DaemonSet scoped recommendations grouped by node label key from `spec.scope
   - `status.groups` is used only for scoped DaemonSet and `status.recommendation` is not populated.
 - Admission-controller/updater read only the active status field for the current VPA mode.
 
+## 005-default-update-mode-in-place-or-recreate.patch
+
+Lets the module make `InPlaceOrRecreate` the default update mode instead of upstream `Recreate`, as the module documentation states.
+
+- The default comes from the `VPA_DEFAULT_UPDATE_MODE` environment variable. Only `InPlaceOrRecreate` changes it. Without the variable, or with any other value, the default stays `Recreate`, as in upstream.
+- The module templates set the variable on the updater and the admission controller: `InPlaceOrRecreate` on Kubernetes 1.33 and later, where in-place resize is available, and `Recreate` otherwise.
+- `GetUpdateMode` returns this default when `spec.updatePolicy.updateMode` is not set, and the admission webhook writes it into a VPA without `spec.updatePolicy`.
+- The updater reads the mode through `GetUpdateMode` when it selects pods for in-place updates. Upstream dereferences `spec.updatePolicy.updateMode` there directly, so with the new default a VPA without `updatePolicy` would crash the updater.
+- Explicitly set modes are not changed, including `Recreate` and the deprecated `Auto`. VPAs that already store a mode written by the webhook keep it.

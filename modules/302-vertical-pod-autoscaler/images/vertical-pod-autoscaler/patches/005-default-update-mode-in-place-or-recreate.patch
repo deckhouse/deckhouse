@@ -1,0 +1,270 @@
+diff --git a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler.go b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler.go
+index 1722017..175cd8f 100644
+--- a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler.go
++++ b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler.go
+@@ -28,6 +28,7 @@ import (
+ 	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/admission-controller/resource"
+ 	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+ 	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/metrics/admission"
++	vpa_api_util "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/vpa"
+ )
+ 
+ // resourceHandler builds patches for VPAs.
+@@ -88,8 +89,7 @@ func (h *resourceHandler) GetPatches(_ context.Context, ar *admissionv1.Admissio
+ 	patches := []resource.PatchRecord{}
+ 	if vpa.Spec.UpdatePolicy == nil {
+ 		// Sets the default updatePolicy.
+-		// Changed from UpdateModeAuto to UpdateModeRecreate as part of Auto mode deprecation
+-		defaultUpdateMode := vpa_types.UpdateModeRecreate
++		defaultUpdateMode := vpa_api_util.DefaultUpdateMode()
+ 		patches = append(patches, resource.PatchRecord{
+ 			Op:    "add",
+ 			Path:  "/spec/updatePolicy",
+diff --git a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler_test.go b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler_test.go
+new file mode 100644
+index 0000000..708e1a7
+--- /dev/null
++++ b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/handler_test.go
+@@ -0,0 +1,52 @@
++package vpa
++
++import (
++	"context"
++	"encoding/json"
++	"testing"
++
++	"github.com/stretchr/testify/assert"
++	admissionv1 "k8s.io/api/admission/v1"
++	"k8s.io/apimachinery/pkg/runtime"
++)
++
++func TestGetPatchesDefaultUpdateMode(t *testing.T) {
++	testCases := []struct {
++		name              string
++		defaultUpdateMode string
++		vpaJSON           string
++		expectedPatches   string
++	}{
++		{
++			name:            "VPA without update policy gets Recreate without the env var",
++			vpaJSON:         `{"spec":{"targetRef":{"apiVersion":"apps/v1","kind":"Deployment","name":"app"}}}`,
++			expectedPatches: `[{"op":"add","path":"/spec/updatePolicy","value":{"updateMode":"Recreate"}}]`,
++		},
++		{
++			name:              "VPA without update policy gets InPlaceOrRecreate default",
++			defaultUpdateMode: "InPlaceOrRecreate",
++			vpaJSON:           `{"spec":{"targetRef":{"apiVersion":"apps/v1","kind":"Deployment","name":"app"}}}`,
++			expectedPatches:   `[{"op":"add","path":"/spec/updatePolicy","value":{"updateMode":"InPlaceOrRecreate"}}]`,
++		},
++		{
++			name:              "VPA with explicit update mode is not patched",
++			defaultUpdateMode: "InPlaceOrRecreate",
++			vpaJSON:           `{"spec":{"targetRef":{"apiVersion":"apps/v1","kind":"Deployment","name":"app"},"updatePolicy":{"updateMode":"Recreate"}}}`,
++			expectedPatches:   `[]`,
++		},
++	}
++	for _, tc := range testCases {
++		t.Run(tc.name, func(t *testing.T) {
++			t.Setenv("VPA_DEFAULT_UPDATE_MODE", tc.defaultUpdateMode)
++			handler := NewResourceHandler(NewDefaultPreProcessor())
++			patches, errs := handler.GetPatches(context.Background(), &admissionv1.AdmissionRequest{
++				Operation: admissionv1.Create,
++				Object:    runtime.RawExtension{Raw: []byte(tc.vpaJSON)},
++			})
++			assert.Empty(t, errs)
++			actual, err := json.Marshal(patches)
++			assert.NoError(t, err)
++			assert.JSONEq(t, tc.expectedPatches, string(actual))
++		})
++	}
++}
+diff --git a/vertical-pod-autoscaler/pkg/updater/logic/updater.go b/vertical-pod-autoscaler/pkg/updater/logic/updater.go
+index 6a7db37..1aaebf5 100644
+--- a/vertical-pod-autoscaler/pkg/updater/logic/updater.go
++++ b/vertical-pod-autoscaler/pkg/updater/logic/updater.go
+@@ -524,7 +524,7 @@ func filterPods(pods []*corev1.Pod, predicate func(*corev1.Pod) bool) []*corev1.
+ 
+ func filterNonInPlaceUpdatablePods(pods []*corev1.Pod, inplaceRestriction restriction.PodsInPlaceRestriction, vpa *vpa_types.VerticalPodAutoscaler, infeasibleAttempts map[types.UID]*vpa_types.RecommendedPodResources) []*corev1.Pod {
+ 	return filterPods(pods, func(pod *corev1.Pod) bool {
+-		updateMode := *vpa.Spec.UpdatePolicy.UpdateMode
++		updateMode := vpa_api_util.GetUpdateMode(vpa)
+ 		decision := inplaceRestriction.CanInPlaceUpdate(pod, vpa, infeasibleAttempts)
+ 		switch decision {
+ 		case utils.InPlaceApproved:
+diff --git a/vertical-pod-autoscaler/pkg/updater/logic/updater_test.go b/vertical-pod-autoscaler/pkg/updater/logic/updater_test.go
+index f2fcae1..5f95d82 100644
+--- a/vertical-pod-autoscaler/pkg/updater/logic/updater_test.go
++++ b/vertical-pod-autoscaler/pkg/updater/logic/updater_test.go
+@@ -199,6 +199,54 @@ func TestRunOnce_Mode(t *testing.T) {
+ 	}
+ }
+ 
++func TestRunOnce_DefaultUpdateMode(t *testing.T) {
++	tests := []struct {
++		name                  string
++		defaultUpdateMode     string
++		expectedEvictionCount int
++		expectedInPlacedCount int
++		canInPlaceUpdate      utils.InPlaceDecision
++	}{
++		{
++			name:                  "without the env var VPA evicts pods",
++			defaultUpdateMode:     "",
++			expectedEvictionCount: 5,
++			expectedInPlacedCount: 0,
++			canInPlaceUpdate:      utils.InPlaceApproved,
++		},
++		{
++			name:                  "InPlaceOrRecreate default updates pods in place",
++			defaultUpdateMode:     "InPlaceOrRecreate",
++			expectedEvictionCount: 0,
++			expectedInPlacedCount: 5,
++			canInPlaceUpdate:      utils.InPlaceApproved,
++		},
++		{
++			name:                  "InPlaceOrRecreate default falls back to eviction",
++			defaultUpdateMode:     "InPlaceOrRecreate",
++			expectedEvictionCount: 5,
++			expectedInPlacedCount: 0,
++			canInPlaceUpdate:      utils.InPlaceEvict,
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			t.Setenv("VPA_DEFAULT_UPDATE_MODE", tc.defaultUpdateMode)
++			testRunOnceBase(
++				t,
++				"",
++				false,
++				newFakeValidator(true),
++				true,
++				tc.expectedEvictionCount,
++				tc.expectedInPlacedCount,
++				tc.canInPlaceUpdate,
++				false,
++			)
++		})
++	}
++}
++
+ func TestRunOnce_Status(t *testing.T) {
+ 	tests := []struct {
+ 		name                  string
+@@ -331,7 +379,9 @@ func testRunOnceBase(
+ 	podLister := &test.PodListerMock{}
+ 	podLister.On("List").Return(pods, nil)
+ 
+-	vpaObj.Spec.UpdatePolicy = &vpa_types.PodUpdatePolicy{UpdateMode: &updateMode}
++	if updateMode != "" {
++		vpaObj.Spec.UpdatePolicy = &vpa_types.PodUpdatePolicy{UpdateMode: &updateMode}
++	}
+ 	if isCPUBoostTest {
+ 		durationSeconds := int32(60)
+ 		cpuStartupBoost := &vpa_types.GenericStartupBoost{
+diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/api.go b/vertical-pod-autoscaler/pkg/utils/vpa/api.go
+index c07bda1..fd9e316 100644
+--- a/vertical-pod-autoscaler/pkg/utils/vpa/api.go
++++ b/vertical-pod-autoscaler/pkg/utils/vpa/api.go
+@@ -21,6 +21,7 @@ import (
+ 	"encoding/json"
+ 	"errors"
+ 	"fmt"
++	"os"
+ 	"strings"
+ 	"time"
+ 
+@@ -325,11 +326,24 @@ func FindParentControllerForPod(ctx context.Context, pod *corev1.Pod, ctrlFetche
+ 	return controller, nil
+ }
+ 
++// defaultUpdateModeEnv names the environment variable read by DefaultUpdateMode.
++const defaultUpdateModeEnv = "VPA_DEFAULT_UPDATE_MODE"
++
++// DefaultUpdateMode returns the update mode for VPAs that do not set one:
++// UpdateModeInPlaceOrRecreate if the VPA_DEFAULT_UPDATE_MODE environment variable
++// is set to it, and UpdateModeRecreate otherwise.
++func DefaultUpdateMode() vpa_types.UpdateMode {
++	if vpa_types.UpdateMode(os.Getenv(defaultUpdateModeEnv)) == vpa_types.UpdateModeInPlaceOrRecreate {
++		return vpa_types.UpdateModeInPlaceOrRecreate
++	}
++	return vpa_types.UpdateModeRecreate
++}
++
+ // GetUpdateMode returns the updatePolicy.updateMode for a given VPA.
+-// If the mode is not specified it returns the default (UpdateModeRecreate).
++// If the mode is not specified it returns DefaultUpdateMode().
+ func GetUpdateMode(vpa *vpa_types.VerticalPodAutoscaler) vpa_types.UpdateMode {
+ 	if vpa.Spec.UpdatePolicy == nil || vpa.Spec.UpdatePolicy.UpdateMode == nil || *vpa.Spec.UpdatePolicy.UpdateMode == "" {
+-		return vpa_types.UpdateModeRecreate
++		return DefaultUpdateMode()
+ 	}
+ 	return *vpa.Spec.UpdatePolicy.UpdateMode
+ }
+diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/api_test.go b/vertical-pod-autoscaler/pkg/utils/vpa/api_test.go
+index 25abd00..7f3c2eb 100644
+--- a/vertical-pod-autoscaler/pkg/utils/vpa/api_test.go
++++ b/vertical-pod-autoscaler/pkg/utils/vpa/api_test.go
+@@ -712,3 +712,63 @@ func TestPodHasCPUBoostInProgressAnnotation(t *testing.T) {
+ 		})
+ 	}
+ }
++
++func TestGetUpdateMode(t *testing.T) {
++	testCases := []struct {
++		name              string
++		defaultUpdateMode string
++		updatePolicy      *vpa_types.PodUpdatePolicy
++		expected          vpa_types.UpdateMode
++	}{
++		{
++			name:         "no update policy without the env var",
++			updatePolicy: nil,
++			expected:     vpa_types.UpdateModeRecreate,
++		},
++		{
++			name:              "no update policy with InPlaceOrRecreate default",
++			defaultUpdateMode: "InPlaceOrRecreate",
++			updatePolicy:      nil,
++			expected:          vpa_types.UpdateModeInPlaceOrRecreate,
++		},
++		{
++			name:              "update policy without update mode with InPlaceOrRecreate default",
++			defaultUpdateMode: "InPlaceOrRecreate",
++			updatePolicy:      &vpa_types.PodUpdatePolicy{MinReplicas: ptr.To(int32(2))},
++			expected:          vpa_types.UpdateModeInPlaceOrRecreate,
++		},
++		{
++			name:              "empty update mode with InPlaceOrRecreate default",
++			defaultUpdateMode: "InPlaceOrRecreate",
++			updatePolicy:      &vpa_types.PodUpdatePolicy{UpdateMode: ptr.To(vpa_types.UpdateMode(""))},
++			expected:          vpa_types.UpdateModeInPlaceOrRecreate,
++		},
++		{
++			name:              "unknown env var value",
++			defaultUpdateMode: "Unknown",
++			updatePolicy:      nil,
++			expected:          vpa_types.UpdateModeRecreate,
++		},
++		{
++			name:              "explicit Recreate with InPlaceOrRecreate default",
++			defaultUpdateMode: "InPlaceOrRecreate",
++			updatePolicy:      &vpa_types.PodUpdatePolicy{UpdateMode: ptr.To(vpa_types.UpdateModeRecreate)},
++			expected:          vpa_types.UpdateModeRecreate,
++		},
++		{
++			name:              "explicit Off with InPlaceOrRecreate default",
++			defaultUpdateMode: "InPlaceOrRecreate",
++			updatePolicy:      &vpa_types.PodUpdatePolicy{UpdateMode: ptr.To(vpa_types.UpdateModeOff)},
++			expected:          vpa_types.UpdateModeOff,
++		},
++	}
++	for _, tc := range testCases {
++		t.Run(tc.name, func(t *testing.T) {
++			t.Setenv("VPA_DEFAULT_UPDATE_MODE", tc.defaultUpdateMode)
++			vpa := &vpa_types.VerticalPodAutoscaler{
++				Spec: vpa_types.VerticalPodAutoscalerSpec{UpdatePolicy: tc.updatePolicy},
++			}
++			assert.Equal(t, tc.expected, GetUpdateMode(vpa))
++		})
++	}
++}
