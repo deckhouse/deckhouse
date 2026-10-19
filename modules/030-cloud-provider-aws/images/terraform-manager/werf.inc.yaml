@@ -34,7 +34,7 @@ git:
 shell:
   install:
   - cd /src
-  - git apply /patches/*.patch --verbose
+  - if ls /patches/*.patch >/dev/null 2>&1; then git apply /patches/*.patch --verbose; fi
 ---
 image: terraform-provider-aws
 final: false
@@ -53,7 +53,7 @@ shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
-  - make fmt
+  - GO_VER=go make fmt
   - GO_VER=go CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/hashicorp/terraform-provider-aws/version.ProviderVersion={{ $version }}"
   - mv /go/bin/terraform-provider-aws /terraform-provider-aws
   - strip /terraform-provider-aws

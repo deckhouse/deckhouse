@@ -50,7 +50,7 @@
   logo: /images/logos/terraform.svg
   license: Mozilla Public License 2.0
   id: terraform-provider-aws
-  version: "5.83.1"
+  version: "6.69.1"
 
 - name: Amazon Web Services Node termination handler
   link: https://github.com/aws/aws-node-termination-handler

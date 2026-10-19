@@ -6,7 +6,7 @@ aws:
   namespace: hashicorp
   cloudName: AWS
   type: aws
-  version: "5.83.1"
+  version: "6.69.1"
   # artifact name with provider binary
   artifact: terraform-provider-aws
   # provider binary name with artifact and destination image
