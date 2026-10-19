@@ -1,0 +1,182 @@
+- case: install/RequirementsUnmet
+  message: 'Installation is blocked: application requirements are not satisfied'
+  state: Pending
+  tip: 'Check the application''s spec.requirements: required Deckhouse version or
+    dependent modules do not match the cluster. Update Deckhouse, enable required
+    modules, or adjust requirements.'
+- case: install/in progress
+  message: Installation is in progress
+  state: Pending
+  tip: No action is required unless this state persists.
+- case: install/AttachFailed
+  message: 'Installation failed: application package could not be downloaded or mounted'
+  state: Failed
+  tip: Check network connectivity to the registry, verify imagePullSecret and package
+    signature. Fix the issue — the controller will retry on the next reconcile.
+- case: install/LoadFromFilesystemFailed
+  message: 'Installation failed: application package on disk could not be loaded'
+  state: Failed
+  tip: The on-disk artifact is corrupted or has an invalid structure. Delete the cached
+    package from the node disk and re-pull the image. The controller will retry on
+    the next reconcile.
+- case: install/SettingsInvalid
+  message: 'Installation failed: application settings did not pass validation'
+  state: Failed
+  tip: Fix the Application spec.settings fields that fail OpenAPI validation. The
+    controller will retry automatically after the settings are changed.
+- case: install/HookInitializationFailed
+  message: 'Installation failed: hook synchronization phase failed'
+  state: Failed
+  tip: Check the hook pod/job logs (kubectl logs). Fix the hook code or its dependencies.
+    Roll back the application version if needed.
+- case: install/HookFailed
+  message: 'Installation failed: startup or runtime hooks failed'
+  state: Failed
+  tip: Check the failed hook logs. Fix the configuration or hook code. The attempt
+    will be retried on the next reconcile.
+- case: install/ManifestsApplyFailed
+  message: 'Installation failed: Helm could not apply manifests'
+  state: Failed
+  tip: Check helm history and events in the application namespace. Resolve resource
+    conflicts (namespace, CRD, RBAC). The controller will retry on the next reconcile.
+- case: install/fallback
+  message: 'Installation failed: ReleaseDeleteFailed'
+  state: Failed
+- case: install/complete
+  message: ""
+  state: Ready
+- case: update/WaitingWindow
+  message: Update is waiting for the update window; previous version is still serving
+  state: Updating
+  tip: 'No action is required: the update starts in the next update window. Change
+    the update windows in spec.update to start it earlier.'
+- case: update/RequirementsUnmet
+  message: 'Update is blocked: the new version''s requirements are not satisfied;
+    previous version is still serving'
+  state: Updating
+  tip: 'Check the new version''s requirements: required Deckhouse version or dependent
+    modules do not match the cluster. The update will continue automatically.'
+- case: update/AttachFailed
+  message: 'Update is stalled: new version could not be downloaded; previous version
+    is still serving'
+  state: Updating
+  tip: Check registry connectivity, and image integrity. The previous version continues
+    to work. After fixing, the controller will retry the download.
+- case: update/LoadFromFilesystemFailed
+  message: 'Update is stalled: new version could not be loaded from filesystem; previous
+    version is still serving'
+  state: Updating
+  tip: Delete the corrupted new version package from the node disk. The previous version
+    continues to work. The controller will retry download and loading.
+- case: update/SettingsInvalid
+  message: 'Update is stalled: new settings did not pass validation; previous version
+    is still serving'
+  state: Updating
+  tip: Fix the application settings to match the new version's schema. The previous
+    version continues to work. After fixing, the update will continue.
+- case: update/preparing
+  message: 'Update in progress: the new version is being applied; the previous version
+    is still serving'
+  state: Updating
+  tip: The previous version continues to serve while the new version is applied. No
+    action is required unless this state persists.
+- case: update/HookInitializationFailed
+  message: Update failed during hook synchronization; previous version is no longer
+    serving
+  state: Failed
+  tip: The application is not serving requests. Check the new version's hook logs.
+    Fix the hook/config or manually roll back the application version.
+- case: update/HookFailed
+  message: 'Update failed: startup or runtime hooks of the new version failed; previous
+    version is no longer serving'
+  state: Failed
+  tip: The application is not serving requests. Check the new version's hook logs.
+    Fix the hook/config or roll back the application version manually.
+- case: update/ManifestsApplyFailed
+  message: 'Update failed: Helm could not apply manifests for the new version; previous
+    version is no longer serving'
+  state: Failed
+  tip: Resources in the cluster are inconsistent. Check helm history and events in
+    the namespace. Resolve resource conflicts. If needed, roll back manually via helm
+    rollback.
+- case: update/fallback
+  message: 'Update failed: ReleaseDeleteFailed; previous version is no longer serving'
+  state: Failed
+- case: update/Reconciling
+  message: 'Update applied: the new version''s workload is rolling out'
+  state: Updating
+  tip: Wait for the rollout to finish. If it stalls, check pod status and events.
+- case: update/Degraded
+  message: Update applied but the workload health monitor reports degraded
+  state: Degraded
+  tip: Check pod status and logs to identify the root cause. Roll back the application
+    version if the new one cannot start.
+- case: update/HealthUnknown
+  message: 'Update applied: waiting for a workload the health monitor can confirm'
+  state: Updating
+  tip: Either no report has arrived yet, or the chart ships no Deployment or StatefulSet,
+    the only kinds the health monitor watches.
+- case: update/complete
+  message: ""
+  state: Ready
+- case: reconcile/healthy
+  message: ""
+  state: Ready
+- case: reconcile/Configuring
+  message: 'Configuration in progress: new settings are being applied'
+  state: Configuring
+  tip: The application keeps working with the previous settings until the new ones
+    are applied. No action is required unless this state persists.
+- case: reconcile/SettingsInvalid
+  message: 'Reconcile failed: new settings did not pass validation; previously applied
+    configuration is still in effect'
+  state: Degraded
+  tip: The previous configuration continues to work. Fix the invalid fields in the
+    application settings. After saving, the controller will re-apply the settings.
+- case: reconcile/HookInitializationFailed
+  message: 'Reconcile failed: hook synchronization phase failed; workload remains
+    scaled but is no longer managed'
+  state: Degraded
+  tip: Pods are alive but the controller is not managing them. Check the failed hook
+    logs. Fix the hook/config — the controller will retry reconcile.
+- case: reconcile/HookFailed
+  message: 'Reconcile failed: startup or runtime hooks failed; workload remains scaled
+    but is no longer managed'
+  state: Degraded
+  tip: Pods are alive but the controller is not managing them. Check the failed hook
+    logs. Fix the hook/config — the controller will retry reconcile.
+- case: reconcile/ManifestsApplyFailed
+  message: 'Reconcile failed: Helm could not apply manifests'
+  state: Degraded
+  tip: Check events in the namespace and helm history. Resolve resource conflicts
+    (foreign ownership, finalizers, CRD mismatches). The controller will retry reconcile
+    automatically.
+- case: reconcile/fallback
+  message: 'Reconcile failed: ReleaseDeleteFailed'
+  state: Degraded
+- case: reconcile/Reconciling
+  message: 'Reconcile failed: workload is still reconciling'
+  state: Degraded
+  tip: Workload is still reconciling. Wait for the rollout to complete. If it stays
+    in this state, check pod status and events.
+- case: reconcile/Degraded
+  message: 'Reconcile failed: workload health monitor reports degraded'
+  state: Degraded
+  tip: Workload health monitor reports degraded. Check pod status and logs to identify
+    the root cause.
+- case: suspended/requirements
+  message: 'Application is suspended: requirements unmet'
+  state: Suspended
+  tip: Solve the application requirements. After it, the controller will automatically
+    restore all conditions and resume operation.
+- case: suspended/failing disable
+  message: 'Application is suspended: requirements unmet; the disable is failing:
+    ReleaseDeleteFailed: boom'
+  state: Suspended
+  tip: Solve the application requirements. After it, the controller will automatically
+    restore all conditions and resume operation.
+- case: deleting/uninstall failure
+  message: 'Application is being deleted: HookFailed: boom'
+  state: Deleting
+  tip: No action is required. The resource disappears once its release and files are
+    taken down.

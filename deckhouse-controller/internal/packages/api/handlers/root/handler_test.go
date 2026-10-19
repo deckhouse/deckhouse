@@ -81,7 +81,7 @@ func (p rootProvider) GetMetrics() metricsstorage.Storage { return p.metrics }
 
 func (rootProvider) GetElector() *leaderelection.LeaderElector { return nil }
 
-func (p rootProvider) IsConverged() bool { return p.converged }
+func (p rootProvider) Ready() bool { return p.converged }
 
 // rootDeps backs the root routes with an empty storage, no elector and a finished startup converge.
 func rootDeps() root.Deps {
@@ -232,4 +232,13 @@ func TestReadyzReportsStartupConverge(t *testing.T) {
 			assert.Equal(t, tt.want, get(t, router, "/readyz").Code)
 		})
 	}
+}
+
+// TestMetricsWithoutStorage: in the default tree addon-operator owns the metrics, the socket server
+// has no storage and answers 404 instead of panicking.
+func TestMetricsWithoutStorage(t *testing.T) {
+	deps := root.Deps{Provider: rootProvider{converged: true}}
+	router := root.NewHandler(v1.NewPrivateHandler(newDeps(fakeProvider{})), deps)
+
+	assert.Equal(t, http.StatusNotFound, get(t, router, "/metrics").Code)
 }

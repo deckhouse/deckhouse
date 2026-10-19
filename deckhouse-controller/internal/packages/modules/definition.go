@@ -17,8 +17,8 @@ package modules
 import (
 	"github.com/Masterminds/semver/v3"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
 
@@ -85,6 +85,23 @@ type DisableMessages struct {
 	En string `json:"en,omitempty" yaml:"en,omitempty"`
 }
 
+// temporarySubscriptions are the module subscriptions module.yaml cannot declare yet: prometheus
+// renders the prompp image, so it reruns when prompp ships other images.
+var temporarySubscriptions = map[string][]string{
+	"prometheus": {"prompp"},
+}
+
+// subscriptions are the nodes whose Output the module's inputs hash: global, plus its temporary
+// subscriptions.
+func (d Definition) subscriptions() map[string]struct{} {
+	subs := map[string]struct{}{"global": {}}
+	for _, name := range temporarySubscriptions[d.Name] {
+		subs[name] = struct{}{}
+	}
+
+	return subs
+}
+
 // Constraints projects the module definition onto the scheduler input shape,
 // flattening mandatory and conditional module requirements into a single dependency
 // map and projecting AnyOf groups onto schedule.AnyOfGroup. Mandatory entries win
@@ -120,22 +137,22 @@ func (d Definition) Constraints() schedule.Constraints {
 		})
 	}
 
-	order := schedule.Order(d.Weight)
-	if order == 0 {
-		order = schedule.FunctionalOrder
+	// Only a critical module is ordered by its weight, as addon-operator orders modules; any other
+	// is functional, so the bootstrap rule (FunctionalOrder only) gates it.
+	var order schedule.Order = schedule.FunctionalOrder
+	if d.Critical && d.Weight != 0 {
+		order = schedule.Order(d.Weight)
 	}
 
 	return schedule.Constraints{
-		Order:        order,
-		Kubernetes:   d.Requirements.Kubernetes,
-		Deckhouse:    d.Requirements.Deckhouse,
-		Dependencies: deps,
-		AnyOf:        anyOf,
-		NoneOf:       noneOf,
-		Subscriptions: map[string]struct{}{
-			"global": {},
-		},
-		Licensing: d.Licensing,
+		Order:         order,
+		Kubernetes:    d.Requirements.Kubernetes,
+		Deckhouse:     d.Requirements.Deckhouse,
+		Dependencies:  deps,
+		AnyOf:         anyOf,
+		NoneOf:        noneOf,
+		Subscriptions: d.subscriptions(),
+		Licensing:     d.Licensing,
 		// Modules are disabled by default; a higher-precedence intent rule
 		// (bundle membership, user config) turns them on.
 		Floor: rule.Static(rule.Disable),

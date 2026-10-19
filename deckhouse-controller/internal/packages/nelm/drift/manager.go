@@ -38,18 +38,15 @@ type Manager struct {
 	mtx      sync.Mutex                   // protects monitors map
 	monitors map[string]*resourcesMonitor // keyed by Helm release name
 
-	callback AbsentCallback
-
 	logger *log.Logger
 }
 
 // New creates a new monitor manager instance.
-func New(kubeClient *klient.Client, nelm *nelm.Client, callback AbsentCallback, logger *log.Logger) *Manager {
+func New(kubeClient *klient.Client, nelm *nelm.Client, logger *log.Logger) *Manager {
 	return &Manager{
 		ctx:        context.Background(),
 		kubeClient: kubeClient,
 		nelm:       nelm,
-		callback:   callback,
 		monitors:   make(map[string]*resourcesMonitor),
 		logger:     logger,
 	}
@@ -68,19 +65,24 @@ func (m *Manager) CheckResources(ctx context.Context, name string) error {
 	return m.monitors[name].checkResources(ctx)
 }
 
-// AddMonitor creates and starts a new monitor for a Helm release.
-// If a monitor already exists for this release, stop it and start a new one.
+// AddMonitor creates and starts a new monitor for a Helm release; callback is called when
+// resources of rendered are absent.
+// If a monitor already exists for this release, stop it and start a new one that carries its
+// pause count: a pause taken before an upgrade must hold until its matching resume.
 // The monitor will run in the background, checking resources every 4 minutes.
-func (m *Manager) AddMonitor(namespace, name, rendered string) {
+func (m *Manager) AddMonitor(namespace, name, rendered string, callback AbsentCallback) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
-	if _, ok := m.monitors[name]; ok {
-		m.monitors[name].Stop()
+	monitor := newMonitor(m.kubeClient, m.nelm, namespace, name, rendered, m.logger)
+
+	if previous, ok := m.monitors[name]; ok {
+		previous.Stop()
+		monitor.pauseCount.Store(previous.pauseCount.Load())
 	}
 
-	m.monitors[name] = newMonitor(m.kubeClient, m.nelm, namespace, name, rendered, m.logger)
-	m.monitors[name].Start(m.ctx, m.callback)
+	m.monitors[name] = monitor
+	m.monitors[name].Start(m.ctx, callback)
 }
 
 // RemoveMonitor stops and removes a monitor for a Helm release.

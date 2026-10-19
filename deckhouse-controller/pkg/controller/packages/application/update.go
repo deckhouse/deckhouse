@@ -75,6 +75,14 @@ func (r *reconciler) globalUpdateSettings() releaseupdater.Settings {
 	}
 }
 
+// applyNow reports whether the application asks to skip the update windows for its spec version
+// (v1alpha1.ApplicationAnnotationApplyNow).
+func applyNow(app *v1alpha1.Application) bool {
+	version := app.Annotations[v1alpha1.ApplicationAnnotationApplyNow]
+
+	return version != "" && version == app.Spec.PackageVersion
+}
+
 // mergeUpdateSettings applies the update policy of an application over the global update
 // settings. The policy has no notification settings, so those always come from the global ones.
 func mergeUpdateSettings(policy *v1alpha1.ApplicationUpdate, global releaseupdater.Settings) releaseupdater.Settings {

@@ -62,19 +62,6 @@ type syncer struct {
 	logger *log.Logger
 }
 
-// Option overrides a syncer default; the defaults describe the running process.
-type Option func(*syncer)
-
-// WithEmbeddedModulesDir points the sync at another embedded modules dir.
-func WithEmbeddedModulesDir(dir string) Option {
-	return func(s *syncer) { s.embeddedModulesDir = dir }
-}
-
-// WithGlobalHooksDir points the sync at another global hooks dir.
-func WithGlobalHooksDir(dir string) Option {
-	return func(s *syncer) { s.globalHooksDir = dir }
-}
-
 // Sync ensures the package objects of the old module stack for the running
 // Deckhouse version and the dirs the image ships. The
 // repositories go first, so the version stubs find them in place. A source
@@ -89,8 +76,8 @@ func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc de
 
 // newSyncer builds a syncer over the dirs the running process carries; the version every package
 // the image ships is named after comes from app.Version.
-func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, logger *log.Logger, opts ...Option) *syncer {
-	s := &syncer{
+func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, logger *log.Logger) *syncer {
+	return &syncer{
 		reader: reader,
 		writer: writer,
 		dc:     dc,
@@ -100,12 +87,6 @@ func newSyncer(reader client.Reader, writer client.Client, dc dependency.Contain
 
 		logger: logger.Named("syncer"),
 	}
-
-	for _, opt := range opts {
-		opt(s)
-	}
-
-	return s
 }
 
 // sync runs the passes in order: the repositories first, so the version stubs find them in place,
@@ -128,9 +109,9 @@ func (s *syncer) sync(ctx context.Context) error {
 	return nil
 }
 
-// PackageRepositoryNameForModuleSource maps a ModuleSource name to the name of the
+// packageRepositoryNameForModuleSource maps a ModuleSource name to the name of the
 // PackageRepository serving the same registry path.
-func PackageRepositoryNameForModuleSource(sourceName string) string {
+func packageRepositoryNameForModuleSource(sourceName string) string {
 	if sourceName == moduleSourceNameDeckhouse {
 		return repositoryNameDeckhouseModules
 	}

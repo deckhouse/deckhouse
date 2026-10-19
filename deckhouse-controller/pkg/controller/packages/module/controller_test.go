@@ -43,9 +43,10 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
-	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
-	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
@@ -60,12 +61,10 @@ const (
 
 	versionName     = "deckhouse-test-module-v1.0.1"
 	nextVersionName = "deckhouse-test-module-v1.0.2"
-
-	// devDigest is what the stub resolves the mutable dev tag to, staleDigest the one a
-	// repushed dev module was last handed over on.
-	devDigest   = "sha256:c0ffee"
-	staleDigest = "sha256:stale"
 )
+
+// noRequirements are the constraints of a version that publishes no requirements.
+var noRequirements = schedule.Constraints{Order: schedule.FunctionalOrder}
 
 // testRemote is the registry.Remote every fixture's PackageRepository builds into.
 var testRemote = registry.Remote{
@@ -196,7 +195,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.Empty(suite.T(), suite.manager.updated)
 	})
 
-	suite.Run("successful reconcile hands the module to the runtime", func() {
+	suite.Run("successful reconcile hands the module to the engine", func() {
 		suite.setupController("successful-reconcile.yaml")
 
 		result, err := suite.ctr.Reconcile(ctx, request(moduleName))
@@ -204,17 +203,16 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.True(suite.T(), result.IsZero(), "a settled module must not be requeued")
 
 		require.Len(suite.T(), suite.manager.updated, 1)
-		assert.False(suite.T(), suite.manager.updated[0].forced,
-			"a released module changes version through its spec, so nothing has to be forced")
-		assert.Equal(suite.T(), packageruntime.Module{
+		assert.Equal(suite.T(), engine.Module{
 			Name:            moduleName,
-			Definition:      modules.Definition{Name: moduleName, Version: "v1.0.1"},
+			Version:         "v1.0.1",
+			Repository:      testRemote,
 			Settings:        addonutils.Values{"replicas": float64(2), "ingress": map[string]any{"host": "module.example.com"}},
 			SettingsVersion: 2,
 			Maintenance:     "NoResourceReconciliation",
 			Enabled:         ptr.To(true),
-			Repository:      testRemote,
-		}, suite.manager.updated[0].module)
+			Requirements:    noRequirements,
+		}, suite.manager.updated[0])
 
 		assert.True(suite.T(), suite.getVersion(versionName).Status.Used)
 
@@ -267,8 +265,6 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.Equal(suite.T(), 30*time.Second, result.RequeueAfter)
 
 		assert.Empty(suite.T(), suite.manager.updated)
-		// The repository is read before the relink, so a missing one cannot leave the
-		// versions half-updated.
 		assert.False(suite.T(), suite.getVersion(versionName).Status.Used)
 	})
 
@@ -321,25 +317,25 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.Contains(suite.T(), annotations, "packages.deckhouse.io/keep-me")
 	})
 
-	suite.Run("embedded module reaches the runtime as embedded, not as released", func() {
+	suite.Run("embedded module reaches the engine as embedded, not as released", func() {
 		suite.setupController("embedded.yaml")
 
 		result, err := suite.ctr.Reconcile(ctx, request(moduleName))
 		require.NoError(suite.T(), err)
 		assert.True(suite.T(), result.IsZero())
 
-		// The released path would resolve this fixture too, so reaching the runtime with neither
-		// a repository nor a Definition — which is what routes it to the embedded pipeline — is
-		// what tells the two apart.
+		// The released path would resolve this fixture too, so reaching the engine as embedded,
+		// with no repository and no version, is what tells the two apart.
 		require.Len(suite.T(), suite.manager.updated, 1)
-		assert.False(suite.T(), suite.manager.updated[0].forced)
-		assert.Equal(suite.T(), packageruntime.Module{
+		assert.Equal(suite.T(), engine.Module{
 			Name:            moduleName,
+			Embedded:        true,
 			Settings:        addonutils.Values{"replicas": float64(2)},
 			SettingsVersion: 1,
 			Maintenance:     "NoResourceReconciliation",
 			Enabled:         ptr.To(true),
-		}, suite.manager.updated[0].module,
+			Requirements:    noRequirements,
+		}, suite.manager.updated[0],
 			"the image ships an embedded module, so nothing is pulled for it")
 
 		// A module the image started shipping after it had already been released still
@@ -349,84 +345,29 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			ownerRefName(suite.getModule(moduleName), v1alpha1.ModulePackageVersionKind))
 	})
 
-	suite.Run("embedded wins over dev", func() {
-		suite.setupController("embedded-and-dev.yaml")
-
-		result, err := suite.ctr.Reconcile(ctx, request(moduleName))
-		require.NoError(suite.T(), err)
-		assert.True(suite.T(), result.IsZero(), "an embedded module follows no mutable tag to re-resolve")
-
-		require.Len(suite.T(), suite.manager.updated, 1)
-		assert.Empty(suite.T(), suite.manager.updated[0].module.Repository.Name,
-			"an embedded module reaches the runtime without a repository")
-		assert.Empty(suite.T(), suite.manager.digestCalls,
-			"the embedded annotation is read first, the way the bootstrap and the runtime do")
-	})
-
-	suite.Run("dev module is forced onto the resolved digest", func() {
-		suite.setupController("dev.yaml")
-
-		result, err := suite.ctr.Reconcile(ctx, request(moduleName))
-		require.NoError(suite.T(), err)
-		assert.Equal(suite.T(), 15*time.Second, result.RequeueAfter,
-			"a repush under the same tag moves nothing in the API server")
-
-		require.Len(suite.T(), suite.manager.updated, 1)
-		assert.True(suite.T(), suite.manager.updated[0].forced,
-			"change detection sees the same tag either way, so only force carries a repush through")
-		assert.Equal(suite.T(), packageruntime.Module{
-			Name:            moduleName,
-			Definition:      modules.Definition{Name: moduleName, Version: "main"},
-			Settings:        addonutils.Values{"replicas": float64(2)},
-			SettingsVersion: 1,
-			Maintenance:     "NoResourceReconciliation",
-			Enabled:         ptr.To(true),
-			Repository:      testRemote,
-		}, suite.manager.updated[0].module)
-		assert.Equal(suite.T(), []digestCall{{repo: testRemote, name: moduleName, tag: "main"}},
-			suite.manager.digestCalls,
-			"the tag is what decides which image the digest is resolved from")
-
-		annotations := suite.getModule(moduleName).Annotations
-		assert.Equal(suite.T(), devDigest, annotations[v1beta1.ModuleAnnotationHash],
-			"the digest is recorded only after the handover, so a failure re-forces rather than skips")
-		assert.NotContains(suite.T(), annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
-	})
-
-	suite.Run("dev module on an untouched digest is not forced", func() {
-		suite.setupController("dev-unchanged-digest.yaml")
+	suite.Run("requirements reach the engine at the order of a critical version's weight", func() {
+		suite.setupController("requirements-weight.yaml")
 
 		_, err := suite.ctr.Reconcile(ctx, request(moduleName))
 		require.NoError(suite.T(), err)
 
 		require.Len(suite.T(), suite.manager.updated, 1)
-		assert.False(suite.T(), suite.manager.updated[0].forced)
+		reqs := suite.manager.updated[0].Requirements
+		assert.Equal(suite.T(), schedule.Order(20), reqs.Order, "a critical module's weight is the order, as the webhook computes it")
+		assert.NotNil(suite.T(), reqs.Kubernetes)
+		assert.Contains(suite.T(), reqs.Dependencies, "parent")
 	})
 
-	suite.Run("dev module releases the version it was released on", func() {
-		suite.setupController("dev-released-version.yaml")
+	suite.Run("the global module reaches the engine as global settings only", func() {
+		suite.setupController("global.yaml")
 
-		_, err := suite.ctr.Reconcile(ctx, request(moduleName))
+		result, err := suite.ctr.Reconcile(ctx, request("global"))
 		require.NoError(suite.T(), err)
+		assert.True(suite.T(), result.IsZero())
 
-		// No version backs a mutable tag, so a reference left over from the module's
-		// released past would block its owner's deletion for ever.
-		assert.False(suite.T(), suite.getVersion(versionName).Status.Used)
-
-		mod := suite.getModule(moduleName)
-		assert.Empty(suite.T(), ownerRefName(mod, v1alpha1.ModulePackageVersionKind))
-		assert.Empty(suite.T(), ownerRefName(mod, v1alpha1.ModulePackageKind))
-	})
-
-	suite.Run("dev module with no repository name requeues", func() {
-		suite.setupController("dev-without-repository.yaml")
-
-		result, err := suite.ctr.Reconcile(ctx, request(moduleName))
-		require.NoError(suite.T(), err)
-		assert.Equal(suite.T(), 30*time.Second, result.RequeueAfter)
-
-		assert.Empty(suite.T(), suite.manager.updated)
-		assert.Empty(suite.T(), suite.manager.digestCalls)
+		assert.Empty(suite.T(), suite.manager.updated, "global is never a module of the engine")
+		assert.Equal(suite.T(), []addonutils.Values{{"highAvailability": true}}, suite.manager.globals)
+		assert.Equal(suite.T(), "embedded-global", ownerRefName(suite.getModule("global"), v1alpha1.ModulePackageVersionKind))
 	})
 
 	suite.Run("deleted module is torn down, detached and finished", func() {
@@ -438,7 +379,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 		assert.True(suite.T(), result.IsZero())
 
-		assert.Equal(suite.T(), []removedModule{{name: moduleName}}, suite.manager.removed)
+		assert.Equal(suite.T(), []string{moduleName}, suite.manager.removed)
 		assert.False(suite.T(), suite.getVersion(versionName).Status.Used)
 
 		err = suite.Client().Get(ctx, client.ObjectKey{Name: moduleName}, new(v1beta1.Module))
@@ -453,7 +394,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		_, err := suite.ctr.Reconcile(ctx, request(moduleName))
 		require.NoError(suite.T(), err)
 
-		assert.Equal(suite.T(), []removedModule{{name: moduleName, embedded: true}}, suite.manager.removed)
+		assert.Equal(suite.T(), []string{moduleName}, suite.manager.removed)
 		assert.False(suite.T(), suite.getVersion("embedded-test-module").Status.Used)
 	})
 
@@ -579,26 +520,6 @@ func TestCommitFailureLeavesTheRuntimeAheadOfTheAPI(t *testing.T) {
 	assert.Equal(t, versionName, ownerRefName(mod, v1alpha1.ModulePackageVersionKind))
 }
 
-func TestDevHashIsNotRecordedWhenThePatchFails(t *testing.T) {
-	cl := seedFakeClient(t, "dev-released-version.yaml", interceptor.Funcs{Patch: failFirstModulePatch()})
-
-	manager := newPackageManagerStub(t)
-	ctr := reconcilerFor(t, cl, manager)
-
-	result, err := ctr.Reconcile(context.Background(), request(moduleName))
-	require.NoError(t, err)
-	assert.Equal(t, 30*time.Second, result.RequeueAfter)
-
-	require.Len(t, manager.updated, 1)
-	assert.True(t, manager.updated[0].forced)
-
-	// The digest is written in the same patch that was rejected, so the next pass still
-	// sees the old one and forces again instead of skipping the repush.
-	mod := new(v1beta1.Module)
-	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
-	assert.NotContains(t, mod.Annotations, v1beta1.ModuleAnnotationHash)
-}
-
 func TestReconcileWaitsForInit(t *testing.T) {
 	cl := seedFakeClient(t, "successful-reconcile.yaml", interceptor.Funcs{})
 
@@ -616,13 +537,15 @@ func TestReconcileWaitsForInit(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	// Reconciling before the runtime has loaded its packages would hand the module over
+	// Reconciling before the engine has booted would hand the module over
 	// to a manager that cannot place it yet.
 	select {
 	case <-done:
 		require.Fail(t, "the reconcile must block until init is done")
-	case <-time.After(50 * time.Millisecond):
+	default:
 	}
+
+	assert.Empty(t, manager.updated, "nothing reaches the manager before init is done")
 
 	init.Done()
 
@@ -675,7 +598,7 @@ func TestDeleteIsFinishedWhileAForeignFinalizerHolds(t *testing.T) {
 
 	// The teardown and the detach both run before the finalizer is looked at, so a module
 	// someone else's finalizer keeps alive is still released by the runtime.
-	assert.Equal(t, []removedModule{{name: moduleName}}, manager.removed)
+	assert.Equal(t, []string{moduleName}, manager.removed)
 
 	mpv := new(v1alpha1.ModulePackageVersion)
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: versionName}, mpv))
@@ -699,7 +622,7 @@ func TestDeleteWaitsForRuntimeTeardown(t *testing.T) {
 	result, err := ctr.Reconcile(context.Background(), request(moduleName))
 	require.NoError(t, err)
 	assert.Equal(t, 5*time.Second, result.RequeueAfter)
-	assert.Equal(t, []removedModule{{name: moduleName}}, manager.removed)
+	assert.Equal(t, []string{moduleName}, manager.removed)
 
 	// Releasing the version before the teardown finishes lets it be garbage collected —
 	// and its package files removed from disk — while the uninstall still needs them.
@@ -763,35 +686,12 @@ func TestDeleteFailsOnUnreadableVersion(t *testing.T) {
 	// gone: treating the two alike would leak the used flag.
 	_, err := ctr.Reconcile(context.Background(), request(moduleName))
 	require.ErrorIs(t, err, getErr)
-	assert.Equal(t, []removedModule{{name: moduleName}}, manager.removed)
+	assert.Equal(t, []string{moduleName}, manager.removed)
 
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
 	assert.Contains(t, mod.Finalizers, v1beta1.ModuleFinalizerStatisticRegistered)
 }
 
-func TestDevModuleIsNotHandedOverOnAnUnresolvedDigest(t *testing.T) {
-	cl := seedFakeClient(t, "dev.yaml", interceptor.Funcs{})
-
-	manager := newPackageManagerStub(t)
-	manager.digestErr = errors.New("manifest unknown")
-	ctr := reconcilerFor(t, cl, manager)
-
-	result, err := ctr.Reconcile(context.Background(), request(moduleName))
-	require.NoError(t, err)
-	assert.Equal(t, 30*time.Second, result.RequeueAfter)
-
-	assert.Empty(t, manager.updated)
-
-	// The digest is the dev module's only change signal, so recording one that was never
-	// handed over would skip the next repush instead of forcing it.
-	mod := new(v1beta1.Module)
-	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
-	assert.Equal(t, staleDigest, mod.Annotations[v1beta1.ModuleAnnotationHash])
-}
-
-// seedFakeClient builds a client from a fixture and wraps it with funcs, for the paths that
-// only show up when a write or a read fails. Seeding uses Create, so funcs passed here
-// must leave it alone.
 func seedFakeClient(t *testing.T, fixture string, funcs interceptor.Funcs) client.Client {
 	t.Helper()
 
@@ -884,15 +784,14 @@ func ownerRefName(mod *v1beta1.Module, kind string) string {
 	return ""
 }
 
-// packageManagerStub records the calls the reconciler makes into the package runtime.
+// packageManagerStub records the calls the reconciler makes into the package engine.
 // RegisterController requires it to satisfy the package's manager interface, which is the
-// compile-time check that this stub still matches the real runtime.
+// compile-time check that this stub still matches the real engine.
 type packageManagerStub struct {
-	updated     []updatedModule
-	removed     []removedModule
-	digestCalls []digestCall
+	updated []engine.Module
+	globals []addonutils.Values
+	removed []string
 
-	digestErr   error
 	removalDone bool
 
 	queue workqueue.TypedRateLimitingInterface[string]
@@ -912,53 +811,26 @@ func newPackageManagerStub(t *testing.T) *packageManagerStub {
 	}
 }
 
-type updatedModule struct {
-	module packageruntime.Module
-	forced bool
+func (s *packageManagerStub) ApplyModule(mod engine.Module) {
+	s.updated = append(s.updated, mod)
 }
 
-type removedModule struct {
-	name     string
-	embedded bool
-}
-
-type digestCall struct {
-	repo registry.Remote
-	name string
-	tag  string
-}
-
-func (s *packageManagerStub) UpdateModule(mod packageruntime.Module, force bool) {
-	s.updated = append(s.updated, updatedModule{module: mod, forced: force})
-}
-
-func (s *packageManagerStub) UpdateGlobalModule(settings addonutils.Values, version int) {
-}
-
-func (s *packageManagerStub) GetModuleDigest(_ context.Context, repo registry.Remote, name, tag string) (string, error) {
-	s.digestCalls = append(s.digestCalls, digestCall{repo: repo, name: name, tag: tag})
-
-	if s.digestErr != nil {
-		return "", s.digestErr
-	}
-
-	return devDigest, nil
+func (s *packageManagerStub) ApplyGlobal(settings addonutils.Values, _ int) {
+	s.globals = append(s.globals, settings)
 }
 
 func (s *packageManagerStub) RemoveModule(name string) bool {
-	s.removed = append(s.removed, removedModule{name: name})
+	s.removed = append(s.removed, name)
 
 	return s.removalDone
 }
 
-func (s *packageManagerStub) RemoveEmbeddedModule(name string) bool {
-	s.removed = append(s.removed, removedModule{name: name, embedded: true})
-
-	return s.removalDone
+func (s *packageManagerStub) Report(string) (model.Report, bool) {
+	return model.Report{}, false
 }
 
-func (s *packageManagerStub) GetStatus(string) packagestatus.Status {
-	return packagestatus.Status{}
+func (s *packageManagerStub) Observed(string) observed.Observation {
+	return observed.Observation{}
 }
 
 func (s *packageManagerStub) GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[string] {

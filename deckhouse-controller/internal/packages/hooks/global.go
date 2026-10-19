@@ -118,11 +118,3 @@ func (s *GlobalStorage) GetHookByName(name string) GlobalHook {
 
 	return s.byName[name]
 }
-
-// Clear removes all hooks from storage, resetting it to empty state.
-func (s *GlobalStorage) Clear() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.byName = make(map[string]GlobalHook)
-}

@@ -15,9 +15,7 @@
 package status
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
 )
 
 // State constants for ApplicationStatus.Summary.State. Every application maps
@@ -31,22 +29,25 @@ import (
 //     (UpdateInstalled=False together with Ready=False).
 //   - Updating:  a new version is installing while the old one still serves
 //     (UpdateInstalled=False, Ready/Scaled/ConfigurationApplied/Managed True).
+//   - Configuring: Installed=True and accepted settings no run has applied yet; the application
+//     keeps running with the previous ones until the run succeeds.
 //   - Ready:     Installed=True and every other primary condition is True.
 //   - Degraded:  Installed=True with a reconcile problem and no active update.
-//   - Suspended: a hard dependency was disabled under a running app
-//     (Installed=True turning False/RequirementsUnmet, which is what
-//     distinguishes it from a first-install Pending).
+//   - Suspended: a hard dependency was disabled under an installed app while
+//     its release is still installed; once the disable took it down,
+//     Installed=False/RequirementsUnmet and the state is Pending.
 //   - Deleting:  the runtime accepted the removal and is tearing the
 //     application down; every condition reports Deleting until the resource
 //     disappears.
 const (
-	statePending   = "Pending"
-	stateFailed    = "Failed"
-	stateUpdating  = "Updating"
-	stateReady     = "Ready"
-	stateDegraded  = "Degraded"
-	stateSuspended = "Suspended"
-	stateDeleting  = "Deleting"
+	statePending     = "Pending"
+	stateFailed      = "Failed"
+	stateUpdating    = "Updating"
+	stateConfiguring = "Configuring"
+	stateReady       = "Ready"
+	stateDegraded    = "Degraded"
+	stateSuspended   = "Suspended"
+	stateDeleting    = "Deleting"
 )
 
 // advice is the user-facing Summary for one (phase, canonical reason) pair:
@@ -65,46 +66,42 @@ const reasonHealthUnknown = "HealthUnknown"
 // summaryTable is the whole Summary policy in one place: phase → canonical
 // reason → what the user sees. It mirrors the scenarios enumerated in
 // summary_test.go one-to-one. The phase and the canonical reason both come
-// from the mapper's own helpers (phaseOf, the pipeline chains, canonicalReason),
-// so there is a single definition of "what phase are we in" and "what failed".
+// from the mappers' own helpers (phaseOf, the pipeline chains, the signals'
+// canonical reasons), so there is a single definition of "what phase are we in"
+// and "what failed".
 var summaryTable = map[phase]map[string]advice{
 	phaseInstall: {
-		"Pending": {
-			statePending,
-			"Installation is waiting for dependent modules to converge",
-			"Wait for dependent modules to converge automatically. No action required.",
-		},
 		"RequirementsUnmet": {
 			statePending,
 			"Installation is blocked: application requirements are not satisfied",
 			"Check the application's spec.requirements: required Deckhouse version or dependent modules do not match the cluster. Update Deckhouse, enable required modules, or adjust requirements.",
 		},
-		"DownloadFailed": {
+		model.ReasonAttachFailed: {
 			stateFailed,
 			"Installation failed: application package could not be downloaded or mounted",
 			"Check network connectivity to the registry, verify imagePullSecret and package signature. Fix the issue — the controller will retry on the next reconcile.",
 		},
-		"LoadFromFilesystemFailed": {
+		model.ReasonLoadFromFilesystemFailed: {
 			stateFailed,
 			"Installation failed: application package on disk could not be loaded",
 			"The on-disk artifact is corrupted or has an invalid structure. Delete the cached package from the node disk and re-pull the image. The controller will retry on the next reconcile.",
 		},
-		"SettingsInvalid": {
+		model.ReasonSettingsInvalid: {
 			stateFailed,
 			"Installation failed: application settings did not pass validation",
-			"Fix the ModuleConfig fields that fail OpenAPI validation. The controller will retry automatically after the config is changed.",
+			"Fix the Application spec.settings fields that fail OpenAPI validation. The controller will retry automatically after the settings are changed.",
 		},
-		"HookInitializationFailed": {
+		model.ReasonHookInitializationFailed: {
 			stateFailed,
 			"Installation failed: hook synchronization phase failed",
 			"Check the hook pod/job logs (kubectl logs). Fix the hook code or its dependencies. Roll back the application version if needed.",
 		},
-		"HookFailed": {
+		model.ReasonHookFailed: {
 			stateFailed,
 			"Installation failed: startup or runtime hooks failed",
 			"Check the failed hook logs. Fix the configuration or hook code. The attempt will be retried on the next reconcile.",
 		},
-		"ManifestsApplyFailed": {
+		model.ReasonManifestsApplyFailed: {
 			stateFailed,
 			"Installation failed: Helm could not apply manifests",
 			"Check helm history and events in the application namespace. Resolve resource conflicts (namespace, CRD, RBAC). The controller will retry on the next reconcile.",
@@ -112,42 +109,46 @@ var summaryTable = map[phase]map[string]advice{
 	},
 
 	// Update entries bake the "stalled vs failed" split into the state field:
-	// early-stage blockers (download, load, settings, pending) leave the old
-	// version serving (Updating), late-stage ones (hooks, manifests) do not
-	// (Failed). This is the same split the old code recovered by reading
-	// Ready=False — here it falls out of the reason alone.
+	// blockers before the activation (gates, download, load, settings) leave the
+	// old version serving (Updating), failures of the activated version's first
+	// run do not (Failed).
 	phaseUpdate: {
-		"Pending": {
+		model.ReasonWaitingWindow: {
 			stateUpdating,
-			"Update is waiting for dependent modules to converge; previous version is still serving",
-			"Wait — the previous version is still working. The update will continue automatically once dependent modules converge.",
+			"Update is waiting for the update window; previous version is still serving",
+			"No action is required: the update starts in the next update window. Change the update windows in spec.update to start it earlier.",
 		},
-		"DownloadFailed": {
+		reasonRequirementsUnmet: {
+			stateUpdating,
+			"Update is blocked: the new version's requirements are not satisfied; previous version is still serving",
+			"Check the new version's requirements: required Deckhouse version or dependent modules do not match the cluster. The update will continue automatically.",
+		},
+		model.ReasonAttachFailed: {
 			stateUpdating,
 			"Update is stalled: new version could not be downloaded; previous version is still serving",
 			"Check registry connectivity, and image integrity. The previous version continues to work. After fixing, the controller will retry the download.",
 		},
-		"LoadFromFilesystemFailed": {
+		model.ReasonLoadFromFilesystemFailed: {
 			stateUpdating,
 			"Update is stalled: new version could not be loaded from filesystem; previous version is still serving",
 			"Delete the corrupted new version package from the node disk. The previous version continues to work. The controller will retry download and loading.",
 		},
-		"SettingsInvalid": {
+		model.ReasonSettingsInvalid: {
 			stateUpdating,
 			"Update is stalled: new settings did not pass validation; previous version is still serving",
 			"Fix the application settings to match the new version's schema. The previous version continues to work. After fixing, the update will continue.",
 		},
-		"HookInitializationFailed": {
+		model.ReasonHookInitializationFailed: {
 			stateFailed,
 			"Update failed during hook synchronization; previous version is no longer serving",
 			"The application is not serving requests. Check the new version's hook logs. Fix the hook/config or manually roll back the application version.",
 		},
-		"HookFailed": {
+		model.ReasonHookFailed: {
 			stateFailed,
 			"Update failed: startup or runtime hooks of the new version failed; previous version is no longer serving",
 			"The application is not serving requests. Check the new version's hook logs. Fix the hook/config or roll back the application version manually.",
 		},
-		"ManifestsApplyFailed": {
+		model.ReasonManifestsApplyFailed: {
 			stateFailed,
 			"Update failed: Helm could not apply manifests for the new version; previous version is no longer serving",
 			"Resources in the cluster are inconsistent. Check helm history and events in the namespace. Resolve resource conflicts. If needed, roll back manually via helm rollback.",
@@ -176,32 +177,22 @@ var summaryTable = map[phase]map[string]advice{
 	// Reconcile degradation reports Degraded — Installed stays True but a
 	// problem surfaced with no active update — plus a message and tip.
 	phaseReconcile: {
-		"DownloadFailed": {
-			stateDegraded,
-			"Reconcile failed: on-disk artifact failed verification; runtime state can no longer be trusted",
-			"The on-disk artifact has been tampered with or corrupted. Verify integrity, delete and re-fetch the package from the registry. The controller will retry reconcile.",
-		},
-		"LoadFromFilesystemFailed": {
-			stateDegraded,
-			"Reconcile failed: application could not be loaded from filesystem; runtime state can no longer be trusted",
-			"Delete the corrupted package cache on the node. The controller will retry loading; conditions will be restored based on reconcile progress.",
-		},
-		"SettingsInvalid": {
+		model.ReasonSettingsInvalid: {
 			stateDegraded,
 			"Reconcile failed: new settings did not pass validation; previously applied configuration is still in effect",
 			"The previous configuration continues to work. Fix the invalid fields in the application settings. After saving, the controller will re-apply the settings.",
 		},
-		"HookInitializationFailed": {
+		model.ReasonHookInitializationFailed: {
 			stateDegraded,
 			"Reconcile failed: hook synchronization phase failed; workload remains scaled but is no longer managed",
 			"Pods are alive but the controller is not managing them. Check the failed hook logs. Fix the hook/config — the controller will retry reconcile.",
 		},
-		"HookFailed": {
+		model.ReasonHookFailed: {
 			stateDegraded,
 			"Reconcile failed: startup or runtime hooks failed; workload remains scaled but is no longer managed",
 			"Pods are alive but the controller is not managing them. Check the failed hook logs. Fix the hook/config — the controller will retry reconcile.",
 		},
-		"ManifestsApplyFailed": {
+		model.ReasonManifestsApplyFailed: {
 			stateDegraded,
 			"Reconcile failed: Helm could not apply manifests",
 			"Check events in the namespace and helm history. Resolve resource conflicts (foreign ownership, finalizers, CRD mismatches). The controller will retry reconcile automatically.",
@@ -243,6 +234,14 @@ var summaryDeleting = advice{
 // there is no message or tip.
 var summaryReady = advice{state: stateReady}
 
+// summaryConfiguring is the fixed Summary for an installed application whose accepted settings no run
+// has applied yet: the run applying them is ahead or in flight.
+var summaryConfiguring = advice{
+	state:   stateConfiguring,
+	message: "Configuration in progress: new settings are being applied",
+	tip:     "The application keeps working with the previous settings until the new ones are applied. No action is required unless this state persists.",
+}
+
 // summaryInstalling is the fixed Summary for a first install whose pipeline is
 // running with no failing gate: the application left Pending, and nothing is installed yet.
 var summaryInstalling = advice{
@@ -262,133 +261,114 @@ var summaryUpdating = advice{
 	tip:     "The previous version continues to serve while the new version is applied. No action is required unless this state persists.",
 }
 
-// summarize computes the user-facing Summary (state, message, tip) from the
-// same condmap.State the mappers consume. It is a pure function — no I/O.
+// summarize computes the user-facing Summary from the same facts the
+// mappers read. It is a pure function — no I/O.
 //
-// It is fed the pre-mapping state on purpose: isDependencyDisabled reads the
-// previous external Installed=True before this run flips it to False, and the
-// install-completion check below mirrors mapInstalled's success condition so
-// the freshly-installed run reports ready rather than pending.
-func summarize(state condmap.State) (string, string, string) {
+// It reads the conditions on the resource from before this projection on purpose: isSuspended
+// reads the previous Installed=True, and the install-completion check mirrors mapInstalled's
+// success condition so the freshly-installed run reports ready.
+func summarize(f *facts) advice {
 	// Deleting outranks every other signal: the conditions still describe the last
 	// reconcile, so reading them would report a problem the user cannot act on.
-	if state.IsDeleting() {
-		return summaryDeleting.state, summaryDeleting.message, summaryDeleting.tip
-	}
-
-	// Suspended — dependency disabled under a running app. Shares the mapper's
-	// definition exactly, so the two can never drift apart.
-	if isDependencyDisabled(state) {
-		return summarySuspended.state, summarySuspended.message, summarySuspended.tip
-	}
-
-	switch phaseOf(state) {
-	case phaseInstall:
-		blocker, ok := pipelineBlocker(state, installPipeline)
-		if !ok {
-			// Pipeline clear: install just completed (mirrors mapInstalled's
-			// success check) → ready; once Enable has taken it off Pending the
-			// pipeline is running; before that no decision has arrived yet.
-			if isInstallComplete(state) {
-				return summaryReady.state, summaryReady.message, summaryReady.tip
-			}
-			if state.IntEqual(intPending, metav1.ConditionFalse) {
-				return summaryInstalling.state, summaryInstalling.message, summaryInstalling.tip
-			}
-			return adviseFor(phaseInstall, "Pending")
+	if f.deleting {
+		a := summaryDeleting
+		if f.removeError != "" {
+			a.message += ": " + f.removeError
 		}
-		return adviseFor(phaseInstall, reasonOf(state, blocker))
+
+		// The uninstall's own failure, whatever operation wrote it: a stale run failure shows
+		// for the moments until the uninstall reports.
+		if s := firstFalse(f.lateStage()); s != nil {
+			a.message += ": " + s.reason + ": " + s.message
+		}
+
+		return a
+	}
+
+	// Suspended — a hard requirement was lost under an installed application;
+	// its disable may still be running, and a failing one is named.
+	if isSuspended(f) {
+		a := summarySuspended
+		if s := firstFalse(f.lateStage()); s != nil {
+			a.message += "; the disable is failing: " + s.reason + ": " + s.message
+		}
+
+		return a
+	}
+
+	switch phaseOf(f) {
+	case phaseInstall:
+		blocker := firstFalse(f.installPipeline())
+		if blocker == nil {
+			if isInstallComplete(f) {
+				return summaryReady
+			}
+			return summaryInstalling
+		}
+		return advise(phaseInstall, blocker.reason)
 
 	case phaseUpdate:
-		blocker, ok := pipelineBlocker(state, updatePipeline)
-		if !ok {
-			// "No blocker" is not the same as "update finished". firstFalse skips a
-			// transient ManifestsApplied=False/ApplyingManifests exactly as the
-			// mapper does, so the update pipeline reads clear during every re-apply
-			// window. But mapUpdateInstalled only flips UpdateInstalled (and mapReady
-			// only flips Ready) to True once ManifestsApplied is actually True; until
-			// then it returns empty and leaves the previous — possibly failed —
-			// conditions sticky. Mirror that success gate here, otherwise a mid-apply
-			// retry over a failed update would report Ready while the conditions a
-			// client also reads still say ManifestsApplyFailed.
-			if !state.IntEqual(intManifestsApplied, metav1.ConditionTrue) {
-				return summaryUpdating.state, summaryUpdating.message, summaryUpdating.tip
+		blocker := firstFalse(f.updatePipeline())
+		if blocker == nil {
+			// No blocker is not "update finished": a candidate is still being
+			// prepared, or the activated version has not succeeded yet.
+			if f.candidate || !f.manifests.isTrue() {
+				return summaryUpdating
 			}
 			// The manifests landed, but only a positive health report makes the new
 			// version ready; anything else is still an update in flight.
-			if !state.IntEqual(intScaled, metav1.ConditionTrue) {
-				return adviseFor(phaseUpdate, workloadReason(state))
+			if !f.scaled.isTrue() {
+				return advise(phaseUpdate, workloadReason(f))
 			}
-			return summaryReady.state, summaryReady.message, summaryReady.tip
+			return summaryReady
 		}
-		return adviseFor(phaseUpdate, reasonOf(state, blocker))
+		return advise(phaseUpdate, blocker.reason)
 
 	case phaseReconcile:
-		blocker, ok := firstFalse(state, reconcileSummaryChain)
-		if !ok {
-			return summaryReady.state, summaryReady.message, summaryReady.tip // healthy steady state
+		blocker := firstFalse(f.reconcileSummaryChain())
+		if blocker == nil {
+			if f.settingsChanged {
+				return summaryConfiguring
+			}
+
+			return summaryReady // healthy steady state
 		}
-		return adviseFor(phaseReconcile, reasonOf(state, blocker))
+		return advise(phaseReconcile, blocker.reason)
 	}
 
-	return "", "", ""
+	return advice{}
 }
 
 // reconcileSummaryChain lists the internal gates that degrade a running app,
-// in priority order. It mirrors what the mapper actually breaks on reconcile
-// so the summary cannot disagree with the conditions: the reconcileChain gates
-// (which break Ready/Managed) first, then Configured (which breaks only
-// ConfigurationApplied), then Scaled (workload health). Configured=False/SettingsChanged
-// is progress, not degradation: firstFalse skips it and the summary stays Ready.
-//
-// intScaled is last: a real artifact, hook or manifest failure outranks
-// workload health. Only a False is a degradation — the health monitor reports
-// both Reconciling and Degraded as Scaled=False, while Unknown means "no
-// workloads to observe", which is not a problem.
-var reconcileSummaryChain = []string{
-	intReadyOnFilesystem,
-	intLoaded,
-	intHooksProcessed,
-	intManifestsApplied,
-	intConfigured,
-	intScaled,
+// in priority order: hook and manifest failures, then settings, then workload
+// health. Only a False Scaled is a degradation.
+func (f *facts) reconcileSummaryChain() []*signal {
+	return []*signal{&f.hooks, &f.manifests, &f.configured, &f.scaled}
 }
 
 // workloadReason returns the health monitor's verdict on the package workload.
-// An absent or reasonless intScaled means the monitor has not reported at all,
-// which is not the same as reporting that there is nothing to observe.
-func workloadReason(state condmap.State) string {
-	reason, _ := state.GetIntReason(intScaled)
-	if reason == "" {
+// A scaled signal without a reason means the monitor has not reported at all.
+func workloadReason(f *facts) string {
+	if f.scaled.reason == "" {
 		return reasonHealthUnknown
 	}
 
-	return reasonOf(state, intScaled)
+	return f.scaled.reason
 }
 
-// reasonOf returns the canonical external reason for a failing internal
-// condition — the same translation the mappers apply via emit/canonicalReason.
-func reasonOf(state condmap.State, internalCond string) string {
-	intReason, _ := state.GetIntReason(internalCond)
-	return canonicalReason(internalCond, intReason)
-}
-
-// adviseFor looks up the Summary for a (phase, reason) pair, falling back to a
-// generic phrasing when the reason is outside the documented vocabulary (e.g.
-// a newly added internal condition that has no tip yet).
-func adviseFor(ph phase, reason string) (string, string, string) {
+// advise looks up the Summary of a (phase, reason) pair, falling back to a generic phrasing when
+// the reason is outside the table.
+func advise(ph phase, reason string) advice {
 	if a, ok := summaryTable[ph][reason]; ok {
-		return a.state, a.message, a.tip
+		return a
 	}
 
 	switch ph {
 	case phaseInstall:
-		return stateFailed, "Installation failed: " + reason, ""
+		return advice{state: stateFailed, message: "Installation failed: " + reason}
 	case phaseUpdate:
-		return stateFailed, "Update failed: " + reason + "; previous version is no longer serving", ""
-	case phaseReconcile:
-		return stateDegraded, "Reconcile failed: " + reason, ""
+		return advice{state: stateFailed, message: "Update failed: " + reason + "; previous version is no longer serving"}
+	default:
+		return advice{state: stateDegraded, message: "Reconcile failed: " + reason}
 	}
-
-	return "", "", ""
 }

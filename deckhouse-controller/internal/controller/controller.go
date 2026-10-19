@@ -17,6 +17,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -43,8 +44,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
-	pkgmodules "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
-	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/disk"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -78,17 +79,20 @@ const (
 	controllerName = "deckhouse-controller"
 )
 
-// Controller drives modules through the package runtime alone, without addon-operator.
+// Controller drives modules through the package engine alone, without addon-operator.
 type Controller struct {
 	ctrl ctrlmanager.Manager
 	// sync is held for the whole bootstrap, so a waiter cannot observe a half-restored tree
 	sync *sync.WaitGroup
+	// mu orders Start's sync.Add before Stop's Wait; stopped: Stop ran, a later Start does nothing.
+	mu      sync.Mutex
+	stopped bool
 
-	manager *pkgruntime.Runtime
+	manager *engine.Engine
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 
-	settings             *helpers.DeckhouseSettingsContainer
+	deckhouseSettings    *helpers.DeckhouseSettingsContainer
 	applicationsSettings *helpers.ApplicationsSettingsContainer
 
 	dc dependency.Container
@@ -96,7 +100,7 @@ type Controller struct {
 	logger *log.Logger
 }
 
-// Build assembles the manager, the package runtime and the shared containers; it starts nothing.
+// Build assembles the manager, the package engine and the shared containers; it starts nothing.
 func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage, logger *log.Logger) (*Controller, error) {
 	scheme, err := buildSchema()
 	if err != nil {
@@ -144,18 +148,19 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 		ReleaseChannel: app.DefaultReleaseChannel,
 	})
 
-	manager, err := pkgruntime.Build(runtime.GetClient(), nil, ms, logger)
+	manager, err := engine.Build(runtime.GetClient(), nil, ms, logger, engine.Config{EnableModuleV2: true})
 	if err != nil {
-		return nil, fmt.Errorf("create runtime: %w", err)
+		return nil, fmt.Errorf("create package engine: %w", err)
 	}
 
-	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, ms)
+	deckhouseSettings := helpers.NewDeckhouseSettingsContainer(nil, ms)
+	applicationsSettings := helpers.NewApplicationsSettingsContainer()
 	synced := new(sync.WaitGroup)
 	dc := dependency.NewDependencyContainer()
 
 	// TODO: get rid of stack extenders, its no longer needed, but deckhouse release controller still depends on it
 	exts := extenders.NewExtendersStack(app.Version, nil, nil, logger.Named("extenders"))
-	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtime, dc, exts, manager, settingsContainer, ms, logger)
+	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtime, dc, exts, manager, deckhouseSettings, ms, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
@@ -165,7 +170,7 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 		return nil, fmt.Errorf("register application package version controller: %w", err)
 	}
 
-	err = modulepackageversion.RegisterController(synced, runtime, dc, logger)
+	err = modulepackageversion.RegisterController(runtime, dc, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register module package version controller: %w", err)
 	}
@@ -175,9 +180,7 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 		return nil, fmt.Errorf("register module controller: %w", err)
 	}
 
-	applicationsSettings := helpers.NewApplicationsSettingsContainer()
-
-	err = application.RegisterController(synced, runtime, manager, nil, settingsContainer, applicationsSettings, logger)
+	err = application.RegisterController(synced, runtime, manager, nil, deckhouseSettings, applicationsSettings, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register application controller: %w", err)
 	}
@@ -210,7 +213,7 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 			manager,
 			ms,
 			config.NewSchemaStore(nil),
-			settingsContainer,
+			deckhouseSettings,
 			exts,
 		)
 	}
@@ -223,7 +226,7 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 
 		embeddedPolicy: embeddedPolicy,
 
-		settings:             settingsContainer,
+		deckhouseSettings:    deckhouseSettings,
 		applicationsSettings: applicationsSettings,
 
 		dc: dc,
@@ -333,16 +336,23 @@ func buildCacheByObject() map[client.Object]cache.ByObject {
 	}
 }
 
-// Start runs the manager, rebuilds the module tree from the cluster and hands it to the runtime.
-// The scheduler is resumed only once that tree is whole, so no module is scheduled half-restored.
+// Start runs the manager, cleans the disk up and boots the engine from the cluster: Global, every
+// installed module and application. Boot restores each from its
+// status.currentVersion and status.lastAppliedConfiguration; a Boot error stops deckhouse.
 func (c *Controller) Start(ctx context.Context) error {
+	c.mu.Lock()
+	if c.stopped {
+		c.mu.Unlock()
+		return errors.New("controller stopped")
+	}
+
 	c.sync.Add(1)
+	c.mu.Unlock()
+
 	defer c.sync.Done()
 
-	// run the manager in the background
-	if err := c.manager.Run(); err != nil {
-		return fmt.Errorf("run package runtime: %w", err)
-	}
+	// start the engine's services; the hook event loop must run before Boot
+	c.manager.Start()
 
 	// starts all child controllers
 	go func() {
@@ -359,44 +369,58 @@ func (c *Controller) Start(ctx context.Context) error {
 	// The old module stack recorded its packages in module releases, and the
 	// image ships the embedded modules; give each of them a package version
 	// object, and the user module sources their repositories, while the
-	// controllers still wait for the sync. Runs after the resolver, so a
-	// deployed duplicate it superseded no longer counts.
+	// controllers still wait for the sync.
 	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, c.logger); err != nil {
 		return fmt.Errorf("sync package objects: %w", err)
 	}
 
-	// loadModules below enqueues downloads straight away, so this is the last point at which
-	// dropping stale package state cannot race a deploy — as long as this manager registers no
-	// reconciler that deploys on its own. A leak must not stop the tree loading.
-	if err := c.cleanupPackages(ctx); err != nil {
+	// this list decides what is deleted and what is restored, so a lagging watch would read as a
+	// package gone
+	applications := new(v1alpha1.ApplicationList)
+	if err := c.ctrl.GetAPIReader().List(ctx, applications); err != nil {
+		return fmt.Errorf("list applications: %w", err)
+	}
+
+	modules := new(v1beta1.ModuleList)
+	if err := c.ctrl.GetAPIReader().List(ctx, modules); err != nil {
+		return fmt.Errorf("list modules: %w", err)
+	}
+
+	// The controllers wait for the sync, so nothing applies a package before Boot. A leak must
+	// not stop the boot.
+	if err := c.cleanupPackages(ctx, applications.Items, modules.Items); err != nil {
 		c.logger.Warn("failed to cleanup packages", log.Err(err))
 	}
 
-	if err := c.loadModules(ctx); err != nil {
-		return fmt.Errorf("load modules: %w", err)
+	if err := c.bootPackages(ctx, applications.Items, modules.Items); err != nil {
+		return fmt.Errorf("boot packages: %w", err)
 	}
 
-	c.manager.ResumeScheduler()
-
 	// update embedded policy and deckhouse settings by the deckhouse moduleConfig
-	go c.runSyncDeckhouseSettingsLoop(ctx)
+	go c.runSyncSettingsLoop(ctx)
 
 	return nil
 }
 
-// Stop stops the controller and package runtime.
+// Stop waits for a Start in progress (the engine may stop only after Boot returned), then stops
+// the package engine; a Start after it does nothing.
 func (c *Controller) Stop() {
+	c.mu.Lock()
+	c.stopped = true
+	c.mu.Unlock()
+
+	c.sync.Wait()
 	c.manager.Stop()
 }
 
-// GetRuntime returns the package runtime.
-func (c *Controller) GetRuntime() *pkgruntime.Runtime {
+// Engine returns the package engine.
+func (c *Controller) Engine() *engine.Engine {
 	return c.manager
 }
 
-// runSyncDeckhouseSettingsLoop updates the embedded policy, the Deckhouse settings and the global
+// runSyncSettingsLoop updates the embedded policy, the Deckhouse settings and the global
 // applications settings until ctx is canceled.
-func (c *Controller) runSyncDeckhouseSettingsLoop(ctx context.Context) {
+func (c *Controller) runSyncSettingsLoop(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -444,7 +468,7 @@ func (c *Controller) syncDeckhouseSettings(config addonutils.Values) {
 
 	c.logger.Debug("update deckhouse settings")
 
-	c.settings.Set(settings)
+	c.deckhouseSettings.Set(settings)
 
 	if settings.ReleaseChannel == "" {
 		settings.ReleaseChannel = app.DefaultReleaseChannel
@@ -454,123 +478,143 @@ func (c *Controller) syncDeckhouseSettings(config addonutils.Values) {
 	c.embeddedPolicy.Set(settings)
 }
 
-// loadModules hands every placed module to the package runtime, which starts its pipeline.
-func (c *Controller) loadModules(ctx context.Context) error {
+// bootPackages restores Global, every installed module and every installed application. A
+// resource being deleted is restored to be uninstalled as at runtime (hooks, release, purge),
+// unless restorable rejects it (force-removed, or a disabled module); the controller's remove then
+// deletes its release by name.
+func (c *Controller) bootPackages(ctx context.Context, applications []v1alpha1.Application, modules []v1beta1.Module) error {
+	bootApps := make([]engine.BootApplication, 0, len(applications))
+	for i := range applications {
+		instance := &applications[i]
+		if !application.Restorable(instance) {
+			continue
+		}
+
+		boot, err := application.BootOf(ctx, c.ctrl.GetClient(), instance)
+		if err != nil {
+			return fmt.Errorf("boot application '%s/%s': %w", instance.Namespace, instance.Name, err)
+		}
+
+		bootApps = append(bootApps, boot)
+	}
+
 	// one repository backs many modules, so each is resolved once
 	remotes := make(map[string]registry.Remote)
 
-	modules := new(v1beta1.ModuleList)
-	if err := c.ctrl.GetAPIReader().List(ctx, modules); err != nil {
-		return fmt.Errorf("list modules: %w", err)
-	}
+	var global []byte
 
-	runtimeModules := make([]pkgruntime.Module, 0, len(modules.Items))
-	for _, module := range modules.Items {
-		if !module.DeletionTimestamp.IsZero() {
-			c.logger.Debug("module is deleted, skip loading", slog.String("module", module.Name))
+	bootModules := make([]engine.BootModule, 0, len(modules))
+	for i := range modules {
+		module := &modules[i]
+		if !restorable(module) {
+			c.logger.Debug("skip booting a deleted module: nothing installed, force-removed or disabled", slog.String("module", module.Name))
 			continue
 		}
 
-		// The runtime built the global module itself out of the global hooks dir before the
-		// bootstrap ran, so nothing is loaded for it; only its settings cross over.
+		// The engine built the global module itself; only its settings checkpoint crosses over.
 		if module.Name == "global" {
-			c.manager.UpdateGlobalModule(module.Spec.Settings.GetMap(), module.Spec.SettingsVersion)
-
+			global = module.Status.LastAppliedConfiguration.Raw
 			continue
 		}
 
-		// an embedded module is on disk already and its repository resolves to nothing
-		if module.IsEmbedded() {
-			runtimeModules = append(runtimeModules, pkgruntime.Module{
-				Name:            module.Name,
-				Settings:        module.Spec.Settings.GetMap(),
-				SettingsVersion: module.Spec.SettingsVersion,
-				Maintenance:     module.Spec.Maintenance,
-				Enabled:         module.Spec.Enabled,
-			})
-
-			continue
-		}
-
+		// every module has a repository, an embedded one too; without one it cannot be restored
 		if module.Spec.PackageRepositoryName == "" {
-			c.logger.Debug("module has no repository, skip loading", slog.String("module", module.Name))
+			c.logger.Warn("module has no repository, skip booting it", slog.String("module", module.Name))
 			continue
 		}
 
-		remote, ok := remotes[module.Spec.PackageRepositoryName]
-		if !ok {
-			repo := new(v1alpha1.PackageRepository)
-			if err := c.ctrl.GetClient().Get(ctx, client.ObjectKey{Name: module.Spec.PackageRepositoryName}, repo); err != nil {
-				return fmt.Errorf("get package repository '%s' of the module '%s': %w",
-					module.Spec.PackageRepositoryName, module.Name, err)
+		boot := engine.BootModule{
+			Name:        module.Name,
+			Embedded:    module.IsEmbedded(),
+			LastApplied: module.Status.LastAppliedConfiguration.Raw,
+			Maintenance: module.Spec.Maintenance,
+			Enabled:     module.Spec.Enabled,
+			Removing:    !module.DeletionTimestamp.IsZero(),
+		}
+
+		if module.Status.CurrentVersion != nil {
+			boot.CurrentVersion = module.Status.CurrentVersion.Version
+		}
+
+		// an embedded module is in the image and its repository resolves to nothing
+		if !boot.Embedded && boot.CurrentVersion != "" {
+			remote, ok := remotes[module.Spec.PackageRepositoryName]
+			if !ok {
+				repo := new(v1alpha1.PackageRepository)
+				if err := c.ctrl.GetClient().Get(ctx, client.ObjectKey{Name: module.Spec.PackageRepositoryName}, repo); err != nil {
+					return fmt.Errorf("get package repository '%s' of the module '%s': %w",
+						module.Spec.PackageRepositoryName, module.Name, err)
+				}
+
+				remote = registry.BuildRemote(repo)
+				remotes[module.Spec.PackageRepositoryName] = remote
 			}
 
-			remote = registry.BuildRemote(repo)
-			remotes[module.Spec.PackageRepositoryName] = remote
+			boot.Repository = remote
 		}
 
-		runtimeModules = append(runtimeModules, pkgruntime.Module{
-			Name:            module.Name,
-			Settings:        module.Spec.Settings.GetMap(),
-			SettingsVersion: module.Spec.SettingsVersion,
-			Maintenance:     module.Spec.Maintenance,
-			Enabled:         module.Spec.Enabled,
-			Definition:      pkgmodules.Definition{Name: module.Name, Version: module.Spec.PackageVersion},
-			Repository:      remote,
-		})
+		bootModules = append(bootModules, boot)
 	}
 
-	c.manager.LoadModules(ctx, runtimeModules)
-
-	return nil
+	return c.manager.Boot(ctx, global, bootApps, bootModules)
 }
 
-// cleanupPackages hands the runtime every package the cluster still claims, so it drops the rest.
-// A terminating instance is left out, as in loadModules: the runtime forgets its teardown across a
-// restart and never loads a terminating object, so the remover answers "nothing left to tear down"
-// and this pass is the last owner of its release.
-func (c *Controller) cleanupPackages(ctx context.Context) error {
-	// this list decides what is deleted, so a lagging watch would read as an application gone
-	applications := new(v1alpha1.ApplicationList)
-	if err := c.ctrl.GetAPIReader().List(ctx, applications); err != nil {
-		return fmt.Errorf("list applications: %w", err)
+// cleanupPackages hands the engine every package the cluster still claims, so it drops the rest.
+// A terminating instance is kept as in bootPackages: Boot needs its image to uninstall it. An
+// embedded module's image is the deckhouse image, not the disk's, so it names nothing. No Module
+// listed at all is refused: the sync has just written the global and the embedded ones, so an
+// empty list is a read gone wrong, and acting on it would purge every module image.
+func (c *Controller) cleanupPackages(ctx context.Context, applications []v1alpha1.Application, modules []v1beta1.Module) error {
+	if len(modules) == 0 {
+		return errors.New("no module listed")
 	}
 
-	preserveApps := make([]pkgruntime.PreserveApplication, 0, len(applications.Items))
-	for i := range applications.Items {
-		application := &applications.Items[i]
-
-		if !application.DeletionTimestamp.IsZero() {
+	preserveApps := make([]disk.PreservePackage, 0, 2*len(applications))
+	for i := range applications {
+		instance := &applications[i]
+		if !application.Restorable(instance) {
 			continue
 		}
 
-		preserveApps = append(preserveApps, pkgruntime.PreserveApplication{
-			Namespace:   application.Namespace,
-			Name:        application.Name,
-			PackageName: application.Spec.PackageName,
-			Repository:  application.Spec.PackageRepositoryName,
-			Version:     application.Spec.PackageVersion,
-		})
+		preserveApps = append(preserveApps, application.PreserveOf(instance)...)
 	}
 
-	modules := new(v1beta1.ModuleList)
-	if err := c.ctrl.GetAPIReader().List(ctx, modules); err != nil {
-		return fmt.Errorf("list modules: %w", err)
-	}
-
-	preserveModules := make([]pkgruntime.PreserveModule, 0, len(modules.Items))
-	for _, module := range modules.Items {
-		if !module.DeletionTimestamp.IsZero() {
+	preserveModules := make([]disk.PreservePackage, 0, 2*len(modules))
+	for i := range modules {
+		module := &modules[i]
+		if !restorable(module) || module.IsEmbedded() {
 			continue
 		}
 
-		preserveModules = append(preserveModules, pkgruntime.PreserveModule{
-			Name:       module.Name,
-			Repository: module.Spec.PackageRepositoryName,
-			Version:    module.Spec.PackageVersion,
-			Embedded:   module.IsEmbedded(),
+		preserveModules = append(preserveModules, disk.PreservePackage{
+			Name: module.Name, Repository: module.Spec.PackageRepositoryName, Version: module.Spec.PackageVersion,
 		})
+
+		if module.Status.CurrentVersion != nil {
+			preserveModules = append(preserveModules, disk.PreservePackage{
+				Name: module.Name, Repository: module.Spec.PackageRepositoryName, Version: module.Status.CurrentVersion.Version,
+			})
+		}
 	}
 
-	return c.manager.CleanupV2(ctx, preserveApps, preserveModules)
+	return c.manager.Cleanup(ctx, preserveApps, preserveModules)
+}
+
+// restorable is application.Restorable for a module: Boot gets it and Cleanup keeps its image,
+// except one being deleted with no activated version or removedWithoutRestore.
+func restorable(module *v1beta1.Module) bool {
+	if module.DeletionTimestamp.IsZero() {
+		return true
+	}
+
+	return module.Status.CurrentVersion != nil && module.Status.CurrentVersion.Version != "" && !removedWithoutRestore(module)
+}
+
+// removedWithoutRestore reports whether a module being deleted is left to the controller's remove,
+// which deletes its release by name: force-removed, or disabled by an explicit spec.enabled false.
+// A package is restored for removal only for what needs it loaded, the deletion hooks and the
+// purge; a disabled module has neither (its disable already ran or skipped the deletion hooks, and
+// modules have no purge), while its restore costs an image and fails Boot when the registry lost it.
+func removedWithoutRestore(module *v1beta1.Module) bool {
+	return v1alpha1.IsForceRemoved(module) || (module.Spec.Enabled != nil && !*module.Spec.Enabled)
 }

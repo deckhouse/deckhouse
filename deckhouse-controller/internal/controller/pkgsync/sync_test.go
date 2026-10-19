@@ -61,10 +61,8 @@ func newTestSyncerWithGlobal(t *testing.T, version, embeddedDir, globalDir strin
 		WithObjects(objects...).
 		Build()
 
-	syncer := newSyncer(cl, cl, dependency.NewMockedContainer(), log.NewNop(),
-		WithEmbeddedModulesDir(embeddedDir),
-		WithGlobalHooksDir(globalDir),
-	)
+	syncer := newSyncer(cl, cl, dependency.NewMockedContainer(), log.NewNop())
+	syncer.embeddedModulesDir, syncer.globalHooksDir = embeddedDir, globalDir
 
 	return syncer, cl
 }
@@ -236,7 +234,7 @@ func TestPackageRepositoryNameForModuleSource(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		assert.Equal(t, c.want, PackageRepositoryNameForModuleSource(c.source), c.source)
+		assert.Equal(t, c.want, packageRepositoryNameForModuleSource(c.source), c.source)
 	}
 }
 

@@ -82,7 +82,7 @@ func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.M
 		CA:        source.Spec.Registry.CA,
 	}
 
-	name := PackageRepositoryNameForModuleSource(source.Name)
+	name := packageRepositoryNameForModuleSource(source.Name)
 
 	repo := new(v1alpha1.PackageRepository)
 	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, repo)

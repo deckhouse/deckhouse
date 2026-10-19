@@ -1,0 +1,28 @@
+apiVersion: deckhouse.io/v1beta1
+kind: Module
+metadata:
+  name: global
+  annotations:
+    modules.deckhouse.io/embedded: "true"
+spec:
+  packageRepositoryName: embedded
+  packageVersion: v1.0.0
+  settingsVersion: 1
+  settings:
+    highAvailability: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: global
+  uid: package-uid
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: embedded-global
+  uid: embedded-version-uid
+spec:
+  packageName: global
+  packageRepositoryName: embedded
+  packageVersion: v1.0.0

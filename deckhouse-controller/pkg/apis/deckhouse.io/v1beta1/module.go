@@ -30,12 +30,6 @@ const (
 
 	ModuleFinalizerStatisticRegistered = "module.deckhouse.io/statistic-registered"
 
-	// ModuleAnnotationDev marks a module restored from a development pull override.
-	ModuleAnnotationDev = "modules.deckhouse.io/dev"
-
-	// ModuleAnnotationHash holds the digest a dev module was last handed to the runtime on.
-	ModuleAnnotationHash = "modules.deckhouse.io/hash"
-
 	// ModuleAnnotationEmbedded marks a module that is embedded in the Deckhouse image.
 	ModuleAnnotationEmbedded = "modules.deckhouse.io/embedded"
 )
@@ -176,9 +170,9 @@ type ModuleStatus struct {
 // machine on top of conditions.
 type ModuleStatusSummary struct {
 	// State is the high-level lifecycle state observed for the module.
-	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting.
+	// Always one of: Pending, Failed, Updating, Configuring, Ready, Degraded, Suspended, Deleting.
 	// +optional
-	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting]
+	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Configuring, Ready, Degraded, Suspended, Deleting]
 	State string `json:"state,omitempty"`
 
 	// Message is a human-readable description of the current state.
@@ -209,11 +203,6 @@ type ModuleList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []Module `json:"items"`
-}
-
-// IsDev returns true if the module is in dev mode.
-func (m *Module) IsDev() bool {
-	return m.Annotations[ModuleAnnotationDev] == "true"
 }
 
 // IsEmbedded returns true if the module is embedded in the Deckhouse image.

@@ -72,7 +72,7 @@ properties:
 `)
 	values := valuesFromYAML(t, `foo: bar`)
 
-	errs, err := Validate(s, values)
+	errs, err := ValidateTransition(s, values, nil)
 	require.NoError(t, err)
 	assert.Empty(t, errs)
 }
@@ -89,7 +89,7 @@ x-deckhouse-validations:
 `)
 	values := valuesFromYAML(t, `replicas: 3`)
 
-	errs, err := Validate(s, values)
+	errs, err := ValidateTransition(s, values, nil)
 	require.NoError(t, err)
 	assert.Empty(t, errs)
 }
@@ -106,7 +106,7 @@ x-deckhouse-validations:
 `)
 	values := valuesFromYAML(t, `replicas: 0`)
 
-	errs, err := Validate(s, values)
+	errs, err := ValidateTransition(s, values, nil)
 	require.NoError(t, err)
 	require.Len(t, errs, 1)
 	assert.Equal(t, "replicas must be >= 1", errs[0].Error())
@@ -333,7 +333,7 @@ replicas: 10
 maxReplicas: 5
 `)
 
-	errs, err := Validate(s, values)
+	errs, err := ValidateTransition(s, values, nil)
 	require.NoError(t, err)
 	require.Len(t, errs, 1)
 	assert.Contains(t, errs[0].Error(), "replicas must be between")
@@ -348,7 +348,7 @@ x-deckhouse-validations: "not a list"
 `)
 	values := valuesFromYAML(t, `{}`)
 
-	_, err := Validate(s, values)
+	_, err := ValidateTransition(s, values, nil)
 	assert.Error(t, err)
 }
 
@@ -360,6 +360,6 @@ x-deckhouse-validations:
 `)
 	values := valuesFromYAML(t, `{}`)
 
-	_, err := Validate(s, values)
+	_, err := ValidateTransition(s, values, nil)
 	assert.Error(t, err)
 }

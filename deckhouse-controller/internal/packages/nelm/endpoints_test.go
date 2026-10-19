@@ -19,14 +19,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 )
 
 func TestExtractEndpointURLs(t *testing.T) {
 	tests := []struct {
 		name     string
 		rendered string
-		expected []status.URL
+		expected []observed.URL
 	}{
 		{
 			name:     "empty manifest",
@@ -53,7 +53,7 @@ spec:
       - path: /ui
       - path: /api
 `,
-			expected: []status.URL{
+			expected: []observed.URL{
 				{URL: "https://app.example.com/api"},
 				{URL: "https://app.example.com/ui"},
 			},
@@ -76,7 +76,7 @@ spec:
       paths:
       - path: /ui
 `,
-			expected: []status.URL{
+			expected: []observed.URL{
 				{URL: "https://app.example.com/ui", Description: "Web UI"},
 			},
 		},
@@ -95,7 +95,7 @@ spec:
       paths:
       - path: /
 `,
-			expected: []status.URL{{URL: "http://app.example.com/"}},
+			expected: []observed.URL{{URL: "http://app.example.com/"}},
 		},
 		{
 			name: "rule without paths defaults to root",
@@ -112,7 +112,7 @@ spec:
   rules:
   - host: app.example.com
 `,
-			expected: []status.URL{{URL: "https://app.example.com/"}},
+			expected: []observed.URL{{URL: "https://app.example.com/"}},
 		},
 		{
 			name: "ingress without annotation is skipped",
@@ -213,7 +213,7 @@ spec:
   rules:
   - host: c.example.com
 `,
-			expected: []status.URL{
+			expected: []observed.URL{
 				{URL: "http://b.example.com/metrics", Description: "Dashboard"},
 				{URL: "https://a.example.com/", Description: "Dashboard"},
 			},
@@ -233,7 +233,7 @@ spec:
       paths:
       - path: ui
 `,
-			expected: []status.URL{{URL: "http://app.example.com/ui"}},
+			expected: []observed.URL{{URL: "http://app.example.com/ui"}},
 		},
 	}
 

@@ -23,7 +23,7 @@ import (
 )
 
 // XImmutable is the OpenAPI extension key that freezes a settings field once the
-// application is created: the value may be chosen at install time and never changed afterwards.
+// package is created: the value may be chosen at install time and never changed afterwards.
 const XImmutable = "x-deckhouse-immutable"
 
 // CheckImmutable compares the stored settings against the incoming ones and returns
@@ -224,7 +224,7 @@ func childPath(path []string, segment string) []string {
 // allowed, an error naming joinPath(path) when it is not.
 func compareImmutable(path []string, oldValue, newValue any) error {
 	// No stored value means the field was never set: choosing one now is the install-time
-	// choice happening late, not an edit of a value the application already runs with.
+	// choice happening late, not an edit of a value the package already runs with.
 	// Defaults are applied before the comparison, so this only covers fields that have
 	// no default either.
 	if oldValue == nil {
@@ -238,5 +238,5 @@ func compareImmutable(path []string, oldValue, newValue any) error {
 		return nil
 	}
 
-	return fmt.Errorf("field %q is immutable: it can only be set when the application is created", joinPath(path))
+	return fmt.Errorf("field %q is immutable: it can only be set when the package is created", joinPath(path))
 }

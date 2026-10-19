@@ -66,25 +66,22 @@ func TestValidateGrants(t *testing.T) {
 	}})
 
 	t.Run("allows available value", func(t *testing.T) {
-		err := app.validateGrants(context.Background(), addonutils.Values{"storageClass": "hdd"})
-		require.NoError(t, err)
+		require.NoError(t, app.validateGrants(context.Background(), addonutils.Values{"storageClass": "hdd"}))
 	})
 
-	t.Run("rejects unavailable value", func(t *testing.T) {
+	// An error, not a verdict: it depends on the grants, so the final gate retries it.
+	t.Run("rejects unavailable value as an error", func(t *testing.T) {
 		err := app.validateGrants(context.Background(), addonutils.Values{"storageClass": "nvme"})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "not available")
+		require.ErrorContains(t, err, "not available")
 	})
 
 	t.Run("allows empty value", func(t *testing.T) {
-		err := app.validateGrants(context.Background(), addonutils.Values{})
-		require.NoError(t, err)
+		require.NoError(t, app.validateGrants(context.Background(), addonutils.Values{}))
 	})
 
 	t.Run("skips validation when feature inactive", func(t *testing.T) {
 		inactive := newTestApp(t, grants.NoopResolver{})
-		err := inactive.validateGrants(context.Background(), addonutils.Values{"storageClass": "nvme"})
-		require.NoError(t, err)
+		require.NoError(t, inactive.validateGrants(context.Background(), addonutils.Values{"storageClass": "nvme"}))
 	})
 }
 

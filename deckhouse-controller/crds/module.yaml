@@ -408,12 +408,13 @@ spec:
                   state:
                     description: |-
                       State is the high-level lifecycle state observed for the module.
-                      Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting.
+                      Always one of: Pending, Failed, Updating, Configuring, Ready, Degraded, Suspended, Deleting.
                     type: string
                     x-doc-examples:
                     - Pending
                     - Failed
                     - Updating
+                    - Configuring
                     - Ready
                     - Degraded
                     - Suspended

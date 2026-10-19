@@ -17,678 +17,193 @@ package status
 import (
 	"encoding/json"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/werf/nelm/pkg/legacy/progrep"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
-	intstatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
 )
 
-// summaryFor builds the pre-mapping state from the given options and runs
-// summarize on it — the same state the mapper consumes in service.go.
-func summaryFor(opts ...mappingOption) (string, string, string) {
-	state := condmap.State{
-		Internal: make(map[string]metav1.Condition),
-		External: make(map[string]metav1.Condition),
-	}
-	for _, opt := range opts {
-		opt(&state)
-	}
+func TestCurrentVersionIsTheActivatedVersion(t *testing.T) {
+	// Activated, nothing ran yet: status.currentVersion moves at once, Boot restores it.
+	app := project(t, projection{
+		source:         fakeSource{report: model.Report{CurrentVersion: v2}, known: true},
+		conditions:     installedConditions(),
+		currentVersion: v1,
+	})
 
-	return summarize(state)
+	assert.Equal(t, v2, app.Status.CurrentVersion.Version)
 }
 
-// installed marks the app as previously installed (sticky external condition),
-// which puts the mapper and summarize into the update or reconcile phase.
-func installed() mappingOption {
-	return withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed")
+func TestLastAppliedConfigurationIsTheCheckpoint(t *testing.T) {
+	report := running(v1)
+	report.Current.AcceptedChecksum = "b" // accepted later, not applied: not the checkpoint
+
+	app := project(t, projection{source: fakeSource{report: report, known: true, obs: ready}})
+
+	assert.JSONEq(t, `{"replicas":1}`, string(app.Status.LastAppliedConfiguration.Raw))
+
+	// No checkpoint yet: the field is left as it is.
+	app = project(t, projection{source: fakeSource{report: model.Report{CurrentVersion: v1}, known: true}})
+	assert.Empty(t, app.Status.LastAppliedConfiguration.Raw)
 }
 
-func intCond(cond string, status metav1.ConditionStatus, reason string) mappingOption {
-	return withInternalCondition(cond, status, reason)
+func TestURLsFollowTheAppliedRelease(t *testing.T) {
+	obs := observed.Observation{Health: ready.Health, URLs: []observed.URL{{URL: "https://app.example.com", Description: "UI"}}}
+
+	app := project(t, projection{source: fakeSource{report: running(v1), known: true, obs: obs}})
+	assert.Equal(t, []v1alpha1.ApplicationStatusURL{{URL: "https://app.example.com", Description: "UI"}}, app.Status.URLs)
+
+	// A failed apply keeps the endpoints of the release that is there.
+	report := running(v1)
+	report.Current.ManifestsApplied = failed("RenderFailed")
+
+	svc := &Service{source: fakeSource{report: report, known: true}}
+	svc.computeAndApplyConditions(eventName, app)
+	assert.Len(t, app.Status.URLs, 1)
 }
 
-// running is a previously-installed app with every internal gate True; the
-// overrides (applied last) introduce the fault under test.
-func running(overrides ...mappingOption) []mappingOption {
-	opts := append([]mappingOption{installed()}, withSuccessfulApply()...)
-	return append(opts, overrides...)
-}
-
-// updatingApp is a running app with a version change in progress.
-func updatingApp(overrides ...mappingOption) []mappingOption {
-	return running(append([]mappingOption{withVersionChanged()}, overrides...)...)
-}
-
-// TestLifecycleScenarios drives one internal state through BOTH the mapper and
-// summarize, asserting the external conditions and the summary together. This
-// is what guarantees the summary can never disagree with the conditions a
-// client also sees — they are derived from the same state by shared helpers.
-func TestLifecycleScenarios(t *testing.T) {
-	cases := []struct {
-		name      string
-		opts      []mappingOption
-		wantConds map[string]*expectedCondition // nil value asserts the condition is absent
-		state     string
-		message   string
-		tip       string
-	}{
-		// ── Install (not yet installed) ────────────────────────────────
-		// Installed alone reports the install: the other conditions are
-		// behind its gate.
-
-		{
-			name: "install: waiting for dependent modules",
-			opts: []mappingOption{intCond(intPending, metav1.ConditionTrue, "Waiting")},
-			wantConds: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {metav1.ConditionFalse, "Pending"},
-			}),
-			state:   statePending,
-			message: "Installation is waiting for dependent modules to converge",
-			tip:     "Wait for dependent modules to converge automatically. No action required.",
-		},
-		{
-			// Enable took the application off Pending; the pipeline is running.
-			name: "install: in progress",
-			opts: []mappingOption{
-				intCond(intRequirementsMet, metav1.ConditionTrue, ""),
-				intCond(intPending, metav1.ConditionFalse, "Scheduled"),
-			},
-			wantConds: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: nil,
-			}),
-			state:   statePending,
-			message: "Installation is in progress",
-			tip:     "No action is required unless this state persists.",
-		},
-		{
-			name: "install: requirements unmet",
-			opts: []mappingOption{intCond(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled")},
-			wantConds: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {metav1.ConditionFalse, "RequirementsUnmet"},
-			}),
-			state:   statePending,
-			message: "Installation is blocked: application requirements are not satisfied",
-			tip:     "Check the application's spec.requirements: required Deckhouse version or dependent modules do not match the cluster. Update Deckhouse, enable required modules, or adjust requirements.",
-		},
-		{
-			name: "install: download/mount failed",
-			opts: []mappingOption{intCond(intReadyOnFilesystem, metav1.ConditionFalse, "MountFailed")},
-			wantConds: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {metav1.ConditionFalse, "DownloadFailed"},
-			}),
-			state:   stateFailed,
-			message: "Installation failed: application package could not be downloaded or mounted",
-			tip:     "Check network connectivity to the registry, verify imagePullSecret and package signature. Fix the issue — the controller will retry on the next reconcile.",
-		},
-		{
-			name: "install: load from filesystem failed",
-			opts: []mappingOption{intCond(intLoaded, metav1.ConditionFalse, "RuntimeError")},
-			wantConds: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {metav1.ConditionFalse, "LoadFromFilesystemFailed"},
-			}),
-			state:   stateFailed,
-			message: "Installation failed: application package on disk could not be loaded",
-			tip:     "The on-disk artifact is corrupted or has an invalid structure. Delete the cached package from the node disk and re-pull the image. The controller will retry on the next reconcile.",
-		},
-		{
-			name: "install: invalid settings",
-			opts: []mappingOption{intCond(intConfigured, metav1.ConditionFalse, "InvalidSettings")},
-			wantConds: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {metav1.ConditionFalse, "SettingsInvalid"},
-			}),
-			state:   stateFailed,
-			message: "Installation failed: application settings did not pass validation",
-			tip:     "Fix the ModuleConfig fields that fail OpenAPI validation. The controller will retry automatically after the config is changed.",
-		},
-		{
-			name: "install: hook sync phase failed",
-			opts: []mappingOption{intCond(intHooksProcessed, metav1.ConditionFalse, "HookInitializationFailed")},
-			wantConds: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {metav1.ConditionFalse, "HookInitializationFailed"},
-			}),
-			state:   stateFailed,
-			message: "Installation failed: hook synchronization phase failed",
-			tip:     "Check the hook pod/job logs (kubectl logs). Fix the hook code or its dependencies. Roll back the application version if needed.",
-		},
-		{
-			name: "install: startup/runtime hooks failed",
-			opts: []mappingOption{intCond(intHooksProcessed, metav1.ConditionFalse, "HookExecutionFailed")},
-			wantConds: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {metav1.ConditionFalse, "HookFailed"},
-			}),
-			state:   stateFailed,
-			message: "Installation failed: startup or runtime hooks failed",
-			tip:     "Check the failed hook logs. Fix the configuration or hook code. The attempt will be retried on the next reconcile.",
-		},
-		{
-			name: "install: Helm apply failed",
-			opts: []mappingOption{intCond(intManifestsApplied, metav1.ConditionFalse, "boom")},
-			wantConds: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {metav1.ConditionFalse, "ManifestsApplyFailed"},
-			}),
-			state:   stateFailed,
-			message: "Installation failed: Helm could not apply manifests",
-			tip:     "Check helm history and events in the application namespace. Resolve resource conflicts (namespace, CRD, RBAC). The controller will retry on the next reconcile.",
-		},
-
-		// ── Update (installed, version change in progress) ────────────
-		// Early-stage faults leave the old version serving (Ready/Scaled True);
-		// late-stage faults take it down.
-
-		{
-			name: "update: waiting for dependent modules, old version serving",
-			opts: updatingApp(intCond(intPending, metav1.ConditionTrue, "Waiting")),
-			wantConds: map[string]*expectedCondition{
-				ConditionUpdateInstalled: {metav1.ConditionFalse, "Pending"},
-				ConditionReady:           {metav1.ConditionTrue, ConditionReady},
-				ConditionScaled:          {metav1.ConditionTrue, ConditionScaled},
-			},
-			state:   stateUpdating,
-			message: "Update is waiting for dependent modules to converge; previous version is still serving",
-			tip:     "Wait — the previous version is still working. The update will continue automatically once dependent modules converge.",
-		},
-		{
-			name: "update: download failed, old version serving",
-			opts: updatingApp(intCond(intReadyOnFilesystem, metav1.ConditionFalse, "MountFailed")),
-			wantConds: map[string]*expectedCondition{
-				ConditionUpdateInstalled: {metav1.ConditionFalse, "DownloadFailed"},
-				ConditionReady:           {metav1.ConditionTrue, ConditionReady},
-				ConditionScaled:          {metav1.ConditionTrue, ConditionScaled},
-			},
-			state:   stateUpdating,
-			message: "Update is stalled: new version could not be downloaded; previous version is still serving",
-			tip:     "Check registry connectivity, and image integrity. The previous version continues to work. After fixing, the controller will retry the download.",
-		},
-		{
-			name: "update: load from filesystem failed, old version serving",
-			opts: updatingApp(intCond(intLoaded, metav1.ConditionFalse, "RuntimeError")),
-			wantConds: map[string]*expectedCondition{
-				ConditionUpdateInstalled: {metav1.ConditionFalse, "LoadFromFilesystemFailed"},
-				ConditionReady:           {metav1.ConditionTrue, ConditionReady},
-				ConditionScaled:          {metav1.ConditionTrue, ConditionScaled},
-			},
-			state:   stateUpdating,
-			message: "Update is stalled: new version could not be loaded from filesystem; previous version is still serving",
-			tip:     "Delete the corrupted new version package from the node disk. The previous version continues to work. The controller will retry download and loading.",
-		},
-		{
-			name: "update: invalid settings, old version serving",
-			opts: updatingApp(intCond(intConfigured, metav1.ConditionFalse, "InvalidSettings")),
-			wantConds: map[string]*expectedCondition{
-				ConditionUpdateInstalled: {metav1.ConditionFalse, "SettingsInvalid"},
-				ConditionReady:           {metav1.ConditionTrue, ConditionReady},
-				ConditionScaled:          {metav1.ConditionTrue, ConditionScaled},
-			},
-			state:   stateUpdating,
-			message: "Update is stalled: new settings did not pass validation; previous version is still serving",
-			tip:     "Fix the application settings to match the new version's schema. The previous version continues to work. After fixing, the update will continue.",
-		},
-		{
-			name: "update: hook sync failed, old version down",
-			opts: updatingApp(intCond(intHooksProcessed, metav1.ConditionFalse, "HookInitializationFailed")),
-			wantConds: map[string]*expectedCondition{
-				ConditionUpdateInstalled: {metav1.ConditionFalse, "HookInitializationFailed"},
-				ConditionReady:           {metav1.ConditionFalse, "HookInitializationFailed"},
-				ConditionScaled:          {metav1.ConditionUnknown, "HookInitializationFailed"},
-			},
-			state:   stateFailed,
-			message: "Update failed during hook synchronization; previous version is no longer serving",
-			tip:     "The application is not serving requests. Check the new version's hook logs. Fix the hook/config or manually roll back the application version.",
-		},
-		{
-			name: "update: startup/runtime hooks failed, old version down",
-			opts: updatingApp(intCond(intHooksProcessed, metav1.ConditionFalse, "HookExecutionFailed")),
-			wantConds: map[string]*expectedCondition{
-				ConditionUpdateInstalled: {metav1.ConditionFalse, "HookFailed"},
-				ConditionReady:           {metav1.ConditionFalse, "HookFailed"},
-				ConditionScaled:          {metav1.ConditionUnknown, "HookFailed"},
-			},
-			state:   stateFailed,
-			message: "Update failed: startup or runtime hooks of the new version failed; previous version is no longer serving",
-			tip:     "The application is not serving requests. Check the new version's hook logs. Fix the hook/config or roll back the application version manually.",
-		},
-		{
-			name: "update: Helm apply failed",
-			opts: updatingApp(intCond(intManifestsApplied, metav1.ConditionFalse, "boom")),
-			wantConds: map[string]*expectedCondition{
-				ConditionUpdateInstalled: {metav1.ConditionFalse, "ManifestsApplyFailed"},
-				ConditionReady:           {metav1.ConditionFalse, "ManifestsApplyFailed"},
-				ConditionScaled:          {metav1.ConditionFalse, "ManifestsApplyFailed"},
-			},
-			state:   stateFailed,
-			message: "Update failed: Helm could not apply manifests for the new version; previous version is no longer serving",
-			tip:     "Resources in the cluster are inconsistent. Check helm history and events in the namespace. Resolve resource conflicts. If needed, roll back manually via helm rollback.",
-		},
-
-		// ── Reconcile (installed, no active update) ───────────────────
-
-		{
-			name: "reconcile: all working",
-			opts: running(),
-			wantConds: map[string]*expectedCondition{
-				ConditionReady:                {metav1.ConditionTrue, ConditionReady},
-				ConditionScaled:               {metav1.ConditionTrue, ConditionScaled},
-				ConditionManaged:              {metav1.ConditionTrue, ConditionManaged},
-				ConditionConfigurationApplied: {metav1.ConditionTrue, ConditionConfigurationApplied},
-			},
-			state:   stateReady,
-			message: "",
-			tip:     "",
-		},
-		{
-			name: "reconcile: artifact verification failed",
-			opts: []mappingOption{installed(), intCond(intReadyOnFilesystem, metav1.ConditionFalse, "VerificationFailed")},
-			wantConds: map[string]*expectedCondition{
-				ConditionReady:                {metav1.ConditionFalse, "DownloadFailed"},
-				ConditionScaled:               {metav1.ConditionUnknown, "DownloadFailed"},
-				ConditionConfigurationApplied: {metav1.ConditionUnknown, "DownloadFailed"},
-				ConditionManaged:              {metav1.ConditionFalse, "DownloadFailed"},
-			},
-			state:   stateDegraded,
-			message: "Reconcile failed: on-disk artifact failed verification; runtime state can no longer be trusted",
-			tip:     "The on-disk artifact has been tampered with or corrupted. Verify integrity, delete and re-fetch the package from the registry. The controller will retry reconcile.",
-		},
-		{
-			name: "reconcile: load from filesystem failed",
-			opts: running(intCond(intLoaded, metav1.ConditionFalse, "RuntimeError")),
-			wantConds: map[string]*expectedCondition{
-				ConditionReady:   {metav1.ConditionFalse, "LoadFromFilesystemFailed"},
-				ConditionManaged: {metav1.ConditionFalse, "LoadFromFilesystemFailed"},
-				// Scaled (workload health) and ConfigurationApplied are unaffected
-				// by a load failure on reconcile.
-				ConditionScaled:               {metav1.ConditionTrue, ConditionScaled},
-				ConditionConfigurationApplied: {metav1.ConditionTrue, ConditionConfigurationApplied},
-			},
-			state:   stateDegraded,
-			message: "Reconcile failed: application could not be loaded from filesystem; runtime state can no longer be trusted",
-			tip:     "Delete the corrupted package cache on the node. The controller will retry loading; conditions will be restored based on reconcile progress.",
-		},
-		{
-			name: "reconcile: invalid settings (old config still serving)",
-			opts: running(intCond(intConfigured, metav1.ConditionFalse, "InvalidSettings")),
-			wantConds: map[string]*expectedCondition{
-				ConditionConfigurationApplied: {metav1.ConditionFalse, "SettingsInvalid"},
-				ConditionReady:                {metav1.ConditionTrue, ConditionReady},
-				ConditionScaled:               {metav1.ConditionTrue, ConditionScaled},
-				ConditionManaged:              {metav1.ConditionTrue, ConditionManaged},
-			},
-			state:   stateDegraded,
-			message: "Reconcile failed: new settings did not pass validation; previously applied configuration is still in effect",
-			tip:     "The previous configuration continues to work. Fix the invalid fields in the application settings. After saving, the controller will re-apply the settings.",
-		},
-		{
-			name: "reconcile: new settings are being applied",
-			opts: running(withSettingsChanged()),
-			wantConds: map[string]*expectedCondition{
-				ConditionReady:                {metav1.ConditionFalse, "SettingsChanged"},
-				ConditionManaged:              {metav1.ConditionFalse, "SettingsChanged"},
-				ConditionConfigurationApplied: {metav1.ConditionFalse, "SettingsChanged"},
-				ConditionScaled:               {metav1.ConditionTrue, ConditionScaled},
-			},
-			// Applying new settings is not a degradation.
-			state: stateReady,
-		},
-		{
-			name: "reconcile: startup/runtime hooks failed",
-			opts: running(intCond(intHooksProcessed, metav1.ConditionFalse, "HookExecutionFailed")),
-			wantConds: map[string]*expectedCondition{
-				ConditionReady:                {metav1.ConditionFalse, "HookFailed"},
-				ConditionManaged:              {metav1.ConditionFalse, "HookFailed"},
-				ConditionConfigurationApplied: {metav1.ConditionFalse, "HookFailed"},
-				ConditionScaled:               {metav1.ConditionTrue, ConditionScaled},
-			},
-			state:   stateDegraded,
-			message: "Reconcile failed: startup or runtime hooks failed; workload remains scaled but is no longer managed",
-			tip:     "Pods are alive but the controller is not managing them. Check the failed hook logs. Fix the hook/config — the controller will retry reconcile.",
-		},
-		{
-			name: "reconcile: Helm apply failed",
-			opts: running(intCond(intManifestsApplied, metav1.ConditionFalse, "boom")),
-			wantConds: map[string]*expectedCondition{
-				ConditionReady:   {metav1.ConditionFalse, "ManifestsApplyFailed"},
-				ConditionManaged: {metav1.ConditionFalse, "ManifestsApplyFailed"},
-			},
-			state:   stateDegraded,
-			message: "Reconcile failed: Helm could not apply manifests",
-			tip:     "Check events in the namespace and helm history. Resolve resource conflicts (foreign ownership, finalizers, CRD mismatches). The controller will retry reconcile automatically.",
-		},
-		{
-			name: "reconcile: workload degraded (health monitor)",
-			opts: running(intCond(intScaled, metav1.ConditionFalse, "Degraded")),
-			wantConds: map[string]*expectedCondition{
-				ConditionScaled:               {metav1.ConditionFalse, "Degraded"},
-				ConditionConfigurationApplied: {metav1.ConditionTrue, ConditionConfigurationApplied},
-			},
-			state:   stateDegraded,
-			message: "Reconcile failed: workload health monitor reports degraded",
-			tip:     "Workload health monitor reports degraded. Check pod status and logs to identify the root cause.",
-		},
-
-		// ── Suspended (dependency disabled under a running app) ───────
-
-		{
-			name: "suspended: dependency disabled",
-			opts: running(intCond(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled")),
-			wantConds: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {metav1.ConditionFalse, "RequirementsUnmet"},
-			}),
-			state:   stateSuspended,
-			message: "Application is suspended: requirements unmet",
-			tip:     "Solve the application requirements. After it, the controller will automatically restore all conditions and resume operation.",
-		},
-
-		// ── Deleting (teardown accepted by the runtime) ────────────────
-
-		{
-			name: "deleting: running application is torn down",
-			opts: running(withDeleting()),
-			wantConds: map[string]*expectedCondition{
-				ConditionInstalled:            {metav1.ConditionFalse, condmap.ReasonDeleting},
-				ConditionUpdateInstalled:      {metav1.ConditionFalse, condmap.ReasonDeleting},
-				ConditionReady:                {metav1.ConditionFalse, condmap.ReasonDeleting},
-				ConditionScaled:               {metav1.ConditionFalse, condmap.ReasonDeleting},
-				ConditionManaged:              {metav1.ConditionFalse, condmap.ReasonDeleting},
-				ConditionConfigurationApplied: {metav1.ConditionFalse, condmap.ReasonDeleting},
-			},
-			state:   stateDeleting,
-			message: "Application is being deleted",
-			tip:     "No action is required. The resource disappears once its release and files are taken down.",
-		},
-		{
-			// The internal conditions are gone once the last teardown task drains
-			// (the runtime drops the status), so an event arriving after that maps
-			// an empty state. Without the deleting branch it reads as an update in
-			// progress.
-			name: "deleting: internal conditions already dropped",
-			opts: []mappingOption{installed(), withVersionChanged(), withDeleting()},
-			wantConds: map[string]*expectedCondition{
-				ConditionInstalled: {metav1.ConditionFalse, condmap.ReasonDeleting},
-				ConditionReady:     {metav1.ConditionFalse, condmap.ReasonDeleting},
-			},
-			state:   stateDeleting,
-			message: "Application is being deleted",
-			tip:     "No action is required. The resource disappears once its release and files are taken down.",
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			conds := testMapping(tc.opts...)
-			for typ, exp := range tc.wantConds {
-				cond, ok := conds[typ]
-				if exp == nil {
-					assert.Falsef(t, ok, "condition %q should be absent, got %+v", typ, cond)
-					continue
-				}
-				if !assert.Truef(t, ok, "condition %q should be present", typ) {
-					continue
-				}
-				assert.Equalf(t, exp.status, cond.Status, "condition %q status", typ)
-				assert.Equalf(t, exp.reason, cond.Reason, "condition %q reason", typ)
-			}
-
-			state, message, tip := summaryFor(tc.opts...)
-			assert.Equal(t, tc.state, state, "summary state")
-			assert.Equal(t, tc.message, message, "summary message")
-			assert.Equal(t, tc.tip, tip, "summary tip")
-		})
-	}
-}
-
-// TestSummarize_EdgeCases covers summarize mechanics that are not tied to a
-// single lifecycle scenario.
-func TestSummarize_EdgeCases(t *testing.T) {
-	t.Run("no conditions yet — pending install", func(t *testing.T) {
-		state, message, tip := summaryFor()
-		assert.Equal(t, statePending, state)
-		assert.Equal(t, "Installation is waiting for dependent modules to converge", message)
-		assert.Equal(t, "Wait for dependent modules to converge automatically. No action required.", tip)
-	})
-
-	t.Run("pipeline clear and scaled — install just completed, ready", func(t *testing.T) {
-		// Not yet installed externally, but every internal gate is True and the
-		// workload is scaled: this is the run install completes on. Mirrors
-		// mapInstalled's success check — the app is Ready.
-		state, message, tip := summaryFor(withSuccessfulApply()...)
-		assert.Equal(t, stateReady, state)
-		assert.Empty(t, message)
-		assert.Empty(t, tip)
-	})
-
-	t.Run("scaled before the manifests are applied is not ready yet", func(t *testing.T) {
-		// The workload is ready while the run task is still inside the apply.
-		// Version, URLs and settings are committed under ManifestsApplied.
-		state, _, _ := summaryFor(intCond(intScaled, metav1.ConditionTrue, "Scaled"))
-		assert.Equal(t, statePending, state)
-	})
-
-	t.Run("workload reconciling during reconcile", func(t *testing.T) {
-		// The health monitor reports a rollout as Scaled=False/Reconciling.
-		state, message, tip := summaryFor(installed(), intCond(intScaled, metav1.ConditionFalse, "Reconciling"))
-		assert.Equal(t, stateDegraded, state)
-		assert.Equal(t, "Reconcile failed: workload is still reconciling", message)
-		assert.Equal(t, "Workload is still reconciling. Wait for the rollout to complete. If it stays in this state, check pod status and events.", tip)
-	})
-
-	t.Run("scaled unknown (no workloads to observe) is ready, not degraded", func(t *testing.T) {
-		// Unknown is the health monitor's "nothing to observe" signal with an
-		// empty reason — it is not a degradation.
-		state, message, tip := summaryFor(installed(), intCond(intScaled, metav1.ConditionUnknown, ""))
-		assert.Equal(t, stateReady, state)
-		assert.Empty(t, message)
-		assert.Empty(t, tip)
-	})
-
-	t.Run("update with manifests applied is not ready until the workload is up", func(t *testing.T) {
-		// Regression: the update branch gated on ManifestsApplied alone, so the
-		// summary reported Ready while the health monitor was reporting a rollout
-		// on the very same object.
-		state, message, _ := summaryFor(updatingApp(intCond(intScaled, metav1.ConditionFalse, "Reconciling"))...)
-		assert.Equal(t, stateUpdating, state)
-		assert.Equal(t, "Update applied: the new version's workload is rolling out", message)
-	})
-
-	t.Run("update with manifests applied and no health report is not ready", func(t *testing.T) {
-		// What a version change used to produce: the status reset dropped Scaled
-		// and the edge-triggered monitor had nothing new to report.
-		state, message, _ := summaryFor(updatingApp(intCond(intScaled, metav1.ConditionUnknown, ""))...)
-		assert.Equal(t, stateUpdating, state)
-		assert.Equal(t, "Update applied: waiting for a workload the health monitor can confirm", message)
-	})
-
-	t.Run("manifests applying on a healthy app is ready, not degraded", func(t *testing.T) {
-		// ManifestsApplied=False/ApplyingManifests is a transient progress
-		// marker, not a failure: firstFalse skips it so a healthy app does not
-		// flap to Degraded during every apply window.
-		opts := running(intCond(intManifestsApplied, metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)))
-		state, message, tip := summaryFor(opts...)
-		assert.Equal(t, stateReady, state)
-		assert.Empty(t, message)
-		assert.Empty(t, tip)
-	})
-
-	t.Run("update mid-apply is updating, not ready, even over a sticky failure", func(t *testing.T) {
-		// Regression: a working version is installed, then switched to a broken
-		// one. The new version's manifests fail, so the mapper records
-		// UpdateInstalled/Ready=False/ManifestsApplyFailed (sticky). On the next
-		// reconcile attempt nelm re-enters the apply window and emits
-		// ManifestsApplied=False/ApplyingManifests, which firstFalse skips as
-		// transient progress — so the update pipeline reads clear and the mapper
-		// leaves the sticky failure untouched (Scaled=False keeps mapReady from
-		// re-asserting True). summarize sees the same state and must NOT jump to
-		// Ready: an update with manifests not yet applied is still updating, never
-		// ready. Before the fix this returned stateReady, contradicting the
-		// conditions a client also reads.
-		opts := updatingApp(
-			intCond(intManifestsApplied, metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
-			intCond(intScaled, metav1.ConditionFalse, "Reconciling"),
-		)
-		state, _, _ := summaryFor(opts...)
-		assert.Equal(t, stateUpdating, state)
-	})
-
-	t.Run("unknown reconcile reason falls back to generic phrasing", func(t *testing.T) {
-		// The health monitor is the only writer that can produce an arbitrary
-		// reason (it passes through), so it exercises the defensive fallback.
-		state, message, tip := summaryFor(installed(), intCond(intScaled, metav1.ConditionFalse, "WeirdError"))
-		assert.Equal(t, stateDegraded, state)
-		assert.Equal(t, "Reconcile failed: WeirdError", message)
-		assert.Empty(t, tip)
-	})
-
-	t.Run("real failure outranks degraded workload", func(t *testing.T) {
-		// A filesystem failure and a degraded workload at once: intScaled is the
-		// lowest-priority gate, so the artifact failure wins.
-		state, message, _ := summaryFor(installed(),
-			intCond(intReadyOnFilesystem, metav1.ConditionFalse, "VerificationFailed"),
-			intCond(intScaled, metav1.ConditionFalse, "Degraded"))
-		assert.Equal(t, stateDegraded, state)
-		assert.Equal(t, "Reconcile failed: on-disk artifact failed verification; runtime state can no longer be trusted", message)
-	})
-}
-
-func TestSummarize_SuspendedVsPending(t *testing.T) {
-	t.Run("suspended when previously installed and requirements drop", func(t *testing.T) {
-		state, message, _ := summaryFor(installed(), intCond(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled"))
-		assert.Equal(t, stateSuspended, state)
-		assert.Equal(t, "Application is suspended: requirements unmet", message)
-	})
-
-	t.Run("pending when requirements unmet on first install", func(t *testing.T) {
-		// No external Installed=True: this is a first install blocked on
-		// requirements, not a running app that lost a dependency.
-		state, message, _ := summaryFor(intCond(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled"))
-		assert.Equal(t, statePending, state)
-		assert.NotEqual(t, "Application is suspended: requirements unmet", message)
-	})
-}
-
-// TestComputeAndApplyConditionsInstalledGate covers the removal half of the
-// Installed gate, which the mapping cases above cannot see: a gated condition
-// already on the resource is removed while Installed is not True, and the gated
-// conditions come back on the run that installs the application.
-func TestComputeAndApplyConditionsInstalledGate(t *testing.T) {
-	app := &v1alpha1.Application{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "app"},
-		Status: v1alpha1.ApplicationStatus{
-			// What a first install that failed at manifests used to publish.
-			Conditions: []metav1.Condition{
-				{Type: ConditionInstalled, Status: metav1.ConditionFalse, Reason: "ManifestsApplyFailed"},
-				{Type: ConditionReady, Status: metav1.ConditionFalse, Reason: "ManifestsApplyFailed"},
-				{Type: ConditionManaged, Status: metav1.ConditionFalse, Reason: "ManifestsApplyFailed"},
-			},
-		},
-	}
-
-	internal := func(requirements metav1.ConditionStatus) []intstatus.Condition {
-		return []intstatus.Condition{
-			{Type: intstatus.ConditionRequirementsMet, Status: requirements},
-			{Type: intstatus.ConditionReadyOnFilesystem, Status: metav1.ConditionTrue},
-			{Type: intstatus.ConditionLoaded, Status: metav1.ConditionTrue},
-			{Type: intstatus.ConditionConfigured, Status: metav1.ConditionTrue},
-			{Type: intstatus.ConditionHooksProcessed, Status: metav1.ConditionTrue},
-			{Type: intstatus.ConditionManifestsApplied, Status: metav1.ConditionTrue},
-			{Type: intstatus.ConditionScaled, Status: metav1.ConditionTrue},
-		}
-	}
-
-	current := intstatus.Status{Conditions: []intstatus.Condition{
-		{Type: intstatus.ConditionManifestsApplied, Status: metav1.ConditionFalse, Reason: "HelmFailed"},
-	}}
-	svc := &Service{
-		mapper: buildMapper(),
-		getter: func(string) intstatus.Status { return current },
-	}
-
-	svc.computeAndApplyConditions("ns.app", app)
-	require.Len(t, app.Status.Conditions, 1)
-	assert.Equal(t, ConditionInstalled, app.Status.Conditions[0].Type)
-	assert.Equal(t, "ManifestsApplyFailed", app.Status.Conditions[0].Reason)
-
-	current = intstatus.Status{Version: "1.0.0", Conditions: internal(metav1.ConditionTrue)}
-	svc.computeAndApplyConditions("ns.app", app)
-	for _, condType := range []string{ConditionInstalled, ConditionReady, ConditionScaled, ConditionManaged, ConditionConfigurationApplied} {
-		assert.True(t, meta.IsStatusConditionTrue(app.Status.Conditions, condType), "condition %s", condType)
-	}
-	assert.Nil(t, meta.FindStatusCondition(app.Status.Conditions, ConditionUpdateInstalled))
-
-	// A disabled dependency takes Installed False, and the gated conditions go with it.
-	current = intstatus.Status{Version: "1.0.0", Conditions: internal(metav1.ConditionFalse)}
-	svc.computeAndApplyConditions("ns.app", app)
-	require.Len(t, app.Status.Conditions, 1)
-	assert.Equal(t, ConditionInstalled, app.Status.Conditions[0].Type)
-	assert.Equal(t, "RequirementsUnmet", app.Status.Conditions[0].Reason)
-	assert.Equal(t, stateSuspended, app.Status.Summary.State)
-}
-
-// TestComputeAndApplyConditionsOnDeletion covers this package's own deletionTimestamp
-// wiring: the cases above set condmap.State.Deleting directly and never reach it.
-func TestComputeAndApplyConditionsOnDeletion(t *testing.T) {
-	deleted := metav1.NewTime(time.Unix(0, 0))
-	app := &v1alpha1.Application{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "app", DeletionTimestamp: &deleted},
-	}
-
-	// A Run task that finished after the teardown started still reports
-	// ManifestsApplied, which is what would otherwise commit the version.
-	svc := &Service{
-		mapper: buildMapper(),
-		getter: func(string) intstatus.Status {
-			return intstatus.Status{
-				Version: "1.2.3",
-				Conditions: []intstatus.Condition{
-					{Type: intstatus.ConditionManifestsApplied, Status: metav1.ConditionTrue},
-					{Type: intstatus.ConditionScaled, Status: metav1.ConditionTrue},
-				},
-			}
-		},
-	}
-
-	svc.computeAndApplyConditions("ns.app", app)
-
-	assert.Len(t, app.Status.Conditions, 6)
-	for _, cond := range app.Status.Conditions {
-		assert.Equal(t, metav1.ConditionFalse, cond.Status, "condition %s status", cond.Type)
-		assert.Equal(t, condmap.ReasonDeleting, cond.Reason, "condition %s reason", cond.Type)
-	}
-	assert.Equal(t, stateDeleting, app.Status.Summary.State)
-	assert.Empty(t, app.Status.CurrentVersion.Version)
-	assert.Empty(t, app.Status.URLs)
-}
-
-// TestComputeAndApplyTrackingOnDeletion covers the uninstall progress of a CR on its way out:
-// unlike the version, the report is committed despite the deletionTimestamp, and it outlives
-// the runtime status, which is dropped when the teardown drains, before the finalizer is removed.
-func TestComputeAndApplyTrackingOnDeletion(t *testing.T) {
-	deleted := metav1.NewTime(time.Unix(0, 0))
-	app := &v1alpha1.Application{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "app", DeletionTimestamp: &deleted},
-	}
-
-	tracking := intstatus.Tracking{Completed: 1, Remaining: 1, Report: progrep.ProgressReport{Operations: []progrep.Operation{
-		{OperationRef: progrep.OperationRef{Type: progrep.OperationTypeDelete}, Category: progrep.OperationCategoryResource, Status: progrep.OperationStatusCompleted},
-		{OperationRef: progrep.OperationRef{Type: progrep.OperationTypeTrackAbsence}, Category: progrep.OperationCategoryTrack, Status: progrep.OperationStatusProgressing},
-	}}}
+func TestTrackingFollowsTheObservation(t *testing.T) {
+	tracking := observed.Tracking{Completed: 1, Remaining: 1, Report: json.RawMessage(`{"operations":[]}`)}
 	want, err := json.Marshal(tracking)
 	require.NoError(t, err)
 
-	current := intstatus.Status{Tracking: tracking}
-	svc := &Service{
-		mapper: buildMapper(),
-		getter: func(string) intstatus.Status { return current },
+	app := project(t, projection{source: fakeSource{known: true, obs: observed.Observation{Tracking: tracking}}, deleting: true})
+	assert.JSONEq(t, string(want), string(app.Status.Tracking.Raw), "the uninstall progress is committed on the way out")
+
+	// An empty progress keeps the previous one.
+	svc := &Service{source: fakeSource{known: true}}
+	svc.computeAndApplyConditions(eventName, app)
+	assert.JSONEq(t, string(want), string(app.Status.Tracking.Raw))
+}
+
+// summaryRow is one golden row: the scenario and the Summary it produces.
+type summaryRow struct {
+	Case    string `json:"case"`
+	State   string `json:"state"`
+	Message string `json:"message"`
+	Tip     string `json:"tip,omitempty"`
+}
+
+// TestSummaryRows pins every Summary row (phase × reason → state, message, tip) and every fixed
+// Summary, through the whole projection. Regenerate with -golden.
+func TestSummaryRows(t *testing.T) {
+	install := func(update model.CandidateReport) projection {
+		update.Version = v1
+		return projection{source: fakeSource{known: true, report: model.Report{Candidate: update}}}
+	}
+	installRun := func(change func(*model.CurrentReport)) projection {
+		r := model.Report{CurrentVersion: v1, Current: model.CurrentReport{Version: v1, Decision: enabled()}}
+		change(&r.Current)
+		return projection{source: fakeSource{known: true, report: r}}
+	}
+	installed := func(r model.Report, obs observed.Observation, conditions []metav1.Condition) projection {
+		if conditions == nil {
+			conditions = installedConditions()
+		}
+		return projection{source: fakeSource{known: true, report: r, obs: obs}, conditions: conditions, currentVersion: v1}
+	}
+	candidate := func(u model.CandidateReport) projection {
+		r := running(v1)
+		u.Version = v2
+		r.Candidate = u
+		return installed(r, ready, nil)
+	}
+	activatedV2 := func(change func(*model.CurrentReport), obs observed.Observation) projection {
+		r := running(v2)
+		if change != nil {
+			change(&r.Current)
+		}
+		p := installed(r, obs, with(installedConditions(), metav1.Condition{
+			Type: ConditionUpdateInstalled, Status: metav1.ConditionFalse, Reason: model.ReasonApplyingManifests,
+		}))
+		p.currentVersion = v2
+		return p
+	}
+	reconcile := func(change func(*model.CurrentReport), obs observed.Observation) projection {
+		r := running(v1)
+		if change != nil {
+			change(&r.Current)
+		}
+		return installed(r, obs, nil)
+	}
+	hooks := func(reason string) func(*model.CurrentReport) {
+		return func(c *model.CurrentReport) { c.HooksProcessed = failed(reason) }
+	}
+	manifests := func(reason string) func(*model.CurrentReport) {
+		return func(c *model.CurrentReport) { c.ManifestsApplied = failed(reason) }
+	}
+	progressing := observed.Observation{Health: observed.Health{State: observed.HealthProgressing}}
+	degraded := observed.Observation{Health: observed.Health{State: observed.HealthDegraded}}
+
+	type scenario struct {
+		name string
+		p    projection
 	}
 
-	svc.computeAndApplyConditions("ns.app", app)
-	assert.JSONEq(t, string(want), string(app.Status.Tracking.Raw))
+	var scenarios []scenario
 
-	current = intstatus.Status{}
-	svc.computeAndApplyConditions("ns.app", app)
-	assert.JSONEq(t, string(want), string(app.Status.Tracking.Raw))
+	scenarios = append(scenarios,
+		scenario{"install/RequirementsUnmet", install(model.CandidateReport{Blocked: model.ReasonRequirementsNotMet, Reason: "DependencyNotEnabled"})},
+	)
+
+	scenarios = append(scenarios,
+		scenario{"install/in progress", install(model.CandidateReport{})},
+		scenario{"install/AttachFailed", install(model.CandidateReport{Step: "attach", Reason: model.ReasonAttachFailed})},
+		scenario{"install/LoadFromFilesystemFailed", install(model.CandidateReport{Step: "load", Reason: model.ReasonLoadFromFilesystemFailed})},
+		scenario{"install/SettingsInvalid", install(model.CandidateReport{Blocked: model.ReasonSettingsInvalid})},
+		scenario{"install/HookInitializationFailed", installRun(hooks(model.ReasonHookInitializationFailed))},
+		scenario{"install/HookFailed", installRun(hooks(model.ReasonHookFailed))},
+		scenario{"install/ManifestsApplyFailed", installRun(manifests("RenderFailed"))},
+		scenario{"install/fallback", installRun(manifests(model.ReasonReleaseDeleteFailed))},
+		scenario{"install/complete", projection{source: fakeSource{known: true, report: running(v1), obs: ready}}},
+		scenario{"update/WaitingWindow", candidate(model.CandidateReport{Blocked: model.ReasonWaitingWindow})},
+		scenario{"update/RequirementsUnmet", candidate(model.CandidateReport{Blocked: model.ReasonRequirementsNotMet, Reason: "DependencyNotEnabled"})},
+		scenario{"update/AttachFailed", candidate(model.CandidateReport{Step: "attach", Reason: model.ReasonAttachFailed})},
+		scenario{"update/LoadFromFilesystemFailed", candidate(model.CandidateReport{Step: "load", Reason: model.ReasonLoadFromFilesystemFailed})},
+		scenario{"update/SettingsInvalid", candidate(model.CandidateReport{Blocked: model.ReasonSettingsInvalid})},
+		scenario{"update/preparing", candidate(model.CandidateReport{})},
+		scenario{"update/HookInitializationFailed", activatedV2(hooks(model.ReasonHookInitializationFailed), ready)},
+		scenario{"update/HookFailed", activatedV2(hooks(model.ReasonHookFailed), ready)},
+		scenario{"update/ManifestsApplyFailed", activatedV2(manifests("RenderFailed"), ready)},
+		scenario{"update/fallback", activatedV2(manifests(model.ReasonReleaseDeleteFailed), ready)},
+		scenario{"update/Reconciling", activatedV2(nil, progressing)},
+		scenario{"update/Degraded", activatedV2(nil, degraded)},
+		scenario{"update/HealthUnknown", activatedV2(nil, observed.Observation{})},
+		scenario{"update/complete", activatedV2(nil, ready)},
+		scenario{"reconcile/healthy", reconcile(nil, ready)},
+		scenario{"reconcile/Configuring", reconcile(func(c *model.CurrentReport) { c.AcceptedChecksum = "b" }, ready)},
+		scenario{"reconcile/SettingsInvalid", reconcile(func(c *model.CurrentReport) { c.Configured = failed(model.ReasonSettingsInvalid) }, ready)},
+		scenario{"reconcile/HookInitializationFailed", reconcile(hooks(model.ReasonHookInitializationFailed), ready)},
+		scenario{"reconcile/HookFailed", reconcile(hooks(model.ReasonHookFailed), ready)},
+		scenario{"reconcile/ManifestsApplyFailed", reconcile(manifests("RenderFailed"), ready)},
+		scenario{"reconcile/fallback", reconcile(manifests(model.ReasonReleaseDeleteFailed), ready)},
+		scenario{"reconcile/Reconciling", reconcile(nil, progressing)},
+		scenario{"reconcile/Degraded", reconcile(nil, degraded)},
+		scenario{"suspended/requirements", reconcile(func(c *model.CurrentReport) { c.Decision = disabled("DependencyNotEnabled") }, ready)},
+		scenario{"suspended/failing disable", reconcile(func(c *model.CurrentReport) {
+			c.Decision = disabled("DependencyNotEnabled")
+			c.ManifestsApplied = failed(model.ReasonReleaseDeleteFailed)
+		}, ready)},
+	)
+
+	deleting := reconcile(func(c *model.CurrentReport) { c.HooksProcessed = failed(model.ReasonHookFailed) }, ready)
+	deleting.deleting = true
+	scenarios = append(scenarios, scenario{"deleting/uninstall failure", deleting})
+
+	rows := make([]summaryRow, 0, len(scenarios))
+	for _, s := range scenarios {
+		summary := project(t, s.p).Status.Summary
+		rows = append(rows, summaryRow{Case: s.name, State: summary.State, Message: summary.Message, Tip: summary.Tip})
+	}
+
+	got, err := yaml.Marshal(rows)
+	require.NoError(t, err)
+
+	reconcilertest.CompareOrUpdate(t, "testdata/golden/summary.yaml", got, reconcilertest.WholeDocument)
 }

@@ -19,7 +19,6 @@ package modulepackageversion
 import (
 	"context"
 	"fmt"
-	"sync"
 	"testing"
 	"time"
 
@@ -78,7 +77,6 @@ func withDependencyContainer(dc dependency.Container) reconcilerOption {
 
 func newReconciler(cl client.Client, dc dependency.Container) *reconciler {
 	return &reconciler{
-		init:     new(sync.WaitGroup),
 		client:   cl,
 		logger:   log.NewNop(),
 		dc:       dc,

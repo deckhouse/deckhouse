@@ -253,25 +253,3 @@ func TestApplyIsANoOpWithoutRequests(t *testing.T) {
 	require.Empty(t, unmatched)
 	require.Equal(t, before, deployment)
 }
-
-func TestEqual(t *testing.T) {
-	requests := []Request{
-		{Kind: "Deployment", Name: "a", Replicas: int32Ptr(1)},
-		{Kind: "Deployment", Name: "b"},
-	}
-
-	require.True(t, Equal(nil, nil))
-	require.True(t, Equal(requests, []Request{
-		{Kind: "Deployment", Name: "a", Replicas: int32Ptr(1)},
-		{Kind: "Deployment", Name: "b"},
-	}))
-
-	// Compared by value, not by pointer identity.
-	require.False(t, Equal(requests, []Request{
-		{Kind: "Deployment", Name: "a", Replicas: int32Ptr(2)},
-		{Kind: "Deployment", Name: "b"},
-	}))
-
-	require.False(t, Equal(requests, requests[:1]))
-	require.False(t, Equal(nil, []Request{{Kind: "Deployment", Name: "a"}}))
-}

@@ -18,7 +18,7 @@ spec:
     - jsonPath: .spec.packageName
       name: Package
       type: string
-    - jsonPath: .spec.packageVersion
+    - jsonPath: .status.currentVersion.version
       name: Version
       type: string
     - jsonPath: .spec.packageRepositoryName
@@ -456,6 +456,7 @@ spec:
                     - Pending
                     - Failed
                     - Updating
+                    - Configuring
                     - Ready
                     - Degraded
                     - Suspended

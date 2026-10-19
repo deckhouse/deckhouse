@@ -39,7 +39,7 @@ import (
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -1762,6 +1762,13 @@ func newModuleV2(installed bool) *v1beta1.Module {
 	return module
 }
 
+// ranModuleV2 is newModuleV2(true) after a successful run: its settings checkpoint is written.
+func ranModuleV2(settings string) *v1beta1.Module {
+	module := newModuleV2(true)
+	module.Status.LastAppliedConfiguration = runtime.RawExtension{Raw: []byte(settings)}
+	return module
+}
+
 // newMPV builds the package version newModuleV2 selects.
 func newMPV(meta *v1alpha1.ModulePackageVersionStatusMetadata, schema *openapi.OpenAPIV3Schema) *v1alpha1.ModulePackageVersion {
 	mpv := &v1alpha1.ModulePackageVersion{
@@ -1961,7 +1968,7 @@ func TestModuleConfigValidationHandlerV2_Settings(t *testing.T) {
 func TestModuleConfigValidationHandlerV2_Transition(t *testing.T) {
 	tests := []struct {
 		name        string
-		installed   bool
+		ran         bool
 		oldSettings map[string]any
 		newSettings map[string]any
 		oldVersion  int
@@ -1969,14 +1976,14 @@ func TestModuleConfigValidationHandlerV2_Transition(t *testing.T) {
 		wantMessage string
 	}{
 		{
-			name:        "installed: changing an immutable field is rejected",
-			installed:   true,
+			name:        "ran (checkpoint present): changing an immutable field is rejected",
+			ran:         true,
 			oldSettings: map[string]any{"replicas": "1", "storageClass": "slow"},
 			newSettings: map[string]any{"replicas": "1", "storageClass": "fast"},
 			wantMessage: "storageClass",
 		},
 		{
-			name:        "not installed: an immutable field is still open",
+			name:        "never activated: an immutable field is still open",
 			oldSettings: map[string]any{"replicas": "1", "storageClass": "slow"},
 			newSettings: map[string]any{"replicas": "1", "storageClass": "fast"},
 			wantAllowed: true,
@@ -1989,7 +1996,7 @@ func TestModuleConfigValidationHandlerV2_Transition(t *testing.T) {
 		},
 		{
 			name:        "a settings version change skips the transition rules",
-			installed:   true,
+			ran:         true,
 			oldSettings: map[string]any{"replicas": "1", "storageClass": "slow", "tier": "gold"},
 			newSettings: map[string]any{"replicas": "1", "storageClass": "fast", "tier": "silver"},
 			oldVersion:  2,
@@ -2000,7 +2007,12 @@ func TestModuleConfigValidationHandlerV2_Transition(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			manager := &fakeModulePackageManager{validateResult: settingscheck.Result{Valid: true}}
-			handler := newTestHandlerV2(t, manager, false, newModuleV2(tt.installed), newMPV(nil, v2SettingsSchema()))
+			module := newModuleV2(false)
+			if tt.ran {
+				module = ranModuleV2(`{"replicas":"1","storageClass":"slow"}`)
+			}
+
+			handler := newTestHandlerV2(t, manager, false, module, newMPV(nil, v2SettingsSchema()))
 
 			oldCfg := newModuleConfigV2(nil, tt.oldSettings, nil)
 			if tt.oldVersion != 0 {
@@ -2012,6 +2024,26 @@ func TestModuleConfigValidationHandlerV2_Transition(t *testing.T) {
 			assertResponse(t, resp, tt.wantAllowed, tt.wantMessage)
 		})
 	}
+}
+
+// TestModuleConfigValidationHandlerV2_ImmutableBeforeFirstRun (F50): the engine writes
+// status.currentVersion at activation, before the first run; a module whose first run failed has no
+// lastAppliedConfiguration, has frozen nothing, and its immutable fields stay open (decision 2026-10-09).
+func TestModuleConfigValidationHandlerV2_ImmutableBeforeFirstRun(t *testing.T) {
+	module := newModuleV2(true)
+	module.Status.Conditions = []metav1.Condition{{
+		Type: "Installed", Status: metav1.ConditionFalse, Reason: "ManifestsApplyFailed",
+	}}
+
+	manager := &fakeModulePackageManager{validateResult: settingscheck.Result{Valid: true}}
+	handler := newTestHandlerV2(t, manager, false, module, newMPV(nil, v2SettingsSchema()))
+
+	oldCfg := newModuleConfigV2(nil, map[string]any{"replicas": "1", "storageClass": "missing"}, nil)
+	newCfg := newModuleConfigV2(nil, map[string]any{"replicas": "1", "storageClass": "fast"}, nil)
+
+	resp := callHandler(t, handler, newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg))
+
+	assertResponse(t, resp, true, "")
 }
 
 // TestModuleConfigValidationHandlerV2_Enabling covers the checks a disabled module passes to be enabled.
@@ -2029,6 +2061,10 @@ func TestModuleConfigValidationHandlerV2_Enabling(t *testing.T) {
 			},
 		}
 	}
+	critical := func(m *v1alpha1.ModulePackageVersionStatusMetadata) *v1alpha1.ModulePackageVersionStatusMetadata {
+		m.Critical = true
+		return m
+	}
 
 	tests := []struct {
 		name              string
@@ -2044,11 +2080,18 @@ func TestModuleConfigValidationHandlerV2_Enabling(t *testing.T) {
 		wantExclusive     string
 	}{
 		{
-			name:        "requirements are checked with the module's order",
-			meta:        meta("", "", 20),
+			name:        "requirements are checked with a critical module's order",
+			meta:        critical(meta("", "", 20)),
 			wantAllowed: true,
 			wantCheck:   true,
 			wantOrder:   20,
+		},
+		{
+			name:        "a weighted non-critical module is functional",
+			meta:        meta("", "", 20),
+			wantAllowed: true,
+			wantCheck:   true,
+			wantOrder:   schedule.FunctionalOrder,
 		},
 		{
 			name:        "a module without weight takes the functional order",

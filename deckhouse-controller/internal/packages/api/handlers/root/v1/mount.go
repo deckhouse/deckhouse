@@ -19,6 +19,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/handlers/root/v1/converge"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/handlers/root/v1/packages"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/handlers/root/v1/queues"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/handlers/root/v1/requirements"
@@ -30,16 +31,18 @@ type Deps struct {
 	Packages     packages.Provider
 	Queues       queues.Provider
 	Scheduler    scheduler.Provider
+	Converge     converge.Provider
 	Requirements requirements.Source
 }
 
 // NewPublicHandler mounts the subtrees whose responses carry no package values:
-// queues, scheduler and requirements.
+// queues, scheduler, converge and requirements.
 func NewPublicHandler(deps Deps) http.Handler {
 	router := chi.NewRouter()
 
 	router.Mount("/queues", queues.NewHandler(deps.Queues))
 	router.Mount("/scheduler", scheduler.NewHandler(deps.Scheduler))
+	router.Mount("/converge", converge.NewHandler(deps.Converge))
 	router.Mount("/requirements", requirements.NewHandler(deps.Requirements))
 
 	return router
@@ -52,6 +55,7 @@ func NewPrivateHandler(deps Deps) http.Handler {
 
 	router.Mount("/queues", queues.NewHandler(deps.Queues))
 	router.Mount("/scheduler", scheduler.NewHandler(deps.Scheduler))
+	router.Mount("/converge", converge.NewHandler(deps.Converge))
 	router.Mount("/requirements", requirements.NewHandler(deps.Requirements))
 
 	router.Mount("/packages", packages.NewHandler(deps.Packages))

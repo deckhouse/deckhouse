@@ -30,11 +30,13 @@ import (
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/gate"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	packageschema "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema/cel"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
@@ -117,7 +119,8 @@ type moduleTarget struct {
 	version *v1alpha1.ModulePackageVersion
 }
 
-// installed reports whether the runtime runs the selected version, so it can convert older settings.
+// installed reports whether the selected version is activated (it may not have run yet), so its
+// object can convert older settings.
 func (t *moduleTarget) installed() bool {
 	current := t.module.Status.CurrentVersion
 
@@ -126,9 +129,14 @@ func (t *moduleTarget) installed() bool {
 
 // ranBefore reports whether any version has run; one that never ran has frozen no immutable field.
 func (t *moduleTarget) ranBefore() bool {
-	current := t.module.Status.CurrentVersion
+	return hasRun(t.module.Status.LastAppliedConfiguration)
+}
 
-	return current != nil && current.Version != ""
+// hasRun reports whether a package has run: status.lastAppliedConfiguration is the checkpoint
+// written after a successful run. Present means any bytes, so {} (no settings) counts;
+// status.currentVersion is no signal: it is written at activation, before the first run.
+func hasRun(lastApplied runtime.RawExtension) bool {
+	return len(lastApplied.Raw) > 0
 }
 
 // moduleValidatorV2 holds the package version checks shared by the ModuleConfig and Module webhooks.
@@ -449,19 +457,13 @@ func (v *moduleValidatorV2) validateEnabling(req *moduleRequest, target *moduleT
 		return rejectResult(experimentalRejectMessage(req.name))
 	}
 
-	constraints, err := buildPackageConstraints(meta.Requirements)
+	constraints, err := meta.ToScheduleConstraints()
 	if err != nil {
 		return rejectResult(fmt.Sprintf("the '%s' module requirements: %v", req.name, err))
 	}
 
-	// the order the runtime gives the module, so the bootstrap gate applies to the same modules
-	constraints.Order = schedule.Order(meta.Weight)
-	if constraints.Order == 0 {
-		constraints.Order = schedule.FunctionalOrder
-	}
-
 	if err := v.packages.CheckConstraints(req.name, constraints); err != nil {
-		return rejectResult(fmt.Sprintf("the '%s' module requirements are not met: %v", req.name, err))
+		return rejectResult(fmt.Sprintf("the '%s' module requirements are not met: %s", req.name, gate.ConstraintMessage(err)))
 	}
 
 	if meta.ExclusiveGroup != "" {

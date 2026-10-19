@@ -23,6 +23,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,10 +32,13 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/disk"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
-	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
-	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
@@ -50,12 +54,8 @@ const (
 	// the same ApplicationPackage and ApplicationPackageVersion installed lists.
 	maxConcurrentReconciles = 1
 
-	// defaultRequeueAfter is the retry delay for states that need an external change to
-	// make progress, such as a missing package or a version still in draft.
-	defaultRequeueAfter = 30 * time.Second
-
-	// removalRequeueAfter is how often a running teardown is re-checked. It completes in a queue
-	// callback the API server never sees, so the only way to notice is to ask the runtime again.
+	// removalRequeueAfter is how often a running teardown is re-checked. Its end reaches only the
+	// status queue, not this controller, so the only way to notice is to ask the engine again.
 	removalRequeueAfter = 5 * time.Second
 )
 
@@ -76,15 +76,22 @@ func RegisterController(
 		moduleManager:        moduleManager,
 		deckhouseSettings:    deckhouseSettings,
 		applicationsSettings: applicationsSettings,
-		status:               status.NewService(runtime.GetClient(), manager.GetStatus, logger),
+		status:               status.NewService(runtime.GetClient(), manager, logger),
 		logger:               logger.Named(controllerName),
+	}
+
+	if !app.ModuleV2Enabled() {
+		r.init.Add(1)
+		if err := runtime.Add(ctrlmanager.RunnableFunc(r.preflight)); err != nil {
+			return fmt.Errorf("add preflight: %w", err)
+		}
 	}
 
 	if err := runtime.Add(ctrlmanager.RunnableFunc(func(ctx context.Context) error {
 		r.status.Start(ctx, r.manager.GetAppStatusQueue())
 		return nil
 	})); err != nil {
-		return fmt.Errorf("add preflight: %w", err)
+		return fmt.Errorf("add status service: %w", err)
 	}
 
 	return ctrl.NewControllerManagedBy(runtime).
@@ -115,14 +122,71 @@ type moduleManager interface {
 	AreModulesInited() bool
 }
 
-// packageManager registers and unregisters applications in the package runtime.
+// packageManager hands applications to the package engine (engine.Engine).
 type packageManager interface {
-	UpdateApp(inst packageruntime.App)
-	// RemoveApp tears the application down and reports whether the teardown has finished.
-	RemoveApp(namespace, name string) bool
-	GetStatus(name string) packagestatus.Status
+	ApplyApplication(app engine.Application)
+	// RemoveApplication removes the application and reports whether the removal has finished.
+	RemoveApplication(namespace, name string) bool
+	Report(name string) (model.Report, bool)
+	Observed(name string) observed.Observation
 	GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string]
-	Cleanup(ctx context.Context, preserve []packageruntime.PreservePackage)
+	Cleanup(ctx context.Context, apps, modules []disk.PreservePackage) error
+	Boot(ctx context.Context, global []byte, bootApps []engine.BootApplication, bootModules []engine.BootModule) error
+}
+
+// preflight waits for the module manager, then cleans the disk up and restores every installed
+// application in the engine (without EnableModuleV2; with it the controller tree boots). A Boot
+// error stops the manager: deckhouse must restart.
+func (r *reconciler) preflight(ctx context.Context) error {
+	defer r.init.Done()
+
+	// wait until module manager init
+	r.logger.Debug("wait until module manager is inited")
+	if err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(_ context.Context) (bool, error) {
+		return r.moduleManager.AreModulesInited(), nil
+	}); err != nil {
+		return fmt.Errorf("init module manager: %w", err)
+	}
+
+	appsList := new(v1alpha1.ApplicationList)
+	if err := r.client.List(ctx, appsList); err != nil {
+		return fmt.Errorf("list applications: %w", err)
+	}
+
+	preserve := make([]disk.PreservePackage, 0, 2*len(appsList.Items))
+	boot := make([]engine.BootApplication, 0, len(appsList.Items))
+
+	for i := range appsList.Items {
+		app := &appsList.Items[i]
+
+		// One being deleted is booted to be uninstalled as at runtime; one Restorable rejects gets
+		// its release deleted by name on Remove.
+		if !Restorable(app) {
+			continue
+		}
+
+		preserve = append(preserve, PreserveOf(app)...)
+
+		bootApp, err := BootOf(ctx, r.client, app)
+		if err != nil {
+			return fmt.Errorf("boot application '%s/%s': %w", app.Namespace, app.Name, err)
+		}
+
+		boot = append(boot, bootApp)
+	}
+
+	// A leak must not stop the boot.
+	if err := r.manager.Cleanup(ctx, preserve, nil); err != nil {
+		r.logger.Warn("failed to cleanup application packages", log.Err(err))
+	}
+
+	if err := r.manager.Boot(ctx, nil, boot, nil); err != nil {
+		return fmt.Errorf("boot applications: %w", err)
+	}
+
+	r.logger.Debug("controller is ready")
+
+	return nil
 }
 
 // Reconcile dispatches the application to the delete or the create/update handler.
@@ -150,6 +214,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if !app.DeletionTimestamp.IsZero() {
 		res, err := r.handleDelete(ctx, app)
 		if err != nil {
+			logger.Warn("failed to delete application", log.Err(err))
 			return ctrl.Result{}, fmt.Errorf("delete: %w", err)
 		}
 
@@ -159,15 +224,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// handle create/update events
 	if err := r.handleCreateOrUpdate(ctx, app); err != nil {
 		logger.Warn("failed to handle application", log.Err(err))
-
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("handle: %w", err)
 	}
 
 	return ctrl.Result{}, nil
 }
 
 // handleCreateOrUpdate validates the application's package and version, moves the
-// application onto them and hands it to the package runtime.
+// application onto them and hands it to the package engine.
 func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.Application) error {
 	logger := r.logger.With(slog.String("name", app.Name), slog.String("namespace", app.Namespace))
 
@@ -176,8 +240,8 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	original := app.DeepCopy()
 
-	// The finalizer is claimed before the application reaches the runtime: it is what
-	// guarantees handleDelete gets to call RemoveApp and release the installed lists.
+	// The finalizer is claimed before the application reaches the engine: it is what
+	// guarantees handleDelete gets to call RemoveApplication and release the installed lists.
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered) {
 		patch := client.MergeFrom(app.DeepCopy())
 		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered)
@@ -190,35 +254,24 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		original = app.DeepCopy()
 	}
 
-	ap := new(v1alpha1.ApplicationPackage)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageName}, ap); err != nil {
-		logger.Debug("application package not found", slog.String("package", app.Spec.PackageName), log.Err(err))
-
-		return fmt.Errorf("get application package '%s': %w", app.Spec.PackageName, err)
+	ap, apv, err := r.resolvePackage(ctx, app)
+	if err != nil {
+		logger.Error("failed to resolve the package", log.Err(err))
+		return err
 	}
 
-	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
-
-	apv := new(v1alpha1.ApplicationPackageVersion)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
-		logger.Debug("application package version not found", slog.String("apv", apvName), log.Err(err))
-
-		return fmt.Errorf("get application package version '%s': %w", apvName, err)
-	}
-
-	// a draft version is not published, so it must never reach the runtime
-	if apv.IsDraft() {
-		logger.Debug("application package version is in draft", slog.String("apv", apvName))
-
-		return fmt.Errorf("application package version '%s' is draft", apvName)
-	}
-
-	// The repository is read before any installed list is touched, so a missing
-	// repository cannot leave the lists half-updated.
+	// The repository and the requirements are read before any installed list is touched, so a
+	// missing repository or unparsable requirements cannot leave the lists half-updated.
 	repo := new(v1alpha1.PackageRepository)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepositoryName}, repo); err != nil {
 		logger.Error("get package repository", log.Err(err))
 		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)
+	}
+
+	requirements, err := requirementsOf(apv)
+	if err != nil {
+		logger.Error("parse the application package version requirements", log.Err(err))
+		return fmt.Errorf("parse requirements of application package version '%s': %w", apv.Name, err)
 	}
 
 	if err := r.relink(ctx, app, ap, apv); err != nil {
@@ -226,20 +279,67 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return err
 	}
 
-	r.manager.UpdateApp(packageruntime.App{
-		Name:      app.Name,
-		Namespace: app.Namespace,
-		Definition: apps.Definition{
-			Name:    app.Spec.PackageName,
-			Version: app.Spec.PackageVersion,
-		},
+	// The update windows hold the switch to a new version, also of a version the user set:
+	// spec.update, else the global settings, decide when it happens, unless the apply-now
+	// annotation names the spec version.
+	r.manager.ApplyApplication(engine.Application{
+		Namespace:        app.Namespace,
+		Name:             app.Name,
+		PackageName:      app.Spec.PackageName,
+		Version:          app.Spec.PackageVersion,
+		Repository:       registry.BuildRemote(repo),
 		Settings:         app.Spec.Settings.GetMap(),
 		Maintenance:      app.Spec.Maintenance,
-		Repository:       registry.BuildRemote(repo),
 		ResourceRequests: toResourceRequests(app.Spec.ResourceRequests),
 		UpdateSettings:   r.updateSettings(app),
+		ApplyNow:         applyNow(app),
+		Requirements:     requirements,
 	})
 
+	return r.commit(ctx, app, original, ap, apv)
+}
+
+// resolvePackage fetches the package and the version the spec names, refusing a draft version.
+func (r *reconciler) resolvePackage(ctx context.Context, app *v1alpha1.Application) (*v1alpha1.ApplicationPackage, *v1alpha1.ApplicationPackageVersion, error) {
+	logger := r.logger.With(slog.String("name", app.Name), slog.String("namespace", app.Namespace))
+
+	ap := new(v1alpha1.ApplicationPackage)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageName}, ap); err != nil {
+		logger.Debug("application package not found", slog.String("package", app.Spec.PackageName), log.Err(err))
+
+		return nil, nil, fmt.Errorf("get application package '%s': %w", app.Spec.PackageName, err)
+	}
+
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
+
+	apv := new(v1alpha1.ApplicationPackageVersion)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
+		logger.Debug("application package version not found", slog.String("apv", apvName), log.Err(err))
+		return nil, nil, fmt.Errorf("get application package version '%s': %w", apvName, err)
+	}
+
+	// a draft version is not published, so it must never reach the engine
+	if apv.IsDraft() {
+		logger.Debug("application package version is in draft", slog.String("apv", apvName))
+		return nil, nil, fmt.Errorf("application package version '%s' is draft", apvName)
+	}
+
+	return ap, apv, nil
+}
+
+// requirementsOf parses the requirements the version publishes; none without metadata.
+func requirementsOf(apv *v1alpha1.ApplicationPackageVersion) (schedule.Constraints, error) {
+	var reqs *v1alpha1.PackageRequirements
+	if meta := apv.Status.PackageMetadata; meta != nil {
+		reqs = meta.Requirements
+	}
+
+	return reqs.ToScheduleConstraints()
+}
+
+// commit points the owner references at ap and apv, clears the registry-spec-changed
+// annotation and patches the application against original.
+func (r *reconciler) commit(ctx context.Context, app, original *v1alpha1.Application, ap *v1alpha1.ApplicationPackage, apv *v1alpha1.ApplicationPackageVersion) error {
 	// Both references are non-controller and block owner deletion, so neither the package
 	// nor the version can disappear from under a running application.
 	ctrlutils.ReplaceOwnerReferences(app,
@@ -249,17 +349,18 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	delete(app.Annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 
 	if err := r.client.Patch(ctx, app, client.MergeFrom(original)); err != nil {
-		logger.Error("failed to patch application", log.Err(err))
+		r.logger.Error("failed to patch application", slog.String("name", app.Name), log.Err(err))
+
 		return fmt.Errorf("patch application '%s': %w", app.Name, err)
 	}
 
 	return nil
 }
 
-// handleDelete unregisters the application from the package runtime and, once the runtime reports
-// the teardown finished, detaches the application from its package and version and releases the
+// handleDelete removes the application from the package engine and, once the engine reports the
+// removal finished, detaches the application from its package and version and releases the
 // finalizer. The wait is unbounded on purpose: holding the finalizer is what keeps a Helm release
-// from outliving the CR that owns it, so a teardown the queue keeps retrying keeps the application
+// from outliving the CR that owns it, so a removal the engine keeps retrying keeps the application
 // in Terminating rather than orphaning its resources.
 func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application) (ctrl.Result, error) {
 	logger := r.logger.With(slog.String("name", app.Name), slog.String("namespace", app.Namespace))
@@ -267,12 +368,10 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	logger.Debug("handle delete application")
 	defer logger.Debug("handle delete application complete")
 
-	// The runtime tears the application down asynchronously — the Disable task uninstalls the Helm
-	// release, Purge deletes the orphan resources the application left beside it, Undeploy takes
-	// the files off disk, and the cleanup riding the last task drops the state — so RemoveApp is
-	// polled until it reports the teardown finished.
-	if !r.manager.RemoveApp(app.Namespace, app.Name) {
-		logger.Info("application is still being removed by the runtime")
+	// The engine removes the application asynchronously — the release, the orphans beside it, the
+	// files — so the removal is polled until it reports done.
+	if !r.manager.RemoveApplication(app.Namespace, app.Name) {
+		logger.Info("application is still being removed by the engine")
 
 		return ctrl.Result{RequeueAfter: removalRequeueAfter}, nil
 	}
@@ -420,6 +519,64 @@ func (r *reconciler) detachPackage(ctx context.Context, app *v1alpha1.Applicatio
 	}
 
 	return nil
+}
+
+// PreserveOf is what Cleanup keeps of an installed application: the images of the version it asks
+// for (spec) and the one it runs (status), one entry each.
+func PreserveOf(app *v1alpha1.Application) []disk.PreservePackage {
+	preserve := []disk.PreservePackage{
+		{Name: app.Spec.PackageName, Repository: app.Spec.PackageRepositoryName, Version: app.Spec.PackageVersion},
+	}
+
+	if app.Status.CurrentVersion != nil {
+		preserve = append(preserve, disk.PreservePackage{
+			Name: app.Spec.PackageName, Repository: app.Spec.PackageRepositoryName, Version: app.Status.CurrentVersion.Version,
+		})
+	}
+
+	return preserve
+}
+
+// Restorable reports whether Boot gets app and Cleanup keeps its image: always, except one being
+// deleted with no activated version (nothing to uninstall) or force-removed (its release is
+// deleted by name).
+func Restorable(app *v1alpha1.Application) bool {
+	if app.DeletionTimestamp.IsZero() {
+		return true
+	}
+
+	return app.Status.CurrentVersion != nil && app.Status.CurrentVersion.Version != "" && !v1alpha1.IsForceRemoved(app)
+}
+
+// BootOf is what Boot restores of an installed application: its activated version with its
+// settings checkpoint (status.lastAppliedConfiguration), from the repository in spec; one being
+// deleted is restored to be uninstalled. An application with no activated version needs no
+// repository: it restores nothing.
+func BootOf(ctx context.Context, cli client.Reader, app *v1alpha1.Application) (engine.BootApplication, error) {
+	boot := engine.BootApplication{
+		Namespace:        app.Namespace,
+		Name:             app.Name,
+		PackageName:      app.Spec.PackageName,
+		LastApplied:      app.Status.LastAppliedConfiguration.Raw,
+		Maintenance:      app.Spec.Maintenance,
+		ResourceRequests: toResourceRequests(app.Spec.ResourceRequests),
+		Removing:         !app.DeletionTimestamp.IsZero(),
+	}
+
+	if app.Status.CurrentVersion == nil || app.Status.CurrentVersion.Version == "" {
+		return boot, nil
+	}
+
+	boot.CurrentVersion = app.Status.CurrentVersion.Version
+
+	repo := new(v1alpha1.PackageRepository)
+	if err := cli.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepositoryName}, repo); err != nil {
+		return engine.BootApplication{}, fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)
+	}
+
+	boot.Repository = registry.BuildRemote(repo)
+
+	return boot, nil
 }
 
 // toResourceRequests projects the CR's per-workload overrides onto the runtime

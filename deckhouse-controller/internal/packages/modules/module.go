@@ -21,11 +21,13 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 	"sync/atomic"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
+	gohook "github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
@@ -40,10 +42,10 @@ import (
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
@@ -65,15 +67,20 @@ type Module struct {
 	// Falls back to "0.0.0" if the version string cannot be parsed.
 	version *semver.Version
 
-	// running tracks whether OnStartup hooks have completed successfully.
-	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
+	// running: OnStartup succeeded since the hooks were initialized; DisableHooks resets it, so
+	// OnStartup runs once per enable.
 	running atomic.Bool
 
-	// initialized tracks whether hook controllers have been built for this instance,
-	// so the Enable task skips re-initialization on every reschedule. It is per-instance
-	// on purpose: hook controllers may live on process-global SDK-registry singletons,
-	// so inferring init state from controller presence would leak across instances.
-	initialized atomic.Bool
+	// initialized: the hook controllers are built; only the snapshots dump reads it. Guarded by
+	// hooksMu.
+	initialized bool
+	// hooksMu guards the hook controllers and initialized against the debug snapshots dump:
+	// InitializeHooks and DisableHooks write under it. Hook runs read the controllers without it,
+	// which is safe because the lanes' stop (hooklane) waits for every run before DisableHooks.
+	hooksMu sync.RWMutex
+	// unlocked are the monitors whose events are unlocked, the only ones the snapshots dump reads;
+	// guarded by hooksMu.
+	unlocked hooks.Unlocked
 
 	definition Definition            // Module definition
 	digests    map[string]string     // Package digests
@@ -85,8 +92,10 @@ type Module struct {
 	values        *values.Storage     // Values storage with layering
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
 
-	// maintenance is the package maintenance mode, set by the Configure task and
-	// read by the Run/nelm layer. Empty (Managed) means reconcile normally.
+	// maintenance is the package maintenance mode, set by Current on accept and read
+	// by the nelm layer. Empty (Managed) means reconcile normally. Guarded by mu:
+	// Global's webhook render reads it while Current may write it.
+	mu          sync.Mutex
 	maintenance nelm.MaintenanceState
 
 	patcher           *objectpatch.ObjectPatcher
@@ -237,6 +246,12 @@ func (m *Module) GetRuntimeValues() string {
 	return fmt.Sprintf("Module=%s,Platform=%s", marshalled, marshalledGlobal)
 }
 
+// GetDigests returns the image digests of the package (images_digests.json); Global publishes
+// them into the global values for every render.
+func (m *Module) GetDigests() map[string]string {
+	return m.digests
+}
+
 // GetName returns the full module identifier.
 func (m *Module) GetName() string {
 	return m.name
@@ -290,11 +305,18 @@ func (m *Module) GetHooksQueues() []string {
 	return slices.Compact(res)
 }
 
-// GetHookSnapshotsDump returns a snapshot of hook controller snapshots.
+// GetHookSnapshotsDump returns the snapshots of the hooks' unlocked monitors (hooks.SnapshotsDump).
 func (m *Module) GetHookSnapshotsDump() map[string]any {
+	m.hooksMu.RLock()
+	defer m.hooksMu.RUnlock()
+
 	snapshots := make(map[string]any)
+	if !m.initialized {
+		return snapshots
+	}
+
 	for _, hook := range m.hooks.GetHooks() {
-		snapshots[hook.GetName()] = hook.GetHookController().SnapshotsDump()
+		snapshots[hook.GetName()] = hooks.SnapshotsDump(hook.GetHookConfig().OnKubernetesEvents, m.kubeEventsManager, m.unlocked)
 	}
 
 	return snapshots
@@ -306,23 +328,17 @@ func (m *Module) GetValuesChecksum() string {
 	return m.values.GetValuesChecksum()
 }
 
-// GetSettingsChecksum returns a checksum of the current config values.
-// Used to detect if settings changed.
-func (m *Module) GetSettingsChecksum() string {
-	return m.values.GetSettingsChecksum()
-}
-
 // ValidateSettings converts settings to the latest schema version (if a converter
 // is available), then validates against OpenAPI schema and calls the settings check
 // hook if defined.
 func (m *Module) ValidateSettings(ctx context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
 	settings, err := m.convertSettings(settingsVersion, settings)
 	if err != nil {
-		return settingscheck.Result{}, err
+		return settingscheck.Result{Message: err.Error()}, nil
 	}
 
 	if err = m.values.ValidateSettings(settings); err != nil {
-		return settingscheck.Result{}, err
+		return settingscheck.Result{Message: err.Error()}, nil
 	}
 
 	// apply defaults from config values spec
@@ -394,6 +410,16 @@ func (m *Module) convertSettings(settingsVersion int, settings addonutils.Values
 	return converted, nil
 }
 
+// LatestSettingsVersion returns the latest settings-schema version, the one effective settings
+// are in; 0 without a converter.
+func (m *Module) LatestSettingsVersion() int {
+	if m.converter == nil {
+		return 0
+	}
+
+	return m.converter.LatestVersion()
+}
+
 // GetSettings returns the effective settings: user config merged with
 // config-schema defaults. Same payload exposed to templates as .Module.Settings.
 func (m *Module) GetSettings() addonutils.Values {
@@ -402,12 +428,18 @@ func (m *Module) GetSettings() addonutils.Values {
 
 // SetMaintenance records the module maintenance mode from Module.spec.maintenance.
 func (m *Module) SetMaintenance(state nelm.MaintenanceState) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.maintenance = state
 }
 
 // GetMaintenance returns the module maintenance mode. Empty (Managed) means the
 // module reconciles normally.
 func (m *Module) GetMaintenance() nelm.MaintenanceState {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	return m.maintenance
 }
 
@@ -421,12 +453,6 @@ func (m *Module) GetExclusiveGroup() string {
 	return m.definition.ExclusiveGroup
 }
 
-// HooksInitialized reports whether this instance has already built its hook
-// controllers. When true, the Enable task skips the initialize+sync phase.
-func (m *Module) HooksInitialized() bool {
-	return m.initialized.Load()
-}
-
 // GetHooks returns all hooks for this module in arbitrary order.
 func (m *Module) GetHooks() []hooks.Hook {
 	return m.hooks.GetHooks()
@@ -434,6 +460,9 @@ func (m *Module) GetHooks() []hooks.Hook {
 
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
 func (m *Module) InitializeHooks() {
+	m.hooksMu.Lock()
+	defer m.hooksMu.Unlock()
+
 	for _, hook := range m.hooks.GetHooks() {
 		hookCtrl := hookcontroller.NewHookController()
 		hookCtrl.InitKubernetesBindings(hook.GetHookConfig().OnKubernetesEvents, m.kubeEventsManager, m.logger)
@@ -443,16 +472,22 @@ func (m *Module) InitializeHooks() {
 		hook.WithTmpDir(os.TempDir())
 	}
 
-	m.initialized.Store(true)
+	m.initialized = true
 }
 
 // DisableHooks tears down all active hook bindings and clears the hook registry.
-// Called by the Disable task when a package is being stopped or upgraded.
+// Called by the hook lanes' stop once every lane exited.
 //
 // Cleanup order: schedule bindings are disabled first (stops cron triggers),
 // then Kubernetes monitors are stopped (stops informer watches), and finally
 // the hook registry is cleared so a subsequent InitializeHooks starts fresh.
 func (m *Module) DisableHooks() {
+	m.hooksMu.Lock()
+	defer m.hooksMu.Unlock()
+
+	m.initialized = false
+	m.unlocked = nil
+
 	// Disable all schedule-based hooks
 	schHooks := m.hooks.GetHooksByBinding(shtypes.Schedule)
 	for _, hook := range schHooks {
@@ -469,18 +504,29 @@ func (m *Module) DisableHooks() {
 		}
 	}
 
-	// Detach controllers so a subsequent InitializeHooks starts fresh. Hook objects
-	// may be process-global SDK-registry singletons, so a stale controller left here
-	// would make the next Enable wrongly believe this instance is already initialized.
+	// Detach the controllers: a module's Go hooks are SDK-registry singletons shared by every
+	// load, so the next revision must find none.
 	for _, hook := range m.hooks.GetHooks() {
 		hook.WithHookController(nil)
 	}
 
-	m.initialized.Store(false)
 	m.running.Store(false)
 }
 
-// UnlockKubernetesMonitors called after sync task is completed to unlock getting events
+// applyBindingActions replaces the hook's monitors under hooksMu, so the snapshots dump never reads
+// a monitor half replaced; a recreated monitor is unlocked.
+func (m *Module) applyBindingActions(h hooks.Hook, actions []gohook.BindingAction) error {
+	m.hooksMu.Lock()
+	defer m.hooksMu.Unlock()
+
+	if m.unlocked == nil {
+		m.unlocked = make(hooks.Unlocked)
+	}
+
+	return hooks.ApplyBindingActions(h.GetHookConfig().OnKubernetesEvents, h.GetHookController(), actions, m.unlocked)
+}
+
+// UnlockKubernetesMonitors is called after a binding's synchronization ran, so its events flow.
 func (m *Module) UnlockKubernetesMonitors(hook string, monitors ...string) {
 	h := m.hooks.GetHookByName(hook)
 	if h == nil {
@@ -489,6 +535,18 @@ func (m *Module) UnlockKubernetesMonitors(hook string, monitors ...string) {
 
 	for _, monitorID := range monitors {
 		h.GetHookController().UnlockKubernetesEventsFor(monitorID)
+	}
+
+	// Recorded after the unlock: a dump in between skips the monitor rather than read it locked.
+	m.hooksMu.Lock()
+	defer m.hooksMu.Unlock()
+
+	if m.unlocked == nil {
+		m.unlocked = make(hooks.Unlocked, len(monitors))
+	}
+
+	for _, monitorID := range monitors {
+		m.unlocked[monitorID] = struct{}{}
 	}
 }
 
@@ -619,7 +677,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	}
 
 	if len(hookResult.BindingActions) > 0 {
-		if err = hooks.ApplyBindingActions(h.GetHookConfig().OnKubernetesEvents, h.GetHookController(), hookResult.BindingActions); err != nil {
+		if err = m.applyBindingActions(h, hookResult.BindingActions); err != nil {
 			return fmt.Errorf("apply binding actions: %w", err)
 		}
 	}

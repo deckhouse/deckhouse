@@ -22,7 +22,6 @@ package resourcerequests
 import (
 	"fmt"
 	"maps"
-	"reflect"
 	"slices"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -33,14 +32,14 @@ import (
 // which the CR schema enforces with a keyed list.
 type Request struct {
 	// Kind of the workload, one of the kinds in podSpecPaths.
-	Kind string
+	Kind string `json:"kind"`
 	// Name of the workload as the chart renders it.
-	Name string
+	Name string `json:"name"`
 	// Replicas to run, nil to keep what the chart renders. Only meaningful for
 	// the kinds in replicaKinds.
-	Replicas *int32
+	Replicas *int32 `json:"replicas,omitempty"`
 	// Containers to resize, addressed by name.
-	Containers []Container
+	Containers []Container `json:"containers"`
 }
 
 // Container pins the compute resources of one container inside a workload.
@@ -51,9 +50,9 @@ type Request struct {
 // leaves the chart's cpu alone; there is no way to unset a resource the chart
 // declares.
 type Container struct {
-	Name     string
-	Requests map[string]string
-	Limits   map[string]string
+	Name     string            `json:"name"`
+	Requests map[string]string `json:"requests,omitempty"`
+	Limits   map[string]string `json:"limits,omitempty"`
 }
 
 // podSpecPaths maps a workload kind to the path of the pod spec inside it. A kind
@@ -81,14 +80,6 @@ var replicaKinds = map[string]struct{}{
 // is unique across both lists within one pod spec, so a request naming an init
 // container resizes it without having to say which list it is in.
 var containerFields = []string{"containers", "initContainers"}
-
-// Equal reports whether two request sets describe the same footprint. It is
-// order-sensitive: reordering the list in the CR reads as a change here, which
-// costs one reschedule but no apply, because the manifests it renders are
-// identical and the release checksum does not move.
-func Equal(a, b []Request) bool {
-	return reflect.DeepEqual(a, b)
-}
 
 // Apply overlays the requests onto the rendered resources, mutating them in place.
 //

@@ -68,7 +68,6 @@ require (
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/gammazero/deque v1.1.0
 	github.com/go-logr/logr v1.4.4
 	github.com/go-openapi/swag/conv v0.28.0
 	github.com/go-openapi/swag/loading v0.28.0
@@ -190,7 +189,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/bramvdbogaerde/go-scp v1.6.0 // indirect
-	github.com/cenkalti/backoff/v4 v4.3.0
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/chanced/caps v1.0.2 // indirect

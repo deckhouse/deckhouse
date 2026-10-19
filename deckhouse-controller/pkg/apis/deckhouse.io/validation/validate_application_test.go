@@ -32,7 +32,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -122,15 +122,83 @@ func (s *applicationValidationHandlerSuite) TestSettingsAreValidatedByManagerFor
 func (s *applicationValidationHandlerSuite) TestSettingsAreValidatedOnlyByAPVWhileVersionChanges() {
 	app := newApplication("repo", "pkg", "v1.1.0")
 	app.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.0.0"}
+	oldApp := newApplication("repo", "pkg", "v1.0.0")
+	oldApp.Status.CurrentVersion = app.Status.CurrentVersion
 	manager := &fakePackageManager{
 		validateResult: settingscheck.Result{Valid: false, Message: "settings rejected by the loaded schema"},
 	}
 
-	response := s.validate(app, manager)
+	response := s.submit("UPDATE", app, oldApp, newAPV(apvNameOf(app), false, nil), manager)
 
 	s.True(response.Allowed)
 	s.False(manager.validateCalled)
+	s.True(manager.checkCalled, "a version change checks the new version's requirements")
+}
+
+// TestRequirementsAreNotCheckedOnSettingsOnlyUpdate: unmet requirements of the admitted version are
+// the engine's (the Candidate is Blocked); a settings-only edit must still reach the running version.
+func (s *applicationValidationHandlerSuite) TestRequirementsAreNotCheckedOnSettingsOnlyUpdate() {
+	app := newApplication("repo", "pkg", "v1.0.0")
+	app.Spec.Settings = v1alpha1.MakeMappedFields(map[string]any{"replicas": float64(2)})
+	oldApp := newApplication("repo", "pkg", "v1.0.0")
+	manager := &fakePackageManager{checkErr: errors.New("noneOf group 'db' violated")}
+
+	response := s.submit("UPDATE", app, oldApp, newAPV(apvNameOf(app), false, nil), manager)
+
+	s.True(response.Allowed)
+	s.False(manager.checkCalled)
+}
+
+// TestRequirementsAreCheckedOnVersionChange: an UPDATE to a version whose requirements are unmet is
+// rejected.
+func (s *applicationValidationHandlerSuite) TestRequirementsAreCheckedOnVersionChange() {
+	app := newApplication("repo", "pkg", "v1.1.0")
+	oldApp := newApplication("repo", "pkg", "v1.0.0")
+	manager := &fakePackageManager{checkErr: errors.New("noneOf group 'db' violated")}
+
+	response := s.submit("UPDATE", app, oldApp, newAPV(apvNameOf(app), false, nil), manager)
+
+	s.False(response.Allowed)
 	s.True(manager.checkCalled)
+	s.Contains(response.Result.Message, "noneOf group 'db' violated")
+}
+
+// TestRequirementsAreCheckedOnCreate: a CREATE with unmet requirements is rejected.
+func (s *applicationValidationHandlerSuite) TestRequirementsAreCheckedOnCreate() {
+	app := newApplication("repo", "pkg", "v1.0.0")
+	manager := &fakePackageManager{checkErr: errors.New("noneOf group 'db' violated")}
+
+	response := s.submit("CREATE", app, nil, newAPV(apvNameOf(app), false, nil), manager)
+
+	s.False(response.Allowed)
+	s.True(manager.checkCalled)
+}
+
+// TestEmptyCheckpointCountsAsRun: lastAppliedConfiguration {} (a package without settings) is a
+// checkpoint like any other, and an update over it passes a schema without immutable fields.
+func (s *applicationValidationHandlerSuite) TestEmptyCheckpointCountsAsRun() {
+	app := newApplication("repo", "pkg", "v1.0.0")
+	app.Spec.Settings = v1alpha1.MakeMappedFields(map[string]any{"replicas": float64(2)})
+	oldApp := newApplication("repo", "pkg", "v1.0.0")
+	oldApp.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.0.0"}
+	oldApp.Status.LastAppliedConfiguration = runtime.RawExtension{Raw: []byte("{}")}
+	s.True(hasRun(oldApp.Status.LastAppliedConfiguration))
+
+	apv := newAPV(apvNameOf(app), false, nil)
+	apv.Status.PackageSchemas = &v1alpha1.PackageVersionStatusSchemas{
+		SettingsSchema: &v1alpha1.PackageSchema{OpenAPIV3Schema: &openapi.OpenAPIV3Schema{
+			Type:       openapi.StringOrArray{"object"},
+			Properties: map[string]openapi.OpenAPIV3Schema{"replicas": {Type: openapi.StringOrArray{"integer"}}},
+		}},
+	}
+
+	response := s.submit("UPDATE", app, oldApp, apv, &fakePackageManager{})
+
+	s.True(response.Allowed)
+}
+
+func apvNameOf(app *v1alpha1.Application) string {
+	return v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 }
 
 // TestMissingAPVMetadataUsesDefaults verifies admission without optional metadata.
@@ -188,62 +256,6 @@ func (s *applicationValidationHandlerSuite) submit(
 	}
 
 	return callHandler(s.T(), handler, newModuleConfigAdmissionReview(operation, app, old))
-}
-
-func TestParsePackageDependencyConstraint(t *testing.T) {
-	tests := []struct {
-		name      string
-		raw       string
-		wantNil   bool
-		wantError bool
-	}{
-		{name: "empty string yields nil without error", raw: "", wantNil: true},
-		{name: "valid constraint parses", raw: ">=1.0.0", wantNil: false},
-		{name: "valid bare version parses", raw: "1.2.3", wantNil: false},
-		{name: "garbage constraint errors", raw: "abc", wantError: true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parsePackageDependencyConstraint(tt.raw)
-			if tt.wantError {
-				require.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
-			if tt.wantNil {
-				assert.Nil(t, got)
-			} else {
-				assert.NotNil(t, got)
-			}
-		})
-	}
-}
-
-func TestParsePackageConstraint(t *testing.T) {
-	t.Run("nil wrapper yields nil", func(t *testing.T) {
-		got, err := parsePackageConstraint(nil)
-		require.NoError(t, err)
-		assert.Nil(t, got)
-	})
-
-	t.Run("empty constraint yields nil", func(t *testing.T) {
-		got, err := parsePackageConstraint(&v1alpha1.VersionConstraint{Constraint: ""})
-		require.NoError(t, err)
-		assert.Nil(t, got)
-	})
-
-	t.Run("valid constraint parses", func(t *testing.T) {
-		got, err := parsePackageConstraint(&v1alpha1.VersionConstraint{Constraint: ">=1.26"})
-		require.NoError(t, err)
-		assert.NotNil(t, got)
-	})
-
-	t.Run("invalid constraint errors", func(t *testing.T) {
-		_, err := parsePackageConstraint(&v1alpha1.VersionConstraint{Constraint: "abc"})
-		require.Error(t, err)
-	})
 }
 
 func TestValidateApplicationSettings(t *testing.T) {
@@ -367,7 +379,6 @@ func TestValidateAppAgainstApv(t *testing.T) {
 			apv:            compatAPV(),
 			currentVersion: "0.9.0",
 			oldVersion:     version,
-			wantCheck:      true,
 		},
 		{
 			name:       "allowed downgrade delegates to the manager",
@@ -706,9 +717,10 @@ func (s *applicationValidationHandlerSuite) TestImmutableSettingsFieldCannotChan
 			wantMessage: "grantedClass",
 		},
 		{
-			// Nothing was ever applied, so nothing is frozen: an install wedged by a
-			// typo in its immutable field can still be corrected in place.
-			name:         "UPDATE of an application that never applied may change the immutable field",
+			// Activated (status.currentVersion is written at activation) but its first
+			// run never succeeded, so nothing is frozen: an install wedged by a typo in
+			// its immutable field can still be corrected in place.
+			name:         "UPDATE of an activated application that never applied may change the immutable field",
 			operation:    "UPDATE",
 			newSettings:  map[string]any{"storageClass": "slow"},
 			oldSettings:  map[string]any{"storageClass": "fast"},
@@ -726,15 +738,18 @@ func (s *applicationValidationHandlerSuite) TestImmutableSettingsFieldCannotChan
 			if tt.oldSettings != nil {
 				oldApp = newApplication("repo", "pkg", "1.0.0")
 				oldApp.Spec.Settings = v1alpha1.MakeMappedFields(tt.oldSettings)
-				// A version in the status is what marks the install as applied, and so
-				// as holding values an immutable field is frozen at.
-				if !tt.neverApplied {
-					oldApp.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "1.0.0"}
-				}
+				oldApp.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "1.0.0"}
 			}
 
-			if tt.oldApplied != nil {
-				raw, err := json.Marshal(tt.oldApplied)
+			// The checkpoint is what marks the install as applied, and so as holding the
+			// values an immutable field is frozen at; by default the old manifest's.
+			applied := tt.oldApplied
+			if applied == nil && !tt.neverApplied {
+				applied = tt.oldSettings
+			}
+
+			if oldApp != nil && applied != nil {
+				raw, err := json.Marshal(applied)
 				s.Require().NoError(err)
 				oldApp.Status.LastAppliedConfiguration = runtime.RawExtension{Raw: raw}
 			}

@@ -18,491 +18,790 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
-	intstatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 )
 
-type mappingOption func(state *condmap.State)
+const (
+	moduleName = "mod"
+	v1         = "v1.0.0"
+	v2         = "v2.0.0"
+)
 
-func withInternalCondition(cond string, status metav1.ConditionStatus, reason string) mappingOption {
-	return func(state *condmap.State) {
-		state.Internal[cond] = metav1.Condition{
-			Type:   cond,
-			Status: status,
-			Reason: reason,
-		}
-	}
+// fakeSource is the engine as the status service reads it.
+type fakeSource struct {
+	report model.Report
+	known  bool
+	obs    observed.Observation
 }
 
-func withExternalCondition(cond string, status metav1.ConditionStatus, reason string) mappingOption {
-	return func(state *condmap.State) {
-		state.External[cond] = metav1.Condition{
-			Type:   cond,
-			Status: status,
-			Reason: reason,
-		}
-	}
-}
+func (f fakeSource) Report(string) (model.Report, bool)   { return f.report, f.known }
+func (f fakeSource) Observed(string) observed.Observation { return f.obs }
 
-func withVersionChanged() mappingOption {
-	return func(state *condmap.State) {
-		state.Updating = true
-	}
-}
-
-func withDeleting() mappingOption {
-	return func(state *condmap.State) {
-		state.Deleting = true
-	}
-}
-
-func withSuccessfulApply() []mappingOption {
-	return []mappingOption{
-		withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionTrue, "Enabled"),
-		withInternalCondition(string(intstatus.ConditionReadyOnFilesystem), metav1.ConditionTrue, "Mounted"),
-		withInternalCondition(string(intstatus.ConditionLoaded), metav1.ConditionTrue, "Loaded"),
-		withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "Configured"),
-		withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksProcessed"),
-		withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionTrue, "ManifestsApplied"),
-		withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Scaled"),
-	}
-}
-
-func testMapping(opts ...mappingOption) map[string]metav1.Condition {
-	state := &condmap.State{
-		Internal: make(map[string]metav1.Condition),
-		External: make(map[string]metav1.Condition),
-	}
-
-	for _, opt := range opts {
-		opt(state)
-	}
-
-	result := make(map[string]metav1.Condition)
-	for _, cond := range buildMapper().Map(*state).Set {
-		result[cond.Type] = cond
-	}
-
-	return result
-}
-
-// expectedCondition defines what we expect for a condition in test results
-type expectedCondition struct {
+// cond is an expected external condition: status and reason.
+type cond struct {
 	status metav1.ConditionStatus
 	reason string
 }
 
-// gatedConditions are the conditions behind the Installed gate.
-var gatedConditions = []string{
-	ConditionUpdateInstalled,
-	ConditionReady,
-	ConditionScaled,
-	ConditionManaged,
-	ConditionConfigurationApplied,
+func wantTrue(reason string) cond            { return cond{metav1.ConditionTrue, reason} }
+func wantFalse(reason string) cond           { return cond{metav1.ConditionFalse, reason} }
+func wantUnknown(reason string) cond         { return cond{metav1.ConditionUnknown, reason} }
+func trueCondition() model.Condition         { return model.TrueCondition() }
+func failed(reason string) model.Condition   { return model.FalseCondition(reason, "boom") }
+func enabled() *model.Decision               { return &model.Decision{Enabled: true} }
+func disabled(reason string) *model.Decision { return &model.Decision{Reason: reason, Message: "off"} }
+
+// running is the Report of a module whose version runs and whose last run succeeded.
+func running(version string) model.Report {
+	return model.Report{
+		CurrentVersion: version,
+		Current: model.CurrentReport{
+			Version:          version,
+			Configured:       trueCondition(),
+			HooksProcessed:   trueCondition(),
+			ManifestsApplied: trueCondition(),
+			Installed:        trueCondition(),
+			Decision:         enabled(),
+			AcceptedChecksum: "a",
+			AppliedChecksum:  "a",
+			AppliedValues:    map[string]any{"replicas": 1.0},
+		},
+	}
 }
 
-// gatedAbsent adds to want the promise of the Installed gate: every condition
-// behind it is absent from the mapping result.
-func gatedAbsent(want map[string]*expectedCondition) map[string]*expectedCondition {
-	for _, condType := range gatedConditions {
-		want[condType] = nil
+// ready is the observation of healthy workloads.
+var ready = observed.Observation{Health: observed.Health{State: observed.HealthReady}}
+
+// installedConditions are the external conditions of an installed, healthy module.
+func installedConditions() []metav1.Condition {
+	return []metav1.Condition{
+		{Type: ConditionInstalled, Status: metav1.ConditionTrue, Reason: ConditionInstalled},
+		{Type: ConditionReady, Status: metav1.ConditionTrue, Reason: ConditionReady},
+		{Type: ConditionScaled, Status: metav1.ConditionTrue, Reason: ConditionScaled},
+		{Type: ConditionManaged, Status: metav1.ConditionTrue, Reason: ConditionManaged},
+		{Type: ConditionConfigurationApplied, Status: metav1.ConditionTrue, Reason: ConditionConfigurationApplied},
+	}
+}
+
+// with returns conditions with c set.
+func with(conditions []metav1.Condition, c metav1.Condition) []metav1.Condition {
+	out := append([]metav1.Condition(nil), conditions...)
+	meta.SetStatusCondition(&out, c)
+
+	return out
+}
+
+// projection is one status computation: the engine's status and the resource's before it.
+type projection struct {
+	name           string
+	source         fakeSource
+	conditions     []metav1.Condition
+	currentVersion string
+	deleting       bool
+}
+
+// project runs the status service over p and returns the resulting Module.
+func project(t *testing.T, p projection) *v1beta1.Module {
+	t.Helper()
+
+	name := p.name
+	if name == "" {
+		name = moduleName
+	}
+
+	module := &v1beta1.Module{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Status: v1beta1.ModuleStatus{
+			Conditions:     p.conditions,
+			CurrentVersion: &v1beta1.ModuleStatusVersion{Version: p.currentVersion},
+		},
+	}
+
+	if p.deleting {
+		now := metav1.Now()
+		module.DeletionTimestamp = &now
+	}
+
+	svc := &Service{source: p.source}
+	svc.computeAndApplyConditions(name, module)
+
+	return module
+}
+
+// assertConditions checks that the module carries exactly want.
+func assertConditions(t *testing.T, module *v1beta1.Module, want map[string]cond) {
+	t.Helper()
+
+	got := make(map[string]cond, len(module.Status.Conditions))
+	for _, c := range module.Status.Conditions {
+		got[c.Type] = cond{c.Status, c.Reason}
+	}
+
+	assert.Equal(t, want, got)
+}
+
+// healthy are the gated conditions of an installed, healthy module.
+func healthy(extra map[string]cond) map[string]cond {
+	want := map[string]cond{
+		ConditionInstalled:            wantTrue(ConditionInstalled),
+		ConditionReady:                wantTrue(ConditionReady),
+		ConditionScaled:               wantTrue(ConditionScaled),
+		ConditionManaged:              wantTrue(ConditionManaged),
+		ConditionConfigurationApplied: wantTrue(ConditionConfigurationApplied),
+	}
+	for k, v := range extra {
+		want[k] = v
 	}
 
 	return want
 }
 
-// testCase defines a single test case for condition mapping
-type testCase struct {
-	name     string
-	opts     []mappingOption
-	expected map[string]*expectedCondition // nil value means condition should be absent
-}
+func TestFirstInstall(t *testing.T) {
+	preparing := model.Report{Candidate: model.CandidateReport{Version: v1}}
 
-func runTestCases(t *testing.T, cases []testCase) {
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := testMapping(tc.opts...)
-
-			for condType, exp := range tc.expected {
-				if exp == nil {
-					_, ok := result[condType]
-					assert.False(t, ok, "condition '%s' should not be present", condType)
-					continue
-				}
-
-				cond, ok := result[condType]
-				if !ok {
-					assert.Failf(t, "condition not found", "condition '%s' not found in result", condType)
-					continue
-				}
-
-				assert.Equal(t, exp.status, cond.Status, "condition '%s' status", condType)
-				assert.Equal(t, exp.reason, cond.Reason, "condition '%s' reason", condType)
-			}
-		})
-	}
-}
-
-// TestSchedulerVerdict covers what status.enabled is resolved from: the
-// scheduler's verdict on the internal RequirementsMet condition, whatever its
-// reason, and no verdict at all while there is no decision or on removal.
-func TestSchedulerVerdict(t *testing.T) {
-	cases := []struct {
-		name        string
-		opts        []mappingOption
-		wantEnabled bool
-		wantVerdict bool
+	tests := []struct {
+		name    string
+		report  model.Report
+		obs     observed.Observation
+		want    map[string]cond
+		summary string
 	}{
 		{
-			name: "none before the first scheduling decision",
+			name:    "in progress, nothing failed: Pending",
+			report:  preparing,
+			want:    map[string]cond{ConditionInstalled: wantFalse("Pending")},
+			summary: statePending,
 		},
 		{
-			name: "none while the verdict is unknown",
-			opts: []mappingOption{withInternalCondition(intRequirementsMet, metav1.ConditionUnknown, "")},
+			name:    "requirements: the scheduler's reason",
+			report:  model.Report{Candidate: model.CandidateReport{Version: v1, Blocked: model.ReasonRequirementsNotMet, Reason: "DependencyNotEnabled"}},
+			want:    map[string]cond{ConditionInstalled: wantFalse("DependencyNotEnabled")},
+			summary: statePending,
 		},
 		{
-			name:        "enabled when the module is scheduled",
-			opts:        []mappingOption{withInternalCondition(intRequirementsMet, metav1.ConditionTrue, "Enabled")},
-			wantEnabled: true,
-			wantVerdict: true,
+			name:    "requirements without a reason",
+			report:  model.Report{Candidate: model.CandidateReport{Version: v1, Blocked: model.ReasonRequirementsNotMet}},
+			want:    map[string]cond{ConditionInstalled: wantFalse(model.ReasonRequirementsNotMet)},
+			summary: statePending,
 		},
 		{
-			name:        "disabled by the user",
-			opts:        []mappingOption{withInternalCondition(intRequirementsMet, metav1.ConditionFalse, reasonDisabled)},
-			wantVerdict: true,
+			name:    "attach failed",
+			report:  model.Report{Candidate: model.CandidateReport{Version: v1, Step: "attach", Reason: model.ReasonAttachFailed}},
+			want:    map[string]cond{ConditionInstalled: wantFalse(model.ReasonAttachFailed)},
+			summary: stateFailed,
 		},
 		{
-			name:        "disabled by a lost dependency",
-			opts:        []mappingOption{withInternalCondition(intRequirementsMet, metav1.ConditionFalse, "DependencyNotEnabled")},
-			wantVerdict: true,
+			name:    "load failed",
+			report:  model.Report{Candidate: model.CandidateReport{Version: v1, Step: "load", Reason: model.ReasonLoadFromFilesystemFailed}},
+			want:    map[string]cond{ConditionInstalled: wantFalse(model.ReasonLoadFromFilesystemFailed)},
+			summary: stateFailed,
 		},
 		{
-			// The teardown writes False/Deleting over every internal condition.
-			name: "none while the module is removed",
-			opts: []mappingOption{
-				withInternalCondition(intRequirementsMet, metav1.ConditionFalse, string(intstatus.ConditionReasonDeleting)),
-				withDeleting(),
-			},
+			name:    "settings rejected by the revision",
+			report:  model.Report{Candidate: model.CandidateReport{Version: v1, Blocked: model.ReasonSettingsInvalid}},
+			want:    map[string]cond{ConditionInstalled: wantFalse(model.ReasonSettingsInvalid)},
+			summary: stateFailed,
+		},
+		{
+			name: "activated, first run's hooks failed",
+			report: model.Report{CurrentVersion: v1, Current: model.CurrentReport{
+				Version: v1, Configured: trueCondition(), HooksProcessed: failed(model.ReasonHookFailed), Decision: enabled(),
+			}},
+			want:    map[string]cond{ConditionInstalled: wantFalse(model.ReasonHookFailed)},
+			summary: stateFailed,
+		},
+		{
+			name: "activated, first run's hook initialization failed",
+			report: model.Report{CurrentVersion: v1, Current: model.CurrentReport{
+				Version: v1, HooksProcessed: failed(model.ReasonHookInitializationFailed), Decision: enabled(),
+			}},
+			want:    map[string]cond{ConditionInstalled: wantFalse(model.ReasonHookInitializationFailed)},
+			summary: stateFailed,
+		},
+		{
+			name: "activated, first run's manifests failed",
+			report: model.Report{CurrentVersion: v1, Current: model.CurrentReport{
+				Version: v1, HooksProcessed: trueCondition(), ManifestsApplied: failed("RenderFailed"), Decision: enabled(),
+			}},
+			want:    map[string]cond{ConditionInstalled: wantFalse(model.ReasonManifestsApplyFailed)},
+			summary: stateFailed,
+		},
+		{
+			name: "activated while disabled: the scheduler's reason",
+			report: model.Report{CurrentVersion: v1, Current: model.CurrentReport{
+				Decision: disabled("DisabledByBundle"),
+			}},
+			want:    map[string]cond{ConditionInstalled: wantFalse("DisabledByBundle")},
+			summary: statePending,
+		},
+		{
+			name:    "release installed, workloads rolling out: still Pending (G4)",
+			report:  running(v1),
+			obs:     observed.Observation{Health: observed.Health{State: observed.HealthProgressing}},
+			want:    map[string]cond{ConditionInstalled: wantFalse("Pending")},
+			summary: statePending,
+		},
+		{
+			name:    "release installed, workloads ready: installed",
+			report:  running(v1),
+			obs:     ready,
+			want:    healthy(nil),
+			summary: stateReady,
+		},
+		{
+			name:    "release installed, no workloads: installed",
+			report:  running(v1),
+			obs:     observed.Observation{NoWorkloads: true},
+			want:    healthy(nil),
+			summary: stateReady,
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			state := condmap.State{
-				Internal: make(map[string]metav1.Condition),
-				External: make(map[string]metav1.Condition),
-			}
-			for _, opt := range tc.opts {
-				opt(&state)
-			}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			module := project(t, projection{source: fakeSource{report: tt.report, known: true, obs: tt.obs}})
 
-			enabled, ok := schedulerVerdict(state)
-			assert.Equal(t, tc.wantVerdict, ok, "verdict")
-			assert.Equal(t, tc.wantEnabled, enabled, "enabled")
+			assertConditions(t, module, tt.want)
+			assert.Equal(t, tt.summary, module.Status.Summary.State)
 		})
 	}
 }
 
-// TestSchedulerReasonPassthrough covers the module-specific canonicalReason
-// behavior: a scheduler forbid on the install pipeline surfaces its own
-// decision reason instead of the application's collapsed RequirementsUnmet.
-func TestSchedulerReasonPassthrough(t *testing.T) {
-	cases := []testCase{
+func TestUnknownKeepsTheExternalConditions(t *testing.T) {
+	tests := []struct {
+		name   string
+		source fakeSource
+	}{
+		{name: "restart: the engine reported nothing yet", source: fakeSource{known: true, report: model.Report{CurrentVersion: v1}}},
+		{name: "the engine does not know the module", source: fakeSource{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			module := project(t, projection{source: tt.source, conditions: installedConditions(), currentVersion: v1})
+
+			assertConditions(t, module, healthy(nil))
+			assert.Equal(t, v1, module.Status.CurrentVersion.Version)
+		})
+	}
+}
+
+func TestRestartDoesNotFlapInstalled(t *testing.T) {
+	// A restored Current reports nothing until its first run; then a run failure surfaces on the
+	// other conditions, never on Installed.
+	steps := []model.Report{
+		{CurrentVersion: v1},
+		{CurrentVersion: v1, Current: model.CurrentReport{Version: v1, HooksProcessed: failed(model.ReasonHookFailed), Decision: enabled()}},
+	}
+
+	conditions := installedConditions()
+	for _, report := range steps {
+		module := project(t, projection{source: fakeSource{report: report, known: true, obs: ready}, conditions: conditions, currentVersion: v1})
+		conditions = module.Status.Conditions
+
+		installed := meta.FindStatusCondition(conditions, ConditionInstalled)
+		require.NotNil(t, installed)
+		assert.Equal(t, metav1.ConditionTrue, installed.Status)
+	}
+
+	assert.Equal(t, metav1.ConditionFalse, meta.FindStatusCondition(conditions, ConditionReady).Status)
+}
+
+func TestReconcile(t *testing.T) {
+	tests := []struct {
+		name    string
+		report  func() model.Report
+		obs     observed.Observation
+		want    map[string]cond
+		summary string
+	}{
 		{
-			name: "install blocked by a dependency carries the scheduler reason",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DependencyNotEnabled"),
+			name:    "healthy",
+			report:  func() model.Report { return running(v1) },
+			obs:     ready,
+			want:    healthy(nil),
+			summary: stateReady,
+		},
+		{
+			name: "operation hook failed",
+			report: func() model.Report {
+				r := running(v1)
+				r.Current.HooksProcessed = failed(model.ReasonHookFailed)
+				return r
 			},
-			expected: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionFalse, reason: "DependencyNotEnabled"},
+			obs: ready,
+			want: healthy(map[string]cond{
+				ConditionReady:                wantFalse(model.ReasonHookFailed),
+				ConditionManaged:              wantFalse(model.ReasonHookFailed),
+				ConditionConfigurationApplied: wantFalse(model.ReasonHookFailed),
 			}),
+			summary: stateDegraded,
 		},
 		{
-			name: "install blocked by an explicit disable carries the scheduler reason",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "Disabled"),
-			},
-			expected: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionFalse, reason: "Disabled"},
+			name:   "runtime hook synchronization failed (observed)",
+			report: func() model.Report { return running(v1) },
+			obs: observed.Observation{Health: ready.Health, HookFailure: &observed.HookFailure{
+				Hook: "h", Reason: observed.HookReasonSync, Message: "boom",
+			}},
+			want: healthy(map[string]cond{
+				ConditionReady:                wantFalse(reasonHookInitializationFailed),
+				ConditionManaged:              wantFalse(reasonHookInitializationFailed),
+				ConditionConfigurationApplied: wantFalse(reasonHookInitializationFailed),
 			}),
+			summary: stateDegraded,
 		},
-	}
-
-	runTestCases(t, cases)
-}
-
-// TestDisabledModule covers the isDisabled branch: the scheduler switches a
-// previously-installed module off. Installed goes False with the scheduler
-// reason, and the closed Installed gate removes every other condition until the
-// module is installed again.
-func TestDisabledModule(t *testing.T) {
-	cases := []testCase{
 		{
-			name: "installed module switched off by the user",
-			opts: append(withSuccessfulApply(),
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "Disabled"),
-			),
-			expected: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionFalse, reason: "Disabled"},
+			name:   "runtime hook failed on an event (observed)",
+			report: func() model.Report { return running(v1) },
+			obs: observed.Observation{Health: ready.Health, HookFailure: &observed.HookFailure{
+				Hook: "h", Reason: observed.HookReasonEvent, Message: "boom",
+			}},
+			want: healthy(map[string]cond{
+				ConditionReady:                wantFalse(model.ReasonHookFailed),
+				ConditionManaged:              wantFalse(model.ReasonHookFailed),
+				ConditionConfigurationApplied: wantFalse(model.ReasonHookFailed),
 			}),
+			summary: stateDegraded,
 		},
 		{
-			name: "installed module switched off by a lost dependency",
-			opts: append(withSuccessfulApply(),
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "DependencyNotEnabled"),
-			),
-			expected: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionFalse, reason: "DependencyNotEnabled"},
+			name: "manifests failed",
+			report: func() model.Report {
+				r := running(v1)
+				r.Current.ManifestsApplied = failed("RenderFailed")
+				return r
+			},
+			obs: ready,
+			want: healthy(map[string]cond{
+				ConditionReady:                wantFalse(model.ReasonManifestsApplyFailed),
+				ConditionManaged:              wantFalse(model.ReasonManifestsApplyFailed),
+				ConditionConfigurationApplied: wantFalse(model.ReasonManifestsApplyFailed),
 			}),
+			summary: stateDegraded,
 		},
 		{
-			// Enabling it again starts an install: Installed reports the progress,
-			// the rest wait for the install to complete.
-			name: "switched-off module enabled again",
-			opts: append(withSuccessfulApply(),
-				withExternalCondition(ConditionInstalled, metav1.ConditionFalse, "Disabled"),
-				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionTrue, "Waiting"),
-			),
-			expected: gatedAbsent(map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionFalse, reason: "Pending"},
+			name: "applying a changed release: no flap",
+			report: func() model.Report {
+				r := running(v1)
+				r.Current.ManifestsApplied = model.FalseCondition(model.ReasonApplyingManifests, "")
+				return r
+			},
+			obs:     ready,
+			want:    healthy(nil),
+			summary: stateReady,
+		},
+		{
+			name: "settings rejected: only ConfigurationApplied",
+			report: func() model.Report {
+				r := running(v1)
+				r.Current.Configured = failed(model.ReasonSettingsInvalid)
+				return r
+			},
+			obs: ready,
+			want: healthy(map[string]cond{
+				ConditionConfigurationApplied: wantFalse(model.ReasonSettingsInvalid),
 			}),
+			summary: stateDegraded,
+		},
+		{
+			name: "settings accepted, not applied yet: SettingsChanged",
+			report: func() model.Report {
+				r := running(v1)
+				r.Current.AcceptedChecksum = "b"
+				return r
+			},
+			obs: ready,
+			want: healthy(map[string]cond{
+				ConditionReady:                wantFalse(reasonSettingsChanged),
+				ConditionManaged:              wantFalse(reasonSettingsChanged),
+				ConditionConfigurationApplied: wantFalse(reasonSettingsChanged),
+			}),
+			summary: stateConfiguring,
+		},
+		{
+			name: "maintenance applied by a run",
+			report: func() model.Report {
+				r := running(v1)
+				r.Current.Maintenance = "NoResourceReconciliation"
+				return r
+			},
+			obs: ready,
+			want: healthy(map[string]cond{
+				ConditionManaged: wantFalse(reasonNoResourceReconciliation),
+			}),
+			summary: stateReady,
+		},
+		{
+			name: "maintenance accepted, not applied yet: SettingsChanged",
+			report: func() model.Report {
+				r := running(v1)
+				r.Current.Maintenance = "NoResourceReconciliation"
+				r.Current.AcceptedChecksum = "b"
+				return r
+			},
+			obs: ready,
+			want: healthy(map[string]cond{
+				ConditionReady:                wantFalse(reasonSettingsChanged),
+				ConditionManaged:              wantFalse(reasonSettingsChanged),
+				ConditionConfigurationApplied: wantFalse(reasonSettingsChanged),
+			}),
+			summary: stateConfiguring,
+		},
+		{
+			name:   "workloads degraded",
+			report: func() model.Report { return running(v1) },
+			obs:    observed.Observation{Health: observed.Health{State: observed.HealthDegraded, Message: "crash"}},
+			want: healthy(map[string]cond{
+				ConditionReady:   wantTrue(ConditionReady),
+				ConditionScaled:  wantFalse(reasonDegraded),
+				ConditionManaged: wantTrue(ConditionManaged),
+			}),
+			summary: stateDegraded,
 		},
 	}
 
-	runTestCases(t, cases)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			module := project(t, projection{
+				source:         fakeSource{report: tt.report(), known: true, obs: tt.obs},
+				conditions:     installedConditions(),
+				currentVersion: v1,
+			})
+
+			assertConditions(t, module, tt.want)
+			assert.Equal(t, tt.summary, module.Status.Summary.State)
+		})
+	}
 }
 
-func TestScaledRule(t *testing.T) {
-	cases := []testCase{
+func TestUpdate(t *testing.T) {
+	updateInstalled := func(status metav1.ConditionStatus, reason string) metav1.Condition {
+		return metav1.Condition{Type: ConditionUpdateInstalled, Status: status, Reason: reason}
+	}
+
+	candidate := func(u model.CandidateReport) func() model.Report {
+		return func() model.Report {
+			r := running(v1)
+			u.Version = v2
+			r.Candidate = u
+			return r
+		}
+	}
+
+	// activated is v2 activated while the Current section still holds v1's run.
+	activated := func(revision string, change func(*model.CurrentReport)) func() model.Report {
+		return func() model.Report {
+			r := running(v1)
+			r.CurrentVersion = v2
+			r.Current.Version = revision
+			if change != nil {
+				change(&r.Current)
+			}
+			return r
+		}
+	}
+
+	tests := []struct {
+		name           string
+		report         func() model.Report
+		conditions     []metav1.Condition
+		currentVersion string
+		want           map[string]cond
+		summary        string
+	}{
 		{
-			name: "true when first install completes",
-			opts: withSuccessfulApply(),
-			expected: map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionTrue, reason: ConditionInstalled},
-				ConditionScaled:    {status: metav1.ConditionTrue, reason: ConditionScaled},
-			},
+			name:    "waiting for the window",
+			report:  candidate(model.CandidateReport{Blocked: model.ReasonWaitingWindow}),
+			want:    healthy(map[string]cond{ConditionUpdateInstalled: wantFalse(model.ReasonWaitingWindow)}),
+			summary: stateUpdating,
 		},
 		{
-			// A package the health monitor never observes, like global, over a stale failure.
-			name: "true when a workload-less install completes",
-			opts: append(withSuccessfulApply(),
-				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, string(intstatus.ConditionReasonNoWorkloads)),
-				withExternalCondition(ConditionInstalled, metav1.ConditionFalse, "HookFailed"),
-			),
-			expected: map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionTrue, reason: ConditionInstalled},
-				ConditionScaled:    {status: metav1.ConditionTrue, reason: ConditionScaled},
-			},
+			name:    "requirements of the new version: the scheduler's reason",
+			report:  candidate(model.CandidateReport{Blocked: model.ReasonRequirementsNotMet, Reason: "DependencyNotEnabled"}),
+			want:    healthy(map[string]cond{ConditionUpdateInstalled: wantFalse("DependencyNotEnabled")}),
+			summary: stateUpdating,
 		},
 		{
-			// The health monitor can report Scaled before the install pipeline finishes.
-			name: "absent when Scaled arrives before manifests are applied",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionTrue, "Ready"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionInstalled: nil,
-				ConditionScaled:    nil,
-			},
+			name:    "requirements of the new version without a reason",
+			report:  candidate(model.CandidateReport{Blocked: model.ReasonRequirementsNotMet}),
+			want:    healthy(map[string]cond{ConditionUpdateInstalled: wantFalse(model.ReasonRequirementsNotMet)}),
+			summary: stateUpdating,
 		},
 		{
-			name: "absent while first install manifests are being applied",
-			opts: append(withSuccessfulApply(),
-				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
-			),
-			expected: map[string]*expectedCondition{
-				ConditionInstalled: nil,
-				ConditionScaled:    nil,
+			// The running version keeps its last accepted settings (CUR-04); its rejection describes
+			// it, not the update.
+			name: "settings rejected by the running version while the new one prepares",
+			report: func() model.Report {
+				r := candidate(model.CandidateReport{})()
+				r.Current.Configured = failed(model.ReasonSettingsInvalid)
+				return r
 			},
+			want:    healthy(nil),
+			summary: stateUpdating,
+		},
+		{
+			name:    "settings rejected by the new version",
+			report:  candidate(model.CandidateReport{Blocked: model.ReasonSettingsInvalid}),
+			want:    healthy(map[string]cond{ConditionUpdateInstalled: wantFalse(model.ReasonSettingsInvalid)}),
+			summary: stateUpdating,
+		},
+		{
+			name:    "download failed",
+			report:  candidate(model.CandidateReport{Step: "attach", Reason: model.ReasonAttachFailed}),
+			want:    healthy(map[string]cond{ConditionUpdateInstalled: wantFalse(model.ReasonAttachFailed)}),
+			summary: stateUpdating,
+		},
+		{
+			name:       "preparing: an earlier UpdateInstalled stays",
+			report:     candidate(model.CandidateReport{}),
+			conditions: with(installedConditions(), updateInstalled(metav1.ConditionTrue, ConditionUpdateInstalled)),
+			want:       healthy(map[string]cond{ConditionUpdateInstalled: wantTrue(ConditionUpdateInstalled)}),
+			summary:    stateUpdating,
+		},
+		{
+			name:       "activated, the new version has not reported: in progress, an earlier True is not kept",
+			report:     activated(v1, nil),
+			conditions: with(installedConditions(), updateInstalled(metav1.ConditionTrue, ConditionUpdateInstalled)),
+			want:       healthy(map[string]cond{ConditionUpdateInstalled: wantFalse(model.ReasonApplyingManifests)}),
+			summary:    stateUpdating,
+		},
+		{
+			name:           "the new version's run succeeded",
+			report:         activated(v2, nil),
+			conditions:     with(installedConditions(), updateInstalled(metav1.ConditionFalse, model.ReasonApplyingManifests)),
+			currentVersion: v2,
+			want:           healthy(map[string]cond{ConditionUpdateInstalled: wantTrue(ConditionUpdateInstalled)}),
+			summary:        stateReady,
+		},
+		{
+			name: "the new version's run failed: Update failed",
+			report: activated(v2, func(c *model.CurrentReport) {
+				c.HooksProcessed = failed(model.ReasonHookFailed)
+			}),
+			conditions:     with(installedConditions(), updateInstalled(metav1.ConditionFalse, model.ReasonApplyingManifests)),
+			currentVersion: v2,
+			want: healthy(map[string]cond{
+				ConditionUpdateInstalled:      wantFalse(model.ReasonHookFailed),
+				ConditionReady:                wantFalse(model.ReasonHookFailed),
+				ConditionScaled:               wantUnknown(model.ReasonHookFailed),
+				ConditionManaged:              wantFalse(model.ReasonHookFailed),
+				ConditionConfigurationApplied: wantFalse(model.ReasonHookFailed),
+			}),
+			summary: stateFailed,
+		},
+		{
+			name:           "a failed update succeeds on a later run",
+			report:         activated(v2, nil),
+			conditions:     with(installedConditions(), updateInstalled(metav1.ConditionFalse, model.ReasonHookFailed)),
+			currentVersion: v2,
+			want:           healthy(map[string]cond{ConditionUpdateInstalled: wantTrue(ConditionUpdateInstalled)}),
+			summary:        stateReady,
+		},
+		{
+			name:           "activation and success seen at once: the version change keeps the update phase",
+			report:         activated(v2, nil),
+			currentVersion: v1,
+			want:           healthy(map[string]cond{ConditionUpdateInstalled: wantTrue(ConditionUpdateInstalled)}),
+			summary:        stateReady,
+		},
+		{
+			name:           "a blocked update reverted: UpdateInstalled settles",
+			report:         func() model.Report { return running(v1) },
+			conditions:     with(installedConditions(), updateInstalled(metav1.ConditionFalse, model.ReasonWaitingWindow)),
+			currentVersion: v1,
+			want:           healthy(map[string]cond{ConditionUpdateInstalled: wantTrue(ConditionUpdateInstalled)}),
+			summary:        stateReady,
 		},
 	}
 
-	runTestCases(t, cases)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conditions := tt.conditions
+			if conditions == nil {
+				conditions = installedConditions()
+			}
+
+			currentVersion := tt.currentVersion
+			if currentVersion == "" {
+				currentVersion = v1
+			}
+
+			module := project(t, projection{
+				source:         fakeSource{report: tt.report(), known: true, obs: ready},
+				conditions:     conditions,
+				currentVersion: currentVersion,
+			})
+
+			assertConditions(t, module, tt.want)
+			assert.Equal(t, tt.summary, module.Status.Summary.State)
+		})
+	}
 }
 
-// withSettingsChanged marks new settings that the Run task has not applied yet.
-func withSettingsChanged() mappingOption {
-	return withInternalCondition(intConfigured, metav1.ConditionFalse, string(intstatus.ConditionReasonSettingsChanged))
+func TestDisable(t *testing.T) {
+	tests := []struct {
+		name    string
+		report  func() model.Report
+		want    map[string]cond
+		summary string
+		message string
+	}{
+		{
+			name: "decided, the release is still installed: Suspended",
+			report: func() model.Report {
+				r := running(v1)
+				r.Current.Decision = disabled(reasonDisabled)
+				return r
+			},
+			want:    healthy(nil),
+			summary: stateSuspended,
+			message: summarySuspendedDisabled.message,
+		},
+		{
+			name: "the disable keeps failing: named in the summary",
+			report: func() model.Report {
+				r := running(v1)
+				r.Current.Decision = disabled("DependencyNotEnabled")
+				r.Current.ManifestsApplied = failed(model.ReasonReleaseDeleteFailed)
+				return r
+			},
+			want: healthy(map[string]cond{
+				ConditionReady:                wantFalse(model.ReasonReleaseDeleteFailed),
+				ConditionManaged:              wantFalse(model.ReasonReleaseDeleteFailed),
+				ConditionConfigurationApplied: wantFalse(model.ReasonReleaseDeleteFailed),
+			}),
+			summary: stateSuspended,
+			message: summarySuspendedRequirements.message + "; the disable is failing: ReleaseDeleteFailed: boom",
+		},
+		{
+			name: "disabled: Installed False with the scheduler's reason",
+			report: func() model.Report {
+				r := running(v1)
+				r.Current.Decision = disabled("DisabledByBundle")
+				r.Current.Installed = model.FalseCondition(model.ReasonDisabled, "")
+				return r
+			},
+			want:    map[string]cond{ConditionInstalled: wantFalse("DisabledByBundle")},
+			summary: stateSuspended,
+			message: summarySuspendedDisabled.message,
+		},
+		{
+			name: "disabled by the floor: no reason, Disabled",
+			report: func() model.Report {
+				r := running(v1)
+				r.Current.Decision = disabled("")
+				r.Current.Installed = model.FalseCondition(model.ReasonDisabled, "")
+				return r
+			},
+			want:    map[string]cond{ConditionInstalled: wantFalse(reasonDisabled)},
+			summary: stateSuspended,
+			message: summarySuspendedDisabled.message,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			module := project(t, projection{
+				source:         fakeSource{report: tt.report(), known: true, obs: ready},
+				conditions:     installedConditions(),
+				currentVersion: v1,
+			})
+
+			assertConditions(t, module, tt.want)
+			assert.Equal(t, tt.summary, module.Status.Summary.State)
+			assert.Equal(t, tt.message, module.Status.Summary.Message)
+			require.NotNil(t, module.Status.Enabled)
+			assert.False(t, *module.Status.Enabled)
+		})
+	}
 }
 
-// TestSettingsChanged covers the window between a settings change and the Run
-// task that applies it: Ready, Managed and ConfigurationApplied go False/SettingsChanged.
-func TestSettingsChanged(t *testing.T) {
-	reason := string(intstatus.ConditionReasonSettingsChanged)
+func TestGlobal(t *testing.T) {
+	report := model.Report{Current: model.CurrentReport{
+		Configured:       trueCondition(),
+		HooksProcessed:   trueCondition(),
+		ManifestsApplied: trueCondition(),
+		AppliedValues:    map[string]any{"modules": map[string]any{}},
+	}}
 
-	cases := []testCase{
-		{
-			name: "reconcile resets Ready, Managed and ConfigurationApplied",
-			opts: running(withSettingsChanged()),
-			expected: map[string]*expectedCondition{
-				ConditionReady:                {status: metav1.ConditionFalse, reason: reason},
-				ConditionManaged:              {status: metav1.ConditionFalse, reason: reason},
-				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: reason},
-				ConditionScaled:               {status: metav1.ConditionTrue, reason: ConditionScaled},
-				ConditionInstalled:            nil,
-			},
-		},
-		{
-			name: "reconcile keeps SettingsChanged while manifests apply",
-			opts: running(
-				withSettingsChanged(),
-				withInternalCondition(intManifestsApplied, metav1.ConditionFalse, string(intstatus.ConditionReasonApplyingManifests)),
-			),
-			expected: map[string]*expectedCondition{
-				ConditionReady:                {status: metav1.ConditionFalse, reason: reason},
-				ConditionManaged:              {status: metav1.ConditionFalse, reason: reason},
-				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: reason},
-			},
-		},
-		{
-			name: "a failure of the applying run is not masked",
-			opts: running(
-				withSettingsChanged(),
-				withInternalCondition(intManifestsApplied, metav1.ConditionFalse, "HelmFailed"),
-			),
-			expected: map[string]*expectedCondition{
-				ConditionReady:                {status: metav1.ConditionFalse, reason: "ManifestsApplyFailed"},
-				ConditionManaged:              {status: metav1.ConditionFalse, reason: "ManifestsApplyFailed"},
-				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: "ManifestsApplyFailed"},
-			},
-		},
-		{
-			name: "invalid settings replace the marker",
-			opts: running(withInternalCondition(intConfigured, metav1.ConditionFalse, "InvalidSettings")),
-			expected: map[string]*expectedCondition{
-				ConditionReady:                {status: metav1.ConditionTrue, reason: ConditionReady},
-				ConditionManaged:              {status: metav1.ConditionTrue, reason: ConditionManaged},
-				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: "SettingsInvalid"},
-			},
-		},
-		{
-			name: "update resets Ready, Managed and ConfigurationApplied",
-			opts: running(withVersionChanged(), withSettingsChanged()),
-			expected: map[string]*expectedCondition{
-				ConditionReady:                {status: metav1.ConditionFalse, reason: reason},
-				ConditionManaged:              {status: metav1.ConditionFalse, reason: reason},
-				ConditionConfigurationApplied: {status: metav1.ConditionFalse, reason: reason},
-			},
-		},
-		{
-			name: "first install is left to Installed",
-			opts: []mappingOption{withSettingsChanged()},
-			expected: map[string]*expectedCondition{
-				ConditionInstalled:            nil,
-				ConditionReady:                nil,
-				ConditionManaged:              nil,
-				ConditionConfigurationApplied: nil,
-			},
-		},
-		{
-			name: "applied settings restore the conditions",
-			opts: running(),
-			expected: map[string]*expectedCondition{
-				ConditionReady:                {status: metav1.ConditionTrue, reason: ConditionReady},
-				ConditionManaged:              {status: metav1.ConditionTrue, reason: ConditionManaged},
-				ConditionConfigurationApplied: {status: metav1.ConditionTrue, reason: ConditionConfigurationApplied},
-			},
-		},
-	}
+	module := project(t, projection{name: globalModuleName, source: fakeSource{report: report, known: true}})
 
-	runTestCases(t, cases)
+	assertConditions(t, module, healthy(nil))
+	assert.Equal(t, stateReady, module.Status.Summary.State)
+	require.NotNil(t, module.Status.Enabled)
+	assert.True(t, *module.Status.Enabled)
+	assert.Empty(t, module.Status.CurrentVersion.Version, "Global has no version of its own")
+	assert.JSONEq(t, `{"modules":{}}`, string(module.Status.LastAppliedConfiguration.Raw))
 }
 
-// withMaintenanceMode sets the MaintenanceMode the last successful Run recorded.
-func withMaintenanceMode(status metav1.ConditionStatus) mappingOption {
-	reason := ""
-	if status == metav1.ConditionTrue {
-		reason = string(intstatus.ConditionReasonNoResourceReconciliation)
+func TestDeleting(t *testing.T) {
+	report := running(v2)
+	report.RemoveError = "delete release: forbidden"
+
+	module := project(t, projection{
+		source:         fakeSource{report: report, known: true, obs: ready},
+		conditions:     installedConditions(),
+		currentVersion: v1,
+		deleting:       true,
+	})
+
+	want := map[string]cond{}
+	for _, c := range []string{ConditionInstalled, ConditionUpdateInstalled, ConditionReady, ConditionScaled, ConditionManaged, ConditionConfigurationApplied} {
+		want[c] = wantFalse("Deleting")
 	}
 
-	return withInternalCondition(intMaintenanceMode, status, reason)
+	assertConditions(t, module, want)
+	assert.Equal(t, stateDeleting, module.Status.Summary.State)
+	assert.Contains(t, module.Status.Summary.Message, "delete release: forbidden")
+	assert.Equal(t, v1, module.Status.CurrentVersion.Version, "nothing is committed on the way out")
 }
 
-func TestMaintenanceMode(t *testing.T) {
-	installed := func(opts ...mappingOption) []mappingOption {
-		return append(append(withSuccessfulApply(),
-			withExternalCondition(ConditionInstalled, metav1.ConditionTrue, ConditionInstalled)), opts...)
-	}
+func TestDeletingSummaryNamesTheUninstallFailure(t *testing.T) {
+	report := running(v1)
+	report.Current.HooksProcessed = model.FalseCondition(model.ReasonHookFailed, "beforeDeleteHelm: boom")
 
-	cases := []testCase{
-		{
-			name: "applied maintenance breaks Managed only",
-			opts: installed(withMaintenanceMode(metav1.ConditionTrue)),
-			expected: map[string]*expectedCondition{
-				ConditionManaged:              {status: metav1.ConditionFalse, reason: string(intstatus.ConditionReasonNoResourceReconciliation)},
-				ConditionReady:                {status: metav1.ConditionTrue, reason: ConditionReady},
-				ConditionScaled:               {status: metav1.ConditionTrue, reason: ConditionScaled},
-				ConditionConfigurationApplied: {status: metav1.ConditionTrue, reason: ConditionConfigurationApplied},
-			},
-		},
-		{
-			name: "managed mode keeps Managed true",
-			opts: installed(withMaintenanceMode(metav1.ConditionFalse)),
-			expected: map[string]*expectedCondition{
-				ConditionManaged: {status: metav1.ConditionTrue, reason: ConditionManaged},
-			},
-		},
-		{
-			name: "unknown mode before the first run keeps Managed true",
-			opts: installed(withMaintenanceMode(metav1.ConditionUnknown)),
-			expected: map[string]*expectedCondition{
-				ConditionManaged: {status: metav1.ConditionTrue, reason: ConditionManaged},
-			},
-		},
-		{
-			name: "a failure outranks maintenance",
-			opts: installed(withMaintenanceMode(metav1.ConditionTrue),
-				withInternalCondition(string(intstatus.ConditionManifestsApplied), metav1.ConditionFalse, "boom")),
-			expected: map[string]*expectedCondition{
-				ConditionManaged: {status: metav1.ConditionFalse, reason: "ManifestsApplyFailed"},
-			},
-		},
-		{
-			name: "maintenance outranks pending settings",
-			opts: installed(withMaintenanceMode(metav1.ConditionTrue),
-				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionFalse, string(intstatus.ConditionReasonSettingsChanged))),
-			expected: map[string]*expectedCondition{
-				ConditionManaged: {status: metav1.ConditionFalse, reason: string(intstatus.ConditionReasonNoResourceReconciliation)},
-			},
-		},
-	}
+	module := project(t, projection{
+		source:         fakeSource{report: report, known: true, obs: ready},
+		conditions:     installedConditions(),
+		currentVersion: v1,
+		deleting:       true,
+	})
 
-	runTestCases(t, cases)
+	assert.Equal(t, stateDeleting, module.Status.Summary.State)
+	assert.Equal(t, summaryDeleting.message+": HookFailed: beforeDeleteHelm: boom", module.Status.Summary.Message)
 }
 
-func TestMaintenanceModeKeepsSummaryReady(t *testing.T) {
-	state := condmap.State{
-		Internal: make(map[string]metav1.Condition),
-		External: make(map[string]metav1.Condition),
+func TestUnknownKeepsEachExternalCondition(t *testing.T) {
+	// Each condition carries a value no current input would produce; a restart reports nothing,
+	// so every one of them stays.
+	for _, condType := range []string{
+		ConditionInstalled, ConditionUpdateInstalled, ConditionReady, ConditionScaled, ConditionManaged, ConditionConfigurationApplied,
+	} {
+		t.Run(condType, func(t *testing.T) {
+			status := metav1.ConditionFalse
+			if condType == ConditionInstalled {
+				status = metav1.ConditionTrue // the gate: False would remove the others
+			}
+
+			previous := metav1.Condition{Type: condType, Status: status, Reason: "Previous", Message: "kept"}
+			conditions := with(installedConditions(), previous)
+
+			module := project(t, projection{
+				source:         fakeSource{known: true, report: model.Report{CurrentVersion: v1}},
+				conditions:     conditions,
+				currentVersion: v1,
+			})
+
+			got := meta.FindStatusCondition(module.Status.Conditions, condType)
+			require.NotNil(t, got)
+			assert.Equal(t, previous.Status, got.Status)
+			assert.Equal(t, previous.Reason, got.Reason)
+			assert.Equal(t, previous.Message, got.Message)
+		})
 	}
-
-	opts := append(withSuccessfulApply(),
-		withExternalCondition(ConditionInstalled, metav1.ConditionTrue, ConditionInstalled),
-		withMaintenanceMode(metav1.ConditionTrue))
-	for _, opt := range opts {
-		opt(&state)
-	}
-
-	summary, _, _ := summarize(state)
-	assert.Equal(t, stateReady, summary)
-}
-
-func TestNoWorkloadsSummaryReady(t *testing.T) {
-	state := condmap.State{
-		Internal: make(map[string]metav1.Condition),
-		External: make(map[string]metav1.Condition),
-	}
-
-	opts := append(withSuccessfulApply(),
-		withInternalCondition(intScaled, metav1.ConditionTrue, string(intstatus.ConditionReasonNoWorkloads)))
-	for _, opt := range opts {
-		opt(&state)
-	}
-
-	summary, _, _ := summarize(state)
-	assert.Equal(t, stateReady, summary)
 }

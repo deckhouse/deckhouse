@@ -20,6 +20,7 @@ import (
 	"maps"
 
 	"github.com/Masterminds/semver/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 )
@@ -73,8 +74,7 @@ const (
 // Annotations of the packages.deckhouse.io vocabulary.
 const (
 	// PackageAnnotationManagedBy marks a Helm release as owned by the package release
-	// layer; PackageAnnotationManagedByValue is the only value it carries. Releases are
-	// looked up by this pair on cleanup.
+	// layer; PackageAnnotationManagedByValue is the only value it carries.
 	PackageAnnotationManagedBy      = "packages.deckhouse.io/managed-by"
 	PackageAnnotationManagedByValue = "deckhouse"
 
@@ -88,11 +88,17 @@ const (
 	// PackageAnnotationRegistrySpecChanged out.
 	PackageAnnotationRegistrySpecChecksum = "packages.deckhouse.io/registry-spec-checksum"
 
-	// PackageAnnotationEndpointDescription marks an Ingress in the application chart as
-	// an application endpoint and holds its description; the hosts and paths of that
-	// Ingress are reflected in status.urls.
-	PackageAnnotationEndpointDescription = "packages.deckhouse.io/application-endpoint-description"
+	// PackageAnnotationForceRemove, set to "true" on an Application or Module being deleted, makes
+	// the next boot skip restoring it: its release is deleted by name, without hooks or a purge of
+	// its leftovers. The way out for a package that cannot be restored, e.g. one missing from the
+	// registry. No effect on a resource not being deleted.
+	PackageAnnotationForceRemove = "packages.deckhouse.io/force-remove"
 )
+
+// IsForceRemoved reports whether obj is being deleted with PackageAnnotationForceRemove set to "true".
+func IsForceRemoved(obj metav1.Object) bool {
+	return !obj.GetDeletionTimestamp().IsZero() && obj.GetAnnotations()[PackageAnnotationForceRemove] == "true"
+}
 
 // PackageReleaseChannels maps repository name -> release channel name -> version.
 type PackageReleaseChannels map[string]map[string]string

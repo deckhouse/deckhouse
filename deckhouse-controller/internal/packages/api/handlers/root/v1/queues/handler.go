@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// Package queues serves the task queues of the package runtime.
+// Package queues serves the hook lanes of the package engine (the queues of the hooks).
 package queues
 
 import (
@@ -22,9 +22,9 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api"
 )
 
-// Provider provides task queue state to the endpoints.
+// Provider provides the hook lanes' state to the endpoints.
 type Provider interface {
-	// DumpQueues returns the queues of one package, or every queue when name is empty.
+	// DumpQueues returns the lanes of one package, or of every package when name is empty.
 	DumpQueues(name string) any
 }
 
@@ -43,8 +43,8 @@ type handler struct {
 	provider Provider
 }
 
-// dump serves every queue with its tasks, or the queues of the package named by
-// the name query parameter.
+// dump serves every lane with its state, or the lanes of the package named by the
+// name query parameter.
 func (h *handler) dump(w http.ResponseWriter, req *http.Request) {
 	api.EncodeResponse(w, req, h.provider.DumpQueues(req.URL.Query().Get("name")))
 }

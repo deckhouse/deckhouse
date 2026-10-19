@@ -22,11 +22,17 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 )
 
-const ingressKind = "Ingress"
+const (
+	ingressKind = "Ingress"
+
+	// annotationEndpointDescription marks an Ingress in the application chart as
+	// an application endpoint and holds its description; the hosts and paths of that
+	// Ingress are reflected in status.urls.
+	annotationEndpointDescription = "packages.deckhouse.io/application-endpoint-description"
+)
 
 // endpointIngress is a minimal projection of an Ingress manifest, just enough
 // to detect the endpoint annotation and build URLs from rules and TLS hosts.
@@ -59,10 +65,10 @@ type endpointIngress struct {
 // description). The scheme is https when the host is covered by spec.tls,
 // http otherwise. The result is deduplicated and sorted; undecodable
 // documents are skipped.
-func extractEndpointURLs(renderedManifests string) []status.URL {
+func extractEndpointURLs(renderedManifests string) []observed.URL {
 	dec := yaml.NewYAMLOrJSONDecoder(strings.NewReader(renderedManifests), 4096)
 
-	var urls []status.URL
+	var urls []observed.URL
 	for {
 		ing := new(endpointIngress)
 		if err := dec.Decode(ing); err != nil {
@@ -78,7 +84,7 @@ func extractEndpointURLs(renderedManifests string) []status.URL {
 			continue
 		}
 
-		value, set := ing.Metadata.Annotations[v1alpha1.PackageAnnotationEndpointDescription]
+		value, set := ing.Metadata.Annotations[annotationEndpointDescription]
 		if !set || value == "false" {
 			continue
 		}
@@ -107,7 +113,7 @@ func extractEndpointURLs(renderedManifests string) []status.URL {
 
 			paths := rule.HTTP.Paths
 			if len(paths) == 0 {
-				urls = append(urls, status.URL{URL: scheme + "://" + rule.Host + "/", Description: description})
+				urls = append(urls, observed.URL{URL: scheme + "://" + rule.Host + "/", Description: description})
 				continue
 			}
 
@@ -116,12 +122,12 @@ func extractEndpointURLs(renderedManifests string) []status.URL {
 				if !strings.HasPrefix(path, "/") {
 					path = "/" + path
 				}
-				urls = append(urls, status.URL{URL: scheme + "://" + rule.Host + path, Description: description})
+				urls = append(urls, observed.URL{URL: scheme + "://" + rule.Host + path, Description: description})
 			}
 		}
 	}
 
-	slices.SortFunc(urls, func(a, b status.URL) int {
+	slices.SortFunc(urls, func(a, b observed.URL) int {
 		return cmp.Or(cmp.Compare(a.URL, b.URL), cmp.Compare(a.Description, b.Description))
 	})
 

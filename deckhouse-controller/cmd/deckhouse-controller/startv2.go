@@ -119,16 +119,17 @@ func startV2(logger *log.Logger) func(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("create deckhouse controller: %w", err)
 		}
 
-		manager := deckhouse.GetRuntime()
+		packageEngine := deckhouse.Engine()
 
 		deps := apiv1.Deps{
-			Packages:     manager,
-			Queues:       manager,
-			Scheduler:    manager,
+			Packages:     packageEngine,
+			Queues:       packageEngine,
+			Scheduler:    packageEngine,
+			Converge:     packageEngine,
 			Requirements: d8requirements.DumpValues,
 		}
 
-		server := apiserver.New(ms, manager, deps, logger)
+		server := apiserver.New(ms, packageEngine, deps, logger)
 		if err := server.Start(); err != nil {
 			return fmt.Errorf("start server: %w", err)
 		}
@@ -203,6 +204,8 @@ func runV2WithLeaderElection(ctx context.Context, shutdown func(), server *apise
 
 				if err := runV2(leaderCtx, deckhouse, client, logger); err != nil && leaderCtx.Err() == nil {
 					logger.Error("run", log.Err(err))
+					// runV2 returned, so Start did: stop as the non-HA path does before it exits
+					shutdown()
 					os.Exit(1)
 				}
 			},

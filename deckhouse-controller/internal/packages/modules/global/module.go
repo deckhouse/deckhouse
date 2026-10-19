@@ -15,11 +15,12 @@
 package global
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"maps"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -43,10 +44,9 @@ import (
 	sdkutils "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
@@ -55,20 +55,26 @@ import (
 )
 
 type Module struct {
-	name string // Package name
-	path string // path to the package dir on fs
+	name    string          // Package name
+	path    string          // path to the package dir on fs
+	version *semver.Version // version is the deckhouse image's: the global module ships in it
 
 	hooks     *hooks.GlobalStorage  // Hook storage with indices
 	values    *values.Storage       // Values storage with layering
 	converter *conversion.Converter // Schema version converter for settings
 
-	// running tracks whether OnStartup hooks have completed successfully.
-	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
-	running atomic.Bool
-
-	// initialized tracks whether hook controllers have been built, so the Enable
-	// task skips re-initialization on every reschedule.
-	initialized atomic.Bool
+	// initialized: the hook controllers are built; only the snapshots dump reads it. Guarded by
+	// hooksMu.
+	initialized bool
+	// hooksMu guards the hook controllers and initialized against the debug snapshots dump:
+	// InitializeHooks and DisableHooks write under it. Hook runs read the controllers without it:
+	// the global hooks are disabled only by the lanes' stop (hooklane: a failed
+	// synchronization, Global's exit), which waits for every run first, so a controller is never
+	// cleared under a running hook.
+	hooksMu sync.RWMutex
+	// unlocked are the monitors whose events are unlocked, the only ones the snapshots dump reads;
+	// guarded by hooksMu.
+	unlocked hooks.Unlocked
 
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
@@ -76,14 +82,20 @@ type Module struct {
 
 	metricStorage metricsstorage.Storage
 
-	// dynamicMu guards dynamicEnabled and configEnabled: global hooks and the
-	// config controller write them while the scheduler reads the resolved state
-	// concurrently through IsEnabled. It is a leaf lock (no global method calls
-	// back into the scheduler or runtime), so it is safe to take under either
-	// r.mu (writer) or the scheduler's lock (reader) without ordering cycles.
-	dynamicMu      sync.RWMutex
-	dynamicEnabled map[string]bool // Dynamic enabled state set by global hooks, keyed by kebab-case module name.
-	configEnabled  map[string]bool // Explicit ModuleConfig enabled intent, keyed by kebab-case module name; key present iff the user expressed an opinion.
+	// dynamicMu guards dynamicEnabled: global hooks write it, the scheduler reads it through
+	// IsEnabled. A leaf lock (onDynamicChange is called after it is released), so the scheduler
+	// may take it under its own lock.
+	dynamicMu sync.RWMutex
+	// dynamicEnabled is the global hooks' signal by kebab-case module name; an absent key is no
+	// signal, as addon-operator's DynamicallyEnabled extender keeps it.
+	dynamicEnabled map[string]bool
+
+	// onDynamicChange is Config.OnDynamicChange; nil when nobody listens.
+	onDynamicChange func()
+
+	// imagesDigests are the image digests of the enabled modules by module name, replaced whole by
+	// SetModulesImagesDigests; module renders read them concurrently.
+	imagesDigests atomic.Pointer[map[string]map[string]string]
 
 	logger *log.Logger
 }
@@ -92,6 +104,9 @@ type Module struct {
 type Config struct {
 	Path         string            // Path to package dir
 	StaticValues addonutils.Values // Static values from values.yaml files
+	// Version is the deckhouse image's version, the one the global Module's spec names; "v0.0.0" when
+	// it does not parse.
+	Version string
 
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
@@ -105,6 +120,13 @@ type Config struct {
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
+
+	// OnDynamicChange is called after a global hook changed a module's signal (set, flipped or
+	// removed; see filterEnabledFromValuesPatch), from the goroutine that ran the hook, with no lock
+	// of the module held. Why: the signal is stripped from the values patch, so the values checksum
+	// does not change and nothing else tells the scheduler to read IsEnabled again; the package
+	// engine wires it to its recompute. Must not block for long. Nil: nobody listens.
+	OnDynamicChange func()
 }
 
 // NewModuleByConfig creates a new Module instance with the specified configuration.
@@ -115,16 +137,22 @@ func NewModuleByConfig(cfg *Config, logger *log.Logger) (*Module, error) {
 	m := new(Module)
 
 	m.name = "global"
-	m.running = atomic.Bool{}
 	m.dynamicEnabled = make(map[string]bool)
-	m.configEnabled = make(map[string]bool)
 
 	m.path = cfg.Path
 	m.converter = cfg.Conversions
+
+	version, err := semver.NewVersion(cfg.Version)
+	if err != nil {
+		version = semver.MustParse("v0.0.0")
+	}
+
+	m.version = version
 	m.patcher = cfg.Patcher
 	m.metricStorage = cfg.MetricStorage
 	m.scheduleManager = cfg.ScheduleManager
 	m.kubeEventsManager = cfg.KubeEventsManager
+	m.onDynamicChange = cfg.OnDynamicChange
 	m.logger = logger
 
 	m.hooks = hooks.NewGlobalStorage()
@@ -132,7 +160,6 @@ func NewModuleByConfig(cfg *Config, logger *log.Logger) (*Module, error) {
 		return nil, fmt.Errorf("add hooks: %v", err)
 	}
 
-	var err error
 	m.values, err = values.NewStorage(m.name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
 		return nil, fmt.Errorf("new values storage: %v", err)
@@ -173,9 +200,9 @@ func (m *Module) GetName() string {
 	return m.name
 }
 
-// GetVersion return the package version
+// GetVersion returns the deckhouse image's version (Config.Version).
 func (m *Module) GetVersion() *semver.Version {
-	return semver.MustParse("v0.0.0")
+	return m.version
 }
 
 // GetConstraints returns the scheduler constraints for the global module: it
@@ -194,11 +221,18 @@ func (m *Module) GetPath() string {
 	return m.path
 }
 
-// GetHookSnapshotsDump returns a snapshot of hook controller snapshots.
+// GetHookSnapshotsDump returns the snapshots of the hooks' unlocked monitors (hooks.SnapshotsDump).
 func (m *Module) GetHookSnapshotsDump() map[string]any {
+	m.hooksMu.RLock()
+	defer m.hooksMu.RUnlock()
+
 	snapshots := make(map[string]any)
+	if !m.initialized {
+		return snapshots
+	}
+
 	for _, hook := range m.hooks.GetHooks() {
-		snapshots[hook.GetName()] = hook.GetHookController().SnapshotsDump()
+		snapshots[hook.GetName()] = hooks.SnapshotsDump(hook.GetHookConfig().OnKubernetesEvents, m.kubeEventsManager, m.unlocked)
 	}
 
 	return snapshots
@@ -210,23 +244,48 @@ func (m *Module) GetValuesChecksum() string {
 	return m.values.GetValuesChecksum()
 }
 
-// GetSettingsChecksum returns a checksum of the current config values.
-// Used to detect if settings changed.
-func (m *Module) GetSettingsChecksum() string {
-	return m.values.GetSettingsChecksum()
-}
-
 // GetValues returns values for rendering.
 //
 // Global values are exposed both flat (.Values.replicas) and under the "global"
 // key (.Values.global.replicas) so templates written for the old addon-operator
 // layout keep working.
+//
+// The enabled modules' image digests are merged into modulesImages.digests here, over the ones the
+// global hook read from the image, and not kept in the values: GetValuesChecksum, Global's Output,
+// does not hash them, so a module update reruns only that module's subscribers.
 func (m *Module) GetValues() addonutils.Values {
-	v := m.values.GetValues()
+	v := addonutils.MergeValues(m.values.GetValues(), m.imagesDigestsValues())
 	return addonutils.MergeValues(
 		v,
 		addonutils.Values{addonutils.ModuleNameToValuesKey(m.name): v},
 	)
+}
+
+// SetModulesImagesDigests replaces the image digests of the enabled modules, by module name
+// (kebab-case): charts on the legacy helm_lib read another module's images from
+// modulesImages.digests by its camelCase name.
+func (m *Module) SetModulesImagesDigests(digests map[string]map[string]string) {
+	m.imagesDigests.Store(&digests)
+}
+
+// imagesDigestsValues is modulesImages.digests built from the published digests; nil without any.
+func (m *Module) imagesDigestsValues() addonutils.Values {
+	published := m.imagesDigests.Load()
+	if published == nil || len(*published) == 0 {
+		return nil
+	}
+
+	digests := make(map[string]any, len(*published))
+	for name, images := range *published {
+		byImage := make(map[string]any, len(images))
+		for image, digest := range images {
+			byImage[image] = digest
+		}
+
+		digests[addonutils.ModuleNameToValuesKey(name)] = byImage
+	}
+
+	return addonutils.Values{"modulesImages": map[string]any{"digests": digests}}
 }
 
 // ValidateSettings converts settings to the latest schema version (if a converter
@@ -234,11 +293,11 @@ func (m *Module) GetValues() addonutils.Values {
 func (m *Module) ValidateSettings(_ context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
 	settings, err := m.convertSettings(settingsVersion, settings)
 	if err != nil {
-		return settingscheck.Result{}, err
+		return settingscheck.Result{Message: err.Error()}, nil
 	}
 
 	if err = m.values.ValidateSettings(settings); err != nil {
-		return settingscheck.Result{}, err
+		return settingscheck.Result{Message: err.Error()}, nil
 	}
 
 	// apply defaults from config values spec
@@ -294,18 +353,27 @@ func (m *Module) convertSettings(settingsVersion int, settings addonutils.Values
 	return converted, nil
 }
 
+// LatestSettingsVersion returns the latest settings-schema version, the one effective settings
+// are in; 0 without a converter.
+func (m *Module) LatestSettingsVersion() int {
+	if m.converter == nil {
+		return 0
+	}
+
+	return m.converter.LatestVersion()
+}
+
 // GetSettings returns the effective settings: user config merged with
 // config-schema defaults. Same payload exposed to templates as .Module.Settings.
 func (m *Module) GetSettings() addonutils.Values {
 	return m.values.GetSettings()
 }
 
-// SetMaintenance is a no-op: the synthetic global package is always managed and has
-// no maintenance mode. It exists only to satisfy the Configure task's interface.
-func (m *Module) SetMaintenance(_ nelm.MaintenanceState) {}
-
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
 func (m *Module) InitializeHooks() {
+	m.hooksMu.Lock()
+	defer m.hooksMu.Unlock()
+
 	for _, hook := range m.hooks.GetHooks() {
 		hookCtrl := hookcontroller.NewHookController()
 		hookCtrl.InitKubernetesBindings(hook.GetHookConfig().OnKubernetesEvents, m.kubeEventsManager, m.logger)
@@ -315,21 +383,65 @@ func (m *Module) InitializeHooks() {
 		hook.WithTmpDir(os.TempDir())
 	}
 
-	m.initialized.Store(true)
+	m.initialized = true
 }
 
-// HooksInitialized reports whether InitializeHooks has built the hook controllers.
-func (m *Module) HooksInitialized() bool {
-	return m.initialized.Load()
+// DisableHooks stops the hook bindings and drops the controllers, so the next InitializeHooks starts
+// fresh. Called by the lanes' stop (hooklane): after a synchronization that failed
+// midway and when Global exits.
+func (m *Module) DisableHooks() {
+	m.hooksMu.Lock()
+	defer m.hooksMu.Unlock()
+
+	m.initialized = false
+	m.unlocked = nil
+
+	for _, hook := range m.hooks.GetHooksByBinding(shtypes.Schedule) {
+		if ctrl := hook.GetHookController(); ctrl != nil {
+			ctrl.DisableScheduleBindings()
+		}
+	}
+
+	for _, hook := range m.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent) {
+		if ctrl := hook.GetHookController(); ctrl != nil {
+			ctrl.DisableKubernetesBindings()
+		}
+	}
+
+	for _, hook := range m.hooks.GetHooks() {
+		hook.WithHookController(nil)
+	}
+}
+
+// GetHooksQueues returns the queues of the global hooks' schedule and Kubernetes bindings, sorted
+// and without duplicates.
+func (m *Module) GetHooksQueues() []string {
+	var res []string //nolint:prealloc
+
+	for _, hook := range m.hooks.GetHooksByBinding(shtypes.Schedule) {
+		for _, binding := range hook.GetHookConfig().Schedules {
+			res = append(res, binding.Queue)
+		}
+	}
+
+	for _, hook := range m.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent) {
+		for _, binding := range hook.GetHookConfig().OnKubernetesEvents {
+			res = append(res, binding.Queue)
+		}
+	}
+
+	slices.Sort(res)
+
+	return slices.Compact(res)
 }
 
 // GetHooksByBinding returns the global hooks for the binding as the ControllableHook
-// view, so the shared Enable task can drive global like any package.
+// view, so the hook lanes drive global like any package.
 func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.ControllableHook {
 	return hooks.ToControllable(m.hooks.GetHooksByBinding(binding))
 }
 
-// UnlockKubernetesMonitors called after sync task is completed to unlock getting events
+// UnlockKubernetesMonitors is called after a binding's synchronization ran, so its events flow.
 func (m *Module) UnlockKubernetesMonitors(hook string, monitors ...string) {
 	h := m.hooks.GetHookByName(hook)
 	if h == nil {
@@ -338,6 +450,18 @@ func (m *Module) UnlockKubernetesMonitors(hook string, monitors ...string) {
 
 	for _, monitorID := range monitors {
 		h.GetHookController().UnlockKubernetesEventsFor(monitorID)
+	}
+
+	// Recorded after the unlock: a dump in between skips the monitor rather than read it locked.
+	m.hooksMu.Lock()
+	defer m.hooksMu.Unlock()
+
+	if m.unlocked == nil {
+		m.unlocked = make(hooks.Unlocked, len(monitors))
+	}
+
+	for _, monitorID := range monitors {
+		m.unlocked[monitorID] = struct{}{}
 	}
 }
 
@@ -378,8 +502,6 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
 		}
 	}
-
-	m.running.Store(true)
 
 	return nil
 }
@@ -446,40 +568,35 @@ func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.Bi
 	if valuesPatch, has := hookResult.Patches[addonutils.MemoryValuesPatch]; has && valuesPatch != nil {
 		// filterEnabledFromValuesPatch strips the dynamic-enable signals from the
 		// patch in place, so the apply below sees only real global values.
-		enabled := filterEnabledFromValuesPatch(valuesPatch)
+		signals, filterErr := filterEnabledFromValuesPatch(valuesPatch)
+		if filterErr != nil {
+			return fmt.Errorf("filter enabled signals: %w", filterErr)
+		}
+
 		if err = m.values.ApplyValuesPatchWithLegacyRoot(*valuesPatch); err != nil {
 			return fmt.Errorf("apply hook values patch: %w", err)
 		}
 
-		m.dynamicMu.Lock()
-		maps.Copy(m.dynamicEnabled, enabled)
-		m.dynamicMu.Unlock()
+		// Only a real change is reported: hooks repeat their signals on every run, and each
+		// report recomputes the whole graph.
+		if m.recordDynamicEnabled(signals) && m.onDynamicChange != nil {
+			m.onDynamicChange()
+		}
 	}
 
 	return nil
 }
 
-// filterEnabledFromValuesPatch extracts dynamic module-enable signals from a
-// global hook's values patch and removes them from the patch in place, returning
-// a map of kebab-case module name to enabled state.
+// filterEnabledFromValuesPatch pulls the dynamic enable signals out of a global hook's values patch,
+// in place, and returns them by kebab-case module name: *true or *false for a set, nil for a remove.
 //
-// Global hooks enable other modules by patching a virtual "/<moduleKey>Enabled"
-// key (e.g. "/cniCiliumEnabled") in global values. These keys are not part of
-// the global values schema, so they must not reach the values storage: every
-// operation whose first path segment ends in "Enabled" is treated as an enable
-// signal (mapped to true) — regardless of its Op or Value — then translated to
-// its module name (cni-cilium) and pulled out of the patch. Every remaining
-// operation is a real global value and stays in the patch for the caller to
-// apply.
-//
-// The signal is enable-only by contract: the patch value is intentionally
-// ignored (a "*Enabled" key always maps to true), and the caller merges the
-// result into dynamicEnabled with maps.Copy, which never removes keys. A hook
-// therefore cannot turn a module off — neither by emitting Enabled:false nor by
-// omitting a previously-signaled key. The disable direction comes solely from
-// ModuleConfig (configEnabled), which IsEnabled checks first.
-func filterEnabledFromValuesPatch(valuesPatch *addonutils.ValuesPatch) map[string]bool {
-	enabled := make(map[string]bool)
+// Global hooks signal a module through a virtual "/<moduleKey>Enabled" key (e.g. "/cniCiliumEnabled"),
+// as addon-operator's DynamicallyEnabled extender reads it. The key is no global value: it must not
+// reach the values storage nor its checksum. Every other operation stays in the patch for the caller
+// to apply. A later operation on the same key wins. A set with a value other than a JSON boolean is
+// an error, as in addon-operator.
+func filterEnabledFromValuesPatch(valuesPatch *addonutils.ValuesPatch) (map[string]*bool, error) {
+	signals := make(map[string]*bool)
 	kept := valuesPatch.Operations[:0]
 
 	for _, op := range valuesPatch.Operations {
@@ -489,13 +606,59 @@ func filterEnabledFromValuesPatch(valuesPatch *addonutils.ValuesPatch) map[strin
 			continue
 		}
 
-		key := strings.TrimSuffix(pathParts[1], "Enabled")
-		enabled[strcase.ToKebab(key)] = true
+		module := strcase.ToKebab(strings.TrimSuffix(pathParts[1], "Enabled"))
+		if op.Op == "remove" {
+			signals[module] = nil
+			continue
+		}
+
+		enabled, err := enabledValue(op.Value)
+		if err != nil {
+			return nil, fmt.Errorf("signal of module '%s': %w", module, err)
+		}
+
+		signals[module] = &enabled
 	}
 
 	valuesPatch.Operations = kept
 
-	return enabled
+	return signals, nil
+}
+
+// enabledValue reads a signal's value as addon-operator's ModuleEnabledValue reads a patch value.
+func enabledValue(raw json.RawMessage) (bool, error) {
+	switch strings.ToLower(string(bytes.TrimSpace(raw))) {
+	case "true":
+		return true, nil
+	case "false":
+		return false, nil
+	}
+
+	return false, fmt.Errorf("unsupported enabled value '%s'", raw)
+}
+
+// recordDynamicEnabled applies the signals of one hook run to dynamicEnabled, a nil one dropping its
+// key, and reports whether any module's signal changed.
+func (m *Module) recordDynamicEnabled(signals map[string]*bool) bool {
+	m.dynamicMu.Lock()
+	defer m.dynamicMu.Unlock()
+
+	changed := false
+
+	for name, enabled := range signals {
+		old, had := m.dynamicEnabled[name]
+
+		switch {
+		case enabled == nil && had:
+			delete(m.dynamicEnabled, name)
+			changed = true
+		case enabled != nil && (!had || old != *enabled):
+			m.dynamicEnabled[name] = *enabled
+			changed = true
+		}
+	}
+
+	return changed
 }
 
 // SetEnabledModules inject enabledModules to the global values
@@ -522,7 +685,7 @@ func (m *Module) SetEnabledModules(enabledModules []string) {
 	}
 }
 
-// SetCapabilities injects GVK values, discovered during executing ModuleEnsureCRDs tasks,
+// SetCapabilities injects the GVKs Global's ensureCRDs step installed
 // into the .capabilities global value, exposed to charts as .Platform.capabilities
 func (m *Module) SetCapabilities(apiVersions []string) {
 	if len(apiVersions) == 0 {
@@ -553,59 +716,16 @@ func (m *Module) SetCapabilities(apiVersions []string) {
 	}
 }
 
-// IsEnabled answers a module's resolved enablement intent for the scheduler as a
-// tri-state, folding the two external signals global tracks:
-//   - non-nil true/false - an explicit ModuleConfig opinion; it is authoritative
-//     and can both enable and disable;
-//   - non-nil true       - absent a ModuleConfig opinion, a global hook
-//     dynamically enabled the module (hooks are enable-only);
-//   - nil                - neither signal has an opinion; resolution defers to
-//     the bundle floor.
-//
-// moduleName is the kebab-case module name. Safe for concurrent use: the
-// scheduler reads this while global hooks and the config controller write.
+// IsEnabled is the global hooks' signal of a module (kebab-case name) for the scheduler: the value a
+// hook set last, or nil when none is set. Safe for concurrent use.
 func (m *Module) IsEnabled(moduleName string) *bool {
 	m.dynamicMu.RLock()
 	defer m.dynamicMu.RUnlock()
 
-	if enabled, ok := m.configEnabled[moduleName]; ok {
-		return &enabled
+	enabled, ok := m.dynamicEnabled[moduleName]
+	if !ok {
+		return nil
 	}
 
-	if m.dynamicEnabled[moduleName] {
-		on := true
-		return &on
-	}
-
-	return nil
-}
-
-// SetConfigEnabled records the explicit ModuleConfig enabled intent for a module:
-// a non-nil value sets the tri-state, nil clears any prior opinion. It reports
-// whether the stored state changed, so the caller can decide whether to trigger
-// a reschedule. It is the config-side counterpart to the dynamic enabled state
-// set by global hooks; both feed IsEnabled.
-func (m *Module) SetConfigEnabled(moduleName string, enabled *bool) bool {
-	m.dynamicMu.Lock()
-	defer m.dynamicMu.Unlock()
-
-	prev, had := m.configEnabled[moduleName]
-
-	if enabled == nil {
-		if !had {
-			return false
-		}
-
-		delete(m.configEnabled, moduleName)
-
-		return true
-	}
-
-	if had && prev == *enabled {
-		return false
-	}
-
-	m.configEnabled[moduleName] = *enabled
-
-	return true
+	return &enabled
 }

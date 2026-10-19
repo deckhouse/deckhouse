@@ -125,7 +125,12 @@ func (m *Manager) Add(schedule shtypes.ScheduleEntry) {
 	// Create a new cron job for this crontab expression
 	entryID, err := m.cron.AddFunc(schedule.Crontab, func() {
 		m.logger.Debug("cron job scheduled", slog.String("cron", schedule.Crontab))
-		m.scheduleCh <- schedule.Crontab
+		// The event loop stops draining the channel after Stop; a job fired around Stop must not
+		// block its goroutine forever.
+		select {
+		case m.scheduleCh <- schedule.Crontab:
+		case <-m.ctx.Done():
+		}
 	})
 	if err != nil {
 		// Log invalid crontab expressions instead of silently failing

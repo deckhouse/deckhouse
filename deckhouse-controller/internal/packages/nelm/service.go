@@ -43,7 +43,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm/drift"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
@@ -71,14 +70,6 @@ const (
 	// maxNamedResources bounds how many resources a timeout cause names — the
 	// text reaches a package condition message.
 	maxNamedResources = 5
-)
-
-const (
-	conditionReasonRenderFailed           status.ConditionReason = "RenderFailed"
-	conditionReasonCheckTemplatesFailed   status.ConditionReason = "CheckTemplatesFailed"
-	conditionReasonCreateValuesFileFailed status.ConditionReason = "CreateValuesFileFailed"
-	conditionReasonCheckReleaseFailed     status.ConditionReason = "CheckReleaseFailed"
-	conditionReasonApplyManifestsFailed   status.ConditionReason = "ApplyManifestsFailed"
 )
 
 // MaintenanceState is the reconciliation mode requested for a package. The zero
@@ -134,13 +125,15 @@ type Service struct {
 
 	timeout time.Duration // bounds one release apply
 
-	status *status.Service
+	// observations receive the release progress, the endpoints and "no workloads" (observe.go).
+	observations observations
 
 	logger *log.Logger
 }
 
-// NewService creates a new nelm service for managing Helm releases.
-func NewService(kubeClient *klient.Client, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
+// NewService creates a new nelm service for managing Helm releases. observations receive what the
+// service observes while it renders, applies and deletes releases (observed.Store).
+func NewService(kubeClient *klient.Client, observations observations, logger *log.Logger) *Service {
 	timeout := envconfig.PackageNelmTimeout()
 
 	nelmClient := nelm.New(logger,
@@ -159,8 +152,8 @@ func NewService(kubeClient *klient.Client, callback drift.AbsentCallback, status
 		tmpDir:         os.TempDir(),
 		client:         nelmClient,
 		timeout:        timeout,
-		status:         status,
-		monitorManager: drift.New(kubeClient, nelmClient, callback, logger),
+		observations:   observations,
+		monitorManager: drift.New(kubeClient, nelmClient, logger),
 		logger:         logger.Named(nelmServiceTracer),
 	}
 }
@@ -355,7 +348,7 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 
 	s.logger.Debug("delete nelm release", slog.String("name", name), slog.String("namespace", namespace))
 
-	return s.client.Delete(ctx, namespace, name, s.status.UpdateUninstallTracking)
+	return s.client.Delete(ctx, namespace, name, s.trackUninstall)
 }
 
 // Upgrade installs or upgrades a Helm release for a package.
@@ -382,7 +375,15 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 // policy stops guarding them against manual edits.
 //
 // Returns ErrPackageNotHelm if the package doesn't contain a valid Helm chart.
-func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) error {
+//
+// applying, when not nil, is called once right before the release is installed or upgraded, and
+// never when the render matches the deployed release: the caller reports the apply in flight
+// (ManifestsApplied false with ApplyingManifests, as the status did when nelm sent progress).
+//
+// drifted is the callback of the drift monitor this call (re)starts for the release: it is called
+// whenever resources of this render are absent. The caller of the last Upgrade owns the monitor,
+// so a new owner of the release (a switch) takes it over with its first Upgrade.
+func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, applying, drifted func()) error {
 	ctx, span := otel.Tracer(nelmServiceTracer).Start(ctx, "Upgrade")
 	defer span.End()
 
@@ -398,10 +399,14 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	isHelm, err := s.isHelmChart(pkg.GetPath())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return status.NewError(conditionReasonCheckTemplatesFailed, err)
+		return newReasonError(reasonCheckTemplatesFailed, err)
 	}
 
 	if !isHelm {
+		// No chart means no release and no workloads, so the health monitor never reports on the
+		// package; recorded here, by the only writer of the observation.
+		s.observations.SetNoWorkloads(pkg.GetName(), true)
+
 		return ErrPackageNotHelm
 	}
 
@@ -411,7 +416,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		marked, err := s.isReleaseUnderMaintenance(ctx, namespace, pkg.GetName())
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
-			return status.NewError(conditionReasonCheckReleaseFailed, err)
+			return newReasonError(reasonCheckReleaseFailed, err)
 		}
 
 		if marked {
@@ -425,7 +430,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	valuesPath, err := s.createTmpValuesFile(pkg.GetName(), pkg.GetValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return status.NewError(conditionReasonCreateValuesFileFailed, err)
+		return newReasonError(reasonCreateValuesFileFailed, err)
 	}
 	defer os.Remove(valuesPath) // Clean up temp file
 
@@ -477,28 +482,28 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	if requests := resourceRequests(pkg); len(requests) > 0 {
 		if resized, err = s.renderResized(ctx, namespace, pkg.GetName(), renderOptions, requests); err != nil {
 			span.SetStatus(codes.Error, err.Error())
-			return status.NewError(conditionReasonRenderFailed, err)
+			return newReasonError(reasonRenderFailed, err)
 		}
 
 		// The checksum, the absent-resources monitor and the install all have to
 		// see the same manifests, so the overlay is folded in before any of them.
 		if renderedManifests, err = nelm.JoinManifests(resized); err != nil {
 			span.SetStatus(codes.Error, err.Error())
-			return status.NewError(conditionReasonRenderFailed, err)
+			return newReasonError(reasonRenderFailed, err)
 		}
 	} else if renderedManifests, err = s.client.Render(ctx, namespace, pkg.GetName(), renderOptions); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return status.NewError(conditionReasonRenderFailed, err)
+		return newReasonError(reasonRenderFailed, err)
 	}
 
 	// Collect application endpoint URLs from the rendered manifests. Done
 	// before the shouldUpgrade check so URLs are refreshed even when the
 	// upgrade itself is skipped.
-	s.status.UpdateURLs(pkg.GetName(), extractEndpointURLs(renderedManifests))
+	s.observations.UpdateURLs(pkg.GetName(), extractEndpointURLs(renderedManifests))
 
 	// The health monitor reports only on workloads it sees, so a release without
 	// any would leave Scaled Unknown and the first install never complete.
-	s.status.SetNoWorkloads(pkg.GetName(), !hasWorkloads(renderedManifests))
+	s.observations.SetNoWorkloads(pkg.GetName(), !hasWorkloads(renderedManifests))
 
 	// Calculate checksum to detect changes in rendered manifests
 	checksum := addonutils.CalculateStringsChecksum(renderedManifests)
@@ -507,11 +512,11 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	shouldUpgrade, err := s.shouldRunHelmUpgrade(ctx, namespace, pkg.GetName(), checksum)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return status.NewError(conditionReasonCheckReleaseFailed, err)
+		return newReasonError(reasonCheckReleaseFailed, err)
 	}
 
 	if !shouldUpgrade {
-		s.updateMonitor(state, namespace, pkg.GetName(), renderedManifests)
+		s.updateMonitor(state, namespace, pkg.GetName(), renderedManifests, drifted)
 		s.logger.Debug("no need to upgrade", slog.String("name", pkg.GetName()))
 
 		return nil
@@ -528,25 +533,31 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		dir, cleanup, err := s.writeResizedChart(pkg.GetName(), pkg.GetPath(), resized)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
-			return status.NewError(conditionReasonRenderFailed, err)
+			return newReasonError(reasonRenderFailed, err)
 		}
 		defer cleanup()
 
 		chartPath = dir
 	}
 
-	// Tracking still holds the previous apply's report, which a deadline reached
-	// before this one reports anything would name as ours.
-	s.status.ResetTracking(pkg.GetName())
+	// The observed progress still holds the previous apply's report; it is not this one's.
+	s.observations.ResetTracking(pkg.GetName())
+
+	if applying != nil {
+		applying()
+	}
 
 	// The deadline is ours, so an apply that outlives it is cancelled with a cause
-	// naming what it waited for, the way the runtime names a reschedule.
-	ctx, stopDeadline := s.withApplyDeadline(ctx, pkg.GetName())
+	// naming what it waited for. The apply keeps
+	// its own progress for that message (applyProgress).
+	progress := new(applyProgress)
+
+	ctx, stopDeadline := s.withApplyDeadline(ctx, progress)
 	defer stopDeadline()
 
 	// Install or upgrade the release
 	err = s.client.Install(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
-		OnTrackingEvent: s.status.UpdateTracking,
+		OnTrackingEvent: s.trackApply(progress),
 		TrackingOptions: trackingOptions,
 		Path:            chartPath,
 		ValuesPaths:     []string{valuesPath},
@@ -561,10 +572,10 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return status.NewError(conditionReasonApplyManifestsFailed, err)
+		return newReasonError(reasonApplyManifestsFailed, err)
 	}
 
-	s.updateMonitor(state, namespace, pkg.GetName(), renderedManifests)
+	s.updateMonitor(state, namespace, pkg.GetName(), renderedManifests, drifted)
 
 	return nil
 }
@@ -600,13 +611,13 @@ func (s *Service) isReleaseUnderMaintenance(ctx context.Context, namespace, name
 
 // updateMonitor keeps resource monitoring on for managed packages and off for
 // packages under maintenance, so their deleted resources are not restored.
-func (s *Service) updateMonitor(state MaintenanceState, namespace, name, manifests string) {
+func (s *Service) updateMonitor(state MaintenanceState, namespace, name, manifests string, drifted func()) {
 	if state == NoResourceReconciliation {
 		s.monitorManager.RemoveMonitor(name)
 		return
 	}
 
-	s.monitorManager.AddMonitor(namespace, name, manifests)
+	s.monitorManager.AddMonitor(namespace, name, manifests, drifted)
 }
 
 // HasConversionWebhook reports whether the package's chart can render a
@@ -857,36 +868,6 @@ func linkFile(src, dst string) error {
 	return os.Symlink(resolved, dst)
 }
 
-// Cleanup uninstalls releases owned by this service (carrying the managed-by
-// annotation) whose name is not in keep. keep keys are "<namespace>/<release-name>".
-// One release failing to uninstall does not stop the others; every failure is returned.
-func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}, ignoreNamespaces ...string) error {
-	releases, err := s.client.ListReleases(ctx, nelm.ListOptions{
-		Selector: map[string]string{v1alpha1.PackageAnnotationManagedBy: v1alpha1.PackageAnnotationManagedByValue},
-	})
-	if err != nil {
-		return fmt.Errorf("list releases: %w", err)
-	}
-
-	var errs error
-	for _, r := range releases {
-		if _, alive := keep[r.Namespace+"/"+r.Name]; alive {
-			continue
-		}
-
-		if slices.Contains(ignoreNamespaces, r.Namespace) {
-			continue
-		}
-
-		// Orphan releases have no package status to report progress to.
-		if err = s.client.Delete(ctx, r.Namespace, r.Name, nil); err != nil {
-			errs = errors.Join(errs, fmt.Errorf("delete orphan release '%s/%s': %w", r.Namespace, r.Name, err))
-		}
-	}
-
-	return errs
-}
-
 // shouldRunHelmUpgrade determines if a Helm upgrade is needed.
 //
 // Upgrade is required if ANY of these conditions are true:
@@ -1004,11 +985,11 @@ func (s *Service) isHelmChart(path string) (bool, error) {
 }
 
 // withApplyDeadline bounds ctx by the service timeout, cancelling it with a cause
-// that names the resources the apply never finished. The returned function ends
-// the deadline and must be called.
-func (s *Service) withApplyDeadline(ctx context.Context, name string) (context.Context, func()) {
+// that names the resources the apply never finished, as progress last reported them.
+// The returned function ends the deadline and must be called.
+func (s *Service) withApplyDeadline(ctx context.Context, progress *applyProgress) (context.Context, func()) {
 	ctx, cancel := context.WithCancelCause(ctx)
-	timer := time.AfterFunc(s.timeout, func() { cancel(s.applyTimeoutCause(name, s.timeout)) })
+	timer := time.AfterFunc(s.timeout, func() { cancel(applyTimeoutCause(progress.last(), s.timeout)) })
 
 	return ctx, func() {
 		timer.Stop()
@@ -1017,10 +998,9 @@ func (s *Service) withApplyDeadline(ctx context.Context, name string) (context.C
 }
 
 // applyTimeoutCause is the cancellation cause for an apply that outlived the
-// timeout. Tracking holds the operations nelm was executing, collected by the
-// status service from the progress reports the apply was sending.
-func (s *Service) applyTimeoutCause(name string, timeout time.Duration) error {
-	waiting := waitingFor(s.status.GetStatus(name).Tracking.Report.Operations)
+// timeout. ops are the operations of the apply's latest progress report.
+func applyTimeoutCause(ops []progrep.Operation, timeout time.Duration) error {
+	waiting := waitingFor(ops)
 	if len(waiting) == 0 {
 		return fmt.Errorf("apply timed out after %s", timeout)
 	}
@@ -1049,7 +1029,7 @@ func resourcesByStatus(ops []progrep.Operation, statuses ...progrep.OperationSta
 	seen := make(map[string]struct{}, len(ops))
 
 	for _, op := range ops {
-		if !status.IsResourceOperation(op) {
+		if !isResourceOperation(op) {
 			continue
 		}
 

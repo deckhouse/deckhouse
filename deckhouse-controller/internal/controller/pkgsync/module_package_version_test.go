@@ -392,15 +392,17 @@ func TestSyncGlobalModulePackageVersion(t *testing.T) {
 		assert.Nil(t, mpv.Status.PackageSchemas)
 	})
 
-	t.Run("a broken schema skips the version", func(t *testing.T) {
+	t.Run("a broken schema fails the sync", func(t *testing.T) {
 		globalDir := t.TempDir()
 		writeLegacyOpenAPI(t, globalDir, "{not a schema", "")
 
 		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), globalDir)
-		require.NoError(t, s.sync(ctx))
+		err := s.sync(ctx)
+		require.Error(t, err, "an unparsable schema is a broken image: deckhouse must not start on it")
+		assert.Contains(t, err.Error(), "global schemas")
 
-		assert.Empty(t, listModulePackageVersionNames(t, cl), "an unparsable schema is a broken image, not an empty one")
-		assert.Empty(t, listModulePackageNames(t, cl), "no version, no catalog entry either")
+		assert.Empty(t, listModulePackageVersionNamesExceptGlobal(t, cl))
+		assert.NotContains(t, listModulePackageVersionNames(t, cl), "embedded-global")
 	})
 
 	t.Run("keeps a version matching the disk untouched", func(t *testing.T) {

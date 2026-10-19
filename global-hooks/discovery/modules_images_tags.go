@@ -41,11 +41,11 @@ func discoveryModulesImagesDigests(_ context.Context, input *go_hook.HookInput) 
 
 	digestsFile := "/deckhouse/modules/images_digests.json"
 
-	if env := d8env.GetDownloadedModulesDir(); env != "" {
+	// With the package engine (DECKHOUSE_ENABLE_MODULE_V2) the engine publishes the digests of the
+	// enabled downloaded modules itself: a directory under deployed/ is a revision (name@version),
+	// and a Candidate waiting for its window is mounted beside the running one.
+	if env := d8env.GetDownloadedModulesDir(); env != "" && os.Getenv("DECKHOUSE_ENABLE_MODULE_V2") != "true" {
 		downloadedModulesDir = filepath.Join(env, "modules")
-		if os.Getenv("DECKHOUSE_ENABLE_MODULE_V2") == "true" {
-			downloadedModulesDir = filepath.Join(downloadedModulesDir, "deployed")
-		}
 	}
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {

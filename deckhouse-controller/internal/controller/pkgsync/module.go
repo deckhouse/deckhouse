@@ -47,7 +47,7 @@ var legacyModuleConditions = []string{
 }
 
 // syncModules writes a Module for every module the cluster runs. The last pass to write a name
-// wins, so the order below is the precedence: embedded over an override over a deployed release.
+// wins, so the order below is the precedence: embedded over a deployed release.
 func (s *syncer) syncModules(ctx context.Context) error {
 	configs, err := s.getModuleConfigs(ctx)
 	if err != nil {
@@ -65,16 +65,16 @@ func (s *syncer) syncModules(ctx context.Context) error {
 		return fmt.Errorf("sync deployed modules: %w", err)
 	}
 
-	if err := s.syncOverrideModules(ctx, deckhouseReleaseChannel, releaseChannels, configs); err != nil {
-		return fmt.Errorf("sync override modules: %w", err)
-	}
-
 	if err := s.syncEmbeddedModules(ctx, deckhouseReleaseChannel, configs); err != nil {
 		return fmt.Errorf("sync embedded modules: %w", err)
 	}
 
 	if err := s.syncGlobalModule(ctx, configs); err != nil {
 		return fmt.Errorf("sync global module: %w", err)
+	}
+
+	if err := s.deleteUnresolvableModules(ctx); err != nil {
+		return fmt.Errorf("delete unresolvable modules: %w", err)
 	}
 
 	if err := s.dropLegacyConditions(ctx); err != nil {
@@ -113,7 +113,7 @@ func (s *syncer) syncGlobalModule(ctx context.Context, configs map[string]*v1alp
 	// embeddedPackageVersion reduces the Deckhouse version to
 	embeddedPackageVersion := app.EmbeddedPackageVersion()
 
-	if err := s.ensureModule(ctx, packageNameGlobal, repositoryNameEmbedded, embeddedPackageVersion, "", false, configs["global"]); err != nil {
+	if err := s.ensureModule(ctx, packageNameGlobal, repositoryNameEmbedded, embeddedPackageVersion, "", configs["global"]); err != nil {
 		return fmt.Errorf("ensure global module: %w", err)
 	}
 
@@ -153,7 +153,7 @@ func (s *syncer) syncEmbeddedModules(ctx context.Context, deckhouseReleaseChanne
 	}
 
 	for _, module := range modules {
-		if err := s.ensureModule(ctx, module, repositoryNameEmbedded, embeddedPackageVersion, releaseChannel, false, configs[module]); err != nil {
+		if err := s.ensureModule(ctx, module, repositoryNameEmbedded, embeddedPackageVersion, releaseChannel, configs[module]); err != nil {
 			return fmt.Errorf("ensure embedded module %s: %w", module, err)
 		}
 	}
@@ -173,7 +173,7 @@ func (s *syncer) syncDeployedModules(ctx context.Context, deckhouseReleaseChanne
 		config := configs[release.GetModuleName()]
 		moduleName := release.GetModuleName()
 		moduleVersion := release.GetModuleVersion()
-		repositoryName := PackageRepositoryNameForModuleSource(release.GetModuleSource())
+		repositoryName := packageRepositoryNameForModuleSource(release.GetModuleSource())
 
 		releaseChannel := deckhouseReleaseChannel
 		if config != nil {
@@ -182,7 +182,7 @@ func (s *syncer) syncDeployedModules(ctx context.Context, deckhouseReleaseChanne
 			}
 		}
 
-		if err := s.ensureModule(ctx, moduleName, repositoryName, moduleVersion, releaseChannel, false, config); err != nil {
+		if err := s.ensureModule(ctx, moduleName, repositoryName, moduleVersion, releaseChannel, config); err != nil {
 			return fmt.Errorf("ensure module %s: %w", moduleName, err)
 		}
 	}
@@ -190,7 +190,7 @@ func (s *syncer) syncDeployedModules(ctx context.Context, deckhouseReleaseChanne
 	return nil
 }
 
-// getDeployedModuleReleases reads the deployed release of every module no pull override covers.
+// getDeployedModuleReleases reads the deployed release of every module.
 // A release naming no module source is skipped with a warning: it resolves to no repository.
 func (s *syncer) getDeployedModuleReleases(ctx context.Context) ([]*v1alpha1.ModuleRelease, error) {
 	releases := new(v1alpha1.ModuleReleaseList)
@@ -200,11 +200,6 @@ func (s *syncer) getDeployedModuleReleases(ctx context.Context) ([]*v1alpha1.Mod
 
 	deployed := make([]*v1alpha1.ModuleRelease, 0, len(releases.Items))
 	for _, release := range releases.Items {
-		override := new(v1alpha2.ModulePullOverride)
-		if err := s.reader.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, override); err == nil {
-			continue
-		}
-
 		if release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed || !release.DeletionTimestamp.IsZero() {
 			continue
 		}
@@ -219,101 +214,6 @@ func (s *syncer) getDeployedModuleReleases(ctx context.Context) ([]*v1alpha1.Mod
 	}
 
 	return deployed, nil
-}
-
-// syncOverrideModules writes a Module for every module running the dev copy a pull override put on
-// disk. Its version is the image tag the override names, not a package version.
-func (s *syncer) syncOverrideModules(ctx context.Context, deckhouseReleaseChannel string, releaseChannels map[string]string, configs map[string]*v1alpha1.ModuleConfig) error {
-	overrides, err := s.getOverrides(ctx)
-	if err != nil {
-		return fmt.Errorf("get overrides: %w", err)
-	}
-
-	for _, override := range overrides {
-		config := configs[override.Name]
-		moduleName := override.Name
-		imageTag := override.Spec.ImageTag
-
-		repositories, err := s.availableRepositories(ctx, moduleName)
-		if err != nil {
-			return fmt.Errorf("get the available repositories of the '%s' module: %w", moduleName, err)
-		}
-
-		repositoryName, ok := getOverrideRepository(config, repositories)
-		if !ok {
-			s.logger.Warn("no config source and no single available repository for the dev module, skip it",
-				slog.String("name", moduleName), slog.Any("repositories", repositories))
-
-			continue
-		}
-
-		releaseChannel := deckhouseReleaseChannel
-		if config != nil {
-			if channel, ok := releaseChannels[config.Spec.UpdatePolicy]; ok {
-				releaseChannel = channel
-			}
-		}
-
-		if err := s.ensureModule(ctx, moduleName, repositoryName, imageTag, releaseChannel, true, config); err != nil {
-			return fmt.Errorf("ensure module %s: %w", moduleName, err)
-		}
-	}
-
-	return nil
-}
-
-// getOverrideRepository answers which repository a dev module belongs to. The pull override names no
-// source, so it comes from the module config, or from the only repository the catalog lists for the
-// package - "deckhouse-modules" when it lists several. Nothing left to ask leaves the module unplaced.
-func getOverrideRepository(config *v1alpha1.ModuleConfig, repositories []string) (string, bool) {
-	if config != nil && config.Spec.Source != "" {
-		return PackageRepositoryNameForModuleSource(config.Spec.Source), true
-	}
-
-	switch {
-	case len(repositories) == 1:
-		return repositories[0], true
-
-	case slices.Contains(repositories, repositoryNameDeckhouseModules):
-		return repositoryNameDeckhouseModules, true
-	}
-
-	return "", false
-}
-
-// availableRepositories reads the repositories the catalog entry of the module lists.
-// A module the catalog does not name yet lists none.
-func (s *syncer) availableRepositories(ctx context.Context, moduleName string) ([]string, error) {
-	modulePackage := new(v1alpha1.ModulePackage)
-	if err := s.reader.Get(ctx, client.ObjectKey{Name: moduleName}, modulePackage); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, nil
-		}
-
-		return nil, fmt.Errorf("get the '%s' module package: %w", moduleName, err)
-	}
-
-	return modulePackage.Status.AvailableRepositories, nil
-}
-
-// getOverrides reads the pull override each module runs a dev copy by.
-// Only a ready override counts: the loader has put its copy on disk.
-func (s *syncer) getOverrides(ctx context.Context) ([]*v1alpha2.ModulePullOverride, error) {
-	overrides := new(v1alpha2.ModulePullOverrideList)
-	if err := s.reader.List(ctx, overrides); err != nil {
-		return nil, fmt.Errorf("list module pull overrides: %w", err)
-	}
-
-	result := make([]*v1alpha2.ModulePullOverride, 0, len(overrides.Items))
-	for _, override := range overrides.Items {
-		if override.Status.Message != v1alpha2.ModulePullOverrideMessageReady || !override.DeletionTimestamp.IsZero() {
-			continue
-		}
-
-		result = append(result, &override)
-	}
-
-	return result, nil
 }
 
 // getDeckhouseReleaseChannel reads the channel Deckhouse itself follows, the one its embedded
@@ -361,7 +261,7 @@ func (s *syncer) getReleaseChannelsByUpdatePolicy(ctx context.Context) (map[stri
 
 // ensureModule brings the module in line with the files it runs and its config, creating it when
 // the cluster carries none. The module has other writers, so a patch with no drift is not sent.
-func (s *syncer) ensureModule(ctx context.Context, moduleName, repositoryName, packageVersion, releaseChannel string, dev bool, moduleConfig *v1alpha1.ModuleConfig) error {
+func (s *syncer) ensureModule(ctx context.Context, moduleName, repositoryName, packageVersion, releaseChannel string, moduleConfig *v1alpha1.ModuleConfig) error {
 	module := new(v1beta1.Module)
 
 	if err := s.reader.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
@@ -369,12 +269,12 @@ func (s *syncer) ensureModule(ctx context.Context, moduleName, repositoryName, p
 			return fmt.Errorf("get the '%s' module: %w", moduleName, err)
 		}
 
-		return s.createModule(ctx, moduleName, repositoryName, packageVersion, releaseChannel, dev, moduleConfig)
+		return s.createModule(ctx, moduleName, repositoryName, packageVersion, releaseChannel, moduleConfig)
 	}
 
 	patch := client.MergeFrom(module.DeepCopy())
 
-	applyModuleVersion(module, repositoryName, packageVersion, releaseChannel, dev)
+	applyModuleVersion(module, repositoryName, packageVersion, releaseChannel)
 	applyModuleConfig(module, moduleConfig)
 
 	patchData, err := patch.Data(module)
@@ -396,10 +296,10 @@ func (s *syncer) ensureModule(ctx context.Context, moduleName, repositoryName, p
 }
 
 // createModule writes a module the cluster does not carry yet.
-func (s *syncer) createModule(ctx context.Context, moduleName, repositoryName, packageVersion, releaseChannel string, dev bool, moduleConfig *v1alpha1.ModuleConfig) error {
+func (s *syncer) createModule(ctx context.Context, moduleName, repositoryName, packageVersion, releaseChannel string, moduleConfig *v1alpha1.ModuleConfig) error {
 	module := &v1beta1.Module{ObjectMeta: metav1.ObjectMeta{Name: moduleName}}
 
-	applyModuleVersion(module, repositoryName, packageVersion, releaseChannel, dev)
+	applyModuleVersion(module, repositoryName, packageVersion, releaseChannel)
 	applyModuleConfig(module, moduleConfig)
 
 	if err := s.writer.Create(ctx, module); err != nil && !apierrors.IsAlreadyExists(err) {
@@ -411,16 +311,12 @@ func (s *syncer) createModule(ctx context.Context, moduleName, repositoryName, p
 	return nil
 }
 
-// applyModuleVersion writes the package coordinates and marks where the files came from. The
-// embedded mark is reconciled both ways; the dev mark is only set, the override controller clears it.
-func applyModuleVersion(module *v1beta1.Module, repositoryName, packageVersion, releaseChannel string, dev bool) {
+// applyModuleVersion writes the package coordinates and marks where the files came from; the
+// embedded mark is reconciled both ways.
+func applyModuleVersion(module *v1beta1.Module, repositoryName, packageVersion, releaseChannel string) {
 	module.Spec.PackageRepositoryName = repositoryName
 	module.Spec.PackageVersion = packageVersion
 	module.Spec.ReleaseChannel = releaseChannel
-
-	if dev {
-		setModuleAnnotation(module, v1beta1.ModuleAnnotationDev)
-	}
 
 	if repositoryName != repositoryNameEmbedded {
 		delete(module.Annotations, v1beta1.ModuleAnnotationEmbedded)
@@ -456,6 +352,33 @@ func applyModuleConfig(module *v1beta1.Module, moduleConfig *v1alpha1.ModuleConf
 	module.Spec.Settings = moduleConfig.Spec.Settings
 	module.Spec.SettingsVersion = moduleConfig.Spec.Version
 	module.Spec.Maintenance = moduleConfig.Spec.Maintenance
+}
+
+// deleteUnresolvableModules deletes the modules no pass above placed and that name no package: no
+// repository and no version, left by the old module stack for a module never downloaded. Nothing
+// can install one, and the schema rejects every write to it (packageVersion is required), so the
+// Module controller would fail on it forever. The global and the embedded modules are never touched.
+func (s *syncer) deleteUnresolvableModules(ctx context.Context) error {
+	modules := new(v1beta1.ModuleList)
+	if err := s.reader.List(ctx, modules); err != nil {
+		return fmt.Errorf("list modules: %w", err)
+	}
+
+	for i := range modules.Items {
+		module := &modules.Items[i]
+		if module.Name == packageNameGlobal || module.IsEmbedded() ||
+			module.Spec.PackageRepositoryName != "" || module.Spec.PackageVersion != "" {
+			continue
+		}
+
+		if err := s.writer.Delete(ctx, module); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("delete the '%s' module: %w", module.Name, err)
+		}
+
+		s.logger.Info("module without a repository and a version deleted", slog.String("name", module.Name))
+	}
+
+	return nil
 }
 
 // dropLegacyConditions removes the conditions of the old module stack from all modules.

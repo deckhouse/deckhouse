@@ -28,7 +28,7 @@ import (
 
 // ensureModulePackage makes sure the catalog names the module: an empty ModulePackage is created
 // once and never touched again, seeded with the repositories of the sources whose catalog lists the
-// module, so a dev copy can be placed before the repository scan enriches the same object. The entry
+// module, so a module can be placed before the repository scan enriches the same object. The entry
 // has no owner, so it outlives every repository.
 func (s *syncer) ensureModulePackage(ctx context.Context, name string, moduleSources []v1alpha1.ModuleSource) error {
 	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, new(v1alpha1.ModulePackage))
@@ -89,7 +89,7 @@ func availableRepositoriesFromSources(moduleName string, moduleSources []v1alpha
 				continue
 			}
 
-			repositories = append(repositories, PackageRepositoryNameForModuleSource(moduleSource.Name))
+			repositories = append(repositories, packageRepositoryNameForModuleSource(moduleSource.Name))
 
 			break
 		}

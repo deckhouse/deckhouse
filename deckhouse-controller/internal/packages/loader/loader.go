@@ -37,7 +37,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
@@ -67,8 +66,8 @@ const (
 // ErrPackageNotFound is returned when the requested package directory doesn't exist
 var ErrPackageNotFound = errors.New("package not found")
 
-// LoadAppConf loads an application package from the given directory on the filesystem.
-// The directory name must follow the "namespace.name" convention (e.g., "default.my-app").
+// LoadNamedAppConf loads the application appName ("namespace.name", e.g. "default.my-app") at
+// version from appDir.
 //
 // Steps:
 //  1. Validates the package directory exists
@@ -79,13 +78,16 @@ var ErrPackageNotFound = errors.New("package not found")
 //  6. Loads image digests (images_digests.json)
 //
 // Returns ErrPackageNotFound if the directory doesn't exist.
-func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.Config, error) {
+func LoadAppConf(ctx context.Context, appDir, name string, logger *log.Logger) (*apps.Config, error) {
 	ctx, span := otel.Tracer(loaderTracer).Start(ctx, "LoadAppConf")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("path", appDir))
+	span.SetAttributes(attribute.String("name", name))
 
-	logger = logger.With(slog.String("path", appDir))
+	logger = logger.
+		With(slog.String("path", appDir)).
+		With(slog.String("name", name))
 
 	logger.Debug("load application from directory")
 
@@ -106,13 +108,11 @@ func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.
 		return nil, fmt.Errorf("load values: %w", err)
 	}
 
-	// Extract namespace and name from directory basename (e.g., "default.my-app")
-	appName := filepath.Base(appDir)
-
-	splits := strings.SplitN(appName, ".", 2)
+	// Split the application name into namespace and name (e.g., "default.my-app")
+	splits := strings.SplitN(name, ".", 2)
 	if len(splits) != 2 {
 		span.SetStatus(codes.Error, "invalid name")
-		return nil, fmt.Errorf("invalid package name '%s'", appName)
+		return nil, fmt.Errorf("invalid package name '%s'", name)
 	}
 
 	hooks, err := loadAppHooks(ctx, splits[0], splits[1], appDir, logger)
@@ -151,7 +151,7 @@ func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.
 
 // LoadEmbeddedConf loads a module config from an embedded (built-in) module directory.
 // Unlike LoadModuleConf, it does not resolve version by symlinks.
-func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger) (*modules.Config, error) {
+func LoadEmbeddedConf(ctx context.Context, moduleDir, version string, logger *log.Logger) (*modules.Config, error) {
 	ctx, span := otel.Tracer(loaderTracer).Start(ctx, "LoadModuleConf")
 	defer span.End()
 
@@ -179,6 +179,9 @@ func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger)
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package from '%s': %w", moduleDir, err)
 	}
+
+	// embedded modules have no version in definition
+	def.Version = version
 
 	// Load values from values.yaml and openapi schemas
 	static, config, values, err := loadValues(def.Name, moduleDir)
@@ -266,7 +269,7 @@ func LoadEmbeddedDefinition(moduleDir string) (*dto.ModuleDefinition, error) {
 	return loadModulePackageDefinition(moduleDir)
 }
 
-// LoadModuleConf loads a module package from the given directory on the filesystem.
+// LoadModuleConf loads the downloaded module name at version from moduleDir.
 //
 // Steps:
 //  1. Validates the module directory exists
@@ -276,13 +279,16 @@ func LoadEmbeddedDefinition(moduleDir string) (*dto.ModuleDefinition, error) {
 //  5. Loads image digests (images_digests.json)
 //
 // Returns ErrPackageNotFound if the directory doesn't exist.
-func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (*modules.Config, error) {
+func LoadModuleConf(ctx context.Context, moduleDir, name string, logger *log.Logger) (*modules.Config, error) {
 	ctx, span := otel.Tracer(loaderTracer).Start(ctx, "LoadModuleConf")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("path", moduleDir))
+	span.SetAttributes(attribute.String("name", name))
 
-	logger = logger.With(slog.String("path", moduleDir))
+	logger = logger.
+		With(slog.String("path", moduleDir)).
+		With(slog.String("name", name))
 
 	logger.Debug("load module from directory")
 
@@ -299,10 +305,13 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 
 	if def.Version == "" {
 		// TODO(ipaqsa): its better to have version injected into package.yaml, but we can retrieve by fs
-		def.Version, err = getModuleVersion(ctx, moduleDir)
-		if err != nil {
-			return nil, fmt.Errorf("load module version: %w", err)
+		splits := strings.SplitN(moduleDir, "@", 2)
+		if len(splits) < 2 {
+			span.SetStatus(codes.Error, "no version")
+			return nil, fmt.Errorf("module '%s' declares no version and its path carries none", moduleDir)
 		}
+
+		def.Version = splits[1]
 	}
 
 	// override version has const v2.0.0
@@ -648,29 +657,13 @@ func loadEmbeddedDigests(packageName string) (map[string]string, error) {
 // loadConversions reads conversion rules from the module's openapi/conversions directory.
 // Returns nil if the directory does not exist (conversions are optional).
 func loadConversions(moduleDir string) (*conversion.Converter, error) {
-	d := filepath.Join(moduleDir, "openapi", conversionsDir)
-	if _, err := os.Stat(d); err != nil {
+	dir := filepath.Join(moduleDir, "openapi", conversionsDir)
+	if _, err := os.Stat(dir); err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("stat conversions dir: %w", err)
 	}
-	return conversion.NewConverterFromDir(d)
-}
 
-// getModuleVersion returns the version of the package at moduleDir.
-// With dm-verity, the version is extracted from the device status.
-// Without dm-verity, the version is derived from the symlink target directory name.
-func getModuleVersion(ctx context.Context, moduleDir string) (string, error) {
-	if verity.IsSupported() {
-		return verity.GetVersionByDevice(ctx, filepath.Base(moduleDir))
-	}
-
-	// resolve symlink to get the versioned directory name
-	target, err := os.Readlink(moduleDir)
-	if err != nil {
-		return "", fmt.Errorf("readlink '%s': %w", moduleDir, err)
-	}
-
-	return filepath.Base(target), nil
+	return conversion.NewConverterFromDir(dir)
 }

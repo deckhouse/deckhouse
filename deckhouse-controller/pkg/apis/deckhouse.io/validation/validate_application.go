@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/gate"
 	packageschema "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -123,7 +123,10 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 //     OpenAPI schema published at APV.status.packageSchemas.settingsSchema (if present).
 //  2. Requirement constraints — the APV's requirements (Kubernetes version, Deckhouse
 //     version, and module dependencies) are parsed into semver constraints and delegated
-//     to the package manager's CheckConstraints method.
+//     to the package manager's CheckConstraints method. Only on CREATE and on an UPDATE
+//     that changes the APV: unmet requirements of a version admitted earlier are the
+//     engine's (the Candidate is Blocked), and a settings-only edit must still reach the
+//     running version, as the Module webhook checks requirements only on enabling.
 //
 // This is called during admission webhook validation to reject Applications whose
 // settings are malformed or whose cluster requirements are not satisfied.
@@ -145,6 +148,14 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 		return fmt.Errorf("validate settings: %w", err)
 	}
 
+	// The requirements of an unchanged version were checked when it was admitted.
+	if oldApp != nil {
+		oldName := v1alpha1.MakeApplicationPackageVersionName(oldApp.Spec.PackageRepositoryName, oldApp.Spec.PackageName, oldApp.Spec.PackageVersion)
+		if oldName == apvName {
+			return nil
+		}
+	}
+
 	metadata := apv.Status.PackageMetadata
 	if metadata == nil {
 		metadata = new(v1alpha1.ApplicationPackageVersionStatusMetadata)
@@ -157,7 +168,7 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 		}
 	}
 
-	constraints, err := buildPackageConstraints(metadata.Requirements)
+	constraints, err := metadata.Requirements.ToScheduleConstraints()
 	if err != nil {
 		return err
 	}
@@ -165,7 +176,12 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 	// Delegate to the manager which checks the parsed constraints against the
 	// actual cluster state and rejects on dependency cycles. The name is the
 	// scheduler-side identifier (namespace.name) used by the cycle simulation.
-	return manager.CheckConstraints(apps.BuildName(app.Namespace, app.Name), constraints)
+	// Admission shows the scheduler's message, without the reason prefix.
+	if err := manager.CheckConstraints(apps.BuildName(app.Namespace, app.Name), constraints); err != nil {
+		return errors.New(gate.ConstraintMessage(err))
+	}
+
+	return nil
 }
 
 // checkVersionCompatibility gates a change from the previous spec version: an upgrade by the target's rules, a downgrade by the previous one's.
@@ -220,188 +236,6 @@ func previousCompatibility(ctx context.Context, cli client.Client, app *v1alpha1
 	}
 
 	return apv.Status.PackageMetadata.Compatibility, nil
-}
-
-// buildPackageConstraints parses a package version's requirements into scheduler constraints; nil requirements yield none.
-func buildPackageConstraints(reqs *v1alpha1.PackageRequirements) (schedule.Constraints, error) {
-	constraints := schedule.Constraints{
-		Order: schedule.FunctionalOrder,
-	}
-
-	if reqs == nil {
-		return constraints, nil
-	}
-
-	// Parse the minimum Kubernetes version constraint (e.g. ">= 1.28").
-	kubernetesConstraint, err := parsePackageConstraint(reqs.Kubernetes)
-	if err != nil {
-		return schedule.Constraints{}, fmt.Errorf("parse kubernetes requirement: %w", err)
-	}
-
-	constraints.Kubernetes = kubernetesConstraint
-
-	// Parse the minimum Deckhouse version constraint (e.g. ">= 1.60").
-	deckhouseConstraint, err := parsePackageConstraint(reqs.Deckhouse)
-	if err != nil {
-		return schedule.Constraints{}, fmt.Errorf("parse deckhouse requirement: %w", err)
-	}
-
-	constraints.Deckhouse = deckhouseConstraint
-
-	// Parse module dependency constraints. Mandatory entries must be present;
-	// conditional entries (formerly the "!optional" suffix) are skippable;
-	// anyOf groups require ≥1 installed member that satisfies its constraint;
-	// noneOf groups require zero installed members that match their constraints.
-	// A name listed in both mandatory and conditional is rejected — silently
-	// letting conditional overwrite mandatory would weaken the requirement
-	// without telling the user.
-	modules := make(map[string]schedule.Dependency)
-	var anyOfGroups []schedule.AnyOfGroup
-	var noneOfGroups []schedule.NoneOfGroup
-	if reqs.Modules != nil {
-		for _, dep := range reqs.Modules.Mandatory {
-			constraint, err := parsePackageDependencyConstraint(dep.Constraint)
-			if err != nil {
-				return schedule.Constraints{}, fmt.Errorf("parse mandatory module requirement '%s': %w", dep.Name, err)
-			}
-
-			modules[dep.Name] = schedule.Dependency{
-				Constraint: constraint,
-				Optional:   false,
-			}
-		}
-		for _, dep := range reqs.Modules.Conditional {
-			if _, ok := modules[dep.Name]; ok {
-				return schedule.Constraints{}, fmt.Errorf("parse conditional module requirement '%s': also listed as mandatory", dep.Name)
-			}
-
-			if len(dep.Constraint) == 0 {
-				return schedule.Constraints{}, fmt.Errorf("parse conditional module requirement '%s': constraint is required", dep.Name)
-			}
-
-			constraint, err := parsePackageDependencyConstraint(dep.Constraint)
-			if err != nil {
-				return schedule.Constraints{}, fmt.Errorf("parse conditional module requirement '%s': %w", dep.Name, err)
-			}
-
-			modules[dep.Name] = schedule.Dependency{
-				Constraint: constraint,
-				Optional:   true,
-			}
-		}
-
-		anyOfGroups = make([]schedule.AnyOfGroup, 0, len(reqs.Modules.AnyOf))
-		seenAnyOfNames := make(map[string]struct{}, len(reqs.Modules.AnyOf))
-		for i, group := range reqs.Modules.AnyOf {
-			if len(group.Name) == 0 {
-				return schedule.Constraints{}, fmt.Errorf("parse anyOf group [%d]: name is required", i)
-			}
-
-			if _, dup := seenAnyOfNames[group.Name]; dup {
-				return schedule.Constraints{}, fmt.Errorf("parse anyOf group '%s': duplicate group name", group.Name)
-			}
-
-			seenAnyOfNames[group.Name] = struct{}{}
-
-			if len(group.Modules) == 0 {
-				return schedule.Constraints{}, fmt.Errorf("parse anyOf group '%s': at least one member is required", group.Name)
-			}
-
-			members := make(map[string]*semver.Constraints, len(group.Modules))
-			for _, m := range group.Modules {
-				if len(m.Name) == 0 {
-					return schedule.Constraints{}, fmt.Errorf("parse anyOf group '%s': member name is required", group.Name)
-				}
-
-				if _, dup := members[m.Name]; dup {
-					return schedule.Constraints{}, fmt.Errorf("parse anyOf group '%s': duplicate member '%s'", group.Name, m.Name)
-				}
-
-				if existing, clash := modules[m.Name]; clash {
-					bucket := "mandatory"
-					if existing.Optional {
-						bucket = "conditional"
-					}
-
-					return schedule.Constraints{}, fmt.Errorf("parse anyOf group '%s' member '%s': also listed as %s", group.Name, m.Name, bucket)
-				}
-
-				constraint, err := parsePackageDependencyConstraint(m.Constraint)
-				if err != nil {
-					return schedule.Constraints{}, fmt.Errorf("parse anyOf group '%s' member '%s': %w", group.Name, m.Name, err)
-				}
-
-				members[m.Name] = constraint
-			}
-
-			anyOfGroups = append(anyOfGroups, schedule.AnyOfGroup{
-				Name:    group.Name,
-				Members: members,
-			})
-		}
-
-		noneOfGroups = make([]schedule.NoneOfGroup, 0, len(reqs.Modules.NoneOf))
-		seenNoneOfNames := make(map[string]struct{}, len(reqs.Modules.NoneOf))
-		for i, group := range reqs.Modules.NoneOf {
-			if len(group.Name) == 0 {
-				return schedule.Constraints{}, fmt.Errorf("parse noneOf group [%d]: name is required", i)
-			}
-
-			if _, dup := seenNoneOfNames[group.Name]; dup {
-				return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s': duplicate group name", group.Name)
-			}
-
-			seenNoneOfNames[group.Name] = struct{}{}
-
-			if len(group.Modules) == 0 {
-				return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s': at least one member is required", group.Name)
-			}
-
-			members := make(map[string]*semver.Constraints, len(group.Modules))
-			for _, m := range group.Modules {
-				if len(m.Name) == 0 {
-					return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s': member name is required", group.Name)
-				}
-
-				if _, dup := members[m.Name]; dup {
-					return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s': duplicate member '%s'", group.Name, m.Name)
-				}
-
-				if existing, clash := modules[m.Name]; clash {
-					bucket := "mandatory"
-					if existing.Optional {
-						bucket = "conditional"
-					}
-
-					return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s' member '%s': also listed as %s", group.Name, m.Name, bucket)
-				}
-
-				for _, ag := range anyOfGroups {
-					if _, clash := ag.Members[m.Name]; clash {
-						return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s' member '%s': also listed in anyOf group '%s'", group.Name, m.Name, ag.Name)
-					}
-				}
-
-				constraint, err := parsePackageDependencyConstraint(m.Constraint)
-				if err != nil {
-					return schedule.Constraints{}, fmt.Errorf("parse noneOf group '%s' member '%s': %w", group.Name, m.Name, err)
-				}
-
-				members[m.Name] = constraint
-			}
-
-			noneOfGroups = append(noneOfGroups, schedule.NoneOfGroup{
-				Name:    group.Name,
-				Members: members,
-			})
-		}
-	}
-
-	constraints.Dependencies = modules
-	constraints.AnyOf = anyOfGroups
-	constraints.NoneOf = noneOfGroups
-
-	return constraints, nil
 }
 
 // validateAppSettings validates Application.spec.settings against the OpenAPI settings
@@ -477,10 +311,10 @@ func checkImmutableSettings(settingsSchema *spec.Schema, app, oldApp *v1alpha1.A
 		return nil
 	}
 
-	// An application that has never applied runs nothing, so it has frozen nothing: the
-	// install-time choice is still open. Without this, an install that never came up
-	// because its immutable field held a typo could only be deleted and recreated.
-	if oldApp.Status.CurrentVersion == nil || oldApp.Status.CurrentVersion.Version == "" {
+	// Nothing applied, nothing frozen: an install whose first run failed (an immutable field
+	// with a typo) is fixed in place. status.currentVersion is no signal: it is written at
+	// activation, before the first run.
+	if !hasRun(oldApp.Status.LastAppliedConfiguration) {
 		return nil
 	}
 
@@ -514,19 +348,10 @@ func checkImmutableSettings(settingsSchema *spec.Schema, app, oldApp *v1alpha1.A
 // effectiveSettings returns the settings the application actually runs with, which is
 // what an immutable field is frozen at: status.lastAppliedConfiguration, written by the
 // controller after every successful apply with the schema defaults and the project's
-// grant defaults already merged in.
-//
-// Only an applied install reaches here, so an absent lastAppliedConfiguration means the
-// install predates that field. spec.settings is the fallback for it: weaker, because
-// values the controller resolves never appear there, but it is all such an install has.
+// grant defaults already merged in. Only an application that has run (hasRun) reaches here.
 func effectiveSettings(app *v1alpha1.Application) (map[string]any, error) {
-	raw := app.Status.LastAppliedConfiguration.Raw
-	if len(raw) == 0 {
-		return app.Spec.Settings.GetMap(), nil
-	}
-
 	settings := make(map[string]any)
-	if err := json.Unmarshal(raw, &settings); err != nil {
+	if err := json.Unmarshal(app.Status.LastAppliedConfiguration.Raw, &settings); err != nil {
 		// Same direction as a failed decode of the old object: this is the value
 		// immutability is measured against, so guessing at it is not an option.
 		return nil, fmt.Errorf("unmarshal last applied configuration: %w", err)
@@ -592,24 +417,4 @@ func deleteAtPath(settings map[string]any, path []string) {
 	}
 
 	delete(parent, path[len(path)-1])
-}
-
-// parsePackageConstraint parses the optional semver expression on a PackageConstraint,
-// returning a nil *semver.Constraints when the wrapper is nil or its constraint is empty.
-func parsePackageConstraint(c *v1alpha1.VersionConstraint) (*semver.Constraints, error) {
-	if c == nil {
-		return nil, nil
-	}
-
-	return parsePackageDependencyConstraint(c.Constraint)
-}
-
-// parsePackageDependencyConstraint parses a raw semver expression, treating an empty
-// string as "no constraint" rather than an error.
-func parsePackageDependencyConstraint(raw string) (*semver.Constraints, error) {
-	if len(raw) == 0 {
-		return nil, nil
-	}
-
-	return semver.NewConstraint(raw)
 }

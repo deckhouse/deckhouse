@@ -50,7 +50,7 @@ func (s *LoaderTestSuite) SetupSuite() {
 func (s *LoaderTestSuite) TestLoadAppConfCompletePackage() {
 	packageDir := filepath.Join(s.testdataDir, "apps", "default.complete-app")
 
-	cfg, err := loader.LoadAppConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadAppConf(context.Background(), packageDir, filepath.Base(packageDir), s.logger)
 
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), cfg)
@@ -87,7 +87,7 @@ func (s *LoaderTestSuite) TestLoadAppConfCompletePackage() {
 func (s *LoaderTestSuite) TestLoadAppConfModulesRequirements() {
 	packageDir := filepath.Join(s.testdataDir, "apps", "default.complete-app")
 
-	cfg, err := loader.LoadAppConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadAppConf(context.Background(), packageDir, filepath.Base(packageDir), s.logger)
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), cfg)
 
@@ -161,7 +161,7 @@ func (s *LoaderTestSuite) TestLoadAppConfModulesRequirements() {
 func (s *LoaderTestSuite) TestLoadAppConfMinimalPackage() {
 	packageDir := filepath.Join(s.testdataDir, "apps", "default.minimal-app")
 
-	cfg, err := loader.LoadAppConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadAppConf(context.Background(), packageDir, filepath.Base(packageDir), s.logger)
 
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), cfg)
@@ -184,7 +184,7 @@ func (s *LoaderTestSuite) TestLoadAppConfMinimalPackage() {
 func (s *LoaderTestSuite) TestLoadAppConfWithDigests() {
 	packageDir := filepath.Join(s.testdataDir, "apps", "default.with-digests")
 
-	cfg, err := loader.LoadAppConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadAppConf(context.Background(), packageDir, filepath.Base(packageDir), s.logger)
 
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), cfg)
@@ -199,7 +199,7 @@ func (s *LoaderTestSuite) TestLoadAppConfWithDigests() {
 func (s *LoaderTestSuite) TestLoadAppConfNotFound() {
 	packageDir := filepath.Join(s.testdataDir, "apps", "non-existent")
 
-	cfg, err := loader.LoadAppConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadAppConf(context.Background(), packageDir, filepath.Base(packageDir), s.logger)
 
 	require.Error(s.T(), err)
 	require.ErrorIs(s.T(), err, loader.ErrPackageNotFound)
@@ -217,7 +217,7 @@ func (s *LoaderTestSuite) TestLoadAppConfInvalidPackageName() {
 	content := []byte("name: test\ntype: Application\nversion: v1.0.0\n")
 	require.NoError(s.T(), os.WriteFile(filepath.Join(packageDir, "package.yaml"), content, 0644))
 
-	cfg, err := loader.LoadAppConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadAppConf(context.Background(), packageDir, filepath.Base(packageDir), s.logger)
 
 	require.Error(s.T(), err)
 	s.Contains(err.Error(), "invalid package name")
@@ -228,7 +228,7 @@ func (s *LoaderTestSuite) TestLoadAppConfInvalidPackageName() {
 func (s *LoaderTestSuite) TestLoadModuleConfCompletePackage() {
 	packageDir := filepath.Join(s.testdataDir, "modules", "complete-module")
 
-	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, "complete-module", s.logger)
 
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), cfg)
@@ -263,7 +263,7 @@ func (s *LoaderTestSuite) TestLoadModuleConfCompletePackage() {
 func (s *LoaderTestSuite) TestLoadModuleConfModulesRequirements() {
 	packageDir := filepath.Join(s.testdataDir, "modules", "complete-module")
 
-	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, "complete-module", s.logger)
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), cfg)
 
@@ -337,7 +337,7 @@ func (s *LoaderTestSuite) TestLoadModuleConfModulesRequirements() {
 func (s *LoaderTestSuite) TestLoadModuleConfMinimalPackage() {
 	packageDir := filepath.Join(s.testdataDir, "modules", "minimal-module")
 
-	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, "minimal-module", s.logger)
 
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), cfg)
@@ -360,11 +360,12 @@ func (s *LoaderTestSuite) TestLoadModuleConfMinimalPackage() {
 // accessibility into the new package licensing field.
 func (s *LoaderTestSuite) TestLoadModuleConfLegacyAccessibilityAsLicensing() {
 	tmpDir := s.T().TempDir()
-	versionDir := filepath.Join(tmpDir, "v1.2.3")
-	packageDir := filepath.Join(tmpDir, "legacy-module")
+	// The engine mounts a module at name@version; a module without a declared version takes it
+	// from that path.
+	packageDir := filepath.Join(tmpDir, "legacy-module@v1.2.3")
 
-	require.NoError(s.T(), os.Mkdir(versionDir, 0o755))
-	require.NoError(s.T(), os.WriteFile(filepath.Join(versionDir, "module.yaml"), []byte(`name: legacy-module
+	require.NoError(s.T(), os.Mkdir(packageDir, 0o755))
+	require.NoError(s.T(), os.WriteFile(filepath.Join(packageDir, "module.yaml"), []byte(`name: legacy-module
 stage: Experimental
 weight: 900
 accessibility:
@@ -378,9 +379,7 @@ accessibility:
       enabledInBundles:
         - Minimal
 `), 0o600))
-	require.NoError(s.T(), os.Symlink(versionDir, packageDir))
-
-	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, "legacy-module", s.logger)
 
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), cfg)
@@ -407,7 +406,7 @@ version: v1.0.0
 exclusiveGroup: cni
 `), 0o600))
 
-	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, "exclusive-module", s.logger)
 
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), cfg)
@@ -419,17 +418,16 @@ exclusiveGroup: cni
 // module.yaml survives the fallback conversion into the package definition.
 func (s *LoaderTestSuite) TestLoadModuleConfLegacyExclusiveGroup() {
 	tmpDir := s.T().TempDir()
-	versionDir := filepath.Join(tmpDir, "v1.2.3")
-	packageDir := filepath.Join(tmpDir, "legacy-exclusive-module")
+	// The engine mounts a module at name@version; a module without a declared version takes it
+	// from that path.
+	packageDir := filepath.Join(tmpDir, "legacy-exclusive-module@v1.2.3")
 
-	require.NoError(s.T(), os.Mkdir(versionDir, 0o755))
-	require.NoError(s.T(), os.WriteFile(filepath.Join(versionDir, "module.yaml"), []byte(`name: legacy-exclusive-module
+	require.NoError(s.T(), os.Mkdir(packageDir, 0o755))
+	require.NoError(s.T(), os.WriteFile(filepath.Join(packageDir, "module.yaml"), []byte(`name: legacy-exclusive-module
 weight: 900
 exclusiveGroup: cni
 `), 0o600))
-	require.NoError(s.T(), os.Symlink(versionDir, packageDir))
-
-	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, "legacy-exclusive-module", s.logger)
 
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), cfg)
@@ -437,11 +435,47 @@ exclusiveGroup: cni
 	s.Equal("cni", cfg.Definition.ExclusiveGroup)
 }
 
+// TestLoadModuleConfVersion tests where a downloaded module's version comes from: the version
+// declared in package.yaml, otherwise the mount path (<name>@<version>), and v2.0.0 for a version
+// that is not semver (a dev module carries a tag, not a version).
+func (s *LoaderTestSuite) TestLoadModuleConfVersion() {
+	tests := []struct {
+		name     string
+		dir      string
+		declared string
+		want     string
+	}{
+		{name: "declared version", dir: "version-module@v1.4.0", declared: "v1.0.0", want: "v1.0.0"},
+		{name: "version from the mount path", dir: "version-module@v1.4.0", want: "v1.4.0"},
+		{name: "dev tag from the mount path", dir: "version-module@main", want: "v2.0.0"},
+		{name: "declared dev tag", dir: "version-module@v1.4.0", declared: "pr-123", want: "v2.0.0"},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			packageDir := filepath.Join(s.T().TempDir(), tt.dir)
+			require.NoError(s.T(), os.Mkdir(packageDir, 0o755))
+
+			definition := "apiVersion: v1\ntype: Module\nname: version-module\n"
+			if tt.declared != "" {
+				definition += "version: " + tt.declared + "\n"
+			}
+			require.NoError(s.T(), os.WriteFile(filepath.Join(packageDir, "package.yaml"), []byte(definition), 0o600))
+
+			cfg, err := loader.LoadModuleConf(context.Background(), packageDir, "version-module", s.logger)
+
+			require.NoError(s.T(), err)
+			require.NotNil(s.T(), cfg)
+			s.Equal(tt.want, cfg.Definition.Version)
+		})
+	}
+}
+
 // TestLoadModuleConfWithDigests tests loading a module with image digests.
 func (s *LoaderTestSuite) TestLoadModuleConfWithDigests() {
 	packageDir := filepath.Join(s.testdataDir, "modules", "with-digests")
 
-	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, "with-digests", s.logger)
 
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), cfg)
@@ -461,18 +495,20 @@ func (s *LoaderTestSuite) TestLoadEmbeddedConfMarksPackageEmbedded() {
 	require.NoError(s.T(), os.MkdirAll(moduleDir, 0o755))
 	require.NoError(s.T(), os.WriteFile(filepath.Join(moduleDir, "module.yaml"), []byte("name: embedded-module\nweight: 1\n"), 0o600))
 
-	cfg, err := loader.LoadEmbeddedConf(context.Background(), filepath.Join("modules", "embedded-module"), s.logger)
+	cfg, err := loader.LoadEmbeddedConf(context.Background(), filepath.Join("modules", "embedded-module"), "v1.0.0", s.logger)
 
 	require.NoError(s.T(), err)
 	require.NotNil(s.T(), cfg)
 	s.True(cfg.Embedded)
+	// An embedded module declares no version; it gets the one it is loaded with.
+	s.Equal("v1.0.0", cfg.Definition.Version)
 }
 
 // TestLoadModuleConfNotFound tests error when package directory doesn't exist.
 func (s *LoaderTestSuite) TestLoadModuleConfNotFound() {
 	packageDir := filepath.Join(s.testdataDir, "modules", "non-existent")
 
-	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, s.logger)
+	cfg, err := loader.LoadModuleConf(context.Background(), packageDir, "non-existent", s.logger)
 
 	require.Error(s.T(), err)
 	require.ErrorIs(s.T(), err, loader.ErrPackageNotFound)

@@ -33,7 +33,8 @@ import (
 // Without this the monitor keeps its registration-time (empty) Kind, its
 // snapshot stays empty, and the hook fails. Mirrors addon-operator's
 // ModuleHook.ApplyBindingActions.
-func ApplyBindingActions(bindings []shtypes.OnKubernetesEventConfig, ctrl *controller.HookController, actions []gohook.BindingAction) error {
+// A recreated monitor is unlocked, so it is added to unlocked.
+func ApplyBindingActions(bindings []shtypes.OnKubernetesEventConfig, ctrl *controller.HookController, actions []gohook.BindingAction, unlocked Unlocked) error {
 	for _, action := range actions {
 		monitorID, ok := monitorIDForBinding(bindings, action.Name)
 
@@ -50,6 +51,8 @@ func ApplyBindingActions(bindings []shtypes.OnKubernetesEventConfig, ctrl *contr
 			if err := ctrl.UpdateMonitor(monitorID, action.Kind, action.ApiVersion); err != nil {
 				return fmt.Errorf("update monitor for binding %q: %w", action.Name, err)
 			}
+
+			unlocked[monitorID] = struct{}{}
 		}
 	}
 

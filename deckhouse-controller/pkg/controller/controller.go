@@ -53,7 +53,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
-	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine"
 	utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -100,6 +100,9 @@ type DeckhouseController struct {
 	preflightCountDown *sync.WaitGroup
 
 	moduleLoader *moduleloader.Loader
+
+	// engine runs the applications; it is never stopped in this tree.
+	engine *engine.Engine
 
 	dc dependency.Container
 
@@ -328,9 +331,9 @@ func NewDeckhouseController(
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
 	applicationsSettings := helpers.NewApplicationsSettingsContainer()
 
-	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), operator.ModuleManager, operator.MetricStorage, logger)
+	pkgEngine, err := engine.Build(runtimeManager.GetClient(), operator.ModuleManager, operator.MetricStorage, logger, engine.Config{EnableModuleV2: false})
 	if err != nil {
-		return nil, fmt.Errorf("create package operator: %w", err)
+		return nil, fmt.Errorf("create package engine: %w", err)
 	}
 
 	// do not start operator until controllers preflight checks done
@@ -374,24 +377,20 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
-	// package should not run before converge done
-	operator.ConvergeState.SetOnConvergeStart(func() {
-		logger.Debug("start converge")
-		pkgRuntime.PauseScheduler()
-	})
-
+	// The engine's rules read addon-operator's state, which is no input of any node: the first
+	// converge ends the boot gate (Resume, deferred to the end of Boot when it comes earlier), and
+	// every converge makes the rules read it again (Recheck).
 	operator.ConvergeState.SetOnConvergeFinish(func() {
 		logger.Debug("finish converge")
-		pkgRuntime.ResumeScheduler()
+		pkgEngine.Resume()
+		pkgEngine.Recheck()
 	})
 
 	// Package system controllers (feature flag)
 	if app.PackageSystemEnabled() {
 		logger.Info("Package system controllers are enabled")
 
-		if err = pkgRuntime.Run(); err != nil {
-			return nil, fmt.Errorf("run package runtime: %w", err)
-		}
+		pkgEngine.Start()
 
 		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
 		if err != nil {
@@ -408,12 +407,12 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register application package version controller: %w", err)
 		}
 
-		err = application.RegisterController(new(sync.WaitGroup), runtimeManager, pkgRuntime, operator.ModuleManager, settingsContainer, applicationsSettings, logger)
+		err = application.RegisterController(new(sync.WaitGroup), runtimeManager, pkgEngine, operator.ModuleManager, settingsContainer, applicationsSettings, logger)
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
 		}
 
-		err = modulepackageversion.RegisterController(preflightCountDown, runtimeManager, dc, logger)
+		err = modulepackageversion.RegisterController(runtimeManager, dc, logger)
 		if err != nil {
 			return nil, fmt.Errorf("register module package version controller: %w", err)
 		}
@@ -425,7 +424,7 @@ func NewDeckhouseController(
 			runtimeManager.GetWebhookServer(),
 			runtimeManager.GetClient(),
 			operator.ModuleManager,
-			pkgRuntime,
+			pkgEngine,
 			configtools.NewValidator(operator.ModuleManager, conversionsStore),
 			loader,
 			operator.MetricStorage,
@@ -452,8 +451,15 @@ func NewDeckhouseController(
 
 		defaultReleaseChannel: defaultReleaseChannel,
 
+		engine: pkgEngine,
+
 		log: logger,
 	}, nil
+}
+
+// Engine returns the package engine.
+func (c *DeckhouseController) Engine() *engine.Engine {
+	return c.engine
 }
 
 func setModulesEnvironment(operator *addonoperator.AddonOperator) {

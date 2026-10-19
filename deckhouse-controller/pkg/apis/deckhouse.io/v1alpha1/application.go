@@ -28,6 +28,13 @@ const (
 	ApplicationKind     = "Application"
 
 	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
+
+	// ApplicationAnnotationApplyNow skips the update windows for one version: its value is the
+	// version to apply now, and it takes effect only while spec.packageVersion equals it exactly,
+	// as a string ("v1.2.3" does not match "1.2.3"). Bound to a version rather than "true" because
+	// an Application, unlike a release, lives across versions: the next update obeys the windows
+	// again without anyone removing the annotation.
+	ApplicationAnnotationApplyNow = "application.deckhouse.io/apply-now"
 )
 
 var (
@@ -50,7 +57,7 @@ var _ runtime.Object = (*Application)(nil)
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced
 // +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
-// +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
+// +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.status.currentVersion.version
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
 // +kubebuilder:printcolumn:name=State,type=string,JSONPath=.status.summary.state
 // +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status,priority=1
@@ -315,7 +322,7 @@ type ApplicationStatus struct {
 type ApplicationStatusSummary struct {
 	// Current application lifecycle state.
 	// +optional
-	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting]
+	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Configuring, Ready, Degraded, Suspended, Deleting]
 	State string `json:"state,omitempty"`
 
 	// Description of the current application state.

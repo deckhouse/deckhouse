@@ -165,6 +165,21 @@ func TestSyncModulesFromModuleReleases(t *testing.T) {
 		assert.True(t, module.IsEmbedded())
 	})
 
+	t.Run("a module under a pull override migrates from its deployed release", func(t *testing.T) {
+		override := &v1alpha2.ModulePullOverride{
+			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
+			Spec:       v1alpha2.ModulePullOverrideSpec{ImageTag: "pr-42"},
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), override,
+			testModuleRelease("echo", "deckhouse", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed))
+		require.NoError(t, s.sync(ctx))
+
+		module := getModule(t, cl, "echo")
+		assert.Equal(t, "v1.2.3", module.Spec.PackageVersion, "the override is ignored: the deployed release decides")
+		assert.Equal(t, "deckhouse-modules", module.Spec.PackageRepositoryName)
+	})
+
 	t.Run("a module that left the image loses the embedded mark", func(t *testing.T) {
 		existing := &v1beta1.Module{
 			ObjectMeta: metav1.ObjectMeta{
@@ -181,156 +196,6 @@ func TestSyncModulesFromModuleReleases(t *testing.T) {
 		module := getModule(t, cl, "echo")
 		assert.Equal(t, "example", module.Spec.PackageRepositoryName)
 		assert.False(t, module.IsEmbedded())
-	})
-}
-
-func TestSyncModulesFromModulePullOverrides(t *testing.T) {
-	ctx := context.Background()
-
-	readyPullOverride := func(moduleName, imageTag string) *v1alpha2.ModulePullOverride {
-		return &v1alpha2.ModulePullOverride{
-			ObjectMeta: metav1.ObjectMeta{Name: moduleName},
-			Spec:       v1alpha2.ModulePullOverrideSpec{ImageTag: imageTag},
-			Status:     v1alpha2.ModulePullOverrideStatus{Message: v1alpha2.ModulePullOverrideMessageReady},
-		}
-	}
-
-	packageWithAvailableRepositories := func(moduleName string, repositories ...string) *v1alpha1.ModulePackage {
-		return &v1alpha1.ModulePackage{
-			ObjectMeta: metav1.ObjectMeta{Name: moduleName},
-			Status:     v1alpha1.ModulePackageStatus{AvailableRepositories: repositories},
-		}
-	}
-
-	sourcedConfig := func(moduleName, sourceName string) *v1alpha1.ModuleConfig {
-		moduleConfig := testModuleConfig(moduleName)
-		moduleConfig.Spec.Source = sourceName
-
-		return moduleConfig
-	}
-
-	t.Run("takes the version from the image tag and marks the module dev", func(t *testing.T) {
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
-			readyPullOverride("echo", "pr-1234"),
-			sourcedConfig("echo", "example"))
-		require.NoError(t, s.sync(ctx))
-
-		module := getModule(t, cl, "echo")
-		assert.Equal(t, "pr-1234", module.Spec.PackageVersion)
-		assert.Equal(t, "example", module.Spec.PackageRepositoryName)
-		assert.True(t, module.IsDev())
-	})
-
-	t.Run("outranks a deployed release", func(t *testing.T) {
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
-			readyPullOverride("echo", "pr-1234"),
-			sourcedConfig("echo", "example"),
-			testModuleRelease("echo", "example", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed))
-		require.NoError(t, s.sync(ctx))
-
-		assert.Equal(t, "pr-1234", getModule(t, cl, "echo").Spec.PackageVersion)
-	})
-
-	t.Run("loses to the embedded copy", func(t *testing.T) {
-		dir := t.TempDir()
-		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
-
-		s, cl := newTestSyncer(t, "v1.80.0", dir,
-			readyPullOverride("echo", "pr-1234"),
-			sourcedConfig("echo", "example"))
-		require.NoError(t, s.sync(ctx))
-
-		module := getModule(t, cl, "echo")
-		assert.Equal(t, "v1.80.0", module.Spec.PackageVersion)
-		assert.True(t, module.IsEmbedded())
-	})
-
-	t.Run("an override that is not ready places nothing", func(t *testing.T) {
-		pullOverride := readyPullOverride("echo", "pr-1234")
-		pullOverride.Status.Message = v1alpha2.ModulePullOverrideMessageModuleNotFound
-
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), pullOverride, sourcedConfig("echo", "example"))
-		require.NoError(t, s.sync(ctx))
-
-		assert.Empty(t, listModuleNamesExceptGlobal(t, cl))
-	})
-
-	t.Run("the repository comes from the module config source", func(t *testing.T) {
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
-			readyPullOverride("echo", "pr-1234"),
-			sourcedConfig("echo", "deckhouse"),
-			packageWithAvailableRepositories("echo", "example"))
-		require.NoError(t, s.sync(ctx))
-
-		assert.Equal(t, "deckhouse-modules", getModule(t, cl, "echo").Spec.PackageRepositoryName,
-			"the config source outranks the catalog")
-	})
-
-	t.Run("the repository the module object carries does not decide", func(t *testing.T) {
-		existing := &v1beta1.Module{
-			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
-			Spec:       v1beta1.ModuleSpec{PackageRepositoryName: "other", PackageVersion: "v1.2.3"},
-		}
-
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), existing,
-			readyPullOverride("echo", "pr-1234"),
-			packageWithAvailableRepositories("echo", "example"))
-		require.NoError(t, s.sync(ctx))
-
-		module := getModule(t, cl, "echo")
-		assert.Equal(t, "example", module.Spec.PackageRepositoryName, "the catalog decides, not the object")
-		assert.Equal(t, "pr-1234", module.Spec.PackageVersion)
-	})
-
-	t.Run("the only available repository names it", func(t *testing.T) {
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
-			readyPullOverride("echo", "pr-1234"),
-			packageWithAvailableRepositories("echo", "example"))
-		require.NoError(t, s.sync(ctx))
-
-		assert.Equal(t, "example", getModule(t, cl, "echo").Spec.PackageRepositoryName)
-	})
-
-	t.Run("several available repositories and deckhouse-modules is one of them", func(t *testing.T) {
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
-			readyPullOverride("echo", "pr-1234"),
-			packageWithAvailableRepositories("echo", "example", "deckhouse-modules"))
-		require.NoError(t, s.sync(ctx))
-
-		assert.Equal(t, "deckhouse-modules", getModule(t, cl, "echo").Spec.PackageRepositoryName)
-	})
-
-	t.Run("several available repositories and none is deckhouse-modules", func(t *testing.T) {
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
-			readyPullOverride("echo", "pr-1234"),
-			packageWithAvailableRepositories("echo", "example", "other"))
-		require.NoError(t, s.sync(ctx))
-
-		assert.Empty(t, listModuleNamesExceptGlobal(t, cl), "the sync cannot tell which repository the module belongs to")
-	})
-
-	t.Run("a config naming no source falls back to the catalog", func(t *testing.T) {
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
-			readyPullOverride("echo", "pr-1234"),
-			testModuleConfig("echo"),
-			packageWithAvailableRepositories("echo", "example"))
-		require.NoError(t, s.sync(ctx))
-
-		assert.Equal(t, "example", getModule(t, cl, "echo").Spec.PackageRepositoryName)
-	})
-
-	t.Run("a catalog entry with no available repository places nothing", func(t *testing.T) {
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), readyPullOverride("echo", "pr-1234"), packageWithAvailableRepositories("echo"))
-		require.NoError(t, s.sync(ctx))
-
-		assert.Empty(t, listModuleNamesExceptGlobal(t, cl))
-	})
-
-	t.Run("no catalog entry at all places nothing", func(t *testing.T) {
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), readyPullOverride("echo", "pr-1234"))
-		require.NoError(t, s.sync(ctx))
-
-		assert.Empty(t, listModuleNamesExceptGlobal(t, cl))
 	})
 }
 
@@ -399,6 +264,47 @@ func TestSyncModulesFromModuleConfig(t *testing.T) {
 		require.NoError(t, s.sync(ctx))
 
 		assert.Nil(t, getModule(t, cl, "echo").Spec.Enabled)
+	})
+}
+
+func TestDeleteUnresolvableModules(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("a module with no repository and no version is deleted", func(t *testing.T) {
+		stale := &v1beta1.Module{ObjectMeta: metav1.ObjectMeta{Name: "never-downloaded"}}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), stale)
+		require.NoError(t, s.sync(ctx))
+
+		assert.Empty(t, listModuleNamesExceptGlobal(t, cl))
+	})
+
+	t.Run("a module that names its package is kept", func(t *testing.T) {
+		versioned := &v1beta1.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
+			Spec:       v1beta1.ModuleSpec{PackageRepositoryName: "deckhouse-modules", PackageVersion: "v1.2.3"},
+		}
+		versionOnly := &v1beta1.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: "pinned"},
+			Spec:       v1beta1.ModuleSpec{PackageVersion: "v1.0.0"},
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), versioned, versionOnly)
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, []string{"echo", "pinned"}, listModuleNamesExceptGlobal(t, cl))
+	})
+
+	t.Run("an embedded module is kept", func(t *testing.T) {
+		embedded := &v1beta1.Module{ObjectMeta: metav1.ObjectMeta{
+			Name:        "shipped",
+			Annotations: map[string]string{v1beta1.ModuleAnnotationEmbedded: "true"},
+		}}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), embedded)
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, []string{"shipped"}, listModuleNamesExceptGlobal(t, cl))
 	})
 }
 
@@ -473,28 +379,6 @@ func TestSyncModulesReleaseChannel(t *testing.T) {
 		require.NoError(t, s.sync(ctx))
 
 		assert.Equal(t, "EarlyAccess", getModule(t, cl, "echo").Spec.ReleaseChannel)
-	})
-
-	t.Run("a dev copy follows the channel its module config names", func(t *testing.T) {
-		pullOverride := &v1alpha2.ModulePullOverride{
-			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
-			Spec:       v1alpha2.ModulePullOverrideSpec{ImageTag: "pr-1234"},
-			Status:     v1alpha2.ModulePullOverrideStatus{Message: v1alpha2.ModulePullOverrideMessageReady},
-		}
-
-		moduleConfig := testModuleConfig("echo")
-		moduleConfig.Spec.Source = "example"
-		moduleConfig.Spec.UpdatePolicy = "nightly"
-
-		updatePolicy := &v1alpha2.ModuleUpdatePolicy{
-			ObjectMeta: metav1.ObjectMeta{Name: "nightly"},
-			Spec:       v1alpha2.ModuleUpdatePolicySpec{ReleaseChannel: "Alpha"},
-		}
-
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), pullOverride, moduleConfig, updatePolicy)
-		require.NoError(t, s.sync(ctx))
-
-		assert.Equal(t, "Alpha", getModule(t, cl, "echo").Spec.ReleaseChannel)
 	})
 }
 

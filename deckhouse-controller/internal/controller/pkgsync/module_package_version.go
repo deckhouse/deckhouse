@@ -143,10 +143,12 @@ func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName
 // so the metadata stays empty and only the settings and values schemas are
 // filled. An empty metadata object rather than none keeps every reader that
 // reaches into it, such as the exclusive group and stage getters, off a nil
-// dereference. The version is written even when the dir yields no schemas at
-// all: the image always ships them, and the package and the version are what
-// the module controller gates registration on, so withholding them over an
-// unreadable dir would strand the global Module rather than degrade it.
+// dereference. The version is written even when the dir holds no schema files:
+// the package and the version are what the module controller gates
+// registration on. A schema that cannot be read or parsed fails the sync
+// instead: it is a broken image, and skipping the version would strand the
+// global Module without settings, so Global would hold every package behind
+// its barrier with nothing failing; deckhouse must not start on it.
 func (s *syncer) syncGlobalModulePackageVersion(ctx context.Context, moduleSources []v1alpha1.ModuleSource) error {
 	name := fmt.Sprintf("%s-%s", repositoryNameEmbedded, packageNameGlobal)
 	if !s.validModulePackageVersionName(name, packageNameGlobal) {
@@ -155,18 +157,12 @@ func (s *syncer) syncGlobalModulePackageVersion(ctx context.Context, moduleSourc
 
 	settingsRaw, valuesRaw, err := loader.LoadGlobalSchemas(s.globalHooksDir)
 	if err != nil {
-		s.logger.Warn("global hooks dir holds no readable schemas, skip its package version",
-			slog.String("dir", s.globalHooksDir), log.Err(err))
-
-		return nil
+		return fmt.Errorf("load the global schemas from '%s': %w", s.globalHooksDir, err)
 	}
 
 	schemas, err := v1alpha1.ParsePackageSchemas(settingsRaw, valuesRaw)
 	if err != nil {
-		s.logger.Warn("global schemas do not parse, skip its package version",
-			slog.String("dir", s.globalHooksDir), log.Err(err))
-
-		return nil
+		return fmt.Errorf("parse the global schemas from '%s': %w", s.globalHooksDir, err)
 	}
 
 	// the global package is available in no repository either, so the sync creates its catalog entry
@@ -233,7 +229,7 @@ func (s *syncer) modulePackageVersionSpecForModuleRelease(release *v1alpha1.Modu
 	}
 
 	version := "v" + parsed.String()
-	repository := PackageRepositoryNameForModuleSource(source)
+	repository := packageRepositoryNameForModuleSource(source)
 
 	name := v1alpha1.MakeModulePackageVersionName(repository, moduleName, version)
 	if !s.validModulePackageVersionName(name, moduleName) {

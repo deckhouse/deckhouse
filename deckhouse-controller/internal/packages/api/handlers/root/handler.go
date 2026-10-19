@@ -40,11 +40,11 @@ type Deps struct {
 	Provider Provider
 }
 
-// Provider serves the root routes; GetElector is nil outside HA.
+// Provider serves the root routes; GetElector is nil outside HA, GetMetrics nil when socket-only.
 type Provider interface {
 	GetMetrics() metricsstorage.Storage
 	GetElector() *leaderelection.LeaderElector
-	IsConverged() bool
+	Ready() bool
 }
 
 type handler struct {
@@ -69,11 +69,22 @@ func NewHandler(api http.Handler, deps Deps) http.Handler {
 	router.Get("/readyz", h.ready)
 
 	router.Get("/endpoints", listRoutes(router))
-	router.Get("/metrics", h.provider.GetMetrics().Handler().ServeHTTP)
+	router.Get("/metrics", h.metrics)
 
 	router.Mount(apiPrefix, api)
 
 	return router
+}
+
+// metrics serves the metrics storage; 404 without one (another server owns the metrics).
+func (h *handler) metrics(w http.ResponseWriter, req *http.Request) {
+	storage := h.provider.GetMetrics()
+	if storage == nil {
+		http.NotFound(w, req)
+		return
+	}
+
+	storage.Handler().ServeHTTP(w, req)
 }
 
 // alive reports that the process is up and serving.
@@ -96,7 +107,7 @@ func (h *handler) ready(w http.ResponseWriter, _ *http.Request) {
 
 // reportStartupConvergeStatus answers with this replica's startup converge state, as addon-operator did.
 func (h *handler) reportStartupConvergeStatus(w http.ResponseWriter) {
-	if !h.provider.IsConverged() {
+	if !h.provider.Ready() {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte("Startup converge in progress\n"))
 

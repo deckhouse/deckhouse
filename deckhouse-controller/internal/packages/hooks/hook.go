@@ -49,8 +49,8 @@ type Hook interface {
 
 // ControllableHook is the minimal hook view the runtime needs to enable bindings
 // and route events: the hook's name and its controller. Both module hooks (Hook)
-// and global hooks (GlobalHook) satisfy it, so tasks shared across them (Enable,
-// hook routing) can depend on this instead of a concrete hook type.
+// and global hooks (GlobalHook) satisfy it, so the hook lanes start and route both kinds
+// through this instead of a concrete hook type.
 type ControllableHook interface {
 	GetName() string
 	GetHookController() *controller.HookController
@@ -138,4 +138,31 @@ func (s *Storage) GetHookByName(name string) Hook {
 	defer s.mu.RUnlock()
 
 	return s.byName[name]
+}
+
+// moduleConfigured and globalConfigured are hooks with a module or global hook config.
+type (
+	moduleConfigured interface {
+		GetHookConfig() *addonhooks.ModuleHookConfig
+	}
+	globalConfigured interface {
+		GetHookConfig() *addonhooks.GlobalHookConfig
+	}
+)
+
+// ExecutionSettings are the execution rate settings of h's config (executionMinInterval and
+// executionBurst); nil when it sets none or its config is not a module or global hook's.
+func ExecutionSettings(h ControllableHook) *shtypes.Settings {
+	switch h := h.(type) {
+	case moduleConfigured:
+		if cfg := h.GetHookConfig(); cfg != nil {
+			return cfg.Settings
+		}
+	case globalConfigured:
+		if cfg := h.GetHookConfig(); cfg != nil {
+			return cfg.Settings
+		}
+	}
+
+	return nil
 }

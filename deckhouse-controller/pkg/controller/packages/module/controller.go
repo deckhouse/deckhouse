@@ -30,9 +30,10 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
-	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
-	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -54,14 +55,11 @@ const (
 	// defaultRequeueAfter is the retry delay for states that need an external change to
 	// make progress, such as a missing package or a version still in draft.
 	defaultRequeueAfter = 30 * time.Second
-	// devRequeueAfter is how often a dev module's tag is re-resolved. A repush moves nothing
-	// in the API server, so the digest behind the tag is only ever seen by looking again.
-	devRequeueAfter = 15 * time.Second
-	// removalRequeueAfter is how often a running teardown is re-checked. It completes in a queue
-	// callback the API server never sees, so the only way to notice is to ask the runtime again.
+	// removalRequeueAfter is how often a running teardown is re-checked. Its end reaches only the
+	// status queue, not this controller, so the only way to notice is to ask the engine again.
 	removalRequeueAfter = 5 * time.Second
 
-	// globalModuleName is the reserved name of the global module, which the runtime builds
+	// globalModuleName is the reserved name of the global module, which the engine builds
 	// itself out of the global hooks dir.
 	globalModuleName = "global"
 )
@@ -77,7 +75,7 @@ func RegisterController(
 		init:    sync,
 		client:  runtime.GetClient(),
 		manager: manager,
-		status:  status.NewService(runtime.GetClient(), manager.GetStatus, logger),
+		status:  status.NewService(runtime.GetClient(), manager, logger),
 		logger:  logger.Named(controllerName),
 	}
 
@@ -85,7 +83,7 @@ func RegisterController(
 		r.status.Start(ctx, r.manager.GetModuleStatusQueue())
 		return nil
 	})); err != nil {
-		return fmt.Errorf("add preflight: %w", err)
+		return fmt.Errorf("add status service: %w", err)
 	}
 
 	if err := ctrl.NewControllerManagedBy(runtime).
@@ -112,17 +110,16 @@ type reconciler struct {
 	logger  *log.Logger
 }
 
-// packageManager registers and unregisters modules in the package runtime.
+// packageManager hands modules and Global's settings to the package engine (engine.Engine).
 type packageManager interface {
-	UpdateModule(module packageruntime.Module, force bool)
-	UpdateGlobalModule(settings addonutils.Values, settingsVersion int)
-	// RemoveModule tears the module down and reports whether the teardown has finished.
+	ApplyModule(module engine.Module)
+	ApplyGlobal(settings addonutils.Values, settingsVersion int)
+	// RemoveModule removes the module and reports whether the removal has finished; true at once
+	// for global.
 	RemoveModule(name string) bool
-	// RemoveEmbeddedModule is RemoveModule for a module the image ships; it undeploys nothing.
-	RemoveEmbeddedModule(name string) bool
-	GetStatus(name string) packagestatus.Status
+	Report(name string) (model.Report, bool)
+	Observed(name string) observed.Observation
 	GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[string]
-	GetModuleDigest(ctx context.Context, repo registry.Remote, name, tag string) (string, error)
 }
 
 // Reconcile dispatches the module to the delete or the create/update handler.
@@ -160,17 +157,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
-	// A dev module follows a mutable tag, and a repush under it changes nothing the informer
-	// watches, so the only way to notice one is to resolve the tag again on a timer.
-	if module.IsDev() && !module.IsEmbedded() {
-		return ctrl.Result{RequeueAfter: devRequeueAfter}, nil
-	}
-
 	return ctrl.Result{}, nil
 }
 
 // handleCreateOrUpdate validates the module's package and version, moves the module
-// onto them and hands it to the package runtime.
+// onto them and hands it to the package engine.
 func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1beta1.Module) error {
 	logger := r.logger.With(slog.String("name", module.Name))
 
@@ -179,7 +170,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1beta1.M
 
 	original := module.DeepCopy()
 
-	// The finalizer is claimed before the module reaches the runtime: it is what
+	// The finalizer is claimed before the module reaches the engine: it is what
 	// guarantees handleDelete gets to call RemoveModule and release the version.
 	if !controllerutil.ContainsFinalizer(module, v1beta1.ModuleFinalizerStatisticRegistered) {
 		patch := client.MergeFrom(module.DeepCopy())
@@ -193,23 +184,16 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1beta1.M
 		original = module.DeepCopy()
 	}
 
-	// The global module is routed ahead of every annotation: the runtime holds the module
+	// The global module is routed ahead of every annotation: the engine holds the module
 	// itself, so nothing about it is ever loaded, deployed or removed.
 	if module.Name == globalModuleName {
 		return r.handleGlobal(ctx, module, original)
 	}
 
 	// An embedded module ships inside the image: it has a package and a version like any other,
-	// but no repository to pull it from. The annotation is read before the dev one, the way the
-	// bootstrap and the runtime do — embedded wins while the image ships the module.
+	// but no repository to pull it from.
 	if module.IsEmbedded() {
 		return r.handleEmbedded(ctx, module, original)
-	}
-
-	// A dev module is pinned to a mutable tag, which the repository scan publishes no version
-	// for, so it is routed before the package and the version are looked up.
-	if module.IsDev() {
-		return r.handleDev(ctx, module, original)
 	}
 
 	pkg, mpv, err := r.resolvePackage(ctx, module)
@@ -217,12 +201,18 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1beta1.M
 		return err
 	}
 
-	// The repository is read before any used flag is touched, so a missing repository
-	// cannot leave the versions half-updated.
+	// The repository and the requirements are read before any used flag is touched, so a missing
+	// repository or unparsable requirements cannot leave the versions half-updated.
 	repo := new(v1alpha1.PackageRepository)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Spec.PackageRepositoryName}, repo); err != nil {
 		logger.Error("get package repository", log.Err(err))
 		return fmt.Errorf("get package repository '%s': %w", module.Spec.PackageRepositoryName, err)
+	}
+
+	requirements, err := requirementsOf(mpv)
+	if err != nil {
+		logger.Error("parse the module package version requirements", log.Err(err))
+		return fmt.Errorf("parse requirements of module package version '%s': %w", mpv.Name, err)
 	}
 
 	if err := r.relink(ctx, module, pkg, mpv); err != nil {
@@ -230,23 +220,21 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1beta1.M
 		return err
 	}
 
-	r.manager.UpdateModule(packageruntime.Module{
-		Name: module.Name,
-		Definition: modules.Definition{
-			Name:    module.Name,
-			Version: module.Spec.PackageVersion,
-		},
+	r.manager.ApplyModule(engine.Module{
+		Name:            module.Name,
+		Version:         module.Spec.PackageVersion,
+		Repository:      registry.BuildRemote(repo),
 		Settings:        module.Spec.Settings.GetMap(),
 		SettingsVersion: module.Spec.SettingsVersion,
 		Maintenance:     module.Spec.Maintenance,
 		Enabled:         module.Spec.Enabled,
-		Repository:      registry.BuildRemote(repo),
-	}, false)
+		Requirements:    requirements,
+	})
 
 	return r.commit(ctx, module, original, pkg, mpv)
 }
 
-// handleEmbedded hands a module the image ships to the package runtime. It passes the same package
+// handleEmbedded hands a module the image ships to the package engine. It passes the same package
 // and version gate as a downloaded one — the bootstrap fills both from the module files on disk
 // before any Module is written — and differs in exactly two ways: the reserved "embedded"
 // repository resolves to no object, so none is read, and the files are already in place.
@@ -260,6 +248,12 @@ func (r *reconciler) handleEmbedded(ctx context.Context, module, original *v1bet
 		return err
 	}
 
+	requirements, err := requirementsOf(mpv)
+	if err != nil {
+		logger.Error("parse the module package version requirements", log.Err(err))
+		return fmt.Errorf("parse requirements of module package version '%s': %w", mpv.Name, err)
+	}
+
 	// relink drops the downloaded version a module the image started shipping after it had
 	// already been released still points at.
 	if err := r.relink(ctx, module, pkg, mpv); err != nil {
@@ -267,22 +261,23 @@ func (r *reconciler) handleEmbedded(ctx context.Context, module, original *v1bet
 		return err
 	}
 
-	// No repository and no package version: that is what routes the module to the embedded
-	// pipeline, which loads the files the image already carries.
-	r.manager.UpdateModule(packageruntime.Module{
+	// Embedded: the engine loads the files the image carries, at the version the image ships.
+	r.manager.ApplyModule(engine.Module{
 		Name:            module.Name,
+		Embedded:        true,
 		Settings:        module.Spec.Settings.GetMap(),
 		SettingsVersion: module.Spec.SettingsVersion,
 		Maintenance:     module.Spec.Maintenance,
 		Enabled:         module.Spec.Enabled,
-	}, false)
+		Requirements:    requirements,
+	})
 
 	return r.commit(ctx, module, original, pkg, mpv)
 }
 
-// handleGlobal hands the global module's settings to the package runtime. It passes the same
+// handleGlobal hands the global module's settings to the package engine. It passes the same
 // package and version gate as an embedded module — the bootstrap fills both from the global
-// hooks dir before any Module is written — but the runtime built the module itself at startup,
+// hooks dir before any Module is written — but the engine built the module itself at startup,
 // so the settings are the only thing that crosses over.
 func (r *reconciler) handleGlobal(ctx context.Context, module, original *v1beta1.Module) error {
 	logger := r.logger.With(slog.String("name", module.Name))
@@ -299,18 +294,18 @@ func (r *reconciler) handleGlobal(ctx context.Context, module, original *v1beta1
 		return err
 	}
 
-	r.manager.UpdateGlobalModule(module.Spec.Settings.GetMap(), module.Spec.SettingsVersion)
+	r.manager.ApplyGlobal(module.Spec.Settings.GetMap(), module.Spec.SettingsVersion)
 
 	return r.commit(ctx, module, original, pkg, mpv)
 }
 
 // resolvePackage reads the module's package and the version its spec names. A version still in
-// draft is not published, so its metadata must never reach the runtime.
+// draft is not published, so its metadata must never reach the engine.
 func (r *reconciler) resolvePackage(ctx context.Context, module *v1beta1.Module) (*v1alpha1.ModulePackage, *v1alpha1.ModulePackageVersion, error) {
 	logger := r.logger.With(slog.String("name", module.Name))
 
-	pkg := new(v1alpha1.ModulePackage)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Name}, pkg); err != nil {
+	mp := new(v1alpha1.ModulePackage)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Name}, mp); err != nil {
 		logger.Debug("module package not found", slog.String("package", module.Name), log.Err(err))
 
 		return nil, nil, fmt.Errorf("get module package '%s': %w", module.Name, err)
@@ -324,26 +319,30 @@ func (r *reconciler) resolvePackage(ctx context.Context, module *v1beta1.Module)
 	mpv := new(v1alpha1.ModulePackageVersion)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: versionName}, mpv); err != nil {
 		logger.Debug("module package version not found", slog.String("mpv", versionName), log.Err(err))
-
 		return nil, nil, fmt.Errorf("get module package version '%s': %w", versionName, err)
 	}
 
 	if mpv.IsDraft() {
 		logger.Debug("module package version is in draft", slog.String("mpv", versionName))
-
 		return nil, nil, fmt.Errorf("module package version '%s' is draft", versionName)
 	}
 
-	return pkg, mpv, nil
+	return mp, mpv, nil
+}
+
+// requirementsOf parses the requirements the version publishes at the module's order; none
+// without metadata.
+func requirementsOf(mpv *v1alpha1.ModulePackageVersion) (schedule.Constraints, error) {
+	return mpv.Status.PackageMetadata.ToScheduleConstraints()
 }
 
 // commit records the package and the version as the module's owners and clears the registry
 // annotation in one patch. Both references are non-controller and block owner deletion, so
 // neither the package nor the version can disappear from under a running module.
-func (r *reconciler) commit(ctx context.Context, module, original *v1beta1.Module, pkg *v1alpha1.ModulePackage, mpv *v1alpha1.ModulePackageVersion) error {
+func (r *reconciler) commit(ctx context.Context, module, original *v1beta1.Module, mp *v1alpha1.ModulePackage, mpv *v1alpha1.ModulePackageVersion) error {
 	ctrlutils.ReplaceOwnerReferences(module,
 		ctrlutils.OwnerReference(v1alpha1.ModulePackageVersionGVK, mpv.Name, mpv.UID),
-		ctrlutils.OwnerReference(v1alpha1.ModulePackageGVK, pkg.Name, pkg.UID),
+		ctrlutils.OwnerReference(v1alpha1.ModulePackageGVK, mp.Name, mp.UID),
 	)
 	delete(module.Annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 
@@ -355,87 +354,8 @@ func (r *reconciler) commit(ctx context.Context, module, original *v1beta1.Modul
 	return nil
 }
 
-// handleDev hands a module pinned to a mutable dev image tag to the package runtime, the way
-// the override controller drives the addon-operator path.
-//
-// No ModulePackageVersion is published for such a tag, so the digest behind it takes the place of
-// a version as the change signal: it is compared with the one the module was last handed over on,
-// and a move forces the runtime past change detection that only ever sees the same tag. The digest
-// is recorded after the handover, so a failure before it re-forces rather than skips.
-func (r *reconciler) handleDev(ctx context.Context, module, original *v1beta1.Module) error {
-	logger := r.logger.With(slog.String("name", module.Name))
-
-	logger.Debug("handle dev module")
-
-	if module.Spec.PackageRepositoryName == "" {
-		logger.Debug("dev module has no package repository")
-
-		return fmt.Errorf("dev module '%s' has no package repository", module.Name)
-	}
-
-	repo := new(v1alpha1.PackageRepository)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Spec.PackageRepositoryName}, repo); err != nil {
-		logger.Error("failed to get the package repository", log.Err(err))
-		return fmt.Errorf("get package repository '%s': %w", module.Spec.PackageRepositoryName, err)
-	}
-
-	remote := registry.BuildRemote(repo)
-
-	digest, err := r.manager.GetModuleDigest(ctx, remote, module.Name, module.Spec.PackageVersion)
-	if err != nil {
-		logger.Error("failed to resolve the dev image digest", log.Err(err))
-		return fmt.Errorf("get digest of the module '%s': %w", module.Name, err)
-	}
-
-	// Only the digest tells a repushed image from an untouched one, and force is what carries that
-	// verdict past change detection, which sees the same tag either way.
-	forced := module.Annotations[v1beta1.ModuleAnnotationHash] != digest
-
-	// A version the repository scan produced cannot back a dev tag, and the reference to it would
-	// block its owner's deletion for ever — the module arrives with one when it was released before.
-	if name := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageVersionKind); name != "" {
-		if err := r.detachVersion(ctx, name); err != nil {
-			logger.Error("failed to detach the module package version", slog.String("mpv", name), log.Err(err))
-			return fmt.Errorf("detach module package version '%s': %w", name, err)
-		}
-	}
-
-	// The version recorded in the package would name the released version the module has just
-	// left behind, so it is released together with the reference to the package below.
-	if name := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageKind); name != "" {
-		if err := r.detachPackage(ctx, name); err != nil {
-			logger.Error("failed to detach the module package", slog.String("package", name), log.Err(err))
-			return fmt.Errorf("detach module package '%s': %w", name, err)
-		}
-	}
-
-	r.manager.UpdateModule(packageruntime.Module{
-		Name: module.Name,
-		Definition: modules.Definition{
-			Name:    module.Name,
-			Version: module.Spec.PackageVersion,
-		},
-		Settings:        module.Spec.Settings.GetMap(),
-		SettingsVersion: module.Spec.SettingsVersion,
-		Maintenance:     module.Spec.Maintenance,
-		Enabled:         module.Spec.Enabled,
-		Repository:      remote,
-	}, forced)
-
-	ctrlutils.DropOwnerReferences(module, v1alpha1.ModulePackageVersionKind, v1alpha1.ModulePackageKind)
-	module.Annotations[v1beta1.ModuleAnnotationHash] = digest
-	delete(module.Annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
-
-	if err := r.client.Patch(ctx, module, client.MergeFrom(original)); err != nil {
-		logger.Error("failed to patch the module", log.Err(err))
-		return fmt.Errorf("patch module '%s': %w", module.Name, err)
-	}
-
-	return nil
-}
-
-// handleDelete unregisters the module from the package runtime and, once the runtime reports the
-// teardown finished, releases the module's package version and the finalizer. The wait is unbounded
+// handleDelete removes the module from the package engine and, once the engine reports the
+// removal finished, releases the module's package version and the finalizer. The wait is unbounded
 // on purpose: holding the finalizer is what keeps a Helm release from outliving the CR that owns
 // it, so a teardown the queue keeps retrying keeps the module in Terminating rather than orphaning
 // its resources.
@@ -445,24 +365,11 @@ func (r *reconciler) handleDelete(ctx context.Context, module *v1beta1.Module) (
 	logger.Debug("handle delete module")
 	defer logger.Debug("handle delete module complete")
 
-	// An embedded module deployed nothing, so its removal enqueues no undeploy — but its hooks and
-	// its Helm release are still taken down by Disable, which is what this waits for.
-	remove := r.manager.RemoveModule
-	if module.IsEmbedded() {
-		remove = r.manager.RemoveEmbeddedModule
-	}
-
-	// Global has nothing to tear down — it was never deployed or loaded — and tearing it down
-	// anyway would drop the module the whole runtime renders against.
-	if module.Name == globalModuleName {
-		remove = removeNothing
-	}
-
-	// The runtime tears the module down asynchronously — the Disable task uninstalls the Helm
-	// release, Undeploy takes the files off disk, and the cleanup riding the last task drops the
-	// state — so the remover is polled until it reports the teardown finished.
-	if !remove(module.Name) {
-		logger.Info("module is still being removed by the runtime")
+	// The engine removes the module asynchronously — the release, the hooks, the files — so the
+	// removal is polled until it reports done. Global reports done at once: it is never removed,
+	// the whole engine renders against it.
+	if !r.manager.RemoveModule(module.Name) {
+		logger.Info("module is still being removed by the engine")
 
 		return ctrl.Result{RequeueAfter: removalRequeueAfter}, nil
 	}
@@ -486,7 +393,8 @@ func (r *reconciler) handleDelete(ctx context.Context, module *v1beta1.Module) (
 	}
 
 	// The package is named after the module, so the reference and the name agree; the reference is
-	// still preferred, and the name only carries a module attached before the reference was written.
+	// still preferred, and the name only carries a module attached before the reference was
+	// written.
 	pkgName := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageKind)
 	if pkgName == "" {
 		pkgName = module.Name
@@ -511,10 +419,6 @@ func (r *reconciler) handleDelete(ctx context.Context, module *v1beta1.Module) (
 
 	return ctrl.Result{}, nil
 }
-
-// removeNothing is the remover of a module the runtime never placed: the teardown is done
-// before it starts.
-func removeNothing(string) bool { return true }
 
 // relink marks mpv as used by the module and records the version in pkg, releasing the version
 // the module switched away from. Releasing first keeps the flags correct across a version bump.

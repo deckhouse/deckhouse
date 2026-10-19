@@ -22,7 +22,6 @@ import (
 
 type Info struct {
 	Name    string            `json:"name" yaml:"name"`
-	Running bool              `json:"running" yaml:"running"`
 	Path    string            `json:"path" yaml:"path"`
 	Values  addonutils.Values `json:"values,omitempty" yaml:"values,omitempty"`
 	Hooks   []string          `json:"hooks,omitempty" yaml:"hooks,omitempty"`
@@ -40,11 +39,9 @@ func (m *Module) GetInfo() Info {
 
 	dynamic := make(map[string]bool, len(m.dynamicEnabled))
 	maps.Copy(dynamic, m.dynamicEnabled)
-	maps.Copy(dynamic, m.configEnabled)
 
 	return Info{
 		Name:    m.name,
-		Running: m.running.Load(),
 		Path:    m.path,
 		Values:  m.values.GetValues(),
 		Hooks:   hooks,

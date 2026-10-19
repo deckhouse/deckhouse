@@ -34,44 +34,60 @@ import (
 )
 
 const (
-	// apiSocketPath is the Unix socket the package runtime API listens on.
-	apiSocketPath = "/tmp/deckhouse-debug.socket"
+	// SocketPath is the Unix socket the packages API listens on (the CLI's PACKAGES_DEBUG_UNIX_SOCKET
+	// default).
+	SocketPath = "/tmp/deckhouse-debug.socket"
 
 	// apiShutdownTimeout bounds how long shutdown waits for in-flight API requests.
 	apiShutdownTimeout = 5 * time.Second
 )
 
-// convergence reports whether the controller finished its startup converge.
-type convergence interface {
-	IsConverged() bool
+// ready reports whether the controller finished its startup converge (latched).
+type ready interface {
+	Ready() bool
 }
 
 // Server serves the runtime API: the private tree on the Unix socket, the public one over TCP.
 type Server struct {
-	tcp         *tcp.Server
-	socket      *socket.Server
-	workers     errgroup.Group
-	elector     atomic.Pointer[leaderelection.LeaderElector] // set after Start, read by probe handlers
-	metrics     metricsstorage.Storage
-	convergence convergence
-	logger      *log.Logger
+	tcp     *tcp.Server
+	socket  *socket.Server
+	workers errgroup.Group
+	elector atomic.Pointer[leaderelection.LeaderElector] // set after Start, read by probe handlers
+	metrics metricsstorage.Storage
+	ready   ready
+	logger  *log.Logger
 }
 
 // New builds both transports; nothing is bound until Start.
-func New(metrics metricsstorage.Storage, convergence convergence, deps v1.Deps, logger *log.Logger) *Server {
+func New(metrics metricsstorage.Storage, ready ready, deps v1.Deps, logger *log.Logger) *Server {
 	s := &Server{
-		workers:     errgroup.Group{},
-		metrics:     metrics,
-		convergence: convergence,
-		logger:      logger.Named("api"),
+		workers: errgroup.Group{},
+		metrics: metrics,
+		ready:   ready,
+		logger:  logger.Named("api"),
 	}
 
 	rootDeps := root.Deps{
 		Provider: s,
 	}
 
-	s.socket = socket.NewServer(apiSocketPath, root.NewHandler(v1.NewPrivateHandler(deps), rootDeps), logger)
+	s.socket = socket.NewServer(SocketPath, root.NewHandler(v1.NewPrivateHandler(deps), rootDeps), logger)
 	s.tcp = tcp.NewServer(envconfig.ListenAddress(), envconfig.ListenPort(), root.NewHandler(v1.NewPublicHandler(deps), rootDeps), logger)
+
+	return s
+}
+
+// NewSocketOnly builds the private tree on the Unix socket at socketPath and no TCP listener, for a
+// process whose metrics and probes another server owns (addon-operator). Without metrics and an
+// elector, /metrics answers 404 and /readyz reports ready's own answer.
+func NewSocketOnly(socketPath string, ready ready, deps v1.Deps, logger *log.Logger) *Server {
+	s := &Server{
+		workers: errgroup.Group{},
+		ready:   ready,
+		logger:  logger.Named("api"),
+	}
+
+	s.socket = socket.NewServer(socketPath, root.NewHandler(v1.NewPrivateHandler(deps), root.Deps{Provider: s}), logger)
 
 	return s
 }
@@ -81,9 +97,9 @@ func (s *Server) GetMetrics() metricsstorage.Storage {
 	return s.metrics
 }
 
-// IsConverged reports whether the controller finished its startup converge.
-func (s *Server) IsConverged() bool {
-	return s.convergence.IsConverged()
+// Ready reports whether the controller finished its startup converge.
+func (s *Server) Ready() bool {
+	return s.ready.Ready()
 }
 
 // GetElector returns the leader elector for this server.
@@ -103,6 +119,12 @@ func (s *Server) Start() error {
 	}
 
 	s.workers.Go(s.socket.Wait)
+
+	if s.tcp == nil {
+		go s.watchAPIServers()
+
+		return nil
+	}
 
 	if err := s.tcp.Start(); err != nil {
 		return fmt.Errorf("start tcp server: %w", err)
@@ -129,7 +151,10 @@ func (s *Server) watchAPIServers() {
 func (s *Server) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), apiShutdownTimeout)
 	defer cancel()
-	err := errors.Join(s.socket.Shutdown(ctx), s.tcp.Shutdown(ctx))
+	err := s.socket.Shutdown(ctx)
+	if s.tcp != nil {
+		err = errors.Join(err, s.tcp.Shutdown(ctx))
+	}
 
 	return errors.Join(err, s.workers.Wait())
 }

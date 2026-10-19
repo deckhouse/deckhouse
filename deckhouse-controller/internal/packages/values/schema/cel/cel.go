@@ -45,16 +45,6 @@ type rule struct {
 	Message    string `json:"message" yaml:"message"`
 }
 
-// Validate evaluates all x-deckhouse-validations CEL rules attached to schema and
-// its nested properties recursively without any previous-value context. Rules
-// that reference oldSelf (transition rules) are skipped.
-//
-// It is equivalent to ValidateTransition(schema, values, nil) and is preserved
-// as a thin wrapper for callers that don't have access to the previous values.
-func Validate(schema *spec.Schema, values any) ([]error, error) {
-	return ValidateTransition(schema, values, nil)
-}
-
 // ValidateTransition evaluates all x-deckhouse-validations CEL rules attached to
 // schema and its nested properties recursively, exposing the current value as
 // "self" and the previous value as "oldSelf" inside expressions.

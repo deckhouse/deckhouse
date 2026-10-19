@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -43,9 +44,11 @@ import (
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
-	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
-	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/disk"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -75,7 +78,7 @@ func TestControllerTestSuite(t *testing.T) {
 type ControllerTestSuite struct {
 	reconcilertest.Suite
 
-	ctr     reconcile.Reconciler
+	ctr     *harness
 	manager *packageManagerStub
 }
 
@@ -117,22 +120,37 @@ type updateSettings struct {
 	global    string
 }
 
-// reconcilerFor registers the controller with initialisation already complete.
-func reconcilerFor(t *testing.T, cl client.Client, manager *packageManagerStub) reconcile.Reconciler {
+// harness is the controller as RegisterController leaves it behind in the manager: the
+// reconcile entry point and the preflight runnable. Tests drive the package through these
+// two and through nothing else.
+type harness struct {
+	reconcile.Reconciler
+
+	preflight ctrlmanager.Runnable
+}
+
+// reconcilerFor registers the controller and opens the preflight gate that Reconcile waits
+// on, which is the state a running controller reconciles in.
+func reconcilerFor(t *testing.T, cl client.Client, manager *packageManagerStub) *harness {
 	t.Helper()
 
 	return reconcilerWithSettings(t, cl, manager, updateSettings{})
 }
 
 // reconcilerWithSettings is reconcilerFor with the given settings to fall back to.
-func reconcilerWithSettings(t *testing.T, cl client.Client, manager *packageManagerStub, settings updateSettings) reconcile.Reconciler {
+func reconcilerWithSettings(t *testing.T, cl client.Client, manager *packageManagerStub, settings updateSettings) *harness {
 	t.Helper()
 
-	return registerController(t, cl, manager, modulesInited(true), settings)
+	h := registerController(t, cl, manager, modulesInited(true), settings)
+	require.NoError(t, h.preflight.Start(context.Background()))
+
+	return h
 }
 
-// registerController captures the reconciler and starts its status service.
-func registerController(t *testing.T, cl client.Client, manager *packageManagerStub, modules modulesInited, settings updateSettings) reconcile.Reconciler {
+// registerController runs the package's only exported entry point against a manager stub
+// and picks up the runnables it registered. The settings containers are filled the way the
+// deckhouse and the global ModuleConfigs fill them in a running controller.
+func registerController(t *testing.T, cl client.Client, manager *packageManagerStub, modules modulesInited, settings updateSettings) *harness {
 	t.Helper()
 
 	deckhouse := helpers.DefaultDeckhouseSettings()
@@ -151,23 +169,25 @@ func registerController(t *testing.T, cl client.Client, manager *packageManagerS
 	require.NoError(t, application.RegisterController(new(sync.WaitGroup), mgr, manager, modules,
 		helpers.NewDeckhouseSettingsContainer(deckhouse, nil), applications, log.NewNop()))
 
-	var ctr reconcile.Reconciler
+	h := new(harness)
 
 	var funcs []ctrlmanager.Runnable
 	for _, runnable := range mgr.runnables {
 		if reconciler, ok := runnable.(reconcile.Reconciler); ok {
-			ctr = reconciler
+			h.Reconciler = reconciler
 			continue
 		}
 
 		funcs = append(funcs, runnable)
 	}
 
-	require.NotNil(t, ctr, "the controller must be registered in the manager")
-	require.Len(t, funcs, 1, "the status runnable must be registered")
-	require.NoError(t, funcs[0].Start(t.Context()))
+	require.NotNil(t, h.Reconciler, "the controller must be registered in the manager")
+	require.Len(t, funcs, 2, "the preflight and the status runnable must be registered, in that order")
 
-	return ctr
+	h.preflight = funcs[0]
+	require.NoError(t, funcs[1].Start(t.Context()))
+
+	return h
 }
 
 // managerStub is the part of ctrlmanager.Manager that RegisterController touches. The
@@ -209,7 +229,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.Empty(suite.T(), suite.manager.updated)
 	})
 
-	suite.Run("successful reconcile hands the application to the runtime", func() {
+	suite.Run("successful reconcile hands the application to the engine", func() {
 		suite.setupController("successful-reconcile.yaml")
 
 		result, err := suite.ctr.Reconcile(ctx, suite.Request(appName, appNamespace))
@@ -217,11 +237,12 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.True(suite.T(), result.IsZero(), "a settled application must not be requeued")
 
 		require.Len(suite.T(), suite.manager.updated, 1)
-		assert.Equal(suite.T(), packageruntime.App{
-			Name:       appName,
-			Namespace:  appNamespace,
-			Definition: apps.Definition{Name: packageName, Version: "v1.0.1"},
-			Settings:   map[string]any{"host": "app.example.com"},
+		assert.Equal(suite.T(), engine.Application{
+			Namespace:   appNamespace,
+			Name:        appName,
+			PackageName: packageName,
+			Version:     "v1.0.1",
+			Settings:    map[string]any{"host": "app.example.com"},
 			Repository: registry.Remote{
 				Name:         "deckhouse",
 				Repository:   "registry.example.com/test",
@@ -234,6 +255,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 				Mode:          v1alpha2.UpdateModeAutoPatch,
 				BlockOnAlerts: releaseupdater.BlockOnAlerts{Severity: 4},
 			},
+			Requirements: schedule.Constraints{Order: schedule.FunctionalOrder},
 		}, suite.manager.updated[0])
 	})
 
@@ -337,10 +359,11 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("package-not-found.yaml")
 
 		result, err := suite.ctr.Reconcile(ctx, suite.Request(appName, appNamespace))
+		require.Error(suite.T(), err)
 		require.True(suite.T(), apierrors.IsNotFound(err))
 		assert.True(suite.T(), result.IsZero())
 
-		assert.Empty(suite.T(), suite.manager.updated, "an unresolved application must not reach the runtime")
+		assert.Empty(suite.T(), suite.manager.updated, "an unresolved application must not reach the engine")
 		// The finalizer is claimed before the package lookup, so deletion is guarded
 		// even for an application that never resolved.
 		assert.Contains(suite.T(), suite.getApplication(appName, appNamespace).Finalizers,
@@ -351,6 +374,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("version-not-found.yaml")
 
 		result, err := suite.ctr.Reconcile(ctx, suite.Request(appName, appNamespace))
+		require.Error(suite.T(), err)
 		require.True(suite.T(), apierrors.IsNotFound(err))
 		assert.True(suite.T(), result.IsZero())
 
@@ -362,10 +386,11 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("version-is-draft.yaml")
 
 		result, err := suite.ctr.Reconcile(ctx, suite.Request(appName, appNamespace))
-		require.EqualError(suite.T(), err, "application package version 'deckhouse-test-v1.0.1' is draft")
+		require.Error(suite.T(), err)
+		require.ErrorContains(suite.T(), err, "application package version 'deckhouse-test-v1.0.1' is draft")
 		assert.True(suite.T(), result.IsZero())
 
-		assert.Empty(suite.T(), suite.manager.updated, "a draft version must not reach the runtime")
+		assert.Empty(suite.T(), suite.manager.updated, "a draft version must not reach the engine")
 		assert.Empty(suite.T(), suite.getApplicationPackage(packageName).Status.UsedBy)
 	})
 
@@ -373,12 +398,13 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("repository-not-found.yaml")
 
 		result, err := suite.ctr.Reconcile(ctx, suite.Request(appName, appNamespace))
+		require.Error(suite.T(), err)
 		require.True(suite.T(), apierrors.IsNotFound(err))
 		assert.True(suite.T(), result.IsZero())
 
 		assert.Empty(suite.T(), suite.manager.updated)
-		assert.Empty(suite.T(), suite.getApplicationPackage(packageName).Status.UsedBy)
-		assert.Empty(suite.T(), suite.getApplicationPackageVersion(versionName).Status.UsedBy)
+		assert.False(suite.T(), suite.getApplicationPackage(packageName).IsAppInstalled(appNamespace, appName))
+		assert.False(suite.T(), suite.getApplicationPackageVersion(versionName).IsAppInstalled(appNamespace, appName))
 	})
 
 	suite.Run("version switch releases the previous version", func() {
@@ -682,6 +708,92 @@ func TestDeleteDistinguishesAMissingVersionFromAnUnreadableOne(t *testing.T) {
 	assert.Equal(t, []types.NamespacedName{{Namespace: appNamespace, Name: appName}}, manager.removed)
 }
 
+func TestPreflightPreservesEveryApplication(t *testing.T) {
+	cl := fake.NewClientBuilder().
+		WithScheme(testScheme(t)).
+		WithObjects(
+			newApplication(appName, appNamespace, packageName, "v1.0.1"),
+			newApplication("other-app", "baz", "other-test", "v2.0.0"),
+		).
+		Build()
+
+	manager := newPackageManagerStub(t)
+	ctr := registerController(t, cl, manager, modulesInited(true), updateSettings{})
+	require.NoError(t, ctr.preflight.Start(context.Background()))
+
+	require.Len(t, manager.cleanups, 1)
+	assert.ElementsMatch(t, []disk.PreservePackage{
+		{Name: packageName, Repository: "deckhouse", Version: "v1.0.1"},
+		{Name: "other-test", Repository: "deckhouse", Version: "v2.0.0"},
+	}, manager.cleanups[0])
+
+	// Nothing was activated yet, so Boot restores no version; it is called once, after Cleanup.
+	require.Len(t, manager.boots, 1)
+	assert.Len(t, manager.boots[0], 2)
+	for _, boot := range manager.boots[0] {
+		assert.Empty(t, boot.CurrentVersion)
+	}
+}
+
+// TestPreflightBootsTheCheckpointAndDeletedApplications: an activated application is restored from
+// status (version, raw lastAppliedConfiguration, the repository in spec); an activated one being
+// deleted is preserved and booted too, marked Removing, so the engine uninstalls it.
+func TestPreflightBootsTheCheckpointAndDeletedApplications(t *testing.T) {
+	installed := newApplication(appName, appNamespace, packageName, "v1.0.2")
+	installed.Spec.Maintenance = "NoResourceReconciliation"
+	installed.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.0.1"}
+	installed.Status.LastAppliedConfiguration = runtime.RawExtension{Raw: []byte(`{"replicas":2}`)}
+
+	deleting := newApplication("gone", appNamespace, packageName, "v1.0.1")
+	deleting.Finalizers = []string{"test.deckhouse.io/hold"}
+	deleting.DeletionTimestamp = ptr.To(metav1.Now())
+	deleting.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.0.1"}
+
+	repo := &v1alpha1.PackageRepository{ObjectMeta: metav1.ObjectMeta{Name: "deckhouse"}}
+
+	cl := fake.NewClientBuilder().WithScheme(testScheme(t)).WithObjects(installed, deleting, repo).Build()
+
+	manager := newPackageManagerStub(t)
+	ctr := registerController(t, cl, manager, modulesInited(true), updateSettings{})
+	require.NoError(t, ctr.preflight.Start(context.Background()))
+
+	require.Len(t, manager.cleanups, 1)
+	require.Len(t, manager.cleanups[0], 4, "an activated application being deleted is preserved: two versions each")
+	assert.Contains(t, manager.cleanups[0], disk.PreservePackage{Name: packageName, Repository: "deckhouse", Version: "v1.0.2"},
+		"both images are kept: the desired one")
+	assert.Contains(t, manager.cleanups[0], disk.PreservePackage{Name: packageName, Repository: "deckhouse", Version: "v1.0.1"},
+		"and the restored one")
+
+	require.Len(t, manager.boots, 1)
+	require.Len(t, manager.boots[0], 2, "an activated application being deleted is booted")
+
+	boots := make(map[string]engine.BootApplication, 2)
+	for _, b := range manager.boots[0] {
+		boots[b.Name] = b
+	}
+
+	assert.True(t, boots["gone"].Removing, "an application being deleted is booted to be uninstalled")
+
+	boot := boots[appName]
+	assert.False(t, boot.Removing)
+	assert.Equal(t, "v1.0.1", boot.CurrentVersion, "restored at status.currentVersion, not spec")
+	assert.JSONEq(t, `{"replicas":2}`, string(boot.LastApplied))
+	assert.Equal(t, "NoResourceReconciliation", boot.Maintenance)
+}
+
+func TestPreflightWaitsForModuleManager(t *testing.T) {
+	cl := fake.NewClientBuilder().WithScheme(testScheme(t)).Build()
+
+	manager := newPackageManagerStub(t)
+	ctr := registerController(t, cl, manager, modulesInited(false), updateSettings{})
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+
+	require.ErrorIs(t, ctr.preflight.Start(ctx), context.DeadlineExceeded)
+	assert.Empty(t, manager.cleanups,
+		"runtime state must not be dropped while the module manager is still initialising")
+}
+
 // seedFakeClient builds a client from a fixture and wraps it with funcs, for the paths that
 // only show up when a write or a read fails. Seeding itself goes through Create, which the
 // interceptors used here leave alone.
@@ -727,6 +839,17 @@ func testScheme(t *testing.T) *runtime.Scheme {
 	return scheme
 }
 
+func newApplication(name, namespace, pkg, version string) *v1alpha1.Application {
+	return &v1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Spec: v1alpha1.ApplicationSpec{
+			PackageName:           pkg,
+			PackageRepositoryName: "deckhouse",
+			PackageVersion:        version,
+		},
+	}
+}
+
 // ownerRefName is the read-only counterpart of ctrlutils.OwnerRefName, kept local so the
 // assertions do not depend on the helper under test.
 func ownerRefName(app *v1alpha1.Application, kind string) string {
@@ -744,12 +867,14 @@ type modulesInited bool
 
 func (m modulesInited) AreModulesInited() bool { return bool(m) }
 
-// packageManagerStub records the calls the reconciler makes into the package runtime.
+// packageManagerStub records the calls the reconciler makes into the package engine.
 // RegisterController requires it to satisfy the package's manager interface, which is the
-// compile-time check that this stub still matches the real runtime.
+// compile-time check that this stub still matches the real engine.
 type packageManagerStub struct {
-	updated     []packageruntime.App
+	updated     []engine.Application
 	removed     []types.NamespacedName
+	cleanups    [][]disk.PreservePackage
+	boots       [][]engine.BootApplication
 	removalDone bool
 
 	queue workqueue.TypedRateLimitingInterface[string]
@@ -769,23 +894,36 @@ func newPackageManagerStub(t *testing.T) *packageManagerStub {
 	}
 }
 
-func (s *packageManagerStub) UpdateApp(app packageruntime.App) {
+func (s *packageManagerStub) ApplyApplication(app engine.Application) {
 	s.updated = append(s.updated, app)
 }
 
-func (s *packageManagerStub) RemoveApp(namespace, name string) bool {
+func (s *packageManagerStub) RemoveApplication(namespace, name string) bool {
 	s.removed = append(s.removed, types.NamespacedName{Namespace: namespace, Name: name})
 
 	return s.removalDone
 }
 
-func (s *packageManagerStub) GetStatus(string) packagestatus.Status {
-	return packagestatus.Status{}
+func (s *packageManagerStub) Report(string) (model.Report, bool) {
+	return model.Report{}, false
+}
+
+func (s *packageManagerStub) Observed(string) observed.Observation {
+	return observed.Observation{}
 }
 
 func (s *packageManagerStub) GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string] {
 	return s.queue
 }
 
-// Cleanup satisfies the manager contract; boot cleanup runs outside this controller.
-func (s *packageManagerStub) Cleanup(context.Context, []packageruntime.PreservePackage) {}
+func (s *packageManagerStub) Cleanup(_ context.Context, preserve, _ []disk.PreservePackage) error {
+	s.cleanups = append(s.cleanups, preserve)
+
+	return nil
+}
+
+func (s *packageManagerStub) Boot(_ context.Context, _ []byte, apps []engine.BootApplication, _ []engine.BootModule) error {
+	s.boots = append(s.boots, apps)
+
+	return nil
+}

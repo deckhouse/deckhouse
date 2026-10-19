@@ -55,8 +55,9 @@ const (
 // ErrAbsentManifest is returned when one or more expected resources are missing from the cluster.
 var ErrAbsentManifest = errors.New("absent manifest")
 
-// AbsentCallback is invoked when absent resources are detected
-type AbsentCallback func(name string)
+// AbsentCallback is invoked when absent resources are detected. Each monitor has its own: the
+// one its release was last applied with.
+type AbsentCallback func()
 
 // resourcesMonitor periodically checks if all Helm release resources exist in the cluster
 type resourcesMonitor struct {
@@ -131,7 +132,7 @@ func (m *resourcesMonitor) Stop() {
 // Multiple goroutines can call Pause() concurrently; each call increments the pause counter.
 // The monitor will remain paused until Resume() is called an equal number of times.
 func (m *resourcesMonitor) Pause() {
-	m.logger.Info("pause loop")
+	m.logger.Debug("pause loop")
 
 	m.pauseCount.Add(1)
 }
@@ -144,7 +145,7 @@ func (m *resourcesMonitor) Resume() {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
-	m.logger.Info("resume loop")
+	m.logger.Debug("resume loop")
 
 	if m.pauseCount.Load() > 0 {
 		m.pauseCount.Add(-1)
@@ -180,7 +181,7 @@ func (m *resourcesMonitor) Start(ctx context.Context, callback AbsentCallback) {
 
 				case <-timer.C:
 					if m.pauseCount.Load() > 0 {
-						m.logger.Info("loop paused")
+						m.logger.Debug("loop paused")
 						continue
 					}
 
@@ -205,7 +206,7 @@ func (m *resourcesMonitor) Start(ctx context.Context, callback AbsentCallback) {
 					if errors.Is(err, ErrAbsentManifest) {
 						m.logger.Debug("absent resources detected")
 						if callback != nil {
-							callback(m.name)
+							callback()
 						}
 					}
 				}

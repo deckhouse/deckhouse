@@ -164,58 +164,6 @@ func New(logger *log.Logger, opts ...Option) *Client {
 	}
 }
 
-// ReleaseRef identifies a nelm release (a logical install, not a specific revision).
-type ReleaseRef struct {
-	Namespace string
-	Name      string
-}
-
-// ListOptions contains options for listing Helm releases.
-type ListOptions struct {
-	// Selector filters releases by Release.Info annotations; all key/value
-	// pairs must match. Empty selector matches every release.
-	Selector map[string]string
-}
-
-// ListReleases returns nelm releases cluster-wide matching opts.Selector.
-// The filter is applied client-side — action.ReleaseList has no server-side selector.
-func (c *Client) ListReleases(ctx context.Context, opts ListOptions) ([]ReleaseRef, error) {
-	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "ListReleases")
-	defer span.End()
-
-	result, err := action.ReleaseList(ctx, action.ReleaseListOptions{
-		KubeConnectionOptions: common.KubeConnectionOptions{
-			KubeContextCurrent: c.kubeContext,
-		},
-		ReleaseStorageDriver: c.driver,
-		OutputNoPrint:        true,
-		ReleaseNamespace:     "", // cluster-wide
-	})
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return nil, fmt.Errorf("list nelm releases: %w", err)
-	}
-
-	refs := make([]ReleaseRef, 0, len(result.Releases))
-	for _, r := range result.Releases {
-		if !matchAll(r.Annotations, opts.Selector) {
-			continue
-		}
-		refs = append(refs, ReleaseRef{Namespace: r.Namespace, Name: r.Name})
-	}
-	return refs, nil
-}
-
-// matchAll reports whether all key/value pairs from selector are present in target.
-func matchAll(target, selector map[string]string) bool {
-	for k, v := range selector {
-		if target[k] != v {
-			return false
-		}
-	}
-	return true
-}
-
 // LastStatus returns the revision number and status of the latest release
 // Returns ("0", "", nil) if the release doesn't exist
 func (c *Client) LastStatus(ctx context.Context, namespace, releaseName string) (string, string, error) {

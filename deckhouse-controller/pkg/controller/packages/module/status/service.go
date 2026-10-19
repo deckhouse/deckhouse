@@ -28,8 +28,8 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -37,19 +37,21 @@ import (
 // Service processes status events and updates Module conditions.
 type Service struct {
 	client client.Client
-	getter getter
-	mapper condmap.Mapper
+	source source
 	logger *log.Logger
 }
 
-type getter func(name string) status.Status
+// source is the package engine's status: the lifecycle Report and the observations.
+type source interface {
+	Report(name string) (model.Report, bool)
+	Observed(name string) observed.Observation
+}
 
-// NewService creates a new status service with default condition specs.
-func NewService(client client.Client, getter getter, logger *log.Logger) *Service {
+// NewService creates the status service of the kind.
+func NewService(client client.Client, source source, logger *log.Logger) *Service {
 	return &Service{
 		client: client,
-		getter: getter,
-		mapper: buildMapper(),
+		source: source,
 		logger: logger.Named("status-service"),
 	}
 }
@@ -66,7 +68,14 @@ func (s *Service) Start(ctx context.Context, queue workqueue.TypedRateLimitingIn
 			}
 
 			if err := s.handleEvent(ctx, name); err != nil {
-				s.logger.Warn("handle status event, requeued", slog.String("name", name), log.Err(err))
+				// A conflict is a patch from a stale cached copy (the optimistic lock): expected while
+				// notifications for one name arrive in bursts.
+				if apierrors.IsConflict(err) {
+					s.logger.Debug("status patch conflict, requeued", slog.String("name", name), log.Err(err))
+				} else {
+					s.logger.Warn("handle status event, requeued", slog.String("name", name), log.Err(err))
+				}
+
 				queue.AddRateLimited(name)
 			} else {
 				queue.Forget(name)
@@ -101,7 +110,11 @@ func (s *Service) handleEvent(ctx context.Context, name string) error {
 		return nil
 	}
 
-	if err := s.client.Status().Patch(ctx, module, client.MergeFrom(original)); err != nil {
+	// The projection reads the conditions already on the resource (Installed is sticky), so a patch
+	// computed from a stale cached copy must fail rather than replace the conditions: the optimistic
+	// lock turns it into a conflict, and the name is requeued.
+	patch := client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{})
+	if err := s.client.Status().Patch(ctx, module, patch); err != nil {
 		return fmt.Errorf("patch module status: %w", err)
 	}
 
@@ -109,22 +122,29 @@ func (s *Service) handleEvent(ctx context.Context, name string) error {
 }
 
 func (s *Service) computeAndApplyConditions(name string, module *v1beta1.Module) {
-	packageStatus := s.getter(name)
+	report, known := s.source.Report(name)
+	obs := s.source.Observed(name)
 
 	if module.Status.CurrentVersion == nil {
 		module.Status.CurrentVersion = new(v1beta1.ModuleStatusVersion)
 	}
 
-	versionChanged := module.Status.CurrentVersion.Version != "" && module.Status.CurrentVersion.Version != packageStatus.Version
-	mapperStatus := s.buildMapperStatus(versionChanged, module.Status.Conditions, packageStatus.Conditions)
+	// The CR is the authority on deletion: the engine forgets a removed package, and never
+	// knows one after a restart mid-deletion.
+	deleting := !module.DeletionTimestamp.IsZero()
 
-	// The CR is the authority here: the runtime status is dropped when the last
-	// teardown task drains, and never exists at all after a restart mid-deletion.
-	mapperStatus.Deleting = !module.DeletionTimestamp.IsZero()
+	f := buildFacts(input{
+		Name:           name,
+		Report:         report,
+		Known:          known,
+		Observation:    obs,
+		External:       module.Status.Conditions,
+		CurrentVersion: module.Status.CurrentVersion.Version,
+		Deleting:       deleting,
+	})
 
-	// Apply mapped conditions (external user-facing conditions)
-	mapped := s.mapper.Map(mapperStatus)
-	for _, cond := range mapped.Set {
+	m := mapConditions(&f)
+	for _, cond := range m.set {
 		// Reason is required by metav1.Condition contract
 		reason := cond.Reason
 		if reason == "" {
@@ -142,72 +162,41 @@ func (s *Service) computeAndApplyConditions(name string, module *v1beta1.Module)
 
 	// Gated conditions are not reported while their gate is closed: until the
 	// module is installed, Installed is the only condition it carries.
-	for _, condType := range mapped.Remove {
+	for _, condType := range m.remove {
 		meta.RemoveStatusCondition(&module.Status.Conditions, condType)
 	}
 
 	// Nothing about a live install is committed onto a resource on its way out.
-	// The runtime freezes its own status on removal, but the CR's timestamp is
-	// authoritative even for a package the runtime never tracked.
-	if !mapperStatus.IsDeleting() && packageStatus.IsConditionTrue(status.ConditionManifestsApplied) {
-		module.Status.CurrentVersion.Version = packageStatus.Version
+	if !deleting && known {
+		// The activated version: Boot restores it, so it is written at activation.
+		if report.CurrentVersion != "" {
+			module.Status.CurrentVersion.Version = report.CurrentVersion
+		}
 
-		if packageStatus.Settings != nil {
-			if raw, err := json.Marshal(packageStatus.Settings); err == nil {
+		// The settings checkpoint Boot restores, as effective values.
+		if values := report.Current.AppliedValues; values != nil {
+			if raw, err := json.Marshal(values); err == nil {
 				module.Status.LastAppliedConfiguration = runtime.RawExtension{Raw: raw}
 			}
 		}
 	}
 
-	if enabled, ok := schedulerVerdict(mapperStatus); ok {
+	if enabled, ok := schedulerVerdict(&f); ok {
 		module.Status.Enabled = &enabled
 	}
 
-	// Skip writing tracking if there's nothing to report — preserves the previous
-	// tracking field on the CR through trailing empty progress events from nelm.
-	if len(packageStatus.Tracking.Report.Operations) > 0 {
-		raw, _ := json.Marshal(packageStatus.Tracking)
-		module.Status.Tracking = runtime.RawExtension{Raw: raw}
+	// An empty progress leaves the previous tracking on the CR.
+	if !obs.Tracking.Empty() {
+		if raw, err := json.Marshal(obs.Tracking); err == nil {
+			module.Status.Tracking = runtime.RawExtension{Raw: raw}
+		}
 	}
 
-	// Summary is computed from the same pre-mapping state the mapper consumed,
-	// not from the merged conditions: summarize shares the mapper's phase and
-	// disabled-module helpers, so the two cannot drift, and reads the internal
-	// conditions directly instead of reverse-deriving reasons.
-	state, message, tip := summarize(mapperStatus)
+	// Summary is computed from the same facts the mappers read.
+	summary := summarize(&f)
 	module.Status.Summary = &v1beta1.ModuleStatusSummary{
-		State:   state,
-		Message: message,
-		Tip:     tip,
+		State:   summary.state,
+		Message: summary.message,
+		Tip:     summary.tip,
 	}
-}
-
-// buildMapperStatus creates mapper input from Module and internal conditions.
-func (s *Service) buildMapperStatus(versionChanged bool, external []metav1.Condition, internal []status.Condition) condmap.State {
-	mapperStatus := condmap.State{
-		External: make(map[string]metav1.Condition, len(external)),
-		Internal: make(map[string]metav1.Condition, len(internal)),
-	}
-
-	for _, cond := range internal {
-		mapperStatus.Internal[string(cond.Type)] = metav1.Condition{
-			Type:    string(cond.Type),
-			Status:  cond.Status,
-			Reason:  string(cond.Reason),
-			Message: cond.Message,
-		}
-	}
-
-	for _, cond := range external {
-		mapperStatus.External[cond.Type] = metav1.Condition{
-			Type:    cond.Type,
-			Status:  cond.Status,
-			Reason:  cond.Reason,
-			Message: cond.Message,
-		}
-	}
-
-	mapperStatus.Updating = versionChanged
-
-	return mapperStatus
 }

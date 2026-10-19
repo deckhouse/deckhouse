@@ -25,6 +25,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -45,10 +46,13 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	apiv1 "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/handlers/root/v1"
+	apiserver "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/api/server"
 	d8apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
+	d8requirements "github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -282,7 +286,9 @@ func enabledHA(logger *log.Logger) bool {
 func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {
 	exitCh := make(chan struct{})
 	operatorStarted := false
-	go signalHandler(ctx, exitCh, operator, &operatorStarted, logger)
+	// apiServer is set once started; the signal handler stops it before the operator.
+	var apiServer atomic.Pointer[apiserver.Server]
+	go signalHandler(ctx, exitCh, operator, &operatorStarted, &apiServer, logger)
 
 	if err := d8apis.EnsureCRDs(ctx, operator.KubeClient()); err != nil {
 		return fmt.Errorf("ensure crds: %w", err)
@@ -307,6 +313,21 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 		return fmt.Errorf("start deckhouse controller: %w", err)
 	}
 
+	// The packages API on the socket only: addon-operator owns the TCP listener, metrics and probes.
+	packageEngine := deckhouseController.Engine()
+	server := apiserver.NewSocketOnly(apiserver.SocketPath, packageEngine, apiv1.Deps{
+		Packages:     packageEngine,
+		Queues:       packageEngine,
+		Scheduler:    packageEngine,
+		Converge:     packageEngine,
+		Requirements: d8requirements.DumpValues,
+	}, logger)
+	if err = server.Start(); err != nil {
+		return fmt.Errorf("start packages api server: %w", err)
+	}
+
+	apiServer.Store(server)
+
 	if err = operator.Start(ctx); err != nil {
 		return fmt.Errorf("start operator: %w", err)
 	}
@@ -321,7 +342,7 @@ func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log
 	return nil
 }
 
-func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonoperator.AddonOperator, operatorStarted *bool, logger *log.Logger) {
+func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonoperator.AddonOperator, operatorStarted *bool, apiServer *atomic.Pointer[apiserver.Server], logger *log.Logger) {
 	telemetryShutdown := registerTelemetry(ctx, logger.Named("otlp-tracing"))
 
 	interruptCh := make(chan os.Signal, 5)
@@ -347,6 +368,8 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 				if err := telemetryShutdown(ctx); err != nil {
 					logger.Error("telemetry shutdown", log.Err(err))
 				}
+
+				stopAPIServer(apiServer, logger)
 
 				if *operatorStarted {
 					operator.Stop()
@@ -416,6 +439,8 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 					logger.Error("telemetry shutdown", log.Err(err))
 				}
 
+				stopAPIServer(apiServer, logger)
+
 				if *operatorStarted {
 					operator.Stop()
 				}
@@ -430,6 +455,15 @@ func signalHandler(ctx context.Context, exitCh chan struct{}, operator *addonope
 				}
 				os.Exit(128 + signum)
 			}
+		}
+	}
+}
+
+// stopAPIServer stops the packages API server if it was started; closing it unlinks the socket.
+func stopAPIServer(apiServer *atomic.Pointer[apiserver.Server], logger *log.Logger) {
+	if server := apiServer.Load(); server != nil {
+		if err := server.Stop(); err != nil {
+			logger.Error("packages api server stop", log.Err(err))
 		}
 	}
 }
