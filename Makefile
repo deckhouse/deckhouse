@@ -528,6 +528,7 @@ set-build-envs:
   endif
 
 	export WERF_REPO := $(DEV_REGISTRY_PATH)
+	export WERF_META_REPO := $(WERF_REPO)/meta
 	export REGISTRY_SUFFIX := $(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO := --secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
 
