@@ -69,6 +69,11 @@ func TestRenderBashibleTemplateUsesOnlyKubeAPIEndpoints(t *testing.T) {
 	require.Contains(t, content, `for server in 10.0.0.1:6443; do`)
 	require.Contains(t, content, `export PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="848c3b2c-eda6-11ec-9289-dff550c719eb"`)
 	require.Contains(t, content, `export PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS="10.0.0.1:6443"`)
+	require.Contains(t, content, `if [ -n "$tmp" ] && [ "$tmp" != "null" ] ; then
+        NODE_GROUP="$tmp"
+      else
+        >&2 echo "Node group label is missing. Keeping configured node group '${NODE_GROUP}'. Set 'node.deckhouse.io/group' on this node."
+      fi`)
 	require.NotContains(t, content, `bb-minget-install`)
 	require.Contains(t, content, `bb-rpp-get-install`)
 	require.NotContains(t, content, `10.0.0.2:<no value>`)

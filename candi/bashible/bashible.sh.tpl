@@ -365,9 +365,10 @@ function main() {
 
   if test -f /etc/kubernetes/kubelet.conf ; then
     if tmp="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
-      NODE_GROUP="$tmp"
-      if [ "${NODE_GROUP}" == "null" ] ; then
-        >&2 echo "Node group label is missing. Set 'node.deckhouse.io/group' on this node."
+      if [ -n "$tmp" ] && [ "$tmp" != "null" ] ; then
+        NODE_GROUP="$tmp"
+      else
+        >&2 echo "Node group label is missing. Keeping configured node group '${NODE_GROUP}'. Set 'node.deckhouse.io/group' on this node."
       fi
     fi
   fi
