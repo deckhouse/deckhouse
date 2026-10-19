@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-792528ccdfcb360d6b38ea572339e67fd76ef7c0f1164374dcba3d6e78d58f0f",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 5,
   "statements": [
     {
       "vulnerability": {
@@ -31,7 +31,91 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимость находится в пакете golang.org/x/net/dns/dnsmessage — паника при разборе некорректных SVCB/HTTPS-записей, когда размер значения параметра выходит за границы буфера сообщения. В графе пакетов recommender этот пакет отсутствует: из модуля golang.org/x/net v0.55.0 в сборку попадают только idna, http/httpguts, http2, http2/hpack, internal/httpcommon и internal/httpsfv (проверено go list -deps для pkg/recommender на vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Разбор DNS выполняет штатный резолвер Go через собственную vendored-копию dnsmessage в составе стандартной библиотеки — это отдельный продукт (stdlib), который обновляется бампом Go toolchain в рамках планового апгрейда базовых образов, а не зависимостями данного модуля. Уязвимый код из golang.org/x/net в сборку не входит.",
       "timestamp": "2026-08-20T13:49:22.30517Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78669"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в собственной реализации HTTP/2 модуля golang.org/x/net. При каждом кадре SETTINGS со значением SETTINGS_INITIAL_WINDOW_SIZE функция serverConn.processSettingInitialWindowSize и обработчик SETTINGS клиентского транспорта пересчитывают окно управления потоком для всех открытых потоков, поэтому поток мелких кадров SETTINGS создаёт нагрузку на CPU, пропорциональную числу потоков. В x/net v0.55.0 файлы этой реализации (http2/server.go, http2/transport.go и связанные с ними) собираются только при условии !(go1.27 && !http2legacy). Recommender собирается Go 1.27 без тега http2legacy, поэтому вместо них компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле recommender из golang.org/x/net/http2 остались только обёртки Transport и ClientConn и функция ConfigureTransports, а символов serverConn, clientConnReadLoop, outflow и Framer нет (проверено go tool nm на сборке vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-10-16T09:05:07.248289Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78663"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в серверной части собственной реализации HTTP/2 модуля golang.org/x/net. Когда клиент сбрасывает поток, serverConn возвращает в окно управления потоком соединения объём буферизованных, но не прочитанных данных, а когда обработчик дочитывает тело запроса, возвращает его повторно. Так злонамеренный клиент обходит лимит MaxReceiveBufferPerConnection. В x/net v0.55.0 файлы этой реализации (http2/server.go, http2/transport.go и связанные с ними) собираются только при условии !(go1.27 && !http2legacy). Recommender собирается Go 1.27 без тега http2legacy, поэтому вместо них компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле recommender из golang.org/x/net/http2 остались только обёртки Transport и ClientConn и функция ConfigureTransports, а символов serverConn, outflow и Framer нет (проверено go tool nm на сборке vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-10-16T09:05:27.805126Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97032"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в серверной части собственной реализации HTTP/2 модуля golang.org/x/net. При обработке кадра SETTINGS со значением SETTINGS_HEADER_TABLE_SIZE serverConn меняет размер таблицы HPACK-кодировщика без синхронизации, пока другая горутина кодирует тем же кодировщиком кадр HEADERS ответа, поэтому злонамеренный клиент может вызвать аварийное завершение сервера. В x/net v0.55.0 файлы этой реализации (http2/server.go, http2/transport.go и связанные с ними) собираются только при условии !(go1.27 && !http2legacy). Recommender собирается Go 1.27 без тега http2legacy, поэтому вместо них компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле recommender из golang.org/x/net/http2 остались только обёртки Transport и ClientConn и функция ConfigureTransports, символов serverConn и Framer нет, а из golang.org/x/net/http2/hpack попадает только инициализация пакета, без кодировщика (проверено go tool nm на сборке vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-10-16T09:05:49.67828Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78659"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в собственной реализации HTTP/2 модуля golang.org/x/net. HTTP/2-сервер разворачивает перечисленные в заголовке Trailer имена полей в карту Request.Trailer и расходует память на каждое поле, тогда как сам заголовок учитывается в лимите размера заголовков один раз, поэтому злонамеренный клиент может вызвать исчерпание памяти. Исправление в x/net v0.60.0 вводит для заголовка trailer отдельный бюджет в Framer.readMetaFrame. В x/net v0.55.0 серверная реализация (http2/server.go и связанные с ней файлы) собирается только при условии !(go1.27 && !http2legacy). Recommender собирается Go 1.27 без тега http2legacy, поэтому вместо неё компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле recommender из golang.org/x/net/http2 остались только обёртки Transport и ClientConn и функция ConfigureTransports, а символов serverConn и Framer, включая readMetaFrame, и пакета golang.org/x/net/internal/httpcommon нет (go tool nm на сборке vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-10-16T09:06:11.745908Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в клиентском транспорте собственной реализации HTTP/2 модуля golang.org/x/net: функция clientConnReadLoop.handleResponse принимала в ответах сервера некорректные заголовки, влияющие на кадрирование (Connection, Transfer-Encoding, конфликтующие Content-Length). Если программа работает как обратный прокси и пересылает такой ответ клиенту HTTP/1, это может привести к подмене ответов (response smuggling). В x/net v0.55.0 клиентская реализация (http2/transport.go) собирается только при условии !(go1.27 && !http2legacy). Recommender собирается Go 1.27 без тега http2legacy, поэтому вместо неё компилируется обёртка transport_wrap.go, которая передаёт запросы встроенной реализации HTTP/2 из net/http. Символов clientConnReadLoop из golang.org/x/net/http2 в бинарном файле нет (go tool nm на сборке vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-10-16T09:06:23.610176Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56851"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/text"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в пакете golang.org/x/text/secure/precis: профиль Nickname может аварийно завершиться с выходом за границы среза при преобразовании специально подобранной строки в короткий буфер. Recommender не использует профили PRECIS: пакета secure/precis нет в графе зависимостей сборки (go list -deps), и его символов нет в бинарном файле (go tool nm на сборке vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Из golang.org/x/text в сборку попадают только пакеты, которые использует golang.org/x/net/idna: transform, unicode/bidi, unicode/norm и secure/bidirule. Уязвимый код в образе отсутствует.",
+      "timestamp": "2026-10-15T13:00:03.758346Z"
     }
   ],
-  "timestamp": "2026-08-20T13:50:04Z"
+  "timestamp": "2026-10-16T09:06:34Z"
 }

@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-cf67c1d15ba9b2b3a76640921b70d3ec428d80b094749baab315f0035d5a1fc0",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 2,
+  "version": 6,
   "statements": [
     {
       "vulnerability": {
@@ -59,7 +59,77 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Относится к пакету golang.org/x/crypto/openpgp и его подпакетам (packet, armor, clearsign, errors, elgamal, s2k), которые не поддерживаются, признаны небезопасными по дизайну и не имеют исправленной версии. Ни один из этих пакетов не входит в граф зависимостей собираемого бинарного файла descheduler: из модуля golang.org/x/crypto используются только cryptobyte, cryptobyte/asn1, hkdf, internal/alias, internal/poly1305, salsa20/salsa и nacl/secretbox. Операции с OpenPGP компонентом не выполняются, уязвимый код в образе отсутствует.",
       "timestamp": "2026-08-21T08:19:43.512067Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78669"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.58.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в собственной реализации HTTP/2 модуля golang.org/x/net. При каждом кадре SETTINGS со значением SETTINGS_INITIAL_WINDOW_SIZE функция serverConn.processSettingInitialWindowSize и обработчик SETTINGS клиентского транспорта пересчитывают окно управления потоком для всех открытых потоков, поэтому поток мелких кадров SETTINGS создаёт нагрузку на CPU, пропорциональную числу потоков. В x/net v0.58.0 файлы этой реализации (http2/server.go, http2/transport.go и связанные с ними) собираются только при условии !(go1.27 && !http2legacy). Descheduler собирается Go 1.27 без тега http2legacy, поэтому вместо них компилируются обёртки server_wrap.go и transport_wrap.go, которые передают ConfigureServer и ConfigureTransports встроенной реализации HTTP/2 из net/http. В бинарном файле нет символов serverConn, clientConnReadLoop и outflow из golang.org/x/net/http2: остались только разбор кадров, hpack и обёртка ClientConn. Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-10-16T09:00:43.465741Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78659"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.58.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в собственной реализации HTTP/2 модуля golang.org/x/net. HTTP/2-сервер разворачивает перечисленные в заголовке Trailer имена полей в карту Request.Trailer и расходует память на каждое поле, тогда как сам заголовок учитывается в лимите размера заголовков один раз, поэтому злонамеренный клиент может вызвать исчерпание памяти. Исправление в x/net v0.60.0 вводит для заголовка trailer отдельный бюджет в Framer.readMetaFrame. В x/net v0.58.0 серверная реализация (http2/server.go и связанные с ней файлы) собирается только при условии !(go1.27 && !http2legacy). Descheduler собирается Go 1.27 без тега http2legacy, поэтому вместо неё компилируется обёртка server_wrap.go, которая передаёт обработку соединений встроенной реализации HTTP/2 из net/http. Кода, который разворачивает Trailer в карту, в бинарном файле нет: отсутствуют символы serverConn из golang.org/x/net/http2 и пакет golang.org/x/net/internal/httpcommon с функцией NewServerRequest (go tool nm на сборке descheduler v0.36.0 с наложенными патчами модуля). Framer.readMetaFrame в бинарный файл попадает, потому что разбор кадров x/net использует gRPC-транспорт; сам descheduler gRPC-соединений не устанавливает: gRPC-сервер не создаётся, а OTLP-коллектор модулем не настраивается. google.golang.org/grpc не разбирает заголовок trailer по полям, а хранит его как одно значение метаданных, размер которого readMetaFrame учитывает полностью, поэтому непропорционального расхода памяти не возникает. Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-10-16T09:00:56.975246Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.58.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в клиентском транспорте собственной реализации HTTP/2 модуля golang.org/x/net: функция clientConnReadLoop.handleResponse принимала в ответах сервера некорректные заголовки, влияющие на кадрирование (Connection, Transfer-Encoding, конфликтующие Content-Length). Если программа работает как обратный прокси и пересылает такой ответ клиенту HTTP/1, это может привести к подмене ответов (response smuggling). В x/net v0.58.0 клиентская реализация (http2/transport.go) собирается только при условии !(go1.27 && !http2legacy). Descheduler собирается Go 1.27 без тега http2legacy, поэтому вместо неё компилируется обёртка transport_wrap.go, которая передаёт запросы встроенной реализации HTTP/2 из net/http. Символов clientConnReadLoop из golang.org/x/net/http2 в бинарном файле нет (go tool nm на сборке descheduler v0.36.0 с наложенными патчами модуля). Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-10-16T09:01:13.766164Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78663"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.58.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в серверной части собственной реализации HTTP/2 модуля golang.org/x/net. Когда клиент сбрасывает поток, serverConn возвращает в окно управления потоком соединения объём буферизованных, но не прочитанных данных, а когда обработчик дочитывает тело запроса, возвращает его повторно. Так злонамеренный клиент обходит лимит MaxReceiveBufferPerConnection. Исправление в x/net v0.60.0 затрагивает только http2/server.go (serverConn.closeStream, serverConn.noteBodyRead, requestBody). В x/net v0.58.0 этот файл и связанные с ним (http2/transport.go, writesched*.go, config.go) собираются только при условии !(go1.27 && !http2legacy). Descheduler собирается Go 1.27 без тега http2legacy, поэтому вместо них компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле нет символов serverConn и requestBody из golang.org/x/net/http2 (проверено go tool nm на сборке descheduler v0.36.0 с наложенными патчами модуля). Обёртка Server.ServeConn из server_wrap.go, которую вызывает k8s.io/apiserver, передаёт соединение серверу net/http. Разбор кадров (Framer) из x/net, который использует gRPC-транспорт, исправлением не затрагивается. Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-10-16T09:01:29.756373Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97032"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.58.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в серверной части собственной реализации HTTP/2 модуля golang.org/x/net. При обработке кадра SETTINGS со значением SETTINGS_HEADER_TABLE_SIZE serverConn меняет размер таблицы HPACK-кодировщика без синхронизации, пока другая горутина кодирует тем же кодировщиком кадр HEADERS ответа, поэтому злонамеренный клиент может вызвать аварийное завершение сервера. Исправление в x/net v0.60.0 затрагивает только http2/server.go: изменение размера таблицы откладывается до записи следующего кадра (serverConn.processSetting, serverConn.startFrameWrite). В x/net v0.58.0 этот файл и связанные с ним (http2/transport.go, writesched*.go, config.go) собираются только при условии !(go1.27 && !http2legacy). Descheduler собирается Go 1.27 без тега http2legacy, поэтому вместо них компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле нет символов serverConn из golang.org/x/net/http2 (проверено go tool nm на сборке descheduler v0.36.0 с наложенными патчами модуля). Обёртка Server.ServeConn из server_wrap.go, которую вызывает k8s.io/apiserver, передаёт соединение серверу net/http. Разбор кадров (Framer) и пакет golang.org/x/net/http2/hpack, которые использует gRPC-транспорт, исправлением не затрагиваются: hpack между v0.58.0 и v0.60.0 не менялся. Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
+      "timestamp": "2026-10-16T09:01:53.631906Z"
     }
   ],
-  "timestamp": "2026-08-21T08:25:31Z"
+  "timestamp": "2026-10-16T09:01:59Z"
 }

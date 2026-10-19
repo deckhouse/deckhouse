@@ -1,0 +1,18 @@
+diff --git a/vertical-pod-autoscaler/pkg/admission-controller/main.go b/vertical-pod-autoscaler/pkg/admission-controller/main.go
+--- a/vertical-pod-autoscaler/pkg/admission-controller/main.go
++++ b/vertical-pod-autoscaler/pkg/admission-controller/main.go
+@@ -128,9 +128,14 @@
+ 	if config.RegisterWebhook {
+ 		mutatingWebhookClient = kubeClient.AdmissionregistrationV1().MutatingWebhookConfigurations()
+ 	}
++	// Serve HTTP/1.1 only: the webhook port is reachable from any pod in the cluster,
++	// and kube-apiserver falls back to HTTP/1.1 when HTTP/2 is not negotiated.
++	protocols := new(http.Protocols)
++	protocols.SetHTTP1(true)
+ 	server := &http.Server{
+ 		Addr:      fmt.Sprintf(":%d", config.Port),
+ 		TLSConfig: configTLS(*config.CertsConfiguration, config.MinTlsVersion, config.Ciphers, stopCh, mutatingWebhookClient),
++		Protocols: protocols,
+ 	}
+ 	url := fmt.Sprintf("%v:%v", config.WebhookAddress, config.WebhookPort)
+ 	ignoredNamespaces := strings.Split(config.CommonFlags.IgnoredVpaObjectNamespaces, ",")

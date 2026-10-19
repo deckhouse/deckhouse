@@ -1,0 +1,23 @@
+diff --git a/vertical-pod-autoscaler/pkg/admission-controller/main.go b/vertical-pod-autoscaler/pkg/admission-controller/main.go
+--- a/vertical-pod-autoscaler/pkg/admission-controller/main.go
++++ b/vertical-pod-autoscaler/pkg/admission-controller/main.go
+@@ -120,7 +120,10 @@
+ 
+ 	calculators := []patch.Calculator{patch.NewResourceUpdatesCalculator(recommendationProvider, config.MaxAllowedCPUBoost), patch.NewObservedContainersCalculator()}
+ 	as := logic.NewAdmissionServer(podPreprocessor, vpaPreprocessor, limitRangeCalculator, vpaMatcher, calculators)
+-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
++	// Use a dedicated mux: net/http/pprof, imported by pkg/utils/server, registers
++	// /debug/pprof/* on http.DefaultServeMux, which must not be served on the webhook port.
++	webhookMux := http.NewServeMux()
++	webhookMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+ 		as.Serve(w, r)
+ 		healthCheck.UpdateLastActivity()
+ 	})
+@@ -134,6 +137,7 @@
+ 	protocols.SetHTTP1(true)
+ 	server := &http.Server{
+ 		Addr:      fmt.Sprintf(":%d", config.Port),
++		Handler:   webhookMux,
+ 		TLSConfig: configTLS(*config.CertsConfiguration, config.MinTlsVersion, config.Ciphers, stopCh, mutatingWebhookClient),
+ 		Protocols: protocols,
+ 	}
