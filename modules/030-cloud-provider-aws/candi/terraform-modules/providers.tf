@@ -16,4 +16,8 @@ provider "aws" {
   access_key = var.providerClusterConfiguration.provider.providerAccessKeyId
   secret_key = var.providerClusterConfiguration.provider.providerSecretAccessKey
   region     = var.providerClusterConfiguration.provider.region
+  # The provider checks the region against a list compiled into it, so regions opened
+  # after the provider release (e.g. ap-southeast-6) fail with "invalid AWS Region".
+  # Endpoints are still resolved from the partition pattern, so skipping the check is safe.
+  skip_region_validation = true
 }
