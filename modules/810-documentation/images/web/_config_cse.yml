@@ -28,7 +28,7 @@ linkRewrite:
     - '^.*(/products/kubernetes-platform/documentation/(latest|v[0-9]+(\.[0-9]+)?)?/)?user/.*$'
     - '^.*(/products/kubernetes-platform/documentation/(latest|v[0-9]+(\.[0-9]+)?)?/)?admin/.*$'
     - '^.*(/products/kubernetes-platform/documentation/(latest|v[0-9]+(\.[0-9]+)?)?/)?reference/(release-channels\.html|oss_info\.html|supported_versions\.html).*$'
-    - '^\./(release-channels\.html|oss_info\.html).*$'
+    - '^(\./|\.\./)(release-notes\.html|release-channels\.html|oss_info\.html).*$'
     - '^.*/products/kubernetes-platform/features/.*$'
     - '^.*/cloud-provider-gcp/.*$'
     - '^.*/cloud-provider-yandex/.*$'

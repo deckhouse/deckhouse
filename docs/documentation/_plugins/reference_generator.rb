@@ -21,7 +21,11 @@ module ReferenceGenerator
       @referenceData = site.data['reference']['d8-cli']
       @base = site.source
       @lang = lang
-      @sidebar = 'main'
+      if site.config['d8Revision'].downcase == 'cse'
+        @sidebar = 'cse'
+      else
+        @sidebar = 'main'
+      end
       @fileName = "index.html"
 
       @path = "#{@baseUrl}/#{@fileName}"

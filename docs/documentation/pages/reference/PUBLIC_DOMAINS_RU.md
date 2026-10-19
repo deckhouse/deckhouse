@@ -3,6 +3,7 @@ title: Список зарезервированных DNS-имён Deckhouse Pl
 permalink: ru/reference/public-domains.html
 description: Список зарезервированных DNS-имён, которые использует Deckhouse Platform. Генератор данных для hosts-файла
 lang: ru
+editionsNotAvailable: [cse]
 search: публичные домены DP
 ---
 

@@ -3,6 +3,7 @@ title: Результаты Kubernetes conformance-тестов
 permalink: ru/reference/kubernetes-conformance.html
 description: "Результаты e2e-тестов CNCF Kubernetes conformance для версий Kubernetes, поддерживаемых Deckhouse Platform"
 lang: ru
+editionsNotAvailable: [cse]
 search: kubernetes conformance, cncf conformance, sonobuoy, e2e-тесты, junit, тесты на совместимость
 ---
 
