@@ -119,6 +119,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Before the manager: its typed cache cannot list a NodeConfig this has not rewritten.
+	setupLog.Info("migrating NodeConfigs written before the contract freeze")
+	if err := crdmigration.MigrateNodeConfigs(ctx, directClient); err != nil {
+		setupLog.Error(err, "unable to migrate NodeConfigs")
+		os.Exit(1)
+	}
+
 	cacheOpts, clientOpts := common.CacheOptions()
 	clientOpts.Cache.DisableFor = append(clientOpts.Cache.DisableFor, webhook.DisableFor()...)
 

@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
@@ -69,6 +70,7 @@ var _ = BeforeSuite(func() {
 	scheme = k8sruntime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
 	Expect(apiextensionsv1.AddToScheme(scheme)).To(Succeed())
+	Expect(internalv1alpha1.AddToScheme(scheme)).To(Succeed())
 
 	By("bootstrapping the envtest environment with the NodeGroup CRD")
 	var err error
