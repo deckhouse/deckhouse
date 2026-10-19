@@ -40,9 +40,23 @@ func hardDeadline(op *v1alpha1.NodeOperation) time.Time {
 	case op.Status.StartedAt != nil:
 		// The node has the work and owes an answer.
 		return op.Status.StartedAt.Time.Add(operationTimeout)
+	case op.Status.Deadline != nil:
+		// Pinned by the first write after the operation may go ahead, not by
+		// its creation: an approval given an hour late must not start expired.
+		return op.Status.Deadline.Time
 	default:
-		return op.CreationTimestamp.Time.Add(operationTimeout)
+		return time.Now().Add(operationTimeout)
 	}
+}
+
+// publishedDeadline is the deadline the status shows: none while the operation
+// waits for approval, which takes as long as it takes, and none once it ended.
+func publishedDeadline(op *v1alpha1.NodeOperation) *metav1.Time {
+	if terminal(op) || waitingForApproval(op) {
+		return nil
+	}
+	deadline := metav1.NewTime(hardDeadline(op))
+	return &deadline
 }
 
 // awaitingEviction reports what the operation is still waiting for. A Drain is
@@ -52,33 +66,22 @@ func awaitingEviction(op *v1alpha1.NodeOperation) bool {
 	return op.Spec.Type == v1alpha1.NodeOperationTypeDrain || op.Status.StartedAt == nil
 }
 
-// adoptDrainDeadline gives a parent the deadline its child eviction runs to;
-// otherwise the parent fails out from under a still-running drain, which then
-// finishes onto a node whose operation has already released it.
-func (r *Reconciler) adoptDrainDeadline(ctx context.Context, op *v1alpha1.NodeOperation, deadline *metav1.Time) error {
-	return r.patchStatus(ctx, op, fmt.Sprintf("take over the eviction deadline of %s", op.Name), func() {
-		op.Status.DrainDeadline = deadline.DeepCopy()
-	})
-}
-
-// expire fails an operation that ran out of time and says so. Announced only
-// once the phase is actually written: an event for a transition a conflict
-// rolled back would be a lie, and the retry would emit it again.
-func (r *Reconciler) expire(ctx context.Context, op *v1alpha1.NodeOperation, deadline time.Time, logger logr.Logger) error {
-	reason, message := timedOut(op, deadline)
-	if err := r.fail(ctx, op, reason, message, logger); err != nil {
-		return err
-	}
-	r.Recorder.Event(op, corev1.EventTypeWarning, reason, message)
-	return nil
+// expire fails an operation that ran out of time and says so.
+func (r *Reconciler) expire(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node, deadline time.Time, logger logr.Logger) error {
+	reason, message := timedOut(op, deadline, evictionFailure(op, node))
+	return r.fail(ctx, op, reason, message, logger)
 }
 
 // timedOut names what the operation was still waiting for when the deadline
-// passed, so the record says which node is holding the group up.
-func timedOut(op *v1alpha1.NodeOperation, deadline time.Time) (string, string) {
+// passed, so the record says which node is holding the group up, and why when
+// the draining controller said so.
+func timedOut(op *v1alpha1.NodeOperation, deadline time.Time, evictionError string) (string, string) {
 	when := deadline.UTC().Format(time.RFC3339)
-	if awaitingEviction(op) {
-		return "PreparationTimedOut", fmt.Sprintf("node %s was not prepared by %s: its workload has not finished leaving", op.Spec.NodeName, when)
+	if !awaitingEviction(op) {
+		return "NodeTimedOut", fmt.Sprintf("node %s did not report back by %s", op.Spec.NodeName, when)
 	}
-	return "NodeTimedOut", fmt.Sprintf("node %s did not report back by %s", op.Spec.NodeName, when)
+	if evictionError != "" {
+		return "PreparationTimedOut", fmt.Sprintf("node %s was not drained by %s. Last eviction error: %s", op.Spec.NodeName, when, evictionError)
+	}
+	return "PreparationTimedOut", fmt.Sprintf("node %s was not drained by %s", op.Spec.NodeName, when)
 }

@@ -43,6 +43,13 @@ func makeNSPR(name, manifest string) *deckhousev1alpha1.NodeStaticPodRequest {
 	}
 }
 
+func denyMessage(resp admission.Response) string {
+	if resp.Result == nil {
+		return ""
+	}
+	return resp.Result.Message
+}
+
 func makeNSPRRequest(t *testing.T, op admissionv1.Operation, nspr *deckhousev1alpha1.NodeStaticPodRequest) admission.Request {
 	t.Helper()
 	raw, err := json.Marshal(nspr)
@@ -115,7 +122,7 @@ func TestNodeStaticPodRequestValidator(t *testing.T) {
 			op:          admissionv1.Create,
 			nspr:        makeNSPR("kube-apiserver", nsprManifest("registry-agent")),
 			wantAllowed: false,
-			wantMessage: "the node agent or a bashible step writes itself",
+			wantMessage: "is reserved for a manifest that the node agent or a bashible step writes",
 		},
 		{
 			// The bashible steps write these into the same directory: 051 the API
@@ -124,7 +131,7 @@ func TestNodeStaticPodRequestValidator(t *testing.T) {
 			op:          admissionv1.Create,
 			nspr:        makeNSPR("kubernetes-api-proxy", nsprManifest("registry-agent")),
 			wantAllowed: false,
-			wantMessage: "the node agent or a bashible step writes itself",
+			wantMessage: "is reserved for a manifest that the node agent or a bashible step writes",
 		},
 		{
 			// kubelet collides on namespace/name, whatever the file is called.
@@ -132,14 +139,14 @@ func TestNodeStaticPodRequestValidator(t *testing.T) {
 			op:          admissionv1.Create,
 			nspr:        makeNSPR("aaa", strings.Replace(nsprManifest("kube-apiserver"), "d8-system", "kube-system", 1)),
 			wantAllowed: false,
-			wantMessage: "the pod kube-system/kube-apiserver already has a manifest",
+			wantMessage: "already writes a manifest for the pod kube-system/kube-apiserver",
 		},
 		{
 			name:        "a pod a bashible step writes, under another name, is denied",
 			op:          admissionv1.Create,
 			nspr:        makeNSPR("nodeservices", nsprManifest("registry-nodeservices")),
 			wantAllowed: false,
-			wantMessage: "the pod d8-system/registry-nodeservices already has a manifest",
+			wantMessage: "already writes a manifest for the pod d8-system/registry-nodeservices",
 		},
 		{
 			name:        "a reserved name is refused on UPDATE too",
@@ -174,6 +181,30 @@ func TestNodeStaticPodRequestValidator(t *testing.T) {
 			op:          admissionv1.Create,
 			nspr:        makeNSPR("registry-agent", "apiVersion: v1\nkind: Pod\nmetadata:\n  name: registry-agent\n"),
 			wantAllowed: false,
+		},
+		{
+			// The mirror pod lands in the namespace the manifest names: a root pod
+			// must not appear among a tenant's workloads.
+			name:        "a pod in a tenant namespace is denied",
+			op:          admissionv1.Create,
+			nspr:        makeNSPR("agent", strings.Replace(nsprManifest("agent"), "d8-system", "default", 1)),
+			wantAllowed: false,
+			wantMessage: `.spec.manifest is refused: manifest is not a valid static pod: metadata.namespace "default"`,
+		},
+		{
+			// kubelet runs the pod without the API server and cannot fetch the token.
+			name:        "a pod with a service account is denied",
+			op:          admissionv1.Create,
+			nspr:        makeNSPR("agent", nsprManifest("agent")+"  serviceAccountName: agent\n"),
+			wantAllowed: false,
+			wantMessage: "spec.serviceAccountName references an API object",
+		},
+		{
+			name:        "a pod with a secret volume is denied on UPDATE too",
+			op:          admissionv1.Update,
+			nspr:        makeNSPR("agent", nsprManifest("agent")+"  volumes:\n  - name: certs\n    secret:\n      secretName: certs\n"),
+			wantAllowed: false,
+			wantMessage: "spec.volumes[0].secret references an API object",
 		},
 		{
 			// Loose parsing: the document is executed by a kubelet of its own

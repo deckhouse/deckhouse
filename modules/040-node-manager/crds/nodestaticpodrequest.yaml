@@ -41,15 +41,51 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Resource for running a static pod on selected nodes without using the Kubernetes scheduler.
+            Request to run a static pod on the selected nodes without using the Kubernetes scheduler.
 
-            Kubelet starts a static pod from a manifest stored on the node's disk. This allows the pod to run before the API server becomes available and before CNI is initialized. This can be used for components required to pull container images.
+            `node-manager` adds the manifest to `spec.staticPods` of the NodeConfig of each selected node. The node writes the manifest to disk, and kubelet runs the pod from it. The request reports whether the nodes wrote the manifest. It does not report whether the pod runs.
 
-            Node-controller adds the manifest to `spec.staticPods` of the NodeConfig resource for each matching node and tracks the results of applying the manifest on the nodes.
-
-            Resource contains only the pod manifest. The node ensures that the image is available in containerd and that the manifest file is present on disk. The pod must obtain any other required resources on its own. For example, the pod can issue its own certificates, use the node's kubeconfig, and mount directories for persistent state using `hostPath` with the `DirectoryOrCreate` type.
-
-            A user with permission to create NodeStaticPodRequest resources can run arbitrary manifests with root privileges on all selected nodes. By default, permission to create these resources is granted only to platform components.
+            A user with permission to create NodeStaticPodRequests can run arbitrary manifests with root privileges on all selected nodes.
+          x-doc-examples:
+          - |
+              ```yaml
+              # A node-local agent on the nodes of the worker NodeGroup.
+              apiVersion: deckhouse.io/v1alpha1
+              kind: NodeStaticPodRequest
+              metadata:
+                name: node-local-agent
+              spec:
+                nodeGroupSelector:
+                  matchNames:
+                    - worker
+                manifest: |
+                  apiVersion: v1
+                  kind: Pod
+                  metadata:
+                    name: node-local-agent
+                    namespace: kube-system
+                  spec:
+                    hostNetwork: true
+                    priorityClassName: system-node-critical
+                    containers:
+                      - name: agent
+                        image: deckhouse.local/images:node-local-agent
+                        args:
+                          - --listen-address=$MY_IP:5002
+                        env:
+                          - name: NODE_NAME
+                            valueFrom:
+                              fieldRef:
+                                fieldPath: spec.nodeName
+                        volumeMounts:
+                          - name: state
+                            mountPath: /var/lib/node-local-agent
+                    volumes:
+                      - name: state
+                        hostPath:
+                          path: /var/lib/node-local-agent
+                          type: DirectoryOrCreate
+              ```
           required:
             - spec
           properties:
@@ -73,8 +109,12 @@ spec:
                   properties:
                     matchNames:
                       type: array
+                      maxItems: 64
+                      x-kubernetes-list-type: set
                       items:
                         type: string
+                        maxLength: 63
+                        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                       description: |
                         Names of NodeGroups on whose nodes the pod must run.
                 manifest:
@@ -84,13 +124,18 @@ spec:
                   description: |
                     Complete pod manifest.
 
-                    The `metadata.name` and `metadata.namespace` fields must not be empty and are independent of the NodeStaticPodRequest resource name. The resource name is used as the manifest file name on the node, while kubelet determines the mirror pod name from the manifest.
+                    Requirements for the manifest:
 
-                    When the manifest is written to disk, the `$MY_IP` substring is replaced with the node's IP address, similarly to control plane component manifests.
+                    - `metadata.name` is a DNS subdomain (RFC 1123), `metadata.namespace` is a DNS label (RFC 1123).
+                    - The namespace is `kube-system` or starts with `d8-`.
+                    - `spec.nodeName` is not set.
+                    - The pod does not reference API objects. Not allowed: `spec.serviceAccountName`, volumes of the `secret`, `configMap`, `persistentVolumeClaim` and `projected` types, `envFrom` and `env[].valueFrom` with `secretKeyRef` or `configMapKeyRef` in containers and init containers.
 
-                    Multiple NodeStaticPodRequest resources cannot define a pod with the same `metadata.namespace` and `metadata.name`. If a conflict is detected, the resource created later is rejected with the `Conflict` reason in the `Ready` condition. This ensures that the manifest being applied does not depend on the order of entries in NodeConfig.
+                    A manifest that does not meet these requirements is rejected on creation and update.
 
-                    Maximum manifest size is 32 KiB. A node can run no more than 16 static pods defined using NodeStaticPodRequest resources. In addition, the resulting NodeConfig must not exceed the API server request size limit.
+                    When the manifest is written to disk, the `$MY_IP` substring is replaced with the node's IP address.
+
+                    Maximum manifest size is 32 KiB. A node can run no more than 16 static pods defined by NodeStaticPodRequests.
             status:
               type: object
               properties:
@@ -102,24 +147,13 @@ spec:
                     Generation of `spec` that corresponds to the current `status`.
                 phase:
                   type: string
-                  enum: ["Ready", "Degraded"]
+                  enum: ["Pending", "Ready", "Degraded"]
                   description: |
-                    Current phase of static pod application.
+                    Summary of the conditions.
 
-                    Possible values:
-
-                    - `Ready`: Manifest was successfully processed and accepted by the selected nodes. The reason in the `Ready` condition is `Resolved`, or, if the manifest reaches no node, `ServedByBashible` or `NoNodesSelected`.
-                    - `Degraded`: Manifest cannot be applied. The reason is specified in the `Ready` condition: `InvalidName`, `ReservedName`, `InvalidManifest`, `Conflict`, `LimitExceeded`, or `RefusedByNodes`.
-
-                    The `ServedByBashible` reason indicates that the selected NodeGroups are managed by bashible, which writes the `registry-agent` manifest on their nodes itself. The message lists these NodeGroups.
-
-                    The `NoNodesSelected` reason indicates that the manifest reaches no node: the selector matches no existing NodeGroup or the selected NodeGroups have no nodes. The message names the cause.
-
-                    The `InvalidName` reason indicates that the NodeStaticPodRequest resource name does not conform to the DNS label format with a maximum length of 63 characters, which is required for using the name in the node configuration.
-
-                    The `ReservedName` reason indicates that either the NodeStaticPodRequest resource name or the combination of `metadata.namespace` and `metadata.name` from the pod manifest is already used by a manifest created by the node agent or a bashible step.
-
-                    The `LimitExceeded` reason indicates that the limit of 16 static pods has been exceeded for at least one selected NodeGroup. In this case, this resource, as one of the resources created later, is not added to the node configuration.
+                    - `Pending`: The selected nodes are still writing the manifest (the `Ready` condition has the `RolloutInProgress` reason).
+                    - `Ready`: The `Ready` condition is `True`.
+                    - `Degraded`: `node-manager` did not accept the request (the `Accepted` condition is `False`), or nodes refused the manifest (the `Ready` condition has the `RefusedByNodes` reason).
                 matchedNodeGroups:
                   type: array
                   items:
@@ -131,13 +165,13 @@ spec:
                   format: int32
                   minimum: 0
                   description: |
-                    Number of selected nodes that reported that the manifest was successfully written.
+                    Number of selected nodes that reported the current manifest written.
                 failedNodes:
                   type: integer
                   format: int32
                   minimum: 0
                   description: |
-                    Number of selected nodes that reported a failure to apply the manifest.
+                    Number of selected nodes that refused the manifest.
                 matchedNodes:
                   type: integer
                   format: int32
@@ -149,15 +183,53 @@ spec:
                   format: int32
                   minimum: 0
                   description: |
-                    Number of selected nodes that have not yet reported either successful manifest application or a failure.
-                failureMessage:
-                  type: string
+                    Number of selected nodes that have not yet reported either the current manifest written or a failure.
+                nodes:
+                  type: array
+                  maxItems: 32
                   description: |
-                    Error message received from one of the nodes on which the manifest could not be applied.
+                    Selected nodes that have not written the current manifest, at most 32.
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - state
+                    properties:
+                      name:
+                        type: string
+                        description: |
+                          Node name.
+                      state:
+                        type: string
+                        enum: ["Pending", "Failed"]
+                        description: |
+                          `Failed` if the node refused the manifest or `Pending` if it has not answered yet.
+                      message:
+                        type: string
+                        maxLength: 4096
+                        description: |
+                          Why the node refused the manifest or what it waits for.
                 conditions:
                   type: array
                   description: |
-                    Detailed information about the static pod application status.
+                    Conditions of the request: `Accepted` and `Ready`.
+
+                    `Accepted` shows whether `node-manager` accepted the request. It is `True` with the `Accepted` reason or `False` with one of these reasons:
+
+                    - `InvalidName`: The request name is not a DNS label (RFC 1123) of at most 63 characters.
+                    - `ReservedName`: The request name, or the `metadata.namespace` and `metadata.name` of the pod, is already used by a static pod of the platform.
+                    - `InvalidManifest`: The manifest does not meet the requirements of `spec.manifest`.
+                    - `Conflict`: An older request already defines a pod with the same `metadata.namespace` and `metadata.name`.
+                    - `LimitExceeded`: At least one selected NodeGroup already has 16 static pods from older requests. Only the nodes of the other selected NodeGroups get the manifest.
+
+                    `Ready` shows whether the selected nodes wrote the current manifest:
+
+                    - `True` with the `AllNodesApplied` reason: Every selected node wrote it.
+                    - `True` with the `NoNodesSelected` reason: The selector matches no existing NodeGroup, or the selected NodeGroups have no nodes.
+                    - `True` with the `ServedByBashible` reason: The selected NodeGroups are managed by bashible, which writes the `registry-agent` manifest on their nodes itself.
+                    - `False` with the `RolloutInProgress` reason: Some selected nodes have not written the current manifest yet.
+                    - `False` with the `RefusedByNodes` reason: At least one node refused the manifest.
+                    - `False` with the `NotAccepted` reason: The `Accepted` condition is `False`.
                   x-kubernetes-list-type: map
                   x-kubernetes-list-map-keys:
                     - type

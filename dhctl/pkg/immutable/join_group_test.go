@@ -31,7 +31,7 @@ func TestJoinPayloadPutsTheNodeInItsOwnGroup(t *testing.T) {
 		NodeGroupName: "front",
 		MetaConfig:    testMetaConfig(t),
 		Join: &joinInput{
-			CACert:             "Y2E=",
+			ClusterCABundle:    "-----BEGIN CERTIFICATE-----\ntest-ca\n-----END CERTIFICATE-----\n",
 			BootstrapToken:     "abcdef.0123456789abcdef",
 			APIServerEndpoints: []string{"https://10.0.0.1:6443"},
 		},

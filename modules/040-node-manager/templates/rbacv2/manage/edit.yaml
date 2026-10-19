@@ -28,19 +28,22 @@ rules:
   - sshcredentials
   - staticinstances
   - containerdintegritypolicies
+  - nodeextensionrequests
   verbs:
   - create
   - update
   - patch
   - delete
   - deletecollection
-# The spec of an operation is immutable, so update and patch would grant nothing.
+# patch is how an operator approves a Disruption (spec.approved, the only
+# field of the spec that can change); update would grant nothing patch does not.
 - apiGroups:
   - deckhouse.io
   resources:
   - nodeoperations
   verbs:
   - create
+  - patch
   - delete
 - apiGroups:
   - deckhouse.io

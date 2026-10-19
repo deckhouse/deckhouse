@@ -9,6 +9,7 @@ spec:
   group: internal.deckhouse.io
   names:
     kind: NodeConfig
+    listKind: NodeConfigList
     plural: nodeconfigs
     shortNames:
     - nc
@@ -16,60 +17,91 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .spec.systemType
+      name: SystemType
+      priority: 1
+      type: string
+    - jsonPath: .metadata.labels.node\.deckhouse\.io/group
+      name: Group
+      priority: 1
+      type: string
     - jsonPath: .status.phase
       name: Phase
       type: string
+    - jsonPath: .status.appliedGeneration
+      name: Applied
+      priority: 1
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
         description: |-
-          NodeConfig is the desired state of a Deckhouse Engine node, stored at
-          /config/nodeconfig.yaml and as a cluster CRD (crds/nodeconfig.yaml, generated).
-          Keep identical with nodelet's internal/config/types.go and dhctl's spec-only mirrors.
+          NodeConfig is the desired state of one node and the node agent's report on it.
+
+          The node agent (nodelet) applies `spec`.
         properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
           spec:
-            description: NodeSpec is the desired state of the node.
+            description: Desired state of the node.
             properties:
               apiServerEndpoints:
-                description: |-
-                  APIServerEndpoints is the list of API server URLs the node connects to
-                  (via the node-local API proxy).
+                description: Kubernetes API server URLs with scheme and port, for
+                  example `https://10.0.0.1:6443`.
                 items:
-                  pattern: ^(https?://)?(\[[0-9A-Fa-f:]+\]|[A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?([.][A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?)*):(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3})/?$
+                  maxLength: 253
+                  pattern: ^https://(\[[0-9A-Fa-f:]+\]|[A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?([.][A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?)*):(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3})/?$
                   type: string
+                maxItems: 16
                 type: array
+                x-kubernetes-list-type: set
               containerRuntime:
                 description: ContainerRuntime holds containerd configuration.
                 properties:
                   maxConcurrentDownloads:
-                    default: 8
                     description: |-
-                      MaxConcurrentDownloads limits parallel image layer downloads. Zero is
-                      containerd's "no limit", and a NodeGroup takes any integer
-                      (crds/node_group.yaml:1638): a value it accepts must be accepted here.
-                      The default is bashible's (candi/bashible/common-steps/all/032_configure_containerd.sh.tpl).
+                      Maximum number of image layers downloaded in parallel.
+
+                      `0` means no limit. Defaults to `8` when unset.
                     minimum: 0
                     type: integer
-                  registryOwner:
-                    default: nodelet
+                  registryConfigOwner:
                     description: |-
-                      Component that manages the containerd `registry.d` directory.
+                      Component that writes the containerd `registry.d` directory.
 
-                      Possible values:
+                      - `Nodelet`: The node agent writes the configuration from `spec.registry` to the
+                        directory and removes everything else in it.
+                      - `RegistryAgent`: The registry agent static pod owns the directory.
 
-                      - `nodelet`: Node agent generates configuration in the directory based on `spec.registry` and removes configuration that should not be present.
-                      - `agent`: Directory is managed by the registry agent static pod. The node agent does not write configuration to or remove configuration from the directory, including configuration from `spec.registry`. This allows the `_default` configuration created by the registry agent to be used for accessing the platform container registry.
-
-                      Value is set by node-controller depending on the `registry` module operating mode.
+                      Defaults to `Nodelet` when unset. Set by `node-manager`.
                     enum:
-                    - nodelet
-                    - agent
+                    - Nodelet
+                    - RegistryAgent
                     type: string
                   sandboxImage:
                     description: |-
                       The `pause` image used for pod sandboxes.
 
                       If not specified, the pause image imported by the containerd system extension is used.
+                    maxLength: 1024
                     pattern: ^[^[:space:]]+$
                     type: string
                 type: object
@@ -86,12 +118,8 @@ spec:
                   description: |-
                     Extension is a signed verity sysext built from a release channel, fetched
                     from the registry-packages-proxy by digest. Optional repository selects the
-                    proxy's per-registry config; optional additionalPath is its "path" parameter.
+                    proxy's per-registry config; optional path is its "path" parameter.
                   properties:
-                    additionalPath:
-                      description: AdditionalPath is forwarded to the proxy as the
-                        "path" query parameter.
-                      type: string
                     digest:
                       description: Digest is the sha256 digest of the sysext image.
                       pattern: ^sha256:[a-f0-9]{64}$
@@ -103,18 +131,43 @@ spec:
                       minLength: 1
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
+                    path:
+                      description: Path to the artifact inside the registry.
+                      maxLength: 512
+                      type: string
                     repository:
                       description: Repository optionally selects the proxy's per-registry
                         client config.
+                      maxLength: 1024
+                      pattern: ^[^[:space:]]+$
                       type: string
                     requestedBy:
-                      description: RequestedBy records who requested the extension
-                        (e.g. "node-manager").
-                      type: string
+                      description: |-
+                        Object that requested the extension.
+
+                        Unset for an extension of the platform itself.
+                      properties:
+                        kind:
+                          description: Kind of the object.
+                          enum:
+                          - NodeExtensionRequest
+                          - NodeStaticPodRequest
+                          type: string
+                        name:
+                          description: Name of the object.
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                      required:
+                      - kind
+                      - name
+                      type: object
                   required:
                   - digest
                   - name
                   type: object
+                maxItems: 128
                 type: array
                 x-kubernetes-list-map-keys:
                 - name
@@ -146,6 +199,7 @@ spec:
                   The pattern is StaticClusterConfiguration's own
                   (candi/openapi/static_cluster_configuration.yaml): IPv4 only.
                 items:
+                  maxLength: 43
                   pattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$
                   type: string
                 maxItems: 64
@@ -154,26 +208,41 @@ spec:
                 description: Kernel holds sysctl settings and kernel modules to load.
                 properties:
                   modules:
+                    description: |-
+                      Kernel modules to load, in this order.
+
+                      Dependencies are not loaded automatically: list each module after the modules it
+                      depends on. Do not list a driver built into the kernel: `KernelModulesLoaded`
+                      becomes `False`.
+
+                      A module added to the list is loaded only after the disruption is approved.
                     items:
                       description: KernelModule is a module to load with optional
                         parameters.
                       properties:
                         name:
+                          maxLength: 64
                           minLength: 1
                           type: string
                         params:
                           items:
+                            maxLength: 256
                             type: string
+                          maxItems: 32
                           type: array
                       required:
                       - name
                       type: object
+                    maxItems: 64
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   sysctl:
                     additionalProperties:
                       description: SysctlValue bounds a single sysctl value for predictable
                         CRD CEL cost.
-                      maxLength: 4096
+                      maxLength: 1024
                       type: string
                     maxProperties: 256
                     type: object
@@ -193,11 +262,11 @@ spec:
                     description: |-
                       BootstrapToken is the bootstrap token used by kubelet to obtain its
                       client certificate on first boot.
+                    maxLength: 4096
                     type: string
-                  caCert:
-                    description: |-
-                      CACert is the base64-encoded cluster CA certificate used in the
-                      bootstrap-kubelet.conf to verify the API server.
+                  clusterCABundle:
+                    description: PEM bundle of the cluster CA.
+                    maxLength: 65536
                     type: string
                   clusterDNS:
                     description: ClusterDNS is the list of DNS server IP addresses
@@ -217,17 +286,19 @@ spec:
                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                     type: string
                   containerLogMaxFiles:
-                    default: 4
-                    description: ContainerLogMaxFiles is the number of rotated log
-                      files to retain.
+                    description: |-
+                      Number of rotated log files kept per container.
+
+                      Defaults to `4` when unset.
                     maximum: 1000
                     minimum: 1
                     type: integer
                   containerLogMaxSize:
-                    default: 50Mi
                     description: |-
-                      ContainerLogMaxSize is the maximum log file size before rotation
-                      (e.g. "50Mi").
+                      Maximum size of a container log file before it is rotated.
+
+                      Defaults to `50Mi` when unset.
+                    maxLength: 64
                     type: string
                     x-kubernetes-validations:
                     - message: containerLogMaxSize must be a positive Kubernetes quantity
@@ -246,8 +317,10 @@ spec:
                     pattern: ^[0-9]+\.[0-9]+$
                     type: string
                   maxPods:
-                    default: 120
-                    description: MaxPods is the maximum number of pods per node.
+                    description: |-
+                      Maximum number of pods on the node.
+
+                      Defaults to `120` when unset.
                     maximum: 1000
                     minimum: 1
                     type: integer
@@ -293,14 +366,13 @@ spec:
                       from pods for the system itself (kubeReserved).
                     properties:
                       mode:
-                        default: Auto
                         description: |-
-                          Mode is the reservation policy.
+                          Reservation policy.
 
-                          Possible values:
+                          - `Auto`: Computed from the node's capacity.
+                          - `Off`: Nothing is reserved.
 
-                          - `Auto` — compute the reservation from the node's capacity.
-                          - `Off` — reserve nothing.
+                          Defaults to `Auto` when unset.
                         enum:
                         - Auto
                         - "Off"
@@ -321,25 +393,41 @@ spec:
                     properties:
                       search:
                         items:
+                          maxLength: 253
                           type: string
+                        maxItems: 16
                         type: array
                       servers:
+                        description: Name server IP addresses.
                         items:
+                          maxLength: 45
                           type: string
+                        maxItems: 16
                         type: array
+                        x-kubernetes-validations:
+                        - message: DNS servers must be IP addresses
+                          rule: self.all(address, isIP(address))
                     type: object
                   hostname:
+                    description: Host name of the node.
+                    maxLength: 253
                     type: string
                   interfaces:
+                    description: Network interfaces, keyed by name.
                     items:
                       description: NetworkInterface describes a single NIC.
                       properties:
                         addresses:
-                          description: Addresses are static CIDR addresses (used when
-                            DHCP is false).
+                          description: Static addresses in CIDR notation, used when
+                            `dhcp` is `false`.
                           items:
+                            maxLength: 43
                             type: string
+                          maxItems: 16
                           type: array
+                          x-kubernetes-validations:
+                          - message: interface addresses must be in CIDR notation
+                            rule: self.all(address, isCIDR(address))
                         cluster:
                           description: |-
                             Cluster names this NIC the one the cluster's traffic runs on, for a
@@ -349,18 +437,27 @@ spec:
                           description: DHCP enables DHCPv4 on the interface.
                           type: boolean
                         gateway:
+                          description: Default gateway IP address.
+                          maxLength: 45
                           type: string
+                          x-kubernetes-validations:
+                          - message: the gateway must be an IP address
+                            rule: isIP(self)
                         name:
+                          maxLength: 253
                           minLength: 1
                           type: string
                       required:
                       - dhcp
                       - name
                       type: object
+                    maxItems: 16
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                     x-kubernetes-validations:
-                    - message: at most one interface may be marked as the cluster
-                        interface
+                    - message: at most one interface may be marked cluster
                       rule: self.filter(i, has(i.cluster) && i.cluster).size() <=
                         1
                   ntp:
@@ -368,7 +465,9 @@ spec:
                     properties:
                       servers:
                         items:
+                          maxLength: 253
                           type: string
+                        maxItems: 16
                         type: array
                     type: object
                   routes:
@@ -376,23 +475,41 @@ spec:
                       description: Route is a static route.
                       properties:
                         gateway:
+                          description: Gateway IP address.
+                          maxLength: 45
                           type: string
+                          x-kubernetes-validations:
+                          - message: the gateway must be an IP address
+                            rule: isIP(self)
                         name:
+                          maxLength: 253
                           type: string
                         networks:
+                          description: Destination networks in CIDR notation.
                           items:
+                            maxLength: 43
                             type: string
+                          maxItems: 16
                           type: array
+                          x-kubernetes-validations:
+                          - message: route networks must be in CIDR notation
+                            rule: self.all(network, isCIDR(network))
                       type: object
+                    maxItems: 64
                     type: array
                 type: object
               nodeName:
-                description: NodeName is the Kubernetes node name this config applies
-                  to.
+                description: |-
+                  Name of the Kubernetes node this configuration applies to.
+
+                  Equals `metadata.name` and cannot be changed.
                 maxLength: 253
                 minLength: 1
                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                 type: string
+                x-kubernetes-validations:
+                - message: spec.nodeName cannot be changed
+                  rule: self == oldSelf
               osImage:
                 description: |-
                   Operating system image to use on the node.
@@ -401,18 +518,16 @@ spec:
 
                   Required when `systemType` is `Immutable`.
                 properties:
-                  additionalPath:
-                    description: |-
-                      Additional path to the image passed to `registry-packages-proxy` as the `path` parameter.
-
-                      For Deckhouse images, the parameter can be left empty because the repository path is already specified in `spec.registry.path`.
-                    type: string
                   digest:
                     description: |-
                       Operating system image digest.
 
                       Identifies a specific image and is used by the node to determine whether an update is required. During installation, the node saves the digest and compares it with the specified value during subsequent checks.
                     pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  path:
+                    description: Path to the image inside the registry.
+                    maxLength: 512
                     type: string
                   repository:
                     description: |-
@@ -421,6 +536,8 @@ spec:
                       The value is passed to `registry-packages-proxy` as the `repository` parameter.
 
                       If the parameter is not specified, `repository` is not passed and `registry-packages-proxy` uses its default container registry.
+                    maxLength: 1024
+                    pattern: ^[^[:space:]]+$
                     type: string
                   rootHash:
                     description: |-
@@ -444,28 +561,32 @@ spec:
                     description: |-
                       Address is the registry host, optionally with a port, e.g.
                       "registry.deckhouse.io" or "registry.example.com:5000".
+                    maxLength: 1024
                     minLength: 1
-                    pattern: ^\S+$
+                    pattern: ^[^[:space:]]+$
                     type: string
                   auth:
                     description: |-
                       Auth is the base64-encoded "user:password" pair, as it appears in the
                       "auth" field of a docker config.
-                    pattern: ^[A-Za-z0-9+/]+={0,2}$
+                    format: byte
+                    maxLength: 4096
                     type: string
-                  ca:
-                    description: |-
-                      CA is a PEM certificate bundle to verify the registry with, for registries
-                      signed by a private CA. The image carries the Mozilla bundle and nothing
-                      else, so without this a self-signed registry is unreachable.
+                  caBundle:
+                    description: PEM bundle of the CA certificates the registry is
+                      verified with.
+                    maxLength: 65536
                     type: string
                   path:
                     description: Path is the repository path within the registry,
                       e.g. "/deckhouse/ce".
+                    maxLength: 1024
                     type: string
                   scheme:
-                    default: HTTPS
-                    description: Scheme is HTTPS (default) or HTTP.
+                    description: |-
+                      Protocol the node uses to connect to the registry.
+
+                      Defaults to `HTTPS` when unset.
                     enum:
                     - HTTPS
                     - HTTP
@@ -473,22 +594,33 @@ spec:
                 required:
                 - address
                 type: object
-              registryPackagesProxyAccessTokenB64:
+              registryPackagesProxy:
                 description: |-
-                  RegistryPackagesProxyAccessTokenB64 is a base64-encoded token used to
-                  authenticate against the registry packages proxy. Deliberately not marked
-                  sensitive: nodelet must read it, and the token is identical on every node.
-                pattern: ^(([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?)?$
-                type: string
-              registryPackagesProxyEndpoints:
-                description: |-
-                  registry-packages-proxy addresses with scheme and port. The node agent uses them instead of the API server hosts.
+                  How the node reaches `registry-packages-proxy`, which serves it extensions and
+                  operating system images.
+                properties:
+                  accessToken:
+                    description: |-
+                      Bearer token the node presents to the proxy.
 
-                  Set only in the initial configuration of the first master node, where the installer runs the proxy. node-controller does not set this field.
-                items:
-                  pattern: ^https?://(\[[0-9A-Fa-f:]+\]|[A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?([.][A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?)*):(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3})/?$
-                  type: string
-                type: array
+                      Base64-encoded in the object.
+                    format: byte
+                    maxLength: 4096
+                    type: string
+                  endpoints:
+                    description: |-
+                      `registry-packages-proxy` URLs with scheme and port.
+
+                      When unset, the node uses port `4219` of the `apiServerEndpoints` hosts. Set
+                      only in the initial configuration of the first master node.
+                    items:
+                      maxLength: 253
+                      pattern: ^https?://(\[[0-9A-Fa-f:]+\]|[A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?([.][A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?)*):(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3})/?$
+                      type: string
+                    maxItems: 16
+                    type: array
+                    x-kubernetes-list-type: set
+                type: object
               staticPods:
                 description: |-
                   Manifests of static pods that kubelet runs without using the Kubernetes scheduler.
@@ -497,8 +629,7 @@ spec:
 
                   Control plane component manifests created by the node agent are not included in `spec.staticPods` and are not modified when this parameter is processed.
                 items:
-                  description: |-
-                    Static pod.
+                  description: Static pod.
                   properties:
                     manifest:
                       description: |-
@@ -517,6 +648,28 @@ spec:
                       minLength: 1
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
+                    requestedBy:
+                      description: |-
+                        Object that requested the static pod.
+
+                        Unset for a static pod of the platform itself.
+                      properties:
+                        kind:
+                          description: Kind of the object.
+                          enum:
+                          - NodeExtensionRequest
+                          - NodeStaticPodRequest
+                          type: string
+                        name:
+                          description: Name of the object.
+                          maxLength: 253
+                          minLength: 1
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                      required:
+                      - kind
+                      - name
+                      type: object
                   required:
                   - manifest
                   - name
@@ -534,34 +687,44 @@ spec:
                   untouched, having no way to tell the node a new one. Deliberately not
                   marked sensitive: the apiserver would answer "<omitted>" and the
                   carry-over would write that back, destroying the token.
+                maxLength: 4096
                 type: string
               storage:
                 description: |-
-                  Storage selects the target disk for the OS install. The partition layout
-                  is fixed (boot/config/data), so only the whole-disk device is needed.
+                  Disk the operating system is installed on, and additional filesystems.
+
+                  The installation disk cannot be changed once set.
                 properties:
                   device:
                     description: |-
                       Device is the whole-disk block device to install onto, e.g. "/dev/sda",
                       "/dev/nvme0n1", or a stable "/dev/disk/by-id/..." path. Ignored when
                       diskSelector is set.
+                    maxLength: 1024
                     pattern: ^/dev/[A-Za-z0-9._/-]+$
                     type: string
+                    x-kubernetes-validations:
+                    - message: spec.storage.device names the disk this system was
+                        installed on and cannot change
+                      rule: self == oldSelf
                   diskSelector:
                     description: |-
-                      DiskSelector picks the target disk by attributes instead of a fixed path.
-                      It takes priority over device (matching Talos semantics). All specified
-                      conditions must match; the first disk that matches is used.
+                      Selects the installation disk by attributes instead of a fixed path.
+
+                      All specified fields must match.
                     properties:
                       busPath:
                         description: BusPath matches the hardware bus path (glob).
+                        maxLength: 253
                         type: string
                       model:
                         description: Model matches the device model (glob), e.g. "Samsung*".
+                        maxLength: 253
                         type: string
                       name:
                         description: Name matches the kernel device name (glob), e.g.
                           "nvme0n1".
+                        maxLength: 253
                         type: string
                       rotational:
                         description: Rotational matches spinning (true) vs solid-state
@@ -569,11 +732,13 @@ spec:
                         type: boolean
                       serial:
                         description: Serial matches the disk serial number (glob).
+                        maxLength: 253
                         type: string
                       size:
                         description: |-
                           Size matches the disk capacity, optionally with a comparison operator,
                           e.g. ">=100Gi", ">1Ti", "512Gi".
+                        maxLength: 253
                         type: string
                       type:
                         description: Type matches the disk kind.
@@ -585,8 +750,13 @@ spec:
                         type: string
                       wwid:
                         description: WWID matches the World Wide Identifier (glob).
+                        maxLength: 253
                         type: string
                     type: object
+                    x-kubernetes-validations:
+                    - message: spec.storage.diskSelector names the disk this system
+                        was installed on and cannot change
+                      rule: self == oldSelf
                   mounts:
                     description: |-
                       Mounts are additional filesystems the node makes available, at /mnt/<name>
@@ -603,21 +773,23 @@ spec:
                             BindTo mounts the filesystem at this path instead of /mnt/<name>, for a
                             directory something else knows by name (/var/lib/etcd). The directory must
                             be empty: mounting over files hides them, and hidden etcd data is lost data.
+                          maxLength: 1024
                           pattern: ^/[A-Za-z0-9._/-]+$
                           type: string
                         device:
                           description: |-
                             Device is the partition to use, e.g. "/dev/sdb1" or a stable
                             "/dev/disk/by-id/...-part1" path.
+                          maxLength: 1024
                           pattern: ^/dev/[A-Za-z0-9._/-]+$
                           type: string
                         filesystem:
-                          default: ext4
                           description: |-
-                            Filesystem is what to create when the partition is empty. It says what to
-                            create and is not a matching condition.
+                            Filesystem to create on an empty partition.
+
+                            Defaults to `Ext4` when unset.
                           enum:
-                          - ext4
+                          - Ext4
                           type: string
                         mode:
                           description: |-
@@ -648,31 +820,38 @@ spec:
                             fsType:
                               description: FSType matches the type of the filesystem
                                 already present (glob).
+                              maxLength: 253
                               type: string
                             label:
                               description: Label matches the filesystem label (glob).
+                              maxLength: 253
                               type: string
                             name:
                               description: Name matches the kernel device name (glob),
                                 e.g. "sdb1" or "nvme0n1p*".
+                              maxLength: 253
                               type: string
                             partLabel:
                               description: PartLabel matches the GPT partition name
                                 (glob).
+                              maxLength: 253
                               type: string
                             partUUID:
                               description: PartUUID matches the GPT partition UUID
                                 exactly, ignoring case.
+                              maxLength: 253
                               type: string
                             size:
                               description: |-
                                 Size matches the size, optionally with a comparison operator, e.g.
                                 ">=100Gi", ">1Ti", "512Gi". Without an operator the comparison is ">=";
                                 "=" allows 1%, since a disk rarely reports an exact round size.
+                              maxLength: 253
                               type: string
                             uuid:
                               description: UUID matches the filesystem UUID exactly,
                                 ignoring case.
+                              maxLength: 253
                               type: string
                           type: object
                       required:
@@ -692,9 +871,12 @@ spec:
                       re-partitioned. Default false: only an unprovisioned (or non-matching)
                       disk is set up, so an existing layout stays and a reboot never destroys data.
                     type: boolean
+                    x-kubernetes-validations:
+                    - message: spec.storage.wipe names the disk this system was installed
+                        on and cannot change
+                      rule: self == oldSelf
                 type: object
               systemType:
-                default: Immutable
                 description: |-
                   How the node is managed.
 
@@ -712,49 +894,81 @@ spec:
                   mode:
                     description: Mode is the update mode.
                     enum:
-                    - Automatic
                     - Manual
+                    - Automatic
                     type: string
-                  window:
-                    description: Window is the maintenance window for updates.
-                    properties:
-                      days:
-                        description: Days are the weekdays the window applies to.
-                        items:
-                          enum:
-                          - Mon
-                          - Tue
-                          - Wed
-                          - Thu
-                          - Fri
-                          - Sat
-                          - Sun
+                  windows:
+                    description: |-
+                      Time windows in UTC when the node may download and apply updates.
+
+                      An update is allowed if any window matches. Without windows, updates are
+                      allowed at any time.
+                    items:
+                      description: One update window, in UTC.
+                      properties:
+                        days:
+                          description: |-
+                            Days of the week the window applies to.
+
+                            When empty, the window applies every day.
+                          items:
+                            enum:
+                            - Mon
+                            - Tue
+                            - Wed
+                            - Thu
+                            - Fri
+                            - Sat
+                            - Sun
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: set
+                        from:
+                          description: Start of the window, `H:MM` or `HH:MM` (24-hour,
+                            UTC).
+                          pattern: ^(?:\d|[01]\d|2[0-3]):[0-5]\d$
                           type: string
-                        type: array
-                      from:
-                        description: |-
-                          From is the window start time, "H:MM" or "HH:MM" (24h). The pattern is the
-                          NodeGroup one (crds/node_group.yaml:432), which takes a one-digit hour.
-                        pattern: ^(?:\d|[01]\d|2[0-3]):[0-5]\d$
-                        type: string
-                      to:
-                        description: To is the window end time, same format as From.
-                        pattern: ^(?:\d|[01]\d|2[0-3]):[0-5]\d$
-                        type: string
-                    type: object
+                        to:
+                          description: |-
+                            End of the window, same format as `from`.
+
+                            A window whose end is before its start runs over midnight.
+                          pattern: ^(?:\d|[01]\d|2[0-3]):[0-5]\d$
+                          type: string
+                      required:
+                      - from
+                      - to
+                      type: object
+                    maxItems: 16
+                    type: array
+                    x-kubernetes-list-type: atomic
                 type: object
             required:
             - nodeName
+            - systemType
             type: object
             x-kubernetes-validations:
             - message: spec.osImage must be set on an Immutable node
               rule: self.systemType == 'Mutable' || has(self.osImage)
             - message: spec.systemType cannot be changed
               rule: self.systemType == oldSelf.systemType
+            - message: a Mutable node takes only nodeName, featureGates, apiServerEndpoints,
+                registryPackagesProxy, extensions and staticPods
+              rule: self.systemType == 'Immutable' || !(has(self.osImage) || has(self.storage)
+                || has(self.kernel) || has(self.network) || has(self.kubelet) || has(self.containerRuntime)
+                || has(self.registry) || has(self.updatePolicy) || has(self.statusToken)
+                || has(self.internalNetworkCIDRs))
           status:
             description: Status is reported by the on-node agent after each reconcile
               pass.
             properties:
+              agent:
+                description: Node agent build that wrote this status.
+                properties:
+                  version:
+                    description: Build version of the node agent.
+                    type: string
+                type: object
               appliedGeneration:
                 description: |-
                   AppliedGeneration is the spec generation the node has applied.
@@ -767,9 +981,80 @@ spec:
                 type: integer
               conditions:
                 description: |-
-                  Conditions are the node-level reconcile outcomes (ConfigurationApplied,
-                  DisruptionRequired) plus the gate subsystems (APIEndpointsReachable,
-                  SysctlApplied); per-extension and per-unit outcomes live in Extensions and Units.
+                  Conditions of the node.
+
+                  A `False` condition whose reason ends with `Pending` is a wait. Any other `False`
+                  reason and `Unknown` mean a failure. `AddressResolved` does not affect `phase`.
+
+                  In `Ready`, `ConfigurationApplied` and `DisruptionApproved`, `observedGeneration` is
+                  the generation the node has processed. In the other conditions, it is the
+                  generation the node runs.
+
+                  Condition types:
+
+                  - `Ready`: `True` with reason `ReconcileSucceeded` when `phase` is `Ready`.
+                    Otherwise `False`, with the phase as the reason. The message names the condition
+                    that determined the phase.
+                  - `ConfigurationApplied`: `True` when the node runs the published configuration.
+
+                    With `True`, the reason is `ReconcileSucceeded`, or `UnknownFields` when the
+                    object has fields unknown to this agent build. The message lists them.
+
+                    Reasons with `False` that mean a wait:
+
+                    - `DisruptionApprovalPending`
+                    - `Pending`
+                    - `RestartPending`
+
+                    Reasons with `False` that mean a failure:
+
+                    - `Rejected`
+                    - `RolledBackToLastKnownGood`
+                    - `RollbackFailed`
+                    - `PartiallyApplied`
+                    - `FieldsNotApplicable`
+                  - `DisruptionApproved`: Whether the interruption that the configuration of the node
+                    needs is approved.
+
+                    Reasons:
+
+                    - `ApprovalPending` (`False`): A configuration that interrupts the node waits for
+                      approval.
+                    - `AttemptsExhausted` (`False`): The interruptions `node-manager` attempted
+                      failed, and it makes no new attempt for now.
+                    - `Approved` (`True`): The interruption is approved.
+                    - `NoDisruptionPending` (`True`): Nothing waits for approval.
+                  - `AddressResolved`: Whether the node has determined the address it registers
+                    with.
+
+                    Reasons with `False`:
+
+                    - `NoneInCIDR`, `Ambiguous`: The node cannot choose an address.
+                    - `AddressDrift`: The node keeps the address it registered with, but that
+                      address is no longer on the machine or the configuration now selects another
+                      one.
+                  - Subsystem conditions, one per subsystem the pass ran or skipped:
+
+                    - `APIEndpointsReachable`
+                    - `SysctlApplied`
+                    - `KernelModulesLoaded`
+                    - `MountsReady`
+                    - `ExtensionsReady`
+                    - `ContainerdReady`
+                    - `KubeletReady`
+                    - `StaticPodsReady`
+                    - `UnitsRunning`
+                    - `OSImageUpToDate`
+                    - `ControlPlaneBootstrapped`
+
+                    Values of a subsystem condition:
+
+                    - `True`: The reason is `ReconcileSucceeded`.
+                    - `False`: The message gives the cause. The reason is `Pending` while the subsystem
+                      waits for something outside the node, otherwise `ReconcileFailed` or a more
+                      specific reason of the subsystem.
+                    - `Unknown`: The subsystem did not run in this pass. The reason is
+                      `ReconcileSkipped`.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -860,7 +1145,7 @@ spec:
 
                         - Ready: the extension is installed (on an Immutable node, also merged).
                         - Pending: the extension is being fetched or waits for the update window, or
-                          the agent restarts with a new build of itself (reason AgentRestarting).
+                          the agent restarts with a new build of itself (reason RestartPending).
                         - Failed: the cause is in Message.
                       enum:
                       - Ready
@@ -922,12 +1207,13 @@ spec:
                 format: int64
                 type: integer
               osImage:
-                description: |-
-                  Status of the operating system image on the node. Filled in by the node.
+                description: Status of the operating system image on the node. Filled
+                  in by the node.
                 properties:
                   attemptsLeft:
-                    description: |-
-                      Number of remaining boot attempts with the image being verified before initramfs automatically rolls back to the previous image.
+                    description: Number of remaining boot attempts with the image
+                      being verified before initramfs automatically rolls back to
+                      the previous image.
                     type: integer
                   digest:
                     description: |-
@@ -948,7 +1234,8 @@ spec:
                       Used to identify the actual root filesystem content independently of the image digest. For example, the digests of the desired and currently used images may differ after republishing, while identical `rootHash` values indicate that the root filesystem content has not changed.
                     type: string
                   slot:
-                    description: A/B slot (`a` or `b`) containing the image currently used by the node.
+                    description: A/B slot (`a` or `b`) containing the image currently
+                      used by the node.
                     type: string
                   trialDigest:
                     description: |-
@@ -959,15 +1246,13 @@ spec:
                 type: object
               phase:
                 description: |-
-                  Phase summarises the node.
+                  Summary of the node.
 
-                  - Ready: the node has applied the published configuration.
-                  - Pending: the node is healthy but has not applied the published
-                    configuration yet. It holds a disruptive change for approval, waits for a
-                    condition outside the node, or restarts with a new agent build (reason
-                    AgentRestarting).
-                  - Degraded: a subsystem failed, the node rejected the configuration, or the
-                    node rolled back.
+                  - `Ready`: The node runs the published configuration and every subsystem is healthy.
+                  - `Pending`: The node is healthy but does not run the published configuration
+                    yet.
+                  - `Degraded`: At least one condition other than `AddressResolved` reports a
+                    failure.
                 enum:
                 - Ready
                 - Pending
@@ -981,8 +1266,15 @@ spec:
                 items:
                   description: Processing result for a single static pod.
                   properties:
+                    manifestDigest:
+                      description: |-
+                        sha256 of the manifest as published in `spec`, in the form `sha256:<hex>`.
+
+                        Set when `state` is `Written`.
+                      type: string
                     message:
-                      description: Detailed information about the error when `state` is `Failed`.
+                      description: Detailed information about the error when `state`
+                        is `Failed`.
                       type: string
                     name:
                       description: Static pod name corresponding to `spec.staticPods[].name`.
@@ -1054,9 +1346,13 @@ spec:
                 - name
                 x-kubernetes-list-type: map
             type: object
+            x-kubernetes-preserve-unknown-fields: true
         required:
         - spec
         type: object
+        x-kubernetes-validations:
+        - message: a NodeConfig is named after its node
+          rule: self.spec.nodeName == self.metadata.name
     served: true
     storage: true
     subresources:

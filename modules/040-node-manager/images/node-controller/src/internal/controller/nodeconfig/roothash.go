@@ -19,7 +19,6 @@ package nodeconfig
 import (
 	"archive/tar"
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -232,13 +231,13 @@ func dialRegistry(reg *internalv1alpha1.Registry, repo string) (imageSource, err
 	opts := []registryclient.Option{
 		registryclient.WithInsecure(strings.EqualFold(reg.Scheme, "HTTP")),
 	}
-	if reg.CA != "" {
-		opts = append(opts, registryclient.WithCA(reg.CA))
+	if reg.CABundle != "" {
+		opts = append(opts, registryclient.WithCA(reg.CABundle))
 	}
-	if reg.Auth != "" {
-		user, password, err := decodeAuth(reg.Auth)
-		if err != nil {
-			return nil, err
+	if len(reg.Auth) > 0 {
+		user, password, ok := strings.Cut(string(reg.Auth), ":")
+		if !ok {
+			return nil, errors.New("the registry credentials are not user:password")
 		}
 		opts = append(opts, registryclient.WithLoginPassword(user, password))
 	}
@@ -264,19 +263,6 @@ func repositorySegments(address, repo, registryPath string) []string {
 		return nil
 	}
 	return strings.Split(trimmed, "/")
-}
-
-// decodeAuth splits the base64 "user:password" a docker config carries.
-func decodeAuth(auth string) (string, string, error) {
-	raw, err := base64.StdEncoding.DecodeString(auth)
-	if err != nil {
-		return "", "", fmt.Errorf("decode the registry credentials: %w", err)
-	}
-	user, password, ok := strings.Cut(string(raw), ":")
-	if !ok {
-		return "", "", errors.New("the registry credentials are not user:password")
-	}
-	return user, password, nil
 }
 
 // rootHashWatcher keeps the resolver in step with the digest the cluster publishes:

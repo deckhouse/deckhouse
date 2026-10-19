@@ -87,13 +87,13 @@ func (s *sourceReader) readMutableInputs(ctx context.Context) (clusterInputs, er
 func renderMutableSpec(node *corev1.Node, ngName string, in clusterInputs) internalv1alpha1.NodeSpec {
 	requested, _ := nodeExtensions(in, deckhousev1alpha1.ExtensionKindPackage, node, ngName)
 	return internalv1alpha1.NodeSpec{
-		SystemType:                          internalv1alpha1.SystemTypeMutable,
-		NodeName:                            node.Name,
-		APIServerEndpoints:                  in.APIServerEndpoints,
-		RegistryPackagesProxyAccessTokenB64: in.RegistryPackagesProxyToken,
-		FeatureGates:                        maps.Clone(in.Platform.FeatureGates),
-		StaticPods:                          mergeStaticPods(in.Platform.StaticPods, nodeStaticPods(in.NodeStaticPodRequests, in.NodeStaticPodRequestsRejected, ngName)),
-		Extensions:                          mergeExtensions(in.Platform.Extensions, requested),
+		SystemType:            internalv1alpha1.SystemTypeMutable,
+		NodeName:              node.Name,
+		APIServerEndpoints:    in.APIServerEndpoints,
+		RegistryPackagesProxy: internalv1alpha1.RegistryPackagesProxy{AccessToken: in.RegistryPackagesProxyToken},
+		FeatureGates:          maps.Clone(in.Platform.FeatureGates),
+		StaticPods:            mergeStaticPods(in.Platform.StaticPods, nodeStaticPods(in.NodeStaticPodRequests, in.NodeStaticPodRequestsRejected, ngName)),
+		Extensions:            mergeExtensions(in.Platform.Extensions, requested),
 	}
 }
 

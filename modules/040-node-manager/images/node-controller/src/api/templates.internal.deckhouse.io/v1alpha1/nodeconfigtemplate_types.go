@@ -35,6 +35,10 @@ const NodeConfigTemplateResource = "nodeconfigtemplates"
 // a live bootstrap token in etcd and go stale against its NodeGroup. The spec is
 // the NodeConfig spec, so what an operator pushes is what a node reads.
 //
+// templates.internal.deckhouse.io/vX serves the spec of NodeConfig
+// internal.deckhouse.io/vX: a client reads the version of the document off the
+// version of the template, so the two groups gain versions together.
+//
 // +kubebuilder:object:root=true
 type NodeConfigTemplate struct {
 	metav1.TypeMeta   `json:",inline"`

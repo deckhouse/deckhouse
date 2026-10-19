@@ -824,20 +824,19 @@ rules:
   - internal.deckhouse.io
   resources:
   - nodeconfigs/status
-  # No "get". The API masks sensitive fields on the resource endpoint only, not
-  # on the status subresource, so a node holding get here could read a
-  # neighbour's maintenance token straight out of
-  # GET /nodeconfigs/<other>/status and walk around the mask above. The agent
-  # never reads status back — it watches the resource and only ever writes here.
-  # A write reaches admission, where the policy pins it to the node's own object;
-  # a read would not.
+  # No "get", as defence in depth: the API server patch that masks sensitive fields
+  # (modules/000-common/images/kubernetes/patches/*/010-x-kubernetes-sensitive-data.patch)
+  # masks GET on the status subresource too, so the maintenance token stays hidden
+  # either way. The agent never reads status back — it watches the resource and only
+  # ever writes here. A write reaches admission, where the policy pins it to the
+  # node's own object; a read would not.
   verbs:
   - patch
   - update
 # Operations tell the node what the cluster has prepared for it — a reboot to
 # carry out, permission to interrupt itself — and the node reports the outcome
-# through their status. Creating one is not the node's to do: that is the
-# cluster's decision, or an operator's.
+# through its NodeReported condition. Creating one is not the node's to do:
+# that is the cluster's decision, or an operator's.
 - apiGroups:
   - deckhouse.io
   resources:
@@ -852,9 +851,9 @@ rules:
   - nodeoperations/status
   # No "get", for the same reason as nodeconfigs/status above, minus the
   # sensitive field: the node reads the operation itself, which carries its
-  # status, and only ever writes here.
+  # status, and only ever writes here. Update only: the report carries the
+  # resourceVersion it read, so it never lands on an operation that has ended.
   verbs:
-  - patch
   - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1

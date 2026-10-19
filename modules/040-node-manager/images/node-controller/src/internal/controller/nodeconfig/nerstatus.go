@@ -37,18 +37,38 @@ import (
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
-// readyConditionType answers whether a request's extension reaches the nodes it selects.
-const readyConditionType = "Ready"
+// The two conditions of a request, NodeExtensionRequest and NodeStaticPodRequest alike:
+// Accepted is this controller's verdict on the object, Ready says the fleet runs it.
+const (
+	acceptedConditionType = "Accepted"
+	readyConditionType    = "Ready"
+)
 
-// phaseDegraded is the NER phase when the extension reaches no node it should; the Ready
-// (phaseReady, shared with NodeConfig) phase means it does. Mirrors the NodeConfig status
-// shape (phase + typed conditions).
-const phaseDegraded = "Degraded"
+// Reasons of the Ready condition. NoNodesSelected and ServedByBashible (nsprstatus.go)
+// are True as well: nothing is waited for.
+const (
+	reasonAllNodesApplied   = "AllNodesApplied"
+	reasonRolloutInProgress = "RolloutInProgress"
+	// reasonRefusedByNodes is the request accepted here and rejected where it matters.
+	reasonRefusedByNodes  = "RefusedByNodes"
+	reasonNotAccepted     = "NotAccepted"
+	reasonNoNodesSelected = "NoNodesSelected"
+)
+
+// The phase of a request, the scale NodeConfig uses too (phaseReady is shared).
+const (
+	phasePending  = "Pending"
+	phaseDegraded = "Degraded"
+)
+
+// maxConditionMessage bounds a condition message: a node's refusal can carry a whole
+// script output, and a status write must not fail on its size.
+const maxConditionMessage = 4096
 
 // reconcileNERStatuses writes each NodeExtensionRequest's status: the groups it reaches
 // and the Ready condition. It settles the contest the renders settle, so the status says
 // what the renders did; a failing write blocks no render.
-func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logger) error {
+func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logger, p *pass) error {
 	ners := &deckhousev1alpha1.NodeExtensionRequestList{}
 	if err := r.Client.List(ctx, ners); err != nil {
 		return fmt.Errorf("list NodeExtensionRequests for status: %w", err)
@@ -73,10 +93,15 @@ func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logge
 	// What the nodes made of these requests. Nothing is published without it:
 	// counts absent read as counts zero, so a transient read failure would turn
 	// "50 nodes refused it" into a clean Ready and lose the reason with it.
-	outcomes, err := readNEROutcomes(ctx, r.Client)
+	digests := make(map[string]string, len(ners.Items))
+	for i := range ners.Items {
+		digests[ners.Items[i].Name] = ners.Items[i].Spec.Extension.Digest
+	}
+	f, err := r.readFleet(ctx, p)
 	if err != nil {
 		return fmt.Errorf("read what the nodes report about NodeExtensionRequests: %w", err)
 	}
+	outcomes := nerOutcomes(f, digests)
 
 	// The denominator: read once for every request, since it is the same listing.
 	nodes := &corev1.NodeList{}
@@ -90,7 +115,7 @@ func (r *Reconciler) reconcileNERStatuses(ctx context.Context, logger logr.Logge
 			continue
 		}
 		reach := nerReachOf(ner, immutable, mutable)
-		if err := r.updateNERStatus(ctx, ner, conflicts, reach, nodes.Items, outcomes[ner.Name]); err != nil {
+		if err := r.updateNERStatus(ctx, ner, conflicts, reach, nodes.Items, f, outcomes[ner.Name]); err != nil {
 			logger.Error(err, "cannot update NodeExtensionRequest status", "request", ner.Name)
 		}
 	}
@@ -141,6 +166,8 @@ type nerReach struct {
 	targets []string
 	// refused say which named groups cannot install it, and why.
 	refused []string
+	// missing are the named groups no NodeGroup carries.
+	missing []string
 }
 
 // nerReachOf is where a request's image goes: Engine groups take a system extension, groups
@@ -150,14 +177,14 @@ func nerReachOf(ner *deckhousev1alpha1.NodeExtensionRequest, immutable, mutable 
 	named := ner.Spec.NodeGroupSelector.MatchNames
 	engine := matchedNodeGroups(named, immutable)
 	bashible := matchedNodeGroups(named, mutable)
-	reach := nerReach{selected: slices.Concat(engine, bashible)}
+	reach := nerReach{selected: slices.Concat(engine, bashible), missing: missingNodeGroups(named, immutable, mutable)}
 	switch ner.Spec.Extension.Kind {
 	case deckhousev1alpha1.ExtensionKindSystemExtension:
 		reach.targets = engine
 		reach.refused = refusedGroups(named, bashible, "are managed by bashible, which installs no system extension")
 	case deckhousev1alpha1.ExtensionKindPackage:
 		reach.refused = refusedGroups(named, engine, "run Deckhouse Engine, which installs no registry package")
-		if len(ner.Spec.KernelModules) == 0 {
+		if len(ner.Spec.Extension.KernelModules) == 0 {
 			reach.targets = bashible
 		}
 	}
@@ -174,79 +201,140 @@ func refusedGroups(named, groups []string, why string) []string {
 
 // updateNERStatus computes and writes one request's status, skipping the write when
 // nothing changed.
-func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, reach nerReach, nodes []corev1.Node, outcome nerOutcome) error {
-	kind := ner.Spec.Extension.Kind
+func (r *Reconciler) updateNERStatus(ctx context.Context, ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, reach nerReach, nodes []corev1.Node, f fleet, outcome requestOutcome) error {
+	matched := nerMatchedNodes(ner, nodes, reach.targets)
 	desired := ner.Status.DeepCopy()
 	desired.ObservedGeneration = ner.Generation
 	desired.MatchedNodeGroups = reach.targets
-	desired.MatchedNodes = nerMatchedNodeCount(ner, nodes, reach.targets)
-	desired.AppliedNodes = outcome.applied
-	desired.FailedNodes = outcome.failed
-	desired.FailureMessage = outcome.message
+	desired.MatchedNodes = int32(len(matched))
+	desired.AppliedNodes = int32(len(outcome.applied))
+	desired.FailedNodes = int32(len(outcome.failed))
+	desired.PendingNodes = pendingNodeCount(desired.MatchedNodes, desired.AppliedNodes, desired.FailedNodes)
 
-	// The default is the request this controller refused, reason and message
-	// already in hand.
-	desired.Phase = phaseDegraded
-	status := metav1.ConditionFalse
-	reason, message := nerStatusReason(ner, conflicts, reach)
-	// A refusal here reached no node, so nobody is late with an answer. Only a
-	// refusal by the nodes keeps the arithmetic: there they did get it.
-	desired.PendingNodes = pendingNodeCount(desired.MatchedNodes, outcome.applied, outcome.failed)
-	if reason != "" {
-		desired.PendingNodes = 0
-	}
-	switch {
-	case reason == "" && outcome.failed > 0:
-		// It resolved here and the nodes refused it. Reporting Ready on the
-		// strength of the resolution alone is what made a rejected extension
-		// indistinguishable from a working one.
-		reason = reasonRefusedByNodes
-		message = fmt.Sprintf("%d node(s) refused the %s, %d applied it: %s",
-			outcome.failed, kindWords(kind), outcome.applied, outcome.message)
-	case reason == "":
-		desired.Phase = phaseReady
-		status = metav1.ConditionTrue
-		reason = reasonResolved
-		message = strings.Join(append([]string{fmt.Sprintf("the %s resolved; %d of %d node(s) report it applied",
-			kindWords(kind), outcome.applied, desired.MatchedNodes)}, reach.refused...), "; ")
-	}
-	meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
-		Type:               readyConditionType,
-		Status:             status,
-		ObservedGeneration: ner.Generation,
-		Reason:             reason,
-		Message:            message,
+	accepted := nerAccepted(ner, conflicts, reach)
+	pending := pendingNodes(f, matched, outcome, func(config *internalv1alpha1.NodeConfig) string {
+		return pendingReason(f, config, carriesNER(config, ner), nerHeld(config, ner.Spec.Extension))
 	})
+	// A refusal here reached no node, so nobody is late with an answer.
+	if accepted.Status != metav1.ConditionTrue {
+		desired.PendingNodes = 0
+		pending = nil
+	}
+	desired.Nodes = statusNodes(outcome.failed, pending)
+	ready := nerReady(ner, accepted, desired, reach, nodes, refusalMessage(outcome.failed), pendingMessage(pending))
+	meta.SetStatusCondition(&desired.Conditions, accepted)
+	meta.SetStatusCondition(&desired.Conditions, ready)
+	desired.Phase = requestPhase(accepted, ready)
 
 	if apiequality.Semantic.DeepEqual(&ner.Status, desired) {
 		return nil
 	}
-	// The whole status in one JSON patch, as nsprstatus.go writes it: a merge patch
-	// leaves out the counters that stay 0 and keeps the fields that went empty.
-	patch, err := json.Marshal([]map[string]any{{"op": "add", "path": "/status", "value": desired}})
+	return patchRequestStatus(ctx, r.Client, ner, desired)
+}
+
+// nerAccepted is this controller's verdict on a request: an invalid extension first, then
+// a lost contest, then nowhere to go.
+func nerAccepted(ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, reach nerReach) metav1.Condition {
+	cond := metav1.Condition{Type: acceptedConditionType, ObservedGeneration: ner.Generation, Status: metav1.ConditionFalse}
+	reason, message := nerStatusReason(ner, conflicts, reach)
+	if reason == "" {
+		cond.Status = metav1.ConditionTrue
+		reason = reasonAccepted
+		message = strings.Join(append([]string{fmt.Sprintf("the %s is accepted", kindWords(ner.Spec.Extension.Kind))}, reach.refused...), ". ")
+	}
+	cond.Reason, cond.Message = reason, nodecommon.Truncate(message, maxConditionMessage)
+	return cond
+}
+
+// nerReady says how far the selected nodes have got with the request's digest: refusal names
+// the nodes that refused it, pending the ones still owing an answer.
+func nerReady(ner *deckhousev1alpha1.NodeExtensionRequest, accepted metav1.Condition, status *deckhousev1alpha1.NodeExtensionRequestStatus, reach nerReach, nodes []corev1.Node, refusal, pending string) metav1.Condition {
+	cond := metav1.Condition{Type: readyConditionType, ObservedGeneration: ner.Generation, Status: metav1.ConditionFalse}
+	ext := ner.Spec.Extension
+	switch {
+	case accepted.Status != metav1.ConditionTrue:
+		cond.Reason, cond.Message = reasonNotAccepted, "the request is not accepted: "+accepted.Reason
+	case status.FailedNodes > 0:
+		cond.Reason = reasonRefusedByNodes
+		cond.Message = fmt.Sprintf("%d of %d node(s) refused the %s %s, %d run it: %s",
+			status.FailedNodes, status.MatchedNodes, kindWords(ext.Kind), ext.Digest, status.AppliedNodes, refusal)
+	case status.MatchedNodes == 0 && status.AppliedNodes == 0:
+		cond.Status = metav1.ConditionTrue
+		cond.Reason, cond.Message = reasonNoNodesSelected, nerReachesNoNode(reach, nodes)
+	case status.PendingNodes > 0:
+		cond.Reason = reasonRolloutInProgress
+		cond.Message = fmt.Sprintf("%d of %d node(s) run %s; %d pending", status.AppliedNodes, status.MatchedNodes, ext.Digest, status.PendingNodes)
+		if pending != "" {
+			cond.Message += ": " + pending
+		}
+	default:
+		cond.Status = metav1.ConditionTrue
+		cond.Reason = reasonAllNodesApplied
+		cond.Message = fmt.Sprintf("%d of %d node(s) run %s", status.AppliedNodes, status.MatchedNodes, ext.Digest)
+	}
+	cond.Message = nodecommon.Truncate(cond.Message, maxConditionMessage)
+	return cond
+}
+
+// requestPhase follows the two conditions: Ready when the fleet runs the request,
+// Degraded when this controller or the nodes refused it, Pending while it rolls out.
+func requestPhase(accepted, ready metav1.Condition) string {
+	if ready.Status == metav1.ConditionTrue {
+		return phaseReady
+	}
+	if accepted.Status != metav1.ConditionTrue || ready.Reason == reasonRefusedByNodes {
+		return phaseDegraded
+	}
+	return phasePending
+}
+
+// patchRequestStatus writes the whole status in one JSON patch: a merge patch leaves out
+// the counters that stay 0 and keeps the fields that went empty.
+func patchRequestStatus(ctx context.Context, c client.Client, obj client.Object, status any) error {
+	patch, err := json.Marshal([]map[string]any{{"op": "add", "path": "/status", "value": status}})
 	if err != nil {
 		return fmt.Errorf("marshal status: %w", err)
 	}
-	if err := r.Client.Status().Patch(ctx, ner, client.RawPatch(types.JSONPatchType, patch)); err != nil {
+	if err := c.Status().Patch(ctx, obj, client.RawPatch(types.JSONPatchType, patch)); err != nil {
 		return fmt.Errorf("patch status: %w", err)
 	}
 	return nil
 }
 
-// nerMatchedNodeCount counts the nodes of the selected groups the render gives
+// nerMatchedNodes names, sorted, the nodes of the selected groups the render gives
 // the extension to, node labels included (nerMatchesNode).
-func nerMatchedNodeCount(ner *deckhousev1alpha1.NodeExtensionRequest, nodes []corev1.Node, groups []string) int32 {
-	var count int32
+func nerMatchedNodes(ner *deckhousev1alpha1.NodeExtensionRequest, nodes []corev1.Node, groups []string) []string {
+	var matched []string
 	for i := range nodes {
 		group := nodes[i].Labels[nodecommon.NodeGroupLabel]
 		if !slices.Contains(groups, group) {
 			continue
 		}
 		if nerMatchesNode(ner, &nodes[i], group) {
-			count++
+			matched = append(matched, nodes[i].Name)
 		}
 	}
-	return count
+	slices.Sort(matched)
+	return matched
+}
+
+// nerReachesNoNode says why an accepted request is on no node: the named groups that do not
+// exist, the selected ones without nodes, and the ones whose nodes the nodeSelector leaves out.
+func nerReachesNoNode(reach nerReach, nodes []corev1.Node) string {
+	var empty, unlabelled []string
+	for _, group := range reach.targets {
+		inGroup := func(node corev1.Node) bool { return node.Labels[nodecommon.NodeGroupLabel] == group }
+		if slices.ContainsFunc(nodes, inGroup) {
+			unlabelled = append(unlabelled, group)
+			continue
+		}
+		empty = append(empty, group)
+	}
+	var more []string
+	if len(unlabelled) > 0 {
+		more = append(more, fmt.Sprintf("no node of NodeGroup(s) %s has the labels from nodeSelector", strings.Join(unlabelled, ", ")))
+	}
+	return noNodeMessage(reach.missing, empty, more...)
 }
 
 // matchedNodeGroups returns the NodeGroups a selector picks out of groups: the
@@ -262,9 +350,9 @@ func matchedNodeGroups(matchNames, groups []string) []string {
 	return matched
 }
 
-// nerStatusReason returns the reason a request is not ready and a human message for
-// its Ready condition, or empty strings when it reaches its nodes: an invalid extension
-// first, then a lost contest, then nowhere to go.
+// nerStatusReason returns the reason this controller refuses a request and a human
+// message for its Accepted condition, or empty strings when it accepts it: an invalid
+// extension first, then a lost contest, then nowhere to go.
 func nerStatusReason(ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[string]nerConflict, reach nerReach) (string, string) {
 	if !extensionValid(ner) {
 		return reasonInvalidExtension, "extension must set both name and digest"
@@ -273,8 +361,8 @@ func nerStatusReason(ner *deckhousev1alpha1.NodeExtensionRequest, conflicts map[
 		return conflict.reason, conflictMessage(conflict)
 	}
 	kind := ner.Spec.Extension.Kind
-	if kind == deckhousev1alpha1.ExtensionKindPackage && len(ner.Spec.KernelModules) > 0 {
-		return reasonNotDeliverable, "kernel modules load from a system extension only, and this image is a registry package: the request reaches no node"
+	if kind == deckhousev1alpha1.ExtensionKindPackage && len(ner.Spec.Extension.KernelModules) > 0 {
+		return reasonNotDeliverable, "kernel modules load only from a system extension, and this image is a registry package. No node installs it"
 	}
 	if len(reach.selected) > 0 && len(reach.targets) == 0 {
 		return reasonNotDeliverable, notDeliverableMessage(kind, reach)
@@ -287,7 +375,7 @@ func notDeliverableMessage(kind deckhousev1alpha1.ExtensionKind, reach nerReach)
 	if len(reach.refused) == 0 {
 		return fmt.Sprintf("no selected NodeGroup installs a %s", kindWords(kind))
 	}
-	return fmt.Sprintf("the %s reaches no node: %s", kindWords(kind), strings.Join(reach.refused, "; "))
+	return fmt.Sprintf("no node can install the %s: %s", kindWords(kind), strings.Join(reach.refused, "; "))
 }
 
 // kindWords names a kind of image in a message.
@@ -311,7 +399,7 @@ func conflictMessage(conflict nerConflict) string {
 		if conflict.platformPackage != "" {
 			return platformConflictMessage(conflict)
 		}
-		return fmt.Sprintf("extension %s already claimed by NodeExtensionRequest %q", conflict.field, conflict.winner)
+		return fmt.Sprintf("the extension %s is already used by NodeExtensionRequest %q", conflict.field, conflict.winner)
 	case reasonModuleConflict:
 		return fmt.Sprintf("kernel module %q is already loaded with different parameters by NodeExtensionRequest %q", conflict.field, conflict.winner)
 	default:
@@ -322,8 +410,8 @@ func conflictMessage(conflict nerConflict) string {
 // platformConflictMessage explains a registry package request that yields to the platform.
 func platformConflictMessage(conflict nerConflict) string {
 	if conflict.field == "name" {
-		return fmt.Sprintf("name %q is taken by a platform package; the name is only a label, pick another", conflict.platformPackage)
+		return fmt.Sprintf("name %q is taken by a platform package. Choose another name", conflict.platformPackage)
 	}
-	return fmt.Sprintf("this digest is installed by the platform as package %q; removing the request would remove that package's files",
+	return fmt.Sprintf("the platform installs this digest as package %q. Deleting the request would delete the files of that package",
 		conflict.platformPackage)
 }

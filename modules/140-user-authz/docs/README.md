@@ -520,6 +520,7 @@ read:
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
     - deckhouse.io/localpathprovisioners
+    - deckhouse.io/nodeextensionrequests
     - deckhouse.io/nodegroups
     - deckhouse.io/nodeoperations
     - deckhouse.io/openstackinstanceclasses
@@ -718,7 +719,7 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterEditor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
 ```text
-create,delete:
+create,delete,patch:
     - deckhouse.io/nodeoperations
 delete,deletecollection:
     - acme.cert-manager.io/challenges
@@ -757,6 +758,7 @@ write:
     - deckhouse.io/hubblemonitoringconfigs
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
+    - deckhouse.io/nodeextensionrequests
     - deckhouse.io/nodegroups
     - extensions.istio.io/wasmplugins
     - extensions/daemonsets
@@ -800,6 +802,7 @@ proxy:
     - nodes
 read:
     - control-plane.deckhouse.io/controlplaneoperations
+    - deckhouse.io/nodestaticpodrequests
     - nfd.k8s-sigs.io/nodefeaturegroups
     - nfd.k8s-sigs.io/nodefeaturerules
     - nfd.k8s-sigs.io/nodefeatures

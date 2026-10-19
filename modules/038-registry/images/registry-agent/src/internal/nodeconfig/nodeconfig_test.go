@@ -33,7 +33,13 @@ import (
 // A literal of that shape is indistinguishable from a real credential to a secret
 // scanner, and a fixture is exactly where one gets committed for real one day. Built
 // from its parts, there is nothing in this file for either to find.
-var fakeAuth = base64.StdEncoding.EncodeToString([]byte("license-token:not-a-real-key"))
+var (
+	fakeUserPassword = []byte("license-token:not-a-real-key")
+	fakeAuth         = base64.StdEncoding.EncodeToString(fakeUserPassword)
+)
+
+// clusterAuthority is the PEM the document carries as kubelet.clusterCABundle.
+const clusterAuthority = "-----BEGIN CERTIFICATE-----\ncluster-authority\n-----END CERTIFICATE-----\n"
 
 // documentYAML is a NodeConfig as nodelet keeps it, with neighbours around the two fields
 // this reads: the document is large, and taking two fields out of it must not trip over
@@ -49,16 +55,18 @@ spec:
   - https://192.168.1.10:6443
   - https://192.168.1.11:6443
   containerRuntime:
-    registryOwner: agent
-    maxConcurrentDownloads: 8
+    registryConfigOwner: RegistryAgent
   kubelet:
     maxPods: 110
-    caCert: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCmNsdXN0ZXItYXV0aG9yaXR5Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+    clusterCABundle: |
+      -----BEGIN CERTIFICATE-----
+      cluster-authority
+      -----END CERTIFICATE-----
   registry:
     address: registry.deckhouse.io
     path: /deckhouse/ee
     scheme: HTTPS
-    ca: |
+    caBundle: |
       -----BEGIN CERTIFICATE-----
       not-a-real-certificate
       -----END CERTIFICATE-----
@@ -86,8 +94,9 @@ func TestLoadTakesTheTwoFieldsTheAgentNeeds(t *testing.T) {
 	assert.Equal(t, "registry.deckhouse.io", document.Spec.Registry.Address)
 	assert.Equal(t, "/deckhouse/ee", document.Spec.Registry.Path)
 	assert.Equal(t, "HTTPS", document.Spec.Registry.Scheme)
-	assert.Contains(t, document.Spec.Registry.CA, "not-a-real-certificate")
-	assert.Equal(t, fakeAuth, document.Spec.Registry.Auth)
+	assert.Contains(t, document.Spec.Registry.CABundle, "not-a-real-certificate")
+	assert.Equal(t, fakeUserPassword, document.Spec.Registry.Auth,
+		"the document carries base64(user:password), which the bytes field decodes")
 }
 
 // A bashible node has no such document, and that is the ordinary answer rather than a
@@ -139,7 +148,8 @@ func TestRestConfigFromTheNodesOwnIdentity(t *testing.T) {
 	// The authority comes out of the document, so nothing of /etc/kubernetes/pki has to
 	// be mounted — on a master that directory also holds the authority's private key.
 	assert.Empty(t, config.TLSClientConfig.CAFile)
-	assert.Contains(t, string(config.TLSClientConfig.CAData), "cluster-authority")
+	assert.Equal(t, clusterAuthority, string(config.TLSClientConfig.CAData),
+		"clusterCABundle is the PEM itself, handed to the client as it is")
 }
 
 // A node config predating the field falls back to the authority on disk rather than
@@ -160,23 +170,6 @@ func TestRestConfigFallsBackToTheAuthorityOnDisk(t *testing.T) {
 	assert.Empty(t, config.TLSClientConfig.CAData)
 }
 
-// An authority that is not base64 is a broken document, not a node that is not ready:
-// falling back silently would verify the API server against the wrong thing.
-func TestRestConfigRejectsAnUnusableAuthority(t *testing.T) {
-	dir := t.TempDir()
-	cert := filepath.Join(dir, "kubelet-client-current.pem")
-	require.NoError(t, os.WriteFile(cert, []byte("-----BEGIN CERTIFICATE-----\n"), 0o600))
-
-	document, err := Load(write(t,
-		"spec:\n  apiServerEndpoints:\n  - 10.0.0.1:6443\n  kubelet:\n    caCert: \"not base64 @@\"\n"))
-	require.NoError(t, err)
-
-	_, err = Identity{ClientCertificatePath: cert}.RestConfig(document)
-	require.Error(t, err)
-	assert.False(t, errors.Is(err, ErrNoIdentityYet), "this one an operator has to look at")
-	assert.Contains(t, err.Error(), "base64")
-}
-
 // Both spellings of the endpoint, because the field carries both and getting it wrong is
 // invisible: prefixing a URL that already has a scheme yields "https://https/10.0.0.1:6443",
 // whose host is the literal "https". The agent then reports the API server unreachable,
@@ -192,8 +185,8 @@ func TestRestConfigAcceptsBothSpellingsOfTheEndpoint(t *testing.T) {
 		{"plain http, spelled out", "http://10.0.0.1:6443", "http://10.0.0.1:6443"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			document, err := Load(write(t, "spec:\n  apiServerEndpoints:\n  - "+tc.endpoint+"\n  kubelet:\n    caCert: "+
-				base64.StdEncoding.EncodeToString([]byte("-----BEGIN CERTIFICATE-----\n"))+"\n"))
+			document, err := Load(write(t, "spec:\n  apiServerEndpoints:\n  - "+tc.endpoint+
+				"\n  kubelet:\n    clusterCABundle: \"-----BEGIN CERTIFICATE-----\\n\"\n"))
 			require.NoError(t, err)
 
 			config, err := Identity{ClientCertificatePath: cert}.RestConfig(document)

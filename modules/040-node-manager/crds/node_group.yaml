@@ -94,16 +94,22 @@ spec:
               # group have its systemType removed and turn back into a bashible
               # one.
               #
-              # Only a value that is already set is frozen. A group that has none
-              # must still be able to record what it is: the bootstrap hook
-              # creates the master NodeGroup before dhctl applies the manifest
-              # naming its systemType, and every NodeGroup predating the field is
-              # in the same position. Setting it on a group that is already
-              # running bashible nodes is the harmful case, and deciding that
-              # needs to see the cluster, so the webhook denies that one.
+              # Unset and Mutable mean the same, so a group moves between them
+              # freely. It may also become Immutable: the bootstrap hook creates
+              # the master NodeGroup before dhctl applies the manifest naming its
+              # systemType. Doing that on a group already running bashible nodes
+              # is the harmful case, and deciding that needs to see the cluster,
+              # so the webhook denies that one. Only Immutable is final.
+              #
+              # Never add `default:` to systemType: it would write an explicit
+              # value into every existing group and break unset == Mutable.
+              #
+              # Hybrid resolves to CloudStatic or CloudPermanent only at conversion
+              # and staticInstances does not exist here, so the CloudStatic refusal
+              # is left to the webhook, which sees every request as v1.
               x-kubernetes-validations:
-                - rule: "!has(oldSelf.systemType) ? true : (has(self.systemType) && self.systemType == oldSelf.systemType)"
-                  message: .spec.systemType field is immutable once set
+                - rule: "oldSelf.?systemType.orValue('Mutable') != 'Immutable' || self.?systemType.orValue('') == 'Immutable'"
+                  message: .spec.systemType Immutable cannot be changed or removed
               properties:
 
                 nodeType:
@@ -128,14 +134,20 @@ spec:
                   type: string
                 systemType:
                   description: |
-                    How the node is managed.
+                    How the nodes of the group are managed.
 
-                    Possible values:
+                    - `Mutable`: bashible configures the node on the fly. An unset field means the same.
+                    - `Immutable`: The node agent brings the node to the state described in a NodeConfig object, without bashible. The machine must boot from a Deckhouse Engine image.
 
-                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means.
-                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object. bashible is not used.
+                    `Immutable` is supported for:
 
-                    Once the field names a value, that value can no longer be changed or removed. A NodeGroup that names none can still record one — but not `Immutable` while it holds nodes bashible has already configured, since those nodes cannot be handed over to the on-node agent.
+                    - `Static`: Machines must be added with `d8 node add`.
+                    - `Cloud`: Machines must be created by the cloud provider through Cluster API (CAPI).
+                    - `Hybrid`: Machines must be created by dhctl (`CloudPermanent` in `deckhouse.io/v1`).
+
+                    `Immutable` is not supported for other `Hybrid` groups (`CloudStatic` in `deckhouse.io/v1`).
+
+                    A group can become `Immutable` only while bashible has configured none of its nodes. `Immutable` cannot be changed or removed.
                   type: string
                   enum:
                     - Mutable
@@ -757,16 +769,22 @@ spec:
               # group have its systemType removed and turn back into a bashible
               # one.
               #
-              # Only a value that is already set is frozen. A group that has none
-              # must still be able to record what it is: the bootstrap hook
-              # creates the master NodeGroup before dhctl applies the manifest
-              # naming its systemType, and every NodeGroup predating the field is
-              # in the same position. Setting it on a group that is already
-              # running bashible nodes is the harmful case, and deciding that
-              # needs to see the cluster, so the webhook denies that one.
+              # Unset and Mutable mean the same, so a group moves between them
+              # freely. It may also become Immutable: the bootstrap hook creates
+              # the master NodeGroup before dhctl applies the manifest naming its
+              # systemType. Doing that on a group already running bashible nodes
+              # is the harmful case, and deciding that needs to see the cluster,
+              # so the webhook denies that one. Only Immutable is final.
+              #
+              # Never add `default:` to systemType: it would write an explicit
+              # value into every existing group and break unset == Mutable.
+              #
+              # Hybrid resolves to CloudStatic or CloudPermanent only at conversion
+              # and staticInstances does not exist here, so the CloudStatic refusal
+              # is left to the webhook, which sees every request as v1.
               x-kubernetes-validations:
-                - rule: "!has(oldSelf.systemType) ? true : (has(self.systemType) && self.systemType == oldSelf.systemType)"
-                  message: .spec.systemType field is immutable once set
+                - rule: "oldSelf.?systemType.orValue('Mutable') != 'Immutable' || self.?systemType.orValue('') == 'Immutable'"
+                  message: .spec.systemType Immutable cannot be changed or removed
               properties:
                 nodeType:
                   description: |
@@ -790,14 +808,20 @@ spec:
                   type: string
                 systemType:
                   description: |
-                    How the node is managed.
+                    How the nodes of the group are managed.
 
-                    Possible values:
+                    - `Mutable`: bashible configures the node on the fly. An unset field means the same.
+                    - `Immutable`: The node agent brings the node to the state described in a NodeConfig object, without bashible. The machine must boot from a Deckhouse Engine image.
 
-                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means.
-                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object. bashible is not used.
+                    `Immutable` is supported for:
 
-                    Once the field names a value, that value can no longer be changed or removed. A NodeGroup that names none can still record one — but not `Immutable` while it holds nodes bashible has already configured, since those nodes cannot be handed over to the on-node agent.
+                    - `Static`: Machines must be added with `d8 node add`.
+                    - `Cloud`: Machines must be created by the cloud provider through Cluster API (CAPI).
+                    - `Hybrid`: Machines must be created by dhctl (`CloudPermanent` in `deckhouse.io/v1`).
+
+                    `Immutable` is not supported for other `Hybrid` groups (`CloudStatic` in `deckhouse.io/v1`).
+
+                    A group can become `Immutable` only while bashible has configured none of its nodes. `Immutable` cannot be changed or removed.
                   type: string
                   enum:
                     - Mutable
@@ -1460,16 +1484,22 @@ spec:
               # group have its systemType removed and turn back into a bashible
               # one.
               #
-              # Only a value that is already set is frozen. A group that has none
-              # must still be able to record what it is: the bootstrap hook
-              # creates the master NodeGroup before dhctl applies the manifest
-              # naming its systemType, and every NodeGroup predating the field is
-              # in the same position. Setting it on a group that is already
-              # running bashible nodes is the harmful case, and deciding that
-              # needs to see the cluster, so the webhook denies that one.
+              # Unset and Mutable mean the same, so a group moves between them
+              # freely. It may also become Immutable: the bootstrap hook creates
+              # the master NodeGroup before dhctl applies the manifest naming its
+              # systemType. Doing that on a group already running bashible nodes
+              # is the harmful case, and deciding that needs to see the cluster,
+              # so the webhook denies that one. Only Immutable is final.
+              #
+              # Never add `default:` to systemType: it would write an explicit
+              # value into every existing group and break unset == Mutable.
               x-kubernetes-validations:
-                - rule: "!has(oldSelf.systemType) ? true : (has(self.systemType) && self.systemType == oldSelf.systemType)"
-                  message: .spec.systemType field is immutable once set
+                - rule: "oldSelf.?systemType.orValue('Mutable') != 'Immutable' || self.?systemType.orValue('') == 'Immutable'"
+                  message: .spec.systemType Immutable cannot be changed or removed
+                - rule: "self.?systemType.orValue('') != 'Immutable' || self.nodeType != 'CloudStatic'"
+                  message: systemType Immutable is not supported for nodeType CloudStatic
+                - rule: "self.?systemType.orValue('') != 'Immutable' || !has(self.staticInstances)"
+                  message: "staticInstances cannot provision an Immutable node. Add machines with d8 node add"
               properties:
                 nodeType:
                   description: |
@@ -1495,14 +1525,20 @@ spec:
                   type: string
                 systemType:
                   description: |
-                    How the node is managed.
+                    How the nodes of the group are managed.
 
-                    Possible values:
+                    - `Mutable`: bashible configures the node on the fly. An unset field means the same.
+                    - `Immutable`: The node agent brings the node to the state described in a NodeConfig object, without bashible. The machine must boot from a Deckhouse Engine image.
 
-                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means.
-                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object. bashible is not used.
+                    `Immutable` is supported for:
 
-                    Once the field names a value, that value can no longer be changed or removed. A NodeGroup that names none can still record one — but not `Immutable` while it holds nodes bashible has already configured, since those nodes cannot be handed over to the on-node agent.
+                    - `Static`: Machines must be added with `d8 node add`. `staticInstances` cannot be used.
+                    - `CloudEphemeral`: Machines must be created by the cloud provider through Cluster API (CAPI).
+                    - `CloudPermanent`: Machines are created by dhctl.
+
+                    `Immutable` is not supported for `CloudStatic` groups.
+
+                    A group can become `Immutable` only while bashible has configured none of its nodes. `Immutable` cannot be changed or removed.
                   type: string
                   enum:
                     - Mutable

@@ -17,17 +17,22 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"cmp"
+	"slices"
+	"strings"
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
-// NodeOperationNodeLabel names the node a NodeOperation is for, so one node's
-// operations can be listed without reading everyone else's. Shared between the
-// creating and reconciling controllers so the lookup contract cannot drift.
-const NodeOperationNodeLabel = "node-manager.deckhouse.io/node"
+// NodeOperationNodeNameField selects the operations of one node. The CRD
+// declares it in selectableFields, and node-controller indexes its cache by it.
+const NodeOperationNodeNameField = "spec.nodeName"
 
 // NodeOperation is one interruption of a node's work: a reboot, an eviction of
-// its workload, or the permission a node needs before applying a disruptive
-// configuration. A record of intent: who asked, for what, and how it ended.
+// its workload, or the disruption a node needs to apply a NodeConfig revision.
+// A record of intent: who asked, for what, and how it ended.
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=nop
 // +kubebuilder:subresource:status
@@ -47,13 +52,14 @@ const (
 	NodeOperationTypeReboot NodeOperationType = "Reboot"
 	// NodeOperationTypeDrain evicts the workload and leaves the node unschedulable.
 	NodeOperationTypeDrain NodeOperationType = "Drain"
-	// NodeOperationTypeApproveDisruption allows the node to apply a configuration
-	// whose application interrupts it.
-	NodeOperationTypeApproveDisruption NodeOperationType = "ApproveDisruption"
+	// NodeOperationTypeDisruption interrupts the node so that it can apply a
+	// NodeConfig revision that needs it. node-manager creates it, and it waits
+	// for approval.
+	NodeOperationTypeDisruption NodeOperationType = "Disruption"
 )
 
-// NodeOperationSpec is immutable: a different intent is a different operation.
-// No CRD is generated from this file — crds/nodeoperation.yaml is written by
+// NodeOperationSpec is immutable except Approved: a different intent is a
+// different operation. No CRD is generated from this file — crds/nodeoperation.yaml is written by
 // hand and is the authority on validation; kubebuilder markers here would drift.
 type NodeOperationSpec struct {
 	// Type is the operation to perform.
@@ -62,15 +68,30 @@ type NodeOperationSpec struct {
 	// NodeName is the node the operation applies to.
 	NodeName string `json:"nodeName"`
 
-	// ConfigGeneration is the NodeConfig revision an ApproveDisruption covers.
+	// ConfigGeneration is the NodeConfig revision a Disruption covers.
 	// The permission is deliberately narrow: a configuration published
 	// afterwards asks for its own.
 	// +optional
 	ConfigGeneration *int64 `json:"configGeneration,omitempty"`
 
+	// NodeConfigUID is the NodeConfig object a Disruption covers: a
+	// recreated NodeConfig counts its generation from 1 again.
+	// +optional
+	NodeConfigUID types.UID `json:"nodeConfigUID,omitempty"`
+
+	// Approved lets a Disruption go ahead. node-manager sets it on creation in any
+	// approval mode but Manual. In Manual an operator does. It only goes false -> true.
+	// +optional
+	Approved *bool `json:"approved,omitempty"`
+
 	// Drain controls the eviction that precedes the interruption.
 	// +optional
 	Drain *NodeOperationDrainSpec `json:"drain,omitempty"`
+
+	// Cause is why the node is interrupted. node-manager fills it for a
+	// Disruption from the node's request. An operator may set it on the others.
+	// +optional
+	Cause string `json:"cause,omitempty"`
 }
 
 // NodeOperationDrainSpec controls whether the workload leaves before the node
@@ -86,23 +107,41 @@ type NodeOperationDrainSpec struct {
 type NodeOperationPhase string
 
 const (
-	// NodeOperationPhasePending is queued but not started.
+	// NodeOperationPhasePending is queued but not started: waiting for approval
+	// or just created.
 	NodeOperationPhasePending NodeOperationPhase = "Pending"
-	// NodeOperationPhaseInProgress means the node was prepared and is carrying the
-	// operation out.
+	// NodeOperationPhaseApproved means the operation may go ahead and the node
+	// is being prepared for it. A Drain never has this phase.
+	NodeOperationPhaseApproved NodeOperationPhase = "Approved"
+	// NodeOperationPhaseInProgress means the eviction was requested (Drain) or
+	// the node was prepared and may carry the operation out (the other types).
 	NodeOperationPhaseInProgress NodeOperationPhase = "InProgress"
-	// NodeOperationPhaseCompleted means it finished successfully.
+	// NodeOperationPhaseCompleted means it finished successfully. A Disruption
+	// completes when the node releases it, with its revision applied or not.
 	NodeOperationPhaseCompleted NodeOperationPhase = "Completed"
 	// NodeOperationPhaseFailed means it did not.
 	NodeOperationPhaseFailed NodeOperationPhase = "Failed"
 )
 
-// NodeOperationStatus is written by whoever is moving the operation forward:
-// node-manager prepares the node, the on-node agent carries the work out.
+// NodeOperationStatus is written by node-manager. The on-node agent writes only
+// its NodeReported condition, and node-manager derives the phase from it.
 type NodeOperationStatus struct {
 	// Phase is the current phase of the operation.
 	// +optional
 	Phase NodeOperationPhase `json:"phase,omitempty"`
+
+	// Reason is the CamelCase cause of the current phase.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+
+	// Message explains Reason to a human.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// Deadline is when the current stretch of the operation times out; unset
+	// while the operation waits for approval and once it has finished.
+	// +optional
+	Deadline *metav1.Time `json:"deadline,omitempty"`
 
 	// StartedAt is when the node was handed the operation; the wait for the
 	// node is measured from here rather than from a condition timestamp, which
@@ -122,13 +161,18 @@ type NodeOperationStatus struct {
 	// +optional
 	NodeWasUnschedulable *bool `json:"nodeWasUnschedulable,omitempty"`
 
+	// BootID is the node's bootID when the reboot started. The reboot is over
+	// once the node runs with another one and is Ready.
+	// +optional
+	BootID string `json:"bootID,omitempty"`
+
 	// DrainDeadline is when the requested eviction runs out of time. Pinned at
 	// request time from the group's drain timeout as it stood then — the bound
 	// the draining controller pinned into its own context — never re-derived.
 	// +optional
 	DrainDeadline *metav1.Time `json:"drainDeadline,omitempty"`
 
-	// Conditions carry the details of the operation's progress.
+	// Conditions are Drained and Retry (node-manager) and NodeReported (the node).
 	// +optional
 	// +listType=map
 	// +listMapKey=type
@@ -144,4 +188,39 @@ type NodeOperationList struct {
 
 func init() {
 	SchemeBuilder.Register(&NodeOperation{}, &NodeOperationList{})
+}
+
+// FailedDisruptions returns the failed attempts of one NodeConfig revision oldest first, the
+// order retention collects them in: by NodeOperationFinishedAt, then by name. Both controllers
+// count and name the attempts by it, so they agree on which one is the newest.
+func FailedDisruptions(ops []NodeOperation, nodeConfigUID types.UID, generation int64) []*NodeOperation {
+	var failed []*NodeOperation
+	for i := range ops {
+		op := &ops[i]
+		if op.Status.Phase == NodeOperationPhaseFailed && DisruptionOf(op, nodeConfigUID, generation) {
+			failed = append(failed, op)
+		}
+	}
+	slices.SortFunc(failed, func(a, b *NodeOperation) int {
+		return cmp.Or(NodeOperationFinishedAt(a).Compare(NodeOperationFinishedAt(b)), strings.Compare(a.Name, b.Name))
+	})
+	return failed
+}
+
+// DisruptionOf reports whether op is a Disruption of the NodeConfig revision. Generation alone
+// is not identity: a recreated NodeConfig counts from 1 again.
+func DisruptionOf(op *NodeOperation, nodeConfigUID types.UID, generation int64) bool {
+	if op.Spec.Type != NodeOperationTypeDisruption || op.Spec.NodeConfigUID != nodeConfigUID {
+		return false
+	}
+	return op.Spec.ConfigGeneration != nil && *op.Spec.ConfigGeneration == generation
+}
+
+// NodeOperationFinishedAt is when an operation ended. The stamp is written a moment after the
+// phase, so an end not stamped yet counts from the creation rather than from nothing.
+func NodeOperationFinishedAt(op *NodeOperation) time.Time {
+	if op.Status.FinishedAt != nil {
+		return op.Status.FinishedAt.Time
+	}
+	return op.CreationTimestamp.Time
 }

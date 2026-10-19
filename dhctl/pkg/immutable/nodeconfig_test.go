@@ -107,9 +107,7 @@ func TestSysextDigestsPicksNewestPatch(t *testing.T) {
 
 	extensions, err := sysextExtensions(metaConfig.Images.ConvertToMap(), "1.34")
 	require.NoError(t, err)
-	require.Contains(t, extensions, extension{
-		Name: kubeletExtension, Digest: immutabletest.KubeletDigest, RequestedBy: platformExtensionRequestedBy,
-	})
+	require.Contains(t, extensions, extension{Name: kubeletExtension, Digest: immutabletest.KubeletDigest})
 }
 
 // The camelcase function strips version separators, so "kubernetesCniSysext1610"
@@ -157,9 +155,7 @@ func TestSysextDigestsIgnoresNonVersionSuffixes(t *testing.T) {
 
 	extensions, err := sysextExtensions(metaConfig.Images.ConvertToMap(), "1.34")
 	require.NoError(t, err)
-	require.Contains(t, extensions, extension{
-		Name: containerdExtension, Digest: immutabletest.ContainerdDigest, RequestedBy: platformExtensionRequestedBy,
-	})
+	require.Contains(t, extensions, extension{Name: containerdExtension, Digest: immutabletest.ContainerdDigest})
 }
 
 // The registry is split from the configured imagesRepo, not taken raw: the
@@ -275,7 +271,7 @@ func TestNodeConfigCarriesTheAgentWhenTheAgentOwnsTheRuntime(t *testing.T) {
 	require.NoError(t, err, "an agent-owned pull path is how an Engine cluster installs from mc/registry")
 	require.Equal(t, "dev-registry.deckhouse.io", nodeConfig.Spec.Registry.Address,
 		"the agent's seed is the upstream the node names")
-	require.Equal(t, registryOwnerAgent, nodeConfig.Spec.ContainerRuntime.RegistryOwner)
+	require.Equal(t, "RegistryAgent", nodeConfig.Spec.ContainerRuntime.RegistryConfigOwner)
 	require.Len(t, nodeConfig.Spec.StaticPods, 1)
 	require.Equal(t, registryAgentStaticPodName, nodeConfig.Spec.StaticPods[0].Name,
 		"node-controller recognises the agent by this name and keeps registry.d with it")
@@ -315,7 +311,7 @@ func TestNodeConfigCarriesNoAgentByDefault(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Empty(t, nodeConfig.Spec.StaticPods)
-	require.Empty(t, nodeConfig.Spec.ContainerRuntime.RegistryOwner)
+	require.Empty(t, nodeConfig.Spec.ContainerRuntime.RegistryConfigOwner)
 }
 
 // Direct on its own is how every immutable master is installed.

@@ -99,6 +99,7 @@ func (r *InstanceController) Reconcile(ctx context.Context, req ctrl.Request) (c
 		nonTerminalStep(r.reconcileNodeRef),
 		r.reconcileSourceExistence,
 		nonTerminalStep(r.instanceSvc.ReconcileBashibleHeartbeat),
+		nonTerminalStep(r.instanceSvc.ReconcileNodeAgent),
 		nonTerminalStep(r.instanceSvc.ReconcileBashibleStatus),
 		nonTerminalStep(r.reconcileMachineStatus),
 	} {

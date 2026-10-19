@@ -75,7 +75,10 @@ spec:
                     description:
                       description: Описание процесса получения логов начальной настройки узла.
                 conditions:
-                  description: Детализированные условия Instance (MachineReady, BashibleReady и т.д.).
+                  description: |
+                    Детализированные условия Instance (MachineReady, BashibleReady и т.д.).
+
+                    На узле, у которого есть NodeConfig, условие `NodeAgentReady` равно `True`, пока агент узла присылает отчёты, и `Unknown` с причиной `NoReport`, если отчёта нет дольше 10 минут.
                   items:
                     properties:
                       type:

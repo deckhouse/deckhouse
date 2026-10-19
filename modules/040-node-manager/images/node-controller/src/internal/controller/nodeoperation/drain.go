@@ -19,6 +19,7 @@ package nodeoperation
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -49,8 +50,10 @@ func (r *Reconciler) startDrain(ctx context.Context, op *v1alpha1.NodeOperation,
 	return nil
 }
 
+// drainRequested reports whether the operation has asked for its eviction: from
+// the ask on, its Drained condition is there, False until the workload has left.
 func drainRequested(op *v1alpha1.NodeOperation) bool {
-	return meta.IsStatusConditionTrue(op.Status.Conditions, conditionDrainRequested)
+	return meta.FindStatusCondition(op.Status.Conditions, conditionDrained) != nil
 }
 
 // drainMarker is the value this operation writes into the node's drain
@@ -60,6 +63,9 @@ func drainMarker(op *v1alpha1.NodeOperation) string {
 	return drainingSource + "/" + string(lineageUID(op))
 }
 
+// lineageUID is the UID of the operation the eviction is for. A Drain the
+// previous controller created for another operation carries that operation's
+// UID, so both read the same answer off the node.
 func lineageUID(op *v1alpha1.NodeOperation) types.UID {
 	for _, owner := range op.OwnerReferences {
 		if owner.Kind == nodeOperationKind {
@@ -86,6 +92,39 @@ func requestedByAnother(op *v1alpha1.NodeOperation, node *corev1.Node) bool {
 	return ok && requested != drainMarker(op)
 }
 
+// evictionHolder names who holds the node's one drain request. An operation's
+// marker carries its lineage UID, which is the UID of the operation at its root.
+func (r *Reconciler) evictionHolder(ctx context.Context, node *corev1.Node) (string, error) {
+	requested := node.Annotations[nodecommon.DrainingAnnotation]
+	uid, byOperation := strings.CutPrefix(requested, drainingSource+"/")
+	if !byOperation {
+		// An empty value is bashible's as well, see the draining controller.
+		if requested == "" || requested == "bashible" {
+			return "a bashible update", nil
+		}
+		return "a drain requested by " + requested, nil
+	}
+	ops, err := operationsOfNode(ctx, r.Client, node.Name)
+	if err != nil {
+		return "", fmt.Errorf("list the operations of %s: %w", node.Name, err)
+	}
+	for i := range ops {
+		if ops[i].UID == types.UID(uid) {
+			return "NodeOperation " + ops[i].Name, nil
+		}
+	}
+	return fmt.Sprintf("a NodeOperation that no longer exists (UID %s)", uid), nil
+}
+
+// evictionFailure is the error the draining controller keeps hitting on this
+// operation's eviction; empty while the eviction is not failing or not ours.
+func evictionFailure(op *v1alpha1.NodeOperation, node *corev1.Node) string {
+	if node.Annotations[nodecommon.DrainingAnnotation] != drainMarker(op) {
+		return ""
+	}
+	return node.Annotations[nodecommon.DrainFailedAnnotation]
+}
+
 // recordDrainRequested remembers that the eviction has been asked for and, the
 // first time only, until when it may run. The deadline is written once and
 // never moved: a deadline renewed on every re-issue is no deadline.
@@ -95,10 +134,10 @@ func (r *Reconciler) recordDrainRequested(ctx context.Context, op *v1alpha1.Node
 
 	return r.patchStatus(ctx, op, fmt.Sprintf("record that %s asked for its eviction", op.Name), func() {
 		meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
-			Type:               conditionDrainRequested,
-			Status:             metav1.ConditionTrue,
+			Type:               conditionDrained,
+			Status:             metav1.ConditionFalse,
 			Reason:             "Draining",
-			Message:            fmt.Sprintf("the draining controller was asked to empty %s", op.Spec.NodeName),
+			Message:            fmt.Sprintf("the draining controller is requested to evict the workload from node %s", op.Spec.NodeName),
 			ObservedGeneration: op.Generation,
 		})
 		if op.Status.DrainDeadline == nil {

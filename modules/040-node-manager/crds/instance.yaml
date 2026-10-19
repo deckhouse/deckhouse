@@ -151,7 +151,10 @@ spec:
                       type: string
                       description: Description about getting logs.
                 conditions:
-                  description: Detailed conditions of the instance (`MachineReady`, `BashibleReady`, etc.).
+                  description: |
+                    Detailed conditions of the instance (`MachineReady`, `BashibleReady`, etc.).
+
+                    On a node that has a NodeConfig, `NodeAgentReady` is `True` while the node agent reports and `Unknown` with reason `NoReport` after 10 minutes without a report.
                   type: array
                   x-kubernetes-list-map-keys:
                     - type

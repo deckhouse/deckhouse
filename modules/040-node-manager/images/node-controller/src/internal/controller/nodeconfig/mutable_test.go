@@ -17,7 +17,6 @@ limitations under the License.
 package nodeconfig
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -39,8 +38,8 @@ import (
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
-// testProxyToken is a placeholder, built here so no token-shaped literal sits in the tree.
-var testProxyToken = base64.StdEncoding.EncodeToString([]byte("proxy-token"))
+// testProxyToken is a placeholder, so no token-shaped literal sits in the tree.
+var testProxyToken = []byte("proxy-token")
 
 // A bashible node's document carries what the agent does there and nothing an
 // Engine node needs: no OS image, no system extensions.
@@ -58,7 +57,7 @@ func TestTheMutableRenderCarriesOnlyWhatTheAgentDoesThere(t *testing.T) {
 		Platform: platformDocument{
 			FeatureGates: map[string]bool{"static-pods": true, "extensions": true},
 			Extensions: []internalv1alpha1.Extension{{
-				Name: nodeletExtension, Digest: testNodeletPackageDigest, RequestedBy: platformExtensionRequestedBy,
+				Name: nodeletExtension, Digest: testNodeletPackageDigest,
 			}},
 		},
 		NodeStaticPodRequests:         ordered,
@@ -74,12 +73,11 @@ func TestTheMutableRenderCarriesOnlyWhatTheAgentDoesThere(t *testing.T) {
 	require.Equal(t, "worker-0", spec.NodeName)
 	require.Zero(t, spec.OSImage)
 	require.Equal(t, []string{"https://10.0.0.1:6443"}, spec.APIServerEndpoints)
-	require.Equal(t, testProxyToken, spec.RegistryPackagesProxyAccessTokenB64)
+	require.Equal(t, testProxyToken, spec.RegistryPackagesProxy.AccessToken)
 	require.Equal(t, map[string]bool{"static-pods": true, "extensions": true}, spec.FeatureGates)
 	require.Equal(t, []internalv1alpha1.Extension{{
-		Name:        "nodelet",
-		Digest:      testNodeletPackageDigest,
-		RequestedBy: platformExtensionRequestedBy,
+		Name:   "nodelet",
+		Digest: testNodeletPackageDigest,
 	}}, spec.Extensions)
 	require.Equal(t, []string{"static-pod"}, staticPodNames(spec.StaticPods))
 }
@@ -278,8 +276,8 @@ func TestTheMutableDocumentListsThePlatformThenTheRequests(t *testing.T) {
 		Platform: platformDocument{
 			FeatureGates: map[string]bool{"extensions": true, "static-pods": true},
 			Extensions: []internalv1alpha1.Extension{
-				{Name: nodeletExtension, Digest: testNodeletPackageDigest, RequestedBy: platformExtensionRequestedBy},
-				{Name: "jq", Digest: testenv.TestPlatformPackageDigests["jq"], RequestedBy: platformExtensionRequestedBy},
+				{Name: nodeletExtension, Digest: testNodeletPackageDigest},
+				{Name: "jq", Digest: testenv.TestPlatformPackageDigests["jq"]},
 			},
 			StaticPods: []internalv1alpha1.StaticPod{{Name: "early", Manifest: "kind: Pod"}},
 		},
@@ -295,7 +293,7 @@ func TestTheMutableDocumentListsThePlatformThenTheRequests(t *testing.T) {
 	require.Equal(t, []internalv1alpha1.Extension{
 		in.Platform.Extensions[0],
 		in.Platform.Extensions[1],
-		{Name: "sds-utils", Digest: drbdDigest, RequestedBy: nerRequestedByPrefix + "sds-utils"},
+		{Name: "sds-utils", Digest: drbdDigest, RequestedBy: nerOwner("sds-utils")},
 	}, spec.Extensions)
 	require.Equal(t, in.Platform.FeatureGates, spec.FeatureGates)
 	require.Equal(t, in.Platform.StaticPods, spec.StaticPods)
@@ -337,8 +335,7 @@ func TestABashibleNodeTakesNeitherSystemExtensionsNorKernelModules(t *testing.T)
 			Extension: deckhousev1alpha1.NodeExtension{Name: "drbd", Digest: drbdDigest, Kind: deckhousev1alpha1.ExtensionKindSystemExtension},
 		}),
 		ner("gpu-tools", deckhousev1alpha1.NodeExtensionRequestSpec{
-			Extension:     deckhousev1alpha1.NodeExtension{Name: "gpu-tools", Digest: otherDigest, Kind: deckhousev1alpha1.ExtensionKindPackage},
-			KernelModules: []deckhousev1alpha1.KernelModule{{Name: "nvidia"}},
+			Extension: deckhousev1alpha1.NodeExtension{Name: "gpu-tools", Digest: otherDigest, Kind: deckhousev1alpha1.ExtensionKindPackage, KernelModules: []deckhousev1alpha1.KernelModule{{Name: "nvidia"}}},
 		}),
 	}, noPlatform)
 
@@ -388,7 +385,7 @@ func TestNodesOfOnePassDoNotShareTheirRequestedPackages(t *testing.T) {
 	var in clusterInputs
 	// A decoded platform document carries spare capacity behind its last element.
 	in.Platform.Extensions = make([]internalv1alpha1.Extension, 1, 4)
-	in.Platform.Extensions[0] = internalv1alpha1.Extension{Name: nodeletExtension, Digest: testNodeletPackageDigest, RequestedBy: platformExtensionRequestedBy}
+	in.Platform.Extensions[0] = internalv1alpha1.Extension{Name: nodeletExtension, Digest: testNodeletPackageDigest}
 	in.NodeExtensions, in.NodeExtensionConflicts = settleNERs([]deckhousev1alpha1.NodeExtensionRequest{
 		ner("pkg-a", deckhousev1alpha1.NodeExtensionRequestSpec{
 			Extension:    deckhousev1alpha1.NodeExtension{Name: "pkg-a", Digest: drbdDigest, Kind: deckhousev1alpha1.ExtensionKindPackage},

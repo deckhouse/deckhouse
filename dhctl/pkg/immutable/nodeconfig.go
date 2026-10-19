@@ -23,7 +23,6 @@ import (
 	"strconv"
 
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
-	"k8s.io/utils/ptr"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
@@ -45,14 +44,6 @@ const (
 	// sizes depend on provider rounding, and device names do not follow attach
 	// order.
 	systemDiskSize = ">=20Gi"
-
-	// The +kubebuilder:default values of the NodeConfig CRD
-	// (modules/040-node-manager/images/node-controller/src/api/internal.deckhouse.io/v1alpha1/nodeconfig_types.go),
-	// applied here because the payload is marshalled to a file instead of being
-	// created through the API server, where CRD defaulting runs.
-	defaultContainerLogMaxSize    = "50Mi"
-	defaultContainerLogMaxFiles   = 4
-	defaultMaxConcurrentDownloads = 8
 
 	// defaultPodSubnetNodeCIDRPrefix is what bashible falls back to when the
 	// cluster configuration names no prefix.
@@ -89,8 +80,9 @@ type nodeConfigInput struct {
 // node. The CA and the token are read from the running cluster: a second
 // source for either would be a second source of truth.
 type joinInput struct {
-	CACert         string
-	BootstrapToken string
+	// ClusterCABundle is the cluster CA, PEM.
+	ClusterCABundle string
+	BootstrapToken  string
 	// APIServerEndpoints are the apiservers already serving the cluster. A
 	// joining node cannot use the first master's placeholder trick: its own
 	// apiserver does not exist until control-plane-manager puts one there.
@@ -145,8 +137,9 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 	}
 
 	spec := nodeSpec{
-		NodeName: in.NodeName,
-		OSImage:  osImageRef,
+		SystemType: systemTypeImmutable,
+		NodeName:   in.NodeName,
+		OSImage:    osImageRef,
 		Storage: storage{
 			DiskSelector: &diskSelector{Size: systemDiskSize},
 			Mounts:       nodeMounts(in.NodeGroupName),
@@ -169,12 +162,6 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 			Interfaces: []networkInterface{{Name: "eth0", DHCP: true}},
 		},
 		Kubelet: nodeKubelet(in.MetaConfig, kubernetesVersion, podsPerNode, in.NodeGroupName),
-		// No sandboxImage: the containerd extension ships pause and nodelet names it.
-		// Mirrors renderContainerRuntime in
-		// modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/render.go.
-		ContainerRuntime: containerRuntime{
-			MaxConcurrentDownloads: ptr.To(defaultMaxConcurrentDownloads),
-		},
 		// The zeroth master is its own apiserver and its address is unknown
 		// while the payload is being built, so the endpoint stays a
 		// placeholder; the node expands it from its own address on load.
@@ -226,11 +213,9 @@ func nodeKubelet(metaConfig *config.MetaConfig, kubernetesVersion string, podsPe
 	k := kubelet{
 		// kubelet's feature gates depend on it; without it a DRA workload runs
 		// everywhere in the cluster except on this node.
-		KubernetesVersion:    kubernetesVersion,
-		ClusterDomain:        metaConfig.ClusterDomain,
-		MaxPods:              podsPerNode,
-		ContainerLogMaxSize:  defaultContainerLogMaxSize,
-		ContainerLogMaxFiles: defaultContainerLogMaxFiles,
+		KubernetesVersion: kubernetesVersion,
+		ClusterDomain:     metaConfig.ClusterDomain,
+		MaxPods:           podsPerNode,
 		// In a cloud the node is CAPI-backed and the cloud-controller-manager has
 		// to assign its providerID before CAPI can match Machine to Node. On bare
 		// metal there is none, and its uninitialized taint would never be removed.
@@ -264,7 +249,7 @@ func applyJoinToSpec(spec *nodeSpec, join *joinInput) {
 		return
 	}
 
-	spec.Kubelet.CACert = join.CACert
+	spec.Kubelet.ClusterCABundle = join.ClusterCABundle
 	spec.Kubelet.BootstrapToken = join.BootstrapToken
 	spec.APIServerEndpoints = join.APIServerEndpoints
 	// Deckhouse is running by now, so the serving CSR gets approved. Left off,
@@ -355,12 +340,19 @@ func nodeRegistry(metaConfig *config.MetaConfig) (*registrySpec, error) {
 		return nil, errors.New("registry address is empty")
 	}
 
+	// Mirrors Data.AuthBase64 in dhctl/pkg/config/registry/types.go without the
+	// base64: the field is bytes, and JSON encodes them itself.
+	var auth []byte
+	if settings.RemoteData.Username != "" {
+		auth = []byte(settings.RemoteData.Username + ":" + settings.RemoteData.Password)
+	}
+
 	return &registrySpec{
-		Address: address,
-		Path:    path,
-		Scheme:  string(settings.RemoteData.Scheme),
-		CA:      settings.RemoteData.CA,
-		Auth:    settings.RemoteData.AuthBase64(),
+		Address:  address,
+		Path:     path,
+		Scheme:   string(settings.RemoteData.Scheme),
+		CABundle: settings.RemoteData.CA,
+		Auth:     auth,
 	}, nil
 }
 

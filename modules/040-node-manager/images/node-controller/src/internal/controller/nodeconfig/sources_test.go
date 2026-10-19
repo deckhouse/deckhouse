@@ -210,7 +210,8 @@ func TestReadClusterState(t *testing.T) {
 		require.Equal(t, network.DefaultClusterDomain, in.ClusterDomain)
 		require.Equal(t, []string{"https://10.0.0.1:6443"}, in.APIServerEndpoints)
 		require.Equal(t, "10.0.0.10", in.ClusterDNS)
-		require.NotEmpty(t, in.KubernetesCA)
+		// PEM as published, not base64 of it: clusterCABundle is a PEM field.
+		require.Equal(t, "-----BEGIN CERTIFICATE-----", in.KubernetesCA)
 	})
 
 	t.Run("the configured domain wins", func(t *testing.T) {
@@ -316,9 +317,11 @@ func TestReadClusterDNS(t *testing.T) {
 // "this registry is anonymous", it hands every node of the group a pull that
 // fails against a private registry with nothing saying why.
 func TestRegistryAuth(t *testing.T) {
+	// NodeConfig carries the raw pair and encodes it on the wire: passing the docker
+	// config's base64 through would encode it twice.
 	auth, err := registryAuth([]byte(`{"auths":{"registry.example.com":{"auth":"dXNlcjpwYXNz"}}}`), "registry.example.com")
 	require.NoError(t, err)
-	require.Equal(t, "dXNlcjpwYXNz", auth)
+	require.Equal(t, []byte("user:pass"), auth)
 
 	// An anonymous registry genuinely has no credentials.
 	auth, err = registryAuth(nil, "registry.example.com")
@@ -327,6 +330,9 @@ func TestRegistryAuth(t *testing.T) {
 
 	_, err = registryAuth([]byte("{not json"), "registry.example.com")
 	require.ErrorContains(t, err, registryDockerConfigKey)
+
+	_, err = registryAuth([]byte(`{"auths":{"registry.example.com":{"auth":"not base64!"}}}`), "registry.example.com")
+	require.ErrorContains(t, err, "decode the registry credentials")
 }
 
 // A cluster carries the static configuration or the provider one, never both,
@@ -716,12 +722,23 @@ func TestTheRegistryComesFromTheModulesConfiguration(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "dev-registry.deckhouse.io/sys/deckhouse-oss", imagesRepo)
 		require.Equal(t, &internalv1alpha1.Registry{
-			Address: "dev-registry.deckhouse.io",
-			Path:    "/sys/deckhouse-oss",
-			Scheme:  "HTTPS",
-			CA:      "CA",
-			Auth:    base64.StdEncoding.EncodeToString([]byte("license-token:key")),
+			Address:  "dev-registry.deckhouse.io",
+			Path:     "/sys/deckhouse-oss",
+			Scheme:   "HTTPS",
+			CABundle: "CA",
+			Auth:     []byte("license-token:key"),
 		}, registry)
+	})
+
+	t.Run("the upstream, with its account pre-encoded", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(inCluster, registryConfig(map[string]any{
+			"host": "dev-registry.deckhouse.io",
+			"auth": map[string]any{"auth": base64.StdEncoding.EncodeToString([]byte("license-token:key"))},
+		})).Build()
+
+		registry, _, err := (&sourceReader{Reader: cl}).readRegistry(context.Background())
+		require.NoError(t, err)
+		require.Equal(t, []byte("license-token:key"), registry.Auth)
 	})
 
 	// Air-gapped: no upstream at all, and the in-cluster registry is the only one there is.

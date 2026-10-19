@@ -52,7 +52,7 @@ func nodeExtensions(in clusterInputs, kind deckhousev1alpha1.ExtensionKind, node
 		// request with an unusable extension.
 		extensions = append(extensions, resolveExtension(ner))
 
-		for _, module := range ner.Spec.KernelModules {
+		for _, module := range ner.Spec.Extension.KernelModules {
 			if _, seen := seenModules[module.Name]; seen {
 				continue
 			}
@@ -73,21 +73,17 @@ func deliverable(ner *deckhousev1alpha1.NodeExtensionRequest, nodes deckhousev1a
 	if ner.Spec.Extension.Kind != nodes {
 		return false
 	}
-	return nodes == deckhousev1alpha1.ExtensionKindSystemExtension || len(ner.Spec.KernelModules) == 0
+	return nodes == deckhousev1alpha1.ExtensionKindSystemExtension || len(ner.Spec.Extension.KernelModules) == 0
 }
 
-// Reasons a request is not ready, reported on its Ready condition. An empty
-// reason means the extension resolved and won its name and digest.
+// Reasons of the Accepted condition of a request: Accepted, or why this
+// controller refused it. Shared with NodeStaticPodRequest where the words fit.
 const (
-	reasonResolved         = "Resolved"
+	reasonAccepted         = "Accepted"
 	reasonInvalidExtension = "InvalidExtension"
 	reasonConflict         = "Conflict"
 	reasonModuleConflict   = "KernelModuleConflict"
 	reasonReservedName     = "ReservedName"
-	// reasonRefusedByNodes is the request that resolved here and was rejected
-	// where it matters. The others are this controller's own verdicts; this one
-	// is the fleet's.
-	reasonRefusedByNodes = "RefusedByNodes"
 	// reasonNotDeliverable is a request whose selected groups cannot install its kind
 	// of image, or a registry package that asks for kernel modules.
 	reasonNotDeliverable = "NotDeliverable"
@@ -105,11 +101,14 @@ func extensionValid(ner *deckhousev1alpha1.NodeExtensionRequest) bool {
 func resolveExtension(ner *deckhousev1alpha1.NodeExtensionRequest) internalv1alpha1.Extension {
 	ext := ner.Spec.Extension
 	return internalv1alpha1.Extension{
-		Name:           ext.Name,
-		Repository:     ext.Repository,
-		AdditionalPath: ext.Path,
-		Digest:         ext.Digest,
-		RequestedBy:    nerRequestedByPrefix + ner.Name,
+		Name:       ext.Name,
+		Digest:     ext.Digest,
+		Repository: ext.Repository,
+		Path:       ext.Path,
+		RequestedBy: &internalv1alpha1.ObjectOwner{
+			Kind: internalv1alpha1.ObjectOwnerKindNodeExtensionRequest,
+			Name: ner.Name,
+		},
 	}
 }
 
@@ -163,7 +162,7 @@ func resolveNERConflicts(ordered []*deckhousev1alpha1.NodeExtensionRequest, plat
 		}
 		nameOwner[nameKey] = ner.Name
 		digestOwner[digestKey] = ner.Name
-		for _, module := range ner.Spec.KernelModules {
+		for _, module := range ner.Spec.Extension.KernelModules {
 			moduleOwner[module.Name] = ner
 		}
 	}
@@ -221,7 +220,7 @@ func settleNERs(ners []deckhousev1alpha1.NodeExtensionRequest, platform []intern
 // one already loads with different parameters; the same module with the same
 // parameters is not a clash and is loaded once.
 func moduleConflict(ner *deckhousev1alpha1.NodeExtensionRequest, owners map[string]*deckhousev1alpha1.NodeExtensionRequest) (nerConflict, bool) {
-	for _, module := range ner.Spec.KernelModules {
+	for _, module := range ner.Spec.Extension.KernelModules {
 		owner, taken := owners[module.Name]
 		if !taken || sameModuleParams(owner, module) {
 			continue
@@ -234,7 +233,7 @@ func moduleConflict(ner *deckhousev1alpha1.NodeExtensionRequest, owners map[stri
 // sameModuleParams reports whether the owner of a module loads it with exactly
 // the parameters this request asks for.
 func sameModuleParams(owner *deckhousev1alpha1.NodeExtensionRequest, module deckhousev1alpha1.KernelModule) bool {
-	for _, owned := range owner.Spec.KernelModules {
+	for _, owned := range owner.Spec.Extension.KernelModules {
 		if owned.Name != module.Name {
 			continue
 		}

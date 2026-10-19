@@ -33,6 +33,7 @@ import (
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	instancecommon "github.com/deckhouse/node-controller/internal/controller/instance/common"
@@ -877,6 +878,7 @@ func newTestInstanceController(
 	require.NoError(t, capiv1beta2.AddToScheme(scheme))
 	require.NoError(t, mcmv1alpha1.AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
 
 	k8sClient := fake.NewClientBuilder().
 		WithScheme(scheme).

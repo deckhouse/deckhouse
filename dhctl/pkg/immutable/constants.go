@@ -41,7 +41,7 @@ const (
 )
 
 // systemTypeImmutable is the NodeGroup systemType that asks for a node dhctl
-// cannot SSH into.
+// cannot SSH into, and the spec.systemType of the NodeConfig such a node gets.
 // Mirrors SystemTypeImmutable of node-controller/src/api/deckhouse.io/v1.
 const systemTypeImmutable = "Immutable"
 
@@ -105,12 +105,6 @@ const (
 	nodeletSysextImage = "nodeletSysext"
 	// guestAgentSysextImage is unversioned for the same reason.
 	guestAgentSysextImage = "qemuGuestAgentSysext"
-
-	// platformExtensionRequestedBy names the module that wants the extension, not
-	// the process that wrote the file, so it stays "node-manager" when
-	// node-controller re-renders this node.
-	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go.
-	platformExtensionRequestedBy = "node-manager"
 
 	// registryPackagesDigestsKey is the images_digests.json module the sysext
 	// images are built in.

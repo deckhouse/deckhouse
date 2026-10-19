@@ -20,192 +20,153 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NodeConfig is the desired state of a Deckhouse Engine node, stored at
-// /config/nodeconfig.yaml and as a cluster CRD (crds/nodeconfig.yaml, generated).
-// Keep identical with nodelet's internal/config/types.go and dhctl's spec-only mirrors.
+// Maintainers: the schema's source is nodelet's api/internal.deckhouse.io/v1alpha1, and
+// crds/nodeconfig.yaml, which validates, is copied from it (hack/sync-nodeconfig-crd.sh). These
+// types keep its shape (TestTheGoTypesAndTheShippedCRDAgree), as do dhctl/pkg/immutable/types.go.
+
+// NodeConfig is the desired state of a Deckhouse node agent (nodelet), one object per node. An
+// Engine node reads the same document from /config/nodeconfig.yaml before it reaches the cluster.
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster,shortName=nc
-// +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
-// +kubebuilder:metadata:labels="heritage=deckhouse"
-// +kubebuilder:metadata:labels="module=node-manager"
-// +crd-enricher:crd:minimal=true
 type NodeConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec NodeSpec `json:"spec"`
 
-	// Status is reported by the on-node agent after each reconcile pass.
-	// +optional
+	// Status is reported by the node agent after each reconcile pass.
 	Status NodeConfigStatus `json:"status,omitempty"`
 }
 
 // NodeConfigStatus is the observed state reported by the node agent.
 type NodeConfigStatus struct {
-	// ObservedGeneration is the latest spec generation the node has processed:
-	// it reaches the newest generation as soon as the node has looked at it,
-	// even while it is still held for approval (see AppliedGeneration).
-	// +optional
+	// ObservedGeneration is the latest spec generation the node has looked at. It reaches
+	// the newest generation even while the node holds that generation for approval; see
+	// appliedGeneration for what the node runs.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-	// AppliedGeneration is the spec generation the node runs; converged means it equals
-	// metadata.generation with ConfigurationApplied True at it. It lags while a disruptive
-	// change waits for approval, and while a new agent build for it has not yet run it.
-	// +optional
+	// AppliedGeneration is the spec generation the node has applied. The current spec is applied
+	// when it equals metadata.generation and ConfigurationApplied is True at that generation.
 	AppliedGeneration int64 `json:"appliedGeneration,omitempty"`
-	// Phase summarises the node. Ready: running the published config. Pending: healthy,
-	// not yet running it: held for approval, waiting outside the node, or restarting into
-	// a new agent build (AgentRestarting). Degraded: subsystem failed, rejected, rolled back.
-	// +optional
-	// +kubebuilder:validation:Enum=Ready;Pending;Degraded
+	// Phase summarises the node: Ready once it applied the published configuration, Pending
+	// while it has not yet, Degraded when a subsystem failed or the configuration was refused.
 	Phase string `json:"phase,omitempty"`
-	// Features are the features that ran on the node in its last pass, sorted: the
-	// gates the document switched on plus the node type's defaults. spec.featureGates
-	// is empty on an Engine node where everything runs, so this is what to read.
-	// +optional
+	// Features that ran on the node during its last pass, sorted by name: the gates
+	// switched on in spec.featureGates plus the defaults of the node type.
 	Features []string `json:"features,omitempty"`
-	// Conditions are the node-level reconcile outcomes (ConfigurationApplied,
-	// DisruptionRequired) plus the gate subsystems (APIEndpointsReachable,
-	// SysctlApplied); per-extension and per-unit outcomes live in Extensions and Units.
-	// +optional
-	// +listType=map
-	// +listMapKey=type
+	// Conditions of the node: Ready, ConfigurationApplied, DisruptionApproved and AddressResolved
+	// at the generation it processed, one per subsystem at the generation it runs. The reasons are
+	// listed in crds/nodeconfig.yaml.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-	// Extensions is the outcome of each configured system extension, one entry
-	// per extension. Republished on every pass, empty when the pass checked
-	// nothing — never "the previous outcome still holds".
-	// +optional
-	// +listType=map
-	// +listMapKey=name
+	// Extensions is the outcome of each configured extension, one entry per extension.
+	// Republished on every pass, and empty when the pass checked nothing.
 	Extensions []ExtensionStatus `json:"extensions,omitempty"`
-	// Units is the outcome of each managed systemd unit (containerd, kubelet and
-	// every unit an extension ships), one entry per unit. Republished on every
-	// pass like Extensions, and empty when the pass checked nothing.
-	// +optional
-	// +listType=map
-	// +listMapKey=name
+	// Units is the outcome of each managed systemd unit (containerd, kubelet and every
+	// unit an extension ships), one entry per unit. Republished on every pass, and empty
+	// when the pass checked nothing.
 	Units []UnitStatus `json:"units,omitempty"`
-	// StaticPods is one entry per spec.staticPods item the node wrote or failed
-	// to, republished every pass and empty when the pass checked nothing — like
-	// Extensions and Units. Declared without omitempty on purpose: an empty pass
-	// has to say so explicitly, and the node turns the nil slice into [] before
-	// it applies the status.
-	// +optional
-	// +listType=map
-	// +listMapKey=name
+
+	// Maintainers: no omitempty on purpose: an empty pass has to say so explicitly, and the
+	// node turns the nil slice into [] before it applies the status.
+
+	// StaticPods is the outcome of each static pod, one entry per spec.staticPods item.
+	// Republished on every pass, and empty when the pass checked no static pods.
 	StaticPods []StaticPodStatus `json:"staticPods"`
-	// Network is what the node resolved for itself: the interface it took its
-	// cluster address from, and that address. Written by the node alone.
-	// +optional
+	// Network is what the node resolved for itself: the interface it took its cluster
+	// address from, and that address. Written by the node alone.
 	Network *NetworkStatus `json:"network,omitempty"`
-	// LastReconcileTime is when the node last finished a reconcile pass — the
-	// only thing in the status that ages, so it is what tells a dead agent from
-	// a healthy one. Republished coarsely: judge staleness in tens of minutes.
-	// +optional
+	// LastReconcileTime is when the node last finished a reconcile pass. It is the only
+	// field of the status that ages, so it tells a stopped agent from a healthy one.
+	// Republished coarsely: judge staleness in tens of minutes.
 	LastReconcileTime metav1.Time `json:"lastReconcileTime,omitempty"`
-	// OSImage is how far the node has got with spec.osImage. Mirrors
-	// config.OSImageStatus in the nodelet repository (internal/config/types.go):
-	// a field missing here is pruned and the node's whole status apply fails.
-	// +optional
+	// OSImage is the state of the operating system image on the node. Filled in by the node.
 	OSImage *OSImageStatus `json:"osImage,omitempty"`
-	// MaintenanceToken is the bearer token an operator presents to the node's
-	// :50000 config-push port once the node has lost the API. Root-equivalent,
-	// so the apiserver keeps it out of every answer without the sensitive
-	// subresource, which nodes are not granted.
-	// +optional
-	// +crd-enricher:deckhouse:sensitive-data
+
+	// MaintenanceToken is the bearer token an operator presents to the node's :50000
+	// configuration port once the node has lost the API. The node creates it once and keeps
+	// it in /var/lib/nodelet/maintenance-token.
 	MaintenanceToken string `json:"maintenanceToken,omitempty"`
+	// Agent describes the node agent that wrote this status.
+	Agent *AgentStatus `json:"agent,omitempty"`
 }
 
-// OSImageStatus is the node's side of a rootfs update: what it runs, what it is
-// trying, and what it has already refused.
+// AgentStatus describes the node agent that wrote the status.
+type AgentStatus struct {
+	// Version is the build of the agent: a release tag such as v0.1.16, or a short commit
+	// for a development build. For display only.
+	Version string `json:"version,omitempty"`
+}
+
+// OSImageStatus is the node's side of an operating system image update: what it runs,
+// what it is trying, and what it has already refused.
 type OSImageStatus struct {
-	// Digest is the image the node is running, as recorded on its config
-	// partition. Empty on a node installed before that record existed.
-	// +optional
+	// Digest of the operating system image the node runs, read from its configuration
+	// partition. Absent on a node installed before the digest was recorded there.
 	Digest string `json:"digest,omitempty"`
-	// Slot is the A/B slot that image lives in ("a" or "b").
-	// +optional
+	// Slot is the A/B slot (a or b) holding the image the node runs.
 	Slot string `json:"slot,omitempty"`
-	// RootHash is the root hash of the image the node is actually running, read
-	// from its active slot. It is what makes "asked for X, running Y" answerable
-	// from the cluster: the digest can differ while the root is the same, and the
-	// hash is what says which of the two happened.
-	// +optional
+	// RootHash is the dm-verity root hash of the image the node runs, read from the active
+	// slot. The digests of the desired and the running image may differ after a republish
+	// while equal root hashes say the root filesystem has not changed.
 	RootHash string `json:"rootHash,omitempty"`
-	// TrialDigest is the image staged for the next boot, or on trial in this one.
-	// Set only while an update is in flight, which is exactly when Digest still
-	// names the old image.
-	// +optional
+	// TrialDigest is the image prepared for the next boot or on trial in the current one.
+	// Set only during an update, while digest still names the previous image.
 	TrialDigest string `json:"trialDigest,omitempty"`
-	// AttemptsLeft is how many boots the trial image has left to prove itself
-	// before the initramfs rolls back.
-	// +optional
+	// AttemptsLeft is how many boots the image on trial has left before the initramfs rolls
+	// back to the previous image.
 	AttemptsLeft int `json:"attemptsLeft,omitempty"`
-	// FailedDigest is an image this node booted and rolled back from. It is never
-	// tried again: a digest names immutable content, so a fixed image is a
-	// different digest.
-	// +optional
+	// FailedDigest is an image the node booted and rolled back from. It is never tried
+	// again: a digest names immutable content, so a fixed image has a different digest.
 	FailedDigest string `json:"failedDigest,omitempty"`
 }
 
-// NetworkStatus is the address the node joined the cluster on and the
-// interface it sits on.
+// NetworkStatus is the address the node joined the cluster on and the interface it sits on.
 type NetworkStatus struct {
-	// ClusterInterface is the NIC the address was taken from.
-	// +optional
+	// ClusterInterface is the network interface the address was taken from.
 	ClusterInterface string `json:"clusterInterface,omitempty"`
 	// Address is the address kubelet registered the node with.
-	// +optional
 	Address string `json:"address,omitempty"`
 }
 
-// ExtensionStatus is the reconcile outcome of one system extension.
+// ExtensionStatus is the reconcile outcome of one extension.
 type ExtensionStatus struct {
-	// Name is the extension name: a spec.extensions[].name, or a request the spec
-	// no longer names whose uninstall failed on a Mutable node.
+	// Name is the extension name: a spec.extensions[].name, or the name of an extension
+	// removed from spec whose uninstall failed on a Mutable node.
 	Name string `json:"name"`
-	// Digest depends on State. Ready: installed on the node. Pending: being installed,
-	// or, for the agent's own entry, installed and waiting for the new build to start.
-	// Failed: the one the node refused or could not install.
-	// +optional
+	// Digest depends on state: installed when Ready, being installed when Pending, refused or not
+	// installable when Failed.
 	Digest string `json:"digest,omitempty"`
-	// State is Ready when the extension is installed (on an Immutable node, merged),
-	// Pending while it is fetched, waits for the update window, or the agent restarts
-	// into a new build of itself (AgentRestarting), or Failed with the cause in Message.
-	// +kubebuilder:validation:Enum=Ready;Pending;Failed
+	// State of the extension: Ready once installed, Pending while it is fetched or waits for the
+	// update window, Failed with the cause in message.
 	State string `json:"state"`
-	// Message carries the cause when State is Failed.
-	// +optional
+	// Message carries the cause when state is Failed.
 	Message string `json:"message,omitempty"`
 }
 
 // UnitStatus is the reconcile outcome of one managed systemd unit.
 type UnitStatus struct {
-	// Name is the systemd unit name (e.g. containerd.service).
+	// Name is the systemd unit name, for example containerd.service.
 	Name string `json:"name"`
-	// State is Active when the unit is running, Pending when it is queued to be
-	// started later this pass, or Failed with the cause in Message.
-	// +kubebuilder:validation:Enum=Active;Pending;Failed
+	// State is Active when the unit runs, Pending when it is queued to start later in this
+	// pass, or Failed with the cause in message.
 	State string `json:"state"`
-	// Message carries the cause when State is Failed.
-	// +optional
+	// Message carries the cause when state is Failed.
 	Message string `json:"message,omitempty"`
 }
 
-// StaticPodStatus is the outcome of one static pod on the node.
+// StaticPodStatus is the processing result of one static pod.
 type StaticPodStatus struct {
+	// Name of the static pod, as in spec.staticPods[].name.
 	Name string `json:"name"`
-	// Written: the file equals the manifest in the spec. Failed: it does not,
-	// and Reason says why — the three causes call for three different actions.
-	// +kubebuilder:validation:Enum=Written;Failed
+	// State of the manifest: Written when the file on disk matches spec, Failed otherwise, with
+	// the cause in reason.
 	State string `json:"state"`
-	// ManifestRejected: fix the object. WriteFailed: look at the node.
-	// RemoveFailed: the name left the spec but the pod is still running.
-	// +optional
-	// +kubebuilder:validation:Enum=ManifestRejected;WriteFailed;RemoveFailed
+	// ManifestDigest is the sha256 of the manifest the node wrote, so the cluster can tell
+	// which revision of the request the node runs: sha256:<hex> of spec.staticPods[].manifest
+	// as published, before $MY_IP is expanded. Set next to state Written.
+	ManifestDigest string `json:"manifestDigest,omitempty"`
+	// Reason for the Failed state: ManifestRejected, WriteFailed, or RemoveFailed when the pod left
+	// spec but its file could not be removed and the pod keeps running.
 	Reason string `json:"reason,omitempty"`
-	// +optional
+	// Message is the detail of the error when state is Failed.
 	Message string `json:"message,omitempty"`
 }
 
@@ -218,8 +179,18 @@ type NodeConfigList struct {
 	Items           []NodeConfig `json:"items"`
 }
 
-// SystemType says how a node is managed. The values are NodeGroup's
-// spec.systemType; mirrors internal/config/systemtype.go in the nodelet repository.
+// The conditions node-manager reads off a NodeConfig, and the reasons of a False
+// DisruptionApproved: the node asks to be interrupted, or node-manager stopped answering it.
+const (
+	NodeConfigConditionTypeConfigurationApplied = "ConfigurationApplied"
+	NodeConfigConditionTypeDisruptionApproved   = "DisruptionApproved"
+
+	NodeConfigReasonApprovalPending   = "ApprovalPending"
+	NodeConfigReasonAttemptsExhausted = "AttemptsExhausted"
+)
+
+// SystemType says how a node is managed. The values are NodeGroup's spec.systemType;
+// mirrors internal/config/systemtype.go in the nodelet repository.
 type SystemType string
 
 const (
@@ -228,360 +199,270 @@ const (
 )
 
 // NodeSpec is the desired state of the node.
-//
-// +kubebuilder:validation:XValidation:rule="self.systemType == 'Mutable' || has(self.osImage)",message="spec.osImage must be set on an Immutable node"
-// +kubebuilder:validation:XValidation:rule="self.systemType == oldSelf.systemType",message="spec.systemType cannot be changed"
 type NodeSpec struct {
-	// SystemType says how this node is managed. On a Mutable node bashible
-	// configures the machine and the agent does only what bashible does not.
-	// +optional
-	// +kubebuilder:default=Immutable
-	// +kubebuilder:validation:Enum=Immutable;Mutable
-	SystemType SystemType `json:"systemType,omitempty"`
-	// FeatureGates switches the node's features on and off by name. An unset gate is
-	// on for an Immutable node wherever its type allows the feature, and off for a
-	// Mutable node, which runs only what its document switches on. Written by node-controller.
-	// +optional
-	// +kubebuilder:validation:MaxProperties=32
-	// +kubebuilder:validation:XValidation:rule="self.all(k, size(k) <= 63 && k.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'))",message="a feature name is a DNS label"
+	// SystemType is how the node is managed, and cannot be changed: Immutable, a Deckhouse Engine
+	// node the agent configures whole, or Mutable, a bashible node where it runs only featureGates.
+	SystemType SystemType `json:"systemType"`
+	// FeatureGates switch node agent features on or off by name, set by node-controller. A missing
+	// one is on for an Immutable node if its type supports it, and off for a Mutable node.
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
-	// NodeName is the Kubernetes node name this config applies to.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// NodeName is the name of the Kubernetes node this configuration applies to. Equal to
+	// the object name and cannot be changed.
 	NodeName string `json:"nodeName"`
-	// OSImage is the image the cluster believes this node should run; required on
-	// an Immutable node by the rule above. omitzero: a Mutable document must not
-	// carry osImage: {digest: ""}, which the digest pattern refuses.
-	// +optional
+
+	// Maintainers: omitzero, as Storage, Kernel, Network, Kubelet, ContainerRuntime,
+	// UpdatePolicy and RegistryPackagesProxy: an empty section is left out rather than sent
+	// as {}, and a Mutable document must not carry osImage: {digest: ""}.
+
+	// OSImage is the operating system image the node runs, required when systemType is Immutable.
+	// The node compares its digest with /config/os-digest, saved at installation, to decide an update.
 	OSImage OSImage `json:"osImage,omitzero"`
-	// Storage selects the target disk for the OS install. The partition layout
-	// is fixed (boot/config/data), so only the whole-disk device is needed.
-	// omitzero, as Kernel, Network and UpdatePolicy: an empty section is left out.
-	// +optional
+	// Storage selects the whole disk the system is installed on and the filesystems the node
+	// mounts. device, wipe and diskSelector cannot be changed; mounts can.
 	Storage Storage `json:"storage,omitzero"`
-	// Extensions are what the node installs, pinned by digest: on an Immutable node a
-	// signed dm-verity sysext image, on a Mutable node a registry package whose own
-	// install script runs as root. An entry named nodelet updates the agent itself.
-	// +optional
-	// +listType=map
-	// +listMapKey=name
+	// Extensions are what the node installs, each pinned by digest: a signed dm-verity system
+	// extension on an Immutable node, a registry package on a Mutable one. An entry named nodelet
+	// updates the node agent itself.
 	Extensions []Extension `json:"extensions,omitempty"`
-	// StaticPods are the manifests kubelet runs outside the scheduler. Bounded
-	// with Manifest so the worst case (16 x 32 KiB = 512 KiB) stays well under
-	// etcd's 1.5 MiB object limit with the rest of the spec beside it.
-	// +optional
-	// +listType=map
-	// +listMapKey=name
-	// +kubebuilder:validation:MaxItems=16
+
+	// StaticPods are the manifests the node writes to /etc/kubernetes/manifests for kubelet. The
+	// control plane manifests the node agent writes itself are not part of this list.
 	StaticPods []StaticPod `json:"staticPods,omitempty"`
-	// Kernel holds sysctl settings and kernel modules to load. omitzero: a Mutable
-	// document has none, and an empty section is left out rather than sent as {}.
-	// +optional
+	// Kernel holds sysctl settings and kernel modules to load.
 	Kernel Kernel `json:"kernel,omitzero"`
-	// Network holds hostname, DNS, NTP, interfaces and routes; omitzero as Kernel,
-	// which also leaves it out of a NodeConfigTemplate, where the operator writes it.
-	// +optional
+	// Network holds the hostname, DNS, NTP, interfaces and routes of the node. Written by
+	// whoever provisions the machine and changed through the API afterwards.
 	Network Network `json:"network,omitzero"`
-	// Kubelet holds kubelet configuration parameters. omitzero: a Mutable document
-	// sends none, so the API server has no {} to fill with defaults.
-	// +optional
+	// Kubelet holds kubelet parameters.
 	Kubelet Kubelet `json:"kubelet,omitzero"`
-	// ContainerRuntime holds containerd configuration; omitzero as Kubelet.
-	// +optional
+	// ContainerRuntime holds containerd parameters.
 	ContainerRuntime ContainerRuntime `json:"containerRuntime,omitzero"`
-	// APIServerEndpoints is the list of API server URLs the node connects to
-	// (via the node-local API proxy).
-	// +optional
-	// +kubebuilder:validation:items:Pattern=`^(https?://)?(\[[0-9A-Fa-f:]+\]|[A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?([.][A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?)*):(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3})/?$`
+	// APIServerEndpoints are the addresses of the Kubernetes API servers the node connects
+	// to through its node-local API proxy, each as https://<host>:<port>.
 	APIServerEndpoints []string `json:"apiServerEndpoints,omitempty"`
-	// InternalNetworkCIDRs are the subnets the cluster's own traffic runs on.
-	// The node picks the interface holding an address inside one of them and
-	// registers with that address; a node with one NIC needs none of this.
-	// The pattern is StaticClusterConfiguration's own
-	// (candi/openapi/static_cluster_configuration.yaml): IPv4 only.
-	// +optional
-	// +kubebuilder:validation:MaxItems=64
-	// +kubebuilder:validation:items:Pattern=`^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$`
+
+	// InternalNetworkCIDRs are the subnets the cluster's own traffic runs on. The node picks
+	// the interface holding an address inside one of them and registers with that address.
+	// A node with one network interface needs none.
 	InternalNetworkCIDRs []string `json:"internalNetworkCIDRs,omitempty"`
-	// StatusToken is the bearer presented to the node's :50000 status port.
-	// Whoever writes the document mints it (dhctl, or the NodeConfigTemplate
-	// render for a hand-installed machine); the cluster carries it over
-	// untouched, having no way to tell the node a new one. Deliberately not
-	// marked sensitive: the apiserver would answer "<omitted>" and the
-	// carry-over would write that back, destroying the token.
-	// +optional
+
+	// StatusToken is the bearer token presented to the node's :50000 status port. Whoever
+	// writes the document creates it (the installer, or the NodeConfigTemplate for a machine
+	// added by hand). The cluster cannot give the node a new one, so it never changes.
 	StatusToken string `json:"statusToken,omitempty"`
-	// UpdatePolicy controls how and when the node is updated; omitzero as Kernel.
-	// +optional
+	// UpdatePolicy says how and when the node applies updates that interrupt it.
 	UpdatePolicy UpdatePolicy `json:"updatePolicy,omitzero"`
-
-	// RegistryPackagesProxyAccessTokenB64 is a base64-encoded token used to
-	// authenticate against the registry packages proxy. Deliberately not marked
-	// sensitive: nodelet must read it, and the token is identical on every node.
-	// +optional
-	// +kubebuilder:validation:Pattern=`^(([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?)?$`
-	RegistryPackagesProxyAccessTokenB64 string `json:"registryPackagesProxyAccessTokenB64,omitempty"`
-
-	// RegistryPackagesProxyEndpoints are registry-packages-proxy addresses, scheme and
-	// port included, the agent uses as given instead of the API server hosts. Only the
-	// first master's seed sets them; node-controller never renders them. Pattern: nodelet's.
-	// +optional
-	// +kubebuilder:validation:items:Pattern=`^https?://(\[[0-9A-Fa-f:]+\]|[A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?([.][A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?)*):(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3})/?$`
-	RegistryPackagesProxyEndpoints []string `json:"registryPackagesProxyEndpoints,omitempty"`
-
-	// Registry is the container registry the node talks to directly, without
-	// the registry-packages-proxy. A node bootstrapping a control plane has no
-	// proxy yet but must pull images and sysexts; workers leave this empty.
-	// +optional
+	// RegistryPackagesProxy is how the node reaches the registry-packages-proxy it downloads
+	// extensions through.
+	RegistryPackagesProxy RegistryPackagesProxy `json:"registryPackagesProxy,omitzero"`
+	// Registry is the container registry the node talks to directly, without the proxy: a node
+	// bootstrapping the control plane has no proxy yet, and containerd pulls the pause image itself.
 	Registry *Registry `json:"registry,omitempty"`
 }
 
-// Registry describes direct access to a container registry: address, scheme
-// and credentials. It feeds the extension downloader and containerd hosts.toml,
-// so a control-plane static pod without imagePullSecrets can pull its image.
-type Registry struct {
-	// Address is the registry host, optionally with a port, e.g.
-	// "registry.deckhouse.io" or "registry.example.com:5000".
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`^\S+$`
-	Address string `json:"address"`
-	// Path is the repository path within the registry, e.g. "/deckhouse/ce".
-	// +optional
-	Path string `json:"path,omitempty"`
-	// Scheme is HTTPS (default) or HTTP.
-	// +optional
-	// +kubebuilder:validation:Enum=HTTPS;HTTP
-	// +kubebuilder:default=HTTPS
-	Scheme string `json:"scheme,omitempty"`
-	// CA is a PEM certificate bundle to verify the registry with, for registries
-	// signed by a private CA. The image carries the Mozilla bundle and nothing
-	// else, so without this a self-signed registry is unreachable.
-	// +optional
-	CA string `json:"ca,omitempty"`
-	// Auth is the base64-encoded "user:password" pair, as it appears in the
-	// "auth" field of a docker config.
-	// +optional
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9+/]+={0,2}$`
-	Auth string `json:"auth,omitempty"`
+// RegistryPackagesProxy is how the node reaches the registry-packages-proxy.
+type RegistryPackagesProxy struct {
+	// Endpoints are the proxy addresses, with scheme and port, used instead of the API server
+	// hosts. Set only in the first master's initial configuration; node-controller does not set them.
+	Endpoints []string `json:"endpoints,omitempty"`
+
+	// AccessToken is the token the node authenticates to the proxy with, base64-encoded.
+	AccessToken []byte `json:"accessToken,omitempty"`
 }
 
-// OSImage names the image the node must run. Mirrors the agent's contract
-// (internal/config/types.go in the nodelet repository) and the initramfs one
-// (images/init/src/0.1/nodeconfig.go); a shape they refuse strands the node.
+// Registry describes direct access to a container registry: address, scheme and
+// credentials.
+type Registry struct {
+	// Address is the registry host, optionally with a port, for example
+	// registry.deckhouse.io or registry.example.com:5000.
+	Address string `json:"address"`
+	// Path is the repository path within the registry, for example /deckhouse/ce.
+	Path string `json:"path,omitempty"`
+	// Scheme is the protocol the registry is reached with. Defaults to HTTPS when unset.
+	Scheme string `json:"scheme,omitempty"`
+	// CABundle is a PEM certificate bundle to verify a registry signed by a private
+	// certificate authority. The node trusts the public authorities only, so a registry
+	// with a self-signed certificate is unreachable without it.
+	CABundle string `json:"caBundle,omitempty"`
+	// Auth is the user:password pair, base64-encoded, as in the auth field of a docker
+	// config.
+	Auth []byte `json:"auth,omitempty"`
+}
+
+// ObjectOwner names the object that asked for an entry of the spec.
+type ObjectOwner struct {
+	// Kind of the object.
+	Kind string `json:"kind"`
+	// Name of the object.
+	Name string `json:"name"`
+}
+
+// The kinds an ObjectOwner names.
+const (
+	ObjectOwnerKindNodeExtensionRequest = "NodeExtensionRequest"
+	ObjectOwnerKindNodeStaticPodRequest = "NodeStaticPodRequest"
+)
+
+// Maintainers: mirrors the agent's contract (internal/config/types.go in the nodelet
+// repository) and the initramfs one (images/init/src/0.1/nodeconfig.go); a shape they
+// refuse strands the node.
+
+// OSImage names the operating system image the node runs.
 type OSImage struct {
-	// Digest pins the exact image, as for an extension. The node records it at
-	// install and compares it on every pass, so a tag would say nothing.
-	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	// Digest of the operating system image. The node saves it at installation and compares
+	// it with this value to decide whether an update is needed.
 	Digest string `json:"digest"`
 	// Repository is the registry host the image is fetched from, handed to the
 	// registry-packages-proxy as its "repository" parameter. Empty leaves the
 	// parameter out, so the proxy uses its own default registry.
-	// +optional
 	Repository string `json:"repository,omitempty"`
-	// AdditionalPath is the proxy's "path" parameter. Empty is right for
-	// Deckhouse: every image of a release sits in the repository
-	// spec.registry.path already names.
-	// +optional
-	AdditionalPath string `json:"additionalPath,omitempty"`
-	// RootHash is the dm-verity root hash of the root inside the image, as ASCII
-	// hex. It is what tells "the same root, published again" from "a different
-	// root": the digest names the packaging and changes on every republish, so a
-	// node comparing digests alone goes off to update itself onto a copy of itself.
-	//
-	// Optional, and filled in from the image's own label when the registry can be
-	// read. Its absence costs the node one download — it reads the same hash out of
-	// the artifact itself — which is why nothing here fails when the lookup does.
-	// +optional
-	// +kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
+	// Path of the image within the repository, passed to the registry-packages-proxy
+	// as its path parameter. When unset, the repository root is used.
+	Path string `json:"path,omitempty"`
+
+	// Maintainers: optional, filled in from the image's own label when the registry can be
+	// read. Its absence costs the node one download, which is why nothing fails when the
+	// lookup does.
+
+	// RootHash is the dm-verity root hash of the root filesystem, in hex: unlike the digest, it
+	// stays the same when the image is published again. When unset, the node reads it from the image.
 	RootHash string `json:"rootHash,omitempty"`
 }
 
-// Storage selects the target disk for the OS install. The partition layout is
-// fixed (boot ESP + config + data), so only the whole-disk device is needed.
-// Consumed by the initramfs disk provisioner at install time.
+// Storage selects the disk the system is installed on and additional filesystems.
+// Consumed by the initramfs disk provisioner at installation.
 type Storage struct {
 	Disk `json:",inline"`
-	// Mounts are additional filesystems the node makes available, at /mnt/<name>
-	// or wherever bindTo names. Nothing here is partitioned: only existing
-	// partitions and blank whole disks are formatted (when empty) and mounted.
-	// +optional
-	// +listType=map
-	// +listMapKey=name
+	// Mounts are additional filesystems mounted at /mnt/<name> or at bindTo. Nothing is
+	// partitioned: a blank partition or disk is formatted, a filesystem is mounted as it is.
 	Mounts []Mount `json:"mounts,omitempty"`
 }
 
-// Mount is one additional filesystem, at /mnt/<name> unless bindTo says
-// otherwise. Exactly one of device or partitionSelector names the partition; an
-// empty one is formatted (label = name), an existing filesystem mounted as is.
-// +kubebuilder:validation:XValidation:rule="has(self.device) != has(self.partitionSelector)",message="exactly one of device or partitionSelector must be set"
+// Mount is one additional filesystem, at /mnt/<name> unless bindTo names another path.
+// Exactly one of device or partitionSelector names the partition. An empty partition is
+// formatted with the label set to name, an existing filesystem is mounted as it is.
 type Mount struct {
-	// Name identifies the mount, and is both the mount point (/mnt/<name>) and
-	// the filesystem label written when this node formats the partition. Capped
-	// at 16 characters because that is the size of the ext4 volume label field.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=16
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// Name of the mount: the mount point /mnt/<name> and the filesystem label written when
+	// the node formats the partition. At most 16 characters, the size of the ext4 volume
+	// label.
 	Name string `json:"name"`
-	// Device is the partition to use, e.g. "/dev/sdb1" or a stable
-	// "/dev/disk/by-id/...-part1" path.
-	// +optional
-	// +kubebuilder:validation:Pattern=`^/dev/[A-Za-z0-9._/-]+$`
+	// Device is the partition to use, for example /dev/sdb1 or a stable
+	// /dev/disk/by-id/...-part1 path.
 	Device string `json:"device,omitempty"`
 	// PartitionSelector picks the partition by attributes instead of a fixed path.
-	// +optional
 	PartitionSelector *PartitionSelector `json:"partitionSelector,omitempty"`
-	// BindTo mounts the filesystem at this path instead of /mnt/<name>, for a
-	// directory something else knows by name (/var/lib/etcd). The directory must
-	// be empty: mounting over files hides them, and hidden etcd data is lost data.
-	// +optional
-	// +kubebuilder:validation:Pattern=`^/[A-Za-z0-9._/-]+$`
+	// BindTo mounts the filesystem at this path instead of /mnt/<name>, for a directory
+	// another component knows by name, such as /var/lib/etcd. The directory must be empty:
+	// mounting over files hides them.
 	BindTo string `json:"bindTo,omitempty"`
-	// Mode is the mode of the filesystem root after mounting, as an octal string,
-	// e.g. "0700". Left alone when unset. A freshly made ext4 has its root at
-	// 0755, which is a mode etcd refuses to start on.
-	// +optional
-	// +kubebuilder:validation:Pattern=`^0[0-7]{3}$`
+	// Mode of the filesystem root after mounting, as an octal string, for example 0700.
+	// When unset, the mode is left as it is; a freshly made ext4 filesystem has its root at
+	// 0755, a mode etcd refuses to start on.
 	Mode string `json:"mode,omitempty"`
-	// Filesystem is what to create when the partition is empty. It says what to
-	// create and is not a matching condition.
-	// +optional
-	// +kubebuilder:validation:Enum=ext4
-	// +kubebuilder:default=ext4
+	// Filesystem to create when the partition is empty. Not a matching condition. Defaults
+	// to Ext4 when unset.
 	Filesystem string `json:"filesystem,omitempty"`
 }
 
-// PartitionSelector matches one partition by attributes (all specified fields
-// are AND-ed); string fields are shell-style globs, except uuid and partUUID
-// (literal, case-insensitive). Matching several devices is an error, never a choice.
+// PartitionSelector matches one partition by attributes. All specified fields must match.
+// String fields are shell-style globs, except uuid and partUUID, which match exactly,
+// ignoring case. Matching several partitions is an error, never a choice.
 type PartitionSelector struct {
-	// Name matches the kernel device name (glob), e.g. "sdb1" or "nvme0n1p*".
-	// +optional
+	// Name matches the kernel device name (glob), for example sdb1 or nvme0n1p*.
 	Name string `json:"name,omitempty"`
 	// UUID matches the filesystem UUID exactly, ignoring case.
-	// +optional
 	UUID string `json:"uuid,omitempty"`
 	// Label matches the filesystem label (glob).
-	// +optional
 	Label string `json:"label,omitempty"`
 	// FSType matches the type of the filesystem already present (glob).
-	// +optional
 	FSType string `json:"fsType,omitempty"`
 	// PartUUID matches the GPT partition UUID exactly, ignoring case.
-	// +optional
 	PartUUID string `json:"partUUID,omitempty"`
 	// PartLabel matches the GPT partition name (glob).
-	// +optional
 	PartLabel string `json:"partLabel,omitempty"`
-	// Size matches the size, optionally with a comparison operator, e.g.
-	// ">=100Gi", ">1Ti", "512Gi". Without an operator the comparison is ">=";
-	// "=" allows 1%, since a disk rarely reports an exact round size.
-	// +optional
+	// Size matches the size, optionally with a comparison operator, for example >=100Gi,
+	// >1Ti or 512Gi. Without an operator the comparison is >=; = allows 1%, since a disk
+	// rarely reports an exact round size.
 	Size string `json:"size,omitempty"`
-	// Blank makes whole disks selectable, and only ones that carry nothing: no
-	// partition table, no filesystem — a cloud disk never touched. Without it a
-	// selector sees partitions only; a whole disk is where somebody's layout lives.
-	// +optional
+	// Blank makes whole disks selectable, and only disks that carry nothing: no partition
+	// table and no filesystem, such as a cloud disk never used. Without it the selector sees
+	// partitions only.
 	Blank bool `json:"blank,omitempty"`
 }
 
-// Disk names one whole-disk block device, by path or by attributes, and says
-// whether it may be reformatted.
+// Disk names one whole-disk block device, by path or by attributes, and says whether it
+// may be reformatted.
 type Disk struct {
-	// Device is the whole-disk block device to install onto, e.g. "/dev/sda",
-	// "/dev/nvme0n1", or a stable "/dev/disk/by-id/..." path. Ignored when
-	// diskSelector is set.
-	// +optional
-	// +kubebuilder:validation:Pattern=`^/dev/[A-Za-z0-9._/-]+$`
+	// Device is the whole-disk block device to install onto, for example /dev/sda,
+	// /dev/nvme0n1 or a stable /dev/disk/by-id/... path. Ignored when diskSelector is set.
+	// Cannot be changed.
 	Device string `json:"device,omitempty"`
-	// DiskSelector picks the target disk by attributes instead of a fixed path.
-	// It takes priority over device (matching Talos semantics). All specified
-	// conditions must match; the first disk that matches is used.
-	// +optional
+	// DiskSelector picks the disk to install onto by attributes instead of a fixed path,
+	// and takes priority over device. All specified fields must match; the first disk that
+	// matches is used. Cannot be changed.
 	DiskSelector *DiskSelector `json:"diskSelector,omitempty"`
-	// Wipe controls whether an already-provisioned disk is wiped and
-	// re-partitioned. Default false: only an unprovisioned (or non-matching)
-	// disk is set up, so an existing layout stays and a reboot never destroys data.
-	// +optional
+	// Wipe makes the installer wipe and repartition a disk that is already provisioned.
+	// When false, only a blank or non-matching disk is set up, so an existing layout stays
+	// and a reboot never destroys data. Cannot be changed.
 	Wipe bool `json:"wipe,omitempty"`
 }
 
-// DiskSelector matches a target disk by attributes (all specified fields are
-// AND-ed). String fields with a glob (name/model/serial/wwid/busPath) match
-// shell-style patterns. Attributes are read from `lsblk`/`/sys/block`.
+// DiskSelector matches a disk by attributes. All specified fields must match. Fields
+// marked glob take shell-style patterns. Attributes are read from lsblk and /sys/block.
 type DiskSelector struct {
-	// Size matches the disk capacity, optionally with a comparison operator,
-	// e.g. ">=100Gi", ">1Ti", "512Gi".
-	// +optional
+	// Size matches the disk capacity, optionally with a comparison operator, for example
+	// >=100Gi, >1Ti or 512Gi.
 	Size string `json:"size,omitempty"`
-	// Type matches the disk kind.
-	// +optional
-	// +kubebuilder:validation:Enum=SSD;HDD;NVMe;SD
+	// Type matches the kind of disk.
 	Type string `json:"type,omitempty"`
-	// Rotational matches spinning (true) vs solid-state (false) disks.
-	// +optional
+	// Rotational matches spinning (true) or solid-state (false) disks.
 	Rotational *bool `json:"rotational,omitempty"`
-	// Model matches the device model (glob), e.g. "Samsung*".
-	// +optional
+	// Model matches the device model (glob), for example Samsung*.
 	Model string `json:"model,omitempty"`
 	// Serial matches the disk serial number (glob).
-	// +optional
 	Serial string `json:"serial,omitempty"`
 	// WWID matches the World Wide Identifier (glob).
-	// +optional
 	WWID string `json:"wwid,omitempty"`
-	// Name matches the kernel device name (glob), e.g. "nvme0n1".
-	// +optional
+	// Name matches the kernel device name (glob), for example nvme0n1.
 	Name string `json:"name,omitempty"`
 	// BusPath matches the hardware bus path (glob).
-	// +optional
 	BusPath string `json:"busPath,omitempty"`
 }
 
-// Extension is a signed verity sysext built from a release channel, fetched
-// from the registry-packages-proxy by digest. Optional repository selects the
-// proxy's per-registry config; optional additionalPath is its "path" parameter.
+// Extension is one artifact the node installs, pinned by digest and fetched through the
+// registry-packages-proxy.
 type Extension struct {
-	// Name is the extension name (also the sysext image basename).
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// Name of the extension: the system extension image name on an Immutable node, the
+	// registry package name on a Mutable one.
 	Name string `json:"name"`
-	// Digest is the sha256 digest of the sysext image.
-	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	// Digest of the artifact image.
 	Digest string `json:"digest"`
 	// Repository optionally selects the proxy's per-registry client config.
-	// +optional
 	Repository string `json:"repository,omitempty"`
-	// AdditionalPath is forwarded to the proxy as the "path" query parameter.
-	// +optional
-	AdditionalPath string `json:"additionalPath,omitempty"`
-	// RequestedBy records who requested the extension (e.g. "node-manager").
-	// +optional
-	RequestedBy string `json:"requestedBy,omitempty"`
+	// Path of the artifact within the repository, passed to the
+	// registry-packages-proxy as its path parameter. When unset, the repository root is used.
+	Path string `json:"path,omitempty"`
+	// RequestedBy is the object that asked for the extension. Unset for the extensions of
+	// the platform itself.
+	RequestedBy *ObjectOwner `json:"requestedBy,omitempty"`
 }
 
-// StaticPod is one manifest for /etc/kubernetes/manifests. The node prepares two
-// things for such a pod and nothing else: the image in containerd and this file
-// on disk. Whatever the pod needs beyond that, it brings itself.
+// StaticPod is one manifest for /etc/kubernetes/manifests. The node prepares the image in
+// containerd and this file on disk, and nothing else.
 type StaticPod struct {
-	// Name is the manifest file name without extension and the list key. It
-	// is unrelated to the pod's metadata.name: kubelet names the mirror pod
-	// by the manifest, never by the file.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// Name of the manifest file without an extension, and the key of the list. Unrelated to
+	// metadata.name of the pod in the manifest: kubelet names the mirror pod after the
+	// manifest, not after the file.
 	Name string `json:"name"`
-	// Manifest is the whole Pod document. $MY_IP is replaced with the node
-	// address on the way to disk, as in the control-plane manifests. 32 KiB is
-	// nine times the registry agent's manifest.
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=32768
+	// Manifest is the complete pod manifest. When the manifest is written to disk, $MY_IP is
+	// replaced with the node's IP address, as in the control plane manifests.
 	Manifest string `json:"manifest"`
+	// RequestedBy is the object that asked for the static pod. Unset for the static pods of
+	// the platform itself.
+	RequestedBy *ObjectOwner `json:"requestedBy,omitempty"`
 }
 
-// SysctlValue bounds a single sysctl value for predictable CRD CEL cost.
-// +kubebuilder:validation:MaxLength=4096
+// SysctlValue is one sysctl value.
 type SysctlValue string
 
 // DeepCopy lets controller-gen copy maps whose values use this scalar type.
@@ -591,75 +472,67 @@ func (in SysctlValue) DeepCopy() *SysctlValue {
 	return out
 }
 
-// Kernel describes sysctl settings and kernel modules.
+// Kernel holds sysctl settings and kernel modules to load.
 type Kernel struct {
-	// +optional
-	// +kubebuilder:validation:MaxProperties=256
-	// +kubebuilder:validation:XValidation:rule="!('vm.overcommit_memory' in self) || self['vm.overcommit_memory'] == '1'",message="vm.overcommit_memory is required to be 1"
-	// +kubebuilder:validation:XValidation:rule="self.all(key, key.matches('^[A-Za-z0-9_-]+([.][A-Za-z0-9_-]+)+$'))",message="sysctl keys must use dotted notation"
-	// +kubebuilder:validation:XValidation:rule="self.all(key, self[key].trim() != '')",message="sysctl values must not be empty or whitespace"
+	// Sysctl maps sysctl keys in dotted notation to their values.
 	Sysctl map[string]SysctlValue `json:"sysctl,omitempty"`
-	// +optional
+	// Modules are the kernel modules to load.
 	Modules []KernelModule `json:"modules,omitempty"`
 }
 
 // KernelModule is a module to load with optional parameters.
 type KernelModule struct {
-	// +kubebuilder:validation:MinLength=1
+	// Name of the kernel module.
 	Name string `json:"name"`
-	// +optional
+	// Params are the module parameters as key=value strings.
 	Params []string `json:"params,omitempty"`
 }
 
-// Network describes hostname, DNS, NTP, interfaces and routes.
+// Network holds the hostname, DNS, NTP, interfaces and routes of the node.
 type Network struct {
-	// +optional
+	// Hostname of the node. Equal to the Kubernetes node name.
 	Hostname string `json:"hostname,omitempty"`
-	// +optional
+	// DNS is the resolver configuration.
 	DNS DNS `json:"dns,omitempty"`
-	// +optional
+	// NTP is the time synchronization configuration.
 	NTP NTP `json:"ntp,omitempty"`
-	// +optional
-	// +kubebuilder:validation:XValidation:rule="self.filter(i, has(i.cluster) && i.cluster).size() <= 1",message="at most one interface may be marked as the cluster interface"
+	// Interfaces are the network interfaces of the node.
 	Interfaces []NetworkInterface `json:"interfaces,omitempty"`
-	// +optional
+	// Routes are static routes.
 	Routes []Route `json:"routes,omitempty"`
 }
 
-// DNS resolver configuration.
+// DNS is the resolver configuration.
 type DNS struct {
-	// +optional
+	// Servers are the IP addresses of the DNS servers.
 	Servers []string `json:"servers,omitempty"`
-	// +optional
+	// Search are the DNS search domains.
 	Search []string `json:"search,omitempty"`
 }
 
-// NTP time-sync configuration.
+// NTP is the time synchronization configuration.
 type NTP struct {
-	// +optional
+	// Servers are the NTP servers, by host name or IP address.
 	Servers []string `json:"servers,omitempty"`
 }
 
-// NetworkInterface describes a single NIC.
+// NetworkInterface describes one network interface.
 type NetworkInterface struct {
-	// +kubebuilder:validation:MinLength=1
+	// Name of the interface.
 	Name string `json:"name"`
 	// DHCP enables DHCPv4 on the interface.
 	DHCP bool `json:"dhcp"`
-	// Addresses are static CIDR addresses (used when DHCP is false).
-	// +optional
+	// Addresses are the static addresses of the interface in CIDR notation, used when dhcp
+	// is false.
 	Addresses []string `json:"addresses,omitempty"`
-	// +optional
+	// Gateway is the IP address of the default gateway.
 	Gateway string `json:"gateway,omitempty"`
-	// Cluster names this NIC the one the cluster's traffic runs on, for a
-	// machine whose addressing spec.internalNetworkCIDRs cannot tell apart.
-	// +optional
+	// Cluster marks this interface as the one the cluster's traffic runs on, for a machine
+	// whose addresses spec.internalNetworkCIDRs cannot tell apart.
 	Cluster bool `json:"cluster,omitempty"`
 }
 
-// NodeLabelValue carries a label value unvalidated: a NodeGroup takes any
-// string (crds/node_group.yaml:1915), and refusing one here costs the group its
-// whole configuration instead of costing the node one label.
+// NodeLabelValue is the value of a node label.
 type NodeLabelValue string
 
 // DeepCopy lets controller-gen copy maps whose values use this scalar type.
@@ -671,165 +544,115 @@ func (in NodeLabelValue) DeepCopy() *NodeLabelValue {
 
 // Route is a static route.
 type Route struct {
-	// +optional
+	// Name of the route.
 	Name string `json:"name,omitempty"`
-	// +optional
+	// Networks are the destination networks in CIDR notation.
 	Networks []string `json:"networks,omitempty"`
-	// +optional
+	// Gateway is the IP address the networks are reached through.
 	Gateway string `json:"gateway,omitempty"`
 }
 
-// Kubelet configuration parameters.
+// Kubelet holds kubelet parameters.
 type Kubelet struct {
-	// ClusterDomain is the DNS domain for this cluster (e.g. "cluster.local").
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// ClusterDomain is the DNS domain of the cluster, for example cluster.local.
 	ClusterDomain string `json:"clusterDomain,omitempty"`
-	// ClusterDNS is the list of DNS server IP addresses for the cluster.
-	// +optional
-	// +kubebuilder:validation:MaxItems=8
-	// +kubebuilder:validation:items:MaxLength=45
-	// +kubebuilder:validation:XValidation:rule="self.all(address, isIP(address))",message="clusterDNS entries must be valid IP addresses"
+	// ClusterDNS are the IP addresses of the cluster DNS servers.
 	ClusterDNS []string `json:"clusterDNS,omitempty"`
-	// MaxPods is the maximum number of pods per node.
-	// +optional
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=1000
-	// +kubebuilder:default=120
+	// MaxPods is the maximum number of pods on the node. Defaults to 120 when unset.
 	MaxPods int `json:"maxPods,omitempty"`
-	// KubernetesVersion is the cluster's minor version, e.g. "1.34". It decides
-	// which feature gates kubelet is started with (bashible turns DRA gates on
-	// by version); without it DRA workloads cannot run on immutable nodes.
-	// +optional
-	// +kubebuilder:validation:MaxLength=16
-	// +kubebuilder:validation:Pattern=`^[0-9]+\.[0-9]+$`
+	// KubernetesVersion is the minor version of the cluster, for example 1.34. It decides
+	// which feature gates kubelet starts with.
 	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
-	// ContainerLogMaxSize is the maximum log file size before rotation
-	// (e.g. "50Mi").
-	// +optional
-	// +kubebuilder:default="50Mi"
-	// +kubebuilder:validation:XValidation:rule="isQuantity(self) && sign(quantity(self)) > 0",message="containerLogMaxSize must be a positive Kubernetes quantity"
+	// ContainerLogMaxSize is the size a container log file reaches before it is rotated,
+	// for example 50Mi. Defaults to 50Mi when unset.
 	ContainerLogMaxSize string `json:"containerLogMaxSize,omitempty"`
-	// Maintainers: the maximum below is 1000 because the on-node loader enforces
-	// it; kept in step by hand. Separated from the comment below by a blank line
-	// on purpose — controller-gen ships the touching comment group into the CRD.
 
-	// ContainerLogMaxFiles is the number of rotated log files to retain.
-	// +optional
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=1000
-	// +kubebuilder:default=4
+	// ContainerLogMaxFiles is the number of rotated log files kept per container. Defaults
+	// to 4 when unset.
 	ContainerLogMaxFiles int `json:"containerLogMaxFiles,omitempty"`
-	// CACert is the base64-encoded cluster CA certificate used in the
-	// bootstrap-kubelet.conf to verify the API server.
-	// +optional
-	CACert string `json:"caCert,omitempty"`
-	// BootstrapToken is the bootstrap token used by kubelet to obtain its
-	// client certificate on first boot.
-	// +optional
+	// ClusterCABundle is the PEM certificate bundle of the cluster certificate authority
+	// kubelet verifies the API server with.
+	ClusterCABundle string `json:"clusterCABundle,omitempty"`
+	// BootstrapToken is the bootstrap token kubelet obtains its client certificate with on
+	// the first boot. Present only in the initial configuration of a node.
 	BootstrapToken string `json:"bootstrapToken,omitempty"`
-	// RegisterWithTaints is a list of taints to add to the node object when
-	// kubelet registers itself. Only takes effect on initial registration.
-	// +optional
+	// RegisterWithTaints are the taints kubelet puts on the node object when it registers
+	// the node. Take effect only at the first registration.
 	RegisterWithTaints []Taint `json:"registerWithTaints,omitempty"`
-	// ExternalCloudProvider enables --cloud-provider=external so the
+	// ExternalCloudProvider starts kubelet with --cloud-provider=external, so that the
 	// cloud-controller-manager manages the node (zone, region, providerID).
-	// +optional
 	ExternalCloudProvider bool `json:"externalCloudProvider,omitempty"`
-	// NodeLabels are labels added to the node object when kubelet registers.
-	// A NodeGroup caps neither their number nor their shape
-	// (crds/node_group.yaml:1915), so neither does this.
-	// +optional
+	// NodeLabels are the labels kubelet puts on the node object when it registers the node.
 	NodeLabels map[string]NodeLabelValue `json:"nodeLabels,omitempty"`
-	// ServerTLSBootstrap makes kubelet request a serving certificate from the
-	// cluster instead of signing its own. Default true. The zero master sets it
-	// to false: nothing approves serving CSRs until Deckhouse is installed.
-	// +optional
+	// ServerTLSBootstrap makes kubelet request its serving certificate from the cluster
+	// instead of signing its own. Defaults to true when unset. The first master sets it to
+	// false: nothing approves serving certificate requests until Deckhouse is installed.
 	ServerTLSBootstrap *bool `json:"serverTLSBootstrap,omitempty"`
-	// ResourceReservation controls how much CPU, memory and disk are held back
-	// from pods for the system itself (kubeReserved).
-	// +optional
+	// ResourceReservation controls how much CPU, memory and disk are held back from pods
+	// for the system itself (kubeReserved).
 	ResourceReservation *ResourceReservation `json:"resourceReservation,omitempty"`
 }
 
-// ResourceReservation is the kubeReserved policy for the node.
+// ResourceReservation is the kubeReserved policy of the node.
 type ResourceReservation struct {
-	// Mode is the reservation policy.
-	//
-	// Possible values:
-	//
-	// - `Auto` — compute the reservation from the node's capacity.
-	// - `Off` — reserve nothing.
-	// +kubebuilder:validation:Enum=Auto;Off
-	// +kubebuilder:default=Auto
+	// Mode is the reservation policy: Auto, the default, computes it from the node's capacity,
+	// and Off reserves nothing.
 	Mode string `json:"mode,omitempty"`
 }
 
-// Taint represents a Kubernetes taint applied to a node during registration.
-// Key, value and effect take what a NodeGroup takes (crds/node_group.yaml:1944):
-// bare strings and an optional effect, so a taint copied from one still fits.
+// Taint is a taint kubelet puts on the node when it registers it.
 type Taint struct {
+	// Key of the taint.
 	Key string `json:"key"`
-	// +optional
+	// Value of the taint.
 	Value string `json:"value,omitempty"`
-	// +optional
-	// +kubebuilder:validation:Enum=NoSchedule;PreferNoSchedule;NoExecute
+	// Effect of the taint.
 	Effect string `json:"effect,omitempty"`
 }
 
-// ContainerRuntime configuration for the containerd runtime. nodelet renders
-// these into /run/etc/containerd/config.toml before starting containerd.
+// RegistryConfigOwner says who writes containerd's registry configuration directory.
+type RegistryConfigOwner string
+
+const (
+	RegistryConfigOwnerNodelet       RegistryConfigOwner = "Nodelet"
+	RegistryConfigOwnerRegistryAgent RegistryConfigOwner = "RegistryAgent"
+)
+
+// Maintainers: the maxConcurrentDownloads default is bashible's
+// (candi/bashible/common-steps/all/032_configure_containerd.sh.tpl). Zero is containerd's
+// "no limit", and a NodeGroup takes any integer: a value it accepts must be accepted here.
+
+// ContainerRuntime holds containerd parameters.
 type ContainerRuntime struct {
-	// SandboxImage overrides the pause image used for pod sandboxes. Empty means
-	// the pause image the containerd extension imports itself. No default here:
-	// a defaulted value would never let the node see it empty.
-	// +optional
-	// +kubebuilder:validation:Pattern=`^[^[:space:]]+$`
+	// SandboxImage is the pause image used for pod sandboxes. When unset, the pause image
+	// imported by the containerd system extension is used.
 	SandboxImage string `json:"sandboxImage,omitempty"`
-	// MaxConcurrentDownloads limits parallel image layer downloads. Zero is
-	// containerd's "no limit", and a NodeGroup takes any integer
-	// (crds/node_group.yaml:1638): a value it accepts must be accepted here.
-	// The default is bashible's (candi/bashible/common-steps/all/032_configure_containerd.sh.tpl).
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=8
+	// MaxConcurrentDownloads limits parallel image layer downloads; 0 means no limit.
+	// Defaults to 8 when unset.
 	MaxConcurrentDownloads *int `json:"maxConcurrentDownloads,omitempty"`
-	// RegistryOwner says who writes containerd's registry.d. "nodelet" (the
-	// default) renders spec.registry and sweeps the rest; "agent" means a
-	// static pod owns the directory and nodelet neither writes nor removes
-	// anything there. Set by node-controller from the registry module's mode.
-	// +optional
-	// +kubebuilder:validation:Enum=nodelet;agent
-	// +kubebuilder:default=nodelet
-	RegistryOwner string `json:"registryOwner,omitempty"`
+	// RegistryConfigOwner manages containerd's registry.d, set by node-controller from the
+	// registry module's mode: Nodelet, the default, writes it from spec.registry, and with
+	// RegistryAgent the registry agent static pod does while the node agent leaves it alone.
+	RegistryConfigOwner RegistryConfigOwner `json:"registryConfigOwner,omitempty"`
 }
 
-// UpdatePolicy controls how/when the node is updated.
+// UpdatePolicy says how and when the node applies updates that interrupt it.
 type UpdatePolicy struct {
-	// Mode is the update mode.
-	// +optional
-	// +kubebuilder:validation:Enum=Automatic;Manual
+	// Mode is how a disruptive update is approved, as disruptions.approvalMode of the
+	// NodeGroup: Automatic or Manual.
 	Mode string `json:"mode,omitempty"`
-	// Window is the maintenance window for updates.
-	// +optional
-	Window UpdateWindow `json:"window,omitempty"`
+	// Windows are the time windows in UTC when the node may apply an update. Any window
+	// that matches allows it; when unset, an update is allowed at any time.
+	Windows []UpdateWindow `json:"windows,omitempty"`
 }
 
-// UpdateWindow is the maintenance window for updates.
+// UpdateWindow is one time window for updates.
 type UpdateWindow struct {
-	// From is the window start time, "H:MM" or "HH:MM" (24h). The pattern is the
-	// NodeGroup one (crds/node_group.yaml:432), which takes a one-digit hour.
-	// +optional
-	// +kubebuilder:validation:Pattern=`^(?:\d|[01]\d|2[0-3]):[0-5]\d$`
-	From string `json:"from,omitempty"`
-	// To is the window end time, same format as From.
-	// +optional
-	// +kubebuilder:validation:Pattern=`^(?:\d|[01]\d|2[0-3]):[0-5]\d$`
-	To string `json:"to,omitempty"`
-	// Days are the weekdays the window applies to.
-	// +optional
-	// +kubebuilder:validation:items:Enum=Mon;Tue;Wed;Thu;Fri;Sat;Sun
+	// From is the start of the window in UTC, H:MM or HH:MM (24h).
+	From string `json:"from"`
+	// To is the end of the window in UTC, in the same format as from.
+	To string `json:"to"`
+	// Days are the days of the week the window applies to. When unset, every day.
 	Days []string `json:"days,omitempty"`
 }
 

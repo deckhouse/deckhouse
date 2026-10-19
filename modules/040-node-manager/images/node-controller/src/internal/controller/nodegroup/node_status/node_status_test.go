@@ -24,6 +24,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
 func newScheme(t *testing.T) *runtime.Scheme {
@@ -31,6 +35,9 @@ func newScheme(t *testing.T) *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	if err := corev1.AddToScheme(scheme); err != nil {
 		t.Fatalf("add corev1 scheme: %v", err)
+	}
+	if err := internalv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatalf("add internal scheme: %v", err)
 	}
 	return scheme
 }
@@ -158,7 +165,7 @@ func TestCompute(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(newScheme(t)).WithRuntimeObjects(tt.objs...).Build()
 			s := &Service{Client: cl}
 
-			res, err := s.Compute(context.Background(), "worker")
+			res, err := s.Compute(context.Background(), &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}})
 			if err != nil {
 				t.Fatalf("Compute: %v", err)
 			}
@@ -183,5 +190,126 @@ func TestGetConfigurationChecksum_MissingSecretReturnsEmpty(t *testing.T) {
 	s := &Service{Client: cl}
 	if got := s.getConfigurationChecksum(context.Background(), "worker"); got != "" {
 		t.Fatalf("expected empty checksum when secret missing, got %q", got)
+	}
+}
+
+func makeNodeConfig(name string, generation, applied int64, conditions ...metav1.Condition) *internalv1alpha1.NodeConfig {
+	return &internalv1alpha1.NodeConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Generation: generation},
+		Status:     internalv1alpha1.NodeConfigStatus{AppliedGeneration: applied, Conditions: conditions},
+	}
+}
+
+// An Engine node never carries the bashible checksum: its rollout is read off its NodeConfig.
+func TestCompute_ImmutableGroupReadsNodeConfig(t *testing.T) {
+	appliedAt := func(generation int64) metav1.Condition {
+		return metav1.Condition{Type: "ConfigurationApplied", Status: metav1.ConditionTrue, ObservedGeneration: generation}
+	}
+	tests := []struct {
+		name         string
+		config       *internalv1alpha1.NodeConfig
+		wantUpToDate int32
+		wantUpdating bool
+		wantWaiting  bool
+	}{
+		{
+			name:         "applied the current generation",
+			config:       makeNodeConfig("n1", 3, 3, appliedAt(3)),
+			wantUpToDate: 1,
+		},
+		{
+			name:         "applied condition stamped with an older generation",
+			config:       makeNodeConfig("n1", 3, 3, appliedAt(2)),
+			wantUpToDate: 0,
+		},
+		{
+			name:         "rejected the current generation",
+			config:       makeNodeConfig("n1", 3, 3, metav1.Condition{Type: "ConfigurationApplied", Status: metav1.ConditionFalse, Reason: "Rejected", ObservedGeneration: 3}),
+			wantUpToDate: 0,
+		},
+		{
+			name:         "behind the current generation",
+			config:       makeNodeConfig("n1", 3, 2, appliedAt(2)),
+			wantUpdating: true,
+		},
+		{
+			name: "holds the current generation for approval",
+			config: makeNodeConfig("n1", 3, 2,
+				metav1.Condition{Type: "ConfigurationApplied", Status: metav1.ConditionFalse, Reason: "DisruptionApprovalPending", ObservedGeneration: 3},
+				metav1.Condition{Type: "DisruptionApproved", Status: metav1.ConditionFalse, Reason: "ApprovalPending", ObservedGeneration: 3}),
+			wantUpdating: true,
+			wantWaiting:  true,
+		},
+		{
+			name: "no NodeConfig yet",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// The checksum annotation matches: an Immutable group must not count it.
+			objs := []runtime.Object{
+				makeChecksumSecret(map[string]string{"worker": "abc"}),
+				makeNode("n1", "worker", true, "abc"),
+			}
+			if tt.config != nil {
+				objs = append(objs, tt.config)
+			}
+			cl := fake.NewClientBuilder().WithScheme(newScheme(t)).WithRuntimeObjects(objs...).Build()
+			ng := &v1.NodeGroup{
+				ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+				Spec:       v1.NodeGroupSpec{SystemType: v1.SystemTypeImmutable},
+			}
+
+			res, err := (&Service{Client: cl}).Compute(context.Background(), ng)
+			if err != nil {
+				t.Fatalf("Compute: %v", err)
+			}
+			if res.UpToDateCount != tt.wantUpToDate {
+				t.Errorf("UpToDateCount = %d, want %d", res.UpToDateCount, tt.wantUpToDate)
+			}
+			node := res.NodesForConditions[0]
+			if node.Updating != tt.wantUpdating {
+				t.Errorf("Updating = %v, want %v", node.Updating, tt.wantUpdating)
+			}
+			if node.WaitingDisruptiveApproval != tt.wantWaiting {
+				t.Errorf("WaitingDisruptiveApproval = %v, want %v", node.WaitingDisruptiveApproval, tt.wantWaiting)
+			}
+		})
+	}
+}
+
+// The agent republishes its status on every pass; only a change of what Compute reads may
+// wake the group status, whose pass lists every Machine in the cluster.
+func TestNodeConfigChanged(t *testing.T) {
+	appliedAt := func(generation int64) metav1.Condition {
+		return metav1.Condition{Type: "ConfigurationApplied", Status: metav1.ConditionTrue, ObservedGeneration: generation}
+	}
+	before := makeNodeConfig("n1", 3, 2, appliedAt(2))
+	before.Labels = map[string]string{"node.deckhouse.io/group": "worker"}
+
+	heartbeat := before.DeepCopy()
+	heartbeat.Status.LastReconcileTime = metav1.Now()
+	caughtUp := before.DeepCopy()
+	caughtUp.Status.AppliedGeneration = 3
+	caughtUp.Status.Conditions = []metav1.Condition{appliedAt(3)}
+	moved := before.DeepCopy()
+	moved.Labels = map[string]string{"node.deckhouse.io/group": "other"}
+
+	tests := []struct {
+		name  string
+		after *internalv1alpha1.NodeConfig
+		want  bool
+	}{
+		{name: "heartbeat", after: heartbeat, want: false},
+		{name: "applied the current generation", after: caughtUp, want: true},
+		{name: "moved to another group", after: moved, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NodeConfigChanged(event.UpdateEvent{ObjectOld: before, ObjectNew: tt.after}); got != tt.want {
+				t.Fatalf("NodeConfigChanged() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

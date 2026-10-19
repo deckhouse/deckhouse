@@ -29,6 +29,10 @@ rules:
   - sshcredentials
   - staticinstances
   - containerdintegritypolicies
+  - nodeextensionrequests
+  # Read only, edit does not write it either: a creator runs any manifest as
+  # root on the selected nodes.
+  - nodestaticpodrequests
   verbs:
   - get
   - list

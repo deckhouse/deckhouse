@@ -37,7 +37,7 @@ var _ = Describe("Module :: node-manager :: helm template :: NodeOperation right
 		f.HelmRender()
 	})
 
-	It("lets the manage roles read and create operations", func() {
+	It("lets the manage roles read, create and approve operations", func() {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 		view := f.KubernetesGlobalResource("ClusterRole", "d8:system-capability:node-manager:view")
@@ -46,11 +46,11 @@ var _ = Describe("Module :: node-manager :: helm template :: NodeOperation right
 		Expect(edit.Exists()).To(BeTrue())
 
 		Expect(nodeOperationVerbs(view)).To(ConsistOf("get", "list", "watch"))
-		// The spec is immutable, so update and patch would grant nothing.
-		Expect(nodeOperationVerbs(edit)).To(ConsistOf("create", "delete"))
+		// patch approves a Disruption; the rest of the spec is immutable.
+		Expect(nodeOperationVerbs(edit)).To(ConsistOf("create", "patch", "delete"))
 	})
 
-	It("lets the user-authz roles read and create operations", func() {
+	It("lets the user-authz roles read, create and approve operations", func() {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 		user := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:node-manager:user")
@@ -61,8 +61,43 @@ var _ = Describe("Module :: node-manager :: helm template :: NodeOperation right
 		Expect(clusterAdmin.Exists()).To(BeTrue())
 
 		Expect(nodeOperationVerbs(user)).To(ConsistOf("get", "list", "watch"))
-		Expect(nodeOperationVerbs(clusterEditor)).To(ConsistOf("create", "delete"))
-		Expect(nodeOperationVerbs(clusterAdmin)).To(ConsistOf("get", "list", "watch", "create", "delete"))
+		Expect(nodeOperationVerbs(clusterEditor)).To(ConsistOf("create", "patch", "delete"))
+		Expect(nodeOperationVerbs(clusterAdmin)).To(ConsistOf("get", "list", "watch", "create", "patch", "delete"))
+	})
+
+	// The node reports with an update that carries the resourceVersion it read;
+	// a patch would land on an operation that has meanwhile ended.
+	It("lets a node only read operations and update their status", func() {
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		agent := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:node-agent")
+		Expect(agent.Exists()).To(BeTrue())
+		Expect(nodeOperationVerbs(agent)).To(ConsistOf("get", "list", "watch"))
+		Expect(roleVerbs(agent, "deckhouse.io", "nodeoperations/status")).To(ConsistOf("update"))
+	})
+
+	// Operations of one node are found by spec.nodeName, a selectable field;
+	// a policy guarding a label nobody reads any more would only mislead.
+	It("does not guard the retired node label", func() {
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "nodeoperations-own-node-only.deckhouse.io")
+		Expect(policy.Exists()).To(BeTrue())
+		Expect(policy.Field("spec.validations").String()).NotTo(ContainSubstring("node-manager.deckhouse.io/node"))
+	})
+
+	// node-manager creates its Disruptions as this service account: a policy naming
+	// any other refuses every one of them, and no node is interrupted for its config.
+	It("leaves creating a Disruption to the service account node-controller runs as", func() {
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		Expect(f.KubernetesResource("ServiceAccount", "d8-cloud-instance-manager", "node-controller").Exists()).To(BeTrue())
+		policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "nodeoperations-disruption-by-node-manager.deckhouse.io")
+		Expect(policy.Exists()).To(BeTrue())
+		Expect(policy.Field("spec.validations.0.expression").String()).
+			To(ContainSubstring(`"system:serviceaccount:d8-cloud-instance-manager:node-controller"`))
+		binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "nodeoperations-disruption-by-node-manager.deckhouse.io")
+		Expect(binding.Field("spec.validationActions").String()).To(ContainSubstring("Deny"))
 	})
 })
 

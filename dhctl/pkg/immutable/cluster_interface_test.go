@@ -319,7 +319,7 @@ func TestTheJoinPayloadOfAnUnknownMachineCarriesTheClusterNetworks(t *testing.T)
 	payload, nodeConfig, err := BuildJoinPayload(t.Context(), JoinPayloadInput{
 		NodeName:           "worker-0",
 		MetaConfig:         metaConfig,
-		CACert:             "dGVzdC1jYQ==",
+		ClusterCABundle:    "-----BEGIN CERTIFICATE-----\ntest-ca\n-----END CERTIFICATE-----\n",
 		BootstrapToken:     immutabletest.BootstrapToken,
 		APIServerEndpoints: []string{"https://10.0.0.11:6443"},
 		NodeGroupName:      "worker",

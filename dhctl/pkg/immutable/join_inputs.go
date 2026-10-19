@@ -16,7 +16,6 @@ package immutable
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -65,7 +64,7 @@ func BuildJoinPayloadFromCluster(
 	nodeGroupName string,
 ) (string, []byte, error) {
 	var (
-		caCert    string
+		caBundle  string
 		token     string
 		endpoints []string
 	)
@@ -76,7 +75,7 @@ func BuildJoinPayloadFromCluster(
 		joinInputAttempts, joinInputInterval).
 		RunContext(ctx, func() error {
 			var err error
-			caCert, err = clusterCABase64(ctx, kubeCl)
+			caBundle, err = clusterCABundle(ctx, kubeCl)
 			if err != nil {
 				return err
 			}
@@ -94,7 +93,7 @@ func BuildJoinPayloadFromCluster(
 	return BuildJoinPayload(ctx, JoinPayloadInput{
 		NodeName:           nodeName,
 		MetaConfig:         metaConfig,
-		CACert:             caCert,
+		ClusterCABundle:    caBundle,
 		BootstrapToken:     token,
 		APIServerEndpoints: endpoints,
 		Customization:      customization,
@@ -104,9 +103,8 @@ func BuildJoinPayloadFromCluster(
 	})
 }
 
-// clusterCABase64 reads the cluster CA the way the on-node agent expects it:
-// base64 of the PEM.
-func clusterCABase64(ctx context.Context, kubeCl *client.KubernetesClient) (string, error) {
+// clusterCABundle reads the cluster CA as the PEM the node's kubelet.clusterCABundle takes.
+func clusterCABundle(ctx context.Context, kubeCl *client.KubernetesClient) (string, error) {
 	cm, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Get(ctx, clusterCAConfigMap, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("read the cluster CA from %s/%s: %w", global.ConfigsNS, clusterCAConfigMap, err)
@@ -115,7 +113,7 @@ func clusterCABase64(ctx context.Context, kubeCl *client.KubernetesClient) (stri
 	if ca == "" {
 		return "", fmt.Errorf("configmap %s/%s carries no %s", global.ConfigsNS, clusterCAConfigMap, clusterCAKey)
 	}
-	return base64.StdEncoding.EncodeToString([]byte(ca)), nil
+	return ca, nil
 }
 
 // groupBootstrapToken returns the group's newest non-expired bootstrap token, so a

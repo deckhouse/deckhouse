@@ -100,6 +100,9 @@ func ParseCustomizations(ctx context.Context, documents []string) ([]Customizati
 		if err := checkAddresses(ctx, parsed.Spec.Network, parsed.Metadata.Name); err != nil {
 			return nil, err
 		}
+		if err := checkIPs(parsed.Spec.Network, parsed.Metadata.Name); err != nil {
+			return nil, err
+		}
 		if err := checkClusterMark(parsed.Spec.Network, parsed.Metadata.Name); err != nil {
 			return nil, err
 		}
@@ -114,9 +117,14 @@ func ParseCustomizations(ctx context.Context, documents []string) ([]Customizati
 	return customizations, nil
 }
 
+// mountFilesystemExt4 is the one filesystem a NodeConfig mount takes.
+// Mirrors the Mount.Filesystem enum in
+// modules/040-node-manager/images/node-controller/src/api/internal.deckhouse.io/v1alpha1/nodeconfig_types.go.
+const mountFilesystemExt4 = "Ext4"
+
 // checkMounts refuses what a mount may not say: bindTo and mode over a rendered
 // mount, which would move etcd off the hostPath its static pod carries, and a
-// mount naming no disk, which the NodeConfig schema rejects.
+// mount naming no disk or another filesystem, which the NodeConfig schema rejects.
 func checkMounts(mounts []mount, number int) error {
 	rendered := etcdMounts()
 
@@ -133,6 +141,11 @@ func checkMounts(mounts []mount, number int) error {
 				"node customization %d names no disk for the %s mount: the mount replaces the rendered one whole, so give it a partitionSelector or a device",
 				number, m.Name)
 		}
+		// The schema's only value; the lowercase ext4 of older documents is refused.
+		if m.Filesystem != "" && m.Filesystem != mountFilesystemExt4 {
+			return fmt.Errorf("node customization %d sets filesystem %q on the %s mount: write %s or leave it out",
+				number, m.Filesystem, m.Name, mountFilesystemExt4)
+		}
 	}
 
 	return nil
@@ -147,6 +160,16 @@ func checkAddresses(ctx context.Context, n *network, nodeName string) error {
 	}
 
 	for _, iface := range n.Interfaces {
+		// A missing prefix means a single host to networkd, which leaves the
+		// machine off its own subnet with no way to say so. The NodeConfig schema
+		// refuses it on a DHCP interface too.
+		for _, address := range iface.Addresses {
+			if _, _, err := net.ParseCIDR(address); err != nil {
+				return fmt.Errorf(
+					"node %s gives interface %s the address %q, which carries no prefix length: write it as 192.168.0.101/24, the form the machine configures the interface with",
+					nodeName, iface.Name, address)
+			}
+		}
 		// A DHCP interface never has its addresses read, so they are a mistake we
 		// survive: most likely an operator who meant dhcp: false.
 		if iface.DHCP {
@@ -166,14 +189,36 @@ func checkAddresses(ctx context.Context, n *network, nodeName string) error {
 					"give the interface an address, or write dhcp: true",
 				nodeName, iface.Name)
 		}
-		// A missing prefix means a single host to networkd, which leaves the
-		// machine off its own subnet with no way to say so.
-		for _, address := range iface.Addresses {
-			if _, _, err := net.ParseCIDR(address); err != nil {
-				return fmt.Errorf(
-					"node %s gives interface %s the address %q, which carries no prefix length: write it as 192.168.0.101/24, the form the machine configures the interface with",
-					nodeName, iface.Name, address)
-			}
+	}
+
+	return nil
+}
+
+// checkIPs refuses a DNS server or a gateway that is not an IP address, which the
+// NodeConfig schema refuses: the node would reject the whole document.
+func checkIPs(n *network, nodeName string) error {
+	if n == nil {
+		return nil
+	}
+
+	var addresses []string
+	if n.DNS != nil {
+		addresses = append(addresses, n.DNS.Servers...)
+	}
+	for _, iface := range n.Interfaces {
+		if iface.Gateway != "" {
+			addresses = append(addresses, iface.Gateway)
+		}
+	}
+	for _, r := range n.Routes {
+		if r.Gateway != "" {
+			addresses = append(addresses, r.Gateway)
+		}
+	}
+
+	for _, address := range addresses {
+		if net.ParseIP(address) == nil {
+			return fmt.Errorf("node %s names %q as a DNS server or a gateway: write an IP address, the only form the node takes", nodeName, address)
 		}
 	}
 

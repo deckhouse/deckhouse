@@ -178,7 +178,7 @@ func templateFilter(opts *metainternalversion.ListOptions) (func(name string) bo
 func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup, bootstrapToken string) (*templatesv1alpha1.NodeConfigTemplate, error) {
 	spec, err := nodeconfig.RenderBootstrapSpec(ctx, s.client, s.client, ng, "")
 	if err != nil {
-		return nil, fmt.Errorf("render the node config of %s: %w", ng.Name, err)
+		return nil, notReady(ng, err)
 	}
 
 	// Without it kubelet has nothing to present on first contact, and the
@@ -217,12 +217,19 @@ func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup, bootstra
 func (s *TemplateStorage) renderMutable(ctx context.Context, ng *v1.NodeGroup) (*templatesv1alpha1.NodeConfigTemplate, error) {
 	spec, err := nodeconfig.RenderMutableSpec(ctx, s.client, ng)
 	if err != nil {
-		return nil, fmt.Errorf("render the node config of %s: %w", ng.Name, err)
+		return nil, notReady(ng, err)
 	}
 	return &templatesv1alpha1.NodeConfigTemplate{
 		ObjectMeta: metav1.ObjectMeta{Name: ng.Name},
 		Spec:       spec,
 	}, nil
+}
+
+// notReady answers a render that fails with 503 and its cause. The render reads only
+// what the cluster publishes itself (release digests, endpoints, tokens), so a missing
+// input is a "not yet" a client can retry, not a broken request.
+func notReady(ng *v1.NodeGroup, err error) error {
+	return apierrors.NewServiceUnavailable(fmt.Sprintf("the node config of NodeGroup %s cannot be rendered yet: %v", ng.Name, err))
 }
 
 // nodeIdentityGroups are the identities a node's agent reads a template with: a

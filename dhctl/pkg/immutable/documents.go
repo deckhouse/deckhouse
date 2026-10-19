@@ -98,8 +98,8 @@ type JoinPayloadInput struct {
 	NodeName string
 	// MetaConfig is the parsed cluster configuration.
 	MetaConfig *config.MetaConfig
-	// CACert is the cluster CA, base64-encoded, as the cluster holds it.
-	CACert string
+	// ClusterCABundle is the cluster CA, PEM, as the cluster holds it.
+	ClusterCABundle string
 	// BootstrapToken is the group's current bootstrap token.
 	BootstrapToken string
 	// APIServerEndpoints are the apiservers already serving the cluster.
@@ -122,7 +122,7 @@ type JoinPayloadInput struct {
 // reach an existing apiserver. control-plane-manager promotes the node later.
 func BuildJoinPayload(ctx context.Context, in JoinPayloadInput) (string, []byte, error) {
 	switch {
-	case in.CACert == "":
+	case in.ClusterCABundle == "":
 		return "", nil, errors.New("build join payload: cluster CA is empty")
 	case in.BootstrapToken == "":
 		return "", nil, errors.New("build join payload: bootstrap token is empty")
@@ -135,7 +135,7 @@ func BuildJoinPayload(ctx context.Context, in JoinPayloadInput) (string, []byte,
 		NodeGroupName: in.NodeGroupName,
 		MetaConfig:    in.MetaConfig,
 		Join: &joinInput{
-			CACert:             in.CACert,
+			ClusterCABundle:    in.ClusterCABundle,
 			BootstrapToken:     in.BootstrapToken,
 			APIServerEndpoints: in.APIServerEndpoints,
 		},

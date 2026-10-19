@@ -29,20 +29,9 @@ import (
 
 var nsprWebhookLog = logf.Log.WithName("nodestaticpodrequest-webhook")
 
-// NodeStaticPodRequestValidator refuses what the CRD cannot express: an object
-// name the node config field would not take or that already has a writer, a pod
-// that already has a writer, and a manifest that is not a valid Pod with a name
-// and a namespace — the same single question the node's loader asks, answered by
-// the same decoder. Refused here because a node that refuses a manifest refuses
-// the whole NodeConfig with it — one typo would stop that node converging on
-// anything at all. The nodeconfig controller checks the same things again and
-// writes the reason onto the object, for the documents already in the cluster
-// when this webhook arrived.
-//
-// Two objects whose manifests name one pod are NOT refused here. Seeing that
-// needs a live listing of every other object, and the loser needs a status to be
-// told in — so the controller settles it cluster-wide and writes Conflict onto
-// the younger one, the same split NodeExtensionRequest makes.
+// NodeStaticPodRequestValidator refuses an object name the NodeConfig field would not take or
+// that has a writer, and a manifest ValidateStaticPodManifest refuses or whose pod has a writer.
+// Two objects naming one pod are settled by the controller, which sees them all.
 type NodeStaticPodRequestValidator struct {
 	decoder admission.Decoder
 }
@@ -62,7 +51,7 @@ func (w *NodeStaticPodRequestValidator) Handle(_ context.Context, req admission.
 
 	if deckhousev1alpha1.IsReservedStaticPodName(nspr.Name) {
 		return admission.Denied(fmt.Sprintf(
-			"it is forbidden to name a NodeStaticPodRequest %q: the name belongs to a manifest the node agent or a bashible step writes itself", nspr.Name))
+			"metadata.name %q is reserved for a manifest that the node agent or a bashible step writes", nspr.Name))
 	}
 
 	pod, err := deckhousev1alpha1.ValidateStaticPodManifest(nspr.Spec.Manifest)
@@ -71,7 +60,7 @@ func (w *NodeStaticPodRequestValidator) Handle(_ context.Context, req admission.
 	}
 	if deckhousev1alpha1.IsReservedStaticPod(pod) {
 		return admission.Denied(fmt.Sprintf(
-			".spec.manifest is refused: the pod %s already has a manifest the node agent or a bashible step writes itself", pod))
+			".spec.manifest is refused: the node agent or a bashible step already writes a manifest for the pod %s", pod))
 	}
 
 	return admission.Allowed("")

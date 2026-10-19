@@ -163,6 +163,26 @@ func TestMessageFromConditions(t *testing.T) {
 			},
 			expected: "",
 		},
+		{
+			name: "node agent message goes without the bashible prefix",
+			conditions: []deckhousev1alpha2.InstanceCondition{
+				{Type: deckhousev1alpha2.InstanceConditionTypeMachineReady, Status: metav1.ConditionTrue, Reason: "Ready"},
+				{
+					Type:    deckhousev1alpha2.InstanceConditionTypeNodeAgentReady,
+					Status:  metav1.ConditionUnknown,
+					Message: "the node agent has not reported since 2026-10-15T11:49:00Z",
+				},
+			},
+			expected: "the node agent has not reported since 2026-10-15T11:49:00Z",
+		},
+		{
+			name: "machine problem wins over node agent message",
+			conditions: []deckhousev1alpha2.InstanceCondition{
+				{Type: deckhousev1alpha2.InstanceConditionTypeMachineReady, Status: metav1.ConditionFalse, Message: "machine message"},
+				{Type: deckhousev1alpha2.InstanceConditionTypeNodeAgentReady, Status: metav1.ConditionTrue, Message: "the node agent reports"},
+			},
+			expected: "machine: machine message",
+		},
 	}
 
 	for _, tt := range tests {

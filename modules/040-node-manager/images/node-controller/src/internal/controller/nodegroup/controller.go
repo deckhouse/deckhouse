@@ -38,6 +38,7 @@ import (
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
@@ -98,6 +99,10 @@ func (r *Status) SetupWatches(w register.Watcher) {
 	w.Watches(&capiv1beta2.Machine{}, handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
 	w.Watches(ngcommon.NewUnstructured(ngcommon.CAPIMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup))
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(nodecommon.ChecksumSecretPredicate()))
+	// An Immutable node reports its rollout in its NodeConfig, not on the Node; the object
+	// carries the group label the mapper reads.
+	w.Watches(&internalv1alpha1.NodeConfig{}, handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup),
+		builder.WithPredicates(predicate.Funcs{UpdateFunc: nodestatus.NodeConfigChanged}))
 	// Not every NodeGroup on every registration event: the handler narrows a payload change down
 	// to the groups of that provider, because one pass through this Reconcile lists every Machine
 	// and MachineDeployment in the cluster.
@@ -148,7 +153,7 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 
 	logger.V(1).Info("computing node status", "nodeGroup", ng.Name, "nodeType", ng.Spec.NodeType)
 	nodeService := nodestatus.Service{Client: r.Client}
-	nodeResult, err := nodeService.Compute(ctx, ng.Name)
+	nodeResult, err := nodeService.Compute(ctx, ng)
 	if err != nil {
 		logger.Error(err, "failed to compute node status", "nodeGroup", ng.Name)
 		return ctrl.Result{}, err
@@ -226,7 +231,10 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	newConditions := ngcommon.ConvertFromCalcConditions(calculated)
 	conditionSummary := ngconditions.CalculateConditionSummary(newConditions, statusMsg)
 
-	patch := client.MergeFrom(ng.DeepCopy())
+	// The lock turns a status read from a cache that has not seen the previous write into a
+	// conflict and a fresh pass: a merge patch from that stale base leaves out a condition
+	// that only went back to its old value, and the stale one stays on the server.
+	patch := client.MergeFromWithOptions(ng.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	statusBefore := ng.Status
 	ng.Status.Nodes = nodeResult.NodesCount
 	ng.Status.Ready = nodeResult.ReadyCount

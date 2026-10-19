@@ -149,7 +149,7 @@ func TestCloudPayloadSurvivesTheProviderBlock(t *testing.T) {
 	join, _, err := BuildJoinPayload(t.Context(), JoinPayloadInput{
 		NodeName:           "example-master-1",
 		MetaConfig:         testMetaConfig(t),
-		CACert:             base64.StdEncoding.EncodeToString([]byte("cluster ca")),
+		ClusterCABundle:    "-----BEGIN CERTIFICATE-----\ntest-ca\n-----END CERTIFICATE-----\n",
 		BootstrapToken:     immutabletest.BootstrapToken,
 		APIServerEndpoints: []string{"https://10.0.0.1:6443"},
 	})

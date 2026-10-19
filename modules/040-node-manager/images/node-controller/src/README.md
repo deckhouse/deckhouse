@@ -100,6 +100,19 @@ Details: [docs/controller-capi.md](docs/controller-capi.md).
 | `node-bootstrap` | NodeBootstrapConfig | Cluster API bootstrap provider for immutable NodeGroups: renders each Machine's `NodeConfig` userdata into a Secret and advertises it through the `NodeBootstrapConfig` status CAPI waits on. |
 | `node-operation` | NodeOperation | Carries a node-interrupting operation (reboot, eviction, permission to apply a disruptive config) from recorded intent to result: evicts, hands over via `InProgress`, the node reports back. |
 
+The NodeConfig CRD, `modules/040-node-manager/crds/nodeconfig.yaml`, is copied, not edited: its schema has one
+source, the nodelet repository, which generates `crds/internal.deckhouse.io_nodeconfigs.yaml` from its public API
+package. Copy it at the tag of the nodelet the release ships, `$nodeletVersion` in
+`images/platform/registrypackages/nodelet/werf.inc.yaml`:
+
+```bash
+modules/040-node-manager/hack/sync-nodeconfig-crd.sh
+```
+
+The Go types in `api/internal.deckhouse.io/v1alpha1` keep the same shape for node-controller itself, and
+`TestTheGoTypesAndTheShippedCRDAgree` fails when the copied schema and the types drift apart: a change of the
+schema starts in nodelet, and these types follow it.
+
 ### Instances and users
 
 | Controller | Watches | What it does | Took over from |

@@ -270,6 +270,58 @@ func TestCustomizationRefusesAnAddressWithoutAPrefix(t *testing.T) {
 	require.ErrorContains(t, err, "192.168.0.101/24", "the form expected of it")
 }
 
+// The NodeConfig schema takes IP addresses alone for DNS servers and gateways, and
+// CIDRs alone for interface addresses, DHCP or not; the node refuses the rest.
+func TestCustomizationRefusesWhatTheSchemaRefusesInTheNetwork(t *testing.T) {
+	for name, tc := range map[string]struct{ network, value string }{
+		"DNS server by name": {`
+    dns:
+      servers: ["dns.example.com"]`, "dns.example.com"},
+		"interface gateway by name": {`
+    interfaces:
+    - name: eno1
+      dhcp: false
+      addresses: ["192.168.0.101/24"]
+      gateway: router.example.com`, "router.example.com"},
+		"route gateway by name": {`
+    routes:
+    - networks: ["10.1.0.0/16"]
+      gateway: router.example.com`, "router.example.com"},
+		"DHCP interface address without a prefix": {`
+    interfaces:
+    - name: eno1
+      dhcp: true
+      addresses: ["192.168.0.101"]`, "192.168.0.101"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseCustomizations(t.Context(), []string{nodeConfigFor("master-0", "\n  network:"+tc.network+"\n")})
+
+			require.ErrorContains(t, err, "master-0")
+			require.ErrorContains(t, err, tc.value)
+		})
+	}
+}
+
+// The schema spells the filesystem Ext4; a document written for the lowercase ext4
+// of before is refused with the spelling to use.
+func TestCustomizationRefusesAFilesystemTheSchemaDoesNotTake(t *testing.T) {
+	document := nodeConfigFor("master-0", `
+  storage:
+    mounts:
+    - name: data
+      device: /dev/sdb1
+      filesystem: ext4
+`)
+	_, err := ParseCustomizations(t.Context(), []string{document})
+
+	require.ErrorContains(t, err, `"ext4"`)
+	require.ErrorContains(t, err, "write Ext4")
+
+	parsed, err := ParseCustomizations(t.Context(), []string{strings.Replace(document, "ext4", "Ext4", 1)})
+	require.NoError(t, err)
+	require.Len(t, parsed, 1)
+}
+
 func TestCustomizationRefusesAnEmptyDiskSelector(t *testing.T) {
 	document := nodeConfigFor("master-0", `
   storage:
@@ -363,7 +415,7 @@ func TestCustomizationReachesTheJoinPayload(t *testing.T) {
 	payload, _, err := BuildJoinPayload(t.Context(), JoinPayloadInput{
 		NodeName:           "master-1",
 		MetaConfig:         testMetaConfig(t),
-		CACert:             "dGVzdC1jYQ==",
+		ClusterCABundle:    "-----BEGIN CERTIFICATE-----\ntest-ca\n-----END CERTIFICATE-----\n",
 		BootstrapToken:     immutabletest.BootstrapToken,
 		APIServerEndpoints: []string{"https://10.0.0.11:6443"},
 		Customization:      &parsed[0],
@@ -442,7 +494,7 @@ func TestTheMarkedInterfaceBeatsEveryOtherRung(t *testing.T) {
 	payload, _, err := BuildJoinPayload(t.Context(), JoinPayloadInput{
 		NodeName:           "master-1",
 		MetaConfig:         testMetaConfig(t),
-		CACert:             "dGVzdC1jYQ==",
+		ClusterCABundle:    "-----BEGIN CERTIFICATE-----\ntest-ca\n-----END CERTIFICATE-----\n",
 		BootstrapToken:     immutabletest.BootstrapToken,
 		APIServerEndpoints: []string{"https://10.0.0.11:6443"},
 		Customization:      &parsed[0],
@@ -483,7 +535,7 @@ func TestCustomizationWarnsAboutAddressesOnADHCPInterface(t *testing.T) {
     interfaces:
     - name: eno1
       dhcp: true
-      addresses: ["192.168.0.101"]
+      addresses: ["192.168.0.101/24"]
     - name: eno2
       dhcp: true
 `)

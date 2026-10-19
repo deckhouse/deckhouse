@@ -17,6 +17,8 @@ limitations under the License.
 package nodeconfig
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -68,11 +70,16 @@ func extensionsOf(ners []deckhousev1alpha1.NodeExtensionRequest, node *corev1.No
 func requestedNames(extensions []internalv1alpha1.Extension) []string {
 	var names []string
 	for _, ext := range extensions {
-		if strings.HasPrefix(ext.RequestedBy, nerRequestedByPrefix) {
+		if ext.RequestedBy != nil && ext.RequestedBy.Kind == internalv1alpha1.ObjectOwnerKindNodeExtensionRequest {
 			names = append(names, ext.Name)
 		}
 	}
 	return names
+}
+
+// nerOwner is the requestedBy of an entry the named NodeExtensionRequest put there.
+func nerOwner(name string) *internalv1alpha1.ObjectOwner {
+	return &internalv1alpha1.ObjectOwner{Kind: internalv1alpha1.ObjectOwnerKindNodeExtensionRequest, Name: name}
 }
 
 func TestNodeExtensions(t *testing.T) {
@@ -81,7 +88,7 @@ func TestNodeExtensions(t *testing.T) {
 	drbdExtension := internalv1alpha1.Extension{
 		Name:        "drbd",
 		Digest:      drbdDigest,
-		RequestedBy: nerRequestedByPrefix + "sds-drbd",
+		RequestedBy: nerOwner("sds-drbd"),
 	}
 
 	older := metav1.NewTime(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
@@ -156,11 +163,11 @@ func TestNodeExtensions(t *testing.T) {
 			node:   nodeWith(nil),
 			ngName: "worker",
 			wantExtensions: []internalv1alpha1.Extension{{
-				Name:           "drbd",
-				Repository:     "dev-registry.deckhouse.io/sys/deckhouse-oss/modules",
-				AdditionalPath: "sds-replicated-volume",
-				Digest:         drbdDigest,
-				RequestedBy:    nerRequestedByPrefix + "sds-drbd",
+				Name:        "drbd",
+				Digest:      drbdDigest,
+				Repository:  "dev-registry.deckhouse.io/sys/deckhouse-oss/modules",
+				Path:        "sds-replicated-volume",
+				RequestedBy: nerOwner("sds-drbd"),
 			}},
 		},
 		{
@@ -198,7 +205,7 @@ func TestNodeExtensions(t *testing.T) {
 			wantExtensions: []internalv1alpha1.Extension{{
 				Name:        "drbd",
 				Digest:      drbdDigest,
-				RequestedBy: nerRequestedByPrefix + "drbd-old",
+				RequestedBy: nerOwner("drbd-old"),
 			}},
 		},
 		{
@@ -216,7 +223,7 @@ func TestNodeExtensions(t *testing.T) {
 			wantExtensions: []internalv1alpha1.Extension{{
 				Name:        "alpha",
 				Digest:      drbdDigest,
-				RequestedBy: nerRequestedByPrefix + "alpha",
+				RequestedBy: nerOwner("alpha"),
 			}},
 		},
 		{
@@ -226,12 +233,10 @@ func TestNodeExtensions(t *testing.T) {
 			name: "a request that lost a kernel module contributes nothing",
 			ners: []deckhousev1alpha1.NodeExtensionRequest{
 				nerCreated("apple", newer, deckhousev1alpha1.NodeExtensionRequestSpec{
-					Extension:     deckhousev1alpha1.NodeExtension{Name: "beta", Digest: otherDigest},
-					KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=enabled"}}},
+					Extension: deckhousev1alpha1.NodeExtension{Name: "beta", Digest: otherDigest, KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=enabled"}}}},
 				}),
 				nerCreated("zebra", older, deckhousev1alpha1.NodeExtensionRequestSpec{
-					Extension:     deckhousev1alpha1.NodeExtension{Name: "alpha", Digest: drbdDigest},
-					KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=disabled"}}},
+					Extension: deckhousev1alpha1.NodeExtension{Name: "alpha", Digest: drbdDigest, KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=disabled"}}}},
 				}),
 			},
 			node:   nodeWith(nil),
@@ -239,7 +244,7 @@ func TestNodeExtensions(t *testing.T) {
 			wantExtensions: []internalv1alpha1.Extension{{
 				Name:        "alpha",
 				Digest:      drbdDigest,
-				RequestedBy: nerRequestedByPrefix + "zebra",
+				RequestedBy: nerOwner("zebra"),
 			}},
 			wantModules: []internalv1alpha1.KernelModule{
 				{Name: "drbd", Params: []string{"usermode_helper=disabled"}},
@@ -249,11 +254,10 @@ func TestNodeExtensions(t *testing.T) {
 			name: "kernel modules collected and deduplicated by name",
 			ners: []deckhousev1alpha1.NodeExtensionRequest{
 				ner("sds-drbd", deckhousev1alpha1.NodeExtensionRequestSpec{
-					Extension: deckhousev1alpha1.NodeExtension{Name: "drbd", Digest: drbdDigest},
-					KernelModules: []deckhousev1alpha1.KernelModule{
+					Extension: deckhousev1alpha1.NodeExtension{Name: "drbd", Digest: drbdDigest, KernelModules: []deckhousev1alpha1.KernelModule{
 						{Name: "drbd", Params: []string{"usermode_helper=disabled"}},
 						{Name: "drbd_transport_tcp"},
-					},
+					}},
 				}),
 			},
 			node:           nodeWith(nil),
@@ -287,12 +291,10 @@ func TestNodeExtensionsOrderDoesNotFollowTheListing(t *testing.T) {
 	newer := metav1.NewTime(time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC))
 
 	first := nerCreated("zebra", older, deckhousev1alpha1.NodeExtensionRequestSpec{
-		Extension:     deckhousev1alpha1.NodeExtension{Name: "alpha", Digest: drbdDigest},
-		KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd"}},
+		Extension: deckhousev1alpha1.NodeExtension{Name: "alpha", Digest: drbdDigest, KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd"}}},
 	})
 	second := nerCreated("apple", newer, deckhousev1alpha1.NodeExtensionRequestSpec{
-		Extension:     deckhousev1alpha1.NodeExtension{Name: "beta", Digest: otherDigest},
-		KernelModules: []deckhousev1alpha1.KernelModule{{Name: "nvidia"}},
+		Extension: deckhousev1alpha1.NodeExtension{Name: "beta", Digest: otherDigest, KernelModules: []deckhousev1alpha1.KernelModule{{Name: "nvidia"}}},
 	})
 
 	// The same two requests, listed both ways round.
@@ -308,8 +310,8 @@ func TestNodeExtensionsOrderDoesNotFollowTheListing(t *testing.T) {
 
 	// And it is the order every decision about them is made in: oldest first,
 	// whatever the listing said.
-	got := []string{oneWay[0].RequestedBy, oneWay[1].RequestedBy}
-	if !reflect.DeepEqual(got, []string{nerRequestedByPrefix + "zebra", nerRequestedByPrefix + "apple"}) {
+	got := []*internalv1alpha1.ObjectOwner{oneWay[0].RequestedBy, oneWay[1].RequestedBy}
+	if !reflect.DeepEqual(got, []*internalv1alpha1.ObjectOwner{nerOwner("zebra"), nerOwner("apple")}) {
 		t.Fatalf("extensions = %v, want the oldest request first", got)
 	}
 }
@@ -386,12 +388,10 @@ func TestResolveNERConflicts(t *testing.T) {
 			name: "kernel module with different parameters: the older request wins",
 			ners: []deckhousev1alpha1.NodeExtensionRequest{
 				nerCreated("apple", newer, deckhousev1alpha1.NodeExtensionRequestSpec{
-					Extension:     deckhousev1alpha1.NodeExtension{Name: "beta", Digest: otherDigest, Kind: deckhousev1alpha1.ExtensionKindSystemExtension},
-					KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=enabled"}}},
+					Extension: deckhousev1alpha1.NodeExtension{Name: "beta", Digest: otherDigest, Kind: deckhousev1alpha1.ExtensionKindSystemExtension, KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=enabled"}}}},
 				}),
 				nerCreated("zebra", older, deckhousev1alpha1.NodeExtensionRequestSpec{
-					Extension:     deckhousev1alpha1.NodeExtension{Name: "alpha", Digest: drbdDigest, Kind: deckhousev1alpha1.ExtensionKindSystemExtension},
-					KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=disabled"}}},
+					Extension: deckhousev1alpha1.NodeExtension{Name: "alpha", Digest: drbdDigest, Kind: deckhousev1alpha1.ExtensionKindSystemExtension, KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=disabled"}}}},
 				}),
 			},
 			want: map[string]nerConflict{
@@ -402,12 +402,10 @@ func TestResolveNERConflicts(t *testing.T) {
 			name: "the same module with the same parameters is what both asked for",
 			ners: []deckhousev1alpha1.NodeExtensionRequest{
 				nerCreated("new", newer, deckhousev1alpha1.NodeExtensionRequestSpec{
-					Extension:     deckhousev1alpha1.NodeExtension{Name: "beta", Digest: otherDigest, Kind: deckhousev1alpha1.ExtensionKindSystemExtension},
-					KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=disabled"}}},
+					Extension: deckhousev1alpha1.NodeExtension{Name: "beta", Digest: otherDigest, Kind: deckhousev1alpha1.ExtensionKindSystemExtension, KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=disabled"}}}},
 				}),
 				nerCreated("old", older, deckhousev1alpha1.NodeExtensionRequestSpec{
-					Extension:     deckhousev1alpha1.NodeExtension{Name: "alpha", Digest: drbdDigest, Kind: deckhousev1alpha1.ExtensionKindSystemExtension},
-					KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=disabled"}}},
+					Extension: deckhousev1alpha1.NodeExtension{Name: "alpha", Digest: drbdDigest, Kind: deckhousev1alpha1.ExtensionKindSystemExtension, KernelModules: []deckhousev1alpha1.KernelModule{{Name: "drbd", Params: []string{"usermode_helper=disabled"}}}},
 				}),
 			},
 			want: map[string]nerConflict{},
@@ -538,8 +536,8 @@ func TestARequestThatReachesNoNodeClaimsNothing(t *testing.T) {
 			younger: deckhousev1alpha1.NodeExtensionRequestSpec{
 				Extension: deckhousev1alpha1.NodeExtension{
 					Name: "drbd-sysext", Digest: otherDigest, Kind: deckhousev1alpha1.ExtensionKindSystemExtension,
+					KernelModules: modules("usermode_helper=enabled"),
 				},
-				KernelModules: modules("usermode_helper=enabled"),
 			},
 		},
 	} {
@@ -548,8 +546,8 @@ func TestARequestThatReachesNoNodeClaimsNothing(t *testing.T) {
 				deckhousev1alpha1.NodeExtensionRequestSpec{
 					Extension: deckhousev1alpha1.NodeExtension{
 						Name: "drbd", Digest: drbdDigest, Kind: deckhousev1alpha1.ExtensionKindPackage,
+						KernelModules: modules("usermode_helper=disabled"),
 					},
-					KernelModules: modules("usermode_helper=disabled"),
 				})
 			younger := nerCreated("younger", metav1.NewTime(time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)), tc.younger)
 
@@ -570,7 +568,7 @@ func TestNamesAndDigestsAreUniquePerKind(t *testing.T) {
 			NodeGroupSelector: deckhousev1alpha1.NodeGroupSelector{MatchNames: []string{group}},
 		})
 	}
-	sysext := []internalv1alpha1.Extension{{Name: "drbd", Digest: drbdDigest, RequestedBy: nerRequestedByPrefix + "drbd-sysext"}}
+	sysext := []internalv1alpha1.Extension{{Name: "drbd", Digest: drbdDigest, RequestedBy: nerOwner("drbd-sysext")}}
 	for _, tc := range []struct {
 		name string
 		ners []deckhousev1alpha1.NodeExtensionRequest
@@ -613,5 +611,29 @@ func TestNamesAndDigestsAreUniquePerKind(t *testing.T) {
 			extensions, _ := nodeExtensions(in, deckhousev1alpha1.ExtensionKindSystemExtension, nodeWith(nil), "engine")
 			require.Equal(t, tc.engine, extensions)
 		})
+	}
+}
+
+// Every system extension the platform puts on an Engine node is a reserved name: a request
+// taking one is refused, not accepted and then dropped by the render in favour of the
+// platform's (mergeExtensions). The CRD and its Russian description list the same names.
+func TestEveryPlatformSystemExtensionNameIsReserved(t *testing.T) {
+	platform, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: {
+		"containerdSysext224":    "sha256:c",
+		"kubernetesCniSysext162": "sha256:n",
+		"kubeletSysext1356":      "sha256:k",
+		"nodeletSysext":          "sha256:a",
+		"qemuGuestAgentSysext":   "sha256:q",
+	}}, "1.35")
+	require.NoError(t, err)
+
+	crd := testenv.NodeManagerCRDPaths(testenv.NodeExtensionRequestCRDFile)[0]
+	for _, path := range []string{crd, filepath.Join(filepath.Dir(crd), "doc-ru-"+string(testenv.NodeExtensionRequestCRDFile))} {
+		raw, err := os.ReadFile(path)
+		require.NoError(t, err)
+		for name := range platform {
+			require.True(t, deckhousev1alpha1.IsReservedExtensionName(name), "%s is a platform extension", name)
+			require.True(t, strings.Contains(string(raw), "`"+name+"`"), "%s does not list the reserved name %s", path, name)
+		}
 	}
 }

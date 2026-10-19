@@ -110,6 +110,7 @@ const (
 	InstanceConditionTypeBashibleReady             = "BashibleReady"
 	InstanceConditionTypeWaitingApproval           = "WaitingApproval"
 	InstanceConditionTypeWaitingDisruptionApproval = "WaitingDisruptionApproval"
+	InstanceConditionTypeNodeAgentReady            = "NodeAgentReady"
 )
 
 const (

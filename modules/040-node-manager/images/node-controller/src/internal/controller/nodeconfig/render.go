@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -55,7 +54,7 @@ func nodeRenderInputsChanged(before, after client.Object) bool {
 
 // renderSpec turns a NodeGroup plus cluster state into one node's desired state.
 // On the first master it must differ from the installer payload on exactly three
-// fields (caCert, serverTLSBootstrap, proxy token); every other field must agree.
+// fields (clusterCABundle, serverTLSBootstrap, proxy token); every other field must agree.
 func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.NodeSpec {
 	extraExtensions, extraModules := nodeExtensions(in, deckhousev1alpha1.ExtensionKindSystemExtension, node, ng.Name)
 	staticPods := nodeStaticPods(in.NodeStaticPodRequests, in.NodeStaticPodRequestsRejected, ng.Name)
@@ -64,8 +63,6 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 	kernel.Modules = extraModules
 
 	return internalv1alpha1.NodeSpec{
-		// Written although it is the CRD default: the stored object carries it, and
-		// a render without it would read as drift on every pass.
 		SystemType:           internalv1alpha1.SystemTypeImmutable,
 		NodeName:             node.Name,
 		OSImage:              in.OSImage,
@@ -74,8 +71,8 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		Extensions:           mergeExtensions(renderExtensions(in.SysextDigests), extraExtensions),
 		StaticPods:           staticPods,
 		// A NodeGroup has no disk field; without a selector the boot path refuses
-		// outright ("neither device nor diskSelector set"). Any selector the
-		// operator wrote survives this one through keepBootstrapOnlyFields.
+		// outright ("neither device nor diskSelector set"). Only a new machine gets
+		// it: the apply of an existing object leaves storage to the machine.
 		Storage:          internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize}}},
 		Kernel:           kernel,
 		Network:          renderNetwork(node),
@@ -84,59 +81,22 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 		// Every node, not only control-plane: containerd pulls the pause image
 		// itself with no imagePullSecret, and in a closed network that image
 		// lives in a private registry.
-		Registry:                            in.Registry,
-		UpdatePolicy:                        renderUpdatePolicy(ng),
-		RegistryPackagesProxyAccessTokenB64: in.RegistryPackagesProxyToken,
+		Registry:              in.Registry,
+		UpdatePolicy:          renderUpdatePolicy(ng),
+		RegistryPackagesProxy: internalv1alpha1.RegistryPackagesProxy{AccessToken: in.RegistryPackagesProxyToken},
 	}
 }
 
-// keepBootstrapOnlyFields carries over the machine-specific parts of the spec —
-// the status token, registration taints, explicit network, explicit storage.
-// The rest is rendered: a copied value is never corrected.
-func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec) {
-	// The machine mints this token and nothing in the cluster can tell it a new
-	// one, so a render that dropped it would lock the operator out of the
-	// node's status port for good.
-	desired.StatusToken = existing.StatusToken
-
-	// Taints take effect while the node registers and are rendered for a machine
-	// that has not joined; dropping them afterwards patches every node once,
-	// spending a rollout slot on a field no node can act on any more.
-	if len(existing.Kubelet.RegisterWithTaints) > 0 {
-		desired.Kubelet.RegisterWithTaints = existing.Kubelet.RegisterWithTaints
-	}
-
-	// A static network belongs to the provisioner: overwriting it with the
-	// rendered "eth0, DHCP" leaves the node unreachable after a reboot. Two
-	// fields are not the machine's: the hostname, which must match the Node
-	// name, and the interfaces of a machine that named none — a spec with no
-	// interface at all is a node with no address after a reboot.
-	rendered := desired.Network
-	desired.Network = existing.Network
-	desired.Network.Hostname = rendered.Hostname
-	if len(desired.Network.Interfaces) == 0 {
-		desired.Network.Interfaces = rendered.Interfaces
-	}
-
-	if storageIsExplicit(&existing.Storage, &desired.Storage) {
-		desired.Storage = existing.Storage
-	}
-}
-
-// storageIsExplicit reports whether storage carries something this controller
-// does not render. A selector differing from the rendered guess is the
-// operator's: a hand-installed worker names its disk and nothing else, publishes
-// that once, and has no second write to restore it from.
-func storageIsExplicit(storage, rendered *internalv1alpha1.Storage) bool {
-	if storage.Device != "" || len(storage.Mounts) > 0 {
-		return true
-	}
-	// The webhook freezes wipe against every other writer, so a render that
-	// drops it destroys a field nothing but the machine can put back.
-	if storage.Wipe {
-		return true
-	}
-	return storage.DiskSelector != nil && !apiequality.Semantic.DeepEqual(storage.DiskSelector, rendered.DiskSelector)
+// withoutMachineFields is the part of a spec node-controller owns once the object exists: the
+// status token, registration taints, network and storage are the machine's. The bootstrap token
+// is never applied either: one copied into the object is taken over, so the apply removes it.
+func withoutMachineFields(spec internalv1alpha1.NodeSpec) internalv1alpha1.NodeSpec {
+	spec.StatusToken = ""
+	spec.Kubelet.RegisterWithTaints = nil
+	spec.Kubelet.BootstrapToken = ""
+	spec.Network = internalv1alpha1.Network{}
+	spec.Storage = internalv1alpha1.Storage{}
+	return spec
 }
 
 // renderKernel publishes the cluster-decided sysctl keys — the same four dhctl
@@ -172,10 +132,10 @@ func renderExtensions(digests map[string]string) []internalv1alpha1.Extension {
 	names := slices.Sorted(maps.Keys(digests))
 	extensions := make([]internalv1alpha1.Extension, 0, len(names))
 	for _, name := range names {
+		// No requestedBy: these are the platform's own.
 		extensions = append(extensions, internalv1alpha1.Extension{
-			Name:        name,
-			Digest:      digests[name],
-			RequestedBy: platformExtensionRequestedBy,
+			Name:   name,
+			Digest: digests[name],
 		})
 	}
 	return extensions
@@ -191,19 +151,17 @@ func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) intern
 		// kubelet reads the CA from disk on every start, and on an immutable
 		// node that file is on tmpfs. Without the CA in the config the node
 		// cannot rewrite it after a reboot and kubelet never comes back.
-		CACert: in.KubernetesCA,
+		ClusterCABundle: in.KubernetesCA,
 		// Without it the node never gets a providerID and CAPI cannot match its
 		// Machine to the Node. Both cloud node types are CAPI-backed, so both
 		// need it — not just CloudEphemeral.
 		ExternalCloudProvider: isCloudNodeType(ng.Spec.NodeType),
-		// Defaults mirror the NodeConfig CRD defaults so the bootstrap file path
-		// (no API-server CRD defaulting) gets the same values. maxPods is the
-		// exception: it follows the pod subnet the way bashible's does.
-		KubernetesVersion:    in.KubernetesVersion,
-		MaxPods:              in.DefaultMaxPods,
-		ContainerLogMaxSize:  defaultContainerLogMaxSize,
-		ContainerLogMaxFiles: defaultContainerLogMaxFiles,
-		ResourceReservation:  renderResourceReservation(ng),
+		// A setting the group leaves unset is left unset: the node holds the
+		// default. maxPods is a cluster decision, not a default: it follows the
+		// pod subnet the way bashible's does.
+		KubernetesVersion:   in.KubernetesVersion,
+		MaxPods:             in.DefaultMaxPods,
+		ResourceReservation: renderResourceReservation(ng),
 	}
 	if in.ClusterDNS != "" {
 		kubelet.ClusterDNS = []string{in.ClusterDNS}
@@ -222,8 +180,8 @@ func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) intern
 	}
 
 	// Taints only take effect while the node registers itself; afterwards the
-	// node-template controller owns them, and keepBootstrapOnlyFields carries
-	// the rendered value on so a joined node is not patched to drop it.
+	// node-template controller owns them, and the apply of an existing object
+	// leaves them to the machine.
 	if node.CreationTimestamp.IsZero() {
 		kubelet.RegisterWithTaints = renderTaints(ng)
 	}
@@ -284,27 +242,22 @@ func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
 	}
 	if maxPods, ok := configuredMaxPods(ng); ok && clampMaxPods(maxPods) != maxPods {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-			fmt.Sprintf("kubelet.maxPods %d is outside the 1..%d an immutable node accepts; the nodes of this group are configured with %d",
+			fmt.Sprintf("kubelet.maxPods %d is outside the range 1..%d allowed on Immutable nodes. The nodes of this group are configured with %d",
 				maxPods, maxPodsCeiling, clampMaxPods(maxPods)))
 	}
 	if ng.Spec.Disruptions != nil && ng.Spec.Disruptions.ApprovalMode == v1.DisruptionApprovalModeRollingUpdate {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-			fmt.Sprintf("disruptions.approvalMode %s has no counterpart on an immutable node; the nodes of this group are configured with %s",
+			fmt.Sprintf("disruptions.approvalMode %s is not supported on Immutable nodes. The nodes of this group are configured with %s",
 				v1.DisruptionApprovalModeRollingUpdate, v1.DisruptionApprovalModeAutomatic))
 	}
 	if configuredReservationMode(ng) == resourceReservationModeStatic {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-			fmt.Sprintf("kubelet.resourceReservation.mode %s cannot be honoured on an immutable node, which reserves by capacity or not at all; the nodes of this group are configured with %s",
+			fmt.Sprintf("kubelet.resourceReservation.mode %s is not supported on Immutable nodes: they reserve resources by capacity or not at all. The nodes of this group are configured with %s",
 				resourceReservationModeStatic, resourceReservationModeAuto))
-	}
-	if windows := disruptionWindows(ng); len(windows) > 1 {
-		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-			fmt.Sprintf("disruptions windows: an immutable node holds a single update window; the nodes of this group are configured with the first of the %d given",
-				len(windows)))
 	}
 	for _, key := range effectlessTaints(ng) {
 		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
-			fmt.Sprintf("nodeTemplate.taints: %q has no effect, and kubelet cannot register a node with such a taint; the nodes of this group are not tainted with it",
+			fmt.Sprintf("nodeTemplate.taints: taint %q has an empty effect, and kubelet cannot register a node with such a taint. The nodes of this group do not get it",
 				key))
 	}
 }
@@ -408,15 +361,12 @@ func isCloudNodeType(t v1.NodeType) bool {
 
 // renderContainerRuntime carries over the only containerd knob a NodeGroup
 // exposes; the runtime itself is a platform-chosen system extension, and so is
-// pause, which is why sandboxImage stays empty. Defaults mirror the CRD defaults
-// so the bootstrap file path gets the same values.
+// pause, which is why sandboxImage stays empty. Unset settings stay unset: the
+// node holds the defaults.
 func renderContainerRuntime(
 	ng *v1.NodeGroup, in clusterInputs, staticPods []internalv1alpha1.StaticPod,
 ) internalv1alpha1.ContainerRuntime {
-	runtime := internalv1alpha1.ContainerRuntime{
-		MaxConcurrentDownloads: ptr.To(defaultMaxConcurrentDownloads),
-		RegistryOwner:          registryOwnerNodelet,
-	}
+	var runtime internalv1alpha1.ContainerRuntime
 	// The agent owns the whole directory or none of it: nodelet writing
 	// spec.registry there would put an explicit host directory over the agent's
 	// _default and route the platform registry past the agent.
@@ -431,7 +381,7 @@ func renderContainerRuntime(
 	// the object may have been refused (a reserved name, a conflict, the per-group cap)
 	// and never arrive.
 	if in.RegistryAgentMode && hasStaticPod(staticPods, registryAgentStaticPodName) {
-		runtime.RegistryOwner = registryOwnerAgent
+		runtime.RegistryConfigOwner = internalv1alpha1.RegistryConfigOwnerRegistryAgent
 	}
 	if ng.Spec.CRI == nil {
 		return runtime
@@ -452,8 +402,8 @@ func hasStaticPod(pods []internalv1alpha1.StaticPod, name string) bool {
 	})
 }
 
-// renderUpdatePolicy maps the group's disruption settings onto the window the
-// node may fetch new system extensions in.
+// renderUpdatePolicy maps the group's disruption settings onto the windows the
+// node may apply disruptive updates in.
 func renderUpdatePolicy(ng *v1.NodeGroup) internalv1alpha1.UpdatePolicy {
 	policy := internalv1alpha1.UpdatePolicy{Mode: string(v1.DisruptionApprovalModeAutomatic)}
 	if ng.Spec.Disruptions == nil {
@@ -466,16 +416,26 @@ func renderUpdatePolicy(ng *v1.NodeGroup) internalv1alpha1.UpdatePolicy {
 		policy.Mode = string(mode)
 	}
 
-	// NodeConfig carries a single window; the first one wins until the agent
-	// learns to hold a list.
-	if windows := disruptionWindows(ng); len(windows) > 0 {
-		policy.Window = internalv1alpha1.UpdateWindow{
-			From: windows[0].From,
-			To:   windows[0].To,
-			Days: windows[0].Days,
-		}
+	for _, window := range disruptionWindows(ng) {
+		policy.Windows = append(policy.Windows, internalv1alpha1.UpdateWindow{
+			From: window.From,
+			To:   window.To,
+			Days: uniqueDays(window.Days),
+		})
 	}
 	return policy
+}
+
+// uniqueDays drops repeated days: a NodeGroup takes [Mon, Mon], and the node's
+// schema keeps days as a set and refuses the whole document over a duplicate.
+func uniqueDays(days []string) []string {
+	var unique []string
+	for _, day := range days {
+		if !slices.Contains(unique, day) {
+			unique = append(unique, day)
+		}
+	}
+	return unique
 }
 
 func disruptionWindows(ng *v1.NodeGroup) []v1.DisruptionWindow {

@@ -70,22 +70,24 @@ type Spec struct {
 
 // Kubelet is NodeConfig's spec.kubelet, trimmed to the cluster authority.
 type Kubelet struct {
-	// CACert is the base64-encoded cluster CA, the one the kubelet verifies the API
+	// ClusterCABundle is the cluster CA as PEM, the one the kubelet verifies the API
 	// server with. Read from here rather than from /etc/kubernetes/pki/ca.crt so that
 	// the agent needs no mount of that directory — on a master it also holds the
 	// cluster CA's private key, and one file of it cannot be mounted without the pod
 	// hanging on a node where the file is not there yet.
-	CACert string `json:"caCert"`
+	ClusterCABundle string `json:"clusterCABundle"`
 }
 
 // Registry is NodeConfig's spec.registry.
 type Registry struct {
-	Address string `json:"address"`
-	Path    string `json:"path"`
-	Scheme  string `json:"scheme"`
-	CA      string `json:"ca"`
-	// Auth is base64("user:password"), the form a docker config keeps it in.
-	Auth string `json:"auth"`
+	Address  string `json:"address"`
+	Path     string `json:"path"`
+	Scheme   string `json:"scheme"`
+	CABundle string `json:"caBundle"`
+
+	// Auth is the raw "user:password". The document carries it base64-encoded, the
+	// same value on the wire before and after the field became bytes.
+	Auth []byte `json:"auth"`
 }
 
 // Load reads the document, returning nothing when this node has none.

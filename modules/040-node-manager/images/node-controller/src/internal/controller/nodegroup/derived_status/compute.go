@@ -38,7 +38,7 @@ import (
 const (
 	engineNone = "None"
 	engineMCM  = "MCM"
-	engineCAPI = "CAPI"
+	EngineCAPI = "CAPI"
 )
 
 const useMCMAnnotation = "node.deckhouse.io/use-mcm"
@@ -71,7 +71,7 @@ func defaultEngine(ng *v1.NodeGroup, reg cloudprovider.Registration) string {
 		useMCM := ng.GetAnnotations()[useMCMAnnotation] != ""
 		return defaultCloudEphemeralEngine(reg, useMCM)
 	case ng.Spec.NodeType == v1.NodeTypeStatic && ng.Spec.StaticInstances != nil:
-		return engineCAPI
+		return EngineCAPI
 	default:
 		return engineNone
 	}
@@ -86,11 +86,11 @@ func defaultCloudEphemeralEngine(provider cloudprovider.Registration, useMCM boo
 		if useMCM {
 			return engineMCM
 		}
-		return engineCAPI
+		return EngineCAPI
 	case hasMCM:
 		return engineMCM
 	case hasCAPI:
-		return engineCAPI
+		return EngineCAPI
 	default:
 		return engineNone
 	}
@@ -128,7 +128,7 @@ func engineFrom(ng *v1.NodeGroup, reg cloudprovider.Registration, live machineDe
 			return engineMCM
 		}
 		if live.CAPI {
-			return engineCAPI
+			return EngineCAPI
 		}
 	}
 	return defaultEngine(ng, reg)

@@ -55,26 +55,26 @@ func nodeConfigRolloutInputsChanged(before, after client.Object) bool {
 		!slices.EqualFunc(oldConfig.OwnerReferences, newConfig.OwnerReferences, ownerRefEqual) {
 		return true
 	}
-	// readNEROutcomes counts the extension states and digests off this list, and a node
+	// nerOutcomes counts the extension states and digests off this list, and a node
 	// can change one without touching a condition or the applied generation: the event
 	// has to come from the same object the count is read from.
 	if !slices.Equal(oldConfig.Status.Extensions, newConfig.Status.Extensions) {
 		return true
 	}
-	// readNodeConfigOutcomes counts the static pod states off this list, and it is
+	// nsprOutcomes counts the static pod states and digests off this list, and it is
 	// the only source of those counts: a retry that wrote the manifest moves
 	// nothing else on the object.
 	if !slices.EqualFunc(oldConfig.Status.StaticPods, newConfig.Status.StaticPods, staticPodStatusEqual) {
 		return true
 	}
-	return !conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, configurationAppliedCondition) ||
-		!conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, disruptionRequiredCondition)
+	return !conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, internalv1alpha1.NodeConfigConditionTypeConfigurationApplied) ||
+		!conditionEqual(oldConfig.Status.Conditions, newConfig.Status.Conditions, internalv1alpha1.NodeConfigConditionTypeDisruptionApproved)
 }
 
-// staticPodStatusEqual compares the fields a pass reads: the state the counts
-// are made of, and the reason and message the status republishes.
+// staticPodStatusEqual compares the fields a pass reads: the state and manifest
+// digest the counts are made of, and the reason and message the status republishes.
 func staticPodStatusEqual(a, b internalv1alpha1.StaticPodStatus) bool {
-	if a.Name != b.Name {
+	if a.Name != b.Name || a.ManifestDigest != b.ManifestDigest {
 		return false
 	}
 	return a.State == b.State && a.Reason == b.Reason && a.Message == b.Message
@@ -189,11 +189,9 @@ func membersOfUpdating(configs []internalv1alpha1.NodeConfig,
 		if !holdsSlot(nc, mutable) {
 			continue
 		}
-		// The same carry-over apply() performs: a node keeping what it booted
-		// with is not drift, and reading it as drift would free a slot the node
-		// is genuinely holding.
-		keepBootstrapOnlyFields(&want, &nc.Spec)
-		if !apiequality.Semantic.DeepEqual(nc.Spec, want) {
+		// The comparison apply() makes: a node keeping what it booted with is not
+		// drift, and reading it as drift would free a slot the node is holding.
+		if !apiequality.Semantic.DeepEqual(withoutMachineFields(nc.Spec), withoutMachineFields(want)) {
 			continue
 		}
 		updating[nc.Name] = struct{}{}
@@ -233,7 +231,7 @@ func applied(nc *internalv1alpha1.NodeConfig) bool {
 	// ConfigurationApplied, not phase == Ready: a rolled-back or half-applied
 	// spec rightly holds the rollout, but phase is Degraded for ANY unhealthy
 	// subsystem, and an unrelated fault must not freeze the group forever.
-	cond := meta.FindStatusCondition(nc.Status.Conditions, configurationAppliedCondition)
+	cond := meta.FindStatusCondition(nc.Status.Conditions, internalv1alpha1.NodeConfigConditionTypeConfigurationApplied)
 	if cond == nil || cond.Status != metav1.ConditionTrue {
 		return false
 	}

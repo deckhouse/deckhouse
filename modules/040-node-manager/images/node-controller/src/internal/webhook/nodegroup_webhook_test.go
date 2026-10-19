@@ -229,9 +229,9 @@ func TestValidation_NodeTypeImmutability_SameType(t *testing.T) {
 	}
 }
 
-// A value that is already set is frozen: changing or dropping it re-creates
-// every machine in the group. A group with no value yet is not frozen — the
-// master NodeGroup exists before dhctl applies the manifest naming its systemType.
+// Unset and Mutable mean the same, and a group without bashible nodes may still
+// become Immutable (the master NodeGroup exists before dhctl applies the manifest
+// naming its systemType). Only Immutable is final: leaving it re-creates every machine.
 func TestValidation_SystemTypeImmutability(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -241,10 +241,10 @@ func TestValidation_SystemTypeImmutability(t *testing.T) {
 	}{
 		{name: "recording Immutable on a group with no nodes is allowed", oldType: "", newType: v1.SystemTypeImmutable, wantAllowed: true},
 		{name: "recording Mutable on a group that never named one is allowed", oldType: "", newType: v1.SystemTypeMutable, wantAllowed: true},
+		{name: "changing Mutable to Immutable on a group with no nodes is allowed", oldType: v1.SystemTypeMutable, newType: v1.SystemTypeImmutable, wantAllowed: true},
+		{name: "clearing it on a mutable group is allowed", oldType: v1.SystemTypeMutable, newType: "", wantAllowed: true},
 		{name: "clearing it on an immutable group is denied", oldType: v1.SystemTypeImmutable, newType: ""},
 		{name: "changing Immutable to Mutable is denied", oldType: v1.SystemTypeImmutable, newType: v1.SystemTypeMutable},
-		{name: "changing Mutable to Immutable is denied", oldType: v1.SystemTypeMutable, newType: v1.SystemTypeImmutable},
-		{name: "clearing it on a mutable group is denied", oldType: v1.SystemTypeMutable, newType: ""},
 		{name: "leaving it unset is allowed", oldType: "", newType: "", wantAllowed: true},
 		{name: "leaving it Immutable is allowed", oldType: v1.SystemTypeImmutable, newType: v1.SystemTypeImmutable, wantAllowed: true},
 	}
@@ -255,9 +255,9 @@ func TestValidation_SystemTypeImmutability(t *testing.T) {
 			c := fake.NewClientBuilder().WithScheme(s).Build()
 			w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
-			oldNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+			oldNG := baseNodeGroup("worker", v1.NodeTypeStatic)
 			oldNG.Spec.SystemType = tc.oldType
-			newNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+			newNG := baseNodeGroup("worker", v1.NodeTypeStatic)
 			newNG.Spec.SystemType = tc.newType
 
 			resp := w.Handle(t.Context(), makeAdmissionRequest(t, "UPDATE", newNG, oldNG))
@@ -270,8 +270,8 @@ func TestValidation_SystemTypeImmutability(t *testing.T) {
 			if resp.Result == nil || resp.Result.Code != http.StatusForbidden {
 				t.Fatalf("expected 403, got: %v", resp.Result)
 			}
-			if resp.Result.Message != ".spec.systemType field is immutable once set" {
-				t.Fatalf("message = %q, want %q", resp.Result.Message, ".spec.systemType field is immutable once set")
+			if resp.Result.Message != systemTypeChangedMessage {
+				t.Fatalf("message = %q, want %q", resp.Result.Message, systemTypeChangedMessage)
 			}
 		})
 	}
@@ -312,25 +312,35 @@ func TestValidation_SystemTypeAdoptionChecksNodes(t *testing.T) {
 		},
 	}
 
-	for _, op := range []admissionv1.Operation{admissionv1.Update, admissionv1.Create} {
+	// On CREATE there is no old object at all: deleting a NodeGroup leaves its
+	// nodes behind, so recreating it under the same name arrives here as a
+	// create over live bashible nodes.
+	transitions := []struct {
+		op      admissionv1.Operation
+		oldType v1.SystemType
+	}{
+		{op: admissionv1.Update, oldType: ""},
+		{op: admissionv1.Update, oldType: v1.SystemTypeMutable},
+		{op: admissionv1.Create},
+	}
+
+	for _, tr := range transitions {
 		for _, tc := range tests {
-			t.Run(string(op)+": "+tc.name, func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s from %q: %s", tr.op, tr.oldType, tc.name), func(t *testing.T) {
 				s := newScheme()
 				c := fake.NewClientBuilder().WithScheme(s).WithObjects(tc.nodes...).Build()
 				w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
-				newNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+				newNG := baseNodeGroup("worker", v1.NodeTypeStatic)
 				newNG.Spec.SystemType = v1.SystemTypeImmutable
 
-				// On CREATE there is no old object at all: deleting a NodeGroup
-				// leaves its nodes behind, so recreating it under the same name
-				// arrives here as a create over live bashible nodes.
 				var oldNG *v1.NodeGroup
-				if op == admissionv1.Update {
-					oldNG = baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+				if tr.op == admissionv1.Update {
+					oldNG = baseNodeGroup("worker", v1.NodeTypeStatic)
+					oldNG.Spec.SystemType = tr.oldType
 				}
 
-				resp := w.Handle(t.Context(), makeAdmissionRequest(t, op, newNG, oldNG))
+				resp := w.Handle(t.Context(), makeAdmissionRequest(t, tr.op, newNG, oldNG))
 				if resp.Allowed != tc.wantAllowed {
 					t.Fatalf("Allowed = %v, want %v (result: %v)", resp.Allowed, tc.wantAllowed, resp.Result)
 				}
@@ -342,6 +352,102 @@ func TestValidation_SystemTypeAdoptionChecksNodes(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// Only a CAPI machine boots from a Deckhouse Engine image, so a CloudEphemeral
+// group may become Immutable only when its machines are created through CAPI.
+func TestValidation_SystemTypeImmutableNeedsCAPI(t *testing.T) {
+	capiOnly := map[string][]byte{"type": []byte("openstack"), "capiClusterKind": []byte("OpenStackCluster")}
+	mcmOnly := map[string][]byte{"type": []byte("openstack"), "machineClassKind": []byte("OpenStackMachineClass")}
+	both := map[string][]byte{
+		"type":             []byte("openstack"),
+		"capiClusterKind":  []byte("OpenStackCluster"),
+		"machineClassKind": []byte("OpenStackMachineClass"),
+	}
+
+	tests := []struct {
+		name         string
+		registration map[string][]byte
+		useMCM       bool
+		oldType      v1.SystemType
+		op           admissionv1.Operation
+		wantDenied   string
+	}{
+		{name: "a provider that has only CAPI", registration: capiOnly, op: admissionv1.Create},
+		{name: "a provider that has both, on the CAPI default", registration: both, op: admissionv1.Create},
+		{
+			name: "a provider that has only MCM", registration: mcmOnly, op: admissionv1.Create,
+			wantDenied: `cloud provider "openstack" creates them through MCM`,
+		},
+		{
+			name: "a provider that has both, pinned to MCM", registration: both, useMCM: true, op: admissionv1.Create,
+			wantDenied: `cloud provider "openstack" creates them through MCM`,
+		},
+		{
+			name: "no cloud provider registered", op: admissionv1.Create,
+			wantDenied: "no cloud provider is registered",
+		},
+		{
+			name: "a Mutable group on MCM turning Immutable", registration: mcmOnly, op: admissionv1.Update, oldType: v1.SystemTypeMutable,
+			wantDenied: `cloud provider "openstack" creates them through MCM`,
+		},
+		// Not re-judged once Immutable: an unrelated edit must not depend on the provider.
+		{name: "an Immutable group edited", registration: mcmOnly, op: admissionv1.Update, oldType: v1.SystemTypeImmutable},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newScheme()
+			builder := fake.NewClientBuilder().WithScheme(s)
+			if tc.registration != nil {
+				builder = builder.WithObjects(providermock.DefaultRegistration(tc.registration))
+			}
+			w := &NodeGroupValidator{Client: builder.Build(), decoder: admission.NewDecoder(s)}
+
+			newNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
+			newNG.Spec.SystemType = v1.SystemTypeImmutable
+			if tc.useMCM {
+				newNG.Annotations = map[string]string{"node.deckhouse.io/use-mcm": "true"}
+			}
+			var oldNG *v1.NodeGroup
+			if tc.op == admissionv1.Update {
+				oldNG = newNG.DeepCopy()
+				oldNG.Spec.SystemType = tc.oldType
+			}
+
+			resp := w.Handle(t.Context(), makeAdmissionRequest(t, tc.op, newNG, oldNG))
+			if tc.wantDenied == "" {
+				if !resp.Allowed {
+					t.Fatalf("want allowed, got denied: %v", resp.Result)
+				}
+				return
+			}
+			if resp.Allowed {
+				t.Fatalf("want denied with %q, got allowed", tc.wantDenied)
+			}
+			if !strings.Contains(resp.Result.Message, tc.wantDenied) {
+				t.Fatalf("message = %q, want it to contain %q", resp.Result.Message, tc.wantDenied)
+			}
+		})
+	}
+}
+
+// The CRD of deckhouse.io/v1alpha1 and v1alpha2 cannot refuse this: their Hybrid
+// becomes CloudStatic only at conversion, and the webhook sees every request as v1.
+func TestValidation_SystemTypeImmutableRefusesCloudStatic(t *testing.T) {
+	s := newScheme()
+	w := &NodeGroupValidator{Client: fake.NewClientBuilder().WithScheme(s).Build(), decoder: admission.NewDecoder(s)}
+
+	ng := baseNodeGroup("worker", v1.NodeTypeCloudStatic)
+	ng.Spec.SystemType = v1.SystemTypeImmutable
+
+	resp := w.Handle(t.Context(), makeAdmissionRequest(t, admissionv1.Create, ng, nil))
+	if resp.Allowed {
+		t.Fatal("want denied, got allowed")
+	}
+	if resp.Result.Message != cloudStaticMessage {
+		t.Fatalf("message = %q, want %q", resp.Result.Message, cloudStaticMessage)
 	}
 }
 

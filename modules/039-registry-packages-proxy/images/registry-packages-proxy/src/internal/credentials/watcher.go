@@ -39,6 +39,8 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+var _ registry.ClientConfigGetter = (*Watcher)(nil)
+
 type Watcher struct {
 	k8sClient                     *kubernetes.Clientset
 	k8sDynamicClient              dynamic.Interface

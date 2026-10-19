@@ -71,14 +71,14 @@ type clusterInputs struct {
 	// one, derived from the pod subnet the way bashible derives it. A node that
 	// disagrees with the rest of the fleet skews the scheduler for all of it.
 	DefaultMaxPods int
-	// KubernetesCA is the base64-encoded cluster CA. kubelet loads it from disk
-	// on every start, and on an immutable node that file lives on tmpfs — a
-	// config without it leaves the node unable to start kubelet after a reboot.
+	// KubernetesCA is the cluster CA bundle, PEM. kubelet loads it from disk on
+	// every start, and on an immutable node that file lives on tmpfs — a config
+	// without it leaves the node unable to start kubelet after a reboot.
 	KubernetesCA string
 	// SysextDigests maps an extension name to the image digest to pull.
 	SysextDigests map[string]string
-	// RegistryPackagesProxyToken authenticates against the packages proxy.
-	RegistryPackagesProxyToken string
+	// RegistryPackagesProxyToken authenticates against the packages proxy, raw.
+	RegistryPackagesProxyToken []byte
 	// Platform is what the platform puts on every node bashible configures, and what
 	// its packages claim in the requests' contest (platform.go).
 	Platform platformDocument
@@ -345,11 +345,11 @@ func (s *sourceReader) readRegistry(ctx context.Context) (*internalv1alpha1.Regi
 	}
 
 	registry := &internalv1alpha1.Registry{
-		Address: address,
-		Path:    string(secret.Data[registryPathKey]),
-		Scheme:  strings.ToUpper(string(secret.Data[registrySchemeKey])),
-		CA:      string(secret.Data[registryCAKey]),
-		Auth:    auth,
+		Address:  address,
+		Path:     string(secret.Data[registryPathKey]),
+		Scheme:   strings.ToUpper(string(secret.Data[registrySchemeKey])),
+		CABundle: string(secret.Data[registryCAKey]),
+		Auth:     auth,
 	}
 
 	imagesRepo := string(secret.Data[registryImagesKey])
@@ -387,32 +387,41 @@ func (s *sourceReader) readRegistryUpstream(ctx context.Context) (*internalv1alp
 
 	registry := &internalv1alpha1.Registry{Address: host, Scheme: "HTTPS"}
 	registry.Path, _ = upstream["path"].(string)
-	registry.CA, _ = upstream["ca"].(string)
+	registry.CABundle, _ = upstream["ca"].(string)
 	if scheme, _ := upstream["scheme"].(string); scheme != "" {
 		registry.Scheme = strings.ToUpper(scheme)
 	}
 
-	// Carried the way a docker config carries it, which is what the node and the
-	// resolver both read: base64 of "user:password", or the pre-encoded form as typed.
-	if auth, ok := upstream["auth"].(map[string]any); ok {
-		username, _ := auth["username"].(string)
-		password, _ := auth["password"].(string)
-		if username != "" || password != "" {
-			registry.Auth = base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
-		} else {
-			registry.Auth, _ = auth["auth"].(string)
-		}
+	auth, err := upstreamAuth(upstream)
+	if err != nil {
+		return nil, "", false, fmt.Errorf("read the upstream credentials from %s %s: %w", registryConfigKind, registryConfigName, err)
 	}
-
+	registry.Auth = auth
 	return registry, host + registry.Path, true, nil
 }
 
-// registryAuth pulls one registry's credentials out of a docker config. No
+// upstreamAuth is the raw "user:password" of the registry module's upstream: given as
+// a pair, or pre-encoded the way a docker config's auth field carries it.
+func upstreamAuth(upstream map[string]any) ([]byte, error) {
+	auth, ok := upstream["auth"].(map[string]any)
+	if !ok {
+		return nil, nil
+	}
+	username, _ := auth["username"].(string)
+	password, _ := auth["password"].(string)
+	if username != "" || password != "" {
+		return []byte(username + ":" + password), nil
+	}
+	encoded, _ := auth["auth"].(string)
+	return decodeDockerAuth(encoded)
+}
+
+// registryAuth pulls one registry's raw "user:password" out of a docker config. No
 // credentials is fine (anonymous pull), but an unparsable config is an error —
 // treating it as anonymous fails against a private registry with no cause shown.
-func registryAuth(dockerConfig []byte, address string) (string, error) {
+func registryAuth(dockerConfig []byte, address string) ([]byte, error) {
 	if len(dockerConfig) == 0 {
-		return "", nil
+		return nil, nil
 	}
 	var config struct {
 		Auths map[string]struct {
@@ -420,9 +429,22 @@ func registryAuth(dockerConfig []byte, address string) (string, error) {
 		} `json:"auths"`
 	}
 	if err := json.Unmarshal(dockerConfig, &config); err != nil {
-		return "", fmt.Errorf("parse %s: %w", registryDockerConfigKey, err)
+		return nil, fmt.Errorf("parse %s: %w", registryDockerConfigKey, err)
 	}
-	return config.Auths[address].Auth, nil
+	return decodeDockerAuth(config.Auths[address].Auth)
+}
+
+// decodeDockerAuth turns the base64 auth field of a docker config into the raw
+// "user:password" NodeConfig carries; empty stays empty.
+func decodeDockerAuth(encoded string) ([]byte, error) {
+	if encoded == "" {
+		return nil, nil
+	}
+	raw, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil, fmt.Errorf("decode the registry credentials: %w", err)
+	}
+	return raw, nil
 }
 
 // readRegistryAgentMode reports whether the registry module has handed
@@ -475,9 +497,9 @@ func (s *sourceReader) readNodeStaticPodRequests(ctx context.Context) ([]deckhou
 	return list.Items, nil
 }
 
-// readClusterCA returns the cluster CA, base64-encoded the way the NodeConfig
-// carries it. It comes from the ConfigMap Kubernetes publishes for every
-// ServiceAccount, so there is nothing module-specific to keep in sync.
+// readClusterCA returns the cluster CA bundle, PEM. It comes from the ConfigMap
+// Kubernetes publishes for every ServiceAccount, so there is nothing
+// module-specific to keep in sync.
 func (s *sourceReader) readClusterCA(ctx context.Context) (string, error) {
 	cm := &corev1.ConfigMap{}
 	if err := s.Reader.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: clusterCAConfigMap}, cm); err != nil {
@@ -487,7 +509,7 @@ func (s *sourceReader) readClusterCA(ctx context.Context) (string, error) {
 	if ca == "" {
 		return "", fmt.Errorf("configmap %s/%s carries no %s", kubeSystemNS, clusterCAConfigMap, clusterCAKey)
 	}
-	return base64.StdEncoding.EncodeToString([]byte(ca)), nil
+	return ca, nil
 }
 
 // readAPIServerEndpoints merges control-plane pod IPs with the kubernetes
@@ -757,18 +779,16 @@ func pickKubeletDigest(packages map[string]string, kubernetesVersion string) str
 	return best
 }
 
-// readPackagesProxyToken returns the token the node presents to the registry
-// packages proxy, base64-encoded the way the on-node agent expects it.
-func (s *sourceReader) readPackagesProxyToken(ctx context.Context) (string, error) {
+// readPackagesProxyToken returns the raw token the node presents to the registry
+// packages proxy; the NodeConfig field encodes it on the wire.
+func (s *sourceReader) readPackagesProxyToken(ctx context.Context) ([]byte, error) {
 	secret := &corev1.Secret{}
 	if err := s.Reader.Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: registryPackagesProxyTokenSecret}, secret); err != nil {
-		return "", fmt.Errorf("read registry packages proxy token: %w", err)
+		return nil, fmt.Errorf("read registry packages proxy token: %w", err)
 	}
 	token, ok := secret.Data[registryPackagesProxyTokenKey]
 	if !ok || len(token) == 0 {
-		return "", fmt.Errorf("secret %s/%s has no %q key", cloudInstanceManagerNS, registryPackagesProxyTokenSecret, registryPackagesProxyTokenKey)
+		return nil, fmt.Errorf("secret %s/%s has no %q key", cloudInstanceManagerNS, registryPackagesProxyTokenSecret, registryPackagesProxyTokenKey)
 	}
-	// The agent decodes the field before use, and the secret already holds the
-	// raw token, so hand it over encoded.
-	return base64.StdEncoding.EncodeToString(token), nil
+	return token, nil
 }

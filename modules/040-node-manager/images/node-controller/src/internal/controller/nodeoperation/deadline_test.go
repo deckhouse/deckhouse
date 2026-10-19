@@ -36,9 +36,18 @@ func TestHardDeadline(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{CreationTimestamp: metav1.Time{Time: created}},
 	}
 
-	t.Run("a queued operation is bounded from its creation", func(t *testing.T) {
-		require.Equal(t, created.Add(operationTimeout), hardDeadline(op))
-		require.True(t, time.Now().After(hardDeadline(op)), "two hours queued is past the bound")
+	// An approval an operator gave an hour after the request was made: measured
+	// from creation, the operation would fail before it touched the node.
+	t.Run("an operation not yet started is not bounded from its creation", func(t *testing.T) {
+		require.False(t, time.Now().After(hardDeadline(op)), "the clock starts when the operation may go ahead")
+	})
+
+	t.Run("a queued operation is bounded from when its clock started", func(t *testing.T) {
+		pinned := created.Add(time.Hour)
+		op.Status.Deadline = ptr.To(metav1.NewTime(pinned))
+
+		require.Equal(t, pinned, hardDeadline(op))
+		require.True(t, time.Now().After(hardDeadline(op)), "a pinned deadline in the past is past the bound")
 	})
 
 	t.Run("asking for an eviction extends it to that eviction's own bound", func(t *testing.T) {
@@ -79,10 +88,11 @@ func TestTimedOut(t *testing.T) {
 	deadline := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		name       string
-		op         v1alpha1.NodeOperation
-		expReason  string
-		expMessage string
+		name          string
+		op            v1alpha1.NodeOperation
+		evictionError string
+		expReason     string
+		expMessage    string
 	}{
 		{
 			name: "waiting for the eviction names the node holding the group",
@@ -90,7 +100,17 @@ func TestTimedOut(t *testing.T) {
 				Spec: v1alpha1.NodeOperationSpec{NodeName: "worker-1"},
 			},
 			expReason:  "PreparationTimedOut",
-			expMessage: "node worker-1 was not prepared by 2026-08-04T12:00:00Z: its workload has not finished leaving",
+			expMessage: "node worker-1 was not drained by 2026-08-04T12:00:00Z",
+		},
+		{
+			name: "an eviction that kept failing says why",
+			op: v1alpha1.NodeOperation{
+				Spec: v1alpha1.NodeOperationSpec{NodeName: "worker-1"},
+			},
+			evictionError: "Cannot evict pod as it would violate the pod disruption budget",
+			expReason:     "PreparationTimedOut",
+			expMessage: "node worker-1 was not drained by 2026-08-04T12:00:00Z. Last eviction error: " +
+				"Cannot evict pod as it would violate the pod disruption budget",
 		},
 		{
 			name: "waiting for the node names the node that went quiet",
@@ -105,7 +125,7 @@ func TestTimedOut(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			reason, message := timedOut(&tc.op, deadline)
+			reason, message := timedOut(&tc.op, deadline, tc.evictionError)
 			require.Equal(t, tc.expReason, reason)
 			require.Equal(t, tc.expMessage, message)
 		})

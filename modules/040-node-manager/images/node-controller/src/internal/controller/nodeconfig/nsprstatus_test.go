@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
@@ -29,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -61,21 +63,23 @@ func immutableGroup(name string) *v1.NodeGroup {
 // nodes they cannot log in to.
 func TestNSPRStatusReportsResolutionAndCounts(t *testing.T) {
 	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	node := nodeInGroup("worker-0", "worker")
 	cl := fake.NewClientBuilder().
 		WithScheme(nsprStatusScheme(t)).
 		WithObjects(
 			&object,
 			immutableGroup("worker"),
+			&node,
 			nodeConfigWithPod("worker-0",
 				[]internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: podManifest("registry-agent")}},
-				[]internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Written"}}),
+				[]internalv1alpha1.StaticPodStatus{writtenPod("registry-agent", podManifest("registry-agent"))}),
 		).
 		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
 		Build()
 
 	r := &Reconciler{}
 	r.Client = cl
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
@@ -83,8 +87,11 @@ func TestNSPRStatusReportsResolutionAndCounts(t *testing.T) {
 	require.Equal(t, int32(1), fresh.Status.AppliedNodes)
 	require.Equal(t, int32(0), fresh.Status.FailedNodes)
 	require.Equal(t, []string{"worker"}, fresh.Status.MatchedNodeGroups)
+	require.True(t, meta.IsStatusConditionTrue(fresh.Status.Conditions, acceptedConditionType))
 	require.True(t, meta.IsStatusConditionTrue(fresh.Status.Conditions, readyConditionType))
-	require.Equal(t, reasonResolved, meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType).Reason)
+	ready := meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType)
+	require.Equal(t, reasonAllNodesApplied, ready.Reason)
+	require.Equal(t, "1 of 1 node(s) wrote the current manifest", ready.Message)
 }
 
 // A manifest this controller refused never reaches a node, so nothing but its
@@ -99,14 +106,15 @@ func TestNSPRStatusReportsTheRefusal(t *testing.T) {
 
 	r := &Reconciler{}
 	r.Client = cl
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "broken"}, fresh))
 	require.Equal(t, phaseDegraded, fresh.Status.Phase)
-	condition := meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType)
+	condition := meta.FindStatusCondition(fresh.Status.Conditions, acceptedConditionType)
 	require.Equal(t, metav1.ConditionFalse, condition.Status)
 	require.Equal(t, reasonInvalidManifest, condition.Reason)
+	require.Equal(t, reasonNotAccepted, meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType).Reason)
 }
 
 // It resolved here and the nodes refused it: reporting Ready on the strength of
@@ -131,17 +139,17 @@ func TestNSPRStatusReportsWhatTheNodesRefused(t *testing.T) {
 
 	r := &Reconciler{}
 	r.Client = cl
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
 	require.Equal(t, phaseDegraded, fresh.Status.Phase)
 	require.Equal(t, int32(1), fresh.Status.FailedNodes)
-	require.Equal(t, reasonRefusedByNodes,
-		meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType).Reason)
+	ready := meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType)
+	require.Equal(t, reasonRefusedByNodes, ready.Reason)
 	// Reason first: which of the three refusals it was decides whether the
 	// operator edits this object or goes and looks at the node.
-	require.Contains(t, fresh.Status.FailureMessage, "WriteFailed: read-only file system")
+	require.Contains(t, ready.Message, "WriteFailed: read-only file system")
 }
 
 // A pass that cannot read the fleet knows nothing about it, and zero counts are
@@ -150,9 +158,12 @@ func TestNSPRStatusReportsWhatTheNodesRefused(t *testing.T) {
 func TestNSPRStatusIsNotPublishedFromAFleetThatCouldNotBeRead(t *testing.T) {
 	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
 	object.Status = deckhousev1alpha1.NodeStaticPodRequestStatus{
-		Phase:          phaseDegraded,
-		FailedNodes:    50,
-		FailureMessage: "read-only file system",
+		Phase:       phaseDegraded,
+		FailedNodes: 50,
+		Conditions: []metav1.Condition{{
+			Type: readyConditionType, Status: metav1.ConditionFalse, Reason: reasonRefusedByNodes,
+			Message: "50 of 50 node(s) refused the static pod, 0 wrote it: read-only file system", LastTransitionTime: metav1.Now(),
+		}},
 	}
 	cl := fake.NewClientBuilder().
 		WithScheme(nsprStatusScheme(t)).
@@ -170,18 +181,18 @@ func TestNSPRStatusIsNotPublishedFromAFleetThatCouldNotBeRead(t *testing.T) {
 
 	r := &Reconciler{}
 	r.Client = cl
-	require.Error(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()),
+	require.Error(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()),
 		"the pass has to be retried, not counted as a successful report")
 
 	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
 	require.Equal(t, int32(50), fresh.Status.FailedNodes)
-	require.Equal(t, "read-only file system", fresh.Status.FailureMessage)
+	require.Contains(t, meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType).Message, "read-only file system")
 }
 
-// Nobody has reported yet is Ready with no applied nodes, not Degraded: painting
-// every object red for a minute teaches an operator to ignore the colour. And an
-// identical status is not rewritten: each write wakes every watcher of the kind.
+// Nobody has reported yet is Pending, not Degraded: painting every object red for a
+// minute teaches an operator to ignore the colour. And an identical status is not
+// rewritten: each write wakes every watcher of the kind.
 func TestNSPRStatusSettlesAndIsNotRewritten(t *testing.T) {
 	object := nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{})
 	node := nodeInGroup("worker-0", "worker")
@@ -193,16 +204,16 @@ func TestNSPRStatusSettlesAndIsNotRewritten(t *testing.T) {
 
 	r := &Reconciler{}
 	r.Client = cl
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 	written := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, written))
 	require.Equal(t, written.Generation, written.Status.ObservedGeneration)
-	require.Equal(t, phaseReady, written.Status.Phase)
+	require.Equal(t, phasePending, written.Status.Phase)
 	require.Equal(t, int32(0), written.Status.AppliedNodes)
-	require.Equal(t, reasonResolved, meta.FindStatusCondition(written.Status.Conditions, readyConditionType).Reason)
+	require.Equal(t, reasonRolloutInProgress, meta.FindStatusCondition(written.Status.Conditions, readyConditionType).Reason)
 
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 	again := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, again))
 	require.Equal(t, written.ResourceVersion, again.ResourceVersion, "an unchanged status must not be patched")
@@ -230,7 +241,7 @@ func TestTheStatusWriteCarriesEveryCounter(t *testing.T) {
 
 	r := &Reconciler{}
 	r.Client = cl
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 	require.Len(t, patches, 1)
 	for _, counter := range []string{"matchedNodes", "appliedNodes", "failedNodes", "pendingNodes"} {
@@ -238,13 +249,12 @@ func TestTheStatusWriteCarriesEveryCounter(t *testing.T) {
 	}
 }
 
-// The status is written whole, so a field that went empty is gone: a refusal the
-// nodes took back must not leave its message behind.
+// The status is written whole, so a field that went empty is gone: a group the
+// selector no longer matches must not stay listed.
 func TestTheStatusWriteClearsWhatWentEmpty(t *testing.T) {
 	object := nspr("static-pod", deckhousev1alpha1.NodeStaticPodRequestSpec{})
 	object.Status = deckhousev1alpha1.NodeStaticPodRequestStatus{
-		Phase: phaseDegraded, FailedNodes: 1, FailureMessage: "read-only file system",
-		MatchedNodeGroups: []string{"gone"},
+		Phase: phaseDegraded, FailedNodes: 1, MatchedNodeGroups: []string{"gone"},
 	}
 	node := nodeInGroup("worker-0", "worker")
 	cl := fake.NewClientBuilder().
@@ -252,17 +262,16 @@ func TestTheStatusWriteClearsWhatWentEmpty(t *testing.T) {
 		WithObjects(&object, immutableGroup("worker"), &node,
 			nodeConfigWithPod("worker-0",
 				[]internalv1alpha1.StaticPod{{Name: "static-pod", Manifest: podManifest("static-pod")}},
-				[]internalv1alpha1.StaticPodStatus{{Name: "static-pod", State: "Written"}})).
+				[]internalv1alpha1.StaticPodStatus{writtenPod("static-pod", podManifest("static-pod"))})).
 		WithStatusSubresource(&deckhousev1alpha1.NodeStaticPodRequest{}).
 		Build()
 
 	r := &Reconciler{}
 	r.Client = cl
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "static-pod"}, fresh))
-	require.Empty(t, fresh.Status.FailureMessage)
 	require.Equal(t, []string{"worker"}, fresh.Status.MatchedNodeGroups)
 	require.Equal(t, int32(0), fresh.Status.FailedNodes)
 }
@@ -273,8 +282,8 @@ func TestTheStatusSaysHowManyNodesWereAskedAndHowManyHaveNotAnswered(t *testing.
 		nodeInGroup("worker-0", "worker"), nodeInGroup("worker-1", "worker"),
 		nodeInGroup("worker-2", "worker"), nodeInGroup("master-0", "master"),
 	}
-	if got := matchedNodeCount(nodes, []string{"worker"}); got != 3 {
-		t.Fatalf("matchedNodeCount = %d, want 3", got)
+	if got := matchedNodes(nodes, []string{"worker"}); len(got) != 3 {
+		t.Fatalf("matchedNodes = %v, want the 3 workers", got)
 	}
 	if got := pendingNodeCount(3, 1, 1); got != 1 {
 		t.Fatalf("pendingNodeCount = %d, want 1", got)
@@ -298,7 +307,7 @@ func TestNSPRStatusCountsTheNodesOfEveryGroup(t *testing.T) {
 	pendingNode := nodeInGroup("engine-1", "engine")
 	bashibleNode := nodeInGroup("worker-0", "worker")
 	legacyNode := nodeInGroup("legacy-0", "legacy")
-	written := []internalv1alpha1.StaticPodStatus{{Name: "static-pod", State: "Written"}}
+	written := []internalv1alpha1.StaticPodStatus{writtenPod("static-pod", podManifest("static-pod"))}
 	pods := []internalv1alpha1.StaticPod{{Name: "static-pod", Manifest: podManifest("static-pod")}}
 	cl := fake.NewClientBuilder().
 		WithScheme(nsprStatusScheme(t)).
@@ -316,7 +325,7 @@ func TestNSPRStatusCountsTheNodesOfEveryGroup(t *testing.T) {
 
 	r := &Reconciler{}
 	r.Client = cl
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "static-pod"}, fresh))
@@ -347,7 +356,7 @@ func TestNSPRStatusLeavesTheRegistryAgentToBashible(t *testing.T) {
 
 	r := &Reconciler{}
 	r.Client = cl
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 	for _, name := range []string{"registry-agent", "agent-copy"} {
 		fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
@@ -376,7 +385,7 @@ func TestTheCapOnABashibleGroupLeavesTheRegistryAgentOut(t *testing.T) {
 
 	r := &Reconciler{}
 	r.Client = cl
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 	for _, name := range []string{fmt.Sprintf("pod-%02d", maxStaticPods-1), "registry-agent"} {
 		fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
@@ -408,11 +417,12 @@ func TestNSPRStatusRefusedHereLeavesNothingPending(t *testing.T) {
 
 	r := &Reconciler{}
 	r.Client = cl
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "broken"}, fresh))
 	require.Equal(t, int32(0), fresh.Status.PendingNodes, "nothing was handed to a node")
+	require.Empty(t, fresh.Status.Nodes, "no node owes an answer")
 	require.Equal(t, int32(2), fresh.Status.MatchedNodes, "how many nodes the selector covers is still the answer")
 }
 
@@ -429,7 +439,7 @@ func TestNSPRStatusRefusedByTheNodesKeepsItsArithmetic(t *testing.T) {
 			&object, immutableGroup("worker"), &first, &second, &silent,
 			nodeConfigWithPod("worker-0",
 				[]internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: podManifest("registry-agent")}},
-				[]internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Written"}}),
+				[]internalv1alpha1.StaticPodStatus{writtenPod("registry-agent", podManifest("registry-agent"))}),
 			nodeConfigWithPod("worker-1",
 				[]internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: podManifest("registry-agent")}},
 				[]internalv1alpha1.StaticPodStatus{{
@@ -442,7 +452,7 @@ func TestNSPRStatusRefusedByTheNodesKeepsItsArithmetic(t *testing.T) {
 
 	r := &Reconciler{}
 	r.Client = cl
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
@@ -479,7 +489,7 @@ func TestARenderFailureDoesNotFreezeTheRequestStatuses(t *testing.T) {
 
 	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "registry-agent"}, fresh))
-	require.Equal(t, phaseReady, fresh.Status.Phase, "the status reads its own inputs and they were readable")
+	require.Equal(t, phasePending, fresh.Status.Phase, "the status reads its own inputs and they were readable")
 	require.Equal(t, int32(1), fresh.Status.MatchedNodes)
 }
 
@@ -499,24 +509,24 @@ func TestNSPRStatusReportsTheObjectTheCapLeftOut(t *testing.T) {
 
 	r := &Reconciler{}
 	r.Client = cl
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 	dropped := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: fmt.Sprintf("pod-%02d", maxStaticPods)}, dropped))
 	require.Equal(t, phaseDegraded, dropped.Status.Phase)
-	condition := meta.FindStatusCondition(dropped.Status.Conditions, readyConditionType)
+	condition := meta.FindStatusCondition(dropped.Status.Conditions, acceptedConditionType)
 	require.Equal(t, metav1.ConditionFalse, condition.Status)
 	require.Equal(t, reasonLimitExceeded, condition.Reason)
 	require.Contains(t, condition.Message, "engine")
 
 	kept := &deckhousev1alpha1.NodeStaticPodRequest{}
 	require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: "pod-00"}, kept))
-	require.Equal(t, phaseReady, kept.Status.Phase)
+	require.True(t, meta.IsStatusConditionTrue(kept.Status.Conditions, acceptedConditionType))
 }
 
 // A request that reaches no node is not broken, so it stays Ready for
-// `kubectl wait`, but "0 of 0 node(s)" under Resolved told nobody why: the
-// reason says whether bashible serves it or what keeps it from every node.
+// `kubectl wait`, and the reason says whether bashible serves it or what keeps it
+// from every node. One with nodes that have not answered yet is Pending.
 func TestNSPRStatusSaysWhyARequestReachesNoNode(t *testing.T) {
 	engineNode := nodeInGroup("engine-0", "engine")
 	workerNode := nodeInGroup("worker-0", "worker")
@@ -530,29 +540,30 @@ func TestNSPRStatusSaysWhyARequestReachesNoNode(t *testing.T) {
 		name          string
 		request       *deckhousev1alpha1.NodeStaticPodRequest
 		reason        string
+		phase         string
 		matchedGroups []string
 		matchedNodes  int32
 		mentions      []string
 	}{
 		{
-			name: "a request with nodes is resolved", request: selecting("static-pod", "engine"),
-			reason: reasonResolved, matchedGroups: []string{"engine"}, matchedNodes: 1,
+			name: "a request with nodes waits for them", request: selecting("static-pod", "engine"),
+			reason: reasonRolloutInProgress, phase: phasePending, matchedGroups: []string{"engine"}, matchedNodes: 1,
 		},
 		{
-			name: "a request on a bashible group with nodes is resolved", request: selecting("static-pod", "worker"),
-			reason: reasonResolved, matchedGroups: []string{"worker"}, matchedNodes: 1,
+			name: "a request on a bashible group with nodes waits for them", request: selecting("static-pod", "worker"),
+			reason: reasonRolloutInProgress, phase: phasePending, matchedGroups: []string{"worker"}, matchedNodes: 1,
 		},
 		{
 			name: "bashible serves registry-agent on its own groups", request: selecting("registry-agent", "worker"),
-			reason: "ServedByBashible", matchedGroups: []string{"worker"}, mentions: []string{"worker"},
+			reason: "ServedByBashible", phase: phaseReady, matchedGroups: []string{"worker"}, mentions: []string{"worker"},
 		},
 		{
 			name: "the selector names no existing group", request: selecting("static-pod", "ghost"),
-			reason: "NoNodesSelected", mentions: []string{"ghost"},
+			reason: "NoNodesSelected", phase: phaseReady, mentions: []string{"ghost"},
 		},
 		{
 			name: "the selected group has no nodes", request: selecting("static-pod", "empty"),
-			reason: "NoNodesSelected", matchedGroups: []string{"empty"}, mentions: []string{"empty", "no nodes"},
+			reason: "NoNodesSelected", phase: phaseReady, matchedGroups: []string{"empty"}, mentions: []string{"empty", "no nodes"},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -565,13 +576,13 @@ func TestNSPRStatusSaysWhyARequestReachesNoNode(t *testing.T) {
 
 			r := &Reconciler{}
 			r.Client = cl
-			require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+			require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 			fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
 			require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: tc.request.Name}, fresh))
 			condition := meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType)
-			require.Equal(t, metav1.ConditionTrue, condition.Status, "a request that reaches no node is not broken")
-			require.Equal(t, phaseReady, fresh.Status.Phase)
+			require.Equal(t, tc.phase == phaseReady, condition.Status == metav1.ConditionTrue, "Ready follows the phase")
+			require.Equal(t, tc.phase, fresh.Status.Phase)
 			require.Equal(t, tc.reason, condition.Reason)
 			require.Equal(t, tc.matchedGroups, fresh.Status.MatchedNodeGroups)
 			require.Equal(t, tc.matchedNodes, fresh.Status.MatchedNodes)
@@ -603,13 +614,141 @@ func TestNSPRStatusDoesNotWaitForTheRenderInputsOfABashibleNode(t *testing.T) {
 	r := &Reconciler{}
 	r.Client = cl
 	r.sources = sourceReaderOver(cl)
-	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard()))
+	require.NoError(t, r.reconcileNSPRStatuses(context.Background(), logr.Discard(), newPass()))
 
 	for name, group := range map[string]string{"engine-pod": "engine", "worker-pod": "worker"} {
 		fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
 		require.NoError(t, cl.Get(context.Background(), types.NamespacedName{Name: name}, fresh))
 		require.Equal(t, []string{group}, fresh.Status.MatchedNodeGroups, name)
 		require.Equal(t, int32(1), fresh.Status.MatchedNodes, name)
-		require.Equal(t, reasonResolved, meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType).Reason, name)
+		require.True(t, meta.IsStatusConditionTrue(fresh.Status.Conditions, acceptedConditionType), name)
 	}
+}
+
+func nsprStatusOf(t *testing.T, cl client.Client, name string) deckhousev1alpha1.NodeStaticPodRequestStatus {
+	t.Helper()
+	fresh := &deckhousev1alpha1.NodeStaticPodRequest{}
+	require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: name}, fresh))
+	return fresh.Status
+}
+
+// A node that will not run the revision carrying the manifest has refused it, whether it
+// rolled the revision back or node-manager's approval to interrupt it failed; the message
+// names each such node, so the operator knows which nodes to look at.
+func TestNSPRStatusCountsTheNodesThatFailedTheRevisionCarryingIt(t *testing.T) {
+	object := nspr("static-pod", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	carrying := []internalv1alpha1.StaticPod{{Name: "static-pod", Manifest: podManifest("static-pod")}}
+	runs := nodeConfigWithPod("worker-0", carrying, []internalv1alpha1.StaticPodStatus{writtenPod("static-pod", podManifest("static-pod"))})
+	rolledBack := nodeConfigWithPod("worker-1", carrying, nil)
+	rolledBack.Generation, rolledBack.Status.AppliedGeneration = 4, 3
+	rolledBack.Status.Conditions = []metav1.Condition{{
+		Type: internalv1alpha1.NodeConfigConditionTypeConfigurationApplied, Status: metav1.ConditionFalse, Reason: "RolledBackToLastKnownGood",
+		ObservedGeneration: 4, Message: "kubelet: the unit did not start", LastTransitionTime: metav1.Now(),
+	}}
+	drainFailed := nodeConfigWithPod("worker-2", carrying, nil)
+	waitingForApproval(drainFailed, "uid-2", 4)
+	failed := approvalOf("worker-2", "disruption-worker-2-0", "uid-2", 4, deckhousev1alpha1.NodeOperationPhaseFailed,
+		"the eviction of node worker-2 did not finish in time")
+	failed.Status.FinishedAt = ptr.To(metav1.NewTime(time.Date(2026, time.January, 1, 8, 0, 0, 0, time.UTC)))
+	objects := []client.Object{&object, immutableGroup("worker"), runs, rolledBack, drainFailed, failed}
+	for _, name := range []string{"worker-0", "worker-1", "worker-2"} {
+		node := nodeInGroup(name, "worker")
+		objects = append(objects, &node)
+	}
+	cl := nerStatusCluster(t, objects...)
+
+	require.NoError(t, nerStatusReconciler(cl).reconcileNSPRStatuses(t.Context(), logr.Discard(), newPass()))
+
+	status := nsprStatusOf(t, cl, "static-pod")
+	require.Equal(t, int32(1), status.AppliedNodes)
+	require.Equal(t, int32(2), status.FailedNodes)
+	require.Equal(t, phaseDegraded, status.Phase)
+	ready := meta.FindStatusCondition(status.Conditions, readyConditionType)
+	require.Equal(t, reasonRefusedByNodes, ready.Reason)
+	require.Equal(t, "2 of 3 node(s) refused the static pod, 1 wrote it: "+
+		"node worker-1: RolledBackToLastKnownGood: kubelet: the unit did not start; "+
+		"node worker-2: NodeOperation disruption-worker-2-0 failed: the eviction of node worker-2 did not finish in time. "+
+		"Attempt 2 of 3 is requested at 2026-01-01T08:01:00Z",
+		ready.Message)
+	require.Equal(t, []deckhousev1alpha1.RequestNodeStatus{
+		{Name: "worker-1", State: deckhousev1alpha1.RequestNodeStateFailed, Message: "RolledBackToLastKnownGood: kubelet: the unit did not start"},
+		{Name: "worker-2", State: deckhousev1alpha1.RequestNodeStateFailed,
+			Message: "NodeOperation disruption-worker-2-0 failed: the eviction of node worker-2 did not finish in time. " +
+				"Attempt 2 of 3 is requested at 2026-01-01T08:01:00Z"},
+	}, status.Nodes)
+}
+
+// The retry after a failed attempt waiting for an operator leaves the failure a refusal, as for
+// a NodeExtensionRequest: both read the node's refusal from nodeRefusal.
+func TestNSPRStatusCountsAFailedAttemptWhileTheRetryWaitsForAnOperator(t *testing.T) {
+	object := nspr("static-pod", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	config := nodeConfigWithPod("worker-0", []internalv1alpha1.StaticPod{{Name: "static-pod", Manifest: podManifest("static-pod")}}, nil)
+	waitingForApproval(config, "uid-0", 4)
+	node := nodeInGroup("worker-0", "worker")
+	cl := nerStatusCluster(t, &object, immutableGroup("worker"), &node, config,
+		approvalOf("worker-0", "disruption-worker-0-0", "uid-0", 4, deckhousev1alpha1.NodeOperationPhaseFailed,
+			"module example: no example.ko found"),
+		approval("disruption-worker-0-1", "uid-0", 4, false, deckhousev1alpha1.NodeOperationPhasePending))
+
+	require.NoError(t, nerStatusReconciler(cl).reconcileNSPRStatuses(t.Context(), logr.Discard(), newPass()))
+
+	status := nsprStatusOf(t, cl, "static-pod")
+	require.Equal(t, int32(1), status.FailedNodes)
+	require.Equal(t, phaseDegraded, status.Phase)
+	ready := meta.FindStatusCondition(status.Conditions, readyConditionType)
+	require.Equal(t, reasonRefusedByNodes, ready.Reason)
+	require.Equal(t, "1 of 1 node(s) refused the static pod, 0 wrote it: "+
+		"node worker-0: NodeOperation disruption-worker-0-0 failed: module example: no example.ko found. "+
+		"Attempt 2 of 3, NodeOperation disruption-worker-0-1, waits for an operator to set spec.approved to true",
+		ready.Message)
+}
+
+// The pending list names five nodes and counts the rest, so a large group still gets a
+// message under the size of a condition; a node whose agent does not know a field of its
+// configuration says so.
+func TestNSPRStatusNamesFivePendingNodesAndCountsTheRest(t *testing.T) {
+	object := nspr("static-pod", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	oldAgent := nodeConfigWithPod("worker-0", []internalv1alpha1.StaticPod{{Name: "static-pod", Manifest: podManifest("static-pod")}}, nil)
+	oldAgent.Status.Conditions = []metav1.Condition{{
+		Type: internalv1alpha1.NodeConfigConditionTypeConfigurationApplied, Status: metav1.ConditionTrue, Reason: "UnknownFields",
+		Message: "the node does not apply spec.staticPods", LastTransitionTime: metav1.Now(),
+	}}
+	objects := []client.Object{&object, immutableGroup("worker"), oldAgent}
+	for i := range 7 {
+		node := nodeInGroup(fmt.Sprintf("worker-%d", i), "worker")
+		objects = append(objects, &node)
+	}
+	cl := nerStatusCluster(t, objects...)
+
+	require.NoError(t, nerStatusReconciler(cl).reconcileNSPRStatuses(t.Context(), logr.Discard(), newPass()))
+
+	ready := meta.FindStatusCondition(nsprStatusOf(t, cl, "static-pod").Conditions, readyConditionType)
+	require.Equal(t, reasonRolloutInProgress, ready.Reason)
+	require.Equal(t, "0 of 7 node(s) wrote the current manifest; 7 pending: "+
+		"node worker-0: the node agent does not support some fields of its NodeConfig: the node does not apply spec.staticPods; "+
+		"node worker-1: the node has no NodeConfig yet; node worker-2: the node has no NodeConfig yet; "+
+		"node worker-3: the node has no NodeConfig yet; node worker-4: the node has no NodeConfig yet; and 2 more",
+		ready.Message)
+}
+
+// A node held on an older generation — for an approval of an unrelated change, or behind the
+// rollout slot — still runs a manifest the request did not change, and is counted applied by
+// the digest of the manifest it wrote: a held revision must not turn every request pending.
+func TestNSPRStatusCountsAHeldNodeThatRunsTheManifest(t *testing.T) {
+	object := nspr("static-pod", deckhousev1alpha1.NodeStaticPodRequestSpec{})
+	held := nodeConfigWithPod("worker-0",
+		[]internalv1alpha1.StaticPod{{Name: "static-pod", Manifest: podManifest("static-pod")}},
+		[]internalv1alpha1.StaticPodStatus{writtenPod("static-pod", podManifest("static-pod"))})
+	held.Status.AppliedGeneration = 2
+	waitingForApproval(held, "uid-0", 3)
+	node := nodeInGroup("worker-0", "worker")
+	cl := nerStatusCluster(t, &object, immutableGroup("worker"), held, &node,
+		approvalOf("worker-0", "disruption-worker-0-0", "uid-0", 3, deckhousev1alpha1.NodeOperationPhasePending, ""))
+
+	require.NoError(t, nerStatusReconciler(cl).reconcileNSPRStatuses(t.Context(), logr.Discard(), newPass()))
+
+	status := nsprStatusOf(t, cl, "static-pod")
+	require.Equal(t, int32(1), status.AppliedNodes)
+	require.Equal(t, phaseReady, status.Phase)
+	require.Equal(t, reasonAllNodesApplied, meta.FindStatusCondition(status.Conditions, readyConditionType).Reason)
 }

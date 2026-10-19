@@ -21,6 +21,7 @@ package nodeconfig
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -122,6 +123,16 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// queue. The CRD is a hard dependency for the same reason as the one above.
 	w.Watches(&deckhousev1alpha1.NodeStaticPodRequest{}, allMapper,
 		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	// A disruption approval that ends moves nothing on the node when it failed before the
+	// node was let go (a drain that timed out), yet the request statuses name it. One that is
+	// collected frees an attempt. No other type of operation is read here.
+	w.Watches(&deckhousev1alpha1.NodeOperation{}, allMapper, builder.WithPredicates(predicate.Funcs{
+		CreateFunc: func(event.CreateEvent) bool { return false },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return isDisruption(e.ObjectNew) && operationPhaseChanged(e.ObjectOld, e.ObjectNew)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool { return isDisruption(e.Object) },
+	}))
 	// The registry module's answer to who writes containerd's registry.d. Without
 	// this watch the switch reaches no node until something else enqueues a pass,
 	// and no resync period is set. The predicate is mandatory: the Secret informer
@@ -160,6 +171,22 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 			return e.ObjectNew.GetName() == network.ModuleConfigName && network.NetworkGroupChanged(e.ObjectOld, e.ObjectNew)
 		},
 	}))
+}
+
+// operationPhaseChanged reports whether a NodeOperation update moved its phase, the one
+// field of it the request statuses follow.
+func operationPhaseChanged(before, after client.Object) bool {
+	oldOp, okOld := before.(*deckhousev1alpha1.NodeOperation)
+	newOp, okNew := after.(*deckhousev1alpha1.NodeOperation)
+	if !okOld || !okNew {
+		return true
+	}
+	return oldOp.Status.Phase != newOp.Status.Phase
+}
+
+func isDisruption(obj client.Object) bool {
+	op, ok := obj.(*deckhousev1alpha1.NodeOperation)
+	return !ok || op.Spec.Type == deckhousev1alpha1.NodeOperationTypeDisruption
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -228,10 +255,10 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 	// both the nodes it targets and its status. Run whatever the renders did:
 	// these read their own inputs and fail closed on their own read failures, so
 	// one unrenderable node must not freeze every request's status.
-	if err := r.reconcileNERStatuses(ctx, logger); err != nil {
+	if err := r.reconcileNERStatuses(ctx, logger, p); err != nil {
 		errs = append(errs, err)
 	}
-	if err := r.reconcileNSPRStatuses(ctx, logger); err != nil {
+	if err := r.reconcileNSPRStatuses(ctx, logger, p); err != nil {
 		errs = append(errs, err)
 	}
 	if len(errs) > 0 {
@@ -331,8 +358,14 @@ func (r *Reconciler) renderNode(ctx context.Context, ng *v1.NodeGroup, node *cor
 // when the node has none or another writer got there first. The status belongs
 // to the node-local agent and is never touched here.
 func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, desired *internalv1alpha1.NodeConfig, logger logr.Logger, p *pass) (*internalv1alpha1.NodeConfig, error) {
+	if cached := r.unchanged(ctx, desired); cached != nil {
+		logger.V(1).Info("NodeConfig spec unchanged", "node", desired.Name)
+		return cached, nil
+	}
+
+	// Read live: the cache strips managedFields, and takeOver reads them.
 	existing := &internalv1alpha1.NodeConfig{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: desired.Name}, existing)
+	err := r.sources.Reader.Get(ctx, types.NamespacedName{Name: desired.Name}, existing)
 	if apierrors.IsNotFound(err) {
 		return r.create(ctx, ng, node, desired, logger, p)
 	}
@@ -340,7 +373,10 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 		return nil, fmt.Errorf("get NodeConfig %s: %w", desired.Name, err)
 	}
 
-	keepBootstrapOnlyFields(&desired.Spec, &existing.Spec)
+	if existing, err = r.takeOver(ctx, existing, logger); existing == nil {
+		return nil, err
+	}
+	desired.Spec = withoutMachineFields(desired.Spec)
 	specChanged := !specUpToDate(existing, desired)
 
 	if !metadataUpToDate(existing, desired) {
@@ -376,6 +412,23 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 	return r.patch(ctx, ng, existing, desired, logger, budget)
 }
 
+// unchanged returns the cached object when the pass has nothing to write to it. A node asking
+// to be interrupted is read live all the same: the answer creates a NodeOperation, and the
+// cache may still hold a request the node has withdrawn.
+func (r *Reconciler) unchanged(ctx context.Context, desired *internalv1alpha1.NodeConfig) *internalv1alpha1.NodeConfig {
+	cached := &internalv1alpha1.NodeConfig{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: desired.Name}, cached); err != nil {
+		return nil
+	}
+	if !specUpToDate(cached, desired) || !metadataUpToDate(cached, desired) {
+		return nil
+	}
+	if disruptionRequested(cached) {
+		return nil
+	}
+	return cached
+}
+
 // create gives a node its first NodeConfig. Only a CloudEphemeral payload is
 // rendered by this controller: for any other node the object carries
 // bootstrap-only fields nothing here can reproduce, so its own is waited for.
@@ -384,7 +437,7 @@ func (r *Reconciler) create(ctx context.Context, ng *v1.NodeGroup, node *corev1.
 		logger.V(1).Info("waiting for the payload-provisioned node to publish its own NodeConfig", "node", desired.Name)
 		return nil, nil
 	}
-	if err := r.Client.Create(ctx, desired); err != nil {
+	if err := r.Client.Create(ctx, desired, client.FieldOwner(fieldManager)); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			return nil, nil
 		}
@@ -401,11 +454,9 @@ func (r *Reconciler) create(ctx context.Context, ng *v1.NodeGroup, node *corev1.
 	return desired, nil
 }
 
-// patch writes the rendered spec onto the object the slot was granted against.
+// patch applies the rendered spec onto the object the slot was granted against.
 func (r *Reconciler) patch(ctx context.Context, ng *v1.NodeGroup, existing, desired *internalv1alpha1.NodeConfig, logger logr.Logger, budget *rolloutBudget) (*internalv1alpha1.NodeConfig, error) {
-	updated := existing.DeepCopy()
-	updated.Spec = desired.Spec
-	current, err := r.write(ctx, existing, updated, logger)
+	current, err := r.applySpec(ctx, existing, desired.Spec, logger)
 	if current == nil {
 		return nil, err
 	}
@@ -445,9 +496,66 @@ func (r *Reconciler) write(ctx context.Context, existing, updated *internalv1alp
 	return updated, nil
 }
 
-// specUpToDate reports whether the object already carries the rendered spec.
+// applySpec writes the spec by server-side apply, every field of it owned by
+// fieldManager; a field it applied before and leaves out now is removed. The apply
+// is conditional on the revision read, as write() is.
+func (r *Reconciler) applySpec(ctx context.Context, existing *internalv1alpha1.NodeConfig, spec internalv1alpha1.NodeSpec, logger logr.Logger) (*internalv1alpha1.NodeConfig, error) {
+	applied, err := applyConfiguration(existing, spec)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.Client.Patch(ctx, applied, client.Apply, client.FieldOwner(fieldManager), client.ForceOwnership); err != nil {
+		if apierrors.IsConflict(err) {
+			logger.V(1).Info("NodeConfig changed while it was being rendered; leaving it to the next pass", "node", existing.Name)
+			return nil, nil
+		}
+		return nil, fmt.Errorf("apply NodeConfig %s: %w", existing.Name, err)
+	}
+	current := &internalv1alpha1.NodeConfig{}
+	if err := fromUnstructured(applied, current); err != nil {
+		return nil, fmt.Errorf("read the applied NodeConfig %s: %w", existing.Name, err)
+	}
+	return current, nil
+}
+
+// applyConfiguration is the apply request for a spec: the object's name and revision
+// and the spec alone. Marshalled through encoding/json, which honours omitzero, so an
+// empty section is left out rather than applied as {}.
+func applyConfiguration(existing *internalv1alpha1.NodeConfig, spec internalv1alpha1.NodeSpec) (*unstructured.Unstructured, error) {
+	raw, err := json.Marshal(spec)
+	if err != nil {
+		return nil, fmt.Errorf("marshal the spec of NodeConfig %s: %w", existing.Name, err)
+	}
+	var fields map[string]any
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return nil, fmt.Errorf("unmarshal the spec of NodeConfig %s: %w", existing.Name, err)
+	}
+	applied := &unstructured.Unstructured{Object: map[string]any{"spec": fields}}
+	applied.SetGroupVersionKind(internalv1alpha1.GroupVersion.WithKind("NodeConfig"))
+	applied.SetName(existing.Name)
+	applied.SetResourceVersion(existing.ResourceVersion)
+	return applied, nil
+}
+
+// fromUnstructured decodes an object the way the API serves it, []byte fields included.
+func fromUnstructured(in *unstructured.Unstructured, out *internalv1alpha1.NodeConfig) error {
+	raw, err := json.Marshal(in.Object)
+	if err != nil {
+		return fmt.Errorf("marshal: %w", err)
+	}
+	if err := json.Unmarshal(raw, out); err != nil {
+		return fmt.Errorf("unmarshal: %w", err)
+	}
+	return nil
+}
+
+// specUpToDate reports whether the object already carries the rendered spec, the
+// machine's own fields aside. A bootstrap token left on the object is a change.
 func specUpToDate(existing, desired *internalv1alpha1.NodeConfig) bool {
-	return apiequality.Semantic.DeepEqual(existing.Spec, desired.Spec)
+	if existing.Spec.Kubelet.BootstrapToken != "" {
+		return false
+	}
+	return apiequality.Semantic.DeepEqual(withoutMachineFields(existing.Spec), withoutMachineFields(desired.Spec))
 }
 
 // metadataUpToDate reports whether the object carries the labels and owner. Ownership is

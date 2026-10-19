@@ -19,7 +19,6 @@ package nodeletseed
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -34,9 +33,6 @@ const (
 	// directory. node-controller renders the same file for every node after the first.
 	templatePath = "nodelet/nodeconfig-mutable.yaml.tpl"
 
-	// requestedBy mirrors platformExtensionRequestedBy in node-controller:
-	// modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go
-	requestedBy = "node-manager"
 	// installerProxyToken mirrors the default in
 	// candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl.
 	installerProxyToken = "passthrough"
@@ -50,18 +46,24 @@ type Document struct {
 }
 
 type Spec struct {
-	SystemType                          string          `json:"systemType"`
-	RegistryPackagesProxyEndpoints      []string        `json:"registryPackagesProxyEndpoints,omitempty"`
-	RegistryPackagesProxyAccessTokenB64 string          `json:"registryPackagesProxyAccessTokenB64,omitempty"`
-	FeatureGates                        map[string]bool `json:"featureGates"`
-	Extensions                          []Extension     `json:"extensions"`
-	StaticPods                          []StaticPod     `json:"staticPods,omitempty"`
+	SystemType            string                `json:"systemType"`
+	RegistryPackagesProxy RegistryPackagesProxy `json:"registryPackagesProxy"`
+	FeatureGates          map[string]bool       `json:"featureGates"`
+	Extensions            []Extension           `json:"extensions"`
+	StaticPods            []StaticPod           `json:"staticPods,omitempty"`
 }
 
+// RegistryPackagesProxy is how the agent reaches the installer's packages proxy.
+type RegistryPackagesProxy struct {
+	Endpoints []string `json:"endpoints,omitempty"`
+	// AccessToken holds the raw token; JSON carries it base64-encoded.
+	AccessToken []byte `json:"accessToken,omitempty"`
+}
+
+// Extension is a platform package: no repository, and no requestedBy.
 type Extension struct {
-	Name        string `json:"name"`
-	Digest      string `json:"digest"`
-	RequestedBy string `json:"requestedBy,omitempty"`
+	Name   string `json:"name"`
+	Digest string `json:"digest"`
 }
 
 type StaticPod struct {
@@ -98,9 +100,10 @@ func FirstMaster(_ context.Context, candiDir string, images map[string]any, prox
 		if ext.Name == "" || ext.Digest == "" {
 			return nil, fmt.Errorf("%s: extension %d has no name or no digest", path, i)
 		}
-		doc.Spec.Extensions[i].RequestedBy = requestedBy
 	}
-	doc.Spec.RegistryPackagesProxyEndpoints = proxyEndpoints
-	doc.Spec.RegistryPackagesProxyAccessTokenB64 = base64.StdEncoding.EncodeToString([]byte(installerProxyToken))
+	doc.Spec.RegistryPackagesProxy = RegistryPackagesProxy{
+		Endpoints:   proxyEndpoints,
+		AccessToken: []byte(installerProxyToken),
+	}
 	return doc, nil
 }

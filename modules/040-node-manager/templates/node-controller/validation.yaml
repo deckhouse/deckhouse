@@ -4,10 +4,11 @@ other admission policies.
 
 Those are gated on helm_lib_kind_exists, which answers from the Helm
 capabilities. That gate cannot be satisfied in the template tests, so a gated
-file is never rendered in CI — and these two are the compensating control for a
-cluster-wide RBAC grant, so a silent skip is the failure that matters most. The
-gate has nothing left to protect either: ValidatingAdmissionPolicy has been GA
-since Kubernetes 1.30, and candi/version_map.yml supports 1.33 upwards.
+file is never rendered in CI — and the two kubelet policies are the compensating
+control for a cluster-wide RBAC grant, so a silent skip is the failure that
+matters most. The gate has nothing left to protect either:
+ValidatingAdmissionPolicy has been GA since Kubernetes 1.30, and
+candi/version_map.yml supports 1.33 upwards.
 */}}
 {{- $policyName := "nodeconfigs-own-node-only.deckhouse.io" }}
 ---
@@ -76,7 +77,7 @@ spec:
 {{- $policyName := "nodeoperations-own-node-only.deckhouse.io" }}
 # A node only ever reports on an operation, so an update of its own node's
 # operation is the only thing it may do here. Creating one is the cluster's
-# decision or an operator's — a node that could mint its own ApproveDisruption
+# decision or an operator's — a node that could mint its own Disruption
 # would be granting itself the permission this whole resource exists to withhold
 # — and a delete cannot be attributed to a node at all, since the name is
 # generated and DELETE carries no object to read spec.nodeName from.
@@ -103,22 +104,79 @@ spec:
       "a node may only update its own NodeOperation; " + request.userInfo.username + " tried to " + request.operation
   # The object under admission is the new one, so the rule above would let a node
   # take over someone else's operation by retargeting spec.nodeName in the same
-  # write. The CRD refuses that today with its own immutable-spec rule; this does
-  # not depend on that rule staying there.
+  # write. The spec rule below refuses that too; this one names what happened.
   - expression: 'request.operation != "UPDATE" || request.userInfo.username == "system:node:" + oldObject.spec.nodeName'
     reason: Forbidden
     messageExpression: |
       "a node may not take over the operation of " + oldObject.spec.nodeName + "; " + request.userInfo.username + " tried to update it"
-  # The spec is held immutable by the CRD; metadata is held by nothing. The node
-  # label is what every lookup between the operations on one node goes through,
-  # so dropping it would make this one invisible to its siblings — and their
-  # answers about the node wrong.
-  - expression: |
-      request.operation != "UPDATE" ||
-      object.metadata.?labels["node-manager.deckhouse.io/node"].orValue("") == oldObject.metadata.?labels["node-manager.deckhouse.io/node"].orValue("")
+  # spec.approved is the one field the CRD lets change, and it is the permission
+  # itself: a node that could set it would approve its own disruption.
+  - expression: 'request.operation != "UPDATE" || object.spec == oldObject.spec'
     reason: Forbidden
     messageExpression: |
-      "the node-manager.deckhouse.io/node label is how the operations on one node find each other; " + request.userInfo.username + " tried to change it"
+      "a node may not change the spec of an operation, approving it included; " + request.userInfo.username + " tried to"
+  # The node reports through its NodeReported condition and node-manager derives
+  # the phase from it; a node writing anything else would decide the outcome.
+  - expression: |
+      request.operation != "UPDATE" || (
+        object.?status.?phase == oldObject.?status.?phase &&
+        object.?status.?reason == oldObject.?status.?reason &&
+        object.?status.?message == oldObject.?status.?message &&
+        object.?status.?deadline == oldObject.?status.?deadline &&
+        object.?status.?startedAt == oldObject.?status.?startedAt &&
+        object.?status.?finishedAt == oldObject.?status.?finishedAt &&
+        object.?status.?nodeWasUnschedulable == oldObject.?status.?nodeWasUnschedulable &&
+        object.?status.?drainDeadline == oldObject.?status.?drainDeadline &&
+        object.?status.?bootID == oldObject.?status.?bootID &&
+        object.?status.?conditions.orValue([]).filter(c, c.type != "NodeReported") ==
+          oldObject.?status.?conditions.orValue([]).filter(c, c.type != "NodeReported"))
+    reason: Forbidden
+    messageExpression: |
+      "a node writes only the NodeReported condition of its operation; " + request.userInfo.username + " tried to change more"
+  # After RebootStarted the operation stays InProgress until node-manager sees the
+  # node back. An agent that does not remember its report reboots again on such an
+  # operation after boot. Its report is refused here, and it does not reboot then.
+  - expression: |
+      request.operation != "UPDATE" ||
+      !oldObject.?status.?conditions.orValue([]).exists(c, c.type == "NodeReported" && c.reason == "RebootStarted")
+    reason: Forbidden
+    messageExpression: |
+      "a node may not write to an operation it reported RebootStarted on. node-manager completes the operation once the node is back. " + request.userInfo.username + " tried to"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+---
+{{- $policyName := "nodeoperations-disruption-by-node-manager.deckhouse.io" }}
+# node-manager creates a Disruption when a node asks to be interrupted for a
+# NodeConfig revision. One created by anyone else would interrupt a node that
+# never asked, so only node-controller's service account may create one.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  # CREATE only: the CRD keeps spec.type immutable.
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["CREATE"]
+      resources:   ["nodeoperations"]
+  matchConditions:
+  - name: disruptions-only
+    expression: 'object.spec.type == "Disruption"'
+  validations:
+  - expression: 'request.userInfo.username == "system:serviceaccount:d8-cloud-instance-manager:node-controller"'
+    reason: Forbidden
+    message: "Disruption operations are created by node-manager when a node needs to be interrupted for a NodeConfig revision. Approve the existing one with spec.approved, or create a Reboot or Drain"
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding

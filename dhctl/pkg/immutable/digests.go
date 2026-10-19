@@ -60,11 +60,11 @@ func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extens
 	// a node prunes every extension its document omits, and pruning nodelet stops
 	// the agent's own unit for good.
 	extensions := []extension{
-		{Name: containerdExtension, Digest: containerd, RequestedBy: platformExtensionRequestedBy},
-		{Name: kubeletExtension, Digest: newestPatchDigest(packages, "kubeletSysext"+minor), RequestedBy: platformExtensionRequestedBy},
-		{Name: cniExtension, Digest: cni, RequestedBy: platformExtensionRequestedBy},
-		{Name: nodeletExtension, Digest: packages[nodeletSysextImage], RequestedBy: platformExtensionRequestedBy},
-		{Name: guestAgentExtension, Digest: packages[guestAgentSysextImage], RequestedBy: platformExtensionRequestedBy},
+		{Name: containerdExtension, Digest: containerd},
+		{Name: kubeletExtension, Digest: newestPatchDigest(packages, "kubeletSysext"+minor)},
+		{Name: cniExtension, Digest: cni},
+		{Name: nodeletExtension, Digest: packages[nodeletSysextImage]},
+		{Name: guestAgentExtension, Digest: packages[guestAgentSysextImage]},
 	}
 	for _, e := range extensions {
 		if e.Digest == "" {

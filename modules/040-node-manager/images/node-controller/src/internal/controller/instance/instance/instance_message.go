@@ -28,6 +28,8 @@ const (
 	emptyMessage          = ""
 	machineMessagePrefix  = "machine: "
 	bashibleMessagePrefix = "bashible: "
+	// The node agent's messages name the agent themselves.
+	nodeAgentMessagePrefix = ""
 )
 
 type conditionMatcher func(deckhousev1alpha2.InstanceCondition) bool
@@ -69,11 +71,25 @@ var messagePriorityMatchers = []messagePriorityMatcher{
 		},
 		prefix: bashibleMessagePrefix,
 	},
+	// A silent node agent outranks a healthy bashible: on a bashible node both run.
+	{
+		match: func(c deckhousev1alpha2.InstanceCondition) bool {
+			return c.Type == deckhousev1alpha2.InstanceConditionTypeNodeAgentReady &&
+				c.Status != metav1.ConditionTrue
+		},
+		prefix: nodeAgentMessagePrefix,
+	},
 	{
 		match: func(c deckhousev1alpha2.InstanceCondition) bool {
 			return c.Type == deckhousev1alpha2.InstanceConditionTypeBashibleReady
 		},
 		prefix: bashibleMessagePrefix,
+	},
+	{
+		match: func(c deckhousev1alpha2.InstanceCondition) bool {
+			return c.Type == deckhousev1alpha2.InstanceConditionTypeNodeAgentReady
+		},
+		prefix: nodeAgentMessagePrefix,
 	},
 }
 

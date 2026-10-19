@@ -46,3 +46,13 @@ func PodReady(pod *corev1.Pod) bool {
 	}
 	return false
 }
+
+// NodeReady reports the Ready condition of a Node.
+func NodeReady(node *corev1.Node) bool {
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == corev1.NodeReady {
+			return condition.Status == corev1.ConditionTrue
+		}
+	}
+	return false
+}

@@ -17,6 +17,8 @@ limitations under the License.
 package layout
 
 import (
+	"encoding/base64"
+
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
 
 	"github.com/deckhouse/registry-agent/internal/nodeconfig"
@@ -59,8 +61,8 @@ func (n nodeConfigSeed) load() (*registryv1alpha1.RegistryNodeSpec, error) {
 
 	scheme := registryv1alpha1.Scheme(registry.Scheme)
 	if scheme == "" {
-		// The CRD default, applied here because a document read from a file passes no
-		// API server. Same reasoning as nodelet's own loader.
+		// An unset scheme means HTTPS, as the field documents; nodelet's own loader
+		// reads it the same way.
 		scheme = registryv1alpha1.SchemeHTTPS
 	}
 
@@ -68,12 +70,12 @@ func (n nodeConfigSeed) load() (*registryv1alpha1.RegistryNodeSpec, error) {
 		Scheme: scheme,
 		Host:   registry.Address,
 		Path:   registry.Path,
-		CA:     registry.CA,
+		CA:     registry.CABundle,
 	}
-	if registry.Auth != "" {
-		// base64("user:password") is the form both sides keep it in, so it is copied
-		// rather than parsed.
-		endpoint.Auth = &registryv1alpha1.Auth{Auth: registry.Auth}
+	if len(registry.Auth) > 0 {
+		// base64("user:password") is the form the layout keeps it in, so it is encoded
+		// back rather than split into a user and a password.
+		endpoint.Auth = &registryv1alpha1.Auth{Auth: base64.StdEncoding.EncodeToString(registry.Auth)}
 	}
 
 	return &registryv1alpha1.RegistryNodeSpec{

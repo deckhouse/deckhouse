@@ -34,7 +34,10 @@ const (
 	BootstrapTokenSecretName = "bootstrap-token-abcdef"
 
 	// BootstrapToken is the token those fixtures publish.
-	BootstrapToken = "abcdef.0123456789abcdef"
+	BootstrapToken = "abcdef.0123456789abcdef" // gitleaks:allow, the shape of a bootstrap token, not one
+
+	// ClusterCA is the cluster CA those fixtures publish, PEM as kube-root-ca.crt holds it.
+	ClusterCA = "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"
 )
 
 // CreateBootstrapToken publishes the master group's token, one of the three things
@@ -67,7 +70,7 @@ func CreateJoinInputsWithoutToken(t *testing.T, kubeCl *client.KubernetesClient)
 
 	_, err := kubeCl.CoreV1().ConfigMaps(global.ConfigsNS).Create(t.Context(), &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Name: "kube-root-ca.crt", Namespace: global.ConfigsNS},
-		Data:       map[string]string{"ca.crt": "-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----\n"},
+		Data:       map[string]string{"ca.crt": ClusterCA},
 	}, metav1.CreateOptions{})
 	require.NoError(t, err)
 

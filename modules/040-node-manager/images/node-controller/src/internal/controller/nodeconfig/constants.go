@@ -16,8 +16,6 @@ limitations under the License.
 
 package nodeconfig
 
-import "time"
-
 const (
 	controllerName = "node-config"
 
@@ -29,10 +27,9 @@ const (
 	managedByLabel = "node-manager.deckhouse.io/managed-by"
 	managedByValue = "node-controller"
 
-	// nodeConfigUIDLabel names the NodeConfig an approval was issued for. Node
-	// name plus generation is not identity: a recreated config counts from 1
-	// again and matched a day-old operation for the object before it.
-	nodeConfigUIDLabel = "node-manager.deckhouse.io/node-config-uid"
+	// fieldManager owns, by server-side apply, every NodeConfig spec field this
+	// controller renders (controller.go applySpec, ownership.go takeOver).
+	fieldManager = "node-controller"
 
 	kubeSystemNS           = "kube-system"
 	cloudInstanceManagerNS = "d8-cloud-instance-manager"
@@ -72,13 +69,6 @@ const (
 	registryConfigAPIVersion = "deckhouse.io/v1alpha1"
 	registryConfigKind       = "RegistryConfig"
 	registryConfigName       = "registry"
-
-	// registryOwnerNodelet and registryOwnerAgent are the two answers
-	// containerRuntime.registryOwner has, mirroring the CRD enum
-	// (crds/nodeconfig.yaml). Written explicitly because the bootstrap file path
-	// never reaches an API server and sees no CRD default.
-	registryOwnerNodelet = "nodelet"
-	registryOwnerAgent   = "agent"
 
 	// registryBashibleConfigSecret is what the registry module writes for
 	// bashible; the presence of its "agent" key is the one signal that
@@ -147,15 +137,6 @@ const (
 	// for the same reason and read the same way.
 	guestAgentSysextImage = "qemuGuestAgentSysext"
 
-	// platformExtensionRequestedBy names the module, not the writing component:
-	// dhctl and this controller write the same three extensions, so the field
-	// must not differ between nodes. Keep in step with dhctl/pkg/immutable/digests.go.
-	platformExtensionRequestedBy = "node-manager"
-
-	// nerRequestedByPrefix qualifies an extension that came from a
-	// NodeExtensionRequest, distinguishing it from the platform marker above.
-	nerRequestedByPrefix = "NodeExtensionRequest/"
-
 	// resourceReservationModeAuto and resourceReservationModeStatic are the
 	// NodeGroup kubeReserved modes this render reasons about; Static has no
 	// counterpart on an immutable node, and Off only ever passes through.
@@ -167,15 +148,16 @@ const (
 
 	phaseReady = "Ready"
 
-	// extensionStateReady and extensionStateFailed mirror the agent's enum for
-	// NodeConfig.status.extensions[].state; the third value, Pending, means the
-	// node is still working and counts as neither outcome.
-	extensionStateReady  = "Ready"
-	extensionStateFailed = "Failed"
+	// extensionStateReady, extensionStateFailed and extensionStatePending mirror the
+	// agent's enum for NodeConfig.status.extensions[].state; Pending means the node is
+	// still working, or waits for the update window, and counts as neither outcome.
+	extensionStateReady   = "Ready"
+	extensionStateFailed  = "Failed"
+	extensionStatePending = "Pending"
 
 	// staticPodStateWritten and staticPodStateFailed are the whole enum of
-	// StaticPodStatus.State in api/internal.deckhouse.io/v1alpha1/nodeconfig_types.go
-	// (Enum=Written;Failed): the node holds the file the spec asked for, or it does not.
+	// status.staticPods[].state in crds/nodeconfig.yaml: the node holds the file the spec
+	// asked for, or it does not.
 	staticPodStateWritten = "Written"
 	staticPodStateFailed  = "Failed"
 
@@ -194,27 +176,15 @@ const (
 	// setting the render could not carry over as written (recordClampedSettings).
 	settingClampedEvent = "SettingClamped"
 
-	// disruptionRequiredCondition is how the agent says it cannot apply the
-	// config it was given without interrupting the node.
-	disruptionRequiredCondition = "DisruptionRequired"
-
-	// configurationAppliedCondition is how the agent says whether the node is
-	// running the spec that was published to it, as opposed to a rolled-back,
-	// quarantined or half-applied one.
-	configurationAppliedCondition = "ConfigurationApplied"
+	// configurationPendingReason is ConfigurationApplied=False while the pass waits for
+	// something outside the node; unknownFieldsReason is True with fields the agent does
+	// not know and so does not apply.
+	configurationPendingReason = "Pending"
+	unknownFieldsReason        = "UnknownFields"
 
 	// disruptionApprovalExhaustedEvent names the Warning that says the cluster
 	// has stopped interrupting a node for a configuration revision.
 	disruptionApprovalExhaustedEvent = "DisruptionApprovalExhausted"
-)
-
-// A failed disruption takes the node out of service and changes nothing, so the
-// retries for one configuration revision are bounded: each attempt waits longer
-// than the one before, and after the last the revision is left alone.
-const (
-	maxDisruptionAttempts     = 3
-	disruptionRetryBackoff    = time.Minute
-	disruptionRetryBackoffMax = 10 * time.Minute
 )
 
 // nodeManagerDigestsKey and osImageName locate the Deckhouse Engine image of this
@@ -234,19 +204,9 @@ const systemDiskSelectorSize = ">=2Gi"
 // when ClusterConfiguration names none (the default bashible reads too).
 const defaultPodSubnetNodeCIDRPrefix = 24
 
-// Defaults mirroring the NodeConfig CRD field defaults, applied in render so
-// the bootstrap file path (which bypasses API-server CRD defaulting) produces
-// the same values as a day-2 object.
-const (
-	// maxPodsCeiling is what the agent's schema accepts (Maximum=1000), which is
-	// the top of the bashible ladder too, so only an operator's own number can
-	// still reach it.
-	maxPodsCeiling              = 1000
-	defaultContainerLogMaxSize  = "50Mi"
-	defaultContainerLogMaxFiles = 4
-	// bashible's number (candi/bashible/common-steps/all/032_configure_containerd.sh.tpl).
-	defaultMaxConcurrentDownloads = 8
-)
+// maxPodsCeiling is what the agent's schema accepts (Maximum=1000), which is the
+// top of the bashible ladder too, so only an operator's own number can reach it.
+const maxPodsCeiling = 1000
 
 // reservedLabelNamespaces are the label namespaces a node may not put itself
 // into; kubeletLabelNamespaces are the ones inside them kubelet does accept

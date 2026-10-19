@@ -23,6 +23,7 @@ to produce node counts, conditions, cloud status, and machine failures.
 | `Secret` (configuration-checksums) | Change | Enqueue all NodeGroups |
 | `Secret` (provider registration) | Change | Enqueue only the NodeGroups of that provider |
 | `InstanceClass` (every registered kind) | Any change | Enqueue the NodeGroups referencing it |
+| `NodeConfig` | Group label, applied or held generation, approval wait | `node.deckhouse.io/group` → NodeGroup name |
 
 The NodeGroup filter drops the controller's own status writes — without it every patch woke the
 controller again. The registration Secrets are the ones labelled
@@ -73,7 +74,7 @@ NodeGroup changed (or secondary resource triggers re-enqueue)
 |-------|--------|
 | `status.nodes` | Count of nodes in NodeGroup |
 | `status.ready` | Count of ready nodes |
-| `status.upToDate` | Count of nodes matching configuration checksum |
+| `status.upToDate` | Mutable: count of nodes matching the configuration checksum. Immutable: count of nodes whose NodeConfig applied its current generation (`appliedGeneration == generation` and `ConfigurationApplied=True` at it) |
 | `status.desired` | From MachineDeployment replicas (CloudEphemeral only) |
 | `status.min` / `status.max` | From MachineDeployment (CloudEphemeral only) |
 | `status.instances` | Running machine instances (CloudEphemeral only) |

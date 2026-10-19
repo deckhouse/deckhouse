@@ -39,15 +39,14 @@ metadata:
 spec:
   nodeName: master-0
   apiServerEndpoints:
-  - 192.168.1.10:6443
+  - https://192.168.1.10:6443
   containerRuntime:
-    registryOwner: agent
-    maxConcurrentDownloads: 8
+    registryConfigOwner: RegistryAgent
   registry:
     address: registry.deckhouse.io
     path: /deckhouse/ee
     scheme: HTTPS
-    ca: |
+    caBundle: |
       -----BEGIN CERTIFICATE-----
       not-a-real-certificate
       -----END CERTIFICATE-----
@@ -107,8 +106,8 @@ func TestNodeConfigSeedWithoutARegistry(t *testing.T) {
 	assert.Nil(t, spec)
 }
 
-// The scheme has a CRD default, and a document read from a file passes no API server to
-// apply it — the same reason nodelet's own loader applies it in code.
+// An unset scheme means HTTPS, as the field documents, and nodelet's own loader reads
+// it the same way.
 func TestNodeConfigSeedDefaultsTheScheme(t *testing.T) {
 	seed := writeNodeConfig(t,
 		"spec:\n  registry:\n    address: registry.example.com:5000\n")

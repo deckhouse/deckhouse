@@ -17,13 +17,10 @@ limitations under the License.
 package nodeconfig
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
@@ -38,14 +35,9 @@ func nodeConfigWithPod(name string, pods []internalv1alpha1.StaticPod, podStatus
 	}
 }
 
-// nodeConfigScheme is all this source reads: no Nodes, no NodeGroups. Every node
-// has a NodeConfig, so this reader needs nothing else to know whose reports it
-// is counting.
-func nodeConfigScheme(t *testing.T) *runtime.Scheme {
-	t.Helper()
-	scheme := runtime.NewScheme()
-	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
-	return scheme
+// writtenPod is the entry a node publishes once the manifest is on its disk.
+func writtenPod(name, manifest string) internalv1alpha1.StaticPodStatus {
+	return internalv1alpha1.StaticPodStatus{Name: name, State: "Written", ManifestDigest: manifestDigest(manifest)}
 }
 
 // The manifest on disk is the whole of what a node owes a static pod, so it is
@@ -56,9 +48,9 @@ func nodeConfigScheme(t *testing.T) *runtime.Scheme {
 func TestNodeConfigOutcomesCountWhatTheNodesReport(t *testing.T) {
 	agent := []internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: podManifest("registry-agent")}}
 
-	cl := fake.NewClientBuilder().WithScheme(nodeConfigScheme(t)).WithObjects(
+	outcomes := nsprOutcomes(fleetOf(
 		nodeConfigWithPod("worker-0", agent,
-			[]internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Written"}}),
+			[]internalv1alpha1.StaticPodStatus{writtenPod("registry-agent", podManifest("registry-agent"))}),
 		nodeConfigWithPod("worker-1", agent,
 			[]internalv1alpha1.StaticPodStatus{{
 				Name: "registry-agent", State: "Failed",
@@ -66,7 +58,7 @@ func TestNodeConfigOutcomesCountWhatTheNodesReport(t *testing.T) {
 			}}),
 		// Has not answered at all: the node is not refusing, it has not spoken.
 		nodeConfigWithPod("worker-2", agent, nil),
-		// A second refusal keeps the first message; a state outside the enum counts as nothing.
+		// Every node's refusal is kept; a state outside the enum counts as nothing.
 		nodeConfigWithPod("worker-4", agent,
 			[]internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Failed", Reason: "RemoveFailed", Message: "busy"}}),
 		nodeConfigWithPod("worker-5", agent,
@@ -75,19 +67,15 @@ func TestNodeConfigOutcomesCountWhatTheNodesReport(t *testing.T) {
 		nodeConfigWithPod("worker-3",
 			[]internalv1alpha1.StaticPod{{Name: "somebody-else", Manifest: podManifest("somebody-else")}},
 			[]internalv1alpha1.StaticPodStatus{{Name: "somebody-else", State: "Failed", Reason: "ManifestRejected"}}),
-	).Build()
+	), map[string]string{"registry-agent": podManifest("registry-agent"), "somebody-else": podManifest("somebody-else")})
 
-	outcomes, err := readNodeConfigOutcomes(context.Background(), cl)
-	require.NoError(t, err)
-
-	require.Equal(t, int32(1), outcomes["registry-agent"].applied)
-	require.Equal(t, int32(2), outcomes["registry-agent"].failed)
+	require.Equal(t, map[string]struct{}{"worker-0": {}}, outcomes["registry-agent"].applied)
 	// The reason has to reach the cluster, so nobody has to read a node's
 	// journal to learn whether to edit the object or to go and look at the node.
-	require.Equal(t, "WriteFailed: read-only file system", outcomes["registry-agent"].message)
-
-	require.Equal(t, int32(1), outcomes["somebody-else"].failed)
-	require.Equal(t, int32(0), outcomes["somebody-else"].applied)
+	require.Equal(t, map[string]string{"worker-1": "WriteFailed: read-only file system", "worker-4": "RemoveFailed: busy"},
+		outcomes["registry-agent"].failed)
+	require.Equal(t, map[string]string{"worker-3": "ManifestRejected"}, outcomes["somebody-else"].failed)
+	require.Empty(t, outcomes["somebody-else"].applied)
 }
 
 // Every reason is a refusal: this source counts them alike and only carries the
@@ -97,17 +85,14 @@ func TestNodeConfigOutcomesCountWhatTheNodesReport(t *testing.T) {
 func TestNodeConfigOutcomesCountEveryReasonAsARefusal(t *testing.T) {
 	for _, reason := range []string{"ManifestRejected", "WriteFailed", "RemoveFailed"} {
 		t.Run(reason, func(t *testing.T) {
-			cl := fake.NewClientBuilder().WithScheme(nodeConfigScheme(t)).WithObjects(
+			outcomes := nsprOutcomes(fleetOf(
 				nodeConfigWithPod("worker-0", nil,
 					[]internalv1alpha1.StaticPodStatus{{Name: "agent", State: "Failed", Reason: reason}}),
-			).Build()
+			), map[string]string{"agent": podManifest("agent")})
 
-			outcomes, err := readNodeConfigOutcomes(context.Background(), cl)
-			require.NoError(t, err)
-			require.Equal(t, int32(1), outcomes["agent"].failed)
-			require.Equal(t, int32(0), outcomes["agent"].applied)
-			require.Equal(t, reason, outcomes["agent"].message,
+			require.Equal(t, map[string]string{"worker-0": reason}, outcomes["agent"].failed,
 				"a refusal with no message still has to say which of the three it was")
+			require.Empty(t, outcomes["agent"].applied)
 		})
 	}
 }
@@ -115,21 +100,18 @@ func TestNodeConfigOutcomesCountEveryReasonAsARefusal(t *testing.T) {
 // A fleet that reports nothing is a fleet with no counters, and the status pass
 // has to be able to tell that from "every node wrote it".
 func TestNodeConfigOutcomesOfASilentFleet(t *testing.T) {
-	cl := fake.NewClientBuilder().WithScheme(nodeConfigScheme(t)).Build()
-
-	outcomes, err := readNodeConfigOutcomes(context.Background(), cl)
-	require.NoError(t, err)
-	require.Empty(t, outcomes)
+	require.Empty(t, nsprOutcomes(fleetOf(), map[string]string{"agent": podManifest("agent")}))
 }
 
-// A report counts only for the generation that carries the current manifest: a
-// node still running the previous one reports the old manifest Written, and a
-// node refusing its current generation whole has refused the pod in it.
-func TestNodeConfigOutcomesFollowTheCurrentGeneration(t *testing.T) {
-	agent := []internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: podManifest("registry-agent")}}
-	written := []internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Written"}}
-	atGeneration := func(name string, generation, applied int64, conditions ...metav1.Condition) *internalv1alpha1.NodeConfig {
-		config := nodeConfigWithPod(name, agent, written)
+// A node runs the request when it reports the request's manifest written, by digest, whatever
+// generation it runs: a held node whose older generation carries the same manifest runs it. Another
+// digest is no answer, and a node refusing the generation that carries the manifest refused it.
+func TestNodeConfigOutcomesCountTheManifestTheNodeWrote(t *testing.T) {
+	current, previous := podManifest("registry-agent"), podManifest("registry-agent-v1")
+	atGeneration := func(name, specified, written string, generation, applied int64, conditions ...metav1.Condition) *internalv1alpha1.NodeConfig {
+		config := nodeConfigWithPod(name,
+			[]internalv1alpha1.StaticPod{{Name: "registry-agent", Manifest: specified}},
+			[]internalv1alpha1.StaticPodStatus{writtenPod("registry-agent", written)})
 		config.Generation = generation
 		config.Status.AppliedGeneration = applied
 		config.Status.Conditions = conditions
@@ -137,29 +119,30 @@ func TestNodeConfigOutcomesFollowTheCurrentGeneration(t *testing.T) {
 	}
 	notApplied := func(reason string, generation int64) metav1.Condition {
 		return metav1.Condition{
-			Type: configurationAppliedCondition, Status: metav1.ConditionFalse,
+			Type: internalv1alpha1.NodeConfigConditionTypeConfigurationApplied, Status: metav1.ConditionFalse,
 			ObservedGeneration: generation, Reason: reason, Message: "the node said why",
 		}
 	}
-	held := atGeneration("held", 3, 2, notApplied("DisruptionApprovalPending", 3), metav1.Condition{
-		Type: disruptionRequiredCondition, Status: metav1.ConditionTrue, ObservedGeneration: 3, Reason: "DisruptionPending",
-	})
 
-	cl := fake.NewClientBuilder().WithScheme(nodeConfigScheme(t)).WithObjects(
-		atGeneration("current", 3, 3),
-		atGeneration("behind", 3, 2),
-		atGeneration("rolled-back", 3, 2, notApplied("RolledBackToLastKnownGood", 3)),
-		atGeneration("stale-refusal", 3, 2, notApplied("Rejected", 2)),
+	outcomes := nsprOutcomes(fleetOf(
+		atGeneration("current", current, current, 3, 3),
+		// Held for an approval of a change elsewhere in its config: the manifest is unchanged.
+		atGeneration("held", current, current, 3, 2, notApplied("DisruptionApprovalPending", 3), metav1.Condition{
+			Type: internalv1alpha1.NodeConfigConditionTypeDisruptionApproved, Status: metav1.ConditionFalse, ObservedGeneration: 3, Reason: "ApprovalPending",
+		}),
+		// The rollout slot held its spec back: it still runs the previous manifest.
+		atGeneration("queued", previous, previous, 2, 2),
+		atGeneration("behind", current, previous, 3, 2),
+		atGeneration("rolled-back", current, previous, 3, 2, notApplied("RolledBackToLastKnownGood", 3)),
+		atGeneration("stale-refusal", current, previous, 3, 2, notApplied("Rejected", 2)),
 		// A pass that failed to save: no refusal of the pods, and its entries are the old generation's.
-		atGeneration("save-failed", 3, 2, notApplied("PartiallyApplied", 3)),
-		held,
-	).Build()
+		atGeneration("save-failed", current, previous, 3, 2, notApplied("PartiallyApplied", 3)),
+		// An older agent publishes no digest: it has not said which manifest it wrote.
+		atGeneration("no-digest", current, "", 3, 3),
+	), map[string]string{"registry-agent": current})
 
-	outcomes, err := readNodeConfigOutcomes(context.Background(), cl)
-	require.NoError(t, err)
-	require.Equal(t, int32(1), outcomes["registry-agent"].applied)
-	require.Equal(t, int32(1), outcomes["registry-agent"].failed)
-	require.Equal(t, "RolledBackToLastKnownGood: the node said why", outcomes["registry-agent"].message)
+	require.Equal(t, map[string]struct{}{"current": {}, "held": {}}, outcomes["registry-agent"].applied)
+	require.Equal(t, map[string]string{"rolled-back": "RolledBackToLastKnownGood: the node said why"}, outcomes["registry-agent"].failed)
 }
 
 // ConfigurationApplied=False is more than a refusal: a self-update restart, a bootstrap wait, fields
@@ -171,7 +154,7 @@ func TestOnlyARefusedConfigFailsItsStaticPods(t *testing.T) {
 		reason  string
 		refused bool
 	}{
-		{reason: "AgentRestarting"},
+		{reason: "RestartPending"},
 		{reason: "Pending"},
 		{reason: "FieldsNotApplicable"},
 		{reason: "UnknownFields"},
@@ -182,25 +165,21 @@ func TestOnlyARefusedConfigFailsItsStaticPods(t *testing.T) {
 	} {
 		t.Run(tc.reason, func(t *testing.T) {
 			config := nodeConfigWithPod("worker-0", agent,
-				[]internalv1alpha1.StaticPodStatus{{Name: "registry-agent", State: "Written"}})
+				[]internalv1alpha1.StaticPodStatus{writtenPod("registry-agent", podManifest("registry-agent-v1"))})
 			config.Generation = 2
-			config.Status.AppliedGeneration = 2
+			config.Status.AppliedGeneration = 1
 			config.Status.Conditions = []metav1.Condition{{
-				Type: configurationAppliedCondition, Status: metav1.ConditionFalse,
+				Type: internalv1alpha1.NodeConfigConditionTypeConfigurationApplied, Status: metav1.ConditionFalse,
 				ObservedGeneration: 2, Reason: tc.reason, Message: "the node said why",
 			}}
-			cl := fake.NewClientBuilder().WithScheme(nodeConfigScheme(t)).WithObjects(config).Build()
 
-			outcomes, err := readNodeConfigOutcomes(context.Background(), cl)
-			require.NoError(t, err)
+			outcomes := nsprOutcomes(fleetOf(config), map[string]string{"registry-agent": podManifest("registry-agent")})
 
 			if tc.refused {
-				require.Equal(t, int32(1), outcomes["registry-agent"].failed)
-				require.Equal(t, tc.reason+": the node said why", outcomes["registry-agent"].message)
+				require.Equal(t, map[string]string{"worker-0": tc.reason + ": the node said why"}, outcomes["registry-agent"].failed)
 				return
 			}
-			require.Equal(t, int32(0), outcomes["registry-agent"].failed)
-			require.Equal(t, int32(1), outcomes["registry-agent"].applied, "the per-pod entry answers")
+			require.False(t, answered(outcomes["registry-agent"], "worker-0"), "the per-pod entry answers, and it is about another manifest")
 		})
 	}
 }

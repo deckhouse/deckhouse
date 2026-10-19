@@ -19,9 +19,10 @@ rules:
 # Access level: ClusterAdmin.
 # Includes User, PrivilegedUser, Editor, Admin, and ClusterEditor permissions.
 # Full access:
-# - node-manager deckhouse.io resources (instances, nodegroups, nodegroupconfigurations, nodeusers, sshcredentials, staticinstances)
+# - node-manager deckhouse.io resources (instances, nodegroups, nodegroupconfigurations, nodeusers, sshcredentials, staticinstances, nodeextensionrequests)
 # Read access:
 # - Node Feature Discovery resources
+# - nodestaticpodrequests
 # No access:
 # - Machine Controller Manager (machine.sapcloud.io) and Cluster API
 #   (cluster.x-k8s.io, infrastructure.cluster.x-k8s.io) resources:
@@ -48,6 +49,7 @@ rules:
   - sshcredentials
   - staticinstances
   - containerdintegritypolicies
+  - nodeextensionrequests
   verbs:
   - get
   - list
@@ -57,7 +59,8 @@ rules:
   - patch
   - delete
   - deletecollection
-# The spec of an operation is immutable, so update and patch would grant nothing.
+# patch is how an operator approves a Disruption (spec.approved, the only
+# field of the spec that can change); update would grant nothing patch does not.
 - apiGroups:
   - deckhouse.io
   resources:
@@ -67,7 +70,19 @@ rules:
   - list
   - watch
   - create
+  - patch
   - delete
+# The manifests show what the platform runs on the nodes, so reading them stays
+# with cluster administrators. No role writes them: a creator runs any manifest
+# as root on the selected nodes.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodestaticpodrequests
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - nfd.k8s-sigs.io
   resources:
@@ -81,7 +96,7 @@ rules:
 ---
 # Access level: ClusterEditor.
 # Includes User, PrivilegedUser, Editor, and Admin permissions.
-# Adds write access to public node-manager resources (instances, nodegroups, nodegroupconfigurations, staticinstances).
+# Adds write access to public node-manager resources (instances, nodegroups, nodegroupconfigurations, staticinstances, nodeextensionrequests).
 # Adds read access to nodegroupconfigurations and staticinstances.
 # Adds update and patch access to Kubernetes Node resources.
 # Allowed public resource verbs: create, update, patch, delete, deletecollection.
@@ -117,19 +132,22 @@ rules:
   - nodegroups
   - nodegroupconfigurations
   - staticinstances
+  - nodeextensionrequests
   verbs:
   - create
   - update
   - patch
   - delete
   - deletecollection
-# The spec of an operation is immutable, so update and patch would grant nothing.
+# patch is how an operator approves a Disruption (spec.approved, the only
+# field of the spec that can change); update would grant nothing patch does not.
 - apiGroups:
   - deckhouse.io
   resources:
   - nodeoperations
   verbs:
   - create
+  - patch
   - delete
 # A rendered template carries a live bootstrap token, so reading one is the
 # right to join a machine to the cluster. It belongs with the write verbs, not
@@ -180,7 +198,7 @@ rules: []
 ---
 # Access level: User.
 # Read access:
-# - public node-manager resources (instances, nodegroups, nodeoperations)
+# - public node-manager resources (instances, nodegroups, nodeoperations, nodeextensionrequests)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -195,6 +213,7 @@ rules:
   - instances
   - nodegroups
   - nodeoperations
+  - nodeextensionrequests
   verbs:
   - get
   - list

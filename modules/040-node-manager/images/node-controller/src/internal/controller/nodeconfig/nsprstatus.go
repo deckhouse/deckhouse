@@ -18,7 +18,6 @@ package nodeconfig
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -28,10 +27,9 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
@@ -40,7 +38,7 @@ import (
 // nodes report). Mirrors reconcileNERStatuses (nerstatus.go). It runs off the
 // same pass that re-renders the nodes, so editing an object refreshes both the
 // nodes it targets and its status.
-func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logger) error {
+func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logger, p *pass) error {
 	nsprs := &deckhousev1alpha1.NodeStaticPodRequestList{}
 	if err := r.Client.List(ctx, nsprs); err != nil {
 		return fmt.Errorf("list NodeStaticPodRequests for status: %w", err)
@@ -59,10 +57,15 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 	// What the fleet made of these pods, from every node's NodeConfig. Nothing is published
 	// without it: absent counts read as zero, so one failed read would turn "every node
 	// refused it" into a clean Ready and lose the reason.
-	outcomes, err := readNodeConfigOutcomes(ctx, r.Client)
+	f, err := r.readFleet(ctx, p)
 	if err != nil {
 		return fmt.Errorf("read what the nodes report about NodeStaticPodRequests: %w", err)
 	}
+	manifests := make(map[string]string, len(nsprs.Items))
+	for i := range nsprs.Items {
+		manifests[nsprs.Items[i].Name] = nsprs.Items[i].Spec.Manifest
+	}
+	outcomes := nsprOutcomes(f, manifests)
 
 	// The denominator: read once for every object, since it is the same listing.
 	nodes := &corev1.NodeList{}
@@ -83,22 +86,17 @@ func (r *Reconciler) reconcileNSPRStatuses(ctx context.Context, logger logr.Logg
 		_, refused := rejected[nspr.Name]
 		_, refusedOnMutable := onMutable[nspr.Name]
 		reach := reachOf(nspr, immutable, mutable, refusedOnMutable && !refused)
-		if err := r.updateNSPRStatus(ctx, nspr, rejected, capped[nspr.Name], reach, nodes.Items, outcomes[nspr.Name]); err != nil {
+		if err := r.updateNSPRStatus(ctx, nspr, rejected, capped[nspr.Name], reach, nodes.Items, f, outcomes[nspr.Name]); err != nil {
 			logger.Error(err, "cannot update NodeStaticPodRequest status", "staticPodRequest", nspr.Name)
 		}
 	}
 	return nil
 }
 
-// Ready reasons of a request that resolved and reaches no node. Neither is a
-// fault, so Ready stays True and `kubectl wait --for=condition=Ready` returns.
-const (
-	// reasonServedByBashible is registry-agent on the groups bashible manages:
-	// a bashible step writes it there, and the agent is never asked for it.
-	reasonServedByBashible = "ServedByBashible"
-	// reasonNoNodesSelected names what keeps the request from every node.
-	reasonNoNodesSelected = "NoNodesSelected"
-)
+// reasonServedByBashible is a Ready reason of an accepted request that reaches no node:
+// registry-agent on the groups bashible manages, where a bashible step writes it and the
+// agent is never asked for it. Not a fault, so Ready stays True, as with NoNodesSelected.
+const reasonServedByBashible = "ServedByBashible"
 
 // nsprReach is where one request's static pod goes, by the groups it selects.
 type nsprReach struct {
@@ -138,103 +136,128 @@ func missingNodeGroups(selected, immutable, mutable []string) []string {
 // serves it there, or nothing it selects has a node the agent writes to.
 func reachedNoNode(reach nsprReach) (string, string) {
 	if len(reach.servedByBashible) > 0 {
-		return reasonServedByBashible, fmt.Sprintf("a bashible step writes this static pod on the nodes of NodeGroup(s) %s; the node agent is not asked for it",
+		return reasonServedByBashible, fmt.Sprintf("a bashible step writes this static pod on the nodes of NodeGroup(s) %s. The node agent does not write it there",
 			strings.Join(reach.servedByBashible, ", "))
 	}
+	return reasonNoNodesSelected, noNodeMessage(reach.missing, reach.targets)
+}
+
+// noNodeMessage says why the groups a selector names give no node: the names no NodeGroup
+// carries, the selected groups that have no nodes, and the further causes given.
+func noNodeMessage(missing, empty []string, more ...string) string {
 	var causes []string
-	if len(reach.missing) > 0 {
-		causes = append(causes, fmt.Sprintf("NodeGroup(s) %s do not exist", strings.Join(reach.missing, ", ")))
+	if len(missing) > 0 {
+		causes = append(causes, fmt.Sprintf("NodeGroup(s) %s do not exist", strings.Join(missing, ", ")))
 	}
-	if len(reach.targets) > 0 {
-		causes = append(causes, fmt.Sprintf("NodeGroup(s) %s have no nodes", strings.Join(reach.targets, ", ")))
+	if len(empty) > 0 {
+		causes = append(causes, fmt.Sprintf("NodeGroup(s) %s have no nodes", strings.Join(empty, ", ")))
 	}
+	causes = append(causes, more...)
 	if len(causes) == 0 {
 		causes = append(causes, "there is no NodeGroup to select")
 	}
-	return reasonNoNodesSelected, "the static pod reaches no node: " + strings.Join(causes, "; ")
+	return "the request selects no node: " + strings.Join(causes, "; ")
 }
 
 // updateNSPRStatus computes and patches one object's status, skipping the write
 // when nothing changed. Every group the selector matches is listed; the nodes of
 // those that are served by bashible are not counted.
-func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alpha1.NodeStaticPodRequest, rejected map[string]nsprRefusal, cappedIn []string, reach nsprReach, nodes []corev1.Node, outcome nsprOutcome) error {
+func (r *Reconciler) updateNSPRStatus(ctx context.Context, nspr *deckhousev1alpha1.NodeStaticPodRequest, rejected map[string]nsprRefusal, cappedIn []string, reach nsprReach, nodes []corev1.Node, f fleet, outcome requestOutcome) error {
+	matched := matchedNodes(nodes, reach.targets)
 	desired := nspr.Status.DeepCopy()
 	desired.ObservedGeneration = nspr.Generation
 	desired.MatchedNodeGroups = slices.Concat(reach.targets, reach.servedByBashible)
 	slices.Sort(desired.MatchedNodeGroups)
-	desired.MatchedNodes = matchedNodeCount(nodes, reach.targets)
-	desired.AppliedNodes = outcome.applied
-	desired.FailedNodes = outcome.failed
-	desired.FailureMessage = outcome.message
+	desired.MatchedNodes = int32(len(matched))
+	desired.AppliedNodes = int32(len(outcome.applied))
+	desired.FailedNodes = int32(len(outcome.failed))
+	desired.PendingNodes = pendingNodeCount(desired.MatchedNodes, desired.AppliedNodes, desired.FailedNodes)
 
-	// The default is the object this controller refused, reason and message
-	// already in hand.
-	desired.Phase = phaseDegraded
-	status := metav1.ConditionFalse
-	reason, message := "", ""
-	if refusal, refused := rejected[nspr.Name]; refused {
-		reason, message = refusal.reason, refusal.message
-	}
-	if reason == "" && len(cappedIn) > 0 {
-		reason = reasonLimitExceeded
-		message = fmt.Sprintf("more than %d static pods select node group(s) %s; this one is among the youngest and is left out of their node configs",
-			maxStaticPods, strings.Join(cappedIn, ", "))
-	}
-	// A refusal here reached no node, so nobody is late with an answer. Only a
-	// refusal by the nodes keeps the arithmetic: there they did get it.
-	desired.PendingNodes = pendingNodeCount(desired.MatchedNodes, outcome.applied, outcome.failed)
-	if reason != "" {
-		desired.PendingNodes = 0
-	}
-	// A node that reports it written was reached, whatever the node list says yet.
-	reachedNone := desired.MatchedNodes == 0 && outcome.applied == 0
-	switch {
-	case reason == "" && outcome.failed > 0:
-		reason = reasonRefusedByNodes
-		message = fmt.Sprintf("%d node(s) refused the static pod, %d wrote it: %s",
-			outcome.failed, outcome.applied, outcome.message)
-	case reason == "" && reachedNone:
-		desired.Phase = phaseReady
-		status = metav1.ConditionTrue
-		reason, message = reachedNoNode(reach)
-	case reason == "":
-		desired.Phase = phaseReady
-		status = metav1.ConditionTrue
-		reason = reasonResolved
-		message = fmt.Sprintf("the static pod resolved; %d of %d node(s) report it written", outcome.applied, desired.MatchedNodes)
-	}
-	meta.SetStatusCondition(&desired.Conditions, metav1.Condition{
-		Type:               readyConditionType,
-		Status:             status,
-		ObservedGeneration: nspr.Generation,
-		Reason:             reason,
-		Message:            message,
+	accepted := nsprAccepted(nspr, rejected, cappedIn)
+	pending := pendingNodes(f, matched, outcome, func(config *internalv1alpha1.NodeConfig) string {
+		manifest, ok := specManifest(config, nspr.Name)
+		return pendingReason(f, config, ok && manifest == nspr.Spec.Manifest, "")
 	})
+	// A refusal here reached no node, so nobody is late with an answer.
+	if accepted.Status != metav1.ConditionTrue {
+		desired.PendingNodes = 0
+		pending = nil
+	}
+	desired.Nodes = statusNodes(outcome.failed, pending)
+	ready := nsprReady(nspr, accepted, desired, reach, refusalMessage(outcome.failed), pendingMessage(pending))
+	meta.SetStatusCondition(&desired.Conditions, accepted)
+	meta.SetStatusCondition(&desired.Conditions, ready)
+	desired.Phase = requestPhase(accepted, ready)
 
 	if apiequality.Semantic.DeepEqual(&nspr.Status, desired) {
 		return nil
 	}
-	// The whole status in one JSON patch: a merge patch would leave out the
-	// counters that stay 0 and keep the fields that went empty.
-	patch, err := json.Marshal([]map[string]any{{"op": "add", "path": "/status", "value": desired}})
-	if err != nil {
-		return fmt.Errorf("marshal status: %w", err)
-	}
-	if err := r.Client.Status().Patch(ctx, nspr, client.RawPatch(types.JSONPatchType, patch)); err != nil {
-		return fmt.Errorf("patch status: %w", err)
-	}
-	return nil
+	return patchRequestStatus(ctx, r.Client, nspr, desired)
 }
 
-// matchedNodeCount is how many nodes belong to the groups a request selects.
-func matchedNodeCount(nodes []corev1.Node, groups []string) int32 {
-	var count int32
+// nsprAccepted is this controller's verdict on an object: the refusals of the contest
+// first, then the per-group cap.
+func nsprAccepted(nspr *deckhousev1alpha1.NodeStaticPodRequest, rejected map[string]nsprRefusal, cappedIn []string) metav1.Condition {
+	cond := metav1.Condition{
+		Type:               acceptedConditionType,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: nspr.Generation,
+		Reason:             reasonAccepted,
+		Message:            "the static pod is accepted",
+	}
+	if refusal, refused := rejected[nspr.Name]; refused {
+		cond.Status, cond.Reason, cond.Message = metav1.ConditionFalse, refusal.reason, nodecommon.Truncate(refusal.message, maxConditionMessage)
+		return cond
+	}
+	if len(cappedIn) > 0 {
+		cond.Status, cond.Reason = metav1.ConditionFalse, reasonLimitExceeded
+		cond.Message = fmt.Sprintf("more than %d static pods select NodeGroup(s) %s. This request is among the newest and is not added to the NodeConfigs of their nodes",
+			maxStaticPods, strings.Join(cappedIn, ", "))
+	}
+	return cond
+}
+
+// nsprReady says how far the selected nodes have got with writing the manifest: refusal names
+// the nodes that refused it, pending the ones still owing an answer.
+func nsprReady(nspr *deckhousev1alpha1.NodeStaticPodRequest, accepted metav1.Condition, status *deckhousev1alpha1.NodeStaticPodRequestStatus, reach nsprReach, refusal, pending string) metav1.Condition {
+	cond := metav1.Condition{Type: readyConditionType, ObservedGeneration: nspr.Generation, Status: metav1.ConditionFalse}
+	switch {
+	case accepted.Status != metav1.ConditionTrue:
+		cond.Reason, cond.Message = reasonNotAccepted, "the static pod is not accepted: "+accepted.Reason
+	case status.FailedNodes > 0:
+		cond.Reason = reasonRefusedByNodes
+		cond.Message = fmt.Sprintf("%d of %d node(s) refused the static pod, %d wrote it: %s",
+			status.FailedNodes, status.MatchedNodes, status.AppliedNodes, refusal)
+	// A node that reports it written was reached, whatever the node list says yet.
+	case status.MatchedNodes == 0 && status.AppliedNodes == 0:
+		cond.Status = metav1.ConditionTrue
+		cond.Reason, cond.Message = reachedNoNode(reach)
+	case status.PendingNodes > 0:
+		cond.Reason = reasonRolloutInProgress
+		cond.Message = fmt.Sprintf("%d of %d node(s) wrote the current manifest; %d pending",
+			status.AppliedNodes, status.MatchedNodes, status.PendingNodes)
+		if pending != "" {
+			cond.Message += ": " + pending
+		}
+	default:
+		cond.Status = metav1.ConditionTrue
+		cond.Reason = reasonAllNodesApplied
+		cond.Message = fmt.Sprintf("%d of %d node(s) wrote the current manifest", status.AppliedNodes, status.MatchedNodes)
+	}
+	cond.Message = nodecommon.Truncate(cond.Message, maxConditionMessage)
+	return cond
+}
+
+// matchedNodes names, sorted, the nodes that belong to the groups a request selects.
+func matchedNodes(nodes []corev1.Node, groups []string) []string {
+	var matched []string
 	for i := range nodes {
 		if slices.Contains(groups, nodes[i].Labels[nodecommon.NodeGroupLabel]) {
-			count++
+			matched = append(matched, nodes[i].Name)
 		}
 	}
-	return count
+	slices.Sort(matched)
+	return matched
 }
 
 // pendingNodeCount never goes below zero: a node can report before the node

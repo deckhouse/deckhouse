@@ -54,11 +54,6 @@ type NodeExtensionRequestSpec struct {
 	// NodeSelector narrows the extension to nodes carrying the given labels.
 	// +optional
 	NodeSelector NodeSelector `json:"nodeSelector,omitempty"`
-
-	// KernelModules are the modules to load once a system extension is merged. A
-	// registry package cannot load any, and such a request reaches no node.
-	// +optional
-	KernelModules []KernelModule `json:"kernelModules,omitempty"`
 }
 
 // NodeExtension locates an image the way the registry-packages-proxy locates any package:
@@ -87,19 +82,29 @@ type NodeExtension struct {
 	// (its --rpp-repository), for example a ModuleSource's spec.registry.repo. Left
 	// empty, the image is pulled from the cluster's main registry.
 	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	// +kubebuilder:validation:Pattern=`^[^[:space:]]+$`
 	Repository string `json:"repository,omitempty"`
 
 	// Path is the image's path within the repository (the proxy's --rpp-path).
 	// Left empty, the repository root is used.
 	// +optional
+	// +kubebuilder:validation:MaxLength=512
 	Path string `json:"path,omitempty"`
+
+	// KernelModules are the modules to load once the system extension is merged.
+	// +optional
+	// +kubebuilder:validation:MaxItems=32
+	// +listType=map
+	// +listMapKey=name
+	KernelModules []KernelModule `json:"kernelModules,omitempty"`
 }
 
 // IsReservedExtensionName reports whether an extension name belongs to a platform
-// extension and so may not be requested. Kept next to the NodeExtension contract so the
-// admission webhook and the controller backstop enforce one list.
+// extension and so may not be requested; node-controller refuses such a request with
+// Accepted=False, reason ReservedName.
 func IsReservedExtensionName(name string) bool {
-	return slices.Contains([]string{"containerd", "kubelet", "kubernetes-cni", "nodelet"}, name)
+	return slices.Contains([]string{"containerd", "kubelet", "kubernetes-cni", "nodelet", "qemu-guest-agent"}, name)
 }
 
 // ExtensionKind is what the image of a request is, as its requester declares it.
@@ -117,13 +122,20 @@ const (
 type NodeGroupSelector struct {
 	// MatchNames is the set of NodeGroup names the extension applies to.
 	// +optional
+	// +kubebuilder:validation:MaxItems=64
+	// +listType=set
+	// +kubebuilder:validation:items:MaxLength=63
+	// +kubebuilder:validation:items:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	MatchNames []string `json:"matchNames,omitempty"`
 }
 
 // NodeSelector selects nodes by label.
 type NodeSelector struct {
-	// MatchLabels is the set of node labels a node must carry to be selected.
+	// MatchLabels is the set of node labels a node must carry to be selected. The
+	// shipped CRD caps each value at 63 characters (additionalProperties.maxLength): no
+	// marker reaches the values of a map.
 	// +optional
+	// +kubebuilder:validation:MaxProperties=16
 	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 }
 
@@ -132,30 +144,36 @@ type NodeSelector struct {
 type KernelModule struct {
 	// Name is the kernel module name.
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=64
 	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9][a-zA-Z0-9_-]*$`
 	Name string `json:"name"`
 
 	// Params are the module parameters, passed as "key=value" strings.
 	// +optional
+	// +kubebuilder:validation:MaxItems=32
+	// +kubebuilder:validation:items:MaxLength=256
 	Params []string `json:"params,omitempty"`
 }
 
-// NodeExtensionRequestStatus is written by node-controller as it matches the selectors.
-// It mirrors the NodeConfig status shape: a phase, typed conditions, and the observed
-// generation.
+// NodeExtensionRequestStatus is written by node-controller. The Accepted condition shows
+// whether node-controller accepted the request, with the reason Accepted, InvalidExtension,
+// ReservedName, Conflict, KernelModuleConflict or NotDeliverable. The Ready condition
+// shows whether the selected nodes run the request's digest.
 type NodeExtensionRequestStatus struct {
 	// ObservedGeneration is the generation of the spec this status reflects.
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	// Phase is Ready when the extension reaches the nodes it selects, or Degraded
-	// when it does not — the Ready condition carries the reason.
-	// +kubebuilder:validation:Enum=Ready;Degraded
+	// Phase is Ready when the Ready condition is True. It is Degraded when Accepted is
+	// False or Ready is False with RefusedByNodes. Otherwise it is Pending.
+	// +kubebuilder:validation:Enum=Pending;Ready;Degraded
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
-	// Conditions carry the details of the request's progress. Ready answers
-	// whether the extension reaches its nodes.
+	// Conditions are Accepted and Ready. Ready is True with AllNodesApplied or
+	// NoNodesSelected, and False with RolloutInProgress, RefusedByNodes or NotAccepted.
+	// Its message names the refusing nodes or up to five pending ones and is cut to 4096 bytes.
 	// +optional
 	// +listType=map
 	// +listMapKey=type
@@ -165,26 +183,60 @@ type NodeExtensionRequestStatus struct {
 	// +optional
 	MatchedNodeGroups []string `json:"matchedNodeGroups,omitempty"`
 
-	// AppliedNodes is how many of the selected nodes report the extension installed at the digest
-	// their NodeConfig carries, the previous one while a node waits for a rollout slot; FailedNodes
-	// how many report it refused. No omitempty on the counters: 0 is an answer the printer columns show.
+	// AppliedNodes is how many of the selected nodes report the extension Ready at this request's
+	// digest. FailedNodes is how many refused it or the revision that contains it, or had the
+	// approvals for that revision fail. The counters have no omitempty, so the printer columns show 0.
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	AppliedNodes int32 `json:"appliedNodes"`
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	FailedNodes int32 `json:"failedNodes"`
 
 	// MatchedNodes is how many nodes of the groups that install this kind of image the
-	// selectors pick; PendingNodes how many of them have reported nothing yet.
+	// selectors pick. PendingNodes is how many of them are neither applied nor failed,
+	// including nodes still running an older digest.
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	MatchedNodes int32 `json:"matchedNodes"`
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	PendingNodes int32 `json:"pendingNodes"`
 
-	// FailureMessage is what the nodes say about the refusal, taken from one of
-	// them. A bad image fails the same way everywhere, so one message is the
-	// whole story — and it is the operator's shortcut past a serial console.
+	// Nodes are the selected nodes that have not applied the request, at most MaxStatusNodes.
+	// Failed nodes come first, then each state is sorted by name.
 	// +optional
-	FailureMessage string `json:"failureMessage,omitempty"`
+	// +kubebuilder:validation:MaxItems=32
+	Nodes []RequestNodeStatus `json:"nodes,omitempty"`
+}
+
+// MaxStatusNodes is how many nodes status.nodes of a request lists. The counters give the rest.
+const MaxStatusNodes = 32
+
+// RequestNodeState is where a selected node is with a request it has not applied.
+type RequestNodeState string
+
+const (
+	// RequestNodeStateFailed is a node that refused the request.
+	RequestNodeStateFailed RequestNodeState = "Failed"
+	// RequestNodeStatePending is a node that has not answered yet.
+	RequestNodeStatePending RequestNodeState = "Pending"
+)
+
+// RequestNodeStatus is one selected node that has not applied a request. NodeExtensionRequest
+// and NodeStaticPodRequest share it.
+type RequestNodeStatus struct {
+	// Name is the node name.
+	Name string `json:"name"`
+
+	// State is Failed when the node refused the request and Pending while it has not answered.
+	// +kubebuilder:validation:Enum=Pending;Failed
+	State RequestNodeState `json:"state"`
+
+	// Message is the text the Ready condition gives for this node, cut to 4096 bytes.
+	// +optional
+	// +kubebuilder:validation:MaxLength=4096
+	Message string `json:"message,omitempty"`
 }
 
 // NodeExtensionRequestList is a list of NodeExtensionRequest objects.

@@ -20,6 +20,7 @@ controller/instance/
 │   ├── instance_service.go
 │   ├── instance_reconciler_finalizer.go
 │   ├── instance_reconciler_heartbeat.go
+│   ├── instance_reconciler_node_agent.go
 │   ├── instance_reconciler_source.go
 │   ├── instance_reconciler_status.go
 │   ├── instance_bashible_status.go
@@ -41,8 +42,8 @@ controller/instance/
 controller-runtime result handling.
 
 `instance/` contains operations on existing `Instance` objects: finalization,
-source existence checks, bashible heartbeat/status aggregation, and message
-aggregation.
+source existence checks, bashible heartbeat/status aggregation, the node agent
+condition, and message aggregation.
 
 `common/machine/` hides CAPI/MCM differences behind one `Machine` adapter
 interface.
@@ -84,8 +85,9 @@ For an existing `Instance`, reconcile runs these steps in order:
 3. reconcileMachineRef
 4. ReconcileSourceExistence
 5. ReconcileBashibleHeartbeat
-6. ReconcileBashibleStatus
-7. reconcileMachineStatus
+6. ReconcileNodeAgent
+7. ReconcileBashibleStatus
+8. reconcileMachineStatus
 ```
 
 The loop uses two step shapes:
@@ -133,6 +135,20 @@ WaitingDisruptionApproval=True elapsed >= 20m -> WaitingDisruptionApproval
 
 Explicit `BashibleReady=False` is preserved.
 
+`ReconcileNodeAgent`
+
+Sets `NodeAgentReady` on the instance of a node that has a NodeConfig (nodelet
+runs on bashible nodes too), by node-controller's clock:
+
+```text
+status.lastReconcileTime age <= 10m  -> True, Reporting
+status.lastReconcileTime age >  10m  -> Unknown, NoReport
+no NodeConfig or no report yet       -> condition untouched
+```
+
+The threshold is `agentSilence` of the nodeconfig controller. The periodic
+one-minute requeue flips the condition without an event.
+
 `ReconcileBashibleStatus`
 
 Aggregates bashible-related conditions into `Status.BashibleStatus` and
@@ -156,6 +172,7 @@ BashibleReady problem
 WaitingDisruptionApproval=True
 WaitingApproval=True
 BashibleReady message
+NodeAgentReady message, without a prefix
 ```
 
 `reconcileMachineStatus`
@@ -220,3 +237,4 @@ machines become `Error`, and drain-blocked failures become `Blocked`.
 | `Status.Message` | `node-controller-instance-bashible-status` |
 | `Status.Conditions[BashibleReady]` heartbeat | `node-controller-instance-bashible-heartbeat` |
 | `Status.Conditions[BashibleReady]` actual | bashible |
+| `Status.Conditions[NodeAgentReady]` | `node-controller-instance-node-agent` |

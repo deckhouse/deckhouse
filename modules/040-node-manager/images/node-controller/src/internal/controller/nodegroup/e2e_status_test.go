@@ -22,12 +22,14 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	providermock "github.com/deckhouse/node-controller/internal/cloudprovider/mock"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
@@ -238,6 +240,27 @@ func conditionStatus(ng *v1.NodeGroup, condType string) metav1.ConditionStatus {
 	return ""
 }
 
+// updateNodeConfigStatus writes the status the node agent would report, stamped like the agent
+// stamps its node-level conditions: with the generation the node last looked at.
+func updateNodeConfigStatus(name string, mutate func(*internalv1alpha1.NodeConfig)) {
+	GinkgoHelper()
+	nc := &internalv1alpha1.NodeConfig{}
+	Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: name}, nc)).To(Succeed())
+	nc.Status.ObservedGeneration = nc.Generation
+	nc.Status.StaticPods = []internalv1alpha1.StaticPodStatus{}
+	mutate(nc)
+	Expect(k8sClient.Status().Update(suiteCtx, nc)).To(Succeed())
+}
+
+func setNodeConfigCondition(nc *internalv1alpha1.NodeConfig, condType string, status metav1.ConditionStatus, reason string) {
+	meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
+		Type:               condType,
+		Status:             status,
+		Reason:             reason,
+		ObservedGeneration: nc.Generation,
+	})
+}
+
 // processedDeckhouse reads the unstructured status.deckhouse the status controller writes
 // (synced flag, observed.checkSum and processed.checkSum); these fields are not on the typed
 // NodeGroupStatus.
@@ -329,6 +352,62 @@ var _ = Describe("NodeGroup status controller", func() {
 				g.Expect(ng.Status.Instances).To(Equal(int32(0)))
 				g.Expect(conditionStatus(ng, common.ConditionTypeScaling)).To(BeEmpty())
 			}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+		})
+	})
+
+	Context("Immutable NodeGroup", func() {
+		// User story: As a platform user, I want the status of an Immutable group to show where
+		// its rollout is, so that UPTODATE, Updating and WaitingForDisruptiveApproval tell me the
+		// same about Engine nodes as they do about bashible nodes.
+		It("reads the rollout of its nodes off their NodeConfigs", func() {
+			name := uniqueNG("immutable-rollout")
+			ng := staticNodeGroup(name)
+			ng.Spec.SystemType = v1.SystemTypeImmutable
+			createNodeGroup(ng)
+			nodeName := name + "-n1"
+			createGroupNode(nodeName, name, true, "", nil)
+
+			nc := &internalv1alpha1.NodeConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   nodeName,
+					Labels: map[string]string{nodecommon.NodeGroupLabel: name},
+				},
+				Spec: internalv1alpha1.NodeSpec{
+					SystemType: internalv1alpha1.SystemTypeImmutable,
+					NodeName:   nodeName,
+					OSImage:    internalv1alpha1.OSImage{Digest: testenv.TestOSImageDigest},
+				},
+			}
+			Expect(k8sClient.Create(suiteCtx, nc)).To(Succeed())
+			DeferCleanup(func() { _ = k8sClient.Delete(suiteCtx, nc) })
+
+			By("the node applied the generation it was given")
+			updateNodeConfigStatus(nodeName, func(nc *internalv1alpha1.NodeConfig) {
+				nc.Status.AppliedGeneration = nc.Generation
+				setNodeConfigCondition(nc, "ConfigurationApplied", metav1.ConditionTrue, "ReconcileSucceeded")
+			})
+			Eventually(func(g Gomega) {
+				ng := getNG(name)
+				g.Expect(ng.Status.UpToDate).To(Equal(int32(1)))
+				g.Expect(conditionStatus(ng, common.ConditionTypeUpdating)).To(Equal(metav1.ConditionFalse))
+				g.Expect(conditionStatus(ng, common.ConditionTypeWaitingForDisruptiveApproval)).To(Equal(metav1.ConditionFalse))
+			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+			By("the next generation waits for disruption approval")
+			published := &internalv1alpha1.NodeConfig{}
+			Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: nodeName}, published)).To(Succeed())
+			published.Spec.Kubelet.MaxPods = 120
+			Expect(k8sClient.Update(suiteCtx, published)).To(Succeed())
+			updateNodeConfigStatus(nodeName, func(nc *internalv1alpha1.NodeConfig) {
+				setNodeConfigCondition(nc, "ConfigurationApplied", metav1.ConditionFalse, "DisruptionApprovalPending")
+				setNodeConfigCondition(nc, "DisruptionApproved", metav1.ConditionFalse, "ApprovalPending")
+			})
+			Eventually(func(g Gomega) {
+				ng := getNG(name)
+				g.Expect(ng.Status.UpToDate).To(Equal(int32(0)))
+				g.Expect(conditionStatus(ng, common.ConditionTypeUpdating)).To(Equal(metav1.ConditionTrue))
+				g.Expect(conditionStatus(ng, common.ConditionTypeWaitingForDisruptiveApproval)).To(Equal(metav1.ConditionTrue))
+			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 		})
 	})
 

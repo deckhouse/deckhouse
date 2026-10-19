@@ -74,7 +74,6 @@ func renderPlatformDocument(text string, images map[string]map[string]string) (p
 		if ext.Name == "" || ext.Digest == "" {
 			return platformDocument{}, fmt.Errorf("%s: extension %d has no name or no digest", platformDocumentKey, i)
 		}
-		file.Spec.Extensions[i].RequestedBy = platformExtensionRequestedBy
 	}
 	return platformDocument{
 		FeatureGates: file.Spec.FeatureGates,

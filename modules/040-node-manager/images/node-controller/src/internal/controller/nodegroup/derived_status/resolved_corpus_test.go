@@ -116,7 +116,7 @@ func nodeGroupCorpus() []corpusFixture {
 				},
 			},
 			result: Result{
-				Engine:            engineCAPI,
+				Engine:            EngineCAPI,
 				KubernetesVersion: "1.33",
 				CRIType:           criTypeContainerd,
 				SerializedLabels:  "node-role.kubernetes.io/static-full=,node.deckhouse.io/group=static-full,node.deckhouse.io/type=Static,role=worker",
@@ -217,7 +217,7 @@ func nodeGroupCorpus() []corpusFixture {
 				CloudProcessed: true,
 			},
 			result: Result{
-				Engine:            engineCAPI,
+				Engine:            EngineCAPI,
 				KubernetesVersion: "1.33",
 				CRIType:           criTypeContainerd,
 				Zones:             []string{"a"},

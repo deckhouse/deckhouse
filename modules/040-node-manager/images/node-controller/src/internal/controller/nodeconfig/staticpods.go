@@ -40,19 +40,19 @@ const maxStaticPods = 16
 var staticPodLog = log.Log.WithName(controllerName)
 
 // reasonInvalidManifest is the one refusal a static pod has that an extension
-// request does not; the rest of the vocabulary (Resolved, ReservedName, Conflict,
-// RefusedByNodes) is shared and declared in extensions.go.
+// request does not; the rest of the vocabulary (ReservedName, Conflict) is shared
+// and declared in extensions.go.
 const reasonInvalidManifest = "InvalidManifest"
 
 // reasonInvalidName is the other: an object name the API server admits — a CR
 // name is a DNS subdomain — and spec.staticPods[].name does not.
 const reasonInvalidName = "InvalidName"
 
-// reasonLimitExceeded is an accepted object the per-group cap (maxStaticPods)
-// left out of a node config: nothing is wrong with it, it simply never arrives.
+// reasonLimitExceeded is an object the per-group cap (maxStaticPods) left out of
+// a node config: nothing is wrong with it, it simply never arrives.
 const reasonLimitExceeded = "LimitExceeded"
 
-// nsprRefusal records why a static pod was refused: the reason its Ready
+// nsprRefusal records why a static pod was refused: the reason its Accepted
 // condition carries, and the message that says what is wrong with it.
 type nsprRefusal struct {
 	reason  string
@@ -99,7 +99,7 @@ func rejectedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest) (map[strin
 		if deckhousev1alpha1.IsReservedStaticPodName(nspr.Name) {
 			refuse(nspr.Name, nsprRefusal{
 				reason:  reasonReservedName,
-				message: "the name belongs to a manifest the node agent or a bashible step writes itself",
+				message: "the name is reserved for a manifest that the node agent or a bashible step writes",
 			})
 			continue
 		}
@@ -111,7 +111,7 @@ func rejectedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest) (map[strin
 		if deckhousev1alpha1.IsReservedStaticPod(pod) {
 			refuse(nspr.Name, nsprRefusal{
 				reason:  reasonReservedName,
-				message: fmt.Sprintf("the pod %s already has a manifest the node agent or a bashible step writes itself", pod),
+				message: fmt.Sprintf("the node agent or a bashible step already writes a manifest for the pod %s", pod),
 			})
 			continue
 		}
@@ -119,7 +119,7 @@ func rejectedNSPRs(ordered []*deckhousev1alpha1.NodeStaticPodRequest) (map[strin
 			refuse(nspr.Name, nsprRefusal{
 				reason: reasonConflict,
 				message: fmt.Sprintf(
-					"the pod %s is already asked for by NodeStaticPodRequest %q, which is older; two manifests for one pod in a node's config are refused by the node as a whole",
+					"the pod %s is already requested by the older NodeStaticPodRequest %q. A node rejects the whole NodeConfig if it has two manifests for one pod",
 					pod, owner),
 			})
 			continue
@@ -155,6 +155,10 @@ func nodeStaticPods(ordered []*deckhousev1alpha1.NodeStaticPodRequest, rejected 
 		pods = append(pods, internalv1alpha1.StaticPod{
 			Name:     nspr.Name,
 			Manifest: nspr.Spec.Manifest,
+			RequestedBy: &internalv1alpha1.ObjectOwner{
+				Kind: internalv1alpha1.ObjectOwnerKindNodeStaticPodRequest,
+				Name: nspr.Name,
+			},
 		})
 	}
 

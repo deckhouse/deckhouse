@@ -57,7 +57,7 @@ func (r *Reconciler) rememberCordon(ctx context.Context, op *v1alpha1.NodeOperat
 // recorded; one that has not recorded yet has not cordoned either, so nil. The
 // read goes straight to the API server: a stale cache reads as "nobody here".
 func (r *Reconciler) cordonRecordedByHolder(ctx context.Context, op *v1alpha1.NodeOperation) (*bool, error) {
-	others, err := r.operationsOfNode(ctx, op.Spec.NodeName)
+	others, err := operationsOfNode(ctx, r.apiReader, op.Spec.NodeName)
 	if err != nil {
 		return nil, fmt.Errorf("list the operations of %s: %w", op.Spec.NodeName, err)
 	}
@@ -136,10 +136,11 @@ func (r *Reconciler) releaseNode(ctx context.Context, op *v1alpha1.NodeOperation
 }
 
 // heldUnschedulableByAnother reports whether an operation of another lineage
-// still needs this node out of the scheduler: a Drain, or an interruption
-// mid-eviction. An operation's own child eviction shares its lineage.
+// still needs this node out of the scheduler: a live Drain, or an interruption
+// still evicting. A Drain the previous controller created for this operation
+// shares its lineage.
 func (r *Reconciler) heldUnschedulableByAnother(ctx context.Context, op *v1alpha1.NodeOperation) (bool, error) {
-	others, err := r.operationsOfNode(ctx, op.Spec.NodeName)
+	others, err := operationsOfNode(ctx, r.apiReader, op.Spec.NodeName)
 	if err != nil {
 		return false, fmt.Errorf("list the operations of %s: %w", op.Spec.NodeName, err)
 	}
@@ -149,7 +150,14 @@ func (r *Reconciler) heldUnschedulableByAnother(ctx context.Context, op *v1alpha
 		if lineageUID(other) == lineage || terminal(other) {
 			continue
 		}
-		if other.Spec.Type == v1alpha1.NodeOperationTypeDrain || drainRequested(other) {
+		// Waiting for an approval, or skipping the eviction, it has not
+		// touched the node.
+		if waitingForApproval(other) || skipDrain(other) {
+			continue
+		}
+		// A Drain evicts until it ends; any other operation until the node
+		// has the work.
+		if awaitingEviction(other) {
 			return true, nil
 		}
 	}

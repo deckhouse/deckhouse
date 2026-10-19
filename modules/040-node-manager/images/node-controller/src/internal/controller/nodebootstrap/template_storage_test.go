@@ -246,6 +246,23 @@ func TestNodeConfigTemplateIsUnavailableWithoutAToken(t *testing.T) {
 	require.True(t, apierrors.IsServiceUnavailable(err), "expected ServiceUnavailable, got %v", err)
 }
 
+// The render reads only what the cluster publishes itself, so an input that is not
+// there yet is "not yet" for the client to retry, with the cause, rather than a 500.
+func TestNodeConfigTemplateIsUnavailableUntilTheClusterInputsAreThere(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, clientgoscheme.AddToScheme(scheme))
+	require.NoError(t, deckhousev1.AddToScheme(scheme))
+	require.NoError(t, deckhousev1alpha1.AddToScheme(scheme))
+	cluster := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		immutableStaticNodeGroup(testTemplateNodeGroup),
+		bootstrapTokenSecret(testTemplateNodeGroup),
+	).Build()
+
+	_, err := NewTemplateStorage(cluster).Get(t.Context(), testTemplateNodeGroup, &metav1.GetOptions{})
+	require.True(t, apierrors.IsServiceUnavailable(err), "expected ServiceUnavailable, got %v", err)
+	require.ErrorContains(t, err, testTemplateNodeGroup)
+}
+
 func immutableStaticNodeGroup(name string) client.Object {
 	return &deckhousev1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -411,12 +428,12 @@ func TestNodeConfigTemplateServesTheDocumentOfABashibleGroup(t *testing.T) {
 			require.Empty(t, template.Spec.Kubelet.BootstrapToken)
 			require.Empty(t, template.Spec.StatusToken)
 			require.Equal(t, []string{"https://192.168.199.10:6443"}, template.Spec.APIServerEndpoints)
-			require.NotEmpty(t, template.Spec.RegistryPackagesProxyAccessTokenB64)
+			require.Equal(t, []byte("proxy-token"), template.Spec.RegistryPackagesProxy.AccessToken)
 			require.Equal(t, map[string]bool{"static-pods": true, "extensions": true}, template.Spec.FeatureGates)
 			names := make([]string, 0, len(template.Spec.Extensions))
 			for _, ext := range template.Spec.Extensions {
 				names = append(names, ext.Name)
-				require.Equal(t, "node-manager", ext.RequestedBy, ext.Name)
+				require.Nil(t, ext.RequestedBy, "a platform package names no requester: %s", ext.Name)
 			}
 			// The list itself is candi/nodelet/nodeconfig-mutable.yaml.tpl's: the agent first.
 			require.Len(t, names, len(testenv.TestPlatformPackageDigests)+1)

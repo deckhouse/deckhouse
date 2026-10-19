@@ -20,11 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -32,193 +28,62 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	sigsyaml "sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
-	"github.com/deckhouse/node-controller/internal/webhook"
 )
 
-// renderedStorage is what renderSpec always puts in the desired spec: the guess
-// the cluster makes when nothing else names a disk.
-func renderedStorage() internalv1alpha1.Storage {
-	return internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
-		DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize},
-	}}
-}
-
-// TestKeepBootstrapOnlyFields covers the first master's first day-2 render:
-// only fields with no answer in the cluster survive the wholesale patch.
-// Registry, serverTLSBootstrap and resourceReservation deliberately do NOT.
-func TestKeepBootstrapOnlyFields(t *testing.T) {
-	bootstrapped := internalv1alpha1.NodeSpec{
-		Registry: &internalv1alpha1.Registry{Address: "registry.example.com", Path: "/deckhouse/ce"},
-		// The installer's shape: a selector it chose plus the disk etcd lives
-		// on. The mounts are what mark the section as somebody else's — the
-		// selector alone is a field this controller renders too.
+// The machine owns what it wrote when it registered: the apply set of an existing
+// object carries none of it, and the comparison that decides a write ignores it. The
+// bootstrap token is not the machine's: the apply leaves it out, so a copied one is removed.
+func TestTheApplySetLeavesTheMachineFieldsOut(t *testing.T) {
+	registered := internalv1alpha1.NodeSpec{
+		NodeName:    "master-0",
+		StatusToken: "e3b0c44298fc1c14",
 		Storage: internalv1alpha1.Storage{
-			Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: ">=30Gi"}},
-			Mounts: []internalv1alpha1.Mount{{
-				Name:              "kubernetes-data",
-				PartitionSelector: &internalv1alpha1.PartitionSelector{Size: "10Gi", Blank: true},
-				BindTo:            "/var/lib/etcd",
-				Mode:              "0700",
-			}},
+			Disk:   internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: ">=30Gi"}},
+			Mounts: []internalv1alpha1.Mount{{Name: "kubernetes-data", BindTo: "/var/lib/etcd"}},
+		},
+		Network: internalv1alpha1.Network{
+			Hostname:   "master-0",
+			Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", Addresses: []string{"192.0.2.10/24"}}},
 		},
 		Kubelet: internalv1alpha1.Kubelet{
-			ServerTLSBootstrap:  ptr.To(false),
-			ResourceReservation: &internalv1alpha1.ResourceReservation{Mode: "Auto"},
-		},
-		// The machine minted it and nothing in the cluster can reissue it.
-		StatusToken: "e3b0c44298fc1c14",
-	}
-
-	tests := []struct {
-		name       string
-		existing   internalv1alpha1.NodeSpec
-		expStorage internalv1alpha1.Storage
-		expNetwork internalv1alpha1.Network
-	}{
-		{
-			name:       "bootstrapped master keeps only what the cluster cannot render",
-			existing:   bootstrapped,
-			expStorage: bootstrapped.Storage,
-		},
-		{
-			name:       "worker with nothing to keep is left as rendered",
-			existing:   internalv1alpha1.NodeSpec{},
-			expStorage: renderedStorage(),
-		},
-		{
-			// The guess this controller renders itself is not the operator's, so
-			// it is re-rendered rather than kept — otherwise the threshold could
-			// never be corrected on a node that already exists.
-			name: "a selector equal to the rendered guess is re-rendered",
-			existing: internalv1alpha1.NodeSpec{
-				Storage: renderedStorage(),
-			},
-			expStorage: renderedStorage(),
-		},
-		{
-			// A statically addressed machine: the render must not put it back
-			// on DHCP — the OS renders its network from this spec on every
-			// boot, and eth0-DHCP over a static address is a dead node.
-			name: "a static network survives the render, the hostname does not",
-			existing: internalv1alpha1.NodeSpec{
-				Network: internalv1alpha1.Network{
-					Hostname: "what-the-machine-said",
-					Interfaces: []internalv1alpha1.NetworkInterface{{
-						Name: "eth0", DHCP: false, Addresses: []string{"192.0.2.10/24"}, Gateway: "192.0.2.1",
-					}},
-				},
-			},
-			expStorage: renderedStorage(),
-			expNetwork: internalv1alpha1.Network{
-				Hostname: "master-0",
-				Interfaces: []internalv1alpha1.NetworkInterface{{
-					Name: "eth0", DHCP: false, Addresses: []string{"192.0.2.10/24"}, Gateway: "192.0.2.1",
-				}},
-			},
-		},
-		{
-			name: "the rendered DHCP default is not explicit and is re-rendered",
-			existing: internalv1alpha1.NodeSpec{
-				Network: internalv1alpha1.Network{
-					Hostname:   "master-0",
-					Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
-				},
-			},
-			expStorage: renderedStorage(),
-			expNetwork: internalv1alpha1.Network{Hostname: "master-0", Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}}},
-		},
-		{
-			name: "an explicit device is as specific as a selector",
-			existing: internalv1alpha1.NodeSpec{
-				Storage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{Device: "/dev/sdb"}},
-			},
-			expStorage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{Device: "/dev/sdb"}},
-		},
-		{
-			// The disk etcd lives on is given to a control-plane node this way.
-			// Dropping the list would leave nothing under /var/lib/etcd on the next
-			// pass, and etcd would come up as a brand new cluster after a reboot.
-			name: "the mounts a master keeps etcd on are not dropped",
-			existing: internalv1alpha1.NodeSpec{
-				Storage: internalv1alpha1.Storage{Mounts: []internalv1alpha1.Mount{{
-					Name:              "kubernetes-data",
-					PartitionSelector: &internalv1alpha1.PartitionSelector{Size: "10Gi", Blank: true},
-					BindTo:            "/var/lib/etcd",
-					Mode:              "0700",
-				}}},
-			},
-			expStorage: internalv1alpha1.Storage{Mounts: []internalv1alpha1.Mount{{
-				Name:              "kubernetes-data",
-				PartitionSelector: &internalv1alpha1.PartitionSelector{Size: "10Gi", Blank: true},
-				BindTo:            "/var/lib/etcd",
-				Mode:              "0700",
-			}}},
-		},
-		{
-			// The webhook calls wipe machine-owned and refuses it from every
-			// other writer, so a render that drops it is the one write nobody
-			// is left able to undo.
-			name: "the wipe a machine published survives a storage it renders otherwise",
-			existing: internalv1alpha1.NodeSpec{
-				Storage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
-					DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize},
-					Wipe:         true,
-				}},
-			},
-			expStorage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
-				DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize},
-				Wipe:         true,
-			}},
+			MaxPods:            110,
+			RegisterWithTaints: []internalv1alpha1.Taint{{Key: "dedicated", Effect: "NoSchedule"}},
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			rendered := &internalv1alpha1.Registry{Address: "rendered.example.com"}
-			desired := internalv1alpha1.NodeSpec{
-				NodeName: "master-0",
-				Registry: rendered,
-				Storage:  renderedStorage(),
-				Network: internalv1alpha1.Network{
-					Hostname:   "master-0",
-					Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
-				},
-				Kubelet: internalv1alpha1.Kubelet{MaxPods: 120},
-			}
+	applied := withoutMachineFields(registered)
 
-			keepBootstrapOnlyFields(&desired, &tc.existing)
+	require.Equal(t, internalv1alpha1.NodeSpec{
+		NodeName: "master-0",
+		Kubelet:  internalv1alpha1.Kubelet{MaxPods: 110},
+	}, applied)
+	require.NotEmpty(t, registered.Storage.Mounts, "the spec it was taken from is not changed")
 
-			require.Equal(t, tc.expStorage, desired.Storage)
-			require.Equal(t, tc.existing.StatusToken, desired.StatusToken)
-			if tc.expNetwork.Hostname != "" {
-				require.Equal(t, tc.expNetwork, desired.Network)
-			}
+	rendered := &internalv1alpha1.NodeConfig{Spec: renderSpecOf(applied)}
+	require.True(t, specUpToDate(&internalv1alpha1.NodeConfig{Spec: registered}, rendered),
+		"a node keeping what it registered with is not drift")
 
-			// The cluster owns these, so the render wins even over the bootstrap
-			// value; resourceReservation is NodeGroup-owned too (see
-			// TestRenderResourceReservation).
-			require.Equal(t, rendered, desired.Registry)
-			require.Nil(t, desired.Kubelet.ServerTLSBootstrap)
-			require.Nil(t, desired.Kubelet.ResourceReservation)
+	withToken := registered
+	withToken.Kubelet.BootstrapToken = "abcdef.0123456789abcdef"
+	require.Empty(t, withoutMachineFields(withToken).Kubelet.BootstrapToken, "the apply never carries the token")
+	require.False(t, specUpToDate(&internalv1alpha1.NodeConfig{Spec: withToken}, rendered),
+		"a token copied into the object is a change the apply removes")
+}
 
-			// Everything else still comes from the render.
-			require.Equal(t, "master-0", desired.NodeName)
-			require.Equal(t, 120, desired.Kubelet.MaxPods)
-		})
-	}
+func renderSpecOf(spec internalv1alpha1.NodeSpec) internalv1alpha1.NodeSpec {
+	spec.Network = internalv1alpha1.Network{Hostname: spec.NodeName}
+	spec.Storage = internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize}}}
+	return spec
 }
 
 // Kernel keys are published, not carried over — a carried-over value is frozen
@@ -235,13 +100,12 @@ func TestRenderKernelPublishesEveryKeyANodeMustKeep(t *testing.T) {
 	}, sysctl)
 
 	// And a node that booted with a different value for one of them is brought
-	// back to the cluster's, rather than keeping its own forever.
+	// back to the cluster's: kernel is not the machine's, so it is applied.
 	stale := internalv1alpha1.NodeSpec{
 		Kernel: internalv1alpha1.Kernel{Sysctl: map[string]internalv1alpha1.SysctlValue{"kernel.panic": "0"}},
 	}
-	desired := internalv1alpha1.NodeSpec{Kernel: renderKernel()}
-	keepBootstrapOnlyFields(&desired, &stale)
-	require.Equal(t, internalv1alpha1.SysctlValue("10"), desired.Kernel.Sysctl["kernel.panic"])
+	require.False(t, specUpToDate(&internalv1alpha1.NodeConfig{Spec: stale},
+		&internalv1alpha1.NodeConfig{Spec: internalv1alpha1.NodeSpec{Kernel: renderKernel()}}))
 }
 
 // kubelet exits when --node-labels carries a label it may not accept, so a node
@@ -416,10 +280,9 @@ func TestRenderResourceReservation(t *testing.T) {
 	}
 }
 
-// Both writers of a platform extension must name the same author, or the first
-// master differs from every other node. The literal is spelled out, not taken
-// from the constant, so a one-sided change fails here instead of diverging.
-func TestRenderExtensionsNamesTheModuleThatAskedForThem(t *testing.T) {
+// A platform extension names no requester: the node tells a request from the
+// platform's own by requestedBy, and dhctl writes the first master the same way.
+func TestRenderExtensionsNameNoRequester(t *testing.T) {
 	extensions := renderExtensions(map[string]string{
 		containerdExtension: "sha256:1",
 		kubeletExtension:    "sha256:2",
@@ -428,7 +291,7 @@ func TestRenderExtensionsNamesTheModuleThatAskedForThem(t *testing.T) {
 
 	require.Len(t, extensions, 3)
 	for _, ext := range extensions {
-		require.Equal(t, "node-manager", ext.RequestedBy, "%s must name the module both writers belong to", ext.Name)
+		require.Nil(t, ext.RequestedBy, "%s is the platform's own", ext.Name)
 	}
 }
 
@@ -488,37 +351,33 @@ func TestRenderNarrowsEveryValueTheAgentSchemaRefuses(t *testing.T) {
 			expLogMaxSize string
 		}{
 			{
-				name:          "nothing configured keeps the CRD defaults",
-				expMaxPods:    120,
-				expLogMaxSize: defaultContainerLogMaxSize,
+				// maxPods follows the pod subnet; the log size is left to the node.
+				name:       "nothing configured leaves the defaults to the node",
+				expMaxPods: 120,
 			},
 			{
 				// A NodeGroup takes a bare integer; the agent's schema has
 				// Minimum=1, and 0 is dropped by omitempty into a silent 120.
-				name:          "maxPods 0 is legal for a NodeGroup and refused by the agent",
-				kubelet:       &v1.KubeletSpec{MaxPods: ptr.To(int32(0))},
-				expMaxPods:    1,
-				expLogMaxSize: defaultContainerLogMaxSize,
+				name:       "maxPods 0 is legal for a NodeGroup and refused by the agent",
+				kubelet:    &v1.KubeletSpec{MaxPods: ptr.To(int32(0))},
+				expMaxPods: 1,
 			},
 			{
-				name:          "maxPods above the ceiling",
-				kubelet:       &v1.KubeletSpec{MaxPods: ptr.To(int32(1500))},
-				expMaxPods:    maxPodsCeiling,
-				expLogMaxSize: defaultContainerLogMaxSize,
+				name:       "maxPods above the ceiling",
+				kubelet:    &v1.KubeletSpec{MaxPods: ptr.To(int32(1500))},
+				expMaxPods: maxPodsCeiling,
 			},
 			{
 				// The NodeGroup pattern is unanchored, so it matches anything
 				// containing "50M"; the agent's CEL rule parses the quantity.
-				name:          "containerLogMaxSize with a suffix that is no quantity",
-				kubelet:       &v1.KubeletSpec{ContainerLogMaxSize: "50Mib"},
-				expMaxPods:    120,
-				expLogMaxSize: defaultContainerLogMaxSize,
+				name:       "containerLogMaxSize with a suffix that is no quantity",
+				kubelet:    &v1.KubeletSpec{ContainerLogMaxSize: "50Mib"},
+				expMaxPods: 120,
 			},
 			{
-				name:          "containerLogMaxSize of zero, which the agent refuses as non-positive",
-				kubelet:       &v1.KubeletSpec{ContainerLogMaxSize: "0Mi"},
-				expMaxPods:    120,
-				expLogMaxSize: defaultContainerLogMaxSize,
+				name:       "containerLogMaxSize of zero, which the agent refuses as non-positive",
+				kubelet:    &v1.KubeletSpec{ContainerLogMaxSize: "0Mi"},
+				expMaxPods: 120,
 			},
 			{
 				name:          "a quantity both schemas accept is passed through",
@@ -586,10 +445,10 @@ func TestRecordClampedSettings(t *testing.T) {
 	}
 }
 
-// Registration taints are rendered for a machine that has not joined yet and
-// have no meaning afterwards. Without carrying the field over, every node is
-// patched once just to drop it, spending a rollout slot on a no-op.
-func TestKeepBootstrapOnlyFieldsKeepsRegistrationTaints(t *testing.T) {
+// Registration taints are rendered for a machine that has not joined yet and have no
+// meaning afterwards. They are the machine's once it registered, so a joined node is
+// not patched just to drop them.
+func TestARegisteredNodeIsNotPatchedToDropItsRegistrationTaints(t *testing.T) {
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
 		Spec: v1.NodeGroupSpec{
@@ -605,81 +464,44 @@ func TestKeepBootstrapOnlyFieldsKeepsRegistrationTaints(t *testing.T) {
 
 	registered := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0", CreationTimestamp: metav1.Now()}}
 	dayTwo := renderSpec(ng, registered, clusterInputs{})
-	keepBootstrapOnlyFields(&dayTwo, &bootstrap)
 
-	require.Equal(t, bootstrap, dayTwo, "the node it was written for reads as up to date")
+	require.True(t, specUpToDate(&internalv1alpha1.NodeConfig{Spec: bootstrap}, &internalv1alpha1.NodeConfig{Spec: dayTwo}),
+		"the node it was written for reads as up to date")
 }
 
-// The render applies these because the bootstrap file path bypasses API-server
-// CRD defaulting. One that drifts from the schema gives a bootstrapping node
-// different values than a day-2 one, so they are read from the type, not typed.
-func TestRenderDefaultsMatchTheAgentSchema(t *testing.T) {
-	markers := kubebuilderMarkers(t, "../../../api/internal.deckhouse.io/v1alpha1/nodeconfig_types.go")
-
-	require.Equal(t, defaultContainerLogMaxSize, markers["ContainerLogMaxSize"]["default"])
-	require.Equal(t, strconv.Itoa(defaultContainerLogMaxFiles), markers["ContainerLogMaxFiles"]["default"])
-	require.Equal(t, strconv.Itoa(defaultMaxConcurrentDownloads), markers["MaxConcurrentDownloads"]["default"])
-	require.Equal(t, strconv.Itoa(maxPodsCeiling), markers["MaxPods"]["validation:Maximum"])
-}
-
-// kubebuilderMarkers returns every field's +kubebuilder: markers, keyed by field
-// name and then by marker. Field names are unique among the ones read above.
-func kubebuilderMarkers(t *testing.T, path string) map[string]map[string]string {
-	t.Helper()
-
-	file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ParseComments)
-	require.NoError(t, err)
-
-	markers := map[string]map[string]string{}
-	ast.Inspect(file, func(node ast.Node) bool {
-		field, ok := node.(*ast.Field)
-		if !ok || field.Doc == nil || len(field.Names) != 1 {
-			return true
+// The value of an unset field lives in nodelet alone (FREEZE-SPEC 1.6): a default in
+// the schema is a second copy, and the API server would write it into every object.
+func TestTheShippedCRDDefaultsNothing(t *testing.T) {
+	var defaults []string
+	var walk func(path string, node any)
+	walk = func(path string, node any) {
+		switch value := node.(type) {
+		case map[string]any:
+			for key, child := range value {
+				if key == "default" {
+					defaults = append(defaults, path)
+				}
+				walk(path+"."+key, child)
+			}
+		case []any:
+			for _, child := range value {
+				walk(path+"[]", child)
+			}
 		}
-		for _, line := range field.Doc.List {
-			marker, ok := strings.CutPrefix(line.Text, "// +kubebuilder:")
-			if !ok {
-				continue
-			}
-			name, value, found := strings.Cut(marker, "=")
-			if !found {
-				continue
-			}
-			if markers[field.Names[0].Name] == nil {
-				markers[field.Names[0].Name] = map[string]string{}
-			}
-			markers[field.Names[0].Name][name] = strings.Trim(value, `"`)
-		}
-		return true
-	})
-	require.NotEmpty(t, markers, "no markers read from %s", path)
-	return markers
+	}
+	walk("", nodeConfigCRDSchema(t))
+	require.Empty(t, defaults)
 }
 
-// The shipped CRD is what the API server enforces; the render applies the same
-// numbers itself, for the bootstrap file path that never reaches it. One that
-// drifts gives a bootstrapping node different values than a day-2 one.
-func TestRenderDefaultsMatchTheShippedCRD(t *testing.T) {
+// The shipped CRD is what the API server enforces; the render clamps to the same
+// bounds, and a value beyond them is refused whole.
+func TestRenderBoundsMatchTheShippedCRD(t *testing.T) {
 	schema := nodeConfigCRDSchema(t)
 
-	kubelet := func(field string) map[string]any {
-		return crdField(t, schema, "spec", "kubelet", field)
-	}
-	require.Equal(t, float64(maxPodsCeiling), kubelet("maxPods")["maximum"])
-	require.Equal(t, float64(defaultMaxPodsFor(intstr.FromInt(defaultPodSubnetNodeCIDRPrefix))), kubelet("maxPods")["default"])
-	require.Equal(t, defaultContainerLogMaxSize, kubelet("containerLogMaxSize")["default"])
-	require.Equal(t, float64(defaultContainerLogMaxFiles), kubelet("containerLogMaxFiles")["default"])
-	require.Equal(t, float64(defaultMaxConcurrentDownloads),
-		crdField(t, schema, "spec", "containerRuntime", "maxConcurrentDownloads")["default"])
+	require.Equal(t, float64(maxPodsCeiling), crdField(t, schema, "spec", "kubelet", "maxPods")["maximum"])
 
-	// The bootstrap file path never reaches an API server, so the render writes
-	// this default itself; a drift here gives a bootstrapping node a different
-	// owner of registry.d than a day-2 one.
-	require.Equal(t, registryOwnerNodelet,
-		crdField(t, schema, "spec", "containerRuntime", "registryOwner")["default"])
-
-	// The Engine render writes the type the API server would default it to.
-	require.Equal(t, string(internalv1alpha1.SystemTypeImmutable), crdField(t, schema, "spec", "systemType")["default"])
+	// No default: every writer names the type, and the API server refuses one that does not.
+	require.Contains(t, crdField(t, schema, "spec")["required"], "systemType")
 
 	// The render is what fills the list, so the bound it caps at is the bound the
 	// API server enforces: a longer list is refused whole and the node is left
@@ -691,24 +513,7 @@ func TestRenderDefaultsMatchTheShippedCRD(t *testing.T) {
 // the envtest suites locate it, and returns its single version's schema.
 func nodeConfigCRDSchema(t *testing.T) map[string]any {
 	t.Helper()
-
-	paths := testenv.NodeManagerCRDPaths(testenv.NodeConfigCRDFile)
-	require.Len(t, paths, 1)
-	raw, err := os.ReadFile(paths[0])
-	require.NoError(t, err, "the shipped NodeConfig CRD must be readable at %s", paths[0])
-
-	var crd struct {
-		Spec struct {
-			Versions []struct {
-				Schema struct {
-					OpenAPIV3Schema map[string]any `json:"openAPIV3Schema"`
-				} `json:"schema"`
-			} `json:"versions"`
-		} `json:"spec"`
-	}
-	require.NoError(t, sigsyaml.Unmarshal(raw, &crd))
-	require.Len(t, crd.Spec.Versions, 1)
-	return crd.Spec.Versions[0].Schema.OpenAPIV3Schema
+	return testenv.ShippedCRDSchema(t, testenv.NodeConfigCRDFile)
 }
 
 // crdField walks the schema down a property path to one field.
@@ -876,114 +681,6 @@ func TestRenderedSpecPassesTheAgentSchema(t *testing.T) {
 	}
 }
 
-// The rendered network is a guess — eth0 with DHCP — so a machine that named
-// its own interfaces keeps them. A machine that named none keeps the guess:
-// blanking the section leaves the node without a network after a reboot.
-func TestKeepBootstrapOnlyFieldsKeepsAMachineNamedNetwork(t *testing.T) {
-	rendered := internalv1alpha1.Network{
-		Hostname:   "worker-0",
-		Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
-	}
-	machineNamed := internalv1alpha1.Network{
-		Hostname: "worker-0",
-		Interfaces: []internalv1alpha1.NetworkInterface{{
-			Name: "bond0", Addresses: []string{"192.0.2.10/24"}, Gateway: "192.0.2.1",
-		}},
-	}
-
-	tests := []struct {
-		name     string
-		existing internalv1alpha1.Network
-		exp      internalv1alpha1.Network
-	}{
-		{
-			name:     "the interfaces the machine named survive the render",
-			existing: machineNamed,
-			exp:      machineNamed,
-		},
-		{
-			name:     "a node that named no interfaces is left with the rendered eth0",
-			existing: internalv1alpha1.Network{},
-			exp:      rendered,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			desired := internalv1alpha1.NodeSpec{Network: rendered}
-			existing := internalv1alpha1.NodeSpec{Network: tc.existing}
-
-			keepBootstrapOnlyFields(&desired, &existing)
-
-			require.Equal(t, tc.exp, desired.Network)
-		})
-	}
-}
-
-// renderNetwork answers only a hostname and interfaces, so a machine that set
-// nothing but resolvers has a network that differs from the render in fields
-// the render never fills. Judging emptiness by interfaces alone would drop them.
-func TestKeepBootstrapOnlyFieldsKeepsAResolverOnlyNetwork(t *testing.T) {
-	existing := internalv1alpha1.NodeSpec{Network: internalv1alpha1.Network{
-		DNS: internalv1alpha1.DNS{Servers: []string{"10.0.0.10"}},
-	}}
-	desired := internalv1alpha1.NodeSpec{Network: internalv1alpha1.Network{
-		Hostname:   "master-0",
-		Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
-	}}
-
-	keepBootstrapOnlyFields(&desired, &existing)
-
-	require.Equal(t, []string{"10.0.0.10"}, desired.Network.DNS.Servers,
-		"the resolvers the machine was given were dropped")
-	// The machine named no interfaces, so the rendered one has to stand: the OS
-	// renders its network from this spec, and one with no interface at all is a
-	// node with no address after a reboot.
-	require.Equal(t, []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}}, desired.Network.Interfaces)
-	require.Equal(t, "master-0", desired.Network.Hostname)
-}
-
-// A worker installed by hand has no etcd mount, so the document the operator
-// merges into the template names nothing but the disk they picked. The node
-// publishes it once and has no way to publish it again, so a render that
-// overwrites the selector loses that disk for good.
-func TestKeepBootstrapOnlyFieldsKeepsAnOperatorWrittenDiskSelector(t *testing.T) {
-	rendered := internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
-		DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize},
-	}}
-	operatorWritten := internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
-		DiskSelector: &internalv1alpha1.DiskSelector{Serial: "S3Z8NB0K700001"},
-	}}
-
-	tests := []struct {
-		name     string
-		existing internalv1alpha1.Storage
-		exp      internalv1alpha1.Storage
-	}{
-		{
-			name:     "the disk the operator named survives the render",
-			existing: operatorWritten,
-			exp:      operatorWritten,
-		},
-		{
-			name:     "a node carrying nothing but the rendered guess keeps being rendered",
-			existing: internalv1alpha1.Storage{},
-			exp:      rendered,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			desired := internalv1alpha1.NodeSpec{Storage: *rendered.DeepCopy()}
-			existing := internalv1alpha1.NodeSpec{Storage: tc.existing}
-
-			keepBootstrapOnlyFields(&desired, &existing)
-
-			require.Equal(t, tc.exp, desired.Storage)
-		})
-	}
-}
-
 // An explicit zero is containerd's "no limit"; it has to reach the object as a
 // zero, not vanish behind omitempty and come back as the CRD default.
 func TestAnExplicitZeroDownloadsReachesTheAPI(t *testing.T) {
@@ -991,15 +688,6 @@ func TestAnExplicitZeroDownloadsReachesTheAPI(t *testing.T) {
 	data, err := json.Marshal(renderContainerRuntime(ng, clusterInputs{}, nil))
 	require.NoError(t, err)
 	require.Contains(t, string(data), `"maxConcurrentDownloads":0`)
-}
-
-// The NodeConfig webhook carves out exactly this NIC for a machine that named
-// none, from a copy of its own (webhook.ClusterFallbackInterfaces). Drift here
-// denies that node's config on every pass, permanently.
-func TestRenderedFallbackNICMatchesTheWebhookCarveOut(t *testing.T) {
-	rendered := renderNetwork(&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}})
-
-	require.Equal(t, webhook.ClusterFallbackInterfaces(), rendered.Interfaces)
 }
 
 // crdItems steps into an array's item schema, which crdField cannot: items is a
@@ -1030,11 +718,11 @@ func TestShippedCRDCarriesTheStaticPodContract(t *testing.T) {
 	require.Equal(t, float64(1), manifest["minLength"])
 	require.Equal(t, float64(32768), manifest["maxLength"])
 
-	// Who writes containerd's registry.d. The default is what keeps a cluster
+	// Who writes containerd's registry.d. Unset is Nodelet, which keeps a cluster
 	// that never heard of an agent behaving exactly as it did before.
-	owner := crdField(t, schema, "spec", "containerRuntime", "registryOwner")
-	require.Equal(t, "nodelet", owner["default"])
-	require.Equal(t, []any{registryOwnerNodelet, registryOwnerAgent}, owner["enum"])
+	owner := crdField(t, schema, "spec", "containerRuntime", "registryConfigOwner")
+	require.NotContains(t, owner, "default")
+	require.Equal(t, []any{string(internalv1alpha1.RegistryConfigOwnerNodelet), string(internalv1alpha1.RegistryConfigOwnerRegistryAgent)}, owner["enum"])
 
 	// Two states, not three: a node either holds the file the spec asked for or
 	// it does not. What an operator does next is in the reason, because the three
@@ -1058,10 +746,10 @@ func TestRenderContainerRuntimeLeavesImagesToTheExtension(t *testing.T) {
 	for _, tt := range []struct {
 		name      string
 		agentMode bool
-		owner     string
+		owner     any
 	}{
-		{name: "no agent", owner: registryOwnerNodelet},
-		{name: "agent mode", agentMode: true, owner: registryOwnerAgent},
+		{name: "no agent"},
+		{name: "agent mode", agentMode: true, owner: string(internalv1alpha1.RegistryConfigOwnerRegistryAgent)},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			in := clusterInputs{RegistryAgentMode: tt.agentMode}
@@ -1070,13 +758,15 @@ func TestRenderContainerRuntimeLeavesImagesToTheExtension(t *testing.T) {
 			}
 			spec := renderSpec(ng, node, in)
 
-			raw, err := k8sruntime.DefaultUnstructuredConverter.ToUnstructured(&spec)
+			data, err := json.Marshal(spec)
 			require.NoError(t, err)
-			containerRuntime, ok := raw["containerRuntime"].(map[string]any)
-			require.True(t, ok)
+			var raw map[string]any
+			require.NoError(t, json.Unmarshal(data, &raw))
+			// Nothing to say leaves the section out, as the API sends it.
+			containerRuntime, _ := raw["containerRuntime"].(map[string]any)
 			require.NotContains(t, containerRuntime, "sandboxImage")
 			require.NotContains(t, containerRuntime, "localImages")
-			require.Equal(t, tt.owner, containerRuntime["registryOwner"])
+			require.Equal(t, tt.owner, containerRuntime["registryConfigOwner"])
 		})
 	}
 }
@@ -1199,32 +889,32 @@ func TestRenderRegistryOwner(t *testing.T) {
 	ng := &v1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudEphemeral}}
 	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}
 
+	// Unset is the node's Nodelet.
 	bare := renderSpec(ng, node, clusterInputs{})
-	require.Equal(t, registryOwnerNodelet, bare.ContainerRuntime.RegistryOwner,
+	require.Empty(t, bare.ContainerRuntime.RegistryConfigOwner,
 		"a cluster that never heard of an agent goes on as it did before")
 
 	// The intent on its own. Reachable whenever the object has not arrived yet, and
 	// an end state when it never does — a manifest the contest refused, or one the
 	// per-group cap left out.
 	intentOnly := renderSpec(ng, node, clusterInputs{RegistryAgentMode: true})
-	require.Equal(t, registryOwnerNodelet, intentOnly.ContainerRuntime.RegistryOwner,
+	require.Empty(t, intentOnly.ContainerRuntime.RegistryConfigOwner,
 		"nodelet keeps writing registry.d until the node actually has the agent")
 
 	// The pod on its own. Some other module may name a static pod whatever it likes;
 	// who owns registry.d still follows from the registry module.
 	podOnly := renderSpec(ng, node, clusterInputs{NodeStaticPodRequests: withAgentStaticPod()})
-	require.Equal(t, registryOwnerNodelet, podOnly.ContainerRuntime.RegistryOwner)
+	require.Empty(t, podOnly.ContainerRuntime.RegistryConfigOwner)
 
 	claimed := renderSpec(ng, node, clusterInputs{
 		RegistryAgentMode:     true,
 		NodeStaticPodRequests: withAgentStaticPod(),
 	})
-	require.Equal(t, registryOwnerAgent, claimed.ContainerRuntime.RegistryOwner)
+	require.Equal(t, internalv1alpha1.RegistryConfigOwnerRegistryAgent, claimed.ContainerRuntime.RegistryConfigOwner)
 
 	// And it is taken back the moment the registry module stops saying so: the
 	// directory goes back to nodelet without anybody editing a node.
-	require.Equal(t, registryOwnerNodelet,
-		renderSpec(ng, node, clusterInputs{}).ContainerRuntime.RegistryOwner)
+	require.Empty(t, renderSpec(ng, node, clusterInputs{}).ContainerRuntime.RegistryConfigOwner)
 }
 
 // The API server defaults an unnamed type to Immutable; an Engine render that left
@@ -1237,19 +927,18 @@ func TestTheEngineRenderNamesItsSystemType(t *testing.T) {
 	require.Equal(t, internalv1alpha1.SystemTypeImmutable, spec.SystemType)
 }
 
-// The spec's sections are omitzero for the Mutable document and the template; an
-// Engine render sends every one of them, even from no inputs, and keeps the empty
-// objects nested inside them, so its bytes are what they were.
-func TestTheEngineRenderSendsEverySection(t *testing.T) {
+// The spec's sections are omitzero; an Engine render from no inputs still sends the
+// ones the cluster always has something to say in, and leaves out a section that
+// would carry nothing but defaults, which the node holds.
+func TestTheEngineRenderSendsWhatItDecides(t *testing.T) {
 	raw, err := json.Marshal(renderSpec(immutableGroup("worker"), &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{}))
 	require.NoError(t, err)
 
-	for _, section := range []string{"kernel", "network", "storage", "updatePolicy", "kubelet", "containerRuntime"} {
+	for _, section := range []string{"kernel", "network", "storage", "updatePolicy", "kubelet"} {
 		require.Contains(t, string(raw), `"`+section+`":{`)
 	}
-	for _, nested := range []string{`"dns":{}`, `"ntp":{}`, `"window":{}`} {
-		require.Contains(t, string(raw), nested)
-	}
+	require.NotContains(t, string(raw), `"containerRuntime"`)
+	require.NotContains(t, string(raw), `"windows"`)
 }
 
 // The warnings name limits of an Engine node. bashible applies maxPods 1500 and
@@ -1272,4 +961,38 @@ func TestRecordClampedSettingsLeavesABashibleGroupAlone(t *testing.T) {
 		messages = append(messages, event)
 	}
 	require.Empty(t, messages)
+}
+
+// The node holds every window of its group, as bashible's nodes do, and no clamp
+// warning is left to explain a lost one. Days are a set on the node: a group that
+// repeats a day must not get its whole document refused for it.
+func TestRenderUpdatePolicyCarriesEveryWindow(t *testing.T) {
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec: v1.NodeGroupSpec{
+			SystemType: v1.SystemTypeImmutable,
+			Disruptions: &v1.DisruptionsSpec{
+				ApprovalMode: v1.DisruptionApprovalModeManual,
+				Automatic: &v1.AutomaticDisruptionSpec{Windows: []v1.DisruptionWindow{
+					{From: "22:00", To: "23:00", Days: []string{"Sat", "Sat", "Sun"}},
+					{From: "1:00", To: "3:00"},
+				}},
+			},
+		},
+	}
+
+	require.Equal(t, internalv1alpha1.UpdatePolicy{
+		Mode: string(v1.DisruptionApprovalModeManual),
+		Windows: []internalv1alpha1.UpdateWindow{
+			{From: "22:00", To: "23:00", Days: []string{"Sat", "Sun"}},
+			{From: "1:00", To: "3:00"},
+		},
+	}, renderUpdatePolicy(ng))
+
+	recorder := record.NewFakeRecorder(10)
+	r := &Reconciler{}
+	r.Recorder = recorder
+	r.recordClampedSettings(ng)
+	close(recorder.Events)
+	require.Empty(t, recorder.Events, "nothing was clamped")
 }

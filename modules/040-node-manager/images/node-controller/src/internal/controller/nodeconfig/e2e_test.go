@@ -149,7 +149,7 @@ var _ = Describe("NodeConfig controller", func() {
 			// kubelet loads the CA from a file on tmpfs, so the node rewrites
 			// it from here on every boot. A config without it leaves a rebooted
 			// node unable to start kubelet at all.
-			g.Expect(nc.Spec.Kubelet.CACert).To(Equal(base64.StdEncoding.EncodeToString([]byte(testClusterCA))))
+			g.Expect(nc.Spec.Kubelet.ClusterCABundle).To(Equal(testClusterCA))
 
 			// A NodeGroup has no disk field, but rendering no selector is a dead
 			// node ("neither device nor diskSelector set"); the size bound keeps
@@ -175,11 +175,10 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(byName).To(HaveKeyWithValue(nodeletExtension, testNodeletDigest))
 			g.Expect(byName).To(HaveKeyWithValue(guestAgentExtension, testGuestAgentDigest))
 
-			// The update window is the one the operator configured.
-			g.Expect(nc.Spec.UpdatePolicy.Window.From).To(Equal("03:00"))
-			g.Expect(nc.Spec.UpdatePolicy.Window.To).To(Equal("06:00"))
+			// The update windows are the ones the operator configured.
+			g.Expect(nc.Spec.UpdatePolicy.Windows).To(Equal([]internalv1alpha1.UpdateWindow{{From: "03:00", To: "06:00", Days: []string{"Mon"}}}))
 
-			g.Expect(nc.Spec.RegistryPackagesProxyAccessTokenB64).NotTo(BeEmpty())
+			g.Expect(nc.Spec.RegistryPackagesProxy.AccessToken).NotTo(BeEmpty())
 
 			// This config replaces the bootstrap one wholesale: kubelet does not
 			// start without kernel.panic, and the OS renders its hostname from
@@ -246,11 +245,13 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(extensionDigests(getNodeConfig(ctx, g, nodeName))).
 				To(HaveKeyWithValue(testRequestedSysextName, testRequestedSysextDigest))
 
-			// The same pass reports the resolution back on the request.
+			// The same pass reports the verdict back on the request; no agent runs
+			// here to install it, so the node still owes an answer.
 			fresh := &v1alpha1.NodeExtensionRequest{}
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ner.Name}, fresh)).To(Succeed())
 			g.Expect(fresh.Status.MatchedNodeGroups).To(ConsistOf(ngName))
-			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, readyConditionType)).To(BeTrue())
+			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, acceptedConditionType)).To(BeTrue())
+			g.Expect(fresh.Status.Phase).To(Equal(phasePending))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("pointing the request at a rebuilt image")
@@ -310,7 +311,7 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
 			g.Expect(nc.Spec.StaticPods).To(BeEmpty())
-			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerNodelet))
+			g.Expect(nc.Spec.ContainerRuntime.RegistryConfigOwner).To(BeEmpty())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("publishing a static pod for the group")
@@ -340,7 +341,9 @@ var _ = Describe("NodeConfig controller", func() {
 			fresh := &v1alpha1.NodeStaticPodRequest{}
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: request.Name}, fresh)).To(Succeed())
 			g.Expect(fresh.Status.MatchedNodeGroups).To(ConsistOf(ngName))
-			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, readyConditionType)).To(BeTrue())
+			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, acceptedConditionType)).To(BeTrue())
+			// No agent runs here to write the manifest, so the node owes an answer.
+			g.Expect(fresh.Status.Phase).To(Equal(phasePending))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("handing containerd's registry.d to the registry module's agent")
@@ -361,7 +364,7 @@ var _ = Describe("NodeConfig controller", func() {
 
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
-			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerAgent))
+			g.Expect(nc.Spec.ContainerRuntime.RegistryConfigOwner).To(Equal(internalv1alpha1.RegistryConfigOwnerRegistryAgent))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("narrowing the static pod to another group")
@@ -372,7 +375,7 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
 			g.Expect(nc.Spec.StaticPods).To(BeEmpty())
-			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerNodelet),
+			g.Expect(nc.Spec.ContainerRuntime.RegistryConfigOwner).To(BeEmpty(),
 				"a node with no agent on it keeps writing its own registry.d")
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
@@ -383,7 +386,7 @@ var _ = Describe("NodeConfig controller", func() {
 
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
-			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerAgent))
+			g.Expect(nc.Spec.ContainerRuntime.RegistryConfigOwner).To(Equal(internalv1alpha1.RegistryConfigOwnerRegistryAgent))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("taking registry.d back when the agent mode is switched off")
@@ -391,7 +394,7 @@ var _ = Describe("NodeConfig controller", func() {
 
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
-			g.Expect(nc.Spec.ContainerRuntime.RegistryOwner).To(Equal(registryOwnerNodelet))
+			g.Expect(nc.Spec.ContainerRuntime.RegistryConfigOwner).To(BeEmpty())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -442,7 +445,7 @@ var _ = Describe("NodeConfig controller", func() {
 			fresh := &v1alpha1.NodeStaticPodRequest{}
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: loser.Name}, fresh)).To(Succeed())
 			g.Expect(fresh.Status.Phase).To(Equal(phaseDegraded))
-			condition := meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType)
+			condition := meta.FindStatusCondition(fresh.Status.Conditions, acceptedConditionType)
 			g.Expect(condition).NotTo(BeNil())
 			g.Expect(condition.Reason).To(Equal(reasonConflict))
 			g.Expect(condition.Message).To(ContainSubstring("d8-system/shared-agent"))
@@ -450,7 +453,7 @@ var _ = Describe("NodeConfig controller", func() {
 
 			// And the winner is unbothered by the contest it won.
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: winner.Name}, fresh)).To(Succeed())
-			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, readyConditionType)).To(BeTrue())
+			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, acceptedConditionType)).To(BeTrue())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		By("withdrawing the older object")
@@ -465,7 +468,7 @@ var _ = Describe("NodeConfig controller", func() {
 
 			fresh := &v1alpha1.NodeStaticPodRequest{}
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: loser.Name}, fresh)).To(Succeed())
-			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, readyConditionType)).To(BeTrue())
+			g.Expect(meta.IsStatusConditionTrue(fresh.Status.Conditions, acceptedConditionType)).To(BeTrue())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -502,7 +505,7 @@ var _ = Describe("NodeConfig controller", func() {
 			fresh := &v1alpha1.NodeStaticPodRequest{}
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: request.Name}, fresh)).To(Succeed())
 			g.Expect(fresh.Status.Phase).To(Equal(phaseDegraded))
-			condition := meta.FindStatusCondition(fresh.Status.Conditions, readyConditionType)
+			condition := meta.FindStatusCondition(fresh.Status.Conditions, acceptedConditionType)
 			g.Expect(condition).NotTo(BeNil())
 			g.Expect(condition.Reason).To(Equal(reasonInvalidName))
 			g.Expect(condition.Message).To(ContainSubstring(request.Name))
@@ -677,7 +680,7 @@ var _ = Describe("NodeConfig controller", func() {
 			Eventually(func(g Gomega) {
 				nc := getNodeConfig(ctx, g, name)
 				meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
-					Type: configurationAppliedCondition, Status: metav1.ConditionFalse,
+					Type: internalv1alpha1.NodeConfigConditionTypeConfigurationApplied, Status: metav1.ConditionFalse,
 					Reason: "RollbackFailed", Message: "the previous configuration could not be restored",
 				})
 				nc.Status.AppliedGeneration = 0
@@ -976,28 +979,24 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			op = findOperation(ctx, g, nodeName)
 			g.Expect(op).NotTo(BeNil())
-			g.Expect(op.Spec.Type).To(Equal(v1alpha1.NodeOperationTypeApproveDisruption))
+			g.Expect(op.Spec.Type).To(Equal(v1alpha1.NodeOperationTypeDisruption))
 			g.Expect(op.Spec.ConfigGeneration).To(HaveValue(Equal(generation)))
 			g.Expect(op.Spec.Drain.Skip).To(BeFalse())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
-		// The eviction is an operation of its own rather than a side effect, so
-		// it can be watched, and it belongs to the operation that needs it.
-		var drain *v1alpha1.NodeOperation
-		Eventually(func(g Gomega) {
-			drain = findDrainOf(ctx, g, op.Name)
-			g.Expect(drain).NotTo(BeNil())
-			g.Expect(drain.Spec.NodeName).To(Equal(nodeName))
-		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
-
+		// The operation evicts the workload itself and says so: the request on
+		// the node carries its identity, and no second operation appears.
 		node := &corev1.Node{}
 		Eventually(func(g Gomega) {
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-			g.Expect(node.Annotations).To(HaveKeyWithValue(nodecommon.DrainingAnnotation, HavePrefix("node-operation/")))
+			g.Expect(node.Annotations).To(HaveKeyWithValue(nodecommon.DrainingAnnotation, "node-operation/"+string(op.UID)))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		Consistently(func(g Gomega) {
 			g.Expect(findOperation(ctx, g, nodeName).Status.Phase).NotTo(Equal(v1alpha1.NodeOperationPhaseInProgress))
+			ops := &v1alpha1.NodeOperationList{}
+			g.Expect(k8sClient.List(ctx, ops, client.MatchingFields{v1alpha1.NodeOperationNodeNameField: nodeName})).To(Succeed())
+			g.Expect(ops.Items).To(ConsistOf(HaveField("Name", op.Name)))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 
 		By("the drain finishing")
@@ -1012,19 +1011,32 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(k8sClient.Update(ctx, node)).To(Succeed())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
-		// The eviction finishing is what lets the parent hand the node over.
+		// The eviction finishing is what lets the operation hand the node over.
 		Eventually(func(g Gomega) {
-			g.Expect(findDrainOf(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseCompleted))
-
-			parent := &v1alpha1.NodeOperation{}
-			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, parent)).To(Succeed())
-			g.Expect(parent.Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseInProgress))
+			fresh := &v1alpha1.NodeOperation{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, fresh)).To(Succeed())
+			g.Expect(fresh.Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseInProgress))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
-		By("the node reporting the operation done")
+		By("the node taking the operation and reporting it done")
+		// The node holds DisruptionApproved True while it works under the operation.
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
+				Type: internalv1alpha1.NodeConfigConditionTypeDisruptionApproved, Status: metav1.ConditionTrue, Reason: "Approved",
+				Message: "approved by NodeOperation " + op.Name, ObservedGeneration: generation,
+			})
+			g.Expect(k8sClient.Status().Update(ctx, nc)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		// The node writes its NodeReported condition alone; node-manager derives the phase.
 		Eventually(func(g Gomega) {
 			done := findOperation(ctx, g, nodeName)
-			done.Status.Phase = v1alpha1.NodeOperationPhaseCompleted
+			meta.SetStatusCondition(&done.Status.Conditions, metav1.Condition{
+				Type:    "NodeReported",
+				Status:  metav1.ConditionTrue,
+				Reason:  "Succeeded",
+				Message: "the node applied the configuration",
+			})
 			g.Expect(k8sClient.Status().Update(ctx, done)).To(Succeed())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
@@ -1035,6 +1047,10 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(node.Spec.Unschedulable).To(BeFalse())
 			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		// A node that applied the revision asks for nothing more, so no second window follows.
+		Consistently(func(g Gomega) {
+			g.Expect(approvals(ctx, g, nodeName)).To(ConsistOf(HaveField("Name", op.Name)))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
 	// User story: As a cluster operator, I want one interruption per change, so a
@@ -1072,18 +1088,29 @@ var _ = Describe("NodeConfig controller", func() {
 
 		// The node's status still points at the revision it was moved off; an
 		// interruption for that one drains the node for a config nobody will
-		// report done and holds it cordoned until the operation times out.
+		// report done and holds it cordoned until the operation times out. In
+		// Manual mode the request for it may exist, unapproved, but nothing acts on it.
 		Consistently(func(g Gomega) {
-			g.Expect(approvals(ctx, g, nodeName)).To(BeEmpty())
+			for _, op := range approvals(ctx, g, nodeName) {
+				g.Expect(op.Spec.ConfigGeneration).NotTo(HaveValue(Equal(current)))
+				g.Expect(op.Status.Phase).NotTo(Equal(v1alpha1.NodeOperationPhaseInProgress))
+			}
+			node := &corev1.Node{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
+			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 
 		By("the agent asking again, for the revision it now has")
 		requestDisruption(ctx, nodeName, current)
 
 		Eventually(func(g Gomega) {
-			ops := approvals(ctx, g, nodeName)
-			g.Expect(ops).To(HaveLen(1))
-			g.Expect(ops[0].Spec.ConfigGeneration).To(HaveValue(Equal(current)))
+			var forCurrent []v1alpha1.NodeOperation
+			for _, op := range approvals(ctx, g, nodeName) {
+				if op.Spec.ConfigGeneration != nil && *op.Spec.ConfigGeneration == current {
+					forCurrent = append(forCurrent, op)
+				}
+			}
+			g.Expect(forCurrent).To(HaveLen(1))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -1121,6 +1148,44 @@ var _ = Describe("NodeConfig controller", func() {
 		touchNodeGroup(ctx, ngName)
 		Consistently(func(g Gomega) {
 			g.Expect(approvals(ctx, g, nodeName)).To(HaveLen(1))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a cluster operator, I want node-manager to stay given up on a node once
+	// its attempts are spent, so that the node is not interrupted once more each time it
+	// reports that node-manager gave up. Retry keeps saying so: the node still asks.
+	It("stays given up on a node whose three attempts failed", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-exhausted")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+		generation := publishedGeneration(ctx, nodeName)
+		nc := getNodeConfig(ctx, Default, nodeName)
+
+		By("three attempts failed")
+		finishedAttempt(ctx, nc, v1alpha1.NodeOperationPhaseFailed, 3*time.Hour)
+		finishedAttempt(ctx, nc, v1alpha1.NodeOperationPhaseFailed, 2*time.Hour)
+		last := finishedAttempt(ctx, nc, v1alpha1.NodeOperationPhaseFailed, time.Hour)
+
+		By("the node asking again for the same revision")
+		requestDisruption(ctx, nodeName, generation)
+		Eventually(func(g Gomega) {
+			g.Expect(retryReasonOf(ctx, g, last.Name)).To(Equal("AttemptsExhausted"))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the node reporting that node-manager gave up")
+		Eventually(func(g Gomega) {
+			fresh := getNodeConfig(ctx, g, nodeName)
+			meta.SetStatusCondition(&fresh.Status.Conditions, metav1.Condition{
+				Type: internalv1alpha1.NodeConfigConditionTypeDisruptionApproved, Status: metav1.ConditionFalse, Reason: internalv1alpha1.NodeConfigReasonAttemptsExhausted,
+				Message: "3 of 3 attempts failed", ObservedGeneration: generation,
+			})
+			g.Expect(k8sClient.Status().Update(ctx, fresh)).To(Succeed())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		Consistently(func(g Gomega) {
+			g.Expect(retryReasonOf(ctx, g, last.Name)).To(Equal("AttemptsExhausted"))
+			g.Expect(approvals(ctx, g, nodeName)).To(HaveLen(3))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -1162,8 +1227,9 @@ var _ = Describe("NodeConfig controller", func() {
 		nc := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
-				NodeName: nodeName,
-				OSImage:  internalv1alpha1.OSImage{Digest: testOSImageDigest},
+				SystemType: internalv1alpha1.SystemTypeImmutable,
+				NodeName:   nodeName,
+				OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				Network: internalv1alpha1.Network{Interfaces: []internalv1alpha1.NetworkInterface{
 					{Name: "eth0", Addresses: []string{"192.0.2.10/24"}, Cluster: true},
 					{Name: "eth1", Addresses: []string{"198.51.100.10/24"}, Cluster: true},
@@ -1194,6 +1260,7 @@ var _ = Describe("NodeConfig controller", func() {
 		published := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
+				SystemType:  internalv1alpha1.SystemTypeImmutable,
 				NodeName:    nodeName,
 				OSImage:     internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				StatusToken: testStatusToken,
@@ -1205,8 +1272,40 @@ var _ = Describe("NodeConfig controller", func() {
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
 
-			g.Expect(nc.Spec.Kubelet.CACert).NotTo(BeEmpty(), "the controller never rendered over the published config")
+			g.Expect(nc.Spec.Kubelet.ClusterCABundle).NotTo(BeEmpty(), "the controller never rendered over the published config")
 			g.Expect(nc.Spec.StatusToken).To(Equal(testStatusToken))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a cluster operator, I want a bootstrap token a machine copied
+	// into its NodeConfig gone once the node is configured, so that every kubelet
+	// reading NodeConfigs does not hold a token to join the cluster.
+	It("removes a bootstrap token a machine published", func(ctx context.Context) {
+		ngName := testenv.UniqueName("static-imm")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.NodeType = deckhousev1.NodeTypeStatic
+			ng.Spec.CloudInstances = nil
+		})
+		nodeName := testenv.UniqueName("static")
+		createNode(ctx, nodeName, ngName)
+
+		published := &internalv1alpha1.NodeConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+			Spec: internalv1alpha1.NodeSpec{
+				SystemType: internalv1alpha1.SystemTypeImmutable,
+				NodeName:   nodeName,
+				OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
+				Kubelet:    internalv1alpha1.Kubelet{BootstrapToken: "abcdef.0123456789abcdef"},
+			},
+		}
+		Expect(k8sClient.Create(ctx, published)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, published) })
+
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+
+			g.Expect(nc.Spec.Kubelet.ClusterCABundle).NotTo(BeEmpty(), "the controller never rendered over the published config")
+			g.Expect(nc.Spec.Kubelet.BootstrapToken).To(BeEmpty())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -1377,9 +1476,29 @@ var _ = Describe("NodeConfig controller", func() {
 		generation := publishedGeneration(ctx, nodeName)
 		requestDisruption(ctx, nodeName, generation)
 
-		// Nothing is created on the node's behalf: the operator decides.
+		// The request is published for the operator to approve, and nothing acts on it
+		// until they do: no drain, no deadline running.
+		nc := &internalv1alpha1.NodeConfig{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, nc)).To(Succeed())
+		var op *v1alpha1.NodeOperation
+		Eventually(func(g Gomega) {
+			ops := approvals(ctx, g, nodeName)
+			g.Expect(ops).To(HaveLen(1))
+			op = &ops[0]
+			g.Expect(op.Spec.Approved).To(HaveValue(BeFalse()))
+			g.Expect(op.Spec.NodeConfigUID).To(Equal(nc.UID))
+			g.Expect(op.Spec.ConfigGeneration).To(HaveValue(Equal(generation)))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
 		Consistently(func(g Gomega) {
-			g.Expect(findOperation(ctx, g, nodeName)).To(BeNil())
+			ops := approvals(ctx, g, nodeName)
+			g.Expect(ops).To(HaveLen(1))
+			g.Expect(ops[0].Status.Phase).To(Equal(v1alpha1.NodeOperationPhasePending))
+			g.Expect(ops[0].Status.Reason).To(Equal("WaitingForApproval"))
+			g.Expect(ops[0].Status.Deadline).To(BeNil())
+			node := &corev1.Node{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
+			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -1420,7 +1539,7 @@ var _ = Describe("NodeConfig controller", func() {
 			extensions := getNodeConfig(ctx, g, nodeName).Spec.Extensions
 			g.Expect(extensions).To(HaveLen(len(platform.Extensions) + 1))
 			g.Expect(extensions[len(extensions)-1].Name).To(Equal("sds-utils"))
-			g.Expect(extensions[len(extensions)-1].RequestedBy).To(Equal(nerRequestedByPrefix + request.Name))
+			g.Expect(extensions[len(extensions)-1].RequestedBy).To(Equal(nerOwner(request.Name)))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -1445,10 +1564,12 @@ var _ = Describe("NodeConfig controller", func() {
 			"kind":       "NodeConfig",
 			"metadata":   map[string]any{"name": nodeName},
 			"spec": map[string]any{
-				"systemType":                          "Mutable",
-				"nodeName":                            nodeName,
-				"registryPackagesProxyEndpoints":      []any{"http://127.0.0.1:5444"},
-				"registryPackagesProxyAccessTokenB64": base64.StdEncoding.EncodeToString([]byte("passthrough")),
+				"systemType": "Mutable",
+				"nodeName":   nodeName,
+				"registryPackagesProxy": map[string]any{
+					"endpoints":   []any{"http://127.0.0.1:5444"},
+					"accessToken": base64.StdEncoding.EncodeToString([]byte("passthrough")),
+				},
 			},
 		}}
 		Expect(k8sClient.Create(ctx, seed)).To(Succeed())
@@ -1457,13 +1578,13 @@ var _ = Describe("NodeConfig controller", func() {
 			nc := getNodeConfig(ctx, g, nodeName)
 			g.Expect(nc.Spec.FeatureGates).To(HaveKeyWithValue("static-pods", true))
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
-			g.Expect(nc.Spec.RegistryPackagesProxyAccessTokenB64).To(Equal(base64.StdEncoding.EncodeToString([]byte("proxy-token"))),
+			g.Expect(nc.Spec.RegistryPackagesProxy.AccessToken).To(Equal([]byte("proxy-token")),
 				"the node keeps the installer's token")
 
 			stored := &unstructured.Unstructured{}
 			stored.SetGroupVersionKind(internalv1alpha1.GroupVersion.WithKind("NodeConfig"))
 			g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, stored)).To(Succeed())
-			_, found, err := unstructured.NestedFieldNoCopy(stored.Object, "spec", "registryPackagesProxyEndpoints")
+			_, found, err := unstructured.NestedFieldNoCopy(stored.Object, "spec", "registryPackagesProxy", "endpoints")
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(found).To(BeFalse(), "the node keeps the installer's proxy, and fetches nothing once dhctl is gone")
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
@@ -1611,8 +1732,9 @@ var _ = Describe("NodeConfig controller", func() {
 		bootstrapped := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
-				NodeName: nodeName,
-				OSImage:  internalv1alpha1.OSImage{Digest: testOSImageDigest},
+				SystemType: internalv1alpha1.SystemTypeImmutable,
+				NodeName:   nodeName,
+				OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				Network: internalv1alpha1.Network{
 					Hostname: nodeName,
 					Interfaces: []internalv1alpha1.NetworkInterface{{
@@ -1646,9 +1768,9 @@ var _ = Describe("NodeConfig controller", func() {
 	})
 
 	// User story: As a cluster operator, I want a machine I installed by hand on
-	// DHCP to be configured by the cluster, so that a NodeConfig naming no
-	// network at all is not frozen out by the webhook that guards one.
-	It("configures a static node that published no network of its own", func(ctx context.Context) {
+	// DHCP to be configured by the cluster without the cluster guessing its network,
+	// and to correct that network through the API when the machine changes.
+	It("configures a static node and leaves its network to the machine", func(ctx context.Context) {
 		ngName := testenv.UniqueName("static-imm")
 		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, func(ng *deckhousev1.NodeGroup) {
 			ng.Spec.NodeType = deckhousev1.NodeTypeStatic
@@ -1662,33 +1784,43 @@ var _ = Describe("NodeConfig controller", func() {
 		published := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
-				NodeName: nodeName,
-				OSImage:  internalv1alpha1.OSImage{Digest: testOSImageDigest},
+				SystemType: internalv1alpha1.SystemTypeImmutable,
+				NodeName:   nodeName,
+				OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
 			},
 		}
 		Expect(k8sClient.Create(ctx, published)).To(Succeed())
 		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, published) })
 
-		By("letting the controller render over it, admission and all")
+		By("letting the controller render over it")
 		Eventually(func(g Gomega) {
 			nc := getNodeConfig(ctx, g, nodeName)
 
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
-			g.Expect(nc.Spec.Kubelet.CACert).NotTo(BeEmpty(), "the node never got its kubelet CA")
-			g.Expect(nc.Spec.Network.Hostname).To(Equal(nodeName))
-			g.Expect(nc.Spec.Network.Interfaces).To(ConsistOf(
-				internalv1alpha1.NetworkInterface{Name: "eth0", DHCP: true}))
+			g.Expect(nc.Spec.Kubelet.ClusterCABundle).NotTo(BeEmpty(), "the node never got its kubelet CA")
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		Consistently(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Network).To(BeZero(), "the network is the machine's, not a guess")
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 
-		By("still refusing an edit of the network the machine now owns")
+		By("an operator correcting the network through the API")
 		nc := &internalv1alpha1.NodeConfig{}
 		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, nc)).To(Succeed())
 		nc.Spec.Network.Interfaces = []internalv1alpha1.NetworkInterface{{
 			Name: "eth9", Addresses: []string{"10.9.9.9/24"},
 		}}
-		err := k8sClient.Update(ctx, nc)
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(ContainSubstring("spec.network is written on the machine"))
+		Expect(k8sClient.Update(ctx, nc)).To(Succeed())
+
+		// The next pass keeps it: the controller applies no network at all.
+		patchNodeGroup(ctx, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.Kubelet = &deckhousev1.KubeletSpec{MaxPods: ptr.To[int32](111)}
+		})
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+			g.Expect(nc.Spec.Kubelet.MaxPods).To(Equal(111))
+			g.Expect(nc.Spec.Network.Interfaces).To(ConsistOf(
+				internalv1alpha1.NetworkInterface{Name: "eth9", Addresses: []string{"10.9.9.9/24"}}))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
 	// The agent registers a static node's NodeConfig by name alone. Held back for
@@ -1705,8 +1837,9 @@ var _ = Describe("NodeConfig controller", func() {
 			published := &internalv1alpha1.NodeConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 				Spec: internalv1alpha1.NodeSpec{
-					NodeName: nodeName,
-					OSImage:  internalv1alpha1.OSImage{Digest: testOSImageDigest},
+					SystemType: internalv1alpha1.SystemTypeImmutable,
+					NodeName:   nodeName,
+					OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				},
 			}
 			Expect(k8sClient.Create(ctx, published)).To(Succeed())
@@ -1752,8 +1885,7 @@ var _ = Describe("NodeConfig controller", func() {
 	})
 
 	// User story: As a cluster operator, I want a DHCP machine that was handed
-	// its own resolvers to be configured by the cluster, so that publishing one
-	// field of the network does not freeze the node's config for good.
+	// its own resolvers to be configured by the cluster, and its resolvers kept.
 	It("configures a static node that published resolvers but no NIC", func(ctx context.Context) {
 		ngName := testenv.UniqueName("static-imm")
 		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, func(ng *deckhousev1.NodeGroup) {
@@ -1764,12 +1896,13 @@ var _ = Describe("NodeConfig controller", func() {
 		createNode(ctx, nodeName, ngName)
 
 		// Resolvers and time servers the installer handed the machine; the NIC
-		// is left to DHCP, so the controller fills it in on every pass.
+		// is left to DHCP, and the controller adds none.
 		published := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
-				NodeName: nodeName,
-				OSImage:  internalv1alpha1.OSImage{Digest: testOSImageDigest},
+				SystemType: internalv1alpha1.SystemTypeImmutable,
+				NodeName:   nodeName,
+				OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				Network: internalv1alpha1.Network{
 					DNS: internalv1alpha1.DNS{Servers: []string{"10.0.0.53"}},
 					NTP: internalv1alpha1.NTP{Servers: []string{"10.0.0.123"}},
@@ -1784,12 +1917,10 @@ var _ = Describe("NodeConfig controller", func() {
 			nc := getNodeConfig(ctx, g, nodeName)
 
 			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
-			g.Expect(nc.Spec.Kubelet.CACert).NotTo(BeEmpty(), "the node never got its kubelet CA")
+			g.Expect(nc.Spec.Kubelet.ClusterCABundle).NotTo(BeEmpty(), "the node never got its kubelet CA")
 			g.Expect(nc.Spec.Network.DNS.Servers).To(ConsistOf("10.0.0.53"))
 			g.Expect(nc.Spec.Network.NTP.Servers).To(ConsistOf("10.0.0.123"))
-			g.Expect(nc.Spec.Network.Hostname).To(Equal(nodeName))
-			g.Expect(nc.Spec.Network.Interfaces).To(ConsistOf(
-				internalv1alpha1.NetworkInterface{Name: "eth0", DHCP: true}))
+			g.Expect(nc.Spec.Network.Interfaces).To(BeEmpty())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -1828,9 +1959,10 @@ var _ = Describe("NodeConfig controller", func() {
 		bootstrapped := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
-				NodeName: nodeName,
-				Registry: &internalv1alpha1.Registry{Address: "registry.example.com", Path: "/deckhouse/ce"},
-				OSImage:  internalv1alpha1.OSImage{Digest: testOSImageDigest},
+				SystemType: internalv1alpha1.SystemTypeImmutable,
+				NodeName:   nodeName,
+				Registry:   &internalv1alpha1.Registry{Address: "registry.example.com", Path: "/deckhouse/ce"},
+				OSImage:    internalv1alpha1.OSImage{Digest: testOSImageDigest},
 				// The installer's shape: its disk plus the one etcd lives on. The
 				// mounts mark the section as somebody else's — a selector alone
 				// is rendered here too, and keeping it would be write-once.
@@ -1861,7 +1993,6 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(nc.Spec.Extensions).To(HaveLen(5))
 
 			// What only the installer knew was not dropped.
-			g.Expect(nc.Spec.Kubelet.ResourceReservation).NotTo(BeNil())
 			g.Expect(nc.Spec.Storage.DiskSelector).NotTo(BeNil())
 			g.Expect(nc.Spec.Storage.DiskSelector.Size).To(Equal(">=30Gi"))
 			g.Expect(nc.Spec.Storage.Mounts).To(HaveLen(1), "etcd must keep the disk it lives on")
@@ -1871,12 +2002,16 @@ var _ = Describe("NodeConfig controller", func() {
 			// the cluster registry with the credentials from its secret.
 			g.Expect(nc.Spec.Registry).NotTo(BeNil())
 			g.Expect(nc.Spec.Registry.Address).To(Equal(testRegistryAddress))
-			g.Expect(nc.Spec.Registry.Auth).To(Equal(testRegistryAuth))
+			auth, err := base64.StdEncoding.DecodeString(testRegistryAuth)
+			g.Expect(err).NotTo(HaveOccurred())
+			g.Expect(nc.Spec.Registry.Auth).To(Equal(auth), "the raw pair, base64 once on the wire")
 
 			// serverTLSBootstrap is left to the cluster: keeping the payload's
 			// "false" forever left the master with a self-signed kubelet cert
-			// carrying no IP — no exec, no logs, no metrics.
+			// carrying no IP — no exec, no logs, no metrics. kubeReserved is the
+			// group's: the value its own schema stores for a group that names none.
 			g.Expect(nc.Spec.Kubelet.ServerTLSBootstrap).To(BeNil())
+			g.Expect(nc.Spec.Kubelet.ResourceReservation).To(Equal(&internalv1alpha1.ResourceReservation{Mode: "Auto"}))
 
 			// Left empty: nodelet names the pause the containerd extension imports.
 			// The CRD must not default it either, or the node would never see it empty.
@@ -1893,9 +2028,9 @@ func reportHeld(ctx context.Context, name string, heldGeneration int64) {
 	Eventually(func(g Gomega) {
 		nc := getNodeConfig(ctx, g, name)
 		meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
-			Type:               disruptionRequiredCondition,
-			Status:             metav1.ConditionTrue,
-			Reason:             "KubeletRestartRequired",
+			Type:               internalv1alpha1.NodeConfigConditionTypeDisruptionApproved,
+			Status:             metav1.ConditionFalse,
+			Reason:             "ApprovalPending",
 			Message:            "applying this config restarts kubelet",
 			ObservedGeneration: heldGeneration,
 		})
@@ -1903,7 +2038,7 @@ func reportHeld(ctx context.Context, name string, heldGeneration int64) {
 		// the rollout must not take an overstating agent's word while the same
 		// status says the node still waits to be interrupted.
 		meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
-			Type:               configurationAppliedCondition,
+			Type:               internalv1alpha1.NodeConfigConditionTypeConfigurationApplied,
 			Status:             metav1.ConditionTrue,
 			Reason:             "ReconcileSucceeded",
 			Message:            "the node is running the published configuration",
@@ -1923,7 +2058,7 @@ func approvals(ctx context.Context, g Gomega, nodeName string) []v1alpha1.NodeOp
 	g.Expect(k8sClient.List(ctx, ops)).To(Succeed())
 	var found []v1alpha1.NodeOperation
 	for i := range ops.Items {
-		if ops.Items[i].Spec.Type == v1alpha1.NodeOperationTypeApproveDisruption && ops.Items[i].Spec.NodeName == nodeName {
+		if ops.Items[i].Spec.Type == v1alpha1.NodeOperationTypeDisruption && ops.Items[i].Spec.NodeName == nodeName {
 			found = append(found, ops.Items[i])
 		}
 	}
@@ -2106,33 +2241,13 @@ func createAPIServerPod(ctx context.Context, podIP string) *corev1.Pod {
 	return pod
 }
 
-// findDrainOf returns the eviction a given operation spawned, located the way
-// the controller locates it: by ownership, not by a name anyone could take.
-func findDrainOf(ctx context.Context, g Gomega, parent string) *v1alpha1.NodeOperation {
-	ops := &v1alpha1.NodeOperationList{}
-	g.Expect(k8sClient.List(ctx, ops)).To(Succeed())
-	for i := range ops.Items {
-		if ops.Items[i].Spec.Type != v1alpha1.NodeOperationTypeDrain {
-			continue
-		}
-		for _, owner := range ops.Items[i].OwnerReferences {
-			if owner.Name == parent {
-				return &ops.Items[i]
-			}
-		}
-	}
-	return nil
-}
-
 // findOperation returns the operation covering this node, if the controller
 // asked for one.
 func findOperation(ctx context.Context, g Gomega, nodeName string) *v1alpha1.NodeOperation {
 	ops := &v1alpha1.NodeOperationList{}
 	g.Expect(k8sClient.List(ctx, ops)).To(Succeed())
 	for i := range ops.Items {
-		// The child Drain names the same node; the caller is after the
-		// operation that asked for it.
-		if ops.Items[i].Spec.NodeName == nodeName && ops.Items[i].Spec.Type != v1alpha1.NodeOperationTypeDrain {
+		if ops.Items[i].Spec.NodeName == nodeName {
 			return &ops.Items[i]
 		}
 	}
@@ -2153,6 +2268,45 @@ func failOperation(ctx context.Context, name string) {
 	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 }
 
+// finishedAttempt records a Disruption of the NodeConfig's revision that ended the given time
+// ago. Created unapproved, so nothing acts on the node, and in a second of its own: the order
+// of attempts is read off their whole-second creation timestamps.
+func finishedAttempt(ctx context.Context, nc *internalv1alpha1.NodeConfig, phase v1alpha1.NodeOperationPhase, ago time.Duration) *v1alpha1.NodeOperation {
+	GinkgoHelper()
+
+	time.Sleep(time.Until(time.Now().Truncate(time.Second).Add(time.Second)))
+	op := &v1alpha1.NodeOperation{
+		ObjectMeta: metav1.ObjectMeta{Name: testenv.UniqueName("attempt")},
+		Spec: v1alpha1.NodeOperationSpec{
+			Type:             v1alpha1.NodeOperationTypeDisruption,
+			NodeName:         nc.Name,
+			ConfigGeneration: ptr.To(nc.Generation),
+			NodeConfigUID:    nc.UID,
+			Approved:         ptr.To(false),
+		},
+	}
+	Expect(k8sClient.Create(ctx, op)).To(Succeed())
+	DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, op) })
+
+	Eventually(func(g Gomega) {
+		fresh := &v1alpha1.NodeOperation{}
+		g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, fresh)).To(Succeed())
+		fresh.Status.Phase = phase
+		fresh.Status.FinishedAt = ptr.To(metav1.NewTime(time.Now().Add(-ago)))
+		g.Expect(k8sClient.Status().Update(ctx, fresh)).To(Succeed())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	return op
+}
+
+func retryReasonOf(ctx context.Context, g Gomega, name string) string {
+	op := &v1alpha1.NodeOperation{}
+	g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: name}, op)).To(Succeed())
+	retry := meta.FindStatusCondition(op.Status.Conditions, "Retry")
+	g.Expect(retry).NotTo(BeNil())
+	g.Expect(retry.Status).To(Equal(metav1.ConditionFalse))
+	return retry.Reason
+}
+
 // requestDisruption is what the agent does when the config it was given cannot
 // be applied without restarting kubelet, containerd or the extensions.
 func requestDisruption(ctx context.Context, name string, generation int64) {
@@ -2161,9 +2315,9 @@ func requestDisruption(ctx context.Context, name string, generation int64) {
 	Eventually(func(g Gomega) {
 		nc := getNodeConfig(ctx, g, name)
 		meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
-			Type:               disruptionRequiredCondition,
-			Status:             metav1.ConditionTrue,
-			Reason:             "KubeletRestartRequired",
+			Type:               internalv1alpha1.NodeConfigConditionTypeDisruptionApproved,
+			Status:             metav1.ConditionFalse,
+			Reason:             "ApprovalPending",
 			Message:            "applying this config restarts kubelet",
 			ObservedGeneration: generation,
 		})
@@ -2179,7 +2333,7 @@ func reportApplied(ctx context.Context, name string) {
 	Eventually(func(g Gomega) {
 		nc := getNodeConfig(ctx, g, name)
 		meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
-			Type:               configurationAppliedCondition,
+			Type:               internalv1alpha1.NodeConfigConditionTypeConfigurationApplied,
 			Status:             metav1.ConditionTrue,
 			Reason:             "ReconcileSucceeded",
 			Message:            "the node is running the published configuration",

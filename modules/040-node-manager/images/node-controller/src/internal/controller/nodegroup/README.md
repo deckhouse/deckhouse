@@ -51,9 +51,10 @@ flowchart TD
 
 Keeps `NodeGroup.status` in step with the real world.
 
-**Watches:** `NodeGroup` (spec and annotation changes only), `Node`, MCM and CAPI `Machine`,
-MCM and CAPI `MachineDeployment`, the `configuration-checksums` Secret, the cloud-provider
-Secret, and the provider `InstanceClass` kinds.
+**Watches:** `NodeGroup` (spec and annotation changes only), `Node`, `NodeConfig` (changes of
+what `node_status` reads only), MCM and CAPI `Machine`, MCM and CAPI `MachineDeployment`, the
+`configuration-checksums` Secret, the cloud-provider Secret, and the provider `InstanceClass`
+kinds.
 
 **Writes:** `status.nodes`, `ready`, `upToDate`, `desired`, `min`, `max`, `instances`,
 `kubernetesVersion`, `error`, `conditions`, `conditionSummary`, `lastMachineFailures`, and — in a
@@ -151,7 +152,9 @@ itself down and no minor upgrade could ever finish.
 ### node_status
 
 Counts the nodes of a group: how many exist, how many are ready, and how many already run the
-desired configuration checksum.
+desired configuration. A bashible node runs it when it carries the desired configuration checksum.
+An Immutable node runs it when its NodeConfig has applied the current generation; the same
+NodeConfig marks the node as updating while it is behind, and as waiting for disruption approval.
 
 ### cloud_status
 

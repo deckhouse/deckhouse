@@ -22,6 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
@@ -67,4 +68,25 @@ func TestBuildJoinPayloadFromClusterWaitsForTheBootstrapToken(t *testing.T) {
 	require.Len(t, documents, 1, "a joining master gets no ControlPlaneConfig")
 	require.Equal(t, string(nodeConfigDocument), documents[0],
 		"the join path checks the very bytes the joining machine is handed")
+}
+
+// The node takes the cluster CA as the PEM the cluster holds, not base64 of it: a
+// joining kubelet handed anything else cannot verify the apiserver it joins.
+func TestBuildJoinPayloadFromClusterCarriesTheClusterCAAsPEM(t *testing.T) {
+	kubeCl := client.NewFakeKubernetesClient()
+	immutabletest.CreateJoinInputsWithoutToken(t, kubeCl)
+	immutabletest.CreateBootstrapToken(t, kubeCl)
+
+	_, nodeConfigDocument, err := immutable.BuildJoinPayloadFromCluster(
+		t.Context(), kubeCl, immutabletest.MetaConfig(t), "example-master-1", nil, nil, "", "master")
+	require.NoError(t, err)
+
+	var document struct {
+		Spec struct {
+			Kubelet map[string]any `json:"kubelet"`
+		} `json:"spec"`
+	}
+	require.NoError(t, yaml.Unmarshal(nodeConfigDocument, &document))
+	require.Equal(t, immutabletest.ClusterCA, document.Spec.Kubelet["clusterCABundle"])
+	require.NotContains(t, document.Spec.Kubelet, "caCert")
 }

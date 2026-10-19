@@ -16,6 +16,7 @@ package nodeletseed
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -64,16 +65,42 @@ func TestFirstMasterRendersThePlatformDocumentForTheInstallerProxy(t *testing.T)
 		APIVersion: "internal.deckhouse.io/v1alpha1",
 		Kind:       "NodeConfig",
 		Spec: Spec{
-			SystemType:                          "Mutable",
-			RegistryPackagesProxyEndpoints:      []string{"http://127.0.0.1:5444"},
-			RegistryPackagesProxyAccessTokenB64: base64.StdEncoding.EncodeToString([]byte("passthrough")),
-			FeatureGates:                        map[string]bool{"extensions": true},
+			SystemType: "Mutable",
+			RegistryPackagesProxy: RegistryPackagesProxy{
+				Endpoints:   []string{"http://127.0.0.1:5444"},
+				AccessToken: []byte("passthrough"),
+			},
+			FeatureGates: map[string]bool{"extensions": true},
 			Extensions: []Extension{
-				{Name: "nodelet", Digest: "sha256:agent", RequestedBy: "node-manager"},
-				{Name: "jq", Digest: "sha256:jq", RequestedBy: "node-manager"},
+				{Name: "nodelet", Digest: "sha256:agent"},
+				{Name: "jq", Digest: "sha256:jq"},
 			},
 		},
 	}, doc)
+}
+
+// What lands on the node: the proxy under registryPackagesProxy with the token on the
+// wire as base64, as before, and no requestedBy on a platform package.
+func TestFirstMasterSeedSpeaksTheNodeConfigShape(t *testing.T) {
+	doc, err := FirstMaster(t.Context(), candiWith(t, twoPackages),
+		images(map[string]any{"nodelet": "sha256:agent", "jq": "sha256:jq"}), installerProxy)
+	require.NoError(t, err)
+
+	raw, err := json.Marshal(doc)
+	require.NoError(t, err)
+	var wire map[string]any
+	require.NoError(t, json.Unmarshal(raw, &wire))
+	spec := wire["spec"].(map[string]any)
+
+	require.Equal(t, map[string]any{
+		"endpoints":   []any{"http://127.0.0.1:5444"},
+		"accessToken": base64.StdEncoding.EncodeToString([]byte("passthrough")),
+	}, spec["registryPackagesProxy"])
+	require.NotContains(t, spec, "registryPackagesProxyEndpoints")
+	require.NotContains(t, spec, "registryPackagesProxyAccessTokenB64")
+	for _, ext := range spec["extensions"].([]any) {
+		require.NotContains(t, ext, "requestedBy", "a platform package has no requester")
+	}
 }
 
 // A package the release did not build would be waited for on the first master until

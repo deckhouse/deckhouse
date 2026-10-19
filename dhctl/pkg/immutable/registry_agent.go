@@ -29,7 +29,9 @@ const (
 	// so the node keeps the agent when node-controller takes its document over.
 	registryAgentStaticPodName = "registry-agent"
 
-	registryOwnerAgent = "agent"
+	// registryConfigOwnerAgent hands containerd's registry.d to the agent.
+	// Mirrors RegistryConfigOwnerRegistryAgent of node-controller/src/api/internal.deckhouse.io/v1alpha1.
+	registryConfigOwnerAgent = "RegistryAgent"
 
 	// registryDigestsKey is the registry module in images_digests.json, and
 	// registryAgentImage its node agent there.
@@ -87,6 +89,6 @@ func applyRegistryAgent(spec *nodeSpec, metaConfig *config.MetaConfig) error {
 		Name:     registryAgentStaticPodName,
 		Manifest: strings.Replace(registryAgentManifest, registryAgentDigestPlaceholder, digest, 1),
 	})
-	spec.ContainerRuntime.RegistryOwner = registryOwnerAgent
+	spec.ContainerRuntime.RegistryConfigOwner = registryConfigOwnerAgent
 	return nil
 }

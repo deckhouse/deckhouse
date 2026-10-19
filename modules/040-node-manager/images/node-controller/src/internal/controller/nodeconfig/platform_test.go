@@ -86,8 +86,8 @@ func TestThePlatformDocumentRendersWithTheReleaseDigests(t *testing.T) {
 	require.Equal(t, platformDocument{
 		FeatureGates: map[string]bool{"extensions": true},
 		Extensions: []internalv1alpha1.Extension{
-			{Name: "nodelet", Digest: "sha256:agent", RequestedBy: platformExtensionRequestedBy},
-			{Name: "jq", Digest: "sha256:jq", RequestedBy: platformExtensionRequestedBy},
+			{Name: "nodelet", Digest: "sha256:agent"},
+			{Name: "jq", Digest: "sha256:jq"},
 		},
 		StaticPods: []internalv1alpha1.StaticPod{{Name: "early", Manifest: "kind: Pod"}},
 	}, platform)
@@ -117,7 +117,7 @@ func TestTheShippedPlatformDocumentRenders(t *testing.T) {
 	platform := testPlatform(t)
 
 	require.Equal(t, internalv1alpha1.Extension{
-		Name: nodeletExtension, Digest: testNodeletPackageDigest, RequestedBy: platformExtensionRequestedBy,
+		Name: nodeletExtension, Digest: testNodeletPackageDigest,
 	}, platform.Extensions[0])
 	require.Len(t, platform.Extensions, len(testenv.TestPlatformPackageDigests)+1)
 	seen := map[string]bool{}

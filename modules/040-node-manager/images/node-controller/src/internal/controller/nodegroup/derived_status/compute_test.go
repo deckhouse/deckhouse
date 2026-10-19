@@ -63,13 +63,13 @@ func TestDefaultCloudEphemeralEngine(t *testing.T) {
 		{
 			name:     "CAPI only",
 			provider: cloudprovider.Registration{CAPIClusterKind: "DVPCluster"},
-			want:     engineCAPI,
+			want:     EngineCAPI,
 		},
 		{
 			name:     "both, useMCM=false defaults to CAPI",
 			provider: cloudprovider.Registration{MachineClassKind: "AWSInstanceClass", CAPIClusterKind: "DVPCluster"},
 			useMCM:   false,
-			want:     engineCAPI,
+			want:     EngineCAPI,
 		},
 		{
 			name:     "both, useMCM=true forces MCM",
@@ -130,7 +130,7 @@ func TestEngine_PinAndDefaults(t *testing.T) {
 				NodeType:        v1.NodeTypeStatic,
 				StaticInstances: &v1.StaticInstancesSpec{},
 			}},
-			want: engineCAPI,
+			want: EngineCAPI,
 		},
 		{
 			name: "static without staticInstances is None",
@@ -286,7 +286,7 @@ func TestEngine_ExistingMachineDeploymentsWin(t *testing.T) {
 	})
 
 	t.Run("CAPI machines answer CAPI", func(t *testing.T) {
-		assert.Equal(t, engineCAPI, engineFrom(cloudEphemeral(), bothCapable, machineDeployments{CAPI: true}))
+		assert.Equal(t, EngineCAPI, engineFrom(cloudEphemeral(), bothCapable, machineDeployments{CAPI: true}))
 	})
 
 	// The only case where the CAPI branch changes the answer: the annotation would say MCM, but
@@ -294,7 +294,7 @@ func TestEngine_ExistingMachineDeploymentsWin(t *testing.T) {
 	t.Run("CAPI machines outrank the use-mcm annotation", func(t *testing.T) {
 		ng := cloudEphemeral()
 		ng.Annotations = map[string]string{useMCMAnnotation: "true"}
-		assert.Equal(t, engineCAPI, engineFrom(ng, bothCapable, machineDeployments{CAPI: true}))
+		assert.Equal(t, EngineCAPI, engineFrom(ng, bothCapable, machineDeployments{CAPI: true}))
 	})
 
 	t.Run("MCM wins when both kinds are present", func(t *testing.T) {
@@ -303,15 +303,15 @@ func TestEngine_ExistingMachineDeploymentsWin(t *testing.T) {
 	})
 
 	t.Run("no machines at all falls back to the provider default", func(t *testing.T) {
-		assert.Equal(t, engineCAPI, engineFrom(cloudEphemeral(), bothCapable, machineDeployments{}))
+		assert.Equal(t, EngineCAPI, engineFrom(cloudEphemeral(), bothCapable, machineDeployments{}))
 	})
 
 	// The pin is what the group was already told to be; machines that contradict it are the
 	// symptom of something else and must not flip the engine, which would recreate every node.
 	t.Run("the pin outranks the machines", func(t *testing.T) {
 		ng := cloudEphemeral()
-		ng.Status.Engine = engineCAPI
-		assert.Equal(t, engineCAPI, engineFrom(ng, bothCapable, machineDeployments{MCM: true}))
+		ng.Status.Engine = EngineCAPI
+		assert.Equal(t, EngineCAPI, engineFrom(ng, bothCapable, machineDeployments{MCM: true}))
 	})
 
 	t.Run("use-mcm decides a group that has no machines yet", func(t *testing.T) {

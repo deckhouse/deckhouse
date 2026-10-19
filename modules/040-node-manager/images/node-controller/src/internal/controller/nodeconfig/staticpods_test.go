@@ -199,12 +199,32 @@ func TestNodeStaticPodRequests(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Every entry here came from a request, and its name is the request's.
+			for i := range tt.want {
+				tt.want[i].RequestedBy = nsprOwner(tt.want[i].Name)
+			}
 			pods := staticPodsOf(tt.nsprs, tt.ngName)
 			if !reflect.DeepEqual(pods, tt.want) {
 				t.Fatalf("static pods = %#v, want %#v", pods, tt.want)
 			}
 		})
 	}
+}
+
+// nsprOwner is the requestedBy of an entry the named NodeStaticPodRequest put there.
+func nsprOwner(name string) *internalv1alpha1.ObjectOwner {
+	return &internalv1alpha1.ObjectOwner{Kind: internalv1alpha1.ObjectOwnerKindNodeStaticPodRequest, Name: name}
+}
+
+// The node tells a requested static pod from the platform's own by requestedBy, and
+// the name it carries is the request's, which is also the manifest's file name.
+func TestAStaticPodNamesTheRequestThatAskedForIt(t *testing.T) {
+	pods := staticPodsOf([]deckhousev1alpha1.NodeStaticPodRequest{
+		nspr("registry-agent", deckhousev1alpha1.NodeStaticPodRequestSpec{}),
+	}, "worker")
+
+	require.Len(t, pods, 1)
+	require.Equal(t, &internalv1alpha1.ObjectOwner{Kind: "NodeStaticPodRequest", Name: "registry-agent"}, pods[0].RequestedBy)
 }
 
 // spec.staticPods is an array, so a listing-order dependency was a spec diff — a
@@ -274,7 +294,7 @@ func TestRejectedNSPRs(t *testing.T) {
 			Manifest: podManifest("kube-apiserver"),
 		}))
 		require.Equal(t, reasonReservedName, rejected["kube-apiserver"].reason)
-		require.Contains(t, rejected["kube-apiserver"].message, "writes itself")
+		require.Contains(t, rejected["kube-apiserver"].message, "the node agent or a bashible step writes")
 	})
 
 	// kubelet collides on the pod, so the file name alone does not protect it.

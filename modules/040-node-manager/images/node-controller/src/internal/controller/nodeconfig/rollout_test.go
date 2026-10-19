@@ -152,7 +152,7 @@ func TestNodeConfigRolloutInputsChanged(t *testing.T) {
 		expChanged bool
 	}{
 		{
-			// readNEROutcomes counts Ready only at the digest the spec asks for.
+			// nerOutcomes counts Ready only at the digest the spec asks for.
 			name: "only the status digest changed",
 			after: config(func(nc *internalv1alpha1.NodeConfig) {
 				nc.Status.Extensions[0].Digest = "sha256:new"
@@ -181,6 +181,14 @@ func TestNodeConfigRolloutInputsChanged(t *testing.T) {
 				nc.Status.StaticPods[0] = internalv1alpha1.StaticPodStatus{
 					Name: "registry-agent", State: "Written",
 				}
+			}),
+			expChanged: true,
+		},
+		{
+			// nsprOutcomes counts Written only at the digest of the request's manifest.
+			name: "only the manifest digest changed",
+			after: config(func(nc *internalv1alpha1.NodeConfig) {
+				nc.Status.StaticPods[0].ManifestDigest = "sha256:new"
 			}),
 			expChanged: true,
 		},
@@ -284,7 +292,7 @@ func appliedConfig(name string, spec internalv1alpha1.NodeSpec) internalv1alpha1
 	}
 	nc.Status.AppliedGeneration = 2
 	meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
-		Type: configurationAppliedCondition, Status: metav1.ConditionTrue,
+		Type: internalv1alpha1.NodeConfigConditionTypeConfigurationApplied, Status: metav1.ConditionTrue,
 		Reason: "ReconcileSucceeded", Message: "applied", ObservedGeneration: nc.Generation,
 	})
 	return nc
@@ -360,7 +368,7 @@ func nodeConfigAt(generation, observed, applied int64, phase string) *internalv1
 // carrying the generation it describes.
 func withConfigApplied(nc *internalv1alpha1.NodeConfig, status metav1.ConditionStatus, generation int64) *internalv1alpha1.NodeConfig {
 	meta.SetStatusCondition(&nc.Status.Conditions, metav1.Condition{
-		Type:               configurationAppliedCondition,
+		Type:               internalv1alpha1.NodeConfigConditionTypeConfigurationApplied,
 		Status:             status,
 		Reason:             "ReconcileSucceeded",
 		ObservedGeneration: generation,
@@ -429,9 +437,9 @@ func TestApplied(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.disruption {
 				meta.SetStatusCondition(&tt.nc.Status.Conditions, metav1.Condition{
-					Type:               disruptionRequiredCondition,
-					Status:             metav1.ConditionTrue,
-					Reason:             "DisruptionPending",
+					Type:               internalv1alpha1.NodeConfigConditionTypeDisruptionApproved,
+					Status:             metav1.ConditionFalse,
+					Reason:             "ApprovalPending",
 					ObservedGeneration: tt.nc.Generation,
 				})
 			}
@@ -508,9 +516,12 @@ func TestABashibleNodeWithoutAnAgentHoldsNoSlot(t *testing.T) {
 			Spec: renderMutableSpec(node, ng.Name, in),
 		}
 	}
-	cl := fake.NewClientBuilder().WithScheme(nsprStatusScheme(t)).WithObjects(ng, &current, &fresh, &stale,
-		silentConfig(&current, clusterInputs{}),
-		silentConfig(&stale, clusterInputs{RegistryPackagesProxyToken: "previous-token"})).Build()
+	// The stale document is created the way a writer creates one, so its fields have an
+	// owner for the apply to take over; an object nobody owns a field of keeps it.
+	cl := fake.NewClientBuilder().WithScheme(nsprStatusScheme(t)).WithReturnManagedFields().
+		WithObjects(ng, &current, &fresh, &stale, silentConfig(&current, clusterInputs{})).Build()
+	require.NoError(t, cl.Create(t.Context(), silentConfig(&stale, clusterInputs{RegistryPackagesProxyToken: []byte("previous-token")}),
+		client.FieldOwner("node-controller-before-apply")))
 	r, p := mutableReconciler(cl, clusterInputs{})
 
 	budget, err := r.rolloutBudget(t.Context(), ng, p)
@@ -524,7 +535,7 @@ func TestABashibleNodeWithoutAnAgentHoldsNoSlot(t *testing.T) {
 	}
 	rewritten := &internalv1alpha1.NodeConfig{}
 	require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: stale.Name}, rewritten))
-	require.Empty(t, rewritten.Spec.RegistryPackagesProxyAccessTokenB64, "the stale document is rewritten")
+	require.Empty(t, rewritten.Spec.RegistryPackagesProxy.AccessToken, "the stale document is rewritten")
 }
 
 // A node registers its NodeConfig by name alone. With no slot free its labels and owner
@@ -543,7 +554,7 @@ func TestAHeldNodeConfigIsLabelledWithoutSpendingASlot(t *testing.T) {
 	updating.Status.ObservedGeneration = 1
 	registered := &internalv1alpha1.NodeConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: joiner.Name},
-		Spec:       renderMutableSpec(&joiner, ng.Name, clusterInputs{RegistryPackagesProxyToken: "seed-token"}),
+		Spec:       renderMutableSpec(&joiner, ng.Name, clusterInputs{RegistryPackagesProxyToken: []byte("seed-token")}),
 	}
 	cl := fake.NewClientBuilder().WithScheme(nsprStatusScheme(t)).WithObjects(ng, &holder, &joiner, updating, registered).Build()
 	r, p := mutableReconciler(cl, clusterInputs{})
@@ -575,7 +586,7 @@ func TestAHeldNodeOnAnOlderSpecIsNotCountedWhenLabelled(t *testing.T) {
 	joiner.UID = "worker-1-uid"
 	updating := notApplied(holder.Name, renderMutableSpec(&holder, ng.Name, clusterInputs{}))
 	updating.Labels = map[string]string{nodecommon.NodeGroupLabel: ng.Name}
-	older := notApplied(joiner.Name, renderMutableSpec(&joiner, ng.Name, clusterInputs{RegistryPackagesProxyToken: "previous-token"}))
+	older := notApplied(joiner.Name, renderMutableSpec(&joiner, ng.Name, clusterInputs{RegistryPackagesProxyToken: []byte("previous-token")}))
 	cl := fake.NewClientBuilder().WithScheme(nsprStatusScheme(t)).WithObjects(ng, &holder, &joiner, &updating, &older).Build()
 	r, p := mutableReconciler(cl, clusterInputs{})
 	budget, err := r.rolloutBudget(t.Context(), ng, p)
@@ -616,7 +627,7 @@ func TestAMetadataOnlyChangeSpendsNoFreeSlot(t *testing.T) {
 			if tc.applied {
 				unlabelled.Status.AppliedGeneration = 1
 				unlabelled.Status.Conditions = []metav1.Condition{{
-					Type: configurationAppliedCondition, Status: metav1.ConditionTrue, ObservedGeneration: 1, Reason: "Applied",
+					Type: internalv1alpha1.NodeConfigConditionTypeConfigurationApplied, Status: metav1.ConditionTrue, ObservedGeneration: 1, Reason: "Applied",
 				}}
 			}
 			cl := fake.NewClientBuilder().WithScheme(nsprStatusScheme(t)).WithObjects(ng, &node, unlabelled).Build()
@@ -658,7 +669,7 @@ func TestABashibleNodeWhoseAgentReportedHoldsItsSlot(t *testing.T) {
 	observedOlder.Status.ObservedGeneration = 1
 	conditionsOnly := internalv1alpha1.NodeConfig{ObjectMeta: metav1.ObjectMeta{Name: "n1", Generation: 2}, Spec: desired}
 	meta.SetStatusCondition(&conditionsOnly.Status.Conditions, metav1.Condition{
-		Type: configurationAppliedCondition, Status: metav1.ConditionFalse, Reason: "Applying",
+		Type: internalv1alpha1.NodeConfigConditionTypeConfigurationApplied, Status: metav1.ConditionFalse, Reason: "Applying",
 	})
 
 	for name, nc := range map[string]internalv1alpha1.NodeConfig{
@@ -671,4 +682,17 @@ func TestABashibleNodeWhoseAgentReportedHoldsItsSlot(t *testing.T) {
 			require.Contains(t, updating, "n1")
 		})
 	}
+}
+
+// The request statuses name a NodeOperation as waited for or failed, and its phase is all
+// they follow: an operation that fails before the node is let go moves nothing on the node.
+func TestOperationPhaseChanged(t *testing.T) {
+	op := &deckhousev1alpha1.NodeOperation{Status: deckhousev1alpha1.NodeOperationStatus{Phase: deckhousev1alpha1.NodeOperationPhaseInProgress}}
+	failed := op.DeepCopy()
+	failed.Status.Phase = deckhousev1alpha1.NodeOperationPhaseFailed
+	reworded := op.DeepCopy()
+	reworded.Status.Message = "the eviction of node worker-0 is failing"
+
+	require.True(t, operationPhaseChanged(op, failed))
+	require.False(t, operationPhaseChanged(op, reworded))
 }

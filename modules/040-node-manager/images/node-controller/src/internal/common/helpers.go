@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"unicode/utf8"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -30,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
 func GetNodeGroup(ctx context.Context, r client.Reader, name string) (*v1.NodeGroup, error) {
@@ -38,6 +40,37 @@ func GetNodeGroup(ctx context.Context, r client.Reader, name string) (*v1.NodeGr
 		return nil, err
 	}
 	return ng, nil
+}
+
+// GetNodeConfig reads the NodeConfig named after the node, nil when the node has none.
+func GetNodeConfig(ctx context.Context, r client.Reader, nodeName string) (*internalv1alpha1.NodeConfig, error) {
+	nc := &internalv1alpha1.NodeConfig{}
+	if err := r.Get(ctx, types.NamespacedName{Name: nodeName}, nc); err != nil {
+		if errors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get NodeConfig %s: %w", nodeName, err)
+	}
+	return nc, nil
+}
+
+// NodeAgentSilence is how old the last report of a node agent (status.lastReconcileTime of its
+// NodeConfig) gets before the agent counts as silent: it republishes the time coarsely.
+const NodeAgentSilence = 10 * time.Minute
+
+// Truncate cuts s to at most maxBytes on a rune boundary and marks the cut. A bound below the
+// length of the mark is raised to it: what is left is the mark alone.
+func Truncate(s string, maxBytes int) string {
+	const suffix = "… (truncated)"
+	maxBytes = max(maxBytes, len(suffix))
+	if len(s) <= maxBytes {
+		return s
+	}
+	cut := maxBytes - len(suffix)
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut] + suffix
 }
 
 // DefaultDrainTimeout bounds an eviction whose group names no

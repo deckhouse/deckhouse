@@ -46,9 +46,48 @@ spec:
           description: |
             Request to install an extension on the selected nodes: a system extension (a sysext image, optionally with kernel modules) or a registry package.
 
-            The requester sets the kind in `spec.extension.kind`. A registry package (`Package`) is installed on the selected nodes that bashible configures. A system extension (`SystemExtension`) is installed on the selected Deckhouse Engine nodes. The kind is never inferred from the image. If none of the selected groups installs extensions of this kind, the `Ready` condition reports the `NotDeliverable` reason.
+            The requester sets the kind in `spec.extension.kind`. A registry package (`Package`) is installed on the selected nodes that bashible configures. A system extension (`SystemExtension`) is installed on the selected Deckhouse Engine nodes. The kind is never inferred from the image. If none of the selected groups installs extensions of this kind, the `Accepted` condition reports the `NotDeliverable` reason.
 
             The image is addressed the same way as any package in the registry-packages-proxy: a name, a digest, and an optional repository and path. node-controller copies these fields unchanged into `spec.extensions` of the NodeConfig, and the node agent installs the extension. node-controller does not look up the image by module or ModuleSource.
+          x-doc-examples:
+          - |
+              ```yaml
+              # A system extension with kernel modules, fetched from the registry of a ModuleSource.
+              apiVersion: deckhouse.io/v1alpha1
+              kind: NodeExtensionRequest
+              metadata:
+                name: drbd
+              spec:
+                extension:
+                  name: drbd
+                  digest: sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945
+                  kind: SystemExtension
+                  repository: registry.example.com/deckhouse/modules
+                  path: drbd/extensions
+                  kernelModules:
+                    - name: drbd
+                      params:
+                        - usermode_helper=disabled
+                    - name: drbd_transport_tcp
+                nodeGroupSelector:
+                  matchNames:
+                    - worker
+              ---
+              # A registry package from the cluster's main registry, on the nodes of every
+              # group bashible configures that carry the label.
+              apiVersion: deckhouse.io/v1alpha1
+              kind: NodeExtensionRequest
+              metadata:
+                name: nvme-cli
+              spec:
+                extension:
+                  name: nvme-cli
+                  digest: sha256:9b2a6f2bb7e3c5f6d1a0e4c8b7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8
+                  kind: Package
+                nodeSelector:
+                  matchLabels:
+                    storage.example.com/nvme: "true"
+              ```
           required:
             - spec
           properties:
@@ -69,6 +108,11 @@ spec:
                     - name
                     - digest
                     - kind
+                  x-kubernetes-validations:
+                    - rule: self.kind == oldSelf.kind
+                      message: "kind cannot be changed: delete the request and create it again"
+                    - rule: self.kind == 'SystemExtension' || !has(self.kernelModules)
+                      message: kernel modules load from a SystemExtension only
                   description: |
                     Image to install and its kind. The image is addressed the same way as any package in the registry-packages-proxy.
                   properties:
@@ -78,11 +122,11 @@ spec:
                       maxLength: 63
                       pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                       description: |
-                        Extension name. It is copied unchanged into the extension name in `spec.extensions` of the NodeConfig.
+                        Extension name.
 
-                        A system extension is checked against the extension-release file in the image and installed as `<name>.raw`. A registry package is recorded under `/var/cache/registrypackages/<name>`.
+                        The image of a system extension must contain the extension-release file for this name.
 
-                        The names `containerd`, `kubelet`, `kubernetes-cni` and `nodelet` are reserved.
+                        The names `containerd`, `kubelet`, `kubernetes-cni`, `nodelet` and `qemu-guest-agent` belong to platform extensions and are not accepted.
                     digest:
                       type: string
                       pattern: '^sha256:[a-f0-9]{64}$'
@@ -97,17 +141,52 @@ spec:
                         - `Package`: a registry package. The node agent installs it on the selected nodes that bashible configures.
                         - `SystemExtension`: a system extension. The node agent merges it on the selected Deckhouse Engine nodes.
 
-                        Nodes of groups of the other type do not receive the image. If none of the selected groups installs extensions of this kind, the `Ready` condition reports the `NotDeliverable` reason.
+                        Nodes of groups of the other type do not receive the image. If none of the selected groups installs extensions of this kind, the `Accepted` condition reports the `NotDeliverable` reason.
 
                         Cannot be changed after creation. To change the kind, delete the request and create it again.
                     repository:
                       type: string
+                      maxLength: 1024
+                      pattern: '^[^[:space:]]+$'
                       description: |
                         The key the registry-packages-proxy resolves credentials by (its `--rpp-repository`), for example a ModuleSource's `spec.registry.repo`. Left empty, the image is pulled from the cluster's main registry.
                     path:
                       type: string
+                      maxLength: 512
                       description: |
                         The image's path within the repository (the proxy's `--rpp-path`). Left empty, the repository root is used.
+                    kernelModules:
+                      type: array
+                      maxItems: 32
+                      x-kubernetes-list-type: map
+                      x-kubernetes-list-map-keys:
+                        - name
+                      description: |
+                        Kernel modules the node agent loads after merging the system extension, in the listed order. Allowed only with the `SystemExtension` kind. Each module is listed once.
+
+                        Dependencies are not loaded automatically: list every module the extension needs, each one after the modules it depends on.
+
+                        Adding a module interrupts each selected node: the node waits for an approved `Disruption` NodeOperation.
+                      items:
+                        type: object
+                        required:
+                          - name
+                        properties:
+                          name:
+                            type: string
+                            minLength: 1
+                            maxLength: 64
+                            pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]*$'
+                            description: |
+                              Kernel module name.
+                          params:
+                            type: array
+                            maxItems: 32
+                            items:
+                              type: string
+                              maxLength: 256
+                            description: |
+                              Module parameters, passed as `key=value` strings.
                 nodeGroupSelector:
                   type: object
                   description: |
@@ -115,8 +194,12 @@ spec:
                   properties:
                     matchNames:
                       type: array
+                      maxItems: 64
+                      x-kubernetes-list-type: set
                       items:
                         type: string
+                        maxLength: 63
+                        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
                       description: |
                         The set of NodeGroup names the extension applies to.
                 nodeSelector:
@@ -126,31 +209,12 @@ spec:
                   properties:
                     matchLabels:
                       type: object
+                      maxProperties: 16
                       additionalProperties:
                         type: string
+                        maxLength: 63
                       description: |
                         The set of node labels a node must carry to be selected.
-                kernelModules:
-                  type: array
-                  description: |
-                    Kernel modules to load once the system extension is merged. A registry package cannot load kernel modules, so such a request is not delivered to any node.
-                  items:
-                    type: object
-                    required:
-                      - name
-                    properties:
-                      name:
-                        type: string
-                        minLength: 1
-                        pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]*$'
-                        description: |
-                          The kernel module name.
-                      params:
-                        type: array
-                        items:
-                          type: string
-                        description: |
-                          The module parameters, passed as `key=value` strings.
             status:
               type: object
               properties:
@@ -162,10 +226,13 @@ spec:
                     The generation of the spec this status reflects.
                 phase:
                   type: string
-                  enum: ["Ready", "Degraded"]
+                  enum: ["Pending", "Ready", "Degraded"]
                   description: |
-                    - `Ready`: the extension is delivered to the selected nodes.
-                    - `Degraded`: the extension is not delivered. The `Ready` condition gives the reason.
+                    Summary of the conditions.
+
+                    - `Pending`: The selected nodes are still installing the extension (the `Ready` condition has the `RolloutInProgress` reason).
+                    - `Ready`: The `Ready` condition is `True`.
+                    - `Degraded`: `node-manager` did not accept the request (the `Accepted` condition is `False`), or nodes refused the extension (the `Ready` condition has the `RefusedByNodes` reason).
                 matchedNodeGroups:
                   type: array
                   items:
@@ -177,15 +244,13 @@ spec:
                   format: int32
                   minimum: 0
                   description: |
-                    Number of selected nodes that report the extension installed with the digest from their NodeConfig. While a node waits for a rollout slot, its NodeConfig still carries the request's previous digest.
-
-                    The value comes from node reports. A request can have the `Resolved` reason and still be refused by every node it is delivered to.
+                    Number of selected nodes that report the extension installed at the digest of this request.
                 failedNodes:
                   type: integer
                   format: int32
                   minimum: 0
                   description: |
-                    Number of selected nodes that report the extension refused.
+                    Number of selected nodes that refused the extension at the request's digest.
                 matchedNodes:
                   type: integer
                   format: int32
@@ -197,17 +262,52 @@ spec:
                   format: int32
                   minimum: 0
                   description: |
-                    Number of selected nodes that have reported neither the extension installed nor a refusal yet.
-                failureMessage:
-                  type: string
+                    Number of selected nodes that have reported neither the extension installed at the request's digest nor a refusal yet.
+                nodes:
+                  type: array
+                  maxItems: 32
                   description: |
-                    What the nodes say about the refusal, taken from one of them.
+                    Selected nodes that have not applied the request, at most 32.
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - state
+                    properties:
+                      name:
+                        type: string
+                        description: |
+                          Node name.
+                      state:
+                        type: string
+                        enum: ["Pending", "Failed"]
+                        description: |
+                          `Failed` if the node refused the request or `Pending` if it has not answered yet.
+                      message:
+                        type: string
+                        maxLength: 4096
+                        description: |
+                          Why the node refused the request or what it waits for.
                 conditions:
                   type: array
                   description: |
-                    Latest details of the request's progress.
+                    Conditions of the request: `Accepted` and `Ready`.
 
-                    The `Ready` condition shows whether the extension is delivered to its nodes. The `Resolved` reason means it is. The other reasons explain why it is not: `InvalidExtension`, `ReservedName`, `Conflict`, `KernelModuleConflict`, `NotDeliverable` (no selected group installs this kind of image), and `RefusedByNodes`.
+                    `Accepted` shows whether `node-manager` accepted the request. It is `True` with the `Accepted` reason or `False` with one of these reasons:
+
+                    - `InvalidExtension`: The extension has no name or no digest.
+                    - `ReservedName`: The name belongs to a platform extension.
+                    - `Conflict`: An older request of the same kind already uses this name or digest, or the platform installs a registry package with this name or digest on the same nodes.
+                    - `KernelModuleConflict`: An older request already loads one of the kernel modules with different parameters.
+                    - `NotDeliverable`: None of the selected NodeGroups installs extensions of this kind.
+
+                    `Ready` shows whether the selected nodes run the request's digest:
+
+                    - `True` with the `AllNodesApplied` reason: Every selected node runs it.
+                    - `True` with the `NoNodesSelected` reason: The request selects no node. The selected NodeGroups do not exist, have no nodes, or have no nodes that match `nodeSelector`.
+                    - `False` with the `RolloutInProgress` reason: Some selected nodes do not run it yet.
+                    - `False` with the `RefusedByNodes` reason: At least one node refused the extension.
+                    - `False` with the `NotAccepted` reason: The `Accepted` condition is `False`.
                   x-kubernetes-list-type: map
                   x-kubernetes-list-map-keys:
                     - type

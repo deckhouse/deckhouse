@@ -31,6 +31,7 @@ import (
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
@@ -73,6 +74,7 @@ var _ = BeforeSuite(func() {
 	Expect(deckhousev1alpha2.AddToScheme(scheme)).To(Succeed())
 	Expect(capiv1beta2.AddToScheme(scheme)).To(Succeed())
 	Expect(mcmv1alpha1.AddToScheme(scheme)).To(Succeed())
+	Expect(internalv1alpha1.AddToScheme(scheme)).To(Succeed())
 
 	By("bootstrapping the envtest environment with deckhouse CRDs")
 	var err error
@@ -82,6 +84,7 @@ var _ = BeforeSuite(func() {
 			testenv.WithInstanceCRDFile(),
 			testenv.WithMCMCRDFile(),
 			testenv.WithMachineCRDFile(),
+			testenv.WithNodeManager(testenv.NodeConfigCRDFile),
 		)...,
 	)
 	Expect(err).NotTo(HaveOccurred())

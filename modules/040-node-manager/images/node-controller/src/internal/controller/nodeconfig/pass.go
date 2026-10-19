@@ -49,6 +49,8 @@ type pass struct {
 	// mutable is what reading the inputs of a bashible node produced: one read
 	// per pass, since nothing in them depends on the group.
 	mutable *clusterInputsResult
+	// fleet is what both request status passes read about the nodes, after the renders.
+	fleet *fleet
 }
 
 // clusterInputsResult is one attempt at reading the cluster-wide inputs, kept

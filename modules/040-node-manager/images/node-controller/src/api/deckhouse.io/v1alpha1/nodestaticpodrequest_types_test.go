@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	sigsyaml "sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/node-controller/internal/testenv"
@@ -176,6 +177,146 @@ func TestValidateStaticPodManifest(t *testing.T) {
 	}
 }
 
+// kubeSystemPod is a static pod manifest in kube-system with the given spec, indented
+// by two spaces.
+func kubeSystemPod(spec string) string {
+	return "apiVersion: v1\nkind: Pod\nmetadata:\n  name: agent\n  namespace: kube-system\nspec:\n" + spec
+}
+
+// The mirror pod lands in the namespace the manifest names, so a tenant would get a
+// root pod it never asked for. kubelet runs a static pod without the API server, and
+// NodeRestriction refuses the mirror pod of one that references API objects.
+func TestValidateStaticPodManifestKeepsThePodToItself(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest string
+		wantPod  string
+		wantErr  string
+	}{
+		{
+			// The shape of the registry agent: host paths and the downward API are
+			// the node's own, not API objects.
+			name: "host paths and the node name from the downward API",
+			manifest: kubeSystemPod(`  hostNetwork: true
+  containers:
+  - name: agent
+    image: deckhouse.local/images:agent
+    env:
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    volumeMounts:
+    - name: state
+      mountPath: /var/lib/agent
+  volumes:
+  - name: state
+    hostPath:
+      path: /var/lib/agent
+      type: DirectoryOrCreate
+`),
+			wantPod: "kube-system/agent",
+		},
+		{
+			name:     "a tenant namespace",
+			manifest: "apiVersion: v1\nkind: Pod\nmetadata:\n  name: agent\n  namespace: default\n",
+			wantErr:  `metadata.namespace "default" is neither kube-system nor a d8- namespace`,
+		},
+		{
+			name:     "a namespace that only looks like a platform one",
+			manifest: "apiVersion: v1\nkind: Pod\nmetadata:\n  name: agent\n  namespace: d8system\n",
+			wantErr:  `metadata.namespace "d8system" is neither kube-system nor a d8- namespace`,
+		},
+		{
+			name:     "a namespace that is not a DNS label",
+			manifest: "apiVersion: v1\nkind: Pod\nmetadata:\n  name: agent\n  namespace: d8-system.example\n",
+			wantErr:  `metadata.namespace "d8-system.example" is not a DNS-1123 label`,
+		},
+		{
+			name:     "a name that is not a DNS subdomain",
+			manifest: "apiVersion: v1\nkind: Pod\nmetadata:\n  name: Registry_Agent\n  namespace: kube-system\n",
+			wantErr:  `metadata.name "Registry_Agent" is not a DNS-1123 subdomain`,
+		},
+		{
+			name:     "a node name",
+			manifest: kubeSystemPod("  nodeName: worker-0\n"),
+			wantErr:  "spec.nodeName is set",
+		},
+		{
+			name:     "a service account",
+			manifest: kubeSystemPod("  serviceAccountName: agent\n"),
+			wantErr:  "spec.serviceAccountName references an API object",
+		},
+		{
+			name:     "a service account under its deprecated field",
+			manifest: kubeSystemPod("  serviceAccount: agent\n"),
+			wantErr:  "spec.serviceAccount references an API object",
+		},
+		{
+			name:     "an image pull secret",
+			manifest: kubeSystemPod("  imagePullSecrets:\n  - name: registry\n"),
+			wantPod:  "kube-system/agent",
+		},
+		{
+			name:     "a secret volume after a host path",
+			manifest: kubeSystemPod("  volumes:\n  - name: state\n    hostPath:\n      path: /var/lib/agent\n  - name: certs\n    secret:\n      secretName: certs\n"),
+			wantErr:  "spec.volumes[1].secret references an API object",
+		},
+		{
+			name:     "a ConfigMap volume",
+			manifest: kubeSystemPod("  volumes:\n  - name: config\n    configMap:\n      name: config\n"),
+			wantErr:  "spec.volumes[0].configMap references an API object",
+		},
+		{
+			name:     "a claim volume",
+			manifest: kubeSystemPod("  volumes:\n  - name: data\n    persistentVolumeClaim:\n      claimName: data\n"),
+			wantErr:  "spec.volumes[0].persistentVolumeClaim references an API object",
+		},
+		{
+			name:     "a projected volume",
+			manifest: kubeSystemPod("  volumes:\n  - name: token\n    projected:\n      sources:\n      - serviceAccountToken:\n          path: token\n"),
+			wantErr:  "spec.volumes[0].projected references an API object",
+		},
+		{
+			name:     "a generic ephemeral volume",
+			manifest: kubeSystemPod("  volumes:\n  - name: scratch\n    ephemeral:\n      volumeClaimTemplate:\n        spec:\n          accessModes: [ReadWriteOnce]\n"),
+			wantPod:  "kube-system/agent",
+		},
+		{
+			name:     "a container taking its environment from a ConfigMap",
+			manifest: kubeSystemPod("  containers:\n  - name: agent\n    envFrom:\n    - configMapRef:\n        name: config\n"),
+			wantErr:  "spec.containers[0].envFrom[0] references an API object",
+		},
+		{
+			name:     "an init container taking its environment from a Secret",
+			manifest: kubeSystemPod("  initContainers:\n  - name: init\n    envFrom:\n    - secretRef:\n        name: env\n"),
+			wantErr:  "spec.initContainers[0].envFrom[0] references an API object",
+		},
+		{
+			name:     "one variable of the second container from a ConfigMap",
+			manifest: kubeSystemPod("  containers:\n  - name: first\n  - name: second\n    env:\n    - name: PLAIN\n      value: x\n    - name: FROM_CONFIG\n      valueFrom:\n        configMapKeyRef:\n          name: config\n          key: value\n"),
+			wantErr:  "spec.containers[1].env[1].valueFrom.configMapKeyRef references an API object",
+		},
+		{
+			name:     "an ephemeral container variable from a Secret",
+			manifest: kubeSystemPod("  ephemeralContainers:\n  - name: debug\n    env:\n    - name: TOKEN\n      valueFrom:\n        secretKeyRef:\n          name: token\n          key: value\n"),
+			wantPod:  "kube-system/agent",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pod, err := ValidateStaticPodManifest(tt.manifest)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+				require.Equal(t, tt.wantPod, pod)
+				return
+			}
+			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
 // The markers on the type and the shipped CRD are two copies of one declaration
 // and nothing regenerates one from the other: this API group ships its CRD by
 // hand. This test is what keeps them equal.
@@ -225,7 +366,37 @@ func TestShippedCRDMatchesTheGoTypes(t *testing.T) {
 	// Counted in runes by the API server, and nodelet's loader counts runes too.
 	require.Equal(t, float64(32768), manifest["maxLength"])
 
-	require.Equal(t, []any{"Ready", "Degraded"}, crdField(t, schema, "status", "phase")["enum"])
+	require.Equal(t, []any{"Pending", "Ready", "Degraded"}, crdField(t, schema, "status", "phase")["enum"])
+	require.NotContains(t, crdField(t, schema, "status")["properties"], "failureMessage")
+}
+
+// The API server keeps a selector meaning one thing, and takes the phase the
+// controller writes while the nodes are still catching up.
+func TestNSPRSchemaTellsEveryGroupFromNone(t *testing.T) {
+	c := requestsAPIClient(t)
+	manifest := "apiVersion: v1\nkind: Pod\nmetadata:\n  name: agent\n  namespace: kube-system\n"
+
+	requireGroupSelectorBounded(t, c, "NodeStaticPodRequest", map[string]any{"manifest": manifest})
+
+	t.Run("the documented examples are accepted", func(t *testing.T) {
+		for _, example := range docExamples(t, testenv.NodeStaticPodRequestCRDFile) {
+			documented, _, err := unstructured.NestedString(example.Object, "spec", "manifest")
+			require.NoError(t, err)
+			_, err = ValidateStaticPodManifest(documented)
+			require.NoError(t, err, example.GetName())
+
+			example.SetName("example-" + example.GetName())
+			require.NoError(t, c.Create(t.Context(), example), example.GetName())
+		}
+	})
+
+	t.Run("the status takes the Pending phase", func(t *testing.T) {
+		request := rawRequest("NodeStaticPodRequest", "status", map[string]any{"manifest": manifest})
+		require.NoError(t, c.Create(t.Context(), request))
+
+		require.NoError(t, unstructured.SetNestedField(request.Object, "Pending", "status", "phase"))
+		require.NoError(t, c.Status().Update(t.Context(), request))
+	})
 }
 
 var printerColumnMarker = regexp.MustCompile(`\+kubebuilder:printcolumn:name=([^,]+),jsonPath=([^,]+),`)
@@ -263,17 +434,31 @@ func crdField(t *testing.T, schema map[string]any, path ...string) map[string]an
 // none of them: the Conditions doc, the CRD description and its Russian twin.
 // This is what stops the next reason landing in only one of them.
 func TestTheReasonsAreDocumented(t *testing.T) {
-	paths := testenv.NodeManagerCRDPaths(testenv.NodeStaticPodRequestCRDFile)
-	require.Len(t, paths, 1)
-	files := []string{paths[0], filepath.Join(filepath.Dir(paths[0]), "doc-ru-nodestaticpodrequest.yaml"), "nodestaticpodrequest_types.go"}
-	for _, path := range files {
-		raw, err := os.ReadFile(path)
-		require.NoError(t, err)
-		for _, reason := range []string{
-			"InvalidName", "ReservedName", "InvalidManifest", "Conflict", "LimitExceeded", "RefusedByNodes",
-			"ServedByBashible", "NoNodesSelected",
-		} {
-			require.Contains(t, string(raw), reason, "%s must be described in %s", reason, path)
+	ready := []string{"AllNodesApplied", "NoNodesSelected", "RolloutInProgress", "RefusedByNodes", "NotAccepted"}
+	for _, tt := range []struct {
+		crd     testenv.NodeManagerCRDFile
+		types   string
+		reasons []string
+	}{
+		{
+			crd:     testenv.NodeStaticPodRequestCRDFile,
+			types:   "nodestaticpodrequest_types.go",
+			reasons: append([]string{"InvalidName", "ReservedName", "InvalidManifest", "Conflict", "LimitExceeded", "ServedByBashible"}, ready...),
+		},
+		{
+			crd:     testenv.NodeExtensionRequestCRDFile,
+			types:   "nodeextensionrequest_types.go",
+			reasons: append([]string{"InvalidExtension", "ReservedName", "Conflict", "KernelModuleConflict", "NotDeliverable"}, ready...),
+		},
+	} {
+		paths := testenv.NodeManagerCRDPaths(tt.crd)
+		require.Len(t, paths, 1)
+		for _, path := range []string{paths[0], filepath.Join(filepath.Dir(paths[0]), "doc-ru-"+string(tt.crd)), tt.types} {
+			raw, err := os.ReadFile(path)
+			require.NoError(t, err)
+			for _, reason := range tt.reasons {
+				require.Contains(t, string(raw), reason, "%s must be described in %s", reason, path)
+			}
 		}
 	}
 }
@@ -287,4 +472,21 @@ func TestTheStatusCountersSerializeZero(t *testing.T) {
 	for _, counter := range []string{"matchedNodes", "appliedNodes", "failedNodes", "pendingNodes"} {
 		require.Contains(t, string(raw), `"`+counter+`":0`)
 	}
+}
+
+// The node writes the manifest and kubelet runs the pod: nothing on the node pulls the image,
+// and the counts say the file was written, not that the pod runs. The description must not
+// promise more, in either language.
+func TestTheNSPRDescriptionPromisesOnlyTheManifest(t *testing.T) {
+	paths := testenv.NodeManagerCRDPaths(testenv.NodeStaticPodRequestCRDFile)
+	require.Len(t, paths, 1)
+	english, err := os.ReadFile(paths[0])
+	require.NoError(t, err)
+	russian, err := os.ReadFile(filepath.Join(filepath.Dir(paths[0]), "doc-ru-"+string(testenv.NodeStaticPodRequestCRDFile)))
+	require.NoError(t, err)
+
+	require.False(t, strings.Contains(string(english), "image is available in containerd"), "the node pulls no image")
+	require.True(t, strings.Contains(string(english), "It does not report whether the pod runs."), "the status reports the manifest only")
+	require.False(t, strings.Contains(string(russian), "\u043d\u0430\u043b\u0438\u0447\u0438\u0435 \u043e\u0431\u0440\u0430\u0437\u0430 \u0432 containerd"), "the node pulls no image")
+	require.True(t, strings.Contains(string(russian), "\u043d\u0435 \u0441\u043e\u043e\u0431\u0449\u0430\u0435\u0442, \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u043b\u0438 \u043f\u043e\u0434"), "the status reports the manifest only")
 }

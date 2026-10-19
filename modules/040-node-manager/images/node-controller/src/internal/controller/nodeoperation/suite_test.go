@@ -22,14 +22,21 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
-var k8sClient client.Client
+var (
+	k8sClient client.Client
+
+	// cfg is the admin connection; specs that act as a node impersonate from it.
+	cfg *rest.Config
+)
 
 // TestNodeOperationControllerEnvtest runs the envtest-backed integration
 // suite: the real controller against a real kube-apiserver. Skipped when
@@ -44,20 +51,25 @@ func TestNodeOperationControllerEnvtest(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	By("bootstrapping envtest with the NodeOperation and NodeGroup CRDs")
+	By("bootstrapping envtest with the NodeOperation, NodeGroup and NodeConfig CRDs")
 	suite, stop := testenv.StartSuite(GinkgoWriter,
 		[]func(*k8sruntime.Scheme) error{
 			deckhousev1alpha1.AddToScheme,
 			// NodeGroup: the wait for an eviction is bounded by the group's own
 			// nodeDrainTimeoutSecond, so the controller reads the node's group.
 			deckhousev1.AddToScheme,
+			// NodeConfig: whether a finished Disruption is followed by another
+			// attempt depends on what the node asks for there.
+			internalv1alpha1.AddToScheme,
 		},
 		testenv.CRDPaths(
 			testenv.WithNodeManager(testenv.NodeOperationCRDFile),
 			testenv.WithNodeGroupCRDFile(),
+			testenv.WithNodeManager(testenv.NodeConfigCRDFile),
 		)...,
 	)
 	DeferCleanup(stop)
 
 	k8sClient = suite.Client
+	cfg = suite.Config
 })

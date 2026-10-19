@@ -21,6 +21,12 @@ spec:
       storage: true
       subresources:
         status: {}
+      # Lets a node watch only its own live operations and an operator select by
+      # node, phase or type; field selectors on custom resources need these.
+      selectableFields:
+        - jsonPath: .spec.nodeName
+        - jsonPath: .status.phase
+        - jsonPath: .spec.type
       additionalPrinterColumns:
         - name: Phase
           jsonPath: .status.phase
@@ -38,13 +44,27 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Describes an operation on a node that interrupts its work (a disruptive operation): a reboot, an eviction of its workload, or the permission a node needs before applying a configuration that cannot be applied without interrupting the node.
+            Describes an operation on a node that interrupts its work.
 
-            An operation is a record of intent, not a switch: it is created once, carried through its phases by `node-manager` and the on-node agent, and kept afterwards as the history of what was done to the node and why. Editing the `spec` of an existing operation is rejected — create a new one if needed.
+            The `spec` of an existing operation cannot be changed, except `.spec.approved`. To approve a `Disruption` operation, run:
 
-            Operations are how disruptive work is coordinated for the nodes of a NodeGroup with `systemType: Immutable`. The same resource is available to an operator who needs to reboot or drain such a node by hand.
+            ```shell
+            d8 k patch nodeoperation <OPERATION_NAME> --type=merge -p '{"spec":{"approved":true}}'
+            ```
 
-            Every operation carries the label `node-manager.deckhouse.io/node` with the value of `.spec.nodeName`. `node-manager` stamps it on operations that reach it without one. It is how operations on the same node find each other, which is what keeps two of them from disagreeing about the state the node was in before either started.
+            In the command, replace `<OPERATION_NAME>` with the name of the operation.
+          x-doc-examples:
+            - |
+              ```yaml
+              # Reboot a node.
+              apiVersion: deckhouse.io/v1alpha1
+              kind: NodeOperation
+              metadata:
+                name: reboot-worker-1
+              spec:
+                type: Reboot
+                nodeName: worker-1
+              ```
           required:
             - spec
           properties:
@@ -60,31 +80,42 @@ spec:
                 - type
                 - nodeName
               x-kubernetes-validations:
-                - rule: self == oldSelf
-                  message: the spec of an operation is immutable; create another operation instead
-                - rule: "self.type != 'ApproveDisruption' || has(self.configGeneration)"
-                  message: ApproveDisruption requires .spec.configGeneration
-                - rule: "self.type == 'ApproveDisruption' || !has(self.configGeneration)"
-                  message: .spec.configGeneration is only meaningful for ApproveDisruption
+                # Every field but approved, by name: a field added to the spec has to be added here too.
+                # Spelled with has() rather than optional equality: comparing optionals loses
+                # the maxLength bound and the rule's estimated cost exceeds the CRD budget.
+                - rule: >-
+                    self.type == oldSelf.type && self.nodeName == oldSelf.nodeName &&
+                    self.?configGeneration == oldSelf.?configGeneration &&
+                    has(self.nodeConfigUID) == has(oldSelf.nodeConfigUID) &&
+                    (!has(self.nodeConfigUID) || self.nodeConfigUID == oldSelf.nodeConfigUID) &&
+                    has(self.drain) == has(oldSelf.drain) &&
+                    (!has(self.drain) || self.drain == oldSelf.drain) &&
+                    has(self.cause) == has(oldSelf.cause) &&
+                    (!has(self.cause) || self.cause == oldSelf.cause)
+                  message: the spec of an operation is immutable except .spec.approved. Create another operation instead
+                - rule: "!oldSelf.?approved.orValue(false) || self.?approved.orValue(false)"
+                  message: an approval cannot be withdrawn
+                - rule: "self.type != 'Disruption' || (has(self.configGeneration) && has(self.nodeConfigUID))"
+                  message: Disruption requires .spec.configGeneration and .spec.nodeConfigUID
+                - rule: "self.type == 'Disruption' || !has(self.configGeneration)"
+                  message: .spec.configGeneration is only meaningful for Disruption
                 - rule: "self.type != 'Drain' || !has(self.drain)"
-                  message: a Drain is the eviction itself, so .spec.drain says nothing about it
+                  message: .spec.drain is not allowed for Drain
               properties:
                 type:
                   type: string
                   enum:
                     - Reboot
                     - Drain
-                    - ApproveDisruption
+                    - Disruption
                   description: |
-                    The operation to perform on the node.
+                    Operation to perform on the node.
 
-                    Possible values:
+                    * `Reboot`: Reboot the node. Only the nodes of a NodeGroup with `systemType: Immutable` perform this operation. A node that bashible manages refuses it, and the operation fails with the reason `NodeRefused`.
+                    * `Drain`: Evict the workload from the node. The node stays unschedulable until an operator makes it schedulable again.
+                    * `Disruption`: Interrupt the node's work so that the node can apply a new configuration.
 
-                    * `Reboot` — reboot the node.
-                    * `Drain` — evict the workload from the node and keep it unschedulable. The operation is complete once the workload has been removed from the node. The node stays out of the scheduler until an operator returns it.
-                    * `ApproveDisruption` — allow the node to apply a configuration whose application interrupts it (restarting kubelet or the container runtime, rebuilding the system extensions layer, changing the system image).
-
-                    An `ApproveDisruption` operation is normally created by `node-manager` in answer to a node that asked for it. The other two are meant for an operator.
+                    `node-manager` creates `Disruption` operations. Creating one by hand is refused. `Reboot` and `Drain` are meant for an operator.
                 nodeName:
                   type: string
                   minLength: 1
@@ -97,15 +128,30 @@ spec:
                   format: int64
                   minimum: 1
                   description: |
-                    The revision of the node's NodeConfig this permission covers (`.metadata.generation` of the NodeConfig object).
+                    Revision of the node's NodeConfig this disruption is for (`.metadata.generation` of the NodeConfig object).
 
-                    The permission is deliberately narrow: it authorises the interruption of the node's work that one particular configuration needs, so the next published configuration asks for permission again. Only meaningful for `ApproveDisruption`.
+                    Allowed only for `Disruption`. The API server rejects the field for other types. If the NodeConfig moves to a newer generation before the operation is approved, `node-manager` deletes the operation.
+                nodeConfigUID:
+                  type: string
+                  maxLength: 36
+                  description: |
+                    NodeConfig object this disruption is for (`.metadata.uid` of the node's NodeConfig).
+
+                    Only meaningful for `Disruption`. Other types ignore it.
+                approved:
+                  type: boolean
+                  description: |
+                    Whether the interruption may go ahead. If the field is not set, the operation is not approved.
+
+                    Only meaningful for `Disruption`. `Reboot` and `Drain` ignore it.
+
+                    In the `Manual` approval mode of the NodeGroup (`spec.disruptions.approvalMode`), `node-manager` sets it to `false`, and an operator sets it to `true`. In the other modes, `node-manager` sets it to `true` on creation. An approval cannot be withdrawn.
                 drain:
                   type: object
                   description: |
                     How to evict the workload before the node is interrupted.
 
-                    The eviction is carried out by a `Drain` operation of its own, created for and owned by this one. It can be watched like any other operation and is removed together with its parent.
+                    Allowed for `Reboot` and `Disruption`. The API server rejects the field for `Drain`.
                   properties:
                     skip:
                       type: boolean
@@ -113,24 +159,64 @@ spec:
                       description: |
                         Interrupt the node without evicting its workload first.
 
-                        The workload is then cut off by the interruption instead of being moved, so this is for nodes whose pods must not be evicted (a single-node group, a node running the only replica of something that cannot be moved).
+                        When `node-manager` creates a `Disruption`, it sets the field to `true` for these nodes:
+
+                        - The single node of the `master` NodeGroup
+                        - The node of the Deckhouse pod, while fewer than two nodes of its group are `Ready`
+                        - Every node of a NodeGroup with `spec.disruptions.automatic.drainBeforeApproval: false`
+                cause:
+                  type: string
+                  maxLength: 1024
+                  description: |
+                    Why the node is interrupted.
+
+                    For a `Disruption`, `node-manager` sets it on creation. For `Reboot` and `Drain`, an operator may set it.
             status:
               type: object
+              x-kubernetes-validations:
+                - rule: "!has(oldSelf.phase) || !(oldSelf.phase in ['Completed', 'Failed']) || (has(self.phase) && self.phase == oldSelf.phase)"
+                  message: a finished operation cannot be reopened
               properties:
                 phase:
                   type: string
                   enum:
                     - Pending
+                    - Approved
                     - InProgress
                     - Completed
                     - Failed
                   description: |
-                    The current phase of the operation:
+                    Current phase of the operation, set by `node-manager`.
 
-                    * `Pending` — the operation is queued and node-manager has not started it yet;
-                    * `InProgress` — the node has been prepared (drained, unless the drain was skipped) and is carrying the operation out;
-                    * `Completed` — the operation finished successfully;
-                    * `Failed` — the operation failed. See `conditions` and the events for the reason.
+                    * `Pending`: The operation is queued or waits for approval.
+                    * `Approved`: The operation may go ahead. The workload is being evicted from the node before the node receives the operation.
+                    * `InProgress`: For `Drain`, the workload is being evicted. For the other types, the node has been prepared and can perform the operation.
+                    * `Completed`: The operation finished successfully.
+                    * `Failed`: The operation failed.
+                reason:
+                  type: string
+                  maxLength: 128
+                  pattern: '^[A-Za-z][A-Za-z0-9]*$'
+                  description: |
+                    Reason for the current phase of the operation.
+
+                    * `Pending`: `Queued` (nothing has been done yet), `WaitingForApproval`.
+                    * `Approved`: `Draining` (the workload is being evicted from the node), `WaitingForOperation` (another eviction of the node is running, and `message` names who requested it).
+                    * `InProgress`: `Draining` and `WaitingForOperation` (for `Drain`), `WaitingForNode` (the node has received the operation and has not reported yet), `Rebooting` (the node is rebooting and has not come back yet).
+                    * `Completed`: `Succeeded`, `Released` (the node gave up on the NodeConfig revision the `Disruption` is for), `Drained` (for `Drain`).
+                    * `Failed`: `NodeFailed` and `NodeRefused` (reported by the node), `PreparationTimedOut` (the workload did not leave the node in time), `NodeTimedOut` (the node did not report back or did not come back after a reboot in time), `NodeNotFound`, `NodeGroupMissing`.
+                message:
+                  type: string
+                  maxLength: 32768
+                  description: |
+                    Human-readable explanation of `reason`.
+                deadline:
+                  type: string
+                  format: date-time
+                  description: |
+                    Time when the current stage of the operation times out and the operation fails.
+
+                    The node gets 30 minutes from `startedAt` to report the result or to come back after a reboot. The eviction gets the drain timeout of the NodeGroup (`nodeDrainTimeoutSecond`) plus 30 minutes.
                 startedAt:
                   type: string
                   format: date-time
@@ -142,6 +228,11 @@ spec:
                   description: |
                     When the operation reached a terminal phase. A finished operation is kept as the
                     record of what was done to the node and is collected once it is a day old.
+                bootID:
+                  type: string
+                  maxLength: 64
+                  description: |
+                    Boot ID of the node (`status.nodeInfo.bootID` of the Node object) when the reboot started.
                 nodeWasUnschedulable:
                   type: boolean
                   description: |
@@ -157,8 +248,21 @@ spec:
                     It is pinned at the moment the eviction is requested, from the NodeGroup's `nodeDrainTimeoutSecond` as it stood then, because that is the bound the draining controller itself started running to. Deriving it again later would let a change to the NodeGroup cut short a drain that is still running.
                 conditions:
                   type: array
+                  maxItems: 8
                   description: |
-                    The latest details of the operation's progress.
+                    Latest details of the operation's progress:
+
+                    * `Drained`: Written by `node-manager`. While the workload is being evicted, the condition is `False` with the reason `Draining`. Once the workload has left, it is `True` with the reason `Drained`. When the operation skips the eviction, it is `True` with the reason `DrainSkipped`.
+                    * `NodeReported`: Written by the node. The condition is `True` with the reason `Succeeded`, `Released`, `Failed`, `Refused` or `RebootStarted`.
+                    * `Retry`: Written by `node-manager` on a failed `Disruption`. The condition says whether `node-manager` makes another attempt for the same NodeConfig revision.
+
+                    Reasons of the `Retry` condition:
+
+                    * `Created` (`True`): The next attempt exists, and `message` names it.
+                    * `Scheduled` (`True`): `node-manager` creates the next attempt at the time given in `message`.
+                    * `AttemptsExhausted` (`False`): 3 attempts for the same revision have failed. `node-manager` makes no new attempt until the NodeConfig changes or the oldest failed attempt is deleted.
+                    * `Superseded` (`False`): The NodeConfig has moved to another generation or has been recreated.
+                    * `NotRequested` (`False`): The node no longer asks to be interrupted for this revision.
                   x-kubernetes-list-type: map
                   x-kubernetes-list-map-keys:
                     - type

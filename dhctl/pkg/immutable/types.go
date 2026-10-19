@@ -38,15 +38,15 @@ type nodeConfig struct {
 // images/init/src/0.1/nodeconfig.go: both parse this document, and a shape they
 // disagree with fails the parse and drops the node into an emergency shell.
 type osImage struct {
-	Digest         string `json:"digest"`
-	Repository     string `json:"repository,omitempty"`
-	AdditionalPath string `json:"additionalPath,omitempty"`
+	Digest string `json:"digest"`
 }
 
 // nodeSpec carries only the fields dhctl emits. The contract lives in the
 // agent's own type, which has more; anything absent here keeps its default on
 // the node.
 type nodeSpec struct {
+	// SystemType is required by the schema, which has no default for it.
+	SystemType         string           `json:"systemType"`
 	NodeName           string           `json:"nodeName"`
 	OSImage            osImage          `json:"osImage"`
 	Storage            storage          `json:"storage,omitempty"`
@@ -54,7 +54,7 @@ type nodeSpec struct {
 	Kernel             kernel           `json:"kernel,omitempty"`
 	Network            network          `json:"network,omitempty"`
 	Kubelet            kubelet          `json:"kubelet,omitempty"`
-	ContainerRuntime   containerRuntime `json:"containerRuntime,omitempty"`
+	ContainerRuntime   containerRuntime `json:"containerRuntime,omitzero"`
 	APIServerEndpoints []string         `json:"apiServerEndpoints,omitempty"`
 	// InternalNetworkCIDRs are the networks the cluster reaches its nodes on.
 	// The node resolves its own cluster address against them when no interface
@@ -132,18 +132,19 @@ type partitionSelector struct {
 // images and the system extensions directly, without the in-cluster
 // registry-packages-proxy that does not exist yet during bootstrap.
 type registrySpec struct {
-	Address string `json:"address"`
-	Path    string `json:"path"`
-	Scheme  string `json:"scheme,omitempty"`
-	CA      string `json:"ca,omitempty"`
-	Auth    string `json:"auth,omitempty"`
+	Address  string `json:"address"`
+	Path     string `json:"path"`
+	Scheme   string `json:"scheme,omitempty"`
+	CABundle string `json:"caBundle,omitempty"`
+	// Auth holds the raw user:password; JSON carries it base64-encoded.
+	Auth []byte `json:"auth,omitempty"`
 }
 
-// extension is a signed verity sysext merged onto the read-only root.
+// extension is a signed verity sysext merged onto the read-only root. A platform
+// extension names no repository and no requestedBy.
 type extension struct {
-	Name        string `json:"name"`
-	Digest      string `json:"digest"`
-	RequestedBy string `json:"requestedBy,omitempty"`
+	Name   string `json:"name"`
+	Digest string `json:"digest"`
 }
 
 // kernel holds sysctl settings applied before kubelet starts.
@@ -193,8 +194,6 @@ type kubelet struct {
 	MaxPods       int      `json:"maxPods,omitempty"`
 	// KubernetesVersion decides kubelet's feature gates on the node.
 	KubernetesVersion     string            `json:"kubernetesVersion,omitempty"`
-	ContainerLogMaxSize   string            `json:"containerLogMaxSize,omitempty"`
-	ContainerLogMaxFiles  int               `json:"containerLogMaxFiles,omitempty"`
 	ExternalCloudProvider bool              `json:"externalCloudProvider,omitempty"`
 	NodeLabels            map[string]string `json:"nodeLabels,omitempty"`
 	// ServerTLSBootstrap is a pointer so that the explicit "false" the first
@@ -202,11 +201,11 @@ type kubelet struct {
 	// until Deckhouse is installed.
 	ServerTLSBootstrap  *bool                `json:"serverTLSBootstrap,omitempty"`
 	ResourceReservation *resourceReservation `json:"resourceReservation,omitempty"`
-	// CACert (cluster CA, base64) and BootstrapToken are empty for the first
-	// master and required for joining nodes. A non-empty CACert also marks a
-	// join payload: the node refuses to bootstrap a new cluster with one.
-	CACert         string `json:"caCert,omitempty"`
-	BootstrapToken string `json:"bootstrapToken,omitempty"`
+	// ClusterCABundle (cluster CA, PEM) and BootstrapToken are empty for the first
+	// master and required for joining nodes. A non-empty ClusterCABundle also marks
+	// a join payload: the node refuses to bootstrap a new cluster with one.
+	ClusterCABundle string `json:"clusterCABundle,omitempty"`
+	BootstrapToken  string `json:"bootstrapToken,omitempty"`
 }
 
 // resourceReservation controls how much of the node is kept for the system.
@@ -216,11 +215,10 @@ type resourceReservation struct {
 
 // containerRuntime configures containerd.
 type containerRuntime struct {
-	SandboxImage           string `json:"sandboxImage,omitempty"`
-	MaxConcurrentDownloads *int   `json:"maxConcurrentDownloads,omitempty"`
-	// RegistryOwner says who writes containerd's registry.d: nodelet (the default,
-	// from spec.registry) or "agent", a static pod in spec.staticPods.
-	RegistryOwner string `json:"registryOwner,omitempty"`
+	SandboxImage string `json:"sandboxImage,omitempty"`
+	// RegistryConfigOwner says who writes containerd's registry.d: nodelet when
+	// unset (from spec.registry), or RegistryAgent, a static pod in spec.staticPods.
+	RegistryConfigOwner string `json:"registryConfigOwner,omitempty"`
 }
 
 // staticPod is a manifest the node writes for kubelet to run outside the

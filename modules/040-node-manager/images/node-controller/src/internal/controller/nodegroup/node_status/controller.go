@@ -21,6 +21,8 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	conditionscalc "github.com/deckhouse/node-controller/internal/controller/nodegroup/conditionscalc"
 )
 
@@ -35,13 +37,19 @@ type Result struct {
 	NodesForConditions []*conditionscalc.Node
 }
 
-func (s *Service) Compute(ctx context.Context, nodeGroupName string) (Result, error) {
-	nodes, err := s.getNodesForNodeGroup(ctx, nodeGroupName)
+func (s *Service) Compute(ctx context.Context, ng *v1.NodeGroup) (Result, error) {
+	nodes, err := s.getNodesForNodeGroup(ctx, ng.Name)
 	if err != nil {
 		return Result{}, err
 	}
 
-	configChecksum := s.getConfigurationChecksum(ctx, nodeGroupName)
+	// An Immutable node reports its rollout in its NodeConfig and never carries the
+	// bashible checksum annotation.
+	immutable := ng.Spec.SystemType == v1.SystemTypeImmutable
+	configChecksum := ""
+	if !immutable {
+		configChecksum = s.getConfigurationChecksum(ctx, ng.Name)
+	}
 	result := Result{
 		NodesForConditions: make([]*conditionscalc.Node, 0, len(nodes)),
 	}
@@ -51,10 +59,29 @@ func (s *Service) Compute(ctx context.Context, nodeGroupName string) (Result, er
 		if isNodeReady(&node) {
 			result.ReadyCount++
 		}
-		result.NodesForConditions = append(result.NodesForConditions, conditionscalc.NodeToConditionsNode(&node))
+		conditionsNode := conditionscalc.NodeToConditionsNode(&node)
+		result.NodesForConditions = append(result.NodesForConditions, conditionsNode)
 
-		if configChecksum != "" && node.Annotations["node.deckhouse.io/configuration-checksum"] == configChecksum {
+		if !immutable {
+			if configChecksum != "" && node.Annotations[nodecommon.ConfigurationChecksumAnnotation] == configChecksum {
+				result.UpToDateCount++
+			}
+			continue
+		}
+
+		rollout, err := s.getNodeConfigRollout(ctx, node.Name)
+		if err != nil {
+			return Result{}, err
+		}
+		if rollout.applied {
 			result.UpToDateCount++
+		}
+		if rollout.behind {
+			conditionsNode.Updating = true
+		}
+		if rollout.waitingForApproval {
+			conditionsNode.WaitingDisruptiveApproval = true
+			conditionsNode.Updating = true
 		}
 	}
 

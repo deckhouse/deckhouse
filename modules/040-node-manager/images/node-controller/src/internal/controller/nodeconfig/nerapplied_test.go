@@ -17,14 +17,15 @@ limitations under the License.
 package nodeconfig
 
 import (
-	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
@@ -38,259 +39,241 @@ func nodeConfigWith(name string, spec []internalv1alpha1.Extension, status []int
 	}
 }
 
+// fleetOf is what a status pass knows about these nodes when none waits for an
+// approval and no render held one back.
+func fleetOf(configs ...*internalv1alpha1.NodeConfig) fleet {
+	f := fleet{configs: map[string]*internalv1alpha1.NodeConfig{}, approvals: map[string]approvalState{}}
+	for _, config := range configs {
+		f.configs[config.Name] = config
+	}
+	return f
+}
+
 // The whole point of reading the nodes back: a request that resolves here can
 // still be refused by every node it reaches, and until this was counted the two
 // looked identical from the cluster.
 func TestNEROutcomesCountWhatTheNodesReport(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
-
-	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+	outcomes := nerOutcomes(fleetOf(
 		// Two nodes refuse bob and accept bob-signed.
 		nodeConfigWith("master-0",
 			[]internalv1alpha1.Extension{
-				{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"},
-				{Name: "bob-signed", RequestedBy: nerRequestedByPrefix + "bob-signed-request"},
+				{Name: "bob", Digest: "sha256:d1", RequestedBy: nerOwner("bob-request")},
+				{Name: "bob-signed", Digest: "sha256:d2", RequestedBy: nerOwner("bob-signed-request")},
 			},
 			[]internalv1alpha1.ExtensionStatus{
-				{Name: "bob", State: "Failed", Message: "Required key not available"},
-				{Name: "bob-signed", State: "Ready"},
+				{Name: "bob", Digest: "sha256:d1", State: "Failed", Message: "Required key not available"},
+				{Name: "bob-signed", Digest: "sha256:d2", State: "Ready"},
 			}),
 		nodeConfigWith("worker-0",
 			[]internalv1alpha1.Extension{
-				{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"},
-				{Name: "bob-signed", RequestedBy: nerRequestedByPrefix + "bob-signed-request"},
+				{Name: "bob", Digest: "sha256:d1", RequestedBy: nerOwner("bob-request")},
+				{Name: "bob-signed", Digest: "sha256:d2", RequestedBy: nerOwner("bob-signed-request")},
 			},
 			[]internalv1alpha1.ExtensionStatus{
-				{Name: "bob", State: "Failed", Message: "Required key not available"},
-				{Name: "bob-signed", State: "Ready"},
+				{Name: "bob", Digest: "sha256:d1", State: "Failed", Message: "Required key not available"},
+				{Name: "bob-signed", Digest: "sha256:d2", State: "Ready"},
 			}),
 		// A node that has not answered yet counts as neither.
 		nodeConfigWith("worker-1",
-			[]internalv1alpha1.Extension{{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"}},
+			[]internalv1alpha1.Extension{{Name: "bob", Digest: "sha256:d1", RequestedBy: nerOwner("bob-request")}},
 			nil),
-		// A platform extension: node-manager asked for it, no NER owns it.
+		// A platform extension carries no requestedBy: no request owns it.
 		nodeConfigWith("worker-2",
-			[]internalv1alpha1.Extension{{Name: "containerd", RequestedBy: "node-manager"}},
-			[]internalv1alpha1.ExtensionStatus{{Name: "containerd", State: "Ready"}}),
-	).Build()
+			[]internalv1alpha1.Extension{{Name: "containerd", Digest: "sha256:d3"}},
+			[]internalv1alpha1.ExtensionStatus{{Name: "containerd", Digest: "sha256:d3", State: "Ready"}}),
+	), map[string]string{"bob-request": "sha256:d1", "bob-signed-request": "sha256:d2"})
 
-	outcomes, err := readNEROutcomes(context.Background(), client)
-	require.NoError(t, err)
+	require.Equal(t, map[string]string{"master-0": "Required key not available", "worker-0": "Required key not available"},
+		outcomes["bob-request"].failed, "the reason must reach the cluster, so nobody has to read a node's journal for it")
+	require.Empty(t, outcomes["bob-request"].applied)
 
-	require.Equal(t, int32(2), outcomes["bob-request"].failed)
-	require.Equal(t, int32(0), outcomes["bob-request"].applied)
-	require.Equal(t, "Required key not available", outcomes["bob-request"].message,
-		"the reason must reach the cluster, so nobody has to read a node's journal for it")
-
-	require.Equal(t, int32(2), outcomes["bob-signed-request"].applied)
-	require.Equal(t, int32(0), outcomes["bob-signed-request"].failed)
-	require.Empty(t, outcomes["bob-signed-request"].message)
-
-	// requestedBy is the join key, and "node-manager" is not a request.
-	require.NotContains(t, outcomes, "node-manager")
+	require.Len(t, outcomes["bob-signed-request"].applied, 2)
+	require.Empty(t, outcomes["bob-signed-request"].failed)
+	require.Len(t, outcomes, 2, "a platform extension is no request's")
 }
 
 // A node reporting Pending is still working; counting it either way would be an
 // answer it has not given.
 func TestNEROutcomesIgnorePendingNodes(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
-
-	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+	outcomes := nerOutcomes(fleetOf(
 		nodeConfigWith("worker-0",
-			[]internalv1alpha1.Extension{{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"}},
-			[]internalv1alpha1.ExtensionStatus{{Name: "bob", State: "Pending"}}),
-	).Build()
+			[]internalv1alpha1.Extension{{Name: "bob", Digest: "sha256:d1", RequestedBy: nerOwner("bob-request")}},
+			[]internalv1alpha1.ExtensionStatus{{Name: "bob", Digest: "sha256:d1", State: "Pending"}}),
+	), map[string]string{"bob-request": "sha256:d1"})
 
-	outcomes, err := readNEROutcomes(context.Background(), client)
-	require.NoError(t, err)
-	require.Equal(t, int32(0), outcomes["bob-request"].applied)
-	require.Equal(t, int32(0), outcomes["bob-request"].failed)
+	require.False(t, answered(outcomes["bob-request"], "worker-0"))
 }
 
-// TestNEROutcomesCountWholesaleRejections: a wholesale rejection leaves no
-// durable Failed entry in status.extensions; the only lasting trace is the
-// ConfigurationApplied condition, and the count has to come from there.
-func TestNEROutcomesCountWholesaleRejections(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
-
-	rejected := nodeConfigWith("master-0",
+// A node that refused or rolled back the revision carrying a request has refused the request,
+// whether or not it named the extension: it will not run it until the configuration changes.
+// The node's own Failed entry stays its word about that extension.
+func TestNEROutcomesCountANodeThatRefusedTheRevisionCarryingTheRequest(t *testing.T) {
+	refused := nodeConfigWith("master-0",
 		[]internalv1alpha1.Extension{
-			{Name: "containerd", RequestedBy: "node-manager"},
-			{Name: "bob-signed", RequestedBy: nerRequestedByPrefix + "bob-signed-request"},
-			{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"},
+			{Name: "containerd", Digest: "sha256:d3"},
+			{Name: "bob-signed", Digest: "sha256:d2", RequestedBy: nerOwner("bob-signed-request")},
+			{Name: "bob", Digest: "sha256:d1", RequestedBy: nerOwner("bob-request")},
 		},
-		// Last-known-good statuses: bob-signed made it in an earlier
-		// generation, bob never appears.
 		[]internalv1alpha1.ExtensionStatus{
-			{Name: "containerd", State: "Ready"},
-			{Name: "bob-signed", State: "Ready"},
+			{Name: "containerd", Digest: "sha256:d3", State: "Ready"},
+			{Name: "bob", Digest: "sha256:d1", State: "Failed", Message: "its roothash signature is not one this node trusts"},
 		})
-	rejected.Generation = 7
-	rejected.Status.Conditions = []metav1.Condition{{
-		Type:               configurationAppliedCondition,
-		Status:             metav1.ConditionFalse,
-		Reason:             "Rejected",
-		ObservedGeneration: 7,
-		Message:            "bob: config rejected: its roothash signature is not one this node trusts",
-	}}
-
-	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(rejected).Build()
-
-	outcomes, err := readNEROutcomes(context.Background(), client)
-	require.NoError(t, err)
-
-	require.Equal(t, int32(1), outcomes["bob-request"].failed)
-	require.Equal(t, int32(0), outcomes["bob-request"].applied)
-	require.Contains(t, outcomes["bob-request"].message, "not one this node trusts")
-
-	// The extension that did make it is not blamed for the rejection.
-	require.Equal(t, int32(1), outcomes["bob-signed-request"].applied)
-	require.Equal(t, int32(0), outcomes["bob-signed-request"].failed)
-}
-
-// TestNEROutcomesBlameOnlyTheExtensionTheNodeNamed: the node names one
-// extension in the rejection, and an extension whose name is merely a prefix of
-// it was not refused — bob and bob-signed is the pair this shipped with.
-func TestNEROutcomesBlameOnlyTheExtensionTheNodeNamed(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
-
-	// Both are new in this generation, so neither has an entry in
-	// status.extensions and both are judged by the condition alone.
-	rejected := nodeConfigWith("worker-0",
-		[]internalv1alpha1.Extension{
-			{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"},
-			{Name: "bob-signed", RequestedBy: nerRequestedByPrefix + "bob-signed-request"},
-		},
+	rolledBack := nodeConfigWith("worker-0",
+		[]internalv1alpha1.Extension{{Name: "bob-signed", Digest: "sha256:d2", RequestedBy: nerOwner("bob-signed-request")}},
 		nil)
-	rejected.Generation = 4
-	rejected.Status.Conditions = []metav1.Condition{{
-		Type:               configurationAppliedCondition,
-		Status:             metav1.ConditionFalse,
-		Reason:             "Rejected",
-		ObservedGeneration: 4,
-		Message:            "bob-signed: config rejected: its roothash signature is not one this node trusts",
-	}}
-
-	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(rejected).Build()
-
-	outcomes, err := readNEROutcomes(context.Background(), client)
-	require.NoError(t, err)
-
-	require.Equal(t, int32(1), outcomes["bob-signed-request"].failed)
-	require.Equal(t, int32(0), outcomes["bob-request"].failed,
-		"bob was not the extension the node refused, and must not be reported Degraded for it")
-	require.Empty(t, outcomes["bob-request"].message,
-		"a request must never carry another request's refusal message")
-}
-
-// TestNEROutcomesIgnoreUnrelatedAndStaleRejections: ConfigurationApplied goes
-// False for unrelated reasons (update windows) and a stale False says nothing;
-// counting either as a refusal paints "refused" over a healthy rollout.
-func TestNEROutcomesIgnoreUnrelatedAndStaleRejections(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
-
-	waiting := nodeConfigWith("worker-0",
-		[]internalv1alpha1.Extension{{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"}},
+	// Applied the generation it reports on: a stale refusal is no answer about the current one.
+	current := nodeConfigWith("worker-1",
+		[]internalv1alpha1.Extension{{Name: "bob-signed", Digest: "sha256:d2", RequestedBy: nerOwner("bob-signed-request")}},
 		nil)
-	waiting.Generation = 3
-	waiting.Status.Conditions = []metav1.Condition{{
-		Type:               configurationAppliedCondition,
-		Status:             metav1.ConditionFalse,
-		Reason:             "WaitingForWindow",
-		ObservedGeneration: 3,
-		Message:            "the node is waiting for an update window",
-	}}
-
-	stale := nodeConfigWith("worker-1",
-		[]internalv1alpha1.Extension{{Name: "bob", RequestedBy: nerRequestedByPrefix + "bob-request"}},
-		nil)
-	stale.Generation = 9
-	stale.Status.Conditions = []metav1.Condition{{
-		Type:               configurationAppliedCondition,
-		Status:             metav1.ConditionFalse,
-		Reason:             "Rejected",
-		ObservedGeneration: 8, // an earlier spec, already replaced
-		Message:            "bob: config rejected: its roothash signature is not one this node trusts",
-	}}
-
-	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(waiting, stale).Build()
-
-	outcomes, err := readNEROutcomes(context.Background(), client)
-	require.NoError(t, err)
-	require.Equal(t, int32(0), outcomes["bob-request"].failed)
-	require.Equal(t, int32(0), outcomes["bob-request"].applied)
-}
-
-// Only a refusal reason refuses: an agent restarting into a new build names what it installs
-// next. PartiallyApplied refuses for NER, unlike for static pods, and a Ready at the digest a node
-// rolled back to (nodelet internal/reconcile/loop.go keeps the error under Rejected) hides nothing.
-func TestNEROutcomesCountOnlyARefusal(t *testing.T) {
-	for _, tc := range []struct {
-		name, reason string
-		statuses     []internalv1alpha1.ExtensionStatus
-		wantFailed   int32
-	}{
-		{name: "an agent restarting", reason: "AgentRestarting"},
-		{name: "Rejected", reason: "Rejected", wantFailed: 1},
-		{name: "RolledBackToLastKnownGood", reason: "RolledBackToLastKnownGood", wantFailed: 1},
-		{name: "RollbackFailed", reason: "RollbackFailed", wantFailed: 1},
-		{name: "PartiallyApplied", reason: "PartiallyApplied", wantFailed: 1},
-		{
-			name: "rolled back, Ready at the old digest", reason: "Rejected", wantFailed: 1,
-			statuses: []internalv1alpha1.ExtensionStatus{{Name: "bob", Digest: "sha256:d1", State: "Ready"}},
-		},
+	for config, reason := range map[*internalv1alpha1.NodeConfig]string{
+		refused: "Rejected", rolledBack: "RolledBackToLastKnownGood", current: "Rejected",
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			config := nodeConfigWith("worker-0",
-				[]internalv1alpha1.Extension{{Name: "bob", Digest: "sha256:d2", RequestedBy: nerRequestedByPrefix + "bob-request"}},
-				tc.statuses)
-			config.Generation = 2
-			config.Status.AppliedGeneration = 2
-			config.Status.Conditions = []metav1.Condition{{
-				Type:               configurationAppliedCondition,
-				Status:             metav1.ConditionFalse,
-				Reason:             tc.reason,
-				ObservedGeneration: 2,
-				Message:            "bob: install failed",
-			}}
-			cl := fake.NewClientBuilder().WithScheme(nodeConfigScheme(t)).WithObjects(config).Build()
+		config.Generation = 7
+		config.Status.AppliedGeneration = 6
+		config.Status.Conditions = []metav1.Condition{{
+			Type: internalv1alpha1.NodeConfigConditionTypeConfigurationApplied, Status: metav1.ConditionFalse, Reason: reason,
+			ObservedGeneration: 7, Message: "bob: config rejected",
+		}}
+	}
+	current.Status.AppliedGeneration = 7
 
-			outcomes, err := readNEROutcomes(t.Context(), cl)
-			require.NoError(t, err)
-			require.Zero(t, outcomes["bob-request"].applied)
-			require.Equal(t, tc.wantFailed, outcomes["bob-request"].failed)
-			if tc.wantFailed > 0 {
-				require.Equal(t, "bob: install failed", outcomes["bob-request"].message)
-			}
+	outcomes := nerOutcomes(fleetOf(refused, rolledBack, current),
+		map[string]string{"bob-request": "sha256:d1", "bob-signed-request": "sha256:d2"})
+
+	require.Equal(t, map[string]string{"master-0": "its roothash signature is not one this node trusts"}, outcomes["bob-request"].failed)
+	require.Equal(t, map[string]string{
+		"master-0": "Rejected: bob: config rejected",
+		"worker-0": "RolledBackToLastKnownGood: bob: config rejected",
+	}, outcomes["bob-signed-request"].failed)
+	require.Empty(t, outcomes["bob-signed-request"].applied)
+}
+
+// Applied means this request's digest: a node still on another one — the spec not
+// rolled out to it yet, or a rollback — has not answered the request.
+func TestNEROutcomesCountOnlyTheDigestOfTheRequest(t *testing.T) {
+	outcomes := nerOutcomes(fleetOf(
+		// Waits for a rollout slot: its spec still carries the old digest, and it runs it.
+		nodeConfigWith("worker-0",
+			[]internalv1alpha1.Extension{{Name: "bob", Digest: "sha256:d1", RequestedBy: nerOwner("bob-request")}},
+			[]internalv1alpha1.ExtensionStatus{{Name: "bob", Digest: "sha256:d1", State: "Ready"}}),
+		// Rolled back: the spec says d2, the node runs d1.
+		nodeConfigWith("worker-1",
+			[]internalv1alpha1.Extension{{Name: "bob", Digest: "sha256:d2", RequestedBy: nerOwner("bob-request")}},
+			[]internalv1alpha1.ExtensionStatus{{Name: "bob", Digest: "sha256:d1", State: "Ready"}}),
+		// Refused the old digest; that is not an answer about the new one.
+		nodeConfigWith("worker-2",
+			[]internalv1alpha1.Extension{{Name: "bob", Digest: "sha256:d1", RequestedBy: nerOwner("bob-request")}},
+			[]internalv1alpha1.ExtensionStatus{{Name: "bob", Digest: "sha256:d1", State: "Failed", Message: "old"}}),
+		nodeConfigWith("worker-3",
+			[]internalv1alpha1.Extension{{Name: "bob", Digest: "sha256:d2", RequestedBy: nerOwner("bob-request")}},
+			[]internalv1alpha1.ExtensionStatus{{Name: "bob", Digest: "sha256:d2", State: "Ready"}}),
+	), map[string]string{"bob-request": "sha256:d2"})
+
+	require.Equal(t, map[string]struct{}{"worker-3": {}}, outcomes["bob-request"].applied, "only worker-3 runs the digest the request asks for")
+	require.Empty(t, outcomes["bob-request"].failed)
+}
+
+// An approved operation waits for its eviction, not for an operator: the request
+// status must not send the operator to approve it a second time.
+func TestApprovalWaitNamesAnApprovedOperation(t *testing.T) {
+	tests := []struct {
+		phase deckhousev1alpha1.NodeOperationPhase
+		exp   string
+	}{
+		{phase: deckhousev1alpha1.NodeOperationPhasePending, exp: "waiting for approval by NodeOperation disruption-worker-0-1 in phase Pending"},
+		{phase: deckhousev1alpha1.NodeOperationPhaseApproved, exp: "NodeOperation disruption-worker-0-1 is approved, the node is being prepared"},
+	}
+	for _, tc := range tests {
+		t.Run(string(tc.phase), func(t *testing.T) {
+			op := approvalOf("worker-0", "disruption-worker-0-1", "uid-0", 3, tc.phase,
+				"NodeOperation disruption-worker-0-1-drain-x is evicting the workload")
+			require.Equal(t, tc.exp, approvalWait(approvalState{current: op}))
 		})
 	}
 }
 
-// A node reports Ready at whatever it has installed, and after a rollback that is the
-// old digest: counting it by name alone called a node still on D1 applied for D2.
-func TestNEROutcomesCountOnlyTheDigestOfTheNodeSpec(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, internalv1alpha1.AddToScheme(scheme))
-
-	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-		nodeConfigWith("worker-0",
-			[]internalv1alpha1.Extension{
-				{Name: "bob", Digest: "sha256:d2", RequestedBy: nerRequestedByPrefix + "bob-request"},
-				{Name: "bob-signed", Digest: "sha256:d2", RequestedBy: nerRequestedByPrefix + "bob-signed-request"},
+// Between attempts nothing is waited for in the cluster, so the refusal says when node-manager
+// asks again.
+func TestNodeRefusalSaysWhenTheNextAttemptIsRequested(t *testing.T) {
+	finished := time.Date(2026, time.January, 1, 8, 0, 0, 0, time.UTC)
+	attempt := func(name string, phase deckhousev1alpha1.NodeOperationPhase, finishedAt time.Time) *deckhousev1alpha1.NodeOperation {
+		op := approvalOf("worker-0", name, "uid-0", 4, phase, "module example: no example.ko found")
+		op.Status.FinishedAt = ptr.To(metav1.NewTime(finishedAt))
+		return op
+	}
+	tests := []struct {
+		name string
+		ops  []client.Object
+		exp  string
+	}{
+		{
+			name: "after a failed attempt",
+			ops:  []client.Object{attempt("disruption-worker-0-0", deckhousev1alpha1.NodeOperationPhaseFailed, finished)},
+			exp: "NodeOperation disruption-worker-0-0 failed: module example: no example.ko found. " +
+				"Attempt 2 of 3 is requested at 2026-01-01T08:01:00Z",
+		},
+		{
+			name: "after two, the wait is longer and runs from the newest",
+			ops: []client.Object{
+				attempt("disruption-worker-0-0", deckhousev1alpha1.NodeOperationPhaseFailed, finished.Add(-time.Hour)),
+				attempt("disruption-worker-0-1", deckhousev1alpha1.NodeOperationPhaseFailed, finished),
 			},
-			[]internalv1alpha1.ExtensionStatus{
-				{Name: "bob", Digest: "sha256:d1", State: "Ready"},
-				{Name: "bob-signed", Digest: "sha256:d2", State: "Ready"},
-			}),
-	).Build()
+			exp: "NodeOperation disruption-worker-0-1 failed: module example: no example.ko found. " +
+				"Attempt 3 of 3 is requested at 2026-01-01T08:02:00Z",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			config := nodeConfigWith("worker-0", nil, nil)
+			waitingForApproval(config, "uid-0", 4)
+			r := &Reconciler{sources: &sourceReader{Reader: operationsClient(t, tc.ops...)}}
+			approvals, err := r.approvalsFor(t.Context(), config)
+			require.NoError(t, err)
 
-	outcomes, err := readNEROutcomes(context.Background(), client)
-	require.NoError(t, err)
-	require.Equal(t, int32(0), outcomes["bob-request"].applied, "the node is still on the digest the request moved away from")
-	require.Equal(t, int32(1), outcomes["bob-signed-request"].applied)
+			refusal, refused := nodeRefusal(config, approvals)
+			require.True(t, refused)
+			require.Equal(t, tc.exp, refusal)
+		})
+	}
+}
+
+// A window the node released is not a refusal, with the revision applied or not: a node that
+// will not apply it says so in its NodeConfig (configRefused). A failure before that window is
+// over once the window completed.
+func TestNodeRefusalIsNotACompletedAttempt(t *testing.T) {
+	finished := time.Now().Add(-time.Hour)
+	attempt := func(name string, phase deckhousev1alpha1.NodeOperationPhase, finishedAt time.Time) *deckhousev1alpha1.NodeOperation {
+		op := approvalOf("worker-0", name, "uid-0", 4, phase, "module example: no example.ko found")
+		op.Status.FinishedAt = ptr.To(metav1.NewTime(finishedAt))
+		return op
+	}
+	tests := []struct {
+		name string
+		ops  []client.Object
+	}{
+		{
+			name: "a completed attempt",
+			ops:  []client.Object{attempt("disruption-worker-0-0", deckhousev1alpha1.NodeOperationPhaseCompleted, finished)},
+		},
+		{
+			name: "a completed attempt after a failed one",
+			ops: []client.Object{
+				attempt("disruption-worker-0-0", deckhousev1alpha1.NodeOperationPhaseFailed, finished.Add(-time.Hour)),
+				attempt("disruption-worker-0-1", deckhousev1alpha1.NodeOperationPhaseCompleted, finished),
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			config := nodeConfigWith("worker-0", nil, nil)
+			waitingForApproval(config, "uid-0", 4)
+			r := &Reconciler{sources: &sourceReader{Reader: operationsClient(t, tc.ops...)}}
+			approvals, err := r.approvalsFor(t.Context(), config)
+			require.NoError(t, err)
+
+			refusal, refused := nodeRefusal(config, approvals)
+			require.False(t, refused)
+			require.Empty(t, refusal)
+		})
+	}
 }

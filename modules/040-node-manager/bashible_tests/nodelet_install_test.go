@@ -78,7 +78,7 @@ func TestTheStaticPodDocsKnowNoNodeWithoutTheAgent(t *testing.T) {
 		"modules/040-node-manager/crds/doc-ru-nodestaticpodrequest.yaml",
 	} {
 		doc := strings.ToLower(readFile(t, path))
-		for _, claim := range []string{"edition", "редакци", "no node agent", "не работает агент"} {
+		for _, claim := range []string{"edition", "\u0440\u0435\u0434\u0430\u043a\u0446\u0438", "no node agent", "\u043d\u0435 \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u0430\u0433\u0435\u043d\u0442"} {
 			require.Falsef(t, strings.Contains(doc, claim), "%s says %q", path, claim)
 		}
 	}

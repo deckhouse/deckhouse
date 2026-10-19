@@ -17,7 +17,6 @@ limitations under the License.
 package nodeconfig
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -113,17 +112,14 @@ func (i Identity) RestConfig(document *Document) (*rest.Config, error) {
 	// disk, and taking it from here is what lets the agent run with no mount of
 	// /etc/kubernetes/pki — a directory that on a master also holds that authority's
 	// private key.
-	switch authority, decodeErr := base64.StdEncoding.DecodeString(
-		document.Spec.Kubelet.CACert); {
-	case document.Spec.Kubelet.CACert == "":
+	switch authority := document.Spec.Kubelet.ClusterCABundle; authority {
+	case "":
 		if err := readable(i.clusterCAPath()); err != nil {
 			return nil, err
 		}
 		tlsConfig.CAFile = i.clusterCAPath()
-	case decodeErr != nil:
-		return nil, fmt.Errorf("the cluster authority in the node config is not base64: %w", decodeErr)
 	default:
-		tlsConfig.CAData = authority
+		tlsConfig.CAData = []byte(authority)
 	}
 
 	// One endpoint per client, and the next one on every new attempt. A client is built once

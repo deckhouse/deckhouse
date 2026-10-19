@@ -18,7 +18,12 @@ package testenv
 
 import (
 	"maps"
+	"os"
 	"slices"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	sigsyaml "sigs.k8s.io/yaml"
 )
 
 type (
@@ -68,6 +73,30 @@ func ControllerCRDPaths(crds ...ControllerCRDFile) []string {
 
 func NodeManagerCRDPaths(crds ...NodeManagerCRDFile) []string {
 	return resolveUpPaths("040-node-manager/crds", crds)
+}
+
+// ShippedCRDSchema reads the openAPIV3Schema of the one version a CRD of the module serves. The
+// Russian description of a CRD, "doc-ru-" before the file name, has the same layout.
+func ShippedCRDSchema(t *testing.T, file NodeManagerCRDFile) map[string]any {
+	t.Helper()
+
+	paths := NodeManagerCRDPaths(file)
+	require.Len(t, paths, 1)
+	raw, err := os.ReadFile(paths[0])
+	require.NoError(t, err, "%s must be readable at %s", file, paths[0])
+
+	var crd struct {
+		Spec struct {
+			Versions []struct {
+				Schema struct {
+					OpenAPIV3Schema map[string]any `json:"openAPIV3Schema"`
+				} `json:"schema"`
+			} `json:"versions"`
+		} `json:"spec"`
+	}
+	require.NoError(t, sigsyaml.Unmarshal(raw, &crd))
+	require.Len(t, crd.Spec.Versions, 1)
+	return crd.Spec.Versions[0].Schema.OpenAPIV3Schema
 }
 
 // ModuleCRDPaths resolves CRD files under the repo's modules directory (e.g.
