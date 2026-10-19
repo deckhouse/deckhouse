@@ -9,6 +9,8 @@ Rules:
 - When writing or reviewing tests, documentation or examples, take any password, token, API key, base64 secret payload, htpasswd or bcrypt hash, JWT, private key or cloud credential from this list. Do not invent new ones, do not copy real ones.
 - Pick the value by purpose. If several fit, choose the one whose decoded meaning reads best in context.
 - If nothing fits, add a new value to this list and to the last `[[allowlists]]` block in `.gitleaks.toml` in the same change.
+- Every new entry in `.gitleaks.toml` gets a comment above it with the date, the MR or issue that added it and the reason, for example `# Added on 2026-10-16 in MR !703: ...`. A whole-file exclusion in `paths` is allowed only for third-party files or fixtures parsed by the code under test, by exact path, and never for files with real secrets.
+- The pipeline reads `.gitleaks.toml` from `main`, so a new entry works only after it is merged. Add it in a separate MR before the MR that uses it.
 - A value that is not in the list is a gitleaks finding. Do not add per-file or per-value ignores, replace it with a value from the list.
 - Inline `gitleaks:allow` comments are ignored by CI (`--ignore-gitleaks-allow`). Never add them.
 - Use the encoded form where `Secret.data`, docker config `auth` or similar requires base64. The "Meaning" column shows the decoded text.

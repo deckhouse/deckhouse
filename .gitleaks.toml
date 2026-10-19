@@ -4,39 +4,56 @@ path = "gitleaks.base.toml"
 
 [[allowlists]]
 regexes = [
+  # Added on 2026-08-07 in MR #21924 (kubernetes-cni CVE fix): image digest key that only looks like a token.
   'kubernetesCni191',
+  # Added on 2026-10-16 in the secrets refactoring (MR !703): standard fake test values from AGENTS.md.
+  # The family is wide on purpose: tests need values of a given length, so the suffix varies.
   'dh-test-secret-[0-9A-Za-z]*',
   'ZGgtdGVzdC1zZWNyZXQt[0-9A-Za-z+/=]*',
   'dGVzdC12YWx1ZQ==',
   'dXNlcm5hbWU6cGFzc3dvcmQ=?',
+  # Added in the secrets refactoring (MR !703): Secret name built by the metallb hook, not a secret.
   'bgp-pwd-ns1-secret1',
+  # Added in the secrets refactoring (MR !703): bootstrap token shaped test value, the format is fixed.
   'abcdef\.0123456789abcdef',
+  # Added in the secrets refactoring (MR !703): Prometheus metric name, matched only by the word secret.
   'd8_istio_ca_secretref_unresolved',
+  # Added in the secrets refactoring (MR !703): base64 of the enum values serviceAccount and apiToken.
   'c2VydmljZUFjY291bnQ=',
   'YXBpVG9rZW4=',
+  # Added in the secrets refactoring (MR !703): standard example values already used in the documentation.
   'PFlPVVItR1JBRkFOQUNMT1VELVRPS0VOPg==',
   'Zm9vOiRhcHIxJE9GRzNYeWJwJGNrTDBGSERBa29YWUlsSDkuY3lzVDAK',
   'JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H',
   'AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==',
   '98sdcj5e8c7asd98j4j3n9csakn',
+  # Added in the secrets refactoring (MR !703): standard fake JWT and fake private key body for tests.
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJzdWIiOiJkZWNraG91c2UtdGVzdCIsIm5hbWUiOiJ0ZXN0In0\.dGVzdC1zaWduYXR1cmUtbm90LXJlYWw',
   'ZGVja2hvdXNlLXRlc3QtcHJpdmF0ZS1rZXktbm90LWEtcmVhbC1zZWNyZXQtMDEyMzQ1Njc4OWFiY2RlZg==',
+  # Added in the secrets refactoring (MR !703): elided private keys in the documentation examples.
   '-----BEGIN PRIVATE KEY-----\\nMIIE\.\.\.\.1ZPJeBLt\+\\n-----END PRIVATE KEY----',
   '-----BEGIN OPENSSH PRIVATE KEY-----\s+\.\.\.\s+-----END OPENSSH PRIVATE KEY----',
   '-----BEGIN PRIVATE KEY-----",\s+"client_id": "342975658279248"'
 ]
+# Whole-file exclusions. Added in the secrets refactoring (MR !703) where a narrow pattern is impossible.
 paths = [
+  # Minified third-party library.
   '''(^|/)docs/site/assets/js/pdf\.worker\.min\.js$''',
+  # Valid test SSH keys parsed by the tests, so they cannot be replaced with the standard fake body.
   '''(^|/)dhctl/pkg/config/mocks/id_rsa$''',
   '''(^|/)dhctl/pkg/config/mocks/id_invalid_rsa$''',
   '''(^|/)dhctl/pkg/config/mocks/id_passphrase_rsa$''',
   '''(^|/)dhctl/pkg/config/mocks/id_passphrase_invalid_rsa$''',
+  # Valid test TLS key and valid test ED25519 keys, parsed by the code under test.
   '''(^|/)dhctl/pkg/util/registryutil/registry_test\.go$''',
   '''(^|/)ee/modules/110-istio/hooks/ee/alliance_metadata_merge_test\.go$''',
   '''(^|/)ee/modules/110-istio/hooks/ee/federation_discovery_test\.go$''',
   '''(^|/)ee/modules/110-istio/hooks/ee/multicluster_discovery_test\.go$''',
+  # Test Secret manifests with real template content that the controller parses.
   '''(^|/)modules/040-control-plane-manager/images/control-plane-manager/src/internal/controllers/control-plane-configuration/testdata/cases/basic-config\.yaml$''',
+  # Upstream dex patches: third-party content that is not ours to edit.
   '''(^|/)modules/150-user-authn/images/dex/patches/007-ipv6-host\.patch$''',
   '''(^|/)modules/150-user-authn/images/dex/patches/010-provide-custom-CA-to-gitlab-connector\.patch$''',
+  # Secret manifests with real structure in the EKS e2e layout.
   '''(^|/)testing/cloud_layouts/EKS/WithoutNAT/configuration\.tpl\.yaml$'''
 ]
