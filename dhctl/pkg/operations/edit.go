@@ -52,6 +52,12 @@ func OnAbsentFor(secret string) func(ctx context.Context, kubeCl *client.Kuberne
 	return nil
 }
 
+// SecretLabelsFor returns the labels SecretEdit sets on the edited Secret.
+// They must match the ones the Secret gets on bootstrap/converge.
+func SecretLabelsFor(secret string) map[string]string {
+	return map[string]string{"name": secret}
+}
+
 // RejectLegacyProviderEditOnMcFlow refuses to create the legacy
 // d8-provider-cluster-configuration Secret on a cluster that is configured
 // through the cloud-provider ModuleConfig: writing it would fork the provider

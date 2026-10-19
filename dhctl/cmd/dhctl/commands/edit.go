@@ -74,9 +74,7 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 		return operations.SecretEdit(
 			ctx,
 			kubeCl,
-			name, "kube-system", secret, dataKey, map[string]string{
-				"name": name,
-			},
+			name, "kube-system", secret, dataKey, operations.SecretLabelsFor(secret),
 			&opts.Global,
 			operations.EditOptions{
 				Editor:      opts.Render.Editor,
