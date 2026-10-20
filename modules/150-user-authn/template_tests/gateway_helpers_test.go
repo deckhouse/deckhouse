@@ -45,6 +45,36 @@ func TestGatewayAPIEnabledHelper(t *testing.T) {
 		},
 	}
 	c.AddDependency(library)
+
+	// dmt renders the module without its values; the helper must not fail on a nil map.
+	t.Run("missing values", func(t *testing.T) {
+		only := &chart.Chart{
+			Metadata: c.Metadata,
+			Templates: []*chart.File{
+				{Name: "templates/_helpers.tpl", Data: helpers},
+				{Name: "templates/result", Data: []byte(`{{ include "user_authn_gateway_api_enabled" . }}`)},
+			},
+		}
+		only.AddDependency(library)
+		for _, tc := range []struct {
+			name    string
+			values  map[string]any
+			enabled string
+		}{
+			{name: "no module values, no global modules", values: map[string]any{"global": map[string]any{}}, enabled: "true"},
+			{name: "null gatewayAPI", values: map[string]any{"global": map[string]any{"modules": map[string]any{"gatewayAPI": nil}}, "userAuthn": map[string]any{"gatewayAPI": nil}}, enabled: "true"},
+			{name: "global disabled, no module values", values: map[string]any{"global": map[string]any{"modules": map[string]any{"gatewayAPI": map[string]any{"enabled": false}}}}, enabled: "false"},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				values, err := chartutil.ToRenderValues(only, tc.values, chartutil.ReleaseOptions{Name: "test"}, nil)
+				require.NoError(t, err)
+				rendered, err := engine.Render(only, values)
+				require.NoError(t, err)
+				require.Equal(t, tc.enabled, rendered["user-authn/templates/result"])
+			})
+		}
+	})
+
 	for _, tc := range []struct {
 		name           string
 		global, module *bool
