@@ -1,4 +1,5 @@
-{{- $version := "v2.8.3-deckhouse.7"}}
+{{- $version := "flant-1.0.1"}}
+{{- $repo := "deckhouse/cluster-and-infrastructure/fork/distribution.git" }}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
 fromImage: common/src-artifact
@@ -10,14 +11,14 @@ git:
       install:
         - '**/*'
 secrets:
-  - id: SOURCE_REPO
-    value: "{{ $.SOURCE_REPO }}"
+  - id: CI_JOB_TOKEN
+    env: CI_JOB_TOKEN
 shell:
   install:
     - mkdir -m 1777 /src/tmp
     - chmod +x /src/scripts/*
     - git config --global advice.detachedHead false
-    - git clone --depth 1 --single-branch --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-distribution.git /src/distribution
+    - git clone --depth 1 --single-branch --branch {{ $version }} https://gitlab-ci-token:$(cat /run/secrets/CI_JOB_TOKEN)@fox.flant.com/{{ $repo }} /src/distribution
     - rm -rf /src/distribution/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
