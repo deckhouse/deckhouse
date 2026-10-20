@@ -45,7 +45,7 @@
   {{- $captures := index $modulePathMatch 0 }}
   {{- if ge (len $captures) 2 }}
     {{- $moduleKebabName := index $captures 1 }}
-    {{- $metaTitle = printf "%s | %s | Deckhouse" $pageTitleForHead $moduleKebabName }}
+    {{- $metaTitle = printf "%s | %s | Deckhouse Platform" $pageTitleForHead $moduleKebabName }}
   {{- end }}
 {{- end }}
 

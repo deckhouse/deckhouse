@@ -73,7 +73,7 @@ DVP экспортирует метрики в Prometheus, что позволя
 таких как AWS Route53, Google Cloud DNS, Cloudflare и других.
 Полный перечень доступен [в официальной документации `cert-manager`](https://cert-manager.io/docs/configuration/acme/dns01/).
 
-Модуль `cert-manager` в Deckhouse Kubernetes Platform может автоматически создавать ClusterIssuer для Cloudflare, Amazon Route53, DigitalOcean, Google Cloud DNS и Yandex Cloud DNS при заполнении соответствующих параметров модуля.
+Модуль `cert-manager` в Deckhouse Platform может автоматически создавать ClusterIssuer для Cloudflare, Amazon Route53, DigitalOcean, Google Cloud DNS и Yandex Cloud DNS при заполнении соответствующих параметров модуля.
 Порядок настройки Yandex Cloud DNS описан в разделе [Заказ wildcard-сертификата с DNS в Yandex Cloud DNS](/modules/cert-manager/usage.html#заказ-wildcard-сертификата-с-dns-в-yandex-cloud-dns).
 
 Если провайдер не поддерживается напрямую,

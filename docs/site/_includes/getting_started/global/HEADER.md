@@ -3,5 +3,5 @@
 
 {::options parse_block_html="false" /}
 
-<h1 class="docs__title">{{ page.title_main }}</h1>
+<h1 class="docs__title">{{ page.title }}</h1>
 {% include getting_started/global/steps.html %}
