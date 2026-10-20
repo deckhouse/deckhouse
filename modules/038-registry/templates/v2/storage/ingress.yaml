@@ -74,10 +74,16 @@ metadata:
     {{- if .Values.registry.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.registry.whitelistSourceRanges | join "," }}
     {{- end }}
+  {{- if include "helm_lib_module_ingress_nginx_annotations_version_ge" (list $ "1.3.0") }}
+    {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    nginx.ingress.kubernetes.io/ingress-nginx-hsts: "true"
+    {{- end }}
+  {{- else }}
     {{- with (include "helm_lib_module_ingress_configuration_snippet" .) }}
     nginx.ingress.kubernetes.io/configuration-snippet: |
       {{- . | nindent 6 }}
     {{- end }}
+  {{- end }}
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   rules:

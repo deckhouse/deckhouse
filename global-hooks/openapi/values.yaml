@@ -255,6 +255,11 @@ properties:
         x-examples:
         - - { "name": "gateways.gateway.networking.k8s.io", "versions": [ { "name": "v1", "served": true, "storage": true } ] }
           - { "name": "inferencepools.inference.networking.k8s.io", "versions": [] }
+      ingressNginxAnnotationsVersion:
+        type: string
+        description: |
+          The minimum generation of the additional Ingress annotations reported by the `d8-ingress-nginx/additional-annotations-version` ConfigMap and by the ingress-nginx controller and validator pods that have not finished, or an empty string if the ConfigMap has no version or any reported version is not a semver.
+        x-examples: [ "v1.3.0", "" ]
   clusterConfiguration:
     $ref: '/deckhouse/candi/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
   modulesImages:

@@ -106,4 +106,48 @@ discovery:
 		})
 	})
 
+	Context("ingress-nginx module v1.3.0 or newer", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
+			f.ValuesSetFromYaml("userAuthn.https", `{"mode":"CustomCertificate"}`)
+			f.ValuesSetFromYaml("userAuthn.internal.dexTLS", `{"crt":"plainstring","key":"plainstring", "ca":" plainstring"}`)
+			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`)
+			f.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
+			f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "1.3.0")
+			f.HelmRender()
+		})
+
+		It("uses the annotations that replace configuration snippets", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingress := f.KubernetesResource("Ingress", "d8-user-authn", "dex")
+			Expect(ingress.Exists()).To(BeTrue())
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/ingress-nginx-hsts").String()).To(Equal("true"))
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("ingress-nginx module version not discovered", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.15.6")
+			f.ValuesSetFromYaml("userAuthn.https", `{"mode":"CustomCertificate"}`)
+			f.ValuesSetFromYaml("userAuthn.internal.dexTLS", `{"crt":"plainstring","key":"plainstring", "ca":" plainstring"}`)
+			f.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`)
+			f.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
+			f.HelmRender()
+		})
+
+		It("keeps the configuration snippets", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingress := f.KubernetesResource("Ingress", "d8-user-authn", "dex")
+			Expect(ingress.Exists()).To(BeTrue())
+			snippet := ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").String()
+			Expect(snippet).To(ContainSubstring("Strict-Transport-Security"))
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/ingress-nginx-hsts").Exists()).To(BeFalse())
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-ssl-use-controller-certificate").Exists()).To(BeFalse())
+		})
+	})
 })

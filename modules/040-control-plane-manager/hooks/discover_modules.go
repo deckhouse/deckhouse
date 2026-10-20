@@ -146,10 +146,10 @@ func handleAuthDiscoveryModules(_ context.Context, input *go_hook.HookInput) err
 			input.Values.Remove(userAuthnOIDCIssuerAddressPath)
 		}
 	}
-	if enableBasicAuth, ok := authNData["enableBasicAuth"]; ok {
-		if enabledBool, err := strconv.ParseBool(enableBasicAuth); err == nil {
-			input.Values.Set(userAuthnEnableBasicAuthPath, enabledBool)
-		}
+	if enabledBool, err := strconv.ParseBool(authNData["enableBasicAuth"]); err == nil {
+		input.Values.Set(userAuthnEnableBasicAuthPath, enabledBool)
+	} else {
+		input.Values.Remove(userAuthnEnableBasicAuthPath)
 	}
 
 	authnWebhookURLExists := input.ConfigValues.Exists(userAuthenticationWebhookURLPath)

@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
@@ -87,6 +88,42 @@ var _ = Describe("Module :: registry-packages-proxy :: helm template :: custom-c
 			Expect(created.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
 		})
 	})
+
+	Context("Cluster bootstrapped, ingress-nginx module v1.3.0 or newer", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesBootstrapped)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "1.3.0")
+			f.ValuesSetFromYaml("registryPackagesProxy", customCertificatePresent)
+			f.HelmRender()
+		})
+
+		It("uses the annotation that replaces the configuration snippet", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingress := f.KubernetesResource("Ingress", "d8-cloud-instance-manager", "registry-packages-proxy")
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/ingress-nginx-hsts").String()).To(Equal("true"))
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").Exists()).To(BeFalse())
+		})
+	})
+
+	DescribeTable("Cluster bootstrapped, ingress-nginx module version unknown or older than v1.3.0",
+		func(setVersion func()) {
+			f.ValuesSetFromYaml("global", globalValuesBootstrapped)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			setVersion()
+			f.ValuesSetFromYaml("registryPackagesProxy", customCertificatePresent)
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingress := f.KubernetesResource("Ingress", "d8-cloud-instance-manager", "registry-packages-proxy")
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").String()).To(ContainSubstring("Strict-Transport-Security"))
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/ingress-nginx-hsts").Exists()).To(BeFalse())
+		},
+		Entry("version is not discovered", func() {}),
+		Entry("version is empty", func() { f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "") }),
+		Entry("version is not a semver", func() { f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "broken") }),
+		Entry("version is v1.2.0", func() { f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "1.2.0") }),
+	)
 
 	Context("Cluster not bootstrapped", func() {
 		BeforeEach(func() {

@@ -88,4 +88,46 @@ var _ = Describe("Module :: documentation :: helm template :: custom-certificate
 		})
 	})
 
+	Context("ingress-nginx module v1.3.0 or newer", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("documentation", customCertificatePresent)
+			f.ApplyOpenAPIDefaults()
+			f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "1.3.0")
+			f.HelmRender()
+		})
+
+		It("uses the annotations that replace configuration snippets", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingress := f.KubernetesResource("Ingress", "d8-system", "documentation")
+			Expect(ingress.Exists()).To(BeTrue())
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-ssl-use-controller-certificate").String()).To(Equal("true"))
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/ingress-nginx-hsts").String()).To(Equal("true"))
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("ingress-nginx module version not discovered", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("documentation", customCertificatePresent)
+			f.ApplyOpenAPIDefaults()
+			f.HelmRender()
+		})
+
+		It("keeps the configuration snippets", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingress := f.KubernetesResource("Ingress", "d8-system", "documentation")
+			Expect(ingress.Exists()).To(BeTrue())
+			snippet := ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").String()
+			Expect(snippet).To(ContainSubstring("proxy_ssl_certificate /etc/nginx/ssl/client.crt;"))
+			Expect(snippet).To(ContainSubstring("Strict-Transport-Security"))
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/ingress-nginx-hsts").Exists()).To(BeFalse())
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-ssl-use-controller-certificate").Exists()).To(BeFalse())
+		})
+	})
 })

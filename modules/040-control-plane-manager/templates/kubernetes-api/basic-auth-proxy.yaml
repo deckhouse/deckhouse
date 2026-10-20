@@ -11,6 +11,12 @@ metadata:
   name: basic-auth-proxy
   namespace: kube-system
   annotations:
+  {{- if include "helm_lib_module_ingress_nginx_annotations_version_ge" (list $ "1.3.0") }}
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-by-header: Authorization
+    nginx.ingress.kubernetes.io/canary-by-header-pattern: "^(.*)Basic(.*)$"
+  {{- else }}
   {{- if or (.Values.global.enabledModules | has "cert-manager") (eq .Values.global.modules.https.mode "CustomCertificate") }}
     nginx.ingress.kubernetes.io/configuration-snippet: |
       {{ include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
@@ -20,6 +26,7 @@ metadata:
   {{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges | join "," }}
   {{- end }}
+  {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
 spec:
   ingressClassName: {{ .Values.controlPlaneManager.apiserver.publishAPI.ingress.ingressClass | default (include "helm_lib_module_ingress_class" . | quote ) }}
@@ -27,13 +34,20 @@ spec:
   - host: {{ include "helm_lib_module_public_domain" (list . "api") }}
     http:
       paths:
+  {{- if include "helm_lib_module_ingress_nginx_annotations_version_ge" (list $ "1.3.0") }}
+      - path: /
+  {{- else }}
       - path: /basic-auth(\/?)(.*)
+  {{- end }}
         pathType: ImplementationSpecific
         backend:
           service:
             name: basic-auth-proxy
             port:
               number: 7332
+  {{- if include "helm_lib_module_ingress_nginx_annotations_version_ge" (list $ "1.3.0") }}
+  {{- /* ingress-nginx ignores TLS on canary Ingresses; kubernetes-api declares it for this host. */}}
+  {{- else }}
 {{- if and
       (or
         (.Values.global.enabledModules | has "cert-manager")
@@ -45,6 +59,7 @@ spec:
   - hosts:
     - {{ include "helm_lib_module_public_domain" (list . "api") }}
     secretName: {{ include "publish_api_certificate_name" . }}
+  {{- end }}
   {{- end }}
 {{- end }}
 {{- if or $ingressEnabled $gatewayEnabled }}

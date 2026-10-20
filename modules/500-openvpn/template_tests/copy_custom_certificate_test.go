@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
@@ -75,6 +76,46 @@ var _ = Describe("Module :: openvpn :: helm template :: custom-certificate", fun
 		})
 
 	})
+
+	Context("ingress-nginx module v1.3.0 or newer", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "1.3.0")
+			f.ValuesSetFromYaml("openvpn", customCertificatePresent)
+			f.HelmRender()
+		})
+
+		It("uses the annotations that replace configuration snippets", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingress := f.KubernetesResource("Ingress", "d8-openvpn", "admin")
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-ssl-use-controller-certificate").String()).To(Equal("true"))
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/ingress-nginx-hsts").String()).To(Equal("true"))
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").Exists()).To(BeFalse())
+		})
+	})
+
+	DescribeTable("ingress-nginx module version unknown or older than v1.3.0",
+		func(setVersion func()) {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			setVersion()
+			f.ValuesSetFromYaml("openvpn", customCertificatePresent)
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ingress := f.KubernetesResource("Ingress", "d8-openvpn", "admin")
+			snippet := ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").String()
+			Expect(snippet).To(ContainSubstring("proxy_ssl_certificate /etc/nginx/ssl/client.crt;"))
+			Expect(snippet).To(ContainSubstring("Strict-Transport-Security"))
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-ssl-use-controller-certificate").Exists()).To(BeFalse())
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/ingress-nginx-hsts").Exists()).To(BeFalse())
+		},
+		Entry("version is not discovered", func() {}),
+		Entry("version is empty", func() { f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "") }),
+		Entry("version is not a semver", func() { f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "broken") }),
+		Entry("version is v1.2.0", func() { f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "1.2.0") }),
+	)
 
 	Context("With Gateway API enabled", func() {
 		BeforeEach(func() {

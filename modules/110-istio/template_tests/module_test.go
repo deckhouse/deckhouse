@@ -1409,6 +1409,25 @@ network-neigh-0-cluster-id:
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ambientgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Gateway", "d8-istio", "ambientgateway-remote-neigh-0-cluster-id").Exists()).To(BeFalse())
 		})
+		It("uses the annotations that replace configuration snippets when the ingress-nginx module is v1.3.0 or newer", func() {
+			f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "1.3.0")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			apiProxy := f.KubernetesResource("Ingress", "d8-istio", "api-proxy")
+			Expect(apiProxy.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-ssl-use-controller-certificate").String()).To(Equal("true"))
+			Expect(apiProxy.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Ingress", "d8-istio", "metadata-exporter").Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").Exists()).To(BeFalse())
+		})
+
+		It("keeps the configuration snippets while the ingress-nginx module version is not discovered", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			apiProxy := f.KubernetesResource("Ingress", "d8-istio", "api-proxy")
+			Expect(apiProxy.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").String()).To(ContainSubstring("proxy_ssl_certificate /etc/nginx/ssl/client.crt;"))
+			Expect(apiProxy.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-ssl-use-controller-certificate").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Ingress", "d8-istio", "metadata-exporter").Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").Exists()).To(BeTrue())
+		})
 	})
 
 	Context("istiod with default resourcesManagement configuration", func() {

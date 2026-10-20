@@ -9,6 +9,11 @@ metadata:
   {{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges | join "," }}
   {{- end }}
+  {{- if include "helm_lib_module_ingress_nginx_annotations_version_ge" (list $ "1.3.0") }}
+  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    nginx.ingress.kubernetes.io/ingress-nginx-hsts: "true"
+  {{- end }}
+  {{- else }}
   {{- if .Values.controlPlaneManager.internal.authn.enableBasicAuth }}
     nginx.ingress.kubernetes.io/configuration-snippet: |
       if ($http_authorization ~ "^(.*)Basic(.*)$") {
@@ -24,6 +29,7 @@ metadata:
         deny all;
         return 403;
       }
+  {{- end }}
   {{- end }}
   name: kubernetes-api
   namespace: kube-system
@@ -46,10 +52,54 @@ spec:
   - host: {{ include "helm_lib_module_public_domain" (list . "api") }}
     http:
       paths:
+  {{- if include "helm_lib_module_ingress_nginx_annotations_version_ge" (list $ "1.3.0") }}
+      - path: /
+        backend:
+  {{- else }}
       - backend:
+  {{- end }}
           service:
             name: kubernetes
             port:
               number: 443
         pathType: ImplementationSpecific
+  {{- if include "helm_lib_module_ingress_nginx_annotations_version_ge" (list $ "1.3.0") }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kubernetes-api-health-endpoints
+  namespace: kube-system
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/denylist-source-range: "0.0.0.0/0,::/0"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
+spec:
+  ingressClassName: {{ .Values.controlPlaneManager.apiserver.publishAPI.ingress.ingressClass | default (include "helm_lib_module_ingress_class" . | quote ) }}
+  rules:
+  - host: {{ include "helm_lib_module_public_domain" (list . "api") }}
+    http:
+      paths:
+      - path: /healthz
+        pathType: Prefix
+        backend:
+          service:
+            name: kubernetes
+            port:
+              number: 443
+      - path: /livez
+        pathType: Prefix
+        backend:
+          service:
+            name: kubernetes
+            port:
+              number: 443
+      - path: /readyz
+        pathType: Prefix
+        backend:
+          service:
+            name: kubernetes
+            port:
+              number: 443
+  {{- end }}
 {{- end }}

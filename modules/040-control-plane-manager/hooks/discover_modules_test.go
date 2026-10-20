@@ -285,4 +285,82 @@ global:
 			})
 		})
 	})
+
+	Context("enableBasicAuth discovery", func() {
+		const (
+			enableBasicAuthValues = `
+controlPlaneManager:
+  internal:
+    authn: {}
+  apiserver:
+    authn: {}
+    authz: {}
+global:
+  discovery:
+    kubernetesCA: kubernetesCATest
+`
+			cmWithBasicAuth = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: control-plane-configurator
+  namespace: d8-user-authn
+  labels:
+    control-plane-configurator: ""
+data:
+  enableBasicAuth: "true"
+`
+			cmWithInvalidBasicAuth = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: control-plane-configurator
+  namespace: d8-user-authn
+  labels:
+    control-plane-configurator: ""
+data:
+  enableBasicAuth: "broken"
+`
+			cmWithoutBasicAuth = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: control-plane-configurator
+  namespace: d8-user-authn
+  labels:
+    control-plane-configurator: ""
+data:
+  oidcIssuerURL: https://example.com/
+`
+		)
+
+		f := HookExecutionConfigInit(enableBasicAuthValues, `{}`)
+
+		It("Removes enableBasicAuth when the setting disappears from the ConfigMap", func() {
+			f.BindingContexts.Set(f.KubeStateSet(cmWithBasicAuth))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.authn.enableBasicAuth").Bool()).To(BeTrue())
+
+			f.BindingContexts.Set(f.KubeStateSet(cmWithoutBasicAuth))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.authn.enableBasicAuth").Exists()).To(BeFalse())
+		})
+
+		It("Removes enableBasicAuth when the setting is not a boolean", func() {
+			f.BindingContexts.Set(f.KubeStateSet(cmWithBasicAuth))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.authn.enableBasicAuth").Bool()).To(BeTrue())
+
+			f.BindingContexts.Set(f.KubeStateSet(cmWithInvalidBasicAuth))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.internal.authn.enableBasicAuth").Exists()).To(BeFalse())
+		})
+	})
 })

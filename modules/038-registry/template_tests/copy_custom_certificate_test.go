@@ -18,9 +18,11 @@ package template_tests
 
 import (
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 const globalValues = `
@@ -106,6 +108,55 @@ var _ = Describe("Module :: registry :: helm template :: custom-certificate for 
 		Expect(copied.Field("data").String()).
 			To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
 	})
+})
+
+// nginxAnnotation reads one nginx.ingress.kubernetes.io annotation of an Ingress.
+func nginxAnnotation(ingress object_store.KubeObject, name string) string {
+	return ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/" + name).String()
+}
+
+// hasNginxAnnotation reports whether an Ingress sets one nginx.ingress.kubernetes.io annotation.
+func hasNginxAnnotation(ingress object_store.KubeObject, name string) bool {
+	return ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/" + name).Exists()
+}
+
+var _ = Describe("Module :: registry :: helm template :: ingress-nginx annotations", func() {
+	f := SetupHelmConfig(``)
+
+	render := func(registryValues string, setVersion func()) {
+		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		setVersion()
+		f.ValuesSetFromYaml("registry", registryValues)
+		f.HelmRender()
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+	}
+	supported := func() { f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "1.3.0") }
+
+	Context("ingress-nginx module v1.3.0 or newer", func() {
+		It("uses the annotation that replaces the snippet on the v2 endpoint", func() {
+			render(v2WithCustomCertificate, supported)
+			ingress := f.KubernetesResource("Ingress", "d8-system", "registry-push")
+			Expect(ingress.Exists()).To(BeTrue())
+			Expect(nginxAnnotation(ingress, "ingress-nginx-hsts")).To(Equal("true"))
+			Expect(hasNginxAnnotation(ingress, "configuration-snippet")).To(BeFalse())
+		})
+	})
+
+	DescribeTable("ingress-nginx module version unknown or older than v1.3.0",
+		func(setVersion func()) {
+			render(v2WithCustomCertificate, setVersion)
+			push := f.KubernetesResource("Ingress", "d8-system", "registry-push")
+			Expect(push.Exists()).To(BeTrue())
+			snippet := nginxAnnotation(push, "configuration-snippet")
+			Expect(snippet).To(ContainSubstring("Strict-Transport-Security"))
+			Expect(hasNginxAnnotation(push, "ingress-nginx-hsts")).To(BeFalse())
+		},
+		Entry("version is not discovered", func() {}),
+		Entry("version is empty", func() { f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "") }),
+		Entry("version is not a semver", func() { f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "broken") }),
+		Entry("version is v1.2.0", func() { f.ValuesSet("global.discovery.ingressNginxAnnotationsVersion", "1.2.0") }),
+	)
 })
 
 var _ = Describe("Module :: registry :: helm template :: custom-certificate", func() {
