@@ -230,10 +230,6 @@ import:
   add: /usr/local/go
   to: /usr/local/go
   before: install
-- from: common/alt-p11-artifact
-  add: /root/.ssh
-  to: /root/.ssh
-  before: install
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
@@ -242,6 +238,8 @@ secrets:
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
+  # ssh auth to 3p repos for git archive --remote
+  - mkdir -p -m 0700 /root/.ssh && echo "StrictHostKeyChecking accept-new" > /root/.ssh/config
   - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
   - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
   - |
@@ -329,7 +327,7 @@ git:
   tag: {{ $istioVersion }}
   add: /
   to: /src/proxy
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 shell:
   setup:
