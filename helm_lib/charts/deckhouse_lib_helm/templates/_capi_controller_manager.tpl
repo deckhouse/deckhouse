@@ -228,6 +228,7 @@ kind: SecurityPolicyException
 metadata:
   name: {{ $fullname }}
   namespace: {{ $namespace }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" $fullname)) | nindent 2 }}
 spec:
   network:
     {{- if $additionalPorts }}
@@ -235,6 +236,8 @@ spec:
       {{- range $additionalPorts }}
       - port: {{ .containerPort }}
         protocol: {{ .protocol | default "TCP" }}
+        metadata:
+          description: {{ printf "CAPI infrastructure controller manager %v port, bound on the node because the Pod runs in the host network." (.name | default .containerPort) | quote }}
       {{- end }}
     {{- end }}
     hostNetwork:

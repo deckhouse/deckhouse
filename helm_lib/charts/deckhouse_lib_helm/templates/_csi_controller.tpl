@@ -300,7 +300,7 @@ spec:
         image: {{ $provisionerImage | quote }}
         args:
         - "--timeout={{ $provisionerTimeout }}"
-        - "--v=5"
+        - "--v={{ include "helm_lib_module_klog_verbosity" $context }}"
         - "--csi-address=$(ADDRESS)"
   {{- if $volumeNamePrefix }}
         - "--volume-name-prefix={{ $volumeNamePrefix }}"
@@ -355,7 +355,7 @@ spec:
         image: {{ $attacherImage | quote }}
         args:
         - "--timeout={{ $attacherTimeout }}"
-        - "--v=5"
+        - "--v={{ include "helm_lib_module_klog_verbosity" $context }}"
         - "--csi-address=$(ADDRESS)"
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
@@ -386,7 +386,7 @@ spec:
         image: {{ $resizerImage | quote }}
         args:
         - "--timeout={{ $resizerTimeout }}"
-        - "--v=5"
+        - "--v={{ include "helm_lib_module_klog_verbosity" $context }}"
         - "--csi-address=$(ADDRESS)"
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
@@ -445,7 +445,7 @@ spec:
         image: {{ $snapshotterImage | quote }}
         args:
         - "--timeout={{ $snapshotterTimeout }}"
-        - "--v=5"
+        - "--v={{ include "helm_lib_module_klog_verbosity" $context }}"
         - "--csi-address=$(ADDRESS)"
         - "--leader-election=true"
         - "--leader-election-namespace=$(NAMESPACE)"
@@ -585,6 +585,7 @@ kind: SecurityPolicyException
 metadata:
   name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-controller")) | nindent 2 }}
 spec:
 {{- if or $forceCsiControllerPrivilegedContainer $runAsRootUser (eq $csiControllerHostNetwork "true") (ne $csiControllerHostPID "false") }}
   {{- if or $forceCsiControllerPrivilegedContainer $runAsRootUser }}
@@ -721,7 +722,7 @@ rules:
   verbs: ["list", "watch", "create", "update", "patch"]
 - apiGroups: ["snapshot.storage.k8s.io"]
   resources: ["volumesnapshots"]
-  verbs: ["get", "list"]
+  verbs: ["get", "list", "watch", "update", "patch"]
 - apiGroups: ["snapshot.storage.k8s.io"]
   resources: ["volumesnapshotcontents"]
   verbs: ["get", "list"]

@@ -228,6 +228,7 @@ kind: SecurityPolicyException
 metadata:
   name: {{ $fullname }}
   namespace: {{ $namespace }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" $fullname)) | nindent 2 }}
 spec:
   {{- if $hostNetwork }}
   network:

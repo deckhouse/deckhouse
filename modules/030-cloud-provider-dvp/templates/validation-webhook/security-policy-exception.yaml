@@ -7,6 +7,7 @@ kind: SecurityPolicyException
 metadata:
   name: validation-webhook
   namespace: d8-cloud-provider-dvp
+  {{- include "helm_lib_module_labels" (list . (dict "app" "validation-webhook")) | nindent 2 }}
 spec:
   network:
     hostNetwork:

@@ -453,6 +453,18 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 			spe := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "cloud-controller-manager")
 			Expect(spe.Exists()).To(BeTrue())
+			Expect(spe.Field("metadata.labels.heritage").String()).To(Equal("deckhouse"))
+			Expect(spe.Field("metadata.labels.module").String()).To(Equal("cloud-provider-aws"))
+		})
+
+		It("Should render SecurityPolicyException for node-termination-handler with module labels", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			spe := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "node-termination-handler")
+			Expect(spe.Exists()).To(BeTrue())
+			Expect(spe.Field("metadata.labels.heritage").String()).To(Equal("deckhouse"))
+			Expect(spe.Field("metadata.labels.module").String()).To(Equal("cloud-provider-aws"))
+			Expect(spe.Field("metadata.labels.app").String()).To(Equal("node-termination-handler"))
 		})
 
 		It("Should render SecurityPolicyException for CSI controller", func() {
@@ -482,6 +494,9 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 			csiNodeSpe := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "csi-node")
 			Expect(csiNodeSpe.Exists()).To(BeFalse())
+
+			nthSpe := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "node-termination-handler")
+			Expect(nthSpe.Exists()).To(BeFalse())
 		})
 	})
 

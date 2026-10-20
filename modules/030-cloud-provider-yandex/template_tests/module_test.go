@@ -919,6 +919,9 @@ labels: {}
 
 				exception := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "validation-webhook")
 				Expect(exception.Exists()).To(BeTrue())
+				Expect(exception.Field("metadata.labels.heritage").String()).To(Equal("deckhouse"))
+				Expect(exception.Field("metadata.labels.module").String()).To(Equal("cloud-provider-yandex"))
+				Expect(exception.Field("metadata.labels.app").String()).To(Equal("validation-webhook"))
 				Expect(exception.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
 			})
 		})

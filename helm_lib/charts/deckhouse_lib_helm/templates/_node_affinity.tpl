@@ -121,10 +121,10 @@ tolerations:
   {{- if .Values.global.clusterConfiguration }}
     {{- if eq .Values.global.clusterConfiguration.clusterType "Cloud" }}
       "not empty string"
-    {{- /* We consider non-cloud clusters with enabled cloud-provider-.* module as Hybrid clusters */ -}}
+    {{- /* We consider non-cloud clusters with enabled cloud-provider-.* or infra-provider-.* module as Hybrid clusters */ -}}
     {{- else }}
       {{- range $v := .Values.global.enabledModules }}
-        {{- if hasPrefix "cloud-provider-" $v }}
+        {{- if or (hasPrefix "cloud-provider-" $v) (hasPrefix "infra-provider-" $v) }}
           "not empty string"
         {{- end }}
       {{- end }}

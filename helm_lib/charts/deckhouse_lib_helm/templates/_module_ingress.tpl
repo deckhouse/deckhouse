@@ -55,3 +55,25 @@ add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" alway
     true
   {{- end -}}
 {{- end -}}
+
+{{- /* Usage: {{- if include "helm_lib_module_ingress_nginx_annotations_version_ge" (list . "1.3.0") }} */ -}}
+{{- /* returns "true" if the generation of the additional Ingress annotations the ingress-nginx controllers support, discovered in .Values.global.discovery.ingressNginxAnnotationsVersion, is a semver greater than or equal to the given one */ -}}
+{{- /* returns an empty string if the discovered version is missing, empty or not a semver, so the caller falls back */ -}}
+{{- define "helm_lib_module_ingress_nginx_annotations_version_ge" -}}
+  {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $minimal := index . 1 | toString -}} {{- /* Minimal version the discovered one must reach, e.g. "1.3.0" or "v1.3.0" */ -}}
+
+  {{- $semver := "^v?[0-9]+(\\.[0-9]+)?(\\.[0-9]+)?(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$" -}}
+  {{- if not (regexMatch $semver $minimal) -}}
+    {{- fail (printf "helm_lib_module_ingress_nginx_annotations_version_ge: %q is not a semver" $minimal) -}}
+  {{- end -}}
+
+  {{- $discovered := "" -}}
+  {{- $global := $context.Values.global -}}
+  {{- if and (kindIs "map" $global) (kindIs "map" $global.discovery) -}}
+    {{- $discovered = $global.discovery.ingressNginxAnnotationsVersion | default "" | toString -}}
+  {{- end -}}
+  {{- if and (regexMatch $semver $discovered) (semverCompare (printf ">=%s" $minimal) $discovered) -}}
+    true
+  {{- end -}}
+{{- end -}}

@@ -408,6 +408,25 @@ spec:
 {{- end }}
 
 
+{{- /* Usage: {{ include "helm_lib_module_klog_verbosity" . }} */ -}}
+{{- /* Returns klog --v value for the module logLevel (INFO by default) */ -}}
+{{- define "helm_lib_module_klog_verbosity" }}
+  {{- $moduleValues := index .Values (include "helm_lib_module_camelcase_name" .) | default dict }}
+  {{- $logLevel := dig "logLevel" "INFO" $moduleValues }}
+  {{- if eq $logLevel "ERROR" -}}
+0
+  {{- else if eq $logLevel "WARN" -}}
+1
+  {{- else if eq $logLevel "DEBUG" -}}
+4
+  {{- else if eq $logLevel "TRACE" -}}
+5
+  {{- else -}}
+2
+  {{- end -}}
+{{- end }}
+
+
 {{- /* Usage: {{ include "helm_lib_module_webhook_service" (list . $config) }} */ -}}
 {{- /*
   Generates webhook Service manifest.
