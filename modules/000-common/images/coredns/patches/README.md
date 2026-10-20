@@ -20,3 +20,14 @@ from `v1.82.1` to `v1.83.2` to remediate the following vulnerabilities:
 - CVE-2026-84303 (`google.golang.org/grpc`)
 - CVE-2026-84304 (`google.golang.org/grpc`)
 - CVE-2026-84445 (`google.golang.org/grpc`)
+
+Moves `golang.org/x/net` from `v0.58.0` to `v0.60.0` (pulling `golang.org/x/crypto`
+`v0.57.0`, `golang.org/x/sys` `v0.48.0`, `golang.org/x/text` `v0.42.0`,
+`golang.org/x/term` `v0.46.0`, `golang.org/x/sync` `v0.23.0` and `golang.org/x/mod`
+`v0.41.0`) to remediate the following vulnerabilities:
+
+- CVE-2026-78659 (`golang.org/x/net`)
+- CVE-2026-78660 (`golang.org/x/net`)
+- CVE-2026-78663 (`golang.org/x/net`)
+- CVE-2026-78669 (`golang.org/x/net`)
+- CVE-2026-97032 (`golang.org/x/net`)
