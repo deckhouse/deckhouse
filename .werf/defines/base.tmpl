@@ -71,7 +71,7 @@ final: false
 from: {{ index $.Images "builder/distroless" }}
 shell:
   beforeInstall:
-  - pm install diffutils procps bash coreutils findutils gawk grep sed jq yq less vim semver bash-completion gnu-glibc-devel openssl util-linux cryptsetup erofs-utils ncurses python@3.12 python-wheel -n
+  - pm install diffutils procps bash coreutils findutils gawk grep sed jq yq less vim semver bash-completion gnu-glibc-devel gnu-glibc-locale openssl util-linux cryptsetup erofs-utils ncurses python@3.12 python-wheel -n
   install:
   - python3 -m ensurepip
   - python3 -m pip install -f file:///wheels --no-index pyOpenSSL==24.3.0 cryptography==44.0.1 bcrypt==4.1.1
@@ -95,6 +95,7 @@ import:
   includePaths:
   - usr/lib/lib*.so*
   - usr/lib/ld-linux-x86-64.so.2
+  - usr/lib/locale/C.utf8
   - usr/bin/veritysetup
   - usr/bin/mkfs.erofs
   - usr/share/terminfo
