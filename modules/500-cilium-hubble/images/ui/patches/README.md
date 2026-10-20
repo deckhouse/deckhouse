@@ -18,6 +18,7 @@ Updated go dependencies to fix vulnerabilities, e.g.:
 - `github.com/cilium/ebpf` -> `v0.22.0` (CVE-2026-10722)
 - `github.com/cilium/cilium` -> `v1.19.5` (CVE-2026-56742, CVE-2026-56743)
 - `google.golang.org/grpc` -> `v1.83.2` (CVE-2026-84303, CVE-2026-84304, CVE-2026-84445)
+- `golang.org/x/net` -> `v0.60.0` (CVE-2026-78669, CVE-2026-78663, CVE-2026-97032, CVE-2026-78659, CVE-2026-78660)
 
 ## 003--auth.backend.patch
 
