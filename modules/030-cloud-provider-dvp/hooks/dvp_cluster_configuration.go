@@ -412,12 +412,19 @@ func mapPCCtoRootValues(input *go_hook.HookInput, pcc *v1.DvpProviderClusterConf
 	}
 
 	// provider has no disabled flag, overwriting is safe
-	if pcc.Provider != nil && pcc.Provider.Namespace != nil {
-		input.Values.Set("cloudProviderDvp.provider", map[string]any{
-			"parameters": map[string]any{
-				"namespace": *pcc.Provider.Namespace,
-			},
-		})
+	if pcc.Provider != nil {
+		providerParams := map[string]any{}
+		if pcc.Provider.Namespace != nil {
+			providerParams["namespace"] = *pcc.Provider.Namespace
+		}
+		if pcc.Provider.NetworkPolicy != nil {
+			providerParams["networkPolicy"] = *pcc.Provider.NetworkPolicy
+		}
+		if len(providerParams) > 0 {
+			input.Values.Set("cloudProviderDvp.provider", map[string]any{
+				"parameters": providerParams,
+			})
+		}
 	}
 
 	// nodes.disabled intentionally not touched
