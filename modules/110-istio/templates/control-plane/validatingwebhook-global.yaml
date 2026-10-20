@@ -1,4 +1,5 @@
-# Helm cannot deploy the kube-apiserver DestinationRule because it stumbles on this webhook.
+# Helm cannot deploy the module's own Istio resources (Telemetry, DestinationRule, Gateway, etc.) while istiod is not ready,
+# because they stumble on this webhook.
 # isGlobalVersionIstiodReady is under discovery_istiod_health.go hook control.
 
 {{- if .Values.istio.internal.isGlobalVersionIstiodReady }}

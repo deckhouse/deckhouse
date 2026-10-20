@@ -189,11 +189,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(mwh.Exists()).To(BeTrue())
 			Expect(len(mwh.Field("webhooks").Array())).To(Equal(4))
 
-			drApiserver := f.KubernetesResource("DestinationRule", "d8-istio", "kube-apiserver")
-
-			Expect(drApiserver.Exists()).To(BeTrue())
-			Expect(drApiserver.Field("spec.host").String()).To(Equal(`kubernetes.default.svc.my.domain`))
-			Expect(drApiserver.Field("spec.trafficPolicy.tls.mode").String()).To(Equal(`DISABLE`))
+			Expect(f.KubernetesResource("DestinationRule", "d8-istio", "kube-apiserver").Exists()).To(BeFalse())
 
 			Expect(f.KubernetesResource("Deployment", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
