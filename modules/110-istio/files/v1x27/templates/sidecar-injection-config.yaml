@@ -20,11 +20,7 @@ templates:
   # Deprecated no-op, remove in 1.79
   d8-seccomp: |
     spec: {}
+  # No-op: a native sidecar, the default since Istio 1.27, already stops after the application.
+  # Kept so that Pods still requesting this template are injected.
   d8-hold-istio-proxy-termination-until-application-stops: |
-    spec:
-      containers:
-      - name: istio-proxy
-        lifecycle:
-          preStop:
-            exec:
-              command: ["/bin/sh", "-c", "curl -X POST 'localhost:15000/drain_listeners?inboundonly&graceful&skip_exit'; while [ $(ss -Htlp state all | grep -vE '(envoy|pilot-agent|TIME-WAIT)' | wc -l | xargs ) -ne 0 ]; do sleep 1; done"]
+    spec: {}

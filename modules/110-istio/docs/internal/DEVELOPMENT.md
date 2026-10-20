@@ -137,6 +137,7 @@ Istio tag → `manifests/charts/istio-control/istio-discovery/`:
 | static sidecar | `files/injection-template.yaml` |
 | static gateway | `files/gateway-injection-template.yaml` |
 | operator-backed revisions only: `static/d8-seccomp-injection-template.yaml` | nothing — it is Deckhouse's own injection template, not an upstream file |
+| operator-backed revisions only: `static/d8-hold-injection-template.yaml` | nothing — it is Deckhouse's own injection template, not an upstream file. Newer revisions have no such file: their `d8-hold-istio-proxy-termination-until-application-stops` key in `sidecar-injection-config.yaml` is a no-op |
 | operator-backed revisions only: `static/gateway-injection-template.yaml` | `files/gateway-injection-template.yaml` — vendored here as well, because `istios.yaml` overrides the `gateway` key and that replaces the chart's own copy outright |
 | for reference: what Istio puts into the CM | `templates/istiod-injector-configmap.yaml` |
 

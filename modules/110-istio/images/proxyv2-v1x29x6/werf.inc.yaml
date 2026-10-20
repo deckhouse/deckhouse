@@ -67,8 +67,8 @@ import:
   add: /out/lib64/ld-linux-x86-64.so.2
   to: /lib64/ld-linux-x86-64.so.2
   before: install
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-pm-artifact
-  add: /relocate-pm
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-links-artifact
+  add: /relocate
   to: /
   before: setup
 - from: registrypackages/iptables-static-artifact
@@ -357,26 +357,30 @@ from: {{ index $.Images "builder/distroless" }}
 shell:
   beforeInstall:
   - pm install libc@2.43 -d /out
-{{- include "pm_binaries_artifact" (dict
-      "Images" $.Images
-      "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
-      "packages" "bash coreutils curl findutils grep iproute2"
-      "binaries" "/usr/bin/bash:/bin/bash /usr/bin/sh:/bin/sh /usr/bin/ss:/usr/sbin/ss /usr/bin/echo /usr/bin/sleep /usr/bin/wc /usr/bin/grep /usr/bin/xargs /usr/bin/curl"
-      "post" (`mkdir -p "$out/sbin" /sbin
-# The targets live in the final image, not here, and werf drops a symlink it cannot
-# resolve inside the artifact — so each one gets a placeholder to point at. Nothing
-# under /sbin is imported; only $out is.
-touch /sbin/xtables-nft-multi /sbin/xtables-legacy-multi
-for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-  ln -sf /sbin/xtables-nft-multi "$out/sbin/${cmd}"
-done
-for mode in legacy nft; do
-  for basecmd in iptables ip6tables; do
-    for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
-      ln -sf /sbin/xtables-${mode}-multi "$out/sbin/${cmd}"
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-links-artifact
+final: false
+from: {{ index $.Images "builder/distroless" }}
+shell:
+  install:
+  - |
+    set -eu
+    out=/relocate
+    mkdir -p "$out/sbin" /sbin
+    # The targets live in the final image, not here, and werf drops a symlink it cannot
+    # resolve inside the artifact — so each one gets a placeholder to point at. Nothing
+    # under /sbin is imported; only $out is.
+    touch /sbin/xtables-nft-multi /sbin/xtables-legacy-multi
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+      ln -sf /sbin/xtables-nft-multi "$out/sbin/${cmd}"
     done
-  done
-done`)) }}
+    for mode in legacy nft; do
+      for basecmd in iptables ip6tables; do
+        for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+          ln -sf /sbin/xtables-${mode}-multi "$out/sbin/${cmd}"
+        done
+      done
+    done
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
 {{- end }}

@@ -157,8 +157,10 @@ spec:
         - name: AMBIENT_ENABLE_MULTI_NETWORK
           value: "true"
         {{- end }}
+        {{- if not (hasKey $.Values.istio.controlPlane.extraEnvs "ENABLE_NATIVE_SIDECARS") }}
         - name: ENABLE_NATIVE_SIDECARS
-          value: "false"
+          value: "true"
+        {{- end }}
         - name: GOMEMLIMIT
           valueFrom:
             resourceFieldRef:

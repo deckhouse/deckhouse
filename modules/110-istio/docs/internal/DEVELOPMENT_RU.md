@@ -137,6 +137,7 @@ Upstream в `istiod-injector-configmap.yaml` собирает **широкий**
 | static sidecar | `files/injection-template.yaml` |
 | static gateway | `files/gateway-injection-template.yaml` |
 | только для revision с оператором: `static/d8-seccomp-injection-template.yaml` | ничего — это собственный injection-шаблон Deckhouse, а не upstream-файл |
+| только для revision с оператором: `static/d8-hold-injection-template.yaml` | ничего — это собственный injection-шаблон Deckhouse, а не upstream-файл. В новых revision такого файла нет: их ключ `d8-hold-istio-proxy-termination-until-application-stops` в `sidecar-injection-config.yaml` ничего не делает |
 | только для revision с оператором: `static/gateway-injection-template.yaml` | `files/gateway-injection-template.yaml` — вендорим и его, потому что `istios.yaml` переопределяет ключ `gateway`, а это целиком заменяет копию из чарта |
 | справочно: что Istio кладёт в CM | `templates/istiod-injector-configmap.yaml` |
 

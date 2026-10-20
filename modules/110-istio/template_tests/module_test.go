@@ -25,6 +25,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
+	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
@@ -1721,6 +1723,28 @@ MY_VAR: "myvalue"
 		})
 	})
 
+	Context("1.25 sidecar injector templates", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25"]`)
+			f.HelmRender()
+		})
+
+		It("renders a d8-hold template that skips native sidecars", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25")
+			Expect(istioV25.Exists()).To(BeTrue())
+			d8HoldTemplate := istioV25.Field("spec.values.sidecarInjectorWebhook.templates.d8-hold-istio-proxy-termination-until-application-stops").String()
+			Expect(d8HoldTemplate).To(ContainSubstring("sidecar.istio.io/nativeSidecar"))
+			Expect(d8HoldTemplate).To(ContainSubstring(`env "ENABLE_NATIVE_SIDECARS"`))
+			Expect(d8HoldTemplate).To(ContainSubstring("drain_listeners?inboundonly&graceful&skip_exit"))
+		})
+	})
+
 	Context("ingress gateway controller with inlet NodePort is enabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
@@ -2121,8 +2145,15 @@ MY_VAR: "myvalue"
 			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/part-of").String()).To(Equal("istio"))
 			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/managed-by").String()).To(Equal("Helm"))
 
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==ENABLE_NATIVE_SIDECARS).value").String()).To(Equal("true"))
+
 			injectorValues := f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x27").Field("data.values").String()
 			Expect(injectorValues).To(ContainSubstring(`"resources": {}`))
+
+			injectorConfig, err := yaml.YAMLToJSON([]byte(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x27").Field("data.config").String()))
+			Expect(err).ShouldNot(HaveOccurred())
+			d8HoldTemplate := gjson.GetBytes(injectorConfig, "templates.d8-hold-istio-proxy-termination-until-application-stops").String()
+			Expect(d8HoldTemplate).To(Equal("spec: {}"))
 
 			cniConfig := f.KubernetesResource("ConfigMap", "d8-istio", "cni-config")
 			Expect(cniConfig.Field("data.AMBIENT_ENABLEMENT_SELECTOR").String()).To(ContainSubstring("istio.io/dataplane-mode: ambient"))
@@ -2175,8 +2206,15 @@ MY_VAR: "myvalue"
 			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/part-of").String()).To(Equal("istio"))
 			Expect(ds.Field("spec.template.metadata.labels.app\\.kubernetes\\.io/managed-by").String()).To(Equal("Helm"))
 
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==ENABLE_NATIVE_SIDECARS).value").String()).To(Equal("true"))
+
 			injectorValues := f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x29").Field("data.values").String()
 			Expect(injectorValues).To(ContainSubstring(`"resources": {}`))
+
+			injectorConfig, err := yaml.YAMLToJSON([]byte(f.KubernetesResource("ConfigMap", "d8-istio", "istio-sidecar-injector-v1x29").Field("data.config").String()))
+			Expect(err).ShouldNot(HaveOccurred())
+			d8HoldTemplate := gjson.GetBytes(injectorConfig, "templates.d8-hold-istio-proxy-termination-until-application-stops").String()
+			Expect(d8HoldTemplate).To(Equal("spec: {}"))
 
 			cniConfig := f.KubernetesResource("ConfigMap", "d8-istio", "cni-config")
 			Expect(cniConfig.Field("data.AMBIENT_ENABLEMENT_SELECTOR").String()).To(ContainSubstring("istio.io/dataplane-mode: ambient"))
@@ -2343,6 +2381,36 @@ MY_VAR: "myvalue"
 			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==ISTIO_MULTIROOT_MESH).value").String()).To(Equal("true"))
 			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==ENABLE_ENHANCED_RESOURCE_SCOPING).value").String()).To(Equal("true"))
 			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==GOMAXPROCS)").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("operator-free istiod with ENABLE_NATIVE_SIDECARS overridden in controlPlane.extraEnvs", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.27":
+  revision: "v1x27"
+  fullVersion: "1.27.9"
+  imageSuffix: "V1x27x9"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.27"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+			f.ValuesSetFromYaml("istio.controlPlane.extraEnvs", `
+ENABLE_NATIVE_SIDECARS: "false"
+`)
+			f.HelmRender()
+		})
+
+		It("renders the user value instead of the module default, without a duplicate entry", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ds := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27")
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==ENABLE_NATIVE_SIDECARS)#.value").Array()).To(HaveLen(1))
+			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==ENABLE_NATIVE_SIDECARS).value").String()).To(Equal("false"))
 		})
 	})
 

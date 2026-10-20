@@ -1,0 +1,15 @@
+{{- /* [Deckhouse] Same detection as the d8-seccomp template. A native istio-proxy already outlives the
+       application containers, and it lives in initContainers, which a containers overlay would
+       turn into a second, image-less istio-proxy container. */}}
+{{- $nativeSidecar := (or (and (not (isset .ObjectMeta.Annotations `sidecar.istio.io/nativeSidecar`)) (eq (env "ENABLE_NATIVE_SIDECARS" "false") "true")) (eq (index .ObjectMeta.Annotations `sidecar.istio.io/nativeSidecar`) "true")) }}
+{{- if $nativeSidecar }}
+spec: {}
+{{- else }}
+spec:
+  containers:
+  - name: istio-proxy
+    lifecycle:
+      preStop:
+        exec:
+          command: ["/bin/sh", "-c", "curl -X POST 'localhost:15000/drain_listeners?inboundonly&graceful&skip_exit'; while [ $(ss -Htlp state all | grep -vE '(envoy|pilot-agent|TIME-WAIT)' | wc -l | xargs ) -ne 0 ]; do sleep 1; done"]
+{{- end }}

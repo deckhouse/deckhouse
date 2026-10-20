@@ -1123,7 +1123,7 @@ properties:
         type: string
         description: |
           Managing the redirection mode of application traffic to be forwarded under Istio control in the Pod's network namespace.
-          - `CNIPlugin` — in this mode, the configuration is performed by a CNI plugin when creating a Pod on a node. This mode does not require additional permissions for Pods and is recommended. This mode has [limitations](./examples.html#cniplugin-application-traffic-redirection-mode-restrictions) when using application init-containers that perform network communication with other services.
+          - `CNIPlugin` — in this mode, the configuration is performed by a CNI plugin when creating a Pod on a node. This mode does not require additional permissions for Pods and is recommended. This mode has [limitations](./examples.html#cniplugin-application-traffic-redirection-mode-restrictions) when using application init-containers that perform network communication with other services. The limitations apply only to regular sidecars, which Istio 1.25 injects by default.
           - `InitContainer` — classic mode, each application Pod is automatically injected with a special init-container that configures the network environment of the Pod. In order to perform this configuration, the init-container is given additional permissions, which may not meet the security requirements of individual installations.
         default: "InitContainer"
         enum: ["CNIPlugin", "InitContainer"]
@@ -1148,6 +1148,8 @@ properties:
               With this feature, the sidecar-injector injects the sidecar at the first place of Pod's container list and adds a postStart hook to be sure if the Envoy proxy is initialized before the application. So the Envoy is able to handle requests without application network errors.
 
               This global flag can be overriden per Pod by an annotation — `proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'`.
+
+              Has no effect on [native sidecars](./#native-sidecars), which Istio 1.27 and newer inject by default: they always start before the application.
           idleTimeout:
             type: string
             pattern: '^[0-9]+(s|m|h)$'

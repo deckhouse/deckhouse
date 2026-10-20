@@ -171,6 +171,23 @@ The istiod controller and sidecar-proxy containers export their own metrics that
 - DNS requests from within the pods are transparently redirected to the sidecar-proxy for processing:
   - This way, domain names of the services in the neighboring clusters can be disassociated from their addresses.
 
+### Native sidecars
+
+By default, Istio 1.27 and newer inject sidecar-proxy as a [Kubernetes native sidecar](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/). The `istio-proxy` container is placed in `spec.initContainers` and has `restartPolicy: Always`. By default, Istio 1.25 injects a regular sidecar: `istio-proxy` is an ordinary container in `spec.containers`.
+
+A native sidecar is tied to the Pod lifecycle:
+
+- It starts before the application init containers, so they can use the Mesh network.
+- It delays the start of the application containers until the proxy is ready.
+- It stops only after the application containers have exited, so the application keeps network access while shutting down.
+- It doesn't prevent Job Pods from completing.
+
+Since the proxy is already running, the traffic of the application init containers goes through it and follows the same rules as the rest of the Pod's traffic: [`outboundTrafficPolicyMode`](configuration.html#parameters-outboundtrafficpolicymode), Sidecar egress settings, AuthorizationPolicy and mTLS. With a regular sidecar in the `InitContainer` [traffic redirection mode](configuration.html#parameters-dataplane-trafficredirectionsetupmode), the application init containers run before the redirection is set up and bypass the mesh.
+
+When a Pod moves from a regular sidecar to a native one, for example after an upgrade from Istio 1.25, check its init containers that connect to services outside the mesh. With `outboundTrafficPolicyMode: RegistryOnly`, register these services with a ServiceEntry.
+
+To set the sidecar type for a specific Pod, add the `sidecar.istio.io/nativeSidecar` annotation (`"true"` or `"false"`) to the Pod template.
+
 ### User request lifecycle
 
 #### Application with Istio turned off

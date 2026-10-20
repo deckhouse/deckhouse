@@ -837,7 +837,7 @@ To disable the ambient mode, follow these steps:
 
 ### Jobs with an Istio sidecar
 
-A regular Istio sidecar keeps running after a Job's application container exits, preventing the Pod (and therefore the Job) from completing. For Jobs and CronJobs that need Istio, enable a Kubernetes native sidecar in the Pod template. The proxy then won't prevent the Job from completing:
+The module doesn't inject the sidecar into Job Pods unless the Pod template asks for it explicitly:
 
 ```yaml
 spec:
@@ -845,21 +845,24 @@ spec:
     metadata:
       annotations:
         sidecar.istio.io/inject: "true"
-        sidecar.istio.io/nativeSidecar: "true"
 ```
 
-This example assumes the namespace is labeled for Istio injection. In a namespace without an injection label, use the Pod template label `sidecar.istio.io/inject: "true"` instead of the injection annotation; keep `sidecar.istio.io/nativeSidecar: "true"` as a Pod template annotation. For a CronJob, put these settings under `spec.jobTemplate.spec.template.metadata`.
+This example assumes the namespace is labeled for Istio injection. In a namespace without an injection label, use the Pod template label `sidecar.istio.io/inject: "true"` instead of the annotation. For a CronJob, put these settings under `spec.jobTemplate.spec.template.metadata`.
+
+A regular sidecar, which Istio 1.25 injects by default, keeps running after the application container exits and prevents the Job from completing. If the Pod uses a regular sidecar, for example with Istio 1.25, also add the `sidecar.istio.io/nativeSidecar: "true"` annotation to the Pod template.
 
 ### Prevent istio-proxy from terminating before the main application's connections are closed
 
-By default, during termination, all containers in a Pod, including istio-proxy one, receive SIGTERM signal simultaneously. But some applications need time to properly handle the termination and sometimes they need to do some network requests. It isn't possible when the istio-proxy stops before the application do. The solution is to add a preStop hook which evaluates the application's activity via discovering application's network sockets and let the sidecar stop when they aren't in the network namespace.
+With [native sidecars](./#native-sidecars), which Istio 1.27 and newer inject by default, `istio-proxy` stops only after the application containers have exited: it receives SIGTERM after them, and the application keeps network access while shutting down.
 
-The annotation below adds the preStop hook to istio-proxy container in application's Pod:
+With a regular sidecar, which Istio 1.25 injects by default, all containers in a Pod, including `istio-proxy`, receive SIGTERM simultaneously. Applications that need network access while shutting down lose it when `istio-proxy` stops first. For these Pods, add a preStop hook to `istio-proxy`. The hook waits until the application has no network sockets left in the Pod's network namespace:
 
 ```yaml
 annotations:
   inject.istio.io/templates: "sidecar,d8-hold-istio-proxy-termination-until-application-stops"
 ```
+
+The `d8-hold-istio-proxy-termination-until-application-stops` injection template works only with Istio 1.25. With Istio 1.27 and newer, it does nothing, even for Pods with a regular sidecar. Use a native sidecar for these Pods instead.
 
 <span id="telemetry-api-mesh-observability"></span>
 
@@ -1146,7 +1149,9 @@ The RBAC manifest above is not enough to run `istioctl analyze` or `istioctl ana
 
 ## CNIPlugin application traffic redirection mode restrictions
 
-Unlike the `InitContainer` mode, the redirection setting is done at the moment of Pod creating, not at the moment of triggering the `istio-init` init-container. This means that application init-containers will not be able to interact with other services because all traffic will be redirected to the `istio-proxy` sidecar container, which is not yet running. Workarounds:
+The restriction described below applies only to regular sidecars, which Istio 1.25 injects by default. A [native sidecar](./#native-sidecars) starts before the application init containers, so their traffic goes through the mesh like the rest of the Pod's traffic.
+
+Unlike the `InitContainer` mode, the redirection setting is done at the moment of Pod creating, not at the moment of triggering the `istio-init` init container. This means that application init containers will not be able to interact with other services because all traffic will be redirected to the `istio-proxy` sidecar container, which is not yet running. Workarounds:
 
 * Run the application init container from the user with uid `1337`. Requests from this user are not intercepted under Istio control.
 * Exclude a service IP address or port from Istio control using the `traffic.sidecar.istio.io/excludeOutboundIPRanges` or `traffic.sidecar.istio.io/excludeOutboundPorts` annotations.
