@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
-	github.com/flant/shell-operator v1.21.0
+	github.com/flant/shell-operator v1.21.2
 	github.com/stretchr/testify v1.11.1
 	k8s.io/api v0.35.8
 	k8s.io/apiextensions-apiserver v0.35.8

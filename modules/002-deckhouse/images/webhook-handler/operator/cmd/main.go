@@ -56,6 +56,7 @@ import (
 
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
 	"deckhouse.io/webhook/internal/controller"
+	"deckhouse.io/webhook/internal/hookrunner"
 )
 
 var (
@@ -417,6 +418,7 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
+	var pythonHookServer string
 	var tlsOpts []func(*tls.Config)
 	// healthcheck value
 	var isAlive = true
@@ -437,6 +439,8 @@ func main() {
 	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.StringVar(&pythonHookServer, "python-hook-server", "/python-hook-server.py",
+		"The script that runs Python hooks on one long-lived interpreter. Empty starts python3 for every request.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -609,7 +613,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	shOp, err := shell_operator.NewShellOperator(ctx, shCfg, shell_operator.WithLogger(logger.Named("shell-operator")))
+	shOpts := []shell_operator.Option{shell_operator.WithLogger(logger.Named("shell-operator"))}
+	if pythonHookServer != "" {
+		runner := hookrunner.New("python3", pythonHookServer, filepath.Join(os.TempDir(), "python-hook-server.sock"),
+			logger.Named("python-hook-server"))
+		go runner.Serve(ctx)
+		shOpts = append(shOpts, shell_operator.WithHookRunner(runner))
+	}
+
+	shOp, err := shell_operator.NewShellOperator(ctx, shCfg, shOpts...)
 	if err != nil {
 		setupLog.Error(err, "unable to initialise shell-operator")
 		os.Exit(1)

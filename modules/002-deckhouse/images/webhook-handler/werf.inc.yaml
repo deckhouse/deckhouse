@@ -105,12 +105,28 @@ git:
     - '**/testdata'
 - add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/src/entrypoint.sh
   to: /entrypoint.sh
+{{- /*
+  webhook-operator starts it once and hands it the Python hooks, so that a request costs a fork
+  instead of an interpreter start-up; see operator/internal/hookrunner.
+*/}}
+- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/src/python_hook_server.py
+  to: /python-hook-server.py
 - add: /{{ .ModulePath }}shell_lib/semver.sh
   to: /{{ .ModulePath }}frameworks/shell/semver.sh
 - add: /{{ .ModulePath }}python_lib
   to: /frameworks/python
 - add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/operator/internal/controller/templates
   to: /internal/controller/templates
+shell:
+  install:
+{{- /*
+  The root filesystem is read-only at runtime, so Python cannot cache bytecode for a module that
+  ships without it and compiles it again in every process: sitecustomize.py, and pprint.py, which
+  the deckhouse library imports, cost about 3 ms per hook start that way. The top level of the
+  standard library is compiled here (2.7 MB); packages already ship their bytecode. checked-hash
+  keeps a file that a later git patch changes correct: its bytecode no longer matches and is ignored.
+*/}}
+  - python3 -m compileall -q -l --invalidation-mode checked-hash /usr/lib/python3.12 /frameworks/python
 imageSpec:
   config:
     env: {"PYTHONPATH": "/frameworks/python"}
