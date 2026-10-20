@@ -13,7 +13,7 @@ USB device passthrough requires:
 
 - `containerd v2`: Detailed requirements for cluster nodes are described in the [`defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) parameter.
 - [Kubernetes](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#kubernetes) version 1.34 or higher.
-- [Deckhouse Kubernetes Platform (DKP)](https://releases.deckhouse.io/) version 1.75 or higher.
+- [Deckhouse Platform (DP)](https://releases.deckhouse.io/) version 1.75 or higher.
 
 ## Overview
 

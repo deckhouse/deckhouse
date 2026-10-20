@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/about/editions.html
 lang: ru
 ---
 
-Deckhouse Virtualization Platform (DVP) доступна как самостоятельный продукт и как модуль виртуализации, интегрированный в определённые редакции Deckhouse Kubernetes Platform (DKP).
+Deckhouse Virtualization Platform (DVP) доступна как самостоятельный продукт и как модуль виртуализации, интегрированный в определённые редакции Deckhouse Platform (DP).
 
 Поставляется как самостоятельный продукт:
 
