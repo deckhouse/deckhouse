@@ -9,6 +9,9 @@ shipped by upstream Cilium v1.17.17 to remediate known CVEs, e.g.:
 - `github.com/envoyproxy/go-control-plane/envoy` -> `v1.37.0`
 - `go.mongodb.org/mongo-driver` -> `v1.17.7`
 - `github.com/cilium/ebpf` -> `v0.22.0` (CVE-2026-10722)
+- `golang.org/x/net` -> `v0.60.0` (CVE-2026-78669, CVE-2026-78663, CVE-2026-97032,
+  CVE-2026-78659, CVE-2026-78660); pulls `golang.org/x/crypto` `v0.57.0`,
+  `golang.org/x/text` `v0.42.0`, `golang.org/x/sys` `v0.48.0` and other `golang.org/x/*`
 
 Regenerate by cloning `cilium v1.17.17`, applying this patch, bumping the
 required module(s), then running `go mod tidy && go mod vendor && go mod verify`
