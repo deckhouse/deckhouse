@@ -138,7 +138,7 @@ fi
 
 {{- $containerd := "containerd1736"}}
 {{- if eq .cri "ContainerdV2" }}
-  {{- $containerd = "containerd229" }}
+  {{- $containerd = "containerd2210" }}
 bb-package-install "erofs:{{ .images.registrypackages.erofs }}" "cryptsetup:{{ .images.registrypackages.cryptsetup }}"
 {{- end }}
 
