@@ -1,0 +1,8 @@
+<footer class="footer">
+    <div class="footer__content container">
+      {% include copyright.html %}
+    </div>
+</footer>
+
+{%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+<script type='text/javascript' src='/assets/js/codeblock.js?v={{ assetHash }}'></script>

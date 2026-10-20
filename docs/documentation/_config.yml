@@ -163,6 +163,10 @@ defaults:
     values:
       editionsNotAvailable: [cse]
   - scope:
+      path: "pages/guides"
+    values:
+      editionsNotAvailable: [cse]
+  - scope:
       path: "pages/admin"
     values:
       sidebar: main

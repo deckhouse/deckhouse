@@ -2,6 +2,7 @@
 title: List of reserved Deckhouse Platform DNS names
 permalink: en/reference/public-domains.html
 description: List of reserved DNS names that Deckhouse Platform uses. Hosts file data generator
+editionsNotAvailable: [cse]
 search: public domains DP
 ---
 
