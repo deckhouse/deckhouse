@@ -18,13 +18,63 @@
           "type": "dashboard"
         },
         "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "enable": false,
+        "expr": "max (etcd_server_leader_changes_seen_total{job=\"kube-etcd3\", node=~\"$node\"}) - max (etcd_server_leader_changes_seen_total{job=\"kube-etcd3\", node=~\"$node\"} offset $__interval) > bool 0",
+        "iconColor": "red",
+        "name": "Leader change",
+        "titleFormat": "etcd leader change"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "enable": false,
+        "expr": "sum by (node) (etcd_disk_backend_defrag_duration_seconds_count{job=\"kube-etcd3\", node=~\"$node\"}) - sum by (node) (etcd_disk_backend_defrag_duration_seconds_count{job=\"kube-etcd3\", node=~\"$node\"} offset $__interval) > bool 0",
+        "iconColor": "orange",
+        "name": "Defrag",
+        "tagKeys": "node",
+        "textFormat": "{{node}}",
+        "titleFormat": "etcd defrag"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "enable": false,
+        "expr": "sum by (node) ({__name__=~\"etcd_network_snapshot_send_(success|failures)\", job=\"kube-etcd3\", node=~\"$node\"}) - sum by (node) ({__name__=~\"etcd_network_snapshot_send_(success|failures)\", job=\"kube-etcd3\", node=~\"$node\"} offset $__interval) > bool 0",
+        "iconColor": "blue",
+        "name": "Snapshot",
+        "tagKeys": "node",
+        "textFormat": "{{node}}",
+        "titleFormat": "raft snapshot sent"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "$ds_prometheus"
+        },
+        "enable": false,
+        "expr": "max by (node) (process_start_time_seconds{job=\"kube-etcd3\", node=~\"$node\"}) != bool max by (node) (process_start_time_seconds{job=\"kube-etcd3\", node=~\"$node\"} offset $__interval)",
+        "iconColor": "purple",
+        "name": "Restart",
+        "tagKeys": "node",
+        "textFormat": "{{node}}",
+        "titleFormat": "etcd restart"
       }
     ]
   },
   "description": "",
   "editable": false,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": 19,
   "links": [],
   "liveNow": false,
@@ -33,22 +83,129 @@
       "datasource": {
         "uid": "$ds_prometheus"
       },
+      "description": "Which member is the leader. Disk and network of the leader affect every write in the cluster.\n\nFrequent changes: the leader does not reach the others in time, see 'Disk Sync Duration p99' (fsync above 1s) and 'Peer RTT p99'.",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "custom": {
+            "fillOpacity": 70,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineWidth": 0,
+            "spanNulls": false
           },
           "mappings": [
             {
               "options": {
-                "match": "null",
-                "result": {
-                  "text": "N/A"
+                "1": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "leader"
                 }
               },
-              "type": "special"
+              "type": "value"
             }
           ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 50,
+      "options": {
+        "alignValue": "left",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "mergeValues": true,
+        "rowHeight": 0.9,
+        "showValue": "never",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "max by (node) (etcd_server_is_leader{job=\"kube-etcd3\", node=~\"$node\"}) == 1",
+          "legendFormat": "{{node}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Leader",
+      "type": "state-timeline"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "description": "CPU of the master node. etcd has no CPU limit, it suffers only when the whole node is busy.\n\nbusy is high: another process takes the CPU, see the node dashboard.\n\niowait is high with slow fsync: the disk is the bottleneck. iowait is high with normal fsync: another process loads the disk.\n\nsteal is high: the hypervisor takes the CPU, invisible from inside the node.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "max": 1,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -62,34 +219,28 @@
               }
             ]
           },
-          "unit": "none"
+          "unit": "percentunit"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 3,
-        "x": 0,
+        "h": 8,
+        "w": 8,
+        "x": 8,
         "y": 0
       },
-      "id": 28,
-      "maxDataPoints": 100,
+      "id": 60,
       "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "fields": "",
-          "values": false
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "showPercentChange": false,
-        "text": {},
-        "textMode": "auto",
-        "wideLayout": true
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "pluginVersion": "10.4.5",
       "targets": [
@@ -97,33 +248,74 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(etcd_server_has_leader{job=\"kube-etcd3\", node=~\"$node\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "",
-          "metric": "etcd_server_has_leader",
-          "refId": "A",
-          "step": 20
+          "expr": "clamp_min(1 - avg by (node) (rate(node_cpu_seconds_total{job=\"node-exporter\", node=~\"$node\", mode=\"idle\"}[$__rate_interval])), 0)",
+          "legendFormat": "{{node}} busy",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "avg by (node) (rate(node_cpu_seconds_total{job=\"node-exporter\", node=~\"$node\", mode=\"iowait\"}[$__rate_interval]))",
+          "legendFormat": "{{node}} iowait",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "avg by (node) (rate(node_cpu_seconds_total{job=\"node-exporter\", node=~\"$node\", mode=\"steal\"}[$__rate_interval]))",
+          "legendFormat": "{{node}} steal",
+          "range": true,
+          "refId": "C"
         }
       ],
-      "title": "Up",
-      "type": "stat"
+      "title": "Node CPU",
+      "type": "timeseries"
     },
     {
       "datasource": {
         "uid": "$ds_prometheus"
       },
+      "description": "Time etcd spends on a request, per member. Unary requests only, without Watch and Lease streams.\n\nOne member is slow: its node, see 'Node CPU', 'Disk Sync Duration p99', 'DB Reads from Disk'.\n\nAll members are slow: the leader or the network, see 'Leader', 'Disk Sync Duration p99', 'Peer RTT p99'.\n\nSpikes every 5 minutes: compaction, see 'Compaction: Write Pause p99'.\n\nNothing explains it: etcd logs every request slower than 100ms with its key and size, search the etcd log for 'apply request took too long'.",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
           },
           "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
             },
-            "inspect": false
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
@@ -138,52 +330,29 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "s"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Metric"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Service / Node"
-              },
-              {
-                "id": "unit",
-                "value": "short"
-              },
-              {
-                "id": "decimals",
-                "value": 2
-              },
-              {
-                "id": "custom.align"
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 3,
-        "x": 3,
+        "h": 8,
+        "w": 8,
+        "x": 16,
         "y": 0
       },
-      "id": 43,
+      "id": 46,
       "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
         },
-        "showHeader": true
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "pluginVersion": "10.4.5",
       "targets": [
@@ -191,32 +360,132 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "changes(etcd_server_leader_changes_seen_total{job=\"kube-etcd3\", node=~\"$node\"}[$__range])",
-          "format": "time_series",
-          "instant": true,
-          "intervalFactor": 1,
+          "expr": "histogram_quantile(0.99, sum by (node, le) (rate(grpc_server_handling_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\", grpc_type=\"unary\"}[$__rate_interval])))",
           "legendFormat": "{{node}}",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Total Leader Elections",
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "includeTimeField": false,
-            "reducers": [
-              "lastNotNull"
-            ]
-          }
-        }
-      ],
-      "type": "table"
+      "title": "RPC Duration p99 by Node",
+      "type": "timeseries"
     },
     {
       "datasource": {
         "uid": "$ds_prometheus"
       },
+      "description": "etcd request latency measured by kube-apiserver across all members. The node filter does not apply.\n\nlist is slow, get is fast: reads are heavy, see 'LIST from etcd'.\n\nget is slow too: requests are waiting, see 'RPC Duration p99 by Node', disk, CPU and maintenance.\n\nwrite (create, update, delete) is slow: the write path, see 'Disk Sync Duration p99' and 'Peer RTT p99'.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      },
+      "id": 62,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(etcd_request_duration_seconds_bucket{job=\"kube-apiserver\", operation=~\"create|update|delete\"}[$__rate_interval])))",
+          "legendFormat": "write",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(etcd_request_duration_seconds_bucket{job=\"kube-apiserver\", operation=~\"get\"}[$__rate_interval])))",
+          "legendFormat": "get",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(etcd_request_duration_seconds_bucket{job=\"kube-apiserver\", operation=~\"list.*\"}[$__rate_interval])))",
+          "legendFormat": "list",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "apiserver -> etcd p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "description": "Writes from kube-apiserver to etcd, the 5 busiest resources over the selected range. The node filter does not apply.\n\nA spike together with slow 'Disk Sync Duration p99': this resource overloads the disk. No spike: the disk itself became slow.\n\nThe resource name is in 'resource' since Kubernetes 1.34, in 'type' before.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -273,22 +542,22 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
-        "w": 10,
-        "x": 6,
-        "y": 0
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 8
       },
-      "id": 23,
+      "id": 70,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       },
       "pluginVersion": "10.4.5",
@@ -297,34 +566,136 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(grpc_server_started_total{job=\"kube-etcd3\", node=~\"$node\", grpc_type=\"unary\"}[$__rate_interval]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "RPC Rate",
-          "metric": "grpc_server_started_total",
-          "refId": "A",
-          "step": 2
-        },
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "sum(rate(grpc_server_handled_total{job=\"kube-etcd3\", node=~\"$node\", grpc_type=\"unary\",grpc_code!=\"OK\"}[$__rate_interval]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "RPC Failed Rate",
-          "metric": "grpc_server_handled_total",
-          "refId": "B",
-          "step": 2
+          "expr": "sum by (resource, type) (rate(etcd_request_duration_seconds_count{job=\"kube-apiserver\", operation=~\"create|update|delete\"}[$__rate_interval])) and on (resource, type) topk(5, sum by (resource, type) (increase(etcd_request_duration_seconds_count{job=\"kube-apiserver\", operation=~\"create|update|delete\"}[$__range] @ end())))",
+          "legendFormat": "{{resource}}{{type}}",
+          "range": true,
+          "refId": "A"
         }
       ],
-      "title": "RPC Rate",
+      "title": "Writes to etcd by Resource (top 5)",
       "type": "timeseries"
     },
     {
       "datasource": {
         "uid": "$ds_prometheus"
       },
+      "description": "How long writes were blocked by compaction, per member. Every 5 minutes compaction deletes old revisions in batches of 1000: a batch reads them from the database file, deletes them and commits. Writes wait, reads do not.\n\nA spike on 'RPC Duration p99 by Node' of about the same height at the same time: the spike is compaction.\n\nBars of seconds with a spike on 'DB Reads from Disk' at the same time: the old revisions are read from disk, the database is not in the page cache, see 'DB in Page Cache'.\n\nBars of seconds without reads from disk: the batch writes a lot, the database is large or fragmented, see 'DB Size', defrag helps.\n\n'4 s+' is the ceiling of the metric, the real pause was longer, the axis stops there. 'Disk Sync Duration p99' does not show these pauses: one slow commit among thousands is outside p99.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMax": 0,
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [
+            {
+              "options": {
+                "4": {
+                  "index": 0,
+                  "text": "4 s+"
+                }
+              },
+              "type": "value"
+            },
+            {
+              "options": {
+                "from": 4.09,
+                "result": {
+                  "index": 1,
+                  "text": "4 s+ (metric ceiling)"
+                }
+              },
+              "type": "range"
+            }
+          ],
+          "max": 4.096,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 8
+      },
+      "id": 68,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum by (node, le) (rate(etcd_debugging_mvcc_db_compaction_pause_duration_milliseconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval]))) / 1000",
+          "legendFormat": "{{node}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Compaction: Write Pause p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "description": "Objects read from etcd by LIST requests that bypass the watch cache, the 5 heaviest resources over the selected range. The node filter does not apply.\n\nA spike together with slow 'list' on 'apiserver -> etcd p99': this resource is listed from etcd, find the client in the apiserver audit log.\n\nA spike right after a 'Restart' annotation: apiserver refills its watch cache, normal.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -347,7 +718,7 @@
             },
             "insertNulls": false,
             "lineInterpolation": "stepAfter",
-            "lineWidth": 2,
+            "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
@@ -356,7 +727,7 @@
             "spanNulls": true,
             "stacking": {
               "group": "A",
-              "mode": "normal"
+              "mode": "none"
             },
             "thresholdsStyle": {
               "mode": "off"
@@ -381,22 +752,22 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
-        "x": 16,
-        "y": 0
+        "x": 0,
+        "y": 16
       },
-      "id": 41,
+      "id": 64,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       },
       "pluginVersion": "10.4.5",
@@ -405,34 +776,217 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(grpc_server_started_total{job=\"kube-etcd3\", node=~\"$node\", grpc_service=\"etcdserverpb.Watch\", grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{job=\"kube-etcd3\", node=~\"$node\", grpc_service=\"etcdserverpb.Watch\", grpc_type=\"bidi_stream\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Watch Streams",
-          "metric": "grpc_server_handled_total",
-          "refId": "A",
-          "step": 4
-        },
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "sum(grpc_server_started_total{job=\"kube-etcd3\", node=~\"$node\", grpc_service=\"etcdserverpb.Lease\", grpc_type=\"bidi_stream\"}) - sum(grpc_server_handled_total{job=\"kube-etcd3\", node=~\"$node\", grpc_service=\"etcdserverpb.Lease\", grpc_type=\"bidi_stream\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Lease Streams",
-          "metric": "grpc_server_handled_total",
-          "refId": "B",
-          "step": 4
+          "expr": "sum by (resource) (rate(apiserver_storage_list_fetched_objects_total{job=\"kube-apiserver\"}[$__rate_interval])) and on (resource) topk(5, sum by (resource) (increase(apiserver_storage_list_fetched_objects_total{job=\"kube-apiserver\"}[$__range] @ end())))",
+          "legendFormat": "{{resource}}",
+          "range": true,
+          "refId": "A"
         }
       ],
-      "title": "Active Streams",
+      "title": "LIST from etcd: Objects Fetched/s (top 5)",
       "type": "timeseries"
     },
     {
       "datasource": {
         "uid": "$ds_prometheus"
       },
+      "description": "Time etcd waits for the disk, per member. WAL fsync: before a write is acknowledged, normal below 10ms. DB commit: periodic flush of the database, normal below 25ms.\n\nSlow on the leader or on most members: every write is slow. Above 1s on the leader: the leader changes.\n\nSlow on one follower: only reads from it are slow.\n\nSlow together with a spike on 'Writes to etcd by Resource': load. Slow without a spike: the disk itself, see iowait on 'Node CPU'.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 16
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum by (node, le) (rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])))",
+          "legendFormat": "{{node}} WAL fsync (ok < 10ms)",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum by (node, le) (rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])))",
+          "legendFormat": "{{node}} DB commit (ok < 25ms)",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Disk Sync Duration p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "description": "How often etcd reads a database page from disk because it is not in the page cache, per member. Writes never count here.\n\nAbove zero with slow reads on 'RPC Duration p99 by Node': the page cache is evicted, see 'DB in Page Cache'.\n\nA short burst after a node reboot or an etcd restart: the cache warms up, normal.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 16
+      },
+      "id": 74,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "rate(container_memory_failures_total{namespace=\"kube-system\", container=\"etcd\", node=~\"$node\", failure_type=\"pgmajfault\", scope=\"container\"}[$__rate_interval])",
+          "legendFormat": "{{node}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "DB Reads from Disk (major faults/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "description": "Size of the database file, per member. It includes free pages left by compaction, defrag returns them, so a drop at a 'Defrag' annotation is normal.\n\nGrows: objects or their history grow, see 'Writes to etcd by Resource'.\n\nClose to the quota: etcd stops accepting writes, see the alert D8KubeEtcdDatabaseSizeCloseToTheLimit.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -489,10 +1043,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 0,
-        "y": 7
+        "y": 24
       },
       "id": 1,
       "options": {
@@ -500,11 +1054,11 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       },
       "pluginVersion": "10.4.5",
@@ -514,13 +1068,9 @@
             "uid": "$ds_prometheus"
           },
           "expr": "etcd_mvcc_db_total_size_in_bytes{job=\"kube-etcd3\", node=~\"$node\"}",
-          "format": "time_series",
-          "hide": false,
-          "intervalFactor": 1,
           "legendFormat": "{{node}} DB Size",
-          "metric": "",
-          "refId": "A",
-          "step": 4
+          "range": true,
+          "refId": "A"
         }
       ],
       "title": "DB Size",
@@ -530,388 +1080,7 @@
       "datasource": {
         "uid": "$ds_prometheus"
       },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 100,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "stepAfter",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "ops"
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/^0.000[0-9]/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#56A64B",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/^0.00[1-9]/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#F2CC0C",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/^0.0[1-9]/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#FF780A",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/^0.[1-9]/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#E02F44",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byRegexp",
-              "options": "/^[1-9]/"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#C4162A",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "+Inf"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#AD0317",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 8,
-        "y": 7
-      },
-      "id": 44,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "exemplar": true,
-          "expr": "sum(rate(etcd_server_apply_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (le)",
-          "format": "heatmap",
-          "hide": false,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{le}}",
-          "metric": "etcd_disk_wal_fsync_duration_seconds_bucket",
-          "refId": "A",
-          "step": 4
-        }
-      ],
-      "title": "Apply duration bucket",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 30,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "stepAfter",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "Bps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 7
-      },
-      "id": 22,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "rate(etcd_network_client_grpc_received_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{node}} Client Traffic In",
-          "metric": "etcd_network_client_grpc_received_bytes_total",
-          "refId": "A",
-          "step": 4
-        }
-      ],
-      "title": "Client Traffic In",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "stepAfter",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 0,
-        "y": 14
-      },
-      "id": 29,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "process_resident_memory_bytes{job=\"kube-etcd3\", node=~\"$node\"}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{node}} Resident Memory",
-          "metric": "process_resident_memory_bytes",
-          "refId": "A",
-          "step": 4
-        }
-      ],
-      "title": "Memory",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
+      "description": "Round trip between members over the raft channel. Empty in single-master clusters.\n\nEvery write waits for a round trip to the majority, every read checks the leader: RTT adds to both.\n\nClose to the election timeout (1s), or packet loss: heartbeats do not arrive in time and the leader changes, see 'Leader'.\n\nOne direction A -> B is high: the problem is on B or on this link. All directions of one node are high: the network of this node.\n\n'unknown member': Prometheus has no metrics from this member, it is not scraped or has no node any more, compare with 'etcdctl member list'.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -968,638 +1137,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 8,
         "x": 8,
-        "y": 14
-      },
-      "id": 3,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "exemplar": true,
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node, le))",
-          "format": "time_series",
-          "hide": false,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{node}} WAL fsync",
-          "metric": "etcd_disk_wal_fsync_duration_seconds_bucket",
-          "refId": "A",
-          "step": 4
-        },
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node, le))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{node}} DB fsync",
-          "metric": "etcd_disk_backend_commit_duration_seconds_bucket",
-          "refId": "B",
-          "step": 4
-        }
-      ],
-      "title": "Disk Sync Duration",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 30,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "stepAfter",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "Bps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 14
-      },
-      "id": 21,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "rate(etcd_network_client_grpc_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{node}} Client Traffic Out",
-          "metric": "etcd_network_client_grpc_sent_bytes_total",
-          "refId": "A",
-          "step": 4
-        }
-      ],
-      "title": "Client Traffic Out",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "stepAfter",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 0,
-        "y": 21
-      },
-      "id": 40,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "sum(rate(etcd_server_proposals_failed_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Proposal Failure Rate",
-          "metric": "etcd_server_proposals_failed_total",
-          "refId": "A",
-          "step": 2
-        },
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "sum(etcd_server_proposals_pending{job=\"kube-etcd3\", node=~\"$node\"})",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Proposal Pending Total",
-          "metric": "etcd_server_proposals_pending",
-          "refId": "B",
-          "step": 2
-        },
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "sum(rate(etcd_server_proposals_committed_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Proposal Commit Rate",
-          "metric": "etcd_server_proposals_committed_total",
-          "refId": "C",
-          "step": 2
-        },
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "sum(rate(etcd_server_proposals_applied_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval]))",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "Proposal Apply Rate",
-          "refId": "D",
-          "step": 2
-        }
-      ],
-      "title": "Raft Proposals",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "stepAfter",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "Bps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 8,
-        "y": 21
-      },
-      "id": 20,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "sum(rate(etcd_network_peer_received_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{node}} Peer Traffic In",
-          "metric": "etcd_network_peer_received_bytes_total",
-          "refId": "A",
-          "step": 4
-        }
-      ],
-      "title": "Peer Traffic In",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "stepAfter",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "Bps"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 21
-      },
-      "id": 16,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "sum(rate(etcd_network_peer_sent_bytes_total{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node)",
-          "format": "time_series",
-          "hide": false,
-          "intervalFactor": 1,
-          "legendFormat": "{{node}} Peer Traffic Out",
-          "metric": "etcd_network_peer_sent_bytes_total",
-          "refId": "A",
-          "step": 4
-        }
-      ],
-      "title": "Peer Traffic Out",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "stepAfter",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 28
-      },
-      "id": 46,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.4.5",
-      "targets": [
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "expr": "histogram_quantile(0.99, sum(rate(grpc_server_handling_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node, le))",
-          "hide": false,
-          "intervalFactor": 1,
-          "legendFormat": "{{node}} RPC Request Duration",
-          "range": true,
-          "refId": "A",
-          "step": 4
-        }
-      ],
-      "title": "RPC Request Duration",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "uid": "$ds_prometheus"
-      },
-      "description": "Peer RTT panel only relevant for multi-master configuration and will be null in single-master cluster.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "stepAfter",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 28
+        "y": 24
       },
       "id": 48,
       "options": {
@@ -1607,11 +1148,11 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc"
         }
       },
       "pluginVersion": "10.4.5",
@@ -1620,16 +1161,108 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "histogram_quantile(0.99, sum(rate(etcd_network_peer_round_trip_time_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])) by (node, le))",
-          "hide": false,
-          "intervalFactor": 1,
-          "legendFormat": "{{node}} Peer RTT",
+          "expr": "(histogram_quantile(0.99, sum by (node, To, le) (rate(etcd_network_peer_round_trip_time_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])))) * on (To) group_left (peer) max by (To, peer) (label_replace(label_replace(last_over_time(etcd_server_id{job=\"kube-etcd3\"}[1d]), \"To\", \"$1\", \"server_id\", \"(.+)\"), \"peer\", \"$1\", \"node\", \"(.+)\")) or on (node, To) label_replace((histogram_quantile(0.99, sum by (node, To, le) (rate(etcd_network_peer_round_trip_time_seconds_bucket{job=\"kube-etcd3\", node=~\"$node\"}[$__rate_interval])))), \"peer\", \"unknown member\", \"To\", \".*\")",
+          "legendFormat": "{{node}} -> {{peer}} ({{To}})",
           "range": true,
-          "refId": "A",
-          "step": 4
+          "refId": "A"
         }
       ],
-      "title": "Peer RTT",
+      "title": "Peer RTT p99",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "$ds_prometheus"
+      },
+      "description": "Share of the database data that is in memory, per member. etcd reads the database through the page cache, a page that is not there is read from disk.\n\nNear 100%: all reads are from memory.\n\nA drop with 'DB Reads from Disk' above zero: the node is short of memory and the cache is evicted, see the node dashboard for who takes it.\n\nA drop without reads from disk: the evicted pages are cold, not a problem. A drop after a 'Restart' annotation: a measurement artifact until the next defrag.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 24
+      },
+      "id": 72,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "10.4.5",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "expr": "clamp_max(max by (node) (container_memory_mapped_file{namespace=\"kube-system\", container=\"etcd\", node=~\"$node\"}) / max by (node) (etcd_mvcc_db_total_size_in_use_in_bytes{job=\"kube-etcd3\", node=~\"$node\"}), 1)",
+          "legendFormat": "{{node}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "DB in Page Cache (share of DB in use)",
       "type": "timeseries"
     }
   ],
