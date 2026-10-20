@@ -19,6 +19,7 @@ package hooks
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -303,6 +304,57 @@ data:
 		})
 	})
 
+	clusterConfigNetworkPolicy := strings.Replace(
+		clusterConfig, "  namespace: cloud-provider01\n", "  namespace: cloud-provider01\n  networkPolicy: None\n", 1,
+	)
+
+	pccSecretNetworkPolicy := fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-provider-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+`, base64.StdEncoding.EncodeToString([]byte(clusterConfigNetworkPolicy)))
+
+	// ---- State B (networkPolicy): the migration ModuleConfig carries provider.networkPolicy of the PCC ----
+	Context("State B (networkPolicy): PCC with provider.networkPolicy", func() {
+		f := HookExecutionConfigInit(migrationValues, `{}`)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			f.KubeStateSet(pccSecretNetworkPolicy)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("should carry networkPolicy of the PCC into provider.parameters", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(migrationModuleConfigProviderParameters(f)).To(HaveKeyWithValue("networkPolicy", "None"))
+		})
+	})
+
+	Context("State B (default networkPolicy): PCC without provider.networkPolicy", func() {
+		f := HookExecutionConfigInit(migrationValues, `{}`)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		f.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			f.KubeStateSet(pccSecret)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunHook()
+		})
+
+		It("should carry the schema default Isolated of the PCC", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(migrationModuleConfigProviderParameters(f)).To(HaveKeyWithValue("networkPolicy", "Isolated"))
+		})
+	})
+
 	// ---- State A: no PCC — OnAfterHelm does nothing ----
 	Context("State A: no PCC — OnAfterHelm does not create migration resources", func() {
 		f := HookExecutionConfigInit(migrationValues, `{}`)
@@ -571,6 +623,29 @@ spec:
 		})
 	})
 })
+
+// migrationModuleConfigProviderParameters returns settings.provider.parameters of the ModuleConfig
+// in the migration resources secret.
+func migrationModuleConfigProviderParameters(f *HookExecutionConfig) map[string]any {
+	migrationSecret := f.KubernetesResource("Secret", "d8-cloud-provider-dvp", "d8-migration-resources")
+	Expect(migrationSecret.Exists()).To(BeTrue())
+
+	rawBytes, err := base64.StdEncoding.DecodeString(migrationSecret.Field("data.resources\\.yaml").String())
+	Expect(err).NotTo(HaveOccurred())
+
+	for _, doc := range splitYAMLDocuments(string(rawBytes)) {
+		var obj map[string]any
+		if err := yaml.Unmarshal([]byte(doc), &obj); err != nil || obj["kind"] != "ModuleConfig" {
+			continue
+		}
+		settings := obj["spec"].(map[string]any)["settings"].(map[string]any)
+		return settings["provider"].(map[string]any)["parameters"].(map[string]any)
+	}
+
+	Fail("ModuleConfig document must be present in resources.yaml")
+
+	return nil
+}
 
 // splitYAMLDocuments splits a multi-document YAML string into individual documents.
 func splitYAMLDocuments(multiDoc string) []string {

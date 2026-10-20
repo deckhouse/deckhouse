@@ -116,15 +116,19 @@ func buildD8CredentialsSecret(kubeconfigDataBase64 string) map[string]any {
 
 // buildModuleConfigFromPCC builds the ModuleConfig v2 manifest for the PCC (cloud
 // DVP) migration path. Provider and nodes settings are derived from the
-// ProviderClusterConfiguration: namespace, layout, sshPublicKey, region, zones
+// ProviderClusterConfiguration: namespace, networkPolicy, layout, sshPublicKey, region, zones
 // and the per-NodeGroup ipAddresses aggregated from the master and worker
 // NodeGroups. storage.parameters is emitted empty and disabled flags are omitted
 // so schema defaults apply, matching buildModuleConfigForHybrid.
 func buildModuleConfigFromPCC(cfg *v1.DvpProviderClusterConfiguration) (map[string]any, error) {
+	providerParameters := map[string]any{
+		"namespace": *cfg.Provider.Namespace,
+	}
+	if cfg.Provider.NetworkPolicy != nil {
+		providerParameters["networkPolicy"] = *cfg.Provider.NetworkPolicy
+	}
 	providerSettings := map[string]any{
-		"parameters": map[string]any{
-			"namespace": *cfg.Provider.Namespace,
-		},
+		"parameters": providerParameters,
 	}
 
 	layout := ""
