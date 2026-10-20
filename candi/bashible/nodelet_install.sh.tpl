@@ -36,8 +36,13 @@ nodelet-document() {
 {{- end }}
   mv -f /var/lib/nodelet/nodeconfig.yaml.new /var/lib/nodelet/nodeconfig.yaml
 }
-if [ ! -x /opt/deckhouse/bin/nodelet ] || [ ! -f /etc/systemd/system/nodelet.service ]; then
+# The agent of this release, not just any agent: one an older release installed may not read the
+# NodeConfig this release writes, and then cannot update itself through it. rpp-get records the
+# digest it installed; the running agent keeps the replaced binary until it restarts.
+nodelet_installed_digest="$(cat "${BB_RP_INSTALLED_PACKAGES_STORE:-/var/cache/registrypackages}/nodelet/digest" 2>/dev/null || true)"
+if [ ! -x /opt/deckhouse/bin/nodelet ] || [ ! -f /etc/systemd/system/nodelet.service ] || [ "$nodelet_installed_digest" != "{{ $nodeletDigest }}" ]; then
   nodelet-timed package rpp-get install -force "nodelet:{{ $nodeletDigest }}"
+  systemctl try-restart nodelet.service
 fi
 if [ ! -s /var/lib/nodelet/nodeconfig.yaml ]; then
   nodelet-timed document nodelet-document

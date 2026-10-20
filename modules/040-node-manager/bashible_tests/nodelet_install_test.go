@@ -163,19 +163,26 @@ func TestTheInstallationRestoresOnlyWhatIsMissing(t *testing.T) {
 		name            string
 		agent           string
 		unit, document  bool
+		recorded        string
 		env             []string
 		install, writes string
 		fails           bool
 	}{
 		{name: "a clean node", install: forced, writes: "-attempts 0"},
-		{name: "the binary removed", unit: true, document: true, install: forced},
-		{name: "the unit removed", agent: workingAgent, document: true, install: forced},
-		{name: "the document removed", agent: workingAgent, unit: true, env: []string{"MAX_RETRIES=5"}, writes: "-attempts 5"},
-		{name: "the first run", agent: workingAgent, unit: true, env: []string{"MAX_RETRIES=5", "FIRST_BASHIBLE_RUN=yes"}, writes: "-attempts 0"},
-		{name: "everything in place", agent: failingAgent, unit: true, document: true},
-		{name: "no template", agent: failingAgent, unit: true, fails: true},
+		{name: "the binary removed", unit: true, document: true, recorded: nodeletDigest, install: forced},
+		{name: "the unit removed", agent: workingAgent, document: true, recorded: nodeletDigest, install: forced},
+		{name: "an older release's agent", agent: workingAgent, unit: true, document: true, recorded: "sha256:older", install: forced},
+		{name: "the document removed", agent: workingAgent, unit: true, recorded: nodeletDigest, env: []string{"MAX_RETRIES=5"}, writes: "-attempts 5"},
+		{name: "the first run", agent: workingAgent, unit: true, recorded: nodeletDigest, env: []string{"MAX_RETRIES=5", "FIRST_BASHIBLE_RUN=yes"}, writes: "-attempts 0"},
+		{name: "everything in place", agent: failingAgent, unit: true, document: true, recorded: nodeletDigest},
+		{name: "no template", agent: failingAgent, unit: true, recorded: nodeletDigest, fails: true},
 	} {
 		dir := t.TempDir()
+		store := filepath.Join(dir, "store")
+		if tc.recorded != "" {
+			require.NoError(t, os.MkdirAll(filepath.Join(store, "nodelet"), 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(store, "nodelet", "digest"), []byte(tc.recorded+"\n"), 0o644))
+		}
 		if tc.agent != "" {
 			require.NoError(t, os.WriteFile(filepath.Join(dir, "nodelet"), []byte(tc.agent), 0o755))
 		}
@@ -187,7 +194,7 @@ func TestTheInstallationRestoresOnlyWhatIsMissing(t *testing.T) {
 			require.NoError(t, os.WriteFile(filepath.Join(dir, "lib", "nodeconfig.yaml"), []byte("kind: NodeConfig\n"), 0o600))
 		}
 
-		out, err := runWithAgentStubs(t, dir, "set -Eeuo pipefail\n"+agentStubs+body, tc.env...)
+		out, err := runWithAgentStubs(t, dir, "set -Eeuo pipefail\n"+agentStubs+body, append(tc.env, "BB_RP_INSTALLED_PACKAGES_STORE="+store)...)
 
 		document, readErr := os.ReadFile(filepath.Join(dir, "lib", "nodeconfig.yaml"))
 		if tc.fails {
@@ -201,8 +208,10 @@ func TestTheInstallationRestoresOnlyWhatIsMissing(t *testing.T) {
 		require.Equal(t, "kind: NodeConfig\n", string(document), tc.name)
 		if tc.install == "" {
 			require.NotContains(t, out, "rpp-get", tc.name)
+			require.NotContains(t, out, "systemctl try-restart", tc.name)
 		} else {
 			require.Contains(t, out, tc.install, tc.name)
+			require.Contains(t, out, "systemctl try-restart nodelet.service", tc.name)
 		}
 		if tc.writes == "" {
 			require.NotContains(t, out, "first-document", tc.name)
