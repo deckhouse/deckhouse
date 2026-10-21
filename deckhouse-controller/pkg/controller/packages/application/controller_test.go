@@ -432,6 +432,29 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			ownerRefName(app, v1alpha1.ApplicationPackageVersionKind))
 	})
 
+	suite.Run("automatic version is computed and reaches the engine in one reconcile", func() {
+		suite.setupController("automatic-version.yaml")
+
+		_, err := suite.ctr.Reconcile(ctx, suite.Request(appName, appNamespace))
+		require.NoError(suite.T(), err)
+
+		require.Len(suite.T(), suite.manager.updated, 1)
+		assert.Equal(suite.T(), "v1.0.2", suite.manager.updated[0].Version)
+
+		current := suite.getApplicationPackageVersion("deckhouse-test-v1.0.2")
+		assert.True(suite.T(), current.IsAppInstalled(appNamespace, appName))
+
+		pkg := suite.getApplicationPackage(packageName)
+		assert.Equal(suite.T(), "v1.0.2", pkg.GetAppVersion(appNamespace, appName),
+			"the package must record the version the engine runs, not the spec one")
+
+		app := suite.getApplication(appName, appNamespace)
+		assert.Equal(suite.T(), "v1.0.1", app.Spec.PackageVersion, "the spec must stay the user's")
+		require.NotNil(suite.T(), app.Status.Update)
+		assert.Equal(suite.T(), "v1.0.2", app.Status.Update.AutomaticVersion)
+		assert.Empty(suite.T(), app.Status.Update.Plan, "the plan must not repeat the automatic version")
+	})
+
 	suite.Run("package switch releases the previous package", func() {
 		suite.setupController("package-switch.yaml")
 

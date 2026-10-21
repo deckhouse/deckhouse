@@ -76,6 +76,8 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 			return rejectResult(fmt.Sprintf("get application package: %v", err))
 		}
 
+		version := admittedVersion(app, oldApp)
+
 		warnings, err := validateAppAgainstApv(ctx, cli, manager, app, oldApp)
 		if err != nil {
 			// The denial message is the only feedback `kubectl apply` prints, and
@@ -83,12 +85,12 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 			// and the package version whose requirements were evaluated, so the
 			// rejection is traceable when several manifests are applied at once.
 			return rejectResult(fmt.Sprintf("Application '%s/%s' (package '%s' version '%s'): %s",
-				app.Namespace, app.Name, app.Spec.PackageName, app.Spec.PackageVersion, err))
+				app.Namespace, app.Name, app.Spec.PackageName, version, err))
 		}
 
 		// The running version is checked by its object, which converts older settings with the
 		// same chain; the settings version is known to the chain by now.
-		if appInstalled(app) {
+		if appInstalled(app, oldApp) {
 			res, err := manager.ValidatePackageSettings(ctx, apps.BuildName(app.Namespace, app.Name), app.Spec.SettingsVersion, app.Spec.Settings.GetMap())
 			if err != nil {
 				return nil, err
@@ -135,8 +137,7 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 // settings are malformed or whose cluster requirements are not satisfied. The warnings
 // tell about settings written for an older settings version.
 func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packageManager, app, oldApp *v1alpha1.Application) ([]string, error) {
-	// Build the deterministic APV name from the Application's spec fields (repo, package, version).
-	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, admittedVersion(app, oldApp))
 
 	// Fetch the corresponding ApplicationPackageVersion to read its metadata requirements.
 	apv := new(v1alpha1.ApplicationPackageVersion)
@@ -154,11 +155,8 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 	}
 
 	// The requirements of an unchanged version were checked when it was admitted.
-	if oldApp != nil {
-		oldName := v1alpha1.MakeApplicationPackageVersionName(oldApp.Spec.PackageRepositoryName, oldApp.Spec.PackageName, oldApp.Spec.PackageVersion)
-		if oldName == apvName {
-			return warnings, nil
-		}
+	if oldApp != nil && !specVersionChanged(app, oldApp) {
+		return warnings, nil
 	}
 
 	metadata := apv.Status.PackageMetadata
@@ -187,6 +185,23 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 	}
 
 	return warnings, nil
+}
+
+// admittedVersion returns the version a request is validated against: spec.packageVersion on a create and on a
+// change of the spec version, status.currentVersion on any other update (a settings edit reaches the running
+// version, which an automatic update may have moved past spec).
+func admittedVersion(app, oldApp *v1alpha1.Application) string {
+	if oldApp == nil || specVersionChanged(app, oldApp) || app.Status.CurrentVersion == nil || app.Status.CurrentVersion.Version == "" {
+		return app.Spec.PackageVersion
+	}
+
+	return app.Status.CurrentVersion.Version
+}
+
+// specVersionChanged reports whether the update names another package version in spec (repository, package or version).
+func specVersionChanged(app, oldApp *v1alpha1.Application) bool {
+	return v1alpha1.MakeApplicationPackageVersionName(oldApp.Spec.PackageRepositoryName, oldApp.Spec.PackageName, oldApp.Spec.PackageVersion) !=
+		v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 }
 
 // checkVersionCompatibility gates a change from the previous spec version: an upgrade by the target's rules, a downgrade by the previous one's.
@@ -274,7 +289,7 @@ func validateAppSettings(ctx context.Context, cli client.Client, apv *v1alpha1.A
 		return warnings, err
 	}
 
-	if !appInstalled(app) {
+	if !appInstalled(app, oldApp) {
 		values := addonutils.Values{app.Spec.PackageName: settings}
 		if err = storage.ValidateConfigValues(app.Spec.PackageName, values); err != nil {
 			return nil, err
@@ -306,9 +321,9 @@ func obsoleteSettingsWarnings(field string, version int, settings map[string]any
 	}
 }
 
-// appInstalled reports whether the spec version is activated, so its object can convert older settings.
-func appInstalled(app *v1alpha1.Application) bool {
-	return app.Status.CurrentVersion != nil && app.Status.CurrentVersion.Version == app.Spec.PackageVersion
+// appInstalled reports whether the admitted version is activated, so its object can convert older settings.
+func appInstalled(app, oldApp *v1alpha1.Application) bool {
+	return app.Status.CurrentVersion != nil && app.Status.CurrentVersion.Version == admittedVersion(app, oldApp)
 }
 
 // settingsConverter builds the converter of the settings conversions a package version

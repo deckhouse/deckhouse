@@ -200,6 +200,42 @@ func (s *applicationValidationHandlerSuite) TestEmptyCheckpointCountsAsRun() {
 	s.True(response.Allowed)
 }
 
+// TestSettingsUpdateIsValidatedAgainstRunningVersion: an automatic update ran a version newer than spec, so a
+// settings edit is checked against the running version's schema and by the engine, never against the spec one.
+func (s *applicationValidationHandlerSuite) TestSettingsUpdateIsValidatedAgainstRunningVersion() {
+	app := newApplication("repo", "pkg", "v1.0.0")
+	app.Spec.Settings = v1alpha1.MakeMappedFields(map[string]any{"replicas": float64(2)})
+	app.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.1.0"}
+	oldApp := newApplication("repo", "pkg", "v1.0.0")
+	oldApp.Status.CurrentVersion = app.Status.CurrentVersion
+	manager := &fakePackageManager{
+		validateResult: settingscheck.Result{Valid: false, Message: "settings rejected by the loaded schema"},
+	}
+
+	// Only the running version's APV exists: a lookup of the spec one would fail the request with another message.
+	response := s.submit("UPDATE", app, oldApp, newAPV("repo-pkg-v1.1.0", false, nil), manager)
+
+	s.False(response.Allowed)
+	s.True(manager.validateCalled)
+	s.Contains(response.Result.Message, "settings rejected by the loaded schema")
+	s.False(manager.checkCalled, "a settings edit does not check requirements")
+}
+
+// TestSpecVersionChangeIsValidatedAgainstSpec: a new spec version is checked against its own APV, whatever runs.
+func (s *applicationValidationHandlerSuite) TestSpecVersionChangeIsValidatedAgainstSpec() {
+	app := newApplication("repo", "pkg", "v1.1.0")
+	app.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.0.5"}
+	oldApp := newApplication("repo", "pkg", "v1.0.0")
+	oldApp.Status.CurrentVersion = app.Status.CurrentVersion
+	manager := new(fakePackageManager)
+
+	response := s.submit("UPDATE", app, oldApp, newAPV(apvNameOf(app), false, nil), manager)
+
+	s.True(response.Allowed)
+	s.False(manager.validateCalled)
+	s.True(manager.checkCalled)
+}
+
 func apvNameOf(app *v1alpha1.Application) string {
 	return v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 }
@@ -386,6 +422,7 @@ func TestValidateAppAgainstApv(t *testing.T) {
 		{
 			name:           "incompatible pair is not rechecked while the version is unchanged",
 			apv:            compatAPV(),
+			previousAPV:    previousAPV("0.9.0", -1, 1),
 			currentVersion: "0.9.0",
 			oldVersion:     version,
 		},
@@ -1005,7 +1042,9 @@ func (s *applicationValidationHandlerSuite) TestImmutableFieldIsSkippedAfterSett
 		{Version: 2, Expr: []string{`.a = .a + "-v2"`}},
 	}
 
-	response := s.submitVersions("UPDATE", app, oldApp, &fakePackageManager{},
+	// a settings-only edit is admitted against the running 1.1.0, whose engine accepts it
+	manager := &fakePackageManager{validateResult: settingscheck.Result{Valid: true}}
+	response := s.submitVersions("UPDATE", app, oldApp, manager,
 		renamedSettingsAPV(app, "1.0.0", false), rewriting)
 
 	s.True(response.Allowed, "a version 2 value compared with a version 1 one would read as a change")

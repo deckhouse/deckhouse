@@ -26,9 +26,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -43,6 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status"
+	appupdate "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/update"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -77,6 +80,7 @@ func RegisterController(
 		deckhouseSettings:    deckhouseSettings,
 		applicationsSettings: applicationsSettings,
 		status:               status.NewService(runtime.GetClient(), manager, logger),
+		updater:              appupdate.NewUpdater(runtime.GetClient()),
 		logger:               logger.Named(controllerName),
 	}
 
@@ -96,11 +100,16 @@ func RegisterController(
 
 	return ctrl.NewControllerManagedBy(runtime).
 		Named(controllerName).
-		For(&v1alpha1.Application{}).
+		// The automatic update steps on the installed version, UpdateInstalled and Ready, which bump no generation.
+		For(&v1alpha1.Application{}, builder.WithPredicates(
+			predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, updateInputChanged()))).
 		// The update settings of an application fall back to global.applications.update and
 		// then to the deckhouse ones, so a change of either is merged into every application again.
 		WatchesRawSource(r.requeueOnSettingsChange(applicationsSettings.SubscribeUpdate(), deckhouseSettings.SubscribeUpdate())).
-		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
+		// A new version of the package, or a change of its rules, moves the update plan; a global event filter
+		// would drop these, since status and labels bump no generation.
+		Watches(&v1alpha1.ApplicationPackageVersion{}, handler.EnqueueRequestsFromMapFunc(r.requestsForVersion),
+			builder.WithPredicates(planInputChanged())).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
 		Complete(r)
 }
@@ -111,6 +120,7 @@ type reconciler struct {
 	client               client.Client
 	manager              packageManager
 	status               *status.Service
+	updater              *appupdate.Updater
 	moduleManager        moduleManager
 	deckhouseSettings    deckhouseSettings
 	applicationsSettings applicationsSettings
@@ -238,8 +248,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	logger.Debug("handle application")
 	defer logger.Debug("handle application complete")
 
-	original := app.DeepCopy()
-
 	// The finalizer is claimed before the application reaches the engine: it is what
 	// guarantees handleDelete gets to call RemoveApplication and release the installed lists.
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered) {
@@ -250,9 +258,15 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 			logger.Error("failed to add the application finalizer", log.Err(err))
 			return fmt.Errorf("patch application '%s': %w", app.Name, err)
 		}
-
-		original = app.DeepCopy()
 	}
+
+	// status.update goes before the package: the version resolved below is the one it moves to.
+	if err := r.updater.Update(ctx, app); err != nil {
+		logger.Error("failed to update the automatic update status", log.Err(err))
+		return fmt.Errorf("update status of application '%s': %w", app.Name, err)
+	}
+
+	original := app.DeepCopy()
 
 	ap, apv, err := r.resolvePackage(ctx, app)
 	if err != nil {
@@ -286,7 +300,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		Namespace:        app.Namespace,
 		Name:             app.Name,
 		PackageName:      app.Spec.PackageName,
-		Version:          app.Spec.PackageVersion,
+		Version:          apv.Spec.PackageVersion,
 		Repository:       registry.BuildRemote(repo),
 		Settings:         app.Spec.Settings.GetMap(),
 		SettingsVersion:  app.Spec.SettingsVersion,
@@ -300,7 +314,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	return r.commit(ctx, app, original, ap, apv)
 }
 
-// resolvePackage fetches the package and the version the spec names, refusing a draft version.
+// resolvePackage fetches the package and the version the engine runs (appupdate.Version), refusing a draft version.
 func (r *reconciler) resolvePackage(ctx context.Context, app *v1alpha1.Application) (*v1alpha1.ApplicationPackage, *v1alpha1.ApplicationPackageVersion, error) {
 	logger := r.logger.With(slog.String("name", app.Name), slog.String("namespace", app.Namespace))
 
@@ -311,7 +325,7 @@ func (r *reconciler) resolvePackage(ctx context.Context, app *v1alpha1.Applicati
 		return nil, nil, fmt.Errorf("get application package '%s': %w", app.Spec.PackageName, err)
 	}
 
-	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, appupdate.Version(app))
 
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
@@ -385,7 +399,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	// changed, but it is written after the attach, so an attached application can lack it.
 	apvName := ctrlutils.OwnerRefName(app, v1alpha1.ApplicationPackageVersionKind)
 	if apvName == "" {
-		apvName = v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
+		apvName = v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, appupdate.Version(app))
 	}
 
 	if err := r.detachVersion(ctx, app, apvName); err != nil {
@@ -438,7 +452,7 @@ func (r *reconciler) relink(ctx context.Context, app *v1alpha1.Application, pkg 
 		return err
 	}
 
-	return r.attachPackage(ctx, app, pkg)
+	return r.attachPackage(ctx, app, pkg, apv.Spec.PackageVersion)
 }
 
 // attachVersion adds the application to the version's installed list.
@@ -458,10 +472,10 @@ func (r *reconciler) attachVersion(ctx context.Context, app *v1alpha1.Applicatio
 
 // attachPackage adds the application to the package's installed list, or refreshes the
 // version recorded there when the application moved to another version of the same package.
-func (r *reconciler) attachPackage(ctx context.Context, app *v1alpha1.Application, pkg *v1alpha1.ApplicationPackage) error {
+func (r *reconciler) attachPackage(ctx context.Context, app *v1alpha1.Application, pkg *v1alpha1.ApplicationPackage, version string) error {
 	patch := client.MergeFrom(pkg.DeepCopy())
 
-	if !pkg.AddInstalledApp(app.Namespace, app.Name, app.Spec.PackageVersion, app.Spec.PackageRepositoryName) {
+	if !pkg.AddInstalledApp(app.Namespace, app.Name, version, app.Spec.PackageRepositoryName) {
 		return nil
 	}
 
@@ -523,10 +537,10 @@ func (r *reconciler) detachPackage(ctx context.Context, app *v1alpha1.Applicatio
 }
 
 // PreserveOf is what Cleanup keeps of an installed application: the images of the version it asks
-// for (spec) and the one it runs (status), one entry each.
+// for (appupdate.Version) and the one it runs (status), one entry each.
 func PreserveOf(app *v1alpha1.Application) []disk.PreservePackage {
 	preserve := []disk.PreservePackage{
-		{Name: app.Spec.PackageName, Repository: app.Spec.PackageRepositoryName, Version: app.Spec.PackageVersion},
+		{Name: app.Spec.PackageName, Repository: app.Spec.PackageRepositoryName, Version: appupdate.Version(app)},
 	}
 
 	if app.Status.CurrentVersion != nil {

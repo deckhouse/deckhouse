@@ -169,7 +169,6 @@ type ApplicationUpdate struct {
 	//
 	//   Confirmation is required for updating both minor and patch versions.
 	// +kubebuilder:validation:Enum=AutoPatch;Auto;Manual
-	// +kubebuilder:default=AutoPatch
 	// +optional
 	// +crd-enricher:deckhouse:documentation:examples=[AutoPatch, Auto, Manual]
 	Mode string `json:"mode,omitempty"`
@@ -290,6 +289,12 @@ type ApplicationStatus struct {
 	// +optional
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
 
+	// Automatic update of the application: the update plan and the version it moves to next.
+	//
+	// Empty in the `Manual` update mode and before the first version is installed.
+	// +optional
+	Update *ApplicationStatusUpdate `json:"update,omitempty"`
+
 	// Application endpoint URLs obtained from Ingress resources in the application chart with the `packages.deckhouse.io/application-endpoint-description` annotation.
 	// +optional
 	URLs []ApplicationStatusURL `json:"urls,omitempty"`
@@ -320,6 +325,17 @@ type ApplicationStatus struct {
 	// +crd-enricher:raw:items.properties.status.description="Condition status."
 	// +crd-enricher:raw:items.properties.type.description="Condition type in CamelCase or in the format `foo.example.com/CamelCase`."
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+}
+
+// ApplicationStatusUpdate is the automatic update state of the application, recomputed on every reconcile.
+type ApplicationStatusUpdate struct {
+	// Update path after the automatic version: each step is the newest version the previous one may be updated to by its compatibility rules.
+	// +optional
+	Plan []string `json:"plan,omitempty"`
+
+	// Version the automatic update installs next. It changes only after the previous one is installed and ready.
+	// +optional
+	AutomaticVersion string `json:"automaticVersion,omitempty"`
 }
 
 // ApplicationStatusSummary aggregates the high-level lifecycle state, message

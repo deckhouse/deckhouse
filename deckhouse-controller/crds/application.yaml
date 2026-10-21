@@ -287,7 +287,6 @@ spec:
                         type: integer
                     type: object
                   mode:
-                    default: AutoPatch
                     description: |-
                       Update mode of the application on its [release channel](#application-v1alpha1-spec-releasechannel).
 
@@ -478,6 +477,24 @@ spec:
                 description: Nelm report on application status.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              update:
+                description: |-
+                  Automatic update of the application: the update plan and the version it moves to next.
+
+                  Empty in the `Manual` update mode and before the first version is installed.
+                properties:
+                  automaticVersion:
+                    description: Version the automatic update installs next. It changes
+                      only after the previous one is installed and ready.
+                    type: string
+                  plan:
+                    description: 'Update path after the automatic version: each step
+                      is the newest version the previous one may be updated to by
+                      its compatibility rules.'
+                    items:
+                      type: string
+                    type: array
+                type: object
               urls:
                 description: Application endpoint URLs obtained from Ingress resources
                   in the application chart with the `packages.deckhouse.io/application-endpoint-description`

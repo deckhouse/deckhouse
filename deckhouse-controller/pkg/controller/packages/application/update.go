@@ -18,13 +18,18 @@ import (
 	"context"
 	"slices"
 
+	"k8s.io/apimachinery/pkg/api/equality"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status"
+	appupdate "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/update"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
@@ -75,12 +80,93 @@ func (r *reconciler) globalUpdateSettings() releaseupdater.Settings {
 	}
 }
 
-// applyNow reports whether the application asks to skip the update windows for its spec version
+// applyNow reports whether the application asks to skip the update windows for the version the engine runs
 // (v1alpha1.ApplicationAnnotationApplyNow).
 func applyNow(app *v1alpha1.Application) bool {
 	version := app.Annotations[v1alpha1.ApplicationAnnotationApplyNow]
 
-	return version != "" && version == app.Spec.PackageVersion
+	return version != "" && version == appupdate.Version(app)
+}
+
+// updateInputChanged passes an update of the status the automatic update steps on: the installed version,
+// UpdateInstalled or Ready, which the status service writes and which bump no generation.
+func updateInputChanged() predicate.Funcs {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldApp, ok := e.ObjectOld.(*v1alpha1.Application)
+			if !ok {
+				return false
+			}
+
+			newApp, ok := e.ObjectNew.(*v1alpha1.Application)
+			if !ok {
+				return false
+			}
+
+			return installedVersion(oldApp) != installedVersion(newApp) ||
+				conditionFlipped(oldApp, newApp, status.ConditionUpdateInstalled) ||
+				conditionFlipped(oldApp, newApp, status.ConditionReady)
+		},
+	}
+}
+
+// conditionFlipped reports whether the condition became True or stopped being True.
+func conditionFlipped(oldApp, newApp *v1alpha1.Application, condType string) bool {
+	return apimeta.IsStatusConditionTrue(oldApp.Status.Conditions, condType) !=
+		apimeta.IsStatusConditionTrue(newApp.Status.Conditions, condType)
+}
+
+// installedVersion returns status.currentVersion of the application, empty before the first install.
+func installedVersion(app *v1alpha1.Application) string {
+	if app.Status.CurrentVersion == nil {
+		return ""
+	}
+
+	return app.Status.CurrentVersion.Version
+}
+
+// planInputChanged passes an update of a package version that changes the update plan; the installed lists the
+// controller itself writes to the version's status do not pass.
+func planInputChanged() predicate.Funcs {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldApv, ok := e.ObjectOld.(*v1alpha1.ApplicationPackageVersion)
+			if !ok {
+				return false
+			}
+
+			newApv, ok := e.ObjectNew.(*v1alpha1.ApplicationPackageVersion)
+			if !ok {
+				return false
+			}
+
+			return oldApv.IsDraft() != newApv.IsDraft() ||
+				oldApv.Labels[v1alpha1.PackageLabelExistInRegistry] != newApv.Labels[v1alpha1.PackageLabelExistInRegistry] ||
+				!equality.Semantic.DeepEqual(oldApv.Status.PackageMetadata, newApv.Status.PackageMetadata)
+		},
+	}
+}
+
+// requestsForVersion returns a request for every application of the version's package, whose plan the version may change.
+func (r *reconciler) requestsForVersion(ctx context.Context, obj client.Object) []reconcile.Request {
+	repository := obj.GetLabels()[v1alpha1.PackageLabelRepository]
+	pkg := obj.GetLabels()[v1alpha1.PackageLabelPackage]
+
+	apps := new(v1alpha1.ApplicationList)
+	if err := r.client.List(ctx, apps); err != nil {
+		r.logger.Warn("failed to list applications to recompute their update plan", log.Err(err))
+
+		return nil
+	}
+
+	var requests []reconcile.Request
+	for _, app := range apps.Items {
+		if app.Spec.PackageRepositoryName == repository && app.Spec.PackageName == pkg {
+			requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&app)})
+		}
+	}
+
+	return requests
 }
 
 // mergeUpdateSettings applies the update policy of an application over the global update
@@ -99,7 +185,7 @@ func mergeUpdateSettings(policy *v1alpha1.ApplicationUpdate, global releaseupdat
 	}
 
 	return releaseupdater.Settings{
-		Mode:               v1alpha2.ParseUpdateMode(policy.Mode),
+		Mode:               appupdate.ParseMode(policy.Mode),
 		Windows:            toUpdateWindows(policy.Windows),
 		NotificationConfig: global.NotificationConfig,
 		BlockOnAlerts:      blockOnAlerts,
