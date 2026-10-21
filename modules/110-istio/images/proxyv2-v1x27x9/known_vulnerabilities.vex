@@ -17,7 +17,24 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 concerns golang.org/x/crypto/openpgp, which is unmaintained and unsafe by design. This component does not import or execute the openpgp package; golang.org/x/crypto is pulled in transitively for other subpackages. Exploitation of openpgp via this binary is not available.",
       "timestamp": "2026-10-12T11:48:29.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-85747",
+        "aliases": [
+          "GHSA-685w-q87j-wqw3"
+        ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/distribution"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-85747 is in github.com/docker/distribution/registry/client (manifests.Get does not verify the manifest digest). pilot-agent links only registry/client/auth/challenge (WWW-Authenticate parsing, via go-containerregistry remote/transport); registry/client and registry/proxy are not compiled in. No fixed v2 release exists.",
+      "timestamp": "2026-10-20T15:00:00.000000000Z"
     }
   ],
-  "timestamp": "2026-10-12T11:48:29Z"
+  "timestamp": "2026-10-20T15:00:00Z"
 }
