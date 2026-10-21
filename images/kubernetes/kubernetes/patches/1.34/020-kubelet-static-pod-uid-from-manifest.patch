@@ -1,0 +1,720 @@
+diff --git a/pkg/kubelet/config/file.go b/pkg/kubelet/config/file.go
+index 2e3f632095b..872337b61b3 100644
+--- a/pkg/kubelet/config/file.go
++++ b/pkg/kubelet/config/file.go
+@@ -132,7 +132,16 @@ func (s *sourceFile) run() {
+ 	s.startWatch()
+ }
+ 
+-func (s *sourceFile) applyDefaults(pod *api.Pod, source string) error {
++func (s *sourceFile) applyDefaults(pod *api.Pod, source string, data []byte) error {
++	// Derive the UID from the manifest content, not from the internal api.Pod:
++	// the latter changes on every kubelet minor upgrade, see staticPodContentUID.
++	if len(pod.UID) == 0 {
++		uid, err := staticPodContentUID(data, source, s.nodeName)
++		if err != nil {
++			return err
++		}
++		pod.UID = uid
++	}
+ 	return applyDefaults(pod, source, true, s.nodeName)
+ }
+ 
+@@ -243,7 +252,7 @@ func (s *sourceFile) extractFromFile(filename string) (pod *v1.Pod, err error) {
+ 	}
+ 
+ 	defaultFn := func(pod *api.Pod) error {
+-		return s.applyDefaults(pod, filename)
++		return s.applyDefaults(pod, filename, data)
+ 	}
+ 
+ 	parsed, pod, podErr := tryDecodeSinglePod(data, defaultFn)
+diff --git a/pkg/kubelet/config/static_pod_uid.go b/pkg/kubelet/config/static_pod_uid.go
+new file mode 100644
+index 00000000000..75980939ab3
+--- /dev/null
++++ b/pkg/kubelet/config/static_pod_uid.go
+@@ -0,0 +1,51 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package config
++
++import (
++	"encoding/hex"
++	"fmt"
++	"hash/fnv"
++
++	"k8s.io/apimachinery/pkg/types"
++	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
++)
++
++// staticPodContentUID derives the UID of a static pod from the manifest file
++// content instead of the dump of the internal api.Pod object.
++//
++// The upstream UID is a hash of the internal api.Pod after defaulting. Every
++// minor release adds fields to the internal types, so the UID of an unchanged
++// manifest changes on every in-place kubelet minor upgrade, and the new kubelet
++// kills the running static pods as orphans.
++//
++// The hash input is utilyaml.ToJSON(data): exactly the bytes kubelet decodes the
++// pod from, so any change of the decoded pod changes the UID and the pod is
++// replaced as before. A YAML manifest is normalized by this conversion: comments,
++// indentation and key order do not affect the UID. A JSON manifest is passed
++// through unchanged and hashed as is.
++func staticPodContentUID(data []byte, source string, nodeName types.NodeName) (types.UID, error) {
++	json, err := utilyaml.ToJSON(data)
++	if err != nil {
++		return "", err
++	}
++	hasher := fnv.New128a()
++	hasher.Write(json)
++	fmt.Fprintf(hasher, "host:%s", nodeName)
++	fmt.Fprintf(hasher, "file:%s", source)
++	return types.UID(hex.EncodeToString(hasher.Sum(nil))), nil
++}
+diff --git a/pkg/kubelet/config/static_pod_uid_test.go b/pkg/kubelet/config/static_pod_uid_test.go
+new file mode 100644
+index 00000000000..e9e7ed763d7
+--- /dev/null
++++ b/pkg/kubelet/config/static_pod_uid_test.go
+@@ -0,0 +1,268 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package config
++
++import (
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++
++	v1 "k8s.io/api/core/v1"
++	"k8s.io/apimachinery/pkg/types"
++	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
++	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
++)
++
++const (
++	testStaticPodSource   = "/etc/kubernetes/manifests/kube-scheduler.yaml"
++	testStaticPodNodeName = types.NodeName("master-0")
++)
++
++const testStaticPodManifest = `apiVersion: v1
++kind: Pod
++metadata:
++  name: kube-scheduler
++  namespace: kube-system
++  labels:
++    component: kube-scheduler
++    tier: control-plane
++  annotations:
++    control-plane-manager.deckhouse.io/checksum: "0123456789abcdef"
++spec:
++  hostNetwork: true
++  priorityClassName: system-node-critical
++  containers:
++  - name: kube-scheduler
++    image: registry.example.com/kube-scheduler@sha256:0000000000000000000000000000000000000000000000000000000000000000
++    command:
++    - kube-scheduler
++    - --config=/etc/kubernetes/scheduler-config.yaml
++    resources:
++      requests:
++        cpu: 100m
++    volumeMounts:
++    - name: kubeconfig
++      mountPath: /etc/kubernetes/scheduler.conf
++      readOnly: true
++  volumes:
++  - name: kubeconfig
++    hostPath:
++      path: /etc/kubernetes/scheduler.conf
++      type: FileOrCreate
++`
++
++// The same pod as testStaticPodManifest: comments, indentation, key order and
++// quoting differ.
++const testStaticPodManifestReformatted = `# managed by control-plane-manager
++kind: Pod
++apiVersion: v1
++metadata:
++    annotations: {control-plane-manager.deckhouse.io/checksum: '0123456789abcdef'}
++    labels:
++        tier: control-plane
++        component: kube-scheduler
++    name: kube-scheduler
++    namespace: kube-system
++spec:
++    containers:
++    -   command: [kube-scheduler, "--config=/etc/kubernetes/scheduler-config.yaml"]
++        image: "registry.example.com/kube-scheduler@sha256:0000000000000000000000000000000000000000000000000000000000000000"
++        name: kube-scheduler
++        resources: {requests: {cpu: 100m}}
++        volumeMounts:
++        -   {mountPath: /etc/kubernetes/scheduler.conf, name: kubeconfig, readOnly: true}
++    hostNetwork: true
++    priorityClassName: system-node-critical
++    volumes:
++    -   name: kubeconfig
++        hostPath: {type: FileOrCreate, path: /etc/kubernetes/scheduler.conf}
++`
++
++// testStaticPodUIDGolden pins the UID of testStaticPodManifest. It must be the
++// same in every Kubernetes minor version: a change means that all static pods
++// are restarted on the next in-place kubelet upgrade.
++const testStaticPodUIDGolden = types.UID("d8b13a1a8595d9069839a00291e0dde7")
++
++func mustContentUID(t *testing.T, data, source string, nodeName types.NodeName) types.UID {
++	t.Helper()
++	uid, err := staticPodContentUID([]byte(data), source, nodeName)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	return uid
++}
++
++func TestStaticPodContentUIDGolden(t *testing.T) {
++	uid := mustContentUID(t, testStaticPodManifest, testStaticPodSource, testStaticPodNodeName)
++	if uid != testStaticPodUIDGolden {
++		t.Fatalf("static pod UID changed: got %q, want %q", uid, testStaticPodUIDGolden)
++	}
++}
++
++// staticPodUIDGoldenFiles pins the UIDs of the manifests in testdata/static-pod-uid.
++// They must be the same in every Kubernetes minor version, like testStaticPodUIDGolden.
++// etcd.yaml and kube-apiserver.yaml are control plane manifests as rendered by
++// Deckhouse, with addresses, names and images replaced. tricky.yaml collects YAML
++// constructs whose conversion to JSON could drift between YAML library versions.
++var staticPodUIDGoldenFiles = []struct {
++	file string
++	uid  types.UID
++}{
++	{file: "etcd.yaml", uid: "87037a4693a309a6a35502dd03e00d36"},
++	{file: "kube-apiserver.yaml", uid: "dd61559e42e77c671df60ba10fbc5910"},
++	{file: "tricky.yaml", uid: "f509bf0146637c062b7550812e74b4b1"},
++}
++
++// testTrickyManifestJSON is utilyaml.ToJSON of testdata/static-pod-uid/tricky.yaml.
++// If TestStaticPodContentUIDGoldenFiles fails for tricky.yaml, this test shows
++// which construct is converted differently.
++const testTrickyManifestJSON = `{"apiVersion":"v1","kind":"Pod","metadata":{"annotations":{"empty":"","folded":"folded text\n","literal":"line one\nline two\n","quoted-number":"007"},"creationTimestamp":null,"name":"tricky","namespace":"kube-system"},"spec":{"activeDeadlineSeconds":9007199254740993,"containers":[{"args":[],"env":null,"image":"registry.example.com/main:v1","livenessProbe":{"initialDelaySeconds":15,"periodSeconds":10},"name":"main","ports":[{"containerPort":6443}],"resources":{},"volumeMounts":[{"mountPath":"/config","name":"config"}]}],"enableServiceLinks":true,"hostNetwork":true,"terminationGracePeriodSeconds":30,"volumes":[{"configMap":{"defaultMode":420,"name":"config"},"name":"config"}]},"status":{}}`
++
++func TestStaticPodContentUIDGoldenFiles(t *testing.T) {
++	for _, tc := range staticPodUIDGoldenFiles {
++		name, want := tc.file, tc.uid
++		t.Run(name, func(t *testing.T) {
++			data, err := os.ReadFile(filepath.Join("testdata", "static-pod-uid", name))
++			if err != nil {
++				t.Fatal(err)
++			}
++			uid := mustContentUID(t, string(data), "/etc/kubernetes/manifests/"+name, testStaticPodNodeName)
++			if uid != want {
++				t.Fatalf("static pod UID changed: got %q, want %q", uid, want)
++			}
++		})
++	}
++}
++
++func TestStaticPodContentUIDTrickyJSON(t *testing.T) {
++	data, err := os.ReadFile(filepath.Join("testdata", "static-pod-uid", "tricky.yaml"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	json, err := utilyaml.ToJSON(data)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if string(json) != testTrickyManifestJSON {
++		t.Fatalf("YAML to JSON conversion changed:\ngot:  %s\nwant: %s", json, testTrickyManifestJSON)
++	}
++}
++
++// A manifest in JSON format is hashed as is: utilyaml.ToJSON passes JSON through
++// unchanged, so the UID is computed from exactly the bytes kubelet decodes.
++// Reformatting a JSON manifest therefore changes the UID and restarts the pod.
++func TestStaticPodContentUIDJSONManifest(t *testing.T) {
++	compact := `{"apiVersion":"v1","kind":"Pod","metadata":{"name":"p"}}`
++	indented := "{\n  \"apiVersion\": \"v1\",\n  \"kind\": \"Pod\",\n  \"metadata\": {\"name\": \"p\"}\n}\n"
++	a := mustContentUID(t, compact, testStaticPodSource, testStaticPodNodeName)
++	if b := mustContentUID(t, compact, testStaticPodSource, testStaticPodNodeName); a != b {
++		t.Fatalf("same JSON manifest got different UIDs: %q != %q", a, b)
++	}
++	if b := mustContentUID(t, indented, testStaticPodSource, testStaticPodNodeName); a == b {
++		t.Fatalf("reformatted JSON manifest is expected to get another UID, got %q for both", a)
++	}
++}
++
++func TestStaticPodContentUIDIgnoresFormatting(t *testing.T) {
++	a := mustContentUID(t, testStaticPodManifest, testStaticPodSource, testStaticPodNodeName)
++	b := mustContentUID(t, testStaticPodManifestReformatted, testStaticPodSource, testStaticPodNodeName)
++	if a != b {
++		t.Fatalf("reformatted manifest got another UID: %q != %q", a, b)
++	}
++}
++
++func TestStaticPodContentUIDChanges(t *testing.T) {
++	base := mustContentUID(t, testStaticPodManifest, testStaticPodSource, testStaticPodNodeName)
++	cases := map[string]struct {
++		data     string
++		source   string
++		nodeName types.NodeName
++	}{
++		"args": {
++			data: strings.Replace(testStaticPodManifest, "- --config=/etc/kubernetes/scheduler-config.yaml",
++				"- --config=/etc/kubernetes/scheduler-config.yaml\n    - --v=4", 1),
++		},
++		"annotation only": {
++			data: strings.Replace(testStaticPodManifest, `"0123456789abcdef"`, `"fedcba9876543210"`, 1),
++		},
++		"image": {
++			data: strings.Replace(testStaticPodManifest, "sha256:0000", "sha256:1111", 1),
++		},
++		// Known limitation: the same quantity in another notation is another
++		// content, so the pod is restarted. Safe: a change is never missed.
++		"same value in another notation": {
++			data: strings.Replace(testStaticPodManifest, "cpu: 100m", "cpu: \"0.1\"", 1),
++		},
++		"another file": {source: "/etc/kubernetes/manifests/other.yaml"},
++		"another node": {nodeName: "master-1"},
++	}
++	for name, tc := range cases {
++		t.Run(name, func(t *testing.T) {
++			data, source, nodeName := testStaticPodManifest, testStaticPodSource, testStaticPodNodeName
++			if tc.data != "" {
++				data = tc.data
++			}
++			if tc.source != "" {
++				source = tc.source
++			}
++			if tc.nodeName != "" {
++				nodeName = tc.nodeName
++			}
++			if uid := mustContentUID(t, data, source, nodeName); uid == base {
++				t.Fatalf("UID did not change: %q", uid)
++			}
++		})
++	}
++}
++
++func extractTestStaticPod(t *testing.T, data string) (string, *v1.Pod) {
++	t.Helper()
++	path := filepath.Join(t.TempDir(), "kube-scheduler.yaml")
++	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
++		t.Fatal(err)
++	}
++	s := &sourceFile{nodeName: testStaticPodNodeName, fileKeyMapping: map[string]string{}}
++	pod, err := s.extractFromFile(path)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	return path, pod
++}
++
++func TestExtractFromFileUsesContentUID(t *testing.T) {
++	path, pod := extractTestStaticPod(t, testStaticPodManifest)
++	want := mustContentUID(t, testStaticPodManifest, path, testStaticPodNodeName)
++	if pod.UID != want {
++		t.Fatalf("got UID %q, want %q", pod.UID, want)
++	}
++	if got := pod.Annotations[kubetypes.ConfigHashAnnotationKey]; got != string(want) {
++		t.Fatalf("got %s=%q, want %q", kubetypes.ConfigHashAnnotationKey, got, want)
++	}
++}
++
++func TestExtractFromFileKeepsExplicitUID(t *testing.T) {
++	const explicit = "00000000-0000-0000-0000-00000000a001"
++	data := strings.Replace(testStaticPodManifest, "  name: kube-scheduler\n", "  name: kube-scheduler\n  uid: "+explicit+"\n", 1)
++	_, pod := extractTestStaticPod(t, data)
++	if pod.UID != explicit {
++		t.Fatalf("got UID %q, want %q", pod.UID, explicit)
++	}
++	if got := pod.Annotations[kubetypes.ConfigHashAnnotationKey]; got != explicit {
++		t.Fatalf("got %s=%q, want %q", kubetypes.ConfigHashAnnotationKey, got, explicit)
++	}
++}
+diff --git a/pkg/kubelet/config/testdata/static-pod-uid/etcd.yaml b/pkg/kubelet/config/testdata/static-pod-uid/etcd.yaml
+new file mode 100644
+index 00000000000..8ac01b030ba
+--- /dev/null
++++ b/pkg/kubelet/config/testdata/static-pod-uid/etcd.yaml
+@@ -0,0 +1,118 @@
++apiVersion: v1
++kind: Pod
++metadata:
++  annotations:
++    control-plane-manager.deckhouse.io/ca-checksum: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
++    control-plane-manager.deckhouse.io/config-checksum: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
++    control-plane-manager.deckhouse.io/etcd.advertise-client-urls: https://192.0.2.10:2379
++    control-plane-manager.deckhouse.io/pki-checksum: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
++  labels:
++    component: etcd
++    security.deckhouse.io/security-policy-exception: etcd
++    tier: control-plane
++  name: etcd
++  namespace: kube-system
++spec:
++  containers:
++  - command:
++    - etcd
++    - --advertise-client-urls=https://192.0.2.10:2379
++    - --cert-file=/etc/kubernetes/pki/etcd/server.crt
++    - --client-cert-auth=true
++    - --data-dir=/var/lib/etcd
++    - --initial-advertise-peer-urls=https://192.0.2.10:2380
++    - --initial-cluster=master-0=https://192.0.2.10:2380
++    - --initial-cluster-state=existing
++    - --watch-progress-notify-interval=5s
++    - --quota-backend-bytes=2147483648
++    - --metrics=extensive
++    - --key-file=/etc/kubernetes/pki/etcd/server.key
++    - --listen-client-urls=https://127.0.0.1:2379,https://192.0.2.10:2379
++    - --listen-metrics-urls=http://127.0.0.1:2381
++    - --listen-peer-urls=https://192.0.2.10:2380
++    - --name=master-0
++    - --peer-cert-file=/etc/kubernetes/pki/etcd/peer.crt
++    - --peer-client-cert-auth=true
++    - --peer-key-file=/etc/kubernetes/pki/etcd/peer.key
++    - --peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
++    - --snapshot-count=10000
++    - --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
++    env:
++    - name: ETCD_HEARTBEAT_INTERVAL
++      value: "100"
++    - name: ETCD_ELECTION_TIMEOUT
++      value: "1000"
++    image: registry.example.com/etcd@sha256:0000000000000000000000000000000000000000000000000000000000000000
++    imagePullPolicy: IfNotPresent
++    livenessProbe:
++      failureThreshold: 8
++      httpGet:
++        host: 127.0.0.1
++        path: /livez
++        port: probe-port
++        scheme: HTTP
++      initialDelaySeconds: 10
++      periodSeconds: 10
++      timeoutSeconds: 15
++    name: etcd
++    ports:
++    - containerPort: 2381
++      name: probe-port
++      protocol: TCP
++    readinessProbe:
++      failureThreshold: 3
++      httpGet:
++        host: 127.0.0.1
++        path: /health
++        port: 2381
++        scheme: HTTP
++      periodSeconds: 1
++      timeoutSeconds: 15
++    resources:
++      requests:
++        cpu: 441m
++        memory: "837320027"
++    securityContext:
++      allowPrivilegeEscalation: false
++      capabilities:
++        drop:
++        - ALL
++      readOnlyRootFilesystem: true
++      runAsGroup: 0
++      runAsNonRoot: false
++      runAsUser: 0
++      seccompProfile:
++        type: RuntimeDefault
++    startupProbe:
++      failureThreshold: 24
++      httpGet:
++        host: 127.0.0.1
++        path: /readyz?exclude=non_learner
++        port: 2381
++        scheme: HTTP
++      initialDelaySeconds: 10
++      periodSeconds: 10
++      timeoutSeconds: 15
++    volumeMounts:
++    - mountPath: /var/lib/etcd
++      name: etcd-data
++    - mountPath: /etc/kubernetes/pki/etcd
++      name: etcd-certs
++      readOnly: true
++  dnsPolicy: ClusterFirstWithHostNet
++  hostNetwork: true
++  priority: 2000001000
++  priorityClassName: system-node-critical
++  securityContext:
++    seccompProfile:
++      type: RuntimeDefault
++  volumes:
++  - hostPath:
++      path: /var/lib/etcd
++      type: DirectoryOrCreate
++    name: etcd-data
++  - hostPath:
++      path: /etc/kubernetes/pki/etcd
++      type: DirectoryOrCreate
++    name: etcd-certs
++status: {}
+diff --git a/pkg/kubelet/config/testdata/static-pod-uid/kube-apiserver.yaml b/pkg/kubelet/config/testdata/static-pod-uid/kube-apiserver.yaml
+new file mode 100644
+index 00000000000..074d2744f43
+--- /dev/null
++++ b/pkg/kubelet/config/testdata/static-pod-uid/kube-apiserver.yaml
+@@ -0,0 +1,182 @@
++apiVersion: v1
++kind: Pod
++metadata:
++  annotations:
++    control-plane-manager.deckhouse.io/ca-checksum: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
++    control-plane-manager.deckhouse.io/config-checksum: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
++    control-plane-manager.deckhouse.io/kube-apiserver.advertise-address.endpoint: 192.0.2.10
++    control-plane-manager.deckhouse.io/kubernetes-version: "1.36"
++    control-plane-manager.deckhouse.io/pki-checksum: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
++  labels:
++    component: kube-apiserver
++    security.deckhouse.io/security-policy-exception: kube-apiserver
++    tier: control-plane
++  name: kube-apiserver
++  namespace: kube-system
++spec:
++  containers:
++  - command:
++    - kube-apiserver
++    - --api-audiences=https://kubernetes.default.svc.cluster.local
++    - --service-account-issuer=https://kubernetes.default.svc.cluster.local
++    - --service-account-jwks-uri=https://kubernetes.default.svc.cluster.local/openid/v1/jwks
++    - --service-account-key-file=/etc/kubernetes/pki/sa.pub
++    - --service-account-signing-key-file=/etc/kubernetes/pki/sa.key
++    - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
++    - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
++    - --client-ca-file=/etc/kubernetes/pki/ca.crt
++    - --secure-port=6443
++    - --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt
++    - --etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt
++    - --etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key
++    - --authorization-mode=Node,RBAC
++    - --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt
++    - --proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key
++    - --requestheader-allowed-names=front-proxy-client
++    - --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt
++    - --requestheader-extra-headers-prefix=X-Remote-Extra-
++    - --requestheader-group-headers=X-Remote-Group
++    - --requestheader-username-headers=X-Remote-User
++    - --service-cluster-ip-range=198.51.100.0/16
++    - --advertise-address=192.0.2.10
++    - --enable-bootstrap-token-auth=true
++    - --allow-privileged=true
++    - --enable-admission-plugins=EventRateLimit,ExtendedResourceToleration,NodeRestriction,PodNodeSelector,PodTolerationRestriction
++    - --admission-control-config-file=/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml
++    - --kubelet-certificate-authority=/etc/kubernetes/pki/ca.crt
++    - --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt
++    - --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key
++    - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
++    - --audit-policy-file=/etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
++    - --audit-log-format=json
++    - --audit-log-path=/var/log/kube-audit/audit.log
++    - --audit-log-truncate-enabled=true
++    - --audit-log-maxage=30
++    - --audit-log-maxsize=100
++    - --audit-log-maxbackup=10
++    - --bind-address=192.0.2.10
++    - --default-unreachable-toleration-seconds=300
++    - --default-not-ready-toleration-seconds=300
++    - --etcd-servers=https://127.0.0.1:2379,https://192.0.2.10:2379,https://192.0.2.107:2379,https://192.0.2.11:2379
++    - --feature-gates=RotateKubeletServerCertificate=true,CRDSensitiveData=true,DRADeviceBindingConditions=true,DRAConsumableCapacity=true,DRAExtendedResource=true,DRAPartitionableDevices=true
++    - --runtime-config=admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true
++    - --profiling=false
++    - --request-timeout=60s
++    - --shutdown-delay-duration=15s
++    - --shutdown-send-retry-after=true
++    - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
++    - --authentication-config=/etc/kubernetes/deckhouse/extra-files/authentication-config.yaml
++    - --watch-cache-sizes=manifestcheckpointcontentchunks.state-snapshotter.deckhouse.io#0
++    env:
++    - name: GOGC
++      value: "50"
++    image: registry.example.com/kube-apiserver@sha256:0000000000000000000000000000000000000000000000000000000000000000
++    imagePullPolicy: IfNotPresent
++    livenessProbe:
++      failureThreshold: 8
++      httpGet:
++        host: 192.0.2.10
++        path: /livez
++        port: 6443
++        scheme: HTTPS
++      initialDelaySeconds: 10
++      periodSeconds: 10
++      timeoutSeconds: 15
++    name: kube-apiserver
++    readinessProbe:
++      failureThreshold: 3
++      httpGet:
++        host: 192.0.2.10
++        path: /healthz
++        port: 6443
++        scheme: HTTPS
++      periodSeconds: 1
++      timeoutSeconds: 15
++    resources:
++      requests:
++        cpu: 567m
++        memory: "1076554321"
++    securityContext:
++      allowPrivilegeEscalation: false
++      capabilities:
++        drop:
++        - ALL
++      readOnlyRootFilesystem: true
++      runAsGroup: 0
++      runAsNonRoot: false
++      runAsUser: 0
++      seccompProfile:
++        type: RuntimeDefault
++    startupProbe:
++      failureThreshold: 24
++      httpGet:
++        host: 192.0.2.10
++        path: /livez
++        port: 6443
++        scheme: HTTPS
++      initialDelaySeconds: 10
++      periodSeconds: 10
++      timeoutSeconds: 15
++    volumeMounts:
++    - mountPath: /etc/kubernetes/deckhouse/extra-files
++      name: deckhouse-extra-files
++      readOnly: true
++    - mountPath: /etc/pki
++      name: etc-pki
++      readOnly: true
++    - mountPath: /usr/share/ca-certificates
++      name: usr-share-ca-certificates
++      readOnly: true
++    - mountPath: /usr/local/share/ca-certificates
++      name: usr-local-share-ca-certificates
++      readOnly: true
++    - mountPath: /etc/ssl/certs
++      name: ca-certs
++      readOnly: true
++    - mountPath: /etc/kubernetes/pki
++      name: k8s-certs
++      readOnly: true
++    - mountPath: /var/log/kube-audit
++      name: kube-audit-log
++  dnsPolicy: ClusterFirstWithHostNet
++  hostAliases:
++  - hostnames:
++    - dex.example.com
++    ip: 198.51.100.12
++  hostNetwork: true
++  priority: 2000001000
++  priorityClassName: system-node-critical
++  securityContext:
++    seccompProfile:
++      type: RuntimeDefault
++  terminationGracePeriodSeconds: 80
++  volumes:
++  - hostPath:
++      path: /etc/kubernetes/deckhouse/extra-files
++      type: DirectoryOrCreate
++    name: deckhouse-extra-files
++  - hostPath:
++      path: /etc/pki
++      type: DirectoryOrCreate
++    name: etc-pki
++  - hostPath:
++      path: /etc/ssl/certs
++      type: DirectoryOrCreate
++    name: ca-certs
++  - hostPath:
++      path: /etc/kubernetes/pki
++      type: DirectoryOrCreate
++    name: k8s-certs
++  - hostPath:
++      path: /usr/share/ca-certificates
++      type: DirectoryOrCreate
++    name: usr-share-ca-certificates
++  - hostPath:
++      path: /usr/local/share/ca-certificates
++      type: DirectoryOrCreate
++    name: usr-local-share-ca-certificates
++  - hostPath:
++      path: /var/log/kube-audit
++      type: DirectoryOrCreate
++    name: kube-audit-log
++status: {}
+diff --git a/pkg/kubelet/config/testdata/static-pod-uid/tricky.yaml b/pkg/kubelet/config/testdata/static-pod-uid/tricky.yaml
+new file mode 100644
+index 00000000000..85b33d809fc
+--- /dev/null
++++ b/pkg/kubelet/config/testdata/static-pod-uid/tricky.yaml
+@@ -0,0 +1,40 @@
++# Constructs whose YAML -> JSON conversion must stay the same in every version.
++apiVersion: v1
++kind: Pod
++metadata:
++  name: tricky
++  namespace: kube-system
++  creationTimestamp: null
++  annotations:
++    literal: |
++      line one
++      line two
++    folded: >
++      folded
++      text
++    quoted-number: "007"
++    empty: ""
++spec:
++  hostNetwork: true
++  enableServiceLinks: yes
++  terminationGracePeriodSeconds: 30
++  activeDeadlineSeconds: 9007199254740993
++  containers:
++  - name: main
++    image: registry.example.com/main:v1
++    args: []
++    env: null
++    resources: {}
++    ports:
++    - containerPort: 6443
++    livenessProbe:
++      initialDelaySeconds: 1.5e1
++      periodSeconds: 0x0A
++    volumeMounts:
++    - {name: config, mountPath: /config}
++  volumes:
++  - name: config
++    configMap:
++      name: config
++      defaultMode: 0644
++status: {}

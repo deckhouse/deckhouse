@@ -251,4 +251,24 @@ Bounds the errors `ValidateFieldManager` (`k8s.io/apimachinery/pkg/apis/meta/v1/
 
 Before the patch, every non-printable character produced its own `FieldValueInvalid` error, and each of these errors carried the whole value. A long `fieldManager` query parameter of a create, update or patch request, or a long `managedFields[].manager` in an object, made kube-apiserver build an error list that grows quadratically with the value length and join it into the `422` message. Such a request took seconds of CPU and a lot of memory, and the response was huge. Now the `422` response contains a single cause. Valid values are not affected.
 
-The patch is carried on 1.33 (`017`), 1.34 (`018`), 1.35 (`017`), 1.36 (`016`) and 1.37 (`017`).
+### kubelet-static-pod-uid-from-manifest.patch
+
+The kubelet derives the UID of a static pod from the manifest file content instead of the internal `api.Pod` object. Without the patch, every in-place kubelet minor upgrade or downgrade kills all static pods of the node (etcd, kube-apiserver, kube-controller-manager, kube-scheduler, kubernetes-api-proxy) without a graceful shutdown and starts them again.
+
+Upstream hashes a dump of the internal `api.Pod` after defaulting (`applyDefaults` in `pkg/kubelet/config/common.go`). Every minor release adds fields to the internal types, so an unchanged manifest gets a new UID. The new kubelet treats the running pod with the old UID as an orphan and kills it with a 2-second grace period. The pod cgroup is destroyed in the same cleanup pass, which sends SIGKILL: etcd and kube-apiserver usually die with exit code 137; components that exit quickly on SIGTERM sometimes manage to, but without their graceful shutdown procedure.
+
+With the patch, when the manifest has no `metadata.uid`, the UID is an FNV-128a hash of `utilyaml.ToJSON(<file>)` (exactly the bytes the kubelet decodes the pod from), the node name and the file path:
+
+- the UID does not depend on the kubelet version, so the new kubelet keeps the running static pods;
+- any change of the decoded pod changes the UID, so the pod is replaced and the mirror pod is recreated as before;
+- for a YAML manifest, comments, indentation and key order do not change the UID; a JSON manifest is hashed as is, so reformatting it restarts the pod;
+- an explicit `metadata.uid` is used as is;
+- the static pod URL source is not changed.
+
+The first start of the patched kubelet, and a return to a kubelet without the patch, changes the UIDs once and kills the static pods, as a minor upgrade does today. The kubelet package changes with the patch, so this happens on the Deckhouse release update that delivers the patch, on all nodes, even without a Kubernetes version change.
+
+`TestStaticPodContentUIDGolden` and `TestStaticPodContentUIDGoldenFiles` pin the UIDs of fixed manifests (including Deckhouse-rendered `etcd.yaml` and `kube-apiserver.yaml` in `testdata/static-pod-uid`), and `TestStaticPodContentUIDTrickyJSON` pins the YAML to JSON conversion. They must pass unchanged in every minor version: if they fail, all static pods will be restarted on the upgrade to that version. The image build does not run these tests: run `go test ./pkg/kubelet/config/ -run 'StaticPod|ExtractFromFile'` on the patched tree when the patch is carried to a new minor version.
+
+See issues:
+- https://github.com/kubernetes/kubernetes/issues/67537
+- https://github.com/kubernetes/kubernetes/issues/116080
