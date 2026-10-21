@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"maps"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -269,6 +270,13 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 	span.SetAttributes(attribute.String("path", opts.Path))
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
+	chart, err := localChart(opts.Path)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+
+		return err
+	}
+
 	var valuesSet []string
 	if len(opts.RootValues) > 0 {
 		valuesSet = append(valuesSet, opts.RootValues)
@@ -292,7 +300,7 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			RootSetJSON: valuesSet,
 		},
 		TrackingOptions:        opts.TrackingOptions,
-		Chart:                  opts.Path,
+		Chart:                  chart,
 		DefaultChartName:       releaseName,
 		DefaultChartVersion:    "0.2.0",
 		DefaultChartAPIVersion: "v2",
@@ -400,6 +408,13 @@ func (c *Client) RenderResources(ctx context.Context, namespace, releaseName str
 	span.SetAttributes(attribute.String("path", opts.Path))
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
+	chart, err := localChart(opts.Path)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+
+		return nil, err
+	}
+
 	var valuesSet []string
 	if len(opts.RootValues) > 0 {
 		valuesSet = append(valuesSet, opts.RootValues)
@@ -419,7 +434,7 @@ func (c *Client) RenderResources(ctx context.Context, namespace, releaseName str
 			RootSetJSON: valuesSet,
 		},
 		OutputFilePath:         "/dev/null", // No output file, we return the manifest as a string
-		Chart:                  opts.Path,
+		Chart:                  chart,
 		DefaultChartName:       releaseName,
 		DefaultChartVersion:    "0.2.0",
 		DefaultChartAPIVersion: "v2",
@@ -572,6 +587,18 @@ func (c *Client) getRelease(ctx context.Context, namespace, releaseName string) 
 	}
 
 	return res, nil
+}
+
+// localChart returns the chart path absolute. nelm v2 reads a chart from disk only when its
+// path is absolute or starts with "."; a relative one, like the package engine's
+// "modules/002-deckhouse", it takes for a repository chart and tries to download.
+func localChart(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("resolve chart path '%s': %w", path, err)
+	}
+
+	return abs, nil
 }
 
 // recoverPanic converts a panic recovered from a deferred call into err,
