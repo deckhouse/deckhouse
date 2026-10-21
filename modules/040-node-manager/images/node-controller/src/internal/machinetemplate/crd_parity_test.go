@@ -264,6 +264,97 @@ func TestOpenstackPreemptibleNotEmittedOffSelectel(t *testing.T) {
 	assert.Contains(t, tags, "use-cluster-api=1")
 }
 
+// TestOpenstackConfigDriveMirrorsExternalNetworkDHCP pins that OpenStackMachineTemplate.spec.configDrive
+// is set only when the external network does not provide DHCP — the same gate the MCM template used.
+// Pre-fix v2 forced configDrive on unconditionally, which silently changed boot behaviour on custom
+// images whose cloud-init datasource_list excludes ConfigDrive or whose kernel lacks the vfat driver.
+func TestOpenstackConfigDriveMirrorsExternalNetworkDHCP(t *testing.T) {
+	fixture := fixtureByName(t, "openstack")
+	contract := loadContract(t, fixture.contractPath)
+
+	render := func(dhcp any) map[string]any {
+		t.Helper()
+		providerConfig := deepCopySpec(t, fixture.providerConfig)
+		if dhcp == nil {
+			delete(providerConfig, "externalNetworkDHCP")
+		} else {
+			providerConfig["externalNetworkDHCP"] = dhcp
+		}
+		local := fixture
+		local.providerConfig = providerConfig
+		obj, err := renderV2Spec(local, contract, fixture.instanceClass)
+		require.NoError(t, err)
+		spec, _, err := nestedMap(obj, "spec", "template", "spec")
+		require.NoError(t, err)
+		return spec
+	}
+
+	// externalNetworkDHCP = false -> configDrive must be set, so cloud-init can read metadata
+	// from the drive instead of waiting for DHCP that never comes.
+	assert.Equal(t, true, render(false)["configDrive"],
+		"configDrive must be set when externalNetworkDHCP is false")
+
+	// externalNetworkDHCP = true -> configDrive must be absent, matching the MCM template.
+	_, present := render(true)["configDrive"]
+	assert.False(t, present,
+		"configDrive must be absent when externalNetworkDHCP is true (MCM parity)")
+
+	// externalNetworkDHCP absent -> treated as true, matching the openstack_cluster_configuration
+	// hook which defaults the field to true before publishing internal values.
+	_, present = render(nil)["configDrive"]
+	assert.False(t, present,
+		"configDrive must be absent when externalNetworkDHCP is unset — hook default is true")
+}
+
+// TestOpenstackPortsRenderedForAllNetworks pins that ports[] is emitted for every network listed
+// in mainNetwork + additionalNetworks, regardless of whether any SecurityGroup is configured and
+// regardless of podNetworkMode. Pre-fix the gate `if or (SG>0) (podNetworkMode == DRwPSE)` meant
+// that a NodeGroup with additionalNetworks but no SG and non-DirectRouting pod mode (e.g. VXLAN)
+// emitted no ports[] at all, so CAPO fell back to OpenStackCluster.spec.network — a single
+// network — and the secondary NIC silently disappeared on CAPI while MCM happily attached it.
+func TestOpenstackPortsRenderedForAllNetworks(t *testing.T) {
+	fixture := fixtureByName(t, "openstack")
+	contract := loadContract(t, fixture.contractPath)
+
+	// Pathological combo: no SecurityGroups anywhere + VXLAN pod networking.
+	providerConfig := deepCopySpec(t, fixture.providerConfig)
+	providerConfig["podNetworkMode"] = "VXLAN"
+	instances, _, err := nestedMap(providerConfig, "instances")
+	require.NoError(t, err)
+	delete(instances, "securityGroups")
+	providerConfig["instances"] = instances
+	local := fixture
+	local.providerConfig = providerConfig
+
+	instanceClass := deepCopySpec(t, fixture.instanceClass)
+	delete(instanceClass, "additionalSecurityGroups")
+
+	obj, err := renderV2Spec(local, contract, instanceClass)
+	require.NoError(t, err)
+
+	ports, found, err := nestedSlice(obj, "spec", "template", "spec", "ports")
+	require.NoError(t, err)
+	require.True(t, found, "spec.template.spec.ports must be emitted even without SG and off DirectRouting+PortSecurity")
+	require.Len(t, ports, 2, "both mainNetwork and additionalNetworks must appear as ports")
+
+	// Neither port carries a securityGroups block (nothing was configured) nor allowedAddressPairs
+	// (podNetworkMode is VXLAN, allowedAddressPairs is reserved for DirectRouting+PortSecurity).
+	for i, p := range ports {
+		port, ok := p.(map[string]any)
+		require.True(t, ok, "ports[%d] must be a map", i)
+		_, hasSG := port["securityGroups"]
+		assert.False(t, hasSG, "ports[%d]: no SG configured, port must not carry securityGroups", i)
+		_, hasAAP := port["allowedAddressPairs"]
+		assert.False(t, hasAAP, "ports[%d]: podNetworkMode is VXLAN, no allowedAddressPairs expected", i)
+	}
+
+	// spec.securityGroups block must also be absent at the machine level.
+	_, hasMachineSG, err := nestedSlice(obj, "spec", "template", "spec", "securityGroups")
+	require.NoError(t, err)
+	assert.False(t, hasMachineSG,
+		"machine-level securityGroups must stay absent when no SG is configured in InstanceClass or provider")
+}
+
 // TestProviderRenderParityOnEdgeSpecs runs both engines on the InstanceClass shapes a fixture
 // never has: only the CRD-required fields, and every optional field set to its zero value.
 //

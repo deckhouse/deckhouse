@@ -12,7 +12,9 @@ metadata:
 spec:
   template:
     spec:
+      {{- if and (hasKey .Values.nodeManager.internal.cloudProvider.openstack "externalNetworkDHCP") (not .Values.nodeManager.internal.cloudProvider.openstack.externalNetworkDHCP) }}
       configDrive: true
+      {{- end }}
       flavor: {{ .nodeGroup.instanceClass.flavorName | quote}}
     {{- if hasKey .nodeGroup.instanceClass "imageName" }}
       image:
@@ -62,7 +64,6 @@ spec:
           name: {{ . }}
     {{- end }}
     {{- end }}
-    {{- if or (gt (len $securityGroups) 0) (eq .Values.nodeManager.internal.cloudProvider.openstack.podNetworkMode "DirectRoutingWithPortSecurityEnabled") }}
       ports:
       {{- range $networks | uniq }}
       - network:
@@ -80,7 +81,6 @@ spec:
         - ipAddress: {{ $.Values.global.discovery.podSubnet | quote }}
         {{- end }}
     {{- end }}
-  {{- end }}
     {{- if hasKey .nodeGroup.instanceClass "rootDiskSize" }}
       rootVolume:
         sizeGiB: {{ .nodeGroup.instanceClass.rootDiskSize }}
