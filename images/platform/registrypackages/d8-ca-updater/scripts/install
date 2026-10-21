@@ -45,7 +45,13 @@ rm -rf "$legacy_ca_dir"
 
 mkdir -p /opt/deckhouse/bin "$d8_share_ca_dir"/ca-bundle
 cp -f d8-ca-updater /opt/deckhouse/bin
-cp certs/* "$d8_share_ca_dir"/
+cp -f distrusted.txt "$d8_share_ca_dir"/
+# Skip the roots listed in distrusted.txt (see README.md).
+for cert in certs/*.crt; do
+  if ! openssl x509 -in "$cert" -noout -ext subjectKeyIdentifier 2>/dev/null | tr -d ' :' | grep -qxFf distrusted.txt; then
+    cp "$cert" "$d8_share_ca_dir"/
+  fi
+done
 cp -f ca-bundle.crt "$d8_share_ca_dir"/ca-bundle/ca-certificates.crt
 
 /opt/deckhouse/bin/d8-ca-updater

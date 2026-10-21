@@ -24,6 +24,7 @@ set -Eeo pipefail
 CERT_SRC_DIR="/opt/deckhouse/share/ca-certificates/root-certs"
 REDHAT_CA_DIR=/etc/pki/ca-trust
 DEBIAN_CA_DIR=/usr/local/share/ca-certificates
+DISTRUSTED_LIST="$CERT_SRC_DIR/distrusted.txt"
 mkdir -p /etc/ssl/certs
 
 link_redhat_CAs() {
@@ -34,6 +35,27 @@ link_redhat_CAs() {
 link_debian_CAs() {
   mkdir -p "$DEBIAN_CA_DIR"
   ln -sf "$CERT_SRC_DIR"/*.crt "$DEBIAN_CA_DIR"
+}
+
+# Block the roots listed in $DISTRUSTED_LIST (see README.md) in the distribution's own store.
+# p11-kit finds a certificate by its Subject Key Identifier; extracting again would append a copy.
+distrust_redhat_CAs() {
+  local blocklist="$REDHAT_CA_DIR/source/blocklist" ski
+  [ -d "$blocklist" ] || blocklist="$REDHAT_CA_DIR/source/blacklist"
+  for ski in $(<"$DISTRUSTED_LIST"); do
+    [ -s "$blocklist/$ski.crt" ] || trust extract --overwrite --format=pem-bundle \
+      --filter="pkcs11:id=$(sed 's/../%&/g' <<<"$ski");type=cert" "$blocklist/$ski.crt"
+  done
+}
+
+# Debian selects by path in ca-certificates.conf.
+distrust_debian_CAs() {
+  local cert
+  for cert in /usr/share/ca-certificates/*/*.crt; do
+    if openssl x509 -in "$cert" -noout -ext subjectKeyIdentifier 2>/dev/null | tr -d ' :' | grep -qxFf "$DISTRUSTED_LIST"; then
+      sed -i "s|^${cert#/usr/share/ca-certificates/}$|!&|" /etc/ca-certificates.conf
+    fi
+  done
 }
 
 copy_redhat_ca_bundle() {
@@ -49,9 +71,11 @@ copy_debian_ca_bundle() {
 
 if command -v update-ca-trust >/dev/null 2>&1; then
   link_redhat_CAs
+  distrust_redhat_CAs
   update-ca-trust
 elif command -v update-ca-certificates >/dev/null 2>&1; then
   link_debian_CAs
+  distrust_debian_CAs
   update-ca-certificates -f
 else 
   if ! command -v openssl >/dev/null 2>&1; then
