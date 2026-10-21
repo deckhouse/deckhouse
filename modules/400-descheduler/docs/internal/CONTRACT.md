@@ -5,8 +5,9 @@ description: What a Descheduler v1alpha2 resource turns into, what the module se
 
 This document is for producers, that is, whoever writes a `Descheduler` resource: a module that
 ships one in its chart (today the external `virtualization` module ships
-`Descheduler/virtualization`) or a cluster administrator. It describes Deckhouse 1.77.1 and main,
-which run upstream descheduler v0.36.0 with the module's patches. The `Since` columns give the
+`Descheduler/virtualization`) or a cluster administrator. It describes Deckhouse 1.77.1, which runs
+upstream descheduler v0.36.0, and main, which runs v0.37.0, both with the module's patches. The
+`Since` columns give the
 release in which a field or strategy appeared. Anything this document does not describe is outside
 the contract.
 
@@ -111,16 +112,16 @@ A module's own release needs nothing extra.
 Nothing else reaches the descheduler. Apart from the resource names inside `thresholds` and
 `targetThresholds`, which are kept as written, the schema declares no other keys: neither
 `spec.nodeSelector` nor upstream plugin arguments such as `numberOfNodes`, `evictableNamespaces`,
-`excludeOwnerKinds`, `includingInitContainers` or eviction limits. A module release fails on such a
-key, and kubectl's default strict validation rejects it too. The API server prunes the key only
-from a write that is not a server-side apply and uses field validation `Warn` (the server default,
-which answers with an `unknown field` warning) or `Ignore`.
+`excludeOwnerKinds`, `includingInitContainers` or policy-wide eviction limits. A module release
+fails on such a key, and kubectl's default strict validation rejects it too. The API server prunes
+the key only from a write that is not a server-side apply and uses field validation `Warn` (the
+server default, which answers with an `unknown field` warning) or `Ignore`.
 
 ### Strategies
 
 | Strategy key | Since | Plugin, extension point | Arguments that reach the plugin |
 |---|---|---|---|
-| `lowNodeUtilization` | 1.67.0 | `LowNodeUtilization`, balance | `thresholds`, `targetThresholds` |
+| `lowNodeUtilization` | 1.67.0 | `LowNodeUtilization`, balance | `thresholds`, `targetThresholds`; since 1.78.0 also `useDeviationThresholds` and `evictionLimits.node` |
 | `highNodeUtilization` | 1.67.0 | `HighNodeUtilization`, balance | `thresholds` |
 | `removeDuplicates` | 1.67.0 | `RemoveDuplicates`, balance | none |
 | `removePodsViolatingNodeAffinity` | 1.67.0 | `RemovePodsViolatingNodeAffinity`, deschedule | `nodeAffinityType` |
@@ -135,7 +136,8 @@ keeps the descheduler running, and still has its resource-wide fields checked at
 profile, delete the resource.
 
 - `lowNodeUtilization`: thresholds are percentages of node allocatable. Send both maps, non-empty,
-  with the same resource keys, each threshold at or below its target. The CRD bounds `cpu`,
+  with the same resource keys, each threshold at or below its target unless
+  `useDeviationThresholds` is `true`. The CRD bounds `cpu`,
   `memory` and `pods` to integers from 0 to 100 (since 1.75.0). Neither the CRD nor the module
   checks any other key, such as an extended resource, but the descheduler still requires a number
   from 0 to 100 there, and any other value stops every profile. A node is underutilized when every
@@ -154,6 +156,31 @@ profile, delete the resource.
     Ready node that has had no metrics since the descheduler started, makes the strategy fail
     every cycle, and only the log shows it. If a node's metrics stop later, the descheduler keeps
     seeing the node at its last value until the next restart.
+
+  Since 1.78.0 two more arguments reach the plugin; both are omitted from the policy when unset:
+  - `useDeviationThresholds: true` (default `false`) turns both maps into offsets from the average
+    usage. A node is underutilized when every listed resource is at or below the average minus its
+    threshold, and overutilized when any listed resource is above the average plus its target; both
+    bounds are clamped to 0-100. A threshold may then exceed its target, the 0-100 range and the
+    same-keys rule still apply. Example: `thresholds: {cpu: 5}`, `targetThresholds: {cpu: 5}` keeps
+    CPU within ±5 points of the average.
+
+    The average is taken per listed resource over every Ready node of the cluster that has the
+    resource. It includes control-plane nodes, cordoned nodes and nodes the evictable pods cannot
+    move to because of taints. A producer cannot scope it: `nodeLabelSelector` only limits the nodes
+    an evicted pod must fit on (see "nodeLabelSelector"). Example: 3 control-plane nodes at 10% CPU
+    and 3 workers at 55, 60 and 65% give an average of 35% and, with ±5, a corridor of 30-40%. Only
+    the control-plane nodes are underutilized, the VM pods on the workers do not tolerate their
+    taints, and nothing is balanced.
+  - `evictionLimits.node` (an integer from 1) caps the pods this profile's `LowNodeUtilization`
+    takes from one node in one cycle. A pod already tracked as a background eviction (see
+    "Background evictions"), such as a KubeVirt VM in live migration, takes a slot in every cycle
+    that reaches it, although no new request is sent. So in practice `node: N` caps the pods of one
+    node in background eviction at once, for example N migrating VMs, rather than the new eviction
+    requests per cycle. The cap is approximate: pods are taken in priority and QoS order, so a pod
+    ordered before the tracked ones can still be evicted. Without the limit the strategy evicts from
+    a node until the node is no longer overutilized or the underutilized nodes have no capacity
+    left.
 - `highNodeUtilization`: send non-empty `thresholds`. The strategy always uses requests and evicts
   pods only from nodes at or below every threshold. The evicted pods are packed onto busier nodes
   only if they use `schedulerName: high-node-utilization`, the scheduler profile of
@@ -242,9 +269,10 @@ Every profile gets the same DefaultEvictor, and a resource cannot change it:
 DaemonSet pods, mirror and static pods and terminating pods are not evicted either. Pods without a
 PDB, pods with ResourceClaims and pods annotated
 `descheduler.alpha.kubernetes.io/prefer-no-eviction` are evicted; that annotation only changes the
-order. The policy sets no eviction limits, so one cycle may evict any number of pods per node and
-per namespace. Every eviction goes through the Eviction API with the pod's default grace period,
-so PodDisruptionBudgets are the only cap.
+order. The policy sets no policy-wide eviction limits, so one cycle may evict any number of pods per
+node and per namespace; only `lowNodeUtilization.evictionLimits.node` caps the evictions of that one
+strategy. Every eviction goes through the Eviction API with the pod's default grace period, so
+PodDisruptionBudgets are the only cap across strategies.
 
 **The `descheduler.alpha.kubernetes.io/evict` pod annotation overrides most of this.** For a pod
 with it, whatever the value, the descheduler skips the `d8-*` and `kube-system` refusal, the
@@ -348,7 +376,7 @@ start, so all profiles stop, at the latest when the descheduler pod next restart
 - a resource name that YAML reads as a number or a boolean: `123`, `012`, `0x1f`, `1e3`, `1.5`,
   `true`, `false`, `yes`, `no`, `on`, `off`, `y`, `n`;
 - `lowNodeUtilization` or `highNodeUtilization` enabled without thresholds, a threshold above its
-  target, different resource sets in `thresholds` and `targetThresholds`, a threshold that is not a
+  target without `useDeviationThresholds`, different resource sets in `thresholds` and `targetThresholds`, a threshold that is not a
   number, a threshold below 0 or above 100 on a resource other than `cpu`, `memory` and `pods`;
 - `nodeAffinityType: []`;
 - a `podRestartThreshold` above 2147483647 that wraps to 0 or below, such as 2147483648;
@@ -458,7 +486,7 @@ Earlier releases differ from the sections above in at least these ways:
 | Without metrics, usage comes from requests and limits. | Requests only. |
 | Without `metrics.k8s.io` the module falls back to requests. | The switch depends on the APIService existing, not on it being available. |
 | The owning controller rejects a background eviction with `429 Too Many Requests`. | Only a 429 whose message contains `Eviction triggered evacuation` starts a background eviction; any other 429 is a failed eviction. |
-| Background evictions in progress count against the eviction limits. | There are no limits. |
+| Background evictions in progress count against the eviction limits. | The only limit is `lowNodeUtilization.evictionLimits.node`. A pod already tracked as a background eviction takes one of its slots in every cycle that reaches it, without a new request. |
 | Pods in `d8-*` and `kube-system`, critical pods, pods with local storage and DaemonSet pods are never evicted. | These are defaults; the evict annotation overrides them, and local storage depends on `evictLocalStoragePods`. |
 | The English README enables `RemovePodsViolatingInterPodAntiAffinity` with `highNodeUtilization.enabled`. | It is `removePodsViolatingInterPodAntiAffinity.enabled`. |
 | The Russian CRD description has a v1alpha2 `spec.nodeSelector`. | There is none. |
@@ -476,7 +504,8 @@ Earlier releases differ from the sections above in at least these ways:
    something: at best the profile silently does nothing, at worst every profile stops or the module
    stops applying Descheduler changes.
 4. **Give every enabled utilization strategy its thresholds.** For `lowNodeUtilization`, both maps
-   with the same keys, each threshold at or below its target, every value from 0 to 100, and only
+   with the same keys, each threshold at or below its target (unless `useDeviationThresholds` is
+   `true`), every value from 0 to 100, and only
    `cpu`, `memory` and `pods` as keys on a cluster that has, or may get, `metrics.k8s.io`.
 5. **Check label keys and values yourself.** The CRD lets malformed pod and namespace selectors
    through, and they stop every profile. It also rejects legal values without a lowercase letter or
@@ -488,7 +517,9 @@ Earlier releases differ from the sections above in at least these ways:
    always exist, such as the Deckhouse ones.
 8. **Make sure the target pods can be evicted at all.** Pods with `emptyDir` or `hostPath` volumes
    need `evictLocalStoragePods: true`.
-9. **Protect workloads with PodDisruptionBudgets.** They are the only limit on evictions.
+9. **Protect workloads with PodDisruptionBudgets.** They are the only limit that covers every
+   strategy; `lowNodeUtilization.evictionLimits.node` caps only that strategy, per node, and counts
+   background evictions still in progress.
 10. **Change the spec only when you mean to.** Every spec change, creation or deletion restarts the
     shared descheduler, and the new process runs a cycle for all producers right away.
 11. **Delete the resource to switch the profile off.** Disabling all strategies leaves a running
@@ -502,7 +533,7 @@ Earlier releases differ from the sections above in at least these ways:
       `false`, `null`.
 - [ ] No empty lists, no empty `nodeLabelSelector`, no zero or empty priority threshold.
 - [ ] Utilization strategies have complete thresholds from 0 to 100 (for `lowNodeUtilization`, each
-      at or below its target), and `lowNodeUtilization` thresholds use only `cpu`, `memory` or
+      at or below its target unless `useDeviationThresholds` is `true`), and `lowNodeUtilization` thresholds use only `cpu`, `memory` or
       `pods`.
 - [ ] Every selector key and value is a valid Kubernetes label key or value.
 - [ ] The priority threshold leaves the intended classes evictable; a named class always exists.

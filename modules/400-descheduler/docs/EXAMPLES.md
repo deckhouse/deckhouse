@@ -45,6 +45,29 @@ spec:
         cpu: 50
 ```
 
+## Example LowNodeUtilization strategy with thresholds relative to the average
+
+The strategy keeps the CPU utilization of the nodes within the corridor of ±5% around the average utilization of the cluster nodes and evicts at most two pods from one node per descheduling cycle. A virtual machine that is still migrating from the node takes one of the two places:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: low-node-utilization-deviation
+spec:
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      useDeviationThresholds: true
+      thresholds:
+        cpu: 5
+      targetThresholds:
+        cpu: 5
+      evictionLimits:
+        node: 2
+```
+
 ## Example HighNodeUtilization strategy
 
 ```yaml

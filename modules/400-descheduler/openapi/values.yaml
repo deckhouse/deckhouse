@@ -209,6 +209,14 @@ properties:
                           maximum: 100
                           description: Pods count in percents
                       additionalProperties: true
+                    useDeviationThresholds:
+                      type: boolean
+                    evictionLimits:
+                      type: object
+                      properties:
+                        node:
+                          type: integer
+                          minimum: 1
                 highNodeUtilization:
                   type: object
                   default: {}

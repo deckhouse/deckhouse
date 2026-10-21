@@ -82,6 +82,15 @@ type LowNodeUtilization struct {
 	Enabled          bool                   `json:"enabled" yaml:"enabled"`
 	Thresholds       map[string]interface{} `json:"thresholds,omitempty" yaml:"thresholds,omitempty"`
 	TargetThresholds map[string]interface{} `json:"targetThresholds,omitempty" yaml:"targetThresholds,omitempty"`
+	// UseDeviationThresholds makes thresholds and targetThresholds offsets from the average node utilization.
+	UseDeviationThresholds bool            `json:"useDeviationThresholds,omitempty" yaml:"useDeviationThresholds,omitempty"`
+	EvictionLimits         *EvictionLimits `json:"evictionLimits,omitempty" yaml:"evictionLimits,omitempty"`
+}
+
+// EvictionLimits mirrors the upstream api.EvictionLimits of the LowNodeUtilization plugin args.
+type EvictionLimits struct {
+	// Node caps the pods LowNodeUtilization takes from one node in a cycle; pods already in background eviction count too.
+	Node *int `json:"node,omitempty" yaml:"node,omitempty"`
 }
 
 type HighNodeUtilization struct {

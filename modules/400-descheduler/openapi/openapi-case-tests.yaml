@@ -76,6 +76,17 @@ positive:
                   memory: 50
                   pods: 50
                   gpu: "gpuNode"
+          - name: test5
+            strategies:
+              lowNodeUtilization:
+                enabled: true
+                useDeviationThresholds: true
+                thresholds:
+                  cpu: 5
+                targetThresholds:
+                  cpu: 5
+                evictionLimits:
+                  node: 2
 negative:
   configValues:
     - logLevel: "warning"
@@ -99,6 +110,18 @@ negative:
             strategies:
               removeDuplicates:
                 enabled: true
+    - internal:
+        deschedulers:
+          - name: test1
+            strategies:
+              lowNodeUtilization:
+                enabled: true
+                thresholds:
+                  cpu: 5
+                targetThresholds:
+                  cpu: 5
+                evictionLimits:
+                  node: 0
     - deschedulingInterval: "invalid"
       internal:
         deschedulers: []

@@ -91,6 +91,10 @@ Feature gate имеет статус alpha в upstream-проекте [deschedul
 
 Стратегия включается параметром [spec.strategies.lowNodeUtilization.enabled](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-enabled).
 
+По умолчанию `thresholds` и `targetThresholds` задают абсолютные значения в процентах. Если параметр [spec.strategies.lowNodeUtilization.useDeviationThresholds](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-usedeviationthresholds) равен `true`, они отсчитываются от средней нагрузки всех узлов кластера в состоянии Ready: узел считается недостаточно нагруженным, если использование ресурсов на нем не выше среднего значения за вычетом `thresholds`, и избыточно нагруженным, если выше среднего значения с прибавлением `targetThresholds`. Например, при средней загрузке CPU 40% параметры `thresholds: {cpu: 5}` и `targetThresholds: {cpu: 5}` делают узлы с загрузкой не выше 35% недостаточно нагруженными, а выше 45% избыточно нагруженными. Так стратегия удерживает узлы в коридоре ±5% от среднего значения.
+
+Чтобы вытеснять поды постепенно, задайте параметр [spec.strategies.lowNodeUtilization.evictionLimits.node](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-evictionlimits-node) - максимальное количество подов, которые стратегия вытесняет с одного узла за один цикл работы descheduler. Виртуальная машина, которая ещё мигрирует с узла, занимает место в лимите в каждом цикле, поэтому для виртуальных машин параметр фактически ограничивает количество одновременных миграций с одного узла.
+
 {% alert level="warning" %}
 Если API-группа `metrics.k8s.io` в кластере **недоступна**, использование ресурсов узла учитывает [extended-ресурсы](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) и рассчитывается на основе запросов и лимитов подов ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), а не их фактического потребления. Такой подход обеспечивает согласованность с работой kube-scheduler, который использует аналогичный принцип при размещении подов на узлах.
 

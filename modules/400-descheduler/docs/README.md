@@ -91,6 +91,10 @@ Nodes with resource usage in the range between `thresholds` and `targetThreshold
 
 The strategy is enabled by the parameter [spec.strategies.lowNodeUtilization.enabled](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-enabled).
 
+By default, `thresholds` and `targetThresholds` are absolute percentages. If [spec.strategies.lowNodeUtilization.useDeviationThresholds](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-usedeviationthresholds) is `true`, they are counted from the average utilization of all Ready nodes of the cluster: a node is under utilized if its usage is at or below the average minus `thresholds`, and over utilized if its usage is above the average plus `targetThresholds`. For example, with an average CPU utilization of 40%, `thresholds: {cpu: 5}` and `targetThresholds: {cpu: 5}` make nodes at or below 35% under utilized and nodes above 45% over utilized, so the strategy keeps the nodes within the corridor of ±5% around the average.
+
+To evict pods gradually, set [spec.strategies.lowNodeUtilization.evictionLimits.node](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-evictionlimits-node): the maximum number of pods the strategy evicts from one node in one descheduling cycle. A virtual machine that is still migrating from the node takes a place in the limit in every cycle, so for virtual machines the parameter effectively limits how many of them migrate from one node at the same time.
+
 {% alert level="warning" %}
 If the `metrics.k8s.io` API is **not** available in the cluster, node resource usage takes into account [extended resources](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) and is calculated based on pod requests and limits ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), not actual consumption. This approach ensures consistency with the kube-scheduler, which uses a similar principle when scheduling pods on nodes.
 

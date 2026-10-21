@@ -176,6 +176,43 @@ spec:
       enabled: true
 `
 
+	deschedulerCR9 = `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: test9
+spec:
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      useDeviationThresholds: true
+      thresholds:
+        cpu: 5
+      targetThresholds:
+        cpu: 5
+      evictionLimits:
+        node: 2
+`
+
+	deschedulerCR10 = `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: test10
+spec:
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      useDeviationThresholds: false
+      thresholds:
+        cpu: 20
+      targetThresholds:
+        cpu: 50
+      evictionLimits: {}
+`
+
 	// Simulates a Descheduler CR that was converted from v1alpha1
 	// with only deprecated strategies (e.g. removePodsViolatingNodeTaints).
 	// After conversion, all deprecated strategies are stripped and spec.strategies is empty.
@@ -444,6 +481,56 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
   strategies:
     removeDuplicates:
       enabled: true
+`))
+		})
+	})
+
+	Context("Cluster with Descheduler CR with LowNodeUtilization deviation thresholds and eviction limits", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerCR9)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should pass useDeviationThresholds and evictionLimits to internal values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
+- name: test9
+  evictLocalStoragePods: false
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      useDeviationThresholds: true
+      thresholds:
+        cpu: 5
+      targetThresholds:
+        cpu: 5
+      evictionLimits:
+        node: 2
+`))
+		})
+	})
+
+	Context("Cluster with Descheduler CR with explicit useDeviationThresholds false and empty evictionLimits", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerCR10)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should drop useDeviationThresholds and keep evictionLimits empty", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
+- name: test10
+  evictLocalStoragePods: false
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      thresholds:
+        cpu: 20
+      targetThresholds:
+        cpu: 50
+      evictionLimits: {}
 `))
 		})
 	})

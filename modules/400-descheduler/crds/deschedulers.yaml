@@ -588,6 +588,34 @@ spec:
                               maximum: 100
                               description: Pods count in percents
                           additionalProperties: true
+                        useDeviationThresholds:
+                          type: boolean
+                          default: false
+                          description: |-
+                            Counts [thresholds](#descheduler-v1alpha2-spec-strategies-lownodeutilization-thresholds) and [targetThresholds](#descheduler-v1alpha2-spec-strategies-lownodeutilization-targetthresholds) from the average utilization of the nodes instead of using them as absolute values.
+
+                            The average is calculated over all Ready nodes of the cluster for every resource listed in `thresholds`, regardless of [nodeLabelSelector](#descheduler-v1alpha2-spec-nodelabelselector).
+
+                            A node is considered under utilized if its usage of **all** listed resources is at or below the average minus the `thresholds` value. A node is considered over utilized if its usage of **at least one** listed resource is above the average plus the `targetThresholds` value. The resulting bounds are limited to the range from 0 to 100%.
+
+                            In this mode, a `thresholds` value may be greater than the `targetThresholds` value of the same resource. Both sections must still list the same resources.
+
+                            For example, `thresholds: {cpu: 5}` and `targetThresholds: {cpu: 5}` keep the CPU utilization of the nodes within the corridor of ±5% around the average.
+                        evictionLimits:
+                          type: object
+                          description: Limits the number of pods the strategy evicts from one node.
+                          properties:
+                            node:
+                              type: integer
+                              minimum: 1
+                              description: |-
+                                The maximum number of pods the strategy evicts from one node in one descheduling cycle.
+
+                                The limit also counts pods evicted in the background, such as a virtual machine pod that leaves the node through a live migration. Such a pod takes a place in the limit in every cycle until it leaves the node, and no new eviction request is sent for it. So for virtual machines the parameter effectively limits how many of them migrate from one node at the same time.
+
+                                If the parameter is not set, the strategy evicts pods from a node until the node stops being over utilized or the under utilized nodes run out of free resources.
+                          x-doc-examples:
+                            - node: 2
                     highNodeUtilization:
                       type: object
                       description: |-

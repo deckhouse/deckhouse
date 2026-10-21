@@ -433,6 +433,160 @@ profiles:
 		})
 	})
 
+	Context("With LowNodeUtilization deviation thresholds and eviction limits", func() {
+		BeforeEach(func() {
+			moduleValues := `
+internal:
+  deschedulers:
+  - name: deviation
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+        useDeviationThresholds: true
+        thresholds:
+          cpu: 5
+        targetThresholds:
+          cpu: 5
+        evictionLimits:
+          node: 2
+  - name: static
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 20
+        targetThresholds:
+          cpu: 50
+`
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("descheduler", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should render the fields only into the LowNodeUtilization args of their profile", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			cm := f.KubernetesResource("ConfigMap", "d8-descheduler", "descheduler-policy")
+			Expect(cm.Field(`data.policy\.yaml`)).To(MatchYAML(`---
+apiVersion: descheduler/v1alpha2
+kind: DeschedulerPolicy
+profiles:
+- name: deviation
+  pluginConfig:
+  - args:
+      evictFailedBarePods: true
+      evictLocalStoragePods: false
+      evictSystemCriticalPods: false
+      ignorePvcPods: false
+      nodeFit: true
+    name: DefaultEvictor
+  - args:
+      evictionLimits:
+        node: 2
+      targetThresholds:
+        cpu: 5
+      thresholds:
+        cpu: 5
+      useDeviationThresholds: true
+    name: LowNodeUtilization
+  plugins:
+    balance:
+      enabled:
+      - LowNodeUtilization
+    filter:
+      enabled:
+      - DefaultEvictor
+    preEvictionFilter:
+      enabled:
+      - DefaultEvictor
+- name: static
+  pluginConfig:
+  - args:
+      evictFailedBarePods: true
+      evictLocalStoragePods: false
+      evictSystemCriticalPods: false
+      ignorePvcPods: false
+      nodeFit: true
+    name: DefaultEvictor
+  - args:
+      targetThresholds:
+        cpu: 50
+      thresholds:
+        cpu: 20
+    name: LowNodeUtilization
+  plugins:
+    balance:
+      enabled:
+      - LowNodeUtilization
+    filter:
+      enabled:
+      - DefaultEvictor
+    preEvictionFilter:
+      enabled:
+      - DefaultEvictor
+`))
+		})
+	})
+
+	Context("With LowNodeUtilization empty eviction limits as the hook passes them", func() {
+		// The get_crds hook drops useDeviationThresholds: false and keeps evictionLimits: {}.
+		BeforeEach(func() {
+			moduleValues := `
+internal:
+  deschedulers:
+  - name: empty-limits
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 20
+        targetThresholds:
+          cpu: 50
+        evictionLimits: {}
+`
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("descheduler", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should render an empty evictionLimits and no useDeviationThresholds", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			cm := f.KubernetesResource("ConfigMap", "d8-descheduler", "descheduler-policy")
+			Expect(cm.Field(`data.policy\.yaml`)).To(MatchYAML(`---
+apiVersion: descheduler/v1alpha2
+kind: DeschedulerPolicy
+profiles:
+- name: empty-limits
+  pluginConfig:
+  - args:
+      evictFailedBarePods: true
+      evictLocalStoragePods: false
+      evictSystemCriticalPods: false
+      ignorePvcPods: false
+      nodeFit: true
+    name: DefaultEvictor
+  - args:
+      evictionLimits: {}
+      targetThresholds:
+        cpu: 50
+      thresholds:
+        cpu: 20
+    name: LowNodeUtilization
+  plugins:
+    balance:
+      enabled:
+      - LowNodeUtilization
+    filter:
+      enabled:
+      - DefaultEvictor
+    preEvictionFilter:
+      enabled:
+      - DefaultEvictor
+`))
+		})
+	})
+
 	Context("With protectedStorageClasses set", func() {
 		BeforeEach(func() {
 			moduleValues := `

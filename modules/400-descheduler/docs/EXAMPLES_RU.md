@@ -43,6 +43,29 @@ spec:
         cpu: 50
 ```
 
+## Пример стратегии LowNodeUtilization с порогами относительно среднего значения
+
+Стратегия удерживает загрузку CPU узлов в коридоре ±5% от средней загрузки узлов кластера и вытесняет не более двух подов с одного узла за один цикл работы descheduler. Виртуальная машина, которая ещё мигрирует с узла, занимает одно из двух мест:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: low-node-utilization-deviation
+spec:
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      useDeviationThresholds: true
+      thresholds:
+        cpu: 5
+      targetThresholds:
+        cpu: 5
+      evictionLimits:
+        node: 2
+```
+
 ## Пример стратегии HighNodeUtilization
 
 ```yaml
