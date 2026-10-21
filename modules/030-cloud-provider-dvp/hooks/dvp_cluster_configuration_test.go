@@ -19,6 +19,7 @@ package hooks
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -101,6 +102,16 @@ data:
   "cloud-provider-cluster-configuration.yaml": %s
   "cloud-provider-discovery-data.json": %s
 `, base64.StdEncoding.EncodeToString([]byte(stateAClusterConfiguration1)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
+
+	// The shared emptyValues pre-seeds networkPolicy: Isolated, which would mask a missing copy.
+	const noNetworkPolicyValues = `
+global:
+  discovery: {}
+cloudProviderDvp:
+  internal: {}
+  nodes: {}
+  provider: {}
+`
 
 	// ---- State A: no PCC ----
 	Context("State A: no PCC (new v2 cluster)", func() {
@@ -263,6 +274,61 @@ metadata:
 			// Resources should NOT be created directly by the hook.
 			moduleConfig := b.KubernetesGlobalResource("ModuleConfig", "cloud-provider-dvp")
 			Expect(moduleConfig.Exists()).To(BeFalse())
+		})
+	})
+
+	pccStateWithNetworkPolicy := func(policy string) string {
+		cfg := strings.Replace(stateAClusterConfiguration1, "  namespace: cloud-provider01\n", "  namespace: cloud-provider01\n  networkPolicy: "+policy+"\n", 1)
+		Expect(cfg).NotTo(Equal(stateAClusterConfiguration1), "fixture must contain the namespace line to insert networkPolicy after")
+		return fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-provider-cluster-configuration
+  namespace: kube-system
+data:
+  "cloud-provider-cluster-configuration.yaml": %s
+  "cloud-provider-discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(cfg)), base64.StdEncoding.EncodeToString([]byte(stateACloudDiscoveryData)))
+	}
+
+	for _, policy := range []string{"None", "Isolated"} {
+		Context("State B: PCC with provider.networkPolicy "+policy, func() {
+			b := HookExecutionConfigInit(noNetworkPolicyValues, `{}`)
+			b.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+			b.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+			b.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+			BeforeEach(func() {
+				b.KubeStateSet(pccStateWithNetworkPolicy(policy))
+				b.BindingContexts.Set(b.GenerateBeforeHelmContext())
+				b.RunHook()
+			})
+
+			It("should carry networkPolicy from PCC into provider values", func() {
+				Expect(b).To(ExecuteSuccessfully())
+				Expect(b.ValuesGet("cloudProviderDvp.provider.parameters.networkPolicy").String()).To(Equal(policy))
+				Expect(b.ValuesGet("cloudProviderDvp.provider.parameters.namespace").String()).To(Equal("cloud-provider01"))
+			})
+		})
+	}
+
+	Context("State B: PCC without networkPolicy", func() {
+		b := HookExecutionConfigInit(noNetworkPolicyValues, `{}`)
+		b.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+		b.RegisterCRD("deckhouse.io", "v1alpha1", "DVPInstanceClass", false)
+		b.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+
+		BeforeEach(func() {
+			b.KubeStateSet(notEmptyPCCState)
+			b.BindingContexts.Set(b.GenerateBeforeHelmContext())
+			b.RunHook()
+		})
+
+		It("should carry the schema default Isolated of the PCC", func() {
+			Expect(b).To(ExecuteSuccessfully())
+			Expect(b.ValuesGet("cloudProviderDvp.provider.parameters.networkPolicy").String()).To(Equal("Isolated"))
+			Expect(b.ValuesGet("cloudProviderDvp.provider.parameters.namespace").String()).To(Equal("cloud-provider01"))
 		})
 	})
 
