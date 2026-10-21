@@ -68,4 +68,4 @@ You can enable containerd v2 in two ways:
        type: ContainerdV2
    ```
 
-   When migrating to containerd v2 Deckhouse Kubernetes Platform will begin sequentially updating the nodes.
+   When migrating to containerd v2 Deckhouse Platform will begin sequentially updating the nodes.

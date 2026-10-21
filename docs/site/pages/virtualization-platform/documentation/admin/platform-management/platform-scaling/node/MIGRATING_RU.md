@@ -68,4 +68,4 @@ ls -l /etc/containerd/conf.d
        type: ContainerdV2
    ```
 
-   При переходе на containerd v2 Deckhouse Kubernetes Platform начнет поочерёдное обновление узлов.
+   При переходе на containerd v2 Deckhouse Platform начнет поочерёдное обновление узлов.

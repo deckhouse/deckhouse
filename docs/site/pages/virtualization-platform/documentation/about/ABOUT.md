@@ -4,7 +4,7 @@ permalink: en/virtualization-platform/documentation/about.html
 ---
 
 Deckhouse Virtualization Platform (DVP) enables declarative creation, execution, and management of virtual machines and their resources.
-DVP is powered by [Deckhouse Kubernetes Platform](/products/kubernetes-platform/). The [d8](/products/kubernetes-platform/documentation/v1/deckhouse-cli/) command line utility is used to manage DKP/DVP resources.
+DVP is powered by [Deckhouse Platform](/products/kubernetes-platform/). The [d8](/products/kubernetes-platform/documentation/v1/deckhouse-cli/) command line utility is used to manage DKP/DVP resources.
 
 ## Usage scenarios
 

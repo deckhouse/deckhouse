@@ -69,7 +69,7 @@
   {%- assign generated_title = page_title_for_head -%}
 {%- endif -%}
 
-{%- assign words = page.product_code | replace: '-', ' ' | split: ' ' -%}
+{%- assign words = page.product_code | replace: 'kubernetes-platform', 'platform' | replace: '-', ' ' | split: ' ' -%}
 {%- assign additional_title = "" -%}
 {%- for word in words -%}
   {%- assign capitalized_word = word | capitalize -%}

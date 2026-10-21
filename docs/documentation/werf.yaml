@@ -14,7 +14,7 @@ project: deckhouse-web
 configVersion: 1
 build:
   imageSpec:
-    author: "Deckhouse Kubernetes Platform <contact@deckhouse.io>"
+    author: "Deckhouse Platform <contact@deckhouse.io>"
     clearHistory: true
     config:
       keepEssentialWerfLabels: true

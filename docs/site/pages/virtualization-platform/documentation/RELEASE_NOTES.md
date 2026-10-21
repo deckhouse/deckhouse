@@ -29,7 +29,7 @@ Release date: March 31, 2026.
 - [vm] Fixed an issue where a virtual machine could get stuck in the `Maintenance` state during restore from a snapshot.
 - [vm] Added storage-side error messages (from the CSI driver) to the virtual machine status for block device attachment failures.
 - [vd,vi,cvi] Fixed the creation of block devices from VMDK files (especially for VMDKs in the `streamOptimized` format used in exports from VMware).
-- [usb] Stabilized USB device support for virtualization on Deckhouse Kubernetes Platform version `>=1.76` and Kubernetes version `>=1.33`.
+- [usb] Stabilized USB device support for virtualization on Deckhouse Platform version `>=1.76` and Kubernetes version `>=1.33`.
 - [usb] Fixed USB device detection on the host: duplicate USB devices could previously appear.
 
 ## v1.6.1
