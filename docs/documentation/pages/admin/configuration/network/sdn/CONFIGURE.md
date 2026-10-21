@@ -494,7 +494,7 @@ spec:
     - "*"  # Apply to all OS bundles.
   nodeGroups:
     - "*"  # Apply to all node groups.
-  weight: 100
+  weight: 50  # Before the kubelet is configured and started.
   content: |
     #!/bin/bash
     echo "vm.nr_hugepages = 4096" > /etc/sysctl.d/99-hugepages.conf
@@ -503,9 +503,11 @@ spec:
 
 This configuration sets `vm.nr_hugepages = 4096` on all nodes, providing 8 GiB of hugepages (4096 pages × 2 MiB per page).
 
+Steps of NodeGroupConfiguration run in the order of `weight` together with the built-in steps, and the kubelet is configured at step 64. The weight is below 64, so hugepages are allocated before the kubelet is configured. The kubelet sees them on its first start, and the per-NUMA memory reservation accounts for them right away.
+
 ##### Configuring Topology Manager
 
-For optimal performance, enable Topology Manager on NodeGroups of worker nodes where DPDK applications will run. This ensures that CPU, memory, and device resources are allocated from the same NUMA node.
+Set the `SingleNumaNode` policy in [`topologyManager`](/modules/node-manager/cr.html#nodegroup-v1-spec-kubelet-topologymanager) of the [NodeGroup](/modules/node-manager/cr.html#nodegroup) of worker nodes where DPDK applications will run. The kubelet then gives Guaranteed pods whole physical cores and allocates CPU, memory and devices of a pod from one NUMA node.
 
 Example NodeGroup configuration:
 
@@ -517,16 +519,15 @@ metadata:
 spec:
   kubelet:
     topologyManager:
-      enabled: true
       policy: SingleNumaNode
-      scope: Container
+    resourceReservation:
+      mode: Auto
   nodeType: Static
 ```
 
-For more information, see:
+A DPDK pod gets dedicated CPUs only if it is Guaranteed (requests equal limits) and requests a whole number of CPUs. With SMT enabled, the number of CPUs must be even. The whole pod must fit into one NUMA node.
 
-* [topologyManager.enabled](/modules/node-manager/cr.html#nodegroup-v1-spec-kubelet-topologymanager-enabled)
-* [topologyManager.policy](/modules/node-manager/cr.html#nodegroup-v1-spec-kubelet-topologymanager-policy).
+For details, see [How do I give pods dedicated CPUs and NUMA alignment?](/modules/node-manager/faq.html#how-do-i-give-pods-dedicated-cpus-and-numa-alignment)
 
 #### Preliminary steps before creating an UnderlayNetwork
 

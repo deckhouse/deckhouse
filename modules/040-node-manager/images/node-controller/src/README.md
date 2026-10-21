@@ -16,8 +16,7 @@ The hooks replaced by controllers are listed per controller in [Controllers](#co
 
 ### Validation Webhook
 
-17 validations, all ported from the original bash hook `hooks/node_group`.
-Only validates things that CRD OpenAPI schema cannot:
+Cross-field and cluster-state validations, including checks ported from the original bash hook `hooks/node_group`:
 
 | # | Validation | Type |
 |---|---|---|
@@ -33,11 +32,13 @@ Only validates things that CRD OpenAPI schema cannot:
 | 10 | RollingUpdate only for CloudEphemeral | CREATE/UPDATE |
 | 11 | staticInstances.labelSelector immutability | UPDATE |
 | 12 | Duplicate taints (same key+effect) | CREATE/UPDATE |
-| 13 | topologyManager requires resourceReservation | CREATE/UPDATE |
-| 14 | topologyManager + Static mode requires cpu | CREATE/UPDATE |
+| 13 | topologyManager.policy other than None requires Auto/Static resourceReservation | CREATE/UPDATE |
+| 14 | topologyManager.policy other than None + Static reservation requires a positive CPU quantity | CREATE/UPDATE |
 | 15 | CRI change with custom containerd nodes | UPDATE |
 | 16 | ContainerdV2 with unsupported nodes | UPDATE |
 | 17 | memorySwap requires cgroup v2 | UPDATE |
+| 18 | A topologyManager change warns about kubelet restart; a policy other than None also warns about disruption | UPDATE |
+| 19 | Deprecated topologyManager.enabled has no effect; a warning with the removal command when it is true, or false next to a policy other than None | CREATE/UPDATE |
 
 Validations handled by CRD and NOT duplicated in webhook:
 - Name format (pattern), name length (maxLength)

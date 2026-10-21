@@ -496,7 +496,7 @@ spec:
     - "*"  # Применить ко всем bundle'ам ОС.
   nodeGroups:
     - "*"  # Применить ко всем группам узлов.
-  weight: 100
+  weight: 50  # До настройки и запуска kubelet.
   content: |
     #!/bin/bash
     echo "vm.nr_hugepages = 4096" > /etc/sysctl.d/99-hugepages.conf
@@ -505,9 +505,11 @@ spec:
 
 Эта конфигурация устанавливает `vm.nr_hugepages = 4096` на всех узлах, предоставляя 8 GiB hugepages (4096 страниц × 2 MiB на страницу).
 
+Шаги NodeGroupConfiguration выполняются по порядку `weight` вместе со встроенными шагами, а kubelet настраивается на шаге 64. Вес меньше 64, поэтому hugepages выделяются до настройки kubelet. kubelet видит их при первом запуске, а распределение резерва памяти по NUMA-узлам сразу их учитывает.
+
 ##### Настройка Topology Manager
 
-Включите Topology Manager на [NodeGroup](/modules/node-manager/cr.html#nodegroup) рабочих узлов, где будут запускаться DPDK-приложения. Это обеспечит выделение ресурсов CPU, памяти и устройств из одного NUMA узла.
+Задайте политику `SingleNumaNode` в параметре [`topologyManager`](/modules/node-manager/cr.html#nodegroup-v1-spec-kubelet-topologymanager) [NodeGroup](/modules/node-manager/cr.html#nodegroup) рабочих узлов, где будут запускаться DPDK-приложения. Тогда kubelet выделит Guaranteed-подам целые физические ядра, а CPU, память и устройства пода возьмёт из одного NUMA-узла.
 
 Пример конфигурации NodeGroup:
 
@@ -519,16 +521,15 @@ metadata:
 spec:
   kubelet:
     topologyManager:
-      enabled: true
       policy: SingleNumaNode
-      scope: Container
+    resourceReservation:
+      mode: Auto
   nodeType: Static
 ```
 
-Для получения дополнительной информации см.:
+DPDK-под получает выделенные CPU, только если он класса Guaranteed (requests равны limits) и запрашивает целое число CPU. При включённом SMT число CPU должно быть чётным. Под целиком должен помещаться в один NUMA-узел.
 
-* [topologyManager.enabled](/modules/node-manager/cr.html#nodegroup-v1-spec-kubelet-topologymanager-enabled);
-* [topologyManager.policy](/modules/node-manager/cr.html#nodegroup-v1-spec-kubelet-topologymanager-policy).
+Подробнее - в разделе [Как выделить подам отдельные CPU и выровнять их по NUMA?](/modules/node-manager/faq.html#как-выделить-подам-отдельные-cpu-и-выровнять-их-по-numa).
 
 #### Предварительные действия перед созданием UnderlayNetwork
 

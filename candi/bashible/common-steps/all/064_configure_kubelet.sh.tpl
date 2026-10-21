@@ -180,6 +180,10 @@ print(numfmt_to_bytes(human_number, multiplier))" $1 $2
 }
 
 total_memory=$(free -m|awk '/^Mem:/{print $2}')
+# floor to GiB: kernel update moves MemTotal by MiBs, keep reserves stable
+if (( total_memory >= 1024 )); then
+  total_memory=$(( total_memory / 1024 * 1024 ))
+fi
 
 {{- $resourceReservationMode := dig "kubelet" "resourceReservation" "mode" "" .nodeGroup }}
 {{- if eq $resourceReservationMode "Auto" }}
@@ -238,15 +242,128 @@ function eviction_soft_threshold_memory_available {
   echo -n "${return}"
 }
 
-{{- $topologyManagerEnabled := dig "kubelet" "topologyManager" "enabled" false .nodeGroup }}
-{{- if eq $topologyManagerEnabled true }}
-function reserved_memory {
-  return=$(echo $(dynamic_memory_sizing) $(eviction_hard_threshold_memory_available) | awk '{print $1 + $2}')
-  echo -n "${return}"
-}
+{{- $topologyManager := dig "kubelet" "topologyManager" (dict) .nodeGroup }}
+{{- $topologyPolicy := dig "policy" "None" $topologyManager }}
+{{- $pinning := ne $topologyPolicy "None" }}
+{{- $fullPCPUs := has $topologyPolicy (list "Restricted" "SingleNumaNode") }}
+
+system_reserved_memory=0
+{{- if or (eq $resourceReservationMode "Auto") (eq $resourceReservationMode "Static") }}
+system_reserved_memory=$(dynamic_memory_sizing)
+{{- end }}
+eviction_hard_memory=$(eviction_hard_threshold_memory_available)
+eviction_soft_memory=$(eviction_soft_threshold_memory_available)
+# failed $() inside these functions leaves "" and kubelet would crashloop
+for value in "${system_reserved_memory}" "${eviction_hard_memory}" "${eviction_soft_memory}"; do
+  if [[ ! "${value}" =~ ^[0-9]+$ ]]; then
+    bb-log-error "cannot calculate kubelet memory reservations"
+    exit 1
+  fi
+done
+
+{{- if $pinning }}
+{{- if not (or (eq $resourceReservationMode "Auto") (and (eq $resourceReservationMode "Static") (hasKey (dig "kubelet" "resourceReservation" "static" (dict) .nodeGroup) "cpu"))) }}
+bb-log-error "CPU pinning requires resourceReservation Auto, or Static with static.cpu"
+exit 1
 {{- end }}
 
-bb-sync-file /var/lib/kubelet/config.yaml - << EOF
+numa_sysfs="${D8_NUMA_SYSFS_DIR:-/sys/devices/system/node}"
+
+function numa_node_ids {
+  local dir
+  for dir in "${numa_sysfs}"/node[0-9]*; do
+    if [[ -d "${dir}" ]]; then
+      echo "${dir##*/node}"
+    fi
+  done | sort -n
+}
+numa_ids=($(numa_node_ids))
+
+# Split reserve by zone ordinary memory (MemTotal minus hugepages).
+# Weights in GiB: small MemTotal/hugepages drift must not change reservedMemory, it means drain.
+function numa_reserved_memory {
+  local reserve="$1" id kb pages size count i share assigned=0 total_weight=0
+  local -a ids=() weights=() usable=()
+  for id in "${numa_ids[@]}"; do
+    # same match as cAdvisor, so a format kubelet still reads is read here too
+    kb="$(sed -n 's/.*MemTotal:[[:space:]]*\([0-9][0-9]*\) kB.*/\1/p' "${numa_sysfs}/node${id}/meminfo" 2>/dev/null | head -n 1)" || kb=""
+    if [[ ! "${kb}" =~ ^[0-9]+$ ]]; then
+      bb-log-error "cannot read MemTotal of NUMA node ${id}"
+      return 1
+    fi
+    for pages in "${numa_sysfs}/node${id}"/hugepages/hugepages-*kB/nr_hugepages; do
+      if [[ -f "${pages}" ]]; then
+        size="${pages%kB/nr_hugepages}"
+        size="${size##*hugepages-}"
+        count="$(< "${pages}")" || count=""
+        if [[ ! "${size}" =~ ^[0-9]+$ || ! "${count}" =~ ^[0-9]+$ ]]; then
+          bb-log-error "cannot read hugepages of NUMA node ${id} from ${pages}"
+          return 1
+        fi
+        kb=$(( kb - size * count ))
+      fi
+    done
+    if (( kb >= 1048576 )); then
+      ids+=("${id}")
+      weights+=("$(( kb / 1048576 ))")
+      usable+=("$(( kb * 1024 ))")
+      total_weight=$(( total_weight + kb / 1048576 ))
+    fi
+  done
+  if (( total_weight == 0 )); then
+    bb-log-error "no NUMA nodes with ordinary memory in ${numa_sysfs}"
+    return 1
+  fi
+  echo "reservedMemory:"
+  for i in "${!ids[@]}"; do
+    # last zone takes remainder: kubelet wants exact sum
+    if (( i == ${#ids[@]} - 1 )); then
+      share=$(( reserve - assigned ))
+    else
+      share=$(( reserve * weights[i] / total_weight ))
+    fi
+    if (( share >= usable[i] )); then
+      bb-log-error "reserved memory ${share} exhausts NUMA node ${ids[i]}"
+      return 1
+    fi
+    assigned=$(( assigned + share ))
+    if (( share > 0 )); then
+      printf -- '- numaNode: %s\n  limits:\n    memory: "%s"\n' "${ids[i]}" "${share}"
+    fi
+  done
+}
+numa_reserved_memory_yaml="$(numa_reserved_memory "$(( system_reserved_memory + eviction_hard_memory ))")"
+
+function numa_topology_options {
+  local count=${#numa_ids[@]} i closest="$1"
+  local -a row
+  if (( count == 0 )); then
+    closest=false
+  fi
+  # kubelet indexes distances by NUMA ID: need IDs 0..N-1 and full rows, else it fails to start
+  for i in "${!numa_ids[@]}"; do
+    row=($(cat "${numa_sysfs}/node${i}/distance" 2>/dev/null))
+    if [[ "${closest}" == true ]] && { [[ "${numa_ids[i]}" != "${i}" ]] || (( ${#row[@]} != count )); }; then
+      bb-log-warning "NUMA distances unusable, prefer-closest-numa-nodes is not set"
+      closest=false
+    fi
+  done
+  if [[ "${closest}" == true ]] || (( count > 8 )); then
+    echo "topologyManagerPolicyOptions:"
+  fi
+  if [[ "${closest}" == true ]]; then
+    echo '  prefer-closest-numa-nodes: "true"'
+  fi
+  # kubelet refuses policy != none on >8 zones without it, values <8 are rejected
+  if (( count > 8 )); then
+    echo "  max-allowable-numa-nodes: \"${count}\""
+  fi
+}
+numa_topology_options_yaml="$(numa_topology_options {{ eq $topologyPolicy "Restricted" }})"
+{{- end }}
+
+new_kubelet_config="$(bb-tmp-file)"
+cat > "${new_kubelet_config}" << EOF
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
 authentication:
@@ -286,13 +403,13 @@ eventBurst: 50
 evictionHard:
   imagefs.available: $evictionHardThresholdImagefsAvailable
   imagefs.inodesFree: $evictionHardThresholdImagefsInodesFree
-  memory.available: "$(eviction_hard_threshold_memory_available)"
+  memory.available: "${eviction_hard_memory}"
   nodefs.available: $evictionHardThresholdNodefsAvailable
   nodefs.inodesFree: $evictionHardThresholdNodefsInodesFree
 evictionSoft:
   imagefs.available: $evictionSoftThresholdImagefsAvailable
   imagefs.inodesFree: $evictionSoftThresholdImagefsInodesFree
-  memory.available: "$(eviction_soft_threshold_memory_available)"
+  memory.available: "${eviction_soft_memory}"
   nodefs.available: $evictionSoftThresholdNodefsAvailable
   nodefs.inodesFree: $evictionSoftThresholdNodefsInodesFree
 evictionSoftGracePeriod:
@@ -389,7 +506,7 @@ syncFrequency: 1m0s
 {{- if eq $resourceReservationMode "Auto" }}
 systemReserved:
   cpu: 70m
-  memory: "$(dynamic_memory_sizing)"
+  memory: "${system_reserved_memory}"
   ephemeral-storage: 1Gi
 {{- else if eq $resourceReservationMode "Static" }}
 systemReserved:
@@ -400,7 +517,7 @@ systemReserved:
   cpu: {{ .nodeGroup.kubelet.resourceReservation.static.cpu | quote }}
         {{- end }}
         {{- if hasKey .nodeGroup.kubelet.resourceReservation.static "memory" }}
-  memory: "$(dynamic_memory_sizing)"
+  memory: "${system_reserved_memory}"
         {{- end }}
         {{- if hasKey .nodeGroup.kubelet.resourceReservation.static "ephemeralStorage" }}
   ephemeral-storage: {{ .nodeGroup.kubelet.resourceReservation.static.ephemeralStorage | quote }}
@@ -426,17 +543,60 @@ shutdownGracePeriodByPodPriority:
 {{- if hasKey .nodeGroup "staticInstances" }}
 providerID: $(cat /var/lib/bashible/node-spec-provider-id)
 {{- end }}
-{{- if eq $topologyManagerEnabled true }}
+{{- if $pinning }}
 cpuManagerPolicy: static
+{{- if $fullPCPUs }}
+cpuManagerPolicyOptions:
+  full-pcpus-only: "true"
+{{- end }}
 memoryManagerPolicy: Static
-reservedMemory:
-- numaNode: 0
-  limits:
-    memory: "$(reserved_memory)"
-topologyManagerScope: {{ dig "kubelet" "topologyManager" "scope" "Container" .nodeGroup | kebabcase }}
-topologyManagerPolicy: {{ dig "kubelet" "topologyManager" "policy" "None" .nodeGroup | kebabcase }}
+${numa_reserved_memory_yaml}
+${numa_topology_options_yaml}
+topologyManagerScope: {{ dig "scope" "Pod" $topologyManager | kebabcase }}
+topologyManagerPolicy: {{ $topologyPolicy | kebabcase }}
 {{- end }}
 EOF
+{{- if $pinning }}
+
+# Changing these makes kubelet re-admit running pods under the new policy.
+# Only cpu and memory of systemReserved feed the managers.
+function kubelet_pinning_fields {
+  /opt/deckhouse/bin/yq -o=json -I=0 '[.cpuManagerPolicy, .cpuManagerPolicyOptions, .memoryManagerPolicy, .reservedMemory, .systemReserved.cpu, .systemReserved.memory, .topologyManagerPolicy, .topologyManagerScope] | sort_keys(..)' "$1"
+}
+
+# Unknown answer fails the step before config is written: bashible retries it, no blind drain.
+# DaemonSet and mirror pods skipped: drain leaves them anyway.
+function node_has_guaranteed_pods {
+  local node pods rc=0
+  node="$(bb-d8-node-name)"
+  if [[ -z "${node}" ]]; then
+    bb-log-error "cannot get node name to check Guaranteed pods"
+    exit 1
+  fi
+  if ! pods="$(bb-curl-kube /api/v1/pods --get --data-urlencode "fieldSelector=spec.nodeName=${node}")"; then
+    bb-log-error "cannot list pods of node ${node} to decide on drain"
+    exit 1
+  fi
+  jq -e 'any(.items[]; .status.phase == "Running" and .status.qosClass == "Guaranteed"
+    and .metadata.annotations["kubernetes.io/config.mirror"] == null
+    and all(.metadata.ownerReferences[]?; .kind != "DaemonSet"))' <<< "${pods}" > /dev/null || rc=$?
+  if (( rc > 1 )); then
+    bb-log-error "cannot parse pods of node ${node} to decide on drain"
+    exit 1
+  fi
+  (( rc == 0 ))
+}
+
+# first run: approval is skipped anyway, API may be unreachable
+if [[ "${FIRST_BASHIBLE_RUN:-}" != "yes" ]] &&
+   [[ -f /var/lib/kubelet/config.yaml ]] &&
+   [[ "$(kubelet_pinning_fields /var/lib/kubelet/config.yaml 2>/dev/null)" != "$(kubelet_pinning_fields "${new_kubelet_config}")" ]] &&
+   node_has_guaranteed_pods; then
+  bb-deckhouse-get-disruptive-update-approval
+fi
+{{- end }}
+
+bb-sync-file /var/lib/kubelet/config.yaml "${new_kubelet_config}"
 
 # CIS becnhmark purposes
 chmod 600 /var/lib/kubelet/config.yaml

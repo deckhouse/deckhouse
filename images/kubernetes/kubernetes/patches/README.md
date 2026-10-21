@@ -272,3 +272,13 @@ The first start of the patched kubelet, and a return to a kubelet without the pa
 See issues:
 - https://github.com/kubernetes/kubernetes/issues/67537
 - https://github.com/kubernetes/kubernetes/issues/116080
+
+### kubelet-cpumanager-smtalign-preallocated.patch (1.33-1.36)
+
+Backport of the CPU manager fix from [kubernetes/kubernetes#129079](https://github.com/kubernetes/kubernetes/pull/129079) (commit `bbf1e0550ed`, released in 1.37).
+
+With `cpuManagerPolicyOptions: full-pcpus-only: "true"` the static policy checks SMT alignment before it looks up the checkpoint. After a kubelet restart the CPUs of running containers are already taken in the restored state, so `availablePhysicalCPUs` does not include them. A running container that holds more CPUs than are left free is rejected with `SMTAlignmentError` and killed, with or without SMT. The patch moves the "container already present in state" check before the SMT check, the same as upstream.
+
+1.33-1.35 still have the SMT check inline in `Allocate` (upstream later moved it to `enforceSMTAlignment`), so only the order of the two blocks changes; 1.36 takes the upstream change as is. The upstream unit test is carried. 1.37+ already ships the fix. `NodeGroup` `spec.kubelet.topologyManager` with policy `Restricted` or `SingleNumaNode` enables `full-pcpus-only`, so the patch is needed there.
+
+The patch is carried on 1.33 (`020`), 1.34 (`021`), 1.35 (`020`) and 1.36 (`019`).

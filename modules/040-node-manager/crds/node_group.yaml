@@ -2314,31 +2314,26 @@ spec:
                     topologyManager:
                       type: object
                       description: |
-                        Controls a topology manager.
+                        Controls the kubelet resource managers on [NUMA](https://en.wikipedia.org/wiki/Non-Uniform_Memory_Access) nodes: the CPU manager, the memory manager and the topology manager.
 
-                        The topology manager allows the Kubernetes scheduler to take resource topology data into account when scheduling pods.
+                        With a policy other than `None`, containers of Guaranteed pods with an integer CPU request get exclusive CPUs, and the memory of Guaranteed pods is bound to NUMA nodes. With `Restricted` and `SingleNumaNode`, they get whole physical cores. Deckhouse calculates NUMA-dependent kubelet settings on each node of the group: it splits `reservedMemory` between NUMA nodes and sets `max-allowable-numa-nodes` on nodes with more than 8 NUMA nodes.
 
-                        In a cluster with [NUMA](https://en.wikipedia.org/wiki/Non-Uniform_Memory_Access) nodes, the topology manager can improve application performance by aligning workloads with NUMA nodes that are more resource-efficient.
+                        A policy other than `None` requires `resourceReservation.mode` `Auto`, or `Static` with a positive `static.cpu`. Changing the settings restarts the kubelet and can require a disruption on nodes with Guaranteed pods. See [How do I give pods dedicated CPUs and NUMA alignment?](faq.html#how-do-i-give-pods-dedicated-cpus-and-numa-alignment)
 
                         For more information, see the [Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/).
                       properties:
                         enabled:
                           type: boolean
-                          default: false
+                          x-doc-deprecated: true
                           description: |
-                            Enables Topology Management on a node.
-
-                            If the topology manager is enabled, strict resource allocation modes are activated for containers in Guaranteed pods. The following parameter values are set in the kubelet configuration:
-
-                            - `cpuManagerPolicy: static`: The kubelet exclusively assigns whole physical cores to a container with an integer CPU request.
-                            - `memoryManagerPolicy: Static`: The kubelet assigns the container’s memory to a minimum number of NUMA nodes (preferably one).
+                            Deprecated, has no effect. The resource managers are controlled by `policy` alone.
                         scope:
                           type: string
-                          default: Container
+                          default: Pod
                           description: |
                             Defines granularity with which resources are aligned:
-                            - `Container`. The preferred resources are computed for a container. The computation does not take into account that multiple containers may belong to the same pod.
-                            - `Pod`. The preferred resources are computed for the pod. All containers in the pod are treated as a whole in the computation.
+                            - `Container`: resources are aligned for each container separately.
+                            - `Pod`: all containers of a pod are aligned together.
                           enum:
                             - Container
                             - Pod
@@ -2346,13 +2341,11 @@ spec:
                           type: string
                           default: None
                           description: |
-                            Resource/topology alignment policy to use when scheduling a pod.
-
-                            There are four supported policies:
-                            - `None` — no resource alignment (default).
-                            - `BestEffort` — a preferred NUMA node is defined for each container. If there are no preferred nodes for the pod available, it will be scheduled to a node without taking topology manager data into account, while the already running pod will keep running.
-                            - `Restricted` — a preferred NUMA node is defined for each pod container. If there are no preferred nodes available, a new pod will not be scheduled to a node while an already running pod will be stopped.
-                            - `SingleNumaNode` — a preferred NUMA node is defined for each pod container. If there is no NUMA node available that suits **all pod containers**, a new pod will not be scheduled while an already running pod will be stopped.
+                            Resource alignment policy and the related kubelet settings:
+                            - `None`: no alignment. The CPU and memory managers are not used.
+                            - `BestEffort`: Guaranteed pods get exclusive CPUs and NUMA-bound memory. Resources are aligned to NUMA nodes when possible; a pod is admitted even if they cannot be aligned, but it is rejected if its memory cannot be placed.
+                            - `Restricted`: Guaranteed pods get exclusive whole physical cores and NUMA-bound memory. A pod is rejected if its resources cannot be aligned; when a pod needs several NUMA nodes, the closest ones are preferred.
+                            - `SingleNumaNode`: as `Restricted`, but all resources of a pod (or of a container, see `scope`) must come from one NUMA node.
 
                             More information can be found in [the Kubernetes documentation](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
                           enum:

@@ -490,6 +490,7 @@ spec:
 | disruptions                           | -                          | -                 | -               |
 | kubelet.maxPods                       | -                          | -                 | +               |
 | kubelet.rootDir                       | -                          | -                 | +               |
+| kubelet.topologyManager               | + (policy other than `None`, [details](#how-do-i-give-pods-dedicated-cpus-and-numa-alignment)) | - | + |
 | kubernetesVersion                     | -                          | -                 | +               |
 | nodeTemplate                          | -                          | -                 | -               |
 | static                                | -                          | -                 | +               |
@@ -523,6 +524,104 @@ Deckhouse tolerates the `dedicated` by default, so we recommend using the `dedic
 
 To use custom keys for `taints` (e.g., `dedicated.client.com`), you must add the key's value to the array [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys) parameters. This way, deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
 {% endalert %}
+
+## How do I give pods dedicated CPUs and NUMA alignment?
+
+Use the [`spec.kubelet.topologyManager`](cr.html#nodegroup-v1-spec-kubelet-topologymanager) parameter of the NodeGroup. Deckhouse configures the CPU, memory and topology managers of the kubelet and calculates NUMA-dependent values on each node of the group.
+
+The result depends on `policy`:
+
+| `policy` | What pods get | kubelet settings |
+|----------|---------------|------------------|
+| `None` (default) | Nothing, all pods share all CPUs | Not set, the kubelet defaults are used |
+| `BestEffort` | Exclusive CPUs for containers of Guaranteed pods that request a whole number of CPUs, NUMA-bound memory. NUMA alignment of CPUs, memory and devices when possible | `cpuManagerPolicy: static`, `memoryManagerPolicy: Static`, `topologyManagerPolicy: best-effort` |
+| `Restricted` | Exclusive whole physical cores. The pod gets CPUs, memory and devices from the smallest possible set of NUMA nodes, otherwise it is rejected | `cpuManagerPolicy: static` with `full-pcpus-only`, `memoryManagerPolicy: Static`, `topologyManagerPolicy: restricted` |
+| `SingleNumaNode` | Exclusive whole physical cores. CPUs, memory and devices come from one NUMA node, otherwise the pod is rejected | `cpuManagerPolicy: static` with `full-pcpus-only`, `memoryManagerPolicy: Static`, `topologyManagerPolicy: single-numa-node` |
+
+The `scope` parameter sets what is aligned for every policy except `None`: `Pod` (default) aligns all containers of a pod together, `Container` aligns each container separately.
+
+The `enabled` parameter is deprecated and has no effect: the managers are controlled by `policy` alone. To turn them off, set `policy: None`.
+
+For every policy except `None`, Deckhouse also:
+
+- splits `reservedMemory` between NUMA nodes in proportion to their memory without hugepages;
+- sets `prefer-closest-numa-nodes` for `Restricted` if the node reports a full NUMA distance table and its NUMA node IDs are consecutive from 0;
+- sets `max-allowable-numa-nodes` if the node has more than 8 NUMA nodes.
+
+The policies `BestEffort`, `Restricted` and `SingleNumaNode` require [`resourceReservation.mode`](cr.html#nodegroup-v1-spec-kubelet-resourcereservation-mode) `Auto`, or `Static` with a positive `static.cpu`.
+
+With every policy except `None`, the memory of a Guaranteed pod is bound to the NUMA nodes chosen at admission, `BestEffort` included. A pod whose memory cannot be placed is rejected with `UnexpectedAdmissionError`. A container can be killed by the OOM killer when its NUMA nodes run out of memory, even if other NUMA nodes have free memory.
+
+Exclusive CPUs are taken from the shared pool. Burstable and BestEffort pods, including system components, run on the CPUs that remain. This matters for pods that use more CPU than they request: without exclusive CPUs they use idle time of all cores, with exclusive CPUs they share the remaining CPUs. With `Auto`, the shared pool can shrink to 1 CPU. If needed, use `Static` with a larger `static.cpu`.
+
+The following NodeGroup gives Guaranteed pods on the `worker-dpdk` nodes exclusive whole cores on one NUMA node:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-dpdk
+spec:
+  nodeType: Static
+  kubelet:
+    topologyManager:
+      policy: SingleNumaNode
+    resourceReservation:
+      mode: Auto
+```
+
+Only containers of Guaranteed pods with a whole number of CPUs get exclusive CPUs: requests are equal to limits for CPU and memory in every container, and the CPU value is an integer:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dpdk-app
+spec:
+  containers:
+  - name: app
+    image: registry.example.com/dpdk-app:latest
+    resources:
+      requests:
+        cpu: "4"
+        memory: 8Gi
+      limits:
+        cpu: "4"
+        memory: 8Gi
+```
+
+### Rules of the Restricted and SingleNumaNode policies
+
+- The number of CPUs of a container must be a multiple of the number of threads per core. With SMT (Hyper-Threading) enabled, an odd number of CPUs is rejected with `SMTAlignmentError`.
+- With `SingleNumaNode`, the pod (with `scope: Pod`) or each container (with `scope: Container`) must fit into one NUMA node. Size pods by the smallest NUMA node in the group.
+- A pod that cannot be aligned is rejected: with `TopologyAffinityError` if its CPUs do not fit, with `UnexpectedAdmissionError` if its memory does not fit.
+- The scheduler does not know about NUMA nodes. It can place a pod on a node where the pod is then rejected. The controller of the pod (for example, a Deployment or a StatefulSet) creates a new pod, which can be rejected again.
+
+### Changing the settings
+
+Changing `policy`, or `scope` with a policy other than `None`, restarts the kubelet on the nodes of the group.
+
+The node requests a disruption if all of the following is true:
+
+- the new kubelet configuration uses a policy other than `None`;
+- the kubelet CPU or memory settings change, for example `policy`, `scope`, the CPU or memory reservation in `resourceReservation`, or the amount of memory or hugepages on the node. Other reservations, such as `ephemeralStorage`, do not cause a disruption;
+- the node runs Guaranteed pods. DaemonSet and static pods are not counted, because a drain does not evict them.
+
+The disruption is handled according to the [`disruptions`](cr.html#nodegroup-v1-spec-disruptions) settings of the group:
+
+- with `approvalMode: Automatic` the node is drained and then gets the new configuration;
+- with `approvalMode: Automatic` and [`automatic.drainBeforeApproval: false`](cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) the node is not drained. After the kubelet restart, running pods that do not fit the new policy are stopped;
+- with `approvalMode: Manual` the node is not drained automatically. Drain it, then run `d8 k annotate node <NODE_NAME> update.node.deckhouse.io/disruption-approved=`;
+- with `approvalMode: RollingUpdate` (cloud nodes only) the node is replaced with a new one.
+
+Switching to `None` does not drain nodes: running containers keep their CPUs and the NUMA node of their memory until they are recreated. To spread them over all CPUs, restart the workloads, for example with `d8 k rollout restart`.
+
+### Limitations
+
+- Nodes with more than 8 NUMA nodes are supported, but pod admission takes longer.
+- Nodes in one group may have different NUMA layouts. Each node gets its own values, but the pod size limit is set by the smallest NUMA node.
+- NodeGroupConfiguration scripts must not change reservations or manager policies in `/var/lib/kubelet/config.yaml`.
+- Allocate hugepages before the kubelet is configured. Steps of NodeGroupConfiguration run in the order of `weight` together with the built-in steps, and the kubelet is configured at step 64, so use a `weight` below 64. The NUMA split of the reservation counts hugepages allocated at that moment. Hugepages allocated later change the split and can cause one more drain if the node runs Guaranteed pods.
 
 ## How to allocate nodes to system components?
 

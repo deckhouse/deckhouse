@@ -45,6 +45,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -344,24 +345,15 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.TopologyManager != nil {
-		if ng.Spec.Kubelet.TopologyManager.Policy != "" {
-			if ng.Spec.Kubelet.ResourceReservation == nil ||
-				ng.Spec.Kubelet.ResourceReservation.Mode == "Off" {
-				return admission.Denied(
-					".spec.kubelet.resourceReservation must be enabled for .spec.kubelet.topologyManager to work")
-			}
-
-			if ng.Spec.Kubelet.ResourceReservation.Mode == "Static" {
-				if ng.Spec.Kubelet.ResourceReservation.Static == nil ||
-					ng.Spec.Kubelet.ResourceReservation.Static.CPU == nil {
-					return admission.Denied(
-						"for .spec.kubelet.topologyManager and .spec.kubelet.resourceReservation.mode == \"Static\", " +
-							".spec.kubelet.resourceReservation.static.cpu must be specified")
-				}
-			}
-		}
+	if err := validateTopologyManager(ng.Spec.Kubelet); err != nil {
+		return admission.Denied(err.Error())
 	}
+	var oldKubelet *v1.KubeletSpec
+	if oldNG != nil {
+		oldKubelet = oldNG.Spec.Kubelet
+	}
+	warnings = append(warnings, topologyManagerWarnings(oldKubelet, ng.Spec.Kubelet, req.Operation == "UPDATE")...)
+	warnings = append(warnings, topologyManagerDeprecationWarnings(ng.Name, ng.Spec.Kubelet)...)
 
 	if req.Operation == "UPDATE" && oldNG != nil {
 		oldCRIType := getCRIType(oldNG, clusterConfig.DefaultCRI)
@@ -424,6 +416,95 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		return admission.Allowed("").WithWarnings(warnings...)
 	}
 	return admission.Allowed("")
+}
+
+type topologyManagerSettings struct {
+	policy string
+	scope  string
+}
+
+// computeTopologyManagerSettings returns what reaches the kubelet: CRD defaults filled, ignored fields dropped.
+func computeTopologyManagerSettings(k *v1.KubeletSpec) topologyManagerSettings {
+	res := topologyManagerSettings{policy: "None"}
+	if k == nil || k.TopologyManager == nil {
+		return res
+	}
+	tm := k.TopologyManager
+	if tm.Policy != "" {
+		res.policy = tm.Policy
+	}
+	if res.policy == "None" {
+		return res
+	}
+	res.scope = "Pod"
+	if tm.Scope != "" {
+		res.scope = tm.Scope
+	}
+	return res
+}
+
+// cpuPinning: static CPU manager is on, kubelet needs a CPU reserve.
+func (s topologyManagerSettings) cpuPinning() bool {
+	return s.policy != "None"
+}
+
+// memoryPinning: static memory manager is on, changing it may need a drain.
+func (s topologyManagerSettings) memoryPinning() bool {
+	return s.policy != "None"
+}
+
+func validateTopologyManager(k *v1.KubeletSpec) error {
+	if !computeTopologyManagerSettings(k).cpuPinning() {
+		return nil
+	}
+	reservation := k.ResourceReservation
+	if reservation == nil {
+		return fmt.Errorf(".spec.kubelet.resourceReservation must be enabled when .spec.kubelet.topologyManager.policy is not None")
+	}
+	switch reservation.Mode {
+	case "Auto":
+		return nil
+	case "Static":
+		if reservation.Static == nil || reservation.Static.CPU == nil {
+			return fmt.Errorf(".spec.kubelet.resourceReservation.static.cpu must be specified when .spec.kubelet.topologyManager.policy is not None and the resource reservation is Static")
+		}
+		q, err := resource.ParseQuantity(reservation.Static.CPU.String())
+		if err != nil || q.Sign() <= 0 {
+			return fmt.Errorf(".spec.kubelet.resourceReservation.static.cpu must be a positive CPU quantity when .spec.kubelet.topologyManager.policy is not None")
+		}
+		return nil
+	default:
+		return fmt.Errorf(".spec.kubelet.resourceReservation.mode must be Auto or Static when .spec.kubelet.topologyManager.policy is not None")
+	}
+}
+
+func topologyManagerWarnings(oldK, newK *v1.KubeletSpec, isUpdate bool) []string {
+	oldSettings := computeTopologyManagerSettings(oldK)
+	newSettings := computeTopologyManagerSettings(newK)
+	if !isUpdate || oldSettings == newSettings {
+		return nil
+	}
+	warnings := []string{"changing .spec.kubelet.topologyManager requires a kubelet restart when the setting is applied to nodes"}
+	if newSettings.memoryPinning() {
+		warnings = append(warnings, "applying .spec.kubelet.topologyManager may require a disruption on nodes with Guaranteed pods according to the NodeGroup disruption settings")
+	}
+	return warnings
+}
+
+// enabled: false with policy None is the stored CRD default of old objects, not worth a warning.
+func topologyManagerDeprecationWarnings(name string, k *v1.KubeletSpec) []string {
+	if k == nil || k.TopologyManager == nil || k.TopologyManager.Enabled == nil {
+		return nil
+	}
+	tm := k.TopologyManager
+	remove := fmt.Sprintf(`d8 k patch nodegroup %s --type json -p '[{"op":"remove","path":"/spec/kubelet/topologyManager/enabled"}]'`, name)
+	if !*tm.Enabled && tm.Policy != "" && tm.Policy != "None" {
+		return []string{fmt.Sprintf(".spec.kubelet.topologyManager.enabled is deprecated and has no effect: enabled: false does not turn off the policy %s, set policy None to turn it off; remove enabled: %s", tm.Policy, remove)}
+	}
+	if *tm.Enabled {
+		return []string{".spec.kubelet.topologyManager.enabled is deprecated and has no effect, the resource managers are controlled by .spec.kubelet.topologyManager.policy alone; remove it: " + remove}
+	}
+	return nil
 }
 
 // validateLabelSelectorImmutability checks that staticInstances.labelSelector

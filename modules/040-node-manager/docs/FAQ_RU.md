@@ -488,6 +488,7 @@ spec:
 | disruptions                           | -                          | -                 | -               |
 | kubelet.maxPods                       | -                          | -                 | +               |
 | kubelet.rootDir                       | -                          | -                 | +               |
+| kubelet.topologyManager               | + (политика, отличная от `None`, [подробнее](#как-выделить-подам-отдельные-cpu-и-выровнять-их-по-numa)) | - | + |
 | kubernetesVersion                     | -                          | -                 | +               |
 | nodeTemplate                          | -                          | -                 | -               |
 | static                                | -                          | -                 | +               |
@@ -523,6 +524,104 @@ Deckhouse по умолчанию поддерживает использова�
 {% endalert %}
 
 Подробности [в статье на Habr](https://habr.com/ru/company/flant/blog/432748/).
+
+## Как выделить подам отдельные CPU и выровнять их по NUMA?
+
+Используйте параметр [`spec.kubelet.topologyManager`](cr.html#nodegroup-v1-spec-kubelet-topologymanager) в NodeGroup. Deckhouse настроит менеджеры CPU, памяти и топологии kubelet и рассчитает значения, зависящие от NUMA, на каждом узле группы.
+
+Результат зависит от `policy`:
+
+| `policy` | Что получают поды | Настройки kubelet |
+|----------|-------------------|-------------------|
+| `None` (по умолчанию) | Ничего, все поды делят все CPU | Не задаются, используются значения kubelet по умолчанию |
+| `BestEffort` | Эксклюзивные CPU для контейнеров Guaranteed-подов с целым числом CPU, память, закреплённая за NUMA-узлами. NUMA-выравнивание CPU, памяти и устройств, если возможно | `cpuManagerPolicy: static`, `memoryManagerPolicy: Static`, `topologyManagerPolicy: best-effort` |
+| `Restricted` | Эксклюзивные целые физические ядра. Под получает CPU, память и устройства из наименьшего возможного набора NUMA-узлов, иначе отклоняется | `cpuManagerPolicy: static` с `full-pcpus-only`, `memoryManagerPolicy: Static`, `topologyManagerPolicy: restricted` |
+| `SingleNumaNode` | Эксклюзивные целые физические ядра. CPU, память и устройства берутся из одного NUMA-узла, иначе под отклоняется | `cpuManagerPolicy: static` с `full-pcpus-only`, `memoryManagerPolicy: Static`, `topologyManagerPolicy: single-numa-node` |
+
+Параметр `scope` задаёт, что выравнивается, для всех политик, кроме `None`: `Pod` (по умолчанию) выравнивает все контейнеры пода вместе, `Container` выравнивает каждый контейнер отдельно.
+
+Параметр `enabled` устарел и ни на что не влияет: менеджерами управляет только `policy`. Чтобы выключить их, задайте `policy: None`.
+
+Для всех политик, кроме `None`, Deckhouse также:
+
+- распределяет `reservedMemory` по NUMA-узлам пропорционально их памяти без hugepages;
+- включает `prefer-closest-numa-nodes` для `Restricted`, если узел сообщает полную таблицу расстояний между NUMA-узлами, а их номера идут подряд с 0;
+- задаёт `max-allowable-numa-nodes`, если NUMA-узлов больше 8.
+
+Для политик `BestEffort`, `Restricted` и `SingleNumaNode` нужен [`resourceReservation.mode`](cr.html#nodegroup-v1-spec-kubelet-resourcereservation-mode) `Auto` или `Static` с положительным `static.cpu`.
+
+При любой политике, кроме `None`, в том числе при `BestEffort`, память Guaranteed-пода закрепляется за NUMA-узлами, выбранными при допуске. Под, память которого не удаётся разместить, отклоняется с `UnexpectedAdmissionError`. Контейнер может быть завершён OOM killer, когда на его NUMA-узлах заканчивается память, даже если на других NUMA-узлах она свободна.
+
+Эксклюзивные CPU забираются из общего пула. Burstable- и BestEffort-поды, включая системные компоненты, работают на оставшихся CPU. Это заметно для подов, которые потребляют больше CPU, чем запрашивают: без эксклюзивных CPU они используют простой всех ядер, а с эксклюзивными CPU делят оставшиеся. В режиме `Auto` общий пул может сократиться до 1 CPU. При необходимости используйте `Static` с большим `static.cpu`.
+
+NodeGroup ниже выделяет Guaranteed-подам на узлах `worker-dpdk` целые физические ядра в одном NUMA-узле:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker-dpdk
+spec:
+  nodeType: Static
+  kubelet:
+    topologyManager:
+      policy: SingleNumaNode
+    resourceReservation:
+      mode: Auto
+```
+
+Эксклюзивные CPU получают только контейнеры Guaranteed-подов с целым числом CPU: в каждом контейнере requests равны limits по CPU и памяти, а значение CPU целое:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dpdk-app
+spec:
+  containers:
+  - name: app
+    image: registry.example.com/dpdk-app:latest
+    resources:
+      requests:
+        cpu: "4"
+        memory: 8Gi
+      limits:
+        cpu: "4"
+        memory: 8Gi
+```
+
+### Правила политик Restricted и SingleNumaNode
+
+- Число CPU контейнера должно быть кратно числу потоков на ядро. При включённом SMT (Hyper-Threading) нечётное число CPU отклоняется с `SMTAlignmentError`.
+- При `SingleNumaNode` под (при `scope: Pod`) или каждый контейнер (при `scope: Container`) должен помещаться в один NUMA-узел. Рассчитывайте размер подов по самому маленькому NUMA-узлу группы.
+- Под, который не удаётся выровнять, отклоняется: с `TopologyAffinityError`, если не помещаются CPU, и с `UnexpectedAdmissionError`, если не помещается память.
+- Планировщик не знает о NUMA-узлах. Он может назначить под на узел, где под затем будет отклонён. Контроллер пода (например, Deployment или StatefulSet) создаст новый под, который тоже может быть отклонён.
+
+### Изменение настроек
+
+Изменение `policy`, а при политике, отличной от `None`, и `scope` перезапускает kubelet на узлах группы.
+
+Узел запрашивает прерывание работы (disruption), если выполнены все условия:
+
+- новая конфигурация kubelet использует политику, отличную от `None`;
+- меняются настройки CPU или памяти kubelet, например `policy`, `scope`, резерв CPU или памяти в `resourceReservation` или объём памяти либо hugepages на узле. Другие резервы, например `ephemeralStorage`, прерывания не вызывают;
+- на узле работают Guaranteed-поды. Поды DaemonSet и статические поды не учитываются, потому что drain их не вытесняет.
+
+Прерывание обрабатывается по настройкам [`disruptions`](cr.html#nodegroup-v1-spec-disruptions) группы:
+
+- при `approvalMode: Automatic` выполняется drain узла, затем узел получает новую конфигурацию;
+- при `approvalMode: Automatic` и [`automatic.drainBeforeApproval: false`](cr.html#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) drain не выполняется. После перезапуска kubelet работающие поды, не подходящие под новую политику, будут остановлены;
+- при `approvalMode: Manual` drain автоматически не выполняется. Выполните drain узла, затем выполните `d8 k annotate node <NODE_NAME> update.node.deckhouse.io/disruption-approved=`;
+- при `approvalMode: RollingUpdate` (только облачные узлы) узел заменяется новым.
+
+Переход на `None` не вызывает drain: работающие контейнеры сохраняют свои CPU и NUMA-узел памяти до пересоздания. Чтобы распределить их по всем CPU, перезапустите нагрузку, например командой `d8 k rollout restart`.
+
+### Ограничения
+
+- Узлы с более чем 8 NUMA-узлами поддерживаются, но допуск подов на них занимает больше времени.
+- Узлы одной группы могут иметь разную NUMA-раскладку. Каждый узел получает свои значения, но предельный размер пода задаёт самый маленький NUMA-узел.
+- Скрипты NodeGroupConfiguration не должны менять резервы и политики менеджеров в `/var/lib/kubelet/config.yaml`.
+- Выделяйте hugepages до настройки kubelet. Шаги NodeGroupConfiguration выполняются по порядку `weight` вместе со встроенными шагами, а kubelet настраивается на шаге 64, поэтому используйте `weight` меньше 64. Распределение резерва по NUMA-узлам учитывает hugepages, выделенные к этому моменту. Выделенные позже hugepages меняют распределение и могут вызвать ещё один drain, если на узле работают Guaranteed-поды.
 
 ## Как выделить узлы под системные компоненты?
 

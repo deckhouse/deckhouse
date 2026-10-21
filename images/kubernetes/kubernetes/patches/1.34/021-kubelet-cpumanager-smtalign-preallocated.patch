@@ -1,0 +1,81 @@
+diff --git a/pkg/kubelet/cm/cpumanager/policy_static.go b/pkg/kubelet/cm/cpumanager/policy_static.go
+index 6c767882a6a..619fa7c8d8a 100644
+--- a/pkg/kubelet/cm/cpumanager/policy_static.go
++++ b/pkg/kubelet/cm/cpumanager/policy_static.go
+@@ -344,6 +344,17 @@ func (p *staticPolicy) Allocate(s state.State, pod *v1.Pod, container *v1.Contai
+ 		}
+ 	}()
+ 
++	// Checking the checkpoint state before SMT alignment validation means that
++	// existing allocations are preserved even if they violate the current policy.
++	// For example, if kubelet previously ran with full-pcpus-only=false and is
++	// restarted with full-pcpus-only=true, checkpointed allocations that don't
++	// satisfy SMT alignment are accepted to avoid disrupting running workloads.
++	if cset, ok := s.GetCPUSet(string(pod.UID), container.Name); ok {
++		p.updateCPUsToReuse(pod, container, cset)
++		klog.InfoS("Static policy: container already present in state, skipping", "pod", klog.KObj(pod), "containerName", container.Name)
++		return nil
++	}
++
+ 	if p.options.FullPhysicalCPUsOnly {
+ 		if (numCPUs % p.cpuGroupSize) != 0 {
+ 			// Since CPU Manager has been enabled requesting strict SMT alignment, it means a guaranteed pod can only be admitted
+@@ -377,11 +388,6 @@ func (p *staticPolicy) Allocate(s state.State, pod *v1.Pod, container *v1.Contai
+ 			}
+ 		}
+ 	}
+-	if cset, ok := s.GetCPUSet(string(pod.UID), container.Name); ok {
+-		p.updateCPUsToReuse(pod, container, cset)
+-		klog.InfoS("Static policy: container already present in state, skipping", "pod", klog.KObj(pod), "containerName", container.Name)
+-		return nil
+-	}
+ 
+ 	// Call Topology Manager to get the aligned socket affinity across all hint providers.
+ 	hint := p.affinity.GetAffinity(string(pod.UID), container.Name)
+diff --git a/pkg/kubelet/cm/cpumanager/policy_static_test.go b/pkg/kubelet/cm/cpumanager/policy_static_test.go
+index a91c54f8407..8b1a250c0f9 100644
+--- a/pkg/kubelet/cm/cpumanager/policy_static_test.go
++++ b/pkg/kubelet/cm/cpumanager/policy_static_test.go
+@@ -570,6 +570,42 @@ func TestStaticPolicyAdd(t *testing.T) {
+ 			expCPUAlloc:     true,
+ 			expCSet:         cpuset.New(1, 2, 3, 4, 5, 7, 8, 9, 10, 11),
+ 		},
++		{
++			// The purpose of this test is to verify that SMTAlignment consider
++			// pre-allocated CPUs assigned to the container.
++			// for example, in case of kubelet restart.
++			description: "GuPodManyCores, DualSocketHT, ExpectReAllocCPUs",
++			topo:        topoDualSocketHT,
++			options: map[string]string{
++				FullPCPUsOnlyOption: "true",
++			},
++			numReservedCPUs: 4,
++			reservedCPUs:    newCPUSetPtr(0, 1, 6, 7),
++			pod:             makePod("fakePod", "fakeContainer", "6", "6"),
++			stAssignments: state.ContainerCPUAssignments{
++				"fakePod": map[string]cpuset.CPUSet{
++					"fakeContainer": cpuset.New(2, 3, 4, 8, 9, 10),
++				},
++			},
++			stDefaultCPUSet: cpuset.New(0, 1, 5, 6, 7, 11),
++			expErr:          nil,
++			expCPUAlloc:     true,
++			expCSet:         cpuset.New(2, 3, 4, 8, 9, 10),
++		},
++		{
++			description: "GuPodManyCores, DualSocketHT, NotEnoughAvailable, NoAlloc",
++			topo:        topoDualSocketHT,
++			options: map[string]string{
++				FullPCPUsOnlyOption: "true",
++			},
++			numReservedCPUs: 4,
++			reservedCPUs:    newCPUSetPtr(0, 1, 6, 7),
++			pod:             makePod("fakePod", "fakeContainer", "10", "10"),
++			stAssignments:   state.ContainerCPUAssignments{},
++			stDefaultCPUSet: cpuset.New(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
++			expErr:          SMTAlignmentError{RequestedCPUs: 10, CpusPerCore: 2, AvailablePhysicalCPUs: 8, CausedByPhysicalCPUs: true},
++			expCPUAlloc:     false,
++		},
+ 	}
+ 	newNUMAAffinity := func(bits ...int) bitmask.BitMask {
+ 		affinity, _ := bitmask.NewBitMask(bits...)

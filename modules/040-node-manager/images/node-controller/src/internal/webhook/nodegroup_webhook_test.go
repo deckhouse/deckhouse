@@ -877,7 +877,7 @@ func TestValidation_TopologyManagerWithoutResourceReservation(t *testing.T) {
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.Kubelet = &v1.KubeletSpec{
-		TopologyManager: &v1.TopologyManagerSpec{Policy: "single-numa-node"},
+		TopologyManager: &v1.TopologyManagerSpec{Policy: "SingleNumaNode"},
 	}
 
 	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
@@ -893,7 +893,7 @@ func TestValidation_TopologyManagerStaticWithoutCPU(t *testing.T) {
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.Kubelet = &v1.KubeletSpec{
-		TopologyManager:     &v1.TopologyManagerSpec{Policy: "single-numa-node"},
+		TopologyManager:     &v1.TopologyManagerSpec{Policy: "SingleNumaNode"},
 		ResourceReservation: &v1.ResourceReservationSpec{Mode: "Static", Static: &v1.StaticResourceReservation{}},
 	}
 
@@ -911,7 +911,7 @@ func TestValidation_TopologyManagerWithValidConfig(t *testing.T) {
 	cpu := intstr.FromString("500m")
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.Kubelet = &v1.KubeletSpec{
-		TopologyManager: &v1.TopologyManagerSpec{Policy: "single-numa-node"},
+		TopologyManager: &v1.TopologyManagerSpec{Policy: "SingleNumaNode"},
 		ResourceReservation: &v1.ResourceReservationSpec{
 			Mode:   "Static",
 			Static: &v1.StaticResourceReservation{CPU: &cpu},
