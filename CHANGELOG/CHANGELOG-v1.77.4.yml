@@ -1,0 +1,125 @@
+chrony:
+  fixes:
+    - summary: Bump golang.org/x/net in chrony_exporter to fix CVE-2026-78669.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/792
+cilium-hubble:
+  fixes:
+    - summary: Fixed known vulnerabilities in the Hubble relay and UI images.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/713
+cloud-provider-aws:
+  fixes:
+    - summary: >-
+        Allow bootstrapping clusters in AWS regions unknown to the bundled terraform-provider-aws, such
+        as `ap-southeast-6`.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/832
+cloud-provider-dvp:
+  fixes:
+    - summary: >-
+        A DVP cluster migrated to the new provider configuration format keeps its `networkPolicy - None`
+        instead of silently switching to `Isolated`.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/845
+    - summary: >-
+        Clusters with `networkPolicy - None` in the provider configuration no longer get NetworkPolicies
+        created for LoadBalancer Services.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/859
+cloud-provider-yandex:
+  fixes:
+    - summary: >-
+        Preemptible nodes are created as preemptible VMs and rotated before the 24h limit when a NodeGroup
+        is managed by the CAPI engine.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/771
+      impact: >-
+        Upgrade does not recreate any node. NodeGroups that already have preemptible: true under the CAPI
+        engine keep their current regular VMs; Machines created after the upgrade (scale-up, replacement)
+        are preemptible, so such NodeGroups run mixed VMs until a full rollout (any rollout-triggering
+        InstanceClass change or the manual-rollout-id annotation). Preemptible VMs are rotated every ~20h.
+    - summary: >-
+        Preemptible nodes are created as preemptible VMs and rotated before the 24h limit when a NodeGroup
+        is managed by the CAPI engine.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/76
+      impact: >-
+        NodeGroups that already have preemptible: true under the CAPI engine keep their current regular
+        VMs until the next rollout (any rollout-triggering InstanceClass change or manual-rollout-id);
+        after that rollout their nodes become preemptible VMs and are rotated every ~20h.
+cni-cilium:
+  fixes:
+    - summary: Fixed known vulnerabilities in the Cilium images.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/713
+      impact: Cilium agent and operator pods will be restarted.
+common:
+  fixes:
+    - summary: Fixed known vulnerabilities in the CNI migration images.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/715
+control-plane-manager:
+  features:
+    - summary: >-
+        The `etcd` dashboard is reworked to find the cause of slow `etcd` - disk, network, leader, `kube-apiserver`
+        load or page cache.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/727
+deckhouse:
+  fixes:
+    - summary: Bump containerd to v2.2.10 and dependencies to fix CVEs
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/821
+dhctl:
+  fixes:
+    - summary: Bump golang.org/x/net to fix CVE-2026-78669.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/792
+docs:
+  fixes:
+    - summary: Update terminology in the documentation and SEO improvements.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/873
+documentation:
+  fixes:
+    - summary: Update documentation building rules.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/839
+istio:
+  fixes:
+    - summary: Added VEX for CVE-2026-85747 in pilot and proxyv2 images.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/864
+kube-dns:
+  fixes:
+    - summary: Fixed known vulnerabilities in the CoreDNS and sts-pods-hosts-appender images.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/714
+      impact: CoreDNS pods will be restarted.
+metallb:
+  fixes:
+    - summary: Fixed known vulnerabilities in the MetalLB images.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/719
+      impact: metallb pods will be restarted.
+node-local-dns:
+  fixes:
+    - summary: Fixed known vulnerabilities in the node-local-dns images.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/714
+      impact: node-local-dns pods will be restarted.
+node-manager:
+  fixes:
+    - summary: Updates otel, grpc and x/crypto dependencies of node-controller to fix CVEs.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/76
+    - summary: fixed private build
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/786
+    - summary: Bump golang.org/x/net to fix CVE-2026-78669, CVE-2026-78663, CVE-2026-97032.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/792
+registry:
+  fixes:
+    - summary: Bump golang.org/x/net in nodeservices-manager to fix CVE-2026-78669.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/792
+registry-packages-proxy:
+  fixes:
+    - summary: Bump golang.org/x/net to fix CVE-2026-78669.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/792
+registrypackages:
+  fixes:
+    - summary: Fixed known vulnerabilities in the kubernetes-cni package.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/721
+    - summary: >-
+        Bump golang.org/x/net, golang.org/x/crypto and OpenTelemetry in rpp-get and the docker-registry
+        auth_server to fix CVE-2026-78669, CVE-2026-56855, CVE-2026-81870.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/792
+terraform-manager:
+  fixes:
+    - summary: Bump golang.org/x/net in opentofu to fix CVE-2026-78669.
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/792
+vertical-pod-autoscaler:
+  fixes:
+    - summary: The admission-controller webhook now serves HTTP/1.1 only and no longer exposes
+      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/754

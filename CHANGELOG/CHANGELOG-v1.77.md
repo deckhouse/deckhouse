@@ -36,6 +36,7 @@
  - Applying this change restarts control-plane components.
  - Before, such an entry stopped the webhook from reloading the rules, so subjects of rules added later, and every subject after a restart of the webhook, were not limited to their namespaces. Subjects of a rule whose only entry is invalid now get no namespace through the entries of that rule.
  - CAPI NodeGroups whose MachineDeployment was stuck on an old MachineTemplate are rolled to the current InstanceClass after the update, within maxSurgePerZone/maxUnavailablePerZone. Groups already on the current template are not touched.
+ - Cilium agent and operator pods will be restarted.
  - Cilium agent pods are restarted to apply the fixes.
  - Cloud provider configuration for DKP clusters deployed in DVP needs to be migrated from ProviderClusterConfiguration to ModuleConfig settings. For migration instructions, refer to "Cluster and Infrastructure" in the DKP FAQ.
  - Clusters bootstrapped before v1.55 were switched to the `Baseline` default PSS policy in 1.77, which denies privileged workloads in user namespaces.
@@ -57,6 +58,7 @@
     The webhook uses `failurePolicy: Fail`, so while Gatekeeper is unavailable `kubectl debug`
     will not work in user namespaces. System namespaces are excluded from the webhook and are
     not affected.
+ - CoreDNS pods will be restarted.
  - Creating a `Group` or a `User`, or renaming an existing one, so that `Group.spec.name` matches a group subject or `User.spec.email` matches a user subject of an existing AuthorizationRule or ClusterAuthorizationRule is now rejected, preventing an unintended privilege grant. The email is compared after lowercasing, since that is the form that reaches the token. Set the `user-authz.deckhouse.io/allow-authorization-rule-collision` annotation to `"true"` on the object if the collision is intentional. Already existing objects keep working and only produce a warning. Any declarative flow that manages both the rule and the identity is affected, not only one that deletes and recreates the identity: a first-time apply denies the `Group` or `User` whenever the rule happens to be applied first, and nothing guarantees the order. Add the annotation to such objects before upgrading. Deleting a `Group` or a `User` whose name is still a subject of a rule now produces a warning, since the rule keeps granting that name.
  - Custom roles of the legacy experimental RBACv2 scheme must be migrated to the new `d8:custom:*` scheme before upgrading to DKP 1.78. The `D8UserAuthzLegacyRBACv2CustomRoleFound` alert identifies affected roles. Refer to the `user-authz` module FAQ for migration instructions.
  - Deckhouse 1.78 makes `Baseline` the default PSS policy for all clusters.
@@ -80,6 +82,7 @@
     If the proxy server cannot reach the issuer or the public address of the cluster, add these addresses to `noProxy`.
  - In the `metallb` module, BGP configuration was migrated from ModuleConfig to dedicated custom resources. Existing configuration is migrated automatically during the update. Before editing the generated resources, disable further migration by updating the ModuleConfig version. Afterwards, remove the obsolete BGP settings from the ModuleConfig. See the module documentation for details.
  - Machines are not recreated on update. Machines created before the update keep the standard network type and no labels until the NodeGroup is rolled out (change a rolling InstanceClass field or set the `manual-rollout-id` annotation on the NodeGroup). Machines stuck in provisioning because of `additionalSubnets` become ready without recreation.
+ - NodeGroups that already have preemptible: true under the CAPI engine keep their current regular VMs until the next rollout (any rollout-triggering InstanceClass change or manual-rollout-id); after that rollout their nodes become preemptible VMs and are rotated every ~20h.
  - Nodes in maintenance mode could previously cause the fencing-agent to crash while attempting to arm the watchdog. The agent now skips watchdog arming during maintenance and resumes it automatically afterwards.
  - On upgrade, every DexAuthenticator that carries the
     `dexauthenticator.deckhouse.io/allow-access-to-kubernetes` annotation gets a freshly generated client
@@ -187,6 +190,7 @@
  - The node-local-dns DaemonSet pods will restart after the update.
  - This release fixes an issue where transient cluster DNS failures could cause the user-authz-webhook to restart, temporarily denying all Kubernetes API requests until DNS recovered.
  - Unsafe custom HelperPod settings in the `local-path-config` ConfigMap are no longer accepted. Default DKP installations are unaffected.
+ - Upgrade does not recreate any node. NodeGroups that already have preemptible: true under the CAPI engine keep their current regular VMs; Machines created after the upgrade (scale-up, replacement) are preemptible, so such NodeGroups run mixed VMs until a full rollout (any rollout-triggering InstanceClass change or the manual-rollout-id annotation). Preemptible VMs are rotated every ~20h.
  - ValidatingAdmissionPolicy reserved-public-hosts-* is removed. Ingresses that were denied because they matched publicDomainTemplate are allowed again. settings.reservedPublicHosts in ModuleConfig deckhouse remains accepted and is ignored. Enforcement returns in a later release.
  - Values taken from `Project.spec.parameters` are now quoted where they are substituted into the
     shipped project templates, and a parameter that changes the structure of the rendered manifests
@@ -218,6 +222,8 @@
     the `default-scheduler` profile is not affected. Pods using this profile must declare resource
     `requests` — the scheduler scores nodes using `NonZeroRequested`, substituting 100m CPU / 200Mi
     memory for containers without requests, which makes bin packing operate on synthetic numbers.
+ - metallb pods will be restarted.
+ - node-local-dns pods will be restarted.
 
 ## Features
 
@@ -508,6 +514,7 @@
     The cilium-hubble components (hubble-ui, hubble-relay) will restart after the update.
  - **[cilium-hubble]** Fixed CVE-2026-29181 in hubble-ui-backend by bumping OpenTelemetry Go to v1.41.0. [#20087](https://github.com/deckhouse/deckhouse/pull/20087)
  - **[cilium-hubble]** Fixed CVE-2026-41520 in hubble-ui-backend. [#20359](https://github.com/deckhouse/deckhouse/pull/20359)
+ - **[cilium-hubble]** Fixed known vulnerabilities in the Hubble relay and UI images. [#713](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/713)
  - **[cloud-provider-aws]** Added a new Bashible step to install `linux-modules-extra` on Ubuntu nodes. [#19415](https://github.com/deckhouse/deckhouse/pull/19415)
  - **[cloud-provider-aws]** Adds SecurityPolicyException for CCM and CSI components, fixes VPA and PodMonitor module guards, migrates hand-written templates to helm_lib helpers. [#21397](https://github.com/deckhouse/deckhouse/pull/21397)
  - **[cloud-provider-aws]** Bumped Go module dependencies to fix known CVEs in terraform-manager, cloud-data-discoverer; documented GO-2026-5932 vulnerability via VEX. [#20780](https://github.com/deckhouse/deckhouse/pull/20780)
@@ -518,12 +525,14 @@
  - **[cloud-provider-azure]** Bumped helm_lib with liveness probe parameters for the CSI controller. [#19694](https://github.com/deckhouse/deckhouse/pull/19694)
  - **[cloud-provider-azure]** Fix multimaster bootstrap by falling back to the `d8-masters-kubernetes-data-device-path` Secret when the master data device LUN is not provided via cloud-init. [#23090](https://github.com/deckhouse/deckhouse/pull/23090)
  - **[cloud-provider-azure]** fix GetCapacity not implemented error spam in logs [#22903](https://github.com/deckhouse/deckhouse/pull/22903)
+ - **[cloud-provider-dvp]** A DVP cluster migrated to the new provider configuration format keeps its `networkPolicy - None` instead of silently switching to `Isolated`. [#845](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/845)
  - **[cloud-provider-dvp]** Add skip storage class annotation handling to skip discovery of some storage classes from parent clusters, e.g., local disks. [#19696](https://github.com/deckhouse/deckhouse/pull/19696)
  - **[cloud-provider-dvp]** Added mount points for the validation-webhook image so serving certificates persist correctly. [#21526](https://github.com/deckhouse/deckhouse/pull/21526)
  - **[cloud-provider-dvp]** Added the d8_cloud_provider_dvp_migration_pending metric for the D8CloudProviderDVPMigrationPending alert. [#21409](https://github.com/deckhouse/deckhouse/pull/21409)
  - **[cloud-provider-dvp]** Always use WaitForFirstConsumer for child-cluster DVP StorageClasses and recreate incompatible managed classes during upgrade. [#20116](https://github.com/deckhouse/deckhouse/pull/20116)
  - **[cloud-provider-dvp]** Bumped Go module dependencies to fix known CVEs in cloud-controller-manager, dvp-csi, capdvp, cloud-data-discoverer. [#20780](https://github.com/deckhouse/deckhouse/pull/20780)
  - **[cloud-provider-dvp]** Bumped helm_lib with liveness probe parameters for the CSI controller. [#19694](https://github.com/deckhouse/deckhouse/pull/19694)
+ - **[cloud-provider-dvp]** Clusters with `networkPolicy - None` in the provider configuration no longer get NetworkPolicies created for LoadBalancer Services. [#859](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/859)
  - **[cloud-provider-dvp]** Fix CVEs [#22319](https://github.com/deckhouse/deckhouse/pull/22319)
  - **[cloud-provider-dvp]** Fixed CVEs in the cloud-provider-dvp module. [#20796](https://github.com/deckhouse/deckhouse/pull/20796)
  - **[cloud-provider-dvp]** Fixed LoadBalancer stuck in pending by retrying on conflict when updating ServiceWithHealthchecks and propagating IP to the child cluster service status. [#19590](https://github.com/deckhouse/deckhouse/pull/19590)
@@ -578,6 +587,10 @@
  - **[cloud-provider-yandex]** Bumped Go module dependencies to fix known CVEs in cloud-metrics-exporter, cloud-migrator, cloud-data-discoverer. [#20780](https://github.com/deckhouse/deckhouse/pull/20780)
  - **[cloud-provider-yandex]** Bumped helm_lib with liveness probe parameters for the CSI controller. [#19694](https://github.com/deckhouse/deckhouse/pull/19694)
  - **[cloud-provider-yandex]** Fixed the volume-expansion-mode annotation so Yandex CSI supports online PVC resize. [#20578](https://github.com/deckhouse/deckhouse/pull/20578)
+ - **[cloud-provider-yandex]** Preemptible nodes are created as preemptible VMs and rotated before the 24h limit when a NodeGroup is managed by the CAPI engine. [#76](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/76)
+    NodeGroups that already have preemptible: true under the CAPI engine keep their current regular VMs until the next rollout (any rollout-triggering InstanceClass change or manual-rollout-id); after that rollout their nodes become preemptible VMs and are rotated every ~20h.
+ - **[cloud-provider-yandex]** Preemptible nodes are created as preemptible VMs and rotated before the 24h limit when a NodeGroup is managed by the CAPI engine. [#771](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/771)
+    Upgrade does not recreate any node. NodeGroups that already have preemptible: true under the CAPI engine keep their current regular VMs; Machines created after the upgrade (scale-up, replacement) are preemptible, so such NodeGroups run mixed VMs until a full rollout (any rollout-triggering InstanceClass change or the manual-rollout-id annotation). Preemptible VMs are rotated every ~20h.
  - **[cloud-provider-yandex]** Restored `additionalSubnets`, `networkType` and VM labels (`nodes.parameters.labels`, `additionalLabels`) for CAPI-managed Yandex nodes. [#671](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/671)
     Machines are not recreated on update. Machines created before the update keep the standard network type and no labels until the NodeGroup is rolled out (change a rolling InstanceClass field or set the `manual-rollout-id` annotation on the NodeGroup). Machines stuck in provisioning because of `additionalSubnets` become ready without recreation.
  - **[cloud-provider-yandex]** fix "Address in use" failures when replacing nodes and when removing external IP addresses [#23256](https://github.com/deckhouse/deckhouse/pull/23256)
@@ -597,6 +610,8 @@
  - **[cni-cilium]** Fixed CVE-2026-41520 for the cilium-bugtool util. [#20067](https://github.com/deckhouse/deckhouse/pull/20067)
  - **[cni-cilium]** Fixed Cilium agent CPU overload on nodes with many CPUs. [#19903](https://github.com/deckhouse/deckhouse/pull/19903)
  - **[cni-cilium]** Fixed infinite reconciliation of EgressGateway objects and improved status reporting. [#19219](https://github.com/deckhouse/deckhouse/pull/19219)
+ - **[cni-cilium]** Fixed known vulnerabilities in the Cilium images. [#713](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/713)
+    Cilium agent and operator pods will be restarted.
  - **[cni-cilium]** Restore cilium-agent startup on nodes with BPF JIT hardening enabled by tolerating ErrRestrictedKernel in the eBPF probe. [#22646](https://github.com/deckhouse/deckhouse/pull/22646)
     cilium-agent pods are restarted on all nodes.
  - **[cni-cilium]** Updated Cilium from 1.17.4 to 1.17.17. [#20720](https://github.com/deckhouse/deckhouse/pull/20720)
@@ -638,6 +653,7 @@
  - **[common]** Fixed activating modsecurity CRS rules when the Ingress NGINX Controller is running with IsolatedProcess validation. [#20155](https://github.com/deckhouse/deckhouse/pull/20155)
     All Ingress NGINX Controller pods will be restarted.
  - **[common]** Fixed invalid PromQL expression in the `D8UpmeterProbeGarbagePodsFromDeployments` alert of `upmeter`. [#19571](https://github.com/deckhouse/deckhouse/pull/19571)
+ - **[common]** Fixed known vulnerabilities in the CNI migration images. [#715](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/715)
  - **[common]** Fixed known vulnerabilities in the CoreDNS image used by the node-local-dns module. [#187](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/187)
  - **[common]** Fixed mount points in a `geoproxy` image in `ingress-nginx`. [#20099](https://github.com/deckhouse/deckhouse/pull/20099)
     Geoproxy image will be restarted.
@@ -713,6 +729,7 @@
     Non-system users can no longer add or modify the `heritage` label; this prevents accidental creation of user-managed resources that become protected by Deckhouse heritage restrictions.
  - **[deckhouse]** Allow editing and deleting the resources of an application under maintenance. [#23113](https://github.com/deckhouse/deckhouse/pull/23113)
  - **[deckhouse]** An unset `settings.update.mode` now defaults to `AutoPatch` instead of silently running as `Auto`. [#21926](https://github.com/deckhouse/deckhouse/pull/21926)
+ - **[deckhouse]** Bump containerd to v2.2.10 and dependencies to fix CVEs [#821](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/821)
  - **[deckhouse]** Bumped addon-operator to fix module installation with conversion webhooks. [#21366](https://github.com/deckhouse/deckhouse/pull/21366)
  - **[deckhouse]** Cleaned availableRepositories on PackageRepository deletion. [#19973](https://github.com/deckhouse/deckhouse/pull/19973)
  - **[deckhouse]** Deleted module documentation when a module is disabled. [#20434](https://github.com/deckhouse/deckhouse/pull/20434)
@@ -816,6 +833,8 @@
     module pods will be restarted
  - **[kube-dns]** Bumped Go dependencies in the sts-pods-hosts-appender-webhook and coredns images to fix known CVEs. [#21389](https://github.com/deckhouse/deckhouse/pull/21389)
     The CoreDNS and kube-dns components will be restarted after the update.
+ - **[kube-dns]** Fixed known vulnerabilities in the CoreDNS and sts-pods-hosts-appender images. [#714](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/714)
+    CoreDNS pods will be restarted.
  - **[kube-dns]** Fixing of the subsystems list for modules. [#20925](https://github.com/deckhouse/deckhouse/pull/20925)
  - **[kube-dns]** Set resource limits for the `render-etc-hosts-with-cluster-domain-aliases` init container so that pods can be created in namespaces with a ResourceQuota on `limits.cpu`/`limits.memory`. [#23295](https://github.com/deckhouse/deckhouse/pull/23295)
  - **[kube-proxy]** Fixed kube-proxy failing to start on Kubernetes 1.36 and higher because of the removed `TopologyAwareHints` feature gate. [#23336](https://github.com/deckhouse/deckhouse/pull/23336)
@@ -829,6 +848,8 @@
  - **[metallb]** Bumped Go dependencies in the metallb and l2lb images to fix known CVEs. [#21391](https://github.com/deckhouse/deckhouse/pull/21391)
     The `metallb` components (controller, speaker, l2lb) will be restarted.
  - **[metallb]** Fixed creation of `BGPPeer` objects on Kubernetes 1.36+, which blocked BGP sessions and LoadBalancer IP announcements in BGP mode. [#23312](https://github.com/deckhouse/deckhouse/pull/23312)
+ - **[metallb]** Fixed known vulnerabilities in the MetalLB images. [#719](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/719)
+    metallb pods will be restarted.
  - **[multitenancy-manager]** A project parameter can no longer inject objects into the rendered project manifests. [#22091](https://github.com/deckhouse/deckhouse/pull/22091)
     Values taken from `Project.spec.parameters` are now quoted where they are substituted into the
     shipped project templates, and a parameter that changes the structure of the rendered manifests
@@ -876,6 +897,8 @@
     The node-local-dns DaemonSet pods will restart after the update.
  - **[node-local-dns]** Bumped Go dependencies in the safe-updater and stale-dns-connections-cleaner images to fix known CVEs. [#21389](https://github.com/deckhouse/deckhouse/pull/21389)
     The `node-local-dns` components will be restarted.
+ - **[node-local-dns]** Fixed known vulnerabilities in the node-local-dns images. [#714](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/714)
+    node-local-dns pods will be restarted.
  - **[node-manager]** A StaticInstance whose StaticMachine was deleted is returned to Pending and becomes available for bootstrapping again instead of staying out of the pool forever. [#457](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/457)
  - **[node-manager]** Added RBAC policies for PersistentVolumes managed by capi-controller-manager. [#19291](https://github.com/deckhouse/deckhouse/pull/19291)
  - **[node-manager]** Added RBAC rules for node-manager. [#19720](https://github.com/deckhouse/deckhouse/pull/19720)
@@ -958,6 +981,7 @@
  - **[registrypackages]** Bumped containerd to 1.7.35/2.2.8; bumped grpc, x/crypto, and websocket in containerd, crictl, and Kubernetes 1.32–1.36 gomod patches. [#23087](https://github.com/deckhouse/deckhouse/pull/23087)
  - **[registrypackages]** Close CVEs in `cfssl`, `docker-registry` and `rpp-get` by bumping vulnerable Go dependencies, and build `yq` from `pm` at 4.53.6. [#22684](https://github.com/deckhouse/deckhouse/pull/22684)
  - **[registrypackages]** Fix dm-verity devices that could never be closed for containerd 2.2.7 (CSE only). [#22807](https://github.com/deckhouse/deckhouse/pull/22807)
+ - **[registrypackages]** Fixed known vulnerabilities in the kubernetes-cni package. [#721](https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/721)
  - **[registrypackages]** Fsync the EROFS layer blob in `containerd` before committing snapshot metadata, so an unclean shutdown can no longer leave an unmountable image layer. [#23145](https://github.com/deckhouse/deckhouse/pull/23145)
  - **[registrypackages]** Updated `registrypackages/docker-registry` image Go dependencies to fix Go CVEs. [#20377](https://github.com/deckhouse/deckhouse/pull/20377)
  - **[registrypackages]** Updated the Mozilla CA snapshot used by d8-ca-updater and made the build fail on trusted expired certificates. [#20939](https://github.com/deckhouse/deckhouse/pull/20939)
