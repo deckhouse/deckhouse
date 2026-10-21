@@ -83,17 +83,23 @@ func buildDisks(reg *registry.Service, logger *log.Logger) (diskBackend, diskBac
 // buildScheduler creates the paused scheduler with its rule getters. The gate inputs come from the
 // global values (the engine's global module, else addon-operator's); the hooks' enable signal
 // exists only with the engine's global module; dependencies are asked from addon-operator only
-// while modules live there.
-func buildScheduler(cli kclient.Client, moduleManager moduleManager, globalModule *globalmodule.Module, edit *edition.Edition, logger *log.Logger) *schedule.Scheduler {
-	var globalValues func() addonutils.Values
+// while modules live there; onConvergence, when set, is told every change of the graph's
+// convergence.
+func buildScheduler(cli kclient.Client, moduleManager moduleManager, globalModule *globalmodule.Module, edit *edition.Edition, onConvergence func(converged bool), logger *log.Logger) *schedule.Scheduler {
+	// globalValue reads one global value: the getters run for every node on every computation, so
+	// they must not copy the whole global values the way a render does.
+	var globalValue func(key string) (any, bool)
 	if globalModule != nil {
-		globalValues = globalModule.GetValues
+		globalValue = globalModule.GetValue
 	} else {
-		globalValues = func() addonutils.Values { return moduleManager.GetGlobal().GetValues(false) }
+		globalValue = func(key string) (any, bool) {
+			value, ok := moduleManager.GetGlobal().GetValues(false)[key]
+			return value, ok
+		}
 	}
 
 	deckhouseVersion := func() (*semver.Version, error) {
-		value, ok := globalValues()[deckhouseVersionValue]
+		value, ok := globalValue(deckhouseVersionValue)
 		if !ok {
 			return nil, errors.New("deckhouse version not found in global values")
 		}
@@ -111,7 +117,16 @@ func buildScheduler(cli kclient.Client, moduleManager moduleManager, globalModul
 	}
 
 	kubernetesVersion := func() (*semver.Version, error) {
-		discovery := globalValues().GetKeySection("discovery")
+		var discovery map[string]any
+
+		section, _ := globalValue("discovery")
+		switch section := section.(type) {
+		case addonutils.Values:
+			discovery = section
+		case map[string]any:
+			discovery = section
+		}
+
 		if len(discovery) == 0 {
 			return nil, errors.New("discovery section not found in global values")
 		}
@@ -130,7 +145,7 @@ func buildScheduler(cli kclient.Client, moduleManager moduleManager, globalModul
 	}
 
 	bootstrapped := func() bool {
-		value, ok := globalValues()[bootstrappedGlobalValue]
+		value, ok := globalValue(bootstrappedGlobalValue)
 		if !ok {
 			return false
 		}
@@ -149,6 +164,10 @@ func buildScheduler(cli kclient.Client, moduleManager moduleManager, globalModul
 
 	if globalModule != nil {
 		opts = append(opts, schedule.WithDynamicGetter(globalModule.IsEnabled))
+	}
+
+	if onConvergence != nil {
+		opts = append(opts, schedule.WithConvergenceHook(onConvergence))
 	}
 
 	// without a dependency getter the scheduler answers dependency rules from its own graph
@@ -243,9 +262,9 @@ func buildObjectPatcher(logger *log.Logger) (*objectpatch.ObjectPatcher, error) 
 	return objectpatch.NewObjectPatcher(client, logger.Named("object-patcher")), nil
 }
 
-// buildKubeEventsManager creates the manager of the hooks' watches, with the metric storage hook
-// initialization needs.
-func buildKubeEventsManager(logger *log.Logger) (kubeeventsmanager.KubeEventsManager, error) {
+// buildKubeEventsManager creates the manager of the hooks' watches; it writes its snapshot, event,
+// jq and watch error metrics into the engine's exported storage.
+func buildKubeEventsManager(metricStorage metricsstorage.Storage, logger *log.Logger) (kubeeventsmanager.KubeEventsManager, error) {
 	client, err := newKubeClient(kubeClientOptions{
 		name:         "kube-events-manager-client",
 		metricPrefix: "packages_kube_events_manager_",
@@ -257,15 +276,12 @@ func buildKubeEventsManager(logger *log.Logger) (kubeeventsmanager.KubeEventsMan
 	}
 
 	manager := kubeeventsmanager.NewKubeEventsManager(context.Background(), client, logger.Named("kube-events-manager"))
-	manager.WithMetricStorage(metricsstorage.NewMetricStorage(
-		metricsstorage.WithLogger(logger.Named("kube-events-metrics")),
-		metricsstorage.WithNewRegistry(),
-	))
+	manager.WithMetricStorage(metricStorage)
 
 	return manager, nil
 }
 
-func buildNelmService(observations *observed.Store, logger *log.Logger) (*nelm.Service, error) {
+func buildNelmService(observations *observed.Store, metricStorage metricsstorage.Storage, logger *log.Logger) (*nelm.Service, error) {
 	client, err := newKubeClient(kubeClientOptions{
 		name:         "nelm-monitor-client",
 		metricPrefix: "packages_nelm_monitor_",
@@ -277,7 +293,7 @@ func buildNelmService(observations *observed.Store, logger *log.Logger) (*nelm.S
 		return nil, err
 	}
 
-	return nelm.NewService(client, observations, logger), nil
+	return nelm.NewService(client, observations, metricStorage, logger), nil
 }
 
 // buildOrphanService: its client is shaped like the patcher's.

@@ -27,13 +27,13 @@ type Report struct {
 	// CurrentVersion is the activated version (status.currentVersion), written at activation, the
 	// point of no return, and once when a restored package Reconciler starts. A value lagging
 	// behind activation would make a restart restore the old version over a partly applied new one.
-	CurrentVersion string
-	Current        CurrentReport   // Current is written only by the Current goroutine.
-	Candidate      CandidateReport // Candidate is written only by the package Reconciler.
-	Removed        bool            // Removed: the package Reconciler's remove has finished.
+	CurrentVersion string          `json:"currentVersion" yaml:"currentVersion"`
+	Current        CurrentReport   `json:"current" yaml:"current"`     // Current is written only by the Current goroutine.
+	Candidate      CandidateReport `json:"candidate" yaml:"candidate"` // Candidate is written only by the package Reconciler.
+	Removed        bool            `json:"removed" yaml:"removed"`     // Removed: the package Reconciler's remove has finished.
 	// RemoveError is the last failure of the by-name release delete of a remove without a Current;
 	// cleared when the delete succeeds. While it is set, Removed stays false.
-	RemoveError string
+	RemoveError string `json:"removeError" yaml:"removeError"`
 }
 
 // Condition is one internal condition of the Current section. The zero value is "not reported":
@@ -42,12 +42,12 @@ type Report struct {
 // (and every other condition) never reads False for a moment after a restart. Build values with
 // TrueCondition and FalseCondition.
 type Condition struct {
-	Status ConditionStatus
+	Status ConditionStatus `json:"status" yaml:"status"`
 	// Reason is empty unless False. For a failed step it is the reason its error names, else the
 	// step's own. Which condition is false is always the step's, so the projection derives the
 	// external reason from the condition and reads this one as detail.
-	Reason  string
-	Message string
+	Reason  string `json:"reason" yaml:"reason"`
+	Message string `json:"message" yaml:"message"`
 }
 
 // ConditionStatus is the status of a Condition; its zero value is ConditionUnknown.
@@ -108,57 +108,57 @@ type CurrentReport struct {
 	// Current, so after an activation these conditions are the previous revision's until Version
 	// equals Report.CurrentVersion: the projection keeps the update phase until then. Accepts and
 	// decisions do not move it, they say nothing about the new revision's operation.
-	Version string
+	Version string `json:"version" yaml:"version"`
 
-	Configured       Condition // Configured: the latest pushed configuration was accepted.
-	HooksProcessed   Condition // HooksProcessed: the hooks of the last operation succeeded.
-	ManifestsApplied Condition // ManifestsApplied: the release of the last operation was applied.
-	Installed        Condition // Installed: the release is installed; false only once disabled, never on a failure.
+	Configured       Condition `json:"configured" yaml:"configured"`             // Configured: the latest pushed configuration was accepted.
+	HooksProcessed   Condition `json:"hooksProcessed" yaml:"hooksProcessed"`     // HooksProcessed: the hooks of the last operation succeeded.
+	ManifestsApplied Condition `json:"manifestsApplied" yaml:"manifestsApplied"` // ManifestsApplied: the release of the last operation was applied.
+	Installed        Condition `json:"installed" yaml:"installed"`               // Installed: the release is installed; false only once disabled, never on a failure.
 
 	// AcceptedValues are the effective settings in force, written on every successful accept,
 	// before any run. Why beside the checkpoint: other components read the settings of deckhouse
 	// and global as soon as they are in force, and a failing first run must not block them.
-	AcceptedValues addonutils.Values
+	AcceptedValues addonutils.Values `json:"acceptedValues" yaml:"acceptedValues"`
 	// AcceptedChecksum is the effective values' checksum (with the maintenance mode and, for an
 	// application, the resource requests); Global's covers the values alone.
-	AcceptedChecksum string
+	AcceptedChecksum string `json:"acceptedChecksum" yaml:"acceptedChecksum"`
 	// Maintenance is the maintenance mode of the accepted configuration; the composition root
 	// publishes the maintenance metric from it.
-	Maintenance nelm.MaintenanceState
+	Maintenance nelm.MaintenanceState `json:"maintenance" yaml:"maintenance"`
 
 	// Decision is the scheduler's decision about Current's node; nil until one arrived. The
 	// projection derives RequirementsMet and status.enabled from it.
-	Decision *Decision
+	Decision *Decision `json:"decision" yaml:"decision"`
 
 	// The settings checkpoint, written after a successful run, and after the disable and every
 	// later accept while disabled. Boot restores AppliedValues at the restored object's latest settings version.
 	//
 	// AppliedValues are the effective settings of the checkpoint (status.lastAppliedConfiguration).
-	AppliedValues addonutils.Values
+	AppliedValues addonutils.Values `json:"appliedValues" yaml:"appliedValues"`
 	// AppliedChecksum is the checkpoint's effective values' checksum, as AcceptedChecksum.
-	AppliedChecksum string
+	AppliedChecksum string `json:"appliedChecksum" yaml:"appliedChecksum"`
 }
 
 // Decision is the scheduler's decision about one node (Event.Enabled, Reason, Message).
 type Decision struct {
-	Enabled bool
-	Reason  string // Reason is empty when enabled.
-	Message string
+	Enabled bool   `json:"enabled" yaml:"enabled"`
+	Reason  string `json:"reason" yaml:"reason"` // Reason is empty when enabled.
+	Message string `json:"message" yaml:"message"`
 }
 
 // CandidateReport is the Candidate section: the preparation of the candidate, its blockers and
 // failures (the UpdateInstalled condition). Written only by the package Reconciler and cleared when
 // no update is needed or at activation. At most one of Blocked and Step is set.
 type CandidateReport struct {
-	Version string // Version is the desired version being evaluated.
+	Version string `json:"version" yaml:"version"` // Version is the desired version being evaluated.
 	// Blocked is the reason of the gate that blocks: ReasonSettingsInvalid,
 	// ReasonRequirementsNotMet or ReasonWaitingWindow. Nothing is broken; the world must change.
-	Blocked string
+	Blocked string `json:"blocked" yaml:"blocked"`
 	// Step is the preparation step that failed (attach, load); the package Reconciler retries it.
-	Step string
+	Step string `json:"step" yaml:"step"`
 	// Reason is the failed step's own reason (AttachFailed, LoadFromFilesystemFailed); the
 	// projection derives the external reason from Step. For Blocked=RequirementsNotMet it is the scheduler's reason
 	// (ConstraintError.Reason, e.g. DependencyNotEnabled), which modules show as is.
-	Reason  string
-	Message string
+	Reason  string `json:"reason" yaml:"reason"`
+	Message string `json:"message" yaml:"message"`
 }

@@ -25,8 +25,10 @@ import (
 	"syscall"
 	"time"
 
+	admetrics "github.com/flant/addon-operator/pkg/metrics"
 	klient "github.com/flant/kube-client/client"
 	"github.com/flant/shell-operator/pkg/executor"
+	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 	"github.com/shirou/gopsutil/v3/process"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -93,6 +95,11 @@ func startV2(logger *log.Logger) func(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("init client: %w", err)
 		}
 
+		// The libraries name their metrics "{PREFIX}…": the kube events manager's snapshot, event
+		// and jq metrics would otherwise carry the placeholder.
+		shmetrics.InitMetrics(metrics.Prefix)
+		admetrics.InitMetrics(metrics.Prefix)
+
 		ms := metricsstorage.NewMetricStorage(
 			metricsstorage.WithLogger(logger.Named("metric-storage")),
 		)
@@ -102,7 +109,10 @@ func startV2(logger *log.Logger) func(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("register hook metrics: %w", err)
 		}
 
-		if err := metrics.RegisterShellOperatorMetrics(ms, []string{}); err != nil {
+		// The kube events manager's metrics carry the labels the packages set on their monitors
+		// (namespace: applications only).
+		kubeEventsLabels := []string{metrics.LabelHook, metrics.LabelBinding, metrics.LabelModule, metrics.LabelNamespace, metrics.LabelQueue, metrics.LabelKind}
+		if err := metrics.RegisterShellOperatorMetrics(ms, kubeEventsLabels); err != nil {
 			return fmt.Errorf("register shell operator metrics: %w", err)
 		}
 

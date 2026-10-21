@@ -45,7 +45,7 @@ func runScript(ctx context.Context, path string, settings, values addonutils.Val
 
 	span.SetAttributes(attribute.String("path", path))
 
-	// Debug: every computation runs every enabled script.
+	// A computation runs a script only when its inputs changed (Rule.Decide).
 	logger.Debug("run enabled script", slog.String("path", path))
 
 	settingsFile, err := prepareTmpFile(os.TempDir(), settings)

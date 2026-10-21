@@ -22,6 +22,7 @@ import (
 	"context"
 	"log/slog"
 	"maps"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
@@ -38,9 +39,13 @@ const (
 type Rule struct {
 	descriptor     func() *Descriptor
 	enabledModules func() []string
-	// last is the verdict of the last successful run; nil before the first one.
-	last   *rule.Decision
-	logger *log.Logger
+	// inputs identifies what the script reads besides the enabled modules: equal inputs and enabled
+	// modules give the last verdict without a run.
+	inputs func() string
+	// last is the verdict of the last successful run, lastKey its inputs; nil before the first one.
+	last    *rule.Decision
+	lastKey string
+	logger  *log.Logger
 }
 
 // Descriptor is a module's enabled script with its inputs: Values with the global block, Settings
@@ -52,11 +57,13 @@ type Descriptor struct {
 }
 
 // NewRule constructs the rule of the script descriptor returns (nil: none). enabledModules is what
-// the script sees as global.enabledModules; logger should name the module.
-func NewRule(descriptor func() *Descriptor, enabledModules func() []string, logger *log.Logger) *Rule {
+// the script sees as global.enabledModules; inputs identifies the settings and values the script
+// reads (nil: run on every decision); logger should name the module.
+func NewRule(descriptor func() *Descriptor, enabledModules func() []string, inputs func() string, logger *log.Logger) *Rule {
 	return &Rule{
 		descriptor:     descriptor,
 		enabledModules: enabledModules,
+		inputs:         inputs,
 		logger:         logger,
 	}
 }
@@ -66,12 +73,23 @@ func NewRule(descriptor func() *Descriptor, enabledModules func() []string, logg
 // every scheduler call; the scripts are small and ship with deckhouse. The error is only logged:
 // the status keeps showing the last verdict.
 func (r *Rule) Decide() rule.Decision {
+	enabled := r.enabledModules()
+
+	// A run is an exec plus the values marshaled to files: on equal inputs the verdict is the same.
+	key := ""
+	if r.inputs != nil {
+		key = r.inputs() + "\nenabled=" + strings.Join(enabled, ",")
+		if r.last != nil && key == r.lastKey {
+			return *r.last
+		}
+	}
+
 	script := r.descriptor()
 	if script == nil {
 		return rule.Decision{Kind: rule.Undefined}
 	}
 
-	values := withEnabledModules(script.Values, r.enabledModules())
+	values := withEnabledModules(script.Values, enabled)
 
 	res, err := runScript(context.Background(), script.Path, script.Settings, values, r.logger)
 	if err != nil {
@@ -88,7 +106,7 @@ func (r *Rule) Decide() rule.Decision {
 		decision = rule.Decision{Kind: rule.Forbid, Reason: reasonDisabledByScript, Message: res.reason}
 	}
 
-	r.last = &decision
+	r.last, r.lastKey = &decision, key
 
 	return decision
 }

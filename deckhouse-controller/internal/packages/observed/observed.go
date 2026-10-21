@@ -50,8 +50,8 @@ const (
 
 // Health is the reduced workload health of one package; it becomes the Scaled condition.
 type Health struct {
-	State   HealthState
-	Message string
+	State   HealthState `json:"state" yaml:"state"`
+	Message string      `json:"message" yaml:"message"`
 }
 
 // Tracking is the progress of the latest release apply or uninstall: json.Marshal(Tracking) is
@@ -59,12 +59,12 @@ type Health struct {
 // it. Raw JSON keeps this package free of nelm types.
 type Tracking struct {
 	// Completed is the number of completed resource operations of Report.
-	Completed int `json:"completed"`
+	Completed int `json:"completed" yaml:"completed"`
 	// Remaining is the number of the other resource operations of Report.
-	Remaining int `json:"remaining"`
+	Remaining int `json:"remaining" yaml:"remaining"`
 	// Report is nelm's progress report, marshaled by the release service; empty when nothing was
 	// reported since the last reset.
-	Report json.RawMessage `json:"report"`
+	Report json.RawMessage `json:"report" yaml:"report"`
 }
 
 // Empty reports whether no progress is recorded; the projection then leaves status.tracking as
@@ -76,8 +76,8 @@ func (t Tracking) Empty() bool {
 // URL is an endpoint a package exposes, extracted by the release service from the rendered
 // Ingresses (it becomes an entry of Application status.urls).
 type URL struct {
-	URL         string
-	Description string
+	URL         string `json:"url" yaml:"url"`
+	Description string `json:"description" yaml:"description"`
 }
 
 // Hook failure reasons: the projection reports a failed synchronization as a hook initialization
@@ -93,24 +93,24 @@ const (
 // an event or a schedule). It lasts until that hook succeeds, because its lane retries it and
 // holds the items behind it. Failures of hooks an operation runs are in the engine's Report.
 type HookFailure struct {
-	Hook    string
-	Reason  string // Reason is HookReasonSync or HookReasonEvent.
-	Message string
+	Hook    string `json:"hook" yaml:"hook"`
+	Reason  string `json:"reason" yaml:"reason"` // Reason is HookReasonSync or HookReasonEvent.
+	Message string `json:"message" yaml:"message"`
 	// Since is when this failure (same hook, reason and message) was first recorded; a retry that
 	// fails the same way does not move it.
-	Since time.Time
+	Since time.Time `json:"since" yaml:"since"`
 }
 
 // Observation is everything observed about one package. Returned by value; its slices and the
 // hook failure are copies the caller may keep.
 type Observation struct {
-	Health      Health
-	Tracking    Tracking
-	URLs        []URL
-	NoWorkloads bool
+	Health      Health   `json:"health" yaml:"health"`
+	Tracking    Tracking `json:"tracking" yaml:"tracking"`
+	URLs        []URL    `json:"urls" yaml:"urls"`
+	NoWorkloads bool     `json:"noWorkloads" yaml:"noWorkloads"`
 	// HookFailure is the last failure of a runtime or synchronization hook; nil when none is
 	// outstanding.
-	HookFailure *HookFailure
+	HookFailure *HookFailure `json:"hookFailure" yaml:"hookFailure"`
 }
 
 // Store is the observation store. Safe for concurrent use. Every write that changes the stored

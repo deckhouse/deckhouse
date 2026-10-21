@@ -85,6 +85,14 @@ type Scheduler struct {
 	bootstrapCondition     condition.Condition
 	dynamicGetter          dynamic.Getter // dynamicGetter is consulted only without an intent (intentOf).
 
+	// rechecks counts the Recheck calls: an enabled script runs again after one even on equal
+	// inputs, since a Recheck is the signal that something outside the facts changed.
+	rechecks uint64
+
+	// onConvergence is WithConvergenceHook's hook; converged is what it was last told.
+	onConvergence func(converged bool)
+	converged     bool
+
 	logger *log.Logger
 }
 
@@ -136,6 +144,15 @@ func WithBundleChecker(getter bundle.BundleChecker) Option {
 	}
 }
 
+// WithConvergenceHook sets the function told when the graph's convergence changes (Converged):
+// false at Resume and whenever a computation leaves the graph unconverged, true when one converges
+// it. Called under the scheduler's lock: it must not block.
+func WithConvergenceHook(hook func(converged bool)) Option {
+	return func(s *Scheduler) {
+		s.onConvergence = hook
+	}
+}
+
 // NewScheduler creates a paused Scheduler with an empty graph. Nothing is computed until Resume:
 // before the boot the gate inputs and the intents are unknown, and an unknown input reads as
 // Forbid.
@@ -170,6 +187,12 @@ func (s *Scheduler) Resume() {
 	}
 
 	s.paused = false
+
+	// The startup period opens here: the graph was never told converged while paused.
+	if s.onConvergence != nil {
+		s.onConvergence(false)
+	}
+
 	s.compute()
 }
 
@@ -178,6 +201,7 @@ func (s *Scheduler) Recheck() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	s.rechecks++
 	s.compute()
 }
 
@@ -335,9 +359,20 @@ func (s *Scheduler) Publish(name string, f Facts) {
 		return
 	}
 
-	s.nodes[name].facts = f
+	n := s.nodes[name]
+	resolve := resolvesRules(name, n.facts, f)
+	n.facts = f
 
-	s.compute()
+	s.computeWith(resolve)
+}
+
+// resolvesRules reports whether new facts of the named node change what the rules read, so that
+// the computation resolves them again: the node's own inputs (its settings and values, which its
+// enabled script reads) or Global's Output (the global values the getters and every script
+// read). Applied, and a module's Output, are read only by the inputs, the convergence and the
+// gates (SCH-19).
+func resolvesRules(name string, old, f Facts) bool {
+	return old.OwnInputs != f.OwnInputs || (name == GlobalNode && old.Output != f.Output)
 }
 
 // changes reports whether f is of the named node's revision and differs from its facts. Called
@@ -396,6 +431,11 @@ func (s *Scheduler) Converged() bool {
 		return false
 	}
 
+	return s.allConverged()
+}
+
+// allConverged reports whether every module node and the global node are converged; s.mu held.
+func (s *Scheduler) allConverged() bool {
 	for _, n := range s.nodes {
 		if (n.module || n.name == GlobalNode) && !n.converged {
 			return false
@@ -405,6 +445,16 @@ func (s *Scheduler) Converged() bool {
 	return true
 }
 
+// reportConvergence tells the hook a convergence other than the last one it was told; s.mu held.
+func (s *Scheduler) reportConvergence(converged bool) {
+	if s.onConvergence == nil || converged == s.converged {
+		return
+	}
+
+	s.converged = converged
+	s.onConvergence(converged)
+}
+
 // compute is the one computation, in topological order, under s.mu:
 //  1. decision: every node's rule chain (dependencies first; an enabled script sees the modules
 //     decided enabled before it);
@@ -412,7 +462,7 @@ func (s *Scheduler) Converged() bool {
 //     enabled modules);
 //  3. converged: disabled, or Applied == inputs;
 //  4. gate: enabled and everything it waits for converged;
-//  5. an event per node, then a wake.
+//  5. an event per node, a changed graph convergence to the hook, then a wake.
 //
 // Each step covers all nodes before the next, because global's inputs need every decision and the
 // gates every convergence. Computing all of it atomically is the point: if each Current judged
@@ -420,6 +470,12 @@ func (s *Scheduler) Converged() bool {
 // converged. Getter inputs change with the global values, which Global publishes; the rest
 // Recheck covers.
 func (s *Scheduler) compute() {
+	s.computeWith(true)
+}
+
+// computeWith is compute; without resolve it keeps every node's decision from the last computation
+// (step 1), which a Publish that changed nothing the rules read may do (resolvesRules).
+func (s *Scheduler) computeWith(resolve bool) {
 	if s.paused || s.stopped {
 		return
 	}
@@ -433,7 +489,9 @@ func (s *Scheduler) compute() {
 	s.enabled = s.enabled[:0]
 
 	for _, n := range sorted {
-		n.decision = rule.Resolve(n.rules...)
+		if resolve {
+			n.decision = rule.Resolve(n.rules...)
+		}
 
 		if n.module && n.enabled() {
 			s.enabled = append(s.enabled, n.name)
@@ -453,6 +511,8 @@ func (s *Scheduler) compute() {
 		n.gate = s.gateOf(n, unconverged)
 		s.pending[n.name] = s.eventOf(n, modules)
 	}
+
+	s.reportConvergence(s.allConverged())
 
 	select {
 	case s.wake <- struct{}{}:
@@ -479,6 +539,18 @@ func (s *Scheduler) eventOf(n *node, modules []EnabledModule) Event {
 	}
 
 	return ev
+}
+
+// scriptInputs identifies what an enabled script of n reads besides the enabled modules: n's own
+// inputs (its settings and values), Global's own inputs and Output (the global values) and the
+// Recheck count. s.mu held.
+func (s *Scheduler) scriptInputs(n *node) string {
+	var global Facts
+	if g, ok := s.nodes[GlobalNode]; ok {
+		global = g.facts
+	}
+
+	return fmt.Sprintf("own=%s\nglobal=%s/%s\nrechecks=%d", n.facts.OwnInputs, global.OwnInputs, global.Output, s.rechecks)
 }
 
 // enabledBefore is an enabled script's global.enabledModules: the modules decided enabled so far in

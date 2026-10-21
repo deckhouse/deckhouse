@@ -322,7 +322,7 @@ func (b *Backend) download(ctx context.Context, repo registry.Remote, packageDir
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "download")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("package", name))
 	span.SetAttributes(attribute.String("version", version))
 	span.SetAttributes(attribute.String("package_dir", packageDir))
 	span.SetAttributes(attribute.String("repository", repo.Name))
@@ -426,7 +426,7 @@ func (b *Backend) symlink(ctx context.Context, packageDir, deployed, name, versi
 
 	span.SetAttributes(attribute.String("package_dir", packageDir))
 	span.SetAttributes(attribute.String("deployed", deployed))
-	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("instance", name))
 	span.SetAttributes(attribute.String("version", version))
 
 	logger := b.logger.With(

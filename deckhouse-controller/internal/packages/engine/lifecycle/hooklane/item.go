@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -61,16 +62,20 @@ type item struct {
 	// waits for it, done, closed once the item left the lane.
 	binding *hookcontroller.BindingExecutionInfo
 	done    chan struct{}
+	// parent is the span of the Start that enabled the binding: its run is that span's child, so
+	// one trace shows a package's startup with its synchronizations.
+	parent trace.SpanContext
 }
 
-// syncItem is the synchronization of one binding of hook.
-func syncItem(hook string, info hookcontroller.BindingExecutionInfo) *item {
+// syncItem is the synchronization of one binding of hook; parent is the span of the Start.
+func syncItem(hook string, info hookcontroller.BindingExecutionInfo, parent trace.SpanContext) *item {
 	it := &item{
 		hook:     hook,
 		queue:    info.QueueName,
 		kind:     KindSync,
 		contexts: appendCompact(nil, info.BindingContext...),
 		binding:  &info,
+		parent:   parent,
 
 		allowFailure: info.AllowFailure,
 	}
@@ -182,10 +187,14 @@ func (f allowedFailure) Unwrap() error { return f.err }
 // hook changed the values checksum: a synchronization too, which may run beside the run that read
 // the values.
 func (l *Lanes) run(ctx context.Context, it *item) error {
+	if it.parent.IsValid() {
+		ctx = trace.ContextWithSpanContext(ctx, it.parent)
+	}
+
 	ctx, span := otel.Tracer(tracer).Start(ctx, "RunHook")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", l.name), attribute.String("hook", it.hook),
+	span.SetAttributes(attribute.String("package", l.name), attribute.String("hook", it.hook),
 		attribute.String("kind", string(it.kind)))
 
 	l.router.pauser.PauseMonitor(l.name)

@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
@@ -240,11 +241,15 @@ func (a *Application) addHooks(found ...hooks.Hook) error {
 			kubeCfg.Monitor.Metadata.LogLabels[pkg.LogKeyHook] = hook.GetName()
 			kubeCfg.Monitor.Metadata.LogLabels["hook.type"] = "package"
 
+			// module and namespace tell apart the series of same-named hooks of different
+			// applications, and of one application installed in several namespaces.
 			kubeCfg.Monitor.Metadata.MetricLabels = map[string]string{
-				pkg.MetricKeyHook:    hook.GetName(),
-				pkg.MetricKeyBinding: kubeCfg.BindingName,
-				pkg.MetricKeyQueue:   kubeCfg.Queue,
-				pkg.MetricKeyKind:    kubeCfg.Monitor.Kind,
+				pkg.MetricKeyHook:      hook.GetName(),
+				pkg.MetricKeyBinding:   kubeCfg.BindingName,
+				pkg.MetricKeyModule:    a.GetName(),
+				metrics.LabelNamespace: a.GetNamespace(),
+				pkg.MetricKeyQueue:     kubeCfg.Queue,
+				pkg.MetricKeyKind:      kubeCfg.Monitor.Kind,
 			}
 		}
 
@@ -803,7 +808,7 @@ func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bct
 	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "RunHookByName")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("hook", name))
 
 	hook := a.hooks.GetHookByName(name)
 	if hook == nil {
@@ -816,7 +821,28 @@ func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bct
 	return a.runHook(ctx, hook, bctx)
 }
 
-// runHook executes a single hook with the specified binding context.
+// runHook runs the hook (execHook) and records the run: its duration and, for an event run, its
+// outcome (hooks.RecordRun).
+func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingContext) error {
+	queue, allowFailure := hooks.RunBinding(h, bctx)
+
+	// namespace tells apart one application installed in several namespaces.
+	usageLabels := map[string]string{
+		pkg.MetricKeyModule:    a.GetName(),
+		metrics.LabelNamespace: a.GetNamespace(),
+		pkg.MetricKeyHook:      h.GetName(),
+		pkg.MetricKeyBinding:   hooks.BindingType(bctx),
+		pkg.MetricKeyQueue:     queue,
+	}
+
+	started := time.Now()
+	err := a.execHook(ctx, h, bctx, usageLabels)
+	hooks.RecordRun(ctx, a.metricStorage, hooks.ModuleRunMetrics, usageLabels, bctx, allowFailure, time.Since(started), err)
+
+	return err
+}
+
+// execHook executes a single hook with the specified binding context.
 // It prepares hook values, executes the hook, applies patches, and handles errors.
 //
 // Process:
@@ -826,32 +852,35 @@ func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bct
 //  4. Apply values patches to storage
 //
 // Returns error if hook execution or patch application fails.
-func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingContext) error {
+func (a *Application) execHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingContext, usageLabels map[string]string) error {
 	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "runHook")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("hook", h.GetName()))
-	span.SetAttributes(attribute.String("name", a.GetName()))
+	span.SetAttributes(attribute.String("package", a.GetName()))
 
 	hookConfigValues := a.values.GetSettings()
 	hookValues := a.values.GetValues()
 	hookVersion := h.GetConfigVersion()
 
-	metricLabels := map[string]string{
-		pkg.MetricKeyHook: h.GetName(),
-		pkg.LogKeyModule:  a.GetName(),
+	// The metrics the hook emits carry only what identifies the application, apart from usageLabels
+	// so that a run label never changes their series.
+	hookMetricLabels := map[string]string{
+		pkg.MetricKeyHook:      h.GetName(),
+		pkg.MetricKeyModule:    a.GetName(),
+		metrics.LabelNamespace: a.GetNamespace(),
 	}
 
 	hookResult, err := h.Execute(ctx, hookVersion, bctx, a.GetName(), hookConfigValues, hookValues, make(map[string]string))
 
 	if hookResult != nil && hookResult.Usage != nil {
-		a.metricStorage.HistogramObserve(metrics.ModuleHookRunSysCPUSeconds, hookResult.Usage.Sys.Seconds(), metricLabels, nil)
-		a.metricStorage.HistogramObserve(metrics.ModuleHookRunUserCPUSeconds, hookResult.Usage.User.Seconds(), metricLabels, nil)
-		a.metricStorage.GaugeSet(metrics.ModuleHookRunMaxRSSBytes, float64(hookResult.Usage.MaxRss)*1024, metricLabels)
+		a.metricStorage.HistogramObserve(metrics.ModuleHookRunSysCPUSeconds, hookResult.Usage.Sys.Seconds(), usageLabels, nil)
+		a.metricStorage.HistogramObserve(metrics.ModuleHookRunUserCPUSeconds, hookResult.Usage.User.Seconds(), usageLabels, nil)
+		a.metricStorage.GaugeSet(metrics.ModuleHookRunMaxRSSBytes, float64(hookResult.Usage.MaxRss)*1024, usageLabels)
 	}
 
 	if hookResult != nil && len(hookResult.Metrics) > 0 {
-		metricsErr := a.metricStorage.ApplyBatchOperations(hookResult.Metrics, metricLabels)
+		metricsErr := a.metricStorage.ApplyBatchOperations(hookResult.Metrics, hookMetricLabels)
 		if metricsErr != nil {
 			return metricsErr
 		}

@@ -529,7 +529,7 @@ func (k *Kit) collect() {
 
 // Dump renders a Report for failure messages and comparisons.
 func Dump(r model.Report) string {
-	data, _ := json.Marshal(r) //nolint:musttag // a test dump of the engine's Report, which carries no JSON contract
+	data, _ := json.Marshal(r)
 	return string(data)
 }
 

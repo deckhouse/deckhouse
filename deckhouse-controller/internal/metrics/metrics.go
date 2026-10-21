@@ -86,6 +86,10 @@ const (
 	ModuleReleaseGroup               = "module_release_group"
 )
 
+// Prefix is what every deckhouse-controller metric name starts with; the libraries' "{PREFIX}"
+// placeholders resolve to it.
+const Prefix = "deckhouse_"
+
 // Group templates for dynamic metric names using fmt.Sprintf
 const (
 	ObsoleteConfigMetricGroupTemplate = "obsoleteVersion_%s"

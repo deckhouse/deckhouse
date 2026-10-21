@@ -25,6 +25,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/ettle/strcase"
@@ -181,9 +182,11 @@ func (m *Module) addHooks(found ...hooks.GlobalHook) error {
 			kubeCfg.Monitor.Metadata.LogLabels[pkg.LogKeyHook] = hook.GetName()
 			kubeCfg.Monitor.Metadata.LogLabels["hook.type"] = "package"
 
+			// An empty module keeps the label set of the module hooks, as addon-operator does.
 			kubeCfg.Monitor.Metadata.MetricLabels = map[string]string{
 				pkg.MetricKeyHook:    hook.GetName(),
 				pkg.MetricKeyBinding: kubeCfg.BindingName,
+				pkg.MetricKeyModule:  "",
 				pkg.MetricKeyQueue:   kubeCfg.Queue,
 				pkg.MetricKeyKind:    kubeCfg.Monitor.Kind,
 			}
@@ -506,7 +509,26 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 	return nil
 }
 
-// runHook executes a single hook with the specified binding context.
+// runHook runs the hook (execHook) and records the run: its duration and, for an event run, its
+// outcome (hooks.RecordRun).
+func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.BindingContext) error {
+	queue, allowFailure := hooks.RunBinding(h, bctx)
+
+	// Global hooks have their own metric names and no module label, as under addon-operator.
+	usageLabels := map[string]string{
+		pkg.MetricKeyHook:    h.GetName(),
+		pkg.MetricKeyBinding: hooks.BindingType(bctx),
+		pkg.MetricKeyQueue:   queue,
+	}
+
+	started := time.Now()
+	err := m.execHook(ctx, h, bctx, usageLabels)
+	hooks.RecordRun(ctx, m.metricStorage, hooks.GlobalRunMetrics, usageLabels, bctx, allowFailure, time.Since(started), err)
+
+	return err
+}
+
+// execHook executes a single hook with the specified binding context.
 // It prepares hook values, executes the hook, applies patches, and handles errors.
 //
 // Process:
@@ -516,32 +538,32 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 //  4. Apply values patches to storage
 //
 // Returns error if hook execution or patch fails.
-func (m *Module) runHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.BindingContext) error {
+func (m *Module) execHook(ctx context.Context, h hooks.GlobalHook, bctx []bctx.BindingContext, usageLabels map[string]string) error {
 	ctx, span := otel.Tracer(m.GetName()).Start(ctx, "runHook")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("hook", h.GetName()))
-	span.SetAttributes(attribute.String("name", m.GetName()))
+	span.SetAttributes(attribute.String("package", m.GetName()))
 
 	hookConfigValues := m.values.GetSettings()
 	hookValues := m.GetValues()
 	hookVersion := h.GetConfigVersion()
 
-	metricLabels := map[string]string{
+	// The metrics a global hook emits carry only the hook, as under addon-operator.
+	hookMetricLabels := map[string]string{
 		pkg.MetricKeyHook: h.GetName(),
-		pkg.LogKeyModule:  m.GetName(),
 	}
 
 	hookResult, err := h.Execute(ctx, hookVersion, bctx, m.GetName(), hookConfigValues, hookValues, make(map[string]string))
 
 	if hookResult != nil && hookResult.Usage != nil {
-		m.metricStorage.HistogramObserve(metrics.ModuleHookRunSysCPUSeconds, hookResult.Usage.Sys.Seconds(), metricLabels, nil)
-		m.metricStorage.HistogramObserve(metrics.ModuleHookRunUserCPUSeconds, hookResult.Usage.User.Seconds(), metricLabels, nil)
-		m.metricStorage.GaugeSet(metrics.ModuleHookRunMaxRSSBytes, float64(hookResult.Usage.MaxRss)*1024, metricLabels)
+		m.metricStorage.HistogramObserve(metrics.GlobalHookRunSysCPUSeconds, hookResult.Usage.Sys.Seconds(), usageLabels, nil)
+		m.metricStorage.HistogramObserve(metrics.GlobalHookRunUserCPUSeconds, hookResult.Usage.User.Seconds(), usageLabels, nil)
+		m.metricStorage.GaugeSet(metrics.GlobalHookRunMaxRSSBytes, float64(hookResult.Usage.MaxRss)*1024, usageLabels)
 	}
 
 	if hookResult != nil && len(hookResult.Metrics) > 0 {
-		metricsErr := m.metricStorage.ApplyBatchOperations(hookResult.Metrics, metricLabels)
+		metricsErr := m.metricStorage.ApplyBatchOperations(hookResult.Metrics, hookMetricLabels)
 		if metricsErr != nil {
 			return metricsErr
 		}
@@ -714,6 +736,15 @@ func (m *Module) SetCapabilities(apiVersions []string) {
 	if err := m.values.ApplyValuesPatch(patch); err != nil {
 		m.logger.Error(fmt.Sprintf("failed to set capabilities to global: %v", err.Error()))
 	}
+}
+
+// GetValue is the global value at key, without the copies GetValues makes for rendering: the
+// scheduler's getters read one key on every computation. The value is shared and must not be
+// changed; the digests GetValues merges in are not part of it.
+func (m *Module) GetValue(key string) (any, bool) {
+	value, ok := m.values.GetValues()[key]
+
+	return value, ok
 }
 
 // IsEnabled is the global hooks' signal of a module (kebab-case name) for the scheduler: the value a

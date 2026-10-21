@@ -177,7 +177,9 @@ func (s *Scheduler) addNode(nd Node) {
 		n.rules = append(n.rules, dynamic.NewRule(s.intentOf, nd.Name))
 
 		if nd.EnabledScript != nil {
-			n.rules = append(n.rules, script.NewRule(nd.EnabledScript, s.enabledBefore, s.logger.With(slog.String("module", nd.Name))))
+			// The script reads the module's settings and values and the global values: equal ones need no run.
+			inputs := func() string { return s.scriptInputs(n) }
+			n.rules = append(n.rules, script.NewRule(nd.EnabledScript, s.enabledBefore, inputs, s.logger.With(slog.String("module", nd.Name))))
 		}
 	}
 

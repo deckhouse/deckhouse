@@ -222,7 +222,7 @@ func (m *resourcesMonitor) checkResources(ctx context.Context) error {
 	ctx, span := otel.Tracer(monitorTracer).Start(ctx, "checkResources")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", m.name))
+	span.SetAttributes(attribute.String("package", m.name))
 	span.SetAttributes(attribute.Int("resources", len(m.resources)))
 
 	m.logger.Debug("check resources")
@@ -360,7 +360,7 @@ func (m *resourcesMonitor) checkResource(ctx context.Context, res resourceKey) e
 	ctx, span := otel.Tracer(monitorTracer).Start(ctx, "checkResource")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", m.name))
+	span.SetAttributes(attribute.String("package", m.name))
 	span.SetAttributes(attribute.String("namespace", res.Namespace))
 	span.SetAttributes(attribute.String("gvr", res.GVR.String()))
 

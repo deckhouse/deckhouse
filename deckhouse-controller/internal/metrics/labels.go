@@ -96,6 +96,9 @@ const (
 	// LabelBinding is the label key for the hook binding name.
 	LabelBinding = "binding"
 
+	// LabelKind is the Kubernetes kind a hook's binding watches.
+	LabelKind = "kind"
+
 	// LabelQueue is the label key for the task queue name.
 	LabelQueue = "queue"
 

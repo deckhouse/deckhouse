@@ -314,7 +314,7 @@ func (b *Backend) download(ctx context.Context, repo registry.Remote, packageDir
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Download")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("package", name))
 	span.SetAttributes(attribute.String("version", version))
 	span.SetAttributes(attribute.String("package_dir", packageDir))
 	span.SetAttributes(attribute.String("repository", repo.Name))
@@ -476,7 +476,7 @@ func (b *Backend) mount(ctx context.Context, packageDir, deployedDir, name, vers
 
 	span.SetAttributes(attribute.String("package_dir", packageDir))
 	span.SetAttributes(attribute.String("deployed_dir", deployedDir))
-	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("instance", name))
 	span.SetAttributes(attribute.String("version", version))
 
 	logger := b.logger.With(

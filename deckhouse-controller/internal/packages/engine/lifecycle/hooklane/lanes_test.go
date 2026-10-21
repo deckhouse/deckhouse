@@ -303,10 +303,14 @@ func (s *lanesSuite) TestFailingHeadBlocksItsLaneAndIsRetried() {
 	s.Equal(1, d.Failure.Attempts)
 	s.Equal("5s", d.Failure.NextRetry)
 
-	mark := len(s.calls.list())
 	s.clock.Advance(5 * time.Second)
 
-	s.Require().True(s.calls.wait(func(e []string) bool { return countOf(e, "run:flaky:e1") == 2 }))
+	// A wake left from e2's delivery may rearm the first delay late; past the second failure's
+	// record every arm is the doubled one.
+	failed := "record-failure:flaky:" + observed.HookReasonEvent
+	s.Require().True(s.calls.wait(func(e []string) bool { return countOf(e, failed) == 2 }))
+	mark := slices.Index(s.calls.list(), failed) + 1
+	mark += slices.Index(s.calls.list()[mark:], failed) + 1
 	s.Equal(10*time.Second, s.armedRetry(mark), "the delay doubles while the same head keeps failing")
 
 	s.clock.Advance(10 * time.Second)

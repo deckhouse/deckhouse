@@ -68,7 +68,7 @@ func loadEmbeddedHooks(ctx context.Context, name string, logger *log.Logger) ([]
 	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "loadEmbeddedHooks")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("package", name))
 
 	logger.Debug("load hooks")
 
@@ -90,7 +90,7 @@ func loadAppHooks(ctx context.Context, namespace, name, path string, logger *log
 	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "loadAppHooks")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("package", name))
 	span.SetAttributes(attribute.String("namespace", namespace))
 	span.SetAttributes(attribute.String("path", path))
 
@@ -133,7 +133,7 @@ func loadModuleHooks(ctx context.Context, name, path string, logger *log.Logger)
 	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "loadModuleHooks")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("package", name))
 	span.SetAttributes(attribute.String("path", path))
 
 	logger.Debug("load hooks")

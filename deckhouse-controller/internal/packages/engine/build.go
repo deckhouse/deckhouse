@@ -110,8 +110,11 @@ type Engine struct {
 	// hookRouter delivers hook events to the lanes the packages' and Global's hooks run in; its
 	// event loop (Serve) is one of the goroutines Start runs.
 	hookRouter *hooklane.Router
-	// ownsLiveTicks: without addon-operator the engine emits deckhouse_live_ticks.
-	ownsLiveTicks bool
+	// ownsOperatorMetrics: without addon-operator the engine emits deckhouse_live_ticks and the
+	// convergence metrics, which addon-operator emits otherwise.
+	ownsOperatorMetrics bool
+	// convergence writes the convergence metrics; nil when addon-operator owns them.
+	convergence *convergence
 
 	// stopOnce: the core's Shutdown must run exactly once. done ends the goroutines Start runs;
 	// stopped waits for them.
@@ -138,13 +141,13 @@ func Build(cli kclient.Client, moduleManager moduleManager, metricStorage metric
 	logger = logger.Named("package-engine")
 
 	e := &Engine{
-		cfg:             cfg,
-		logger:          logger,
-		metrics:         metricStorage,
-		scheduleManager: cron.NewManager(logger),
-		sink:            newStatusSink(),
-		ownsLiveTicks:   moduleManager == nil,
-		done:            make(chan struct{}),
+		cfg:                 cfg,
+		logger:              logger,
+		metrics:             metricStorage,
+		scheduleManager:     cron.NewManager(logger),
+		sink:                newStatusSink(),
+		ownsOperatorMetrics: moduleManager == nil,
+		done:                make(chan struct{}),
 	}
 
 	// The observations wake the status side through the same sink as the core's Notify, so a
@@ -159,7 +162,7 @@ func Build(cli kclient.Client, moduleManager moduleManager, metricStorage metric
 		return nil, fmt.Errorf("build object patcher: %w", err)
 	}
 
-	if e.kubeEventsManager, err = buildKubeEventsManager(logger); err != nil {
+	if e.kubeEventsManager, err = buildKubeEventsManager(metricStorage, logger); err != nil {
 		return nil, fmt.Errorf("build kube events manager: %w", err)
 	}
 
@@ -186,10 +189,16 @@ func Build(cli kclient.Client, moduleManager moduleManager, metricStorage metric
 		return nil, fmt.Errorf("new edition: %w", err)
 	}
 
-	e.scheduler = buildScheduler(cli, moduleManager, e.global, edit, logger)
+	var onConvergence func(converged bool)
+	if e.ownsOperatorMetrics {
+		e.convergence = &convergence{metrics: metricStorage}
+		onConvergence = e.convergence.changed
+	}
+
+	e.scheduler = buildScheduler(cli, moduleManager, e.global, edit, onConvergence, logger)
 
 	// Drift reaches the Current through the callback each Upgrade hands the release's monitor.
-	if e.nelm, err = buildNelmService(e.observed, logger); err != nil {
+	if e.nelm, err = buildNelmService(e.observed, metricStorage, logger); err != nil {
 		return nil, fmt.Errorf("build nelm service: %w", err)
 	}
 
@@ -339,7 +348,7 @@ func (e *Engine) runSink() {
 
 	// A nil channel never fires: addon-operator counts the live ticks itself.
 	var liveTicks <-chan time.Time
-	if e.ownsLiveTicks {
+	if e.ownsOperatorMetrics {
 		ticker := time.NewTicker(liveTicksPeriod)
 		defer ticker.Stop()
 
