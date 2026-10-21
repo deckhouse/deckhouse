@@ -99,14 +99,14 @@ func (w *Watcher) Watch(ctx context.Context) {
 }
 
 func (w *Watcher) watchSecret(ctx context.Context) {
-	watchFunc := func(_ metav1.ListOptions) (watch.Interface, error) {
+	watchFunc := func(ctx context.Context, _ metav1.ListOptions) (watch.Interface, error) {
 		// Get the deckhouse-registry secret
 		return w.k8sClient.CoreV1().Secrets("d8-system").Watch(ctx, metav1.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector("metadata.name", "deckhouse-registry").String(),
 		})
 	}
 
-	secretWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
+	secretWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFuncWithContext: watchFunc})
 	if err != nil {
 		w.logger.Error("Watch secrets: %v", err)
 		return
@@ -187,12 +187,12 @@ func (w *Watcher) processSecretEvent(secretEvent watch.Event) error {
 }
 
 func (w *Watcher) watchModuleSources(ctx context.Context) {
-	watchFunc := func(_ metav1.ListOptions) (watch.Interface, error) {
+	watchFunc := func(ctx context.Context, _ metav1.ListOptions) (watch.Interface, error) {
 		// Get the module sources and their registry credentials
 		return w.k8sDynamicClient.Resource(ModuleSourceGVR).Watch(ctx, metav1.ListOptions{})
 	}
 
-	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFunc: watchFunc})
+	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcherWithContext(ctx, "1", &cache.ListWatch{WatchFuncWithContext: watchFunc})
 	if err != nil {
 		w.logger.Error("Watch module sources: %v", err)
 		return

@@ -17,34 +17,6 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. Бинарник nodeservices-manager не импортирует golang.org/x/crypto/openpgp; модуль golang.org/x/crypto подтягивается транзитивно через go_lib/registry/pki, который использует golang.org/x/crypto/bcrypt (путь: internal/staticpod -> go_lib/registry/models/node-services -> go_lib/registry/pki -> bcrypt). В графе импортов из этого модуля присутствуют только bcrypt, blowfish, cryptobyte, ed25519, ocsp и pkcs12, пакета openpgp там нет. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
       "timestamp": "2026-08-27T13:00:39.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-56855"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh: удалённая сторона может вызвать взаимную блокировку SSH-соединения специально сформированными сообщениями. manager не работает с SSH. Из golang.org/x/crypto в него собираются только bcrypt, blowfish, cryptobyte, ed25519, ocsp и pkcs12, golang.org/x/crypto/ssh в сборку не входит.",
-      "timestamp": "2026-10-01T09:08:28.000000000Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-78662"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_present",
-      "impact_statement": "Уязвимость в golang.org/x/crypto/ssh: удалённая сторона может вызвать взаимную блокировку SSH-соединения, отправляя поток запросов в канал. manager не работает с SSH. Из golang.org/x/crypto в него собираются только bcrypt, blowfish, cryptobyte, ed25519, ocsp и pkcs12, golang.org/x/crypto/ssh в сборку не входит.",
-      "timestamp": "2026-10-01T09:08:28.000000000Z"
     }
   ],
   "timestamp": "2026-10-01T09:08:28.000000000Z"
