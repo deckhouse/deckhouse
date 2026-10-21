@@ -24,7 +24,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
   - url: {{ $.SOURCE_REPO }}/kubernetes/cloud-provider-gcp.git
     tag: {{ $version }}

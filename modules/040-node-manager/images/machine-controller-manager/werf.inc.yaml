@@ -21,7 +21,7 @@ git:
   add: /
   to: /src
 fromCacheVersion: "2026.07.21.1"
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

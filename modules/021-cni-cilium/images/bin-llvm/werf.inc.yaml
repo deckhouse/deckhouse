@@ -23,7 +23,7 @@ git:
   to: /src/llvm
   stageDependencies:
     install: ['**/*']
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 shell:
   install:

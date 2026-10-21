@@ -17,7 +17,7 @@ imageSpec:
     entrypoint: ["/usr/local/bin/dex", "serve", "/etc/dex/config.docker.yaml"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-src-artifact
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 fromCacheVersion: "2025-02-18.01"
 final: false
 git:

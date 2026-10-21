@@ -41,7 +41,7 @@ shell:
     - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $BUILD_TAGS -ldflags="-s -w $ETCD_SIGN_ENABLED" -o /control-plane-manager .
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/src

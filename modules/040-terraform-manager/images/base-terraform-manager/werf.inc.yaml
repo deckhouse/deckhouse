@@ -42,7 +42,7 @@ git:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-terraform-src-artifact
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
 - url: {{ $.SOURCE_REPO }}/hashicorp/terraform.git
   tag: v{{ .TF.terraform }}
@@ -63,7 +63,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-opentofu-src-artifact
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
 - url: {{ $.SOURCE_REPO }}/opentofu/opentofu.git
   tag: v{{ .TF.opentofu }}

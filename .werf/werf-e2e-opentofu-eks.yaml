@@ -75,7 +75,7 @@ git:
   add: /
   to: /src/provider-kubernetes
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 ---
 image: e2e-eks-terraform-plugins
 final: false

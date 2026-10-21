@@ -17,7 +17,7 @@ imageSpec:
     cmd: [ "--upstream=http://0.0.0.0:8080/", "--http-address=0.0.0.0:4180" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/

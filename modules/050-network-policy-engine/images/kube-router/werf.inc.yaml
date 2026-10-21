@@ -12,7 +12,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}

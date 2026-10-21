@@ -134,7 +134,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-label-converter-src-artifact
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src/label-converter
   to: /src
@@ -208,7 +208,7 @@ shell:
     - chmod 0700 /webhook-operator
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-webhook-operator-src-artifact
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/operator

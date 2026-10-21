@@ -14,7 +14,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
 - url: {{ $.SOURCE_REPO }}/rancher/local-path-provisioner.git
   tag: v{{$localPathProvisionerVersion}}

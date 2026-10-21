@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/040-node-manager/images/fencing-agent/src

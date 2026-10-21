@@ -1,7 +1,7 @@
 {{- $version := "4.6.1" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - url: {{ $.SOURCE_REPO }}/chrony/chrony

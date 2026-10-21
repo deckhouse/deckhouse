@@ -7,7 +7,7 @@
 # and on https://github.com/cilium/hubble-ui/blob/v0.13.5/backend/Dockerfile
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - url: {{ $.SOURCE_REPO }}/cilium/hubble-ui.git

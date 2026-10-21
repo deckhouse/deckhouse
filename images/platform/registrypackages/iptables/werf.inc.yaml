@@ -65,7 +65,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
 - url: {{ $.SOURCE_REPO }}/netfilter/libmnl
   tag: libmnl-{{ $libmnl_version }}

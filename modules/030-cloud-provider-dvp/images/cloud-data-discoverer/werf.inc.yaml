@@ -12,7 +12,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 fromCacheVersion: 2025-03-04.01
 git:
 - add: {{ .gitPrefix }}/go_lib/cloud-data

@@ -7,7 +7,7 @@
 
 image: dhctl-src-artifact
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
 - add: {{ printf "%s/dhctl" $prefix }}
   to: /src/dhctl

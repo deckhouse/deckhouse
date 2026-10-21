@@ -22,7 +22,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
 - add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src/src

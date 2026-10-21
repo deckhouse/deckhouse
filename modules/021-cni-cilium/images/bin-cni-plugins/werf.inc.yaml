@@ -8,7 +8,7 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - url: {{ $.SOURCE_REPO }}/containernetworking/plugins.git

@@ -1,6 +1,6 @@
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 # The registry itself is `github.com/distribution/distribution/v3`, resolved through GOPROXY like every
 # other dependency of this repository. What is built here is the wrapper around it — under `wrapper/`,

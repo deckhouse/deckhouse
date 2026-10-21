@@ -18,7 +18,7 @@ import:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
 - url: {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-google.git
   tag: v{{ $version }}

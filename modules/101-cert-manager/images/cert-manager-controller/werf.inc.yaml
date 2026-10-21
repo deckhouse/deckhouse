@@ -11,7 +11,7 @@ imageSpec:
     entrypoint: ["/bin/cert-manager-controller"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -36,7 +36,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-ci-validator
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/crds

@@ -2,7 +2,7 @@
 {{ $appAbsPath := printf "/deckhouse/modules/038-%s/images/%s/app" $.ModuleName $.ImageName }}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
   - add: {{ $appRelPath }}

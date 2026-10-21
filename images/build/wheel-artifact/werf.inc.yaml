@@ -2,7 +2,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
 - url: {{ .SOURCE_REPO }}/python-modules/wheels
   commit: {{ $commit }}

@@ -13,7 +13,7 @@ git:
   add: /
   to: /src
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 ---
 image: ssh-static
 final: false

@@ -19,7 +19,7 @@
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - url: {{ $.SOURCE_REPO }}/gardener/autoscaler.git

@@ -11,7 +11,7 @@ imageSpec:
     entrypoint: [ "/constraint_exporter" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/images/{{ $.ImageName }}/src

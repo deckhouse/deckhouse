@@ -57,7 +57,7 @@ func main() {
 			}
 			log.Fatalln("invalid yaml:", err)
 		}
-		if stapel.FromArtifact != "common/src-artifact" {
+		if stapel.FromArtifact != "builder/src" {
 			continue
 		}
 
@@ -78,7 +78,7 @@ func main() {
 func validateSrcArtifactSuffix(stapel *stapelManifest) error {
 	if !strings.HasSuffix(stapel.Artifact, "-src-artifact") {
 		return fmt.Errorf(
-			"[SRC-M1] %s: Artifact is based on common/src-artifact but does not have a -src-artifact suffix",
+			"[SRC-M1] %s: Artifact is based on builder/src but does not have a -src-artifact suffix",
 			stapel.Artifact)
 	}
 	return nil

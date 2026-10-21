@@ -19,7 +19,7 @@ import:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
-from: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
 - url: {{ $.SOURCE_REPO }}/openssl/openssl.git
   tag: openssl-{{ include "get_oss_version_by_id" (list "openssl" $ ) }}
