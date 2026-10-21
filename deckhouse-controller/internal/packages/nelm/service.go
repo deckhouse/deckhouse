@@ -15,7 +15,6 @@
 package nelm
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -23,6 +22,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -57,8 +57,7 @@ const (
 	chartsDir    = "charts"     // Helm subcharts directory
 	webhooksDir  = "webhooks"   // webhook handlers read by templates via .Files.Get
 
-	// conversionWebhookKind is the token a chart must mention to render a
-	// ConversionWebhook; charts that never mention it are skipped without a render.
+	// conversionWebhookKind is the kind of the conversion webhook manifests.
 	conversionWebhookKind = "ConversionWebhook"
 )
 
@@ -90,6 +89,10 @@ var ErrPackageNotHelm = errors.New("package not helm")
 // chartFileExtensions are the chart files that can render a manifest. Packaged
 // subcharts (.tgz) are not inspected.
 var chartFileExtensions = []string{".yaml", ".yml", ".tpl"}
+
+// conversionWebhookKindLine matches a literal `kind: ConversionWebhook` line, so a
+// mere mention of the kind (e.g. in a comment) does not select the template.
+var conversionWebhookKindLine = regexp.MustCompile(`(?m)^kind:\s*` + conversionWebhookKind + `\s*$`)
 
 // Package provides access to package data needed for Helm operations.
 type Package interface {
@@ -622,12 +625,11 @@ func (s *Service) updateMonitor(state MaintenanceState, namespace, name, manifes
 
 // HasConversionWebhook reports whether the package's chart can render a
 // ConversionWebhook, so callers skip the render for packages that ship none.
-// It scans the chart's templates and subcharts for the kind; a file that merely
-// mentions it counts, because a false positive costs one render while a false
-// negative would silently drop a conversion.
+// It scans the chart's templates and subcharts for a literal `kind:` line, so a
+// kind built dynamically (`kind: {{ $kind }}`) is not detected.
 func (s *Service) HasConversionWebhook(path string) (bool, error) {
 	for _, dir := range []string{templatesDir, chartsDir} {
-		found, err := containsToken(filepath.Join(path, dir), conversionWebhookKind)
+		found, err := containsMatch(filepath.Join(path, dir), conversionWebhookKindLine)
 		if err != nil {
 			return false, fmt.Errorf("scan %s dir: %w", dir, err)
 		}
@@ -640,10 +642,9 @@ func (s *Service) HasConversionWebhook(path string) (bool, error) {
 	return false, nil
 }
 
-// containsToken reports whether any chart file under root contains the token.
+// containsMatch reports whether any chart file under root matches re.
 // A missing root is not an error: the chart simply has no such directory.
-func containsToken(root, token string) (bool, error) {
-	needle := []byte(token)
+func containsMatch(root string, re *regexp.Regexp) (bool, error) {
 	found := false
 
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
@@ -660,7 +661,7 @@ func containsToken(root, token string) (bool, error) {
 			return err
 		}
 
-		if bytes.Contains(data, needle) {
+		if re.Match(data) {
 			found = true
 			return fs.SkipAll
 		}
@@ -675,7 +676,7 @@ func containsToken(root, token string) (bool, error) {
 }
 
 // GetConversionWebhooks returns the conversion webhooks for the given package.
-// It renders only the templates that mention the kind (plus helpers), and falls
+// It renders only the templates that declare the kind (plus helpers), and falls
 // back to the full chart if that reduced render fails.
 func (s *Service) GetConversionWebhooks(ctx context.Context, namespace string, pkg Package) ([]manifest.Manifest, error) {
 	rendered, err := s.renderConversionWebhookChart(ctx, namespace, pkg)
@@ -750,11 +751,12 @@ func (s *Service) renderConversionWebhookChart(ctx context.Context, namespace st
 }
 
 // conversionWebhookTemplates returns paths, relative to path/templates, of the
-// chart files that mention a ConversionWebhook, plus every "_" helper they may
+// chart files that declare a ConversionWebhook, plus every "_" helper they may
 // include (helpers render nothing on their own). A missing templates dir yields none.
+// A file that only mentions the kind is left out: rendered ahead of the hooks, its
+// values may not be ready yet.
 func conversionWebhookTemplates(path string) ([]string, error) {
 	root := filepath.Join(path, templatesDir)
-	needle := []byte(conversionWebhookKind)
 
 	var found []string
 
@@ -777,7 +779,7 @@ func conversionWebhookTemplates(path string) ([]string, error) {
 				return err
 			}
 
-			if !bytes.Contains(data, needle) {
+			if !conversionWebhookKindLine.Match(data) {
 				return nil
 			}
 		}
