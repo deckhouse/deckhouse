@@ -23,7 +23,7 @@
 
 {{- $containerd := "containerd1736"}}
 {{- if eq .cri "ContainerdV2" }}
-  {{- $containerd = "containerd229" }}
+  {{- $containerd = "containerd2210" }}
 {{- end }}
 
 if ! command -v systemd-run >/dev/null 2>&1 || ! command -v systemctl >/dev/null 2>&1; then

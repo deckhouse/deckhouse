@@ -17,7 +17,7 @@
       version: "1.7.36"
     - condition:
         mainline: "v2"
-      version: "2.2.9"
+      version: "2.2.10"
 - name: cfssl
   link: https://github.com/cloudflare/cfssl
   description: An open and reliable container runtime.
