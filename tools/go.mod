@@ -61,9 +61,9 @@ require (
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
-	github.com/flant/addon-operator v1.26.0 // indirect
+	github.com/flant/addon-operator v1.26.1 // indirect
 	github.com/flant/kube-client v1.10.0 // indirect
-	github.com/flant/shell-operator v1.21.2 // indirect
+	github.com/flant/shell-operator v1.21.3 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/fzipp/gocyclo v0.3.1 // indirect
