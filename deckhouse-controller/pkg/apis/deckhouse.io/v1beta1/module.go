@@ -94,6 +94,13 @@ type ModuleSpec struct {
 	// +optional
 	ReleaseChannel string `json:"releaseChannel,omitempty"`
 
+	// Module update settings: update mode, update windows, and blocking updates when alerts are present.
+	//
+	// If this parameter is not specified, the Deckhouse Platform update settings are applied.
+	// +optional
+	// +crd-enricher:deckhouse:documentation:examples={mode: Auto, windows: [{from: "8:00", to: "15:00", days: [Tue, Sat]}], blockOnAlerts: {enabled: true, severity: 2}}
+	Update *ModuleUpdate `json:"update,omitempty"`
+
 	// Enables or disables the module. Unset leaves the decision to the platform.
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
@@ -121,6 +128,78 @@ type ModuleSpec struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
 	Settings *v1alpha1.MappedFields `json:"settings,omitempty"`
+}
+
+// ModuleUpdate is the update policy of a single module.
+type ModuleUpdate struct {
+	// Update mode of the module on its release channel.
+	//
+	// - `AutoPatch`: Automatic update mode for patch versions.
+	//
+	//   To change a minor version (for example, from `v1.2.*` to `v1.3.*`), confirmation is required.
+	//
+	//   A patch version update (for example, from `v1.3.1` to `v1.3.2`) is applied taking into account the update windows, if they are set.
+	//
+	// - `Auto`: Automatic update mode for all versions.
+	//
+	//   Minor version updates (for example, from `v1.2.*` to `v1.3.*`) and patch version updates (for example, from `v1.3.1` to `v1.3.2`) are applied taking into account the update windows, if they are set.
+	//
+	// - `Manual`: Manual update mode for all versions.
+	//
+	//   Confirmation is required for updating both minor and patch versions.
+	// +kubebuilder:validation:Enum=AutoPatch;Auto;Manual
+	// +kubebuilder:default=AutoPatch
+	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=[AutoPatch, Auto, Manual]
+	Mode string `json:"mode,omitempty"`
+
+	// List of module update windows.
+	// +optional
+	Windows []ModuleUpdateWindow `json:"windows,omitempty"`
+
+	// Settings for blocking module updates while there are alerts in the cluster.
+	// +optional
+	BlockOnAlerts *ModuleUpdateBlockOnAlerts `json:"blockOnAlerts,omitempty"`
+}
+
+// Time interval during the day when module updates are allowed.
+type ModuleUpdateWindow struct {
+	// Start time of the update window (UTC timezone).
+	//
+	// Should be earlier than the end time of the update window.
+	// +kubebuilder:validation:Pattern=`^(?:\d|[01]\d|2[0-3]):[0-5]\d$`
+	// +crd-enricher:deckhouse:documentation:examples="13:00"
+	From string `json:"from"`
+
+	// End time of the update window (UTC timezone).
+	//
+	// Should be later than the start time of the update window.
+	// +kubebuilder:validation:Pattern=`^(?:\d|[01]\d|2[0-3]):[0-5]\d$`
+	// +crd-enricher:deckhouse:documentation:examples="18:30"
+	To string `json:"to"`
+
+	// Days of the week on which the update window is applied.
+	//
+	// If the parameter is omitted, the update window is applied every day.
+	// +kubebuilder:validation:items:Enum=Mon;Tue;Wed;Thu;Fri;Sat;Sun
+	// +optional
+	Days []string `json:"days,omitempty"`
+}
+
+// ModuleUpdateBlockOnAlerts holds the settings for blocking the module update on alerts.
+type ModuleUpdateBlockOnAlerts struct {
+	// Indicates whether to block module updates when the cluster has alerts with a severity level equal to or higher than the value specified in the `severity` parameter.
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+
+	// Alert severity level at which updates are blocked.
+	//
+	// Set as a value from `0` to `9`, where `0` is the highest severity and `9` is the lowest.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=9
+	// +kubebuilder:default=4
+	// +optional
+	Severity *int32 `json:"severity,omitempty"`
 }
 
 type ModuleStatus struct {
