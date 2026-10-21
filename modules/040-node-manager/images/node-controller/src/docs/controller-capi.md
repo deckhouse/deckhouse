@@ -35,6 +35,8 @@ NodeGroup changed (or MD re-enqueues by node-group label)
   │
   ├─ NodeGroup not found? → done
   │
+  ├─ NodeGroup master? → drop the finalizer if present; being deleted → done
+  │
   ├─ being deleted? → cleanupMachineDeployments → remove finalizer → done
   │
   ├─ ensureFinalizer (node-manager.deckhouse.io/capi-md-cleanup)
@@ -52,6 +54,8 @@ On NodeGroup deletion the reconciler runs `cleanupMachineDeployments` — delete
 NodeGroup's CAPI and MCM MachineDeployments (and each MCM MachineDeployment's referenced
 MachineClass) — then removes its `node-manager.deckhouse.io/capi-md-cleanup` finalizer.
 The node drain itself is driven asynchronously by capi/caps-controller-manager.
+NodeGroup `master` is the exception: it never carries the finalizer, and its deletion runs no
+cleanup — the `master-node-group` controller re-creates the group with the same spec.
 
 ### reconcileCloudMDsRendered (CAPI engine)
 

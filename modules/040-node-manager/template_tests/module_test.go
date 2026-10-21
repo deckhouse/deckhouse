@@ -1294,6 +1294,25 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			}
 		})
 
+		// Nothing deletes NodeGroup master legitimately, so no user, dhctl included, is exempt.
+		It("refuses deleting NodeGroup master to everyone", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			name := "master-node-group-deletion.deckhouse.io"
+			policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", name)
+			Expect(policy.Exists()).To(BeTrue(), "ValidatingAdmissionPolicy %s must be rendered", name)
+			Expect(policy.Field("spec.matchConstraints.resourceRules.0.apiGroups").String()).To(MatchJSON(`["deckhouse.io"]`))
+			Expect(policy.Field("spec.matchConstraints.resourceRules.0.resources").String()).To(MatchJSON(`["nodegroups"]`))
+			Expect(policy.Field("spec.matchConstraints.resourceRules.0.operations").String()).To(MatchJSON(`["DELETE"]`))
+			Expect(policy.Field("spec.validations.0.expression").String()).To(ContainSubstring(`"master"`))
+			Expect(policy.Field("spec").String()).NotTo(ContainSubstring("userInfo"), "%s must exempt no user", name)
+
+			binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", name+"-binding")
+			Expect(binding.Exists()).To(BeTrue(), "ValidatingAdmissionPolicyBinding %s-binding must be rendered", name)
+			Expect(binding.Field("spec.policyName").String()).To(Equal(name))
+			Expect(binding.Field("spec.validationActions").String()).To(ContainSubstring("Deny"))
+		})
+
 		// The CRD schemas hold these rules now, and node-controller serves no such paths:
 		// a webhook left registered would fail every write to the resource.
 		It("registers no webhook for NodeConfig or NodeExtensionRequest", func() {

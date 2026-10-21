@@ -15,35 +15,37 @@
 package immutable
 
 import (
+	"bytes"
+	"context"
 	"io"
 	"net"
-	"os"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/settings"
 	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
+	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/stretchr/testify/require"
 )
 
-// A wait rebuilds this channel on every attempt, and the provider prints three
-// lines per open. Taking the logger from the context is what lets the caller
-// quiet the plumbing behind its own progress line.
-func TestTheTunnelNarratesWhereItsContextNarrates(t *testing.T) {
-	src, err := os.ReadFile("tunnel.go")
-	if err != nil {
-		t.Fatalf("read tunnel.go: %v", err)
-	}
+// Every step that reaches the master opens a channel of its own, a wait does it
+// every attempt, and the provider frames each open as a "Get SSH client" block.
+// The terminal must not show it, and the debug file must keep it.
+func TestOpeningAChannelStaysOffTheTerminal(t *testing.T) {
+	target := startEchoServer(t)
+	bastion := startFakeBastion(t, testHostKey(t), target)
 
-	body := string(src)
-	if !strings.Contains(body, "channelSettings{Settings: sett, logger: dhlog.FromContext(ctx)}") {
-		t.Error("the SSH provider must take its logger from the context, or a wait cannot quiet the plumbing behind it")
-	}
-	if strings.Contains(body, "provider.NewDefaultSSHProvider(\n\t\tsett,") {
-		t.Error("the bare settings narrate onto the screen whatever the caller asked for")
-	}
+	var terminal bytes.Buffer
+	_, stop := openChannelThroughFakeBastion(dhlog.ToContext(t.Context(), dhlog.NewStreamLogger(&terminal)), t, bastion, target)
+	stop()
+	require.NotContains(t, terminal.String(), "Get SSH client", "opening a channel reached the terminal")
+
+	var debugFile bytes.Buffer
+	_, stop = openChannelThroughFakeBastion(dhlog.ToContext(t.Context(), dhlog.NewBufferLogger(&debugFile)), t, bastion, target)
+	stop()
+	require.Contains(t, debugFile.String(), `level=DEBUG msg="Starting: Get SSH client"`,
+		"opening a channel is how a bastion that refuses is diagnosed, the debug file must keep it")
 }
 
 // A dial that ends on a deadline must cost the one connection it was made for.
@@ -54,7 +56,7 @@ func TestTheForwardOutlivesADialThatTimedOut(t *testing.T) {
 	target := startEchoServer(t)
 	bastion := startFakeBastion(t, testHostKey(t), target)
 
-	address, stop := openChannelThroughFakeBastion(t, bastion, target)
+	address, stop := openChannelThroughFakeBastion(t.Context(), t, bastion, target)
 	defer stop()
 
 	echoed, err := echoThrough(address, "ping")
@@ -86,7 +88,7 @@ func waitForTheDialToTimeOut(t *testing.T, address string) {
 	require.NoError(t, err)
 }
 
-func openChannelThroughFakeBastion(t *testing.T, bastion *fakeBastion, target string) (string, func()) {
+func openChannelThroughFakeBastion(ctx context.Context, t *testing.T, bastion *fakeBastion, target string) (string, func()) {
 	t.Helper()
 
 	bastionHost, bastionPort := splitHostPort(t, bastion.address)
@@ -99,7 +101,7 @@ func openChannelThroughFakeBastion(t *testing.T, bastion *fakeBastion, target st
 		BastionPassword: "password",
 	}
 	address, stop, err := OpenBastionChannel(
-		t.Context(),
+		ctx,
 		&sshconfig.ConnectionConfig{Config: config.FillDefaults()},
 		settings.NewBaseProviders(settings.ProviderParams{}),
 		targetHost,

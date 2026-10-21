@@ -1708,6 +1708,29 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// node-controller re-creates a deleted NodeGroup master, and the masters keep their
+	// configuration through the moment the group is gone.
+	It("keeps the NodeConfig of a master while NodeGroup master is missing", func(ctx context.Context) {
+		nodeName := testenv.UniqueName("master")
+		createManagedNodeConfig(ctx, nodeName)
+		createNode(ctx, nodeName, "master")
+
+		Consistently(func(g Gomega) {
+			getNodeConfig(ctx, g, nodeName)
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	It("removes the NodeConfig of a node whose NodeGroup is missing", func(ctx context.Context) {
+		nodeName := testenv.UniqueName("node")
+		createManagedNodeConfig(ctx, nodeName)
+		createNode(ctx, nodeName, testenv.UniqueName("workers-gone"))
+
+		Eventually(func(g Gomega) {
+			err := k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, &internalv1alpha1.NodeConfig{})
+			g.Expect(apierrors.IsNotFound(err)).To(BeTrue(), "got %v", err)
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// User story: As a cluster operator, I want a master joining an existing
 	// cluster to keep the payload it booted with, so that scaling the control
 	// plane does not silently move its etcd off the disk the installer chose.
@@ -2448,6 +2471,20 @@ func createNode(ctx context.Context, name, ngName string) *corev1.Node {
 	Expect(k8sClient.Create(ctx, node)).To(Succeed())
 	DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, node) })
 	return node
+}
+
+// createManagedNodeConfig stands for the NodeConfig this controller rendered for the node earlier.
+func createManagedNodeConfig(ctx context.Context, name string) {
+	GinkgoHelper()
+
+	nc := &internalv1alpha1.NodeConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{managedByLabel: managedByValue}},
+		Spec:       internalv1alpha1.NodeSpec{SystemType: internalv1alpha1.SystemTypeMutable, NodeName: name},
+	}
+	Expect(k8sClient.Create(ctx, nc)).To(Succeed())
+	DeferCleanup(func(ctx context.Context) {
+		Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, nc))).To(Succeed())
+	})
 }
 
 // managedByBashible turns the group testenv.CreateImmutableNodeGroup builds into

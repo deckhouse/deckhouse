@@ -45,11 +45,9 @@ var (
 	suiteCancel context.CancelFunc
 )
 
-// TestMasterNodeGroupControllerEnvtest runs the envtest-backed integration suite. The cluster
-// configuration Secret is published before the manager starts, so the first spec observes the real
-// startup path: the controller's one-shot enqueue creating the master NodeGroup against a real
-// apiserver. The remaining specs drive Reconcile directly, because the startup source fires once
-// per manager and each case needs its own cluster configuration.
+// TestMasterNodeGroupControllerEnvtest runs the envtest-backed integration suite. Most specs drive
+// Reconcile directly, because each case needs its own cluster configuration. The specs that need
+// the controller's own startup enqueue and watches run under a manager started by startManager.
 func TestMasterNodeGroupControllerEnvtest(t *testing.T) {
 	if !testenv.AssetsAvailable() {
 		t.Skip("envtest assets not found; run `make envtest` (or set KUBEBUILDER_ASSETS) to run the integration suite")
@@ -78,16 +76,28 @@ var _ = BeforeSuite(func() {
 		Data:       map[string][]byte{clusterConfigKey: []byte("clusterType: Cloud\n")},
 	}
 	Expect(k8sClient.Create(suiteCtx, secret)).To(Succeed())
+})
 
-	By("starting the manager with the master-node-group controller")
-	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
+// startManager runs the master-node-group controller until the calling container ends. A running
+// controller reacts to every change of NodeGroup master, so the specs that drive Reconcile directly
+// must not run under it. Call it once: controller-runtime refuses a second controller of one name.
+func startManager() {
+	ctx, cancel := context.WithCancel(suiteCtx)
+	mgr, err := testenv.NewManager(ctx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 
+	stopped := make(chan struct{})
 	go func() {
 		defer GinkgoRecover()
-		Expect(mgr.Start(suiteCtx)).To(Succeed())
+		defer close(stopped)
+		Expect(mgr.Start(ctx)).To(Succeed())
 	}()
-})
+
+	DeferCleanup(func() {
+		cancel()
+		Eventually(stopped, eventuallyTimeout).Should(BeClosed())
+	})
+}
 
 var _ = AfterSuite(func() {
 	By("tearing down the envtest environment")

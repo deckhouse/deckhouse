@@ -192,6 +192,17 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 	registration := pCatalog.ByNodeGroup(ng)
 
+	// NodeGroup master is never held and never torn down: a deleted one is restored, and the
+	// machines of the control plane must outlive the deletion. A finalizer from an older release goes.
+	if ng.Name == common.MasterNodeGroupName {
+		if err := r.releaseMaster(ctx, ng); err != nil {
+			return ctrl.Result{}, err
+		}
+		if !ng.DeletionTimestamp.IsZero() {
+			return ctrl.Result{}, nil
+		}
+	}
+
 	if !ng.DeletionTimestamp.IsZero() {
 		done, err := r.cleanupMachineDeployments(ctx, ng.Name, registration)
 		if err != nil {
@@ -258,6 +269,9 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 }
 
 func (r *MachineDeploymentReconciler) ensureFinalizer(ctx context.Context, ng *deckhousev1.NodeGroup) error {
+	if ng.Name == common.MasterNodeGroupName {
+		return nil
+	}
 	if controllerutil.ContainsFinalizer(ng, mdCleanupFinalizer) {
 		return nil
 	}
@@ -267,6 +281,20 @@ func (r *MachineDeploymentReconciler) ensureFinalizer(ctx context.Context, ng *d
 		return fmt.Errorf("add finalizer to NodeGroup %s: %w", ng.Name, err)
 	}
 	*ng = *updated
+	return nil
+}
+
+// releaseMaster takes the finalizer off NodeGroup master. The lock keeps the patch, which rewrites
+// the whole finalizer list, from dropping the one masternodegroup puts on the same object.
+func (r *MachineDeploymentReconciler) releaseMaster(ctx context.Context, ng *deckhousev1.NodeGroup) error {
+	if !controllerutil.ContainsFinalizer(ng, mdCleanupFinalizer) {
+		return nil
+	}
+	patch := client.MergeFromWithOptions(ng.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	controllerutil.RemoveFinalizer(ng, mdCleanupFinalizer)
+	if err := r.Client.Patch(ctx, ng, patch); err != nil {
+		return fmt.Errorf("remove finalizer from NodeGroup %s: %w", ng.Name, err)
+	}
 	return nil
 }
 

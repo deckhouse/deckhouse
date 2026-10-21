@@ -29,4 +29,8 @@ const (
 	// cluster with no UUID: renamed MachineClasses, a shifted epoch.
 	ClusterUUIDConfigMapName = "d8-cluster-uuid"
 	ClusterUUIDConfigMapKey  = "cluster-uuid"
+
+	// MasterNodeGroupName is the NodeGroup of the control-plane nodes. Nothing deletes it
+	// legitimately, and the masternodegroup controller restores one deleted anyway.
+	MasterNodeGroupName = "master"
 )

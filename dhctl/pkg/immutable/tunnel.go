@@ -96,11 +96,11 @@ func openBastionTunnel(ctx context.Context, sshConfig *sshconfig.Config, sett se
 	bastionConfig.ForceLegacy = false
 	bastionConfig.ForceModern = true
 
-	// The provider narrates where this context narrates: a wait opens a channel
-	// every attempt, and the retry loop inside the provider prints three lines
-	// per open — on top of the one line that carries the node's own progress.
+	// The provider narrates into the debug file only: every step that reaches the
+	// master opens a channel of its own, a wait does it every attempt, and each
+	// open is a "Get SSH client" block. A failed open still returns its error.
 	sshProvider := provider.NewDefaultSSHProvider(
-		channelSettings{Settings: sett, logger: dhlog.FromContext(ctx)},
+		channelSettings{Settings: sett, logger: slog.New(debugOnlyHandler{dhlog.FromContext(ctx).Handler()})},
 		&sshconfig.ConnectionConfig{
 			Config: bastionConfig,
 			Hosts:  []sshconfig.Host{{Host: sshConfig.BastionHost}},
@@ -237,3 +237,27 @@ type channelSettings struct {
 }
 
 func (s channelSettings) Logger() *slog.Logger { return s.logger }
+
+// debugOnlyHandler lowers every record to Debug on its way to the handler behind
+// it. lib-dhctl keeps Debug in the debug file and off every terminal, the live
+// log box included, which still shows a record tagged FileOnly.
+type debugOnlyHandler struct{ slog.Handler }
+
+var _ slog.Handler = debugOnlyHandler{}
+
+func (h debugOnlyHandler) Enabled(ctx context.Context, _ slog.Level) bool {
+	return h.Handler.Enabled(ctx, slog.LevelDebug)
+}
+
+func (h debugOnlyHandler) Handle(ctx context.Context, record slog.Record) error {
+	record.Level = slog.LevelDebug
+	return h.Handler.Handle(ctx, record)
+}
+
+func (h debugOnlyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return debugOnlyHandler{h.Handler.WithAttrs(attrs)}
+}
+
+func (h debugOnlyHandler) WithGroup(name string) slog.Handler {
+	return debugOnlyHandler{h.Handler.WithGroup(name)}
+}

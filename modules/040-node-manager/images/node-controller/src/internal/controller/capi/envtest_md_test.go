@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -258,5 +259,89 @@ var _ = Describe("CAPI MachineDeployment rendering", func() {
 			g.Expect(got.Spec.Template.Spec.Bootstrap.DataSecretName).NotTo(BeNil())
 			g.Expect(*got.Spec.Template.Spec.Bootstrap.DataSecretName).To(Equal(legacyName))
 		}, 5*time.Second, 500*time.Millisecond).Should(Succeed())
+	})
+})
+
+// User story: As a cluster operator, I want the machines of the control plane to survive a deletion
+// of NodeGroup master, so that node-controller restores the group onto nodes that are still there.
+var _ = Describe("CAPI MachineDeployment controller and NodeGroup master", func() {
+	const masterName = "master"
+	// holdFinalizer keeps a deleted master in deletion for the specs to watch: envtest runs no
+	// masternodegroup controller, whose own finalizer does that in a cluster.
+	const holdFinalizer = "test.deckhouse.io/hold"
+
+	getMaster := func(g Gomega) *deckhousev1.NodeGroup {
+		ng := &deckhousev1.NodeGroup{}
+		g.Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: masterName}, ng)).To(Succeed())
+		return ng
+	}
+
+	createMaster := func(finalizers ...string) {
+		ng := &deckhousev1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: masterName, Finalizers: finalizers}}
+		ng.Spec.NodeType = deckhousev1.NodeTypeStatic
+		Expect(k8sClient.Create(suiteCtx, ng)).To(Succeed())
+		DeferCleanup(func() {
+			testenv.RemoveFinalizers(suiteCtx, k8sClient, getMaster(Default))
+			Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, ng))).To(Succeed())
+			Eventually(func() bool {
+				return apierrors.IsNotFound(k8sClient.Get(suiteCtx, client.ObjectKeyFromObject(ng), &deckhousev1.NodeGroup{}))
+			}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(BeTrue())
+		})
+	}
+
+	It("never puts the cleanup finalizer on NodeGroup master", func() {
+		createMaster()
+
+		Consistently(func(g Gomega) {
+			g.Expect(getMaster(g).Finalizers).NotTo(ContainElement(mdCleanupFinalizer))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	It("takes the cleanup finalizer an older release put off NodeGroup master", func() {
+		createMaster(mdCleanupFinalizer)
+
+		Eventually(func(g Gomega) {
+			g.Expect(getMaster(g).Finalizers).NotTo(ContainElement(mdCleanupFinalizer))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	It("keeps the MachineDeployments of a deleted NodeGroup master", func() {
+		createMaster(mdCleanupFinalizer, holdFinalizer)
+
+		md := &capiv1beta2.MachineDeployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      testenv.UniqueName("master"),
+				Namespace: common.MachineNamespace,
+				Labels:    map[string]string{"node-group": masterName},
+			},
+			Spec: capiv1beta2.MachineDeploymentSpec{
+				ClusterName: "static",
+				Selector:    metav1.LabelSelector{MatchLabels: map[string]string{"node-group": masterName}},
+				Template: capiv1beta2.MachineTemplateSpec{
+					ObjectMeta: capiv1beta2.ObjectMeta{Labels: map[string]string{"node-group": masterName}},
+					Spec: capiv1beta2.MachineSpec{
+						ClusterName: "static",
+						Bootstrap:   capiv1beta2.Bootstrap{DataSecretName: ptr("manual-bootstrap-for-master")},
+						InfrastructureRef: capiv1beta2.ContractVersionedObjectReference{
+							APIGroup: "infrastructure.cluster.x-k8s.io",
+							Kind:     "StaticMachineTemplate",
+							Name:     masterName,
+						},
+					},
+				},
+			},
+		}
+		Expect(k8sClient.Create(suiteCtx, md)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, md))).To(Succeed())
+		})
+
+		Expect(k8sClient.Delete(suiteCtx, getMaster(Default))).To(Succeed())
+		Eventually(func(g Gomega) {
+			g.Expect(getMaster(g).Finalizers).To(ConsistOf(holdFinalizer), "released without a cleanup")
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		Consistently(func(g Gomega) {
+			g.Expect(k8sClient.Get(suiteCtx, client.ObjectKeyFromObject(md), &capiv1beta2.MachineDeployment{})).To(Succeed())
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 })

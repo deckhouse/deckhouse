@@ -1,0 +1,31 @@
+{{- /* Rendered unconditionally against a fixed apiVersion, for the reasons given in templates/node-controller/validation.yaml. */}}
+{{- $policyName := "master-node-group-deletion.deckhouse.io" }}
+---
+# NodeGroup master describes the control-plane nodes, and nothing deletes it legitimately: dhctl
+# destroy leaves it alone. No user is exempt. node-controller restores a group deleted anyway.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["DELETE"]
+      resources:   ["nodegroups"]
+  validations:
+  - expression: 'request.name != "master"'
+    reason: Forbidden
+    message: "NodeGroup master cannot be deleted: it describes the control-plane nodes of the cluster. Edit its spec instead."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-binding
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]

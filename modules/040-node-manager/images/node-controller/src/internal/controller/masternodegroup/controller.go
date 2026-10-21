@@ -27,6 +27,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -43,6 +44,9 @@ func init() {
 
 const (
 	masterNodeGroupName = "master"
+	// masterNodeGroupFinalizer holds a deleted master NodeGroup until its spec is copied into the
+	// group that replaces it.
+	masterNodeGroupFinalizer = "node-manager.deckhouse.io/master-node-group"
 
 	clusterConfigSecretNamespace = "kube-system"
 	clusterConfigSecretName      = "d8-cluster-configuration"
@@ -55,11 +59,12 @@ type Reconciler struct {
 	register.Base
 }
 
-// ForPredicates drops every NodeGroup event: the group is ensured once at startup, the way the
-// create_master_node_group hook did on OnStartup. Reacting to events would also re-create a group
-// that an administrator removed on purpose.
+// ForPredicates passes the events of the master NodeGroup only. Nothing deletes that group
+// legitimately, dhctl destroy included, so a deleted one is restored with its own spec.
 func (r *Reconciler) ForPredicates() []predicate.Predicate {
-	return []predicate.Predicate{predicate.NewPredicateFuncs(func(client.Object) bool { return false })}
+	return []predicate.Predicate{predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetName() == masterNodeGroupName
+	})}
 }
 
 func (r *Reconciler) SetupWatches(w register.Watcher) {
@@ -75,8 +80,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 	existing := &deckhousev1.NodeGroup{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: masterNodeGroupName}, existing)
 	if err == nil {
-		logger.V(1).Info("skipping: master NodeGroup already exists")
-		return ctrl.Result{}, nil
+		return r.reconcileExisting(ctx, existing)
 	}
 	if !errors.IsNotFound(err) {
 		return ctrl.Result{}, fmt.Errorf("get NodeGroup %s: %w", masterNodeGroupName, err)
@@ -93,7 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 
 	// The NodeGroup validating webhook is served by node-controller itself, so a create issued
 	// before the webhook server listens is rejected; the workqueue backoff covers that window.
-	if err := r.Client.Create(ctx, masterNodeGroup(clusterType)); err != nil {
+	if err := r.Client.Create(ctx, withFinalizer(masterNodeGroup(clusterType))); err != nil {
 		if errors.IsAlreadyExists(err) {
 			return ctrl.Result{}, nil
 		}
@@ -102,6 +106,75 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 
 	logger.Info("master NodeGroup created")
 	return ctrl.Result{}, nil
+}
+
+// reconcileExisting keeps the finalizer on the master NodeGroup and restores the group once it is
+// deleted. dhctl creates the group at bootstrap without the finalizer.
+func (r *Reconciler) reconcileExisting(ctx context.Context, ng *deckhousev1.NodeGroup) (ctrl.Result, error) {
+	if !ng.DeletionTimestamp.IsZero() {
+		return r.restore(ctx, ng)
+	}
+	if controllerutil.ContainsFinalizer(ng, masterNodeGroupFinalizer) {
+		return ctrl.Result{}, nil
+	}
+
+	patch := client.MergeFromWithOptions(ng.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	controllerutil.AddFinalizer(ng, masterNodeGroupFinalizer)
+	if err := r.Client.Patch(ctx, ng, patch); err != nil {
+		return ctrl.Result{}, fmt.Errorf("add finalizer to NodeGroup %s: %w", masterNodeGroupName, err)
+	}
+
+	log.FromContext(ctx).Info("master NodeGroup finalizer added")
+	return ctrl.Result{}, nil
+}
+
+// restore re-creates the deleted master NodeGroup with its spec, labels and annotations. The new
+// group takes the same name, so it is created only after the finalizer lets the old object go.
+func (r *Reconciler) restore(ctx context.Context, deleted *deckhousev1.NodeGroup) (ctrl.Result, error) {
+	// Not held by this controller: once the group is gone, it is created from the template.
+	if !controllerutil.ContainsFinalizer(deleted, masterNodeGroupFinalizer) {
+		return ctrl.Result{}, nil
+	}
+	// Another finalizer, foregroundDeletion of a cascading delete for one, keeps the old object after
+	// ours is gone, and the create would collide with it. Its removal updates the group and brings us back.
+	if len(deleted.Finalizers) > 1 {
+		return ctrl.Result{}, nil
+	}
+
+	logger := log.FromContext(ctx)
+	saved := deleted.DeepCopy()
+
+	// The lock turns a stale cached object into a conflict: a plain patch would strip the
+	// finalizer from a group already restored under the same name.
+	controllerutil.RemoveFinalizer(deleted, masterNodeGroupFinalizer)
+	if err := r.Client.Patch(ctx, deleted, client.MergeFromWithOptions(saved, client.MergeFromWithOptimisticLock{})); err != nil {
+		return ctrl.Result{}, fmt.Errorf("remove finalizer from NodeGroup %s: %w", masterNodeGroupName, err)
+	}
+
+	restored := withFinalizer(&deckhousev1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        masterNodeGroupName,
+			Labels:      saved.Labels,
+			Annotations: saved.Annotations,
+		},
+		Spec: saved.Spec,
+	})
+	// ponytail: a create failing here is retried by the template branch, which loses the saved
+	// spec. Keep the saved object across retries if this window ever shows up in practice.
+	if err := r.Client.Create(ctx, restored); err != nil {
+		return ctrl.Result{}, fmt.Errorf("re-create NodeGroup %s: %w", masterNodeGroupName, err)
+	}
+
+	logger.Info("master NodeGroup restored after deletion", "deletedUID", saved.UID, "uid", restored.UID)
+	r.Recorder.Event(restored, corev1.EventTypeWarning, "RestoredAfterDeletion",
+		"NodeGroup master was deleted and has been re-created with the same spec, labels and annotations")
+	return ctrl.Result{}, nil
+}
+
+// withFinalizer protects a master NodeGroup from the moment it is created.
+func withFinalizer(ng *deckhousev1.NodeGroup) *deckhousev1.NodeGroup {
+	controllerutil.AddFinalizer(ng, masterNodeGroupFinalizer)
+	return ng
 }
 
 // readClusterType reads clusterType out of the cluster configuration. Every failure is reported:

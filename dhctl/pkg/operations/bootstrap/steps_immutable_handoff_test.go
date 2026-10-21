@@ -219,29 +219,27 @@ func TestBothWaitsUseAFreshChannelPerAttempt(t *testing.T) {
 	}
 }
 
-// A channel is opened every attempt, so the SSH progress behind it repeats every
-// few seconds for a wait that runs for minutes. On a live stand it printed three
-// lines per attempt and buried the only line that carried the node's own state.
-// The compact terminal drops a record tagged file-only and the debug file keeps
-// it (lib-dhctl's routeToTTY), so the tag is the whole contract.
-func TestOpeningAChannelIsNotNarratedOnEveryAttempt(t *testing.T) {
+// Opening a channel narrates into the debug file only, so a bastion that refuses
+// would leave a minutes-long wait silent. Its error is the one thing the operator
+// sees about opening the channel.
+func TestAChannelThatCannotBeOpenedIsReported(t *testing.T) {
 	var records bytes.Buffer
-	ctx := dhlog.ToContext(context.Background(), dhlog.NewBufferLogger(&records))
+	ctx := dhlog.ToContext(t.Context(), dhlog.NewBufferLogger(&records))
 
-	openChannel := func(ctx context.Context) (string, func(), error) {
-		dhlog.FromContext(ctx).InfoContext(ctx, "Get SSH client")
+	var opened int
+	openChannel := func(context.Context) (string, func(), error) {
+		opened++
+		if opened < 2 {
+			return "", nil, errors.New("connect to the bastion host 198.51.100.7: connection refused")
+		}
 		return "127.0.0.1:0", func() {}, nil
 	}
 
-	if err := retryWithFreshChannel(ctx, handoffTestLoop(t, 1), openChannel, func(string) error { return nil }); err != nil {
-		t.Fatalf("wait: %v", err)
+	if err := retryWithFreshChannel(ctx, handoffTestLoop(t, 3), openChannel, func(string) error { return nil }); err != nil {
+		t.Fatalf("want success once the bastion answers, got %v", err)
 	}
-
-	if !strings.Contains(records.String(), "Get SSH client") {
-		t.Fatal("the SSH progress must still reach the debug log; it is how a channel that will not open is diagnosed")
-	}
-	if !strings.Contains(records.String(), `msg="Get SSH client" file_only=true`) {
-		t.Errorf("opening a channel must narrate file-only, off the compact terminal: it repeats every attempt of a minutes-long wait\n%s", records.String())
+	if !strings.Contains(records.String(), `level=WARN msg="connect to the bastion host 198.51.100.7: connection refused"`) {
+		t.Errorf("a channel that cannot be opened must be reported to the operator:\n%s", records.String())
 	}
 }
 

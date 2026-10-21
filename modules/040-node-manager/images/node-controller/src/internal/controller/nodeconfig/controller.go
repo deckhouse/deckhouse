@@ -55,6 +55,10 @@ func init() {
 	register.RegisterController(controllerName, &corev1.Node{}, &Reconciler{})
 }
 
+// masterNodeGroupWait paces the nodes of NodeGroup master while the group is gone: it is restored
+// after a deletion, so they are not orphans and keep their NodeConfig.
+const masterNodeGroupWait = 5 * time.Second
+
 type Reconciler struct {
 	register.Base
 
@@ -311,6 +315,10 @@ func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node,
 		return ctrl.Result{}, err
 	}
 	if ng == nil {
+		if ngName == nodecommon.MasterNodeGroupName {
+			logger.Info("NodeGroup master is missing, keeping the NodeConfig until it is restored", "node", nodeName)
+			return ctrl.Result{RequeueAfter: masterNodeGroupWait}, nil
+		}
 		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
 	}
 

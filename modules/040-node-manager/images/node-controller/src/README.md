@@ -67,7 +67,7 @@ reconcile loop.
 | `nodegroup-status` | NodeGroup | Writes the whole `NodeGroup.status`: node counts, readiness, effective Kubernetes version, conditions, and the one-time `status.engine` pin (MCM or CAPI). | `update_node_group_status.go` — [docs](docs/controller-nodegroup-status.md) |
 | `bashible-context` | NodeGroup | Assembles the Secret `d8-cloud-instance-manager/bashible-apiserver-context` — the single input bashible-apiserver renders node configuration from. | helm define `bashible_input_data` |
 | `nodegroup-update-approval` | NodeGroup | Approves node updates one at a time and handles disruption approval. | `update_approval.go` — [docs](docs/controller-update-approval.md) |
-| `master-node-group` | — (one-shot at startup) | Creates the `master` NodeGroup once at startup if it is absent; never touches an existing one. Node type comes from `clusterType` in the Secret `kube-system/d8-cluster-configuration`. | `create_master_node_group.go` |
+| `master-node-group` | NodeGroup `master` (plus one enqueue at startup) | Creates the `master` NodeGroup with the finalizer `node-manager.deckhouse.io/master-node-group` if it is absent, adds the finalizer to an existing one and never changes its spec. A deleted group is re-created with the same spec, labels and annotations. Node type of a new group comes from `clusterType` in the Secret `kube-system/d8-cluster-configuration`. | `create_master_node_group.go` |
 
 ### Node-driven
 
@@ -86,7 +86,7 @@ Details: [docs/controller-capi.md](docs/controller-capi.md).
 
 | Controller | Watches | What it does |
 |---|---|---|
-| `capi-machine-deployment` | NodeGroup | Renders the MachineDeployments of a NodeGroup: CAPI ones per zone, or MCM MachineClass + MachineDeployment when the group runs on MCM. Cleans them up when the NodeGroup is deleted. |
+| `capi-machine-deployment` | NodeGroup | Renders the MachineDeployments of a NodeGroup: CAPI ones per zone, or MCM MachineClass + MachineDeployment when the group runs on MCM. Cleans them up when the NodeGroup is deleted. The `master` NodeGroup is left alone: it never carries the finalizer `node-manager.deckhouse.io/capi-md-cleanup`, and its machines are not cleaned up when it is deleted. |
 | `capi-cluster-resources` | Secret `d8-node-manager-cloud-provider` | Creates the cluster-level CAPI `Cluster` and applies its `MachineHealthCheck`. |
 | `capi-control-plane` | DeckhouseControlPlane | Marks the externally managed control plane ready so CAPI proceeds. |
 | `capi-api-version` | MachineDeployment (CAPI) | Backfills the infrastructure `apiGroup` on objects created under the older v1beta1 contract. |
