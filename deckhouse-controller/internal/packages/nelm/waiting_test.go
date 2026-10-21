@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/werf/nelm/pkg/legacy/progrep"
+	"github.com/werf/nelm/v2/pkg/legacy/progrep"
 )
 
 func TestWaitingFor(t *testing.T) {

@@ -20,7 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/werf/nelm/pkg/legacy/progrep"
+	"github.com/werf/nelm/v2/pkg/legacy/progrep"
 )
 
 func TestTracking(t *testing.T) {

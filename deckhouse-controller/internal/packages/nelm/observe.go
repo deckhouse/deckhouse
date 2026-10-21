@@ -22,7 +22,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/werf/nelm/pkg/legacy/progrep"
+	"github.com/werf/nelm/v2/pkg/legacy/progrep"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
 )

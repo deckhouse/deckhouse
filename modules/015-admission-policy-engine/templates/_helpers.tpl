@@ -537,12 +537,13 @@ spec:
   intercept, the deletion of the constraints and roles among them, and the uninstall never finishes.
   The bindings of the Gatekeeper service account are held back too: without them Gatekeeper cannot
   read an object missing from its cache, and a webhook with `failurePolicy: Fail` rejects the request.
-  A dependency on a webhook configuration the release does not contain is ignored.
+  external=false keeps a dependency on a webhook configuration the release does not contain ignored:
+  with the default external=auto, nelm treats it as an external one and fails the release.
   Usage: include "webhook_delete_dependencies" . — indents with 4 spaces for metadata.annotations.
 */}}
 {{- define "webhook_delete_dependencies" }}
-    werf.io/delete-dependency-validating-webhook: state=absent,kind=ValidatingWebhookConfiguration,name=d8-admission-policy-engine-config
-    werf.io/delete-dependency-mutating-webhook: state=absent,kind=MutatingWebhookConfiguration,name=d8-admission-policy-engine-config
+    werf.io/delete-dependency-validating-webhook: state=absent,kind=ValidatingWebhookConfiguration,name=d8-admission-policy-engine-config,external=false
+    werf.io/delete-dependency-mutating-webhook: state=absent,kind=MutatingWebhookConfiguration,name=d8-admission-policy-engine-config,external=false
 {{- end }}
 
 {{- /*

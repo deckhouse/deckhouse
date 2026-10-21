@@ -17,7 +17,7 @@ require (
 
 require (
 	4d63.com/gochecknoglobals v0.0.0-20201008074935-acfc0b28355a // indirect
-	dario.cat/mergo v1.0.1 // indirect
+	dario.cat/mergo v1.0.2 // indirect
 	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/Djarvur/go-err113 v0.0.0-20210108212216-aea10b59be24 // indirect
@@ -42,7 +42,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.18.2 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
-	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
+	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/daixiang0/gci v0.2.8 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -53,15 +53,15 @@ require (
 	github.com/denis-tingajkin/go-header v0.4.2 // indirect
 	github.com/docker/cli v29.4.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
-	github.com/docker/docker-credential-helpers v0.9.3 // indirect
+	github.com/docker/docker-credential-helpers v0.9.5 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/esimonov/ifshort v1.0.2 // indirect
 	github.com/ettle/strcase v0.2.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
-	github.com/fatih/color v1.18.0 // indirect
+	github.com/fatih/color v1.19.0 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
-	github.com/flant/addon-operator v1.25.6 // indirect
+	github.com/flant/addon-operator v1.26.0 // indirect
 	github.com/flant/kube-client v1.10.0 // indirect
 	github.com/flant/shell-operator v1.21.2 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
@@ -136,8 +136,8 @@ require (
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/itchyny/gojq v0.12.18 // indirect
-	github.com/itchyny/timefmt-go v0.1.7 // indirect
+	github.com/itchyny/gojq v0.12.19 // indirect
+	github.com/itchyny/timefmt-go v0.1.8 // indirect
 	github.com/jgautheron/goconst v1.4.0 // indirect
 	github.com/jingyugao/rowserrcheck v0.0.0-20210315055705-d907ca737bb1 // indirect
 	github.com/jirfag/go-printf-func-name v0.0.0-20200119135958-7558a9eaa5af // indirect
@@ -160,7 +160,7 @@ require (
 	github.com/matoous/godox v0.0.0-20210227103229-6504466cf951 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
-	github.com/mattn/go-runewidth v0.0.20 // indirect
+	github.com/mattn/go-runewidth v0.0.21 // indirect
 	github.com/mbilski/exhaustivestruct v1.2.0 // indirect
 	github.com/mgechev/dots v0.0.0-20190921121421-c36f7dcfbb81 // indirect
 	github.com/mgechev/revive v1.0.6 // indirect
@@ -190,8 +190,8 @@ require (
 	github.com/polyfloyd/go-errorlint v0.0.0-20210418123303-74da32850375 // indirect
 	github.com/prometheus/client_golang v1.23.2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.66.1 // indirect
-	github.com/prometheus/procfs v0.16.1 // indirect
+	github.com/prometheus/common v0.67.5 // indirect
+	github.com/prometheus/procfs v0.20.1 // indirect
 	github.com/quasilyte/go-ruleguard v0.3.4 // indirect
 	github.com/quasilyte/regex/syntax v0.0.0-20200407221936-30656e2c4a95 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
@@ -207,7 +207,7 @@ require (
 	github.com/sourcegraph/go-diff v0.6.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
-	github.com/spf13/cast v1.7.0 // indirect
+	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
@@ -219,7 +219,7 @@ require (
 	github.com/sylabs/oci-tools v0.19.0 // indirect
 	github.com/tdakkota/asciicheck v0.0.0-20200416200610-e657995f937b // indirect
 	github.com/tetafro/godot v1.4.6 // indirect
-	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/timakin/bodyclose v0.0.0-20200424151742-cb6215831a94 // indirect
 	github.com/tomarrell/wrapcheck/v2 v2.1.0 // indirect
@@ -282,8 +282,8 @@ require (
 	mvdan.cc/unparam v0.0.0-20210104141923-aac4ce9116a7 // indirect
 	sigs.k8s.io/controller-runtime v0.23.3 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
-	sigs.k8s.io/kustomize/api v0.20.1 // indirect
-	sigs.k8s.io/kustomize/kyaml v0.20.1 // indirect
+	sigs.k8s.io/kustomize/api v0.21.1 // indirect
+	sigs.k8s.io/kustomize/kyaml v0.21.1 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
