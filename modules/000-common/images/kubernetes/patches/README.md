@@ -3,6 +3,14 @@
 Warning! Some required patches that extend kubernetes functionally located in `ee/modules/000-common/images/kubernetes/patches/`
 directory.
 
+### 000-gomod.patch
+
+Bumps Go dependencies in the root `go.mod`/`go.sum` (and the `go` directive in `go.work` where needed) to fix known CVEs in the Kubernetes binaries, including `kube-proxy`. The build runs `GOWORK=off go mod vendor` after the patches are applied, so only the root module files are changed; staging modules pick up the new versions through MVS.
+
+Current bumps on all versions: `golang.org/x/net` v0.60.0 (with `golang.org/x/crypto` v0.57.0 and `golang.org/x/text` v0.42.0), `google.golang.org/grpc` v1.83.2, `go.opentelemetry.io/otel`, `otel/sdk`, `otel/exporters/otlp/otlptrace` and `otlptracegrpc` v1.45.0 (with `go.opentelemetry.io/proto/otlp` v1.11.0). This moves `otlptracegrpc` from the upstream v1.27.0-v1.40.0 to v1.45.0.
+
+The patch is carried on 1.32 through 1.36 and must apply first (`000`), before patches that touch `go.work.sum` or source code. Regenerate it with `go get` on the upstream tag with the whole patch set applied. Remove the bumps once the upstream patch release ships the same or newer versions.
+
 ### local-init-configuration.patch
 
 We want to include in join data the following:
