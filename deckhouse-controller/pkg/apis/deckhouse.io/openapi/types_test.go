@@ -196,6 +196,10 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 					},
 				},
 			},
+			"maxMemory": {
+				Type:            StringOrArray{"integer"},
+				XUISizingMemory: &UISizingMemory{DefaultUnit: "Mi"},
+			},
 		},
 		XValidations: []ValidationRule{
 			{Expression: "self.storageClass != ''", Message: "storageClass must be set"},
@@ -280,6 +284,23 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	}
 	if setting.Messages["ru"] != "Данные удаляются" {
 		t.Errorf("x-deckhouse-enum-switch-settings messages: got %+v", setting.Messages)
+	}
+
+	mem, ok := restored.Properties["maxMemory"]
+	if !ok || mem.XUISizingMemory == nil {
+		t.Fatal("x-deckhouse-ui-sizing-memory lost")
+	}
+	if mem.XUISizingMemory.DefaultUnit != "Mi" {
+		t.Errorf("x-deckhouse-ui-sizing-memory defaultUnit: got %q, want Mi", mem.XUISizingMemory.DefaultUnit)
+	}
+}
+
+// TestUISizingMemory_invalidTypeRejected verifies a non-object x-deckhouse-ui-sizing-memory fails to unmarshal.
+func TestUISizingMemory_invalidTypeRejected(t *testing.T) {
+	var restored OpenAPIV3Schema
+	err := json.Unmarshal([]byte(`{"type":"integer","x-deckhouse-ui-sizing-memory":"Mi"}`), &restored)
+	if err == nil {
+		t.Fatal("expected error unmarshaling string into x-deckhouse-ui-sizing-memory, got nil")
 	}
 }
 

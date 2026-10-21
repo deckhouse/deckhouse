@@ -124,6 +124,12 @@ type OpenAPIV3Schema struct {
 	// +optional
 	XUIGroup string `json:"x-deckhouse-ui-group,omitempty"`
 
+	// x-deckhouse-ui-sizing-memory marks an integer settings field that stores a memory
+	// size in bytes: the web console renders it as a quantity input with unit suffixes
+	// instead of a plain number field.
+	// +optional
+	XUISizingMemory *UISizingMemory `json:"x-deckhouse-ui-sizing-memory,omitempty"`
+
 	// x-deckhouse-enum-switch-settings, declared on a oneOf branch, lists the confirmation
 	// dialogs the web console shows before switching the branch discriminator from a value
 	// of that branch to one of the listed target values.
@@ -207,6 +213,15 @@ type UIResourceNameSelector struct {
 
 	// +optional
 	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+}
+
+// UISizingMemory configures the web console quantity input of an integer settings field
+// that stores a memory size in bytes.
+type UISizingMemory struct {
+	// DefaultUnit is the unit the field uses to display the stored bytes when the form
+	// opens: a binary suffix of the Kubernetes quantity notation — Ki, Mi, Gi or Ti.
+	// Storage is not affected: the settings value stays in bytes.
+	DefaultUnit string `json:"defaultUnit"`
 }
 
 // EnumSwitchSetting describes one confirmation the web console shows before the oneOf branch
