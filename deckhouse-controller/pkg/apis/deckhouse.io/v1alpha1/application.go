@@ -109,6 +109,13 @@ type ApplicationSpec struct {
 	// +crd-enricher:deckhouse:documentation:examples={mode: Auto, windows: [{from: "8:00", to: "15:00", days: [Tue, Sat]}], blockOnAlerts: {enabled: true, severity: 2}}
 	Update *ApplicationUpdate `json:"update,omitempty"`
 
+	// Version of the settings schema the settings are written for. Distinct from packageVersion, which selects the application package.
+	//
+	// Settings of an older version are converted to the latest one the package provides. If not specified, version 1 is used.
+	// +kubebuilder:validation:Type=number
+	// +optional
+	SettingsVersion int `json:"settingsVersion,omitempty"`
+
 	// Configuration application settings.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional

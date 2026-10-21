@@ -18,7 +18,17 @@
 // per-operation state the owner keeps, so this package knows nothing of its owners.
 package operation
 
-import "context"
+import (
+	"context"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+)
+
+// tracerName is the instrumentation scope of the operation and step spans.
+const tracerName = "package-operation"
 
 // Kind names an operation.
 type Kind string
@@ -73,8 +83,8 @@ type Operation struct {
 }
 
 // Start runs steps in order in a new goroutine under a child of ctx and stops at the first
-// failure. Non-blocking.
-func Start(ctx context.Context, kind Kind, key string, steps []Step) *Operation {
+// failure; name is the package the spans carry. Non-blocking.
+func Start(ctx context.Context, name string, kind Kind, key string, steps []Step) *Operation {
 	ctx, cancel := context.WithCancel(ctx)
 
 	o := &Operation{Kind: kind, Key: key, cancel: cancel, done: make(chan Result, 1)}
@@ -82,7 +92,7 @@ func Start(ctx context.Context, kind Kind, key string, steps []Step) *Operation 
 	go func() {
 		defer cancel()
 
-		o.done <- run(ctx, kind, key, steps)
+		o.done <- run(ctx, name, kind, key, steps)
 	}()
 
 	return o
@@ -103,13 +113,37 @@ func (o *Operation) Done() <-chan Result {
 	return o.done
 }
 
-// run executes steps and builds the result.
-func run(ctx context.Context, kind Kind, key string, steps []Step) Result {
+// run executes steps and builds the result, under one span with a child span per step.
+func run(ctx context.Context, name string, kind Kind, key string, steps []Step) Result {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, string(kind), trace.WithAttributes(
+		attribute.String("package", name),
+		attribute.String("kind", string(kind)),
+		attribute.String("key", key)))
+	defer span.End()
+
 	for i := range steps {
-		if err := steps[i].Run(ctx); err != nil {
-			return Result{Kind: kind, Key: key, Failed: &steps[i], Err: err, Canceled: ctx.Err() != nil}
+		if err := runStep(ctx, &steps[i]); err != nil {
+			res := Result{Kind: kind, Key: key, Failed: &steps[i], Err: err, Canceled: ctx.Err() != nil}
+			span.SetAttributes(attribute.String("failed_step", steps[i].Name), attribute.Bool("canceled", res.Canceled))
+			span.SetStatus(codes.Error, err.Error())
+
+			return res
 		}
 	}
 
 	return Result{Kind: kind, Key: key}
+}
+
+// runStep runs one step under its own span; a failure is recorded on it.
+func runStep(ctx context.Context, step *Step) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, step.Name)
+	defer span.End()
+
+	err := step.Run(ctx)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+	}
+
+	return err
 }

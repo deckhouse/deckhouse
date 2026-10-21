@@ -1,0 +1,5 @@
+x-config-version: 3
+type: object
+properties:
+  c:
+    type: string

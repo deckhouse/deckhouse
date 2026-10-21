@@ -251,6 +251,12 @@ spec:
                 description: Configuration application settings.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              settingsVersion:
+                description: |-
+                  Version of the settings schema the settings are written for. Distinct from packageVersion, which selects the application package.
+
+                  Settings of an older version are converted to the latest one the package provides. If not specified, version 1 is used.
+                type: number
               update:
                 description: |-
                   Application update settings: update mode, update windows, and blocking updates when alerts are present.

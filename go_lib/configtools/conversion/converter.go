@@ -59,6 +59,32 @@ func NewConverterFromDir(pathToConversions string) (*Converter, error) {
 	}
 	return c, nil
 }
+
+// NewConverter builds a Converter from in-memory conversions: version → jq expressions bringing
+// settings of version-1 to version. The versions must form a gapless chain starting at 2.
+func NewConverter(conversions map[int][]string) (*Converter, error) {
+	c := &Converter{conversions: make(map[int]string, len(conversions)), latest: 1}
+	for v, expressions := range conversions {
+		if v < 2 {
+			return nil, fmt.Errorf("conversion version %d: must be at least 2", v)
+		}
+		conversion := strings.Join(expressions, " | ")
+		if _, err := gojq.Parse(conversion); err != nil {
+			return nil, fmt.Errorf("parse conversion version %d: %w", v, err)
+		}
+		if v > c.latest {
+			c.latest = v
+		}
+		c.conversions[v] = conversion
+	}
+	for v := 2; v <= c.latest; v++ {
+		if _, ok := c.conversions[v]; !ok {
+			return nil, fmt.Errorf("conversion version %d is missing, the latest is %d", v, c.latest)
+		}
+	}
+	return c, nil
+}
+
 func readConversions(path string) (int, string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

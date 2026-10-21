@@ -136,6 +136,24 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("successful reconcile with settings conversions", func() {
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(reconcilertest.Image(map[string]string{
+			"package.yaml":                "name: test-package\ntype: Application\nversion: \"1.0.0\"\n",
+			"version.json":                `{"version": "1.0.0"}`,
+			"openapi/settings.yaml":       "x-config-version: 3\ntype: object\nproperties:\n  c:\n    type: string\n",
+			"openapi/conversions/v3.yaml": "version: 3\nconversions:\n- .c = .b\n- del(.b)\n",
+			"openapi/conversions/v2.yaml": "version: 2\nconversions:\n- .b = .a\n- del(.a)\ndescription:\n  ru: The a field is renamed to b (ru).\n  en: The a field is renamed to b.\n",
+		}), nil)
+		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
+
+		suite.setupController("successful-reconcile-with-conversions.yaml", withDependencyContainer(dc))
+
+		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
+		_, err := suite.ctr.Reconcile(ctx, suite.Request(apv.Name, ""))
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("registry error reconcile with golden file", func() {
 		dc := dependency.NewMockedContainer()
 		dc.CRClient.ImageMock.Return(nil, fmt.Errorf("registry error"))

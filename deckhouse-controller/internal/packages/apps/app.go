@@ -54,6 +54,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -100,9 +101,10 @@ type Application struct {
 	digests    map[string]string // Package digests
 	repository registry.Remote   // Application repository
 
-	hooks         *hooks.Storage      // Hook storage with indices
-	values        *values.Storage     // Values storage with layering
-	settingsCheck *kind.SettingsCheck // Hook to validate settings
+	hooks         *hooks.Storage        // Hook storage with indices
+	values        *values.Storage       // Values storage with layering
+	settingsCheck *kind.SettingsCheck   // Hook to validate settings
+	converter     *conversion.Converter // Schema version converter for settings
 
 	// maintenance is the package maintenance mode, set by Current on accept and read
 	// by the nelm layer. Empty (Managed) means reconcile normally. Guarded by mu, as
@@ -144,6 +146,8 @@ type Config struct {
 
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
+
+	Conversions *conversion.Converter // Schema version converter
 
 	Hooks []hooks.Hook // Discovered hooks
 
@@ -191,6 +195,7 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	a.digests = cfg.Digests
 	a.repository = cfg.Repository
 	a.settingsCheck = cfg.SettingsCheck
+	a.converter = cfg.Conversions
 	a.patcher = cfg.Patcher
 	a.scheduleManager = cfg.ScheduleManager
 	a.kubeEventsManager = cfg.KubeEventsManager
@@ -383,8 +388,14 @@ func (a *Application) GetValuesChecksum() string {
 	return a.values.GetValuesChecksum()
 }
 
-// ValidateSettings validates settings against openAPI and call setting check if exists
-func (a *Application) ValidateSettings(ctx context.Context, _ int, settings addonutils.Values) (settingscheck.Result, error) {
+// ValidateSettings converts settings to the latest schema version (if a converter
+// is available), validates them against openAPI and calls the settings check if exists.
+func (a *Application) ValidateSettings(ctx context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
+	settings, err := a.convertSettings(settingsVersion, settings)
+	if err != nil {
+		return settingscheck.Result{Message: err.Error()}, nil
+	}
+
 	if err := a.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{Message: err.Error()}, nil
 	}
@@ -418,15 +429,63 @@ func (a *Application) GetValues() addonutils.Values {
 	return a.values.GetValues()
 }
 
-// ApplySettings applies settings values to application. Before persisting the
-// user config it resolves per-project grant defaults from
-// AvailableClusterResource and stores them for the grantDefaultsTransformer.
-func (a *Application) ApplySettings(_ int, settings addonutils.Values) error {
-	if err := a.resolveGrantDefaults(context.Background()); err != nil {
+// ApplySettings converts settings to the latest schema version (if a converter
+// is available) and applies them to application. Before persisting the user config
+// it resolves per-project grant defaults from AvailableClusterResource and stores
+// them for the grantDefaultsTransformer.
+func (a *Application) ApplySettings(settingsVersion int, settings addonutils.Values) error {
+	settings, err := a.convertSettings(settingsVersion, settings)
+	if err != nil {
+		return err
+	}
+
+	if err = a.resolveGrantDefaults(context.Background()); err != nil {
 		return err
 	}
 
 	return a.values.ApplySettings(settings)
+}
+
+// convertSettings converts settings to the latest schema version.
+// A zero settingsVersion (Application without spec.settingsVersion) is read as version 1:
+// the chain is what materializes fields the latest schema requires, so skipping it
+// leaves an unversioned config permanently invalid.
+func (a *Application) convertSettings(settingsVersion int, settings addonutils.Values) (addonutils.Values, error) {
+	if a.converter == nil {
+		return settings, nil
+	}
+
+	if settingsVersion == 0 {
+		settingsVersion = 1
+	}
+
+	// nothing converts back, and settings of a later version left as written would be read in this one
+	if latest := a.converter.LatestVersion(); settingsVersion > latest {
+		return nil, fmt.Errorf("settings version %d is newer than the latest %d", settingsVersion, latest)
+	}
+
+	// the converter skips a nil document, and an absent spec.settings is exactly
+	// the case the chain has to fill in
+	if settings == nil {
+		settings = addonutils.Values{}
+	}
+
+	_, converted, err := a.converter.ConvertToLatest(settingsVersion, settings)
+	if err != nil {
+		return nil, fmt.Errorf("convert settings: %w", err)
+	}
+
+	return converted, nil
+}
+
+// LatestSettingsVersion returns the latest settings-schema version, the one effective settings
+// are in; 0 without a converter.
+func (a *Application) LatestSettingsVersion() int {
+	if a.converter == nil {
+		return 0
+	}
+
+	return a.converter.LatestVersion()
 }
 
 // resolveGrantDefaults resolves the per-project default for every

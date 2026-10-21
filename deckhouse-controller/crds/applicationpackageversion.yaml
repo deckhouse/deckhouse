@@ -519,6 +519,40 @@ spec:
                 description: OpenAPI schemas for validating user-defined application
                   settings and final values passed to package hooks and templates.
                 properties:
+                  settingsConversions:
+                    description: |-
+                      Conversions that bring settings written for an older settings schema version to the latest one, ordered by version.
+
+                      Empty when the package has a single settings schema version.
+                    items:
+                      description: PackageSettingsConversion converts settings of
+                        the previous settings schema version to Version.
+                      properties:
+                        descriptions:
+                          description: Localized description of the changes in this
+                            settings schema version.
+                          properties:
+                            en:
+                              description: English description of the conversion.
+                              type: string
+                            ru:
+                              description: Russian description of the conversion.
+                              type: string
+                          type: object
+                        expr:
+                          description: jq expressions applied to the settings in order.
+                          items:
+                            type: string
+                          type: array
+                        version:
+                          description: Settings schema version the conversion produces;
+                            it converts settings of the previous version.
+                          type: integer
+                      required:
+                      - expr
+                      - version
+                      type: object
+                    type: array
                   settingsSchema:
                     description: |-
                       OpenAPI v3 schema for validating user-defined application settings in `Application.spec.settings`.

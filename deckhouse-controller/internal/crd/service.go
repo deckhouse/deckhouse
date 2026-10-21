@@ -55,26 +55,32 @@ var ErrCRDsNotFound = fmt.Errorf("no crds found")
 
 // Service applies CRDs found in package paths and reports the GroupVersionKinds
 // of Deckhouse-managed CRDs. It records the GVKs each module applies at install
-// time, so GetManagedGVKs is served from memory without listing the cluster.
+// time, so GetManagedGVKs is served from memory without listing the cluster, and
+// the path it installed, so an unchanged path is not installed again.
 // It is safe for concurrent use.
 type Service struct {
 	client *client.Client
 	logger *log.Logger
 
-	// mu guards gvks.
+	// mu guards gvks and installed.
 	mu sync.RWMutex
 	// gvks maps a module name to the "group/version/kind" strings of the CRDs
 	// applied for it by the most recent Install. Recorded at install time
 	// (crdinstaller reports them) so GetManagedGVKs needs no cluster List.
 	gvks map[string][]string
+	// installed maps a module name to the path its last successful Install
+	// applied; the files under a path (name@version, or the image's embedded dir)
+	// never change, so the same path needs no second install in this process.
+	installed map[string]string
 }
 
 // NewService returns a Service that applies CRDs via the given Kubernetes client.
 func NewService(client *client.Client, logger *log.Logger) *Service {
 	return &Service{
-		client: client,
-		logger: logger.Named(tracer),
-		gvks:   make(map[string][]string),
+		client:    client,
+		logger:    logger.Named(tracer),
+		gvks:      make(map[string][]string),
+		installed: make(map[string]string),
 	}
 }
 
@@ -94,8 +100,13 @@ func (s *Service) HasCRDs(path string) error {
 
 // Install scans the package's crds directory and applies every CRD manifest
 // found, labelling them as Deckhouse-managed so GetGVKs can list them back.
-// It is a no-op when the package ships no CRDs.
+// It is a no-op when the package ships no CRDs, and when the module's last
+// successful Install applied the same path.
 func (s *Service) Install(ctx context.Context, name, path string) error {
+	if s.installedAt(name) == path {
+		return nil
+	}
+
 	ctx, span := otel.Tracer(tracer).Start(ctx, "Install")
 	defer span.End()
 
@@ -107,7 +118,7 @@ func (s *Service) Install(ctx context.Context, name, path string) error {
 	if len(crds) == 0 {
 		// Record an empty set so a module that drops all its CRDs stops
 		// contributing GVKs to capabilities on re-install.
-		s.setGVKs(name, nil)
+		s.setInstalled(name, path, nil)
 		return nil
 	}
 
@@ -127,17 +138,26 @@ func (s *Service) Install(ctx context.Context, name, path string) error {
 	// crdinstaller records a "group/version/kind" entry for every CRD it
 	// applied (created or updated), so after a successful Run this is the
 	// complete GVK set for the module. Cache it for GetManagedGVKs.
-	s.setGVKs(name, installer.GetAppliedGVKs())
+	s.setInstalled(name, path, installer.GetAppliedGVKs())
 
 	return nil
 }
 
-// setGVKs records the GVKs applied for a module, replacing any previous set.
-func (s *Service) setGVKs(name string, gvks []string) {
+// installedAt is the path the module's last successful Install applied; "" when none.
+func (s *Service) installedAt(name string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.installed[name]
+}
+
+// setInstalled records the path and the GVKs applied for a module, replacing any previous set.
+func (s *Service) setInstalled(name, path string, gvks []string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.gvks[name] = gvks
+	s.installed[name] = path
 }
 
 // getCRDsFromPath returns the paths of every .yaml file under path/crds whose

@@ -178,6 +178,18 @@ func (s *LoaderTestSuite) TestLoadAppConfMinimalPackage() {
 	s.Empty(cfg.StaticValues)
 	s.Nil(cfg.ConfigSchema)
 	s.Nil(cfg.ValuesSchema)
+	s.Nil(cfg.Conversions)
+}
+
+// TestLoadAppConfWithConversions tests that an application's settings conversions are loaded.
+func (s *LoaderTestSuite) TestLoadAppConfWithConversions() {
+	packageDir := filepath.Join(s.testdataDir, "apps", "default.with-conversions")
+
+	cfg, err := loader.LoadAppConf(context.Background(), packageDir, filepath.Base(packageDir), s.logger)
+
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), cfg.Conversions)
+	s.Equal(3, cfg.Conversions.LatestVersion())
 }
 
 // TestLoadAppConfWithDigests tests loading an application with image digests.

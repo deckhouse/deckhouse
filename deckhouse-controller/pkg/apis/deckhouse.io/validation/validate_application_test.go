@@ -41,17 +41,19 @@ import (
 
 // fakePackageManager implements the packageManager interface for tests.
 type fakePackageManager struct {
-	validateResult settingscheck.Result
-	validateErr    error
-	validateCalled bool
+	validateResult  settingscheck.Result
+	validateErr     error
+	validateCalled  bool
+	validateVersion int
 
 	checkErr       error
 	checkCalled    bool
 	gotConstraints schedule.Constraints
 }
 
-func (f *fakePackageManager) ValidatePackageSettings(_ context.Context, _ string, _ int, _ addonutils.Values) (settingscheck.Result, error) {
+func (f *fakePackageManager) ValidatePackageSettings(_ context.Context, _ string, settingsVersion int, _ addonutils.Values) (settingscheck.Result, error) {
 	f.validateCalled = true
+	f.validateVersion = settingsVersion
 
 	return f.validateResult, f.validateErr
 }
@@ -69,6 +71,7 @@ func newApplication(repo, pkg, version string) *v1alpha1.Application {
 			PackageRepositoryName: repo,
 			PackageName:           pkg,
 			PackageVersion:        version,
+			SettingsVersion:       1,
 		},
 	}
 }
@@ -258,6 +261,12 @@ func (s *applicationValidationHandlerSuite) submit(
 	return callHandler(s.T(), handler, newModuleConfigAdmissionReview(operation, app, old))
 }
 
+// validateAppSettingsErr is validateAppSettings without its warnings.
+func validateAppSettingsErr(ctx context.Context, cli client.Client, apv *v1alpha1.ApplicationPackageVersion, app, oldApp *v1alpha1.Application) error {
+	_, err := validateAppSettings(ctx, cli, apv, app, oldApp)
+	return err
+}
+
 func TestValidateApplicationSettings(t *testing.T) {
 	objectSchema := func(props map[string]openapi.OpenAPIV3Schema, required []string) *v1alpha1.PackageSchema {
 		return &v1alpha1.PackageSchema{
@@ -272,14 +281,14 @@ func TestValidateApplicationSettings(t *testing.T) {
 	t.Run("nil package schemas is a no-op", func(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
 		app := newApplication("repo", "pkg", "1.0.0")
-		require.NoError(t, validateAppSettings(apv, app, nil))
+		require.NoError(t, validateAppSettingsErr(context.Background(), nil, apv, app, nil))
 	})
 
 	t.Run("nil settings schema is a no-op", func(t *testing.T) {
 		apv := &v1alpha1.ApplicationPackageVersion{}
 		apv.Status.PackageSchemas = &v1alpha1.PackageVersionStatusSchemas{}
 		app := newApplication("repo", "pkg", "1.0.0")
-		require.NoError(t, validateAppSettings(apv, app, nil))
+		require.NoError(t, validateAppSettingsErr(context.Background(), nil, apv, app, nil))
 	})
 
 	t.Run("settings satisfying the schema pass", func(t *testing.T) {
@@ -292,7 +301,7 @@ func TestValidateApplicationSettings(t *testing.T) {
 		app := newApplication("repo", "pkg", "1.0.0")
 		app.Spec.Settings = v1alpha1.MakeMappedFields(map[string]any{"foo": "bar"})
 
-		require.NoError(t, validateAppSettings(apv, app, nil))
+		require.NoError(t, validateAppSettingsErr(context.Background(), nil, apv, app, nil))
 	})
 
 	t.Run("settings violating the schema are rejected", func(t *testing.T) {
@@ -306,7 +315,7 @@ func TestValidateApplicationSettings(t *testing.T) {
 		// "foo" is required but missing
 		app.Spec.Settings = v1alpha1.MakeMappedFields(map[string]any{"other": "value"})
 
-		require.Error(t, validateAppSettings(apv, app, nil))
+		require.Error(t, validateAppSettingsErr(context.Background(), nil, apv, app, nil))
 	})
 }
 
@@ -584,7 +593,7 @@ func TestValidateAppAgainstApv(t *testing.T) {
 				oldApp = newApplication(repo, pkg, tt.oldVersion)
 			}
 
-			err := validateAppAgainstApv(context.Background(), cli, manager, app, oldApp)
+			_, err := validateAppAgainstApv(context.Background(), cli, manager, app, oldApp)
 
 			if tt.wantErr {
 				require.Error(t, err)
@@ -779,4 +788,242 @@ func TestExtractOldApplicationRejectsUpdateWithoutOldObject(t *testing.T) {
 	oldApp, err := extractOldApplication(&kwhmodel.AdmissionReview{Operation: kwhmodel.OperationCreate})
 	require.NoError(t, err)
 	assert.Nil(t, oldApp)
+}
+
+// renamedSettingsAPV publishes version 2 settings with the immutable, required field b, which
+// version 1 named a; with convert false it publishes the version 1 schema and no conversions.
+func renamedSettingsAPV(app *v1alpha1.Application, version string, convert bool) *v1alpha1.ApplicationPackageVersion {
+	apv := newAPV(v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, version), false, nil)
+
+	field := "a"
+	if convert {
+		field = "b"
+	}
+
+	apv.Status.PackageSchemas = &v1alpha1.PackageVersionStatusSchemas{
+		SettingsSchema: &v1alpha1.PackageSchema{
+			OpenAPIV3Schema: &openapi.OpenAPIV3Schema{
+				Type:       openapi.StringOrArray{"object"},
+				Required:   []string{field},
+				Properties: map[string]openapi.OpenAPIV3Schema{field: {Type: openapi.StringOrArray{"string"}, XImmutable: true}},
+			},
+		},
+	}
+
+	if convert {
+		apv.Status.PackageSchemas.SettingsConversions = []v1alpha1.PackageSettingsConversion{
+			{Version: 2, Expr: []string{".b = .a", "del(.a)"}},
+		}
+	}
+
+	return apv
+}
+
+// versionedApplication is an Application at package version with settings written for settingsVersion.
+func versionedApplication(version string, settingsVersion int, settings map[string]any) *v1alpha1.Application {
+	app := newApplication("repo", "pkg", version)
+	app.Spec.SettingsVersion = settingsVersion
+	app.Spec.Settings = v1alpha1.MakeMappedFields(settings)
+
+	return app
+}
+
+// applied marks app as run at currentVersion with the effective settings.
+func (s *applicationValidationHandlerSuite) applied(app *v1alpha1.Application, currentVersion string, settings map[string]any) {
+	s.T().Helper()
+
+	raw, err := json.Marshal(settings)
+	s.Require().NoError(err)
+
+	app.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: currentVersion}
+	app.Status.LastAppliedConfiguration = runtime.RawExtension{Raw: raw}
+}
+
+// submitVersions submits one admission request with every package version in apvs present.
+func (s *applicationValidationHandlerSuite) submitVersions(operation string, app, oldApp *v1alpha1.Application, manager *fakePackageManager, apvs ...*v1alpha1.ApplicationPackageVersion) *admissionv1.AdmissionResponse {
+	s.T().Helper()
+
+	objs := []client.Object{&v1alpha1.ApplicationPackage{ObjectMeta: metav1.ObjectMeta{Name: app.Spec.PackageName}}}
+	for _, apv := range apvs {
+		objs = append(objs, apv)
+	}
+
+	var old interface{}
+	if oldApp != nil {
+		old = oldApp
+	}
+
+	handler := applicationValidationHandler(newFakeClient(s.T(), objs...), manager)
+
+	return callHandler(s.T(), handler, newModuleConfigAdmissionReview(operation, app, old))
+}
+
+func (s *applicationValidationHandlerSuite) TestOlderSettingsVersionIsConvertedBeforeValidation() {
+	app := versionedApplication("1.0.0", 1, map[string]any{"a": "fast"})
+
+	response := s.submitVersions("CREATE", app, nil, &fakePackageManager{}, renamedSettingsAPV(app, "1.0.0", true))
+
+	s.True(response.Allowed, "version 1 settings convert to the required version 2 field")
+}
+
+func (s *applicationValidationHandlerSuite) TestUnversionedSettingsWarn() {
+	// written before spec.settingsVersion existed (the CRD requires it for new writes)
+	app := versionedApplication("1.0.0", 0, map[string]any{"a": "fast"})
+
+	response := s.submitVersions("UPDATE", app, app, &fakePackageManager{}, renamedSettingsAPV(app, "1.0.0", false))
+
+	s.Require().True(response.Allowed)
+	s.Equal([]string{"spec.settingsVersion is not set, spec.settings are read as version 1: set it, the latest version is 1"}, response.Warnings)
+}
+
+func (s *applicationValidationHandlerSuite) TestObsoleteSettingsVersionWarns() {
+	app := versionedApplication("1.0.0", 1, map[string]any{"a": "fast"})
+
+	response := s.submitVersions("CREATE", app, nil, &fakePackageManager{}, renamedSettingsAPV(app, "1.0.0", true))
+
+	s.Require().True(response.Allowed)
+	s.Equal([]string{"spec.settingsVersion=1 is obsolete. Please migrate spec.settings to the latest version 2"}, response.Warnings)
+}
+
+func (s *applicationValidationHandlerSuite) TestLatestSettingsVersionDoesNotWarn() {
+	app := versionedApplication("1.0.0", 2, map[string]any{"b": "fast"})
+
+	response := s.submitVersions("CREATE", app, nil, &fakePackageManager{}, renamedSettingsAPV(app, "1.0.0", true))
+
+	s.Require().True(response.Allowed)
+	s.Empty(response.Warnings)
+}
+
+func (s *applicationValidationHandlerSuite) TestLatestSettingsVersionIsNotConverted() {
+	app := versionedApplication("1.0.0", 2, map[string]any{"a": "fast"})
+
+	response := s.submitVersions("CREATE", app, nil, &fakePackageManager{}, renamedSettingsAPV(app, "1.0.0", true))
+
+	s.False(response.Allowed, "version 2 settings must carry the version 2 field")
+}
+
+func (s *applicationValidationHandlerSuite) TestSettingsVersionBeyondTheChainIsRejected() {
+	app := versionedApplication("1.0.0", 3, map[string]any{"b": "fast"})
+
+	response := s.submitVersions("CREATE", app, nil, &fakePackageManager{}, renamedSettingsAPV(app, "1.0.0", true))
+
+	s.Require().False(response.Allowed)
+	s.Contains(response.Result.Message, "settings version 3 is not supported, the latest is 2")
+}
+
+func (s *applicationValidationHandlerSuite) TestSettingsVersionOfPackageWithoutConversionsIsOne() {
+	app := versionedApplication("1.0.0", 2, map[string]any{"a": "fast"})
+
+	response := s.submitVersions("CREATE", app, nil, &fakePackageManager{}, renamedSettingsAPV(app, "1.0.0", false))
+
+	s.Require().False(response.Allowed)
+	s.Contains(response.Result.Message, "the latest is 1")
+}
+
+func (s *applicationValidationHandlerSuite) TestInstalledVersionIsValidatedOnlyByManagerAtSettingsVersion() {
+	// version 2 settings in the version 1 shape fail the published schema, so only the manager decides
+	app := versionedApplication("1.0.0", 2, map[string]any{"a": "fast"})
+	app.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "1.0.0"}
+	manager := &fakePackageManager{validateResult: settingscheck.Result{Valid: true}}
+
+	response := s.submitVersions("UPDATE", app, app, manager, renamedSettingsAPV(app, "1.0.0", true))
+
+	s.True(response.Allowed)
+	s.True(manager.validateCalled)
+	s.Equal(2, manager.validateVersion)
+}
+
+func (s *applicationValidationHandlerSuite) TestImmutableFieldIsComparedAcrossSettingsVersions() {
+	tests := []struct {
+		name            string
+		settingsVersion int
+		settings        map[string]any
+		wantAllowed     bool
+	}{
+		{name: "raising the version and changing the field is rejected", settingsVersion: 2, settings: map[string]any{"b": "slow"}},
+		{name: "raising the version and keeping the field is allowed", settingsVersion: 2, settings: map[string]any{"b": "fast"}, wantAllowed: true},
+		{name: "changing the field at the older version is rejected", settingsVersion: 1, settings: map[string]any{"a": "slow"}},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			oldApp := versionedApplication("1.0.0", 1, map[string]any{"a": "fast"})
+			s.applied(oldApp, "1.0.0", map[string]any{"b": "fast"})
+
+			app := versionedApplication("1.0.0", tt.settingsVersion, tt.settings)
+			app.Status = oldApp.Status
+
+			response := s.submitVersions("UPDATE", app, oldApp, &fakePackageManager{validateResult: settingscheck.Result{Valid: true}},
+				renamedSettingsAPV(app, "1.0.0", true))
+
+			s.Require().Equal(tt.wantAllowed, response.Allowed)
+			if !tt.wantAllowed {
+				s.Contains(response.Result.Message, "b")
+			}
+		})
+	}
+}
+
+func (s *applicationValidationHandlerSuite) TestImmutableFieldIsComparedAcrossPackageVersions() {
+	tests := []struct {
+		name        string
+		settings    map[string]any
+		wantAllowed bool
+	}{
+		{name: "changing the converted field is rejected", settings: map[string]any{"b": "slow"}},
+		{name: "keeping the converted field is allowed", settings: map[string]any{"b": "fast"}, wantAllowed: true},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			// 1.0.0 has a single settings version, so its checkpoint holds the version 1 field
+			oldApp := versionedApplication("1.0.0", 1, map[string]any{"a": "fast"})
+			s.applied(oldApp, "1.0.0", map[string]any{"a": "fast"})
+
+			app := versionedApplication("1.1.0", 2, tt.settings)
+			app.Status = oldApp.Status
+
+			response := s.submitVersions("UPDATE", app, oldApp, &fakePackageManager{},
+				renamedSettingsAPV(app, "1.0.0", false), renamedSettingsAPV(app, "1.1.0", true))
+
+			s.Require().Equal(tt.wantAllowed, response.Allowed)
+		})
+	}
+}
+
+func (s *applicationValidationHandlerSuite) TestImmutableFieldIsSkippedAfterSettingsSchemaDowngrade() {
+	// 1.1.0 version 2 rewrites the value of the immutable field a; the spec already names 1.0.0,
+	// which knows only version 1, while 1.1.0 still runs: its checkpoint cannot be converted back
+	oldApp := versionedApplication("1.0.0", 1, map[string]any{"a": "fast"})
+	s.applied(oldApp, "1.1.0", map[string]any{"a": "fast-v2"})
+
+	app := versionedApplication("1.0.0", 1, map[string]any{"a": "fast"})
+	app.Status = oldApp.Status
+
+	rewriting := renamedSettingsAPV(app, "1.1.0", false)
+	rewriting.Status.PackageSchemas.SettingsConversions = []v1alpha1.PackageSettingsConversion{
+		{Version: 2, Expr: []string{`.a = .a + "-v2"`}},
+	}
+
+	response := s.submitVersions("UPDATE", app, oldApp, &fakePackageManager{},
+		renamedSettingsAPV(app, "1.0.0", false), rewriting)
+
+	s.True(response.Allowed, "a version 2 value compared with a version 1 one would read as a change")
+}
+
+func (s *applicationValidationHandlerSuite) TestImmutableFieldFindsTheCurrentVersionInThePreviousRepository() {
+	// one edit moves the application to another repository and version: the running version's
+	// package version is the previous repository's
+	oldApp := versionedApplication("1.0.0", 1, map[string]any{"a": "fast"})
+	oldApp.Spec.PackageRepositoryName = "previous"
+	s.applied(oldApp, "1.0.0", map[string]any{"a": "fast"})
+
+	app := versionedApplication("1.1.0", 2, map[string]any{"b": "slow"})
+	app.Status = oldApp.Status
+
+	response := s.submitVersions("UPDATE", app, oldApp, &fakePackageManager{},
+		renamedSettingsAPV(oldApp, "1.0.0", false), renamedSettingsAPV(app, "1.1.0", true))
+
+	s.Require().False(response.Allowed)
+	s.Contains(response.Result.Message, "b")
 }

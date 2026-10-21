@@ -76,6 +76,7 @@ var ErrPackageNotFound = errors.New("package not found")
 //  4. Extracts namespace and name from the directory basename
 //  5. Discovers and loads batch hooks
 //  6. Loads image digests (images_digests.json)
+//  7. Loads settings conversions (openapi/conversions)
 //
 // Returns ErrPackageNotFound if the directory doesn't exist.
 func LoadAppConf(ctx context.Context, appDir, name string, logger *log.Logger) (*apps.Config, error) {
@@ -133,6 +134,12 @@ func LoadAppConf(ctx context.Context, appDir, name string, logger *log.Logger) (
 		return nil, fmt.Errorf("load digests: %w", err)
 	}
 
+	conversions, err := loadConversions(appDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load conversions: %w", err)
+	}
+
 	return &apps.Config{
 		Path:       appDir,
 		Definition: appDef,
@@ -142,6 +149,8 @@ func LoadAppConf(ctx context.Context, appDir, name string, logger *log.Logger) (
 		StaticValues: static,
 		ConfigSchema: config,
 		ValuesSchema: values,
+
+		Conversions: conversions,
 
 		Hooks: hooks.hooks,
 

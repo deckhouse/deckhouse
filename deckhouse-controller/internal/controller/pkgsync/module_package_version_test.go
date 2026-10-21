@@ -79,6 +79,41 @@ func TestSyncModulePackageVersionsFromImage(t *testing.T) {
 		assert.Contains(t, mpv.Status.PackageSchemas.ValuesSchema.OpenAPIV3Schema.Properties, "internal")
 	})
 
+	t.Run("fills the settings conversions from openapi/conversions", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+		writeOpenAPI(t, filepath.Join(dir, "900-echo"), "type: object\n", "")
+		writeConversions(t, filepath.Join(dir, "900-echo"), map[string]string{
+			"v2.yaml":             "version: 2\nconversions:\n- .b = .a\ndescription:\n  en: renamed\n",
+			"v3.yaml":             "version: 3\nconversions:\n- .c = .b\n",
+			"conversions_test.go": "package conversions\n",
+		})
+
+		s, cl := newTestSyncer(t, "v1.80.0", dir)
+		require.NoError(t, s.sync(ctx))
+
+		mpv := getModulePackageVersion(t, cl, "embedded-echo")
+		require.NotNil(t, mpv.Status.PackageSchemas)
+		assert.Equal(t, []v1alpha1.PackageSettingsConversion{
+			{Version: 2, Expr: []string{".b = .a"}, Descriptions: &v1alpha1.PackageSettingsConversionDescriptions{En: "renamed"}},
+			{Version: 3, Expr: []string{".c = .b"}},
+		}, mpv.Status.PackageSchemas.SettingsConversions)
+	})
+
+	t.Run("a broken conversion chain skips the version", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+		writeOpenAPI(t, filepath.Join(dir, "900-echo"), "type: object\n", "")
+		writeConversions(t, filepath.Join(dir, "900-echo"), map[string]string{
+			"v3.yaml": "version: 3\nconversions:\n- .\n",
+		})
+
+		s, cl := newTestSyncer(t, "v1.80.0", dir)
+		require.NoError(t, s.sync(ctx))
+
+		assert.Empty(t, listModulePackageVersionNamesExceptGlobal(t, cl))
+	})
+
 	t.Run("a broken schema skips the version", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
@@ -370,6 +405,20 @@ func TestSyncGlobalModulePackageVersion(t *testing.T) {
 		mpv := getModulePackageVersion(t, cl, "embedded-global")
 		require.NotNil(t, mpv.Status.PackageSchemas.SettingsSchema)
 		assert.Contains(t, mpv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties, "modern")
+	})
+
+	t.Run("carries the global settings conversions", func(t *testing.T) {
+		globalDir := t.TempDir()
+		writeOpenAPI(t, globalDir, "type: object\n", "")
+		writeConversions(t, globalDir, map[string]string{"v2.yaml": "version: 2\nconversions:\n- .b = .a\n"})
+
+		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), globalDir)
+		require.NoError(t, s.sync(ctx))
+
+		mpv := getModulePackageVersion(t, cl, "embedded-global")
+		require.NotNil(t, mpv.Status.PackageSchemas)
+		assert.Equal(t, []v1alpha1.PackageSettingsConversion{{Version: 2, Expr: []string{".b = .a"}}},
+			mpv.Status.PackageSchemas.SettingsConversions)
 	})
 
 	t.Run("a dir holding no schemas still names the package and the version", func(t *testing.T) {

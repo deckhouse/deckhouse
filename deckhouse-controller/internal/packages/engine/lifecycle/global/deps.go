@@ -69,8 +69,8 @@ type hookLanes interface {
 
 // crdService applies the CRDs shipped in a module's image (internal/crd.Service).
 type crdService interface {
-	// Install applies every CRD under path/crds, owned by name; a no-op without CRDs. Safe for
-	// concurrent calls for different modules.
+	// Install applies every CRD under path/crds, owned by name; a no-op without CRDs or when name's
+	// last successful Install applied the same path. Safe for concurrent calls for different modules.
 	Install(ctx context.Context, name, path string) error
 	HasCRDs(path string) error // HasCRDs returns nil when path ships CRDs.
 	// GetManagedGVKs returns the GVKs Install applied for the named modules.
@@ -78,8 +78,8 @@ type crdService interface {
 }
 
 // webhookService applies the conversion webhooks a module's chart declares; a no-op when it
-// declares none. The composition root implements it, because the rendering returns Kubernetes
-// manifests.
+// declares none; safe for concurrent calls for different modules. The composition root implements
+// it, because the rendering returns Kubernetes manifests.
 type webhookService interface {
 	EnsureWebhooks(ctx context.Context, view model.ModuleView) error
 }

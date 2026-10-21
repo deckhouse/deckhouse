@@ -116,6 +116,16 @@ func writeOpenAPI(t *testing.T, dir, settings, values string) {
 	}
 }
 
+// writeConversions writes the settings conversion files, file name to content, under dir/openapi/conversions.
+func writeConversions(t *testing.T, dir string, files map[string]string) {
+	t.Helper()
+	conversionsDir := filepath.Join(dir, "openapi", "conversions")
+	require.NoError(t, os.MkdirAll(conversionsDir, 0o755))
+	for name, content := range files {
+		require.NoError(t, os.WriteFile(filepath.Join(conversionsDir, name), []byte(content), 0o644))
+	}
+}
+
 func testModuleSource(name, repo string) *v1alpha1.ModuleSource {
 	return &v1alpha1.ModuleSource{
 		ObjectMeta: metav1.ObjectMeta{Name: name},

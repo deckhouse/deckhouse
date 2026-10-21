@@ -22,6 +22,7 @@ import (
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/configstate"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
@@ -139,15 +140,32 @@ func (g *Global) onStartup(ctx context.Context, st *operationState) error {
 	return nil
 }
 
-// ensureWebhooks ensures the conversion webhooks of every enabled module, one at a time.
+// webhookParallelism bounds the concurrent conversion webhook ensures of one run: each renders its
+// module's chart, and the first run after a start renders every module that declares webhooks.
+const webhookParallelism = 12
+
+// ensureWebhooks ensures the conversion webhooks of every enabled module in parallel; the first error
+// cancels the rest. Modules never share a webhook object, so concurrent ensures never write one.
 func (g *Global) ensureWebhooks(ctx context.Context, st *operationState) error {
+	group, ctx := errgroup.WithContext(ctx)
+	group.SetLimit(webhookParallelism)
+
 	for _, m := range st.modules {
-		if err := g.deps.Webhooks.EnsureWebhooks(ctx, m); err != nil {
-			return fmt.Errorf("ensure conversion webhooks of module %s@%s: %w", m.Name, m.Version, err)
-		}
+		group.Go(func() error {
+			// Ensures started after the first failure skip the render.
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+
+			if err := g.deps.Webhooks.EnsureWebhooks(ctx, m); err != nil {
+				return fmt.Errorf("ensure conversion webhooks of module %s@%s: %w", m.Name, m.Version, err)
+			}
+
+			return nil
+		})
 	}
 
-	return nil
+	return group.Wait()
 }
 
 // imagesDigests are the image digests of the revisions the event names, by module name: exactly the

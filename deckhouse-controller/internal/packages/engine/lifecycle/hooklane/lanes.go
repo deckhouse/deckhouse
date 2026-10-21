@@ -31,6 +31,7 @@ import (
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -38,6 +39,10 @@ import (
 
 // stopWarnPeriod is how often a stop that waits for a hook in flight says which.
 const stopWarnPeriod = 10 * time.Second
+
+// enableParallelism bounds the hooks whose Kubernetes bindings Start enables at once: each binding
+// waits for its informer's initial list, and shell-operator waits for that outside its locks.
+const enableParallelism = 12
 
 // Object is a package's hooks as the lanes run them: an application, a module or the global module.
 type Object interface {
@@ -88,8 +93,9 @@ type Lanes struct {
 // Start starts the hooks of pkg and returns the stop that ends them:
 //  1. initialize the hook controllers;
 //  2. start one lane per hook queue and register them with the router;
-//  3. enable the Kubernetes bindings and put one synchronization item per binding into its hook's
-//     lane, the bindings that wait for it first;
+//  3. enable the Kubernetes bindings, up to enableParallelism hooks at once, and put one
+//     synchronization item per binding into its hook's lane in hook order, the bindings that wait
+//     for it first;
 //  4. enable the schedule bindings;
 //  5. wait for the synchronization of the bindings that wait for it, bounded by ctx.
 //
@@ -141,24 +147,9 @@ func (l *Lanes) start(ctx, lifetime context.Context) error {
 	// synchronization unlocked the monitor, so nothing is routed before a lane can run it.
 	l.router.register(l)
 
-	var syncs []*item
-
-	for _, hook := range l.object.GetHooksByBinding(shtypes.OnKubernetesEvent) {
-		l.logger.Debug("enable kube hook", slog.String("hook", hook.GetName()))
-
-		var infos []hookcontroller.BindingExecutionInfo
-
-		// The callback gets one synchronization per binding (its initial snapshot).
-		err := hook.GetHookController().HandleEnableKubernetesBindings(ctx, func(info hookcontroller.BindingExecutionInfo) {
-			infos = append(infos, info)
-		})
-		if err != nil {
-			return fmt.Errorf("enable kubernetes bindings of hook '%s': %w", hook.GetName(), err)
-		}
-
-		for i := range infos {
-			syncs = append(syncs, syncItem(hook.GetName(), infos[i]))
-		}
+	syncs, err := l.enableKubernetes(ctx)
+	if err != nil {
+		return err
 	}
 
 	waits := l.deliverSync(syncs)
@@ -179,6 +170,46 @@ func (l *Lanes) start(ctx, lifetime context.Context) error {
 	}
 
 	return nil
+}
+
+// enableKubernetes enables the Kubernetes bindings of the hooks in parallel and returns one
+// synchronization item per binding, in hook order whatever order the enables finished in.
+func (l *Lanes) enableKubernetes(ctx context.Context) ([]*item, error) {
+	kube := l.object.GetHooksByBinding(shtypes.OnKubernetesEvent)
+	infos := make([][]hookcontroller.BindingExecutionInfo, len(kube))
+
+	group, ctx := errgroup.WithContext(ctx)
+	group.SetLimit(enableParallelism)
+
+	for i, hook := range kube {
+		group.Go(func() error {
+			l.logger.Debug("enable kube hook", slog.String("hook", hook.GetName()))
+
+			// The callback gets one synchronization per binding (its initial snapshot).
+			err := hook.GetHookController().HandleEnableKubernetesBindings(ctx, func(info hookcontroller.BindingExecutionInfo) {
+				infos[i] = append(infos[i], info)
+			})
+			if err != nil {
+				return fmt.Errorf("enable kubernetes bindings of hook '%s': %w", hook.GetName(), err)
+			}
+
+			return nil
+		})
+	}
+
+	if err := group.Wait(); err != nil {
+		return nil, err
+	}
+
+	var syncs []*item
+
+	for i, hook := range kube {
+		for j := range infos[i] {
+			syncs = append(syncs, syncItem(hook.GetName(), infos[i][j]))
+		}
+	}
+
+	return syncs, nil
 }
 
 // deliverSync puts the synchronization items into their lanes, in every lane those that wait

@@ -71,6 +71,7 @@ func moduleRequestFrom(module *v1beta1.Module) *moduleRequest {
 		name:            module.Name,
 		enabled:         module.Spec.Enabled,
 		settingsVersion: module.Spec.SettingsVersion,
+		versionField:    "spec.settingsVersion",
 		settings:        module.Spec.Settings,
 		annotations:     module.Annotations,
 	}

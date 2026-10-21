@@ -396,6 +396,11 @@ func (m *Module) convertSettings(settingsVersion int, settings addonutils.Values
 		settingsVersion = 1
 	}
 
+	// nothing converts back, and settings of a later version left as written would be read in this one
+	if latest := m.converter.LatestVersion(); settingsVersion > latest {
+		return nil, fmt.Errorf("settings version %d is newer than the latest %d", settingsVersion, latest)
+	}
+
 	// the converter skips a nil document, and an absent spec.settings is exactly
 	// the case the chain has to fill in
 	if settings == nil {

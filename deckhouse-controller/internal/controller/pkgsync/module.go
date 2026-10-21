@@ -27,6 +27,7 @@ import (
 	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
@@ -63,6 +64,10 @@ func (s *syncer) syncModules(ctx context.Context) error {
 
 	if err := s.syncDeployedModules(ctx, deckhouseReleaseChannel, releaseChannels, configs); err != nil {
 		return fmt.Errorf("sync deployed modules: %w", err)
+	}
+
+	if err := s.deleteModuleReleases(ctx); err != nil {
+		return fmt.Errorf("delete module releases: %w", err)
 	}
 
 	if err := s.syncEmbeddedModules(ctx, deckhouseReleaseChannel, configs); err != nil {
@@ -214,6 +219,56 @@ func (s *syncer) getDeployedModuleReleases(ctx context.Context) ([]*v1alpha1.Mod
 	}
 
 	return deployed, nil
+}
+
+// deleteModuleReleases deletes every module release once its module has taken the version over. The
+// module owns the version from here on, so a release left behind would roll it back on the next
+// start. No release controller runs here to release the finalizers, so they are dropped first.
+func (s *syncer) deleteModuleReleases(ctx context.Context) error {
+	releases := new(v1alpha1.ModuleReleaseList)
+	if err := s.reader.List(ctx, releases); err != nil {
+		return fmt.Errorf("list module releases: %w", err)
+	}
+
+	for i := range releases.Items {
+		release := &releases.Items[i]
+
+		if err := s.dropModuleReleaseFinalizers(ctx, release); err != nil {
+			return fmt.Errorf("drop finalizers of the '%s' module release: %w", release.Name, err)
+		}
+
+		if err := s.writer.Delete(ctx, release); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("delete the '%s' module release: %w", release.Name, err)
+		}
+
+		s.logger.Debug("module release deleted", slog.String("name", release.Name))
+	}
+
+	return nil
+}
+
+// dropModuleReleaseFinalizers removes the finalizers of the old release controller. A release
+// carrying none is not patched.
+func (s *syncer) dropModuleReleaseFinalizers(ctx context.Context, release *v1alpha1.ModuleRelease) error {
+	patch := client.MergeFrom(release.DeepCopy())
+
+	controllerutil.RemoveFinalizer(release, v1alpha1.ModuleReleaseFinalizerExistOnFs)
+	controllerutil.RemoveFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered)
+
+	patchData, err := patch.Data(release)
+	if err != nil {
+		return fmt.Errorf("build the patch: %w", err)
+	}
+
+	if string(patchData) == "{}" {
+		return nil
+	}
+
+	if err = s.writer.Patch(ctx, release, client.RawPatch(patch.Type(), patchData)); client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("patch: %w", err)
+	}
+
+	return nil
 }
 
 // getDeckhouseReleaseChannel reads the channel Deckhouse itself follows, the one its embedded

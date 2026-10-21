@@ -107,6 +107,7 @@ type Unconverged struct {
 
 // UnconvergedNode is one unconverged node; WaitsFor is empty while its gate is open.
 type UnconvergedNode struct {
+	Order    Order // Order is the effective order the tier rule gates by.
 	WaitsFor string
 }
 
@@ -123,7 +124,7 @@ func (s *Scheduler) Unconverged() Unconverged {
 	unconverged := s.lowestUnconverged()
 	for _, n := range s.nodes {
 		if (n.module || n.name == GlobalNode) && !n.converged {
-			res.Nodes[n.name] = UnconvergedNode{WaitsFor: s.blockerOf(n, unconverged)}
+			res.Nodes[n.name] = UnconvergedNode{Order: n.effectiveOrder, WaitsFor: s.blockerOf(n, unconverged)}
 		}
 	}
 

@@ -323,8 +323,9 @@ func TestModuleValidationHandlerV2_VersionChange(t *testing.T) {
 	assertResponse(t, resp, false, v1alpha1.MakeModulePackageVersionName(v2Repository, v2ModuleName, "v1.3.0"))
 }
 
-// withSettings returns the Module with spec.settings set.
+// withSettings returns the Module with spec.settings set, written for settings version 1.
 func withSettings(module *v1beta1.Module, settings map[string]any) *v1beta1.Module {
+	module.Spec.SettingsVersion = 1
 	module.Spec.Settings = v1alpha1.MakeMappedFields(settings)
 	return module
 }

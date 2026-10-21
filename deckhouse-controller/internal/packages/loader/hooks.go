@@ -21,7 +21,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -29,7 +28,6 @@ import (
 	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonsdk "github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/executor"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -50,17 +48,11 @@ const (
 var (
 	// ErrFileWrongExtension is returned when a file has an unexpected extension for a batch hook
 	ErrFileWrongExtension = errors.New("file has wrong extension")
-	// ErrFileNotBatchHook is returned when a file doesn't respond correctly to "hook list"
-	ErrFileNotBatchHook = errors.New("file is not batch hook")
 	// ErrFileNotExecutable is returned when a hook file lacks executable permissions
 	ErrFileNotExecutable = errors.New("no executable permissions, chmod +x is required to run this hook")
 
 	// the list of subdirectories to exclude when searching for a module's hooks
 	hooksExcludedDir = []string{"venv", "lib"}
-
-	// compiledHooksFound matches the "Found N items" output of a batch hook's "hook list" command,
-	// where N is a positive integer (1–9999). Used to identify valid batch hook binaries.
-	compiledHooksFound = regexp.MustCompile(`Found ([1-9]|[1-9]\d|[1-9]\d\d|[1-9]\d\d\d) items`)
 )
 
 // hookLoadResult holds the hooks and optional settings validation discovered from a package directory.
@@ -166,7 +158,7 @@ func searchBatchAppHooks(namespace, name, path string, logger *log.Logger) (*hoo
 		return &hookLoadResult{}, nil
 	}
 
-	hooksRelativePaths, err := getHookExecutablePaths(hooksPath, true, logger)
+	hooksRelativePaths, err := getHookExecutablePaths(hooksPath, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -184,9 +176,11 @@ func searchBatchAppHooks(namespace, name, path string, logger *log.Logger) (*hoo
 			return nil, fmt.Errorf("get hook name: %w", err)
 		}
 
+		// "hook config" also tells a batch hook from another executable: one run per binary.
 		hookConfig, err := kind.GetBatchHookConfig(name, hookPath)
 		if err != nil {
-			return nil, fmt.Errorf("get sdk config for hook '%s': %w", hookName, err)
+			logger.Warn("skip executable that is not a batch hook", slog.String("path", hookPath), log.Err(err))
+			continue
 		}
 
 		if hookConfig.Readiness != nil {
@@ -240,7 +234,7 @@ func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadRes
 		return &hookLoadResult{}, nil
 	}
 
-	hooksRelativePaths, err := getHookExecutablePaths(hooksPath, true, logger)
+	hooksRelativePaths, err := getHookExecutablePaths(hooksPath, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -258,9 +252,11 @@ func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadRes
 			return nil, fmt.Errorf("get hook name: %w", err)
 		}
 
+		// "hook config" also tells a batch hook from another executable: one run per binary.
 		hookConfig, err := kind.GetBatchHookConfig(name, hookPath)
 		if err != nil {
-			return nil, fmt.Errorf("get sdk config for hook '%s': %w", hookName, err)
+			logger.Warn("skip executable that is not a batch hook", slog.String("path", hookPath), log.Err(err))
+			continue
 		}
 
 		if hookConfig.Readiness != nil {
@@ -305,11 +301,10 @@ func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadRes
 	return result, nil
 }
 
-// getHookExecutablePaths recursively walks dir and returns absolute paths to executable files.
+// getHookExecutablePaths recursively walks dir and returns absolute paths to the extensionless
+// executable files, the batch hook candidates; "hook config" tells which are batch hooks.
 // Hidden directories and directories in hooksExcludedDir are skipped.
-// If checkBatch is true, each executable is additionally verified to be a valid batch hook
-// by running it with "hook list" and checking the output.
-func getHookExecutablePaths(dir string, checkBatch bool, logger *log.Logger) ([]string, error) {
+func getHookExecutablePaths(dir string, logger *log.Logger) ([]string, error) {
 	paths := make([]string, 0)
 
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
@@ -331,12 +326,9 @@ func getHookExecutablePaths(dir string, checkBatch bool, logger *log.Logger) ([]
 			return nil
 		}
 
-		if checkBatch {
-			if err = isExecutableBatchHook(path, f); err != nil {
-				logger.Debug("skip file", slog.String("path", path), log.Err(err))
-
-				return nil
-			}
+		if filepath.Ext(f.Name()) != "" {
+			logger.Debug("skip file", slog.String("path", path), log.Err(ErrFileWrongExtension))
+			return nil
 		}
 
 		paths = append(paths, path)
@@ -348,51 +340,6 @@ func getHookExecutablePaths(dir string, checkBatch bool, logger *log.Logger) ([]
 	}
 
 	return paths, nil
-}
-
-// isExecutableBatchHook checks that a file is both executable and a valid batch hook.
-// Files with any extension are rejected — only extensionless binaries are considered.
-func isExecutableBatchHook(path string, file os.FileInfo) error {
-	if err := isExecutable(file); err != nil {
-		return err
-	}
-
-	switch filepath.Ext(file.Name()) {
-	case "":
-		// extensionless binary — verify it responds to "hook list"
-		return isBatchHook(path)
-	default:
-		return ErrFileWrongExtension
-	}
-}
-
-// isBatchHook determines if a binary is a batch hook by executing it.
-// It runs the binary with "hook list" and checks if the output matches the expected format.
-//
-// WARNING: Security issue - executes untrusted binaries during discovery
-// WARNING: Performance issue - runs every executable file found
-// TODO: Consider alternative detection methods (file signatures, metadata, etc.)
-func isBatchHook(path string) error {
-	// TODO: check binary another way
-	args := []string{"hook", "list"}
-
-	cmd := executor.NewExecutor(
-		"",
-		path,
-		args,
-		[]string{})
-
-	out, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("exec file '%s': %w", path, err)
-	}
-
-	// Match "Found N items" output to confirm this is a batch hook
-	if compiledHooksFound.Match(out) {
-		return nil
-	}
-
-	return ErrFileNotBatchHook
 }
 
 // isExecutable checks whether any execute bit (owner, group, or other) is set on the file.

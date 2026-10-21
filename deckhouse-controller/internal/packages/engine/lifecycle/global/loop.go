@@ -99,7 +99,7 @@ func (g *Global) act(ctx context.Context, want action, ev *schedule.Event) {
 func (g *Global) startOperation(ctx context.Context, kind operation.Kind, key string, st *operationState, steps func(*operationState) []operation.Step) {
 	g.state.busy = true
 	g.operationState = st
-	g.operation = operation.Start(ctx, kind, key, steps(st))
+	g.operation = operation.Start(ctx, schedule.GlobalNode, kind, key, steps(st))
 }
 
 func (g *Global) collectOperation() *operationState {

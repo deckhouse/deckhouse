@@ -71,8 +71,10 @@ type moduleRequest struct {
 	name            string
 	enabled         *bool
 	settingsVersion int
-	settings        *v1alpha1.MappedFields
-	annotations     map[string]string
+	// versionField names the settings version field of the object in messages.
+	versionField string
+	settings     *v1alpha1.MappedFields
+	annotations  map[string]string
 }
 
 // moduleConfigRequest reads a ModuleConfig; nil stays nil.
@@ -85,6 +87,7 @@ func moduleConfigRequest(cfg *v1alpha1.ModuleConfig) *moduleRequest {
 		name:            cfg.Name,
 		enabled:         cfg.Spec.Enabled,
 		settingsVersion: cfg.Spec.Version,
+		versionField:    "spec.version",
 		settings:        cfg.Spec.Settings,
 		annotations:     cfg.Annotations,
 	}
@@ -384,13 +387,24 @@ func (v *moduleValidatorV2) validatePackage(ctx context.Context, req, oldReq *mo
 	return warnings, nil, nil
 }
 
-// validateSettings checks the settings against the package version's schema and, on UPDATE, its transition rules.
+// validateSettings checks the settings against the package version: they are converted from the
+// request's settings version to the latest one by the conversions the version publishes, then checked
+// against its schema and, on UPDATE, its transition rules, both sides at the latest version.
 func (v *moduleValidatorV2) validateSettings(ctx context.Context, req, oldReq *moduleRequest, target *moduleTarget) ([]string, *kwhvalidating.ValidatorResult, error) {
-	settings := req.settings.GetMap()
+	converter, err := settingsConverter(target.version.Status.PackageSchemas)
+	if err != nil {
+		return nil, nil, fmt.Errorf("the '%s' module settings conversions: %w", req.name, err)
+	}
 
-	var warnings []string
+	settings, err := convertSettingsToLatest(converter, req.settingsVersion, req.settings.GetMap())
+	if err != nil {
+		reject, err := rejectResult(fmt.Sprintf("spec.settings are not valid: %v", err))
+		return nil, reject, err
+	}
+
+	warnings := obsoleteSettingsWarnings(req.versionField, req.settingsVersion, req.settings.GetMap(), converter)
 	if target.installed() {
-		res, err := v.packages.ValidatePackageSettings(ctx, req.name, req.settingsVersion, settings)
+		res, err := v.packages.ValidatePackageSettings(ctx, req.name, req.settingsVersion, req.settings.GetMap())
 		if err != nil {
 			return nil, nil, fmt.Errorf("validate the '%s' module settings: %w", req.name, err)
 		}
@@ -399,7 +413,7 @@ func (v *moduleValidatorV2) validateSettings(ctx context.Context, req, oldReq *m
 			return nil, reject, err
 		}
 
-		warnings = res.Warnings
+		warnings = append(warnings, res.Warnings...)
 	}
 
 	storage, err := settingsSchemaStorage(target.version.Status.PackageSchemas)
@@ -410,7 +424,7 @@ func (v *moduleValidatorV2) validateSettings(ctx context.Context, req, oldReq *m
 		return warnings, nil, nil
 	}
 
-	// without a running version nothing converts older settings, so the latest schema is the only check
+	// a running version is checked by its object, which converts older settings with the same chain
 	if !target.installed() {
 		if err := storage.ValidateConfigValues(req.name, addonutils.Values{req.name: settings}); err != nil {
 			reject, err := rejectResult(fmt.Sprintf("spec.settings are not valid: %v", err))
@@ -418,13 +432,17 @@ func (v *moduleValidatorV2) validateSettings(ctx context.Context, req, oldReq *m
 		}
 	}
 
-	// transition rules compare like with like, so a settings version change skips them
 	schema := storage.Schemas[validation.ConfigValuesSchema]
-	if oldReq == nil || schema == nil || oldReq.settingsVersion != req.settingsVersion {
+	if oldReq == nil || schema == nil {
 		return warnings, nil, nil
 	}
 
-	oldSettings := oldReq.settings.GetMap()
+	// transition rules compare like with like, so both sides go to the latest version; old settings
+	// the chain cannot convert (written for a later version) have nothing to compare with
+	oldSettings, err := convertSettingsToLatest(converter, oldReq.settingsVersion, oldReq.settings.GetMap())
+	if err != nil {
+		return warnings, nil, nil
+	}
 
 	errs, celErr := cel.ValidateTransition(schema, settings, oldSettings)
 	if celErr != nil {
@@ -439,7 +457,7 @@ func (v *moduleValidatorV2) validateSettings(ctx context.Context, req, oldReq *m
 	}
 
 	if len(errs) > 0 {
-		reject, err := rejectResult(fmt.Sprintf("spec.settings are not valid (version %d): %s", req.settingsVersion, errors.Join(errs...)))
+		reject, err := rejectResult(fmt.Sprintf("spec.settings are not valid (version %d): %s", latestSettingsVersion(converter), errors.Join(errs...)))
 		return nil, reject, err
 	}
 

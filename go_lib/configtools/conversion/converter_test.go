@@ -90,3 +90,53 @@ arrayField:
 		}
 	})
 }
+
+func TestNewConverter(t *testing.T) {
+	t.Run("should convert along an in-memory chain", func(t *testing.T) {
+		converter, err := NewConverter(map[int][]string{
+			2: {".b = .a", "del(.a)"},
+			3: {".c = .b", "del(.b)"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if converter.LatestVersion() != 3 {
+			t.Fatalf("expected latest 3, got %d", converter.LatestVersion())
+		}
+		version, converted, err := converter.ConvertToLatest(1, map[string]interface{}{"a": "value"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if version != 3 || len(converted) != 1 || converted["c"] != "value" {
+			t.Fatalf("expected {c: value} at 3, got %v at %d", converted, version)
+		}
+	})
+
+	t.Run("should have latest 1 without conversions", func(t *testing.T) {
+		converter, err := NewConverter(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if converter.LatestVersion() != 1 {
+			t.Fatalf("expected latest 1, got %d", converter.LatestVersion())
+		}
+	})
+
+	t.Run("should reject a gap in the chain", func(t *testing.T) {
+		if _, err := NewConverter(map[int][]string{2: {"."}, 4: {"."}}); err == nil {
+			t.Fatal("expected an error for the missing version 3")
+		}
+	})
+
+	t.Run("should reject a version below 2", func(t *testing.T) {
+		if _, err := NewConverter(map[int][]string{1: {"."}}); err == nil {
+			t.Fatal("expected an error for version 1")
+		}
+	})
+
+	t.Run("should reject an invalid expression", func(t *testing.T) {
+		if _, err := NewConverter(map[int][]string{2: {".a = "}}); err == nil {
+			t.Fatal("expected an error for the invalid expression")
+		}
+	})
+}

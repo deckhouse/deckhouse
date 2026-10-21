@@ -179,6 +179,36 @@ type PackageVersionStatusSchemas struct {
 	// +kubebuilder:validation:Type=object
 	// +mapType=atomic
 	ValuesSchema *PackageSchema `json:"valuesSchema,omitempty"`
+
+	// Conversions that bring settings written for an older settings schema version to the latest one, ordered by version.
+	//
+	// Empty when the package has a single settings schema version.
+	// +optional
+	SettingsConversions []PackageSettingsConversion `json:"settingsConversions,omitempty"`
+}
+
+// PackageSettingsConversion converts settings of the previous settings schema version to Version.
+type PackageSettingsConversion struct {
+	// Settings schema version the conversion produces; it converts settings of the previous version.
+	Version int `json:"version"`
+
+	// jq expressions applied to the settings in order.
+	Expr []string `json:"expr"`
+
+	// Localized description of the changes in this settings schema version.
+	// +optional
+	Descriptions *PackageSettingsConversionDescriptions `json:"descriptions,omitempty"`
+}
+
+// PackageSettingsConversionDescriptions holds localized descriptions of a settings conversion.
+type PackageSettingsConversionDescriptions struct {
+	// Russian description of the conversion.
+	// +optional
+	Ru string `json:"ru,omitempty"`
+
+	// English description of the conversion.
+	// +optional
+	En string `json:"en,omitempty"`
 }
 
 // PackageDisableOptions describes the package's disable protection surfaced to the UI.

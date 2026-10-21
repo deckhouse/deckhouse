@@ -26,18 +26,19 @@ import (
 )
 
 // crdParallelism bounds the concurrent CRD installs of one run. Parallel, because every package
-// waits behind the barrier and even an unchanged CRD costs a round trip; bounded, because the
-// installs share one client and its rate limiter.
-const crdParallelism = 8
+// waits behind the barrier and the first run after a start installs every module's CRDs; bounded,
+// because the installs share one client and its rate limiter.
+const crdParallelism = 12
 
 // ensureCRDs ensures the CRDs of every enabled module. A first pass, in the event's order, takes
 // each module's view from the event and records the names publish needs. Then the CRDs are
 // installed in parallel; the first error cancels the rest. Invariant: no two modules ship the same
 // CRD, so concurrent installs never write one object.
 //
-// Every run installs every enabled module's CRDs, changed or not: a run is what restores a CRD
-// deleted or edited by hand. A broken CRD is reported on Global's ManifestsApplied, not on the
-// module that ships it.
+// Every run asks for every enabled module's CRDs; the service installs only a path it has not
+// installed in this process, so a CRD deleted or edited by hand returns with the module's next
+// version or the next start, as under addon-operator. A broken CRD is reported on Global's
+// ManifestsApplied, not on the module that ships it.
 func (g *Global) ensureCRDs(ctx context.Context, st *operationState) error {
 	for _, m := range st.enabled {
 		// The one place the attachment is asserted: the package Reconciler attaches the ModuleView

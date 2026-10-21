@@ -40,6 +40,7 @@ import (
 	packageschema "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
 // maxApplicationNameLength limits the instance name: it prefixes the name of every object
@@ -75,11 +76,20 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 			return rejectResult(fmt.Sprintf("get application package: %v", err))
 		}
 
-		name := apps.BuildName(app.Namespace, app.Name)
+		warnings, err := validateAppAgainstApv(ctx, cli, manager, app, oldApp)
+		if err != nil {
+			// The denial message is the only feedback `kubectl apply` prints, and
+			// it arrives without the object it belongs to: name the Application
+			// and the package version whose requirements were evaluated, so the
+			// rejection is traceable when several manifests are applied at once.
+			return rejectResult(fmt.Sprintf("Application '%s/%s' (package '%s' version '%s'): %s",
+				app.Namespace, app.Name, app.Spec.PackageName, app.Spec.PackageVersion, err))
+		}
 
-		var warnings []string
-		if app.Status.CurrentVersion != nil && app.Status.CurrentVersion.Version == app.Spec.PackageVersion {
-			res, err := manager.ValidatePackageSettings(ctx, name, 0, app.Spec.Settings.GetMap())
+		// The running version is checked by its object, which converts older settings with the
+		// same chain; the settings version is known to the chain by now.
+		if appInstalled(app) {
+			res, err := manager.ValidatePackageSettings(ctx, apps.BuildName(app.Namespace, app.Name), app.Spec.SettingsVersion, app.Spec.Settings.GetMap())
 			if err != nil {
 				return nil, err
 			}
@@ -88,16 +98,7 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 				return rejectResult(res.Message)
 			}
 
-			warnings = res.Warnings
-		}
-
-		if err := validateAppAgainstApv(ctx, cli, manager, app, oldApp); err != nil {
-			// The denial message is the only feedback `kubectl apply` prints, and
-			// it arrives without the object it belongs to: name the Application
-			// and the package version whose requirements were evaluated, so the
-			// rejection is traceable when several manifests are applied at once.
-			return rejectResult(fmt.Sprintf("Application '%s/%s' (package '%s' version '%s'): %s",
-				app.Namespace, app.Name, app.Spec.PackageName, app.Spec.PackageVersion, err))
+			warnings = append(warnings, res.Warnings...)
 		}
 
 		return allowResult(warnings)
@@ -119,8 +120,10 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 // validateAppAgainstApv validates an Application against its corresponding
 // ApplicationPackageVersion (APV). It fetches the APV once and performs two checks:
 //
-//  1. Settings schema validation — Application.spec.settings are validated against the
-//     OpenAPI schema published at APV.status.packageSchemas.settingsSchema (if present).
+//  1. Settings validation — Application.spec.settings are converted from spec.settingsVersion
+//     to the latest version by the conversions the APV publishes, then, unless the version
+//     is installed, validated against the OpenAPI schema published at
+//     APV.status.packageSchemas.settingsSchema (if present).
 //  2. Requirement constraints — the APV's requirements (Kubernetes version, Deckhouse
 //     version, and module dependencies) are parsed into semver constraints and delegated
 //     to the package manager's CheckConstraints method. Only on CREATE and on an UPDATE
@@ -129,30 +132,32 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 //     running version, as the Module webhook checks requirements only on enabling.
 //
 // This is called during admission webhook validation to reject Applications whose
-// settings are malformed or whose cluster requirements are not satisfied.
-func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packageManager, app, oldApp *v1alpha1.Application) error {
+// settings are malformed or whose cluster requirements are not satisfied. The warnings
+// tell about settings written for an older settings version.
+func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packageManager, app, oldApp *v1alpha1.Application) ([]string, error) {
 	// Build the deterministic APV name from the Application's spec fields (repo, package, version).
 	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 
 	// Fetch the corresponding ApplicationPackageVersion to read its metadata requirements.
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	if err := cli.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
-		return fmt.Errorf("get application package version: %w", err)
+		return nil, fmt.Errorf("get application package version: %w", err)
 	}
 
 	if apv.IsDraft() {
-		return fmt.Errorf("application package version '%s' is draft", apvName)
+		return nil, fmt.Errorf("application package version '%s' is draft", apvName)
 	}
 
-	if err := validateAppSettings(apv, app, oldApp); err != nil {
-		return fmt.Errorf("validate settings: %w", err)
+	warnings, err := validateAppSettings(ctx, cli, apv, app, oldApp)
+	if err != nil {
+		return nil, fmt.Errorf("validate settings: %w", err)
 	}
 
 	// The requirements of an unchanged version were checked when it was admitted.
 	if oldApp != nil {
 		oldName := v1alpha1.MakeApplicationPackageVersionName(oldApp.Spec.PackageRepositoryName, oldApp.Spec.PackageName, oldApp.Spec.PackageVersion)
 		if oldName == apvName {
-			return nil
+			return warnings, nil
 		}
 	}
 
@@ -164,13 +169,13 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 	// Only a spec version change is gated, so the controller's own patches never trip it; nothing is installed on create.
 	if oldApp != nil && oldApp.Spec.PackageVersion != app.Spec.PackageVersion {
 		if err := checkVersionCompatibility(ctx, cli, app, oldApp.Spec.PackageVersion, metadata.Compatibility); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	constraints, err := metadata.Requirements.ToScheduleConstraints()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Delegate to the manager which checks the parsed constraints against the
@@ -178,10 +183,10 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 	// scheduler-side identifier (namespace.name) used by the cycle simulation.
 	// Admission shows the scheduler's message, without the reason prefix.
 	if err := manager.CheckConstraints(apps.BuildName(app.Namespace, app.Name), constraints); err != nil {
-		return errors.New(gate.ConstraintMessage(err))
+		return nil, errors.New(gate.ConstraintMessage(err))
 	}
 
-	return nil
+	return warnings, nil
 }
 
 // checkVersionCompatibility gates a change from the previous spec version: an upgrade by the target's rules, a downgrade by the previous one's.
@@ -238,27 +243,136 @@ func previousCompatibility(ctx context.Context, cli client.Client, app *v1alpha1
 	return apv.Status.PackageMetadata.Compatibility, nil
 }
 
-// validateAppSettings validates Application.spec.settings against the OpenAPI settings
-// schema published by the ApplicationPackageVersion at status.packageSchemas.settingsSchema.
-// The schema is a typed openapi.OpenAPIV3Schema, marshalled to JSON and passed to
-// addon-operator's SchemaStorage, which validates the user-supplied settings wrapped
-// under the package name. Returns nil when the APV publishes no settings schema — the
-// webhook treats an absent schema as "nothing to validate" rather than a rejection,
-// so packages that ship without a schema remain installable.
+// validateAppSettings validates Application.spec.settings against the package version:
+// they are converted from spec.settingsVersion to the latest settings version by the
+// conversions the APV publishes at status.packageSchemas.settingsConversions, rejecting a
+// version the chain does not know. Unless the version is installed (its object checks
+// them in the engine), the converted settings are validated against the OpenAPI settings
+// schema at status.packageSchemas.settingsSchema. The schema is a typed
+// openapi.OpenAPIV3Schema, marshalled to JSON and passed to addon-operator's
+// SchemaStorage, which validates the user-supplied settings wrapped under the package
+// name. Returns nil when the APV publishes no settings schema — the webhook treats an
+// absent schema as "nothing to validate" rather than a rejection, so packages that ship
+// without a schema remain installable.
 //
 // On UPDATE it additionally enforces x-deckhouse-immutable against oldApp.
-func validateAppSettings(apv *v1alpha1.ApplicationPackageVersion, app, oldApp *v1alpha1.Application) error {
+func validateAppSettings(ctx context.Context, cli client.Client, apv *v1alpha1.ApplicationPackageVersion, app, oldApp *v1alpha1.Application) ([]string, error) {
+	converter, err := settingsConverter(apv.Status.PackageSchemas)
+	if err != nil {
+		return nil, err
+	}
+
+	settings, err := convertSettingsToLatest(converter, app.Spec.SettingsVersion, app.Spec.Settings.GetMap())
+	if err != nil {
+		return nil, err
+	}
+
+	warnings := obsoleteSettingsWarnings("spec.settingsVersion", app.Spec.SettingsVersion, app.Spec.Settings.GetMap(), converter)
+
 	storage, err := settingsSchemaStorage(apv.Status.PackageSchemas)
 	if err != nil || storage == nil {
-		return err
+		return warnings, err
 	}
 
-	values := addonutils.Values{app.Spec.PackageName: app.Spec.Settings.GetMap()}
-	if err = storage.ValidateConfigValues(app.Spec.PackageName, values); err != nil {
-		return err
+	if !appInstalled(app) {
+		values := addonutils.Values{app.Spec.PackageName: settings}
+		if err = storage.ValidateConfigValues(app.Spec.PackageName, values); err != nil {
+			return nil, err
+		}
 	}
 
-	return checkImmutableSettings(storage.Schemas[validation.ConfigValuesSchema], app, oldApp)
+	if err = checkImmutableSettings(ctx, cli, storage.Schemas[validation.ConfigValuesSchema], converter, settings, app, oldApp); err != nil {
+		return nil, err
+	}
+
+	return warnings, nil
+}
+
+// obsoleteSettingsWarnings tells about settings written for an older settings version than the
+// latest of converter, or without a version (read as version 1); none for empty settings.
+func obsoleteSettingsWarnings(field string, version int, settings map[string]any, converter *conversion.Converter) []string {
+	if len(settings) == 0 {
+		return nil
+	}
+
+	latest := latestSettingsVersion(converter)
+	switch {
+	case version == 0:
+		return []string{fmt.Sprintf("%s is not set, spec.settings are read as version 1: set it, the latest version is %d", field, latest)}
+	case version < latest:
+		return []string{fmt.Sprintf("%s=%d is obsolete. Please migrate spec.settings to the latest version %d", field, version, latest)}
+	default:
+		return nil
+	}
+}
+
+// appInstalled reports whether the spec version is activated, so its object can convert older settings.
+func appInstalled(app *v1alpha1.Application) bool {
+	return app.Status.CurrentVersion != nil && app.Status.CurrentVersion.Version == app.Spec.PackageVersion
+}
+
+// settingsConverter builds the converter of the settings conversions a package version
+// publishes; nil when it publishes none, its latest settings version being 1.
+func settingsConverter(schemas *v1alpha1.PackageVersionStatusSchemas) (*conversion.Converter, error) {
+	if schemas == nil || len(schemas.SettingsConversions) == 0 {
+		return nil, nil
+	}
+
+	conversions := make(map[int][]string, len(schemas.SettingsConversions))
+	for _, c := range schemas.SettingsConversions {
+		conversions[c.Version] = c.Expr
+	}
+
+	converter, err := conversion.NewConverter(conversions)
+	if err != nil {
+		return nil, fmt.Errorf("build the settings converter: %w", err)
+	}
+
+	return converter, nil
+}
+
+// latestSettingsVersion is the latest settings version of converter's chain; 1 without one.
+func latestSettingsVersion(converter *conversion.Converter) int {
+	if converter == nil {
+		return 1
+	}
+
+	return converter.LatestVersion()
+}
+
+// convertSettingsToLatest converts settings written for version (0 reads as 1) to the latest
+// settings version of converter, rejecting a version the chain does not know.
+func convertSettingsToLatest(converter *conversion.Converter, version int, settings map[string]any) (map[string]any, error) {
+	if version == 0 {
+		version = 1
+	}
+
+	latest := latestSettingsVersion(converter)
+	if version < 1 || version > latest {
+		return nil, fmt.Errorf("settings version %d is not supported, the latest is %d", version, latest)
+	}
+
+	return convertSettings(converter, version, latest, settings)
+}
+
+// convertSettings converts settings from version to the later version to; the same version is a no-op.
+func convertSettings(converter *conversion.Converter, from, to int, settings map[string]any) (map[string]any, error) {
+	if converter == nil || from == to {
+		return settings, nil
+	}
+
+	// the converter skips a nil document, and an absent spec.settings is exactly
+	// the case the chain has to fill in
+	if settings == nil {
+		settings = make(map[string]any)
+	}
+
+	_, converted, err := converter.ConvertTo(from, to, settings)
+	if err != nil {
+		return nil, fmt.Errorf("convert settings from version %d: %w", from, err)
+	}
+
+	return converted, nil
 }
 
 // settingsSchemaStorage builds a schema storage from a package version's settings schema; nil when it publishes none.
@@ -306,7 +420,9 @@ func extractOldApplication(review *kwhmodel.AdmissionReview) (*v1alpha1.Applicat
 
 // checkImmutableSettings rejects an update that changes a settings field marked
 // x-deckhouse-immutable. Skipped when there is no previous object to compare against.
-func checkImmutableSettings(settingsSchema *spec.Schema, app, oldApp *v1alpha1.Application) error {
+// newSettings are the update's settings converted to the latest version of converter,
+// the target package version's chain.
+func checkImmutableSettings(ctx context.Context, cli client.Client, settingsSchema *spec.Schema, converter *conversion.Converter, newSettings map[string]any, app, oldApp *v1alpha1.Application) error {
 	if oldApp == nil || settingsSchema == nil {
 		return nil
 	}
@@ -323,14 +439,38 @@ func checkImmutableSettings(settingsSchema *spec.Schema, app, oldApp *v1alpha1.A
 		return err
 	}
 
+	// The effective settings are in the latest version of the package that applied them,
+	// which a version change may have moved past or behind: bring them to the target's
+	// latest. A later version cannot be converted back, so after a downgrade of the
+	// settings schema there is nothing to compare like with like.
+	latest := latestSettingsVersion(converter)
+	applied, err := appliedSettingsVersion(ctx, cli, app, oldApp, latest)
+	if err != nil {
+		return err
+	}
+
+	if applied > latest {
+		return nil
+	}
+
+	if oldSettings, err = convertSettings(converter, applied, latest, oldSettings); err != nil {
+		return fmt.Errorf("convert the last applied settings: %w", err)
+	}
+
+	// The manifest the user last wrote is compared at the latest version too; one the chain
+	// cannot convert is taken as written.
+	oldManifest := oldApp.Spec.Settings.GetMap()
+	if converted, err := convertSettingsToLatest(converter, oldApp.Spec.SettingsVersion, oldManifest); err == nil {
+		oldManifest = converted
+	}
+
 	// Defaults go on both sides so that a key left out of the manifest compares equal
 	// to the value the application actually runs with — otherwise dropping the key
 	// would read as "never set" and slip past the check. ApplyDefaults mutates in
-	// place, which is safe here because both maps are freshly decoded.
-	newSettings := app.Spec.Settings.GetMap()
+	// place, which is safe here because both maps are freshly decoded or converted.
 	validation.ApplyDefaults(oldSettings, settingsSchema)
 	validation.ApplyDefaults(newSettings, settingsSchema)
-	dropUnsetGrants(settingsSchema, oldSettings, newSettings, oldApp.Spec.Settings.GetMap())
+	dropUnsetGrants(settingsSchema, oldSettings, newSettings, oldManifest)
 
 	errs := packageschema.CheckImmutable(settingsSchema, oldSettings, newSettings)
 	if len(errs) == 0 {
@@ -343,6 +483,35 @@ func checkImmutableSettings(settingsSchema *spec.Schema, app, oldApp *v1alpha1.A
 	}
 
 	return errors.New(strings.Join(msgs, "; "))
+}
+
+// appliedSettingsVersion is the settings version status.lastAppliedConfiguration is in: the latest
+// version of the package version that applied it, status.currentVersion. targetLatest stands for
+// the target package version itself and for a current version whose package version is gone.
+func appliedSettingsVersion(ctx context.Context, cli client.Client, app, oldApp *v1alpha1.Application, targetLatest int) (int, error) {
+	current := oldApp.Status.CurrentVersion
+	if current == nil || current.Version == "" || current.Version == app.Spec.PackageVersion {
+		return targetLatest, nil
+	}
+
+	// the current version came from the repository the previous spec named
+	name := v1alpha1.MakeApplicationPackageVersionName(oldApp.Spec.PackageRepositoryName, oldApp.Spec.PackageName, current.Version)
+
+	apv := new(v1alpha1.ApplicationPackageVersion)
+	if err := cli.Get(ctx, client.ObjectKey{Name: name}, apv); err != nil {
+		if apierrors.IsNotFound(err) {
+			return targetLatest, nil
+		}
+
+		return 0, fmt.Errorf("get current application package version: %w", err)
+	}
+
+	converter, err := settingsConverter(apv.Status.PackageSchemas)
+	if err != nil {
+		return 0, fmt.Errorf("current application package version: %w", err)
+	}
+
+	return latestSettingsVersion(converter), nil
 }
 
 // effectiveSettings returns the settings the application actually runs with, which is

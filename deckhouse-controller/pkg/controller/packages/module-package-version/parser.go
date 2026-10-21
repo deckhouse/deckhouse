@@ -86,12 +86,15 @@ type metadataReader struct {
 	settingsReader       *bytes.Buffer
 	legacySettingsReader *bytes.Buffer
 	valuesReader         *bytes.Buffer
+	// conversions holds the raw settings conversion files, one per file.
+	conversions [][]byte
 }
 
 // parseVersionMetadataByImage extracts module metadata from a tar-formatted image reader.
 // It looks for: version.json, package.yaml (v2 definition), module.yaml (legacy
-// definition), changelog.yaml, and the openapi schema files (settings.yaml with
-// the config-values.yaml fallback, values.yaml). All files are optional — missing
+// definition), changelog.yaml, the openapi schema files (settings.yaml with
+// the config-values.yaml fallback, values.yaml) and the settings conversion
+// files (openapi/conversions/*.yaml). All files are optional — missing
 // files result in zero-value fields in the returned metadata.
 func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reader) (*moduleMetadata, error) {
 	meta := new(moduleMetadata)
@@ -152,7 +155,7 @@ func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reade
 		settingsRaw = mr.legacySettingsReader.Bytes()
 	}
 
-	schemas, err := v1alpha1.ParsePackageSchemas(settingsRaw, mr.valuesReader.Bytes())
+	schemas, err := v1alpha1.ParsePackageSchemas(settingsRaw, mr.valuesReader.Bytes(), mr.conversions)
 	if err != nil {
 		return nil, fmt.Errorf("parse package schemas: %w", err)
 	}
@@ -164,8 +167,9 @@ func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reade
 
 // untarMetadata iterates through the tar archive and copies the content of recognized
 // metadata files (version.json, package.yaml, module.yaml, changelog.yaml/yml, the
-// openapi schema files) into their respective buffers. Unrecognized entries are
-// skipped. Each file read is bounded by maxMetadataFileSize.
+// openapi schema and settings conversion files) into their respective buffers.
+// Unrecognized entries are skipped. Each file read is bounded by maxMetadataFileSize.
+// The whole archive is read: the number of conversion files is not known upfront.
 func (r *metadataReader) untarMetadata(rc io.Reader) error {
 	tr := tar.NewReader(rc)
 	for {
@@ -177,7 +181,8 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 			return err
 		}
 
-		switch strings.ToLower(hdr.Name) {
+		name := strings.ToLower(hdr.Name)
+		switch name {
 		case versionFile:
 			if _, err = io.Copy(r.versionReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
 				return err
@@ -207,18 +212,20 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 				return err
 			}
 		default:
-			continue
-		}
+			if !v1alpha1.IsSettingsConversionFile(name) {
+				continue
+			}
 
-		// All known metadata files captured — skip remaining tar entries. The
-		// legacy settings name never satisfies the exit: settings.yaml may still
-		// come later in the tar and must win over it.
-		if r.versionReader.Len() > 0 &&
-			r.changelogReader.Len() > 0 &&
-			(r.packageReader.Len() > 0 || r.moduleReader.Len() > 0) &&
-			r.settingsReader.Len() > 0 &&
-			r.valuesReader.Len() > 0 {
-			return nil
+			if len(r.conversions) == v1alpha1.MaxSettingsConversions {
+				return fmt.Errorf("more than %d settings conversion files", v1alpha1.MaxSettingsConversions)
+			}
+
+			conversion, err := io.ReadAll(io.LimitReader(tr, maxMetadataFileSize))
+			if err != nil {
+				return err
+			}
+
+			r.conversions = append(r.conversions, conversion)
 		}
 	}
 }

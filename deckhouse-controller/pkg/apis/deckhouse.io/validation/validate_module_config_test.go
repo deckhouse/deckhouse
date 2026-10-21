@@ -1700,8 +1700,9 @@ func TestModuleConfigValidationHandler_Experimental(t *testing.T) {
 type fakeModulePackageManager struct {
 	enabled map[string]bool
 
-	validateResult settingscheck.Result
-	validateCalled bool
+	validateResult  settingscheck.Result
+	validateCalled  bool
+	validateVersion int
 
 	checkErr       error
 	checkCalled    bool
@@ -1725,8 +1726,9 @@ func (f *fakeModulePackageManager) GetEnabledModuleNames() []string {
 	return names
 }
 
-func (f *fakeModulePackageManager) ValidatePackageSettings(_ context.Context, _ string, _ int, _ addonutils.Values) (settingscheck.Result, error) {
+func (f *fakeModulePackageManager) ValidatePackageSettings(_ context.Context, _ string, settingsVersion int, _ addonutils.Values) (settingscheck.Result, error) {
 	f.validateCalled = true
+	f.validateVersion = settingsVersion
 	return f.validateResult, nil
 }
 
@@ -1781,6 +1783,18 @@ func newMPV(meta *v1alpha1.ModulePackageVersionStatusMetadata, schema *openapi.O
 		}
 	}
 	return mpv
+}
+
+// withConversions publishes the settings conversions on the package version.
+func withConversions(mpv *v1alpha1.ModulePackageVersion, conversions ...v1alpha1.PackageSettingsConversion) *v1alpha1.ModulePackageVersion {
+	mpv.Status.PackageSchemas.SettingsConversions = conversions
+	return mpv
+}
+
+// renameCountConversion is version 2 of v2SettingsSchema: version 1 named "replicas" "count".
+var renameCountConversion = v1alpha1.PackageSettingsConversion{
+	Version: 2,
+	Expr:    []string{"if .count != null then .replicas = .count end", "del(.count)"},
 }
 
 // v2SettingsSchema requires a string "replicas" and freezes "storageClass" once the version runs.
@@ -1912,6 +1926,8 @@ func TestModuleConfigValidationHandlerV2_Settings(t *testing.T) {
 	tests := []struct {
 		name           string
 		installed      bool
+		convert        bool
+		version        int
 		settings       map[string]any
 		validateResult settingscheck.Result
 		wantAllowed    bool
@@ -1919,6 +1935,57 @@ func TestModuleConfigValidationHandlerV2_Settings(t *testing.T) {
 		wantRuntime    bool
 		wantWarnings   []string
 	}{
+		{
+			name:         "not installed: older settings are converted before the schema check",
+			convert:      true,
+			settings:     map[string]any{"count": "2"},
+			wantAllowed:  true,
+			wantWarnings: []string{"spec.version=1 is obsolete. Please migrate spec.settings to the latest version 2"},
+		},
+		{
+			name:         "an older settings version warns",
+			convert:      true,
+			settings:     map[string]any{"count": "2"},
+			wantAllowed:  true,
+			wantWarnings: []string{"spec.version=1 is obsolete. Please migrate spec.settings to the latest version 2"},
+		},
+		{
+			name:        "the latest settings version does not warn",
+			convert:     true,
+			version:     2,
+			settings:    map[string]any{"replicas": "2"},
+			wantAllowed: true,
+		},
+		{
+			name:        "not installed: latest settings are not converted",
+			convert:     true,
+			version:     2,
+			settings:    map[string]any{"count": "2"},
+			wantMessage: "spec.settings are not valid",
+		},
+		{
+			name:        "a settings version beyond the chain is rejected",
+			convert:     true,
+			version:     3,
+			settings:    map[string]any{"replicas": "2"},
+			wantMessage: "settings version 3 is not supported, the latest is 2",
+		},
+		{
+			name:        "a settings version beyond a package without conversions is rejected",
+			version:     2,
+			settings:    map[string]any{"replicas": "2"},
+			wantMessage: "the latest is 1",
+		},
+		{
+			name:           "installed: the runtime validates older settings at their version",
+			installed:      true,
+			convert:        true,
+			settings:       map[string]any{"count": "2"},
+			validateResult: settingscheck.Result{Valid: true},
+			wantAllowed:    true,
+			wantWarnings:   []string{"spec.version=1 is obsolete. Please migrate spec.settings to the latest version 2"},
+			wantRuntime:    true,
+		},
 		{
 			name:        "not installed: settings matching the package version schema are allowed",
 			settings:    map[string]any{"replicas": "2"},
@@ -1951,13 +2018,26 @@ func TestModuleConfigValidationHandlerV2_Settings(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			manager := &fakeModulePackageManager{validateResult: tt.validateResult}
-			handler := newTestHandlerV2(t, manager, false, newModuleV2(tt.installed), newMPV(nil, v2SettingsSchema()))
+			mpv := newMPV(nil, v2SettingsSchema())
+			if tt.convert {
+				mpv = withConversions(mpv, renameCountConversion)
+			}
 
-			resp := callHandler(t, handler, newModuleConfigAdmissionReview("CREATE", newModuleConfigV2(nil, tt.settings, nil), nil))
+			handler := newTestHandlerV2(t, manager, false, newModuleV2(tt.installed), mpv)
+
+			cfg := newModuleConfigV2(nil, tt.settings, nil)
+			if tt.version != 0 {
+				cfg.Spec.Version = tt.version
+			}
+
+			resp := callHandler(t, handler, newModuleConfigAdmissionReview("CREATE", cfg, nil))
 
 			assertResponse(t, resp, tt.wantAllowed, tt.wantMessage)
 			assert.Equal(t, tt.wantRuntime, manager.validateCalled)
-			if tt.wantWarnings != nil {
+			if tt.wantRuntime {
+				assert.Equal(t, cfg.Spec.Version, manager.validateVersion, "the runtime converts from the request's version")
+			}
+			if tt.wantWarnings != nil || tt.wantAllowed {
 				assert.Equal(t, tt.wantWarnings, resp.Warnings)
 			}
 		})
@@ -1969,9 +2049,11 @@ func TestModuleConfigValidationHandlerV2_Transition(t *testing.T) {
 	tests := []struct {
 		name        string
 		ran         bool
+		convert     bool
 		oldSettings map[string]any
 		newSettings map[string]any
 		oldVersion  int
+		newVersion  int
 		wantAllowed bool
 		wantMessage string
 	}{
@@ -1995,7 +2077,33 @@ func TestModuleConfigValidationHandlerV2_Transition(t *testing.T) {
 			wantMessage: "gold tier is sticky",
 		},
 		{
-			name:        "a settings version change skips the transition rules",
+			name:        "a settings version change compares both sides at the latest version",
+			ran:         true,
+			convert:     true,
+			oldSettings: map[string]any{"count": "1", "storageClass": "slow"},
+			newSettings: map[string]any{"replicas": "1", "storageClass": "fast"},
+			newVersion:  2,
+			wantMessage: "storageClass",
+		},
+		{
+			name:        "a settings version change keeping the values is allowed",
+			ran:         true,
+			convert:     true,
+			oldSettings: map[string]any{"count": "1", "storageClass": "slow", "tier": "gold"},
+			newSettings: map[string]any{"replicas": "1", "storageClass": "slow", "tier": "gold"},
+			newVersion:  2,
+			wantAllowed: true,
+		},
+		{
+			name:        "a settings version change runs the CEL transition rules",
+			convert:     true,
+			oldSettings: map[string]any{"count": "1", "tier": "gold"},
+			newSettings: map[string]any{"replicas": "1", "tier": "silver"},
+			newVersion:  2,
+			wantMessage: "gold tier is sticky",
+		},
+		{
+			name:        "old settings beyond the chain skip the transition rules",
 			ran:         true,
 			oldSettings: map[string]any{"replicas": "1", "storageClass": "slow", "tier": "gold"},
 			newSettings: map[string]any{"replicas": "1", "storageClass": "fast", "tier": "silver"},
@@ -2012,14 +2120,24 @@ func TestModuleConfigValidationHandlerV2_Transition(t *testing.T) {
 				module = ranModuleV2(`{"replicas":"1","storageClass":"slow"}`)
 			}
 
-			handler := newTestHandlerV2(t, manager, false, module, newMPV(nil, v2SettingsSchema()))
+			mpv := newMPV(nil, v2SettingsSchema())
+			if tt.convert {
+				mpv = withConversions(mpv, renameCountConversion)
+			}
+
+			handler := newTestHandlerV2(t, manager, false, module, mpv)
 
 			oldCfg := newModuleConfigV2(nil, tt.oldSettings, nil)
 			if tt.oldVersion != 0 {
 				oldCfg.Spec.Version = tt.oldVersion
 			}
 
-			resp := callHandler(t, handler, newModuleConfigAdmissionReview("UPDATE", newModuleConfigV2(nil, tt.newSettings, nil), oldCfg))
+			newCfg := newModuleConfigV2(nil, tt.newSettings, nil)
+			if tt.newVersion != 0 {
+				newCfg.Spec.Version = tt.newVersion
+			}
+
+			resp := callHandler(t, handler, newModuleConfigAdmissionReview("UPDATE", newCfg, oldCfg))
 
 			assertResponse(t, resp, tt.wantAllowed, tt.wantMessage)
 		})

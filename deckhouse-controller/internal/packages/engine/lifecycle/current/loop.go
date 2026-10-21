@@ -124,7 +124,7 @@ func (r *Reconciler) startOperation(ctx context.Context, kind operation.Kind, in
 
 	r.state.busy = true
 	r.operationState = st
-	r.operation = operation.Start(ctx, kind, inputs, st.steps)
+	r.operation = operation.Start(ctx, r.name, kind, inputs, st.steps)
 }
 
 func (r *Reconciler) collectOperation() *operationState {

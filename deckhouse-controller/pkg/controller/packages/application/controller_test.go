@@ -238,11 +238,12 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		require.Len(suite.T(), suite.manager.updated, 1)
 		assert.Equal(suite.T(), engine.Application{
-			Namespace:   appNamespace,
-			Name:        appName,
-			PackageName: packageName,
-			Version:     "v1.0.1",
-			Settings:    map[string]any{"host": "app.example.com"},
+			Namespace:       appNamespace,
+			Name:            appName,
+			PackageName:     packageName,
+			Version:         "v1.0.1",
+			Settings:        map[string]any{"host": "app.example.com"},
+			SettingsVersion: 2,
 			Repository: registry.Remote{
 				Name:         "deckhouse",
 				Repository:   "registry.example.com/test",

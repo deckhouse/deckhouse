@@ -1,0 +1,68 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  finalizers:
+  - applicationpackageversion.deckhouse.io/used-by-application
+  labels:
+    packages.deckhouse.io/exist-in-registry: "true"
+    packages.deckhouse.io/package: test
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-test-v1.0.0
+  resourceVersion: "3"
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.0
+status:
+  conditions:
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: Succeeded
+    status: "True"
+    type: MetadataLoaded
+  packageMetadata:
+    changelog: {}
+    versionCompatibilityRules:
+      downgrade:
+        step:
+          major: 0
+          minor: 0
+          patches: -1
+      upgrade:
+        step:
+          major: 0
+          minor: 1
+          patches: -1
+  packageSchemas:
+    settingsConversions:
+    - descriptions:
+        en: The a field is renamed to b.
+        ru: The a field is renamed to b (ru).
+      expr:
+      - .b = .a
+      - del(.a)
+      version: 2
+    - expr:
+      - .c = .b
+      - del(.b)
+      version: 3
+    settingsSchema:
+      openAPIV3Schema:
+        properties:
+          c:
+            type: string
+        type: object
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+  resourceVersion: "1"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+status: {}

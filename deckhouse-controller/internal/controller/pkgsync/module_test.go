@@ -197,6 +197,36 @@ func TestSyncModulesFromModuleReleases(t *testing.T) {
 		assert.Equal(t, "example", module.Spec.PackageRepositoryName)
 		assert.False(t, module.IsEmbedded())
 	})
+
+	t.Run("every release is deleted, finalizers and all", func(t *testing.T) {
+		deployed := testModuleRelease("echo", "deckhouse", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed)
+		deployed.Finalizers = []string{
+			v1alpha1.ModuleReleaseFinalizerExistOnFs,
+			v1alpha1.ModuleReleaseFinalizerMetricsRegistered,
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), deployed,
+			testModuleRelease("echo", "deckhouse", "1.3.0", v1alpha1.ModuleReleasePhasePending))
+		require.NoError(t, s.sync(ctx))
+
+		releases := new(v1alpha1.ModuleReleaseList)
+		require.NoError(t, cl.List(ctx, releases))
+		assert.Empty(t, releases.Items)
+		assert.Equal(t, "v1.2.3", getModule(t, cl, "echo").Spec.PackageVersion)
+	})
+
+	t.Run("a version changed after the migration survives the next sync", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
+			testModuleRelease("echo", "deckhouse", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed))
+		require.NoError(t, s.sync(ctx))
+
+		module := getModule(t, cl, "echo")
+		module.Spec.PackageVersion = "v1.4.0"
+		require.NoError(t, cl.Update(ctx, module))
+
+		require.NoError(t, s.sync(ctx))
+		assert.Equal(t, "v1.4.0", getModule(t, cl, "echo").Spec.PackageVersion)
+	})
 }
 
 func TestSyncModulesFromModuleConfig(t *testing.T) {

@@ -29,6 +29,7 @@ import (
 
 	"github.com/werf/nelm/pkg/action"
 	"github.com/werf/nelm/pkg/common"
+	"github.com/werf/nelm/pkg/featgate"
 	"github.com/werf/nelm/pkg/legacy/progrep"
 	nelmlog "github.com/werf/nelm/pkg/log"
 	"go.opentelemetry.io/otel"
@@ -138,6 +139,8 @@ func New(logger *log.Logger, opts ...Option) *Client {
 	// Set the default nelm logger to our custom adapter
 	one.Do(func() {
 		nelmlog.Default = newNelmLogger(logger)
+		// Drop explicit nulls like addon-operator's nelm client does; applied, they make nelm own the field.
+		featgate.FeatGateCleanNullFields.Enable()
 	})
 
 	// Set default options with history limit of 10 revisions

@@ -26,6 +26,7 @@ spec:
   packageVersion: v1.0.1
   settings:
     host: app.example.com
+  settingsVersion: 2
 status:
   lastAppliedConfiguration: null
   tracking: null

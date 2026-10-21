@@ -289,6 +289,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		Version:          app.Spec.PackageVersion,
 		Repository:       registry.BuildRemote(repo),
 		Settings:         app.Spec.Settings.GetMap(),
+		SettingsVersion:  app.Spec.SettingsVersion,
 		Maintenance:      app.Spec.Maintenance,
 		ResourceRequests: toResourceRequests(app.Spec.ResourceRequests),
 		UpdateSettings:   r.updateSettings(app),

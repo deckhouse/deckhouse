@@ -29,10 +29,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -46,9 +44,6 @@ const (
 	maxConcurrentReconciles = 1
 
 	defaultRequeue = 15 * time.Second
-
-	schemaTypeSettings = iota
-	schemaTypeValues
 )
 
 // reconciler promotes draft ApplicationPackageVersion resources by loading
@@ -190,20 +185,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	}
 
 	original := apv.DeepCopy()
-	if err = r.setPackageMetadata(apv, meta); err != nil {
-		r.setMetadataLoadedConditionFalse(
-			apv,
-			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
-			fmt.Sprintf("fetch package metadata: %s", err.Error()),
-		)
-
-		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch status '%s': %w", apv.Name, err)
-		}
-
-		return fmt.Errorf("set package metadata '%s': %w", apv.Name, err)
-	}
-
+	r.setPackageMetadata(apv, meta)
 	r.setMetadataLoadedConditionTrue(apv)
 
 	if err = r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
@@ -298,12 +280,12 @@ func (r *reconciler) setMetadataLoadedConditionFalse(apv *v1alpha1.ApplicationPa
 
 // setPackageMetadata projects parsed package metadata onto the ApplicationPackageVersion
 // status. It overwrites Status.PackageMetadata with the stage, localized descriptions,
-// runtime requirements, version compatibility rules, and changelog extracted from the package image, then delegates
-// to setPackageSchema for the settings and values OpenAPI schemas. A nil meta is a
+// runtime requirements, version compatibility rules, and changelog extracted from the package image, and the
+// package schemas (settings and values OpenAPI schemas, settings conversions). A nil meta is a
 // no-op, so callers may invoke this unconditionally after a best-effort parse.
-func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion, meta *packageMetadata) error {
+func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion, meta *packageMetadata) {
 	if meta == nil {
-		return nil
+		return
 	}
 
 	apv.Status.PackageMetadata = meta.definition.ConvertToStatusMetadata()
@@ -312,53 +294,5 @@ func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion,
 		Fixes:    meta.changelog.Fixes,
 	}
 
-	if err := setPackageSchema(apv, schemaTypeSettings, meta.rawSettingsSchema); err != nil {
-		return fmt.Errorf("set settings schema: %w", err)
-	}
-
-	if err := setPackageSchema(apv, schemaTypeValues, meta.rawValuesSchema); err != nil {
-		return fmt.Errorf("set values schema: %w", err)
-	}
-
-	return nil
-}
-
-// setPackageSchema parses a raw YAML/JSON OpenAPI v3 schema and stores it on the
-// ApplicationPackageVersion status under either SettingsSchema or ValuesSchema,
-// selected by schemaType. The schema is stored as a typed openapi.OpenAPIV3Schema
-// that preserves all Deckhouse x-* extensions as explicit fields.
-// The x-config-version envelope marker is stripped.
-// An empty rawSchema is treated as "no schema supplied" and returns nil
-// without touching the status. Unknown schemaType values are silently ignored.
-func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, rawSchema []byte) error {
-	if len(rawSchema) == 0 {
-		return nil
-	}
-
-	var wrapper struct {
-		Version string `json:"x-config-version"`
-		openapi.OpenAPIV3Schema
-	}
-
-	if err := yaml.Unmarshal(rawSchema, &wrapper); err != nil {
-		return fmt.Errorf("invalid JSON schema: %w", err)
-	}
-
-	if apv.Status.PackageSchemas == nil {
-		apv.Status.PackageSchemas = new(v1alpha1.PackageVersionStatusSchemas)
-	}
-
-	schema := &v1alpha1.PackageSchema{
-		OpenAPIV3Schema: &wrapper.OpenAPIV3Schema,
-	}
-
-	switch schemaType {
-	case schemaTypeSettings:
-		apv.Status.PackageSchemas.SettingsSchema = schema
-	case schemaTypeValues:
-		apv.Status.PackageSchemas.ValuesSchema = schema
-	default:
-	}
-
-	return nil
+	apv.Status.PackageSchemas = meta.schemas
 }

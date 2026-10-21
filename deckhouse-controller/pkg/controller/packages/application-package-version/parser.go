@@ -25,6 +25,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -39,7 +40,8 @@ const (
 	settingsSchemaFile = "openapi/settings.yaml"
 
 	// legacySettingsSchemaFile is the previous name of settingsSchemaFile, retained
-	// for backward compatibility with packages built before the rename.
+	// for backward compatibility with packages built before the rename; used only
+	// when settingsSchemaFile is absent.
 	legacySettingsSchemaFile = "openapi/config-values.yaml"
 
 	// maxMetadataFileSize limits the size of individual metadata files extracted from tar archives.
@@ -49,11 +51,10 @@ const (
 
 // packageMetadata holds all metadata extracted from a package image tar archive.
 type packageMetadata struct {
-	version           string
-	changelog         packageChangelog
-	definition        dto.ApplicationDefinition
-	rawSettingsSchema []byte
-	rawValuesSchema   []byte
+	version    string
+	changelog  packageChangelog
+	definition dto.ApplicationDefinition
+	schemas    *v1alpha1.PackageVersionStatusSchemas
 }
 
 // packageChangelog represents user-facing release notes for a package version.
@@ -65,25 +66,30 @@ type packageChangelog struct {
 // metadataReader buffers the raw content of each metadata file extracted from the tar.
 // Each buffer may remain empty if the corresponding file is absent from the archive.
 type metadataReader struct {
-	definitionReader     *bytes.Buffer
-	versionReader        *bytes.Buffer
-	changelogReader      *bytes.Buffer
-	valuesSchemaReader   *bytes.Buffer
-	settingsSchemaReader *bytes.Buffer
+	definitionReader           *bytes.Buffer
+	versionReader              *bytes.Buffer
+	changelogReader            *bytes.Buffer
+	valuesSchemaReader         *bytes.Buffer
+	settingsSchemaReader       *bytes.Buffer
+	legacySettingsSchemaReader *bytes.Buffer
+	// conversions holds the raw settings conversion files, one per file.
+	conversions [][]byte
 }
 
 // parseVersionMetadataByImage extracts package metadata from a tar-formatted image reader.
-// It looks for three files: version.json, package.yaml (definition), and changelog.yaml.
-// All files are optional — missing files result in zero-value fields in the returned metadata.
+// It looks for version.json, package.yaml (definition), changelog.yaml, the openapi
+// schema files (settings.yaml with the config-values.yaml fallback, values.yaml) and
+// the settings conversion files (openapi/conversions/*.yaml). All files are optional — missing files result in zero-value fields in the returned metadata.
 func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reader) (*packageMetadata, error) {
 	meta := new(packageMetadata)
 
 	mr := &metadataReader{
-		versionReader:        bytes.NewBuffer(nil),
-		changelogReader:      bytes.NewBuffer(nil),
-		definitionReader:     bytes.NewBuffer(nil),
-		valuesSchemaReader:   bytes.NewBuffer(nil),
-		settingsSchemaReader: bytes.NewBuffer(nil),
+		versionReader:              bytes.NewBuffer(nil),
+		changelogReader:            bytes.NewBuffer(nil),
+		definitionReader:           bytes.NewBuffer(nil),
+		valuesSchemaReader:         bytes.NewBuffer(nil),
+		settingsSchemaReader:       bytes.NewBuffer(nil),
+		legacySettingsSchemaReader: bytes.NewBuffer(nil),
 	}
 
 	if err := mr.untarMetadata(img); err != nil {
@@ -114,20 +120,26 @@ func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reade
 		}
 	}
 
-	if mr.settingsSchemaReader.Len() > 0 {
-		meta.rawSettingsSchema = mr.settingsSchemaReader.Bytes()
+	settingsRaw := mr.settingsSchemaReader.Bytes()
+	if len(settingsRaw) == 0 {
+		settingsRaw = mr.legacySettingsSchemaReader.Bytes()
 	}
 
-	if mr.valuesSchemaReader.Len() > 0 {
-		meta.rawValuesSchema = mr.valuesSchemaReader.Bytes()
+	schemas, err := v1alpha1.ParsePackageSchemas(settingsRaw, mr.valuesSchemaReader.Bytes(), mr.conversions)
+	if err != nil {
+		return nil, fmt.Errorf("parse package schemas: %w", err)
 	}
+
+	meta.schemas = schemas
 
 	return meta, nil
 }
 
 // untarMetadata iterates through the tar archive and copies the content of recognized
-// metadata files (version.json, changelog.yaml/yml, package.yaml) into their respective buffers.
-// Unrecognized entries are skipped. Each file read is bounded by maxMetadataFileSize.
+// metadata files (version.json, changelog.yaml/yml, package.yaml, the openapi schema and
+// settings conversion files) into their respective buffers. Unrecognized entries are
+// skipped. Each file read is bounded by maxMetadataFileSize. The whole archive is read:
+// the number of conversion files is not known upfront.
 func (r *metadataReader) untarMetadata(rc io.Reader) error {
 	tr := tar.NewReader(rc)
 	for {
@@ -148,8 +160,12 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 			if _, err = io.Copy(r.valuesSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
 				return err
 			}
-		case settingsSchemaFile, legacySettingsSchemaFile:
+		case settingsSchemaFile:
 			if _, err = io.Copy(r.settingsSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
+				return err
+			}
+		case legacySettingsSchemaFile:
+			if _, err = io.Copy(r.legacySettingsSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
 				return err
 			}
 		case "changelog.yaml", "changelog.yml":
@@ -161,16 +177,20 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 				return err
 			}
 		default:
-			continue
-		}
+			if !v1alpha1.IsSettingsConversionFile(hdr.Name) {
+				continue
+			}
 
-		// All metadata files found — skip remaining tar entries.
-		if r.versionReader.Len() > 0 &&
-			r.changelogReader.Len() > 0 &&
-			r.definitionReader.Len() > 0 &&
-			r.valuesSchemaReader.Len() > 0 &&
-			r.settingsSchemaReader.Len() > 0 {
-			return nil
+			if len(r.conversions) == v1alpha1.MaxSettingsConversions {
+				return fmt.Errorf("more than %d settings conversion files", v1alpha1.MaxSettingsConversions)
+			}
+
+			conversion, err := io.ReadAll(io.LimitReader(tr, maxMetadataFileSize))
+			if err != nil {
+				return err
+			}
+
+			r.conversions = append(r.conversions, conversion)
 		}
 	}
 }

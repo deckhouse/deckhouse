@@ -211,9 +211,9 @@ func TestUpdateSequenceOfTheEngine(t *testing.T) {
 	k.MustBoot()
 
 	k.ApplyModule(enginetest.Module(moduleName, v1), true)
-	k.WaitReport(moduleName, "v1 runs", func(r model.Report) bool {
-		return enginetest.Running(r, v1) && r.Current.AppliedChecksum != ""
-	})
+	v1Installed := func(r model.Report) bool { return enginetest.Running(r, v1) && r.Current.AppliedChecksum != "" }
+	k.WaitReport(moduleName, "v1 runs", v1Installed)
+	waitCollected(k, "v1's install collected", v1Installed)
 
 	installed := len(k.History(moduleName))
 
@@ -261,7 +261,9 @@ func TestDisableSequenceOfTheEngine(t *testing.T) {
 	k.MustBoot()
 
 	k.ApplyModule(enginetest.Module(moduleName, v1), true)
-	k.WaitReport(moduleName, "v1 runs", func(r model.Report) bool { return enginetest.Running(r, v1) })
+	v1Runs := func(r model.Report) bool { return enginetest.Running(r, v1) }
+	k.WaitReport(moduleName, "v1 runs", v1Runs)
+	waitCollected(k, "v1's install collected", v1Runs)
 
 	installed := len(k.History(moduleName))
 
@@ -293,6 +295,15 @@ func TestDisableSequenceOfTheEngine(t *testing.T) {
 
 	last := modules[len(modules)-1]
 	assert.Equal(t, ptrFalse(), last.Status.Enabled)
+}
+
+// waitCollected waits until the history's last Report satisfies pred: the collector collapses
+// changes, so a Report the engine already moved past may otherwise never reach the history.
+func waitCollected(k *enginetest.Kit, desc string, pred func(model.Report) bool) {
+	k.Wait(desc, func() bool {
+		h := k.History(moduleName)
+		return len(h) > 0 && pred(h[len(h)-1])
+	})
 }
 
 func ptrFalse() *bool {

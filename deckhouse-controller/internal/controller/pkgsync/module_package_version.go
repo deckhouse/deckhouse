@@ -110,7 +110,7 @@ func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName
 
 	meta := def.ConvertToStatusMetadata()
 
-	settingsRaw, valuesRaw, err := loader.LoadEmbeddedSchemas(moduleDir)
+	raw, err := loader.LoadEmbeddedSchemas(moduleDir)
 	if err != nil {
 		s.logger.Warn("module dir holds no readable schemas, skip its package version",
 			slog.String("dir", moduleDir), log.Err(err))
@@ -118,7 +118,7 @@ func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName
 		return nil
 	}
 
-	schemas, err := v1alpha1.ParsePackageSchemas(settingsRaw, valuesRaw)
+	schemas, err := v1alpha1.ParsePackageSchemas(raw.Settings, raw.Values, raw.Conversions)
 	if err != nil {
 		s.logger.Warn("module schemas do not parse, skip its package version",
 			slog.String("dir", moduleDir), log.Err(err))
@@ -140,8 +140,8 @@ func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName
 //
 // It differs from an embedded module in what disk can tell about it: the global
 // hooks dir holds no definition file - the hooks are compiled into the binary -
-// so the metadata stays empty and only the settings and values schemas are
-// filled. An empty metadata object rather than none keeps every reader that
+// so the metadata stays empty and only the settings and values schemas and the
+// settings conversions are filled. An empty metadata object rather than none keeps every reader that
 // reaches into it, such as the exclusive group and stage getters, off a nil
 // dereference. The version is written even when the dir holds no schema files:
 // the package and the version are what the module controller gates
@@ -155,12 +155,12 @@ func (s *syncer) syncGlobalModulePackageVersion(ctx context.Context, moduleSourc
 		return nil
 	}
 
-	settingsRaw, valuesRaw, err := loader.LoadGlobalSchemas(s.globalHooksDir)
+	raw, err := loader.LoadGlobalSchemas(s.globalHooksDir)
 	if err != nil {
 		return fmt.Errorf("load the global schemas from '%s': %w", s.globalHooksDir, err)
 	}
 
-	schemas, err := v1alpha1.ParsePackageSchemas(settingsRaw, valuesRaw)
+	schemas, err := v1alpha1.ParsePackageSchemas(raw.Settings, raw.Values, raw.Conversions)
 	if err != nil {
 		return fmt.Errorf("parse the global schemas from '%s': %w", s.globalHooksDir, err)
 	}

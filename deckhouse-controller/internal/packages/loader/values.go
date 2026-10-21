@@ -75,25 +75,82 @@ func loadValues(name, path string) (addonutils.Values, []byte, []byte, error) {
 	return static, config, values, nil
 }
 
-// LoadEmbeddedSchemas reads the raw settings and values schemas of an
-// embedded module, without the rest of the config LoadEmbeddedConf brings. A
-// module without the schema files yields nils. The path may name the module
-// directly or carry the on-disk weight prefix.
-func LoadEmbeddedSchemas(moduleDir string) ([]byte, []byte, error) {
-	moduleDir, err := resolveEmbeddedPath(moduleDir)
-	if err != nil {
-		return nil, nil, fmt.Errorf("resolve embedded path: %w", err)
-	}
-
-	return loadPackageSchemas(moduleDir)
+// RawSchemas are the raw schema files of a package as disk holds them.
+type RawSchemas struct {
+	// Settings is openapi/settings.yaml (or the legacy openapi/config-values.yaml); nil when absent.
+	Settings []byte
+	// Values is openapi/values.yaml; nil when absent.
+	Values []byte
+	// Conversions are the openapi/conversions/*.yaml files, one per file; nil when absent.
+	Conversions [][]byte
 }
 
-// LoadGlobalSchemas reads the raw settings and values schemas of the global
+// LoadEmbeddedSchemas reads the raw schemas and settings conversions of an
+// embedded module, without the rest of the config LoadEmbeddedConf brings. A
+// module without the files yields nils. The path may name the module directly
+// or carry the on-disk weight prefix.
+func LoadEmbeddedSchemas(moduleDir string) (RawSchemas, error) {
+	moduleDir, err := resolveEmbeddedPath(moduleDir)
+	if err != nil {
+		return RawSchemas{}, fmt.Errorf("resolve embedded path: %w", err)
+	}
+
+	return loadRawSchemas(moduleDir)
+}
+
+// LoadGlobalSchemas reads the raw schemas and settings conversions of the global
 // module from the given global hooks dir. Unlike LoadEmbeddedSchemas it resolves
 // no weight prefix: the global dir carries none, and it holds no definition file
 // either, so the schemas are all a reader gets. A dir without them yields nils.
-func LoadGlobalSchemas(globalHooksDir string) ([]byte, []byte, error) {
-	return loadPackageSchemas(globalHooksDir)
+func LoadGlobalSchemas(globalHooksDir string) (RawSchemas, error) {
+	return loadRawSchemas(globalHooksDir)
+}
+
+// loadRawSchemas reads the schema and settings conversion files of the package in packageDir.
+func loadRawSchemas(packageDir string) (RawSchemas, error) {
+	settings, values, err := loadPackageSchemas(packageDir)
+	if err != nil {
+		return RawSchemas{}, err
+	}
+
+	conversions, err := loadRawConversions(packageDir)
+	if err != nil {
+		return RawSchemas{}, err
+	}
+
+	return RawSchemas{Settings: settings, Values: values, Conversions: conversions}, nil
+}
+
+// loadRawConversions reads every *.yaml file of the package's openapi/conversions
+// directory, the files loadConversions builds the converter from; nil without the directory.
+func loadRawConversions(packageDir string) ([][]byte, error) {
+	dir := filepath.Join(packageDir, openAPIDir, conversionsDir)
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("read dir '%s': %w", dir, err)
+	}
+
+	var conversions [][]byte
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".yaml" {
+			continue
+		}
+
+		path := filepath.Join(dir, entry.Name())
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("read file '%s': %w", path, err)
+		}
+
+		conversions = append(conversions, content)
+	}
+
+	return conversions, nil
 }
 
 // loadPackageSchemas reads settings.yaml (or legacy config-values.yaml) and

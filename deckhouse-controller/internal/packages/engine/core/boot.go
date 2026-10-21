@@ -24,6 +24,10 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle"
@@ -39,6 +43,9 @@ import (
 // 10 minutes; Boot fails instead, because Global is the barrier every package runs behind and going
 // on without its values is not an option: the restart (or another replica) is the visible way out.
 const globalSyncTimeout = 10 * time.Minute
+
+// tracerName is the instrumentation scope of the Boot spans.
+const tracerName = "package-engine"
 
 // ErrGlobalNotSynced is Boot's error when Global's hooks did not synchronize within
 // globalSyncTimeout.
@@ -85,6 +92,22 @@ type resumeState struct {
 // Restored Currents run once after boot with their checkpoint, without waiting for Apply (applied
 // is not persisted); an unchanged release makes that run cheap.
 func (e *Engine) Boot(ctx context.Context, bootGlobal *BootGlobal, packages []model.BootPackage) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "Boot", trace.WithAttributes(
+		attribute.Int("packages", len(packages)),
+		attribute.Bool("global", bootGlobal != nil)))
+	defer span.End()
+
+	err := e.boot(ctx, bootGlobal, packages)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+	}
+
+	return err
+}
+
+// boot is Boot under its span.
+func (e *Engine) boot(ctx context.Context, bootGlobal *BootGlobal, packages []model.BootPackage) error {
 	seen := make(map[string]struct{}, len(packages))
 	for _, pkg := range packages {
 		if pkg.Name == schedule.GlobalNode {
@@ -121,7 +144,10 @@ func (e *Engine) Boot(ctx context.Context, bootGlobal *BootGlobal, packages []mo
 		e.mu.Unlock()
 	}
 
-	restored, err := e.restore(ctx, packages)
+	restoreCtx, restoreSpan := otel.Tracer(tracerName).Start(ctx, "restore")
+	restored, err := e.restore(restoreCtx, packages)
+	restoreSpan.End()
+
 	if err != nil {
 		return err
 	}
@@ -162,6 +188,9 @@ func (e *Engine) Boot(ctx context.Context, bootGlobal *BootGlobal, packages []mo
 	// a cold node may take long on its own, and its failures end Boot anyway.
 	deadline := retry.OrWall(e.deps.Global.Clock).NewTimer(globalSyncTimeout)
 	defer deadline.Stop()
+
+	_, waitSpan := otel.Tracer(tracerName).Start(ctx, "waitGlobalSync")
+	defer waitSpan.End()
 
 	select {
 	case <-g.Synced():
@@ -260,13 +289,13 @@ func checkpointAt(settings *model.Settings, latest int) *model.Settings {
 	return &at
 }
 
-// versionedSettings is implemented by objects with a versioned settings schema (modules).
+// versionedSettings is implemented by objects with a versioned settings schema (modules, applications).
 type versionedSettings interface {
 	LatestSettingsVersion() int
 }
 
 // latestSettingsVersion is obj's latest settings-schema version; 0 for an object without versioned
-// settings (applications ignore the version).
+// settings.
 func latestSettingsVersion(obj model.Package) int {
 	if v, ok := obj.(versionedSettings); ok {
 		return v.LatestSettingsVersion()

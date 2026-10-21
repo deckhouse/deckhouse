@@ -34,7 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-const defaultRestoreParallelism = 8
+const defaultRestoreParallelism = 12
 
 // scheduler is what Engine consumes from the scheduler (*schedule.Scheduler) and hands on: New
 // gives the same value to every package Reconciler, Current and Global, so one graph serves all.

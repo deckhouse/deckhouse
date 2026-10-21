@@ -252,7 +252,7 @@ func (r *Reconciler) prepare(ctx context.Context, desired model.Desired) {
 		return
 	}
 
-	c.op = operation.Start(ctx, operation.Prepare, c.target.Version, prepareSteps(r.deps, c.target, &c.prepared))
+	c.op = operation.Start(ctx, r.name, operation.Prepare, c.target.Version, prepareSteps(r.deps, c.target, &c.prepared))
 }
 
 // preparationDone is the Done channel of the attempt in flight; nil, which blocks, when none is.
