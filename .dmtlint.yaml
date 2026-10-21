@@ -18,3 +18,6 @@ global:
       rules:
         no-new-privileges:
           impact: warn
+        # Until the modules violating PSS restricted are fixed or get SecurityPolicyExceptions.
+        pod-security-standards:
+          impact: warn
