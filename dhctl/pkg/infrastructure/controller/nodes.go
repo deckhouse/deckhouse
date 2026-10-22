@@ -16,7 +16,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
@@ -54,11 +53,8 @@ func getNgMetaConfig(ctx context.Context, clusterMetaConfig *config.MetaConfig, 
 		return nil, fmt.Errorf("unable to prepare copied config: %v", err)
 	}
 	if settings != nil {
-		nodeGroupsSettings, err := json.Marshal([]json.RawMessage{settings})
-		if err != nil {
+		if err := cfg.ApplyNodeGroupSettings(settings); err != nil {
 			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
-		} else {
-			cfg.ProviderClusterConfig["nodeGroups"] = nodeGroupsSettings
 		}
 	}
 

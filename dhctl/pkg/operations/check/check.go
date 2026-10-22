@@ -208,17 +208,16 @@ func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClien
 	}
 
 	cfg := metaConfig
-	if nodeGroupState.Settings != nil {
-		nodeGroupsSettings, err := json.Marshal([]json.RawMessage{nodeGroupState.Settings})
+	// Stored group settings only matter to the legacy provider configuration: with the provider
+	// configured through resources there is no document to put them into.
+	if nodeGroupState.Settings != nil && metaConfig.HasLegacyProviderConfig() {
+		// we use dummy validator because metaConfig was prepared early
+		cfg, err = metaConfig.DeepCopy().Prepare(ctx, config.DummyValidatorProvider())
 		if err != nil {
+			return plan.HasNoChanges, nil, nil, fmt.Errorf("unable to prepare copied config: %v", err)
+		}
+		if err := cfg.ApplyNodeGroupSettings(nodeGroupState.Settings); err != nil {
 			dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
-		} else {
-			// we use dummy validator because metaConfig was prepared early
-			cfg, err = metaConfig.DeepCopy().Prepare(ctx, config.DummyValidatorProvider())
-			if err != nil {
-				return plan.HasNoChanges, nil, nil, fmt.Errorf("unable to prepare copied config: %v", err)
-			}
-			cfg.ProviderClusterConfig["nodeGroups"] = nodeGroupsSettings
 		}
 	}
 

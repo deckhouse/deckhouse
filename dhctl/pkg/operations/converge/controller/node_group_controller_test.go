@@ -15,10 +15,13 @@
 package controller
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
 func Test_sortNodeNames(t *testing.T) {
@@ -165,4 +168,112 @@ func Test_getNodesToDeleteInfo(t *testing.T) {
 			require.Len(t, remaining, len(test.nodes)-len(deleted))
 		})
 	}
+}
+
+// The nodes of a group are deleted with the settings the group had when they were created, but only
+// for the legacy provider configuration: a cluster that configures its provider through resources has
+// no document to put the settings into.
+func Test_nodeGroupMetaConfig(t *testing.T) {
+	storedSettings := []byte(`{"name":"stored","replicas":1}`)
+
+	tests := []struct {
+		name     string
+		shared   *config.MetaConfig
+		settings []byte
+		// sameConfig reports that the configuration is used as it is, without a copy.
+		sameConfig bool
+		// nodeGroups is the "nodeGroups" document of the returned configuration; empty means there is none.
+		nodeGroups string
+	}{
+		{
+			name:       "legacy configuration gets the stored settings in a copy",
+			shared:     legacyCloudMetaConfig(),
+			settings:   storedSettings,
+			nodeGroups: `[{"name":"stored","replicas":1}]`,
+		},
+		{
+			name:       "legacy configuration without stored settings is used as it is",
+			shared:     legacyCloudMetaConfig(),
+			sameConfig: true,
+			nodeGroups: currentNodeGroups,
+		},
+		{
+			name:       "provider configured through resources is used as it is",
+			shared:     resourcesCloudMetaConfig(),
+			settings:   storedSettings,
+			sameConfig: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			sharedBefore := string(test.shared.ProviderClusterConfig["nodeGroups"])
+
+			var cfg *config.MetaConfig
+			require.NotPanics(t, func() {
+				var err error
+				cfg, err = nodeGroupMetaConfig(t.Context(), test.shared, test.settings)
+				require.NoError(t, err)
+			})
+
+			if test.sameConfig {
+				require.Same(t, test.shared, cfg)
+			} else {
+				require.NotSame(t, test.shared, cfg)
+			}
+
+			if test.nodeGroups == "" {
+				require.Empty(t, cfg.ProviderClusterConfig["nodeGroups"])
+			} else {
+				require.JSONEq(t, test.nodeGroups, string(cfg.ProviderClusterConfig["nodeGroups"]))
+			}
+
+			require.Equal(t, sharedBefore, string(test.shared.ProviderClusterConfig["nodeGroups"]),
+				"the configuration shared by the converge run stays as it was")
+		})
+	}
+}
+
+const currentNodeGroups = `[{"name":"current","replicas":3}]`
+
+const masterNodeGroupResource = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    minPerZone: 1
+    classReference:
+      kind: DVPInstanceClass
+      name: master-class
+`
+
+func cloudMetaConfig() *config.MetaConfig {
+	return &config.MetaConfig{
+		ClusterConfig: map[string]json.RawMessage{
+			"clusterType":       json.RawMessage(`"Cloud"`),
+			"serviceSubnetCIDR": json.RawMessage(`"10.222.0.0/16"`),
+			"clusterDomain":     json.RawMessage(`"cluster.local"`),
+			"cloud":             json.RawMessage(`{"provider":"DVP","prefix":"test"}`),
+		},
+	}
+}
+
+func legacyCloudMetaConfig() *config.MetaConfig {
+	metaConfig := cloudMetaConfig()
+	metaConfig.ProviderClusterConfig = map[string]json.RawMessage{
+		"layout":     json.RawMessage(`"Standard"`),
+		"nodeGroups": json.RawMessage(currentNodeGroups),
+	}
+
+	return metaConfig
+}
+
+func resourcesCloudMetaConfig() *config.MetaConfig {
+	metaConfig := cloudMetaConfig()
+	metaConfig.ResourcesYAML = masterNodeGroupResource
+
+	return metaConfig
 }

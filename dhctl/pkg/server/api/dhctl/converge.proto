@@ -50,6 +50,13 @@ message ConvergeStart {
   // SSH provider is created. A mutable master NodeGroup is still converged over ssh and needs
   // connection_config.
   string kubeconfig = 7;
+  // Desired cluster resources (multi-document YAML). A cloud cluster that
+  // keeps its provider configuration in resources (the new cloud provider
+  // format) has no provider cluster configuration: the provider ModuleConfig,
+  // credentials, InstanceClasses and NodeGroups are taken from here, and the
+  // node groups and their sizes are derived from them. Optional: clients that
+  // predate the field leave it empty.
+  string resources = 8;
 }
 
 message ConvergePhaseEnd {

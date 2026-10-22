@@ -30,6 +30,10 @@ type ScanResult struct {
 	ProviderSpecificClusterConfiguration string `json:"provider_specific_cluster_configuration"`
 	SSHPrivateKey                        string `json:"ssh_private_key"`
 	SSHPublicKey                         string `json:"ssh_public_key"`
+	// Resources is the provider configuration of a cluster in the new format (the provider
+	// ModuleConfig, the credentials Secrets, the instance classes and the CloudPermanent
+	// NodeGroups) as a multi-document YAML. Empty for a legacy or a static cluster.
+	Resources string `json:"resources,omitempty"`
 }
 
 type AttachResult struct {

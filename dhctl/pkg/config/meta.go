@@ -29,6 +29,7 @@ import (
 
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/iancoleman/strcase"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
 	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
@@ -676,10 +677,48 @@ func (m *MetaConfig) HasProviderModuleConfig() bool {
 	return m.findProviderModuleConfig() != nil
 }
 
+// HasProviderNodeSettings reports whether the enabled cloud-provider-<name> ModuleConfig carries the
+// node settings of the new provider model (settings.nodes.parameters). A ModuleConfig that only
+// switches the module on, as a legacy cluster has, does not.
+func (m *MetaConfig) HasProviderNodeSettings() bool {
+	mc := m.findProviderModuleConfig()
+	if mc == nil {
+		return false
+	}
+
+	parameters, found, err := unstructured.NestedFieldNoCopy(map[string]any(mc.Spec.Settings), "nodes", "parameters")
+	if err != nil || !found {
+		return false
+	}
+
+	values, ok := parameters.(map[string]any)
+
+	return ok && len(values) > 0
+}
+
 // HasLegacyProviderConfig reports whether the cluster carries a non-empty
 // d8-provider-cluster-configuration payload (the legacy provider format).
 func (m *MetaConfig) HasLegacyProviderConfig() bool {
 	return m != nil && len(m.ProviderClusterConfig) > 0
+}
+
+// ApplyNodeGroupSettings pins the stored settings of one node group as the "nodeGroups" document
+// of the legacy provider cluster configuration, so a node of that group is planned with the
+// settings it was created with. A cluster that configures its provider through resources has no
+// such document: its groups come from the resources and there is nothing to override, so the
+// call leaves the configuration as it is.
+func (m *MetaConfig) ApplyNodeGroupSettings(settings []byte) error {
+	if !m.HasLegacyProviderConfig() {
+		return nil
+	}
+
+	nodeGroupsSettings, err := json.Marshal([]json.RawMessage{settings})
+	if err != nil {
+		return err
+	}
+	m.ProviderClusterConfig["nodeGroups"] = nodeGroupsSettings
+
+	return nil
 }
 
 func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings(ctx context.Context) map[string]any {

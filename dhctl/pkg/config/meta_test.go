@@ -30,6 +30,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -1354,4 +1355,79 @@ func TestFindTerraNodeGroupOnMcFlowLogsNothing(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, settings)
 	require.Empty(t, captured.String(), "nothing to report: %s", captured.String())
+}
+
+// The stored settings of a node group replace the nodeGroups of the legacy provider configuration.
+func TestApplyNodeGroupSettingsOverridesLegacyNodeGroups(t *testing.T) {
+	m := cloudMetaConfig("")
+	m.ProviderClusterConfig = map[string]json.RawMessage{
+		"layout":     json.RawMessage(`"Standard"`),
+		"nodeGroups": json.RawMessage(`[{"name":"old","replicas":1}]`),
+	}
+
+	require.NoError(t, m.ApplyNodeGroupSettings([]byte(`{"name":"kept","replicas":2}`)))
+
+	require.JSONEq(t, `[{"name":"kept","replicas":2}]`, string(m.ProviderClusterConfig["nodeGroups"]))
+	require.Equal(t, json.RawMessage(`"Standard"`), m.ProviderClusterConfig["layout"], "the rest of the document stays")
+}
+
+// A cluster that configures its provider through resources has no provider cluster configuration
+// to put the settings into; writing into the missing map used to panic.
+func TestApplyNodeGroupSettingsIsNoopWithoutLegacyProviderConfig(t *testing.T) {
+	for name, providerClusterConfig := range map[string]map[string]json.RawMessage{
+		"nil":   nil,
+		"empty": {},
+	} {
+		t.Run(name, func(t *testing.T) {
+			m := cloudMetaConfig(mcFlowResources)
+			m.ProviderClusterConfig = providerClusterConfig
+
+			require.NotPanics(t, func() {
+				require.NoError(t, m.ApplyNodeGroupSettings([]byte(`{"name":"kept","replicas":2}`)))
+			})
+			require.Empty(t, m.ProviderClusterConfig)
+		})
+	}
+}
+
+// The provider ModuleConfig of a cluster in the new format carries the node settings; the one that
+// only switches the module on for a legacy cluster does not.
+func TestHasProviderNodeSettings(t *testing.T) {
+	enabledModuleConfig := func(settings map[string]any) *ModuleConfig {
+		moduleConfig := &ModuleConfig{}
+		moduleConfig.SetName("cloud-provider-dvp")
+		moduleConfig.Spec.Enabled = ptr.To(true)
+		moduleConfig.Spec.Settings = settings
+
+		return moduleConfig
+	}
+
+	tests := map[string]struct {
+		moduleConfig *ModuleConfig
+		want         bool
+	}{
+		"node parameters": {
+			moduleConfig: enabledModuleConfig(map[string]any{"nodes": map[string]any{"parameters": map[string]any{"layout": "Standard"}}}),
+			want:         true,
+		},
+		"no settings": {moduleConfig: enabledModuleConfig(nil)},
+		"empty node parameters": {
+			moduleConfig: enabledModuleConfig(map[string]any{"nodes": map[string]any{"parameters": map[string]any{}}}),
+		},
+		"settings without nodes": {
+			moduleConfig: enabledModuleConfig(map[string]any{"provider": map[string]any{"parameters": map[string]any{"namespace": "team"}}}),
+		},
+		"no module config": {},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			m := &MetaConfig{ProviderName: "dvp"}
+			if tt.moduleConfig != nil {
+				m.ModuleConfigs = []*ModuleConfig{tt.moduleConfig}
+			}
+
+			require.Equal(t, tt.want, m.HasProviderNodeSettings())
+		})
+	}
 }

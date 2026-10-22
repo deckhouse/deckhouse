@@ -17,6 +17,11 @@ package commander
 type CommanderModeParams struct {
 	ClusterConfigurationData         []byte
 	ProviderClusterConfigurationData []byte
+	// ResourcesData is the desired cluster resources (multi-document YAML).
+	// In the new cloud provider format the provider ModuleConfig, NodeGroups,
+	// InstanceClasses and credentials travel here instead of the provider
+	// configuration document. Optional: empty for older clients.
+	ResourcesData []byte
 }
 
 func NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurationData []byte) *CommanderModeParams {
@@ -30,4 +35,10 @@ func NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurati
 		ClusterConfigurationData:         clusterConfigurationData,
 		ProviderClusterConfigurationData: providerClusterConfigurationData,
 	}
+}
+
+// WithResources sets the desired cluster resources and returns the params.
+func (p *CommanderModeParams) WithResources(resourcesData []byte) *CommanderModeParams {
+	p.ResourcesData = resourcesData
+	return p
 }

@@ -41,7 +41,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 type destroyParams struct {
@@ -202,7 +201,7 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 		// registry. The operation below delivers the bundle from the cluster.
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
-			input.CombineYAMLs(p.request.ClusterConfig, p.request.InitConfig, p.request.ProviderSpecificClusterConfig),
+			cachePathConfig(p.request.Resources, p.request.ClusterConfig, p.request.InitConfig, p.request.ProviderSpecificClusterConfig),
 			config.DummyValidatorProvider(),
 			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
@@ -286,7 +285,7 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
-		),
+		).WithResources([]byte(p.request.Resources)),
 		TmpDir:                 s.params.TmpDir,
 		Logger:                 dhlog.FromContext(ctx),
 		IsDebug:                s.params.IsDebug,

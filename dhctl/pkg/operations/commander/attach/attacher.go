@@ -24,6 +24,9 @@ import (
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -40,6 +43,11 @@ import (
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
+
+// providerMigrationMarkerConfigMap is the ConfigMap the cloud provider module keeps in its namespace
+// while a migration of the provider configuration to resources is in progress (it is
+// MigrationConfigMapName of go_lib/cloud-provider/api).
+const providerMigrationMarkerConfigMap = "d8-module-is-migrating"
 
 type Params struct {
 	CommanderMode         bool
@@ -257,6 +265,10 @@ func (i *Attacher) scan(
 
 		res = &ScanResult{}
 
+		if err := dropLeftoverLegacyProviderConfig(ctx, kubeClient, metaConfig); err != nil {
+			return fmt.Errorf("unable to check the provider configuration of the cluster: %w", err)
+		}
+
 		metaConfig.UUID, err = infrastructurestate.GetClusterUUID(ctx, kubeClient)
 		if err != nil {
 			return fmt.Errorf("unable to get cluster uuid: %w", err)
@@ -301,9 +313,14 @@ func (i *Attacher) scan(
 			return nil
 		}
 
-		res.SSHPublicKey, err = extractSSHPublicKey(metaConfig.ProviderName, metaConfig.ProviderClusterConfig)
+		res.SSHPublicKey, err = sshPublicKeyFromMetaConfig(metaConfig)
 		if err != nil {
 			return fmt.Errorf("unable to get ssh public key: %w", err)
+		}
+
+		res.Resources, err = providerResourcesYAML(metaConfig)
+		if err != nil {
+			return fmt.Errorf("unable to prepare provider resources: %w", err)
 		}
 
 		nodesState, err := infrastructurestate.GetNodesStateFromCluster(ctx, kubeClient)
@@ -388,13 +405,10 @@ func (i *Attacher) check(
 		var err error
 
 		checker := check.NewChecker(&check.Params{
-			KubeProvider:  kubeProvider,
-			StateCache:    cache.Global(),
-			CommanderMode: i.Params.CommanderMode,
-			CommanderModeParams: commander.NewCommanderModeParams(
-				[]byte(scanResult.ClusterConfiguration),
-				[]byte(scanResult.ProviderSpecificClusterConfiguration),
-			),
+			KubeProvider:          kubeProvider,
+			StateCache:            cache.Global(),
+			CommanderMode:         i.Params.CommanderMode,
+			CommanderModeParams:   checkCommanderModeParams(scanResult),
 			InfrastructureContext: i.Params.InfrastructureContext,
 			TmpDir:                i.Params.TmpDir,
 			IsDebug:               i.Params.IsDebug,
@@ -420,14 +434,47 @@ func (i *Attacher) check(
 	})
 }
 
-func extractSSHPublicKey(providerName string, providerConfig map[string]json.RawMessage) (string, error) {
-	var key string
-	switch providerName {
-	case "GCP":
-		key = "sshKey"
-	default:
-		key = "sshPublicKey"
+// checkCommanderModeParams builds the input of the check that runs at the end of the attach. A
+// cluster in the new provider format has no provider configuration document, only resources, and
+// the check validates the provider from the resources it is given. The attach has no desired
+// resources yet (the cluster has no template), so it gives the check what the scan read from the
+// cluster: the check then compares the cluster with itself instead of failing on the missing
+// ModuleConfig, credentials and NodeGroup.
+func checkCommanderModeParams(scanResult *ScanResult) *commander.CommanderModeParams {
+	params := commander.NewCommanderModeParams(
+		[]byte(scanResult.ClusterConfiguration),
+		[]byte(scanResult.ProviderSpecificClusterConfiguration),
+	)
+
+	if scanResult.Resources != "" {
+		params = params.WithResources([]byte(scanResult.Resources))
 	}
+
+	return params
+}
+
+// sshPublicKeyFromMetaConfig returns the cluster ssh public key. A cluster with a legacy provider
+// configuration keeps it in the provider cluster configuration. A cluster in the new provider format
+// has no provider cluster configuration: the key lives in the cloud-provider module settings, and an
+// absent key is not an error there (Commander treats the key as optional).
+func sshPublicKeyFromMetaConfig(metaConfig *config.MetaConfig) (string, error) {
+	if metaConfig.HasLegacyProviderConfig() {
+		return extractSSHPublicKey(metaConfig.ProviderName, metaConfig.ProviderClusterConfig)
+	}
+
+	return sshPublicKeyFromModuleSettings(metaConfig.ProviderName, metaConfig.CloudProviderVars), nil
+}
+
+func sshPublicKeyFieldName(providerName string) string {
+	if providerName == "GCP" {
+		return "sshKey"
+	}
+
+	return "sshPublicKey"
+}
+
+func extractSSHPublicKey(providerName string, providerConfig map[string]json.RawMessage) (string, error) {
+	key := sshPublicKeyFieldName(providerName)
 
 	sshKeyJSON, ok := providerConfig[key]
 	if !ok {
@@ -441,6 +488,61 @@ func extractSSHPublicKey(providerName string, providerConfig map[string]json.Raw
 	}
 
 	return sshKey, nil
+}
+
+// sshPublicKeyFromModuleSettings reads the key from the cloud-provider ModuleConfig that
+// config.MetaConfig stores whole in CloudProviderVars.Settings (spec.settings.nodes.parameters.<key>).
+// It returns an empty string when the settings or the key are absent.
+func sshPublicKeyFromModuleSettings(providerName string, vars *config.CloudProviderVars) string {
+	if vars == nil {
+		return ""
+	}
+
+	// A missing or non-string key reads as absent: the key is optional.
+	key, _, _ := unstructured.NestedString(vars.Settings, "spec", "settings", "nodes", "parameters", sshPublicKeyFieldName(providerName))
+
+	return key
+}
+
+// dropLeftoverLegacyProviderConfig makes the metaConfig of a cluster migrated to the new provider
+// format say so. The migration leaves the legacy provider configuration Secret in the cluster, and
+// the parse of the cluster reads it next to the provider ModuleConfig; the scan would then return
+// that stale document as the provider configuration of the cluster and no resources, and Commander
+// would attach a cluster that runs on resources as a legacy one.
+//
+// A cluster counts as migrated when its provider ModuleConfig carries the node settings of the new
+// model and the module no longer reports a migration in progress. A ModuleConfig that only switches
+// the module on (a legacy cluster has one) carries no settings, and while the migration is in
+// progress the legacy document is still the source of the configuration: both keep the legacy
+// document.
+func dropLeftoverLegacyProviderConfig(ctx context.Context, kubeClient *client.KubernetesClient, metaConfig *config.MetaConfig) error {
+	if metaConfig.ClusterType != config.CloudClusterType || !metaConfig.HasLegacyProviderConfig() || !metaConfig.HasProviderNodeSettings() {
+		return nil
+	}
+
+	pending, err := providerMigrationPending(ctx, kubeClient, metaConfig.ProviderName)
+	if err != nil {
+		return err
+	}
+	if pending {
+		return nil
+	}
+
+	metaConfig.ProviderClusterConfig = nil
+
+	return nil
+}
+
+func providerMigrationPending(ctx context.Context, kubeClient *client.KubernetesClient, providerName string) (bool, error) {
+	_, err := kubeClient.CoreV1().ConfigMaps(config.CloudProviderNamespace(providerName)).Get(ctx, providerMigrationMarkerConfigMap, metav1.GetOptions{})
+	if k8serrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("get ConfigMap %q of the provider migration: %w", providerMigrationMarkerConfigMap, err)
+	}
+
+	return true, nil
 }
 
 type nodeState struct {

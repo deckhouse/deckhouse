@@ -26,8 +26,10 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 const (
@@ -78,7 +80,11 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		}
 	}
 
-	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
+	configData := input.CombineYAMLs(
+		string(params.ClusterConfigurationData),
+		string(params.ProviderClusterConfigurationData),
+		string(params.ResourcesData),
+	)
 	metaConfig, err := config.ParseConfigFromDataEnsureProvider(
 		ctx,
 		configData,
@@ -95,6 +101,10 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		return nil, fmt.Errorf("unable to parse config: %w", err)
 	}
 	metaConfig.UUID = clusterUUID
+
+	if err := requireControlPlaneSpec(metaConfig, operation); err != nil {
+		return nil, err
+	}
 
 	// Destroy keeps them in the state: its retry after the masters are gone has no API to read them
 	// from. Saved only once the parse accepted them, or a rejected ModuleConfig could not be corrected
@@ -202,4 +212,28 @@ func readClusterSettingsModuleConfigs(ctx context.Context, kubeClient config.Kub
 		return nil, fmt.Errorf("read ModuleConfigs from the cluster: %w", err)
 	}
 	return mcs, nil
+}
+
+// requireControlPlaneSpec refuses a configuration that leaves the number of control-plane nodes
+// unknown. A cloud cluster that keeps its provider configuration in resources gets the count from
+// the master NodeGroup among them; without it the count reads as zero, and check and converge
+// would plan the removal of every master. That means the resources did not arrive or lost the
+// NodeGroup, and it has to stop here rather than turn into a destructive plan. Destroy removes the
+// nodes regardless of their number, so it is left alone.
+func requireControlPlaneSpec(metaConfig *config.MetaConfig, operation infrastructureprovider.DhctlOperation) error {
+	if operation == infrastructureprovider.DhctlOperationDestroy {
+		return nil
+	}
+	if metaConfig.ClusterType != config.CloudClusterType || metaConfig.HasLegacyProviderConfig() {
+		return nil
+	}
+	if metaConfig.MasterNodeGroupSpec.Replicas > 0 {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"the cluster configures its cloud provider through resources, but they contain no NodeGroup %q "+
+			"with spec.cloudInstances.minPerZone: dhctl cannot tell how many control-plane nodes to keep. "+
+			"Check that the cluster's resources reached dhctl and include this NodeGroup", global.MasterNodeGroupName,
+	)
 }

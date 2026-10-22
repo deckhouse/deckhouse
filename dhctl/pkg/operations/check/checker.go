@@ -222,12 +222,6 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", err
 	}
 
-	// we use static or provider config because commander does not support managed cluster
-	staticOrProviderClusterConfig, err := getClusterSpecificConfig(ctx, metaConfig, commanderSource)
-	if err != nil {
-		return "", fmt.Errorf("Unable to get static/provider cluster config: %w", err)
-	}
-
 	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, &c.Options.Global, infrastructureprovider.DhctlOperationConverge)
 	if err != nil {
 		return "", fmt.Errorf("Unable to get in-cluster meta config: %w", err)
@@ -238,17 +232,17 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", err
 	}
 
-	// we use static or provider config because commander does not support managed cluster
-	inClusterStaticOrProviderClusterConfig, err := getClusterSpecificConfig(ctx, inClusterMetaConfig, inClusterSource)
-	if err != nil {
-		return "", fmt.Errorf("Unable to get in-cluster static/provider cluster config yaml: %w", err)
-	}
-
 	checks := []checkFunc{
 		equalByOperatorCheck(metaConfig.UUID, inClusterMetaConfig.UUID, "cluster UUID"),
 		equalMapByDeepEqualFuncCheck(clusterConfig, inClusterConfig, clusterConfigKind),
-		equalMapByDeepEqualFuncCheck(staticOrProviderClusterConfig, inClusterStaticOrProviderClusterConfig, "provider configuration"),
 	}
+
+	providerChecks, err := providerConfigurationChecks(ctx, metaConfig, inClusterMetaConfig)
+	if err != nil {
+		return "", err
+	}
+
+	checks = append(checks, providerChecks...)
 
 	syncStatus := CheckStatusInSync
 
@@ -260,6 +254,41 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 	}
 
 	return syncStatus, nil
+}
+
+// providerConfigurationChecks builds the provider configuration comparison for checkConfiguration.
+// With the provider configured through resources (new format) there is no desired provider document
+// to compare, so the comparison is skipped, but only when the provider ModuleConfig exists in the
+// desired resources or in the cluster: relaxing the "cannot be empty" guard globally would report
+// InSync for a cloud cluster that lost its provider configuration. The desired side matters right
+// after a legacy cluster is switched to the new format: the agent has not applied the resources yet,
+// so the cluster has no ModuleConfig, and the check would fail with "cannot be empty" until it has.
+// A legacy desired configuration always keeps the comparison.
+func providerConfigurationChecks(ctx context.Context, desired, inCluster *config.MetaConfig) ([]checkFunc, error) {
+	if !desired.HasLegacyProviderConfig() && (desired.HasProviderModuleConfig() || inCluster.HasProviderModuleConfig()) {
+		return nil, nil
+	}
+
+	const (
+		commanderSource = "commander"
+		inClusterSource = "in-cluster"
+	)
+
+	// we use static or provider config because commander does not support managed cluster
+	staticOrProviderClusterConfig, err := getClusterSpecificConfig(ctx, desired, commanderSource)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get static/provider cluster config: %w", err)
+	}
+
+	// we use static or provider config because commander does not support managed cluster
+	inClusterStaticOrProviderClusterConfig, err := getClusterSpecificConfig(ctx, inCluster, inClusterSource)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get in-cluster static/provider cluster config yaml: %w", err)
+	}
+
+	return []checkFunc{
+		equalMapByDeepEqualFuncCheck(staticOrProviderClusterConfig, inClusterStaticOrProviderClusterConfig, "provider configuration"),
+	}, nil
 }
 
 type InfraResult struct {

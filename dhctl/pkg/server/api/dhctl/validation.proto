@@ -28,6 +28,10 @@ message ValidateOptions {
 message ValidateResourcesRequest {
   string config = 1;
   ValidateOptions opts = 2;
+  // Desired cluster resources (multi-document YAML). Carried for symmetry with
+  // the operations that read it (check, converge, destroy, detach); this
+  // request does not read it, so setting it has no effect.
+  string resources = 3;
 }
 
 message ValidateResourcesResponse {
@@ -37,6 +41,10 @@ message ValidateResourcesResponse {
 message ValidateInitConfigRequest {
   string config = 1;
   ValidateOptions opts = 2;
+  // Desired cluster resources (multi-document YAML). Carried for symmetry with
+  // the operations that read it (check, converge, destroy, detach); this
+  // request does not read it, so setting it has no effect.
+  string resources = 3;
 }
 
 message ValidateInitConfigResponse {
@@ -46,6 +54,10 @@ message ValidateInitConfigResponse {
 message ValidateClusterConfigRequest {
   string config = 1;
   ValidateOptions opts = 2;
+  // Desired cluster resources (multi-document YAML). Carried for symmetry with
+  // the operations that read it (check, converge, destroy, detach); this
+  // request does not read it, so setting it has no effect.
+  string resources = 3;
 }
 
 message ValidateClusterConfigResponse {
@@ -56,6 +68,10 @@ message ValidateClusterConfigResponse {
 message ValidateStaticClusterConfigRequest {
   string config = 1;
   ValidateOptions opts = 2;
+  // Desired cluster resources (multi-document YAML). Carried for symmetry with
+  // the operations that read it (check, converge, destroy, detach); this
+  // request does not read it, so setting it has no effect.
+  string resources = 3;
 }
 
 message ValidateStaticClusterConfigResponse {
@@ -66,6 +82,10 @@ message ValidateProviderSpecificClusterConfigRequest {
   string config = 1;
   string cluster_config = 2;
   ValidateOptions opts = 3;
+  // Desired cluster resources (multi-document YAML). Carried for symmetry with
+  // the operations that read it (check, converge, destroy, detach); this
+  // request does not read it, so setting it has no effect.
+  string resources = 4;
 }
 
 message ValidateProviderSpecificClusterConfigResponse {
@@ -77,6 +97,10 @@ message ValidateChangesRequest {
   string old_config = 2;
   string new_config = 3;
   ValidateOptions opts = 4;
+  // Desired cluster resources (multi-document YAML). Carried for symmetry with
+  // the operations that read it (check, converge, destroy, detach); this
+  // request does not read it, so setting it has no effect.
+  string resources = 5;
 }
 
 message ValidateChangesResponse {
@@ -86,6 +110,10 @@ message ValidateChangesResponse {
 message ParseConnectionConfigRequest {
   string config = 1;
   ValidateOptions opts = 2;
+  // Desired cluster resources (multi-document YAML). Carried for symmetry with
+  // the operations that read it (check, converge, destroy, detach); this
+  // request does not read it, so setting it has no effect.
+  string resources = 3;
 }
 
 message ParseConnectionConfigResponse {
@@ -105,6 +133,10 @@ message ConfigExtenderRequest {
   string config = 1;
   // Which single extension kind to compute.
   ConfigExtensionKind kind = 2;
+  // Desired cluster resources (multi-document YAML). Carried for symmetry with
+  // the operations that read it (check, converge, destroy, detach); this
+  // request does not read it, so setting it has no effect.
+  string resources = 3;
 }
 
 // ConfigExtenderResponse returns the recommended config for the requested kind

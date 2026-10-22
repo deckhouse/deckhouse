@@ -43,7 +43,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 type checkParams struct {
@@ -180,7 +179,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		// registry. The operation below delivers the bundle from the cluster.
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
-			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
+			cachePathConfig(p.request.Resources, p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
 			config.DummyValidatorProvider(),
 			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
@@ -245,7 +244,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
-		),
+		).WithResources([]byte(p.request.Resources)),
 		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter).
 			WithUseTfCache(opts.Cache.UseTfCache).
 			WithDebug(s.params.IsDebug),

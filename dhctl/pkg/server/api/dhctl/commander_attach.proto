@@ -49,6 +49,10 @@ message CommanderAttachStart {
   // leave connection_config empty: the cluster is then driven over the API server only and no
   // SSH provider is created.
   string kubeconfig = 6;
+  // Desired cluster resources (multi-document YAML). Carried for symmetry with
+  // the operations that read it (check, converge, destroy, detach); this
+  // request does not read it, so setting it has no effect.
+  string resources = 7;
 }
 
 message CommanderAttachPhaseEnd {

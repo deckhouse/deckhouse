@@ -16,6 +16,7 @@ package commander
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -277,4 +278,240 @@ func TestParseMetaConfig_DestroyDoesNotCacheWhenTheParseFails(t *testing.T) {
 	inCache, err := stateCache.InCache(ctx, clusterSettingsModuleConfigsCacheKey)
 	require.NoError(t, err)
 	require.False(t, inCache)
+}
+
+const providerResourcesClusterConfiguration = `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: DVP
+  prefix: pcc
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: Automatic
+clusterDomain: cluster.local
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.io/deckhouse/ce
+`
+
+// providerResources is the new provider format as Commander sends it: the provider ModuleConfig,
+// the credentials, the instance class and the NodeGroups travel as resources, not as a
+// ProviderClusterConfiguration.
+const providerResources = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  enabled: true
+  version: 2
+  settings:
+    provider:
+      parameters:
+        namespace: team
+    storage:
+      parameters: {}
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl test@example
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials
+  namespace: d8-cloud-provider-dvp
+type: cloud-provider.deckhouse.io/credentials
+stringData:
+  authScheme: kubeconfig
+  secret: kubeconfig
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DVPInstanceClass
+metadata:
+  name: master-class
+spec:
+  rootDisk:
+    size: 50Gi
+    storageClass: replicated
+    image:
+      kind: ClusterVirtualImage
+      name: ubuntu
+  etcdDisk:
+    size: 10Gi
+    storageClass: replicated
+  virtualMachine:
+    cpu:
+      cores: 4
+      coreFraction: 20%
+    memory:
+      size: 8Gi
+    virtualMachineClassName: generic
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: CloudPermanent
+  cloudInstances:
+    minPerZone: 3
+    maxPerZone: 3
+    classReference:
+      kind: DVPInstanceClass
+      name: master-class
+`
+
+// providerResourcesWithoutMaster keeps the provider configuration and drops the master NodeGroup,
+// the shape a lost or truncated group would produce.
+const providerResourcesWithoutMaster = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  enabled: true
+  version: 2
+  settings:
+    provider:
+      parameters:
+        namespace: team
+    storage:
+      parameters: {}
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl test@example
+`
+
+func parseMetaConfig(t *testing.T, resources, operation string) (*config.MetaConfig, error) {
+	t.Helper()
+
+	// The provider schema of the cluster configuration is delivered by the provider bundle;
+	// the stub places the real schema where the parser looks for it.
+	tests.StubDeliveredProviderBundle(t, options.DefaultTmpDir(), "dvp")
+
+	stateCache := cache.NewTestCache()
+	require.NoError(t, stateCache.Save(t.Context(), "uuid", []byte("cluster-uuid")))
+
+	// The provider configuration slot is empty: the provider lives in the resources.
+	params := NewCommanderModeParams([]byte(providerResourcesClusterConfiguration), []byte{})
+	if resources != "" {
+		params.WithResources([]byte(resources))
+	}
+
+	globalOptions := options.New().Global
+	globalOptions.CandiDir = tests.RequireCandiDir(t)
+
+	// The cluster settings ModuleConfigs are read from the cluster: an empty one has none.
+	return ParseMetaConfig(t.Context(), stateCache, params, operation, getterFor(client.NewFakeKubernetesClient()), &globalOptions)
+}
+
+func TestParseMetaConfigDerivesTheClusterFromResources(t *testing.T) {
+	metaConfig, err := parseMetaConfig(t, providerResources, infrastructureprovider.DhctlOperationConverge)
+	require.NoError(t, err)
+
+	require.False(t, metaConfig.HasLegacyProviderConfig(), "the provider is configured through resources")
+	require.True(t, metaConfig.HasProviderModuleConfig())
+	require.Equal(t, "cluster-uuid", metaConfig.UUID)
+
+	// The count of control-plane nodes comes from the master NodeGroup among the resources.
+	require.Equal(t, 3, metaConfig.MasterNodeGroupSpec.Replicas)
+
+	require.NotNil(t, metaConfig.CloudProviderVars)
+	require.Contains(t, metaConfig.CloudProviderVars.NodeGroups, "master")
+	require.Contains(t, metaConfig.CloudProviderVars.InstanceClasses, "master-class")
+	require.NotEmpty(t, metaConfig.CloudProviderVars.Secrets, "the credentials Secret has to reach the infrastructure utility")
+}
+
+// The resources join the configuration after the cluster configuration, so documents split by a
+// separator at either end, or by several separators, must still parse.
+func TestParseMetaConfigJoinsResourcesWithTheConfiguration(t *testing.T) {
+	for name, resources := range map[string]string{
+		"leading separator":  "---\n" + providerResources,
+		"trailing separator": providerResources + "\n---\n",
+		"blank lines around": "\n\n" + providerResources + "\n\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			metaConfig, err := parseMetaConfig(t, resources, infrastructureprovider.DhctlOperationConverge)
+			require.NoError(t, err)
+			require.Equal(t, 3, metaConfig.MasterNodeGroupSpec.Replicas)
+			require.Contains(t, metaConfig.CloudProviderVars.NodeGroups, "master")
+		})
+	}
+}
+
+// A cloud cluster that keeps its provider in resources and lost the master NodeGroup must not
+// reach check or converge: the count of control-plane nodes would read as zero.
+func TestParseMetaConfigRefusesResourcesWithoutMaster(t *testing.T) {
+	for name, resources := range map[string]string{
+		"no resources at all":      "",
+		"resources without master": providerResourcesWithoutMaster,
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := parseMetaConfig(t, resources, infrastructureprovider.DhctlOperationConverge)
+			require.ErrorContains(t, err, "NodeGroup \"master\"")
+			require.ErrorContains(t, err, "minPerZone")
+		})
+	}
+}
+
+// Destroy removes the nodes whatever their number, so it must stay possible for a cluster whose
+// resources lost the master.
+func TestParseMetaConfigDestroyDoesNotNeedTheMaster(t *testing.T) {
+	_, err := parseMetaConfig(t, providerResourcesWithoutMaster, infrastructureprovider.DhctlOperationDestroy)
+	require.NoError(t, err)
+}
+
+func TestRequireControlPlaneSpec(t *testing.T) {
+	cloud := func(mutate func(m *config.MetaConfig)) *config.MetaConfig {
+		m := &config.MetaConfig{ClusterType: config.CloudClusterType}
+		mutate(m)
+		return m
+	}
+
+	tests := map[string]struct {
+		metaConfig *config.MetaConfig
+		operation  string
+		wantErr    bool
+	}{
+		"cloud, resources, master known": {
+			metaConfig: cloud(func(m *config.MetaConfig) { m.MasterNodeGroupSpec.Replicas = 1 }),
+			operation:  infrastructureprovider.DhctlOperationConverge,
+		},
+		"cloud, resources, master unknown": {
+			metaConfig: cloud(func(*config.MetaConfig) {}),
+			operation:  infrastructureprovider.DhctlOperationConverge,
+			wantErr:    true,
+		},
+		"cloud, legacy provider configuration": {
+			metaConfig: cloud(func(m *config.MetaConfig) {
+				m.ProviderClusterConfig = map[string]json.RawMessage{"layout": json.RawMessage(`"Standard"`)}
+			}),
+			operation: infrastructureprovider.DhctlOperationConverge,
+		},
+		"cloud, master unknown, destroy": {
+			metaConfig: cloud(func(*config.MetaConfig) {}),
+			operation:  infrastructureprovider.DhctlOperationDestroy,
+		},
+		"static cluster": {
+			metaConfig: &config.MetaConfig{ClusterType: config.StaticClusterType},
+			operation:  infrastructureprovider.DhctlOperationConverge,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := requireControlPlaneSpec(tt.metaConfig, tt.operation)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
 }

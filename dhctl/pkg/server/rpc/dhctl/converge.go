@@ -45,7 +45,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 type convergeParams struct {
@@ -206,7 +205,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		// registry. The operation below delivers the bundle from the cluster.
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
-			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
+			cachePathConfig(p.request.Resources, p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
 			config.DummyValidatorProvider(),
 			s.params.GlobalOptions,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
@@ -275,7 +274,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
-		),
+		).WithResources([]byte(p.request.Resources)),
 		Embedded:              true,
 		IsDebug:               s.params.IsDebug,
 		TmpDir:                tmpDir,
@@ -301,7 +300,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		CommanderModeParams: commander.NewCommanderModeParams(
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
-		),
+		).WithResources([]byte(p.request.Resources)),
 		InfrastructureContext:      infrastructureContext,
 		ApproveDestructiveChangeID: p.request.ApproveDestructionChangeId,
 		OnCheckResult:              onCheckResult,

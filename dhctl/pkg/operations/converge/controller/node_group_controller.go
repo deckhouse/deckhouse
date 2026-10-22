@@ -17,7 +17,6 @@ package controller
 import (
 	"cmp"
 	gocontext "context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -192,22 +191,9 @@ func (c *NodeGroupController) deleteRedundantNodes(
 		return err
 	}
 
-	if settings != nil {
-		nodeGroupsSettings, err := json.Marshal([]json.RawMessage{settings})
-		if err != nil {
-			dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprint(err))
-		} else {
-			mc, err := ctx.MetaConfig()
-			if err != nil {
-				return err
-			}
-			// we use dummy validator because metaConfig was prepared early
-			cfg, err = mc.DeepCopy().Prepare(ctx.Ctx(), config.DummyValidatorProvider())
-			if err != nil {
-				return fmt.Errorf("unable to prepare copied config: %v", err)
-			}
-			cfg.ProviderClusterConfig["nodeGroups"] = nodeGroupsSettings
-		}
+	cfg, err = nodeGroupMetaConfig(ctx.Ctx(), cfg, settings)
+	if err != nil {
+		return err
 	}
 
 	// No kube client is resolved here on purpose: DestroyPipeline below removes a node, and for a
@@ -504,4 +490,27 @@ type nodeGroupController interface {
 	beforeUpdateNodes(ctx *context.Context) error
 	updateNode(ctx *context.Context, name string, index int) error
 	deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error
+}
+
+// nodeGroupMetaConfig returns the configuration to plan the deletion of the nodes of a group with.
+// Stored group settings only matter to the legacy provider configuration: for it a copy of the
+// configuration gets them pinned, and the shared configuration stays as it was. With the provider
+// configured through resources there is no document to put them into, so the configuration is
+// returned as it is.
+func nodeGroupMetaConfig(ctx gocontext.Context, cfg *config.MetaConfig, settings []byte) (*config.MetaConfig, error) {
+	if settings == nil || !cfg.HasLegacyProviderConfig() {
+		return cfg, nil
+	}
+
+	// we use dummy validator because metaConfig was prepared early
+	copied, err := cfg.DeepCopy().Prepare(ctx, config.DummyValidatorProvider())
+	if err != nil {
+		return nil, fmt.Errorf("unable to prepare copied config: %v", err)
+	}
+
+	if err := copied.ApplyNodeGroupSettings(settings); err != nil {
+		dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
+	}
+
+	return copied, nil
 }
