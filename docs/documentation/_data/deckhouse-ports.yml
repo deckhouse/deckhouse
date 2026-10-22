@@ -482,6 +482,11 @@ groups:
     description:
       en: "`monitoring-ping` metrics"
       ru: "Метрики `monitoring-ping`"
+  - ports: "4293"
+    protocol: TCP
+    description:
+      en: "Healthcheck of the `opagent` agent of the `observability` module"
+      ru: "Healthcheck агента `opagent` модуля `observability`"
   - ports: "4295&#8209;4297"
     protocol: UDP
     description:
