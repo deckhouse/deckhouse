@@ -201,6 +201,174 @@ func TestResourceMapper(t *testing.T) {
 	})
 }
 
+func mutationWithOps(kinds []gatekeeper.MatchKind, ops ...string) gatekeeper.Mutation {
+	m := gatekeeper.Mutation{Spec: gatekeeper.MutationSpec{Match: gatekeeper.Match{Kinds: kinds}}}
+	if len(ops) > 0 {
+		m.Spec.ApplyTo = []gatekeeper.MutationApplyTo{{Operations: ops}}
+	}
+	return m
+}
+
+func TestDeduplicateMutationKinds(t *testing.T) {
+	pods := []gatekeeper.MatchKind{{APIGroups: []string{""}, Kinds: []string{"Pod"}}}
+	deployments := []gatekeeper.MatchKind{{APIGroups: []string{"apps"}, Kinds: []string{"Deployment"}}}
+
+	t.Run("operations of mutations with the same kinds are united", func(t *testing.T) {
+		res, _ := deduplicateMutationKinds([]gatekeeper.Mutation{
+			mutationWithOps(pods, "CREATE"),
+			mutationWithOps(pods, "UPDATE"),
+			mutationWithOps(deployments, "CREATE"),
+		})
+
+		assert.Equal(t, []mutationKind{
+			{MatchKind: gatekeeper.MatchKind{APIGroups: []string{""}, Kinds: []string{"Pod"}}, Operations: []string{"CREATE", "UPDATE"}},
+			{MatchKind: gatekeeper.MatchKind{APIGroups: []string{"apps"}, Kinds: []string{"Deployment"}}, Operations: []string{"CREATE"}},
+		}, res)
+	})
+
+	t.Run("checksum changes with operations", func(t *testing.T) {
+		_, createOnly := deduplicateMutationKinds([]gatekeeper.Mutation{mutationWithOps(pods, "CREATE")})
+		_, all := deduplicateMutationKinds([]gatekeeper.Mutation{mutationWithOps(pods)})
+		_, allAgain := deduplicateMutationKinds([]gatekeeper.Mutation{mutationWithOps(pods)})
+
+		assert.NotEqual(t, createOnly, all)
+		assert.Equal(t, all, allAgain)
+	})
+
+	t.Run("checksum does not depend on the order of mutations", func(t *testing.T) {
+		_, first := deduplicateMutationKinds([]gatekeeper.Mutation{mutationWithOps(pods, "CREATE"), mutationWithOps(deployments)})
+		_, second := deduplicateMutationKinds([]gatekeeper.Mutation{mutationWithOps(deployments), mutationWithOps(pods, "CREATE")})
+
+		assert.Equal(t, first, second)
+	})
+}
+
+func TestMutationResourceMapper(t *testing.T) {
+	cl := fake.NewFakeCluster(fake.ClusterVersionV121)
+
+	apiRes, err := restmapper.GetAPIGroupResources(cl.Discovery)
+	require.NoError(t, err)
+
+	rmatch := resourceMatcher{
+		apiGroupResources: apiRes,
+		mapper:            restmapper.NewDiscoveryRESTMapper(apiRes),
+	}
+
+	t.Run("resources of one group with the same operations share a rule", func(t *testing.T) {
+		data, err := rmatch.convertMutationKindsToResource([]mutationKind{
+			{MatchKind: gatekeeper.MatchKind{APIGroups: []string{"apps"}, Kinds: []string{"Deployment", "StatefulSet"}}, Operations: []string{"CREATE", "UPDATE"}},
+			{MatchKind: gatekeeper.MatchKind{APIGroups: []string{""}, Kinds: []string{"Pod"}}, Operations: []string{"CREATE"}},
+		})
+		require.NoError(t, err)
+		assert.YAMLEq(t, `
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  operations:
+  - CREATE
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - statefulsets
+  operations:
+  - CREATE
+  - UPDATE
+`, string(data))
+	})
+
+	t.Run("operations of the same resource from different kinds entries are united", func(t *testing.T) {
+		data, err := rmatch.convertMutationKindsToResource([]mutationKind{
+			{MatchKind: gatekeeper.MatchKind{APIGroups: []string{"*"}, Kinds: []string{"Pod"}}, Operations: []string{"UPDATE"}},
+			{MatchKind: gatekeeper.MatchKind{APIGroups: []string{""}, Kinds: []string{"Pod"}}, Operations: []string{"CREATE"}},
+		})
+		require.NoError(t, err)
+		assert.YAMLEq(t, `
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  operations:
+  - CREATE
+  - UPDATE
+`, string(data))
+	})
+
+	t.Run("groups are not crossed with resources of other groups", func(t *testing.T) {
+		data, err := rmatch.convertMutationKindsToResource([]mutationKind{
+			{MatchKind: gatekeeper.MatchKind{APIGroups: []string{"", "apps"}, Kinds: []string{"Pod", "Deployment"}}, Operations: []string{"CREATE", "UPDATE"}},
+		})
+		require.NoError(t, err)
+		assert.YAMLEq(t, `
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  operations:
+  - CREATE
+  - UPDATE
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  operations:
+  - CREATE
+  - UPDATE
+`, string(data))
+	})
+
+	t.Run("unknown kinds are skipped", func(t *testing.T) {
+		data, err := rmatch.convertMutationKindsToResource([]mutationKind{
+			{MatchKind: gatekeeper.MatchKind{APIGroups: []string{"apps/v1"}, Kinds: []string{"Deployment"}}, Operations: []string{"CREATE"}},
+		})
+		require.NoError(t, err)
+		assert.YAMLEq(t, `[]`, string(data))
+	})
+}
+
+func TestUpdateTrackedObjectsWritesMutationOperations(t *testing.T) {
+	cl := fake.NewFakeCluster(fake.ClusterVersionV121)
+	kt := NewKindTracker(cl.Client, "d8-admission-policy-engine", "constraint-exporter")
+	require.NoError(t, kt.FindInitialChecksum())
+
+	createOnly := gatekeeper.Mutation{Spec: gatekeeper.MutationSpec{
+		Match:   gatekeeper.Match{Kinds: []gatekeeper.MatchKind{{APIGroups: []string{"apps"}, Kinds: []string{"Deployment"}}}},
+		ApplyTo: []gatekeeper.MutationApplyTo{{Operations: []string{"CREATE"}}},
+	}}
+	metadata := gatekeeper.Mutation{Spec: gatekeeper.MutationSpec{
+		Match: gatekeeper.Match{Kinds: []gatekeeper.MatchKind{{APIGroups: []string{""}, Kinds: []string{"Pod"}}}},
+	}}
+
+	readMutateData := func() string {
+		cm, err := cl.Client.CoreV1().ConfigMaps("d8-admission-policy-engine").Get(context.Background(), "constraint-exporter", metav1.GetOptions{})
+		require.NoError(t, err)
+		return cm.Data["mutate-resources.yaml"]
+	}
+
+	kt.UpdateTrackedObjects(nil, []gatekeeper.Mutation{createOnly, metadata})
+	assert.YAMLEq(t, `
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  operations:
+  - CREATE
+  - UPDATE
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  operations:
+  - CREATE
+`, readMutateData())
+
+	// A change of the operations alone must rewrite the configmap.
+	createOnly.Spec.ApplyTo[0].Operations = []string{"UPDATE"}
+	kt.UpdateTrackedObjects(nil, []gatekeeper.Mutation{createOnly, metadata})
+	assert.Contains(t, readMutateData(), "- apps\n  operations:\n  - UPDATE\n")
+}
+
 func TestUpdateTrackedObjectsConfigMapRetryOnConflict(t *testing.T) {
 	client := k8sfake.NewSimpleClientset()
 

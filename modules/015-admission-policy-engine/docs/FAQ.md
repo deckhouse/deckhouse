@@ -474,6 +474,41 @@ The module enforces the following restrictions:
 - `deny-invalid-assignmetadata-externaldata-datasource.deckhouse.io` — the `spec.parameters.assign.externalData.dataSource` field of `AssignMetadata` supports only `Username`. This field defaults to `ValueAtLocation` when omitted, and that default is rejected too — set `dataSource: Username` explicitly. Unlike `Assign`, `AssignMetadata` doesn't support `ValueAtLocation`, because a metadata mutation has no source value at `location` to read.
 - `deny-mutator-without-match-kinds.deckhouse.io` — the `spec.match.kinds` field is required and must not be empty in `Assign`, `AssignMetadata`, `ModifySet`, and `AssignImage` resources, and every entry in it must set non-empty `apiGroups` and `kinds` without a `*` kind. This restriction is specific to Deckhouse: the `d8-admission-policy-engine-config` MutatingWebhookConfiguration rules are generated only from the `match.kinds` field across all resources of these kinds, resolving `apiGroups`/`kinds` through the Kubernetes REST mapper. A resource with an entry that doesn't resolve to a concrete resource type never triggers a mutation, even though Gatekeeper itself would still treat it as valid.
 
+## How to apply a mutation only when a resource is created?
+
+Use the `spec.applyTo[].operations` field of `Assign`, `ModifySet`, or `AssignImage`
+to choose the admission operations that trigger the mutation.
+The field accepts `CREATE`, `UPDATE`, and `*`.
+If the field is omitted or contains `*`, the mutation runs on both `CREATE` and `UPDATE`.
+
+The following example sets `imagePullPolicy` only when a pod is created and leaves updates of the pod unchanged:
+
+```yaml
+apiVersion: mutations.gatekeeper.sh/v1
+kind: Assign
+metadata:
+  name: always-pull-on-create
+spec:
+  applyTo:
+    - groups: [""]
+      kinds: ["Pod"]
+      versions: ["v1"]
+      operations: ["CREATE"]
+  match:
+    scope: Namespaced
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+  location: "spec.containers[name:*].imagePullPolicy"
+  parameters:
+    assign:
+      value: Always
+```
+
+The module builds the rules of the `d8-admission-policy-engine-config` MutatingWebhookConfiguration from these operations.
+A resource is sent to Gatekeeper only for the operations that at least one of its mutations requests.
+`AssignMetadata` has no `applyTo` field and always runs on `CREATE` and `UPDATE`.
+
 ## Verification of image signatures
 
 {% alert level="warning" %}
@@ -483,6 +518,11 @@ Cosign versions up to v2 are supported. Versions v3 and above are not supported.
 {% endalert %}
 
 The module implements a function for verifying signatures of container images signed using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). For more details on signing and verifying container images, see the [DP documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/security/policies.html#image-signature-verification).
+
+Signature verification caches the credentials of a private registry read from the `dockerCfg` field of a SecurityPolicy.
+After you change `dockerCfg`, the new credentials take effect once the cache entry expires.
+To set the cache lifetime, use the [`imageSignatureVerification.registryCredentialsCacheTTLSeconds`](configuration.html#parameters-imagesignatureverification-registrycredentialscachettlseconds) parameter.
+The default is 300 seconds.
 
 ## How to block deleting a node without a label
 

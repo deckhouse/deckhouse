@@ -42,6 +42,17 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: detect_track_ma
 		})
 	})
 
+	Context("CM with mutation operations", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(cmWithMutationOperations))
+			f.RunHook()
+		})
+		It("should keep the operations of mutation resources", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.trackedMutateResources").String()).To(MatchJSON(`[{"apiGroups":[""],"resources":["pods"],"operations":["CREATE"]},{"apiGroups":["apps"],"resources":["deployments"],"operations":["CREATE","UPDATE"]}]`))
+		})
+	})
+
 	Context("Empty CM", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(emptyCM))
@@ -87,6 +98,33 @@ kind: ConfigMap
 metadata:
   annotations:
     security.deckhouse.io/constraints-checksum: b73817c9948c3f7d823859980f0d8b1216f1f00222570bde38c9bd54b50cea87
+  labels:
+    owner: constraint-exporter
+  name: constraint-exporter
+  namespace: d8-admission-policy-engine
+`
+
+var cmWithMutationOperations = `
+apiVersion: v1
+data:
+  validate-resources.yaml: |
+    []
+  mutate-resources.yaml: |
+    - apiGroups:
+      - ""
+      resources:
+      - pods
+      operations:
+      - CREATE
+    - apiGroups:
+      - apps
+      resources:
+      - deployments
+      operations:
+      - CREATE
+      - UPDATE
+kind: ConfigMap
+metadata:
   labels:
     owner: constraint-exporter
   name: constraint-exporter

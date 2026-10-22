@@ -125,7 +125,7 @@ func restoreTemplateLibRegoTests(moved [][2]string) error {
 }
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
-	f := SetupHelmConfig(`{"admissionPolicyEngine": {"podSecurityStandards": {}, "internal": {"ratify": {"imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey2"]}], "webhook": {"key": "dGVzdC12YWx1ZQ==", "crt": "dGVzdC12YWx1ZQ==" , "ca": "dGVzdC12YWx1ZQ=="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
+	f := SetupHelmConfig(`{"admissionPolicyEngine": {"podSecurityStandards": {}, "imageSignatureVerification": {"registryCredentialsCacheTTLSeconds": 300}, "internal": {"ratify": {"imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey2"]}], "webhook": {"key": "test-ratify-webhook-key", "crt": "test-ratify-webhook-crt", "ca": "test-ratify-webhook-ca"}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
 	{
 		"metadata": {
 			"name": "foo"
@@ -505,6 +505,50 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			Expect(mw.Field("webhooks.0.matchConditions.0.expression").String()).To(Equal(
 				`!(has(request.namespace) && (request.namespace.startsWith("d8-") || request.namespace.startsWith("kube-")))`))
 		})
+
+		It("Renders every operation the mutation webhook handles for a rule without operations", func() {
+			// A rule without operations comes from a constraint-exporter that predates applyTo operations.
+			mw := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-admission-policy-engine-config")
+			Expect(mw.Field("webhooks.0.rules").String()).To(MatchJSON(
+				`[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["pods"]}]`))
+		})
+	})
+
+	Context("Cluster with mutations limited by applyTo operations", func() {
+		BeforeEach(func() {
+			f.ValuesSet("admissionPolicyEngine.internal.bootstrapped", true)
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedConstraintResources", `[]`)
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedMutateResources",
+				`[{"apiGroups":[""],"resources":["pods"],"operations":["CREATE"]},{"apiGroups":["apps"],"resources":["deployments"],"operations":["CREATE","UPDATE"]}]`)
+			f.HelmRender()
+		})
+
+		It("Renders the operations constraint-exporter derived from the mutations", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			mw := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-admission-policy-engine-config")
+			Expect(mw.Field("webhooks.0.rules").String()).To(MatchJSON(
+				`[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE"],"resources":["pods"]},` +
+					`{"apiGroups":["apps"],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["deployments"]}]`))
+		})
+	})
+
+	Context("Cluster with mutation rules written by the previous constraint-exporter", func() {
+		BeforeEach(func() {
+			f.ValuesSet("admissionPolicyEngine.internal.bootstrapped", true)
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedConstraintResources", `[]`)
+			// The previous exporter wrote CONNECT for a mutation matching PodExecOptions.
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedMutateResources",
+				`[{"apiGroups":[""],"resources":["pods","pods/attach","pods/exec"],"operations":["CONNECT"]},{"apiGroups":["apps"],"resources":["deployments"],"operations":["CONNECT","UPDATE"]}]`)
+			f.HelmRender()
+		})
+
+		It("Keeps only the operations the mutation webhook handles", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			mw := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-admission-policy-engine-config")
+			Expect(mw.Field("webhooks.0.rules").String()).To(MatchJSON(
+				`[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE"],"resources":["pods","pods/attach","pods/exec"]},` +
+					`{"apiGroups":["apps"],"apiVersions":["*"],"operations":["UPDATE"],"resources":["deployments"]}]`))
+		})
 	})
 
 	Context("Cluster running a dev build", func() {
@@ -589,6 +633,27 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 				ratifyRegSecret := f.KubernetesResource("Secret", nsName, "ratify-dockercfg-0")
 				Expect(ratifyRegSecret.Exists()).To(BeTrue())
 				Expect(ratifyRegSecret.Field(`data.\.dockerconfigjson`).String()).To(Equal("zxc="))
+			})
+
+			It("Passes the TTL from the module configuration to the k8Secrets auth provider", func() {
+				store := f.KubernetesGlobalResource("Store", "oras")
+				Expect(store.Exists()).To(BeTrue())
+				Expect(store.Field("spec.parameters.authProvider.name").String()).To(Equal("k8Secrets"))
+				Expect(store.Field("spec.parameters.authProvider.secretTimeout").Int()).To(Equal(int64(300)))
+			})
+		})
+
+		Context("Sets the registry credentials cache TTL", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("admissionPolicyEngine.internal", `{ "bootstrapped": true, "podSecurityStandards": {"enforcementActions": ["deny"]}, "securityPolicies": [{"metadata": {"name": "foo"}, "spec": {"match": {"labelSelector": {}}, "policies": {"verifyImageSignatures": [{"dockerCfg": "zxc=", "reference": "ghcr.io/*", "publicKeys": ["someKey1"]}]}}}], "ratify": {"webhook": {"ca": "ca", "crt": "crt", "key": "key"}, "imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey1"]}]}, "trackedConstraintResources": [{"apiGroups": [], "resources": ["pod"]}], "webhook": {"ca": "ca", "crt": "crt", "key": "key"}, "trackedMutateResources": []}`)
+				f.ValuesSet("admissionPolicyEngine.imageSignatureVerification.registryCredentialsCacheTTLSeconds", 3600)
+				f.HelmRender()
+			})
+
+			It("Passes the TTL to the k8Secrets auth provider", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				store := f.KubernetesGlobalResource("Store", "oras")
+				Expect(store.Field("spec.parameters.authProvider.secretTimeout").Int()).To(Equal(int64(3600)))
 			})
 		})
 	})

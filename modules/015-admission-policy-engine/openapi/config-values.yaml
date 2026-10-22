@@ -127,3 +127,25 @@ properties:
               type: string
             namespace:
               type: string
+  imageSignatureVerification:
+    type: object
+    default: {}
+    x-doc-d8Editions:
+      - se+
+      - ee
+      - cse-lite
+      - cse-pro
+    description: |
+      Settings of the image signature verification configured by the `verifyImageSignatures` policy of the SecurityPolicy resource.
+    properties:
+      registryCredentialsCacheTTLSeconds:
+        type: integer
+        default: 300
+        minimum: 30
+        maximum: 43200
+        x-examples: [300, 3600]
+        description: |
+          Time in seconds for which the credentials of a private registry stay cached after being read from the `dockerCfg` field of a SecurityPolicy.
+
+          After you change `dockerCfg`, the signature verification keeps using the previous credentials until the cache entry expires.
+          A lower value applies the new credentials sooner, at the cost of more frequent reads of the Secret from the Kubernetes API.

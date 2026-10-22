@@ -1,8 +1,11 @@
 positive:
   configValues:
     - {}
+    - { imageSignatureVerification: { registryCredentialsCacheTTLSeconds: 3600 } }
 negative:
   configValues:
     - { somethingInConfig: yes }
+    - { imageSignatureVerification: { registryCredentialsCacheTTLSeconds: 0 } }
+    - { imageSignatureVerification: { registryCredentialsCacheTTLSeconds: 86400 } }
   values:
     - { somethingInConfig: yes }

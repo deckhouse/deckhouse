@@ -40,15 +40,28 @@ webhooks:
     expression: '!({{ include "system_namespaces_cel" . }})'
   objectSelector: {}
   reinvocationPolicy: IfNeeded
+  {{/*
+    constraint-exporter derives the operations of a rule from `spec.applyTo[].operations` of the
+    mutations. Only the operations the Gatekeeper mutation webhook handles are kept: an exporter of
+    the previous version wrote `CONNECT` for a mutation matching `PodExecOptions`, and passing that
+    on would stop the mutation of the pods in the same rule until the new exporter rewrites the
+    data. A rule left without operations gets every operation the mutation webhook handles.
+  */}}
+  {{- $mutationOperations := list "CREATE" "UPDATE" }}
   rules:
   {{- range $trackResource := .Values.admissionPolicyEngine.internal.trackedMutateResources }}
+  {{- $operations := list }}
+  {{- range $operation := $trackResource.operations | default list }}
+    {{- if has $operation $mutationOperations }}
+      {{- $operations = append $operations $operation }}
+    {{- end }}
+  {{- end }}
   - apiGroups:
       {{- $trackResource.apiGroups | toYaml | nindent 6 }}
     apiVersions:
     - '*'
     operations:
-    - CREATE
-    - UPDATE
+      {{- $operations | default $mutationOperations | toYaml | nindent 4 }}
     resources:
       {{- $trackResource.resources | toYaml | nindent 6 }}
   {{- end }}

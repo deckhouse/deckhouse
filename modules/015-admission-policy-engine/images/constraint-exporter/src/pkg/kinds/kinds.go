@@ -21,6 +21,8 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"log/slog"
+	"maps"
+	"slices"
 	"sort"
 	"strings"
 
@@ -88,9 +90,56 @@ func deduplicateKinds[T resourceWithMatch](matchResources []T) (map[string]gatek
 	return m, fmt.Sprintf("%x", hasher.Sum(nil))
 }
 
+// mutationKind is a match kind of a mutation together with the admission operations that trigger it.
+type mutationKind struct {
+	gatekeeper.MatchKind
+	Operations []string
+}
+
+// deduplicateMutationKinds merges the match kinds of all mutations, uniting the operations of the
+// mutations that target the same kinds. The checksum covers the operations, so a change of applyTo
+// operations alone also rewrites the tracked objects configmap.
+func deduplicateMutationKinds(mutations []gatekeeper.Mutation) ([]mutationKind, string) {
+	if len(mutations) == 0 {
+		return nil, ""
+	}
+
+	kinds := make(map[string]gatekeeper.MatchKind)
+	ops := make(map[string]map[string]struct{})
+
+	for _, mutation := range mutations {
+		mutationOps := mutation.GetOperations()
+		for _, k := range mutation.GetMatchKinds() {
+			sort.Strings(k.APIGroups)
+			sort.Strings(k.Kinds)
+			key := fmt.Sprintf("%s:%s", strings.Join(k.APIGroups, ","), strings.Join(k.Kinds, ","))
+
+			if _, ok := kinds[key]; !ok {
+				kinds[key] = k
+				ops[key] = make(map[string]struct{})
+			}
+			for _, op := range mutationOps {
+				ops[key][op] = struct{}{}
+			}
+		}
+	}
+
+	keys := slices.Sorted(maps.Keys(kinds))
+	res := make([]mutationKind, 0, len(keys))
+	hasher := sha256.New()
+
+	for _, key := range keys {
+		kindOps := slices.Sorted(maps.Keys(ops[key]))
+		res = append(res, mutationKind{MatchKind: kinds[key], Operations: kindOps})
+		hasher.Write([]byte(key + ":" + strings.Join(kindOps, ",") + ";"))
+	}
+
+	return res, fmt.Sprintf("%x", hasher.Sum(nil))
+}
+
 func (kt *KindTracker) UpdateTrackedObjects(constraints []gatekeeper.Constraint, mutations []gatekeeper.Mutation) {
 	deduplicatedConstraintKinds, cchecksum := deduplicateKinds(constraints)
-	deduplicatedMutateKinds, mchecksum := deduplicateKinds(mutations)
+	mutationKinds, mchecksum := deduplicateMutationKinds(mutations)
 
 	if cchecksum == kt.latestConstraintsChecksum && mchecksum == kt.latestMutationsChecksum {
 		return
@@ -101,11 +150,6 @@ func (kt *KindTracker) UpdateTrackedObjects(constraints []gatekeeper.Constraint,
 	constraintKinds := make([]gatekeeper.MatchKind, 0, len(deduplicatedConstraintKinds))
 	for _, k := range deduplicatedConstraintKinds {
 		constraintKinds = append(constraintKinds, k)
-	}
-
-	mutationKinds := make([]gatekeeper.MatchKind, 0, len(deduplicatedMutateKinds))
-	for _, m := range deduplicatedMutateKinds {
-		mutationKinds = append(mutationKinds, m)
 	}
 
 	// convert kinds to the resources
@@ -125,7 +169,7 @@ func (kt *KindTracker) UpdateTrackedObjects(constraints []gatekeeper.Constraint,
 	kt.latestMutationsChecksum = mchecksum
 }
 
-func (kt *KindTracker) convertKinds(constraintKinds, mutateKinds []gatekeeper.MatchKind) ( /*constraintData*/ []byte /*mutateData*/, []byte, error) {
+func (kt *KindTracker) convertKinds(constraintKinds []gatekeeper.MatchKind, mutateKinds []mutationKind) ( /*constraintData*/ []byte /*mutateData*/, []byte, error) {
 	apiRes, err := restmapper.GetAPIGroupResources(kt.client.Discovery())
 	if err != nil {
 		return nil, nil, err
@@ -141,7 +185,7 @@ func (kt *KindTracker) convertKinds(constraintKinds, mutateKinds []gatekeeper.Ma
 		return nil, nil, err
 	}
 
-	mutateData, err := rmatch.convertKindsToResource(mutateKinds)
+	mutateData, err := rmatch.convertMutationKindsToResource(mutateKinds)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -278,63 +322,28 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 
 		for _, apiGroup := range mk.APIGroups {
 			for _, kind := range mk.Kinds {
-				if apiGroup == "*" {
-					gvks := rm.findGVKsForWildcard(kind)
-					for _, gvk := range gvks {
-						restMapping, err := rm.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-						if err != nil {
-							// skip outdated resources, like extensions/Ingress
-							slog.Warn(
-								"skip wildcard resource mapping",
-								"group", gvk.Group,
-								"kind", gvk.Kind,
-								"version", gvk.Version,
-								"error", err,
-							)
-							continue
-						}
-
-						uniqKey := fmt.Sprintf("%s/%s", restMapping.Resource.Group, restMapping.Resource.Resource)
-						if _, ok := globalDuplications[uniqKey]; ok {
-							continue
-						}
-
-						uniqGroups[restMapping.Resource.Group] = struct{}{}
-						uniqResources[restMapping.Resource.Resource] = struct{}{}
-						globalDuplications[uniqKey] = struct{}{}
-					}
-				} else {
-					// specific resource mapping, for pods/exec command
-					if kind == "PodExecOptions" {
-						uniqKey := fmt.Sprintf("%s/%s", "", "pods/exec")
-						if _, ok := globalDuplications[uniqKey]; ok {
-							continue
-						}
-						uniqGroups[""] = struct{}{}
-						uniqResources["pods/exec"] = struct{}{}
-						uniqResources["pods/attach"] = struct{}{}
-						uniqOperations["CONNECT"] = struct{}{}
-						globalDuplications[uniqKey] = struct{}{}
+				// specific resource mapping, for pods/exec command
+				if apiGroup != "*" && kind == "PodExecOptions" {
+					uniqKey := fmt.Sprintf("%s/%s", "", "pods/exec")
+					if _, ok := globalDuplications[uniqKey]; ok {
 						continue
 					}
+					uniqGroups[""] = struct{}{}
+					uniqResources["pods/exec"] = struct{}{}
+					uniqResources["pods/attach"] = struct{}{}
+					uniqOperations["CONNECT"] = struct{}{}
+					globalDuplications[uniqKey] = struct{}{}
+					continue
+				}
 
-					restMapping, err := rm.mapper.RESTMapping(schema.GroupKind{
-						Group: apiGroup,
-						Kind:  kind,
-					})
-					if err != nil {
-						// skip outdated resources, like extensions/Ingress
-						slog.Warn("skip resource mapping", "group", apiGroup, "kind", kind, "error", err)
-						continue
-					}
-
-					uniqKey := fmt.Sprintf("%s/%s", restMapping.Resource.Group, restMapping.Resource.Resource)
+				for _, gr := range rm.resolve(apiGroup, kind) {
+					uniqKey := fmt.Sprintf("%s/%s", gr.Group, gr.Resource)
 					if _, ok := globalDuplications[uniqKey]; ok {
 						continue
 					}
 
-					uniqGroups[restMapping.Resource.Group] = struct{}{}
-					uniqResources[restMapping.Resource.Resource] = struct{}{}
+					uniqGroups[gr.Group] = struct{}{}
+					uniqResources[gr.Resource] = struct{}{}
 					globalDuplications[uniqKey] = struct{}{}
 				}
 			}
@@ -368,6 +377,99 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 			APIGroups:  groups,
 			Resources:  resources,
 			Operations: operations,
+		})
+	}
+
+	return yaml.Marshal(res)
+}
+
+// resolve maps an apiGroup and a kind of a match entry to the resources of the cluster.
+// The "*" apiGroup matches the kind in every group that serves it.
+func (rm resourceMatcher) resolve(apiGroup, kind string) []schema.GroupResource {
+	if apiGroup == "*" {
+		res := make([]schema.GroupResource, 0)
+		for _, gvk := range rm.findGVKsForWildcard(kind) {
+			restMapping, err := rm.mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+			if err != nil {
+				// skip outdated resources, like extensions/Ingress
+				slog.Warn(
+					"skip wildcard resource mapping",
+					"group", gvk.Group,
+					"kind", gvk.Kind,
+					"version", gvk.Version,
+					"error", err,
+				)
+				continue
+			}
+			res = append(res, restMapping.Resource.GroupResource())
+		}
+		return res
+	}
+
+	restMapping, err := rm.mapper.RESTMapping(schema.GroupKind{
+		Group: apiGroup,
+		Kind:  kind,
+	})
+	if err != nil {
+		// skip outdated resources, like extensions/Ingress
+		slog.Warn("skip resource mapping", "group", apiGroup, "kind", kind, "error", err)
+		return nil
+	}
+
+	return []schema.GroupResource{restMapping.Resource.GroupResource()}
+}
+
+// convertMutationKindsToResource builds the rules of the mutating webhook. Every resource gets the union
+// of the operations of all mutations that match it, and resources of one group with the same operations
+// share a rule, so a rule never matches a group and a resource that no mutation pairs together.
+func (rm resourceMatcher) convertMutationKindsToResource(kinds []mutationKind) ([]byte, error) {
+	opsByResource := make(map[schema.GroupResource]map[string]struct{})
+
+	for _, mk := range kinds {
+		for _, apiGroup := range mk.APIGroups {
+			for _, kind := range mk.Kinds {
+				for _, gr := range rm.resolve(apiGroup, kind) {
+					if _, ok := opsByResource[gr]; !ok {
+						opsByResource[gr] = make(map[string]struct{})
+					}
+					for _, op := range mk.Operations {
+						opsByResource[gr][op] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+
+	type ruleKey struct {
+		group      string
+		operations string
+	}
+
+	resourcesByRule := make(map[ruleKey][]string)
+	operationsByRule := make(map[ruleKey][]string)
+
+	for gr, ops := range opsByResource {
+		operations := slices.Sorted(maps.Keys(ops))
+		key := ruleKey{group: gr.Group, operations: strings.Join(operations, ",")}
+		resourcesByRule[key] = append(resourcesByRule[key], gr.Resource)
+		operationsByRule[key] = operations
+	}
+
+	keys := slices.SortedFunc(maps.Keys(resourcesByRule), func(a, b ruleKey) int {
+		if c := strings.Compare(a.group, b.group); c != 0 {
+			return c
+		}
+		return strings.Compare(a.operations, b.operations)
+	})
+
+	res := make([]matchResource, 0, len(keys))
+	for _, key := range keys {
+		resources := resourcesByRule[key]
+		sort.Strings(resources)
+		res = append(res, matchResource{
+			APIGroups:  []string{key.group},
+			Resources:  resources,
+			Operations: operationsByRule[key],
 		})
 	}
 

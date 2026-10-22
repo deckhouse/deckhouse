@@ -474,6 +474,41 @@ CRD `Assign`, `AssignMetadata`, `ModifySet` и `AssignImage` импортиро�
 - `deny-invalid-assignmetadata-externaldata-datasource.deckhouse.io` — поле `spec.parameters.assign.externalData.dataSource` ресурса `AssignMetadata` поддерживает только значение `Username`. По умолчанию, если поле не задано, оно принимает значение `ValueAtLocation` — это значение по умолчанию тоже отклоняется, поэтому `dataSource: Username` нужно указывать явно. В отличие от `Assign`, значение `ValueAtLocation` не поддерживается, так как при мутации метаданных нет исходного значения в `location`, которое можно прочитать.
 - `deny-mutator-without-match-kinds.deckhouse.io` — поле `spec.match.kinds` обязательно, не может быть пустым в ресурсах `Assign`, `AssignMetadata`, `ModifySet` и `AssignImage`, и в каждом его элементе должны быть заданы непустые `apiGroups` и `kinds` без значения `*` в `kinds`. Это ограничение специфично для Deckhouse: правила `MutatingWebhookConfiguration` `d8-admission-policy-engine-config` формируются только на основе поля `match.kinds` всех перечисленных ресурсов, а `apiGroups`/`kinds` сопоставляются с реальными типами ресурсов Kubernetes. Если элемент не разрешается в конкретный тип ресурса, ресурс с ним никогда не запускает мутацию, хотя сам Gatekeeper по-прежнему считает такой элемент допустимым.
 
+## Как применить мутацию только при создании ресурса?
+
+Чтобы выбрать операции, при которых срабатывает мутация,
+используйте поле `spec.applyTo[].operations` ресурсов `Assign`, `ModifySet` или `AssignImage`.
+Поле принимает значения `CREATE`, `UPDATE` и `*`.
+Если поле не задано или содержит `*`, мутация выполняется и при `CREATE`, и при `UPDATE`.
+
+Пример ниже задаёт `imagePullPolicy` только при создании пода и не меняет под при его обновлении:
+
+```yaml
+apiVersion: mutations.gatekeeper.sh/v1
+kind: Assign
+metadata:
+  name: always-pull-on-create
+spec:
+  applyTo:
+    - groups: [""]
+      kinds: ["Pod"]
+      versions: ["v1"]
+      operations: ["CREATE"]
+  match:
+    scope: Namespaced
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+  location: "spec.containers[name:*].imagePullPolicy"
+  parameters:
+    assign:
+      value: Always
+```
+
+Модуль формирует правила MutatingWebhookConfiguration `d8-admission-policy-engine-config` на основе этих операций.
+Запрос к ресурсу передаётся в Gatekeeper только для операций, которые запрашивает хотя бы одна из его мутаций.
+У ресурса `AssignMetadata` нет поля `applyTo`, поэтому он всегда выполняется при `CREATE` и `UPDATE`.
+
 ## Проверка подписи образов
 
 {% alert level="warning" %}
@@ -483,6 +518,11 @@ CRD `Assign`, `AssignMetadata`, `ModifySet` и `AssignImage` импортиро�
 {% endalert %}
 
 В модуле реализована функция проверки подписи образов контейнеров, подписанных с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). Подробнее о подписании и проверке образов контейнеров можно узнать в [документации DP](/products/kubernetes-platform/documentation/v1/admin/configuration/security/policies.html#проверка-подписи-образов).
+
+Проверка подписей кеширует учётные данные приватного хранилища образов, прочитанные из поля `dockerCfg` ресурса SecurityPolicy.
+После изменения `dockerCfg` новые учётные данные начинают действовать, когда истекает срок записи в кеше.
+Чтобы задать срок хранения записей в кеше, используйте параметр [`imageSignatureVerification.registryCredentialsCacheTTLSeconds`](configuration.html#parameters-imagesignatureverification-registrycredentialscachettlseconds).
+Значение по умолчанию — 300 секунд.
 
 ## Как запретить удаление узла без лейбла
 

@@ -19,6 +19,8 @@ package gatekeeper
 import (
 	"context"
 	"log/slog"
+	"maps"
+	"slices"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -45,8 +47,20 @@ type MutationMeta struct {
 	Name string
 }
 
+// supportedMutationOperations mirrors the operations the Gatekeeper mutation webhook executes
+// (supportedMutationOperations in gatekeeper/pkg/mutation/match/apply_to.go). An applyTo entry without
+// operations, or with "*", stands for all of them.
+var supportedMutationOperations = []string{"CREATE", "UPDATE"}
+
+const operationAll = "*"
+
+type MutationApplyTo struct {
+	Operations []string `json:"operations,omitempty"`
+}
+
 type MutationSpec struct {
-	Match Match `json:"match"`
+	Match   Match             `json:"match"`
+	ApplyTo []MutationApplyTo `json:"applyTo,omitempty"`
 }
 
 type Mutation struct {
@@ -56,6 +70,37 @@ type Mutation struct {
 
 func (m Mutation) GetMatchKinds() []MatchKind {
 	return m.Spec.Match.Kinds
+}
+
+// GetOperations returns the sorted admission operations that can trigger the mutation: the union of the
+// operations of all its applyTo entries. Gatekeeper checks the operation per applyTo entry, so the union is a
+// superset of what any single matched kind needs, which is safe for the webhook rules built from it.
+// A mutation without applyTo (AssignMetadata) runs on every supported operation.
+func (m Mutation) GetOperations() []string {
+	if len(m.Spec.ApplyTo) == 0 {
+		return slices.Clone(supportedMutationOperations)
+	}
+
+	ops := make(map[string]struct{}, len(supportedMutationOperations))
+	for _, applyTo := range m.Spec.ApplyTo {
+		if len(applyTo.Operations) == 0 || slices.Contains(applyTo.Operations, operationAll) {
+			return slices.Clone(supportedMutationOperations)
+		}
+
+		for _, op := range applyTo.Operations {
+			if slices.Contains(supportedMutationOperations, op) {
+				ops[op] = struct{}{}
+			}
+		}
+	}
+
+	// The CRD accepts only supported operations, so an empty set means no entry could ever match.
+	// Fall back to all of them rather than dropping the mutation from the webhook rules.
+	if len(ops) == 0 {
+		return slices.Clone(supportedMutationOperations)
+	}
+
+	return slices.Sorted(maps.Keys(ops))
 }
 
 type listClient interface {

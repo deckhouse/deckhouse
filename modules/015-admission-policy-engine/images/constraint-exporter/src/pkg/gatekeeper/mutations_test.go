@@ -92,3 +92,66 @@ func newMutationObject(apiVersion, kind, name string) runtime.Object {
 		},
 	}}
 }
+
+func TestMutationGetOperations(t *testing.T) {
+	tests := []struct {
+		name    string
+		applyTo []MutationApplyTo
+		want    []string
+	}{
+		{name: "no applyTo", applyTo: nil, want: []string{"CREATE", "UPDATE"}},
+		{name: "applyTo without operations", applyTo: []MutationApplyTo{{}}, want: []string{"CREATE", "UPDATE"}},
+		{name: "wildcard", applyTo: []MutationApplyTo{{Operations: []string{"*"}}}, want: []string{"CREATE", "UPDATE"}},
+		{name: "create only", applyTo: []MutationApplyTo{{Operations: []string{"CREATE"}}}, want: []string{"CREATE"}},
+		{name: "update only", applyTo: []MutationApplyTo{{Operations: []string{"UPDATE"}}}, want: []string{"UPDATE"}},
+		{
+			name:    "union of entries",
+			applyTo: []MutationApplyTo{{Operations: []string{"UPDATE"}}, {Operations: []string{"CREATE"}}},
+			want:    []string{"CREATE", "UPDATE"},
+		},
+		{
+			name:    "entry without operations widens the union",
+			applyTo: []MutationApplyTo{{Operations: []string{"CREATE"}}, {}},
+			want:    []string{"CREATE", "UPDATE"},
+		},
+		{name: "unsupported operation only", applyTo: []MutationApplyTo{{Operations: []string{"DELETE"}}}, want: []string{"CREATE", "UPDATE"}},
+		{name: "unsupported operation is dropped", applyTo: []MutationApplyTo{{Operations: []string{"DELETE", "CREATE"}}}, want: []string{"CREATE"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := Mutation{Spec: MutationSpec{ApplyTo: tt.applyTo}}
+			require.Equal(t, tt.want, m.GetOperations())
+		})
+	}
+}
+
+func TestGetMutations_ReadsApplyToOperations(t *testing.T) {
+	obj := newMutationObject("mutations.gatekeeper.sh/v1", "Assign", "assign-create-only")
+	u := obj.(*unstructured.Unstructured)
+	u.Object["spec"].(map[string]interface{})["applyTo"] = []interface{}{
+		map[string]interface{}{
+			"groups":     []interface{}{""},
+			"kinds":      []interface{}{"Pod"},
+			"versions":   []interface{}{"v1"},
+			"operations": []interface{}{"CREATE"},
+		},
+	}
+	client := ctrlfake.NewClientBuilder().WithRuntimeObjects(obj).Build()
+	kubeClient := k8sfake.NewSimpleClientset()
+
+	discovery := kubeClient.Discovery().(*fakediscovery.FakeDiscovery)
+	discovery.Resources = []*metav1.APIResourceList{
+		{
+			GroupVersion: "mutations.gatekeeper.sh/v1",
+			APIResources: []metav1.APIResource{
+				{Name: "assign", Kind: "Assign", Verbs: metav1.Verbs{"list"}},
+			},
+		},
+	}
+
+	mutations, err := GetMutations(client, kubeClient)
+	require.NoError(t, err)
+	require.Len(t, mutations, 1)
+	require.Equal(t, []string{"CREATE"}, mutations[0].GetOperations())
+}
