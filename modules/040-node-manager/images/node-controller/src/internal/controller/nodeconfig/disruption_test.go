@@ -301,6 +301,36 @@ func TestReconcileDisruptionCreatesADisruption(t *testing.T) {
 	require.Equal(t, "disruption-worker-0-", created.Items[0].GenerateName)
 }
 
+// The node of a deleted Cluster API machine is going away: a new interruption would only be
+// ended at once with MachineDeleted, so none is asked for while the machine's Drain exists.
+func TestReconcileDisruptionAsksNothingForTheNodeOfADeletedMachine(t *testing.T) {
+	const uid = "5f5d1c7e-0000-4000-8000-000000000011"
+	for _, phase := range []v1alpha1.NodeOperationPhase{v1alpha1.NodeOperationPhaseInProgress, v1alpha1.NodeOperationPhaseCompleted} {
+		t.Run(string(phase), func(t *testing.T) {
+			ended := failedApproval("disruption-worker-0-ended", uid, 4, 5*time.Minute)
+			ended.Status.Reason = "MachineDeleted"
+			drain := &v1alpha1.NodeOperation{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   "drain-worker-0-machine",
+					Labels: map[string]string{v1alpha1.NodeOperationMachineUIDLabel: "8e1f0c2a-0000-4000-8000-000000000001"},
+				},
+				Spec:   v1alpha1.NodeOperationSpec{Type: v1alpha1.NodeOperationTypeDrain, NodeName: "worker-0"},
+				Status: v1alpha1.NodeOperationStatus{Phase: phase},
+			}
+			cl := operationsClient(t, ended, drain)
+			r := &Reconciler{sources: &sourceReader{Reader: cl}}
+			r.Client = cl
+			r.Recorder = record.NewFakeRecorder(10)
+			node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}
+
+			_, err := r.reconcileDisruption(t.Context(), nodeGroupWithNodes(2), node, askingNodeConfig("worker-0", uid, 4), logr.Discard())
+			require.NoError(t, err)
+
+			require.ElementsMatch(t, []string{"disruption-worker-0-ended", "drain-worker-0-machine"}, operationNames(t, cl))
+		})
+	}
+}
+
 // A group of one is drained like any other: only a lone control-plane node, or the node of the
 // Deckhouse pod with no other Ready node, is interrupted without a drain.
 func TestReconcileDisruptionDrainsAGroupOfOne(t *testing.T) {

@@ -102,26 +102,18 @@ func (r *Reconciler) releaseNode(ctx context.Context, op *v1alpha1.NodeOperation
 		// Lowering it is only ours while nobody else needs it raised: a Drain,
 		// or an interruption mid-eviction, needs the node kept out of the
 		// scheduler, and releasing would put pods back onto an emptying node.
+		// So does the node of a deleted machine, which is removed next.
 		held, err := r.heldUnschedulableByAnother(ctx, op)
 		if err != nil {
 			return err
 		}
-		if held {
+		if held || machineDrain(op) {
 			restored = node.Spec.Unschedulable
 		}
 	}
 
-	// Spelled out rather than computed from a mutated copy: annotations carry
-	// omitempty, so removing the last key makes the merge patch say
-	// "annotations: null", deleting every annotation on the node.
-	annotations := map[string]any{}
-	for _, key := range []string{nodecommon.DrainingAnnotation, nodecommon.DrainedAnnotation} {
-		if node.Annotations[key] == marker {
-			annotations[key] = nil
-		}
-	}
 	body, err := json.Marshal(map[string]any{
-		"metadata": map[string]any{"annotations": annotations},
+		"metadata": map[string]any{"annotations": markerErasure(node, marker)},
 		"spec":     map[string]any{"unschedulable": restored},
 	})
 	if err != nil {
@@ -133,6 +125,19 @@ func (r *Reconciler) releaseNode(ctx context.Context, op *v1alpha1.NodeOperation
 	logger.Info("node released after its operation",
 		"node", node.Name, "operation", op.Name, "unschedulable", restored)
 	return nil
+}
+
+// markerErasure is the merge patch of the annotations that removes the marker's keys.
+// Spelled out rather than computed from a mutated copy: annotations carry omitempty,
+// so removing the last key makes the patch say "annotations: null", deleting them all.
+func markerErasure(node *corev1.Node, marker string) map[string]any {
+	annotations := map[string]any{}
+	for _, key := range []string{nodecommon.DrainingAnnotation, nodecommon.DrainedAnnotation} {
+		if node.Annotations[key] == marker {
+			annotations[key] = nil
+		}
+	}
+	return annotations
 }
 
 // heldUnschedulableByAnother reports whether an operation of another lineage

@@ -53,7 +53,8 @@ NodeGroup changed (or MD re-enqueues by node-group label)
 On NodeGroup deletion the reconciler runs `cleanupMachineDeployments` — deletes the
 NodeGroup's CAPI and MCM MachineDeployments (and each MCM MachineDeployment's referenced
 MachineClass) — then removes its `node-manager.deckhouse.io/capi-md-cleanup` finalizer.
-The node drain itself is driven asynchronously by capi/caps-controller-manager.
+The node drain itself runs as a `Drain` NodeOperation of the `machine-drain` controller
+while CAPI deletes the Machines, see the template annotations below.
 NodeGroup `master` is the exception: it never carries the finalizer, and its deletion runs no
 cleanup — the `master-node-group` controller re-creates the group with the same spec.
 
@@ -68,6 +69,10 @@ Creates/updates one `MachineDeployment` (cluster.x-k8s.io/v1beta2) **per zone**:
 - `spec.clusterName` = `capiClusterName`; `spec.template.spec.infrastructureRef` kind/apiGroup from the cloud-provider secret.
 - `spec.template.spec.bootstrap.dataSecretName` = template name.
 - `spec.template.spec.deletion`: `nodeDrainTimeoutSeconds` from `ng.spec.nodeDrainTimeoutSecond` (default 600); deletion/volume-detach timeouts 600.
+- `spec.template.metadata.annotations`: `pre-drain.delete.hook.machine.cluster.x-k8s.io/node-manager: node-controller`
+  and `machine.cluster.x-k8s.io/exclude-node-draining: ""`. A deleted Machine waits on the hook while the
+  `machine-drain` controller (`internal/controller/machinedrain`) evicts its node through a `Drain` NodeOperation,
+  and CAPI skips its own drain. CAPI copies both onto the existing Machines without replacing them.
 - `spec.rollout.strategy`: `maxSurge`/`maxUnavailable` from `cloudInstances` (defaults 1/0).
 - Annotations: autoscaler min/max size, plus capacity labels/taints (`serializeNodeGroupLabels` / `serializeNodeGroupTaints`).
 - `spec.replicas` = `calculateReplicas(current, minPerZone, maxPerZone)` — clamps the
@@ -83,6 +88,7 @@ Creates one `MachineDeployment` named `{ng.name}`:
 - `spec.replicas` = `ng.spec.staticInstances.count`.
 - `spec.rollout.strategy`: maxSurge 1, maxUnavailable 0.
 - selector/template labels: `cluster-name=static`, `deployment-name={ng.name}`.
+- `spec.template.metadata.annotations`: the same two as the cloud MachineDeployment above.
 
 ### reconcileCloudMCMs (MCM engine)
 

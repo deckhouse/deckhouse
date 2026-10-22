@@ -41,13 +41,19 @@ import (
 
 // The policies under test in templates/node-controller/validation.yaml.
 const (
-	policyName           = "nodeoperations-own-node-only.deckhouse.io"
-	disruptionPolicyName = "nodeoperations-disruption-by-node-manager.deckhouse.io"
+	policyName             = "nodeoperations-own-node-only.deckhouse.io"
+	disruptionPolicyName   = "nodeoperations-disruption-by-node-manager.deckhouse.io"
+	machineDrainPolicyName = "nodeoperations-machine-drain-by-node-manager.deckhouse.io"
 )
 
 // disruptionRefusal is the start of what the API server answers a Disruption
 // created by anyone but node-manager.
 const disruptionRefusal = "Disruption operations are created by node-manager"
+
+// machineDrainRefusal is what the API server answers anyone but node-manager
+// who sets the label of a deleted machine on an operation.
+const machineDrainRefusal = "Drain operations for a deleted machine are created by node-manager. " +
+	"Create the Drain without the label node-manager.deckhouse.io/machine-uid"
 
 // User story: As a cluster operator, I want a node to be able to report on its
 // own operation and do nothing else with it, so no node can approve its own
@@ -218,6 +224,97 @@ var _ = Describe("The policy that leaves creating a Disruption to node-manager",
 		Expect(asOperator.Create(ctx, op)).To(Succeed())
 	})
 })
+
+// User story: As a cluster operator, I want only node-manager to mark a Drain
+// as the one of a deleted machine, so that no Drain of mine lets a machine go
+// before its node is drained or ends the other operations of a node.
+var _ = Describe("The policy that leaves the Drain of a deleted machine to node-manager", Ordered, func() {
+	var asOperator, asNodeController client.Client
+
+	BeforeAll(func(ctx context.Context) {
+		// Registered before the policy, so it runs after the policy is deleted:
+		// the other specs create these Drains as the admin, and the API server
+		// unloads a deleted policy asynchronously.
+		DeferCleanup(func(ctx context.Context) {
+			Eventually(func(g Gomega) {
+				op := labelledDrainOn(testenv.UniqueName("after"))
+				g.Expect(k8sClient.Create(ctx, op)).To(Succeed())
+				g.Expect(k8sClient.Delete(ctx, op)).To(Succeed())
+			}, time.Minute, testenv.EventuallyPoll).Should(Succeed())
+		})
+		installPolicy(ctx, machineDrainPolicyName)
+
+		// Both are cluster administrators, so RBAC lets the writes through and
+		// only the policy decides.
+		asOperator = clientAs("operator", "system:masters", "system:authenticated")
+		asNodeController = clientAs("system:serviceaccount:d8-cloud-instance-manager:node-controller",
+			"system:masters", "system:serviceaccounts", "system:authenticated")
+
+		// The API server loads a new policy asynchronously.
+		Eventually(func(g Gomega) {
+			op := labelledDrainOn(testenv.UniqueName("probe"))
+			DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, op) })
+			g.Expect(asOperator.Create(ctx, op)).To(MatchError(ContainSubstring(machineDrainRefusal)))
+		}, time.Minute, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	It("refuses an operator creating a Drain with the label", func(ctx context.Context) {
+		op := labelledDrainOn(testenv.UniqueName("by-hand"))
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, op) })
+
+		Expect(asOperator.Create(ctx, op)).To(MatchError(ContainSubstring(machineDrainRefusal)))
+	})
+
+	It("refuses an operator adding the label to a Drain", func(ctx context.Context) {
+		op := labelledDrainOn(testenv.UniqueName("unlabelled"))
+		op.Labels = nil
+		Expect(asOperator.Create(ctx, op)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, op) })
+
+		body := `{"metadata":{"labels":{"node-manager.deckhouse.io/machine-uid":"` + string(uuid.NewUUID()) + `"}}}`
+		Expect(asOperator.Patch(ctx, op, mergePatch(body))).To(MatchError(ContainSubstring(machineDrainRefusal)))
+	})
+
+	// The label is how node-manager finds the Drain of a machine. Moved to another
+	// machine, it would release that machine on a Drain of someone else's node.
+	It("refuses an operator moving the label to another machine", func(ctx context.Context) {
+		op := labelledDrainOn(testenv.UniqueName("by-node-manager"))
+		Expect(asNodeController.Create(ctx, op)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, op) })
+
+		body := `{"metadata":{"labels":{"node-manager.deckhouse.io/machine-uid":"` + string(uuid.NewUUID()) + `"}}}`
+		Expect(asOperator.Patch(ctx, op, mergePatch(body))).To(MatchError(ContainSubstring(machineDrainRefusal)))
+	})
+
+	It("lets node-controller create a Drain with the label", func(ctx context.Context) {
+		op := labelledDrainOn(testenv.UniqueName("by-node-manager"))
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, op) })
+
+		Expect(asNodeController.Create(ctx, op)).To(Succeed())
+	})
+
+	// Only the label is node-manager's: the garbage collector and an operator still
+	// write the rest of the operation's metadata.
+	It("lets an operator change a Drain with the label without touching the label", func(ctx context.Context) {
+		op := labelledDrainOn(testenv.UniqueName("by-node-manager"))
+		Expect(asNodeController.Create(ctx, op)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, op) })
+
+		Expect(asOperator.Patch(ctx, op, mergePatch(`{"metadata":{"annotations":{"example.com/note":"seen"}}}`))).To(Succeed())
+	})
+})
+
+// labelledDrainOn is a Drain the way node-manager writes it for a deleted
+// machine, for a node the specs never create.
+func labelledDrainOn(nodeName string) *v1alpha1.NodeOperation {
+	return &v1alpha1.NodeOperation{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   testenv.UniqueName("machine-drain"),
+			Labels: map[string]string{"node-manager.deckhouse.io/machine-uid": string(uuid.NewUUID())},
+		},
+		Spec: v1alpha1.NodeOperationSpec{Type: v1alpha1.NodeOperationTypeDrain, NodeName: nodeName},
+	}
+}
 
 // disruptionOn is a Disruption the way node-manager writes it, for a node the
 // specs never create.

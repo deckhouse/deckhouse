@@ -21,13 +21,17 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
@@ -207,7 +211,27 @@ func cleanupAll() {
 		for i := range ngList.Items {
 			_ = client.IgnoreNotFound(k8sClient.Delete(suiteCtx, &ngList.Items[i]))
 		}
+
+		pdbList := &policyv1.PodDisruptionBudgetList{}
+		g.Expect(k8sClient.List(suiteCtx, pdbList, client.InNamespace(metav1.NamespaceDefault))).To(Succeed())
+		for i := range pdbList.Items {
+			_ = client.IgnoreNotFound(k8sClient.Delete(suiteCtx, &pdbList.Items[i]))
+		}
+
+		opList := &deckhousev1alpha1.NodeOperationList{}
+		g.Expect(k8sClient.List(suiteCtx, opList)).To(Succeed())
+		for i := range opList.Items {
+			_ = client.IgnoreNotFound(k8sClient.Delete(suiteCtx, &opList.Items[i]))
+		}
 	}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+}
+
+// evictionBlocked is the condition the draining controller reports refused
+// evictions with on a NodeOperation, nil while there are none.
+func evictionBlocked(g Gomega, name string) *metav1.Condition {
+	op := &deckhousev1alpha1.NodeOperation{}
+	g.Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: name}, op)).To(Succeed())
+	return meta.FindStatusCondition(op.Status.Conditions, deckhousev1alpha1.NodeOperationConditionEvictionBlocked)
 }
 
 // User story: As a cluster operator, I want a node marked for draining to be cordoned and have its
@@ -355,5 +379,64 @@ var _ = Describe("Draining a node on the draining annotation", func() {
 		Consistently(func() bool {
 			return getNodeState(name).Annotations[nodecommon.DrainedAnnotation] == "bashible"
 		}, negativeCheckDuration, eventuallyPoll).Should(BeTrue())
+	})
+})
+
+// User story: As a cluster operator, I want a NodeOperation whose eviction does not finish to say
+// which pods are refused, so that I can lift the block before the operation runs out of time.
+var _ = Describe("Reporting refused evictions on the NodeOperation that asked for them", func() {
+	It("names the pod a PodDisruptionBudget keeps until the eviction goes through", func() {
+		name := testenv.UniqueName("drain-refused")
+		op := &deckhousev1alpha1.NodeOperation{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec:       deckhousev1alpha1.NodeOperationSpec{Type: deckhousev1alpha1.NodeOperationTypeDrain, NodeName: name},
+		}
+		Expect(k8sClient.Create(suiteCtx, op)).To(Succeed())
+
+		// The API server evicts a pending pod without asking its budget, and an unready
+		// one whenever the budget has enough healthy pods without it.
+		pod := createBoundPod("app-"+name, name, "")
+		pod.Labels = map[string]string{"app": name}
+		Expect(k8sClient.Update(suiteCtx, pod)).To(Succeed())
+		pod.Status.Phase = corev1.PodRunning
+		pod.Status.Conditions = []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}}
+		Expect(k8sClient.Status().Update(suiteCtx, pod)).To(Succeed())
+
+		// The status a disruption controller would write; envtest runs none. A budget
+		// it has not processed yet is refused with Retry-After, which client-go waits
+		// out itself, ten times over, before the drain hears of it.
+		pdb := &policyv1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: metav1.NamespaceDefault},
+			Spec: policyv1.PodDisruptionBudgetSpec{
+				MinAvailable: ptr.To(intstr.FromInt32(1)),
+				Selector:     &metav1.LabelSelector{MatchLabels: pod.Labels},
+			},
+		}
+		Expect(k8sClient.Create(suiteCtx, pdb)).To(Succeed())
+		pdb.Status = policyv1.PodDisruptionBudgetStatus{
+			ObservedGeneration: pdb.Generation,
+			CurrentHealthy:     1,
+			DesiredHealthy:     1,
+			ExpectedPods:       1,
+		}
+		Expect(k8sClient.Status().Update(suiteCtx, pdb)).To(Succeed())
+
+		marker := nodecommon.NodeOperationDrainSource + "/" + string(op.UID)
+		createGroupNode(name, name, map[string]string{nodecommon.DrainingAnnotation: marker})
+
+		Eventually(func(g Gomega) {
+			blocked := evictionBlocked(g, name)
+			g.Expect(blocked).NotTo(BeNil())
+			g.Expect(blocked.Status).To(Equal(metav1.ConditionTrue))
+			g.Expect(blocked.Message).To(ContainSubstring(`pods/"` + pod.Name + `"`))
+			g.Expect(blocked.Message).To(ContainSubstring("disruption budget"))
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+
+		Expect(k8sClient.Delete(suiteCtx, pdb)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeState(name).Annotations[nodecommon.DrainedAnnotation]).To(Equal(marker))
+			g.Expect(evictionBlocked(g, name)).To(BeNil())
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
 })

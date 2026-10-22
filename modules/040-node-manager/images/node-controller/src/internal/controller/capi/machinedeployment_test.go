@@ -22,10 +22,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/capacity"
+	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
@@ -229,6 +232,33 @@ func TestBuildCAPIMachineDeploymentCapacityAnnotations(t *testing.T) {
 		if _, err := resource.ParseQuantity(got); err != nil {
 			t.Fatalf("annotation %q has invalid Kubernetes quantity %q: %v", key, got, err)
 		}
+	}
+}
+
+// A deleted Machine waits on node-manager's hook, and CAPI skips its own drain: the eviction runs
+// as a Drain operation instead. Both kinds of MachineDeployment carry the two annotations, and CAPI
+// copies them onto the Machines without replacing them.
+func TestMachineDeploymentsHandTheDrainToNodeManager(t *testing.T) {
+	ng := &deckhousev1.NodeGroup{}
+	ng.Name = "worker"
+	ng.Spec.StaticInstances = &deckhousev1.StaticInstancesSpec{}
+
+	for name, md := range map[string]*unstructured.Unstructured{
+		"cloud":  buildCAPIMachineDeployment(capiMDInput{ng: ng}),
+		"static": buildStaticMD(ng),
+	} {
+		t.Run(name, func(t *testing.T) {
+			annotations, _, err := unstructured.NestedStringMap(md.Object, "spec", "template", "metadata", "annotations")
+			if err != nil {
+				t.Fatalf("read spec.template.metadata.annotations: %v", err)
+			}
+			if got := annotations[common.MachineDrainHookAnnotation]; got != common.MachineDrainHookOwner {
+				t.Fatalf("annotation %q = %q, want %q", common.MachineDrainHookAnnotation, got, common.MachineDrainHookOwner)
+			}
+			if got, ok := annotations[capiv1beta2.ExcludeNodeDrainingAnnotation]; !ok || got != "" {
+				t.Fatalf("annotation %q = %q (present %v), want an empty value", capiv1beta2.ExcludeNodeDrainingAnnotation, got, ok)
+			}
+		})
 	}
 }
 

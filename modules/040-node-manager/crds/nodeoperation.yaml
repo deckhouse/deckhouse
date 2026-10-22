@@ -53,6 +53,8 @@ spec:
             ```
 
             In the command, replace `<OPERATION_NAME>` with the name of the operation.
+
+            Operations for a deleted Cluster API Machine carry the label `node-manager.deckhouse.io/machine-uid`. Only `node-manager` can set it.
           x-doc-examples:
             - |
               ```yaml
@@ -112,7 +114,9 @@ spec:
                     Operation to perform on the node.
 
                     * `Reboot`: Reboot the node. Only the nodes of a NodeGroup with `systemType: Immutable` perform this operation. A node that bashible manages refuses it, and the operation fails with the reason `NodeRefused`.
-                    * `Drain`: Evict the workload from the node. The node stays unschedulable until an operator makes it schedulable again.
+                    * `Drain`: Evict the workload from the node. The node stays unschedulable until an operator makes it schedulable again. `node-manager` also creates a `Drain` for the node of a deleted Cluster API Machine. `.spec.cause` names the machine.
+
+                      To cancel a running `Drain`, delete it. `node-manager` withdraws its eviction request from the node before the object is gone. The cordon the eviction placed stays: make the node schedulable again yourself.
                     * `Disruption`: Interrupt the node's work so that the node can apply a new configuration.
 
                     `node-manager` creates `Disruption` operations. Creating one by hand is refused. `Reboot` and `Drain` are meant for an operator.
@@ -204,7 +208,7 @@ spec:
                     * `Approved`: `Draining` (the workload is being evicted from the node), `WaitingForOperation` (another eviction of the node is running, and `message` names who requested it).
                     * `InProgress`: `Draining` and `WaitingForOperation` (for `Drain`), `WaitingForNode` (the node has received the operation and has not reported yet), `Rebooting` (the node is rebooting and has not come back yet).
                     * `Completed`: `Succeeded`, `Released` (the node gave up on the NodeConfig revision the `Disruption` is for), `Drained` (for `Drain`).
-                    * `Failed`: `NodeFailed` and `NodeRefused` (reported by the node), `PreparationTimedOut` (the workload did not leave the node in time), `NodeTimedOut` (the node did not report back or did not come back after a reboot in time), `NodeNotFound`, `NodeGroupMissing`.
+                    * `Failed`: `NodeFailed` and `NodeRefused` (reported by the node), `PreparationTimedOut` (the workload did not leave the node in time), `NodeTimedOut` (the node did not report back or did not come back after a reboot in time), `NodeNotFound`, `NodeGroupMissing`, `MachineDeleted` (the machine of the node is being deleted).
                 message:
                   type: string
                   maxLength: 32768
@@ -245,6 +249,8 @@ spec:
                   description: |
                     When the eviction this operation asked for runs out of the time it was given.
 
+                    On the `Drain` of a deleted machine, the operation fails with `PreparationTimedOut` at this moment, and the machine is deleted with the pods that did not leave. The field is not set for a `Static` or `CloudStatic` NodeGroup without `nodeDrainTimeoutSecond`, and such a `Drain` has no time limit.
+
                     It is pinned at the moment the eviction is requested, from the NodeGroup's `nodeDrainTimeoutSecond` as it stood then, because that is the bound the draining controller itself started running to. Deriving it again later would let a change to the NodeGroup cut short a drain that is still running.
                 conditions:
                   type: array
@@ -253,6 +259,7 @@ spec:
                     Latest details of the operation's progress:
 
                     * `Drained`: Written by `node-manager`. While the workload is being evicted, the condition is `False` with the reason `Draining`. Once the workload has left, it is `True` with the reason `Drained`. When the operation skips the eviction, it is `True` with the reason `DrainSkipped`.
+                    * `EvictionBlocked`: Written by `node-manager` while evictions of the workload are refused, for example by a PodDisruptionBudget. The condition is `True` with the reason `EvictionRefused`, and its `message` lists the refusals as the eviction reports them, one per pod. The same text is in the operation's `message`. The condition is removed once the refusals stop or the eviction ends. A finished operation keeps the refusals it ended on.
                     * `NodeReported`: Written by the node. The condition is `True` with the reason `Succeeded`, `Released`, `Failed`, `Refused` or `RebootStarted`.
                     * `Retry`: Written by `node-manager` on a failed `Disruption`. The condition says whether `node-manager` makes another attempt for the same NodeConfig revision.
 

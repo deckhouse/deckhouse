@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,4 +56,41 @@ func operationsOfNode(ctx context.Context, reader client.Reader, nodeName string
 		return nil, err
 	}
 	return list.Items, nil
+}
+
+// machineDrain reports the Drain node-manager created for a deleted Cluster API
+// Machine, see internal/controller/machinedrain.
+func machineDrain(op *v1alpha1.NodeOperation) bool {
+	_, ofMachine := op.Labels[v1alpha1.NodeOperationMachineUIDLabel]
+	return ofMachine && op.Spec.Type == v1alpha1.NodeOperationTypeDrain
+}
+
+// endForMachine fails every other live operation of the node: the machine is
+// being removed, and its Drain must not wait behind them. Each one gives its
+// drain request back at once, so the Drain takes it on this very pass.
+func (r *Reconciler) endForMachine(ctx context.Context, op *v1alpha1.NodeOperation, logger logr.Logger) error {
+	// Past the cache: failing an operation is final.
+	others, err := operationsOfNode(ctx, r.apiReader, op.Spec.NodeName)
+	if err != nil {
+		return fmt.Errorf("list the operations of %s: %w", op.Spec.NodeName, err)
+	}
+	message := fmt.Sprintf("Machine %s is deleted. node-manager ended this operation so that the machine can be removed",
+		op.Annotations[v1alpha1.NodeOperationMachineAnnotation])
+	for i := range others {
+		other := &others[i]
+		if other.UID == op.UID || terminal(other) {
+			continue
+		}
+		// An operation of an unknown type refuses every write, see Reconcile.
+		if !knownType(other.Spec.Type) {
+			continue
+		}
+		if err := r.fail(ctx, other, "MachineDeleted", message, logger); err != nil {
+			return err
+		}
+		if err := r.releaseNode(ctx, other, logger); err != nil {
+			return err
+		}
+	}
+	return nil
 }

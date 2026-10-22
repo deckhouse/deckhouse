@@ -430,6 +430,7 @@ func buildStaticMD(ng *deckhousev1.NodeGroup) *unstructured.Unstructured {
 						"cluster.x-k8s.io/cluster-name":    "static",
 						"cluster.x-k8s.io/deployment-name": ng.Name,
 					},
+					"annotations": machineDeletionAnnotations(),
 				},
 				"spec": map[string]interface{}{
 					"clusterName": "static",

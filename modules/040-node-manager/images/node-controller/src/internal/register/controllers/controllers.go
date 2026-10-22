@@ -27,6 +27,7 @@ import (
 	_ "github.com/deckhouse/node-controller/internal/controller/csitaint"
 	_ "github.com/deckhouse/node-controller/internal/controller/draining"
 	_ "github.com/deckhouse/node-controller/internal/controller/instance"
+	_ "github.com/deckhouse/node-controller/internal/controller/machinedrain"
 	_ "github.com/deckhouse/node-controller/internal/controller/masternodegroup"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodebootstrap"
 	_ "github.com/deckhouse/node-controller/internal/controller/nodeconfig"

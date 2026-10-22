@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
@@ -67,14 +68,17 @@ var _ = BeforeSuite(func() {
 	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
 	// Instance is deleted when a spot node finishes draining.
 	Expect(deckhousev1alpha2.AddToScheme(scheme)).To(Succeed())
+	// NodeOperation hears which of the evictions it asked for are refused.
+	Expect(deckhousev1alpha1.AddToScheme(scheme)).To(Succeed())
 
-	By("bootstrapping the envtest environment with the NodeGroup and Instance CRDs")
+	By("bootstrapping the envtest environment with the NodeGroup, Instance and NodeOperation CRDs")
 	var err error
 	testEnv, cfg, k8sClient, err = testenv.Start(
 		scheme,
 		testenv.CRDPaths(
 			testenv.WithNodeGroupCRDFile(),
 			testenv.WithInstanceCRDFile(),
+			testenv.WithNodeManager(testenv.NodeOperationCRDFile),
 		)...,
 	)
 	Expect(err).NotTo(HaveOccurred())

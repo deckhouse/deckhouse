@@ -1550,6 +1550,8 @@ spec:
                   description: |
                     Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
 
+                    When a machine is deleted, the `Drain` operation evicts the pods for this long. Then the machine is deleted anyway. In a `Static` or `CloudStatic` NodeGroup without this field, the `Drain` of a deleted machine has no time limit.
+
                     The range is the one the module's own settings have always enforced. A value outside it used to be accepted here and then rejected when the module read it, which stopped node-manager reconciling anything at all.
                 gpu:
                   x-doc-d8Editions:

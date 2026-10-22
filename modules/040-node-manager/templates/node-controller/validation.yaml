@@ -186,3 +186,46 @@ metadata:
 spec:
   policyName: {{ $policyName }}
   validationActions: [Deny]
+---
+{{- $policyName := "nodeoperations-machine-drain-by-node-manager.deckhouse.io" }}
+# node-manager creates a Drain with this label when a Cluster API Machine is
+# deleted. The Drain ends the other operations of the node, and its end lets the
+# machine go. A label set by anyone else would cancel those operations or release
+# a machine whose node was never drained. Only node-controller's service account
+# may set it.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  # UPDATE too: a label, unlike spec.type, can be added to an existing operation.
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["CREATE", "UPDATE"]
+      resources:   ["nodeoperations"]
+  matchConditions:
+  # An update matches only when it adds the label or changes its value, so the
+  # rest of the operation stays writable and removing the label is not refused.
+  - name: machine-uid-label-set
+    expression: |
+      object.metadata.?labels[?"node-manager.deckhouse.io/machine-uid"].hasValue() && (
+        request.operation == "CREATE" ||
+        object.metadata.?labels[?"node-manager.deckhouse.io/machine-uid"] !=
+          oldObject.metadata.?labels[?"node-manager.deckhouse.io/machine-uid"])
+  validations:
+  - expression: 'request.userInfo.username == "system:serviceaccount:d8-cloud-instance-manager:node-controller"'
+    reason: Forbidden
+    message: "Drain operations for a deleted machine are created by node-manager. Create the Drain without the label node-manager.deckhouse.io/machine-uid"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]

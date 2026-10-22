@@ -125,6 +125,16 @@ func evictionFailure(op *v1alpha1.NodeOperation, node *corev1.Node) string {
 	return node.Annotations[nodecommon.DrainFailedAnnotation]
 }
 
+// evictionRefusals are the evictions the draining controller reports refused
+// to this operation's drain; empty while none are.
+func evictionRefusals(op *v1alpha1.NodeOperation) string {
+	blocked := meta.FindStatusCondition(op.Status.Conditions, v1alpha1.NodeOperationConditionEvictionBlocked)
+	if blocked == nil {
+		return ""
+	}
+	return blocked.Message
+}
+
 // recordDrainRequested remembers that the eviction has been asked for and, the
 // first time only, until when it may run. The deadline is written once and
 // never moved: a deadline renewed on every re-issue is no deadline.
@@ -140,7 +150,7 @@ func (r *Reconciler) recordDrainRequested(ctx context.Context, op *v1alpha1.Node
 			Message:            fmt.Sprintf("the draining controller is requested to evict the workload from node %s", op.Spec.NodeName),
 			ObservedGeneration: op.Generation,
 		})
-		if op.Status.DrainDeadline == nil {
+		if op.Status.DrainDeadline == nil && !unlimitedDrain(op) {
 			op.Status.DrainDeadline = ptr.To(deadline)
 		}
 	})

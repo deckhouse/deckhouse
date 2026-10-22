@@ -30,9 +30,29 @@ import (
 // declares it in selectableFields, and node-controller indexes its cache by it.
 const NodeOperationNodeNameField = "spec.nodeName"
 
+const (
+	// NodeOperationMachineUIDLabel marks the Drain node-manager creates when a
+	// Cluster API Machine is deleted. The value is the UID of that Machine.
+	// Only node-controller may set it, the admission policy enforces that.
+	NodeOperationMachineUIDLabel = "node-manager.deckhouse.io/machine-uid"
+	// NodeOperationMachineAnnotation names that Machine for the messages.
+	NodeOperationMachineAnnotation = "node-manager.deckhouse.io/machine"
+	// NodeOperationUnlimitedDrainAnnotation marks the Drain of a deleted machine
+	// of a Static or CloudStatic group without nodeDrainTimeoutSecond. Cluster API
+	// drained such a machine without a time limit, and so does this Drain. It is
+	// read only on an operation with NodeOperationMachineUIDLabel.
+	NodeOperationUnlimitedDrainAnnotation = "node-manager.deckhouse.io/drain-without-time-limit"
+
+	// NodeOperationConditionEvictionBlocked is set by the draining controller while
+	// the eviction it runs for the operation is refused. The message has the
+	// refusals as the eviction reports them; the condition goes once they stop.
+	NodeOperationConditionEvictionBlocked = "EvictionBlocked"
+)
+
 // NodeOperation is one interruption of a node's work: a reboot, an eviction of
 // its workload, or the disruption a node needs to apply a NodeConfig revision.
-// A record of intent: who asked, for what, and how it ended.
+// A record of intent: who asked, for what, and how it ended. The operations of
+// a deleted Cluster API Machine carry NodeOperationMachineUIDLabel.
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,shortName=nop
 // +kubebuilder:subresource:status
@@ -51,6 +71,8 @@ const (
 	// NodeOperationTypeReboot reboots the node.
 	NodeOperationTypeReboot NodeOperationType = "Reboot"
 	// NodeOperationTypeDrain evicts the workload and leaves the node unschedulable.
+	// node-manager also creates one when a Cluster API Machine is deleted,
+	// before the machine is removed.
 	NodeOperationTypeDrain NodeOperationType = "Drain"
 	// NodeOperationTypeDisruption interrupts the node so that it can apply a
 	// NodeConfig revision that needs it. node-manager creates it, and it waits
@@ -89,7 +111,8 @@ type NodeOperationSpec struct {
 	Drain *NodeOperationDrainSpec `json:"drain,omitempty"`
 
 	// Cause is why the node is interrupted. node-manager fills it for a
-	// Disruption from the node's request. An operator may set it on the others.
+	// Disruption from the node's request, and for the Drain of a deleted
+	// machine with the machine's name. An operator may set it on the others.
 	// +optional
 	Cause string `json:"cause,omitempty"`
 }
@@ -172,7 +195,8 @@ type NodeOperationStatus struct {
 	// +optional
 	DrainDeadline *metav1.Time `json:"drainDeadline,omitempty"`
 
-	// Conditions are Drained and Retry (node-manager) and NodeReported (the node).
+	// Conditions are Drained, EvictionBlocked and Retry (node-manager) and
+	// NodeReported (the node).
 	// +optional
 	// +listType=map
 	// +listMapKey=type

@@ -16,7 +16,11 @@ limitations under the License.
 
 package nodeoperation
 
-import "time"
+import (
+	"time"
+
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
+)
 
 const (
 	controllerName = "node-operation"
@@ -66,7 +70,11 @@ const (
 	// drainingSource prefixes the drains this controller asks for; the node
 	// marker adds the operation's identity (see drainMarker) because the two
 	// drain annotations are a single slot shared with "bashible" and "user".
-	drainingSource = "node-operation"
+	drainingSource = nodecommon.NodeOperationDrainSource
+
+	// drainFinalizer holds a deleted Drain until its request is off the node:
+	// deleting a running Drain is how it is cancelled.
+	drainFinalizer = "node-manager.deckhouse.io/drain-request"
 
 	// nodeOperationKind is how a Drain the previous controller created names
 	// the operation it evicts for, in an owner reference.

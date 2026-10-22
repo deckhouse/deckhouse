@@ -31,10 +31,20 @@ const (
 	DrainedAnnotation            = "update.node.deckhouse.io/drained"
 	DrainFailedAnnotation        = "update.node.deckhouse.io/drain-failed"
 
+	// A NodeOperation asks for a drain with this source and its lineage UID:
+	// "node-operation/<uid>".
+	NodeOperationDrainSource = "node-operation"
+
 	// Node metadata annotations
 	ConfigurationChecksumAnnotation = "node.deckhouse.io/configuration-checksum"
 	ProviderIDAnnotation            = "node.deckhouse.io/provider-id"
 
 	// Standard CAPI annotation set on Nodes managed by a CAPI Machine.
 	CAPIMachineAnnotation = "cluster.x-k8s.io/machine"
+
+	// CAPI holds a deleted Machine until this hook is removed. node-controller
+	// puts it into every CAPI MachineDeployment template and removes it from a
+	// deleted Machine once its Drain ends or its node cannot be drained.
+	MachineDrainHookAnnotation = "pre-drain.delete.hook.machine.cluster.x-k8s.io/node-manager"
+	MachineDrainHookOwner      = "node-controller"
 )

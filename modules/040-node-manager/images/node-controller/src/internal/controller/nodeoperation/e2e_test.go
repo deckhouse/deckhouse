@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -705,6 +706,54 @@ var _ = Describe("NodeOperation controller", func() {
 			g.Expect(fresh.Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
 			g.Expect(fresh.Annotations).NotTo(HaveKey(nodecommon.DrainedAnnotation))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// Deleting a running Drain is how an operator cancels it. A request left on the
+	// node outlives the operation, and the draining controller evicts for nobody.
+	It("withdraws its drain request when it is deleted mid-eviction, and leaves the node cordoned", func(ctx context.Context) {
+		node := createNode(ctx, testenv.UniqueName("cancel"), false)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeDrain, nil)
+
+		waitForDrainRequest(ctx, node.Name)
+
+		By("the draining controller cordoning the node for the eviction")
+		Expect(k8sClient.Patch(ctx, getNode(ctx, Default, node.Name), mergePatch(`{"spec":{"unschedulable":true}}`))).To(Succeed())
+
+		By("an operator deleting the operation")
+		Expect(k8sClient.Delete(ctx, op)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			g.Expect(apierrors.IsNotFound(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, &v1alpha1.NodeOperation{}))).
+				To(BeTrue(), "the operation goes once it has let the node go")
+			fresh := getNode(ctx, g, node.Name)
+			g.Expect(fresh.Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
+			g.Expect(fresh.Spec.Unschedulable).To(BeTrue(), "the cordon stays, as when a hand drain is withdrawn")
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		Consistently(func(g Gomega) {
+			g.Expect(getNode(ctx, g, node.Name).Annotations).NotTo(HaveKey(nodecommon.DrainingAnnotation))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// A finished operation is deleted too, when it is collected. A completed Drain
+	// asked for the node to stay out, and its collection must not undo that.
+	It("keeps the node out when a completed Drain is deleted", func(ctx context.Context) {
+		node := createNode(ctx, testenv.UniqueName("keptout"), false)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeDrain, nil)
+		markDrained(ctx, node.Name)
+
+		Eventually(func(g Gomega) {
+			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseCompleted))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		Expect(k8sClient.Delete(ctx, op)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			g.Expect(apierrors.IsNotFound(k8sClient.Get(ctx, types.NamespacedName{Name: op.Name}, &v1alpha1.NodeOperation{}))).To(BeTrue())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+		Consistently(func(g Gomega) {
+			g.Expect(getNode(ctx, g, node.Name).Spec.Unschedulable).To(BeTrue())
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
 	// A node outside every group is invisible to the draining controller, so a

@@ -99,6 +99,24 @@ var _ = Describe("Module :: node-manager :: helm template :: NodeOperation right
 		binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "nodeoperations-disruption-by-node-manager.deckhouse.io")
 		Expect(binding.Field("spec.validationActions").String()).To(ContainSubstring("Deny"))
 	})
+
+	// node-manager creates the Drain of a deleted machine as this service account.
+	// A policy naming any other refuses that Drain, and the machine waits on its
+	// pre-drain hook for good.
+	It("leaves the label of a deleted machine's Drain to the service account node-controller runs as", func() {
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		Expect(f.KubernetesResource("ServiceAccount", "d8-cloud-instance-manager", "node-controller").Exists()).To(BeTrue())
+		policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "nodeoperations-machine-drain-by-node-manager.deckhouse.io")
+		Expect(policy.Exists()).To(BeTrue())
+		Expect(policy.Field("spec.matchConditions.0.expression").String()).
+			To(ContainSubstring(`"node-manager.deckhouse.io/machine-uid"`))
+		Expect(policy.Field("spec.validations.0.expression").String()).
+			To(ContainSubstring(`"system:serviceaccount:d8-cloud-instance-manager:node-controller"`))
+		binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "nodeoperations-machine-drain-by-node-manager.deckhouse.io")
+		Expect(binding.Field("spec.policyName").String()).To(Equal("nodeoperations-machine-drain-by-node-manager.deckhouse.io"))
+		Expect(binding.Field("spec.validationActions").String()).To(ContainSubstring("Deny"))
+	})
 })
 
 func nodeOperationVerbs(role object_store.KubeObject) []string {

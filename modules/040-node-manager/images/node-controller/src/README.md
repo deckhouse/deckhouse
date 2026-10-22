@@ -93,13 +93,19 @@ Details: [docs/controller-capi.md](docs/controller-capi.md).
 | `capi-finalizer-cleanup` | Cluster (CAPI) | Removes the `deckhouse.io/capi-controller-manager` finalizer so a deleted Cluster is not stuck. |
 | `capi-md-metrics` | MachineDeployment (CAPI) | Exports per-MachineDeployment gauges to the metrics endpoint. |
 
+`machine-drain` (`internal/controller/machinedrain`) watches CAPI Machines. When a Machine held by the
+pre-drain hook of node-manager is deleted, it creates a `Drain` NodeOperation for its node and removes the
+hook once the Drain ends. A node that is gone or not Ready gets no Drain: the hook is removed at once, and
+the NodeGroup gets the event `MachineDeletedWithoutDrain`. In a `Static` or `CloudStatic` group without
+`nodeDrainTimeoutSecond` the Drain has no time limit, as the CAPI drain had none there.
+
 ### Immutable OS nodes (olcedar)
 
 | Controller | Watches | What it does |
 |---|---|---|
 | `node-config` | Node | Renders a `NodeConfig` for every node from the NodeGroup and live cluster state: the whole node for an Engine (`systemType: Immutable`) NodeGroup, the static pods, the agent's own package, the platform packages and the registry packages NodeExtensionRequests ask for on a bashible one; the on-node agent reconciles the node towards it. Compiles the `NodeStaticPodRequest` objects that select the group into `spec.staticPods`, and owns the `NodeStaticPodRequest` / `NodeExtensionRequest` status counters (matched, applied, failed, pending nodes). |
 | `node-bootstrap` | NodeBootstrapConfig | Cluster API bootstrap provider for immutable NodeGroups: renders each Machine's `NodeConfig` userdata into a Secret and advertises it through the `NodeBootstrapConfig` status CAPI waits on. |
-| `node-operation` | NodeOperation | Carries a node-interrupting operation (reboot, eviction, permission to apply a disruptive config) from recorded intent to result: evicts, hands over via `InProgress`, the node reports back. |
+| `node-operation` | NodeOperation | Carries a node-interrupting operation (reboot, eviction, permission to apply a disruptive config) from recorded intent to result: evicts, hands over via `InProgress`, the node reports back. A Drain carries the finalizer `node-manager.deckhouse.io/drain-request`: deleting a running one withdraws its drain request and leaves the cordon. |
 
 The NodeConfig CRD, `modules/040-node-manager/crds/nodeconfig.yaml`, is copied, not edited: its schema has one
 source, the nodelet repository, which generates `crds/internal.deckhouse.io_nodeconfigs.yaml` from its public API

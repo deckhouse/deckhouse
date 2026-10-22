@@ -31,11 +31,16 @@ import (
 // hardDeadline is the moment this operation runs out of time. Read off the
 // operation alone, never recomputed from the cluster: a later NodeGroup edit
 // or deletion must not cut short a drain that is still legitimately running.
+// An unlimited Drain has none, callers check unlimitedDrain first.
 func hardDeadline(op *v1alpha1.NodeOperation) time.Time {
 	switch {
 	case awaitingEviction(op) && op.Status.DrainDeadline != nil:
 		// Waiting for an eviction that was given until then, plus the margin
-		// every stretch gets for the plumbing around it.
+		// every stretch gets for the plumbing around it. A deleted machine gets
+		// no margin: Cluster API removed it at the drain timeout as well.
+		if machineDrain(op) {
+			return op.Status.DrainDeadline.Time
+		}
 		return op.Status.DrainDeadline.Time.Add(operationTimeout)
 	case op.Status.StartedAt != nil:
 		// The node has the work and owes an answer.
@@ -55,8 +60,18 @@ func publishedDeadline(op *v1alpha1.NodeOperation) *metav1.Time {
 	if terminal(op) || waitingForApproval(op) {
 		return nil
 	}
+	if unlimitedDrain(op) {
+		return nil
+	}
 	deadline := metav1.NewTime(hardDeadline(op))
 	return &deadline
+}
+
+// unlimitedDrain reports the Drain of a deleted machine that has no time limit,
+// see v1alpha1.NodeOperationUnlimitedDrainAnnotation.
+func unlimitedDrain(op *v1alpha1.NodeOperation) bool {
+	_, unlimited := op.Annotations[v1alpha1.NodeOperationUnlimitedDrainAnnotation]
+	return unlimited && machineDrain(op)
 }
 
 // awaitingEviction reports what the operation is still waiting for. A Drain is
@@ -68,7 +83,11 @@ func awaitingEviction(op *v1alpha1.NodeOperation) bool {
 
 // expire fails an operation that ran out of time and says so.
 func (r *Reconciler) expire(ctx context.Context, op *v1alpha1.NodeOperation, node *corev1.Node, deadline time.Time, logger logr.Logger) error {
-	reason, message := timedOut(op, deadline, evictionFailure(op, node))
+	evictionError := evictionRefusals(op)
+	if evictionError == "" {
+		evictionError = evictionFailure(op, node)
+	}
+	reason, message := timedOut(op, deadline, evictionError)
 	return r.fail(ctx, op, reason, message, logger)
 }
 
@@ -80,8 +99,13 @@ func timedOut(op *v1alpha1.NodeOperation, deadline time.Time, evictionError stri
 	if !awaitingEviction(op) {
 		return "NodeTimedOut", fmt.Sprintf("node %s did not report back by %s", op.Spec.NodeName, when)
 	}
+	message := fmt.Sprintf("node %s was not drained by %s", op.Spec.NodeName, when)
 	if evictionError != "" {
-		return "PreparationTimedOut", fmt.Sprintf("node %s was not drained by %s. Last eviction error: %s", op.Spec.NodeName, when, evictionError)
+		message += ". Last eviction error: " + evictionError
 	}
-	return "PreparationTimedOut", fmt.Sprintf("node %s was not drained by %s", op.Spec.NodeName, when)
+	// The hook is removed once the Drain ends, so the machine goes anyway.
+	if machineDrain(op) {
+		message += ". The machine is deleted with the pods that did not leave"
+	}
+	return "PreparationTimedOut", message
 }

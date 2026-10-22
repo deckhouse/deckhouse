@@ -168,8 +168,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
+	if !op.DeletionTimestamp.IsZero() {
+		return ctrl.Result{}, r.cancel(ctx, op, logger)
+	}
+
 	if terminal(op) {
 		return r.retire(ctx, op, logger)
+	}
+
+	if err := r.holdDrain(ctx, op); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Before the node is read: the operations ended here give the node's drain
+	// request back, and the eviction below reads the node as they left it.
+	if machineDrain(op) {
+		if err := r.endForMachine(ctx, op, logger); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Past the cache: the spec is immutable, so failing an operation is final,
@@ -254,7 +270,7 @@ func (r *Reconciler) carryOut(ctx context.Context, op *v1alpha1.NodeOperation, n
 	// Every stretch of the operation is bounded, not only the node's: an
 	// eviction that never finishes would otherwise hold the operation Approved
 	// forever, and with it the node out of the scheduler.
-	if deadline := hardDeadline(op); time.Now().After(deadline) {
+	if deadline := hardDeadline(op); !unlimitedDrain(op) && time.Now().After(deadline) {
 		return ctrl.Result{}, r.expire(ctx, op, node, deadline, logger)
 	}
 
@@ -355,10 +371,10 @@ func (r *Reconciler) evict(ctx context.Context, op *v1alpha1.NodeOperation, node
 	// operation's: markers removed by anything else would otherwise be
 	// waited on forever. Asking again does not move the pinned deadline.
 	if !drainRequested(op) || idle(op, node) {
-		// The request is a single slot: taking it from whoever holds it makes
-		// both operations keep taking it back. Waiting is bounded by this
-		// operation's own deadline.
-		if requestedByAnother(op, node) {
+		// The request is a single slot: taking it from whoever holds it makes both
+		// operations keep taking it back. A machine Drain takes it from any holder:
+		// endForMachine ended the operations, bashible asks again once it is free.
+		if requestedByAnother(op, node) && !machineDrain(op) {
 			holder, err := r.evictionHolder(ctx, node)
 			if err != nil {
 				return false, err
@@ -379,6 +395,10 @@ func (r *Reconciler) evict(ctx context.Context, op *v1alpha1.NodeOperation, node
 	message := fmt.Sprintf("The workload is being evicted from node %s", node.Name)
 	if failure := evictionFailure(op, node); failure != "" {
 		message = fmt.Sprintf("the eviction of node %s is failing: %s", node.Name, failure)
+	}
+	// What is refused now says more than how an earlier attempt failed.
+	if refusals := evictionRefusals(op); refusals != "" {
+		message = fmt.Sprintf("the eviction of node %s is blocked: %s", node.Name, refusals)
 	}
 	// The Node event carrying the answer is the normal wake-up; the caller's
 	// requeue covers a dropped one, which would otherwise strand the operation

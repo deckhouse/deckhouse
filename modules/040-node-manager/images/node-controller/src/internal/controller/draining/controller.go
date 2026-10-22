@@ -21,10 +21,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -35,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
@@ -52,6 +56,10 @@ const (
 	// instance behind this node is about to be reclaimed
 	// (modules/030-cloud-provider-aws/hooks/add_termination_metadata.go:37).
 	spotTerminationLabel = "node.deckhouse.io/termination-in-progress"
+
+	// refusalCheckInterval is how often a drain a NodeOperation asked for passes
+	// its refusals on: as often as the helper retries a refused eviction.
+	refusalCheckInterval = 5 * time.Second
 )
 
 // Reconciler empties a node when somebody annotates it, and answers with a
@@ -174,10 +182,94 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node) (_ ct
 
 	// The drain's outcome decides what is written, so it is collected first.
 	if finished, drainErr := r.drains.result(node.Name); finished {
+		// Collecting it forgot its refusals, so the operation hears there are none.
+		if err := r.reportRefusals(ctx, node.Name, state.requestedBy); err != nil {
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, r.finishDrain(ctx, logger, node, state.requestedBy, drainErr)
 	}
 
-	return ctrl.Result{}, r.startDrain(ctx, logger, node, state.requestedBy)
+	if err := r.startDrain(ctx, logger, node, state.requestedBy); err != nil {
+		return ctrl.Result{}, err
+	}
+	if !strings.HasPrefix(state.requestedBy, nodecommon.NodeOperationDrainSource+"/") {
+		return ctrl.Result{}, nil
+	}
+	// Nothing on the node changes while an eviction is refused, so the passes
+	// that tell the operation come from here.
+	return ctrl.Result{RequeueAfter: refusalCheckInterval}, r.reportRefusals(ctx, node.Name, state.requestedBy)
+}
+
+// reportRefusals tells the NodeOperation that asked for the drain which of its
+// evictions are refused, and that none are once they stop.
+func (r *Reconciler) reportRefusals(ctx context.Context, nodeName, source string) error {
+	uid, ofOperation := strings.CutPrefix(source, nodecommon.NodeOperationDrainSource+"/")
+	if !ofOperation {
+		return nil
+	}
+	refusals := r.drains.refusals(nodeName, time.Now())
+
+	ops := &deckhousev1alpha1.NodeOperationList{}
+	if err := r.Client.List(ctx, ops); err != nil {
+		return fmt.Errorf("list NodeOperations: %w", err)
+	}
+	for i := range ops.Items {
+		op := &ops.Items[i]
+		if !askedFor(op, nodeName, types.UID(uid)) {
+			continue
+		}
+		if err := r.setEvictionBlocked(ctx, op, refusals); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// askedFor reports whether the drain the node carries is the operation's. The
+// request names the operation's lineage: its own UID, or the UID of the
+// operation it was created for (lineageUID in internal/controller/nodeoperation/drain.go).
+func askedFor(op *deckhousev1alpha1.NodeOperation, nodeName string, uid types.UID) bool {
+	if op.Spec.NodeName != nodeName {
+		return false
+	}
+	if op.UID == uid {
+		return true
+	}
+	for _, owner := range op.OwnerReferences {
+		if owner.UID == uid {
+			return true
+		}
+	}
+	return false
+}
+
+// setEvictionBlocked writes the refusals into the operation's EvictionBlocked
+// condition, and removes it when there are none. A finished operation keeps the
+// refusals it ended on.
+func (r *Reconciler) setEvictionBlocked(ctx context.Context, op *deckhousev1alpha1.NodeOperation, refusals []string) error {
+	if op.Status.Phase == deckhousev1alpha1.NodeOperationPhaseCompleted || op.Status.Phase == deckhousev1alpha1.NodeOperationPhaseFailed {
+		return nil
+	}
+	before := op.DeepCopy()
+	if len(refusals) == 0 {
+		meta.RemoveStatusCondition(&op.Status.Conditions, deckhousev1alpha1.NodeOperationConditionEvictionBlocked)
+	} else {
+		meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
+			Type:               deckhousev1alpha1.NodeOperationConditionEvictionBlocked,
+			Status:             metav1.ConditionTrue,
+			Reason:             "EvictionRefused",
+			Message:            truncateForAnnotation(strings.Join(refusals, "; ")),
+			ObservedGeneration: op.Generation,
+		})
+	}
+	if equality.Semantic.DeepEqual(before.Status, op.Status) {
+		return nil
+	}
+	patch := client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{})
+	if err := r.Client.Status().Patch(ctx, op, patch); err != nil {
+		return fmt.Errorf("report the refused evictions to %s: %w", op.Name, err)
+	}
+	return nil
 }
 
 // deleteInstance removes the Instance of a reclaimed spot node. The Instance is read first so the

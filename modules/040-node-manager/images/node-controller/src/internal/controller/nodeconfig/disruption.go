@@ -64,8 +64,9 @@ func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, 
 		return ctrl.Result{}, nil
 	}
 
-	// An operation in flight needs nothing.
-	if approvals.current != nil {
+	// An operation in flight needs nothing. Nor does a node whose machine is being deleted: an
+	// interruption would only be ended at once with MachineDeleted.
+	if approvals.current != nil || approvals.machineDeleted {
 		return ctrl.Result{}, nil
 	}
 
@@ -97,6 +98,9 @@ type approvalState struct {
 	lastFailed *v1alpha1.NodeOperation
 	// stale are the requests left unapproved for older revisions.
 	stale []*v1alpha1.NodeOperation
+	// machineDeleted: the node has the Drain of a deleted Cluster API Machine, see
+	// internal/controller/machinedrain.
+	machineDeleted bool
 }
 
 // retryIn is what is left of the backoff after the newest failed attempt. Each
@@ -133,6 +137,9 @@ func listApprovals(ctx context.Context, reader client.Reader, nc *internalv1alph
 	var lastCompletedAt time.Time
 	for i := range ops.Items {
 		op := &ops.Items[i]
+		if _, ofMachine := op.Labels[v1alpha1.NodeOperationMachineUIDLabel]; ofMachine {
+			state.machineDeleted = true
+		}
 		if op.Spec.Type != v1alpha1.NodeOperationTypeDisruption {
 			continue
 		}

@@ -345,6 +345,41 @@ func TestTheEvictionErrorReachesTheOperation(t *testing.T) {
 	require.Equal(t, "the eviction of node worker is failing: "+evictionError, fresh.Status.Message)
 }
 
+// The draining controller reports on the operation which evictions are refused
+// while it keeps trying, so an operator sees what to unblock before the deadline.
+func TestARefusedEvictionReachesTheOperation(t *testing.T) {
+	node := groupedNode("worker")
+	op := rebootOf(node)
+	r, c, _ := phaseRecordingReconciler(t, node, op)
+
+	reconcileOperation(t, r, op.Name)
+	refuseEviction(t, c, op.Name)
+	reconcileOperation(t, r, op.Name)
+
+	fresh := getOp(t, c, op.Name)
+	require.Equal(t, v1alpha1.NodeOperationPhaseApproved, fresh.Status.Phase)
+	require.Equal(t, "Draining", fresh.Status.Reason)
+	require.Equal(t, "the eviction of node worker is blocked: "+evictionRefusal, fresh.Status.Message)
+}
+
+// An operation that runs out of time on a refused eviction says what refused it.
+func TestAnOperationTimingOutOnARefusedEvictionSaysWhy(t *testing.T) {
+	node := groupedNode("worker")
+	op := rebootOf(node)
+	r, c, _ := phaseRecordingReconciler(t, node, op)
+
+	reconcileOperation(t, r, op.Name)
+	refuseEviction(t, c, op.Name)
+	fresh := getOp(t, c, op.Name)
+	fresh.Status.DrainDeadline = ptr.To(metav1.NewTime(time.Now().Add(-2 * operationTimeout)))
+	require.NoError(t, c.Status().Update(context.Background(), fresh))
+	reconcileOperation(t, r, op.Name)
+
+	fresh = getOp(t, c, op.Name)
+	require.Equal(t, "PreparationTimedOut", fresh.Status.Reason)
+	require.Contains(t, fresh.Status.Message, ". Last eviction error: "+evictionRefusal)
+}
+
 // The node has the work once the workload is gone. A drained marker removed
 // afterwards, by a bashible drain for one, must not send it back to evicting.
 func TestAnOperationAtWorkDoesNotEvictAgain(t *testing.T) {
@@ -645,6 +680,22 @@ func annotateNode(t *testing.T, c client.Client, nodeName, key, value string) {
 	}
 	node.Annotations[key] = value
 	require.NoError(t, c.Update(context.Background(), node))
+}
+
+// evictionRefusal is a line the drain reports for an eviction a
+// PodDisruptionBudget refuses.
+const evictionRefusal = `error when evicting pods/"web-0" -n "app" (will retry after 5s): ` +
+	`Cannot evict pod as it would violate the pod's disruption budget.`
+
+// refuseEviction plays the draining controller reporting a refused eviction.
+func refuseEviction(t *testing.T, c client.Client, name string) {
+	t.Helper()
+	op := getOp(t, c, name)
+	meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
+		Type: v1alpha1.NodeOperationConditionEvictionBlocked, Status: metav1.ConditionTrue,
+		Reason: "EvictionRefused", Message: evictionRefusal,
+	})
+	require.NoError(t, c.Status().Update(context.Background(), op))
 }
 
 func removeNodeAnnotation(t *testing.T, c client.Client, nodeName, key string) {

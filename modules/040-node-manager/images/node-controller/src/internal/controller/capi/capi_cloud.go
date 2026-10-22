@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	sigsyaml "sigs.k8s.io/yaml"
 
+	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/cloudprovider"
 	"github.com/deckhouse/node-controller/internal/common"
@@ -125,7 +126,8 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 			"replicas":    int64(in.desired),
 			"template": map[string]interface{}{
 				"metadata": map[string]interface{}{
-					"labels": commonLabels(),
+					"labels":      commonLabels(),
+					"annotations": machineDeletionAnnotations(),
 				},
 				"spec": map[string]interface{}{
 					"clusterName": in.clusterName,
@@ -153,6 +155,16 @@ func buildCAPIMachineDeployment(in capiMDInput) *unstructured.Unstructured {
 			},
 		},
 	}}
+}
+
+// machineDeletionAnnotations hand the eviction of a deleted Machine to node-manager: CAPI waits
+// on the hook until internal/controller/machinedrain removes it after its Drain operation, and
+// skips its own drain. A function and not a shared map, see commonLabels in buildCAPIMachineDeployment.
+func machineDeletionAnnotations() map[string]interface{} {
+	return map[string]interface{}{
+		common.MachineDrainHookAnnotation:         common.MachineDrainHookOwner,
+		capiv1beta2.ExcludeNodeDrainingAnnotation: "",
+	}
 }
 
 // The kubelet ephemeral-storage deductions candi/bashible/common-steps/all/064_configure_kubelet.sh.tpl

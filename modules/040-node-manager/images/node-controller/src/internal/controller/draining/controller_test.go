@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"maps"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -784,5 +785,23 @@ func TestTruncateForAnnotation(t *testing.T) {
 	// The cut drops at most one partial rune, so the body lands just under the limit.
 	if body := len(got) - len(suffix); body > 1024 || body <= 1024-utf8.UTFMax {
 		t.Fatalf("truncated body = %d bytes, want the 1024-byte limit less at most one partial rune", body)
+	}
+}
+
+// The helper repeats a refused eviction every 5s, so a refusal it stopped
+// repeating has gone through and is no longer reported.
+func TestRefusalLog_ReportsTheRefusalsStillRepeated(t *testing.T) {
+	refusals := &refusalLog{lastSeen: map[string]time.Time{}}
+	for _, line := range []string{"refused b\n", "refused a\n", "refused b\n"} {
+		if _, err := refusals.Write([]byte(line)); err != nil {
+			t.Fatalf("write %q: %v", line, err)
+		}
+	}
+
+	if got, want := refusals.current(time.Now()), []string{"refused a", "refused b"}; !slices.Equal(got, want) {
+		t.Fatalf("current refusals = %q, want %q", got, want)
+	}
+	if got := refusals.current(time.Now().Add(refusalWindow + time.Second)); len(got) != 0 {
+		t.Fatalf("refusals not repeated for %s = %q, want none", refusalWindow, got)
 	}
 }
