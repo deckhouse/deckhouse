@@ -156,15 +156,18 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 {%- endif %}
 {%- endif %}
 
-{% if page.platform_type == "cloud" %}
+{% if page.platform_type == "cloud" or page.platform_type == "baremetal" or page.platform_code == 'bm-private' %}
 {% offtopic title="Если установка была прервана..." %}
-> Если установка была прервана (не хватило квот, ошибки сети и т. п.), вы можете её перезапустить. Установка корректно продолжится, никакие дублирующие ресурсы в облаке созданы не будут.
+> Если установка была прервана ({% if page.platform_type == "cloud" %}не хватило квот, {% endif %}ошибки сети и т. п.), вы можете её перезапустить. Установка корректно продолжится{% if page.platform_type == "cloud" %}, никакие дублирующие ресурсы в облаке созданы не будут{% endif %}.
 >
-> Если установка не может быть продолжена и вам нужно удалить созданные в облаке ресурсы, выполните следующую команду:
+> Если установка не может быть продолжена и вам нужно {% if page.platform_type == "cloud" %}удалить созданные в облаке ресурсы{% else %}очистить узлы{% endif %}, выполните следующую команду:
 >
 > ```shell
-> dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
+> dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{% elsif page.platform_type == "baremetal" or page.platform_code == 'bm-private' %}<username>{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
 > ```
+{%- if page.platform_type != "cloud" %}
+> Обратите внимание, что во время очистки master-узел будет перезагружен.
+{% endif %}
 {%- endofftopic %}
 {%- endif %}
 {%- endif %}

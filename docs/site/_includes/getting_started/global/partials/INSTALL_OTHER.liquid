@@ -149,15 +149,18 @@ The `--ssh-user` parameter here refers to the default user for the relevant VM i
 {%- endif %}
 {%- endif %}
 
-{% if page.platform_type == "cloud" %}
+{% if page.platform_type == "cloud" or page.platform_type == "baremetal" or page.platform_code == 'bm-private' %}
 {% offtopic title="If the installation was interrupted..." %}
-> If the installation was interrupted (there were not enough quotas, network errors, etc.), you can restart it. The installation will continue correctly, no duplicate resources will be created in the cloud.
+> If the installation was interrupted ({% if page.platform_type == "cloud" %}there were not enough quotas, {% endif %}network errors, etc.), you can restart it. The installation will continue correctly{% if page.platform_type == "cloud" %}, no duplicate resources will be created in the cloud{% endif %}.
 >
-> If the installation failed, and you need to delete the resources created in the cloud, run the following command:
+> If the installation failed, and you need to {% if page.platform_type == "cloud" %}delete the resources created in the cloud{% else %}clean up the nodes{% endif %}, run the following command:
 >
 > ```shell
-> dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
+> dhctl bootstrap-phase abort --ssh-user={% if page.platform_code == "azure" %}azureuser{%- elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{% elsif page.platform_type == "baremetal" or page.platform_code == 'bm-private' %}<username>{%- else %}ubuntu{%- endif %} --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
 > ```
+{%- if page.platform_type != "cloud" %}
+> Note that the master node will be rebooted during the cleanup.
+{% endif %}
 {%- endofftopic %}
 {%- endif %}
 {%- endif %}
