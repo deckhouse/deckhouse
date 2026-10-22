@@ -669,6 +669,68 @@ resources:
 			})
 		})
 
+		Context("leader election", func() {
+			leaderElectionOf := func(name string) string {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				ds := f.KubernetesResource("DaemonSet", "kube-system", name)
+				Expect(ds.Exists()).To(BeTrue())
+				return ds.Field(`spec.template.spec.containers.#(name=="control-plane-manager").env.#(name=="LEADER_ELECTION").value`).String()
+			}
+			leaderElection := func() string {
+				return leaderElectionOf("d8-control-plane-manager")
+			}
+
+			Context("multi-master control plane with highAvailability disabled", func() {
+				BeforeEach(func() {
+					f.ValuesSet("global.highAvailability", false)
+					f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", true)
+					f.HelmRender()
+				})
+
+				It("is enabled", func() {
+					Expect(leaderElection()).To(Equal("true"))
+				})
+			})
+
+			Context("single master with highAvailability enabled", func() {
+				BeforeEach(func() {
+					f.ValuesSet("global.highAvailability", true)
+					f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", false)
+					f.HelmRender()
+				})
+
+				It("is disabled", func() {
+					Expect(leaderElection()).To(Equal("false"))
+				})
+			})
+
+			Context("multi-master control plane with an etcd arbiter", func() {
+				BeforeEach(func() {
+					f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", true)
+					f.ValuesSet("controlPlaneManager.internal.hasEtcdArbiterNode", true)
+					f.HelmRender()
+				})
+
+				It("is enabled on the masters and disabled on the arbiter", func() {
+					Expect(leaderElection()).To(Equal("true"))
+					Expect(leaderElectionOf("d8-control-plane-manager-etcd-arbiter")).To(Equal("false"))
+				})
+			})
+
+			Context("single master with an etcd arbiter", func() {
+				BeforeEach(func() {
+					f.ValuesSet("global.discovery.clusterControlPlaneIsHighlyAvailable", false)
+					f.ValuesSet("controlPlaneManager.internal.hasEtcdArbiterNode", true)
+					f.HelmRender()
+				})
+
+				It("is disabled on both", func() {
+					Expect(leaderElection()).To(Equal("false"))
+					Expect(leaderElectionOf("d8-control-plane-manager-etcd-arbiter")).To(Equal("false"))
+				})
+			})
+		})
+
 		Context("only apiserver.serviceAccount.issuer", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", moduleValuesOnlyIssuer)
