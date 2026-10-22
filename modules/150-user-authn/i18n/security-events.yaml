@@ -1,0 +1,36 @@
+# Russian texts of the SecurityEventDefinitions in templates/security-events.yaml,
+# keyed by the name of the definition.
+dex-authenticator-login-succeeded:
+  description: Пользователь вошёл в приложение через DexAuthenticator
+  docs: |
+    Пользователь завершил вход по OpenID Connect через DexAuthenticator и получил сессию для приложения.
+    Событие содержит email пользователя, IP-адрес клиента, хост приложения и объект DexAuthenticator.
+dex-authenticator-logout:
+  description: Пользователь вышел из приложения через DexAuthenticator
+  docs: |
+    Пользователь с активной сессией открыл адрес выхода `/dex-authenticator/sign_out`, и DexAuthenticator удалил cookie сессии.
+    Истечение срока сессии событие не создаёт.
+dex-authenticator-login-denied:
+  description: DexAuthenticator отказал пользователю в доступе к приложению
+  docs: |
+    Провайдер аутентификации подтвердил личность пользователя, но DexAuthenticator отклонил сессию:
+    ID-токен не прошёл проверку или пользователь не авторизован для приложения.
+    Причина указана в сообщении `metadata.extra.authInfo.message`.
+dex-authenticator-login-failed:
+  description: Вход в приложение через DexAuthenticator не удался
+  docs: |
+    Обработка возврата после входа не завершилась: отсутствует CSRF-cookie, провайдер аутентификации вернул ошибку
+    или DexAuthenticator не смог обменять код авторизации.
+    Отсутствие CSRF-cookie обычно возникает при возврате браузера на старую страницу callback.
+    Серия таких событий с одного адреса может указывать на повторное использование кодов авторизации.
+dex-authenticator-csrf-mismatch:
+  description: DexAuthenticator обнаружил несовпадение CSRF-токена при входе
+  docs: |
+    Параметр `state` в запросе возврата после входа не совпадает с CSRF-cookie браузера.
+    Это признак атаки CSRF на вход или попытки подставить код авторизации в чужой браузер.
+dex-authenticator-session-refresh-failed:
+  description: DexAuthenticator не смог обновить сессию пользователя
+  docs: |
+    Провайдер аутентификации отказал в обновлении токенов активной сессии.
+    Так происходит, если пользователь удалён или заблокирован в провайдере аутентификации либо refresh-токен отозван.
+    Сессия остаётся действительной до истечения срока её ID-токена.

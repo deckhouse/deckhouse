@@ -1,0 +1,439 @@
+{{- /*
+  Security events of every dex-authenticator in the cluster, rendered only
+  when the security-events-manager module serves its API.
+
+  One ClusterSecurityEventShipper reads the pods of all DexAuthenticator
+  objects, the ones Deckhouse modules create included. It is limited to the
+  namespaces that hold a DexAuthenticator: the `app: dex-authenticator` label
+  alone would let anyone who can create a pod print forged auth lines from
+  any namespace. A label check cannot close this, since the pod template of a
+  user Deployment is not validated against reserved labels. The remaining risk
+  is the owner of a namespace with a real DexAuthenticator, who can still
+  forge events from that namespace; `object.namespace` always names it.
+
+  `namespaceSelector.matchNames` takes at most 256 names, so the namespaces
+  are split into items of the same shipper, 256 per item. Separate shippers
+  would share the source name, and the gateway would then stamp the events of
+  all of them with the resource name of the first one.
+  The events come from the auth log lines of oauth2-proxy, written as JSON
+  with `--logging-format=json` (patch 007):
+
+    {"time":"...","level":"auth","client":"<IP>","host":"<HOST>","protocol":"...",
+     "request_id":"...","method":"...","user_agent":"...","user":"<EMAIL>",
+     "status":"AuthSuccess|AuthFailure|AuthError","msg":"<MESSAGE>"}
+
+  Field order is fixed by the struct of patch 007, and encoding/json escapes
+  every quote inside a value, so the `,"status":"...","msg":"...` anchors of
+  the regular expressions cannot be forged through the User-Agent header.
+  `user` is "-" when the user is not known yet, before the code is redeemed.
+
+  `time` is not mapped: it carries no time zone. The event keeps the
+  timestamp log-shipper read the line at.
+
+  The SecurityEventDefinitions are not Helm hooks: the admission webhook
+  only warns about a shipper whose definitions do not exist yet, and the
+  controller picks the definitions up once they appear.
+*/ -}}
+{{- if or (.Values.global.discovery.apiVersions | has "security.deckhouse.io/v1alpha1/SecurityEventDefinition") (.Capabilities.APIVersions.Has "security.deckhouse.io/v1alpha1/SecurityEventDefinition") }}
+{{- /* Russian texts live under i18n/: repository linters reject Cyrillic in templates. */ -}}
+{{- $i18n := .Files.Get "i18n/security-events.yaml" | fromYaml }}
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: SecurityEventDefinition
+metadata:
+  name: dex-authenticator-login-succeeded
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  code: D8_DEX_AUTHENTICATOR_LOGIN_SUCCEEDED
+  category: Auth
+  severity: Low
+  description: User logged in to an application through DexAuthenticator
+  {{- $ru := index $i18n "dex-authenticator-login-succeeded" }}
+  descriptionRu: {{ $ru.description | quote }}
+  metadata:
+    docs:
+      desc:
+        en: |
+          A user completed the OpenID Connect login through DexAuthenticator and got a session for the application.
+          The event carries the user email, the client IP address, the application host and the DexAuthenticator object.
+        ru: {{ $ru.docs | quote }}
+  source: dex-authenticator
+  fields:
+    - name: event.code
+      required: true
+    - name: source.component
+      required: true
+    - name: actor.id
+      required: true
+    - name: actor.sourceIP
+      required: false
+    - name: object.name
+      required: false
+    - name: object.namespace
+      required: false
+    - name: metadata
+      required: false
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: SecurityEventDefinition
+metadata:
+  name: dex-authenticator-logout
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  code: D8_DEX_AUTHENTICATOR_LOGOUT
+  category: Auth
+  severity: Low
+  description: User logged out of an application through DexAuthenticator
+  {{- $ru := index $i18n "dex-authenticator-logout" }}
+  descriptionRu: {{ $ru.description | quote }}
+  metadata:
+    docs:
+      desc:
+        en: |
+          A user with an active session opened the sign-out endpoint `/dex-authenticator/sign_out`, and DexAuthenticator removed the session cookie.
+          A session that expires on its own produces no event.
+        ru: {{ $ru.docs | quote }}
+  source: dex-authenticator
+  fields:
+    - name: event.code
+      required: true
+    - name: source.component
+      required: true
+    - name: actor.id
+      required: true
+    - name: actor.sourceIP
+      required: false
+    - name: object.name
+      required: false
+    - name: object.namespace
+      required: false
+    - name: metadata
+      required: false
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: SecurityEventDefinition
+metadata:
+  name: dex-authenticator-login-denied
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  code: D8_DEX_AUTHENTICATOR_LOGIN_DENIED
+  category: Auth
+  severity: Medium
+  description: DexAuthenticator denied a user access to an application
+  {{- $ru := index $i18n "dex-authenticator-login-denied" }}
+  descriptionRu: {{ $ru.description | quote }}
+  metadata:
+    docs:
+      desc:
+        en: |
+          The identity provider authenticated the user, but DexAuthenticator rejected the session:
+          the ID token failed validation or the user is not authorized for the application.
+          The message in `metadata.extra.authInfo.message` names the reason.
+        ru: {{ $ru.docs | quote }}
+  source: dex-authenticator
+  fields:
+    - name: event.code
+      required: true
+    - name: source.component
+      required: true
+    - name: actor.id
+      required: false
+    - name: actor.sourceIP
+      required: false
+    - name: object.name
+      required: false
+    - name: object.namespace
+      required: false
+    - name: metadata
+      required: false
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: SecurityEventDefinition
+metadata:
+  name: dex-authenticator-login-failed
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  code: D8_DEX_AUTHENTICATOR_LOGIN_FAILED
+  category: Auth
+  severity: Low
+  description: Login to an application through DexAuthenticator failed
+  {{- $ru := index $i18n "dex-authenticator-login-failed" }}
+  descriptionRu: {{ $ru.description | quote }}
+  metadata:
+    docs:
+      desc:
+        en: |
+          The login callback did not complete: the CSRF cookie is missing, the identity provider returned an error,
+          or DexAuthenticator could not redeem the authorization code.
+          A missing CSRF cookie is common after the browser goes back to an old callback page.
+          A burst of these events from one address may indicate a replay of authorization codes.
+        ru: {{ $ru.docs | quote }}
+  source: dex-authenticator
+  fields:
+    - name: event.code
+      required: true
+    - name: source.component
+      required: true
+    - name: actor.sourceIP
+      required: false
+    - name: object.name
+      required: false
+    - name: object.namespace
+      required: false
+    - name: metadata
+      required: false
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: SecurityEventDefinition
+metadata:
+  name: dex-authenticator-csrf-mismatch
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  code: D8_DEX_AUTHENTICATOR_CSRF_MISMATCH
+  category: Auth
+  severity: High
+  description: DexAuthenticator detected a CSRF token mismatch during login
+  {{- $ru := index $i18n "dex-authenticator-csrf-mismatch" }}
+  descriptionRu: {{ $ru.description | quote }}
+  metadata:
+    docs:
+      desc:
+        en: |
+          The `state` parameter of the login callback does not match the CSRF cookie of the browser.
+          This is a sign of a login CSRF attack or of an attempt to slip an authorization code into another browser.
+        ru: {{ $ru.docs | quote }}
+  source: dex-authenticator
+  fields:
+    - name: event.code
+      required: true
+    - name: source.component
+      required: true
+    - name: actor.id
+      required: false
+    - name: actor.sourceIP
+      required: false
+    - name: object.name
+      required: false
+    - name: object.namespace
+      required: false
+    - name: metadata
+      required: false
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: SecurityEventDefinition
+metadata:
+  name: dex-authenticator-session-refresh-failed
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  code: D8_DEX_AUTHENTICATOR_SESSION_REFRESH_FAILED
+  category: Auth
+  severity: Low
+  description: DexAuthenticator could not refresh a user session
+  {{- $ru := index $i18n "dex-authenticator-session-refresh-failed" }}
+  descriptionRu: {{ $ru.description | quote }}
+  metadata:
+    docs:
+      desc:
+        en: |
+          The identity provider refused to refresh the tokens of an active session.
+          This happens when the user was removed or blocked in the identity provider, or the refresh token was revoked.
+          The session stays valid until its ID token expires.
+        ru: {{ $ru.docs | quote }}
+  source: dex-authenticator
+  fields:
+    - name: event.code
+      required: true
+    - name: source.component
+      required: true
+    - name: actor.id
+      required: true
+    - name: actor.sourceIP
+      required: false
+    - name: object.name
+      required: false
+    - name: object.namespace
+      required: false
+    - name: metadata
+      required: false
+{{- $namespaces := list }}
+{{- range .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- $namespaces = append $namespaces .namespace }}
+{{- end }}
+{{- if $namespaces }}
+---
+apiVersion: security.deckhouse.io/v1alpha1
+kind: ClusterSecurityEventShipper
+metadata:
+  name: dex-authenticator
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  {{- range $chunk := $namespaces | uniq | sortAlpha | chunk 256 }}
+  - source: dex-authenticator
+    input:
+      type: KubernetesPods
+      kubernetesPods:
+        namespaceSelector:
+          matchNames: {{ $chunk | toJson }}
+        labelSelector:
+          matchLabels:
+            app: dex-authenticator
+    parser:
+      - name: dex-authenticator
+        parser:
+          type: JSON
+        drop_raw: false
+    producesDefaults:
+      transform:
+        - key: actor.id
+          value: user
+        # `client` is the real client address: oauth2-proxy runs with
+        # `--reverse-proxy` and takes it from the X-Real-IP header of the ingress.
+        - key: actor.sourceIP
+          value: client
+        - key: object.name
+          value: '@root.pod_labels.name'
+        - key: object.namespace
+          value: '@root.namespace'
+        - key: metadata.extra.authInfo.host
+          value: host
+        - key: metadata.extra.authInfo.method
+          value: method
+        - key: metadata.extra.authInfo.requestID
+          value: request_id
+        - key: metadata.extra.authInfo.userAgent
+          value: user_agent
+        - key: metadata.extra.authInfo.status
+          value: status
+        - key: metadata.extra.authInfo.message
+          value: msg
+        - key: metadata.extra.authInfo.pod
+          value: '@root.pod'
+      # No `enrich` here: every event sets `event.outcome` in its own `enrich`,
+      # and a `produces[].enrich` list replaces `producesDefaults.enrich` instead
+      # of extending it. The shared rules are therefore repeated in every event.
+
+    produces:
+      - eventCode: D8_DEX_AUTHENTICATOR_LOGIN_SUCCEEDED
+        extract:
+          field: message
+          operator: Regex
+          values:
+            - '^\{.*"level":"auth",.*,"status":"AuthSuccess","msg":"Authenticated via OAuth2: '
+        enrich:
+          - target: event.outcome
+            source: Static
+            value: Success
+          - target: source.component
+            source: Static
+            value: dex-authenticator
+          - target: actor.type
+            source: Static
+            value: User
+          - target: object.type
+            source: Static
+            value: DexAuthenticator
+
+      - eventCode: D8_DEX_AUTHENTICATOR_LOGOUT
+        extract:
+          field: message
+          operator: Regex
+          values:
+            - '^\{.*"level":"auth",.*,"status":"AuthSuccess","msg":"User signed out"\}$'
+        enrich:
+          - target: event.outcome
+            source: Static
+            value: Success
+          - target: source.component
+            source: Static
+            value: dex-authenticator
+          - target: actor.type
+            source: Static
+            value: User
+          - target: object.type
+            source: Static
+            value: DexAuthenticator
+
+      - eventCode: D8_DEX_AUTHENTICATOR_LOGIN_DENIED
+        extract:
+          field: message
+          operator: Regex
+          values:
+            - '^\{.*"level":"auth",.*,"status":"AuthFailure","msg":"(Invalid authentication via OAuth2: unauthorized"|Session validation failed: |Invalid authorization via session \()'
+        enrich:
+          - target: event.outcome
+            source: Static
+            value: Denied
+          - target: source.component
+            source: Static
+            value: dex-authenticator
+          - target: actor.type
+            source: Static
+            value: User
+          - target: object.type
+            source: Static
+            value: DexAuthenticator
+
+      # The three messages come from patch 008: upstream logs these failures
+      # without the client address, one of them with the whole request dump.
+      - eventCode: D8_DEX_AUTHENTICATOR_LOGIN_FAILED
+        extract:
+          field: message
+          operator: Regex
+          values:
+            - '^\{.*"level":"auth",.*,"status":"Auth(Failure|Error)","msg":"Invalid authentication via OAuth2: (unable to obtain CSRF cookie|identity provider returned an error: |unable to redeem the code)'
+        enrich:
+          - target: event.outcome
+            source: Static
+            value: Failure
+          - target: source.component
+            source: Static
+            value: dex-authenticator
+          - target: actor.type
+            source: Static
+            value: User
+          - target: object.type
+            source: Static
+            value: DexAuthenticator
+
+      - eventCode: D8_DEX_AUTHENTICATOR_CSRF_MISMATCH
+        extract:
+          field: message
+          operator: Regex
+          values:
+            - '^\{.*"level":"auth",.*,"status":"AuthFailure","msg":"Invalid authentication via OAuth2: CSRF token mismatch'
+        enrich:
+          - target: event.outcome
+            source: Static
+            value: Failure
+          - target: source.component
+            source: Static
+            value: dex-authenticator
+          - target: actor.type
+            source: Static
+            value: User
+          - target: object.type
+            source: Static
+            value: DexAuthenticator
+
+      - eventCode: D8_DEX_AUTHENTICATOR_SESSION_REFRESH_FAILED
+        extract:
+          field: message
+          operator: Regex
+          values:
+            - '^\{.*"level":"auth",.*,"status":"AuthError","msg":"Unable to refresh session: '
+        enrich:
+          - target: event.outcome
+            source: Static
+            value: Failure
+          - target: source.component
+            source: Static
+            value: dex-authenticator
+          - target: actor.type
+            source: Static
+            value: User
+          - target: object.type
+            source: Static
+            value: DexAuthenticator
+  {{- end }}
+{{- end }}
+{{- end }}
