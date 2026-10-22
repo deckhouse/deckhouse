@@ -91,8 +91,16 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
-      imagePullSecrets:
-      - name: deckhouse-registry
+      {{- /*
+        No imagePullSecrets on purpose: the image holders pull the images of the
+        registry static pod, and that pod cannot have pull secrets. With
+        KubeletEnsureSecretPulledImages, kubelet re-verifies an image pulled with
+        a pod's secret for every pod without that secret, and the static pod would
+        verify through the registry it is replacing, which on a single master is
+        down at that moment. Pulled with the node's containerd credentials, as the
+        control plane static pods are, the image is accessible to every pod on the
+        node and needs no re-verification.
+      */}}
       serviceAccountName: {{ .Chart.Name }}-nodeservices
       containers:
       - name: registry-nodeservices-manager

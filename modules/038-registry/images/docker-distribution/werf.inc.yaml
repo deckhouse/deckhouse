@@ -1,4 +1,4 @@
-{{- $version := "flant-1.0.1"}}
+{{- $version := "flant-1.1.0"}}
 {{- $repo := "deckhouse/cluster-and-infrastructure/fork/distribution.git" }}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
