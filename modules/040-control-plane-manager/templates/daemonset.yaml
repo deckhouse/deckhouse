@@ -328,8 +328,12 @@ spec:
         # during the first reconcile the apiserver is unreachable for ~60s
         # via the local kubernetes-api-proxy and the lease is lost,
         # crashlooping cpm and forcing an extra static-pod restart.
+        # It follows the real master count, not the highAvailability setting:
+        # the operations approver is cluster-wide and must run in one pod only.
+        # The etcd arbiter does not run the cluster-wide controllers, so it
+        # never competes for the lease.
         - name: LEADER_ELECTION
-          value: {{ include "helm_lib_is_ha_to_value" (list $ "true" "false") | quote }}
+          value: {{ and (ne $profile "etcd-arbiter") $.Values.global.discovery.clusterControlPlaneIsHighlyAvailable | quote }}
         - name: MY_IP
           valueFrom:
             fieldRef:

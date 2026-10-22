@@ -143,10 +143,6 @@ func (c *staticPodConfigurator) configureRuntimeManager(runtimeManager manager.M
 	)
 	ctrlmetrics.Registry.MustRegister(metricsStorage.Collector())
 
-	if err := controlplaneconfiguration.Register(runtimeManager); err != nil {
-		return fmt.Errorf("register controlplane controller: %w", err)
-	}
-
 	if err := controlplanenode.Register(runtimeManager, metricsStorage); err != nil {
 		return fmt.Errorf("register control-plane-node controller: %w", err)
 	}
@@ -157,6 +153,17 @@ func (c *staticPodConfigurator) configureRuntimeManager(runtimeManager manager.M
 
 	if err := controlplaneoperation.Register(runtimeManager, metricsStorage); err != nil {
 		return fmt.Errorf("register control-plane-operation controller: %w", err)
+	}
+
+	// The etcd arbiter runs only the controllers of its own node. The cluster-wide ones stay on the
+	// masters, so LEADER_ELECTION follows the master count alone: with one master and an arbiter
+	// they run in a single pod without leader election.
+	if os.Getenv(constants.EtcdArbiterEnvVar) == "true" {
+		return nil
+	}
+
+	if err := controlplaneconfiguration.Register(runtimeManager); err != nil {
+		return fmt.Errorf("register controlplane controller: %w", err)
 	}
 
 	if err := controlplaneapprover.Register(runtimeManager); err != nil {

@@ -123,10 +123,15 @@ func getLeaderElection() bool {
 	// Leader election is needed only when multiple cpm pods may compete for
 	// cluster-wide work. cpm controllers that touch a specific master (static
 	// pod manifest writes, per-master CRs) are already partitioned by
-	// `spec.nodeName` (see controlPlanePodPredicate, operations-approver, ...),
-	// so on a single-master cluster there is exactly one pod and nothing to
-	// coordinate. Toggle by the LEADER_ELECTION env (set by helm based on
-	// master replica count): true on HA (>1 master), false on single-master.
+	// `spec.nodeName` (see controlPlanePodPredicate, ...), so on a
+	// single-master cluster there is exactly one pod and nothing to
+	// coordinate. Cluster-wide controllers (control-plane-configuration,
+	// operations-approver, update-observer) run only on the leader, so with
+	// more than one master LE must stay on. The etcd arbiter does not run
+	// them at all (see configureRuntimeManager). Toggle by the LEADER_ELECTION
+	// env (set by helm from the real master count, not the highAvailability
+	// setting): true on HA (>1 master), false on single-master and on the
+	// arbiter.
 	//
 	// Why this matters during bootstrap: cpm's very first reconcile rewrites
 	// the etcd and kube-apiserver static-pod manifests, kubelet restarts those
