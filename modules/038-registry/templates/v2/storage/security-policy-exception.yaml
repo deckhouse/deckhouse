@@ -1,0 +1,71 @@
+{{- /*
+What the storage needs beyond the Pod Security Standards, named one item at a time.
+
+Rendered under the same condition as the StatefulSet, and the store path comes from the same
+value: a hostPath is excepted only when path and readOnly both equal the mount's, so a path
+decided in two places would leave the volume unexcepted on exactly the nodes where the two
+disagree.
+*/ -}}
+{{- if eq (include "registry_v2_caches" .) "true" }}
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+{{- $storePath := ((.Values.registry.internal).v2).storePath | default "/opt/deckhouse/registry" }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: registry-storage
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry-storage")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          The registry reads its certificate material from a Secret mount whose files are
+          owned by root with mode 0400, and writes the store to a root-owned hostPath.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 for the same reason. The distroless base image would otherwise run the
+          registry as 64535, which cannot open its own token bundle.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          The registry binds the node address and the node's registry agent binds the
+          loopback one on the same port, which only works in the host network namespace.
+          It also lets the storage serve before the cluster network is up, since the
+          network's own images come from here.
+    hostPorts:
+      - port: 5001
+        protocol: TCP
+        metadata:
+          description: Registry, read through the cache by the node agents and replicated between replicas.
+      - port: 5003
+        protocol: TCP
+        metadata:
+          description: Registry write endpoint without the cache, used by d8 mirror push and by the fill.
+      - port: 4285
+        protocol: TCP
+        metadata:
+          description: Metrics of the registry and the syncer, served through kube-rbac-proxy.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          The blobs live on the node. A persistent volume claim is not an option: the
+          storage has to come up before any storage provisioner, whose images come from here.
+    hostPath:
+      allowedValues:
+        - path: {{ $storePath }}/local_data
+          readOnly: false
+          metadata:
+            description: The store, written by the registry and garbage-collected by the syncer.
+{{- end }}
+{{- end }}

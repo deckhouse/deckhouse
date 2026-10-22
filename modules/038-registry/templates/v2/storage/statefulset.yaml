@@ -110,6 +110,7 @@ spec:
     metadata:
       labels:
         app: registry-storage
+        security.deckhouse.io/security-policy-exception: registry-storage
     spec:
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
@@ -127,6 +128,12 @@ spec:
       # Stated rather than inherited on purpose. An unset security context does not mean root;
       # it means whatever the base image happens to say, decided somewhere this file does not
       # mention.
+      #
+      # Root, but without a single capability: every container drops them all. What root is
+      # needed for here is ownership, and that takes none — the Secret files and the store are
+      # root's own, and the syncer signals a process running under its own UID, found through
+      # a /proc/<pid>/cmdline anyone may read. What the pod needs beyond the restricted
+      # standard is excepted, item by item, in security-policy-exception.yaml beside this file.
       securityContext:
         runAsUser: 0
         runAsGroup: 0
@@ -172,6 +179,11 @@ spec:
       - name: distribution
         image: {{ include "helm_lib_module_image" (list $ "dockerDistribution") }}
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         args: ["serve", "/config/config.yaml"]
         ports:
         - name: registry
@@ -228,6 +240,11 @@ spec:
       - name: auth
         image: {{ include "helm_lib_module_image" (list $ "dockerAuth") }}
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         args:
         - -logtostderr
         - /auth/auth_config.yaml
@@ -265,6 +282,7 @@ spec:
       - name: kube-rbac-proxy
         image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
         imagePullPolicy: IfNotPresent
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" $ | nindent 8 }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4285"
         - "--v=2"
@@ -310,6 +328,11 @@ spec:
       - name: syncer
         image: {{ include "helm_lib_module_image" (list $ "registrySyncer") }}
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         args:
         - --config-path=/config/config.yaml
         # Beside the configuration, on the writable emptyDir: /pki is a Secret mount and

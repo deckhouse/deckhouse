@@ -89,7 +89,9 @@ spec:
       - name: registry-controller
         image: {{ include "helm_lib_module_image" (list $ "registryController") }}
         imagePullPolicy: IfNotPresent
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
+        # Within the restricted standard as it is, so the pod carries no SecurityPolicyException:
+        # it needs nothing of the node, not even its network.
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" $ | nindent 8 }}
         args:
         # Leader election only where there is more than one replica to elect from.
         {{- /*
@@ -139,7 +141,7 @@ spec:
       # authenticates nobody; this decides who may read it, against the same API server
       # that decides everything else.
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" $ | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
         imagePullPolicy: IfNotPresent
         args:

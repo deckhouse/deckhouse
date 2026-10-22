@@ -309,6 +309,8 @@ metadata:
   labels:
     component: registry-agent
     tier: control-plane
+    # Defined by the registry module, in its templates/v2/agent-security-policy-exception.yaml.
+    security.deckhouse.io/security-policy-exception: registry-agent
   name: registry-agent
   namespace: kube-system
 spec:

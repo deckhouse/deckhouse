@@ -11,6 +11,7 @@ metadata:
   labels:
     component: registry-agent
     tier: control-plane
+    security.deckhouse.io/security-policy-exception: registry-agent-engine
   name: registry-agent
   namespace: kube-system
 spec:

@@ -1,0 +1,73 @@
+{{- /*
+What the node agent needs beyond the Pod Security Standards on a node bashible configures.
+
+The pod itself is not rendered here: the step candi/bashible/common-steps/all/053_configure_registry_agent
+writes it as a static pod, and that is where the paths below come from. A hostPath is excepted only when
+path and readOnly both equal the mount's, so the two are kept in step by a template test that renders
+the step and checks every mount against this object.
+
+Rendered whenever this implementation manages the cluster, which is exactly when nodes are told to run
+the agent. The agent on an Engine node mounts different paths and has its own exception, beside its
+manifest in node-static-pod.yaml.
+*/ -}}
+{{- if eq (include "registry_v2_manages" .) "true" }}
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: registry-agent
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "registry")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          The agent writes containerd's registry configuration into a root-owned directory
+          on the node and reads certificate material only root may read.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: UID 0 for the root-owned node directories the agent reads and writes.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          The container runtime reaches the agent on the node's loopback address, which
+          exists only in the host network namespace. The agent opens no other port.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          Everything the agent reads and writes belongs to the node, and it runs before
+          the cluster can provide any other kind of volume.
+    hostPath:
+      allowedValues:
+        - path: /etc/containerd/registry.d
+          readOnly: false
+          metadata:
+            description: containerd's registry drop-in directory, written by the agent alone.
+        - path: /etc/kubernetes/registry-agent
+          readOnly: true
+          metadata:
+            description: The agent's certificate material, bootstrap layout and kubeconfig, written by bashible.
+        - path: /var/lib/deckhouse/registry-agent
+          readOnly: false
+          metadata:
+            description: The last layout the agent received, so that it can route after a reboot without the API server.
+        - path: /opt/deckhouse/share/ca-certificates
+          readOnly: true
+          metadata:
+            description: The certificate authorities the cluster accepts, staged by bashible for every registry.
+        - path: /var/lib/kubelet/pki
+          readOnly: true
+          metadata:
+            description: The kubelet's rotating client certificate, which the agent reads the API server with.
+{{- end }}
+{{- end }}
