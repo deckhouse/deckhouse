@@ -88,19 +88,29 @@ func (lb *LoadBalancerService) DeleteLoadBalancerByName(ctx context.Context, nam
 		}
 	}()
 
+	if err := lb.DeleteServiceWithHealthchecksByName(ctx, name); err != nil {
+		klog.Errorf("Failed to delete LoadBalancer SWHC %q in namespace %q: %v", name, lb.namespace, err)
+		return err
+	}
+
 	svc, err := lb.GetLoadBalancerByName(ctx, name)
 	if err != nil {
 		klog.Errorf("Failed to get LoadBalancer service %q in namespace %q: %v", name, lb.namespace, err)
 		return err
 	}
-	if svc != nil {
-		if err = lb.client.Delete(ctx, svc); err != nil && !k8serrors.IsNotFound(err) {
-			klog.Errorf("Failed to delete LoadBalancer service %q in namespace %q: %v", name, lb.namespace, err)
-			return err
-		}
+	if svc == nil {
+		return nil
+	}
+	if isOwnedBySWHC(svc) {
+		return nil
 	}
 
-	if err := lb.DeleteServiceWithHealthchecksByName(ctx, name); err != nil {
+	if err = lb.client.Delete(ctx, svc); err != nil && !k8serrors.IsNotFound(err) {
+		if k8serrors.IsForbidden(err) && svc.Labels["heritage"] == "deckhouse" {
+			klog.Warningf("Not allowed to delete LoadBalancer service %q in namespace %q labeled heritage=deckhouse, skipping: %v", name, lb.namespace, err)
+			return nil
+		}
+		klog.Errorf("Failed to delete LoadBalancer service %q in namespace %q: %v", name, lb.namespace, err)
 		return err
 	}
 
