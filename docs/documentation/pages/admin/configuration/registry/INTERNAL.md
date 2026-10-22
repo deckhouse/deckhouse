@@ -552,7 +552,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
    target_mode: Unmanaged
    ```
 
-1. If containerd v1 is used and [custom registry configurations](/modules/node-manager/latest/faq.html#how-to-add-configuration-for-an-additional-registry) are applied in the cluster, they must be replaced with the old format. To do this, prepare the registry configurations in the old format. These configurations do not need to be applied at this stage. Example configuration:
+1. If containerd v1 is used and [custom registry configurations](/modules/node-manager/latest/faq.html#how-to-add-configuration-for-an-additional-registry) are applied in the cluster, they must be replaced with the old format. To do this, prepare the registry configurations in the old format. These configurations do not need to be applied at this stage. Example configuration (substitute your own values for `username`, `password`, and `auth`):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -593,10 +593,10 @@ Containerd v2 uses the new format by default. For more details, see the section 
                  endpoint = ["https://${REGISTRY_URL}"]
              [plugins."io.containerd.grpc.v1.cri".registry.configs]
                [plugins."io.containerd.grpc.v1.cri".registry.configs."${REGISTRY_URL}".auth]
-                 username = "username"
-                 password = "password"
+                 username = <USERNAME>
+                 password = <PASSWORD>
                  # OR
-                 auth = "dXNlcm5hbWU6cGFzc3dvcmQ="
+                 auth = <AUTH>
        EOF
    ```
 
