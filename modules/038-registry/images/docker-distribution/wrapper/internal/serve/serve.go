@@ -16,8 +16,10 @@ limitations under the License.
 
 // Package serve runs the registry: one process, one store, and up to three listeners.
 //
-// The serving one is the upstream project's own `registry.NewRegistry`, with TLS, the debug and
-// metrics listener, tracing and the graceful drain as upstream wrote them. What this module adds
+// The serving one is the upstream project's own `registry.NewRegistry`, with TLS, tracing and the
+// graceful drain as upstream wrote them. The debug and metrics listener is not among them — upstream
+// opens it from its `serve` command, which is not run here — and is opened beside it: see
+// debugListener. What this module adds
 // hangs off upstream's own `registry.RegisterHandler`: the token proxy, and the decision about whose
 // word on a client's address is taken.
 //
@@ -160,6 +162,10 @@ func Run(ctx context.Context, distribution *configuration.Configuration, wrapper
 	if err != nil {
 		return fmt.Errorf("building the serving registry: %w", err)
 	}
+
+	// After NewRegistry, as upstream's `serve` does: the registry's metrics are registered by then.
+	// A listener that cannot open is reported inside and does not stop the registry.
+	_, _ = debugListener(distribution, log)
 
 	if wrapper.WriteEndpoint.Address != "" {
 		writing, err := writeEndpoint(ctx, distribution, wrapper, guard, log)
