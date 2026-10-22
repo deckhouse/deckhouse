@@ -53,9 +53,11 @@ const (
 )
 
 type etcdMemberInfo struct {
-	Name      string
-	PeerURLs  []string
-	IsLearner bool
+	ID         uint64
+	Name       string
+	PeerURLs   []string
+	ClientURLs []string
+	IsLearner  bool
 }
 
 type etcdClassification struct {

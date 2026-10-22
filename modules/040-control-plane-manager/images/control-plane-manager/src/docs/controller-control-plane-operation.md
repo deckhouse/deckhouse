@@ -74,6 +74,10 @@ Before abandoning stale desired state, controller can recover an in-progress com
 - `manifestMatchesDesired` for static pod checksum + renewal-id annotations
 - etcd member presence check for `JoinEtcdCluster`
 
+## etcd Leadership
+
+On a graceful stop etcd hands its leadership to the longest connected member, which can be an etcd arbiter. When the cluster has arbiters and `JoinEtcdCluster` is about to rewrite the manifest of the local member that leads etcd, the step first moves the leadership to a master member that follows it. Best effort: on any error the handover is left to etcd and the step continues.
+
 ## Diff Behavior
 
 - File diff is computed before write in `writeFileIfChanged`.

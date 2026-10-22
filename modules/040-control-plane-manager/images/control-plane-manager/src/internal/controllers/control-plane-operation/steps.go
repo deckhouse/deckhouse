@@ -165,9 +165,13 @@ func (c *renewKubeconfigsStep) Execute(_ context.Context, env *StepEnv, logger *
 
 // joinEtcdClusterStep checks if etcd needs to join the cluster and handles the full join flow.
 // No-op for non-etcd components.
-type joinEtcdClusterStep struct{}
+type joinEtcdClusterStep struct {
+	// moveEtcdLeader hands the etcd leadership explicitly to a non-arbiter member before the manifest
+	// is written (see etcd_leader.go). Best effort, optional.
+	moveEtcdLeader func(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, logger *log.Logger)
+}
 
-func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
+func (c *joinEtcdClusterStep) Execute(ctx context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	op := env.State.Raw()
 	if op.Spec.Component != controlplanev1alpha1.OperationComponentEtcd {
 		return StepResult{Outcome: OutcomeCompleted, Message: "skipped: component is not etcd"}, nil
@@ -192,6 +196,9 @@ func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *l
 		// Member registered and local etcd bootstrapped: etcd ignores --initial-cluster on restart, so the self-only manifest from syncFullManifest is safe.
 		// Promote our own member only if it is still a learner (a previous join added it but never promoted it).
 		logger.Info("etcd already in cluster, syncing manifest and ensuring promotion")
+		if c.moveEtcdLeader != nil {
+			c.moveEtcdLeader(ctx, op, logger)
+		}
 		annotations := buildSyncManifestAnnotations(op)
 		results, err := syncFullManifest(op.Spec.Component, env.Secrets.CPMData, annotations, env.Node)
 		if err != nil {

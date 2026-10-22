@@ -48,7 +48,8 @@ import (
 //   - the approver gate admits the leader's operation only into an empty slot, so a follower
 //     approved alongside it cannot take over the leadership.
 //
-// The handover itself is quick: the etcd leader hands over its leadership on a graceful stop,
+// The handover itself is quick: the etcd leader hands over its leadership on a graceful stop, or
+// before it to a master when the cluster has etcd arbiters (control-plane-operation/etcd_leader.go),
 // kube-scheduler releases its Lease on shutdown, and for kube-controller-manager, which does not,
 // the CPO controller deletes the Lease once its stopped holder no longer renews it
 // (control-plane-operation/kcm_leader.go).

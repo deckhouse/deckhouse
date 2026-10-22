@@ -86,6 +86,7 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 	r.steps[controlplanev1alpha1.StepWaitPodReady].(*waitPodReadyStep).waitForPod = r.waitForPod
 	r.steps[controlplanev1alpha1.StepDefragEtcd].(*defragEtcdStep).defragEtcd = r.defragEtcd
 	r.steps[controlplanev1alpha1.StepSyncManifests].(*syncManifestsStep).recordKCMLeader = r.recordKCMLeader
+	r.steps[controlplanev1alpha1.StepJoinEtcdCluster].(*joinEtcdClusterStep).moveEtcdLeader = r.moveEtcdLeaderToMaster
 
 	if constants.SignatureEnabled() {
 		kubeClient, err := kubernetes.NewForConfig(mgr.GetConfig())
