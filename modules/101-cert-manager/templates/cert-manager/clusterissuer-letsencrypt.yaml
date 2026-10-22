@@ -14,7 +14,11 @@ spec:
     privateKeySecretRef:
       name: cert-manager-letsencrypt-private-key
     solvers:
-    - http01:
+    -
+      {{- if hasKey .Values.certManager "http01WaitInsteadOfSelfCheck" }}
+      waitInsteadOfSelfCheck: {{ .Values.certManager.http01WaitInsteadOfSelfCheck | quote }}
+      {{- end }}
+      http01:
         ingress:
           {{- if hasKey .Values.certManager "ingressClassHttp01" }}
           ingressClassName: {{ .Values.certManager.ingressClassHttp01 | quote }}

@@ -1,8 +1,8 @@
 diff --git a/deploy/crds/cert-manager.io_certificates.yaml b/deploy/crds/cert-manager.io_certificates.yaml
-index 7a1cba0..ba755f8 100644
+index 1eb46fbee..c54f8fce9 100644
 --- a/deploy/crds/cert-manager.io_certificates.yaml
 +++ b/deploy/crds/cert-manager.io_certificates.yaml
-@@ -690,6 +690,10 @@ spec:
+@@ -745,6 +745,10 @@ spec:
                    type: string
                  type: array
                  x-kubernetes-list-type: atomic
@@ -14,10 +14,10 @@ index 7a1cba0..ba755f8 100644
              - issuerRef
              - secretName
 diff --git a/internal/apis/certmanager/types_certificate.go b/internal/apis/certmanager/types_certificate.go
-index 5c7aed2..96aa246 100644
+index 44b45805c..a812e10a9 100644
 --- a/internal/apis/certmanager/types_certificate.go
 +++ b/internal/apis/certmanager/types_certificate.go
-@@ -257,6 +257,11 @@ type CertificateSpec struct {
+@@ -262,6 +262,11 @@ type CertificateSpec struct {
  	// to be written to this Certificate's target Secret.
  	AdditionalOutputFormats []CertificateAdditionalOutputFormat
  
@@ -30,10 +30,10 @@ index 5c7aed2..96aa246 100644
  	// More Info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.10
  	//
 diff --git a/internal/apis/certmanager/v1/zz_generated.conversion.go b/internal/apis/certmanager/v1/zz_generated.conversion.go
-index 8e7938e..ef1be79 100644
+index 913e0b555..3199db9bd 100644
 --- a/internal/apis/certmanager/v1/zz_generated.conversion.go
 +++ b/internal/apis/certmanager/v1/zz_generated.conversion.go
-@@ -890,6 +890,7 @@ func autoConvert_v1_CertificateSpec_To_certmanager_CertificateSpec(in *certmanag
+@@ -1077,6 +1077,7 @@ func autoConvert_v1_CertificateSpec_To_certmanager_CertificateSpec(in *certmanag
  	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
@@ -41,7 +41,7 @@ index 8e7938e..ef1be79 100644
  	out.NameConstraints = (*certmanager.NameConstraints)(unsafe.Pointer(in.NameConstraints))
  	return nil
  }
-@@ -932,6 +933,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1_CertificateSpec(in *certmanag
+@@ -1120,6 +1121,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1_CertificateSpec(in *certmanag
  	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]certmanagerv1.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
@@ -50,10 +50,10 @@ index 8e7938e..ef1be79 100644
  	return nil
  }
 diff --git a/internal/apis/certmanager/zz_generated.deepcopy.go b/internal/apis/certmanager/zz_generated.deepcopy.go
-index d64f9cd..1e9379d 100644
+index 6747180aa..d5d606d8f 100644
 --- a/internal/apis/certmanager/zz_generated.deepcopy.go
 +++ b/internal/apis/certmanager/zz_generated.deepcopy.go
-@@ -487,6 +487,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+@@ -610,6 +610,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
  		*out = new(NameConstraints)
  		(*in).DeepCopyInto(*out)
  	}
@@ -66,10 +66,10 @@ index d64f9cd..1e9379d 100644
  }
  
 diff --git a/internal/controller/certificates/policies/checks.go b/internal/controller/certificates/policies/checks.go
-index 02d6fa9..b85ced2 100644
+index ffd27526d..426af90cf 100644
 --- a/internal/controller/certificates/policies/checks.go
 +++ b/internal/controller/certificates/policies/checks.go
-@@ -691,6 +691,18 @@ func SecretAdditionalOutputFormatsManagedFieldsMismatch(fieldManager string) Fun
+@@ -709,6 +709,18 @@ func SecretAdditionalOutputFormatsManagedFieldsMismatch(fieldManager string) Fun
  	}
  }
  
@@ -88,7 +88,7 @@ index 02d6fa9..b85ced2 100644
  // SecretOwnerReferenceManagedFieldMismatch validates that the Secret has an
  // owner reference to the Certificate if enabled. Returns true (violation) if:
  // * the Secret doesn't have an owner reference and is expecting one
-@@ -699,6 +711,8 @@ func SecretAdditionalOutputFormatsManagedFieldsMismatch(fieldManager string) Fun
+@@ -717,6 +729,8 @@ func SecretAdditionalOutputFormatsManagedFieldsMismatch(fieldManager string) Fun
  // non re-triable error.
  func SecretOwnerReferenceManagedFieldMismatch(ownerRefEnabled bool, fieldManager string) Func {
  	return func(input Input) (string, string, bool) {
@@ -97,7 +97,7 @@ index 02d6fa9..b85ced2 100644
  		var hasOwnerRefManagedField bool
  		// Determine whether the Secret has the Certificate as an owner reference
  		// which is owned by the field manager.
-@@ -725,7 +739,7 @@ func SecretOwnerReferenceManagedFieldMismatch(ownerRefEnabled bool, fieldManager
+@@ -743,7 +757,7 @@ func SecretOwnerReferenceManagedFieldMismatch(ownerRefEnabled bool, fieldManager
  		// reference being enabled.
  		if ownerRefEnabled != hasOwnerRefManagedField {
  			return SecretOwnerRefMismatch,
@@ -106,7 +106,7 @@ index 02d6fa9..b85ced2 100644
  		}
  
  		return "", "", false
-@@ -737,6 +751,8 @@ func SecretOwnerReferenceManagedFieldMismatch(ownerRefEnabled bool, fieldManager
+@@ -755,6 +769,8 @@ func SecretOwnerReferenceManagedFieldMismatch(ownerRefEnabled bool, fieldManager
  // * owner reference is enabled, but the reference has an incorrect value
  func SecretOwnerReferenceMismatch(ownerRefEnabled bool) Func {
  	return func(input Input) (string, string, bool) {
@@ -115,7 +115,7 @@ index 02d6fa9..b85ced2 100644
  		// If the Owner Reference is not enabled, we don't need to check the value
  		// and can exit early.
  		if !ownerRefEnabled {
-@@ -764,7 +780,7 @@ func SecretOwnerReferenceMismatch(ownerRefEnabled bool) Func {
+@@ -782,7 +798,7 @@ func SecretOwnerReferenceMismatch(ownerRefEnabled bool) Func {
  		// doesn't match the expected value, return violation.
  		if !hasOwnerRefMatchingCertificate {
  			return SecretOwnerRefMismatch,
@@ -125,10 +125,10 @@ index 02d6fa9..b85ced2 100644
  
  		return "", "", false
 diff --git a/internal/controller/certificates/policies/checks_test.go b/internal/controller/certificates/policies/checks_test.go
-index 75c709b..f536dbb 100644
+index 80111b30e..1563a8213 100644
 --- a/internal/controller/certificates/policies/checks_test.go
 +++ b/internal/controller/certificates/policies/checks_test.go
-@@ -1829,6 +1829,8 @@ func Test_SecretOwnerReferenceManagedFieldMismatch(t *testing.T) {
+@@ -1864,6 +1864,8 @@ func Test_SecretOwnerReferenceManagedFieldMismatch(t *testing.T) {
  	crt := gen.Certificate("test-certificate",
  		gen.SetCertificateUID("uid-123"),
  	)
@@ -137,7 +137,7 @@ index 75c709b..f536dbb 100644
  
  	tests := map[string]struct {
  		input           Input
-@@ -1991,6 +1993,70 @@ func Test_SecretOwnerReferenceManagedFieldMismatch(t *testing.T) {
+@@ -2026,6 +2028,70 @@ func Test_SecretOwnerReferenceManagedFieldMismatch(t *testing.T) {
  			expMessage:      "unexpected managed Secret Owner Reference field on Secret --enable-certificate-owner-ref=true",
  			expViolation:    true,
  		},
@@ -208,7 +208,7 @@ index 75c709b..f536dbb 100644
  	}
  
  	for name, test := range tests {
-@@ -2007,6 +2073,8 @@ func Test_SecretOwnerReferenceMismatch(t *testing.T) {
+@@ -2042,6 +2108,8 @@ func Test_SecretOwnerReferenceMismatch(t *testing.T) {
  	crt := gen.Certificate("test-certificate",
  		gen.SetCertificateUID("uid-123"),
  	)
@@ -217,7 +217,7 @@ index 75c709b..f536dbb 100644
  
  	tests := map[string]struct {
  		input           Input
-@@ -2247,6 +2315,58 @@ func Test_SecretOwnerReferenceMismatch(t *testing.T) {
+@@ -2282,6 +2350,58 @@ func Test_SecretOwnerReferenceMismatch(t *testing.T) {
  			expMessage:      "unexpected Secret Owner Reference value on Secret --enable-certificate-owner-ref=true",
  			expViolation:    true,
  		},
@@ -237,7 +237,7 @@ index 75c709b..f536dbb 100644
 +				Secret: &corev1.Secret{
 +					ObjectMeta: metav1.ObjectMeta{
 +						OwnerReferences: []metav1.OwnerReference{
-+							{APIVersion: "cert-manager.io/v1", Kind: "Certificate", Name: "test-certificate", UID: types.UID("uid-123"), Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true)},
++							{APIVersion: "cert-manager.io/v1", Kind: "Certificate", Name: "test-certificate", UID: types.UID("uid-123"), Controller: new(true), BlockOwnerDeletion: new(true)},
 +						},
 +					},
 +				},
@@ -253,7 +253,7 @@ index 75c709b..f536dbb 100644
 +				Secret: &corev1.Secret{
 +					ObjectMeta: metav1.ObjectMeta{
 +						OwnerReferences: []metav1.OwnerReference{
-+							{APIVersion: "cert-manager.io/v1", Kind: "Certificate", Name: "test-certificate", UID: types.UID("uid-123"), Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true)},
++							{APIVersion: "cert-manager.io/v1", Kind: "Certificate", Name: "test-certificate", UID: types.UID("uid-123"), Controller: new(true), BlockOwnerDeletion: new(true)},
 +						},
 +					},
 +				},
@@ -277,10 +277,10 @@ index 75c709b..f536dbb 100644
  
  	for name, test := range tests {
 diff --git a/pkg/apis/certmanager/v1/types_certificate.go b/pkg/apis/certmanager/v1/types_certificate.go
-index 80e6415..7a6f480 100644
+index da78aba6d..58f360a71 100644
 --- a/pkg/apis/certmanager/v1/types_certificate.go
 +++ b/pkg/apis/certmanager/v1/types_certificate.go
-@@ -316,6 +316,12 @@ type CertificateSpec struct {
+@@ -321,6 +321,12 @@ type CertificateSpec struct {
  	// +listType=atomic
  	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
  
@@ -294,10 +294,10 @@ index 80e6415..7a6f480 100644
  	// More Info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.10
  	//
 diff --git a/pkg/apis/certmanager/v1/zz_generated.deepcopy.go b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
-index e889ecf..3b29f92 100644
+index 1dac57ff6..d7874d8c7 100644
 --- a/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
 +++ b/pkg/apis/certmanager/v1/zz_generated.deepcopy.go
-@@ -487,6 +487,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
+@@ -610,6 +610,11 @@ func (in *CertificateSpec) DeepCopyInto(out *CertificateSpec) {
  		*out = new(NameConstraints)
  		(*in).DeepCopyInto(*out)
  	}
@@ -310,10 +310,10 @@ index e889ecf..3b29f92 100644
  }
  
 diff --git a/pkg/controller/certificates/issuing/internal/secret.go b/pkg/controller/certificates/issuing/internal/secret.go
-index 223b082..3af42d6 100644
+index dc0905ddc..c8a604da2 100644
 --- a/pkg/controller/certificates/issuing/internal/secret.go
 +++ b/pkg/controller/certificates/issuing/internal/secret.go
-@@ -106,10 +106,16 @@ func (s *SecretsManager) UpdateData(ctx context.Context, crt *cmapi.Certificate,
+@@ -110,10 +110,16 @@ func (s *SecretsManager) UpdateData(ctx context.Context, crt *cmapi.Certificate,
  		WithAnnotations(secret.Annotations).WithLabels(secret.Labels).
  		WithData(secret.Data).WithType(secret.Type)
  
@@ -332,7 +332,7 @@ index 223b082..3af42d6 100644
  		applyCnf = applyCnf.WithOwnerReferences(&applymetav1.OwnerReferenceApplyConfiguration{
  			APIVersion: &ref.APIVersion, Kind: &ref.Kind,
 diff --git a/pkg/controller/certificates/issuing/internal/secret_test.go b/pkg/controller/certificates/issuing/internal/secret_test.go
-index 06ca3eb..ac58f31 100644
+index e2b5b723c..7d28787c0 100644
 --- a/pkg/controller/certificates/issuing/internal/secret_test.go
 +++ b/pkg/controller/certificates/issuing/internal/secret_test.go
 @@ -98,6 +98,14 @@ func Test_SecretsManager(t *testing.T) {
@@ -384,9 +384,9 @@ index 06ca3eb..ac58f31 100644
 +						}).
 +						WithType(corev1.SecretTypeTLS).
 +						WithOwnerReferences(&applymetav1.OwnerReferenceApplyConfiguration{
-+							APIVersion: ptr.To("cert-manager.io/v1"), Kind: ptr.To("Certificate"),
-+							Name: ptr.To("test"), UID: &expUID,
-+							Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true),
++							APIVersion: new("cert-manager.io/v1"), Kind: new("Certificate"),
++							Name: new("test"), UID: &expUID,
++							Controller: new(true), BlockOwnerDeletion: new(true),
 +						})
 +					assert.Equal(t, expCnf, gotCnf)
 +
@@ -477,9 +477,9 @@ index 06ca3eb..ac58f31 100644
 +						}).
 +						WithType(corev1.SecretTypeTLS).
 +						WithOwnerReferences(&applymetav1.OwnerReferenceApplyConfiguration{
-+							APIVersion: ptr.To("cert-manager.io/v1"), Kind: ptr.To("Certificate"),
-+							Name: ptr.To("test"), UID: &expUID,
-+							Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true),
++							APIVersion: new("cert-manager.io/v1"), Kind: new("Certificate"),
++							Name: new("test"), UID: &expUID,
++							Controller: new(true), BlockOwnerDeletion: new(true),
 +						})
 +					assert.Equal(t, expCnf, gotCnf)
 +
@@ -544,10 +544,10 @@ index 06ca3eb..ac58f31 100644
  			certificateOptions: controllerpkg.CertificateOptions{EnableOwnerRef: false},
  			certificate:        baseCertWithSecretTemplate,
 diff --git a/pkg/controller/certificates/issuing/secret_manager_test.go b/pkg/controller/certificates/issuing/secret_manager_test.go
-index 9944a0a..64e74a6 100644
+index 93dd2ae9e..d807ca3ae 100644
 --- a/pkg/controller/certificates/issuing/secret_manager_test.go
 +++ b/pkg/controller/certificates/issuing/secret_manager_test.go
-@@ -609,6 +609,72 @@ func Test_ensureSecretData(t *testing.T) {
+@@ -608,6 +608,72 @@ func Test_ensureSecretData(t *testing.T) {
  			},
  			expectedAction: false,
  		},
@@ -555,13 +555,13 @@ index 9944a0a..64e74a6 100644
 +			enableOwnerRef: false,
 +			cert: &cmapi.Certificate{
 +				ObjectMeta: metav1.ObjectMeta{Namespace: "test-namespace", Name: "test-name", UID: types.UID("uid-123")},
-+				Spec:       cmapi.CertificateSpec{SecretName: "test-secret", CertificateOwnerRef: ptr.To(true)},
++				Spec:       cmapi.CertificateSpec{SecretName: "test-secret", CertificateOwnerRef: new(true)},
 +			},
 +			secret: &corev1.Secret{
 +				ObjectMeta: metav1.ObjectMeta{Namespace: "test-namespace", Name: "test-secret",
 +					Labels: map[string]string{cmapi.PartOfCertManagerControllerLabelKey: "true"},
 +					OwnerReferences: []metav1.OwnerReference{
-+						{APIVersion: "cert-manager.io/v1", Kind: "Certificate", Name: "test-name", UID: types.UID("uid-123"), Controller: ptr.To(true), BlockOwnerDeletion: ptr.To(true)},
++						{APIVersion: "cert-manager.io/v1", Kind: "Certificate", Name: "test-name", UID: types.UID("uid-123"), Controller: new(true), BlockOwnerDeletion: new(true)},
 +					},
 +					ManagedFields: []metav1.ManagedFieldsEntry{
 +						{Manager: fieldManager, FieldsV1: &metav1.FieldsV1{
@@ -591,7 +591,7 @@ index 9944a0a..64e74a6 100644
 +			enableOwnerRef: true,
 +			cert: &cmapi.Certificate{
 +				ObjectMeta: metav1.ObjectMeta{Namespace: "test-namespace", Name: "test-name", UID: types.UID("uid-123")},
-+				Spec:       cmapi.CertificateSpec{SecretName: "test-secret", CertificateOwnerRef: ptr.To(false)},
++				Spec:       cmapi.CertificateSpec{SecretName: "test-secret", CertificateOwnerRef: new(false)},
 +			},
 +			secret: &corev1.Secret{
 +				ObjectMeta: metav1.ObjectMeta{Namespace: "test-namespace", Name: "test-secret",
@@ -621,10 +621,10 @@ index 9944a0a..64e74a6 100644
  			enableOwnerRef: true,
  			cert: &cmapi.Certificate{
 diff --git a/test/unit/gen/certificate.go b/test/unit/gen/certificate.go
-index 149857c..1fa6a13 100644
+index 94dbf2570..4c8408067 100644
 --- a/test/unit/gen/certificate.go
 +++ b/test/unit/gen/certificate.go
-@@ -297,3 +297,9 @@ func SetCertificateKeystore(keystores *v1.CertificateKeystores) CertificateModif
+@@ -308,3 +308,9 @@ func SetCertificateKeystore(keystores *v1.CertificateKeystores) CertificateModif
  		crt.Spec.Keystores = keystores
  	}
  }

@@ -1,5 +1,13 @@
 positive:
   configValues:
+  # cert-manager 1.21 options
+  - enableACMERenewalInfo: true
+    http01WaitInsteadOfSelfCheck: "30s"
+    certificateRequestMaximumBackoffDuration: "6h"
+  - http01WaitInsteadOfSelfCheck: "0"
+  - http01WaitInsteadOfSelfCheck: "1h2m3s"
+  - certificateRequestMaximumBackoffDuration: "1h30m"
+  - certificateRequestMaximumBackoffDuration: "9999h"
   # empty configuration is valid
   - {}
 
@@ -66,6 +74,17 @@ positive:
 
 negative:
   configValues:
+  - http01WaitInsteadOfSelfCheck: "-30s"
+  - http01WaitInsteadOfSelfCheck: ""
+  - http01WaitInsteadOfSelfCheck: "30"
+  - http01WaitInsteadOfSelfCheck: "3000000h"
+  - certificateRequestMaximumBackoffDuration: "30m"
+  - certificateRequestMaximumBackoffDuration: "90m"
+  - certificateRequestMaximumBackoffDuration: "1h30m0s"
+  - certificateRequestMaximumBackoffDuration: "1h60m"
+  - certificateRequestMaximumBackoffDuration: "0h"
+  - certificateRequestMaximumBackoffDuration: "3000000h"
+  - enableACMERenewalInfo: "yes"
   - highAvailability: "must be boolean, not string"
   - nodeSelector: ["must be object, not array"]
   - tolerations: "must array of object, not string"

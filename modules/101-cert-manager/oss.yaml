@@ -4,7 +4,7 @@
   logo: https://github.com/jetstack/cert-manager/raw/master/logo/logo.png
   license: Apache License 2.0
   id: cert-manager
-  version: 1.20.3
+  version: 1.21.2
   # Do not forget update flant patch branch in 3p repo!
 - name: cert-manager-webhook-yandex
   link: https://github.com/yandex-cloud/cert-manager-webhook-yandex

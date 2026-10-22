@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: certificaterequests.cert-manager.io
 spec:
   group: cert-manager.io
@@ -313,6 +313,10 @@ spec:
                 type: string
             type: object
         type: object
+    selectableFields:
+    - jsonPath: .spec.issuerRef.group
+    - jsonPath: .spec.issuerRef.kind
+    - jsonPath: .spec.issuerRef.name
     served: true
     storage: true
     subresources:

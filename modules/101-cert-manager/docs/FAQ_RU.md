@@ -428,3 +428,40 @@ CAA record does not match issuer
 то необходимо проверить `CAA (Certificate Authority Authorization)` DNS-запись у домена, для которого заказывается сертификат.
 Если вы хотите использовать Let’s Encrypt-сертификаты, у домена должна быть CAA-запись: `issue "letsencrypt.org"`.
 Подробнее про CAA можно почитать [в документации Let’s Encrypt](https://letsencrypt.org/docs/caa/).
+
+## Что делать, если самопроверка HTTP-01 не завершается?
+
+Перед тем как попросить Let's Encrypt проверить Challenge `HTTP-01`,
+cert-manager запрашивает URL проверки для домена изнутри кластера.
+Если кластер не может обратиться к своему публичному адресу, эта самопроверка не проходит,
+и Challenge остаётся в ожидании, хотя Let's Encrypt смог бы его проверить.
+Так бывает, например, из-за NAT без hairpinning (когда изнутри кластера нельзя обратиться к своему внешнему IP) или при split-horizon DNS (когда один и тот же домен резолвится в разные IP-адреса в зависимости от того, откуда пришёл DNS-запрос: изнутри кластера или снаружи).
+
+В этом случае Challenge сообщает об ошибке самопроверки.
+Чтобы её посмотреть, выполните команду:
+
+```shell
+d8 k -n <NAMESPACE> describe challenges.acme.cert-manager.io
+```
+
+Чтобы пропустить самопроверку для ClusterIssuer `letsencrypt` и `letsencrypt-staging`,
+задайте параметр [`http01WaitInsteadOfSelfCheck`](configuration.html#parameters-http01waitinsteadofselfcheck).
+Следующий ModuleConfig заставляет cert-manager ждать 30 секунд вместо самопроверки:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cert-manager
+spec:
+  version: 1
+  settings:
+    http01WaitInsteadOfSelfCheck: 30s
+```
+
+После обновления ClusterIssuer новый Challenge больше не ждёт успешного завершения самопроверки.
+cert-manager просит Let's Encrypt проверить его через 30 секунд после публикации.
+
+Используйте параметр, только если домен доступен из интернета.
+Иначе каждая попытка проверки завершится ошибкой на стороне Let's Encrypt
+и будет учитываться в его [ограничениях на количество запросов](https://letsencrypt.org/docs/rate-limits/).

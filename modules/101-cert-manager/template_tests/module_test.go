@@ -907,6 +907,84 @@ namespace: d8-ingress-gateway
 		})
 	})
 
+	Context("<cert-manager 1.21 options>", func() {
+		letsencryptIssuers := []string{
+			"letsencrypt",
+			"letsencrypt-staging",
+			"letsencrypt-gateway-shared-gateway",
+			"letsencrypt-staging-gateway-shared-gateway",
+		}
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.discovery.gatewayAPIDefaultGateway", `
+name: shared-gateway
+namespace: d8-ingress-gateway
+`)
+			f.ValuesSetFromYaml("global.discovery.gatewayAPICRDs",
+				gatewayAPICRDsServing("v1", "gateways", "httproutes"))
+			f.ValuesSetFromYaml("certManager", certManager)
+		})
+
+		It("leaves the controller arguments and the solvers unchanged by default", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			args := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager").Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring(`"--feature-gates=ACMEHTTP01IngressPathTypeExact=false"`))
+			Expect(args).NotTo(ContainSubstring("--certificate-request-maximum-backoff-duration"))
+			for _, name := range letsencryptIssuers {
+				issuer := f.KubernetesGlobalResource("ClusterIssuer", name)
+				Expect(issuer.Exists()).To(BeTrue(), name)
+				Expect(issuer.Field("spec.acme.solvers.0.waitInsteadOfSelfCheck").Exists()).To(BeFalse(), name)
+				Expect(issuer.Field("spec.acme.solvers.0.http01").Exists()).To(BeTrue(), name)
+			}
+		})
+
+		It("enables ARI and caps the CertificateRequest backoff", func() {
+			f.ValuesSet("certManager.enableACMERenewalInfo", true)
+			f.ValuesSet("certManager.certificateRequestMaximumBackoffDuration", "6h")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			args := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager").Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring(`"--feature-gates=ACMEHTTP01IngressPathTypeExact=false,ACMEUseARI=true"`))
+			Expect(args).To(ContainSubstring(`"--certificate-request-maximum-backoff-duration=6h"`))
+		})
+
+		It("joins ListenerSets and ACMEUseARI in one feature gates argument", func() {
+			f.ValuesSet("certManager.enableListenerSet", true)
+			f.ValuesSet("certManager.enableACMERenewalInfo", true)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			args := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager").Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring(`"--feature-gates=ACMEHTTP01IngressPathTypeExact=false,ListenerSets=true,ACMEUseARI=true"`))
+		})
+
+		It("sets waitInsteadOfSelfCheck on every Let's Encrypt solver", func() {
+			f.ValuesSet("certManager.http01WaitInsteadOfSelfCheck", "30s")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			for _, name := range letsencryptIssuers {
+				issuer := f.KubernetesGlobalResource("ClusterIssuer", name)
+				Expect(issuer.Field("spec.acme.solvers.0.waitInsteadOfSelfCheck").String()).To(Equal("30s"), name)
+				Expect(issuer.Field("spec.acme.solvers.0.http01").Exists()).To(BeTrue(), name)
+			}
+		})
+
+		It("keeps the zero wait, which skips the self-check entirely", func() {
+			f.ValuesSet("certManager.http01WaitInsteadOfSelfCheck", "0")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			issuer := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt")
+			Expect(issuer.Field("spec.acme.solvers.0.waitInsteadOfSelfCheck").String()).To(Equal("0"))
+		})
+	})
+
 	Context("<Gateway API CRDs without a Gateway>", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesManagedHa)

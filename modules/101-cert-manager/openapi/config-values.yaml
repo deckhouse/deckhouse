@@ -187,6 +187,56 @@ properties:
       Additionally, when Gateway API integration is enabled, this flag also enables ListenerSet integration for Gateway API if the ListenerSet CRD is installed in the cluster and serves the `v1` version.
 
       Gateway API integration is enabled automatically when the Gateway and HTTPRoute CRDs are installed in the cluster and serve the `v1` version.
+  enableACMERenewalInfo:
+    type: boolean
+    default: false
+    x-examples: [true, false]
+    description: |
+      Enable ACME Renewal Information (ARI, [RFC 9773](https://www.rfc-editor.org/rfc/rfc9773))
+      by turning on the `ACMEUseARI` feature gate.
+
+      With ARI, cert-manager asks the ACME server, for example Let's Encrypt,
+      for the renewal window of every certificate it issued.
+      If the server returns a window, cert-manager renews the certificate at a random moment inside it
+      and ignores `renewBefore` and `renewBeforePercentage` of the Certificate resource.
+      The renewal can therefore happen later than `renewBefore` requires.
+      `spec.renewal` of the Certificate still applies on top of the window.
+      If the server does not support ARI or the request fails, `renewBefore` applies as usual.
+
+      The parameter affects every ACME Issuer and ClusterIssuer in the cluster, not only the ones of the module.
+      The feature is in the alpha stage in cert-manager.
+  http01WaitInsteadOfSelfCheck:
+    type: string
+    pattern: '^(0|[0-9]{1,4}h([0-9]{1,4}m)?([0-9]{1,4}s)?|[0-9]{1,4}m([0-9]{1,4}s)?|[0-9]{1,4}s)$'
+    x-examples: ["30s", "2m"]
+    description: |
+      Time to wait instead of the self-check before asking the ACME server to validate
+      an [HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/) challenge.
+
+      Applies to the `letsencrypt` and `letsencrypt-staging` ClusterIssuers, including their Gateway API variants.
+      Before asking the ACME server, cert-manager checks that the challenge is reachable from inside the cluster.
+      This self-check fails when the cluster cannot reach its own public address,
+      for example behind NAT without hairpinning (when you cannot access your external IP address from inside the cluster) or with split-horizon DNS (when the same domain resolves to different IP addresses depending on where the DNS request originated: from inside the cluster or from outside),
+      although the ACME server could validate the challenge.
+      If the parameter is set, cert-manager skips the self-check and waits for the specified time instead.
+      The value `0` asks the ACME server to validate right away and relies on its own retries.
+
+      By default, the self-check is performed.
+  certificateRequestMaximumBackoffDuration:
+    type: string
+    pattern: '^[1-9][0-9]{0,3}h([0-5]?[0-9]m)?$'
+    x-examples: ["6h", "1h30m"]
+    description: |
+      Maximum delay between attempts to issue a certificate after a failed CertificateRequest.
+
+      The delay starts at one hour and doubles after each consecutive failure, but does not exceed this value.
+      A lower value makes cert-manager retry sooner once the issuer is available again,
+      for example after maintenance of the CA.
+      Specify the value in the `<HOURS>h` or `<HOURS>h<MINUTES>m` format, for example `6h` or `1h30m`.
+      The number of hours is from 1 to 9999, the number of minutes is from 0 to 59.
+      Other notations of the same duration, such as `90m` or `1h30m0s`, are not accepted.
+
+      If the parameter is not set, the cert-manager default of 32 hours applies.
   ingressClassHttp01:
     type: string
     x-examples: ["nginx"]

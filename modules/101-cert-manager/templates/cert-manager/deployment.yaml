@@ -3,6 +3,9 @@
 {{- if .Values.certManager.enableListenerSet }}
   {{- $featureGates = append $featureGates "ListenerSets=true" }}
 {{- end }}
+{{- if .Values.certManager.enableACMERenewalInfo }}
+  {{- $featureGates = append $featureGates "ACMEUseARI=true" }}
+{{- end }}
 {{- define "cert_manager_resources" }}
 cpu: 10m
 memory: 25Mi
@@ -75,6 +78,9 @@ spec:
           - "--acme-http01-solver-image={{ include "helm_lib_module_image" (list . "certManagerAcmeSolver") }}"
           {{- if $.Values.certManager.maxConcurrentChallenges }}
           - --max-concurrent-challenges={{ $.Values.certManager.maxConcurrentChallenges }}
+          {{- end }}
+          {{- with $.Values.certManager.certificateRequestMaximumBackoffDuration }}
+          - --certificate-request-maximum-backoff-duration={{ . }}
           {{- end }}
           {{- with .Values.certManager.recursiveSettings }}
             {{- if .nameservers }}

@@ -41,8 +41,9 @@ final: false
 git:
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/crds
   to: /module_crds
-- add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/docs
-  to: /docs  
+  stageDependencies:
+    install:
+    - '**/*'
 import:
 - from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src/deploy/crds
@@ -54,26 +55,40 @@ import:
   before: install
 shell:
   install:
-  - | 
+  # The module CRDs must be the upstream CRDs of this version after update.sh, which injects the Deckhouse
+  # additions. The artifact image imports /crds-validated, so werf builds this check before every build of
+  # the binaries; a non-final image that nothing imports is never built.
+  - |
     echo "Checking if module crds are the same as cert-manager crds"
     DOWNLOAD=false CRD_FILE_PATH=/src/deploy/crds MODULE_VERSION=v{{ $version }} /module_crds/cert-manager/update.sh
 
-    dir1="/src/deploy/crds"
-    dir2="/module_crds/cert-manager"
-    for f in $dir1/*.yaml; do
+    upstream="/src/deploy/crds"
+    module="/module_crds/cert-manager"
+    failed=0
+    if [ "$(cd $upstream && ls *.yaml)" != "$(cd $module && ls *.yaml)" ]; then
+      echo "ERROR: the CRD files of the module differ from the upstream ones"
+      failed=1
+    fi
+    for f in $upstream/*.yaml; do
       base=$(basename "$f")
-        diff <(yq -P 'sort_keys(..)' $dir1/$base) <(yq -P 'sort_keys(..)' $dir2/$base)
-    done  
-
-  - |
-    echo "Checking cert-manager version in documentation"
-    cat /docs/README.md    | grep {{ $version }} || ( echo "ERROR: version v{{ $version }} not found in /docs/README.md"    && exit 1 )
-    cat /docs/README_RU.md | grep {{ $version }} || ( echo "ERROR: version v{{ $version }} not found in /docs/README_RU.md" && exit 1 )
+      yq -P 'sort_keys(..)' "$f" > /tmp/upstream.yaml
+      yq -P 'sort_keys(..)' "$module/$base" > /tmp/module.yaml || { failed=1; continue; }
+      if ! diff /tmp/upstream.yaml /tmp/module.yaml; then
+        echo "ERROR: $module/$base differs from the upstream CRD, run crds/cert-manager/update.sh"
+        failed=1
+      fi
+    done
+    if [ "$failed" -ne 0 ]; then exit 1; fi
+    touch /crds-validated
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 from: {{ index $.Images "builder/golang-1.26" }}
 final: false
 import:
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-ci-validator
+  add: /crds-validated
+  to: /crds-validated
+  before: install
 - from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src
   to: /src

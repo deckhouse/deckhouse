@@ -429,3 +429,40 @@ CAA record does not match issuer
 ```
 
 In this case, you have to check the `CAA (Certificate Authority Authorization)` DNS record of the domain for which the certificate is intended. For Let's Encrypt certificates, the domain must have the `issue "letsencrypt.org"` CAA record. You can read more about CAA [in the Let's Encrypt documentation](https://letsencrypt.org/docs/caa/).
+
+## What to do if the HTTP-01 self-check never completes?
+
+Before cert-manager asks Let's Encrypt to validate an `HTTP-01` Challenge,
+it requests the challenge URL of the domain from inside the cluster.
+If the cluster cannot reach its own public address, this self-check never succeeds,
+and the Challenge stays pending, although Let's Encrypt could validate it.
+It happens, for example, behind NAT without hairpinning (when you cannot access your external IP address from inside the cluster) or with split-horizon DNS (when the same domain resolves to different IP addresses depending on where the DNS request originated: from inside the cluster or from outside).
+
+The Challenge then reports the self-check error.
+To see it, run the following command:
+
+```shell
+d8 k -n <NAMESPACE> describe challenges.acme.cert-manager.io
+```
+
+To skip the self-check for the `letsencrypt` and `letsencrypt-staging` ClusterIssuers,
+set the [`http01WaitInsteadOfSelfCheck`](configuration.html#parameters-http01waitinsteadofselfcheck) parameter.
+The following ModuleConfig makes cert-manager wait 30 seconds instead of the self-check:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cert-manager
+spec:
+  version: 1
+  settings:
+    http01WaitInsteadOfSelfCheck: 30s
+```
+
+After the ClusterIssuers are updated, a new Challenge no longer waits for the successful self-check.
+cert-manager asks Let's Encrypt to validate it 30 seconds after the challenge is presented.
+
+Use the parameter only when the domain is reachable from the internet.
+Otherwise every validation attempt fails on the side of Let's Encrypt
+and counts against its [rate limits](https://letsencrypt.org/docs/rate-limits/).

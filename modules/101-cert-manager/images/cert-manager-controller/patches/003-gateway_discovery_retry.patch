@@ -1,17 +1,17 @@
 diff --git a/pkg/controller/context.go b/pkg/controller/context.go
-index a507da6..6634cc4 100644
+index cb283ec45..ba708e498 100644
 --- a/pkg/controller/context.go
 +++ b/pkg/controller/context.go
-@@ -31,6 +31,7 @@ import (
- 	"k8s.io/apimachinery/pkg/runtime"
+@@ -37,6 +37,7 @@ import (
  	"k8s.io/apimachinery/pkg/selection"
  	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+ 	"k8s.io/apimachinery/pkg/util/sets"
 +	"k8s.io/client-go/discovery"
  	"k8s.io/client-go/kubernetes"
  	kscheme "k8s.io/client-go/kubernetes/scheme"
  	clientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
-@@ -282,7 +283,7 @@ func NewContextFactory(ctx context.Context, opts ContextOptions) (*ContextFactor
- 		restConfig.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(restConfig.QPS, restConfig.Burst)
+@@ -323,7 +324,7 @@ func NewContextFactory(ctx context.Context, opts ContextOptions) (*ContextFactor
+ 		}
  	}
  
 -	clients, err := buildClients(restConfig, opts)
@@ -19,7 +19,7 @@ index a507da6..6634cc4 100644
  	if err != nil {
  		return nil, err
  	}
-@@ -345,7 +346,7 @@ func (c *ContextFactory) Build(component ...string) (*Context, error) {
+@@ -385,7 +386,7 @@ func (c *ContextFactory) Build(component ...string) (*Context, error) {
  	utilruntime.Must(cmscheme.AddToScheme(scheme))
  	utilruntime.Must(gwscheme.AddToScheme(scheme))
  
@@ -28,7 +28,7 @@ index a507da6..6634cc4 100644
  	if err != nil {
  		return nil, err
  	}
-@@ -381,9 +382,55 @@ type contextClients struct {
+@@ -421,9 +422,55 @@ type contextClients struct {
  	gatewayAvailable   bool
  }
  
@@ -85,7 +85,7 @@ index a507da6..6634cc4 100644
  	httpClient, err := rest.HTTPClientFor(restConfig)
  	if err != nil {
  		return contextClients{}, fmt.Errorf("error creating HTTP client: %w", err)
-@@ -412,8 +459,7 @@ func buildClients(restConfig *rest.Config, opts ContextOptions) (contextClients,
+@@ -452,8 +499,7 @@ func buildClients(restConfig *rest.Config, opts ContextOptions) (contextClients,
  	if utilfeature.DefaultFeatureGate.Enabled(feature.ExperimentalGatewayAPISupport) && opts.EnableGatewayAPI {
  		// Check if the gateway API CRDs are available. If they are not found
  		// return an error which will cause cert-manager to crashloopbackoff.
@@ -97,7 +97,7 @@ index a507da6..6634cc4 100644
  		GatewayAPIListenerSetsNotAvailable := "the Gateway API ListenerSet CRD do not seem to be present, but " + feature.ListenerSets +
 diff --git a/pkg/controller/context_discovery_retry_test.go b/pkg/controller/context_discovery_retry_test.go
 new file mode 100644
-index 0000000..f241430
+index 000000000..f24143029
 --- /dev/null
 +++ b/pkg/controller/context_discovery_retry_test.go
 @@ -0,0 +1,108 @@

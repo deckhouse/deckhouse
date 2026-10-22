@@ -17,7 +17,11 @@ spec:
     privateKeySecretRef:
       name: cert-manager-letsencrypt-private-key
     solvers:
-    - http01:
+    -
+      {{- if hasKey .Values.certManager "http01WaitInsteadOfSelfCheck" }}
+      waitInsteadOfSelfCheck: {{ .Values.certManager.http01WaitInsteadOfSelfCheck | quote }}
+      {{- end }}
+      http01:
         gatewayHTTPRoute:
           parentRefs:
           - group: gateway.networking.k8s.io
