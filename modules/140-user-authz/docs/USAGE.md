@@ -29,10 +29,10 @@ roleRef:
 ```
 
 {% offtopic title="The rights that the user will get" %}
-The user gets access to cluster-wide resources, to the configuration of DP modules, and to the namespaces of the enabled DP modules. The user gets no access to the namespaces of user applications.
+The user gets access to cluster-wide resources, to the configuration of Deckhouse Platform modules, and to the namespaces of the enabled Deckhouse Platform modules. The user gets no access to the namespaces of user applications.
 
 The user will be able to:
-- View, modify, delete, and create Kubernetes resources and DP modules;
+- View, modify, delete, and create Kubernetes resources and Deckhouse Platform modules;
 - Modify module configurations (view, modify, delete, and create `moduleConfig` resources);
 - Execute the following commands on pods and services:
   - `kubectl attach`
@@ -67,7 +67,7 @@ roleRef:
 ```
 
 {% offtopic title="The rights that the user will get" %}
-The rights that the user will get will be limited to the following list of DP module namespaces from the `network` subsystem (the actual list depends on the list of modules included in the cluster):
+The rights that the user will get will be limited to the following list of Deckhouse Platform module namespaces from the `network` subsystem (the actual list depends on the list of modules included in the cluster):
 
 - `d8-cni-cilium`
 - `d8-cni-flannel`
@@ -168,7 +168,7 @@ The user will be able to:
 The example uses the [granular role-based model](./#granular-role-based-model).
 {% endalert %}
 
-To assign rights to a user to manage application resources within a namespace (including some namespaced DP module resources such as DexAuthenticator), use the role `d8:namespace:admin` in a RoleBinding in the corresponding namespace. Cluster-wide module configuration is not included.
+To assign rights to a user to manage application resources within a namespace (including some namespaced Deckhouse Platform module resources such as DexAuthenticator), use the role `d8:namespace:admin` in a RoleBinding in the corresponding namespace. Cluster-wide module configuration is not included.
 
 Example of assigning rights to an application developer (User `app-developer`) in namespace `myapp`:
 
@@ -220,7 +220,7 @@ In the `myapp` namespace, the user will be able to:
   - `StatefulSet`
   - `VerticalPodAutoscaler`
   - `VolumeSnapshot`
-- View, edit, delete, and create the following DP module resources:
+- View, edit, delete, and create the following Deckhouse Platform module resources:
   - `DexAuthenticator`
   - `DexClient`
   - `PodLoggingConfig`

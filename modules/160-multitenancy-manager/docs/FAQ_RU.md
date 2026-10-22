@@ -65,7 +65,7 @@ d8 k get available -n <PROJECT_NAME>
 
 Если для ресурса не задана ни одна политика ClusterResourceGrantPolicy, его доступность определяется регистрацией: ресурс доступен всем проектам, если в GrantableClusterResourceDefinition задано [`defaultAvailability: All`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) (значение по умолчанию) и ресурс не попадает под фильтры [`excluded`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded).
 
-Например, определение `clusterroles`, поставляемое DP, исключает все ClusterRole без лейбла `rbac.deckhouse.io/delegatable: "true"`, поэтому такие роли недоступны в RoleBinding даже при отсутствии политик.
+Например, определение `clusterroles`, поставляемое Deckhouse Platform, исключает все ClusterRole без лейбла `rbac.deckhouse.io/delegatable: "true"`, поэтому такие роли недоступны в RoleBinding даже при отсутствии политик.
 
 Чтобы ограничить доступ, создайте [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) и укажите проекты и доступные им cluster-wide-ресурсы.
 
@@ -75,8 +75,15 @@ d8 k get available -n <PROJECT_NAME>
 
 1. **Соответствие селекторам**. Убедитесь, что [`spec.projectSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-projectselector) политики соответствует лейблам Project, а [`spec.namespaceSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-namespaceselector) — лейблам неймспейса:
 
+   Получить информацию о проекте и его лейблы:
+
    ```shell
    d8 k get project <PROJECT_NAME> --show-labels
+   ```
+
+   Отфильтровать неймспейсы по лейблу `projects.deckhouse.io/project=<PROJECT_NAME>` и показать их лейблы:
+
+   ```shell
    d8 k get ns -l projects.deckhouse.io/project=<PROJECT_NAME> --show-labels
    ```
 
@@ -104,6 +111,6 @@ d8 k get available -n <PROJECT_NAME>
 
 После отключения модуля проверка доступности cluster-wide-ресурсов и автоматическая подстановка значений по умолчанию не выполняются. Существующие объекты при этом не изменяются.
 
-Проверка полей с расширением `x-deckhouse-grantable-resource` в настройках приложений DP также не выполняется.
+Проверка полей с расширением `x-deckhouse-grantable-resource` в настройках приложений Deckhouse Platform также не выполняется.
 
 Роль `d8:dict` модуля `user-authz` продолжает работать.

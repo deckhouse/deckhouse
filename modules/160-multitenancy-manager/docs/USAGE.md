@@ -4,7 +4,7 @@ title: "The multitenancy-manager module: usage examples"
 
 ## Default project templates
 
-Deckhouse Platform (DP) includes the following project templates. They are cumulative: each one includes the capabilities of the previous one and adds its own. Parameter values are set in the `.spec.parameters` field of a Project:
+Deckhouse Platform includes the following project templates. They are cumulative: each one includes the capabilities of the previous one and adds its own. Parameter values are set in the `.spec.parameters` field of a Project:
 
 - `simple`: Minimal template that creates only the project namespace. Use it when you only need an isolated namespace managed as a project and configure access and limits through the [standard fields](#standard-project-fields) and [project role bindings](#granting-access-within-a-project).
 
@@ -446,18 +446,18 @@ Available fields (all optional; the complete reference is [in the ProjectTemplat
 
 | Field | What it configures |
 |-------|--------------------|
-| `podSecurityStandard` | Pod security profile: `Privileged`, `Baseline`, or `Restricted`. A parameter with an empty value sets no profile. |
-| `networkPolicy.mode` | Network isolation: `Isolated` (traffic is only allowed within the project and from the platform system components) or `NotRestricted`. |
-| `features.monitoring` | Extended monitoring of the project namespaces. |
-| `features.vulnerabilityScanning` | Scanning of container images for vulnerabilities. |
-| `logShipping.clusterDestinationRef` | Collecting the logs of the project pods into the given destination (`ClusterLogDestination`). |
-| `nodeSelector`, `tolerations` | Placing the pods of the main namespace on dedicated nodes. |
-| `allowedUIDs`, `allowedGIDs` | The allowed UID/GID ranges of the project containers. |
-| `runtimeAudit.enabled` | Auditing the project processes' access to the Linux kernel. |
-| `namespaceMetadata.labels`, `namespaceMetadata.annotations` | Extra labels and annotations of the project namespaces. The labels the module manages cannot be set here. A template or a Project that sets one is refused. One that already has such a label can still be changed while it keeps the label as it is. The label is not applied, and the response warns about it. |
-| `resources`, `grantPolicies` | [Granting cluster-wide resources through a project template](#granting-cluster-wide-resources-through-a-project-template). |
-| `manifests` | Other objects in the project namespaces, applied with the rights of a project administrator. See [Describing other objects in manifests](#describing-other-objects-in-manifests). |
-| `parametersSchema.openAPIV3Schema` | The schema of parameters set when creating a project. |
+| `podSecurityStandard` | Pod security profile: `Privileged`, `Baseline`, or `Restricted`. A parameter with an empty value sets no profile |
+| `networkPolicy.mode` | Network isolation: `Isolated` (traffic is only allowed within the project and from the platform system components) or `NotRestricted` |
+| `features.monitoring` | Extended monitoring of the project namespaces |
+| `features.vulnerabilityScanning` | Scanning of container images for vulnerabilities |
+| `logShipping.clusterDestinationRef` | Collecting the logs of the project pods into the given destination (`ClusterLogDestination`) |
+| `nodeSelector`, `tolerations` | Placing the pods of the main namespace on dedicated nodes |
+| `allowedUIDs`, `allowedGIDs` | The allowed UID/GID ranges of the project containers |
+| `runtimeAudit.enabled` | Auditing the project processes' access to the Linux kernel |
+| `namespaceMetadata.labels`, `namespaceMetadata.annotations` | Extra labels and annotations of the project namespaces. The labels the module manages cannot be set here. A template or a Project that sets one is refused. One that already has such a label can still be changed while it keeps the label as it is. The label is not applied, and the response warns about it |
+| `resources`, `grantPolicies` | [Granting cluster-wide resources through a project template](#granting-cluster-wide-resources-through-a-project-template) |
+| `manifests` | Other objects in the project namespaces, applied with the rights of a project administrator. For details, see [Describing other objects in manifests](#describing-other-objects-in-manifests) |
+| `parametersSchema.openAPIV3Schema` | The schema of parameters set when creating a project |
 
 An example of a structured template:
 
@@ -930,7 +930,7 @@ The following components are used for this:
 
 1. ValidatingAdmissionPolicy: Defines validation rules:
    - Operations: `CREATE`, `UPDATE` and `DELETE`. `system:masters` is not exempt.
-   - Check: only the module's controller and the identities this policy lets through (see [Who bypasses admission](#who-bypasses-admission)) may change such an object. For a project namespace, an update that changes only labels and annotations outside the keys the module owns is allowed as well (see [Creating a project automatically for a namespace](#creating-a-project-automatically-for-a-namespace)).
+   - Check: only the module's controller and the identities this policy lets through (for details, see [Who bypasses admission](#who-bypasses-admission)) may change such an object. For a project namespace, an update that changes only labels and annotations outside the keys the module owns is allowed as well (see [Creating a project automatically for a namespace](#creating-a-project-automatically-for-a-namespace)).
    - Applies to all resources and API groups.
 1. ValidatingAdmissionPolicyBinding: Defines which objects the validation applies to:
    - Uses `namespaceSelector` and `objectSelector` to select resources by the label `heritage: multitenancy-manager`.
@@ -951,7 +951,7 @@ The webhooks and policies of the module have different exclusion lists:
 
 The `/is-granted` and `/defaults` webhooks, which check writes of objects that reference cluster-wide resources in project namespaces (see [Managing access to cluster-wide resources](#managing-access-to-cluster-wide-resources)), skip `system:masters` together with the platform components. The `/protect` webhook keeps AvailableClusterResource read-only. It lets through the controller, the platform components and `system:masters`.
 
-An administrator who has to get past the Project or ProjectTemplate webhook, the policy that guards the `heritage: multitenancy-manager` objects, or the policy that reserves the users the controller acts as, does it deliberately as `system:sudouser`, for example with `d8 k --as system:sudouser …`, and the bypass is then visible in the audit log. There is no such door for ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding, for a create of a ProjectTemplate through `deckhouse.io/v1alpha1`, or for the namespace labels and annotations that the `d8-multitenancy-manager-namespace-ownership` policy keeps.
+An administrator who needs to bypass the Project or ProjectTemplate webhook, the policy that guards the `heritage: multitenancy-manager` objects, or the policy that reserves the users the controller acts as, does it deliberately as `system:sudouser`, for example with `d8 k --as system:sudouser …`, and the bypass is then visible in the audit log. There is no such door for ProjectRoleBinding, ProjectNamespace and ClusterProjectRoleBinding, for a create of a ProjectTemplate through `deckhouse.io/v1alpha1`, or for the namespace labels and annotations that the `d8-multitenancy-manager-namespace-ownership` policy keeps.
 
 ### Creating your own validation
 
@@ -1041,8 +1041,8 @@ The following sections provide common scenarios for configuring and using the me
 
 A [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) (`multitenancy.deckhouse.io/v1alpha2`) has two selectors, [`projectSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-projectselector) and [`namespaceSelector`](cr.html#clusterresourcegrantpolicy-v1alpha2-spec-namespaceselector). The policy applies to a namespace of a project when every selector it sets matches:
 
-- `projectSelector` is matched against the labels of the **Project** object. It selects every namespace of a project at once, including an additional namespace created later, so use it to select a project as a whole. The module puts the `projects.deckhouse.io/project: <PROJECT_NAME>` and `projects.deckhouse.io/project-template: <PROJECT_TEMPLATE_NAME>` labels on every Project, so a project can also be selected by its name or template. The virtual projects carry only the first of these labels. The two labels cannot be set to another project or template. A manifest that replaces a whole Project may leave them out. The request is admitted with a warning, and the module puts the labels back. The template label of a Project changes as soon as `spec.projectTemplateName` changes. The same label on the namespaces shows the template they were rendered from, and the service policies of a template select namespaces by it.
-- `namespaceSelector` is matched against the labels of the **Namespace**. It narrows the choice to some namespaces of the selected projects, or of all projects when `projectSelector` is not set. For example, it can select only the main namespace (the `projects.deckhouse.io/project-namespace` label does not exist) or only the namespaces labeled by a template.
+- `projectSelector` is matched against the labels of the Project object. It selects every namespace of a project at once, including an additional namespace created later, so use it to select a project as a whole. The module puts the `projects.deckhouse.io/project: <PROJECT_NAME>` and `projects.deckhouse.io/project-template: <PROJECT_TEMPLATE_NAME>` labels on every Project, so a project can also be selected by its name or template. The virtual projects carry only the first of these labels. The two labels cannot be set to another project or template. A manifest that replaces a whole Project may leave them out. The request is admitted with a warning, and the module puts the labels back. The template label of a Project changes as soon as `spec.projectTemplateName` changes. The same label on the namespaces shows the template they were rendered from, and the service policies of a template select namespaces by it.
+- `namespaceSelector` is matched against the labels of the Namespace. It narrows the choice to some namespaces of the selected projects, or of all projects when `projectSelector` is not set. For example, it can select only the main namespace (the `projects.deckhouse.io/project-namespace` label does not exist) or only the namespaces labeled by a template.
 - A policy with **neither** selector matches no project on its own. Such a policy is a library policy, applied to a project through `grantPolicies` of its ProjectTemplate. An explicit empty selector (`{}`) matches everything.
 
 The namespaces of the [virtual projects](#virtual-projects) `deckhouse` and `default` are never covered, even by `{}`.
@@ -1502,9 +1502,9 @@ Invalid paths and `catalogFields` without `grantedResource` are refused when the
 d8 k describe grantableclusterresourcedefinition myclusterresources
 ```
 
-#### Using x-deckhouse-grantable-resource in DP application settings
+#### Using x-deckhouse-grantable-resource in Deckhouse Platform application settings
 
-To manage access to cluster-wide resources in DP application settings, use the `x-deckhouse-grantable-resource` OpenAPI extension. In this case, deckhouse-controller automatically checks the availability of the specified resource and assigns the default value when necessary. You do not need to create GrantableClusterResourceReference manually.
+To manage access to cluster-wide resources in Deckhouse Platform application settings, use the `x-deckhouse-grantable-resource` OpenAPI extension. In this case, deckhouse-controller automatically checks the availability of the specified resource and assigns the default value when necessary. You do not need to create GrantableClusterResourceReference manually.
 
 For a description of the extension and usage examples, refer to ["Application settings"](/products/kubernetes-platform/documentation/v1/architecture/marketplace/settings.html#defaulting-a-grantable-cluster-wide-resource-value-x-deckhouse-grantable-resource).
 

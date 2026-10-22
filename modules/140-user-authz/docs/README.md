@@ -18,7 +18,7 @@ The bindings that grant users the access levels of ClusterAuthorizationRule and 
 
 ## Granular role-based model
 
-Unlike the [basic DP role-based model](#basic-role-based-model), the granular role-based one does not use ClusterAuthorizationRule and AuthorizationRule resources. Access rights are configured in the standard Kubernetes RBAC way: by creating RoleBinding or ClusterRoleBinding resources and specifying one of the roles prepared by the `user-authz` module in them. To grant access to all namespaces of a project at once, use the [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) and [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) resources of the `multitenancy-manager` module.
+Unlike the [basic Deckhouse Platform role-based model](#basic-role-based-model), the granular role-based one does not use ClusterAuthorizationRule and AuthorizationRule resources. Access rights are configured in the standard Kubernetes RBAC way: by creating RoleBinding or ClusterRoleBinding resources and specifying one of the roles prepared by the `user-authz` module in them. To grant access to all namespaces of a project at once, use the [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) and [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) resources of the `multitenancy-manager` module.
 
 {% alert level="info" %}
 Access does not have to be granted by hand-writing YAML manifests: the [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html) provides an access grant wizard. It walks you through the steps (who gets access → where → at which level), picks the right binding kind itself (RoleBinding, ClusterRoleBinding, ProjectRoleBinding, or ClusterProjectRoleBinding), and lets you assemble a custom role from ready-made building blocks without writing YAML.
@@ -82,7 +82,7 @@ For example, if a user has a ClusterAuthorizationRule with `accessLevel: Editor`
 A namespace role cannot be assigned through a ClusterRoleBinding. Use a RoleBinding in a namespace, or a ProjectRoleBinding or ClusterProjectRoleBinding for all namespaces of a project.
 {% endalert %}
 
-Namespace roles are intended to assign rights to a user **in a specific namespace**. Users refer to, for example, developers who use a cluster configured by an administrator to deploy their applications. Such users don't need to manage DP modules or a cluster, but they need to be able to, for example, create their Ingress resources, configure application authentication, and collect logs from applications.
+Namespace roles are intended to assign rights to a user **in a specific namespace**. Users refer to, for example, developers who use a cluster configured by an administrator to deploy their applications. Such users don't need to manage Deckhouse Platform modules or a cluster, but they need to be able to, for example, create their Ingress resources, configure application authentication, and collect logs from applications.
 
 The namespace role defines permissions for accessing namespaced resources of modules and standard namespaced resources of Kubernetes (Pod, Deployment, Secret, ConfigMap, etc.).
 
@@ -141,18 +141,18 @@ A subject that can manage the `user-authn` module can register an identity provi
 
 The system/subsystem role defines access rights:
 - to cluster-wide Kubernetes resources;
-- to manage DP modules (ModuleConfig resource) within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all DP modules for the role `d8:system:*`;
-- to manage cluster-wide resources of DP modules within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all resources of DP modules for the role `d8:system:*`;
-- to read the namespaces of the modules of the role's [subsystem](#subsystems-of-the-role-based-model), or of all DP modules for the role `d8:system:*`; writing there is reserved for the `superadmin` level (see [Access of system and subsystem roles to the namespaces of the modules](#access-of-system-and-subsystem-roles-to-the-namespaces-of-the-modules)).
+- to manage Deckhouse Platform modules (ModuleConfig resource) within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all Deckhouse Platform modules for the role `d8:system:*`;
+- to manage cluster-wide resources of Deckhouse Platform modules within the [subsystem](#subsystems-of-the-role-based-model) of the role, or to all resources of Deckhouse Platform modules for the role `d8:system:*`;
+- to read the namespaces of the modules of the role's [subsystem](#subsystems-of-the-role-based-model), or of all Deckhouse Platform modules for the role `d8:system:*`; writing there is reserved for the `superadmin` level (see [Access of system and subsystem roles to the namespaces of the modules](#access-of-system-and-subsystem-roles-to-the-namespaces-of-the-modules)).
 
 The role name format is `d8:system:<ACCESS_LEVEL>` for the system roles and `d8:subsystem:<SUBSYSTEM>:<ACCESS_LEVEL>` for the subsystem roles, where:
 - `SUBSYSTEM` is the role's [subsystem](#subsystems-of-the-role-based-model);
 - `ACCESS_LEVEL` is the access level.
 
   Examples:
-  - `d8:system:viewer` — access to view the configuration of all DP modules (ModuleConfig resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except Secrets and RBAC resources) in the namespaces of all DP modules;
-  - `d8:system:manager` — similar to the role `d8:system:viewer`, but with the right to view/create/modify/delete the configuration of all DP modules (ModuleConfig resource) and their cluster-wide resources; in the namespaces of all DP modules it keeps the read access of `d8:system:viewer`;
-  - `d8:subsystem:observability:viewer` — access to view the configuration of DP modules (ModuleConfig resource) from the `observability` area, their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except secrets and RBAC resources) in the system namespaces `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
+  - `d8:system:viewer` — access to view the configuration of all Deckhouse Platform modules (ModuleConfig resource), their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except Secrets and RBAC resources) in the namespaces of all Deckhouse Platform modules;
+  - `d8:system:manager` — similar to the role `d8:system:viewer`, but with the right to view/create/modify/delete the configuration of all Deckhouse Platform modules (ModuleConfig resource) and their cluster-wide resources; in the namespaces of all Deckhouse Platform modules it keeps the read access of `d8:system:viewer`;
+  - `d8:subsystem:observability:viewer` — access to view the configuration of Deckhouse Platform modules (ModuleConfig resource) from the `observability` area, their cluster-wide resources, their namespaced resources, and standard Kubernetes objects (except secrets and RBAC resources) in the system namespaces `d8-log-shipper`, `d8-monitoring`, `d8-okmeter`, `d8-operator-prometheus`, `d8-upmeter`, `kube-prometheus-pushgateway`.
 
 The module provides three access levels for system and subsystem roles:
 - `viewer` — allows viewing standard Kubernetes resources, the configuration of modules (ModuleConfig resources), cluster-wide resources of modules, and namespaced resources of modules in the module namespace;
@@ -239,7 +239,7 @@ The `d8:dict` role is independent of the `multitenancy-manager` cluster-wide res
 
 ### Subsystems of the role-based model
 
-Each DP module belongs to a specific subsystem. For each subsystem, there is a set of roles with different levels of access. Roles are updated automatically when the module is enabled or disabled.
+Each Deckhouse Platform module belongs to a specific subsystem. For each subsystem, there is a set of roles with different levels of access. Roles are updated automatically when the module is enabled or disabled.
 
 The subsystems of the platform are `iam`, `security`, `cluster`, `delivery`, `network`, `storage`, `observability` and `managed-services`.
 
@@ -251,7 +251,7 @@ For example, for the `network` subsystem, there are the following subsystem role
 
 The scope of a role depends on which subsystem it belongs to:
 
-- The scope of the `d8:system:*` roles is the namespaces of all enabled DP modules, that is, the namespaces that their capabilities name in the `rbac.deckhouse.io/namespace` label.
+- The scope of the `d8:system:*` roles is the namespaces of all enabled Deckhouse Platform modules, that is, the namespaces that their capabilities name in the `rbac.deckhouse.io/namespace` label.
 - The scope of subsystem roles includes the namespaces in which the subsystem’s modules operate (see the subsystem composition table), as well as all cluster-wide objects of the subsystem’s modules.
 
 Role-based model subsystems composition table.
@@ -266,7 +266,7 @@ Membership of objects in the role model is defined by the `rbac.deckhouse.io/*` 
 
 This design has two practical consequences:
 
-- DP modules extend the roles automatically: when a module is enabled, its capabilities are added to the corresponding built-in roles; when it is disabled, they are removed. The permission list of a role always matches the set of enabled modules.
+- Deckhouse Platform modules extend the roles automatically: when a module is enabled, its capabilities are added to the corresponding built-in roles; when it is disabled, they are removed. The permission list of a role always matches the set of enabled modules.
 - You can assemble your own roles from ready-made capabilities without writing RBAC rules by hand. How to do this is described in [the FAQ](faq.html#how-do-i-extend-a-role-or-create-a-new-one).
 
 The names of built-in roles and capabilities start with the `d8:` prefix. This namespace is reserved: you cannot create your own ClusterRole with a `d8:*` name — the only exception is the `d8:custom:*` prefix, which is dedicated to user-defined roles and capabilities. The labels `rbac.deckhouse.io/kind: role` and `rbac.deckhouse.io/kind: capability` are also reserved for built-in objects — use `custom-role` and `custom-capability` for your own.
@@ -286,7 +286,7 @@ Labels the role model uses on ClusterRole objects:
 | `rbac.deckhouse.io/namespace: <namespace>` | Capabilities | The namespace of a module where a RoleBinding is automatically created for the holders of a system/subsystem role. Read only on the capabilities Deckhouse ships; on a custom capability it is ignored ([how to give access to another namespace](faq.html#extending-subsystem-roles-and-adding-a-new-namespace)). |
 | `rbac.deckhouse.io/delegatable: "true"` | The `d8:namespace:*`, `d8:project:*`, and user-defined roles | The role may be referenced by a RoleBinding [inside project namespaces](/modules/multitenancy-manager/usage.html#roles-available-in-a-rolebinding-inside-a-project). Add this label to your custom roles that should be available in projects. |
 | `rbac.deckhouse.io/deprecated: "true"` | [Deprecated alias roles](#deprecated-role-names) | The role is deprecated and will be removed; migrate the bindings to the new role. |
-| `module` | Built-in objects | The name of the DP module the object belongs to. Convenient for aggregation selectors (for example, all capabilities of one module). |
+| `module` | Built-in objects | The name of the Deckhouse Platform module the object belongs to. Convenient for aggregation selectors (for example, all capabilities of one module). |
 | `heritage: deckhouse` | Built-in objects | Marks a platform object. Must not be set on your own objects. |
 
 Annotations on ClusterRole objects:

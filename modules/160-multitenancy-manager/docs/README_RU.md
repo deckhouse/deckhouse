@@ -111,7 +111,7 @@ Certificate — ClusterIssuer, RoleBinding — ClusterRole. Модуль поз�
 
 Для управления доступом к cluster-wide-ресурсам используются следующие ресурсы:
 
-* [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) регистрирует тип cluster-wide-ресурсов, доступом к которому можно управлять. Такие ресурсы поставляются Deckhouse Platform (DP) или разработчиками модулей.
+* [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) регистрирует тип cluster-wide-ресурсов, доступом к которому можно управлять. Такие ресурсы поставляются Deckhouse Platform или разработчиками модулей.
 * [GrantableClusterResourceReference](./cr.html#grantableclusterresourcereference) определяет, где используется зарегистрированный cluster-wide-ресурс. Например, какое поле ресурса содержит ссылку на него. Такие ресурсы поставляются модулями.
 * [ClusterResourceGrantPolicy](./cr.html#clusterresourcegrantpolicy) задаёт правила доступа. Администратор кластера с помощью лейблов выбирает проекты, на которые распространяется политика, определяет разрешённые и запрещённые ресурсы, а также ресурс, используемый по умолчанию.
 * В каждом неймспейсе каждого проекта контроллер поддерживает [AvailableClusterResource](./cr.html#availableclusterresource) для каждого GrantableClusterResourceDefinition. Он содержит список cluster-wide-ресурсов, доступных проекту по применимым политикам, и предназначен только для чтения.
@@ -124,7 +124,7 @@ Certificate — ClusterIssuer, RoleBinding — ClusterRole. Модуль поз�
 
 <pre class="mermaid">
 flowchart LR
-    A["Разработчик модуля или DP<br/>поставляет<br/>GrantableClusterResourceDefinition<br/>и GrantableClusterResourceReference"] --> C
+    A["Разработчик модуля или Deckhouse Platform<br/>поставляет<br/>GrantableClusterResourceDefinition<br/>и GrantableClusterResourceReference"] --> C
     B["Администратор кластера<br/>создаёт<br/>ClusterResourceGrantPolicy"] --> C["Контроллер"]
     C --> D["Создаёт<br/>AvailableClusterResource<br/>в неймспейсе каждого проекта"]
     E["Пользователь создаёт объект<br/>(например,<br/>PersistentVolumeClaim)"] --> F["Mutating-вебхук<br/>/defaults"]
@@ -188,9 +188,9 @@ flowchart LR
 
 Для мониторинга используется метрика `d8_cluster_objects_grant_violated`. Её отдаёт контроллер модуля: он пересчитывает нарушения при каждой обработке неймспейса проекта и не реже чем раз в две минуты по тем же правилам доступности, что и вебхук `/is-granted`.
 
-### Ресурсы, регистрируемые DP
+### Ресурсы, регистрируемые Deckhouse Platform
 
-DP регистрирует следующие cluster-wide-ресурсы:
+Deckhouse Platform регистрирует следующие cluster-wide-ресурсы:
 
 | Имя определения | Cluster-wide-ресурс | Где используется | Режим подстановки значения по умолчанию |
 | --- | --- | --- | --- |
@@ -207,7 +207,7 @@ DP регистрирует следующие cluster-wide-ресурсы:
 
 | Ресурс | Область | Кто создаёт | Ручное создание | Назначение |
 | --- | --- | --- | --- | --- |
-| [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) | Кластер | Разработчик модуля или DP | Разрешено для кастомных ресурсов | Регистрирует тип cluster-wide-ресурса, доступом к которому можно управлять |
+| [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) | Кластер | Разработчик модуля или Deckhouse Platform | Разрешено для кастомных ресурсов | Регистрирует тип cluster-wide-ресурса, доступом к которому можно управлять |
 | [GrantableClusterResourceReference](./cr.html#grantableclusterresourcereference) | Кластер | Разработчик модуля | Разрешено для полей кастомных ресурсов | Определяет, где используется зарегистрированный cluster-wide-ресурс |
 | [ClusterResourceGrantPolicy](./cr.html#clusterresourcegrantpolicy) | Кластер | Администратор кластера | Обязательно | Определяет доступные и запрещённые ресурсы, а также ресурс, используемый проектом по умолчанию |
 | [AvailableClusterResource](./cr.html#availableclusterresource) | Неймспейс | Контроллер (автоматически) | Запрещено (защищено вебхуком) | Каталог доступных проекту ресурсов, только для чтения |

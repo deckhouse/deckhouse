@@ -105,7 +105,7 @@ This mechanism works independently of RBAC. RBAC determines *who can create and 
 
 The following resources are used to manage access to cluster-wide resources:
 
-* [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) registers a type of cluster-wide resource whose access can be managed. These resources are provided by Deckhouse Platform (DP) or by module developers.
+* [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) registers a type of cluster-wide resource whose access can be managed. These resources are provided by Deckhouse Platform or by module developers.
 * [GrantableClusterResourceReference](./cr.html#grantableclusterresourcereference) defines where a registered cluster-wide resource is used, for example, which resource field contains a reference to it. These resources are provided by modules.
 * [ClusterResourceGrantPolicy](./cr.html#clusterresourcegrantpolicy) defines access rules. Using labels, a cluster administrator selects the projects to which the policy applies and defines the allowed and denied resources, as well as the resource used by default.
 * In every namespace of every project, the controller keeps an [AvailableClusterResource](./cr.html#availableclusterresource) for each GrantableClusterResourceDefinition. It lists the cluster-wide resources available to the project under the policies that apply and is read-only.
@@ -118,7 +118,7 @@ The webhooks reject requests while the module controller is unavailable. Until i
 
 <pre class="mermaid">
 flowchart LR
-    A["Module developer or DP<br/>provides GrantableClusterResourceDefinition<br/>and GrantableClusterResourceReference"] --> C
+    A["Module developer or Deckhouse Platform<br/>provides GrantableClusterResourceDefinition<br/>and GrantableClusterResourceReference"] --> C
     B["Cluster administrator<br/>creates<br/>ClusterResourceGrantPolicy"] --> C["Controller"]
     C --> D["Creates AvailableClusterResource<br/>in each project namespace"]
     E["User creates an object<br/>(for example,<br/>PersistentVolumeClaim)"] --> F["Mutating webhook<br/>/defaults"]
@@ -181,9 +181,9 @@ When such objects are detected, the [`ClusterResourceGrantPolicyViolation`](/pro
 
 The `d8_cluster_objects_grant_violated` metric is used for monitoring. It is exported by the module controller, which recounts the violations of a project namespace on every reconcile and at least every two minutes, using the same availability rules as the admission webhook.
 
-### Resources registered by DP
+### Resources registered by Deckhouse Platform
 
-DP registers the following cluster-wide resources:
+Deckhouse Platform registers the following cluster-wide resources:
 
 | Definition name | Cluster-wide resource | Where it is used | Default assignment mode |
 | --- | --- | --- | --- |
@@ -200,7 +200,7 @@ The `clusterissuers` definition is registered only when the `cert-manager` modul
 
 | Resource | Scope | Created by | Manual creation | Purpose |
 | --- | --- | --- | --- | --- |
-| [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) | Cluster | Module developer or DP | Allowed for custom resources | Registers a type of cluster-wide resource whose access can be managed |
+| [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) | Cluster | Module developer or Deckhouse Platform | Allowed for custom resources | Registers a type of cluster-wide resource whose access can be managed |
 | [GrantableClusterResourceReference](./cr.html#grantableclusterresourcereference) | Cluster | Module developer | Allowed for fields of custom resources | Defines where a registered cluster-wide resource is used |
 | [ClusterResourceGrantPolicy](./cr.html#clusterresourcegrantpolicy) | Cluster | Cluster administrator | Required | Defines allowed and denied resources, as well as the resource used by the project by default |
 | [AvailableClusterResource](./cr.html#availableclusterresource) | Namespace | Controller (automatically) | Prohibited (protected by a webhook) | Read-only catalog of resources available to the project |

@@ -32,7 +32,7 @@ In the examples below, `<DEX_DOMAIN>` is the Dex domain. It is the [`publicDomai
 
 ### Checking provider connectivity
 
-The web UI provider details page has a "Check connection" action. It creates a [DexProviderCheck](cr.html#dexprovidercheck) resource and waits for the `user-authn` controller to write the result to its `status`.
+The provider page in the Deckhouse web UI has a "Check connection" action. It creates a [DexProviderCheck](cr.html#dexprovidercheck) resource and waits for the `user-authn` controller to write the result to its `status`.
 
 The check verifies that:
 
@@ -256,7 +256,7 @@ If email verification is not enabled in Keycloak, to properly use it as an ident
     * "Claim value": `true`
     * "Claim JSON Type": `boolean`
 
-  After that, in the client registered for the DP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
+  After that, in the client registered for the Deckhouse Platform cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
 
   In the DexProvider resource, specify `insecureSkipEmailVerified: true` and in the `.spec.oidc.scopes` field, change the Client Scope name to `email_dkp` following the example:
   
@@ -592,7 +592,7 @@ The annotation registers the client as a trusted peer of the privileged `kuberne
 {% alert level="warning" %}
 Access granted this way applies at the cluster level, even though DexClient and DexAuthenticator are namespaced objects. Therefore, only a subject allowed to `create` the `dexclients/allow-access-to-kubernetes` subresource (for DexClient) or the `dexauthenticators/allow-access-to-kubernetes` subresource (for DexAuthenticator) in the namespace of the object can add the annotation or change its value to `"true"`. The `d8:system-capability:user-authn:edit` role and the `ClusterAdmin` access level carry this permission. To grant it in one namespace, create a Role with the `create` verb on these subresources and bind it with a RoleBinding in that namespace. Permissions to create DexClient or DexAuthenticator objects are not sufficient.
 
-Adding the annotation is restricted regardless of its value, including `"false"`. This is required for compatibility with DP versions earlier than 1.77, where access is granted based on the presence of the annotation regardless of its value. If access to the Kubernetes API server is not required, do not add the annotation.
+Adding the annotation is restricted regardless of its value, including `"false"`. This is required for compatibility with Deckhouse Platform versions earlier than 1.77, where access is granted based on the presence of the annotation regardless of its value. If access to the Kubernetes API server is not required, do not add the annotation.
 
 The restriction does not apply to resources that already have the annotation. A user with permissions to modify such a resource can continue to modify it, including removing the annotation or changing its value to disable access.
 {% endalert %}
@@ -778,7 +778,7 @@ By default, commands wait for the operation to complete. To only create a UserOp
 
 #### Self-service password reset
 
-A local user can reset their own password in the DP authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
+A local user can reset their own password in the Deckhouse Platform authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
 
 Self-service password reset is available only for local accounts (the built-in `Local` connector). Users who sign in through external authentication providers must contact the administrator of the corresponding system.
 
