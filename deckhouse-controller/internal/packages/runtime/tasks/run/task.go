@@ -23,7 +23,7 @@ import (
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
-	nelmcommon "github.com/werf/nelm/pkg/common"
+	nelmcommon "github.com/werf/nelm/v2/pkg/common"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"

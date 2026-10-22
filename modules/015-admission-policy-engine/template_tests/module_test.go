@@ -415,6 +415,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 						properties[k] = v
 					}
 					Expect(properties["state"]).To(Equal("absent"), id)
+					Expect(properties["external"]).To(Equal("false"), id)
 					Expect(f.KubernetesGlobalResource(properties["kind"], properties["name"]).Exists()).To(BeTrue(), id)
 					dependsOn = append(dependsOn, properties["kind"])
 				}

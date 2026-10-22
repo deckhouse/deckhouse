@@ -21,7 +21,7 @@ import (
 	"log/slog"
 	"regexp"
 
-	nelmlog "github.com/werf/nelm/pkg/log"
+	nelmlog "github.com/werf/nelm/v2/pkg/log"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )

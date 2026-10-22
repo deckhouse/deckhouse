@@ -20,7 +20,7 @@ import (
 	"sync"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/werf/nelm/pkg/legacy/progrep"
+	"github.com/werf/nelm/v2/pkg/legacy/progrep"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
 

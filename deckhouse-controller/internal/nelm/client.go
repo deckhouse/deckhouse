@@ -21,20 +21,22 @@ import (
 	"log/slog"
 	"maps"
 	"os"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/werf/nelm/pkg/action"
-	"github.com/werf/nelm/pkg/common"
-	"github.com/werf/nelm/pkg/legacy/progrep"
-	nelmlog "github.com/werf/nelm/pkg/log"
+	"github.com/werf/nelm/v2/pkg/action"
+	"github.com/werf/nelm/v2/pkg/common"
+	"github.com/werf/nelm/v2/pkg/legacy/progrep"
+	nelmlog "github.com/werf/nelm/v2/pkg/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -193,7 +195,17 @@ func (c *Client) ListReleases(ctx context.Context, opts ListOptions) ([]ReleaseR
 
 	refs := make([]ReleaseRef, 0, len(result.Releases))
 	for _, r := range result.Releases {
-		if !matchAll(r.Annotations, opts.Selector) {
+		annotations, err := r.Annotations(ctx)
+		if err != nil {
+			// Skip an unreadable release instead of failing the whole list; it is never selected for deletion.
+			c.logger.Warn("failed to read release annotations",
+				slog.String("release", r.Name),
+				slog.String("namespace", r.Namespace),
+				log.Err(err))
+			continue
+		}
+
+		if !matchAll(annotations, opts.Selector) {
 			continue
 		}
 		refs = append(refs, ReleaseRef{Namespace: r.Namespace, Name: r.Name})
@@ -248,7 +260,7 @@ func (c *Client) GetChecksum(ctx context.Context, namespace, releaseName string)
 
 	// Try to get checksum from storage labels first
 	if res.Release != nil {
-		if checksum, ok := res.Release.StorageLabels[ReleaseLabelPackageChecksum]; ok {
+		if checksum, ok := res.Release.Labels[ReleaseLabelPackageChecksum]; ok {
 			return checksum, nil
 		}
 	}
@@ -273,7 +285,7 @@ func (c *Client) GetReleaseLabel(ctx context.Context, namespace, releaseName, ke
 	}
 
 	if res.Release != nil {
-		if value, ok := res.Release.StorageLabels[key]; ok {
+		if value, ok := res.Release.Labels[key]; ok {
 			return value, nil
 		}
 	}
@@ -315,6 +327,13 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 	span.SetAttributes(attribute.String("path", opts.Path))
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
+	chart, err := localChart(opts.Path)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+
+		return err
+	}
+
 	var valuesSet []string
 	if len(opts.RootValues) > 0 {
 		valuesSet = append(valuesSet, opts.RootValues)
@@ -338,19 +357,28 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			RootSetJSON: valuesSet,
 		},
 		TrackingOptions:        opts.TrackingOptions,
-		Chart:                  opts.Path,
+		Chart:                  chart,
 		DefaultChartName:       releaseName,
 		DefaultChartVersion:    "0.2.0",
 		DefaultChartAPIVersion: "v2",
+		// nelm v2 fails on invalid annotations/labels; v1 silently dropped them.
+		DropInvalidAnnotationsAndLabels: true,
 		ReleaseInstallRuntimeOptions: common.ReleaseInstallRuntimeOptions{
-			ExtraLabels:             labels,
-			ExtraAnnotations:        c.opts.ResourcesAnnotations,
-			NoInstallStandaloneCRDs: true,
-			ReleaseHistoryLimit:     int(c.opts.HistoryMax),
-			ReleaseLabels:           opts.ReleaseLabels,
-			ReleaseInfoAnnotations:  c.opts.ReleaseAnnotations,
-			ReleaseStorageDriver:    c.driver,
-			ForceAdoption:           true,
+			ResourceValidationOptions: common.ResourceValidationOptions{
+				// nelm v2 validates manifests with kubeconform by default; v1 did not.
+				NoResourceValidation: true,
+			},
+			// nelm v2 defaults to Background; keep the v1 default.
+			DefaultDeletePropagation: string(metav1.DeletePropagationForeground),
+			DefaultPatchesDisable:    true,
+			ExtraLabels:              labels,
+			ExtraAnnotations:         c.opts.ResourcesAnnotations,
+			NoInstallStandaloneCRDs:  true,
+			ReleaseHistoryLimit:      int(c.opts.HistoryMax),
+			ReleaseLabels:            opts.ReleaseLabels,
+			ReleaseInfoAnnotations:   c.opts.ReleaseAnnotations,
+			ReleaseStorageDriver:     c.driver,
+			ForceAdoption:            true,
 		},
 		Timeout: c.opts.Timeout,
 		// Package releases are serialized by the runtime task pipeline, so the cluster-wide release lock is redundant.
@@ -381,6 +409,13 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 	span.SetAttributes(attribute.String("path", opts.Path))
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
+	chart, err := localChart(opts.Path)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+
+		return "", err
+	}
+
 	var valuesSet []string
 	if len(opts.RootValues) > 0 {
 		valuesSet = append(valuesSet, opts.RootValues)
@@ -400,7 +435,7 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 			RootSetJSON: valuesSet,
 		},
 		OutputFilePath:         "/dev/null", // No output file, we return the manifest as a string
-		Chart:                  opts.Path,
+		Chart:                  chart,
 		DefaultChartName:       releaseName,
 		DefaultChartVersion:    "0.2.0",
 		DefaultChartAPIVersion: "v2",
@@ -410,7 +445,9 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 		ReleaseNamespace:       namespace,
 		ReleaseStorageDriver:   c.driver,
 		Remote:                 true,
-		ForceAdoption:          true,
+		DefaultPatchesDisable:  true,
+		// nelm v2 fails on invalid annotations/labels; v1 silently dropped them.
+		DropInvalidAnnotationsAndLabels: true,
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -481,9 +518,12 @@ func (c *Client) Delete(ctx context.Context, namespace, releaseName string, onTr
 		TrackingOptions: common.TrackingOptions{
 			NoPodLogs: true,
 		},
-		ReleaseHistoryLimit:  int(c.opts.HistoryMax),
-		ReleaseStorageDriver: c.driver,
-		Timeout:              c.opts.Timeout,
+		ReleaseHistoryLimit: int(c.opts.HistoryMax),
+		// nelm v2 defaults to Background; keep the v1 default.
+		DefaultDeletePropagation: string(metav1.DeletePropagationForeground),
+		DefaultPatchesDisable:    true,
+		ReleaseStorageDriver:     c.driver,
+		Timeout:                  c.opts.Timeout,
 		// Package releases are serialized by the runtime task pipeline, so the cluster-wide release lock is redundant.
 		LegacyNoReleaseLock: true,
 	}); err != nil {
@@ -540,7 +580,7 @@ func forwardReports(releaseName string, onEvent func(name string, report progrep
 // Converts nelm's ReleaseNotFoundError to ErrReleaseNotFound for consistent error handling
 //
 //nolint:nonamedreturns // named returns required for defer/recover to modify return values
-func (c *Client) getRelease(ctx context.Context, namespace, releaseName string) (result *action.ReleaseGetResultV1, err error) {
+func (c *Client) getRelease(ctx context.Context, namespace, releaseName string) (result *action.ReleaseGetResultV3, err error) {
 	defer c.recoverPanic("getRelease", nil, &err,
 		slog.String("release", releaseName),
 		slog.String("namespace", namespace),
@@ -564,6 +604,18 @@ func (c *Client) getRelease(ctx context.Context, namespace, releaseName string) 
 	}
 
 	return res, nil
+}
+
+// localChart returns the chart path absolute. nelm v2 reads a chart from disk only when its
+// path is absolute or starts with "."; a relative one, like the package engine's
+// "modules/002-deckhouse", it takes for a repository chart and tries to download.
+func localChart(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("resolve chart path '%s': %w", path, err)
+	}
+
+	return abs, nil
 }
 
 // recoverPanic converts a panic recovered from a deferred call into err,

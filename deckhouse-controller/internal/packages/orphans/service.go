@@ -27,7 +27,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/werf/nelm/pkg/common"
+	"github.com/werf/nelm/v2/pkg/common"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"

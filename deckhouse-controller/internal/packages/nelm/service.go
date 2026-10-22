@@ -30,7 +30,7 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	klient "github.com/flant/kube-client/client"
 	"github.com/google/uuid"
-	"github.com/werf/nelm/pkg/common"
+	"github.com/werf/nelm/v2/pkg/common"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
