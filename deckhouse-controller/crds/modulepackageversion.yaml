@@ -461,7 +461,7 @@ spec:
                             major: 0
                             minor: 1
                             patches: -1
-                        description: Compatibility rules for upgrading to this version.
+                        description: Compatibility rules for upgrading from this version.
                         properties:
                           step:
                             description: Step defines the compatibility rule for this

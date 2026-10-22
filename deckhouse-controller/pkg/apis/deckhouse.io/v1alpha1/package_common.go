@@ -371,9 +371,9 @@ const (
 	DefaultDowngradeMajor int32 = 0
 )
 
-// PackageVersionCompatibilityRules bounds which versions may upgrade to or downgrade from this one.
+// PackageVersionCompatibilityRules bounds which versions this one may be upgraded or downgraded to.
 type PackageVersionCompatibilityRules struct {
-	// Compatibility rules for upgrading to this version.
+	// Compatibility rules for upgrading from this version.
 	// +kubebuilder:default={step:{patches:-1,minor:1,major:0}}
 	// +optional
 	Upgrade *PackageVersionCompatibilityRule `json:"upgrade,omitempty"`
@@ -409,7 +409,7 @@ type PackageVersionCompatibilityRuleStep struct {
 	Major *int32 `json:"major,omitempty"`
 }
 
-// IsCompatible reports whether from may move to to; pass the target's rules for an upgrade, the source's for a downgrade.
+// IsCompatible reports whether from may move to to; pass the rules of from, the version left in either direction.
 // A missing rule or limit takes the direction's default, the same the package parser fills; unparsable versions are incompatible.
 func (r *PackageVersionCompatibilityRules) IsCompatible(from, to string) bool {
 	fromVer, err := semver.NewVersion(from)

@@ -39,12 +39,13 @@ func NewUpdater(cli client.Client) *Updater {
 	return &Updater{client: cli}
 }
 
-// Update patches status.update of the application; Manual mode and a not yet installed application clear it.
-// The plan starts after automaticVersion, so the version being installed is not listed twice.
+// Update patches status.update of the application; a not yet installed application clears it. The plan is the whole
+// path after automaticVersion in every mode, so it shows where the application may go next; automaticVersion is
+// empty in Manual mode.
 func (u *Updater) Update(ctx context.Context, app *v1alpha1.Application) error {
 	var desired *v1alpha1.ApplicationStatusUpdate
 
-	if mode := updateMode(app); mode != v1alpha2.UpdateModeManual && app.Status.CurrentVersion != nil {
+	if app.Status.CurrentVersion != nil {
 		apvs := new(v1alpha1.ApplicationPackageVersionList)
 		if err := u.client.List(ctx, apvs, client.MatchingLabels{
 			v1alpha1.PackageLabelRepository: app.Spec.PackageRepositoryName,
@@ -53,14 +54,21 @@ func (u *Updater) Update(ctx context.Context, app *v1alpha1.Application) error {
 			return fmt.Errorf("list application package versions: %w", err)
 		}
 
-		plan := computePlan(mode, app.Status.CurrentVersion.Version, apvs.Items)
-		automatic := computeAutoVersion(app, plan, installableVersions(apvs.Items))
-		if len(plan) > 0 && plan[0] == automatic {
-			plan = plan[1:]
+		current := app.Status.CurrentVersion.Version
+
+		var automatic string
+		if mode := app.UpdateMode(); mode != v1alpha2.UpdateModeManual {
+			automatic = computeAutoVersion(app, computePlan(mode, current, apvs.Items), installableVersions(apvs.Items))
+		}
+
+		from := current
+		if newer(automatic, current) {
+			from = automatic
 		}
 
 		desired = &v1alpha1.ApplicationStatusUpdate{
-			Plan:             plan,
+			// Auto, unlike AutoPatch, does not stop at the current minor: the whole path.
+			Plan:             computePlan(v1alpha2.UpdateModeAuto, from, apvs.Items),
 			AutomaticVersion: automatic,
 		}
 
@@ -82,51 +90,21 @@ func (u *Updater) Update(ctx context.Context, app *v1alpha1.Application) error {
 	return nil
 }
 
-// updateMode returns the mode of spec.update; without it the default Manual applies.
-func updateMode(app *v1alpha1.Application) v1alpha2.UpdateMode {
-	if app.Spec.Update == nil {
-		return v1alpha2.UpdateModeManual
-	}
-
-	return ParseMode(app.Spec.Update.Mode)
-}
-
-// ParseMode parses an application update mode; unlike v1alpha2.ParseUpdateMode, an empty one is Manual.
-func ParseMode(mode string) v1alpha2.UpdateMode {
-	if mode == "" {
-		return v1alpha2.UpdateModeManual
-	}
-
-	return v1alpha2.ParseUpdateMode(mode)
-}
-
-// Version returns the version the engine runs: in Auto and AutoPatch modes the newer of spec.packageVersion and
-// status.update.automaticVersion, otherwise spec.packageVersion.
-func Version(app *v1alpha1.Application) string {
-	if updateMode(app) == v1alpha2.UpdateModeManual || app.Status.Update == nil {
-		return app.Spec.PackageVersion
-	}
-
-	if newer(app.Status.Update.AutomaticVersion, app.Spec.PackageVersion) {
-		return app.Status.Update.AutomaticVersion
-	}
-
-	return app.Spec.PackageVersion
-}
-
-// candidate is a version the plan may step to, with the rules that gate an upgrade to it.
+// candidate is a version the plan may step to, with the rules that bound the next step from it.
 type candidate struct {
 	version *semver.Version
 	rules   *v1alpha1.PackageVersionCompatibilityRules
 }
 
-// computePlan returns the update path from current, each step the newest version the previous one may upgrade to.
+// computePlan returns the update path from current, each step the newest version the previous one's rules allow.
 // Drafts and versions gone from the registry are skipped; on AutoPatch so are versions outside the current minor.
 func computePlan(mode v1alpha2.UpdateMode, current string, apvs []v1alpha1.ApplicationPackageVersion) []string {
 	from, err := semver.NewVersion(current)
 	if err != nil {
 		return nil
 	}
+
+	rules := versionRules(from, apvs)
 
 	candidates := make([]candidate, 0, len(apvs))
 	for _, apv := range apvs {
@@ -143,12 +121,7 @@ func computePlan(mode v1alpha2.UpdateMode, current string, apvs []v1alpha1.Appli
 			continue
 		}
 
-		var rules *v1alpha1.PackageVersionCompatibilityRules
-		if apv.Status.PackageMetadata != nil {
-			rules = apv.Status.PackageMetadata.Compatibility
-		}
-
-		candidates = append(candidates, candidate{version: version, rules: rules})
+		candidates = append(candidates, candidate{version: version, rules: compatibility(apv)})
 	}
 
 	// Newest first: the first compatible candidate is the step, and only the ones before it are newer.
@@ -159,13 +132,13 @@ func computePlan(mode v1alpha2.UpdateMode, current string, apvs []v1alpha1.Appli
 	var plan []string
 	for {
 		idx := slices.IndexFunc(candidates, func(c candidate) bool {
-			return c.rules.IsCompatible(from.Original(), c.version.Original())
+			return rules.IsCompatible(from.Original(), c.version.Original())
 		})
 		if idx < 0 {
 			return plan
 		}
 
-		from = candidates[idx].version
+		from, rules = candidates[idx].version, candidates[idx].rules
 		plan = append(plan, from.Original())
 		candidates = candidates[:idx]
 	}
@@ -196,6 +169,26 @@ func computeAutoVersion(app *v1alpha1.Application, plan []string, available map[
 func holding(app *v1alpha1.Application) bool {
 	return apimeta.IsStatusConditionFalse(app.Status.Conditions, status.ConditionUpdateInstalled) ||
 		!apimeta.IsStatusConditionTrue(app.Status.Conditions, status.ConditionReady)
+}
+
+// versionRules returns the compatibility rules of the package version of version; nil, the defaults, when it is gone.
+func versionRules(version *semver.Version, apvs []v1alpha1.ApplicationPackageVersion) *v1alpha1.PackageVersionCompatibilityRules {
+	for _, apv := range apvs {
+		if v, err := semver.NewVersion(apv.Spec.PackageVersion); err == nil && v.Equal(version) {
+			return compatibility(apv)
+		}
+	}
+
+	return nil
+}
+
+// compatibility returns the compatibility rules the package version publishes; nil, the defaults, without metadata.
+func compatibility(apv v1alpha1.ApplicationPackageVersion) *v1alpha1.PackageVersionCompatibilityRules {
+	if apv.Status.PackageMetadata == nil {
+		return nil
+	}
+
+	return apv.Status.PackageMetadata.Compatibility
 }
 
 // installable reports whether the package version may be installed: not a draft and still in the registry.

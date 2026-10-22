@@ -25,7 +25,6 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/go-openapi/spec"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
@@ -76,21 +75,21 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 			return rejectResult(fmt.Sprintf("get application package: %v", err))
 		}
 
-		version := admittedVersion(app, oldApp)
+		adm := newAdmission(app, oldApp)
 
-		warnings, err := validateAppAgainstApv(ctx, cli, manager, app, oldApp)
+		warnings, err := validateAppAgainstApv(ctx, cli, manager, adm)
 		if err != nil {
 			// The denial message is the only feedback `kubectl apply` prints, and
 			// it arrives without the object it belongs to: name the Application
 			// and the package version whose requirements were evaluated, so the
 			// rejection is traceable when several manifests are applied at once.
 			return rejectResult(fmt.Sprintf("Application '%s/%s' (package '%s' version '%s'): %s",
-				app.Namespace, app.Name, app.Spec.PackageName, version, err))
+				app.Namespace, app.Name, app.Spec.PackageName, adm.version, err))
 		}
 
 		// The running version is checked by its object, which converts older settings with the
 		// same chain; the settings version is known to the chain by now.
-		if appInstalled(app, oldApp) {
+		if adm.installed {
 			res, err := manager.ValidatePackageSettings(ctx, apps.BuildName(app.Namespace, app.Name), app.Spec.SettingsVersion, app.Spec.Settings.GetMap())
 			if err != nil {
 				return nil, err
@@ -119,27 +118,45 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
 }
 
-// validateAppAgainstApv validates an Application against its corresponding
-// ApplicationPackageVersion (APV). It fetches the APV once and performs two checks:
-//
-//  1. Settings validation — Application.spec.settings are converted from spec.settingsVersion
-//     to the latest version by the conversions the APV publishes, then, unless the version
-//     is installed, validated against the OpenAPI schema published at
-//     APV.status.packageSchemas.settingsSchema (if present).
-//  2. Requirement constraints — the APV's requirements (Kubernetes version, Deckhouse
-//     version, and module dependencies) are parsed into semver constraints and delegated
-//     to the package manager's CheckConstraints method. Only on CREATE and on an UPDATE
-//     that changes the APV: unmet requirements of a version admitted earlier are the
-//     engine's (the Candidate is Blocked), and a settings-only edit must still reach the
-//     running version, as the Module webhook checks requirements only on enabling.
-//
-// This is called during admission webhook validation to reject Applications whose
-// settings are malformed or whose cluster requirements are not satisfied. The warnings
-// tell about settings written for an older settings version.
-func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packageManager, app, oldApp *v1alpha1.Application) ([]string, error) {
-	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, admittedVersion(app, oldApp))
+// admission is what a request is validated against, decided once per request.
+type admission struct {
+	app *v1alpha1.Application
+	// oldApp is the stored object the request replaces; nil on CREATE.
+	oldApp *v1alpha1.Application
+	// version is spec.packageVersion on a create and on a spec version change, the running version on any other
+	// update: a settings edit reaches the running version, which the automatic update may have moved past spec.
+	version string
+	// installed reports whether version runs, so its object validates the settings instead of the schema.
+	installed bool
+	// versionChanged reports a create or a spec version change, which gates the step and the requirements.
+	versionChanged bool
+}
 
-	// Fetch the corresponding ApplicationPackageVersion to read its metadata requirements.
+// newAdmission decides what the request is validated against.
+func newAdmission(app, oldApp *v1alpha1.Application) admission {
+	adm := admission{
+		app:            app,
+		oldApp:         oldApp,
+		version:        app.Spec.PackageVersion,
+		versionChanged: oldApp == nil || specVersionChanged(app, oldApp),
+	}
+
+	running := app.Status.CurrentVersion
+	if !adm.versionChanged && running != nil && running.Version != "" {
+		adm.version = running.Version
+	}
+
+	adm.installed = running != nil && running.Version == adm.version
+
+	return adm
+}
+
+// validateAppAgainstApv validates the request against the package version it admits: the settings, and on a create
+// or a version change the step and the requirements. The warnings tell about settings of an older settings version.
+func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packageManager, adm admission) ([]string, error) {
+	app := adm.app
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, adm.version)
+
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	if err := cli.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
 		return nil, fmt.Errorf("get application package version: %w", err)
@@ -149,14 +166,22 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 		return nil, fmt.Errorf("application package version '%s' is draft", apvName)
 	}
 
-	warnings, err := validateAppSettings(ctx, cli, apv, app, oldApp)
+	warnings, err := validateAppSettings(ctx, cli, apv, adm)
 	if err != nil {
 		return nil, fmt.Errorf("validate settings: %w", err)
 	}
 
-	// The requirements of an unchanged version were checked when it was admitted.
-	if oldApp != nil && !specVersionChanged(app, oldApp) {
+	// Unmet requirements of a version admitted earlier are the engine's (the Candidate is Blocked), and a
+	// settings-only edit must still reach the running version, as the Module webhook checks them only on enabling.
+	if !adm.versionChanged {
 		return warnings, nil
+	}
+
+	// Only a spec version change is gated, so the controller's own patches never trip it; nothing is installed on create.
+	if adm.oldApp != nil && adm.oldApp.Spec.PackageVersion != app.Spec.PackageVersion {
+		if err := checkVersionCompatibility(ctx, cli, app, adm.oldApp); err != nil {
+			return nil, err
+		}
 	}
 
 	metadata := apv.Status.PackageMetadata
@@ -164,38 +189,18 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 		metadata = new(v1alpha1.ApplicationPackageVersionStatusMetadata)
 	}
 
-	// Only a spec version change is gated, so the controller's own patches never trip it; nothing is installed on create.
-	if oldApp != nil && oldApp.Spec.PackageVersion != app.Spec.PackageVersion {
-		if err := checkVersionCompatibility(ctx, cli, app, oldApp.Spec.PackageVersion, metadata.Compatibility); err != nil {
-			return nil, err
-		}
-	}
-
 	constraints, err := metadata.Requirements.ToScheduleConstraints()
 	if err != nil {
 		return nil, err
 	}
 
-	// Delegate to the manager which checks the parsed constraints against the
-	// actual cluster state and rejects on dependency cycles. The name is the
-	// scheduler-side identifier (namespace.name) used by the cycle simulation.
-	// Admission shows the scheduler's message, without the reason prefix.
+	// The name is the scheduler-side identifier (namespace.name) used by the cycle simulation;
+	// admission shows the scheduler's message, without the reason prefix.
 	if err := manager.CheckConstraints(apps.BuildName(app.Namespace, app.Name), constraints); err != nil {
 		return nil, errors.New(gate.ConstraintMessage(err))
 	}
 
 	return warnings, nil
-}
-
-// admittedVersion returns the version a request is validated against: spec.packageVersion on a create and on a
-// change of the spec version, status.currentVersion on any other update (a settings edit reaches the running
-// version, which an automatic update may have moved past spec).
-func admittedVersion(app, oldApp *v1alpha1.Application) string {
-	if oldApp == nil || specVersionChanged(app, oldApp) || app.Status.CurrentVersion == nil || app.Status.CurrentVersion.Version == "" {
-		return app.Spec.PackageVersion
-	}
-
-	return app.Status.CurrentVersion.Version
 }
 
 // specVersionChanged reports whether the update names another package version in spec (repository, package or version).
@@ -204,74 +209,74 @@ func specVersionChanged(app, oldApp *v1alpha1.Application) bool {
 		v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 }
 
-// checkVersionCompatibility gates a change from the previous spec version: an upgrade by the target's rules, a downgrade by the previous one's.
-func checkVersionCompatibility(ctx context.Context, cli client.Client, app *v1alpha1.Application, current string, target *v1alpha1.PackageVersionCompatibilityRules) error {
+// checkVersionCompatibility gates a change of the spec version by the rules of every version the engine may leave
+// for it, in either direction.
+func checkVersionCompatibility(ctx context.Context, cli client.Client, app, oldApp *v1alpha1.Application) error {
 	wanted := app.Spec.PackageVersion
 
-	rules := target
-	if isDowngrade(current, wanted) {
-		var err error
-		if rules, err = previousCompatibility(ctx, cli, app, current); err != nil {
+	for _, current := range leftVersions(app, oldApp) {
+		rules, err := previousCompatibility(ctx, cli, oldApp, current)
+		if err != nil {
 			return err
 		}
-	}
 
-	if !rules.IsCompatible(current, wanted) {
-		return fmt.Errorf("incompatible version: current=%s target=%s", current, wanted)
+		if !rules.IsCompatible(current, wanted) {
+			return fmt.Errorf("incompatible version: current=%s target=%s", current, wanted)
+		}
 	}
 
 	return nil
 }
 
-// isDowngrade reports whether to is lower than from; unparsable versions are not a downgrade, IsCompatible rejects them.
-func isDowngrade(from, to string) bool {
-	fromVer, err := semver.NewVersion(from)
-	if err != nil {
-		return false
+// leftVersions returns the versions the engine may move from: the running one and the one it was heading to,
+// which may be activated before the status shows it.
+func leftVersions(app, oldApp *v1alpha1.Application) []string {
+	heading := oldApp.TargetVersion()
+
+	running := app.Status.CurrentVersion
+	if running == nil || running.Version == "" || running.Version == heading {
+		return []string{heading}
 	}
 
-	toVer, err := semver.NewVersion(to)
-	if err != nil {
-		return false
-	}
-
-	return toVer.LessThan(fromVer)
+	return []string{running.Version, heading}
 }
 
-// previousCompatibility reads the previous version's rules; a vanished version yields nil, so the defaults apply.
-func previousCompatibility(ctx context.Context, cli client.Client, app *v1alpha1.Application, previous string) (*v1alpha1.PackageVersionCompatibilityRules, error) {
-	name := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, previous)
-
-	apv := new(v1alpha1.ApplicationPackageVersion)
-	if err := cli.Get(ctx, client.ObjectKey{Name: name}, apv); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, nil
-		}
-
+// previousCompatibility reads the rules of a version the request leaves, from the repository the previous spec
+// named; a vanished version yields nil, so the defaults apply.
+func previousCompatibility(ctx context.Context, cli client.Client, oldApp *v1alpha1.Application, previous string) (*v1alpha1.PackageVersionCompatibilityRules, error) {
+	apv, err := findAPV(ctx, cli, oldApp.Spec.PackageRepositoryName, oldApp.Spec.PackageName, previous)
+	if err != nil {
 		return nil, fmt.Errorf("get previous application package version: %w", err)
 	}
 
-	if apv.Status.PackageMetadata == nil {
+	if apv == nil || apv.Status.PackageMetadata == nil {
 		return nil, nil
 	}
 
 	return apv.Status.PackageMetadata.Compatibility, nil
 }
 
-// validateAppSettings validates Application.spec.settings against the package version:
-// they are converted from spec.settingsVersion to the latest settings version by the
-// conversions the APV publishes at status.packageSchemas.settingsConversions, rejecting a
-// version the chain does not know. Unless the version is installed (its object checks
-// them in the engine), the converted settings are validated against the OpenAPI settings
-// schema at status.packageSchemas.settingsSchema. The schema is a typed
-// openapi.OpenAPIV3Schema, marshalled to JSON and passed to addon-operator's
-// SchemaStorage, which validates the user-supplied settings wrapped under the package
-// name. Returns nil when the APV publishes no settings schema — the webhook treats an
-// absent schema as "nothing to validate" rather than a rejection, so packages that ship
-// without a schema remain installable.
-//
-// On UPDATE it additionally enforces x-deckhouse-immutable against oldApp.
-func validateAppSettings(ctx context.Context, cli client.Client, apv *v1alpha1.ApplicationPackageVersion, app, oldApp *v1alpha1.Application) ([]string, error) {
+// findAPV returns the package version of the repository, package and version; nil when it is gone.
+func findAPV(ctx context.Context, cli client.Client, repo, pkg, version string) (*v1alpha1.ApplicationPackageVersion, error) {
+	apv := new(v1alpha1.ApplicationPackageVersion)
+	if err := cli.Get(ctx, client.ObjectKey{Name: v1alpha1.MakeApplicationPackageVersionName(repo, pkg, version)}, apv); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	return apv, nil
+}
+
+// validateAppSettings converts spec.settings from spec.settingsVersion to the latest settings version of the package
+// version, rejecting a version its chain does not know; validates them against its settings schema unless the version
+// is installed (its object checks them); and on UPDATE enforces x-deckhouse-immutable. Without a settings schema
+// there is nothing to validate, so packages that ship none stay installable.
+func validateAppSettings(ctx context.Context, cli client.Client, apv *v1alpha1.ApplicationPackageVersion, adm admission) ([]string, error) {
+	app := adm.app
+
 	converter, err := settingsConverter(apv.Status.PackageSchemas)
 	if err != nil {
 		return nil, err
@@ -289,14 +294,14 @@ func validateAppSettings(ctx context.Context, cli client.Client, apv *v1alpha1.A
 		return warnings, err
 	}
 
-	if !appInstalled(app, oldApp) {
+	if !adm.installed {
 		values := addonutils.Values{app.Spec.PackageName: settings}
 		if err = storage.ValidateConfigValues(app.Spec.PackageName, values); err != nil {
 			return nil, err
 		}
 	}
 
-	if err = checkImmutableSettings(ctx, cli, storage.Schemas[validation.ConfigValuesSchema], converter, settings, app, oldApp); err != nil {
+	if err = checkImmutableSettings(ctx, cli, storage.Schemas[validation.ConfigValuesSchema], converter, settings, app, adm.oldApp); err != nil {
 		return nil, err
 	}
 
@@ -319,11 +324,6 @@ func obsoleteSettingsWarnings(field string, version int, settings map[string]any
 	default:
 		return nil
 	}
-}
-
-// appInstalled reports whether the admitted version is activated, so its object can convert older settings.
-func appInstalled(app, oldApp *v1alpha1.Application) bool {
-	return app.Status.CurrentVersion != nil && app.Status.CurrentVersion.Version == admittedVersion(app, oldApp)
 }
 
 // settingsConverter builds the converter of the settings conversions a package version
@@ -510,15 +510,13 @@ func appliedSettingsVersion(ctx context.Context, cli client.Client, app, oldApp 
 	}
 
 	// the current version came from the repository the previous spec named
-	name := v1alpha1.MakeApplicationPackageVersionName(oldApp.Spec.PackageRepositoryName, oldApp.Spec.PackageName, current.Version)
-
-	apv := new(v1alpha1.ApplicationPackageVersion)
-	if err := cli.Get(ctx, client.ObjectKey{Name: name}, apv); err != nil {
-		if apierrors.IsNotFound(err) {
-			return targetLatest, nil
-		}
-
+	apv, err := findAPV(ctx, cli, oldApp.Spec.PackageRepositoryName, oldApp.Spec.PackageName, current.Version)
+	if err != nil {
 		return 0, fmt.Errorf("get current application package version: %w", err)
+	}
+
+	if apv == nil {
+		return targetLatest, nil
 	}
 
 	converter, err := settingsConverter(apv.Status.PackageSchemas)

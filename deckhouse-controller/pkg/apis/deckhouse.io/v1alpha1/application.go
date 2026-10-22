@@ -17,10 +17,13 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 )
 
 const (
@@ -30,7 +33,7 @@ const (
 	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
 
 	// ApplicationAnnotationApplyNow skips the update windows for one version: its value is the
-	// version to apply now, and it takes effect only while spec.packageVersion equals it exactly,
+	// version to apply now, and it takes effect only while TargetVersion equals it exactly,
 	// as a string ("v1.2.3" does not match "1.2.3"). Bound to a version rather than "true" because
 	// an Application, unlike a release, lives across versions: the next update obeys the windows
 	// again without anyone removing the annotation.
@@ -289,9 +292,9 @@ type ApplicationStatus struct {
 	// +optional
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
 
-	// Automatic update of the application: the update plan and the version it moves to next.
+	// Update of the application: the update plan and the version the automatic update moves to next.
 	//
-	// Empty in the `Manual` update mode and before the first version is installed.
+	// Empty before the first version is installed.
 	// +optional
 	Update *ApplicationStatusUpdate `json:"update,omitempty"`
 
@@ -329,11 +332,11 @@ type ApplicationStatus struct {
 
 // ApplicationStatusUpdate is the automatic update state of the application, recomputed on every reconcile.
 type ApplicationStatusUpdate struct {
-	// Update path after the automatic version: each step is the newest version the previous one may be updated to by its compatibility rules.
+	// Update path after the automatic version in every update mode: each step is the newest version the previous one may be updated to by its compatibility rules.
 	// +optional
 	Plan []string `json:"plan,omitempty"`
 
-	// Version the automatic update installs next. It changes only after the previous one is installed and ready.
+	// Version the automatic update installs next. It changes only after the previous one is installed and ready. Empty in the `Manual` update mode.
 	// +optional
 	AutomaticVersion string `json:"automaticVersion,omitempty"`
 }
@@ -386,4 +389,51 @@ type ApplicationList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []Application `json:"items"`
+}
+
+// ParseApplicationUpdateMode parses an application update mode; unlike v1alpha2.ParseUpdateMode, an empty one is Manual.
+func ParseApplicationUpdateMode(mode string) v1alpha2.UpdateMode {
+	if mode == "" {
+		return v1alpha2.UpdateModeManual
+	}
+
+	return v1alpha2.ParseUpdateMode(mode)
+}
+
+// UpdateMode returns the mode of spec.update; without it the default Manual applies.
+func (a *Application) UpdateMode() v1alpha2.UpdateMode {
+	if a.Spec.Update == nil {
+		return v1alpha2.UpdateModeManual
+	}
+
+	return ParseApplicationUpdateMode(a.Spec.Update.Mode)
+}
+
+// TargetVersion returns the version the engine runs: in Auto and AutoPatch modes the newer of spec.packageVersion
+// and status.update.automaticVersion, otherwise spec.packageVersion.
+func (a *Application) TargetVersion() string {
+	if a.UpdateMode() == v1alpha2.UpdateModeManual || a.Status.Update == nil {
+		return a.Spec.PackageVersion
+	}
+
+	if newerVersion(a.Status.Update.AutomaticVersion, a.Spec.PackageVersion) {
+		return a.Status.Update.AutomaticVersion
+	}
+
+	return a.Spec.PackageVersion
+}
+
+// newerVersion reports whether version is greater than current; unparsable versions are not.
+func newerVersion(version, current string) bool {
+	v, err := semver.NewVersion(version)
+	if err != nil {
+		return false
+	}
+
+	c, err := semver.NewVersion(current)
+	if err != nil {
+		return false
+	}
+
+	return v.GreaterThan(c)
 }

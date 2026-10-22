@@ -236,7 +236,7 @@ type ApplicationPackageVersionStatusMetadata struct {
 	// Version compatibility rules for upgrades and downgrades.
 	// +kubebuilder:default={}
 	// +optional
-	// +crd-enricher:raw:properties.upgrade.description="Compatibility rules for upgrading to this application version."
+	// +crd-enricher:raw:properties.upgrade.description="Compatibility rules for upgrading from this application version."
 	// +crd-enricher:raw:properties.upgrade.properties.step.description="Compatibility rule step."
 	// +crd-enricher:raw:properties.upgrade.properties.step.properties.major.description="Number of major versions that can be skipped during an upgrade.\n\nThe `-1` value removes all limits, `0` forbids the change.\n\nDefaults to `0`."
 	// +crd-enricher:raw:properties.upgrade.properties.step.properties.minor.description="Number of minor versions that can be skipped during an upgrade.\n\nThe `-1` value removes all limits, `0` forbids the change.\n\nDefaults to `1`."

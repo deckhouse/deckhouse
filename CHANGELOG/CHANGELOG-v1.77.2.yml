@@ -8,7 +8,6 @@ admission-policy-engine:
         The `PodSecurityStandardsDefaultPolicyNotSet` alert now fires when `podSecurityStandards.defaultPolicy`
         isn't set and the `Privileged` policy is derived from the bootstrap version. The update to Deckhouse
         1.78 is blocked until the policy is set explicitly.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/83
       impact: >-
         Deckhouse 1.78 makes `Baseline` the default PSS policy for all clusters.
 
@@ -39,7 +38,6 @@ admission-policy-engine:
         Fixed the default Pod Security Standards (PSS) policy being switched to `Baseline` without notice
         when the bootstrap version in the `d8-system/install-data` ConfigMap is empty or invalid. Such
         clusters now get the `Privileged` policy.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/83
       impact: >-
         Clusters whose `d8-system/install-data` ConfigMap holds an empty or invalid version and whose
         `podSecurityStandards.defaultPolicy` isn't set were switched to the `Baseline` default PSS policy
@@ -53,18 +51,15 @@ admission-policy-engine:
 candi:
   fixes:
     - summary: remove d8-bcheck in cleanup_static_node
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/202
     - summary: >-
         containerd integrity errors are written to `/var/log/containerd/containerd-integrity.log` on RED
         OS 8.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/262
 cert-manager:
   fixes:
     - summary: Fixed CVEs in the cert-manager images.
       pull_request: https://github.com/deckhouse/deckhouse/pull/23333
     - summary: >-
         Gateway API integration is now enabled automatically when the Gateway and HTTPRoute CRDs are installed.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/241
 chrony:
   fixes:
     - summary: Bump golang.org/x/crypto to v0.55.0 in chrony_exporter to fix CVE-2026-56854.
@@ -76,11 +71,8 @@ ci:
     - summary: Add allowed alerts for D8Monitoring for e2e which uses 1.77+
       pull_request: https://github.com/deckhouse/deckhouse/pull/23280
     - summary: The documentation changes validation resolves symlinked related language files.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/223
     - summary: Fix changelog-generator image tag in changelog-update job to use the shared CI_IMAGES_TAG
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/266
     - summary: add skip docs validation label
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/313
 cloud-provider-dvp:
   fixes:
     - summary: >-
@@ -124,13 +116,10 @@ common:
     - summary: Fix CVEs in the `kube-rbac-proxy` image.
       pull_request: https://github.com/deckhouse/deckhouse/pull/23325
     - summary: Fixed known vulnerabilities in the CoreDNS image used by the node-local-dns module.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/187
 control-plane-manager:
   fixes:
     - summary: A new etcd `maxDbSize` is applied without a `deckhouse` restart.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/204
     - summary: Fix kubectl exec through Kubernetes API published with Gateway API.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/274
 deckhouse:
   fixes:
     - summary: set releaseChannel in CSE
@@ -138,11 +127,8 @@ deckhouse:
     - summary: Fix setting Scaled before Installed.
       pull_request: https://github.com/deckhouse/deckhouse/pull/23258
     - summary: Remove leftover symlink-backend entries when deploying packages with the erofs backend.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/199
     - summary: Fix random startup failures with 'waitid - no child processes' when restoring erofs modules.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/169
     - summary: Fix CVEs in deckhouse-cli.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/307
 deckhouse-controller:
   features:
     - summary: >-
@@ -153,7 +139,6 @@ deckhouse-controller:
     - summary: >-
         When an Application is deleted, Deckhouse also deletes the objects of the kinds listed in the
         package's `orphanResources` value that the application left in its namespace.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/308
 dhctl:
   fixes:
     - summary: Restoring of handling api_server_url and api_server_token in dhctl
@@ -193,28 +178,21 @@ docs:
         storage ports that are no longer bound in the host network from the ports reference.
       pull_request: https://github.com/deckhouse/deckhouse/pull/23277
     - summary: Fix search hanging when IndexedDB upgrade is blocked.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/227
     - summary: Removed mentions of Cilium from the inter-cluster cooperation documentation page.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/133
 istio:
   fixes:
     - summary: >-
         Fixed the istio module getting stuck when switching `globalVersion` from 1.21 while proxies are
         still connected to the 1.21 control plane.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/200
     - summary: Fix leaking istiod control plane after removing an Istio version or disabling the module.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/254
     - summary: >-
         Switching back to Istio 1.21 no longer removes the `networking.istio.io/v1` API from the Istio
         CRDs and no longer breaks the istio release.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/268
     - summary: >-
         Deckhouse update requirements now take into account Istio control planes that are still being
         removed.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/198
     - summary: The Istio operator now recovers Helm releases stuck in the `pending-*` or `uninstalling`
         state.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/260
 kube-dns:
   fixes:
     - summary: >-
@@ -282,21 +260,17 @@ node-manager:
         Hooks no longer fail the module run when a NodeGroup, Node or NodeUser is deleted between the
         snapshot and the patch. Such failures delayed the readiness of the `deckhouse` pod in clusters
         that delete NodeGroups often.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/197
 registry:
   fixes:
     - summary: Bump dependencies in registry.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/150
     - summary: >-
         Bump golang.org/x/crypto in nodeservices-manager to fix CVE-2026-56854, add VEX statements for
         x/crypto/ssh findings.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/311
 registrypackages:
   fixes:
     - summary: >-
         Bumped `containerd` to 1.7.36 / 2.2.9 and OpenTelemetry to 1.45.0 in `containerd` and `crictl`
         to fix CVEs.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/185
 service-with-healthchecks:
   fixes:
     - summary: Fixed metrics endpoints being reachable without going through kube-rbac-proxy authorization.
@@ -310,7 +284,6 @@ terraform-manager:
     - summary: >-
         Fixed the `to-tofu-migrator` init container of `terraform-auto-converger` failing to resolve the
         provider bundle digest, which kept auto-converge from starting.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/288
 user-authn:
   fixes:
     - summary: >-
@@ -330,7 +303,6 @@ user-authn:
         In Deckhouse CSE, a DexProvider with `enableBasicAuth` is rejected, since the edition does not
         ship the basic authentication proxy; the CSE copy of the CRD also gets the LDAP TLS checks of
         the module.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/178
       impact: >-
         In Deckhouse CSE, a DexProvider that already has `enableBasicAuth: true` keeps it after the update,
         and any change to its `oidc` or `ldap` section is rejected until `enableBasicAuth` is set to `false`.
@@ -343,4 +315,3 @@ user-authz:
     - summary: >-
         The authorization webhook answers 500 and logs the real error instead of terminating when it cannot
         marshal a response.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/309

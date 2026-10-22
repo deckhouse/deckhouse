@@ -46,35 +46,48 @@ func (s *UpdaterSuite) TestPlanStepsThroughNewestCompatible() {
 	s.Equal([]string{"v1.3.4", "v1.4.2"}, computePlan(v1alpha2.UpdateModeAuto, "v1.2.3", apvs))
 }
 
-func (s *UpdaterSuite) TestPlanFollowsTargetRules() {
-	apvs := apvList("v1.3.0", "v2.0.0")
-	apvs[1].Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
-		Compatibility: &v1alpha1.PackageVersionCompatibilityRules{
-			Upgrade: &v1alpha1.PackageVersionCompatibilityRule{
-				Step: v1alpha1.PackageVersionCompatibilityRuleStep{Major: ptr.To[int32](1)},
-			},
-		},
-	}
+func (s *UpdaterSuite) TestPlanFollowsRulesOfInstalledVersion() {
+	apvs := apvList("v1.2.3", "v1.3.0", "v2.0.0")
+	limitUpgrade(&apvs[0], v1alpha1.PackageVersionCompatibilityRuleStep{Major: ptr.To[int32](1)})
 
 	s.Equal([]string{"v2.0.0"}, computePlan(v1alpha2.UpdateModeAuto, "v1.2.3", apvs))
 }
 
-func (s *UpdaterSuite) TestPlanTakesRulesOfEachStep() {
-	apvs := apvList("v1.3.0", "v1.4.0", "v1.5.0")
-	apvs[2].Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
-		Compatibility: &v1alpha1.PackageVersionCompatibilityRules{
-			Upgrade: &v1alpha1.PackageVersionCompatibilityRule{
-				Step: v1alpha1.PackageVersionCompatibilityRuleStep{Minor: ptr.To[int32](2)},
-			},
-		},
-	}
+func (s *UpdaterSuite) TestPlanIgnoresRulesOfTarget() {
+	apvs := apvList("v1.2.3", "v1.3.0", "v2.0.0")
+	limitUpgrade(&apvs[2], v1alpha1.PackageVersionCompatibilityRuleStep{Major: ptr.To[int32](1)})
 
-	// v1.5.0 is two minors from v1.3.0, which its own rules allow, so v1.4.0 is skipped.
+	s.Equal([]string{"v1.3.0"}, computePlan(v1alpha2.UpdateModeAuto, "v1.2.3", apvs))
+}
+
+func (s *UpdaterSuite) TestPlanTakesRulesOfEachStep() {
+	apvs := apvList("v1.2.3", "v1.3.0", "v1.4.0", "v1.5.0")
+	limitUpgrade(&apvs[1], v1alpha1.PackageVersionCompatibilityRuleStep{Minor: ptr.To[int32](2)})
+
+	// v1.3.0 allows two minors, so v1.4.0 is skipped.
 	s.Equal([]string{"v1.3.0", "v1.5.0"}, computePlan(v1alpha2.UpdateModeAuto, "v1.2.3", apvs))
 }
 
+func (s *UpdaterSuite) TestPlanStepIsBoundByVersionLeft() {
+	apvs := patchByPatch(apvList("v1.0.0", "v1.0.1", "v1.0.2", "v1.0.3", "v1.0.4"))
+	limitUpgrade(&apvs[0], v1alpha1.PackageVersionCompatibilityRuleStep{Patches: ptr.To[int32](2)})
+
+	// v1.0.0 allows two patches, every later version one.
+	s.Equal([]string{"v1.0.2", "v1.0.3", "v1.0.4"}, computePlan(v1alpha2.UpdateModeAutoPatch, "v1.0.0", apvs))
+}
+
+func (s *UpdaterSuite) TestPlanCrossesMinorOnlyFromReleaseThatAllowsIt() {
+	apvs := apvList("v0.0.1", "v0.0.2", "v0.0.3", "v0.0.4", "v0.0.5", "v0.1.0", "v0.1.1")
+	for i := range 4 {
+		limitUpgrade(&apvs[i], v1alpha1.PackageVersionCompatibilityRuleStep{Minor: ptr.To[int32](0)})
+	}
+
+	// v0.0.1 allows patches only; v0.0.5 keeps the default of one minor.
+	s.Equal([]string{"v0.0.5", "v0.1.1"}, computePlan(v1alpha2.UpdateModeAuto, "v0.0.1", apvs))
+}
+
 func (s *UpdaterSuite) TestPlanStepsPatchByPatchWhenRulesLimitPatches() {
-	apvs := patchByPatch(apvList("v1.2.4", "v1.2.5", "v1.2.6"))
+	apvs := patchByPatch(apvList("v1.2.3", "v1.2.4", "v1.2.5", "v1.2.6"))
 
 	s.Equal([]string{"v1.2.4", "v1.2.5", "v1.2.6"}, computePlan(v1alpha2.UpdateModeAutoPatch, "v1.2.3", apvs))
 }
@@ -207,7 +220,7 @@ func (s *UpdaterSuite) TestUpdateWritesAutomaticVersion() {
 
 func (s *UpdaterSuite) TestUpdatePlanStartsAfterAutomaticVersion() {
 	app := installedApp("v1.2.3", "")
-	cli := s.client(app, patchByPatch(apvList("v1.2.4", "v1.2.5", "v1.2.6"))...)
+	cli := s.client(app, patchByPatch(apvList("v1.2.3", "v1.2.4", "v1.2.5", "v1.2.6"))...)
 
 	s.update(cli, app)
 
@@ -247,20 +260,40 @@ func (s *UpdaterSuite) TestUpdateDropsDraftVersionOnItsWay() {
 	s.Equal(&v1alpha1.ApplicationStatusUpdate{AutomaticVersion: "v1.2.5"}, s.get(cli, app).Status.Update)
 }
 
-func (s *UpdaterSuite) TestUpdateClearsOnManual() {
+func (s *UpdaterSuite) TestUpdateShowsOnlyPlanOnManual() {
 	app := installedApp("v1.2.3", "v1.2.5")
-	app.Status.Update.Plan = []string{"v1.2.5"}
 	app.Spec.Update = &v1alpha1.ApplicationUpdate{Mode: string(v1alpha2.UpdateModeManual)}
+	cli := s.client(app, apvList("v1.2.5", "v1.3.0")...)
+
+	s.update(cli, app)
+
+	s.Equal(&v1alpha1.ApplicationStatusUpdate{Plan: []string{"v1.3.0"}}, s.get(cli, app).Status.Update)
+}
+
+func (s *UpdaterSuite) TestUpdateShowsOnlyPlanWithoutMode() {
+	app := installedApp("v1.2.3", "v1.2.5")
+	app.Spec.Update = nil
 	cli := s.client(app, apvList("v1.2.5")...)
 
 	s.update(cli, app)
 
-	s.Nil(s.get(cli, app).Status.Update)
+	s.Equal(&v1alpha1.ApplicationStatusUpdate{Plan: []string{"v1.2.5"}}, s.get(cli, app).Status.Update)
 }
 
-func (s *UpdaterSuite) TestUpdateClearsWithoutMode() {
+func (s *UpdaterSuite) TestUpdateShowsWholePlanOnAutoPatch() {
+	app := installedApp("v1.2.3", "")
+	cli := s.client(app, apvList("v1.2.4", "v1.3.0")...)
+
+	s.update(cli, app)
+
+	// The automatic update stays within v1.2, the plan goes on to the next minor.
+	s.Equal(&v1alpha1.ApplicationStatusUpdate{Plan: []string{"v1.3.0"}, AutomaticVersion: "v1.2.4"},
+		s.get(cli, app).Status.Update)
+}
+
+func (s *UpdaterSuite) TestUpdateClearsBeforeInstall() {
 	app := installedApp("v1.2.3", "v1.2.5")
-	app.Spec.Update = nil
+	app.Status.CurrentVersion = nil
 	cli := s.client(app, apvList("v1.2.5")...)
 
 	s.update(cli, app)
@@ -282,28 +315,28 @@ func (s *UpdaterSuite) TestUpdateKeepsCurrentWithoutOwnPackageVersions() {
 func (s *UpdaterSuite) TestVersionTakesNewerAutomaticVersion() {
 	app := installedApp("v1.2.3", "v1.3.0")
 
-	s.Equal("v1.3.0", Version(app))
+	s.Equal("v1.3.0", app.TargetVersion())
 }
 
 func (s *UpdaterSuite) TestVersionKeepsNewerSpec() {
 	app := installedApp("v1.2.3", "v1.3.0")
 	app.Spec.PackageVersion = "v1.4.0"
 
-	s.Equal("v1.4.0", Version(app))
+	s.Equal("v1.4.0", app.TargetVersion())
 }
 
 func (s *UpdaterSuite) TestVersionIgnoresAutomaticVersionOnManual() {
 	app := installedApp("v1.2.3", "v1.3.0")
 	app.Spec.Update = &v1alpha1.ApplicationUpdate{Mode: string(v1alpha2.UpdateModeManual)}
 
-	s.Equal("v1.2.3", Version(app))
+	s.Equal("v1.2.3", app.TargetVersion())
 }
 
 func (s *UpdaterSuite) TestVersionIgnoresAutomaticVersionWithoutMode() {
 	app := installedApp("v1.2.3", "v1.3.0")
 	app.Spec.Update = &v1alpha1.ApplicationUpdate{}
 
-	s.Equal("v1.2.3", Version(app))
+	s.Equal("v1.2.3", app.TargetVersion())
 }
 
 // client returns a fake client holding the application and the package versions.
@@ -376,19 +409,22 @@ func versionSet(versions ...string) map[string]bool {
 	return set
 }
 
-// patchByPatch limits the upgrade of every version to one patch.
+// patchByPatch limits the upgrade from every version to one patch.
 func patchByPatch(apvs []v1alpha1.ApplicationPackageVersion) []v1alpha1.ApplicationPackageVersion {
 	for i := range apvs {
-		apvs[i].Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
-			Compatibility: &v1alpha1.PackageVersionCompatibilityRules{
-				Upgrade: &v1alpha1.PackageVersionCompatibilityRule{
-					Step: v1alpha1.PackageVersionCompatibilityRuleStep{Patches: ptr.To[int32](1)},
-				},
-			},
-		}
+		limitUpgrade(&apvs[i], v1alpha1.PackageVersionCompatibilityRuleStep{Patches: ptr.To[int32](1)})
 	}
 
 	return apvs
+}
+
+// limitUpgrade sets the rules of the upgrade from the package version.
+func limitUpgrade(apv *v1alpha1.ApplicationPackageVersion, step v1alpha1.PackageVersionCompatibilityRuleStep) {
+	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
+		Compatibility: &v1alpha1.PackageVersionCompatibilityRules{
+			Upgrade: &v1alpha1.PackageVersionCompatibilityRule{Step: step},
+		},
+	}
 }
 
 // apvList returns loaded package versions of the "console" package in the "deckhouse" repository.

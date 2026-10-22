@@ -475,7 +475,7 @@ spec:
                             major: 0
                             minor: 1
                             patches: -1
-                        description: Compatibility rules for upgrading to this application
+                        description: Compatibility rules for upgrading from this application
                           version.
                         properties:
                           step:

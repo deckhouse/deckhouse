@@ -236,6 +236,97 @@ func (s *applicationValidationHandlerSuite) TestSpecVersionChangeIsValidatedAgai
 	s.True(manager.checkCalled)
 }
 
+func (s *applicationValidationHandlerSuite) TestVersionChangeIsGatedFromRunningVersionWhileUpdatePending() {
+	// v1.0.1 waits for its window while v1.0.0 runs; the engine would leave v1.0.0 for v1.0.2.
+	oldApp := newApplication("repo", "pkg", "v1.0.1")
+	oldApp.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.0.0"}
+	app := newApplication("repo", "pkg", "v1.0.2")
+	app.Status = oldApp.Status
+
+	response := s.submitVersions("UPDATE", app, oldApp, new(fakePackageManager),
+		patchLimitedAPV(app, "v1.0.0", 1), patchLimitedAPV(app, "v1.0.1", 1), patchLimitedAPV(app, "v1.0.2", 1))
+
+	s.False(response.Allowed)
+	s.Contains(response.Result.Message, "incompatible version: current=v1.0.0 target=v1.0.2")
+}
+
+func (s *applicationValidationHandlerSuite) TestVersionChangeIsGatedFromRunningVersionPastSpec() {
+	// The automatic update moved past spec to v1.0.3, which allows one patch.
+	oldApp := newApplication("repo", "pkg", "v1.0.0")
+	oldApp.Spec.Update = &v1alpha1.ApplicationUpdate{Mode: "Auto"}
+	oldApp.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.0.3"}
+	oldApp.Status.Update = &v1alpha1.ApplicationStatusUpdate{AutomaticVersion: "v1.0.3"}
+	app := newApplication("repo", "pkg", "v1.0.5")
+	app.Spec.Update = oldApp.Spec.Update
+	app.Status = oldApp.Status
+
+	response := s.submitVersions("UPDATE", app, oldApp, new(fakePackageManager),
+		patchLimitedAPV(app, "v1.0.0", -1), patchLimitedAPV(app, "v1.0.3", 1), patchLimitedAPV(app, "v1.0.5", 1))
+
+	s.False(response.Allowed)
+	s.Contains(response.Result.Message, "incompatible version: current=v1.0.3 target=v1.0.5")
+}
+
+func (s *applicationValidationHandlerSuite) TestVersionChangeIsGatedFromVersionOnItsWay() {
+	// v1.0.3 may be activated already while the status still shows v1.0.2.
+	oldApp := newApplication("repo", "pkg", "v1.0.0")
+	oldApp.Spec.Update = &v1alpha1.ApplicationUpdate{Mode: "Auto"}
+	oldApp.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.0.2"}
+	oldApp.Status.Update = &v1alpha1.ApplicationStatusUpdate{AutomaticVersion: "v1.0.3"}
+	app := newApplication("repo", "pkg", "v1.0.5")
+	app.Spec.Update = oldApp.Spec.Update
+	app.Status = oldApp.Status
+
+	response := s.submitVersions("UPDATE", app, oldApp, new(fakePackageManager),
+		patchLimitedAPV(app, "v1.0.2", -1), patchLimitedAPV(app, "v1.0.3", 1), patchLimitedAPV(app, "v1.0.5", 1))
+
+	s.False(response.Allowed)
+	s.Contains(response.Result.Message, "incompatible version: current=v1.0.3 target=v1.0.5")
+}
+
+func (s *applicationValidationHandlerSuite) TestVersionChangeAllowedFromEveryVersionLeft() {
+	oldApp := newApplication("repo", "pkg", "v1.0.0")
+	oldApp.Spec.Update = &v1alpha1.ApplicationUpdate{Mode: "Auto"}
+	oldApp.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.0.3"}
+	oldApp.Status.Update = &v1alpha1.ApplicationStatusUpdate{AutomaticVersion: "v1.0.3"}
+	app := newApplication("repo", "pkg", "v1.0.4")
+	app.Spec.Update = oldApp.Spec.Update
+	app.Status = oldApp.Status
+
+	response := s.submitVersions("UPDATE", app, oldApp, new(fakePackageManager),
+		patchLimitedAPV(app, "v1.0.0", -1), patchLimitedAPV(app, "v1.0.3", 1), patchLimitedAPV(app, "v1.0.4", 1))
+
+	s.True(response.Allowed)
+}
+
+func (s *applicationValidationHandlerSuite) TestVersionChangeIsGatedByRulesInPreviousRepository() {
+	// The repository and the version change together; v1.0.0 still runs from the previous repository.
+	oldApp := newApplication("old-repo", "pkg", "v1.0.0")
+	oldApp.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.0.0"}
+	app := newApplication("repo", "pkg", "v1.0.2")
+	app.Status = oldApp.Status
+
+	response := s.submitVersions("UPDATE", app, oldApp, new(fakePackageManager),
+		patchLimitedAPV(oldApp, "v1.0.0", 1), patchLimitedAPV(app, "v1.0.2", 1))
+
+	s.False(response.Allowed)
+	s.Contains(response.Result.Message, "incompatible version: current=v1.0.0 target=v1.0.2")
+}
+
+// patchLimitedAPV publishes a package version that may be upgraded across the given number of patches.
+func patchLimitedAPV(app *v1alpha1.Application, version string, patches int32) *v1alpha1.ApplicationPackageVersion {
+	apv := newAPV(v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, version), false, nil)
+	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
+		Compatibility: &v1alpha1.PackageVersionCompatibilityRules{
+			Upgrade: &v1alpha1.PackageVersionCompatibilityRule{Step: v1alpha1.PackageVersionCompatibilityRuleStep{
+				Patches: ptr.To(patches),
+			}},
+		},
+	}
+
+	return apv
+}
+
 func apvNameOf(app *v1alpha1.Application) string {
 	return v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 }
@@ -299,7 +390,7 @@ func (s *applicationValidationHandlerSuite) submit(
 
 // validateAppSettingsErr is validateAppSettings without its warnings.
 func validateAppSettingsErr(ctx context.Context, cli client.Client, apv *v1alpha1.ApplicationPackageVersion, app, oldApp *v1alpha1.Application) error {
-	_, err := validateAppSettings(ctx, cli, apv, app, oldApp)
+	_, err := validateAppSettings(ctx, cli, apv, newAdmission(app, oldApp))
 	return err
 }
 
@@ -401,6 +492,20 @@ func TestValidateAppAgainstApv(t *testing.T) {
 		return apv
 	}
 
+	// majorUpgradeAPV publishes a version that may be upgraded across one major.
+	majorUpgradeAPV := func(name string) *v1alpha1.ApplicationPackageVersion {
+		apv := newAPV(name, false, nil)
+		apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
+			Compatibility: &v1alpha1.PackageVersionCompatibilityRules{
+				Upgrade: &v1alpha1.PackageVersionCompatibilityRule{Step: v1alpha1.PackageVersionCompatibilityRuleStep{
+					Major: ptr.To[int32](1),
+				}},
+			},
+		}
+
+		return apv
+	}
+
 	tests := []struct {
 		name           string
 		apv            *v1alpha1.ApplicationPackageVersion
@@ -415,6 +520,20 @@ func TestValidateAppAgainstApv(t *testing.T) {
 		{
 			name:        "incompatible version change is rejected",
 			apv:         compatAPV(),
+			oldVersion:  "0.9.0",
+			wantErr:     true,
+			wantErrText: "incompatible version: current=0.9.0 target=1.0.0",
+		},
+		{
+			name:        "upgrade follows the previous version's rules over the target's",
+			apv:         compatAPV(),
+			previousAPV: majorUpgradeAPV(v1alpha1.MakeApplicationPackageVersionName(repo, pkg, "0.9.0")),
+			oldVersion:  "0.9.0",
+			wantCheck:   true,
+		},
+		{
+			name:        "upgrade ignores the target's rules",
+			apv:         majorUpgradeAPV(apvName),
 			oldVersion:  "0.9.0",
 			wantErr:     true,
 			wantErrText: "incompatible version: current=0.9.0 target=1.0.0",
@@ -630,7 +749,7 @@ func TestValidateAppAgainstApv(t *testing.T) {
 				oldApp = newApplication(repo, pkg, tt.oldVersion)
 			}
 
-			_, err := validateAppAgainstApv(context.Background(), cli, manager, app, oldApp)
+			_, err := validateAppAgainstApv(context.Background(), cli, manager, newAdmission(app, oldApp))
 
 			if tt.wantErr {
 				require.Error(t, err)

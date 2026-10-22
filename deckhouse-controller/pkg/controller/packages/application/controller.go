@@ -295,7 +295,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	// The update windows hold the switch to a new version, also of a version the user set:
 	// spec.update, else the global settings, decide when it happens, unless the apply-now
-	// annotation names the spec version.
+	// annotation names the version the engine runs.
 	r.manager.ApplyApplication(engine.Application{
 		Namespace:        app.Namespace,
 		Name:             app.Name,
@@ -314,7 +314,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	return r.commit(ctx, app, original, ap, apv)
 }
 
-// resolvePackage fetches the package and the version the engine runs (appupdate.Version), refusing a draft version.
+// resolvePackage fetches the package and the version the engine runs (Application.TargetVersion), refusing a draft version.
 func (r *reconciler) resolvePackage(ctx context.Context, app *v1alpha1.Application) (*v1alpha1.ApplicationPackage, *v1alpha1.ApplicationPackageVersion, error) {
 	logger := r.logger.With(slog.String("name", app.Name), slog.String("namespace", app.Namespace))
 
@@ -325,7 +325,7 @@ func (r *reconciler) resolvePackage(ctx context.Context, app *v1alpha1.Applicati
 		return nil, nil, fmt.Errorf("get application package '%s': %w", app.Spec.PackageName, err)
 	}
 
-	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, appupdate.Version(app))
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.TargetVersion())
 
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
@@ -399,7 +399,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	// changed, but it is written after the attach, so an attached application can lack it.
 	apvName := ctrlutils.OwnerRefName(app, v1alpha1.ApplicationPackageVersionKind)
 	if apvName == "" {
-		apvName = v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, appupdate.Version(app))
+		apvName = v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.TargetVersion())
 	}
 
 	if err := r.detachVersion(ctx, app, apvName); err != nil {
@@ -537,10 +537,10 @@ func (r *reconciler) detachPackage(ctx context.Context, app *v1alpha1.Applicatio
 }
 
 // PreserveOf is what Cleanup keeps of an installed application: the images of the version it asks
-// for (appupdate.Version) and the one it runs (status), one entry each.
+// for (Application.TargetVersion) and the one it runs (status), one entry each.
 func PreserveOf(app *v1alpha1.Application) []disk.PreservePackage {
 	preserve := []disk.PreservePackage{
-		{Name: app.Spec.PackageName, Repository: app.Spec.PackageRepositoryName, Version: appupdate.Version(app)},
+		{Name: app.Spec.PackageName, Repository: app.Spec.PackageRepositoryName, Version: app.TargetVersion()},
 	}
 
 	if app.Status.CurrentVersion != nil {

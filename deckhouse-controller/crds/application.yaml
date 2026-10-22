@@ -479,18 +479,19 @@ spec:
                 x-kubernetes-preserve-unknown-fields: true
               update:
                 description: |-
-                  Automatic update of the application: the update plan and the version it moves to next.
+                  Update of the application: the update plan and the version the automatic update moves to next.
 
-                  Empty in the `Manual` update mode and before the first version is installed.
+                  Empty before the first version is installed.
                 properties:
                   automaticVersion:
                     description: Version the automatic update installs next. It changes
-                      only after the previous one is installed and ready.
+                      only after the previous one is installed and ready. Empty in
+                      the `Manual` update mode.
                     type: string
                   plan:
-                    description: 'Update path after the automatic version: each step
-                      is the newest version the previous one may be updated to by
-                      its compatibility rules.'
+                    description: 'Update path after the automatic version in every
+                      update mode: each step is the newest version the previous one
+                      may be updated to by its compatibility rules.'
                     items:
                       type: string
                     type: array

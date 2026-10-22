@@ -29,7 +29,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status"
-	appupdate "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/update"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/update"
@@ -85,7 +84,7 @@ func (r *reconciler) globalUpdateSettings() releaseupdater.Settings {
 func applyNow(app *v1alpha1.Application) bool {
 	version := app.Annotations[v1alpha1.ApplicationAnnotationApplyNow]
 
-	return version != "" && version == appupdate.Version(app)
+	return version != "" && version == app.TargetVersion()
 }
 
 // updateInputChanged passes an update of the status the automatic update steps on: the installed version,
@@ -185,7 +184,7 @@ func mergeUpdateSettings(policy *v1alpha1.ApplicationUpdate, global releaseupdat
 	}
 
 	return releaseupdater.Settings{
-		Mode:               appupdate.ParseMode(policy.Mode),
+		Mode:               v1alpha1.ParseApplicationUpdateMode(policy.Mode),
 		Windows:            toUpdateWindows(policy.Windows),
 		NotificationConfig: global.NotificationConfig,
 		BlockOnAlerts:      blockOnAlerts,
