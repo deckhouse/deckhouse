@@ -64,6 +64,21 @@ Oauth2-proxy returns 200 (instead of 202) when the request is authenticated and 
 
 Add json logging.
 
+### 008-auth-log-login-failures.patch
+
+Writes the login failures of the OAuth2 callback and the failed session refreshes to the auth log,
+so each line carries the client address, the request ID and the user.
+The security events of `templates/security-events.yaml` are built from these lines.
+
+- A missing CSRF cookie is logged with `PrintAuthf` instead of `Println(req, ...)`.
+  Upstream `Println` dumps the whole `*http.Request`, the `Cookie` and `Authorization` headers included.
+- An error returned by the identity provider and a failure to redeem the authorization code
+  get an auth log line next to the existing error line.
+- A failed session refresh gets an auth log line with the email of the session,
+  at most once per session per `--cookie-refresh` period.
+  The session is kept unsaved after a failed refresh, so every following request retries it;
+  without the throttle each of them would write one more line.
+
 ### 998-fix-cve.patch
 
 Additional dependency bumps on top of `005-fix-cves.patch`.

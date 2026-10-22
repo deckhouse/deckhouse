@@ -1,0 +1,155 @@
+diff --git a/oauthproxy.go b/oauthproxy.go
+index a8bd18e..71fcefb 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -819,6 +819,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+ 	errorString := req.Form.Get("error")
+ 	if errorString != "" {
+ 		logger.Errorf("Error while parsing OAuth2 callback: %s", errorString)
++		logger.PrintAuthf("", req, logger.AuthFailure, "Invalid authentication via OAuth2: identity provider returned an error: %s", errorString)
+ 		message := fmt.Sprintf("Login Failed: The upstream identity provider returned an error: %s", errorString)
+ 		// Set the debug message and override the non debug message to be the same for this case
+ 		p.ErrorPage(rw, req, http.StatusForbidden, message, message)
+@@ -827,7 +828,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+ 
+ 	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
+ 	if err != nil {
+-		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
++		logger.PrintAuthf("", req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
+ 		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
+ 		return
+ 	}
+@@ -835,6 +836,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+ 	session, err := p.redeemCode(req, csrf.GetCodeVerifier())
+ 	if err != nil {
+ 		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
++		logger.PrintAuthf("", req, logger.AuthError, "Invalid authentication via OAuth2: unable to redeem the code")
+ 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+ 		return
+ 	}
+diff --git a/pkg/middleware/refresh_failure_log.go b/pkg/middleware/refresh_failure_log.go
+new file mode 100644
+index 0000000..ecb5615
+--- /dev/null
++++ b/pkg/middleware/refresh_failure_log.go
+@@ -0,0 +1,56 @@
++package middleware
++
++import (
++	"strconv"
++	"sync"
++	"time"
++
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++)
++
++// refreshFailureLogMaxEntries bounds the memory of refreshFailureLog. When
++// the map is full after the expired entries are dropped, it starts over: a
++// session then gets one more line, which is cheaper than unbounded growth.
++const refreshFailureLogMaxEntries = 10000
++
++// refreshFailureLog throttles the auth log line of a failed session refresh.
++// A failed preemptive refresh keeps the session without saving it, so every
++// following request of that session retries the refresh until the ID token
++// expires. Without the throttle each of those requests, static files and XHR
++// included, would write one more auth line and produce one more security event.
++type refreshFailureLog struct {
++	mu   sync.Mutex
++	seen map[string]time.Time
++}
++
++var refreshFailures = &refreshFailureLog{seen: map[string]time.Time{}}
++
++// shouldLog reports whether a failed refresh of the session is to be written
++// to the auth log at now: once per session per period. A session is keyed by
++// its user and its creation time, so a session that refreshed successfully in
++// between counts as a new one.
++func (l *refreshFailureLog) shouldLog(session *sessionsapi.SessionState, period time.Duration, now time.Time) bool {
++	key := session.Email + "|" + session.User + "|"
++	if session.CreatedAt != nil {
++		key += strconv.FormatInt(session.CreatedAt.UnixNano(), 10)
++	}
++
++	l.mu.Lock()
++	defer l.mu.Unlock()
++
++	if last, ok := l.seen[key]; ok && now.Sub(last) < period {
++		return false
++	}
++	if len(l.seen) >= refreshFailureLogMaxEntries {
++		for k, t := range l.seen {
++			if now.Sub(t) >= period {
++				delete(l.seen, k)
++			}
++		}
++		if len(l.seen) >= refreshFailureLogMaxEntries {
++			l.seen = map[string]time.Time{}
++		}
++	}
++	l.seen[key] = now
++	return true
++}
+diff --git a/pkg/middleware/refresh_failure_log_test.go b/pkg/middleware/refresh_failure_log_test.go
+new file mode 100644
+index 0000000..0b69758
+--- /dev/null
++++ b/pkg/middleware/refresh_failure_log_test.go
+@@ -0,0 +1,44 @@
++package middleware
++
++import (
++	"testing"
++	"time"
++
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++)
++
++func TestRefreshFailureLogOncePerPeriod(t *testing.T) {
++	l := &refreshFailureLog{seen: map[string]time.Time{}}
++	created := time.Unix(1000, 0)
++	s := &sessionsapi.SessionState{Email: "jane@example.com", User: "jane", CreatedAt: &created}
++	now := time.Unix(2000, 0)
++	period := 5 * time.Minute
++
++	if !l.shouldLog(s, period, now) {
++		t.Fatal("the first failure of a session must be logged")
++	}
++	if l.shouldLog(s, period, now.Add(time.Second)) {
++		t.Fatal("a repeated failure within the period must not be logged")
++	}
++	if !l.shouldLog(s, period, now.Add(period)) {
++		t.Fatal("a failure after the period must be logged again")
++	}
++
++	refreshed := created.Add(time.Hour)
++	other := &sessionsapi.SessionState{Email: "jane@example.com", User: "jane", CreatedAt: &refreshed}
++	if !l.shouldLog(other, period, now.Add(period+time.Second)) {
++		t.Fatal("a session refreshed in between is a new session")
++	}
++}
++
++func TestRefreshFailureLogBounded(t *testing.T) {
++	l := &refreshFailureLog{seen: map[string]time.Time{}}
++	now := time.Unix(2000, 0)
++	for i := 0; i < refreshFailureLogMaxEntries+10; i++ {
++		created := time.Unix(int64(i), 0)
++		l.shouldLog(&sessionsapi.SessionState{Email: "u", CreatedAt: &created}, time.Hour, now)
++	}
++	if len(l.seen) > refreshFailureLogMaxEntries {
++		t.Fatalf("the map holds %d entries, more than %d", len(l.seen), refreshFailureLogMaxEntries)
++	}
++}
+diff --git a/pkg/middleware/stored_session.go b/pkg/middleware/stored_session.go
+index 1afe6d0..dce0b85 100644
+--- a/pkg/middleware/stored_session.go
++++ b/pkg/middleware/stored_session.go
+@@ -191,6 +191,9 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+ 		// If a preemptive refresh fails, we still keep the session
+ 		// if validateSession succeeds.
+ 		logger.Errorf("Unable to refresh session: %v", err)
++		if refreshFailures.shouldLog(session, s.refreshPeriod, time.Now()) {
++			logger.PrintAuthf(session.Email, req, logger.AuthError, "Unable to refresh session: %v", err)
++		}
+ 	}
+ 
+ 	// Validate all sessions after any Redeem/Refresh operation (fail or success)
