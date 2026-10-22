@@ -12,18 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package resourcerequests overlays the per-workload resource footprint declared
-// in a package CR (spec.resourceRequests) onto the manifests a chart rendered.
+// Package resourcerequests translates the per-workload resource footprint
+// declared in a package CR (spec.resourceRequests) into nelm render patches,
+// which nelm applies to the rendered manifests both when it renders the chart
+// and when it installs the release.
 //
-// It is a leaf: it knows neither the CR types nor nelm. Callers hand it plain
-// unstructured resources, which it mutates in place.
+// It knows nothing of the CR types: callers hand it plain requests.
 package resourcerequests
 
 import (
+	"encoding/json"
 	"fmt"
-	"maps"
 	"slices"
+	"strings"
 
+	"github.com/werf/nelm/v2/pkg/resource/spec"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -55,20 +58,20 @@ type Container struct {
 	Limits   map[string]string `json:"limits,omitempty"`
 }
 
-// podSpecPaths maps a workload kind to the path of the pod spec inside it. A kind
-// absent from this map is not a workload this package can resize.
-var podSpecPaths = map[string][]string{
-	"Pod":         {"spec"},
-	"Deployment":  {"spec", "template", "spec"},
-	"StatefulSet": {"spec", "template", "spec"},
-	"DaemonSet":   {"spec", "template", "spec"},
-	"ReplicaSet":  {"spec", "template", "spec"},
-	"Job":         {"spec", "template", "spec"},
-	"CronJob":     {"spec", "jobTemplate", "spec", "template", "spec"},
+// podSpecPaths maps a workload kind to the jq path of the pod spec inside it. A
+// kind absent from this map is not a workload this package can resize.
+var podSpecPaths = map[string]string{
+	"Pod":         ".spec",
+	"Deployment":  ".spec.template.spec",
+	"StatefulSet": ".spec.template.spec",
+	"DaemonSet":   ".spec.template.spec",
+	"ReplicaSet":  ".spec.template.spec",
+	"Job":         ".spec.template.spec",
+	"CronJob":     ".spec.jobTemplate.spec.template.spec",
 }
 
 // replicaKinds are the kinds that carry spec.replicas. The CR schema rejects
-// replicas on any other kind; this guard keeps the overlay honest if a request
+// replicas on any other kind; this guard keeps the patch honest if a request
 // reaches it from somewhere else.
 var replicaKinds = map[string]struct{}{
 	"Deployment":  {},
@@ -76,171 +79,116 @@ var replicaKinds = map[string]struct{}{
 	"ReplicaSet":  {},
 }
 
-// containerFields are the container lists a request may address. A container name
-// is unique across both lists within one pod spec, so a request naming an init
-// container resizes it without having to say which list it is in.
-var containerFields = []string{"containers", "initContainers"}
-
-// Apply overlays the requests onto the rendered resources, mutating them in place.
+// Patches translates the requests into nelm render patches, one per request that
+// changes anything.
 //
-// It returns the requests that matched no rendered workload. That is not an
-// error — a chart may render a workload conditionally, so a request can be
-// legitimately dormant — but it is worth surfacing, since a typo in kind or name
-// looks exactly the same from here.
-func Apply(resources []*unstructured.Unstructured, requests []Request) ([]Request, error) {
-	if len(requests) == 0 {
-		return nil, nil
-	}
+// A request whose name holds a slash is left out: no Kubernetes object can be
+// named that way, and nelm would read a name wrapped in slashes as a regexp,
+// resizing every workload of the kind it matches.
+func Patches(requests []Request) ([]spec.Patch, error) {
+	patches := make([]spec.Patch, 0, len(requests))
 
-	matched := make(map[int]struct{}, len(requests))
-
-	for _, resource := range resources {
-		if resource == nil {
+	for _, request := range requests {
+		if strings.Contains(request.Name, "/") {
 			continue
 		}
 
-		for i, request := range requests {
-			if resource.GetKind() != request.Kind || resource.GetName() != request.Name {
-				continue
-			}
-
-			if err := applyOne(resource, request); err != nil {
-				return nil, fmt.Errorf("resize %s '%s': %w", request.Kind, request.Name, err)
-			}
-
-			matched[i] = struct{}{}
+		program, err := jqProgram(request)
+		if err != nil {
+			return nil, fmt.Errorf("resize %s '%s': %w", request.Kind, request.Name, err)
 		}
+
+		if program == "" {
+			continue
+		}
+
+		patches = append(patches, spec.Patch{
+			Match: spec.ResourceMatcher{Kinds: []string{request.Kind}, Names: []string{request.Name}},
+			Type:  spec.PatchTypeJQ,
+			Patch: program,
+		})
 	}
 
+	return patches, nil
+}
+
+// Unmatched returns the requests that address none of the rendered resources.
+//
+// That is not an error — a chart may render a workload conditionally, so a
+// request can be legitimately dormant — but it is worth surfacing, since a typo
+// in kind or name looks exactly the same from here.
+func Unmatched(resources []*unstructured.Unstructured, requests []Request) []Request {
 	var unmatched []Request
-	for i, request := range requests {
-		if _, ok := matched[i]; !ok {
+
+	for _, request := range requests {
+		matched := slices.ContainsFunc(resources, func(resource *unstructured.Unstructured) bool {
+			return resource != nil && resource.GetKind() == request.Kind && resource.GetName() == request.Name
+		})
+
+		if !matched {
 			unmatched = append(unmatched, request)
 		}
 	}
 
-	return unmatched, nil
+	return unmatched
 }
 
-// applyOne overlays a single request onto the workload it addresses.
-func applyOne(resource *unstructured.Unstructured, request Request) error {
-	path, ok := podSpecPaths[request.Kind]
+// jqProgram builds the jq program that overlays one request onto the workload it
+// addresses, or "" when the request changes nothing. User-supplied values reach
+// the program only as JSON literals, which jq reads as its own literals.
+func jqProgram(request Request) (string, error) {
+	podSpec, ok := podSpecPaths[request.Kind]
 	if !ok {
-		return fmt.Errorf("unsupported workload kind")
+		return "", fmt.Errorf("unsupported workload kind")
 	}
+
+	var steps []string
 
 	if request.Replicas != nil {
 		if _, ok := replicaKinds[request.Kind]; !ok {
-			return fmt.Errorf("kind does not have replicas")
+			return "", fmt.Errorf("kind does not have replicas")
 		}
 
-		if err := unstructured.SetNestedField(resource.Object, int64(*request.Replicas), "spec", "replicas"); err != nil {
-			return fmt.Errorf("set replicas: %w", err)
-		}
-	}
-
-	if len(request.Containers) == 0 {
-		return nil
-	}
-
-	podSpec, found, err := unstructured.NestedMap(resource.Object, path...)
-	if err != nil {
-		return fmt.Errorf("read pod spec: %w", err)
-	}
-
-	if !found {
-		return nil
+		steps = append(steps, fmt.Sprintf(".spec.replicas = %d", *request.Replicas))
 	}
 
 	for _, container := range request.Containers {
-		if err = resizeContainer(podSpec, container); err != nil {
-			return fmt.Errorf("resize container '%s': %w", container.Name, err)
-		}
-	}
-
-	if err = unstructured.SetNestedMap(resource.Object, podSpec, path...); err != nil {
-		return fmt.Errorf("write pod spec: %w", err)
-	}
-
-	return nil
-}
-
-// resizeContainer merges the container's resources into every list of podSpec
-// that holds a container of that name. A container the workload does not have is
-// ignored, as the CR field documents.
-func resizeContainer(podSpec map[string]any, container Container) error {
-	if len(container.Requests) == 0 && len(container.Limits) == 0 {
-		return nil
-	}
-
-	for _, field := range containerFields {
-		entries, found, err := unstructured.NestedSlice(podSpec, field)
+		name, err := json.Marshal(container.Name)
 		if err != nil {
-			return fmt.Errorf("read %s: %w", field, err)
+			return "", fmt.Errorf("encode container name: %w", err)
 		}
 
-		if !found {
-			continue
+		// A container name is unique across both lists within one pod spec, so a
+		// request naming an init container resizes it without having to say which
+		// list it is in. []? yields nothing for an absent list, so a container the
+		// workload does not have is ignored, as the CR field documents.
+		resources := fmt.Sprintf("%s | (.containers[]?, .initContainers[]?) | select(.name == %s) | .resources", podSpec, name)
+
+		lists := []struct {
+			field      string
+			quantities map[string]string
+		}{
+			{"requests", container.Requests},
+			{"limits", container.Limits},
 		}
 
-		changed := false
-
-		for _, entry := range entries {
-			spec, ok := entry.(map[string]any)
-			if !ok {
+		for _, list := range lists {
+			// An empty list is skipped rather than merged: merging {} would still
+			// create the resources the chart did not declare.
+			if len(list.quantities) == 0 {
 				continue
 			}
 
-			name, ok := spec["name"].(string)
-			if !ok || name != container.Name {
-				continue
+			literal, err := json.Marshal(list.quantities)
+			if err != nil {
+				return "", fmt.Errorf("encode container '%s' %s: %w", container.Name, list.field, err)
 			}
 
-			mergeResources(spec, container)
-
-			changed = true
-		}
-
-		if !changed {
-			continue
-		}
-
-		if err = unstructured.SetNestedSlice(podSpec, entries, field); err != nil {
-			return fmt.Errorf("write %s: %w", field, err)
+			// Object addition merges key by key, the right side winning, and treats
+			// a missing list as empty.
+			steps = append(steps, fmt.Sprintf("(%s.%s) += %s", resources, list.field, literal))
 		}
 	}
 
-	return nil
-}
-
-// mergeResources merges the requested quantities into the container's resources,
-// creating the maps the container is missing.
-func mergeResources(containerSpec map[string]any, container Container) {
-	resources, ok := containerSpec["resources"].(map[string]any)
-	if !ok {
-		resources = make(map[string]any, 2)
-	}
-
-	mergeQuantities(resources, "requests", container.Requests)
-	mergeQuantities(resources, "limits", container.Limits)
-
-	containerSpec["resources"] = resources
-}
-
-// mergeQuantities merges quantities into one resource list (requests or limits).
-func mergeQuantities(resources map[string]any, field string, quantities map[string]string) {
-	if len(quantities) == 0 {
-		return
-	}
-
-	list, ok := resources[field].(map[string]any)
-	if !ok {
-		list = make(map[string]any, len(quantities))
-	}
-
-	for _, name := range slices.Sorted(maps.Keys(quantities)) {
-		list[name] = quantities[name]
-	}
-
-	resources[field] = list
+	return strings.Join(steps, " | "), nil
 }

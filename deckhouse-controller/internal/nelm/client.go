@@ -32,6 +32,7 @@ import (
 	"github.com/werf/nelm/v2/pkg/common"
 	"github.com/werf/nelm/v2/pkg/legacy/progrep"
 	nelmlog "github.com/werf/nelm/v2/pkg/log"
+	"github.com/werf/nelm/v2/pkg/resource/spec"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -246,6 +247,11 @@ type InstallOptions struct {
 
 	ResourcesLabels map[string]string // Labels to apply to all resources
 
+	// RenderPatches are jq patches nelm applies to the rendered resources. Render
+	// and Install must get the same ones, or the checksum is taken over manifests
+	// the release does not apply.
+	RenderPatches []spec.Patch
+
 	TrackingOptions common.TrackingOptions
 
 	// OnTrackingEvent is an optional callback invoked with progress updates
@@ -306,6 +312,7 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		DefaultChartAPIVersion: "v2",
 		// nelm v2 fails on invalid annotations/labels; v1 silently dropped them.
 		DropInvalidAnnotationsAndLabels: true,
+		LegacyPatches:                   spec.Patches{Render: opts.RenderPatches},
 		ReleaseInstallRuntimeOptions: common.ReleaseInstallRuntimeOptions{
 			ResourceValidationOptions: common.ResourceValidationOptions{
 				// nelm v2 validates manifests with kubeconform by default; v1 did not.
@@ -342,21 +349,6 @@ type RenderedResource struct {
 	// Regular reports a regular release resource: one that lives in the cluster
 	// for as long as the release does.
 	Regular bool
-
-	// Hook reports a Helm hook: installed for the duration of the hook and
-	// legitimately absent from the cluster afterwards.
-	Hook bool
-}
-
-// Render renders a nelm chart to YAML manifests without installing it
-// Returns the rendered manifests as a YAML string
-func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts InstallOptions) (string, error) {
-	resources, err := c.RenderResources(ctx, namespace, releaseName, opts)
-	if err != nil {
-		return "", err
-	}
-
-	return JoinManifests(resources)
 }
 
 // JoinManifests renders the regular release resources as a single multi-document
@@ -389,9 +381,9 @@ func JoinManifests(resources []RenderedResource) (string, error) {
 	return result.String(), nil
 }
 
-// RenderResources renders a nelm chart and returns its resources one by one,
-// classified, for callers that need to inspect or rewrite them before they are
-// installed. Render is the flattened form of it.
+// RenderResources renders a nelm chart without installing it and returns its
+// resources one by one, classified, with opts.RenderPatches already applied.
+// JoinManifests flattens the result.
 //
 //nolint:nonamedreturns // named returns required for defer/recover to modify return values
 func (c *Client) RenderResources(ctx context.Context, namespace, releaseName string, opts InstallOptions) (out []RenderedResource, err error) {
@@ -445,6 +437,7 @@ func (c *Client) RenderResources(ctx context.Context, namespace, releaseName str
 		ReleaseStorageDriver:   c.driver,
 		Remote:                 true,
 		DefaultPatchesDisable:  true,
+		LegacyPatches:          spec.Patches{Render: opts.RenderPatches},
 		// nelm v2 fails on invalid annotations/labels; v1 silently dropped them.
 		DropInvalidAnnotationsAndLabels: true,
 	})
@@ -458,7 +451,6 @@ func (c *Client) RenderResources(ctx context.Context, namespace, releaseName str
 		rendered = append(rendered, RenderedResource{
 			Unstruct: resource.Unstruct,
 			Regular:  resource.StoreAs == common.StoreAsRegular,
-			Hook:     resource.StoreAs == common.StoreAsHook,
 		})
 	}
 

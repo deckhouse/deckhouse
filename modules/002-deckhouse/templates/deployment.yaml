@@ -196,10 +196,6 @@ spec:
               value: {{ .Values.deckhouse.logLevel }}
             - name: DECKHOUSE_ENABLE_PACKAGE_SYSTEM
               value: "true"
-            # Honour Application.spec.resourceRequests. The install path it turns on
-            # renders the package chart, overlays the requested replicas and container
-            # resources, and installs the release from the rendered manifests instead
-            # of the chart itself.
             - name: DECKHOUSE_ENABLE_RESOURCE_REQUESTS
               value: "true"
             - name: DECKHOUSE_ENABLE_MODULE_V2
