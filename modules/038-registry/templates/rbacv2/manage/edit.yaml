@@ -1,0 +1,63 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: registry
+    rbac.deckhouse.io/aggregate-to-cluster-as: manager
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.registry.edit"
+    rbac.deckhouse.io/scope: system
+    rbac.deckhouse.io/namespace: d8-system
+  name: d8:system-capability:registry:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module registry: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль registry: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the registry module configuration and the additional registries (RegistryUpstream), and read the resolved configuration together with the registry credentials."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля registry и дополнительными registry (RegistryUpstream), чтение итоговой конфигурации вместе с учётными данными registry."
+rules:
+# Reading the configuration is reading the registry credentials (the license key or the upstream
+# password), so it belongs with the write verbs, not with the read-only capability. Deleting it is
+# left out: the module cannot be disabled, and a deleted configuration falls back to the defaults,
+# which can switch the registry mode of a running cluster.
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - registry
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+# The module renders RegistryConfig from the ModuleConfig, and the controller writes RegistryStorage.
+# Editing RegistryConfig directly skips the ModuleConfig validation and is rolled back by the next
+# render, so it stays with whoever holds rights beyond the role model, for when Deckhouse is down.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryconfigs
+  - registrystorages
+  verbs:
+  - get
+  - list
+  - watch
+# An upstream intercepts the pulls of its host on every node, so creating one is the power to
+# substitute images, on par with the NodeGroupConfiguration the same role already writes.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registryupstreams
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection

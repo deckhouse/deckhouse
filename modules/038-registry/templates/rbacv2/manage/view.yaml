@@ -1,0 +1,31 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: registry
+    rbac.deckhouse.io/aggregate-to-cluster-as: viewer
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.registry.view"
+    rbac.deckhouse.io/scope: system
+    rbac.deckhouse.io/namespace: d8-system
+  name: d8:system-capability:registry:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module registry: view node settings"
+    ru.meta.deckhouse.io/title: "Модуль registry: просмотр настроек узлов"
+    en.meta.deckhouse.io/description: "Read-only access to the registry settings compiled for each node. The module configuration holds registry credentials, so reading it comes with the edit capability."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к настройкам registry, собранным для каждого узла. Конфигурация модуля содержит учётные данные registry, поэтому её чтение входит в право управления."
+# ModuleConfig/registry, RegistryConfig, RegistryUpstream and RegistryStorage all carry credentials
+# inline: the license key or the upstream password, and the bearer token of the storage. The viewer
+# of the subsystem reads no Secrets, so none of them is here. A RegistryNode names its credentials
+# instead of holding them, which is what makes it readable by every node.
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - registrynodes
+  verbs:
+  - get
+  - list
+  - watch
