@@ -2,6 +2,10 @@
 
 Чтобы развернуть Deckhouse Platform на встроенной виртуализации и иметь интеграцию (например, заказ узлов для вложенного кластера в виртуализации), необходимо выполнить предварительную настройку. Для этого создайте пользователя (ServiceAccount), назначьте ему права и получите kubeconfig.
 
+Ресурсы нового кластера создаются в одном неймспейсе кластера с виртуализацией, и ServiceAccount получает права только в этом неймспейсе.
+Если кластер с виртуализацией используется совместно с другими командами, выберите неймспейс своего проекта.
+Чтобы создать ServiceAccount и назначить ему роль, требуются [права администратора в выбранном неймспейсе](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#use-роли).
+
 1. Создайте пользователя (ServiceAccount и токен), выполнив следующую команду:
 
    ```bash
@@ -10,18 +14,25 @@
    kind: ServiceAccount
    metadata:
      name: sa-demo
-     namespace: default
+     namespace: <NAMESPACE>
    ---
    apiVersion: v1
    kind: Secret
    metadata:
      name: sa-demo-token
-     namespace: default
+     namespace: <NAMESPACE>
      annotations:
        kubernetes.io/service-account.name: sa-demo
    type: kubernetes.io/service-account-token
    EOF
    ```
+
+   Вместо `<NAMESPACE>` укажите выбранный неймспейс.
+{%- if page.gs_installer %}
+   Этот же неймспейс укажите в поле «Проект» в параметрах подключения к облачному провайдеру [на шаге «Базовые параметры установки»](step5.html).
+{%- else %}
+   Этот же неймспейс укажите в параметре `provider.namespace` файла `config.yml` [на шаге «Установка»](step4.html).
+{%- endif %}
 
 1. Назначьте созданному пользователю роль. Для этого выполните:
 
@@ -31,14 +42,14 @@
    kind: RoleBinding
    metadata:
      name: sa-demo-rb
-     namespace: default
+     namespace: <NAMESPACE>
    subjects:
      - kind: ServiceAccount
        name: sa-demo
-       namespace: default
+       namespace: <NAMESPACE>
    roleRef:
      kind: ClusterRole
-     name: d8:namespace:manager
+     name: d8:use:role:manager
      apiGroup: rbac.authorization.k8s.io
    EOF
    ```
@@ -69,7 +80,7 @@
    - context:
        cluster: <CLUSTER-NAME>                # Замените на имя кластера.
        user: sa-demo
-       namespace: default
+       namespace: <NAMESPACE>
      name: sa-demo-context
    current-context: sa-demo-context
    kind: Config
@@ -77,7 +88,7 @@
    users:
    - name: sa-demo
      user:
-       token: $(d8 k get secret sa-demo-token -n default -o json | jq -rc .data.token | base64 -d)
+       token: $(d8 k get secret sa-demo-token -n <NAMESPACE> -o json | jq -rc .data.token | base64 -d)
    EOF
    ```
 

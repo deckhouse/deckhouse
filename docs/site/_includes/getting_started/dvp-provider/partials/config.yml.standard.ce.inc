@@ -167,10 +167,12 @@ provider:
   # [<ru>] Kubeconfig для подключения к API Deckhouse Platform в кодировке Base64.
   kubeconfigDataBase64: *!CHANGE_KUBERNETES_CONFIG_BASE64*
   # [<en>] Namespace in which DP cluster resources will be created.
-  # [<en>] You might consider changing this.
-  # [<ru>] Пространство имён, в котором будут созданы ресурсы кластера DP.
-  # [<ru>] Возможно, захотите изменить.
-  namespace: demo
+  # [<en>] Specify the namespace where you created the ServiceAccount at the "Preparing environment" step.
+  # [<en>] https://deckhouse.io/products/kubernetes-platform/gs/dvp-provider/step3.html
+  # [<ru>] Неймспейс, в котором будут созданы ресурсы кластера DP.
+  # [<ru>] Укажите неймспейс, в котором вы создали ServiceAccount на шаге «Подготовка окружения».
+  # [<ru>] https://deckhouse.ru/products/kubernetes-platform/gs/dvp-provider/step3.html
+  namespace: *!CHANGE_NAMESPACE*
 ---
 # [<en>] Section containing parameters of instance class for worker nodes.
 # [<en>] https://deckhouse.io/modules/cloud-provider-dvp/cr.html

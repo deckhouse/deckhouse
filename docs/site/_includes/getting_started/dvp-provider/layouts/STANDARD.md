@@ -32,5 +32,5 @@ masterNodeGroup:
       storageClass: <STORAGE_CLASS>
 provider:
   kubeconfigDataBase64: <KUBE_CONFIG>
-  namespace: demo
+  namespace: <NAMESPACE>
 ```
