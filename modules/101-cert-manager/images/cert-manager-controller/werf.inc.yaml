@@ -1,6 +1,6 @@
 {{- $version := include "get_oss_version_by_id" (list "cert-manager" $ )  -}} # see in oss.yaml
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /controller-linux-amd64
@@ -49,11 +49,9 @@ import:
   add: /src/deploy/crds
   to: /src/deploy/crds
   before: install
-- from: {{ index $.Images "tools/yq" }}
-  add: /usr/bin/yq
-  to: /usr/bin/yq
-  before: install
 shell:
+  beforeInstall:
+  - pm install yq
   install:
   # The module CRDs must be the upstream CRDs of this version after update.sh, which injects the Deckhouse
   # additions. The artifact image imports /crds-validated, so werf builds this check before every build of
@@ -93,16 +91,14 @@ import:
   add: /src
   to: /src
   before: install
-- from: {{ index $.Images "tools/jq" }}
-  add: /usr/bin/jq
-  to: /usr/bin/jq
-  before: install
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
+  beforeInstall:
+  - pm install jq
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
