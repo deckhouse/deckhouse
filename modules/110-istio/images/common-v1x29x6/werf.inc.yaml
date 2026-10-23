@@ -50,7 +50,7 @@ shell:
   - sed -i 's|https://registry.npmjs.org|http://{{ $.DistroPackagesProxy }}/repository/npmjs|g' yarn.lock
   {{- end }}
   - export CYPRESS_INSTALL_BINARY=0
-  - yarn install --frozen-lockfile
+  - yarn install --frozen-lockfile --network-concurrency 8 --network-timeout 60000
   - KIALI_ENV=production yarn run build
   - rm -rf node_modules
 {{- end }}
