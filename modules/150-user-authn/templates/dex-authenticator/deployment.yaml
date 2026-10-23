@@ -8,6 +8,22 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{- /* The cpu and memory requests of a container: what the CR requests, else its limit (the request the API
+server would default to), else the module default. Always rendered, VPA or not: policies such as the
+required requests of a project template refuse a Deployment without them, and VPA starts from these values.
+Arguments: the resources section of the CR for the container (may be empty) and the YAML of the defaults. */}}
+{{- define "dex_authenticator_container_requests" }}
+  {{- $section := index . 0 | default dict }}
+  {{- $requests := deepCopy ($section.requests | default dict) }}
+  {{- $limits := $section.limits | default dict }}
+  {{- range $key, $value := index . 1 | fromYaml }}
+    {{- if not (hasKey $requests $key) }}
+      {{- $_ := set $requests $key (index $limits $key | default $value) }}
+    {{- end }}
+  {{- end }}
+  {{- toYaml $requests }}
+{{- end }}
+
 {{- $context := . }}
 {{- $redisSidecar := include "dex_authenticator_redis_is_sidecar" $context }}
 {{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
@@ -285,13 +301,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-          {{- if $crd.spec.resources }}
-            {{- with $crd.spec.resources.requests }}
-            {{ toYaml . | nindent 12 }}
-            {{- end }}
-          {{- else if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "dex_authenticator_resources" . | nindent 12 }}
-          {{- end }}
+            {{- include "dex_authenticator_container_requests" (list (dig "resources" dict $crd.spec) (include "dex_authenticator_resources" .)) | nindent 12 }}
           {{- with $crd.spec.resources }}
             {{- with .limits }}
           limits:
@@ -326,20 +336,7 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-          {{- if $crd.spec.resources }}
-            {{- with $crd.spec.resources.redis }}
-              {{- with .requests }}
-            {{ toYaml . | nindent 12 }}
-              {{- end }}
-            {{- end }}
-          {{- end }}
-          {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- if not $crd.spec.resources }}
-              {{- include "redis_resources" . | nindent 12 }}
-            {{- else if not $crd.spec.resources.redis }}
-              {{- include "redis_resources" . | nindent 12 }}
-            {{- end }}
-          {{- end }}
+            {{- include "dex_authenticator_container_requests" (list (dig "resources" "redis" dict $crd.spec) (include "redis_resources" .)) | nindent 12 }}
           {{- with $crd.spec.resources }}
             {{- with .redis }}
               {{- with .limits }}

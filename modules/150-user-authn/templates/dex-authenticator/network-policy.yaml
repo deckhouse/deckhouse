@@ -1,0 +1,110 @@
+{{- /* A DexAuthenticator lives in the namespace of the application it protects, where a default-deny
+policy (the isolated policy of a project, or the customer's own) drops its calls to dex and the requests of
+an ingress controller in hostNetwork. Policies are additive, so this one opens exactly what the authenticator
+needs: dex for code redeem and keys, the revocation feed, istiod for an Istio sidecar, DNS, and its own port
+for whoever routes requests to it. Redis is a sidecar on localhost, which network policies do not filter. */}}
+{{- $context := . }}
+{{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
+{{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
+  {{- $id := printf "%s@%s" $crd.name $crd.namespace }}
+  {{- $info := index $dexAuthenticatorNames $id | default dict }}
+  {{- $baseName := (default (printf "%s-dex-authenticator" $crd.name) (index $info "name")) }}
+  {{- $truncated := (index $info "truncated") }}
+  {{- $hash := (index $info "hash") }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $baseName }}
+  namespace: {{ $crd.namespace | quote }}
+  {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
+  {{- if $truncated }}
+  {{- $_ := set $labels "deckhouse.io/name-truncated" "true" }}
+  {{- $_ := set $labels "deckhouse.io/name-hash" $hash }}
+  {{- end }}
+  {{- include "helm_lib_module_labels" (list $context $labels) | nindent 2 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: dex-authenticator
+      name: {{ $crd.name | quote }}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # No "from": an ingress controller in hostNetwork or a gateway in any namespace has to reach the authenticator.
+  - ports:
+    - protocol: TCP
+      port: 8443
+    {{- if $context.Values.global.enabledModules | has "istio" }}
+    # In ambient mode, mesh clients (gateways, waypoints, other workloads) reach the pod over HBONE on 15008.
+    - protocol: TCP
+      port: 15008
+    {{- end }}
+  {{- if $context.Values.global.enabledModules | has "istio" }}
+  # The merged metrics of an Istio sidecar, scraped by the istio-sidecars PodMonitor.
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: d8-monitoring
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - protocol: TCP
+      port: 15020
+  {{- end }}
+  egress:
+  # Policies match the pod port behind a Service: dex serves 443 of its Service on 5556.
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: d8-user-authn
+      podSelector:
+        matchLabels:
+          app: dex
+    ports:
+    - protocol: TCP
+      port: 5556
+  # The revocation feed of the authenticators: the port named "feed" of user-authn-controller, behind the
+  # revocation-feed Service. A named port opens nothing while the controller has no such port, and follows
+  # the feed if its number changes.
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: d8-user-authn
+      podSelector:
+        matchLabels:
+          app: user-authn-controller
+    ports:
+    - protocol: TCP
+      port: feed
+  {{- if $context.Values.global.enabledModules | has "istio" }}
+  # In a namespace with sidecar injection the istio-proxy of the authenticator takes its configuration and
+  # certificate from istiod (every revision) on 15012; without them the pod never becomes ready.
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: d8-istio
+      podSelector:
+        matchLabels:
+          app: istiod
+    ports:
+    - protocol: TCP
+      port: 15012
+  {{- end }}
+  # CoreDNS listens on 5353 behind the kube-dns Service.
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 5353
+    - protocol: TCP
+      port: 5353
+{{- end }}

@@ -17,6 +17,8 @@ limitations under the License.
 package template_tests
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -422,6 +424,21 @@ periodSeconds: 5
       limits:
         cpu: "5m"
         memory: "8Mi"
+- name: test-partial-resources
+  encodedName: testPartialResources
+  namespace: d8-test
+  credentials:
+    appDexSecret: dexSecret
+    cookieSecret: cookieSecret
+  spec:
+    resources:
+      requests:
+        cpu: "70m"
+      limits:
+        memory: "96Mi"
+      redis:
+        requests:
+          memory: "30Mi"
 `)
 			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorNames", `
 "test-with-resources@d8-test":
@@ -539,10 +556,61 @@ periodSeconds: 5
 			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-with-resources-dex-authenticator")
 			Expect(deployment.Exists()).To(BeTrue())
 
-			// Check redis container resources (should not have CPU/Memory when VPA enabled)
-			// CPU/Memory should not be set when VPA is enabled and redis resources not specified
-			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.cpu").Exists()).To(BeFalse())
-			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.memory").Exists()).To(BeFalse())
+			// The CR sets resources, so there is no VPA, and redis falls back to the module defaults.
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.cpu").String()).To(Equal("10m"))
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.memory").String()).To(Equal("25Mi"))
+		})
+
+		// Policies such as the required requests of a project template refuse a Deployment whose containers
+		// have no cpu or memory requests, and a failed DexAuthenticator fails the whole user-authn release.
+		It("Should render default requests with VPA when the CR sets no resources", func() {
+			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-without-resources-dex-authenticator")
+			vpa := hec.KubernetesResource("VerticalPodAutoscaler", "d8-test", "test-without-resources-dex-authenticator")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(vpa.Exists()).To(BeTrue())
+
+			for i, container := range []string{"dex-authenticator", "redis"} {
+				requests := deployment.Field(fmt.Sprintf("spec.template.spec.containers.%d.resources.requests", i))
+				Expect(deployment.Field(fmt.Sprintf("spec.template.spec.containers.%d.name", i)).String()).To(Equal(container))
+				Expect(requests.Get("cpu").String()).To(Equal("10m"), container)
+				Expect(requests.Get("memory").String()).To(Equal("25Mi"), container)
+
+				// VPA starts from these requests, so they sit inside the range it may move them in.
+				policy := vpa.Field(fmt.Sprintf(`spec.resourcePolicy.containerPolicies.#(containerName=="%s")`, container))
+				Expect(policy.Get("minAllowed").String()).To(MatchJSON(`{"cpu":"10m","memory":"25Mi"}`), container)
+				Expect(policy.Get("maxAllowed").String()).To(MatchJSON(`{"cpu":"20m","memory":"50Mi"}`), container)
+			}
+		})
+
+		It("Should request the CR limits when the CR sets only limits", func() {
+			// A default request above a smaller limit would make the API server refuse the Deployment,
+			// so the request follows the limit, as the API server itself would default it.
+			tiny := hec.KubernetesResource("Deployment", "d8-test", "test-tiny-resources-dex-authenticator")
+			Expect(tiny.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("5m"))
+			Expect(tiny.Field("spec.template.spec.containers.0.resources.requests.memory").String()).To(Equal("8Mi"))
+			Expect(tiny.Field("spec.template.spec.containers.1.resources.requests.cpu").String()).To(Equal("10m"))
+			Expect(tiny.Field("spec.template.spec.containers.1.resources.requests.memory").String()).To(Equal("25Mi"))
+
+			fractional := hec.KubernetesResource("Deployment", "d8-test", "test-fractional-resources-dex-authenticator")
+			Expect(fractional.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("0.5"))
+			Expect(fractional.Field("spec.template.spec.containers.0.resources.requests.memory").String()).To(Equal("0.5Gi"))
+			Expect(fractional.Field("spec.template.spec.containers.1.resources.requests.cpu").String()).To(Equal("0.5"))
+			Expect(fractional.Field("spec.template.spec.containers.1.resources.requests.memory").String()).To(Equal("512Mi"))
+		})
+
+		It("Should fill the requests the CR leaves out, key by key", func() {
+			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-partial-resources-dex-authenticator")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			// cpu from the CR request, memory from the CR limit.
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("70m"))
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.memory").String()).To(Equal("96Mi"))
+			// memory from the CR request, cpu from the default.
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.cpu").String()).To(Equal("10m"))
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.memory").String()).To(Equal("30Mi"))
+			// The ephemeral storage of the logs stays next to them.
+			Expect(deployment.Field(`spec.template.spec.containers.0.resources.requests.ephemeral-storage`).Exists()).To(BeTrue())
+			Expect(deployment.Field(`spec.template.spec.containers.1.resources.requests.ephemeral-storage`).Exists()).To(BeTrue())
 		})
 
 		It("Should give the init container fixed resources whatever the CR asks for", func() {
