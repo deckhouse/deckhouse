@@ -36,7 +36,7 @@ shell:
   - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-ci-validator
-from: {{ index $.Images "builder/src" }}
+from: {{ index $.Images "builder/distroless" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/crds
@@ -51,7 +51,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  - pm install yq
+  - pm install bash git yq
   install:
   # The module CRDs must be the upstream CRDs of this version after update.sh, which injects the Deckhouse
   # additions. The artifact image imports /crds-validated, so werf builds this check before every build of
