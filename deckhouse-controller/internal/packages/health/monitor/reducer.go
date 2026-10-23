@@ -119,13 +119,15 @@ func reduceStatefulSet(ss *appsv1.StatefulSet) WorkloadStatus {
 		desired = *ss.Spec.Replicas
 	}
 
+	// Readiness before the revision: a rolling update waits for every pod to be Ready, so a pod
+	// that is not is the cause to name.
 	switch {
-	case ss.Status.CurrentRevision != ss.Status.UpdateRevision:
-		s.Health = InProgress
-		s.Cause = "rolling update"
 	case ss.Status.ReadyReplicas < desired:
 		s.Health = InProgress
 		s.Cause = "replicas not ready"
+	case ss.Status.CurrentRevision != ss.Status.UpdateRevision:
+		s.Health = InProgress
+		s.Cause = "rolling update"
 	case ss.Status.UpdatedReplicas < desired:
 		s.Health = InProgress
 		s.Cause = "updated replicas below desired"

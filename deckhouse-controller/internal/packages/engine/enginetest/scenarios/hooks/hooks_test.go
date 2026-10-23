@@ -110,6 +110,24 @@ func (s *hooksSuite) TestJ3RuntimeHookFailureIsObservedOnly() {
 	s.Empty(k.Observed.HookFailure("mod"), "stopping the hooks resets the observed failure")
 }
 
+// J4: the synchronizations that change the values at the hooks' start are rendered once: the sync
+// starts the hooks, the run that follows renders what they set, and no second run follows.
+func (s *hooksSuite) TestJ4SynchronizationChangesRenderOnce() {
+	k := et.New(s.T(), et.WithGlobal())
+	k.MustBoot()
+
+	k.Hooks.SyncWrite("mod", "discovered", "yes")
+
+	mark := k.Mark()
+	k.ApplyModule(et.Module("mod", "v1.0.0"), true)
+	k.WaitReport("mod", "installed", func(r model.Report) bool { return et.Running(r, "v1.0.0") })
+	k.Wait("converged", k.Engine.Converged)
+
+	s.Equal(1, k.Count(mark, "sync-change:mod"), "the synchronizations changed the values: %v", k.Log(mark))
+	s.Equal(1, k.Count(mark, "upgraded:mod@v1.0.0"), "one render for one enable: %v", k.Log(mark))
+	s.Less(k.Index(mark, "sync-change:mod"), k.Index(mark, "upgraded:mod@v1.0.0"), "the render follows the change")
+}
+
 func (s *hooksSuite) Unknown(c model.Condition, msg string) {
 	s.T().Helper()
 	s.True(et.Unknown(c), msg)

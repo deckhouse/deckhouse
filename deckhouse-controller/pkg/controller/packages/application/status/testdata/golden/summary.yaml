@@ -105,7 +105,8 @@
 - case: update/Reconciling
   message: 'Update applied: the new version''s workload is rolling out'
   state: Updating
-  tip: Wait for the rollout to finish. If it stalls, check pod status and events.
+  tip: 'Wait for the rollout to finish. If it stalls, check pod status and events:
+    a StatefulSet does not replace a pod that is not Ready, delete such a pod.'
 - case: update/Degraded
   message: Update applied but the workload health monitor reports degraded
   state: Degraded
@@ -157,8 +158,9 @@
 - case: reconcile/Reconciling
   message: 'Reconcile failed: workload is still reconciling'
   state: Degraded
-  tip: Workload is still reconciling. Wait for the rollout to complete. If it stays
-    in this state, check pod status and events.
+  tip: 'Workload is still reconciling. Wait for the rollout to complete. If it stays
+    in this state, check pod status and events: a StatefulSet does not replace a pod
+    that is not Ready, delete such a pod.'
 - case: reconcile/Degraded
   message: 'Reconcile failed: workload health monitor reports degraded'
   state: Degraded

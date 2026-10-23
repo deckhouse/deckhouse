@@ -24,7 +24,7 @@ import (
 
 // startHooks runs once per enable; a failed start stops what it started (hooklane Start). The
 // hooks live under Current's ctx, not the operation's: a binding that does not wait is
-// synchronized after the run that started it.
+// synchronized after the sync that started it.
 func (r *Reconciler) startHooks(ctx context.Context, st *operationState) error {
 	if st.hooksStop != nil {
 		return nil

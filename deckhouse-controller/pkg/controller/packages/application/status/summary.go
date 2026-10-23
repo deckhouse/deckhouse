@@ -160,7 +160,7 @@ var summaryTable = map[phase]map[string]advice{
 		"Reconciling": {
 			stateUpdating,
 			"Update applied: the new version's workload is rolling out",
-			"Wait for the rollout to finish. If it stalls, check pod status and events.",
+			"Wait for the rollout to finish. If it stalls, check pod status and events: a StatefulSet does not replace a pod that is not Ready, delete such a pod.",
 		},
 		"Degraded": {
 			stateDegraded,
@@ -205,7 +205,7 @@ var summaryTable = map[phase]map[string]advice{
 		"Reconciling": {
 			stateDegraded,
 			"Reconcile failed: workload is still reconciling",
-			"Workload is still reconciling. Wait for the rollout to complete. If it stays in this state, check pod status and events.",
+			"Workload is still reconciling. Wait for the rollout to complete. If it stays in this state, check pod status and events: a StatefulSet does not replace a pod that is not Ready, delete such a pod.",
 		},
 		// No "Scaled" entry: the health monitor only emits reason "Scaled" with
 		// status True (healthy), so it can never be a reconcile blocker. A

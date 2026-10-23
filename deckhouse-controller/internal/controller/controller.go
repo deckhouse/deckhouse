@@ -61,6 +61,7 @@ import (
 	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -170,7 +171,12 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 		return nil, fmt.Errorf("register application package version controller: %w", err)
 	}
 
-	err = modulepackageversion.RegisterController(runtime, dc, logger)
+	edit, err := edition.Parse()
+	if err != nil {
+		return nil, fmt.Errorf("parse edition: %w", err)
+	}
+
+	err = modulepackageversion.RegisterController(runtime, edit, dc, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register module package version controller: %w", err)
 	}

@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +36,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -60,15 +63,20 @@ const (
 	// conditional (skippable if the parent module is absent). See
 	// go_lib/dependency/extenders/moduledependency for the original parser.
 	legacyOptionalSuffix = "!optional"
+
+	// embeddedRepositoryName is the reserved repository of the modules the image ships.
+	embeddedRepositoryName = "embedded"
 )
 
 // RegisterController creates and registers the ModulePackageVersion controller.
 // It watches ModulePackageVersion resources and reconciles draft versions by
 // fetching metadata from the package registry and promoting them to non-draft status.
-func RegisterController(runtimeManager manager.Manager, dc dependency.Container, logger *log.Logger) error {
+// A non-nil edition turns on auto-enabling: a Module is created for a module its bundle enables.
+func RegisterController(runtimeManager manager.Manager, edit *edition.Edition, dc dependency.Container, logger *log.Logger) error {
 	r := &reconciler{
 		client:   runtimeManager.GetClient(),
 		registry: registry.NewService(dc, logger),
+		edition:  edit,
 		dc:       dc,
 		logger:   logger.Named(controllerName),
 	}
@@ -85,8 +93,10 @@ func RegisterController(runtimeManager manager.Manager, dc dependency.Container,
 type reconciler struct {
 	client   client.Client
 	registry *registry.Service
-	dc       dependency.Container
-	logger   *log.Logger
+	// edition is the active edition and bundle; nil disables auto-enabling.
+	edition *edition.Edition
+	dc      dependency.Container
+	logger  *log.Logger
 }
 
 // Reconcile handles a single ModulePackageVersion event. Draft resources are
@@ -143,11 +153,11 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 		slog.String("version", mpv.Spec.PackageVersion),
 		slog.String("repository", mpv.Spec.PackageRepositoryName))
 
-	// Non-draft MPVs have already been promoted — nothing to do.
+	// Non-draft MPVs have already been promoted — only the bundle may still need its Module.
 	if !mpv.IsDraft() {
 		logger.Debug("package is not draft")
 
-		return nil
+		return r.ensureModule(ctx, mpv)
 	}
 
 	repo := new(v1alpha1.PackageRepository)
@@ -253,7 +263,112 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 		return fmt.Errorf("patch '%s': %w", mpv.Name, err)
 	}
 
+	return r.ensureModule(ctx, mpv)
+}
+
+// ensureModule creates the Module of a module the active bundle enables, at the latest version of
+// its repository, when the cluster carries none. The Module leaves spec.enabled unset, so the
+// scheduler's bundle rule enables it and spec.enabled=false still turns it off; the requirements
+// are checked by the engine, and the webhook admits the controller's own writes.
+func (r *reconciler) ensureModule(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) error {
+	// the embedded modules get their Modules from the startup sync
+	if r.edition == nil || mpv.Spec.PackageRepositoryName == embeddedRepositoryName || mpv.Status.PackageMetadata == nil {
+		return nil
+	}
+
+	logger := r.logger.With(
+		slog.String("name", mpv.Name),
+		slog.String("package", mpv.Spec.PackageName),
+		slog.String("version", mpv.Spec.PackageVersion))
+
+	licensing := toEditionLicensing(mpv.Status.PackageMetadata.Licensing)
+	if !r.edition.IsAvailable(licensing) || !r.edition.IsEnabled(licensing) {
+		return nil
+	}
+
+	module := new(v1beta1.Module)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: mpv.Spec.PackageName}, module); err == nil {
+		return nil
+	} else if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("get module '%s': %w", mpv.Spec.PackageName, err)
+	}
+
+	latest, err := r.isLatestVersion(ctx, mpv)
+	if err != nil {
+		return err
+	}
+
+	// a later version decides once it is promoted
+	if !latest {
+		return nil
+	}
+
+	module = &v1beta1.Module{
+		ObjectMeta: metav1.ObjectMeta{Name: mpv.Spec.PackageName},
+		Spec: v1beta1.ModuleSpec{
+			PackageRepositoryName: mpv.Spec.PackageRepositoryName,
+			PackageVersion:        mpv.Spec.PackageVersion,
+		},
+	}
+
+	if err = r.client.Create(ctx, module); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			return nil
+		}
+
+		return fmt.Errorf("create module '%s': %w", module.Name, err)
+	}
+
+	logger.Info("module enabled by bundle created", slog.String("bundle", r.edition.Bundle))
+
 	return nil
+}
+
+// isLatestVersion reports whether mpv is the highest version of its package in its repository,
+// drafts included. A version that does not parse never wins.
+func (r *reconciler) isLatestVersion(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) (bool, error) {
+	current, err := semver.NewVersion(mpv.Spec.PackageVersion)
+	if err != nil {
+		return false, nil
+	}
+
+	versions := new(v1alpha1.ModulePackageVersionList)
+	if err = r.client.List(ctx, versions, client.MatchingLabels{
+		v1alpha1.PackageLabelRepository: mpv.Spec.PackageRepositoryName,
+		v1alpha1.PackageLabelPackage:    mpv.Spec.PackageName,
+	}); err != nil {
+		return false, fmt.Errorf("list module package versions of '%s': %w", mpv.Spec.PackageName, err)
+	}
+
+	for _, item := range versions.Items {
+		if !item.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		other, err := semver.NewVersion(item.Spec.PackageVersion)
+		if err == nil && other.GreaterThan(current) {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
+// toEditionLicensing maps the published licensing onto the shape the edition resolves against.
+func toEditionLicensing(licensing *v1alpha1.PackageLicensing) edition.Licensing {
+	if licensing == nil || len(licensing.Editions) == 0 {
+		return edition.Licensing{}
+	}
+
+	editions := make(map[string]edition.EditionLicense, len(licensing.Editions))
+	for name, e := range licensing.Editions {
+		editions[name] = edition.EditionLicense{
+			Available:        e.Available,
+			EnabledInBundles: e.EnabledInBundles,
+		}
+	}
+
+	return edition.Licensing{Editions: editions}
 }
 
 // handleDelete removes the finalizer from the ModulePackageVersion once no Module uses

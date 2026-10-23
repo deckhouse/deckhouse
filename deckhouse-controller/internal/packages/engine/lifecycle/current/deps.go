@@ -80,7 +80,8 @@ type nelmService interface {
 type hookLanes interface {
 	// Start routes the hooks' events to pkg's lanes, enables the bindings and waits (bounded by
 	// ctx) for the synchronization; the lanes live under a child of parent. stop waits for the run
-	// in flight; changed is not called after it. On an error Start has stopped what it started.
+	// in flight; changed is not called after it. stop is non-nil on success: Current reads a nil one
+	// as hooks not started and would sync again. On an error Start has stopped what it started.
 	Start(ctx, parent context.Context, pkg hooklane.Object, changed func()) (func(), error)
 }
 

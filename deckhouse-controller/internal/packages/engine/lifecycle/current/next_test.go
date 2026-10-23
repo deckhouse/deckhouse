@@ -79,6 +79,9 @@ func disabled(s *state) { s.disabled = true }
 
 func busy(s *state) { s.busy = true }
 
+// hooksStarted: a sync or a run started the hooks.
+func hooksStarted(s *state) { s.hooksStarted = true }
+
 // event returns an event of the running version echoing ownInputs.
 func event(enabled, gate bool, inputs string) *schedule.Event {
 	return &schedule.Event{Version: version, Enabled: enabled, Gate: gate, OwnInputs: ownInputs, Inputs: inputs}
@@ -153,12 +156,12 @@ func TestNext(t *testing.T) {
 			action{kind: actionAccept},
 		},
 		{
-			"the configuration in force is not accepted again", newState(acceptedK1),
+			"the configuration in force is not accepted again", newState(acceptedK1, hooksStarted),
 			withConfig(config1, "k1", event(true, true, "x")), 0,
 			action{kind: actionRun, inputs: "x"},
 		},
 		{
-			"a failed configuration waits for its backoff, the old one keeps running", newState(failedK2At(0)),
+			"a failed configuration waits for its backoff, the old one keeps running", newState(failedK2At(0), hooksStarted),
 			withConfig(config2, "k2", event(true, true, "x")), 0,
 			action{kind: actionRun, inputs: "x"},
 		},
@@ -168,7 +171,7 @@ func TestNext(t *testing.T) {
 			action{kind: actionAccept},
 		},
 		{
-			"the retry of a failed configuration waits for an idle worker", newState(failedK2At(0), busy),
+			"the retry of a failed configuration waits for an idle worker", newState(failedK2At(0), busy, hooksStarted),
 			withConfig(config2, "k2", event(true, true, "x")), retry.Min,
 			action{kind: actionRun, inputs: "x"},
 		},
@@ -260,13 +263,13 @@ func TestNext(t *testing.T) {
 
 		// 6. Run.
 		{
-			"run", newState(acceptedK1), withConfig(config1, "k1", event(true, true, "x")), 0,
+			"run", newState(acceptedK1, hooksStarted), withConfig(config1, "k1", event(true, true, "x")), 0,
 			action{kind: actionRun, inputs: "x"},
 		},
 		{
-			"run after a disable", newState(acceptedK1, disabled, applied("d")),
+			"a sync after a disable: the disable stopped the hooks", newState(acceptedK1, disabled, applied("d")),
 			withConfig(config1, "k1", event(true, true, "x")), 0,
-			action{kind: actionRun, inputs: "x"},
+			action{kind: actionSync, inputs: "x"},
 		},
 		{
 			"gate closed", newState(acceptedK1), withConfig(config1, "k1", event(true, false, "x")), 0,
@@ -277,24 +280,58 @@ func TestNext(t *testing.T) {
 			action{kind: actionWait},
 		},
 		{
-			"a failed run waits for its backoff", newState(acceptedK1, failedOperation(operation.Run, "x")),
+			"a failed run waits for its backoff", newState(acceptedK1, hooksStarted, failedOperation(operation.Run, "x")),
 			withConfig(config1, "k1", event(true, true, "x")), retry.Min - time.Nanosecond,
 			action{kind: actionWait},
 		},
 		{
-			"a failed run is retried once its backoff expired", newState(acceptedK1, failedOperation(operation.Run, "x")),
+			"a failed run is retried once its backoff expired", newState(acceptedK1, hooksStarted, failedOperation(operation.Run, "x")),
 			withConfig(config1, "k1", event(true, true, "x")), retry.Min,
 			action{kind: actionRun, inputs: "x"},
 		},
 		{
 			"new Inputs are not held by the backoff of a failed run",
-			newState(acceptedK1, failedOperation(operation.Run, "x")),
+			newState(acceptedK1, hooksStarted, failedOperation(operation.Run, "x")),
 			withConfig(config1, "k1", event(true, true, "y")), 0,
 			action{kind: actionRun, inputs: "y"},
 		},
 		{
-			"a failed disable does not hold a run", newState(acceptedK1, failedOperation(operation.Disable, "x")),
+			"a failed disable does not hold a run", newState(acceptedK1, hooksStarted, failedOperation(operation.Disable, "x")),
 			withConfig(config1, "k1", event(true, true, "x")), 0,
+			action{kind: actionRun, inputs: "x"},
+		},
+		{
+			"hooks not started sync first", newState(acceptedK1), withConfig(config1, "k1", event(true, true, "x")), 0,
+			action{kind: actionSync, inputs: "x"},
+		},
+		{
+			"a converged node needs no sync", newState(acceptedK1, applied("x")),
+			withConfig(config1, "k1", event(true, true, "x")), 0,
+			action{kind: actionWait},
+		},
+		{
+			"a closed gate needs no sync", newState(acceptedK1), withConfig(config1, "k1", event(true, false, "x")), 0,
+			action{kind: actionWait},
+		},
+		{
+			"a failed sync waits for its backoff", newState(acceptedK1, failedOperation(operation.Sync, "")),
+			withConfig(config1, "k1", event(true, true, "x")), retry.Min - time.Nanosecond,
+			action{kind: actionWait},
+		},
+		{
+			"a failed sync holds new Inputs too", newState(acceptedK1, failedOperation(operation.Sync, "")),
+			withConfig(config1, "k1", event(true, true, "y")), 0,
+			action{kind: actionWait},
+		},
+		{
+			"a failed sync is retried once its backoff expired", newState(acceptedK1, failedOperation(operation.Sync, "")),
+			withConfig(config1, "k1", event(true, true, "x")), retry.Min,
+			action{kind: actionSync, inputs: "x"},
+		},
+		{
+			"OnStartup failed after the hooks started: the run retries it after the sync's backoff",
+			newState(acceptedK1, hooksStarted, failedOperation(operation.Sync, "")),
+			withConfig(config1, "k1", event(true, true, "x")), retry.Min,
 			action{kind: actionRun, inputs: "x"},
 		},
 	}
@@ -319,6 +356,7 @@ func TestSupersedes(t *testing.T) {
 	)
 
 	run := &operation.Operation{Kind: operation.Run, Key: "x"}
+	syncing := &operation.Operation{Kind: operation.Sync, Key: "x"}
 	disabling := &operation.Operation{Kind: operation.Disable, Key: "d"}
 	uninstalling := &operation.Operation{Kind: operation.Uninstall}
 
@@ -334,6 +372,13 @@ func TestSupersedes(t *testing.T) {
 		{"run: a new configuration cancels", accept, run, true},
 		{"run: disable cancels", disable, run, true},
 		{"run: uninstall cancels", uninstall, run, true},
+
+		{"sync: wait does not cancel", wait, syncing, false},
+		{"sync: the same sync does not cancel", action{kind: actionSync, inputs: "x"}, syncing, false},
+		{"sync: a run does not cancel, its render follows", runY, syncing, false},
+		{"sync: a new configuration cancels", accept, syncing, true},
+		{"sync: disable cancels", disable, syncing, true},
+		{"sync: uninstall cancels", uninstall, syncing, true},
 
 		{"disable: wait does not cancel", wait, disabling, false},
 		{"disable: run does not cancel", runX, disabling, false},
@@ -487,6 +532,7 @@ func TestStepListsMatchTheFixtures(t *testing.T) {
 		got  []operation.Step
 		want []operation.Step
 	}{
+		{name: "sync", got: module.syncSteps(&operationState{}), want: testPrepareSteps},
 		{name: "run", got: module.runSteps(&operationState{}), want: testRunSteps},
 		{name: "disable", got: module.disableSteps(&operationState{}), want: testDisableSteps},
 		{name: "module uninstall", got: module.uninstallSteps(&operationState{}), want: testModuleUninstallSteps},
@@ -725,13 +771,13 @@ func TestNewInputsRunAfterTheRunInFlight(t *testing.T) {
 	in := withConfig(config1, "k1", event(true, true, "y"))
 
 	// While run "x" is in flight, Inputs "y" decide a run that waits for it.
-	want := next(newState(acceptedK1, busy), in, ownInputs, t0)
+	want := next(newState(acceptedK1, busy, hooksStarted), in, ownInputs, t0)
 	if want.kind != actionRun || want.inputs != "y" || supersedes(want, &operation.Operation{Kind: operation.Run, Key: "x"}) {
 		t.Fatalf("next() = %+v, want a run on y that does not cancel x", want)
 	}
 
 	// Run "x" succeeded: applied is x, the node is not converged on y, and y runs.
-	done := newState(acceptedK1, func(s *state) { s.applied = "x" })
+	done := newState(acceptedK1, hooksStarted, func(s *state) { s.applied = "x" })
 	if got := next(done, in, ownInputs, t0); got.kind != actionRun || got.inputs != "y" {
 		t.Errorf("next() after the run = %+v, want a run on y", got)
 	}

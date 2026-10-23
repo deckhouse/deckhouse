@@ -59,6 +59,20 @@ type operationState struct {
 	steps []operation.Step
 }
 
+// syncSteps is the sync: the hooks start and OnStartup runs before the first render of an enable,
+// so the run that follows renders what their synchronizations set.
+func (r *Reconciler) syncSteps(st *operationState) []operation.Step {
+	return []operation.Step{
+		{
+			Name: stepStartHooks, Condition: operation.HooksProcessed, Reason: model.ReasonHookInitializationFailed,
+			Run: func(ctx context.Context) error { return r.startHooks(ctx, st) },
+		},
+		{Name: stepOnStartup, Condition: operation.HooksProcessed, Reason: model.ReasonHookFailed, Run: r.onStartup},
+	}
+}
+
+// runSteps keeps the hook steps of the sync: startHooks is a no-op while the hooks run and the
+// object skips OnStartup after a success, so a run retries what a failed sync left undone.
 func (r *Reconciler) runSteps(st *operationState) []operation.Step {
 	return []operation.Step{
 		{

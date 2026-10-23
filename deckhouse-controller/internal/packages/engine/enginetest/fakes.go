@@ -383,10 +383,13 @@ type Hooks struct {
 	settingsErr map[string]error
 	// writes are values a binding writes into the object when it runs, by name and binding.
 	writes map[string]map[string]any
+	// syncWrites are values the synchronizations of name write when its hooks start (SyncWrite).
+	syncWrites map[string]map[string]any
 }
 
 // Start records "enable-hooks:<name>" (fault key) and keeps changed for RuntimeChange. A failed
-// enable stops what it started, as the real one does; the stop it returns is idempotent.
+// enable stops what it started, as the real one does; the stop it returns is idempotent. The
+// synchronizations' writes (SyncWrite) land and report the change, as a hook lane does.
 func (h *Hooks) Start(ctx, _ context.Context, pkg hooklane.Object, changed func()) (func(), error) {
 	pkg.InitializeHooks()
 
@@ -398,7 +401,19 @@ func (h *Hooks) Start(ctx, _ context.Context, pkg hooklane.Object, changed func(
 	h.mu.Lock()
 	h.changed[pkg.GetName()] = changed
 	h.active[pkg.GetName()] = pkg
+	writes := h.syncWrites[pkg.GetName()]
 	h.mu.Unlock()
+
+	if len(writes) > 0 {
+		if p, ok := pkg.(interface{ SetValue(string, any) }); ok {
+			for key, value := range writes {
+				p.SetValue(key, value)
+			}
+		}
+
+		h.kit.record("sync-change:" + pkg.GetName())
+		changed()
+	}
 
 	var once sync.Once
 
@@ -465,6 +480,18 @@ func (h *Hooks) SettingsError(name string, err error) {
 	}
 
 	h.settingsErr[name] = err
+}
+
+// SyncWrite makes the synchronizations of name write key=value whenever its hooks start.
+func (h *Hooks) SyncWrite(name, key string, value any) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if h.syncWrites[name] == nil {
+		h.syncWrites[name] = map[string]any{}
+	}
+
+	h.syncWrites[name][key] = value
 }
 
 // WriteOn makes binding of name write key=value when it runs (AfterHelm changing values).

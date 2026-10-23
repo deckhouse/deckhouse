@@ -139,6 +139,7 @@ func New(t testing.TB, opts ...Option) *Kit {
 	k.Hooks = &Hooks{
 		kit: k, changed: make(map[string]func()), active: make(map[string]hooklane.Object),
 		settingsErr: make(map[string]error), writes: make(map[string]map[string]any),
+		syncWrites: make(map[string]map[string]any),
 	}
 	k.Observed = &Observed{kit: k, failures: make(map[string]string)}
 	k.Orphans = &Orphans{kit: k}

@@ -95,6 +95,8 @@ func (r *Reconciler) loop(ctx context.Context) {
 // act starts the operation want decides while the worker is idle; the loop accepts by itself.
 func (r *Reconciler) act(ctx context.Context, want action) {
 	switch want.kind {
+	case actionSync:
+		r.startOperation(ctx, operation.Sync, want.inputs, r.syncSteps)
 	case actionRun:
 		r.startOperation(ctx, operation.Run, want.inputs, r.runSteps)
 	case actionDisable:
@@ -106,12 +108,12 @@ func (r *Reconciler) act(ctx context.Context, want action) {
 }
 
 // startOperation ends the disabled state, after the steps are built: uninstallSteps reads it. An
-// uninstall keeps it, so its retries prepare the hooks as its first attempt did. A run pauses the
-// drift monitor: its hooks may delete release resources, which is not drift.
+// uninstall keeps it, so its retries prepare the hooks as its first attempt did. A sync and a run
+// pause the drift monitor: their hooks may delete release resources, which is not drift.
 func (r *Reconciler) startOperation(ctx context.Context, kind operation.Kind, inputs string, steps func(*operationState) []operation.Step) {
 	st := &operationState{accepted: r.state.settings.Accepted, hooksStop: r.hooksStop}
 
-	if kind == operation.Run && r.deps.Nelm.HasMonitor(r.name) {
+	if (kind == operation.Run || kind == operation.Sync) && r.deps.Nelm.HasMonitor(r.name) {
 		r.deps.Nelm.PauseMonitor(r.name)
 		st.monitorPaused = true
 	}
@@ -132,6 +134,7 @@ func (r *Reconciler) collectOperation() *operationState {
 	r.operation, r.operationState = nil, nil
 	r.state.busy = false
 	r.hooksStop = st.hooksStop
+	r.state.hooksStarted = st.hooksStop != nil
 
 	if st.monitorPaused {
 		r.deps.Nelm.ResumeMonitor(r.name)
@@ -171,6 +174,9 @@ func (r *Reconciler) finishOperation(res operation.Result) bool {
 	r.state.operations.Succeeded()
 
 	switch res.Kind {
+	case operation.Sync:
+		// Nothing rendered, so nothing applied or reported: the run that follows reports over its
+		// steps, the hook steps included.
 	case operation.Run:
 		r.state.applied = res.Key
 		r.state.ran = true

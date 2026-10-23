@@ -51,6 +51,9 @@ type state struct {
 	ran bool
 	// busy: an operation runs in the worker (set by start, cleared when its result is collected).
 	busy bool
+	// hooksStarted: the hooks run (set when an operation's result is collected), so the next
+	// render is a run and not a sync.
+	hooksStarted bool
 	// applied is Facts.Applied; empty after start, so every node runs once after a boot or a
 	// activation (nelm skips an unchanged release).
 	applied  string
@@ -68,6 +71,7 @@ type actionKind int
 const (
 	actionWait actionKind = iota
 	actionAccept
+	actionSync
 	actionRun
 	actionDisable
 	actionUninstall
@@ -75,7 +79,8 @@ const (
 
 type action struct {
 	kind actionKind
-	// inputs are the event's Inputs a run or a disable starts with; on success they become applied.
+	// inputs are the event's Inputs an operation starts with; a run's or a disable's become applied
+	// on success, a sync's never do.
 	inputs string
 }
 
@@ -126,10 +131,19 @@ func next(s state, in input, ownInputs string, now time.Time) action {
 		return action{kind: actionWait}
 	}
 
-	// 6. The gate is open, the node is not converged on these Inputs, and these Inputs did not
-	// just fail.
-	if ev.Enabled && ev.Gate && ev.Inputs != s.applied && !s.operations.Holds(operationKey(operation.Run, ev.Inputs), now) {
-		return action{kind: actionRun, inputs: ev.Inputs}
+	// 6. The gate is open and the node is not converged on these Inputs. Hooks not started yet sync
+	// first: their synchronizations change the values, and the run that follows renders them once
+	// instead of a run that starts the hooks and a second one for what they changed. A failed sync
+	// holds both until its backoff expires; a run only its own Inputs.
+	if ev.Enabled && ev.Gate && ev.Inputs != s.applied {
+		switch {
+		case s.operations.Holds(operationKey(operation.Sync, ""), now):
+			return action{kind: actionWait}
+		case !s.hooksStarted:
+			return action{kind: actionSync, inputs: ev.Inputs}
+		case !s.operations.Holds(operationKey(operation.Run, ev.Inputs), now):
+			return action{kind: actionRun, inputs: ev.Inputs}
+		}
 	}
 
 	// 7. Converged, gated, held by the backoff, or disabled and done.
@@ -155,15 +169,17 @@ func ours(s state, ev *schedule.Event, ownInputs string) bool {
 //     it: it finishes, its success sets applied to the Inputs it started with, and the next run
 //     follows for the new ones. Why: a runtime hook that changes the values during runs would
 //     otherwise cancel them again and again, also in the middle of a release apply.
+//   - A sync is cancelled as a run is: the values its synchronizations change are rendered by the
+//     run that follows.
 func supersedes(want action, op *operation.Operation) bool {
 	switch op.Kind {
 	case operation.Uninstall:
 		return false
 	case operation.Disable:
 		return want.kind == actionUninstall
-	case operation.Run:
+	case operation.Run, operation.Sync:
 		switch want.kind {
-		case actionWait, actionRun:
+		case actionWait, actionSync, actionRun:
 			return false
 		default:
 			return true
@@ -174,7 +190,7 @@ func supersedes(want action, op *operation.Operation) bool {
 }
 
 // operationKey is the backoff key of an operation: a run's kind and the Inputs it started with. A
-// disable and an uninstall delete the release whatever the Inputs are, so their kind alone: a
+// sync, a disable and an uninstall do the same whatever the Inputs are, so their kind alone: a
 // runtime hook that changes the own inputs must not retry them outside their backoff.
 func operationKey(kind operation.Kind, inputs string) string {
 	if kind != operation.Run {
