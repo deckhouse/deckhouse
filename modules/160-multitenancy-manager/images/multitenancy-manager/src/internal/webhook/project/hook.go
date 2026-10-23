@@ -123,17 +123,15 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 
 	// The platform's virtual projects -- default and deckhouse, on the "virtual" template -- have no
 	// namespace of their own and are created by the controller alone. Both their names and their
-	// template are reserved for it: a user project on that template is handled as virtual by the
-	// project controller (no namespace, Deployed) but looks like an ordinary project to everything
-	// keyed on the virtual-project label, so the PRB/CPRB fan-out kept failing on a namespace that
-	// never exists and no ClusterProjectRoleBinding in the cluster could reach Ready; and a user
-	// project under one of the two names would take the place the controller expects to fill.
+	// template are reserved for it: a user project on that template would be handled as virtual (no
+	// namespace, Deployed, no ProjectRoleBinding or ClusterProjectRoleBinding reaching it) while its
+	// owner expects an ordinary project, and a user project under one of the two names would take the
+	// place the controller expects to fill.
 	virtualName := project.Name == projectmanager.DefaultProjectName || project.Name == projectmanager.DeckhouseProjectName
 	if !privileged && (virtualName || project.Spec.ProjectTemplateName == projectmanager.VirtualTemplate) {
 		return admission.Denied(fmt.Sprintf("the %q and %q project names and the %q project template are reserved for the platform's virtual projects",
 			projectmanager.DefaultProjectName, projectmanager.DeckhouseProjectName, projectmanager.VirtualTemplate))
 	}
-
 	// projects.deckhouse.io/project names the project it is on: grant policies select projects by it
 	// (projectSelector), so a Project must not claim another project's name. The controller stamps it;
 	// a manifest may leave it out or repeat the project's own name.
@@ -144,6 +142,19 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 
 	// The warnings of the checks below go out with whichever response allows the request.
 	var warnings []string
+
+	// The virtual-project label is reserved for the platform's virtual projects too. On a user project
+	// it does not make the project virtual (IsVirtual goes by the template), but it reads as one to a
+	// person or a UI looking at the project. A project created before the label was reserved keeps it
+	// with a warning, so its manifests still apply.
+	if !privileged && project.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" {
+		if stored := storedProject(req); stored == nil || stored.Labels[v1alpha3.ProjectLabelVirtualProject] != "true" {
+			return admission.Denied(fmt.Sprintf("the %s=true label is reserved for the platform's virtual projects; remove it from the %q project",
+				v1alpha3.ProjectLabelVirtualProject, project.Name))
+		}
+		warnings = append(warnings, fmt.Sprintf("the %s=true label is reserved for the platform's virtual projects and has no effect on the %q project; remove it",
+			v1alpha3.ProjectLabelVirtualProject, project.Name))
+	}
 
 	var old *v1alpha3.Project
 	if req.Operation == admissionv1.Update && !privileged {

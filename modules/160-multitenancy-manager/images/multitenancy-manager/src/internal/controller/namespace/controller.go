@@ -162,10 +162,11 @@ func isAdoptionCandidate(obj metav1.Object) bool {
 	case v1alpha3.ResourceHeritageDeckhouse, v1alpha3.ResourceHeritageUpmeter:
 		return false
 	}
-	if _, owned := labels[v1alpha3.ResourceLabelProject]; owned {
-		return false
-	}
-	return true
+	// A namespace with the label is left alone even when the value is empty. The empty value names no
+	// project, but before the namespace-ownership policy refused it, it was the way to keep a namespace
+	// out of adoption, and such a namespace keeps that.
+	_, labeled := labels[v1alpha3.ResourceLabelProject]
+	return !labeled
 }
 
 func needsReconcile(obj metav1.Object) bool {

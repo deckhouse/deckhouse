@@ -19,6 +19,7 @@ package webhooks
 import (
 	"bytes"
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -39,6 +40,7 @@ import (
 	grantsv1alpha2 "controller/api/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/jsonpath"
+	"controller/internal/naming"
 )
 
 func newClient(t *testing.T, objs ...client.Object) client.Client {
@@ -65,8 +67,12 @@ func testMapper() meta.RESTMapper {
 	return m
 }
 
+// projectNS is the main namespace of the project of the same name, labelled the way the controller
+// labels it.
 func projectNS(name string, labels map[string]string) *corev1.Namespace {
-	return &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: labels}}
+	l := map[string]string{naming.ProjectLabel: name}
+	maps.Copy(l, labels)
+	return &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name, Labels: l}}
 }
 
 func serve(t *testing.T, h http.Handler, path string, review admissionv1.AdmissionReview) *admissionv1.AdmissionResponse {

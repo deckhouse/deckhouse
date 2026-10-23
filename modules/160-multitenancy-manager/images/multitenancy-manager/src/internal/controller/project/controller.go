@@ -118,8 +118,8 @@ func standardFieldRequests(object client.Object, names ...string) []reconcile.Re
 	if !slices.Contains(names, object.GetName()) {
 		return nil
 	}
-	project, ok := object.GetLabels()[v1alpha3.ResourceLabelProject]
-	if !ok {
+	project := object.GetLabels()[v1alpha3.ResourceLabelProject]
+	if project == "" {
 		return nil
 	}
 	return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: project}}}
@@ -175,7 +175,7 @@ func namespaceProjectRequests(objects ...client.Object) []reconcile.Request {
 
 func requestsForNamespace(object client.Object) []reconcile.Request {
 	var reqs []reconcile.Request
-	if proj, ok := object.GetLabels()[v1alpha3.ResourceLabelProject]; ok {
+	if proj := object.GetLabels()[v1alpha3.ResourceLabelProject]; proj != "" {
 		reqs = append(reqs, reconcile.Request{NamespacedName: client.ObjectKey{Name: proj}})
 	}
 	if virtual := projectmanager.VirtualProjectName(object); virtual != "" {

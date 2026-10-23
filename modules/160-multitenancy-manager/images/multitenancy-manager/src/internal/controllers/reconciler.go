@@ -135,16 +135,16 @@ func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		r.forgetSkips(ns.Name, nil)
 		return ctrl.Result{}, nil
 	}
-	// Only project namespaces (carrying the project label) get a catalog. Any other namespace —
+	// Only project namespaces (carrying the project label with a project name) get a catalog. Any other namespace —
 	// the default namespace, system namespaces, namespaces of "virtual" projects — must not, even
 	// when a registration's defaultAvailability is All. Clean up any catalog that lingers there.
-	if _, isProjectNS := ns.Labels[naming.ProjectLabel]; !isProjectNS {
+	project := resolve.ProjectName(ns)
+	if project == "" {
 		clearViolations(ns.Name)
 		r.forgetSkips(ns.Name, nil)
 		return ctrl.Result{}, r.cleanupCatalog(ctx, ns.Name)
 	}
 
-	project := resolve.ProjectName(ns)
 	if err := r.reconcileCatalog(ctx, ns, project); err != nil {
 		return ctrl.Result{}, fmt.Errorf("reconcile catalog: %w", err)
 	}

@@ -122,7 +122,16 @@ func TestReconcile_Catalog(t *testing.T) {
 // TestReconcile_NonProjectNamespace verifies that a namespace without the project label never gets a
 // catalog and that a stale AvailableClusterResource left in such a namespace is cleaned up.
 func TestReconcile_NonProjectNamespace(t *testing.T) {
-	plain := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
+	t.Run("no project label", func(t *testing.T) {
+		testReconcileNonProjectNamespace(t, nil)
+	})
+	t.Run("an empty project label", func(t *testing.T) {
+		testReconcileNonProjectNamespace(t, map[string]string{naming.ProjectLabel: ""})
+	})
+}
+
+func testReconcileNonProjectNamespace(t *testing.T, labels map[string]string) {
+	plain := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default", Labels: labels}}
 	def := &v1alpha1.GrantableClusterResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{Name: "storageclasses"},
 		Spec: v1alpha1.GrantableClusterResourceDefinitionSpec{

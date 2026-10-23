@@ -63,6 +63,9 @@ const (
 	// deckhouse): an inventory of namespaces with no namespace of its own. The project webhook
 	// keeps it out of user projects.
 	VirtualProjectTemplateName = "virtual"
+	// DefaultProjectName and DeckhouseProjectName are the names of the platform's virtual projects.
+	DefaultProjectName   = "default"
+	DeckhouseProjectName = "deckhouse"
 
 	ResourceLabelProject  = "projects.deckhouse.io/project"
 	ResourceLabelTemplate = "projects.deckhouse.io/project-template"
@@ -331,11 +334,15 @@ type ManifestObject struct {
 }
 
 // IsVirtual reports whether the project is a virtual one: it inventories namespaces and has no
-// namespace of its own, so nothing may be rendered or bound into "its" namespace. The platform's
-// virtual projects carry the label; the template name covers a project that reached the virtual
-// code path of the project controller without it.
+// namespace of its own, so nothing may be rendered or bound into "its" namespace. It is told by the
+// template, as the project controller routes it. The virtual-project label counts only on the
+// platform's own projects (default, deckhouse), which keeps them virtual even with no template set;
+// on any other project it is just a label, and the project keeps its namespace and grant policies.
 func (p *Project) IsVirtual() bool {
-	return p.Labels[ProjectLabelVirtualProject] == "true" || p.Spec.ProjectTemplateName == VirtualProjectTemplateName
+	if p.Spec.ProjectTemplateName == VirtualProjectTemplateName {
+		return true
+	}
+	return p.Labels[ProjectLabelVirtualProject] == "true" && (p.Name == DefaultProjectName || p.Name == DeckhouseProjectName)
 }
 
 func (p *Project) SetState(state string) {

@@ -395,9 +395,7 @@ func (v *validator) resourcesTemplateRemoval(ctx context.Context, req admission.
 // carries only the spec, and one moved away from it a moment ago still renders from it with only the
 // label. The list is read from the API server, so a project the cache has not seen yet counts too.
 // A virtual project does not count: it names the "virtual" template, but never renders from a
-// template object, so a template created under that name can be deleted. It is told by its template
-// name, as the controller routes it, not by the virtual-project label, which any editor of a
-// project can set on one that renders from a template.
+// template object, so a template created under that name can be deleted.
 func (v *validator) projectUsing(ctx context.Context, template string) (string, error) {
 	projects := new(v1alpha3.ProjectList)
 	if err := v.reader.List(ctx, projects); err != nil {

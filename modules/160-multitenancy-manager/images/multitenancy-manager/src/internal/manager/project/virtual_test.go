@@ -41,6 +41,11 @@ func TestVirtualProjectName(t *testing.T) {
 			want: "",
 		},
 		{
+			name: "an empty project label names no project",
+			ns:   &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team", Labels: map[string]string{v1alpha3.ResourceLabelProject: ""}}},
+			want: DefaultProjectName,
+		},
+		{
 			name: "d8 prefix",
 			ns:   &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "d8-upmeter"}},
 			want: DeckhouseProjectName,

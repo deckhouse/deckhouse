@@ -64,8 +64,8 @@ const (
 	DeckhouseNamespacePrefix  = "d8-"
 	KubernetesNamespacePrefix = "kube-"
 
-	DeckhouseProjectName = "deckhouse"
-	DefaultProjectName   = "default"
+	DeckhouseProjectName = v1alpha3.DeckhouseProjectName
+	DefaultProjectName   = v1alpha3.DefaultProjectName
 
 	VirtualTemplate = v1alpha3.VirtualProjectTemplateName
 

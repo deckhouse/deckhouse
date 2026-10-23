@@ -84,6 +84,11 @@ func TestIsAdoptionCandidate(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "an empty project label keeps the namespace out of adoption",
+			ns:   &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team", Labels: map[string]string{v1alpha3.ResourceLabelProject: ""}}},
+			want: false,
+		},
+		{
 			name: "upmeter heritage",
 			ns:   &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "obsv", Labels: map[string]string{v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageUpmeter}}},
 			want: false,

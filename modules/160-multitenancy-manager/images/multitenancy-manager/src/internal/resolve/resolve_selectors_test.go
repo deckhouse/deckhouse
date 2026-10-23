@@ -166,6 +166,27 @@ func TestGrantsForNamespace_NamespaceWithoutProject(t *testing.T) {
 	}
 }
 
+// TestGrantsForNamespace_EmptyProjectLabel: an empty project label names no project, so a namespace
+// that shares its name with a Project does not take that Project's labels.
+func TestGrantsForNamespace_EmptyProjectLabel(t *testing.T) {
+	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "team-a", Labels: map[string]string{"env": "production"}}}
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-a", Labels: map[string]string{naming.ProjectLabel: ""}}}
+	byProject := policyWith(labelsSelector("env", "production"), nil)
+	byProject.Name = "by-project"
+	cl := newClient(t, project, ns, byProject)
+
+	if got := ProjectName(ns); got != "" {
+		t.Fatalf("ProjectName: got %q, expected none", got)
+	}
+	grants, err := GrantsForNamespace(context.Background(), cl, ns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := grantNames(grants); len(got) != 0 {
+		t.Fatalf("got %v, expected no policies", got)
+	}
+}
+
 func annotatedClass(name, value string) *storagev1.StorageClass {
 	sc := &storagev1.StorageClass{ObjectMeta: metav1.ObjectMeta{Name: name}, Provisioner: "x"}
 	if value != "" {

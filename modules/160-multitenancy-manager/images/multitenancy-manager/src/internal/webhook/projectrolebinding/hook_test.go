@@ -86,10 +86,13 @@ func realProject(name string) *v1alpha3.Project {
 }
 
 func virtualProject(name string) *v1alpha3.Project {
-	return &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{
-		Name:   name,
-		Labels: map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"},
-	}}
+	return &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"},
+		},
+		Spec: v1alpha3.ProjectSpec{ProjectTemplateName: v1alpha3.VirtualProjectTemplateName},
+	}
 }
 
 func TestHandle_RejectsVirtualProjectNamespaceByName(t *testing.T) {
@@ -108,7 +111,7 @@ func TestHandle_RejectsMissingProject(t *testing.T) {
 	assert.Contains(t, resp.Result.Message, "is not the main namespace of a project")
 }
 
-func TestHandle_RejectsVirtualProjectByLabel(t *testing.T) {
+func TestHandle_RejectsVirtualProjectByTemplate(t *testing.T) {
 	t.Parallel()
 	v := newValidator(t, virtualProject("space"))
 	resp := v.Handle(context.Background(), createRequest(t, "space", rolebinding.ControllerServiceAccount, binding("d8:project:viewer")))

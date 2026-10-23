@@ -32,7 +32,7 @@ const upmeterNamespacePrefix = "upmeter-"
 // VirtualProjectName is the virtual project that inventories this namespace, or
 // empty if the namespace already belongs to a real project.
 func VirtualProjectName(obj metav1.Object) string {
-	if _, owned := obj.GetLabels()[v1alpha3.ResourceLabelProject]; owned {
+	if obj.GetLabels()[v1alpha3.ResourceLabelProject] != "" {
 		return ""
 	}
 	if IsDeckhouseInventory(obj) {

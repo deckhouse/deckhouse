@@ -198,7 +198,7 @@ func TestProjectFanoutChanged(t *testing.T) {
 
 	virtual := base.DeepCopy()
 	virtual.Labels = map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"}
-	assert.True(t, ProjectFanoutChanged(base, virtual), "a virtual-label change must re-enqueue bindings")
+	assert.False(t, ProjectFanoutChanged(base, virtual), "the virtual label alone does not make a user project virtual")
 
 	byTemplate := base.DeepCopy()
 	byTemplate.Spec.ProjectTemplateName = v1alpha3.VirtualProjectTemplateName

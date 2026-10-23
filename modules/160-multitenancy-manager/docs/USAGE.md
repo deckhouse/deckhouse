@@ -183,7 +183,9 @@ Besides the user-created projects, the `d8 k get projects` list always contains 
 
 Virtual-project status is rebuilt from the live namespace list: a deleted namespace disappears from that list. Virtual projects do not recreate namespaces.
 
-Virtual projects exist for completeness: with them, every namespace of the cluster belongs to some project. They cannot be managed: they are not editable, [ProjectNamespace](cr.html#projectnamespace) and [ProjectRoleBinding](cr.html#projectrolebinding) resources cannot be created in them, and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) does not extend to them. Their project template, `virtual`, is reserved for them: a user project with `projectTemplateName: virtual` is refused by the webhook, since such a project would get no namespace of its own. No ClusterResourceGrantPolicy applies to their namespaces either, even one whose selectors match a virtual Project, because the [cluster resource availability rules](#managing-access-to-cluster-wide-resources) apply only in namespaces with the `projects.deckhouse.io/project` label, and the namespaces of virtual projects do not carry it.
+Virtual projects exist for completeness: with them, every namespace of the cluster belongs to some project. They cannot be managed: they are not editable, [ProjectNamespace](cr.html#projectnamespace) and [ProjectRoleBinding](cr.html#projectrolebinding) resources cannot be created in them, and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) does not extend to them. Their project template, `virtual`, is reserved for them: a user project with `projectTemplateName: virtual` is refused by the webhook, since such a project would get no namespace of its own.
+The `projects.deckhouse.io/virtual-project: "true"` label is reserved too: the webhook refuses a project that is created with it or gets it added. A project is virtual by its template, not by the label, so a user project that already carries the label is an ordinary project; it keeps the label with a warning until the label is removed.
+No ClusterResourceGrantPolicy applies to their namespaces either, even one whose selectors match a virtual Project, because the [cluster resource availability rules](#managing-access-to-cluster-wide-resources) apply only in namespaces with the `projects.deckhouse.io/project` label, and the namespaces of virtual projects do not carry it.
 
 No ProjectTemplate object named `virtual` exists, and the webhook refuses to create one. A template with this name that is already in the cluster is not used by any project and can be deleted.
 
@@ -306,7 +308,8 @@ The node-selector and tolerations annotations are the exception.
 They belong to the module, so adoption copies them into the `namespace.annotations` parameter of the project, where they are changed or removed.
 The pod security, monitoring and scanning labels are turned into parameters of the project, and the additional namespaces inherit them. The `extended-monitoring.deckhouse.io/enabled` and `security-scanning.deckhouse.io/enabled` labels keep the value `"true"` if the namespace had it. Any other value, `"false"` included, is replaced with an empty one, because adoption turns the feature on whenever the namespace carries the label, whatever its value.
 
-The `projects.deckhouse.io/project` label itself is set only by the controller: a namespace created by hand with that label is refused, so a namespace cannot be made to look owned by a project it does not belong to.
+The `projects.deckhouse.io/project` label itself is set only by the controller: a namespace created by hand with that label is refused, an empty value included, so a namespace cannot be made to look owned by a project it does not belong to. A namespace belongs to the project its label names and to no other: one without the label, or with an empty value, is not counted towards the project of the same name.
+A namespace that already carries the empty value is not adopted either: the empty value used to keep a namespace out of adoption, and it still does until the label is removed.
 
 For example:
 

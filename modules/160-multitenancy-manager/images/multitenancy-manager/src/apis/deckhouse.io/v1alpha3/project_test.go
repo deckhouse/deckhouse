@@ -103,3 +103,30 @@ func TestSetCondition(t *testing.T) {
 	assert.Equal(t, "still bad", conditions[0].Message)
 	assert.True(t, conditions[0].LastTransitionTime.Equal(&moved), "a message-only change must not move LastTransitionTime")
 }
+
+func TestProject_IsVirtual(t *testing.T) {
+	label := map[string]string{ProjectLabelVirtualProject: "true"}
+	tests := []struct {
+		name     string
+		project  string
+		labels   map[string]string
+		template string
+		want     bool
+	}{
+		{name: "the virtual template", project: "inventory", template: VirtualProjectTemplateName, want: true},
+		{name: "a platform project with the label and no template", project: "default", labels: label, want: true},
+		{name: "a platform project with the label and the template", project: "deckhouse", labels: label, template: VirtualProjectTemplateName, want: true},
+		{name: "a user project with the label renders from its template", project: "team", labels: label, template: "simple", want: false},
+		{name: "a user project with the label and no template", project: "team", labels: label, want: false},
+		{name: "a platform name without the label or template", project: "default", template: "simple", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Project{
+				ObjectMeta: metav1.ObjectMeta{Name: tt.project, Labels: tt.labels},
+				Spec:       ProjectSpec{ProjectTemplateName: tt.template},
+			}
+			assert.Equal(t, tt.want, p.IsVirtual())
+		})
+	}
+}

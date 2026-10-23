@@ -207,6 +207,10 @@ spec:
       expression: 'has(object.metadata.labels) && "projects.deckhouse.io/project" in object.metadata.labels ? object.metadata.labels["projects.deckhouse.io/project"] : ""'
     - name: oldOwner
       expression: 'oldObject != null && has(oldObject.metadata.labels) && "projects.deckhouse.io/project" in oldObject.metadata.labels ? oldObject.metadata.labels["projects.deckhouse.io/project"] : ""'
+    - name: hasNewOwner
+      expression: 'has(object.metadata.labels) && "projects.deckhouse.io/project" in object.metadata.labels'
+    - name: hasOldOwner
+      expression: 'oldObject != null && has(oldObject.metadata.labels) && "projects.deckhouse.io/project" in oldObject.metadata.labels'
     # The heritage policy above cannot guard the module-owned keys of a Namespace on its own: its
     # binding selects the namespace by the heritage label, and for a Namespace object the API server
     # evaluates that selector against the labels of the object under review -- the NEW object. An
@@ -231,10 +235,11 @@ spec:
     - name: managedKeysUntouched
       expression: 'variables.managedLabels.all(k, (k in variables.oldLabels) == (k in variables.newLabels) && (!(k in variables.oldLabels) || variables.oldLabels[k] == variables.newLabels[k])) && variables.managedAnnotations.all(k, (k in variables.oldAnnotations) == (k in variables.newAnnotations) && (!(k in variables.oldAnnotations) || variables.oldAnnotations[k] == variables.newAnnotations[k]))'
   validations:
-    # Setting the label where there was none, or changing its value, is the controller's alone.
+    # Setting the label where there was none, or changing its value, is the controller's alone, an
+    # empty value included: it names no project, but a selector on the key (Exists) still matches it.
     # Removing it from a namespace the module does not own is not refused: an orphan namespace that
     # never got a project heals that way.
-    - expression: 'variables.newOwner == "" || variables.newOwner == variables.oldOwner'
+    - expression: '!variables.hasNewOwner || (variables.hasOldOwner && variables.newOwner == variables.oldOwner)'
       reason: Forbidden
       messageExpression: '''The projects.deckhouse.io/project label is set by the multitenancy-manager controller when it creates or adopts a namespace; it cannot be set to "'' + variables.newOwner + ''" by hand. Create a Project, or a ProjectNamespace inside one, instead.'''
     # On a namespace the module owned before this request, the keys the module sets stay as they are.

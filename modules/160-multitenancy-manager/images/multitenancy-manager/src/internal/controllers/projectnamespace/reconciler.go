@@ -362,8 +362,8 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// to Privileged, or a feature toggled), because the ProjectNamespace is otherwise only reconciled on
 	// its own spec change or on a change to the project's namespace-name set.
 	enqueueByProjectNamespace := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-		project, ok := obj.GetLabels()[v1alpha3.ResourceLabelProject]
-		if !ok {
+		project := obj.GetLabels()[v1alpha3.ResourceLabelProject]
+		if project == "" {
 			return nil
 		}
 		if name, ok := obj.GetLabels()[v1alpha3.ResourceLabelProjectNamespace]; ok {

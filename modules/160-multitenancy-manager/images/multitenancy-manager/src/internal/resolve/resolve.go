@@ -45,12 +45,11 @@ import (
 )
 
 // ProjectName returns the project a namespace belongs to: the projects.deckhouse.io/project label
-// value, falling back to the namespace name (single-namespace projects).
+// value, or "" for a namespace no project owns. The label is the only mark: the controller stamps it
+// on every namespace it creates or adopts, and an empty value names no project, so a namespace is not
+// counted towards a project merely for sharing its name.
 func ProjectName(ns *corev1.Namespace) string {
-	if p := ns.Labels[naming.ProjectLabel]; p != "" {
-		return p
-	}
-	return ns.Name
+	return ns.Labels[naming.ProjectLabel]
 }
 
 // ApplicableGrants returns every ClusterResourceGrantPolicy that applies to the namespace of the
@@ -73,13 +72,15 @@ func ApplicableGrants(ctx context.Context, cl client.Reader, namespace string) (
 // This is the one place the rule lives: /is-granted, /defaults, the catalog reconciler and the
 // violation recount all come through here, so they cannot disagree about which policies apply.
 func GrantsForNamespace(ctx context.Context, cl client.Reader, ns *corev1.Namespace) ([]*grantsv1alpha2.ClusterResourceGrantPolicy, error) {
-	project := &v1alpha3.Project{}
 	var projectLabels map[string]string
-	switch err := cl.Get(ctx, client.ObjectKey{Name: ProjectName(ns)}, project); {
-	case err == nil:
-		projectLabels = project.Labels
-	case !k8serrors.IsNotFound(err):
-		return nil, fmt.Errorf("get project %s: %w", ProjectName(ns), err)
+	if name := ProjectName(ns); name != "" {
+		project := &v1alpha3.Project{}
+		switch err := cl.Get(ctx, client.ObjectKey{Name: name}, project); {
+		case err == nil:
+			projectLabels = project.Labels
+		case !k8serrors.IsNotFound(err):
+			return nil, fmt.Errorf("get project %s: %w", name, err)
+		}
 	}
 	// A namespace no Project owns yet (adoption pending) has no project labels: only a policy whose
 	// projectSelector accepts an empty label set, or that sets none, can apply to it.

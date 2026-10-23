@@ -334,6 +334,9 @@ func (r *PolicyReconciler) coveredProjects(ctx context.Context, policy *grantsv1
 	for i := range namespaces.Items {
 		ns := &namespaces.Items[i]
 		project := ns.Labels[naming.ProjectLabel]
+		if project == "" {
+			continue
+		}
 		if ns.Name == project {
 			mains[project] = ns
 		}

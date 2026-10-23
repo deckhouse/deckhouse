@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -1072,6 +1073,55 @@ func TestHandle_VirtualTemplateIsReserved(t *testing.T) {
 			assert.True(t, resp.Allowed, name)
 		}
 	})
+}
+
+// The virtual-project label marks the platform's virtual projects. On a project that renders from a
+// template it made everything keyed on IsVirtual skip the project, while its namespace kept the grant
+// policies.
+func TestHandle_VirtualProjectLabelIsReserved(t *testing.T) {
+	ctx := context.Background()
+	project := func(labels map[string]string) *v1alpha3.Project {
+		p := projectWithParameters(nil)
+		p.Labels = labels
+		return p
+	}
+	virtual := map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"}
+
+	t.Run("a user may not create a project with it", func(t *testing.T) {
+		raw, err := json.Marshal(project(virtual))
+		require.NoError(t, err)
+		resp := newValidator(t).Handle(ctx, admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Create,
+			UserInfo:  authnv1.UserInfo{Username: "alice"},
+			Object:    runtime.RawExtension{Raw: raw},
+		}})
+		assert.False(t, resp.Allowed)
+		assert.Contains(t, resp.Result.Message, v1alpha3.ProjectLabelVirtualProject)
+	})
+
+	tests := []struct {
+		name     string
+		user     string
+		old, new map[string]string
+		expected bool
+		warns    bool
+	}{
+		{name: "a user may not add it", user: "alice", old: nil, new: virtual, expected: false},
+		{name: "a project that already carries it keeps it with a warning", user: "alice", old: virtual, new: virtual, expected: true, warns: true},
+		{name: "a user may remove it", user: "alice", old: virtual, new: nil, expected: true},
+		{name: "another value does not make the project virtual", user: "alice", old: nil,
+			new: map[string]string{v1alpha3.ProjectLabelVirtualProject: "false"}, expected: true},
+		{name: "the controller is not checked", user: rolebindingwebhook.ControllerServiceAccount, old: nil, new: virtual, expected: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := newValidator(t).Handle(ctx, updateRequest(t, tt.user, project(tt.old), project(tt.new)))
+			assert.Equal(t, tt.expected, resp.Allowed, "%v", resp.Result)
+			if tt.warns {
+				assert.Contains(t, fmt.Sprint(resp.Warnings), v1alpha3.ProjectLabelVirtualProject)
+			}
+		})
+	}
 }
 
 // TestHandle_ProjectLabelIsTheProjectName: projects.deckhouse.io/project on a Project names that

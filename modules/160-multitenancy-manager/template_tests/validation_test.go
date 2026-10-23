@@ -49,10 +49,12 @@ import (
 const (
 	reservedUsersPolicyName      = "d8-multitenancy-manager-reserved-users"
 	keptObjectsPolicyName        = "d8-multitenancy-manager-kept-objects"
+	namespaceOwnershipPolicyName = "d8-multitenancy-manager-namespace-ownership"
 	manifestsPolicyName          = "d8-multitenancy-manager-manifests"
 	v1alpha1TemplateCreatePolicy = "d8-multitenancy-manager-v1alpha1-template-create"
 
 	controllerServiceAccount = "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
+	deckhouseServiceAccount  = "system:serviceaccount:d8-system:deckhouse"
 	garbageCollector         = "system:serviceaccount:kube-system:generic-garbage-collector"
 	userAuthzController      = "system:serviceaccount:d8-user-authz:controller"
 	projectAdministrator     = "alice@example.com"
@@ -252,6 +254,52 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: kept object
 	})
 })
 
+var _ = Describe("Module :: multitenancy-manager :: helm template :: namespace ownership policy", func() {
+	hec := SetupHelmConfig("")
+
+	BeforeEach(func() {
+		renderPolicies(hec)
+	})
+
+	It("leaves the project label of a namespace to the controller, an empty value included", func() {
+		policy := compileRenderedPolicy(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", namespaceOwnershipPolicyName).ToYaml())
+
+		// A nil label map stands for a namespace without the label, and a nil old map for a create.
+		empty := map[string]string{"projects.deckhouse.io/project": ""}
+		owned := map[string]string{"projects.deckhouse.io/project": "team"}
+		other := map[string]string{"projects.deckhouse.io/project": "other"}
+		none := map[string]string{}
+		cases := []struct {
+			name     string
+			username string
+			old, new map[string]string
+			allowed  bool
+		}{
+			{name: "a user creates a namespace without the label", username: projectAdministrator, new: none, allowed: true},
+			{name: "a user creates a namespace with the label", username: projectAdministrator, new: owned},
+			{name: "a user creates a namespace with an empty label", username: projectAdministrator, new: empty},
+			{name: "a user adds an empty label", username: projectAdministrator, old: none, new: empty},
+			{name: "a user keeps an empty label", username: projectAdministrator, old: empty, new: empty, allowed: true},
+			{name: "a user empties the label", username: projectAdministrator, old: owned, new: empty},
+			{name: "a user fills an empty label", username: projectAdministrator, old: empty, new: owned},
+			{name: "a user changes the label", username: projectAdministrator, old: owned, new: other},
+			{name: "a user removes the label", username: projectAdministrator, old: owned, new: none, allowed: true},
+			{name: "a user removes an empty label", username: projectAdministrator, old: empty, new: none, allowed: true},
+			{name: "the controller creates a namespace with the label", username: controllerServiceAccount, new: owned, allowed: true},
+			{name: "the controller changes the label", username: controllerServiceAccount, old: owned, new: other, allowed: true},
+			{name: "deckhouse creates a namespace with an empty label", username: deckhouseServiceAccount, new: empty, allowed: true},
+		}
+		for _, tc := range cases {
+			allowed, message, err := policy.admit(namespaceWrite(tc.username, tc.old, tc.new), nil)
+			Expect(err).ToNot(HaveOccurred(), tc.name)
+			Expect(allowed).To(Equal(tc.allowed), tc.name)
+			if !allowed {
+				Expect(message).To(HavePrefix("The projects.deckhouse.io/project label is set by the multitenancy-manager controller"), tc.name)
+			}
+		}
+	})
+})
+
 var _ = Describe("Module :: multitenancy-manager :: helm template :: manifests policy", func() {
 	hec := SetupHelmConfig("")
 
@@ -401,6 +449,29 @@ func keptObjectUpdate(username string) admission.Attributes {
 		return object
 	}
 	return admission.NewAttributesRecord(kept(), kept(), gvk, "proj", "deny-all", gvr, "", admission.Update, nil, false,
+		&user.DefaultInfo{Name: username, Groups: groupsOf(username)})
+}
+
+// namespaceWrite is a write of the team namespace with the labels: a create when oldLabels is nil, an
+// update from them otherwise.
+func namespaceWrite(username string, oldLabels, newLabels map[string]string) admission.Attributes {
+	gvk := schema.GroupVersionKind{Version: "v1", Kind: "Namespace"}
+	gvr := schema.GroupVersionResource{Version: "v1", Resource: "namespaces"}
+	namespace := func(labels map[string]string) *unstructured.Unstructured {
+		object := new(unstructured.Unstructured)
+		object.SetGroupVersionKind(gvk)
+		object.SetName("team")
+		object.SetLabels(labels)
+		return object
+	}
+	// The old object stays a nil interface on create: a typed nil pointer counts as present.
+	operation := admission.Create
+	var oldObject runtime.Object
+	if oldLabels != nil {
+		operation = admission.Update
+		oldObject = namespace(oldLabels)
+	}
+	return admission.NewAttributesRecord(namespace(newLabels), oldObject, gvk, "", "team", gvr, "", operation, nil, false,
 		&user.DefaultInfo{Name: username, Groups: groupsOf(username)})
 }
 
