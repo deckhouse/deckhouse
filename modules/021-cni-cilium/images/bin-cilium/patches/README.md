@@ -12,6 +12,7 @@ shipped by upstream Cilium v1.17.17 to remediate known CVEs, e.g.:
 - `golang.org/x/net` -> `v0.60.0` (CVE-2026-78669, CVE-2026-78663, CVE-2026-97032,
   CVE-2026-78659, CVE-2026-78660); pulls `golang.org/x/crypto` `v0.57.0`,
   `golang.org/x/text` `v0.42.0`, `golang.org/x/sys` `v0.48.0` and other `golang.org/x/*`
+- `github.com/klauspost/compress` -> `v1.18.7` (CVE-2026-63209)
 
 Regenerate by cloning `cilium v1.17.17`, applying this patch, bumping the
 required module(s), then running `go mod tidy && go mod vendor && go mod verify`
