@@ -277,10 +277,52 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(mesh.Field("spec.tracing").Exists()).To(BeFalse())
 		})
 
+		It("neither registers nor references deckhouse-tracing when tracing is disabled but a collector is configured", func() {
+			f.ValuesSet("istio.telemetryAPI.enabled", true)
+			f.ValuesSet("istio.tracing.enabled", false)
+			f.ValuesSet("istio.tracing.collector.zipkin.address", "jaeger-collector.tracing.svc.cluster.local:9411")
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25"]`)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(mesh.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+			Expect(mesh.Field("spec.tracing").Exists()).To(BeFalse())
+
+			providers := f.KubernetesResource("Istio", "d8-istio", "v1x25").Field("spec.values.meshConfig.extensionProviders")
+			Expect(providers.Get("#.name").String()).To(Equal(`["d8-main"]`))
+		})
+
+		It("uses legacy tracing and does not reference deckhouse-tracing on an operator-free control plane without Telemetry API mode", func() {
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.27":
+  revision: "v1x27"
+  fullVersion: "1.27.9"
+  imageSuffix: "V1x27x9"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.27"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+			f.ValuesSet("istio.tracing.enabled", true)
+			f.ValuesSet("istio.tracing.collector.zipkin.address", "jaeger-collector.tracing.svc.cluster.local:9411")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(mesh.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+			Expect(mesh.Field("spec.tracing").Exists()).To(BeFalse())
+
+			meshConfig := f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x27").Field("data.mesh").String()
+			Expect(meshConfig).To(ContainSubstring(`address: "jaeger-collector.tracing.svc.cluster.local:9411"`))
+			Expect(meshConfig).NotTo(ContainSubstring("deckhouse-tracing"))
+		})
+
 		It("adds tracing to d8-main Telemetry and Zipkin extension provider when tracing uses collector.zipkin", func() {
 			f.ValuesSet("istio.telemetryAPI.enabled", true)
 			f.ValuesSet("istio.tracing.enabled", true)
-			f.ValuesSet("istio.tracing.collector.zipkin.address", "jaeger-collector.tracing.svc:9411")
+			f.ValuesSet("istio.tracing.collector.zipkin.address", "jaeger-collector.tracing.svc.cluster.local:9411")
 			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25","1.27"]`)
 			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25","1.27"]`)
 			f.HelmRender()
@@ -296,7 +338,9 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			foundZipkinEP := false
 			for _, ep := range istioV25.Field("spec.values.meshConfig.extensionProviders").Array() {
 				if ep.Get("name").String() == "deckhouse-tracing" {
-					Expect(ep.Get("zipkin.address").String()).To(Equal("jaeger-collector.tracing.svc:9411"))
+					Expect(ep.Get("zipkin.service").String()).To(Equal("jaeger-collector.tracing.svc.cluster.local"))
+					Expect(ep.Get("zipkin.port").Int()).To(Equal(int64(9411)))
+					Expect(ep.Get("zipkin.address").Exists()).To(BeFalse())
 					foundZipkinEP = true
 				}
 			}
@@ -860,6 +904,71 @@ podAntiAffinity:
 			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.service").String()).To(Equal(`authservice.d8-istio.svc.cluster.local`))
 			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.port").Int()).To(Equal(int64(10003)))
 
+		})
+	})
+
+	Context("There are user authorization and tracing extension providers next to the module tracing provider", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25","1.27"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25","1.27"]`)
+			f.ValuesSet("istio.telemetryAPI.enabled", true)
+			f.ValuesSet("istio.tracing.enabled", true)
+			f.ValuesSet("istio.tracing.collector.zipkin.address", "jaeger-collector.tracing.svc.cluster.local:9411")
+			f.ValuesSetFromYaml("istio.dataPlane.extensionProviders", `
+- name: oauth2-proxy
+  envoyExtAuthzHttp:
+    service: oauth2-proxy.oauth2-proxy.svc.cluster.local
+    port: 4180
+    includeRequestHeadersInCheck: ["authorization", "cookie"]
+    headersToUpstreamOnAllow: ["authorization"]
+- name: otel-http
+  opentelemetry:
+    service: opentelemetry-collector.observability.svc.cluster.local
+    port: 4318
+    http:
+      path: /v1/traces
+- name: zipkin
+  zipkin:
+    service: zipkin.tracing.svc.cluster.local
+    port: 9411
+`)
+			f.HelmRender()
+		})
+
+		It("renders the user providers after the module providers", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			providers := f.KubernetesResource("Istio", "d8-istio", "v1x25").Field("spec.values.meshConfig.extensionProviders")
+
+			Expect(providers.Get("#.name").String()).To(Equal(`["d8-main","deckhouse-tracing","oauth2-proxy","otel-http","zipkin"]`))
+			Expect(providers.Get("1.zipkin.service").String()).To(Equal("jaeger-collector.tracing.svc.cluster.local"))
+			Expect(providers.Get("1.zipkin.port").Int()).To(Equal(int64(9411)))
+			Expect(providers.Get("2.envoyExtAuthzHttp.port").Int()).To(Equal(int64(4180)))
+			Expect(providers.Get("2.envoyExtAuthzHttp.headersToUpstreamOnAllow").String()).To(Equal(`["authorization"]`))
+			Expect(providers.Get("3.opentelemetry.http.path").String()).To(Equal("/v1/traces"))
+			Expect(providers.Get("4.zipkin.service").String()).To(Equal("zipkin.tracing.svc.cluster.local"))
+
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(mesh.Field("spec.tracing.0.providers.#.name").String()).To(Equal(`["deckhouse-tracing"]`))
+		})
+
+		It("renders the same providers into the mesh config of an operator-free control plane", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			meshJSON, err := yaml.YAMLToJSON([]byte(f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x27").Field("data.mesh").String()))
+			Expect(err).ShouldNot(HaveOccurred())
+			providers := gjson.GetBytes(meshJSON, "extensionProviders")
+
+			Expect(providers.Get("#.name").String()).To(Equal(`["d8-main","deckhouse-tracing","oauth2-proxy","otel-http","zipkin"]`))
+			Expect(providers.Get("1.zipkin.service").String()).To(Equal("jaeger-collector.tracing.svc.cluster.local"))
+			Expect(providers.Get("1.zipkin.port").Int()).To(Equal(int64(9411)))
+			Expect(providers.Get("2.envoyExtAuthzHttp.port").Int()).To(Equal(int64(4180)))
+			Expect(providers.Get("2.envoyExtAuthzHttp.headersToUpstreamOnAllow").String()).To(Equal(`["authorization"]`))
+			Expect(providers.Get("3.opentelemetry.http.path").String()).To(Equal("/v1/traces"))
+			Expect(providers.Get("4.zipkin.service").String()).To(Equal("zipkin.tracing.svc.cluster.local"))
 		})
 	})
 

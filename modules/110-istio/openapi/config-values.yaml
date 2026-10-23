@@ -429,7 +429,13 @@ properties:
             properties:
               service:
                 type: string
-                description: Collector hostname reachable from the mesh (for example a Kubernetes Service DNS name).
+                description: |
+                  OpenTelemetry collector service. The format is `[<namespace>/]<hostname>`.
+
+                  `<hostname>` must be the full hostname of a Service, including the cluster domain (for example, `opentelemetry-collector.observability.svc.cluster.local`), or a ServiceEntry host. Short names and IP addresses do not work. Specify `<namespace>` only if this hostname exists in several namespaces.
+
+                  If Istio cannot find the service, spans are not exported.
+                pattern: '^([a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?/)?([a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?$'
                 example: "opentelemetry-collector.observability.svc.cluster.local"
               port:
                 type: integer
@@ -448,6 +454,7 @@ properties:
                   timeout:
                     type: string
                     description: HTTP export timeout (Istio duration string).
+                    pattern: '^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$'
                     example: "10s"
           zipkin:
             type: object
@@ -459,9 +466,12 @@ properties:
             properties:
               address:
                 type: string
-                description: Network address of zipkin collector in `<host>:<port>` format (FQDN/IP and port allowed by the regex).
-                pattern: '[0-9a-zA-Z\.-]+'
-                example: "zipkin.myjaeger.svc:9411"
+                description: |
+                  Network address of the Zipkin collector in `<host>:<port>` format.
+
+                  If [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled) is `true`, `<host>` must be the full hostname of a service known to Istio, including the cluster domain, for example `zipkin.myjaeger.svc.cluster.local` for a Kubernetes Service. Short names (such as `zipkin.myjaeger.svc`) and IP addresses do not work in this mode.
+                pattern: '^[0-9a-zA-Z.-]+:([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$'
+                example: "zipkin.myjaeger.svc.cluster.local:9411"
       kiali:
         type: object
         description: |
@@ -1077,22 +1087,49 @@ properties:
         description: |
           Additional Istio extension providers to register in the mesh configuration.
 
-          The provider name `d8-main` is reserved by Deckhouse.
+          In each provider, set exactly one of `envoyExtAuthzGrpc`, `envoyExtAuthzHttp`, `opentelemetry` or `zipkin`.
+
+          The module does not enable the registered providers. Reference them by name in your AuthorizationPolicy (`action: CUSTOM`) or Telemetry. Mesh-wide tracing configured in [`tracing`](#parameters-tracing) is not affected.
+
+          The `d8-main` and `deckhouse-tracing` provider names are reserved for the module. The `envoy`, `prometheus` and `stackdriver` names are reserved for the providers built into Istio, because a provider with such a name would replace the built-in one.
         default: []
         x-examples:
         - - name: authservice-grpc
             envoyExtAuthzGrpc:
               service: authservice.example.svc.cluster.local
               port: 10003
+        - - name: oauth2-proxy
+            envoyExtAuthzHttp:
+              service: oauth2-proxy.example.svc.cluster.local
+              port: 4180
+              includeRequestHeadersInCheck: ["authorization", "cookie"]
+              headersToUpstreamOnAllow: ["authorization", "x-auth-request-user"]
+              headersToDownstreamOnDeny: ["content-type", "set-cookie"]
+          - name: otel-tracing
+            opentelemetry:
+              service: opentelemetry-collector.observability.svc.cluster.local
+              port: 4317
+          - name: zipkin-tracing
+            zipkin:
+              service: zipkin.example.svc.cluster.local
+              port: 9411
         items:
           type: object
           additionalProperties: false
-          required: ["name", "envoyExtAuthzGrpc"]
+          description: Extension provider settings.
+          required: ["name"]
+          oneOf:
+          - required: ["envoyExtAuthzGrpc"]
+          - required: ["envoyExtAuthzHttp"]
+          - required: ["opentelemetry"]
+          - required: ["zipkin"]
           properties:
             name:
               type: string
               description: Unique extension provider name.
               pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+              not:
+                pattern: '^(d8-main|deckhouse-tracing|envoy|prometheus|stackdriver)$'
             envoyExtAuthzGrpc:
               type: object
               additionalProperties: false
@@ -1101,7 +1138,13 @@ properties:
               properties:
                 service:
                   type: string
-                  description: Service that implements Envoy ext_authz gRPC API. The format is `[<namespace>/]<hostname>`.
+                  description: |
+                    Service that implements Envoy ext_authz gRPC API. The format is `[<namespace>/]<hostname>`.
+
+                    `<hostname>` must be the full hostname of a Service, including the cluster domain (for example, `authservice.example.svc.cluster.local`), or a ServiceEntry host. Short names and IP addresses do not work. Specify `<namespace>` only if this hostname exists in several namespaces.
+
+                    If Istio cannot find the service, the requests that match AuthorizationPolicy with `action: CUSTOM` referencing this provider are denied.
+                  pattern: '^([a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?/)?([a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?$'
                 port:
                   type: integer
                   description: Service port.
@@ -1113,12 +1156,263 @@ properties:
                 timeout:
                   type: string
                   description: Maximum duration the proxy waits for the authorization service response.
+                  pattern: '^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$'
+                  example: "5s"
                 statusOnError:
                   type: string
-                  description: HTTP status returned to the client when communication with the authorization service fails.
+                  description: |
+                    HTTP status returned to the client when communication with the authorization service fails.
+
+                    Only the status codes that Envoy supports are allowed, for example `403` or `503`.
+                  # The codes of Envoy's type.v3.StatusCode enum. Istio only warns about other codes,
+                  # then denies the requests matched by every CUSTOM policy that uses the provider.
+                  pattern: '^(100|20[0-8]|226|30[0-578]|4(0[0-9]|1[0-7]|2[1-4689]|31)|5(0[0-8]|1[01]))$'
+                  example: "503"
                 clearRouteCache:
                   type: boolean
                   description: Clear route cache to let the external authorization service affect routing decisions.
+            envoyExtAuthzHttp:
+              type: object
+              additionalProperties: false
+              description: External authorization provider that implements Envoy ext_authz HTTP API.
+              required: ["service", "port"]
+              properties:
+                service:
+                  type: string
+                  description: |
+                    Service that implements Envoy ext_authz HTTP API. The format is `[<namespace>/]<hostname>`.
+
+                    `<hostname>` must be the full hostname of a Service, including the cluster domain (for example, `oauth2-proxy.example.svc.cluster.local`), or a ServiceEntry host. Short names and IP addresses do not work. Specify `<namespace>` only if this hostname exists in several namespaces.
+
+                    If Istio cannot find the service, the requests that match AuthorizationPolicy with `action: CUSTOM` referencing this provider are denied.
+                  pattern: '^([a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?/)?([a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?$'
+                port:
+                  type: integer
+                  description: Service port.
+                  minimum: 1
+                  maximum: 65535
+                pathPrefix:
+                  type: string
+                  description: |
+                    Prefix added to the path of the original request before sending it to the authorization service.
+
+                    For example, with `pathPrefix: /check` a request to `/foo` is checked as `/check/foo`.
+                  pattern: '^/'
+                  example: "/check"
+                failOpen:
+                  type: boolean
+                  description: Allow requests when the authorization service is unavailable or returns a 5xx error.
+                timeout:
+                  type: string
+                  description: Maximum duration the proxy waits for the authorization service response.
+                  pattern: '^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$'
+                  example: "5s"
+                statusOnError:
+                  type: string
+                  description: |
+                    HTTP status returned to the client when communication with the authorization service fails.
+
+                    Only the status codes that Envoy supports are allowed, for example `403` or `503`.
+                  # The codes of Envoy's type.v3.StatusCode enum. Istio only warns about other codes,
+                  # then denies the requests matched by every CUSTOM policy that uses the provider.
+                  pattern: '^(100|20[0-8]|226|30[0-578]|4(0[0-9]|1[0-7]|2[1-4689]|31)|5(0[0-8]|1[01]))$'
+                  example: "503"
+                clearRouteCache:
+                  type: boolean
+                  description: Clear route cache to let the external authorization service affect routing decisions.
+                includeRequestHeadersInCheck:
+                  type: array
+                  description: |
+                    Headers of the original request to send to the authorization service.
+
+                    The `Host`, `Method`, `Path` and `Content-Length` headers are always sent.
+
+                    Exact, prefix (`abc*`) and suffix (`*abc`) matches are supported.
+                  items:
+                    type: string
+                  example: ["authorization", "cookie"]
+                includeAdditionalHeadersInCheck:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    Additional headers with fixed values to send to the authorization service.
+
+                    A header with the same name in the original request is overridden.
+                  example:
+                    x-ext-authz-source: istio
+                headersToUpstreamOnAllow:
+                  type: array
+                  description: |
+                    Headers from the authorization service response to add or override in the request sent upstream when the request is allowed.
+
+                    Exact, prefix (`abc*`) and suffix (`*abc`) matches are supported.
+                  items:
+                    type: string
+                  example: ["authorization", "x-auth-request-user"]
+                headersToDownstreamOnDeny:
+                  type: array
+                  description: |
+                    Headers from the authorization service response to send back to the client when the request is denied.
+
+                    Exact, prefix (`abc*`) and suffix (`*abc`) matches are supported.
+                  items:
+                    type: string
+                  example: ["content-type", "set-cookie"]
+                headersToDownstreamOnAllow:
+                  type: array
+                  description: |
+                    Headers from the authorization service response to add or override in the response sent back to the client when the request is allowed.
+
+                    Exact, prefix (`abc*`) and suffix (`*abc`) matches are supported.
+                  items:
+                    type: string
+                  example: ["set-cookie"]
+            opentelemetry:
+              type: object
+              additionalProperties: false
+              description: |
+                Tracing provider that exports spans with OpenTelemetry Protocol (OTLP).
+
+                Spans are exported over gRPC unless `http` is set.
+              required: ["service", "port"]
+              not:
+                required: ["http", "grpc"]
+              properties:
+                service:
+                  type: string
+                  description: |
+                    OpenTelemetry collector service. The format is `[<namespace>/]<hostname>`.
+
+                    `<hostname>` must be the full hostname of a Service, including the cluster domain (for example, `opentelemetry-collector.observability.svc.cluster.local`), or a ServiceEntry host. Short names and IP addresses do not work. Specify `<namespace>` only if this hostname exists in several namespaces.
+
+                    If Istio cannot find the service, spans are not exported.
+                  pattern: '^([a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?/)?([a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?$'
+                  example: "opentelemetry-collector.observability.svc.cluster.local"
+                port:
+                  type: integer
+                  description: OpenTelemetry collector port.
+                  minimum: 1
+                  maximum: 65535
+                  example: 4317
+                maxTagLength:
+                  type: integer
+                  description: Maximum length of the request path to extract and include in the `http.url` span tag. If not set, the Envoy default (`256`) is used.
+                  minimum: 1
+                http:
+                  type: object
+                  additionalProperties: false
+                  description: |
+                    Settings for exporting spans with OTLP over HTTP.
+
+                    Cannot be used together with `grpc`.
+                  required: ["path"]
+                  properties:
+                    path:
+                      type: string
+                      description: Path of the OTLP traces endpoint.
+                      example: "/v1/traces"
+                    timeout:
+                      type: string
+                      description: Maximum duration the proxy waits for the collector response.
+                      pattern: '^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$'
+                      example: "10s"
+                    headers:
+                      type: array
+                      description: Additional headers to send with each export request.
+                      items:
+                        type: object
+                        additionalProperties: false
+                        required: ["name", "value"]
+                        properties:
+                          name:
+                            type: string
+                          value:
+                            type: string
+                      x-examples:
+                      - - name: x-scope-orgid
+                          value: tenant-a
+                grpc:
+                  type: object
+                  additionalProperties: false
+                  description: |
+                    Settings for exporting spans with OTLP over gRPC.
+
+                    Cannot be used together with `http`.
+                  properties:
+                    timeout:
+                      type: string
+                      description: Maximum duration the proxy waits for the collector response.
+                      pattern: '^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$'
+                      example: "10s"
+                    initialMetadata:
+                      type: array
+                      description: Additional metadata to send with each gRPC stream.
+                      items:
+                        type: object
+                        additionalProperties: false
+                        required: ["name", "value"]
+                        properties:
+                          name:
+                            type: string
+                          value:
+                            type: string
+                      x-examples:
+                      - - name: x-scope-orgid
+                          value: tenant-a
+                resourceDetectors:
+                  type: object
+                  additionalProperties: false
+                  description: OpenTelemetry resource detectors that add attributes to the exported spans.
+                  properties:
+                    environment:
+                      type: object
+                      additionalProperties: false
+                      description: |
+                        Read resource attributes from the `OTEL_RESOURCE_ATTRIBUTES` environment variable of the proxy.
+
+                        Set to `{}` to enable.
+                    dynatrace:
+                      type: object
+                      additionalProperties: false
+                      description: |
+                        Read resource attributes from the files written by Dynatrace OneAgent.
+
+                        Set to `{}` to enable.
+            zipkin:
+              type: object
+              additionalProperties: false
+              description: Tracing provider that exports spans with Zipkin API.
+              required: ["service", "port"]
+              properties:
+                service:
+                  type: string
+                  description: |
+                    Zipkin collector service. The format is `[<namespace>/]<hostname>`.
+
+                    `<hostname>` must be the full hostname of a Service, including the cluster domain (for example, `zipkin.example.svc.cluster.local`), or a ServiceEntry host. Short names and IP addresses do not work. Specify `<namespace>` only if this hostname exists in several namespaces.
+
+                    If Istio cannot find the service, spans are not exported.
+                  pattern: '^([a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?/)?([a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([-a-zA-Z0-9]{0,61}[a-zA-Z0-9])?$'
+                  example: "zipkin.example.svc.cluster.local"
+                port:
+                  type: integer
+                  description: Zipkin collector port.
+                  minimum: 1
+                  maximum: 65535
+                  example: 9411
+                maxTagLength:
+                  type: integer
+                  description: Maximum length of the request path to extract and include in the `http.url` span tag. If not set, the Envoy default (`256`) is used.
+                  minimum: 1
+                enable64bitTraceId:
+                  type: boolean
+                  description: Use 64-bit trace IDs instead of 128-bit ones.
+                path:
+                  type: string
+                  description: Path of the Zipkin spans endpoint. If not set, `/api/v2/spans` is used.
+                  pattern: '^/'
+                  example: "/api/v2/spans"
       trafficRedirectionSetupMode:
         type: string
         description: |

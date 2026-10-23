@@ -956,10 +956,10 @@ spec:
 
 [`tracing.collector`](configuration.html#parameters-tracing-collector) — единая точка настройки mesh-wide экспорта (Zipkin или OpenTelemetry).
 
-- При `telemetryAPI.enabled: false` и [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` — только прежний режим: `meshConfig.defaultConfig.tracing.zipkin` из [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (`host:port`, порт Jaeger Zipkin `9411`). Экспорт по OTLP (OpenTelemetry Protocol) требует режима Telemetry API.
-- При `telemetryAPI.enabled: true` и `tracing.enabled: true` модуль создаёт `deckhouse-tracing`, если заданы [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) `service` и `port`, или при [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (при одновременной настройке приоритет у OpenTelemetry). `defaultConfig.tracing` не заполняется; в `Telemetry` `d8-main` добавляется `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, по умолчанию `1.0`).
+- При `telemetryAPI.enabled: false` и [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true` — только прежний режим: `meshConfig.defaultConfig.tracing.zipkin` из [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector-zipkin-address) (`host:port`, порт Jaeger Zipkin `9411`). Экспорт по OTLP (OpenTelemetry Protocol) требует режима Telemetry API.
+- При `telemetryAPI.enabled: true` и `tracing.enabled: true` модуль создаёт `deckhouse-tracing`, если заданы [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) `service` и `port`, или при [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector-zipkin-address) (при одновременной настройке приоритет у OpenTelemetry). `defaultConfig.tracing` не заполняется; в `Telemetry` `d8-main` добавляется `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, по умолчанию `1.0`).
 
-Нестандартные провайдеры — через `Telemetry` с `selector` в неймспейсе приложения, не второй CR без селектора в `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). Подробнее о [настройке трассировки через Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/) — в документации Istio.
+Чтобы отправлять данные трассировки части рабочих нагрузок в другой бэкенд OpenTelemetry или Zipkin, зарегистрируйте его в [`dataPlane.extensionProviders`](configuration.html#parameters-dataplane-extensionproviders) и укажите его в Telemetry с `selector` в неймспейсе приложения. Не создавайте в `d8-istio` второй Telemetry без селектора ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). Прокси отправляет спаны только одному провайдеру трассировки, поэтому данные трассировки таких рабочих нагрузок попадают в этот бэкенд вместо `deckhouse-tracing`. Другие экспортеры, например SkyWalking, зарегистрировать нельзя. Подробнее о [настройке трассировки через Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/) — в документации Istio.
 
 #### Пример — Telemetry API + Jaeger через Zipkin
 
@@ -1014,11 +1014,32 @@ spec:
 
 Для HTTP OTLP задайте `collector.opentelemetry.http.path` (и при необходимости `timeout`) в параметре [`tracing.collector.opentelemetry.http`](configuration.html#parameters-tracing-collector-opentelemetry).
 
-Точечные настройки по workload — `Telemetry` с `selector` в неймспейсе приложения, ссылаясь на `deckhouse-tracing` (или на другой провайдер, который вы определите сами вне `d8-istio`). В `d8-istio` не создавайте второй `Telemetry` без селектора ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)).
+Для точечных настроек по рабочим нагрузкам создайте Telemetry с `selector` в неймспейсе приложения и укажите в нём `deckhouse-tracing` или провайдер, зарегистрированный в [`dataPlane.extensionProviders`](configuration.html#parameters-dataplane-extensionproviders).
 
 #### Пример — трассировка только для части приложений
 
 Используйте `selector` (или `targetRef`), чтобы Telemetry применялась только к подходящим подам — пример ниже безопасен с точки зрения IST0160. В одном неймспейсе без селектора может существовать не больше одного объекта `Telemetry`; не создавайте несколько манифестов без селектора в одном неймспейсе.
+
+Зарегистрируйте провайдер в [`dataPlane.extensionProviders`](configuration.html#parameters-dataplane-extensionproviders):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 1
+  enabled: true
+  settings:
+    dataPlane:
+      extensionProviders:
+      - name: jaeger-zipkin
+        zipkin:
+          service: jaeger-collector.observability.svc.cluster.local
+          port: 9411
+```
+
+Укажите его в Telemetry с `selector`:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1

@@ -149,10 +149,10 @@ properties:
       Параметры трассировки.
 
       Если включён модуль [`ingress-nginx`](/modules/ingress-nginx/) (в `global.enabledModules` присутствует `ingress-nginx`), модуль создаёт ресурс `Telemetry` `ingress-nginx-disable-span-reporting` в неймспейсе `d8-ingress-nginx`.
-      Поды встроенного Ingress-контроллера с сайдкаром Istio перестают отправлять span'ы в бэкенд трассировки — это снижает шум, не нарушая маршрутизацию в меше.
+      Поды встроенного Ingress-контроллера с сайдкаром Istio перестают отправлять спаны в бэкенд трассировки — это снижает шум, не нарушая маршрутизацию в меше.
     properties:
       enabled:
-        description: Включить отправку трейсов в коллектор и интегрировать их отображение в Kiali.
+        description: Включить отправку данных трассировки в коллектор и интегрировать их отображение в Kiali.
       sampling:
         description: |
           Параметр sampling используется для определения процента запросов, которые передаются в систему трассировки.
@@ -168,7 +168,7 @@ properties:
           ```
       collector:
         description: |
-          Единая конфигурация коллектора трассировок. Используется и для прежнего режима (`meshConfig.defaultConfig.tracing`), и для Telemetry API (провайдер в `extensionProviders` и `spec.tracing` в CR `Telemetry` `d8-main` при [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled): `deckhouse-tracing`).
+          Единая конфигурация коллектора данных трассировки. Используется и для прежнего режима (`meshConfig.defaultConfig.tracing`), и для Telemetry API (провайдер в `extensionProviders` и `spec.tracing` в CR `Telemetry` `d8-main` при [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled): `deckhouse-tracing`).
 
           В прежнем режиме используется только Zipkin. Если при включённом Telemetry API заданы и OpenTelemetry, и Zipkin, приоритет у OpenTelemetry.
         properties:
@@ -179,7 +179,12 @@ properties:
               Нужны `service` и `port` (по умолчанию gRPC OTLP; для HTTP укажите `http.path`). Не применяется при `telemetryAPI.enabled: false`.
             properties:
               service:
-                description: Имя хоста коллектора, доступного из меша (например DNS Service в Kubernetes).
+                description: |
+                  Сервис коллектора OpenTelemetry. Формат значения — `[<namespace>/]<hostname>`.
+
+                  В `<hostname>` укажите полное имя Service, включая домен кластера (например, `opentelemetry-collector.observability.svc.cluster.local`), или хост из ServiceEntry. Короткие имена и IP-адреса не работают. `<namespace>` указывайте, только если такой хост есть в нескольких неймспейсах.
+
+                  Если Istio не найдёт сервис, спаны не будут экспортироваться.
               port:
                 description: Порт коллектора (например `4317` для gRPC OTLP).
               http:
@@ -196,10 +201,13 @@ properties:
               При включённой трассировке: в legacy — обязателен `address`; в Telemetry API — если не настроен [`collector.opentelemetry`](#parameters-tracing-collector-opentelemetry).
             properties:
               address:
-                description: Сетевой адрес zipkin-коллектора в формате `<хост>:<порт>` (FQDN или IP согласно шаблону в схеме).
+                description: |
+                  Сетевой адрес коллектора Zipkin в формате `<хост>:<порт>`.
+
+                  Если [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled) равен `true`, в качестве `<хост>` укажите полное имя сервиса, известного Istio, включая домен кластера, например `zipkin.myjaeger.svc.cluster.local` для Kubernetes Service. Короткие имена (например, `zipkin.myjaeger.svc`) и IP-адреса в этом режиме не работают.
       kiali:
         description: |
-          Настройки отображения span'ов в Kiali.
+          Настройки отображения спанов в Kiali.
 
           Если настройки не предоставлены, Kiali не будет отображать трассировку.
         properties:
@@ -212,7 +220,7 @@ properties:
             description: |
               Адрес GRPC-интерфейса Jaeger'а в формате `<proto>://<fqdn>[:port]/`, доступный сервису Kiali изнутри кластера для служебных запросов.
 
-              Если не указать, то Kiali не будет интерпретировать трейсы самостоятельно и ограничится генерацией ссылок на `jaegerURLForUsers`.
+              Если не указать, Kiali не будет самостоятельно обрабатывать данные трассировки и ограничится генерацией ссылок на `jaegerURLForUsers`.
   telemetryAPI:
     description: |
       Интеграция с [Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) Istio (ресурсы `telemetry.istio.io`).
@@ -487,18 +495,28 @@ properties:
             description: JSON формат access-логов sidecar-контейнера. Операторы шаблона описаны в [документации envoy](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
       extensionProviders:
         description: |
-          Дополнительные Istio extension providers, которые будут зарегистрированы в mesh configuration.
+          Дополнительные провайдеры расширений Istio (extension providers), которые регистрируются в конфигурации меша.
 
-          Имя provider'а `d8-main` зарезервировано Deckhouse.
+          В каждом провайдере задайте ровно один из параметров: `envoyExtAuthzGrpc`, `envoyExtAuthzHttp`, `opentelemetry` или `zipkin`.
+
+          Модуль не включает зарегистрированные провайдеры. Указывайте их по имени в своих AuthorizationPolicy (`action: CUSTOM`) или Telemetry. На трассировку всего меша, настроенную в [`tracing`](#parameters-tracing), они не влияют.
+
+          Имена провайдеров `d8-main` и `deckhouse-tracing` зарезервированы за модулем. Имена `envoy`, `prometheus` и `stackdriver` зарезервированы за встроенными провайдерами Istio, так как провайдер с таким именем заменил бы встроенный.
         items:
+          description: Настройки провайдера расширения.
           properties:
             name:
-              description: Уникальное имя extension provider'а.
+              description: Уникальное имя провайдера.
             envoyExtAuthzGrpc:
               description: Внешний сервис авторизации, который реализует Envoy ext_authz gRPC API.
               properties:
                 service:
-                  description: Сервис, который реализует Envoy ext_authz gRPC API. Формат значения — `[<namespace>/]<hostname>`.
+                  description: |
+                    Сервис, который реализует Envoy ext_authz gRPC API. Формат значения — `[<namespace>/]<hostname>`.
+
+                    В `<hostname>` укажите полное имя Service, включая домен кластера (например, `authservice.example.svc.cluster.local`), или хост из ServiceEntry. Короткие имена и IP-адреса не работают. `<namespace>` указывайте, только если такой хост есть в нескольких неймспейсах.
+
+                    Если Istio не найдёт сервис, запросы, которые попадают под AuthorizationPolicy с `action: CUSTOM` и этим провайдером, будут отклонены.
                 port:
                   description: Порт сервиса.
                 failOpen:
@@ -506,9 +524,137 @@ properties:
                 timeout:
                   description: Максимальное время ожидания ответа от сервиса авторизации.
                 statusOnError:
-                  description: HTTP-статус, который будет возвращён клиенту при ошибке взаимодействия с сервисом авторизации.
+                  description: |
+                    HTTP-статус, который будет возвращён клиенту при ошибке взаимодействия с сервисом авторизации.
+
+                    Допустимы только коды статусов, которые поддерживает Envoy, например `403` или `503`.
                 clearRouteCache:
-                  description: Очищать route cache, чтобы внешний сервис авторизации мог влиять на маршрутизацию.
+                  description: Очищать кеш маршрутов, чтобы внешний сервис авторизации мог влиять на маршрутизацию.
+            envoyExtAuthzHttp:
+              description: Внешний сервис авторизации, который реализует Envoy ext_authz HTTP API.
+              properties:
+                service:
+                  description: |
+                    Сервис, который реализует Envoy ext_authz HTTP API. Формат значения — `[<namespace>/]<hostname>`.
+
+                    В `<hostname>` укажите полное имя Service, включая домен кластера (например, `oauth2-proxy.example.svc.cluster.local`), или хост из ServiceEntry. Короткие имена и IP-адреса не работают. `<namespace>` указывайте, только если такой хост есть в нескольких неймспейсах.
+
+                    Если Istio не найдёт сервис, запросы, которые попадают под AuthorizationPolicy с `action: CUSTOM` и этим провайдером, будут отклонены.
+                port:
+                  description: Порт сервиса.
+                pathPrefix:
+                  description: |
+                    Префикс, который добавляется к пути исходного запроса перед отправкой в сервис авторизации.
+
+                    Например, при `pathPrefix: /check` запрос к `/foo` проверяется как `/check/foo`.
+                failOpen:
+                  description: Разрешать запросы, если сервис авторизации недоступен или вернул ошибку 5xx.
+                timeout:
+                  description: Максимальное время ожидания ответа от сервиса авторизации.
+                statusOnError:
+                  description: |
+                    HTTP-статус, который будет возвращён клиенту при ошибке взаимодействия с сервисом авторизации.
+
+                    Допустимы только коды статусов, которые поддерживает Envoy, например `403` или `503`.
+                clearRouteCache:
+                  description: Очищать кеш маршрутов, чтобы внешний сервис авторизации мог влиять на маршрутизацию.
+                includeRequestHeadersInCheck:
+                  description: |
+                    Заголовки исходного запроса, которые отправляются в сервис авторизации.
+
+                    Заголовки `Host`, `Method`, `Path` и `Content-Length` отправляются всегда.
+
+                    Поддерживаются точное совпадение, совпадение по префиксу (`abc*`) и по суффиксу (`*abc`).
+                includeAdditionalHeadersInCheck:
+                  description: |
+                    Дополнительные заголовки с фиксированными значениями, которые отправляются в сервис авторизации.
+
+                    Одноимённый заголовок исходного запроса переопределяется.
+                headersToUpstreamOnAllow:
+                  description: |
+                    Заголовки из ответа сервиса авторизации, которые добавляются или переопределяются в запросе к целевому сервису, если запрос разрешён.
+
+                    Поддерживаются точное совпадение, совпадение по префиксу (`abc*`) и по суффиксу (`*abc`).
+                headersToDownstreamOnDeny:
+                  description: |
+                    Заголовки из ответа сервиса авторизации, которые возвращаются клиенту, если запрос отклонён.
+
+                    Поддерживаются точное совпадение, совпадение по префиксу (`abc*`) и по суффиксу (`*abc`).
+                headersToDownstreamOnAllow:
+                  description: |
+                    Заголовки из ответа сервиса авторизации, которые добавляются или переопределяются в ответе клиенту, если запрос разрешён.
+
+                    Поддерживаются точное совпадение, совпадение по префиксу (`abc*`) и по суффиксу (`*abc`).
+            opentelemetry:
+              description: |
+                Провайдер трассировки, который экспортирует спаны по протоколу OpenTelemetry (OTLP).
+
+                Спаны экспортируются по gRPC, если не задан параметр `http`.
+              properties:
+                service:
+                  description: |
+                    Сервис коллектора OpenTelemetry. Формат значения — `[<namespace>/]<hostname>`.
+
+                    В `<hostname>` укажите полное имя Service, включая домен кластера (например, `opentelemetry-collector.observability.svc.cluster.local`), или хост из ServiceEntry. Короткие имена и IP-адреса не работают. `<namespace>` указывайте, только если такой хост есть в нескольких неймспейсах.
+
+                    Если Istio не найдёт сервис, спаны не будут экспортироваться.
+                port:
+                  description: Порт коллектора OpenTelemetry.
+                maxTagLength:
+                  description: Максимальная длина пути запроса, которая попадает в тег спана `http.url`. Если параметр не задан, используется значение Envoy по умолчанию (`256`).
+                http:
+                  description: |
+                    Параметры экспорта спанов по OTLP через HTTP.
+
+                    Не может использоваться вместе с `grpc`.
+                  properties:
+                    path:
+                      description: Путь эндпоинта OTLP для данных трассировки.
+                    timeout:
+                      description: Максимальное время ожидания ответа от коллектора.
+                    headers:
+                      description: Дополнительные заголовки, которые отправляются с каждым запросом экспорта.
+                grpc:
+                  description: |
+                    Параметры экспорта спанов по OTLP через gRPC.
+
+                    Не может использоваться вместе с `http`.
+                  properties:
+                    timeout:
+                      description: Максимальное время ожидания ответа от коллектора.
+                    initialMetadata:
+                      description: Дополнительные метаданные, которые отправляются с каждым gRPC-потоком.
+                resourceDetectors:
+                  description: Детекторы ресурсов OpenTelemetry, которые добавляют атрибуты к экспортируемым спанам.
+                  properties:
+                    environment:
+                      description: |
+                        Считывать атрибуты ресурса из переменной окружения `OTEL_RESOURCE_ATTRIBUTES` прокси.
+
+                        Чтобы включить, укажите `{}`.
+                    dynatrace:
+                      description: |
+                        Считывать атрибуты ресурса из файлов, которые записывает Dynatrace OneAgent.
+
+                        Чтобы включить, укажите `{}`.
+            zipkin:
+              description: Провайдер трассировки, который экспортирует спаны через Zipkin API.
+              properties:
+                service:
+                  description: |
+                    Сервис коллектора Zipkin. Формат значения — `[<namespace>/]<hostname>`.
+
+                    В `<hostname>` укажите полное имя Service, включая домен кластера (например, `zipkin.example.svc.cluster.local`), или хост из ServiceEntry. Короткие имена и IP-адреса не работают. `<namespace>` указывайте, только если такой хост есть в нескольких неймспейсах.
+
+                    Если Istio не найдёт сервис, спаны не будут экспортироваться.
+                port:
+                  description: Порт коллектора Zipkin.
+                maxTagLength:
+                  description: Максимальная длина пути запроса, которая попадает в тег спана `http.url`. Если параметр не задан, используется значение Envoy по умолчанию (`256`).
+                enable64bitTraceId:
+                  description: Использовать 64-битные идентификаторы трассировки вместо 128-битных.
+                path:
+                  description: Путь эндпоинта Zipkin для спанов. Если параметр не задан, используется `/api/v2/spans`.
       trafficRedirectionSetupMode:
         description: |
           Управление режимом перенаправления прикладного трафика для передачи под управление Istio в сетевом пространстве имён пода.

@@ -248,6 +248,111 @@ positive:
           envoyExtAuthzGrpc:
             service: authservice.d8-istio.svc.cluster.local
             port: 10003
+    - dataPlane:
+        extensionProviders:
+        - name: oauth2-proxy
+          envoyExtAuthzHttp:
+            service: oauth2-proxy.oauth2-proxy.svc.cluster.local
+            port: 4180
+            pathPrefix: /oauth2/auth
+            timeout: 5s
+            failOpen: false
+            statusOnError: "503"
+            includeRequestHeadersInCheck: ["authorization", "cookie", "x-forwarded-*"]
+            includeAdditionalHeadersInCheck:
+              x-ext-authz-source: istio
+            headersToUpstreamOnAllow: ["authorization", "x-auth-request-*"]
+            headersToDownstreamOnDeny: ["content-type", "set-cookie"]
+            headersToDownstreamOnAllow: ["set-cookie"]
+        - name: otel-grpc
+          opentelemetry:
+            service: opentelemetry-collector.observability.svc.cluster.local
+            port: 4317
+            maxTagLength: 512
+            grpc:
+              timeout: 5s
+              initialMetadata:
+              - name: x-scope-orgid
+                value: tenant-a
+            resourceDetectors:
+              environment: {}
+        - name: otel-http
+          opentelemetry:
+            service: opentelemetry-collector.observability.svc.cluster.local
+            port: 4318
+            http:
+              path: /v1/traces
+              timeout: 10s
+              headers:
+              - name: x-scope-orgid
+                value: tenant-a
+        - name: zipkin
+          zipkin:
+            service: zipkin.tracing.svc.cluster.local
+            port: 9411
+            maxTagLength: 512
+            enable64bitTraceId: true
+            path: /api/v2/spans
+    - dataPlane:
+        extensionProviders:
+        - name: authservice-grpc
+          envoyExtAuthzGrpc:
+            service: authservice.d8-istio.svc.cluster.local
+            port: 10003
+            timeout: 1m30s
+        - name: oauth2-proxy
+          envoyExtAuthzHttp:
+            service: oauth2-proxy.oauth2-proxy.svc.cluster.local
+            port: 4180
+            timeout: 500ms
+        - name: otel-grpc
+          opentelemetry:
+            service: opentelemetry-collector.observability.svc.cluster.local
+            port: 4317
+            grpc:
+              timeout: 2.5s
+  # service formats and statusOnError codes
+    - dataPlane:
+        extensionProviders:
+        - name: authservice-grpc
+          envoyExtAuthzGrpc:
+            service: d8-istio/authservice.d8-istio.svc.cluster.local
+            port: 10003
+            statusOnError: "403"
+        - name: oauth2-proxy
+          envoyExtAuthzHttp:
+            service: oauth2-proxy.oauth2-proxy.svc.cluster.local
+            port: 4180
+            statusOnError: "511"
+        - name: otel
+          opentelemetry:
+            service: otel-collector
+            port: 4317
+        - name: zipkin
+          zipkin:
+            service: Zipkin.Example.com
+            port: 9411
+  # zipkin address
+    - tracing:
+        collector:
+          zipkin:
+            address: jaeger-collector.tracing.svc.cluster.local:9411
+    - tracing:
+        collector:
+          zipkin:
+            address: 10.0.0.10:65535
+    - tracing:
+        collector:
+          opentelemetry:
+            service: opentelemetry-collector.observability.svc.cluster.local
+            port: 4318
+            http:
+              timeout: 10s
+    - tracing:
+        collector:
+          opentelemetry:
+            service: observability/opentelemetry-collector.observability.svc.cluster.local
+            port: 4317
     - ca:
         secretRef:
           name: my-istio-ca
@@ -451,6 +556,222 @@ negative:
           envoyExtAuthzGrpc:
             service: authservice.istio-system.svc.cluster.local
             port: "10003"
+  # reserved provider names
+    - dataPlane:
+        extensionProviders:
+        - name: d8-main
+          envoyExtAuthzGrpc:
+            service: authservice.istio-system.svc.cluster.local
+            port: 10003
+    - dataPlane:
+        extensionProviders:
+        - name: deckhouse-tracing
+          zipkin:
+            service: zipkin.tracing.svc.cluster.local
+            port: 9411
+    - dataPlane:
+        extensionProviders:
+        - name: prometheus
+          opentelemetry:
+            service: opentelemetry-collector.observability.svc.cluster.local
+            port: 4317
+  # a provider must set exactly one provider type
+    - dataPlane:
+        extensionProviders:
+        - name: no-provider
+    - dataPlane:
+        extensionProviders:
+        - name: two-providers
+          zipkin:
+            service: zipkin.tracing.svc.cluster.local
+            port: 9411
+          opentelemetry:
+            service: opentelemetry-collector.observability.svc.cluster.local
+            port: 4317
+  # opentelemetry http and grpc are mutually exclusive
+    - dataPlane:
+        extensionProviders:
+        - name: otel
+          opentelemetry:
+            service: opentelemetry-collector.observability.svc.cluster.local
+            port: 4317
+            http:
+              path: /v1/traces
+            grpc:
+              timeout: 5s
+  # opentelemetry http requires path
+    - dataPlane:
+        extensionProviders:
+        - name: otel
+          opentelemetry:
+            service: opentelemetry-collector.observability.svc.cluster.local
+            port: 4318
+            http:
+              timeout: 10s
+  # zipkin requires port
+    - dataPlane:
+        extensionProviders:
+        - name: zipkin
+          zipkin:
+            service: zipkin.tracing.svc.cluster.local
+  # envoyExtAuthzHttp pathPrefix must begin with /
+    - dataPlane:
+        extensionProviders:
+        - name: oauth2-proxy
+          envoyExtAuthzHttp:
+            service: oauth2-proxy.oauth2-proxy.svc.cluster.local
+            port: 4180
+            pathPrefix: oauth2/auth
+  # statusOnError must be an HTTP status code
+    - dataPlane:
+        extensionProviders:
+        - name: authservice-grpc
+          envoyExtAuthzGrpc:
+            service: authservice.istio-system.svc.cluster.local
+            port: 10003
+            statusOnError: "Forbidden"
+    - dataPlane:
+        extensionProviders:
+        - name: oauth2-proxy
+          envoyExtAuthzHttp:
+            service: oauth2-proxy.oauth2-proxy.svc.cluster.local
+            port: 4180
+            statusOnError: "5000"
+  # statusOnError must be a code that Envoy supports
+    - dataPlane:
+        extensionProviders:
+        - name: authservice-grpc
+          envoyExtAuthzGrpc:
+            service: authservice.istio-system.svc.cluster.local
+            port: 10003
+            statusOnError: "599"
+    - dataPlane:
+        extensionProviders:
+        - name: oauth2-proxy
+          envoyExtAuthzHttp:
+            service: oauth2-proxy.oauth2-proxy.svc.cluster.local
+            port: 4180
+            statusOnError: "419"
+  # service must be [<namespace>/]<hostname>
+    - dataPlane:
+        extensionProviders:
+        - name: authservice-grpc
+          envoyExtAuthzGrpc:
+            service: authservice.istio-system.svc.cluster.local:10003
+            port: 10003
+    - dataPlane:
+        extensionProviders:
+        - name: oauth2-proxy
+          envoyExtAuthzHttp:
+            service: http://oauth2-proxy.oauth2-proxy.svc.cluster.local
+            port: 4180
+    - dataPlane:
+        extensionProviders:
+        - name: otel
+          opentelemetry:
+            service: opentelemetry_collector.observability.svc.cluster.local
+            port: 4317
+    - dataPlane:
+        extensionProviders:
+        - name: zipkin
+          zipkin:
+            service: "*/zipkin.tracing.svc.cluster.local"
+            port: 9411
+    - dataPlane:
+        extensionProviders:
+        - name: zipkin
+          zipkin:
+            service: zipkin..tracing.svc.cluster.local
+            port: 9411
+    - dataPlane:
+        extensionProviders:
+        - name: oauth2-proxy
+          envoyExtAuthzHttp:
+            service: oauth2-proxy.oauth2-proxy.svc.cluster.local.
+            port: 4180
+  # fields of newer Istio versions are not supported
+    - dataPlane:
+        extensionProviders:
+        - name: zipkin
+          zipkin:
+            service: zipkin.tracing.svc.cluster.local
+            port: 9411
+            traceContextOption: USE_B3_WITH_W3C_PROPAGATION
+  # timeouts must be Go durations
+    - dataPlane:
+        extensionProviders:
+        - name: authservice-grpc
+          envoyExtAuthzGrpc:
+            service: authservice.istio-system.svc.cluster.local
+            port: 10003
+            timeout: 5 seconds
+    - dataPlane:
+        extensionProviders:
+        - name: oauth2-proxy
+          envoyExtAuthzHttp:
+            service: oauth2-proxy.oauth2-proxy.svc.cluster.local
+            port: 4180
+            timeout: "5"
+    - dataPlane:
+        extensionProviders:
+        - name: otel
+          opentelemetry:
+            service: opentelemetry-collector.observability.svc.cluster.local
+            port: 4318
+            http:
+              path: /v1/traces
+              timeout: 10sec
+    - dataPlane:
+        extensionProviders:
+        - name: otel
+          opentelemetry:
+            service: opentelemetry-collector.observability.svc.cluster.local
+            port: 4317
+            grpc:
+              timeout: 1d
+    - tracing:
+        collector:
+          opentelemetry:
+            service: opentelemetry-collector.observability.svc.cluster.local
+            port: 4318
+            http:
+              timeout: PT10S
+  # zipkin address must be <host>:<port>
+    - tracing:
+        collector:
+          zipkin:
+            address: jaeger-collector.tracing.svc.cluster.local
+    - tracing:
+        collector:
+          zipkin:
+            address: jaeger-collector.tracing.svc.cluster.local:zipkin
+    - tracing:
+        collector:
+          zipkin:
+            address: http://jaeger-collector.tracing.svc.cluster.local:9411
+    - tracing:
+        collector:
+          zipkin:
+            address: jaeger-collector.tracing.svc.cluster.local:0
+    - tracing:
+        collector:
+          zipkin:
+            address: jaeger-collector.tracing.svc.cluster.local:65536
+    - tracing:
+        collector:
+          zipkin:
+            address: tracing/jaeger-collector.tracing.svc.cluster.local:9411
+  # tracing opentelemetry service must be [<namespace>/]<hostname>
+    - tracing:
+        collector:
+          opentelemetry:
+            service: opentelemetry-collector.observability.svc.cluster.local:4317
+            port: 4317
+    - tracing:
+        collector:
+          opentelemetry:
+            service: http://opentelemetry-collector.observability.svc.cluster.local
+            port: 4317
   # cert and secretRef are mutually exclusive
     - ca:
         cert: "---CERT PEM---"

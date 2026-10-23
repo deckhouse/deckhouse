@@ -137,9 +137,7 @@ spec:
             {{- end }}
           {{- end }}
         name: d8-main
-      {{- if and $.Values.istio.tracing.enabled $telemetryAPI.enabled }}
       {{- include "istioTracingProvider" $ | nindent 6 }}
-      {{- end }}
 {{- include "istioUserExtensionProviders" $ | nindent 6 }}
 
       # The rules below exclude upmeter-related namespaces from istiod's point of view.

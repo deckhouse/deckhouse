@@ -954,10 +954,10 @@ For tag removal, disabling specific metrics or modes, follow [Customizing Istio 
 
 [`tracing.collector`](configuration.html#parameters-tracing-collector) is the single ModuleConfig entry for mesh-wide trace export (Zipkin or OpenTelemetry).
 
-- `telemetryAPI.enabled: false` plus [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true`: Legacy only: `meshConfig.defaultConfig.tracing.zipkin` from [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) (`host:port`, Jaeger Zipkin port `9411`). OTLP (OpenTelemetry Protocol) export requires Telemetry API mode.
-- `telemetryAPI.enabled: true` plus `tracing.enabled: true`: The module registers `deckhouse-tracing` when [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) has `service` and `port`, or when [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector) is set (OpenTelemetry wins if both are configured). Legacy `defaultConfig.tracing` is omitted; mesh-wide `Telemetry` `d8-main` gets `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, default `1.0`).
+- `telemetryAPI.enabled: false` plus [`tracing.enabled`](configuration.html#parameters-tracing-enabled) `true`: Legacy only: `meshConfig.defaultConfig.tracing.zipkin` from [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector-zipkin-address) (`host:port`, Jaeger Zipkin port `9411`). OTLP (OpenTelemetry Protocol) export requires Telemetry API mode.
+- `telemetryAPI.enabled: true` plus `tracing.enabled: true`: The module registers `deckhouse-tracing` when [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) has `service` and `port`, or when [`tracing.collector.zipkin.address`](configuration.html#parameters-tracing-collector-zipkin-address) is set (OpenTelemetry wins if both are configured). Legacy `defaultConfig.tracing` is omitted; mesh-wide `Telemetry` `d8-main` gets `spec.tracing` ([`tracing.sampling`](configuration.html#parameters-tracing-sampling) → `randomSamplingPercentage`, default `1.0`).
 
-Exporters the module does not model (SkyWalking, custom TLS stacks, extra provider names) still need namespace-scoped `Telemetry` with `selector`—not a second selector-less CR in `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). See [Distributed tracing with Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
+To send traces from some workloads to another OpenTelemetry or Zipkin backend, register it in [`dataPlane.extensionProviders`](configuration.html#parameters-dataplane-extensionproviders) and reference it from a Telemetry with `selector` in the application namespace. Do not create a second Telemetry without a selector in `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)). A proxy sends spans to a single tracing provider, so these workloads send traces to that backend instead of `deckhouse-tracing`. Other exporters, such as SkyWalking, cannot be registered. See [Distributed tracing with Telemetry API](https://istio.io/latest/docs/tasks/observability/distributed-tracing/telemetry-api/).
 
 #### Example — Telemetry API bundle + bundled Zipkin/Jaeger collector
 
@@ -1012,11 +1012,32 @@ spec:
 
 For HTTP OTLP, add `collector.opentelemetry.http.path` (and optional `timeout`) per [`tracing.collector.opentelemetry.http`](configuration.html#parameters-tracing-collector-opentelemetry).
 
-Per-workload overrides still use namespaced `Telemetry` with `selector` referencing `deckhouse-tracing` (or another provider you define yourself outside `d8-istio`). Do not add a second selector-less `Telemetry` in `d8-istio` ([IST0160](https://istio.io/latest/docs/reference/config/analysis/ist0160/)).
+For per-workload overrides, create a Telemetry with `selector` in the application namespace and reference `deckhouse-tracing` or a provider registered in [`dataPlane.extensionProviders`](configuration.html#parameters-dataplane-extensionproviders).
 
 #### Example — tracing only for selected workloads
 
 Use `selector` (or `targetRef`) so Telemetry targets only matching pods—the pattern below is IST0160-safe. Within a single namespace, `Telemetry` without selectors can still exist at most once; do not pile multiple selector-less manifests there.
+
+Register the provider in [`dataPlane.extensionProviders`](configuration.html#parameters-dataplane-extensionproviders):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 1
+  enabled: true
+  settings:
+    dataPlane:
+      extensionProviders:
+      - name: jaeger-zipkin
+        zipkin:
+          service: jaeger-collector.observability.svc.cluster.local
+          port: 9411
+```
+
+Reference it from a Telemetry with `selector`:
 
 ```yaml
 apiVersion: telemetry.istio.io/v1alpha1

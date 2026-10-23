@@ -272,6 +272,7 @@ DoesNotExist
 Dryrun
 DynamiX
 Dynamix
+Dynatrace
 EBS
 ECC
 ECDHE
@@ -622,6 +623,7 @@ Okmeter
 Okta
 OmniAuth
 Omniauth
+OneAgent
 OpenAPI
 OpenID
 OpenKruise
@@ -2836,6 +2838,8 @@ zoneTagCategory
 соответствующий
 сопоставление
 сопоставления
+спана
+спанам
 спанов
 спаны
 спецзаголовки
