@@ -1,0 +1,275 @@
+diff --git a/connector/oidc/discovery_timeout_test.go b/connector/oidc/discovery_timeout_test.go
+new file mode 100644
+index 00000000..1ef180ab
+--- /dev/null
++++ b/connector/oidc/discovery_timeout_test.go
+@@ -0,0 +1,85 @@
++package oidc
++
++import (
++	"log/slog"
++	"net"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++)
++
++// silentIssuer accepts TCP connections and never answers them: the issuer that
++// held the startup of Dex before the discovery request got a deadline.
++func silentIssuer(t *testing.T) string {
++	t.Helper()
++	ln, err := net.Listen("tcp", "127.0.0.1:0")
++	require.NoError(t, err)
++
++	var mu sync.Mutex
++	var conns []net.Conn
++	go func() {
++		for {
++			c, err := ln.Accept()
++			if err != nil {
++				return
++			}
++			mu.Lock()
++			conns = append(conns, c)
++			mu.Unlock()
++		}
++	}()
++	t.Cleanup(func() {
++		ln.Close()
++		mu.Lock()
++		defer mu.Unlock()
++		for _, c := range conns {
++			c.Close()
++		}
++	})
++	return "http://" + ln.Addr().String()
++}
++
++func TestOpenBoundsProviderDiscovery(t *testing.T) {
++	issuer := silentIssuer(t)
++	c := Config{Issuer: issuer, DiscoveryTimeout: "200ms"}
++
++	start := time.Now()
++	_, err := c.Open("silent", slog.New(slog.DiscardHandler))
++	elapsed := time.Since(start)
++
++	require.Error(t, err)
++	require.Contains(t, err.Error(), "provider discovery at "+issuer+" did not answer within 200ms")
++	require.Less(t, elapsed, 5*time.Second, "Open must return once the discovery deadline passes")
++}
++
++func TestDiscoveryTimeout(t *testing.T) {
++	for _, tc := range []struct {
++		value   string
++		want    time.Duration
++		wantErr bool
++	}{
++		{"", 10 * time.Second, false},
++		{"3s", 3 * time.Second, false},
++		{"1m30s", 90 * time.Second, false},
++		{"0s", 0, true},
++		{"-1s", 0, true},
++		{"10", 0, true},
++	} {
++		got, err := (&Config{DiscoveryTimeout: tc.value}).discoveryTimeout()
++		if tc.wantErr {
++			require.Error(t, err, tc.value)
++			require.True(t, strings.Contains(err.Error(), "invalid discoveryTimeout"), err.Error())
++			continue
++		}
++		require.NoError(t, err, tc.value)
++		require.Equal(t, tc.want, got, tc.value)
++	}
++}
++
++func TestOpenRejectsInvalidDiscoveryTimeout(t *testing.T) {
++	_, err := (&Config{Issuer: "http://127.0.0.1:1", DiscoveryTimeout: "soon"}).Open("bad", slog.New(slog.DiscardHandler))
++	require.ErrorContains(t, err, `invalid discoveryTimeout "soon"`)
++}
+diff --git a/connector/oidc/oidc.go b/connector/oidc/oidc.go
+index e6a38a8a..a28f9d61 100644
+--- a/connector/oidc/oidc.go
++++ b/connector/oidc/oidc.go
+@@ -51,6 +51,12 @@ type Config struct {
+ 	// the providers' discovery URL (.well-known/openid-configuration).
+ 	ProviderDiscoveryOverrides ProviderDiscoveryOverrides `json:"providerDiscoveryOverrides"`
+ 
++	// DiscoveryTimeout bounds the discovery request that Open makes, as a Go
++	// duration ("10s" when empty). Dex opens the connectors one by one before it
++	// serves anything, health checks included, so an issuer that accepts the
++	// connection but never answers would otherwise hold the startup forever.
++	DiscoveryTimeout string `json:"discoveryTimeout"`
++
+ 	// Causes client_secret to be passed as POST parameters instead of basic
+ 	// auth. This is specifically "NOT RECOMMENDED" by the OAuth2 RFC, but some
+ 	// providers require it.
+@@ -157,6 +163,21 @@ func (o *ProviderDiscoveryOverrides) Empty() bool {
+ 	return o.TokenURL == "" && o.AuthURL == "" && o.JWKSURL == "" && o.UserInfoURL == "" && o.DeviceAuthURL == "" && o.EndSessionURL == ""
+ }
+ 
++// defaultDiscoveryTimeout is the bound of the discovery request of Open when
++// the connector does not set discoveryTimeout.
++const defaultDiscoveryTimeout = 10 * time.Second
++
++func (c *Config) discoveryTimeout() (time.Duration, error) {
++	if c.DiscoveryTimeout == "" {
++		return defaultDiscoveryTimeout, nil
++	}
++	d, err := time.ParseDuration(c.DiscoveryTimeout)
++	if err != nil || d <= 0 {
++		return 0, fmt.Errorf("invalid discoveryTimeout %q: a positive duration such as 10s is expected", c.DiscoveryTimeout)
++	}
++	return d, nil
++}
++
+ func getProvider(ctx context.Context, issuer string, overrides ProviderDiscoveryOverrides) (*oidc.Provider, error) {
+ 	provider, err := oidc.NewProvider(ctx, issuer)
+ 	if err != nil {
+@@ -292,6 +313,11 @@ func (c *Config) Open(id string, logger *slog.Logger) (conn connector.Connector,
+ 		return nil, fmt.Errorf("support for the Hosted domains option had been deprecated and removed, consider switching to the Google connector")
+ 	}
+ 
++	discoveryTimeout, err := c.discoveryTimeout()
++	if err != nil {
++		return nil, err
++	}
++
+ 	httpClient, err := httpclient.NewHTTPClient(c.RootCAs, c.InsecureSkipVerify)
+ 	if err != nil {
+ 		return nil, err
+@@ -302,9 +328,17 @@ func (c *Config) Open(id string, logger *slog.Logger) (conn connector.Connector,
+ 	if c.IssuerAlias != "" {
+ 		ctx = oidc.InsecureIssuerURLContext(ctx, c.IssuerAlias)
+ 	}
+-	provider, err := getProvider(ctx, c.Issuer, c.ProviderDiscoveryOverrides)
++	// The provider keeps only the HTTP client of the context, so the deadline
++	// bounds the discovery request and nothing the connector does later.
++	discoveryCtx, stopDiscovery := context.WithTimeout(ctx, discoveryTimeout)
++	provider, err := getProvider(discoveryCtx, c.Issuer, c.ProviderDiscoveryOverrides)
++	timedOut := errors.Is(discoveryCtx.Err(), context.DeadlineExceeded)
++	stopDiscovery()
+ 	if err != nil {
+ 		cancel()
++		if timedOut {
++			return nil, fmt.Errorf("provider discovery at %s did not answer within %s: %v", c.Issuer, discoveryTimeout, err)
++		}
+ 		return nil, err
+ 	}
+ 	if !c.ProviderDiscoveryOverrides.Empty() {
+diff --git a/server/connector_open_test.go b/server/connector_open_test.go
+new file mode 100644
+index 00000000..213e82e5
+--- /dev/null
++++ b/server/connector_open_test.go
+@@ -0,0 +1,94 @@
++package server
++
++import (
++	"bytes"
++	"context"
++	"log/slog"
++	"net"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	gosundheit "github.com/AppsFlyer/go-sundheit"
++	"github.com/prometheus/client_golang/prometheus"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/signer"
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++// TestOpenConnectorsSkipsSilentIssuer: an OIDC issuer that accepts connections and
++// never answers no longer holds the startup. Its discovery hits the deadline, the
++// connector is skipped with DEX_CONTINUE_ON_CONNECTOR_FAILURE, the next connector
++// opens, and every attempt is logged before it starts.
++func TestOpenConnectorsSkipsSilentIssuer(t *testing.T) {
++	ln, err := net.Listen("tcp", "127.0.0.1:0")
++	require.NoError(t, err)
++	var mu sync.Mutex
++	var held []net.Conn
++	go func() {
++		for {
++			c, err := ln.Accept()
++			if err != nil {
++				return
++			}
++			mu.Lock()
++			held = append(held, c)
++			mu.Unlock()
++		}
++	}()
++	t.Cleanup(func() {
++		ln.Close()
++		mu.Lock()
++		defer mu.Unlock()
++		for _, c := range held {
++			c.Close()
++		}
++	})
++
++	var logs bytes.Buffer
++	logger := slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelInfo}))
++	sig, err := signer.NewMockSigner(testKey)
++	require.NoError(t, err)
++
++	ctx := context.Background()
++	config := Config{
++		Issuer:                     "http://localhost",
++		Storage:                    memory.New(logger),
++		Web:                        WebConfig{Dir: "../web"},
++		Logger:                     logger,
++		PrometheusRegistry:         prometheus.NewRegistry(),
++		HealthChecker:              gosundheit.New(),
++		ContinueOnConnectorFailure: true,
++		Signer:                     sig,
++	}
++	for _, conn := range []storage.Connector{
++		{
++			ID:     "silent",
++			Type:   "oidc",
++			Name:   "Silent issuer",
++			Config: []byte(`{"issuer": "http://` + ln.Addr().String() + `", "discoveryTimeout": "200ms"}`),
++		},
++		{ID: "mock", Type: "mockCallback", Name: "Mock"},
++	} {
++		require.NoError(t, config.Storage.CreateConnector(ctx, conn))
++	}
++
++	start := time.Now()
++	server, err := newServer(ctx, config)
++	require.NoError(t, err)
++	require.Less(t, time.Since(start), 5*time.Second, "the silent issuer must not hold the startup")
++
++	_, ok := server.connectors.Cached("mock")
++	require.True(t, ok, "the next connector must open")
++	_, ok = server.connectors.Cached("silent")
++	require.False(t, ok, "the silent connector must be skipped")
++
++	out := logs.String()
++	require.Contains(t, out, `msg="opening connector" connector_id=silent connector_type=oidc`)
++	require.Contains(t, out, `msg="opening connector" connector_id=mock connector_type=mockCallback`)
++	require.Contains(t, out, `msg="server: Failed to open connector" id=silent`)
++	require.True(t, strings.Contains(out, "did not answer within 200ms"), out)
++}
+diff --git a/server/server.go b/server/server.go
+index 9d59849a..aa260dbe 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -204,6 +204,9 @@ func (s *Server) openConnectors(ctx context.Context, c Config) error {
+ 
+ 	var failedCount int
+ 	for _, conn := range storageConnectors {
++		// Logged before the attempt: a connector that hangs while opening is
++		// named even if the pod is killed before the attempt ends.
++		s.logger.Info("opening connector", "connector_id", conn.ID, "connector_type", conn.Type)
+ 		if _, err := s.connectors.Open(conn); err != nil {
+ 			failedCount++
+ 			if c.ContinueOnConnectorFailure {

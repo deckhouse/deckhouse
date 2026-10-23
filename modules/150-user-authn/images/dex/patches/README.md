@@ -2,8 +2,8 @@
 
 Dex v2.46.0 (the `dex` version in `oss.yaml`) plus one patch per zone of
 responsibility, applied in file name order (`git apply /patches/*.patch`).
-Numbering: 1xx storage, 2xx login, 3xx sessions, 998 dependency bumps, 999
-fuzz tests.
+Numbering: 1xx storage, 2xx login, 3xx sessions, 4xx startup, 998 dependency
+bumps, 999 fuzz tests.
 A patch changes lines of an earlier patch only when it is a feature on top of
 it; a fix goes into the patch it fixes. Each patch is the plain diff of one
 commit on top of the previous patches (`git diff <commit>^ <commit>`): it
@@ -996,6 +996,32 @@ every browser session it ends, also when it revokes the whole pair); the
 **Upstream status:** Deckhouse only.
 
 **Depends on:** 290 (`Revocation`, `Recorder`), 300 (`backchannel.Notifier`).
+
+### 400-connector-open-deadline.patch
+
+**Zone:** opening the connectors at startup. Dex opens every connector one by
+one before it serves anything, the health checks included, and the OIDC
+connector fetches the discovery document of its issuer while it opens.
+
+- the discovery request of the OIDC connector has a deadline: the
+  `discoveryTimeout` of the connector, `10s` when it is not set. An issuer that
+  accepts the connection and never answers held the startup forever, and one
+  that drops the packets held it for the 30 s dial timeout, until the liveness
+  probe killed the pod. On timeout the connector fails to open with an error
+  that names the issuer and the bound; with `DEX_CONTINUE_ON_CONNECTOR_FAILURE`
+  Dex logs `server: Failed to open connector` and opens the next connector;
+- `opening connector` with `connector_id` and `connector_type` is logged at
+  INFO before each connector is opened, so a connector that hangs is named in
+  the log even if the pod is killed first.
+
+**Consumer in Deckhouse:** every `DexProvider` of type OIDC;
+`DEX_CONTINUE_ON_CONNECTOR_FAILURE` and the startup probe of the `dex`
+container in `templates/dex/deployment.yaml`, which gives each OIDC provider
+15 s: the deadline plus one probe period.
+
+**Upstream status:** Deckhouse only.
+
+**Depends on:** none.
 
 ### 998-fix-cve.patch
 

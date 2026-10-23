@@ -3,6 +3,20 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
+{{- /* Dex opens every connector before it serves /healthz, and only OIDC does network I/O there: discovery
+against the issuer, which Dex patch 400 bounds at 10s (discoveryTimeout, not set by the module). The
+startupProbe (5s period) gets 60s for the rest of the start plus 15s for each OIDC provider whose issuer
+may not answer. */}}
+{{- define "dex_startup_failure_threshold" }}
+  {{- $oidcProviders := 0 }}
+  {{- range $provider := .Values.userAuthn.internal.providers }}
+    {{- if eq $provider.type "OIDC" }}
+      {{- $oidcProviders = add1 $oidcProviders }}
+    {{- end }}
+  {{- end }}
+  {{- add 12 (mul 3 $oidcProviders) }}
+{{- end }}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -131,6 +145,15 @@ spec:
           preStop:
             sleep:
               seconds: 5
+        # Without a startup budget the liveness probe kills the pod while an unreachable OIDC issuer holds
+        # the start, before DEX_CONTINUE_ON_CONNECTOR_FAILURE can skip the connector.
+        startupProbe:
+          httpGet:
+            path: /healthz/live
+            port: 5559
+            scheme: HTTPS
+          periodSeconds: 5
+          failureThreshold: {{ include "dex_startup_failure_threshold" . }}
         livenessProbe:
           httpGet:
             path: /healthz/live
@@ -211,9 +234,11 @@ spec:
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
+        # Liveness is the proxy's own: a Dex that starts slowly or hangs later does not restart the
+        # proxy. Readiness follows Dex, whose endpoints the proxy serves.
         livenessProbe:
           httpGet:
-            path: /healthz/live
+            path: /livez
             port: 5559
             scheme: HTTPS
         readinessProbe:
