@@ -48,11 +48,12 @@ rules:
   - delete
   - deletecollection
 # Dex writes a Revocation at logout and at /token/revoke, and reads one by name to tell at introspection
-# whether the session or the grant of a token ended. It lists the type only at start, to check that the
-# CRD is installed.
+# whether the session or the grant of a token ended. It lists the type at start, to check that the CRD
+# is installed, and lists the revocations of the browser sessions others ended: it labels each one it
+# claims (update) to send the back-channel logout of the session.
 - apiGroups: ["dex.coreos.com"]
   resources: ["revocations"]
-  verbs: ["get", "create", "list"]
+  verbs: ["get", "create", "list", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -96,11 +97,12 @@ rules:
   - delete
   - deletecollection
 # Dex writes a Revocation at logout and at /token/revoke, and reads one by name to tell at introspection
-# whether the session or the grant of a token ended. It lists the type only at start, to check that the
-# CRD is installed.
+# whether the session or the grant of a token ended. It lists the type at start, to check that the CRD
+# is installed, and lists the revocations of the browser sessions others ended: it labels each one it
+# claims (update) to send the back-channel logout of the session.
 - apiGroups: ["dex.coreos.com"]
   resources: ["revocations"]
-  verbs: ["get", "create", "list"]
+  verbs: ["get", "create", "list", "update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

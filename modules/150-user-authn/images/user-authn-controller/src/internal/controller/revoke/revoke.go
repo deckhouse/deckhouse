@@ -97,7 +97,8 @@ func New(c client.Client, apiReader client.Reader, log logr.Logger, now func() t
 }
 
 // LogoutPair revokes everything Dex issued to the pair: the generation, a Revocation of type pair,
-// the browser sessions together with the sign-ins in progress, and the grants, in this order.
+// the browser sessions (a Revocation of type session each) together with the sign-ins in
+// progress, and the grants, in this order.
 // opUID is the UID of the UserOperation that
 // asks for it, or empty: a retry of the same operation finds the Revocation by it and does not
 // raise the generation again. A retry after a failure between the generation and the Revocation
@@ -132,6 +133,11 @@ func (r *Revoker) LogoutPair(ctx context.Context, p Pair, reason, opUID string) 
 		if s.generation >= generation {
 			// A sign-in after the revocation.
 			continue
+		}
+		// The pair revocation carries no sid: the revocation of each session tells Dex which
+		// back-channel logouts to send.
+		if err := r.writeSessionRevocation(ctx, p, s, reason, opUID, &res); err != nil {
+			return res, err
 		}
 		deleted, err := r.deleteDexObject(ctx, controller.AuthSessionGVK, s.name)
 		if err != nil {
@@ -263,6 +269,30 @@ func (r *Revoker) writePairRevocation(ctx context.Context, p Pair, generation ui
 		OperationUID: opUID,
 	})
 	return name, err
+}
+
+// writeSessionRevocation records the end of the browser session s of the pair, with the clients
+// it reached. Dex reads it to send the back-channel logout of the session to these clients: the
+// logout token is signed with the keys of Dex.
+func (r *Revoker) writeSessionRevocation(ctx context.Context, p Pair, s session, reason, opUID string, res *Result) error {
+	name := revocation.SessionName(s.name)
+	if err := r.writeRevocation(ctx, revocation.Revocation{
+		Name:         name,
+		Type:         revocation.TypeSession,
+		ConnectorID:  p.ConnectorID,
+		UserID:       p.UserID,
+		Subject:      revocation.Subject(p.UserID, p.ConnectorID),
+		SessionID:    s.name,
+		Clients:      revocation.SortedClients(s.clients),
+		Reason:       reason,
+		Source:       revocation.SourceController,
+		CreatedAt:    r.now(),
+		OperationUID: opUID,
+	}); err != nil {
+		return err
+	}
+	res.addRevocation(name)
+	return nil
 }
 
 // writeRevocation creates rev. An object of the same name is a revocation written before, and

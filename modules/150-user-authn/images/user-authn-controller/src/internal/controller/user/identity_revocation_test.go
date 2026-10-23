@@ -158,6 +158,7 @@ func TestReconcile_DeletedUserIsRevoked(t *testing.T) {
 	expected := []string{
 		"update UserIdentity " + ghostPair,
 		"create Revocation " + revocation.PairName(ghostPair, 3),
+		"create Revocation " + revocation.SessionName("sid-ghost"),
 		"delete AuthSession sid-ghost",
 		"delete RefreshToken rt-ghost",
 		"delete OfflineSessions " + ghostPair,

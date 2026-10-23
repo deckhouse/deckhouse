@@ -257,6 +257,7 @@ func TestReconcile_LockLocalOrder(t *testing.T) {
 		"patch Password " + passwordObjectName,
 		"update UserIdentity " + adminPair,
 		"create Revocation " + revocation.PairName(adminPair, 1),
+		"create Revocation " + revocation.SessionName("sid-admin"),
 		"delete AuthSession sid-admin",
 		"delete RefreshToken rt-console",
 		"delete RefreshToken rt-kubeconfig",
@@ -299,8 +300,9 @@ func TestReconcile_RetryKeepsTheGeneration(t *testing.T) {
 	if err := r.client.List(t.Context(), list); err != nil {
 		t.Fatal(err)
 	}
-	if len(list.Items) != 1 {
-		t.Errorf("revocations = %d, want 1", len(list.Items))
+	// One of the pair and one of its browser session.
+	if len(list.Items) != 2 {
+		t.Errorf("revocations = %d, want 2", len(list.Items))
 	}
 }
 

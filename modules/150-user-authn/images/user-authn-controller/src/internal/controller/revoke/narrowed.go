@@ -384,23 +384,9 @@ func (r *Revoker) revokeGrant(ctx context.Context, p Pair, g grant, reason, opUI
 // endSession writes the Revocation of the session s, deletes the grants issued under it, then the
 // session. It returns the ids of the grants.
 func (r *Revoker) endSession(ctx context.Context, p Pair, s session, refs map[string]ref, reason, opUID string, res *Result) ([]string, error) {
-	name := revocation.SessionName(s.name)
-	if err := r.writeRevocation(ctx, revocation.Revocation{
-		Name:         name,
-		Type:         revocation.TypeSession,
-		ConnectorID:  p.ConnectorID,
-		UserID:       p.UserID,
-		Subject:      revocation.Subject(p.UserID, p.ConnectorID),
-		SessionID:    s.name,
-		Clients:      revocation.SortedClients(s.clients),
-		Reason:       reason,
-		Source:       revocation.SourceController,
-		CreatedAt:    r.now(),
-		OperationUID: opUID,
-	}); err != nil {
+	if err := r.writeSessionRevocation(ctx, p, s, reason, opUID, res); err != nil {
 		return nil, err
 	}
-	res.addRevocation(name)
 
 	var ended []string
 	for _, id := range sortedKeys(refs) {

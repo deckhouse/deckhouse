@@ -61,8 +61,8 @@ func janeObjects() []client.Object {
 }
 
 // The order is the contract: the generation first (Dex refuses everything older from then on), the
-// Revocation next (the subscribers hear of it before the long deletions), then the sessions with
-// the sign-ins in progress, then the grants.
+// Revocation next (the subscribers hear of it before the long deletions), then the sessions, each
+// after its own Revocation, with the sign-ins in progress, then the grants.
 func TestLogoutPair_Order(t *testing.T) {
 	t.Parallel()
 
@@ -75,7 +75,9 @@ func TestLogoutPair_Order(t *testing.T) {
 	expected := []string{
 		"update UserIdentity " + janePair,
 		"create Revocation " + revocation.PairName(janePair, 3),
+		"create Revocation " + revocation.SessionName("sid-a"),
 		"delete AuthSession sid-a",
+		"create Revocation " + revocation.SessionName("sid-b"),
 		"delete AuthSession sid-b",
 		"delete AuthCode code-a",
 		"delete AuthRequest req-a",
@@ -173,6 +175,36 @@ func TestLogoutPair_CreatesTheUserIdentity(t *testing.T) {
 	}
 }
 
+// Each ended browser session gets a Revocation with its sid and its clients: the pair revocation
+// names neither, and Dex sends the back-channel logout of the session from it.
+func TestLogoutPair_WritesTheSessionRevocations(t *testing.T) {
+	t.Parallel()
+
+	c := newTestClient(t, &calls{}, interceptor.Funcs{}, janeObjects()...)
+	res, err := newTestRevoker(c).LogoutPair(t.Context(), jane, revocation.ReasonLock, "op-1")
+	if err != nil {
+		t.Fatalf("LogoutPair: %v", err)
+	}
+	if res.Name != revocation.PairName(janePair, 3) || res.RevocationsWritten != 3 || res.AuthSessionsDeleted != 2 {
+		t.Errorf("result = %+v", res)
+	}
+	for sid, clients := range map[string][]string{"sid-a": {"console"}, "sid-b": {"grafana"}} {
+		rev := getRevocation(t, c, revocation.SessionName(sid))
+		ok := rev.Type == revocation.TypeSession &&
+			rev.SessionID == sid &&
+			slices.Equal(rev.Clients, clients) &&
+			rev.UserID == "jane" &&
+			rev.ConnectorID == naming.LocalConnectorID &&
+			rev.Subject == revocation.Subject("jane", naming.LocalConnectorID) &&
+			rev.Reason == revocation.ReasonLock &&
+			rev.Source == revocation.SourceController &&
+			rev.OperationUID == "op-1"
+		if !ok {
+			t.Errorf("revocation of %s = %+v", sid, rev)
+		}
+	}
+}
+
 // A retry of the operation finds its Revocation by the operation UID and does not raise the
 // generation again.
 func TestLogoutPair_IdempotentByOperationUID(t *testing.T) {
@@ -194,8 +226,9 @@ func TestLogoutPair_IdempotentByOperationUID(t *testing.T) {
 	if g := generationOf(t, c, naming.LocalConnectorID, "jane"); g != 3 {
 		t.Errorf("stored generation = %d, want 3", g)
 	}
-	if revs := listRevocations(t, c); len(revs) != 1 {
-		t.Errorf("revocations = %d, want 1", len(revs))
+	// One of the pair and one of each session.
+	if revs := listRevocations(t, c); len(revs) != 3 {
+		t.Errorf("revocations = %d, want 3", len(revs))
 	}
 
 	// Another operation raises it again.

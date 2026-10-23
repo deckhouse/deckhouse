@@ -965,6 +965,38 @@ forgets), user-api (the devices of the user and the 24-hour rule).
 **Depends on:** 100 (the fields), 290 (`Recorder`), 300 (the logout of a
 session), 310 (the end of a pair over every grant).
 
+### 330-backchannel-revoked-sessions.patch
+
+**Zone:** back-channel logout of the browser sessions that others end. Dex
+sends the OpenID Connect Back-Channel Logout of a session it ends itself
+(`/logout`, the identity provider no longer lets the user in); the
+user-authn controller ends sessions too (`UserOperation`: Logout, Lock,
+ResetPassword, Reset2FA; a deleted user) and records each in a `session`
+revocation, but cannot sign a logout token.
+
+- `storage.RevocationClaimer` (kubernetes, memory): the `session` revocations
+  not claimed yet, and the claim of one. Kubernetes keeps the claim in the
+  label `user-authn.deckhouse.io/backchannel-claimed`: the list is served from
+  the cache of the API server (`resourceVersion=0`), the claim reads the object
+  afresh and writes it back with its `resourceVersion`, so of two replicas
+  claiming at once one gets a conflict and leaves the revocation to the other;
+- every 5 seconds a replica claims the pending revocations and sends the
+  logout token of each session (`backchannel.Notifier.NotifyRevoked`) to the
+  clients of the revocation that have a `backchannelLogoutURI`, best effort as
+  at `/logout`;
+- the `session` revocations Dex writes itself are created claimed; one an
+  earlier Dex wrote (source `dex`, not claimed) and one older than an hour are
+  claimed without a logout.
+
+**Consumer in Deckhouse:** user-authn-controller (a `session` revocation for
+every browser session it ends, also when it revokes the whole pair); the
+`backchannelLogoutURI` of `DexClient`; `templates/dex/rbac-for-us.yaml`
+(`revocations`: `update`).
+
+**Upstream status:** Deckhouse only.
+
+**Depends on:** 290 (`Revocation`, `Recorder`), 300 (`backchannel.Notifier`).
+
 ### 998-fix-cve.patch
 
 **Zone:** CVE. Dependency bumps only: the patch changes only `go.mod` and

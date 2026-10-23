@@ -114,9 +114,10 @@ spec:
                       message: "spec.backchannelLogoutURI must be an https address of an external host: a name with a dot, not an IP address, localhost or a name under .svc or .cluster.local, and without user information"
                   description: |
                     Address Dex notifies when a browser session through which the user signed in to the application ends
-                    (OpenID Connect Back-Channel Logout): the user signs out of the session, or the provider of the user
-                    answers that the user no longer exists or is no longer allowed in. An end of the session by a
-                    UserOperation or through the self-service of the web interface sends no notification.
+                    (OpenID Connect Back-Channel Logout): the user signs out of the session; the provider of the user
+                    answers that the user no longer exists or is no longer allowed in; a UserOperation or the
+                    self-service of the web interface ends the session; the user is deleted. Dex sends the notification
+                    of a session ended outside Dex within seconds.
 
                     Works only with the [browser sessions of Dex](configuration.html#parameters-sessions) enabled. Dex sends the
                     notification once, without retries: the application cannot rely on it to end its own session.

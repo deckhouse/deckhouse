@@ -699,10 +699,10 @@ https://dex.example.com/logout?client_id=dex-client-myapp@mynamespace&post_logou
 
 To learn that a session of a user ended, the application can set
 [`backchannelLogoutURI`](cr.html#dexclient-v1-spec-backchannellogouturi). Dex sends the notification once, without
-retries, when the user signs out of the session or the provider answers that the user is gone. An end of the session
-by a UserOperation or through the self-service of the web interface sends none yet: such an application can check its
-tokens at the introspection endpoint of Dex (`/token/introspect`), which reports the tokens of an ended session or device
-inactive.
+retries, when the user signs out of the session, the provider answers that the user is gone, a UserOperation or the
+self-service of the web interface ends the session, or the user is deleted; for a session ended outside Dex, within
+seconds. An application that must not miss the end can also check its tokens at the introspection endpoint of Dex
+(`/token/introspect`), which reports the tokens of an ended session or device inactive.
 
 An application that requests offline access (refresh tokens) gets them only after an interactive sign-in. With
 [`refreshTokenLifetime: Session`](cr.html#dexclient-v1-spec-refreshtokenlifetime), the application can sign the user in

@@ -1,0 +1,842 @@
+diff --git a/server/backchannel/backchannel.go b/server/backchannel/backchannel.go
+index d1ed698f..b0c84724 100644
+--- a/server/backchannel/backchannel.go
++++ b/server/backchannel/backchannel.go
+@@ -78,26 +78,31 @@ type logoutTokenClaims struct {
+ // problem, the upgrade path is to persist pending notifications and drain them from
+ // the garbage collector, not to make the user wait here.
+ func (n *Notifier) Notify(ctx context.Context, authSession *storage.AuthSession) {
+-	if len(authSession.ClientStates) == 0 {
++	// Read here while the session is still in hand: the caller deletes it the moment
++	// this returns.
++	n.notify(ctx, authSession.UserID, authSession.ConnectorID, authSession.ID,
++		slices.Sorted(maps.Keys(authSession.ClientStates)))
++}
++
++// notify sends the logout token of the session sid of the user to every client of
++// clientIDs that registered a backchannel_logout_uri.
++func (n *Notifier) notify(ctx context.Context, userID, connectorID, sid string, clientIDs []string) {
++	if len(clientIDs) == 0 {
+ 		return
+ 	}
+ 
+ 	subject, err := internal.Marshal(&internal.IDTokenSubject{
+-		UserId: authSession.UserID,
+-		ConnId: authSession.ConnectorID,
++		UserId: userID,
++		ConnId: connectorID,
+ 	})
+ 	if err != nil {
+ 		n.Logger.ErrorContext(ctx, "logout: failed to marshal backchannel subject", "err", err)
+ 		return
+ 	}
+ 
+-	sid := authSession.ID
+-	clientIDs := slices.Sorted(maps.Keys(authSession.ClientStates))
+-
+-	// Read above while the session is still in hand: the caller deletes it the moment
+-	// this returns. Delivery runs off the request — one wedged relying party would
+-	// otherwise hold the user's redirect for the whole timeout — so it gets a context
+-	// that outlives the one dying at that redirect.
++	// Delivery runs off the request — one wedged relying party would otherwise hold
++	// the user's redirect for the whole timeout — so it gets a context that outlives
++	// the one dying at that redirect.
+ 	ctx = context.WithoutCancel(ctx)
+ 	go func() {
+ 		ctx, cancel := context.WithTimeout(ctx, backchannelTimeout)
+@@ -160,11 +165,7 @@ func (n *Notifier) deliverLogoutToken(ctx context.Context, client storage.Client
+ 
+ // signLogoutToken builds and signs the logout token for one audience.
+ func (n *Notifier) signLogoutToken(ctx context.Context, clientID, subject, sid string) (string, error) {
+-	now := time.Now()
+-	if n.Now != nil {
+-		now = n.Now()
+-	}
+-
++	now := n.now()
+ 	claims := logoutTokenClaims{
+ 		Issuer:    n.IssuerURL.String(),
+ 		Subject:   subject,
+@@ -188,6 +189,13 @@ func (n *Notifier) signLogoutToken(ctx context.Context, clientID, subject, sid s
+ 	return token, nil
+ }
+ 
++func (n *Notifier) now() time.Time {
++	if n.Now != nil {
++		return n.Now()
++	}
++	return time.Now()
++}
++
+ // client returns the HTTP client used for delivery, defaulting to one with
+ // no redirect following: a logout token must reach the URI the client registered, not
+ // wherever that URI happens to point today.
+diff --git a/server/backchannel/revoked.go b/server/backchannel/revoked.go
+new file mode 100644
+index 00000000..ff19e8a6
+--- /dev/null
++++ b/server/backchannel/revoked.go
+@@ -0,0 +1,52 @@
++package backchannel
++
++import (
++	"context"
++	"errors"
++	"fmt"
++	"time"
++
++	"github.com/dexidp/dex/server/revocation"
++	"github.com/dexidp/dex/storage"
++)
++
++// revokedMaxAge bounds how late dex sends the back-channel logout of a session
++// another component ended (Deckhouse). An older revocation is claimed without a
++// logout: dex was down while it was written, and by now the relying party has
++// most likely checked the session on its own.
++const revokedMaxAge = time.Hour
++
++// NotifyRevoked sends the back-channel logout of the browser sessions others ended
++// and recorded as revocations: user-authn-controller for a UserOperation, a
++// sign-out through user-api, a deleted user (Deckhouse). Each revocation is
++// claimed first, so of all replicas of dex one sends it, once. The revocations dex
++// records itself are created claimed; those of an earlier version of dex are
++// claimed here without a logout, it was sent then.
++//
++// The caller runs it periodically. Delivery itself is as best-effort as Notify's.
++func (n *Notifier) NotifyRevoked(ctx context.Context, claimer storage.RevocationClaimer) error {
++	pending, err := claimer.PendingSessionRevocations(ctx)
++	if err != nil {
++		return fmt.Errorf("list session revocations: %w", err)
++	}
++
++	now := n.now()
++	var errs []error
++	for _, p := range pending {
++		ok, err := claimer.ClaimRevocation(ctx, p.Handle)
++		if err != nil {
++			errs = append(errs, err)
++			continue
++		}
++		if !ok || p.Source == revocation.SourceDex {
++			continue
++		}
++		if now.Sub(p.CreatedAt) > revokedMaxAge {
++			n.Logger.DebugContext(ctx, "logout: backchannel skipped, session revoked too long ago",
++				"session_id", p.SessionID, "created_at", p.CreatedAt)
++			continue
++		}
++		n.notify(ctx, p.UserID, p.ConnectorID, p.SessionID, p.Clients)
++	}
++	return errors.Join(errs...)
++}
+diff --git a/server/backchannel/revoked_test.go b/server/backchannel/revoked_test.go
+new file mode 100644
+index 00000000..c0f246e3
+--- /dev/null
++++ b/server/backchannel/revoked_test.go
+@@ -0,0 +1,136 @@
++package backchannel
++
++import (
++	"encoding/base64"
++	"encoding/json"
++	"io"
++	"log/slog"
++	"net/http"
++	"net/url"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/signer"
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++// TestNotifyRevoked: the relying parties of a browser session another component
++// ended get its logout token once, over every pass and replica; the sessions dex
++// ended itself and those ended too long ago get none.
++func TestNotifyRevoked(t *testing.T) {
++	ctx := t.Context()
++	logger := slog.New(slog.DiscardHandler)
++	s := memory.New(logger)
++	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
++
++	for _, c := range []storage.Client{
++		{
++			ID: "web", Secret: "secret",
++			RedirectURIs:         []string{"https://web.example.com/callback"},
++			BackchannelLogoutURI: "https://web.example.com/backchannel-logout",
++		},
++		{ID: "kubectl", Secret: "secret", RedirectURIs: []string{"http://localhost:8000"}},
++	} {
++		require.NoError(t, s.CreateClient(ctx, c))
++	}
++
++	creator, ok := storage.AsRevocationCreator(s)
++	require.True(t, ok)
++	for _, r := range []storage.Revocation{
++		{SessionID: "ended-by-controller", Clients: []string{"kubectl", "web"}, Source: "user-authn-controller", CreatedAt: now.Add(-time.Minute)},
++		{SessionID: "ended-by-dex", Clients: []string{"web"}, Source: "dex", CreatedAt: now.Add(-time.Minute), Claimed: true},
++		{SessionID: "ended-by-earlier-dex", Clients: []string{"web"}, Source: "dex", CreatedAt: now.Add(-time.Minute)},
++		{SessionID: "ended-long-ago", Clients: []string{"web"}, Source: "user-authn-controller", CreatedAt: now.Add(-2 * time.Hour)},
++	} {
++		r.Type = storage.RevocationSession
++		r.UserID, r.ConnectorID = "jane", "local"
++		require.NoError(t, creator.CreateRevocation(ctx, r))
++	}
++	claimer, ok := storage.AsRevocationClaimer(s)
++	require.True(t, ok)
++
++	sign, err := (&signer.MockConfig{}).Open(ctx)
++	require.NoError(t, err)
++	issuer, err := url.Parse("https://dex.example.com")
++	require.NoError(t, err)
++	rp := &recordingRP{}
++	n := &Notifier{
++		Storage:    s,
++		Signer:     sign,
++		IssuerURL:  oauth2.IssuerURL{URL: *issuer},
++		Logger:     logger,
++		Now:        func() time.Time { return now },
++		HTTPClient: &http.Client{Transport: rp},
++	}
++
++	require.NoError(t, n.NotifyRevoked(ctx, claimer))
++	// Delivery is fire-and-forget, so the call returns before the POST lands.
++	require.Eventually(t, func() bool { return len(rp.got()) == 1 }, 2*time.Second, 10*time.Millisecond)
++
++	pending, err := claimer.PendingSessionRevocations(ctx)
++	require.NoError(t, err)
++	require.Empty(t, pending, "every revocation is claimed")
++	require.NoError(t, n.NotifyRevoked(ctx, claimer))
++	require.Never(t, func() bool { return len(rp.got()) > 1 }, 200*time.Millisecond, 10*time.Millisecond)
++
++	is := assert.New(t)
++	delivered := rp.got()[0]
++	is.Equal("https://web.example.com/backchannel-logout", delivered.uri)
++	claims := logoutTokenPayload(t, delivered.token)
++	is.Equal("ended-by-controller", claims.SessionID)
++	is.Equal("web", claims.Audience)
++	is.Equal("CgRqYW5lEgVsb2NhbA", claims.Subject)
++	is.Equal("https://dex.example.com", claims.Issuer)
++	is.Contains(claims.Events, backchannelLogoutEvent)
++}
++
++// recordingRP answers every logout token 200 and keeps it.
++type recordingRP struct {
++	mu         sync.Mutex
++	deliveries []delivery
++}
++
++type delivery struct {
++	uri   string
++	token string
++}
++
++func (rp *recordingRP) RoundTrip(r *http.Request) (*http.Response, error) {
++	body, err := io.ReadAll(r.Body)
++	if err != nil {
++		return nil, err
++	}
++	form, err := url.ParseQuery(string(body))
++	if err != nil {
++		return nil, err
++	}
++	rp.mu.Lock()
++	rp.deliveries = append(rp.deliveries, delivery{uri: r.URL.String(), token: form.Get("logout_token")})
++	rp.mu.Unlock()
++	return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody, Request: r}, nil
++}
++
++func (rp *recordingRP) got() []delivery {
++	rp.mu.Lock()
++	defer rp.mu.Unlock()
++	return append([]delivery(nil), rp.deliveries...)
++}
++
++// logoutTokenPayload decodes the claims of a signed logout token, unverified.
++func logoutTokenPayload(t *testing.T, token string) logoutTokenClaims {
++	t.Helper()
++	parts := strings.Split(token, ".")
++	require.Len(t, parts, 3)
++	raw, err := base64.RawURLEncoding.DecodeString(parts[1])
++	require.NoError(t, err)
++	var claims logoutTokenClaims
++	require.NoError(t, json.Unmarshal(raw, &claims))
++	return claims
++}
+diff --git a/server/revocation/revocation.go b/server/revocation/revocation.go
+index 36413f45..b48549ae 100644
+--- a/server/revocation/revocation.go
++++ b/server/revocation/revocation.go
+@@ -93,7 +93,8 @@ const (
+ 	// refresh token (Deckhouse; see GrantEvicted).
+ 	ReasonEvicted = "Evicted"
+ 
+-	sourceDex = "dex"
++	// SourceDex is the Source of the revocations dex records.
++	SourceDex = "dex"
+ )
+ 
+ // Recorder records the revocations dex decides: the end of a browser session
+@@ -148,6 +149,8 @@ func (r *Recorder) PairEnded(ctx context.Context, sessions []storage.AuthSession
+ 	return errors.Join(errs...)
+ }
+ 
++// sessionRevocation is created claimed: every path of dex that ends a session
++// sends its back-channel logout itself (backchannel.Notifier.Notify).
+ func sessionRevocation(session storage.AuthSession, reason string) storage.Revocation {
+ 	return storage.Revocation{
+ 		Type:        storage.RevocationSession,
+@@ -156,6 +159,7 @@ func sessionRevocation(session storage.AuthSession, reason string) storage.Revoc
+ 		SessionID:   session.ID,
+ 		Clients:     slices.Sorted(maps.Keys(session.ClientStates)),
+ 		Reason:      reason,
++		Claimed:     true,
+ 	}
+ }
+ 
+@@ -183,7 +187,7 @@ func (r *Recorder) record(ctx context.Context, rev storage.Revocation) error {
+ 		return fmt.Errorf("marshal subject: %w", err)
+ 	}
+ 	rev.Subject = subject
+-	rev.Source = sourceDex
++	rev.Source = SourceDex
+ 	rev.CreatedAt = r.now()
+ 
+ 	if err := r.creator.CreateRevocation(ctx, rev); err != nil && !errors.Is(err, storage.ErrAlreadyExists) {
+diff --git a/server/revocation/revocation_test.go b/server/revocation/revocation_test.go
+index 393a27f4..88b4afd8 100644
+--- a/server/revocation/revocation_test.go
++++ b/server/revocation/revocation_test.go
+@@ -191,6 +191,8 @@ func TestRecorder(t *testing.T) {
+ 			Reason:      "SessionLogout",
+ 			Source:      "dex",
+ 			CreatedAt:   t0,
++			// dex sends the back-channel logout of the session itself.
++			Claimed: true,
+ 		},
+ 		{
+ 			Type:        storage.RevocationGrant,
+diff --git a/server/server.go b/server/server.go
+index ac608700..9d59849a 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -179,6 +179,10 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+ 
+ 	c.Signer.Start(ctx)
+ 	s.startGarbageCollection(ctx, value(c.GCFrequency, 5*time.Minute), rc.now, c.RefreshTokenPolicy)
++	// Through c.Storage: the key cacher in s.storage hides the methods beyond Storage.
++	if claimer, ok := storage.AsRevocationClaimer(c.Storage); ok {
++		s.startRevokedNotification(ctx, claimer, revokedNotificationFrequency)
++	}
+ 
+ 	return s, nil
+ }
+@@ -497,6 +501,27 @@ func (s *Server) startGarbageCollection(ctx context.Context, frequency time.Dura
+ // refresh tokens past their lifetime (Deckhouse).
+ const refreshTokenSweepInterval = time.Hour
+ 
++// revokedNotificationFrequency is how often dex looks for the browser sessions others
++// ended, to send their back-channel logout (Deckhouse).
++const revokedNotificationFrequency = 5 * time.Second
++
++// startRevokedNotification sends the back-channel logout of the browser sessions
++// others ended, until ctx is done (Deckhouse; see backchannel.Notifier.NotifyRevoked).
++func (s *Server) startRevokedNotification(ctx context.Context, claimer storage.RevocationClaimer, frequency time.Duration) {
++	go func() {
++		for {
++			select {
++			case <-ctx.Done():
++				return
++			case <-time.After(frequency):
++				if err := s.backchannel.NotifyRevoked(ctx, claimer); err != nil && ctx.Err() == nil {
++					s.logger.ErrorContext(ctx, "logout: backchannel of revoked sessions failed", "err", err)
++				}
++			}
++		}
++	}()
++}
++
+ // renderError renders a user-facing error page for the non-flow endpoints the
+ // server still serves directly (e.g. /healthz).
+ func (s *Server) renderError(r *http.Request, w http.ResponseWriter, status int, description string) {
+diff --git a/server/server_revocation_test.go b/server/server_revocation_test.go
+index eb11e489..64b94f4b 100644
+--- a/server/server_revocation_test.go
++++ b/server/server_revocation_test.go
+@@ -686,6 +686,7 @@ func sessionRevocation(t *testing.T, sessionID string) storage.Revocation {
+ 		Clients:     []string{"a-standalone", "b-bound"},
+ 		Reason:      "SessionLogout",
+ 		Source:      "dex",
++		Claimed:     true,
+ 	}
+ }
+ 
+diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
+index e65b4f34..b81d0f0b 100644
+--- a/storage/kubernetes/storage.go
++++ b/storage/kubernetes/storage.go
+@@ -7,6 +7,8 @@ import (
+ 	"log/slog"
+ 	"math/rand"
+ 	"net/http"
++	"net/url"
++	"slices"
+ 	"strings"
+ 	"time"
+ 
+@@ -54,6 +56,7 @@ const (
+ var (
+ 	_ storage.Storage           = (*client)(nil)
+ 	_ storage.RevocationCreator = (*client)(nil)
++	_ storage.RevocationClaimer = (*client)(nil)
+ )
+ 
+ const (
+@@ -947,6 +950,61 @@ func (cli *client) RevocationExists(ctx context.Context, typ storage.RevocationT
+ 	return true, nil
+ }
+ 
++// PendingSessionRevocations lists the Revocation objects of browser sessions without
++// the claimed label, oldest first (Deckhouse). The handle is the object name.
++// Every replica lists every few seconds, so the list is served from the cache of
++// the API server (resourceVersion=0); ClaimRevocation reads the object afresh.
++func (cli *client) PendingSessionRevocations(ctx context.Context) ([]storage.PendingRevocation, error) {
++	params := url.Values{}
++	params.Set("labelSelector", revocationTypeLabel+"="+string(storage.RevocationSession)+",!"+revocationClaimedLabel)
++	params.Set("resourceVersion", "0")
++	u, err := cli.urlForWithParams(cli.apiVersion, cli.namespace, resourceRevocation, "", params)
++	if err != nil {
++		return nil, err
++	}
++	var list RevocationList
++	if err := cli.getURL(u, &list); err != nil {
++		return nil, fmt.Errorf("list revocations: %w", err)
++	}
++	pending := make([]storage.PendingRevocation, 0, len(list.Revocations))
++	for _, r := range list.Revocations {
++		pending = append(pending, storage.PendingRevocation{Revocation: toStorageRevocation(r), Handle: r.Name})
++	}
++	slices.SortStableFunc(pending, func(a, b storage.PendingRevocation) int {
++		return a.CreatedAt.Compare(b.CreatedAt)
++	})
++	return pending, nil
++}
++
++// ClaimRevocation sets the claimed label on the Revocation object handle (Deckhouse).
++// The write carries the resourceVersion that was read: of two replicas claiming at
++// once, one gets a conflict and leaves the revocation to the other.
++func (cli *client) ClaimRevocation(ctx context.Context, handle string) (bool, error) {
++	var r Revocation
++	err := cli.get(resourceRevocation, handle, &r)
++	if errors.Is(err, storage.ErrNotFound) {
++		return false, nil
++	}
++	if err != nil {
++		return false, fmt.Errorf("get revocation %s: %w", handle, err)
++	}
++	if _, claimed := r.Labels[revocationClaimedLabel]; claimed {
++		return false, nil
++	}
++	if r.Labels == nil {
++		r.Labels = map[string]string{}
++	}
++	r.Labels[revocationClaimedLabel] = "true"
++	err = cli.put(resourceRevocation, handle, r)
++	if errors.Is(err, storage.ErrNotFound) || isKubernetesAPIConflictError(err) {
++		return false, nil
++	}
++	if err != nil {
++		return false, fmt.Errorf("claim revocation %s: %w", handle, err)
++	}
++	return true, nil
++}
++
+ func isKubernetesAPIConflictError(err error) bool {
+ 	if httpErr, ok := err.(httpError); ok {
+ 		if httpErr.StatusCode() == http.StatusConflict {
+diff --git a/storage/kubernetes/storage_test.go b/storage/kubernetes/storage_test.go
+index 08c07d14..edec5462 100644
+--- a/storage/kubernetes/storage_test.go
++++ b/storage/kubernetes/storage_test.go
+@@ -3,14 +3,18 @@ package kubernetes
+ import (
+ 	"context"
+ 	"crypto/tls"
++	"encoding/json"
+ 	"errors"
+ 	"fmt"
++	"hash"
++	"hash/fnv"
+ 	"log/slog"
+ 	"net/http"
+ 	"net/http/httptest"
+ 	"os"
+ 	"path/filepath"
+ 	"strings"
++	"sync"
+ 	"testing"
+ 	"time"
+ 
+@@ -405,3 +409,148 @@ func TestRefreshTokenLock(t *testing.T) {
+ 		require.Equal(t, "update-result-2", token.Token)
+ 	})
+ }
++
++// TestClaimRevocation: of the session revocations, the replicas of dex list those
++// not claimed yet, and of two replicas claiming one at once, one wins (Deckhouse).
++func TestClaimRevocation(t *testing.T) {
++	ctx := t.Context()
++	api := &revocationAPI{objects: map[string]Revocation{}}
++	server := httptest.NewServer(api)
++	t.Cleanup(server.Close)
++	cli := &client{
++		client:     server.Client(),
++		baseURL:    server.URL,
++		namespace:  "dex",
++		apiVersion: "dex.coreos.com/v1",
++		logger:     slog.New(slog.DiscardHandler),
++		hash:       func() hash.Hash { return fnv.New64() },
++	}
++
++	t0 := time.Date(2026, 10, 19, 10, 0, 0, 0, time.UTC)
++	for _, r := range []storage.Revocation{
++		{Type: storage.RevocationSession, UserID: "jane", ConnectorID: "local", SessionID: "b", Source: "user-authn-controller", CreatedAt: t0.Add(time.Minute)},
++		{Type: storage.RevocationSession, UserID: "jane", ConnectorID: "local", SessionID: "a", Source: "user-authn-controller", CreatedAt: t0},
++		{Type: storage.RevocationSession, UserID: "jane", ConnectorID: "local", SessionID: "c", Source: "dex", CreatedAt: t0, Claimed: true},
++		{Type: storage.RevocationGrant, UserID: "jane", ConnectorID: "local", GrantID: "g", ClientID: "kubeconfig-generator-0", CreatedAt: t0},
++	} {
++		require.NoError(t, cli.CreateRevocation(ctx, r))
++	}
++
++	handles := func() []string {
++		t.Helper()
++		pending, err := cli.PendingSessionRevocations(ctx)
++		require.NoError(t, err)
++		names := make([]string, 0, len(pending))
++		for _, p := range pending {
++			require.Equal(t, storage.RevocationSession, p.Type)
++			require.False(t, p.Claimed)
++			names = append(names, p.Handle)
++		}
++		return names
++	}
++	require.Equal(t, []string{"session-a", "session-b"}, handles(), "oldest first, the claimed and the grant left out")
++
++	ok, err := cli.ClaimRevocation(ctx, "session-a")
++	require.NoError(t, err)
++	require.True(t, ok)
++	ok, err = cli.ClaimRevocation(ctx, "session-a")
++	require.NoError(t, err)
++	require.False(t, ok, "claimed before")
++	require.Equal(t, []string{"session-b"}, handles())
++
++	// Another replica claims session-b between the read and the write of this one.
++	api.afterGet = func(r *Revocation) { r.ResourceVersion += "1" }
++	ok, err = cli.ClaimRevocation(ctx, "session-b")
++	require.NoError(t, err)
++	require.False(t, ok, "the write of a stale object is refused")
++	api.afterGet = nil
++
++	ok, err = cli.ClaimRevocation(ctx, "session-gone")
++	require.NoError(t, err)
++	require.False(t, ok, "gone")
++}
++
++// revocationAPI serves Revocation objects as the API server does for
++// TestClaimRevocation: it selects by the labels of PendingSessionRevocations and
++// refuses the write of an object whose resourceVersion is not the stored one.
++type revocationAPI struct {
++	mu      sync.Mutex
++	objects map[string]Revocation
++	// afterGet changes an object after it is read, as another writer would.
++	afterGet func(*Revocation)
++}
++
++func (f *revocationAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++	f.mu.Lock()
++	defer f.mu.Unlock()
++
++	const collection = "/apis/dex.coreos.com/v1/namespaces/dex/revocations"
++	name := strings.TrimPrefix(strings.TrimPrefix(r.URL.Path, collection), "/")
++	switch {
++	case r.Method == http.MethodGet && name == "":
++		list := RevocationList{Revocations: []Revocation{}}
++		for _, obj := range f.objects {
++			if selects(r.URL.Query().Get("labelSelector"), obj.Labels) {
++				list.Revocations = append(list.Revocations, obj)
++			}
++		}
++		_ = json.NewEncoder(w).Encode(list)
++	case r.Method == http.MethodGet:
++		obj, ok := f.objects[name]
++		if !ok {
++			w.WriteHeader(http.StatusNotFound)
++			return
++		}
++		_ = json.NewEncoder(w).Encode(obj)
++		if f.afterGet != nil {
++			f.afterGet(&obj)
++			f.objects[name] = obj
++		}
++	case r.Method == http.MethodPost:
++		var obj Revocation
++		if err := json.NewDecoder(r.Body).Decode(&obj); err != nil {
++			w.WriteHeader(http.StatusBadRequest)
++			return
++		}
++		obj.ResourceVersion = "1"
++		f.objects[obj.Name] = obj
++		w.WriteHeader(http.StatusCreated)
++	case r.Method == http.MethodPut:
++		var obj Revocation
++		if err := json.NewDecoder(r.Body).Decode(&obj); err != nil {
++			w.WriteHeader(http.StatusBadRequest)
++			return
++		}
++		stored, ok := f.objects[name]
++		if !ok {
++			w.WriteHeader(http.StatusNotFound)
++			return
++		}
++		if obj.ResourceVersion != stored.ResourceVersion {
++			w.WriteHeader(http.StatusConflict)
++			return
++		}
++		obj.ResourceVersion += "1"
++		f.objects[name] = obj
++		_ = json.NewEncoder(w).Encode(obj)
++	default:
++		w.WriteHeader(http.StatusMethodNotAllowed)
++	}
++}
++
++// selects reports whether labels match selector, of terms "key=value" and "!key".
++func selects(selector string, labels map[string]string) bool {
++	for term := range strings.SplitSeq(selector, ",") {
++		if key, absent := strings.CutPrefix(term, "!"); absent {
++			if _, ok := labels[key]; ok {
++				return false
++			}
++			continue
++		}
++		key, value, _ := strings.Cut(term, "=")
++		if labels[key] != value {
++			return false
++		}
++	}
++	return true
++}
+diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
+index 1ff83e78..c9c45f14 100644
+--- a/storage/kubernetes/types.go
++++ b/storage/kubernetes/types.go
+@@ -1251,12 +1251,21 @@ func toStorageAuthSession(s AuthSession) storage.AuthSession {
+ }
+ 
+ // Labels of a Revocation object, for the subscribers that select the
+-// revocations of a type or of a pair.
++// revocations of a type or of a pair. revocationClaimedLabel marks the revocation
++// of a browser session a replica of dex has claimed to send its back-channel logout.
+ const (
+-	revocationTypeLabel = "user-authn.deckhouse.io/revocation-type"
+-	revocationPairLabel = "user-authn.deckhouse.io/pair"
++	revocationTypeLabel    = "user-authn.deckhouse.io/revocation-type"
++	revocationPairLabel    = "user-authn.deckhouse.io/pair"
++	revocationClaimedLabel = "user-authn.deckhouse.io/backchannel-claimed"
+ )
+ 
++// RevocationList is a list of Revocation objects.
++type RevocationList struct {
++	k8sapi.TypeMeta `json:",inline"`
++	k8sapi.ListMeta `json:"metadata,omitempty"`
++	Revocations     []Revocation `json:"items"`
++}
++
+ // Revocation is a mirrored struct from storage with JSON struct tags and
+ // Kubernetes type metadata.
+ type Revocation struct {
+@@ -1294,6 +1303,13 @@ func (cli *client) fromStorageRevocation(r storage.Revocation) (Revocation, erro
+ 	default:
+ 		return Revocation{}, fmt.Errorf("unknown revocation type %q", r.Type)
+ 	}
++	labels := map[string]string{
++		revocationTypeLabel: string(r.Type),
++		revocationPairLabel: pair,
++	}
++	if r.Claimed {
++		labels[revocationClaimedLabel] = "true"
++	}
+ 
+ 	return Revocation{
+ 		TypeMeta: k8sapi.TypeMeta{
+@@ -1303,10 +1319,7 @@ func (cli *client) fromStorageRevocation(r storage.Revocation) (Revocation, erro
+ 		ObjectMeta: k8sapi.ObjectMeta{
+ 			Name:      name,
+ 			Namespace: cli.namespace,
+-			Labels: map[string]string{
+-				revocationTypeLabel: string(r.Type),
+-				revocationPairLabel: pair,
+-			},
++			Labels:    labels,
+ 		},
+ 		Type:        r.Type,
+ 		ConnectorID: r.ConnectorID,
+@@ -1337,5 +1350,6 @@ func toStorageRevocation(r Revocation) storage.Revocation {
+ 		Reason:      r.Reason,
+ 		Source:      r.Source,
+ 		CreatedAt:   r.CreatedAt,
++		Claimed:     r.Labels[revocationClaimedLabel] != "",
+ 	}
+ }
+diff --git a/storage/kubernetes/types_test.go b/storage/kubernetes/types_test.go
+index df6f8b0d..66a05c4e 100644
+--- a/storage/kubernetes/types_test.go
++++ b/storage/kubernetes/types_test.go
+@@ -377,6 +377,7 @@ func TestRevocationRoundTrip(t *testing.T) {
+ 				Reason:      "SessionLogout",
+ 				Source:      "dex",
+ 				CreatedAt:   createdAt,
++				Claimed:     true,
+ 			},
+ 			objectName: "session-fehzwdh5qy4oyqcn7qhkcgzbm",
+ 		},
+@@ -403,10 +404,14 @@ func TestRevocationRoundTrip(t *testing.T) {
+ 			require.NoError(t, err)
+ 			require.Equal(t, tt.objectName, object.Name)
+ 			require.Regexp(t, kubeResourceNameRegex, object.Name)
+-			require.Equal(t, map[string]string{
++			labels := map[string]string{
+ 				"user-authn.deckhouse.io/revocation-type": string(tt.revocation.Type),
+ 				"user-authn.deckhouse.io/pair":            cli.offlineTokenName("jane", "local"),
+-			}, object.Labels)
++			}
++			if tt.revocation.Claimed {
++				labels["user-authn.deckhouse.io/backchannel-claimed"] = "true"
++			}
++			require.Equal(t, labels, object.Labels)
+ 
+ 			raw, err := json.Marshal(object)
+ 			require.NoError(t, err)
+diff --git a/storage/memory/memory.go b/storage/memory/memory.go
+index f15a625f..f8ac69a8 100644
+--- a/storage/memory/memory.go
++++ b/storage/memory/memory.go
+@@ -15,6 +15,7 @@ import (
+ var (
+ 	_ storage.Storage           = (*memStorage)(nil)
+ 	_ storage.RevocationCreator = (*memStorage)(nil)
++	_ storage.RevocationClaimer = (*memStorage)(nil)
+ )
+ 
+ // New returns an in memory storage.
+@@ -733,6 +734,38 @@ func (s *memStorage) RevocationExists(ctx context.Context, typ storage.Revocatio
+ 	return
+ }
+ 
++// PendingSessionRevocations lists the revocations of browser sessions not claimed yet,
++// oldest first; the handle is the session ID (Deckhouse).
++func (s *memStorage) PendingSessionRevocations(ctx context.Context) (pending []storage.PendingRevocation, err error) {
++	s.tx(func() {
++		for key, r := range s.revocations {
++			if key.typ == storage.RevocationSession && !r.Claimed {
++				pending = append(pending, storage.PendingRevocation{Revocation: r, Handle: key.sessionID})
++			}
++		}
++	})
++	slices.SortStableFunc(pending, func(a, b storage.PendingRevocation) int {
++		return a.CreatedAt.Compare(b.CreatedAt)
++	})
++	return
++}
++
++// ClaimRevocation claims the session revocation handle; a revocation claimed before or
++// gone is not claimed again (Deckhouse).
++func (s *memStorage) ClaimRevocation(ctx context.Context, handle string) (ok bool, err error) {
++	s.tx(func() {
++		for key, r := range s.revocations {
++			if key.typ == storage.RevocationSession && key.sessionID == handle && !r.Claimed {
++				r.Claimed = true
++				s.revocations[key] = r
++				ok = true
++				return
++			}
++		}
++	})
++	return
++}
++
+ // ListRevocations returns the revocations kept, oldest first. Only tests read
+ // them: dex writes revocations for others and reads back only whether a session
+ // or a grant was revoked (RevocationExists).
+diff --git a/storage/storage.go b/storage/storage.go
+index 22d95228..6c3b23e4 100644
+--- a/storage/storage.go
++++ b/storage/storage.go
+@@ -798,6 +798,12 @@ type Revocation struct {
+ 	Source string
+ 
+ 	CreatedAt time.Time
++
++	// Claimed tells that a replica of dex claimed the revocation of a browser
++	// session to send its back-channel logout (Deckhouse; see RevocationClaimer).
++	// Dex creates the revocations of the sessions it ends claimed: it sends their
++	// logout itself.
++	Claimed bool
+ }
+ 
+ // RevocationCreator is implemented by the storages that keep Revocation objects
+@@ -856,6 +862,46 @@ func AsRevocationReader(s Storage) (r RevocationReader, ok bool) {
+ 	}
+ }
+ 
++// PendingRevocation is the revocation of a browser session that no replica of dex has
++// claimed yet (Deckhouse). Handle names the stored revocation for ClaimRevocation.
++type PendingRevocation struct {
++	Revocation
++	Handle string
++}
++
++// RevocationClaimer is implemented by the storages that keep Revocation objects
++// (Deckhouse). Others end browser sessions too — user-authn-controller for a
++// UserOperation, a sign-out through user-api or a deleted user — and record each in
++// a revocation; dex claims the revocation to send the back-channel logout of the
++// session, once over all its replicas.
++type RevocationClaimer interface {
++	// PendingSessionRevocations lists the revocations of browser sessions not claimed yet.
++	PendingSessionRevocations(ctx context.Context) ([]PendingRevocation, error)
++	// ClaimRevocation claims the revocation handle for this replica. ok is false when
++	// another replica claimed it first or it is gone.
++	ClaimRevocation(ctx context.Context, handle string) (ok bool, err error)
++}
++
++// AsRevocationClaimer returns the RevocationClaimer of s, looking through the
++// read-only wrappers of this package as AsRevocationCreator does. ok is false when
++// the storage keeps no revocations.
++func AsRevocationClaimer(s Storage) (c RevocationClaimer, ok bool) {
++	for {
++		switch w := s.(type) {
++		case RevocationClaimer:
++			return w, true
++		case staticClientsStorage:
++			s = w.Storage
++		case staticPasswordsStorage:
++			s = w.Storage
++		case staticConnectorsStorage:
++			s = w.Storage
++		default:
++			return nil, false
++		}
++	}
++}
++
+ // Connector is an object that contains the metadata about connectors used to login to Dex.
+ type Connector struct {
+ 	// ID that will uniquely identify the connector object.

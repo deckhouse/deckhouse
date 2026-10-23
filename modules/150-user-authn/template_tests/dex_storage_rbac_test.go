@@ -143,10 +143,12 @@ var _ = Describe("Module :: user-authn :: helm template :: Dex storage RBAC", fu
 	})
 
 	// Dex writes a Revocation at logout and at /token/revoke (patch 290-revocation), reads one by
-	// name at introspection (patch 300-sessions-logout) and lists the type once at start to check
-	// that the CRD is installed, so both of its roles grant get, create and list alone, in a rule of
-	// its own: no watch, update or delete.
-	It("Should let Dex get, create and list revocations and nothing more", func() {
+	// name at introspection (patch 300-sessions-logout), lists the type once at start to check
+	// that the CRD is installed, and lists the revocations of the browser sessions others ended and
+	// labels each one it claims to send their back-channel logout (patch
+	// 330-backchannel-revoked-sessions), so both of its roles grant get, create, list and update
+	// alone, in a rule of its own: no watch, patch or delete.
+	It("Should let Dex get, create, list and update revocations and nothing more", func() {
 		Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 		for name, role := range map[string]object_store.KubeObject{
@@ -157,7 +159,7 @@ var _ = Describe("Module :: user-authn :: helm template :: Dex storage RBAC", fu
 			rules := dexStorageRules(role, "revocations")
 			Expect(rules).To(HaveLen(1), name)
 			Expect(rules[0].Get("resources").Value()).To(ConsistOf("revocations"), name)
-			Expect(rules[0].Get("verbs").Value()).To(ConsistOf("get", "create", "list"), name)
+			Expect(rules[0].Get("verbs").Value()).To(ConsistOf("get", "create", "list", "update"), name)
 		}
 	})
 })
