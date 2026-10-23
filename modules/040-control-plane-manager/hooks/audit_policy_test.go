@@ -266,6 +266,32 @@ rules:
 
 			Expect(found).To(BeTrue(), "explicit kubectl logs audit rule was not found")
 		})
+
+		It("must log kubelet pods/status updates with the request body before the system namespaces rule", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			data, _ := base64.StdEncoding.DecodeString(f.ValuesGet("controlPlaneManager.internal.auditPolicy").String())
+			var policy audit.Policy
+			_ = yaml.UnmarshalStrict(data, &policy)
+
+			podStatusRule, systemNamespacesRule := -1, -1
+			for i, r := range policy.Rules {
+				if systemNamespacesRule < 0 && r.Level == audit.LevelMetadata && len(r.Namespaces) > 1 && len(r.Resources) == 0 && len(r.Users) == 0 && len(r.UserGroups) == 0 {
+					systemNamespacesRule = i
+				}
+				if podStatusRule >= 0 || r.Level != audit.LevelRequest || len(r.UserGroups) != 1 || r.UserGroups[0] != "system:nodes" {
+					continue
+				}
+				for _, gr := range r.Resources {
+					if gr.Group == "" && len(gr.Resources) == 1 && gr.Resources[0] == "pods/status" {
+						podStatusRule = i
+					}
+				}
+			}
+
+			Expect(podStatusRule).To(BeNumerically(">=", 0), "Request-level rule for kubelet pods/status updates was not found")
+			Expect(systemNamespacesRule).To(BeNumerically(">=", 0), "system namespaces rule was not found")
+			Expect(podStatusRule).To(BeNumerically("<", systemNamespacesRule), "pods/status rule must precede the system namespaces rule")
+		})
 	})
 
 	It("must have RU/EN descriptions for all built-in audit policy rules", func() {

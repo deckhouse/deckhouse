@@ -86,21 +86,22 @@ rules:                       # Набор правил для аудита
 - [Логировать запросы kubectl logs (pods/log) на уровне Metadata.](#rule-11)
 - [Логировать операции create/update/patch/delete от системных ServiceAccount (`kube-system`, `d8-*`).](#rule-12)
 - [Логировать операции create/update/patch/delete для ресурсов Pod.](#rule-13)
-- [Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).](#rule-14)
-- [Логировать все LIST-запросы во всех неймспейсах.](#rule-15)
-- [Логировать операции create/delete для ресурсов ServiceAccount.](#rule-16)
-- [Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.](#rule-17)
-- [Логировать операции create/update/delete для ресурсов ClusterRoleBinding.](#rule-18)
-- [Логировать операции с pod subresource для attach и ephemeral-контейнеров.](#rule-19)
-- [Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.](#rule-20)
-- [Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io.](#rule-21)
-- [Логировать операции update/patch для внутренних virtualization subresources.](#rule-22)
-- [Логировать GET-операции для API-группы subresources.virtualization.deckhouse.io.](#rule-23)
-- [Логировать операции create/update/patch/delete для ресурсов `Pod`.](#rule-24)
-- [Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`.](#rule-25)
-- [Логировать операции create/update/patch/delete для ресурсов ModuleConfig.](#rule-26)
-- [Не логировать запросы аутентифицированных пользователей.](#rule-27)
-- [Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata.](#rule-28)
+- [Логировать обновления статуса Pod от kubelet (pods/status) с телом запроса, чтобы фиксировать остановки контейнеров и их причины.](#rule-14)
+- [Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).](#rule-15)
+- [Логировать все LIST-запросы во всех неймспейсах.](#rule-16)
+- [Логировать операции create/delete для ресурсов ServiceAccount.](#rule-17)
+- [Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.](#rule-18)
+- [Логировать операции create/update/delete для ресурсов ClusterRoleBinding.](#rule-19)
+- [Логировать операции с pod subresource для attach и ephemeral-контейнеров.](#rule-20)
+- [Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.](#rule-21)
+- [Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io.](#rule-22)
+- [Логировать операции update/patch для внутренних virtualization subresources.](#rule-23)
+- [Логировать GET-операции для API-группы subresources.virtualization.deckhouse.io.](#rule-24)
+- [Логировать операции create/update/patch/delete для ресурсов `Pod`.](#rule-25)
+- [Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`.](#rule-26)
+- [Логировать операции create/update/patch/delete для ресурсов ModuleConfig.](#rule-27)
+- [Не логировать запросы аутентифицированных пользователей.](#rule-28)
+- [Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata.](#rule-29)
 
 ### Манифесты правил
 
@@ -390,7 +391,24 @@ omitStages:
 ```
 
 <a id="rule-14"></a>
-14\. Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).
+14\. Логировать обновления статуса Pod от kubelet (pods/status) с телом запроса, чтобы фиксировать остановки контейнеров и их причины.
+
+```yaml
+level: Request
+userGroups:
+  - system:nodes
+verbs:
+  - patch
+  - update
+resources:
+  - resources:
+      - pods/status
+omitStages:
+  - RequestReceived
+```
+
+<a id="rule-15"></a>
+15\. Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).
 
 ```yaml
 level: Metadata
@@ -437,8 +455,8 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-15"></a>
-15\. Логировать все LIST-запросы во всех неймспейсах.
+<a id="rule-16"></a>
+16\. Логировать все LIST-запросы во всех неймспейсах.
 
 ```yaml
 level: Metadata
@@ -446,8 +464,8 @@ verbs:
   - list
 ```
 
-<a id="rule-16"></a>
-16\. Логировать операции create/delete для ресурсов ServiceAccount.
+<a id="rule-17"></a>
+17\. Логировать операции create/delete для ресурсов ServiceAccount.
 
 ```yaml
 level: Metadata
@@ -461,8 +479,8 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-17"></a>
-17\. Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.
+<a id="rule-18"></a>
+18\. Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.
 
 ```yaml
 level: Request
@@ -480,8 +498,8 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-18"></a>
-18\. Логировать операции create/update/delete для ресурсов ClusterRoleBinding.
+<a id="rule-19"></a>
+19\. Логировать операции create/update/delete для ресурсов ClusterRoleBinding.
 
 ```yaml
 level: Request
@@ -497,8 +515,8 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-19"></a>
-19\. Логировать операции с pod subresource для attach и ephemeral-контейнеров.
+<a id="rule-20"></a>
+20\. Логировать операции с pod subresource для attach и ephemeral-контейнеров.
 
 ```yaml
 level: Request
@@ -514,8 +532,8 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-20"></a>
-20\. Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.
+<a id="rule-21"></a>
+21\. Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.
 
 ```yaml
 level: RequestResponse
@@ -527,8 +545,8 @@ resources:
       - virtualmachineoperations
 ```
 
-<a id="rule-21"></a>
-21\. Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io.
+<a id="rule-22"></a>
+22\. Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io.
 
 ```yaml
 level: Metadata
@@ -541,8 +559,8 @@ resources:
   - group: virtualization.deckhouse.io
 ```
 
-<a id="rule-22"></a>
-22\. Логировать операции update/patch для внутренних virtualization subresources.
+<a id="rule-23"></a>
+23\. Логировать операции update/patch для внутренних virtualization subresources.
 
 ```yaml
 level: Metadata
@@ -555,8 +573,8 @@ resources:
       - internalvirtualizationvirtualmachineinstances
 ```
 
-<a id="rule-23"></a>
-23\. Логировать GET-операции для API-группы subresources.virtualization.deckhouse.io.
+<a id="rule-24"></a>
+24\. Логировать GET-операции для API-группы subresources.virtualization.deckhouse.io.
 
 ```yaml
 level: Metadata
@@ -566,8 +584,8 @@ resources:
   - group: subresources.virtualization.deckhouse.io
 ```
 
-<a id="rule-24"></a>
-24\. Логировать операции create/update/patch/delete для ресурсов `Pod`.
+<a id="rule-25"></a>
+25\. Логировать операции create/update/patch/delete для ресурсов `Pod`.
 
 ```yaml
 level: Metadata
@@ -581,8 +599,8 @@ resources:
       - pods
 ```
 
-<a id="rule-25"></a>
-25\. Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`.
+<a id="rule-26"></a>
+26\. Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`.
 
 ```yaml
 level: Metadata
@@ -595,8 +613,8 @@ namespaces:
   - d8-virtualization
 ```
 
-<a id="rule-26"></a>
-26\. Логировать операции create/update/patch/delete для ресурсов ModuleConfig.
+<a id="rule-27"></a>
+27\. Логировать операции create/update/patch/delete для ресурсов ModuleConfig.
 
 ```yaml
 level: Metadata
@@ -611,8 +629,8 @@ resources:
       - moduleconfigs
 ```
 
-<a id="rule-27"></a>
-27\. Не логировать запросы аутентифицированных пользователей.
+<a id="rule-28"></a>
+28\. Не логировать запросы аутентифицированных пользователей.
 
 ```yaml
 level: None
@@ -620,8 +638,8 @@ userGroups:
   - system:authenticated
 ```
 
-<a id="rule-28"></a>
-28\. Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata.
+<a id="rule-29"></a>
+29\. Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata.
 
 ```yaml
 level: Metadata
@@ -866,7 +884,20 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 14: Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).
+  # 14: Логировать обновления статуса Pod от kubelet (pods/status) с телом запроса, чтобы фиксировать остановки контейнеров и их причины.
+  - level: Request
+    userGroups:
+      - system:nodes
+    verbs:
+      - patch
+      - update
+    resources:
+      - resources:
+          - pods/status
+    omitStages:
+      - RequestReceived
+
+  # 15: Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).
   - level: Metadata
     verbs:
       - create
@@ -910,12 +941,12 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 15: Логировать все LIST-запросы во всех неймспейсах.
+  # 16: Логировать все LIST-запросы во всех неймспейсах.
   - level: Metadata
     verbs:
       - list
 
-  # 16: Логировать операции create/delete для ресурсов ServiceAccount.
+  # 17: Логировать операции create/delete для ресурсов ServiceAccount.
   - level: Metadata
     verbs:
       - create
@@ -926,7 +957,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 17: Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.
+  # 18: Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.
   - level: Request
     verbs:
       - create
@@ -941,7 +972,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 18: Логировать операции create/update/delete для ресурсов ClusterRoleBinding.
+  # 19: Логировать операции create/update/delete для ресурсов ClusterRoleBinding.
   - level: Request
     verbs:
       - create
@@ -954,7 +985,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 19: Логировать операции с pod subresource для attach и ephemeral-контейнеров.
+  # 20: Логировать операции с pod subresource для attach и ephemeral-контейнеров.
   - level: Request
     verbs:
       - get
@@ -967,7 +998,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 20: Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.
+  # 21: Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.
   - level: RequestResponse
     verbs:
       - create
@@ -976,7 +1007,7 @@ rules:
         resources:
           - virtualmachineoperations
 
-  # 21: Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io.
+  # 22: Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io.
   - level: Metadata
     verbs:
       - create
@@ -986,7 +1017,7 @@ rules:
     resources:
       - group: virtualization.deckhouse.io
 
-  # 22: Логировать операции update/patch для внутренних virtualization subresources.
+  # 23: Логировать операции update/patch для внутренних virtualization subresources.
   - level: Metadata
     verbs:
       - update
@@ -996,14 +1027,14 @@ rules:
         resources:
           - internalvirtualizationvirtualmachineinstances
 
-  # 23: Логировать GET-операции для API-группы subresources.virtualization.deckhouse.io.
+  # 24: Логировать GET-операции для API-группы subresources.virtualization.deckhouse.io.
   - level: Metadata
     verbs:
       - get
     resources:
       - group: subresources.virtualization.deckhouse.io
 
-  # 24: Логировать операции create/update/patch/delete для ресурсов `Pod`.
+  # 25: Логировать операции create/update/patch/delete для ресурсов `Pod`.
   - level: Metadata
     verbs:
       - create
@@ -1014,7 +1045,7 @@ rules:
       - resources:
           - pods
 
-  # 25: Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`.
+  # 26: Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`.
   - level: Metadata
     verbs:
       - create
@@ -1024,7 +1055,7 @@ rules:
     namespaces:
       - d8-virtualization
 
-  # 26: Логировать операции create/update/patch/delete для ресурсов ModuleConfig.
+  # 27: Логировать операции create/update/patch/delete для ресурсов ModuleConfig.
   - level: Metadata
     verbs:
       - create
@@ -1039,12 +1070,12 @@ rules:
   ############
   # Здесь вставляются пользовательские правила из секрета kube-system/audit-policy
   ############
-  # 27: Не логировать запросы аутентифицированных пользователей.
+  # 28: Не логировать запросы аутентифицированных пользователей.
   - level: None
     userGroups:
       - system:authenticated
 
-  # 28: Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata.
+  # 29: Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata.
   - level: Metadata
 
 ```

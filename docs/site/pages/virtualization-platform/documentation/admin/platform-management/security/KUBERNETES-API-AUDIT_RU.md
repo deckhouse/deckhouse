@@ -34,6 +34,7 @@ Kubernetes поддерживает настройку аудита через �
 - Логировать запросы kubectl logs (pods/log) на уровне Metadata.
 - Логировать операции create/update/patch/delete от системных ServiceAccount (`kube-system`, `d8-*`).
 - Логировать операции create/update/patch/delete для ресурсов Pod.
+- Логировать обновления статуса Pod от kubelet (pods/status) с телом запроса, чтобы фиксировать остановки контейнеров и их причины.
 - Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).
 - Логировать все LIST-запросы во всех неймспейсах.
 - Логировать операции create/delete для ресурсов ServiceAccount.

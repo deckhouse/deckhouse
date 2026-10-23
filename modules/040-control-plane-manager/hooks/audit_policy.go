@@ -313,6 +313,26 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
+		// Must precede the system namespaces rule: otherwise kubelet status updates in `kube-system`
+		// and `d8-*` match it first and lose the request body with the container termination reason.
+		descriptionEN := "Log Pod status updates from kubelet (pods/status) with the request body to capture container terminations and their reasons."
+		descriptionRU := "Логировать обновления статуса Pod от kubelet (pods/status) с телом запроса, чтобы фиксировать остановки контейнеров и их причины."
+		rule := audit.PolicyRule{
+			Level:      audit.LevelRequest,
+			UserGroups: []string{"system:nodes"},
+			Resources: []audit.GroupResources{{
+				Group:     "",
+				Resources: []string{"pods/status"},
+			}},
+			Verbs: []string{"patch", "update"},
+			OmitStages: []audit.Stage{
+				audit.StageRequestReceived,
+			},
+		}
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
+	}
+
+	{
 		descriptionEN := "Log create/update/patch/delete operations in system namespaces (`kube-system`, `d8-*`)."
 		descriptionRU := "Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`)."
 		rule := audit.PolicyRule{
