@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-211b65580da46b8030ee92a5acd03d52c6df673b600fa2375c3d0c10bc3ebca1",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -17,6 +17,20 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимость GO-2026-5932 затрагивает пакет golang.org/x/crypto/openpgp, который не поддерживается и является небезопасным по своей архитектуре. Данный компонент не импортирует и не выполняет код пакета openpgp; пакет golang.org/x/crypto подтягивается транзитивно без исполняемого пути openpgp.",
       "timestamp": "2026-08-13T12:31:39.419749Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-63209"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/klauspost/compress"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость в пакете github.com/klauspost/compress/s2: функции s2.NewDict и Dict.Encode. etcd, etcdctl и etcdutl используют библиотеку только для сжатия zstd, пакет s2 в сборку не входит.",
+      "timestamp": "2026-10-22T13:29:13Z"
     }
   ],
   "timestamp": "2026-08-13T12:31:39Z"
