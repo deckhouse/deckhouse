@@ -13,11 +13,14 @@
   installed tree, which is the same resolution it will do at runtime, so a tool that grows
   or drops a dependency carries the change with it.
 
-  /lib64 gets the loader, /usr/lib64 gets every library. Those two are the entire
-  compiled-in search path of this loader ("ld-linux-x86-64.so.2 --help" prints them) and a
-  distroless image has no ld.so.cache to widen it — so pm's own split, which leaves part of
-  the set under usr/lib, does not survive the move. Verified against a FROM scratch image:
-  with pm's layout curl cannot find libcurl.so.4, with this one it runs.
+  Every library goes into the directory the loader itself came in, because that directory
+  is always part of the loader's own compiled-in search path ("ld-linux-x86-64.so.2 --help"
+  prints it) and a distroless image has no ld.so.cache to widen it. Nothing here needs to
+  know which container-base release is in use: v3 installs the loader into /out/lib64 and
+  searches /lib64 and /usr/lib64, v4 installs it into /out/usr/lib and searches /usr/lib.
+  Either way pm's own split, which leaves part of the set under a directory the loader does
+  not search, does not survive the move. Verified against a FROM scratch image: with pm's
+  layout curl cannot find libcurl.so.4, with this one it runs.
 
   Parameters:
     Images   - the base images map
@@ -27,6 +30,11 @@
                is where pm put it; the destination is where the final image wants it.
     post     - optional extra shell commands, run after staging, one per line. For things
                that belong next to the binaries but come from nowhere, such as symlinks.
+    imports  - optional list of {from, add, to}, put into /out before staging, so that a
+               binary built elsewhere is staged with its libraries like a pm one. Use
+               pm_built_binaries_artifact instead of passing it by hand.
+    pre      - optional shell commands run after the imports and before the libraries are
+               resolved (patchelf is installed by then).
 
   Usage, next to the image that needs them:
     {{- include "pm_binaries_artifact" (dict
@@ -49,6 +57,15 @@
 image: {{ .name }}
 final: false
 from: {{ index .Images "builder/distroless" }}
+{{- with .imports }}
+import:
+  {{- range . }}
+- from: {{ .from }}
+  add: {{ .add }}
+  to: {{ .to }}
+  before: install
+  {{- end }}
+{{- end }}
 shell:
   beforeInstall:
   # -n, because without it pm consults the builder's own package index and skips whatever
@@ -57,19 +74,32 @@ shell:
   - pm install -n {{ required "pm_binaries_artifact needs packages" .packages }} -d /out
   - pm install coreutils gawk patchelf
   install:
+  {{- with .pre }}
+  - |
+    set -eu
+{{ . | trim | indent 4 }}
+  {{- end }}
   - |
     set -eu
 
     out=/relocate-pm
-    loader=/out/lib64/ld-linux-x86-64.so.2
 
-    mkdir -p "$out/lib64" "$out/usr/lib64"
+    loader=""
+    for candidate in /out/usr/lib/ld-linux-x86-64.so.2 /out/lib64/ld-linux-x86-64.so.2; do
+      if [ -e "$candidate" ]; then
+        loader="$candidate"
+        break
+      fi
+    done
 
     # The loader is shipped only when something needs it. A set that is entirely static —
-    # pm builds bash, coreutils, grep and findutils that way — pulls no glibc at all, so
-    # /out has no lib64 to take one from and the package is complete without it.
-    if [ -e "$loader" ]; then
-      cp -aL "$loader" "$out/lib64/"
+    # pm builds bash, jq and yq that way — pulls no glibc at all, so /out carries no loader
+    # to take and the package is complete without one.
+    libdir=""
+    if [ -n "$loader" ]; then
+      libdir="$out$(dirname "${loader#/out}")"
+      mkdir -p "$libdir"
+      cp -aL "$loader" "$libdir/"
     fi
 
     stage_libraries() {
@@ -86,7 +116,7 @@ shell:
             esac
             # -L, because a dangling symlink is dropped on import and the library it stood
             # for would go missing without a word.
-            cp -aL "$lib" "$out/usr/lib64/$(basename "$lib")"
+            cp -aL "$lib" "$libdir/$(basename "$lib")"
           done
     }
 
@@ -115,8 +145,8 @@ shell:
       # whose target is not staged arrives broken or not at all.
       cp -aL "/out$src" "$out$dst"
       if is_dynamic "/out$src"; then
-        if [ ! -e "$loader" ]; then
-          echo "FATAL: $src is dynamic but $loader is absent; add libc to the package list" >&2
+        if [ -z "$loader" ]; then
+          echo "FATAL: $src is dynamic but /out carries no loader; add libc to the package list" >&2
           exit 1
         fi
         stage_libraries "/out$src"
@@ -131,7 +161,7 @@ shell:
     rc=0
     for dst in $staged; do
       status=0
-      report="$("$out/lib64/ld-linux-x86-64.so.2" --library-path "$out/usr/lib64" --list "$out$dst" 2>&1)" || status=$?
+      report="$("$libdir/${loader##*/}" --library-path "$libdir" --list "$out$dst" 2>&1)" || status=$?
       if printf '%s\n' "$report" | grep -qE '=> not found|cannot open shared object file'; then
         echo "FATAL: $dst needs libraries this artifact does not stage:" >&2
         printf '%s\n' "$report" | grep -E '=> not found|cannot open shared object file' | sed 's/^/    /' >&2
@@ -149,7 +179,7 @@ shell:
 
     echo "pm_binaries_artifact: dynamic$staged"
     echo "pm_binaries_artifact: static${static:- none}"
-    echo "pm_binaries_artifact: $(ls -1 "$out/usr/lib64" | wc -l) libraries"
+    echo "pm_binaries_artifact: $(ls -1 "$libdir" 2>/dev/null | wc -l) libraries"
 {{- with .post }}
   - |
     set -eu
@@ -157,4 +187,49 @@ shell:
 {{ . | trim | indent 4 }}
 {{- end }}
   - chown -R 0:0 /relocate-pm
+{{- end }}
+
+{{- /*
+  pm_built_binaries_artifact is pm_binaries_artifact for a binary the module builds itself.
+  The binary is imported from the image it was built in, the libraries it loads come from pm
+  packages, and the staging and the check of the closure are the ones of pm_binaries_artifact:
+  a library that no listed package provides stops the build instead of reaching the image.
+
+  Parameters (those of pm_binaries_artifact, and):
+    from     - the image the binaries were built in
+    binaries - space separated "built_path:dest": where the binary is in that image and where
+               the final image wants it ("built_path" alone keeps the same path)
+    packages - pm packages that provide the libraries of the binaries (libc comes with them)
+
+  Usage:
+    {{- include "pm_built_binaries_artifact" (dict
+          "Images" $.Images
+          "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
+          "from" (printf "%s/%s-artifact" $.ModuleName $.ImageName)
+          "packages" "libpcap-pwru jansson libstdc++"
+          "binaries" "/src/src/pmacctd:/usr/sbin/pmacctd") }}
+
+  and the import in the final image is the one of pm_binaries_artifact (/relocate-pm to /).
+
+  The rpath of the built binaries is removed before the libraries are resolved. The toolchain
+  of builder/distroless links with an rpath of /usr/lib/../lib64, which the loader searches
+  before LD_LIBRARY_PATH, so libstdc++, libgcc_s and libc would be found in the root of the
+  builder, not in /out, would not be staged and the check would still pass.
+*/}}
+{{- define "pm_built_binaries_artifact" }}
+  {{- $imports := list }}
+  {{- $staged := list }}
+  {{- $pre := list }}
+  {{- range $spec := splitList " " (required "pm_built_binaries_artifact needs binaries" .binaries) }}
+    {{- if $spec }}
+      {{- $parts := splitList ":" $spec }}
+      {{- $built := index $parts 0 }}
+      {{- $dest := $built }}
+      {{- if gt (len $parts) 1 }}{{- $dest = index $parts 1 }}{{- end }}
+      {{- $imports = append $imports (dict "from" (required "pm_built_binaries_artifact needs from" $.from) "add" $built "to" (printf "/out%s" $dest)) }}
+      {{- $staged = append $staged $dest }}
+      {{- $pre = append $pre (printf "patchelf --remove-rpath /out%s" $dest) }}
+    {{- end }}
+  {{- end }}
+  {{- include "pm_binaries_artifact" (dict "Images" .Images "name" .name "packages" .packages "binaries" (join " " $staged) "imports" $imports "pre" (join "\n" $pre) "post" .post) }}
 {{- end }}
