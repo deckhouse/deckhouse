@@ -32,6 +32,7 @@ This policy implements the following rules:
 - Log kubectl logs requests (pods/log) at Metadata level.
 - Log create/update/patch/delete operations from system service accounts (`kube-system`, `d8-*`).
 - Log create/update/patch/delete operations for Pod resources.
+- Log Pod status updates from kubelet (pods/status) with the request body to capture container terminations and their reasons.
 - Log create/update/patch/delete operations in system namespaces (`kube-system`, `d8-*`).
 - Log all LIST operations in all namespaces.
 - Log create and delete operations for ServiceAccount resources.
