@@ -11,3 +11,5 @@ spec:
       - pss-baseline-with-exception
       - pss-baseline-spe-container
       - pss-restricted-with-exception
+      - policy-skip-drop-on-controllers
+      - policy-skip-add-on-controllers

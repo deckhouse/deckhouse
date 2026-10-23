@@ -1,0 +1,155 @@
+{{- include "ape.only_ready_constraints" (list . (include "ape.security_policy_constraints" .)) }}
+
+{{- define "ape.security_policy_constraints" }}
+{{- if .Values.admissionPolicyEngine.internal.bootstrapped }}
+
+{{- range $policy := .Values.admissionPolicyEngine.internal.securityPolicies }}
+  {{- range $cr := include "policy_variants" (list $ $policy (dict "security.deckhouse.io/security-policy" "") "Namespaced") | fromYamlArray }}
+    {{- include "security_policy_constraints" (list $ $cr) }}
+  {{- end }}
+{{- end }}
+
+{{- /* Exec and attach into the platform's own pods, not tied to a SecurityPolicy. */}}
+{{- if ne .Values.global.deckhouseVersion "dev" }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8DenyExecHeritage
+metadata:
+  name: deny-exec-heritage-pods
+  {{- include "helm_lib_module_labels" (list . (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["PodExecOptions", "PodAttachOptions"]
+    scope: Namespaced
+    namespaces:
+      {{- include "system_namespaces" . | fromYamlArray | toYaml | nindent 6 }}
+{{- end }}
+
+{{- end }}
+{{- end }}
+
+{{/*
+  security_policy_constraints renders the constraints of one SecurityPolicy, one per rule group.
+  The Pod Security Standards render through it too, with variants the module builds from its own
+  rule set. See policies/_helpers.tpl for a variant.
+
+  A rule a SecurityPolicy omits allows everything, except `allowPrivileged` and
+  `allowPrivilegeEscalation`, which deny when omitted.
+
+  Usage: include "security_policy_constraints" (list $context $cr)
+*/}}
+{{- define "security_policy_constraints" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+  {{- $p := $cr.spec.policies }}
+
+  {{- if not $p.allowPrivileged }}
+    {{- include "policy_constraint" (list $context $cr "D8PrivilegedContainer" (list "allowPrivileged") dict) }}
+  {{- end }}
+
+  {{- if not $p.allowPrivilegeEscalation }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowPrivilegeEscalation" (list "allowPrivilegeEscalation") dict) }}
+  {{- end }}
+
+  {{- if or (and (hasKey $p "allowHostPID") (not $p.allowHostPID)) (and (hasKey $p "allowHostIPC") (not $p.allowHostIPC)) }}
+    {{- $parameters := dict
+          "allowHostPID" (ternary $p.allowHostPID true (hasKey $p "allowHostPID"))
+          "allowHostIPC" (ternary $p.allowHostIPC true (hasKey $p "allowHostIPC")) }}
+    {{- include "policy_constraint" (list $context $cr "D8HostProcesses" (list "allowHostPID" "allowHostIPC") $parameters) }}
+  {{- end }}
+
+  {{- if or (and (hasKey $p "allowHostNetwork") (not $p.allowHostNetwork)) (hasKey $p "allowedHostPorts") }}
+    {{- $parameters := dict "allowHostNetwork" (ternary $p.allowHostNetwork true (hasKey $p "allowHostNetwork")) }}
+    {{- if hasKey $p "allowedHostPorts" }}
+      {{- $_ := set $parameters "ranges" $p.allowedHostPorts }}
+    {{- end }}
+    {{- include "policy_constraint" (list $context $cr "D8HostNetwork" (list "allowHostNetwork" "allowedHostPorts") $parameters) }}
+  {{- end }}
+
+  {{- if hasKey $p "readOnlyRootFilesystem" }}
+    {{- include "policy_constraint" (list $context $cr "D8ReadOnlyRootFilesystem" (list "readOnlyRootFilesystem") dict) }}
+  {{- end }}
+
+  {{- if and (hasKey $p "automountServiceAccountToken") (not $p.automountServiceAccountToken) }}
+    {{- include "policy_constraint" (list $context $cr "D8AutomountServiceAccountTokenPod" (list "automountServiceAccountToken") dict) }}
+  {{- end }}
+
+  {{- if and (hasKey $p "allowRbacWildcards") (not $p.allowRbacWildcards) }}
+    {{- $options := dict "matchKinds" (list (dict "apiGroups" (list "rbac.authorization.k8s.io") "kinds" (list "Role" "RoleBinding"))) }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowRbacWildcards" (list "allowRbacWildcards") dict $options) }}
+  {{- end }}
+
+  {{- if hasKey $p "allowedClusterRoles" }}
+    {{- $options := dict "matchKinds" (list (dict "apiGroups" (list "rbac.authorization.k8s.io") "kinds" (list "RoleBinding"))) }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowedClusterRoles" (list "allowedClusterRoles") (pick $p "allowedClusterRoles") $options) }}
+  {{- end }}
+
+  {{- if hasKey $p "allowedFlexVolumes" }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowedFlexVolumes" (list "allowedFlexVolumes") (pick $p "allowedFlexVolumes")) }}
+  {{- end }}
+
+  {{- if hasKey $p "allowedVolumes" }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowedVolumeTypes" (list "allowedVolumes") (dict "volumes" $p.allowedVolumes)) }}
+  {{- end }}
+
+  {{- if hasKey $p "allowedHostPaths" }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowedHostPaths" (list "allowedHostPaths") (pick $p "allowedHostPaths")) }}
+  {{- end }}
+
+  {{- /* `drop: [ALL]` is commonly added to the Pod by a mutating webhook, so the two capabilities
+         rules are excluded from controller validation one by one. */}}
+  {{- $parameters := pick $p "allowedCapabilities" "requiredDropCapabilities" }}
+  {{- if $parameters }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowedCapabilities" (keys $parameters | sortAlpha) $parameters (dict "perKeyExclusion" true)) }}
+  {{- end }}
+
+  {{- if hasKey $p "allowedAppArmor" }}
+    {{- include "policy_constraint" (list $context $cr "D8AppArmor" (list "allowedAppArmor") (dict "allowedProfiles" $p.allowedAppArmor)) }}
+  {{- end }}
+
+  {{- if hasKey $p "allowedProcMount" }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowedProcMount" (list "allowedProcMount") (pick $p "allowedProcMount")) }}
+  {{- end }}
+
+  {{- $parameters := pick $p "fsGroup" "runAsUser" "runAsGroup" "supplementalGroups" }}
+  {{- if $parameters }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowedUsers" (list "fsGroup" "runAsUser" "runAsGroup" "supplementalGroups") $parameters) }}
+  {{- end }}
+
+  {{- if hasKey $p "seLinux" }}
+    {{- include "policy_constraint" (list $context $cr "D8SeLinux" (list "seLinux") (dict "allowedSELinuxOptions" $p.seLinux)) }}
+  {{- end }}
+
+  {{- if or (hasKey $p "allowedUnsafeSysctls") (hasKey $p "forbiddenSysctls") }}
+    {{- $parameters := pick $p "forbiddenSysctls" }}
+    {{- if hasKey $p "allowedUnsafeSysctls" }}
+      {{- $_ := set $parameters "allowedSysctls" $p.allowedUnsafeSysctls }}
+    {{- end }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowedSysctls" (list "allowedUnsafeSysctls" "forbiddenSysctls") $parameters) }}
+  {{- end }}
+
+  {{- if $p.seccompProfiles }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowedSeccompProfiles" (list "seccompProfiles") (pick $p.seccompProfiles "allowedProfiles" "allowedLocalhostFiles")) }}
+  {{- end }}
+
+  {{- if and (hasKey $p "verifyImageSignatures") (regexMatch "^(EE|FE|CSE|SE-plus)$" $context.Values.global.deckhouseEdition) }}
+    {{- $references := list }}
+    {{- range $signature := $p.verifyImageSignatures }}
+      {{- $references = append $references (printf "^%s$" ($signature.reference | replace "*" ".*")) }}
+    {{- end }}
+    {{- include "policy_constraint" (list $context $cr "D8VerifyImageSignatures" (list "verifyImageSignatures") (dict "references" $references)) }}
+  {{- end }}
+
+  {{- if hasKey $p "allowedServiceTypes" }}
+    {{- $options := dict "matchKinds" (list (dict "apiGroups" (list "") "kinds" (list "Service"))) }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowedServiceTypes" (list "allowedServiceTypes") (pick $p "allowedServiceTypes") $options) }}
+  {{- end }}
+
+  {{- if $p.blockWildcardDomains }}
+    {{- $options := dict "matchKinds" (list (dict "apiGroups" (list "networking.k8s.io") "kinds" (list "Ingress"))) }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowedIngresses" (list "blockWildcardDomains") (pick $p "blockWildcardDomains") $options) }}
+  {{- end }}
+{{- end }}

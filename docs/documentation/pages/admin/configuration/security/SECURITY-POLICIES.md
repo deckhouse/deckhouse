@@ -30,203 +30,54 @@ Depending on how pods are created, there are differences in how the API generate
 
 For all three policy categories (Pod Security Standards, operational, and security policies), there is no provision for automatically recreating existing pods when changing existing policies or adding new ones. Pods that existed prior to changes being made to the policy in use or prior to a new policy being added will continue to run until they are restarted. Upon restart, they will be validated against the new rules.
 
-In DP, there are alerts (ClusterObservabilityAlert resources) for such cases, notifying you of pods in the namespace that violate policies after an existing policy is modified or a new one is added.
+DP provides alerts for such cases.
+Each alert fires once for each policy and namespace with violating objects:
 
-To get a list of alerts, use the command:
+| Alert | What it reports |
+|---|---|
+| `PodSecurityStandardsViolation` | Running pods that violate a Pod Security Standard |
+| `OperationPolicyViolation` | Existing objects that violate an OperationPolicy |
+| `SecurityPolicyViolation` | Existing objects that violate a SecurityPolicy |
+| `ControllerPolicyViolation` | Pod-creating controllers that violate a policy with `enforcementAction: Deny` and are only warned about during the transition period |
+
+The `policy` label of an alert names the policy:
+the name of the OperationPolicy or SecurityPolicy, or `d8-pod-security-baseline` or `d8-pod-security-restricted` for the Pod Security Standards.
+The `namespace` label is the namespace of the violating objects.
+
+An alert is an ObservabilityAlert resource in the namespace of the violating objects, so the users of the namespace see it.
+An alert for cluster-scoped objects is a ClusterObservabilityAlert resource.
+
+To list the alerts in a namespace, run the following command, where `<NAMESPACE>` is the namespace:
 
 ```bash
-d8 k get clusterobservabilityalerts
+d8 k -n <NAMESPACE> get observabilityalerts
 ```
 
 Output example:
 
 <!-- markdownlint-disable MD031 -->
 ```console
-NAME                                                  SEVERITY   STATUS   DURATION   SUMMARY                          AGE
-SecurityPolicyViolation-f3a77d1dd2175402-1777370195   1          Firing   5h         Alerting PrometheusUnavailable   5h1m
-OperationPolicyViolation-9b21d0c871796913-1777370435  1          Firing   6h         Alerting PrometheusUnavailable   6h1m
+NAME                                                        SEVERITY   STATUS   DURATION   SUMMARY                                                                                     AGE
+PodSecurityStandardsViolation-07243a74fddd8234-1792744609   3          Firing   1h         Pods in the `app` namespace violate the `d8-pod-security-baseline` Pod Security Standard.   1h
+SecurityPolicyViolation-8f21cd962274a252-1792744609         3          Firing   1h         Objects in the `app` namespace violate the `restricted-app` SecurityPolicy.                 1h
 ```
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-To view information about a specific alert, use the following command:
+To list the alerts in every namespace and the alerts for cluster-scoped objects, run the following commands:
 
 ```bash
-d8 k get clusterobservabilityalert OperationPolicyViolation-9b21d0c871796913-1777370435 -oyaml
+d8 k get observabilityalerts -A
+d8 k get clusterobservabilityalerts
 ```
 
-{% offtopic title="Example of an alert for a violation of the Pod Security Standards policy..." %}
+To view an alert, run the following command:
 
-```yaml
-kind: ClusterObservabilityAlert
-apiVersion: alerts.observability.deckhouse.io/v1alpha1
-metadata:
-  name: PodSecurityStandardsViolation-91e71759e048a397-1777369535
-  resourceVersion: "7454828154578800069"
-  creationTimestamp: 2026-04-28T09:45:35Z
-  labels:
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-alert:
-  labels:
-    alertname: PodSecurityStandardsViolation
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-    severity_level: "3"
-  annotations:
-    description: |-
-      You have configured [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/), and one or more running pods are violating these standards.
-
-      To identify violating pods:
-
-      - Run the following Prometheus query:
-
-        ```prometheus
-        count by (violating_namespace, violating_name, violation_msg) (
-          d8_gatekeeper_exporter_constraint_violations{
-            violation_enforcement="deny",
-            violating_namespace=~".*",
-            violating_kind="Pod",
-            source_type="PSS"
-          }
-        )
-        ```
-
-      - Alternatively, check the admission-policy-engine reports in the Deckhouse web UI.
-    plk_markup_format: markdown
-    plk_protocol_version: "1"
-    summary: At least one pod violates the configured cluster pod security standards.
-  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="PSS",violating_kind="Pod",violating_namespace=~".*",violation_enforcement="deny"}))
-    > 0
-  created_by: observability
-  rule_group_name: admission-policy-engine-audit-0
-status:
-  alertStatus: Firing
-  silencedBy: []
-  startsAt: 2026-04-28T09:45:35Z
-  resolvedAt: null
-  duration: 20h40m1.015261771s
+```bash
+d8 k -n <NAMESPACE> get observabilityalert <ALERT_NAME> -o yaml
 ```
 
-{% endofftopic %}
-
-{% offtopic title="Example of an alert for a violation of an operational policy..." %}
-
-```yaml
-kind: ClusterObservabilityAlert
-apiVersion: alerts.observability.deckhouse.io/v1alpha1
-metadata:
-  name: OperationPolicyViolation-9b21d0c871796913-1777370435
-  resourceVersion: "7454831929456594373"
-  creationTimestamp: 2026-04-28T10:00:35Z
-  labels:
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-alert:
-  labels:
-    alertname: OperationPolicyViolation
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-    severity_level: "3"
-  annotations:
-    description: >-
-      You have configured operation policies for the cluster, and one or more
-      existing objects are violating these policies.
-
-
-      To identify violating objects:
-
-
-      - Run the following Prometheus query:
-
-        ```prometheus
-        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
-          d8_gatekeeper_exporter_constraint_violations{
-            violation_enforcement="deny",
-            source_type="OperationPolicy"
-          }
-        )
-        ```
-
-      - Alternatively, check the admission-policy-engine reports in the Deckhouse web UI.
-    plk_markup_format: markdown
-    plk_protocol_version: "1"
-    summary: At least one object violates the configured cluster operation policies.
-  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="OperationPolicy",violation_enforcement="deny"}))
-    > 0
-  created_by: observability
-  rule_group_name: admission-policy-engine-audit-0
-status:
-  alertStatus: Firing
-  silencedBy: []
-  startsAt: 2026-04-28T10:00:35Z
-  resolvedAt: null
-  duration: 20h23m41.023025059s
-```
-
-{% endofftopic %}
-
-{% offtopic title="Example of an alert for a security policy violation..." %}
-
-```yaml
-kind: ClusterObservabilityAlert
-apiVersion: alerts.observability.deckhouse.io/v1alpha1
-metadata:
-  name: SecurityPolicyViolation-f3a77d1dd2175402-1777370195
-  resourceVersion: "7454830922622307781"
-  creationTimestamp: 2026-04-28T09:56:35Z
-  labels:
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-alert:
-  labels:
-    alertname: SecurityPolicyViolation
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-    severity_level: "3"
-  annotations:
-    description: >-
-      You have configured security policies for the cluster, and one or more
-      existing objects are violating these policies.
-
-
-      To identify violating objects:
-
-
-      - Run the following Prometheus query:
-
-        ```prometheus
-        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
-          d8_gatekeeper_exporter_constraint_violations{
-            violation_enforcement="deny",
-            source_type="SecurityPolicy"
-          }
-        )
-        ```
-
-      - Alternatively, check the admission-policy-engine reports in the Deckhouse web UI.
-    plk_markup_format: markdown
-    plk_protocol_version: "1"
-    summary: At least one object violates the configured cluster security policies.
-  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="SecurityPolicy",violation_enforcement="deny"}))
-    > 0
-  created_by: observability
-  rule_group_name: admission-policy-engine-audit-0
-status:
-  alertStatus: Firing
-  silencedBy: []
-  startsAt: 2026-04-28T09:56:35Z
-  resolvedAt: null
-  duration: 20h29m21.015479019s
-```
-
-{% endofftopic %}
+The description of the alert contains a Prometheus query that lists the violating objects and the rules they break.
 
 ## Applying Pod Security Standards
 
@@ -321,7 +172,12 @@ A denying policy that reaches system namespaces is therefore rendered as two Gat
 - The policy's own name: For application namespaces, with the action the policy asks for.
 - `d8-system-default-<policy>`: For system namespaces, in `warn` mode.
 
-The `d8-system-default-` and `d8-pod-security-` prefixes are reserved: a policy whose name starts with one of them is rejected on creation.
+For the transition to controller-level validation, a denying policy only warns about pod-creating controllers by default.
+It checks them in one more constraint, `d8-controllers-<policy>`, in `warn` mode, and the constraint with the policy's own name checks Pods only.
+The `podSecurityStandards.controllerValidationEnforcement: Policy` module parameter, or `spec.controllerValidation.mode: Enforce` of the policy,
+checks controllers with the action of the policy in the single constraint instead.
+
+The `d8-system-default-`, `d8-pod-security-` and `d8-controllers-` prefixes are reserved: a policy whose name starts with one of them is rejected on creation.
 A policy name is limited to 235 characters for the same reason, so that the derived constraint names stay within the 253-character limit for a Kubernetes object name.
 
 A policy is rendered as a single constraint when the split would change nothing:

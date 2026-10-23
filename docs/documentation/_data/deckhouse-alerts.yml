@@ -377,6 +377,42 @@ alerts:
         The {{ $labels.kind }} {{ if $labels.namespace }}{{ $labels.namespace }}/{{ end }}{{ $labels.name }} uses the fromRequires or toRequires fields.
       severity: "4"
       markupFormat: markdown
+    - name: ControllerPolicyViolation
+      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/propagated-audit.yaml
+      moduleUrl: 015-admission-policy-engine
+      module: admission-policy-engine
+      edition: ce
+      description: |-
+        The `{{ $labels.policy }}` policy ({{ $labels.source_type }}) denies the Pods that violate it.
+        For a transition period, it only warns about a violation in a pod-creating controller
+        (Deployment, StatefulSet, DaemonSet, Job, CronJob, ReplicationController) instead of denying the controller.
+        The controller is accepted, but it cannot create its Pods: the denial appears only in the events
+        of the ReplicaSet or the controller.
+
+        Controllers that violate the policy in the namespace: {{ $value }}.
+
+        The `d8-pod-security-baseline` and `d8-pod-security-restricted` policies are the Pod Security Standards.
+
+        To list the violating controllers and the rules they break, run the following Prometheus query:
+
+        ```prometheus
+        count by (violating_kind, violating_name, kind, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            source_type="{{ $labels.source_type }}",
+            name=~"d8-controllers-{{ $labels.policy }}{{ if match "^d8-pod-security-" $labels.policy }}-deny(-d8)?(-default)?{{ end }}",
+            violating_namespace="{{ $labels.violating_namespace }}"
+          }
+        )
+        ```
+
+        Bring the pod template of each controller in line with the policy.
+        To deny such controllers instead of warning about them, set `spec.controllerValidation.mode: Enforce` in the policy,
+        or the `podSecurityStandards.controllerValidationEnforcement` module parameter to `Policy`.
+        You can also check the admission-policy-engine reports in the Deckhouse web interface.
+      summary: |
+        Pod-creating controllers in the {{ $labels.violating_namespace }} namespace violate the {{ $labels.policy }} policy, so their Pods are denied.
+      severity: "4"
+      markupFormat: markdown
     - name: D8AdmissionPolicyEngineAuditUnavailable
       sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/availability.yaml
       moduleUrl: 015-admission-policy-engine
@@ -7227,24 +7263,30 @@ alerts:
       module: admission-policy-engine
       edition: ce
       description: |-
-        You have configured operation policies for the cluster, and one or more existing objects are violating these policies.
+        Existing objects {{ if $labels.violating_namespace }}in the `{{ $labels.violating_namespace }}` namespace {{ else }}of cluster-scoped kinds {{ end }}violate
+        the `{{ $labels.policy }}` OperationPolicy.
+        An object is checked when it is created or updated, so these objects were created before the policy applied to them
+        or before its rules changed.
 
-        To identify violating objects:
+        Objects that violate the policy: {{ $value }}.
 
-        - Run the following Prometheus query:
+        To list the violating objects and the rules they break, run the following Prometheus query:
 
-          ```prometheus
-          count by (violating_namespace, violating_kind, violating_name, violation_msg) (
-            d8_gatekeeper_exporter_constraint_violations{
-              violation_enforcement="deny",
-              source_type="OperationPolicy"
-            }
-          )
-          ```
+        ```prometheus
+        count by (violating_kind, violating_name, kind, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            source_type="OperationPolicy",
+            name="{{ $labels.policy }}",
+            violation_enforcement="deny",
+            violating_namespace="{{ $labels.violating_namespace }}"
+          }
+        )
+        ```
 
-        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
+        Bring the objects in line with the policy.
+        You can also check the admission-policy-engine reports in the Deckhouse web interface.
       summary: |
-        At least one object violates the configured cluster operation policies.
+        {{ if $labels.violating_namespace }}Objects in the {{ $labels.violating_namespace }} namespace{{ else }}Cluster-scoped objects{{ end }} violate the {{ $labels.policy }} OperationPolicy.
       severity: "3"
       markupFormat: markdown
     - name: PodSecurityStandardsViolation
@@ -7253,26 +7295,31 @@ alerts:
       module: admission-policy-engine
       edition: ce
       description: |-
-        You have configured [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/), and one or more running pods are violating these standards.
+        Running Pods in the `{{ $labels.violating_namespace }}` namespace violate the [Pod Security Standard](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
+        published as the `{{ $labels.policy }}` SecurityPolicy.
+        A Pod is checked when it is created, so these Pods were created before the standard applied to them
+        or before its rules changed. They keep running until they are restarted, and are denied then.
 
-        To identify violating pods:
+        Pods that violate the standard in the namespace: {{ $value }}.
 
-        - Run the following Prometheus query:
+        To list the violating Pods and the rules they break, run the following Prometheus query:
 
-          ```prometheus
-          count by (violating_namespace, violating_name, violation_msg) (
-            d8_gatekeeper_exporter_constraint_violations{
-              violation_enforcement="deny",
-              violating_namespace=~".*",
-              violating_kind="Pod",
-              source_type="PSS"
-            }
-          )
-          ```
+        ```prometheus
+        count by (violating_name, kind, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            source_type="PSS",
+            name=~"{{ $labels.policy }}-.+",
+            violation_enforcement="deny",
+            violating_kind="Pod",
+            violating_namespace="{{ $labels.violating_namespace }}"
+          }
+        )
+        ```
 
-        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
+        Bring the workloads in line with the standard, or exempt them with a SecurityPolicyException.
+        You can also check the admission-policy-engine reports in the Deckhouse web interface.
       summary: |
-        At least one pod violates the configured cluster pod security standards.
+        Pods in the {{ $labels.violating_namespace }} namespace violate the {{ $labels.policy }} Pod Security Standard.
       severity: "3"
       markupFormat: markdown
     - name: SecurityPolicyViolation
@@ -7281,24 +7328,30 @@ alerts:
       module: admission-policy-engine
       edition: ce
       description: |-
-        You have configured security policies for the cluster, and one or more existing objects are violating these policies.
+        Existing objects {{ if $labels.violating_namespace }}in the `{{ $labels.violating_namespace }}` namespace {{ else }}of cluster-scoped kinds {{ end }}violate
+        the `{{ $labels.policy }}` SecurityPolicy.
+        An object is checked when it is created or updated, so these objects were created before the policy applied to them
+        or before its rules changed.
 
-        To identify violating objects:
+        Objects that violate the policy: {{ $value }}.
 
-        - Run the following Prometheus query:
+        To list the violating objects and the rules they break, run the following Prometheus query:
 
-          ```prometheus
-          count by (violating_namespace, violating_kind, violating_name, violation_msg) (
-            d8_gatekeeper_exporter_constraint_violations{
-              violation_enforcement="deny",
-              source_type="SecurityPolicy"
-            }
-          )
-          ```
+        ```prometheus
+        count by (violating_kind, violating_name, kind, violation_msg) (
+          d8_gatekeeper_exporter_constraint_violations{
+            source_type="SecurityPolicy",
+            name="{{ $labels.policy }}",
+            violation_enforcement="deny",
+            violating_namespace="{{ $labels.violating_namespace }}"
+          }
+        )
+        ```
 
-        - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
+        Bring the objects in line with the policy, or exempt them with a SecurityPolicyException.
+        You can also check the admission-policy-engine reports in the Deckhouse web interface.
       summary: |
-        At least one object violates the configured cluster security policies.
+        {{ if $labels.violating_namespace }}Objects in the {{ $labels.violating_namespace }} namespace{{ else }}Cluster-scoped objects{{ end }} violate the {{ $labels.policy }} SecurityPolicy.
       severity: "3"
       markupFormat: markdown
     - name: StandbyHolderDeploymentReplicasUnavailable

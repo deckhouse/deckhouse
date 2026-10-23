@@ -24,9 +24,32 @@ from dotmap import DotMap
 
 RESERVED_NAME_PREFIXES = (
     "d8-system-default-",
-    # Pod Security Standards render their own constraints under this prefix.
+    # Pod Security Standards render their own constraints under this prefix, and the module
+    # publishes the standards as the SecurityPolicy objects `d8-pod-security-baseline` and
+    # `d8-pod-security-restricted`.
     "d8-pod-security-",
+    # A denying policy that only warns about the pod-creating controllers checks them in a
+    # constraint of its own under this prefix. See policy_controllers in
+    # templates/policies/_helpers.tpl. Only a denying variant is split this way, and the
+    # `d8-system-default-` one only warns, so the two prefixes never stack on one name.
+    "d8-controllers-",
 )
+
+# What the module uses each prefix for, quoted in the denial so that the user learns why the name is
+# taken: a user editing a published standard needs another answer than one naming a policy.
+RESERVED_NAME_PURPOSES = {
+    "d8-system-default-": "for the constraints it derives from a policy that applies to system namespaces. "
+    "Choose another name.",
+    "d8-pod-security-": "for the Pod Security Standards: their constraints and the SecurityPolicy objects "
+    "that describe them, which cannot be changed. Configure the standards in the module settings, "
+    "or choose another name for your policy.",
+    "d8-controllers-": "for the constraints that check the pod-creating controllers of a policy. "
+    "Choose another name.",
+}
+
+# Deckhouse applies the module's own policies, the published Pod Security Standards among them,
+# so it is the one requester the reserved names stay open to.
+DECKHOUSE_USERNAME = "system:serviceaccount:d8-system:deckhouse"
 
 # A Kubernetes object name is limited to 253 characters, and a derived constraint carries the
 # longest of the prefixes above on top of the policy name. Without this check the policy is
@@ -35,6 +58,11 @@ MAX_NAME_LENGTH = 253 - max(len(prefix) for prefix in RESERVED_NAME_PREFIXES)
 
 
 def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
+    # The length check is skipped as well: the module names its own policies, and none of them
+    # is split into prefixed constraints.
+    if ctx.review.request.userInfo.username == DECKHOUSE_USERNAME:
+        return None, True
+
     name = ctx.review.request.object.metadata.name
     for check in (check_reserved_name, check_name_length):
         error = check(name)
@@ -49,8 +77,7 @@ def check_reserved_name(name: str) -> Optional[str]:
         if name.startswith(prefix):
             return (
                 f"Name \"{name}\" starts with the reserved prefix \"{prefix}\". "
-                "The module uses this prefix for the constraints it derives from a policy "
-                "that applies to system namespaces. Choose another name."
+                f"The module uses this prefix {RESERVED_NAME_PURPOSES[prefix]}"
             )
 
     return None

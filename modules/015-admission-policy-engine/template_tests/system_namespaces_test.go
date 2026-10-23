@@ -26,15 +26,33 @@ import (
 )
 
 // Pod Security Standards in system namespaces. Every namespace named `d8-*` or `kube-*`
-// is checked in warn mode, whether or not it carries
-// `security.deckhouse.io/enable-security-policy-check`.
+// is checked against Restricted in warn mode, whatever labels it carries. A namespace that also
+// carries `security.deckhouse.io/enable-security-policy-check: "true"` is enforced on top of that.
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: system namespaces", func() {
 	f := SetupHelmConfig(``)
 
-	const (
-		systemNamespaces      = `["d8-*","kube-*"]`
-		enforcementNotEnabled = `[{"key":"security.deckhouse.io/enable-security-policy-check","operator":"NotIn","values":["true"]}]`
-	)
+	const systemNamespaces = `["d8-*","kube-*"]`
+
+	// Every constraint the two standards render for system namespaces. The test helpers cannot list
+	// the rendered objects, so the set is spelled out: a rule group added to a standard has to be
+	// added here as well.
+	systemConstraints := []struct{ kind, standard string }{
+		{"D8AllowedCapabilities", "baseline"},
+		{"D8AllowedHostPaths", "baseline"},
+		{"D8AllowedProcMount", "baseline"},
+		{"D8AllowedSeccompProfiles", "baseline"},
+		{"D8AllowedSysctls", "baseline"},
+		{"D8AppArmor", "baseline"},
+		{"D8HostNetwork", "baseline"},
+		{"D8HostProcesses", "baseline"},
+		{"D8PrivilegedContainer", "baseline"},
+		{"D8SeLinux", "baseline"},
+		{"D8AllowPrivilegeEscalation", "restricted"},
+		{"D8AllowedCapabilities", "restricted"},
+		{"D8AllowedSeccompProfiles", "restricted"},
+		{"D8AllowedUsers", "restricted"},
+		{"D8AllowedVolumeTypes", "restricted"},
+	}
 
 	renderWith := func(defaultPolicy, enforcementAction string, enforcementActions ...string) {
 		actions := ""
@@ -143,7 +161,7 @@ internal:
 				}
 			})
 
-			It("Warns on both standards in namespaces that did not opt in", func() {
+			It("Warns on both standards in every system namespace", func() {
 				for _, c := range []struct{ kind, standard string }{
 					{"D8HostNetwork", "baseline"},
 					{"D8AllowedUsers", "restricted"},
@@ -152,9 +170,9 @@ internal:
 					Expect(warning.Exists()).To(BeTrue(), c.standard)
 					Expect(warning.Field("spec.enforcementAction").String()).To(Equal("warn"), c.standard)
 					Expect(warning.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces), c.standard)
-					// Opted-in namespaces are excluded, so none is both enforced and warned about.
-					Expect(warning.Field("spec.match.namespaceSelector.matchExpressions").String()).To(
-						MatchJSON(enforcementNotEnabled), c.standard)
+					// Selected by the name alone: no namespace label, the opt-in one included,
+					// takes a system namespace out of the warning.
+					Expect(warning.Field("spec.match.namespaceSelector").Exists()).To(BeFalse(), c.standard)
 				}
 			})
 		})
@@ -170,16 +188,15 @@ internal:
 			renderWith("Baseline", "Deny", "deny")
 		})
 
-		It("Warns in the system namespaces no module opted in", func() {
-			for _, c := range []struct{ kind, standard string }{
-				{"D8HostNetwork", "baseline"},
-				{"D8AllowedUsers", "restricted"},
-			} {
+		It("Warns in every system namespace", func() {
+			for _, c := range systemConstraints {
+				name := c.kind + "/" + c.standard
 				constraint := f.KubernetesGlobalResource(c.kind, fmt.Sprintf("d8-pod-security-%s-system", c.standard))
-				Expect(constraint.Exists()).To(BeTrue(), c.standard)
-				Expect(constraint.Field("spec.enforcementAction").String()).To(Equal("warn"), c.standard)
-				Expect(constraint.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces), c.standard)
-				Expect(constraint.Field("spec.match.excludedNamespaces").Exists()).To(BeFalse(), c.standard)
+				Expect(constraint.Exists()).To(BeTrue(), name)
+				Expect(constraint.Field("spec.enforcementAction").String()).To(Equal("warn"), name)
+				Expect(constraint.Field("spec.match.namespaces").String()).To(MatchJSON(systemNamespaces), name)
+				Expect(constraint.Field("spec.match.excludedNamespaces").Exists()).To(BeFalse(), name)
+				Expect(constraint.Field("spec.match.namespaceSelector").Exists()).To(BeFalse(), name)
 			}
 		})
 

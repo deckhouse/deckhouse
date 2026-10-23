@@ -187,6 +187,15 @@ admissionPolicyEngine:
                   - key: env
                     operator: In
                     values: ["prod"]
+      - metadata:
+          name: everywherepolicy
+        spec:
+          enforcementAction: Warn
+          policies:
+            allowPrivileged: false
+          match:
+            namespaceSelector:
+              labelSelector: {}
     trackedConstraintResources:
       - apiGroups:
           - ""
@@ -392,6 +401,17 @@ admissionPolicyEngine:
 			spec := getConstraintSpecMap(f.KubernetesGlobalResource("D8PrivilegedContainer", testPolicyName))
 			match := spec["match"].(map[string]interface{})
 			Expect(match["namespaceSelector"]).To(Equal(mustParseYaml("matchLabels:\n  security-policy.deckhouse.io/enabled: \"true\"")))
+		})
+
+		It("A warning policy for every namespace renders a match without selectors", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// Nothing narrows the policy, so the constraint carries no selector at all.
+			spec := getConstraintSpecMap(f.KubernetesGlobalResource("D8PrivilegedContainer", "everywherepolicy"))
+			match := spec["match"].(map[string]interface{})
+			Expect(match).To(HaveKey("kinds"))
+			Expect(match).To(HaveKeyWithValue("scope", "Namespaced"))
+			Expect(match).To(HaveLen(2))
 		})
 
 		It("A denying policy that spans both scopes is split into two constraints", func() {

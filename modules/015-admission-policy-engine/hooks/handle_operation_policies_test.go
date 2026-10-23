@@ -39,6 +39,19 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle operatio
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "OperationPolicy", false)
 
+	Context("controllerValidation is set", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(testOperationPolicyControllerValidation))
+			f.RunHook()
+		})
+		It("should pass the section to Values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			ops := f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()
+			Expect(ops).To(HaveLen(1))
+			Expect(ops[0].Get("spec.controllerValidation").String()).To(MatchJSON(`{"mode": "Disabled", "excludedPolicies": ["requiredResources"]}`))
+		})
+	})
+
 	Context("Preserve explicit empty arrays in Values for selected fields", func() {
 		Context("Case A: allowedRepos is omitted", func() {
 			BeforeEach(func() {
@@ -484,4 +497,25 @@ spec:
     namespaceSelector:
       matchNames:
         - default
+`
+
+var testOperationPolicyControllerValidation = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  name: foo
+spec:
+  enforcementAction: Deny
+  controllerValidation:
+    mode: Disabled
+    excludedPolicies: ["requiredResources"]
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          operation-policy.deckhouse.io/enabled: "true"
+  policies:
+    requiredResources:
+      requests: ["cpu"]
 `

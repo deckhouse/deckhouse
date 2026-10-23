@@ -1,0 +1,111 @@
+{{- include "ape.only_ready_constraints" (list . (include "ape.operation_policy_constraints" .)) }}
+
+{{- define "ape.operation_policy_constraints" }}
+{{- if .Values.admissionPolicyEngine.internal.bootstrapped }}
+{{- range $policy := .Values.admissionPolicyEngine.internal.operationPolicies }}
+  {{- range $cr := include "policy_variants" (list $ $policy (dict "security.deckhouse.io/operation-policy" "") "") | fromYamlArray }}
+    {{- include "operation_policy_constraints" (list $ $cr) }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+  operation_policy_constraints renders the constraints of one OperationPolicy, one per rule.
+  See policies/_helpers.tpl for a variant.
+
+  Usage: include "operation_policy_constraints" (list $context $cr)
+*/}}
+{{- define "operation_policy_constraints" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+  {{- $p := $cr.spec.policies }}
+
+  {{- if hasKey $p "allowedRepos" }}
+    {{- include "policy_constraint" (list $context $cr "D8AllowedRepos" (list "allowedRepos") (dict "repos" $p.allowedRepos)) }}
+  {{- end }}
+
+  {{- if hasKey $p "requiredResources" }}
+    {{- $parameters := dict }}
+    {{- range $key := list "limits" "requests" }}
+      {{- with get $p.requiredResources $key }}
+        {{- $_ := set $parameters $key . }}
+      {{- end }}
+    {{- end }}
+    {{- include "policy_constraint" (list $context $cr "D8RequiredResources" (list "requiredResources") $parameters) }}
+  {{- end }}
+
+  {{- if hasKey $p "disallowedImageTags" }}
+    {{- include "policy_constraint" (list $context $cr "D8DisallowedTags" (list "disallowedImageTags") (dict "tags" $p.disallowedImageTags)) }}
+  {{- end }}
+
+  {{- /* requiredLabels and requiredAnnotations check the kinds the policy lists as `<group>/<Kind>`. */}}
+  {{- range $rule := list
+        (dict "key" "requiredLabels" "kind" "D8RequiredLabels" "field" "labels")
+        (dict "key" "requiredAnnotations" "kind" "D8RequiredAnnotations" "field" "annotations") }}
+    {{- if hasKey $p $rule.key }}
+      {{- $policy := get $p $rule.key }}
+      {{- $kinds := list }}
+      {{- range $watchKind := $policy.watchKinds }}
+        {{- $parts := regexSplit "/" $watchKind -1 }}
+        {{- $kinds = append $kinds (dict "apiGroups" (list (index $parts 0)) "kinds" (list (index $parts 1))) }}
+      {{- end }}
+      {{- include "policy_constraint" (list $context $cr $rule.kind (list $rule.key) (pick $policy $rule.field) (dict "matchKinds" $kinds)) }}
+    {{- end }}
+  {{- end }}
+
+  {{- if hasKey $p "requiredProbes" }}
+    {{- include "policy_constraint" (list $context $cr "D8RequiredProbes" (list "requiredProbes") (dict "probes" $p.requiredProbes)) }}
+  {{- end }}
+
+  {{- if hasKey $p "maxRevisionHistoryLimit" }}
+    {{- $options := dict "matchKinds" (list (dict "apiGroups" (list "apps") "kinds" (list "DaemonSet" "Deployment"))) }}
+    {{- include "policy_constraint" (list $context $cr "D8RevisionHistoryLimit" (list "maxRevisionHistoryLimit") (dict "limit" $p.maxRevisionHistoryLimit) $options) }}
+  {{- end }}
+
+  {{- if hasKey $p "imagePullPolicy" }}
+    {{- include "policy_constraint" (list $context $cr "D8ImagePullPolicy" (list "imagePullPolicy") (dict "policy" $p.imagePullPolicy)) }}
+  {{- end }}
+
+  {{- if hasKey $p "priorityClassNames" }}
+    {{- include "policy_constraint" (list $context $cr "D8PriorityClass" (list "priorityClassNames") (pick $p "priorityClassNames")) }}
+  {{- end }}
+
+  {{- if hasKey $p "ingressClassNames" }}
+    {{- $options := dict "matchKinds" (list (dict "apiGroups" (list "networking.k8s.io") "kinds" (list "Ingress"))) }}
+    {{- include "policy_constraint" (list $context $cr "D8IngressClass" (list "ingressClassNames") (pick $p "ingressClassNames") $options) }}
+  {{- end }}
+
+  {{- if hasKey $p "storageClassNames" }}
+    {{- $options := dict "matchKinds" (list (dict "apiGroups" (list "") "kinds" (list "PersistentVolumeClaim"))) }}
+    {{- include "policy_constraint" (list $context $cr "D8StorageClass" (list "storageClassNames") (pick $p "storageClassNames") $options) }}
+  {{- end }}
+
+  {{- if hasKey $p "checkHostNetworkDNSPolicy" }}
+    {{- include "policy_constraint" (list $context $cr "D8DNSPolicy" (list "checkHostNetworkDNSPolicy") dict) }}
+  {{- end }}
+
+  {{- if hasKey $p "checkContainerDuplicates" }}
+    {{- include "policy_constraint" (list $context $cr "D8ContainerDuplicates" (list "checkContainerDuplicates") dict) }}
+  {{- end }}
+
+  {{- if hasKey $p "replicaLimits" }}
+    {{- $options := dict "matchKinds" (list (dict "apiGroups" (list "apps") "kinds" (list "Deployment"))) }}
+    {{- include "policy_constraint" (list $context $cr "D8ReplicaLimits" (list "replicaLimits") (dict "ranges" (list $p.replicaLimits)) $options) }}
+  {{- end }}
+
+  {{- if $p.disallowedTolerations }}
+    {{- include "policy_constraint" (list $context $cr "D8DisallowedTolerations" (list "disallowedTolerations") (dict "tolerations" $p.disallowedTolerations)) }}
+  {{- end }}
+
+  {{- if hasKey $p "gpuResourceRestriction" }}
+    {{- $policy := $p.gpuResourceRestriction | default dict }}
+    {{- $namespaceLabel := $policy.namespaceLabel | default dict }}
+    {{- $parameters := dict
+          "namespaceLabel" (dict
+            "key" (dig "key" "gpu.deckhouse.io/enabled" $namespaceLabel)
+            "value" (dig "value" "true" $namespaceLabel))
+          "gpuResourcePatterns" ($policy.gpuResourcePatterns | default (list "^nvidia\\.com/.*$")) }}
+    {{- include "policy_constraint" (list $context $cr "D8GpuResourceRestriction" (list "gpuResourceRestriction") $parameters) }}
+  {{- end }}
+{{- end }}

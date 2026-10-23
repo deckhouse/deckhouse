@@ -856,3 +856,126 @@ spec:
                       - NET_ADMIN
       exception: ''
       exceptionRef: ''
+  # requiredDropCapabilities is excluded from controller validation, allowedCapabilities is not:
+  # a controller is checked against the added capabilities only, and the Pod against both.
+  - name: policy-skip-drop-on-controllers
+    gatorBlock: policy-skip-drop-on-controllers
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: controller-allowed-without-drop
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.capabilities.drop
+        scenario: absent
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-without-drop
+      exception: ''
+      exceptionRef: ''
+    - name: controller-disallowed-added-capability
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.capabilities.add
+        scenario: negative
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-disallowed-added-capability
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  securityContext:
+                    capabilities:
+                      add:
+                      - NET_ADMIN
+      exception: ''
+      exceptionRef: ''
+    - name: pod-disallowed-without-drop
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.capabilities.drop[]
+        scenario: absent
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: pod-disallowed-without-drop
+      exception: ''
+      exceptionRef: ''
+  # allowedCapabilities is excluded from controller validation, requiredDropCapabilities is not.
+  - name: policy-skip-add-on-controllers
+    gatorBlock: policy-skip-add-on-controllers
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_2.yaml
+    cases:
+    - name: controller-allowed-added-capability
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.capabilities.add
+        scenario: negative
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-added-capability
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  securityContext:
+                    capabilities:
+                      add:
+                      - NET_ADMIN
+                      drop:
+                      - ALL
+      exception: ''
+      exceptionRef: ''
+    - name: controller-disallowed-without-drop
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.capabilities.drop
+        scenario: absent
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-disallowed-without-drop
+      exception: ''
+      exceptionRef: ''
+    - name: pod-disallowed-added-capability
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.containers[].securityContext.capabilities.add[]
+        scenario: negative
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: pod-disallowed-added-capability
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                capabilities:
+                  add:
+                  - NET_ADMIN
+                  drop:
+                  - ALL
+      exception: ''
+      exceptionRef: ''

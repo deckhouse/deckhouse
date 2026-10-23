@@ -19,6 +19,8 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"slices"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -53,6 +55,22 @@ func handleSP(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	refs := make(map[string]set.Set)
+
+	// A user policy that already holds the name of a published standard keeps it: the standards
+	// are published only to describe them, so the module leaves that standard unpublished rather
+	// than fail its release on an object it cannot adopt.
+	conflicts := make([]string, 0)
+	for _, sp := range policies {
+		if slices.Contains(publishedStandardNames, sp.Metadata.Name) && !isPodSecurityStandard(sp) {
+			conflicts = append(conflicts, sp.Metadata.Name)
+			input.Logger.Warn("a SecurityPolicy holds the name of a published Pod Security Standard, the standard is not published",
+				slog.String("name", sp.Metadata.Name))
+		}
+	}
+	sort.Strings(conflicts)
+	input.Values.Set("admissionPolicyEngine.internal.podSecurityStandards.conflictingPolicyNames", conflicts)
+
+	policies = slices.DeleteFunc(policies, isPodSecurityStandard)
 
 	for i := range policies {
 		sp := &policies[i]
@@ -112,6 +130,21 @@ func filterSP(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}
 
 	return sp, nil
+}
+
+// isPodSecurityStandard reports whether the policy is one of the Pod Security Standards the module
+// publishes as SecurityPolicy objects. They describe the standards only: the module renders the
+// constraints of the standards itself, with a namespace selection no SecurityPolicy can express,
+// so rendering them as user policies would enforce every rule twice and in the wrong namespaces.
+//
+// The `heritage: deckhouse` label cannot be set by a user, so a user policy is never taken for one.
+func isPodSecurityStandard(sp securityPolicy) bool {
+	labels := sp.Metadata.Labels
+	if labels["heritage"] != "deckhouse" {
+		return false
+	}
+	_, ok := labels[podStandardLabel]
+	return ok
 }
 
 func hasItem(slice []string, value string) bool {
@@ -201,9 +234,16 @@ func preprocesSecurityPolicy(sp *securityPolicy) {
 	}
 }
 
+const podStandardLabel = "security.deckhouse.io/pod-standard"
+
+// publishedStandardNames are the SecurityPolicy objects the module publishes the Pod Security
+// Standards as, see templates/policies/pod-security-standards.yaml.
+var publishedStandardNames = []string{"d8-pod-security-baseline", "d8-pod-security-restricted"}
+
 type securityPolicy struct {
 	Metadata struct {
-		Name string `json:"name"`
+		Name   string            `json:"name"`
+		Labels map[string]string `json:"labels,omitempty"`
 	} `json:"metadata"`
 	Spec v1alpha1.SecurityPolicySpec `json:"spec"`
 }

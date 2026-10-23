@@ -31,6 +31,17 @@ Depending on how pods are created, there are differences in how the API generate
 
 Policies validate pod-creating controllers at `CREATE` and `UPDATE` time. This provides early feedback when a workload is created or updated, before any Pod is launched, and also surfaces creation denials when deploying via CI (CI rarely creates Pods directly, and Pod creation errors from controllers are often not displayed).
 
+{% alert level="warning" %}
+By default, a controller that violates a policy with `enforcementAction: Deny` gets a warning instead of a denial.
+The Pods the controller creates are still denied.
+The module checks controllers in separate constraints named `d8-controllers-<NAME>` with `enforcementAction: warn`.
+The `ControllerPolicyViolation` alert reports such controllers, one alert for each policy and namespace.
+This is a temporary default for the transition to controller-level validation.
+To check controllers with the action of the policy now, set
+[`controllerValidationEnforcement`](configuration.html#parameters-podsecuritystandards-controllervalidationenforcement) to `Policy`.
+In a future release, `Policy` will become the default.
+{% endalert %}
+
 The following objects are validated:
 
 | API group | Resource kind                      | Operations                   |
@@ -77,17 +88,97 @@ before any policy code runs.
 
 For controller kinds, SecurityPolicyException (SPE) labels and annotations are taken from the **pod template's metadata** (`spec.template.metadata`), not from the controller's top-level metadata. This ensures SPEs apply to the pods the controller creates, not to the controller object itself.
 
-### Disabling controller-level validation
+### Configuring controller-level validation
 
-Controller-level validation can be disabled using the [`controllerValidation`](configuration.html#parameters-podsecuritystandards-controllervalidation) parameter in the module settings.
-Despite living in the `podSecurityStandards` section, the parameter applies to every constraint that reads a pod spec,
-including the ones generated from OperationPolicy and SecurityPolicy resources.
+Controller-level validation is configured by four settings with different scopes:
 
-When `controllerValidation: false`, constraints are applied only to Pods. In this case:
+1. The [`controllerValidation`](configuration.html#parameters-podsecuritystandards-controllervalidation) module parameter
+   enables or disables controller-level validation for every constraint that reads a pod spec.
+   Despite living in the `podSecurityStandards` section, it applies to Pod Security Standards, OperationPolicy and SecurityPolicy alike.
+1. The [`controllerValidationEnforcement`](configuration.html#parameters-podsecuritystandards-controllervalidationenforcement)
+   module parameter sets what happens to a controller that violates a denying policy:
+   `Warn` (default) accepts it with a warning, `Policy` denies it.
+   It applies to the Pod Security Standards and to every OperationPolicy and SecurityPolicy without `spec.controllerValidation.mode`.
+1. The [`controllerValidationExcludedPolicies`](configuration.html#parameters-podsecuritystandards-controllervalidationexcludedpolicies)
+   module parameter lists the Pod Security Standards rules that are checked on Pods only.
+   It applies to the Pod Security Standards only.
+1. The `spec.controllerValidation` section of an [OperationPolicy](cr.html#operationpolicy-v1alpha1-spec-controllervalidation)
+   or a [SecurityPolicy](cr.html#securitypolicy-v1alpha1-spec-controllervalidation) configures that policy.
+   `mode: Enforce` checks controllers with the action of the policy, `mode: Warn` only warns about them,
+   and `mode: Disabled` checks only Pods. `Enforce` and `Warn` check controllers even when the module parameter disables it,
+   and a policy without `mode` follows the module parameters.
+   `excludedPolicies` lists the rules of the policy that are checked on Pods only;
+   the module exclusion list does not apply to a policy.
 
-- controllers (Deployment, StatefulSet, DaemonSet, Job, CronJob, ReplicationController) are not checked on creation or update;
-- SecurityPolicyException labels on `spec.template.metadata.labels` of controllers are not resolved, since constraints are not applied to controllers;
-- Pods are still validated at launch time, as they are when `true` is set.
+Exclude a rule from controller-level validation when a mutating webhook makes the Pod compliant
+while the controller's pod template is not.
+For example, the Vertical Pod Autoscaler sets `resources.requests` on the Pod, while the pod template may set `limits` only.
+A container that sets no `resources` at all already passes the controller-level check in the
+[lenient mode](#lenient-mode-for-fields-that-may-be-filled-in-before-the-pod-is-created),
+so the exclusion matters when `resources` are set partially.
+The following OperationPolicy checks the image registry on controllers and the resource requests on Pods only:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  name: requests-set-by-vpa
+spec:
+  enforcementAction: Deny
+  controllerValidation:
+    mode: Enforce
+    excludedPolicies:
+      - requiredResources
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          operation-policy.deckhouse.io/enabled: "true"
+  policies:
+    allowedRepos:
+      - registry.example.com
+    requiredResources:
+      requests:
+        - cpu
+        - memory
+```
+
+A Deployment whose pod template sets `limits` but no `requests` is accepted, and its Pods are denied unless the Vertical Pod Autoscaler sets the requests.
+
+The rules of the Pod Security Standards are excluded in the module settings.
+They are named as the parameters of the SecurityPolicy objects the standards are published with,
+see [Rules of the standards](#rules-of-the-standards).
+The following example checks `allowPrivilegeEscalation` and `requiredDropCapabilities` on Pods only:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: admission-policy-engine
+spec:
+  version: 1
+  settings:
+    podSecurityStandards:
+      controllerValidationExcludedPolicies:
+        - allowPrivilegeEscalation
+        - requiredDropCapabilities
+```
+
+Some rules are checked by one constraint and are excluded together: listing any rule of a group checks the whole group on Pods only.
+The groups are:
+
+- `allowHostPID` and `allowHostIPC`;
+- `allowHostNetwork` and `allowedHostPorts`;
+- `fsGroup`, `runAsUser`, `runAsGroup` and `supplementalGroups`;
+- `allowedUnsafeSysctls` and `forbiddenSysctls`.
+
+`allowedCapabilities` and `requiredDropCapabilities` are excluded one by one.
+
+When a rule is checked on Pods only:
+
+- controllers (Deployment, StatefulSet, DaemonSet, Job, CronJob, ReplicationController) are not checked against it on creation or update;
+- SecurityPolicyException labels on `spec.template.metadata.labels` of controllers are not resolved for it, since it is not applied to controllers;
+- Pods are still checked against it at launch time.
 
 ### Lenient mode for fields that may be filled in before the pod is created
 
@@ -116,203 +207,54 @@ Some checks depend on data that only exists after mutation, so they cannot deny 
 
 For all three policy categories (Pod Security Standards, operational, and security policies), there is no provision for automatically recreating existing pods when changing existing policies or adding new ones. Pods that existed prior to changes being made to the policy in use or prior to a new policy being added will continue to run until they are restarted. Upon restart, they will be validated against the new rules.
 
-The `admission-policy-engine` module provides alerts (`kind: ClusterObservabilityAlert`) for such cases, notifying you of pods in the namespace that violate policies after an existing policy is modified or a new one is added.
+The `admission-policy-engine` module provides alerts for such cases.
+Each alert fires once for each policy and namespace with violating objects:
 
-To get a list of alerts, use the command:
+| Alert | What it reports |
+|---|---|
+| `PodSecurityStandardsViolation` | Running pods that violate a Pod Security Standard |
+| `OperationPolicyViolation` | Existing objects that violate an OperationPolicy |
+| `SecurityPolicyViolation` | Existing objects that violate a SecurityPolicy |
+| `ControllerPolicyViolation` | Pod-creating controllers that violate a policy with `enforcementAction: Deny` and are only warned about during the transition period, see [Controller-level validation](#controller-level-validation) |
+
+The `policy` label of an alert names the policy:
+the name of the OperationPolicy or SecurityPolicy, or `d8-pod-security-baseline` or `d8-pod-security-restricted` for the Pod Security Standards.
+The `namespace` label is the namespace of the violating objects.
+
+An alert is an ObservabilityAlert resource in the namespace of the violating objects, so the users of the namespace see it.
+An alert for cluster-scoped objects is a ClusterObservabilityAlert resource.
+
+To list the alerts in a namespace, run the following command, where `<NAMESPACE>` is the namespace:
 
 ```bash
-d8 k get clusterobservabilityalerts
+d8 k -n <NAMESPACE> get observabilityalerts
 ```
 
 Output example:
 
 <!-- markdownlint-disable MD031 -->
 ```console
-NAME                                                  SEVERITY   STATUS   DURATION   SUMMARY                          AGE
-SecurityPolicyViolation-f3a77d1dd2175402-1777370195   1          Firing   5h         Alerting PrometheusUnavailable   5h1m
-OperationPolicyViolation-9b21d0c871796913-1777370435  1          Firing   6h         Alerting PrometheusUnavailable   6h1m
+NAME                                                        SEVERITY   STATUS   DURATION   SUMMARY                                                                                     AGE
+PodSecurityStandardsViolation-07243a74fddd8234-1792744609   3          Firing   1h         Pods in the `app` namespace violate the `d8-pod-security-baseline` Pod Security Standard.   1h
+SecurityPolicyViolation-8f21cd962274a252-1792744609         3          Firing   1h         Objects in the `app` namespace violate the `restricted-app` SecurityPolicy.                 1h
 ```
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-To view information about a specific alert, use the following command:
+To list the alerts in every namespace and the alerts for cluster-scoped objects, run the following commands:
 
 ```bash
-d8 k get clusterobservabilityalert OperationPolicyViolation-9b21d0c871796913-1777370435 -oyaml
+d8 k get observabilityalerts -A
+d8 k get clusterobservabilityalerts
 ```
 
-{% offtopic title="Example of an alert for a violation of the Pod Security Standards policy..." %}
+To view an alert, run the following command:
 
-```yaml
-kind: ClusterObservabilityAlert
-apiVersion: alerts.observability.deckhouse.io/v1alpha1
-metadata:
-  name: PodSecurityStandardsViolation-91e71759e048a397-1777369535
-  resourceVersion: "7454828154578800069"
-  creationTimestamp: 2026-04-28T09:45:35Z
-  labels:
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-alert:
-  labels:
-    alertname: PodSecurityStandardsViolation
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-    severity_level: "3"
-  annotations:
-    description: |-
-      You have configured [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/), and one or more running pods are violating these standards.
-
-      To identify violating pods:
-
-      - Run the following Prometheus query:
-
-        ```prometheus
-        count by (violating_namespace, violating_name, violation_msg) (
-          d8_gatekeeper_exporter_constraint_violations{
-            violation_enforcement="deny",
-            violating_namespace=~".*",
-            violating_kind="Pod",
-            source_type="PSS"
-          }
-        )
-        ```
-
-      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
-    plk_markup_format: markdown
-    plk_protocol_version: "1"
-    summary: At least one pod violates the configured cluster pod security standards.
-  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="PSS",violating_kind="Pod",violating_namespace=~".*",violation_enforcement="deny"}))
-    > 0
-  created_by: observability
-  rule_group_name: admission-policy-engine-audit-0
-status:
-  alertStatus: Firing
-  silencedBy: []
-  startsAt: 2026-04-28T09:45:35Z
-  resolvedAt: null
-  duration: 20h40m1.015261771s
+```bash
+d8 k -n <NAMESPACE> get observabilityalert <ALERT_NAME> -o yaml
 ```
 
-{% endofftopic %}
-
-{% offtopic title="Example of an alert for a violation of an operational policy..." %}
-
-```yaml
-kind: ClusterObservabilityAlert
-apiVersion: alerts.observability.deckhouse.io/v1alpha1
-metadata:
-  name: OperationPolicyViolation-9b21d0c871796913-1777370435
-  resourceVersion: "7454831929456594373"
-  creationTimestamp: 2026-04-28T10:00:35Z
-  labels:
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-alert:
-  labels:
-    alertname: OperationPolicyViolation
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-    severity_level: "3"
-  annotations:
-    description: >-
-      You have configured operation policies for the cluster, and one or more
-      existing objects are violating these policies.
-
-
-      To identify violating objects:
-
-
-      - Run the following Prometheus query:
-
-        ```prometheus
-        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
-          d8_gatekeeper_exporter_constraint_violations{
-            violation_enforcement="deny",
-            source_type="OperationPolicy"
-          }
-        )
-        ```
-
-      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
-    plk_markup_format: markdown
-    plk_protocol_version: "1"
-    summary: At least one object violates the configured cluster operation policies.
-  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="OperationPolicy",violation_enforcement="deny"}))
-    > 0
-  created_by: observability
-  rule_group_name: admission-policy-engine-audit-0
-status:
-  alertStatus: Firing
-  silencedBy: []
-  startsAt: 2026-04-28T10:00:35Z
-  resolvedAt: null
-  duration: 20h23m41.023025059s
-```
-
-{% endofftopic %}
-
-{% offtopic title="Example of an alert for a security policy violation..." %}
-
-```yaml
-kind: ClusterObservabilityAlert
-apiVersion: alerts.observability.deckhouse.io/v1alpha1
-metadata:
-  name: SecurityPolicyViolation-f3a77d1dd2175402-1777370195
-  resourceVersion: "7454830922622307781"
-  creationTimestamp: 2026-04-28T09:56:35Z
-  labels:
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-alert:
-  labels:
-    alertname: SecurityPolicyViolation
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-    severity_level: "3"
-  annotations:
-    description: >-
-      You have configured security policies for the cluster, and one or more
-      existing objects are violating these policies.
-
-
-      To identify violating objects:
-
-
-      - Run the following Prometheus query:
-
-        ```prometheus
-        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
-          d8_gatekeeper_exporter_constraint_violations{
-            violation_enforcement="deny",
-            source_type="SecurityPolicy"
-          }
-        )
-        ```
-
-      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
-    plk_markup_format: markdown
-    plk_protocol_version: "1"
-    summary: At least one object violates the configured cluster security policies.
-  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="SecurityPolicy",violation_enforcement="deny"}))
-    > 0
-  created_by: observability
-  rule_group_name: admission-policy-engine-audit-0
-status:
-  alertStatus: Firing
-  silencedBy: []
-  startsAt: 2026-04-28T09:56:35Z
-  resolvedAt: null
-  duration: 20h29m21.015479019s
-```
-
-{% endofftopic %}
+The description of the alert contains a Prometheus query that lists the violating objects and the rules they break.
 
 ## Pod Security Standards
 
@@ -336,8 +278,15 @@ Configuring PSS policies for namespaces is done by setting a special label `secu
 The default policy can be overridden globally ([in the module settings](configuration.html#parameters-podsecuritystandards-defaultpolicy)).
 
 {% alert level="info" %}
-In namespaces named `d8-*` and `kube-*`, the `restricted` standard applies regardless of the default policy.
-A violation is recorded in the audit and shown in the web interface Deckhouse Platform, and the workload still starts, unless the module that owns the namespace has hardened it.
+In namespaces named `d8-*` and `kube-*`, the `restricted` standard applies in the `warn` mode,
+whatever the default policy and the namespace labels.
+A violation is recorded in the audit and shown in the web interface Deckhouse Platform, and the workload still starts.
+If the module that owns the namespace has enabled policy checks for it, the standard is also applied there
+with the enforcement action configured for that namespace.
+The `security.deckhouse.io/pod-policy-action` label cannot lower the action below `warn` in these namespaces:
+with `dryrun`, the user still receives warnings.
+In such a namespace each violation is reported by both checks, so the API server response and the audit contain it twice.
+The module dashboard counts such a violation once.
 {% endalert %}
 
 {% alert level="info" %}
@@ -365,6 +314,35 @@ Example of setting the `warn` mode for PSS policies for all pods in the `my-name
 ```bash
 d8 k label ns my-namespace security.deckhouse.io/pod-policy-action=warn
 ```
+
+### Rules of the standards
+
+The module publishes the rules of the standards as two SecurityPolicy objects,
+`d8-pod-security-baseline` and `d8-pod-security-restricted`.
+The rules are written in the format of the [SecurityPolicy](cr.html#securitypolicy) parameters,
+the same ones you use in your own security policies.
+`d8-pod-security-restricted` lists every rule a `Restricted` namespace is checked against, the `Baseline` rules included.
+Two values in the rules have no counterpart in the SecurityPolicy description:
+`""` and `undefined` in `seccompProfiles.allowedProfiles` allow a container that sets no seccomp profile,
+and `type: ""` in `seLinux` allows a container that sets no SELinux type.
+
+To view the rules of the `Restricted` standard, run the following command:
+
+```bash
+d8 k get securitypolicy d8-pod-security-restricted -o yaml
+```
+
+The `spec.policies` section lists the rules, and the `spec.controllerValidation` section shows the controller-level validation settings
+taken from the module configuration.
+
+The objects describe the standards and enforce nothing by themselves.
+The module applies the standards to namespaces by the `security.deckhouse.io/pod-policy` label and the module settings,
+and `spec.match` of the objects shows the application namespaces the standard applies to with the default enforcement mode.
+The objects are managed by the module and cannot be modified.
+Configure the standards in the [module settings](configuration.html#parameters-podsecuritystandards).
+If a SecurityPolicy of your own is already named `d8-pod-security-baseline` or `d8-pod-security-restricted`,
+the module keeps your policy and does not publish that standard. The standard is still enforced.
+To see its rules, rename your policy.
 
 ## Operational policies
 

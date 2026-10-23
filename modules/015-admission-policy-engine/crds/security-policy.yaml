@@ -91,6 +91,76 @@ spec:
                     - Warn
                     - Deny
                     - Dryrun
+                controllerValidation:
+                  type: object
+                  description: |
+                    Validation of the pod-creating controllers against the policy.
+
+                    The controllers are Deployment, StatefulSet, DaemonSet, Job, CronJob and ReplicationController.
+                    A controller is checked when it is created or updated, so a violation is reported before any Pod is created.
+                    Pods are checked in any case.
+
+                    The section overrides the module parameters [podSecurityStandards.controllerValidation](configuration.html#parameters-podsecuritystandards-controllervalidation)
+                    and [podSecurityStandards.controllerValidationEnforcement](configuration.html#parameters-podsecuritystandards-controllervalidationenforcement) for this policy.
+                  properties:
+                    mode:
+                      type: string
+                      description: |
+                        Controller validation mode of the policy:
+                        - `Enforce` — controllers are checked against every rule of the policy except the ones listed in [excludedPolicies](#securitypolicy-v1alpha1-spec-controllervalidation-excludedpolicies), with the action of the policy;
+                        - `Warn` — controllers are checked in the same way, but a policy with `enforcementAction: Deny` only warns about a violation in a controller. The Pods the controller creates are denied;
+                        - `Disabled` — only Pods are checked.
+
+                        If the parameter is omitted, the module parameters [podSecurityStandards.controllerValidation](configuration.html#parameters-podsecuritystandards-controllervalidation)
+                        and [podSecurityStandards.controllerValidationEnforcement](configuration.html#parameters-podsecuritystandards-controllervalidationenforcement) are used.
+                      enum:
+                        - Enforce
+                        - Warn
+                        - Disabled
+                    excludedPolicies:
+                      type: array
+                      description: |
+                        Rules of the policy that are checked on Pods only.
+
+                        Use it for a rule that a mutating webhook satisfies on the Pod but not in the controller's pod template,
+                        for example `requiredDropCapabilities` when the webhook adds `drop: [ALL]` to the containers.
+
+                        Some rules are checked by one constraint and are excluded together: listing any rule of a group checks
+                        the whole group on Pods only. The groups are:
+                        - `allowHostPID` and `allowHostIPC`;
+                        - `allowHostNetwork` and `allowedHostPorts`;
+                        - `fsGroup`, `runAsUser`, `runAsGroup` and `supplementalGroups`;
+                        - `allowedUnsafeSysctls` and `forbiddenSysctls`.
+
+                        `allowedCapabilities` and `requiredDropCapabilities` are excluded one by one.
+                      x-doc-examples: [["requiredDropCapabilities"]]
+                      items:
+                        type: string
+                        enum:
+                          - allowPrivileged
+                          - allowPrivilegeEscalation
+                          - allowHostPID
+                          - allowHostIPC
+                          - allowHostNetwork
+                          - allowedHostPorts
+                          - readOnlyRootFilesystem
+                          - automountServiceAccountToken
+                          - allowedFlexVolumes
+                          - allowedVolumes
+                          - allowedHostPaths
+                          - allowedCapabilities
+                          - requiredDropCapabilities
+                          - allowedAppArmor
+                          - allowedProcMount
+                          - fsGroup
+                          - runAsUser
+                          - runAsGroup
+                          - supplementalGroups
+                          - seLinux
+                          - allowedUnsafeSysctls
+                          - forbiddenSysctls
+                          - seccompProfiles
+                          - verifyImageSignatures
                 policies:
                   type: object
                   description: |

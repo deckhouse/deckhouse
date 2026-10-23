@@ -268,6 +268,8 @@ spec:
 
 1. Добавьте в нужный неймспейс лейбл: `security.deckhouse.io/pod-policy: privileged`, чтобы отключить встроенный набор политик.
 1. Создайте ресурс SecurityPolicy, соответствующий уровню [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) или [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted). В секции `policies` укажите только необходимые вам настройки.
+   Правила можно взять из объекта `d8-pod-security-baseline` или `d8-pod-security-restricted`,
+   в виде которого модуль публикует стандарт, см. раздел [«Правила стандартов»](./#правила-стандартов).
 1. Добавьте в неймспейс дополнительный лейбл, который будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `security-policy.deckhouse.io/baseline-enabled: "true"` либо `security-policy.deckhouse.io/restricted-enabled: "true"`.
 
 {% alert level="info" %}
@@ -752,7 +754,7 @@ init-контейнеров и ephemeral-контейнеров пода. Рес
 {% alert level="warning" %}
 Политика применяется к подам и к контроллерам, создающим поды,
 поэтому Deployment, в шаблоне пода которого запрашиваются GPU-ресурсы, будет отклонён при создании.
-Чтобы не проверять контроллеры, задайте для параметра [`controllerValidation`](configuration.html#parameters-podsecuritystandards-controllervalidation) значение `false`.
+Чтобы проверять это правило только на подах, добавьте `gpuResourceRestriction` в параметр [`spec.controllerValidation.excludedPolicies`](cr.html#operationpolicy-v1alpha1-spec-controllervalidation-excludedpolicies) политики.
 
 Лейбл неймспейса читается из кеша Gatekeeper. Пока неймспейс отсутствует в этом кеше, например когда
 неймспейс и под применяются одновременно и неймспейс ещё не попал в кеш, политика запрещает поды,

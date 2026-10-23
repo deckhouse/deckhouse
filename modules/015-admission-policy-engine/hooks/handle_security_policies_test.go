@@ -34,7 +34,7 @@ const (
 
 var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security policies", func() {
 	f := HookExecutionConfigInit(
-		`{"admissionPolicyEngine": {"internal": {"ratify": {}, "bootstrapped": true} } }`,
+		`{"admissionPolicyEngine": {"internal": {"ratify": {}, "bootstrapped": true, "podSecurityStandards": {}} } }`,
 		`{"admissionPolicyEngine":{}}`,
 	)
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
@@ -218,6 +218,27 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 				}
 			]
 			`))
+		})
+	})
+
+	Context("The Pod Security Standards are published as SecurityPolicy objects", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(testSecurityPolicyPodStandards))
+			f.RunHook()
+		})
+		It("should keep only the user policies and their controllerValidation section", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			p := f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()
+			Expect(p).To(HaveLen(3))
+			// The label alone does not mark a standard: a user policy may carry it.
+			Expect(p[0].Get("metadata.name").String()).To(Equal("d8-pod-security-restricted"))
+			Expect(p[1].Get("metadata.name").String()).To(Equal("d8-pod-security-user-labelled"))
+			Expect(p[2].Get("metadata.name").String()).To(Equal("foo"))
+			Expect(p[2].Get("spec.controllerValidation").String()).To(MatchJSON(`{"mode": "Enforce", "excludedPolicies": ["requiredDropCapabilities"]}`))
+		})
+		It("should report a user policy that holds the name of a published standard", func() {
+			Expect(f.ValuesGet("admissionPolicyEngine.internal.podSecurityStandards.conflictingPolicyNames").String()).
+				To(MatchJSON(`["d8-pod-security-restricted"]`))
 		})
 	})
 
@@ -693,4 +714,66 @@ spec:
     allowPrivileged: false
     seccompProfiles:
       allowedProfiles: []
+`
+
+var testSecurityPolicyPodStandards = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: d8-pod-security-restricted
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      matchNames: ["app"]
+  policies:
+    allowPrivileged: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: d8-pod-security-baseline
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io/pod-standard: baseline
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      excludeNames: ["d8-*", "kube-*"]
+  policies:
+    allowPrivileged: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: d8-pod-security-user-labelled
+  labels:
+    security.deckhouse.io/pod-standard: baseline
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      excludeNames: ["d8-*", "kube-*"]
+  policies:
+    allowPrivileged: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: foo
+spec:
+  enforcementAction: Deny
+  controllerValidation:
+    mode: Enforce
+    excludedPolicies: ["requiredDropCapabilities"]
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          security-policy.deckhouse.io/enabled: "true"
+  policies:
+    requiredDropCapabilities: ["ALL"]
 `

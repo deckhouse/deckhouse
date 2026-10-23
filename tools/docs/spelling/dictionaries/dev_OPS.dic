@@ -1,4 +1,4 @@
-3000
+3010
 1GB
 2GB
 5XX
@@ -797,6 +797,7 @@ SIGTERM
 SLA
 SNAT
 SPE
+SPEs
 SPIFFE
 SPN
 SPNEGO
@@ -962,6 +963,7 @@ ValidatingAdmissionPolicies
 ValidatingAdmissionPolicy
 ValidatingAdmissionPolicyBinding
 ValidatingAdmissionWebhook
+ValidatingWebhookConfiguration
 ValidationWebhook
 Venafi
 VersionItems
@@ -2116,6 +2118,7 @@ zoneTagCategory
 валидироваться
 валидирует
 валидируется
+валидируют
 валидируются
 валидирующие
 валидирующим
@@ -2124,9 +2127,11 @@ zoneTagCategory
 валидными
 вебхук
 вебхука
+вебхуке
 вебхуки
 вебхуков
 вебхуком
+вебхуку
 вендора
 вендором
 вендорской
@@ -2136,6 +2141,8 @@ zoneTagCategory
 версионирования
 версионированной
 версионировать
+верхнеуровневые
+верхнеуровневых
 визуализированы
 визуализируются
 виртуализацией
@@ -2162,6 +2169,7 @@ zoneTagCategory
 высокодоступный
 высокодоступных
 высокоуровневой
+высокоуровневые
 высокоуровневыми
 высокоуровневых
 г
@@ -2439,6 +2447,8 @@ zoneTagCategory
 мультитенантности
 мультитенантность
 мусорку
+мутатор
+мутатора
 мэтчем
 наблюдаемости
 наблюдаемость

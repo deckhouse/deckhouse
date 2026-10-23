@@ -33,8 +33,37 @@ properties:
           Установите значение `true` (по умолчанию), чтобы проверять и поды, и контроллеры,
           либо `false` — чтобы проверять только поды и не проверять контроллеры.
 
-          Параметр действует на все ограничения, которые читают спецификацию пода,
+          Как сообщается о нарушении в контроллере, задаёт параметр [controllerValidationEnforcement](#parameters-podsecuritystandards-controllervalidationenforcement).
+
+          Параметр задаёт значение по умолчанию для всех ограничений, которые читают спецификацию пода,
           включая созданные из ресурсов OperationPolicy и SecurityPolicy.
+          Политика переопределяет его собственной секцией `spec.controllerValidation`.
+      controllerValidationEnforcement:
+        description: |
+          Действие для контроллера, создающего поды, который нарушает политику с `enforcementAction: Deny`.
+
+          - `Warn` — контроллер принимается с предупреждением, а поды, которые он создаёт, запрещаются.
+            Значение используется по умолчанию на переходный период, пока рабочие нагрузки приводятся в соответствие с проверкой контроллеров.
+          - `Policy` — контроллер проверяется с действием политики, поэтому запрещающая политика запрещает и контроллер.
+            После переходного периода это значение станет значением по умолчанию.
+
+          Политика с другим действием сохраняет его для контроллеров: `Warn` предупреждает, а `Dryrun` только фиксирует нарушение.
+
+          Параметр действует для Pod Security Standards и задаёт значение по умолчанию для ресурсов OperationPolicy и SecurityPolicy.
+          Политика переопределяет его параметром `spec.controllerValidation.mode`.
+          Параметр действует, если [controllerValidation](#parameters-podsecuritystandards-controllervalidation) равен `true`.
+      controllerValidationExcludedPolicies:
+        description: |
+          Правила Pod Security Standards, которые проверяются только на подах.
+
+          Правила называются так же, как параметры [SecurityPolicy](cr.html#securitypolicy),
+          в виде которых стандарты опубликованы в объектах `d8-pod-security-baseline` и `d8-pod-security-restricted`.
+          Исключённое правило проверяется только на подах в обоих стандартах.
+          Параметр действует, если [controllerValidation](#parameters-podsecuritystandards-controllervalidation) имеет значение `true`.
+
+          Некоторые правила проверяются одним ограничением и исключаются вместе: если указано любое правило группы,
+          на подах проверяется вся группа. Группы правил: `allowHostPID` с `allowHostIPC`
+          и `allowHostNetwork` с `allowedHostPorts`.
   denyVulnerableImages:
     description: |
       Настройки Trivy-провайдера.

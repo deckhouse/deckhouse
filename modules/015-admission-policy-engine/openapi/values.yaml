@@ -30,6 +30,12 @@ properties:
                 - deny
                 - dryrun
                 - warn
+          conflictingPolicyNames:
+            type: array
+            default: []
+            description: The names of the published standards that user SecurityPolicy objects already hold.
+            items:
+              type: string
       effectiveStorageClass:
         default: false
         oneOf:

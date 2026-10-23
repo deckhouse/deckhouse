@@ -268,6 +268,8 @@ To apply only the required security policies without turning off the entire buil
 
 1. Add the `security.deckhouse.io/pod-policy: privileged` label to your namespace in order to disable built-in policies.
 1. Create a SecurityPolicy that matches the [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) or [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted) policy while also editing the list of `policies` elements as you see fit.
+   Take the rules from the `d8-pod-security-baseline` or `d8-pod-security-restricted` object
+   the module publishes the standards as, see [Rules of the standards](./#rules-of-the-standards).
 1. Add a label to your namespace that matches the `namespaceSelector` in the SecurityPolicy. In the examples below, the label is `security-policy.deckhouse.io/baseline-enabled: "true"` or `security-policy.deckhouse.io/restricted-enabled: "true"`.
 
 {% alert level="info" %}
@@ -751,7 +753,7 @@ with the `gpu.deckhouse.io/enabled: "true"` label.
 {% alert level="warning" %}
 The policy is applied to pods and to the pod-creating controllers,
 so a Deployment whose pod template requests GPU resources is denied on creation.
-To leave controllers unchecked, set the [`controllerValidation`](configuration.html#parameters-podsecuritystandards-controllervalidation) parameter to `false`.
+To check this rule on Pods only, add `gpuResourceRestriction` to the [`spec.controllerValidation.excludedPolicies`](cr.html#operationpolicy-v1alpha1-spec-controllervalidation-excludedpolicies) parameter of the policy.
 
 The namespace label is read from the Gatekeeper cache. While a namespace is missing from that cache,
 for example when the namespace and the pod are applied together and the namespace has not been cached yet,

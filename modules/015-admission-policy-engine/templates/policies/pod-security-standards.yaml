@@ -1,0 +1,49 @@
+{{- /*
+  The Pod Security Standards: their constraints and the SecurityPolicy objects that describe them.
+  Both are rendered from the same rules, see _pod-security-standards.tpl.
+
+  The objects enforce nothing by themselves: the hook that reads SecurityPolicy objects skips them.
+  `spec.match` shows the application namespaces the standard applies to with the module's own
+  enforcement action.
+
+  A user policy that already holds the name of an object keeps it, and the standard stays
+  unpublished: Helm cannot adopt the object, and the standard is enforced without it anyway.
+*/}}
+{{- include "ape.only_ready_constraints" (list . (include "ape.pod_security_standards" .)) }}
+
+{{- define "ape.pod_security_standards" }}
+{{- $context := . }}
+{{- $conflicts := .Values.admissionPolicyEngine.internal.podSecurityStandards.conflictingPolicyNames | default list }}
+{{- range $standard := list "baseline" "restricted" }}
+  {{- $policies := include "pss_policies" (list $context $standard) | fromYaml }}
+  {{- $settings := include "pss_settings" (list $context $standard) | fromYaml }}
+
+  {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
+    {{- include "pss_constraints" (list $context $standard $policies $settings) }}
+  {{- end }}
+
+  {{- if not (has (printf "d8-pod-security-%s" $standard) $conflicts) }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: d8-pod-security-{{ $standard }}
+  {{- $settings.labels }}
+spec:
+  enforcementAction: {{ $context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "Deny" }}
+  controllerValidation:
+    mode: {{ ternary (ternary "Warn" "Enforce" $settings.controllers.warn) "Disabled" $settings.controllers.enabled }}
+    excludedPolicies: {{ $settings.controllers.excluded | toJson }}
+  match:
+    namespaceSelector:
+      excludeNames:
+        {{- include "system_namespaces" $context | nindent 8 }}
+      labelSelector:
+        {{- include "pss_user_namespace_selector" (list $context $standard (include "pss_default_action" $context)) | nindent 8 }}
+    labelSelector:
+      {{- include "pss_object_selector" $context | nindent 6 }}
+  policies:
+    {{- toYaml $policies | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

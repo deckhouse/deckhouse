@@ -162,10 +162,12 @@ admissionPolicyEngine:
 `)
 
 	Context("Cluster with operation policies", func() {
+		var rendered map[string]string
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.HelmRender()
+			rendered = map[string]string{}
+			f.HelmRender(WithRenderOutput(rendered))
 		})
 
 		It("Everything must render properly", func() {
@@ -193,7 +195,7 @@ admissionPolicyEngine:
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			// The split lives in a helper shared with SecurityPolicy, but only OperationPolicy
-			// renders through `operation-policy/constraint.yaml`; without this fixture the nested
+			// renders through `operation-policy.yaml`; without this fixture the nested
 			// range there is never exercised with more than one variant.
 			userScoped := f.KubernetesGlobalResource("D8AllowedRepos", "denypolicy")
 			systemWarn := f.KubernetesGlobalResource("D8AllowedRepos", "d8-system-default-denypolicy")
@@ -229,9 +231,13 @@ admissionPolicyEngine:
 		It("All operation policy constraints must have valid YAML", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			// Dynamically extract constraint names from template files
-			operationConstraints := getOperationConstraintNames()
-			Expect(operationConstraints).NotTo(BeEmpty(), "No operation constraints found in templates")
+			operationConstraints := getConstraintKinds(rendered, "security.deckhouse.io/operation-policy", "")
+			// The fixture sets every rule, so every kind is listed by hand.
+			Expect(operationConstraints).To(ConsistOf(
+				"D8AllowedRepos", "D8RequiredResources", "D8DisallowedTags", "D8RequiredProbes", "D8RevisionHistoryLimit",
+				"D8ImagePullPolicy", "D8PriorityClass", "D8IngressClass", "D8StorageClass", "D8DNSPolicy", "D8RequiredLabels",
+				"D8RequiredAnnotations", "D8ContainerDuplicates", "D8ReplicaLimits", "D8DisallowedTolerations", "D8GpuResourceRestriction",
+			), "OperationPolicy constraints")
 
 			for _, constraintKind := range operationConstraints {
 				constraint := f.KubernetesGlobalResource(constraintKind, testPolicyName)

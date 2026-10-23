@@ -65,8 +65,66 @@ properties:
           Set to `true` (default) to validate both Pods and controllers,
           or to `false` to validate only Pods and leave controllers unchecked.
 
-          The parameter applies to every constraint that reads a pod spec, including
+          How a violation in a controller is reported is set by [controllerValidationEnforcement](#parameters-podsecuritystandards-controllervalidationenforcement).
+
+          The parameter is the default for every constraint that reads a pod spec, including
           the ones generated from OperationPolicy and SecurityPolicy resources.
+          A policy overrides it with its own `spec.controllerValidation` section.
+      controllerValidationEnforcement:
+        type: string
+        default: Warn
+        enum:
+          - Warn
+          - Policy
+        description: |
+          Action on a pod-creating controller that violates a policy with `enforcementAction: Deny`.
+
+          - `Warn` — the controller is accepted with a warning, and the Pods it creates are denied.
+            The value is the default for a transition period, while workloads are brought in line with the controller-level checks.
+          - `Policy` — the controller is checked with the action of the policy, so a denying policy denies the controller as well.
+            The value is to become the default after the transition period.
+
+          A policy with another action keeps it for controllers: `Warn` warns and `Dryrun` only records the violation.
+
+          The parameter applies to the Pod Security Standards and is the default for OperationPolicy and SecurityPolicy resources.
+          A policy overrides it with `spec.controllerValidation.mode`.
+          The parameter takes effect when [controllerValidation](#parameters-podsecuritystandards-controllervalidation) is `true`.
+      controllerValidationExcludedPolicies:
+        type: array
+        default: []
+        description: |
+          Pod Security Standards rules that are checked on Pods only.
+
+          The rules are named as the [SecurityPolicy](cr.html#securitypolicy) parameters
+          the standards are published with, in the `d8-pod-security-baseline` and `d8-pod-security-restricted` objects.
+          An excluded rule is checked on Pods only in both standards.
+          The parameter takes effect when [controllerValidation](#parameters-podsecuritystandards-controllervalidation) is `true`.
+
+          Some rules are checked by one constraint and are excluded together: listing any rule of a group checks
+          the whole group on Pods only. The groups are `allowHostPID` with `allowHostIPC`,
+          and `allowHostNetwork` with `allowedHostPorts`.
+        x-examples:
+          - ["allowPrivilegeEscalation", "requiredDropCapabilities"]
+        uniqueItems: true
+        items:
+          type: string
+          enum:
+            - allowPrivileged
+            - allowPrivilegeEscalation
+            - allowHostPID
+            - allowHostIPC
+            - allowHostNetwork
+            - allowedHostPorts
+            - allowedAppArmor
+            - allowedCapabilities
+            - requiredDropCapabilities
+            - allowedHostPaths
+            - allowedProcMount
+            - seLinux
+            - allowedUnsafeSysctls
+            - seccompProfiles
+            - allowedVolumes
+            - runAsUser
 
   denyVulnerableImages:
     type: object

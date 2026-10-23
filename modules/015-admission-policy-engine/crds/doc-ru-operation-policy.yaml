@@ -18,6 +18,32 @@ spec:
                     - `Warn` — аналогично `Dryrun`, но дополнительно к информации о событии будет выведена информация о том, из-за какого ограничения (constraint) был бы запрет действия, если бы вместо `Warn` использовался `Deny`.
 
                     Действие `Deny` работает в прикладных неймспейсах. В неймспейсе с именем `d8-*` или `kube-*` политика всегда только предупреждает, какое бы действие здесь ни стояло.
+                controllerValidation:
+                  description: |
+                    Проверка контроллеров, создающих поды, на соответствие политике.
+
+                    К таким контроллерам относятся Deployment, StatefulSet, DaemonSet, Job, CronJob и ReplicationController.
+                    Контроллер проверяется при создании и изменении, поэтому о нарушении становится известно до создания пода.
+                    Поды проверяются в любом случае.
+
+                    Секция переопределяет для этой политики параметры модуля [podSecurityStandards.controllerValidation](configuration.html#parameters-podsecuritystandards-controllervalidation)
+                    и [podSecurityStandards.controllerValidationEnforcement](configuration.html#parameters-podsecuritystandards-controllervalidationenforcement).
+                  properties:
+                    mode:
+                      description: |
+                        Режим проверки контроллеров для политики:
+                        - `Enforce` — контроллеры проверяются по всем правилам политики, кроме перечисленных в [excludedPolicies](#operationpolicy-v1alpha1-spec-controllervalidation-excludedpolicies), с действием политики;
+                        - `Warn` — контроллеры проверяются так же, но политика с `enforcementAction: Deny` только предупреждает о нарушении в контроллере. Поды, которые создаёт контроллер, запрещаются;
+                        - `Disabled` — проверяются только поды.
+
+                        Если параметр не задан, используются параметры модуля [podSecurityStandards.controllerValidation](configuration.html#parameters-podsecuritystandards-controllervalidation)
+                        и [podSecurityStandards.controllerValidationEnforcement](configuration.html#parameters-podsecuritystandards-controllervalidationenforcement).
+                    excludedPolicies:
+                      description: |
+                        Правила политики, которые проверяются только на подах.
+
+                        Используйте параметр для правила, которому под соответствует благодаря мутирующему вебхуку, а шаблон пода контроллера — нет.
+                        Например, для `requiredResources` при использовании Vertical Pod Autoscaler.
                 policies:
                   properties:
                     allowedRepos:

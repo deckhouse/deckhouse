@@ -31,203 +31,54 @@ Deckhouse Platform (DP) позволяет управлять безопасно
 
 Для всех трех категорий политик (Pod Security Standards, операционные и политики безопасности) не предусмотрено автоматическое пересоздание существующих подов при изменении действующих или добавлении новых политик. Поды, существовавшие до момента внесения изменений в используемую политику или до добавления новой, продолжат работать до перезапуска. А при перезапуске они будут валидироваться по новым правилам.
 
-В DP для таких случаев предусмотрены алерты (ресурсы ClusterObservabilityAlert), информирующие о наличии в неймспейсе подов с нарушениями после изменения существующей политики или добавления новой.
+В DP предусмотрены алерты для таких случаев.
+Каждый алерт срабатывает отдельно для каждой политики и неймспейса, в которых есть объекты с нарушениями:
 
-Для получения списка алертов используйте команду:
+| Алерт | О чём сообщает |
+|---|---|
+| `PodSecurityStandardsViolation` | Работающие поды, которые нарушают Pod Security Standard |
+| `OperationPolicyViolation` | Существующие объекты, которые нарушают OperationPolicy |
+| `SecurityPolicyViolation` | Существующие объекты, которые нарушают SecurityPolicy |
+| `ControllerPolicyViolation` | Контроллеры, создающие поды, которые нарушают политику с `enforcementAction: Deny` и о которых на переходный период только предупреждают |
+
+Лейбл `policy` алерта содержит имя политики:
+имя OperationPolicy или SecurityPolicy либо `d8-pod-security-baseline` или `d8-pod-security-restricted` для Pod Security Standards.
+Лейбл `namespace` содержит неймспейс объектов с нарушениями.
+
+Алерт — это ресурс ObservabilityAlert в неймспейсе объектов с нарушениями, поэтому его видят пользователи этого неймспейса.
+Алерт о кластерных объектах — это ресурс ClusterObservabilityAlert.
+
+Чтобы получить список алертов в неймспейсе, выполните следующую команду, где `<NAMESPACE>` — неймспейс:
 
 ```bash
-d8 k get clusterobservabilityalerts
+d8 k -n <NAMESPACE> get observabilityalerts
 ```
 
 Пример вывода:
 
 <!-- markdownlint-disable MD031 -->
 ```console
-NAME                                                  SEVERITY   STATUS   DURATION   SUMMARY                          AGE
-SecurityPolicyViolation-f3a77d1dd2175402-1777370195   1          Firing   5h         Alerting PrometheusUnavailable   5h1m
-OperationPolicyViolation-9b21d0c871796913-1777370435  1          Firing   6h         Alerting PrometheusUnavailable   6h1m
+NAME                                                        SEVERITY   STATUS   DURATION   SUMMARY                                                                                     AGE
+PodSecurityStandardsViolation-07243a74fddd8234-1792744609   3          Firing   1h         Pods in the `app` namespace violate the `d8-pod-security-baseline` Pod Security Standard.   1h
+SecurityPolicyViolation-8f21cd962274a252-1792744609         3          Firing   1h         Objects in the `app` namespace violate the `restricted-app` SecurityPolicy.                 1h
 ```
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-Для просмотра информации о конкретном алерте используйте команду:
+Чтобы получить список алертов во всех неймспейсах и алертов о кластерных объектах, выполните следующие команды:
 
 ```bash
-d8 k get clusterobservabilityalert OperationPolicyViolation-9b21d0c871796913-1777370435 -oyaml
+d8 k get observabilityalerts -A
+d8 k get clusterobservabilityalerts
 ```
 
-{% offtopic title="Пример алерта при нарушении политики Pod Security Standards..." %}
+Чтобы посмотреть алерт, выполните следующую команду:
 
-```yaml
-kind: ClusterObservabilityAlert
-apiVersion: alerts.observability.deckhouse.io/v1alpha1
-metadata:
-  name: PodSecurityStandardsViolation-91e71759e048a397-1777369535
-  resourceVersion: "7454828154578800069"
-  creationTimestamp: 2026-04-28T09:45:35Z
-  labels:
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-alert:
-  labels:
-    alertname: PodSecurityStandardsViolation
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-    severity_level: "3"
-  annotations:
-    description: |-
-      You have configured [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/), and one or more running pods are violating these standards.
-
-      To identify violating pods:
-
-      - Run the following Prometheus query:
-
-        ```prometheus
-        count by (violating_namespace, violating_name, violation_msg) (
-          d8_gatekeeper_exporter_constraint_violations{
-            violation_enforcement="deny",
-            violating_namespace=~".*",
-            violating_kind="Pod",
-            source_type="PSS"
-          }
-        )
-        ```
-
-      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
-    plk_markup_format: markdown
-    plk_protocol_version: "1"
-    summary: At least one pod violates the configured cluster pod security standards.
-  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="PSS",violating_kind="Pod",violating_namespace=~".*",violation_enforcement="deny"}))
-    > 0
-  created_by: observability
-  rule_group_name: admission-policy-engine-audit-0
-status:
-  alertStatus: Firing
-  silencedBy: []
-  startsAt: 2026-04-28T09:45:35Z
-  resolvedAt: null
-  duration: 20h40m1.015261771s
+```bash
+d8 k -n <NAMESPACE> get observabilityalert <ALERT_NAME> -o yaml
 ```
 
-{% endofftopic %}
-
-{% offtopic title="Пример алерта при нарушении операционной политики..." %}
-
-```yaml
-kind: ClusterObservabilityAlert
-apiVersion: alerts.observability.deckhouse.io/v1alpha1
-metadata:
-  name: OperationPolicyViolation-9b21d0c871796913-1777370435
-  resourceVersion: "7454831929456594373"
-  creationTimestamp: 2026-04-28T10:00:35Z
-  labels:
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-alert:
-  labels:
-    alertname: OperationPolicyViolation
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-    severity_level: "3"
-  annotations:
-    description: >-
-      You have configured operation policies for the cluster, and one or more
-      existing objects are violating these policies.
-
-
-      To identify violating objects:
-
-
-      - Run the following Prometheus query:
-
-        ```prometheus
-        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
-          d8_gatekeeper_exporter_constraint_violations{
-            violation_enforcement="deny",
-            source_type="OperationPolicy"
-          }
-        )
-        ```
-
-      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
-    plk_markup_format: markdown
-    plk_protocol_version: "1"
-    summary: At least one object violates the configured cluster operation policies.
-  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="OperationPolicy",violation_enforcement="deny"}))
-    > 0
-  created_by: observability
-  rule_group_name: admission-policy-engine-audit-0
-status:
-  alertStatus: Firing
-  silencedBy: []
-  startsAt: 2026-04-28T10:00:35Z
-  resolvedAt: null
-  duration: 20h23m41.023025059s
-```
-
-{% endofftopic %}
-
-{% offtopic title="Пример алерта при нарушении политики безопасности..." %}
-
-```yaml
-kind: ClusterObservabilityAlert
-apiVersion: alerts.observability.deckhouse.io/v1alpha1
-metadata:
-  name: SecurityPolicyViolation-f3a77d1dd2175402-1777370195
-  resourceVersion: "7454830922622307781"
-  creationTimestamp: 2026-04-28T09:56:35Z
-  labels:
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-alert:
-  labels:
-    alertname: SecurityPolicyViolation
-    d8_component: gatekeeper
-    d8_module: admission-policy-engine
-    prometheus: deckhouse
-    severity_level: "3"
-  annotations:
-    description: >-
-      You have configured security policies for the cluster, and one or more
-      existing objects are violating these policies.
-
-
-      To identify violating objects:
-
-
-      - Run the following Prometheus query:
-
-        ```prometheus
-        count by (violating_namespace, violating_kind, violating_name, violation_msg) (
-          d8_gatekeeper_exporter_constraint_violations{
-            violation_enforcement="deny",
-            source_type="SecurityPolicy"
-          }
-        )
-        ```
-
-      - Alternatively, check the admission-policy-engine reports in the web interface Deckhouse Platform.
-    plk_markup_format: markdown
-    plk_protocol_version: "1"
-    summary: At least one object violates the configured cluster security policies.
-  expr: (count(d8_gatekeeper_exporter_constraint_violations{source_type="SecurityPolicy",violation_enforcement="deny"}))
-    > 0
-  created_by: observability
-  rule_group_name: admission-policy-engine-audit-0
-status:
-  alertStatus: Firing
-  silencedBy: []
-  startsAt: 2026-04-28T09:56:35Z
-  resolvedAt: null
-  duration: 20h29m21.015479019s
-```
-
-{% endofftopic %}
+Описание алерта содержит запрос Prometheus, который выводит объекты с нарушениями и нарушенные правила.
 
 ## Применение Pod Security Standards
 
@@ -323,7 +174,12 @@ status:
 - собственное имя политики — для прикладных неймспейсов, с тем действием, которое задано в политике;
 - `d8-system-default-<политика>` — для системных неймспейсов, в режиме `warn`.
 
-Префиксы `d8-system-default-` и `d8-pod-security-` зарезервированы: политика, имя которой начинается с одного из них, отклоняется при создании.
+На период перехода к проверке контроллеров политика с `enforcementAction: Deny` по умолчанию только предупреждает о нарушениях в контроллерах, создающих поды.
+Контроллеры проверяются ещё одним ограничением, `d8-controllers-<политика>`, в режиме `warn`, а ограничение с собственным именем политики проверяет только поды.
+Параметр модуля `podSecurityStandards.controllerValidationEnforcement: Policy` или параметр политики `spec.controllerValidation.mode: Enforce`
+включает проверку контроллеров с действием политики в одном ограничении.
+
+Префиксы `d8-system-default-`, `d8-pod-security-` и `d8-controllers-` зарезервированы: политика, имя которой начинается с одного из них, отклоняется при создании.
 По той же причине имя политики ограничено 235 символами: имена производных ограничений должны укладываться в 253 символа, отведённые для имени объекта Kubernetes.
 
 Политика формируется как одно ограничение, когда разделение ничего не меняет:

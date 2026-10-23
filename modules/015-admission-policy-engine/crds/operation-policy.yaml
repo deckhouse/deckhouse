@@ -45,6 +45,53 @@ spec:
                     - Warn
                     - Deny
                     - Dryrun
+                controllerValidation:
+                  type: object
+                  description: |
+                    Validation of the pod-creating controllers against the policy.
+
+                    The controllers are Deployment, StatefulSet, DaemonSet, Job, CronJob and ReplicationController.
+                    A controller is checked when it is created or updated, so a violation is reported before any Pod is created.
+                    Pods are checked in any case.
+
+                    The section overrides the module parameters [podSecurityStandards.controllerValidation](configuration.html#parameters-podsecuritystandards-controllervalidation)
+                    and [podSecurityStandards.controllerValidationEnforcement](configuration.html#parameters-podsecuritystandards-controllervalidationenforcement) for this policy.
+                  properties:
+                    mode:
+                      type: string
+                      description: |
+                        Controller validation mode of the policy:
+                        - `Enforce` — controllers are checked against every rule of the policy except the ones listed in [excludedPolicies](#operationpolicy-v1alpha1-spec-controllervalidation-excludedpolicies), with the action of the policy;
+                        - `Warn` — controllers are checked in the same way, but a policy with `enforcementAction: Deny` only warns about a violation in a controller. The Pods the controller creates are denied;
+                        - `Disabled` — only Pods are checked.
+
+                        If the parameter is omitted, the module parameters [podSecurityStandards.controllerValidation](configuration.html#parameters-podsecuritystandards-controllervalidation)
+                        and [podSecurityStandards.controllerValidationEnforcement](configuration.html#parameters-podsecuritystandards-controllervalidationenforcement) are used.
+                      enum:
+                        - Enforce
+                        - Warn
+                        - Disabled
+                    excludedPolicies:
+                      type: array
+                      description: |
+                        Rules of the policy that are checked on Pods only.
+
+                        Use it for a rule that a mutating webhook satisfies on the Pod but not in the controller's pod template,
+                        for example `requiredResources` with the Vertical Pod Autoscaler.
+                      x-doc-examples: [["requiredResources"]]
+                      items:
+                        type: string
+                        enum:
+                          - allowedRepos
+                          - requiredResources
+                          - disallowedImageTags
+                          - requiredProbes
+                          - imagePullPolicy
+                          - priorityClassNames
+                          - checkHostNetworkDNSPolicy
+                          - checkContainerDuplicates
+                          - disallowedTolerations
+                          - gpuResourceRestriction
                 policies:
                   type: object
                   properties:

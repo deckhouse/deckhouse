@@ -21,5 +21,3 @@ spec:
           values:
             - baseline
             - restricted
-  parameters:
-    allowPrivilegeEscalation: false

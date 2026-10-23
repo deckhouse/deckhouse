@@ -28,7 +28,7 @@ reserved = load_validation_webhook(Path(__file__).parent / "reserved_policy_name
 main = reserved.main
 
 
-def _binding_context(name: str) -> DotMap:
+def _binding_context(name: str, username: str = "kubernetes-admin") -> DotMap:
     """The request the webhook is called with, cut down to the fields it reads."""
     return DotMap(json.loads("""
 {
@@ -40,7 +40,7 @@ def _binding_context(name: str) -> DotMap:
             "resource": {"group": "deckhouse.io", "version": "v1alpha1", "resource": "securitypolicies"},
             "name": "%s",
             "operation": "CREATE",
-            "userInfo": {"username": "kubernetes-admin", "groups": ["system:masters"]},
+            "userInfo": {"username": "%s", "groups": ["system:masters"]},
             "object": {
                 "apiVersion": "deckhouse.io/v1alpha1",
                 "kind": "SecurityPolicy",
@@ -52,12 +52,12 @@ def _binding_context(name: str) -> DotMap:
     },
     "type": "Validating"
 }
-""" % (name, name)))
+""" % (name, username, name)))
 
 
 class TestCheckReservedName(unittest.TestCase):
     def test_ordinary_names_are_allowed(self):
-        for name in ["foo", "d8-foo", "d8-system-warn-foo", "d8-system-excluded-foo", "system-default-foo", "foo-system", "d8-system"]:
+        for name in ["foo", "d8-foo", "d8-system-warn-foo", "d8-system-excluded-foo", "system-default-foo", "foo-system", "d8-system", "d8-controller-foo"]:
             with self.subTest(name=name):
                 self.assertIsNone(reserved.check_reserved_name(name))
 
@@ -65,6 +65,7 @@ class TestCheckReservedName(unittest.TestCase):
         for name in [
             "d8-system-default-foo",
             "d8-pod-security-baseline-deny-default",
+            "d8-controllers-foo",
         ]:
             with self.subTest(name=name):
                 error = reserved.check_reserved_name(name)
@@ -92,6 +93,9 @@ class TestCheckReservedName(unittest.TestCase):
             with self.subTest(prefix=prefix):
                 self.assertLessEqual(len(prefix + longest), 253)
 
+    def test_every_prefix_explains_its_purpose(self):
+        self.assertEqual(set(reserved.RESERVED_NAME_PREFIXES), set(reserved.RESERVED_NAME_PURPOSES))
+
     def test_no_prefix_contains_another(self):
         # The prefixes exist so that the constraints derived from any two policies stay
         # distinct, which holds only while no prefix is a prefix of another.
@@ -117,6 +121,23 @@ class TestWebhook(unittest.TestCase):
             'Name "d8-system-default-my-policy" starts with the reserved prefix '
             '"d8-system-default-". The module uses this prefix for the constraints it derives '
             "from a policy that applies to system namespaces. Choose another name.",
+        )
+
+    def test_deckhouse_may_apply_a_reserved_name(self):
+        # The module publishes the Pod Security Standards as `d8-pod-security-<standard>`.
+        out = hook.testrun(main, [_binding_context("d8-pod-security-baseline", reserved.DECKHOUSE_USERNAME)])
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_a_reserved_name_is_denied_to_anyone_else(self):
+        out = hook.testrun(main, [_binding_context("d8-pod-security-baseline", "system:serviceaccount:d8-system:other")])
+        tests.assert_validation_deny(
+            self,
+            out,
+            'Name "d8-pod-security-baseline" starts with the reserved prefix '
+            '"d8-pod-security-". The module uses this prefix for the Pod Security Standards: '
+            "their constraints and the SecurityPolicy objects that describe them, which cannot be "
+            "changed. Configure the standards in the module settings, or choose another name for "
+            "your policy.",
         )
 
     def test_a_name_that_leaves_no_room_for_the_prefix_is_denied(self):

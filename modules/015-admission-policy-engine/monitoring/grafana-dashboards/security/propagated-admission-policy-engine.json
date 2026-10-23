@@ -167,7 +167,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (kind) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"})",
+          "expr": "count by (kind) (group by (kind, violating_kind, violating_name, violating_namespace, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\",violating_name!=\"\"}))",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -928,7 +928,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "count by (violating_name,violating_namespace) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"})",
+          "expr": "count by (violating_name,violating_namespace) (group by (kind, violating_kind, violating_name, violating_namespace, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\",violating_name!=\"\"}))",
           "interval": "",
           "legendFormat": "{{violating_namespace }}/{{violating_name}}",
           "refId": "A"
@@ -1022,7 +1022,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (kind) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\"})",
+          "expr": "count by (kind) (group by (kind, violating_kind, violating_name, violating_namespace, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violating_namespace=~\"$namespace\",violating_name!=\"\"}))",
           "format": "time_series",
           "hide": false,
           "instant": true,
@@ -1100,14 +1100,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(d8_gatekeeper_exporter_constraint_violations{violation_enforcement=\"warn\",violating_namespace=~\"$namespace\"})",
+          "expr": "count(group by (kind, violating_kind, violating_name, violating_namespace, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violation_enforcement=\"warn\",violating_namespace=~\"$namespace\",violating_name!=\"\"}))",
           "interval": "",
           "legendFormat": "warn",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "sum(d8_gatekeeper_exporter_constraint_violations{violation_enforcement=\"deny\",violating_namespace=~\"$namespace\"})",
+          "expr": "count(group by (kind, violating_kind, violating_name, violating_namespace, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violation_enforcement=\"deny\",violating_namespace=~\"$namespace\",violating_name!=\"\"}))",
           "hide": false,
           "interval": "",
           "legendFormat": "deny",
@@ -1115,7 +1115,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(d8_gatekeeper_exporter_constraint_violations{violation_enforcement=\"dryrun\",violating_namespace=~\"$namespace\"})",
+          "expr": "count(group by (kind, violating_kind, violating_name, violating_namespace, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violation_enforcement=\"dryrun\",violating_namespace=~\"$namespace\",violating_name!=\"\"}))",
           "hide": false,
           "interval": "",
           "legendFormat": "dryrun",
@@ -1123,7 +1123,7 @@
         },
         {
           "exemplar": true,
-          "expr": "sum(d8_gatekeeper_exporter_constraint_violations{violation_enforcement=\"unrecognized\",violating_namespace=~\"$namespace\"})",
+          "expr": "count(group by (kind, violating_kind, violating_name, violating_namespace, violation_msg) (d8_gatekeeper_exporter_constraint_violations{violation_enforcement=\"unrecognized\",violating_namespace=~\"$namespace\",violating_name!=\"\"}))",
           "hide": false,
           "interval": "",
           "legendFormat": "unrecognized",

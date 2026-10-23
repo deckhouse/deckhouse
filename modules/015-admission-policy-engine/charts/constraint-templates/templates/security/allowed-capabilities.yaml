@@ -37,6 +37,16 @@ spec:
               description: "A list of Linux capabilities that are required to be dropped from a container."
               items:
                 type: string
+            skipControllerChecks:
+              type: array
+              description: >-
+                Checks that apply to Pods only. A controller (Deployment, StatefulSet and the other
+                pod-creating kinds) is not checked against the listed parameters.
+              items:
+                type: string
+                enum:
+                  - allowedCapabilities
+                  - requiredDropCapabilities
   targets:
     - target: admission.k8s.gatekeeper.sh
       code:
@@ -60,12 +70,14 @@ spec:
               import data.lib.check_subset.check_container_subset
               import data.lib.check_subset.check_container_superset
               import data.lib.common.input_containers
+              import data.lib.common.is_controller
               import data.lib.common.object_labels
               import data.lib.common.object_namespace
               import data.lib.message.violation_message
 
               violation contains {"msg": msg, "details": object.union(result.detail, {"container": container.name})} if {
                 not input.review.operation == "DELETE"
+                not controller_check_skipped("allowedCapabilities")
                 container := input_containers[_]
                 result := check_container_subset(
                   container,
@@ -83,6 +95,7 @@ spec:
 
               violation contains {"msg": msg, "details": object.union(result.detail, {"container": container.name})} if {
                 not input.review.operation == "DELETE"
+                not controller_check_skipped("requiredDropCapabilities")
                 container := input_containers[_]
                 result := check_container_superset(
                   container,
@@ -96,4 +109,14 @@ spec:
                 )
                 not result.allowed
                 msg := violation_message("container is not dropping all required capabilities", sprintf("container: %v", [container.name]), result.detail)
+              }
+
+              # The module sets skipControllerChecks when the policy excludes one of the two
+              # parameters from controller validation and keeps the other: the constraint still
+              # matches controllers, and only the excluded parameter is left to the Pod check.
+              # A mutating webhook commonly adds `drop: [ALL]` to the Pod, which a controller
+              # template does not carry.
+              controller_check_skipped(parameter) if {
+                is_controller
+                input.parameters.skipControllerChecks[_] == parameter
               }

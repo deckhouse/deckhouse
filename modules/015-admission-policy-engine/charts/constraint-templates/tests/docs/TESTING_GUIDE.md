@@ -919,7 +919,7 @@ Keep the `constraints/*.yaml` fixtures in step with what the helper renders, so 
 
 When a constraint matches both Pods and controllers (Deployment, StatefulSet, etc.):
 
-1. **`labelSelector`** evaluates against the reviewed object's own `metadata.labels`. For controllers, this is the **top-level** metadata, not the pod template's `spec.template.metadata.labels`. See the comment on `constraint_selector` in `_helpers.tpl`.
+1. **`labelSelector`** evaluates against the reviewed object's own `metadata.labels`. For controllers, this is the **top-level** metadata, not the pod template's `spec.template.metadata.labels`. See the comment on `policy_selectors` in `templates/policies/_helpers.tpl`.
 
 2. **`is_update` guard**: if a rule checks immutable Pod fields (e.g. `automountServiceAccountToken`), scope the guard to `kind == "Pod"` only — controller UPDATEs should still be checked since pod template fields are mutable. A gator suite case cannot declare the review operation, so cover this with an OPA unit test under `files/libs` rather than with a matrix case.
 

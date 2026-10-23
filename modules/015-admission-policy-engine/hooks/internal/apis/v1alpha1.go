@@ -53,8 +53,9 @@ type SecurityPolicy struct {
 }
 
 type SecurityPolicySpec struct {
-	EnforcementAction string `json:"enforcementAction"`
-	Policies          struct {
+	EnforcementAction    string                `json:"enforcementAction"`
+	ControllerValidation *ControllerValidation `json:"controllerValidation,omitempty"`
+	Policies             struct {
 		AllowedHostPaths *[]struct {
 			PathPrefix string `json:"pathPrefix"`
 			ReadOnly   bool   `json:"readOnly"`
@@ -121,8 +122,9 @@ type IDRange struct {
 }
 
 type OperationPolicySpec struct {
-	EnforcementAction string `json:"enforcementAction"`
-	Policies          struct {
+	EnforcementAction    string                `json:"enforcementAction"`
+	ControllerValidation *ControllerValidation `json:"controllerValidation,omitempty"`
+	Policies             struct {
 		AllowedRepos      *[]string `json:"allowedRepos,omitempty"`
 		RequiredResources *struct {
 			Limits   *[]string `json:"limits,omitempty"`
@@ -168,6 +170,13 @@ type OperationPolicySpec struct {
 		NamespaceSelector NamespaceSelector    `json:"namespaceSelector,omitempty"`
 		LabelSelector     metav1.LabelSelector `json:"labelSelector,omitempty"`
 	} `json:"match"`
+}
+
+// ControllerValidation overrides, for one policy, whether its constraints check the pod-creating
+// controllers in addition to Pods.
+type ControllerValidation struct {
+	Mode             string   `json:"mode,omitempty"`
+	ExcludedPolicies []string `json:"excludedPolicies,omitempty"`
 }
 
 type PolicyStatus struct {

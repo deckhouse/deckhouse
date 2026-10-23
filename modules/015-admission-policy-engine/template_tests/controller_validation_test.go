@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: controller validation toggle", func() {
@@ -95,12 +96,7 @@ admissionPolicyEngine:
 				constraint := f.KubernetesGlobalResource("D8HostNetwork", "d8-pod-security-baseline-deny-default")
 				Expect(constraint.Exists()).To(BeTrue(), "D8HostNetwork constraint should exist")
 
-				spec := getConstraintSpecMap(constraint)
-				match, ok := spec["match"].(map[string]interface{})
-				Expect(ok).To(BeTrue(), "spec.match should exist")
-
-				kinds, ok := match["kinds"].([]interface{})
-				Expect(ok).To(BeTrue(), "spec.match.kinds should be a list")
+				kinds := policyConstraintKinds(f, "D8HostNetwork", "d8-pod-security-baseline-deny-default")
 
 				validateKinds(kinds, tc.expectControllers, "D8HostNetwork")
 			})
@@ -109,12 +105,7 @@ admissionPolicyEngine:
 				constraint := f.KubernetesGlobalResource("D8HostProcesses", "d8-pod-security-baseline-deny-default")
 				Expect(constraint.Exists()).To(BeTrue(), "D8HostProcesses constraint should exist")
 
-				spec := getConstraintSpecMap(constraint)
-				match, ok := spec["match"].(map[string]interface{})
-				Expect(ok).To(BeTrue(), "spec.match should exist")
-
-				kinds, ok := match["kinds"].([]interface{})
-				Expect(ok).To(BeTrue(), "spec.match.kinds should be a list")
+				kinds := policyConstraintKinds(f, "D8HostProcesses", "d8-pod-security-baseline-deny-default")
 
 				validateKinds(kinds, tc.expectControllers, "D8HostProcesses")
 			})
@@ -123,12 +114,7 @@ admissionPolicyEngine:
 				constraint := f.KubernetesGlobalResource("D8PrivilegedContainer", "d8-pod-security-baseline-deny-default")
 				Expect(constraint.Exists()).To(BeTrue(), "D8PrivilegedContainer constraint should exist")
 
-				spec := getConstraintSpecMap(constraint)
-				match, ok := spec["match"].(map[string]interface{})
-				Expect(ok).To(BeTrue(), "spec.match should exist")
-
-				kinds, ok := match["kinds"].([]interface{})
-				Expect(ok).To(BeTrue(), "spec.match.kinds should be a list")
+				kinds := policyConstraintKinds(f, "D8PrivilegedContainer", "d8-pod-security-baseline-deny-default")
 
 				validateKinds(kinds, tc.expectControllers, "D8PrivilegedContainer")
 			})
@@ -174,4 +160,35 @@ func validateKinds(kinds []interface{}, expectControllers bool, constraintName s
 		Expect(hasDeployment).To(BeFalse(), "%s should NOT match Deployment when controllerValidation is disabled", constraintName)
 		Expect(hasJob).To(BeFalse(), "%s should NOT match Job when controllerValidation is disabled", constraintName)
 	}
+}
+
+// controllerCheck returns the constraint that checks the pod-creating controllers for the
+// constraint `name` of a policy: `d8-controllers-<name>` while a denying policy only warns on
+// controllers (see policy_controllers), the constraint itself otherwise.
+func controllerCheck(f *Config, kind, name string) object_store.KubeObject {
+	if constraint := f.KubernetesGlobalResource(kind, "d8-controllers-"+name); constraint.Exists() {
+		return constraint
+	}
+	return f.KubernetesGlobalResource(kind, name)
+}
+
+// policyConstraintKinds returns match.kinds of the constraint `name` together with those of its
+// controller constraint, if the policy has one.
+func policyConstraintKinds(f *Config, kind, name string) []interface{} {
+	var kinds []interface{}
+	for _, constraint := range []object_store.KubeObject{
+		f.KubernetesGlobalResource(kind, name),
+		f.KubernetesGlobalResource(kind, "d8-controllers-"+name),
+	} {
+		if !constraint.Exists() {
+			continue
+		}
+		spec := getConstraintSpecMap(constraint)
+		match, ok := spec["match"].(map[string]interface{})
+		Expect(ok).To(BeTrue(), "spec.match should exist")
+		entries, ok := match["kinds"].([]interface{})
+		Expect(ok).To(BeTrue(), "spec.match.kinds should be a list")
+		kinds = append(kinds, entries...)
+	}
+	return kinds
 }

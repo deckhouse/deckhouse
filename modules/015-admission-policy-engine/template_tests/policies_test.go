@@ -23,7 +23,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -45,6 +44,7 @@ func moduleRootDir() string {
 var _ = Describe("Module :: admissionPolicyEngine :: pod security policies ::", func() {
 	var gatorPath string
 	var gatorFound bool
+	var rendered map[string]string
 	f := SetupHelmConfig(`
 admissionPolicyEngine:
   internal:
@@ -104,7 +104,7 @@ admissionPolicyEngine:
 			Expect(constraintDirs).NotTo(BeEmpty(), "no constraint test cases found under %s", constraintsRoot)
 
 			pssKinds := make(map[string]bool)
-			for _, kind := range append(getBaselineConstraintNames(), getRestrictedConstraintNames()...) {
+			for _, kind := range append(append([]string{}, baselinePSSKinds...), restrictedPSSKinds...) {
 				pssKinds[kind] = true
 			}
 			seenPSSKinds := make(map[string]bool)
@@ -256,10 +256,10 @@ admissionPolicyEngine:
 	validateConstraintsForConfig := func(defaultPolicy, enforcementAction string, enforcementActions []string, constraintNamePattern string) {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-		baselineConstraints := getBaselineConstraintNames()
-		restrictedConstraints := getRestrictedConstraintNames()
-		Expect(baselineConstraints).NotTo(BeEmpty(), "No baseline constraints found in templates")
-		Expect(restrictedConstraints).NotTo(BeEmpty(), "No restricted constraints found in templates")
+		baselineConstraints := getConstraintKinds(rendered, "security.deckhouse.io/pod-standard", "baseline")
+		restrictedConstraints := getConstraintKinds(rendered, "security.deckhouse.io/pod-standard", "restricted")
+		Expect(baselineConstraints).To(ConsistOf(baselinePSSKinds), "Baseline constraints")
+		Expect(restrictedConstraints).To(ConsistOf(restrictedPSSKinds), "Restricted constraints")
 
 		allConstraints := append(baselineConstraints, restrictedConstraints...)
 		for _, constraintKind := range allConstraints {
@@ -350,7 +350,8 @@ internal:
 					f.ValuesSetFromYaml("admissionPolicyEngine", configYAML)
 					f.ValuesSetFromYaml("global", globalValues)
 					f.ValuesSet("global.modulesImages", GetModulesImages())
-					f.HelmRender()
+					rendered = map[string]string{}
+					f.HelmRender(WithRenderOutput(rendered))
 				})
 
 				It("All constraints must have valid YAML", func() {
@@ -420,7 +421,8 @@ internal:
 					f.ValuesSetFromYaml("admissionPolicyEngine", configYAML)
 					f.ValuesSetFromYaml("global", globalValues)
 					f.ValuesSet("global.modulesImages", GetModulesImages())
-					f.HelmRender()
+					rendered = map[string]string{}
+					f.HelmRender(WithRenderOutput(rendered))
 				})
 
 				It("All constraints with -d8 suffix must have valid YAML", func() {
@@ -487,38 +489,50 @@ func validateYAML(constraint interface{}, resourceName string) {
 	}
 }
 
-// extractConstraintNamesFromTemplate parses template file and extracts constraint kind names
-// from include statements like: include "pod_security_standard_baseline" (list $context "D8HostNetwork" ...)
-// or include "pod_security_standard_restricted" (list $context "D8AllowedCapabilities" ...)
-func extractConstraintNamesFromTemplate(templatePath string, helperName string) []string {
-	content, err := os.ReadFile(templatePath)
-	if err != nil {
-		Fail(fmt.Sprintf("Failed to read template file %s: %v", templatePath, err))
+// baselinePSSKinds and restrictedPSSKinds are the constraint kinds each standard renders. They are
+// listed by hand, so that a rule dropped from a standard fails the tests instead of shrinking the
+// lists they iterate over.
+var (
+	baselinePSSKinds = []string{
+		"D8HostNetwork", "D8HostProcesses", "D8PrivilegedContainer", "D8AppArmor", "D8AllowedCapabilities",
+		"D8AllowedHostPaths", "D8AllowedProcMount", "D8SeLinux", "D8AllowedSysctls", "D8AllowedSeccompProfiles",
 	}
+	restrictedPSSKinds = []string{
+		"D8AllowedCapabilities", "D8AllowPrivilegeEscalation", "D8AllowedVolumeTypes", "D8AllowedUsers", "D8AllowedSeccompProfiles",
+	}
+)
 
-	// Pattern to match: include "pod_security_standard_baseline" (list $context "D8XXX" ...)
-	// or include "pod_security_standard_restricted" (list $context "D8XXX" ...)
-	// The pattern looks for the helper name followed by a list that contains a quoted string starting with D8
-	pattern := fmt.Sprintf(`include\s+"%s"\s+\([^)]*list[^)]*"([D8][^"]+)"`, regexp.QuoteMeta(helperName))
-	re := regexp.MustCompile(pattern)
-
-	matches := re.FindAllStringSubmatch(string(content), -1)
-	constraintNames := make(map[string]bool)
-
-	for _, match := range matches {
-		if len(match) > 1 {
-			constraintName := match[1]
-			// Only include names that start with D8 (constraint kinds)
-			if strings.HasPrefix(constraintName, "D8") {
-				constraintNames[constraintName] = true
+// getConstraintKinds returns the kinds of the rendered constraints that carry the given label value,
+// such as `security.deckhouse.io/pod-standard: baseline`. Reading the rendered output rather than
+// the template source keeps the list right however the templates build the constraints.
+func getConstraintKinds(rendered map[string]string, label, value string) []string {
+	kinds := make(map[string]bool)
+	for _, content := range rendered {
+		for _, doc := range strings.Split(content, "\n---") {
+			var obj struct {
+				APIVersion string `yaml:"apiVersion"`
+				Kind       string `yaml:"kind"`
+				Metadata   struct {
+					Labels map[string]string `yaml:"labels"`
+				} `yaml:"metadata"`
+			}
+			if err := yaml.Unmarshal([]byte(doc), &obj); err != nil {
+				continue
+			}
+			if !strings.HasPrefix(obj.APIVersion, "constraints.gatekeeper.sh/") {
+				continue
+			}
+			if v, ok := obj.Metadata.Labels[label]; ok && v == value {
+				kinds[obj.Kind] = true
 			}
 		}
 	}
 
-	result := make([]string, 0, len(constraintNames))
-	for name := range constraintNames {
-		result = append(result, name)
+	result := make([]string, 0, len(kinds))
+	for kind := range kinds {
+		result = append(result, kind)
 	}
+	sort.Strings(result)
 
 	return result
 }
@@ -542,85 +556,7 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-// findTemplatePath finds the template file by trying multiple possible paths
-func findTemplatePath(relativePath string) string {
-	// Get the directory where this test file is located
-	_, testFile, _, _ := runtime.Caller(0)
-	testDir := filepath.Dir(testFile)
-
-	// Try different possible paths
-	possiblePaths := []string{
-		// Relative to test file (when running from module root)
-		filepath.Join(testDir, "..", relativePath),
-		// Relative to current working directory
-		relativePath,
-		// From workspace root
-		filepath.Join("modules", "015-admission-policy-engine", relativePath),
-	}
-
-	for _, path := range possiblePaths {
-		absPath, _ := filepath.Abs(path)
-		if _, err := os.Stat(absPath); err == nil {
-			return absPath
-		}
-		// Also try the relative path as-is
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-
-	Fail(fmt.Sprintf("Could not find template file %s. Tried paths: %v (test file: %s)", relativePath, possiblePaths, testFile))
-	return ""
-}
-
-// getBaselineConstraintNames extracts constraint names from baseline template
-func getBaselineConstraintNames() []string {
-	templatePath := findTemplatePath(filepath.Join("templates", "policies", "pod-security-standards", "baseline", "constraint.yaml"))
-	return extractConstraintNamesFromTemplate(templatePath, "pod_security_standard_baseline")
-}
-
-// getRestrictedConstraintNames extracts constraint names from restricted template
-func getRestrictedConstraintNames() []string {
-	templatePath := findTemplatePath(filepath.Join("templates", "policies", "pod-security-standards", "restricted", "constraint.yaml"))
-	return extractConstraintNamesFromTemplate(templatePath, "pod_security_standard_restricted")
-}
-
-// getOperationConstraintNames extracts constraint names from operation-policy template
-// by parsing "kind: D8XXX" lines in define blocks
-func getOperationConstraintNames() []string {
-	templatePath := findTemplatePath(filepath.Join("templates", "policies", "operation-policy", "constraint.yaml"))
-	content, err := os.ReadFile(templatePath)
-	if err != nil {
-		Fail(fmt.Sprintf("Failed to read template file %s: %v", templatePath, err))
-	}
-
-	// Pattern to match: kind: D8XXX (where XXX is the constraint name)
-	// This appears in define blocks like: kind: D8AllowedRepos
-	pattern := `kind:\s+(D8[A-Za-z0-9]+)`
-	re := regexp.MustCompile(pattern)
-
-	matches := re.FindAllStringSubmatch(string(content), -1)
-	constraintNames := make(map[string]bool)
-
-	for _, match := range matches {
-		if len(match) > 1 {
-			constraintName := match[1]
-			// Only include names that start with D8 (constraint kinds)
-			if strings.HasPrefix(constraintName, "D8") {
-				constraintNames[constraintName] = true
-			}
-		}
-	}
-
-	result := make([]string, 0, len(constraintNames))
-	for name := range constraintNames {
-		result = append(result, name)
-	}
-
-	return result
-}
-
-// constraintSelectorExpectation describes expected selector fields rendered by constraint_selector helper.
+// constraintSelectorExpectation describes expected selector fields rendered by the policy_selectors helper.
 type constraintSelectorExpectation struct {
 	namespaces         interface{}
 	excludedNamespaces interface{}

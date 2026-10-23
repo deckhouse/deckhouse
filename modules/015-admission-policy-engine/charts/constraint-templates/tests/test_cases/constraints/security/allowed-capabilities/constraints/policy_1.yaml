@@ -1,0 +1,23 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedCapabilities
+metadata:
+  name: policy-skip-drop-on-controllers
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+      - apiGroups: [""]
+        kinds: ["ReplicationController"]
+      - apiGroups: ["batch"]
+        kinds: ["Job", "CronJob"]
+  parameters:
+    allowedCapabilities:
+      - NET_BIND_SERVICE
+    requiredDropCapabilities:
+      - ALL
+    skipControllerChecks:
+      - requiredDropCapabilities

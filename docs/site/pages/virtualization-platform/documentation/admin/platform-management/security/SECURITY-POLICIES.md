@@ -99,7 +99,12 @@ A denying policy that reaches system namespaces is therefore rendered as two Gat
 - The policy's own name: For application namespaces, with the action the policy asks for.
 - `d8-system-default-<policy>`: For system namespaces, in `warn` mode.
 
-The `d8-system-default-` and `d8-pod-security-` prefixes are reserved: a policy whose name starts with one of them is rejected on creation.
+For the transition to controller-level validation, a denying policy only warns about pod-creating controllers by default.
+It checks them in one more constraint, `d8-controllers-<policy>`, in `warn` mode, and the constraint with the policy's own name checks Pods only.
+The `podSecurityStandards.controllerValidationEnforcement: Policy` module parameter, or `spec.controllerValidation.mode: Enforce` of the policy,
+checks controllers with the action of the policy in the single constraint instead.
+
+The `d8-system-default-`, `d8-pod-security-` and `d8-controllers-` prefixes are reserved: a policy whose name starts with one of them is rejected on creation.
 A policy name is limited to 235 characters for the same reason, so that the derived constraint names stay within the 253-character limit for a Kubernetes object name.
 
 A policy is rendered as a single constraint when the split would change nothing:

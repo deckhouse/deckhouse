@@ -110,7 +110,7 @@ internal:
 			}
 			if ok, _ := MatchJSON(expected).Match(string(actual)); !ok {
 				mismatches = append(mismatches, fmt.Sprintf(
-					"%s: spec.parameters differ from the %s constraint rendered by templates/policies/pod-security-standards/%s/constraint.yaml\n    fixture:  %s\n    rendered: %s",
+					"%s: spec.parameters differ from the %s constraint rendered by templates/policies/pod-security-standards.yaml for the %s standard\n    fixture:  %s\n    rendered: %s",
 					rel, doc.Kind, standard, actual, expected))
 			}
 		}

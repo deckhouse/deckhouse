@@ -2,10 +2,24 @@ positive:
   configValues:
     - {}
     - { imageSignatureVerification: { registryCredentialsCacheTTLSeconds: 3600 } }
+    - podSecurityStandards:
+        controllerValidation: true
+        controllerValidationExcludedPolicies: ["allowPrivilegeEscalation", "requiredDropCapabilities"]
+    - podSecurityStandards:
+        controllerValidationEnforcement: Warn
+    - podSecurityStandards:
+        controllerValidationEnforcement: Policy
 negative:
   configValues:
     - { somethingInConfig: yes }
     - { imageSignatureVerification: { registryCredentialsCacheTTLSeconds: 0 } }
     - { imageSignatureVerification: { registryCredentialsCacheTTLSeconds: 86400 } }
+    # Only the rules of the Pod Security Standards can be excluded.
+    - podSecurityStandards:
+        controllerValidationExcludedPolicies: ["requiredResources"]
+    - podSecurityStandards:
+        controllerValidationExcludedPolicies: ["runAsUser", "runAsUser"]
+    - podSecurityStandards:
+        controllerValidationEnforcement: Deny
   values:
     - { somethingInConfig: yes }
