@@ -7,8 +7,8 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: d8-istio-validator-{{ $revision }}
   annotations:
-    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=istiod-{{ $revision }},namespace=d8-istio
-    werf.io/deploy-dependency-service: state=present,kind=Service,name=istiod-{{ $revision }},namespace=d8-istio
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,group=apps,version=v1,name=istiod-{{ $revision }},namespace=d8-istio
+    werf.io/deploy-dependency-service: state=present,kind=Service,version=v1,name=istiod-{{ $revision }},namespace=d8-istio
   {{- include "helm_lib_module_labels" (list $ (dict "istio.io/rev" $revision )) | nindent 2 }}
 webhooks:
   - name: rev.validation.istio.io
