@@ -175,10 +175,11 @@ spec:
                   pattern: '^[^\r\n]*$'
                 keepUsersLoggedInFor:
                   type: string
+                  pattern: '^([0-9]{1,5}h)?([0-9]{1,7}m)?([0-9]{1,9}s)?$'
                   description: |-
                     Maximum period of user inactivity during which the user session remains active.
 
-                    Set as a string specifying hours, minutes, or seconds: `30m`, `20s`, `2h30m10s`, `24h`.
+                    Set as a string of whole hours, minutes, and seconds, in this order: `30m`, `20s`, `2h30m10s`, `24h`.
 
                     Specified value can't be shorter or equal to the [`idTokenTTL`](configuration.html#parameters-idtokenttl) value set in the module settings. If you set a value that is shorter or equal to `idTokenTTL`, the effective logout time will be `idTokenTTL + 1s`.
 
@@ -561,10 +562,11 @@ spec:
                     > For details on specifying the headers and increasing the buffer, see [How to pass the user's login and groups to an application](faq.html#how-to-pass-the-users-login-and-groups-to-an-application).
                 keepUsersLoggedInFor:
                   type: string
+                  pattern: '^([0-9]{1,5}h)?([0-9]{1,7}m)?([0-9]{1,9}s)?$'
                   description: |-
                     Maximum period of user inactivity during which the user session remains active.
 
-                    Set as a string specifying hours, minutes, or seconds: `30m`, `20s`, `2h30m10s`, `24h`.
+                    Set as a string of whole hours, minutes, and seconds, in this order: `30m`, `20s`, `2h30m10s`, `24h`.
 
                     Specified value can't be shorter or equal to the [`idTokenTTL`](configuration.html#parameters-idtokenttl) value set in the module settings. If you set a value that is shorter or equal to `idTokenTTL`, the effective logout time will be `idTokenTTL + 1s`.
 

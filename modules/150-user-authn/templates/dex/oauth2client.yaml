@@ -22,7 +22,7 @@ trustedPeers:
 {{- if $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
   {{- range $crd := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
     {{- if $crd.allowAccessToKubernetes }}
-- {{ printf "%s-%s-dex-authenticator" $crd.name $crd.namespace }}
+- {{ include "dex_authenticator_client_id" $crd }}
     {{- end }}
   {{- end }}
 {{- end }}

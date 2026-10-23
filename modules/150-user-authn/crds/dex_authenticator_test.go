@@ -22,6 +22,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
@@ -215,4 +216,45 @@ func namedAuthenticator(version, name, domain string) map[string]any {
 	}
 	object["metadata"].(map[string]any)["name"] = name
 	return object
+}
+
+// The templates parse keepUsersLoggedInFor as a duration, and a value they cannot parse fails the release
+// of the whole module. The schema takes the format of idTokenTTL in the module settings and bounds the
+// number of digits of each unit, so that the sum of the largest values still fits time.Duration.
+func TestDexAuthenticatorKeepUsersLoggedInFor(t *testing.T) {
+	values := map[string]bool{
+		"168h":                     true,
+		"30m":                      true,
+		"20s":                      true,
+		"2h30m10s":                 true,
+		"1h0s":                     true,
+		"":                         true,
+		"99999h9999999m999999999s": true,
+		"7d":                       false,
+		"1.5h":                     false,
+		"10 m":                     false,
+		"1H":                       false,
+		"-1h":                      false,
+		"30m1h":                    false,
+		"forever":                  false,
+		"100000h":                  false,
+		"2562048h":                 false,
+		"3000000h":                 false,
+		"10000000m":                false,
+		"1000000000s":              false,
+		"99999999999999999999s":    false,
+	}
+	for version, schema := range authenticatorSchemas(t) {
+		for value, valid := range values {
+			t.Run(version+"/"+value, func(t *testing.T) {
+				object := namedAuthenticator(version, "app", "app.example.com")
+				object["spec"].(map[string]any)["keepUsersLoggedInFor"] = value
+				validateAuthenticator(t, schema, object, valid)
+				if valid && value != "" {
+					_, err := time.ParseDuration(value)
+					require.NoError(t, err, "the schema admits a value the templates cannot parse")
+				}
+			})
+		}
+	}
 }

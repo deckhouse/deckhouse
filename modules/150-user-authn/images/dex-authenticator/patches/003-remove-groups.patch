@@ -1,13 +1,122 @@
-diff --git i/pkg/apis/options/legacy_options.go w/pkg/apis/options/legacy_options.go
-index 7dfe64e6..4e55a305 100644
---- i/pkg/apis/options/legacy_options.go
-+++ w/pkg/apis/options/legacy_options.go
-@@ -420,16 +420,6 @@ func getXAuthRequestHeaders() []Header {
+diff --git a/deckhouse_auth_only_test.go b/deckhouse_auth_only_test.go
+new file mode 100644
+index 00000000..6f215a3d
+--- /dev/null
++++ b/deckhouse_auth_only_test.go
+@@ -0,0 +1,102 @@
++package main
++
++import (
++	"net/http"
++	"testing"
++	"time"
++
++	"github.com/alicebob/miniredis/v2"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// withDeckhouseSessionOptions configures the proxy the way the Deckhouse dex-authenticator does:
++// --set-xauthrequest response headers and a Redis session store.
++func withDeckhouseSessionOptions(t *testing.T, redisAddr string) OptionsModifier {
++	t.Helper()
++
++	legacy := options.NewLegacyOptions()
++	legacy.LegacyHeaders.SetXAuthRequest = true
++	converted, err := legacy.ToOptions()
++	require.NoError(t, err)
++
++	return func(opts *options.Options) {
++		opts.InjectResponseHeaders = converted.InjectResponseHeaders
++		opts.Session.Type = options.RedisSessionStoreType
++		opts.Session.Redis.ConnectionURL = "redis://" + redisAddr
++	}
++}
++
++// TestAuthOnlyAllowListWithoutGroupsHeader checks that the groups of a session stay usable for the
++// allowed_groups query of /auth while patch 003 keeps them out of the response headers. A shared
++// authenticator checks the policy of each application this way instead of dex.
++func TestAuthOnlyAllowListWithoutGroupsHeader(t *testing.T) {
++	tests := []struct {
++		name        string
++		querystring string
++		allowed     bool
++	}{
++		{
++			name:        "no allow list",
++			querystring: "",
++			allowed:     true,
++		},
++		{
++			name:        "user in an allowed group",
++			querystring: "?allowed_groups=admins,ops",
++			allowed:     true,
++		},
++		{
++			name:        "user in no allowed group",
++			querystring: "?allowed_groups=ops",
++			allowed:     false,
++		},
++		{
++			name:        "allowed email",
++			querystring: "?allowed_emails=jane.doe@example.com",
++			allowed:     true,
++		},
++		{
++			name:        "email not allowed",
++			querystring: "?allowed_emails=john.doe@example.com",
++			allowed:     false,
++		},
++		{
++			name:        "allowed group and allowed email",
++			querystring: "?allowed_groups=devs&allowed_emails=jane.doe@example.com",
++			allowed:     true,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			redis := miniredis.RunT(t)
++			test, err := NewAuthOnlyEndpointTest(tt.querystring, withDeckhouseSessionOptions(t, redis.Addr()))
++			require.NoError(t, err)
++
++			created := time.Now()
++			require.NoError(t, test.SaveSession(&sessions.SessionState{
++				User:         "jane",
++				Email:        "jane.doe@example.com",
++				Groups:       []string{"admins", "devs"},
++				AccessToken:  "access_token",
++				RefreshToken: "refresh_token",
++				CreatedAt:    &created,
++			}))
++			require.NotEmpty(t, redis.Keys(), "the session must be kept in Redis, as in the authenticator")
++
++			test.proxy.ServeHTTP(test.rw, test.req)
++
++			if !tt.allowed {
++				assert.Equal(t, http.StatusForbidden, test.rw.Code)
++				return
++			}
++			assert.GreaterOrEqual(t, test.rw.Code, http.StatusOK)
++			assert.Less(t, test.rw.Code, http.StatusMultipleChoices)
++			assert.Equal(t, "jane.doe@example.com", test.rw.Header().Get("X-Auth-Request-Email"))
++			assert.Empty(t, test.rw.Header().Values("X-Auth-Request-Groups"))
++		})
++	}
++}
+diff --git a/pkg/apis/options/legacy_options.go b/pkg/apis/options/legacy_options.go
+index ac5746dc..4e914257 100644
+--- a/pkg/apis/options/legacy_options.go
++++ b/pkg/apis/options/legacy_options.go
+@@ -441,17 +441,6 @@ func getXAuthRequestHeaders() []Header {
  				},
  			},
  		},
 -		{
--			Name: "X-Auth-Request-Groups",
+-			Name:                 "X-Auth-Request-Groups",
+-			PreserveRequestValue: ptr.To(false),
 -			Values: []HeaderValue{
 -				{
 -					ClaimSource: &ClaimSource{
@@ -20,16 +129,16 @@ index 7dfe64e6..4e55a305 100644
  
  	return headers
 diff --git a/pkg/apis/options/legacy_options_test.go b/pkg/apis/options/legacy_options_test.go
-index 4ad7d9f..f1dc4ef 100644
+index f6cbfb7c..d4f48ed6 100644
 --- a/pkg/apis/options/legacy_options_test.go
 +++ b/pkg/apis/options/legacy_options_test.go
-@@ -430,18 +430,6 @@ var _ = Describe("Legacy Options", func() {
+@@ -446,18 +446,6 @@ var _ = Describe("Legacy Options", func() {
  			},
  		}
  
 -		xAuthRequestGroups := Header{
 -			Name:                 "X-Auth-Request-Groups",
--			PreserveRequestValue: false,
+-			PreserveRequestValue: ptr.To(false),
 -			Values: []HeaderValue{
 -				{
 -					ClaimSource: &ClaimSource{
@@ -41,8 +150,8 @@ index 4ad7d9f..f1dc4ef 100644
 -
  		xAuthRequestPreferredUsername := Header{
  			Name:                 "X-Auth-Request-Preferred-Username",
- 			PreserveRequestValue: false,
-@@ -671,7 +659,6 @@ var _ = Describe("Legacy Options", func() {
+ 			PreserveRequestValue: ptr.To(false),
+@@ -687,7 +675,6 @@ var _ = Describe("Legacy Options", func() {
  				expectedResponseHeaders: []Header{
  					xAuthRequestUser,
  					xAuthRequestEmail,
@@ -50,7 +159,7 @@ index 4ad7d9f..f1dc4ef 100644
  					xAuthRequestPreferredUsername,
  				},
  			}),
-@@ -716,7 +703,6 @@ var _ = Describe("Legacy Options", func() {
+@@ -732,7 +719,6 @@ var _ = Describe("Legacy Options", func() {
  				expectedResponseHeaders: []Header{
  					xAuthRequestUser,
  					xAuthRequestEmail,

@@ -23,8 +23,30 @@ positive:
         repeatedChars: false
   - idTokenTTL: 5h59m
   - idTokenTTL: 1h
+  - idTokenTTL: 10m
+  - internal:
+      dexAuthenticatorRedisURL: "redis://127.0.0.1/"
+  - internal:
+      dexAuthenticatorRedisURL: "redis://localhost:6380/0"
+  - internal:
+      dexAuthenticatorRedisURL: "redis://dex-authenticator-redis.d8-user-authn:6379/"
 negative:
   values:
+  # The address is an argument of a Deployment in the user's namespace: no credentials, and the
+  # sidecar speaks neither TLS nor AUTH.
+  - internal:
+      dexAuthenticatorRedisURL: "redis://:password@localhost/"
+  - internal:
+      dexAuthenticatorRedisURL: "redis://user:password@redis.example.com:6379/"
+  - internal:
+      dexAuthenticatorRedisURL: "rediss://127.0.0.1/"
+  - internal:
+      dexAuthenticatorRedisURL: "redis://127.0.0.1/?password=secret"
+  # A query or a fragment without the slash is no host either.
+  - internal:
+      dexAuthenticatorRedisURL: "redis://127.0.0.1?password=secret"
+  - internal:
+      dexAuthenticatorRedisURL: "redis://h:1 #x"
   - kubeconfigGenerator:
     - id: ABC-1
       masterURI: example.com
@@ -46,3 +68,5 @@ negative:
         minLength: 10
   - idTokenTTL: 6h
   - idTokenTTL: 24h
+  - idTokenTTL: 0s
+  - idTokenTTL: 0m0s

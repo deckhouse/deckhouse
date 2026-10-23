@@ -1,8 +1,8 @@
 diff --git a/oauthproxy.go b/oauthproxy.go
-index a8bd18e..71fcefb 100644
+index 08fad0bb..96be355c 100644
 --- a/oauthproxy.go
 +++ b/oauthproxy.go
-@@ -819,6 +819,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+@@ -967,6 +967,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
  	errorString := req.Form.Get("error")
  	if errorString != "" {
  		logger.Errorf("Error while parsing OAuth2 callback: %s", errorString)
@@ -10,16 +10,7 @@ index a8bd18e..71fcefb 100644
  		message := fmt.Sprintf("Login Failed: The upstream identity provider returned an error: %s", errorString)
  		// Set the debug message and override the non debug message to be the same for this case
  		p.ErrorPage(rw, req, http.StatusForbidden, message, message)
-@@ -827,7 +828,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
- 
- 	csrf, err := cookies.LoadCSRFCookie(req, p.CookieOptions)
- 	if err != nil {
--		logger.Println(req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
-+		logger.PrintAuthf("", req, logger.AuthFailure, "Invalid authentication via OAuth2: unable to obtain CSRF cookie")
- 		p.ErrorPage(rw, req, http.StatusForbidden, err.Error(), "Login Failed: Unable to find a valid CSRF token. Please try again.")
- 		return
- 	}
-@@ -835,6 +836,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+@@ -996,6 +997,7 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
  	session, err := p.redeemCode(req, csrf.GetCodeVerifier())
  	if err != nil {
  		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
@@ -29,13 +20,15 @@ index a8bd18e..71fcefb 100644
  	}
 diff --git a/pkg/middleware/refresh_failure_log.go b/pkg/middleware/refresh_failure_log.go
 new file mode 100644
-index 0000000..ecb5615
+index 00000000..811d0414
 --- /dev/null
 +++ b/pkg/middleware/refresh_failure_log.go
-@@ -0,0 +1,56 @@
+@@ -0,0 +1,64 @@
 +package middleware
 +
 +import (
++	"crypto/sha256"
++	"encoding/hex"
 +	"strconv"
 +	"sync"
 +	"time"
@@ -62,12 +55,18 @@ index 0000000..ecb5615
 +
 +// shouldLog reports whether a failed refresh of the session is to be written
 +// to the auth log at now: once per session per period. A session is keyed by
-+// its user and its creation time, so a session that refreshed successfully in
-+// between counts as a new one.
++// its user, its creation time and a hash of its refresh token, so a session
++// that refreshed successfully in between counts as a new one, and the sessions
++// restored from a cookie without the session store (Deckhouse patch 002, all
++// with the same placeholder user and creation time) are told apart.
 +func (l *refreshFailureLog) shouldLog(session *sessionsapi.SessionState, period time.Duration, now time.Time) bool {
 +	key := session.Email + "|" + session.User + "|"
 +	if session.CreatedAt != nil {
 +		key += strconv.FormatInt(session.CreatedAt.UnixNano(), 10)
++	}
++	if session.RefreshToken != "" {
++		sum := sha256.Sum256([]byte(session.RefreshToken))
++		key += "|" + hex.EncodeToString(sum[:8])
 +	}
 +
 +	l.mu.Lock()
@@ -91,13 +90,14 @@ index 0000000..ecb5615
 +}
 diff --git a/pkg/middleware/refresh_failure_log_test.go b/pkg/middleware/refresh_failure_log_test.go
 new file mode 100644
-index 0000000..0b69758
+index 00000000..6685a46c
 --- /dev/null
 +++ b/pkg/middleware/refresh_failure_log_test.go
-@@ -0,0 +1,44 @@
+@@ -0,0 +1,71 @@
 +package middleware
 +
 +import (
++	"strings"
 +	"testing"
 +	"time"
 +
@@ -139,17 +139,43 @@ index 0000000..0b69758
 +		t.Fatalf("the map holds %d entries, more than %d", len(l.seen), refreshFailureLogMaxEntries)
 +	}
 +}
++
++// The sessions restored from a cookie without the session store (Deckhouse
++// patch 002) share the placeholder user and creation time; their refresh
++// tokens tell them apart, so each gets its own auth log line.
++func TestRefreshFailureLogKeepsRestoredSessionsApart(t *testing.T) {
++	l := &refreshFailureLog{seen: map[string]time.Time{}}
++	created := time.Date(1992, time.September, 30, 0, 0, 0, 0, time.UTC)
++	stub := func(refreshToken string) *sessionsapi.SessionState {
++		return &sessionsapi.SessionState{User: "Does not found in Redis", CreatedAt: &created, RefreshToken: refreshToken}
++	}
++	now := time.Unix(2000, 0)
++	if !l.shouldLog(stub("first-refresh-token"), time.Hour, now) {
++		t.Fatal("the failure of the first restored session must be logged")
++	}
++	if !l.shouldLog(stub("second-refresh-token"), time.Hour, now) {
++		t.Fatal("the failure of another restored session must be logged too")
++	}
++	if l.shouldLog(stub("first-refresh-token"), time.Hour, now.Add(time.Minute)) {
++		t.Fatal("a repeated failure of the same session within the period must not be logged")
++	}
++	for k := range l.seen {
++		if strings.Contains(k, "refresh-token") {
++			t.Fatalf("the key %q holds the refresh token itself", k)
++		}
++	}
++}
 diff --git a/pkg/middleware/stored_session.go b/pkg/middleware/stored_session.go
-index 1afe6d0..dce0b85 100644
+index 31002724..31e831d5 100644
 --- a/pkg/middleware/stored_session.go
 +++ b/pkg/middleware/stored_session.go
-@@ -191,6 +191,9 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
- 		// If a preemptive refresh fails, we still keep the session
- 		// if validateSession succeeds.
- 		logger.Errorf("Unable to refresh session: %v", err)
+@@ -225,6 +225,9 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+ 	refreshErr := s.refreshSession(rw, req, session)
+ 	if refreshErr != nil {
+ 		logger.Errorf("Unable to refresh session: %v", refreshErr)
 +		if refreshFailures.shouldLog(session, s.refreshPeriod, time.Now()) {
-+			logger.PrintAuthf(session.Email, req, logger.AuthError, "Unable to refresh session: %v", err)
++			logger.PrintAuthf(session.Email, req, logger.AuthError, "Unable to refresh session: %v", refreshErr)
 +		}
- 	}
  
- 	// Validate all sessions after any Redeem/Refresh operation (fail or success)
+ 		// Check if this is a fatal error that indicates the session is revoked
+ 		// or no longer valid at the provider level

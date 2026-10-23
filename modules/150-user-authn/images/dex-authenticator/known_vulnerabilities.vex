@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-user-authn-dex-authenticator-go-2026-5932",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 2,
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -16,6 +16,9 @@
         },
         {
           "@id": "pkg:golang/golang.org/x/crypto@v0.56.0"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.57.0"
         }
       ],
       "status": "not_affected",
@@ -25,5 +28,5 @@
     }
   ],
   "timestamp": "2026-08-21T08:00:00Z",
-  "last_updated": "2026-09-25T09:36:10Z"
+  "last_updated": "2026-10-14T18:00:00Z"
 }

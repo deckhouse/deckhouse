@@ -9,6 +9,7 @@ memory: 25Mi
 {{- end }}
 
 {{- $context := . }}
+{{- $redisSidecar := include "dex_authenticator_redis_is_sidecar" $context }}
 {{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
 {{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
   {{- $id := printf "%s@%s" $crd.name $crd.namespace }}
@@ -17,6 +18,16 @@ memory: 25Mi
   {{- $truncated := (index $info "truncated") }}
   {{- $hash := (index $info "hash") }}
   {{- $secretName := (default (printf "dex-authenticator-%s" $crd.name) (index $info "secretName")) }}
+  {{- /* spec.highAvailability of the DexAuthenticator overrides the high availability of the cluster. The rollout */}}
+  {{- /* strategy and the PodDisruptionBudget follow the number of replicas it gives. */}}
+  {{- $replicas := 1 }}
+  {{- if ne $crd.spec.highAvailability nil }}
+    {{- if $crd.spec.highAvailability }}
+      {{- $replicas = 2 }}
+    {{- end }}
+  {{- else if (include "helm_lib_ha_enabled" $context) }}
+    {{- $replicas = 2 }}
+  {{- end }}
   {{- if and ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") (not $crd.spec.resources) }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -45,12 +56,14 @@ spec:
       maxAllowed:
         cpu: 20m
         memory: 50Mi
+    {{- if $redisSidecar }}
     - containerName: "redis"
       minAllowed:
         {{- include "redis_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 20m
         memory: 50Mi
+    {{- end }}
   {{- end }}
 ---
 apiVersion: policy/v1
@@ -65,7 +78,8 @@ metadata:
   {{- end }}
   {{- include "helm_lib_module_labels" (list $context $pdbLabels) | nindent 2 }}
 spec:
-  minAvailable: {{ if ne $crd.spec.highAvailability nil }}{{ if $crd.spec.highAvailability }}1{{ else }}0{{ end }}{{ else }}{{ include "helm_lib_is_ha_to_value" (list $context 1 0) }}{{ end }}
+  {{- /* A single replica may be evicted: a budget of 1 would block the drain of its node. */}}
+  minAvailable: {{ if gt $replicas 1 }}1{{ else }}0{{ end }}
   selector:
     matchLabels:
       app: dex-authenticator
@@ -83,14 +97,19 @@ metadata:
   {{- end }}
   {{- include "helm_lib_module_labels" (list $context $depLabels) | nindent 2 }}
 spec:
-  replicas: {{ if ne $crd.spec.highAvailability nil }}{{ if $crd.spec.highAvailability }}2{{ else }}1{{ end }}{{ else }}{{ include "helm_lib_is_ha_to_value" (list $context 2 1) }}{{ end }}
+  replicas: {{ $replicas }}
   revisionHistoryLimit: 2
   strategy:
     type: RollingUpdate
-    {{- if or (and (ne $crd.spec.highAvailability nil) $crd.spec.highAvailability) (include "helm_lib_ha_enabled" $context) }}
     rollingUpdate:
+    {{- if gt $replicas 1 }}
+      {{- /* The other replica serves while one is replaced. */}}
       maxSurge: 0
       maxUnavailable: 1
+    {{- else }}
+      {{- /* A single replica serves until the new one is ready, so a rollout is not an outage. */}}
+      maxSurge: 1
+      maxUnavailable: 0
     {{- end }}
   selector:
     matchLabels:
@@ -113,6 +132,8 @@ spec:
           {{- end }}
         {{- end }}
         checksum/config: {{ $crd.credentials | toJson | b64enc | sha256sum }}
+        {{- /* oauth2-proxy reads the CA of dex once, at startup. */}}
+        checksum/dex-ca: {{ $context.Values.userAuthn.internal.dexTLS.ca | default "" | sha256sum }}
     spec:
 {{- if $crd.spec.nodeSelector }}
       nodeSelector:
@@ -135,6 +156,12 @@ spec:
       volumes:
       - name: tls
         emptyDir: {}
+      - name: dex-ca
+        secret:
+          secretName: {{ $secretName }}
+          items:
+          - key: dex-ca.crt
+            path: ca.crt
       initContainers:
       - args:
         - "{{ $baseName }}.{{ $crd.namespace }}"
@@ -162,7 +189,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list $context "dexAuthenticator") }}
         args:
         - --provider=oidc
-        - "--client-id={{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator"
+        - "--client-id={{ include "dex_authenticator_client_id" $crd }}"
     {{- if ne (include "helm_lib_module_uri_scheme" $context ) "https" }}
         - --cookie-secure=false
     {{- end }}
@@ -173,12 +200,14 @@ spec:
         - --redeem-url=https://dex.d8-user-authn/token
         - --login-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/auth
         - --oidc-jwks-url=https://dex.d8-user-authn/keys
+        # The token and keys of dex come over TLS that the authenticator checks against the CA of dex.
+        - --provider-ca-file=/opt/dex-authenticator/dex-ca/ca.crt
+        - --code-challenge-method=S256
     {{- if $crd.spec.sendAuthorizationHeader }}
         - --set-authorization-header=true
     {{- end }}
         - --set-xauthrequest
         - --scope=groups email openid profile offline_access{{- if $crd.allowAccessToKubernetes }} federated:id audience:server:client_id:kubernetes{{- end }}
-        - --ssl-insecure-skip-verify=true
         - --proxy-prefix=/dex-authenticator
         - --email-domain=*
     {{- range $app := $crd.spec.applications }}
@@ -191,8 +220,14 @@ spec:
         - --skip-provider-button
         - --silence-ping-logging
         - --logging-format=json
-        - --session-store-type=redis
-        - --redis-connection-url=redis://127.0.0.1/
+        # One CSRF cookie per sign-in flow: it holds the state and the PKCE verifier of the flow, so two
+        # tabs that sign in at the same time no longer overwrite each other's verifier. A flow lives as
+        # long as the sign-in at dex takes, so its cookie expires after 10 minutes, and at most 10 of them
+        # are kept: the oldest go first.
+        - --cookie-csrf-per-request=true
+        - --cookie-csrf-per-request-limit=10
+        - --cookie-csrf-expire=10m
+        {{- include "dex_authenticator_session_store_args" $context | nindent 8 }}
     {{- $idTokenTTL := $context.Values.userAuthn.idTokenTTL | default "10m" }}
     {{- $keepUsersLoggedInFor := $crd.spec.keepUsersLoggedInFor | default "168h" }} # 7 days
     {{- $delta := now }}
@@ -216,11 +251,12 @@ spec:
             secretKeyRef:
               name: {{ $secretName }}
               key: cookie-secret
-        - name: TRUSTED_ROOT_CA_FILE
-          value: /certs/ca.crt
         volumeMounts:
         - name: tls
           mountPath: "/opt/dex-authenticator/tls"
+          readOnly: true
+        - name: dex-ca
+          mountPath: "/opt/dex-authenticator/dex-ca"
           readOnly: true
         # Readiness checks the authenticator and its session store, not dex. A check of dex took every
         # authenticator out of its Service during a dex outage, and every protected application answered
@@ -266,6 +302,7 @@ spec:
         - name: dex-https
           containerPort: 8443
           protocol: TCP
+      {{- if $redisSidecar }}
       - name: redis
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $context "redis") }}
@@ -276,6 +313,10 @@ spec:
           - "no"
           - "--bind"
           - "127.0.0.1"
+        {{- with include "dex_authenticator_redis_sidecar_port" $context }}
+          - "--port"
+          - {{ . | quote }}
+        {{- end }}
         # The session store has to outlive the authenticator, which keeps serving for 5 seconds after
         # SIGTERM; without Redis it would clear the sessions of the requests it still gets.
         lifecycle:
@@ -307,4 +348,5 @@ spec:
               {{- end }}
             {{- end }}
           {{- end }}
+      {{- end }}
 {{- end }}

@@ -731,3 +731,126 @@ data:
 		Entry("under the full name of a Secret written before names were truncated", "dex-authenticator-"+name),
 	)
 })
+
+var _ = Describe("User Authn hooks :: get dex authenticator crds :: telemetry ::", func() {
+	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
+	f.RegisterCRD("deckhouse.io", "v2alpha1", "DexAuthenticator", true)
+
+	BeforeEach(func() {
+		f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-console
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-system
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dead-ns
+status:
+  phase: Terminating
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: console
+  namespace: d8-console
+  labels:
+    heritage: deckhouse
+  annotations:
+    dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  highAvailability: true
+  applications:
+  - domain: console.example.com
+    ingressClassName: nginx
+    signOutURL: /auth/logout
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: documentation
+  namespace: d8-system
+  labels:
+    heritage: deckhouse
+spec:
+  applications:
+  - domain: documentation.example.com
+    ingressClassName: nginx
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: app
+  namespace: tenant
+spec:
+  highAvailability: false
+  applications:
+  - domain: app.example.com
+    ingressClassName: nginx
+  - domain: admin.example.com
+    ingressClassName: nginx
+    signOutURL: /logout
+---
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: doomed
+  namespace: dead-ns
+spec:
+  applications:
+  - domain: doomed.example.com
+    ingressClassName: nginx
+`))
+		f.RunHook()
+	})
+
+	It("counts the rendered authenticators by kind", func() {
+		Expect(f).To(ExecuteSuccessfully())
+
+		authenticators := map[string]float64{}
+		applications := map[string]float64{}
+		expired := false
+		for _, m := range f.MetricsCollector.CollectedMetrics() {
+			if m.Group != "d8_telemetry_user_authn_dex_authenticators" {
+				continue
+			}
+			if m.Value == nil {
+				expired = true
+				continue
+			}
+			switch m.Name {
+			case "d8_telemetry_user_authn_dex_authenticators":
+				key := fmt.Sprintf("%s/%s/%s/%s", m.Labels["origin"], m.Labels["high_availability"], m.Labels["sign_out"], m.Labels["kubernetes_access"])
+				authenticators[key] = *m.Value
+			case "d8_telemetry_user_authn_dex_authenticator_applications":
+				applications[m.Labels["origin"]] = *m.Value
+			}
+		}
+
+		Expect(expired).To(BeTrue(), "the counts of the previous run must be expired")
+		Expect(authenticators).To(Equal(map[string]float64{
+			"module/true/true/true":    1,
+			"module/unset/false/false": 1,
+			"user/false/true/false":    1,
+		}), "the authenticator of a terminating namespace is not rendered and not counted")
+		Expect(applications).To(Equal(map[string]float64{"module": 2, "user": 2}))
+	})
+})

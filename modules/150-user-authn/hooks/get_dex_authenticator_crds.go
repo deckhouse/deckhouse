@@ -34,11 +34,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 )
 
 // dexAuthenticatorAllowAccessToKubernetesAnnotation puts the authenticator into trustedPeers
@@ -59,6 +61,10 @@ type DexAuthenticator struct {
 	// which has no logger, to the hook body, which does. It is nil when the annotation is
 	// absent, and json:"-" keeps it out of the internal values the templates read.
 	AllowAccessToKubernetesAnnotation *string `json:"-"`
+
+	// IsCreatedByModule tells an authenticator of a Deckhouse module, labeled heritage: deckhouse
+	// by helm_lib, from one of a user. Only the telemetry reads it.
+	IsCreatedByModule bool `json:"-"`
 }
 
 type Credentials struct {
@@ -100,6 +106,7 @@ func applyDexAuthenticatorFilter(obj *unstructured.Unstructured) (go_hook.Filter
 		Namespace:                         namespace,
 		Spec:                              spec,
 		AllowAccessToKubernetesAnnotation: allowAccessAnnotation,
+		IsCreatedByModule:                 obj.GetLabels()["heritage"] == "deckhouse",
 	}, nil
 }
 
@@ -426,7 +433,82 @@ func getDexAuthenticator(_ context.Context, input *go_hook.HookInput) error {
 
 	input.Values.Set("userAuthn.internal.dexAuthenticatorCRDs", dexAuthenticators)
 	input.Values.Set("userAuthn.internal.dexAuthenticatorNames", namesMap)
+	setDexAuthenticatorTelemetry(input.MetricsCollector, dexAuthenticators)
 	return nil
+}
+
+const dexAuthenticatorsTelemetryGroup = "d8_telemetry_user_authn_dex_authenticators"
+
+var (
+	// dexAuthenticatorsTelemetryMetric counts the rendered authenticators by the labels of
+	// dexAuthenticatorTelemetryKey.
+	dexAuthenticatorsTelemetryMetric = telemetry.WrapName("user_authn_dex_authenticators")
+	// dexAuthenticatorApplicationsTelemetryMetric counts their applications (domains) by origin.
+	dexAuthenticatorApplicationsTelemetryMetric = telemetry.WrapName("user_authn_dex_authenticator_applications")
+)
+
+// dexAuthenticatorTelemetryKey is the label set of dexAuthenticatorsTelemetryMetric. All values are
+// low-cardinality: the metric tells how many authenticators the fleet runs and of what kind.
+type dexAuthenticatorTelemetryKey struct {
+	origin           string
+	highAvailability string
+	signOut          string
+	kubernetesAccess string
+}
+
+// setDexAuthenticatorTelemetry exports the counts of the rendered authenticators for flant-pricing,
+// which collects every d8_telemetry_ metric.
+func setDexAuthenticatorTelemetry(collector sdkpkg.MetricsCollector, dexAuthenticators []DexAuthenticator) {
+	collector.Expire(dexAuthenticatorsTelemetryGroup)
+
+	authenticators := make(map[dexAuthenticatorTelemetryKey]float64)
+	applications := map[string]float64{"module": 0, "user": 0}
+	for _, dexAuthenticator := range dexAuthenticators {
+		origin := "user"
+		if dexAuthenticator.IsCreatedByModule {
+			origin = "module"
+		}
+
+		highAvailability := "unset"
+		if value, found, _ := unstructured.NestedBool(dexAuthenticator.Spec, "highAvailability"); found {
+			highAvailability = strconv.FormatBool(value)
+		}
+
+		signOut := false
+		apps, _, _ := unstructured.NestedSlice(dexAuthenticator.Spec, "applications")
+		for _, app := range apps {
+			appMap, ok := app.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if signOutURL, _, _ := unstructured.NestedString(appMap, "signOutURL"); signOutURL != "" {
+				signOut = true
+			}
+		}
+
+		key := dexAuthenticatorTelemetryKey{
+			origin:           origin,
+			highAvailability: highAvailability,
+			signOut:          strconv.FormatBool(signOut),
+			kubernetesAccess: strconv.FormatBool(dexAuthenticator.AllowAccessToKubernetes),
+		}
+		authenticators[key]++
+		applications[origin] += float64(len(apps))
+	}
+
+	for key, count := range authenticators {
+		collector.Set(dexAuthenticatorsTelemetryMetric, count, map[string]string{
+			"origin":            key.origin,
+			"high_availability": key.highAvailability,
+			"sign_out":          key.signOut,
+			"kubernetes_access": key.kubernetesAccess,
+		}, metrics.WithGroup(dexAuthenticatorsTelemetryGroup))
+	}
+	for origin, count := range applications {
+		collector.Set(dexAuthenticatorApplicationsTelemetryMetric, count, map[string]string{
+			"origin": origin,
+		}, metrics.WithGroup(dexAuthenticatorsTelemetryGroup))
+	}
 }
 
 var (

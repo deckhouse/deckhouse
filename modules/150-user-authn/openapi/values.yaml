@@ -181,6 +181,17 @@ properties:
         type: object
         default: {}
         additionalProperties: true
+      dexAuthenticatorRedisURL:
+        type: string
+        default: "redis://127.0.0.1/"
+        pattern: '^redis://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[0-9]*)?$'
+        description: |
+          Address of the Redis session store of DexAuthenticators: `redis://<host>[:<port>]/[<db>]`.
+
+          A local address (`127.0.0.1` or `localhost`) runs Redis as a sidecar in every DexAuthenticator pod.
+
+          The address goes into the arguments of the DexAuthenticator Deployment, which users of its namespace can read,
+          so it holds no credentials. TLS (`rediss://`) and a password are not supported yet.
       dexClientCRDs:
         type: array
         default: []

@@ -1,29 +1,29 @@
 diff --git a/oauthproxy.go b/oauthproxy.go
-index 10a69b31..cfe0f0ec 100644
+index c1a6e777..eae1d343 100644
 --- a/oauthproxy.go
 +++ b/oauthproxy.go
-@@ -931,6 +931,7 @@ func (p *OAuthProxy) enrichSessionState(ctx context.Context, s *sessionsapi.Sess
- func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
- 	session, err := p.getAuthenticatedSession(rw, req)
+@@ -1090,6 +1090,7 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
+ 		return
+ 	}
  	if err != nil {
 +		rw.Header().Set("X-Auth-Request-Result", "Denied")
  		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
  		return
  	}
-@@ -945,7 +946,7 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
+@@ -1104,7 +1105,7 @@ func (p *OAuthProxy) AuthOnly(rw http.ResponseWriter, req *http.Request) {
  	// we are authenticated
  	p.addHeadersForProxying(rw, session)
- 	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+ 	p.headersChain.Then(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 -		rw.WriteHeader(http.StatusAccepted)
 +		rw.WriteHeader(http.StatusOK)
  	})).ServeHTTP(rw, req)
  }
  
 diff --git a/oauthproxy_test.go b/oauthproxy_test.go
-index 0d8bc91..faa0d60 100644
+index 81af11aa..2a51a082 100644
 --- a/oauthproxy_test.go
 +++ b/oauthproxy_test.go
-@@ -1092,7 +1092,7 @@ func TestAuthOnlyEndpointAccepted(t *testing.T) {
+@@ -1347,7 +1347,7 @@ func TestAuthOnlyEndpointAccepted(t *testing.T) {
  	assert.NoError(t, err)
  
  	test.proxy.ServeHTTP(test.rw, test.req)
@@ -32,7 +32,7 @@ index 0d8bc91..faa0d60 100644
  	bodyBytes, _ := io.ReadAll(test.rw.Body)
  	assert.Equal(t, "", string(bodyBytes))
  }
-@@ -1105,6 +1105,7 @@ func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
+@@ -1360,6 +1360,7 @@ func TestAuthOnlyEndpointUnauthorizedOnNoCookieSetError(t *testing.T) {
  
  	test.proxy.ServeHTTP(test.rw, test.req)
  	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
@@ -40,7 +40,7 @@ index 0d8bc91..faa0d60 100644
  	bodyBytes, _ := io.ReadAll(test.rw.Body)
  	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
  }
-@@ -1125,6 +1126,7 @@ func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
+@@ -1380,6 +1381,7 @@ func TestAuthOnlyEndpointUnauthorizedOnExpiration(t *testing.T) {
  
  	test.proxy.ServeHTTP(test.rw, test.req)
  	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
@@ -48,7 +48,7 @@ index 0d8bc91..faa0d60 100644
  	bodyBytes, _ := io.ReadAll(test.rw.Body)
  	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
  }
-@@ -1144,6 +1146,7 @@ func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
+@@ -1399,6 +1401,7 @@ func TestAuthOnlyEndpointUnauthorizedOnEmailValidationFailure(t *testing.T) {
  
  	test.proxy.ServeHTTP(test.rw, test.req)
  	assert.Equal(t, http.StatusUnauthorized, test.rw.Code)
@@ -56,7 +56,7 @@ index 0d8bc91..faa0d60 100644
  	bodyBytes, _ := io.ReadAll(test.rw.Body)
  	assert.Equal(t, "Unauthorized\n", string(bodyBytes))
  }
-@@ -1222,7 +1225,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
+@@ -1477,7 +1480,7 @@ func TestAuthOnlyEndpointSetXAuthRequestHeaders(t *testing.T) {
  	assert.NoError(t, err)
  
  	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
@@ -65,7 +65,7 @@ index 0d8bc91..faa0d60 100644
  	assert.Equal(t, "oauth_user", pcTest.rw.Header().Get("X-Auth-Request-User"))
  	assert.Equal(t, startSession.Groups, pcTest.rw.Header().Values("X-Auth-Request-Groups"))
  	assert.Equal(t, "oauth_user@example.com", pcTest.rw.Header().Get("X-Auth-Request-Email"))
-@@ -1315,7 +1318,7 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
+@@ -1570,7 +1573,7 @@ func TestAuthOnlyEndpointSetBasicAuthTrueRequestHeaders(t *testing.T) {
  	assert.NoError(t, err)
  
  	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
@@ -74,7 +74,7 @@ index 0d8bc91..faa0d60 100644
  	assert.Equal(t, "oauth_user", pcTest.rw.Header().Values("X-Auth-Request-User")[0])
  	assert.Equal(t, "oauth_user@example.com", pcTest.rw.Header().Values("X-Auth-Request-Email")[0])
  	expectedHeader := "Basic " + base64.StdEncoding.EncodeToString([]byte("oauth_user:This is a secure password"))
-@@ -1395,7 +1398,7 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
+@@ -1650,7 +1653,7 @@ func TestAuthOnlyEndpointSetBasicAuthFalseRequestHeaders(t *testing.T) {
  	assert.NoError(t, err)
  
  	pcTest.proxy.ServeHTTP(pcTest.rw, pcTest.req)
@@ -83,7 +83,52 @@ index 0d8bc91..faa0d60 100644
  	assert.Equal(t, "oauth_user", pcTest.rw.Header().Values("X-Auth-Request-User")[0])
  	assert.Equal(t, "oauth_user@example.com", pcTest.rw.Header().Values("X-Auth-Request-Email")[0])
  	assert.Equal(t, 0, len(pcTest.rw.Header().Values("Authorization")), "should not have Authorization header entries")
-@@ -2908,21 +2911,21 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
+@@ -2729,7 +2732,7 @@ func TestTrustedIPs(t *testing.T) {
+ 				deniedStatus  int
+ 			}{
+ 				{"Proxy", "/", http.StatusOK, http.StatusForbidden},
+-				{"AuthOnly", "/oauth2/auth", http.StatusAccepted, http.StatusUnauthorized},
++				{"AuthOnly", "/oauth2/auth", http.StatusOK, http.StatusUnauthorized},
+ 			} {
+ 				t.Run(endpoint.name, func(t *testing.T) {
+ 					req := tt.req.Clone(tt.req.Context())
+@@ -3127,7 +3130,7 @@ func TestSkipAuthPathRouting(t *testing.T) {
+ 						authReq.Header.Set("X-Forwarded-Uri", r.RequestURI)
+ 						authResponse := httptest.NewRecorder()
+ 						proxy.ServeHTTP(authResponse, authReq)
+-						if authResponse.Code != http.StatusAccepted {
++						if authResponse.Code != http.StatusOK {
+ 							w.WriteHeader(authResponse.Code)
+ 							return
+ 						}
+@@ -3317,7 +3320,7 @@ func TestSkipAuthForwardedTargets(t *testing.T) {
+ 						proxy.ServeHTTP(rw, req)
+ 						wantStatus := http.StatusUnauthorized
+ 						if authenticated {
+-							wantStatus = http.StatusAccepted
++							wantStatus = http.StatusOK
+ 						}
+ 						assert.Equal(t, wantStatus, rw.Code)
+ 						assert.Equal(t, target, req.Header.Get("X-Forwarded-Uri"))
+@@ -3335,7 +3338,7 @@ func TestSkipAuthForwardedTargets(t *testing.T) {
+ 					proxy.ServeHTTP(rw, req)
+ 					wantStatus := http.StatusUnauthorized
+ 					if config != "empty path" && (config == "regex" || method == http.MethodGet) {
+-						wantStatus = http.StatusAccepted
++						wantStatus = http.StatusOK
+ 					}
+ 					assert.Equal(t, wantStatus, rw.Code)
+ 				})
+@@ -3589,7 +3592,7 @@ func TestAllowedRequestWithForwardedUriHeader(t *testing.T) {
+ 			proxy.ServeHTTP(rw, req)
+ 
+ 			if tc.allowed {
+-				assert.Equal(t, 202, rw.Code)
++				assert.Equal(t, http.StatusOK, rw.Code)
+ 			} else {
+ 				assert.Equal(t, 401, rw.Code)
+ 			}
+@@ -3972,21 +3975,21 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
  			allowedGroups:      []string{},
  			groups:             []string{},
  			querystring:        "",
@@ -108,7 +153,7 @@ index 0d8bc91..faa0d60 100644
  		},
  		{
  			name:               "UserNotInAllowedGroup",
-@@ -2936,28 +2939,28 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
+@@ -4000,28 +4003,28 @@ func TestAuthOnlyAllowedGroups(t *testing.T) {
  			allowedGroups:      []string{"a", "b"},
  			groups:             []string{"a", "c"},
  			querystring:        "?allowed_groups=a",
@@ -141,8 +186,8 @@ index 0d8bc91..faa0d60 100644
  		},
  		{
  			name:               "UserNotInQuerystringGroup",
-@@ -3026,7 +3029,7 @@ func TestAuthOnlyAllowedGroupsWithSkipMethods(t *testing.T) {
- 			method:             "OPTIONS",
+@@ -4090,7 +4093,7 @@ func TestAuthOnlyAllowedGroupsWithSkipMethods(t *testing.T) {
+ 			method:             http.MethodOptions,
  			ip:                 "1.2.3.5:43670",
  			withSession:        true,
 -			expectedStatusCode: http.StatusAccepted,
@@ -150,8 +195,8 @@ index 0d8bc91..faa0d60 100644
  		},
  		{
  			name:               "UserWithGroupTrustedIp",
-@@ -3034,7 +3037,7 @@ func TestAuthOnlyAllowedGroupsWithSkipMethods(t *testing.T) {
- 			method:             "GET",
+@@ -4098,7 +4101,7 @@ func TestAuthOnlyAllowedGroupsWithSkipMethods(t *testing.T) {
+ 			method:             http.MethodGet,
  			ip:                 "1.2.3.4:43670",
  			withSession:        true,
 -			expectedStatusCode: http.StatusAccepted,
@@ -159,8 +204,8 @@ index 0d8bc91..faa0d60 100644
  		},
  		{
  			name:               "UserWithoutGroupSkipAuthPreflight",
-@@ -3057,14 +3060,14 @@ func TestAuthOnlyAllowedGroupsWithSkipMethods(t *testing.T) {
- 			method:             "OPTIONS",
+@@ -4121,14 +4124,14 @@ func TestAuthOnlyAllowedGroupsWithSkipMethods(t *testing.T) {
+ 			method:             http.MethodOptions,
  			ip:                 "1.2.3.5:43670",
  			withSession:        false,
 -			expectedStatusCode: http.StatusAccepted,
@@ -168,7 +213,7 @@ index 0d8bc91..faa0d60 100644
  		},
  		{
  			name:               "UserWithoutSessionTrustedIp",
- 			method:             "GET",
+ 			method:             http.MethodGet,
  			ip:                 "1.2.3.4:43670",
  			withSession:        false,
 -			expectedStatusCode: http.StatusAccepted,
@@ -176,7 +221,7 @@ index 0d8bc91..faa0d60 100644
  		},
  	}
  
-@@ -3111,13 +3114,13 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
+@@ -4175,13 +4178,13 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
  			name:               "NotEmailRestriction",
  			email:              "toto@example.com",
  			querystring:        "",
@@ -192,7 +237,7 @@ index 0d8bc91..faa0d60 100644
  		},
  		{
  			name:               "UserNotInAllowedEmailDomain",
-@@ -3135,13 +3138,13 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
+@@ -4199,13 +4202,13 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
  			name:               "UserInAllowedEmailDomains",
  			email:              "toto@example.com",
  			querystring:        "?allowed_email_domains=a.example.com,example.com",
@@ -208,16 +253,16 @@ index 0d8bc91..faa0d60 100644
  		},
  		{
  			name:               "UserNotInAllowedEmailDomainWildcard",
-@@ -3159,7 +3162,7 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
+@@ -4223,7 +4226,7 @@ func TestAuthOnlyAllowedEmailDomains(t *testing.T) {
  			name:               "UserInAllowedEmailDomainsWildcard",
  			email:              "toto@c.example.com",
  			querystring:        "?allowed_email_domains=a.b.c.example.com,*.c.example.com",
 -			expectedStatusCode: http.StatusAccepted,
 +			expectedStatusCode: http.StatusOK,
  		},
- 	}
- 
-@@ -3202,13 +3205,13 @@ func TestAuthOnlyAllowedEmails(t *testing.T) {
+ 		{
+ 			name:               "UserWithMultipleAtSignsExactDomain",
+@@ -4307,13 +4310,13 @@ func TestAuthOnlyAllowedEmails(t *testing.T) {
  			name:               "NotEmailRestriction",
  			email:              "toto@example.com",
  			querystring:        "",
@@ -233,7 +278,7 @@ index 0d8bc91..faa0d60 100644
  		},
  		{
  			name:               "UserNotInAllowedEmail",
-@@ -3226,7 +3229,7 @@ func TestAuthOnlyAllowedEmails(t *testing.T) {
+@@ -4331,7 +4334,7 @@ func TestAuthOnlyAllowedEmails(t *testing.T) {
  			name:               "UserInAllowedEmails",
  			email:              "toto@example.com",
  			querystring:        "?allowed_emails=tete@example.com,toto@example.com",

@@ -59,7 +59,7 @@ type OIDCVerifier struct {
 // NewOIDCVerifier creates a verifier for tokens issued by Dex.
 func NewOIDCVerifier(ctx context.Context, connectURL, issuerURL string) (*OIDCVerifier, error) {
 	// Skip TLS verification: this is in-cluster traffic to the Dex Service,
-	// same pattern as dex-authenticator (--ssl-insecure-skip-verify=true).
+	// and user-api is not given the CA of the Dex certificate.
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{

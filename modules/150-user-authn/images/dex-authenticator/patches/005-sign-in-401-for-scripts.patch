@@ -1,0 +1,154 @@
+diff --git a/deckhouse_sign_in_test.go b/deckhouse_sign_in_test.go
+new file mode 100644
+index 00000000..1d2635b1
+--- /dev/null
++++ b/deckhouse_sign_in_test.go
+@@ -0,0 +1,108 @@
++package main
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"testing"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// TestSignInAnswersScriptsWith401 checks that the sign-in page sends only browser navigations to
++// the provider. ingress-nginx redirects every request without a session to the sign-in page, and a
++// redirect of a script to the provider ends in a CORS error instead of a status the script can see.
++func TestSignInAnswersScriptsWith401(t *testing.T) {
++	tests := []struct {
++		name         string
++		headers      map[string]string
++		isNavigation bool
++	}{
++		{
++			name:         "navigation",
++			headers:      map[string]string{"Sec-Fetch-Mode": "navigate", "Accept": "text/html"},
++			isNavigation: true,
++		},
++		{
++			name:         "navigation that accepts json",
++			headers:      map[string]string{"Sec-Fetch-Mode": "navigate", "Accept": "application/json"},
++			isNavigation: true,
++		},
++		{
++			name:         "navigation of an older iframe",
++			headers:      map[string]string{"Sec-Fetch-Mode": "nested-navigate"},
++			isNavigation: true,
++		},
++		{
++			name:         "fetch",
++			headers:      map[string]string{"Sec-Fetch-Mode": "cors", "Accept": "*/*"},
++			isNavigation: false,
++		},
++		{
++			name:         "same origin fetch",
++			headers:      map[string]string{"Sec-Fetch-Mode": "same-origin"},
++			isNavigation: false,
++		},
++		{
++			name:         "subresource",
++			headers:      map[string]string{"Sec-Fetch-Mode": "no-cors", "Accept": "image/*"},
++			isNavigation: false,
++		},
++		{
++			name:         "no fetch metadata",
++			headers:      map[string]string{"Accept": "text/html,application/xhtml+xml"},
++			isNavigation: true,
++		},
++		{
++			name:         "no fetch metadata and json accepted",
++			headers:      map[string]string{"Accept": "application/json, text/plain, */*"},
++			isNavigation: false,
++		},
++		{
++			name:         "no fetch metadata and xhr marker",
++			headers:      map[string]string{"X-Requested-With": "XMLHttpRequest"},
++			isNavigation: false,
++		},
++	}
++
++	for _, skipProviderButton := range []bool{true, false} {
++		opts := baseTestOptions()
++		opts.SkipProviderButton = skipProviderButton
++		require.NoError(t, validation.Validate(opts))
++		proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
++		require.NoError(t, err)
++
++		for _, tt := range tests {
++			name := tt.name
++			if !skipProviderButton {
++				name += " to the sign-in page"
++			}
++			t.Run(name, func(t *testing.T) {
++				req := httptest.NewRequest(http.MethodGet, "/oauth2/sign_in?rd=%2Fapi%2Fitems", nil)
++				for header, value := range tt.headers {
++					req.Header.Set(header, value)
++				}
++				rw := httptest.NewRecorder()
++
++				proxy.ServeHTTP(rw, req)
++
++				switch {
++				case !tt.isNavigation:
++					assert.Equal(t, http.StatusUnauthorized, rw.Code)
++					assert.Equal(t, applicationJSON, rw.Header().Get("Content-Type"))
++					assert.Equal(t, "{}", rw.Body.String())
++					assert.Empty(t, rw.Result().Cookies(), "a script must not start a login flow")
++				case skipProviderButton:
++					assert.Equal(t, http.StatusFound, rw.Code)
++					assert.True(t, strings.HasPrefix(rw.Header().Get("Location"), "https://accounts.google.com/"),
++						"unexpected redirect %q", rw.Header().Get("Location"))
++				default:
++					assert.Equal(t, http.StatusOK, rw.Code)
++					assert.Contains(t, rw.Body.String(), "Sign in with")
++				}
++			})
++		}
++	}
++}
+diff --git a/oauthproxy.go b/oauthproxy.go
+index 96be355c..ce9f9d7a 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -760,6 +760,13 @@ func (p *OAuthProxy) SignIn(rw http.ResponseWriter, req *http.Request) {
+ 		}
+ 		http.Redirect(rw, req, redirect, http.StatusFound)
+ 	} else {
++		if !isNavigation(req) {
++			// A script lands here when ingress-nginx redirects its request without a session to
++			// the sign-in page. A redirect to the provider would end in a CORS error, so give the
++			// script a 401 it can handle.
++			p.errorJSON(rw, http.StatusUnauthorized)
++			return
++		}
+ 		if p.SkipProviderButton {
+ 			p.OAuthStart(rw, req)
+ 		} else {
+@@ -1427,6 +1434,21 @@ func isAjax(req *http.Request) bool {
+ 	return false
+ }
+ 
++// isNavigation reports whether the browser navigates to the URL: the user followed a link,
++// submitted a form or was redirected there. Fetch Metadata says it directly. Without it (an older
++// browser or a client that is not a browser) only the AJAX markers of the request rule a navigation
++// out.
++func isNavigation(req *http.Request) bool {
++	switch req.Header.Get("Sec-Fetch-Mode") {
++	case "navigate", "nested-navigate":
++		return true
++	case "":
++		return !isAjax(req) && req.Header.Get("X-Requested-With") != "XMLHttpRequest"
++	default:
++		return false
++	}
++}
++
+ // errorJSON returns the error code with an application/json mime type
+ func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
+ 	rw.Header().Set("Content-Type", applicationJSON)

@@ -1,0 +1,175 @@
+diff --git a/deckhouse_sign_out_test.go b/deckhouse_sign_out_test.go
+new file mode 100644
+index 00000000..06d0321b
+--- /dev/null
++++ b/deckhouse_sign_out_test.go
+@@ -0,0 +1,102 @@
++package main
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"testing"
++	"time"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// TestSignOutWithoutIDToken checks the sign-out redirect to the logout of the provider when there is
++// no ID token to put into it: the raw placeholder must never reach dex, which answers 400 to it.
++func TestSignOutWithoutIDToken(t *testing.T) {
++	const (
++		dexLogout = "https://dex.example.com/logout?id_token_hint={id_token}&post_logout_redirect_uri="
++		appURL    = "https://app.example.com/"
++	)
++
++	tests := []struct {
++		name             string
++		session          *sessions.SessionState
++		target           string
++		byHeader         bool
++		expectedLocation string
++	}{
++		{
++			name:             "session with an id token",
++			session:          &sessions.SessionState{Email: "jane.doe@example.com", IDToken: "header.payload.signature"},
++			target:           dexLogout + url.QueryEscape(appURL),
++			expectedLocation: "https://dex.example.com/logout?id_token_hint=header.payload.signature&post_logout_redirect_uri=" + url.QueryEscape(appURL),
++		},
++		{
++			name:             "session with an id token, target in the header",
++			session:          &sessions.SessionState{Email: "jane.doe@example.com", IDToken: "header.payload.signature"},
++			target:           dexLogout + url.QueryEscape(appURL),
++			byHeader:         true,
++			expectedLocation: "https://dex.example.com/logout?id_token_hint=header.payload.signature&post_logout_redirect_uri=" + url.QueryEscape(appURL),
++		},
++		{
++			name:             "no session",
++			target:           dexLogout + url.QueryEscape(appURL),
++			expectedLocation: appURL,
++		},
++		{
++			name:             "no session, target in the header",
++			target:           dexLogout + url.QueryEscape(appURL),
++			byHeader:         true,
++			expectedLocation: appURL,
++		},
++		{
++			name:             "session without an id token",
++			session:          &sessions.SessionState{Email: "jane.doe@example.com", AccessToken: "access_token"},
++			target:           dexLogout + url.QueryEscape(appURL),
++			expectedLocation: appURL,
++		},
++		{
++			name:             "no session, post logout address not allowed",
++			target:           dexLogout + url.QueryEscape("https://evil.example.org/"),
++			expectedLocation: "/",
++		},
++		{
++			name:             "no session, no post logout address",
++			target:           "https://dex.example.com/logout?id_token_hint={id_token}",
++			expectedLocation: "/",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			test, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
++				opts.WhitelistDomains = []string{"dex.example.com", "app.example.com"}
++			})
++			require.NoError(t, err)
++			if tt.byHeader {
++				test.req = httptest.NewRequest(http.MethodGet, "/oauth2/sign_out", nil)
++				test.req.Header.Set("X-Auth-Request-Redirect", tt.target)
++			} else {
++				test.req = httptest.NewRequest(http.MethodGet, "/oauth2/sign_out?rd="+url.QueryEscape(tt.target), nil)
++			}
++			if tt.session != nil {
++				created := time.Now()
++				tt.session.CreatedAt = &created
++				require.NoError(t, test.SaveSession(tt.session))
++			}
++			_, errOutput := captureJSONLogs(t)
++
++			test.rw = httptest.NewRecorder()
++			test.proxy.ServeHTTP(test.rw, test.req)
++
++			assert.Equal(t, http.StatusFound, test.rw.Code)
++			assert.Equal(t, tt.expectedLocation, test.rw.Header().Get("Location"))
++			assert.NotContains(t, test.rw.Header().Get("Location"), idTokenPlaceholder)
++			assert.NotContains(t, test.rw.Header().Get("Location"), url.QueryEscape(idTokenPlaceholder))
++			assert.Empty(t, errOutput.String(), "a sign-out without a session is not an error")
++		})
++	}
++}
+diff --git a/oauthproxy.go b/oauthproxy.go
+index ce9f9d7a..e7d646de 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -828,12 +828,7 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
+ 	}
+ 
+ 	if strings.Contains(redirect, idTokenPlaceholder) {
+-		session, err := p.getAuthenticatedSession(rw, req)
+-		if err != nil {
+-			logger.Errorf("error getting authenticated session during SignOut, won't replace id_token placeholder in redirect URL: %v", err)
+-		} else {
+-			redirect = strings.ReplaceAll(redirect, idTokenPlaceholder, session.IDToken)
+-		}
++		redirect = p.replaceIDTokenPlaceholder(rw, req, redirect)
+ 	}
+ 
+ 	// Call backend logout before clearing the session so we still have the session
+@@ -854,7 +849,36 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
+ 	http.Redirect(rw, req, redirect, http.StatusFound)
+ }
+ 
++// replaceIDTokenPlaceholder puts the ID token of the session into the sign-out redirect. Without a
++// session or without an ID token in it the placeholder must not reach the provider: dex answers 400
++// to a raw "{id_token}" in id_token_hint, and to post_logout_redirect_uri without a hint. A user signs
++// out without a session after a global logout ended it, so the redirect then goes straight to the
++// post_logout_redirect_uri of the target when it is an allowed redirect, and to / otherwise.
++func (p *OAuthProxy) replaceIDTokenPlaceholder(rw http.ResponseWriter, req *http.Request, redirect string) string {
++	session, err := p.getAuthenticatedSession(rw, req)
++	if err == nil && session != nil && session.IDToken != "" {
++		return strings.ReplaceAll(redirect, idTokenPlaceholder, session.IDToken)
++	}
++
++	fallback := "/"
++	if target, parseErr := url.Parse(redirect); parseErr == nil {
++		postLogout := target.Query().Get("post_logout_redirect_uri")
++		if postLogout != "" && p.redirectValidator.IsValidRedirect(postLogout) {
++			fallback = postLogout
++		}
++	}
++	logger.Printf("No ID token for the sign-out redirect, redirecting to %q instead of the provider", fallback)
++
++	return fallback
++}
++
+ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
++	// Look the session up only for a backend logout: a sign-out without a session is not an error.
++	providerData := p.provider.Data()
++	if providerData.BackendLogoutURL == "" {
++		return
++	}
++
+ 	session, err := p.getAuthenticatedSession(rw, req)
+ 	if err != nil {
+ 		logger.Errorf("error getting authenticated session during backend logout: %v", err)
+@@ -865,11 +889,6 @@ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
+ 		return
+ 	}
+ 
+-	providerData := p.provider.Data()
+-	if providerData.BackendLogoutURL == "" {
+-		return
+-	}
+-
+ 	backendLogoutURL := strings.ReplaceAll(providerData.BackendLogoutURL, idTokenPlaceholder, session.IDToken)
+ 	// security exception because URL is dynamic ({id_token} replacement) but
+ 	// base is not end-user provided but comes from configuration somewhat secure

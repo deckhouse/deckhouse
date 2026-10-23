@@ -1,9 +1,9 @@
 diff --git a/fuzz_handlers_test.go b/fuzz_handlers_test.go
 new file mode 100644
-index 0000000..dfffb41
+index 00000000..f6bfb775
 --- /dev/null
 +++ b/fuzz_handlers_test.go
-@@ -0,0 +1,274 @@
+@@ -0,0 +1,279 @@
 +package main
 +
 +import (
@@ -17,6 +17,7 @@ index 0000000..dfffb41
 +
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util/ptr"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
 +)
 +
@@ -132,7 +133,7 @@ index 0000000..dfffb41
 +			Path: "/",
 +			// Static body avoids dialing a real backend while still
 +			// exercising the proxy path after authentication.
-+			Static:     true,
++			Static:     ptr.To(true),
 +			StaticCode: &staticCode,
 +		}},
 +	}
@@ -182,6 +183,8 @@ index 0000000..dfffb41
 +	fuzzProxyHandler(f, []string{
 +		`{"method":"GET","url":"/oauth2/sign_in"}`,
 +		`{"method":"POST","url":"/oauth2/sign_in","postForm":{"username":["u"],"password":["p"]}}`,
++		`{"method":"GET","url":"/oauth2/sign_in","headers":{"Sec-Fetch-Mode":["cors"]}}`,
++		`{"method":"GET","url":"/oauth2/sign_in","headers":{"Accept":["application/json"],"X-Requested-With":["XMLHttpRequest"]}}`,
 +	}, http.MethodPost, "/oauth2/sign_in")
 +}
 +
@@ -189,6 +192,8 @@ index 0000000..dfffb41
 +	fuzzProxyHandler(f, []string{
 +		`{"method":"GET","url":"/oauth2/sign_out"}`,
 +		`{"method":"GET","url":"/oauth2/sign_out?rd=https://evil.example/"}`,
++		`{"method":"GET","url":"/oauth2/sign_out?rd=https%3A%2F%2Fdex.example%2Flogout%3Fid_token_hint%3D%7Bid_token%7D%26post_logout_redirect_uri%3Dhttps%3A%2F%2Fapp.example%2F"}`,
++		`{"method":"GET","url":"/oauth2/sign_out","headers":{"X-Auth-Request-Redirect":["/logout?id_token_hint={id_token}&post_logout_redirect_uri=%zz"]}}`,
 +	}, http.MethodGet, "/oauth2/sign_out")
 +}
 +
@@ -280,7 +285,7 @@ index 0000000..dfffb41
 +}
 diff --git a/pkg/middleware/fuzz_jwt_session_test.go b/pkg/middleware/fuzz_jwt_session_test.go
 new file mode 100644
-index 0000000..1b4aa4a
+index 00000000..8da68af5
 --- /dev/null
 +++ b/pkg/middleware/fuzz_jwt_session_test.go
 @@ -0,0 +1,55 @@
@@ -316,8 +321,8 @@ index 0000000..1b4aa4a
 +				}
 +				return nil, errors.New("unverified")
 +			},
-+		})
-+		handler := alice.New(NewScope(false, "X-Request-Id")).Then(loader(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
++		}, true)
++		handler := alice.New(NewScope(false, "X-Request-Id", nil)).Then(loader(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})))
 +		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://127.0.0.1/", nil)
 +		if err != nil {
 +			t.Skip(err)
@@ -341,10 +346,10 @@ index 0000000..1b4aa4a
 +}
 diff --git a/pkg/sessions/persistence/fuzz_ticket_test.go b/pkg/sessions/persistence/fuzz_ticket_test.go
 new file mode 100644
-index 0000000..c12e14e
+index 00000000..496bd747
 --- /dev/null
 +++ b/pkg/sessions/persistence/fuzz_ticket_test.go
-@@ -0,0 +1,58 @@
+@@ -0,0 +1,60 @@
 +package persistence
 +
 +import (
@@ -375,6 +380,8 @@ index 0000000..c12e14e
 +
 +func FuzzDecodeTicket(f *testing.F) {
 +	f.Add([]byte(`{"Ticket":"dummy-0123456789abcdef.MDEyMzQ1Njc4OWFiY2RlZg","RefreshToken":"rt"}`))
++	f.Add([]byte(`{"Ticket":"v2.ZHVtbXktMDEyMzQ1Njc4OWFiY2RlZg.MDEyMzQ1Njc4OWFiY2RlZg","RefreshToken":"rt"}`))
++	f.Add([]byte(`{"Ticket":"v2.a.b.c","RefreshToken":"rt"}`))
 +	f.Add([]byte(`{"Ticket":"a.b","RefreshToken":""}`))
 +	f.Add([]byte(`{"Ticket":"only-one-part","RefreshToken":"x"}`))
 +	f.Add([]byte(`not-json`))

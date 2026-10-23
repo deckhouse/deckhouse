@@ -1,37 +1,153 @@
+diff --git a/pkg/validation/deckhouse_sessions_test.go b/pkg/validation/deckhouse_sessions_test.go
+new file mode 100644
+index 00000000..44e7c845
+--- /dev/null
++++ b/pkg/validation/deckhouse_sessions_test.go
+@@ -0,0 +1,96 @@
++package validation
++
++import (
++	"context"
++	"errors"
++	"testing"
++	"time"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/stretchr/testify/assert"
++)
++
++func init() {
++	// The upstream tests of an unreachable Redis expect a single attempt: each one waits for a dial
++	// timeout. TestSendRedisConnectionTestRetries sets the attempts it needs.
++	redisConnectionTestAttempts = 1
++	redisConnectionTestInterval = time.Millisecond
++}
++
++// startingRedis fails every Set until it has been asked failures times, like a Redis sidecar that
++// starts after the proxy.
++type startingRedis struct {
++	failures int
++	sets     int
++	data     map[string][]byte
++}
++
++func (r *startingRedis) Get(_ context.Context, key string) ([]byte, error) {
++	return r.data[key], nil
++}
++
++func (r *startingRedis) Lock(string) sessions.Lock {
++	return &sessions.NoOpLock{}
++}
++
++func (r *startingRedis) Set(_ context.Context, key string, value []byte, _ time.Duration) error {
++	r.sets++
++	if r.sets <= r.failures {
++		return errors.New("connection refused")
++	}
++	r.data[key] = value
++	return nil
++}
++
++func (r *startingRedis) Del(_ context.Context, key string) error {
++	delete(r.data, key)
++	return nil
++}
++
++func (r *startingRedis) Ping(context.Context) error {
++	return nil
++}
++
++func TestSendRedisConnectionTestRetries(t *testing.T) {
++	attempts := redisConnectionTestAttempts
++	redisConnectionTestAttempts = 10
++	t.Cleanup(func() { redisConnectionTestAttempts = attempts })
++
++	tests := []struct {
++		name         string
++		failures     int
++		expectedSets int
++		expectedMsgs []string
++	}{
++		{
++			name:         "redis is up",
++			failures:     0,
++			expectedSets: 1,
++			expectedMsgs: []string{},
++		},
++		{
++			name:         "redis comes up before the last attempt",
++			failures:     redisConnectionTestAttempts - 1,
++			expectedSets: redisConnectionTestAttempts,
++			expectedMsgs: []string{},
++		},
++		{
++			name:         "redis never comes up",
++			failures:     redisConnectionTestAttempts,
++			expectedSets: redisConnectionTestAttempts,
++			expectedMsgs: []string{"unable to set a redis initialization key: connection refused"},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			client := &startingRedis{failures: tt.failures, data: map[string][]byte{}}
++
++			msgs := sendRedisConnectionTest(client, "key", "value")
++
++			assert.Equal(t, tt.expectedMsgs, msgs)
++			assert.Equal(t, tt.expectedSets, client.sets)
++			assert.Empty(t, client.data, "the initialization key must be deleted")
++		})
++	}
++}
 diff --git a/pkg/validation/sessions.go b/pkg/validation/sessions.go
-index 96ea6d4f..e35f2ab8 100644
+index 96ea6d4f..05a8f319 100644
 --- a/pkg/validation/sessions.go
 +++ b/pkg/validation/sessions.go
-@@ -8,6 +8,7 @@ import (
-
+@@ -8,9 +8,17 @@ import (
+ 
  	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
  	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
 +	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
  	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis"
  )
-
-@@ -64,13 +65,20 @@ func validateRedisSessionStore(o *options.Options) []string {
- func sendRedisConnectionTest(client redis.Client, key string, val string) []string {
+ 
++// The Redis sidecar of the Deckhouse dex-authenticator may start after the proxy, so the
++// connection test retries for about 20 seconds before the proxy gives up.
++var (
++	redisConnectionTestAttempts = 10
++	redisConnectionTestInterval = 2 * time.Second
++)
++
+ func validateSessionCookieMinimal(o *options.Options) []string {
+ 	if !o.Session.Cookie.Minimal {
+ 		return []string{}
+@@ -65,7 +73,7 @@ func sendRedisConnectionTest(client redis.Client, key string, val string) []stri
  	msgs := []string{}
  	ctx := context.Background()
--
+ 
 -	err := client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
-+	var err error
-+	for i := 0; i < 10; i++ {
-+		logger.Printf("testing connection to redis...")
-+		err = client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
-+		if err == nil {
-+			break
-+		}
-+		time.Sleep(2 * time.Second)
-+	}
++	err := setRedisInitializationKey(ctx, client, key, val)
  	if err != nil {
  		msgs = append(msgs, fmt.Sprintf("unable to set a redis initialization key: %v", err))
  	} else {
--		gval, err := client.Get(ctx, key)
--		if err != nil {
-+		gval, errGet := client.Get(ctx, key)
-+		if errGet != nil {
- 			msgs = append(msgs,
- 				fmt.Sprintf("unable to retrieve redis initialization key: %v", err))
- 		}
+@@ -86,3 +94,19 @@ func sendRedisConnectionTest(client redis.Client, key string, val string) []stri
+ 	}
+ 	return msgs
+ }
++
++// setRedisInitializationKey sets the initialization key, retrying while Redis is not reachable yet.
++func setRedisInitializationKey(ctx context.Context, client redis.Client, key string, val string) error {
++	var err error
++	for attempt := range redisConnectionTestAttempts {
++		if attempt > 0 {
++			time.Sleep(redisConnectionTestInterval)
++		}
++		logger.Printf("testing connection to redis...")
++		err = client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
++		if err == nil {
++			return nil
++		}
++	}
++	return err
++}

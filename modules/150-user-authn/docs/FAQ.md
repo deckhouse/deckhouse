@@ -261,11 +261,26 @@ DexAuthenticator sets its cookies with the `Secure` attribute, so they are sent 
 
 1. Dex redirects the user to the provider's login page in most cases and waits for the user to be redirected back to the `/callback` URL. However, some providers like LDAP or Atlassian Crowd do not support this flow. The user must enter credentials in the Dex login form instead, and Dex will validate them by making a request to the provider's API.
 
+1. DexAuthenticator starts the sign-in with Proof Key for Code Exchange (PKCE) using the `S256` method and gets the tokens and the signing keys from the `dex` Service in the `d8-user-authn` namespace. It checks the certificate of Dex against the certificate authority (CA) of the internal Dex certificate. `user-authn` adds this CA to the Secret of every DexAuthenticator.
+
 1. DexAuthenticator sets the cookie with the full refresh token (instead of issuing a ticket as for the ID token) because Redis does not persist data.
    If no ID token is found in Redis by the ticket, the user can request a new ID token by providing the refresh token from the cookie.
 
 1. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. This is not required for services like [`upmeter`](/modules/upmeter/), as `upmeter` permissions are less granular.
    For the [Kubernetes Dashboard](/modules/dashboard/), it is critical: the Dashboard passes the ID token on to access the Kubernetes API.
+
+### Handling an expired session in a single-page application
+
+Without a session, a request to the application is redirected to the sign-in page from the `auth-signin` annotation (`/dex-authenticator/sign_in`). DexAuthenticator sends the user to Dex only when the browser navigates to that page. A request with the `Sec-Fetch-Mode: navigate` header is a navigation. If the browser does not send `Sec-Fetch-Mode`, a request without the `Accept: application/json` and `X-Requested-With: XMLHttpRequest` headers is a navigation. A script request (`fetch`, XHR) gets the `401` status code with the `{}` body instead of a redirect to Dex, which the browser would block as a cross-origin request.
+
+To send the user to sign in, reload the page when a script request gets `401`:
+
+```javascript
+const response = await fetch("/api/items");
+if (response.status === 401) {
+  window.location.reload();
+}
+```
 
 ## How to generate a kubeconfig and access Kubernetes API?
 

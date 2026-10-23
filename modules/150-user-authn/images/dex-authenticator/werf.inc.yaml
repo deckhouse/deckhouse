@@ -68,8 +68,9 @@ shell:
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
     {{- $_ := set $ "ProjectName" (printf "%s/%s/oauth2-proxy" $.ModuleName $.ImageName ) }}
+    {{- $oauth2ProxyVersion := printf "v%s" (include "get_oss_version_by_id" (list "oauth2-proxy" $ )) }}
     - |
-      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o oauth2-proxy .`) | indent 6 }}
+      {{- include "image-build.build" (set $ "BuildCommand" (printf "go build -ldflags '-s -w -X github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version.VERSION=%s' -o oauth2-proxy ." $oauth2ProxyVersion)) | indent 6 }}
     - chown 64535:64535 oauth2-proxy
     - chmod 0700 oauth2-proxy
 ---

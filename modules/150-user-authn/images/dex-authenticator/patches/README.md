@@ -1,68 +1,107 @@
 ## Patches
 
-### 001-go-mod.patch
+The patches apply to the oauth2-proxy tag from `modules/150-user-authn/oss.yaml` in the order of their numbers.
+Each patch owns one zone and carries its tests. Every patch is a plain diff that starts with `diff --git`, without a
+commit header or message: the patches except `998-fix-cve.patch` are the diffs of the commits of a branch with one
+commit per patch (`git diff <commit>^ <commit>`); `998-fix-cve.patch` is the diff of `go.mod` and `go.sum` after the
+dependency bumps, rebuilt by hand as its section describes.
 
-Update deps.
+Fuzz targets (`999-fuzz-handlers.patch`) and the tests of the other patches are `*_test.go` files, so they do not get
+into the image. To run them, apply the patches to a clone of the tag and run `go test ./...` there.
 
 ### 002-cookie-refresh.patch
 
-There is a problem when we are using nonpersistent Redis for session storage. If Redis was killed or flushed, the user should be authenticated again. That makes oauth2 proxy to be stateful application (or sort of).
-Storing refresh token in cookie adds the possibility to restore access- and id- token even if there is no data in Redis.
-
-Upstream PR - https://github.com/oauth2-proxy/oauth2-proxy/pull/313
-
-A persistent store that holds no data for a ticket returns a stub session instead of an error.
-The stub holds the refresh token from the cookie and the placeholder user `Does not found in Redis`.
-With `--cookie-refresh` above zero, the proxy refreshes the stub instead of trusting it.
-If the cookie carries no refresh token, the store returns an error, so a stub never passes
-as an authenticated session.
-The session store tests expect this behaviour.
-
-Sign-out does not invalidate a previously issued cookie.
-A copy of the cookie restores the session while both conditions hold:
-the refresh token in the cookie is still valid in dex,
-and the cookie itself has not expired (`--cookie-expire`, set from `keepUsersLoggedInFor`).
+- **Zone:** the session ticket cookie and the persistent session store (`pkg/sessions/persistence`); the stored
+  session loader when a refresh cannot be made now (`pkg/middleware`) and the answers of the handlers to it; the
+  ticket of a new sign-in (`OAuthCallback`, `SignIn`).
+- **Consumer in Deckhouse:** every DexAuthenticator. Redis is a sidecar of the pod without a disk, so a restart of the
+  pod or a request to another replica finds no session data.
+- **What it does:** the session cookie carries the session ticket and the refresh token as JSON. When the store has
+  no data for the ticket, the proxy gets a stub session with the refresh token of the cookie, the placeholder user
+  `Does not found in Redis` and a creation time far in the past. With `--cookie-refresh` above zero the stub is
+  refreshed through dex at once instead of being trusted. Any error of the store produces the stub, an unreachable
+  Redis included: the proxy clears the cookie on a load error, and the cookie holds the only copy of the refresh
+  token. A session the ticket secret cannot decrypt, or a cookie without a refresh token, is an error. The stub
+  refreshes under the lock of its ticket in Redis, as a stored session does, so parallel requests with one cookie
+  make one refresh through dex per replica.
+- **When dex cannot answer:** a refresh that gets no answer from dex (connection refused, TLS error, timeout) or gets
+  429 or a 5xx status does not end a session that cannot be trusted without the refresh: the stub, or a session in
+  Redis whose ID token has expired. The session and its cookie are kept, `/auth`, `/oauth2/userinfo` and the proxied
+  requests answer 503 with `Retry-After: 10`, and the same cookie works again once dex answers. A lock that cannot be
+  taken within 5 seconds, or an unreachable Redis, is answered the same way instead of clearing the session; the pod
+  is not ready without Redis anyway. A refresh dex refuses (`invalid_grant`, `invalid_client`, or `access_denied`,
+  which dex answers with 429 for a locked account) still clears the session and the cookie, and so does any other 4xx
+  answer for such a session. Sign-out does not need dex and clears
+  the cookie.
+  - Behind ingress-nginx a 503 of the auth subrequest is neither 401 nor 403, so ingress-nginx does not redirect to
+    the sign-in page: it answers its own 500 page and does not pass `Retry-After` on. The user reloads the page once
+    dex is back and is still signed in.
+  - Behind Envoy `ext_authz` (Gateway API) a 5xx of the authorizer is a failure of the check: Envoy answers
+    `status_on_error`, 403 unless the route sets another status, and never passes the request on unless
+    `failure_mode_allow` is set.
+- **New sign-in:** the session of a new sign-in is saved under a new ticket, not under the ticket of the cookie the
+  browser still has. Another replica that keeps the previous session under the old ticket in its Redis would
+  otherwise serve the previous identity and ID token until its next refresh, up to `--cookie-refresh`.
+- **Ticket format:** oauth2-proxy 7.6.0 and later write the ticket as `v2.<id>.<secret>`. They read the older
+  `<id>.<secret>` too, but the older proxies cannot read the new format, so an upgrade from 7.5.1 logs out the users
+  that reach an old replica with a cookie of a new one, once.
+- **Security:** sign-out does not invalidate a previously issued cookie. A copy of the cookie restores the session
+  while the refresh token in it is valid in dex and the cookie has not expired (`--cookie-expire`, set from
+  `keepUsersLoggedInFor`). The cookie is signed, not encrypted.
+- **Upstream:** <https://github.com/oauth2-proxy/oauth2-proxy/pull/313>, closed without merge. Needed until the
+  sessions move to a shared store.
 
 ### 003-remove-groups.patch
 
-Prevents sending groups auth request header (may cause uncontrollable headers grows).
-Two options to fix this without patch:
-
-Add a new flag: https://github.com/oauth2-proxy/oauth2-proxy/issues/2144
-Migrate to a structured config (alpha config): https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/alpha-config
+- **Zone:** the `X-Auth-Request-*` response headers of `--set-xauthrequest`.
+- **Consumer in Deckhouse:** the ingress-nginx `auth-url` of every application behind a DexAuthenticator. Many groups
+  outgrow the buffers of ingress-nginx and break the request.
+- **What it does:** removes `X-Auth-Request-Groups`. The groups stay in the session: `allowed_groups` and
+  `allowed_emails` in the `/auth` query keep working, which `TestAuthOnlyAllowListWithoutGroupsHeader` checks with
+  the flags and the Redis store of the DexAuthenticator. A shared authenticator will check the policy of an
+  application this way.
+- **Upstream:** <https://github.com/oauth2-proxy/oauth2-proxy/issues/2144>, closed as not planned. The alternative is
+  the alpha config, which replaces the whole flag configuration.
 
 ### 004-add-redis-retries.patch
 
-Prevents oauth2-proxy from failing with exit 1 if Redis has not started in time. Adds a loop to retry sendRedisConnectionTest.
+- **Zone:** the Redis connection test at startup (`pkg/validation`).
+- **Consumer in Deckhouse:** every DexAuthenticator: the Redis sidecar may start after the proxy.
+- **What it does:** retries the test 10 times, 2 seconds apart, instead of exiting with code 1 at once.
+- **Upstream:** not proposed. A native sidecar for Redis would make the patch unnecessary, but it changes the pod
+  of every DexAuthenticator.
 
-### 005-fix-cves.patch
+### 005-sign-in-401-for-scripts.patch
 
-This patch fixes:
-
-- CVE-2025-30204
-- CVE-2025-22868
-- CVE-2024-28180
-- CVE-2026-34986
-- CVE-2026-33186
-
-The login.gov provider embeds `jwt.RegisteredClaims` in its ID token claims, as `golang-jwt/jwt/v5`
-requires. An embedded `jwt.Claims` interface stays nil and makes token validation panic.
-The provider parses the ID token with `jwt.WithIssuedAt()`, so a token with an `iat` claim in the
-future is rejected, as with `StandardClaims` of `jwt/v3`.
-
-The patch also adapts upstream tests to the newer toolchain and dependencies:
-
-- the JSON decoding error messages of Go 1.24 and later, including the field names of Go 1.27;
-- an unreachable upstream address that still parses under the strict URL parsing of Go 1.26;
-- valid JSON in a mocked Google Directory API response.
+- **Zone:** the sign-in page (`SignIn`).
+- **Consumer in Deckhouse:** single-page applications behind a DexAuthenticator. ingress-nginx redirects every request
+  without a session to `auth-signin`, and the redirect of a `fetch` or XHR to dex ended in a CORS error.
+- **What it does:** the sign-in page starts the login only for a browser navigation: `Sec-Fetch-Mode: navigate`, or,
+  without Fetch Metadata, a request without `Accept: application/json` and `X-Requested-With: XMLHttpRequest`.
+  Other requests get 401 with `{}` and no CSRF cookie; the application can reload the page to log in.
+- **Upstream:** not proposed. Upstream answers JSON errors only in the proxy mode, which DexAuthenticator does not use.
+- **Order:** in the fork branch this commit comes after 008-auth-log-login-failures; its hunks do not overlap
+  those of 006, 007 and 008-auth-log-login-failures, so applying the patches by their numbers gives the same tree.
 
 ### 006-return-200-on-success-and-header-on-fail.patch
 
-Oauth2-proxy returns 200 (instead of 202) when the request is authenticated and adds "X-Auth-Request-Result" header on fail.
+- **Zone:** the status of `/auth`.
+- **Consumer in Deckhouse:** Gateway API routes of DexAuthenticator: Envoy `ext_authz` treats only 200 as success.
+  ingress-nginx accepts any 2xx. `X-Auth-Request-Result: Denied` is meant for the `alb` module, which lives outside
+  this repository.
+- **What it does:** `/auth` answers 200 instead of 202 to an authenticated request and sets
+  `X-Auth-Request-Result: Denied` next to the 401.
+- **Upstream:** not proposed.
 
 ### 007-add-json-logging.patch
 
-Add json logging.
+- **Zone:** log formats (`pkg/logger`, `--logging-format`).
+- **Consumer in Deckhouse:** the log collection of the cluster; every DexAuthenticator runs with
+  `--logging-format=json`.
+- **What it does:** `--logging-format=json` writes one JSON object per line for the standard, auth and request logs;
+  the `*-logging-format` templates are ignored. Sign-out logs a `User signed out` auth event. A test checks that a
+  failed CSRF check of the callback logs cookie names, not values (GHSA-hhqp-vx7f-5c6m, fixed upstream in 7.15.5).
+- **Upstream:** <https://github.com/oauth2-proxy/oauth2-proxy/issues/1057>, open.
 
 ### 008-auth-log-login-failures.patch
 
@@ -70,8 +109,7 @@ Writes the login failures of the OAuth2 callback and the failed session refreshe
 so each line carries the client address, the request ID and the user.
 The security events of `templates/security-events.yaml` are built from these lines.
 
-- A missing CSRF cookie is logged with `PrintAuthf` instead of `Println(req, ...)`.
-  Upstream `Println` dumps the whole `*http.Request`, the `Cookie` and `Authorization` headers included.
+- A missing CSRF cookie is already logged with `PrintAuthf` in v7.15.5, so the patch leaves that line as it is.
 - An error returned by the identity provider and a failure to redeem the authorization code
   get an auth log line next to the existing error line.
 - A failed session refresh gets an auth log line with the email of the session,
@@ -79,49 +117,63 @@ The security events of `templates/security-events.yaml` are built from these lin
   The session is kept unsaved after a failed refresh, so every following request retries it;
   without the throttle each of them would write one more line.
 
+### 009-sign-out-without-id-token.patch
+
+- **Zone:** the sign-out redirect (`SignOut`, `backendLogout`).
+- **Consumer in Deckhouse:** the sign-out through dex (`/logout` with `id_token_hint={id_token}`), planned together
+  with the global logout of user-authn.
+- **What it does:** when there is no session or no ID token to put into `{id_token}`, the redirect goes to the
+  `post_logout_redirect_uri` of the target if it is an allowed redirect (`--whitelist-domain`), and to `/` otherwise.
+  The raw placeholder never reaches dex, which answers 400 to it. A user signs out without a session after a global
+  logout ended it. The session is looked up for a backend logout only when `--backend-logout-url` is set, so a
+  sign-out without a session no longer logs an error.
+- **Upstream:** not proposed.
+
 ### 998-fix-cve.patch
 
-Additional dependency bumps on top of `005-fix-cves.patch`.
+- **Zone:** `go.mod` and `go.sum`.
+- **Consumer in Deckhouse:** the image scanners.
+- **What it does:** bumps the modules with known vulnerabilities that the tag does not fix yet. The patch changes only
+  `go.mod` and `go.sum`; do not edit it by hand, rebuild it.
+- **How to rebuild it** (for example, to add or drop a bump), with the tag from `oss.yaml`:
 
-Fix CVEs:
-- CVE-2025-29923
-- CVE-2026-25680
-- CVE-2026-25681
-- CVE-2026-27136
-- CVE-2026-33814
-- CVE-2026-39821
-- CVE-2026-39824
-- CVE-2026-42502
-- CVE-2026-42506
-- CVE-2026-46600
-- CVE-2026-56852
-- CVE-2026-56854
-- CVE-2026-56855
-- CVE-2026-78662
-- CVE-2026-84303
-- CVE-2026-84304
-- CVE-2026-84445
+  ```shell
+  git clone --branch v7.15.5 https://github.com/oauth2-proxy/oauth2-proxy.git && cd oauth2-proxy
+  # Apply every patch numbered below 998, in order.
+  for p in $(ls /path/to/patches/*.patch | grep -v -e '/998-' -e '/999-'); do git apply "$p"; done
+  git add -A && git commit -q -m "patches below 998"
+  # Find the vulnerable modules that a newer version fixes.
+  govulncheck ./...
+  # Bump each of them (the current list is below), then tidy and build.
+  go get golang.org/x/net@v0.60.0
+  go mod tidy && go build ./...
+  git diff -- go.mod go.sum > /path/to/patches/998-fix-cve.patch
+  ```
 
-GHSA:
-- GHSA-hrxh-6v49-42gf
+  Drop a bump once the tag requires that version or newer. List the vulnerabilities of every bump below.
+- **Current bumps:** `golang.org/x/net` v0.60.0 (GO-2026-6603, GO-2026-6610, GO-2026-6611, GO-2026-6612,
+  GO-2026-6617).
+- **Not covered by the patch:** the advisories of the Go standard library are fixed by the Go version of the builder
+  image; GO-2026-5932 (`golang.org/x/crypto/openpgp`, no fix) is not reachable and is described in
+  `known_vulnerabilities.vex`.
+- **Upstream:** the next releases of oauth2-proxy bump the modules themselves.
 
 ### 999-fuzz-handlers.patch
 
-Go native fuzz tests for oauth2-proxy user-input surfaces. Applied last.
+- **Zone:** Go native fuzz tests; applied last.
+- **Consumer in Deckhouse:** the fuzzing pipeline (`FUZZ_PACKAGES` in `werf.inc.yaml`).
+- **Targets:**
+  - the HTTP mux via `ServeHTTP`: `/`, `/robots.txt`, `/oauth2/sign_in`, `/oauth2/sign_out`, `/oauth2/start`,
+    `/oauth2/callback`, `/oauth2/auth`, `/oauth2/userinfo`, cookies, `Authorization`, `X-Forwarded-*`, the sign-in of
+    a script (patch 005) and the sign-out redirect with `{id_token}` (patch 009);
+  - `ManualSignIn`, `LoadCookiedSession`, `redeemCode`;
+  - the JSON ticket cookie of patch 002 (`decodeTicket`, `decodeTicketFromRequest`);
+  - the JWT bearer and basic session loader.
+- **Upstream:** not proposed.
 
-Targets:
+Run from a patched source tree:
 
-- HTTP mux via `ServeHTTP`: `/`, `/robots.txt`, `/oauth2/sign_in`,
-  `/oauth2/sign_out`, `/oauth2/start`, `/oauth2/callback`, `/oauth2/auth`,
-  `/oauth2/userinfo`, cookies, `Authorization`, `X-Forwarded-*`
-- `ManualSignIn`, `LoadCookiedSession`, `redeemCode`
-- Deckhouse cookie-refresh JSON ticket parser (`decodeTicket`,
-  `decodeTicketFromRequest`)
-- JWT bearer/basic session loader
-
-`*_test.go` is not compiled into the image. Run from a patched source tree:
-
-```
+```shell
 go test -run=^$ -fuzz=FuzzServeHTTP -fuzztime=12h .
 go test -run=^$ -fuzz=FuzzDecodeTicket$ -fuzztime=12h ./pkg/sessions/persistence
 go test -run=^$ -fuzz=FuzzJwtSessionLoader$ -fuzztime=12h ./pkg/middleware
@@ -135,30 +187,5 @@ It lists the `go.mod` requirements that the patch set changes over the upstream 
 
 | Module | Upstream | Patched |
 |---|---|---|
-| `cloud.google.com/go/auth/oauth2adapt` | — | v0.2.8 |
-| `cloud.google.com/go/auth` | — | v0.18.2 |
-| `github.com/felixge/httpsnoop` | — | v1.0.4 |
-| `github.com/go-logr/stdr` | — | v1.2.2 |
-| `github.com/google/s2a-go` | v0.1.4 | v0.1.9 |
-| `github.com/googleapis/enterprise-certificate-proxy` | v0.2.3 | v0.3.11 |
-| `github.com/googleapis/gax-go/v2` | v2.11.0 | v2.17.0 |
-| `github.com/redis/go-redis/v9` | v9.0.2 | v9.6.3 |
-| `github.com/stretchr/testify` | v1.8.4 | v1.11.1 |
-| `go.opentelemetry.io/auto/sdk` | — | v1.2.1 |
-| `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` | — | v0.61.0 |
-| `go.opentelemetry.io/otel/metric` | — | v1.44.0 |
-| `go.opentelemetry.io/otel/trace` | — | v1.44.0 |
-| `go.opentelemetry.io/otel` | — | v1.44.0 |
-| `golang.org/x/crypto` | v0.46.0 | v0.57.0 |
-| `golang.org/x/net` | v0.48.0 | v0.60.0 |
-| `golang.org/x/oauth2` | v0.34.0 | v0.36.0 |
-| `golang.org/x/sync` | v0.19.0 | v0.23.0 |
-| `golang.org/x/sys` | v0.39.0 | v0.48.0 |
-| `golang.org/x/text` | v0.32.0 | v0.42.0 |
-| `google.golang.org/api` | v0.126.0 | v0.264.0 |
-| `google.golang.org/genproto/googleapis/rpc` | v0.0.0-20251202230838-ff82c1b0f217 | v0.0.0-20260526163538-3dc84a4a5aaa |
-| `google.golang.org/grpc` | v1.79.3 | v1.83.2 |
-| `google.golang.org/protobuf` | v1.36.10 | v1.36.11 |
-
-The `go` directive of `go.mod` is raised from 1.24.0 to 1.26.0: the patched dependencies require it.
+| `golang.org/x/net` | v0.59.0 | v0.60.0 |
 <!-- cvefix:end -->

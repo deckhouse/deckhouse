@@ -29,6 +29,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   annotations:
+    {{- include "dex_authenticator_client_id_annotation" $crd | nindent 4 }}
     alb.network.deckhouse.io/backend-tls-settings: '{"mode": "SIMPLE", "insecureSkipVerify": true}'
   {{- if $app.whitelistSourceRanges }}
     alb.network.deckhouse.io/whitelist-source-range: {{ $app.whitelistSourceRanges | join "," }}

@@ -1,14 +1,148 @@
+diff --git a/deckhouse_logging_test.go b/deckhouse_logging_test.go
+new file mode 100644
+index 00000000..e411ddd4
+--- /dev/null
++++ b/deckhouse_logging_test.go
+@@ -0,0 +1,127 @@
++package main
++
++import (
++	"bytes"
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
++	"github.com/onsi/ginkgo/v2"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// captureJSONLogs switches the global logger to the JSON format of patch 007 and returns the
++// buffers of the info and error streams.
++func captureJSONLogs(t *testing.T) (*bytes.Buffer, *bytes.Buffer) {
++	t.Helper()
++
++	var output, errOutput bytes.Buffer
++	logger.SetOutput(&output)
++	logger.SetErrOutput(&errOutput)
++	logger.SetJSONFormat(true)
++	t.Cleanup(func() {
++		logger.SetJSONFormat(false)
++		logger.SetOutput(ginkgo.GinkgoWriter)
++		logger.SetErrOutput(ginkgo.GinkgoWriter)
++	})
++
++	return &output, &errOutput
++}
++
++// jsonLogLines decodes the log lines and fails when one of them is not a JSON object.
++func jsonLogLines(t *testing.T, logs string) []map[string]any {
++	t.Helper()
++
++	lines := []map[string]any{}
++	for _, line := range strings.Split(strings.TrimSuffix(logs, "\n"), "\n") {
++		if line == "" {
++			continue
++		}
++		entry := map[string]any{}
++		require.NoError(t, json.Unmarshal([]byte(line), &entry), "every line must be a JSON object: %q", line)
++		lines = append(lines, entry)
++	}
++
++	return lines
++}
++
++func authLogMessages(lines []map[string]any) []string {
++	messages := []string{}
++	for _, line := range lines {
++		if line["level"] == "auth" {
++			messages = append(messages, line["msg"].(string))
++		}
++	}
++
++	return messages
++}
++
++// TestOAuthCallbackCSRFFailureJSONLogs checks GHSA-hhqp-vx7f-5c6m with the JSON logs of the
++// dex-authenticator: a failed CSRF check of the callback logs the names of the cookies, never their
++// values. The session cookie of the dex-authenticator carries the refresh token of the user.
++func TestOAuthCallbackCSRFFailureJSONLogs(t *testing.T) {
++	opts := baseTestOptions()
++	require.NoError(t, validation.Validate(opts))
++	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
++	require.NoError(t, err)
++
++	csrf, err := cookies.NewCSRF(proxy.CookieOptions, "synthetic-pkce-verifier")
++	require.NoError(t, err)
++	output, errOutput := captureJSONLogs(t)
++
++	query := url.Values{
++		"code":  {"synthetic-callback-code"},
++		"state": {encodeState(csrf.HashOAuthState(), "/", false)},
++	}
++	req := httptest.NewRequest(http.MethodGet, "/oauth2/callback?"+query.Encode(), nil)
++	sessionCookie := &http.Cookie{Name: proxy.CookieOptions.Name, Value: "synthetic-refresh-token-credential"}
++	req.AddCookie(sessionCookie)
++	rw := httptest.NewRecorder()
++	proxy.ServeHTTP(rw, req)
++
++	assert.Equal(t, http.StatusForbidden, rw.Code)
++	logs := output.String() + errOutput.String()
++	assert.NotContains(t, logs, sessionCookie.Value)
++	assert.Contains(t, authLogMessages(jsonLogLines(t, output.String())),
++		"Cookies were found in OAuth callback, but none was a CSRF cookie.")
++	jsonLogLines(t, errOutput.String())
++}
++
++// TestSignOutJSONLog checks the "User signed out" auth event of patch 007: it names the user of the
++// session the request carried.
++func TestSignOutJSONLog(t *testing.T) {
++	test, err := NewProcessCookieTestWithDefaults()
++	require.NoError(t, err)
++	test.req = httptest.NewRequest(http.MethodGet, test.opts.ProxyPrefix+"/sign_out", nil)
++
++	created := time.Now()
++	require.NoError(t, test.SaveSession(&sessions.SessionState{
++		Email:       "jane.doe@example.com",
++		AccessToken: "access_token",
++		CreatedAt:   &created,
++	}))
++	output, _ := captureJSONLogs(t)
++
++	test.rw = httptest.NewRecorder()
++	test.proxy.ServeHTTP(test.rw, test.req)
++
++	assert.Equal(t, http.StatusFound, test.rw.Code)
++	lines := jsonLogLines(t, output.String())
++	signedOut := []map[string]any{}
++	for _, line := range lines {
++		if line["level"] == "auth" && line["msg"] == "User signed out" {
++			signedOut = append(signedOut, line)
++		}
++	}
++	require.Len(t, signedOut, 1)
++	assert.Equal(t, "jane.doe@example.com", signedOut[0]["user"])
++}
 diff --git a/oauthproxy.go b/oauthproxy.go
-index cfe0f0ec..a8bd18e0 100644
+index eae1d343..08fad0bb 100644
 --- a/oauthproxy.go
 +++ b/oauthproxy.go
-@@ -727,6 +727,9 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
- 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
- 		return
- 	}
-+	if session, sErr := p.LoadCookiedSession(req); sErr == nil && session != nil {
-+		logger.PrintAuthf(session.Email, req, logger.AuthSuccess, "User signed out")
+@@ -833,6 +833,10 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
+ 	// (and id_token) available to invoke the provider's logout endpoint
+ 	p.backendLogout(rw, req)
+ 
++	if scope := middlewareapi.GetRequestScope(req); scope != nil && scope.Session != nil {
++		logger.PrintAuthf(scope.Session.Email, req, logger.AuthSuccess, "User signed out")
 +	}
++
  	err = p.ClearSessionCookie(rw, req)
  	if err != nil {
  		logger.Errorf("Error clearing session cookie: %v", err)
@@ -40,8 +174,123 @@ index dfffd0fa..30f9d808 100644
  		ErrToInfo:       false,
  		File: LogFileOptions{
  			Filename:   "",
+diff --git a/pkg/logger/deckhouse_logger_test.go b/pkg/logger/deckhouse_logger_test.go
+new file mode 100644
+index 00000000..410d132b
+--- /dev/null
++++ b/pkg/logger/deckhouse_logger_test.go
+@@ -0,0 +1,109 @@
++package logger
++
++import (
++	"bytes"
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"testing"
++	"time"
++
++	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++func newJSONLogger(out, errOut *bytes.Buffer) *Logger {
++	l := New(0)
++	l.writer = out
++	l.errWriter = errOut
++	l.SetJSONFormat(true)
++	return l
++}
++
++func decodeLines(t *testing.T, buf *bytes.Buffer) []map[string]any {
++	t.Helper()
++	lines := []map[string]any{}
++	for _, line := range strings.Split(strings.TrimSuffix(buf.String(), "\n"), "\n") {
++		if line == "" {
++			continue
++		}
++		entry := map[string]any{}
++		require.NoError(t, json.Unmarshal([]byte(line), &entry), "every line must be a JSON object: %q", line)
++		lines = append(lines, entry)
++	}
++	return lines
++}
++
++func scopedRequest(t *testing.T, target string) *http.Request {
++	t.Helper()
++	req := httptest.NewRequest(http.MethodGet, target, nil)
++	req.Header.Set("User-Agent", "agent \"quoted\"\nnext line")
++	return middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{RequestID: "request-id"})
++}
++
++func TestJSONFormatStandardLog(t *testing.T) {
++	var out, errOut bytes.Buffer
++	l := newJSONLogger(&out, &errOut)
++
++	l.Output(DEFAULT, 1, "plain \"message\"\nwith a newline")
++	l.Output(ERROR, 1, "failure")
++
++	info := decodeLines(t, &out)
++	require.Len(t, info, 1)
++	assert.Equal(t, "info", info[0]["level"])
++	assert.Equal(t, "plain \"message\"\nwith a newline", info[0]["msg"])
++	assert.NotContains(t, info[0], "file", "no file is logged without Lshortfile or Llongfile")
++
++	errors := decodeLines(t, &errOut)
++	require.Len(t, errors, 1)
++	assert.Equal(t, "error", errors[0]["level"])
++	assert.Equal(t, "failure", errors[0]["msg"])
++}
++
++func TestJSONFormatAuthLog(t *testing.T) {
++	var out, errOut bytes.Buffer
++	l := newJSONLogger(&out, &errOut)
++
++	l.PrintAuthf("jane@example.com", scopedRequest(t, "http://app.example.com/oauth2/sign_out"), AuthSuccess, "User signed out %d", 1)
++
++	lines := decodeLines(t, &out)
++	require.Len(t, lines, 1)
++	assert.Equal(t, "auth", lines[0]["level"])
++	assert.Equal(t, "jane@example.com", lines[0]["user"])
++	assert.Equal(t, string(AuthSuccess), lines[0]["status"])
++	assert.Equal(t, "User signed out 1", lines[0]["msg"])
++	assert.Equal(t, "request-id", lines[0]["request_id"])
++	assert.Equal(t, "app.example.com", lines[0]["host"])
++	assert.Equal(t, "agent \"quoted\"\nnext line", lines[0]["user_agent"])
++	assert.Empty(t, errOut.String())
++}
++
++func TestJSONFormatRequestLog(t *testing.T) {
++	var out, errOut bytes.Buffer
++	l := newJSONLogger(&out, &errOut)
++	req := scopedRequest(t, "http://app.example.com/oauth2/auth?rd=%2F")
++
++	l.PrintReq("jane", "-", req, url.URL{Path: "/oauth2/auth", RawQuery: "rd=%2F"}, time.Now(), http.StatusUnauthorized, 13)
++
++	lines := decodeLines(t, &out)
++	require.Len(t, lines, 1)
++	assert.Equal(t, "request", lines[0]["level"])
++	assert.Equal(t, "/oauth2/auth?rd=%2F", lines[0]["uri"])
++	assert.InDelta(t, http.StatusUnauthorized, lines[0]["status"], 0)
++	assert.InDelta(t, 13, lines[0]["response_size"], 0)
++	assert.Equal(t, "jane", lines[0]["user"])
++}
++
++func TestTextFormatIsTheDefault(t *testing.T) {
++	var out bytes.Buffer
++	l := New(0)
++	l.writer = &out
++
++	l.Output(DEFAULT, 1, "message")
++
++	assert.True(t, strings.HasSuffix(out.String(), "] message\n"), "unexpected log line: %q", out.String())
++	assert.False(t, json.Valid(bytes.TrimSpace(out.Bytes())))
++}
 diff --git a/pkg/logger/logger.go b/pkg/logger/logger.go
-index cb1da0a4..129a4b51 100644
+index cb1da0a4..7d606942 100644
 --- a/pkg/logger/logger.go
 +++ b/pkg/logger/logger.go
 @@ -2,6 +2,7 @@ package logger
@@ -165,7 +414,7 @@ index cb1da0a4..129a4b51 100644
 +			file = l.GetFileLineString(calldepth + 1)
 +		}
 +		l.writeJSON(w, stdJSONLog{
-+			Time:    FormatTimestamp(time.Now()),
++			Time:    l.FormatTimestamp(time.Now()),
 +			Level:   levelString(lvl),
 +			File:    file,
 +			Message: message,
@@ -191,7 +440,7 @@ index cb1da0a4..129a4b51 100644
 +
 +	if l.jsonFormat {
 +		l.writeJSON(l.writer, authJSONLog{
-+			Time:      FormatTimestamp(now),
++			Time:      l.FormatTimestamp(now),
 +			Level:     "auth",
 +			Client:    client,
 +			Host:      requestutil.GetRequestHost(req),
@@ -225,7 +474,7 @@ index cb1da0a4..129a4b51 100644
 +
 +	if l.jsonFormat {
 +		l.writeJSON(l.writer, reqJSONLog{
-+			Time:            FormatTimestamp(ts),
++			Time:            l.FormatTimestamp(ts),
 +			Level:           "request",
 +			Client:          client,
 +			Host:            requestutil.GetRequestHost(req),
@@ -285,4 +534,3 @@ index c291405c..64055dd5 100644
  
  	logger.SetExcludePaths(o.ExcludePaths)
  
-
