@@ -9,6 +9,7 @@ import:
   to: /
   includePaths:
   - certs/
+  - distrusted.txt
   - d8-ca-updater
   - ca-bundle.crt
   - install
