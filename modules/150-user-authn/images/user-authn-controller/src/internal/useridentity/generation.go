@@ -39,7 +39,8 @@ func (p Pair) Name() string {
 // BumpGeneration raises the generation of the pair by one and returns the new value. From then on
 // Dex refuses everything it issued to the pair before.
 //
-// An existing object gets the new generation and nothing else. A missing one is created with the
+// An existing object gets the new generation and forgets its known devices, nothing else. A missing
+// one is created with the
 // claims, createdAt, and generation 1, and without the record of the copy: the transitional Dex
 // keeps reading the TOTP secret and the lock of the pair from the old places, and the copy
 // (identitymigration) brings them over as into any object it has not copied yet.
@@ -71,6 +72,9 @@ func BumpGeneration(ctx context.Context, reader client.Reader, writer client.Wri
 		}
 		generation = old + 1
 		current.SetGeneration(generation)
+		// Everything of the pair is revoked: no browser of it is known any more, so a device signed in
+		// again counts as new, whoever holds it.
+		current.ForgetKnownDevices()
 		return current, nil
 	})
 	if err != nil {

@@ -40,6 +40,7 @@ func newFakeDynamicClient(objects ...runtime.Object) *fake.FakeDynamicClient {
 	gvrToListKind := map[schema.GroupVersionResource]string{
 		passwordGVR:      "PasswordList",
 		userOperationGVR: "UserOperationList",
+		userAccountGVR:   "UserAccountList",
 	}
 	return fake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), gvrToListKind, objects...)
 }
@@ -173,6 +174,78 @@ func TestPasswordCache_StopIsIdempotent(t *testing.T) {
 	client.Stop()
 }
 
+func TestK8sClient_AccountName(t *testing.T) {
+	client := startedClient(t, newFakeDynamicClient(password("jane-obj", "jane", "jane-id")))
+
+	local, err := client.AccountName(context.Background(), "jane-id", "local")
+	if err != nil {
+		t.Fatalf("AccountName() of a local user error = %v", err)
+	}
+	if want := LocalAccountName("jane@example.com", "jane"); local != want {
+		t.Errorf("AccountName() of a local user = %q, want %q", local, want)
+	}
+	if _, err := client.AccountName(context.Background(), "nobody", "local"); !errors.Is(err, ErrUserNotFound) {
+		t.Errorf("AccountName() of an unknown local user error = %v, want %v", err, ErrUserNotFound)
+	}
+
+	external, err := client.AccountName(context.Background(), "cn=jdoe,ou=people", "ldap")
+	if err != nil {
+		t.Fatalf("AccountName() of an external user error = %v", err)
+	}
+	if want := ExternalAccountName("ldap", "cn=jdoe,ou=people"); external != want {
+		t.Errorf("AccountName() of an external user = %q, want %q", external, want)
+	}
+}
+
+func TestK8sClient_Devices(t *testing.T) {
+	account := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "UserAccount",
+		"metadata":   map[string]interface{}{"name": "local-jane"},
+		"status": map[string]interface{}{
+			"email":       "jane@example.com",
+			"userID":      "jane",
+			"connectorID": "local",
+			"sessions": []interface{}{map[string]interface{}{
+				"id":         "fehzwdh5qy4oyqcn7qhkcgzbm",
+				"kind":       "Browser",
+				"clients":    []interface{}{"console"},
+				"ipAddress":  "203.0.113.7",
+				"userAgent":  "Firefox",
+				"signedInAt": "2026-10-16T10:00:00Z",
+			}},
+			"sessionsTruncated": true,
+		},
+	}}
+	client, err := NewClientWithDynamic(newFakeDynamicClient(account), testLogger())
+	if err != nil {
+		t.Fatalf("NewClientWithDynamic() error = %v", err)
+	}
+
+	got, err := client.Devices(context.Background(), "local-jane")
+	if err != nil {
+		t.Fatalf("Devices() error = %v", err)
+	}
+	signedInAt := time.Date(2026, 10, 16, 10, 0, 0, 0, time.UTC)
+	want := Devices{
+		Items: []Device{{
+			ID: "fehzwdh5qy4oyqcn7qhkcgzbm", Kind: DeviceKindBrowser, Clients: []string{"console"},
+			IPAddress: "203.0.113.7", UserAgent: "Firefox", SignedInAt: &signedInAt,
+		}},
+		Truncated:   true,
+		UserID:      "jane",
+		ConnectorID: "local",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Devices() = %+v, want %+v", got, want)
+	}
+
+	none, err := client.Devices(context.Background(), "local-nobody")
+	if err != nil || len(none.Items) != 0 {
+		t.Errorf("Devices() of a missing account = %+v, %v; want none", none, err)
+	}
+}
+
 func TestK8sClient_LocalUsername_CacheNotSynced(t *testing.T) {
 	client, err := NewClientWithDynamic(newFakeDynamicClient(password("admin-obj", "admin", "admin")), testLogger())
 	if err != nil {
@@ -236,6 +309,21 @@ func TestK8sClient_CreateUserOperation(t *testing.T) {
 					"connectorID": "ldap",
 					"userID":      "cn=jdoe,ou=people,dc=example,dc=org",
 				},
+			},
+		},
+		{
+			name: "logout of one device",
+			op: UserOperation{
+				GenerateName: "self-logout-device-",
+				Type:         OperationTypeLogout,
+				User:         "jane",
+				Logout:       &Logout{Grant: "qx3w2ttiyq5ovzvbuehdcbbse"},
+			},
+			wantSpec: map[string]interface{}{
+				"type":          "Logout",
+				"user":          "jane",
+				"initiatorType": "self",
+				"logout":        map[string]interface{}{"grant": "qx3w2ttiyq5ovzvbuehdcbbse"},
 			},
 		},
 	}

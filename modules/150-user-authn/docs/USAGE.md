@@ -701,7 +701,7 @@ To learn that a session of a user ended, the application can set
 [`backchannelLogoutURI`](cr.html#dexclient-v1-spec-backchannellogouturi). Dex sends the notification once, without
 retries, when the user signs out of the session or the provider answers that the user is gone. An end of the session
 by a UserOperation or through the self-service of the web interface sends none yet: such an application can check its
-tokens at the introspection endpoint of Dex (`/token/introspect`), which reports the tokens of an ended session
+tokens at the introspection endpoint of Dex (`/token/introspect`), which reports the tokens of an ended session or device
 inactive.
 
 An application that requests offline access (refresh tokens) gets them only after an interactive sign-in. With
@@ -898,6 +898,34 @@ A user can sign out on all devices, and a local user can change their password, 
 
 Changing the password is available only for local accounts (the built-in `Local` connector). Users who sign in through external authentication providers change their password in the corresponding system.
 
+A user can also see the devices signed in to their account (the [`status.sessions`](cr.html#useraccount-v1alpha1-status-sessions) field of their UserAccount) and sign out of them one by one:
+
+- Signing out of one device creates a `Logout` operation with [`logout.session`](cr.html#useroperation-v1-spec-logout-session) for a browser or [`logout.grant`](cr.html#useroperation-v1-spec-logout-grant) for another device, such as a kubeconfig file. The other devices keep their sessions.
+- Signing out of the other devices creates a `Logout` operation with [`logout.exceptSession`](cr.html#useroperation-v1-spec-logout-exceptsession) or [`logout.exceptGrant`](cr.html#useroperation-v1-spec-logout-exceptgrant). It keeps only the device the user acts from.
+
+Signing out on all devices, signing out of the other devices or of another device, and changing the password are available only on a trusted device: one signed in at least [`devices.trustedAfter`](configuration.html#parameters-devices-trustedafter) ago, 24 hours by default. A device signed in more recently can sign the user out only of itself. Someone who has just signed in with a stolen password therefore can neither sign the owner out nor change the password, while the owner sees the new device in the list on a trusted device and signs it out. A user without a trusted device asks an administrator: the operations of an administrator are not limited. With `devices.trustedAfter: 0s`, every device is trusted at once.
+
+The age of a device counts from the first sign-in of its browser, not only the last one. At sign-in, Dex gives the browser a long-lived cookie and remembers when it first saw that browser sign in to the account (the [`knownSince`](cr.html#useraccount-v1alpha1-status-sessions-knownsince) field). A browser that signed out and signed in again keeps its age. Dex forgets the browser, and its next sign-in counts as new, when:
+
+- the last sign-in of the browser is ended from another device or by an administrator. While the browser holds another active session or token of the account, it stays known;
+- the user signs out of the other devices: every browser but the current one is forgotten, signed in or not;
+- the user signs out on all devices, or an administrator locks the user, resets the password, resets 2FA, or signs the user out;
+- the account has more remembered browsers than [`devices.rememberedBrowsers`](configuration.html#parameters-devices-rememberedbrowsers) (20 by default): the browser seen longest ago is forgotten. With `0`, Dex remembers no browser, and every sign-in is a new device.
+
+Someone who signs in with a stolen password uses a browser without that cookie, so the device is new for them. A stolen session is not covered: the age is that of the session or token of the request, so a copied cookie of Dex or of the web interface has the age of the owner's device.
+
+If the password may have been stolen, act from a trusted device in this order:
+
+1. Request a password change.
+2. Right away, sign out on this device and sign in again: Dex asks for the current and the new password. The browser keeps its age.
+3. Only then sign out of the other devices. The current browser stays known, so it stays trusted, and every other device, the intruder's included, is signed out.
+
+Do steps 1 and 2 one right after the other. Until the new password is set, any sign-in asks for it, the intruder's with the stolen password included, and the age of the device is not checked on that page.
+
+Do not start with signing out on all devices: it makes the current browser new as well, and for `devices.trustedAfter` it can neither request a password change nor sign out a device that signs in again with the stolen password.
+
+A stolen password alone signs in to an account without 2FA. Enable 2FA for local users with the [`staticUsers2FA`](configuration.html#parameters-staticusers2fa) parameter.
+
 #### Creating UserOperation manually
 
 When the `d8 iam user` CLI is unavailable (e.g. in CI/CD, GitOps, or automation pipelines), you can create a [UserOperation](cr.html#useroperation) resource directly. Use `apiVersion: deckhouse.io/v1` and set `initiatorType: admin`.
@@ -999,6 +1027,21 @@ spec:
   initiatorType: admin
 ```
 
+Example — sign a user out of one device and keep the sessions on the others. Take the `id` of the device from [`status.sessions`](cr.html#useraccount-v1alpha1-status-sessions) of the user's UserAccount (for details, see the [Viewing account state](#viewing-account-state) section). For a device of the `Browser` kind, set it in [`logout.session`](cr.html#useroperation-v1-spec-logout-session); for a device of the `Grant` kind, such as a kubeconfig file, in [`logout.grant`](cr.html#useroperation-v1-spec-logout-grant):
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: logout-admin-kubeconfig
+spec:
+  user: admin
+  type: Logout
+  initiatorType: admin
+  logout:
+    grant: qx3w2ttiyq5ovzvbuehdcbbse
+```
+
 #### Operations on external users
 
 For users of external providers of any type (LDAP, Atlassian Crowd, OIDC, SAML, GitHub, GitLab, Bitbucket Cloud), use the [`spec.target`](cr.html#useroperation-v1-spec-target) field instead of `spec.user`. The `Lock`, `Unlock` and `Logout` operation types are supported for external users.
@@ -1031,7 +1074,7 @@ spec:
 Using a UserOperation object has the following specifics:
 
 - A UserOperation is a **single-use** object. After creation, the module processes it and writes the result to `status.phase` (`Succeeded` or `Failed`).
-- Completed operations are **automatically deleted** after 24 hours.
+- Operations are **automatically deleted** after [`retention.userOperations`](configuration.html#parameters-retention-useroperations) (24 hours by default).
 - A UserOperation runs once. Changes to its spec after creation are ignored.
 - To perform a new action, create a new UserOperation.
 
@@ -1077,6 +1120,16 @@ To list the accounts, run:
 ```shell
 d8 k get useraccounts
 ```
+
+The [`status.sessions`](cr.html#useraccount-v1alpha1-status-sessions) field lists the devices signed in to the account, the most recently active first: browsers signed in to Dex (the `Browser` kind) and devices holding a refresh token not bound to a live browser session of Dex, such as kubeconfig files (the `Grant` kind). For each device, it shows the applications, the client address and User-Agent of the last sign-in, the time of the sign-in, and the hour of the last activity. The client address is right only when the Ingress controller sees it (for details, see the [Which client address does Dex see?](faq.html#which-client-address-does-dex-see) section). To view the devices of an account, run:
+
+```shell
+d8 k get useraccount <NAME> -o jsonpath='{range .status.sessions[*]}{.kind}{"\t"}{.id}{"\t"}{.clients}{"\t"}{.ipAddress}{"\t"}{.lastActivity}{"\n"}{end}'
+```
+
+While the [browser sessions of Dex](#browser-sessions-of-dex) are disabled, every sign-in to an application of a DexAuthenticator is a device of its own.
+
+Dex keeps at most [`devices.maxPerApplication`](configuration.html#parameters-devices-maxperapplication) (10 by default) refresh tokens of a user for one application. A sign-in past the limit signs the device of the least recently used one out of that application; a trusted device (the [`devices.trustedAfter`](configuration.html#parameters-devices-trustedafter) parameter) goes only once no untrusted one is left. A refresh token is replaced, not added, in two cases: an application of a DexAuthenticator signs in again in a browser with a session of Dex, and Basic Authentication to the Kubernetes API signs in again. Every other sign-in is a new device: for example, every new kubeconfig file is one, and the previous ones keep working.
 
 #### Automatic lockout
 

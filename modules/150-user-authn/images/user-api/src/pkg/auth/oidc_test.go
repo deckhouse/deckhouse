@@ -296,6 +296,14 @@ func TestOIDCVerifier_Verify(t *testing.T) {
 			},
 		},
 		{
+			name:      "token naming its device",
+			overrides: map[string]any{"sid": "fehzwdh5qy4oyqcn7qhkcgzbm", "d8_gid": "qx3w2ttiyq5ovzvbuehdcbbse"},
+			want: &Claims{
+				Subject: testJaneSubject, UserID: "jane", ConnectorID: "local", Email: "jane@example.com",
+				SessionID: "fehzwdh5qy4oyqcn7qhkcgzbm", GrantID: "qx3w2ttiyq5ovzvbuehdcbbse",
+			},
+		},
+		{
 			name:      "token of another client",
 			overrides: map[string]any{"aud": "kubeconfig-generator"},
 			wantErr:   ErrTokenValidation,

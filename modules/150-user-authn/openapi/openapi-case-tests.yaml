@@ -1,5 +1,19 @@
 positive:
   values:
+  - devices:
+      trustedAfter: 1h30m
+  # Every device is trusted at once.
+  - devices:
+      trustedAfter: 0s
+  - devices:
+      maxPerApplication: 3
+      rememberedBrowsers: 0
+  - refreshTokenValidIfNotUsedFor: 720h
+  - refreshTokenAbsoluteLifetime: 720h
+    refreshTokenValidIfNotUsedFor: 720h
+  - retention:
+      userOperations: 168h
+      revocations: 24h
   - kubeconfigGenerator:
     - id: abc-1
       masterURI: example.com
@@ -50,6 +64,24 @@ positive:
       dexAuthenticatorRedisURL: "redis://dex-authenticator-redis.d8-user-authn:6379/"
 negative:
   values:
+  - devices:
+      trustedAfter: 1d
+  - devices:
+      trustedAfter: -1h
+  # An empty duration would leave user-api without its --min-device-age.
+  - devices:
+      trustedAfter: ""
+  - devices:
+      maxPerApplication: 0
+  - devices:
+      rememberedBrowsers: -1
+  # An unused refresh token must not outlive the token (6 months by default).
+  - refreshTokenValidIfNotUsedFor: 4381h
+  - refreshTokenValidIfNotUsedFor: 0s
+  - retention:
+      userOperations: 0s
+  - retention:
+      revocations: a day
   # The address is an argument of a Deployment in the user's namespace: no credentials, and the
   # sidecar speaks neither TLS nor AUTH.
   - internal:

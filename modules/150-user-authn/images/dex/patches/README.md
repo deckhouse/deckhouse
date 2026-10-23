@@ -32,6 +32,12 @@ fields.
   connector (310); `AuthSession`: `mfaAuthenticators`, the authenticators of
   the second factor passed on the browser session, and `rememberMe`, the
   remember-me choice its cookie is issued with again (300);
+- the devices of the user (320): `OfflineSessions.grants`, every refresh token
+  of the pair by token ID (`refresh` keeps naming the last one of each client);
+  `ipAddress`, `userAgent` and `deviceHash` (the hash of the device mark) of
+  the sign-in on `AuthRequest`, `AuthCode`, `RefreshToken`, the refresh token
+  references and `AuthSession`; `UserIdentity.knownDevices`, the browsers that
+  completed a login of the pair (`hash`, `firstSeen`, `lastSeen`);
 - `Client`: `allowedEmails`, `allowedGroups`; `Connector`: `allowedEmails`,
   `allowedEmailDomains`, `allowedGroups` (allow-lists of 200), with the JSON
   names the user-authn templates already render;
@@ -892,6 +898,72 @@ stored before it, from the last login.
 **Depends on:** 100 (`claimsRefreshedAt`), 210 (`useridentity.Record`), 250
 (`RotateUpstream`, `UpstreamError`), 290 (`Recorder`), 300 (the order of the
 session login checks).
+
+### 320-devices.patch
+
+**Zone:** devices: a user signs in to one client from several devices.
+Upstream keeps one refresh token per (user, connector, client): a login on a
+second laptop or a second kubeconfig signs the first one out.
+
+- **grants by login**: the password grant (basic-auth-proxy repeats it) keeps
+  one grant per client and replaces it; a client bound to the browser session
+  keeps one grant per session, so signing in again in the same browser replaces
+  it; any other login (another browser, kubeconfig, device flow, a client
+  without sessions) adds a grant. The grants a login replaces are read in the
+  same write of `OfflineSessions` that adds its own, and their refresh tokens
+  are deleted after it: logins of one browser at once (restored tabs) keep one
+  grant of the session, and a failed write leaves no reference to a deleted
+  token. The first logins of a user at once, which all find no
+  `OfflineSessions`, add their grants to the one the first of them created
+  instead of failing. A client keeps at most `devices.maxPerClient`
+  grants of a pair (10 by default): the one used longest ago is evicted and
+  recorded as a `grant` revocation with the reason `Evicted` (290), so its
+  DexAuthenticator sessions end within seconds. A grant younger than
+  `devices.trustedAfter` (24h by default) goes first; `0s` prefers none. The
+  new `devices` section of the config takes these and `maxKnown`; the module
+  renders them from its `devices` settings.
+  The browser session the evicted grant was issued under drops the client from
+  its client states, as a logout of the client does: it no longer lists the
+  application and does not sign the browser in to it again without a password;
+- **references by grant**: `OfflineSessions.grants` holds every grant, the
+  refresh and revocation paths look a grant up by its ID; `refresh[client]`
+  names the last grant of the client for the code that knows one. An offline
+  session written before reads as the grants of `refresh`, and an older Dex that
+  rewrites the object drops `grants`: the grants it does not name are refused
+  at their next use;
+- **expired grants go**: a refresh token past its absolute lifetime or unused
+  longer than allowed is deleted with its reference when a refresh is refused
+  as expired, and the garbage collection deletes the others once an hour (they
+  belong to clients that never came back). Upstream keeps them, and each one
+  stayed a device of the user in `UserAccount`;
+- **logout of one browser**: `/logout` revokes the grants of the clients bound
+  to the session that were issued in that session, not the grants the same
+  clients hold on the other devices of the user;
+- **the device of a grant**: the address and the User-Agent of the browser at
+  `/auth` go with the auth request and the code into the grant; the password
+  grant takes those of the token request;
+- **`d8_gid`**: the ID and access tokens issued with a refresh token, or
+  refreshed from one, carry its ID, so a token without a browser session names
+  its device;
+- **device mark** (`server/devicemark`): at `/auth/{connector}` every browser
+  gets a long-lived random cookie (`__Host-dex_device`, 400 days, renewed at
+  every login), kept apart from the session cookie, so a logout does not clear
+  it. Dex keeps only its SHA-256 hash: on the auth request, the code, the grant
+  and the browser session, and in `UserIdentity.knownDevices` once a login of
+  the browser passed every factor (at most `devices.maxKnown` browsers, 20 by
+  default, the one seen longest ago goes; `0` remembers none). A device is as old as the first login of its browser: the
+  user-authn controller lists it as `knownSince`, user-api counts the 24 hours
+  from it. Dex never forgets a browser; the controller removes the browsers of
+  the devices someone else ended and clears the list when it revokes the pair.
+
+**Consumer in Deckhouse:** user-authn-controller (`UserAccount.status.sessions`
+with `knownSince`, `UserOperation Logout` of one grant, the known devices it
+forgets), user-api (the devices of the user and the 24-hour rule).
+
+**Upstream status:** Deckhouse only.
+
+**Depends on:** 100 (the fields), 290 (`Recorder`), 300 (the logout of a
+session), 310 (the end of a pair over every grant).
 
 ### 998-fix-cve.patch
 

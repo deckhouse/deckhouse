@@ -162,6 +162,96 @@ spec:
 
                         Until then, a sign-in shows the QR code again. A UserOperation of the `Reset2FA` type removes
                         the secret.
+                sessions:
+                  type: array
+                  maxItems: 50
+                  description: |
+                    Devices signed in to the account, the most recently active first.
+
+                    A device is one of the following:
+
+                    * a browser signed in to Dex while the
+                      [`sessions`](configuration.html#parameters-sessions) of Dex are enabled, together with the
+                      applications whose refresh tokens are bound to its session (the DexAuthenticator objects, and
+                      DexClient objects with `refreshTokenLifetime: Session`);
+                    * a refresh token not bound to a live session of Dex in a browser: kubeconfig, a device flow, an
+                      application of a DexClient, Basic Authentication to the API server, a token whose session has
+                      ended while the application keeps it, and, while the sessions of Dex are disabled, every sign-in
+                      to an application of a DexAuthenticator.
+
+                    The list holds at most 50 devices. To sign a device out, create a UserOperation of the `Logout`
+                    type with its `id` in `logout.session` (a browser) or `logout.grant` (a refresh token).
+                  items:
+                    type: object
+                    required:
+                      - id
+                      - kind
+                    properties:
+                      id:
+                        type: string
+                        description: |
+                          Identifier of the device: the identifier of the session of Dex (the `sid` claim of its
+                          tokens) for a browser, the identifier of the refresh token for other devices.
+                      kind:
+                        type: string
+                        enum:
+                          - Browser
+                          - Grant
+                        description: |
+                          Kind of the device.
+
+                          Possible values:
+
+                          * `Browser`: a browser signed in to Dex.
+                          * `Grant`: a refresh token not bound to a live session of Dex in a browser.
+                      clients:
+                        type: array
+                        description: |
+                          Dex clients (applications) signed in on the device.
+                        items:
+                          type: string
+                      ipAddress:
+                        type: string
+                        maxLength: 64
+                        description: |
+                          Client address of the last sign-in of the device, as the Ingress controller passed it to
+                          Dex. It locates the device only approximately: a proxy, NAT, or VPN changes it. Behind a
+                          balancer that hides the address of the client, it is the address of the balancer (for
+                          details, see the [Which client address does Dex see?](faq.html#which-client-address-does-dex-see)
+                          section).
+                      userAgent:
+                        type: string
+                        maxLength: 512
+                        description: |
+                          User-Agent header the device sent at its last sign-in, cut to 512 bytes.
+
+                          The device sets the header itself. Treat it as text.
+                      signedInAt:
+                        type: string
+                        format: date-time
+                        description: |
+                          Time the device signed in, in RFC3339 format.
+                      knownSince:
+                        type: string
+                        format: date-time
+                        description: |
+                          Time Dex first saw the browser of the device complete a sign-in to the account, in RFC3339 format.
+
+                          Set when more than a minute earlier than `signedInAt`: the browser signed in before, signed out, and signed in again.
+                          Dex recognizes the browser by a long-lived cookie it sets at sign-in. Signing out of the other devices
+                          on the account, signing out everywhere, and the operations that end every session of the user make Dex
+                          forget the browsers, and so does ending this device from another device or by an administrator.
+                      lastActivity:
+                        type: string
+                        format: date-time
+                        description: |
+                          Time of the last use of the device, in RFC3339 format, rounded down to the hour.
+                          A device that signed in less than an hour ago shows its sign-in time.
+                sessionsTruncated:
+                  type: boolean
+                  description: |
+                    Whether the account has more devices than `sessions` lists. The least recently active ones are
+                    not listed.
       subresources:
         status: {}
       additionalPrinterColumns:

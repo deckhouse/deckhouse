@@ -54,9 +54,22 @@ var mfaSecretFlags = []string{
 	"createdAt",
 }
 
+// refFields are the keys of a reference of OfflineSessions (an entry of refresh or grants) that the
+// cache keeps: the grant, its client and browser session, and the device UserAccount lists it as.
+var refFields = []string{
+	"ID",
+	"ClientID",
+	"SessionID",
+	"CreatedAt",
+	"LastUsed",
+	"IPAddress",
+	"UserAgent",
+	"DeviceHash",
+}
+
 // SecretFields returns Dex credential keys stripped from the informer cache
-// and UserAccount. OfflineSessions.refresh is reduced to token IDs so Reset2FA
-// can match sessions that lack userID, and UserIdentity.mfaSecrets to mfaSecretFlags.
+// and UserAccount. The references of OfflineSessions.refresh and grants are reduced to refFields,
+// and UserIdentity.mfaSecrets to mfaSecretFlags.
 func SecretFields() []string {
 	return slices.Clone(secretFields)
 }
@@ -140,7 +153,8 @@ func stripSecretKeys(m map[string]any) {
 	for _, key := range secretFields {
 		delete(m, key)
 	}
-	reduceRefreshToIDs(m)
+	reduceRefs(m, "refresh")
+	reduceRefs(m, "grants")
 	reduceMFASecretsToFlags(m)
 }
 
@@ -177,20 +191,21 @@ func reduceMFASecretsToFlags(m map[string]any) {
 	m["mfaSecrets"] = reduced
 }
 
-// reduceRefreshToIDs keeps OfflineSessions.refresh keys and each entry's ID,
-// dropping token material. Empty or malformed refresh maps are removed.
-func reduceRefreshToIDs(m map[string]any) {
-	raw, ok := m["refresh"]
+// reduceRefs keeps the keys of the references in OfflineSessions.<field> and each entry's
+// refFields, dropping anything else. An entry without an ID is dropped; empty or malformed maps are
+// removed.
+func reduceRefs(m map[string]any, field string) {
+	raw, ok := m[field]
 	if !ok {
 		return
 	}
-	refreshMap, ok := raw.(map[string]any)
+	refs, ok := raw.(map[string]any)
 	if !ok {
-		delete(m, "refresh")
+		delete(m, field)
 		return
 	}
-	reduced := make(map[string]any, len(refreshMap))
-	for k, v := range refreshMap {
+	reduced := make(map[string]any, len(refs))
+	for k, v := range refs {
 		entry, ok := v.(map[string]any)
 		if !ok {
 			continue
@@ -202,11 +217,18 @@ func reduceRefreshToIDs(m map[string]any) {
 		if !ok || id == "" {
 			continue
 		}
-		reduced[k] = map[string]any{"ID": id}
+		kept := make(map[string]any, len(refFields))
+		for _, key := range refFields {
+			if value, ok := entry[key]; ok {
+				kept[key] = value
+			}
+		}
+		kept["ID"] = id
+		reduced[k] = kept
 	}
 	if len(reduced) == 0 {
-		delete(m, "refresh")
+		delete(m, field)
 		return
 	}
-	m["refresh"] = reduced
+	m[field] = reduced
 }

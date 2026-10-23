@@ -27,11 +27,13 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -56,6 +58,9 @@ type Reconciler struct {
 	client client.Client
 	log    logr.Logger
 	now    func() time.Time
+	// establishedAge is how long a device must have been signed in to act on the others through
+	// user-api: when the list is cut, such devices are kept first.
+	establishedAge time.Duration
 }
 
 // New constructs a Reconciler. now defaults to time.Now when nil.
@@ -63,12 +68,14 @@ func New(c client.Client, log logr.Logger, now func() time.Time) *Reconciler {
 	if now == nil {
 		now = time.Now
 	}
-	return &Reconciler{client: c, log: log, now: now}
+	return &Reconciler{client: c, log: log, now: now, establishedAge: DefaultEstablishedDeviceAge}
 }
 
-// Register wires the UserAccount reconciler onto the manager.
-func Register(mgr manager.Manager) error {
+// Register wires the UserAccount reconciler onto the manager. establishedAge is the minimum device
+// age of user-api.
+func Register(mgr manager.Manager, establishedAge time.Duration) error {
 	r := New(mgr.GetClient(), mgr.GetLogger().WithName("useraccount"), nil)
+	r.establishedAge = establishedAge
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup useraccount controller: %w", err)
 	}
@@ -88,6 +95,11 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 		Watches(controller.Object(controller.PasswordGVK), handler.EnqueueRequestsFromMapFunc(r.mapPassword), builder.WithPredicates(inDexNS)).
 		Watches(controller.Object(controller.OfflineSessionsGVK), handler.EnqueueRequestsFromMapFunc(r.mapOfflineSessions), builder.WithPredicates(inDexNS)).
 		Watches(controller.Object(controller.UserIdentityGVK), handler.EnqueueRequestsFromMapFunc(r.mapUserIdentity), builder.WithPredicates(inDexNS)).
+		Watches(controller.Object(controller.AuthSessionGVK), handler.EnqueueRequestsFromMapFunc(r.mapAuthSession), builder.WithPredicates(inDexNS)).
+		// A refresh token is listed only while it exists, so its creation and deletion count; its updates
+		// at every refresh do not.
+		Watches(controller.Object(controller.RefreshTokenGVK), handler.EnqueueRequestsFromMapFunc(r.mapRefreshToken),
+			builder.WithPredicates(inDexNS, predicate.Funcs{UpdateFunc: func(event.UpdateEvent) bool { return false }})).
 		Watches(controller.Object(controller.DexProviderGVK), handler.EnqueueRequestsFromMapFunc(r.mapDexProvider)).
 		Watches(controller.Object(controller.UserGVK), handler.EnqueueRequestsFromMapFunc(r.mapUser)).
 		Complete(r)
@@ -242,6 +254,14 @@ func (r *Reconciler) desiredLocal(ctx context.Context, name string, now time.Tim
 		}
 	}
 	desired := projectLocal(pw, ident, user, now)
+	var known map[string]time.Time
+	if ident != nil {
+		known = ident.KnownDevices
+	}
+	desired.Status.Sessions, desired.Status.SessionsTruncated, err = r.sessionsOf(ctx, pw.UserID, naming.LocalConnectorID, nil, known, now)
+	if err != nil {
+		return nil, err
+	}
 	return &desired, nil
 }
 
@@ -281,7 +301,88 @@ func (r *Reconciler) desiredExternal(ctx context.Context, name string, now time.
 		return nil, nil
 	}
 	desired := projectExternal(src, provider.Type, now)
+	var known map[string]time.Time
+	if identPtr != nil {
+		known = identPtr.KnownDevices
+	}
+	desired.Status.Sessions, desired.Status.SessionsTruncated, err = r.sessionsOf(ctx, src.UserID, src.ConnID, sessPtr, known, now)
+	if err != nil {
+		return nil, err
+	}
 	return &desired, nil
+}
+
+// sessionsOf lists the devices of the pair (userID, connID): its browser sessions and the grants its
+// OfflineSessions refers to. sess is the OfflineSessions of the pair when already read; known is when
+// each browser of the pair was first seen, by the hash of its device mark.
+func (r *Reconciler) sessionsOf(ctx context.Context, userID, connID string, sess *sessionView, known map[string]time.Time, now time.Time) ([]v1alpha1.UserAccountSession, bool, error) {
+	if userID == "" || connID == "" {
+		return nil, false, nil
+	}
+	pair := naming.OfflineTokenName(userID, connID)
+	if sess == nil {
+		found, ok, err := r.getSession(ctx, pair)
+		if err != nil {
+			return nil, false, err
+		}
+		if ok {
+			sess = &found
+		}
+	}
+	var grants []grantView
+	// An object written by an old Dex may lack the pair; one naming another pair is a collision.
+	if sess != nil && (sess.UserID == "" || sess.UserID == userID) && (sess.ConnID == "" || sess.ConnID == connID) {
+		grants = sess.Grants
+	}
+	if len(grants) > 0 {
+		var err error
+		if grants, err = r.withTokens(ctx, pair, grants); err != nil {
+			return nil, false, err
+		}
+	}
+	browsers, err := r.listBrowsers(ctx, pair, userID, connID)
+	if err != nil {
+		return nil, false, err
+	}
+	sessions, truncated := projectSessions(browsers, grants, known, r.establishedAge, now)
+	return sessions, truncated, nil
+}
+
+// withTokens keeps the grants whose refresh token exists: a reference left behind by a revocation or
+// by a failed write of Dex is no device, and Dex refuses it.
+func (r *Reconciler) withTokens(ctx context.Context, pair string, grants []grantView) ([]grantView, error) {
+	list := controller.List(controller.RefreshTokenGVK)
+	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace), client.MatchingFields{controller.RefreshTokenPairField: pair}); err != nil {
+		return nil, fmt.Errorf("list refresh tokens of pair %s: %w", pair, err)
+	}
+	exist := make(map[string]struct{}, len(list.Items))
+	for i := range list.Items {
+		exist[list.Items[i].GetName()] = struct{}{}
+	}
+	return slices.DeleteFunc(slices.Clone(grants), func(g grantView) bool {
+		_, ok := exist[g.ID]
+		return !ok
+	}), nil
+}
+
+// listBrowsers lists the browser sessions of the pair (userID, connID), named pair.
+func (r *Reconciler) listBrowsers(ctx context.Context, pair, userID, connID string) ([]browserView, error) {
+	list := controller.List(controller.AuthSessionGVK)
+	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace), client.MatchingFields{controller.AuthSessionPairField: pair}); err != nil {
+		return nil, fmt.Errorf("list authsessions of pair %s: %w", pair, err)
+	}
+	out := make([]browserView, 0, len(list.Items))
+	for i := range list.Items {
+		b, err := decodeBrowser(&list.Items[i])
+		if err != nil {
+			return nil, err
+		}
+		if b.UserID != userID || b.ConnectorID != connID {
+			continue
+		}
+		out = append(out, b)
+	}
+	return out, nil
 }
 
 func (r *Reconciler) passwordForLocalAccount(ctx context.Context, name string) (passwordView, bool, error) {
@@ -518,7 +619,9 @@ func (r *Reconciler) mapPassword(_ context.Context, obj client.Object) []reconci
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: naming.LocalName(localNameInput(pw.Email, pw.Username))}}}
 }
 
-func (r *Reconciler) mapOfflineSessions(_ context.Context, obj client.Object) []reconcile.Request {
+// mapOfflineSessions maps an OfflineSessions to the account of its pair: its grants are the devices
+// of the account.
+func (r *Reconciler) mapOfflineSessions(ctx context.Context, obj client.Object) []reconcile.Request {
 	u, ok := controller.AsUnstructured(obj)
 	if !ok {
 		return nil
@@ -527,11 +630,10 @@ func (r *Reconciler) mapOfflineSessions(_ context.Context, obj client.Object) []
 	if err != nil || sess.ConnID == "" {
 		return nil
 	}
-	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: naming.ExternalName(sess.ConnID, sess.UserID)}}}
+	return r.requestsForPair(ctx, sess.UserID, sess.ConnID, u.GetName())
 }
 
-// mapUserIdentity maps an external UserIdentity to its account, and a local one to the account
-// of its Password.
+// mapUserIdentity maps a UserIdentity to the account of its pair.
 func (r *Reconciler) mapUserIdentity(ctx context.Context, obj client.Object) []reconcile.Request {
 	u, ok := controller.AsUnstructured(obj)
 	if !ok {
@@ -541,13 +643,49 @@ func (r *Reconciler) mapUserIdentity(ctx context.Context, obj client.Object) []r
 	if err != nil || ident.ConnectorID == "" {
 		return nil
 	}
-	if isExternalConnector(ident.ConnectorID) {
-		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: naming.ExternalName(ident.ConnectorID, ident.UserID)}}}
+	return r.requestsForPair(ctx, ident.UserID, ident.ConnectorID, u.GetName())
+}
+
+// mapAuthSession maps a browser session of Dex to the account of its pair.
+func (r *Reconciler) mapAuthSession(ctx context.Context, obj client.Object) []reconcile.Request {
+	u, ok := controller.AsUnstructured(obj)
+	if !ok {
+		return nil
+	}
+	pairs := controller.AuthSessionPair(u)
+	if len(pairs) == 0 {
+		return nil
+	}
+	userID, _, _ := unstructured.NestedString(u.Object, "userID")
+	connID, _, _ := unstructured.NestedString(u.Object, "connectorID")
+	return r.requestsForPair(ctx, userID, connID, pairs[0])
+}
+
+// mapRefreshToken maps a refresh token of Dex to the account of its pair.
+func (r *Reconciler) mapRefreshToken(ctx context.Context, obj client.Object) []reconcile.Request {
+	u, ok := controller.AsUnstructured(obj)
+	if !ok {
+		return nil
+	}
+	pairs := controller.RefreshTokenPair(u)
+	if len(pairs) == 0 {
+		return nil
+	}
+	userID, _, _ := unstructured.NestedString(u.Object, "claims", "userID")
+	connID, _, _ := unstructured.NestedString(u.Object, "connectorID")
+	return r.requestsForPair(ctx, userID, connID, pairs[0])
+}
+
+// requestsForPair maps a Dex object of the pair (userID, connID), named pair, to its account: an
+// external pair to the account named after it, a local one to the account of its Password.
+func (r *Reconciler) requestsForPair(ctx context.Context, userID, connID, pair string) []reconcile.Request {
+	if isExternalConnector(connID) {
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: naming.ExternalName(connID, userID)}}}
 	}
 
 	passwords := controller.List(controller.PasswordGVK)
-	if err := r.client.List(ctx, passwords, client.InNamespace(naming.DexNamespace), client.MatchingFields{controller.PasswordPairField: u.GetName()}); err != nil {
-		r.log.Error(err, "map useridentity: list passwords", "useridentity", u.GetName())
+	if err := r.client.List(ctx, passwords, client.InNamespace(naming.DexNamespace), client.MatchingFields{controller.PasswordPairField: pair}); err != nil {
+		r.log.Error(err, "map pair: list passwords", "pair", pair)
 		return nil
 	}
 	reqs := make([]reconcile.Request, 0, len(passwords.Items))
@@ -680,7 +818,20 @@ func statusEqual(a, b v1alpha1.UserAccountStatus) bool {
 		metaTimeEqual(a.ExpireAt, b.ExpireAt) &&
 		metaTimeEqual(a.LastLogin, b.LastLogin) &&
 		twoFactorEqual(a.TwoFactor, b.TwoFactor) &&
-		slices.Equal(a.Groups, b.Groups)
+		slices.Equal(a.Groups, b.Groups) &&
+		a.SessionsTruncated == b.SessionsTruncated &&
+		slices.EqualFunc(a.Sessions, b.Sessions, sessionEqual)
+}
+
+func sessionEqual(a, b v1alpha1.UserAccountSession) bool {
+	return a.ID == b.ID &&
+		a.Kind == b.Kind &&
+		a.IPAddress == b.IPAddress &&
+		a.UserAgent == b.UserAgent &&
+		slices.Equal(a.Clients, b.Clients) &&
+		metaTimeEqual(a.SignedInAt, b.SignedInAt) &&
+		metaTimeEqual(a.KnownSince, b.KnownSince) &&
+		metaTimeEqual(a.LastActivity, b.LastActivity)
 }
 
 func twoFactorEqual(a, b *v1alpha1.UserAccountTwoFactor) bool {

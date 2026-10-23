@@ -3016,7 +3016,7 @@ index 83635f28..f15a625f 100644
  	s.tx(func() {
  		for _, r := range s.revocations {
 diff --git a/storage/storage.go b/storage/storage.go
-index cf0dbf6d..2ea726c9 100644
+index 262f47b0..22d95228 100644
 --- a/storage/storage.go
 +++ b/storage/storage.go
 @@ -234,11 +234,14 @@ const (
@@ -3039,7 +3039,7 @@ index cf0dbf6d..2ea726c9 100644
  	RefreshTokenLifetimeSession = "session"
  )
  
-@@ -761,6 +764,35 @@ func AsRevocationCreator(s Storage) (c RevocationCreator, ok bool) {
+@@ -824,6 +827,35 @@ func AsRevocationCreator(s Storage) (c RevocationCreator, ok bool) {
  	}
  }
  

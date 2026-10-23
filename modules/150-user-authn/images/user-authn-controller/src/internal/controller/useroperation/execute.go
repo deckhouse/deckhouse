@@ -278,7 +278,8 @@ func (r *Reconciler) deletePairSession(ctx context.Context, p identityPair) (boo
 }
 
 // executeLogout ends the sessions of a user: by default everything of the pair, through a new
-// generation; with spec.logout, one browser session, every session but one, or one client.
+// generation; with spec.logout, one browser session, every session but one, one client, one grant,
+// or every grant but one.
 func (r *Reconciler) executeLogout(ctx context.Context, op operation) (outcome, error) {
 	pair, err := r.operationPair(ctx, op)
 	if err != nil {
@@ -289,13 +290,13 @@ func (r *Reconciler) executeLogout(ctx context.Context, op operation) (outcome, 
 		l = &logoutSpec{}
 	}
 	set := 0
-	for _, v := range []string{l.Session, l.ExceptSession} {
+	for _, v := range []string{l.Session, l.ExceptSession, l.Grant, l.ExceptGrant} {
 		if v != "" {
 			set++
 		}
 	}
 	if set > 1 {
-		return outcome{}, failed("logout accepts at most one of session and exceptSession")
+		return outcome{}, failed("logout accepts at most one of session, exceptSession, grant, and exceptGrant")
 	}
 
 	r.log.Info("Logging the user out", append(operationLogKV(op), "connectorID", pair.connectorID, "userID", pair.userID)...)
@@ -307,11 +308,18 @@ func (r *Reconciler) executeLogout(ctx context.Context, op operation) (outcome, 
 		res, err = r.revoker.LogoutSession(ctx, p, l.Session, op.UID)
 	case l.ExceptSession != "":
 		res, err = r.revoker.LogoutExceptSession(ctx, p, l.ExceptSession, op.UID)
+	case l.Grant != "":
+		res, err = r.revoker.LogoutGrant(ctx, p, l.Grant, op.UID)
+	case l.ExceptGrant != "":
+		res, err = r.revoker.LogoutExceptGrant(ctx, p, l.ExceptGrant, op.UID)
 	default:
 		return r.logoutPair(ctx, op, pair, revocation.ReasonLogout)
 	}
 	if errors.Is(err, revoke.ErrSessionNotFound) {
 		return outcome{}, failed("session not found")
+	}
+	if errors.Is(err, revoke.ErrGrantNotFound) {
+		return outcome{}, failed("grant not found")
 	}
 	if err != nil {
 		return outcome{}, err

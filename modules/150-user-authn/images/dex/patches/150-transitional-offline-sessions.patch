@@ -999,10 +999,10 @@ index 00000000..3d672995
 +	require.Equal(t, 4, api.listings(t, cli, resourcePassword))
 +}
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index fea47f7c..5bce3df6 100644
+index a48f1dfc..1ff83e78 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
-@@ -557,6 +557,9 @@ type Password struct {
+@@ -562,6 +562,9 @@ type Password struct {
  	HashUpdatedAt                   time.Time `json:"hashUpdatedAt"`
  	RequireResetHashOnNextSuccLogin bool      `json:"requireResetHashOnNextSuccLogin,omitempty"`
  	IncorrectPasswordLoginAttempts  uint64    `json:"incorrectPasswordLoginAttempts"`
@@ -1012,9 +1012,9 @@ index fea47f7c..5bce3df6 100644
  }
  
  // PasswordList is a list of Passwords.
-@@ -822,6 +825,9 @@ type OfflineSessions struct {
- 	ConnID        string                              `json:"connID,omitempty"`
+@@ -846,6 +849,9 @@ type OfflineSessions struct {
  	Refresh       map[string]*storage.RefreshTokenRef `json:"refresh,omitempty"`
+ 	Grants        map[string]*storage.RefreshTokenRef `json:"grants,omitempty"`
  	ConnectorData []byte                              `json:"connectorData,omitempty"`
 +
 +	// Fields of the previous storage layout, kept for one release (transitional.go).

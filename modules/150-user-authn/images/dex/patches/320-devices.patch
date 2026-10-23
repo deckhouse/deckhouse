@@ -1,0 +1,2501 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+index 8d50bd62..3748191d 100644
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
+@@ -81,6 +81,9 @@ type Config struct {
+ 	// PasswordPolicy is the password policy of local users (passwordpolicy.go).
+ 	PasswordPolicy *PasswordPolicy `json:"passwordPolicy"`
+ 
++	// Devices limits the devices of a user (Deckhouse).
++	Devices *Devices `json:"devices"`
++
+ 	// RateLimit limits failed attempts per client address on the login form, the
+ 	// token endpoint and the second factor.
+ 	RateLimit *RateLimit `json:"rateLimit"`
+@@ -814,6 +817,20 @@ type RefreshToken struct {
+ 	ValidIfNotUsedFor string `json:"validIfNotUsedFor"`
+ }
+ 
++// Devices holds the limits of the devices of a user (Deckhouse): the browsers and
++// other clients the user signed in from, each with refresh tokens of its own.
++type Devices struct {
++	// TrustedAfter keeps a refresh token this old from eviction while its client
++	// has younger ones of the user. "0s" prefers none. Defaults to "24h".
++	TrustedAfter string `json:"trustedAfter"`
++	// MaxPerClient is how many refresh tokens a user keeps in one client: a login
++	// past it evicts one. Defaults to 10.
++	MaxPerClient *int `json:"maxPerClient"`
++	// MaxKnown is how many browsers of a user Dex remembers with their first
++	// login. 0 remembers none. Defaults to 20.
++	MaxKnown *int `json:"maxKnown"`
++}
++
+ // Sessions holds authentication session configuration.
+ type Sessions struct {
+ 	// CookieName is the name of the session cookie. Defaults to "dex_session".
+diff --git a/cmd/dex/devices.go b/cmd/dex/devices.go
+new file mode 100644
+index 00000000..172af881
+--- /dev/null
++++ b/cmd/dex/devices.go
+@@ -0,0 +1,34 @@
++package main
++
++import (
++	"fmt"
++	"time"
++
++	"github.com/dexidp/dex/server"
++)
++
++// serverConfig checks the device limits and converts them for the server
++// (Deckhouse). A nil config, or a field left out, keeps the default.
++func (d *Devices) serverConfig() (server.DevicesConfig, error) {
++	var out server.DevicesConfig
++	if d == nil {
++		return out, nil
++	}
++	if d.TrustedAfter != "" {
++		trustedAfter, err := time.ParseDuration(d.TrustedAfter)
++		if err != nil || trustedAfter < 0 {
++			return out, fmt.Errorf("trustedAfter %q is not a non-negative duration", d.TrustedAfter)
++		}
++		out.TrustedAfter = &trustedAfter
++	}
++	if d.MaxPerClient != nil {
++		if *d.MaxPerClient < 1 {
++			return out, fmt.Errorf("maxPerClient must be at least 1, got %d", *d.MaxPerClient)
++		}
++		out.MaxPerClient = *d.MaxPerClient
++	}
++	if d.MaxKnown != nil && *d.MaxKnown < 0 {
++		return out, fmt.Errorf("maxKnown must not be negative, got %d", *d.MaxKnown)
++	}
++	return out, nil
++}
+diff --git a/cmd/dex/devices_test.go b/cmd/dex/devices_test.go
+new file mode 100644
+index 00000000..a9205c61
+--- /dev/null
++++ b/cmd/dex/devices_test.go
+@@ -0,0 +1,42 @@
++package main
++
++import (
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++)
++
++func TestDevicesServerConfig(t *testing.T) {
++	intp := func(n int) *int { return &n }
++	day, zero := 24*time.Hour, time.Duration(0)
++
++	tests := []struct {
++		name         string
++		devices      *Devices
++		trustedAfter *time.Duration
++		maxPerClient int
++		wantErr      string
++	}{
++		{name: "nil keeps the defaults"},
++		{name: "a day and five devices", devices: &Devices{TrustedAfter: "24h", MaxPerClient: intp(5)}, trustedAfter: &day, maxPerClient: 5},
++		{name: "trusted at once", devices: &Devices{TrustedAfter: "0s"}, trustedAfter: &zero},
++		{name: "no browser remembered", devices: &Devices{MaxKnown: intp(0)}},
++		{name: "a negative age", devices: &Devices{TrustedAfter: "-1h"}, wantErr: "trustedAfter"},
++		{name: "not a duration", devices: &Devices{TrustedAfter: "a day"}, wantErr: "trustedAfter"},
++		{name: "no device per client", devices: &Devices{MaxPerClient: intp(0)}, wantErr: "maxPerClient"},
++		{name: "a negative number of browsers", devices: &Devices{MaxKnown: intp(-1)}, wantErr: "maxKnown"},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			got, err := tt.devices.serverConfig()
++			if tt.wantErr != "" {
++				require.ErrorContains(t, err, tt.wantErr)
++				return
++			}
++			require.NoError(t, err)
++			require.Equal(t, tt.trustedAfter, got.TrustedAfter)
++			require.Equal(t, tt.maxPerClient, got.MaxPerClient)
++		})
++	}
++}
+diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
+index 8aaf24f0..b1518da0 100644
+--- a/cmd/dex/serve.go
++++ b/cmd/dex/serve.go
+@@ -47,6 +47,7 @@ import (
+ 	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/signer"
+ 	"github.com/dexidp/dex/server/tokens"
++	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+@@ -425,6 +426,16 @@ func runServe(options serveOptions) error {
+ 	}
+ 
+ 	serverConfig.RefreshTokenPolicy = refreshTokenPolicy
++	if serverConfig.Devices, err = c.Devices.serverConfig(); err != nil {
++		return fmt.Errorf("invalid devices config: %v", err)
++	}
++	if c.Devices != nil {
++		logger.Info("config devices", "trusted_after", c.Devices.TrustedAfter,
++			"max_per_client", serverConfig.Devices.MaxPerClient, "max_known", c.Devices.MaxKnown)
++		if c.Devices.MaxKnown != nil {
++			useridentity.SetMaxKnownDevices(*c.Devices.MaxKnown)
++		}
++	}
+ 
+ 	if serverConfig.PasswordPolicy, err = c.PasswordPolicy.serverPolicy(); err != nil {
+ 		return fmt.Errorf("invalid password policy config: %v", err)
+diff --git a/server/authflow/dispatch.go b/server/authflow/dispatch.go
+index 1f7ef11a..ab767e1b 100644
+--- a/server/authflow/dispatch.go
++++ b/server/authflow/dispatch.go
+@@ -96,7 +96,7 @@ func (h *Handler) dispatch(w http.ResponseWriter, r *http.Request, authReq stora
+ 	// Every factor is done, so the login counts: finalizeLogin left LastLogin to
+ 	// this point because a second factor could follow.
+ 	if h.MFAEnabled {
+-		if err := useridentity.Completed(ctx, h.Storage, authReq.Claims.UserID, authReq.ConnectorID, authReq.AuthTime); err != nil {
++		if err := useridentity.Completed(ctx, h.Storage, authReq.Claims.UserID, authReq.ConnectorID, authReq.AuthTime, authReq.DeviceHash); err != nil {
+ 			h.Logger.ErrorContext(ctx, "failed to record the last login", "err", err)
+ 		}
+ 	}
+diff --git a/server/authflow/finalize.go b/server/authflow/finalize.go
+index ff7e823d..e6ecccb5 100644
+--- a/server/authflow/finalize.go
++++ b/server/authflow/finalize.go
+@@ -50,6 +50,7 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 		Time:        now,
+ 		Complete:    !h.MFAEnabled,
+ 		GroupsRead:  tokens.ParseScopes(authReq.Scopes).Groups,
++		DeviceHash:  authReq.DeviceHash,
+ 		Logger:      h.Logger,
+ 	})
+ 	var blocked *useridentity.BlockedError
+diff --git a/server/authflow/login.go b/server/authflow/login.go
+index e0584a7e..d44f7562 100644
+--- a/server/authflow/login.go
++++ b/server/authflow/login.go
+@@ -15,7 +15,9 @@ import (
+ 
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/devicemark"
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/reqctx"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/storage"
+ )
+@@ -86,6 +88,12 @@ func (h *Handler) handleConnectorLogin(w http.ResponseWriter, r *http.Request) {
+ 
+ 	// Actually create the auth request
+ 	authReq.Expiry = h.Now().Add(h.AuthRequestsValidFor)
++	// The browser signing in: the device the grant of the login is listed as
++	// (Deckhouse).
++	authReq.IPAddress, authReq.UserAgent = reqctx.RemoteIP(r), reqctx.UserAgent(r)
++	// The mark of the browser: a device is as old as the first login of its
++	// browser (Deckhouse; see server/devicemark).
++	authReq.DeviceHash = devicemark.Hash(w, r, h.IssuerURL.Scheme == "https")
+ 	if err := h.Storage.CreateAuthRequest(ctx, *authReq); err != nil {
+ 		h.Logger.ErrorContext(r.Context(), "failed to create authorization request", "err", err)
+ 		h.renderError(r, w, http.StatusInternalServerError, "Failed to connect to the database.")
+diff --git a/server/authflow/response.go b/server/authflow/response.go
+index 91952c6d..fea5e343 100644
+--- a/server/authflow/response.go
++++ b/server/authflow/response.go
+@@ -212,6 +212,9 @@ func (h *Handler) issueCode(ctx context.Context, w http.ResponseWriter, r *http.
+ 		PKCE:          authReq.PKCE,
+ 		AuthTime:      authReq.AuthTime,
+ 		Generation:    authReq.Generation,
++		IPAddress:     authReq.IPAddress,
++		UserAgent:     authReq.UserAgent,
++		DeviceHash:    authReq.DeviceHash,
+ 	}
+ 	if err := h.Storage.CreateAuthCode(ctx, resp.code); err != nil {
+ 		h.Logger.ErrorContext(r.Context(), "Failed to create auth code", "err", err)
+diff --git a/server/config.go b/server/config.go
+index 25200b26..3e956ac6 100644
+--- a/server/config.go
++++ b/server/config.go
+@@ -87,6 +87,9 @@ type Config struct {
+ 	// Refresh token expiration settings
+ 	RefreshTokenPolicy *tokens.RefreshStrategy
+ 
++	// Devices limits the devices of a user (Deckhouse).
++	Devices DevicesConfig
++
+ 	// If set, the server will use this connector to handle password grants
+ 	PasswordConnector string
+ 
+@@ -131,6 +134,16 @@ type Config struct {
+ 	Lockout *lockout.Policy
+ }
+ 
++// DevicesConfig limits the devices of a user (Deckhouse). The zero value keeps
++// the defaults of tokens.RefreshStore. The number of browsers remembered is a
++// process-wide setting (useridentity.SetMaxKnownDevices).
++type DevicesConfig struct {
++	// TrustedAfter, when set, is tokens.RefreshStore.ProtectedGrantAge.
++	TrustedAfter *time.Duration
++	// MaxPerClient, when positive, is tokens.RefreshStore.MaxGrantsPerClient.
++	MaxPerClient int
++}
++
+ // WebConfig holds the server's frontend templates and asset configuration.
+ type WebConfig struct {
+ 	// A file path to static web assets.
+diff --git a/server/devicemark/devicemark.go b/server/devicemark/devicemark.go
+new file mode 100644
+index 00000000..3ba24f46
+--- /dev/null
++++ b/server/devicemark/devicemark.go
+@@ -0,0 +1,91 @@
++// Package devicemark gives every browser that signs in to Dex a long-lived
++// random mark (Deckhouse), so that a device is as old as the first login of its
++// browser, not only its last one.
++//
++// The mark is a cookie of its own, separate from the session cookie: a logout
++// ends the session and clears its cookie, the mark stays. Dex keeps only the
++// SHA-256 hash of the mark: on the auth request, the code, the grant and the
++// browser session of a login, and in the known devices of the pair
++// (storage.UserIdentity.KnownDevices) once a login of the browser passed every
++// factor. The user-authn controller lists a device as known since the first
++// login of its browser; user-api lets a device act on the other devices and the
++// password 24 hours after that.
++//
++// A thief who signs in with a stolen password does so from a browser without
++// the mark of the owner, so the device is new. A mark copied from the owner's
++// browser is as good as the session cookie next to it, and the controller
++// forgets the browsers whose sign-in someone else ends.
++package devicemark
++
++import (
++	"crypto/rand"
++	"crypto/sha256"
++	"encoding/base64"
++	"net/http"
++	"time"
++)
++
++const (
++	// cookieName is the mark over HTTPS: __Host- makes the browser take it only
++	// from Dex itself (secure, path /, no domain).
++	cookieName = "__Host-dex_device"
++	// insecureCookieName is the mark of a Dex served over plain HTTP (tests).
++	insecureCookieName = "dex_device"
++
++	// maxAge is how long the browser keeps the mark: the longest a browser
++	// accepts, renewed at every login of the browser.
++	maxAge = 400 * 24 * time.Hour
++
++	// markBytes is the entropy of a mark.
++	markBytes = 32
++)
++
++// markLength is the length of a mark in unpadded base64url.
++var markLength = base64.RawURLEncoding.EncodedLen(markBytes)
++
++// Hash returns the hash of the device mark of the browser of r, giving the
++// browser a new mark first when it has none or one that is malformed. The mark
++// is written again at every call, so it lives maxAge after the last login of
++// the browser. secure tells whether Dex is served over HTTPS. An empty result
++// means no mark could be made.
++func Hash(w http.ResponseWriter, r *http.Request, secure bool) string {
++	name := insecureCookieName
++	if secure {
++		name = cookieName
++	}
++	mark := ""
++	if c, err := r.Cookie(name); err == nil && valid(c.Value) {
++		mark = c.Value
++	}
++	if mark == "" {
++		buf := make([]byte, markBytes)
++		if _, err := rand.Read(buf); err != nil {
++			return ""
++		}
++		mark = base64.RawURLEncoding.EncodeToString(buf)
++	}
++	http.SetCookie(w, &http.Cookie{
++		Name:     name,
++		Value:    mark,
++		Path:     "/",
++		MaxAge:   int(maxAge.Seconds()),
++		HttpOnly: true,
++		Secure:   secure,
++		SameSite: http.SameSiteLaxMode,
++	})
++	return hashOf(mark)
++}
++
++// valid reports whether mark has the form of a mark Dex makes.
++func valid(mark string) bool {
++	if len(mark) != markLength {
++		return false
++	}
++	_, err := base64.RawURLEncoding.DecodeString(mark)
++	return err == nil
++}
++
++func hashOf(mark string) string {
++	sum := sha256.Sum256([]byte(mark))
++	return base64.RawURLEncoding.EncodeToString(sum[:])
++}
+diff --git a/server/devicemark/devicemark_test.go b/server/devicemark/devicemark_test.go
+new file mode 100644
+index 00000000..d004151c
+--- /dev/null
++++ b/server/devicemark/devicemark_test.go
+@@ -0,0 +1,53 @@
++package devicemark
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++)
++
++func markOf(t *testing.T, rr *httptest.ResponseRecorder, name string) *http.Cookie {
++	t.Helper()
++	for _, c := range rr.Result().Cookies() {
++		if c.Name == name {
++			return c
++		}
++	}
++	t.Fatalf("no %s cookie in the response", name)
++	return nil
++}
++
++// TestHash: a browser without a mark gets one; a browser with a mark keeps it and
++// gets the same hash; a malformed mark is replaced.
++func TestHash(t *testing.T) {
++	rr := httptest.NewRecorder()
++	first := Hash(rr, httptest.NewRequest(http.MethodGet, "/auth/local", nil), true)
++	require.NotEmpty(t, first)
++	mark := markOf(t, rr, cookieName)
++	require.True(t, mark.HttpOnly)
++	require.True(t, mark.Secure)
++	require.Equal(t, "/", mark.Path)
++	require.Equal(t, int(maxAge.Seconds()), mark.MaxAge)
++	require.NotEqual(t, first, mark.Value, "the hash is not the mark")
++
++	again := httptest.NewRequest(http.MethodGet, "/auth/local", nil)
++	again.AddCookie(&http.Cookie{Name: cookieName, Value: mark.Value})
++	rr = httptest.NewRecorder()
++	require.Equal(t, first, Hash(rr, again, true))
++	require.Equal(t, mark.Value, markOf(t, rr, cookieName).Value, "the mark is kept and its lifetime renewed")
++
++	forged := httptest.NewRequest(http.MethodGet, "/auth/local", nil)
++	forged.AddCookie(&http.Cookie{Name: cookieName, Value: "short"})
++	rr = httptest.NewRecorder()
++	replaced := Hash(rr, forged, true)
++	require.NotEqual(t, hashOf("short"), replaced, "a malformed mark is replaced, not hashed")
++	require.NotEqual(t, "short", markOf(t, rr, cookieName).Value)
++}
++
++func TestHashOverHTTP(t *testing.T) {
++	rr := httptest.NewRecorder()
++	require.NotEmpty(t, Hash(rr, httptest.NewRequest(http.MethodGet, "/auth/local", nil), false))
++	require.False(t, markOf(t, rr, insecureCookieName).Secure)
++}
+diff --git a/server/grants/authcode.go b/server/grants/authcode.go
+index 0fdd38c6..2c7efd02 100644
+--- a/server/grants/authcode.go
++++ b/server/grants/authcode.go
+@@ -144,6 +144,12 @@ func ExchangeAuthCode(ctx context.Context, s storage.Storage, sessions *session.
+ 		SessionID: authCode.SessionID,
+ 
+ 		Generation: authCode.Generation,
++
++		// The browser that signed in, not the client redeeming the code: the device
++		// the grant is listed as (Deckhouse).
++		IPAddress:  authCode.IPAddress,
++		UserAgent:  authCode.UserAgent,
++		DeviceHash: authCode.DeviceHash,
+ 	}
+ 
+ 	// A refresh token is only issued when the connector supports it, the grant
+diff --git a/server/grants/grants.go b/server/grants/grants.go
+index 1a3b037d..ac5b21d6 100644
+--- a/server/grants/grants.go
++++ b/server/grants/grants.go
+@@ -18,6 +18,7 @@ import (
+ 	"github.com/dexidp/dex/server/lockout"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/ratelimit"
++	"github.com/dexidp/dex/server/reqctx"
+ 	"github.com/dexidp/dex/server/revocation"
+ 	"github.com/dexidp/dex/server/router"
+ 	"github.com/dexidp/dex/server/session"
+@@ -54,6 +55,11 @@ type Request struct {
+ 	SubjectTokenType   string
+ 	RequestedTokenType string
+ 
++	// IPAddress and UserAgent are of the client of the token request (Deckhouse):
++	// the device of a grant the password grant issues.
++	IPAddress string
++	UserAgent string
++
+ 	// refresh holds the refresh token the refresh grant looks up while resolving
+ 	// the connector, so it is fetched and decoded once and reused in Authorize.
+ 	refresh   *storage.RefreshToken
+@@ -68,6 +74,8 @@ func parseRequest(r *http.Request) (*Request, *oauth2.Error) {
+ 	}
+ 
+ 	req := &Request{
++		IPAddress:          reqctx.RemoteIP(r),
++		UserAgent:          reqctx.UserAgent(r),
+ 		Scopes:             strings.Fields(r.PostFormValue("scope")),
+ 		Nonce:              r.PostFormValue("nonce"),
+ 		ConnectorID:        r.PostFormValue("connector_id"),
+diff --git a/server/grants/password.go b/server/grants/password.go
+index 72a909f2..c17ad0de 100644
+--- a/server/grants/password.go
++++ b/server/grants/password.go
+@@ -97,6 +97,12 @@ func (g *password) Authorize(ctx context.Context, req *Request, client storage.C
+ 		ConnectorID:   g.connectorID,
+ 		Nonce:         req.Nonce,
+ 		ConnectorData: identity.ConnectorData,
++
++		// A client repeats the password grant for one user (basic-auth-proxy every
++		// few minutes): its refresh token replaces the previous one (Deckhouse).
++		ReplaceGrant: true,
++		IPAddress:    req.IPAddress,
++		UserAgent:    req.UserAgent,
+ 	}
+ 
+ 	// The allow-lists of the client and the connector decide whether the user
+diff --git a/server/grants/refresh.go b/server/grants/refresh.go
+index 1c22995f..2d5236f7 100644
+--- a/server/grants/refresh.go
++++ b/server/grants/refresh.go
+@@ -65,6 +65,13 @@ func (g *refresh) ConnectorID(ctx context.Context, req *Request, client storage.
+ 
+ 	refreshToken, err := tokens.LookupRefreshToken(ctx, g.storage, g.policy, g.logger, &client.ID, token)
+ 	if err != nil {
++		// An expired token is refused for good (Deckhouse): it goes now rather than
++		// at the next sweep, so the device of the user goes with it.
++		if errors.Is(err, tokens.ErrRefreshTokenExpired) {
++			if derr := g.issuer.Refresh.DeleteIfExpired(ctx, token.RefreshId, g.policy); derr != nil {
++				g.logger.ErrorContext(ctx, "failed to delete an expired refresh token", "token_id", token.RefreshId, "err", derr)
++			}
++		}
+ 		return "", refreshLookupError(err)
+ 	}
+ 
+@@ -161,6 +168,7 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 		AuthTime:    authTime,
+ 		SessionID:   sessionID,
+ 		Generation:  refreshToken.Generation,
++		GrantID:     refreshToken.ID,
+ 	}
+ 
+ 	// The connector may have returned another email or other groups: the
+@@ -286,7 +294,7 @@ func (g *refresh) endPair(ctx context.Context, userID, connectorID string) {
+ 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+ 		g.logger.ErrorContext(ctx, "failed to get offline sessions", "err", err)
+ 	}
+-	for _, ref := range offline.Refresh {
++	for _, ref := range tokens.GrantsOf(offline) {
+ 		refresh, err := g.storage.GetRefresh(ctx, ref.ID)
+ 		if err != nil {
+ 			continue
+@@ -375,7 +383,7 @@ func (g *refresh) sessionID(ctx context.Context, refreshToken *storage.RefreshTo
+ 		return "", &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
+ 	}
+ 
+-	ref, ok := offlineSessions.Refresh[refreshToken.ClientID]
++	ref, ok := tokens.GrantsOf(offlineSessions)[refreshToken.ID]
+ 	if !ok {
+ 		// Issued outside a browser flow — the password grant, or before sessions were
+ 		// turned on. There is no session to be bound to.
+diff --git a/server/introspection/introspection.go b/server/introspection/introspection.go
+index a59cdf73..aaca6afc 100644
+--- a/server/introspection/introspection.go
++++ b/server/introspection/introspection.go
+@@ -302,32 +302,50 @@ func (h *Handler) generationError(ctx context.Context, err error) error {
+ 	}
+ }
+ 
+-// revokedError reports a token of a client bound to the browser session (the
+-// client's RefreshTokenLifetime) inactive once a Revocation of that session (the sid
+-// claim) was recorded: the user signed out of it, an operator ended it, or its pair
+-// was ended (Deckhouse). A token of a client that is not bound outlives the session,
+-// as its refresh token does. A storage that cannot be read is a server error.
++// revokedError reports a token inactive once a Revocation of where it came from was
++// recorded (Deckhouse):
++//   - of its grant (the d8_gid claim): the device was signed out, its client revoked
++//     the refresh token, or a newer sign-in evicted it;
++//   - of its browser session (the sid claim), for a client bound to the session (the
++//     client's RefreshTokenLifetime): the user signed out of it, an operator ended it,
++//     or its pair was ended. A token of a client that is not bound outlives the
++//     session, as its refresh token does.
++//
++// A storage that cannot be read is a server error.
+ func (h *Handler) revokedError(ctx context.Context, client storage.Client, idToken *oidc.IDToken) error {
+-	if h.Revocations == nil || !client.RefreshBoundToSession() {
++	if h.Revocations == nil {
+ 		return nil
+ 	}
+ 	var claims struct {
+ 		SessionID string `json:"sid"`
++		GrantID   string `json:"d8_gid"`
+ 	}
+ 	if err := idToken.Claims(&claims); err != nil {
+-		h.Logger.ErrorContext(ctx, "failed to read the sid of the token", "err", err)
++		h.Logger.ErrorContext(ctx, "failed to read the sid and d8_gid of the token", "err", err)
+ 		return newIntrospectInternalServerError()
+ 	}
+-	if claims.SessionID == "" {
+-		return nil
+-	}
+-	revoked, err := h.Revocations.RevocationExists(ctx, storage.RevocationSession, claims.SessionID)
+-	if err != nil {
+-		h.Logger.ErrorContext(ctx, "failed to check the revocation of the session of the token", "err", err)
+-		return newIntrospectInternalServerError()
++	checks := []struct {
++		typ storage.RevocationType
++		id  string
++	}{{storage.RevocationGrant, claims.GrantID}}
++	if client.RefreshBoundToSession() {
++		checks = append(checks, struct {
++			typ storage.RevocationType
++			id  string
++		}{storage.RevocationSession, claims.SessionID})
+ 	}
+-	if revoked {
+-		return newIntrospectInactiveTokenError()
++	for _, c := range checks {
++		if c.id == "" {
++			continue
++		}
++		revoked, err := h.Revocations.RevocationExists(ctx, c.typ, c.id)
++		if err != nil {
++			h.Logger.ErrorContext(ctx, "failed to check the revocation of the token", "type", string(c.typ), "err", err)
++			return newIntrospectInternalServerError()
++		}
++		if revoked {
++			return newIntrospectInactiveTokenError()
++		}
+ 	}
+ 	return nil
+ }
+diff --git a/server/logout/logout.go b/server/logout/logout.go
+index 09e4c5a4..5bf92dc0 100644
+--- a/server/logout/logout.go
++++ b/server/logout/logout.go
+@@ -299,7 +299,9 @@ func (h *Handler) revokeSessionBoundTokens(ctx context.Context, authSession *sto
+ 		}
+ 	}
+ 
+-	h.Issuer.Refresh.RevokeClients(ctx, authSession.UserID, authSession.ConnectorID, bound)
++	// Only the grants of this browser session go (Deckhouse): the same clients keep
++	// their grants on the other devices of the user.
++	h.Issuer.Refresh.RevokeSession(ctx, authSession.UserID, authSession.ConnectorID, authSession.ID, bound)
+ }
+ 
+ // idTokenHint holds the parts of a verified id_token_hint that logout cares about.
+diff --git a/server/reqctx/reqctx.go b/server/reqctx/reqctx.go
+index 56bc491e..a16c2dba 100644
+--- a/server/reqctx/reqctx.go
++++ b/server/reqctx/reqctx.go
+@@ -2,6 +2,9 @@ package reqctx
+ 
+ import (
+ 	"context"
++	"net"
++	"net/http"
++	"unicode/utf8"
+ 
+ 	"github.com/google/uuid"
+ )
+@@ -22,3 +25,37 @@ func WithRequestID(ctx context.Context) context.Context {
+ func WithRemoteIP(ctx context.Context, ip string) context.Context {
+ 	return context.WithValue(ctx, RequestKeyRemoteIP, ip)
+ }
++
++// maxUserAgent bounds the User-Agent dex keeps of a request (Deckhouse): the client
++// sends it, and every grant, auth request and session of the user carries a copy.
++const maxUserAgent = 512
++
++// UserAgent returns the User-Agent of r cut to maxUserAgent bytes on a character
++// boundary (Deckhouse).
++func UserAgent(r *http.Request) string {
++	ua := r.UserAgent()
++	if len(ua) <= maxUserAgent {
++		return ua
++	}
++	n := maxUserAgent
++	for n > 0 && !utf8.RuneStart(ua[n]) {
++		n--
++	}
++	return ua[:n]
++}
++
++// RemoteIP returns the address of the client of r (Deckhouse): the one the real-IP
++// resolver put in the context, or the host part of r.RemoteAddr. Either way the
++// result carries no port; only an address that parses as neither is returned
++// verbatim.
++func RemoteIP(r *http.Request) string {
++	if ip, ok := r.Context().Value(RequestKeyRemoteIP).(string); ok && ip != "" {
++		return ip
++	}
++	// RemoteAddr carries the ephemeral source port, which is noise in an audit
++	// record: it identifies the connection, not the client.
++	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
++		return host
++	}
++	return r.RemoteAddr
++}
+diff --git a/server/reqctx/reqctx_deckhouse_test.go b/server/reqctx/reqctx_deckhouse_test.go
+new file mode 100644
+index 00000000..f7a1efe2
+--- /dev/null
++++ b/server/reqctx/reqctx_deckhouse_test.go
+@@ -0,0 +1,38 @@
++package reqctx
++
++import (
++	"net/http/httptest"
++	"strings"
++	"testing"
++	"unicode/utf8"
++
++	"github.com/stretchr/testify/assert"
++)
++
++// TestUserAgent: dex keeps at most maxUserAgent bytes of the User-Agent a client
++// sends, cut before a character the bound would split (Deckhouse).
++func TestUserAgent(t *testing.T) {
++	tests := []struct {
++		name     string
++		header   string
++		expected string
++	}{
++		{name: "short", header: "Mozilla/5.0", expected: "Mozilla/5.0"},
++		{name: "exactly the bound", header: strings.Repeat("a", maxUserAgent), expected: strings.Repeat("a", maxUserAgent)},
++		{name: "longer", header: strings.Repeat("a", maxUserAgent+100), expected: strings.Repeat("a", maxUserAgent)},
++		{
++			name:     "a character across the bound",
++			header:   strings.Repeat("a", maxUserAgent-1) + "é" + "tail",
++			expected: strings.Repeat("a", maxUserAgent-1),
++		},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			r := httptest.NewRequest("GET", "/", nil)
++			r.Header.Set("User-Agent", tt.header)
++			got := UserAgent(r)
++			assert.Equal(t, tt.expected, got)
++			assert.True(t, utf8.ValidString(got))
++		})
++	}
++}
+diff --git a/server/revocation/revocation.go b/server/revocation/revocation.go
+index 637bd901..36413f45 100644
+--- a/server/revocation/revocation.go
++++ b/server/revocation/revocation.go
+@@ -89,6 +89,9 @@ const (
+ 	// ReasonIdentityGone: the identity provider answered that the user is gone
+ 	// or no longer let in (Deckhouse; see PairEnded).
+ 	ReasonIdentityGone = "IdentityGone"
++	// ReasonEvicted: a newer sign-in of the user to the client evicted the
++	// refresh token (Deckhouse; see GrantEvicted).
++	ReasonEvicted = "Evicted"
+ 
+ 	sourceDex = "dex"
+ )
+@@ -123,6 +126,14 @@ func (r *Recorder) GrantRevoked(ctx context.Context, refresh storage.RefreshToke
+ 	return r.record(ctx, grantRevocation(refresh, ReasonTokenRevoked))
+ }
+ 
++// GrantEvicted records that a newer sign-in of the user to the client evicted
++// the refresh token (Deckhouse): the client keeps a limited number of devices of a
++// user (tokens.RefreshStore.MaxGrantsPerClient). A failure is logged by the caller's storage
++// error alone: the token goes anyway, and Dex refuses it at its next use.
++func (r *Recorder) GrantEvicted(ctx context.Context, refresh storage.RefreshToken) error {
++	return r.record(ctx, grantRevocation(refresh, ReasonEvicted))
++}
++
+ // PairEnded records the end of the browser sessions and refresh tokens of a pair
+ // whose identity provider answered that the user is gone or no longer let in
+ // (Deckhouse). Every one is tried; the errors are returned together.
+diff --git a/server/server.go b/server/server.go
+index d1d97de0..ac608700 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -110,6 +110,12 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+ 		IssuerURL: s.issuerURL,
+ 	}
+ 	s.issuer = tokens.NewIssuer(s.storage, c.Signer, s.issuerURL.URL, rc.idTokensValidFor, rc.now, s.logger)
++	if c.Devices.TrustedAfter != nil {
++		s.issuer.Refresh.ProtectedGrantAge = *c.Devices.TrustedAfter
++	}
++	if c.Devices.MaxPerClient > 0 {
++		s.issuer.Refresh.MaxGrantsPerClient = c.Devices.MaxPerClient
++	}
+ 	s.connectors = connectors.NewCache(s.storage, connectors.Resolver(s.storage, s.logger, ConnectorsConfig))
+ 	s.backchannel = &backchannel.Notifier{
+ 		Storage:   s.storage,
+@@ -134,6 +140,13 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+ 	// The storage given to the server, not the key cache around it: the cache
+ 	// hides the methods of the storage beyond storage.Storage.
+ 	s.revocations = revocation.NewRecorder(c.Storage, rc.now)
++	// An evicted grant is announced like a revoked one (Deckhouse): the sessions of
++	// the DexAuthenticators on it end within seconds.
++	s.issuer.Refresh.OnEvict = func(ctx context.Context, refresh storage.RefreshToken) {
++		if err := s.revocations.GrantEvicted(ctx, refresh); err != nil {
++			s.logger.ErrorContext(ctx, "failed to record an evicted refresh token", "token_id", refresh.ID, "err", err)
++		}
++	}
+ 	if !s.revocations.Enabled() {
+ 		s.logger.WarnContext(ctx, "revocation events are disabled: the storage does not support them")
+ 	}
+@@ -165,7 +178,7 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+ 	s.mux = r
+ 
+ 	c.Signer.Start(ctx)
+-	s.startGarbageCollection(ctx, value(c.GCFrequency, 5*time.Minute), rc.now)
++	s.startGarbageCollection(ctx, value(c.GCFrequency, 5*time.Minute), rc.now, c.RefreshTokenPolicy)
+ 
+ 	return s, nil
+ }
+@@ -449,8 +462,9 @@ func (k *keyCacher) GetKeys(ctx context.Context) (storage.Keys, error) {
+ 	return storageKeys, nil
+ }
+ 
+-func (s *Server) startGarbageCollection(ctx context.Context, frequency time.Duration, now func() time.Time) {
++func (s *Server) startGarbageCollection(ctx context.Context, frequency time.Duration, now func() time.Time, refreshPolicy *tokens.RefreshStrategy) {
+ 	go func() {
++		var lastRefreshSweep time.Time
+ 		for {
+ 			select {
+ 			case <-ctx.Done():
+@@ -464,11 +478,25 @@ func (s *Server) startGarbageCollection(ctx context.Context, frequency time.Dura
+ 						"device_requests", r.DeviceRequests, "device_tokens", r.DeviceTokens,
+ 						"auth_sessions", r.AuthSessions)
+ 				}
++				// Expired refresh tokens (Deckhouse): a sweep lists every token, so
++				// it runs at most once in refreshTokenSweepInterval.
++				if now().Sub(lastRefreshSweep) >= refreshTokenSweepInterval {
++					lastRefreshSweep = now()
++					if n, err := s.issuer.Refresh.DeleteExpired(ctx, refreshPolicy); err != nil {
++						s.logger.ErrorContext(ctx, "garbage collection of refresh tokens failed", "err", err)
++					} else if n > 0 {
++						s.logger.InfoContext(ctx, "garbage collection run, delete expired refresh tokens", "refresh_tokens", n)
++					}
++				}
+ 			}
+ 		}
+ 	}()
+ }
+ 
++// refreshTokenSweepInterval is how often the garbage collection deletes the
++// refresh tokens past their lifetime (Deckhouse).
++const refreshTokenSweepInterval = time.Hour
++
+ // renderError renders a user-facing error page for the non-flow endpoints the
+ // server still serves directly (e.g. /healthz).
+ func (s *Server) renderError(r *http.Request, w http.ResponseWriter, status int, description string) {
+diff --git a/server/server_devices_test.go b/server/server_devices_test.go
+new file mode 100644
+index 00000000..7d4b9b8e
+--- /dev/null
++++ b/server/server_devices_test.go
+@@ -0,0 +1,180 @@
++package server
++
++import (
++	"encoding/json"
++	"net/http"
++	"net/http/cookiejar"
++	"net/http/httptest"
++	"net/url"
++	"slices"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/tokens"
++	"github.com/dexidp/dex/storage"
++)
++
++// TestIntrospectionEndsWithTheGrant: once the revocation of a grant is recorded (the
++// device was signed out, its client revoked the refresh token, a newer sign-in
++// evicted it), the tokens issued with it are inactive though they have not expired
++// (Deckhouse).
++func TestIntrospectionEndsWithTheGrant(t *testing.T) {
++	_, s := newLockTestServer(t)
++	rr := passwordGrant(t, s)
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	var resp struct {
++		AccessToken string `json:"access_token"`
++	}
++	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
++	grantID, _ := decodeJWTClaims(t, resp.AccessToken)["d8_gid"].(string)
++	require.NotEmpty(t, grantID)
++
++	introspect := func() bool {
++		req := httptest.NewRequest(http.MethodPost, "/token/introspect", strings.NewReader(url.Values{"token": {resp.AccessToken}}.Encode()))
++		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++		req.SetBasicAuth("test", "barfoo")
++		rr := httptest.NewRecorder()
++		s.ServeHTTP(rr, req)
++		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++		var got struct {
++			Active bool `json:"active"`
++		}
++		require.NoError(t, json.NewDecoder(rr.Body).Decode(&got))
++		return got.Active
++	}
++	require.True(t, introspect(), "a token of a live grant is active")
++
++	cacher, ok := s.storage.(*keyCacher)
++	require.True(t, ok)
++	creator, ok := storage.AsRevocationCreator(cacher.Storage)
++	require.True(t, ok)
++	require.NoError(t, creator.CreateRevocation(t.Context(), storage.Revocation{
++		Type: storage.RevocationGrant, GrantID: grantID, ClientID: "test", UserID: mockUserID, ConnectorID: "test",
++	}))
++	require.False(t, introspect(), "the revocation of its grant ends the token")
++}
++
++// browserLogin signs a browser with jar in to the client "test-client" through the
++// mock connector and returns the AuthSession it is left with.
++func browserLogin(t *testing.T, httpServer *httptest.Server, s *Server, jar http.CookieJar) storage.AuthSession {
++	t.Helper()
++	client := &http.Client{
++		Jar: jar,
++		CheckRedirect: func(req *http.Request, _ []*http.Request) error {
++			if !strings.HasPrefix(req.URL.String(), httpServer.URL) {
++				return http.ErrUseLastResponse
++			}
++			return nil
++		},
++	}
++	resp, err := client.Get(httpServer.URL + "/auth?" + url.Values{
++		"client_id":     {"test-client"},
++		"redirect_uri":  {"https://client.example/cb"},
++		"response_type": {"code"},
++		"scope":         {"openid offline_access"},
++		"state":         {"state-1"},
++		"connector_id":  {"mock"},
++	}.Encode())
++	require.NoError(t, err)
++	resp.Body.Close()
++	require.Equal(t, http.StatusSeeOther, resp.StatusCode, "the login ends with a code for the client")
++	require.Contains(t, resp.Header.Get("Location"), "code=")
++
++	u, err := url.Parse(httpServer.URL)
++	require.NoError(t, err)
++	var sid string
++	for _, c := range jar.Cookies(u) {
++		if c.Name == "dex_session" {
++			sid = c.Value
++		}
++	}
++	require.NotEmpty(t, sid, "the login left a session cookie")
++	sessions, err := s.storage.ListAuthSessions(t.Context())
++	require.NoError(t, err)
++	slices.SortFunc(sessions, func(a, b storage.AuthSession) int { return b.CreatedAt.Compare(a.CreatedAt) })
++	require.NotEmpty(t, sessions)
++	return sessions[0]
++}
++
++// TestDeviceMark: a browser keeps its device mark across a logout, so its next
++// login is of a known device, first seen at its first login; another browser is
++// another device (Deckhouse).
++func TestDeviceMark(t *testing.T) {
++	httpServer, s := newTestServerWithSessions(t, nil)
++	defer httpServer.Close()
++	ctx := t.Context()
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++		ID: "test-client", Secret: "secret", RedirectURIs: []string{"https://client.example/cb"},
++	}))
++
++	jar, err := cookiejar.New(nil)
++	require.NoError(t, err)
++	first := browserLogin(t, httpServer, s, jar)
++	require.NotEmpty(t, first.DeviceHash, "the session carries the hash of the device mark")
++	identity, err := s.storage.GetUserIdentity(ctx, first.UserID, first.ConnectorID)
++	require.NoError(t, err)
++	require.Len(t, identity.KnownDevices, 1)
++	known := identity.KnownDevices[0]
++	require.Equal(t, first.DeviceHash, known.Hash)
++
++	// A logout ends the session; the mark stays in the browser.
++	require.NoError(t, s.storage.DeleteAuthSession(ctx, first.ID))
++	again := browserLogin(t, httpServer, s, jar)
++	require.NotEqual(t, first.ID, again.ID, "a new session")
++	require.Equal(t, first.DeviceHash, again.DeviceHash, "the same browser")
++	identity, err = s.storage.GetUserIdentity(ctx, first.UserID, first.ConnectorID)
++	require.NoError(t, err)
++	require.Len(t, identity.KnownDevices, 1)
++	require.True(t, known.FirstSeen.Equal(identity.KnownDevices[0].FirstSeen), "first seen at the first login")
++	require.False(t, identity.KnownDevices[0].LastSeen.Before(known.LastSeen))
++
++	otherJar, err := cookiejar.New(nil)
++	require.NoError(t, err)
++	other := browserLogin(t, httpServer, s, otherJar)
++	require.NotEqual(t, first.DeviceHash, other.DeviceHash, "another browser is another device")
++	identity, err = s.storage.GetUserIdentity(ctx, first.UserID, first.ConnectorID)
++	require.NoError(t, err)
++	require.Len(t, identity.KnownDevices, 2)
++}
++
++// TestPasswordGrantKeepsOneGrant: a client repeats the password grant for one
++// user (basic-auth-proxy), so its refresh token replaces the previous one instead
++// of adding a device (Deckhouse). The grant keeps the address of the client.
++func TestPasswordGrantKeepsOneGrant(t *testing.T) {
++	_, s := newLockTestServer(t)
++
++	for i := 0; i < 3; i++ {
++		rr := passwordGrant(t, s)
++		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	}
++
++	offline, err := s.storage.GetOfflineSessions(t.Context(), mockUserID, "test")
++	require.NoError(t, err)
++	grants := tokens.GrantsOf(offline)
++	require.Len(t, grants, 1, "one grant for the client")
++	for id, ref := range grants {
++		assert.Equal(t, id, offline.Refresh["test"].ID)
++		assert.Equal(t, "192.0.2.1", ref.IPAddress, "the address of the client of the token request")
++		refresh, err := s.storage.GetRefresh(t.Context(), id)
++		require.NoError(t, err)
++		assert.Equal(t, "192.0.2.1", refresh.IPAddress)
++	}
++}
++
++// TestDevicesConfig: the age that keeps a device from eviction and the number of
++// devices per client come from the config, a day and 10 without it (Deckhouse).
++func TestDevicesConfig(t *testing.T) {
++	_, byDefault := newTestServer(t, nil)
++	require.Equal(t, tokens.DefaultProtectedGrantAge, byDefault.issuer.Refresh.ProtectedGrantAge)
++	require.Equal(t, tokens.DefaultMaxGrantsPerClient, byDefault.issuer.Refresh.MaxGrantsPerClient)
++
++	for _, age := range []time.Duration{time.Hour, 0} {
++		_, s := newTestServer(t, func(c *Config) { c.Devices = DevicesConfig{TrustedAfter: &age, MaxPerClient: 3} })
++		require.Equal(t, age, s.issuer.Refresh.ProtectedGrantAge)
++		require.Equal(t, 3, s.issuer.Refresh.MaxGrantsPerClient)
++	}
++}
+diff --git a/server/server_grant_refresh_test.go b/server/server_grant_refresh_test.go
+index 2ef6df5e..fc859c3c 100644
+--- a/server/server_grant_refresh_test.go
++++ b/server/server_grant_refresh_test.go
+@@ -179,6 +179,15 @@ func TestRefreshTokenExpirationScenarios(t *testing.T) {
+ 				require.Equal(t, 200, rr.Code)
+ 			} else {
+ 				require.Equal(t, rr.Body.String(), tc.error)
++				// An expired token is deleted at the refusal, so it is no device of the
++				// user any more; one refused for what the client sent stays (Deckhouse).
++				_, gerr := s.storage.GetRefresh(t.Context(), "test")
++				switch {
++				case strings.Contains(tc.error, "Refresh token expired."):
++					require.ErrorIs(t, gerr, storage.ErrNotFound, "the expired token is deleted")
++				case tc.refreshID == "":
++					require.NoError(t, gerr, "a token refused for what the client sent stays")
++				}
+ 				return
+ 			}
+ 
+diff --git a/server/server_identity_refresh_test.go b/server/server_identity_refresh_test.go
+index 14b376e9..8427600f 100644
+--- a/server/server_identity_refresh_test.go
++++ b/server/server_identity_refresh_test.go
+@@ -151,6 +151,7 @@ func TestRefreshReadsStaleIdentity(t *testing.T) {
+ 				}
+ 				require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
+ 				assert.Equal(t, tc.wantUsername, decodeJWTClaims(t, resp.IDToken)["name"])
++				assert.Equal(t, "test", decodeJWTClaims(t, resp.IDToken)["d8_gid"], "the grant the tokens were refreshed from")
+ 			}
+ 
+ 			_, errToken := s.storage.GetRefresh(ctx, "test")
+diff --git a/server/server_logout_test.go b/server/server_logout_test.go
+index f8f7a599..5a7d42b3 100644
+--- a/server/server_logout_test.go
++++ b/server/server_logout_test.go
+@@ -253,14 +253,20 @@ func TestHandleLogoutRevokesOnlySessionBoundClients(t *testing.T) {
+ 	webRefresh := newTestRefreshToken(t, server, userID, connectorID, webClient)
+ 	proxyRefresh := newTestRefreshToken(t, server, userID, connectorID, proxyClient)
+ 	cliRefresh := newTestRefreshToken(t, server, userID, connectorID, cliClient)
++	// The bound client on another device of the user, in another browser session
++	// (Deckhouse): signing out of this browser leaves it alone.
++	proxyElsewhere := newTestRefreshToken(t, server, userID, connectorID, proxyClient)
+ 
+ 	require.NoError(t, server.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
+ 		UserID: userID, ConnID: connectorID,
+ 		Refresh: map[string]*storage.RefreshTokenRef{
+-			webClient:   {ID: webRefresh, ClientID: webClient, CreatedAt: time.Now(), LastUsed: time.Now()},
+-			proxyClient: {ID: proxyRefresh, ClientID: proxyClient, CreatedAt: time.Now(), LastUsed: time.Now()},
++			webClient:   {ID: webRefresh, ClientID: webClient, CreatedAt: time.Now(), LastUsed: time.Now(), SessionID: "testnonce"},
++			proxyClient: {ID: proxyRefresh, ClientID: proxyClient, CreatedAt: time.Now(), LastUsed: time.Now(), SessionID: "testnonce"},
+ 			cliClient:   {ID: cliRefresh, ClientID: cliClient, CreatedAt: time.Now(), LastUsed: time.Now()},
+ 		},
++		Grants: map[string]*storage.RefreshTokenRef{
++			proxyElsewhere: {ID: proxyElsewhere, ClientID: proxyClient, CreatedAt: time.Now(), LastUsed: time.Now(), SessionID: "elsewhere"},
++		},
+ 	}))
+ 
+ 	require.NoError(t, server.storage.CreateAuthSession(ctx, storage.AuthSession{
+@@ -293,9 +299,14 @@ func TestHandleLogoutRevokesOnlySessionBoundClients(t *testing.T) {
+ 	_, err = server.storage.GetRefresh(ctx, cliRefresh)
+ 	require.NoError(t, err)
+ 
++	// ...and so does the bound client on another device (Deckhouse).
++	_, err = server.storage.GetRefresh(ctx, proxyElsewhere)
++	require.NoError(t, err)
++
+ 	os, err := server.storage.GetOfflineSessions(ctx, userID, connectorID)
+ 	require.NoError(t, err)
+-	require.NotContains(t, os.Refresh, proxyClient)
++	require.Equal(t, proxyElsewhere, os.Refresh[proxyClient].ID, "the client names its grant left")
++	require.NotContains(t, os.Grants, proxyRefresh)
+ 	require.Contains(t, os.Refresh, webClient)
+ 	require.Contains(t, os.Refresh, cliClient)
+ }
+@@ -890,8 +901,8 @@ func TestBackchannelLogoutSSOSharesOneSID(t *testing.T) {
+ 	require.NoError(t, server.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
+ 		UserID: userID, ConnID: connectorID,
+ 		Refresh: map[string]*storage.RefreshTokenRef{
+-			"app-a": {ID: aRefresh, ClientID: "app-a"},
+-			"app-b": {ID: bRefresh, ClientID: "app-b"},
++			"app-a": {ID: aRefresh, ClientID: "app-a", SessionID: "testnonce"},
++			"app-b": {ID: bRefresh, ClientID: "app-b", SessionID: "testnonce"},
+ 		},
+ 	}))
+ 
+@@ -1097,10 +1108,12 @@ func TestRefreshSIDFollowsOrigin(t *testing.T) {
+ 	newTestAuthSession(t, server, userID, connectorID, "browsernonce")
+ 	const sid = "browsernonce"
+ 
+-	// A refresh token from a browser flow records the session it came from; one
+-	// from any other flow records nothing.
++	// A refresh token of a client bound to the session, from a browser flow,
++	// records the session it came from; one of a client that is not bound records
++	// nothing even from a browser flow (Deckhouse: it is a device of its own), and
++	// one from any other flow records nothing.
+ 	fromBrowser, err := server.issuer.Refresh.Create(ctx, tokens.Authorization{
+-		Client:      storage.Client{ID: "web"},
++		Client:      storage.Client{ID: "web", RefreshTokenLifetime: storage.RefreshTokenLifetimeSession},
+ 		Claims:      storage.Claims{UserID: userID},
+ 		Scopes:      []string{"openid", "offline_access"},
+ 		ConnectorID: connectorID,
+@@ -1109,6 +1122,15 @@ func TestRefreshSIDFollowsOrigin(t *testing.T) {
+ 	require.NoError(t, err)
+ 	require.NotEmpty(t, fromBrowser)
+ 
++	_, err = server.issuer.Refresh.Create(ctx, tokens.Authorization{
++		Client:      storage.Client{ID: "kubeconfig"},
++		Claims:      storage.Claims{UserID: userID},
++		Scopes:      []string{"openid", "offline_access"},
++		ConnectorID: connectorID,
++		SessionID:   sid,
++	})
++	require.NoError(t, err)
++
+ 	_, err = server.issuer.Refresh.Create(ctx, tokens.Authorization{
+ 		Client:      storage.Client{ID: "cli"},
+ 		Claims:      storage.Claims{UserID: userID},
+@@ -1119,7 +1141,8 @@ func TestRefreshSIDFollowsOrigin(t *testing.T) {
+ 
+ 	offline, err := server.storage.GetOfflineSessions(ctx, userID, connectorID)
+ 	require.NoError(t, err)
+-	require.Equal(t, sid, offline.Refresh["web"].SessionID, "browser flow records its session")
++	require.Equal(t, sid, offline.Refresh["web"].SessionID, "a bound client records its session")
++	require.Empty(t, offline.Refresh["kubeconfig"].SessionID, "a client that is not bound records none")
+ 	require.Empty(t, offline.Refresh["cli"].SessionID, "other flows record none")
+ }
+ 
+diff --git a/server/server_revocation_test.go b/server/server_revocation_test.go
+index df082eca..eb11e489 100644
+--- a/server/server_revocation_test.go
++++ b/server/server_revocation_test.go
+@@ -668,7 +668,7 @@ func newLogoutTestSession(t *testing.T, s *Server, logoutState *storage.LogoutSt
+ 	boundRefreshID = newTestRefreshToken(t, s, userID, connectorID, "b-bound")
+ 	require.NoError(t, s.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
+ 		UserID: userID, ConnID: connectorID,
+-		Refresh: map[string]*storage.RefreshTokenRef{"b-bound": {ID: boundRefreshID, ClientID: "b-bound"}},
++		Refresh: map[string]*storage.RefreshTokenRef{"b-bound": {ID: boundRefreshID, ClientID: "b-bound", SessionID: sessionID}},
+ 	}))
+ 	return sessionID, boundRefreshID
+ }
+diff --git a/server/server_test.go b/server/server_test.go
+index 24dc2727..c6ccd948 100644
+--- a/server/server_test.go
++++ b/server/server_test.go
+@@ -1460,9 +1460,10 @@ func TestRefreshTokenFlow(t *testing.T) {
+ 	}
+ 	defer resp.Body.Close()
+ 
+-	// try to refresh expired token with old refresh token.
+-	if _, err := oauth2Client.config.TokenSource(ctx, tok).Token(); err == nil {
+-		t.Errorf("Token refreshed with invalid refresh token, error expected.")
++	// The second login is another device of the user (Deckhouse): the refresh
++	// token of the first one keeps working. Upstream replaces it.
++	if _, err := oauth2Client.config.TokenSource(ctx, tok).Token(); err != nil {
++		t.Errorf("Token of the first login not refreshed: %v", err)
+ 	}
+ }
+ 
+diff --git a/server/session/session.go b/server/session/session.go
+index 188a114f..24d300ed 100644
+--- a/server/session/session.go
++++ b/server/session/session.go
+@@ -7,7 +7,6 @@ import (
+ 	"fmt"
+ 	"log/slog"
+ 	"math"
+-	"net"
+ 	"net/http"
+ 	"slices"
+ 	"time"
+@@ -103,18 +102,7 @@ func (m *Manager) RememberMeDefault() *bool {
+ // remoteIP returns the real IP from context (set by the real-IP resolver) or,
+ // failing that, the host part of r.RemoteAddr. Either way the result carries no
+ // port; only an address that parses as neither is returned verbatim.
+-func remoteIP(r *http.Request) string {
+-	if ip, ok := r.Context().Value(reqctx.RequestKeyRemoteIP).(string); ok && ip != "" {
+-		return ip
+-	}
+-	// RemoteAddr carries the ephemeral source port, which is noise in an audit
+-	// record: it identifies the connection, not the client. The resolver behind
+-	// the context value already strips it, so strip it here too.
+-	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+-		return host
+-	}
+-	return r.RemoteAddr
+-}
++func remoteIP(r *http.Request) string { return reqctx.RemoteIP(r) }
+ 
+ func (m *Manager) cookiePath() string {
+ 	if m.IssuerURL.Path == "" {
+@@ -306,7 +294,10 @@ func (m *Manager) CreateOrUpdateAuthSession(ctx context.Context, r *http.Request
+ 				old.LastActivity = now
+ 				old.IdleExpiry = now.Add(m.Config.ValidIfNotUsedFor)
+ 				old.IPAddress = remoteIP(r)
+-				old.UserAgent = r.UserAgent()
++				old.UserAgent = reqctx.UserAgent(r)
++				if authReq.DeviceHash != "" {
++					old.DeviceHash = authReq.DeviceHash
++				}
+ 				old.Generation = authReq.Generation
+ 				if old.ClientStates == nil {
+ 					old.ClientStates = make(map[string]*storage.ClientAuthState)
+@@ -337,7 +328,8 @@ func (m *Manager) CreateOrUpdateAuthSession(ctx context.Context, r *http.Request
+ 		CreatedAt:      now,
+ 		LastActivity:   now,
+ 		IPAddress:      remoteIP(r),
+-		UserAgent:      r.UserAgent(),
++		UserAgent:      reqctx.UserAgent(r),
++		DeviceHash:     authReq.DeviceHash,
+ 		AbsoluteExpiry: now.Add(m.Config.AbsoluteLifetime),
+ 		IdleExpiry:     now.Add(m.Config.ValidIfNotUsedFor),
+ 		Generation:     authReq.Generation,
+diff --git a/server/tokens/authorization.go b/server/tokens/authorization.go
+index 4e18bc13..467e62f9 100644
+--- a/server/tokens/authorization.go
++++ b/server/tokens/authorization.go
+@@ -32,6 +32,26 @@ type Authorization struct {
+ 	// (see server/revocation), emitted as the "d8_gen" claim and kept on the
+ 	// refresh token.
+ 	Generation uint64
++
++	// GrantID is the ID of the refresh token issued with or refreshed into the
++	// tokens, emitted as the "d8_gid" claim (Deckhouse): the device a token without
++	// a browser session belongs to.
++	GrantID string
++
++	// IPAddress and UserAgent are of the sign-in (Deckhouse), kept on the grant
++	// as the device it is listed as.
++	IPAddress string
++	UserAgent string
++
++	// DeviceHash is the hash of the device mark of the browser that signed in
++	// (Deckhouse; see server/devicemark), kept on the grant.
++	DeviceHash string
++
++	// ReplaceGrant makes the refresh token replace every grant the pair has in the
++	// client instead of joining them (Deckhouse): the password grant and token
++	// exchange, which a client repeats for one user (basic-auth-proxy every few
++	// minutes), are no new device.
++	ReplaceGrant bool
+ }
+ 
+ // TokenSet is what the /token endpoint returns for an Authorization.
+diff --git a/server/tokens/claims.go b/server/tokens/claims.go
+index 194b556e..f6ff4b92 100644
+--- a/server/tokens/claims.go
++++ b/server/tokens/claims.go
+@@ -93,6 +93,11 @@ type IDTokenClaims struct {
+ 	// issued at (see server/revocation). Absent for generation 0, which every
+ 	// consumer reads as 0: tokens issued before generations existed stay valid.
+ 	D8Generation uint64 `json:"d8_gen,omitempty"`
++
++	// D8GrantID is the ID of the refresh token the token was issued with or
++	// refreshed from (Deckhouse): the device of a token that has no browser
++	// session. Absent for tokens without a refresh token.
++	D8GrantID string `json:"d8_gid,omitempty"`
+ }
+ 
+ // FederatedIDClaims carries the upstream connector's identity for the
+diff --git a/server/tokens/issuer.go b/server/tokens/issuer.go
+index 994587b9..b5f3b83a 100644
+--- a/server/tokens/issuer.go
++++ b/server/tokens/issuer.go
+@@ -50,6 +50,11 @@ func NewIssuer(storage storage.Storage, sig signer.Signer, issuerURL url.URL, id
+ // decision, so the caller passes it in. This is the single mint every standard
+ // OAuth2 grant uses.
+ func (i *Issuer) Issue(ctx context.Context, auth Authorization, code string, withRefresh bool) (TokenSet, error) {
++	// The refresh token is created after the tokens it comes with, which carry
++	// its ID (Deckhouse): pick it first.
++	if withRefresh && auth.GrantID == "" {
++		auth.GrantID = storage.NewID()
++	}
+ 	accessToken, expiry, err := i.SignAccessToken(ctx, auth)
+ 	if err != nil {
+ 		return TokenSet{}, fmt.Errorf("create access token: %w", err)
+@@ -116,6 +121,7 @@ func (i *Issuer) SignIDToken(ctx context.Context, auth Authorization, accessToke
+ 
+ 	tok.SessionID = auth.SessionID
+ 	tok.D8Generation = auth.Generation
++	tok.D8GrantID = auth.GrantID
+ 
+ 	signingAlg, err := i.signer.Algorithm(ctx)
+ 	if err != nil {
+diff --git a/server/tokens/issuer_test.go b/server/tokens/issuer_test.go
+index a857ce0a..57e59aa0 100644
+--- a/server/tokens/issuer_test.go
++++ b/server/tokens/issuer_test.go
+@@ -70,12 +70,29 @@ func TestIssuerIssue(t *testing.T) {
+ 	require.NoError(t, err)
+ 	require.Contains(t, sess.Refresh, "client-1")
+ 
++	// The tokens name the grant they came with (Deckhouse).
++	require.Equal(t, rt.RefreshId, jwtClaim(t, ts.IDToken, "d8_gid"))
++	require.Equal(t, rt.RefreshId, jwtClaim(t, ts.AccessToken, "d8_gid"))
++
+ 	// Without refresh: access + id only.
+ 	ts2, err := iss.Issue(ctx, auth, "", false)
+ 	require.NoError(t, err)
+ 	require.NotEmpty(t, ts2.AccessToken)
+ 	require.NotEmpty(t, ts2.IDToken)
+ 	require.Empty(t, ts2.RefreshToken)
++	require.Nil(t, jwtClaim(t, ts2.IDToken, "d8_gid"), "no grant, no d8_gid")
++}
++
++// jwtClaim returns a claim of the payload of a JWT, nil when absent.
++func jwtClaim(t *testing.T, jwt, name string) any {
++	t.Helper()
++	parts := strings.Split(jwt, ".")
++	require.Len(t, parts, 3)
++	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
++	require.NoError(t, err)
++	claims := map[string]any{}
++	require.NoError(t, json.Unmarshal(payload, &claims))
++	return claims[name]
+ }
+ 
+ // TestIssuerGenerationClaim checks "d8_gen": present exactly when the pair has
+diff --git a/server/tokens/refresh_store.go b/server/tokens/refresh_store.go
+index 7b02178b..e0437c01 100644
+--- a/server/tokens/refresh_store.go
++++ b/server/tokens/refresh_store.go
+@@ -6,6 +6,9 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"log/slog"
++	"maps"
++	"slices"
++	"strings"
+ 	"time"
+ 
+ 	"github.com/dexidp/dex/connector"
+@@ -20,19 +23,54 @@ type RefreshStore struct {
+ 	storage storage.Storage
+ 	now     func() time.Time
+ 	logger  *slog.Logger
++
++	// OnEvict, when set, is told of a refresh token about to be deleted because
++	// its client has MaxGrantsPerClient newer ones for the pair (Deckhouse).
++	OnEvict func(ctx context.Context, refresh storage.RefreshToken)
++
++	// MaxGrantsPerClient is how many refresh tokens a pair keeps in one client
++	// (Deckhouse): the devices the user signed in to the client from. A login past
++	// it evicts the token used longest ago, a token younger than ProtectedGrantAge
++	// first. DefaultMaxGrantsPerClient unless configured.
++	MaxGrantsPerClient int
++
++	// ProtectedGrantAge keeps a token from eviction while the client has younger
++	// ones (Deckhouse): a device signed in that long may sign the user out of the
++	// others (user-api), and a burst of new sign-ins with a stolen password must
++	// evict its own tokens, not the owner's. Zero prefers none: the token used
++	// longest ago goes, whatever its age. DefaultProtectedGrantAge unless configured.
++	ProtectedGrantAge time.Duration
+ }
+ 
++// DefaultMaxGrantsPerClient is RefreshStore.MaxGrantsPerClient unless configured
++// (Deckhouse).
++const DefaultMaxGrantsPerClient = 10
++
++// DefaultProtectedGrantAge is RefreshStore.ProtectedGrantAge unless configured
++// (Deckhouse).
++const DefaultProtectedGrantAge = 24 * time.Hour
++
+ // NewRefreshStore returns a store backed by the given storage.
+ func NewRefreshStore(storage storage.Storage, now func() time.Time, logger *slog.Logger) *RefreshStore {
+-	return &RefreshStore{storage: storage, now: now, logger: logger}
++	return &RefreshStore{
++		storage:            storage,
++		now:                now,
++		logger:             logger,
++		MaxGrantsPerClient: DefaultMaxGrantsPerClient,
++		ProtectedGrantAge:  DefaultProtectedGrantAge,
++	}
+ }
+ 
+ // Create issues a new refresh token for the authorization and records it in the
+ // user's offline session. On any offline-session failure the refresh token is
+ // rolled back so no orphaned token is left behind.
+ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string, error) {
++	id := auth.GrantID
++	if id == "" {
++		id = storage.NewID()
++	}
+ 	refresh := storage.RefreshToken{
+-		ID:            storage.NewID(),
++		ID:            id,
+ 		Token:         storage.NewID(),
+ 		ClientID:      auth.Client.ID,
+ 		ConnectorID:   auth.ConnectorID,
+@@ -43,6 +81,9 @@ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string,
+ 		CreatedAt:     rt.now(),
+ 		LastUsed:      rt.now(),
+ 		Generation:    auth.Generation,
++		IPAddress:     auth.IPAddress,
++		UserAgent:     auth.UserAgent,
++		DeviceHash:    auth.DeviceHash,
+ 	}
+ 
+ 	rawToken, err := internal.Marshal(&internal.RefreshToken{RefreshId: refresh.ID, Token: refresh.Token})
+@@ -62,15 +103,27 @@ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string,
+ 		}
+ 	}
+ 
++	// Only a token bound to the browser session belongs to it (Deckhouse): it ends
++	// with the session and is listed as part of that browser. A token of a client
++	// that is not bound (kubeconfig, device flow, a DexClient that keeps its own
++	// tokens) is a device of its own, even when the browser that signed in had a
++	// session, so it records none.
++	sessionID := ""
++	if auth.Client.RefreshBoundToSession() {
++		sessionID = auth.SessionID
++	}
+ 	tokenRef := storage.RefreshTokenRef{
+-		ID:        refresh.ID,
+-		ClientID:  refresh.ClientID,
+-		CreatedAt: refresh.CreatedAt,
+-		LastUsed:  refresh.LastUsed,
+-		SessionID: auth.SessionID,
++		ID:         refresh.ID,
++		ClientID:   refresh.ClientID,
++		CreatedAt:  refresh.CreatedAt,
++		LastUsed:   refresh.LastUsed,
++		SessionID:  sessionID,
++		IPAddress:  auth.IPAddress,
++		UserAgent:  auth.UserAgent,
++		DeviceHash: auth.DeviceHash,
+ 	}
+ 
+-	session, err := rt.storage.GetOfflineSessions(ctx, refresh.Claims.UserID, refresh.ConnectorID)
++	_, err = rt.storage.GetOfflineSessions(ctx, refresh.Claims.UserID, refresh.ConnectorID)
+ 	switch {
+ 	case err != nil && err != storage.ErrNotFound:
+ 		rollback()
+@@ -80,37 +133,219 @@ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string,
+ 			UserID:        refresh.Claims.UserID,
+ 			ConnID:        refresh.ConnectorID,
+ 			Refresh:       map[string]*storage.RefreshTokenRef{tokenRef.ClientID: &tokenRef},
++			Grants:        map[string]*storage.RefreshTokenRef{tokenRef.ID: &tokenRef},
+ 			ConnectorData: auth.ConnectorData,
+ 		}
+-		if err := rt.storage.CreateOfflineSessions(ctx, offlineSessions); err != nil {
++		err := rt.storage.CreateOfflineSessions(ctx, offlineSessions)
++		if errors.Is(err, storage.ErrAlreadyExists) {
++			// Another login of the user created it a moment ago (Deckhouse).
++			err = rt.addGrant(ctx, refresh, &tokenRef, auth)
++		}
++		if err != nil {
+ 			rollback()
+ 			return "", fmt.Errorf("create offline session: %w", err)
+ 		}
+ 	default:
+-		// Replace any existing refresh token for this client.
+-		if oldRef, ok := session.Refresh[tokenRef.ClientID]; ok {
+-			if err := rt.storage.DeleteRefresh(ctx, oldRef.ID); err != nil && err != storage.ErrNotFound {
+-				rollback()
+-				return "", fmt.Errorf("delete previous refresh token: %w", err)
++		if err := rt.addGrant(ctx, refresh, &tokenRef, auth); err != nil {
++			rollback()
++			return "", err
++		}
++	}
++
++	return rawToken, nil
++}
++
++// addGrant adds the grant tokenRef of a new login to the offline session of the
++// user of refresh (Deckhouse). The grants of the client it replaces are every one
++// for a client that repeats its logins and the one of this browser session for a
++// client bound to it; any other login is a new device of the user. They are
++// taken from the offline session the update writes, so two logins of one browser
++// at once each replace the other's grant, and their tokens are deleted once the
++// update holds, so a failed update leaves no reference to a deleted token.
++func (rt *RefreshStore) addGrant(ctx context.Context, refresh storage.RefreshToken, tokenRef *storage.RefreshTokenRef, auth Authorization) error {
++	var replaced, evicted []*storage.RefreshTokenRef
++	err := rt.storage.UpdateOfflineSessions(ctx, refresh.Claims.UserID, refresh.ConnectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++		replaced = replacedGrants(old, auth)
++		grants := GrantsOf(old)
++		for _, ref := range replaced {
++			delete(grants, ref.ID)
++		}
++		grants[tokenRef.ID] = tokenRef
++		evicted = evictGrants(grants, tokenRef, rt.now(), evictionPolicy{
++			maxPerClient: rt.MaxGrantsPerClient,
++			protectedAge: rt.ProtectedGrantAge,
++		})
++		old.Grants = grants
++		if old.Refresh == nil {
++			old.Refresh = make(map[string]*storage.RefreshTokenRef)
++		}
++		old.Refresh[tokenRef.ClientID] = tokenRef
++		// The upstream credential of this login is kept on the refresh token
++		// created above. Publishing it here as well would hand one single-use
++		// credential to every client of the user, so it only seeds a session
++		// that has none (see refresh_upstream.go).
++		if len(old.ConnectorData) == 0 && len(auth.ConnectorData) > 0 {
++			old.ConnectorData = auth.ConnectorData
++		}
++		return old, nil
++	})
++	if err != nil {
++		return fmt.Errorf("update offline session: %w", err)
++	}
++	rt.deleteReplaced(ctx, replaced)
++	rt.deleteEvicted(ctx, evicted)
++	return nil
++}
++
++// deleteReplaced deletes the refresh tokens a new login replaced (Deckhouse),
++// after the offline session no longer refers to them. Failures are logged: a
++// token left behind has no reference and is refused at its next use.
++func (rt *RefreshStore) deleteReplaced(ctx context.Context, replaced []*storage.RefreshTokenRef) {
++	for _, ref := range replaced {
++		if err := rt.storage.DeleteRefresh(ctx, ref.ID); err != nil && !errors.Is(err, storage.ErrNotFound) {
++			rt.logger.ErrorContext(ctx, "failed to delete a replaced refresh token", "token_id", ref.ID, "err", err)
++		}
++	}
++}
++
++// GrantsOf returns the references to the refresh tokens of an offline session,
++// indexed by token ID (Deckhouse): its Grants, and for one written before them,
++// or by a Dex that keeps one token per client, the tokens of Refresh too. The map
++// is the session's own when it has Grants, so an updater may change it.
++func GrantsOf(o storage.OfflineSessions) map[string]*storage.RefreshTokenRef {
++	grants := o.Grants
++	if grants == nil {
++		grants = make(map[string]*storage.RefreshTokenRef, len(o.Refresh))
++	}
++	for _, ref := range o.Refresh {
++		if ref == nil {
++			continue
++		}
++		if _, ok := grants[ref.ID]; !ok {
++			grants[ref.ID] = ref
++		}
++	}
++	return grants
++}
++
++// replacedGrants returns the grants of the offline session that a new refresh
++// token of auth replaces (Deckhouse): every grant of the client for a login the
++// client repeats (ReplaceGrant), the grant of the same browser session for a
++// client bound to it, none otherwise.
++func replacedGrants(o storage.OfflineSessions, auth Authorization) []*storage.RefreshTokenRef {
++	bySession := auth.SessionID != "" && auth.Client.RefreshBoundToSession()
++	var replaced []*storage.RefreshTokenRef
++	for _, ref := range GrantsOf(o) {
++		if ref.ClientID != auth.Client.ID {
++			continue
++		}
++		if auth.ReplaceGrant || (bySession && ref.SessionID == auth.SessionID) {
++			replaced = append(replaced, ref)
++		}
++	}
++	return replaced
++}
++
++// evictionPolicy decides which grants of a client a new login evicts (Deckhouse).
++type evictionPolicy struct {
++	maxPerClient int
++	protectedAge time.Duration
++}
++
++// evictGrants removes from grants the grants of the client of added beyond
++// policy.maxPerClient and returns them: the ones used longest ago among those
++// younger than policy.protectedAge, and the older ones only once no younger one
++// is left. The grant just added is never evicted.
++func evictGrants(grants map[string]*storage.RefreshTokenRef, added *storage.RefreshTokenRef, now time.Time, policy evictionPolicy) []*storage.RefreshTokenRef {
++	var others []*storage.RefreshTokenRef
++	for _, ref := range grants {
++		if ref.ClientID == added.ClientID && ref.ID != added.ID {
++			others = append(others, ref)
++		}
++	}
++	excess := len(others) + 1 - max(policy.maxPerClient, 1)
++	if excess <= 0 {
++		return nil
++	}
++	protected := func(ref *storage.RefreshTokenRef) bool { return now.Sub(ref.CreatedAt) >= policy.protectedAge }
++	slices.SortFunc(others, func(a, b *storage.RefreshTokenRef) int {
++		if pa, pb := protected(a), protected(b); pa != pb {
++			if pa {
++				return 1
+ 			}
++			return -1
++		}
++		if c := a.LastUsed.Compare(b.LastUsed); c != 0 {
++			return c
+ 		}
+-		if err := rt.storage.UpdateOfflineSessions(ctx, session.UserID, session.ConnID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
+-			old.Refresh[tokenRef.ClientID] = &tokenRef
+-			// The upstream credential of this login is kept on the refresh token
+-			// created above. Publishing it here as well would hand one single-use
+-			// credential to every client of the user, so it only seeds a session
+-			// that has none (see refresh_upstream.go).
+-			if len(old.ConnectorData) == 0 && len(auth.ConnectorData) > 0 {
+-				old.ConnectorData = auth.ConnectorData
++		return strings.Compare(a.ID, b.ID)
++	})
++	evicted := others[:excess]
++	for _, ref := range evicted {
++		delete(grants, ref.ID)
++	}
++	return evicted
++}
++
++// deleteEvicted deletes the refresh tokens evicted by a new login, telling
++// OnEvict of each first. Failures are logged: a token left behind has no
++// reference and is refused at its next use.
++func (rt *RefreshStore) deleteEvicted(ctx context.Context, evicted []*storage.RefreshTokenRef) {
++	for _, ref := range evicted {
++		if rt.OnEvict != nil {
++			if refresh, err := rt.storage.GetRefresh(ctx, ref.ID); err == nil {
++				rt.OnEvict(ctx, refresh)
+ 			}
+-			return old, nil
+-		}); err != nil {
+-			rollback()
+-			return "", fmt.Errorf("update offline session: %w", err)
+ 		}
++		if err := rt.storage.DeleteRefresh(ctx, ref.ID); err != nil && !errors.Is(err, storage.ErrNotFound) {
++			rt.logger.ErrorContext(ctx, "failed to delete an evicted refresh token", "token_id", ref.ID, "err", err)
++		}
++		rt.forgetEvictedClient(ctx, ref)
++	}
++}
++
++// errNoClientState aborts forgetEvictedClient on a session without the client.
++var errNoClientState = errors.New("session holds no state of the client")
++
++// forgetEvictedClient removes the client of an evicted grant from the browser
++// session it was issued under (Deckhouse), as a logout of the client does: the
++// browser is signed out of that application, so the session no longer lists it
++// among its applications and does not sign the browser in to it again without
++// a password. Only a grant of a client bound to the session records the
++// session, one grant per client and session. Failures are logged.
++func (rt *RefreshStore) forgetEvictedClient(ctx context.Context, ref *storage.RefreshTokenRef) {
++	if ref.SessionID == "" {
++		return
++	}
++	err := rt.storage.UpdateAuthSession(ctx, ref.SessionID, func(s storage.AuthSession) (storage.AuthSession, error) {
++		if _, ok := s.ClientStates[ref.ClientID]; !ok {
++			return s, errNoClientState
++		}
++		states := maps.Clone(s.ClientStates)
++		delete(states, ref.ClientID)
++		s.ClientStates = states
++		return s, nil
++	})
++	if err != nil && !errors.Is(err, errNoClientState) && !errors.Is(err, storage.ErrNotFound) {
++		rt.logger.ErrorContext(ctx, "failed to remove an evicted client from its browser session",
++			"session_id", ref.SessionID, "client_id", ref.ClientID, "err", err)
+ 	}
++}
+ 
+-	return rawToken, nil
++// setLatest points Refresh at the newest grant left of the client, or removes
++// the client from it (Deckhouse): Refresh names the last grant of each client.
++func setLatest(o *storage.OfflineSessions, clientID string) {
++	var latest *storage.RefreshTokenRef
++	for _, ref := range o.Grants {
++		if ref.ClientID == clientID && (latest == nil || ref.CreatedAt.After(latest.CreatedAt)) {
++			latest = ref
++		}
++	}
++	if latest == nil {
++		delete(o.Refresh, clientID)
++		return
++	}
++	o.Refresh[clientID] = latest
+ }
+ 
+ // IdentityFromClaims projects stored claims into a connector identity. The
+@@ -262,12 +497,17 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
+ 	spent, source, accepted := src.spent()
+ 
+ 	offlineSessionUpdater := func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
+-		ref, ok := old.Refresh[refresh.ClientID]
+-		if !ok || ref.ID != refresh.ID {
++		grants := GrantsOf(old)
++		ref, ok := grants[refresh.ID]
++		if !ok {
+ 			return old, errors.New("refresh token invalid")
+ 		}
+ 
+ 		ref.LastUsed = lastUsed
++		if latest, ok := old.Refresh[refresh.ClientID]; ok && latest.ID == refresh.ID {
++			latest.LastUsed = lastUsed
++		}
++		old.Grants = grants
+ 
+ 		// Publish a rotated credential only while the session still holds the one
+ 		// this request spent, or none: a request that lost the race to this one may
+@@ -296,8 +536,10 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
+ // of the same client may have replaced it already, and must keep its own.
+ func (rt *RefreshStore) RevokeGrant(ctx context.Context, refresh *storage.RefreshToken) error {
+ 	err := rt.storage.UpdateOfflineSessions(ctx, refresh.Claims.UserID, refresh.ConnectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++		old.Grants = GrantsOf(old)
++		delete(old.Grants, refresh.ID)
+ 		if ref, ok := old.Refresh[refresh.ClientID]; ok && ref.ID == refresh.ID {
+-			delete(old.Refresh, refresh.ClientID)
++			setLatest(&old, refresh.ClientID)
+ 		}
+ 		return old, nil
+ 	})
+@@ -311,6 +553,54 @@ func (rt *RefreshStore) RevokeGrant(ctx context.Context, refresh *storage.Refres
+ 	return nil
+ }
+ 
++// expired reports whether refresh is past its absolute lifetime or unused longer
++// than strategy allows: Dex refuses it for good.
++func expired(strategy *RefreshStrategy, refresh storage.RefreshToken) bool {
++	return strategy != nil && (strategy.CompletelyExpired(refresh.CreatedAt) || strategy.ExpiredBecauseUnused(refresh.LastUsed))
++}
++
++// DeleteIfExpired deletes the refresh token id with its reference when it is
++// expired under strategy (Deckhouse): a refresh Dex refused as expired leaves no
++// device of the user behind.
++func (rt *RefreshStore) DeleteIfExpired(ctx context.Context, id string, strategy *RefreshStrategy) error {
++	refresh, err := rt.storage.GetRefresh(ctx, id)
++	switch {
++	case errors.Is(err, storage.ErrNotFound):
++		return nil
++	case err != nil:
++		return fmt.Errorf("get refresh token: %w", err)
++	case !expired(strategy, refresh):
++		return nil
++	}
++	return rt.RevokeGrant(ctx, &refresh)
++}
++
++// DeleteExpired deletes every refresh token expired under strategy with its
++// reference, and returns how many it deleted (Deckhouse). A token whose client
++// never comes back is not refused at a refresh, and without this it would stay a
++// device of the user for good. Failures are logged and the others go on.
++func (rt *RefreshStore) DeleteExpired(ctx context.Context, strategy *RefreshStrategy) (int, error) {
++	if strategy == nil || (strategy.absoluteLifetime == 0 && strategy.validIfNotUsedFor == 0) {
++		return 0, nil
++	}
++	refreshes, err := rt.storage.ListRefreshTokens(ctx)
++	if err != nil {
++		return 0, fmt.Errorf("list refresh tokens: %w", err)
++	}
++	deleted := 0
++	for i := range refreshes {
++		if !expired(strategy, refreshes[i]) {
++			continue
++		}
++		if err := rt.RevokeGrant(ctx, &refreshes[i]); err != nil {
++			rt.logger.ErrorContext(ctx, "failed to delete an expired refresh token", "token_id", refreshes[i].ID, "err", err)
++			continue
++		}
++		deleted++
++	}
++	return deleted, nil
++}
++
+ // RevokeClients deletes the refresh tokens issued to the named clients for the
+ // user/connector pair, in one pass over the offline session. Every other client's
+ // token is left alone. See RevokeAll for the unscoped variant.
+@@ -326,18 +616,31 @@ func (rt *RefreshStore) RevokeClients(ctx context.Context, userID, connectorID s
+ 		}
+ 	}
+ 
+-	rt.revoke(ctx, userID, connectorID, func(id string) bool {
+-		_, ok := revoking[id]
++	rt.revoke(ctx, userID, connectorID, func(ref *storage.RefreshTokenRef) bool {
++		_, ok := revoking[ref.ClientID]
+ 		return ok
+ 	})
+ }
+ 
++// RevokeSession deletes the refresh tokens the named clients were issued in the
++// browser session sessionID (Deckhouse): signing out of a browser ends the grants
++// of that browser, not those the same clients hold on the other devices of the
++// user.
++func (rt *RefreshStore) RevokeSession(ctx context.Context, userID, connectorID, sessionID string, clientIDs []string) {
++	if sessionID == "" || len(clientIDs) == 0 {
++		return
++	}
++	rt.revoke(ctx, userID, connectorID, func(ref *storage.RefreshTokenRef) bool {
++		return ref.SessionID == sessionID && slices.Contains(clientIDs, ref.ClientID)
++	})
++}
++
+ // RevokeAll deletes every refresh token for the user/connector pair. This is the
+ // administrative hammer, reached through the gRPC API when an operator terminates a
+ // user's sessions or deletes their identity — not something an ordinary RP-initiated
+ // logout does.
+ func (rt *RefreshStore) RevokeAll(ctx context.Context, userID, connectorID string) {
+-	rt.revoke(ctx, userID, connectorID, func(string) bool { return true })
++	rt.revoke(ctx, userID, connectorID, func(*storage.RefreshTokenRef) bool { return true })
+ }
+ 
+ // revoke deletes the refresh tokens of every client matching the predicate and
+@@ -348,7 +651,7 @@ func (rt *RefreshStore) RevokeAll(ctx context.Context, userID, connectorID strin
+ // session update would have its reference wiped, we snapshot the token IDs,
+ // remove only those references (the updater sees the latest state, so a
+ // concurrently added reference survives), then delete the tokens.
+-func (rt *RefreshStore) revoke(ctx context.Context, userID, connectorID string, match func(clientID string) bool) {
++func (rt *RefreshStore) revoke(ctx context.Context, userID, connectorID string, match func(ref *storage.RefreshTokenRef) bool) {
+ 	offlineSessions, err := rt.storage.GetOfflineSessions(ctx, userID, connectorID)
+ 	if err != nil {
+ 		if !errors.Is(err, storage.ErrNotFound) {
+@@ -357,9 +660,10 @@ func (rt *RefreshStore) revoke(ctx context.Context, userID, connectorID string,
+ 		return
+ 	}
+ 
+-	tokenIDs := make(map[string]struct{}, len(offlineSessions.Refresh))
+-	for clientID, ref := range offlineSessions.Refresh {
+-		if match(clientID) {
++	grants := GrantsOf(offlineSessions)
++	tokenIDs := make(map[string]struct{}, len(grants))
++	for _, ref := range grants {
++		if match(ref) {
+ 			tokenIDs[ref.ID] = struct{}{}
+ 		}
+ 	}
+@@ -369,9 +673,13 @@ func (rt *RefreshStore) revoke(ctx context.Context, userID, connectorID string,
+ 	}
+ 
+ 	if err := rt.storage.UpdateOfflineSessions(ctx, userID, connectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++		old.Grants = GrantsOf(old)
++		for id := range tokenIDs {
++			delete(old.Grants, id)
++		}
+ 		for clientID, ref := range old.Refresh {
+ 			if _, ok := tokenIDs[ref.ID]; ok {
+-				delete(old.Refresh, clientID)
++				setLatest(&old, clientID)
+ 			}
+ 		}
+ 		return old, nil
+diff --git a/server/tokens/refresh_store_test.go b/server/tokens/refresh_store_test.go
+index e6853fc0..ebd50a6b 100644
+--- a/server/tokens/refresh_store_test.go
++++ b/server/tokens/refresh_store_test.go
+@@ -2,7 +2,11 @@ package tokens
+ 
+ import (
+ 	"context"
++	"fmt"
+ 	"log/slog"
++	"maps"
++	"slices"
++	"sync"
+ 	"testing"
+ 	"time"
+ 
+@@ -25,34 +29,408 @@ func TestRefreshStoreCreate(t *testing.T) {
+ 	ctx := context.Background()
+ 	rt, store := newTestStore(t)
+ 	auth := testAuthorization()
++	auth.IPAddress, auth.UserAgent, auth.DeviceHash = "203.0.113.7", "test-agent", "device-hash-1"
+ 
+-	first, err := rt.Create(ctx, auth)
+-	require.NoError(t, err)
+-	var firstTok internal.RefreshToken
+-	require.NoError(t, internal.Unmarshal(first, &firstTok))
+-
+-	stored, err := store.GetRefresh(ctx, firstTok.RefreshId)
++	first := createdID(t, rt, auth)
++	stored, err := store.GetRefresh(ctx, first)
+ 	require.NoError(t, err)
+ 	require.Equal(t, "client-1", stored.ClientID)
+ 	require.Equal(t, auth.ConnectorData, stored.ConnectorData)
++	require.Equal(t, "203.0.113.7", stored.IPAddress)
++	require.Equal(t, "device-hash-1", stored.DeviceHash)
+ 
+ 	sess, err := store.GetOfflineSessions(ctx, "u1", "mock")
+ 	require.NoError(t, err)
+-	require.Contains(t, sess.Refresh, "client-1")
++	require.Equal(t, first, sess.Refresh["client-1"].ID)
++	require.Equal(t, "test-agent", sess.Grants[first].UserAgent)
++	require.Equal(t, "device-hash-1", sess.Grants[first].DeviceHash)
++
++	// A second login of the client is another device (Deckhouse): the first token
++	// stays, Refresh names the newer one.
++	second := createdID(t, rt, auth)
++	_, err = store.GetRefresh(ctx, first)
++	require.NoError(t, err)
++	sess, err = store.GetOfflineSessions(ctx, "u1", "mock")
++	require.NoError(t, err)
++	require.Equal(t, second, sess.Refresh["client-1"].ID)
++	require.Len(t, sess.Grants, 2)
++
++	// The password grant repeats for one user: it replaces every grant of the
++	// client.
++	replace := auth
++	replace.ReplaceGrant = true
++	third := createdID(t, rt, replace)
++	for _, id := range []string{first, second} {
++		_, err = store.GetRefresh(ctx, id)
++		require.ErrorIs(t, err, storage.ErrNotFound)
++	}
++	sess, err = store.GetOfflineSessions(ctx, "u1", "mock")
++	require.NoError(t, err)
++	require.Equal(t, []string{third}, grantIDs(sess))
++}
++
++// TestRefreshStoreCreateSessionBound: a client bound to the browser session keeps
++// one grant per session (Deckhouse): signing in again in the same browser
++// replaces it, another browser adds one.
++func TestRefreshStoreCreateSessionBound(t *testing.T) {
++	ctx := context.Background()
++	rt, store := newTestStore(t)
++	auth := testAuthorization()
++	auth.Client.RefreshTokenLifetime = storage.RefreshTokenLifetimeSession
++
++	inA := auth
++	inA.SessionID = "browser-a"
++	inB := auth
++	inB.SessionID = "browser-b"
++
++	a1 := createdID(t, rt, inA)
++	b1 := createdID(t, rt, inB)
++	a2 := createdID(t, rt, inA)
++
++	_, err := store.GetRefresh(ctx, a1)
++	require.ErrorIs(t, err, storage.ErrNotFound, "the same browser replaces its grant")
++	sess, err := store.GetOfflineSessions(ctx, "u1", "mock")
++	require.NoError(t, err)
++	require.ElementsMatch(t, []string{a2, b1}, grantIDs(sess))
++
++	// Signing out of browser a ends the grants of browser a only.
++	rt.RevokeSession(ctx, "u1", "mock", "browser-a", []string{"client-1"})
++	sess, err = store.GetOfflineSessions(ctx, "u1", "mock")
++	require.NoError(t, err)
++	require.Equal(t, []string{b1}, grantIDs(sess))
++	require.Equal(t, b1, sess.Refresh["client-1"].ID)
++	_, err = store.GetRefresh(ctx, a2)
++	require.ErrorIs(t, err, storage.ErrNotFound)
++}
++
++// readTogether holds every reader of an offline session until all of them have
++// read it, as logins that arrive at once do.
++type readTogether struct {
++	storage.Storage
++	readers sync.WaitGroup
++}
++
++func (s *readTogether) GetOfflineSessions(ctx context.Context, userID, connID string) (storage.OfflineSessions, error) {
++	o, err := s.Storage.GetOfflineSessions(ctx, userID, connID)
++	s.readers.Done()
++	s.readers.Wait()
++	return o, err
++}
++
++// TestRefreshStoreCreateAtOnce: logins of one browser to a client bound to the
++// session that arrive at once, as a browser that restores its tabs, keep one
++// grant of the session, and only its refresh token is left (Deckhouse). So do
++// the first logins of a user at once, which all find no offline session.
++func TestRefreshStoreCreateAtOnce(t *testing.T) {
++	const logins = 8
++	for _, existing := range []bool{true, false} {
++		t.Run(fmt.Sprintf("offline session exists %t", existing), func(t *testing.T) {
++			ctx := t.Context()
++			logger := slog.New(slog.DiscardHandler)
++			base := memory.New(logger)
++			auth := testAuthorization()
++			auth.Client.RefreshTokenLifetime = storage.RefreshTokenLifetimeSession
++			auth.SessionID = "browser-a"
++			if existing {
++				other := testAuthorization()
++				other.Client.ID = "client-2"
++				_, err := NewRefreshStore(base, time.Now, logger).Create(ctx, other)
++				require.NoError(t, err)
++			}
++
++			store := &readTogether{Storage: base}
++			store.readers.Add(logins)
++			rt := NewRefreshStore(store, time.Now, logger)
++			var wg sync.WaitGroup
++			errs := make(chan error, logins)
++			for range logins {
++				wg.Go(func() {
++					_, err := rt.Create(ctx, auth)
++					errs <- err
++				})
++			}
++			wg.Wait()
++			close(errs)
++			for err := range errs {
++				require.NoError(t, err)
++			}
++
++			sess, err := base.GetOfflineSessions(ctx, "u1", "mock")
++			require.NoError(t, err)
++			var ofClient []string
++			for id, ref := range GrantsOf(sess) {
++				if ref.ClientID == "client-1" {
++					ofClient = append(ofClient, id)
++				}
++			}
++			require.Len(t, ofClient, 1, "one grant of the session")
++			tokens, err := base.ListRefreshTokens(ctx)
++			require.NoError(t, err)
++			var left []string
++			for _, token := range tokens {
++				if token.ClientID == "client-1" {
++					left = append(left, token.ID)
++				}
++			}
++			require.Equal(t, ofClient, left, "only the refresh token of that grant is left")
++		})
++	}
++}
++
++// TestRefreshStoreDeleteExpired: the sweep deletes the tokens past their absolute
++// lifetime or unused too long, with their references, and keeps the others; no
++// lifetime deletes nothing (Deckhouse).
++func TestRefreshStoreDeleteExpired(t *testing.T) {
++	ctx := t.Context()
++	now := time.Now()
++	rt, store := newTestStore(t)
++	auth := testAuthorization()
++	old, unused, fresh := createdID(t, rt, auth), createdID(t, rt, auth), createdID(t, rt, auth)
++	age := func(id string, created, used time.Duration) {
++		require.NoError(t, store.UpdateRefreshToken(ctx, id, func(r storage.RefreshToken) (storage.RefreshToken, error) {
++			r.CreatedAt, r.LastUsed = now.Add(-created), now.Add(-used)
++			return r, nil
++		}))
++	}
++	age(old, 3*time.Hour, time.Minute)
++	age(unused, time.Hour, 45*time.Minute)
++
++	n, err := rt.DeleteExpired(ctx, NewRefreshStrategy(true, 0, 0, 0, nil))
++	require.NoError(t, err)
++	require.Zero(t, n, "no lifetime, nothing expires")
++	n, err = rt.DeleteExpired(ctx, nil)
++	require.NoError(t, err)
++	require.Zero(t, n)
++
++	strategy := NewRefreshStrategy(true, 2*time.Hour, 30*time.Minute, 0, func() time.Time { return now })
++	require.NoError(t, rt.DeleteIfExpired(ctx, fresh, strategy))
++	_, err = store.GetRefresh(ctx, fresh)
++	require.NoError(t, err, "a token that is not expired stays")
+ 
+-	// A second create for the same client replaces the old token.
+-	second, err := rt.Create(ctx, auth)
++	n, err = rt.DeleteExpired(ctx, strategy)
+ 	require.NoError(t, err)
+-	var secondTok internal.RefreshToken
+-	require.NoError(t, internal.Unmarshal(second, &secondTok))
+-	require.NotEqual(t, firstTok.RefreshId, secondTok.RefreshId)
++	require.Equal(t, 2, n)
++	for _, id := range []string{old, unused} {
++		_, err = store.GetRefresh(ctx, id)
++		require.ErrorIs(t, err, storage.ErrNotFound)
++	}
++	sess, err := store.GetOfflineSessions(ctx, "u1", "mock")
++	require.NoError(t, err)
++	require.Equal(t, []string{fresh}, grantIDs(sess))
++	require.Equal(t, fresh, sess.Refresh["client-1"].ID)
++}
++
++// TestRefreshStoreCreateEvicts: past DefaultMaxGrantsPerClient devices a login evicts
++// the grant used longest ago, and OnEvict is told of it (Deckhouse).
++func TestRefreshStoreCreateEvicts(t *testing.T) {
++	ctx := context.Background()
++	rt, store := newTestStore(t)
++	auth := testAuthorization()
++	var evicted []string
++	rt.OnEvict = func(_ context.Context, refresh storage.RefreshToken) { evicted = append(evicted, refresh.ID) }
+ 
+-	_, err = store.GetRefresh(ctx, firstTok.RefreshId)
++	var ids []string
++	for i := 0; i < DefaultMaxGrantsPerClient; i++ {
++		ids = append(ids, createdID(t, rt, auth))
++	}
++	// The oldest login is used now: the second oldest is the one to go.
++	require.NoError(t, store.UpdateOfflineSessions(ctx, "u1", "mock", func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++		old.Grants[ids[0]].LastUsed = time.Now().Add(time.Hour)
++		return old, nil
++	}))
++	// Another client of the user does not count.
++	other := auth
++	other.Client.ID = "client-2"
++	createdID(t, rt, other)
++
++	newest := createdID(t, rt, auth)
++	require.Equal(t, []string{ids[1]}, evicted)
++	_, err := store.GetRefresh(ctx, ids[1])
+ 	require.ErrorIs(t, err, storage.ErrNotFound)
++	sess, err := store.GetOfflineSessions(ctx, "u1", "mock")
++	require.NoError(t, err)
++	require.Len(t, sess.Grants, DefaultMaxGrantsPerClient+1)
++	require.Contains(t, sess.Grants, newest)
++	require.NotContains(t, sess.Grants, ids[1])
++}
++
++// TestRefreshStoreEvictionForgetsTheClientOfItsSession: the browser session an
++// evicted grant was issued under no longer holds its client, so it neither lists
++// the application nor signs the browser in to it again without a password; the
++// other clients of the session stay (Deckhouse).
++func TestRefreshStoreEvictionForgetsTheClientOfItsSession(t *testing.T) {
++	ctx := context.Background()
++	rt, store := newTestStore(t)
++	auth := testAuthorization()
++	auth.Client.RefreshTokenLifetime = storage.RefreshTokenLifetimeSession
++
++	states := func() map[string]*storage.ClientAuthState {
++		return map[string]*storage.ClientAuthState{"client-1": {}, "client-2": {}}
++	}
++	var sessions []string
++	for i := 0; i < DefaultMaxGrantsPerClient+1; i++ {
++		sid := fmt.Sprintf("sid-%02d", i)
++		require.NoError(t, store.CreateAuthSession(ctx, storage.AuthSession{ID: sid, UserID: "u1", ConnectorID: "mock", ClientStates: states()}))
++		sessions = append(sessions, sid)
++		bound := auth
++		bound.SessionID = sid
++		createdID(t, rt, bound)
++	}
++
++	offline, err := store.GetOfflineSessions(ctx, "u1", "mock")
++	require.NoError(t, err)
++	kept := map[string]bool{}
++	for _, ref := range offline.Grants {
++		kept[ref.SessionID] = true
++	}
++	require.Len(t, kept, DefaultMaxGrantsPerClient, "one grant is evicted")
++	for _, sid := range sessions {
++		s, err := store.GetAuthSession(ctx, sid)
++		require.NoError(t, err)
++		require.Contains(t, s.ClientStates, "client-2", "session %s lost a client it was not evicted from", sid)
++		if kept[sid] {
++			require.Contains(t, s.ClientStates, "client-1", "session %s lost a client whose grant stays", sid)
++		} else {
++			require.NotContains(t, s.ClientStates, "client-1", "the session of the evicted grant still holds its client")
++		}
++	}
++}
+ 
++// TestRefreshStoreCreateEvictsYoungFirst: a device signed in ProtectedGrantAge ago (a day by default)
++// is kept while the client has younger ones, however long ago it was used; it goes
++// only once every other one is that old (Deckhouse).
++func TestRefreshStoreCreateEvictsYoungFirst(t *testing.T) {
++	ctx := context.Background()
++	rt, store := newTestStore(t)
++	auth := testAuthorization()
++
++	var ids []string
++	for i := 0; i < DefaultMaxGrantsPerClient; i++ {
++		ids = append(ids, createdID(t, rt, auth))
++	}
++	setGrants := func(f func(id string, ref *storage.RefreshTokenRef)) {
++		require.NoError(t, store.UpdateOfflineSessions(ctx, "u1", "mock", func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++			for id, ref := range old.Grants {
++				f(id, ref)
++			}
++			return old, nil
++		}))
++	}
++	// The owner's device, signed in two days ago and used longest ago of all.
++	setGrants(func(id string, ref *storage.RefreshTokenRef) {
++		if id == ids[0] {
++			ref.CreatedAt = time.Now().Add(-48 * time.Hour)
++			ref.LastUsed = time.Now().Add(-2 * time.Hour)
++		}
++	})
++
++	createdID(t, rt, auth)
++	sess, err := store.GetOfflineSessions(ctx, "u1", "mock")
++	require.NoError(t, err)
++	require.Contains(t, sess.Grants, ids[0], "the old device is kept")
++	require.NotContains(t, sess.Grants, ids[1], "the young one used longest ago goes")
++
++	// Once every other device is old, the one used longest ago goes, old or not.
++	setGrants(func(_ string, ref *storage.RefreshTokenRef) { ref.CreatedAt = time.Now().Add(-48 * time.Hour) })
++	createdID(t, rt, auth)
+ 	sess, err = store.GetOfflineSessions(ctx, "u1", "mock")
+ 	require.NoError(t, err)
+-	require.Equal(t, secondTok.RefreshId, sess.Refresh["client-1"].ID)
++	require.NotContains(t, sess.Grants, ids[0])
++	require.Len(t, sess.Grants, DefaultMaxGrantsPerClient)
++}
++
++// TestRefreshStoreCreateProtectedGrantAge: the age that keeps a device from
++// eviction is configured; zero prefers none, and the device used longest ago goes
++// however old it is (Deckhouse).
++func TestRefreshStoreCreateProtectedGrantAge(t *testing.T) {
++	tests := []struct {
++		name         string
++		protectedAge time.Duration
++		ownerKept    bool
++	}{
++		{name: "an hour protects a device signed in two hours ago", protectedAge: time.Hour, ownerKept: true},
++		{name: "three hours do not", protectedAge: 3 * time.Hour, ownerKept: false},
++		{name: "zero protects none", protectedAge: 0, ownerKept: false},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			ctx := context.Background()
++			rt, store := newTestStore(t)
++			rt.ProtectedGrantAge = tt.protectedAge
++			auth := testAuthorization()
++
++			var ids []string
++			for i := 0; i < DefaultMaxGrantsPerClient; i++ {
++				ids = append(ids, createdID(t, rt, auth))
++			}
++			// The owner's device, signed in two hours ago and used longest ago of all.
++			require.NoError(t, store.UpdateOfflineSessions(ctx, "u1", "mock", func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++				old.Grants[ids[0]].CreatedAt = time.Now().Add(-2 * time.Hour)
++				old.Grants[ids[0]].LastUsed = time.Now().Add(-time.Hour)
++				return old, nil
++			}))
++
++			createdID(t, rt, auth)
++			sess, err := store.GetOfflineSessions(ctx, "u1", "mock")
++			require.NoError(t, err)
++			require.Len(t, sess.Grants, DefaultMaxGrantsPerClient)
++			if tt.ownerKept {
++				require.Contains(t, sess.Grants, ids[0])
++				require.NotContains(t, sess.Grants, ids[1])
++			} else {
++				require.NotContains(t, sess.Grants, ids[0])
++			}
++		})
++	}
++}
++
++// TestRefreshStoreCreateMaxGrantsPerClient: the number of devices a user keeps
++// in one client is configured (Deckhouse).
++func TestRefreshStoreCreateMaxGrantsPerClient(t *testing.T) {
++	ctx := context.Background()
++	rt, store := newTestStore(t)
++	rt.MaxGrantsPerClient = 3
++	auth := testAuthorization()
++
++	first := createdID(t, rt, auth)
++	for range 3 {
++		createdID(t, rt, auth)
++	}
++	sess, err := store.GetOfflineSessions(ctx, "u1", "mock")
++	require.NoError(t, err)
++	require.Len(t, sess.Grants, 3)
++	require.NotContains(t, sess.Grants, first, "the device used longest ago goes")
++}
++
++// TestRefreshStoreLegacyOfflineSession: an offline session written before Grants
++// keeps working, its grant is the one of Refresh (Deckhouse).
++func TestRefreshStoreLegacyOfflineSession(t *testing.T) {
++	ctx := context.Background()
++	rt, store := newTestStore(t)
++	auth := testAuthorization()
++	old := createdID(t, rt, auth)
++	require.NoError(t, store.UpdateOfflineSessions(ctx, "u1", "mock", func(o storage.OfflineSessions) (storage.OfflineSessions, error) {
++		o.Grants = nil
++		return o, nil
++	}))
++
++	newer := createdID(t, rt, auth)
++	sess, err := store.GetOfflineSessions(ctx, "u1", "mock")
++	require.NoError(t, err)
++	require.ElementsMatch(t, []string{old, newer}, grantIDs(sess))
++}
++
++func createdID(t *testing.T, rt *RefreshStore, auth Authorization) string {
++	t.Helper()
++	raw, err := rt.Create(context.Background(), auth)
++	require.NoError(t, err)
++	var tok internal.RefreshToken
++	require.NoError(t, internal.Unmarshal(raw, &tok))
++	return tok.RefreshId
++}
++
++func grantIDs(o storage.OfflineSessions) []string {
++	return slices.Sorted(maps.Keys(o.Grants))
+ }
+ 
+ func TestRefreshStoreRotate(t *testing.T) {
+diff --git a/server/useridentity/useridentity.go b/server/useridentity/useridentity.go
+index ca19a5d3..67423e53 100644
+--- a/server/useridentity/useridentity.go
++++ b/server/useridentity/useridentity.go
+@@ -18,6 +18,7 @@ import (
+ 	"log/slog"
+ 	"math/rand/v2"
+ 	"slices"
++	"sync/atomic"
+ 	"time"
+ 
+ 	"github.com/dexidp/dex/storage"
+@@ -88,6 +89,10 @@ type Login struct {
+ 	// they were, so a session login or a refresh never serves its empty groups
+ 	// as the user's (Deckhouse).
+ 	GroupsRead bool
++	// DeviceHash is the hash of the device mark of the browser of the login
++	// (Deckhouse; see server/devicemark), empty without one. A complete login
++	// remembers the browser among the known devices of the pair.
++	DeviceHash string
+ 	// Logger logs a write of the identity given up for the stored one (see
+ 	// Record). Nil logs nothing.
+ 	Logger *slog.Logger
+@@ -184,10 +189,18 @@ func update(ctx context.Context, s storage.Storage, l Login) (uint64, error) {
+ 		claims := l.claimsOver(old.Claims)
+ 		movesLastLogin := l.Complete && l.movesLastLogin(old.LastLogin)
+ 		movesClaimsRefreshedAt := l.movesClaimsRefreshedAt(old.ClaimsRefreshedAt)
+-		if sameClaims(old.Claims, claims) && !movesLastLogin && !movesClaimsRefreshedAt {
++		var known []storage.KnownDevice
++		remembers := false
++		if l.Complete {
++			known, remembers = rememberDevice(old.KnownDevices, l.DeviceHash, l.Time)
++		}
++		if sameClaims(old.Claims, claims) && !movesLastLogin && !movesClaimsRefreshedAt && !remembers {
+ 			return old, errUnchanged
+ 		}
+ 		old.Claims = claims
++		if remembers {
++			old.KnownDevices = known
++		}
+ 		if movesLastLogin {
+ 			old.LastLogin = l.Time
+ 		}
+@@ -278,12 +291,19 @@ func sameClaims(a, b storage.Claims) bool {
+ // repeating the call for the same login, or calling it for a login served from a
+ // session (whose auth time is the LastLogin it continues), writes nothing. A pair
+ // without an identity has nothing to record.
+-func Completed(ctx context.Context, s storage.Storage, userID, connectorID string, at time.Time) error {
++func Completed(ctx context.Context, s storage.Storage, userID, connectorID string, at time.Time, deviceHash string) error {
+ 	err := s.UpdateUserIdentity(ctx, userID, connectorID, func(old storage.UserIdentity) (storage.UserIdentity, error) {
+-		if !old.LastLogin.Before(at) {
++		movesLastLogin := old.LastLogin.Before(at)
++		known, remembers := rememberDevice(old.KnownDevices, deviceHash, at)
++		if !movesLastLogin && !remembers {
+ 			return old, errUnchanged
+ 		}
+-		old.LastLogin = at
++		if movesLastLogin {
++			old.LastLogin = at
++		}
++		if remembers {
++			old.KnownDevices = known
++		}
+ 		return old, nil
+ 	})
+ 	if err == nil || errors.Is(err, errUnchanged) || errors.Is(err, storage.ErrNotFound) {
+@@ -338,3 +358,55 @@ func isBlocked(err error) bool {
+ 	var blockedErr *BlockedError
+ 	return errors.As(err, &blockedErr)
+ }
++
++// DefaultMaxKnownDevices bounds the known devices of a pair unless configured
++// (Deckhouse): past it, the browser seen longest ago is forgotten.
++const DefaultMaxKnownDevices = 20
++
++// configuredKnownDevices is the configured bound plus one; zero, the value
++// before any SetMaxKnownDevices, stands for DefaultMaxKnownDevices.
++var configuredKnownDevices atomic.Int64
++
++// SetMaxKnownDevices sets how many browsers of a pair Dex remembers with their
++// first login (Deckhouse); 0 remembers none, and a login then forgets the ones
++// remembered before. It is a setting of the process: call it before serving.
++func SetMaxKnownDevices(n int) {
++	configuredKnownDevices.Store(int64(max(n, 0)) + 1)
++}
++
++// maxKnownDevices is the bound in force.
++func maxKnownDevices() int {
++	if v := configuredKnownDevices.Load(); v > 0 {
++		return int(v - 1)
++	}
++	return DefaultMaxKnownDevices
++}
++
++// rememberDevice returns known with the browser hash seen at time at: added as
++// first and last seen then, or its last seen moved on. It reports false and
++// returns known as it is when there is nothing to change: no hash, or a browser
++// seen at or after at. known is never changed in place.
++func rememberDevice(known []storage.KnownDevice, hash string, at time.Time) ([]storage.KnownDevice, bool) {
++	if hash == "" {
++		return known, false
++	}
++	limit := maxKnownDevices()
++	if limit == 0 {
++		return nil, len(known) > 0
++	}
++	i := slices.IndexFunc(known, func(d storage.KnownDevice) bool { return d.Hash == hash })
++	if i >= 0 && !known[i].LastSeen.Before(at) {
++		return known, false
++	}
++	out := slices.Clone(known)
++	if i >= 0 {
++		out[i].LastSeen = at
++		return out, true
++	}
++	out = append(out, storage.KnownDevice{Hash: hash, FirstSeen: at, LastSeen: at})
++	if len(out) > limit {
++		slices.SortStableFunc(out, func(a, b storage.KnownDevice) int { return b.LastSeen.Compare(a.LastSeen) })
++		out = out[:limit]
++	}
++	return out, true
++}
+diff --git a/server/useridentity/useridentity_test.go b/server/useridentity/useridentity_test.go
+index e5bd8c9a..34e82439 100644
+--- a/server/useridentity/useridentity_test.go
++++ b/server/useridentity/useridentity_test.go
+@@ -4,8 +4,10 @@ import (
+ 	"bytes"
+ 	"context"
+ 	"errors"
++	"fmt"
+ 	"log/slog"
+ 	"reflect"
++	"slices"
+ 	"testing"
+ 	"time"
+ 
+@@ -516,7 +518,7 @@ func TestCompleted(t *testing.T) {
+ 			s := newStorage(t)
+ 			require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "jane", ConnectorID: "local", LastLogin: tc.lastLogin}))
+ 
+-			require.NoError(t, Completed(ctx, s, "jane", "local", tc.at))
++			require.NoError(t, Completed(ctx, s, "jane", "local", tc.at, ""))
+ 
+ 			got, err := s.GetUserIdentity(ctx, "jane", "local")
+ 			require.NoError(t, err)
+@@ -525,7 +527,7 @@ func TestCompleted(t *testing.T) {
+ 	}
+ 
+ 	t.Run("pair without an identity", func(t *testing.T) {
+-		require.NoError(t, Completed(t.Context(), newStorage(t), "jane", "local", t0))
++		require.NoError(t, Completed(t.Context(), newStorage(t), "jane", "local", t0, "device-1"))
+ 	})
+ }
+ 
+@@ -623,6 +625,84 @@ func TestState(t *testing.T) {
+ 	require.False(t, errors.As(err, &blocked))
+ }
+ 
++// TestRememberDevice: a complete login adds its browser as first and last seen,
++// a later one moves only the last seen, an earlier one changes nothing, and past
++// DefaultMaxKnownDevices the browser seen longest ago goes (Deckhouse).
++func TestRememberDevice(t *testing.T) {
++	known, changed := rememberDevice(nil, "a", t0)
++	require.True(t, changed)
++	require.Equal(t, []storage.KnownDevice{{Hash: "a", FirstSeen: t0, LastSeen: t0}}, known)
++
++	later, changed := rememberDevice(known, "a", t0.Add(time.Hour))
++	require.True(t, changed)
++	require.Equal(t, []storage.KnownDevice{{Hash: "a", FirstSeen: t0, LastSeen: t0.Add(time.Hour)}}, later)
++	require.Equal(t, t0, known[0].LastSeen, "the list passed in is not changed")
++
++	_, changed = rememberDevice(later, "a", t0)
++	require.False(t, changed, "an older login moves nothing")
++	_, changed = rememberDevice(later, "", t0.Add(2*time.Hour))
++	require.False(t, changed, "a login without a mark remembers nothing")
++
++	many := make([]storage.KnownDevice, 0, DefaultMaxKnownDevices)
++	for i := range DefaultMaxKnownDevices {
++		many = append(many, storage.KnownDevice{Hash: fmt.Sprintf("d%02d", i), FirstSeen: t0, LastSeen: t0.Add(time.Duration(i) * time.Minute)})
++	}
++	full, changed := rememberDevice(many, "new", t0.Add(time.Hour))
++	require.True(t, changed)
++	require.Len(t, full, DefaultMaxKnownDevices)
++	require.False(t, slices.ContainsFunc(full, func(d storage.KnownDevice) bool { return d.Hash == "d00" }), "the browser seen longest ago goes")
++	require.True(t, slices.ContainsFunc(full, func(d storage.KnownDevice) bool { return d.Hash == "new" }))
++}
++
++// TestRememberDeviceLimit: the number of browsers remembered is configured; with
++// none, a login forgets the ones remembered before (Deckhouse). Not parallel: the
++// limit is a setting of the process.
++func TestRememberDeviceLimit(t *testing.T) {
++	t.Cleanup(func() { SetMaxKnownDevices(DefaultMaxKnownDevices) })
++	two := []storage.KnownDevice{
++		{Hash: "old", FirstSeen: t0, LastSeen: t0},
++		{Hash: "recent", FirstSeen: t0, LastSeen: t0.Add(time.Minute)},
++	}
++
++	SetMaxKnownDevices(2)
++	got, changed := rememberDevice(two, "new", t0.Add(time.Hour))
++	require.True(t, changed)
++	require.ElementsMatch(t, []string{"recent", "new"}, []string{got[0].Hash, got[1].Hash}, "the browser seen longest ago goes")
++
++	SetMaxKnownDevices(0)
++	got, changed = rememberDevice(two, "new", t0.Add(time.Hour))
++	require.True(t, changed)
++	require.Empty(t, got, "no browser is remembered")
++	_, changed = rememberDevice(nil, "new", t0.Add(time.Hour))
++	require.False(t, changed, "nothing to forget")
++}
++
++// TestRecordRemembersTheDeviceOfACompleteLogin: the browser of a login is
++// remembered once every factor passed, by Record or by Completed (Deckhouse).
++func TestRecordRemembersTheDeviceOfACompleteLogin(t *testing.T) {
++	ctx := t.Context()
++	s := newStorage(t)
++	login := Login{ConnectorID: "local", Claims: storage.Claims{UserID: "jane"}, Time: t0, DeviceHash: "browser-1"}
++
++	_, err := Record(ctx, s, login)
++	require.NoError(t, err)
++	ui, err := s.GetUserIdentity(ctx, "jane", "local")
++	require.NoError(t, err)
++	require.Empty(t, ui.KnownDevices, "a second factor may follow")
++
++	require.NoError(t, Completed(ctx, s, "jane", "local", t0, "browser-1"))
++	ui, err = s.GetUserIdentity(ctx, "jane", "local")
++	require.NoError(t, err)
++	require.Equal(t, []storage.KnownDevice{{Hash: "browser-1", FirstSeen: t0, LastSeen: t0}}, ui.KnownDevices)
++
++	login.Complete, login.Time, login.DeviceHash = true, t0.Add(time.Hour), "browser-2"
++	_, err = Record(ctx, s, login)
++	require.NoError(t, err)
++	ui, err = s.GetUserIdentity(ctx, "jane", "local")
++	require.NoError(t, err)
++	require.Len(t, ui.KnownDevices, 2)
++}
++
+ // TestRefreshed: claims read again outside a login replace the stored ones, unless
+ // those were read later (Deckhouse).
+ func TestRefreshed(t *testing.T) {

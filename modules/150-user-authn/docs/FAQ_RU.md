@@ -384,6 +384,26 @@ Dex ограничивает частоту неудачных попыток в
 
 Кроме того, Dex блокирует учётную запись после неудачных попыток входа. Блокировка настраивается параметром [`passwordPolicy.lockout`](configuration.html#parameters-passwordpolicy-lockout). Она действует для локальных пользователей, а для пользователей LDAP и Crowd — если их типы указаны в [`applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors).
 
+## Какой адрес клиента видит Dex?
+
+Dex использует адрес клиента в трёх местах:
+
+* в ограничении частоты неудачных попыток с одного адреса ([`rateLimit`](configuration.html#parameters-ratelimit));
+* в журнале входов (ключ `client_remote_addr`);
+* в списке устройств пользователя ([`ipAddress`](cr.html#useraccount-v1alpha1-status-sessions-ipaddress) в объекте UserAccount).
+
+Dex берёт адрес, который ему передаёт Ingress-контроллер платформы (каким заголовкам он доверяет, описано в параметре [`rateLimit`](configuration.html#parameters-ratelimit)). Поэтому адрес верный, только если Ingress-контроллер сам видит адрес клиента. Балансировщик перед Ingress-контроллером, который подменяет адрес клиента своим, скрывает его. Тогда Dex видит адрес балансировщика для всех пользователей:
+
+* ограничение считает неудачные попытки всех пользователей вместе, поэтому ошибки одного пользователя могут привести к отказам во входе другим;
+* журнал входов и список устройств пользователя показывают адрес балансировщика.
+
+Чтобы Ingress-контроллер получал адрес клиента, настройте объект [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller):
+
+* если балансировщик поддерживает протокол PROXY, используйте inlet с ним, например `LoadBalancerWithProxyProtocol` или `HostPortWithProxyProtocol`;
+* если запросы приходят через HTTP-прокси, который добавляет заголовок `X-Forwarded-For`, включите для inlet параметр `behindL7Proxy` и укажите адреса прокси в `acceptClientIPHeadersFrom`. Параметр `realIPHeader` задаёт другой заголовок и работает только вместе с `behindL7Proxy`.
+
+Чтобы проверить, какой адрес видит Dex, выполните вход и сравните ключ `client_remote_addr` в строке `login successful` журнала Dex с адресом своего компьютера.
+
 ## Как узнать, почему пользователю отказано во входе?
 
 Dex записывает каждый вход в журнал в формате JSON. Отказ во входе записывается с уровнем `WARN` и полем `reason`:

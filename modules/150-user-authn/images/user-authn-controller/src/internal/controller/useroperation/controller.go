@@ -54,6 +54,8 @@ type Reconciler struct {
 	revoker   *revoke.Revoker
 	log       logr.Logger
 	now       func() time.Time
+	// retention is how long a UserOperation is kept after its creation.
+	retention time.Duration
 }
 
 // New constructs a Reconciler. now defaults to time.Now when nil. apiReader must bypass the
@@ -73,12 +75,15 @@ func New(c client.Client, apiReader client.Reader, log logr.Logger, now func() t
 		revoker:   revoke.New(c, apiReader, log, now),
 		log:       log,
 		now:       now,
+		retention: DefaultRetention,
 	}
 }
 
-// Register wires the UserOperation reconciler onto the manager.
-func Register(mgr manager.Manager) error {
+// Register wires the UserOperation reconciler onto the manager. retention is how long an operation
+// is kept after its creation.
+func Register(mgr manager.Manager, retention time.Duration) error {
 	r := New(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetLogger().WithName("useroperation"), nil)
+	r.retention = retention
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup useroperation controller: %w", err)
 	}
@@ -151,7 +156,7 @@ func (r *Reconciler) reconcileTerminal(ctx context.Context, obj *unstructured.Un
 	}
 
 	age := now.Sub(op.CreationTimestamp.Time)
-	if age >= retentionPeriod {
+	if age >= r.retention {
 		r.log.Info("Deleting old UserOperation", operationLogKV(op)...)
 		if err := r.client.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
 			return reconcile.Result{}, fmt.Errorf("delete useroperation %s: %w", obj.GetName(), err)
@@ -159,7 +164,7 @@ func (r *Reconciler) reconcileTerminal(ctx context.Context, obj *unstructured.Un
 		return reconcile.Result{}, nil
 	}
 
-	remaining := retentionPeriod - age
+	remaining := r.retention - age
 	return reconcile.Result{RequeueAfter: remaining}, nil
 }
 
@@ -196,7 +201,7 @@ func (r *Reconciler) complete(
 		return reconcile.Result{}, err
 	}
 
-	remaining := retentionPeriod - now.Sub(op.CreationTimestamp.Time)
+	remaining := r.retention - now.Sub(op.CreationTimestamp.Time)
 	if remaining < 0 {
 		remaining = 0
 	}

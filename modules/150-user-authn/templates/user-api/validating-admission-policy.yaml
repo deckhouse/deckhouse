@@ -2,8 +2,10 @@
 {{- $policyName := "user-api-self-service.deckhouse.io" }}
 ---
 # user-api acts for whoever presents a token of the console, and it may create UserOperations for any
-# user. The API server holds it to what a user may do to their own account: sign out everywhere and
-# ask for a password change. A compromised user-api can neither lock a user nor set their password.
+# user. The API server holds it to what a user may do to their own account: sign out everywhere, on one
+# device or on the other devices, and ask for a password change. A compromised user-api can neither lock
+# a user nor set their password. The controller ends a session or a grant only of the user the
+# operation names.
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
 metadata:
@@ -30,10 +32,6 @@ spec:
     - expression: '!has(object.spec.resetPassword) && !has(object.spec.lock)'
       reason: Forbidden
       message: 'user-api may not set spec.resetPassword or spec.lock'
-    # Signing out everywhere only: ending one session or one application comes with a later version.
-    - expression: 'object.spec.type != "Logout" || !has(object.spec.logout)'
-      reason: Forbidden
-      message: 'user-api may not set spec.logout'
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding

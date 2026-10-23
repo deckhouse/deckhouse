@@ -384,6 +384,26 @@ Dex limits failed sign-in attempts per client IP address on the sign-in form, th
 
 Dex also locks an account after failed sign-in attempts. Configure the lockout with the [`passwordPolicy.lockout`](configuration.html#parameters-passwordpolicy-lockout) parameter. It applies to local users, and to LDAP and Crowd users if their types are listed in [`applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors).
 
+## Which client address does Dex see?
+
+Dex uses the address of the client in three places:
+
+* the limit of failed attempts per address ([`rateLimit`](configuration.html#parameters-ratelimit));
+* the sign-in log (the `client_remote_addr` key);
+* the devices of a user ([`ipAddress`](cr.html#useraccount-v1alpha1-status-sessions-ipaddress) in the UserAccount object).
+
+Dex takes the address that the Ingress controller of the platform passes on (see [`rateLimit`](configuration.html#parameters-ratelimit) for the headers it trusts). So the address is right only when the Ingress controller sees the address of the client itself. A balancer in front of the Ingress controller that replaces the address of the client with its own hides it. Then Dex sees the address of the balancer for every user:
+
+* the limit counts the failed attempts of all users together, so the failures of one user can make Dex refuse the sign-ins of the others;
+* the sign-in log and the devices of a user show the address of the balancer.
+
+To pass the address of the client to the Ingress controller, configure the [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) object:
+
+* if the balancer supports the PROXY protocol, use an inlet with it, such as `LoadBalancerWithProxyProtocol` or `HostPortWithProxyProtocol`;
+* if the requests come through an HTTP proxy that adds the `X-Forwarded-For` header, enable `behindL7Proxy` for the inlet and list the addresses of the proxy in `acceptClientIPHeadersFrom`. The `realIPHeader` parameter selects another header and works only with `behindL7Proxy`.
+
+To check the address Dex sees, sign in and compare the `client_remote_addr` key of the `login successful` line in the Dex log with the address of your computer.
+
 ## How to find out why a sign-in was refused?
 
 Dex logs every sign-in in JSON. A refused sign-in is logged at the `WARN` level with the `reason` field:

@@ -51,6 +51,11 @@ type Claims struct {
 	ConnectorID string
 	// Email only names the account of an external provider in a UserOperation target.
 	Email string
+	// SessionID (the sid claim) is the browser session of Dex the token was issued in, and GrantID
+	// (the d8_gid claim) the refresh token it was issued with: together they name the device of the
+	// request. Either is empty when the token has none.
+	SessionID string
+	GrantID   string
 }
 
 type Verifier interface {
@@ -219,6 +224,8 @@ func (v *OIDCVerifier) Verify(ctx context.Context, token string) (*Claims, error
 	var claims struct {
 		AuthorizedParty string `json:"azp"`
 		Email           string `json:"email"`
+		SessionID       string `json:"sid"`
+		GrantID         string `json:"d8_gid"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
 		return nil, fmt.Errorf("%w: parse claims: %v", ErrTokenValidation, err)
@@ -245,5 +252,7 @@ func (v *OIDCVerifier) Verify(ctx context.Context, token string) (*Claims, error
 		UserID:      userID,
 		ConnectorID: connectorID,
 		Email:       claims.Email,
+		SessionID:   claims.SessionID,
+		GrantID:     claims.GrantID,
 	}, nil
 }

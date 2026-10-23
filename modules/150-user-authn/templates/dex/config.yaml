@@ -138,8 +138,13 @@ fields when it decides who may write the provider. Rendered right after the conn
     idTokens: {{ $context.Values.userAuthn.idTokenTTL | default "10m" | quote }}
     refreshTokens:
       reuseInterval: "2m"
-      validIfNotUsedFor: "2190h" # 3 months
+      validIfNotUsedFor: {{ $context.Values.userAuthn.refreshTokenValidIfNotUsedFor | default "2190h" | quote }}
       absoluteLifetime: {{ $context.Values.userAuthn.refreshTokenAbsoluteLifetime | default "4380h" | quote }}
+  # The devices of a user: at the limit of a client, the devices not trusted yet are signed out first.
+  devices:
+    trustedAfter: {{ dig "devices" "trustedAfter" "24h" $context.Values.userAuthn | quote }}
+    maxPerClient: {{ dig "devices" "maxPerApplication" 10 $context.Values.userAuthn }}
+    maxKnown: {{ dig "devices" "rememberedBrowsers" 20 $context.Values.userAuthn }}
   {{- with $context.Values.userAuthn.sessions }}
   {{- if .enabled }}
   {{- $identityRefresh := .identityRefresh | default dict }}

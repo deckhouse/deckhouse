@@ -21,6 +21,8 @@ import (
 	"slices"
 	"testing"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"user-authn-controller/internal/controller"
@@ -134,5 +136,96 @@ func TestLogoutExceptSession_KeepsTheGrantsOfTheSession(t *testing.T) {
 	refs := refsOf(t, c, naming.LocalConnectorID, "jane")
 	if _, ok := refs["console"]; !ok || len(refs) != 1 {
 		t.Errorf("references = %v, want only the console one", refs)
+	}
+}
+
+// One device of the console goes, the other device of the same client and the kubeconfig stay.
+func TestLogoutGrant(t *testing.T) {
+	t.Parallel()
+
+	c := newTestClient(t, &calls{}, interceptor.Funcs{}, devicesObjects()...)
+	res, err := newTestRevoker(c).LogoutGrant(t.Context(), jane, "rt-laptop", "op-1")
+	if err != nil {
+		t.Fatalf("LogoutGrant: %v", err)
+	}
+	if res.RefreshTokensDeleted != 1 || exists(t, c, controller.RefreshTokenGVK, "rt-laptop") {
+		t.Errorf("result = %+v, want rt-laptop deleted", res)
+	}
+	for _, kept := range []string{"rt-phone", "rt-kubeconfig"} {
+		if !exists(t, c, controller.RefreshTokenGVK, kept) {
+			t.Errorf("%s was deleted", kept)
+		}
+	}
+	grants := grantsOfObj(t, c, naming.LocalConnectorID, "jane")
+	if _, ok := grants["rt-laptop"]; ok || len(grants) != 2 {
+		t.Errorf("grants = %v, want rt-phone and rt-kubeconfig", grants)
+	}
+	if refs := refsOf(t, c, naming.LocalConnectorID, "jane"); len(refs) != 2 {
+		t.Errorf("refresh = %v, want console (rt-phone) and kubeconfig kept", refs)
+	}
+	if rev := getRevocation(t, c, revocation.GrantName("rt-laptop")); rev.Reason != revocation.ReasonLogoutGrant {
+		t.Errorf("revocation = %+v", rev)
+	}
+	// The browser session of the laptop stays, without the console it was signed out of.
+	obj := controller.Object(controller.AuthSessionGVK)
+	if err := c.Get(t.Context(), types.NamespacedName{Namespace: naming.DexNamespace, Name: "sid-laptop"}, obj); err != nil {
+		t.Fatalf("get session sid-laptop: %v", err)
+	}
+	if states, _, _ := unstructured.NestedMap(obj.Object, "clientStates"); states["console"] != nil {
+		t.Error("the session of the revoked grant still holds the console state")
+	}
+
+	t.Run("grant of another pair", func(t *testing.T) {
+		t.Parallel()
+		c := newTestClient(t, &calls{}, interceptor.Funcs{}, devicesObjects()...)
+		if _, err := newTestRevoker(c).LogoutGrant(t.Context(), jane, "rt-missing", ""); !errors.Is(err, ErrGrantNotFound) {
+			t.Fatalf("err = %v, want ErrGrantNotFound", err)
+		}
+	})
+}
+
+// Signing out on the other devices from the phone: the laptop session and its grant, and the
+// kubeconfig, go; the phone stays.
+func TestLogoutExceptGrant(t *testing.T) {
+	t.Parallel()
+
+	c := newTestClient(t, &calls{}, interceptor.Funcs{}, devicesObjects()...)
+	res, err := newTestRevoker(c).LogoutExceptGrant(t.Context(), jane, "rt-phone", "op-1")
+	if err != nil {
+		t.Fatalf("LogoutExceptGrant: %v", err)
+	}
+	if res.AuthSessionsDeleted != 1 || res.RefreshTokensDeleted != 2 {
+		t.Errorf("result = %+v, want sid-laptop, rt-laptop and rt-kubeconfig", res)
+	}
+	if !exists(t, c, controller.RefreshTokenGVK, "rt-phone") {
+		t.Error("the kept grant was deleted")
+	}
+	grants := grantsOfObj(t, c, naming.LocalConnectorID, "jane")
+	if _, ok := grants["rt-phone"]; !ok || len(grants) != 1 {
+		t.Errorf("grants = %v, want only rt-phone", grants)
+	}
+
+	t.Run("kept grant of another pair", func(t *testing.T) {
+		t.Parallel()
+		c := newTestClient(t, &calls{}, interceptor.Funcs{}, devicesObjects()...)
+		if _, err := newTestRevoker(c).LogoutExceptGrant(t.Context(), jane, "rt-missing", ""); !errors.Is(err, ErrGrantNotFound) {
+			t.Fatalf("err = %v, want ErrGrantNotFound", err)
+		}
+	})
+}
+
+// The pair logout removes the references of grants too.
+func TestLogoutPair_RemovesGrants(t *testing.T) {
+	t.Parallel()
+
+	c := newTestClient(t, &calls{}, interceptor.Funcs{}, devicesObjects()...)
+	if _, err := newTestRevoker(c).LogoutPair(t.Context(), jane, revocation.ReasonLogout, ""); err != nil {
+		t.Fatalf("LogoutPair: %v", err)
+	}
+	if grants := grantsOfObj(t, c, naming.LocalConnectorID, "jane"); len(grants) != 0 {
+		t.Errorf("grants left: %v", grants)
+	}
+	if refs := refsOf(t, c, naming.LocalConnectorID, "jane"); len(refs) != 0 {
+		t.Errorf("references left: %v", refs)
 	}
 }

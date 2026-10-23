@@ -138,25 +138,79 @@ func TestSetupLogging(t *testing.T) {
 
 func TestRevocationRetention(t *testing.T) {
 	for _, tc := range []struct {
-		value   string
-		want    time.Duration
-		wantErr bool
+		value      string
+		configured string
+		want       time.Duration
+		wantErr    bool
 	}{
 		{value: "", want: 70 * time.Minute},
 		{value: "10m", want: 70 * time.Minute},
 		{value: "2h30m10s", want: 3*time.Hour + 30*time.Minute + 10*time.Second},
 		{value: "0s", wantErr: true},
 		{value: "ten minutes", wantErr: true},
+		// A configured retention keeps the revocations longer, never shorter.
+		{value: "10m", configured: "24h", want: 24 * time.Hour},
+		{value: "2h", configured: "30m", want: 3 * time.Hour},
+		{value: "10m", configured: "a day", wantErr: true},
 	} {
-		got, err := revocationRetention(tc.value)
+		got, err := revocationRetention(tc.value, tc.configured)
 		if tc.wantErr {
 			if err == nil {
-				t.Errorf("revocationRetention(%q) = %v, want an error", tc.value, got)
+				t.Errorf("revocationRetention(%q, %q) = %v, want an error", tc.value, tc.configured, got)
 			}
 			continue
 		}
 		if err != nil || got != tc.want {
-			t.Errorf("revocationRetention(%q) = %v, %v; want %v", tc.value, got, err, tc.want)
+			t.Errorf("revocationRetention(%q, %q) = %v, %v; want %v", tc.value, tc.configured, got, err, tc.want)
+		}
+	}
+}
+
+func TestOperationRetention(t *testing.T) {
+	for _, tc := range []struct {
+		value   string
+		want    time.Duration
+		wantErr bool
+	}{
+		{value: "", want: 24 * time.Hour},
+		{value: "168h", want: 168 * time.Hour},
+		{value: "0s", wantErr: true},
+		{value: "a week", wantErr: true},
+	} {
+		got, err := operationRetention(tc.value)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("operationRetention(%q) = %v, want an error", tc.value, got)
+			}
+			continue
+		}
+		if err != nil || got != tc.want {
+			t.Errorf("operationRetention(%q) = %v, %v; want %v", tc.value, got, err, tc.want)
+		}
+	}
+}
+
+func TestMinDeviceAge(t *testing.T) {
+	for _, tc := range []struct {
+		value   string
+		want    time.Duration
+		wantErr bool
+	}{
+		{value: "", want: 24 * time.Hour},
+		{value: "1h30m", want: 90 * time.Minute},
+		{value: "0s", want: 0},
+		{value: "-1h", wantErr: true},
+		{value: "a day", wantErr: true},
+	} {
+		got, err := minDeviceAge(tc.value)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("minDeviceAge(%q) = %v, want an error", tc.value, got)
+			}
+			continue
+		}
+		if err != nil || got != tc.want {
+			t.Errorf("minDeviceAge(%q) = %v, %v; want %v", tc.value, got, err, tc.want)
 		}
 	}
 }

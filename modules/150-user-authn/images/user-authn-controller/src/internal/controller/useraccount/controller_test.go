@@ -19,6 +19,7 @@ package useraccount
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -343,6 +344,7 @@ func TestReconcile_ExternalDoesNotListPasswords(t *testing.T) {
 		WithScheme(scheme).
 		WithRESTMapper(newTestMapper()).
 		WithStatusSubresource(&v1alpha1.UserAccount{}).
+		WithIndex(controller.Object(controller.AuthSessionGVK), controller.AuthSessionPairField, controller.AuthSessionPair).
 		WithObjects(sess, provider).
 		WithInterceptorFuncs(interceptor.Funcs{
 			List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
@@ -388,6 +390,8 @@ func newTestReconciler(t *testing.T, now time.Time, objs ...client.Object) *Reco
 		WithRESTMapper(newTestMapper()).
 		WithStatusSubresource(&v1alpha1.UserAccount{}).
 		WithIndex(controller.Object(controller.PasswordGVK), controller.PasswordPairField, controller.PasswordPair).
+		WithIndex(controller.Object(controller.AuthSessionGVK), controller.AuthSessionPairField, controller.AuthSessionPair).
+		WithIndex(controller.Object(controller.RefreshTokenGVK), controller.RefreshTokenPairField, controller.RefreshTokenPair).
 		WithObjects(objs...).
 		Build()
 	return New(c, logr.Discard(), func() time.Time { return now })
@@ -411,6 +415,8 @@ func newTestMapper() meta.RESTMapper {
 	m.Add(controller.PasswordGVK, meta.RESTScopeNamespace)
 	m.Add(controller.OfflineSessionsGVK, meta.RESTScopeNamespace)
 	m.Add(controller.UserIdentityGVK, meta.RESTScopeNamespace)
+	m.Add(controller.AuthSessionGVK, meta.RESTScopeNamespace)
+	m.Add(controller.RefreshTokenGVK, meta.RESTScopeNamespace)
 	m.Add(controller.DexProviderGVK, meta.RESTScopeRoot)
 	m.Add(controller.UserGVK, meta.RESTScopeRoot)
 	m.Add(v1alpha1.SchemeGroupVersion.WithKind("UserAccount"), meta.RESTScopeRoot)
@@ -440,6 +446,37 @@ func sessionUnstructured(name string, fields map[string]any) *unstructured.Unstr
 			"name":      name,
 			"namespace": naming.DexNamespace,
 		},
+	}
+	for k, v := range fields {
+		obj[k] = v
+	}
+	return &unstructured.Unstructured{Object: obj}
+}
+
+// refreshTokenUnstructured is a Dex RefreshToken of the pair (userID, connID) named id, with its
+// secret.
+func refreshTokenUnstructured(id, userID, connID string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion":  controller.RefreshTokenGVK.GroupVersion().String(),
+		"kind":        controller.RefreshTokenGVK.Kind,
+		"metadata":    map[string]any{"name": id, "namespace": naming.DexNamespace},
+		"claims":      map[string]any{"userID": userID},
+		"connectorID": connID,
+		"token":       "secret-refresh-token",
+	}}
+}
+
+// authSessionUnstructured is a Dex AuthSession of the pair (userID, connID) with its cookie secret,
+// which the projection must never show.
+func authSessionUnstructured(id, userID, connID string, fields map[string]any) *unstructured.Unstructured {
+	obj := map[string]any{
+		"apiVersion":  controller.AuthSessionGVK.GroupVersion().String(),
+		"kind":        controller.AuthSessionGVK.Kind,
+		"metadata":    map[string]any{"name": id, "namespace": naming.DexNamespace},
+		"userID":      userID,
+		"connectorID": connID,
+		"secret":      "secret-session-cookie",
+		"nonce":       "secret-nonce",
 	}
 	for k, v := range fields {
 		obj[k] = v
@@ -756,6 +793,84 @@ func TestReconcile_LocalWithoutUserIdentity(t *testing.T) {
 	}
 }
 
+func TestReconcile_LocalListsDevices(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 10, 16, 12, 30, 0, 0, time.UTC)
+	ts := func(d time.Duration) string { return now.Add(d).Format(time.RFC3339Nano) }
+	pair := naming.OfflineTokenName("jane", naming.LocalConnectorID)
+	pw := passwordUnstructured("pw-jane", map[string]any{"email": "jane@example.com", "username": "jane", "userID": "jane"})
+	offline := sessionUnstructured(pair, map[string]any{
+		"userID": "jane",
+		"connID": naming.LocalConnectorID,
+		"grants": map[string]any{
+			"g-console": map[string]any{
+				"ID": "g-console", "ClientID": "console", "SessionID": "sid-1",
+				"CreatedAt": ts(-2 * time.Hour), "LastUsed": ts(-time.Hour),
+			},
+			"g-kube": map[string]any{
+				"ID": "g-kube", "ClientID": "kubeconfig-generator", "IPAddress": "198.51.100.2", "UserAgent": "kubectl",
+				"CreatedAt": ts(-30 * time.Minute), "LastUsed": "0001-01-01T00:00:00Z",
+			},
+			// A reference whose refresh token is gone: no device.
+			"g-gone": map[string]any{
+				"ID": "g-gone", "ClientID": "grafana", "CreatedAt": ts(-10 * time.Minute), "LastUsed": ts(-time.Minute),
+			},
+		},
+		"refresh": map[string]any{
+			"console":              map[string]any{"ID": "g-console", "ClientID": "console"},
+			"kubeconfig-generator": map[string]any{"ID": "g-kube", "ClientID": "kubeconfig-generator"},
+		},
+	})
+	tokenConsole := refreshTokenUnstructured("g-console", "jane", naming.LocalConnectorID)
+	tokenKube := refreshTokenUnstructured("g-kube", "jane", naming.LocalConnectorID)
+	live := authSessionUnstructured("sid-1", "jane", naming.LocalConnectorID, map[string]any{
+		"clientStates": map[string]any{"console": map[string]any{}},
+		"ipAddress":    "203.0.113.7",
+		"userAgent":    "Firefox",
+		"createdAt":    ts(-3 * time.Hour),
+		"lastActivity": ts(-2 * time.Hour),
+		"idleExpiry":   ts(time.Hour),
+	})
+	ended := authSessionUnstructured("sid-ended", "jane", naming.LocalConnectorID, map[string]any{
+		"createdAt":  ts(-48 * time.Hour),
+		"idleExpiry": ts(-time.Minute),
+	})
+	// A session of another pair whose name the index would also return on a hash collision.
+	other := authSessionUnstructured("sid-other", "someone", naming.LocalConnectorID, nil)
+
+	r := newTestReconciler(t, now, pw, offline, tokenConsole, tokenKube, live, ended, other)
+	name := naming.LocalName("jane@example.com")
+	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	var ua v1alpha1.UserAccount
+	if err := r.client.Get(t.Context(), types.NamespacedName{Name: name}, &ua); err != nil {
+		t.Fatalf("get useraccount: %v", err)
+	}
+	hour := func(h int) *metav1.Time { return metaTimeOrNil(time.Date(2026, 10, 16, h, 0, 0, 0, time.UTC)) }
+	want := []v1alpha1.UserAccountSession{
+		{
+			ID: "g-kube", Kind: v1alpha1.SessionKindGrant, Clients: []string{"kubeconfig-generator"},
+			IPAddress: "198.51.100.2", UserAgent: "kubectl",
+			SignedInAt: metaTimeOrNil(now.Add(-30 * time.Minute)), LastActivity: hour(12),
+		},
+		{
+			ID: "sid-1", Kind: v1alpha1.SessionKindBrowser, Clients: []string{"console"},
+			IPAddress: "203.0.113.7", UserAgent: "Firefox",
+			SignedInAt: metaTimeOrNil(now.Add(-3 * time.Hour)), LastActivity: hour(11),
+		},
+	}
+	if !slices.EqualFunc(ua.Status.Sessions, want, sessionEqual) {
+		got, _ := json.MarshalIndent(ua.Status.Sessions, "", "  ")
+		t.Errorf("sessions =\n%s", got)
+	}
+	if ua.Status.SessionsTruncated {
+		t.Error("sessionsTruncated = true, want false")
+	}
+}
+
 func TestMapUserIdentity(t *testing.T) {
 	t.Parallel()
 
@@ -773,6 +888,61 @@ func TestMapUserIdentity(t *testing.T) {
 	}
 	if reqs := r.mapUserIdentity(t.Context(), useridentity.New("ghost", naming.LocalConnectorID).Object()); len(reqs) != 0 {
 		t.Errorf("local identity without a Password = %v", reqs)
+	}
+}
+
+func TestMapDevicesOfAPair(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+	pw := passwordUnstructured("pw-jane", map[string]any{"email": "jane@example.com", "username": "jane", "userID": "jane"})
+	r := newTestReconciler(t, now, pw)
+	local := naming.LocalName("jane@example.com")
+
+	tests := []struct {
+		name     string
+		mapFunc  func(context.Context, client.Object) []reconcile.Request
+		obj      client.Object
+		expected []string
+	}{
+		{
+			name:     "browser session of a local user",
+			mapFunc:  r.mapAuthSession,
+			obj:      authSessionUnstructured("sid-1", "jane", naming.LocalConnectorID, nil),
+			expected: []string{local},
+		},
+		{
+			name:     "browser session of an external user",
+			mapFunc:  r.mapAuthSession,
+			obj:      authSessionUnstructured("sid-2", "sub-1", "corp-oidc", nil),
+			expected: []string{naming.ExternalName("corp-oidc", "sub-1")},
+		},
+		{
+			name:     "browser session without its pair",
+			mapFunc:  r.mapAuthSession,
+			obj:      authSessionUnstructured("sid-3", "", "", nil),
+			expected: nil,
+		},
+		{
+			name:    "grants of a local user",
+			mapFunc: r.mapOfflineSessions,
+			obj: sessionUnstructured(naming.OfflineTokenName("jane", naming.LocalConnectorID), map[string]any{
+				"userID": "jane", "connID": naming.LocalConnectorID,
+			}),
+			expected: []string{local},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var got []string
+			for _, req := range tt.mapFunc(t.Context(), tt.obj) {
+				got = append(got, req.Name)
+			}
+			if !slices.Equal(got, tt.expected) {
+				t.Errorf("requests = %v, want %v", got, tt.expected)
+			}
+		})
 	}
 }
 

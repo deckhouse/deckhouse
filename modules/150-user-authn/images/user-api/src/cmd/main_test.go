@@ -62,6 +62,10 @@ func TestNewMux_Routes(t *testing.T) {
 		{name: "self password change", method: http.MethodPost, path: "/api/v1/self/password-change", wantStatus: http.StatusUnauthorized},
 		{name: "password reset is gone", method: http.MethodPost, path: "/api/v1/password/reset", wantStatus: http.StatusNotFound},
 		{name: "self logout takes POST only", method: http.MethodGet, path: "/api/v1/self/logout", wantStatus: http.StatusMethodNotAllowed},
+		{name: "devices", method: http.MethodGet, path: "/api/v1/self/sessions", wantStatus: http.StatusUnauthorized},
+		{name: "logout of a device", method: http.MethodPost, path: "/api/v1/self/sessions/fehzwdh5qy4oyqcn7qhkcgzbm/logout", wantStatus: http.StatusUnauthorized},
+		{name: "logout of a device takes POST only", method: http.MethodGet, path: "/api/v1/self/sessions/fehzwdh5qy4oyqcn7qhkcgzbm/logout", wantStatus: http.StatusMethodNotAllowed},
+		{name: "logout of the other devices", method: http.MethodPost, path: "/api/v1/self/logout-others", wantStatus: http.StatusUnauthorized},
 		{name: "health", method: http.MethodGet, path: "/healthz", wantStatus: http.StatusOK},
 	}
 

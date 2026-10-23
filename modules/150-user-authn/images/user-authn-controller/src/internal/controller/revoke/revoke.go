@@ -168,12 +168,11 @@ func (r *Revoker) LogoutPair(ctx context.Context, p Pair, reason, opUID string) 
 	if err != nil {
 		return res, err
 	}
-	for _, clientID := range sortedKeys(refs) {
-		ref := refs[clientID]
-		if _, ok := revoked[ref.id]; !ok {
+	for _, id := range sortedKeys(refs) {
+		if _, ok := revoked[id]; !ok {
 			continue
 		}
-		if err := r.removeRef(ctx, pairName, clientID, ref.id); err != nil {
+		if err := r.removeRef(ctx, pairName, refs[id]); err != nil {
 			return res, err
 		}
 	}
@@ -231,7 +230,9 @@ func (r *Revoker) writePairRevocation(ctx context.Context, p Pair, generation ui
 	if err != nil {
 		return "", err
 	}
-	clients = append(clients, slices.Collect(maps.Keys(refs))...)
+	for _, rf := range refs {
+		clients = append(clients, rf.clientID)
+	}
 	tokens, err := r.tokensOf(ctx, pairName)
 	if err != nil {
 		return "", err
@@ -312,6 +313,16 @@ type session struct {
 	name       string
 	clients    []string
 	generation uint64
+	// deviceHash is the hash of the device mark of the browser of the session.
+	deviceHash string
+	// expiry is when the session ends unless used again: the earlier of its idle and absolute
+	// expiry, zero when Dex wrote neither.
+	expiry time.Time
+}
+
+// expired tells whether the session ended at now; Dex may not have deleted it yet.
+func (s session) expired(now time.Time) bool {
+	return !s.expiry.IsZero() && !now.Before(s.expiry)
 }
 
 func (r *Revoker) sessionsOf(ctx context.Context, pairName string) ([]session, error) {
@@ -329,11 +340,31 @@ func (r *Revoker) sessionsOf(ctx context.Context, pairName string) ([]session, e
 
 func decodeSession(obj *unstructured.Unstructured) session {
 	states, _, _ := unstructured.NestedMap(obj.Object, "clientStates")
+	deviceHash, _, _ := unstructured.NestedString(obj.Object, "deviceHash")
 	return session{
 		name:       obj.GetName(),
 		clients:    slices.Sorted(maps.Keys(states)),
 		generation: objectGeneration(obj),
+		deviceHash: deviceHash,
+		expiry:     sessionExpiry(obj),
 	}
+}
+
+// sessionExpiry is the earlier of the idle and the absolute expiry of an AuthSession. A time that
+// is missing or does not read is left out.
+func sessionExpiry(obj *unstructured.Unstructured) time.Time {
+	var expiry time.Time
+	for _, field := range []string{"idleExpiry", "absoluteExpiry"} {
+		value, _, _ := unstructured.NestedString(obj.Object, field)
+		parsed, err := controller.ParseRFC3339(value)
+		if err != nil || parsed == nil || parsed.Year() <= 1 {
+			continue
+		}
+		if expiry.IsZero() || parsed.Before(expiry) {
+			expiry = *parsed
+		}
+	}
+	return expiry
 }
 
 // signInPageSize bounds a page of authorization codes or auth requests read at once: the
@@ -421,11 +452,21 @@ func signInOf(obj *unstructured.Unstructured, p Pair) bool {
 // the browser session it was issued under.
 type ref struct {
 	id        string
+	clientID  string
 	sessionID string
+	// deviceHash is the hash of the device mark of the browser of the sign-in.
+	deviceHash string
+
+	// inGrants and inRefresh tell where the OfflineSessions holds the reference: in grants, and as
+	// the entry of the client in refresh (the last grant of the client).
+	inGrants  bool
+	inRefresh bool
 }
 
-// offlineRefs reads the references of the OfflineSessions of the pair, by client. The cache keeps
-// only their IDs, so the object is read fresh.
+// offlineRefs reads the references of the OfflineSessions of the pair, by refresh token ID: those of
+// grants, every grant of the pair, and of refresh, the last grant of each client, which is all an
+// object written before grants has. The object is read fresh: a reference Dex has just added must
+// not survive a revocation because the cache has not seen it yet.
 func (r *Revoker) offlineRefs(ctx context.Context, p Pair) (map[string]ref, error) {
 	obj := controller.Object(controller.OfflineSessionsGVK)
 	err := r.apiReader.Get(ctx, types.NamespacedName{Namespace: naming.DexNamespace, Name: p.name()}, obj)
@@ -441,30 +482,57 @@ func (r *Revoker) offlineRefs(ctx context.Context, p Pair) (map[string]ref, erro
 		// Another pair with a colliding name: not this pair's references.
 		return map[string]ref{}, nil
 	}
-	refresh, _, _ := unstructured.NestedMap(obj.Object, "refresh")
-	out := make(map[string]ref, len(refresh))
-	for clientID, raw := range refresh {
-		entry, ok := raw.(map[string]any)
-		if !ok {
-			continue
+	out := map[string]ref{}
+	for _, field := range []string{"grants", "refresh"} {
+		entries, _, _ := unstructured.NestedMap(obj.Object, field)
+		for key, raw := range entries {
+			entry, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+			id, _ := entry["ID"].(string)
+			if id == "" {
+				continue
+			}
+			rf, seen := out[id]
+			if !seen {
+				clientID, _ := entry["ClientID"].(string)
+				sessionID, _ := entry["SessionID"].(string)
+				deviceHash, _ := entry["DeviceHash"].(string)
+				rf = ref{id: id, clientID: clientID, sessionID: sessionID, deviceHash: deviceHash}
+			}
+			if field == "grants" {
+				rf.inGrants = true
+			} else {
+				// The key is the client; an entry written before ClientID was kept names it only there.
+				rf.clientID, rf.inRefresh = key, true
+			}
+			out[id] = rf
 		}
-		id, _ := entry["ID"].(string)
-		if id == "" {
-			continue
-		}
-		sessionID, _ := entry["SessionID"].(string)
-		out[clientID] = ref{id: id, sessionID: sessionID}
 	}
 	return out, nil
 }
 
-// removeRef removes the reference of clientID from the OfflineSessions of the pair if it still
-// names the refresh token id. A JSON Patch with a test: a sign-in that replaced the reference in
-// between keeps it. A merge patch from the cache is not an option, the cache strips connectorData.
-func (r *Revoker) removeRef(ctx context.Context, pairName, clientID, id string) error {
-	path := "/refresh/" + escapePointer(clientID)
-	patch := fmt.Sprintf(`[{"op":"test","path":%q,"value":%q},{"op":"remove","path":%q}]`, path+"/ID", id, path)
-	return r.patchJSON(ctx, controller.OfflineSessionsGVK, pairName, patch)
+// removeRef removes the references to the refresh token of rf from the OfflineSessions of the pair:
+// its entry of grants, and the entry of its client in refresh if that still names it. JSON Patches
+// with a test, one per field: a sign-in that replaced a reference in between keeps it, and a field
+// without the entry fails its own patch only. A merge patch from the cache is not an option, the
+// cache strips connectorData. Dex reads the grants left of the client from grants.
+func (r *Revoker) removeRef(ctx context.Context, pairName string, rf ref) error {
+	var paths []string
+	if rf.inGrants {
+		paths = append(paths, "/grants/"+escapePointer(rf.id))
+	}
+	if rf.inRefresh {
+		paths = append(paths, "/refresh/"+escapePointer(rf.clientID))
+	}
+	for _, path := range paths {
+		patch := fmt.Sprintf(`[{"op":"test","path":%q,"value":%q},{"op":"remove","path":%q}]`, path+"/ID", rf.id, path)
+		if err := r.patchJSON(ctx, controller.OfflineSessionsGVK, pairName, patch); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // patchJSON applies a JSON Patch. A patch that does not apply - the test failed, or the path is gone -

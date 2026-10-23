@@ -7,7 +7,9 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "user-api")) | nindent 2 }}
 ---
 # user-api creates self-service UserOperations and reads their status. What it may create is narrowed
-# by the ValidatingAdmissionPolicy in validating-admission-policy.yaml.
+# by the ValidatingAdmissionPolicy in validating-admission-policy.yaml. It reads the devices of a user
+# from the UserAccount it names, never lists them: the sessions and refresh tokens of Dex stay out of
+# its reach.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -20,6 +22,12 @@ rules:
   - useroperations
   verbs:
   - create
+  - get
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - useraccounts
+  verbs:
   - get
 - apiGroups:
   - dex.coreos.com

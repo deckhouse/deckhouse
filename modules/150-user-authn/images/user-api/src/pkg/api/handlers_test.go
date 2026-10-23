@@ -34,18 +34,21 @@ import (
 	"user-api/pkg/k8s"
 )
 
+// janeClaims and jdoeClaims are the tokens of devices signed in two days ago (testDevices).
 var (
 	janeClaims = &auth.Claims{
 		Subject:     "CgRqYW5lEgVsb2NhbA",
 		UserID:      "jane",
 		ConnectorID: "local",
 		Email:       "jane@example.com",
+		SessionID:   oldBrowser,
 	}
 	jdoeClaims = &auth.Claims{
 		Subject:     "CiNjbj1qZG9lLG91PXBlb3BsZSxkYz1leGFtcGxlLGRjPW9yZxIEbGRhcA",
 		UserID:      "cn=jdoe,ou=people,dc=example,dc=org",
 		ConnectorID: "ldap",
 		Email:       "jdoe@example.org",
+		GrantID:     oldGrant,
 	}
 )
 
@@ -77,6 +80,12 @@ type mockK8sClient struct {
 	usernames   map[string]string
 	usernameErr error
 	createErr   error
+	// devices are the devices of every account, testDevices when Items is nil; devicesErr fails
+	// reading them. An account belongs to the pair AccountName was last asked for, unless devices
+	// names a pair.
+	devices    k8s.Devices
+	devicesErr error
+	pair       [2]string
 	// statuses are returned by successive status reads; the last one repeats.
 	statuses []k8s.OperationStatus
 
@@ -94,6 +103,33 @@ func (m *mockK8sClient) LocalUsername(_ context.Context, userID string) (string,
 		return "", k8s.ErrUserNotFound
 	}
 	return username, nil
+}
+
+func (m *mockK8sClient) AccountName(ctx context.Context, userID, connectorID string) (string, error) {
+	m.mu.Lock()
+	m.pair = [2]string{userID, connectorID}
+	m.mu.Unlock()
+	if connectorID != "local" {
+		return k8s.ExternalAccountName(connectorID, userID), nil
+	}
+	username, err := m.LocalUsername(ctx, userID)
+	if err != nil {
+		return "", err
+	}
+	return k8s.LocalAccountName("", username), nil
+}
+
+func (m *mockK8sClient) Devices(_ context.Context, _ string) (k8s.Devices, error) {
+	devices := m.devices
+	if devices.Items == nil {
+		devices = testDevices()
+	}
+	if devices.UserID == "" {
+		m.mu.Lock()
+		devices.UserID, devices.ConnectorID = m.pair[0], m.pair[1]
+		m.mu.Unlock()
+	}
+	return devices, m.devicesErr
 }
 
 func (m *mockK8sClient) CreateUserOperation(_ context.Context, op k8s.UserOperation) (string, error) {
@@ -134,6 +170,7 @@ func newTestHandler(verifier auth.Verifier, k8sClient k8s.Client) *Handler {
 	h := NewHandler(verifier, k8sClient, logger)
 	h.waitTimeout = 200 * time.Millisecond
 	h.pollInterval = time.Millisecond
+	h.now = func() time.Time { return devicesNow }
 	return h
 }
 
@@ -295,9 +332,24 @@ func TestHandler_SelfLogout(t *testing.T) {
 		{
 			name: "external account without an email",
 			verifier: &mockVerifier{claims: &auth.Claims{
-				Subject: jdoeClaims.Subject, UserID: jdoeClaims.UserID, ConnectorID: jdoeClaims.ConnectorID,
+				Subject: jdoeClaims.Subject, UserID: jdoeClaims.UserID, ConnectorID: jdoeClaims.ConnectorID, GrantID: oldGrant,
 			}},
 			k8sClient:  &mockK8sClient{},
+			wantStatus: http.StatusForbidden,
+			wantError:  "forbidden",
+		},
+		{
+			name:           "device signed in an hour ago",
+			verifier:       &mockVerifier{claims: withDevice(janeClaims, newBrowser, "")},
+			k8sClient:      janeStore(succeeded("")),
+			wantStatus:     http.StatusForbidden,
+			wantError:      "too_early",
+			wantRetryAfter: "82800",
+		},
+		{
+			name:       "token that names no device",
+			verifier:   &mockVerifier{claims: withDevice(janeClaims, "", "")},
+			k8sClient:  janeStore(succeeded("")),
 			wantStatus: http.StatusForbidden,
 			wantError:  "forbidden",
 		},
@@ -452,7 +504,7 @@ func TestHandler_SelfPasswordChange(t *testing.T) {
 		{
 			name: "Password found by user ID, not by the name claims",
 			verifier: &mockVerifier{claims: &auth.Claims{
-				Subject: "CgdqYW5lLWlkEgVsb2NhbA", UserID: "jane-id", ConnectorID: "local",
+				Subject: "CgdqYW5lLWlkEgVsb2NhbA", UserID: "jane-id", ConnectorID: "local", SessionID: oldBrowser,
 			}},
 			k8sClient:     &mockK8sClient{usernames: map[string]string{"jane-id": "jane"}, statuses: succeeded("")},
 			wantStatus:    http.StatusOK,
@@ -492,6 +544,15 @@ func TestHandler_SelfPasswordChange(t *testing.T) {
 			k8sClient:  &mockK8sClient{},
 			wantStatus: http.StatusForbidden,
 			wantError:  "forbidden",
+		},
+		{
+			// A thief who has just signed in with a stolen password cannot take the account over.
+			name:           "device signed in an hour ago",
+			verifier:       &mockVerifier{claims: withDevice(janeClaims, newBrowser, "")},
+			k8sClient:      &mockK8sClient{usernames: map[string]string{"jane": "jane"}, statuses: succeeded("")},
+			wantStatus:     http.StatusForbidden,
+			wantError:      "too_early",
+			wantRetryAfter: "82800",
 		},
 		{
 			name:       "token refused",
@@ -548,7 +609,7 @@ func TestHandler_UserRateLimit(t *testing.T) {
 	}
 
 	// Another user has a budget of their own.
-	verifier.claims = &auth.Claims{Subject: "CgRqb2huEgVsb2NhbA", UserID: "john", ConnectorID: "local"}
+	verifier.claims = &auth.Claims{Subject: "CgRqb2huEgVsb2NhbA", UserID: "john", ConnectorID: "local", SessionID: oldBrowser}
 	if w := call(h.SelfLogout); w.Code != http.StatusOK {
 		t.Fatalf("other user: status = %d, want %d", w.Code, http.StatusOK)
 	}

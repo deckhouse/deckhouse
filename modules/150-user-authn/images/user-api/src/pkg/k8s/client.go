@@ -18,10 +18,13 @@ package k8s
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -56,6 +59,17 @@ var (
 		Version:  "v1",
 		Resource: "useroperations",
 	}
+	userAccountGVR = schema.GroupVersionResource{
+		Group:    "deckhouse.io",
+		Version:  "v1alpha1",
+		Resource: "useraccounts",
+	}
+)
+
+// Kinds of a Device.
+const (
+	DeviceKindBrowser = "Browser"
+	DeviceKindGrant   = "Grant"
 )
 
 // UserOperation is a self-service deckhouse.io/v1 UserOperation: the user acts on their own account.
@@ -66,6 +80,42 @@ type UserOperation struct {
 	// User names a local user, Target the account of an external provider. Exactly one is set.
 	User   string
 	Target *Target
+	// Logout narrows a Logout down to devices; nil signs the user out everywhere.
+	Logout *Logout
+}
+
+// Logout is spec.logout of a UserOperation: at most one field is set. The controller ends a session
+// or a grant only of the user the operation names.
+type Logout struct {
+	Session       string
+	ExceptSession string
+	Grant         string
+	ExceptGrant   string
+}
+
+// Device is a device signed in to the account of a user: an entry of status.sessions of its
+// UserAccount.
+type Device struct {
+	ID         string     `json:"id"`
+	Kind       string     `json:"kind"`
+	Clients    []string   `json:"clients,omitempty"`
+	IPAddress  string     `json:"ipAddress,omitempty"`
+	UserAgent  string     `json:"userAgent,omitempty"`
+	SignedInAt *time.Time `json:"signedInAt,omitempty"`
+	// KnownSince is when Dex first saw the browser of the device complete a login of the account, set
+	// when earlier than SignedInAt: the device is as old as that.
+	KnownSince   *time.Time `json:"knownSince,omitempty"`
+	LastActivity *time.Time `json:"lastActivity,omitempty"`
+}
+
+// Devices are the devices of an account and whether the UserAccount lists only the most recently
+// active of them.
+type Devices struct {
+	Items     []Device
+	Truncated bool
+	// UserID and ConnectorID are the pair the UserAccount belongs to, from its status.
+	UserID      string
+	ConnectorID string
 }
 
 // Target names the account of an external provider: the email it signs in with, narrowed down to
@@ -86,6 +136,10 @@ type OperationStatus struct {
 type Client interface {
 	// LocalUsername returns the username of the local user with the given user ID.
 	LocalUsername(ctx context.Context, userID string) (string, error)
+	// AccountName returns the name of the UserAccount of the pair (userID, connectorID).
+	AccountName(ctx context.Context, userID, connectorID string) (string, error)
+	// Devices returns the devices of the UserAccount named name; none when there is no such object.
+	Devices(ctx context.Context, name string) (Devices, error)
 	// CreateUserOperation creates op and returns the generated name.
 	CreateUserOperation(ctx context.Context, op UserOperation) (string, error)
 	UserOperationStatus(ctx context.Context, name string) (OperationStatus, error)
@@ -141,6 +195,50 @@ func (c *K8sClient) LocalUsername(_ context.Context, userID string) (string, err
 	return c.passwordCache.Username(userID)
 }
 
+// AccountName names the UserAccount of a local user after its Password object, and that of an
+// external provider after the pair.
+func (c *K8sClient) AccountName(_ context.Context, userID, connectorID string) (string, error) {
+	if connectorID == localConnectorID {
+		return c.passwordCache.AccountName(userID)
+	}
+	return ExternalAccountName(connectorID, userID), nil
+}
+
+// Devices reads status.sessions of the UserAccount named name.
+func (c *K8sClient) Devices(ctx context.Context, name string) (Devices, error) {
+	account, err := c.dynamicClient.Resource(userAccountGVR).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return Devices{}, nil
+	}
+	if err != nil {
+		return Devices{}, fmt.Errorf("get user account %s: %w", name, err)
+	}
+
+	var status struct {
+		UserID            string   `json:"userID"`
+		ConnectorID       string   `json:"connectorID"`
+		Sessions          []Device `json:"sessions"`
+		SessionsTruncated bool     `json:"sessionsTruncated"`
+	}
+	raw, found, err := unstructured.NestedFieldNoCopy(account.Object, "status")
+	if err != nil || !found {
+		return Devices{}, err
+	}
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return Devices{}, fmt.Errorf("encode the status of user account %s: %w", name, err)
+	}
+	if err := json.Unmarshal(data, &status); err != nil {
+		return Devices{}, fmt.Errorf("decode the status of user account %s: %w", name, err)
+	}
+	return Devices{
+		Items:       status.Sessions,
+		Truncated:   status.SessionsTruncated,
+		UserID:      status.UserID,
+		ConnectorID: status.ConnectorID,
+	}, nil
+}
+
 func (c *K8sClient) CreateUserOperation(ctx context.Context, op UserOperation) (string, error) {
 	spec := map[string]any{
 		"type":          op.Type,
@@ -158,6 +256,20 @@ func (c *K8sClient) CreateUserOperation(ctx context.Context, op UserOperation) (
 			target["userID"] = op.Target.UserID
 		}
 		spec["target"] = target
+	}
+	if op.Logout != nil {
+		logout := map[string]any{}
+		for field, value := range map[string]string{
+			"session":       op.Logout.Session,
+			"exceptSession": op.Logout.ExceptSession,
+			"grant":         op.Logout.Grant,
+			"exceptGrant":   op.Logout.ExceptGrant,
+		} {
+			if value != "" {
+				logout[field] = value
+			}
+		}
+		spec["logout"] = logout
 	}
 
 	userOp := &unstructured.Unstructured{

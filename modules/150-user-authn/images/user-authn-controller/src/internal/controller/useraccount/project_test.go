@@ -18,9 +18,15 @@ package useraccount
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
+	"slices"
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -261,5 +267,309 @@ func collectJSONKeysInto(v any, keys map[string]struct{}) {
 		for _, child := range typed {
 			collectJSONKeysInto(child, keys)
 		}
+	}
+}
+
+func TestProjectSessions(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 10, 16, 12, 30, 0, 0, time.UTC)
+	at := func(d time.Duration) time.Time { return now.Add(d) }
+	hour := func(h int) *metav1.Time { return metaTimeOrNil(time.Date(2026, 10, 16, h, 0, 0, 0, time.UTC)) }
+	browser := browserView{
+		ID:           "sid-1",
+		Clients:      []string{"console"},
+		IPAddress:    "203.0.113.7",
+		UserAgent:    "Firefox",
+		CreatedAt:    at(-5 * time.Hour),
+		LastActivity: at(-3 * time.Hour),
+		Expiry:       at(time.Hour),
+	}
+
+	tests := []struct {
+		name     string
+		browsers []browserView
+		grants   []grantView
+		expected []v1alpha1.UserAccountSession
+	}{
+		{
+			name:     "the grants of a live browser session are its applications",
+			browsers: []browserView{browser},
+			grants: []grantView{
+				{ID: "g-console", ClientID: "console", SessionID: "sid-1", IPAddress: "198.51.100.1", LastUsed: at(-2 * time.Hour)},
+				{ID: "g-grafana", ClientID: "grafana", SessionID: "sid-1", LastUsed: at(-90 * time.Minute)},
+			},
+			expected: []v1alpha1.UserAccountSession{{
+				ID:           "sid-1",
+				Kind:         v1alpha1.SessionKindBrowser,
+				Clients:      []string{"console", "grafana"},
+				IPAddress:    "203.0.113.7",
+				UserAgent:    "Firefox",
+				SignedInAt:   metaTimeOrNil(at(-5 * time.Hour)),
+				LastActivity: hour(11), // grafana, 11:00, rounded down
+			}},
+		},
+		{
+			name:     "an ended browser session leaves its grants as devices",
+			browsers: []browserView{{ID: "sid-1", Expiry: at(-time.Minute), LastActivity: at(-time.Hour)}},
+			grants: []grantView{{
+				ID: "g-console", ClientID: "console", SessionID: "sid-1", UserAgent: "Firefox",
+				CreatedAt: at(-5 * time.Hour), LastUsed: at(-10 * time.Minute),
+			}},
+			expected: []v1alpha1.UserAccountSession{{
+				ID:           "g-console",
+				Kind:         v1alpha1.SessionKindGrant,
+				Clients:      []string{"console"},
+				UserAgent:    "Firefox",
+				SignedInAt:   metaTimeOrNil(at(-5 * time.Hour)),
+				LastActivity: hour(12),
+			}},
+		},
+		{
+			name: "a device signed in within the hour is active from its sign-in, not from the hour before",
+			browsers: []browserView{{
+				ID: "sid-2", Clients: []string{"console"}, CreatedAt: at(-11 * time.Minute),
+				LastActivity: at(-5 * time.Minute), Expiry: at(time.Hour),
+			}},
+			expected: []v1alpha1.UserAccountSession{{
+				ID:           "sid-2",
+				Kind:         v1alpha1.SessionKindBrowser,
+				Clients:      []string{"console"},
+				SignedInAt:   metaTimeOrNil(at(-11 * time.Minute)),
+				LastActivity: metaTimeOrNil(at(-11 * time.Minute)), // 12:19, not 12:00
+			}},
+		},
+		{
+			name:     "grants without a browser come apart, the most recently active first",
+			browsers: []browserView{browser},
+			grants: []grantView{
+				{ID: "g-old", ClientID: "kubeconfig-generator", CreatedAt: at(-48 * time.Hour), LastUsed: at(-24 * time.Hour)},
+				{ID: "g-new", ClientID: "kubeconfig-generator", CreatedAt: at(-time.Hour)},
+			},
+			expected: []v1alpha1.UserAccountSession{
+				{
+					ID:           "g-new",
+					Kind:         v1alpha1.SessionKindGrant,
+					Clients:      []string{"kubeconfig-generator"},
+					SignedInAt:   metaTimeOrNil(at(-time.Hour)),
+					LastActivity: metaTimeOrNil(at(-time.Hour)), // 11:30: the hour rounds down to before the sign-in
+				},
+				{
+					ID:           "sid-1",
+					Kind:         v1alpha1.SessionKindBrowser,
+					Clients:      []string{"console"},
+					IPAddress:    "203.0.113.7",
+					UserAgent:    "Firefox",
+					SignedInAt:   metaTimeOrNil(at(-5 * time.Hour)),
+					LastActivity: hour(9),
+				},
+				{
+					ID:           "g-old",
+					Kind:         v1alpha1.SessionKindGrant,
+					Clients:      []string{"kubeconfig-generator"},
+					SignedInAt:   metaTimeOrNil(at(-48 * time.Hour)),
+					LastActivity: metaTimeOrNil(time.Date(2026, 10, 15, 12, 0, 0, 0, time.UTC)),
+				},
+			},
+		},
+		{
+			name: "nothing signed in",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, truncated := projectSessions(tt.browsers, tt.grants, nil, DefaultEstablishedDeviceAge, now)
+			if truncated {
+				t.Error("truncated = true, want false")
+			}
+			if !reflect.DeepEqual(got, tt.expected) {
+				gotJSON, _ := json.MarshalIndent(got, "", "  ")
+				wantJSON, _ := json.MarshalIndent(tt.expected, "", "  ")
+				t.Errorf("sessions =\n%s\nwant\n%s", gotJSON, wantJSON)
+			}
+		})
+	}
+}
+
+func TestProjectSessionsKeepsTheMostRecent(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+	grants := make([]grantView, 0, v1alpha1.MaxSessions+5)
+	for i := range v1alpha1.MaxSessions + 5 {
+		grants = append(grants, grantView{
+			ID:       fmt.Sprintf("g-%03d", i),
+			ClientID: "kubeconfig-generator",
+			LastUsed: now.Add(-time.Duration(i) * time.Hour),
+		})
+	}
+
+	got, truncated := projectSessions(nil, grants, nil, DefaultEstablishedDeviceAge, now)
+	if !truncated {
+		t.Error("truncated = false, want true")
+	}
+	if len(got) != v1alpha1.MaxSessions {
+		t.Fatalf("len = %d, want %d", len(got), v1alpha1.MaxSessions)
+	}
+	if last := fmt.Sprintf("g-%03d", v1alpha1.MaxSessions-1); got[0].ID != "g-000" || got[len(got)-1].ID != last {
+		t.Errorf("kept %s..%s, want g-000..%s", got[0].ID, got[len(got)-1].ID, last)
+	}
+}
+
+func TestProjectSessionsOrderHoldsWithinAnHour(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 10, 16, 12, 50, 0, 0, time.UTC)
+	at := func(m int) time.Time { return time.Date(2026, 10, 16, 12, m, 0, 0, time.UTC) }
+	project := func(consoleUsed, kubeUsed time.Time) []v1alpha1.UserAccountSession {
+		got, _ := projectSessions(nil, []grantView{
+			{ID: "g-kube", ClientID: "kubeconfig-generator", LastUsed: kubeUsed},
+			{ID: "g-console", ClientID: "console", LastUsed: consoleUsed},
+		}, nil, DefaultEstablishedDeviceAge, now)
+		return got
+	}
+	// Two devices taking turns within one hour leave the status as it was.
+	first := project(at(10), at(20))
+	second := project(at(40), at(30))
+	if !reflect.DeepEqual(first, second) {
+		t.Errorf("order changed within the hour:\n%+v\n%+v", first, second)
+	}
+	if first[0].ID != "g-console" {
+		t.Errorf("first = %s, want g-console (the IDs order devices of one hour)", first[0].ID)
+	}
+}
+
+func TestProjectSessionsKeepsEstablishedDevices(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+	grants := []grantView{{
+		ID: "g-owner", ClientID: "console", CreatedAt: now.Add(-48 * time.Hour), LastUsed: now.Add(-40 * time.Hour),
+	}}
+	for i := range v1alpha1.MaxSessions + 5 {
+		grants = append(grants, grantView{
+			ID: fmt.Sprintf("g-new-%03d", i), ClientID: "console", CreatedAt: now.Add(-time.Hour), LastUsed: now,
+		})
+	}
+
+	got, truncated := projectSessions(nil, grants, nil, DefaultEstablishedDeviceAge, now)
+	if !truncated || len(got) != v1alpha1.MaxSessions {
+		t.Fatalf("len = %d, truncated = %t; want %d, true", len(got), truncated, v1alpha1.MaxSessions)
+	}
+	if !slices.ContainsFunc(got, func(s v1alpha1.UserAccountSession) bool { return s.ID == "g-owner" }) {
+		t.Error("the device signed in two days ago was pushed off the list by new ones")
+	}
+	if got[len(got)-1].ID != "g-owner" {
+		t.Errorf("last = %s, want g-owner: the kept list is ordered by activity", got[len(got)-1].ID)
+	}
+
+	// With a minimum device age of three days, the owner's device is as new as the others, and the
+	// least recently active goes first.
+	got, _ = projectSessions(nil, grants, nil, 72*time.Hour, now)
+	if slices.ContainsFunc(got, func(s v1alpha1.UserAccountSession) bool { return s.ID == "g-owner" }) {
+		t.Error("the device signed in two days ago was kept under a minimum age of three days")
+	}
+}
+
+// A browser that completed a login before its current sign-in is known since its first login; a
+// browser seen first at this sign-in, or one Dex no longer knows, is as old as the sign-in.
+func TestProjectSessionsKnownSince(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)
+	firstSeen := now.Add(-72 * time.Hour)
+	// "new" is the first login of its browser: remembered at the first factor, a moment before the session.
+	known := map[string]time.Time{"known": firstSeen, "new": now.Add(-time.Hour - 20*time.Second)}
+	got, _ := projectSessions(
+		[]browserView{
+			{ID: "sid-known", DeviceHash: "known", CreatedAt: now.Add(-time.Hour), Expiry: now.Add(time.Hour)},
+			{ID: "sid-new", DeviceHash: "new", CreatedAt: now.Add(-time.Hour), Expiry: now.Add(time.Hour)},
+			{ID: "sid-forgotten", DeviceHash: "forgotten", CreatedAt: now.Add(-time.Hour), Expiry: now.Add(time.Hour)},
+		},
+		[]grantView{{ID: "g-known", ClientID: "kubeconfig-generator", DeviceHash: "known", CreatedAt: now.Add(-2 * time.Hour)}},
+		known, DefaultEstablishedDeviceAge, now)
+	since := map[string]*metav1.Time{}
+	for _, s := range got {
+		since[s.ID] = s.KnownSince
+	}
+	if since["sid-known"] == nil || !since["sid-known"].Time.Equal(firstSeen) {
+		t.Errorf("sid-known knownSince = %v, want %v", since["sid-known"], firstSeen)
+	}
+	if since["g-known"] == nil || !since["g-known"].Time.Equal(firstSeen) {
+		t.Errorf("g-known knownSince = %v, want %v", since["g-known"], firstSeen)
+	}
+	for _, id := range []string{"sid-new", "sid-forgotten"} {
+		if since[id] != nil {
+			t.Errorf("%s knownSince = %v, want none", id, since[id])
+		}
+	}
+}
+
+// A device whose browser has been known for a day is kept when the list is cut, even if it signed in
+// again moments ago.
+func TestProjectSessionsKeepsKnownDevices(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+	grants := []grantView{{
+		ID: "g-owner", ClientID: "console", DeviceHash: "owner", CreatedAt: now.Add(-time.Hour), LastUsed: now.Add(-40 * time.Hour),
+	}}
+	for i := range v1alpha1.MaxSessions + 5 {
+		grants = append(grants, grantView{
+			ID: fmt.Sprintf("g-new-%03d", i), ClientID: "console", CreatedAt: now.Add(-time.Hour), LastUsed: now,
+		})
+	}
+	got, _ := projectSessions(nil, grants, map[string]time.Time{"owner": now.Add(-48 * time.Hour)}, DefaultEstablishedDeviceAge, now)
+	if !slices.ContainsFunc(got, func(s v1alpha1.UserAccountSession) bool { return s.ID == "g-owner" }) {
+		t.Error("the device of a browser known for two days was pushed off the list by new ones")
+	}
+}
+
+func TestProjectSessionsBoundsWhatADeviceSends(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+	// A two-byte rune crosses the bound: the cut goes before it.
+	agent := strings.Repeat("a", maxUserAgent-1) + "é" + strings.Repeat("b", 100)
+	got, _ := projectSessions(nil, []grantView{{ID: "g", UserAgent: agent, IPAddress: strings.Repeat("1", 100)}}, nil, DefaultEstablishedDeviceAge, now)
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1", len(got))
+	}
+	if want := strings.Repeat("a", maxUserAgent-1); got[0].UserAgent != want {
+		t.Errorf("userAgent has %d bytes, want the %d before the cut rune", len(got[0].UserAgent), len(want))
+	}
+	if !utf8.ValidString(got[0].UserAgent) {
+		t.Error("userAgent is not valid UTF-8")
+	}
+	if len(got[0].IPAddress) != maxIPAddress {
+		t.Errorf("ipAddress has %d bytes, want %d", len(got[0].IPAddress), maxIPAddress)
+	}
+}
+
+func TestDecodeGrants(t *testing.T) {
+	t.Parallel()
+
+	got := decodeGrants(
+		map[string]refTokenFields{
+			"g2": {ID: "g2", ClientID: "console", SessionID: "sid-1", IPAddress: "203.0.113.7", CreatedAt: "2026-10-16T10:00:00.123456789Z"},
+		},
+		map[string]refTokenFields{
+			// The last grant of console, already in grants.
+			"console": {ID: "g2", ClientID: "console"},
+			// Written by an old Dex: not in grants, the client named only by the key.
+			"kubeconfig-generator": {ID: "g1", LastUsed: "0001-01-01T00:00:00Z"},
+		},
+	)
+	want := []grantView{
+		{ID: "g1", ClientID: "kubeconfig-generator"},
+		{
+			ID: "g2", ClientID: "console", SessionID: "sid-1", IPAddress: "203.0.113.7",
+			CreatedAt: time.Date(2026, 10, 16, 10, 0, 0, 123456789, time.UTC),
+		},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("grants = %+v, want %+v", got, want)
 	}
 }

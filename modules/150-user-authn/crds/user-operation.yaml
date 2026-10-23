@@ -136,7 +136,7 @@ spec:
 
             A UserOperation runs once, and changes to its spec after creation are ignored.
             The module processes the operation and writes the result to `status.phase`
-            (`Succeeded` or `Failed`). Completed operations are automatically deleted after 24 hours.
+            (`Succeeded` or `Failed`). Operations are automatically deleted after the `retention.userOperations` setting of the module (24 hours by default).
             To perform a new action, create a new UserOperation.
 
             `Lock`, `ResetPassword`, `Reset2FA`, and `Logout` end the sessions of the user at once. The module
@@ -164,8 +164,8 @@ spec:
                   message: 'spec.target is only supported for Lock, Unlock, and Logout operations; ResetPassword, Reset2FA, and RequirePasswordChange apply to local users (spec.user) only.'
                 - rule: 'self.type == "Logout" || !has(self.logout)'
                   message: 'spec.logout is only supported for the Logout operation.'
-                - rule: '!has(self.logout) || [has(self.logout.session), has(self.logout.exceptSession)].filter(x, x).size() <= 1'
-                  message: 'spec.logout accepts at most one of session and exceptSession.'
+                - rule: '!has(self.logout) || [has(self.logout.session), has(self.logout.exceptSession), has(self.logout.grant), has(self.logout.exceptGrant)].filter(x, x).size() <= 1'
+                  message: 'spec.logout accepts at most one of session, exceptSession, grant, and exceptGrant.'
                 - rule: 'self.type != "RequirePasswordChange" || has(self.user)'
                   message: 'RequirePasswordChange applies to local users (spec.user) only.'
               properties:
@@ -300,6 +300,23 @@ spec:
                         ID of the browser session to keep. Every other browser session of the user ends, and every
                         refresh token not issued in the kept session is revoked. A token issued while the operation
                         runs can survive it. The operation fails if the user has no such session.
+                    grant:
+                      type: string
+                      pattern: '^[a-z2-7]{1,64}$'
+                      description: |
+                        ID of the refresh token to revoke: a device signed in without a browser session of Dex,
+                        such as a kubeconfig. It is the `id` of a device of the `Grant` kind in
+                        [`status.sessions`](cr.html#useraccount-v1alpha1-status-sessions) of the UserAccount and the
+                        `d8_gid` claim of the tokens issued with the refresh token. The other devices keep their
+                        sessions. The operation fails if the user has no such refresh token.
+                    exceptGrant:
+                      type: string
+                      pattern: '^[a-z2-7]{1,64}$'
+                      description: |
+                        ID of the refresh token to keep, for signing out of the other devices from a device without
+                        a browser session of Dex. Every browser session of the user ends, except the one the kept
+                        refresh token was issued in, and every other refresh token is revoked. A token issued while
+                        the operation runs can survive it. The operation fails if the user has no such refresh token.
             status:
               type: object
               properties:

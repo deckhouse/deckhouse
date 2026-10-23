@@ -79,6 +79,16 @@ spec:
         # Revocations are kept for the ID token lifetime and an hour.
         - name: ID_TOKEN_TTL
           value: {{ .Values.userAuthn.idTokenTTL | default "10m" | quote }}
+        # The trusted devices are kept first when the device list of a UserAccount is cut.
+        - name: MIN_DEVICE_AGE
+          value: {{ dig "devices" "trustedAfter" "24h" .Values.userAuthn | quote }}
+        - name: USER_OPERATION_RETENTION
+          value: {{ dig "retention" "userOperations" "24h" .Values.userAuthn | quote }}
+        {{- with dig "retention" "revocations" "" .Values.userAuthn }}
+        # Never shorter than the ID token lifetime and an hour: the controller raises it to that.
+        - name: REVOCATION_RETENTION
+          value: {{ . | quote }}
+        {{- end }}
         - name: REVOCATION_FEED_ADDR
           value: ":8443"
         - name: REVOCATION_FEED_TLS_DIR

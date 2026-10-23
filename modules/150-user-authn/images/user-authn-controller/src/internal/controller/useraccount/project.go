@@ -17,10 +17,12 @@ limitations under the License.
 package useraccount
 
 import (
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -211,6 +213,167 @@ func projectExternal(src externalSource, providerType string, now time.Time) des
 			TwoFactor:              src.TwoFactor,
 		},
 	}
+}
+
+const (
+	// maxUserAgent and maxIPAddress bound what a device puts into the status: the User-Agent is the
+	// browser's own header and could otherwise grow the object by kilobytes per device.
+	maxUserAgent = 512
+	maxIPAddress = 64
+
+	// DefaultEstablishedDeviceAge is how long a device must have been signed in to act on the other
+	// devices of the user through user-api (its minimum device age), unless configured.
+	DefaultEstablishedDeviceAge = 24 * time.Hour
+)
+
+// device is a device of a pair while it is projected: lastActivity is exact, for ordering.
+type device struct {
+	session      v1alpha1.UserAccountSession
+	lastActivity time.Time
+}
+
+// projectSessions lists the devices of a pair: each live browser session with the applications
+// signed in through it, and each grant not issued under a live browser session. A grant issued under
+// a session that has ended is a device of its own: the application keeps it until logout or
+// revocation. The most recently active come first, at most v1alpha1.MaxSessions of them. A device
+// whose browser completed a login of the pair before its sign-in (known, by the hash of the device
+// mark) is known since then.
+func projectSessions(browsers []browserView, grants []grantView, known map[string]time.Time, establishedAge time.Duration, now time.Time) ([]v1alpha1.UserAccountSession, bool) {
+	devices := make(map[string]*device, len(browsers)+len(grants))
+	for _, b := range browsers {
+		if !b.Expiry.IsZero() && !b.Expiry.After(now) {
+			continue
+		}
+		devices[b.ID] = &device{
+			session: v1alpha1.UserAccountSession{
+				ID:         b.ID,
+				Kind:       v1alpha1.SessionKindBrowser,
+				Clients:    slices.Clone(b.Clients),
+				IPAddress:  truncate(b.IPAddress, maxIPAddress),
+				UserAgent:  truncate(b.UserAgent, maxUserAgent),
+				SignedInAt: metaTimeOrNil(b.CreatedAt),
+				KnownSince: knownSince(known, b.DeviceHash, b.CreatedAt),
+			},
+			lastActivity: b.LastActivity,
+		}
+	}
+	for _, g := range grants {
+		if d, ok := devices[g.SessionID]; ok && g.SessionID != "" && d.session.Kind == v1alpha1.SessionKindBrowser {
+			if g.ClientID != "" && !slices.Contains(d.session.Clients, g.ClientID) {
+				d.session.Clients = append(d.session.Clients, g.ClientID)
+				slices.Sort(d.session.Clients)
+			}
+			d.lastActivity = laterTime(d.lastActivity, g.LastUsed)
+			continue
+		}
+		var clients []string
+		if g.ClientID != "" {
+			clients = []string{g.ClientID}
+		}
+		devices[g.ID] = &device{
+			session: v1alpha1.UserAccountSession{
+				ID:         g.ID,
+				Kind:       v1alpha1.SessionKindGrant,
+				Clients:    clients,
+				IPAddress:  truncate(g.IPAddress, maxIPAddress),
+				UserAgent:  truncate(g.UserAgent, maxUserAgent),
+				SignedInAt: metaTimeOrNil(g.CreatedAt),
+				KnownSince: knownSince(known, g.DeviceHash, g.CreatedAt),
+			},
+			lastActivity: laterTime(g.CreatedAt, g.LastUsed),
+		}
+	}
+
+	ordered := slices.Collect(maps.Values(devices))
+	for _, d := range ordered {
+		// Rounded down to the hour, and ordered by the rounded time: the status is rewritten at most once
+		// an hour, not whenever two devices used within the same hour take turns. A device signed in within
+		// the hour keeps its sign-in time: its activity cannot come before it, and the sign-in does not move.
+		d.lastActivity = d.lastActivity.Truncate(time.Hour)
+		if signedIn := d.session.SignedInAt; signedIn != nil && d.lastActivity.Before(signedIn.Time) {
+			d.lastActivity = signedIn.Time
+		}
+	}
+	byActivity := func(a, b *device) int {
+		if c := b.lastActivity.Compare(a.lastActivity); c != 0 {
+			return c
+		}
+		return strings.Compare(a.session.ID, b.session.ID)
+	}
+	slices.SortFunc(ordered, byActivity)
+	truncated := len(ordered) > v1alpha1.MaxSessions
+	if truncated {
+		// The devices signed in long enough to act on the others are kept first: a flood of new sign-ins
+		// must not push the owner's device off the list, where user-api would no longer find it.
+		established := func(d *device) bool {
+			since := d.session.SignedInAt
+			if d.session.KnownSince != nil {
+				since = d.session.KnownSince
+			}
+			return since != nil && now.Sub(since.Time) >= establishedAge
+		}
+		slices.SortStableFunc(ordered, func(a, b *device) int {
+			if ea, eb := established(a), established(b); ea != eb {
+				if ea {
+					return -1
+				}
+				return 1
+			}
+			return 0
+		})
+		ordered = ordered[:v1alpha1.MaxSessions]
+		slices.SortFunc(ordered, byActivity)
+	}
+	if len(ordered) == 0 {
+		return nil, false
+	}
+	out := make([]v1alpha1.UserAccountSession, 0, len(ordered))
+	for _, d := range ordered {
+		d.session.LastActivity = metaTimeOrNil(d.lastActivity)
+		out = append(out, d.session)
+	}
+	return out, truncated
+}
+
+// knownSinceMargin is how much earlier than a sign-in its browser must have been first seen for the
+// device to be listed as known since then. The first login of a browser is remembered at its first
+// factor, a moment before its browser session and seconds or, with a second factor to set up, minutes
+// before its grant: that is the same sign-in, not an earlier one.
+const knownSinceMargin = time.Minute
+
+// knownSince is when the browser hash was first seen completing a login of the pair, when that is more
+// than knownSinceMargin before signedIn: the browser signed in before this sign-in. Nil otherwise.
+func knownSince(known map[string]time.Time, hash string, signedIn time.Time) *metav1.Time {
+	firstSeen, ok := known[hash]
+	if hash == "" || !ok || signedIn.IsZero() || !firstSeen.Before(signedIn.Add(-knownSinceMargin)) {
+		return nil
+	}
+	return metaTimeOrNil(firstSeen)
+}
+
+func laterTime(a, b time.Time) time.Time {
+	if b.After(a) {
+		return b
+	}
+	return a
+}
+
+func metaTimeOrNil(t time.Time) *metav1.Time {
+	if t.IsZero() {
+		return nil
+	}
+	return metaTimePtr(&t)
+}
+
+// truncate cuts s to at most n bytes without splitting a UTF-8 sequence.
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
+	}
+	return s[:n]
 }
 
 func localNameInput(email, username string) string {

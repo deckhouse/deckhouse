@@ -22,19 +22,30 @@ import (
 	"time"
 
 	"golang.org/x/time/rate"
+
+	"user-api/pkg/auth"
 )
 
 const (
-	// A user may sign out everywhere or ask for a password change once in 10 seconds, three times
-	// in a row at most. Both endpoints share the budget.
+	// A device of a user may act on the account (sign out everywhere or on devices, ask for a
+	// password change) once in 10 seconds, three times in a row at most. The actions share the
+	// budget.
 	userRequestInterval = 10 * time.Second
 	userRequestBurst    = 3
 
-	// userLimiterSweepInterval is how often the limiters of idle users are dropped.
+	// A device of a user may read the list of the devices once in 2 seconds, five times in a row
+	// at most.
+	userReadInterval = 2 * time.Second
+	userReadBurst    = 5
+
+	// userLimiterSweepInterval is how often the limiters of idle devices are dropped.
 	userLimiterSweepInterval = time.Minute
 )
 
-// userLimiter limits the requests of every user, keyed by SHA-256 of the sub claim of their token.
+// userLimiter limits the requests of every device of a user, keyed by SHA-256 of budgetKey. Each
+// device has a budget of its own: a device signed in a moment ago, which may not act on the
+// others yet, cannot use up the budget of the owner's device and keep it from signing the new
+// device out.
 type userLimiter struct {
 	mu        sync.Mutex
 	limiters  map[[sha256.Size]byte]*userLimit
@@ -56,20 +67,34 @@ func newUserLimiter(interval time.Duration, burst int) *userLimiter {
 	}
 }
 
-// reserve takes a request from the budget of the subject at now. It returns zero when the request
-// may go on, or how long the user has to wait otherwise; a refused request takes nothing.
-func (l *userLimiter) reserve(subject string, now time.Time) time.Duration {
-	key := sha256.Sum256([]byte(subject))
+// budgetKey names the budget of the device of claims: the user and the browser session (sid) of the
+// token, or else its refresh token (d8_gid), as currentDevice finds the device. Tokens that name no
+// device share the budget of the user; they cannot act on the account anyway.
+func budgetKey(claims *auth.Claims) string {
+	switch {
+	case claims.SessionID != "":
+		return claims.Subject + "\x00sid\x00" + claims.SessionID
+	case claims.GrantID != "":
+		return claims.Subject + "\x00gid\x00" + claims.GrantID
+	default:
+		return claims.Subject
+	}
+}
+
+// reserve takes a request from the budget of key at now. It returns zero when the request may go
+// on, or how long the device has to wait otherwise; a refused request takes nothing.
+func (l *userLimiter) reserve(key string, now time.Time) time.Duration {
+	hashed := sha256.Sum256([]byte(key))
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	l.sweep(now)
 
-	limit, ok := l.limiters[key]
+	limit, ok := l.limiters[hashed]
 	if !ok {
 		limit = &userLimit{limiter: rate.NewLimiter(rate.Every(l.interval), l.burst)}
-		l.limiters[key] = limit
+		l.limiters[hashed] = limit
 	}
 	limit.lastSeen = now
 
@@ -81,8 +106,8 @@ func (l *userLimiter) reserve(subject string, now time.Time) time.Duration {
 	return 0
 }
 
-// sweep drops the limiters of users idle long enough to have their whole budget back: a new
-// limiter is the same as theirs, so the map only holds users who are being limited.
+// sweep drops the limiters of devices idle long enough to have their whole budget back: a new
+// limiter is the same as theirs, so the map only holds devices that are being limited.
 func (l *userLimiter) sweep(now time.Time) {
 	if now.Sub(l.lastSweep) < userLimiterSweepInterval {
 		return

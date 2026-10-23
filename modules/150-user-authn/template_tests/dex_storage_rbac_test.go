@@ -102,11 +102,11 @@ var _ = Describe("Module :: user-authn :: helm template :: Dex storage RBAC", fu
 		dexVerbs := dexStorageRule(roles["dex ClusterRole"], "useridentities")
 		Expect(dexVerbs).To(ContainElements("get", "list", "watch", "create", "update", "delete"))
 
-		// The controller writes UserIdentity with Create and Update only. It ends sessions; it never
-		// creates one.
+		// The controller writes UserIdentity with Create and Update only. It ends sessions and takes
+		// the client of a revoked grant out of its session; it never creates one.
 		controllerRole := hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:controller")
 		Expect(dexStorageRule(controllerRole, "useridentities")).To(ConsistOf("get", "list", "watch", "create", "update", "delete"))
-		Expect(dexStorageRule(controllerRole, "authsessions")).To(ConsistOf("get", "list", "watch", "delete"))
+		Expect(dexStorageRule(controllerRole, "authsessions")).To(ConsistOf("get", "list", "watch", "patch", "delete"))
 	})
 
 	// Revocations live in d8-user-authn only: the controller writes and garbage-collects them

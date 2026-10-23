@@ -56,7 +56,8 @@ const (
 	SourceController = "user-authn-controller"
 	SourceDex        = "dex"
 
-	// The reasons the controller writes. Dex writes TokenRevoked and SessionLogout.
+	// The reasons the controller writes. Dex writes TokenRevoked, SessionLogout, IdentityGone and
+	// Evicted.
 	ReasonLock                = "Lock"
 	ReasonResetPassword       = "ResetPassword"
 	ReasonReset2FA            = "Reset2FA"
@@ -64,6 +65,8 @@ const (
 	ReasonLogout              = "Logout"
 	ReasonLogoutSession       = "LogoutSession"
 	ReasonLogoutExceptSession = "LogoutExceptSession"
+	ReasonLogoutGrant         = "LogoutGrant"
+	ReasonLogoutExceptGrant   = "LogoutExceptGrant"
 )
 
 const (

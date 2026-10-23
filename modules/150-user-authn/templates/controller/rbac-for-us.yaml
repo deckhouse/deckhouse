@@ -152,8 +152,9 @@ rules:
   - create
   - update
   - delete
-# AuthSession: Dex browser sessions; ending the sessions of a user deletes them. The controller
-# never creates a session.
+# AuthSession: Dex browser sessions; ending the sessions of a user deletes them, and signing out of
+# a device that holds a grant removes the client of the grant from its session (patch). The
+# controller never creates a session.
 - apiGroups:
   - dex.coreos.com
   resources:
@@ -162,6 +163,7 @@ rules:
   - get
   - list
   - watch
+  - patch
   - delete
 - apiGroups:
   - ""

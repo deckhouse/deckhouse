@@ -83,6 +83,8 @@ spec:
         - --console-client-id=console-d8-console-dex-authenticator
         - --tls-cert-file=/certs/tls.crt
         - --tls-key-file=/certs/tls.key
+        # Only a trusted device signs the user out of the other devices and asks for a password change.
+        - --min-device-age={{ dig "devices" "trustedAfter" "24h" .Values.userAuthn }}
         ports:
         - containerPort: 8443
           name: https

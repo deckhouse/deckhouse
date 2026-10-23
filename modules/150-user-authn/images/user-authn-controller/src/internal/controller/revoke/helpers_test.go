@@ -228,6 +228,43 @@ func offlineObj(connID, userID string, refs map[string][2]string) *unstructured.
 	})
 }
 
+// devicesObjects is a pair signed in to the console from two devices (Dex keeps the grants of both
+// in grants, refresh names the last one) and to kubeconfig, with a browser session of the laptop.
+func devicesObjects() []client.Object {
+	offline := offlineObj(naming.LocalConnectorID, "jane", map[string][2]string{
+		"console":              {"rt-phone", ""},
+		"kubeconfig-generator": {"rt-kubeconfig", ""},
+	})
+	grants := map[string]any{}
+	for id, r := range map[string][2]string{
+		"rt-laptop":     {"console", "sid-laptop"},
+		"rt-phone":      {"console", ""},
+		"rt-kubeconfig": {"kubeconfig-generator", ""},
+	} {
+		grants[id] = map[string]any{"ID": id, "ClientID": r[0], "SessionID": r[1]}
+	}
+	offline.Object["grants"] = grants
+	return []client.Object{
+		identityObj(naming.LocalConnectorID, "jane", 2),
+		offline,
+		tokenObj("rt-laptop", naming.LocalConnectorID, "jane", "console", 2),
+		tokenObj("rt-phone", naming.LocalConnectorID, "jane", "console", 2),
+		tokenObj("rt-kubeconfig", naming.LocalConnectorID, "jane", "kubeconfig-generator", 2),
+		sessionObj("sid-laptop", naming.LocalConnectorID, "jane", 2, "console"),
+	}
+}
+
+// grantsOfObj returns the grants of the OfflineSessions of the pair.
+func grantsOfObj(t *testing.T, c client.Client, connID, userID string) map[string]any {
+	t.Helper()
+	obj := controller.Object(controller.OfflineSessionsGVK)
+	if err := c.Get(t.Context(), types.NamespacedName{Namespace: naming.DexNamespace, Name: naming.OfflineTokenName(userID, connID)}, obj); err != nil {
+		t.Fatalf("get offlinesessions: %v", err)
+	}
+	grants, _, _ := unstructured.NestedMap(obj.Object, "grants")
+	return grants
+}
+
 func identityObj(connID, userID string, generation uint64) *unstructured.Unstructured {
 	id := useridentity.New(userID, connID)
 	id.SetClaims(useridentity.Claims{UserID: userID, Email: userID + "@example.com"})

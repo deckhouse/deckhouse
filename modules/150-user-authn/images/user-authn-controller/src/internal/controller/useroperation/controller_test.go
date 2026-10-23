@@ -570,6 +570,39 @@ func TestReconcile_CleansUpOldOperations(t *testing.T) {
 	assertDeleted(t, r, controller.UserOperationGVK, "", "old-user-operation-1")
 }
 
+// The retention is configured: a week keeps an operation of 25 hours and comes back for it when the
+// week is over.
+func TestReconcile_KeepsOperationsForTheRetention(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	created := now.Add(-25 * time.Hour)
+	op := userOperationObj("kept-user-operation-1", created, map[string]any{
+		"type":          "Lock",
+		"initiatorType": "Admin",
+		"user":          "admin",
+		"lock":          map[string]any{"for": "1h"},
+	})
+	_ = unstructured.SetNestedMap(op.Object, map[string]any{
+		"phase":       "Succeeded",
+		"completedAt": created.UTC().Format(time.RFC3339),
+	}, "status")
+
+	r := newTestReconciler(t, now, op)
+	r.retention = 7 * 24 * time.Hour
+	res, err := r.Reconcile(t.Context(), opRequest("kept-user-operation-1"))
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if res.RequeueAfter != 7*24*time.Hour-25*time.Hour {
+		t.Errorf("RequeueAfter = %v, want the rest of the week", res.RequeueAfter)
+	}
+	obj := controller.Object(controller.UserOperationGVK)
+	if err := r.client.Get(t.Context(), types.NamespacedName{Name: "kept-user-operation-1"}, obj); err != nil {
+		t.Errorf("the operation of 25 hours is gone under a retention of a week: %v", err)
+	}
+}
+
 func TestReconcile_HonorsCanceledContext(t *testing.T) {
 	t.Parallel()
 

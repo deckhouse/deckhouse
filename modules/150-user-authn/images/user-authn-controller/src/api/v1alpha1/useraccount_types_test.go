@@ -86,12 +86,21 @@ func TestUserAccountJSONOmitsSecrets(t *testing.T) {
 					ProviderType:           "LDAP",
 					IncorrectLoginAttempts: 1,
 					Groups:                 []string{"developers"},
+					Sessions: []UserAccountSession{{
+						ID:           "sid-1",
+						Kind:         SessionKindBrowser,
+						Clients:      []string{"console"},
+						IPAddress:    "203.0.113.7",
+						UserAgent:    "Mozilla/5.0",
+						SignedInAt:   now.DeepCopy(),
+						LastActivity: now.DeepCopy(),
+					}},
 				},
 			},
 		},
 	}
 
-	forbiddenKeys := []string{"hash", "previousHashes", "connectorData", "refresh", "totp", "password"}
+	forbiddenKeys := []string{"hash", "previousHashes", "connectorData", "refresh", "totp", "password", "token", "secret", "nonce"}
 	requiredStatusKeys := []string{"email", "incorrectLoginAttempts", "kind"}
 
 	for _, tt := range tests {

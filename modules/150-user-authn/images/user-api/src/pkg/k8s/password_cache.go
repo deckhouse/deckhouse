@@ -46,7 +46,8 @@ var passwordGVR = schema.GroupVersionResource{
 	Resource: "passwords",
 }
 
-// PasswordCache maps the user IDs of local users to their usernames, from the Dex Password objects.
+// PasswordCache maps the user IDs of local users to their usernames and the names of their
+// UserAccount objects, from the Dex Password objects.
 // It uses a Kubernetes informer to efficiently watch for changes instead of making API calls on
 // every request.
 type PasswordCache struct {
@@ -111,30 +112,47 @@ func (pc *PasswordCache) Stop() {
 
 // Username returns the username of the local user with the given user ID.
 func (pc *PasswordCache) Username(userID string) (string, error) {
+	obj, err := pc.password(userID)
+	if err != nil {
+		return "", err
+	}
+	return passwordField(obj, "username"), nil
+}
+
+// AccountName returns the name of the UserAccount of the local user with the given user ID.
+func (pc *PasswordCache) AccountName(userID string) (string, error) {
+	obj, err := pc.password(userID)
+	if err != nil {
+		return "", err
+	}
+	return passwordField(obj, accountNameField), nil
+}
+
+// password returns the Password object of the local user with the given user ID.
+func (pc *PasswordCache) password(userID string) (any, error) {
 	if !pc.IsSynced() {
-		return "", ErrCacheNotSynced
+		return nil, ErrCacheNotSynced
 	}
 
 	objs, err := pc.informer.GetIndexer().ByIndex(userIDIndex, userID)
 	if err != nil {
-		return "", fmt.Errorf("look up password by user ID: %w", err)
+		return nil, fmt.Errorf("look up password by user ID: %w", err)
 	}
 
 	switch len(objs) {
 	case 0:
-		return "", ErrUserNotFound
+		return nil, ErrUserNotFound
 	case 1:
 	default:
 		// Two Password objects with one user ID give their users the same tokens. Which of them
 		// signed in cannot be told, so none of them is acted upon.
-		return "", ErrAmbiguousUser
+		return nil, ErrAmbiguousUser
 	}
 
-	username := passwordField(objs[0], "username")
-	if username == "" {
-		return "", ErrUserNotFound
+	if passwordField(objs[0], "username") == "" {
+		return nil, ErrUserNotFound
 	}
-	return username, nil
+	return objs[0], nil
 }
 
 // IsSynced returns true if the cache has completed initial sync.
@@ -161,7 +179,16 @@ func passwordUserIDs(obj any) ([]string, error) {
 	return []string{userID}, nil
 }
 
-// trimPassword keeps only the identity of a Password object: its name, username and user ID.
+// accountNameField is the field trimPassword keeps the name of the UserAccount of a Password in: the
+// email it is named after stays out of the cache.
+const accountNameField = "accountName"
+
+// trimPassword keeps only the identity of a Password object: its name, username, user ID, and the
+// name of its UserAccount.
+//
+// The transform has to be idempotent: client-go may run it again on an object it already trimmed.
+// The email is gone then, and a name computed from the username would name a UserAccount that does
+// not exist, so the name computed the first time is kept.
 func trimPassword(obj any) (any, error) {
 	u, ok := obj.(*unstructured.Unstructured)
 	if !ok {
@@ -180,6 +207,13 @@ func trimPassword(obj any) (any, error) {
 			trimmed.Object[field] = value
 		}
 	}
+	email, _, _ := unstructured.NestedString(u.Object, "email")
+	username, _, _ := unstructured.NestedString(u.Object, "username")
+	accountName, trimmedBefore, _ := unstructured.NestedString(u.Object, accountNameField)
+	if !trimmedBefore || email != "" {
+		accountName = LocalAccountName(email, username)
+	}
+	trimmed.Object[accountNameField] = accountName
 
 	return trimmed, nil
 }

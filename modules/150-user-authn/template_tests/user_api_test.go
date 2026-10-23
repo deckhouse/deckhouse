@@ -20,7 +20,9 @@ import (
 	"encoding/base64"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -61,6 +63,63 @@ var _ = Describe("Module :: user-authn :: helm template :: user-api", func() {
 		hec.ValuesSet("userAuthn.internal.userAPITLS.key", "user-api-key")
 		hec.ValuesSet("userAuthn.internal.userAPITLS.ca", "user-api-ca")
 	})
+
+	// devices.trustedAfter is one setting for user-api (the device age of the self-service actions), the
+	// controller (the trusted devices kept first in a cut list) and Dex (the untrusted devices evicted first).
+	DescribeTable("Should trust the devices of users after devices.trustedAfter everywhere",
+		func(trustedAfter, want string) {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", ldapProvider)
+			if trustedAfter != "" {
+				hec.ValuesSet("userAuthn.devices.trustedAfter", trustedAfter)
+			}
+			hec.HelmRender()
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			userAPI := hec.KubernetesResource("Deployment", "d8-user-authn", "user-api")
+			Expect(userAPI.Field(`spec.template.spec.containers.#(name=="user-api").args`).AsStringSlice()).
+				To(ContainElement("--min-device-age=" + want))
+			controller := hec.KubernetesResource("Deployment", "d8-user-authn", "user-authn-controller")
+			Expect(controller.Field(`spec.template.spec.containers.0.env.#(name=="MIN_DEVICE_AGE").value`).String()).To(Equal(want))
+			Expect(gjson.GetBytes(renderedDexConfig(hec), "devices.trustedAfter").String()).To(Equal(want))
+		},
+		Entry("a day by default", "", "24h"),
+		Entry("an hour and a half", "1h30m", "1h30m"),
+		Entry("at once", "0s", "0s"),
+	)
+
+	// The limits of devices, the life of an unused refresh token and the retention of the records reach Dex and the
+	// controller.
+	DescribeTable("Should pass the limits and the retention on",
+		func(settings map[string]string, want map[string]string) {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", ldapProvider)
+			for path, value := range settings {
+				hec.ValuesSetFromYaml("userAuthn."+path, value)
+			}
+			hec.HelmRender()
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			dex := renderedDexConfig(hec)
+			controller := hec.KubernetesResource("Deployment", "d8-user-authn", "user-authn-controller")
+			env := func(name string) string {
+				return controller.Field(`spec.template.spec.containers.0.env.#(name=="` + name + `").value`).String()
+			}
+			Expect(gjson.GetBytes(dex, "devices.maxPerClient").String()).To(Equal(want["maxPerClient"]))
+			Expect(gjson.GetBytes(dex, "devices.maxKnown").String()).To(Equal(want["maxKnown"]))
+			Expect(gjson.GetBytes(dex, "expiry.refreshTokens.validIfNotUsedFor").String()).To(Equal(want["refreshIdle"]))
+			Expect(env("USER_OPERATION_RETENTION")).To(Equal(want["operations"]))
+			Expect(env("REVOCATION_RETENTION")).To(Equal(want["revocations"]))
+		},
+		Entry("the defaults", map[string]string{}, map[string]string{
+			"maxPerClient": "10", "maxKnown": "20", "refreshIdle": "2190h", "operations": "24h", "revocations": "",
+		}),
+		Entry("set", map[string]string{
+			"refreshTokenValidIfNotUsedFor": "720h",
+			"devices":                       "{maxPerApplication: 3, rememberedBrowsers: 0}",
+			"retention":                     "{userOperations: 168h, revocations: 24h}",
+		}, map[string]string{
+			"maxPerClient": "3", "maxKnown": "0", "refreshIdle": "720h", "operations": "168h", "revocations": "24h",
+		}),
+	)
 
 	Context("Without static users and without ValidatingAdmissionPolicy support", func() {
 		BeforeEach(func() {
@@ -147,12 +206,13 @@ var _ = Describe("Module :: user-authn :: helm template :: user-api", func() {
 			}]`))
 		})
 
-		It("Should let user-api create and read UserOperations and nothing more", func() {
+		It("Should let user-api create and read UserOperations, read a named UserAccount, and nothing more", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 
 			clusterRole := hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:user-api")
 			Expect(clusterRole.Field("rules").String()).To(MatchJSON(`[
 				{"apiGroups": ["deckhouse.io"], "resources": ["useroperations"], "verbs": ["create", "get"]},
+				{"apiGroups": ["deckhouse.io"], "resources": ["useraccounts"], "verbs": ["get"]},
 				{"apiGroups": ["dex.coreos.com"], "resources": ["passwords"], "verbs": ["get", "list", "watch"]}
 			]`))
 		})
@@ -252,10 +312,32 @@ var _ = Describe("Module :: user-authn :: helm template :: user-api", func() {
 				spec:     object{"type": "Logout", "user": "jane"},
 			},
 			{
-				name:     "Logout of one session",
+				name:     "Logout of one browser",
 				username: userAPIServiceAccount,
 				spec: object{"type": "Logout", "user": "jane", "initiatorType": "self",
 					"logout": object{"session": "fehzwdh5qy4oyqcn7qhkcgzbm"}},
+				wantAllowed: true,
+			},
+			{
+				name:     "Logout of one device without a browser",
+				username: userAPIServiceAccount,
+				spec: object{"type": "Logout", "user": "jane", "initiatorType": "self",
+					"logout": object{"grant": "fehzwdh5qy4oyqcn7qhkcgzbm"}},
+				wantAllowed: true,
+			},
+			{
+				name:     "Logout of the other devices",
+				username: userAPIServiceAccount,
+				spec: object{"type": "Logout", "user": "jane", "initiatorType": "self",
+					"logout": object{"exceptSession": "fehzwdh5qy4oyqcn7qhkcgzbm"}},
+				wantAllowed: true,
+			},
+			{
+				name:     "Logout of the other devices from a device without a browser",
+				username: userAPIServiceAccount,
+				spec: object{"type": "Logout", "user": "jane", "initiatorType": "self",
+					"logout": object{"exceptGrant": "fehzwdh5qy4oyqcn7qhkcgzbm"}},
+				wantAllowed: true,
 			},
 			{
 				name:     "RequirePasswordChange carrying a password hash",
@@ -301,7 +383,7 @@ var _ = Describe("Module :: user-authn :: helm template :: user-api", func() {
 			// Strict decoding asserts that the rendered manifest carries no field the API does not know.
 			var policy admissionregistrationv1.ValidatingAdmissionPolicy
 			Expect(yaml.UnmarshalStrict([]byte(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", userAPIPolicyName).ToYaml()), &policy)).To(Succeed())
-			Expect(policy.Spec.Validations).To(HaveLen(4))
+			Expect(policy.Spec.Validations).To(HaveLen(3))
 			for _, validation := range policy.Spec.Validations {
 				Expect(validation.Reason).ToNot(BeNil())
 				Expect(*validation.Reason).To(Equal(metav1.StatusReasonForbidden))

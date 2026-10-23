@@ -18,6 +18,8 @@ package controller
 
 import (
 	"encoding/json"
+	"maps"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -368,6 +370,39 @@ func TestStripDexSecretsPassthroughAndMalformedRefresh(t *testing.T) {
 		}
 		if _, exists := entry["token"]; exists {
 			t.Fatal("token kept")
+		}
+	})
+
+	t.Run("grants keep the device of each grant", func(t *testing.T) {
+		t.Parallel()
+		device := map[string]any{
+			"ID":        "g1",
+			"ClientID":  "console",
+			"SessionID": "sid-1",
+			"CreatedAt": "2026-10-16T10:00:00Z",
+			"LastUsed":  "2026-10-16T11:00:00Z",
+			"IPAddress": "203.0.113.7",
+			"UserAgent": "Mozilla/5.0",
+		}
+		entry := maps.Clone(device)
+		entry["Unknown"] = "dropped"
+		obj := &unstructured.Unstructured{Object: map[string]any{
+			"grants":  map[string]any{"g1": entry},
+			"refresh": map[string]any{"console": maps.Clone(entry)},
+		}}
+		got, err := StripDexSecrets(obj)
+		if err != nil {
+			t.Fatalf("StripDexSecrets: %v", err)
+		}
+		stripped := got.(*unstructured.Unstructured)
+		for _, path := range [][]string{{"grants", "g1"}, {"refresh", "console"}} {
+			kept, _, err := unstructured.NestedMap(stripped.Object, path...)
+			if err != nil {
+				t.Fatalf("%v: %v", path, err)
+			}
+			if !reflect.DeepEqual(kept, device) {
+				t.Errorf("%v = %v, want %v", path, kept, device)
+			}
 		}
 	})
 

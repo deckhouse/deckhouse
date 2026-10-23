@@ -64,6 +64,16 @@ const (
 	idTokenTTLEnv     = "ID_TOKEN_TTL"
 	defaultIDTokenTTL = 10 * time.Minute
 
+	// deviceAgeEnv is the minimum device age of user-api: the devices that old are kept first when
+	// the device list of a UserAccount is cut.
+	deviceAgeEnv = "MIN_DEVICE_AGE"
+
+	// revocationRetentionEnv keeps the revocations longer than revocation.Retention of the ID token
+	// lifetime; a shorter value is raised to it. operationRetentionEnv is how long a UserOperation is
+	// kept after its creation.
+	revocationRetentionEnv = "REVOCATION_RETENTION"
+	operationRetentionEnv  = "USER_OPERATION_RETENTION"
+
 	// revocationFeedAddrEnv is where the revocation feed listens, revocationFeedTLSDirEnv where its
 	// certificate is (tls.crt, tls.key). Without the address the feed is off.
 	revocationFeedAddrEnv   = "REVOCATION_FEED_ADDR"
@@ -109,7 +119,15 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 		return nil, fmt.Errorf("add v1alpha1 scheme: %w", err)
 	}
 
-	retention, err := revocationRetention(os.Getenv(idTokenTTLEnv))
+	retention, err := revocationRetention(os.Getenv(idTokenTTLEnv), os.Getenv(revocationRetentionEnv))
+	if err != nil {
+		return nil, err
+	}
+	deviceAge, err := minDeviceAge(os.Getenv(deviceAgeEnv))
+	if err != nil {
+		return nil, err
+	}
+	operationRetention, err := operationRetention(os.Getenv(operationRetentionEnv))
 	if err != nil {
 		return nil, err
 	}
@@ -135,13 +153,13 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 		return nil, err
 	}
 
-	if err = useraccount.Register(runtimeManager); err != nil {
+	if err = useraccount.Register(runtimeManager, deviceAge); err != nil {
 		return nil, fmt.Errorf("register useraccount controller: %w", err)
 	}
 	if err = user.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register user controller: %w", err)
 	}
-	if err = useroperation.Register(runtimeManager); err != nil {
+	if err = useroperation.Register(runtimeManager, operationRetention); err != nil {
 		return nil, fmt.Errorf("register useroperation controller: %w", err)
 	}
 	if err = userexpire.Register(runtimeManager); err != nil {
@@ -175,18 +193,59 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 }
 
 // revocationRetention is how long revocations are kept, from the ID token lifetime idTokenTTL.
-func revocationRetention(idTokenTTL string) (time.Duration, error) {
-	if idTokenTTL == "" {
-		return revocation.Retention(defaultIDTokenTTL), nil
+// revocationRetention is how long the revocations are kept: revocation.Retention of the ID token
+// lifetime, or the configured retention when that is longer.
+func revocationRetention(idTokenTTL, configured string) (time.Duration, error) {
+	ttl := defaultIDTokenTTL
+	if idTokenTTL != "" {
+		parsed, err := time.ParseDuration(idTokenTTL)
+		if err != nil {
+			return 0, fmt.Errorf("parse %s: %w", idTokenTTLEnv, err)
+		}
+		if parsed <= 0 {
+			return 0, fmt.Errorf("%s %q is not positive", idTokenTTLEnv, idTokenTTL)
+		}
+		ttl = parsed
 	}
-	ttl, err := time.ParseDuration(idTokenTTL)
+	retention := revocation.Retention(ttl)
+	if configured == "" {
+		return retention, nil
+	}
+	longer, err := time.ParseDuration(configured)
 	if err != nil {
-		return 0, fmt.Errorf("parse %s: %w", idTokenTTLEnv, err)
+		return 0, fmt.Errorf("parse %s: %w", revocationRetentionEnv, err)
 	}
-	if ttl <= 0 {
-		return 0, fmt.Errorf("%s %q is not positive", idTokenTTLEnv, idTokenTTL)
+	return max(retention, longer), nil
+}
+
+// operationRetention reads how long a UserOperation is kept; unset is a day.
+func operationRetention(value string) (time.Duration, error) {
+	if value == "" {
+		return useroperation.DefaultRetention, nil
 	}
-	return revocation.Retention(ttl), nil
+	retention, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", operationRetentionEnv, err)
+	}
+	if retention <= 0 {
+		return 0, fmt.Errorf("%s %q is not positive", operationRetentionEnv, value)
+	}
+	return retention, nil
+}
+
+// minDeviceAge reads the minimum device age of user-api; unset is a day, zero lets any device.
+func minDeviceAge(value string) (time.Duration, error) {
+	if value == "" {
+		return useraccount.DefaultEstablishedDeviceAge, nil
+	}
+	age, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", deviceAgeEnv, err)
+	}
+	if age < 0 {
+		return 0, fmt.Errorf("%s %q is negative", deviceAgeEnv, value)
+	}
+	return age, nil
 }
 
 func newManagerOptions(scheme *runtime.Scheme) (manager.Options, error) {

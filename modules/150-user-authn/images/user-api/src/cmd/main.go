@@ -42,6 +42,7 @@ type Config struct {
 	ConsoleClientID string
 	TLSCertFile     string
 	TLSKeyFile      string
+	MinDeviceAge    time.Duration
 }
 
 func main() {
@@ -63,6 +64,8 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&cfg.ConsoleClientID, "console-client-id", "", "Dex client ID of the console; only its ID tokens are accepted")
 	rootCmd.PersistentFlags().StringVar(&cfg.TLSCertFile, "tls-cert-file", "", "TLS certificate file path")
 	rootCmd.PersistentFlags().StringVar(&cfg.TLSKeyFile, "tls-key-file", "", "TLS private key file path")
+	rootCmd.PersistentFlags().DurationVar(&cfg.MinDeviceAge, "min-device-age", api.DefaultMinDeviceAge,
+		"How long the device of a request must have been signed in to sign out of the other devices and change the password; 0 lets any device")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -71,6 +74,9 @@ func main() {
 }
 
 func run(cfg *Config) error {
+	if cfg.MinDeviceAge < 0 {
+		return fmt.Errorf("--min-device-age must not be negative, got %s", cfg.MinDeviceAge)
+	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
@@ -81,6 +87,7 @@ func run(cfg *Config) error {
 		"dex_url", cfg.DexURL,
 		"issuer_url", cfg.IssuerURL,
 		"console_client_id", cfg.ConsoleClientID,
+		"min_device_age", cfg.MinDeviceAge,
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -108,6 +115,7 @@ func run(cfg *Config) error {
 	defer k8sClient.Stop()
 
 	handler := api.NewHandler(oidcVerifier, k8sClient, logger)
+	handler.SetMinDeviceAge(cfg.MinDeviceAge)
 
 	// Rate limiter: 10 requests per second with burst of 20 for all users together; every user also
 	// has a budget of their own, checked once the token names them.
@@ -162,6 +170,9 @@ func newMux(handler *api.Handler, limiter *rate.Limiter) *http.ServeMux {
 	mux.HandleFunc("GET /metrics", handler.Metrics)
 	mux.HandleFunc("POST /api/v1/self/logout", rateLimitMiddleware(limiter, handler.SelfLogout))
 	mux.HandleFunc("POST /api/v1/self/password-change", rateLimitMiddleware(limiter, handler.SelfPasswordChange))
+	mux.HandleFunc("GET /api/v1/self/sessions", rateLimitMiddleware(limiter, handler.SelfDevices))
+	mux.HandleFunc("POST /api/v1/self/sessions/{id}/logout", rateLimitMiddleware(limiter, handler.SelfDeviceLogout))
+	mux.HandleFunc("POST /api/v1/self/logout-others", rateLimitMiddleware(limiter, handler.SelfLogoutOthers))
 	return mux
 }
 

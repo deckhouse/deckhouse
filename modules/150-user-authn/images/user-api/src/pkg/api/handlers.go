@@ -79,10 +79,17 @@ type Handler struct {
 	registry   *prometheus.Registry
 	reqCounter *prometheus.CounterVec
 
-	userLimiter  *userLimiter
+	// userLimiter is the budget of the actions of every device of a user (budgetKey).
+	userLimiter *userLimiter
+	// readLimiter is the budget of the reads of a device, apart from the actions: a list of the
+	// devices read before and after an action must not use up the action.
+	readLimiter  *userLimiter
 	now          func() time.Time
 	waitTimeout  time.Duration
 	pollInterval time.Duration
+	// minDeviceAge is how long the device of a request must have been signed in to act on the other
+	// devices or the password; zero lets any device.
+	minDeviceAge time.Duration
 }
 
 // OperationResponse reports the UserOperation a request created: "done" once the controller has
@@ -123,13 +130,21 @@ func NewHandler(verifier auth.Verifier, k8sClient k8s.Client, logger *slog.Logge
 		registry:     registry,
 		reqCounter:   reqCounter,
 		userLimiter:  newUserLimiter(userRequestInterval, userRequestBurst),
+		readLimiter:  newUserLimiter(userReadInterval, userReadBurst),
 		now:          time.Now,
 		waitTimeout:  operationWaitTimeout,
 		pollInterval: operationPollInterval,
+		minDeviceAge: DefaultMinDeviceAge,
 	}
 	h.ready.Store(true)
 
 	return h
+}
+
+// SetMinDeviceAge sets how long the device of a request must have been signed in to sign the user
+// out of the other devices or everywhere and to ask for a password change; zero lets any device.
+func (h *Handler) SetMinDeviceAge(age time.Duration) {
+	h.minDeviceAge = age
 }
 
 func (h *Handler) Healthz(w http.ResponseWriter, _ *http.Request) {
@@ -153,47 +168,66 @@ func (h *Handler) Metrics(w http.ResponseWriter, r *http.Request) {
 
 // SelfLogout signs the user out everywhere: a UserOperation Logout revokes every token, session and
 // kubeconfig of the pair the token names. A local user is named by username, the account of an
-// external provider by its email, connector ID and user ID.
+// external provider by its email, connector ID and user ID. Only a device signed in for
+// h.minDeviceAge may do it.
 func (h *Handler) SelfLogout(w http.ResponseWriter, r *http.Request) {
 	claims, ok := h.beginSelfRequest(w, r, logoutEndpoint)
-	if !ok {
+	if !ok || !h.deviceOldEnough(w, r, logoutEndpoint, claims) {
 		return
 	}
 
+	op, ok := h.logoutOperation(w, r, logoutEndpoint, claims, "self-logout-", nil)
+	if !ok {
+		return
+	}
+	h.runOperation(w, r, logoutEndpoint, claims, op)
+}
+
+// logoutOperation is a Logout of the user of claims, narrowed down by logout. It writes the response
+// and returns false when the user cannot be named.
+func (h *Handler) logoutOperation(
+	w http.ResponseWriter,
+	r *http.Request,
+	endpoint string,
+	claims *auth.Claims,
+	generateName string,
+	logout *k8s.Logout,
+) (k8s.UserOperation, bool) {
 	op := k8s.UserOperation{
-		GenerateName: "self-logout-",
+		GenerateName: generateName,
 		Type:         k8s.OperationTypeLogout,
+		Logout:       logout,
 	}
 
 	if claims.ConnectorID == localDexConnectorID {
-		username, ok := h.localUsername(w, r, logoutEndpoint, claims)
+		username, ok := h.localUsername(w, r, endpoint, claims)
 		if !ok {
-			return
+			return k8s.UserOperation{}, false
 		}
 		op.User = username
-	} else {
-		// The controller finds an external account by its email, which the provider reported at
-		// sign-in; without one there is nothing to name the account by.
-		if claims.Email == "" {
-			h.logger.Warn("Self logout refused: the token has no email",
-				"user_id", claims.UserID, "connector_id", claims.ConnectorID, "remote_addr", r.RemoteAddr)
-			h.fail(w, logoutEndpoint, http.StatusForbidden, "forbidden",
-				"Signing out everywhere needs an email in the token")
-			return
-		}
-		op.Target = &k8s.Target{
-			Email:       claims.Email,
-			ConnectorID: claims.ConnectorID,
-			UserID:      claims.UserID,
-		}
+		return op, true
 	}
 
-	h.runOperation(w, r, logoutEndpoint, claims, op)
+	// The controller finds an external account by its email, which the provider reported at
+	// sign-in; without one there is nothing to name the account by.
+	if claims.Email == "" {
+		h.logger.Warn("Self logout refused: the token has no email",
+			"user_id", claims.UserID, "connector_id", claims.ConnectorID, "remote_addr", r.RemoteAddr)
+		h.fail(w, endpoint, http.StatusForbidden, "forbidden", "Signing out needs an email in the token")
+		return k8s.UserOperation{}, false
+	}
+	op.Target = &k8s.Target{
+		Email:       claims.Email,
+		ConnectorID: claims.ConnectorID,
+		UserID:      claims.UserID,
+	}
+	return op, true
 }
 
 // SelfPasswordChange asks a local user to change the password at the next sign-in: a UserOperation
 // RequirePasswordChange sets the flag on the Password object, and Dex asks for the current and a new
-// password, under the password policy, at the next interactive sign-in.
+// password, under the password policy, at the next interactive sign-in. Only a device signed in for
+// h.minDeviceAge may ask for it.
 func (h *Handler) SelfPasswordChange(w http.ResponseWriter, r *http.Request) {
 	claims, ok := h.beginSelfRequest(w, r, passwordChangeEndpoint)
 	if !ok {
@@ -211,7 +245,7 @@ func (h *Handler) SelfPasswordChange(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username, ok := h.localUsername(w, r, passwordChangeEndpoint, claims)
-	if !ok {
+	if !ok || !h.deviceOldEnough(w, r, passwordChangeEndpoint, claims) {
 		return
 	}
 
@@ -225,6 +259,11 @@ func (h *Handler) SelfPasswordChange(w http.ResponseWriter, r *http.Request) {
 // beginSelfRequest authenticates the request, checks its body and takes it from the budget of the
 // user. It writes the response and returns false when the request goes no further.
 func (h *Handler) beginSelfRequest(w http.ResponseWriter, r *http.Request, endpoint string) (*auth.Claims, bool) {
+	return h.beginSelf(w, r, endpoint, h.userLimiter)
+}
+
+// beginSelf is beginSelfRequest with the budget of limiter.
+func (h *Handler) beginSelf(w http.ResponseWriter, r *http.Request, endpoint string, limiter *userLimiter) (*auth.Claims, bool) {
 	token, err := h.verifier.ExtractToken(r)
 	if err != nil {
 		h.logger.Warn("Failed to extract token", "error", err, "remote_addr", r.RemoteAddr)
@@ -245,7 +284,7 @@ func (h *Handler) beginSelfRequest(w http.ResponseWriter, r *http.Request, endpo
 		return nil, false
 	}
 
-	if delay := h.userLimiter.reserve(claims.Subject, h.now()); delay > 0 {
+	if delay := limiter.reserve(budgetKey(claims), h.now()); delay > 0 {
 		h.logger.Warn("Rate limit exceeded for user", "user_id", claims.UserID, "connector_id", claims.ConnectorID)
 		w.Header().Set("Retry-After", retryAfterSeconds(delay))
 		h.fail(w, endpoint, http.StatusTooManyRequests, "rate_limit_exceeded", "Too many requests, please try again later")

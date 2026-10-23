@@ -299,7 +299,7 @@ index 906e5ce5..08c07d14 100644
  	ctx := context.Background()
  	if os.Getenv(kubeconfigPathVariableName) == "" {
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index 151c8ad1..fea47f7c 100644
+index 151c8ad1..a48f1dfc 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
 @@ -1,6 +1,8 @@
@@ -365,38 +365,43 @@ index 151c8ad1..fea47f7c 100644
  	}
  }
  
-@@ -424,6 +452,10 @@ type AuthRequest struct {
+@@ -424,6 +452,13 @@ type AuthRequest struct {
  	Prompt   string    `json:"prompt,omitempty"`
  	MaxAge   int       `json:"maxAge"`
  	AuthTime time.Time `json:"authTime,omitempty"`
 +
 +	PasswordChangeBinding []byte `json:"passwordChangeBinding,omitempty"`
 +	Generation            uint64 `json:"generation,omitempty"`
++	IPAddress             string `json:"ipAddress,omitempty"`
++	UserAgent             string `json:"userAgent,omitempty"`
++	DeviceHash            string `json:"deviceHash,omitempty"`
 +	PendingPasswordChange string `json:"pendingPasswordChange,omitempty"`
  }
  
  // AuthRequestList is a list of AuthRequests.
-@@ -459,6 +491,9 @@ func toStorageAuthRequest(req AuthRequest) storage.AuthRequest {
+@@ -459,6 +494,10 @@ func toStorageAuthRequest(req AuthRequest) storage.AuthRequest {
  		MaxAge:              req.MaxAge,
  		AuthTime:            req.AuthTime,
  	}
 +	a.PasswordChangeBinding = req.PasswordChangeBinding
 +	a.Generation = req.Generation
++	a.IPAddress, a.UserAgent, a.DeviceHash = req.IPAddress, req.UserAgent, req.DeviceHash
 +	a.PendingPasswordChange = req.PendingPasswordChange
  	return a
  }
  
-@@ -493,6 +528,9 @@ func (cli *client) fromStorageAuthRequest(a storage.AuthRequest) AuthRequest {
+@@ -493,6 +532,10 @@ func (cli *client) fromStorageAuthRequest(a storage.AuthRequest) AuthRequest {
  		MaxAge:              a.MaxAge,
  		AuthTime:            a.AuthTime,
  	}
 +	req.PasswordChangeBinding = a.PasswordChangeBinding
 +	req.Generation = a.Generation
++	req.IPAddress, req.UserAgent, req.DeviceHash = a.IPAddress, a.UserAgent, a.DeviceHash
 +	req.PendingPasswordChange = a.PendingPasswordChange
  	return req
  }
  
-@@ -514,6 +552,11 @@ type Password struct {
+@@ -514,6 +557,11 @@ type Password struct {
  	EmailVerified     *bool    `json:"emailVerified,omitempty"`
  	UserID            string   `json:"userID,omitempty"`
  	Groups            []string `json:"groups,omitempty"`
@@ -408,7 +413,7 @@ index 151c8ad1..fea47f7c 100644
  }
  
  // PasswordList is a list of Passwords.
-@@ -542,6 +585,11 @@ func (cli *client) fromStoragePassword(p storage.Password) Password {
+@@ -542,6 +590,11 @@ func (cli *client) fromStoragePassword(p storage.Password) Password {
  		EmailVerified:     p.EmailVerified,
  		UserID:            p.UserID,
  		Groups:            p.Groups,
@@ -420,7 +425,7 @@ index 151c8ad1..fea47f7c 100644
  	}
  }
  
-@@ -555,6 +603,11 @@ func toStoragePassword(p Password) storage.Password {
+@@ -555,6 +608,11 @@ func toStoragePassword(p Password) storage.Password {
  		EmailVerified:     p.EmailVerified,
  		UserID:            p.UserID,
  		Groups:            p.Groups,
@@ -432,24 +437,30 @@ index 151c8ad1..fea47f7c 100644
  	}
  }
  
-@@ -584,6 +637,8 @@ type AuthCode struct {
+@@ -584,6 +642,11 @@ type AuthCode struct {
  	AuthTime time.Time `json:"authTime,omitempty"`
  
  	SessionID string `json:"sessionID,omitempty"`
 +
 +	Generation uint64 `json:"generation,omitempty"`
++	IPAddress  string `json:"ipAddress,omitempty"`
++	UserAgent  string `json:"userAgent,omitempty"`
++	DeviceHash string `json:"deviceHash,omitempty"`
  }
  
  // AuthCodeList is a list of AuthCodes.
-@@ -615,6 +670,7 @@ func (cli *client) fromStorageAuthCode(a storage.AuthCode) AuthCode {
+@@ -615,6 +678,10 @@ func (cli *client) fromStorageAuthCode(a storage.AuthCode) AuthCode {
  		CodeChallengeMethod: a.PKCE.CodeChallengeMethod,
  		AuthTime:            a.AuthTime,
  		SessionID:           a.SessionID,
 +		Generation:          a.Generation,
++		IPAddress:           a.IPAddress,
++		UserAgent:           a.UserAgent,
++		DeviceHash:          a.DeviceHash,
  	}
  }
  
-@@ -633,8 +689,9 @@ func toStorageAuthCode(a AuthCode) storage.AuthCode {
+@@ -633,8 +700,12 @@ func toStorageAuthCode(a AuthCode) storage.AuthCode {
  			CodeChallenge:       a.CodeChallenge,
  			CodeChallengeMethod: a.CodeChallengeMethod,
  		},
@@ -458,35 +469,71 @@ index 151c8ad1..fea47f7c 100644
 +		AuthTime:   a.AuthTime,
 +		SessionID:  a.SessionID,
 +		Generation: a.Generation,
++		IPAddress:  a.IPAddress,
++		UserAgent:  a.UserAgent,
++		DeviceHash: a.DeviceHash,
  	}
  }
  
-@@ -658,6 +715,8 @@ type RefreshToken struct {
+@@ -658,6 +729,11 @@ type RefreshToken struct {
  	Claims        Claims `json:"claims,omitempty"`
  	ConnectorID   string `json:"connectorID,omitempty"`
  	ConnectorData []byte `json:"connectorData,omitempty"`
 +
 +	Generation uint64 `json:"generation,omitempty"`
++	IPAddress  string `json:"ipAddress,omitempty"`
++	UserAgent  string `json:"userAgent,omitempty"`
++	DeviceHash string `json:"deviceHash,omitempty"`
  }
  
  // RefreshList is a list of refresh tokens.
-@@ -680,6 +739,7 @@ func toStorageRefreshToken(r RefreshToken) storage.RefreshToken {
+@@ -680,6 +756,10 @@ func toStorageRefreshToken(r RefreshToken) storage.RefreshToken {
  		Scopes:        r.Scopes,
  		Nonce:         r.Nonce,
  		Claims:        toStorageClaims(r.Claims),
 +		Generation:    r.Generation,
++		IPAddress:     r.IPAddress,
++		UserAgent:     r.UserAgent,
++		DeviceHash:    r.DeviceHash,
  	}
  }
  
-@@ -703,6 +763,7 @@ func (cli *client) fromStorageRefreshToken(r storage.RefreshToken) RefreshToken
+@@ -703,6 +783,10 @@ func (cli *client) fromStorageRefreshToken(r storage.RefreshToken) RefreshToken
  		Scopes:        r.Scopes,
  		Nonce:         r.Nonce,
  		Claims:        fromStorageClaims(r.Claims),
 +		Generation:    r.Generation,
++		IPAddress:     r.IPAddress,
++		UserAgent:     r.UserAgent,
++		DeviceHash:    r.DeviceHash,
  	}
  }
  
-@@ -807,6 +868,10 @@ type Connector struct {
+@@ -760,6 +844,7 @@ type OfflineSessions struct {
+ 	UserID        string                              `json:"userID,omitempty"`
+ 	ConnID        string                              `json:"connID,omitempty"`
+ 	Refresh       map[string]*storage.RefreshTokenRef `json:"refresh,omitempty"`
++	Grants        map[string]*storage.RefreshTokenRef `json:"grants,omitempty"`
+ 	ConnectorData []byte                              `json:"connectorData,omitempty"`
+ }
+ 
+@@ -776,6 +861,7 @@ func (cli *client) fromStorageOfflineSessions(o storage.OfflineSessions) Offline
+ 		UserID:        o.UserID,
+ 		ConnID:        o.ConnID,
+ 		Refresh:       o.Refresh,
++		Grants:        o.Grants,
+ 		ConnectorData: o.ConnectorData,
+ 	}
+ }
+@@ -785,6 +871,7 @@ func toStorageOfflineSessions(o OfflineSessions) storage.OfflineSessions {
+ 		UserID:        o.UserID,
+ 		ConnID:        o.ConnID,
+ 		Refresh:       o.Refresh,
++		Grants:        o.Grants,
+ 		ConnectorData: o.ConnectorData,
+ 	}
+ 	if s.Refresh == nil {
+@@ -807,6 +894,10 @@ type Connector struct {
  	Config []byte `json:"config,omitempty"`
  	// GrantTypes is a list of grant types that this connector is allowed to be used with.
  	GrantTypes []string `json:"grantTypes,omitempty"`
@@ -497,7 +544,7 @@ index 151c8ad1..fea47f7c 100644
  }
  
  func (cli *client) fromStorageConnector(c storage.Connector) Connector {
-@@ -824,6 +889,10 @@ func (cli *client) fromStorageConnector(c storage.Connector) Connector {
+@@ -824,6 +915,10 @@ func (cli *client) fromStorageConnector(c storage.Connector) Connector {
  		Name:       c.Name,
  		Config:     c.Config,
  		GrantTypes: c.GrantTypes,
@@ -508,7 +555,7 @@ index 151c8ad1..fea47f7c 100644
  	}
  }
  
-@@ -835,6 +904,10 @@ func toStorageConnector(c Connector) storage.Connector {
+@@ -835,6 +930,10 @@ func toStorageConnector(c Connector) storage.Connector {
  		ResourceVersion: c.ObjectMeta.ResourceVersion,
  		Config:          c.Config,
  		GrantTypes:      c.GrantTypes,
@@ -519,13 +566,15 @@ index 151c8ad1..fea47f7c 100644
  	}
  }
  
-@@ -968,8 +1041,17 @@ type UserIdentity struct {
+@@ -968,8 +1067,19 @@ type UserIdentity struct {
  	CreatedAt           time.Time                               `json:"createdAt,omitempty"`
  	LastLogin           time.Time                               `json:"lastLogin,omitempty"`
  	BlockedUntil        time.Time                               `json:"blockedUntil,omitempty"`
 +	ClaimsRefreshedAt   time.Time                               `json:"claimsRefreshedAt,omitempty"`
 +
 +	IncorrectPasswordLoginAttempts uint64 `json:"incorrectPasswordLoginAttempts,omitempty"`
++
++	KnownDevices []storage.KnownDevice `json:"knownDevices,omitempty"`
  }
  
 +// adminLockAnnotation holds the blockedUntil an administrator set on a (user,
@@ -537,7 +586,7 @@ index 151c8ad1..fea47f7c 100644
  // UserIdentityList is a list of UserIdentities.
  type UserIdentityList struct {
  	k8sapi.TypeMeta `json:",inline"`
-@@ -995,11 +1077,30 @@ func (cli *client) fromStorageUserIdentity(u storage.UserIdentity) UserIdentity
+@@ -995,11 +1105,31 @@ func (cli *client) fromStorageUserIdentity(u storage.UserIdentity) UserIdentity
  		WebAuthnCredentials: u.WebAuthnCredentials,
  		CreatedAt:           u.CreatedAt,
  		LastLogin:           u.LastLogin,
@@ -545,6 +594,7 @@ index 151c8ad1..fea47f7c 100644
  		BlockedUntil:        u.BlockedUntil,
 +
 +		IncorrectPasswordLoginAttempts: u.IncorrectPasswordLoginAttempts,
++		KnownDevices:                   u.KnownDevices,
  	}
  }
  
@@ -569,7 +619,7 @@ index 151c8ad1..fea47f7c 100644
  	s := storage.UserIdentity{
  		UserID:              u.UserID,
  		ConnectorID:         u.ConnectorID,
-@@ -1009,13 +1110,24 @@ func toStorageUserIdentity(u UserIdentity) storage.UserIdentity {
+@@ -1009,13 +1139,25 @@ func toStorageUserIdentity(u UserIdentity) storage.UserIdentity {
  		WebAuthnCredentials: u.WebAuthnCredentials,
  		CreatedAt:           u.CreatedAt,
  		LastLogin:           u.LastLogin,
@@ -577,6 +627,7 @@ index 151c8ad1..fea47f7c 100644
  		BlockedUntil:        u.BlockedUntil,
 +
 +		IncorrectPasswordLoginAttempts: u.IncorrectPasswordLoginAttempts,
++		KnownDevices:                   u.KnownDevices,
 +		Generation:                     generation,
 +	}
 +	if v, ok := u.Annotations[adminLockAnnotation]; ok {
@@ -595,7 +646,11 @@ index 151c8ad1..fea47f7c 100644
  }
  
  // AuthSession is a Kubernetes representation of a storage AuthSession.
-@@ -1035,6 +1147,10 @@ type AuthSession struct {
+@@ -1032,9 +1174,14 @@ type AuthSession struct {
+ 	LastActivity   time.Time                           `json:"lastActivity,omitempty"`
+ 	IPAddress      string                              `json:"ipAddress,omitempty"`
+ 	UserAgent      string                              `json:"userAgent,omitempty"`
++	DeviceHash     string                              `json:"deviceHash,omitempty"`
  	AbsoluteExpiry time.Time                           `json:"absoluteExpiry,omitempty"`
  	IdleExpiry     time.Time                           `json:"idleExpiry,omitempty"`
  	LogoutState    *storage.LogoutState                `json:"logoutState,omitempty"`
@@ -606,7 +661,7 @@ index 151c8ad1..fea47f7c 100644
  }
  
  // AuthSessionList is a list of AuthSessions.
-@@ -1054,37 +1170,133 @@ func (cli *client) fromStorageAuthSession(s storage.AuthSession) AuthSession {
+@@ -1054,37 +1201,135 @@ func (cli *client) fromStorageAuthSession(s storage.AuthSession) AuthSession {
  			Name:      s.ID,
  			Namespace: cli.namespace,
  		},
@@ -629,6 +684,7 @@ index 151c8ad1..fea47f7c 100644
 +		LastActivity:      s.LastActivity,
 +		IPAddress:         s.IPAddress,
 +		UserAgent:         s.UserAgent,
++		DeviceHash:        s.DeviceHash,
 +		AbsoluteExpiry:    s.AbsoluteExpiry,
 +		IdleExpiry:        s.IdleExpiry,
 +		LogoutState:       s.LogoutState,
@@ -661,6 +717,7 @@ index 151c8ad1..fea47f7c 100644
 +		LastActivity:      s.LastActivity,
 +		IPAddress:         s.IPAddress,
 +		UserAgent:         s.UserAgent,
++		DeviceHash:        s.DeviceHash,
 +		AbsoluteExpiry:    s.AbsoluteExpiry,
 +		IdleExpiry:        s.IdleExpiry,
 +		LogoutState:       s.LogoutState,
@@ -765,10 +822,10 @@ index 151c8ad1..fea47f7c 100644
 +}
 diff --git a/storage/kubernetes/types_test.go b/storage/kubernetes/types_test.go
 new file mode 100644
-index 00000000..209157dd
+index 00000000..df6f8b0d
 --- /dev/null
 +++ b/storage/kubernetes/types_test.go
-@@ -0,0 +1,672 @@
+@@ -0,0 +1,699 @@
 +package kubernetes
 +
 +import (
@@ -850,6 +907,33 @@ index 00000000..209157dd
 +	require.Equal(t, time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC), got.HashUpdatedAt)
 +	require.True(t, got.RequireResetHashOnNextSuccLogin)
 +	require.Equal(t, uint64(3), got.IncorrectPasswordLoginAttempts)
++}
++
++// TestDeviceMarkFieldsRoundTrip: the hash of the device mark of a login goes
++// with the auth request, the code, the refresh token and the browser session,
++// and the known devices with the user identity (Deckhouse).
++func TestDeviceMarkFieldsRoundTrip(t *testing.T) {
++	cli := newTypesTestClient()
++	at := time.Date(2026, 10, 17, 12, 0, 0, 0, time.UTC)
++
++	req := toStorageAuthRequest(cli.fromStorageAuthRequest(storage.AuthRequest{ID: "req", DeviceHash: "hash-1"}))
++	require.Equal(t, "hash-1", req.DeviceHash)
++	code := toStorageAuthCode(cli.fromStorageAuthCode(storage.AuthCode{ID: "code", DeviceHash: "hash-1"}))
++	require.Equal(t, "hash-1", code.DeviceHash)
++	refresh := toStorageRefreshToken(cli.fromStorageRefreshToken(storage.RefreshToken{ID: "rt", DeviceHash: "hash-1"}))
++	require.Equal(t, "hash-1", refresh.DeviceHash)
++	session := toStorageAuthSession(cli.fromStorageAuthSession(storage.AuthSession{ID: "sid", DeviceHash: "hash-1"}))
++	require.Equal(t, "hash-1", session.DeviceHash)
++
++	known := []storage.KnownDevice{{Hash: "hash-1", FirstSeen: at, LastSeen: at.Add(time.Hour)}}
++	raw, err := json.Marshal(cli.fromStorageUserIdentity(storage.UserIdentity{UserID: "jane", ConnectorID: "local", KnownDevices: known}))
++	require.NoError(t, err)
++	require.Contains(t, string(raw), `"knownDevices":[{"hash":"hash-1","firstSeen":"2026-10-17T12:00:00Z","lastSeen":"2026-10-17T13:00:00Z"}]`)
++	var decoded UserIdentity
++	require.NoError(t, json.Unmarshal(raw, &decoded))
++	got, err := toStorageUserIdentity(decoded)
++	require.NoError(t, err)
++	require.Equal(t, known, got.KnownDevices)
 +}
 +
 +func TestUserIdentityFailedAttemptsRoundTrip(t *testing.T) {
@@ -1600,7 +1684,7 @@ index acd0be1b..e4b00c3d 100644
 +	storage.Storage
 +}
 diff --git a/storage/storage.go b/storage/storage.go
-index 84976c5d..cf0dbf6d 100644
+index 84976c5d..262f47b0 100644
 --- a/storage/storage.go
 +++ b/storage/storage.go
 @@ -218,6 +218,13 @@ type Client struct {
@@ -1617,7 +1701,7 @@ index 84976c5d..cf0dbf6d 100644
  }
  
  // Refresh token lifetimes, the values Client.RefreshTokenLifetime accepts.
-@@ -341,6 +348,21 @@ type AuthRequest struct {
+@@ -341,6 +348,30 @@ type AuthRequest struct {
  	// WebAuthnSessionData stores temporary WebAuthn ceremony data (challenge, etc.)
  	// between Begin and Finish calls. JSON-encoded webauthn.SessionData.
  	WebAuthnSessionData []byte
@@ -1631,6 +1715,15 @@ index 84976c5d..cf0dbf6d 100644
 +	// recorded (UserIdentity.Generation). The code, the tokens and the browser
 +	// session of the login carry it on.
 +	Generation uint64
++
++	// IPAddress and UserAgent are of the browser or client that signed in
++	// (Deckhouse): the device the grant is listed as.
++	IPAddress string
++	UserAgent string
++
++	// DeviceHash is the SHA-256 hash of the device mark of the browser that signed
++	// in (Deckhouse; see server/devicemark), empty for a client without one.
++	DeviceHash string
 +	// PendingPasswordChange is the password change page this login goes to once
 +	// its second factor is done: the path and query of the page. Empty unless the
 +	// password policy requires a new password and a second factor comes first, so
@@ -1639,7 +1732,7 @@ index 84976c5d..cf0dbf6d 100644
  }
  
  // AuthCode represents a code which can be exchanged for an OAuth2 token response.
-@@ -388,6 +410,10 @@ type AuthCode struct {
+@@ -388,6 +419,19 @@ type AuthCode struct {
  
  	// PKCE CodeChallenge and CodeChallengeMethod
  	PKCE PKCE
@@ -1647,10 +1740,19 @@ index 84976c5d..cf0dbf6d 100644
 +	// Generation is the generation of the pair at the login the code was issued
 +	// for (AuthRequest.Generation).
 +	Generation uint64
++
++	// IPAddress and UserAgent are of the browser or client that signed in
++	// (Deckhouse): the device the grant is listed as.
++	IPAddress string
++	UserAgent string
++
++	// DeviceHash is the SHA-256 hash of the device mark of the browser that signed
++	// in (Deckhouse; see server/devicemark), empty for a client without one.
++	DeviceHash string
  }
  
  // RefreshToken is an OAuth2 refresh token which allows a client to request new
-@@ -420,6 +446,10 @@ type RefreshToken struct {
+@@ -420,6 +464,19 @@ type RefreshToken struct {
  	// Nonce value supplied during the initial redirect. This is required to be part
  	// of the claims of any future id_token generated by the client.
  	Nonce string
@@ -1658,10 +1760,35 @@ index 84976c5d..cf0dbf6d 100644
 +	// Generation is the generation of the pair at the login the token was issued
 +	// for. Rotation keeps it.
 +	Generation uint64
++
++	// IPAddress and UserAgent are of the browser or client that signed in
++	// (Deckhouse): the device the grant is listed as.
++	IPAddress string
++	UserAgent string
++
++	// DeviceHash is the SHA-256 hash of the device mark of the browser that signed
++	// in (Deckhouse; see server/devicemark), empty for a client without one.
++	DeviceHash string
  }
  
  // RefreshTokenRef is a reference object that contains metadata about refresh tokens.
-@@ -481,6 +511,33 @@ type UserIdentity struct {
+@@ -437,6 +494,15 @@ type RefreshTokenRef struct {
+ 	// lifetime: the token outlives the session, but a token that was never part of
+ 	// one must not start claiming a session on refresh.
+ 	SessionID string
++
++	// IPAddress and UserAgent are of the sign-in that issued the token
++	// (Deckhouse): the device the grant is listed as.
++	IPAddress string
++	UserAgent string
++
++	// DeviceHash is the SHA-256 hash of the device mark of the browser that signed
++	// in (Deckhouse; see server/devicemark), empty for a client without one.
++	DeviceHash string
+ }
+ 
+ // MFASecret stores the enrollment state and secret for an MFA authenticator.
+@@ -481,6 +547,48 @@ type UserIdentity struct {
  	CreatedAt           time.Time
  	LastLogin           time.Time
  	BlockedUntil        time.Time
@@ -1692,10 +1819,36 @@ index 84976c5d..cf0dbf6d 100644
 +	// user-authn.deckhouse.io/generation and does not write it. A pair without
 +	// one is at generation 0.
 +	Generation uint64
++
++	// KnownDevices are the browsers that completed a login of the pair, by the
++	// hash of their device mark (Deckhouse; see server/devicemark): when each was
++	// first and last seen. A login that passed every factor adds or refreshes
++	// its browser; the user-authn controller removes the browsers whose sign-in
++	// it ends and clears the list when it revokes the pair. A device is as old as
++	// the first login of its browser, not only its last one.
++	KnownDevices []KnownDevice
++}
++
++// KnownDevice is a browser that completed a login of a pair (Deckhouse).
++type KnownDevice struct {
++	Hash      string    `json:"hash"`
++	FirstSeen time.Time `json:"firstSeen"`
++	LastSeen  time.Time `json:"lastSeen"`
  }
  
  // ClientAuthState represents authentication state for a specific client within an auth session.
-@@ -545,6 +602,20 @@ type AuthSession struct {
+@@ -536,6 +644,10 @@ type AuthSession struct {
+ 	IPAddress string
+ 	UserAgent string
+ 
++	// DeviceHash is the SHA-256 hash of the device mark of the browser that signed
++	// in (Deckhouse; see server/devicemark), empty for a client without one.
++	DeviceHash string
++
+ 	// AbsoluteExpiry is CreatedAt + AbsoluteLifetime, set once at creation.
+ 	AbsoluteExpiry time.Time
+ 	// IdleExpiry is LastActivity + ValidIfNotUsedFor, updated on every activity.
+@@ -545,6 +657,20 @@ type AuthSession struct {
  	// upstream provider. The callback handler reads it back to complete the flow.
  	// Nil when no logout is in progress.
  	LogoutState *LogoutState
@@ -1716,7 +1869,26 @@ index 84976c5d..cf0dbf6d 100644
  }
  
  // OfflineSessions objects are sessions pertaining to users with refresh tokens.
-@@ -577,6 +648,22 @@ type Password struct {
+@@ -556,9 +682,17 @@ type OfflineSessions struct {
+ 	ConnID string
+ 
+ 	// Refresh is a hash table of refresh token reference objects
+-	// indexed by the ClientID of the refresh token.
++	// indexed by the ClientID of the refresh token. With several grants of a
++	// client it names the last one issued (Deckhouse), for the code that knows
++	// one grant per client.
+ 	Refresh map[string]*RefreshTokenRef
+ 
++	// Grants are the references to every refresh token of the pair, indexed by
++	// the ID of the token (Deckhouse): a user signs in to a client from several
++	// devices. Empty for an offline session written before they existed, whose
++	// grants are those of Refresh.
++	Grants map[string]*RefreshTokenRef
++
+ 	// Authentication data provided by an upstream source.
+ 	ConnectorData []byte
+ }
+@@ -577,6 +711,22 @@ type Password struct {
  	// Bcrypt encoded hash of the password. This package enforces a min cost value of 10
  	Hash []byte `json:"hash"`
  
@@ -1739,7 +1911,7 @@ index 84976c5d..cf0dbf6d 100644
  	// Bcrypt encoded hash of the password set in environment variable of this name.
  	HashFromEnv string `json:"hashFromEnv"`
  
-@@ -601,6 +688,79 @@ type Password struct {
+@@ -601,6 +751,79 @@ type Password struct {
  	Groups []string `json:"groups"`
  }
  
@@ -1819,7 +1991,7 @@ index 84976c5d..cf0dbf6d 100644
  // Connector is an object that contains the metadata about connectors used to login to Dex.
  type Connector struct {
  	// ID that will uniquely identify the connector object.
-@@ -623,6 +783,15 @@ type Connector struct {
+@@ -623,6 +846,15 @@ type Connector struct {
  	// GrantTypes is a list of grant types that this connector is allowed to be used with.
  	// If empty, all grant types are allowed.
  	GrantTypes []string `json:"grantTypes,omitempty"`

@@ -143,7 +143,7 @@ var _ = Describe("Module :: user-authn :: helm template :: controller", func() {
 		Expect(clusterRole.Field("rules").String()).ToNot(ContainSubstring("revocations"))
 		Expect(clusterRole.Field("rules").String()).ToNot(ContainSubstring("oauth2clients"))
 		// A Logout of one client removes the client from the browser sessions.
-		Expect(clusterRole.Field(`rules.#(resources.0=="authsessions").verbs`).String()).To(MatchJSON(`["get","list","watch","delete"]`))
+		Expect(clusterRole.Field(`rules.#(resources.0=="authsessions").verbs`).String()).To(MatchJSON(`["get","list","watch","patch","delete"]`))
 
 		admin := hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:admin-kubeconfig")
 		Expect(admin.Field(`rules.#(apiGroups.0=="dex.coreos.com").resources`).String()).To(ContainSubstring(`"revocations"`))

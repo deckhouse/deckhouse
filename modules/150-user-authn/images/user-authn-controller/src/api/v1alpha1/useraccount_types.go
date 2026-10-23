@@ -27,6 +27,16 @@ const (
 
 	KindLocal    = "Local"
 	KindExternal = "External"
+
+	// SessionKindBrowser is a browser signed in to Dex: a session of Dex and the applications it
+	// signed in to.
+	SessionKindBrowser = "Browser"
+	// SessionKindGrant is a device holding a refresh token issued without a session of Dex in a
+	// browser: kubeconfig, device flow, an application of its own, basic authentication.
+	SessionKindGrant = "Grant"
+
+	// MaxSessions bounds UserAccount.status.sessions; the most recently active are listed.
+	MaxSessions = 50
 )
 
 // UserAccountSpec is empty. UserAccount is a controller-projected view of Dex
@@ -62,6 +72,35 @@ type UserAccountStatus struct {
 	LastLogin *metav1.Time `json:"lastLogin,omitempty"`
 	// TwoFactor is set once Dex keeps a UserIdentity for the account.
 	TwoFactor *UserAccountTwoFactor `json:"twoFactor,omitempty"`
+	// Sessions are the devices signed in to the account, the most recently active first.
+	Sessions []UserAccountSession `json:"sessions,omitempty"`
+	// SessionsTruncated tells that the account has more than MaxSessions devices and the least
+	// recently active are not listed.
+	SessionsTruncated bool `json:"sessionsTruncated,omitempty"`
+}
+
+// UserAccountSession is a device signed in to the account: a browser session of Dex or a grant.
+type UserAccountSession struct {
+	// ID is the ID of the session of Dex (the sid claim) or of the grant (the d8_gid claim).
+	ID string `json:"id"`
+	// Kind is SessionKindBrowser or SessionKindGrant.
+	Kind string `json:"kind"`
+	// Clients are the applications signed in on the device.
+	Clients []string `json:"clients,omitempty"`
+	// IPAddress is the address the ingress saw at the last sign-in of the device.
+	IPAddress string `json:"ipAddress,omitempty"`
+	// UserAgent is the User-Agent of the device as it sent it.
+	UserAgent string `json:"userAgent,omitempty"`
+	// SignedInAt is when the device signed in.
+	SignedInAt *metav1.Time `json:"signedInAt,omitempty"`
+	// KnownSince is when Dex first saw the browser of the device complete a login of the account,
+	// set when more than a minute earlier than SignedInAt: the browser signed in before, signed out, and
+	// signed in again.
+	// The device is as old as that for the actions on the other devices and the password.
+	KnownSince *metav1.Time `json:"knownSince,omitempty"`
+	// LastActivity is the last use of the device, rounded down to the hour and never before
+	// SignedInAt.
+	LastActivity *metav1.Time `json:"lastActivity,omitempty"`
 }
 
 // +kubebuilder:object:root=true

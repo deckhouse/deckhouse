@@ -43,7 +43,8 @@ const (
 	phaseSucceeded statusPhase = "Succeeded"
 	phaseFailed    statusPhase = "Failed"
 
-	retentionPeriod = 24 * time.Hour
+	// DefaultRetention is how long a UserOperation is kept after its creation, unless configured.
+	DefaultRetention = 24 * time.Hour
 )
 
 // foreverTime is lockedUntil for lock.for == permanent.
@@ -80,11 +81,14 @@ type operationTarget struct {
 	UserID      string `json:"userID,omitempty"`
 }
 
-// logoutSpec narrows a Logout down to one browser session, every session but one, or one client.
-// Without any of them the Logout revokes everything of the pair.
+// logoutSpec narrows a Logout down to one browser session, every session but one, one client, one
+// grant (a device without a browser session), or every grant but one. Without any of them the
+// Logout revokes everything of the pair.
 type logoutSpec struct {
 	Session       string `json:"session,omitempty"`
 	ExceptSession string `json:"exceptSession,omitempty"`
+	Grant         string `json:"grant,omitempty"`
+	ExceptGrant   string `json:"exceptGrant,omitempty"`
 }
 
 type resetPassword struct {
@@ -260,7 +264,8 @@ func operationLogKV(op operation) []any {
 		}
 	}
 	if l := op.Spec.Logout; l != nil {
-		fields = append(fields, "logoutSession", l.Session, "logoutExceptSession", l.ExceptSession)
+		fields = append(fields, "logoutSession", l.Session, "logoutExceptSession", l.ExceptSession,
+			"logoutGrant", l.Grant, "logoutExceptGrant", l.ExceptGrant)
 	}
 	return fields
 }
