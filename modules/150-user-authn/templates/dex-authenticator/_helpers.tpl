@@ -51,6 +51,33 @@ redirectURIs:
   {{- range $app := $crd.spec.applications }}
 - {{ printf "https://%s/dex-authenticator/callback" $app.domain | quote }}
   {{- end }}
+{{- /* Sign-out through dex returns to the root of the application the user signed out of. */}}
+postLogoutRedirectURIs:
+  {{- range $app := $crd.spec.applications }}
+- {{ printf "https://%s/" $app.domain | quote }}
+  {{- end }}
+  {{- if dig "sessions" "enabled" false $context.Values.userAuthn }}
+{{- /* The session of the application ends with the session of dex it signed in through. */}}
+refreshTokenLifetime: session
+    {{- if eq (include "dex_authenticator_shares_sso" (list $context $crd)) "true" }}
+ssoSharedWith:
+      {{- range $peer := $context.Values.userAuthn.internal.dexAuthenticatorCRDs }}
+        {{- if and (ne (include "dex_authenticator_client_id" $peer) $clientID) (eq (include "dex_authenticator_shares_sso" (list $context $peer)) "true") }}
+- {{ include "dex_authenticator_client_id" $peer | quote }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end -}}
+
+{{- /* Whether a DexAuthenticator shares the sign-in through the sessions of dex with the other web */ -}}
+{{- /* interfaces of the platform: with sessions.sso Platform, the DexAuthenticators in the d8-* namespaces. */ -}}
+{{- /* Usage: include "dex_authenticator_shares_sso" (list $context $crd) */ -}}
+{{- define "dex_authenticator_shares_sso" -}}
+  {{- $context := index . 0 -}}
+  {{- $crd := index . 1 -}}
+  {{- $sso := dig "sessions" "sso" "Platform" $context.Values.userAuthn -}}
+{{ and (eq $sso "Platform") (hasPrefix "d8-" $crd.namespace) }}
 {{- end -}}
 
 {{- /* The address of the Redis session store of the DexAuthenticators. */ -}}

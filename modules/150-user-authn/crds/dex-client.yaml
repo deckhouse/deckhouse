@@ -88,6 +88,55 @@ spec:
                     type: string
                     maxLength: 256
                     pattern: '^[^\r\n]*$'
+                postLogoutRedirectURIs:
+                  type: array
+                  description: |
+                    Addresses Dex may send the browser back to after the user signs out of Dex through the application
+                    (`post_logout_redirect_uri` of OpenID Connect RP-Initiated Logout).
+
+                    Works only with the [browser sessions of Dex](configuration.html#parameters-sessions) enabled.
+
+                    Values must not contain line breaks.
+                  items:
+                    type: string
+                    maxLength: 2048
+                    pattern: '^[^\r\n]*$'
+                backchannelLogoutURI:
+                  type: string
+                  maxLength: 2048
+                  pattern: '^https://[^\r\n]*$'
+                  x-kubernetes-validations:
+                    # The host is matched on the address itself: CEL bounds the cost of a regular expression by the length of
+                    # the string, and the length of url(self).getHost() is not known. The host must have a dot and not end
+                    # with one: a single label or a trailing dot is resolved through the search domains of the pod of Dex.
+                    - rule: |
+                        isURL(self) && !self.matches("^https://[^/?#]*@") && self.matches("^https://[^/?#:]*\\.[^/?#:]*[^./?#:](:[0-9]+)?([/?#]|$)") && !self.matches("(?i)^https://(\\[[^]]*\\]|[0-9.]+|localhost|[^/?#:]*\\.localhost|[^/?#:]*\\.svc|[^/?#:]*\\.svc\\.[^/?#:]*|[^/?#:]*\\.cluster\\.local)(:[0-9]+)?([/?#]|$)")
+                      message: "spec.backchannelLogoutURI must be an https address of an external host: a name with a dot, not an IP address, localhost or a name under .svc or .cluster.local, and without user information"
+                  description: |
+                    Address Dex notifies when a browser session through which the user signed in to the application ends
+                    (OpenID Connect Back-Channel Logout): the user signs out of the session, or the provider of the user
+                    answers that the user no longer exists or is no longer allowed in. An end of the session by a
+                    UserOperation or through the self-service of the web interface sends no notification.
+
+                    Works only with the [browser sessions of Dex](configuration.html#parameters-sessions) enabled. Dex sends the
+                    notification once, without retries: the application cannot rely on it to end its own session.
+
+                    Must be an HTTPS address whose host is a name with a dot: Dex sends the notification from inside the
+                    cluster, so an IP address, `localhost`, a name without a dot or ending with one, and a name under `.svc` or
+                    `.cluster.local` are not accepted. A short name such as `<SERVICE>.<NAMESPACE>` cannot be told from an
+                    external name: use the full external name of the application.
+                refreshTokenLifetime:
+                  type: string
+                  enum: ["Standalone", "Session"]
+                  description: |
+                    How long the refresh tokens of the application live, with the [browser sessions of Dex](configuration.html#parameters-sessions) enabled.
+
+                    - `Standalone`: The tokens live until they expire, whatever happens to the session of the browser.
+                      An application that requests offline access then gets a refresh token only after an interactive sign-in.
+                    - `Session`: The tokens end when the user signs out of the session of Dex they were issued through.
+                      Such an application can sign the user in from the session of the browser.
+
+                    Without the parameter, the tokens are `Standalone`.
                 secretMetadata:
                   type: object
                   description: 'Labels and annotations to add to the `dex-client-<NAME>` Secret.'

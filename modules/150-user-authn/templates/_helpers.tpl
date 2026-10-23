@@ -31,3 +31,13 @@
   {{- $global := dig "enabled" true (index $globalModules "gatewayAPI" | default dict) -}}
   {{- dig "enabled" $global (index $moduleValues "gatewayAPI" | default dict) -}}
 {{- end -}}
+
+{{- /* Seconds of a duration in the form the settings take: whole hours, minutes and seconds, in this */ -}}
+{{- /* order ("30m", "2h30m", "24h"). */ -}}
+{{- define "user_authn_duration_seconds" -}}
+  {{- $seconds := 0 -}}
+  {{- with regexFind "^[0-9]+h" . }}{{ $seconds = add $seconds (mul (trimSuffix "h" . | atoi) 3600) }}{{ end -}}
+  {{- with regexFind "[0-9]+m" . }}{{ $seconds = add $seconds (mul (trimSuffix "m" . | atoi) 60) }}{{ end -}}
+  {{- with regexFind "[0-9]+s$" . }}{{ $seconds = add $seconds (trimSuffix "s" . | atoi) }}{{ end -}}
+  {{- $seconds -}}
+{{- end -}}

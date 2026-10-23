@@ -379,6 +379,15 @@ spec:
                         Determines if the Issuer should ask for confirmation and provide hints during the authentication process.
 
                         By default, the confirmation will be requested on the first authentication. Possible values may vary depending on the Issuer.
+                    upstreamLogout:
+                      type: boolean
+                      default: false
+                      description: |
+                        Signs the user out of the provider too when the user signs out of Dex.
+
+                        Works only with the [browser sessions of Dex](configuration.html#parameters-sessions) enabled and only when the provider advertises an `end_session_endpoint`.
+
+                        By default, signing out of Dex leaves the session of the provider alone: signing out of one application does not sign the user out of everything else that signs in through the provider. The provider may then sign the user in again without a password. To ask for the password at every sign-in, set `promptType: login`.
                     rootCAData:
                       type: string
                       description: |

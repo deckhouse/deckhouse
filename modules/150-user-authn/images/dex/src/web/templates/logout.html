@@ -17,6 +17,9 @@
       {{ end }}
   </div>
   <form method="post" action="{{ .ReqPath }}" class="login-form">
+    {{ if .ClientID }}<input type="hidden" name="client_id" value="{{ .ClientID }}"/>{{ end }}
+    {{ if .PostLogoutRedirectURI }}<input type="hidden" name="post_logout_redirect_uri" value="{{ .PostLogoutRedirectURI }}"/>{{ end }}
+    {{ if .State }}<input type="hidden" name="state" value="{{ .State }}"/>{{ end }}
     <button type="submit" class="btn btn-primary">
         {{ if eq (extra "lang") "en" }}
         Log Out

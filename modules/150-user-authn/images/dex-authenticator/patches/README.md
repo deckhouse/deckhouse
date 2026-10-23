@@ -168,6 +168,45 @@ The security events of `templates/security-events.yaml` are built from these lin
 - **Upstream:** not proposed.
 - **Depends on:** 009 (the sign-out of a session without an ID token).
 
+### 012-sign-out-through-the-provider.patch
+
+- **Zone:** where the browser goes after sign-out (`SignOut`, `--provider-logout-url`).
+- **Consumer in Deckhouse:** every DexAuthenticator while the sessions of dex are on (the `sessions.enabled` parameter
+  of the module), with `--provider-logout-url=https://<dex>/logout`.
+- **What it does:** after sign-out (the refresh token revoked by 011, the cookie cleared) sends the browser to the
+  logout endpoint of dex with `client_id` and `post_logout_redirect_uri=https://<host of the request>/` instead of the
+  sign-out redirect. Dex ends its session in this browser, and the revocation feed signs the other applications of
+  the browser out; dex patch 300 accepts the client without an ID token in the address and asks the user to confirm
+  only for a request from another site. Dex returns only to the addresses registered for the client. The address
+  comes from the flag only, `rd` does not change it; the flag takes an absolute https URL. Without
+  `--provider-logout-url` nothing changes.
+- **Upstream:** not proposed.
+- **Depends on:** 011 (the revocation before the session is cleared).
+
+### 013-restart-login-on-refused-code.patch
+
+- **Zone:** the OAuth2 callback and the code exchange (`OAuthCallback`, `OIDCProvider.Redeem`), and the mark of a
+  restarted flow in the CSRF cookie (`pkg/cookies`, `OAuthStart`).
+- **Consumer in Deckhouse:** every DexAuthenticator while the sessions of dex are on (the `sessions.enabled` parameter
+  of the module). Dex patch 300 refuses to exchange an authorization code minted in a browser session that has ended
+  between the code being issued and redeemed (`invalid_grant`).
+- **What it does:** on `invalid_grant` from the code exchange — a tab that reached the callback after the user signed
+  out — the callback starts the login again instead of answering an empty HTTP 500. A browser navigation is redirected
+  to the sign-in page keeping where it was going (`rd`, validated), so the user signs in again and lands where they
+  meant to; a script (`fetch`/XHR, decided as in patch 005) gets 401, not a cross-origin redirect it cannot follow.
+  Other redemption errors — the provider is unreachable or answered a 5xx — stay a server error. `OIDCProvider.Redeem`
+  wraps the token-exchange error with `%w` so the callback reads the `*oauth2.RetrieveError` underneath and tells
+  `invalid_grant` from the rest. The login is restarted at most once per sign-in flow: the restart redirect carries
+  `login_restarted=1`, the sign-in copies it into the CSRF cookie of the new flow, and a code refused again in that
+  flow is the server error of any other redemption failure. The CSRF cookie of the refused flow is cleared. The mark
+  lives in the cookie of the flow, not in a cookie of the browser, so parallel sign-ins (one CSRF cookie per flow,
+  `--cookie-csrf-per-request`) do not take each other's restart. The refused code gets the auth log line of a failed
+  redemption (`Invalid authentication via OAuth2: unable to redeem the code: ...`), so the
+  `D8_DEX_AUTHENTICATOR_LOGIN_FAILED` security event still fires.
+- **Upstream:** not proposed; the behavior pairs with the browser sessions of dex.
+- **Depends on:** 005-sign-in-401-for-scripts (the navigation-versus-script test and the 401 for scripts) and
+  008-auth-log-login-failures (the auth log line of a failed redemption).
+
 ### 998-fix-cve.patch
 
 - **Zone:** `go.mod` and `go.sum`.

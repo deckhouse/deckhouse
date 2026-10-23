@@ -34,6 +34,7 @@ allowedGroups:
 - {{ $group | quote }}
 {{- end }}
   {{- end }}
+{{- include "dex_client_logout_fields" $crd.spec | nindent 0 }}
 
 # Following manifest should be deleted, because it uses colons in the client
 # name which is impossible to send as a part basic auth credentials.
@@ -71,4 +72,5 @@ allowedGroups:
 - {{ $group | quote }}
 {{- end }}
   {{- end }}
+{{- include "dex_client_logout_fields" $crd.spec | nindent 0 }}
 {{- end }}

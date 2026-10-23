@@ -229,6 +229,7 @@ spec:
     "insecureSkipVerify": false,
     "issuer": "https://issue.example.com",
     "promptType": "consent",
+    "upstreamLogout": false,
 	"allowedGroups": [ "not-slu-gif-ed" ],
     "scopes": [
       "profile",

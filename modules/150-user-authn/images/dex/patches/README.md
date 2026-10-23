@@ -2,7 +2,8 @@
 
 Dex v2.46.0 (the `dex` version in `oss.yaml`) plus one patch per zone of
 responsibility, applied in file name order (`git apply /patches/*.patch`).
-Numbering: 1xx storage, 2xx features, 998 dependency bumps, 999 fuzz tests.
+Numbering: 1xx storage, 2xx login, 3xx sessions, 998 dependency bumps, 999
+fuzz tests.
 A patch changes lines of an earlier patch only when it is a feature on top of
 it; a fix goes into the patch it fixes. Each patch is the plain diff of one
 commit on top of the previous patches (`git diff <commit>^ <commit>`): it
@@ -27,11 +28,10 @@ fields.
   uses;
 - `UserIdentity`: `incorrectPasswordLoginAttempts`, the failed-attempt counter
   of users of external password connectors (LDAP, Atlassian Crowd);
-  `AdminLockedUntil`, the `blockedUntil` an administrator set (230 tells his
-  lock from an automatic one by it), read from the annotation
-  `user-authn.deckhouse.io/admin-lock` that the user-authn controller writes
-  with the lock. Dex never writes it: an update keeps the metadata of the
-  object it read. A value that does not parse reads as no such lock;
+  `claimsRefreshedAt`, when the stored claims were last read from the
+  connector (310); `AuthSession`: `mfaAuthenticators`, the authenticators of
+  the second factor passed on the browser session, and `rememberMe`, the
+  remember-me choice its cookie is issued with again (300);
 - `Client`: `allowedEmails`, `allowedGroups`; `Connector`: `allowedEmails`,
   `allowedEmailDomains`, `allowedGroups` (allow-lists of 200), with the JSON
   names the user-authn templates already render;
@@ -757,6 +757,141 @@ and nothing that ends the tokens of a user at once.
 **Depends on:** 100 (the `generation` fields, `Revocation`), 210
 (`useridentity.Record`, the lock check that `State` joins), 240
 (`rateLimitedRoutes`), 260 (the sign-in log scheme).
+
+### 300-sessions-logout.patch
+
+**Zone:** sessions and logout: what the browser sessions of Dex
+(`DEX_SESSIONS_ENABLED`) need before Deckhouse turns them on. Nothing here
+runs with sessions off.
+
+- **logout by `client_id`**: `/logout` takes the client from `client_id` when
+  there is no `id_token_hint` (RP-Initiated Logout §2), so an application signs
+  its users out by sending the browser to Dex with no token in the address;
+  `post_logout_redirect_uri` is checked against the `postLogoutRedirectURIs` of
+  that client, and a `client_id` that contradicts the hint is refused (400);
+- **confirmation**: a GET without a hint goes through when it is a top-level
+  navigation from the site of Dex (`Sec-Fetch-Site` `same-origin`, `same-site`
+  or `none`, `Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`). The site
+  is the registrable domain: any host under it, an application of another tenant
+  too, can sign the user out this way, though only to an address the client
+  registered. A POST without a hint goes through only from Dex's own origin
+  (`Sec-Fetch-Site: same-origin`, or the `Origin` of the issuer from a browser
+  that sends no fetch metadata), which is where the confirmation form posts
+  from. Any other request — another site, a form of another host of the site, a
+  frame, a request without fetch metadata — gets the confirmation page, whose
+  form posts the client, the address to return to and the state back;
+- **three states of the storage**: a session that cannot be read is not "no
+  session". `/logout` and `/logout/callback` answer 503 and keep the session
+  and the cookie; a login goes on interactively and keeps the cookie; a refresh
+  that cannot read the offline session answers 500 and revokes nothing
+  (`session.Manager.CurrentSession`);
+- **a bound grant outlives the idle session**: a refresh token bound to its
+  session (`refreshTokenLifetime: session`) is no longer refused because the
+  session went idle, reached its lifetime or was replaced; it ends when the
+  session is ended on purpose (logout revokes it, 290 announces it) or its pair
+  is revoked. Introspection judges it the same way. The idle and absolute
+  lifetimes close the window for signing in without a password, not the
+  applications already signed in;
+- **a code minted in a session is spent by logout**: the authorization code the
+  browser carries to the token endpoint names the session it was minted in
+  (`sid`). Redeeming it is refused as a spent code (`invalid_grant`) once that
+  session has ended, so signing out also voids a code the application had not yet
+  exchanged — a logout does not raise the generation of the pair, so the 290
+  revocation check alone would let such a code through, and the token it would
+  mint would name a session that signing out was meant to end. The same gate
+  covers the device flow, which redeems its code through the same path; a code
+  that names no session (a non-browser login, or sessions off) is unaffected
+  (`grants.ExchangeAuthCode`, `session.Manager.Alive`);
+- **an application in use keeps its session**: the refresh of a token issued
+  through a live session counts as a use of the session (of the same user,
+  connector and generation), so its idle timeout starts again and the browser
+  signs in to the other applications without a password while one of them is
+  in use, up to the absolute lifetime. The session is written at most once a
+  tenth of `validIfNotUsedFor` (at least every 5 minutes); an ended session
+  stays ended. Upstream counts only the logins through the session;
+- **upstream logout off by default**: the OIDC connector sends the browser to
+  the provider's `end_session_endpoint` only with `upstreamLogout: true`;
+- **checks of the session login**: the allow-lists of the client and the
+  connector (which also narrow the groups), and for a local user a password
+  that is still there and need not be changed; a refused session login goes on
+  to the interactive one and writes nothing to the session. The state of a
+  client signed in through SSO is recorded only once the checks let the user
+  in, so a refused attempt neither lists the client in the session (for logout
+  and back-channel logout) nor counts as activity;
+- **the time of the browser**: `max_age` and `auth_time` of a login from the
+  session count from the authentication on this browser (the client's state, or
+  that of the client whose session it shares), not from `LastLogin` of the pair,
+  which a login on any other device moves;
+- **a new secret at every login**: a login on a session the browser already
+  holds, and a second factor recorded on the session, give the session a new
+  secret and the browser a new cookie with the remember-me choice of the session
+  (`rememberMe`), so a copy of the cookie taken before the user authenticated
+  again, or between the password and the second factor, does not open it;
+- **the second factor once per session**: the response of a login that passed
+  the second factor records the MFA chain of its client on the browser session
+  (of the same user, connector and generation); a login from the session to a
+  client whose chain was passed asks for no second factor again. Upstream asks
+  for it at every login from a session, as the session is made after the first
+  factor. A reset of the second factor, a lock and a logout end the session with
+  the generation of the pair;
+- **offline access only interactively**: a client asking for `offline_access`
+  whose refresh tokens are not bound to the session (kubeconfig, device flow,
+  an application keeping its own tokens) is not signed in from a session, so a
+  stolen session cookie mints no credential that outlives the session.
+
+**Consumer in Deckhouse:** `templates/dex/config.yaml` (the `sessions`
+parameters of the module), dex-authenticator (sign out through `/logout` by
+`client_id`, `refreshTokenLifetime: session`), `DexProvider` (`upstreamLogout`),
+`DexClient` (`postLogoutRedirectURIs`, `refreshTokenLifetime`).
+
+**Upstream status:** Deckhouse only. Upstream requires `id_token_hint` for
+`post_logout_redirect_uri`, ends a bound grant with the idle session, treats a
+storage error as no session, logs out of an OIDC provider whenever it
+advertises `end_session_endpoint`, writes the SSO state of a client before the
+checks of the session login, takes `max_age` and `auth_time` from `LastLogin`
+of the pair, and keeps the secret of a session for its whole life.
+
+**Depends on:** 100 (`mfaAuthenticators`, `rememberMe`), 200 (`checkAllowLists`), 220 (the
+password change flag), 290 (the `session` revocation of `/logout`).
+
+### 310-session-identity-freshness.patch
+
+**Zone:** freshness of the identity while sessions are on. Upstream serves the
+claims stored at the last login and never asks the connector again, so a user
+deleted, locked or moved between groups at the provider keeps the access Dex
+gave. Here the stored claims are served while younger than
+`sessions.identityRefresh.maxAge` (default 0: read at every refresh, as
+without sessions), counted from `claimsRefreshedAt` (100) or, for an identity
+stored before it, from the last login.
+
+- a refresh with stale claims reads the identity through the connector the
+  way a refresh without sessions does (250, with the groups whatever the token
+  asked for) and stores it (`useridentity.Refreshed`);
+- the provider answering that the user is gone or no longer let in
+  (`connector.ErrIdentityGone`, the groups the connector requires) ends the
+  pair: every browser session and refresh token of the pair is recorded as a
+  revocation with the reason `IdentityGone` (290) and goes; the refresh gets
+  `invalid_grant`. A refused credential alone ends only the token, as in 250;
+- a provider that does not answer leaves the stored claims served up to
+  `identityRefresh.gracePeriod` past `maxAge` (default 0), and the refresh
+  fails with 500 after it, the token kept;
+- a session login with stale claims signs a user of a provider in through the
+  provider again, rather than spend here the provider credential the refresh
+  tokens of the pair rotate (250); a local user's claims are read from the
+  password at once (a local user's are never served stored);
+- a login moves `claimsRefreshedAt` like the last login of the password grant:
+  when older than a minute;
+- a refresh without a stored identity reads the connector, as without
+  sessions, instead of failing with 500.
+
+**Consumer in Deckhouse:** `templates/dex/config.yaml`
+(`sessions.identityRefresh`, `maxAge` defaults to `idTokenTTL`).
+
+**Upstream status:** Deckhouse only.
+
+**Depends on:** 100 (`claimsRefreshedAt`), 210 (`useridentity.Record`), 250
+(`RotateUpstream`, `UpstreamError`), 290 (`Recorder`), 300 (the order of the
+session login checks).
 
 ### 998-fix-cve.patch
 

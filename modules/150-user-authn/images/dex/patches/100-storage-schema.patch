@@ -299,7 +299,7 @@ index 906e5ce5..08c07d14 100644
  	ctx := context.Background()
  	if os.Getenv(kubeconfigPathVariableName) == "" {
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index 151c8ad1..a3bca09f 100644
+index 151c8ad1..fea47f7c 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
 @@ -1,6 +1,8 @@
@@ -519,10 +519,11 @@ index 151c8ad1..a3bca09f 100644
  	}
  }
  
-@@ -968,8 +1041,16 @@ type UserIdentity struct {
+@@ -968,8 +1041,17 @@ type UserIdentity struct {
  	CreatedAt           time.Time                               `json:"createdAt,omitempty"`
  	LastLogin           time.Time                               `json:"lastLogin,omitempty"`
  	BlockedUntil        time.Time                               `json:"blockedUntil,omitempty"`
++	ClaimsRefreshedAt   time.Time                               `json:"claimsRefreshedAt,omitempty"`
 +
 +	IncorrectPasswordLoginAttempts uint64 `json:"incorrectPasswordLoginAttempts,omitempty"`
  }
@@ -536,9 +537,11 @@ index 151c8ad1..a3bca09f 100644
  // UserIdentityList is a list of UserIdentities.
  type UserIdentityList struct {
  	k8sapi.TypeMeta `json:",inline"`
-@@ -996,10 +1077,28 @@ func (cli *client) fromStorageUserIdentity(u storage.UserIdentity) UserIdentity
+@@ -995,11 +1077,30 @@ func (cli *client) fromStorageUserIdentity(u storage.UserIdentity) UserIdentity
+ 		WebAuthnCredentials: u.WebAuthnCredentials,
  		CreatedAt:           u.CreatedAt,
  		LastLogin:           u.LastLogin,
++		ClaimsRefreshedAt:   u.ClaimsRefreshedAt,
  		BlockedUntil:        u.BlockedUntil,
 +
 +		IncorrectPasswordLoginAttempts: u.IncorrectPasswordLoginAttempts,
@@ -566,9 +569,11 @@ index 151c8ad1..a3bca09f 100644
  	s := storage.UserIdentity{
  		UserID:              u.UserID,
  		ConnectorID:         u.ConnectorID,
-@@ -1010,12 +1109,22 @@ func toStorageUserIdentity(u UserIdentity) storage.UserIdentity {
+@@ -1009,13 +1110,24 @@ func toStorageUserIdentity(u UserIdentity) storage.UserIdentity {
+ 		WebAuthnCredentials: u.WebAuthnCredentials,
  		CreatedAt:           u.CreatedAt,
  		LastLogin:           u.LastLogin,
++		ClaimsRefreshedAt:   u.ClaimsRefreshedAt,
  		BlockedUntil:        u.BlockedUntil,
 +
 +		IncorrectPasswordLoginAttempts: u.IncorrectPasswordLoginAttempts,
@@ -590,28 +595,78 @@ index 151c8ad1..a3bca09f 100644
  }
  
  // AuthSession is a Kubernetes representation of a storage AuthSession.
-@@ -1035,6 +1144,8 @@ type AuthSession struct {
+@@ -1035,6 +1147,10 @@ type AuthSession struct {
  	AbsoluteExpiry time.Time                           `json:"absoluteExpiry,omitempty"`
  	IdleExpiry     time.Time                           `json:"idleExpiry,omitempty"`
  	LogoutState    *storage.LogoutState                `json:"logoutState,omitempty"`
 +
-+	Generation uint64 `json:"generation,omitempty"`
++	Generation        uint64   `json:"generation,omitempty"`
++	MFAAuthenticators []string `json:"mfaAuthenticators,omitempty"`
++	RememberMe        bool     `json:"rememberMe,omitempty"`
  }
  
  // AuthSessionList is a list of AuthSessions.
-@@ -1065,6 +1176,7 @@ func (cli *client) fromStorageAuthSession(s storage.AuthSession) AuthSession {
- 		AbsoluteExpiry: s.AbsoluteExpiry,
- 		IdleExpiry:     s.IdleExpiry,
- 		LogoutState:    s.LogoutState,
-+		Generation:     s.Generation,
+@@ -1054,37 +1170,133 @@ func (cli *client) fromStorageAuthSession(s storage.AuthSession) AuthSession {
+ 			Name:      s.ID,
+ 			Namespace: cli.namespace,
+ 		},
+-		Secret:         s.Secret,
+-		UserID:         s.UserID,
+-		ConnectorID:    s.ConnectorID,
+-		ClientStates:   s.ClientStates,
+-		CreatedAt:      s.CreatedAt,
+-		LastActivity:   s.LastActivity,
+-		IPAddress:      s.IPAddress,
+-		UserAgent:      s.UserAgent,
+-		AbsoluteExpiry: s.AbsoluteExpiry,
+-		IdleExpiry:     s.IdleExpiry,
+-		LogoutState:    s.LogoutState,
++		Secret:            s.Secret,
++		UserID:            s.UserID,
++		ConnectorID:       s.ConnectorID,
++		ClientStates:      s.ClientStates,
++		CreatedAt:         s.CreatedAt,
++		LastActivity:      s.LastActivity,
++		IPAddress:         s.IPAddress,
++		UserAgent:         s.UserAgent,
++		AbsoluteExpiry:    s.AbsoluteExpiry,
++		IdleExpiry:        s.IdleExpiry,
++		LogoutState:       s.LogoutState,
++		Generation:        s.Generation,
++		MFAAuthenticators: s.MFAAuthenticators,
++		RememberMe:        s.RememberMe,
  	}
  }
  
-@@ -1082,9 +1194,100 @@ func toStorageAuthSession(s AuthSession) storage.AuthSession {
- 		AbsoluteExpiry: s.AbsoluteExpiry,
- 		IdleExpiry:     s.IdleExpiry,
- 		LogoutState:    s.LogoutState,
-+		Generation:     s.Generation,
+ func toStorageAuthSession(s AuthSession) storage.AuthSession {
+ 	result := storage.AuthSession{
+-		ID:             s.ObjectMeta.Name,
+-		Secret:         s.Secret,
+-		UserID:         s.UserID,
+-		ConnectorID:    s.ConnectorID,
+-		ClientStates:   s.ClientStates,
+-		CreatedAt:      s.CreatedAt,
+-		LastActivity:   s.LastActivity,
+-		IPAddress:      s.IPAddress,
+-		UserAgent:      s.UserAgent,
+-		AbsoluteExpiry: s.AbsoluteExpiry,
+-		IdleExpiry:     s.IdleExpiry,
+-		LogoutState:    s.LogoutState,
++		ID:                s.ObjectMeta.Name,
++		Secret:            s.Secret,
++		UserID:            s.UserID,
++		ConnectorID:       s.ConnectorID,
++		ClientStates:      s.ClientStates,
++		CreatedAt:         s.CreatedAt,
++		LastActivity:      s.LastActivity,
++		IPAddress:         s.IPAddress,
++		UserAgent:         s.UserAgent,
++		AbsoluteExpiry:    s.AbsoluteExpiry,
++		IdleExpiry:        s.IdleExpiry,
++		LogoutState:       s.LogoutState,
++		Generation:        s.Generation,
++		MFAAuthenticators: s.MFAAuthenticators,
++		RememberMe:        s.RememberMe,
  	}
  	if result.ClientStates == nil {
  		result.ClientStates = make(map[string]*storage.ClientAuthState)
@@ -710,10 +765,10 @@ index 151c8ad1..a3bca09f 100644
 +}
 diff --git a/storage/kubernetes/types_test.go b/storage/kubernetes/types_test.go
 new file mode 100644
-index 00000000..43f3bfb2
+index 00000000..209157dd
 --- /dev/null
 +++ b/storage/kubernetes/types_test.go
-@@ -0,0 +1,670 @@
+@@ -0,0 +1,672 @@
 +package kubernetes
 +
 +import (
@@ -896,10 +951,12 @@ index 00000000..43f3bfb2
 +			ClientStates: map[string]*storage.ClientAuthState{},
 +			CreatedAt:    expiry,
 +			Generation:   3,
++			RememberMe:   true,
 +		}
 +		raw, err := json.Marshal(cli.fromStorageAuthSession(want))
 +		require.NoError(t, err)
 +		require.Contains(t, string(raw), `"generation":3`)
++		require.Contains(t, string(raw), `"rememberMe":true`)
 +		var decoded AuthSession
 +		require.NoError(t, json.Unmarshal(raw, &decoded))
 +		require.Equal(t, want, toStorageAuthSession(decoded))
@@ -1543,7 +1600,7 @@ index acd0be1b..e4b00c3d 100644
 +	storage.Storage
 +}
 diff --git a/storage/storage.go b/storage/storage.go
-index 84976c5d..9de0d5c2 100644
+index 84976c5d..cf0dbf6d 100644
 --- a/storage/storage.go
 +++ b/storage/storage.go
 @@ -218,6 +218,13 @@ type Client struct {
@@ -1604,10 +1661,16 @@ index 84976c5d..9de0d5c2 100644
  }
  
  // RefreshTokenRef is a reference object that contains metadata about refresh tokens.
-@@ -481,6 +511,27 @@ type UserIdentity struct {
+@@ -481,6 +511,33 @@ type UserIdentity struct {
  	CreatedAt           time.Time
  	LastLogin           time.Time
  	BlockedUntil        time.Time
++
++	// ClaimsRefreshedAt is when Claims were last read from the connector: by a
++	// login, or by a refresh that read them again (Deckhouse). With sessions on,
++	// dex serves the stored claims until they are older than the identityRefresh
++	// maxAge of the sessions, and reads them again then. Zero means never.
++	ClaimsRefreshedAt time.Time
 +
 +	// IncorrectPasswordLoginAttempts counts the consecutive failed password logins
 +	// of this (user, connector) pair since its last successful one. Automatic
@@ -1632,7 +1695,7 @@ index 84976c5d..9de0d5c2 100644
  }
  
  // ClientAuthState represents authentication state for a specific client within an auth session.
-@@ -545,6 +596,10 @@ type AuthSession struct {
+@@ -545,6 +602,20 @@ type AuthSession struct {
  	// upstream provider. The callback handler reads it back to complete the flow.
  	// Nil when no logout is in progress.
  	LogoutState *LogoutState
@@ -1640,10 +1703,20 @@ index 84976c5d..9de0d5c2 100644
 +	// Generation is the generation of the pair at the last login on this
 +	// session (AuthRequest.Generation).
 +	Generation uint64
++
++	// MFAAuthenticators are the authenticators of the second factor passed on
++	// this session (Deckhouse). A login from the session to a client whose MFA
++	// chain they cover asks for no second factor again.
++	MFAAuthenticators []string
++
++	// RememberMe is the "remember me" choice of the last login on this session
++	// (Deckhouse): its cookie outlives the browser. A cookie issued again for the
++	// session, with a new secret, keeps the choice.
++	RememberMe bool
  }
  
  // OfflineSessions objects are sessions pertaining to users with refresh tokens.
-@@ -577,6 +632,22 @@ type Password struct {
+@@ -577,6 +648,22 @@ type Password struct {
  	// Bcrypt encoded hash of the password. This package enforces a min cost value of 10
  	Hash []byte `json:"hash"`
  
@@ -1666,7 +1739,7 @@ index 84976c5d..9de0d5c2 100644
  	// Bcrypt encoded hash of the password set in environment variable of this name.
  	HashFromEnv string `json:"hashFromEnv"`
  
-@@ -601,6 +672,79 @@ type Password struct {
+@@ -601,6 +688,79 @@ type Password struct {
  	Groups []string `json:"groups"`
  }
  
@@ -1746,7 +1819,7 @@ index 84976c5d..9de0d5c2 100644
  // Connector is an object that contains the metadata about connectors used to login to Dex.
  type Connector struct {
  	// ID that will uniquely identify the connector object.
-@@ -623,6 +767,15 @@ type Connector struct {
+@@ -623,6 +783,15 @@ type Connector struct {
  	// GrantTypes is a list of grant types that this connector is allowed to be used with.
  	// If empty, all grant types are allowed.
  	GrantTypes []string `json:"grantTypes,omitempty"`

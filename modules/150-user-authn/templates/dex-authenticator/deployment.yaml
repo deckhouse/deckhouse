@@ -229,6 +229,11 @@ spec:
         - --code-challenge-method=S256
         # Sign-out revokes the refresh token of the session in dex (RFC 7009) over the TLS of dex.
         - --revocation-url=https://dex.d8-user-authn/token/revoke
+    {{- if and (dig "sessions" "enabled" false $context.Values.userAuthn) (eq (include "helm_lib_module_uri_scheme" $context) "https") }}
+        # With the sessions of dex on, sign-out then sends the browser to dex by the client ID, to end the session of
+        # dex in this browser and with it the other applications signed in through it.
+        - --provider-logout-url=https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/logout
+    {{- end }}
     {{- /* The proxy refuses to start with an empty CA file, so without the CA it runs without the feed. */}}
     {{- if $revocationFeedCA }}
         # The revocation feed of user-authn-controller: revoked sessions are refused within seconds. Only the CA

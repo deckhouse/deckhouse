@@ -140,6 +140,34 @@ fields when it decides who may write the provider. Rendered right after the conn
       reuseInterval: "2m"
       validIfNotUsedFor: "2190h" # 3 months
       absoluteLifetime: {{ $context.Values.userAuthn.refreshTokenAbsoluteLifetime | default "4380h" | quote }}
+  {{- with $context.Values.userAuthn.sessions }}
+  {{- if .enabled }}
+  {{- $identityRefresh := .identityRefresh | default dict }}
+  {{- $absoluteLifetime := .absoluteLifetime | default "168h" }}
+  {{- $validIfNotUsedFor := .validIfNotUsedFor | default "24h" }}
+  {{- /* Dex refuses an idle timeout longer than the lifetime. The settings refuse it when both are set; the
+         default idle timeout of a day yields to a shorter lifetime set alone. */}}
+  {{- if gt (include "user_authn_duration_seconds" $validIfNotUsedFor | atoi) (include "user_authn_duration_seconds" $absoluteLifetime | atoi) }}
+    {{- $validIfNotUsedFor = $absoluteLifetime }}
+  {{- end }}
+  {{- /* SSO goes only to the clients that list each other in ssoSharedWith: the DexAuthenticators of the platform
+         with sso: Platform (templates/dex-authenticator/_helpers.tpl). */}}
+  sessions:
+    # __Host-: the browser takes the cookie only from Dex itself (secure, path /, no domain), so an
+    # application on a sibling host of the same domain cannot plant a session cookie of its own.
+    cookieName: __Host-dex_session
+    absoluteLifetime: {{ $absoluteLifetime | quote }}
+    validIfNotUsedFor: {{ $validIfNotUsedFor | quote }}
+    rememberMeCheckedByDefault: {{ .rememberMeCheckedByDefault | default false }}
+    ssoSharedWithDefault: none
+    {{- with $context.Values.userAuthn.internal.dexSessionsCookieKey }}
+    cookieEncryptionKey: {{ . | quote }}
+    {{- end }}
+    identityRefresh:
+      maxAge: {{ $identityRefresh.maxAge | default $context.Values.userAuthn.idTokenTTL | default "10m" | quote }}
+      gracePeriod: {{ $identityRefresh.gracePeriod | default "0s" | quote }}
+  {{- end }}
+  {{- end }}
   logger:
     level: info
     format: json
@@ -337,6 +365,9 @@ fields when it decides who may write the provider. Rendered right after the conn
         {{- end }}
         {{- if $provider.oidc.promptType }}
         promptType: {{ $provider.oidc.promptType | quote }}
+        {{- end }}
+        {{- if $provider.oidc.upstreamLogout }}
+        upstreamLogout: true
         {{- end }}
         {{- if $provider.oidc.insecureSkipVerify }}
         insecureSkipVerify: true

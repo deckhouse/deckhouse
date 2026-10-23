@@ -290,6 +290,12 @@ DexAuthenticator получает отзывы от сервиса `revocation-f
 
 Когда пользователь выходит из приложения, DexAuthenticator отзывает refresh-токен сессии в Dex. Копия cookie сессии тоже перестаёт работать.
 
+При включённых [браузерных сессиях Dex](usage.html#браузерные-сессии-dex) DexAuthenticator затем отправляет браузер в Dex, чтобы завершить сессию Dex, и браузер выходит из остальных приложений, в которые вошёл через эту сессию. Выполняйте выход переходом браузера, а не запросом из скрипта, который не следует перенаправлению в Dex:
+
+```javascript
+window.location.assign("/dex-authenticator/sign_out");
+```
+
 ## Как сгенерировать kubeconfig для доступа к Kubernetes API?
 
 Для генерации kubeconfig воспользуйтесь разделом [«Как сгенерировать kubeconfig для доступа к Kubernetes API?»](/modules/control-plane-manager/faq.html#как-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api) документации модуля `control-plane-manager`.

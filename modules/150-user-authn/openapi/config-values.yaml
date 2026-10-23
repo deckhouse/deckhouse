@@ -324,6 +324,123 @@ properties:
       The value must not be shorter than `idTokenTTL`.
 
       It is specified as a string containing the time unit in hours, minutes and seconds: 30m, 20s, 2h30m10s, 24h.
+  sessions:
+    type: object
+    default: {}
+    description: |
+      Browser sessions of Dex.
+
+      With sessions on, Dex remembers the user signed in to a browser:
+
+      - The web interfaces of Deckhouse (the DexAuthenticator objects of the platform modules, such as the console or Grafana)
+        share the sign-in: the user enters the password and the second factor once and opens the others without them (see `sso`).
+        For a user of an external provider, this lasts while the stored user data is fresh (see `identityRefresh`).
+      - The sign-in form shows the "Remember me" checkbox. With it, the session survives closing the browser.
+      - Signing out of an application of a DexAuthenticator object ends the session: the browser is signed out of all the
+        applications of DexAuthenticator objects it signed in to through this session within seconds.
+
+      What does not change:
+
+      - Access tokens for `kubectl` (kubeconfig, `d8 login`) and applications of the DexClient objects that request
+        offline access are issued only after an interactive sign-in, never from a session of the browser. A DexClient
+        with [`refreshTokenLifetime: Session`](cr.html#dexclient-v1-spec-refreshtokenlifetime) is the exception.
+      - An application signed in through a DexAuthenticator stays signed in for
+        [`keepUsersLoggedInFor`](cr.html#dexauthenticator-v1-spec-keepusersloggedinfor), even after the session of Dex
+        expires. The session limits only signing in without a password.
+      - Signing out of Dex does not sign the user out of an external OIDC provider unless the provider has
+        [`upstreamLogout`](cr.html#dexprovider-v1-spec-oidc-upstreamlogout) enabled.
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Turns the browser sessions of Dex on.
+      absoluteLifetime:
+        type: string
+        pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
+        default: '168h'
+        description: |
+          Maximum lifetime of a session, counted from the sign-in.
+
+          However much the browser is used, the session ends after this time, and the next application asks for
+          the password and the second factor again. By default, a user who works every day enters them once a week.
+
+          Set as a string of whole hours, minutes, and seconds, in this order: `30m`, `2h30m`, `24h`.
+      validIfNotUsedFor:
+        type: string
+        pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
+        default: '24h'
+        description: |
+          Time after which an unused session ends.
+
+          A session is used when the browser signs in to an application through it, and when an application
+          signed in through it refreshes its tokens: an application of a DexAuthenticator object or of a DexClient
+          with `refreshTokenLifetime: Session`. Such an application refreshes its tokens while it is open and sends
+          requests; an application closed, or open in a browser of a sleeping computer, does not use the session.
+          While the browser uses the session, it lasts up to `absoluteLifetime`.
+
+          With the default of a day, a session survives a night but not a weekend. For stricter
+          requirements, set a shorter time, for example `1h`: the user then enters the password again after each
+          break of an hour.
+
+          Must not be longer than `absoluteLifetime`. When only `absoluteLifetime` is set and is shorter than a day,
+          an unused session ends after `absoluteLifetime`.
+
+          Set as a string of whole hours, minutes, and seconds, in this order: `30m`, `2h30m`, `24h`.
+      rememberMeCheckedByDefault:
+        type: boolean
+        default: false
+        description: |
+          Whether the "Remember me" checkbox of the sign-in form is selected by default.
+
+          Without "Remember me", the session ends when the browser is closed.
+      sso:
+        type: string
+        enum: ["Platform", "None"]
+        default: "Platform"
+        description: |
+          Sharing of the sign-in between applications.
+
+          - `Platform`: The web interfaces of Deckhouse share the sign-in. These are the applications of the
+            DexAuthenticator objects in the `d8-*` namespaces. User DexAuthenticator and DexClient objects do not share it.
+          - `None`: Every application asks for the sign-in. A session only spares the password when the user signs in
+            to the same application again.
+      identityRefresh:
+        type: object
+        default: {}
+        description: |
+          Freshness of the user data that Dex stores at the sign-in, such as the groups of the user.
+
+          With sessions on, Dex serves the stored data until it is older than `maxAge`, and then reads it from the
+          provider again. If the provider answers that the user no longer exists or is no longer allowed in, Dex
+          ends all the sessions and tokens of the user of this provider.
+          The data of local users is read again every time.
+
+          A sign-in from a session needs fresh data too. Dex keeps no credentials of a user of an external provider
+          to read the data in the background, so once the data is older than `maxAge`, such a user signs in to the
+          next application with the password again. Every sign-in and every refresh of the tokens of an application
+          that reads the provider renews the data: a user who keeps working in an application of a DexAuthenticator
+          keeps the single sign-on. To keep it through longer breaks, raise `maxAge`.
+        properties:
+          maxAge:
+            type: string
+            pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
+            description: |
+              Age of the stored data after which Dex reads it from the provider again.
+
+              Defaults to [`idTokenTTL`](#parameters-idtokenttl).
+
+              Set as a string of whole hours, minutes, and seconds, in this order: `30m`, `2h30m`, `24h`.
+          gracePeriod:
+            type: string
+            pattern: '^([0-9]+h)?([0-9]+m)?([0-9]+s)?$'
+            default: '0s'
+            description: |
+              How much longer than `maxAge` Dex serves the stored data when the provider does not answer.
+
+              After this period, Dex refuses to refresh the tokens of the user until the provider answers.
+
+              Set as a string of whole hours, minutes, and seconds, in this order: `30s`, `5m`, `1h`.
   highAvailability:
     type: boolean
     x-examples: [true, false]
@@ -461,6 +578,22 @@ x-deckhouse-validations:
       ||
       duration(self.idTokenTTL) < duration("6h")
     message: "user-authn.idTokenTTL must be less than 6h (Dex signing keys rotate every 6 hours)"
+  - expression: |
+      !has(self.sessions)
+      ||
+      !has(self.sessions.validIfNotUsedFor)
+      ||
+      duration(self.sessions.validIfNotUsedFor) > duration("0s")
+      &&
+      duration(has(self.sessions.absoluteLifetime) ? self.sessions.absoluteLifetime : "168h") >= duration(self.sessions.validIfNotUsedFor)
+    message: "user-authn.sessions.validIfNotUsedFor must be greater than zero and not longer than sessions.absoluteLifetime"
+  - expression: |
+      !has(self.sessions)
+      ||
+      !has(self.sessions.absoluteLifetime)
+      ||
+      duration(self.sessions.absoluteLifetime) > duration("0s")
+    message: "user-authn.sessions.absoluteLifetime must be greater than zero (Dex does not start with a zero session lifetime)"
   - expression: |
       !has(self.idTokenTTL) || !has(self.refreshTokenAbsoluteLifetime)
       ||

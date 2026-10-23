@@ -1,0 +1,191 @@
+diff --git a/deckhouse_sign_out_provider_logout_test.go b/deckhouse_sign_out_provider_logout_test.go
+new file mode 100644
+index 00000000..74e5c834
+--- /dev/null
++++ b/deckhouse_sign_out_provider_logout_test.go
+@@ -0,0 +1,88 @@
++package main
++
++import (
++	"net/http/httptest"
++	"net/url"
++	"testing"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++const providerLogout = "https://dex.example.com/logout"
++
++func withProviderLogoutURL(providerLogoutURL string) OptionsModifier {
++	return func(opts *options.Options) {
++		opts.ProviderLogoutURL = providerLogoutURL
++	}
++}
++
++// TestSignOutThroughTheProvider checks that sign-out sends the browser to the logout endpoint of the
++// provider by client_id, back to the root of the host, whatever the sign-out redirect, after the refresh
++// token of the session is revoked.
++func TestSignOutThroughTheProvider(t *testing.T) {
++	tests := []struct {
++		name        string
++		session     *sessions.SessionState
++		wantRevoked bool
++	}{
++		{
++			name:        "session",
++			session:     &sessions.SessionState{Email: "jane.doe@example.com", IDToken: "id-token", RefreshToken: signOutRefresh},
++			wantRevoked: true,
++		},
++		{
++			// A global logout ended the session already: the session of the provider still goes.
++			name: "no session",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			endpoint := &revokeEndpoint{}
++			server := httptest.NewServer(endpoint.handler(answerOK))
++			t.Cleanup(server.Close)
++
++			rw := signOut(t, tt.session, "?rd="+url.QueryEscape("https://app.example.com/elsewhere"),
++				withRevocationURL(server.URL+"/token/revoke"),
++				withProviderLogoutURL(providerLogout+"?ui_locales=ru"),
++			)
++
++			assert.Equal(t, 302, rw.Code)
++			location, err := url.Parse(rw.Header().Get("Location"))
++			require.NoError(t, err)
++			assert.Equal(t, "https", location.Scheme)
++			assert.Equal(t, "dex.example.com", location.Host)
++			assert.Equal(t, "/logout", location.Path)
++			assert.Equal(t, url.Values{
++				"client_id":                {clientID},
++				"post_logout_redirect_uri": {"https://example.com/"},
++				"ui_locales":               {"ru"},
++			}, location.Query())
++			assert.NotContains(t, location.String(), "id-token", "no token in the address")
++			if tt.wantRevoked {
++				assertSignedOut(t, rw)
++				assert.Equal(t, 1, endpoint.calls())
++			} else {
++				assert.Zero(t, endpoint.calls())
++			}
++		})
++	}
++}
++
++func TestParseProviderLogoutURL(t *testing.T) {
++	u, err := parseProviderLogoutURL("")
++	require.NoError(t, err)
++	assert.Nil(t, u)
++
++	u, err = parseProviderLogoutURL(providerLogout)
++	require.NoError(t, err)
++	assert.Equal(t, providerLogout, u.String())
++
++	for _, raw := range []string{"http://dex.example.com/logout", "/logout", "https://", "https://dex example.com/"} {
++		_, err := parseProviderLogoutURL(raw)
++		assert.Error(t, err, raw)
++	}
++}
+diff --git a/oauthproxy.go b/oauthproxy.go
+index d085c931..b51ee4eb 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -113,6 +113,7 @@ type OAuthProxy struct {
+ 	realClientIPParser   ipapi.RealClientIPParser
+ 	trustedIPs           *ip.NetSet
+ 	revocationURL        string
++	providerLogoutURL    *url.URL
+ 
+ 	sessionChain      alice.Chain
+ 	headersChain      alice.Chain
+@@ -221,6 +222,10 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+ 	if err != nil {
+ 		return nil, err
+ 	}
++	providerLogoutURL, err := parseProviderLogoutURL(opts.ProviderLogoutURL)
++	if err != nil {
++		return nil, err
++	}
+ 	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator, revocationFeed)
+ 	headersChain, err := buildHeadersChain(opts)
+ 	if err != nil {
+@@ -255,6 +260,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+ 		allowQuerySemicolons: opts.AllowQuerySemicolons,
+ 		trustedIPs:           trustedIPs,
+ 		revocationURL:        opts.RevocationURL,
++		providerLogoutURL:    providerLogoutURL,
+ 
+ 		basicAuthValidator: basicAuthValidator,
+ 		basicAuthGroups:    opts.HtpasswdUserGroups,
+@@ -893,9 +899,43 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
+ 		return
+ 	}
+ 
++	if p.providerLogoutURL != nil {
++		redirect = p.providerLogoutRedirect(req)
++	}
+ 	http.Redirect(rw, req, redirect, http.StatusFound)
+ }
+ 
++// parseProviderLogoutURL parses --provider-logout-url, the RP-initiated logout endpoint of the
++// provider; nil when it is empty.
++func parseProviderLogoutURL(raw string) (*url.URL, error) {
++	if raw == "" {
++		return nil, nil
++	}
++	u, err := url.Parse(raw)
++	if err != nil {
++		return nil, fmt.Errorf("invalid provider-logout-url: %v", err)
++	}
++	if u.Scheme != "https" || u.Host == "" {
++		return nil, fmt.Errorf("invalid provider-logout-url %q: an absolute https URL is expected", raw)
++	}
++	return u, nil
++}
++
++// providerLogoutRedirect is where the browser goes after sign-out with --provider-logout-url (Deckhouse
++// patch 012): the RP-initiated logout endpoint of the provider, which ends the session of the provider
++// in this browser and with it the other applications signed in through it, and then returns to the
++// root of the host the user signed out on. The client is named by client_id, so no token goes into the
++// address, and the provider returns only to the addresses registered for the client. The sign-out
++// redirect (rd) does not change it.
++func (p *OAuthProxy) providerLogoutRedirect(req *http.Request) string {
++	u := *p.providerLogoutURL
++	q := u.Query()
++	q.Set("client_id", p.provider.Data().ClientID)
++	q.Set("post_logout_redirect_uri", "https://"+requestutil.GetRequestHost(req)+"/")
++	u.RawQuery = q.Encode()
++	return u.String()
++}
++
+ // replaceIDTokenPlaceholder puts the ID token of the session into the sign-out redirect. Without a
+ // session or without an ID token in it the placeholder must not reach the provider: dex answers 400
+ // to a raw "{id_token}" in id_token_hint, and to post_logout_redirect_uri without a hint. A user signs
+diff --git a/pkg/apis/options/options.go b/pkg/apis/options/options.go
+index 75f8b3dc..acb07afd 100644
+--- a/pkg/apis/options/options.go
++++ b/pkg/apis/options/options.go
+@@ -76,6 +76,9 @@ type Options struct {
+ 	// The token revocation endpoint (RFC 7009) of the provider, called on sign-out.
+ 	RevocationURL string `flag:"revocation-url" cfg:"revocation_url"`
+ 
++	// The RP-initiated logout endpoint of the provider the browser is sent to after sign-out.
++	ProviderLogoutURL string `flag:"provider-logout-url" cfg:"provider_logout_url"`
++
+ 	// This is used for backwards compatibility for basic auth users
+ 	LegacyPreferEmailToUser bool `cfg:",internal"`
+ 
+@@ -173,6 +176,7 @@ func NewFlagSet() *pflag.FlagSet {
+ 	flagSet.String("revocation-feed-url", "", "https URL of the revocation feed of the user-authn module of Deckhouse: sessions it revokes are refused. Disabled when empty")
+ 	flagSet.String("revocation-feed-ca-file", "", "path to the CA certificate the revocation feed is checked against instead of the system roots")
+ 	flagSet.String("revocation-url", "", "token revocation endpoint (RFC 7009) of the provider: sign-out revokes the refresh token of the session there. Disabled when empty")
++	flagSet.String("provider-logout-url", "", "https URL of the RP-initiated logout endpoint of the provider: sign-out sends the browser there by client_id, to return to the root of the host. Disabled when empty")
+ 
+ 	flagSet.AddFlagSet(cookieFlagSet())
+ 	flagSet.AddFlagSet(loggingFlagSet())

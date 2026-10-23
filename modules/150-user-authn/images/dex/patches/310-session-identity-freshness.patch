@@ -1,0 +1,1392 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+index c235debc..8d50bd62 100644
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
+@@ -831,6 +831,22 @@ type Sessions struct {
+ 	// SSOSharedWithDefault is the default SSO sharing policy for clients without explicit ssoSharedWith.
+ 	// "all" = share with all clients, "none" = share with no one (default: "none").
+ 	SSOSharedWithDefault string `json:"ssoSharedWithDefault"`
++	// IdentityRefresh controls how long dex serves the identity stored at the last
++	// login before it reads it from the connector again (Deckhouse).
++	IdentityRefresh *IdentityRefresh `json:"identityRefresh"`
++}
++
++// IdentityRefresh is how long the stored identity of a user stays good while
++// sessions are on (Deckhouse). A refresh token is refreshed with the stored claims
++// while they are younger than MaxAge, and with claims read from the connector
++// after; a login from a session after MaxAge signs the user in again.
++type IdentityRefresh struct {
++	// MaxAge is the age of the stored claims after which they are read again.
++	// Defaults to 0: read at every refresh, as without sessions.
++	MaxAge string `json:"maxAge"`
++	// GracePeriod is how much longer than MaxAge the stored claims are served when
++	// the connector fails to answer. Defaults to 0.
++	GracePeriod string `json:"gracePeriod"`
+ }
+ 
+ // MFAAuthenticator defines a multi-factor authentication provider.
+diff --git a/cmd/dex/config_identityrefresh_test.go b/cmd/dex/config_identityrefresh_test.go
+new file mode 100644
+index 00000000..28de4f0f
+--- /dev/null
++++ b/cmd/dex/config_identityrefresh_test.go
+@@ -0,0 +1,41 @@
++package main
++
++import (
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// TestParseSessionConfigIdentityRefresh: how long the stored identity is served
++// with sessions on (Deckhouse).
++func TestParseSessionConfigIdentityRefresh(t *testing.T) {
++	t.Run("defaults read the identity at every refresh", func(t *testing.T) {
++		sc, err := parseSessionConfig(&Sessions{})
++		require.NoError(t, err)
++		assert.Zero(t, sc.IdentityMaxAge)
++		assert.Zero(t, sc.IdentityGracePeriod)
++	})
++
++	t.Run("values", func(t *testing.T) {
++		sc, err := parseSessionConfig(&Sessions{IdentityRefresh: &IdentityRefresh{MaxAge: "10m", GracePeriod: "30s"}})
++		require.NoError(t, err)
++		assert.Equal(t, 10*time.Minute, sc.IdentityMaxAge)
++		assert.Equal(t, 30*time.Second, sc.IdentityGracePeriod)
++	})
++
++	for _, tc := range []struct {
++		name    string
++		refresh IdentityRefresh
++	}{
++		{"negative max age", IdentityRefresh{MaxAge: "-1m"}},
++		{"negative grace period", IdentityRefresh{GracePeriod: "-1s"}},
++		{"not a duration", IdentityRefresh{MaxAge: "10 minutes"}},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			_, err := parseSessionConfig(&Sessions{IdentityRefresh: &tc.refresh})
++			require.Error(t, err)
++		})
++	}
++}
+diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
+index 17c15f10..8aaf24f0 100644
+--- a/cmd/dex/serve.go
++++ b/cmd/dex/serve.go
+@@ -921,6 +921,15 @@ func parseSessionConfig(s *Sessions) (*session.Config, error) {
+ 		if s.SSOSharedWithDefault != "" {
+ 			sc.SSOSharedWithDefault = s.SSOSharedWithDefault
+ 		}
++		if r := s.IdentityRefresh; r != nil {
++			var err error
++			if sc.IdentityMaxAge, err = parseNonNegativeDuration("identityRefresh.maxAge", r.MaxAge); err != nil {
++				return nil, err
++			}
++			if sc.IdentityGracePeriod, err = parseNonNegativeDuration("identityRefresh.gracePeriod", r.GracePeriod); err != nil {
++				return nil, err
++			}
++		}
+ 	}
+ 	if sc.AbsoluteLifetime <= 0 {
+ 		return nil, fmt.Errorf("absoluteLifetime must be positive, got %v", sc.AbsoluteLifetime)
+@@ -943,6 +952,22 @@ func parseSessionConfig(s *Sessions) (*session.Config, error) {
+ 	return sc, nil
+ }
+ 
++// parseNonNegativeDuration parses the duration of the option name; an empty one
++// is zero.
++func parseNonNegativeDuration(name, value string) (time.Duration, error) {
++	if value == "" {
++		return 0, nil
++	}
++	d, err := time.ParseDuration(value)
++	if err != nil {
++		return 0, fmt.Errorf("invalid %s %q: %v", name, value, err)
++	}
++	if d < 0 {
++		return 0, fmt.Errorf("%s must not be negative, got %v", name, d)
++	}
++	return d, nil
++}
++
+ func buildMFAProviders(authenticators []MFAAuthenticator, issuerURL string, logger *slog.Logger) map[string]mfa.Provider {
+ 	if len(authenticators) == 0 {
+ 		return nil
+diff --git a/server/authflow/finalize.go b/server/authflow/finalize.go
+index bf9314ba..ff7e823d 100644
+--- a/server/authflow/finalize.go
++++ b/server/authflow/finalize.go
+@@ -49,6 +49,7 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 		Claims:      claims,
+ 		Time:        now,
+ 		Complete:    !h.MFAEnabled,
++		GroupsRead:  tokens.ParseScopes(authReq.Scopes).Groups,
+ 		Logger:      h.Logger,
+ 	})
+ 	var blocked *useridentity.BlockedError
+diff --git a/server/authflow/sessionlogin.go b/server/authflow/sessionlogin.go
+index 3b3864f6..7ff29a65 100644
+--- a/server/authflow/sessionlogin.go
++++ b/server/authflow/sessionlogin.go
+@@ -7,6 +7,7 @@ import (
+ 	"slices"
+ 	"time"
+ 
++	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/allowlist"
+ 	"github.com/dexidp/dex/server/connectors"
+ 	sessionpkg "github.com/dexidp/dex/server/session"
+@@ -79,6 +80,24 @@ func (h *Handler) trySessionLoginWithSession(ctx context.Context, r *http.Reques
+ 		return false
+ 	}
+ 
++	// Stored claims serve a session login only while fresh (Deckhouse; see
++	// session.Manager.ClaimsFresh). A local user's are read from the password at once.
++	// Any other user signs in through the provider again, which reads them, rather
++	// than have the provider credential spent here that the refresh tokens of the
++	// pair rotate.
++	if !h.Sessions.ClaimsFresh(ui, now) {
++		if session.ConnectorID != connectors.LocalConnector {
++			h.Logger.DebugContext(ctx, "session: stored identity is stale, falling back to the login",
++				"session_id", session.ID, "user_id", session.UserID, "claims_refreshed_at", ui.ClaimsRefreshedAt)
++			return false
++		}
++		claims, ok := h.localClaims(ctx, ui.Claims)
++		if !ok {
++			return false
++		}
++		ui.Claims = claims
++	}
++
+ 	// The other checks of the interactive login hold here too (Deckhouse): the
+ 	// allow-lists of the client and the connector, which also narrow the groups the
+ 	// tokens carry, and for a local user a password that is still there and need not
+@@ -111,6 +130,26 @@ func (h *Handler) trySessionLoginWithSession(ctx context.Context, r *http.Reques
+ 	return h.finishSessionLogin(ctx, r, w, authReq, session, &ui, state.AuthenticatedAt, ssoSource, now)
+ }
+ 
++// localClaims reads the claims of a local user from its password through the
++// local connector (Deckhouse); false when the user is gone or the read failed.
++func (h *Handler) localClaims(ctx context.Context, stored storage.Claims) (storage.Claims, bool) {
++	conn, err := h.Connectors.Get(ctx, connectors.LocalConnector)
++	if err != nil {
++		h.Logger.ErrorContext(ctx, "session: failed to get the local connector", "err", err)
++		return storage.Claims{}, false
++	}
++	refresher, ok := conn.Connector.(connector.RefreshConnector)
++	if !ok {
++		return stored, true
++	}
++	ident, err := refresher.Refresh(ctx, connector.Scopes{Groups: true}, tokens.IdentityFromClaims(stored))
++	if err != nil {
++		h.Logger.DebugContext(ctx, "session: failed to read the local user, falling back to the login", "err", err)
++		return storage.Claims{}, false
++	}
++	return tokens.ClaimsFromIdentity(ident), true
++}
++
+ // localPasswordUsable reports whether a local user may be signed in from a
+ // session: the password is still there — the user was not deleted — and does not
+ // have to be changed first. Any other connector has nothing to check here.
+diff --git a/server/authflow/sessionlogin_deckhouse_test.go b/server/authflow/sessionlogin_deckhouse_test.go
+index 5b1f26fd..3785cd20 100644
+--- a/server/authflow/sessionlogin_deckhouse_test.go
++++ b/server/authflow/sessionlogin_deckhouse_test.go
+@@ -11,6 +11,8 @@ import (
+ 	"github.com/stretchr/testify/assert"
+ 	"github.com/stretchr/testify/require"
+ 
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+@@ -178,6 +180,13 @@ func TestTrySessionLogin_LocalPassword(t *testing.T) {
+ 			const email = "jane@example.com"
+ 
+ 			ensureSessionLoginConnector(t, s, "local")
++			// The local connector reads the password, as in a server.
++			s.Connectors = connectors.NewCache(s.Storage, func(conn storage.Connector) (connector.Connector, error) {
++				if conn.ID == connectors.LocalConnector {
++					return connectors.NewPasswordDB(s.Storage), nil
++				}
++				return testResolveConnector(conn)
++			})
+ 			require.NoError(t, s.Storage.CreateAuthSession(ctx, storage.AuthSession{
+ 				ID: "test-nonce", Secret: "test-nonce", UserID: "jane-id", ConnectorID: "local",
+ 				ClientStates:   map[string]*storage.ClientAuthState{"client-1": {AuthenticatedAt: now, LastActivity: now}},
+@@ -195,6 +204,7 @@ func TestTrySessionLogin_LocalPassword(t *testing.T) {
+ 			if tc.password != nil {
+ 				pw := *tc.password
+ 				pw.Email, pw.UserID, pw.Username, pw.Hash = email, "jane-id", "jane", []byte("$2a$10$hash")
++				pw.Groups = []string{"devs"}
+ 				require.NoError(t, s.Storage.CreatePassword(ctx, pw))
+ 			}
+ 			authReq := storage.AuthRequest{
+@@ -207,10 +217,44 @@ func TestTrySessionLogin_LocalPassword(t *testing.T) {
+ 
+ 			ok := s.trySessionLogin(ctx, sessionCookieRequest("test-nonce"), httptest.NewRecorder(), &authReq)
+ 			assert.Equal(t, tc.want, ok)
++			if !tc.want {
++				return
++			}
++
++			// The identity is read from the password, groups included.
++			issued, err := s.Storage.GetAuthRequest(ctx, authReq.ID)
++			require.NoError(t, err)
++			assert.Equal(t, []string{"devs"}, issued.Claims.Groups)
+ 		})
+ 	}
+ }
+ 
++// TestTrySessionLogin_StaleIdentity: the stored identity serves a session login
++// only while younger than identityRefresh.maxAge; after it a user of a provider
++// signs in through the provider again, and a local user's identity is read from
++// the password at once (Deckhouse).
++func TestTrySessionLogin_StaleIdentity(t *testing.T) {
++	ctx := t.Context()
++
++	t.Run("provider user", func(t *testing.T) {
++		s := newTestSessionServer(t)
++		s.SkipApproval = true
++		authReq := setupSessionLoginFixture(t, s)
++		s.Sessions.Config.IdentityMaxAge = 10 * time.Minute
++
++		// The fixture's identity was read at its last login, 30 minutes ago.
++		ok := s.trySessionLogin(ctx, sessionCookieRequest("test-nonce"), httptest.NewRecorder(), &authReq)
++		assert.False(t, ok, "a stale identity sends the user to the provider")
++
++		require.NoError(t, s.Storage.UpdateUserIdentity(ctx, "user-1", "mock", func(old storage.UserIdentity) (storage.UserIdentity, error) {
++			old.ClaimsRefreshedAt = s.Now().Add(-time.Minute)
++			return old, nil
++		}))
++		ok = s.trySessionLogin(ctx, sessionCookieRequest("test-nonce"), httptest.NewRecorder(), &authReq)
++		assert.True(t, ok, "an identity read a minute ago serves the login")
++	})
++}
++
+ // TestTrySessionLogin_StorageUnavailable: a session that cannot be read is no
+ // session for this login, which goes on interactively, but the cookie stays, so the
+ // session serves again once the storage does (Deckhouse).
+diff --git a/server/authflow/sessionlogin_test.go b/server/authflow/sessionlogin_test.go
+index 01a07921..1de93c98 100644
+--- a/server/authflow/sessionlogin_test.go
++++ b/server/authflow/sessionlogin_test.go
+@@ -41,6 +41,9 @@ func newTestSessionServer(t *testing.T) *sessionTestServer {
+ 		CookieName:        "dex_session",
+ 		AbsoluteLifetime:  24 * time.Hour,
+ 		ValidIfNotUsedFor: 1 * time.Hour,
++		// Serve the stored identity, as upstream always does; the tests of reading
++		// it again set their own (Deckhouse).
++		IdentityMaxAge: 24 * time.Hour,
+ 	}
+ 	h := &Handler{
+ 		Storage:   memory.New(nil),
+diff --git a/server/grants/grants.go b/server/grants/grants.go
+index fdcb40b9..1a3b037d 100644
+--- a/server/grants/grants.go
++++ b/server/grants/grants.go
+@@ -12,6 +12,7 @@ import (
+ 	"time"
+ 
+ 	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/backchannel"
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/internal"
+ 	"github.com/dexidp/dex/server/lockout"
+@@ -169,6 +170,10 @@ type Handler struct {
+ 	Lockout *lockout.Guard
+ 	// Revocations records the refresh tokens revoked at /token/revoke.
+ 	Revocations *revocation.Recorder
++	// Backchannel tells the relying parties of a browser session that a refresh
++	// ended it (Deckhouse: the provider answered that the user is gone). Nil tells
++	// nobody.
++	Backchannel *backchannel.Notifier
+ 
+ 	grants map[string]Grant
+ }
+@@ -191,7 +196,7 @@ func (h *Handler) Mount(m router.Mux) {
+ 		&password{issuer: h.Issuer, storage: h.Storage, now: h.Now, logger: h.Logger, connectorID: h.PasswordConnector, lockout: h.Lockout},
+ 		&tokenExchange{issuer: h.Issuer, storage: h.Storage, now: h.Now, logger: h.Logger},
+ 		&authorizationCode{issuer: h.Issuer, storage: h.Storage, sessions: h.Sessions, connectors: h.Connectors, now: h.Now, logger: h.Logger},
+-		&refresh{storage: h.Storage, issuer: h.Issuer, policy: h.RefreshPolicy, sessions: h.Sessions, sessionsEnabled: h.SessionsEnabled, now: h.Now, logger: h.Logger},
++		&refresh{storage: h.Storage, issuer: h.Issuer, policy: h.RefreshPolicy, sessions: h.Sessions, sessionsEnabled: h.SessionsEnabled, revocations: h.Revocations, backchannel: h.Backchannel, now: h.Now, logger: h.Logger},
+ 		&deviceCode{storage: h.Storage, now: h.Now, logger: h.Logger},
+ 	)
+ 	m.HandleCORS("/token", h.handleToken)
+diff --git a/server/grants/password.go b/server/grants/password.go
+index a6e2b551..72a909f2 100644
+--- a/server/grants/password.go
++++ b/server/grants/password.go
+@@ -119,6 +119,7 @@ func (g *password) Authorize(ctx context.Context, req *Request, client storage.C
+ 		Time:            g.now(),
+ 		Complete:        true,
+ 		CoarseLastLogin: true,
++		GroupsRead:      tokens.ParseScopes(req.Scopes).Groups,
+ 		Logger:          g.logger,
+ 	})
+ 	if oerr := identityError(ctx, g.logger, err, tokenRequestLocked,
+diff --git a/server/grants/refresh.go b/server/grants/refresh.go
+index 3634384d..1c22995f 100644
+--- a/server/grants/refresh.go
++++ b/server/grants/refresh.go
+@@ -10,9 +10,11 @@ import (
+ 
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/allowlist"
++	"github.com/dexidp/dex/server/backchannel"
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/internal"
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/revocation"
+ 	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/tokens"
+@@ -30,6 +32,8 @@ type refresh struct {
+ 	issuer          *tokens.Issuer
+ 	policy          *tokens.RefreshStrategy
+ 	sessionsEnabled bool
++	revocations     *revocation.Recorder
++	backchannel     *backchannel.Notifier
+ 	now             func() time.Time
+ 	logger          *slog.Logger
+ }
+@@ -113,11 +117,16 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 	var userIdent *storage.UserIdentity
+ 	if g.sessionsEnabled {
+ 		ui, err := g.storage.GetUserIdentity(ctx, refreshToken.Claims.UserID, refreshToken.ConnectorID)
+-		if err != nil {
++		switch {
++		case err == nil:
++			userIdent = &ui
++		case errors.Is(err, storage.ErrNotFound):
++			// No identity to serve stored claims from (Deckhouse): the refresh reads
++			// the connector, as without sessions.
++		default:
+ 			g.logger.ErrorContext(ctx, "failed to get user identity", "err", err)
+ 			return nil, &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
+ 		}
+-		userIdent = &ui
+ 	}
+ 
+ 	authTime := time.Time{}
+@@ -130,20 +139,17 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 		ident       connector.Identity
+ 	)
+ 	if userIdent != nil {
+-		// When sessions are enabled, downstream refresh is disconnected from the
+-		// upstream provider: use the claims cached in UserIdentity at the last login
+-		// instead of contacting the connector (which may fail if the upstream token
+-		// has expired).
+-		claims := userIdent.Claims
+-		rawNewToken, ident, err = g.issuer.Refresh.Rotate(ctx, refreshToken, req.refreshID, g.policy,
+-			func(context.Context) (connector.Identity, error) { return tokens.IdentityFromClaims(claims), nil })
++		var oerr *oauth2.Error
++		if rawNewToken, ident, oerr = g.rotateStored(ctx, req, refreshToken, *userIdent, conn, scopes); oerr != nil {
++			return nil, oerr
++		}
+ 	} else {
+ 		// Otherwise re-read the identity from the connector.
+ 		rawNewToken, ident, err = g.issuer.Refresh.RotateUpstream(ctx, refreshToken, req.refreshID, g.policy,
+ 			upstream(conn, scopes))
+-	}
+-	if err != nil {
+-		return nil, g.rotateError(ctx, err, refreshToken)
++		if err != nil {
++			return nil, g.rotateError(ctx, err, refreshToken)
++		}
+ 	}
+ 
+ 	auth := tokens.Authorization{
+@@ -187,6 +193,123 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 	return ts.Response(g.now()), nil
+ }
+ 
++// rotateStored rotates the refresh token of a pair whose identity dex stores, as it
++// does with sessions on. Upstream serves the stored claims and never asks the
++// connector; here (Deckhouse) they are served while younger than the sessions'
++// identityRefresh maxAge (see session.Manager.ClaimsFresh), and read from the
++// connector after, the way a refresh without sessions reads them, and stored for
++// the refreshes to come.
++//
++// A provider that answers the user is gone or no longer let in ends everything
++// the pair holds (see endPair). A provider that fails to answer leaves the stored
++// claims served for the grace period beyond maxAge; after it the refresh fails as a
++// server error, and the token is kept for when the provider is back.
++func (g *refresh) rotateStored(ctx context.Context, req *Request, refreshToken *storage.RefreshToken, ui storage.UserIdentity, conn connectors.Connector, scopes []string) (string, connector.Identity, *oauth2.Error) {
++	now := g.now()
++	stored := func(context.Context) (connector.Identity, error) { return tokens.IdentityFromClaims(ui.Claims), nil }
++	rotateStoredClaims := func() (string, connector.Identity, *oauth2.Error) {
++		rawNewToken, ident, err := g.issuer.Refresh.Rotate(ctx, refreshToken, req.refreshID, g.policy, stored)
++		if err != nil {
++			return "", ident, g.rotateError(ctx, err, refreshToken)
++		}
++		return rawNewToken, ident, nil
++	}
++
++	if g.sessions.ClaimsFresh(ui, now) {
++		return rotateStoredClaims()
++	}
++
++	// The identity is stored for every client of the pair, so it is read whole:
++	// with the groups whatever this token asked for. The token carries only what
++	// it asked for (see tokens.Issuer).
++	up := upstream(conn, append(slices.Clone(scopes), tokens.ScopeGroups))
++	rawNewToken, ident, err := g.issuer.Refresh.RotateUpstream(ctx, refreshToken, req.refreshID, g.policy, up)
++	if err == nil {
++		// A local user's claims are read at every refresh anyway (see
++		// session.Manager.ClaimsFresh): storing them would only cost a write.
++		if up.Refresh != nil && ui.ConnectorID != connectors.LocalConnector {
++			if err := useridentity.Refreshed(ctx, g.storage, ui.UserID, ui.ConnectorID, tokens.ClaimsFromIdentity(ident), now); err != nil {
++				g.logger.ErrorContext(ctx, "failed to store the identity read from the connector", "err", err)
++			}
++		}
++		return rawNewToken, ident, nil
++	}
++
++	var upstreamErr *tokens.UpstreamError
++	switch {
++	case errors.As(err, &upstreamErr) && upstreamErr.Refused && identityGone(upstreamErr.Err):
++		g.logger.WarnContext(ctx, "refresh refused by the upstream provider, ending the sessions of the user",
++			upstreamRefusal(upstreamErr.Err, refreshToken)...)
++		g.endPair(ctx, refreshToken.Claims.UserID, refreshToken.ConnectorID)
++		return "", ident, &oauth2.Error{
++			Type:        oauth2.InvalidGrant,
++			Description: "The identity provider refused to refresh the identity.",
++			Status:      http.StatusBadRequest,
++		}
++	case errors.As(err, &upstreamErr) && !upstreamErr.Refused && g.sessions.ClaimsUsable(ui, now):
++		g.logger.WarnContext(ctx, "refresh: the upstream provider did not answer, serving the stored identity",
++			"connector_id", refreshToken.ConnectorID, "client_id", refreshToken.ClientID,
++			"claims_refreshed_at", ui.ClaimsRefreshedAt, "err", err)
++		return rotateStoredClaims()
++	default:
++		return "", ident, g.rotateError(ctx, err, refreshToken)
++	}
++}
++
++// identityGone reports whether the connector answered that the user is gone or no
++// longer let in, as opposed to refusing the credential it was offered.
++func identityGone(err error) bool {
++	var groupsErr *connector.UserNotInRequiredGroupsError
++	return errors.Is(err, connector.ErrIdentityGone) || errors.As(err, &groupsErr)
++}
++
++// endPair ends everything dex holds for a pair whose identity provider answered
++// that the user is gone or no longer let in (Deckhouse): its browser sessions and
++// its refresh tokens. Each is announced to the components that trust the tokens
++// without asking dex (see server/revocation) before it goes. Failures are logged:
++// the refusal stands either way, and a token or session left behind fails at its
++// next use against the same provider.
++func (g *refresh) endPair(ctx context.Context, userID, connectorID string) {
++	var sessions []storage.AuthSession
++	all, err := g.storage.ListAuthSessions(ctx)
++	if err != nil {
++		g.logger.ErrorContext(ctx, "failed to list auth sessions", "err", err)
++	}
++	for _, session := range all {
++		if session.UserID == userID && session.ConnectorID == connectorID {
++			sessions = append(sessions, session)
++		}
++	}
++
++	var refreshes []storage.RefreshToken
++	offline, err := g.storage.GetOfflineSessions(ctx, userID, connectorID)
++	if err != nil && !errors.Is(err, storage.ErrNotFound) {
++		g.logger.ErrorContext(ctx, "failed to get offline sessions", "err", err)
++	}
++	for _, ref := range offline.Refresh {
++		refresh, err := g.storage.GetRefresh(ctx, ref.ID)
++		if err != nil {
++			continue
++		}
++		refreshes = append(refreshes, refresh)
++	}
++
++	if err := g.revocations.PairEnded(ctx, sessions, refreshes); err != nil {
++		g.logger.ErrorContext(ctx, "failed to record the end of the sessions of a user", "err", err)
++	}
++	for _, session := range sessions {
++		// The relying parties of the session learn that it ended, as at a logout
++		// (OpenID Connect Back-Channel Logout).
++		if g.backchannel != nil {
++			g.backchannel.Notify(ctx, &session)
++		}
++		if err := g.storage.DeleteAuthSession(ctx, session.ID); err != nil && !errors.Is(err, storage.ErrNotFound) {
++			g.logger.ErrorContext(ctx, "failed to delete auth session", "session_id", session.ID, "err", err)
++		}
++	}
++	g.issuer.Refresh.RevokeAll(ctx, userID, connectorID)
++}
++
+ // checkAllowLists applies the allow-lists of the client and the connector to
+ // claims of the refresh token's user (see allowlist.Apply). A refused user
+ // loses the client's refresh token, as a refused login gets none; msg is the
+diff --git a/server/helpers_test.go b/server/helpers_test.go
+index e3448e69..6c09d2a4 100644
+--- a/server/helpers_test.go
++++ b/server/helpers_test.go
+@@ -228,6 +228,9 @@ func testSessionConfig() *session.Config {
+ 		CookieEncryptionKey: testSessionKey,
+ 		AbsoluteLifetime:    24 * time.Hour,
+ 		ValidIfNotUsedFor:   time.Hour,
++		// Serve the stored identity, as upstream always does; the tests of reading
++		// it again set their own (Deckhouse).
++		IdentityMaxAge: 24 * time.Hour,
+ 	}
+ }
+ 
+diff --git a/server/revocation/revocation.go b/server/revocation/revocation.go
+index 8eeff33f..637bd901 100644
+--- a/server/revocation/revocation.go
++++ b/server/revocation/revocation.go
+@@ -86,6 +86,9 @@ const (
+ 	ReasonSessionLogout = "SessionLogout"
+ 	// ReasonTokenRevoked: the client revoked a refresh token (RFC 7009).
+ 	ReasonTokenRevoked = "TokenRevoked"
++	// ReasonIdentityGone: the identity provider answered that the user is gone
++	// or no longer let in (Deckhouse; see PairEnded).
++	ReasonIdentityGone = "IdentityGone"
+ 
+ 	sourceDex = "dex"
+ )
+@@ -112,27 +115,49 @@ func (r *Recorder) Enabled() bool {
+ // SessionEnded records that the browser session ended: its "sid" and the
+ // clients it reached.
+ func (r *Recorder) SessionEnded(ctx context.Context, session storage.AuthSession) error {
+-	return r.record(ctx, storage.Revocation{
++	return r.record(ctx, sessionRevocation(session, ReasonSessionLogout))
++}
++
++// GrantRevoked records that its client revoked the refresh token.
++func (r *Recorder) GrantRevoked(ctx context.Context, refresh storage.RefreshToken) error {
++	return r.record(ctx, grantRevocation(refresh, ReasonTokenRevoked))
++}
++
++// PairEnded records the end of the browser sessions and refresh tokens of a pair
++// whose identity provider answered that the user is gone or no longer let in
++// (Deckhouse). Every one is tried; the errors are returned together.
++func (r *Recorder) PairEnded(ctx context.Context, sessions []storage.AuthSession, refreshes []storage.RefreshToken) error {
++	errs := make([]error, 0, len(sessions)+len(refreshes))
++	for _, session := range sessions {
++		errs = append(errs, r.record(ctx, sessionRevocation(session, ReasonIdentityGone)))
++	}
++	for _, refresh := range refreshes {
++		errs = append(errs, r.record(ctx, grantRevocation(refresh, ReasonIdentityGone)))
++	}
++	return errors.Join(errs...)
++}
++
++func sessionRevocation(session storage.AuthSession, reason string) storage.Revocation {
++	return storage.Revocation{
+ 		Type:        storage.RevocationSession,
+ 		ConnectorID: session.ConnectorID,
+ 		UserID:      session.UserID,
+ 		SessionID:   session.ID,
+ 		Clients:     slices.Sorted(maps.Keys(session.ClientStates)),
+-		Reason:      ReasonSessionLogout,
+-	})
++		Reason:      reason,
++	}
+ }
+ 
+-// GrantRevoked records that its client revoked the refresh token.
+-func (r *Recorder) GrantRevoked(ctx context.Context, refresh storage.RefreshToken) error {
+-	return r.record(ctx, storage.Revocation{
++func grantRevocation(refresh storage.RefreshToken, reason string) storage.Revocation {
++	return storage.Revocation{
+ 		Type:        storage.RevocationGrant,
+ 		ConnectorID: refresh.ConnectorID,
+ 		UserID:      refresh.Claims.UserID,
+ 		GrantID:     refresh.ID,
+ 		ClientID:    refresh.ClientID,
+ 		Clients:     []string{refresh.ClientID},
+-		Reason:      ReasonTokenRevoked,
+-	})
++		Reason:      reason,
++	}
+ }
+ 
+ // record creates rev. A revocation recorded before, by a repeated request, is
+diff --git a/server/server.go b/server/server.go
+index e9364419..d1d97de0 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -308,6 +308,7 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+ 			SupportedGrantTypes: rc.grantTypes,
+ 			Lockout:             guard,
+ 			Revocations:         s.revocations,
++			Backchannel:         s.backchannel,
+ 		},
+ 		&userinfo.Handler{
+ 			Issuer: s.issuerURL.String(),
+diff --git a/server/server_grant_refresh_test.go b/server/server_grant_refresh_test.go
+index 938ad81b..2ef6df5e 100644
+--- a/server/server_grant_refresh_test.go
++++ b/server/server_grant_refresh_test.go
+@@ -235,6 +235,8 @@ func TestRefreshTokenAuthTime(t *testing.T) {
+ 			sessionConfig: &session.Config{
+ 				CookieName:       "dex_session",
+ 				AbsoluteLifetime: 24 * time.Hour,
++				// Serve the stored identity, as upstream does (Deckhouse).
++				IdentityMaxAge: 24 * time.Hour,
+ 			},
+ 			createUserIdentity: true,
+ 			wantAuthTime:       true,
+@@ -246,13 +248,17 @@ func TestRefreshTokenAuthTime(t *testing.T) {
+ 			wantAuthTime:       false,
+ 		},
+ 		{
++			// Without a stored identity the refresh reads the connector, as without
++			// sessions, and has no auth time to report (Deckhouse).
+ 			name: "sessions enabled but user identity missing",
+ 			sessionConfig: &session.Config{
+ 				CookieName:       "dex_session",
+ 				AbsoluteLifetime: 24 * time.Hour,
++				// Serve the stored identity, as upstream does (Deckhouse).
++				IdentityMaxAge: 24 * time.Hour,
+ 			},
+ 			createUserIdentity: false,
+-			wantHTTPError:      true,
++			wantAuthTime:       false,
+ 		},
+ 	}
+ 
+@@ -375,7 +381,7 @@ func TestRefreshDisconnectsUpstreamWhenSessionsEnabled(t *testing.T) {
+ 			wantOK:             true,
+ 		},
+ 		{
+-			name:               "sessions enabled without user identity - fails",
++			name:               "sessions enabled without user identity - reads upstream, which fails",
+ 			sessionsEnabled:    true,
+ 			createUserIdentity: false,
+ 			wantOK:             false,
+@@ -396,6 +402,8 @@ func TestRefreshDisconnectsUpstreamWhenSessionsEnabled(t *testing.T) {
+ 					c.SessionConfig = &session.Config{
+ 						CookieName:       "dex_session",
+ 						AbsoluteLifetime: 24 * time.Hour,
++						// Serve the stored identity, as upstream does (Deckhouse).
++						IdentityMaxAge: 24 * time.Hour,
+ 					}
+ 				}
+ 			})
+diff --git a/server/server_identity_refresh_test.go b/server/server_identity_refresh_test.go
+new file mode 100644
+index 00000000..14b376e9
+--- /dev/null
++++ b/server/server_identity_refresh_test.go
+@@ -0,0 +1,266 @@
++package server
++
++import (
++	"bytes"
++	"context"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++	xoauth2 "golang.org/x/oauth2"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/revocation"
++	"github.com/dexidp/dex/server/session"
++	"github.com/dexidp/dex/storage"
++)
++
++// With sessions on, a refresh serves the identity stored at the last login only
++// while it is younger than identityRefresh.maxAge, and reads it from the connector
++// after (Deckhouse).
++func TestRefreshReadsStaleIdentity(t *testing.T) {
++	now := time.Now().UTC().Round(time.Second)
++	const (
++		maxAge = 10 * time.Minute
++		grace  = 5 * time.Minute
++	)
++	stored := storage.Claims{UserID: "1", Username: "jane", Email: "jane.doe@example.com", Groups: []string{"a", "b"}}
++	upstream := connector.Identity{UserID: "1", Username: "jane2", Email: "jane.doe@example.com", Groups: []string{"x"}}
++
++	tests := []struct {
++		name string
++		// age is the age of the stored claims.
++		age         time.Duration
++		upstreamErr error
++		wantStatus  int
++		wantCalls   int
++		// wantUsername is the name the ID token carries.
++		wantUsername string
++		// wantStored is the identity stored after the refresh.
++		wantStored storage.Claims
++		// wantEnded expects everything of the pair to be ended.
++		wantEnded bool
++	}{
++		{
++			name:         "fresh claims are served stored",
++			age:          maxAge - time.Second,
++			wantStatus:   http.StatusOK,
++			wantUsername: "jane",
++			wantStored:   stored,
++		},
++		{
++			name:         "stale claims are read and stored",
++			age:          maxAge,
++			wantStatus:   http.StatusOK,
++			wantCalls:    1,
++			wantUsername: "jane2",
++			wantStored:   storage.Claims{UserID: "1", Username: "jane2", Email: "jane.doe@example.com", Groups: []string{"x"}},
++		},
++		{
++			name:        "provider answers the user is gone",
++			age:         maxAge,
++			upstreamErr: fmt.Errorf("user not found: %w", connector.ErrIdentityGone),
++			wantStatus:  http.StatusBadRequest,
++			wantCalls:   1,
++			wantStored:  stored,
++			wantEnded:   true,
++		},
++		{
++			name:        "provider refuses only the credential",
++			age:         maxAge,
++			upstreamErr: &xoauth2.RetrieveError{ErrorCode: "invalid_grant"},
++			wantStatus:  http.StatusBadRequest,
++			wantCalls:   1,
++			wantStored:  stored,
++		},
++		{
++			name:         "provider fails within the grace period",
++			age:          maxAge + grace - time.Second,
++			upstreamErr:  errors.New("connection refused"),
++			wantStatus:   http.StatusOK,
++			wantCalls:    1,
++			wantUsername: "jane",
++			wantStored:   stored,
++		},
++		{
++			name:        "provider fails after the grace period",
++			age:         maxAge + grace,
++			upstreamErr: errors.New("connection refused"),
++			wantStatus:  http.StatusInternalServerError,
++			wantCalls:   1,
++			wantStored:  stored,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			httpServer, s := newTestServer(t, func(c *Config) {
++				c.Now = func() time.Time { return now }
++				c.SessionConfig = &session.Config{
++					CookieName:          "dex_session",
++					AbsoluteLifetime:    24 * time.Hour,
++					ValidIfNotUsedFor:   time.Hour,
++					IdentityMaxAge:      maxAge,
++					IdentityGracePeriod: grace,
++				}
++			})
++			defer httpServer.Close()
++
++			ctx := t.Context()
++			mockRefreshTokenTestStorage(t, s.storage, false)
++			conn := &scriptedRefreshConnector{identity: upstream, err: tc.upstreamErr}
++			s.connectors.Set("test", connectors.Connector{Connector: conn})
++
++			require.NoError(t, s.storage.CreateUserIdentity(ctx, storage.UserIdentity{
++				UserID: "1", ConnectorID: "test", Claims: stored,
++				LastLogin: now.Add(-time.Hour), ClaimsRefreshedAt: now.Add(-tc.age),
++			}))
++			// Another client's token of the pair, its browser session, and a
++			// session of another pair.
++			other := newTestRefreshToken(t, s, "1", "test", "other")
++			require.NoError(t, s.storage.UpdateOfflineSessions(ctx, "1", "test", func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++				old.Refresh["other"] = &storage.RefreshTokenRef{ID: other, ClientID: "other"}
++				return old, nil
++			}))
++			newTestAuthSession(t, s, "1", "test", "pair-session")
++			newTestAuthSession(t, s, "2", "test", "another-pair")
++
++			rr := postRefresh(t, s, "test", "bar")
++			require.Equal(t, tc.wantStatus, rr.Code, rr.Body.String())
++			assert.Equal(t, tc.wantCalls, conn.calls, "calls to the connector")
++
++			ui, err := s.storage.GetUserIdentity(ctx, "1", "test")
++			require.NoError(t, err)
++			assert.Equal(t, tc.wantStored, ui.Claims)
++			if tc.wantCalls == 1 && tc.wantStatus == http.StatusOK && tc.upstreamErr == nil {
++				assert.Equal(t, now, ui.ClaimsRefreshedAt)
++			}
++
++			if tc.wantStatus == http.StatusOK {
++				var resp struct {
++					IDToken string `json:"id_token"`
++				}
++				require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
++				assert.Equal(t, tc.wantUsername, decodeJWTClaims(t, resp.IDToken)["name"])
++			}
++
++			_, errToken := s.storage.GetRefresh(ctx, "test")
++			_, errOther := s.storage.GetRefresh(ctx, other)
++			_, errSession := s.storage.GetAuthSession(ctx, "pair-session")
++			_, errAnother := s.storage.GetAuthSession(ctx, "another-pair")
++			require.NoError(t, errAnother, "another pair is left alone")
++			if !tc.wantEnded {
++				require.NoError(t, errOther, "the pair's other token is kept")
++				require.NoError(t, errSession, "the pair's session is kept")
++				if tc.wantStatus != http.StatusBadRequest {
++					require.NoError(t, errToken, "the token is kept")
++				}
++				return
++			}
++
++			require.ErrorIs(t, errToken, storage.ErrNotFound)
++			require.ErrorIs(t, errOther, storage.ErrNotFound)
++			require.ErrorIs(t, errSession, storage.ErrNotFound)
++
++			var kinds []string
++			for _, rev := range serverRevocations(t, s) {
++				assert.Equal(t, revocation.ReasonIdentityGone, rev.Reason)
++				kinds = append(kinds, string(rev.Type)+":"+rev.SessionID+rev.GrantID)
++			}
++			assert.ElementsMatch(t, []string{"session:pair-session", "grant:test", "grant:" + other}, kinds)
++		})
++	}
++}
++
++// TestRefreshEndedPairNotifiesBackchannel: when the provider answers that the user is
++// gone, the relying parties of the browser sessions it ends get a logout token, as
++// at a logout (Deckhouse).
++func TestRefreshEndedPairNotifiesBackchannel(t *testing.T) {
++	now := time.Now().UTC().Round(time.Second)
++	rp, wait := startBackchannelRP(t, http.StatusOK)
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.Now = func() time.Time { return now }
++		c.SessionConfig = &session.Config{
++			CookieName:        "dex_session",
++			AbsoluteLifetime:  24 * time.Hour,
++			ValidIfNotUsedFor: time.Hour,
++			IdentityMaxAge:    10 * time.Minute,
++		}
++	})
++	defer httpServer.Close()
++
++	ctx := t.Context()
++	mockRefreshTokenTestStorage(t, s.storage, false)
++	s.connectors.Set("test", connectors.Connector{Connector: &scriptedRefreshConnector{
++		err: fmt.Errorf("user not found: %w", connector.ErrIdentityGone),
++	}})
++	require.NoError(t, s.storage.CreateUserIdentity(ctx, storage.UserIdentity{
++		UserID: "1", ConnectorID: "test", Claims: storage.Claims{UserID: "1", Username: "jane"},
++		LastLogin: now.Add(-time.Hour), ClaimsRefreshedAt: now.Add(-time.Hour),
++	}))
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++		ID: "web-a", Secret: "secret", RedirectURIs: []string{"https://example.com/callback"},
++		BackchannelLogoutURI: rp.URL + "/web-a",
++	}))
++	require.NoError(t, s.storage.CreateAuthSession(ctx, storage.AuthSession{
++		ID: "pair-session", Secret: testSessionSecret("pair-session"),
++		UserID: "1", ConnectorID: "test", CreatedAt: now, LastActivity: now,
++		ClientStates: map[string]*storage.ClientAuthState{"web-a": {AuthenticatedAt: now}},
++	}))
++
++	rr := postRefresh(t, s, "test", "bar")
++	require.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
++
++	got := wait(1)
++	require.Len(t, got, 1)
++	assert.Equal(t, "web-a", got[0].clientID)
++	assert.Equal(t, "pair-session", decodeJWTClaims(t, got[0].token)["sid"])
++}
++
++// postRefresh posts a refresh of the token id with its secret token for the client
++// "test".
++func postRefresh(t *testing.T, s *Server, id, token string) *httptest.ResponseRecorder {
++	t.Helper()
++	tokenData, err := internal.Marshal(&internal.RefreshToken{RefreshId: id, Token: token})
++	require.NoError(t, err)
++	v := url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tokenData}}
++	req := httptest.NewRequest(http.MethodPost, "/token", bytes.NewBufferString(v.Encode()))
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	req.SetBasicAuth("test", "barfoo")
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, req)
++	return rr
++}
++
++// scriptedRefreshConnector answers every refresh with identity, or with err, and
++// counts the refreshes.
++type scriptedRefreshConnector struct {
++	identity connector.Identity
++	err      error
++	calls    int
++}
++
++func (c *scriptedRefreshConnector) LoginURL(_ connector.Scopes, callbackURL, state string) (string, []byte, error) {
++	return callbackURL + "?state=" + url.QueryEscape(state), nil, nil
++}
++
++func (c *scriptedRefreshConnector) HandleCallback(connector.Scopes, []byte, *http.Request) (connector.Identity, error) {
++	return c.identity, nil
++}
++
++func (c *scriptedRefreshConnector) Refresh(context.Context, connector.Scopes, connector.Identity) (connector.Identity, error) {
++	c.calls++
++	if c.err != nil {
++		return connector.Identity{}, c.err
++	}
++	return c.identity, nil
++}
+diff --git a/server/session/session.go b/server/session/session.go
+index 65412ff5..188a114f 100644
+--- a/server/session/session.go
++++ b/server/session/session.go
+@@ -6,6 +6,7 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"log/slog"
++	"math"
+ 	"net"
+ 	"net/http"
+ 	"slices"
+@@ -27,8 +28,54 @@ type Config struct {
+ 	// SSOSharedWithDefault is the default SSO sharing policy for clients without explicit SSOSharedWith.
+ 	// "all" = share with all clients, "none" or "" = share with no one (default).
+ 	SSOSharedWithDefault string
++	// IdentityMaxAge is how long the claims stored at a login, or read since, are
++	// served before they are read from the connector again (Deckhouse).
++	IdentityMaxAge time.Duration
++	// IdentityGracePeriod is how much longer than IdentityMaxAge stored claims are
++	// served when the connector fails to answer (Deckhouse).
++	IdentityGracePeriod time.Duration
+ }
+ 
++// ClaimsFresh reports whether the claims stored for ui may be served at now
++// without reading them from the connector (Deckhouse): they are younger than
++// IdentityMaxAge. The claims of a local user are never served stored: reading them
++// again costs one read of its password, and a deleted user or a changed group then
++// shows at once.
++func (m *Manager) ClaimsFresh(ui storage.UserIdentity, now time.Time) bool {
++	if m.Config == nil || ui.ConnectorID == localConnector {
++		return false
++	}
++	return claimsAge(ui, now) < m.Config.IdentityMaxAge
++}
++
++// ClaimsUsable reports whether the stored claims of ui may still be served at now
++// when the connector failed to answer (Deckhouse): they are younger than
++// IdentityMaxAge and IdentityGracePeriod together.
++func (m *Manager) ClaimsUsable(ui storage.UserIdentity, now time.Time) bool {
++	if m.Config == nil {
++		return false
++	}
++	return claimsAge(ui, now) < m.Config.IdentityMaxAge+m.Config.IdentityGracePeriod
++}
++
++// claimsAge is how long ago the stored claims of ui were read from the connector.
++// An identity stored before ClaimsRefreshedAt existed has the claims of its last
++// login, and one that has no login either has claims of unknown age.
++func claimsAge(ui storage.UserIdentity, now time.Time) time.Duration {
++	readAt := ui.ClaimsRefreshedAt
++	if readAt.IsZero() {
++		readAt = ui.LastLogin
++	}
++	if readAt.IsZero() {
++		return math.MaxInt64
++	}
++	return now.Sub(readAt)
++}
++
++// localConnector is the ID of the built-in password connector, as
++// server/connectors.LocalConnector names it.
++const localConnector = "local"
++
+ // Manager owns the session lifecycle. Construct it with New.
+ type Manager struct {
+ 	Storage   storage.Storage
+diff --git a/server/useridentity/useridentity.go b/server/useridentity/useridentity.go
+index 1c71a378..ca19a5d3 100644
+--- a/server/useridentity/useridentity.go
++++ b/server/useridentity/useridentity.go
+@@ -82,11 +82,40 @@ type Login struct {
+ 	// taken from LastLogin. A browser login keeps LastLogin exact, as sessions
+ 	// report it as the auth time.
+ 	CoarseLastLogin bool
++	// GroupsRead reports that the connector was asked for the groups of the user
++	// (the groups scope): LDAP, Crowd, GitHub and GitLab read them only then. A
++	// login without it keeps the groups stored and leaves the claims as old as
++	// they were, so a session login or a refresh never serves its empty groups
++	// as the user's (Deckhouse).
++	GroupsRead bool
+ 	// Logger logs a write of the identity given up for the stored one (see
+ 	// Record). Nil logs nothing.
+ 	Logger *slog.Logger
+ }
+ 
++// claimsOfUnknownAge is the ClaimsRefreshedAt of an identity whose first login
++// did not read the groups: its claims are stale from the start (a zero time would
++// fall back to LastLogin, which that login sets).
++var claimsOfUnknownAge = time.Unix(1, 0).UTC()
++
++// movesClaimsRefreshedAt reports whether login l rewrites the ClaimsRefreshedAt
++// stored: the claims of every login that read the groups come from the connector,
++// so a login older than lastLoginPrecision is moved on, as LastLogin of the
++// password grant is. It never moves back.
++func (l Login) movesClaimsRefreshedAt(stored time.Time) bool {
++	return l.GroupsRead && l.Time.Sub(stored) >= lastLoginPrecision
++}
++
++// claimsOver are the claims login l stores over stored: its own, with the groups
++// stored when it did not read them.
++func (l Login) claimsOver(stored storage.Claims) storage.Claims {
++	claims := l.Claims
++	if !l.GroupsRead {
++		claims.Groups = stored.Groups
++	}
++	return claims
++}
++
+ // movesLastLogin reports whether a complete login l rewrites the LastLogin
+ // stored. LastLogin never moves back.
+ func (l Login) movesLastLogin(stored time.Time) bool {
+@@ -116,12 +145,18 @@ func Record(ctx context.Context, s storage.Storage, l Login) (uint64, error) {
+ 	}
+ 
+ 	// The first login of the pair.
++	refreshedAt := l.Time
++	if !l.GroupsRead {
++		refreshedAt = claimsOfUnknownAge
++	}
+ 	err = s.CreateUserIdentity(ctx, storage.UserIdentity{
+ 		UserID:      l.Claims.UserID,
+ 		ConnectorID: l.ConnectorID,
+ 		Claims:      l.Claims,
+ 		Consents:    make(map[string][]string),
+ 		CreatedAt:   l.Time,
++
++		ClaimsRefreshedAt: refreshedAt,
+ 	})
+ 	if err != nil && !errors.Is(err, storage.ErrAlreadyExists) {
+ 		return 0, fmt.Errorf("create user identity: %w", err)
+@@ -146,14 +181,19 @@ func update(ctx context.Context, s storage.Storage, l Login) (uint64, error) {
+ 			return old, blockedError(old)
+ 		}
+ 		generation = old.Generation
++		claims := l.claimsOver(old.Claims)
+ 		movesLastLogin := l.Complete && l.movesLastLogin(old.LastLogin)
+-		if sameClaims(old.Claims, l.Claims) && !movesLastLogin {
++		movesClaimsRefreshedAt := l.movesClaimsRefreshedAt(old.ClaimsRefreshedAt)
++		if sameClaims(old.Claims, claims) && !movesLastLogin && !movesClaimsRefreshedAt {
+ 			return old, errUnchanged
+ 		}
+-		old.Claims = l.Claims
++		old.Claims = claims
+ 		if movesLastLogin {
+ 			old.LastLogin = l.Time
+ 		}
++		if movesClaimsRefreshedAt {
++			old.ClaimsRefreshedAt = l.Time
++		}
+ 		return old, nil
+ 	}
+ 
+@@ -184,6 +224,25 @@ func update(ctx context.Context, s storage.Storage, l Login) (uint64, error) {
+ 	return generation, nil
+ }
+ 
++// Refreshed records claims of the pair read from the connector at time at, outside
++// a login (Deckhouse): a refresh that read the identity again because the stored
++// claims grew older than the sessions allow. Claims read before the stored ones are
++// not written over them.
++func Refreshed(ctx context.Context, s storage.Storage, userID, connectorID string, claims storage.Claims, at time.Time) error {
++	err := s.UpdateUserIdentity(ctx, userID, connectorID, func(old storage.UserIdentity) (storage.UserIdentity, error) {
++		if !at.After(old.ClaimsRefreshedAt) {
++			return old, errUnchanged
++		}
++		old.Claims = claims
++		old.ClaimsRefreshedAt = at
++		return old, nil
++	})
++	if err != nil && !errors.Is(err, errUnchanged) {
++		return fmt.Errorf("update user identity: %w", err)
++	}
++	return nil
++}
++
+ // isWriteFailure reports whether err is a failure to write an identity, as
+ // opposed to the identity missing, the pair blocked or nothing to write.
+ func isWriteFailure(err error) bool {
+diff --git a/server/useridentity/useridentity_test.go b/server/useridentity/useridentity_test.go
+index 0b55a03c..e5bd8c9a 100644
+--- a/server/useridentity/useridentity_test.go
++++ b/server/useridentity/useridentity_test.go
+@@ -77,7 +77,7 @@ func TestRecord(t *testing.T) {
+ 				require.NoError(t, s.CreateUserIdentity(ctx, *tc.existing))
+ 			}
+ 
+-			generation, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: tc.complete})
++			generation, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, GroupsRead: true, Time: t0, Complete: tc.complete})
+ 			require.NoError(t, err)
+ 			require.Equal(t, tc.wantGeneration, generation)
+ 
+@@ -106,7 +106,7 @@ func TestRecordBlocked(t *testing.T) {
+ 	}
+ 	require.NoError(t, s.CreateUserIdentity(ctx, old))
+ 
+-	_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++	_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, GroupsRead: true, Time: t0, Complete: true})
+ 
+ 	var blocked *BlockedError
+ 	require.ErrorAs(t, err, &blocked)
+@@ -138,7 +138,7 @@ func TestRecordCreateRace(t *testing.T) {
+ 	ctx := t.Context()
+ 	s := &createRace{Storage: newStorage(t)}
+ 
+-	generation, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++	generation, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, GroupsRead: true, Time: t0, Complete: true})
+ 	require.NoError(t, err)
+ 	require.Equal(t, uint64(1), generation, "the generation of the identity created meanwhile")
+ 
+@@ -168,11 +168,11 @@ func (s raiseAfterCreate) CreateUserIdentity(ctx context.Context, u storage.User
+ func TestRecordFirstLoginGeneration(t *testing.T) {
+ 	ctx := t.Context()
+ 
+-	generation, err := Record(ctx, newStorage(t), Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++	generation, err := Record(ctx, newStorage(t), Login{ConnectorID: "local", Claims: claims, GroupsRead: true, Time: t0, Complete: true})
+ 	require.NoError(t, err)
+ 	require.Zero(t, generation)
+ 
+-	generation, err = Record(ctx, raiseAfterCreate{Storage: newStorage(t)}, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++	generation, err = Record(ctx, raiseAfterCreate{Storage: newStorage(t)}, Login{ConnectorID: "local", Claims: claims, GroupsRead: true, Time: t0, Complete: true})
+ 	require.NoError(t, err)
+ 	require.Equal(t, uint64(1), generation, "the generation stored, not the one created")
+ }
+@@ -192,7 +192,7 @@ func TestRecordFirstLoginOfLockedPair(t *testing.T) {
+ 	ctx := t.Context()
+ 	s := lockOnCreate{Storage: newStorage(t)}
+ 
+-	_, err := Record(ctx, s, Login{ConnectorID: "ldap", Claims: claims, Time: t0, Complete: true})
++	_, err := Record(ctx, s, Login{ConnectorID: "ldap", Claims: claims, GroupsRead: true, Time: t0, Complete: true})
+ 
+ 	var blocked *BlockedError
+ 	require.ErrorAs(t, err, &blocked)
+@@ -214,46 +214,58 @@ func TestRecordWritesOnlyChanges(t *testing.T) {
+ 		login         Login
+ 		wantClaims    storage.Claims
+ 		wantLastLogin time.Time
++		// wantRefreshed is the ClaimsRefreshedAt written, the stored one (that of
++		// the last login) when zero.
++		wantRefreshed time.Time
+ 	}{
+ 		{
+ 			name:          "password grant within a minute of the last login writes nothing",
+ 			lastLogin:     t0.Add(-59 * time.Second),
+-			login:         Login{Claims: claims, Complete: true, CoarseLastLogin: true},
++			login:         Login{GroupsRead: true, Claims: claims, Complete: true, CoarseLastLogin: true},
+ 			wantClaims:    claims,
+ 			wantLastLogin: t0.Add(-59 * time.Second),
+ 		},
+ 		{
+ 			name:          "password grant a minute after the last login moves it",
+ 			lastLogin:     t0.Add(-time.Minute),
+-			login:         Login{Claims: claims, Complete: true, CoarseLastLogin: true},
++			login:         Login{GroupsRead: true, Claims: claims, Complete: true, CoarseLastLogin: true},
+ 			wantClaims:    claims,
+ 			wantLastLogin: t0,
+ 		},
+ 		{
+ 			name:          "password grant with new claims within a minute writes the claims",
+ 			lastLogin:     t0.Add(-time.Second),
+-			login:         Login{Claims: newClaims, Complete: true, CoarseLastLogin: true},
++			login:         Login{GroupsRead: true, Claims: newClaims, Complete: true, CoarseLastLogin: true},
+ 			wantClaims:    newClaims,
+ 			wantLastLogin: t0.Add(-time.Second),
+ 		},
+ 		{
+ 			name:          "browser login keeps the last login exact",
+ 			lastLogin:     t0.Add(-time.Second),
+-			login:         Login{Claims: claims, Complete: true},
++			login:         Login{GroupsRead: true, Claims: claims, Complete: true},
+ 			wantClaims:    claims,
+ 			wantLastLogin: t0,
+ 		},
+ 		{
+ 			name:          "browser login before a second factor with the same claims writes nothing",
++			lastLogin:     t0.Add(-59 * time.Second),
++			login:         Login{GroupsRead: true, Claims: claims},
++			wantClaims:    claims,
++			wantLastLogin: t0.Add(-59 * time.Second),
++		},
++		{
++			// The claims were read from the connector again (Deckhouse).
++			name:          "browser login before a second factor moves only when the claims were read",
+ 			lastLogin:     t0.Add(-time.Hour),
+-			login:         Login{Claims: claims},
++			login:         Login{GroupsRead: true, Claims: claims},
+ 			wantClaims:    claims,
+ 			wantLastLogin: t0.Add(-time.Hour),
++			wantRefreshed: t0,
+ 		},
+ 		{
+ 			name:          "last login never moves back",
+ 			lastLogin:     t0.Add(time.Hour),
+-			login:         Login{Claims: newClaims, Complete: true},
++			login:         Login{GroupsRead: true, Claims: newClaims, Complete: true},
+ 			wantClaims:    newClaims,
+ 			wantLastLogin: t0.Add(time.Hour),
+ 		},
+@@ -264,6 +276,7 @@ func TestRecordWritesOnlyChanges(t *testing.T) {
+ 			s := &countingUpdate{Storage: newStorage(t)}
+ 			require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{
+ 				UserID: "jane", ConnectorID: "local", Claims: claims, LastLogin: tc.lastLogin,
++				ClaimsRefreshedAt: tc.lastLogin,
+ 			}))
+ 			login := tc.login
+ 			login.ConnectorID, login.Time = "local", t0
+@@ -275,8 +288,16 @@ func TestRecordWritesOnlyChanges(t *testing.T) {
+ 			require.NoError(t, err)
+ 			require.Equal(t, tc.wantClaims, got.Claims)
+ 			require.Equal(t, tc.wantLastLogin, got.LastLogin)
++			wantRefreshed := tc.wantRefreshed
++			if wantRefreshed.IsZero() {
++				wantRefreshed = tc.lastLogin
++				if tc.wantLastLogin.After(tc.lastLogin) && tc.wantLastLogin.Sub(tc.lastLogin) >= time.Minute {
++					wantRefreshed = tc.wantLastLogin
++				}
++			}
++			require.Equal(t, wantRefreshed, got.ClaimsRefreshedAt)
+ 			wantWrites := 0
+-			if !sameClaims(tc.wantClaims, claims) || !tc.wantLastLogin.Equal(tc.lastLogin) {
++			if !sameClaims(tc.wantClaims, claims) || !tc.wantLastLogin.Equal(tc.lastLogin) || !wantRefreshed.Equal(tc.lastLogin) {
+ 				wantWrites = 1
+ 			}
+ 			require.Equal(t, wantWrites, s.writes)
+@@ -332,7 +353,7 @@ func TestRecordRetriesWrite(t *testing.T) {
+ 	s := &failingUpdate{Storage: newStorage(t), failures: identityWriteAttempts - 1}
+ 	require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "jane", ConnectorID: "local"}))
+ 
+-	_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++	_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, GroupsRead: true, Time: t0, Complete: true})
+ 	require.NoError(t, err)
+ 
+ 	require.Equal(t, identityWriteAttempts, s.tries)
+@@ -342,6 +363,45 @@ func TestRecordRetriesWrite(t *testing.T) {
+ 	require.Equal(t, t0, got.LastLogin)
+ }
+ 
++// TestRecordWithoutGroups checks that a login which did not ask the connector for
++// the groups keeps the groups stored and leaves the claims as old as they were
++// (Deckhouse).
++func TestRecordWithoutGroups(t *testing.T) {
++	ctx := t.Context()
++	noGroups := claims
++	noGroups.Groups = nil
++	noGroups.Email = "jane.new@example.com"
++
++	t.Run("an identity read before", func(t *testing.T) {
++		s := newStorage(t)
++		readAt := t0.Add(-time.Hour)
++		require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{
++			UserID: "jane", ConnectorID: "ldap", Claims: claims, ClaimsRefreshedAt: readAt,
++		}))
++
++		_, err := Record(ctx, s, Login{ConnectorID: "ldap", Claims: noGroups, Time: t0, Complete: true})
++		require.NoError(t, err)
++
++		got, err := s.GetUserIdentity(ctx, "jane", "ldap")
++		require.NoError(t, err)
++		require.Equal(t, claims.Groups, got.Claims.Groups, "the groups stored are kept")
++		require.Equal(t, "jane.new@example.com", got.Claims.Email, "the rest of the claims is the login's")
++		require.Equal(t, readAt, got.ClaimsRefreshedAt, "the claims are as old as before")
++		require.Equal(t, t0, got.LastLogin)
++	})
++
++	t.Run("the first login", func(t *testing.T) {
++		s := newStorage(t)
++		_, err := Record(ctx, s, Login{ConnectorID: "ldap", Claims: noGroups, Time: t0, Complete: true})
++		require.NoError(t, err)
++
++		got, err := s.GetUserIdentity(ctx, "jane", "ldap")
++		require.NoError(t, err)
++		require.Empty(t, got.Claims.Groups)
++		require.Equal(t, claimsOfUnknownAge, got.ClaimsRefreshedAt, "claims without the groups are stale from the start")
++	})
++}
++
+ // A write of an existing identity that keeps failing does not fail the login:
+ // the identity is read instead, and its lock still refuses a blocked pair.
+ func TestRecordWriteKeepsFailing(t *testing.T) {
+@@ -358,7 +418,7 @@ func TestRecordWriteKeepsFailing(t *testing.T) {
+ 		var logs bytes.Buffer
+ 
+ 		generation, err := Record(ctx, s, Login{
+-			ConnectorID: "local", Claims: claims, Time: t0, Complete: true,
++			ConnectorID: "local", Claims: claims, GroupsRead: true, Time: t0, Complete: true,
+ 			Logger: slog.New(slog.NewTextHandler(&logs, nil)),
+ 		})
+ 
+@@ -380,7 +440,7 @@ func TestRecordWriteKeepsFailing(t *testing.T) {
+ 		locked.BlockedUntil = t0.Add(time.Hour)
+ 		require.NoError(t, s.CreateUserIdentity(ctx, locked))
+ 
+-		_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++		_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, GroupsRead: true, Time: t0, Complete: true})
+ 
+ 		var blocked *BlockedError
+ 		require.ErrorAs(t, err, &blocked)
+@@ -393,7 +453,7 @@ func TestRecordWriteKeepsFailing(t *testing.T) {
+ 		require.NoError(t, memory.CreateUserIdentity(ctx, stored))
+ 		s := &failingUpdate{Storage: failingGet{Storage: memory}, failures: -1}
+ 
+-		_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++		_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, GroupsRead: true, Time: t0, Complete: true})
+ 
+ 		require.ErrorIs(t, err, errStorage)
+ 		var blocked *BlockedError
+@@ -406,7 +466,7 @@ func TestRecordWriteKeepsFailing(t *testing.T) {
+ 		s := &failingUpdate{Storage: newStorage(t), failures: -1}
+ 		require.NoError(t, s.CreateUserIdentity(ctx, stored))
+ 
+-		_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++		_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, GroupsRead: true, Time: t0, Complete: true})
+ 		require.NoError(t, err)
+ 		require.Equal(t, 1, s.tries)
+ 	})
+@@ -562,3 +622,29 @@ func TestState(t *testing.T) {
+ 	require.ErrorIs(t, err, errStorage)
+ 	require.False(t, errors.As(err, &blocked))
+ }
++
++// TestRefreshed: claims read again outside a login replace the stored ones, unless
++// those were read later (Deckhouse).
++func TestRefreshed(t *testing.T) {
++	ctx := t.Context()
++	s := newStorage(t)
++	require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{
++		UserID: "jane", ConnectorID: "ldap", Claims: claims, ClaimsRefreshedAt: t0,
++	}))
++
++	newClaims := claims
++	newClaims.Groups = []string{"admins"}
++
++	require.NoError(t, Refreshed(ctx, s, "jane", "ldap", newClaims, t0.Add(-time.Second)))
++	got, err := s.GetUserIdentity(ctx, "jane", "ldap")
++	require.NoError(t, err)
++	require.Equal(t, claims, got.Claims, "claims read before the stored ones do not replace them")
++
++	require.NoError(t, Refreshed(ctx, s, "jane", "ldap", newClaims, t0.Add(time.Second)))
++	got, err = s.GetUserIdentity(ctx, "jane", "ldap")
++	require.NoError(t, err)
++	require.Equal(t, newClaims, got.Claims)
++	require.Equal(t, t0.Add(time.Second), got.ClaimsRefreshedAt)
++
++	require.ErrorIs(t, Refreshed(ctx, s, "gone", "ldap", newClaims, t0), storage.ErrNotFound)
++}

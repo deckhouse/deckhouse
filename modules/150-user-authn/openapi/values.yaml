@@ -30,6 +30,9 @@ properties:
       dexTrustedProxySecret:
         type: string
         default: ""
+      dexSessionsCookieKey:
+        type: string
+        default: ""
       kubeconfigEncodedNames:
         type: array
         default: []

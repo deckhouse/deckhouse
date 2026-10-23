@@ -1,0 +1,3091 @@
+diff --git a/connector/oidc/oidc.go b/connector/oidc/oidc.go
+index aaaa6b2f..e6a38a8a 100644
+--- a/connector/oidc/oidc.go
++++ b/connector/oidc/oidc.go
+@@ -74,6 +74,12 @@ type Config struct {
+ 	// Override the value of email_verified to true in the returned claims
+ 	InsecureSkipEmailVerified bool `json:"insecureSkipEmailVerified"`
+ 
++	// UpstreamLogout sends the browser on to the provider's end_session_endpoint
++	// when the user logs out of dex, ending the provider's session too (Deckhouse).
++	// Off by default: logging out of one application would otherwise log the user
++	// out of the provider, and of everything else that signs in through it.
++	UpstreamLogout bool `json:"upstreamLogout"`
++
+ 	// InsecureEnableGroups enables groups claims. This is disabled by default until https://github.com/dexidp/dex/issues/1065 is resolved
+ 	InsecureEnableGroups bool     `json:"insecureEnableGroups"`
+ 	AllowedGroups        []string `json:"allowedGroups"`
+@@ -359,9 +365,12 @@ func (c *Config) Open(id string, logger *slog.Logger) (conn connector.Connector,
+ 		}
+ 	}
+ 
+-	endSessionURL := metadata.EndSessionEndpoint
+-	if c.ProviderDiscoveryOverrides.EndSessionURL != "" {
+-		endSessionURL = c.ProviderDiscoveryOverrides.EndSessionURL
++	var endSessionURL string
++	if c.UpstreamLogout {
++		endSessionURL = metadata.EndSessionEndpoint
++		if c.ProviderDiscoveryOverrides.EndSessionURL != "" {
++			endSessionURL = c.ProviderDiscoveryOverrides.EndSessionURL
++		}
+ 	}
+ 	if endSessionURL != "" {
+ 		endSessionParsed, err := url.Parse(endSessionURL)
+diff --git a/connector/oidc/oidc_test.go b/connector/oidc/oidc_test.go
+index d05d3c1f..ec578ab5 100644
+--- a/connector/oidc/oidc_test.go
++++ b/connector/oidc/oidc_test.go
+@@ -1184,11 +1184,25 @@ func TestEndSessionURLDiscovery(t *testing.T) {
+ 	_ = key // We only need the server for discovery.
+ 
+ 	conn, err := newConnector(Config{
++		Issuer:         ts.URL,
++		Scopes:         []string{"openid"},
++		UpstreamLogout: true,
++	})
++	require.NoError(t, err)
++	require.Equal(t, fmt.Sprintf("%s/logout", ts.URL), conn.endSessionURL)
++
++	// Without the switch the advertised endpoint is not used: logging out of dex
++	// leaves the provider's session alone.
++	conn, err = newConnector(Config{
+ 		Issuer: ts.URL,
+ 		Scopes: []string{"openid"},
+ 	})
+ 	require.NoError(t, err)
+-	require.Equal(t, fmt.Sprintf("%s/logout", ts.URL), conn.endSessionURL)
++	require.Empty(t, conn.endSessionURL)
++
++	logoutURL, err := conn.LogoutURL(t.Context(), "https://dex.example.com/logout/callback")
++	require.NoError(t, err)
++	require.Empty(t, logoutURL, "no upstream logout without the switch")
+ }
+ 
+ func TestEndSessionURLOverride(t *testing.T) {
+@@ -1202,6 +1216,7 @@ func TestEndSessionURLOverride(t *testing.T) {
+ 		ProviderDiscoveryOverrides: ProviderDiscoveryOverrides{
+ 			EndSessionURL: "https://custom.example.com/logout",
+ 		},
++		UpstreamLogout: true,
+ 	})
+ 	require.NoError(t, err)
+ 	require.Equal(t, "https://custom.example.com/logout", conn.endSessionURL)
+diff --git a/server/authflow/handler.go b/server/authflow/handler.go
+index 4881e21a..6d91d9b2 100644
+--- a/server/authflow/handler.go
++++ b/server/authflow/handler.go
+@@ -1,6 +1,7 @@
+ package authflow
+ 
+ import (
++	"context"
+ 	"log/slog"
+ 	"net/http"
+ 	"strings"
+@@ -48,6 +49,10 @@ type Handler struct {
+ 	// dispatcher gate MFA without the MFA handler — see mfaRequired.
+ 	MFAEnabled      bool
+ 	DefaultMFAChain []string
++	// MFAChain resolves the MFA chain of a client for a connector (the MFA
++	// handler's), which the browser session records once passed and a login from
++	// the session checks (Deckhouse). Nil records and checks nothing.
++	MFAChain func(ctx context.Context, clientID, connectorID string) ([]string, error)
+ 	// SkipApproval disables the consent screen server-wide (see consent.Satisfied).
+ 	SkipApproval bool
+ 
+diff --git a/server/authflow/response.go b/server/authflow/response.go
+index a2ea0213..91952c6d 100644
+--- a/server/authflow/response.go
++++ b/server/authflow/response.go
+@@ -57,6 +57,7 @@ func (h *Handler) writeResponse(w http.ResponseWriter, r *http.Request, authReq
+ 	// cookie — not something to repeat two or three times while writing one
+ 	// response.
+ 	resp := &authResponse{sessionID: h.sessionID(ctx, w, r)}
++	h.recordSessionMFA(ctx, w, resp.sessionID, authReq)
+ 	for _, handle := range []responseTypeHandler{
+ 		h.issueCode,
+ 		h.issueAccessToken,
+@@ -175,6 +176,23 @@ func (h *Handler) sessionID(ctx context.Context, w http.ResponseWriter, r *http.
+ 	return ""
+ }
+ 
++// recordSessionMFA records on the browser session the MFA chain the login passed
++// (Deckhouse), so that a login from the session to a client with the same chain
++// asks for no second factor again (see trySessionLoginWithSession). A failure
++// costs only that convenience and does not stop the response.
++func (h *Handler) recordSessionMFA(ctx context.Context, w http.ResponseWriter, sessionID string, authReq storage.AuthRequest) {
++	if sessionID == "" || !authReq.MFAValidated || h.MFAChain == nil {
++		return
++	}
++	chain, err := h.MFAChain(ctx, authReq.ClientID, authReq.ConnectorID)
++	if err == nil {
++		err = h.Sessions.RecordMFA(ctx, w, sessionID, authReq, chain)
++	}
++	if err != nil {
++		h.Logger.WarnContext(ctx, "session: failed to record the second factor", "session_id", sessionID, "err", err)
++	}
++}
++
+ // issueCode handles the "code" response_type: it mints and stores an auth code.
+ func (h *Handler) issueCode(ctx context.Context, w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest, resp *authResponse) bool {
+ 	if !slices.Contains(authReq.ResponseTypes, oauth2.ResponseTypeCode) {
+diff --git a/server/authflow/sessionlogin.go b/server/authflow/sessionlogin.go
+index f82c2d85..3b3864f6 100644
+--- a/server/authflow/sessionlogin.go
++++ b/server/authflow/sessionlogin.go
+@@ -4,9 +4,14 @@ import (
+ 	"context"
+ 	"errors"
+ 	"net/http"
++	"slices"
+ 	"time"
+ 
++	"github.com/dexidp/dex/server/allowlist"
++	"github.com/dexidp/dex/server/connectors"
++	sessionpkg "github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/signinlog"
++	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+ )
+@@ -25,37 +30,25 @@ func (h *Handler) trySessionLoginWithSession(ctx context.Context, r *http.Reques
+ 		return false
+ 	}
+ 
++	if !h.mayLoginFromSession(ctx, authReq) {
++		return false
++	}
++
+ 	now := h.Now()
+ 
+-	_, directLogin := session.ClientStates[authReq.ClientID]
++	// state is the authentication on this browser the login rests on: the client's
++	// own, or, failing that, the SSO session shared by another client. An SSO state
++	// for the client is written only by finishSessionLogin, once every check below
++	// let the user in (Deckhouse): a refused login leaves the session as it was,
++	// neither listing the client nor counting as activity.
++	state, directLogin := session.ClientStates[authReq.ClientID]
++	var ssoSource *storage.ClientAuthState
+ 	if !directLogin {
+-		// No direct session for this client — try SSO from a sharing client.
+-		sourceState := h.Sessions.FindSSO(ctx, session, authReq.ClientID)
+-		if sourceState == nil {
+-			return false
+-		}
+-
+-		// Create a new client state for the target client via SSO. It carries the
+-		// source's authentication time: the user did not authenticate again here.
+-		if err := h.Storage.UpdateAuthSession(ctx, session.ID, func(old storage.AuthSession) (storage.AuthSession, error) {
+-			if old.ClientStates == nil {
+-				old.ClientStates = make(map[string]*storage.ClientAuthState)
+-			}
+-			old.ClientStates[authReq.ClientID] = &storage.ClientAuthState{
+-				AuthenticatedAt: sourceState.AuthenticatedAt,
+-				LastActivity:    now,
+-				ViaSSO:          true,
+-			}
+-			old.LastActivity = now
+-			old.IdleExpiry = h.Sessions.IdleExpiry(now)
+-			return old, nil
+-		}); err != nil {
+-			h.Logger.ErrorContext(ctx, "session: failed to create SSO client state", "err", err)
++		ssoSource = h.Sessions.FindSSO(ctx, session, authReq.ClientID)
++		if ssoSource == nil {
+ 			return false
+ 		}
+-
+-		h.Logger.DebugContext(ctx, "session: SSO login from sharing client",
+-			"user_id", session.UserID, "connector_id", session.ConnectorID, "client_id", authReq.ClientID)
++		state = ssoSource
+ 	}
+ 
+ 	// Load identity from storage (same path for direct and SSO login).
+@@ -86,11 +79,28 @@ func (h *Handler) trySessionLoginWithSession(ctx context.Context, r *http.Reques
+ 		return false
+ 	}
+ 
+-	// Check max_age: if the user's last authentication is too old, force re-auth.
+-	if authReq.MaxAge >= 0 {
+-		if now.Sub(ui.LastLogin) > time.Duration(authReq.MaxAge)*time.Second {
+-			return false
++	// The other checks of the interactive login hold here too (Deckhouse): the
++	// allow-lists of the client and the connector, which also narrow the groups the
++	// tokens carry, and for a local user a password that is still there and need not
++	// be changed first. A refused session login goes on to the interactive one, which
++	// refuses the user the same way or asks for the new password.
++	claims := ui.Claims
++	if err := h.checkAllowLists(ctx, authReq.ClientID, session.ConnectorID, &claims); err != nil {
++		var notAllowed *allowlist.NotAllowedError
++		if !errors.As(err, &notAllowed) {
++			h.Logger.ErrorContext(ctx, "session: failed to apply the allow-lists", "err", err)
+ 		}
++		return false
++	}
++	ui.Claims = claims
++	if !h.localPasswordUsable(ctx, session.ConnectorID, ui.Claims.Email) {
++		return false
++	}
++
++	// max_age counts from the authentication on this browser (Deckhouse), not from
++	// the LastLogin of the pair, which a login on any other device moves.
++	if authReq.MaxAge >= 0 && now.Sub(state.AuthenticatedAt) > time.Duration(authReq.MaxAge)*time.Second {
++		return false
+ 	}
+ 
+ 	if directLogin {
+@@ -98,12 +108,82 @@ func (h *Handler) trySessionLoginWithSession(ctx context.Context, r *http.Reques
+ 			"session_id", session.ID, "user_id", session.UserID)
+ 	}
+ 
+-	return h.finishSessionLogin(ctx, r, w, authReq, session, &ui, now)
++	return h.finishSessionLogin(ctx, r, w, authReq, session, &ui, state.AuthenticatedAt, ssoSource, now)
++}
++
++// localPasswordUsable reports whether a local user may be signed in from a
++// session: the password is still there — the user was not deleted — and does not
++// have to be changed first. Any other connector has nothing to check here.
++func (h *Handler) localPasswordUsable(ctx context.Context, connectorID, email string) bool {
++	if connectorID != connectors.LocalConnector {
++		return true
++	}
++
++	p, err := h.Storage.GetPassword(ctx, email)
++	switch {
++	case errors.Is(err, storage.ErrNotFound):
++		h.Logger.DebugContext(ctx, "session: local user is gone, falling back to the login")
++		return false
++	case err != nil:
++		h.Logger.ErrorContext(ctx, "session: failed to get password", "err", err)
++		return false
++	case p.RequireResetHashOnNextSuccLogin:
++		h.Logger.DebugContext(ctx, "session: password change required, falling back to the login")
++		return false
++	default:
++		return true
++	}
++}
++
++// sessionMFAPassed reports whether the second factor a login of the session's
++// connector to the client needs was passed on the session (Deckhouse): the
++// session recorded every authenticator of the client's chain (see
++// recordSessionMFA). Upstream asks for the second factor at every login from a
++// session, as the session is made after the first factor. The session ends with
++// a reset of the second factor, a lock or a logout, as the generation of the pair
++// changes.
++func (h *Handler) sessionMFAPassed(ctx context.Context, session *storage.AuthSession, clientID string) bool {
++	if !h.MFAEnabled || h.MFAChain == nil {
++		return false
++	}
++	chain, err := h.MFAChain(ctx, clientID, session.ConnectorID)
++	if err != nil {
++		h.Logger.ErrorContext(ctx, "session: failed to resolve the MFA chain", "client_id", clientID, "err", err)
++		return false
++	}
++	return sessionpkg.MFASatisfied(*session, chain)
++}
++
++// mayLoginFromSession reports whether the client of authReq may be signed in from
++// a browser session at all (Deckhouse). A client that asks for offline access and
++// whose refresh tokens outlive the session — kubeconfig, a device, an application
++// that keeps its own — gets a grant only from an interactive login: a stolen
++// session cookie must not mint credentials that survive the end of the session.
++// A client binds its tokens to the session with RefreshTokenLifetime "session".
++func (h *Handler) mayLoginFromSession(ctx context.Context, authReq *storage.AuthRequest) bool {
++	if !slices.Contains(authReq.Scopes, tokens.ScopeOfflineAccess) {
++		return true
++	}
++
++	client, err := h.Storage.GetClient(ctx, authReq.ClientID)
++	if err != nil {
++		h.Logger.ErrorContext(ctx, "session: failed to get client", "client_id", authReq.ClientID, "err", err)
++		return false
++	}
++	if !client.RefreshBoundToSession() {
++		h.Logger.DebugContext(ctx, "session: offline access outlives the session, interactive login required",
++			"client_id", authReq.ClientID)
++		return false
++	}
++	return true
+ }
+ 
+ // finishSessionLogin completes a session-based login (direct or SSO) by updating the auth request
+ // with the user's identity, refreshing session activity, and returning the appropriate redirect URL.
+-func (h *Handler) finishSessionLogin(ctx context.Context, r *http.Request, w http.ResponseWriter, authReq *storage.AuthRequest, session *storage.AuthSession, ui *storage.UserIdentity, now time.Time) bool {
++// authTime is when the user authenticated on this browser for the login. ssoSource is the state of
++// the client the login shares the session of, or nil for a direct login: the client gets an SSO
++// state carrying the source's authentication time, as the user did not authenticate again here.
++func (h *Handler) finishSessionLogin(ctx context.Context, r *http.Request, w http.ResponseWriter, authReq *storage.AuthRequest, session *storage.AuthSession, ui *storage.UserIdentity, authTime time.Time, ssoSource *storage.ClientAuthState, now time.Time) bool {
+ 	claims := storage.Claims{
+ 		UserID:            ui.Claims.UserID,
+ 		Username:          ui.Claims.Username,
+@@ -113,29 +193,54 @@ func (h *Handler) finishSessionLogin(ctx context.Context, r *http.Request, w htt
+ 		Groups:            ui.Claims.Groups,
+ 	}
+ 
+-	// Update AuthRequest with stored identity and auth_time from last login.
++	mfaPassed := h.sessionMFAPassed(ctx, session, authReq.ClientID)
++
++	// Record the use of the session first: an SSO state that cannot be written
++	// fails the login rather than leave the client out of the session it uses.
++	if err := h.Storage.UpdateAuthSession(ctx, session.ID, func(old storage.AuthSession) (storage.AuthSession, error) {
++		old.LastActivity = now
++		old.IdleExpiry = h.Sessions.IdleExpiry(now)
++		if ssoSource != nil {
++			if old.ClientStates == nil {
++				old.ClientStates = make(map[string]*storage.ClientAuthState)
++			}
++			old.ClientStates[authReq.ClientID] = &storage.ClientAuthState{
++				AuthenticatedAt: ssoSource.AuthenticatedAt,
++				LastActivity:    now,
++				ViaSSO:          true,
++			}
++		} else if cs, ok := old.ClientStates[authReq.ClientID]; ok {
++			cs.LastActivity = now
++		}
++		return old, nil
++	}); err != nil {
++		if ssoSource != nil {
++			h.Logger.ErrorContext(ctx, "session: failed to create SSO client state", "err", err)
++			return false
++		}
++		h.Logger.WarnContext(ctx, "session: failed to record the session activity", "session_id", session.ID, "err", err)
++	}
++	if ssoSource != nil {
++		h.Logger.DebugContext(ctx, "session: SSO login from sharing client",
++			"user_id", session.UserID, "connector_id", session.ConnectorID, "client_id", authReq.ClientID)
++	}
++
++	// Update AuthRequest with stored identity and auth_time of this browser.
+ 	if err := h.Storage.UpdateAuthRequest(ctx, authReq.ID, func(a storage.AuthRequest) (storage.AuthRequest, error) {
+ 		a.LoggedIn = true
+ 		a.Claims = claims
+ 		a.ConnectorID = session.ConnectorID
+-		a.AuthTime = ui.LastLogin
++		a.AuthTime = authTime
+ 		a.Generation = ui.Generation
++		if mfaPassed {
++			a.MFAValidated = true
++		}
+ 		return a, nil
+ 	}); err != nil {
+ 		h.Logger.ErrorContext(ctx, "session: failed to update auth request", "err", err)
+ 		return false
+ 	}
+ 
+-	// Update session activity.
+-	_ = h.Storage.UpdateAuthSession(ctx, session.ID, func(old storage.AuthSession) (storage.AuthSession, error) {
+-		old.LastActivity = now
+-		old.IdleExpiry = h.Sessions.IdleExpiry(now)
+-		if cs, ok := old.ClientStates[authReq.ClientID]; ok {
+-			cs.LastActivity = now
+-		}
+-		return old, nil
+-	})
+-
+ 	// Re-read to get the updated AuthRequest (LoggedIn, Claims, ConnectorID set above),
+ 	// then let the shared decision pick the next step.
+ 	updated, err := h.Storage.GetAuthRequest(ctx, authReq.ID)
+diff --git a/server/authflow/sessionlogin_deckhouse_test.go b/server/authflow/sessionlogin_deckhouse_test.go
+new file mode 100644
+index 00000000..5b1f26fd
+--- /dev/null
++++ b/server/authflow/sessionlogin_deckhouse_test.go
+@@ -0,0 +1,303 @@
++package authflow
++
++import (
++	"context"
++	"crypto"
++	"errors"
++	"net/http/httptest"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++)
++
++// TestTrySessionLogin_OfflineAccess: a client that asks for offline access gets a
++// grant from the session only when its refresh tokens end with the session; any
++// other — kubeconfig, a device, an application keeping its own tokens — signs the
++// user in interactively (Deckhouse).
++func TestTrySessionLogin_OfflineAccess(t *testing.T) {
++	tests := []struct {
++		name string
++		// lifetime is the RefreshTokenLifetime of the client; noClient leaves the
++		// client out of the storage.
++		lifetime string
++		noClient bool
++		scopes   []string
++		want     bool
++	}{
++		{
++			name:   "standalone client asking for offline access",
++			scopes: []string{"openid", "offline_access"},
++			want:   false,
++		},
++		{
++			name:     "session-bound client asking for offline access",
++			lifetime: storage.RefreshTokenLifetimeSession,
++			scopes:   []string{"openid", "offline_access"},
++			want:     true,
++		},
++		{
++			name:   "standalone client without offline access",
++			scopes: []string{"openid", "email"},
++			want:   true,
++		},
++		{
++			name:     "unknown client asking for offline access",
++			noClient: true,
++			scopes:   []string{"openid", "offline_access"},
++			want:     false,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			ctx := t.Context()
++			s := newTestSessionServer(t)
++			s.SkipApproval = true
++			authReq := setupSessionLoginFixture(t, s)
++			authReq.Scopes = tc.scopes
++
++			if tc.noClient {
++				require.NoError(t, s.Storage.DeleteClient(ctx, authReq.ClientID))
++			} else {
++				require.NoError(t, s.Storage.UpdateClient(ctx, authReq.ClientID, func(old storage.Client) (storage.Client, error) {
++					old.RefreshTokenLifetime = tc.lifetime
++					return old, nil
++				}))
++			}
++
++			w := httptest.NewRecorder()
++			ok := s.trySessionLogin(ctx, sessionCookieRequest("test-nonce"), w, &authReq)
++			assert.Equal(t, tc.want, ok)
++
++			// Either way the session is the user's to keep.
++			_, err := s.Storage.GetAuthSession(ctx, "test-nonce")
++			require.NoError(t, err)
++			assert.Empty(t, w.Result().Cookies(), "the session cookie is left alone")
++		})
++	}
++}
++
++// TestTrySessionLogin_AllowLists: the allow-lists of the client and the connector
++// refuse a session login as they refuse the interactive one, and narrow the groups
++// the tokens carry the same way (Deckhouse).
++func TestTrySessionLogin_AllowLists(t *testing.T) {
++	tests := []struct {
++		name       string
++		client     storage.Client
++		connector  storage.Connector
++		want       bool
++		wantGroups []string
++	}{
++		{
++			name:       "no lists",
++			want:       true,
++			wantGroups: []string{"admins", "devs"},
++		},
++		{
++			name:   "client email list without the user",
++			client: storage.Client{AllowedEmails: []string{"other@example.com"}},
++		},
++		{
++			name:      "connector group list without the user",
++			connector: storage.Connector{AllowedGroups: []string{"ops"}},
++		},
++		{
++			name:       "client group list narrows the groups",
++			client:     storage.Client{AllowedGroups: []string{"devs"}},
++			want:       true,
++			wantGroups: []string{"devs"},
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			ctx := t.Context()
++			s := newTestSessionServer(t)
++			s.SkipApproval = true
++			authReq := setupSessionLoginFixture(t, s)
++
++			require.NoError(t, s.Storage.UpdateUserIdentity(ctx, "user-1", "mock", func(old storage.UserIdentity) (storage.UserIdentity, error) {
++				old.Claims.Groups = []string{"admins", "devs"}
++				return old, nil
++			}))
++			require.NoError(t, s.Storage.UpdateClient(ctx, authReq.ClientID, func(old storage.Client) (storage.Client, error) {
++				old.AllowedEmails, old.AllowedGroups = tc.client.AllowedEmails, tc.client.AllowedGroups
++				return old, nil
++			}))
++			require.NoError(t, s.Storage.UpdateConnector(ctx, "mock", func(old storage.Connector) (storage.Connector, error) {
++				old.AllowedGroups = tc.connector.AllowedGroups
++				return old, nil
++			}))
++
++			ok := s.trySessionLogin(ctx, sessionCookieRequest("test-nonce"), httptest.NewRecorder(), &authReq)
++			require.Equal(t, tc.want, ok)
++			if !tc.want {
++				return
++			}
++
++			issued, err := s.Storage.GetAuthRequest(ctx, authReq.ID)
++			require.NoError(t, err)
++			assert.Equal(t, tc.wantGroups, issued.Claims.Groups)
++		})
++	}
++}
++
++// TestTrySessionLogin_LocalPassword: a local user is signed in from the session
++// only while the password is there and need not be changed (Deckhouse).
++func TestTrySessionLogin_LocalPassword(t *testing.T) {
++	tests := []struct {
++		name string
++		// password is the user's Password, nil for a deleted user.
++		password *storage.Password
++		want     bool
++	}{
++		{
++			name:     "password in place",
++			password: &storage.Password{},
++			want:     true,
++		},
++		{
++			name:     "password change required",
++			password: &storage.Password{RequireResetHashOnNextSuccLogin: true},
++		},
++		{
++			name: "user deleted",
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			ctx := t.Context()
++			s := newTestSessionServer(t)
++			s.SkipApproval = true
++			now := s.Now()
++			const email = "jane@example.com"
++
++			ensureSessionLoginConnector(t, s, "local")
++			require.NoError(t, s.Storage.CreateAuthSession(ctx, storage.AuthSession{
++				ID: "test-nonce", Secret: "test-nonce", UserID: "jane-id", ConnectorID: "local",
++				ClientStates:   map[string]*storage.ClientAuthState{"client-1": {AuthenticatedAt: now, LastActivity: now}},
++				CreatedAt:      now,
++				LastActivity:   now,
++				AbsoluteExpiry: now.Add(time.Hour),
++				IdleExpiry:     now.Add(time.Hour),
++			}))
++			require.NoError(t, s.Storage.CreateUserIdentity(ctx, storage.UserIdentity{
++				UserID: "jane-id", ConnectorID: "local",
++				Claims:    storage.Claims{UserID: "jane-id", Username: "jane", Email: email},
++				Consents:  map[string][]string{"client-1": {"openid"}},
++				LastLogin: now,
++			}))
++			if tc.password != nil {
++				pw := *tc.password
++				pw.Email, pw.UserID, pw.Username, pw.Hash = email, "jane-id", "jane", []byte("$2a$10$hash")
++				require.NoError(t, s.Storage.CreatePassword(ctx, pw))
++			}
++			authReq := storage.AuthRequest{
++				ID: storage.NewID(), ClientID: "client-1", ConnectorID: "local",
++				Scopes: []string{"openid"}, RedirectURI: "http://localhost/callback", MaxAge: -1,
++				HMACKey: storage.NewHMACKey(crypto.SHA256), Expiry: now.Add(10 * time.Minute),
++			}
++			require.NoError(t, s.Storage.CreateAuthRequest(ctx, authReq))
++			ensureSessionLoginClient(t, s, storage.Client{ID: "client-1", Secret: "secret"})
++
++			ok := s.trySessionLogin(ctx, sessionCookieRequest("test-nonce"), httptest.NewRecorder(), &authReq)
++			assert.Equal(t, tc.want, ok)
++		})
++	}
++}
++
++// TestTrySessionLogin_StorageUnavailable: a session that cannot be read is no
++// session for this login, which goes on interactively, but the cookie stays, so the
++// session serves again once the storage does (Deckhouse).
++func TestTrySessionLogin_StorageUnavailable(t *testing.T) {
++	ctx := t.Context()
++	s := newTestSessionServer(t)
++	authReq := setupSessionLoginFixture(t, s)
++
++	failing := &sessionsDown{Storage: s.Storage}
++	s.Storage = failing
++	s.Sessions.Storage = failing
++
++	w := httptest.NewRecorder()
++	ok := s.trySessionLogin(ctx, sessionCookieRequest("test-nonce"), w, &authReq)
++	assert.False(t, ok)
++	assert.Empty(t, w.Result().Cookies(), "the cookie of a session that could not be read is kept")
++}
++
++// sessionsDown is a storage whose auth sessions cannot be read.
++type sessionsDown struct {
++	storage.Storage
++}
++
++func (s *sessionsDown) GetAuthSession(context.Context, string) (storage.AuthSession, error) {
++	return storage.AuthSession{}, errors.New("storage unavailable")
++}
++
++// TestTrySessionLogin_SecondFactor: a login from a session asks for no second
++// factor again when the session passed the whole MFA chain of the client
++// (Deckhouse); upstream asks for it at every login from a session.
++func TestTrySessionLogin_SecondFactor(t *testing.T) {
++	tests := []struct {
++		name   string
++		passed []string
++		chain  []string
++		want   bool
++	}{
++		{name: "chain passed on the session", passed: []string{"totp"}, chain: []string{"totp"}, want: true},
++		{name: "part of the chain passed", passed: []string{"totp"}, chain: []string{"totp", "webauthn"}},
++		{name: "nothing passed", chain: []string{"totp"}},
++		{name: "no chain", passed: []string{"totp"}},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			ctx := t.Context()
++			s := newTestSessionServer(t)
++			s.SkipApproval = true
++			s.MFAEnabled = true
++			s.MFAChain = func(context.Context, string, string) ([]string, error) { return tc.chain, nil }
++			authReq := setupSessionLoginFixture(t, s)
++			require.NoError(t, s.Storage.UpdateAuthSession(ctx, "test-nonce", func(old storage.AuthSession) (storage.AuthSession, error) {
++				old.MFAAuthenticators = tc.passed
++				return old, nil
++			}))
++
++			require.True(t, s.trySessionLogin(ctx, sessionCookieRequest("test-nonce"), httptest.NewRecorder(), &authReq))
++			got, err := s.Storage.GetAuthRequest(ctx, authReq.ID)
++			require.NoError(t, err)
++			assert.Equal(t, tc.want, got.MFAValidated)
++		})
++	}
++}
++
++// TestRecordSessionMFA: issuing the response of a login that passed the second
++// factor records its chain on the session of the browser (Deckhouse).
++func TestRecordSessionMFA(t *testing.T) {
++	for _, validated := range []bool{true, false} {
++		ctx := t.Context()
++		s := newTestSessionServer(t)
++		s.MFAChain = func(context.Context, string, string) ([]string, error) { return []string{"totp"}, nil }
++		authReq := setupSessionLoginFixture(t, s)
++		authReq.Claims.UserID = "user-1"
++		authReq.MFAValidated = validated
++
++		w := httptest.NewRecorder()
++		s.recordSessionMFA(ctx, w, "test-nonce", authReq)
++		session, err := s.Storage.GetAuthSession(ctx, "test-nonce")
++		require.NoError(t, err)
++		if validated {
++			assert.Equal(t, []string{"totp"}, session.MFAAuthenticators)
++			assert.NotEqual(t, "test-nonce", session.Secret, "the second factor gives the session a new secret")
++			assert.Len(t, w.Result().Cookies(), 1)
++		} else {
++			assert.Empty(t, session.MFAAuthenticators, "a login that passed no second factor records none")
++			assert.Equal(t, "test-nonce", session.Secret, "a login without a second factor keeps the secret")
++			assert.Empty(t, w.Result().Cookies())
++		}
++	}
++}
+diff --git a/server/authflow/sessionlogin_sso_deckhouse_test.go b/server/authflow/sessionlogin_sso_deckhouse_test.go
+new file mode 100644
+index 00000000..993881fa
+--- /dev/null
++++ b/server/authflow/sessionlogin_sso_deckhouse_test.go
+@@ -0,0 +1,60 @@
++package authflow
++
++import (
++	"crypto"
++	"net/http/httptest"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++)
++
++// TestTrySessionLogin_RefusedSSOLeavesSession: an SSO login the checks refuse
++// writes nothing to the session (Deckhouse): the client is not listed in it, so
++// a logout neither revokes it nor notifies it, and the refused attempt does not
++// count as activity that keeps the session from going idle.
++func TestTrySessionLogin_RefusedSSOLeavesSession(t *testing.T) {
++	ctx := t.Context()
++	s := newTestSessionServer(t)
++	s.SkipApproval = true
++	now := s.Now()
++
++	require.NoError(t, s.Storage.CreateClient(ctx, storage.Client{ID: "client-1", Secret: "secret", SSOSharedWith: []string{"client-2"}}))
++	ensureSessionLoginClient(t, s, storage.Client{ID: "client-2", Secret: "secret", AllowedEmails: []string{"other@example.com"}})
++	ensureSessionLoginConnector(t, s, "mock")
++
++	idle := now.Add(59 * time.Minute)
++	require.NoError(t, s.Storage.CreateAuthSession(ctx, storage.AuthSession{
++		ID: "test-nonce", Secret: "test-nonce",
++		UserID: "user-1", ConnectorID: "mock",
++		ClientStates: map[string]*storage.ClientAuthState{
++			"client-1": {AuthenticatedAt: now.Add(-time.Minute), LastActivity: now.Add(-time.Minute)},
++		},
++		CreatedAt:      now.Add(-30 * time.Minute),
++		LastActivity:   now.Add(-time.Minute),
++		AbsoluteExpiry: now.Add(24 * time.Hour),
++		IdleExpiry:     idle,
++	}))
++	require.NoError(t, s.Storage.CreateUserIdentity(ctx, storage.UserIdentity{
++		UserID: "user-1", ConnectorID: "mock",
++		Claims:    storage.Claims{UserID: "user-1", Username: "testuser", Email: "test@example.com"},
++		Consents:  map[string][]string{"client-2": {"openid"}},
++		CreatedAt: now.Add(-time.Hour),
++		LastLogin: now.Add(-30 * time.Minute),
++	}))
++	authReq := storage.AuthRequest{
++		ID: storage.NewID(), ClientID: "client-2", ConnectorID: "mock",
++		Scopes: []string{"openid"}, RedirectURI: "http://localhost/callback", MaxAge: -1,
++		HMACKey: storage.NewHMACKey(crypto.SHA256), Expiry: now.Add(10 * time.Minute),
++	}
++	require.NoError(t, s.Storage.CreateAuthRequest(ctx, authReq))
++
++	require.False(t, s.trySessionLogin(ctx, sessionCookieRequest("test-nonce"), httptest.NewRecorder(), &authReq))
++
++	session, err := s.Storage.GetAuthSession(ctx, "test-nonce")
++	require.NoError(t, err)
++	require.NotContains(t, session.ClientStates, "client-2")
++	require.Equal(t, idle, session.IdleExpiry)
++}
+diff --git a/server/authflow/sessionlogin_test.go b/server/authflow/sessionlogin_test.go
+index 9d135c59..01a07921 100644
+--- a/server/authflow/sessionlogin_test.go
++++ b/server/authflow/sessionlogin_test.go
+@@ -533,9 +533,33 @@ func setupSessionLoginFixture(t *testing.T, s *sessionTestServer) storage.AuthRe
+ 		Expiry:      now.Add(10 * time.Minute),
+ 	}
+ 	require.NoError(t, s.Storage.CreateAuthRequest(ctx, authReq))
++
++	// The session login applies the allow-lists of the client and the connector,
++	// as the interactive login does (Deckhouse), so both have to exist.
++	ensureSessionLoginClient(t, s, storage.Client{
++		ID: authReq.ClientID, Secret: "secret", RedirectURIs: []string{authReq.RedirectURI},
++	})
++	ensureSessionLoginConnector(t, s, "mock")
+ 	return authReq
+ }
+ 
++// ensureSessionLoginClient creates client unless a client with its ID exists.
++func ensureSessionLoginClient(t *testing.T, s *sessionTestServer, client storage.Client) {
++	t.Helper()
++	if err := s.Storage.CreateClient(t.Context(), client); err != nil {
++		require.ErrorIs(t, err, storage.ErrAlreadyExists)
++	}
++}
++
++// ensureSessionLoginConnector creates a mock connector unless one with the ID exists.
++func ensureSessionLoginConnector(t *testing.T, s *sessionTestServer, id string) {
++	t.Helper()
++	err := s.Storage.CreateConnector(t.Context(), storage.Connector{ID: id, Type: "mockCallback", Name: id})
++	if err != nil {
++		require.ErrorIs(t, err, storage.ErrAlreadyExists)
++	}
++}
++
+ // sessionCookieRequest2 is sessionCookieRequest for the tests that care that the
+ // two halves of the cookie differ.
+ func sessionCookieRequest2(sessionID, secret string) *http.Request {
+@@ -672,9 +696,10 @@ func TestTrySessionLogin(t *testing.T) {
+ 	})
+ }
+ 
+-// setupSessionWithIdentity creates an AuthSession, UserIdentity, and AuthRequest in storage
+-// for use in trySessionLogin tests. Returns the authReq.
+-func setupSessionWithIdentity(t *testing.T, s *sessionTestServer, now time.Time, lastLogin time.Time) storage.AuthRequest {
++// setupSessionWithIdentity creates an AuthSession in which client-1 authenticated on
++// the browser at browserAuth, the UserIdentity of its pair and an AuthRequest of
++// client-1, for use in trySessionLogin tests. Returns the authReq.
++func setupSessionWithIdentity(t *testing.T, s *sessionTestServer, now time.Time, browserAuth time.Time) storage.AuthRequest {
+ 	t.Helper()
+ 	ctx := t.Context()
+ 	nonce := "test-nonce"
+@@ -685,7 +710,7 @@ func setupSessionWithIdentity(t *testing.T, s *sessionTestServer, now time.Time,
+ 		ID:          nonce, Secret: nonce,
+ 		ClientStates: map[string]*storage.ClientAuthState{
+ 			"client-1": {
+-				AuthenticatedAt: now.Add(-1 * time.Minute),
++				AuthenticatedAt: browserAuth,
+ 				LastActivity:    now.Add(-1 * time.Minute),
+ 			},
+ 		},
+@@ -706,7 +731,9 @@ func setupSessionWithIdentity(t *testing.T, s *sessionTestServer, now time.Time,
+ 		},
+ 		Consents:  make(map[string][]string),
+ 		CreatedAt: now.Add(-1 * time.Hour),
+-		LastLogin: lastLogin,
++		// A login on another device moved LastLogin of the pair: the session login
++		// must not take it for the authentication on this browser.
++		LastLogin: now,
+ 	}
+ 	require.NoError(t, s.Storage.CreateUserIdentity(ctx, ui))
+ 
+@@ -721,6 +748,8 @@ func setupSessionWithIdentity(t *testing.T, s *sessionTestServer, now time.Time,
+ 		Expiry:      now.Add(10 * time.Minute),
+ 	}
+ 	require.NoError(t, s.Storage.CreateAuthRequest(ctx, authReq))
++	ensureSessionLoginClient(t, s, storage.Client{ID: authReq.ClientID, Secret: "secret"})
++	ensureSessionLoginConnector(t, s, authReq.ConnectorID)
+ 
+ 	return authReq
+ }
+@@ -791,7 +820,7 @@ func TestTrySessionLogin_MaxAge(t *testing.T) {
+ 		assert.False(t, ok, "max_age=0 should always force re-authentication")
+ 	})
+ 
+-	t.Run("auth_time is set from UserIdentity.LastLogin", func(t *testing.T) {
++	t.Run("auth_time is the authentication on this browser, not LastLogin of the pair", func(t *testing.T) {
+ 		s := newTestSessionServer(t)
+ 		s.SkipApproval = false
+ 		now := s.Now()
+@@ -1131,6 +1160,8 @@ func TestTrySessionLogin_SSO(t *testing.T) {
+ 			Expiry:      now.Add(10 * time.Minute),
+ 		}
+ 		require.NoError(t, s.Storage.CreateAuthRequest(ctx, authReq))
++		ensureSessionLoginClient(t, s, storage.Client{ID: authReq.ClientID, Secret: "secret"})
++		ensureSessionLoginConnector(t, s, authReq.ConnectorID)
+ 
+ 		r := sessionCookieRequest("test-nonce")
+ 		w := httptest.NewRecorder()
+@@ -1205,6 +1236,8 @@ func TestTrySessionLogin_SSO(t *testing.T) {
+ 			Expiry:      now.Add(10 * time.Minute),
+ 		}
+ 		require.NoError(t, s.Storage.CreateAuthRequest(ctx, authReq))
++		ensureSessionLoginClient(t, s, storage.Client{ID: authReq.ClientID, Secret: "secret"})
++		ensureSessionLoginConnector(t, s, authReq.ConnectorID)
+ 
+ 		r := sessionCookieRequest("test-nonce")
+ 		w := httptest.NewRecorder()
+@@ -1261,6 +1294,8 @@ func TestTrySessionLogin_SSO(t *testing.T) {
+ 			Expiry:      now.Add(10 * time.Minute),
+ 		}
+ 		require.NoError(t, s.Storage.CreateAuthRequest(ctx, authReq))
++		ensureSessionLoginClient(t, s, storage.Client{ID: authReq.ClientID, Secret: "secret"})
++		ensureSessionLoginConnector(t, s, authReq.ConnectorID)
+ 
+ 		r := sessionCookieRequest("test-nonce")
+ 		w := httptest.NewRecorder()
+@@ -1475,6 +1510,8 @@ func TestPromptNone(t *testing.T) {
+ 			Expiry:      now.Add(10 * time.Minute),
+ 		}
+ 		require.NoError(t, s.Storage.CreateAuthRequest(ctx, authReq))
++		ensureSessionLoginClient(t, s, storage.Client{ID: authReq.ClientID, Secret: "secret"})
++		ensureSessionLoginConnector(t, s, authReq.ConnectorID)
+ 
+ 		r := sessionCookieRequest("test-nonce")
+ 		w := httptest.NewRecorder()
+@@ -1531,6 +1568,8 @@ func TestPromptNone(t *testing.T) {
+ 			MaxAge: -1, HMACKey: storage.NewHMACKey(crypto.SHA256), Expiry: now.Add(10 * time.Minute),
+ 		}
+ 		require.NoError(t, s.Storage.CreateAuthRequest(ctx, authReq))
++		ensureSessionLoginClient(t, s, storage.Client{ID: authReq.ClientID, Secret: "secret"})
++		ensureSessionLoginConnector(t, s, authReq.ConnectorID)
+ 
+ 		r := sessionCookieRequest("test-nonce")
+ 		w := httptest.NewRecorder()
+@@ -1649,6 +1688,8 @@ func TestSSO_ConsentAndMFA(t *testing.T) {
+ 			MaxAge: -1, HMACKey: storage.NewHMACKey(crypto.SHA256), Expiry: now.Add(10 * time.Minute),
+ 		}
+ 		require.NoError(t, s.Storage.CreateAuthRequest(ctx, authReq))
++		ensureSessionLoginClient(t, s, storage.Client{ID: authReq.ClientID, Secret: "secret"})
++		ensureSessionLoginConnector(t, s, authReq.ConnectorID)
+ 		return authReq
+ 	}
+ 
+@@ -1757,6 +1798,8 @@ func TestSSO_ConsentAndMFA(t *testing.T) {
+ 			MaxAge: -1, HMACKey: storage.NewHMACKey(crypto.SHA256), Expiry: now.Add(10 * time.Minute),
+ 		}
+ 		require.NoError(t, s.Storage.CreateAuthRequest(ctx, authReq))
++		ensureSessionLoginClient(t, s, storage.Client{ID: authReq.ClientID, Secret: "secret"})
++		ensureSessionLoginConnector(t, s, authReq.ConnectorID)
+ 
+ 		r := sessionCookieRequest("test-nonce")
+ 		w := httptest.NewRecorder()
+@@ -1880,6 +1923,8 @@ func TestIdleExpiryExtension(t *testing.T) {
+ 			MaxAge: -1, HMACKey: storage.NewHMACKey(crypto.SHA256), Expiry: now.Add(10 * time.Minute),
+ 		}
+ 		require.NoError(t, s.Storage.CreateAuthRequest(ctx, authReq))
++		ensureSessionLoginClient(t, s, storage.Client{ID: authReq.ClientID, Secret: "secret"})
++		ensureSessionLoginConnector(t, s, authReq.ConnectorID)
+ 
+ 		r := sessionCookieRequest("test-nonce")
+ 		w := httptest.NewRecorder()
+@@ -1927,6 +1972,8 @@ func TestSSO_Unidirectional(t *testing.T) {
+ 			MaxAge: -1, HMACKey: storage.NewHMACKey(crypto.SHA256), Expiry: now.Add(10 * time.Minute),
+ 		}
+ 		require.NoError(t, s.Storage.CreateAuthRequest(ctx, authReq))
++		ensureSessionLoginClient(t, s, storage.Client{ID: authReq.ClientID, Secret: "secret"})
++		ensureSessionLoginConnector(t, s, authReq.ConnectorID)
+ 
+ 		r := sessionCookieRequest("test-nonce")
+ 		w := httptest.NewRecorder()
+@@ -2018,6 +2065,7 @@ func TestSSO_TransitiveTrustChain(t *testing.T) {
+ 			MaxAge: -1, HMACKey: storage.NewHMACKey(crypto.SHA256), Expiry: now.Add(10 * time.Minute),
+ 		}
+ 		require.NoError(t, s.Storage.CreateAuthRequest(ctx, req))
++		ensureSessionLoginConnector(t, s, req.ConnectorID)
+ 		r := sessionCookieRequest("test-nonce")
+ 		w := httptest.NewRecorder()
+ 		session := s.Sessions.ValidAuthSession(ctx, w, r, &req)
+diff --git a/server/device/device.go b/server/device/device.go
+index 486d3297..316e8ca6 100644
+--- a/server/device/device.go
++++ b/server/device/device.go
+@@ -18,6 +18,7 @@ import (
+ 	"github.com/dexidp/dex/server/grants"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/router"
++	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/templates"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/storage"
+@@ -48,11 +49,13 @@ type Handler struct {
+ 	RequestsValidFor time.Duration
+ 	Logger           *slog.Logger
+ 
+-	// Issuer mints the tokens, and Connectors resolves the connector, for the
++	// Issuer mints the tokens, Connectors resolves the connector, and Sessions
++	// checks that a code minted in a browser session is still live, for the
+ 	// auth-code exchange the device flow shares with the authorization_code grant
+ 	// via grants.ExchangeAuthCode.
+ 	Issuer     *tokens.Issuer
+ 	Connectors *connectors.Cache
++	Sessions   *session.Manager
+ }
+ 
+ // Mount registers the device authorization routes.
+@@ -387,7 +390,7 @@ func (h *Handler) completeDeviceAuthorization(w http.ResponseWriter, r *http.Req
+ 
+ 	// ExchangeAuthCode consumes the code (its atomic single-use gate) and returns
+ 	// what to issue; the tokens are minted here.
+-	auth, withRefresh, err := grants.ExchangeAuthCode(ctx, h.Storage, h.Connectors, h.Logger, authCode, client)
++	auth, withRefresh, err := grants.ExchangeAuthCode(ctx, h.Storage, h.Sessions, h.Connectors, h.Logger, authCode, client)
+ 	if err != nil {
+ 		h.Logger.ErrorContext(ctx, "could not exchange auth code for client", "client_id", deviceReq.ClientID, "err", err)
+ 		return "", &deviceFlowError{status: http.StatusInternalServerError, message: "Failed to exchange auth code."}
+diff --git a/server/grants/authcode.go b/server/grants/authcode.go
+index 5d3f90ba..0fdd38c6 100644
+--- a/server/grants/authcode.go
++++ b/server/grants/authcode.go
+@@ -10,6 +10,7 @@ import (
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/revocation"
++	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/storage"
+@@ -20,6 +21,7 @@ import (
+ type authorizationCode struct {
+ 	issuer     *tokens.Issuer
+ 	storage    storage.Storage
++	sessions   *session.Manager
+ 	connectors *connectors.Cache
+ 	now        func() time.Time
+ 	logger     *slog.Logger
+@@ -68,7 +70,7 @@ func (g *authorizationCode) Authorize(ctx context.Context, req *Request, client
+ 		return nil, &oauth2.Error{Type: oauth2.InvalidRequest, Description: "redirect_uri did not match URI from initial request.", Status: http.StatusBadRequest}
+ 	}
+ 
+-	auth, withRefresh, err := ExchangeAuthCode(ctx, g.storage, g.connectors, g.logger, authCode, client)
++	auth, withRefresh, err := ExchangeAuthCode(ctx, g.storage, g.sessions, g.connectors, g.logger, authCode, client)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+@@ -86,7 +88,7 @@ func (g *authorizationCode) Authorize(ctx context.Context, req *Request, client
+ // and is rejected — a code yields tokens at most once. Consuming it before
+ // minting means a signing failure afterwards leaves the code spent, which is the
+ // right trade: replay safety over a retry on a rare signer outage.
+-func ExchangeAuthCode(ctx context.Context, s storage.Storage, conns *connectors.Cache, logger *slog.Logger, authCode storage.AuthCode, client storage.Client) (tokens.Authorization, bool, error) {
++func ExchangeAuthCode(ctx context.Context, s storage.Storage, sessions *session.Manager, conns *connectors.Cache, logger *slog.Logger, authCode storage.AuthCode, client storage.Client) (tokens.Authorization, bool, error) {
+ 	if err := s.DeleteAuthCode(ctx, authCode.ID); err != nil {
+ 		if err == storage.ErrNotFound {
+ 			return tokens.Authorization{}, false, &oauth2.Error{Type: oauth2.InvalidGrant, Description: "Invalid or expired code parameter.", Status: http.StatusBadRequest}
+@@ -109,6 +111,21 @@ func ExchangeAuthCode(ctx context.Context, s storage.Storage, conns *connectors.
+ 		return tokens.Authorization{}, false, &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError}
+ 	}
+ 
++	// A code minted in a browser session is spent by signing out of that session.
++	// Logout ends the session and revokes the tokens then bound to it, but a code
++	// not yet redeemed carries no token for logout to revoke, and ending one session
++	// does not raise the pair's generation, so the revocation check above lets it
++	// through. Refuse it here, as any spent code — the token this would mint names a
++	// session that has already ended, which is exactly the login signing out was to
++	// end. A code that names no session (a non-browser login, or sessions disabled)
++	// is unaffected, and a storage that cannot read the session fails closed. This
++	// guards the device flow too, which redeems its code through here.
++	if authCode.SessionID != "" && !sessions.Alive(ctx, authCode.SessionID) {
++		logger.WarnContext(ctx, signinlog.TokenRequestSessionEnded, signinlog.Refused(signinlog.ReasonSessionEnded,
++			authCode.ConnectorID, client.ID, signinlog.ClaimsUser(authCode.Claims))...)
++		return tokens.Authorization{}, false, &oauth2.Error{Type: oauth2.InvalidGrant, Description: "Invalid or expired code parameter.", Status: http.StatusBadRequest}
++	}
++
+ 	auth := tokens.Authorization{
+ 		Client:        client,
+ 		Claims:        authCode.Claims,
+@@ -120,10 +137,10 @@ func ExchangeAuthCode(ctx context.Context, s storage.Storage, conns *connectors.
+ 
+ 		// Stamped on the code while the browser was still here: the token endpoint
+ 		// has no cookie to consult, and resolving the session from the user would
+-		// hand this token whichever session that user has open elsewhere. A code
+-		// redeemed after its session ended still names it, which is what the sid
+-		// means — where the token came from. Whether that token is good for
+-		// anything is the session check in introspection and refresh.
++		// hand this token whichever session that user has open elsewhere. The sid
++		// names where the token came from and is carried onto it unchanged; a code
++		// whose session has since ended is refused above, so a token minted here
++		// never names a session that is already gone.
+ 		SessionID: authCode.SessionID,
+ 
+ 		Generation: authCode.Generation,
+diff --git a/server/grants/grants.go b/server/grants/grants.go
+index c2680d6d..fdcb40b9 100644
+--- a/server/grants/grants.go
++++ b/server/grants/grants.go
+@@ -190,7 +190,7 @@ func (h *Handler) Mount(m router.Mux) {
+ 		&clientCredentials{issuer: h.Issuer, logger: h.Logger},
+ 		&password{issuer: h.Issuer, storage: h.Storage, now: h.Now, logger: h.Logger, connectorID: h.PasswordConnector, lockout: h.Lockout},
+ 		&tokenExchange{issuer: h.Issuer, storage: h.Storage, now: h.Now, logger: h.Logger},
+-		&authorizationCode{issuer: h.Issuer, storage: h.Storage, connectors: h.Connectors, now: h.Now, logger: h.Logger},
++		&authorizationCode{issuer: h.Issuer, storage: h.Storage, sessions: h.Sessions, connectors: h.Connectors, now: h.Now, logger: h.Logger},
+ 		&refresh{storage: h.Storage, issuer: h.Issuer, policy: h.RefreshPolicy, sessions: h.Sessions, sessionsEnabled: h.SessionsEnabled, now: h.Now, logger: h.Logger},
+ 		&deviceCode{storage: h.Storage, now: h.Now, logger: h.Logger},
+ 	)
+diff --git a/server/grants/refresh.go b/server/grants/refresh.go
+index d14e9ed8..3634384d 100644
+--- a/server/grants/refresh.go
++++ b/server/grants/refresh.go
+@@ -99,14 +99,13 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 		return nil, g.revoked(ctx, refreshToken)
+ 	}
+ 
+-	// Resolved before anything is rotated or read from the connector: a token whose
+-	// session has ended is not going to produce a token set. Skipped outright when
+-	// sessions are off — nothing was ever bound to one, so the read would only
+-	// confirm that, and refusing a refresh over it would be indefensible.
++	// Resolved before anything is rotated or read from the connector. Skipped
++	// outright when sessions are off — nothing was ever bound to one, so the read
++	// would only confirm that, and refusing a refresh over it would be indefensible.
+ 	var sessionID string
+ 	if g.sessionsEnabled {
+ 		var oerr *oauth2.Error
+-		if sessionID, oerr = g.sessionID(ctx, refreshToken, client); oerr != nil {
++		if sessionID, oerr = g.sessionID(ctx, refreshToken); oerr != nil {
+ 			return nil, oerr
+ 		}
+ 	}
+@@ -176,6 +175,14 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 		return nil, &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
+ 	}
+ 
++	// An application in use keeps the browser session it signed in through alive
++	// for the other applications of the browser (Deckhouse). Only a client whose
++	// tokens are bound to the session does: a standalone token, such as the one in
++	// a kubeconfig, lives on its own and must not keep the browser signed in.
++	if client.RefreshBoundToSession() {
++		g.sessions.UsedByRefresh(ctx, sessionID, client.ID, refreshToken.Claims.UserID, refreshToken.ConnectorID, generation)
++	}
++
+ 	ts := tokens.TokenSet{AccessToken: accessToken, IDToken: idToken, RefreshToken: rawNewToken, Expiry: expiry}
+ 	return ts.Response(g.now()), nil
+ }
+@@ -215,72 +222,45 @@ func (g *refresh) revoked(ctx context.Context, refreshToken *storage.RefreshToke
+ 	}
+ }
+ 
+-// sessionID returns the sid for the refreshed tokens, and refuses the refresh when
+-// the session has ended and the client asked its tokens to end with it.
++// sessionID returns the sid for the refreshed tokens.
++//
++// The sid names where a token came from and is carried across refreshes unchanged;
++// stripping it would cut the token loose from the session whose end is to revoke it.
+ //
+-// The sid names where a token came from and is carried across refreshes unchanged,
+-// dead session or not; stripping it would make the token active again at the next
+-// refresh, undoing what introspection just reported. Whether the token is still good
+-// for anything is the client's RefreshTokenLifetime, read the same way here and in
+-// introspection (see sessionAlive in server/introspection).
++// A token bound to its session (the client's RefreshTokenLifetime) is not refused
++// because the session has since gone idle or reached its lifetime (Deckhouse): those
++// close the window in which the browser signs in without a password, not the
++// applications already signed in. The bound token ends when its session is ended on
++// purpose — logout revokes it with the session (see server/logout), and the end is
++// announced (see server/revocation) — or when its pair is revoked, as every token does.
++// Introspection does not look at the session either (see introspectAccessToken in
++// server/introspection).
+ //
+ // Origin comes from the stored reference and nowhere else: a token minted outside a
+ // browser flow has none and must not acquire one from whatever session its user
+ // happens to have open.
+-func (g *refresh) sessionID(ctx context.Context, refreshToken *storage.RefreshToken, client storage.Client) (string, *oauth2.Error) {
+-	bound := client.RefreshBoundToSession()
+-
++//
++// A storage that cannot be read refuses the refresh as a server error and revokes
++// nothing: the token may be perfectly good.
++func (g *refresh) sessionID(ctx context.Context, refreshToken *storage.RefreshToken) (string, *oauth2.Error) {
+ 	offlineSessions, err := g.storage.GetOfflineSessions(ctx, refreshToken.Claims.UserID, refreshToken.ConnectorID)
+ 	if err != nil {
+-		if !errors.Is(err, storage.ErrNotFound) {
+-			g.logger.ErrorContext(ctx, "refresh: failed to read offline session for sid", "err", err)
+-		}
+-		if bound {
+-			// Nothing to check the token against. For a standalone token that costs
+-			// only its sid, which can make it look less bound than it is but never
+-			// more; for a bound one it would mean handing out a token whose whole
+-			// validity rests on a session nobody could read.
+-			return "", sessionEndedError()
++		if errors.Is(err, storage.ErrNotFound) {
++			return "", nil
+ 		}
+-		return "", nil
++		g.logger.ErrorContext(ctx, "refresh: failed to read offline session for sid", "err", err)
++		return "", &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
+ 	}
+ 
+ 	ref, ok := offlineSessions.Refresh[refreshToken.ClientID]
+-	if !ok || ref.SessionID == "" {
++	if !ok {
+ 		// Issued outside a browser flow — the password grant, or before sessions were
+-		// turned on. There is no session to be bound to, so there is none to end.
++		// turned on. There is no session to be bound to.
+ 		return "", nil
+ 	}
+-
+-	if !bound {
+-		return ref.SessionID, nil
+-	}
+-
+-	if !g.sessions.Alive(ctx, ref.SessionID) {
+-		// Through the store, not storage.DeleteRefresh: the token and the offline
+-		// session's reference to it have to go together, or the admin API lists a
+-		// token that no longer exists and fails trying to revoke it.
+-		g.issuer.Refresh.RevokeClients(ctx, refreshToken.Claims.UserID, refreshToken.ConnectorID,
+-			[]string{refreshToken.ClientID})
+-
+-		g.logger.InfoContext(ctx, "refresh: refused, session ended",
+-			"client_id", refreshToken.ClientID, "user_id", refreshToken.Claims.UserID)
+-		return "", sessionEndedError()
+-	}
+ 	return ref.SessionID, nil
+ }
+ 
+-// sessionEndedError reports a refused refresh as invalid_grant, the one code RFC
+-// 6749 §5.2 has for a refresh token that is no longer good for anything. The client
+-// owns the session in question, so the description names the reason.
+-func sessionEndedError() *oauth2.Error {
+-	return &oauth2.Error{
+-		Type:        oauth2.InvalidGrant,
+-		Description: "The session this refresh token belongs to has ended.",
+-		Status:      http.StatusBadRequest,
+-	}
+-}
+-
+ // refreshScopes resolves the scopes for this refresh. Per RFC 6749 §6 the client
+ // may omit them (defaulting to the originally authorized scopes) but may not
+ // widen them.
+diff --git a/server/introspection/introspection.go b/server/introspection/introspection.go
+index f9437c4a..a59cdf73 100644
+--- a/server/introspection/introspection.go
++++ b/server/introspection/introspection.go
+@@ -14,7 +14,6 @@ import (
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/revocation"
+ 	"github.com/dexidp/dex/server/router"
+-	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/signer"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/storage"
+@@ -169,11 +168,10 @@ type Handler struct {
+ 	Storage       storage.Storage
+ 	Logger        *slog.Logger
+ 	RefreshPolicy *tokens.RefreshStrategy
+-
+-	// Sessions resolves whether the browser session a token was issued under is
+-	// still alive. Nil when sessions are disabled, in which case no token carries
+-	// a sid and there is nothing to check.
+-	Sessions *session.Manager
++	// Revocations looks up the end of a browser session (Deckhouse; see
++	// revokedError). Storage may be a wrapper that hides it, so it is passed on its
++	// own. Nil looks nothing up.
++	Revocations storage.RevocationReader
+ }
+ 
+ // Mount registers the introspection route.
+@@ -289,25 +287,6 @@ func (h *Handler) introspectRefreshToken(ctx context.Context, token string) (*In
+ 	}, nil
+ }
+ 
+-// sessionAlive reports whether a token's session still stands, for clients that
+-// asked to be judged that way.
+-//
+-// RFC 7662 §4 requires the server to report a revoked token as inactive, and ending
+-// a session revokes the tokens bound to it. Which tokens those are is the client's
+-// RefreshTokenLifetime, the same declaration the refresh grant reads — the two must
+-// agree, or a standalone client refreshes into a token that is inactive from birth.
+-//
+-// The comparison is against the sid, not merely the existence of a session: signing
+-// out and back in makes a new session under the same subject, and the old token must
+-// not be revived by it.
+-func (h *Handler) sessionAlive(ctx context.Context, client storage.Client, subject, sessionID string) bool {
+-	if sessionID == "" || !client.RefreshBoundToSession() {
+-		return true
+-	}
+-
+-	return h.Sessions.Alive(ctx, sessionID)
+-}
+-
+ // generationError maps the generation check of a token (see server/revocation):
+ // a token issued before its pair was revoked is reported inactive (RFC 7662
+ // §4), a failure to read the pair is a server error.
+@@ -323,6 +302,36 @@ func (h *Handler) generationError(ctx context.Context, err error) error {
+ 	}
+ }
+ 
++// revokedError reports a token of a client bound to the browser session (the
++// client's RefreshTokenLifetime) inactive once a Revocation of that session (the sid
++// claim) was recorded: the user signed out of it, an operator ended it, or its pair
++// was ended (Deckhouse). A token of a client that is not bound outlives the session,
++// as its refresh token does. A storage that cannot be read is a server error.
++func (h *Handler) revokedError(ctx context.Context, client storage.Client, idToken *oidc.IDToken) error {
++	if h.Revocations == nil || !client.RefreshBoundToSession() {
++		return nil
++	}
++	var claims struct {
++		SessionID string `json:"sid"`
++	}
++	if err := idToken.Claims(&claims); err != nil {
++		h.Logger.ErrorContext(ctx, "failed to read the sid of the token", "err", err)
++		return newIntrospectInternalServerError()
++	}
++	if claims.SessionID == "" {
++		return nil
++	}
++	revoked, err := h.Revocations.RevocationExists(ctx, storage.RevocationSession, claims.SessionID)
++	if err != nil {
++		h.Logger.ErrorContext(ctx, "failed to check the revocation of the session of the token", "err", err)
++		return newIntrospectInternalServerError()
++	}
++	if revoked {
++		return newIntrospectInactiveTokenError()
++	}
++	return nil
++}
++
+ func (h *Handler) introspectAccessToken(ctx context.Context, token string) (*Introspection, error) {
+ 	verifier := oidc.NewVerifier(h.Issuer, &signer.KeySet{Signer: h.Signer}, &oidc.Config{SkipClientIDCheck: true})
+ 	idToken, err := verifier.Verify(ctx, token)
+@@ -348,12 +357,16 @@ func (h *Handler) introspectAccessToken(ctx context.Context, token string) (*Int
+ 		return nil, newIntrospectInternalServerError()
+ 	}
+ 
+-	if !h.sessionAlive(ctx, client, idToken.Subject, claims.SessionID) {
+-		return nil, newIntrospectInactiveTokenError()
+-	}
++	// An access token stays active while its session idles out (Deckhouse), as the
++	// refresh grant keeps serving a bound token (see sessionID in server/grants). A
++	// revocation of its pair ends it, and so does the end of the browser session it
++	// is bound to (see revokedError).
+ 	if err := h.generationError(ctx, revocation.CheckToken(ctx, h.Storage, idToken)); err != nil {
+ 		return nil, err
+ 	}
++	if err := h.revokedError(ctx, client, idToken); err != nil {
++		return nil, err
++	}
+ 
+ 	return &Introspection{
+ 		Active:    true,
+diff --git a/server/logout/logout.go b/server/logout/logout.go
+index 9553f526..09e4c5a4 100644
+--- a/server/logout/logout.go
++++ b/server/logout/logout.go
+@@ -50,6 +50,10 @@ type Handler struct {
+ 	Revocations *revocation.Recorder
+ }
+ 
++// ErrMsgLogoutUnavailable is the page of a logout that could not read or record
++// the session: nothing has ended, and the user is to try again.
++const ErrMsgLogoutUnavailable = "Logout is temporarily unavailable. Please try again."
++
+ // renderError renders a user-facing HTML error page.
+ func (h *Handler) renderError(r *http.Request, w http.ResponseWriter, status int, description string) {
+ 	templates.RenderError(h.Templates, h.Logger, r, w, status, description)
+@@ -101,12 +105,23 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
+ 	postLogoutRedirectURI := r.FormValue("post_logout_redirect_uri")
+ 	state := r.FormValue("state")
+ 
+-	// The session named by the cookie is the one that will end, if any. ValidSession
++	// The session named by the cookie is the one that will end, if any. CurrentSession
+ 	// is the same check every other session-trusting path makes: nonce verified,
+ 	// expiry enforced, and a cookie that survived its session cleared on the way out.
+-	authSession := h.Sessions.ValidSession(ctx, w, r)
++	// A storage that cannot be read ends nothing and reports nothing ended: the
++	// session may well be there, and "you are logged out" would be a lie.
++	authSession, err := h.Sessions.CurrentSession(ctx, w, r)
++	if err != nil {
++		h.Logger.ErrorContext(ctx, "logout: failed to read the session", "err", err)
++		h.renderError(r, w, http.StatusServiceUnavailable, ErrMsgLogoutUnavailable)
++		return
++	}
+ 
+-	var clientID string
++	// The client is named by the hint or, without one, by client_id (RP-Initiated
++	// Logout §2 allows either). A client that signs its users out by sending the
++	// browser here then needs no ID token in the address, where it would end up in
++	// browser history and access logs.
++	clientID := r.FormValue("client_id")
+ 	hintMatchesSession := false
+ 
+ 	if idTokenHint != "" {
+@@ -116,6 +131,10 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
+ 			h.renderError(r, w, http.StatusBadRequest, "Invalid id_token_hint.")
+ 			return
+ 		}
++		if clientID != "" && clientID != hint.clientID {
++			h.renderError(r, w, http.StatusBadRequest, "client_id does not match id_token_hint.")
++			return
++		}
+ 
+ 		clientID = hint.clientID
+ 		hintMatchesSession = hint.matches(authSession)
+@@ -125,29 +144,11 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
+ 			"client_id", clientID, "matches_session", hintMatchesSession)
+ 	}
+ 
+-	// Ask the user to confirm in two cases, both from RP-Initiated Logout §2: "the OP
+-	// MUST ask the End-User this question if an id_token_hint was not provided or if
+-	// the supplied ID Token does not belong to the current OP session."
+-	//
+-	//   - A hint that names some other session is suspect whatever the method, so a
+-	//     cross-site POST cannot use a leaked token to end the current session either.
+-	//   - No hint at all needs confirming only on GET, which is what stops
+-	//     <img src="/logout"> from working as CSRF. The confirmation form itself POSTs
+-	//     back without a hint, and that submission is the one that must go through —
+-	//     which is why this case is method-sensitive and the one above is not.
+-	confirm := (idTokenHint != "" && !hintMatchesSession) ||
+-		(idTokenHint == "" && r.Method == http.MethodGet)
+-	if authSession != nil && confirm {
+-		if err := h.Templates.Logout(r, w, "", false, true); err != nil {
+-			h.Logger.ErrorContext(ctx, "server template error", "err", err)
+-		}
+-		return
+-	}
+-
+-	// Validate post_logout_redirect_uri against registered client URIs.
++	// Validate post_logout_redirect_uri against registered client URIs before
++	// anything else, so the confirmation page never carries one that is not.
+ 	if postLogoutRedirectURI != "" {
+ 		if clientID == "" {
+-			h.renderError(r, w, http.StatusBadRequest, "post_logout_redirect_uri requires id_token_hint.")
++			h.renderError(r, w, http.StatusBadRequest, "post_logout_redirect_uri requires id_token_hint or client_id.")
+ 			return
+ 		}
+ 
+@@ -166,6 +167,33 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
+ 		}
+ 	}
+ 
++	// Ask the user to confirm in two cases, both from RP-Initiated Logout §2: "the OP
++	// MUST ask the End-User this question if an id_token_hint was not provided or if
++	// the supplied ID Token does not belong to the current OP session."
++	//
++	//   - A hint that names some other session is suspect whatever the method, so a
++	//     cross-site POST cannot use a leaked token to end the current session either.
++	//   - No hint at all needs confirming on a GET that is not a top-level navigation
++	//     from the site of dex (see sameSiteNavigation). That is what stops
++	//     <img src="/logout"> and a page of another site from working as CSRF, while
++	//     "Sign out" in an application on the same site goes straight through. The
++	//     site is the registrable domain: any host under it, an application of
++	//     another tenant too, can sign the user out this way, though only to an
++	//     address the client registered.
++	//   - A POST without a hint goes through only from dex's own origin (Deckhouse,
++	//     see sameOriginPost): the confirmation form posts back from there. A form of
++	//     another host of the site would otherwise end the session unasked, as the
++	//     Lax cookie goes with a same-site POST.
++	confirm := (idTokenHint != "" && !hintMatchesSession) ||
++		(idTokenHint == "" && r.Method == http.MethodGet && !sameSiteNavigation(r)) ||
++		(idTokenHint == "" && r.Method == http.MethodPost && !h.sameOriginPost(r))
++	if authSession != nil && confirm {
++		if err := h.Templates.LogoutConfirmation(r, w, clientID, postLogoutRedirectURI, state); err != nil {
++			h.Logger.ErrorContext(ctx, "server template error", "err", err)
++		}
++		return
++	}
++
+ 	// Nothing to end: no cookie, or a cookie for a session that is gone or expired.
+ 	// ValidSession has already cleared the cookie if there was one worth clearing.
+ 	// Still honor the redirect, so a repeated logout lands the user where they asked.
+@@ -202,6 +230,35 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
+ 	h.finishLogout(w, r, postLogoutRedirectURI, state, loggedOut)
+ }
+ 
++// sameOriginPost reports whether a POST came from a page of dex's own origin
++// (Deckhouse): by Sec-Fetch-Site, or, from a browser that does not send it, by the
++// Origin header. A request with neither is not taken for one.
++func (h *Handler) sameOriginPost(r *http.Request) bool {
++	if site := r.Header.Get("Sec-Fetch-Site"); site != "" {
++		return site == "same-origin"
++	}
++	origin := r.Header.Get("Origin")
++	return origin != "" && origin == h.IssuerURL.Scheme+"://"+h.IssuerURL.Host
++}
++
++// sameSiteNavigation reports whether the request is a top-level navigation that
++// started on dex's own site: from an application under the same registrable
++// domain, by a link or a redirect, or from an address the user typed. Browsers
++// set the Sec-Fetch-* headers themselves and a page cannot forge them. A request
++// without them — an old browser, a script — is not taken for one, nor is a
++// navigation inside a frame, which the user does not see.
++func sameSiteNavigation(r *http.Request) bool {
++	if r.Header.Get("Sec-Fetch-Mode") != "navigate" || r.Header.Get("Sec-Fetch-Dest") != "document" {
++		return false
++	}
++	switch r.Header.Get("Sec-Fetch-Site") {
++	case "same-origin", "same-site", "none":
++		return true
++	default:
++		return false
++	}
++}
++
+ // recordSessionEnd records the end of the session before anything of it goes:
+ // its clients are read from it, and a session that ended unrecorded would live
+ // on in the components that trust its tokens. When the record fails, the
+@@ -210,7 +267,7 @@ func (h *Handler) recordSessionEnd(ctx context.Context, w http.ResponseWriter, r
+ 	if err := h.Revocations.SessionEnded(ctx, *authSession); err != nil {
+ 		h.Logger.ErrorContext(ctx, "logout: failed to record the end of the session",
+ 			"session_id", authSession.ID, "user_id", authSession.UserID, "err", err)
+-		h.renderError(r, w, http.StatusServiceUnavailable, "Logout is temporarily unavailable. Please try again.")
++		h.renderError(r, w, http.StatusServiceUnavailable, ErrMsgLogoutUnavailable)
+ 		return false
+ 	}
+ 	return true
+@@ -328,6 +385,11 @@ func (h *Handler) handleLogoutCallback(w http.ResponseWriter, r *http.Request) {
+ 
+ 	session, err := h.Storage.GetAuthSession(ctx, sessionID)
+ 	if err != nil {
++		if !errors.Is(err, storage.ErrNotFound) {
++			h.Logger.ErrorContext(ctx, "logout callback: failed to read the session", "err", err)
++			h.renderError(r, w, http.StatusServiceUnavailable, ErrMsgLogoutUnavailable)
++			return
++		}
+ 		h.Logger.ErrorContext(ctx, "logout callback: session not found", "err", err)
+ 		h.renderError(r, w, http.StatusBadRequest, "Session not found.")
+ 		return
+diff --git a/server/mfa/handler.go b/server/mfa/handler.go
+index bd397e79..be4d8a26 100644
+--- a/server/mfa/handler.go
++++ b/server/mfa/handler.go
+@@ -99,6 +99,13 @@ func (h *Handler) validateMFARequest(w http.ResponseWriter, r *http.Request) (*m
+ 	}, true
+ }
+ 
++// ChainForClient returns the MFA chain a login of the connector to the client
++// passes (Deckhouse: the login flow records it on the browser session, see
++// session.Manager.RecordMFA).
++func (h *Handler) ChainForClient(ctx context.Context, clientID, connectorID string) ([]string, error) {
++	return h.chainForClient(ctx, clientID, connectorID)
++}
++
+ func (h *Handler) chainForClient(ctx context.Context, clientID, connectorID string) ([]string, error) {
+ 	if len(h.MFAProviders) == 0 {
+ 		return nil, nil
+diff --git a/server/server.go b/server/server.go
+index a57f70db..e9364419 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -279,6 +279,19 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+ 	sessions := s.sessions
+ 	// guard checks every password: the login form and the password grant.
+ 	guard := &lockout.Guard{Storage: s.storage, Now: rc.now, Logger: s.logger, Policy: c.Lockout}
++	// The login flow records the MFA chain a login passed on the browser session
++	// and checks it on a login from the session (Deckhouse), so it resolves chains
++	// the way the MFA handler does.
++	mfaHandler := &mfa.Handler{
++		Storage:         s.storage,
++		Templates:       s.templates,
++		Logger:          s.logger,
++		IssuerURL:       s.issuerURL,
++		MFAProviders:    c.MFAProviders,
++		DefaultMFAChain: c.DefaultMFAChain,
++		Now:             rc.now,
++		Connectors:      s.connectors,
++	}
+ 
+ 	for _, h := range []router.Handler{
+ 		s.discovery,
+@@ -309,7 +322,7 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+ 			Storage:       s.storage,
+ 			Logger:        s.logger,
+ 			RefreshPolicy: c.RefreshTokenPolicy,
+-			Sessions:      sessions,
++			Revocations:   revocationReader(c.Storage),
+ 		},
+ 		&device.Handler{
+ 			IssuerURL:        s.issuerURL,
+@@ -320,6 +333,7 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+ 			Logger:           s.logger,
+ 			Issuer:           s.issuer,
+ 			Connectors:       s.connectors,
++			Sessions:         sessions,
+ 		},
+ 		&home.Handler{
+ 			IssuerURL: s.issuerURL,
+@@ -344,20 +358,12 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+ 			Issuer:                 s.issuer,
+ 			MFAEnabled:             len(c.MFAProviders) > 0,
+ 			DefaultMFAChain:        c.DefaultMFAChain,
++			MFAChain:               mfaHandler.ChainForClient,
+ 			SkipApproval:           c.SkipApprovalScreen,
+ 			PasswordPolicy:         c.PasswordPolicy,
+ 			Lockout:                guard,
+ 		},
+-		&mfa.Handler{
+-			Storage:         s.storage,
+-			Templates:       s.templates,
+-			Logger:          s.logger,
+-			IssuerURL:       s.issuerURL,
+-			MFAProviders:    c.MFAProviders,
+-			DefaultMFAChain: c.DefaultMFAChain,
+-			Now:             rc.now,
+-			Connectors:      s.connectors,
+-		},
++		mfaHandler,
+ 		&consent.Handler{
+ 			Storage:      s.storage,
+ 			Templates:    s.templates,
+@@ -400,6 +406,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+ 	s.mux.ServeHTTP(w, r)
+ }
+ 
++// revocationReader returns the RevocationReader of s, nil when s cannot look
++// revocations up (Deckhouse). It is taken from the storage of the config: the key
++// cacher around it hides it.
++func revocationReader(s storage.Storage) storage.RevocationReader {
++	if r, ok := storage.AsRevocationReader(s); ok {
++		return r
++	}
++	return nil
++}
++
+ // newKeyCacher returns a storage which caches keys so long as the next
+ func newKeyCacher(s storage.Storage, now func() time.Time) storage.Storage {
+ 	if now == nil {
+diff --git a/server/server_grant_refresh_test.go b/server/server_grant_refresh_test.go
+index a27b94d9..938ad81b 100644
+--- a/server/server_grant_refresh_test.go
++++ b/server/server_grant_refresh_test.go
+@@ -530,9 +530,10 @@ func TestHandleRefreshTokenAllowedConnectors(t *testing.T) {
+ // TestRefreshTokenSID pins what a refresh does with the sid claim.
+ //
+ // A refresh carries the claim across unchanged, alive session or not, and never
+-// hands one to a token minted outside a browser flow. What the end of that session
+-// costs the token is the client's declaration: nothing for a standalone one,
+-// everything for a session-bound one.
++// hands one to a token minted outside a browser flow. A session that idled out or
++// reached its lifetime costs the token nothing, standalone or session-bound
++// (Deckhouse): a bound token ends with a deliberate end of its session, when logout
++// revokes it (see TestHandleLogoutRevokesOnlySessionBoundClients).
+ func TestRefreshTokenSID(t *testing.T) {
+ 	// The session's own id is the sid; nothing is derived any more.
+ 	const sid = "sessionid"
+@@ -548,8 +549,6 @@ func TestRefreshTokenSID(t *testing.T) {
+ 		// default (standalone).
+ 		lifetime string
+ 		wantSID  any
+-		// wantRefused expects the refresh to be turned away instead of issuing.
+-		wantRefused bool
+ 	}{
+ 		{
+ 			name:    "browser flow, session alive",
+@@ -585,19 +584,20 @@ func TestRefreshTokenSID(t *testing.T) {
+ 			wantSID:  sid,
+ 		},
+ 		{
+-			// The whole point of the setting.
+-			name:        "session-bound client, session ended",
+-			origin:      sid,
+-			live:        "",
+-			lifetime:    storage.RefreshTokenLifetimeSession,
+-			wantRefused: true,
++			// The session idled out or reached its lifetime: that closes the window for
++			// signing in without a password, not the application already signed in.
++			name:     "session-bound client, session ended",
++			origin:   sid,
++			live:     "",
++			lifetime: storage.RefreshTokenLifetimeSession,
++			wantSID:  sid,
+ 		},
+ 		{
+-			name:        "session-bound client, user signed in again",
+-			origin:      sid,
+-			live:        "anothersession",
+-			lifetime:    storage.RefreshTokenLifetimeSession,
+-			wantRefused: true,
++			name:     "session-bound client, user signed in again",
++			origin:   sid,
++			live:     "anothersession",
++			lifetime: storage.RefreshTokenLifetimeSession,
++			wantSID:  sid,
+ 		},
+ 		{
+ 			// Nothing bound it to a session in the first place, so there is no
+@@ -664,17 +664,6 @@ func TestRefreshTokenSID(t *testing.T) {
+ 			rr := httptest.NewRecorder()
+ 			s.ServeHTTP(rr, req)
+ 
+-			if tc.wantRefused {
+-				require.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
+-				require.Contains(t, rr.Body.String(), "invalid_grant")
+-
+-				// Spent, not merely refused: a token left in storage only fails for
+-				// as long as the check holds.
+-				_, err := s.storage.GetRefresh(ctx, "test")
+-				require.ErrorIs(t, err, storage.ErrNotFound)
+-				return
+-			}
+-
+ 			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+ 
+ 			var resp struct {
+@@ -688,3 +677,91 @@ func TestRefreshTokenSID(t *testing.T) {
+ 		})
+ 	}
+ }
++
++// TestRefreshUsesItsSession: the refresh of a token issued through a live browser
++// session counts as a use of the session, so the browser signs in to the other
++// applications without a password while one of them is in use (Deckhouse). A
++// session that ended stays ended, and another session of the user is not touched.
++func TestRefreshUsesItsSession(t *testing.T) {
++	const sid = "sessionid"
++	tests := []struct {
++		name string
++		// idleFor is how long the session has gone unused at the refresh.
++		idleFor   time.Duration
++		otherLive bool
++		// standalone leaves the refresh tokens of the client unbound from the session.
++		standalone  bool
++		expectedUse bool
++	}{
++		{name: "live session, unused for half its idle timeout", idleFor: 30 * time.Minute, expectedUse: true},
++		// A kubeconfig is signed in through the browser, but its refreshes must not keep the browser
++		// signed in to the other applications.
++		{name: "a standalone client", idleFor: 30 * time.Minute, standalone: true},
++		{name: "live session, used a moment ago", idleFor: time.Minute},
++		{name: "session gone idle", idleFor: 2 * time.Hour},
++		{name: "the user signed in again on another browser", idleFor: 30 * time.Minute, otherLive: true, expectedUse: true},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			httpServer, s := newTestServerWithSessions(t, nil)
++			defer httpServer.Close()
++
++			ctx := t.Context()
++			mockRefreshTokenTestStorage(t, s.storage, false)
++			if !tc.standalone {
++				require.NoError(t, s.storage.UpdateClient(ctx, "test", func(old storage.Client) (storage.Client, error) {
++					old.RefreshTokenLifetime = storage.RefreshTokenLifetimeSession
++					return old, nil
++				}))
++			}
++			require.NoError(t, s.storage.UpdateOfflineSessions(ctx, "1", "test",
++				func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++					old.Refresh["test"].SessionID = sid
++					return old, nil
++				}))
++			require.NoError(t, s.storage.CreateUserIdentity(ctx, storage.UserIdentity{
++				UserID: "1", ConnectorID: "test",
++				Claims:    storage.Claims{UserID: "1", Username: "jane"},
++				LastLogin: time.Now(),
++			}))
++
++			lastUse := time.Now().Add(-tc.idleFor).UTC()
++			newSession := func(id string) {
++				require.NoError(t, s.storage.CreateAuthSession(ctx, storage.AuthSession{
++					ID: id, Secret: testSessionSecret(id), UserID: "1", ConnectorID: "test",
++					CreatedAt: lastUse, LastActivity: lastUse,
++					AbsoluteExpiry: lastUse.Add(24 * time.Hour), IdleExpiry: lastUse.Add(time.Hour),
++				}))
++			}
++			newSession(sid)
++			if tc.otherLive {
++				newSession("anothersession")
++			}
++
++			tokenData, err := internal.Marshal(&internal.RefreshToken{RefreshId: "test", Token: "bar"})
++			require.NoError(t, err)
++			req := httptest.NewRequest(http.MethodPost, "/token", strings.NewReader(url.Values{
++				"grant_type": {"refresh_token"}, "refresh_token": {tokenData},
++			}.Encode()))
++			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++			req.SetBasicAuth("test", "barfoo")
++			rr := httptest.NewRecorder()
++			s.ServeHTTP(rr, req)
++			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++
++			got, err := s.storage.GetAuthSession(ctx, sid)
++			require.NoError(t, err)
++			if tc.expectedUse {
++				assert.WithinDuration(t, time.Now(), got.LastActivity, time.Minute)
++				assert.WithinDuration(t, time.Now().Add(time.Hour), got.IdleExpiry, time.Minute)
++			} else {
++				assert.True(t, lastUse.Equal(got.LastActivity), "last activity %s, want %s", got.LastActivity, lastUse)
++			}
++			if tc.otherLive {
++				other, err := s.storage.GetAuthSession(ctx, "anothersession")
++				require.NoError(t, err)
++				assert.True(t, lastUse.Equal(other.LastActivity), "another session of the user was touched")
++			}
++		})
++	}
++}
+diff --git a/server/server_logout_origin_test.go b/server/server_logout_origin_test.go
+new file mode 100644
+index 00000000..ce3cbb00
+--- /dev/null
++++ b/server/server_logout_origin_test.go
+@@ -0,0 +1,60 @@
++package server
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++)
++
++// TestLogoutPostWithoutHintNeedsOwnOrigin: a POST to /logout without an
++// id_token_hint ends the session only from a page of dex's own origin, the
++// confirmation form (Deckhouse). A form of another host of the same site, whose
++// POST the Lax cookie goes with, gets the confirmation page instead.
++func TestLogoutPostWithoutHintNeedsOwnOrigin(t *testing.T) {
++	tests := []struct {
++		name    string
++		site    string
++		origin  string
++		confirm bool
++	}{
++		{name: "confirmation form of dex", site: "same-origin"},
++		{name: "another host of the site", site: "same-site", confirm: true},
++		{name: "another site", site: "cross-site", confirm: true},
++		{name: "no fetch metadata, own origin", origin: "own"},
++		{name: "no fetch metadata, other origin", origin: "https://app.example.com", confirm: true},
++		{name: "no fetch metadata, no origin", confirm: true},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			httpServer, server, _ := newLogoutByClientServer(t)
++			defer httpServer.Close()
++
++			req := httptest.NewRequest(http.MethodPost, "/logout", strings.NewReader(url.Values{}.Encode()))
++			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++			if tc.site != "" {
++				req.Header.Set("Sec-Fetch-Site", tc.site)
++			}
++			switch tc.origin {
++			case "":
++			case "own":
++				req.Header.Set("Origin", server.issuerURL.Scheme+"://"+server.issuerURL.Host)
++			default:
++				req.Header.Set("Origin", tc.origin)
++			}
++			req.AddCookie(testSessionCookie("testnonce"))
++			rr := httptest.NewRecorder()
++			server.ServeHTTP(rr, req)
++
++			require.Equal(t, http.StatusOK, rr.Code)
++			if tc.confirm {
++				require.Contains(t, rr.Body.String(), "Do you want to log out?")
++			} else {
++				require.Contains(t, rr.Body.String(), "successfully logged out")
++			}
++		})
++	}
++}
+diff --git a/server/server_logout_test.go b/server/server_logout_test.go
+index 9443e742..f8f7a599 100644
+--- a/server/server_logout_test.go
++++ b/server/server_logout_test.go
+@@ -47,6 +47,7 @@ func TestHandleLogoutPOST(t *testing.T) {
+ 
+ 	rr := httptest.NewRecorder()
+ 	req := httptest.NewRequest("POST", "/logout", nil)
++	req.Header.Set("Sec-Fetch-Site", "same-origin") // the confirmation form of dex
+ 	server.ServeHTTP(rr, req)
+ 	require.Equal(t, http.StatusOK, rr.Code)
+ 	body := rr.Body.String()
+@@ -87,6 +88,7 @@ func TestHandleLogoutNoHintPOSTPerformsLogout(t *testing.T) {
+ 
+ 	rr := httptest.NewRecorder()
+ 	req := httptest.NewRequest("POST", "/logout", nil)
++	req.Header.Set("Sec-Fetch-Site", "same-origin") // the confirmation form of dex
+ 	req.AddCookie(&http.Cookie{
+ 		Name:  "dex_session",
+ 		Value: internal.SessionCookieValue(nonce, testSessionSecret(nonce), testSessionKey),
+@@ -410,6 +412,7 @@ func TestHandleLogoutFromCookie(t *testing.T) {
+ 	// POST performs logout (GET without hint shows confirmation).
+ 	rr := httptest.NewRecorder()
+ 	req := httptest.NewRequest("POST", "/logout", nil)
++	req.Header.Set("Sec-Fetch-Site", "same-origin") // the confirmation form of dex
+ 	req.AddCookie(&http.Cookie{
+ 		Name:  "dex_session",
+ 		Value: internal.SessionCookieValue(nonce, testSessionSecret(nonce), testSessionKey),
+@@ -682,6 +685,7 @@ func TestHandleLogoutEndsOneDevice(t *testing.T) {
+ 
+ 	rr := httptest.NewRecorder()
+ 	req := httptest.NewRequest("POST", "/logout", nil)
++	req.Header.Set("Sec-Fetch-Site", "same-origin") // the confirmation form of dex
+ 	req.AddCookie(testSessionCookie("phone"))
+ 	server.ServeHTTP(rr, req)
+ 	require.Equal(t, http.StatusOK, rr.Code)
+@@ -845,6 +849,7 @@ func TestBackchannelLogoutToleratesFailingRP(t *testing.T) {
+ 
+ 	rr := httptest.NewRecorder()
+ 	req := httptest.NewRequest("POST", "/logout", nil)
++	req.Header.Set("Sec-Fetch-Site", "same-origin") // the confirmation form of dex
+ 	req.AddCookie(testSessionCookie("testnonce"))
+ 	server.ServeHTTP(rr, req)
+ 
+@@ -921,10 +926,11 @@ func TestBackchannelLogoutSSOSharesOneSID(t *testing.T) {
+ 	require.NoError(t, err)
+ }
+ 
+-// TestIntrospectionFollowsSession is the gateway-side half of logout: RFC 7662 §4
+-// requires an authorization server to report a revoked token as inactive, and once
+-// a token is bound to a session, ending the session is what revokes it.
+-func TestIntrospectionFollowsSession(t *testing.T) {
++// TestIntrospectionOutlivesSessionIdle: a token of a session-bound client stays
++// active when its session idles out or reaches its lifetime, as the refresh grant
++// keeps serving it (Deckhouse; see TestRefreshTokenSID). Logout revokes it through
++// its grant, and the revocation of its pair through the generation.
++func TestIntrospectionOutlivesSessionIdle(t *testing.T) {
+ 	httpServer, server := newTestServerWithSessions(t, nil)
+ 	defer httpServer.Close()
+ 
+@@ -933,9 +939,7 @@ func TestIntrospectionFollowsSession(t *testing.T) {
+ 
+ 	require.NoError(t, server.storage.CreateClient(ctx, storage.Client{
+ 		ID: clientID, Secret: "secret",
+-		RedirectURIs: []string{"https://example.com/callback"},
+-		// Only a client that declared its tokens session-bound is judged by its
+-		// session here; see sessionAlive in server/introspection.
++		RedirectURIs:         []string{"https://example.com/callback"},
+ 		RefreshTokenLifetime: storage.RefreshTokenLifetimeSession,
+ 	}))
+ 	newTestAuthSession(t, server, userID, connectorID, "testnonce")
+@@ -962,21 +966,60 @@ func TestIntrospectionFollowsSession(t *testing.T) {
+ 	require.True(t, introspect(t), "a token of a live session is active")
+ 
+ 	require.NoError(t, server.storage.DeleteAuthSession(ctx, "testnonce"))
+-	require.False(t, introspect(t), "ending the session revokes the token")
++	require.True(t, introspect(t), "a session gone idle does not end the token")
+ 
+-	// Signing in again creates a session with a new nonce, so a new sid. The old
+-	// token names the old one and must not come back to life.
+ 	newTestAuthSession(t, server, userID, connectorID, "anothernonce")
+-	require.False(t, introspect(t), "a fresh session must not revive an old token")
+-
+-	// The same token, for a client that never asked to be bound to the session, is
+-	// still active: outliving the session is what standalone means, and it is the
+-	// half of this that keeps a CLI signed in.
+-	require.NoError(t, server.storage.UpdateClient(ctx, clientID, func(old storage.Client) (storage.Client, error) {
+-		old.RefreshTokenLifetime = storage.RefreshTokenLifetimeStandalone
+-		return old, nil
++	require.True(t, introspect(t), "nor does another session of the user")
++}
++
++// TestIntrospectionEndsWithTheSession: once the end of a browser session is recorded
++// (a logout, an operator, the end of the pair), the tokens of the clients bound to it
++// are inactive though they have not expired; a token of a client that is not bound
++// outlives the session, as its refresh token does (Deckhouse).
++func TestIntrospectionEndsWithTheSession(t *testing.T) {
++	httpServer, server := newTestServerWithSessions(t, nil)
++	defer httpServer.Close()
++
++	ctx := t.Context()
++	const userID, connectorID = "test-user", "mock"
++	for _, c := range []storage.Client{
++		{ID: "bound", Secret: "secret", RedirectURIs: []string{"https://example.com/callback"}, RefreshTokenLifetime: storage.RefreshTokenLifetimeSession},
++		{ID: "standalone", Secret: "secret", RedirectURIs: []string{"https://example.com/callback"}},
++	} {
++		require.NoError(t, server.storage.CreateClient(ctx, c))
++	}
++	newTestAuthSession(t, server, userID, connectorID, "testnonce")
++
++	introspect := func(t *testing.T, clientID string) bool {
++		t.Helper()
++		token := newTestIDToken(t, server, clientID, userID, connectorID, "testnonce")
++		rr := httptest.NewRecorder()
++		req := httptest.NewRequest("POST", "/token/introspect", strings.NewReader(url.Values{"token": {token}}.Encode()))
++		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++		req.SetBasicAuth(clientID, "secret")
++		server.ServeHTTP(rr, req)
++		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++
++		var resp struct {
++			Active bool `json:"active"`
++		}
++		require.NoError(t, json.NewDecoder(rr.Result().Body).Decode(&resp))
++		return resp.Active
++	}
++
++	require.True(t, introspect(t, "bound"), "a token of a live session is active")
++
++	// The key cacher of the server hides the storage the revocations go to.
++	cacher, ok := server.storage.(*keyCacher)
++	require.True(t, ok)
++	creator, ok := storage.AsRevocationCreator(cacher.Storage)
++	require.True(t, ok)
++	require.NoError(t, creator.CreateRevocation(ctx, storage.Revocation{
++		Type: storage.RevocationSession, SessionID: "testnonce", UserID: userID, ConnectorID: connectorID,
+ 	}))
+-	require.True(t, introspect(t), "a standalone client's token is not judged by the session")
++
++	require.False(t, introspect(t, "bound"), "the end of the session ends a bound token")
++	require.True(t, introspect(t, "standalone"), "a token of a client that is not bound outlives it")
+ }
+ 
+ // TestIntrospectionIgnoresTokensWithoutSession: a token minted without a session
+@@ -1152,6 +1195,7 @@ func TestHandleLogoutExpiredSession(t *testing.T) {
+ 
+ 	rr := httptest.NewRecorder()
+ 	req := httptest.NewRequest("POST", "/logout", nil)
++	req.Header.Set("Sec-Fetch-Site", "same-origin") // the confirmation form of dex
+ 	req.AddCookie(testSessionCookie("expirednonce"))
+ 	server.ServeHTTP(rr, req)
+ 
+diff --git a/server/server_revocation_test.go b/server/server_revocation_test.go
+index c8ab57b4..df082eca 100644
+--- a/server/server_revocation_test.go
++++ b/server/server_revocation_test.go
+@@ -719,6 +719,7 @@ func TestLogoutRecordsSessionRevocation(t *testing.T) {
+ 			sessionID, boundRefreshID := newLogoutTestSession(t, s, logoutState)
+ 
+ 			req := httptest.NewRequest(method, path, nil)
++			req.Header.Set("Sec-Fetch-Site", "same-origin") // the confirmation form of dex
+ 			req.AddCookie(testSessionCookie(sessionID))
+ 			rr := httptest.NewRecorder()
+ 			s.ServeHTTP(rr, req)
+@@ -752,6 +753,7 @@ func TestLogoutKeepsSessionWhenRevocationFails(t *testing.T) {
+ 			sessionID, boundRefreshID := newLogoutTestSession(t, s, logoutState)
+ 
+ 			req := httptest.NewRequest(method, path, nil)
++			req.Header.Set("Sec-Fetch-Site", "same-origin") // the confirmation form of dex
+ 			req.AddCookie(testSessionCookie(sessionID))
+ 			rr := httptest.NewRecorder()
+ 			s.ServeHTTP(rr, req)
+diff --git a/server/server_sessions_logout_test.go b/server/server_sessions_logout_test.go
+new file mode 100644
+index 00000000..c7f381a1
+--- /dev/null
++++ b/server/server_sessions_logout_test.go
+@@ -0,0 +1,333 @@
++package server
++
++import (
++	"bytes"
++	"context"
++	"errors"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"sync/atomic"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/storage"
++)
++
++// The logout of an application that sends the browser to dex by its client_id,
++// without an ID token in the address (Deckhouse).
++
++const (
++	logoutClient     = "app"
++	logoutClientURL  = "https://app.example.com/"
++	logoutConfirmMsg = "Do you want to log out?"
++)
++
++// newLogoutByClientServer serves a client with a registered post-logout address and
++// a live session of a user, and returns the server and its storage seen through
++// flaky, which can be told to fail.
++func newLogoutByClientServer(t *testing.T) (*httptest.Server, *Server, *flakyStorage) {
++	t.Helper()
++	flaky := &flakyStorage{}
++	httpServer, server := newTestServerWithSessions(t, func(c *Config) {
++		flaky.Storage = c.Storage
++		c.Storage = flaky
++	})
++	require.NoError(t, server.storage.CreateClient(t.Context(), storage.Client{
++		ID: logoutClient, Secret: "secret",
++		RedirectURIs:           []string{"https://app.example.com/callback"},
++		PostLogoutRedirectURIs: []string{logoutClientURL},
++	}))
++	newTestAuthSession(t, server, "test-user", "mock", "testnonce")
++	return httpServer, server, flaky
++}
++
++// logoutRequest is a request to /logout with the session cookie and the given
++// Sec-Fetch-Site and Sec-Fetch-Dest; an empty site sends no fetch metadata at all.
++func logoutRequest(method string, params url.Values, site, dest string) *http.Request {
++	var req *http.Request
++	if method == http.MethodPost {
++		req = httptest.NewRequest(method, "/logout", strings.NewReader(params.Encode()))
++		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	} else {
++		req = httptest.NewRequest(method, "/logout?"+params.Encode(), nil)
++	}
++	if site != "" {
++		req.Header.Set("Sec-Fetch-Site", site)
++		req.Header.Set("Sec-Fetch-Mode", "navigate")
++		req.Header.Set("Sec-Fetch-Dest", dest)
++	}
++	req.AddCookie(testSessionCookie("testnonce"))
++	return req
++}
++
++func TestHandleLogoutByClientID(t *testing.T) {
++	params := url.Values{
++		"client_id":                {logoutClient},
++		"post_logout_redirect_uri": {logoutClientURL},
++		"state":                    {"xyz"},
++	}
++
++	t.Run("a navigation from the same site ends the session", func(t *testing.T) {
++		for _, site := range []string{"same-origin", "same-site", "none"} {
++			t.Run(site, func(t *testing.T) {
++				httpServer, server, _ := newLogoutByClientServer(t)
++				defer httpServer.Close()
++
++				rr := httptest.NewRecorder()
++				server.ServeHTTP(rr, logoutRequest(http.MethodGet, params, site, "document"))
++
++				require.Equal(t, http.StatusFound, rr.Code, rr.Body.String())
++				assert.Equal(t, logoutClientURL+"?state=xyz", rr.Header().Get("Location"))
++				_, err := server.storage.GetAuthSession(t.Context(), "testnonce")
++				require.ErrorIs(t, err, storage.ErrNotFound)
++			})
++		}
++	})
++
++	t.Run("anything else asks to confirm and carries the request on", func(t *testing.T) {
++		for _, tc := range []struct{ name, site, dest string }{
++			{"another site", "cross-site", "document"},
++			{"a frame of the same site", "same-origin", "iframe"},
++			{"no fetch metadata", "", ""},
++		} {
++			t.Run(tc.name, func(t *testing.T) {
++				httpServer, server, _ := newLogoutByClientServer(t)
++				defer httpServer.Close()
++
++				rr := httptest.NewRecorder()
++				server.ServeHTTP(rr, logoutRequest(http.MethodGet, params, tc.site, tc.dest))
++
++				require.Equal(t, http.StatusOK, rr.Code)
++				body := rr.Body.String()
++				assert.Contains(t, body, logoutConfirmMsg)
++				assert.Contains(t, body, `name="client_id" value="app"`)
++				assert.Contains(t, body, `name="post_logout_redirect_uri" value="https://app.example.com/"`)
++				assert.Contains(t, body, `name="state" value="xyz"`)
++				_, err := server.storage.GetAuthSession(t.Context(), "testnonce")
++				require.NoError(t, err, "nothing ends before the user confirms")
++			})
++		}
++	})
++
++	t.Run("the confirmation ends the session and returns to the client", func(t *testing.T) {
++		httpServer, server, _ := newLogoutByClientServer(t)
++		defer httpServer.Close()
++
++		rr := httptest.NewRecorder()
++		server.ServeHTTP(rr, logoutRequest(http.MethodPost, params, "same-origin", "document"))
++
++		require.Equal(t, http.StatusFound, rr.Code, rr.Body.String())
++		assert.Equal(t, logoutClientURL+"?state=xyz", rr.Header().Get("Location"))
++		_, err := server.storage.GetAuthSession(t.Context(), "testnonce")
++		require.ErrorIs(t, err, storage.ErrNotFound)
++	})
++
++	t.Run("refusals", func(t *testing.T) {
++		for _, tc := range []struct {
++			name   string
++			params url.Values
++		}{
++			{"unregistered address", url.Values{
++				"client_id": {logoutClient}, "post_logout_redirect_uri": {"https://evil.example.com/"},
++			}},
++			{"unknown client", url.Values{
++				"client_id": {"nope"}, "post_logout_redirect_uri": {logoutClientURL},
++			}},
++			{"address without a client", url.Values{
++				"post_logout_redirect_uri": {logoutClientURL},
++			}},
++		} {
++			t.Run(tc.name, func(t *testing.T) {
++				httpServer, server, _ := newLogoutByClientServer(t)
++				defer httpServer.Close()
++
++				rr := httptest.NewRecorder()
++				server.ServeHTTP(rr, logoutRequest(http.MethodGet, tc.params, "same-site", "document"))
++
++				require.Equal(t, http.StatusBadRequest, rr.Code)
++				_, err := server.storage.GetAuthSession(t.Context(), "testnonce")
++				require.NoError(t, err)
++			})
++		}
++	})
++
++	t.Run("client_id contradicting the hint", func(t *testing.T) {
++		httpServer, server, _ := newLogoutByClientServer(t)
++		defer httpServer.Close()
++
++		idToken := newTestIDToken(t, server, "another", "test-user", "mock", "testnonce")
++		rr := httptest.NewRecorder()
++		server.ServeHTTP(rr, logoutRequest(http.MethodGet, url.Values{
++			"client_id": {logoutClient}, "id_token_hint": {idToken},
++		}, "same-site", "document"))
++
++		require.Equal(t, http.StatusBadRequest, rr.Code)
++		_, err := server.storage.GetAuthSession(t.Context(), "testnonce")
++		require.NoError(t, err)
++	})
++}
++
++// TestHandleLogoutStorageUnavailable: a session that cannot be read is neither
++// ended nor reported ended, and its cookie stays (Deckhouse).
++func TestHandleLogoutStorageUnavailable(t *testing.T) {
++	httpServer, server, flaky := newLogoutByClientServer(t)
++	defer httpServer.Close()
++
++	flaky.sessionsDown.Store(true)
++	rr := httptest.NewRecorder()
++	server.ServeHTTP(rr, logoutRequest(http.MethodGet, url.Values{
++		"client_id": {logoutClient}, "post_logout_redirect_uri": {logoutClientURL},
++	}, "same-site", "document"))
++
++	require.Equal(t, http.StatusServiceUnavailable, rr.Code)
++	assert.NotContains(t, rr.Body.String(), "successfully logged out")
++	assert.Empty(t, rr.Result().Cookies(), "the cookie is kept")
++
++	flaky.sessionsDown.Store(false)
++	_, err := server.storage.GetAuthSession(t.Context(), "testnonce")
++	require.NoError(t, err, "the session is still there")
++}
++
++// TestRefreshStorageUnavailable: a refresh that cannot read where its token came
++// from fails as a server error and revokes nothing; the same token works once the
++// storage is back (Deckhouse).
++func TestRefreshStorageUnavailable(t *testing.T) {
++	flaky := &flakyStorage{}
++	httpServer, s := newTestServerWithSessions(t, func(c *Config) {
++		flaky.Storage = c.Storage
++		c.Storage = flaky
++	})
++	defer httpServer.Close()
++
++	ctx := t.Context()
++	mockRefreshTokenTestStorage(t, s.storage, false)
++	require.NoError(t, s.storage.UpdateClient(ctx, "test", func(old storage.Client) (storage.Client, error) {
++		old.RefreshTokenLifetime = storage.RefreshTokenLifetimeSession
++		return old, nil
++	}))
++	require.NoError(t, s.storage.CreateUserIdentity(ctx, storage.UserIdentity{
++		UserID: "1", ConnectorID: "test",
++		Claims:    storage.Claims{UserID: "1", Username: "jane"},
++		LastLogin: time.Now(),
++	}))
++
++	tokenData, err := internal.Marshal(&internal.RefreshToken{RefreshId: "test", Token: "bar"})
++	require.NoError(t, err)
++	refresh := func() *httptest.ResponseRecorder {
++		v := url.Values{"grant_type": {"refresh_token"}, "refresh_token": {tokenData}}
++		req := httptest.NewRequest(http.MethodPost, "/token", bytes.NewBufferString(v.Encode()))
++		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++		req.SetBasicAuth("test", "barfoo")
++		rr := httptest.NewRecorder()
++		s.ServeHTTP(rr, req)
++		return rr
++	}
++
++	flaky.offlineDown.Store(true)
++	rr := refresh()
++	require.Equal(t, http.StatusInternalServerError, rr.Code, rr.Body.String())
++	assert.NotContains(t, rr.Body.String(), "invalid_grant")
++
++	flaky.offlineDown.Store(false)
++	_, err = s.storage.GetRefresh(ctx, "test")
++	require.NoError(t, err, "the token is kept")
++	rr = refresh()
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++}
++
++// TestCodeExchangeAfterLogout: an authorization code minted in a browser session
++// is refused once that session has ended, exactly as a spent code is, instead of
++// minting tokens on a session that signing out was meant to end (Deckhouse). The
++// generation of the pair is unchanged by a logout, so the revocation check alone
++// lets such a code through.
++func TestCodeExchangeAfterLogout(t *testing.T) {
++	ctx := t.Context()
++	httpServer, s := newTestServerWithSessions(t, nil)
++	defer httpServer.Close()
++
++	const userID, connectorID = "test-user", "mock"
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++		ID: "test", Secret: "barfoo", RedirectURIs: []string{"foo://bar.com/"},
++	}))
++
++	// mintCode stores a live session and an authorization code minted in it, as a
++	// browser login does (the code carries the session's ID), and returns both.
++	mintCode := func(t *testing.T) (sessionID, code string) {
++		t.Helper()
++		sessionID = storage.NewID()
++		require.NoError(t, s.storage.CreateAuthSession(ctx, storage.AuthSession{
++			ID: sessionID, Secret: testSessionSecret(sessionID),
++			UserID: userID, ConnectorID: connectorID,
++			ClientStates:   map[string]*storage.ClientAuthState{"test": {AuthenticatedAt: time.Now()}},
++			CreatedAt:      time.Now(),
++			LastActivity:   time.Now(),
++			AbsoluteExpiry: time.Now().Add(time.Hour),
++			IdleExpiry:     time.Now().Add(time.Hour),
++		}))
++		code = storage.NewID()
++		require.NoError(t, s.storage.CreateAuthCode(ctx, storage.AuthCode{
++			ID: code, SessionID: sessionID,
++			ClientID: "test", ConnectorID: connectorID,
++			Claims:      storage.Claims{UserID: userID},
++			Scopes:      []string{"openid", "offline_access"},
++			RedirectURI: "foo://bar.com/",
++			Expiry:      time.Now().Add(time.Minute),
++		}))
++		return sessionID, code
++	}
++
++	t.Run("the session is still there", func(t *testing.T) {
++		_, code := mintCode(t)
++		resp := tokenResponse(t, exchangeCode(t, s, code))
++		require.NotEmpty(t, resp.AccessToken, "a live session issues tokens")
++	})
++
++	t.Run("the session has ended", func(t *testing.T) {
++		sessionID, code := mintCode(t)
++		require.NoError(t, s.storage.DeleteAuthSession(ctx, sessionID))
++
++		requireErrorResponse(t, exchangeCode(t, s, code),
++			http.StatusBadRequest, oauth2.InvalidGrant, "Invalid or expired code parameter.")
++		_, err := s.storage.GetAuthCode(ctx, code)
++		require.ErrorIs(t, err, storage.ErrNotFound, "the code is spent")
++	})
++}
++
++// flakyStorage is a storage whose auth sessions or offline sessions can be made
++// unreadable. It keeps the revocations of the storage it wraps.
++type flakyStorage struct {
++	storage.Storage
++	sessionsDown atomic.Bool
++	offlineDown  atomic.Bool
++}
++
++var errStorageDown = errors.New("storage unavailable")
++
++func (s *flakyStorage) GetAuthSession(ctx context.Context, id string) (storage.AuthSession, error) {
++	if s.sessionsDown.Load() {
++		return storage.AuthSession{}, errStorageDown
++	}
++	return s.Storage.GetAuthSession(ctx, id)
++}
++
++func (s *flakyStorage) GetOfflineSessions(ctx context.Context, userID, connID string) (storage.OfflineSessions, error) {
++	if s.offlineDown.Load() {
++		return storage.OfflineSessions{}, errStorageDown
++	}
++	return s.Storage.GetOfflineSessions(ctx, userID, connID)
++}
++
++func (s *flakyStorage) CreateRevocation(ctx context.Context, r storage.Revocation) error {
++	c, ok := storage.AsRevocationCreator(s.Storage)
++	if !ok {
++		return nil
++	}
++	return c.CreateRevocation(ctx, r)
++}
+diff --git a/server/session/session.go b/server/session/session.go
+index cff6865b..65412ff5 100644
+--- a/server/session/session.go
++++ b/server/session/session.go
+@@ -8,6 +8,7 @@ import (
+ 	"log/slog"
+ 	"net"
+ 	"net/http"
++	"slices"
+ 	"time"
+ 
+ 	"github.com/dexidp/dex/server/internal"
+@@ -139,10 +140,27 @@ func (m *Manager) Alive(ctx context.Context, sessionID string) bool {
+ // ValidSession returns the live session the request's cookie names, or nil. The
+ // cookie is cleared when it names nothing, names something expired, or fails to
+ // prove itself.
++//
++// A storage that cannot be read is no answer either way: the caller gets nil, as
++// with no session, but the cookie is kept, so the session serves again once the
++// storage does. The callers that must not act on a session that may well exist —
++// logout — use CurrentSession instead.
+ func (m *Manager) ValidSession(ctx context.Context, w http.ResponseWriter, r *http.Request) *storage.AuthSession {
+-	if m.Config == nil {
++	session, err := m.CurrentSession(ctx, w, r)
++	if err != nil {
++		m.Logger.ErrorContext(ctx, "failed to get auth session", "err", err)
+ 		return nil
+ 	}
++	return session
++}
++
++// CurrentSession is ValidSession that tells the three answers apart: a live
++// session, no session (nil, nil), or a storage that could not be read (nil and
++// the error). On the error the cookie is kept.
++func (m *Manager) CurrentSession(ctx context.Context, w http.ResponseWriter, r *http.Request) (*storage.AuthSession, error) {
++	if m.Config == nil {
++		return nil, nil
++	}
+ 
+ 	sessionID, secret, ok := m.ParseCookie(r)
+ 	if !ok {
+@@ -151,16 +169,16 @@ func (m *Manager) ValidSession(ctx context.Context, w http.ResponseWriter, r *ht
+ 		if c, err := r.Cookie(m.Config.CookieName); err == nil && c.Value != "" {
+ 			m.ClearCookie(w)
+ 		}
+-		return nil
++		return nil, nil
+ 	}
+ 
+ 	session, err := m.Storage.GetAuthSession(ctx, sessionID)
+ 	if err != nil {
+ 		if !errors.Is(err, storage.ErrNotFound) {
+-			m.Logger.ErrorContext(ctx, "failed to get auth session", "err", err)
++			return nil, fmt.Errorf("get auth session: %w", err)
+ 		}
+ 		m.ClearCookie(w)
+-		return nil
++		return nil, nil
+ 	}
+ 
+ 	// The ID is published in every token as "sid", so it proves nothing on its own.
+@@ -168,7 +186,7 @@ func (m *Manager) ValidSession(ctx context.Context, w http.ResponseWriter, r *ht
+ 	if subtle.ConstantTimeCompare([]byte(session.Secret), []byte(secret)) != 1 {
+ 		m.Logger.DebugContext(ctx, "auth session secret mismatch", "session_id", sessionID)
+ 		m.ClearCookie(w)
+-		return nil
++		return nil, nil
+ 	}
+ 
+ 	// A browser presenting an expired session is the one place worth spending a
+@@ -181,10 +199,10 @@ func (m *Manager) ValidSession(ctx context.Context, w http.ResponseWriter, r *ht
+ 			m.Logger.DebugContext(ctx, "failed to delete expired auth session", "err", err)
+ 		}
+ 		m.ClearCookie(w)
+-		return nil
++		return nil, nil
+ 	}
+ 
+-	return &session
++	return &session, nil
+ }
+ 
+ // ValidAuthSession returns a valid session matching the auth request's connector, or nil.
+@@ -225,11 +243,19 @@ func (m *Manager) CreateOrUpdateAuthSession(ctx context.Context, r *http.Request
+ 	}
+ 
+ 	if current := m.ValidSession(ctx, w, r); current != nil {
+-		if current.UserID == userID && current.ConnectorID == connectorID {
++		// A session of an older generation of the pair was revoked: nothing of it carries over to
++		// the new login, neither the second factor passed on it nor its age (Deckhouse).
++		if current.UserID == userID && current.ConnectorID == connectorID && current.Generation == authReq.Generation {
+ 			m.Logger.DebugContext(ctx, "updating existing auth session",
+ 				"session_id", current.ID, "user_id", userID, "client_id", authReq.ClientID)
+ 
++			// The session gets a new secret at every login on it (Deckhouse): a copy of
++			// the cookie taken before the user authenticated again does not carry over
++			// what this login adds to the session.
++			secret := storage.NewID()
+ 			if err := m.Storage.UpdateAuthSession(ctx, current.ID, func(old storage.AuthSession) (storage.AuthSession, error) {
++				old.Secret = secret
++				old.RememberMe = rememberMe
+ 				old.LastActivity = now
+ 				old.IdleExpiry = now.Add(m.Config.ValidIfNotUsedFor)
+ 				old.IPAddress = remoteIP(r)
+@@ -244,7 +270,7 @@ func (m *Manager) CreateOrUpdateAuthSession(ctx context.Context, r *http.Request
+ 				return fmt.Errorf("update auth session: %w", err)
+ 			}
+ 
+-			m.SetCookie(w, current.ID, current.Secret, rememberMe)
++			m.SetCookie(w, current.ID, secret, rememberMe)
+ 			return nil
+ 		}
+ 
+@@ -268,6 +294,7 @@ func (m *Manager) CreateOrUpdateAuthSession(ctx context.Context, r *http.Request
+ 		AbsoluteExpiry: now.Add(m.Config.AbsoluteLifetime),
+ 		IdleExpiry:     now.Add(m.Config.ValidIfNotUsedFor),
+ 		Generation:     authReq.Generation,
++		RememberMe:     rememberMe,
+ 	}
+ 
+ 	if err := m.Storage.CreateAuthSession(ctx, newSession); err != nil {
+@@ -342,6 +369,125 @@ func (m *Manager) FindSSO(ctx context.Context, session *storage.AuthSession, tar
+ 	return nil
+ }
+ 
++// RecordMFA adds the authenticators of a second factor passed by a login of
++// authReq to the session sessionID (Deckhouse), so that a login from the session
++// to a client with the same chain does not ask for it again (see MFASatisfied).
++// The session must be of the user, the connector and the generation of the login:
++// a session of anyone else is left alone.
++//
++// The session is made after the first factor, so a copy of its cookie taken
++// before the second one would carry the second factor once it is recorded. A
++// record that adds an authenticator therefore gives the session a new secret and
++// w a new cookie, with the remember-me choice of the session. A record that adds
++// nothing — a login from the session — writes nothing.
++func (m *Manager) RecordMFA(ctx context.Context, w http.ResponseWriter, sessionID string, authReq storage.AuthRequest, authenticators []string) error {
++	if m.Config == nil || sessionID == "" || len(authenticators) == 0 {
++		return nil
++	}
++	secret := storage.NewID()
++	var rememberMe bool
++	err := m.Storage.UpdateAuthSession(ctx, sessionID, func(old storage.AuthSession) (storage.AuthSession, error) {
++		if old.UserID != authReq.Claims.UserID || old.ConnectorID != authReq.ConnectorID || old.Generation != authReq.Generation {
++			return old, errSessionNotOfLogin
++		}
++		added := false
++		for _, id := range authenticators {
++			if !slices.Contains(old.MFAAuthenticators, id) {
++				old.MFAAuthenticators = append(old.MFAAuthenticators, id)
++				added = true
++			}
++		}
++		if !added {
++			return old, errNothingRecorded
++		}
++		old.Secret = secret
++		rememberMe = old.RememberMe
++		return old, nil
++	})
++	if errors.Is(err, errSessionNotOfLogin) || errors.Is(err, errNothingRecorded) || errors.Is(err, storage.ErrNotFound) {
++		return nil
++	}
++	if err != nil {
++		return err
++	}
++	m.SetCookie(w, sessionID, secret, rememberMe)
++	return nil
++}
++
++// errSessionNotOfLogin aborts RecordMFA on a session of another login.
++var errSessionNotOfLogin = errors.New("session: not the session of the login")
++
++// errNothingRecorded aborts RecordMFA when the session already holds every
++// authenticator.
++var errNothingRecorded = errors.New("session: the second factor is already recorded")
++
++// MFASatisfied reports whether the second factor of a client with the MFA chain
++// was passed on the session (Deckhouse): every authenticator of the chain was. An
++// empty chain needs nothing to be recorded and reports false, leaving it to the
++// dispatcher.
++func MFASatisfied(session storage.AuthSession, chain []string) bool {
++	if len(chain) == 0 {
++		return false
++	}
++	for _, id := range chain {
++		if !slices.Contains(session.MFAAuthenticators, id) {
++			return false
++		}
++	}
++	return true
++}
++
++// maxRefreshUseInterval is the longest a session goes without a write while the
++// applications bound to it refresh their tokens (see UsedByRefresh).
++const maxRefreshUseInterval = 5 * time.Minute
++
++// refreshUseInterval is how long after its last use a session is written again
++// when an application bound to it refreshes its tokens: a tenth of the idle
++// timeout, at most maxRefreshUseInterval. The idle timeout then counts from up to
++// that much earlier than the last refresh.
++func refreshUseInterval(validIfNotUsedFor time.Duration) time.Duration {
++	return min(validIfNotUsedFor/10, maxRefreshUseInterval)
++}
++
++// errSessionNotUsed aborts UsedByRefresh on a session it does not write.
++var errSessionNotUsed = errors.New("session: not used by the refresh")
++
++// UsedByRefresh records that clientID, signed in through the session sessionID,
++// refreshed its tokens (Deckhouse): the session counts as used, and its idle
++// timeout starts again, as at a sign-in through it. While any application of the
++// browser is in use, the browser then signs in to the others without a password,
++// until the absolute lifetime of the session.
++//
++// Nothing is written for a session that has ended — a bound token outlives its
++// session (see the refresh grant), and its refresh does not bring the session
++// back — for a session of another pair or of another generation of the pair, or
++// within refreshUseInterval of the last use. The refresh goes on whatever
++// happens here.
++func (m *Manager) UsedByRefresh(ctx context.Context, sessionID, clientID, userID, connectorID string, generation uint64) {
++	if m == nil || m.Config == nil || sessionID == "" {
++		return
++	}
++	now := m.Now()
++	err := m.Storage.UpdateAuthSession(ctx, sessionID, func(old storage.AuthSession) (storage.AuthSession, error) {
++		switch {
++		case old.UserID != userID || old.ConnectorID != connectorID || old.Generation != generation,
++			expiryReason(old, now) != "",
++			now.Sub(old.LastActivity) < refreshUseInterval(m.Config.ValidIfNotUsedFor):
++			return old, errSessionNotUsed
++		}
++		old.LastActivity = now
++		old.IdleExpiry = now.Add(m.Config.ValidIfNotUsedFor)
++		if cs, ok := old.ClientStates[clientID]; ok {
++			cs.LastActivity = now
++		}
++		return old, nil
++	})
++	if err != nil && !errors.Is(err, errSessionNotUsed) && !errors.Is(err, storage.ErrNotFound) {
++		m.Logger.WarnContext(ctx, "failed to record the use of a session by a refresh",
++			"session_id", sessionID, "client_id", clientID, "err", err)
++	}
++}
++
+ // UpdateTokenIssuedAt records that a token was just issued to clientID: it refreshes
+ // the session's idle timeout and the client state's last-issued timestamp. A missing,
+ // undecodable or superseded cookie is a no-op.
+diff --git a/server/session/session_generation_test.go b/server/session/session_generation_test.go
+index 5c83fe6f..68fb4d22 100644
+--- a/server/session/session_generation_test.go
++++ b/server/session/session_generation_test.go
+@@ -13,16 +13,19 @@ import (
+ 	"github.com/dexidp/dex/storage/memory"
+ )
+ 
+-// TestCreateOrUpdateAuthSessionGeneration checks that a session takes the
+-// generation of the pair from each login on it: the session login refuses a
+-// session whose generation is not the pair's.
++// TestCreateOrUpdateAuthSessionGeneration checks that a session carries the
++// generation of the pair it was logged in at: the session login refuses a session
++// whose generation is not the pair's. A login of the same generation updates the
++// session; a login after a revocation of the pair starts a new one, so nothing of
++// the revoked session carries over: not the second factor passed on it, not the
++// clients signed in through it, not its age (Deckhouse).
+ func TestCreateOrUpdateAuthSessionGeneration(t *testing.T) {
+ 	ctx := t.Context()
+ 	now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
+ 	store := memory.New(slog.New(slog.DiscardHandler))
+ 	m := &Manager{
+ 		Storage: store,
+-		Config:  &Config{CookieName: "dex_session", AbsoluteLifetime: time.Hour, ValidIfNotUsedFor: time.Hour},
++		Config:  &Config{CookieName: "dex_session", AbsoluteLifetime: 2 * time.Hour, ValidIfNotUsedFor: time.Hour},
+ 		Now:     func() time.Time { return now },
+ 		Logger:  slog.New(slog.DiscardHandler),
+ 	}
+@@ -33,15 +36,51 @@ func TestCreateOrUpdateAuthSessionGeneration(t *testing.T) {
+ 	sessions, err := store.ListAuthSessions(ctx)
+ 	require.NoError(t, err)
+ 	require.Len(t, sessions, 1)
+-	require.Equal(t, uint64(4), sessions[0].Generation)
++	first := sessions[0]
++	require.Equal(t, uint64(4), first.Generation)
++	require.NoError(t, store.UpdateAuthSession(ctx, first.ID, func(old storage.AuthSession) (storage.AuthSession, error) {
++		old.MFAAuthenticators = []string{"totp"}
++		return old, nil
++	}))
++	cookie := w.Result().Cookies()[0]
+ 
+-	// The next login on the same browser updates it.
+-	login.Generation = 5
++	// The next login of the same generation on the same browser updates it.
++	now = now.Add(10 * time.Minute)
++	login.ClientID = "client-2"
+ 	r := httptest.NewRequest("GET", "/", nil)
+-	r.AddCookie(w.Result().Cookies()[0])
+-	require.NoError(t, m.CreateOrUpdateAuthSession(ctx, r, httptest.NewRecorder(), login, false))
+-	session, err := store.GetAuthSession(ctx, sessions[0].ID)
++	r.AddCookie(cookie)
++	w = httptest.NewRecorder()
++	require.NoError(t, m.CreateOrUpdateAuthSession(ctx, r, w, login, false))
++	session, err := store.GetAuthSession(ctx, first.ID)
+ 	require.NoError(t, err)
+-	require.Equal(t, uint64(5), session.Generation)
+-	require.Equal(t, internal.SessionCookieValue(session.ID, session.Secret, nil), w.Result().Cookies()[0].Value)
++	require.Equal(t, uint64(4), session.Generation)
++	require.Equal(t, []string{"totp"}, session.MFAAuthenticators)
++	require.Contains(t, session.ClientStates, "client-1")
++	// The login gives the session a new secret: a copy of the old cookie no longer opens it.
++	require.NotEqual(t, first.Secret, session.Secret)
++	stale := cookie
++	cookie = w.Result().Cookies()[0]
++	require.Equal(t, internal.SessionCookieValue(session.ID, session.Secret, nil), cookie.Value)
++	r = httptest.NewRequest("GET", "/", nil)
++	r.AddCookie(stale)
++	require.Nil(t, m.ValidSession(ctx, httptest.NewRecorder(), r))
++
++	// A login after the pair was revoked replaces it.
++	now = now.Add(10 * time.Minute)
++	login.Generation = 5
++	r = httptest.NewRequest("GET", "/", nil)
++	r.AddCookie(cookie)
++	w = httptest.NewRecorder()
++	require.NoError(t, m.CreateOrUpdateAuthSession(ctx, r, w, login, false))
++	_, err = store.GetAuthSession(ctx, first.ID)
++	require.ErrorIs(t, err, storage.ErrNotFound, "the revoked session is gone")
++	sessions, err = store.ListAuthSessions(ctx)
++	require.NoError(t, err)
++	require.Len(t, sessions, 1)
++	fresh := sessions[0]
++	require.Equal(t, uint64(5), fresh.Generation)
++	require.Empty(t, fresh.MFAAuthenticators, "the second factor of the revoked session does not carry over")
++	require.NotContains(t, fresh.ClientStates, "client-1")
++	require.Equal(t, now, fresh.CreatedAt)
++	require.Equal(t, internal.SessionCookieValue(fresh.ID, fresh.Secret, nil), w.Result().Cookies()[0].Value)
+ }
+diff --git a/server/session/session_mfa_test.go b/server/session/session_mfa_test.go
+new file mode 100644
+index 00000000..75ef933d
+--- /dev/null
++++ b/server/session/session_mfa_test.go
+@@ -0,0 +1,105 @@
++package session
++
++import (
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++// TestRecordMFA: the authenticators a login passed are added to its session, and
++// only to a session of the same user, connector and generation (Deckhouse).
++func TestRecordMFA(t *testing.T) {
++	ctx := t.Context()
++	s := memory.New(slog.Default())
++	m := &Manager{Storage: s, Config: &Config{CookieName: "dex_session"}, Now: time.Now, Logger: slog.Default()}
++	require.NoError(t, s.CreateAuthSession(ctx, storage.AuthSession{
++		ID: "sid", Secret: "secret", UserID: "jane", ConnectorID: "local", Generation: 2,
++		MFAAuthenticators: []string{"webauthn"},
++	}))
++	login := storage.AuthRequest{Claims: storage.Claims{UserID: "jane"}, ConnectorID: "local", Generation: 2}
++
++	require.NoError(t, m.RecordMFA(ctx, httptest.NewRecorder(), "sid", login, []string{"totp", "webauthn"}))
++	got, err := s.GetAuthSession(ctx, "sid")
++	require.NoError(t, err)
++	assert.Equal(t, []string{"webauthn", "totp"}, got.MFAAuthenticators)
++
++	for name, other := range map[string]storage.AuthRequest{
++		"another user":       {Claims: storage.Claims{UserID: "john"}, ConnectorID: "local", Generation: 2},
++		"another connector":  {Claims: storage.Claims{UserID: "jane"}, ConnectorID: "ldap", Generation: 2},
++		"another generation": {Claims: storage.Claims{UserID: "jane"}, ConnectorID: "local", Generation: 1},
++	} {
++		require.NoError(t, m.RecordMFA(ctx, httptest.NewRecorder(), "sid", other, []string{"sms"}), name)
++	}
++	got, err = s.GetAuthSession(ctx, "sid")
++	require.NoError(t, err)
++	assert.Equal(t, []string{"webauthn", "totp"}, got.MFAAuthenticators, "a session of another login is left alone")
++
++	require.NoError(t, m.RecordMFA(ctx, httptest.NewRecorder(), "gone", login, []string{"totp"}), "a session that is gone is no error")
++}
++
++// TestRecordMFARotatesTheSecret: recording a second factor gives the session a
++// new secret and the browser a new cookie (Deckhouse), so a copy of the cookie
++// taken between the password and the second factor does not carry the second
++// factor. The new cookie keeps the remember-me choice of the session; a record
++// that adds nothing, as at a login from the session, changes nothing.
++func TestRecordMFARotatesTheSecret(t *testing.T) {
++	for _, rememberMe := range []bool{true, false} {
++		ctx := t.Context()
++		s := memory.New(slog.Default())
++		m := &Manager{
++			Storage: s, Now: time.Now, Logger: slog.Default(), IssuerURL: oauth2.IssuerURL{URL: url.URL{Scheme: "https", Host: "dex.example.com"}},
++			Config: &Config{CookieName: "dex_session", AbsoluteLifetime: 24 * time.Hour, ValidIfNotUsedFor: time.Hour},
++		}
++		now := time.Now()
++		require.NoError(t, s.CreateAuthSession(ctx, storage.AuthSession{
++			ID: "sid", Secret: "secret", UserID: "jane", ConnectorID: "local", Generation: 2, RememberMe: rememberMe,
++			ClientStates: map[string]*storage.ClientAuthState{"console": {AuthenticatedAt: now, LastActivity: now}},
++			CreatedAt:    now, LastActivity: now, AbsoluteExpiry: now.Add(24 * time.Hour), IdleExpiry: now.Add(time.Hour),
++		}))
++		login := storage.AuthRequest{Claims: storage.Claims{UserID: "jane"}, ConnectorID: "local", Generation: 2}
++		copied := &http.Cookie{Name: "dex_session", Value: internal.SessionCookieValue("sid", "secret", nil)}
++
++		w := httptest.NewRecorder()
++		require.NoError(t, m.RecordMFA(ctx, w, "sid", login, []string{"totp"}))
++		cookies := w.Result().Cookies()
++		require.Len(t, cookies, 1)
++		assert.NotEqual(t, copied.Value, cookies[0].Value)
++		assert.Equal(t, rememberMe, cookies[0].MaxAge > 0, "the new cookie keeps the remember-me choice")
++
++		r := httptest.NewRequest(http.MethodGet, "/", nil)
++		r.AddCookie(copied)
++		assert.Nil(t, m.ValidSession(ctx, httptest.NewRecorder(), r), "a cookie copied before the second factor")
++		r = httptest.NewRequest(http.MethodGet, "/", nil)
++		r.AddCookie(cookies[0])
++		session := m.ValidSession(ctx, httptest.NewRecorder(), r)
++		require.NotNil(t, session)
++		assert.True(t, MFASatisfied(*session, []string{"totp"}))
++
++		// The second factor is already there: nothing to write, no new cookie.
++		w = httptest.NewRecorder()
++		require.NoError(t, m.RecordMFA(ctx, w, "sid", login, []string{"totp"}))
++		assert.Empty(t, w.Result().Cookies())
++		again, err := s.GetAuthSession(ctx, "sid")
++		require.NoError(t, err)
++		assert.Equal(t, session.Secret, again.Secret)
++	}
++}
++
++func TestMFASatisfied(t *testing.T) {
++	session := storage.AuthSession{MFAAuthenticators: []string{"totp"}}
++	assert.True(t, MFASatisfied(session, []string{"totp"}))
++	assert.False(t, MFASatisfied(session, []string{"totp", "webauthn"}), "every authenticator of the chain")
++	assert.False(t, MFASatisfied(session, nil), "an empty chain is the dispatcher's")
++	assert.False(t, MFASatisfied(storage.AuthSession{}, []string{"totp"}))
++}
+diff --git a/server/session/session_refresh_test.go b/server/session/session_refresh_test.go
+new file mode 100644
+index 00000000..341507cd
+--- /dev/null
++++ b/server/session/session_refresh_test.go
+@@ -0,0 +1,89 @@
++package session
++
++import (
++	"log/slog"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++// TestUsedByRefresh checks that the refresh of an application bound to a live
++// session starts the idle timeout of the session again, at most once per
++// refreshUseInterval, and never for a session that ended, of another pair or of
++// another generation (Deckhouse).
++func TestUsedByRefresh(t *testing.T) {
++	created := time.Date(2026, 10, 17, 9, 0, 0, 0, time.UTC)
++	live := func() storage.AuthSession {
++		return storage.AuthSession{
++			ID: "sid-1", UserID: "jane", ConnectorID: "local", Generation: 2,
++			ClientStates:   map[string]*storage.ClientAuthState{"console": {LastActivity: created}},
++			CreatedAt:      created,
++			LastActivity:   created,
++			AbsoluteExpiry: created.Add(24 * time.Hour),
++			IdleExpiry:     created.Add(time.Hour),
++		}
++	}
++
++	tests := []struct {
++		name        string
++		at          time.Duration
++		userID      string
++		generation  uint64
++		expectedUse bool
++	}{
++		{name: "used after the interval", at: 30 * time.Minute, userID: "jane", generation: 2, expectedUse: true},
++		{name: "within the interval", at: 5*time.Minute - time.Second, userID: "jane", generation: 2},
++		{name: "after the idle timeout", at: time.Hour + time.Second, userID: "jane", generation: 2},
++		{name: "another user", at: 30 * time.Minute, userID: "john", generation: 2},
++		{name: "another generation", at: 30 * time.Minute, userID: "jane", generation: 3},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			ctx := t.Context()
++			store := memory.New(slog.New(slog.DiscardHandler))
++			require.NoError(t, store.CreateAuthSession(ctx, live()))
++			now := created.Add(tt.at)
++			m := &Manager{
++				Storage: store,
++				Config:  &Config{AbsoluteLifetime: 24 * time.Hour, ValidIfNotUsedFor: time.Hour},
++				Now:     func() time.Time { return now },
++				Logger:  slog.New(slog.DiscardHandler),
++			}
++
++			m.UsedByRefresh(ctx, "sid-1", "console", tt.userID, "local", tt.generation)
++
++			got, err := store.GetAuthSession(ctx, "sid-1")
++			require.NoError(t, err)
++			if !tt.expectedUse {
++				require.Equal(t, created, got.LastActivity)
++				require.Equal(t, created.Add(time.Hour), got.IdleExpiry)
++				return
++			}
++			require.Equal(t, now, got.LastActivity)
++			require.Equal(t, now.Add(time.Hour), got.IdleExpiry)
++			require.Equal(t, now, got.ClientStates["console"].LastActivity)
++			require.Equal(t, created.Add(24*time.Hour), got.AbsoluteExpiry, "the absolute lifetime does not move")
++		})
++	}
++
++	t.Run("no session", func(t *testing.T) {
++		m := &Manager{
++			Storage: memory.New(slog.New(slog.DiscardHandler)),
++			Config:  &Config{ValidIfNotUsedFor: time.Hour},
++			Now:     time.Now,
++			Logger:  slog.New(slog.DiscardHandler),
++		}
++		m.UsedByRefresh(t.Context(), "sid-gone", "console", "jane", "local", 2)
++		m.UsedByRefresh(t.Context(), "", "console", "jane", "local", 2)
++	})
++}
++
++func TestRefreshUseInterval(t *testing.T) {
++	require.Equal(t, 12*time.Second, refreshUseInterval(2*time.Minute))
++	require.Equal(t, 5*time.Minute, refreshUseInterval(time.Hour))
++	require.Equal(t, 5*time.Minute, refreshUseInterval(24*time.Hour))
++}
+diff --git a/server/signinlog/revoked.go b/server/signinlog/revoked.go
+index c5b2d2af..b7b7e602 100644
+--- a/server/signinlog/revoked.go
++++ b/server/signinlog/revoked.go
+@@ -5,11 +5,17 @@ package signinlog
+ // one.
+ const ReasonRevoked = "revoked"
+ 
++// ReasonSessionEnded: the authorization code was minted in a browser session
++// that has since ended (see server/session), so redeeming it is refused as a
++// spent code would be.
++const ReasonSessionEnded = "session_ended"
++
+ // Messages of the lines about revoked credentials. A refusal is a warning; a
+ // refresh token revoked at its client's request (RFC 7009) is info.
+ const (
+-	RefreshRevoked      = "refresh denied: credentials revoked"
+-	TokenRequestRevoked = "token request denied: credentials revoked"
+-	SessionLoginRevoked = "session login refused: credentials revoked"
+-	TokenRevoked        = "token revoked"
++	RefreshRevoked           = "refresh denied: credentials revoked"
++	TokenRequestRevoked      = "token request denied: credentials revoked"
++	TokenRequestSessionEnded = "token request denied: session ended"
++	SessionLoginRevoked      = "session login refused: credentials revoked"
++	TokenRevoked             = "token revoked"
+ )
+diff --git a/server/templates/templates.go b/server/templates/templates.go
+index 647aaafd..6ca0aa57 100644
+--- a/server/templates/templates.go
++++ b/server/templates/templates.go
+@@ -531,14 +531,40 @@ func (t *Templates) Home(r *http.Request, w http.ResponseWriter, data HomeData)
+ }
+ 
+ func (t *Templates) Logout(r *http.Request, w http.ResponseWriter, backURL string, loggedOut bool, showConfirmation bool) error {
+-	data := struct {
+-		BackURL          string
+-		LoggedOut        bool
+-		ShowConfirmation bool
+-		ReqPath          string
+-		BuildIdentifier  string
+-	}{backURL, loggedOut, showConfirmation, r.URL.Path, t.buildID}
+-	return renderTemplate(w, t.logoutTmpl, data)
++	return renderTemplate(w, t.logoutTmpl, logoutData{
++		BackURL:          backURL,
++		LoggedOut:        loggedOut,
++		ShowConfirmation: showConfirmation,
++		ReqPath:          r.URL.Path,
++		BuildIdentifier:  t.buildID,
++	})
++}
++
++// LogoutConfirmation renders the logout page that asks the user to confirm. Its
++// form posts the client, the address to return to and the state back, so the
++// confirmed logout ends where the unconfirmed one was headed.
++func (t *Templates) LogoutConfirmation(r *http.Request, w http.ResponseWriter, clientID, postLogoutRedirectURI, state string) error {
++	return renderTemplate(w, t.logoutTmpl, logoutData{
++		ShowConfirmation:      true,
++		ReqPath:               r.URL.Path,
++		BuildIdentifier:       t.buildID,
++		ClientID:              clientID,
++		PostLogoutRedirectURI: postLogoutRedirectURI,
++		State:                 state,
++	})
++}
++
++type logoutData struct {
++	BackURL          string
++	LoggedOut        bool
++	ShowConfirmation bool
++	ReqPath          string
++	BuildIdentifier  string
++
++	// The parameters of the logout request, carried by the confirmation form.
++	ClientID              string
++	PostLogoutRedirectURI string
++	State                 string
+ }
+ 
+ func (t *Templates) WebAuthnVerify(r *http.Request, w http.ResponseWriter, mode, authenticatorID string) error {
+diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
+index 5942565c..e65b4f34 100644
+--- a/storage/kubernetes/storage.go
++++ b/storage/kubernetes/storage.go
+@@ -924,6 +924,29 @@ func (cli *client) CreateRevocation(ctx context.Context, r storage.Revocation) e
+ 	return cli.post(resourceRevocation, revocation)
+ }
+ 
++// RevocationExists reads the Revocation object of a browser session or a grant,
++// named as fromStorageRevocation names it (Deckhouse).
++func (cli *client) RevocationExists(ctx context.Context, typ storage.RevocationType, id string) (bool, error) {
++	var name string
++	switch typ {
++	case storage.RevocationSession:
++		name = "session-" + id
++	case storage.RevocationGrant:
++		name = "grant-" + id
++	default:
++		return false, fmt.Errorf("revocations of type %q are not looked up by id", typ)
++	}
++	var r Revocation
++	err := cli.get(resourceRevocation, name, &r)
++	if errors.Is(err, storage.ErrNotFound) {
++		return false, nil
++	}
++	if err != nil {
++		return false, fmt.Errorf("get revocation %s: %w", name, err)
++	}
++	return true, nil
++}
++
+ func isKubernetesAPIConflictError(err error) bool {
+ 	if httpErr, ok := err.(httpError); ok {
+ 		if httpErr.StatusCode() == http.StatusConflict {
+diff --git a/storage/memory/memory.go b/storage/memory/memory.go
+index 83635f28..f15a625f 100644
+--- a/storage/memory/memory.go
++++ b/storage/memory/memory.go
+@@ -716,8 +716,26 @@ func (s *memStorage) CreateRevocation(ctx context.Context, r storage.Revocation)
+ 	return
+ }
+ 
++// RevocationExists reports whether a revocation of the browser session or the grant
++// id is kept (Deckhouse).
++func (s *memStorage) RevocationExists(ctx context.Context, typ storage.RevocationType, id string) (exists bool, err error) {
++	s.tx(func() {
++		for key := range s.revocations {
++			if key.typ != typ {
++				continue
++			}
++			if (typ == storage.RevocationSession && key.sessionID == id) || (typ == storage.RevocationGrant && key.grantID == id) {
++				exists = true
++				return
++			}
++		}
++	})
++	return
++}
++
+ // ListRevocations returns the revocations kept, oldest first. Only tests read
+-// them: dex writes revocations for others and never reads them back.
++// them: dex writes revocations for others and reads back only whether a session
++// or a grant was revoked (RevocationExists).
+ func (s *memStorage) ListRevocations(ctx context.Context) (revocations []storage.Revocation, err error) {
+ 	s.tx(func() {
+ 		for _, r := range s.revocations {
+diff --git a/storage/storage.go b/storage/storage.go
+index cf0dbf6d..2ea726c9 100644
+--- a/storage/storage.go
++++ b/storage/storage.go
+@@ -234,11 +234,14 @@ const (
+ 	// keeps a kubectl credential working after the user signs out of a web app.
+ 	RefreshTokenLifetimeStandalone = "standalone"
+ 
+-	// RefreshTokenLifetimeSession ends the token with that session: redeeming it then
+-	// fails and deletes it. For clients that are a browser session and nothing else,
+-	// such as an authenticating proxy, where a token outliving the session is a way
+-	// back in after logout. Dex requires offline_access for every refresh token, so
+-	// nothing in the request tells the two apart — the client has to say so.
++	// RefreshTokenLifetimeSession ends the token when the session that issued it is
++	// ended: logout revokes it with the session. The session going idle or reaching
++	// its lifetime does not end it (Deckhouse; see sessionID in server/grants). For
++	// clients that are a browser session and nothing else, such as an authenticating
++	// proxy, where a token outliving the logout is a way back in. Dex requires
++	// offline_access for every refresh token, so nothing in the request tells the two
++	// apart — the client has to say so. Only such a client signs a user in from the
++	// session when it asks for offline access (Deckhouse).
+ 	RefreshTokenLifetimeSession = "session"
+ )
+ 
+@@ -761,6 +764,35 @@ func AsRevocationCreator(s Storage) (c RevocationCreator, ok bool) {
+ 	}
+ }
+ 
++// RevocationReader is implemented by the storages that keep Revocation objects and
++// can look one up (Deckhouse): introspection asks whether the browser session or the
++// grant a token was issued in has been revoked.
++type RevocationReader interface {
++	// RevocationExists reports whether a Revocation of the browser session or the
++	// grant id was recorded: typ is RevocationSession or RevocationGrant.
++	RevocationExists(ctx context.Context, typ RevocationType, id string) (bool, error)
++}
++
++// AsRevocationReader returns the RevocationReader of s, looking through the
++// read-only wrappers of this package as AsRevocationCreator does. ok is false when
++// the storage cannot look revocations up.
++func AsRevocationReader(s Storage) (r RevocationReader, ok bool) {
++	for {
++		switch w := s.(type) {
++		case RevocationReader:
++			return w, true
++		case staticClientsStorage:
++			s = w.Storage
++		case staticPasswordsStorage:
++			s = w.Storage
++		case staticConnectorsStorage:
++			s = w.Storage
++		default:
++			return nil, false
++		}
++	}
++}
++
+ // Connector is an object that contains the metadata about connectors used to login to Dex.
+ type Connector struct {
+ 	// ID that will uniquely identify the connector object.
+diff --git a/web/templates/logout.html b/web/templates/logout.html
+index b3d8d66b..f3d378a1 100644
+--- a/web/templates/logout.html
++++ b/web/templates/logout.html
+@@ -8,6 +8,9 @@
+   </div>
+   <div class="theme-form-row">
+     <form method="post" action="{{ .ReqPath }}">
++      {{ if .ClientID }}<input type="hidden" name="client_id" value="{{ .ClientID }}"/>{{ end }}
++      {{ if .PostLogoutRedirectURI }}<input type="hidden" name="post_logout_redirect_uri" value="{{ .PostLogoutRedirectURI }}"/>{{ end }}
++      {{ if .State }}<input type="hidden" name="state" value="{{ .State }}"/>{{ end }}
+       <button type="submit" class="dex-btn theme-btn--primary">Log Out</button>
+     </form>
+   </div>

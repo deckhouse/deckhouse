@@ -24,6 +24,24 @@ positive:
   - idTokenTTL: 5h59m
   - idTokenTTL: 1h
   - idTokenTTL: 10m
+  - sessions:
+      enabled: true
+  # A session lives a week by default, so an unused one may last up to that.
+  - sessions:
+      validIfNotUsedFor: 168h
+  # A lifetime shorter than the idle timeout of a day by default, set alone: the idle timeout yields to it.
+  - sessions:
+      enabled: true
+      absoluteLifetime: 12h
+  - sessions:
+      enabled: true
+      sso: None
+      absoluteLifetime: 12h
+      validIfNotUsedFor: 12h
+      rememberMeCheckedByDefault: true
+      identityRefresh:
+        maxAge: 5m
+        gracePeriod: 30s
   - internal:
       dexAuthenticatorRedisURL: "redis://127.0.0.1/"
   - internal:
@@ -70,3 +88,24 @@ negative:
   - idTokenTTL: 24h
   - idTokenTTL: 0s
   - idTokenTTL: 0m0s
+  # An unused session must not outlive the session (a week by default).
+  - sessions:
+      validIfNotUsedFor: 169h
+  - sessions:
+      absoluteLifetime: 1h
+      validIfNotUsedFor: 2h
+  - sessions:
+      validIfNotUsedFor: 0s
+  # Dex refuses to start with a zero session lifetime.
+  - sessions:
+      absoluteLifetime: 0s
+  - sessions:
+      absoluteLifetime: 0m
+  - sessions:
+      enabled: true
+      absoluteLifetime: 0h0m0s
+  - sessions:
+      sso: All
+  - sessions:
+      identityRefresh:
+        maxAge: 1d

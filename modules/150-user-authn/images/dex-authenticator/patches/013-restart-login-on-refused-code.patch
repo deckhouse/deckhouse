@@ -1,0 +1,474 @@
+diff --git a/deckhouse_callback_test.go b/deckhouse_callback_test.go
+new file mode 100644
+index 00000000..4b8e664f
+--- /dev/null
++++ b/deckhouse_callback_test.go
+@@ -0,0 +1,275 @@
++package main
++
++import (
++	"bytes"
++	"context"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"os"
++	"strings"
++	"testing"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++	"golang.org/x/oauth2"
++
++	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/validation"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
++)
++
++// stubRedeemProvider is a provider whose code redemption fails with a fixed error, so the callback
++// can be driven past redeemCode without a token endpoint.
++type stubRedeemProvider struct {
++	*providers.ProviderData
++	redeemErr error
++}
++
++func (p *stubRedeemProvider) Redeem(_ context.Context, _, _, _ string) (*sessionsapi.SessionState, error) {
++	return nil, p.redeemErr
++}
++
++// invalidGrant is the error OIDCProvider.Redeem returns when the token endpoint refuses the code.
++func invalidGrant() error {
++	return fmt.Errorf("token exchange failed: %w", &oauth2.RetrieveError{
++		Response:  &http.Response{StatusCode: http.StatusBadRequest},
++		ErrorCode: "invalid_grant",
++	})
++}
++
++func TestIsCodeRefused(t *testing.T) {
++	tests := []struct {
++		name string
++		err  error
++		want bool
++	}{
++		{"invalid_grant wrapped", invalidGrant(), true},
++		{"invalid_grant bare", &oauth2.RetrieveError{ErrorCode: "invalid_grant"}, true},
++		{"a provider 5xx", fmt.Errorf("token exchange failed: %w", &oauth2.RetrieveError{
++			Response: &http.Response{StatusCode: http.StatusInternalServerError}, ErrorCode: "invalid_request"}), false},
++		{"a locked account", &oauth2.RetrieveError{ErrorCode: "access_denied"}, false},
++		{"a transport error", fmt.Errorf("token exchange failed: %w", context.DeadlineExceeded), false},
++		{"no error", nil, false},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			assert.Equal(t, tc.want, isCodeRefused(tc.err))
++		})
++	}
++}
++
++// newCallbackProxy builds a proxy whose code redemption fails with redeemErr.
++func newCallbackProxy(t *testing.T, redeemErr error) *OAuthProxy {
++	t.Helper()
++	return newCallbackProxyWith(t, redeemErr, false)
++}
++
++// newCallbackProxyWith is newCallbackProxy with one CSRF cookie per sign-in flow when perRequest is
++// set, as DexAuthenticator runs it.
++func newCallbackProxyWith(t *testing.T, redeemErr error, perRequest bool) *OAuthProxy {
++	t.Helper()
++	opts := baseTestOptions()
++	opts.Cookie.CSRFPerRequest = perRequest
++	require.NoError(t, validation.Validate(opts))
++	proxy, err := NewOAuthProxy(opts, func(string) bool { return true })
++	require.NoError(t, err)
++	proxy.provider = &stubRedeemProvider{ProviderData: &providers.ProviderData{}, redeemErr: redeemErr}
++	return proxy
++}
++
++// callbackRequest is a valid OAuth2 callback (a code, matching state and CSRF cookie) that was going
++// to appRedirect, with the given headers.
++func callbackRequest(t *testing.T, proxy *OAuthProxy, appRedirect string, headers map[string]string) *http.Request {
++	t.Helper()
++	return callbackRequestOfFlow(t, proxy, appRedirect, headers, false)
++}
++
++// callbackRequestOfFlow is callbackRequest of a flow that restarts a refused one when restarted is
++// set.
++func callbackRequestOfFlow(t *testing.T, proxy *OAuthProxy, appRedirect string, headers map[string]string, restarted bool) *http.Request {
++	t.Helper()
++	csrf, err := cookies.NewCSRF(proxy.CookieOptions, "")
++	require.NoError(t, err)
++	if restarted {
++		csrf.MarkRestarted()
++	}
++	req := httptest.NewRequest(http.MethodGet,
++		"/oauth2/callback?code=callback_code&state="+encodeState(csrf.HashOAuthState(), appRedirect, false), nil)
++	req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
++	for k, v := range headers {
++		req.Header.Set(k, v)
++	}
++	csrfCookie, err := csrf.SetCookie(httptest.NewRecorder(), req)
++	require.NoError(t, err)
++	req.AddCookie(csrfCookie)
++	return req
++}
++
++// TestOAuthCallbackRestartsLoginAfterSessionEnded: a tab that finishes its login after the user
++// signed out gets the login started again, not an error page. A browser navigation is redirected to
++// the sign-in page keeping where it was going; a script gets 401 instead of a cross-origin redirect
++// it cannot follow (Deckhouse patch 013, patch 005).
++func TestOAuthCallbackRestartsLoginAfterSessionEnded(t *testing.T) {
++	t.Run("a navigation restarts the login", func(t *testing.T) {
++		proxy := newCallbackProxy(t, invalidGrant())
++		req := callbackRequest(t, proxy, "/app/page", map[string]string{"Sec-Fetch-Mode": "navigate"})
++		rw := httptest.NewRecorder()
++
++		proxy.OAuthCallback(rw, req)
++
++		assert.Equal(t, http.StatusFound, rw.Code, rw.Body.String())
++		assert.Equal(t, "/oauth2/sign_in?rd=%2Fapp%2Fpage&login_restarted=1", rw.Header().Get("Location"))
++	})
++
++	t.Run("a script gets 401, not a redirect", func(t *testing.T) {
++		for _, h := range []map[string]string{
++			{"Sec-Fetch-Mode": "cors"},
++			{"X-Requested-With": "XMLHttpRequest"},
++		} {
++			proxy := newCallbackProxy(t, invalidGrant())
++			req := callbackRequest(t, proxy, "/app/page", h)
++			rw := httptest.NewRecorder()
++
++			proxy.OAuthCallback(rw, req)
++
++			assert.Equal(t, http.StatusUnauthorized, rw.Code)
++			assert.Equal(t, applicationJSON, rw.Header().Get("Content-Type"))
++			assert.Equal(t, "{}", rw.Body.String())
++			assert.Empty(t, rw.Header().Get("Location"))
++		}
++	})
++
++	t.Run("an open redirect falls back to the root", func(t *testing.T) {
++		proxy := newCallbackProxy(t, invalidGrant())
++		req := callbackRequest(t, proxy, "https://evil.example.com/", map[string]string{"Sec-Fetch-Mode": "navigate"})
++		rw := httptest.NewRecorder()
++
++		proxy.OAuthCallback(rw, req)
++
++		assert.Equal(t, http.StatusFound, rw.Code)
++		assert.Equal(t, "/oauth2/sign_in?rd=%2F&login_restarted=1", rw.Header().Get("Location"))
++	})
++}
++
++// TestOAuthCallbackKeepsServerErrorForOtherRedeemFailures: a redemption that failed for another
++// reason (the provider is down or answered a 5xx) stays a 500, not a restart.
++func TestOAuthCallbackKeepsServerErrorForOtherRedeemFailures(t *testing.T) {
++	proxy := newCallbackProxy(t, fmt.Errorf("token exchange failed: %w", &oauth2.RetrieveError{
++		Response:  &http.Response{StatusCode: http.StatusBadGateway},
++		ErrorCode: "",
++	}))
++	req := callbackRequest(t, proxy, "/app/page", map[string]string{"Sec-Fetch-Mode": "navigate"})
++	rw := httptest.NewRecorder()
++
++	proxy.OAuthCallback(rw, req)
++
++	assert.Equal(t, http.StatusInternalServerError, rw.Code)
++	assert.Empty(t, rw.Header().Get("Location"))
++}
++
++// TestOAuthCallbackLogsRefusedCode: a refused code and any other failed redemption write the auth
++// log line the security event of a failed login is built from (patch 008-auth-log-login-failures),
++// with the client address.
++func TestOAuthCallbackLogsRefusedCode(t *testing.T) {
++	for name, redeemErr := range map[string]error{
++		"invalid_grant": invalidGrant(),
++		"a provider 5xx": fmt.Errorf("token exchange failed: %w", &oauth2.RetrieveError{
++			Response: &http.Response{StatusCode: http.StatusBadGateway}}),
++	} {
++		t.Run(name, func(t *testing.T) {
++			var out bytes.Buffer
++			logger.SetOutput(&out)
++			t.Cleanup(func() { logger.SetOutput(os.Stdout) })
++
++			proxy := newCallbackProxy(t, redeemErr)
++			req := callbackRequest(t, proxy, "/app/page", map[string]string{"Sec-Fetch-Mode": "navigate"})
++			req.RemoteAddr = "192.0.2.10:4711"
++			proxy.OAuthCallback(httptest.NewRecorder(), req)
++
++			assert.Contains(t, out.String(), "Invalid authentication via OAuth2: unable to redeem the code")
++			assert.Contains(t, out.String(), "192.0.2.10")
++		})
++	}
++}
++
++// TestOAuthCallbackRestartsTheLoginOncePerFlow: a code refused in a flow that restarts a refused
++// one is an error, not another restart, so a refusal that repeats does not loop. Parallel sign-ins
++// that shared one CSRF cookie made every code fail, and the restarts went round in a loop.
++func TestOAuthCallbackRestartsTheLoginOncePerFlow(t *testing.T) {
++	proxy := newCallbackProxyWith(t, invalidGrant(), true)
++
++	first := httptest.NewRecorder()
++	proxy.OAuthCallback(first, callbackRequestOfFlow(t, proxy, "/app/page", map[string]string{"Sec-Fetch-Mode": "navigate"}, false))
++	assert.Equal(t, http.StatusFound, first.Code)
++	assert.Equal(t, "/oauth2/sign_in?rd=%2Fapp%2Fpage&login_restarted=1", first.Header().Get("Location"))
++
++	second := httptest.NewRecorder()
++	proxy.OAuthCallback(second, callbackRequestOfFlow(t, proxy, "/app/page", map[string]string{"Sec-Fetch-Mode": "navigate"}, true))
++	assert.Equal(t, http.StatusInternalServerError, second.Code)
++	assert.Empty(t, second.Header().Get("Location"))
++}
++
++// TestOAuthCallbackClearsTheCookieOfTheRefusedFlow: with one CSRF cookie per flow, the restart
++// expires the cookie of the refused flow instead of leaving it until it expires on its own.
++func TestOAuthCallbackClearsTheCookieOfTheRefusedFlow(t *testing.T) {
++	proxy := newCallbackProxyWith(t, invalidGrant(), true)
++	req := callbackRequestOfFlow(t, proxy, "/app/page", map[string]string{"Sec-Fetch-Mode": "navigate"}, false)
++	var flowCookie string
++	for _, c := range req.Cookies() {
++		if strings.HasSuffix(c.Name, "_csrf") {
++			flowCookie = c.Name
++		}
++	}
++	require.NotEmpty(t, flowCookie)
++	assert.NotEqual(t, proxy.CookieOptions.Name+"_csrf", flowCookie, "the cookie of a flow carries part of its state in its name")
++
++	rw := httptest.NewRecorder()
++	proxy.OAuthCallback(rw, req)
++
++	assert.Equal(t, http.StatusFound, rw.Code)
++	cleared := false
++	for _, c := range rw.Result().Cookies() {
++		if c.Name == flowCookie && c.MaxAge < 0 {
++			cleared = true
++		}
++	}
++	assert.True(t, cleared, "the CSRF cookie of the refused flow must be cleared")
++}
++
++// TestOAuthStartCarriesTheRestartIntoTheFlow: the sign-in that the restart redirects to marks the
++// CSRF cookie of the new flow, and only that one.
++func TestOAuthStartCarriesTheRestartIntoTheFlow(t *testing.T) {
++	for _, tc := range []struct {
++		target    string
++		restarted bool
++	}{
++		{"/oauth2/start?rd=%2Fapp%2Fpage&login_restarted=1", true},
++		{"/oauth2/start?rd=%2Fapp%2Fpage", false},
++	} {
++		t.Run(tc.target, func(t *testing.T) {
++			proxy := newCallbackProxyWith(t, nil, true)
++			proxy.provider = &stubRedeemProvider{ProviderData: &providers.ProviderData{LoginURL: &url.URL{Scheme: "https", Host: "dex.example.com", Path: "/auth"}}}
++			rw := httptest.NewRecorder()
++			proxy.OAuthStart(rw, middlewareapi.AddRequestScope(httptest.NewRequest(http.MethodGet, tc.target, nil), &middlewareapi.RequestScope{}))
++			require.Equal(t, http.StatusFound, rw.Code, rw.Body.String())
++
++			var csrfCookie *http.Cookie
++			for _, c := range rw.Result().Cookies() {
++				if strings.HasSuffix(c.Name, "_csrf") && c.MaxAge >= 0 {
++					csrfCookie = c
++				}
++			}
++			require.NotNil(t, csrfCookie)
++			req := httptest.NewRequest(http.MethodGet, "/oauth2/callback", nil)
++			req.AddCookie(csrfCookie)
++			csrf, err := cookies.LoadCSRFCookie(req, csrfCookie.Name, proxy.CookieOptions)
++			require.NoError(t, err)
++			assert.Equal(t, tc.restarted, csrf.Restarted())
++		})
++	}
++}
+diff --git a/oauthproxy.go b/oauthproxy.go
+index b51ee4eb..ab87dfc8 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -41,6 +41,7 @@ import (
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/providers"
++	"golang.org/x/oauth2"
+ )
+ 
+ const (
+@@ -1088,6 +1089,10 @@ func (p *OAuthProxy) doOAuthStart(rw http.ResponseWriter, req *http.Request, ove
+ 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+ 		return
+ 	}
++	if req.URL.Query().Get(loginRestartedParam) != "" {
++		// The callback restarted a flow whose code the provider refused (Deckhouse patch 013).
++		csrf.MarkRestarted()
++	}
+ 
+ 	appRedirect, err := p.appDirector.GetRedirect(req)
+ 	if err != nil {
+@@ -1166,6 +1171,35 @@ func (p *OAuthProxy) OAuthCallback(rw http.ResponseWriter, req *http.Request) {
+ 
+ 	session, err := p.redeemCode(req, csrf.GetCodeVerifier())
+ 	if err != nil {
++		if isCodeRefused(err) && !csrf.Restarted() {
++			// Dex refuses to exchange a code minted in a browser session that has
++			// ended between the code being issued and redeemed (invalid_grant): the
++			// tab finished its login after the user signed out. The code is spent
++			// though it never bought a token, so start the login again rather than
++			// show an error (Deckhouse patch 013). Other redemption errors — the
++			// provider is unreachable or answered a 5xx — stay a server error.
++			// The restart happens once per flow: the new flow carries the mark in its
++			// CSRF cookie, and a code refused again there is the error below, not
++			// another restart (a refusal that repeats, for example because parallel
++			// sign-ins share one CSRF cookie, must not loop).
++			// The message keeps the prefix of the redemption failure below, so the
++			// security event of a failed login still fires (patch 008-auth-log-login-failures).
++			logger.PrintAuthf("", req, logger.AuthFailure,
++				"Invalid authentication via OAuth2: unable to redeem the code: the provider refused it (invalid_grant), restarting the login")
++			// The CSRF cookie of the refused flow is spent.
++			csrf.ClearCookie(rw, req)
++			if !isNavigation(req) {
++				// A script must get a status it can act on, not a cross-origin
++				// redirect to the provider's sign-in (see patch 005).
++				p.errorJSON(rw, http.StatusUnauthorized)
++				return
++			}
++			if !p.redirectValidator.IsValidRedirect(appRedirect) {
++				appRedirect = "/"
++			}
++			http.Redirect(rw, req, p.ProxyPrefix+signInPath+"?rd="+url.QueryEscape(appRedirect)+"&"+loginRestartedParam+"=1", http.StatusFound)
++			return
++		}
+ 		logger.Errorf("Error redeeming code during OAuth2 callback: %v", err)
+ 		logger.PrintAuthf("", req, logger.AuthError, "Invalid authentication via OAuth2: unable to redeem the code")
+ 		p.ErrorPage(rw, req, http.StatusInternalServerError, err.Error())
+@@ -1612,6 +1646,22 @@ func isNavigation(req *http.Request) bool {
+ 	}
+ }
+ 
++// loginRestartedParam marks the sign-in that restarts a flow whose code the
++// provider refused (Deckhouse patch 013). The sign-in copies it into the CSRF
++// cookie of the new flow, which the callback reads; a refusal in a flow that
++// carries it is an error, so the restart happens at most once per flow.
++const loginRestartedParam = "login_restarted"
++
++// isCodeRefused reports whether the provider refused the authorization code at the token endpoint
++// with invalid_grant (RFC 6749 §5.2). Dex answers this when the browser session the code was minted
++// in has ended between the code being issued and redeemed: the code is spent though it never bought
++// a token, and the login has to start again. A provider that is unreachable or answers a 5xx is a
++// different error and is not this (see OIDCProvider.Redeem, which keeps the oauth2 error underneath).
++func isCodeRefused(err error) bool {
++	retrieveErr, ok := errors.AsType[*oauth2.RetrieveError](err)
++	return ok && retrieveErr.ErrorCode == "invalid_grant"
++}
++
+ // errorJSON returns the error code with an application/json mime type
+ func (p *OAuthProxy) errorJSON(rw http.ResponseWriter, code int) {
+ 	rw.Header().Set("Content-Type", applicationJSON)
+diff --git a/pkg/cookies/csrf.go b/pkg/cookies/csrf.go
+index 2614f378..382529fb 100644
+--- a/pkg/cookies/csrf.go
++++ b/pkg/cookies/csrf.go
+@@ -25,6 +25,11 @@ type CSRF interface {
+ 
+ 	SetSessionNonce(s *sessions.SessionState)
+ 
++	// MarkRestarted and Restarted carry, in the CSRF cookie of a sign-in flow,
++	// that the flow restarts one the provider refused (Deckhouse patch 013).
++	MarkRestarted()
++	Restarted() bool
++
+ 	SetCookie(http.ResponseWriter, *http.Request) (*http.Cookie, error)
+ 	ClearCookie(http.ResponseWriter, *http.Request)
+ }
+@@ -45,6 +50,11 @@ type csrf struct {
+ 	// authentication code.
+ 	CodeVerifier string `msgpack:"cv,omitempty"`
+ 
++	// LoginRestarted tells that this sign-in flow restarts one whose code the
++	// provider refused (Deckhouse patch 013): a second refusal in the same flow
++	// is an error, not another restart.
++	LoginRestarted bool `msgpack:"r,omitempty"`
++
+ 	cookieOpts *options.Cookie
+ 	clock      func() time.Time
+ }
+@@ -108,6 +118,16 @@ func (c *csrf) GetCodeVerifier() string {
+ 	return c.CodeVerifier
+ }
+ 
++// MarkRestarted records that the flow restarts a refused one.
++func (c *csrf) MarkRestarted() {
++	c.LoginRestarted = true
++}
++
++// Restarted tells whether the flow restarts a refused one.
++func (c *csrf) Restarted() bool {
++	return c.LoginRestarted
++}
++
+ // HashOAuthState returns the hash of the OAuth state nonce
+ func (c *csrf) HashOAuthState() string {
+ 	return encryption.HashNonce(c.OAuthState)
+diff --git a/providers/oidc.go b/providers/oidc.go
+index dbae65de..559131bc 100644
+--- a/providers/oidc.go
++++ b/providers/oidc.go
+@@ -95,7 +95,10 @@ func (p *OIDCProvider) Redeem(ctx context.Context, redirectURL, code, codeVerifi
+ 	ctx = oidc.ClientContext(ctx, requests.DefaultHTTPClient)
+ 	token, err := c.Exchange(ctx, code, opts...)
+ 	if err != nil {
+-		return nil, fmt.Errorf("token exchange failed: %v", err)
++		// Wrap, not flatten: the caller tells a code the provider refused
++		// (invalid_grant) from one it could not exchange for another reason by the
++		// *oauth2.RetrieveError underneath (Deckhouse patch 013).
++		return nil, fmt.Errorf("token exchange failed: %w", err)
+ 	}
+ 
+ 	return p.createSession(ctx, token, false)
+diff --git a/providers/oidc_test.go b/providers/oidc_test.go
+index 3da9d210..fdca5bb3 100644
+--- a/providers/oidc_test.go
++++ b/providers/oidc_test.go
+@@ -4,6 +4,7 @@ import (
+ 	"context"
+ 	"encoding/base64"
+ 	"encoding/json"
++	"errors"
+ 	"fmt"
+ 	"net/http"
+ 	"net/http/httptest"
+@@ -16,6 +17,8 @@ import (
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+ 	internaloidc "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/providers/oidc"
+ 	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++	"golang.org/x/oauth2"
+ )
+ 
+ type redeemTokenResponse struct {
+@@ -106,6 +109,28 @@ func TestOIDCProviderGetLoginURL(t *testing.T) {
+ 	assert.NotContains(t, withNonce, "code_challenge_method")
+ }
+ 
++// TestOIDCProviderRedeemKeepsRetrieveError: a token endpoint that refuses the code with
++// invalid_grant surfaces an *oauth2.RetrieveError the caller can read, not a flattened string, so
++// the authenticator can tell a refused code from a provider that is merely unreachable (Deckhouse
++// patch 013).
++func TestOIDCProviderRedeemKeepsRetrieveError(t *testing.T) {
++	s := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
++		rw.Header().Add("content-type", "application/json")
++		rw.WriteHeader(http.StatusBadRequest)
++		_, _ = rw.Write([]byte(`{"error":"invalid_grant","error_description":"Invalid or expired code parameter."}`))
++	}))
++	defer s.Close()
++	u, err := url.Parse(s.URL)
++	require.NoError(t, err)
++	provider := newOIDCProvider(u, false)
++
++	_, err = provider.Redeem(context.Background(), provider.RedeemURL.String(), "code1234", "")
++	require.Error(t, err)
++	var retrieveErr *oauth2.RetrieveError
++	require.True(t, errors.As(err, &retrieveErr), "the oauth2 error must survive wrapping: %v", err)
++	assert.Equal(t, "invalid_grant", retrieveErr.ErrorCode)
++}
++
+ func TestOIDCProviderRedeem(t *testing.T) {
+ 	idToken, _ := newSignedTestIDToken(defaultIDToken)
+ 	body, _ := json.Marshal(redeemTokenResponse{

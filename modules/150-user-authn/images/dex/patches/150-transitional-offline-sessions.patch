@@ -999,7 +999,7 @@ index 00000000..3d672995
 +	require.Equal(t, 4, api.listings(t, cli, resourcePassword))
 +}
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index a3bca09f..8844cfef 100644
+index fea47f7c..5bce3df6 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
 @@ -557,6 +557,9 @@ type Password struct {

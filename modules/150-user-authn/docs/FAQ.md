@@ -290,6 +290,12 @@ DexAuthenticator receives the revocations from the `revocation-feed` Service in 
 
 When a user signs out of an application, DexAuthenticator revokes the refresh token of the session in Dex. A copy of the session cookie stops working too.
 
+With the [browser sessions of Dex](usage.html#browser-sessions-of-dex) enabled, DexAuthenticator then sends the browser to Dex to end the session of Dex, and the browser is signed out of the other applications it signed in to through this session. Sign the user out with a navigation, not with a script request, which does not follow the redirect to Dex:
+
+```javascript
+window.location.assign("/dex-authenticator/sign_out");
+```
+
 ## How to generate a kubeconfig and access Kubernetes API?
 
 To generate a kubeconfig, refer to the [«How to generate a kubeconfig to access the Kubernetes API?»](/modules/control-plane-manager/faq.html#how-to-generate-a-kubeconfig-to-access-the-kubernetes-api) section of the `control-plane-manager` module documentation.

@@ -116,6 +116,10 @@ spec:
           value: "false"
         - name: DEX_CONTINUE_ON_CONNECTOR_FAILURE
           value: "true"
+        {{- if dig "sessions" "enabled" false .Values.userAuthn }}
+        - name: DEX_SESSIONS_ENABLED
+          value: "true"
+        {{- end }}
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: https

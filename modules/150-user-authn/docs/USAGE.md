@@ -597,6 +597,117 @@ Adding the annotation is restricted regardless of its value, including `"false"`
 The restriction does not apply to resources that already have the annotation. A user with permissions to modify such a resource can continue to modify it, including removing the annotation or changing its value to disable access.
 {% endalert %}
 
+## Browser sessions of Dex
+
+By default, Dex does not remember a user between sign-ins: every application that sends the user to Dex gets the
+sign-in form. With the browser sessions of Dex enabled, Dex remembers the user signed in to the browser.
+To enable the sessions, set the [`sessions.enabled`](configuration.html#parameters-sessions-enabled) parameter:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 3
+  enabled: true
+  settings:
+    sessions:
+      enabled: true
+```
+
+{% endraw %}
+
+What changes with the sessions:
+
+- The web interfaces of Deckhouse share the sign-in: the user enters the password and the second factor once and opens
+  the others without them.
+  These are the applications of the DexAuthenticator objects in the `d8-*` namespaces. User DexAuthenticator and
+  DexClient objects do not share the sign-in. To turn the sharing off, set
+  [`sessions.sso`](configuration.html#parameters-sessions-sso) to `None`.
+  The shared sign-in lasts while the browser uses any of these applications, up to
+  [`sessions.absoluteLifetime`](configuration.html#parameters-sessions-absolutelifetime). After
+  [`sessions.validIfNotUsedFor`](configuration.html#parameters-sessions-validifnotusedfor) without using them, the next
+  application asks for the password again.
+  A user of an external provider shares the sign-in while the user data Dex stored is fresh: after
+  [`sessions.identityRefresh.maxAge`](configuration.html#parameters-sessions-identityrefresh-maxage) without a sign-in or
+  a refresh of the tokens of an application, the next application asks for the password again.
+- The sign-in form shows the "Remember me" checkbox. With it, the session survives closing the browser.
+- When a user signs out of an application of a DexAuthenticator, DexAuthenticator sends the browser to Dex, and Dex ends
+  the session. Within seconds, the browser is signed out of every application of a DexAuthenticator it signed in to
+  through this session. If the application and Dex are on different sites (different registrable domains), Dex asks the
+  user to confirm the sign-out. An application signs out with a navigation of the browser: a script request (`fetch`,
+  XHR) does not follow the redirect to Dex, and the session of Dex stays.
+- Signing out of Dex does not sign the user out of an external OIDC provider: the provider may sign the user in again
+  without a password. To end the session at the provider too, enable
+  [`upstreamLogout`](cr.html#dexprovider-v1-spec-oidc-upstreamlogout) of the provider, or set `promptType: login` to
+  ask for the password at every sign-in.
+- Dex reads the data of the user (such as the groups) from the provider again when the stored data is older than
+  [`sessions.identityRefresh.maxAge`](configuration.html#parameters-sessions-identityrefresh-maxage). If the provider
+  answers that the user no longer exists or is no longer allowed in, Dex ends all the sessions and tokens of the user of
+  this provider.
+
+What does not change:
+
+- Tokens for `kubectl` (kubeconfig, `d8 login`) are issued only after an interactive sign-in, never from a session of the
+  browser.
+- An application of a DexAuthenticator stays signed in for
+  [`keepUsersLoggedInFor`](cr.html#dexauthenticator-v1-spec-keepusersloggedinfor), even when the session of Dex ends by
+  its lifetime or idle timeout. Only signing out ends it.
+
+### How long a session lasts
+
+A session of Dex ends at the first of these:
+
+- [`sessions.absoluteLifetime`](configuration.html#parameters-sessions-absolutelifetime) after the sign-in, a week by
+  default, however much the browser is used;
+- [`sessions.validIfNotUsedFor`](configuration.html#parameters-sessions-validifnotusedfor) without use, a day by
+  default;
+- the sign-out of the user, or an end of the session by an administrator;
+- the closing of the browser, if the user did not select "Remember me" at the sign-in.
+
+The browser uses the session when it signs in to an application through it, and when an application signed in through
+it refreshes its tokens: an application of a DexAuthenticator object or of a DexClient object with
+[`refreshTokenLifetime: Session`](cr.html#dexclient-v1-spec-refreshtokenlifetime). Such an application refreshes its
+tokens every [`idTokenTTL`](configuration.html#parameters-idtokenttl) while it is open and sends requests. A closed
+application, or one open in the browser of a sleeping computer, does not use the session.
+
+With the defaults, a user who works every day enters the password and the second factor once a week, and once more
+after a break longer than a day, such as a weekend. The session survives a night.
+
+When the session ends, the applications already open stay signed in for
+[`keepUsersLoggedInFor`](cr.html#dexauthenticator-v1-spec-keepusersloggedinfor), but signing in to another web
+interface asks for the password again.
+
+To ask for the password more often, shorten `sessions.validIfNotUsedFor`, for example to `1h`: the user then enters it
+again after every break of an hour. `sessions.validIfNotUsedFor` must not be longer than
+`sessions.absoluteLifetime`; when only `sessions.absoluteLifetime` is set and is shorter than a day, an unused session
+ends after `sessions.absoluteLifetime`.
+
+### Signing out of the application of a DexClient
+
+An application of a DexClient object signs the user out of Dex by sending the browser to
+`https://dex.<PUBLIC_DOMAIN>/logout` with the `client_id` and `post_logout_redirect_uri` parameters. Dex returns the browser
+only to the addresses listed in [`postLogoutRedirectURIs`](cr.html#dexclient-v1-spec-postlogoutredirecturis) of the
+DexClient:
+
+```text
+https://dex.example.com/logout?client_id=dex-client-myapp@mynamespace&post_logout_redirect_uri=https%3A%2F%2Fmyapp.example.com%2F
+```
+
+To learn that a session of a user ended, the application can set
+[`backchannelLogoutURI`](cr.html#dexclient-v1-spec-backchannellogouturi). Dex sends the notification once, without
+retries, when the user signs out of the session or the provider answers that the user is gone. An end of the session
+by a UserOperation or through the self-service of the web interface sends none yet: such an application can check its
+tokens at the introspection endpoint of Dex (`/token/introspect`), which reports the tokens of an ended session
+inactive.
+
+An application that requests offline access (refresh tokens) gets them only after an interactive sign-in. With
+[`refreshTokenLifetime: Session`](cr.html#dexclient-v1-spec-refreshtokenlifetime), the application can sign the user in
+from the session of the browser, and its tokens end when the user signs out of this session.
+
 ## Local Authentication
 
 Local authentication provides user verification and access management with support for configurable password policies, two-factor authentication (2FA), and group management.  
