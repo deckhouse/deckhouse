@@ -42,8 +42,10 @@ func OperationPredicate() predicate.Predicate {
 
 			return !oldOperation.IsTerminal() && newOperation.IsTerminal()
 		},
-		DeleteFunc: func(event.DeleteEvent) bool {
-			return false
+		// A deleted operation that has not finished frees its slot; rotation deletes only finished ones.
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			operation, ok := e.Object.(*controlplanev1alpha1.ControlPlaneOperation)
+			return ok && !operation.IsTerminal()
 		},
 		GenericFunc: func(event.GenericEvent) bool {
 			return false
@@ -73,6 +75,39 @@ func ControlPlaneNodePredicate() predicate.Predicate {
 			return false
 		},
 	}
+}
+
+// NodeReadyPredicate reacts when a master or an arbiter turns Ready or NotReady, or is deleted: the
+// pending operations of a NotReady node are held back until a reconcile sees it Ready again, and
+// the approved operation of a deleted node stops holding its slot.
+func NodeReadyPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(event.CreateEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldNode, okOld := e.ObjectOld.(*corev1.Node)
+			newNode, okNew := e.ObjectNew.(*corev1.Node)
+			if !okOld || !okNew || !isEtcdNode(newNode) {
+				return false
+			}
+			return isNodeReady(*oldNode) != isNodeReady(*newNode)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			node, ok := e.Object.(*corev1.Node)
+			return ok && isEtcdNode(node)
+		},
+		GenericFunc: func(event.GenericEvent) bool {
+			return false
+		},
+	}
+}
+
+// isEtcdNode reports whether node is a master or an etcd arbiter.
+func isEtcdNode(node *corev1.Node) bool {
+	_, master := node.Labels[constants.ControlPlaneNodeLabelKey]
+	_, arbiter := node.Labels[constants.EtcdArbiterNodeLabelKey]
+	return master || arbiter
 }
 
 // ControlPlanePodPredicate reacts when a control-plane-manager Pod or a component's static pod starts

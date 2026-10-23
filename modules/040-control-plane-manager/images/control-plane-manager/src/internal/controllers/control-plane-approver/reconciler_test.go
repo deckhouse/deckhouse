@@ -141,6 +141,48 @@ func TestReconciler_Reconcile(t *testing.T) {
 		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "etcd-next", Namespace: constants.KubeSystemNamespace}, &updated))
 		require.False(t, updated.Spec.Approved)
 	})
+
+	t.Run("approved operation on a NotReady node keeps its slot", func(t *testing.T) {
+		t.Parallel()
+		notReady := testControlPlaneNode("n1")
+		notReady.Status.Conditions[0].Status = corev1.ConditionFalse
+		seed := newOperation("etcd-running", "n1", controlplanev1alpha1.OperationComponentEtcd, true)
+		pending := newOperation("etcd-next", "n2", controlplanev1alpha1.OperationComponentEtcd, false)
+		cl := fake.NewClientBuilder().
+			WithScheme(testScheme).
+			WithObjects(notReady, testControlPlaneNode("n2"), testControlPlaneNode("n3"), &seed, &pending).
+			WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
+			Build()
+		r := newReconciler(cl, cl)
+
+		_, err := r.Reconcile(ctx, reconcile.Request{})
+		require.NoError(t, err)
+
+		var updated controlplanev1alpha1.ControlPlaneOperation
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "etcd-next", Namespace: constants.KubeSystemNamespace}, &updated))
+		require.False(t, updated.Spec.Approved)
+	})
+
+	t.Run("pending operation on a NotReady node is not approved", func(t *testing.T) {
+		t.Parallel()
+		notReady := testControlPlaneNode("n1")
+		notReady.Status.Conditions[0].Status = corev1.ConditionFalse
+		op := newOperation("op-etcd", "n1", controlplanev1alpha1.OperationComponentEtcd, false)
+		cl := fake.NewClientBuilder().
+			WithScheme(testScheme).
+			WithObjects(notReady, testControlPlaneNode("n2"), &op).
+			WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
+			Build()
+		r := newReconciler(cl, cl)
+		r.etcdLeader = noEtcdLeader
+
+		_, err := r.Reconcile(ctx, reconcile.Request{})
+		require.NoError(t, err)
+
+		var updated controlplanev1alpha1.ControlPlaneOperation
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "op-etcd", Namespace: constants.KubeSystemNamespace}, &updated))
+		require.False(t, updated.Spec.Approved)
+	})
 }
 
 func testControlPlaneNode(name string) *corev1.Node {

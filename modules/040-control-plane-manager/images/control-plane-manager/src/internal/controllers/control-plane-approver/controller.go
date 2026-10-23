@@ -78,5 +78,10 @@ func Register(mgr manager.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(enqueueApprover),
 			builder.WithPredicates(ControlPlanePodPredicate()),
 		).
+		Watches(
+			&corev1.Node{},
+			handler.EnqueueRequestsFromMapFunc(enqueueApprover),
+			builder.WithPredicates(NodeReadyPredicate()),
+		).
 		Complete(r)
 }

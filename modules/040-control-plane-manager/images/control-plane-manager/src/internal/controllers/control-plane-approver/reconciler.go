@@ -81,16 +81,21 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if err := r.apiReader.List(
 		ctx, operations,
 		client.InNamespace(constants.KubeSystemNamespace),
-		operationsMatchingReadyNodes(nodeNames),
+		operationsMatchingNodes(slices.Concat(nodeNamesOf(masterList), nodeNamesOf(arbiterList))),
 	); err != nil {
 		return reconcile.Result{}, err
 	}
-	if len(operations.Items) == 0 {
+	// An approved operation on a NotReady node still holds its slot: its node may be restarting
+	// the component right now. Only pending operations wait for their node to be Ready.
+	ops := slices.DeleteFunc(operations.Items, func(op controlplanev1alpha1.ControlPlaneOperation) bool {
+		return !op.Spec.Approved && !slices.Contains(nodeNames, op.Spec.NodeName)
+	})
+	if len(ops) == 0 {
 		log.FromContext(ctx).V(1).Info("no control plane operations found")
 		return reconcile.Result{}, nil
 	}
 
-	candidates, recheckAPIServers, err := r.holdBackVersionSkew(ctx, operations.Items, masterNames)
+	candidates, recheckAPIServers, err := r.holdBackVersionSkew(ctx, ops, masterNames)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to check kube-apiserver versions: %w", err)
 	}
@@ -153,7 +158,15 @@ func (r *reconciler) getReadyNodes(masterList *corev1.NodeList, arbiterList *cor
 	return nodes, masterNames, slices.Concat(masterNames, arbiterNames)
 }
 
-func operationsMatchingReadyNodes(nodeNames []string) client.ListOption {
+func nodeNamesOf(list *corev1.NodeList) []string {
+	names := make([]string, 0, len(list.Items))
+	for _, node := range list.Items {
+		names = append(names, node.Name)
+	}
+	return names
+}
+
+func operationsMatchingNodes(nodeNames []string) client.ListOption {
 	requirement, err := labels.NewRequirement(constants.ControlPlaneNodeNameLabelKey, selection.In, nodeNames)
 	if err != nil {
 		return client.MatchingLabels{}

@@ -63,7 +63,8 @@ func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1
 	// The Lease is released as soon as the new instance runs, before it is ready.
 	kcmLeaderRenewing := r.handOverKCMLeader(ctx, op, pod, time.Now(), logger)
 
-	expected := checksumAnnotationsFromSpec(op.Spec)
+	// Renewal IDs too: a certificate renewal changes only them, and the old pod would pass otherwise.
+	expected := buildSyncManifestAnnotations(op)
 	if !isPodReadyWithChecksums(pod, expected) {
 		logger.Info("pod not ready with expected checksums, requeue", slog.String("pod", podName))
 		return StepResult{
