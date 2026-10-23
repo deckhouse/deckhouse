@@ -37,6 +37,7 @@ var componentChecksumDeps = map[string]componentFieldMap{
 			"extra-file-authentication-config.yaml",
 			"extra-file-event-rate-limit-config.yaml",
 			"extra-file-oidc-ca.crt",
+			"extra-file-revocation-webhook-config.yaml",
 			"extra-file-secret-encryption-config.yaml",
 			"extra-file-webhook-config.yaml",
 		},
