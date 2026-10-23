@@ -1,7 +1,7 @@
 {{- $dexVersion := include "get_oss_version_by_id" (list "dex" $ ) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-dex-artifact
   add: /src/dex

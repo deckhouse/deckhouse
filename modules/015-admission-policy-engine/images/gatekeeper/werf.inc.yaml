@@ -1,7 +1,7 @@
 {{ $gatekeeperVersion := include "get_oss_version_by_id" (list "gatekeeper" $ ) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /gatekeeper

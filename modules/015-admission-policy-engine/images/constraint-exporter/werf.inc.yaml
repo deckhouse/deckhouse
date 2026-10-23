@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
   - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /constraint_exporter

@@ -1,7 +1,7 @@
 {{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
   - from: {{ $.ModuleName }}/{{ $.ImageName }}-basic-auth-proxy-artifact
     add: /src/basic-auth-proxy

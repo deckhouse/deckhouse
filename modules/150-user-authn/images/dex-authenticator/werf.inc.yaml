@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-oauth2-proxy-artifact
   add: /src/oauth2-proxy
