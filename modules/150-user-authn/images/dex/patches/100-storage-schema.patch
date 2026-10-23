@@ -24,6 +24,51 @@ index 00000000..6962a886
 +      openAPIV3Schema:
 +        type: object
 +        x-kubernetes-preserve-unknown-fields: true
+diff --git a/scripts/manifests/crds/revocations.yaml b/scripts/manifests/crds/revocations.yaml
+new file mode 100644
+index 00000000..0146a955
+--- /dev/null
++++ b/scripts/manifests/crds/revocations.yaml
+@@ -0,0 +1,39 @@
++apiVersion: apiextensions.k8s.io/v1
++kind: CustomResourceDefinition
++metadata:
++  name: revocations.dex.coreos.com
++spec:
++  group: dex.coreos.com
++  names:
++    kind: Revocation
++    listKind: RevocationList
++    plural: revocations
++    singular: revocation
++  scope: Namespaced
++  versions:
++  - name: v1
++    served: true
++    storage: true
++    schema:
++      openAPIV3Schema:
++        type: object
++        x-kubernetes-preserve-unknown-fields: true
++    additionalPrinterColumns:
++      - name: Type
++        type: string
++        jsonPath: .type
++        description: |
++          What was revoked: pair (everything issued to a user of a connector below Generation), session (a browser session) or grant (a refresh token).
++      - name: Reason
++        type: string
++        jsonPath: .reason
++        description: |
++          Why the credentials were revoked.
++      - name: Generation
++        type: integer
++        jsonPath: .generation
++        description: |
++          The new generation of the pair (pair only).
++      - name: Age
++        type: date
++        jsonPath: .metadata.creationTimestamp
 diff --git a/scripts/manifests/crds/useridentities.yaml b/scripts/manifests/crds/useridentities.yaml
 new file mode 100644
 index 00000000..19406824
@@ -85,10 +130,90 @@ index 00000000..19406824
 +        type: date
 +        jsonPath: .metadata.creationTimestamp
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index d33b868f..a1c8fed9 100644
+index d33b868f..5b2984ff 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
-@@ -896,33 +896,27 @@ func isKubernetesAPIConflictError(err error) bool {
+@@ -27,6 +27,7 @@ const (
+ 	kindDeviceToken     = "DeviceToken"
+ 	kindUserIdentity    = "UserIdentity"
+ 	kindAuthSession     = "AuthSession"
++	kindRevocation      = "Revocation"
+ )
+ 
+ const (
+@@ -42,6 +43,7 @@ const (
+ 	resourceDeviceToken     = "devicetokens"
+ 	resourceUserIdentity    = "useridentities"
+ 	resourceAuthSession     = "authsessions"
++	resourceRevocation      = "revocations"
+ )
+ 
+ const (
+@@ -49,7 +51,10 @@ const (
+ 	crdHandlingCheck  = "check"
+ )
+ 
+-var _ storage.Storage = (*client)(nil)
++var (
++	_ storage.Storage           = (*client)(nil)
++	_ storage.RevocationCreator = (*client)(nil)
++)
+ 
+ const (
+ 	gcResultLimit = 500
+@@ -772,7 +777,7 @@ func (cli *client) GetUserIdentity(ctx context.Context, userID, connectorID stri
+ 	if err != nil {
+ 		return storage.UserIdentity{}, err
+ 	}
+-	return toStorageUserIdentity(u), nil
++	return toStorageUserIdentity(u)
+ }
+ 
+ func (cli *client) getUserIdentity(userID, connectorID string) (u UserIdentity, err error) {
+@@ -792,8 +797,12 @@ func (cli *client) UpdateUserIdentity(ctx context.Context, userID, connectorID s
+ 		if err != nil {
+ 			return err
+ 		}
++		old, err := toStorageUserIdentity(u)
++		if err != nil {
++			return err
++		}
+ 
+-		updated, err := updater(toStorageUserIdentity(u))
++		updated, err := updater(old)
+ 		if err != nil {
+ 			return err
+ 		}
+@@ -821,7 +830,10 @@ func (cli *client) ListUserIdentities(ctx context.Context) ([]storage.UserIdenti
+ 
+ 	userIdentities := make([]storage.UserIdentity, len(userIdentityList.UserIdentities))
+ 	for i, u := range userIdentityList.UserIdentities {
+-		userIdentities[i] = toStorageUserIdentity(u)
++		var err error
++		if userIdentities[i], err = toStorageUserIdentity(u); err != nil {
++			return nil, fmt.Errorf("failed to list user identities: %w", err)
++		}
+ 	}
+ 
+ 	return userIdentities, nil
+@@ -887,6 +899,16 @@ func (cli *client) DeleteAuthSession(ctx context.Context, id string) error {
+ 	return cli.delete(resourceAuthSession, s.ObjectMeta.Name)
+ }
+ 
++// CreateRevocation creates the Revocation object of r, labeled with its type and
++// pair. A revocation written before gives storage.ErrAlreadyExists.
++func (cli *client) CreateRevocation(ctx context.Context, r storage.Revocation) error {
++	revocation, err := cli.fromStorageRevocation(r)
++	if err != nil {
++		return err
++	}
++	return cli.post(resourceRevocation, revocation)
++}
++
+ func isKubernetesAPIConflictError(err error) bool {
+ 	if httpErr, ok := err.(httpError); ok {
+ 		if httpErr.StatusCode() == http.StatusConflict {
+@@ -896,33 +918,27 @@ func isKubernetesAPIConflictError(err error) bool {
  	return false
  }
  
@@ -174,10 +299,43 @@ index 906e5ce5..08c07d14 100644
  	ctx := context.Background()
  	if os.Getenv(kubeconfigPathVariableName) == "" {
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index 151c8ad1..2cb4ea22 100644
+index 151c8ad1..a3bca09f 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
-@@ -297,6 +297,9 @@ type Client struct {
+@@ -1,6 +1,8 @@
+ package kubernetes
+ 
+ import (
++	"fmt"
++	"strconv"
+ 	"strings"
+ 	"time"
+ 
+@@ -260,6 +262,23 @@ func customResourceDefinitions(apiVersion string) []k8sapi.CustomResourceDefinit
+ 				},
+ 			},
+ 		},
++		{
++			ObjectMeta: k8sapi.ObjectMeta{
++				Name: "revocations.dex.coreos.com",
++			},
++			TypeMeta: crdMeta,
++			Spec: k8sapi.CustomResourceDefinitionSpec{
++				Group:    apiGroup,
++				Version:  version,
++				Versions: versions,
++				Scope:    scope,
++				Names: k8sapi.CustomResourceDefinitionNames{
++					Plural:   "revocations",
++					Singular: "revocation",
++					Kind:     "Revocation",
++				},
++			},
++		},
+ 	}
+ }
+ 
+@@ -297,6 +316,9 @@ type Client struct {
  	BackchannelLogoutURI string `json:"backchannelLogoutURI,omitempty"`
  
  	RefreshTokenLifetime string `json:"refreshTokenLifetime,omitempty"`
@@ -187,7 +345,7 @@ index 151c8ad1..2cb4ea22 100644
  }
  
  // ClientList is a list of Clients.
-@@ -329,6 +332,9 @@ func (cli *client) fromStorageClient(c storage.Client) Client {
+@@ -329,6 +351,9 @@ func (cli *client) fromStorageClient(c storage.Client) Client {
  		SSOSharedWith:          c.SSOSharedWith,
  		BackchannelLogoutURI:   c.BackchannelLogoutURI,
  		RefreshTokenLifetime:   c.RefreshTokenLifetime,
@@ -197,7 +355,7 @@ index 151c8ad1..2cb4ea22 100644
  	}
  }
  
-@@ -347,6 +353,9 @@ func toStorageClient(c Client) storage.Client {
+@@ -347,6 +372,9 @@ func toStorageClient(c Client) storage.Client {
  		SSOSharedWith:          c.SSOSharedWith,
  		BackchannelLogoutURI:   c.BackchannelLogoutURI,
  		RefreshTokenLifetime:   c.RefreshTokenLifetime,
@@ -207,35 +365,38 @@ index 151c8ad1..2cb4ea22 100644
  	}
  }
  
-@@ -424,6 +433,9 @@ type AuthRequest struct {
+@@ -424,6 +452,10 @@ type AuthRequest struct {
  	Prompt   string    `json:"prompt,omitempty"`
  	MaxAge   int       `json:"maxAge"`
  	AuthTime time.Time `json:"authTime,omitempty"`
 +
 +	PasswordChangeBinding []byte `json:"passwordChangeBinding,omitempty"`
++	Generation            uint64 `json:"generation,omitempty"`
 +	PendingPasswordChange string `json:"pendingPasswordChange,omitempty"`
  }
  
  // AuthRequestList is a list of AuthRequests.
-@@ -459,6 +471,8 @@ func toStorageAuthRequest(req AuthRequest) storage.AuthRequest {
+@@ -459,6 +491,9 @@ func toStorageAuthRequest(req AuthRequest) storage.AuthRequest {
  		MaxAge:              req.MaxAge,
  		AuthTime:            req.AuthTime,
  	}
 +	a.PasswordChangeBinding = req.PasswordChangeBinding
++	a.Generation = req.Generation
 +	a.PendingPasswordChange = req.PendingPasswordChange
  	return a
  }
  
-@@ -493,6 +507,8 @@ func (cli *client) fromStorageAuthRequest(a storage.AuthRequest) AuthRequest {
+@@ -493,6 +528,9 @@ func (cli *client) fromStorageAuthRequest(a storage.AuthRequest) AuthRequest {
  		MaxAge:              a.MaxAge,
  		AuthTime:            a.AuthTime,
  	}
 +	req.PasswordChangeBinding = a.PasswordChangeBinding
++	req.Generation = a.Generation
 +	req.PendingPasswordChange = a.PendingPasswordChange
  	return req
  }
  
-@@ -514,6 +530,11 @@ type Password struct {
+@@ -514,6 +552,11 @@ type Password struct {
  	EmailVerified     *bool    `json:"emailVerified,omitempty"`
  	UserID            string   `json:"userID,omitempty"`
  	Groups            []string `json:"groups,omitempty"`
@@ -247,7 +408,7 @@ index 151c8ad1..2cb4ea22 100644
  }
  
  // PasswordList is a list of Passwords.
-@@ -542,6 +563,11 @@ func (cli *client) fromStoragePassword(p storage.Password) Password {
+@@ -542,6 +585,11 @@ func (cli *client) fromStoragePassword(p storage.Password) Password {
  		EmailVerified:     p.EmailVerified,
  		UserID:            p.UserID,
  		Groups:            p.Groups,
@@ -259,7 +420,7 @@ index 151c8ad1..2cb4ea22 100644
  	}
  }
  
-@@ -555,6 +581,11 @@ func toStoragePassword(p Password) storage.Password {
+@@ -555,6 +603,11 @@ func toStoragePassword(p Password) storage.Password {
  		EmailVerified:     p.EmailVerified,
  		UserID:            p.UserID,
  		Groups:            p.Groups,
@@ -271,7 +432,61 @@ index 151c8ad1..2cb4ea22 100644
  	}
  }
  
-@@ -807,6 +838,10 @@ type Connector struct {
+@@ -584,6 +637,8 @@ type AuthCode struct {
+ 	AuthTime time.Time `json:"authTime,omitempty"`
+ 
+ 	SessionID string `json:"sessionID,omitempty"`
++
++	Generation uint64 `json:"generation,omitempty"`
+ }
+ 
+ // AuthCodeList is a list of AuthCodes.
+@@ -615,6 +670,7 @@ func (cli *client) fromStorageAuthCode(a storage.AuthCode) AuthCode {
+ 		CodeChallengeMethod: a.PKCE.CodeChallengeMethod,
+ 		AuthTime:            a.AuthTime,
+ 		SessionID:           a.SessionID,
++		Generation:          a.Generation,
+ 	}
+ }
+ 
+@@ -633,8 +689,9 @@ func toStorageAuthCode(a AuthCode) storage.AuthCode {
+ 			CodeChallenge:       a.CodeChallenge,
+ 			CodeChallengeMethod: a.CodeChallengeMethod,
+ 		},
+-		AuthTime:  a.AuthTime,
+-		SessionID: a.SessionID,
++		AuthTime:   a.AuthTime,
++		SessionID:  a.SessionID,
++		Generation: a.Generation,
+ 	}
+ }
+ 
+@@ -658,6 +715,8 @@ type RefreshToken struct {
+ 	Claims        Claims `json:"claims,omitempty"`
+ 	ConnectorID   string `json:"connectorID,omitempty"`
+ 	ConnectorData []byte `json:"connectorData,omitempty"`
++
++	Generation uint64 `json:"generation,omitempty"`
+ }
+ 
+ // RefreshList is a list of refresh tokens.
+@@ -680,6 +739,7 @@ func toStorageRefreshToken(r RefreshToken) storage.RefreshToken {
+ 		Scopes:        r.Scopes,
+ 		Nonce:         r.Nonce,
+ 		Claims:        toStorageClaims(r.Claims),
++		Generation:    r.Generation,
+ 	}
+ }
+ 
+@@ -703,6 +763,7 @@ func (cli *client) fromStorageRefreshToken(r storage.RefreshToken) RefreshToken
+ 		Scopes:        r.Scopes,
+ 		Nonce:         r.Nonce,
+ 		Claims:        fromStorageClaims(r.Claims),
++		Generation:    r.Generation,
+ 	}
+ }
+ 
+@@ -807,6 +868,10 @@ type Connector struct {
  	Config []byte `json:"config,omitempty"`
  	// GrantTypes is a list of grant types that this connector is allowed to be used with.
  	GrantTypes []string `json:"grantTypes,omitempty"`
@@ -282,7 +497,7 @@ index 151c8ad1..2cb4ea22 100644
  }
  
  func (cli *client) fromStorageConnector(c storage.Connector) Connector {
-@@ -824,6 +859,10 @@ func (cli *client) fromStorageConnector(c storage.Connector) Connector {
+@@ -824,6 +889,10 @@ func (cli *client) fromStorageConnector(c storage.Connector) Connector {
  		Name:       c.Name,
  		Config:     c.Config,
  		GrantTypes: c.GrantTypes,
@@ -293,7 +508,7 @@ index 151c8ad1..2cb4ea22 100644
  	}
  }
  
-@@ -835,6 +874,10 @@ func toStorageConnector(c Connector) storage.Connector {
+@@ -835,6 +904,10 @@ func toStorageConnector(c Connector) storage.Connector {
  		ResourceVersion: c.ObjectMeta.ResourceVersion,
  		Config:          c.Config,
  		GrantTypes:      c.GrantTypes,
@@ -304,7 +519,7 @@ index 151c8ad1..2cb4ea22 100644
  	}
  }
  
-@@ -968,8 +1011,16 @@ type UserIdentity struct {
+@@ -968,8 +1041,16 @@ type UserIdentity struct {
  	CreatedAt           time.Time                               `json:"createdAt,omitempty"`
  	LastLogin           time.Time                               `json:"lastLogin,omitempty"`
  	BlockedUntil        time.Time                               `json:"blockedUntil,omitempty"`
@@ -321,7 +536,7 @@ index 151c8ad1..2cb4ea22 100644
  // UserIdentityList is a list of UserIdentities.
  type UserIdentityList struct {
  	k8sapi.TypeMeta `json:",inline"`
-@@ -996,6 +1047,8 @@ func (cli *client) fromStorageUserIdentity(u storage.UserIdentity) UserIdentity
+@@ -996,10 +1077,28 @@ func (cli *client) fromStorageUserIdentity(u storage.UserIdentity) UserIdentity
  		CreatedAt:           u.CreatedAt,
  		LastLogin:           u.LastLogin,
  		BlockedUntil:        u.BlockedUntil,
@@ -330,12 +545,34 @@ index 151c8ad1..2cb4ea22 100644
  	}
  }
  
-@@ -1010,6 +1063,15 @@ func toStorageUserIdentity(u UserIdentity) storage.UserIdentity {
+-func toStorageUserIdentity(u UserIdentity) storage.UserIdentity {
++// generationAnnotation holds the generation of a (user, connector) pair on its
++// UserIdentity, a decimal number. The user-authn controller writes it; dex reads
++// it and never writes it: a new identity is created without it, and an update
++// keeps the metadata of the object it read.
++const generationAnnotation = "user-authn.deckhouse.io/generation"
++
++// toStorageUserIdentity converts u. A generation that does not parse is an
++// error, not generation 0: credentials the pair has revoked must not pass.
++func toStorageUserIdentity(u UserIdentity) (storage.UserIdentity, error) {
++	var generation uint64
++	if v, ok := u.Annotations[generationAnnotation]; ok {
++		var err error
++		if generation, err = strconv.ParseUint(v, 10, 64); err != nil {
++			return storage.UserIdentity{}, fmt.Errorf("user identity %s: annotation %s: %w", u.Name, generationAnnotation, err)
++		}
++	}
++
+ 	s := storage.UserIdentity{
+ 		UserID:              u.UserID,
+ 		ConnectorID:         u.ConnectorID,
+@@ -1010,12 +1109,22 @@ func toStorageUserIdentity(u UserIdentity) storage.UserIdentity {
  		CreatedAt:           u.CreatedAt,
  		LastLogin:           u.LastLogin,
  		BlockedUntil:        u.BlockedUntil,
 +
 +		IncorrectPasswordLoginAttempts: u.IncorrectPasswordLoginAttempts,
++		Generation:                     generation,
 +	}
 +	if v, ok := u.Annotations[adminLockAnnotation]; ok {
 +		// Only the answer to a refused login depends on it, so a value that does
@@ -346,20 +583,151 @@ index 151c8ad1..2cb4ea22 100644
  	}
  	if s.Consents == nil {
  		// Server code assumes this will be non-nil.
+ 		s.Consents = make(map[string][]string)
+ 	}
+-	return s
++	return s, nil
+ }
+ 
+ // AuthSession is a Kubernetes representation of a storage AuthSession.
+@@ -1035,6 +1144,8 @@ type AuthSession struct {
+ 	AbsoluteExpiry time.Time                           `json:"absoluteExpiry,omitempty"`
+ 	IdleExpiry     time.Time                           `json:"idleExpiry,omitempty"`
+ 	LogoutState    *storage.LogoutState                `json:"logoutState,omitempty"`
++
++	Generation uint64 `json:"generation,omitempty"`
+ }
+ 
+ // AuthSessionList is a list of AuthSessions.
+@@ -1065,6 +1176,7 @@ func (cli *client) fromStorageAuthSession(s storage.AuthSession) AuthSession {
+ 		AbsoluteExpiry: s.AbsoluteExpiry,
+ 		IdleExpiry:     s.IdleExpiry,
+ 		LogoutState:    s.LogoutState,
++		Generation:     s.Generation,
+ 	}
+ }
+ 
+@@ -1082,9 +1194,100 @@ func toStorageAuthSession(s AuthSession) storage.AuthSession {
+ 		AbsoluteExpiry: s.AbsoluteExpiry,
+ 		IdleExpiry:     s.IdleExpiry,
+ 		LogoutState:    s.LogoutState,
++		Generation:     s.Generation,
+ 	}
+ 	if result.ClientStates == nil {
+ 		result.ClientStates = make(map[string]*storage.ClientAuthState)
+ 	}
+ 	return result
+ }
++
++// Labels of a Revocation object, for the subscribers that select the
++// revocations of a type or of a pair.
++const (
++	revocationTypeLabel = "user-authn.deckhouse.io/revocation-type"
++	revocationPairLabel = "user-authn.deckhouse.io/pair"
++)
++
++// Revocation is a mirrored struct from storage with JSON struct tags and
++// Kubernetes type metadata.
++type Revocation struct {
++	k8sapi.TypeMeta   `json:",inline"`
++	k8sapi.ObjectMeta `json:"metadata,omitempty"`
++
++	Type        storage.RevocationType `json:"type"`
++	ConnectorID string                 `json:"connectorID"`
++	UserID      string                 `json:"userID"`
++	Subject     string                 `json:"subject"`
++	Generation  uint64                 `json:"generation,omitempty"`
++	SessionID   string                 `json:"sessionID,omitempty"`
++	GrantID     string                 `json:"grantID,omitempty"`
++	ClientID    string                 `json:"clientID,omitempty"`
++	Clients     []string               `json:"clients,omitempty"`
++	Reason      string                 `json:"reason"`
++	Source      string                 `json:"source"`
++	CreatedAt   time.Time              `json:"createdAt"`
++}
++
++// fromStorageRevocation converts r. The name is derived from what r revokes, so
++// that writing a revocation again gives AlreadyExists instead of a second
++// object: pair-<pair>-g<generation>, session-<session ID>, grant-<refresh token
++// ID>, where <pair> is the name of the pair's UserIdentity.
++func (cli *client) fromStorageRevocation(r storage.Revocation) (Revocation, error) {
++	pair := cli.offlineTokenName(r.UserID, r.ConnectorID)
++	var name string
++	switch r.Type {
++	case storage.RevocationPair:
++		name = fmt.Sprintf("pair-%s-g%d", pair, r.Generation)
++	case storage.RevocationSession:
++		name = "session-" + r.SessionID
++	case storage.RevocationGrant:
++		name = "grant-" + r.GrantID
++	default:
++		return Revocation{}, fmt.Errorf("unknown revocation type %q", r.Type)
++	}
++
++	return Revocation{
++		TypeMeta: k8sapi.TypeMeta{
++			Kind:       kindRevocation,
++			APIVersion: cli.apiVersion,
++		},
++		ObjectMeta: k8sapi.ObjectMeta{
++			Name:      name,
++			Namespace: cli.namespace,
++			Labels: map[string]string{
++				revocationTypeLabel: string(r.Type),
++				revocationPairLabel: pair,
++			},
++		},
++		Type:        r.Type,
++		ConnectorID: r.ConnectorID,
++		UserID:      r.UserID,
++		Subject:     r.Subject,
++		Generation:  r.Generation,
++		SessionID:   r.SessionID,
++		GrantID:     r.GrantID,
++		ClientID:    r.ClientID,
++		Clients:     r.Clients,
++		Reason:      r.Reason,
++		Source:      r.Source,
++		CreatedAt:   r.CreatedAt,
++	}, nil
++}
++
++func toStorageRevocation(r Revocation) storage.Revocation {
++	return storage.Revocation{
++		Type:        r.Type,
++		ConnectorID: r.ConnectorID,
++		UserID:      r.UserID,
++		Subject:     r.Subject,
++		Generation:  r.Generation,
++		SessionID:   r.SessionID,
++		GrantID:     r.GrantID,
++		ClientID:    r.ClientID,
++		Clients:     r.Clients,
++		Reason:      r.Reason,
++		Source:      r.Source,
++		CreatedAt:   r.CreatedAt,
++	}
++}
 diff --git a/storage/kubernetes/types_test.go b/storage/kubernetes/types_test.go
 new file mode 100644
-index 00000000..8acba451
+index 00000000..43f3bfb2
 --- /dev/null
 +++ b/storage/kubernetes/types_test.go
-@@ -0,0 +1,245 @@
+@@ -0,0 +1,670 @@
 +package kubernetes
 +
 +import (
 +	"encoding/json"
 +	"hash"
 +	"hash/fnv"
++	"io"
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
 +	"os"
 +	"path/filepath"
++	"strings"
++	"sync"
 +	"testing"
 +	"time"
 +
@@ -445,7 +813,103 @@ index 00000000..8acba451
 +
 +	var decoded UserIdentity
 +	require.NoError(t, json.Unmarshal(raw, &decoded))
-+	require.Equal(t, want, toStorageUserIdentity(decoded))
++	got, err := toStorageUserIdentity(decoded)
++	require.NoError(t, err)
++	require.Equal(t, want, got)
++}
++
++// TestUserIdentityGeneration reads the generation of a pair from the annotation
++// the user-authn controller writes. A value that does not parse fails the read:
++// taking it for 0 would accept what the pair has revoked.
++func TestUserIdentityGeneration(t *testing.T) {
++	tests := []struct {
++		name        string
++		annotations map[string]string
++		expected    uint64
++		expectErr   bool
++	}{
++		{name: "no annotation", expected: 0},
++		{name: "other annotations", annotations: map[string]string{"example.com/other": "3"}, expected: 0},
++		{name: "generation", annotations: map[string]string{generationAnnotation: "3"}, expected: 3},
++		{name: "largest generation", annotations: map[string]string{generationAnnotation: "18446744073709551615"}, expected: 1<<64 - 1},
++		{name: "empty", annotations: map[string]string{generationAnnotation: ""}, expectErr: true},
++		{name: "not a number", annotations: map[string]string{generationAnnotation: "three"}, expectErr: true},
++		{name: "negative", annotations: map[string]string{generationAnnotation: "-1"}, expectErr: true},
++		{name: "signed", annotations: map[string]string{generationAnnotation: "+1"}, expectErr: true},
++		{name: "overflow", annotations: map[string]string{generationAnnotation: "18446744073709551616"}, expectErr: true},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			u := UserIdentity{UserID: "jane", ConnectorID: "ldap"}
++			u.Annotations = tt.annotations
++
++			got, err := toStorageUserIdentity(u)
++			if tt.expectErr {
++				require.ErrorContains(t, err, generationAnnotation)
++				return
++			}
++			require.NoError(t, err)
++			require.Equal(t, tt.expected, got.Generation)
++		})
++	}
++}
++
++func TestGenerationFieldsRoundTrip(t *testing.T) {
++	cli := newTypesTestClient()
++	expiry := time.Date(2026, 10, 16, 12, 30, 0, 0, time.UTC)
++
++	t.Run("auth request", func(t *testing.T) {
++		want := storage.AuthRequest{ID: "req", ClientID: "client", Expiry: expiry, MaxAge: -1, Generation: 3}
++		raw, err := json.Marshal(cli.fromStorageAuthRequest(want))
++		require.NoError(t, err)
++		require.Contains(t, string(raw), `"generation":3`)
++		var decoded AuthRequest
++		require.NoError(t, json.Unmarshal(raw, &decoded))
++		require.Equal(t, want, toStorageAuthRequest(decoded))
++	})
++
++	t.Run("auth code", func(t *testing.T) {
++		want := storage.AuthCode{ID: "code", ClientID: "client", Expiry: expiry, Generation: 3}
++		raw, err := json.Marshal(cli.fromStorageAuthCode(want))
++		require.NoError(t, err)
++		require.Contains(t, string(raw), `"generation":3`)
++		var decoded AuthCode
++		require.NoError(t, json.Unmarshal(raw, &decoded))
++		require.Equal(t, want, toStorageAuthCode(decoded))
++	})
++
++	t.Run("refresh token", func(t *testing.T) {
++		want := storage.RefreshToken{ID: "refresh", Token: "token", ClientID: "client", CreatedAt: expiry, LastUsed: expiry, Generation: 3}
++		raw, err := json.Marshal(cli.fromStorageRefreshToken(want))
++		require.NoError(t, err)
++		require.Contains(t, string(raw), `"generation":3`)
++		var decoded RefreshToken
++		require.NoError(t, json.Unmarshal(raw, &decoded))
++		require.Equal(t, want, toStorageRefreshToken(decoded))
++	})
++
++	t.Run("auth session", func(t *testing.T) {
++		want := storage.AuthSession{
++			ID:           "session",
++			UserID:       "jane",
++			ConnectorID:  "local",
++			ClientStates: map[string]*storage.ClientAuthState{},
++			CreatedAt:    expiry,
++			Generation:   3,
++		}
++		raw, err := json.Marshal(cli.fromStorageAuthSession(want))
++		require.NoError(t, err)
++		require.Contains(t, string(raw), `"generation":3`)
++		var decoded AuthSession
++		require.NoError(t, json.Unmarshal(raw, &decoded))
++		require.Equal(t, want, toStorageAuthSession(decoded))
++	})
++
++	t.Run("generation 0 is not written", func(t *testing.T) {
++		raw, err := json.Marshal(cli.fromStorageAuthCode(storage.AuthCode{ID: "code"}))
++		require.NoError(t, err)
++		require.NotContains(t, string(raw), `"generation"`)
++	})
 +}
 +
 +// TestUserIdentityReadsAdminLock reads the lock of an administrator from the
@@ -463,7 +927,9 @@ index 00000000..8acba451
 +			"connectorID": "local",
 +			"blockedUntil": "`+blockedUntil+`"
 +		}`), &u))
-+		return toStorageUserIdentity(u)
++		got, err := toStorageUserIdentity(u)
++		require.NoError(t, err)
++		return got
 +	}
 +
 +	got := read(t, blockedUntil)
@@ -563,6 +1029,327 @@ index 00000000..8acba451
 +	require.Equal(t, want, toStorageAuthRequest(decoded))
 +}
 +
++func TestRevocationRoundTrip(t *testing.T) {
++	cli := newTypesTestClient()
++	createdAt := time.Date(2026, 10, 16, 10, 0, 0, 123456789, time.UTC)
++	tests := []struct {
++		name       string
++		revocation storage.Revocation
++		objectName string
++	}{
++		{
++			name: "pair",
++			revocation: storage.Revocation{
++				Type:        storage.RevocationPair,
++				ConnectorID: "local",
++				UserID:      "jane",
++				Subject:     "CgRqYW5lEgVsb2NhbA",
++				Generation:  3,
++				Clients:     []string{"console-d8-console-dex-authenticator", "kubeconfig-generator-0"},
++				Reason:      "Lock",
++				Source:      "user-authn-controller",
++				CreatedAt:   createdAt,
++			},
++			objectName: "pair-" + cli.offlineTokenName("jane", "local") + "-g3",
++		},
++		{
++			name: "session",
++			revocation: storage.Revocation{
++				Type:        storage.RevocationSession,
++				ConnectorID: "local",
++				UserID:      "jane",
++				Subject:     "CgRqYW5lEgVsb2NhbA",
++				SessionID:   "fehzwdh5qy4oyqcn7qhkcgzbm",
++				Clients:     []string{"console-d8-console-dex-authenticator"},
++				Reason:      "SessionLogout",
++				Source:      "dex",
++				CreatedAt:   createdAt,
++			},
++			objectName: "session-fehzwdh5qy4oyqcn7qhkcgzbm",
++		},
++		{
++			name: "grant",
++			revocation: storage.Revocation{
++				Type:        storage.RevocationGrant,
++				ConnectorID: "local",
++				UserID:      "jane",
++				Subject:     "CgRqYW5lEgVsb2NhbA",
++				GrantID:     "3w4l2zgokgsohvjnqzjrv7lmz",
++				ClientID:    "kubeconfig-generator-0",
++				Clients:     []string{"kubeconfig-generator-0"},
++				Reason:      "TokenRevoked",
++				Source:      "dex",
++				CreatedAt:   createdAt,
++			},
++			objectName: "grant-3w4l2zgokgsohvjnqzjrv7lmz",
++		},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			object, err := cli.fromStorageRevocation(tt.revocation)
++			require.NoError(t, err)
++			require.Equal(t, tt.objectName, object.Name)
++			require.Regexp(t, kubeResourceNameRegex, object.Name)
++			require.Equal(t, map[string]string{
++				"user-authn.deckhouse.io/revocation-type": string(tt.revocation.Type),
++				"user-authn.deckhouse.io/pair":            cli.offlineTokenName("jane", "local"),
++			}, object.Labels)
++
++			raw, err := json.Marshal(object)
++			require.NoError(t, err)
++			var decoded Revocation
++			require.NoError(t, json.Unmarshal(raw, &decoded))
++			require.Equal(t, tt.revocation, toStorageRevocation(decoded))
++		})
++	}
++
++	_, err := cli.fromStorageRevocation(storage.Revocation{Type: "client", UserID: "jane", ConnectorID: "local"})
++	require.ErrorContains(t, err, "unknown revocation type")
++}
++
++// TestRevocationReadsObjectsOfController reads a Revocation in the form the
++// user-authn controller writes it and its subscribers read it: dex writes the
++// same fields under the same JSON names.
++func TestRevocationReadsObjectsOfController(t *testing.T) {
++	const object = `{
++		"apiVersion": "dex.coreos.com/v1",
++		"kind": "Revocation",
++		"metadata": {
++			"name": "pair-ojqxezlzbj5lq-g3",
++			"namespace": "d8-user-authn",
++			"labels": {
++				"user-authn.deckhouse.io/revocation-type": "pair",
++				"user-authn.deckhouse.io/pair": "ojqxezlzbj5lq",
++				"user-authn.deckhouse.io/operation-uid": "0b2c9e1e-2f43-4a1b-9c55-5d9f1f0f4c1a"
++			}
++		},
++		"type": "pair",
++		"connectorID": "local",
++		"userID": "jane",
++		"subject": "CgRqYW5lEgVsb2NhbA",
++		"generation": 3,
++		"sessionID": "",
++		"grantID": "",
++		"clientID": "",
++		"clients": ["console-d8-console-dex-authenticator", "kubeconfig-generator-0"],
++		"reason": "Lock",
++		"source": "user-authn-controller",
++		"createdAt": "2026-10-16T10:00:00.123456789Z"
++	}`
++
++	var r Revocation
++	require.NoError(t, json.Unmarshal([]byte(object), &r))
++	require.Equal(t, storage.Revocation{
++		Type:        storage.RevocationPair,
++		ConnectorID: "local",
++		UserID:      "jane",
++		Subject:     "CgRqYW5lEgVsb2NhbA",
++		Generation:  3,
++		Clients:     []string{"console-d8-console-dex-authenticator", "kubeconfig-generator-0"},
++		Reason:      "Lock",
++		Source:      "user-authn-controller",
++		CreatedAt:   time.Date(2026, 10, 16, 10, 0, 0, 123456789, time.UTC),
++	}, toStorageRevocation(r))
++}
++
++// schemaAPI answers the requests the storage makes for single objects, the way
++// the Kubernetes API does, and keeps every object as the JSON last written.
++type schemaAPI struct {
++	mu      sync.Mutex
++	objects map[string][]byte
++}
++
++func (f *schemaAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++	f.mu.Lock()
++	defer f.mu.Unlock()
++
++	switch r.Method {
++	case http.MethodGet:
++		obj, ok := f.objects[r.URL.Path]
++		if !ok {
++			w.WriteHeader(http.StatusNotFound)
++			return
++		}
++		w.Write(obj)
++	case http.MethodPost:
++		body, _ := io.ReadAll(r.Body)
++		var meta struct {
++			Metadata struct {
++				Name string `json:"name"`
++			} `json:"metadata"`
++		}
++		if err := json.Unmarshal(body, &meta); err != nil {
++			w.WriteHeader(http.StatusBadRequest)
++			return
++		}
++		p := r.URL.Path + "/" + meta.Metadata.Name
++		if _, ok := f.objects[p]; ok {
++			w.WriteHeader(http.StatusConflict)
++			return
++		}
++		f.objects[p] = body
++		w.WriteHeader(http.StatusCreated)
++	case http.MethodPut:
++		body, _ := io.ReadAll(r.Body)
++		f.objects[r.URL.Path] = body
++		w.Write(body)
++	default:
++		w.WriteHeader(http.StatusMethodNotAllowed)
++	}
++}
++
++func newSchemaAPIClient(t *testing.T) (*client, *schemaAPI) {
++	t.Helper()
++	api := &schemaAPI{objects: map[string][]byte{}}
++	server := httptest.NewServer(api)
++	t.Cleanup(server.Close)
++	return &client{
++		client:     server.Client(),
++		baseURL:    server.URL,
++		namespace:  "dex",
++		apiVersion: "dex.coreos.com/v1",
++		logger:     slog.New(slog.DiscardHandler),
++		hash:       func() hash.Hash { return fnv.New64() },
++	}, api
++}
++
++// object returns the object resource/name as stored, or nil.
++func (f *schemaAPI) object(t *testing.T, cli *client, resource, name string) map[string]any {
++	t.Helper()
++	u, err := cli.urlFor(cli.apiVersion, cli.namespace, resource, name)
++	require.NoError(t, err)
++	f.mu.Lock()
++	defer f.mu.Unlock()
++	raw, ok := f.objects[u[len(cli.baseURL):]]
++	if !ok {
++		return nil
++	}
++	var obj map[string]any
++	require.NoError(t, json.Unmarshal(raw, &obj))
++	return obj
++}
++
++func (f *schemaAPI) set(t *testing.T, cli *client, resource, name, object string) {
++	t.Helper()
++	u, err := cli.urlFor(cli.apiVersion, cli.namespace, resource, name)
++	require.NoError(t, err)
++	f.mu.Lock()
++	defer f.mu.Unlock()
++	f.objects[u[len(cli.baseURL):]] = []byte(object)
++}
++
++func annotations(t *testing.T, obj map[string]any) map[string]any {
++	t.Helper()
++	require.NotNil(t, obj)
++	metadata, ok := obj["metadata"].(map[string]any)
++	require.True(t, ok)
++	a, _ := metadata["annotations"].(map[string]any)
++	return a
++}
++
++// TestUserIdentityGenerationIsReadOnly checks that dex never writes the
++// generation: a write that lost the race to the user-authn controller is
++// repeated on the object the controller wrote, and must not take the generation
++// back.
++func TestUserIdentityGenerationIsReadOnly(t *testing.T) {
++	ctx := t.Context()
++	cli, api := newSchemaAPIClient(t)
++	name := cli.offlineTokenName("jane", "ldap")
++
++	t.Run("create does not write it", func(t *testing.T) {
++		err := cli.CreateUserIdentity(ctx, storage.UserIdentity{
++			UserID:      "jane",
++			ConnectorID: "ldap",
++			Claims:      storage.Claims{UserID: "jane"},
++			Generation:  5,
++		})
++		require.NoError(t, err)
++		require.Nil(t, annotations(t, api.object(t, cli, resourceUserIdentity, name)))
++
++		got, err := cli.GetUserIdentity(ctx, "jane", "ldap")
++		require.NoError(t, err)
++		require.Zero(t, got.Generation)
++	})
++
++	t.Run("update keeps the controller's", func(t *testing.T) {
++		api.set(t, cli, resourceUserIdentity, name, `{
++			"metadata": {"name": "`+name+`", "annotations": {"user-authn.deckhouse.io/generation": "3", "example.com/other": "kept"}},
++			"userID": "jane",
++			"connectorID": "ldap",
++			"claims": {"userID": "jane"}
++		}`)
++
++		got, err := cli.GetUserIdentity(ctx, "jane", "ldap")
++		require.NoError(t, err)
++		require.Equal(t, uint64(3), got.Generation)
++
++		err = cli.UpdateUserIdentity(ctx, "jane", "ldap", func(old storage.UserIdentity) (storage.UserIdentity, error) {
++			require.Equal(t, uint64(3), old.Generation)
++			old.Generation = 7
++			old.Claims.Email = "jane@example.com"
++			return old, nil
++		})
++		require.NoError(t, err)
++
++		stored := api.object(t, cli, resourceUserIdentity, name)
++		require.Equal(t, map[string]any{
++			"user-authn.deckhouse.io/generation": "3",
++			"example.com/other":                  "kept",
++		}, annotations(t, stored))
++		require.Equal(t, "jane@example.com", stored["claims"].(map[string]any)["email"])
++	})
++
++	t.Run("a generation that does not parse fails reads and writes", func(t *testing.T) {
++		const object = `{
++			"metadata": {"name": "NAME", "annotations": {"user-authn.deckhouse.io/generation": "x"}},
++			"userID": "jane",
++			"connectorID": "ldap"
++		}`
++		api.set(t, cli, resourceUserIdentity, name, strings.ReplaceAll(object, "NAME", name))
++
++		_, err := cli.GetUserIdentity(ctx, "jane", "ldap")
++		require.ErrorContains(t, err, generationAnnotation)
++
++		err = cli.UpdateUserIdentity(ctx, "jane", "ldap", func(old storage.UserIdentity) (storage.UserIdentity, error) {
++			t.Fatal("updater called for an identity that does not parse")
++			return old, nil
++		})
++		require.ErrorContains(t, err, generationAnnotation)
++		require.Equal(t, "x", annotations(t, api.object(t, cli, resourceUserIdentity, name))[generationAnnotation])
++	})
++}
++
++func TestCreateRevocation(t *testing.T) {
++	ctx := t.Context()
++	cli, api := newSchemaAPIClient(t)
++	r := storage.Revocation{
++		Type:        storage.RevocationGrant,
++		ConnectorID: "local",
++		UserID:      "jane",
++		Subject:     "CgRqYW5lEgVsb2NhbA",
++		GrantID:     "3w4l2zgokgsohvjnqzjrv7lmz",
++		ClientID:    "kubeconfig-generator-0",
++		Clients:     []string{"kubeconfig-generator-0"},
++		Reason:      "TokenRevoked",
++		Source:      "dex",
++		CreatedAt:   time.Date(2026, 10, 16, 10, 0, 0, 0, time.UTC),
++	}
++
++	require.NoError(t, cli.CreateRevocation(ctx, r))
++	stored := api.object(t, cli, resourceRevocation, "grant-3w4l2zgokgsohvjnqzjrv7lmz")
++	require.NotNil(t, stored)
++	require.Equal(t, "Revocation", stored["kind"])
++	require.Equal(t, "grant", stored["type"])
++	require.Equal(t, "kubeconfig-generator-0", stored["clientID"])
++	require.Equal(t, map[string]any{
++		"user-authn.deckhouse.io/revocation-type": "grant",
++		"user-authn.deckhouse.io/pair":            cli.offlineTokenName("jane", "local"),
++	}, stored["metadata"].(map[string]any)["labels"])
++
++	// The same revocation written again is the same object.
++	require.ErrorIs(t, cli.CreateRevocation(ctx, r), storage.ErrAlreadyExists)
++}
++
 +// TestCustomResourceDefinitionManifests keeps scripts/manifests/crds in step with
 +// the resources the storage registers: Deckhouse ships these manifests and checks
 +// its copy against them, so a resource without a manifest is never installed.
@@ -597,8 +1384,166 @@ index 00000000..8acba451
 +		})
 +	}
 +}
+diff --git a/storage/memory/memory.go b/storage/memory/memory.go
+index 0fdac2b5..83635f28 100644
+--- a/storage/memory/memory.go
++++ b/storage/memory/memory.go
+@@ -4,6 +4,7 @@ package memory
+ import (
+ 	"context"
+ 	"log/slog"
++	"slices"
+ 	"strings"
+ 	"sync"
+ 	"time"
+@@ -11,7 +12,10 @@ import (
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+-var _ storage.Storage = (*memStorage)(nil)
++var (
++	_ storage.Storage           = (*memStorage)(nil)
++	_ storage.RevocationCreator = (*memStorage)(nil)
++)
+ 
+ // New returns an in memory storage.
+ func New(logger *slog.Logger) storage.Storage {
+@@ -27,6 +31,7 @@ func New(logger *slog.Logger) storage.Storage {
+ 		connectors:      make(map[string]storage.Connector),
+ 		deviceRequests:  make(map[string]storage.DeviceRequest),
+ 		deviceTokens:    make(map[string]storage.DeviceToken),
++		revocations:     make(map[revocationKey]storage.Revocation),
+ 		logger:          logger,
+ 	}
+ }
+@@ -56,6 +61,7 @@ type memStorage struct {
+ 	connectors      map[string]storage.Connector
+ 	deviceRequests  map[string]storage.DeviceRequest
+ 	deviceTokens    map[string]storage.DeviceToken
++	revocations     map[revocationKey]storage.Revocation
+ 
+ 	keys storage.Keys
+ 
+@@ -67,6 +73,16 @@ type compositeKeyID struct {
+ 	connID string
+ }
+ 
++// revocationKey identifies what a revocation revokes, as the name of its object
++// does in the kubernetes storage.
++type revocationKey struct {
++	typ        storage.RevocationType
++	pair       compositeKeyID
++	generation uint64
++	sessionID  string
++	grantID    string
++}
++
+ func (s *memStorage) tx(f func()) {
+ 	s.mu.Lock()
+ 	defer s.mu.Unlock()
+@@ -679,3 +695,37 @@ func (s *memStorage) UpdateDeviceToken(ctx context.Context, deviceCode string, u
+ 	})
+ 	return
+ }
++
++// CreateRevocation keeps r. A revocation of the same credentials kept before
++// gives storage.ErrAlreadyExists.
++func (s *memStorage) CreateRevocation(ctx context.Context, r storage.Revocation) (err error) {
++	key := revocationKey{
++		typ:        r.Type,
++		pair:       compositeKeyID{userID: r.UserID, connID: r.ConnectorID},
++		generation: r.Generation,
++		sessionID:  r.SessionID,
++		grantID:    r.GrantID,
++	}
++	s.tx(func() {
++		if _, ok := s.revocations[key]; ok {
++			err = storage.ErrAlreadyExists
++		} else {
++			s.revocations[key] = r
++		}
++	})
++	return
++}
++
++// ListRevocations returns the revocations kept, oldest first. Only tests read
++// them: dex writes revocations for others and never reads them back.
++func (s *memStorage) ListRevocations(ctx context.Context) (revocations []storage.Revocation, err error) {
++	s.tx(func() {
++		for _, r := range s.revocations {
++			revocations = append(revocations, r)
++		}
++	})
++	slices.SortStableFunc(revocations, func(a, b storage.Revocation) int {
++		return a.CreatedAt.Compare(b.CreatedAt)
++	})
++	return
++}
+diff --git a/storage/memory/memory_test.go b/storage/memory/memory_test.go
+index acd0be1b..e4b00c3d 100644
+--- a/storage/memory/memory_test.go
++++ b/storage/memory/memory_test.go
+@@ -3,6 +3,9 @@ package memory
+ import (
+ 	"log/slog"
+ 	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
+ 
+ 	"github.com/dexidp/dex/storage"
+ 	"github.com/dexidp/dex/storage/conformance"
+@@ -17,3 +20,48 @@ func TestStorage(t *testing.T) {
+ 	conformance.RunTests(t, newStorage)
+ 	conformance.RunConcurrencyTests(t, newStorage)
+ }
++
++func TestRevocations(t *testing.T) {
++	ctx := t.Context()
++	s := New(slog.New(slog.DiscardHandler))
++	creator, ok := storage.AsRevocationCreator(s)
++	require.True(t, ok)
++
++	at := time.Date(2026, 10, 16, 10, 0, 0, 0, time.UTC)
++	grant := storage.Revocation{Type: storage.RevocationGrant, UserID: "jane", ConnectorID: "local", GrantID: "g1", CreatedAt: at.Add(time.Second)}
++	session := storage.Revocation{Type: storage.RevocationSession, UserID: "jane", ConnectorID: "local", SessionID: "s1", CreatedAt: at}
++	require.NoError(t, creator.CreateRevocation(ctx, grant))
++	require.NoError(t, creator.CreateRevocation(ctx, session))
++
++	// The same credentials revoked again are one revocation.
++	again := grant
++	again.CreatedAt = at.Add(time.Minute)
++	require.ErrorIs(t, creator.CreateRevocation(ctx, again), storage.ErrAlreadyExists)
++
++	got, err := s.(*memStorage).ListRevocations(ctx)
++	require.NoError(t, err)
++	require.Equal(t, []storage.Revocation{session, grant}, got)
++}
++
++// TestAsRevocationCreator finds the revocations of a storage behind the
++// read-only wrappers the server is given.
++func TestAsRevocationCreator(t *testing.T) {
++	logger := slog.New(slog.DiscardHandler)
++	backing := New(logger)
++	wrapped := storage.WithStaticConnectors(
++		storage.WithStaticPasswords(
++			storage.WithStaticClients(backing, nil), nil, logger), nil)
++
++	creator, ok := storage.AsRevocationCreator(wrapped)
++	require.True(t, ok)
++	require.Same(t, backing.(*memStorage), creator.(*memStorage))
++
++	_, ok = storage.AsRevocationCreator(withoutRevocations{backing})
++	require.False(t, ok)
++}
++
++// withoutRevocations is a storage that keeps no revocations, as the SQL, ent
++// and etcd storages.
++type withoutRevocations struct {
++	storage.Storage
++}
 diff --git a/storage/storage.go b/storage/storage.go
-index 84976c5d..a92091ca 100644
+index 84976c5d..9de0d5c2 100644
 --- a/storage/storage.go
 +++ b/storage/storage.go
 @@ -218,6 +218,13 @@ type Client struct {
@@ -615,7 +1560,7 @@ index 84976c5d..a92091ca 100644
  }
  
  // Refresh token lifetimes, the values Client.RefreshTokenLifetime accepts.
-@@ -341,6 +348,17 @@ type AuthRequest struct {
+@@ -341,6 +348,21 @@ type AuthRequest struct {
  	// WebAuthnSessionData stores temporary WebAuthn ceremony data (challenge, etc.)
  	// between Begin and Finish calls. JSON-encoded webauthn.SessionData.
  	WebAuthnSessionData []byte
@@ -625,6 +1570,10 @@ index 84976c5d..a92091ca 100644
 +	// from. Empty unless the login was sent to that page.
 +	PasswordChangeBinding []byte
 +
++	// Generation is the generation of the (user, connector) pair the login
++	// recorded (UserIdentity.Generation). The code, the tokens and the browser
++	// session of the login carry it on.
++	Generation uint64
 +	// PendingPasswordChange is the password change page this login goes to once
 +	// its second factor is done: the path and query of the page. Empty unless the
 +	// password policy requires a new password and a second factor comes first, so
@@ -633,7 +1582,29 @@ index 84976c5d..a92091ca 100644
  }
  
  // AuthCode represents a code which can be exchanged for an OAuth2 token response.
-@@ -481,6 +499,19 @@ type UserIdentity struct {
+@@ -388,6 +410,10 @@ type AuthCode struct {
+ 
+ 	// PKCE CodeChallenge and CodeChallengeMethod
+ 	PKCE PKCE
++
++	// Generation is the generation of the pair at the login the code was issued
++	// for (AuthRequest.Generation).
++	Generation uint64
+ }
+ 
+ // RefreshToken is an OAuth2 refresh token which allows a client to request new
+@@ -420,6 +446,10 @@ type RefreshToken struct {
+ 	// Nonce value supplied during the initial redirect. This is required to be part
+ 	// of the claims of any future id_token generated by the client.
+ 	Nonce string
++
++	// Generation is the generation of the pair at the login the token was issued
++	// for. Rotation keeps it.
++	Generation uint64
+ }
+ 
+ // RefreshTokenRef is a reference object that contains metadata about refresh tokens.
+@@ -481,6 +511,27 @@ type UserIdentity struct {
  	CreatedAt           time.Time
  	LastLogin           time.Time
  	BlockedUntil        time.Time
@@ -650,10 +1621,29 @@ index 84976c5d..a92091ca 100644
 +	// The pair is locked by an administrator while BlockedUntil equals it: an
 +	// automatic lock that outlasts it replaces BlockedUntil. Zero means none.
 +	AdminLockedUntil time.Time
++
++	// Generation of the pair. The user-authn controller raises it to revoke
++	// everything issued to the pair: a code, a refresh token, a browser session
++	// or an access token is valid only with the current generation. Dex never
++	// changes it; the kubernetes storage reads it from the annotation
++	// user-authn.deckhouse.io/generation and does not write it. A pair without
++	// one is at generation 0.
++	Generation uint64
  }
  
  // ClientAuthState represents authentication state for a specific client within an auth session.
-@@ -577,6 +608,22 @@ type Password struct {
+@@ -545,6 +596,10 @@ type AuthSession struct {
+ 	// upstream provider. The callback handler reads it back to complete the flow.
+ 	// Nil when no logout is in progress.
+ 	LogoutState *LogoutState
++
++	// Generation is the generation of the pair at the last login on this
++	// session (AuthRequest.Generation).
++	Generation uint64
+ }
+ 
+ // OfflineSessions objects are sessions pertaining to users with refresh tokens.
+@@ -577,6 +632,22 @@ type Password struct {
  	// Bcrypt encoded hash of the password. This package enforces a min cost value of 10
  	Hash []byte `json:"hash"`
  
@@ -676,7 +1666,87 @@ index 84976c5d..a92091ca 100644
  	// Bcrypt encoded hash of the password set in environment variable of this name.
  	HashFromEnv string `json:"hashFromEnv"`
  
-@@ -623,6 +670,15 @@ type Connector struct {
+@@ -601,6 +672,79 @@ type Password struct {
+ 	Groups []string `json:"groups"`
+ }
+ 
++// RevocationType is what a Revocation ends.
++type RevocationType string
++
++// Revocation types.
++const (
++	// RevocationPair ends everything issued to a (user, connector) pair below
++	// Revocation.Generation.
++	RevocationPair RevocationType = "pair"
++	// RevocationSession ends the browser session Revocation.SessionID.
++	RevocationSession RevocationType = "session"
++	// RevocationGrant ends the refresh token Revocation.GrantID of the client
++	// Revocation.ClientID.
++	RevocationGrant RevocationType = "grant"
++)
++
++// Revocation records that credentials of a (user, connector) pair were revoked,
++// for the Deckhouse components that accept the tokens of dex without asking it
++// on every request. Dex writes the session and grant revocations it decides
++// itself, and never reads them back.
++type Revocation struct {
++	Type        RevocationType
++	ConnectorID string
++	UserID      string
++	// Subject is the "sub" claim of the tokens of the pair.
++	Subject string
++
++	// Generation is the new generation of the pair (pair).
++	Generation uint64
++	// SessionID is the ended browser session, the "sid" of its tokens (session).
++	SessionID string
++	// GrantID is the ID of the revoked refresh token (grant).
++	GrantID string
++	// ClientID is the client of the revoked refresh token (grant).
++	ClientID string
++
++	// Clients are the clients the revoked credentials were issued to, sorted:
++	// subscribers filter by it.
++	Clients []string
++
++	// Reason names why the credentials were revoked, Source who revoked them.
++	Reason string
++	Source string
++
++	CreatedAt time.Time
++}
++
++// RevocationCreator is implemented by the storages that keep Revocation objects
++// (kubernetes, memory). A revocation that already exists is not created again:
++// ErrAlreadyExists.
++type RevocationCreator interface {
++	CreateRevocation(ctx context.Context, r Revocation) error
++}
++
++// AsRevocationCreator returns the RevocationCreator of s, looking through the
++// read-only wrappers of this package, which hide the methods of the storage they
++// wrap beyond Storage. ok is false when the storage keeps no revocations.
++func AsRevocationCreator(s Storage) (c RevocationCreator, ok bool) {
++	for {
++		switch w := s.(type) {
++		case RevocationCreator:
++			return w, true
++		case staticClientsStorage:
++			s = w.Storage
++		case staticPasswordsStorage:
++			s = w.Storage
++		case staticConnectorsStorage:
++			s = w.Storage
++		default:
++			return nil, false
++		}
++	}
++}
++
+ // Connector is an object that contains the metadata about connectors used to login to Dex.
+ type Connector struct {
+ 	// ID that will uniquely identify the connector object.
+@@ -623,6 +767,15 @@ type Connector struct {
  	// GrantTypes is a list of grant types that this connector is allowed to be used with.
  	// If empty, all grant types are allowed.
  	GrantTypes []string `json:"grantTypes,omitempty"`

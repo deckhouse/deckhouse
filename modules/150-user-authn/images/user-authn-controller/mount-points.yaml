@@ -1,1 +1,2 @@
-dirs: []
+dirs:
+- /etc/revocation-feed/tls

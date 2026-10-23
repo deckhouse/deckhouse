@@ -144,7 +144,8 @@ spec:
         {{- end }}
         {{- if eq $type "LDAP" }}
         - --ldap-base-url=https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
-        {{- /* Requests go to the Dex Service: a pod cannot always reach the public address. */}}
+        {{- /* Requests go to the Dex Service: a pod cannot always reach the public address, and through
+               it ingress-nginx would replace the address of the end client with the proxy. */}}
         - --ldap-dex-url=https://dex.d8-{{ .Chart.Name }}/
         - --ldap-ca-file=/etc/certs/dex-ca.crt
         - --ldap-client-id=kubernetes
@@ -173,6 +174,16 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        {{- if eq $type "LDAP" }}
+        # The secret Dex trusts the address of the end client on. Without it Dex counts the
+        # connection, the proxy, as before.
+        - name: DEX_TRUSTED_PROXY_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: basic-auth-cert
+              key: dex-trusted-proxy-secret
+              optional: true
+        {{- end }}
         # Keep serving while the endpoint removal reaches kube-proxy, ingress-nginx and the API servers;
         # the server closes its listener on SIGTERM.
         lifecycle:

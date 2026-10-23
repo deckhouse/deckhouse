@@ -1,0 +1,46 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $policyName := "user-api-self-service.deckhouse.io" }}
+---
+# user-api acts for whoever presents a token of the console, and it may create UserOperations for any
+# user. The API server holds it to what a user may do to their own account: sign out everywhere and
+# ask for a password change. A compromised user-api can neither lock a user nor set their password.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-api")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE"]
+        resources:   ["useroperations"]
+  matchConditions:
+    - name: 'user-api'
+      expression: 'request.userInfo.username == "system:serviceaccount:d8-{{ .Chart.Name }}:user-api"'
+  validations:
+    - expression: 'has(object.spec.initiatorType) && object.spec.initiatorType == "self"'
+      reason: Forbidden
+      message: 'user-api may only create UserOperations with initiatorType self'
+    - expression: 'has(object.spec.type) && object.spec.type in ["Logout", "RequirePasswordChange"]'
+      reason: Forbidden
+      message: 'user-api may only create UserOperations of the types Logout and RequirePasswordChange'
+    - expression: '!has(object.spec.resetPassword) && !has(object.spec.lock)'
+      reason: Forbidden
+      message: 'user-api may not set spec.resetPassword or spec.lock'
+    # Signing out everywhere only: ending one session or one application comes with a later version.
+    - expression: 'object.spec.type != "Logout" || !has(object.spec.logout)'
+      reason: Forbidden
+      message: 'user-api may not set spec.logout'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-api")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+{{- end }}

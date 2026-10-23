@@ -216,6 +216,8 @@ When OIDC authentication is configured, additional user information is included 
 - `user-authn.deckhouse.io/name` — user's display name
 - `user-authn.deckhouse.io/preferred_username` — user's preferred username  
 - `user-authn.deckhouse.io/dex-provider` — Dex provider identifier (requires `federated:id` scope)
+- `user-authn.deckhouse.io/sub` — `sub` claim of the token: the user and the Dex provider in one identifier
+- `user-authn.deckhouse.io/generation` — generation of the user's Dex account the token was issued at; the `user-authn` module raises it when it revokes the user's tokens
 
 You can find how to set up policies in [a special FAQ section](faq.html#how-do-i-configure-additional-audit-policies).
 

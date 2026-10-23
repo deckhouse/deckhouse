@@ -13,10 +13,10 @@ index 86d88cf7..6c86a42d 100644
  
  // idToName maps an arbitrary ID, such as an email or client ID to a Kubernetes object name.
 diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
-index a1c8fed9..58a6d15a 100644
+index 5b2984ff..5942565c 100644
 --- a/storage/kubernetes/storage.go
 +++ b/storage/kubernetes/storage.go
-@@ -527,6 +527,7 @@ func (cli *client) UpdatePassword(ctx context.Context, email string, updater fun
+@@ -532,6 +532,7 @@ func (cli *client) UpdatePassword(ctx context.Context, email string, updater fun
  
  	newPassword := cli.fromStoragePassword(updated)
  	newPassword.ObjectMeta = p.ObjectMeta
@@ -24,7 +24,7 @@ index a1c8fed9..58a6d15a 100644
  	return cli.put(resourcePassword, p.ObjectMeta.Name, newPassword)
  }
  
-@@ -544,6 +545,7 @@ func (cli *client) UpdateOfflineSessions(ctx context.Context, userID string, con
+@@ -549,6 +550,7 @@ func (cli *client) UpdateOfflineSessions(ctx context.Context, userID string, con
  
  		newOfflineSessions := cli.fromStorageOfflineSessions(updated)
  		newOfflineSessions.ObjectMeta = o.ObjectMeta
@@ -32,7 +32,7 @@ index a1c8fed9..58a6d15a 100644
  		return cli.put(resourceOfflineSessions, o.ObjectMeta.Name, newOfflineSessions)
  	})
  }
-@@ -764,14 +766,24 @@ func (cli *client) UpdateDeviceToken(ctx context.Context, deviceCode string, upd
+@@ -769,14 +771,24 @@ func (cli *client) UpdateDeviceToken(ctx context.Context, deviceCode string, upd
  }
  
  func (cli *client) CreateUserIdentity(ctx context.Context, u storage.UserIdentity) error {
@@ -55,22 +55,22 @@ index a1c8fed9..58a6d15a 100644
 +	if err := cli.addLegacyState(&u); err != nil {
 +		return storage.UserIdentity{}, err
 +	}
- 	return toStorageUserIdentity(u), nil
+ 	return toStorageUserIdentity(u)
  }
  
-@@ -792,6 +804,9 @@ func (cli *client) UpdateUserIdentity(ctx context.Context, userID, connectorID s
+@@ -797,6 +809,9 @@ func (cli *client) UpdateUserIdentity(ctx context.Context, userID, connectorID s
  		if err != nil {
  			return err
  		}
 +		if err := cli.addLegacyState(&u); err != nil {
 +			return err
 +		}
- 
- 		updated, err := updater(toStorageUserIdentity(u))
+ 		old, err := toStorageUserIdentity(u)
  		if err != nil {
+ 			return err
 diff --git a/storage/kubernetes/transitional.go b/storage/kubernetes/transitional.go
 new file mode 100644
-index 00000000..24968e24
+index 00000000..d17473e9
 --- /dev/null
 +++ b/storage/kubernetes/transitional.go
 @@ -0,0 +1,224 @@
@@ -185,7 +185,7 @@ index 00000000..24968e24
 +	if len(u.MFASecrets) == 0 && u.BlockedUntil.IsZero() {
 +		return storage.UserIdentity{}, storage.ErrNotFound
 +	}
-+	return toStorageUserIdentity(u), nil
++	return toStorageUserIdentity(u)
 +}
 +
 +// legacyPasswordLock returns the old lock of the local user userID, which the
@@ -300,10 +300,10 @@ index 00000000..24968e24
 +}
 diff --git a/storage/kubernetes/transitional_test.go b/storage/kubernetes/transitional_test.go
 new file mode 100644
-index 00000000..338fd971
+index 00000000..3d672995
 --- /dev/null
 +++ b/storage/kubernetes/transitional_test.go
-@@ -0,0 +1,692 @@
+@@ -0,0 +1,694 @@
 +package kubernetes
 +
 +import (
@@ -846,6 +846,8 @@ index 00000000..338fd971
 +			}
 +			assert.Equal(t, tc.wantTOTP, totp)
 +			assert.True(t, tc.wantBlocked.Equal(got.BlockedUntil), "blocked until %v, want %v", got.BlockedUntil, tc.wantBlocked)
++			// A pair without an identity has revoked nothing yet.
++			assert.Zero(t, got.Generation)
 +		})
 +	}
 +}
@@ -997,10 +999,10 @@ index 00000000..338fd971
 +	require.Equal(t, 4, api.listings(t, cli, resourcePassword))
 +}
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index 2cb4ea22..2db660a1 100644
+index a3bca09f..8844cfef 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
-@@ -535,6 +535,9 @@ type Password struct {
+@@ -557,6 +557,9 @@ type Password struct {
  	HashUpdatedAt                   time.Time `json:"hashUpdatedAt"`
  	RequireResetHashOnNextSuccLogin bool      `json:"requireResetHashOnNextSuccLogin,omitempty"`
  	IncorrectPasswordLoginAttempts  uint64    `json:"incorrectPasswordLoginAttempts"`
@@ -1010,7 +1012,7 @@ index 2cb4ea22..2db660a1 100644
  }
  
  // PasswordList is a list of Passwords.
-@@ -792,6 +795,9 @@ type OfflineSessions struct {
+@@ -822,6 +825,9 @@ type OfflineSessions struct {
  	ConnID        string                              `json:"connID,omitempty"`
  	Refresh       map[string]*storage.RefreshTokenRef `json:"refresh,omitempty"`
  	ConnectorData []byte                              `json:"connectorData,omitempty"`

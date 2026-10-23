@@ -4725,6 +4725,51 @@ alerts:
         user-authn idTokenTTL is {{ $labels.id_token_ttl }}, which is too long.
       severity: "6"
       markupFormat: markdown
+    - name: D8UserAuthnRevocationFeedLagging
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/revocation-feed.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        For more than 5 minutes, a stream of the revocation feed of `user-authn-controller` has not written to its dex-authenticator for over 30 seconds. A stream writes at least a heartbeat every 10 seconds, so the stream is stuck.
+
+        While the stream is stuck, a session that is revoked (user lock, password reset, logout) keeps working in that dex-authenticator until its next refresh in Dex: up to 30 seconds while Dex is reachable, and no longer than `idTokenTTL` otherwise.
+
+        Check the logs of the controller and of the dex-authenticator pods:
+
+        ```bash
+        d8 k -n d8-user-authn logs deploy/user-authn-controller --all-pods=true | grep revocation-feed
+        ```
+
+        The controller closes a stream that falls behind, and the dex-authenticator reconnects by itself. A lag that does not go away usually means a network problem between the dex-authenticator pods and the controller pods.
+      summary: |
+        The revocation feed of user-authn-controller is not delivering to dex-authenticator.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthnRevocationFeedNotConsumed
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/revocation-feed.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        For more than 15 minutes, no replica of `user-authn-controller` has had a stream of the revocation feed open for the Dex client `{{ $labels.client_id }}`. The client belongs to a DexAuthenticator (the client ID is `<name>-<namespace>-dex-authenticator`).
+
+        The dex-authenticator of this client works without the feed: a session revoked by a user lock, a password reset, or a logout stops working there only at its next refresh in Dex, within 30 seconds while Dex is reachable, and no later than `idTokenTTL`.
+
+        What to check:
+
+        - the logs of the dex-authenticator pods: errors connecting to `https://revocation-feed.d8-user-authn/revocations` and answers 401 or 429;
+        - that the Secret of the DexAuthenticator holds the CA of the feed in the `revocation-feed-ca.crt` key;
+        - network policies in the namespace of the DexAuthenticator: they must allow connections to the `user-authn-controller` pods in `d8-user-authn` on port 8443.
+
+        ```bash
+        d8 k -n d8-user-authn get endpoints revocation-feed
+        d8 k -n d8-user-authn logs deploy/user-authn-controller --all-pods=true | grep revocation-feed
+        ```
+      summary: |
+        The dex-authenticator of the Dex client {{ $labels.client_id }} does not receive the revocation feed.
+      severity: "6"
+      markupFormat: markdown
     - name: D8UserAuthzAuthorizationRuleInvalid
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-controller.yaml
       moduleUrl: 140-user-authz
@@ -5122,6 +5167,46 @@ alerts:
       summary: |
         ClusterRole {{ $labels.name }} aggregates by the label of the retired {{ $labels.lineage }} subsystem.
       severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzRevocationCheckNotSynced
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        For more than 10 minutes the `user-authz-webhook` instance `{{ $labels.pod }}` has not loaded the `Revocation` objects of the `user-authn` module (the objects in `d8-user-authn` that record revoked user credentials): it cannot list them, or cannot find out whether the API server serves them.
+
+        Until it loads them, the instance has no opinion about revoked credentials: on the master node of this instance, `kubectl` with the token of a locked or logged-out user keeps working until the token expires. Other authorization decisions are not affected.
+
+        Check the webhook's access to the API and its logs:
+
+        ```bash
+        d8 k -n d8-user-authz logs {{ $labels.pod }} -c webhook --tail=100 | grep -i revocation
+        d8 k auth can-i list revocations.dex.coreos.com -n d8-user-authn --as=system:serviceaccount:d8-user-authz:webhook
+        ```
+      summary: |
+        The revocation check of the user-authz webhook has not loaded the revocations.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzRevocationCheckStale
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        For more than 15 minutes the `user-authz-webhook` instance `{{ $labels.pod }}` has been unable to watch the `Revocation` objects of the `user-authn` module (the objects in `d8-user-authn` that record revoked user credentials).
+
+        The instance keeps refusing the Dex tokens it already knows to be revoked, but a revocation made since its watch broke does not reach it: on the master node of this instance, `kubectl` with the token of a locked or logged-out user keeps working until the token expires.
+
+        Check the webhook's access to the API and its logs:
+
+        ```bash
+        d8 k -n d8-user-authz logs {{ $labels.pod }} -c webhook --tail=100 | grep -i revocation
+        d8 k auth can-i watch revocations.dex.coreos.com -n d8-user-authn --as=system:serviceaccount:d8-user-authz:webhook
+        ```
+      summary: |
+        The revocation check of the user-authz webhook no longer sees new revocations.
+      severity: "6"
       markupFormat: markdown
     - name: D8UserAuthzRuleNeedsMultiTenancy
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/multitenancy-misconfigured.yaml

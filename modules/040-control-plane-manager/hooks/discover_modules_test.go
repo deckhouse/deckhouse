@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -90,6 +92,21 @@ metadata:
     control-plane-configurator: ""
 `
 
+		authzWithRevocationConfigMap = `
+---
+apiVersion: v1
+data:
+  url: https://127.0.0.1:40443/
+  revocationURL: https://127.0.0.1:40443/revocation
+  ca: authz-webhook-ca
+kind: ConfigMap
+metadata:
+  name: control-plane-configurator
+  namespace: d8-user-authz
+  labels:
+    control-plane-configurator: ""
+`
+
 		auditFullConfigMapAdded = `
 ---
 apiVersion: v1
@@ -108,6 +125,7 @@ metadata:
 controlPlaneManager:
   internal:
     audit: {}
+    authz: {}
   apiserver:
     authn: {}
     authz: {}
@@ -206,6 +224,93 @@ global:
 					Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookCA").Exists()).ToNot(BeTrue())
 				})
 			})
+		})
+	})
+
+	// The revocation check of user-authn is served by the user-authz webhook: its URL comes from the
+	// ConfigMap of user-authz, together with the webhook. Every control-plane-manager Pod writes its
+	// kubeconfig from 1.77.N on, and channel updates go through that release, so the check is added
+	// right away, without waiting for a rollout.
+	Context("The revocation check of user-authn", func() {
+		const revocationURLPath = "controlPlaneManager.internal.authz.revocationWebhookURL"
+
+		f := HookExecutionConfigInit(values, `{}`)
+
+		expectURL := func(expected bool) {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(revocationURLPath).Exists()).To(Equal(expected))
+			if expected {
+				Expect(f.ValuesGet(revocationURLPath).String()).To(Equal("https://127.0.0.1:40443/revocation"))
+			}
+		}
+
+		for _, tc := range []struct {
+			name     string
+			state    string
+			expected bool
+		}{
+			{name: "when user-authz names the check", state: authzWithRevocationConfigMap, expected: true},
+			{name: "when user-authz does not name the check", state: authzConfigMap},
+			{name: "without the ConfigMap of user-authz", state: ""},
+		} {
+			Context(tc.name, func() {
+				BeforeEach(func() {
+					f.BindingContexts.Set(f.KubeStateSet(tc.state))
+					f.RunHook()
+				})
+
+				It(fmt.Sprintf("must set the URL: %v", tc.expected), func() {
+					expectURL(tc.expected)
+				})
+			})
+		}
+
+		Context("user-authz stops naming the check", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(authzWithRevocationConfigMap))
+				f.RunHook()
+				expectURL(true)
+				f.BindingContexts.Set(f.KubeStateSet(authzConfigMap))
+				f.RunHook()
+			})
+
+			It("drops it and keeps the webhook", func() {
+				expectURL(false)
+				Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookURL").String()).To(Equal("https://authz-webhook-only.url"))
+			})
+		})
+	})
+
+	// The revocation check is served by the user-authz webhook. An authorization webhook configured
+	// by hand is some other authorizer, so the check must not be added next to it.
+	Context("The authorization webhook is configured by hand", func() {
+		const manualConfig = `{"controlPlaneManager":{"apiserver":{"authz":{"webhookURL":"https://manual-authz.url","webhookCA":"manual-ca"}}}}`
+		const manualValues = `
+controlPlaneManager:
+  internal:
+    audit: {}
+    authz:
+      revocationWebhookURL: https://127.0.0.1:40443/revocation
+  apiserver:
+    authn: {}
+    authz:
+      webhookURL: https://manual-authz.url
+      webhookCA: manual-ca
+global:
+  discovery:
+    kubernetesCA: kubernetesCATest
+`
+		f := HookExecutionConfigInit(manualValues, manualConfig)
+
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(authzWithRevocationConfigMap))
+			f.RunHook()
+		})
+
+		It("must not add the revocation check, even when user-authz names it", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("controlPlaneManager.apiserver.authz.webhookURL").String()).To(Equal("https://manual-authz.url"))
+			Expect(f.ValuesGet("controlPlaneManager.internal.authz.revocationWebhookURL").Exists()).To(BeFalse())
 		})
 	})
 

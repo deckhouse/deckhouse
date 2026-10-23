@@ -27,8 +27,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apiserverapi "k8s.io/apiserver/pkg/apis/apiserver"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
@@ -1174,12 +1176,13 @@ resources:
 
 				// Verify extra claim mappings are present
 				extraMappings := config.JWT[0].ClaimMappings.Extra
-				Expect(extraMappings).To(HaveLen(3))
+				Expect(extraMappings).To(HaveLen(5))
 
-				// Check user-authn.deckhouse.io/name mapping
+				// Check user-authn.deckhouse.io/name mapping: a token without the claim must still
+				// authenticate, so the claim is read behind has().
 				Expect(extraMappings).To(ContainElement(ExtraClaimMapping{
 					Key:             "user-authn.deckhouse.io/name",
-					ValueExpression: "claims.name",
+					ValueExpression: "has(claims.name) ? claims.name : null",
 				}))
 
 				// Check user-authn.deckhouse.io/preferred_username mapping
@@ -1196,6 +1199,21 @@ resources:
 					Key:             "user-authn.deckhouse.io/dex-provider",
 					ValueExpression: "has(claims.federated_claims) && has(claims.federated_claims.connector_id) ? claims.federated_claims.connector_id : null",
 				}))
+
+				// The pair and the generation of the token, read by the revocation check of
+				// user-authz. sid is deliberately not mapped: revoking by session in kube-apiserver
+				// would also revoke a kubeconfig issued from the same browser session.
+				Expect(extraMappings).To(ContainElement(ExtraClaimMapping{
+					Key:             "user-authn.deckhouse.io/sub",
+					ValueExpression: "has(claims.sub) ? claims.sub : null",
+				}))
+				Expect(extraMappings).To(ContainElement(ExtraClaimMapping{
+					Key:             "user-authn.deckhouse.io/generation",
+					ValueExpression: `has(claims.d8_gen) ? string(int(claims.d8_gen)) : ""`,
+				}))
+				for _, mapping := range extraMappings {
+					Expect(mapping.ValueExpression).NotTo(ContainSubstring("sid"))
+				}
 			})
 		})
 		Context("apiserver oidc settings are set partially", func() {
@@ -1216,6 +1234,59 @@ resources:
 				Expect(config.JWT[0].Issuer.DiscoveryURL).To(Equal("https://dex.d8-user-authn.svc.cluster.local/.well-known/openid-configuration"))
 				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
 				Expect(config.JWT[0].Issuer.CertificateAuthority).Should(BeEmpty())
+			})
+
+			// kube-apiserver rejects the whole token when any extra expression fails, so the
+			// mappings are evaluated against the tokens Dex issues.
+			It("kube-apiserver accepts the configuration, and the extras map every token Dex issues", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				authConfig, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-authentication-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+
+				config, err := loadAuthenticationConfiguration(authConfig)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.JWT).To(HaveLen(1))
+				mappings := config.JWT[0].ClaimMappings.Extra
+
+				By("a token with none of the optional claims: no name, preferred_username, federated_claims, sid or d8_gen")
+				extras, err := extrasFor(mappings, map[string]interface{}{
+					"iss":    "https://dex.example.com",
+					"sub":    "CgRqYW5lEgVsb2NhbA",
+					"aud":    "kubernetes",
+					"email":  "jane@example.com",
+					"groups": []interface{}{"admins"},
+				})
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(extras).To(Equal(map[string][]string{
+					"user-authn.deckhouse.io/sub": {"CgRqYW5lEgVsb2NhbA"},
+				}))
+
+				By("a token with all of them; JSON numbers are doubles in CEL")
+				extras, err = extrasFor(mappings, map[string]interface{}{
+					"iss":                "https://dex.example.com",
+					"sub":                "CgRqYW5lEgVsb2NhbA",
+					"aud":                "kubernetes",
+					"email":              "jane@example.com",
+					"name":               "Jane Doe",
+					"preferred_username": "jane",
+					"federated_claims":   map[string]interface{}{"connector_id": "local", "user_id": "jane"},
+					"sid":                "fehzwdh5qy4oyqcn7qhkcgzbm",
+					"d8_gen":             float64(12),
+				})
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(extras).To(Equal(map[string][]string{
+					"user-authn.deckhouse.io/name":               {"Jane Doe"},
+					"user-authn.deckhouse.io/preferred_username": {"jane"},
+					"user-authn.deckhouse.io/dex-provider":       {"local"},
+					"user-authn.deckhouse.io/sub":                {"CgRqYW5lEgVsb2NhbA"},
+					"user-authn.deckhouse.io/generation":         {"12"},
+				}))
+
+				By("the mapping of name this replaced rejected every token without the claim")
+				_, err = extrasFor([]apiserverapi.ExtraMapping{{Key: "user-authn.deckhouse.io/name", ValueExpression: "claims.name"}},
+					map[string]interface{}{"sub": "CgRqYW5lEgVsb2NhbA"})
+				Expect(err).Should(HaveOccurred())
 			})
 		})
 		Context("apiserver oidc settings are empty", func() {
@@ -1423,6 +1494,184 @@ apiserver:
 			It("should fail helm render with explicit error", func() {
 				Expect(f.RenderError).Should(HaveOccurred())
 				Expect(f.RenderError.Error()).To(ContainSubstring("controlPlaneManager.apiserver.authz.webhookCA is required"))
+			})
+		})
+
+		// The revocation check of user-authn: an authorizer of its own, served by the user-authz webhook,
+		// between node and user-authz-webhook, rendered only when the discover_modules hook found its
+		// URL in the ConfigMap of user-authz, and only from Kubernetes 1.34 on.
+		Context("revocation check of user-authn", func() {
+			const revocationValues = `
+internal:
+  effectiveKubernetesVersion: "1.34"
+  maxUsedKubernetesVersion: "1.34"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  authn: {}
+  selfSignedCA: {}
+  authz:
+    revocationWebhookURL: "https://127.0.0.1:40443/revocation"
+apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
+  authz:
+    webhookURL: "https://127.0.0.1:40443/"
+    webhookCA: "authz-webhook-ca"
+`
+			const revocationKubeconfigPath = "/etc/kubernetes/deckhouse/extra-files/revocation-webhook-config.yaml"
+			const revocationURLValues = `  authz:
+    revocationWebhookURL: "https://127.0.0.1:40443/revocation"
+`
+			const authzWebhookValues = `  authz:
+    webhookURL: "https://127.0.0.1:40443/"
+    webhookCA: "authz-webhook-ca"
+`
+
+			renderedFile := func(key string) []byte {
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(secret.Exists()).To(BeTrue())
+				data, err := base64.StdEncoding.DecodeString(secret.Field("data." + strings.ReplaceAll(key, ".", "\\.")).String())
+				Expect(err).ShouldNot(HaveOccurred())
+				return data
+			}
+			authorizerNames := func(config *apiserverapi.AuthorizationConfiguration) []string {
+				names := make([]string, 0, len(config.Authorizers))
+				for _, a := range config.Authorizers {
+					names = append(names, a.Name)
+				}
+				return names
+			}
+			review := func(extra map[string]authorizationv1.ExtraValue) *authorizationv1.SubjectAccessReview {
+				return &authorizationv1.SubjectAccessReview{Spec: authorizationv1.SubjectAccessReviewSpec{
+					User:               "jane@example.com",
+					Extra:              extra,
+					ResourceAttributes: &authorizationv1.ResourceAttributes{Verb: "get", Resource: "pods", Namespace: "default"},
+				}}
+			}
+
+			expectRevocationEntry := func(kubernetesVersion string) *apiserverapi.WebhookConfiguration {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				raw := renderedFile("extra-file-authorization-config.yaml")
+				config, err := loadAuthorizationConfiguration(raw)
+				Expect(err).ShouldNot(HaveOccurred(), "kube-apiserver %s would not start with this configuration", kubernetesVersion)
+				Expect(authorizerNames(config)).To(Equal([]string{"node", "user-authn-revocation", "user-authz-webhook", "rbac"}))
+
+				webhook := config.Authorizers[1].Webhook
+				Expect(webhook.FailurePolicy).To(Equal("NoOpinion"), "the revocation check must fail open")
+				Expect(webhook.Timeout.Duration).To(Equal(time.Second))
+				Expect(webhook.AuthorizedTTL.Duration).To(Equal(time.Second))
+				Expect(webhook.UnauthorizedTTL.Duration).To(Equal(time.Second))
+				Expect(webhook.SubjectAccessReviewVersion).To(Equal("v1"))
+				Expect(webhook.ConnectionInfo.Type).To(Equal(apiserverapi.AuthorizationWebhookConnectionInfoTypeKubeConfigFile))
+				Expect(*webhook.ConnectionInfo.KubeConfigFile).To(Equal(revocationKubeconfigPath))
+
+				// The user-authz webhook after it is unchanged: fail closed.
+				Expect(config.Authorizers[2].Webhook.FailurePolicy).To(Equal("Deny"))
+				Expect(*config.Authorizers[2].Webhook.ConnectionInfo.KubeConfigFile).To(Equal("/etc/kubernetes/deckhouse/extra-files/webhook-config.yaml"))
+
+				By("only the requests of Dex tokens reach the revocation check")
+				for _, tc := range []struct {
+					extra    map[string]authorizationv1.ExtraValue
+					expected bool
+				}{
+					{extra: map[string]authorizationv1.ExtraValue{"user-authn.deckhouse.io/sub": {"CgRqYW5lEgVsb2NhbA"}, "user-authn.deckhouse.io/generation": {"3"}}, expected: true},
+					{extra: map[string]authorizationv1.ExtraValue{"user-authn.deckhouse.io/sub": {"CgRqYW5lEgVsb2NhbA"}}, expected: true},
+					{extra: map[string]authorizationv1.ExtraValue{"authentication.kubernetes.io/credential-id": {"JTI=x"}}, expected: false},
+					{extra: nil, expected: false},
+				} {
+					matched, err := webhookMatches(webhook, review(tc.extra))
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(matched).To(Equal(tc.expected), "extra %v", tc.extra)
+				}
+
+				By("the kubeconfig of the revocation check points at its path on the webhook's listener")
+				kubeconfig := string(renderedFile("extra-file-revocation-webhook-config.yaml"))
+				Expect(kubeconfig).To(ContainSubstring(`server: "https://127.0.0.1:40443/revocation"`))
+				Expect(kubeconfig).To(ContainSubstring("certificate-authority-data: " + base64.StdEncoding.EncodeToString([]byte("authz-webhook-ca"))))
+				Expect(kubeconfig).To(ContainSubstring("client-certificate: /etc/kubernetes/pki/front-proxy-client.crt"))
+				Expect(kubeconfig).To(ContainSubstring("client-key: /etc/kubernetes/pki/front-proxy-client.key"))
+				return webhook
+			}
+
+			// Kubernetes 1.33 cannot leave the answers of a webhook uncached: the cache fields appeared in
+			// 1.34, and kube-apiserver 1.33 refuses a configuration with a field it does not know. The
+			// check is not rendered there at all, and a revoked token works in kubectl until it expires.
+			Context("Kubernetes 1.33", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("controlPlaneManager", revocationValues)
+					f.ValuesSet("controlPlaneManager.internal.effectiveKubernetesVersion", "1.33")
+					f.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", "1.33")
+					f.HelmRender()
+				})
+
+				It("renders no revocation check and no kubeconfig for it", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+					raw := renderedFile("extra-file-authorization-config.yaml")
+					config, err := loadAuthorizationConfiguration(raw)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(authorizerNames(config)).To(Equal([]string{"node", "user-authz-webhook", "rbac"}))
+					Expect(string(raw)).NotTo(ContainSubstring("cacheAuthorizedRequests"))
+					Expect(string(raw)).NotTo(ContainSubstring("cacheUnauthorizedRequests"))
+
+					secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+					Expect(secret.Field("data.extra-file-revocation-webhook-config\\.yaml").Exists()).To(BeFalse())
+				})
+			})
+
+			for _, version := range []string{"1.34", "1.35"} {
+				Context("Kubernetes "+version, func() {
+					BeforeEach(func() {
+						f.ValuesSetFromYaml("controlPlaneManager", revocationValues)
+						f.ValuesSet("controlPlaneManager.internal.effectiveKubernetesVersion", version)
+						f.HelmRender()
+					})
+
+					It("does not cache the answers", func() {
+						webhook := expectRevocationEntry(version)
+						Expect(webhook.CacheAuthorizedRequests).To(BeFalse())
+						Expect(webhook.CacheUnauthorizedRequests).To(BeFalse())
+					})
+				})
+			}
+
+			// Without the URL - an older user-authz, or an authorization webhook configured by hand,
+			// for which the hook does not set it - the configuration is what it was.
+			Context("without the URL of the revocation check", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("controlPlaneManager", strings.Replace(revocationValues, revocationURLValues, "", 1))
+					f.ValuesSet("controlPlaneManager.apiserver.authz.webhookURL", "https://manual-authz.example.com")
+					f.HelmRender()
+				})
+
+				It("renders no revocation check", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+					config, err := loadAuthorizationConfiguration(renderedFile("extra-file-authorization-config.yaml"))
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(authorizerNames(config)).To(Equal([]string{"node", "user-authz-webhook", "rbac"}))
+
+					secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+					Expect(secret.Field("data.extra-file-revocation-webhook-config\\.yaml").Exists()).To(BeFalse())
+					Expect(secret.Field("data.extra-file-webhook-config\\.yaml").Exists()).To(BeTrue())
+				})
+			})
+
+			// The revocation check is served by the user-authz webhook; without it there is no
+			// AuthorizationConfiguration at all.
+			Context("with the URL of the revocation check but no authorization webhook", func() {
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("controlPlaneManager", strings.TrimSuffix(revocationValues, authzWebhookValues))
+					f.HelmRender()
+				})
+
+				It("renders neither", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+					secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+					Expect(secret.Field("data.extra-file-authorization-config\\.yaml").Exists()).To(BeFalse())
+					Expect(secret.Field("data.extra-file-revocation-webhook-config\\.yaml").Exists()).To(BeFalse())
+				})
 			})
 		})
 

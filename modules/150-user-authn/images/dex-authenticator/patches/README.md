@@ -41,13 +41,14 @@ into the image. To run them, apply the patches to a clone of the tag and run `go
     `failure_mode_allow` is set.
 - **New sign-in:** the session of a new sign-in is saved under a new ticket, not under the ticket of the cookie the
   browser still has. Another replica that keeps the previous session under the old ticket in its Redis would
-  otherwise serve the previous identity and ID token until its next refresh, up to `--cookie-refresh`.
+  otherwise serve the previous identity, `sid` and generation until its next refresh, up to `--cookie-refresh`.
 - **Ticket format:** oauth2-proxy 7.6.0 and later write the ticket as `v2.<id>.<secret>`. They read the older
   `<id>.<secret>` too, but the older proxies cannot read the new format, so an upgrade from 7.5.1 logs out the users
   that reach an old replica with a cookie of a new one, once.
 - **Security:** sign-out does not invalidate a previously issued cookie. A copy of the cookie restores the session
   while the refresh token in it is valid in dex and the cookie has not expired (`--cookie-expire`, set from
-  `keepUsersLoggedInFor`). The cookie is signed, not encrypted.
+  `keepUsersLoggedInFor`). The cookie is signed, not encrypted. Patch 011 revokes the refresh token in dex on
+  sign-out, and patch 010 refuses the stub of a revoked grant before it reaches dex.
 - **Upstream:** <https://github.com/oauth2-proxy/oauth2-proxy/pull/313>, closed without merge. Needed until the
   sessions move to a shared store.
 
@@ -129,6 +130,44 @@ The security events of `templates/security-events.yaml` are built from these lin
   sign-out without a session no longer logs an error.
 - **Upstream:** not proposed.
 
+### 010-revocation-feed.patch
+
+- **Zone:** the subscription to the revocation feed of user-authn and the session check (`pkg/deckhouse/revocation`,
+  the stored session loader in `pkg/middleware`, `--revocation-feed-url`, `--revocation-feed-ca-file`).
+- **Consumer in Deckhouse:** every DexAuthenticator. The feed is served by user-authn-controller
+  (`https://revocation-feed.d8-user-authn/revocations`); a lock, a password reset, a deleted user or "sign out
+  everywhere" reaches the applications behind every replica within seconds.
+- **What it does:** one goroutine per process subscribes to the feed, a `text/event-stream`, with the client ID and
+  secret of the authenticator (HTTP Basic) and trusts only the CA of the feed. It resumes with `Last-Event-ID`,
+  reconnects after 1 to 30 seconds with jitter, after 60 seconds on 401 and after `Retry-After` on 429. It keeps the
+  revoked pairs of a user and a connector with their generation, the ended dex sessions and the revoked grants as
+  keys salted with the client secret, merged monotonically, with their expiry times; no tokens and no names. The
+  stored session loader refuses a session whose ID token carries an older `d8_gen` of its pair (none is 0) or an
+  ended `sid`, or whose refresh token belongs to a revoked grant: it clears the session, logs
+  `Session revoked (reason: pair|session|grant)` and `/auth` answers 401 as without a session. The check runs
+  before a refresh, so the stub of patch 002 is refused by its grant without a call to dex, and again on the tokens
+  a refresh brings. While the feed is not fresh (no whole snapshot yet, or no event for 30 seconds) a session older
+  than 30 seconds is refreshed through dex, which refuses revoked refresh tokens: 5 a second with a burst of 10 per
+  pod, and above the limit the last state of the feed decides. The feed goes stale for every DexAuthenticator at once,
+  so dex and the apiserver then get up to 5 refreshes a second times the number of DexAuthenticator pods in the
+  cluster, each a few apiserver calls; a revocation reaches the sessions over the limit only once the feed is back. Readiness does not depend on the feed. Without
+  `--revocation-feed-url` nothing changes.
+- **Upstream:** not proposed.
+- **Depends on:** 002 (the stub session, checked by its grant).
+
+### 011-sign-out-revoke.patch
+
+- **Zone:** the revocation of the refresh token on sign-out (`SignOut`, `--revocation-url`).
+- **Consumer in Deckhouse:** every DexAuthenticator, with `--revocation-url=https://dex.d8-user-authn/token/revoke`
+  (the RFC 7009 endpoint of dex patch 290).
+- **What it does:** before the session is cleared on sign-out, posts its refresh token to the endpoint with
+  `token_type_hint=refresh_token` and the client credentials (HTTP Basic), within 3 seconds and over the TLS of dex
+  (`--provider-ca-file`). Dex revokes the grant and the revocation feed tells the other replicas, so a copy of the
+  cookie no longer restores the session. Any failure is a warning; the session is cleared anyway. The address
+  comes from the flag only, the sign-out redirect does not change it. Without `--revocation-url` nothing changes.
+- **Upstream:** not proposed.
+- **Depends on:** 009 (the sign-out of a session without an ID token).
+
 ### 998-fix-cve.patch
 
 - **Zone:** `go.mod` and `go.sum`.
@@ -168,7 +207,9 @@ The security events of `templates/security-events.yaml` are built from these lin
     a script (patch 005) and the sign-out redirect with `{id_token}` (patch 009);
   - `ManualSignIn`, `LoadCookiedSession`, `redeemCode`;
   - the JSON ticket cookie of patch 002 (`decodeTicket`, `decodeTicketFromRequest`);
-  - the JWT bearer and basic session loader.
+  - the JWT bearer and basic session loader;
+  - the subscriber of the revocation feed of patch 010: the SSE parser, the events, the state they build and the
+    session check.
 - **Upstream:** not proposed.
 
 Run from a patched source tree:
@@ -177,6 +218,7 @@ Run from a patched source tree:
 go test -run=^$ -fuzz=FuzzServeHTTP -fuzztime=12h .
 go test -run=^$ -fuzz=FuzzDecodeTicket$ -fuzztime=12h ./pkg/sessions/persistence
 go test -run=^$ -fuzz=FuzzJwtSessionLoader$ -fuzztime=12h ./pkg/middleware
+go test -run=^$ -fuzz=FuzzSSEStream$ -fuzztime=12h ./pkg/deckhouse/revocation
 ```
 
 <!-- cvefix:begin -->

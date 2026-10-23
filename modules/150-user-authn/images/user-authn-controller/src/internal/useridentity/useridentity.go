@@ -27,8 +27,10 @@ package useridentity
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -52,12 +54,19 @@ const (
 	// RFC 3339. The lock is the administrator's only while the value equals blockedUntil: a later
 	// automatic lock replaces blockedUntil, and the annotation then describes an older lock.
 	AdminLockAnnotation = "user-authn.deckhouse.io/admin-lock"
+	// GenerationAnnotation holds the generation of the pair, a decimal uint64. Dex takes as valid
+	// only what was issued at the current generation, so raising it revokes everything issued to the
+	// pair before. Only the controller writes it, by one at a time (BumpGeneration); Dex reads it and
+	// keeps it when it writes the object. No annotation is generation 0.
+	GenerationAnnotation = "user-authn.deckhouse.io/generation"
 
-	// SourceOfflineSessions, SourcePassword, and SourceUserOperation name what the controller
-	// wrote into a UserIdentity from, in Record.Source.
+	// SourceOfflineSessions, SourcePassword, SourceUserOperation, and SourceUser name what the
+	// controller wrote into a UserIdentity from, in Record.Source. SourceUser is the generation a
+	// User created again inherits from the revocations of the deleted one.
 	SourceOfflineSessions = "OfflineSessions"
 	SourcePassword        = "Password"
 	SourceUserOperation   = "UserOperation"
+	SourceUser            = "User"
 )
 
 const (
@@ -352,6 +361,29 @@ func (i *Identity) ClearMFA() {
 func (i *Identity) Migrated() bool {
 	_, ok := i.obj.GetAnnotations()[RecordAnnotation]
 	return ok
+}
+
+// ErrInvalidGeneration means GenerationAnnotation holds something that is not a generation.
+var ErrInvalidGeneration = errors.New("not a generation")
+
+// Generation returns the generation of the pair, 0 when the object has none. A value that is not
+// a decimal uint64 without a sign and leading zeros is ErrInvalidGeneration, not 0: whatever reads
+// the generation then refuses rather than takes revoked credentials as valid.
+func (i *Identity) Generation() (uint64, error) {
+	value, ok := i.obj.GetAnnotations()[GenerationAnnotation]
+	if !ok {
+		return 0, nil
+	}
+	generation, err := strconv.ParseUint(value, 10, 64)
+	if err != nil || (len(value) > 1 && value[0] == '0') {
+		return 0, fmt.Errorf("useridentity %s annotation %s %q: %w", i.obj.GetName(), GenerationAnnotation, value, ErrInvalidGeneration)
+	}
+	return generation, nil
+}
+
+// SetGeneration sets GenerationAnnotation to g.
+func (i *Identity) SetGeneration(g uint64) {
+	i.setAnnotation(GenerationAnnotation, strconv.FormatUint(g, 10))
 }
 
 // IncorrectPasswordLoginAttempts returns the failed-attempt counter Dex keeps on the object for

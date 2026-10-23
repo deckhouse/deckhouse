@@ -28,7 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -76,12 +75,7 @@ func TestReconcile_DeletedUserLosesItsDexRecordWithAStaleCache(t *testing.T) {
 	password := passwordObj("managed-ghost", map[string]any{
 		"email": "ghost@example.com", "username": "ghost", "userID": "ghost", "hash": "aGFzaA==",
 	}, managedLabels, nil)
-	api := fake.NewClientBuilder().
-		WithScheme(newTestScheme(t)).
-		WithRESTMapper(newTestMapper()).
-		WithStatusSubresource(userStatusObject()).
-		WithIndex(controller.Object(controller.PasswordGVK), controller.PasswordPairField, controller.PasswordPair).
-		WithObjects(namespaceObj(), password.DeepCopy(), localIdentityObj("ghost"), dexSessionObj(ghostPair, "ghost", naming.LocalConnectorID)).
+	api := newFakeClientBuilder(t, namespaceObj(), password.DeepCopy(), localIdentityObj("ghost"), dexSessionObj(ghostPair, "ghost", naming.LocalConnectorID)).
 		Build()
 	var served atomic.Bool
 	staleCache := interceptor.NewClient(api, interceptor.Funcs{
@@ -120,7 +114,14 @@ func TestReconcile_DeletedUserLosesItsDexRecordWithAStaleCache(t *testing.T) {
 		t.Fatalf("Reconcile after the re-create: %v", err)
 	}
 
-	assertGone(t, r, controller.UserIdentityGVK, ghostPair)
+	// The new ghost starts at the generation of the revocation of the old one, without its record.
+	id := getLocalIdentity(t, r, "ghost")
+	if g, _ := id.Generation(); g != 1 {
+		t.Errorf("generation of the new user = %d, want 1", g)
+	}
+	if totp, _ := id.TOTP(); totp != nil {
+		t.Error("the new user inherited the TOTP secret")
+	}
 	assertGone(t, r, controller.OfflineSessionsGVK, ghostPair)
 }
 
@@ -225,4 +226,14 @@ func assertKept(t *testing.T, r *Reconciler, gvk schema.GroupVersionKind, name s
 	if err := r.client.Get(t.Context(), types.NamespacedName{Namespace: naming.DexNamespace, Name: name}, controller.Object(gvk)); err != nil {
 		t.Errorf("%s %s: %v, want it kept", gvk.Kind, name, err)
 	}
+}
+
+func getLocalIdentity(t *testing.T, r *Reconciler, userID string) *useridentity.Identity {
+	t.Helper()
+	obj := controller.Object(controller.UserIdentityGVK)
+	key := types.NamespacedName{Namespace: naming.DexNamespace, Name: useridentity.Name(userID, naming.LocalConnectorID)}
+	if err := r.client.Get(t.Context(), key, obj); err != nil {
+		t.Fatalf("get useridentity of %s: %v", userID, err)
+	}
+	return useridentity.FromUnstructured(obj)
 }

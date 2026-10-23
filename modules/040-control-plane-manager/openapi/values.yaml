@@ -207,6 +207,18 @@ properties:
             type: boolean
           publishedAPIKubeconfigGeneratorMasterCA:
             type: string
+      authz:
+        type: object
+        default: {}
+        properties:
+          revocationWebhookURL:
+            type: string
+            description: |
+              URL of the revocation check of user-authn, served by the user-authz webhook. Set by the
+              discover_modules hook from the control-plane-configurator ConfigMap of user-authz, and only
+              while the authorization webhook itself comes from that ConfigMap. When set, kube-apiserver of Kubernetes 1.34 and later gets the
+              user-authn-revocation authorizer before user-authz-webhook; below 1.34 the value is ignored.
+            x-examples: ["https://127.0.0.1:40443/revocation"]
       customCertificateData:
         type: object
         default: {}

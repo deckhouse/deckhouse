@@ -362,21 +362,25 @@ func TestReconcile_EndSessionsOfTheLocalUserOnly(t *testing.T) {
 	}
 }
 
-func TestReconcile_Reset2FAMatchesRefreshTokenClaims(t *testing.T) {
+// Reset2FA addresses the pair: it deletes the OfflineSessions named after (admin, local), also one
+// written by an older Dex without userID, and no object of another name, whatever its tokens.
+func TestReconcile_Reset2FADeletesTheOfflineSessionsOfThePair(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	localSession := naming.OfflineTokenName("admin", naming.LocalConnectorID)
 	r := newTestReconciler(t, now,
-		sessionObj("offsess-no-userid", map[string]any{
+		passwordObj("admin", nil),
+		sessionObj(localSession, map[string]any{
 			"connID": "local",
 			"refresh": map[string]any{
 				"console": map[string]any{"ID": "rt-1"},
 			},
 		}),
-		sessionObj("offsess-no-userid-ldap", map[string]any{
-			"connID": "corp-ldap",
+		sessionObj("offsess-no-userid", map[string]any{
+			"connID": "local",
 			"refresh": map[string]any{
-				"console": map[string]any{"ID": "rt-ldap"},
+				"console": map[string]any{"ID": "rt-2"},
 			},
 		}),
 		refreshTokenObj("rt-1", naming.LocalConnectorID, "admin"),
@@ -391,10 +395,10 @@ func TestReconcile_Reset2FAMatchesRefreshTokenClaims(t *testing.T) {
 	if _, err := r.Reconcile(t.Context(), opRequest("user-operation-01")); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
-	assertDeleted(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, "offsess-no-userid")
+	assertDeleted(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, localSession)
 	assertDeleted(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-1")
 	assertDeleted(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-2")
-	getUnstructured(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, "offsess-no-userid-ldap")
+	getUnstructured(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, "offsess-no-userid")
 	getUnstructured(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-ldap")
 	assertPhase(t, r, "user-operation-01", "Succeeded", now)
 }
@@ -585,16 +589,22 @@ func newTestReconciler(t *testing.T, now time.Time, objs ...client.Object) *Reco
 
 func newTestReconcilerWithLog(t *testing.T, now time.Time, log logr.Logger, objs ...client.Object) *Reconciler {
 	t.Helper()
-	scheme := runtime.NewScheme()
-	statusObj := controller.Object(controller.UserOperationGVK)
-	c := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithRESTMapper(newTestMapper()).
-		WithStatusSubresource(statusObj).
-		WithIndex(controller.Object(controller.PasswordGVK), controller.PasswordPairField, controller.PasswordPair).
-		WithObjects(objs...).
-		Build()
+	c := newFakeClientBuilder(objs...).Build()
 	return New(c, c, log, func() time.Time { return now })
+}
+
+// newFakeClientBuilder returns a fake client builder with the objects, the status subresource of
+// UserOperation, and every index of the controller.
+func newFakeClientBuilder(objs ...client.Object) *fake.ClientBuilder {
+	builder := fake.NewClientBuilder().
+		WithScheme(runtime.NewScheme()).
+		WithRESTMapper(newTestMapper()).
+		WithStatusSubresource(controller.Object(controller.UserOperationGVK)).
+		WithObjects(objs...)
+	for _, index := range controller.Indexes() {
+		builder = builder.WithIndex(index.Object, index.Field, index.Extract)
+	}
+	return builder
 }
 
 func newTestMapper() meta.RESTMapper {
@@ -606,6 +616,10 @@ func newTestMapper() meta.RESTMapper {
 	m.Add(controller.OfflineSessionsGVK, meta.RESTScopeNamespace)
 	m.Add(controller.RefreshTokenGVK, meta.RESTScopeNamespace)
 	m.Add(controller.UserIdentityGVK, meta.RESTScopeNamespace)
+	m.Add(controller.AuthSessionGVK, meta.RESTScopeNamespace)
+	m.Add(controller.RevocationGVK, meta.RESTScopeNamespace)
+	m.Add(controller.AuthCodeGVK, meta.RESTScopeNamespace)
+	m.Add(controller.AuthRequestGVK, meta.RESTScopeNamespace)
 	m.Add(controller.UserOperationGVK, meta.RESTScopeRoot)
 	return m
 }
@@ -675,6 +689,7 @@ func userOperationObj(name string, created time.Time, spec map[string]any) *unst
 		"kind":       controller.UserOperationGVK.Kind,
 		"metadata": map[string]any{
 			"name":              name,
+			"uid":               "uid-" + name,
 			"creationTimestamp": created.UTC().Format(time.RFC3339),
 		},
 		"spec": spec,

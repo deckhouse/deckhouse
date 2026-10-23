@@ -26,6 +26,7 @@ Arguments: the resources section of the CR for the container (may be empty) and 
 
 {{- $context := . }}
 {{- $redisSidecar := include "dex_authenticator_redis_is_sidecar" $context }}
+{{- $revocationFeedCA := dig "revocationFeedTLS" "ca" "" $context.Values.userAuthn.internal | default "" }}
 {{- $dexAuthenticatorNames := .Values.userAuthn.internal.dexAuthenticatorNames | default dict -}}
 {{- range $crd := .Values.userAuthn.internal.dexAuthenticatorCRDs }}
   {{- $id := printf "%s@%s" $crd.name $crd.namespace }}
@@ -150,6 +151,7 @@ spec:
         checksum/config: {{ $crd.credentials | toJson | b64enc | sha256sum }}
         {{- /* oauth2-proxy reads the CA of dex once, at startup. */}}
         checksum/dex-ca: {{ $context.Values.userAuthn.internal.dexTLS.ca | default "" | sha256sum }}
+        checksum/revocation-feed-ca: {{ $revocationFeedCA | sha256sum }}
     spec:
 {{- if $crd.spec.nodeSelector }}
       nodeSelector:
@@ -178,6 +180,12 @@ spec:
           items:
           - key: dex-ca.crt
             path: ca.crt
+      - name: revocation-feed-ca
+        secret:
+          secretName: {{ $secretName }}
+          items:
+          - key: revocation-feed-ca.crt
+            path: ca.crt
       initContainers:
       - args:
         - "{{ $baseName }}.{{ $crd.namespace }}"
@@ -187,9 +195,9 @@ spec:
         volumeMounts:
         - name: tls
           mountPath: "/certs"
-        {{- /* Fixed, as for the identical init container of user-api. A ResourceQuota counts a pod */}}
-        {{- /* as max(max(init), sum(app)), so literals are accounted exactly like the sum of the main */}}
-        {{- /* container limits, and they cannot land below the requests whatever the CR asks for. */}}
+        {{- /* Fixed literals: a ResourceQuota counts a pod as max(max(init), sum(app)), so literals are */}}
+        {{- /* accounted exactly like the sum of the main container limits, and they cannot land below */}}
+        {{- /* the requests whatever the CR asks for. */}}
         resources:
           requests:
             memory: 10Mi
@@ -219,6 +227,15 @@ spec:
         # The token and keys of dex come over TLS that the authenticator checks against the CA of dex.
         - --provider-ca-file=/opt/dex-authenticator/dex-ca/ca.crt
         - --code-challenge-method=S256
+        # Sign-out revokes the refresh token of the session in dex (RFC 7009) over the TLS of dex.
+        - --revocation-url=https://dex.d8-user-authn/token/revoke
+    {{- /* The proxy refuses to start with an empty CA file, so without the CA it runs without the feed. */}}
+    {{- if $revocationFeedCA }}
+        # The revocation feed of user-authn-controller: revoked sessions are refused within seconds. Only the CA
+        # of the feed is trusted for it.
+        - --revocation-feed-url=https://revocation-feed.d8-user-authn/revocations
+        - --revocation-feed-ca-file=/opt/dex-authenticator/revocation-feed-ca/ca.crt
+    {{- end }}
     {{- if $crd.spec.sendAuthorizationHeader }}
         - --set-authorization-header=true
     {{- end }}
@@ -273,6 +290,9 @@ spec:
           readOnly: true
         - name: dex-ca
           mountPath: "/opt/dex-authenticator/dex-ca"
+          readOnly: true
+        - name: revocation-feed-ca
+          mountPath: "/opt/dex-authenticator/revocation-feed-ca"
           readOnly: true
         # Readiness checks the authenticator and its session store, not dex. A check of dex took every
         # authenticator out of its Service during a dex outage, and every protected application answered

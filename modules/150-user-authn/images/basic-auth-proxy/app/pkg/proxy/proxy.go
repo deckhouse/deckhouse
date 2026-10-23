@@ -29,11 +29,13 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/netip"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ReneKroon/ttlcache"
@@ -42,8 +44,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 
 	"basic-auth-proxy/pkg/proxy/provider"
+	"basic-auth-proxy/pkg/revocation"
 )
 
 const (
@@ -83,9 +88,12 @@ type Handler struct {
 	OIDCBasicAuthUnsupported bool
 	OIDCGetUserInfo          bool
 
-	LDAPBaseURL              string
-	LDAPDexURL               string
-	LDAPCAFile               string
+	LDAPBaseURL string
+	LDAPDexURL  string
+	LDAPCAFile  string
+	// LDAPTrustedProxySecret is the secret Dex trusts the client address on. It comes from the
+	// environment, not from a flag, and is never logged.
+	LDAPTrustedProxySecret   string
 	LDAPClientID             string
 	LDAPClientSecret         string
 	LDAPScopes               []string
@@ -107,6 +115,18 @@ type Handler struct {
 	// cacheKeyHMACKey is a per-process random key for HMAC-SHA256 over
 	// (login, password) so the raw password never lands in the cache map.
 	cacheKeyHMACKey []byte
+
+	// cacheMu orders the writes to cache with the subject index, so that a revocation finds every
+	// entry stored before it and no entry it revokes is stored after it.
+	cacheMu  sync.Mutex
+	subjects *subjectIndex
+	// revocations tells the generations revoked so far; nil while revocations are not followed.
+	revocations generationSource
+}
+
+// generationSource tells the highest generation revoked for a subject.
+type generationSource interface {
+	Generation(subject string) uint64
 }
 
 func New() *Handler {
@@ -118,14 +138,18 @@ func New() *Handler {
 		panic(fmt.Errorf("init cache HMAC key: %w", err))
 	}
 
-	return &Handler{
+	h := &Handler{
 		cache:           c,
 		CrowdGroups:     []string{},
 		OIDCScopes:      []string{},
 		LDAPScopes:      []string{},
 		logger:          capnslog.NewPackageLogger("basic-auth-proxy", "proxy"),
 		cacheKeyHMACKey: key,
+		subjects:        newSubjectIndex(),
 	}
+	c.SetExpirationCallback(h.forget)
+
+	return h
 }
 
 // Run wires the proxy together and serves until the listener fails.
@@ -138,6 +162,11 @@ func (h *Handler) Run(ctx context.Context) error {
 
 	if err := h.initProvider(ctx); err != nil {
 		return err
+	}
+	if h.LDAPBaseURL != "" {
+		if err := h.followRevocations(ctx); err != nil {
+			return err
+		}
 	}
 
 	u, err := url.Parse(h.KubernetesAPIServerURL)
@@ -310,6 +339,7 @@ func (h *Handler) initProvider(ctx context.Context) error {
 			URL:                  h.LDAPBaseURL,
 			DexURL:               h.LDAPDexURL,
 			CAFile:               h.LDAPCAFile,
+			TrustedProxySecret:   h.LDAPTrustedProxySecret,
 			ClientID:             h.LDAPClientID,
 			ClientSecret:         h.LDAPClientSecret,
 			Scopes:               h.LDAPScopes,
@@ -320,7 +350,7 @@ func (h *Handler) initProvider(ctx context.Context) error {
 			return fmt.Errorf("init LDAP provider: %w", err)
 		}
 		h.provider = p
-		h.logger.Printf("-- LDAP OIDC URL: %s", h.LDAPBaseURL)
+		h.logger.Printf("-- LDAP OIDC URL: %s, trusted proxy secret set: %t", h.LDAPBaseURL, h.LDAPTrustedProxySecret != "")
 		if h.LDAPDexURL != "" {
 			h.logger.Printf("-- LDAP requests sent to: %s", h.LDAPDexURL)
 		}
@@ -328,6 +358,29 @@ func (h *Handler) initProvider(ctx context.Context) error {
 	default:
 		return fmt.Errorf("no auth provider configured")
 	}
+	return nil
+}
+
+// followRevocations evicts the cached checks of the users whose credentials user-authn revokes. Only
+// LDAP goes through Dex: Crowd and OIDC check passwords with the provider itself, and a revocation
+// does not apply to them.
+func (h *Handler) followRevocations(ctx context.Context) error {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		return fmt.Errorf("revocations: in-cluster config: %w", err)
+	}
+	client, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return fmt.Errorf("revocations: dynamic client: %w", err)
+	}
+	watcher, err := revocation.New(client, h.revoke)
+	if err != nil {
+		return fmt.Errorf("revocations: %w", err)
+	}
+
+	h.revocations = watcher
+	go watcher.Run(ctx)
+	h.logger.Printf("-- Following revocations in %s", revocation.Namespace)
 	return nil
 }
 
@@ -376,7 +429,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groups, err := h.validateCredentials(r.Context(), basicLogin, basicPassword)
+	ctx := provider.WithClientAddress(r.Context(), clientAddress(r))
+	groups, err := h.validateCredentials(ctx, basicLogin, basicPassword)
 	if err != nil {
 		h.logger.Errorf("403 Forbidden, authentication problem: %s", err.Error())
 		http.Error(w, "Forbidden", http.StatusForbidden)
@@ -397,6 +451,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 type cacheEntry struct {
 	groups []string
 	err    error
+
+	// subject and generation name the Dex token behind a successful LDAP check, so that a
+	// revocation finds the entry; they are empty for the other providers. seq tells the entry from
+	// a later one under the same key.
+	subject    string
+	generation uint64
+	seq        uint64
 }
 
 // cacheKey returns HMAC-SHA256 over length-prefixed (login, password).
@@ -425,30 +486,104 @@ func (h *Handler) validateCredentials(ctx context.Context, login, password strin
 		}
 	}
 
-	groups, err := h.provider.ValidateCredentials(ctx, login, password)
+	identity, err := h.provider.ValidateCredentials(ctx, login, password)
 	if err != nil {
 		h.logger.Errorf("error during validating user credentials: %+v", err)
-		h.cache.SetWithTTL(key, cacheEntry{err: err}, h.AuthCacheTTL)
+		h.store(key, cacheEntry{err: err}, h.AuthCacheTTL)
 		return nil, err
 	}
 
-	h.cache.SetWithTTL(key, cacheEntry{groups: groups}, h.GroupsCacheTTL)
-	h.logger.Printf("received groups for %s: %s", login, groups)
-	for _, group := range groups {
+	h.store(key, cacheEntry{
+		groups:     identity.Groups,
+		subject:    identity.Subject,
+		generation: identity.Generation,
+	}, h.GroupsCacheTTL)
+	h.logger.Printf("received groups for %s: %s", login, identity.Groups)
+	for _, group := range identity.Groups {
 		if isReservedIdentity(group) {
 			h.logger.Warningf("group %q of user %s will not be forwarded: the %q prefix is reserved by kube-apiserver", group, login, reservedIdentityPrefix)
 		}
 	}
-	return groups, nil
+	return identity.Groups, nil
+}
+
+// store caches the result of a credential check under key. A check whose token is already revoked is
+// not cached: Dex issued the token while the revocation was being written, and the next request has to
+// ask Dex again.
+func (h *Handler) store(key string, entry cacheEntry, ttl time.Duration) {
+	h.cacheMu.Lock()
+	defer h.cacheMu.Unlock()
+
+	h.subjects.remove(key)
+	if entry.subject != "" {
+		if h.revocations != nil && entry.generation < h.revocations.Generation(entry.subject) {
+			h.cache.Remove(key)
+			return
+		}
+		entry.seq = h.subjects.add(key, entry.subject, entry.generation)
+	}
+	h.cache.SetWithTTL(key, entry, ttl)
+}
+
+// forget drops an expired entry from the subject index.
+func (h *Handler) forget(key string, value interface{}) {
+	entry, ok := value.(cacheEntry)
+	if !ok || entry.seq == 0 {
+		return
+	}
+
+	h.cacheMu.Lock()
+	defer h.cacheMu.Unlock()
+	h.subjects.forget(key, entry.seq)
+}
+
+// revoke evicts the cached checks of subject whose tokens Dex issued below generation. The next request
+// of the user goes to Dex: it is refused after Lock or ResetPassword and admitted again after Logout,
+// since a password is a new sign-in.
+func (h *Handler) revoke(subject string, generation uint64) {
+	h.cacheMu.Lock()
+	keys := h.subjects.revoked(subject, generation)
+	for _, key := range keys {
+		h.cache.Remove(key)
+	}
+	h.cacheMu.Unlock()
+
+	if len(keys) > 0 {
+		h.logger.Infof("evicted %d cached credentials revoked at generation %d", len(keys), generation)
+	}
+}
+
+// clientAddress is the address of the end client of r, for the rate limit of Dex. The proxy is
+// reached through the Ingress or the HTTPRoute of the Kubernetes API (control-plane-manager), and
+// the last hop of X-Forwarded-For is the address the closest proxy saw: ingress-nginx always sets it,
+// the ALB Envoy appends its peer, or passes the header of a balancer it trusts (originalIPDetection).
+// The client can write only the hops before it. X-Real-IP is not read: the gateway passes the one
+// the client sent, and drops X-Forwarded-For of a peer it does not trust. Without the header it is
+// the peer of the connection, the proxy in front.
+func clientAddress(r *http.Request) string {
+	if values := r.Header.Values("X-Forwarded-For"); len(values) > 0 {
+		hops := strings.Split(values[len(values)-1], ",")
+		if ip, err := netip.ParseAddr(strings.TrimSpace(hops[len(hops)-1])); err == nil {
+			return ip.String()
+		}
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return ""
+	}
+	return host
 }
 
 // stripIdentityHeaders drops client-supplied X-Remote-* identity headers.
 // kube-apiserver trusts them on our mTLS channel, so leaving them through
 // would let any client become cluster-admin via `X-Remote-Group: system:masters`.
+// The trusted proxy secret of Dex goes too, should a proxy in front add it: it is
+// meant for Dex only and must not reach kube-apiserver or the request log.
 func stripIdentityHeaders(h http.Header) {
 	h.Del("Authorization")
 	h.Del("X-Remote-User")
 	h.Del("X-Remote-Group")
+	h.Del(provider.TrustedProxyHeader)
 	for k := range h {
 		if strings.HasPrefix(k, extraHeaderPrefix) {
 			h.Del(k)

@@ -1,0 +1,2688 @@
+diff --git a/server/authflow/finalize.go b/server/authflow/finalize.go
+index 4038c148..bf9314ba 100644
+--- a/server/authflow/finalize.go
++++ b/server/authflow/finalize.go
+@@ -42,8 +42,9 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 	// Record the user identity of every login, whether sessions are enabled or
+ 	// not, and refuse a locked account before the request is marked logged in:
+ 	// the second factor and the lock live on the identity. When a second factor
+-	// may follow, LastLogin waits for it (see dispatch).
+-	err := useridentity.Record(ctx, h.Storage, useridentity.Login{
++	// may follow, LastLogin waits for it (see dispatch). The request carries the
++	// generation of the pair on to the code, the tokens and the session.
++	generation, err := useridentity.Record(ctx, h.Storage, useridentity.Login{
+ 		ConnectorID: authReq.ConnectorID,
+ 		Claims:      claims,
+ 		Time:        now,
+@@ -67,6 +68,7 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 		a.Claims = issued
+ 		a.ConnectorData = identity.ConnectorData
+ 		a.AuthTime = now
++		a.Generation = generation
+ 		return a, nil
+ 	}
+ 	if err := h.Storage.UpdateAuthRequest(ctx, authReq.ID, updater); err != nil {
+diff --git a/server/authflow/response.go b/server/authflow/response.go
+index 3a63e252..a2ea0213 100644
+--- a/server/authflow/response.go
++++ b/server/authflow/response.go
+@@ -8,6 +8,7 @@ package authflow
+ 
+ import (
+ 	"context"
++	"errors"
+ 	"net/http"
+ 	"net/url"
+ 	"slices"
+@@ -15,6 +16,8 @@ import (
+ 	"time"
+ 
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/revocation"
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/storage"
+ )
+@@ -40,6 +43,9 @@ func (h *Handler) writeResponse(w http.ResponseWriter, r *http.Request, authReq
+ 		}
+ 		return
+ 	}
++	if !h.checkGeneration(ctx, w, r, authReq) {
++		return
++	}
+ 	u, err := url.Parse(authReq.RedirectURI)
+ 	if err != nil {
+ 		h.renderError(r, w, http.StatusInternalServerError, "Invalid redirect URI.")
+@@ -111,6 +117,26 @@ func (h *Handler) writeResponse(w http.ResponseWriter, r *http.Request, authReq
+ 	http.Redirect(w, r, u.String(), http.StatusSeeOther)
+ }
+ 
++// checkGeneration refuses the response when the pair was revoked since the login
++// recorded its generation: the code and the tokens would carry the revoked one.
++// The auth request is gone already, so the user starts the login again.
++func (h *Handler) checkGeneration(ctx context.Context, w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest) bool {
++	err := revocation.Check(ctx, h.Storage, authReq.Claims.UserID, authReq.ConnectorID, authReq.Generation)
++	switch {
++	case err == nil:
++		return true
++	case errors.Is(err, revocation.ErrRevoked):
++		h.Logger.WarnContext(ctx, signinlog.TokenRequestRevoked, signinlog.Refused(signinlog.ReasonRevoked,
++			authReq.ConnectorID, authReq.ClientID, signinlog.ClaimsUser(authReq.Claims))...)
++		h.renderError(r, w, http.StatusBadRequest, "The login is no longer valid. Please sign in again.")
++	default:
++		h.Logger.ErrorContext(ctx, "failed to read the user identity",
++			signinlog.Failed(err, authReq.ConnectorID, authReq.ClientID, signinlog.ClaimsUser(authReq.Claims))...)
++		h.renderError(r, w, http.StatusInternalServerError, "Internal server error.")
++	}
++	return false
++}
++
+ // authResponse accumulates the artifacts each response-type handler produces
+ // for the authorization response.
+ type authResponse struct {
+@@ -167,6 +193,7 @@ func (h *Handler) issueCode(ctx context.Context, w http.ResponseWriter, r *http.
+ 		ConnectorData: authReq.ConnectorData,
+ 		PKCE:          authReq.PKCE,
+ 		AuthTime:      authReq.AuthTime,
++		Generation:    authReq.Generation,
+ 	}
+ 	if err := h.Storage.CreateAuthCode(ctx, resp.code); err != nil {
+ 		h.Logger.ErrorContext(r.Context(), "Failed to create auth code", "err", err)
+@@ -199,6 +226,7 @@ func (h *Handler) issueAccessToken(ctx context.Context, w http.ResponseWriter, r
+ 		Nonce:       authReq.Nonce,
+ 		AuthTime:    authReq.AuthTime,
+ 		SessionID:   resp.sessionID,
++		Generation:  authReq.Generation,
+ 	})
+ 	if err != nil {
+ 		h.Logger.ErrorContext(r.Context(), "failed to create new access token", "err", err)
+@@ -224,6 +252,7 @@ func (h *Handler) issueIDToken(ctx context.Context, w http.ResponseWriter, r *ht
+ 		Nonce:       authReq.Nonce,
+ 		AuthTime:    authReq.AuthTime,
+ 		SessionID:   resp.sessionID,
++		Generation:  authReq.Generation,
+ 	}, resp.accessToken, resp.code.ID)
+ 	if err != nil {
+ 		h.Logger.ErrorContext(r.Context(), "failed to create ID token", "err", err)
+diff --git a/server/authflow/sessionlogin.go b/server/authflow/sessionlogin.go
+index eca470fd..f82c2d85 100644
+--- a/server/authflow/sessionlogin.go
++++ b/server/authflow/sessionlogin.go
+@@ -2,9 +2,11 @@ package authflow
+ 
+ import (
+ 	"context"
++	"errors"
+ 	"net/http"
+ 	"time"
+ 
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+ )
+@@ -63,6 +65,18 @@ func (h *Handler) trySessionLoginWithSession(ctx context.Context, r *http.Reques
+ 		return false
+ 	}
+ 
++	// The pair was revoked since its last login on this browser: the session
++	// ends, and the user signs in again.
++	if session.Generation != ui.Generation {
++		h.Logger.WarnContext(ctx, signinlog.SessionLoginRevoked, append(signinlog.Refused(signinlog.ReasonRevoked,
++			session.ConnectorID, authReq.ClientID, signinlog.ClaimsUser(ui.Claims)), "session_id", session.ID)...)
++		if err := h.Storage.DeleteAuthSession(ctx, session.ID); err != nil && !errors.Is(err, storage.ErrNotFound) {
++			h.Logger.ErrorContext(ctx, "session: failed to delete revoked session", "err", err)
++		}
++		h.Sessions.ClearCookie(w)
++		return false
++	}
++
+ 	// A locked pair is not let in from its session. The user goes on to the
+ 	// login, which refuses him as any login is refused for the lock, and the
+ 	// session serves again once the lock ends.
+@@ -105,6 +119,7 @@ func (h *Handler) finishSessionLogin(ctx context.Context, r *http.Request, w htt
+ 		a.Claims = claims
+ 		a.ConnectorID = session.ConnectorID
+ 		a.AuthTime = ui.LastLogin
++		a.Generation = ui.Generation
+ 		return a, nil
+ 	}); err != nil {
+ 		h.Logger.ErrorContext(ctx, "session: failed to update auth request", "err", err)
+diff --git a/server/authflow/sessionlogin_revocation_test.go b/server/authflow/sessionlogin_revocation_test.go
+new file mode 100644
+index 00000000..c13e33dd
+--- /dev/null
++++ b/server/authflow/sessionlogin_revocation_test.go
+@@ -0,0 +1,73 @@
++package authflow
++
++import (
++	"bytes"
++	"encoding/json"
++	"log/slog"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++)
++
++// TestSessionLoginOfRevokedPair checks that a browser session continues only at
++// the generation its pair has: a session of a pair revoked since its last login
++// there ends, and the user signs in again.
++func TestSessionLoginOfRevokedPair(t *testing.T) {
++	tests := []struct {
++		name              string
++		sessionGeneration uint64
++		wantLogin         bool
++	}{
++		{name: "current generation", sessionGeneration: 2, wantLogin: true},
++		{name: "revoked since", sessionGeneration: 1},
++		{name: "record of the pair created again", sessionGeneration: 3},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			ctx := t.Context()
++			s := newTestSessionServer(t)
++			s.SkipApproval = true
++			var logs bytes.Buffer
++			s.Logger = slog.New(slog.NewJSONHandler(&logs, nil))
++			authReq := setupSessionLoginFixture(t, s)
++			require.NoError(t, s.Storage.UpdateUserIdentity(ctx, "user-1", "mock", func(u storage.UserIdentity) (storage.UserIdentity, error) {
++				u.Generation = 2
++				return u, nil
++			}))
++			require.NoError(t, s.Storage.UpdateAuthSession(ctx, "test-nonce", func(old storage.AuthSession) (storage.AuthSession, error) {
++				old.Generation = tt.sessionGeneration
++				return old, nil
++			}))
++
++			w := httptest.NewRecorder()
++			ok := s.trySessionLogin(ctx, sessionCookieRequest("test-nonce"), w, &authReq)
++			require.Equal(t, tt.wantLogin, ok)
++
++			_, err := s.Storage.GetAuthSession(ctx, "test-nonce")
++			if tt.wantLogin {
++				require.NoError(t, err)
++				stored, err := s.Storage.GetAuthRequest(ctx, authReq.ID)
++				require.NoError(t, err)
++				require.Equal(t, uint64(2), stored.Generation, "the login carries the generation on")
++				return
++			}
++
++			require.ErrorIs(t, err, storage.ErrNotFound)
++			cookies := w.Result().Cookies()
++			require.Len(t, cookies, 1)
++			require.Equal(t, -1, cookies[0].MaxAge, "the cookie is cleared")
++
++			var line map[string]any
++			require.NoError(t, json.Unmarshal(bytes.TrimSpace(logs.Bytes()), &line), logs.String())
++			require.Equal(t, "session login refused: credentials revoked", line["msg"])
++			require.Equal(t, "WARN", line["level"])
++			require.Equal(t, "revoked", line["reason"])
++			require.Equal(t, "mock", line["connector_id"])
++			require.Equal(t, "client-1", line["client_id"])
++			require.Equal(t, "user-1", line["user_id"])
++		})
++	}
++}
+diff --git a/server/discovery/discovery.go b/server/discovery/discovery.go
+index d9119d4b..9431ca7e 100644
+--- a/server/discovery/discovery.go
++++ b/server/discovery/discovery.go
+@@ -71,6 +71,11 @@ type Document struct {
+ 	Scopes                   []string `json:"scopes_supported"`
+ 	AuthMethods              []string `json:"token_endpoint_auth_methods_supported"`
+ 	Claims                   []string `json:"claims_supported"`
++
++	// Revocation and RevocationAuthMethods advertise the token revocation
++	// endpoint (RFC 7009, RFC 8414 §2).
++	Revocation            string   `json:"revocation_endpoint"`
++	RevocationAuthMethods []string `json:"revocation_endpoint_auth_methods_supported"`
+ }
+ 
+ // Keys serves the JSON Web Key Set.
+@@ -167,6 +172,9 @@ func (h *Handler) Construct(ctx context.Context) Document {
+ 
+ 	d.GrantTypes = h.GrantTypes
+ 
++	d.Revocation = h.IssuerURL.AbsURL("/token/revoke")
++	d.RevocationAuthMethods = []string{"client_secret_basic", "client_secret_post"}
++
+ 	if h.SessionsEnabled {
+ 		d.EndSession = h.IssuerURL.AbsURL("/logout")
+ 		d.BackchannelLogout = true
+diff --git a/server/grants/authcode.go b/server/grants/authcode.go
+index d75716c3..5d3f90ba 100644
+--- a/server/grants/authcode.go
++++ b/server/grants/authcode.go
+@@ -2,12 +2,15 @@ package grants
+ 
+ import (
+ 	"context"
++	"errors"
+ 	"log/slog"
+ 	"net/http"
+ 	"time"
+ 
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/revocation"
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/storage"
+ )
+@@ -92,6 +95,20 @@ func ExchangeAuthCode(ctx context.Context, s storage.Storage, conns *connectors.
+ 		return tokens.Authorization{}, false, &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError}
+ 	}
+ 
++	// The pair may have been revoked since the login the code was issued for. The
++	// answer is the one of any spent code: it tells the client nothing more.
++	err := revocation.Check(ctx, s, authCode.Claims.UserID, authCode.ConnectorID, authCode.Generation)
++	switch {
++	case errors.Is(err, revocation.ErrRevoked):
++		logger.WarnContext(ctx, signinlog.TokenRequestRevoked, signinlog.Refused(signinlog.ReasonRevoked,
++			authCode.ConnectorID, client.ID, signinlog.ClaimsUser(authCode.Claims))...)
++		return tokens.Authorization{}, false, &oauth2.Error{Type: oauth2.InvalidGrant, Description: "Invalid or expired code parameter.", Status: http.StatusBadRequest}
++	case err != nil:
++		logger.ErrorContext(ctx, "failed to read the user identity",
++			signinlog.Failed(err, authCode.ConnectorID, client.ID, signinlog.ClaimsUser(authCode.Claims))...)
++		return tokens.Authorization{}, false, &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError}
++	}
++
+ 	auth := tokens.Authorization{
+ 		Client:        client,
+ 		Claims:        authCode.Claims,
+@@ -108,6 +125,8 @@ func ExchangeAuthCode(ctx context.Context, s storage.Storage, conns *connectors.
+ 		// means — where the token came from. Whether that token is good for
+ 		// anything is the session check in introspection and refresh.
+ 		SessionID: authCode.SessionID,
++
++		Generation: authCode.Generation,
+ 	}
+ 
+ 	// A refresh token is only issued when the connector supports it, the grant
+diff --git a/server/grants/grants.go b/server/grants/grants.go
+index aef60db4..c2680d6d 100644
+--- a/server/grants/grants.go
++++ b/server/grants/grants.go
+@@ -17,6 +17,7 @@ import (
+ 	"github.com/dexidp/dex/server/lockout"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/ratelimit"
++	"github.com/dexidp/dex/server/revocation"
+ 	"github.com/dexidp/dex/server/router"
+ 	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/tokens"
+@@ -166,6 +167,8 @@ type Handler struct {
+ 	// Lockout checks the password of the password grant. Nil checks it with the
+ 	// connector alone.
+ 	Lockout *lockout.Guard
++	// Revocations records the refresh tokens revoked at /token/revoke.
++	Revocations *revocation.Recorder
+ 
+ 	grants map[string]Grant
+ }
+@@ -178,9 +181,9 @@ func (h *Handler) register(supported []string, gs ...Grant) {
+ 	}
+ }
+ 
+-// Mount wires the endpoint's grants and registers the token route. Only grants
+-// whose type is in SupportedGrantTypes are registered, so a grant type disabled
+-// by config is simply not served.
++// Mount wires the endpoint's grants and registers the token route and the token
++// revocation route (RFC 7009). Only grants whose type is in SupportedGrantTypes
++// are registered, so a grant type disabled by config is simply not served.
+ func (h *Handler) Mount(m router.Mux) {
+ 	h.grants = map[string]Grant{}
+ 	h.register(h.SupportedGrantTypes,
+@@ -192,6 +195,7 @@ func (h *Handler) Mount(m router.Mux) {
+ 		&deviceCode{storage: h.Storage, now: h.Now, logger: h.Logger},
+ 	)
+ 	m.HandleCORS("/token", h.handleToken)
++	m.HandleFunc(RevokePath, h.handleRevoke)
+ }
+ 
+ // handleToken serves /token: it validates the request shape and dispatches to the
+diff --git a/server/grants/password.go b/server/grants/password.go
+index 6c4afd2e..a6e2b551 100644
+--- a/server/grants/password.go
++++ b/server/grants/password.go
+@@ -111,8 +111,9 @@ func (g *password) Authorize(ctx context.Context, req *Request, client storage.C
+ 	// A login through the API is a login like any other: it records the user
+ 	// identity and is refused for a locked account. No second factor follows.
+ 	// A client may send many of them for one user (basic-auth-proxy), so
+-	// LastLogin is kept to the minute.
+-	err = useridentity.Record(ctx, g.storage, useridentity.Login{
++	// LastLogin is kept to the minute. It authenticates anew, so a revoked
++	// generation does not refuse it: the tokens carry the current one.
++	generation, err := useridentity.Record(ctx, g.storage, useridentity.Login{
+ 		ConnectorID:     g.connectorID,
+ 		Claims:          auth.Claims,
+ 		Time:            g.now(),
+@@ -125,6 +126,7 @@ func (g *password) Authorize(ctx context.Context, req *Request, client storage.C
+ 		return nil, oerr
+ 	}
+ 	auth.Claims = issued
++	auth.Generation = generation
+ 
+ 	return issueTokens(ctx, g.logger, g.issuer, auth, "", shouldIssueRefreshToken(conn, req.Scopes))
+ }
+diff --git a/server/grants/refresh.go b/server/grants/refresh.go
+index 350d7a3d..d14e9ed8 100644
+--- a/server/grants/refresh.go
++++ b/server/grants/refresh.go
+@@ -90,11 +90,14 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 
+ 	// A locked account gets no new tokens. The refresh token is kept, so the
+ 	// session continues once the lock ends.
+-	err := useridentity.CheckBlocked(ctx, g.storage, refreshToken.Claims.UserID, refreshToken.ConnectorID, g.now())
++	generation, err := useridentity.State(ctx, g.storage, refreshToken.Claims.UserID, refreshToken.ConnectorID, g.now())
+ 	if oerr := identityError(ctx, g.logger, err, refreshLocked,
+ 		refreshToken.ConnectorID, client.ID, signinlog.ClaimsUser(refreshToken.Claims)); oerr != nil {
+ 		return nil, oerr
+ 	}
++	if refreshToken.Generation != generation {
++		return nil, g.revoked(ctx, refreshToken)
++	}
+ 
+ 	// Resolved before anything is rotated or read from the connector: a token whose
+ 	// session has ended is not going to produce a token set. Skipped outright when
+@@ -152,6 +155,7 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 		Nonce:       refreshToken.Nonce,
+ 		AuthTime:    authTime,
+ 		SessionID:   sessionID,
++		Generation:  refreshToken.Generation,
+ 	}
+ 
+ 	// The connector may have returned another email or other groups: the
+@@ -194,6 +198,23 @@ func (g *refresh) checkAllowLists(ctx context.Context, client storage.Client, re
+ 	return oerr
+ }
+ 
++// revoked refuses a refresh token issued before its pair was revoked (see
++// server/revocation). Such a token is never good again, so it goes, with the
++// offline session's reference to it, and invalid_grant tells the client to sign
++// the user in again.
++func (g *refresh) revoked(ctx context.Context, refreshToken *storage.RefreshToken) *oauth2.Error {
++	g.logger.WarnContext(ctx, signinlog.RefreshRevoked, signinlog.Refused(signinlog.ReasonRevoked,
++		refreshToken.ConnectorID, refreshToken.ClientID, signinlog.ClaimsUser(refreshToken.Claims))...)
++	if err := g.issuer.Refresh.RevokeGrant(ctx, refreshToken); err != nil {
++		g.logger.ErrorContext(ctx, "failed to delete a revoked refresh token", "token_id", refreshToken.ID, "err", err)
++	}
++	return &oauth2.Error{
++		Type:        oauth2.InvalidGrant,
++		Description: "The credentials of this user were revoked. Sign in again.",
++		Status:      http.StatusBadRequest,
++	}
++}
++
+ // sessionID returns the sid for the refreshed tokens, and refuses the refresh when
+ // the session has ended and the client asked its tokens to end with it.
+ //
+diff --git a/server/grants/revoke.go b/server/grants/revoke.go
+new file mode 100644
+index 00000000..8a413580
+--- /dev/null
++++ b/server/grants/revoke.go
+@@ -0,0 +1,118 @@
++package grants
++
++import (
++	"errors"
++	"net/http"
++
++	"github.com/go-jose/go-jose/v4"
++
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/ratelimit"
++	"github.com/dexidp/dex/server/signinlog"
++	"github.com/dexidp/dex/server/tokens"
++)
++
++// RevokePath is the token revocation endpoint (RFC 7009).
++const RevokePath = "/token/revoke"
++
++// jwtAlgorithms are the algorithms dex signs its tokens with.
++var jwtAlgorithms = []jose.SignatureAlgorithm{jose.RS256, jose.RS384, jose.RS512, jose.ES256, jose.ES384, jose.ES512}
++
++// handleRevoke serves /token/revoke, OAuth 2.0 Token Revocation (RFC 7009), for
++// the refresh tokens of dex. Its access and ID tokens are JWTs dex keeps no
++// state for: one of them cannot be revoked alone, so they get
++// unsupported_token_type. token_type_hint is ignored: the form of the token
++// tells which it is, and RFC 7009 §2.1 asks to look beyond the hint anyway.
++//
++// The token is looked up before its client is compared, so its secret is
++// checked first: a client learns nothing about a grant it does not hold the
++// token of. A token dex does not know or no longer honors is revoked already,
++// which is no error (RFC 7009 §2.2). The Revocation is recorded before the token
++// is deleted, so the subscribers hear of every token that goes; when it cannot
++// be recorded, nothing is deleted and the client may retry.
++func (h *Handler) handleRevoke(w http.ResponseWriter, r *http.Request) {
++	ctx := r.Context()
++	if r.Method != http.MethodPost {
++		h.writeError(ctx, w, &oauth2.Error{Type: oauth2.InvalidRequest, Description: "method not allowed", Status: http.StatusBadRequest})
++		return
++	}
++	req, oerr := parseRequest(r)
++	if oerr != nil {
++		h.writeError(ctx, w, oerr)
++		return
++	}
++	client, ok := h.authenticateClient(ctx, w, req)
++	if !ok {
++		return
++	}
++	// As at /token, the rate limit of the client address counts failed client
++	// credentials only: a refresh token cannot be guessed, and dex-authenticator
++	// revokes the tokens of all its users from one address.
++	ratelimit.Exempt(ctx)
++
++	token := r.PostFormValue("token")
++	if token == "" {
++		h.writeError(ctx, w, &oauth2.Error{Type: oauth2.InvalidRequest, Description: "Required param: token.", Status: http.StatusBadRequest})
++		return
++	}
++	if isJWT(token) {
++		h.writeError(ctx, w, &oauth2.Error{Type: oauth2.UnsupportedTokenType, Description: "Only refresh tokens can be revoked.", Status: http.StatusBadRequest})
++		return
++	}
++	refreshID, oerr := parseRefreshToken(token)
++	if oerr != nil {
++		h.writeError(ctx, w, oerr)
++		return
++	}
++
++	refresh, err := tokens.LookupRefreshToken(ctx, h.Storage, h.RefreshPolicy, h.Logger, nil, refreshID)
++	switch {
++	case errors.Is(err, tokens.ErrRefreshTokenInvalid), errors.Is(err, tokens.ErrRefreshTokenExpired):
++		writeRevoked(w)
++		return
++	case err != nil:
++		// Logged by the lookup.
++		h.writeError(ctx, w, &oauth2.Error{Type: oauth2.TemporarilyUnavailable, Status: http.StatusServiceUnavailable})
++		return
++	}
++
++	user := signinlog.ClaimsUser(refresh.Claims)
++	if refresh.ClientID != client.ID {
++		h.Logger.WarnContext(ctx, "token revocation refused: the token was issued to another client",
++			append(signinlog.Attrs(refresh.ConnectorID, client.ID, user), "token_client_id", refresh.ClientID)...)
++		h.writeError(ctx, w, &oauth2.Error{Type: oauth2.InvalidGrant, Description: "The token was issued to another client.", Status: http.StatusBadRequest})
++		return
++	}
++
++	if err := h.Revocations.GrantRevoked(ctx, *refresh); err != nil {
++		h.Logger.ErrorContext(ctx, "failed to record the revocation of a refresh token",
++			signinlog.Failed(err, refresh.ConnectorID, client.ID, user)...)
++		h.writeError(ctx, w, &oauth2.Error{Type: oauth2.TemporarilyUnavailable, Status: http.StatusServiceUnavailable})
++		return
++	}
++	// The revocation is recorded: a retry after a failure here finds the token
++	// gone or still there, and either way ends with it gone.
++	if err := h.Issuer.Refresh.RevokeGrant(ctx, refresh); err != nil {
++		h.Logger.ErrorContext(ctx, "failed to delete a revoked refresh token",
++			signinlog.Failed(err, refresh.ConnectorID, client.ID, user)...)
++		h.writeError(ctx, w, &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError})
++		return
++	}
++
++	h.Logger.InfoContext(ctx, signinlog.TokenRevoked, signinlog.Attrs(refresh.ConnectorID, client.ID, user)...)
++	writeRevoked(w)
++}
++
++// writeRevoked answers a revocation that is done: 200 with an empty body.
++func writeRevoked(w http.ResponseWriter) {
++	w.Header().Set("Cache-Control", "no-store")
++	w.Header().Set("Pragma", "no-cache")
++	w.WriteHeader(http.StatusOK)
++}
++
++// isJWT reports whether token is a signed JWT, the form of the access and ID
++// tokens of dex. Its refresh tokens are base64url without dots.
++func isJWT(token string) bool {
++	_, err := jose.ParseSigned(token, jwtAlgorithms)
++	return err == nil
++}
+diff --git a/server/grants/tokenexchange.go b/server/grants/tokenexchange.go
+index 793a9e3a..15c85057 100644
+--- a/server/grants/tokenexchange.go
++++ b/server/grants/tokenexchange.go
+@@ -77,7 +77,7 @@ func (g *tokenExchange) Authorize(ctx context.Context, req *Request, client stor
+ 		req.ConnectorID, client.ID, user); oerr != nil {
+ 		return nil, oerr
+ 	}
+-	err = useridentity.CheckBlocked(ctx, g.storage, identity.UserID, req.ConnectorID, g.now())
++	generation, err := useridentity.State(ctx, g.storage, identity.UserID, req.ConnectorID, g.now())
+ 	if oerr := identityError(ctx, g.logger, err, tokenRequestLocked, req.ConnectorID, client.ID, user); oerr != nil {
+ 		return nil, oerr
+ 	}
+@@ -95,6 +95,7 @@ func (g *tokenExchange) Authorize(ctx context.Context, req *Request, client stor
+ 		Claims:      claims,
+ 		Scopes:      req.Scopes,
+ 		ConnectorID: req.ConnectorID,
++		Generation:  generation,
+ 	}
+ 
+ 	// RFC 8693 returns a single requested token plus issued_token_type, not the
+diff --git a/server/introspection/introspection.go b/server/introspection/introspection.go
+index eee7480a..f9437c4a 100644
+--- a/server/introspection/introspection.go
++++ b/server/introspection/introspection.go
+@@ -12,6 +12,7 @@ import (
+ 
+ 	"github.com/dexidp/dex/server/internal"
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/revocation"
+ 	"github.com/dexidp/dex/server/router"
+ 	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/signer"
+@@ -253,6 +254,9 @@ func (h *Handler) introspectRefreshToken(ctx context.Context, token string) (*In
+ 		h.Logger.ErrorContext(ctx, "failed to get refresh token", "err", err)
+ 		return nil, newIntrospectInternalServerError()
+ 	}
++	if err := h.generationError(ctx, revocation.Check(ctx, h.Storage, refresh.Claims.UserID, refresh.ConnectorID, refresh.Generation)); err != nil {
++		return nil, err
++	}
+ 
+ 	subjectString, sErr := tokens.GenSubject(refresh.Claims.UserID, refresh.ConnectorID)
+ 	if sErr != nil {
+@@ -304,6 +308,21 @@ func (h *Handler) sessionAlive(ctx context.Context, client storage.Client, subje
+ 	return h.Sessions.Alive(ctx, sessionID)
+ }
+ 
++// generationError maps the generation check of a token (see server/revocation):
++// a token issued before its pair was revoked is reported inactive (RFC 7662
++// §4), a failure to read the pair is a server error.
++func (h *Handler) generationError(ctx context.Context, err error) error {
++	switch {
++	case err == nil:
++		return nil
++	case errors.Is(err, revocation.ErrRevoked):
++		return newIntrospectInactiveTokenError()
++	default:
++		h.Logger.ErrorContext(ctx, "failed to check the generation of the token", "err", err)
++		return newIntrospectInternalServerError()
++	}
++}
++
+ func (h *Handler) introspectAccessToken(ctx context.Context, token string) (*Introspection, error) {
+ 	verifier := oidc.NewVerifier(h.Issuer, &signer.KeySet{Signer: h.Signer}, &oidc.Config{SkipClientIDCheck: true})
+ 	idToken, err := verifier.Verify(ctx, token)
+@@ -332,6 +351,9 @@ func (h *Handler) introspectAccessToken(ctx context.Context, token string) (*Int
+ 	if !h.sessionAlive(ctx, client, idToken.Subject, claims.SessionID) {
+ 		return nil, newIntrospectInactiveTokenError()
+ 	}
++	if err := h.generationError(ctx, revocation.CheckToken(ctx, h.Storage, idToken)); err != nil {
++		return nil, err
++	}
+ 
+ 	return &Introspection{
+ 		Active:    true,
+diff --git a/server/logout/logout.go b/server/logout/logout.go
+index eab88611..9553f526 100644
+--- a/server/logout/logout.go
++++ b/server/logout/logout.go
+@@ -18,6 +18,7 @@ import (
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/internal"
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/revocation"
+ 	"github.com/dexidp/dex/server/router"
+ 	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/signer"
+@@ -43,6 +44,10 @@ type Handler struct {
+ 	// Backchannel tells the session's relying parties that it ended. The same
+ 	// notifier serves the gRPC API, which ends sessions too.
+ 	Backchannel *backchannel.Notifier
++
++	// Revocations records the end of a session for the Deckhouse components
++	// that trust its tokens without asking dex (see server/revocation).
++	Revocations *revocation.Recorder
+ }
+ 
+ // renderError renders a user-facing HTML error page.
+@@ -185,6 +190,9 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
+ 	h.Logger.DebugContext(ctx, "logout: completing",
+ 		"user_id", authSession.UserID, "connector_id", authSession.ConnectorID, "client_id", clientID)
+ 
++	if !h.recordSessionEnd(ctx, w, r, authSession) {
++		return
++	}
+ 	// Both read ClientStates, which dies with the session, so both run first.
+ 	h.revokeSessionBoundTokens(ctx, authSession)
+ 	h.Backchannel.Notify(ctx, authSession)
+@@ -194,6 +202,20 @@ func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
+ 	h.finishLogout(w, r, postLogoutRedirectURI, state, loggedOut)
+ }
+ 
++// recordSessionEnd records the end of the session before anything of it goes:
++// its clients are read from it, and a session that ended unrecorded would live
++// on in the components that trust its tokens. When the record fails, the
++// session is kept and the user gets a page to retry from (503).
++func (h *Handler) recordSessionEnd(ctx context.Context, w http.ResponseWriter, r *http.Request, authSession *storage.AuthSession) bool {
++	if err := h.Revocations.SessionEnded(ctx, *authSession); err != nil {
++		h.Logger.ErrorContext(ctx, "logout: failed to record the end of the session",
++			"session_id", authSession.ID, "user_id", authSession.UserID, "err", err)
++		h.renderError(r, w, http.StatusServiceUnavailable, "Logout is temporarily unavailable. Please try again.")
++		return false
++	}
++	return true
++}
++
+ // revokeSessionBoundTokens deletes the refresh tokens of the clients that declared
+ // themselves bound to this session, and leaves every other client's token alone.
+ //
+@@ -338,6 +360,9 @@ func (h *Handler) handleLogoutCallback(w http.ResponseWriter, r *http.Request) {
+ 
+ 	// The session actually ends here on the upstream path, so this is where its bound
+ 	// tokens go and its relying parties are told.
++	if !h.recordSessionEnd(ctx, w, r, &session) {
++		return
++	}
+ 	h.revokeSessionBoundTokens(ctx, &session)
+ 	h.Backchannel.Notify(ctx, &session)
+ 
+diff --git a/server/oauth2/oauth2.go b/server/oauth2/oauth2.go
+index 24f4b088..7b36fd58 100644
+--- a/server/oauth2/oauth2.go
++++ b/server/oauth2/oauth2.go
+@@ -18,6 +18,12 @@ const (
+ 	LoginRequired           = "login_required"
+ 	InteractionRequired     = "interaction_required"
+ 	ConsentRequired         = "consent_required"
++
++	// UnsupportedTokenType: the token revocation endpoint (RFC 7009 §2.2.1)
++	// cannot revoke this type of token.
++	UnsupportedTokenType = "unsupported_token_type"
++	// InvalidToken: a bearer token that is not valid (RFC 6750 §3.1).
++	InvalidToken = "invalid_token"
+ )
+ 
+ // Grant types supported at the token endpoint.
+diff --git a/server/revocation/revocation.go b/server/revocation/revocation.go
+new file mode 100644
+index 00000000..8eeff33f
+--- /dev/null
++++ b/server/revocation/revocation.go
+@@ -0,0 +1,157 @@
++// Package revocation decides whether the credentials dex issued to a (user,
++// connector) pair are still valid, and records the revocations dex decides
++// itself for the Deckhouse components that accept the tokens of dex without
++// asking it on every request.
++//
++// Every credential of a pair carries the generation the pair had at its login
++// (storage.UserIdentity.Generation): the authorization code, the refresh token,
++// the browser session, and the "d8_gen" claim of the ID and access tokens. The
++// user-authn controller raises the generation to revoke all of them at once. A
++// credential is valid only with the current generation: a lower one was
++// revoked, a higher one was issued to a record of the pair that was deleted and
++// created again. Nothing compares times.
++package revocation
++
++import (
++	"context"
++	"errors"
++	"fmt"
++	"maps"
++	"slices"
++	"time"
++
++	"github.com/coreos/go-oidc/v3/oidc"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/tokens"
++	"github.com/dexidp/dex/storage"
++)
++
++// ErrRevoked refuses a credential whose generation is not the current one of
++// its pair.
++var ErrRevoked = errors.New("credentials revoked")
++
++// Current returns the generation of the pair. A pair without a UserIdentity,
++// one that never revoked anything, is at generation 0, as is everything issued
++// before generations existed.
++func Current(ctx context.Context, s storage.Storage, userID, connectorID string) (uint64, error) {
++	ui, err := s.GetUserIdentity(ctx, userID, connectorID)
++	switch {
++	case errors.Is(err, storage.ErrNotFound):
++		return 0, nil
++	case err != nil:
++		return 0, fmt.Errorf("get user identity: %w", err)
++	}
++	return ui.Generation, nil
++}
++
++// Check returns ErrRevoked when generation is not the current generation of the
++// pair.
++func Check(ctx context.Context, s storage.Storage, userID, connectorID string, generation uint64) error {
++	current, err := Current(ctx, s, userID, connectorID)
++	if err != nil {
++		return err
++	}
++	if generation != current {
++		return ErrRevoked
++	}
++	return nil
++}
++
++// CheckToken checks an ID or access token of dex, verified by the caller: the
++// pair is in its "sub" claim and the generation in "d8_gen", absent for 0. A
++// token without a connector belongs to a client, not to a pair
++// (client_credentials), and is never revoked this way.
++func CheckToken(ctx context.Context, s storage.Storage, token *oidc.IDToken) error {
++	sub := new(internal.IDTokenSubject)
++	if err := internal.Unmarshal(token.Subject, sub); err != nil {
++		return fmt.Errorf("unmarshal subject: %w", err)
++	}
++	if sub.ConnId == "" {
++		return nil
++	}
++
++	var claims struct {
++		Generation uint64 `json:"d8_gen"`
++	}
++	if err := token.Claims(&claims); err != nil {
++		return fmt.Errorf("decode claims: %w", err)
++	}
++	return Check(ctx, s, sub.UserId, sub.ConnId, claims.Generation)
++}
++
++// Reasons and the source of the revocations dex records.
++const (
++	// ReasonSessionLogout: the user signed out of a browser session.
++	ReasonSessionLogout = "SessionLogout"
++	// ReasonTokenRevoked: the client revoked a refresh token (RFC 7009).
++	ReasonTokenRevoked = "TokenRevoked"
++
++	sourceDex = "dex"
++)
++
++// Recorder records the revocations dex decides: the end of a browser session
++// and of a refresh token. A storage that keeps no revocations (SQL, ent, etcd)
++// records nothing.
++type Recorder struct {
++	creator storage.RevocationCreator
++	now     func() time.Time
++}
++
++// NewRecorder returns the recorder of s.
++func NewRecorder(s storage.Storage, now func() time.Time) *Recorder {
++	creator, _ := storage.AsRevocationCreator(s)
++	return &Recorder{creator: creator, now: now}
++}
++
++// Enabled reports whether the storage keeps revocations.
++func (r *Recorder) Enabled() bool {
++	return r != nil && r.creator != nil
++}
++
++// SessionEnded records that the browser session ended: its "sid" and the
++// clients it reached.
++func (r *Recorder) SessionEnded(ctx context.Context, session storage.AuthSession) error {
++	return r.record(ctx, storage.Revocation{
++		Type:        storage.RevocationSession,
++		ConnectorID: session.ConnectorID,
++		UserID:      session.UserID,
++		SessionID:   session.ID,
++		Clients:     slices.Sorted(maps.Keys(session.ClientStates)),
++		Reason:      ReasonSessionLogout,
++	})
++}
++
++// GrantRevoked records that its client revoked the refresh token.
++func (r *Recorder) GrantRevoked(ctx context.Context, refresh storage.RefreshToken) error {
++	return r.record(ctx, storage.Revocation{
++		Type:        storage.RevocationGrant,
++		ConnectorID: refresh.ConnectorID,
++		UserID:      refresh.Claims.UserID,
++		GrantID:     refresh.ID,
++		ClientID:    refresh.ClientID,
++		Clients:     []string{refresh.ClientID},
++		Reason:      ReasonTokenRevoked,
++	})
++}
++
++// record creates rev. A revocation recorded before, by a repeated request, is
++// what was asked for.
++func (r *Recorder) record(ctx context.Context, rev storage.Revocation) error {
++	if !r.Enabled() {
++		return nil
++	}
++
++	subject, err := tokens.GenSubject(rev.UserID, rev.ConnectorID)
++	if err != nil {
++		return fmt.Errorf("marshal subject: %w", err)
++	}
++	rev.Subject = subject
++	rev.Source = sourceDex
++	rev.CreatedAt = r.now()
++
++	if err := r.creator.CreateRevocation(ctx, rev); err != nil && !errors.Is(err, storage.ErrAlreadyExists) {
++		return fmt.Errorf("create revocation: %w", err)
++	}
++	return nil
++}
+diff --git a/server/revocation/revocation_test.go b/server/revocation/revocation_test.go
+new file mode 100644
+index 00000000..393a27f4
+--- /dev/null
++++ b/server/revocation/revocation_test.go
+@@ -0,0 +1,239 @@
++package revocation
++
++import (
++	"context"
++	"crypto/rand"
++	"crypto/rsa"
++	"errors"
++	"log/slog"
++	"net/url"
++	"testing"
++	"time"
++
++	"github.com/coreos/go-oidc/v3/oidc"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/signer"
++	"github.com/dexidp/dex/server/tokens"
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++// The refresh token of the test vectors. Kept in constants so that secret scanners do not
++// take the literal for a credential.
++const (
++	vectorRefreshID   = "3w4l2zgokgsohvjnqzjrv7lmz"
++	vectorRefreshBody = "pbtiicr6kqrwrlqv3vn6h3pdr"
++)
++
++var t0 = time.Date(2026, 10, 16, 10, 0, 0, 0, time.UTC)
++
++func newStorage(t *testing.T) storage.Storage {
++	t.Helper()
++	return memory.New(slog.New(slog.DiscardHandler))
++}
++
++// failingGet fails every read of an identity.
++type failingGet struct {
++	storage.Storage
++}
++
++var errStorage = errors.New("storage unavailable")
++
++func (failingGet) GetUserIdentity(context.Context, string, string) (storage.UserIdentity, error) {
++	return storage.UserIdentity{}, errStorage
++}
++
++func TestCurrent(t *testing.T) {
++	ctx := t.Context()
++	s := newStorage(t)
++	require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "jane", ConnectorID: "local", Generation: 3}))
++
++	gen, err := Current(ctx, s, "jane", "local")
++	require.NoError(t, err)
++	require.Equal(t, uint64(3), gen)
++
++	gen, err = Current(ctx, s, "john", "local")
++	require.NoError(t, err, "a pair without an identity revoked nothing")
++	require.Zero(t, gen)
++
++	_, err = Current(ctx, failingGet{Storage: s}, "jane", "local")
++	require.ErrorIs(t, err, errStorage)
++}
++
++func TestCheck(t *testing.T) {
++	ctx := t.Context()
++	s := newStorage(t)
++	require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "jane", ConnectorID: "local", Generation: 3}))
++
++	tests := []struct {
++		name       string
++		userID     string
++		generation uint64
++		expected   error
++	}{
++		{name: "current generation", userID: "jane", generation: 3},
++		{name: "revoked since", userID: "jane", generation: 2, expected: ErrRevoked},
++		{name: "issued to a record created again", userID: "jane", generation: 4, expected: ErrRevoked},
++		{name: "pair without an identity", userID: "john", generation: 0},
++		{name: "pair whose identity was deleted", userID: "john", generation: 1, expected: ErrRevoked},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			err := Check(t.Context(), s, tt.userID, "local", tt.generation)
++			if tt.expected == nil {
++				require.NoError(t, err)
++				return
++			}
++			require.ErrorIs(t, err, tt.expected)
++		})
++	}
++
++	err := Check(ctx, failingGet{Storage: s}, "jane", "local", 3)
++	require.ErrorIs(t, err, errStorage)
++	require.NotErrorIs(t, err, ErrRevoked)
++}
++
++func TestCheckToken(t *testing.T) {
++	ctx := t.Context()
++	s := newStorage(t)
++	require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "jane", ConnectorID: "local", Generation: 3}))
++
++	key, err := rsa.GenerateKey(rand.Reader, 2048)
++	require.NoError(t, err)
++	sig, err := signer.NewMockSigner(key)
++	require.NoError(t, err)
++	issuerURL, err := url.Parse("https://issuer.example.com")
++	require.NoError(t, err)
++	issuer := tokens.NewIssuer(s, sig, *issuerURL, time.Hour, time.Now, slog.New(slog.DiscardHandler))
++	verifier := oidc.NewVerifier(issuerURL.String(), &signer.KeySet{Signer: sig}, &oidc.Config{SkipClientIDCheck: true})
++
++	token := func(userID, connectorID string, generation uint64) *oidc.IDToken {
++		t.Helper()
++		raw, _, err := issuer.SignAccessToken(ctx, tokens.Authorization{
++			Client:      storage.Client{ID: "client"},
++			Claims:      storage.Claims{UserID: userID},
++			ConnectorID: connectorID,
++			Generation:  generation,
++		})
++		require.NoError(t, err)
++		idToken, err := verifier.Verify(ctx, raw)
++		require.NoError(t, err)
++		return idToken
++	}
++
++	require.NoError(t, CheckToken(ctx, s, token("jane", "local", 3)))
++	require.ErrorIs(t, CheckToken(ctx, s, token("jane", "local", 2)), ErrRevoked)
++	require.ErrorIs(t, CheckToken(ctx, s, token("jane", "local", 0)), ErrRevoked, "no claim is generation 0")
++	require.NoError(t, CheckToken(ctx, s, token("john", "local", 0)), "a token without the claim stays valid")
++	require.NoError(t, CheckToken(ctx, failingGet{Storage: s}, token("client", "", 0)),
++		"a client's own token (client_credentials) has no pair to read")
++}
++
++// TestSubjectVectors checks the encoding of "sub" that the subscribers of
++// revocations decode (contract MR3, appendix A).
++func TestSubjectVectors(t *testing.T) {
++	for _, tc := range []struct {
++		userID, connectorID, expected string
++	}{
++		{"jane", "local", "CgRqYW5lEgVsb2NhbA"},
++		{"cn=jdoe,ou=people,dc=example,dc=org", "ldap", "CiNjbj1qZG9lLG91PXBlb3BsZSxkYz1leGFtcGxlLGRjPW9yZxIEbGRhcA"},
++	} {
++		sub, err := tokens.GenSubject(tc.userID, tc.connectorID)
++		require.NoError(t, err)
++		require.Equal(t, tc.expected, sub)
++	}
++
++	refresh, err := internal.Marshal(&internal.RefreshToken{RefreshId: vectorRefreshID, Token: vectorRefreshBody})
++	require.NoError(t, err)
++	require.Equal(t, "ChkzdzRsMnpnb2tnc29odmpucXpqcnY3bG16EhlwYnRpaWNyNmtxcndybHF2M3ZuNmgzcGRy", refresh)
++}
++
++func TestRecorder(t *testing.T) {
++	ctx := t.Context()
++	s := newStorage(t)
++	r := NewRecorder(storage.WithStaticClients(s, nil), func() time.Time { return t0 })
++	require.True(t, r.Enabled(), "found behind the static wrappers")
++
++	session := storage.AuthSession{
++		ID:          "fehzwdh5qy4oyqcn7qhkcgzbm",
++		UserID:      "jane",
++		ConnectorID: "local",
++		ClientStates: map[string]*storage.ClientAuthState{
++			"kubeconfig-generator-0":               {},
++			"console-d8-console-dex-authenticator": {},
++		},
++	}
++	require.NoError(t, r.SessionEnded(ctx, session))
++	require.NoError(t, r.SessionEnded(ctx, session), "a session ended twice is one revocation")
++
++	refresh := storage.RefreshToken{
++		ID:          "3w4l2zgokgsohvjnqzjrv7lmz",
++		ClientID:    "kubeconfig-generator-0",
++		ConnectorID: "local",
++		Claims:      storage.Claims{UserID: "jane"},
++	}
++	require.NoError(t, r.GrantRevoked(ctx, refresh))
++
++	got, err := s.(interface {
++		ListRevocations(context.Context) ([]storage.Revocation, error)
++	}).ListRevocations(ctx)
++	require.NoError(t, err)
++	require.ElementsMatch(t, []storage.Revocation{
++		{
++			Type:        storage.RevocationSession,
++			ConnectorID: "local",
++			UserID:      "jane",
++			Subject:     "CgRqYW5lEgVsb2NhbA",
++			SessionID:   "fehzwdh5qy4oyqcn7qhkcgzbm",
++			Clients:     []string{"console-d8-console-dex-authenticator", "kubeconfig-generator-0"},
++			Reason:      "SessionLogout",
++			Source:      "dex",
++			CreatedAt:   t0,
++		},
++		{
++			Type:        storage.RevocationGrant,
++			ConnectorID: "local",
++			UserID:      "jane",
++			Subject:     "CgRqYW5lEgVsb2NhbA",
++			GrantID:     "3w4l2zgokgsohvjnqzjrv7lmz",
++			ClientID:    "kubeconfig-generator-0",
++			Clients:     []string{"kubeconfig-generator-0"},
++			Reason:      "TokenRevoked",
++			Source:      "dex",
++			CreatedAt:   t0,
++		},
++	}, got)
++}
++
++// noRevocations is a storage that keeps no revocations, as SQL, ent and etcd.
++type noRevocations struct {
++	storage.Storage
++}
++
++// failingRevocations cannot write revocations.
++type failingRevocations struct {
++	storage.Storage
++}
++
++func (failingRevocations) CreateRevocation(context.Context, storage.Revocation) error {
++	return errStorage
++}
++
++func TestRecorderWithoutRevocations(t *testing.T) {
++	ctx := t.Context()
++	session := storage.AuthSession{ID: "s1", UserID: "jane", ConnectorID: "local"}
++
++	r := NewRecorder(noRevocations{Storage: newStorage(t)}, time.Now)
++	require.False(t, r.Enabled())
++	require.NoError(t, r.SessionEnded(ctx, session), "nothing to record")
++
++	var nilRecorder *Recorder
++	require.False(t, nilRecorder.Enabled())
++	require.NoError(t, nilRecorder.GrantRevoked(ctx, storage.RefreshToken{ID: "r1"}))
++
++	r = NewRecorder(failingRevocations{Storage: newStorage(t)}, time.Now)
++	require.True(t, r.Enabled())
++	require.ErrorIs(t, r.SessionEnded(ctx, session), errStorage)
++}
+diff --git a/server/server.go b/server/server.go
+index 5f631bca..a57f70db 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -28,6 +28,7 @@ import (
+ 	"github.com/dexidp/dex/server/mfa"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/ratelimit"
++	"github.com/dexidp/dex/server/revocation"
+ 	"github.com/dexidp/dex/server/router"
+ 	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/templates"
+@@ -65,6 +66,9 @@ type Server struct {
+ 	// backchannel notifies relying parties that a session ended. Shared with the
+ 	// gRPC API, which ends sessions too.
+ 	backchannel *backchannel.Notifier
++
++	// revocations records the revocations dex decides (logout, /token/revoke).
++	revocations *revocation.Recorder
+ }
+ 
+ // Connectors is the server's connector cache. The gRPC API needs it to
+@@ -127,6 +131,13 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+ 		SessionsEnabled: c.SessionConfig != nil,
+ 	}
+ 
++	// The storage given to the server, not the key cache around it: the cache
++	// hides the methods of the storage beyond storage.Storage.
++	s.revocations = revocation.NewRecorder(c.Storage, rc.now)
++	if !s.revocations.Enabled() {
++		s.logger.WarnContext(ctx, "revocation events are disabled: the storage does not support them")
++	}
++
+ 	if err := s.openConnectors(ctx, c); err != nil {
+ 		return nil, err
+ 	}
+@@ -249,6 +260,7 @@ func realIPResolver(c Config) func(*http.Request) (string, error) {
+ // pattern ending in "/" covers every route below it.
+ var rateLimitedRoutes = []string{
+ 	"/token",                    // client authentication, password grant (see grants.Handler.dispatch)
++	grants.RevokePath,           // token revocation (290)
+ 	"/auth/{connector}/login",   // login form of password connectors
+ 	authflow.PasswordChangePath, // password change of a login (220)
+ 	"/mfa",                      // second factor: entry,
+@@ -282,11 +294,14 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+ 			SessionsEnabled:     c.SessionConfig != nil,
+ 			SupportedGrantTypes: rc.grantTypes,
+ 			Lockout:             guard,
++			Revocations:         s.revocations,
+ 		},
+ 		&userinfo.Handler{
+ 			Issuer: s.issuerURL.String(),
+ 			Signer: c.Signer,
+ 			Logger: s.logger,
++
++			Storage: s.storage,
+ 		},
+ 		&introspection.Handler{
+ 			Issuer:        s.issuerURL.String(),
+@@ -362,6 +377,7 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+ 			IssuerURL:   s.issuerURL,
+ 			Now:         rc.now,
+ 			Backchannel: s.backchannel,
++			Revocations: s.revocations,
+ 		},
+ 	} {
+ 		h.Mount(routes)
+diff --git a/server/server_discovery_test.go b/server/server_discovery_test.go
+index 806bc4ac..5820e918 100644
+--- a/server/server_discovery_test.go
++++ b/server/server_discovery_test.go
+@@ -83,6 +83,11 @@ func TestHandleDiscovery(t *testing.T) {
+ 			"groups",
+ 			"federated_claims",
+ 		},
++		Revocation: fmt.Sprintf("%s/token/revoke", httpServer.URL),
++		RevocationAuthMethods: []string{
++			"client_secret_basic",
++			"client_secret_post",
++		},
+ 	}, res)
+ }
+ 
+diff --git a/server/server_revocation_test.go b/server/server_revocation_test.go
+new file mode 100644
+index 00000000..c8ab57b4
+--- /dev/null
++++ b/server/server_revocation_test.go
+@@ -0,0 +1,769 @@
++package server
++
++import (
++	"context"
++	"crypto"
++	"encoding/json"
++	"errors"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"slices"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/tokens"
++	"github.com/dexidp/dex/storage"
++)
++
++// The refresh token of the test vectors. Kept in constants so that secret scanners do not
++// take the literal for a credential.
++const (
++	vectorRefreshID   = "3w4l2zgokgsohvjnqzjrv7lmz"
++	vectorRefreshBody = "pbtiicr6kqrwrlqv3vn6h3pdr"
++)
++
++// The generations a pair moves to when its credentials issued at generation 2
++// are no longer valid: a revocation raised it, or its record was deleted and
++// created again from a lower one.
++var revokedGenerations = []struct {
++	name    string
++	current uint64
++}{
++	{name: "revoked", current: 3},
++	{name: "record created again", current: 1},
++}
++
++// setGeneration sets the generation of the pair, as the user-authn controller
++// does to revoke it.
++func setGeneration(t *testing.T, s *Server, userID, connectorID string, generation uint64) {
++	t.Helper()
++	ctx := t.Context()
++	err := s.storage.UpdateUserIdentity(ctx, userID, connectorID, func(u storage.UserIdentity) (storage.UserIdentity, error) {
++		u.Generation = generation
++		return u, nil
++	})
++	if errors.Is(err, storage.ErrNotFound) {
++		err = s.storage.CreateUserIdentity(ctx, storage.UserIdentity{UserID: userID, ConnectorID: connectorID, Generation: generation})
++	}
++	require.NoError(t, err)
++}
++
++// tokenResponse decodes a token response.
++func tokenResponse(t *testing.T, rr *httptest.ResponseRecorder) tokens.Response {
++	t.Helper()
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	var resp tokens.Response
++	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
++	return resp
++}
++
++// requireErrorResponse checks an OAuth2 error response and, when given, its
++// description.
++func requireErrorResponse(t *testing.T, rr *httptest.ResponseRecorder, status int, typ, description string) {
++	t.Helper()
++	require.Equal(t, status, rr.Code, rr.Body.String())
++	var resp struct {
++		Error       string `json:"error"`
++		Description string `json:"error_description"`
++	}
++	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
++	require.Equal(t, typ, resp.Error)
++	if description != "" {
++		require.Equal(t, description, resp.Description)
++	}
++}
++
++// requireGeneration checks the "d8_gen" claim of a token: absent for 0.
++func requireGeneration(t *testing.T, token string, generation uint64) {
++	t.Helper()
++	claims := idTokenClaims(t, token)
++	gen, ok := claims["d8_gen"]
++	if generation == 0 {
++		require.False(t, ok, "d8_gen in %v", claims)
++		return
++	}
++	require.True(t, ok, "no d8_gen in %v", claims)
++	require.EqualValues(t, generation, gen)
++}
++
++func refreshID(t *testing.T, refreshToken string) string {
++	t.Helper()
++	var token internal.RefreshToken
++	require.NoError(t, internal.Unmarshal(refreshToken, &token))
++	return token.RefreshId
++}
++
++// loginCode signs the user of the mock password connector "test" in through
++// the login form of client "test" and returns the authorization code.
++func loginCode(t *testing.T, s *Server, scopes ...string) string {
++	t.Helper()
++	ctx := t.Context()
++	authReq := storage.AuthRequest{
++		ID:            storage.NewID(),
++		ClientID:      "test",
++		ConnectorID:   "test",
++		RedirectURI:   "foo://bar.com/",
++		ResponseTypes: []string{oauth2.ResponseTypeCode},
++		Scopes:        append([]string{"openid"}, scopes...),
++		Expiry:        time.Now().Add(time.Minute),
++		HMACKey:       storage.NewHMACKey(crypto.SHA256),
++		MaxAge:        -1,
++	}
++	require.NoError(t, s.storage.CreateAuthRequest(ctx, authReq))
++
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/auth/test/login?state="+authReq.ID+"&login=test&password=test", nil))
++	require.Equal(t, http.StatusSeeOther, rr.Code, rr.Body.String())
++	rr, _ = followFlow(t, s, rr)
++	location, err := url.Parse(rr.Header().Get("Location"))
++	require.NoError(t, err)
++	code := location.Query().Get("code")
++	require.NotEmpty(t, code, "redirected to %s", location)
++	return code
++}
++
++func exchangeCode(t *testing.T, s *Server, code string) *httptest.ResponseRecorder {
++	t.Helper()
++	return postToken(t, s, url.Values{
++		"grant_type":   {oauth2.GrantTypeAuthorizationCode},
++		"code":         {code},
++		"redirect_uri": {"foo://bar.com/"},
++	})
++}
++
++// TestLoginCarriesGeneration follows the generation of the pair from the login
++// form to the code, the tokens and the refresh token.
++func TestLoginCarriesGeneration(t *testing.T) {
++	_, s := newLockTestServer(t)
++	setGeneration(t, s, mockUserID, "test", 2)
++
++	code := loginCode(t, s, "offline_access")
++	authCode, err := s.storage.GetAuthCode(t.Context(), code)
++	require.NoError(t, err)
++	require.Equal(t, uint64(2), authCode.Generation)
++
++	resp := tokenResponse(t, exchangeCode(t, s, code))
++	requireGeneration(t, resp.IDToken, 2)
++	requireGeneration(t, resp.AccessToken, 2)
++	refresh, err := s.storage.GetRefresh(t.Context(), refreshID(t, resp.RefreshToken))
++	require.NoError(t, err)
++	require.Equal(t, uint64(2), refresh.Generation)
++
++	// A refresh at the current generation keeps it.
++	resp = tokenResponse(t, postToken(t, s, url.Values{
++		"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {resp.RefreshToken},
++	}))
++	requireGeneration(t, resp.IDToken, 2)
++}
++
++func TestCodeExchangeOfRevokedPair(t *testing.T) {
++	for _, tc := range revokedGenerations {
++		t.Run(tc.name, func(t *testing.T) {
++			s, logs := newSignInLogServer(t, nil)
++			setGeneration(t, s, mockUserID, "test", 2)
++			code := loginCode(t, s)
++
++			setGeneration(t, s, mockUserID, "test", tc.current)
++			requireErrorResponse(t, exchangeCode(t, s, code), http.StatusBadRequest, oauth2.InvalidGrant, "Invalid or expired code parameter.")
++			requireRefusal(t, logs.last(t, "token request denied: credentials revoked"), "revoked", "test")
++
++			_, err := s.storage.GetAuthCode(t.Context(), code)
++			require.ErrorIs(t, err, storage.ErrNotFound, "the code is spent")
++		})
++	}
++}
++
++func TestRefreshOfRevokedPair(t *testing.T) {
++	for _, tc := range revokedGenerations {
++		t.Run(tc.name, func(t *testing.T) {
++			ctx := t.Context()
++			s, logs := newSignInLogServer(t, nil)
++			setGeneration(t, s, mockUserID, "test", 2)
++			resp := tokenResponse(t, passwordGrant(t, s))
++			requireGeneration(t, resp.IDToken, 2)
++			refresh := url.Values{"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {resp.RefreshToken}}
++
++			setGeneration(t, s, mockUserID, "test", tc.current)
++			requireErrorResponse(t, postToken(t, s, refresh), http.StatusBadRequest, oauth2.InvalidGrant,
++				"The credentials of this user were revoked. Sign in again.")
++			line := logs.last(t, "refresh denied: credentials revoked")
++			requireRefusal(t, line, "revoked", "test")
++			assert.Equal(t, mockUserID, line["user_id"])
++
++			// The grant is gone for good, with its reference.
++			_, err := s.storage.GetRefresh(ctx, refreshID(t, resp.RefreshToken))
++			require.ErrorIs(t, err, storage.ErrNotFound)
++			offline, err := s.storage.GetOfflineSessions(ctx, mockUserID, "test")
++			require.NoError(t, err)
++			require.NotContains(t, offline.Refresh, "test")
++
++			// The password grant authenticates anew: it is not refused, and its
++			// tokens carry the current generation.
++			resp = tokenResponse(t, passwordGrant(t, s))
++			requireGeneration(t, resp.IDToken, tc.current)
++			requireGeneration(t, resp.AccessToken, tc.current)
++		})
++	}
++}
++
++// A lock refuses first and keeps the refresh token, as without generations.
++func TestRefreshOfRevokedLockedPair(t *testing.T) {
++	_, s := newLockTestServer(t)
++	resp := tokenResponse(t, passwordGrant(t, s))
++	refresh := url.Values{"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {resp.RefreshToken}}
++
++	setGeneration(t, s, mockUserID, "test", 1)
++	setBlockedUntil(t, s, "test", time.Now().Add(time.Hour))
++	requireAccountLocked(t, postToken(t, s, refresh))
++	_, err := s.storage.GetRefresh(t.Context(), refreshID(t, resp.RefreshToken))
++	require.NoError(t, err)
++}
++
++func TestTokenExchangeCarriesGeneration(t *testing.T) {
++	_, s := newLockTestServer(t)
++	exchange := url.Values{
++		"grant_type":           {oauth2.GrantTypeTokenExchange},
++		"connector_id":         {"mock"},
++		"scope":                {"openid"},
++		"subject_token_type":   {oauth2.TokenTypeID},
++		"subject_token":        {"foobar"},
++		"requested_token_type": {oauth2.TokenTypeID},
++	}
++	requireGeneration(t, tokenResponse(t, postToken(t, s, exchange)).AccessToken, 0)
++
++	setGeneration(t, s, mockUserID, "mock", 5)
++	requireGeneration(t, tokenResponse(t, postToken(t, s, exchange)).AccessToken, 5)
++}
++
++// TestAuthResponseOfRevokedPair checks the last step of a browser login: no code
++// and no token of a generation revoked after the login recorded it.
++func TestAuthResponseOfRevokedPair(t *testing.T) {
++	cases := append([]struct {
++		name    string
++		current uint64
++	}{{name: "current generation", current: 2}}, revokedGenerations...)
++	for _, tc := range cases {
++		t.Run(tc.name, func(t *testing.T) {
++			ctx := t.Context()
++			s, logs := newSignInLogServer(t, nil)
++			authReq := storage.AuthRequest{
++				ID:            storage.NewID(),
++				ClientID:      "test",
++				ConnectorID:   "test",
++				RedirectURI:   "foo://bar.com/",
++				ResponseTypes: []string{oauth2.ResponseTypeCode},
++				Scopes:        []string{"openid"},
++				Claims:        storage.Claims{UserID: mockUserID},
++				LoggedIn:      true,
++				MFAValidated:  true,
++				Expiry:        time.Now().Add(time.Minute),
++				HMACKey:       storage.NewHMACKey(crypto.SHA256),
++				Generation:    2,
++			}
++			require.NoError(t, s.storage.CreateAuthRequest(ctx, authReq))
++			setGeneration(t, s, mockUserID, "test", tc.current)
++
++			rr := httptest.NewRecorder()
++			s.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, internal.StepURL("/auth", authReq, internal.StepContinue, nil), nil))
++
++			_, err := s.storage.GetAuthRequest(ctx, authReq.ID)
++			require.ErrorIs(t, err, storage.ErrNotFound, "the request is over either way")
++			if tc.current == authReq.Generation {
++				require.Equal(t, http.StatusSeeOther, rr.Code, rr.Body.String())
++				require.Contains(t, rr.Header().Get("Location"), "code=")
++				return
++			}
++			require.Equal(t, http.StatusBadRequest, rr.Code)
++			require.Contains(t, rr.Body.String(), "The login is no longer valid. Please sign in again.")
++			require.Empty(t, rr.Header().Get("Location"))
++			requireRefusal(t, logs.last(t, "token request denied: credentials revoked"), "revoked", "test")
++		})
++	}
++}
++
++func introspect(t *testing.T, s *Server, token string) bool {
++	t.Helper()
++	req := httptest.NewRequest(http.MethodPost, "/token/introspect", strings.NewReader(url.Values{"token": {token}}.Encode()))
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, req)
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	var resp struct {
++		Active bool `json:"active"`
++	}
++	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
++	return resp.Active
++}
++
++func userInfo(t *testing.T, s *Server, accessToken string) *httptest.ResponseRecorder {
++	t.Helper()
++	req := httptest.NewRequest(http.MethodGet, "/userinfo", nil)
++	req.Header.Set("Authorization", "Bearer "+accessToken)
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, req)
++	return rr
++}
++
++func TestIntrospectionAndUserInfoOfRevokedPair(t *testing.T) {
++	for _, tc := range revokedGenerations {
++		t.Run(tc.name, func(t *testing.T) {
++			_, s := newLockTestServer(t)
++			setGeneration(t, s, mockUserID, "test", 2)
++			resp := tokenResponse(t, passwordGrant(t, s))
++
++			require.True(t, introspect(t, s, resp.AccessToken))
++			require.True(t, introspect(t, s, resp.RefreshToken))
++			require.Equal(t, http.StatusOK, userInfo(t, s, resp.AccessToken).Code)
++
++			setGeneration(t, s, mockUserID, "test", tc.current)
++			require.False(t, introspect(t, s, resp.AccessToken), "access token")
++			require.False(t, introspect(t, s, resp.RefreshToken), "refresh token")
++
++			rr := userInfo(t, s, resp.AccessToken)
++			requireErrorResponse(t, rr, http.StatusUnauthorized, oauth2.InvalidToken, "")
++			require.Equal(t, `Bearer error="invalid_token"`, rr.Header().Get("WWW-Authenticate"))
++		})
++	}
++}
++
++// Tokens of a client itself have no pair: nothing revokes them this way.
++func TestIntrospectionOfClientCredentials(t *testing.T) {
++	_, s := newLockTestServer(t)
++	resp := tokenResponse(t, postToken(t, s, url.Values{
++		"grant_type": {oauth2.GrantTypeClientCredentials},
++		"scope":      {"openid"},
++	}))
++	requireGeneration(t, resp.AccessToken, 0)
++	require.True(t, introspect(t, s, resp.AccessToken))
++}
++
++// --- RFC 7009 ---
++
++// revocationLister is the view of the memory storage on the revocations it
++// keeps.
++type revocationLister interface {
++	ListRevocations(ctx context.Context) ([]storage.Revocation, error)
++}
++
++func listRevocations(t *testing.T, s storage.Storage) []storage.Revocation {
++	t.Helper()
++	lister, ok := s.(revocationLister)
++	require.True(t, ok, "%T keeps no revocations", s)
++	got, err := lister.ListRevocations(t.Context())
++	require.NoError(t, err)
++	return got
++}
++
++// serverRevocations returns the revocations the memory storage of a test server
++// keeps.
++func serverRevocations(t *testing.T, s *Server) []storage.Revocation {
++	t.Helper()
++	cacher, ok := s.storage.(*keyCacher)
++	require.True(t, ok)
++	return listRevocations(t, cacher.Storage)
++}
++
++func postRevoke(t *testing.T, s *Server, form url.Values, clientID, secret string) *httptest.ResponseRecorder {
++	t.Helper()
++	req := httptest.NewRequest(http.MethodPost, "/token/revoke", strings.NewReader(form.Encode()))
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	req.SetBasicAuth(clientID, secret)
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, req)
++	return rr
++}
++
++func requireRevoked(t *testing.T, rr *httptest.ResponseRecorder) {
++	t.Helper()
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	require.Empty(t, rr.Body.String())
++	require.Equal(t, "no-store", rr.Header().Get("Cache-Control"))
++}
++
++func TestTokenRevocation(t *testing.T) {
++	t.Run("refresh token", func(t *testing.T) {
++		ctx := t.Context()
++		s, logs := newSignInLogServer(t, nil)
++		resp := tokenResponse(t, passwordGrant(t, s))
++		id := refreshID(t, resp.RefreshToken)
++		refresh := url.Values{"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {resp.RefreshToken}}
++
++		requireRevoked(t, postRevoke(t, s, url.Values{"token": {resp.RefreshToken}, "token_type_hint": {"refresh_token"}}, "test", "barfoo"))
++
++		_, err := s.storage.GetRefresh(ctx, id)
++		require.ErrorIs(t, err, storage.ErrNotFound)
++		offline, err := s.storage.GetOfflineSessions(ctx, mockUserID, "test")
++		require.NoError(t, err)
++		require.NotContains(t, offline.Refresh, "test")
++		requireErrorResponse(t, postToken(t, s, refresh), http.StatusBadRequest, oauth2.InvalidGrant, "")
++
++		revocations := serverRevocations(t, s)
++		require.Len(t, revocations, 1)
++		got := revocations[0]
++		require.False(t, got.CreatedAt.IsZero())
++		got.CreatedAt = time.Time{}
++		sub, err := tokens.GenSubject(mockUserID, "test")
++		require.NoError(t, err)
++		require.Equal(t, storage.Revocation{
++			Type:        storage.RevocationGrant,
++			ConnectorID: "test",
++			UserID:      mockUserID,
++			Subject:     sub,
++			GrantID:     id,
++			ClientID:    "test",
++			Clients:     []string{"test"},
++			Reason:      "TokenRevoked",
++			Source:      "dex",
++		}, got)
++
++		line := logs.last(t, "token revoked")
++		assert.Equal(t, "INFO", line["level"])
++		assert.Equal(t, "test", line["connector_id"])
++		assert.Equal(t, "test", line["client_id"])
++		assert.Equal(t, mockUserID, line["user_id"])
++		assert.NotContains(t, line, "reason")
++
++		// Revoked already: no error, nothing recorded again (RFC 7009 §2.2).
++		requireRevoked(t, postRevoke(t, s, url.Values{"token": {resp.RefreshToken}}, "test", "barfoo"))
++		require.Len(t, serverRevocations(t, s), 1)
++	})
++
++	t.Run("refresh token of another client", func(t *testing.T) {
++		ctx := t.Context()
++		s, logs := newSignInLogServer(t, nil)
++		require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: "other", Secret: "other-secret"}))
++		resp := tokenResponse(t, passwordGrant(t, s))
++
++		requireErrorResponse(t, postRevoke(t, s, url.Values{"token": {resp.RefreshToken}}, "other", "other-secret"),
++			http.StatusBadRequest, oauth2.InvalidGrant, "The token was issued to another client.")
++		line := logs.last(t, "token revocation refused: the token was issued to another client")
++		assert.Equal(t, "WARN", line["level"])
++		assert.Equal(t, "other", line["client_id"])
++		assert.Equal(t, "test", line["token_client_id"])
++
++		_, err := s.storage.GetRefresh(ctx, refreshID(t, resp.RefreshToken))
++		require.NoError(t, err)
++		require.Empty(t, serverRevocations(t, s))
++	})
++
++	t.Run("unknown token", func(t *testing.T) {
++		_, s := newLockTestServer(t)
++		forged, err := internal.Marshal(&internal.RefreshToken{RefreshId: vectorRefreshID, Token: vectorRefreshBody})
++		require.NoError(t, err)
++		requireRevoked(t, postRevoke(t, s, url.Values{"token": {forged}}, "test", "barfoo"))
++		requireRevoked(t, postRevoke(t, s, url.Values{"token": {"not-a-token"}}, "test", "barfoo"))
++		require.Empty(t, serverRevocations(t, s))
++	})
++
++	t.Run("wrong secret of the refresh token", func(t *testing.T) {
++		ctx := t.Context()
++		_, s := newLockTestServer(t)
++		resp := tokenResponse(t, passwordGrant(t, s))
++		id := refreshID(t, resp.RefreshToken)
++		guessed, err := internal.Marshal(&internal.RefreshToken{RefreshId: id, Token: "guessed"})
++		require.NoError(t, err)
++
++		requireRevoked(t, postRevoke(t, s, url.Values{"token": {guessed}}, "test", "barfoo"))
++		_, err = s.storage.GetRefresh(ctx, id)
++		require.NoError(t, err, "a token with a wrong secret revokes nothing")
++		require.Empty(t, serverRevocations(t, s))
++	})
++
++	t.Run("access token", func(t *testing.T) {
++		_, s := newLockTestServer(t)
++		resp := tokenResponse(t, passwordGrant(t, s))
++
++		for _, form := range []url.Values{
++			{"token": {resp.AccessToken}},
++			{"token": {resp.IDToken}, "token_type_hint": {"refresh_token"}},
++		} {
++			requireErrorResponse(t, postRevoke(t, s, form, "test", "barfoo"), http.StatusBadRequest, oauth2.UnsupportedTokenType, "")
++		}
++		_, err := s.storage.GetRefresh(t.Context(), refreshID(t, resp.RefreshToken))
++		require.NoError(t, err)
++	})
++
++	// RFC 7009 §2.1: a token the hint does not fit is looked up as any type.
++	t.Run("refresh token with an access token hint", func(t *testing.T) {
++		_, s := newLockTestServer(t)
++		resp := tokenResponse(t, passwordGrant(t, s))
++
++		requireRevoked(t, postRevoke(t, s, url.Values{"token": {resp.RefreshToken}, "token_type_hint": {"access_token"}}, "test", "barfoo"))
++		_, err := s.storage.GetRefresh(t.Context(), refreshID(t, resp.RefreshToken))
++		require.ErrorIs(t, err, storage.ErrNotFound)
++	})
++
++	t.Run("client not authenticated", func(t *testing.T) {
++		_, s := newLockTestServer(t)
++		resp := tokenResponse(t, passwordGrant(t, s))
++
++		requireErrorResponse(t, postRevoke(t, s, url.Values{"token": {resp.RefreshToken}}, "test", "wrong"),
++			http.StatusUnauthorized, oauth2.InvalidClient, "")
++		requireErrorResponse(t, postRevoke(t, s, url.Values{"token": {resp.RefreshToken}}, "no-such-client", "barfoo"),
++			http.StatusUnauthorized, oauth2.InvalidClient, "")
++		_, err := s.storage.GetRefresh(t.Context(), refreshID(t, resp.RefreshToken))
++		require.NoError(t, err)
++	})
++
++	t.Run("malformed request", func(t *testing.T) {
++		_, s := newLockTestServer(t)
++		requireErrorResponse(t, postRevoke(t, s, url.Values{}, "test", "barfoo"), http.StatusBadRequest, oauth2.InvalidRequest, "")
++
++		rr := httptest.NewRecorder()
++		s.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/token/revoke?token=x", nil))
++		requireErrorResponse(t, rr, http.StatusBadRequest, oauth2.InvalidRequest, "")
++	})
++
++	t.Run("revocation not recorded", func(t *testing.T) {
++		ctx := t.Context()
++		httpServer, s := newTestServer(t, func(c *Config) {
++			c.Storage = failingRevocations{Storage: c.Storage}
++			c.PasswordConnector = "test"
++		})
++		t.Cleanup(httpServer.Close)
++		mockConnectorDataTestStorage(t, s.storage)
++		resp := tokenResponse(t, passwordGrant(t, s))
++
++		requireErrorResponse(t, postRevoke(t, s, url.Values{"token": {resp.RefreshToken}}, "test", "barfoo"),
++			http.StatusServiceUnavailable, oauth2.TemporarilyUnavailable, "")
++		_, err := s.storage.GetRefresh(ctx, refreshID(t, resp.RefreshToken))
++		require.NoError(t, err, "nothing is deleted without the record")
++		tokenResponse(t, postToken(t, s, url.Values{"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {resp.RefreshToken}}))
++	})
++
++	t.Run("rotated token within the reuse interval", func(t *testing.T) {
++		ctx := t.Context()
++		httpServer, s := newTestServer(t, func(c *Config) {
++			c.PasswordConnector = "test"
++			c.RefreshTokenPolicy = tokens.NewRefreshStrategy(true, 0, 0, time.Minute, time.Now)
++		})
++		t.Cleanup(httpServer.Close)
++		mockConnectorDataTestStorage(t, s.storage)
++		first := tokenResponse(t, passwordGrant(t, s))
++		// A token used within the reuse interval is served again, not rotated:
++		// make it old enough to rotate.
++		require.NoError(t, s.storage.UpdateRefreshToken(ctx, refreshID(t, first.RefreshToken), func(r storage.RefreshToken) (storage.RefreshToken, error) {
++			r.LastUsed = time.Now().Add(-2 * time.Minute)
++			return r, nil
++		}))
++		second := tokenResponse(t, postToken(t, s, url.Values{"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {first.RefreshToken}}))
++		require.NotEqual(t, first.RefreshToken, second.RefreshToken)
++
++		// The previous token still works within the reuse interval, so it
++		// revokes the grant.
++		requireRevoked(t, postRevoke(t, s, url.Values{"token": {first.RefreshToken}}, "test", "barfoo"))
++		_, err := s.storage.GetRefresh(ctx, refreshID(t, second.RefreshToken))
++		require.ErrorIs(t, err, storage.ErrNotFound)
++		requireErrorResponse(t, postToken(t, s, url.Values{"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {second.RefreshToken}}),
++			http.StatusBadRequest, oauth2.InvalidGrant, "")
++		require.Len(t, serverRevocations(t, s), 1)
++	})
++}
++
++func TestRateLimitTokenRevocation(t *testing.T) {
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.RateLimit = rateLimitTestConfig
++	})
++	defer httpServer.Close()
++
++	badClient := func() *http.Request {
++		r := rateLimitedRequest(http.MethodPost, "/token/revoke", url.Values{"token": {"x"}})
++		r.SetBasicAuth("no-such-client", "secret")
++		return r
++	}
++	for range 2 {
++		require.Equal(t, http.StatusUnauthorized, serveRequest(s, badClient()).Code)
++	}
++	rr := serveRequest(s, badClient())
++	assert.Equal(t, http.StatusTooManyRequests, rr.Code)
++	assert.NotEmpty(t, rr.Header().Get("Retry-After"))
++}
++
++// A client that has authenticated takes nothing from the rate limit of its
++// address, whatever the revocation answers: dex-authenticator revokes and
++// refreshes the tokens of all its users from one address.
++func TestRateLimitTokenRevocationOfAuthenticatedClient(t *testing.T) {
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.RateLimit = rateLimitTestConfig
++	})
++	defer httpServer.Close()
++	mockConnectorDataTestStorage(t, s.storage)
++
++	// No token: 400 after the client has authenticated. An unknown token would get 200.
++	for range 4 {
++		r := rateLimitedRequest(http.MethodPost, "/token/revoke", url.Values{"token_type_hint": {"refresh_token"}})
++		r.SetBasicAuth("test", "barfoo")
++		require.Equal(t, http.StatusBadRequest, serveRequest(s, r).Code)
++	}
++}
++
++// --- logout ---
++
++// failingRevocations cannot write revocations.
++type failingRevocations struct {
++	storage.Storage
++}
++
++func (failingRevocations) CreateRevocation(context.Context, storage.Revocation) error {
++	return errors.New("storage unavailable")
++}
++
++// revocationOrder records when revocations are written and sessions deleted.
++type revocationOrder struct {
++	storage.Storage
++
++	mu    sync.Mutex
++	calls []string
++}
++
++func (s *revocationOrder) record(call string) {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	s.calls = append(s.calls, call)
++}
++
++func (s *revocationOrder) CreateRevocation(ctx context.Context, r storage.Revocation) error {
++	s.record("CreateRevocation")
++	creator, ok := storage.AsRevocationCreator(s.Storage)
++	if !ok {
++		return errors.New("no revocations")
++	}
++	return creator.CreateRevocation(ctx, r)
++}
++
++func (s *revocationOrder) DeleteAuthSession(ctx context.Context, id string) error {
++	s.record("DeleteAuthSession")
++	return s.Storage.DeleteAuthSession(ctx, id)
++}
++
++// newLogoutTestSession stores a session of two clients, one of which keeps its
++// refresh token only while the session lives, and returns the logout request
++// and that client's refresh token ID.
++func newLogoutTestSession(t *testing.T, s *Server, logoutState *storage.LogoutState) (sessionID, boundRefreshID string) {
++	t.Helper()
++	ctx := t.Context()
++	const userID, connectorID = "test-user", "mock"
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: "b-bound", RefreshTokenLifetime: storage.RefreshTokenLifetimeSession}))
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: "a-standalone"}))
++	sessionID = storage.NewID()
++	require.NoError(t, s.storage.CreateAuthSession(ctx, storage.AuthSession{
++		ID: sessionID, Secret: testSessionSecret(sessionID),
++		UserID: userID, ConnectorID: connectorID,
++		ClientStates: map[string]*storage.ClientAuthState{
++			"b-bound":      {AuthenticatedAt: time.Now()},
++			"a-standalone": {AuthenticatedAt: time.Now()},
++		},
++		CreatedAt: time.Now(), LastActivity: time.Now(),
++		AbsoluteExpiry: time.Now().Add(time.Hour), IdleExpiry: time.Now().Add(time.Hour),
++		LogoutState: logoutState,
++	}))
++	boundRefreshID = newTestRefreshToken(t, s, userID, connectorID, "b-bound")
++	require.NoError(t, s.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID: userID, ConnID: connectorID,
++		Refresh: map[string]*storage.RefreshTokenRef{"b-bound": {ID: boundRefreshID, ClientID: "b-bound"}},
++	}))
++	return sessionID, boundRefreshID
++}
++
++func sessionRevocation(t *testing.T, sessionID string) storage.Revocation {
++	t.Helper()
++	sub, err := tokens.GenSubject("test-user", "mock")
++	require.NoError(t, err)
++	return storage.Revocation{
++		Type:        storage.RevocationSession,
++		ConnectorID: "mock",
++		UserID:      "test-user",
++		Subject:     sub,
++		SessionID:   sessionID,
++		Clients:     []string{"a-standalone", "b-bound"},
++		Reason:      "SessionLogout",
++		Source:      "dex",
++	}
++}
++
++func withoutCreatedAt(t *testing.T, revocations []storage.Revocation) []storage.Revocation {
++	t.Helper()
++	for i := range revocations {
++		require.False(t, revocations[i].CreatedAt.IsZero())
++		revocations[i].CreatedAt = time.Time{}
++	}
++	return revocations
++}
++
++func TestLogoutRecordsSessionRevocation(t *testing.T) {
++	for _, path := range []string{"/logout", "/logout/callback"} {
++		t.Run(path, func(t *testing.T) {
++			ctx := t.Context()
++			var order *revocationOrder
++			httpServer, s := newTestServerWithSessions(t, func(c *Config) {
++				order = &revocationOrder{Storage: c.Storage}
++				c.Storage = order
++			})
++			defer httpServer.Close()
++
++			var logoutState *storage.LogoutState
++			method := http.MethodPost
++			if path == "/logout/callback" {
++				// The upstream provider has logged out and sends the browser back.
++				logoutState = &storage.LogoutState{}
++				method = http.MethodGet
++			}
++			sessionID, boundRefreshID := newLogoutTestSession(t, s, logoutState)
++
++			req := httptest.NewRequest(method, path, nil)
++			req.AddCookie(testSessionCookie(sessionID))
++			rr := httptest.NewRecorder()
++			s.ServeHTTP(rr, req)
++			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++
++			require.Equal(t, []storage.Revocation{sessionRevocation(t, sessionID)}, withoutCreatedAt(t, listRevocations(t, order.Storage)))
++			require.Equal(t, []string{"CreateRevocation", "DeleteAuthSession"}, order.calls, "recorded before the session goes")
++			_, err := s.storage.GetAuthSession(ctx, sessionID)
++			require.ErrorIs(t, err, storage.ErrNotFound)
++			_, err = s.storage.GetRefresh(ctx, boundRefreshID)
++			require.ErrorIs(t, err, storage.ErrNotFound)
++		})
++	}
++}
++
++func TestLogoutKeepsSessionWhenRevocationFails(t *testing.T) {
++	for _, path := range []string{"/logout", "/logout/callback"} {
++		t.Run(path, func(t *testing.T) {
++			ctx := t.Context()
++			httpServer, s := newTestServerWithSessions(t, func(c *Config) {
++				c.Storage = failingRevocations{Storage: c.Storage}
++			})
++			defer httpServer.Close()
++
++			var logoutState *storage.LogoutState
++			method := http.MethodPost
++			if path == "/logout/callback" {
++				logoutState = &storage.LogoutState{}
++				method = http.MethodGet
++			}
++			sessionID, boundRefreshID := newLogoutTestSession(t, s, logoutState)
++
++			req := httptest.NewRequest(method, path, nil)
++			req.AddCookie(testSessionCookie(sessionID))
++			rr := httptest.NewRecorder()
++			s.ServeHTTP(rr, req)
++			require.Equal(t, http.StatusServiceUnavailable, rr.Code, rr.Body.String())
++			require.Contains(t, rr.Body.String(), "Logout is temporarily unavailable. Please try again.")
++			require.False(t, slices.ContainsFunc(rr.Result().Cookies(), func(c *http.Cookie) bool { return c.MaxAge < 0 }),
++				"the cookie is kept")
++
++			_, err := s.storage.GetAuthSession(ctx, sessionID)
++			require.NoError(t, err, "the session is kept for a retry")
++			_, err = s.storage.GetRefresh(ctx, boundRefreshID)
++			require.NoError(t, err, "nothing of the session is revoked")
++		})
++	}
++}
+diff --git a/server/session/session.go b/server/session/session.go
+index cf45703a..cff6865b 100644
+--- a/server/session/session.go
++++ b/server/session/session.go
+@@ -234,6 +234,7 @@ func (m *Manager) CreateOrUpdateAuthSession(ctx context.Context, r *http.Request
+ 				old.IdleExpiry = now.Add(m.Config.ValidIfNotUsedFor)
+ 				old.IPAddress = remoteIP(r)
+ 				old.UserAgent = r.UserAgent()
++				old.Generation = authReq.Generation
+ 				if old.ClientStates == nil {
+ 					old.ClientStates = make(map[string]*storage.ClientAuthState)
+ 				}
+@@ -266,6 +267,7 @@ func (m *Manager) CreateOrUpdateAuthSession(ctx context.Context, r *http.Request
+ 		UserAgent:      r.UserAgent(),
+ 		AbsoluteExpiry: now.Add(m.Config.AbsoluteLifetime),
+ 		IdleExpiry:     now.Add(m.Config.ValidIfNotUsedFor),
++		Generation:     authReq.Generation,
+ 	}
+ 
+ 	if err := m.Storage.CreateAuthSession(ctx, newSession); err != nil {
+diff --git a/server/session/session_generation_test.go b/server/session/session_generation_test.go
+new file mode 100644
+index 00000000..5c83fe6f
+--- /dev/null
++++ b/server/session/session_generation_test.go
+@@ -0,0 +1,47 @@
++package session
++
++import (
++	"log/slog"
++	"net/http/httptest"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++// TestCreateOrUpdateAuthSessionGeneration checks that a session takes the
++// generation of the pair from each login on it: the session login refuses a
++// session whose generation is not the pair's.
++func TestCreateOrUpdateAuthSessionGeneration(t *testing.T) {
++	ctx := t.Context()
++	now := time.Date(2026, 10, 16, 12, 0, 0, 0, time.UTC)
++	store := memory.New(slog.New(slog.DiscardHandler))
++	m := &Manager{
++		Storage: store,
++		Config:  &Config{CookieName: "dex_session", AbsoluteLifetime: time.Hour, ValidIfNotUsedFor: time.Hour},
++		Now:     func() time.Time { return now },
++		Logger:  slog.New(slog.DiscardHandler),
++	}
++	login := storage.AuthRequest{ClientID: "client-1", ConnectorID: "local", Claims: storage.Claims{UserID: "jane"}, Generation: 4}
++
++	w := httptest.NewRecorder()
++	require.NoError(t, m.CreateOrUpdateAuthSession(ctx, httptest.NewRequest("GET", "/", nil), w, login, false))
++	sessions, err := store.ListAuthSessions(ctx)
++	require.NoError(t, err)
++	require.Len(t, sessions, 1)
++	require.Equal(t, uint64(4), sessions[0].Generation)
++
++	// The next login on the same browser updates it.
++	login.Generation = 5
++	r := httptest.NewRequest("GET", "/", nil)
++	r.AddCookie(w.Result().Cookies()[0])
++	require.NoError(t, m.CreateOrUpdateAuthSession(ctx, r, httptest.NewRecorder(), login, false))
++	session, err := store.GetAuthSession(ctx, sessions[0].ID)
++	require.NoError(t, err)
++	require.Equal(t, uint64(5), session.Generation)
++	require.Equal(t, internal.SessionCookieValue(session.ID, session.Secret, nil), w.Result().Cookies()[0].Value)
++}
+diff --git a/server/signinlog/revoked.go b/server/signinlog/revoked.go
+new file mode 100644
+index 00000000..c5b2d2af
+--- /dev/null
++++ b/server/signinlog/revoked.go
+@@ -0,0 +1,15 @@
++package signinlog
++
++// ReasonRevoked: the credentials of the (user, connector) pair were revoked
++// (see server/revocation): the generation they carry is not the pair's current
++// one.
++const ReasonRevoked = "revoked"
++
++// Messages of the lines about revoked credentials. A refusal is a warning; a
++// refresh token revoked at its client's request (RFC 7009) is info.
++const (
++	RefreshRevoked      = "refresh denied: credentials revoked"
++	TokenRequestRevoked = "token request denied: credentials revoked"
++	SessionLoginRevoked = "session login refused: credentials revoked"
++	TokenRevoked        = "token revoked"
++)
+diff --git a/server/tokens/authorization.go b/server/tokens/authorization.go
+index 38510265..4e18bc13 100644
+--- a/server/tokens/authorization.go
++++ b/server/tokens/authorization.go
+@@ -27,6 +27,11 @@ type Authorization struct {
+ 	// that user happens to have open to tokens minted by the password, token
+ 	// exchange and client credentials grants — none of which joined it.
+ 	SessionID string
++
++	// Generation is the generation of the (user, connector) pair at the login
++	// (see server/revocation), emitted as the "d8_gen" claim and kept on the
++	// refresh token.
++	Generation uint64
+ }
+ 
+ // TokenSet is what the /token endpoint returns for an Authorization.
+diff --git a/server/tokens/claims.go b/server/tokens/claims.go
+index 508cb6f6..194b556e 100644
+--- a/server/tokens/claims.go
++++ b/server/tokens/claims.go
+@@ -88,6 +88,11 @@ type IDTokenClaims struct {
+ 	PreferredUsername string `json:"preferred_username,omitempty"`
+ 
+ 	FederatedIDClaims *FederatedIDClaims `json:"federated_claims,omitempty"`
++
++	// D8Generation is the generation of the (user, connector) pair the token was
++	// issued at (see server/revocation). Absent for generation 0, which every
++	// consumer reads as 0: tokens issued before generations existed stay valid.
++	D8Generation uint64 `json:"d8_gen,omitempty"`
+ }
+ 
+ // FederatedIDClaims carries the upstream connector's identity for the
+diff --git a/server/tokens/issuer.go b/server/tokens/issuer.go
+index bd212211..994587b9 100644
+--- a/server/tokens/issuer.go
++++ b/server/tokens/issuer.go
+@@ -115,6 +115,7 @@ func (i *Issuer) SignIDToken(ctx context.Context, auth Authorization, accessToke
+ 	}
+ 
+ 	tok.SessionID = auth.SessionID
++	tok.D8Generation = auth.Generation
+ 
+ 	signingAlg, err := i.signer.Algorithm(ctx)
+ 	if err != nil {
+diff --git a/server/tokens/issuer_test.go b/server/tokens/issuer_test.go
+index d5540adf..a857ce0a 100644
+--- a/server/tokens/issuer_test.go
++++ b/server/tokens/issuer_test.go
+@@ -3,8 +3,11 @@ package tokens
+ import (
+ 	"crypto/rand"
+ 	"crypto/rsa"
++	"encoding/base64"
++	"encoding/json"
+ 	"log/slog"
+ 	"net/url"
++	"strings"
+ 	"testing"
+ 	"time"
+ 
+@@ -74,3 +77,48 @@ func TestIssuerIssue(t *testing.T) {
+ 	require.NotEmpty(t, ts2.IDToken)
+ 	require.Empty(t, ts2.RefreshToken)
+ }
++
++// TestIssuerGenerationClaim checks "d8_gen": present exactly when the pair has
++// a generation, so tokens of generation 0, all tokens before generations
++// existed among them, look as they did.
++func TestIssuerGenerationClaim(t *testing.T) {
++	ctx := t.Context()
++	iss, _ := newTestIssuer(t)
++
++	for _, tc := range []struct {
++		name       string
++		generation uint64
++		wantClaim  bool
++	}{
++		{name: "generation 0", generation: 0},
++		{name: "generation 3", generation: 3, wantClaim: true},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			auth := testAuthorization()
++			auth.Generation = tc.generation
++
++			ts, err := iss.Issue(ctx, auth, "", false)
++			require.NoError(t, err)
++			for _, token := range []string{ts.IDToken, ts.AccessToken} {
++				claims := decodeTestClaims(t, token)
++				gen, ok := claims["d8_gen"]
++				require.Equal(t, tc.wantClaim, ok, "d8_gen in %v", claims)
++				if ok {
++					require.EqualValues(t, tc.generation, gen)
++				}
++			}
++		})
++	}
++}
++
++// decodeTestClaims decodes the payload of a signed token without verifying it.
++func decodeTestClaims(t *testing.T, token string) map[string]any {
++	t.Helper()
++	parts := strings.Split(token, ".")
++	require.Len(t, parts, 3)
++	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
++	require.NoError(t, err)
++	var claims map[string]any
++	require.NoError(t, json.Unmarshal(payload, &claims))
++	return claims
++}
+diff --git a/server/tokens/refresh_store.go b/server/tokens/refresh_store.go
+index e390ed1e..7b02178b 100644
+--- a/server/tokens/refresh_store.go
++++ b/server/tokens/refresh_store.go
+@@ -42,6 +42,7 @@ func (rt *RefreshStore) Create(ctx context.Context, auth Authorization) (string,
+ 		ConnectorData: auth.ConnectorData,
+ 		CreatedAt:     rt.now(),
+ 		LastUsed:      rt.now(),
++		Generation:    auth.Generation,
+ 	}
+ 
+ 	rawToken, err := internal.Marshal(&internal.RefreshToken{RefreshId: refresh.ID, Token: refresh.Token})
+@@ -290,6 +291,26 @@ func (rt *RefreshStore) updateOfflineSession(ctx context.Context, refresh *stora
+ 	return nil
+ }
+ 
++// RevokeGrant deletes the refresh token and the offline session's reference to
++// it. The reference goes only while it still names this token: a parallel login
++// of the same client may have replaced it already, and must keep its own.
++func (rt *RefreshStore) RevokeGrant(ctx context.Context, refresh *storage.RefreshToken) error {
++	err := rt.storage.UpdateOfflineSessions(ctx, refresh.Claims.UserID, refresh.ConnectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++		if ref, ok := old.Refresh[refresh.ClientID]; ok && ref.ID == refresh.ID {
++			delete(old.Refresh, refresh.ClientID)
++		}
++		return old, nil
++	})
++	if err != nil && !errors.Is(err, storage.ErrNotFound) {
++		return fmt.Errorf("update offline session: %w", err)
++	}
++
++	if err := rt.storage.DeleteRefresh(ctx, refresh.ID); err != nil && !errors.Is(err, storage.ErrNotFound) {
++		return fmt.Errorf("delete refresh token: %w", err)
++	}
++	return nil
++}
++
+ // RevokeClients deletes the refresh tokens issued to the named clients for the
+ // user/connector pair, in one pass over the offline session. Every other client's
+ // token is left alone. See RevokeAll for the unscoped variant.
+diff --git a/server/tokens/refresh_store_test.go b/server/tokens/refresh_store_test.go
+index 67a9693b..e6853fc0 100644
+--- a/server/tokens/refresh_store_test.go
++++ b/server/tokens/refresh_store_test.go
+@@ -137,3 +137,78 @@ func TestRefreshStoreRevoke(t *testing.T) {
+ 	require.Empty(t, sess.Refresh)
+ 	require.Equal(t, []byte("cd"), sess.ConnectorData)
+ }
++
++func TestRefreshStoreCreateKeepsGeneration(t *testing.T) {
++	ctx := t.Context()
++	rt, store := newTestStore(t)
++	auth := testAuthorization()
++	auth.Generation = 3
++
++	raw, err := rt.Create(ctx, auth)
++	require.NoError(t, err)
++	var tok internal.RefreshToken
++	require.NoError(t, internal.Unmarshal(raw, &tok))
++	stored, err := store.GetRefresh(ctx, tok.RefreshId)
++	require.NoError(t, err)
++	require.Equal(t, uint64(3), stored.Generation)
++
++	// Rotation keeps it.
++	_, _, err = rt.Rotate(ctx, &stored, &tok, NewRefreshStrategy(true, 0, 0, 0, time.Now),
++		func(context.Context) (connector.Identity, error) { return IdentityFromClaims(stored.Claims), nil })
++	require.NoError(t, err)
++	rotated, err := store.GetRefresh(ctx, tok.RefreshId)
++	require.NoError(t, err)
++	require.NotEqual(t, stored.Token, rotated.Token)
++	require.Equal(t, uint64(3), rotated.Generation)
++}
++
++func TestRefreshStoreRevokeGrant(t *testing.T) {
++	ctx := t.Context()
++	rt, store := newTestStore(t)
++	for _, tc := range []struct{ id, client string }{{"r1", "c1"}, {"r2", "c2"}, {"r3", "c1"}} {
++		require.NoError(t, store.CreateRefresh(ctx, storage.RefreshToken{
++			ID: tc.id, ClientID: tc.client, ConnectorID: "mock", Claims: storage.Claims{UserID: "u1"},
++		}))
++	}
++	require.NoError(t, store.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID: "u1", ConnID: "mock",
++		Refresh: map[string]*storage.RefreshTokenRef{
++			"c1": {ID: "r1", ClientID: "c1"},
++			"c2": {ID: "r2", ClientID: "c2"},
++		},
++	}))
++	token := func(id string) *storage.RefreshToken {
++		r, err := store.GetRefresh(ctx, id)
++		require.NoError(t, err)
++		return &r
++	}
++
++	require.NoError(t, rt.RevokeGrant(ctx, token("r1")))
++	_, err := store.GetRefresh(ctx, "r1")
++	require.ErrorIs(t, err, storage.ErrNotFound)
++	sess, err := store.GetOfflineSessions(ctx, "u1", "mock")
++	require.NoError(t, err)
++	require.NotContains(t, sess.Refresh, "c1")
++	require.Contains(t, sess.Refresh, "c2", "other clients keep their tokens")
++
++	// A token the session no longer names (a newer login of its client replaced
++	// it) goes without taking the newer one's reference.
++	require.NoError(t, store.UpdateOfflineSessions(ctx, "u1", "mock", func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++		old.Refresh["c1"] = &storage.RefreshTokenRef{ID: "r4", ClientID: "c1"}
++		return old, nil
++	}))
++	require.NoError(t, rt.RevokeGrant(ctx, token("r3")))
++	_, err = store.GetRefresh(ctx, "r3")
++	require.ErrorIs(t, err, storage.ErrNotFound)
++	sess, err = store.GetOfflineSessions(ctx, "u1", "mock")
++	require.NoError(t, err)
++	require.Equal(t, "r4", sess.Refresh["c1"].ID)
++
++	// Without an offline session the token goes all the same.
++	require.NoError(t, store.CreateRefresh(ctx, storage.RefreshToken{
++		ID: "r5", ClientID: "c1", ConnectorID: "ldap", Claims: storage.Claims{UserID: "u1"},
++	}))
++	require.NoError(t, rt.RevokeGrant(ctx, token("r5")))
++	_, err = store.GetRefresh(ctx, "r5")
++	require.ErrorIs(t, err, storage.ErrNotFound)
++}
+diff --git a/server/useridentity/useridentity.go b/server/useridentity/useridentity.go
+index fdd09b01..1c71a378 100644
+--- a/server/useridentity/useridentity.go
++++ b/server/useridentity/useridentity.go
+@@ -105,10 +105,14 @@ func (l Login) movesLastLogin(stored time.Time) bool {
+ // instead: the login goes on when it is not blocked, without refreshing the
+ // claims or LastLogin, and l.Logger logs the failed write. Only a failed read
+ // fails the login.
+-func Record(ctx context.Context, s storage.Storage, l Login) error {
+-	err := update(ctx, s, l)
++//
++// Record returns the generation of the pair (see server/revocation) from the
++// same write, or from the read when the write is given up, for the login to
++// carry on.
++func Record(ctx context.Context, s storage.Storage, l Login) (uint64, error) {
++	generation, err := update(ctx, s, l)
+ 	if !errors.Is(err, storage.ErrNotFound) {
+-		return err
++		return generation, err
+ 	}
+ 
+ 	// The first login of the pair.
+@@ -120,24 +124,28 @@ func Record(ctx context.Context, s storage.Storage, l Login) error {
+ 		CreatedAt:   l.Time,
+ 	})
+ 	if err != nil && !errors.Is(err, storage.ErrAlreadyExists) {
+-		return fmt.Errorf("create user identity: %w", err)
++		return 0, fmt.Errorf("create user identity: %w", err)
+ 	}
+ 
+ 	// Created meanwhile (by a parallel login or by the user-authn controller), or
+ 	// created here. The storage may give a new identity state the pair had before
+ 	// it existed (see storage/kubernetes/transitional.go), a lock included, so the
+ 	// lock is checked on what was stored, and LastLogin is set only for a login
+-	// that is not refused.
++	// that is not refused. The generation is the one stored too: the user-authn
++	// controller may have raised it since the create.
+ 	return update(ctx, s, l)
+ }
+ 
+ // update applies l to the stored identity of its pair, trying a failing write
+-// again; see Record for a write that keeps failing.
+-func update(ctx context.Context, s storage.Storage, l Login) error {
++// again, and returns the generation of the pair it read; see Record for a write
++// that keeps failing.
++func update(ctx context.Context, s storage.Storage, l Login) (uint64, error) {
++	var generation uint64
+ 	updater := func(old storage.UserIdentity) (storage.UserIdentity, error) {
+ 		if blocked(old, l.Time) {
+ 			return old, blockedError(old)
+ 		}
++		generation = old.Generation
+ 		movesLastLogin := l.Complete && l.movesLastLogin(old.LastLogin)
+ 		if sameClaims(old.Claims, l.Claims) && !movesLastLogin {
+ 			return old, errUnchanged
+@@ -158,21 +166,22 @@ func update(ctx context.Context, s storage.Storage, l Login) error {
+ 	}
+ 	switch {
+ 	case err == nil, errors.Is(err, errUnchanged):
+-		return nil
++		return generation, nil
+ 	case !isWriteFailure(err):
+-		return err // storage.ErrNotFound or *BlockedError
++		return 0, err // storage.ErrNotFound or *BlockedError
+ 	}
+ 
+ 	// The identity is there, it could not be written: a login is not refused for
+-	// that. The lock is what must hold, and it is read.
+-	if rerr := CheckBlocked(ctx, s, l.Claims.UserID, l.ConnectorID, l.Time); rerr != nil {
+-		return errors.Join(fmt.Errorf("update user identity: %w", err), rerr)
++	// that. The lock is what must hold, and it is read with the generation.
++	generation, rerr := State(ctx, s, l.Claims.UserID, l.ConnectorID, l.Time)
++	if rerr != nil {
++		return 0, errors.Join(fmt.Errorf("update user identity: %w", err), rerr)
+ 	}
+ 	if l.Logger != nil {
+ 		l.Logger.WarnContext(ctx, "failed to record the user identity of a login, going on with the stored one",
+ 			"connector_id", l.ConnectorID, "user_id", l.Claims.UserID, "err", err)
+ 	}
+-	return nil
++	return generation, nil
+ }
+ 
+ // isWriteFailure reports whether err is a failure to write an identity, as
+@@ -246,6 +255,22 @@ func CheckBlockedIdentity(ui storage.UserIdentity, now time.Time) error {
+ 	return nil
+ }
+ 
++// State returns the generation of the pair (see server/revocation), and
++// *BlockedError when the pair is blocked at now, from one read of its identity.
++// A pair without an identity is at generation 0 and not blocked.
++func State(ctx context.Context, s storage.Storage, userID, connectorID string, now time.Time) (uint64, error) {
++	ui, err := s.GetUserIdentity(ctx, userID, connectorID)
++	switch {
++	case errors.Is(err, storage.ErrNotFound):
++		return 0, nil
++	case err != nil:
++		return 0, fmt.Errorf("get user identity: %w", err)
++	case blocked(ui, now):
++		return ui.Generation, blockedError(ui)
++	}
++	return ui.Generation, nil
++}
++
+ func blocked(ui storage.UserIdentity, now time.Time) bool {
+ 	return now.Before(ui.BlockedUntil)
+ }
+diff --git a/server/useridentity/useridentity_test.go b/server/useridentity/useridentity_test.go
+index 1e71d86f..0b55a03c 100644
+--- a/server/useridentity/useridentity_test.go
++++ b/server/useridentity/useridentity_test.go
+@@ -27,11 +27,12 @@ func newStorage(t *testing.T) storage.Storage {
+ 
+ func TestRecord(t *testing.T) {
+ 	tests := []struct {
+-		name          string
+-		existing      *storage.UserIdentity
+-		complete      bool
+-		wantLastLogin time.Time
+-		wantCreatedAt time.Time
++		name           string
++		existing       *storage.UserIdentity
++		complete       bool
++		wantLastLogin  time.Time
++		wantCreatedAt  time.Time
++		wantGeneration uint64
+ 	}{
+ 		{
+ 			name:          "first login without a second factor",
+@@ -51,10 +52,12 @@ func TestRecord(t *testing.T) {
+ 				MFASecrets: map[string]*storage.MFASecret{"totp": {Secret: "s", Confirmed: true}},
+ 				CreatedAt:  t0.Add(-time.Hour), LastLogin: t0.Add(-time.Minute),
+ 				BlockedUntil: t0.Add(-time.Second), IncorrectPasswordLoginAttempts: 2,
++				Generation: 4,
+ 			},
+-			complete:      true,
+-			wantLastLogin: t0,
+-			wantCreatedAt: t0.Add(-time.Hour),
++			complete:       true,
++			wantLastLogin:  t0,
++			wantCreatedAt:  t0.Add(-time.Hour),
++			wantGeneration: 4,
+ 		},
+ 		{
+ 			name: "next login before a second factor keeps the last login",
+@@ -74,11 +77,13 @@ func TestRecord(t *testing.T) {
+ 				require.NoError(t, s.CreateUserIdentity(ctx, *tc.existing))
+ 			}
+ 
+-			err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: tc.complete})
++			generation, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: tc.complete})
+ 			require.NoError(t, err)
++			require.Equal(t, tc.wantGeneration, generation)
+ 
+ 			got, err := s.GetUserIdentity(ctx, "jane", "local")
+ 			require.NoError(t, err)
++			require.Equal(t, tc.wantGeneration, got.Generation, "a login never changes the generation")
+ 			require.Equal(t, claims, got.Claims)
+ 			require.Equal(t, tc.wantLastLogin, got.LastLogin)
+ 			require.Equal(t, tc.wantCreatedAt, got.CreatedAt)
+@@ -101,7 +106,7 @@ func TestRecordBlocked(t *testing.T) {
+ 	}
+ 	require.NoError(t, s.CreateUserIdentity(ctx, old))
+ 
+-	err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++	_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
+ 
+ 	var blocked *BlockedError
+ 	require.ErrorAs(t, err, &blocked)
+@@ -121,7 +126,8 @@ type createRace struct {
+ func (s *createRace) CreateUserIdentity(ctx context.Context, u storage.UserIdentity) error {
+ 	if !s.raced {
+ 		s.raced = true
+-		if err := s.Storage.CreateUserIdentity(ctx, storage.UserIdentity{UserID: u.UserID, ConnectorID: u.ConnectorID, CreatedAt: t0.Add(-time.Hour)}); err != nil {
++		raced := storage.UserIdentity{UserID: u.UserID, ConnectorID: u.ConnectorID, CreatedAt: t0.Add(-time.Hour), Generation: 1}
++		if err := s.Storage.CreateUserIdentity(ctx, raced); err != nil {
+ 			return err
+ 		}
+ 	}
+@@ -132,7 +138,9 @@ func TestRecordCreateRace(t *testing.T) {
+ 	ctx := t.Context()
+ 	s := &createRace{Storage: newStorage(t)}
+ 
+-	require.NoError(t, Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true}))
++	generation, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++	require.NoError(t, err)
++	require.Equal(t, uint64(1), generation, "the generation of the identity created meanwhile")
+ 
+ 	got, err := s.GetUserIdentity(ctx, "jane", "local")
+ 	require.NoError(t, err)
+@@ -141,6 +149,34 @@ func TestRecordCreateRace(t *testing.T) {
+ 	require.Equal(t, t0.Add(-time.Hour), got.CreatedAt)
+ }
+ 
++// raiseAfterCreate raises the generation of the identity the login has just
++// created, as the user-authn controller revoking the pair at that moment does.
++type raiseAfterCreate struct {
++	storage.Storage
++}
++
++func (s raiseAfterCreate) CreateUserIdentity(ctx context.Context, u storage.UserIdentity) error {
++	if err := s.Storage.CreateUserIdentity(ctx, u); err != nil {
++		return err
++	}
++	return s.UpdateUserIdentity(ctx, u.UserID, u.ConnectorID, func(old storage.UserIdentity) (storage.UserIdentity, error) {
++		old.Generation++
++		return old, nil
++	})
++}
++
++func TestRecordFirstLoginGeneration(t *testing.T) {
++	ctx := t.Context()
++
++	generation, err := Record(ctx, newStorage(t), Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++	require.NoError(t, err)
++	require.Zero(t, generation)
++
++	generation, err = Record(ctx, raiseAfterCreate{Storage: newStorage(t)}, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++	require.NoError(t, err)
++	require.Equal(t, uint64(1), generation, "the generation stored, not the one created")
++}
++
+ // lockOnCreate gives a new identity a lock, as the transitional kubernetes
+ // storage does for a pair locked before the update.
+ type lockOnCreate struct {
+@@ -156,7 +192,7 @@ func TestRecordFirstLoginOfLockedPair(t *testing.T) {
+ 	ctx := t.Context()
+ 	s := lockOnCreate{Storage: newStorage(t)}
+ 
+-	err := Record(ctx, s, Login{ConnectorID: "ldap", Claims: claims, Time: t0, Complete: true})
++	_, err := Record(ctx, s, Login{ConnectorID: "ldap", Claims: claims, Time: t0, Complete: true})
+ 
+ 	var blocked *BlockedError
+ 	require.ErrorAs(t, err, &blocked)
+@@ -232,7 +268,8 @@ func TestRecordWritesOnlyChanges(t *testing.T) {
+ 			login := tc.login
+ 			login.ConnectorID, login.Time = "local", t0
+ 
+-			require.NoError(t, Record(ctx, s, login))
++			_, err := Record(ctx, s, login)
++			require.NoError(t, err)
+ 
+ 			got, err := s.GetUserIdentity(ctx, "jane", "local")
+ 			require.NoError(t, err)
+@@ -295,7 +332,8 @@ func TestRecordRetriesWrite(t *testing.T) {
+ 	s := &failingUpdate{Storage: newStorage(t), failures: identityWriteAttempts - 1}
+ 	require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "jane", ConnectorID: "local"}))
+ 
+-	require.NoError(t, Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true}))
++	_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++	require.NoError(t, err)
+ 
+ 	require.Equal(t, identityWriteAttempts, s.tries)
+ 	got, err := s.GetUserIdentity(ctx, "jane", "local")
+@@ -310,7 +348,7 @@ func TestRecordWriteKeepsFailing(t *testing.T) {
+ 	stored := storage.UserIdentity{
+ 		UserID: "jane", ConnectorID: "local",
+ 		Claims:    storage.Claims{UserID: "jane", Email: "old@example.com"},
+-		LastLogin: t0.Add(-time.Hour),
++		LastLogin: t0.Add(-time.Hour), Generation: 3,
+ 	}
+ 
+ 	t.Run("the login goes on with the stored identity", func(t *testing.T) {
+@@ -319,12 +357,13 @@ func TestRecordWriteKeepsFailing(t *testing.T) {
+ 		require.NoError(t, s.CreateUserIdentity(ctx, stored))
+ 		var logs bytes.Buffer
+ 
+-		err := Record(ctx, s, Login{
++		generation, err := Record(ctx, s, Login{
+ 			ConnectorID: "local", Claims: claims, Time: t0, Complete: true,
+ 			Logger: slog.New(slog.NewTextHandler(&logs, nil)),
+ 		})
+ 
+ 		require.NoError(t, err)
++		require.Equal(t, uint64(3), generation, "the generation read instead")
+ 		require.Equal(t, identityWriteAttempts, s.tries)
+ 		got, err := s.GetUserIdentity(ctx, "jane", "local")
+ 		require.NoError(t, err)
+@@ -341,7 +380,7 @@ func TestRecordWriteKeepsFailing(t *testing.T) {
+ 		locked.BlockedUntil = t0.Add(time.Hour)
+ 		require.NoError(t, s.CreateUserIdentity(ctx, locked))
+ 
+-		err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++		_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
+ 
+ 		var blocked *BlockedError
+ 		require.ErrorAs(t, err, &blocked)
+@@ -354,7 +393,7 @@ func TestRecordWriteKeepsFailing(t *testing.T) {
+ 		require.NoError(t, memory.CreateUserIdentity(ctx, stored))
+ 		s := &failingUpdate{Storage: failingGet{Storage: memory}, failures: -1}
+ 
+-		err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++		_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
+ 
+ 		require.ErrorIs(t, err, errStorage)
+ 		var blocked *BlockedError
+@@ -367,7 +406,8 @@ func TestRecordWriteKeepsFailing(t *testing.T) {
+ 		s := &failingUpdate{Storage: newStorage(t), failures: -1}
+ 		require.NoError(t, s.CreateUserIdentity(ctx, stored))
+ 
+-		require.NoError(t, Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true}))
++		_, err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++		require.NoError(t, err)
+ 		require.Equal(t, 1, s.tries)
+ 	})
+ }
+@@ -489,3 +529,36 @@ func TestCheckBlockedTellsTheAdministratorsLock(t *testing.T) {
+ 		})
+ 	}
+ }
++
++func TestState(t *testing.T) {
++	ctx := t.Context()
++	s := newStorage(t)
++	require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "locked", ConnectorID: "ldap", BlockedUntil: t0.Add(time.Hour), Generation: 2}))
++	require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "free", ConnectorID: "ldap", BlockedUntil: t0.Add(-time.Hour), Generation: 3}))
++
++	generation, err := State(ctx, s, "free", "ldap", t0)
++	require.NoError(t, err)
++	require.Equal(t, uint64(3), generation)
++
++	generation, err = State(ctx, s, "locked", "ldap", t0)
++	var blocked *BlockedError
++	require.ErrorAs(t, err, &blocked)
++	require.Equal(t, t0.Add(time.Hour), blocked.Until)
++	require.False(t, blocked.ByAdministrator)
++	require.Equal(t, uint64(2), generation)
++
++	require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{
++		UserID: "admin-locked", ConnectorID: "ldap", BlockedUntil: t0.Add(time.Hour), AdminLockedUntil: t0.Add(time.Hour),
++	}))
++	_, err = State(ctx, s, "admin-locked", "ldap", t0)
++	require.ErrorAs(t, err, &blocked)
++	require.True(t, blocked.ByAdministrator)
++
++	generation, err = State(ctx, s, "unknown", "ldap", t0)
++	require.NoError(t, err, "a pair without an identity is not locked")
++	require.Zero(t, generation)
++
++	_, err = State(ctx, failingGet{Storage: s}, "free", "ldap", t0)
++	require.ErrorIs(t, err, errStorage)
++	require.False(t, errors.As(err, &blocked))
++}
+diff --git a/server/userinfo/userinfo.go b/server/userinfo/userinfo.go
+index 21ae63f8..8283ab63 100644
+--- a/server/userinfo/userinfo.go
++++ b/server/userinfo/userinfo.go
+@@ -2,6 +2,7 @@ package userinfo
+ 
+ import (
+ 	"encoding/json"
++	"errors"
+ 	"log/slog"
+ 	"net/http"
+ 	"strings"
+@@ -9,8 +10,10 @@ import (
+ 	"github.com/coreos/go-oidc/v3/oidc"
+ 
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/revocation"
+ 	"github.com/dexidp/dex/server/router"
+ 	"github.com/dexidp/dex/server/signer"
++	"github.com/dexidp/dex/storage"
+ )
+ 
+ // Handler serves the OIDC /userinfo endpoint.
+@@ -18,6 +21,9 @@ type Handler struct {
+ 	Issuer string
+ 	Signer signer.Signer
+ 	Logger *slog.Logger
++	// Storage holds the generation of the pairs (see server/revocation): the
++	// token of a revoked pair is refused.
++	Storage storage.Storage
+ }
+ 
+ // Mount registers the userinfo route.
+@@ -45,6 +51,18 @@ func (h *Handler) handle(w http.ResponseWriter, r *http.Request) {
+ 		return
+ 	}
+ 
++	err = revocation.CheckToken(ctx, h.Storage, idToken)
++	switch {
++	case errors.Is(err, revocation.ErrRevoked):
++		w.Header().Set("WWW-Authenticate", `Bearer error="invalid_token"`)
++		h.writeError(w, oauth2.InvalidToken, "The access token was revoked.", http.StatusUnauthorized)
++		return
++	case err != nil:
++		h.Logger.ErrorContext(ctx, "failed to check the generation of the token", "err", err)
++		h.writeError(w, oauth2.ServerError, "", http.StatusInternalServerError)
++		return
++	}
++
+ 	var claims json.RawMessage
+ 	if err := idToken.Claims(&claims); err != nil {
+ 		h.Logger.ErrorContext(ctx, "failed to decode ID token claims", "err", err)

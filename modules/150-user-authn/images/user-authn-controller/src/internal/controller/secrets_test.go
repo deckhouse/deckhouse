@@ -136,8 +136,8 @@ func TestInformerCacheByObjectHasTransform(t *testing.T) {
 	t.Parallel()
 
 	byObject := InformerCacheByObject()
-	if len(byObject) != 4 {
-		t.Fatalf("ByObject entries = %d, want 4", len(byObject))
+	if len(byObject) != 6 {
+		t.Fatalf("ByObject entries = %d, want 6", len(byObject))
 	}
 	for obj, cfg := range byObject {
 		if cfg.Transform == nil {

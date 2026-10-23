@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"user-authn-controller/internal/controller"
+	"user-authn-controller/internal/controller/revoke"
 	"user-authn-controller/internal/naming"
 )
 
@@ -50,6 +51,7 @@ const maxConcurrentReconciles = 8
 type Reconciler struct {
 	client    client.Client
 	apiReader client.Reader
+	revoker   *revoke.Revoker
 	log       logr.Logger
 	now       func() time.Time
 }
@@ -57,6 +59,7 @@ type Reconciler struct {
 // New constructs a Reconciler. now defaults to time.Now when nil.
 // apiReader should bypass the informer cache so Password hash fields are visible
 // (the UserAccount informer Transform strips them); it defaults to c when nil.
+// c must have the indexes of controller.SetupIndexes.
 func New(c client.Client, apiReader client.Reader, log logr.Logger, now func() time.Time) *Reconciler {
 	if now == nil {
 		now = time.Now
@@ -64,7 +67,7 @@ func New(c client.Client, apiReader client.Reader, log logr.Logger, now func() t
 	if apiReader == nil {
 		apiReader = c
 	}
-	return &Reconciler{client: c, apiReader: apiReader, log: log, now: now}
+	return &Reconciler{client: c, apiReader: apiReader, revoker: revoke.New(c, apiReader, log, now), log: log, now: now}
 }
 
 // Register wires the User/Password reconciler onto the manager.

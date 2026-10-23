@@ -47,6 +47,11 @@ rules:
   - patch
   - delete
   - deletecollection
+# Dex writes a Revocation at logout and at /token/revoke. It lists the type only at start,
+# to check that the CRD is installed, and never reads a Revocation back.
+- apiGroups: ["dex.coreos.com"]
+  resources: ["revocations"]
+  verbs: ["create", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -89,6 +94,11 @@ rules:
   - patch
   - delete
   - deletecollection
+# Dex writes a Revocation at logout and at /token/revoke. It lists the type only at start,
+# to check that the CRD is installed, and never reads a Revocation back.
+- apiGroups: ["dex.coreos.com"]
+  resources: ["revocations"]
+  verbs: ["create", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

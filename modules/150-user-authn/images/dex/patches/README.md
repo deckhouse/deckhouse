@@ -39,10 +39,27 @@ fields.
   binds the password change page of 220 to the browser of the login, and
   `pendingPasswordChange`, the change page a login goes to after its second
   factor (220);
+- the generation of a (user, connector) pair (290): `UserIdentity.Generation`
+  is read from the annotation `user-authn.deckhouse.io/generation`, which the
+  user-authn controller writes. Dex never writes it: a new identity is created
+  without it, and an update keeps the metadata of the object it read. A value
+  that does not parse fails the read instead of reading as 0. `AuthRequest`,
+  `AuthCode`, `RefreshToken` and `AuthSession` keep the generation of the
+  pair at the login (`generation`);
+- `Revocation` (`revocations.dex.coreos.com`): what was revoked (`type`:
+  `pair`, `session` or `grant`), the pair (`connectorID`, `userID`, the
+  `subject` of its tokens), `generation`, `sessionID`, `grantID`, `clientID`,
+  `clients`, `reason`, `source`, `createdAt`. The optional interface
+  `RevocationCreator` is implemented by the kubernetes storage, which names
+  the object after what it revokes (`pair-<pair>-g<generation>`,
+  `session-<sid>`, `grant-<refresh token ID>`, so a repeated write gets
+  AlreadyExists) and labels it with `user-authn.deckhouse.io/revocation-type`
+  and `user-authn.deckhouse.io/pair` (the name of the pair's `UserIdentity`),
+  and by the memory storage; SQL, ent and etcd keep no revocations;
 - `scripts/manifests/crds/useridentities.yaml` (printer columns: user,
-  connector, email, attempts, blocked until, last login) and
-  `authsessions.yaml`: upstream registers these CRDs from code only and ships
-  no manifest.
+  connector, email, attempts, blocked until, last login), `authsessions.yaml`
+  and `revocations.yaml` (printer columns: type, reason, generation): upstream
+  registers the first two from code only and ships no manifest.
 
 The kubernetes storage tries a write that conflicts again six times, 5–10,
 10–20, 20–40, 50–100, 100–200 and 200–400 ms apart (upstream: four times within
@@ -53,12 +70,14 @@ in a 500.
 
 The CRDs keep `x-kubernetes-preserve-unknown-fields`, so the new fields of
 existing kinds change no manifest. Tests read the objects in the form the
-user-authn controller and templates write them and round-trip every type
-through the kubernetes storage.
+user-authn controller and templates write them, round-trip every type through
+the kubernetes storage, and check that an update never writes the generation.
 
 **Consumer in Deckhouse:** user-authn-controller (`User` writes the `Password`
-fields, `UserAccount` shows the counters);
-`templates/dex-client/oauth2client.yaml`,
+fields, `UserAccount` shows the counters, `UserOperation` raises the
+generation and writes pair revocations, the revocation feed reads
+`Revocation`); the user-authz webhook and basic-auth-proxy (read
+`Revocation`); `templates/dex-client/oauth2client.yaml`,
 `templates/dex-authenticator/oauth2client.yaml` and `templates/dex/config.yaml`
 (allow-lists); `crds/external/` and `crds/pull_dex_crds.sh`.
 
@@ -93,14 +112,15 @@ kubernetes storage only:
   secret, the lock), so a check before the first login sees them: the lock
   check of 230 refuses the user before the password. That identity is not
   stored: an update still gets "not found" and the first create on login
-  stores the values. A local user's `Password` is found by user ID, since the
-  pair has no email claim yet, in an index of all `Password` objects that Dex
-  lists at most once per 30 seconds per replica: the read comes before the
-  password is checked, so a list per sign-in attempt let anyone make Dex list
-  them all. Parallel reads wait for one list; a failed list is not kept. A
-  lock written only to the old `Password` field reaches Dex within those 30
-  seconds; the controller writes `UserIdentity` as well, so this matters only
-  for objects its copy has not reached yet.
+  stores the values. It is at generation 0, as a pair without an identity is
+  (290). A local user's `Password` is found by user ID, since the pair has no
+  email claim yet, in an index of all `Password` objects that Dex lists at
+  most once per 30 seconds per replica: the read comes before the password is
+  checked, so a list per sign-in attempt let anyone make Dex list them all.
+  Parallel reads wait for one list; a failed list is not kept. A lock written
+  only to the old `Password` field reaches Dex within those 30 seconds; the
+  controller writes `UserIdentity` as well, so this matters only for objects
+  its copy has not reached yet.
 
 **Consumer in Deckhouse:** user-authn-controller (package
 `identitymigration`):
@@ -120,7 +140,9 @@ kubernetes storage only:
 
 **Upstream status:** Deckhouse only, temporary.
 
-**Depends on:** 100 (context lines in `storage/kubernetes/types.go` only).
+**Depends on:** 100 (`toStorageUserIdentity`, which returns an error for a
+generation that does not parse; context lines in `storage/kubernetes/types.go`
+and `storage.go`).
 
 ### 200-client-connector-filters.patch
 
@@ -174,7 +196,7 @@ or groups per client.
 token-exchange grants enforce its lock, whether `DEX_SESSIONS_ENABLED` is set
 or not. The code and device-code exchanges do not check the lock again: they
 finish a login that was checked; revoking what a login issued is the job of
-the pair generation (290, global logout), not of a lock re-check. New package
+the pair generation (290), not of a lock re-check. New package
 `server/useridentity`.
 
 - the login form, connector callbacks and SPNEGO (`finalizeLogin`) create or
@@ -618,6 +640,8 @@ allow-lists, the rate limit and the upstream refresh.
 | `user was forced to change password due to password object requirement` (`… complexity policy settings`, `… rotation policy settings`), `password changed successfully`, `token exchange successful` | INFO | |
 | `refresh token expired`, `refresh token expired due to inactivity` (the normal end of a refresh token; upstream logs `ERROR`) | INFO | |
 | `refresh token claimed twice` (reused after rotation), `trying to claim token for different client` (upstream logs `ERROR`) | WARN | |
+| `refresh denied: credentials revoked`, `token request denied: credentials revoked` (code exchange, `/auth` response), `session login refused: credentials revoked` (290) | WARN | `revoked` |
+| `token revoked` (290, `/token/revoke`) | INFO | |
 
 A refusal decided in `finalizeLogin` is logged once, where it is decided, not
 again as `failed to finalize login`.
@@ -666,6 +690,73 @@ browser under a URL of other ones.
 **Upstream status:** not upstream.
 
 **Depends on:** 220 (`server/templates/passwordchange.go`).
+
+### 290-revocation.patch
+
+**Zone:** revocation, the Dex side of global logout and instant revocation.
+New package `server/revocation`.
+
+Every credential of a (user, connector) pair carries the generation the pair
+had at its login (fields of 100): the auth request, the code, the refresh
+token, the browser session, and the claim `d8_gen` of the ID and access tokens
+(absent for 0; every consumer reads its absence as 0, so tokens issued before
+this patch stay valid). The user-authn controller raises the generation to
+revoke everything issued to the pair. Only the current generation is valid: a
+lower one was revoked, a higher one was issued to a record of the pair that
+was deleted and created again. Nothing compares times.
+
+- the login form, connector callbacks, SPNEGO and the password change page
+  take the generation from the same write as the lock check
+  (`useridentity.Record` returns it, or, when the write is given up (210),
+  from the read that checks the lock); a session login takes the identity's;
+- refused: the code exchange, device flow included (`invalid_grant`, "Invalid
+  or expired code parameter.", as any spent code); the `/auth` response (400
+  "The login is no longer valid. Please sign in again.", the auth request is
+  gone); a refresh (`invalid_grant`, "The credentials of this user were
+  revoked. Sign in again.", and the refresh token goes with its
+  offline-session reference, `RefreshStore.RevokeGrant`; a lock is checked
+  first and answers 429 as before); a session login (the session is deleted,
+  the cookie cleared, the user signs in again); introspection answers
+  `active: false`; userinfo answers 401 `invalid_token`;
+- not refused: the password grant and token exchange authenticate anew and
+  issue the current generation (`useridentity.State` reads the lock and the
+  generation at once); tokens of client credentials have no pair;
+- `/token/revoke` (RFC 7009) for refresh tokens, with the client
+  authentication of `/token`, in the discovery document
+  (`revocation_endpoint`, `revocation_endpoint_auth_methods_supported`) and in
+  the rate limit of 240, where, as at `/token`, only failed client
+  authentication counts. The token is looked up before its client is compared,
+  so its secret is checked first. `token_type_hint` is ignored: the form of the
+  token tells its type (RFC 7009 §2.1). An access or ID token gets
+  `unsupported_token_type`; a token Dex does not know or no longer honors 200;
+  a token of another client `invalid_grant` (WARN `token revocation refused:
+  the token was issued to another client`). A `grant` revocation is written
+  before the token is deleted; when it cannot be written, 503
+  `temporarily_unavailable` and nothing is deleted;
+- `/logout` and `/logout/callback` write a `session` revocation (the `sid` and
+  the clients of the session) before anything of the session goes; when it
+  cannot be written, 503 and the session is kept;
+- the sign-in log reason `revoked` (table of 260);
+- a storage without revocations (SQL, ent, etcd) is logged once at start,
+  "revocation events are disabled: the storage does not support them", and
+  records nothing.
+
+A revocation between a check and a write lets one more token out at the old
+generation: the subscribers refuse it on the revocation event, Dex on the
+next refresh.
+
+**Consumer in Deckhouse:** user-authn-controller (`UserOperation` raises the
+generation; the revocation feed of DexAuthenticator); dex-authenticator
+(`/token/revoke` on sign out); the user-authz webhook and the
+`AuthenticationConfiguration` of kube-apiserver (`d8_gen`); basic-auth-proxy;
+`templates/dex/rbac-for-us.yaml` (`revocations`: `create`).
+
+**Upstream status:** Deckhouse only. v2.46 has no token revocation endpoint
+and nothing that ends the tokens of a user at once.
+
+**Depends on:** 100 (the `generation` fields, `Revocation`), 210
+(`useridentity.Record`, the lock check that `State` joins), 240
+(`rateLimitedRoutes`), 260 (the sign-in log scheme).
 
 ### 998-fix-cve.patch
 
@@ -729,6 +820,7 @@ Seeds reach every handler package without fuzzing:
 | `FuzzHandlePublicKeys` | `/keys` | discovery |
 | `FuzzHandleUserInfo` | `/userinfo` | userinfo |
 | `FuzzHandleIntrospect` | `/token/introspect` | introspection |
+| `FuzzHandleRevoke` | `/token/revoke` | grants |
 | `FuzzHandleAuthorization` | `/auth` | authflow |
 | `FuzzHandleConnectorLogin` | `/auth/{connector}` | authflow |
 | `FuzzHandlePasswordLogin` | `/auth/{connector}/login` | authflow |
@@ -755,8 +847,8 @@ Each input builds its own server, so bound `-fuzzminimizetime`: the default
 
 **Upstream status:** Deckhouse only.
 
-**Depends on:** 100, 200, 220, 230, 240; applied last so it compiles against
-every patch.
+**Depends on:** 100, 200, 220, 230, 240, 290; applied last so it compiles
+against every patch.
 
 <!-- cvefix:begin -->
 ### Dependency overrides

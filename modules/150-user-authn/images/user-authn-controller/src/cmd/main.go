@@ -40,11 +40,14 @@ import (
 	"user-authn-controller/internal/controller"
 	"user-authn-controller/internal/controller/identitymigration"
 	"user-authn-controller/internal/controller/providercheck"
+	"user-authn-controller/internal/controller/revoke"
 	"user-authn-controller/internal/controller/tlsconflict"
 	"user-authn-controller/internal/controller/user"
 	"user-authn-controller/internal/controller/useraccount"
 	"user-authn-controller/internal/controller/userexpire"
 	"user-authn-controller/internal/controller/useroperation"
+	"user-authn-controller/internal/revocation"
+	"user-authn-controller/internal/revocationfeed"
 )
 
 const (
@@ -55,6 +58,16 @@ const (
 	// user-authz-controller.
 	logLevelEnv     = "LOG_LEVEL"
 	defaultLogLevel = "info"
+
+	// idTokenTTLEnv is userAuthn.idTokenTTL, the lifetime of the ID tokens of Dex. The revocations
+	// are kept for it and an hour (revocation.Retention); without it, the default of the module.
+	idTokenTTLEnv     = "ID_TOKEN_TTL"
+	defaultIDTokenTTL = 10 * time.Minute
+
+	// revocationFeedAddrEnv is where the revocation feed listens, revocationFeedTLSDirEnv where its
+	// certificate is (tls.crt, tls.key). Without the address the feed is off.
+	revocationFeedAddrEnv   = "REVOCATION_FEED_ADDR"
+	revocationFeedTLSDirEnv = "REVOCATION_FEED_TLS_DIR"
 
 	// The lease is renewed against the API server, and controller-runtime exits the process when a
 	// renewal misses RenewDeadline (the manager's OnStoppedLeading returns an error from Start). The
@@ -96,12 +109,21 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 		return nil, fmt.Errorf("add v1alpha1 scheme: %w", err)
 	}
 
+	retention, err := revocationRetention(os.Getenv(idTokenTTLEnv))
+	if err != nil {
+		return nil, err
+	}
+
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
 		return nil, fmt.Errorf("get kubeconfig: %w", err)
 	}
 
-	runtimeManager, err := ctrl.NewManager(cfg, newManagerOptions(scheme))
+	opts, err := newManagerOptions(scheme)
+	if err != nil {
+		return nil, err
+	}
+	runtimeManager, err := ctrl.NewManager(cfg, opts)
 	if err != nil {
 		return nil, fmt.Errorf("create runtime manager: %w", err)
 	}
@@ -134,11 +156,47 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 	if err = identitymigration.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register identitymigration controller: %w", err)
 	}
+	if err = revoke.Register(runtimeManager, retention); err != nil {
+		return nil, fmt.Errorf("register revocation gc: %w", err)
+	}
+	if addr := os.Getenv(revocationFeedAddrEnv); addr != "" {
+		feed := revocationfeed.Config{
+			Addr:      addr,
+			TLSDir:    os.Getenv(revocationFeedTLSDirEnv),
+			Retention: retention,
+			Limits:    revocationfeed.DefaultLimits(),
+		}
+		if err = revocationfeed.Register(context.Background(), runtimeManager, feed); err != nil {
+			return nil, fmt.Errorf("register revocation feed: %w", err)
+		}
+	}
 
 	return runtimeManager, nil
 }
 
-func newManagerOptions(scheme *runtime.Scheme) manager.Options {
+// revocationRetention is how long revocations are kept, from the ID token lifetime idTokenTTL.
+func revocationRetention(idTokenTTL string) (time.Duration, error) {
+	if idTokenTTL == "" {
+		return revocation.Retention(defaultIDTokenTTL), nil
+	}
+	ttl, err := time.ParseDuration(idTokenTTL)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", idTokenTTLEnv, err)
+	}
+	if ttl <= 0 {
+		return 0, fmt.Errorf("%s %q is not positive", idTokenTTLEnv, idTokenTTL)
+	}
+	return revocation.Retention(ttl), nil
+}
+
+func newManagerOptions(scheme *runtime.Scheme) (manager.Options, error) {
+	byObject := controller.InformerCacheByObject()
+	clients, clientCache, err := revocationfeed.ClientCache()
+	if err != nil {
+		return manager.Options{}, err
+	}
+	byObject[clients] = clientCache
+
 	timeout := 10 * time.Second
 	// Leader election is always on. It used to follow HA_MODE, but two pods of this Deployment
 	// exist outside HA too: the non-HA rolling update surges the new pod before the old one is
@@ -159,7 +217,7 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 			BindAddress: ":9091",
 		},
 		Cache: cache.Options{
-			ByObject: controller.InformerCacheByObject(),
+			ByObject: byObject,
 		},
 		Client: client.Options{
 			Cache: &client.CacheOptions{
@@ -168,7 +226,7 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 		},
 	}
 
-	return opts
+	return opts, nil
 }
 
 const (

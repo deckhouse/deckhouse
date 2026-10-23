@@ -21,6 +21,7 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -35,181 +36,287 @@ func testLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 }
 
-func TestPasswordCache(t *testing.T) {
-	scheme := runtime.NewScheme()
-
-	passwordGVR := schema.GroupVersionResource{
-		Group:    "dex.coreos.com",
-		Version:  "v1",
-		Resource: "passwords",
+func newFakeDynamicClient(objects ...runtime.Object) *fake.FakeDynamicClient {
+	gvrToListKind := map[schema.GroupVersionResource]string{
+		passwordGVR:      "PasswordList",
+		userOperationGVR: "UserOperationList",
 	}
+	return fake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), gvrToListKind, objects...)
+}
 
-	existingPassword := &unstructured.Unstructured{
+func password(name, username, userID string) *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "dex.coreos.com/v1",
 			"kind":       "Password",
 			"metadata": map[string]interface{}{
-				"name":      "some-encoded-name",
+				"name":      name,
 				"namespace": dexNamespace,
 			},
-			"username": "admin",
-			"email":    "admin@example.com",
+			"username": username,
+			"email":    username + "@example.com",
+			"hash":     "JDJhJDEwJGZ5Q2o3dW5rQnh5eFNyaDZqVUxrVE93dlVhYk56ZGQ4MWFtMDJDVDl0V1RsYi55MEVwdHJp",
 		},
 	}
-
-	gvrToListKind := map[schema.GroupVersionResource]string{
-		passwordGVR: "PasswordList",
+	if userID != "" {
+		obj.Object["userID"] = userID
 	}
+	return obj
+}
 
-	dynamicClient := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind, existingPassword)
-	logger := testLogger()
+func startedClient(t *testing.T, dynamicClient *fake.FakeDynamicClient) *K8sClient {
+	t.Helper()
 
-	cache := NewPasswordCache(dynamicClient, logger)
+	client, err := NewClientWithDynamic(dynamicClient, testLogger())
+	if err != nil {
+		t.Fatalf("NewClientWithDynamic() error = %v", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
-	if err := cache.Start(ctx); err != nil {
-		t.Fatalf("Failed to start password cache: %v", err)
+	if err := client.Start(ctx); err != nil {
+		t.Fatalf("Start() error = %v", err)
 	}
-	defer cache.Stop()
+	t.Cleanup(client.Stop)
+
+	return client
+}
+
+func TestPasswordCache_Username(t *testing.T) {
+	client := startedClient(t, newFakeDynamicClient(
+		password("admin-obj", "admin", "admin"),
+		password("jane-obj", "jane", "jane-id"),
+		password("legacy-obj", "legacy", ""),
+		password("dup-1", "dup-one", "dup"),
+		password("dup-2", "dup-two", "dup"),
+	))
 
 	tests := []struct {
+		name    string
+		userID  string
+		want    string
+		wantErr error
+	}{
+		{name: "user ID equal to the username", userID: "admin", want: "admin"},
+		{name: "user ID that differs from the username", userID: "jane-id", want: "jane"},
+		{name: "username of a user with another user ID", userID: "jane", wantErr: ErrUserNotFound},
+		{name: "object without a user ID is found by username", userID: "legacy", want: "legacy"},
+		{name: "two objects with one user ID", userID: "dup", wantErr: ErrAmbiguousUser},
+		{name: "unknown user ID", userID: "unknown", wantErr: ErrUserNotFound},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := client.LocalUsername(context.Background(), tt.userID)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("LocalUsername(%q) error = %v, want %v", tt.userID, err, tt.wantErr)
+			}
+			if got != tt.want {
+				t.Errorf("LocalUsername(%q) = %q, want %q", tt.userID, got, tt.want)
+			}
+		})
+	}
+
+	if got := client.passwordCache.Count(); got != 5 {
+		t.Errorf("Count() = %d, want 5", got)
+	}
+}
+
+func TestPasswordCache_KeepsNoHashes(t *testing.T) {
+	client := startedClient(t, newFakeDynamicClient(password("jane-obj", "jane", "jane")))
+
+	for _, obj := range client.passwordCache.informer.GetStore().List() {
+		u, ok := obj.(*unstructured.Unstructured)
+		if !ok {
+			t.Fatalf("cached object is %T, want *unstructured.Unstructured", obj)
+		}
+		for _, field := range []string{"hash", "email"} {
+			if _, found := u.Object[field]; found {
+				t.Errorf("cached Password %s keeps the %q field", u.GetName(), field)
+			}
+		}
+	}
+}
+
+func TestPasswordCache_FollowsUpdates(t *testing.T) {
+	dynamicClient := newFakeDynamicClient(password("jane-obj", "jane", "jane"))
+	client := startedClient(t, dynamicClient)
+
+	ctx := context.Background()
+	if _, err := dynamicClient.Resource(passwordGVR).Namespace(dexNamespace).
+		Update(ctx, password("jane-obj", "jane", "jane-renamed"), metav1.UpdateOptions{}); err != nil {
+		t.Fatalf("update Password: %v", err)
+	}
+
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		username, err := client.LocalUsername(ctx, "jane-renamed")
+		if err == nil && username == "jane" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("LocalUsername(jane-renamed) = %q, %v after the update, want jane", username, err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	if _, err := client.LocalUsername(ctx, "jane"); !errors.Is(err, ErrUserNotFound) {
+		t.Errorf("LocalUsername(jane) error = %v after the update, want %v", err, ErrUserNotFound)
+	}
+}
+
+func TestPasswordCache_StopIsIdempotent(t *testing.T) {
+	client := startedClient(t, newFakeDynamicClient())
+
+	// Repeated Stop must not panic on closing an already-closed channel.
+	client.Stop()
+	client.Stop()
+}
+
+func TestK8sClient_LocalUsername_CacheNotSynced(t *testing.T) {
+	client, err := NewClientWithDynamic(newFakeDynamicClient(password("admin-obj", "admin", "admin")), testLogger())
+	if err != nil {
+		t.Fatalf("NewClientWithDynamic() error = %v", err)
+	}
+
+	// Don't start the cache, so it's not synced
+	if _, err := client.LocalUsername(context.Background(), "admin"); !errors.Is(err, ErrCacheNotSynced) {
+		t.Errorf("LocalUsername() error = %v, want %v", err, ErrCacheNotSynced)
+	}
+}
+
+func TestK8sClient_CreateUserOperation(t *testing.T) {
+	tests := []struct {
 		name     string
-		username string
-		want     bool
+		op       UserOperation
+		wantSpec map[string]interface{}
 	}{
 		{
-			name:     "existing local user",
-			username: "admin",
-			want:     true,
+			name: "password change of a local user",
+			op: UserOperation{
+				GenerateName: "self-password-change-",
+				Type:         OperationTypeRequirePasswordChange,
+				User:         "jane",
+			},
+			wantSpec: map[string]interface{}{
+				"type":          "RequirePasswordChange",
+				"user":          "jane",
+				"initiatorType": "self",
+			},
 		},
 		{
-			name:     "non-existing user",
-			username: "unknown",
-			want:     false,
+			name: "logout of a local user",
+			op: UserOperation{
+				GenerateName: "self-logout-",
+				Type:         OperationTypeLogout,
+				User:         "jane",
+			},
+			wantSpec: map[string]interface{}{
+				"type":          "Logout",
+				"user":          "jane",
+				"initiatorType": "self",
+			},
+		},
+		{
+			name: "logout of an external account",
+			op: UserOperation{
+				GenerateName: "self-logout-",
+				Type:         OperationTypeLogout,
+				Target: &Target{
+					Email:       "jdoe@example.org",
+					ConnectorID: "ldap",
+					UserID:      "cn=jdoe,ou=people,dc=example,dc=org",
+				},
+			},
+			wantSpec: map[string]interface{}{
+				"type":          "Logout",
+				"initiatorType": "self",
+				"target": map[string]interface{}{
+					"email":       "jdoe@example.org",
+					"connectorID": "ldap",
+					"userID":      "cn=jdoe,ou=people,dc=example,dc=org",
+				},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := cache.IsLocalUser(tt.username)
-			if got != tt.want {
-				t.Errorf("IsLocalUser(%q) = %v, want %v", tt.username, got, tt.want)
+			dynamicClient := newFakeDynamicClient()
+			client, err := NewClientWithDynamic(dynamicClient, testLogger())
+			if err != nil {
+				t.Fatalf("NewClientWithDynamic() error = %v", err)
+			}
+
+			if _, err := client.CreateUserOperation(context.Background(), tt.op); err != nil {
+				t.Fatalf("CreateUserOperation() error = %v", err)
+			}
+
+			list, err := dynamicClient.Resource(userOperationGVR).List(context.Background(), metav1.ListOptions{})
+			if err != nil {
+				t.Fatalf("list UserOperations: %v", err)
+			}
+			if len(list.Items) != 1 {
+				t.Fatalf("got %d UserOperations, want 1", len(list.Items))
+			}
+
+			op := list.Items[0]
+			if op.GetGenerateName() != tt.op.GenerateName {
+				t.Errorf("generateName = %q, want %q", op.GetGenerateName(), tt.op.GenerateName)
+			}
+			if op.GetAPIVersion() != "deckhouse.io/v1" || op.GetKind() != "UserOperation" {
+				t.Errorf("object is %s %s, want deckhouse.io/v1 UserOperation", op.GetAPIVersion(), op.GetKind())
+			}
+			if !reflect.DeepEqual(op.Object["spec"], tt.wantSpec) {
+				t.Errorf("spec = %v, want %v", op.Object["spec"], tt.wantSpec)
 			}
 		})
 	}
-
-	if !cache.IsSynced() {
-		t.Error("Cache should be synced")
-	}
-
-	if cache.Count() != 1 {
-		t.Errorf("Cache count = %d, want 1", cache.Count())
-	}
 }
 
-func TestPasswordCache_StopIsIdempotent(t *testing.T) {
-	scheme := runtime.NewScheme()
-	passwordGVR := schema.GroupVersionResource{
-		Group:    "dex.coreos.com",
-		Version:  "v1",
-		Resource: "passwords",
-	}
-	gvrToListKind := map[schema.GroupVersionResource]string{passwordGVR: "PasswordList"}
-	dynamicClient := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind)
-
-	cache := NewPasswordCache(dynamicClient, testLogger())
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := cache.Start(ctx); err != nil {
-		t.Fatalf("Failed to start password cache: %v", err)
+func TestK8sClient_UserOperationStatus(t *testing.T) {
+	operation := func(name string, status map[string]interface{}) *unstructured.Unstructured {
+		obj := &unstructured.Unstructured{Object: map[string]interface{}{
+			"apiVersion": "deckhouse.io/v1",
+			"kind":       "UserOperation",
+			"metadata":   map[string]interface{}{"name": name},
+			"spec":       map[string]interface{}{"type": "Logout", "user": "jane", "initiatorType": "self"},
+		}}
+		if status != nil {
+			obj.Object["status"] = status
+		}
+		return obj
 	}
 
-	// Repeated Stop must not panic on closing an already-closed channel.
-	cache.Stop()
-	cache.Stop()
-}
-
-func TestK8sClient_CreatePasswordResetOperation(t *testing.T) {
-	scheme := runtime.NewScheme()
-
-	gvrToListKind := map[schema.GroupVersionResource]string{
-		userOperationGVR: "UserOperationList",
-	}
-
-	dynamicClient := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind)
-	logger := testLogger()
-	client := NewClientWithDynamic(dynamicClient, logger)
-
-	_, err := client.CreatePasswordResetOperation(
-		context.Background(),
-		"testuser",
-		"$2y$10$testHash",
-	)
-
+	client, err := NewClientWithDynamic(newFakeDynamicClient(
+		operation("running", nil),
+		operation("done", map[string]interface{}{"phase": "Succeeded", "message": "generation 4"}),
+		operation("refused", map[string]interface{}{"phase": "Failed", "message": "cannot find password for user: jane"}),
+	), testLogger())
 	if err != nil {
-		t.Fatalf("CreatePasswordResetOperation() unexpected error: %v", err)
+		t.Fatalf("NewClientWithDynamic() error = %v", err)
 	}
 
-	list, err := dynamicClient.Resource(userOperationGVR).List(context.Background(), metav1.ListOptions{})
-	if err != nil {
-		t.Fatalf("Failed to list UserOperations: %v", err)
+	tests := []struct {
+		name    string
+		want    OperationStatus
+		wantErr bool
+	}{
+		{name: "running", want: OperationStatus{}},
+		{name: "done", want: OperationStatus{Phase: PhaseSucceeded, Message: "generation 4"}},
+		{name: "refused", want: OperationStatus{Phase: PhaseFailed, Message: "cannot find password for user: jane"}},
+		{name: "absent", wantErr: true},
 	}
 
-	if len(list.Items) != 1 {
-		t.Errorf("Expected 1 UserOperation, got %d", len(list.Items))
-	}
-
-	op := list.Items[0]
-	spec, ok := op.Object["spec"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Failed to get spec from UserOperation")
-	}
-
-	if spec["user"] != "testuser" {
-		t.Errorf("UserOperation user = %v, want testuser", spec["user"])
-	}
-
-	if spec["type"] != "ResetPassword" {
-		t.Errorf("UserOperation type = %v, want ResetPassword", spec["type"])
-	}
-
-	if spec["initiatorType"] != "self" {
-		t.Errorf("UserOperation initiatorType = %v, want self", spec["initiatorType"])
-	}
-
-	resetPassword, ok := spec["resetPassword"].(map[string]interface{})
-	if !ok {
-		t.Fatal("Failed to get resetPassword from spec")
-	}
-
-	if resetPassword["newPasswordHash"] != "$2y$10$testHash" {
-		t.Errorf("UserOperation newPasswordHash = %v, want $2y$10$testHash", resetPassword["newPasswordHash"])
-	}
-}
-
-func TestK8sClient_IsLocalUser_CacheNotSynced(t *testing.T) {
-	scheme := runtime.NewScheme()
-
-	passwordGVR := schema.GroupVersionResource{
-		Group:    "dex.coreos.com",
-		Version:  "v1",
-		Resource: "passwords",
-	}
-
-	gvrToListKind := map[schema.GroupVersionResource]string{
-		passwordGVR: "PasswordList",
-	}
-
-	dynamicClient := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind)
-	logger := testLogger()
-	client := NewClientWithDynamic(dynamicClient, logger)
-
-	// Don't start the cache, so it's not synced
-	_, err := client.IsLocalUser(context.Background(), "admin")
-	if !errors.Is(err, ErrCacheNotSynced) {
-		t.Errorf("IsLocalUser() error = %v, want %v", err, ErrCacheNotSynced)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := client.UserOperationStatus(context.Background(), tt.name)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("UserOperationStatus(%q) error = %v, wantErr %v", tt.name, err, tt.wantErr)
+			}
+			if got != tt.want {
+				t.Errorf("UserOperationStatus(%q) = %+v, want %+v", tt.name, got, tt.want)
+			}
+		})
 	}
 }

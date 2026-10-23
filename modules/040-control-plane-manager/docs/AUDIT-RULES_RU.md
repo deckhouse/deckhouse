@@ -349,6 +349,7 @@ users:
   - system:serviceaccount:d8-user-authn:basic-auth-proxy
   - system:serviceaccount:d8-user-authn:controller
   - system:serviceaccount:d8-user-authn:dex
+  - system:serviceaccount:d8-user-authn:user-api
   - system:serviceaccount:d8-user-authz:controller
   - system:serviceaccount:d8-user-authz:permission-browser-apiserver
   - system:serviceaccount:d8-user-authz:webhook
@@ -848,6 +849,7 @@ rules:
       - system:serviceaccount:d8-user-authn:basic-auth-proxy
       - system:serviceaccount:d8-user-authn:controller
       - system:serviceaccount:d8-user-authn:dex
+      - system:serviceaccount:d8-user-authn:user-api
       - system:serviceaccount:d8-user-authz:controller
       - system:serviceaccount:d8-user-authz:permission-browser-apiserver
       - system:serviceaccount:d8-user-authz:webhook

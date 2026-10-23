@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -42,7 +43,13 @@ type LDAPConfig struct {
 	DexURL string
 	// CAFile is the PEM bundle of the CA that issued the certificate of Dex. It is required: the
 	// certificate of the Dex Service is internal, and the check of the credentials rests on it.
-	CAFile               string
+	CAFile string
+	// TrustedProxySecret is the secret Dex trusts RealIPHeader on. Requests to DexURL carry the
+	// address of the end client and the secret: through the public address the ingress controller
+	// would replace the client with its own peer, the proxy, and every basic-auth client would
+	// share one rate limit bucket in Dex. Empty sends no secret, and Dex counts the connection
+	// address.
+	TrustedProxySecret   string
 	ClientID             string
 	ClientSecret         string
 	Scopes               []string
@@ -67,20 +74,29 @@ func NewLDAP(ctx context.Context, cfg LDAPConfig) (Provider, error) {
 		return nil, err
 	}
 
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          10,
+		IdleConnTimeout:       30 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       tlsConfig,
+	}
+	dex := dexTransport{base: transport, trustedProxySecret: cfg.TrustedProxySecret}
+	if cfg.DexURL != "" {
+		u, err := url.Parse(cfg.DexURL)
+		if err != nil || u.Host == "" {
+			return nil, fmt.Errorf("the in-cluster address of Dex %q is not a URL", cfg.DexURL)
+		}
+		dex.host = u.Host
+	}
 	httpClient := &http.Client{
-		Timeout: 30 * time.Second,
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-			}).DialContext,
-			MaxIdleConns:          10,
-			IdleConnTimeout:       30 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig:       tlsConfig,
-		},
+		Timeout:   30 * time.Second,
+		Transport: dex,
 	}
 
 	// The endpoints are not discovered: Dex serves them at fixed paths under the issuer, and the
@@ -119,7 +135,9 @@ func NewLDAP(ctx context.Context, cfg LDAPConfig) (Provider, error) {
 	}, nil
 }
 
-func (p *LDAPProvider) ValidateCredentials(ctx context.Context, login, password string) ([]string, error) {
+// ValidateCredentials checks the credentials with a password grant of Dex. The address of the end
+// client in ctx (WithClientAddress) goes to Dex in X-Real-IP.
+func (p *LDAPProvider) ValidateCredentials(ctx context.Context, login, password string) (Identity, error) {
 	p.logger.Info("validate credentials via LDAP (password grant)")
 
 	token, err := p.oauth2.PasswordCredentialsToken(
@@ -128,11 +146,22 @@ func (p *LDAPProvider) ValidateCredentials(ctx context.Context, login, password 
 		password,
 	)
 	if err != nil {
-		return nil, err
+		return Identity{}, err
+	}
+
+	var identity Identity
+	rawIDToken, _ := token.Extra("id_token").(string)
+	if subject, generation, err := idTokenSubject(rawIDToken); err != nil {
+		// The credentials are valid all the same; only a revocation cannot find the cache entry, and
+		// it lives until its TTL.
+		p.logger.Warningf("read the ID token Dex issued: %v; a revocation will not evict the cached credentials of this user", err)
+	} else {
+		identity.Subject = subject
+		identity.Generation = generation
 	}
 
 	if !p.getUserInfo {
-		return nil, nil
+		return identity, nil
 	}
 
 	p.logger.Info("get user info from Dex for LDAP user")
@@ -142,17 +171,18 @@ func (p *LDAPProvider) ValidateCredentials(ctx context.Context, login, password 
 		oauth2.StaticTokenSource(token),
 	)
 	if err != nil {
-		return nil, err
+		return Identity{}, err
 	}
 
 	claims := struct {
 		Groups []string `json:"groups"`
 	}{}
 	if err = info.Claims(&claims); err != nil {
-		return nil, err
+		return Identity{}, err
 	}
+	identity.Groups = claims.Groups
 
-	return claims.Groups, nil
+	return identity, nil
 }
 
 // dexTLSConfig verifies the certificate of Dex against the CA in caFile.

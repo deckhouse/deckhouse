@@ -283,6 +283,68 @@ index 00000000..f6bfb775
 +		_, _ = p.LoadCookiedSession(newFuzzRequest(t, data, http.MethodGet, "/"))
 +	})
 +}
+diff --git a/pkg/deckhouse/revocation/fuzz_sse_test.go b/pkg/deckhouse/revocation/fuzz_sse_test.go
+new file mode 100644
+index 00000000..a20b21d6
+--- /dev/null
++++ b/pkg/deckhouse/revocation/fuzz_sse_test.go
+@@ -0,0 +1,56 @@
++package revocation
++
++import (
++	"bytes"
++	"io"
++	"testing"
++	"time"
++
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++)
++
++// The revocation feed (patch 010) is read from the network: the SSE parser, the events and the
++// state they build must hold any stream. The session check then reads tokens from the session store.
++
++func FuzzSSEStream(f *testing.F) {
++	f.Add([]byte("retry: 5000\n\nevent: snapshot\nid: e.1\ndata: {\"v\":1,\"part\":0,\"last\":true,\"pairs\":[{\"k\":\"BtOeixcwfXZ3z6kDWHNMTw\",\"g\":3,\"exp\":1760620000}]}\n\n"))
++	f.Add([]byte("event: snapshot\nid: e.1\ndata: {\"v\":1,\"part\":0,\"last\":false,\"sessions\":[{\"k\":\"0-SQllhFkuuG1ttZoMxAiA\",\"exp\":1760620000}]}\n\nevent: snapshot\nid: e.1\ndata: {\"v\":1,\"part\":1,\"last\":true,\"grants\":[{\"k\":\"jVFqq8vBRSjPWcgLzpRzaA\",\"exp\":1760620000}]}\n\n"))
++	f.Add([]byte("event: revocation\nid: e.2\ndata: {\"v\":1,\"type\":\"pair\",\"k\":\"BtOeixcwfXZ3z6kDWHNMTw\",\"g\":4,\"exp\":1760620000,\"at\":1760610000}\n\n"))
++	f.Add([]byte("event: heartbeat\r\nid: e.2\r\ndata: {\"v\":1,\"t\":1760610010}\r\n\r\n"))
++	f.Add([]byte("event: revocation\rdata: {\"v\":2,\"type\":\"grant\"}\r\r: comment\n"))
++	f.Add([]byte("data: a\ndata: b\nid: \x00\n\nevent: snapshot\ndata: {\"v\":1,\"part\":7}\n\n"))
++	f.Add([]byte("event: revocation\ndata: {\"v\":1,\"type\":\"pair\",\"k\":\"k\",\"g\":-1}\n\n"))
++	f.Fuzz(func(t *testing.T, stream []byte) {
++		logger.SetOutput(io.Discard)
++		logger.SetErrOutput(io.Discard)
++
++		now := time.Unix(1760610000, 0)
++		feed := &Feed{
++			salt:    salt(vectorSecret),
++			state:   newState(),
++			limiter: newLimiter(forcedRefreshRate, forcedRefreshBurst),
++			now:     func() time.Time { return now },
++		}
++
++		events := newSSEReader(bytes.NewReader(stream))
++		for {
++			event, err := events.next()
++			if err != nil {
++				break
++			}
++			if len(event.Data) > maxLineSize {
++				t.Fatalf("event data of %d bytes passed the limit", len(event.Data))
++			}
++			// An event the subscriber cannot apply ends the stream.
++			if feed.apply(event) != nil {
++				break
++			}
++		}
++		feed.maintain()
++
++		session := &sessionsapi.SessionState{IDToken: string(stream), RefreshToken: string(stream)}
++		_ = feed.Revoked(session)
++		_ = feed.NeedsForcedRefresh(session)
++	})
++}
 diff --git a/pkg/middleware/fuzz_jwt_session_test.go b/pkg/middleware/fuzz_jwt_session_test.go
 new file mode 100644
 index 00000000..8da68af5

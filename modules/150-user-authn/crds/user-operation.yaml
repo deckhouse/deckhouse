@@ -24,11 +24,9 @@ spec:
           description: |
             Describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
 
-            For local users, the `ResetPassword` and `Lock` operations also delete the user's Dex
-            RefreshToken objects. The sessions of the user in applications and kubeconfig files end when
-            the current ID token expires, and the user has to authenticate again. These operations keep
-            the user's 2FA secret. Only `Reset2FA` removes it, and it also deletes the user's Dex
-            OfflineSessions and RefreshToken objects.
+            The `Lock`, `ResetPassword`, and `Reset2FA` operations end the sessions of the user at once,
+            as in `v1`. These operations keep the user's 2FA secret. Only `Reset2FA` removes it, and it
+            also deletes the user's Dex OfflineSessions object.
           required:
             - spec
           properties:
@@ -134,18 +132,20 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Describes a single-use operation to be applied to a user (password reset, 2FA reset, lock/unlock).
+            Describes a single-use operation to be applied to a user (password reset, 2FA reset, lock/unlock, logout).
 
             A UserOperation runs once, and changes to its spec after creation are ignored.
             The module processes the operation and writes the result to `status.phase`
             (`Succeeded` or `Failed`). Completed operations are automatically deleted after 24 hours.
             To perform a new action, create a new UserOperation.
 
-            For local users, the `ResetPassword` and `Lock` operations also delete the user's Dex
-            RefreshToken objects. The sessions of the user in applications and kubeconfig files end when
-            the current ID token expires, and the user has to authenticate again. These operations keep
-            the user's 2FA secret. Only `Reset2FA` removes it, and it also deletes the user's Dex
-            OfflineSessions and RefreshToken objects.
+            `Lock`, `ResetPassword`, `Reset2FA`, and `Logout` end the sessions of the user at once. The module
+            raises the generation of the user's Dex account (a provider and a user ID), records the revocation
+            in a Dex Revocation object, and deletes the user's Dex AuthSession (browser session) and RefreshToken
+            objects. Dex refuses everything it issued to the account before, and dex-authenticator stops
+            accepting the user's sessions within seconds. These operations keep the user's 2FA secret. Only
+            `Reset2FA` removes it, and it also deletes the user's Dex OfflineSessions object. `Unlock` and
+            `RequirePasswordChange` end no sessions. What an operation revoked is in `status.revocation`.
           required:
             - spec
           properties:
@@ -157,11 +157,17 @@ spec:
                 - required: [user]
                 - required: [target]
               x-kubernetes-validations:
-                # target identifies an account of an external provider and is
-                # only meaningful for Lock/Unlock against its Dex UserIdentity.
-                # ResetPassword and Reset2FA operate on a local user (spec.user).
-                - rule: 'self.type in ["Lock", "Unlock"] || !has(self.target)'
-                  message: 'spec.target is only supported for Lock and Unlock operations; ResetPassword and Reset2FA apply to local users (spec.user) only.'
+                # target identifies a Dex account by email and is meaningful for
+                # Lock, Unlock, and Logout against its UserIdentity. ResetPassword,
+                # Reset2FA, and RequirePasswordChange operate on a local user (spec.user).
+                - rule: 'self.type in ["Lock", "Unlock", "Logout"] || !has(self.target)'
+                  message: 'spec.target is only supported for Lock, Unlock, and Logout operations; ResetPassword, Reset2FA, and RequirePasswordChange apply to local users (spec.user) only.'
+                - rule: 'self.type == "Logout" || !has(self.logout)'
+                  message: 'spec.logout is only supported for the Logout operation.'
+                - rule: '!has(self.logout) || [has(self.logout.session), has(self.logout.exceptSession)].filter(x, x).size() <= 1'
+                  message: 'spec.logout accepts at most one of session and exceptSession.'
+                - rule: 'self.type != "RequirePasswordChange" || has(self.user)'
+                  message: 'RequirePasswordChange applies to local users (spec.user) only.'
               properties:
                 user:
                   type: string
@@ -176,13 +182,15 @@ spec:
                 target:
                   type: object
                   description: |
-                    Identifier of an account of an external authentication provider of any type.
+                    Identifier of an account of an external authentication provider, by email.
 
-                    The `Lock` and `Unlock` operations against `target` change the Dex UserIdentity object of
-                    the user who signs in through the `connectorID` provider with this `email`. The lock applies
-                    only to this provider and does not lock a local user or a user of another provider with the
-                    same email. The operation fails if the user has never signed in through the provider or if
-                    more than one user of the provider has this email.
+                    The `Lock`, `Unlock`, and `Logout` operations against `target` apply to the Dex account
+                    (UserIdentity object) of the user whose email at the last sign-in was `email`. `connectorID`
+                    and `userID` narrow the search down to one provider and one user ID. The operation fails if
+                    no account has the email (the user has never signed in) or if more than one account matches;
+                    then set `connectorID`, and `userID` if the provider has several users with the email. The
+                    operation applies only to the account found: a lock does not lock a local user or a user of
+                    another provider with the same email. A local user is addressed by `spec.user` only.
 
                     The lock applies to the user ID that the provider returns at sign-in. A SAML provider must
                     return the same ID at every sign-in, with
@@ -192,7 +200,6 @@ spec:
                     
                     > Only one of the fields can be specified at the same time: `user` or `target`.
                   required:
-                    - connectorID
                     - email
                   properties:
                     connectorID:
@@ -203,10 +210,16 @@ spec:
                     email:
                       type: string
                       description: |
-                        Email of the external user, as reported by the provider at the user's last sign-in.
+                        Email of the user, as reported by the provider at the user's last sign-in.
 
                         The comparison is case-insensitive.
                       x-doc-examples: ['jane.doe@example.org']
+                    userID:
+                      type: string
+                      description: |
+                        ID of the user that the provider returns at sign-in (`userID` of the Dex UserIdentity
+                        object). It tells apart accounts of a provider with the same email.
+                      x-doc-examples: ['cn=jane.doe,ou=people,dc=example,dc=org']
                 type:
                   type: string
                   enum:
@@ -214,6 +227,8 @@ spec:
                     - "Reset2FA"
                     - "Lock"
                     - "Unlock"
+                    - "Logout"
+                    - "RequirePasswordChange"
                   description: |
                     Type of the user operation. Possible values:
                     
@@ -221,6 +236,11 @@ spec:
                     * `Reset2FA`: Two-factor authentication reset. Applies to local users (`spec.user`) only.
                     * `Lock`: User lock. Supports both local users (`spec.user`) and external users (`spec.target`).
                     * `Unlock`: User unlock. Supports both local users (`spec.user`) and external users (`spec.target`).
+                    * `Logout`: Ends the sessions of the user. Without [`logout`](#useroperation-v1-spec-logout), ends
+                      every session in every application and revokes the refresh tokens of kubeconfig files. Supports
+                      both local users (`spec.user`) and external users (`spec.target`).
+                    * `RequirePasswordChange`: The user has to set a new password at the next sign-in. Ends no
+                      sessions. Applies to local users (`spec.user`) only.
                 initiatorType:
                   type: string
                   description: |
@@ -228,7 +248,7 @@ spec:
     
                     * `admin`: By an administrator (e.g. via `d8 iam user` CLI or a manual UserOperation).
                     * `system`: Reserved. No component sets this value (Dex locks a user after failed sign-in attempts without creating a UserOperation).
-                    * `self`: By the user (self-service password reset in the DP authentication interface).
+                    * `self`: By the user (sign-out on all devices or password change in the Deckhouse web interface).
                 resetPassword:
                   type: object
                   description: "Parameters for password reset."
@@ -259,6 +279,27 @@ spec:
                         # because it does not accept the "d" unit we surface here.
                         - rule: 'self == "permanent" || (self.matches("^([0-9]+(\\.[0-9]+)?(s|m|h|d))+$") && self.matches("[1-9]"))'
                           message: 'lock.for must be "permanent" or a positive Go-style duration using s/m/h/d (e.g. "30m", "1h", "2h30m", "7d").'
+                logout:
+                  type: object
+                  description: |
+                    Narrows a `Logout` down. Without it, `Logout` ends every session of the user.
+
+                    Set at most one of the fields. `session` and `exceptSession` apply to Dex browser sessions;
+                    without them the operation fails.
+                  properties:
+                    session:
+                      type: string
+                      pattern: '^[a-z2-7]{1,64}$'
+                      description: |
+                        ID of the browser session to end (the `sid` claim of the tokens issued in it), together with
+                        the refresh tokens issued in it. The operation fails if the user has no such session.
+                    exceptSession:
+                      type: string
+                      pattern: '^[a-z2-7]{1,64}$'
+                      description: |
+                        ID of the browser session to keep. Every other browser session of the user ends, and every
+                        refresh token not issued in the kept session is revoked. A token issued while the operation
+                        runs can survive it. The operation fails if the user has no such session.
             status:
               type: object
               properties:
@@ -280,6 +321,29 @@ spec:
                   description: |
                     Time when the operation was completed, in RFC 3339 format (e.g. `2025-01-15T10:30:00Z`).
                     Empty until the operation finishes processing.
+                revocation:
+                  type: object
+                  description: |
+                    What the operation revoked. Set by `Lock`, `ResetPassword`, `Reset2FA`, and `Logout`.
+                  properties:
+                    name:
+                      type: string
+                      description: |
+                        Name of the Dex Revocation object the operation wrote, or of the first of them.
+                    generation:
+                      type: integer
+                      format: int64
+                      description: |
+                        New generation of the user's Dex account. Everything issued to the account at a lower
+                        generation is revoked. Not set when the operation did not revoke the whole account.
+                    refreshTokensDeleted:
+                      type: integer
+                      description: |
+                        Number of Dex RefreshToken objects of the user the operation deleted.
+                    authSessionsDeleted:
+                      type: integer
+                      description: |
+                        Number of Dex AuthSession objects (browser sessions) of the user the operation deleted.
       subresources: *subresources
       additionalPrinterColumns: *additionalPrinterColumns
 

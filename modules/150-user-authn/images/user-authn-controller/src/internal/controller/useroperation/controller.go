@@ -38,6 +38,7 @@ import (
 
 	"user-authn-controller/internal/controller"
 	"user-authn-controller/internal/controller/identitymigration"
+	"user-authn-controller/internal/controller/revoke"
 	"user-authn-controller/internal/naming"
 )
 
@@ -45,18 +46,19 @@ import (
 const maxConcurrentReconciles = 4
 
 // Reconciler executes UserOperation objects against Dex Password, OfflineSessions, and
-// UserIdentity CRs.
+// UserIdentity CRs, and revokes credentials through revoke.Revoker.
 type Reconciler struct {
 	client    client.Client
 	apiReader client.Reader
 	copier    *identitymigration.Copier
+	revoker   *revoke.Revoker
 	log       logr.Logger
 	now       func() time.Time
 }
 
 // New constructs a Reconciler. now defaults to time.Now when nil. apiReader must bypass the
 // cache: UserIdentity and the TOTP secret of OfflineSessions are read fresh before UserIdentity is
-// written. It defaults to c when nil. c must have the Password index of controller.SetupIndexes.
+// written. It defaults to c when nil. c must have the indexes of controller.SetupIndexes.
 func New(c client.Client, apiReader client.Reader, log logr.Logger, now func() time.Time) *Reconciler {
 	if now == nil {
 		now = time.Now
@@ -68,6 +70,7 @@ func New(c client.Client, apiReader client.Reader, log logr.Logger, now func() t
 		client:    c,
 		apiReader: apiReader,
 		copier:    identitymigration.NewCopier(c, apiReader, log),
+		revoker:   revoke.New(c, apiReader, log, now),
 		log:       log,
 		now:       now,
 	}
@@ -100,6 +103,8 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 		Watches(controller.Object(controller.OfflineSessionsGVK), warmCache, builder.WithPredicates(inDexNS)).
 		Watches(controller.Object(controller.RefreshTokenGVK), warmCache, builder.WithPredicates(inDexNS)).
 		Watches(controller.Object(controller.UserIdentityGVK), warmCache, builder.WithPredicates(inDexNS)).
+		Watches(controller.Object(controller.AuthSessionGVK), warmCache, builder.WithPredicates(inDexNS)).
+		Watches(controller.Object(controller.RevocationGVK), warmCache, builder.WithPredicates(inDexNS)).
 		Complete(r)
 }
 
@@ -126,18 +131,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	r.log.Info("Executing UserOperation", operationLogKV(op)...)
-	execErr := r.execute(ctx, op, now)
+	result, execErr := r.execute(ctx, op, now)
 	if execErr != nil {
 		var perm failedError
 		if !errors.As(execErr, &perm) {
 			return reconcile.Result{}, execErr
 		}
 		r.log.Error(execErr, "Failed to execute UserOperation", operationLogKV(op)...)
-		return r.complete(ctx, obj, op, phaseFailed, perm.Error(), now)
+		return r.complete(ctx, obj, op, phaseFailed, outcome{}, perm.Error(), now)
 	}
 
 	r.log.Info("UserOperation succeeded", operationLogKV(op)...)
-	return r.complete(ctx, obj, op, phaseSucceeded, "", now)
+	return r.complete(ctx, obj, op, phaseSucceeded, result, result.message(), now)
 }
 
 func (r *Reconciler) reconcileTerminal(ctx context.Context, obj *unstructured.Unstructured, op operation, now time.Time) (reconcile.Result, error) {
@@ -158,7 +163,15 @@ func (r *Reconciler) reconcileTerminal(ctx context.Context, obj *unstructured.Un
 	return reconcile.Result{RequeueAfter: remaining}, nil
 }
 
-func (r *Reconciler) complete(ctx context.Context, obj *unstructured.Unstructured, op operation, phase statusPhase, message string, now time.Time) (reconcile.Result, error) {
+func (r *Reconciler) complete(
+	ctx context.Context,
+	obj *unstructured.Unstructured,
+	op operation,
+	phase statusPhase,
+	result outcome,
+	message string,
+	now time.Time,
+) (reconcile.Result, error) {
 	if err := ctx.Err(); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -167,6 +180,9 @@ func (r *Reconciler) complete(ctx context.Context, obj *unstructured.Unstructure
 		"phase":       string(phase),
 		"completedAt": now.UTC().Format(time.RFC3339),
 		"message":     message,
+	}
+	if result.revocation != nil {
+		status["revocation"] = revocationStatus(result.revocation)
 	}
 	if err := unstructured.SetNestedMap(obj.Object, status, "status"); err != nil {
 		return reconcile.Result{}, fmt.Errorf("set useroperation %s status: %w", obj.GetName(), err)

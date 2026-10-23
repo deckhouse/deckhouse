@@ -43,6 +43,9 @@ var _ = Describe("Module :: user-authn :: helm template :: controller", func() {
 		hec.ValuesSet("userAuthn.internal.dexTLS.ca", "plainstring")
 		hec.ValuesSet("userAuthn.internal.selfSignedCA.cert", "test")
 		hec.ValuesSet("userAuthn.internal.selfSignedCA.key", "test")
+		hec.ValuesSet("userAuthn.internal.revocationFeedTLS.crt", "crt")
+		hec.ValuesSet("userAuthn.internal.revocationFeedTLS.key", "key")
+		hec.ValuesSet("userAuthn.internal.revocationFeedTLS.ca", "ca")
 		hec.HelmRender()
 	})
 
@@ -76,6 +79,74 @@ var _ = Describe("Module :: user-authn :: helm template :: controller", func() {
 		Expect(roleBinding.Exists()).To(BeTrue())
 		Expect(roleBinding.Field("roleRef.name").String()).To(Equal("controller"))
 		Expect(roleBinding.Field("subjects.0.name").String()).To(Equal("controller"))
+	})
+
+	It("Should serve the revocation feed over TLS on every replica", func() {
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		deployment := hec.KubernetesResource("Deployment", "d8-user-authn", "user-authn-controller")
+		container := deployment.Field("spec.template.spec.containers.0")
+		Expect(container.Get(`ports.#(name=="feed").containerPort`).Int()).To(BeEquivalentTo(8443))
+		Expect(container.Get(`env.#(name=="REVOCATION_FEED_ADDR").value`).String()).To(Equal(":8443"))
+		Expect(container.Get(`env.#(name=="REVOCATION_FEED_TLS_DIR").value`).String()).To(Equal("/etc/revocation-feed/tls"))
+		Expect(container.Get(`volumeMounts.#(name=="revocation-feed-tls").mountPath`).String()).To(Equal("/etc/revocation-feed/tls"))
+		Expect(container.Get(`volumeMounts.#(name=="revocation-feed-tls").readOnly`).Bool()).To(BeTrue())
+		Expect(deployment.Field(`spec.template.spec.volumes.#(name=="revocation-feed-tls").secret.secretName`).String()).To(Equal("revocation-feed-tls"))
+		// A new certificate restarts the pods: the feed loads it once.
+		Expect(deployment.Field("spec.template.metadata.annotations.checksum/revocation-feed-tls").String()).To(HaveLen(64))
+
+		secret := hec.KubernetesResource("Secret", "d8-user-authn", "revocation-feed-tls")
+		Expect(secret.Exists()).To(BeTrue())
+		Expect(secret.Field("type").String()).To(Equal("kubernetes.io/tls"))
+		Expect(secret.Field("data.tls\\.crt").String()).To(Equal("Y3J0"))
+		Expect(secret.Field("data.tls\\.key").String()).To(Equal("a2V5"))
+		Expect(secret.Field("data.ca\\.crt").String()).To(Equal("Y2E="))
+
+		service := hec.KubernetesResource("Service", "d8-user-authn", "revocation-feed")
+		Expect(service.Exists()).To(BeTrue())
+		Expect(service.Field("spec.ports.0.port").Int()).To(BeEquivalentTo(443))
+		Expect(service.Field("spec.ports.0.targetPort").String()).To(Equal("feed"))
+		Expect(service.Field("spec.selector").String()).To(MatchJSON(`{"app":"user-authn-controller"}`))
+		// Only ready replicas serve: a replica whose cache has not synced has nothing to send.
+		Expect(service.Field("spec.publishNotReadyAddresses").Bool()).To(BeFalse())
+	})
+
+	It("Should keep revocations for the ID token lifetime and an hour", func() {
+		hec.ValuesSet("userAuthn.idTokenTTL", "2h20m4s")
+		hec.HelmRender()
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		deployment := hec.KubernetesResource("Deployment", "d8-user-authn", "user-authn-controller")
+		Expect(deployment.Field(`spec.template.spec.containers.0.env.#(name=="ID_TOKEN_TTL").value`).String()).To(Equal("2h20m4s"))
+	})
+
+	It("Should let the controller grow with the caches of the revocation feed", func() {
+		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler"})
+		hec.HelmRender()
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		vpa := hec.KubernetesResource("VerticalPodAutoscaler", "d8-user-authn", "user-authn-controller")
+		Expect(vpa.Field("spec.resourcePolicy.containerPolicies.0.maxAllowed.memory").String()).To(Equal("256Mi"))
+	})
+
+	It("Should give the controller the rights of the revocations", func() {
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		// Revocation and the clients of DexAuthenticators live in d8-user-authn only: the Role, not
+		// the ClusterRole.
+		role := hec.KubernetesResource("Role", "d8-user-authn", "controller")
+		Expect(role.Field(`rules.#(resources.0=="revocations").verbs`).String()).To(MatchJSON(`["get","list","watch","create","delete"]`))
+		Expect(role.Field(`rules.#(resources.0=="revocations").apiGroups`).String()).To(MatchJSON(`["dex.coreos.com"]`))
+		Expect(role.Field(`rules.#(resources.0=="oauth2clients").verbs`).String()).To(MatchJSON(`["get","list","watch"]`))
+
+		clusterRole := hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:controller")
+		Expect(clusterRole.Field("rules").String()).ToNot(ContainSubstring("revocations"))
+		Expect(clusterRole.Field("rules").String()).ToNot(ContainSubstring("oauth2clients"))
+		// A Logout of one client removes the client from the browser sessions.
+		Expect(clusterRole.Field(`rules.#(resources.0=="authsessions").verbs`).String()).To(MatchJSON(`["get","list","watch","delete"]`))
+
+		admin := hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:admin-kubeconfig")
+		Expect(admin.Field(`rules.#(apiGroups.0=="dex.coreos.com").resources`).String()).To(ContainSubstring(`"revocations"`))
 	})
 
 	It("Should give the readiness probe time for both readyz checks", func() {

@@ -18,8 +18,18 @@ package provider
 
 import "context"
 
+// Identity is what a provider learned about the user whose credentials it validated.
+type Identity struct {
+	Groups []string
+	// Subject and Generation are the sub and d8_gen claims of the ID token Dex issued for the user:
+	// a revocation names the user by the subject and revokes everything below its generation. Both
+	// are zero for the providers that do not go through Dex.
+	Subject    string
+	Generation uint64
+}
+
 // Provider validates user credentials against an upstream IdP and returns
-// the user's groups on success. ctx must be propagated to outbound calls.
+// the user's identity on success. ctx must be propagated to outbound calls.
 type Provider interface {
-	ValidateCredentials(ctx context.Context, login, password string) ([]string, error)
+	ValidateCredentials(ctx context.Context, login, password string) (Identity, error)
 }

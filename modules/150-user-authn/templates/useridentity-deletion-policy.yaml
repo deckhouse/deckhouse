@@ -1,0 +1,42 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- /* A UserIdentity holds the generation of its account. Deleted by hand, it comes back at generation 0, */}}
+{{- /* below the revocations the subscribers keep, and they refuse the new sign-ins of the user until the */}}
+{{- /* revocations expire. Only the components that own the object, and the cluster garbage collectors, */}}
+{{- /* delete it: user-authn-controller when a User is deleted, after it has carried the generation over. */}}
+{{- $policyName := "user-authn-useridentity-deletion.deckhouse.io" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authn-controller")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["dex.coreos.com"]
+      apiVersions: ["*"]
+      operations:  ["DELETE"]
+      resources:   ["useridentities"]
+  validations:
+  - expression: |-
+      request.userInfo.username in [
+        "system:serviceaccount:d8-user-authn:controller",
+        "system:serviceaccount:d8-user-authn:dex",
+        "system:serviceaccount:kube-system:namespace-controller",
+        "system:serviceaccount:kube-system:generic-garbage-collector"
+      ]
+    reason: Forbidden
+    message: >-
+      UserIdentity objects are managed by Dex and user-authn-controller. To remove a local user,
+      delete the User. To reset 2FA or a lock, create a UserOperation of the Reset2FA or Unlock type.
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authn-controller")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+{{- end }}

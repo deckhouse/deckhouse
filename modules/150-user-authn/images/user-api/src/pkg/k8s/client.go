@@ -33,9 +33,21 @@ const (
 	dexNamespace = "d8-user-authn"
 )
 
+// UserOperation types and values user-api creates. A ValidatingAdmissionPolicy refuses any other
+// UserOperation from the user-api service account.
+const (
+	OperationTypeLogout                = "Logout"
+	OperationTypeRequirePasswordChange = "RequirePasswordChange"
+
+	initiatorTypeSelf = "self"
+
+	PhaseSucceeded = "Succeeded"
+	PhaseFailed    = "Failed"
+)
+
 var (
 	ErrUserNotFound    = errors.New("user not found")
-	ErrNotLocalUser    = errors.New("user is not a local user")
+	ErrAmbiguousUser   = errors.New("several local users have this user ID")
 	ErrOperationFailed = errors.New("failed to create user operation")
 	ErrCacheNotSynced  = errors.New("password cache not synced")
 
@@ -46,9 +58,37 @@ var (
 	}
 )
 
+// UserOperation is a self-service deckhouse.io/v1 UserOperation: the user acts on their own account.
+type UserOperation struct {
+	// GenerateName is the prefix of the generated object name.
+	GenerateName string
+	Type         string
+	// User names a local user, Target the account of an external provider. Exactly one is set.
+	User   string
+	Target *Target
+}
+
+// Target names the account of an external provider: the email it signs in with, narrowed down to
+// one provider and one user ID.
+type Target struct {
+	Email       string
+	ConnectorID string
+	UserID      string
+}
+
+// OperationStatus is what the controller writes to the status of a UserOperation. Phase is empty
+// until the operation is done.
+type OperationStatus struct {
+	Phase   string
+	Message string
+}
+
 type Client interface {
-	IsLocalUser(ctx context.Context, username string) (bool, error)
-	CreatePasswordResetOperation(ctx context.Context, username, newPasswordHash string) (string, error)
+	// LocalUsername returns the username of the local user with the given user ID.
+	LocalUsername(ctx context.Context, userID string) (string, error)
+	// CreateUserOperation creates op and returns the generated name.
+	CreateUserOperation(ctx context.Context, op UserOperation) (string, error)
+	UserOperationStatus(ctx context.Context, name string) (OperationStatus, error)
 	Start(ctx context.Context) error
 	Stop()
 }
@@ -70,21 +110,20 @@ func NewClient(logger *slog.Logger) (*K8sClient, error) {
 		return nil, fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
-	passwordCache := NewPasswordCache(dynamicClient, logger)
+	return NewClientWithDynamic(dynamicClient, logger)
+}
+
+func NewClientWithDynamic(dynamicClient dynamic.Interface, logger *slog.Logger) (*K8sClient, error) {
+	passwordCache, err := NewPasswordCache(dynamicClient, logger)
+	if err != nil {
+		return nil, err
+	}
 
 	return &K8sClient{
 		dynamicClient: dynamicClient,
 		passwordCache: passwordCache,
 		logger:        logger,
 	}, nil
-}
-
-func NewClientWithDynamic(dynamicClient dynamic.Interface, logger *slog.Logger) *K8sClient {
-	return &K8sClient{
-		dynamicClient: dynamicClient,
-		passwordCache: NewPasswordCache(dynamicClient, logger),
-		logger:        logger,
-	}
 }
 
 // Start initializes the password cache informer and waits for sync.
@@ -97,31 +136,38 @@ func (c *K8sClient) Stop() {
 	c.passwordCache.Stop()
 }
 
-// IsLocalUser checks if a user is a local Dex user using the cached Password CRDs.
-// Uses informer-based cache for O(1) lookups instead of API calls.
-func (c *K8sClient) IsLocalUser(_ context.Context, username string) (bool, error) {
-	if !c.passwordCache.IsSynced() {
-		return false, ErrCacheNotSynced
-	}
-	return c.passwordCache.IsLocalUser(username), nil
+// LocalUsername looks the user up in the informer-based cache of Password objects.
+func (c *K8sClient) LocalUsername(_ context.Context, userID string) (string, error) {
+	return c.passwordCache.Username(userID)
 }
 
-func (c *K8sClient) CreatePasswordResetOperation(ctx context.Context, username, newPasswordHash string) (string, error) {
+func (c *K8sClient) CreateUserOperation(ctx context.Context, op UserOperation) (string, error) {
+	spec := map[string]any{
+		"type":          op.Type,
+		"initiatorType": initiatorTypeSelf,
+	}
+	if op.User != "" {
+		spec["user"] = op.User
+	}
+	if op.Target != nil {
+		target := map[string]any{"email": op.Target.Email}
+		if op.Target.ConnectorID != "" {
+			target["connectorID"] = op.Target.ConnectorID
+		}
+		if op.Target.UserID != "" {
+			target["userID"] = op.Target.UserID
+		}
+		spec["target"] = target
+	}
+
 	userOp := &unstructured.Unstructured{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": "deckhouse.io/v1",
 			"kind":       "UserOperation",
-			"metadata": map[string]interface{}{
-				"generateName": "self-password-reset-",
+			"metadata": map[string]any{
+				"generateName": op.GenerateName,
 			},
-			"spec": map[string]interface{}{
-				"user":          username,
-				"type":          "ResetPassword",
-				"initiatorType": "self",
-				"resetPassword": map[string]interface{}{
-					"newPasswordHash": newPasswordHash,
-				},
-			},
+			"spec": spec,
 		},
 	}
 
@@ -131,4 +177,22 @@ func (c *K8sClient) CreatePasswordResetOperation(ctx context.Context, username, 
 	}
 
 	return created.GetName(), nil
+}
+
+func (c *K8sClient) UserOperationStatus(ctx context.Context, name string) (OperationStatus, error) {
+	op, err := c.dynamicClient.Resource(userOperationGVR).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return OperationStatus{}, fmt.Errorf("get user operation %s: %w", name, err)
+	}
+
+	phase, _, err := unstructured.NestedString(op.Object, "status", "phase")
+	if err != nil {
+		return OperationStatus{}, fmt.Errorf("read the phase of user operation %s: %w", name, err)
+	}
+	message, _, err := unstructured.NestedString(op.Object, "status", "message")
+	if err != nil {
+		return OperationStatus{}, fmt.Errorf("read the message of user operation %s: %w", name, err)
+	}
+
+	return OperationStatus{Phase: phase, Message: message}, nil
 }

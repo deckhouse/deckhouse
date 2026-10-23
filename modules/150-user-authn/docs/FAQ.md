@@ -282,6 +282,14 @@ if (response.status === 401) {
 }
 ```
 
+### Ending a DexAuthenticator session
+
+DexAuthenticator ends the sessions of a user within seconds after a `Lock`, `ResetPassword`, `Reset2FA` or `Logout` operation and after the user is deleted. A request with an ended session gets the same answer as a request without a session.
+
+DexAuthenticator receives the revocations from the `revocation-feed` Service in the `d8-user-authn` namespace. If a NetworkPolicy restricts egress traffic in the namespace of a DexAuthenticator, allow traffic to the pods with the `app: user-authn-controller` label in the `d8-user-authn` namespace on port `8443`. Without the revocations, DexAuthenticator checks every session older than 30 seconds with Dex, and the `D8UserAuthnRevocationFeedNotConsumed` alert fires after 15 minutes.
+
+When a user signs out of an application, DexAuthenticator revokes the refresh token of the session in Dex. A copy of the session cookie stops working too.
+
 ## How to generate a kubeconfig and access Kubernetes API?
 
 To generate a kubeconfig, refer to the [«How to generate a kubeconfig to access the Kubernetes API?»](/modules/control-plane-manager/faq.html#how-to-generate-a-kubeconfig-to-access-the-kubernetes-api) section of the `control-plane-manager` module documentation.
@@ -381,6 +389,7 @@ Dex logs every sign-in in JSON. A refused sign-in is logged at the `WARN` level 
 * `account_locked`: The user is locked.
 * `rate_limited`: Too many failed attempts came from the client IP address. The line contains the requested `path` instead of the provider, the client and the user.
 * `upstream_refused`: The provider refused to extend the session because the user no longer exists in the provider or has lost access.
+* `revoked`: The refresh token, the authorization code or the browser session was issued before a `Lock`, `ResetPassword`, `Reset2FA` or `Logout` operation or before the user was deleted.
 
 The line also contains `connector_id`, `client_id` and the known user attributes, such as `username` and `email`. A group refusal also contains `user_groups` and `allowed_groups`. A failure of Dex or of the provider is logged at the `ERROR` level.
 
@@ -408,13 +417,17 @@ Use the command:
 d8 iam user unlock <USERNAME>
 ```
 
-The command unlocks a local user. To unlock a user of an external provider, create a UserOperation with `type: Unlock` and [`spec.target`](cr.html#useroperation-v1-spec-target) as described in [Operations on external users](usage.html#operations-on-external-users). A UserOperation with `spec.user` unlocks a local user as well. For a local user, the `ResetPassword`, `Reset2FA` and `Lock` operations also delete the user's refresh tokens. The sessions of the user in applications and kubeconfig files end when the current ID token expires. Only `Reset2FA` removes the user's 2FA secret.
+The command unlocks a local user. To unlock a user of an external provider, create a UserOperation with `type: Unlock` and [`spec.target`](cr.html#useroperation-v1-spec-target) as described in [Operations on external users](usage.html#operations-on-external-users). A UserOperation with `spec.user` unlocks a local user as well. The `Lock` operation has already ended the sessions of the user, and `Unlock` does not restore them, so the user signs in again. Only `Reset2FA` removes the user's 2FA secret.
 
 ## A user was locked automatically — why?
 
 The number of failed login attempts exceeded [`passwordPolicy.lockout.maxAttempts`](configuration.html#parameters-passwordpolicy-lockout-maxattempts). The user is locked for the duration specified in [`passwordPolicy.lockout.lockDuration`](configuration.html#parameters-passwordpolicy-lockout-lockduration) and is unlocked automatically afterwards. Local users are always covered. LDAP and Crowd users are locked only if their type is listed in [`passwordPolicy.lockout.applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors). Dex stores the lock itself and does not create a UserOperation. An administrator can also unlock the user manually with `d8 iam user unlock <USERNAME>` (local users) or by creating a UserOperation with `type: Unlock` (with `spec.user` for local users, with `spec.target` for LDAP and Crowd users).
 
 The `Locked` and `LockedUntil` columns of `d8 k get useraccounts` show whether a user is locked and until when. The module keeps a [UserAccount](cr.html#useraccount) object for each local user and for each user who has signed in through an external provider.
+
+## Can I delete a UserIdentity object?
+
+No. Dex keeps the 2FA secret, the lock and the last sign-in of an account in a UserIdentity object in the `d8-user-authn` namespace. The object also holds the generation of the account in the `user-authn.deckhouse.io/generation` annotation, which the module uses to revoke the account's tokens. The module refuses a request to delete a UserIdentity. To remove a local user, delete the User. To reset 2FA or a lock, use a UserOperation of the `Reset2FA` or `Unlock` type.
 
 ## Can I cancel a UserOperation?
 

@@ -1,0 +1,18 @@
+---
+# The revocation feed of dex-authenticator: https://revocation-feed.d8-user-authn/revocations. Every
+# ready replica of the controller serves it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: revocation-feed
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authn-controller")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  ports:
+  - name: https
+    port: 443
+    targetPort: feed
+    protocol: TCP
+  selector:
+    app: user-authn-controller

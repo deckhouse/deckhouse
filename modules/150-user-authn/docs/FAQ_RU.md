@@ -282,6 +282,14 @@ if (response.status === 401) {
 }
 ```
 
+### Завершение сессии DexAuthenticator
+
+DexAuthenticator завершает сессии пользователя в течение нескольких секунд после операции `Lock`, `ResetPassword`, `Reset2FA` или `Logout` и после удаления пользователя. Запрос с завершённой сессией получает тот же ответ, что и запрос без сессии.
+
+DexAuthenticator получает отзывы от сервиса `revocation-feed` в неймспейсе `d8-user-authn`. Если NetworkPolicy ограничивает исходящий трафик в неймспейсе DexAuthenticator, разрешите трафик к подам с лейблом `app: user-authn-controller` в неймспейсе `d8-user-authn` на порт `8443`. Без отзывов DexAuthenticator проверяет в Dex каждую сессию старше 30 секунд, а через 15 минут срабатывает алерт `D8UserAuthnRevocationFeedNotConsumed`.
+
+Когда пользователь выходит из приложения, DexAuthenticator отзывает refresh-токен сессии в Dex. Копия cookie сессии тоже перестаёт работать.
+
 ## Как сгенерировать kubeconfig для доступа к Kubernetes API?
 
 Для генерации kubeconfig воспользуйтесь разделом [«Как сгенерировать kubeconfig для доступа к Kubernetes API?»](/modules/control-plane-manager/faq.html#как-сгенерировать-kubeconfig-для-доступа-к-kubernetes-api) документации модуля `control-plane-manager`.
@@ -381,6 +389,7 @@ Dex записывает каждый вход в журнал в формате
 * `account_locked` — пользователь заблокирован;
 * `rate_limited` — с IP-адреса клиента пришло слишком много неудачных попыток (вместо провайдера, клиента и пользователя запись содержит запрошенный путь в поле `path`);
 * `upstream_refused` — провайдер отказал в продлении сессии, потому что пользователя в нём больше нет или он потерял доступ.
+* `revoked` — refresh-токен, код авторизации или сессия браузера выданы до операции `Lock`, `ResetPassword`, `Reset2FA` или `Logout` либо до удаления пользователя.
 
 В записи также есть `connector_id`, `client_id` и известные атрибуты пользователя, например `username` и `email`. При отказе по группам в записи также есть `user_groups` и `allowed_groups`. Сбой Dex или провайдера записывается с уровнем `ERROR`.
 
@@ -408,13 +417,17 @@ d8 k get useroperation <имя> -o jsonpath='{.status.message}'
 d8 iam user unlock <USERNAME>
 ```
 
-Команда разблокирует локального пользователя. Чтобы разблокировать пользователя внешнего провайдера, создайте UserOperation с `type: Unlock` и [`spec.target`](cr.html#useroperation-v1-spec-target), как описано [в разделе «Операции над внешними пользователями»](usage.html#операции-над-внешними-пользователями). UserOperation со `spec.user` также разблокирует локального пользователя. Для локального пользователя операции `ResetPassword`, `Reset2FA` и `Lock` также удаляют refresh-токены пользователя. Сессии пользователя в приложениях и файлах kubeconfig завершаются, когда истекает срок действия текущего ID-токена. Секрет 2FA пользователя удаляет только `Reset2FA`.
+Команда разблокирует локального пользователя. Чтобы разблокировать пользователя внешнего провайдера, создайте UserOperation с `type: Unlock` и [`spec.target`](cr.html#useroperation-v1-spec-target), как описано [в разделе «Операции над внешними пользователями»](usage.html#операции-над-внешними-пользователями). UserOperation со `spec.user` также разблокирует локального пользователя. Операция `Lock` уже завершила сессии пользователя, и `Unlock` их не восстанавливает, поэтому пользователь входит заново. Секрет 2FA пользователя удаляет только `Reset2FA`.
 
 ## Пользователь заблокирован автоматически — почему?
 
 Количество неудачных попыток входа превысило [`passwordPolicy.lockout.maxAttempts`](configuration.html#parameters-passwordpolicy-lockout-maxattempts). Пользователь блокируется на время, указанное в [`passwordPolicy.lockout.lockDuration`](configuration.html#parameters-passwordpolicy-lockout-lockduration), после чего разблокируется автоматически. Локальные пользователи блокируются всегда. Пользователи LDAP и Crowd блокируются, только если их тип указан в [`passwordPolicy.lockout.applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors). Dex хранит блокировку сам и не создаёт UserOperation. Администратор может также разблокировать пользователя вручную командой `d8 iam user unlock <USERNAME>` (локальные пользователи) или создав UserOperation с `type: Unlock` (со `spec.user` для локальных пользователей, со `spec.target` для пользователей LDAP и Crowd).
 
 Заблокирован ли пользователь и до какого времени, показывают столбцы `Locked` и `LockedUntil` в выводе `d8 k get useraccounts`. Модуль ведёт объект [UserAccount](cr.html#useraccount) для каждого локального пользователя и для каждого пользователя, который входил через внешний провайдер.
+
+## Можно ли удалить объект UserIdentity?
+
+Нет. Dex хранит секрет 2FA, блокировку и время последнего входа учётной записи в объекте UserIdentity в неймспейсе `d8-user-authn`. В аннотации `user-authn.deckhouse.io/generation` объект также хранит поколение учётной записи, по которому модуль отзывает её токены. Модуль отклоняет запрос на удаление UserIdentity. Чтобы удалить локального пользователя, удалите User. Чтобы сбросить 2FA или блокировку, используйте UserOperation с типом `Reset2FA` или `Unlock`.
 
 ## Можно ли отменить операцию UserOperation?
 

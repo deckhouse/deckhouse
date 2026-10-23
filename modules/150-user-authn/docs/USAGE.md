@@ -714,11 +714,11 @@ Delete the user but keep their references in groups:
 d8 iam user delete anton --keep-memberships
 ```
 
-When a user is deleted, manually or after its `ttl` expires, the module also deletes the user's 2FA (TOTP) secret and lock in Dex. A user created again with the same name does not inherit them.
+When a user is deleted, manually or after its `ttl` expires, the module ends the user's sessions in the same way as the `Logout` operation (see [UserOperation lifecycle and side effects](#useroperation-lifecycle-and-side-effects)) and deletes the user's 2FA (TOTP) secret and lock in Dex. A user created again with the same name does not inherit the sessions, the 2FA secret or the lock.
 
 ### Local user operations
 
-Password reset, 2FA reset, and lock/unlock operations are performed via the [UserOperation](cr.html#useroperation) resource. The `initiatorType` field indicates who initiated the operation: an administrator (`admin`) or the user (`self`).
+Password reset, forced password change, 2FA reset, lock, unlock and logout operations are performed via the [UserOperation](cr.html#useroperation) resource. The `initiatorType` field indicates who initiated the operation: an administrator (`admin`) or the user (`self`).
 
 {% alert level="warning" %}
 Do not change `User.spec.password` after the User is created (for example, with `d8 k edit`). The field is immutable and does not update Dex credentials. Reset passwords with a UserOperation or `d8 iam user reset-password`.
@@ -728,7 +728,7 @@ Do not change `User.spec.password` after the User is created (for example, with 
 
 Use the `d8 iam user` commands for administrative actions on local users. They create a UserOperation resource with `initiatorType: admin`, wait for the operation to complete, and print the result.
 
-You can delete or recreate a local user, or run a UserOperation (`ResetPassword`, `Reset2FA`, `Lock`, `Unlock`) against them, only if you can assign every role already granted to the user's email or groups (covering permissions or an explicit can-assign range). `initiatorType: self` does not bypass this check. The same rule applies to DexProvider objects. For details, see [Limiting the identities of a provider](#limiting-the-identities-of-a-provider).
+You can delete or recreate a local user, or run a UserOperation (`ResetPassword`, `RequirePasswordChange`, `Reset2FA`, `Lock`, `Unlock`, `Logout`) against them, only if you can assign every role already granted to the user's email or groups (covering permissions or an explicit can-assign range). `initiatorType: self` does not bypass this check. The same rule applies to DexProvider objects. For details, see [Limiting the identities of a provider](#limiting-the-identities-of-a-provider).
 
 After an administrator resets the password with `ResetPassword`, the user signs in with that password once. Dex then asks the user to set a new password that complies with the password policy.
 
@@ -778,13 +778,14 @@ d8 iam user unlock admin
 
 By default, commands wait for the operation to complete. To only create a UserOperation and print its name, use the `--wait=false` flag.
 
-#### Self-service password reset
+#### Self-service operations
 
-A local user can reset their own password in the Deckhouse Platform authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
+A user can sign out on all devices, and a local user can change their password, in the Deckhouse Platform web interface. The web interface creates a UserOperation with `initiatorType: self` for the user who is signed in:
 
-Self-service password reset is available only for local accounts (the built-in `Local` connector). Users who sign in through external authentication providers must contact the administrator of the corresponding system.
+- Signing out on all devices creates a `Logout` operation. It ends every session of the user, including kubeconfig files and the session in the web interface. Basic Authentication to the Kubernetes API through an LDAP provider keeps working with the password.
+- Changing the password creates a `RequirePasswordChange` operation. At the next sign-in, Dex asks for the current password and a new one that complies with the password policy. The operation ends no sessions.
 
-When a user resets their password, the new password must comply with the password policy, and the user's active sessions are terminated — re-authentication is required.
+Changing the password is available only for local accounts (the built-in `Local` connector). Users who sign in through external authentication providers change their password in the corresponding system.
 
 #### Creating UserOperation manually
 
@@ -861,13 +862,39 @@ spec:
   initiatorType: admin
 ```
 
+Example — require a new password at the next sign-in without resetting the current one:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: require-password-change-admin
+spec:
+  user: admin
+  type: RequirePasswordChange
+  initiatorType: admin
+```
+
+Example — end every session of a user in every application and kubeconfig file:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: logout-admin
+spec:
+  user: admin
+  type: Logout
+  initiatorType: admin
+```
+
 #### Operations on external users
 
-For users of external providers of any type (LDAP, Atlassian Crowd, OIDC, SAML, GitHub, GitLab, Bitbucket Cloud), use the [`spec.target`](cr.html#useroperation-v1-spec-target) field instead of `spec.user`. Only the `Lock` and `Unlock` operation types are supported for external users.
+For users of external providers of any type (LDAP, Atlassian Crowd, OIDC, SAML, GitHub, GitLab, Bitbucket Cloud), use the [`spec.target`](cr.html#useroperation-v1-spec-target) field instead of `spec.user`. The `Lock`, `Unlock` and `Logout` operation types are supported for external users.
 
-A lock applies to one pair of a provider and a user. It blocks only the user of the provider set in `connectorID` and does not block a local user or a user of another provider with the same email. Dex checks the lock at every sign-in through the provider, at every refresh-token request, at token exchange, and at Basic Authentication to the API server through an LDAP provider. For a Crowd or OIDC provider, basic-auth-proxy checks the credentials with the provider directly, so the lock does not apply to Basic Authentication.
+The operation finds the user's account by the email the provider reported at the user's last sign-in. The `connectorID` and `userID` fields narrow the search down to one provider and one user ID. A lock applies to one pair of a provider and a user. It blocks only the account found and does not block a local user or a user of another provider with the same email. A local user is addressed by `spec.user` only. Dex checks the lock at every sign-in through the provider, at every refresh-token request, at token exchange, and at Basic Authentication to the API server through an LDAP provider. For a Crowd or OIDC provider, basic-auth-proxy checks the credentials with the provider directly, so the lock does not apply to Basic Authentication.
 
-The operation fails if the user has never signed in through this provider or if more than one user of the provider has this email.
+The operation fails if no account has the email (the user has never signed in) or if more than one account matches. In that case, set `connectorID`, and `userID` if the provider has several users with the email.
 
 A lock applies to the user ID that the provider returns at sign-in, so this ID must stay the same at every sign-in of the user. For a SAML provider, set [`nameIDPolicyFormat`](cr.html#dexprovider-v1-spec-saml-nameidpolicyformat) to `persistent` or `emailAddress`, or leave it unset (Dex then requests `persistent`). With `transient`, the provider returns a new ID at every sign-in. A lock then does not apply to the next sign-in of the user, and once the user has signed in twice, the operation fails because more than one user of the provider has the email.
 
@@ -898,7 +925,14 @@ Using a UserOperation object has the following specifics:
 - To perform a new action, create a new UserOperation.
 
 {% alert level="warning" %}
-For a local user, the `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex RefreshToken objects, so the sessions of the user in applications and kubeconfig files end when the current ID token expires. Only `Reset2FA` removes the user's 2FA secret. A `Lock` of a local or an external user refuses sign-in, refresh-token requests and token exchange until the lock ends.
+The `Lock`, `ResetPassword`, `Reset2FA` and `Logout` operations end the sessions of the user at once:
+
+- Dex refuses every refresh token, authorization code and browser session it issued to the user before the operation. Applications and kubeconfig files ask the user to sign in again.
+- DexAuthenticator stops accepting the sessions of the user within seconds.
+- The Kubernetes API refuses the ID tokens issued to the user before the operation within seconds if the [`enableMultiTenancy`](/modules/user-authz/configuration.html#parameters-enablemultitenancy) parameter of the `user-authz` module is enabled and the cluster runs Kubernetes 1.34 or later. Otherwise these ID tokens stay valid for the Kubernetes API until they expire (the [`idTokenTTL`](configuration.html#parameters-idtokenttl) parameter).
+- Basic Authentication to the Kubernetes API through an LDAP provider checks the password with Dex again. After `Logout`, it keeps working with the password.
+
+`Unlock` and `RequirePasswordChange` end no sessions. Only `Reset2FA` removes the user's 2FA secret. A `Lock` refuses sign-in, refresh-token requests and token exchange until the lock ends. The `status.revocation` field of the operation shows what it revoked.
 {% endalert %}
 
 #### Checking operation status

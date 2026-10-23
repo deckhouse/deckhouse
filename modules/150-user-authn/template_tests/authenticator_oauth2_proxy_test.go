@@ -29,7 +29,10 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
-const dexCA = "-----BEGIN CERTIFICATE-----\ndex-ca\n-----END CERTIFICATE-----\n"
+const (
+	dexCA            = "-----BEGIN CERTIFICATE-----\ndex-ca\n-----END CERTIFICATE-----\n"
+	revocationFeedCA = "-----BEGIN CERTIFICATE-----\nrevocation-feed-ca\n-----END CERTIFICATE-----\n"
+)
 
 func authenticatorArgs(hec *Config, namespace, name string) []string {
 	deployment := hec.KubernetesResource("Deployment", namespace, name)
@@ -120,6 +123,19 @@ var _ = Describe("Module :: user-authn :: helm template :: DexAuthenticator oaut
 				To(Equal(fmt.Sprintf("%x", sha256.Sum256([]byte(dexCA)))))
 		})
 
+		It("revokes the refresh token in dex on sign-out", func() {
+			Expect(authenticatorArgs(hec, "tenant-ns", "app-dex-authenticator")).
+				To(ContainElement("--revocation-url=https://dex.d8-user-authn/token/revoke"))
+		})
+
+		It("runs without the revocation feed while its CA is unknown", func() {
+			// oauth2-proxy does not start with an empty CA file.
+			Expect(authenticatorArgs(hec, "tenant-ns", "app-dex-authenticator")).
+				NotTo(ContainElement(HavePrefix("--revocation-feed-")))
+			secret := hec.KubernetesResource("Secret", "tenant-ns", "dex-authenticator-app")
+			Expect(secret.Field(`data.revocation-feed-ca\.crt`).String()).To(BeEmpty())
+		})
+
 		It("uses PKCE", func() {
 			Expect(authenticatorArgs(hec, "tenant-ns", "app-dex-authenticator")).To(ContainElement("--code-challenge-method=S256"))
 		})
@@ -185,6 +201,48 @@ var _ = Describe("Module :: user-authn :: helm template :: DexAuthenticator oaut
 				Expect(resource.Field(`metadata.annotations.dexauthenticator\.deckhouse\.io/client-id`).String()).
 					To(Equal("app-tenant-ns-dex-authenticator"), object.kind+" "+object.name)
 			}
+		})
+	})
+
+	Context("With the CA of the revocation feed", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.internal.revocationFeedTLS.ca", revocationFeedCA)
+			hec.HelmRender()
+			Expect(hec.RenderError).NotTo(HaveOccurred())
+		})
+
+		It("subscribes to the revocation feed and trusts only its CA for it", func() {
+			Expect(authenticatorArgs(hec, "tenant-ns", "app-dex-authenticator")).To(ContainElements(
+				"--revocation-feed-url=https://revocation-feed.d8-user-authn/revocations",
+				"--revocation-feed-ca-file=/opt/dex-authenticator/revocation-feed-ca/ca.crt",
+			))
+
+			secret := hec.KubernetesResource("Secret", "tenant-ns", "dex-authenticator-app")
+			Expect(secret.Field(`data.revocation-feed-ca\.crt`).String()).
+				To(Equal(base64.StdEncoding.EncodeToString([]byte(revocationFeedCA))))
+			Expect(secret.Field(`data.dex-ca\.crt`).String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(dexCA))))
+
+			pod := hec.KubernetesResource("Deployment", "tenant-ns", "app-dex-authenticator").Field("spec.template")
+			Expect(pod.Get(`spec.volumes.#(name=="revocation-feed-ca")`).String()).To(MatchJSON(`{
+				"name": "revocation-feed-ca",
+				"secret": {"secretName": "dex-authenticator-app", "items": [{"key": "revocation-feed-ca.crt", "path": "ca.crt"}]}
+			}`))
+			Expect(pod.Get(`spec.containers.#(name=="dex-authenticator").volumeMounts.#(name=="revocation-feed-ca")`).String()).To(MatchJSON(`{
+				"name": "revocation-feed-ca", "mountPath": "/opt/dex-authenticator/revocation-feed-ca", "readOnly": true
+			}`))
+			// oauth2-proxy reads the CA once, so a new CA of the feed restarts the pods.
+			Expect(pod.Get(`metadata.annotations.checksum/revocation-feed-ca`).String()).
+				To(Equal(fmt.Sprintf("%x", sha256.Sum256([]byte(revocationFeedCA)))))
+		})
+
+		It("keeps the readiness of the authenticator independent of the feed", func() {
+			probe := hec.KubernetesResource("Deployment", "tenant-ns", "app-dex-authenticator").
+				Field(`spec.template.spec.containers.#(name=="dex-authenticator").readinessProbe`)
+			Expect(probe.String()).To(MatchJSON(`{
+				"httpGet": {"port": 8443, "scheme": "HTTPS", "path": "/ready"},
+				"initialDelaySeconds": 5,
+				"periodSeconds": 5
+			}`))
 		})
 	})
 

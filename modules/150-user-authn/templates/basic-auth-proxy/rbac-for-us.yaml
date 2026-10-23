@@ -6,3 +6,49 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 automountServiceAccountToken: false
+{{- if include "is_basic_auth_enabled" . }}
+  {{- $ldap := false }}
+  {{- range $provider := .Values.userAuthn.internal.providers }}
+    {{- if eq $provider.type "LDAP" }}
+      {{- if $provider.ldap.enableBasicAuth }}
+        {{- $ldap = true }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if $ldap }}
+---
+# The proxy evicts the cached checks of an LDAP user whose credentials are revoked, as soon as the
+# Revocation object appears. Crowd and OIDC check passwords past Dex, and a revocation does not
+# apply to them.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: basic-auth-proxy
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+rules:
+- apiGroups:
+  - dex.coreos.com
+  resources:
+  - revocations
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: basic-auth-proxy
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: basic-auth-proxy
+subjects:
+- kind: ServiceAccount
+  name: basic-auth-proxy
+  namespace: d8-{{ .Chart.Name }}
+  {{- end }}
+{{- end }}

@@ -76,26 +76,26 @@ func NewCrowd(cfg CrowdConfig) (Provider, error) {
 	}, nil
 }
 
-func (p *Crowd) ValidateCredentials(ctx context.Context, login, password string) ([]string, error) {
+func (p *Crowd) ValidateCredentials(ctx context.Context, login, password string) (Identity, error) {
 	_, err := p.client.MakeRequest(ctx, "/session", http.MethodPost, struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}{Username: login, Password: password})
 	if err != nil {
-		return nil, err
+		return Identity{}, err
 	}
 
 	body, err := p.client.MakeRequest(ctx, "/user/group/nested?username="+login, http.MethodGet, nil)
 	if err != nil {
-		return nil, err
+		return Identity{}, err
 	}
 
 	crowdGroups, err := p.client.GetGroups(body)
 	if err != nil {
-		return nil, err
+		return Identity{}, err
 	}
 
-	return crowdGroups, nil
+	return Identity{Groups: crowdGroups}, nil
 }
 
 type crowdClient struct {

@@ -35,7 +35,10 @@ func TestNewManagerOptions(t *testing.T) {
 	// Leader election does not depend on HA any more: without HA the Deployment keeps its default
 	// rolling update, so two pods run during every version change, and two of them writing the
 	// same UserAccounts and DexProviderChecks would fight over them.
-	opts := newManagerOptions(runtime.NewScheme())
+	opts, err := newManagerOptions(runtime.NewScheme())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if !opts.LeaderElection || opts.LeaderElectionID != controllerName || opts.LeaderElectionNamespace != leaderElectionNamespace {
 		t.Fatalf("leader election must be on in the module namespace, got %+v", opts)
@@ -61,6 +64,21 @@ func TestNewManagerOptions(t *testing.T) {
 	}
 	if opts.WebhookServer != nil {
 		t.Errorf("WebhookServer = %v, want nil", opts.WebhookServer)
+	}
+	// The revocation feed authenticates DexAuthenticators from a cache of their clients without
+	// secrets; every other cached kind is scoped to the Dex namespace too.
+	kinds := map[string]bool{}
+	for obj, byObject := range opts.Cache.ByObject {
+		kind := obj.GetObjectKind().GroupVersionKind().Kind
+		kinds[kind] = true
+		if byObject.Transform == nil || len(byObject.Namespaces) != 1 {
+			t.Errorf("cache of %s = %+v, want a transform and one namespace", kind, byObject)
+		}
+	}
+	for _, kind := range []string{"Password", "OfflineSessions", "RefreshToken", "UserIdentity", "AuthSession", "Revocation", "OAuth2Client"} {
+		if !kinds[kind] {
+			t.Errorf("no cache config for %s", kind)
+		}
 	}
 }
 
@@ -115,5 +133,30 @@ func TestSetupLogging(t *testing.T) {
 				t.Fatalf("levels = %v, want %v", got, want)
 			}
 		})
+	}
+}
+
+func TestRevocationRetention(t *testing.T) {
+	for _, tc := range []struct {
+		value   string
+		want    time.Duration
+		wantErr bool
+	}{
+		{value: "", want: 70 * time.Minute},
+		{value: "10m", want: 70 * time.Minute},
+		{value: "2h30m10s", want: 3*time.Hour + 30*time.Minute + 10*time.Second},
+		{value: "0s", wantErr: true},
+		{value: "ten minutes", wantErr: true},
+	} {
+		got, err := revocationRetention(tc.value)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("revocationRetention(%q) = %v, want an error", tc.value, got)
+			}
+			continue
+		}
+		if err != nil || got != tc.want {
+			t.Errorf("revocationRetention(%q) = %v, %v; want %v", tc.value, got, err, tc.want)
+		}
 	}
 }

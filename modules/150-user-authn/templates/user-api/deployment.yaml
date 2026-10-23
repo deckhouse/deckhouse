@@ -3,8 +3,7 @@ cpu: 10m
 memory: 25Mi
 {{- end }}
 
-{{- if .Values.userAuthn.internal.dexUsersCRDs }}
-  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -27,7 +26,7 @@ spec:
       maxAllowed:
         cpu: 50m
         memory: 50Mi
-  {{- end }}
+{{- end }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -57,6 +56,8 @@ spec:
     metadata:
       labels:
         app: user-api
+      annotations:
+        checksum/tls: {{ include (print $.Template.BasePath "/user-api/secret.yaml") . | sha256sum }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
@@ -67,24 +68,6 @@ spec:
       automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
-      initContainers:
-      - name: self-signed-generator
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
-        image: {{ include "helm_lib_module_image" (list . "selfSignedGenerator") }}
-        args:
-        - user-api.d8-{{ .Chart.Name }}
-        - user-api.d8-{{ .Chart.Name }}.svc
-        volumeMounts:
-        - name: tls
-          mountPath: /certs
-        resources:
-          requests:
-            cpu: 10m
-            memory: 10Mi
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-          limits:
-            cpu: 10m
-            memory: 25Mi
       containers:
       - name: user-api
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . | nindent 8 }}
@@ -95,6 +78,9 @@ spec:
         - --dex-url=https://dex.d8-{{ .Chart.Name }}.svc
         # Public issuer from token "iss" claims; used for validation, not connectivity.
         - --issuer-url=https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
+        - --dex-ca-file=/certs/dex-ca.crt
+        # Only the console signs users in for user-api: it forwards the ID token its DexAuthenticator holds.
+        - --console-client-id=console-d8-console-dex-authenticator
         - --tls-cert-file=/certs/tls.crt
         - --tls-key-file=/certs/tls.key
         ports:
@@ -133,5 +119,5 @@ spec:
 {{- end }}
       volumes:
       - name: tls
-        emptyDir: {}
-{{- end }}
+        secret:
+          secretName: user-api-tls

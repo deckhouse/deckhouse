@@ -1,0 +1,3042 @@
+diff --git a/deckhouse_revocation_feed_test.go b/deckhouse_revocation_feed_test.go
+new file mode 100644
+index 00000000..7300c355
+--- /dev/null
++++ b/deckhouse_revocation_feed_test.go
+@@ -0,0 +1,186 @@
++package main
++
++import (
++	"context"
++	"crypto/hmac"
++	"crypto/sha256"
++	"encoding/base64"
++	"encoding/pem"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"testing"
++	"time"
++
++	"github.com/alicebob/miniredis/v2"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/deckhouse/revocation"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// feedKey computes a key of the revocation feed for the client secret of the tests, independently of
++// the revocation package.
++func feedKey(keyType, value string) string {
++	saltMAC := hmac.New(sha256.New, []byte(clientSecret))
++	saltMAC.Write([]byte("deckhouse.io/user-authn/revocation-feed/v1/salt"))
++	mac := hmac.New(sha256.New, saltMAC.Sum(nil))
++	mac.Write([]byte(keyType + "\x00" + value))
++	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil)[:16])
++}
++
++// dexRefreshToken encodes a refresh token of dex for a grant: RefreshToken{refresh_id, token}.
++func dexRefreshToken(grant string) string {
++	message := append([]byte{0x0A, byte(len(grant))}, grant...)
++	message = append(message, 0x12, 0x05)
++	message = append(message, "token"...)
++	return base64.RawURLEncoding.EncodeToString(message)
++}
++
++// unsignedIDToken returns an ID token of jane at a generation; the check does not verify it.
++func unsignedIDToken(generation uint64) string {
++	payload := fmt.Sprintf(`{"sub":"CgRqYW5lEgVsb2NhbA","email":"jane.doe@example.com","d8_gen":%d}`, generation)
++	return "eyJhbGciOiJSUzI1NiJ9." + base64.RawURLEncoding.EncodeToString([]byte(payload)) + ".signature"
++}
++
++// withRevocationFeed points the proxy at an in-process revocation feed that revoked the generations of
++// jane below 2 and the grant "revoked-grant".
++func withRevocationFeed(t *testing.T) OptionsModifier {
++	t.Helper()
++
++	exp := time.Now().Add(time.Hour).Unix()
++	snapshot := fmt.Sprintf(`{"v":1,"part":0,"last":true,"pairs":[{"k":%q,"g":2,"exp":%d}],"grants":[{"k":%q,"exp":%d}]}`,
++		feedKey("pair", "CgRqYW5lEgVsb2NhbA"), exp, feedKey("grant", "revoked-grant"), exp)
++	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.Header().Set("Content-Type", "text/event-stream")
++		fmt.Fprintf(w, "retry: 5000\n\nevent: snapshot\nid: e.1\ndata: %s\n\n", snapshot)
++		w.(http.Flusher).Flush()
++		<-r.Context().Done()
++	}))
++	t.Cleanup(server.Close)
++
++	caFile := filepath.Join(t.TempDir(), "ca.crt")
++	ca := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})
++	require.NoError(t, os.WriteFile(caFile, ca, 0o600))
++
++	return func(opts *options.Options) {
++		opts.RevocationFeedURL = server.URL + "/revocations"
++		opts.RevocationFeedCAFile = caFile
++	}
++}
++
++// runRevocationFeed runs the subscription of the proxy until the test ends and waits for its snapshot.
++func runRevocationFeed(t *testing.T, proxy *OAuthProxy) {
++	t.Helper()
++
++	ctx, cancel := context.WithCancel(context.Background())
++	done := make(chan struct{})
++	go func() {
++		defer close(done)
++		proxy.revocationFeed.Run(ctx)
++	}()
++	t.Cleanup(func() {
++		cancel()
++		<-done
++	})
++
++	require.Eventually(t, func() bool { return proxy.revocationFeed.Status() == revocation.StatusFresh },
++		10*time.Second, 10*time.Millisecond)
++}
++
++// TestAuthOnlyRefusesRevokedSessions checks that /auth answers 401, as without a session, to a session
++// the revocation feed revoked, and clears its cookie.
++func TestAuthOnlyRefusesRevokedSessions(t *testing.T) {
++	tests := []struct {
++		name          string
++		session       *sessions.SessionState
++		dropFromRedis bool
++		expectedCode  int
++	}{
++		{
++			name:         "generation the feed revoked",
++			session:      &sessions.SessionState{IDToken: unsignedIDToken(1), RefreshToken: dexRefreshToken("grant")},
++			expectedCode: http.StatusUnauthorized,
++		},
++		{
++			name:         "generation after the revocation",
++			session:      &sessions.SessionState{IDToken: unsignedIDToken(2), RefreshToken: dexRefreshToken("grant")},
++			expectedCode: http.StatusOK,
++		},
++		{
++			name:         "grant the feed revoked",
++			session:      &sessions.SessionState{IDToken: unsignedIDToken(2), RefreshToken: dexRefreshToken("revoked-grant")},
++			expectedCode: http.StatusUnauthorized,
++		},
++		{
++			// The stub of patch 002 is refused by its grant before a refresh through dex.
++			name:          "session restored from the cookie with a revoked grant",
++			session:       &sessions.SessionState{IDToken: unsignedIDToken(2), RefreshToken: dexRefreshToken("revoked-grant")},
++			dropFromRedis: true,
++			expectedCode:  http.StatusUnauthorized,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			redis := miniredis.RunT(t)
++			test, err := NewAuthOnlyEndpointTest("", withDeckhouseSessionOptions(t, redis.Addr()), withRevocationFeed(t))
++			require.NoError(t, err)
++			runRevocationFeed(t, test.proxy)
++			output, errOutput := captureJSONLogs(t)
++
++			created := time.Now()
++			tt.session.Email = "jane.doe@example.com"
++			tt.session.CreatedAt = &created
++			require.NoError(t, test.SaveSession(tt.session))
++			if tt.dropFromRedis {
++				redis.FlushAll()
++			}
++
++			test.rw = httptest.NewRecorder()
++			test.req.RemoteAddr = "192.0.2.1:41000"
++			test.proxy.ServeHTTP(test.rw, test.req)
++
++			assert.Equal(t, tt.expectedCode, test.rw.Code)
++			if tt.expectedCode != http.StatusUnauthorized {
++				return
++			}
++			assert.Equal(t, "Denied", test.rw.Header().Get("X-Auth-Request-Result"))
++			require.Len(t, test.rw.Result().Cookies(), 1)
++			assert.Empty(t, test.rw.Result().Cookies()[0].Value, "the cookie of the revoked session is cleared")
++			assert.Empty(t, errOutput.String(), "a revocation is not an error")
++			assert.Contains(t, output.String(), "Session revoked (reason: ")
++			for _, secret := range []string{tt.session.IDToken, tt.session.RefreshToken, "jane.doe@example.com"} {
++				assert.NotContains(t, output.String(), secret)
++			}
++		})
++	}
++}
++
++func TestRevocationFeedOptions(t *testing.T) {
++	t.Run("disabled without a url", func(t *testing.T) {
++		test, err := NewProcessCookieTestWithDefaults()
++		require.NoError(t, err)
++		assert.Nil(t, test.proxy.revocationFeed)
++	})
++
++	t.Run("https only", func(t *testing.T) {
++		_, err := NewProcessCookieTestWithOptionsModifiers(func(opts *options.Options) {
++			opts.RevocationFeedURL = "http://revocation-feed.d8-user-authn/revocations"
++		})
++		assert.ErrorContains(t, err, "could not build the revocation feed")
++	})
++
++	t.Run("flags", func(t *testing.T) {
++		opts, err := loadConfiguration("", "", nil, []string{
++			"--revocation-feed-url=https://revocation-feed.d8-user-authn/revocations",
++			"--revocation-feed-ca-file=/opt/dex-authenticator/revocation-feed-ca/ca.crt",
++		})
++		require.NoError(t, err)
++		assert.Equal(t, "https://revocation-feed.d8-user-authn/revocations", opts.RevocationFeedURL)
++		assert.Equal(t, "/opt/dex-authenticator/revocation-feed-ca/ca.crt", opts.RevocationFeedCAFile)
++	})
++}
+diff --git a/oauthproxy.go b/oauthproxy.go
+index e7d646de..f402d13b 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -27,6 +27,7 @@ import (
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/app/redirect"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/authentication/basic"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/cookies"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/deckhouse/revocation"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/proxyhttp"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
+@@ -120,6 +121,7 @@ type OAuthProxy struct {
+ 	serveMux          *mux.Router
+ 	redirectValidator redirect.Validator
+ 	appDirector       redirect.AppDirector
++	revocationFeed    *revocation.Feed
+ 
+ 	encodeState bool
+ }
+@@ -213,7 +215,11 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+ 	if err != nil {
+ 		return nil, fmt.Errorf("could not build pre-auth chain: %v", err)
+ 	}
+-	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator)
++	revocationFeed, err := buildRevocationFeed(opts, provider)
++	if err != nil {
++		return nil, err
++	}
++	sessionChain := buildSessionChain(opts, provider, sessionStore, basicAuthValidator, revocationFeed)
+ 	headersChain, err := buildHeadersChain(opts)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("could not build headers chain: %v", err)
+@@ -256,6 +262,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+ 		upstreamProxy:      upstreamProxy,
+ 		redirectValidator:  redirectValidator,
+ 		appDirector:        appDirector,
++		revocationFeed:     revocationFeed,
+ 		encodeState:        opts.EncodeState,
+ 	}
+ 	p.buildServeMux(opts.ProxyPrefix)
+@@ -284,6 +291,10 @@ func (p *OAuthProxy) Start() error {
+ 		cancel() // cancel the context
+ 	}()
+ 
++	if p.revocationFeed != nil {
++		go p.revocationFeed.Run(ctx)
++	}
++
+ 	return p.server.Start(ctx)
+ }
+ 
+@@ -412,7 +423,7 @@ func buildTrustedProxyNetSet(opts *options.Options) (*ip.NetSet, error) {
+ 	return ip.ParseNetSet(trustedProxyIPs)
+ }
+ 
+-func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator) alice.Chain {
++func buildSessionChain(opts *options.Options, provider providers.Provider, sessionStore sessionsapi.SessionStore, validator basic.Validator, revocationFeed *revocation.Feed) alice.Chain {
+ 	chain := alice.New()
+ 
+ 	if opts.SkipJwtBearerTokens {
+@@ -433,16 +444,47 @@ func buildSessionChain(opts *options.Options, provider providers.Provider, sessi
+ 		chain = chain.Append(middleware.NewBasicAuthSessionLoader(validator, opts.HtpasswdUserGroups, opts.LegacyPreferEmailToUser))
+ 	}
+ 
++	var revocationGuard middleware.RevocationGuard
++	if revocationFeed != nil {
++		revocationGuard = revocationFeed
++	}
++
+ 	chain = chain.Append(middleware.NewStoredSessionLoader(&middleware.StoredSessionLoaderOptions{
+ 		SessionStore:    sessionStore,
+ 		RefreshPeriod:   opts.Cookie.Refresh,
+ 		RefreshSession:  provider.RefreshSession,
+ 		ValidateSession: provider.ValidateSession,
++		Revocation:      revocationGuard,
+ 	}))
+ 
+ 	return chain
+ }
+ 
++// buildRevocationFeed returns the subscription to the revocation feed of the user-authn module of
++// Deckhouse, or nil without --revocation-feed-url. Start runs it.
++func buildRevocationFeed(opts *options.Options, provider providers.Provider) (*revocation.Feed, error) {
++	if opts.RevocationFeedURL == "" {
++		return nil, nil
++	}
++
++	clientSecret, err := provider.Data().GetClientSecret()
++	if err != nil {
++		return nil, fmt.Errorf("could not read the client secret for the revocation feed: %v", err)
++	}
++	feed, err := revocation.New(revocation.Options{
++		URL:          opts.RevocationFeedURL,
++		CAFile:       opts.RevocationFeedCAFile,
++		ClientID:     provider.Data().ClientID,
++		ClientSecret: clientSecret,
++	})
++	if err != nil {
++		return nil, fmt.Errorf("could not build the revocation feed: %v", err)
++	}
++
++	logger.Printf("Refusing the sessions revoked by the revocation feed %s", opts.RevocationFeedURL)
++	return feed, nil
++}
++
+ func buildHeadersChain(opts *options.Options) (alice.Chain, error) {
+ 	requestInjector, err := middleware.NewRequestHeaderInjector(opts.InjectRequestHeaders)
+ 	if err != nil {
+diff --git a/pkg/apis/options/options.go b/pkg/apis/options/options.go
+index 11226fce..fe3b4823 100644
+--- a/pkg/apis/options/options.go
++++ b/pkg/apis/options/options.go
+@@ -69,6 +69,10 @@ type Options struct {
+ 	SignatureKey    string `flag:"signature-key" cfg:"signature_key"`
+ 	GCPHealthChecks bool   `flag:"gcp-healthchecks" cfg:"gcp_healthchecks"`
+ 
++	// The revocation feed of the user-authn module of Deckhouse.
++	RevocationFeedURL    string `flag:"revocation-feed-url" cfg:"revocation_feed_url"`
++	RevocationFeedCAFile string `flag:"revocation-feed-ca-file" cfg:"revocation_feed_ca_file"`
++
+ 	// This is used for backwards compatibility for basic auth users
+ 	LegacyPreferEmailToUser bool `cfg:",internal"`
+ 
+@@ -163,6 +167,8 @@ func NewFlagSet() *pflag.FlagSet {
+ 	flagSet.Int("redis-connection-idle-timeout", 0, "Redis connection idle timeout seconds, if Redis timeout option is non-zero, the --redis-connection-idle-timeout must be less then Redis timeout option")
+ 	flagSet.String("signature-key", "", "GAP-Signature request signature key (algorithm:secretkey)")
+ 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
++	flagSet.String("revocation-feed-url", "", "https URL of the revocation feed of the user-authn module of Deckhouse: sessions it revokes are refused. Disabled when empty")
++	flagSet.String("revocation-feed-ca-file", "", "path to the CA certificate the revocation feed is checked against instead of the system roots")
+ 
+ 	flagSet.AddFlagSet(cookieFlagSet())
+ 	flagSet.AddFlagSet(loggingFlagSet())
+diff --git a/pkg/deckhouse/revocation/claims.go b/pkg/deckhouse/revocation/claims.go
+new file mode 100644
+index 00000000..c1e449dd
+--- /dev/null
++++ b/pkg/deckhouse/revocation/claims.go
+@@ -0,0 +1,51 @@
++package revocation
++
++import (
++	"encoding/base64"
++	"encoding/json"
++	"strconv"
++	"strings"
++)
++
++// claims are the claims of an ID token of dex that the check needs.
++type claims struct {
++	// Subject is the pair of the user and the connector ("sub").
++	Subject string
++	// SessionID is the session of dex the token was issued under ("sid"), empty without sessions.
++	SessionID string
++	// Generation is the generation of the pair the token was issued for ("d8_gen"); dex leaves out a
++	// generation of 0, and the tokens issued before the generations were introduced carry none.
++	Generation uint64
++}
++
++// idTokenClaims reads the claims of an ID token without verifying it: the proxy verified the token when
++// it got it from dex, and the session store keeps it intact. ok is false when the token is not a JWT
++// with a JSON payload.
++func idTokenClaims(idToken string) (c claims, ok bool) {
++	parts := strings.Split(idToken, ".")
++	if len(parts) != 3 {
++		return claims{}, false
++	}
++
++	payload, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(parts[1], "="))
++	if err != nil {
++		return claims{}, false
++	}
++
++	var raw struct {
++		Subject    string          `json:"sub"`
++		SessionID  string          `json:"sid"`
++		Generation json.RawMessage `json:"d8_gen"`
++	}
++	if err := json.Unmarshal(payload, &raw); err != nil {
++		return claims{}, false
++	}
++
++	c = claims{Subject: raw.Subject, SessionID: raw.SessionID}
++	if len(raw.Generation) > 0 {
++		// A generation that is not an unsigned integer is read as 0: any revocation of the pair is
++		// newer than it, so the session is refused rather than trusted.
++		c.Generation, _ = strconv.ParseUint(string(raw.Generation), 10, 64)
++	}
++	return c, true
++}
+diff --git a/pkg/deckhouse/revocation/claims_test.go b/pkg/deckhouse/revocation/claims_test.go
+new file mode 100644
+index 00000000..75d6cf8e
+--- /dev/null
++++ b/pkg/deckhouse/revocation/claims_test.go
+@@ -0,0 +1,83 @@
++package revocation
++
++import (
++	"encoding/base64"
++	"testing"
++
++	"github.com/stretchr/testify/assert"
++)
++
++// testIDToken returns an unsigned JWT with the payload: the check reads the claims without verifying.
++func testIDToken(payload string) string {
++	return "eyJhbGciOiJSUzI1NiJ9." + base64.RawURLEncoding.EncodeToString([]byte(payload)) + ".signature"
++}
++
++func TestIDTokenClaims(t *testing.T) {
++	tests := []struct {
++		name       string
++		idToken    string
++		expected   claims
++		expectedOk bool
++	}{
++		{
++			name:       "all claims",
++			idToken:    testIDToken(`{"sub":"CgRqYW5lEgVsb2NhbA","sid":"fehzwdh5qy4oyqcn7qhkcgzbm","d8_gen":3,"email":"jane@example.com"}`),
++			expected:   claims{Subject: "CgRqYW5lEgVsb2NhbA", SessionID: "fehzwdh5qy4oyqcn7qhkcgzbm", Generation: 3},
++			expectedOk: true,
++		},
++		{
++			name:       "no generation is 0",
++			idToken:    testIDToken(`{"sub":"CgRqYW5lEgVsb2NhbA"}`),
++			expected:   claims{Subject: "CgRqYW5lEgVsb2NhbA"},
++			expectedOk: true,
++		},
++		{
++			name:       "largest generation",
++			idToken:    testIDToken(`{"sub":"s","d8_gen":18446744073709551615}`),
++			expected:   claims{Subject: "s", Generation: 18446744073709551615},
++			expectedOk: true,
++		},
++		{
++			name:       "generation that is not an unsigned integer is 0",
++			idToken:    testIDToken(`{"sub":"s","d8_gen":"3"}`),
++			expected:   claims{Subject: "s"},
++			expectedOk: true,
++		},
++		{
++			name:       "negative generation is 0",
++			idToken:    testIDToken(`{"sub":"s","d8_gen":-1}`),
++			expected:   claims{Subject: "s"},
++			expectedOk: true,
++		},
++		{
++			name:       "padded payload",
++			idToken:    "h." + base64.URLEncoding.EncodeToString([]byte(`{"sub":"s"}`)) + ".s",
++			expected:   claims{Subject: "s"},
++			expectedOk: true,
++		},
++		{
++			name:    "no id token",
++			idToken: "",
++		},
++		{
++			name:    "not a jwt",
++			idToken: "opaque",
++		},
++		{
++			name:    "payload not base64url",
++			idToken: "h.!!!.s",
++		},
++		{
++			name:    "payload not json",
++			idToken: "h." + base64.RawURLEncoding.EncodeToString([]byte("text")) + ".s",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			got, ok := idTokenClaims(tt.idToken)
++			assert.Equal(t, tt.expectedOk, ok)
++			assert.Equal(t, tt.expected, got)
++		})
++	}
++}
+diff --git a/pkg/deckhouse/revocation/events.go b/pkg/deckhouse/revocation/events.go
+new file mode 100644
+index 00000000..5cf4b1b6
+--- /dev/null
++++ b/pkg/deckhouse/revocation/events.go
+@@ -0,0 +1,157 @@
++package revocation
++
++import (
++	"encoding/json"
++	"errors"
++	"fmt"
++	"time"
++)
++
++// protocolVersion is the version of the events of the feed the subscriber understands.
++const protocolVersion = 1
++
++// The types of a revocation event.
++const (
++	revocationTypePair    = "pair"
++	revocationTypeSession = "session"
++	revocationTypeGrant   = "grant"
++)
++
++// errNewerVersion marks an event of a newer protocol: the subscriber skips it.
++var errNewerVersion = errors.New("event of a newer protocol version")
++
++// The events of the feed. Every event carries the version of the protocol in "v"; unknown fields are
++// ignored.
++type (
++	snapshotEvent struct {
++		Part     int           `json:"part"`
++		Last     bool          `json:"last"`
++		Pairs    []pairRecord  `json:"pairs"`
++		Sessions []entryRecord `json:"sessions"`
++		Grants   []entryRecord `json:"grants"`
++	}
++
++	revocationEvent struct {
++		Type string `json:"type"`
++		pairRecord
++	}
++
++	pairRecord struct {
++		Key        string `json:"k"`
++		Generation uint64 `json:"g"`
++		Expiry     int64  `json:"exp"`
++	}
++
++	entryRecord struct {
++		Key    string `json:"k"`
++		Expiry int64  `json:"exp"`
++	}
++)
++
++// decodeEvent decodes the data of an event of the feed into v after checking its protocol version.
++func decodeEvent(data []byte, v any) error {
++	var header struct {
++		Version int `json:"v"`
++	}
++	if err := json.Unmarshal(data, &header); err != nil {
++		return fmt.Errorf("decoding the event: %w", err)
++	}
++	switch {
++	case header.Version > protocolVersion:
++		return fmt.Errorf("%w %d", errNewerVersion, header.Version)
++	case header.Version < protocolVersion:
++		return fmt.Errorf("unsupported protocol version %d", header.Version)
++	}
++
++	if err := json.Unmarshal(data, v); err != nil {
++		return fmt.Errorf("decoding the event: %w", err)
++	}
++	return nil
++}
++
++// startStream prepares the state for a new stream: a snapshot interrupted with the previous stream
++// is not continued.
++func (s *state) startStream() {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++
++	s.snapshotPart = -1
++}
++
++// applySnapshot merges a part of a snapshot. The state becomes complete with the last part.
++func (s *state) applySnapshot(event snapshotEvent, now time.Time) error {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++
++	expected := max(s.snapshotPart, 0)
++	if event.Part != expected {
++		return fmt.Errorf("snapshot part %d, expected %d", event.Part, expected)
++	}
++
++	unix := now.Unix()
++	for _, record := range event.Pairs {
++		if record.Key != "" && record.Generation > 0 && record.Expiry >= unix {
++			s.mergePair(record.Key, record.Generation, record.Expiry)
++		}
++	}
++	for _, records := range []struct {
++		target  map[string]int64
++		records []entryRecord
++	}{
++		{target: s.sessions, records: event.Sessions},
++		{target: s.grants, records: event.Grants},
++	} {
++		for _, record := range records.records {
++			if record.Key != "" && record.Expiry >= unix {
++				mergeKey(records.target, record.Key, record.Expiry)
++			}
++		}
++	}
++
++	if !event.Last {
++		s.snapshotPart = event.Part + 1
++		return nil
++	}
++	s.snapshotPart = -1
++	s.hasSnapshot = true
++	s.syncedAt = now
++	return nil
++}
++
++// applyRevocation merges a revocation. A revocation of an unknown type is ignored.
++func (s *state) applyRevocation(event revocationEvent, now time.Time) {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++
++	s.touch(now)
++	if event.Key == "" || event.Expiry < now.Unix() {
++		return
++	}
++	switch event.Type {
++	case revocationTypePair:
++		if event.Generation > 0 {
++			s.mergePair(event.Key, event.Generation, event.Expiry)
++		}
++	case revocationTypeSession:
++		mergeKey(s.sessions, event.Key, event.Expiry)
++	case revocationTypeGrant:
++		mergeKey(s.grants, event.Key, event.Expiry)
++	}
++}
++
++// applyHeartbeat records an event that changes nothing: a heartbeat, or an event the subscriber does
++// not know.
++func (s *state) applyHeartbeat(now time.Time) {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++
++	s.touch(now)
++}
++
++// touch records an event outside a snapshot: the state is complete as of now. An event in the middle of
++// a snapshot leaves the state incomplete until its last part. The caller holds the lock.
++func (s *state) touch(now time.Time) {
++	if s.snapshotPart < 0 {
++		s.syncedAt = now
++	}
++}
+diff --git a/pkg/deckhouse/revocation/events_test.go b/pkg/deckhouse/revocation/events_test.go
+new file mode 100644
+index 00000000..875ee73f
+--- /dev/null
++++ b/pkg/deckhouse/revocation/events_test.go
+@@ -0,0 +1,155 @@
++package revocation
++
++import (
++	"testing"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++func TestDecodeEvent(t *testing.T) {
++	tests := []struct {
++		name          string
++		data          string
++		expected      revocationEvent
++		expectedError string
++		isNewer       bool
++	}{
++		{
++			name:     "revocation of a pair",
++			data:     `{"v":1,"type":"pair","k":"key","g":3,"exp":1760620000,"at":1760610000}`,
++			expected: revocationEvent{Type: "pair", pairRecord: pairRecord{Key: "key", Generation: 3, Expiry: 1760620000}},
++		},
++		{
++			name:     "unknown fields are ignored",
++			data:     `{"v":1,"type":"grant","k":"key","exp":1760620000,"new":{"field":[1]}}`,
++			expected: revocationEvent{Type: "grant", pairRecord: pairRecord{Key: "key", Expiry: 1760620000}},
++		},
++		{
++			name:    "newer protocol",
++			data:    `{"v":2,"type":"pair","k":["changed"]}`,
++			isNewer: true,
++		},
++		{
++			name:          "no version",
++			data:          `{"type":"pair","k":"key","g":3,"exp":1760620000}`,
++			expectedError: "unsupported protocol version 0",
++		},
++		{
++			name:          "version not a number",
++			data:          `{"v":"1"}`,
++			expectedError: "decoding the event",
++		},
++		{
++			name:          "not json",
++			data:          `revoked`,
++			expectedError: "decoding the event",
++		},
++		{
++			name:          "negative generation",
++			data:          `{"v":1,"type":"pair","k":"key","g":-1,"exp":1760620000}`,
++			expectedError: "decoding the event",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			var got revocationEvent
++			err := decodeEvent([]byte(tt.data), &got)
++			switch {
++			case tt.isNewer:
++				assert.ErrorIs(t, err, errNewerVersion)
++			case tt.expectedError != "":
++				assert.ErrorContains(t, err, tt.expectedError)
++			default:
++				require.NoError(t, err)
++				assert.Equal(t, tt.expected, got)
++			}
++		})
++	}
++}
++
++func TestMonotonicMerge(t *testing.T) {
++	exp := testNow.Unix() + 100
++
++	s := newState()
++	s.applyRevocation(revocationEvent{Type: "pair", pairRecord: pairRecord{Key: "pair", Generation: 3, Expiry: exp}}, testNow)
++	// An older revocation, from another replica or a reconnection, lowers nothing.
++	s.applyRevocation(revocationEvent{Type: "pair", pairRecord: pairRecord{Key: "pair", Generation: 2, Expiry: exp + 50}}, testNow)
++	require.NoError(t, s.applySnapshot(snapshotEvent{
++		Part:     0,
++		Last:     true,
++		Pairs:    []pairRecord{{Key: "pair", Generation: 1, Expiry: exp - 50}, {Key: "other-pair", Generation: 1, Expiry: exp}},
++		Sessions: []entryRecord{{Key: "session", Expiry: exp}},
++		Grants:   []entryRecord{{Key: "grant", Expiry: exp}},
++	}, testNow))
++	// A snapshot received twice changes nothing.
++	s.startStream()
++	require.NoError(t, s.applySnapshot(snapshotEvent{
++		Part:     0,
++		Last:     true,
++		Sessions: []entryRecord{{Key: "session", Expiry: exp - 10}},
++		Grants:   []entryRecord{{Key: "grant", Expiry: exp + 10}},
++	}, testNow))
++	s.applyRevocation(revocationEvent{Type: "session", pairRecord: pairRecord{Key: "session", Expiry: exp + 20}}, testNow)
++
++	assert.Equal(t, map[string]pairEntry{
++		"pair":       {gen: 3, exp: exp + 50},
++		"other-pair": {gen: 1, exp: exp},
++	}, s.pairs)
++	assert.Equal(t, map[string]int64{"session": exp + 20}, s.sessions)
++	assert.Equal(t, map[string]int64{"grant": exp + 10}, s.grants)
++}
++
++func TestApplyIgnoresUselessRecords(t *testing.T) {
++	exp := testNow.Unix() + 100
++
++	s := newState()
++	s.applyRevocation(revocationEvent{Type: "pair", pairRecord: pairRecord{Key: "", Generation: 1, Expiry: exp}}, testNow)
++	s.applyRevocation(revocationEvent{Type: "pair", pairRecord: pairRecord{Key: "zero", Generation: 0, Expiry: exp}}, testNow)
++	s.applyRevocation(revocationEvent{Type: "grant", pairRecord: pairRecord{Key: "expired", Expiry: testNow.Unix() - 1}}, testNow)
++	s.applyRevocation(revocationEvent{Type: "unknown", pairRecord: pairRecord{Key: "unknown", Expiry: exp}}, testNow)
++	require.NoError(t, s.applySnapshot(snapshotEvent{
++		Part:     0,
++		Last:     true,
++		Pairs:    []pairRecord{{Key: "zero", Expiry: exp}, {Key: "expired", Generation: 1, Expiry: testNow.Unix() - 1}},
++		Sessions: []entryRecord{{Key: "", Expiry: exp}},
++		Grants:   []entryRecord{{Key: "expired", Expiry: testNow.Unix() - 1}},
++	}, testNow))
++
++	assert.Empty(t, s.pairs)
++	assert.Empty(t, s.sessions)
++	assert.Empty(t, s.grants)
++}
++
++func TestApplySnapshotParts(t *testing.T) {
++	t.Run("parts in order", func(t *testing.T) {
++		s := newState()
++		require.NoError(t, s.applySnapshot(snapshotEvent{Part: 0}, testNow))
++		assert.True(t, s.inSnapshot())
++		require.NoError(t, s.applySnapshot(snapshotEvent{Part: 1}, testNow))
++		require.NoError(t, s.applySnapshot(snapshotEvent{Part: 2, Last: true}, testNow))
++		assert.False(t, s.inSnapshot())
++		assert.Equal(t, StatusFresh, s.status(testNow))
++	})
++
++	t.Run("snapshot not starting with part 0", func(t *testing.T) {
++		s := newState()
++		assert.ErrorContains(t, s.applySnapshot(snapshotEvent{Part: 1, Last: true}, testNow), "snapshot part 1, expected 0")
++		assert.Equal(t, StatusNoSnapshot, s.status(testNow))
++	})
++
++	t.Run("missing part", func(t *testing.T) {
++		s := newState()
++		require.NoError(t, s.applySnapshot(snapshotEvent{Part: 0}, testNow))
++		assert.ErrorContains(t, s.applySnapshot(snapshotEvent{Part: 2, Last: true}, testNow), "snapshot part 2, expected 1")
++	})
++
++	t.Run("snapshot interrupted by a new stream", func(t *testing.T) {
++		s := newState()
++		require.NoError(t, s.applySnapshot(snapshotEvent{Part: 0}, testNow))
++		s.startStream()
++		require.NoError(t, s.applySnapshot(snapshotEvent{Part: 0, Last: true}, testNow))
++		assert.Equal(t, StatusFresh, s.status(testNow))
++	})
++}
+diff --git a/pkg/deckhouse/revocation/feed.go b/pkg/deckhouse/revocation/feed.go
+new file mode 100644
+index 00000000..1feb24e2
+--- /dev/null
++++ b/pkg/deckhouse/revocation/feed.go
+@@ -0,0 +1,391 @@
++// Package revocation subscribes the proxy to the revocation feed of the user-authn module of Deckhouse
++// and refuses the sessions the feed revokes (Deckhouse patch 010).
++//
++// The feed is a text/event-stream: a snapshot of the stored revocations, then the new revocations and a
++// heartbeat every 10 seconds. A revocation names a pair of a user and a connector with its generation,
++// a session of dex or a grant of dex by a key salted with the secret of the client, and an expiry time.
++// The subscriber keeps only the keys, the generations and the expiry times.
++package revocation
++
++import (
++	"context"
++	"crypto/tls"
++	"encoding/base64"
++	"errors"
++	"fmt"
++	"io"
++	"math/rand/v2"
++	"mime"
++	"net"
++	"net/http"
++	"net/url"
++	"strconv"
++	"time"
++
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/util"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/version"
++)
++
++const (
++	// forcedRefreshAge is the age above which a session is refreshed through the provider while the
++	// feed is not fresh: the provider refuses the revoked refresh tokens.
++	forcedRefreshAge = 30 * time.Second
++	// forcedRefreshRate and forcedRefreshBurst limit the forced refreshes of the process. Above the
++	// limit the sessions are checked against the last state of the feed only. The feed goes stale for
++	// every DexAuthenticator at once, so dex and the apiserver get this rate times the number of
++	// their pods: it is kept low.
++	forcedRefreshRate  = 5
++	forcedRefreshBurst = 10
++
++	// minBackoff and maxBackoff bound the delay before a new connection, exponential with full jitter.
++	minBackoff = time.Second
++	maxBackoff = 30 * time.Second
++	// unauthorizedPause is the delay after the feed refused the credentials of the client.
++	unauthorizedPause = time.Minute
++	// maxRetryAfter bounds the delay a 429 of the feed asks for.
++	maxRetryAfter = 5 * time.Minute
++	// errorLogInterval limits the logs of connection errors.
++	errorLogInterval = time.Minute
++	// purgeInterval is how often the expired revocations are forgotten.
++	purgeInterval = time.Minute
++)
++
++// Options configure a Feed.
++type Options struct {
++	// URL is the address of the feed, https only: the client authenticates with its secret.
++	URL string
++	// CAFile is the CA the certificate of the feed is checked against. The system roots are used only
++	// without it.
++	CAFile string
++	// ClientID and ClientSecret are the credentials of the client in dex. The feed authenticates the
++	// client with them, and the secret salts the keys of the feed.
++	ClientID     string
++	ClientSecret string
++}
++
++// Feed is the subscription of the process to the revocation feed and the state it received. Run keeps
++// the subscription; the other methods are safe for concurrent use.
++type Feed struct {
++	url           string
++	authorization string
++	client        *http.Client
++	salt          []byte
++	state         *state
++	limiter       *limiter
++	now           func() time.Time
++
++	// The fields below belong to the goroutine of Run.
++	cursor       string
++	attempt      int
++	loggedStatus Status
++	errorLog     logThrottle
++	versionLog   logThrottle
++	nextPurge    time.Time
++}
++
++// New returns a Feed for the options. It does not connect: Run does.
++func New(opts Options) (*Feed, error) {
++	feedURL, err := url.Parse(opts.URL)
++	if err != nil {
++		return nil, fmt.Errorf("parsing the revocation feed url: %w", err)
++	}
++	if feedURL.Scheme != "https" || feedURL.Host == "" {
++		return nil, fmt.Errorf("the revocation feed url %q is not an absolute https url", opts.URL)
++	}
++
++	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
++	if opts.CAFile != "" {
++		pool, err := util.GetCertPool([]string{opts.CAFile}, false)
++		if err != nil {
++			return nil, fmt.Errorf("loading the CA of the revocation feed: %w", err)
++		}
++		tlsConfig.RootCAs = pool
++	}
++
++	transport := &http.Transport{
++		Proxy: http.ProxyFromEnvironment,
++		DialContext: (&net.Dialer{
++			Timeout:   10 * time.Second,
++			KeepAlive: 30 * time.Second,
++		}).DialContext,
++		TLSClientConfig:       tlsConfig,
++		TLSHandshakeTimeout:   10 * time.Second,
++		ResponseHeaderTimeout: 10 * time.Second,
++	}
++
++	return &Feed{
++		url:           feedURL.String(),
++		authorization: basicAuthorization(opts.ClientID, opts.ClientSecret),
++		client:        &http.Client{Transport: transport},
++		salt:          salt(opts.ClientSecret),
++		state:         newState(),
++		limiter:       newLimiter(forcedRefreshRate, forcedRefreshBurst),
++		now:           time.Now,
++	}, nil
++}
++
++// Status returns the status of the state of the feed.
++func (f *Feed) Status() Status {
++	return f.state.status(f.now())
++}
++
++// Revoked returns the reason the feed revoked the tokens of a session for, or an empty Reason. The
++// last state received counts whatever the status. A session without an ID token, such as the stub of a
++// session restored from the cookie, is checked by its grant only.
++func (f *Feed) Revoked(session *sessionsapi.SessionState) Reason {
++	c, ok := idTokenClaims(session.IDToken)
++	grant := ""
++	if session.RefreshToken != "" {
++		grant = refreshID(session.RefreshToken)
++	}
++	return f.state.revoked(f.salt, c, ok, grant)
++}
++
++// NeedsForcedRefresh reports whether a session has to be refreshed through the provider because the
++// feed is not fresh: the session has a refresh token and is older than forcedRefreshAge. The caller
++// asks AllowForcedRefresh before it refreshes.
++func (f *Feed) NeedsForcedRefresh(session *sessionsapi.SessionState) bool {
++	return session.RefreshToken != "" &&
++		session.Age() > forcedRefreshAge &&
++		f.state.status(f.now()) != StatusFresh
++}
++
++// AllowForcedRefresh takes a forced refresh from the limit of the process.
++func (f *Feed) AllowForcedRefresh() bool {
++	return f.limiter.allow(f.now())
++}
++
++// Run keeps the subscription to the feed until ctx is done.
++func (f *Feed) Run(ctx context.Context) {
++	for {
++		wait := f.subscribe(ctx)
++		f.maintain()
++		if !sleep(ctx, wait) {
++			return
++		}
++	}
++}
++
++// subscribe connects to the feed and reads it until the stream ends. It returns the delay before the
++// next connection.
++func (f *Feed) subscribe(ctx context.Context) time.Duration {
++	streamCtx, cancel := context.WithCancel(ctx)
++	defer cancel()
++
++	req, err := http.NewRequestWithContext(streamCtx, http.MethodGet, f.url, nil)
++	if err != nil {
++		f.logErrorf("building the request: %v", err)
++		return f.backoff()
++	}
++	req.Header.Set("Accept", "text/event-stream")
++	req.Header.Set("Cache-Control", "no-cache")
++	req.Header.Set("Authorization", f.authorization)
++	req.Header.Set("User-Agent", "oauth2-proxy/"+version.VERSION)
++	if f.cursor != "" {
++		req.Header.Set("Last-Event-ID", f.cursor)
++	}
++
++	resp, err := f.client.Do(req)
++	if err != nil {
++		if ctx.Err() != nil {
++			return 0
++		}
++		f.logErrorf("connecting: %v", err)
++		return f.backoff()
++	}
++	defer resp.Body.Close()
++
++	switch {
++	case resp.StatusCode == http.StatusOK && isEventStream(resp.Header.Get("Content-Type")):
++	case resp.StatusCode == http.StatusUnauthorized:
++		logger.Errorf("The revocation feed refused the credentials of the client (401), retrying in %s", unauthorizedPause)
++		f.attempt++
++		return unauthorizedPause
++	case resp.StatusCode == http.StatusTooManyRequests:
++		f.logErrorf("the feed limits the connections (429)")
++		wait := f.backoff()
++		if retryAfter, ok := parseRetryAfter(resp.Header.Get("Retry-After")); ok {
++			wait = retryAfter
++		}
++		return wait
++	default:
++		f.logErrorf("unexpected response %d %q", resp.StatusCode, resp.Header.Get("Content-Type"))
++		return f.backoff()
++	}
++
++	err = f.stream(streamCtx, cancel, resp.Body)
++	switch {
++	case ctx.Err() != nil:
++		return 0
++	case errors.Is(err, errProtocol):
++		// Start over from a snapshot: resuming would skip the event again.
++		f.cursor = ""
++		f.logErrorf("%v", err)
++	case errors.Is(err, context.Canceled):
++		f.logErrorf("no event for %s, reconnecting", freshFor)
++	case errors.Is(err, io.EOF):
++		f.logErrorf("the stream ended")
++	default:
++		f.logErrorf("reading the stream: %v", err)
++	}
++	return f.backoff()
++}
++
++// errProtocol marks an event the subscriber cannot apply.
++var errProtocol = errors.New("protocol error")
++
++// stream applies the events of a stream until it ends. A stream without an event for freshFor is
++// cancelled: the feed sends a heartbeat every 10 seconds.
++func (f *Feed) stream(ctx context.Context, cancel context.CancelFunc, body io.Reader) error {
++	f.state.startStream()
++	watchdog := time.AfterFunc(freshFor, cancel)
++	defer watchdog.Stop()
++
++	events := newSSEReader(body)
++	for {
++		event, err := events.next()
++		if err != nil {
++			if ctx.Err() != nil {
++				return ctx.Err()
++			}
++			return err
++		}
++		watchdog.Reset(freshFor)
++
++		if err := f.apply(event); err != nil {
++			return fmt.Errorf("%w: %s event: %w", errProtocol, event.Name, err)
++		}
++		f.attempt = 0
++		f.maintain()
++	}
++}
++
++// apply applies an event to the state and advances the cursor. Unknown events count as a sign of life;
++// an event of a newer protocol is skipped.
++func (f *Feed) apply(event sseEvent) error {
++	now := f.now()
++
++	switch event.Name {
++	case "snapshot":
++		var snapshot snapshotEvent
++		if err := decodeEvent(event.Data, &snapshot); err != nil {
++			return f.skipNewer(err)
++		}
++		if err := f.state.applySnapshot(snapshot, now); err != nil {
++			return err
++		}
++	case "revocation":
++		var revocation revocationEvent
++		if err := decodeEvent(event.Data, &revocation); err != nil {
++			return f.skipNewer(err)
++		}
++		f.state.applyRevocation(revocation, now)
++	case "heartbeat":
++		if err := decodeEvent(event.Data, &struct{}{}); err != nil {
++			return f.skipNewer(err)
++		}
++		f.state.applyHeartbeat(now)
++	default:
++		f.state.applyHeartbeat(now)
++	}
++
++	// The cursor moves only past a complete state: resuming in the middle of a snapshot would lose
++	// its remaining parts.
++	if event.HasID && !f.state.inSnapshot() {
++		f.cursor = event.ID
++	}
++	return nil
++}
++
++// skipNewer returns nil for an event of a newer protocol, which the subscriber skips, and err otherwise.
++func (f *Feed) skipNewer(err error) error {
++	if !errors.Is(err, errNewerVersion) {
++		return err
++	}
++	if ok, suppressed := f.versionLog.allow(f.now(), errorLogInterval); ok {
++		logger.Printf("WARNING: Skipping an event of the revocation feed: %v (%d more skipped)", err, suppressed)
++	}
++	return nil
++}
++
++// maintain forgets the expired revocations once in purgeInterval and logs a change of the status.
++func (f *Feed) maintain() {
++	now := f.now()
++	if !now.Before(f.nextPurge) {
++		f.state.purge(now)
++		f.nextPurge = now.Add(purgeInterval)
++	}
++
++	status := f.state.status(now)
++	if status == f.loggedStatus {
++		return
++	}
++	f.loggedStatus = status
++	switch status {
++	case StatusFresh:
++		logger.Printf("The revocation feed is fresh")
++	case StatusStale:
++		logger.Printf("WARNING: The revocation feed is stale: sessions older than %s are refreshed through the provider", forcedRefreshAge)
++	}
++}
++
++// logErrorf logs an error of the subscription, once in errorLogInterval.
++func (f *Feed) logErrorf(format string, args ...any) {
++	if ok, suppressed := f.errorLog.allow(f.now(), errorLogInterval); ok {
++		logger.Printf("WARNING: Revocation feed: %s (%d more errors suppressed)", fmt.Sprintf(format, args...), suppressed)
++	}
++}
++
++// backoff returns the delay before the next connection, exponential from minBackoff to maxBackoff with
++// full jitter.
++func (f *Feed) backoff() time.Duration {
++	ceiling := maxBackoff
++	if f.attempt < 5 {
++		ceiling = min(maxBackoff, minBackoff<<f.attempt)
++	}
++	f.attempt++
++	return rand.N(ceiling) //nolint:gosec // G404: the jitter of a retry, not a secret
++}
++
++// basicAuthorization returns the HTTP Basic credentials of a client, URL-encoded as for the token
++// endpoint (RFC 6749, section 2.3.1).
++func basicAuthorization(clientID, clientSecret string) string {
++	credentials := url.QueryEscape(clientID) + ":" + url.QueryEscape(clientSecret)
++	return "Basic " + base64.StdEncoding.EncodeToString([]byte(credentials))
++}
++
++func isEventStream(contentType string) bool {
++	mediaType, _, err := mime.ParseMediaType(contentType)
++	return err == nil && mediaType == "text/event-stream"
++}
++
++// parseRetryAfter reads the delay of a Retry-After header in seconds, up to maxRetryAfter.
++func parseRetryAfter(value string) (time.Duration, bool) {
++	seconds, err := strconv.Atoi(value)
++	if err != nil || seconds < 0 {
++		return 0, false
++	}
++	if seconds > int(maxRetryAfter/time.Second) {
++		return maxRetryAfter, true
++	}
++	return time.Duration(seconds) * time.Second, true
++}
++
++// sleep waits for d or until ctx is done, and reports whether ctx is still alive.
++func sleep(ctx context.Context, d time.Duration) bool {
++	if ctx.Err() != nil {
++		return false
++	}
++
++	timer := time.NewTimer(d)
++	defer timer.Stop()
++
++	select {
++	case <-ctx.Done():
++		return false
++	case <-timer.C:
++		return true
++	}
++}
+diff --git a/pkg/deckhouse/revocation/feed_test.go b/pkg/deckhouse/revocation/feed_test.go
+new file mode 100644
+index 00000000..d679855f
+--- /dev/null
++++ b/pkg/deckhouse/revocation/feed_test.go
+@@ -0,0 +1,542 @@
++package revocation
++
++import (
++	"bytes"
++	"context"
++	"crypto/ecdsa"
++	"crypto/elliptic"
++	"crypto/rand"
++	"crypto/x509"
++	"crypto/x509/pkix"
++	"encoding/pem"
++	"fmt"
++	"io"
++	"math/big"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"sync"
++	"testing"
++	"testing/synctest"
++	"time"
++
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++const (
++	testClientID    = "app-tenant-ns-dex-authenticator"
++	testSubjectJane = "CgRqYW5lEgVsb2NhbA"
++)
++
++// fakeFeed is an in-process feed server over TLS. handle serves the n-th connection, from 0.
++type fakeFeed struct {
++	server *httptest.Server
++	caFile string
++
++	mu      sync.Mutex
++	headers []http.Header
++}
++
++func newFakeFeed(t *testing.T, handle func(w http.ResponseWriter, r *http.Request, n int)) *fakeFeed {
++	t.Helper()
++
++	f := &fakeFeed{}
++	f.server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		f.mu.Lock()
++		n := len(f.headers)
++		f.headers = append(f.headers, r.Header.Clone())
++		f.mu.Unlock()
++		handle(w, r, n)
++	}))
++	t.Cleanup(f.server.Close)
++
++	f.caFile = filepath.Join(t.TempDir(), "ca.crt")
++	ca := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: f.server.Certificate().Raw})
++	require.NoError(t, os.WriteFile(f.caFile, ca, 0o600))
++	return f
++}
++
++// header returns the headers of the n-th connection.
++func (f *fakeFeed) header(n int) http.Header {
++	f.mu.Lock()
++	defer f.mu.Unlock()
++
++	return f.headers[n]
++}
++
++func (f *fakeFeed) connections() int {
++	f.mu.Lock()
++	defer f.mu.Unlock()
++
++	return len(f.headers)
++}
++
++func (f *fakeFeed) subscriber(t *testing.T) *Feed {
++	t.Helper()
++
++	feed, err := New(Options{
++		URL:          f.server.URL + "/revocations",
++		CAFile:       f.caFile,
++		ClientID:     testClientID,
++		ClientSecret: vectorSecret,
++	})
++	require.NoError(t, err)
++	return feed
++}
++
++// startStream answers a subscription the way the feed does.
++func startStream(w http.ResponseWriter) {
++	w.Header().Set("Content-Type", "text/event-stream")
++	w.Header().Set("Cache-Control", "no-store")
++	w.WriteHeader(http.StatusOK)
++	fmt.Fprint(w, "retry: 5000\n\n")
++}
++
++func writeEvent(w io.Writer, name, id, data string) {
++	fmt.Fprintf(w, "event: %s\nid: %s\ndata: %s\n\n", name, id, data)
++	if flusher, ok := w.(http.Flusher); ok {
++		flusher.Flush()
++	}
++}
++
++// testKey returns the key of a value for the client of the tests.
++func testKey(t keyType, value string) string {
++	return key(salt(vectorSecret), t, value)
++}
++
++// testSession returns a session with an ID token of jane at a generation and a refresh token of a grant.
++func testSession(generation uint64, sessionID, grant string) *sessionsapi.SessionState {
++	payload := fmt.Sprintf(`{"sub":%q,"sid":%q,"d8_gen":%d}`, testSubjectJane, sessionID, generation)
++	created := time.Now()
++	return &sessionsapi.SessionState{
++		CreatedAt:    &created,
++		IDToken:      testIDToken(payload),
++		RefreshToken: testRefreshToken(grant, "secret"),
++	}
++}
++
++// captureLogs sends the logs of the test to buffers.
++func captureLogs(t *testing.T) (output, errOutput *bytes.Buffer) {
++	t.Helper()
++
++	output, errOutput = &bytes.Buffer{}, &bytes.Buffer{}
++	logger.SetOutput(output)
++	logger.SetErrOutput(errOutput)
++	t.Cleanup(func() {
++		logger.SetOutput(os.Stdout)
++		logger.SetErrOutput(os.Stderr)
++	})
++	return output, errOutput
++}
++
++func TestNew(t *testing.T) {
++	tests := []struct {
++		name          string
++		opts          Options
++		expectedError string
++	}{
++		{
++			name: "https url",
++			opts: Options{URL: "https://revocation-feed.d8-user-authn/revocations"},
++		},
++		{
++			name:          "http url",
++			opts:          Options{URL: "http://revocation-feed.d8-user-authn/revocations"},
++			expectedError: "not an absolute https url",
++		},
++		{
++			name:          "relative url",
++			opts:          Options{URL: "/revocations"},
++			expectedError: "not an absolute https url",
++		},
++		{
++			name:          "missing ca file",
++			opts:          Options{URL: "https://revocation-feed.d8-user-authn/revocations", CAFile: "/nonexistent/ca.crt"},
++			expectedError: "loading the CA of the revocation feed",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			feed, err := New(tt.opts)
++			if tt.expectedError != "" {
++				assert.ErrorContains(t, err, tt.expectedError)
++				return
++			}
++			require.NoError(t, err)
++			assert.Equal(t, StatusNoSnapshot, feed.Status())
++		})
++	}
++}
++
++func TestFeedSubscribe(t *testing.T) {
++	captureLogs(t)
++	exp := time.Now().Add(time.Hour).Unix()
++	server := newFakeFeed(t, func(w http.ResponseWriter, _ *http.Request, _ int) {
++		startStream(w)
++		writeEvent(w, "snapshot", "e.7", fmt.Sprintf(`{"v":1,"part":0,"last":false,"retention":4200,"pairs":[{"k":%q,"g":3,"exp":%d}],"sessions":[],"grants":[]}`,
++			testKey(keyPair, testSubjectJane), exp))
++		writeEvent(w, "snapshot", "e.7", fmt.Sprintf(`{"v":1,"part":1,"last":true,"retention":4200,"pairs":[],"sessions":[{"k":%q,"exp":%d}],"grants":[]}`,
++			testKey(keySession, "ended-session"), exp))
++		writeEvent(w, "revocation", "e.8", fmt.Sprintf(`{"v":1,"type":"grant","k":%q,"exp":%d,"at":%d}`,
++			testKey(keyGrant, "revoked-grant"), exp, time.Now().Unix()))
++		writeEvent(w, "heartbeat", "e.8", fmt.Sprintf(`{"v":1,"t":%d}`, time.Now().Unix()))
++	})
++	feed := server.subscriber(t)
++
++	wait := feed.subscribe(context.Background())
++
++	assert.Less(t, wait, minBackoff, "a stream that delivered events is followed by the shortest backoff")
++	header := server.header(0)
++	assert.Equal(t, "text/event-stream", header.Get("Accept"))
++	assert.Equal(t, basicAuthorization(testClientID, vectorSecret), header.Get("Authorization"))
++	assert.Empty(t, header.Get("Last-Event-ID"))
++
++	assert.Equal(t, StatusFresh, feed.Status())
++	assert.Equal(t, "e.8", feed.cursor)
++	assert.Equal(t, ReasonPair, feed.Revoked(testSession(2, "session", "grant")))
++	assert.Empty(t, feed.Revoked(testSession(3, "session", "grant")))
++	assert.Equal(t, ReasonSession, feed.Revoked(testSession(3, "ended-session", "grant")))
++	assert.Equal(t, ReasonGrant, feed.Revoked(testSession(3, "session", "revoked-grant")))
++	// The stub of a session restored from the cookie has a refresh token only.
++	assert.Equal(t, ReasonGrant, feed.Revoked(&sessionsapi.SessionState{RefreshToken: testRefreshToken("revoked-grant", "secret")}))
++	assert.Empty(t, feed.Revoked(&sessionsapi.SessionState{RefreshToken: testRefreshToken("grant", "secret")}))
++}
++
++func TestFeedResumesWithTheCursor(t *testing.T) {
++	captureLogs(t)
++	server := newFakeFeed(t, func(w http.ResponseWriter, _ *http.Request, n int) {
++		startStream(w)
++		switch n {
++		case 0:
++			writeEvent(w, "snapshot", "e.7", `{"v":1,"part":0,"last":true}`)
++			writeEvent(w, "heartbeat", "e.9", `{"v":1,"t":1}`)
++		case 1:
++			// A snapshot cut short leaves the cursor where it was.
++			writeEvent(w, "snapshot", "f.3", `{"v":1,"part":0,"last":false}`)
++		case 2:
++			writeEvent(w, "snapshot", "f.3", `{"v":1,"part":0,"last":false}`)
++			writeEvent(w, "snapshot", "f.3", `{"v":1,"part":1,"last":true}`)
++		}
++	})
++	feed := server.subscriber(t)
++
++	for range 4 {
++		feed.subscribe(context.Background())
++	}
++
++	require.Equal(t, 4, server.connections())
++	assert.Empty(t, server.header(0).Get("Last-Event-ID"))
++	assert.Equal(t, "e.9", server.header(1).Get("Last-Event-ID"))
++	assert.Equal(t, "e.9", server.header(2).Get("Last-Event-ID"))
++	assert.Equal(t, "f.3", server.header(3).Get("Last-Event-ID"))
++}
++
++func TestFeedStartsOverAfterAProtocolError(t *testing.T) {
++	output, _ := captureLogs(t)
++	server := newFakeFeed(t, func(w http.ResponseWriter, _ *http.Request, n int) {
++		startStream(w)
++		if n == 0 {
++			writeEvent(w, "snapshot", "e.7", `{"v":1,"part":0,"last":true}`)
++			writeEvent(w, "revocation", "e.8", `{"v":1,"type":"pair","k":"key","g":"three"}`)
++			writeEvent(w, "heartbeat", "e.9", `{"v":1,"t":1}`)
++		}
++	})
++	feed := server.subscriber(t)
++
++	feed.subscribe(context.Background())
++	feed.subscribe(context.Background())
++
++	assert.Empty(t, server.header(1).Get("Last-Event-ID"), "the next stream starts from a snapshot")
++	assert.Contains(t, output.String(), "protocol error: revocation event")
++}
++
++func TestFeedSkipsANewerProtocol(t *testing.T) {
++	output, _ := captureLogs(t)
++	exp := time.Now().Add(time.Hour).Unix()
++	server := newFakeFeed(t, func(w http.ResponseWriter, _ *http.Request, _ int) {
++		startStream(w)
++		writeEvent(w, "snapshot", "e.7", `{"v":1,"part":0,"last":true}`)
++		writeEvent(w, "revocation", "e.8", fmt.Sprintf(`{"v":2,"type":"grant","k":%q,"exp":%d}`, testKey(keyGrant, "v2-grant"), exp))
++		writeEvent(w, "unknown", "e.9", `{"v":1}`)
++		writeEvent(w, "revocation", "e.10", fmt.Sprintf(`{"v":1,"type":"grant","k":%q,"exp":%d}`, testKey(keyGrant, "v1-grant"), exp))
++	})
++	feed := server.subscriber(t)
++
++	feed.subscribe(context.Background())
++
++	assert.Empty(t, feed.Revoked(testSession(1, "", "v2-grant")))
++	assert.Equal(t, ReasonGrant, feed.Revoked(testSession(1, "", "v1-grant")))
++	assert.Equal(t, "e.10", feed.cursor)
++	assert.Contains(t, output.String(), "WARNING: Skipping an event of the revocation feed: event of a newer protocol version 2")
++}
++
++// otherCAFile writes the certificate of another CA: every httptest server has the same certificate.
++func otherCAFile(t *testing.T) string {
++	t.Helper()
++
++	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
++	require.NoError(t, err)
++	template := &x509.Certificate{
++		SerialNumber:          big.NewInt(1),
++		Subject:               pkix.Name{CommonName: "another CA"},
++		NotBefore:             time.Now().Add(-time.Hour),
++		NotAfter:              time.Now().Add(time.Hour),
++		IsCA:                  true,
++		BasicConstraintsValid: true,
++		KeyUsage:              x509.KeyUsageCertSign,
++	}
++	der, err := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
++	require.NoError(t, err)
++
++	caFile := filepath.Join(t.TempDir(), "other-ca.crt")
++	require.NoError(t, os.WriteFile(caFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0o600))
++	return caFile
++}
++
++func TestFeedConnectionErrors(t *testing.T) {
++
++	tests := []struct {
++		name          string
++		handle        func(w http.ResponseWriter, r *http.Request, n int)
++		untrustedCA   bool
++		expectedWait  time.Duration
++		maxWait       time.Duration
++		expectedError string
++		expectedLog   string
++	}{
++		{
++			name: "unauthorized",
++			handle: func(w http.ResponseWriter, _ *http.Request, _ int) {
++				w.Header().Set("WWW-Authenticate", `Basic realm="user-authn-revocations"`)
++				w.WriteHeader(http.StatusUnauthorized)
++			},
++			expectedWait:  unauthorizedPause,
++			expectedError: "The revocation feed refused the credentials of the client (401)",
++		},
++		{
++			name: "too many requests",
++			handle: func(w http.ResponseWriter, _ *http.Request, _ int) {
++				w.Header().Set("Retry-After", "7")
++				w.WriteHeader(http.StatusTooManyRequests)
++			},
++			expectedWait: 7 * time.Second,
++			expectedLog:  "the feed limits the connections (429)",
++		},
++		{
++			name: "too many requests without retry-after",
++			handle: func(w http.ResponseWriter, _ *http.Request, _ int) {
++				w.WriteHeader(http.StatusTooManyRequests)
++			},
++			maxWait:     minBackoff,
++			expectedLog: "the feed limits the connections (429)",
++		},
++		{
++			name: "not an event stream",
++			handle: func(w http.ResponseWriter, _ *http.Request, _ int) {
++				w.Header().Set("Content-Type", "application/json")
++				w.WriteHeader(http.StatusOK)
++			},
++			maxWait:     minBackoff,
++			expectedLog: `unexpected response 200 "application/json"`,
++		},
++		{
++			name: "server error",
++			handle: func(w http.ResponseWriter, _ *http.Request, _ int) {
++				w.WriteHeader(http.StatusServiceUnavailable)
++			},
++			maxWait:     minBackoff,
++			expectedLog: "unexpected response 503",
++		},
++		{
++			name:        "certificate of another ca",
++			handle:      func(http.ResponseWriter, *http.Request, int) {},
++			untrustedCA: true,
++			maxWait:     minBackoff,
++			expectedLog: "certificate signed by unknown authority",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			output, errOutput := captureLogs(t)
++			server := newFakeFeed(t, tt.handle)
++			if tt.untrustedCA {
++				server.caFile = otherCAFile(t)
++			}
++			feed := server.subscriber(t)
++
++			wait := feed.subscribe(context.Background())
++
++			if tt.expectedWait != 0 {
++				assert.Equal(t, tt.expectedWait, wait)
++			} else {
++				assert.Less(t, wait, tt.maxWait)
++			}
++			assert.Contains(t, errOutput.String(), tt.expectedError)
++			assert.Contains(t, output.String(), tt.expectedLog)
++			assert.NotContains(t, output.String()+errOutput.String(), vectorSecret)
++			assert.Equal(t, StatusNoSnapshot, feed.Status())
++		})
++	}
++}
++
++func TestFeedLogsConnectionErrorsOnceAMinute(t *testing.T) {
++	output, _ := captureLogs(t)
++	server := newFakeFeed(t, func(w http.ResponseWriter, _ *http.Request, _ int) {
++		w.WriteHeader(http.StatusServiceUnavailable)
++	})
++	feed := server.subscriber(t)
++	now := time.Now()
++	feed.now = func() time.Time { return now }
++
++	feed.subscribe(context.Background())
++	feed.subscribe(context.Background())
++	feed.subscribe(context.Background())
++	assert.Equal(t, 1, bytes.Count(output.Bytes(), []byte("unexpected response 503")))
++
++	now = now.Add(errorLogInterval)
++	feed.subscribe(context.Background())
++	assert.Equal(t, 2, bytes.Count(output.Bytes(), []byte("unexpected response 503")))
++	assert.Contains(t, output.String(), "(2 more errors suppressed)")
++}
++
++func TestFeedBackoff(t *testing.T) {
++	feed := &Feed{}
++	for attempt, ceiling := range []time.Duration{time.Second, 2 * time.Second, 4 * time.Second, 8 * time.Second, 16 * time.Second, 30 * time.Second, 30 * time.Second} {
++		for range 20 {
++			feed.attempt = attempt
++			wait := feed.backoff()
++			assert.GreaterOrEqual(t, wait, time.Duration(0))
++			assert.Less(t, wait, ceiling, "attempt %d", attempt)
++		}
++	}
++	feed.attempt = 1000
++	assert.Less(t, feed.backoff(), maxBackoff)
++}
++
++func TestParseRetryAfter(t *testing.T) {
++	for value, expected := range map[string]time.Duration{
++		"0":                   0,
++		"30":                  30 * time.Second,
++		"99999999999999999":   maxRetryAfter,
++		"9223372036854775807": maxRetryAfter,
++	} {
++		wait, ok := parseRetryAfter(value)
++		assert.True(t, ok, value)
++		assert.Equal(t, expected, wait, value)
++	}
++	for _, value := range []string{"", "-1", "soon", "Wed, 21 Oct 2026 07:28:00 GMT"} {
++		_, ok := parseRetryAfter(value)
++		assert.False(t, ok, value)
++	}
++}
++
++func TestFeedRun(t *testing.T) {
++	output, _ := captureLogs(t)
++	server := newFakeFeed(t, func(w http.ResponseWriter, r *http.Request, _ int) {
++		startStream(w)
++		writeEvent(w, "snapshot", "e.1", `{"v":1,"part":0,"last":true}`)
++		<-r.Context().Done()
++	})
++	feed := server.subscriber(t)
++	ctx, cancel := context.WithCancel(context.Background())
++	done := make(chan struct{})
++
++	go func() {
++		defer close(done)
++		feed.Run(ctx)
++	}()
++	require.Eventually(t, func() bool { return feed.Status() == StatusFresh }, 10*time.Second, 10*time.Millisecond)
++	cancel()
++
++	select {
++	case <-done:
++	case <-time.After(10 * time.Second):
++		t.Fatal("Run did not return after its context was cancelled")
++	}
++	assert.Contains(t, output.String(), "The revocation feed is fresh")
++	assert.Equal(t, 1, server.connections())
++}
++
++// TestFeedSilentStream checks that a stream without an event for freshFor is dropped, and that the state
++// turns stale with it.
++func TestFeedSilentStream(t *testing.T) {
++	synctest.Test(t, func(t *testing.T) {
++		output, _ := captureLogs(t)
++		feed, err := New(Options{URL: "https://revocation-feed.d8-user-authn/revocations", ClientSecret: vectorSecret})
++		require.NoError(t, err)
++
++		reader, writer := io.Pipe()
++		ctx, cancelCtx := context.WithCancel(context.Background())
++		defer cancelCtx()
++		cancel := func() {
++			cancelCtx()
++			writer.CloseWithError(context.Canceled)
++		}
++		go writeEvent(writer, "snapshot", "e.1", `{"v":1,"part":0,"last":true}`)
++
++		start := time.Now()
++		err = feed.stream(ctx, cancel, reader)
++		assert.ErrorIs(t, err, context.Canceled)
++		assert.Equal(t, freshFor, time.Since(start))
++		assert.Equal(t, StatusFresh, feed.Status())
++
++		time.Sleep(time.Second)
++		feed.maintain()
++		assert.Equal(t, StatusStale, feed.Status())
++		assert.Contains(t, output.String(), "The revocation feed is fresh")
++		assert.Contains(t, output.String(), "WARNING: The revocation feed is stale")
++	})
++}
++
++func TestFeedNeedsForcedRefresh(t *testing.T) {
++	feed, err := New(Options{URL: "https://revocation-feed.d8-user-authn/revocations"})
++	require.NoError(t, err)
++	now := time.Now()
++	feed.now = func() time.Time { return now }
++
++	session := func(age time.Duration, refreshToken string) *sessionsapi.SessionState {
++		created := now.Add(-age)
++		return &sessionsapi.SessionState{CreatedAt: &created, RefreshToken: refreshToken, Clock: func() time.Time { return now }}
++	}
++
++	// No snapshot yet.
++	assert.True(t, feed.NeedsForcedRefresh(session(time.Minute, "token")))
++	assert.False(t, feed.NeedsForcedRefresh(session(10*time.Second, "token")))
++	assert.False(t, feed.NeedsForcedRefresh(session(time.Minute, "")))
++
++	require.NoError(t, feed.state.applySnapshot(snapshotEvent{Part: 0, Last: true}, now))
++	assert.False(t, feed.NeedsForcedRefresh(session(time.Minute, "token")))
++
++	now = now.Add(freshFor + time.Second)
++	assert.True(t, feed.NeedsForcedRefresh(session(time.Minute, "token")))
++}
++
++func TestFeedAllowForcedRefresh(t *testing.T) {
++	feed, err := New(Options{URL: "https://revocation-feed.d8-user-authn/revocations"})
++	require.NoError(t, err)
++	now := time.Now()
++	feed.now = func() time.Time { return now }
++
++	allowed := 0
++	for range 100 {
++		if feed.AllowForcedRefresh() {
++			allowed++
++		}
++	}
++	assert.Equal(t, forcedRefreshBurst, allowed, "the burst")
++
++	now = now.Add(time.Second)
++	allowed = 0
++	for range 100 {
++		if feed.AllowForcedRefresh() {
++			allowed++
++		}
++	}
++	assert.Equal(t, forcedRefreshRate, allowed, "the rate")
++}
+diff --git a/pkg/deckhouse/revocation/keys.go b/pkg/deckhouse/revocation/keys.go
+new file mode 100644
+index 00000000..9bccbac6
+--- /dev/null
++++ b/pkg/deckhouse/revocation/keys.go
+@@ -0,0 +1,69 @@
++package revocation
++
++import (
++	"crypto/hmac"
++	"crypto/sha256"
++	"encoding/base64"
++	"encoding/binary"
++)
++
++// saltMessage derives the salt of a client from its secret. The feed server derives the same salt.
++const saltMessage = "deckhouse.io/user-authn/revocation-feed/v1/salt"
++
++// keyLength is the length of a key before encoding: 128 bits, a collision only refuses a session.
++const keyLength = 16
++
++// maxRefreshIDLength bounds the ID of a grant in a refresh token; dex generates IDs of 25 characters.
++const maxRefreshIDLength = 1024
++
++// keyType names what a key of the feed stands for.
++type keyType string
++
++const (
++	// keyPair is the pair of a user and a connector, the "sub" claim of an ID token of dex.
++	keyPair keyType = "pair"
++	// keySession is a session of dex, the "sid" claim of an ID token.
++	keySession keyType = "sid"
++	// keyGrant is a grant of dex, the ID of a refresh token.
++	keyGrant keyType = "grant"
++)
++
++// salt returns the salt of a client: HMAC-SHA256(key = client secret, message = saltMessage). The feed
++// carries keys, not the values they stand for, and only the client and the server know its salt.
++func salt(clientSecret string) []byte {
++	mac := hmac.New(sha256.New, []byte(clientSecret))
++	mac.Write([]byte(saltMessage))
++	return mac.Sum(nil)
++}
++
++// key returns the key of a value in the feed: the first 128 bits of HMAC-SHA256(key = salt,
++// message = type || 0x00 || value), base64url without padding.
++func key(salt []byte, t keyType, value string) string {
++	mac := hmac.New(sha256.New, salt)
++	mac.Write([]byte(t))
++	mac.Write([]byte{0})
++	mac.Write([]byte(value))
++	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil)[:keyLength])
++}
++
++// refreshID returns the ID of the grant of a refresh token of dex. The token is a protobuf message
++// encoded as base64url without padding, and its first field is the ID: 0x0A, the length as a uvarint,
++// the ID. Dex treats a token it cannot decode as a raw ID, and so does refreshID.
++func refreshID(refreshToken string) string {
++	raw, err := base64.RawURLEncoding.DecodeString(refreshToken)
++	if err != nil || len(raw) < 2 || raw[0] != 0x0A {
++		return refreshToken
++	}
++
++	length, n := binary.Uvarint(raw[1:])
++	if n <= 0 || length > maxRefreshIDLength {
++		return refreshToken
++	}
++
++	start := 1 + n
++	end := start + int(length)
++	if end > len(raw) {
++		return refreshToken
++	}
++	return string(raw[start:end])
++}
+diff --git a/pkg/deckhouse/revocation/keys_test.go b/pkg/deckhouse/revocation/keys_test.go
+new file mode 100644
+index 00000000..6468ac97
+--- /dev/null
++++ b/pkg/deckhouse/revocation/keys_test.go
+@@ -0,0 +1,180 @@
++package revocation
++
++import (
++	"crypto/sha256"
++	"encoding/base64"
++	"encoding/binary"
++	"encoding/hex"
++	"testing"
++
++	"github.com/stretchr/testify/assert"
++)
++
++// IDs of the test vectors. Kept in constants so that secret scanners do not take the literals
++// for credentials.
++const (
++	vectorSessionID   = "fehzwdh5qy4oyqcn7qhkcgzbm"
++	vectorGrantID     = "3w4l2zgokgsohvjnqzjrv7lmz"
++	vectorRefreshBody = "pbtiicr6kqrwrlqv3vn6h3pdr"
++)
++
++// The vectors of appendix A of the contract of the revocation feed: the feed server computes the same
++// keys from the same secret.
++const vectorSecret = "s3cr3t"
++
++// testSubject encodes the "sub" claim of dex: the protobuf message IDTokenSubject{user_id = 1,
++// conn_id = 2}, base64url without padding.
++func testSubject(userID, connectorID string) string {
++	var message []byte
++	for _, field := range []struct {
++		tag   byte
++		value string
++	}{{0x0A, userID}, {0x12, connectorID}} {
++		message = append(message, field.tag)
++		message = binary.AppendUvarint(message, uint64(len(field.value)))
++		message = append(message, field.value...)
++	}
++	return base64.RawURLEncoding.EncodeToString(message)
++}
++
++// testRefreshToken encodes a refresh token of dex: RefreshToken{refresh_id = 1, token = 2}.
++func testRefreshToken(id, token string) string {
++	var message []byte
++	message = append(message, 0x0A)
++	message = binary.AppendUvarint(message, uint64(len(id)))
++	message = append(message, id...)
++	message = append(message, 0x12)
++	message = binary.AppendUvarint(message, uint64(len(token)))
++	message = append(message, token...)
++	return base64.RawURLEncoding.EncodeToString(message)
++}
++
++func TestVectors(t *testing.T) {
++	vectorSalt := salt(vectorSecret)
++
++	tests := []struct {
++		name     string
++		got      string
++		expected string
++	}{
++		{
++			name:     "sub of a local user",
++			got:      testSubject("jane", "local"),
++			expected: "CgRqYW5lEgVsb2NhbA",
++		},
++		{
++			name:     "sub of an ldap user",
++			got:      testSubject("cn=jdoe,ou=people,dc=example,dc=org", "ldap"),
++			expected: "CiNjbj1qZG9lLG91PXBlb3BsZSxkYz1leGFtcGxlLGRjPW9yZxIEbGRhcA",
++		},
++		{
++			name:     "salt",
++			got:      hex.EncodeToString(vectorSalt),
++			expected: "81dac58c605535cd1c2c5bfd371e03b58a946289ab806a32d2ee3397ec693e62",
++		},
++		{
++			name:     "key of a pair",
++			got:      key(vectorSalt, keyPair, "CgRqYW5lEgVsb2NhbA"),
++			expected: "BtOeixcwfXZ3z6kDWHNMTw",
++		},
++		{
++			name:     "key of a session",
++			got:      key(vectorSalt, keySession, vectorSessionID),
++			expected: "0-SQllhFkuuG1ttZoMxAiA",
++		},
++		{
++			name:     "key of a grant",
++			got:      key(vectorSalt, keyGrant, vectorGrantID),
++			expected: "jVFqq8vBRSjPWcgLzpRzaA",
++		},
++		{
++			name:     "refresh token",
++			got:      testRefreshToken(vectorGrantID, vectorRefreshBody),
++			expected: "ChkzdzRsMnpnb2tnc29odmpucXpqcnY3bG16EhlwYnRpaWNyNmtxcndybHF2M3ZuNmgzcGRy",
++		},
++		{
++			name:     "refresh id of the refresh token",
++			got:      refreshID("ChkzdzRsMnpnb2tnc29odmpucXpqcnY3bG16EhlwYnRpaWNyNmtxcndybHF2M3ZuNmgzcGRy"),
++			expected: vectorGrantID,
++		},
++		{
++			// The feed server compares the hash of the secret; the vector pins the secret of the rows above.
++			name:     "sha-256 of the secret",
++			got:      hex.EncodeToString(func() []byte { sum := sha256.Sum256([]byte(vectorSecret)); return sum[:] }()),
++			expected: "4e738ca5563c06cfd0018299933d58db1dd8bf97f6973dc99bf6cdc64b5550bd",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			assert.Equal(t, tt.expected, tt.got)
++		})
++	}
++}
++
++func TestRefreshID(t *testing.T) {
++	tests := []struct {
++		name     string
++		token    string
++		expected string
++	}{
++		{
++			name:     "token of dex",
++			token:    testRefreshToken("grant-id", "secret"),
++			expected: "grant-id",
++		},
++		{
++			name:     "raw id of an older dex",
++			token:    vectorGrantID,
++			expected: vectorGrantID,
++		},
++		{
++			name:     "not base64url",
++			token:    "not a token!",
++			expected: "not a token!",
++		},
++		{
++			name:     "another first field",
++			token:    base64.RawURLEncoding.EncodeToString([]byte{0x12, 0x01, 'x'}),
++			expected: base64.RawURLEncoding.EncodeToString([]byte{0x12, 0x01, 'x'}),
++		},
++		{
++			name:     "length beyond the token",
++			token:    base64.RawURLEncoding.EncodeToString([]byte{0x0A, 0x05, 'a', 'b'}),
++			expected: base64.RawURLEncoding.EncodeToString([]byte{0x0A, 0x05, 'a', 'b'}),
++		},
++		{
++			name:     "broken length",
++			token:    base64.RawURLEncoding.EncodeToString([]byte{0x0A, 0xFF}),
++			expected: base64.RawURLEncoding.EncodeToString([]byte{0x0A, 0xFF}),
++		},
++		{
++			name:     "empty id",
++			token:    base64.RawURLEncoding.EncodeToString([]byte{0x0A, 0x00}),
++			expected: "",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			assert.Equal(t, tt.expected, refreshID(tt.token))
++		})
++	}
++}
++
++func TestKeyDependsOnTypeAndSalt(t *testing.T) {
++	vectorSalt := salt(vectorSecret)
++
++	assert.NotEqual(t, key(vectorSalt, keyPair, "value"), key(vectorSalt, keyGrant, "value"))
++	assert.NotEqual(t, key(vectorSalt, keyPair, "value"), key(salt("another secret"), keyPair, "value"))
++	assert.Len(t, key(vectorSalt, keySession, "value"), 22)
++}
++
++func TestBasicAuthorization(t *testing.T) {
++	// The client ID and the secret are URL-encoded before base64, as dex expects (RFC 6749, 2.3.1).
++	header := basicAuthorization("app:ns", "a b+c")
++	raw, err := base64.StdEncoding.DecodeString(header[len("Basic "):])
++
++	assert.NoError(t, err)
++	assert.Equal(t, "app%3Ans:a+b%2Bc", string(raw))
++}
+diff --git a/pkg/deckhouse/revocation/limiter.go b/pkg/deckhouse/revocation/limiter.go
+new file mode 100644
+index 00000000..8e887f50
+--- /dev/null
++++ b/pkg/deckhouse/revocation/limiter.go
+@@ -0,0 +1,56 @@
++package revocation
++
++import (
++	"sync"
++	"time"
++)
++
++// limiter is a token bucket: rate tokens a second, at most burst at once.
++type limiter struct {
++	mu     sync.Mutex
++	rate   float64
++	burst  float64
++	tokens float64
++	last   time.Time
++}
++
++func newLimiter(rate, burst int) *limiter {
++	return &limiter{rate: float64(rate), burst: float64(burst), tokens: float64(burst)}
++}
++
++// allow takes a token at now and reports whether there was one.
++func (l *limiter) allow(now time.Time) bool {
++	l.mu.Lock()
++	defer l.mu.Unlock()
++
++	if !l.last.IsZero() && now.After(l.last) {
++		l.tokens = min(l.burst, l.tokens+now.Sub(l.last).Seconds()*l.rate)
++	}
++	if now.After(l.last) {
++		l.last = now
++	}
++	if l.tokens < 1 {
++		return false
++	}
++	l.tokens--
++	return true
++}
++
++// logThrottle lets a kind of log line through once in an interval and counts the lines it holds back.
++type logThrottle struct {
++	last       time.Time
++	suppressed int
++}
++
++// allow reports whether a line may be logged at now, and how many lines were held back since the last
++// one logged.
++func (t *logThrottle) allow(now time.Time, interval time.Duration) (ok bool, suppressed int) {
++	if !t.last.IsZero() && now.Sub(t.last) < interval {
++		t.suppressed++
++		return false, 0
++	}
++	suppressed = t.suppressed
++	t.last = now
++	t.suppressed = 0
++	return true, suppressed
++}
+diff --git a/pkg/deckhouse/revocation/sse.go b/pkg/deckhouse/revocation/sse.go
+new file mode 100644
+index 00000000..fd2c681a
+--- /dev/null
++++ b/pkg/deckhouse/revocation/sse.go
+@@ -0,0 +1,126 @@
++package revocation
++
++import (
++	"bufio"
++	"bytes"
++	"errors"
++	"io"
++)
++
++// maxLineSize bounds a line of the stream, and the data of an event: a snapshot part of the feed holds
++// at most 512 records, far below it.
++const maxLineSize = 1 << 20
++
++var errEventTooLarge = errors.New("event data exceeds the size limit")
++
++// sseEvent is an event of a text/event-stream (the server-sent events of the HTML standard).
++type sseEvent struct {
++	// Name is the "event" field, "message" when the event has none.
++	Name string
++	// ID is the "id" field, if the event has one (HasID).
++	ID    string
++	HasID bool
++	// Data is the "data" fields of the event joined with newlines.
++	Data []byte
++}
++
++// sseReader reads the events of a text/event-stream. It ignores comments and the "retry" field: the
++// subscriber reconnects on its own schedule.
++type sseReader struct {
++	scanner *bufio.Scanner
++}
++
++func newSSEReader(r io.Reader) *sseReader {
++	scanner := bufio.NewScanner(r)
++	scanner.Buffer(make([]byte, 0, 4096), maxLineSize)
++	scanner.Split(scanSSELines)
++	return &sseReader{scanner: scanner}
++}
++
++// next returns the next event of the stream. It returns io.EOF when the stream ends; an event the
++// stream ends in the middle of is dropped, as the standard says.
++func (r *sseReader) next() (sseEvent, error) {
++	var (
++		event   sseEvent
++		data    bytes.Buffer
++		hasData bool
++	)
++
++	for r.scanner.Scan() {
++		line := r.scanner.Bytes()
++		if len(line) == 0 {
++			// An empty line dispatches the event; one without data is dropped.
++			if !hasData {
++				event = sseEvent{}
++				continue
++			}
++			if event.Name == "" {
++				event.Name = "message"
++			}
++			event.Data = bytes.Clone(data.Bytes())
++			return event, nil
++		}
++		if line[0] == ':' {
++			continue
++		}
++
++		field, value, found := bytes.Cut(line, []byte(":"))
++		if found {
++			value = bytes.TrimPrefix(value, []byte(" "))
++		}
++
++		switch string(field) {
++		case "event":
++			event.Name = string(value)
++		case "data":
++			if data.Len()+len(value)+1 > maxLineSize {
++				return sseEvent{}, errEventTooLarge
++			}
++			if hasData {
++				data.WriteByte('\n')
++			}
++			data.Write(value)
++			hasData = true
++		case "id":
++			// The standard ignores an ID with a NULL character.
++			if bytes.IndexByte(value, 0) < 0 {
++				event.ID = string(value)
++				event.HasID = true
++			}
++		}
++	}
++
++	if err := r.scanner.Err(); err != nil {
++		return sseEvent{}, err
++	}
++	return sseEvent{}, io.EOF
++}
++
++// scanSSELines splits a stream into lines ended by CRLF, LF or CR.
++func scanSSELines(data []byte, atEOF bool) (advance int, token []byte, err error) {
++	if atEOF && len(data) == 0 {
++		return 0, nil, nil
++	}
++
++	if i := bytes.IndexAny(data, "\r\n"); i >= 0 {
++		if data[i] == '\n' {
++			return i + 1, data[:i], nil
++		}
++		// A CR may be followed by the LF of the same line end.
++		if i+1 < len(data) {
++			if data[i+1] == '\n' {
++				return i + 2, data[:i], nil
++			}
++			return i + 1, data[:i], nil
++		}
++		if atEOF {
++			return i + 1, data[:i], nil
++		}
++		return 0, nil, nil
++	}
++
++	if atEOF {
++		return len(data), data, nil
++	}
++	return 0, nil, nil
++}
+diff --git a/pkg/deckhouse/revocation/sse_test.go b/pkg/deckhouse/revocation/sse_test.go
+new file mode 100644
+index 00000000..60273b0f
+--- /dev/null
++++ b/pkg/deckhouse/revocation/sse_test.go
+@@ -0,0 +1,127 @@
++package revocation
++
++import (
++	"bufio"
++	"errors"
++	"io"
++	"strings"
++	"testing"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// readEvents reads the events of a stream until it ends.
++func readEvents(t *testing.T, stream io.Reader) ([]sseEvent, error) {
++	t.Helper()
++
++	reader := newSSEReader(stream)
++	events := []sseEvent{}
++	for {
++		event, err := reader.next()
++		if err != nil {
++			return events, err
++		}
++		events = append(events, event)
++	}
++}
++
++func TestSSEReader(t *testing.T) {
++	tests := []struct {
++		name     string
++		stream   string
++		expected []sseEvent
++	}{
++		{
++			name: "events of the feed",
++			stream: "retry: 5000\n\n" +
++				"event: snapshot\nid: e.7\ndata: {\"v\":1,\"part\":0,\"last\":true}\n\n" +
++				": comment\n" +
++				"event: heartbeat\nid: e.7\ndata: {\"v\":1,\"t\":1760610010}\n\n",
++			expected: []sseEvent{
++				{Name: "snapshot", ID: "e.7", HasID: true, Data: []byte(`{"v":1,"part":0,"last":true}`)},
++				{Name: "heartbeat", ID: "e.7", HasID: true, Data: []byte(`{"v":1,"t":1760610010}`)},
++			},
++		},
++		{
++			name:   "crlf and cr line ends",
++			stream: "event: a\r\ndata: 1\r\n\r\nevent: b\rdata: 2\r\r",
++			expected: []sseEvent{
++				{Name: "a", Data: []byte("1")},
++				{Name: "b", Data: []byte("2")},
++			},
++		},
++		{
++			name:     "data lines are joined, one leading space is dropped",
++			stream:   "data:first\ndata:  second\ndata\n\n",
++			expected: []sseEvent{{Name: "message", Data: []byte("first\n second\n")}},
++		},
++		{
++			name:     "an event without data is dropped",
++			stream:   "event: empty\nid: 1\n\nevent: full\ndata: x\n\n",
++			expected: []sseEvent{{Name: "full", Data: []byte("x")}},
++		},
++		{
++			name:     "an id with a null character is ignored",
++			stream:   "id: a\x00b\ndata: x\n\n",
++			expected: []sseEvent{{Name: "message", Data: []byte("x")}},
++		},
++		{
++			name:     "unknown fields are ignored",
++			stream:   "retry: 1\nfoo: bar\ndata: x\n\n",
++			expected: []sseEvent{{Name: "message", Data: []byte("x")}},
++		},
++		{
++			name:     "an event the stream ends in is dropped",
++			stream:   "data: whole\n\nevent: snapshot\ndata: half",
++			expected: []sseEvent{{Name: "message", Data: []byte("whole")}},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			events, err := readEvents(t, strings.NewReader(tt.stream))
++			assert.ErrorIs(t, err, io.EOF)
++			assert.Equal(t, tt.expected, events)
++		})
++	}
++}
++
++func TestSSEReaderLimits(t *testing.T) {
++	t.Run("line too long", func(t *testing.T) {
++		stream := "data: " + strings.Repeat("x", maxLineSize) + "\n\n"
++		_, err := readEvents(t, strings.NewReader(stream))
++		assert.ErrorIs(t, err, bufio.ErrTooLong)
++	})
++
++	t.Run("event too large", func(t *testing.T) {
++		line := "data: " + strings.Repeat("x", maxLineSize/4) + "\n"
++		_, err := readEvents(t, strings.NewReader(strings.Repeat(line, 5)+"\n"))
++		assert.ErrorIs(t, err, errEventTooLarge)
++	})
++
++	t.Run("line at the limit", func(t *testing.T) {
++		stream := "data:" + strings.Repeat("x", maxLineSize-6) + "\n\n"
++		events, err := readEvents(t, strings.NewReader(stream))
++		assert.ErrorIs(t, err, io.EOF)
++		require.Len(t, events, 1)
++		assert.Len(t, events[0].Data, maxLineSize-6)
++	})
++}
++
++func TestSSEReaderReadError(t *testing.T) {
++	failure := errors.New("connection reset")
++	stream := io.MultiReader(strings.NewReader("data: x\n\ndata: y"), &failingReader{err: failure})
++
++	events, err := readEvents(t, stream)
++	assert.ErrorIs(t, err, failure)
++	assert.Len(t, events, 1)
++}
++
++type failingReader struct {
++	err error
++}
++
++func (r *failingReader) Read([]byte) (int, error) {
++	return 0, r.err
++}
+diff --git a/pkg/deckhouse/revocation/state.go b/pkg/deckhouse/revocation/state.go
+new file mode 100644
+index 00000000..aa65587d
+--- /dev/null
++++ b/pkg/deckhouse/revocation/state.go
+@@ -0,0 +1,161 @@
++package revocation
++
++import (
++	"sync"
++	"time"
++)
++
++// freshFor is how long the state stays fresh after the last event of the feed. The feed sends a
++// heartbeat every 10 seconds.
++const freshFor = 30 * time.Second
++
++// Status tells how far the state of the feed can be trusted.
++type Status int
++
++const (
++	// StatusNoSnapshot means that no whole snapshot has been received yet.
++	StatusNoSnapshot Status = iota
++	// StatusFresh means that a whole snapshot has been received and the last event is recent.
++	StatusFresh
++	// StatusStale means that the feed has been silent for longer than freshFor, or a new snapshot
++	// has not been received in whole yet.
++	StatusStale
++)
++
++func (s Status) String() string {
++	switch s {
++	case StatusFresh:
++		return "fresh"
++	case StatusStale:
++		return "stale"
++	default:
++		return "no snapshot"
++	}
++}
++
++// Reason tells why a session is revoked; an empty Reason means it is not.
++type Reason string
++
++const (
++	// ReasonPair means that the credentials of the user were revoked after the session got its tokens.
++	ReasonPair Reason = "pair"
++	// ReasonSession means that the session of dex the tokens were issued under was ended.
++	ReasonSession Reason = "session"
++	// ReasonGrant means that the grant of the refresh token of the session was revoked.
++	ReasonGrant Reason = "grant"
++)
++
++// pairEntry is the latest known revocation of a pair: the tokens of a generation below gen are revoked.
++type pairEntry struct {
++	gen uint64
++	exp int64
++}
++
++// state holds the revocations the feed has sent: keys, generations and expiry times, no tokens and no
++// names. Every update is a monotonic merge, so the order of the events, the replicas of the feed and
++// a snapshot received twice do not matter.
++type state struct {
++	mu       sync.RWMutex
++	pairs    map[string]pairEntry
++	sessions map[string]int64
++	grants   map[string]int64
++
++	// hasSnapshot is set once a whole snapshot has been received.
++	hasSnapshot bool
++	// snapshotPart is the next part of the snapshot being received, -1 when none is.
++	snapshotPart int
++	// syncedAt is the time of the last event that left the state complete: the last part of a
++	// snapshot, or an event outside a snapshot.
++	syncedAt time.Time
++}
++
++func newState() *state {
++	return &state{
++		pairs:        map[string]pairEntry{},
++		sessions:     map[string]int64{},
++		grants:       map[string]int64{},
++		snapshotPart: -1,
++	}
++}
++
++// status returns the status of the state at now.
++func (s *state) status(now time.Time) Status {
++	s.mu.RLock()
++	defer s.mu.RUnlock()
++
++	switch {
++	case !s.hasSnapshot:
++		return StatusNoSnapshot
++	case now.Sub(s.syncedAt) > freshFor:
++		return StatusStale
++	default:
++		return StatusFresh
++	}
++}
++
++// revoked returns the reason the tokens of a session are revoked for, or an empty Reason. Claims are
++// the claims of its ID token, if it has one (ok); grant is the ID of the grant of its refresh token,
++// if it has one.
++func (s *state) revoked(salt []byte, c claims, ok bool, grant string) Reason {
++	s.mu.RLock()
++	defer s.mu.RUnlock()
++
++	if ok && c.Subject != "" {
++		if entry, found := s.pairs[key(salt, keyPair, c.Subject)]; found && entry.gen > c.Generation {
++			return ReasonPair
++		}
++	}
++	if ok && c.SessionID != "" {
++		if _, found := s.sessions[key(salt, keySession, c.SessionID)]; found {
++			return ReasonSession
++		}
++	}
++	if grant != "" {
++		if _, found := s.grants[key(salt, keyGrant, grant)]; found {
++			return ReasonGrant
++		}
++	}
++	return ""
++}
++
++// mergePair records a revocation of a pair: the generation and the expiry time only grow.
++func (s *state) mergePair(k string, gen uint64, exp int64) {
++	entry := s.pairs[k]
++	entry.gen = max(entry.gen, gen)
++	entry.exp = max(entry.exp, exp)
++	s.pairs[k] = entry
++}
++
++// mergeKey records a revocation of a session or a grant: the expiry time only grows.
++func mergeKey(m map[string]int64, k string, exp int64) {
++	m[k] = max(m[k], exp)
++}
++
++// purge forgets the revocations that expired before now: the feed forgets them too, and no token
++// they revoke is valid any longer.
++func (s *state) purge(now time.Time) {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++
++	unix := now.Unix()
++	for k, entry := range s.pairs {
++		if entry.exp < unix {
++			delete(s.pairs, k)
++		}
++	}
++	for _, m := range []map[string]int64{s.sessions, s.grants} {
++		for k, exp := range m {
++			if exp < unix {
++				delete(m, k)
++			}
++		}
++	}
++}
++
++// inSnapshot reports whether a snapshot is being received.
++func (s *state) inSnapshot() bool {
++	s.mu.RLock()
++	defer s.mu.RUnlock()
++
++	return s.snapshotPart >= 0
++}
+diff --git a/pkg/deckhouse/revocation/state_test.go b/pkg/deckhouse/revocation/state_test.go
+new file mode 100644
+index 00000000..9149504b
+--- /dev/null
++++ b/pkg/deckhouse/revocation/state_test.go
+@@ -0,0 +1,150 @@
++package revocation
++
++import (
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++var testNow = time.Unix(1760610000, 0)
++
++func TestStateStatus(t *testing.T) {
++	s := newState()
++	assert.Equal(t, StatusNoSnapshot, s.status(testNow))
++
++	// Events before the first whole snapshot do not make the state fresh.
++	s.applyHeartbeat(testNow)
++	require.NoError(t, s.applySnapshot(snapshotEvent{Part: 0}, testNow))
++	assert.Equal(t, StatusNoSnapshot, s.status(testNow))
++
++	require.NoError(t, s.applySnapshot(snapshotEvent{Part: 1, Last: true}, testNow))
++	assert.Equal(t, StatusFresh, s.status(testNow))
++	assert.Equal(t, StatusFresh, s.status(testNow.Add(freshFor)))
++	assert.Equal(t, StatusStale, s.status(testNow.Add(freshFor+time.Second)))
++
++	// Any event outside a snapshot keeps the state fresh.
++	later := testNow.Add(time.Minute)
++	s.applyHeartbeat(later)
++	assert.Equal(t, StatusFresh, s.status(later))
++	s.applyRevocation(revocationEvent{Type: "unknown"}, later.Add(20*time.Second))
++	assert.Equal(t, StatusFresh, s.status(later.Add(45*time.Second)))
++
++	// A new snapshot on a new stream leaves the state stale until its last part once freshFor passes.
++	s.startStream()
++	resnapshot := later.Add(2 * time.Minute)
++	require.NoError(t, s.applySnapshot(snapshotEvent{Part: 0}, resnapshot))
++	s.applyHeartbeat(resnapshot)
++	assert.Equal(t, StatusStale, s.status(resnapshot))
++	require.NoError(t, s.applySnapshot(snapshotEvent{Part: 1, Last: true}, resnapshot))
++	assert.Equal(t, StatusFresh, s.status(resnapshot))
++}
++
++func TestStateRevoked(t *testing.T) {
++	testSalt := salt(vectorSecret)
++	s := newState()
++	exp := testNow.Add(time.Hour).Unix()
++	s.mergePair(key(testSalt, keyPair, "revoked-pair"), 3, exp)
++	mergeKey(s.sessions, key(testSalt, keySession, "ended-session"), exp)
++	mergeKey(s.grants, key(testSalt, keyGrant, "revoked-grant"), exp)
++
++	tests := []struct {
++		name     string
++		claims   claims
++		ok       bool
++		grant    string
++		expected Reason
++	}{
++		{
++			name:     "older generation",
++			claims:   claims{Subject: "revoked-pair", Generation: 2},
++			ok:       true,
++			expected: ReasonPair,
++		},
++		{
++			name:     "no generation",
++			claims:   claims{Subject: "revoked-pair"},
++			ok:       true,
++			expected: ReasonPair,
++		},
++		{
++			name:   "same generation",
++			claims: claims{Subject: "revoked-pair", Generation: 3},
++			ok:     true,
++		},
++		{
++			name:   "newer generation",
++			claims: claims{Subject: "revoked-pair", Generation: 4},
++			ok:     true,
++		},
++		{
++			name:   "another pair",
++			claims: claims{Subject: "another-pair"},
++			ok:     true,
++		},
++		{
++			name:     "ended session",
++			claims:   claims{Subject: "another-pair", SessionID: "ended-session"},
++			ok:       true,
++			expected: ReasonSession,
++		},
++		{
++			name:   "another session",
++			claims: claims{Subject: "another-pair", SessionID: "another-session"},
++			ok:     true,
++		},
++		{
++			name:     "revoked grant",
++			claims:   claims{Subject: "another-pair"},
++			ok:       true,
++			grant:    "revoked-grant",
++			expected: ReasonGrant,
++		},
++		{
++			name:     "no id token, revoked grant",
++			grant:    "revoked-grant",
++			expected: ReasonGrant,
++		},
++		{
++			name:  "no id token, another grant",
++			grant: "another-grant",
++		},
++		{
++			name:   "claims of an unreadable token are not used",
++			claims: claims{Subject: "revoked-pair"},
++		},
++		{
++			name: "nothing to check",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			assert.Equal(t, tt.expected, s.revoked(testSalt, tt.claims, tt.ok, tt.grant))
++		})
++	}
++}
++
++func TestStateRevokedUsesTheSaltOfTheClient(t *testing.T) {
++	s := newState()
++	s.mergePair(key(salt("another client"), keyPair, "pair"), 3, testNow.Add(time.Hour).Unix())
++
++	assert.Empty(t, s.revoked(salt(vectorSecret), claims{Subject: "pair"}, true, ""))
++}
++
++func TestStatePurge(t *testing.T) {
++	s := newState()
++	s.mergePair("expired-pair", 1, testNow.Unix()-1)
++	s.mergePair("pair", 1, testNow.Unix())
++	mergeKey(s.sessions, "expired-session", testNow.Unix()-1)
++	mergeKey(s.sessions, "session", testNow.Unix()+1)
++	mergeKey(s.grants, "expired-grant", testNow.Unix()-1)
++	mergeKey(s.grants, "grant", testNow.Unix()+1)
++
++	s.purge(testNow)
++
++	assert.Equal(t, map[string]pairEntry{"pair": {gen: 1, exp: testNow.Unix()}}, s.pairs)
++	assert.Equal(t, map[string]int64{"session": testNow.Unix() + 1}, s.sessions)
++	assert.Equal(t, map[string]int64{"grant": testNow.Unix() + 1}, s.grants)
++}
+diff --git a/pkg/middleware/deckhouse_revocation.go b/pkg/middleware/deckhouse_revocation.go
+new file mode 100644
+index 00000000..fdd94af5
+--- /dev/null
++++ b/pkg/middleware/deckhouse_revocation.go
+@@ -0,0 +1,47 @@
++package middleware
++
++import (
++	"errors"
++
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/deckhouse/revocation"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++)
++
++// RevocationGuard refuses the sessions the revocation feed of Deckhouse revoked (Deckhouse patch 010).
++// *revocation.Feed implements it.
++type RevocationGuard interface {
++	// Revoked returns the reason the tokens of a session are revoked for, or an empty Reason.
++	Revoked(session *sessionsapi.SessionState) revocation.Reason
++	// NeedsForcedRefresh reports whether a session has to be refreshed through the provider because
++	// the feed is not fresh.
++	NeedsForcedRefresh(session *sessionsapi.SessionState) bool
++	// AllowForcedRefresh takes a forced refresh from the limit of the process.
++	AllowForcedRefresh() bool
++}
++
++// errSessionRevoked means that the revocation feed revoked the session. The session is removed like a
++// session that failed to load, but the revocation is logged where it is found, not as an error.
++var errSessionRevoked = errors.New("the session was revoked")
++
++// checkRevoked returns errSessionRevoked if the revocation feed revoked the session.
++func (s *storedSessionLoader) checkRevoked(session *sessionsapi.SessionState) error {
++	if s.revocation == nil {
++		return nil
++	}
++	reason := s.revocation.Revoked(session)
++	if reason == "" {
++		return nil
++	}
++	logger.Printf("Session revoked (reason: %s), removing session", reason)
++	return errSessionRevoked
++}
++
++// needsForcedRefresh reports whether the session has to be refreshed through the provider while the
++// revocation feed is not fresh, within the limit of forced refreshes. Above the limit the session is
++// checked against the last state of the feed only.
++func (s *storedSessionLoader) needsForcedRefresh(session *sessionsapi.SessionState) bool {
++	return s.revocation != nil &&
++		s.revocation.NeedsForcedRefresh(session) &&
++		s.revocation.AllowForcedRefresh()
++}
+diff --git a/pkg/middleware/deckhouse_revocation_test.go b/pkg/middleware/deckhouse_revocation_test.go
+new file mode 100644
+index 00000000..375f80a4
+--- /dev/null
++++ b/pkg/middleware/deckhouse_revocation_test.go
+@@ -0,0 +1,246 @@
++package middleware
++
++import (
++	"bytes"
++	"context"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"testing"
++	"time"
++
++	middlewareapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/middleware"
++	sessionsapi "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/deckhouse/revocation"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++// fakeRevocationGuard revokes the sessions with the listed ID tokens or refresh tokens.
++type fakeRevocationGuard struct {
++	revokedTokens map[string]revocation.Reason
++	stale         bool
++	allow         bool
++
++	allowCalls int
++}
++
++func (g *fakeRevocationGuard) Revoked(session *sessionsapi.SessionState) revocation.Reason {
++	if reason, ok := g.revokedTokens[session.IDToken]; ok && session.IDToken != "" {
++		return reason
++	}
++	return g.revokedTokens[session.RefreshToken]
++}
++
++func (g *fakeRevocationGuard) NeedsForcedRefresh(session *sessionsapi.SessionState) bool {
++	return g.stale && session.RefreshToken != "" && session.Age() > 30*time.Second
++}
++
++func (g *fakeRevocationGuard) AllowForcedRefresh() bool {
++	g.allowCalls++
++	return g.allow
++}
++
++// revocationTest runs the stored session loader with a guard on a session in the store.
++type revocationTest struct {
++	guard         *fakeRevocationGuard
++	session       *sessionsapi.SessionState
++	refreshPeriod time.Duration
++	// refreshedIDToken is the ID token a refresh brings.
++	refreshedIDToken string
++
++	refreshCalls int
++	clearCalls   int
++	saveCalls    int
++}
++
++func (rt *revocationTest) run(t *testing.T) (session *sessionsapi.SessionState, output, errOutput string) {
++	t.Helper()
++
++	var outputBuffer, errBuffer bytes.Buffer
++	logger.SetOutput(&outputBuffer)
++	logger.SetErrOutput(&errBuffer)
++	t.Cleanup(func() {
++		logger.SetOutput(os.Stdout)
++		logger.SetErrOutput(os.Stderr)
++	})
++
++	store := &fakeSessionStore{
++		LoadFunc: func(*http.Request) (*sessionsapi.SessionState, error) {
++			loaded := *rt.session
++			return &loaded, nil
++		},
++		SaveFunc: func(http.ResponseWriter, *http.Request, *sessionsapi.SessionState) error {
++			rt.saveCalls++
++			return nil
++		},
++		ClearFunc: func(http.ResponseWriter, *http.Request) error {
++			rt.clearCalls++
++			return nil
++		},
++	}
++	opts := &StoredSessionLoaderOptions{
++		SessionStore:  store,
++		RefreshPeriod: rt.refreshPeriod,
++		RefreshSession: func(_ context.Context, s *sessionsapi.SessionState) (bool, error) {
++			rt.refreshCalls++
++			s.IDToken = rt.refreshedIDToken
++			return true, nil
++		},
++		ValidateSession: func(context.Context, *sessionsapi.SessionState) bool { return true },
++		Revocation:      rt.guard,
++	}
++
++	req := httptest.NewRequest(http.MethodGet, "/oauth2/auth", nil)
++	req.AddCookie(&http.Cookie{Name: "_oauth2_proxy", Value: "ticket"})
++	req = middlewareapi.AddRequestScope(req, &middlewareapi.RequestScope{})
++	NewStoredSessionLoader(opts)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
++		session = middlewareapi.GetRequestScope(r).Session
++	})).ServeHTTP(httptest.NewRecorder(), req)
++
++	return session, outputBuffer.String(), errBuffer.String()
++}
++
++func sessionCreated(age time.Duration, idToken, refreshToken string) *sessionsapi.SessionState {
++	created := time.Now().Add(-age)
++	return &sessionsapi.SessionState{
++		CreatedAt:    &created,
++		Email:        "jane@example.com",
++		IDToken:      idToken,
++		RefreshToken: refreshToken,
++	}
++}
++
++func TestStoredSessionLoaderRevocation(t *testing.T) {
++	t.Run("revoked session is removed without a refresh", func(t *testing.T) {
++		rt := &revocationTest{
++			guard:         &fakeRevocationGuard{revokedTokens: map[string]revocation.Reason{"old-id-token": revocation.ReasonPair}},
++			session:       sessionCreated(time.Hour, "old-id-token", "refresh-token"),
++			refreshPeriod: 10 * time.Minute,
++		}
++
++		session, output, errOutput := rt.run(t)
++
++		assert.Nil(t, session)
++		assert.Equal(t, 1, rt.clearCalls)
++		assert.Zero(t, rt.refreshCalls, "a revoked session never reaches the provider")
++		assert.Contains(t, output, "Session revoked (reason: pair), removing session")
++		assert.Empty(t, errOutput, "a revocation is not an error")
++		for _, secret := range []string{"old-id-token", "refresh-token", "jane@example.com"} {
++			assert.NotContains(t, output, secret)
++		}
++	})
++
++	t.Run("stub of a session restored from the cookie is checked by its grant", func(t *testing.T) {
++		stubCreated := time.Date(1992, time.September, 30, 0, 0, 0, 0, time.UTC)
++		rt := &revocationTest{
++			guard: &fakeRevocationGuard{revokedTokens: map[string]revocation.Reason{"revoked-refresh-token": revocation.ReasonGrant}},
++			session: &sessionsapi.SessionState{
++				CreatedAt:    &stubCreated,
++				User:         "Does not found in Redis",
++				RefreshToken: "revoked-refresh-token",
++			},
++			refreshPeriod: 10 * time.Minute,
++		}
++
++		session, output, _ := rt.run(t)
++
++		assert.Nil(t, session)
++		assert.Equal(t, 1, rt.clearCalls)
++		assert.Zero(t, rt.refreshCalls)
++		assert.Contains(t, output, "Session revoked (reason: grant)")
++	})
++
++	t.Run("tokens a refresh brings are checked", func(t *testing.T) {
++		rt := &revocationTest{
++			guard:            &fakeRevocationGuard{revokedTokens: map[string]revocation.Reason{"new-id-token": revocation.ReasonSession}},
++			session:          sessionCreated(time.Hour, "old-id-token", "refresh-token"),
++			refreshPeriod:    10 * time.Minute,
++			refreshedIDToken: "new-id-token",
++		}
++
++		session, output, errOutput := rt.run(t)
++
++		assert.Nil(t, session)
++		assert.Equal(t, 1, rt.refreshCalls)
++		assert.Equal(t, 1, rt.clearCalls)
++		assert.Contains(t, output, "Session revoked (reason: session)")
++		assert.Empty(t, errOutput)
++	})
++
++	t.Run("session not revoked", func(t *testing.T) {
++		rt := &revocationTest{
++			guard:         &fakeRevocationGuard{revokedTokens: map[string]revocation.Reason{"other-id-token": revocation.ReasonPair}},
++			session:       sessionCreated(time.Minute, "id-token", "refresh-token"),
++			refreshPeriod: 10 * time.Minute,
++		}
++
++		session, _, _ := rt.run(t)
++
++		require.NotNil(t, session)
++		assert.Equal(t, "id-token", session.IDToken)
++		assert.Zero(t, rt.clearCalls)
++		assert.Zero(t, rt.refreshCalls)
++	})
++}
++
++func TestStoredSessionLoaderForcedRefresh(t *testing.T) {
++	tests := []struct {
++		name                 string
++		guard                *fakeRevocationGuard
++		age                  time.Duration
++		expectedRefreshCalls int
++		expectedAllowCalls   int
++	}{
++		{
++			name:                 "stale feed, older session",
++			guard:                &fakeRevocationGuard{stale: true, allow: true},
++			age:                  time.Minute,
++			expectedRefreshCalls: 1,
++			expectedAllowCalls:   1,
++		},
++		{
++			name:               "stale feed, limit reached",
++			guard:              &fakeRevocationGuard{stale: true},
++			age:                time.Minute,
++			expectedAllowCalls: 1,
++		},
++		{
++			name:  "stale feed, young session",
++			guard: &fakeRevocationGuard{stale: true, allow: true},
++			age:   10 * time.Second,
++		},
++		{
++			name:  "fresh feed",
++			guard: &fakeRevocationGuard{allow: true},
++			age:   time.Minute,
++		},
++		{
++			name:                 "refresh period passed",
++			guard:                &fakeRevocationGuard{stale: true, allow: true},
++			age:                  time.Hour,
++			expectedRefreshCalls: 1,
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			rt := &revocationTest{
++				guard:            tt.guard,
++				session:          sessionCreated(tt.age, "id-token", "refresh-token"),
++				refreshPeriod:    10 * time.Minute,
++				refreshedIDToken: "new-id-token",
++			}
++
++			session, _, errOutput := rt.run(t)
++
++			require.NotNil(t, session)
++			assert.Equal(t, tt.expectedRefreshCalls, rt.refreshCalls)
++			assert.Equal(t, tt.expectedRefreshCalls, rt.saveCalls)
++			assert.Equal(t, tt.expectedAllowCalls, tt.guard.allowCalls, "the limit is asked once, before the lock")
++			assert.Zero(t, rt.clearCalls)
++			assert.Empty(t, errOutput)
++		})
++	}
++}
+diff --git a/pkg/middleware/stored_session.go b/pkg/middleware/stored_session.go
+index 31e831d5..d8c3f48f 100644
+--- a/pkg/middleware/stored_session.go
++++ b/pkg/middleware/stored_session.go
+@@ -77,6 +77,10 @@ type StoredSessionLoaderOptions struct {
+ 	// If the sesssion is older than `RefreshPeriod` but the provider doesn't
+ 	// refresh it, we must re-validate using this validation.
+ 	ValidateSession func(context.Context, *sessionsapi.SessionState) bool
++
++	// Revocation refuses the sessions the revocation feed of Deckhouse revoked.
++	// Optional: nil disables the check.
++	Revocation RevocationGuard
+ }
+ 
+ // NewStoredSessionLoader creates a new storedSessionLoader which loads
+@@ -89,6 +93,7 @@ func NewStoredSessionLoader(opts *StoredSessionLoaderOptions) alice.Constructor
+ 		refreshPeriod:    opts.RefreshPeriod,
+ 		sessionRefresher: opts.RefreshSession,
+ 		sessionValidator: opts.ValidateSession,
++		revocation:       opts.Revocation,
+ 	}
+ 	return ss.loadSession
+ }
+@@ -100,6 +105,7 @@ type storedSessionLoader struct {
+ 	refreshPeriod    time.Duration
+ 	sessionRefresher func(context.Context, *sessionsapi.SessionState) (bool, error)
+ 	sessionValidator func(context.Context, *sessionsapi.SessionState) bool
++	revocation       RevocationGuard
+ }
+ 
+ // loadSession attempts to load a session as identified by the request cookies.
+@@ -126,7 +132,9 @@ func (s *storedSessionLoader) loadSession(next http.Handler) http.Handler {
+ 		case err != nil && !errors.Is(err, http.ErrNoCookie):
+ 			// In the case when there was an error loading the session,
+ 			// we should clear the session
+-			logger.Errorf("Error loading cookied session: %v, removing session", err)
++			if !errors.Is(err, errSessionRevoked) {
++				logger.Errorf("Error loading cookied session: %v, removing session", err)
++			}
+ 			err = s.store.Clear(rw, req)
+ 			if err != nil {
+ 				logger.Errorf("Error removing session: %v", err)
+@@ -148,11 +156,22 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
+ 		return nil, err
+ 	}
+ 
++	// A revoked session never reaches the provider. The stub of a session
++	// restored from the cookie has no ID token yet and is checked by its grant.
++	if err := s.checkRevoked(session); err != nil {
++		return nil, err
++	}
++
+ 	err = s.refreshSessionIfNeeded(rw, req, session)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("error refreshing access token for session (%s): %w", session, err)
+ 	}
+ 
++	// A refresh brings new tokens, check them too.
++	if err := s.checkRevoked(session); err != nil {
++		return nil, err
++	}
++
+ 	return session, nil
+ }
+ 
+@@ -160,7 +179,10 @@ func (s *storedSessionLoader) getValidatedSession(rw http.ResponseWriter, req *h
+ // is older than the refresh period.
+ // Success or fail, we will then validate the session.
+ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req *http.Request, session *sessionsapi.SessionState) error {
+-	if !needsRefresh(s.refreshPeriod, session) {
++	// While the revocation feed is not fresh, an older session is refreshed
++	// through the provider, which refuses the revoked refresh tokens.
++	forced := !needsRefresh(s.refreshPeriod, session) && s.needsForcedRefresh(session)
++	if !needsRefresh(s.refreshPeriod, session) && !forced {
+ 		// Refresh is disabled or the session is not old enough, do nothing
+ 		return nil
+ 	}
+@@ -214,7 +236,7 @@ func (s *storedSessionLoader) refreshSessionIfNeeded(rw http.ResponseWriter, req
+ 	// Loading from the session store creates a new lock in the session.
+ 	session.Lock = lock
+ 
+-	if !needsRefresh(s.refreshPeriod, session) {
++	if !needsRefresh(s.refreshPeriod, session) && (!forced || !s.revocation.NeedsForcedRefresh(session)) {
+ 		// The session must have already been refreshed while we were waiting to
+ 		// obtain the lock.
+ 		return nil

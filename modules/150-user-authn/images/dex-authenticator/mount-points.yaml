@@ -1,3 +1,4 @@
 dirs:
 - /opt/dex-authenticator/tls
 - /opt/dex-authenticator/dex-ca
+- /opt/dex-authenticator/revocation-feed-ca

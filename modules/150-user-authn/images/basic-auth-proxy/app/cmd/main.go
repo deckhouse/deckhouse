@@ -29,6 +29,10 @@ import (
 	"basic-auth-proxy/pkg/proxy"
 )
 
+// trustedProxySecretEnv names the environment variable with the secret Dex trusts the address of
+// the end client on.
+const trustedProxySecretEnv = "DEX_TRUSTED_PROXY_SECRET"
+
 func main() {
 	handler := proxy.New()
 
@@ -43,6 +47,10 @@ func main() {
 			fmt.Fprintln(out, "--------------------------------")
 			fmt.Fprintln(out, "[ Starting Basic auth proxy ]")
 			fmt.Fprintln(out, "--------------------------------")
+
+			// The secret Dex trusts the client address on stays out of the arguments, which every
+			// reader of the Pod sees.
+			handler.LDAPTrustedProxySecret = os.Getenv(trustedProxySecretEnv)
 
 			ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 			defer stop()

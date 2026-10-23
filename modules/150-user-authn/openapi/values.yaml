@@ -121,6 +121,40 @@ properties:
             default: ""
           certificate_updated:
             type: boolean
+      revocationFeedTLS:
+        type: object
+        default: {}
+        x-examples:
+        - ca: test
+          crt: test
+          key: test
+        properties:
+          crt:
+            type: string
+          key:
+            type: string
+          ca:
+            type: string
+            default: ""
+          certificate_updated:
+            type: boolean
+      userAPITLS:
+        type: object
+        default: {}
+        x-examples:
+        - ca: test
+          crt: test
+          key: test
+        properties:
+          crt:
+            type: string
+          key:
+            type: string
+          ca:
+            type: string
+            default: ""
+          certificate_updated:
+            type: boolean
       dexAuthenticatorCRDs:
         type: array
         default: []

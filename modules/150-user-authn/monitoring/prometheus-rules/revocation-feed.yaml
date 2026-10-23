@@ -1,0 +1,66 @@
+- name: d8.user-authn.revocation-feed
+  rules:
+  - alert: D8UserAuthnRevocationFeedLagging
+    expr: |
+      max(
+        d8_user_authn_revocation_feed_lag_seconds{
+          namespace="d8-user-authn",
+          job="user-authn-controller"
+        }
+      ) > 30
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: user-authn-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: The revocation feed of user-authn-controller is not delivering to dex-authenticator.
+      description: |-
+        For more than 5 minutes, a stream of the revocation feed of `user-authn-controller` has not written to its dex-authenticator for over 30 seconds. A stream writes at least a heartbeat every 10 seconds, so the stream is stuck.
+
+        While the stream is stuck, a session that is revoked (user lock, password reset, logout) keeps working in that dex-authenticator until its next refresh in Dex: up to 30 seconds while Dex is reachable, and no longer than `idTokenTTL` otherwise.
+
+        Check the logs of the controller and of the dex-authenticator pods:
+
+        ```bash
+        d8 k -n d8-user-authn logs deploy/user-authn-controller --all-pods=true | grep revocation-feed
+        ```
+
+        The controller closes a stream that falls behind, and the dex-authenticator reconnects by itself. A lag that does not go away usually means a network problem between the dex-authenticator pods and the controller pods.
+
+  - alert: D8UserAuthnRevocationFeedNotConsumed
+    expr: |
+      sum by (client_id) (
+        d8_user_authn_revocation_feed_subscribers{
+          namespace="d8-user-authn",
+          job="user-authn-controller"
+        }
+      ) == 0
+    for: 15m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: user-authn-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: The dex-authenticator of the Dex client `{{ $labels.client_id }}` does not receive the revocation feed.
+      description: |-
+        For more than 15 minutes, no replica of `user-authn-controller` has had a stream of the revocation feed open for the Dex client `{{ $labels.client_id }}`. The client belongs to a DexAuthenticator (the client ID is `<name>-<namespace>-dex-authenticator`).
+
+        The dex-authenticator of this client works without the feed: a session revoked by a user lock, a password reset, or a logout stops working there only at its next refresh in Dex, within 30 seconds while Dex is reachable, and no later than `idTokenTTL`.
+
+        What to check:
+
+        - the logs of the dex-authenticator pods: errors connecting to `https://revocation-feed.d8-user-authn/revocations` and answers 401 or 429;
+        - that the Secret of the DexAuthenticator holds the CA of the feed in the `revocation-feed-ca.crt` key;
+        - network policies in the namespace of the DexAuthenticator: they must allow connections to the `user-authn-controller` pods in `d8-user-authn` on port 8443.
+
+        ```bash
+        d8 k -n d8-user-authn get endpoints revocation-feed
+        d8 k -n d8-user-authn logs deploy/user-authn-controller --all-pods=true | grep revocation-feed
+        ```

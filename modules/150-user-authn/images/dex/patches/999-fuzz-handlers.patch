@@ -1,9 +1,9 @@
 diff --git a/server/fuzz_handlers_test.go b/server/fuzz_handlers_test.go
 new file mode 100644
-index 00000000..72327324
+index 00000000..54636e19
 --- /dev/null
 +++ b/server/fuzz_handlers_test.go
-@@ -0,0 +1,716 @@
+@@ -0,0 +1,738 @@
 +package server
 +
 +import (
@@ -47,6 +47,7 @@ index 00000000..72327324
 +//	FuzzHandlePublicKeys        /keys                       discovery
 +//	FuzzHandleUserInfo          /userinfo                   userinfo
 +//	FuzzHandleIntrospect        /token/introspect           introspection
++//	FuzzHandleRevoke            /token/revoke               grants
 +//	FuzzHandleAuthorization     /auth                       authflow
 +//	FuzzHandleConnectorLogin    /auth/{connector}           authflow
 +//	FuzzHandlePasswordLogin     /auth/{connector}/login     authflow
@@ -471,6 +472,7 @@ index 00000000..72327324
 +	routeKeys          = fuzzRoute{method: http.MethodGet, path: "/keys", prefix: "/keys"}
 +	routeUserInfo      = fuzzRoute{method: http.MethodGet, path: "/userinfo", prefix: "/userinfo"}
 +	routeIntrospect    = fuzzRoute{method: http.MethodPost, path: "/token/introspect", prefix: "/token/introspect"}
++	routeRevoke        = fuzzRoute{method: http.MethodPost, path: "/token/revoke", prefix: "/token/revoke"}
 +	routeAuthorize     = fuzzRoute{method: http.MethodGet, path: "/auth", prefix: "/auth"}
 +	routeConnector     = fuzzRoute{method: http.MethodGet, path: "/auth/" + fuzzCbConnector, prefix: "/auth/"}
 +	routePasswordLogin = fuzzRoute{method: http.MethodPost, path: "/auth/" + fuzzPwConnector + "/login", prefix: "/auth/"}
@@ -543,6 +545,26 @@ index 00000000..72327324
 +	}, func(req *http.Request, toks fuzzTokens) {
 +		withClientAuth(req, toks)
 +	})
++}
++
++// FuzzHandleRevoke fuzzes the form of the token revocation endpoint (RFC 7009,
++// 290): refresh, access and ID tokens of the fuzz user, with and without a type
++// hint, and a refresh token of another client.
++func FuzzHandleRevoke(f *testing.F) {
++	deniedRefresh := fuzzDeniedRefreshToken(f)
++	fuzzTarget(f, "FuzzHandleRevoke", routeRevoke, []string{
++		`{"method":"POST","url":"/token/revoke","postForm":{"token":["$REFRESH_TOKEN"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token/revoke","postForm":{"token":["$REFRESH_TOKEN"],"token_type_hint":["refresh_token"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token/revoke","postForm":{"token":["$REFRESH_TOKEN"],"token_type_hint":["access_token"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token/revoke","postForm":{"token":["$ACCESS_TOKEN"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token/revoke","postForm":{"token":["$ID_TOKEN"],"token_type_hint":["refresh_token"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token/revoke","postForm":{"token":["` + deniedRefresh + `"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token/revoke","postForm":{"token":["$REFRESH_TOKEN"]},"headers":{"Authorization":["` + fuzzRestrictedAuth + `"]}}`,
++		`{"method":"POST","url":"/token/revoke","postForm":{"token":["$REFRESH_TOKEN"],"client_id":["client"],"client_secret":["secret"]}}`,
++		`{"method":"POST","url":"/token/revoke","postForm":{"token":["x"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token/revoke","postForm":{"token":[""]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"GET","url":"/token/revoke?token=$REFRESH_TOKEN","headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++	}, withClientAuth)
 +}
 +
 +func FuzzHandleAuthorization(f *testing.F) {
@@ -705,13 +727,13 @@ index 00000000..72327324
 +	f.Fuzz(func(t *testing.T, data []byte) {
 +		s, toks := newFuzzServer(t)
 +		for _, route := range []fuzzRoute{
-+			routeToken, routeKeys, routeUserInfo, routeIntrospect, routeAuthorize, routeConnector,
++			routeToken, routeKeys, routeUserInfo, routeIntrospect, routeRevoke, routeAuthorize, routeConnector,
 +			routePasswordLogin, routeCallback, routePasswordChg, routeApproval, routeMFA, routeTOTP, routeWebAuthn,
 +			routeDevice, routeVerifyCode, routeDeviceCode, routeDeviceCb, routeLogout, routeHome,
 +		} {
 +			req := newFuzzRequest(t, data, route, toks)
 +			switch route {
-+			case routeToken, routeIntrospect:
++			case routeToken, routeIntrospect, routeRevoke:
 +				withClientAuth(req, toks)
 +			case routeUserInfo:
 +				withBearer(req, toks)

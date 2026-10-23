@@ -964,6 +964,14 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			webhook := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-user-authz-webhook")
 			Expect(webhook.Exists()).To(BeTrue())
 			Expect(webhook.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzWebhookTargetDown"))
+			Expect(webhook.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzRevocationCheckStale"))
+			Expect(webhook.Field("spec.groups").String()).To(ContainSubstring(`user_authz_webhook_revocation_state{job=\"user-authz-webhook\", namespace=\"d8-user-authz\", state=\"stale\"}`))
+			// An instance that never lists the revocations stays unsynced, never stale (it has nothing
+			// to answer from), and fails open: a revoked token works through its master.
+			Expect(webhook.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzRevocationCheckNotSynced"))
+			Expect(webhook.Field("spec.groups").String()).To(ContainSubstring(`user_authz_webhook_revocation_state{job=\"user-authz-webhook\", namespace=\"d8-user-authz\", state=\"unsynced\"}`))
+			// The label is the Prometheus template of the alert, not a Helm one.
+			Expect(webhook.Field("spec.groups").String()).To(ContainSubstring("{{ $labels.pod }}"))
 
 			browser := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-permission-browser-apiserver")
 			Expect(browser.Exists()).To(BeTrue())
@@ -1172,6 +1180,21 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			browserRole := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:permission-browser-apiserver")
 			Expect(browserRole.Exists()).To(BeTrue())
 			Expect(browserRole.Field("rules").String()).To(ContainSubstring("clusterauthorizationrules"))
+		})
+
+		// The revocation check of user-authn shares the webhook's process and listener. Its entry in
+		// the API server's authorizer chain comes from control-plane-manager, which adds it only
+		// when this ConfigMap names the URL.
+		It("Should serve the revocation check of user-authn", func() {
+			configurator := f.KubernetesResource("ConfigMap", "d8-user-authz", "control-plane-configurator")
+			Expect(configurator.Field("data.url").String()).To(Equal("https://127.0.0.1:40443/"))
+			Expect(configurator.Field("data.revocationURL").String()).To(Equal("https://127.0.0.1:40443/revocation"))
+
+			// It follows the Revocation objects of user-authn, and only reads them.
+			webhookRole := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:webhook")
+			const dexRule = `rules.#(apiGroups.0=="dex.coreos.com")`
+			Expect(webhookRole.Field(dexRule + ".resources").AsStringSlice()).To(Equal([]string{"revocations"}))
+			Expect(webhookRole.Field(dexRule + ".verbs").AsStringSlice()).To(ConsistOf("get", "list", "watch"))
 		})
 
 		It("Should deploy permission-browser-apiserver and supporting objects", func() {

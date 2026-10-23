@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,31 +34,31 @@ import (
 
 const (
 	informerResyncPeriod = 5 * time.Minute
+
+	// userIDIndex finds Password objects by the user ID Dex puts into the sub claim of a local
+	// user's tokens.
+	userIDIndex = "userID"
 )
 
-// PasswordCache maintains a cached set of local usernames from Password CRDs.
-// It uses a Kubernetes informer to efficiently watch for changes instead of
-// making API calls on every request.
-type PasswordCache struct {
-	mu            sync.RWMutex
-	localUsers    map[string]struct{}
-	informer      cache.SharedIndexInformer
-	logger        *slog.Logger
-	stopCh        chan struct{}
-	stopOnce      sync.Once
-	synced        bool
-	dynamicClient dynamic.Interface
+var passwordGVR = schema.GroupVersionResource{
+	Group:    "dex.coreos.com",
+	Version:  "v1",
+	Resource: "passwords",
 }
 
-// NewPasswordCache creates a new PasswordCache with an informer watching Password CRDs.
-func NewPasswordCache(dynamicClient dynamic.Interface, logger *slog.Logger) *PasswordCache {
-	pc := &PasswordCache{
-		localUsers:    make(map[string]struct{}),
-		logger:        logger,
-		stopCh:        make(chan struct{}),
-		dynamicClient: dynamicClient,
-	}
+// PasswordCache maps the user IDs of local users to their usernames, from the Dex Password objects.
+// It uses a Kubernetes informer to efficiently watch for changes instead of making API calls on
+// every request.
+type PasswordCache struct {
+	informer cache.SharedIndexInformer
+	logger   *slog.Logger
+	stopCh   chan struct{}
+	stopOnce sync.Once
+	synced   atomic.Bool
+}
 
+// NewPasswordCache creates a new PasswordCache with an informer watching Password objects.
+func NewPasswordCache(dynamicClient dynamic.Interface, logger *slog.Logger) (*PasswordCache, error) {
 	// Create a filtered dynamic informer factory for the d8-user-authn namespace
 	informerFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(
 		dynamicClient,
@@ -66,23 +67,21 @@ func NewPasswordCache(dynamicClient dynamic.Interface, logger *slog.Logger) *Pas
 		func(opts *metav1.ListOptions) {},
 	)
 
-	gvr := schema.GroupVersionResource{
-		Group:    "dex.coreos.com",
-		Version:  "v1",
-		Resource: "passwords",
+	informer := informerFactory.ForResource(passwordGVR).Informer()
+
+	// user-api only needs the username of a user ID: the password hashes stay out of its memory.
+	if err := informer.SetTransform(trimPassword); err != nil {
+		return nil, fmt.Errorf("set password transform: %w", err)
+	}
+	if err := informer.AddIndexers(cache.Indexers{userIDIndex: passwordUserIDs}); err != nil {
+		return nil, fmt.Errorf("add password indexer: %w", err)
 	}
 
-	pc.informer = informerFactory.ForResource(gvr).Informer()
-
-	if _, err := pc.informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    pc.onAdd,
-		UpdateFunc: pc.onUpdate,
-		DeleteFunc: pc.onDelete,
-	}); err != nil {
-		logger.Error("Failed to register password informer event handler", "error", err)
-	}
-
-	return pc
+	return &PasswordCache{
+		informer: informer,
+		logger:   logger,
+		stopCh:   make(chan struct{}),
+	}, nil
 }
 
 // Start starts the informer and waits for initial cache sync.
@@ -97,10 +96,7 @@ func (pc *PasswordCache) Start(ctx context.Context) error {
 		pc.Stop()
 		return fmt.Errorf("failed to sync password cache")
 	}
-
-	pc.mu.Lock()
-	pc.synced = true
-	pc.mu.Unlock()
+	pc.synced.Store(true)
 
 	pc.logger.Info("Password cache synced", "local_users_count", pc.Count())
 	return nil
@@ -113,91 +109,90 @@ func (pc *PasswordCache) Stop() {
 	})
 }
 
-// IsLocalUser checks if the given username exists in the cache.
-func (pc *PasswordCache) IsLocalUser(username string) bool {
-	pc.mu.RLock()
-	defer pc.mu.RUnlock()
-	_, exists := pc.localUsers[username]
-	return exists
+// Username returns the username of the local user with the given user ID.
+func (pc *PasswordCache) Username(userID string) (string, error) {
+	if !pc.IsSynced() {
+		return "", ErrCacheNotSynced
+	}
+
+	objs, err := pc.informer.GetIndexer().ByIndex(userIDIndex, userID)
+	if err != nil {
+		return "", fmt.Errorf("look up password by user ID: %w", err)
+	}
+
+	switch len(objs) {
+	case 0:
+		return "", ErrUserNotFound
+	case 1:
+	default:
+		// Two Password objects with one user ID give their users the same tokens. Which of them
+		// signed in cannot be told, so none of them is acted upon.
+		return "", ErrAmbiguousUser
+	}
+
+	username := passwordField(objs[0], "username")
+	if username == "" {
+		return "", ErrUserNotFound
+	}
+	return username, nil
 }
 
 // IsSynced returns true if the cache has completed initial sync.
 func (pc *PasswordCache) IsSynced() bool {
-	pc.mu.RLock()
-	defer pc.mu.RUnlock()
-	return pc.synced
+	return pc.synced.Load()
 }
 
 // Count returns the number of local users in the cache.
 func (pc *PasswordCache) Count() int {
-	pc.mu.RLock()
-	defer pc.mu.RUnlock()
-	return len(pc.localUsers)
+	return len(pc.informer.GetStore().ListKeys())
 }
 
-func (pc *PasswordCache) onAdd(obj interface{}) {
-	username := pc.extractUsername(obj)
-	if username == "" {
-		return
+// passwordUserIDs indexes a Password object by the user ID of its user. The User controller writes
+// the username as the user ID, and the UserOperation controller takes the username for an object
+// without one; the index does the same.
+func passwordUserIDs(obj any) ([]string, error) {
+	userID := passwordField(obj, "userID")
+	if userID == "" {
+		userID = passwordField(obj, "username")
 	}
-
-	pc.mu.Lock()
-	pc.localUsers[username] = struct{}{}
-	pc.mu.Unlock()
-
-	pc.logger.Debug("Added local user to cache", "username", username)
+	if userID == "" {
+		return nil, nil
+	}
+	return []string{userID}, nil
 }
 
-func (pc *PasswordCache) onUpdate(oldObj, newObj interface{}) {
-	oldUsername := pc.extractUsername(oldObj)
-	newUsername := pc.extractUsername(newObj)
-
-	if oldUsername == newUsername {
-		return
-	}
-
-	pc.mu.Lock()
-	if oldUsername != "" {
-		delete(pc.localUsers, oldUsername)
-	}
-	if newUsername != "" {
-		pc.localUsers[newUsername] = struct{}{}
-	}
-	pc.mu.Unlock()
-
-	pc.logger.Debug("Updated local user in cache", "old_username", oldUsername, "new_username", newUsername)
-}
-
-func (pc *PasswordCache) onDelete(obj interface{}) {
-	// Handle DeletedFinalStateUnknown (when the watch connection is lost and
-	// we miss the delete event)
-	if deletedState, ok := obj.(cache.DeletedFinalStateUnknown); ok {
-		obj = deletedState.Obj
-	}
-
-	username := pc.extractUsername(obj)
-	if username == "" {
-		return
-	}
-
-	pc.mu.Lock()
-	delete(pc.localUsers, username)
-	pc.mu.Unlock()
-
-	pc.logger.Debug("Deleted local user from cache", "username", username)
-}
-
-func (pc *PasswordCache) extractUsername(obj interface{}) string {
-	unstr, ok := obj.(*unstructured.Unstructured)
+// trimPassword keeps only the identity of a Password object: its name, username and user ID.
+func trimPassword(obj any) (any, error) {
+	u, ok := obj.(*unstructured.Unstructured)
 	if !ok {
-		pc.logger.Warn("Failed to convert object to unstructured")
+		return obj, nil
+	}
+
+	trimmed := &unstructured.Unstructured{Object: map[string]any{}}
+	trimmed.SetAPIVersion(u.GetAPIVersion())
+	trimmed.SetKind(u.GetKind())
+	trimmed.SetNamespace(u.GetNamespace())
+	trimmed.SetName(u.GetName())
+	trimmed.SetUID(u.GetUID())
+	trimmed.SetResourceVersion(u.GetResourceVersion())
+	for _, field := range []string{"username", "userID"} {
+		if value, found, err := unstructured.NestedString(u.Object, field); err == nil && found {
+			trimmed.Object[field] = value
+		}
+	}
+
+	return trimmed, nil
+}
+
+func passwordField(obj any, field string) string {
+	u, ok := obj.(*unstructured.Unstructured)
+	if !ok {
 		return ""
 	}
 
-	username, found, err := unstructured.NestedString(unstr.Object, "username")
+	value, found, err := unstructured.NestedString(u.Object, field)
 	if err != nil || !found {
 		return ""
 	}
-
-	return username
+	return value
 }

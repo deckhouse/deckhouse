@@ -4,6 +4,32 @@ kind: AuthorizationConfiguration
 authorizers:
   - type: Node
     name: node
+  {{- if .apiserver.revocationWebhookURL }}
+  # The revocation check of user-authn, served by the user-authz webhook: it denies a request made
+  # with a Dex token whose credentials were revoked, and has no opinion about anything else - it
+  # never allows. It fails open: an error or a timeout is no opinion, and the request goes on to
+  # the authorizers below as it would without this one. daemonset.yaml sets the URL only from
+  # Kubernetes 1.34 on, where the answers can be left uncached.
+  - type: Webhook
+    name: user-authn-revocation
+    webhook:
+      subjectAccessReviewVersion: v1
+      matchConditionSubjectAccessReviewVersion: v1
+      matchConditions:
+        # Only the tokens of Dex carry this extra: everything else skips the call.
+        - expression: "'user-authn.deckhouse.io/sub' in request.extra"
+      timeout: 1s
+      failurePolicy: NoOpinion
+      # Both TTLs are required, and above zero, even with the cache off.
+      authorizedTTL: 1s
+      unauthorizedTTL: 1s
+      # A revocation applies at the next request, not when a cached answer expires.
+      cacheAuthorizedRequests: false
+      cacheUnauthorizedRequests: false
+      connectionInfo:
+        type: KubeConfigFile
+        kubeConfigFile: /etc/kubernetes/deckhouse/extra-files/revocation-webhook-config.yaml
+  {{- end }}
   - type: Webhook
     name: user-authz-webhook
     webhook:

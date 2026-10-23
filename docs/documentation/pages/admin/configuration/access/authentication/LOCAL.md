@@ -100,13 +100,13 @@ d8 iam user delete anton --keep-memberships
 
 ## Local user operations
 
-Password reset, 2FA reset, and user lock/unlock operations are performed via the [UserOperation](/modules/user-authn/cr.html#useroperation) resource. The `initiatorType` field indicates who initiated the operation: an administrator (`admin`), the system (`system`), or the user (`self`).
+Password reset, forced password change, 2FA reset, user lock/unlock and logout operations are performed via the [UserOperation](/modules/user-authn/cr.html#useroperation) resource. The `initiatorType` field indicates who initiated the operation: an administrator (`admin`), the system (`system`), or the user (`self`).
 
 ### Administrative operations
 
 Use the [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) commands for administrative actions on local users. They create a UserOperation resource with `initiatorType: admin`, wait for the operation to complete, and print the result.
 
-The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex RefreshToken objects. The sessions of the user in applications and kubeconfig files end when the current ID token expires, and the user has to authenticate again. Only `Reset2FA` removes the user's 2FA secret.
+The `ResetPassword`, `Reset2FA`, `Lock` and `Logout` operations end the sessions of the user at once, and the user has to authenticate again. For what ends and how fast, see [UserOperation lifecycle and side effects](/modules/user-authn/usage.html#useroperation-lifecycle-and-side-effects). Only `Reset2FA` removes the user's 2FA secret.
 
 Examples of using the [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) commands:
 
@@ -154,16 +154,14 @@ Examples of using the [`d8 iam user`](/products/kubernetes-platform/documentatio
 
 By default, commands wait for the operation to complete. To only create a UserOperation and print its name, use the `--wait=false` flag.
 
-### Self-service password reset
+### Self-service operations
 
-A local user can reset their own password in the DP authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
+In the DP web interface, a user can sign out on all devices, and a local user can change their password. The web interface creates a UserOperation with `initiatorType: self` for the user who is signed in:
 
-Self-service password reset is available only for local accounts (the built-in `Local` connector). Users who sign in through external authentication providers must contact the administrator of the corresponding system.
+- Signing out on all devices creates a `Logout` operation. It ends every session of the user, including kubeconfig files.
+- Changing the password creates a `RequirePasswordChange` operation. At the next sign-in, Dex asks for the current password and a new one that complies with the [password policy](#configuring-password-policy). The operation ends no sessions.
 
-When a user resets their password:
-
-- The new password must comply with the [password policy](#configuring-password-policy).
-- The user's active sessions are terminated and re-authentication is required.
+Changing the password is available only for local accounts (the built-in `Local` connector). Users who sign in through external authentication providers change their password in the corresponding system.
 
 For user-facing password change and reset scenarios, see [Configuring authentication for applications](../../../../user/access/authentication.html#changing-and-resetting-a-local-users-password).
 
@@ -184,7 +182,7 @@ spec:
     newPasswordHash: "$2y$10$..."
 ```
 
-For users of external providers of any type (LDAP, Atlassian Crowd, OIDC, SAML, GitHub, GitLab, Bitbucket Cloud), use [`spec.target`](/modules/user-authn/cr.html#useroperation-v1-spec-target) instead of `spec.user`. Only `Lock` and `Unlock` are supported for external users. Example — lock an external user for 30 minutes:
+For users of external providers of any type (LDAP, Atlassian Crowd, OIDC, SAML, GitHub, GitLab, Bitbucket Cloud), use [`spec.target`](/modules/user-authn/cr.html#useroperation-v1-spec-target) instead of `spec.user`. The `Lock`, `Unlock` and `Logout` operations are supported for external users. Example — lock an external user for 30 minutes:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -204,7 +202,7 @@ spec:
 A UserOperation is a **single-use**, **immutable** object: after creation, the hook processes it and writes the result to `status.phase` (`Succeeded` or `Failed`). Completed operations are **automatically deleted** after 24 hours.
 
 {% alert level="warning" %}
-The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex RefreshToken objects. The sessions of the user in applications and kubeconfig files end when the current ID token expires, and the user has to authenticate again. `ResetPassword` and `Lock` keep the user's 2FA secret.
+The `ResetPassword`, `Reset2FA`, `Lock` and `Logout` operations end the sessions of the user at once, and the user has to authenticate again. For what ends and how fast, see [UserOperation lifecycle and side effects](/modules/user-authn/usage.html#useroperation-lifecycle-and-side-effects). `ResetPassword`, `Lock` and `Logout` keep the user's 2FA secret.
 {% endalert %}
 
 ## Adding a user to a group

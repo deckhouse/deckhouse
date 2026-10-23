@@ -61,10 +61,10 @@ func SecretFields() []string {
 	return slices.Clone(secretFields)
 }
 
-// InformerCacheByObject scopes Password, OfflineSessions, RefreshToken, and UserIdentity
-// informers to d8-user-authn and strips Dex secrets before the objects are stored. Code that
-// needs a secret field (the UserIdentity migration reads the TOTP secret) reads through the
-// API reader instead.
+// InformerCacheByObject scopes Password, OfflineSessions, RefreshToken, UserIdentity, and
+// AuthSession informers to d8-user-authn and strips Dex secrets before the objects are stored.
+// Code that needs a secret field (the UserIdentity migration reads the TOTP secret) reads through
+// the API reader instead. Revocation objects hold no secrets; they lose only their managed fields.
 func InformerCacheByObject() map[client.Object]cache.ByObject {
 	return map[client.Object]cache.ByObject{
 		Object(PasswordGVK): {
@@ -90,6 +90,18 @@ func InformerCacheByObject() map[client.Object]cache.ByObject {
 				naming.DexNamespace: {},
 			},
 			Transform: StripDexSecrets,
+		},
+		Object(AuthSessionGVK): {
+			Namespaces: map[string]cache.Config{
+				naming.DexNamespace: {},
+			},
+			Transform: StripDexSecrets,
+		},
+		Object(RevocationGVK): {
+			Namespaces: map[string]cache.Config{
+				naming.DexNamespace: {},
+			},
+			Transform: cache.TransformStripManagedFields(),
 		},
 	}
 }

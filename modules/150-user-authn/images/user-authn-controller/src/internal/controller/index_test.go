@@ -67,3 +67,62 @@ func TestPasswordPair(t *testing.T) {
 		})
 	}
 }
+
+func TestPairIndexes(t *testing.T) {
+	t.Parallel()
+
+	pair := naming.OfflineTokenName("jane", "corp-ldap")
+	tests := []struct {
+		name     string
+		extract  func(*unstructured.Unstructured) []string
+		object   map[string]any
+		expected []string
+	}{
+		{
+			name:     "refresh token",
+			extract:  func(u *unstructured.Unstructured) []string { return RefreshTokenPair(u) },
+			object:   map[string]any{"connectorID": "corp-ldap", "claims": map[string]any{"userID": "jane"}},
+			expected: []string{pair},
+		},
+		{
+			name:     "refresh token without connector",
+			extract:  func(u *unstructured.Unstructured) []string { return RefreshTokenPair(u) },
+			object:   map[string]any{"claims": map[string]any{"userID": "jane"}},
+			expected: nil,
+		},
+		{
+			name:     "auth session",
+			extract:  func(u *unstructured.Unstructured) []string { return AuthSessionPair(u) },
+			object:   map[string]any{"userID": "jane", "connectorID": "corp-ldap"},
+			expected: []string{pair},
+		},
+		{
+			name:     "auth session without user",
+			extract:  func(u *unstructured.Unstructured) []string { return AuthSessionPair(u) },
+			object:   map[string]any{"connectorID": "corp-ldap"},
+			expected: nil,
+		},
+		{
+			name:     "revocation clients",
+			extract:  func(u *unstructured.Unstructured) []string { return RevocationClients(u) },
+			object:   map[string]any{"clients": []any{"console", "kubeconfig-generator-0"}},
+			expected: []string{"console", "kubeconfig-generator-0"},
+		},
+		{
+			name:     "oauth2 client id",
+			extract:  func(u *unstructured.Unstructured) []string { return OAuth2ClientID(u) },
+			object:   map[string]any{"id": "console-d8-console-dex-authenticator"},
+			expected: []string{"console-d8-console-dex-authenticator"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := tt.extract(&unstructured.Unstructured{Object: tt.object})
+			if !slices.Equal(got, tt.expected) {
+				t.Errorf("index = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}

@@ -25,9 +25,20 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"slices"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/dynamic/fake"
+	k8stesting "k8s.io/client-go/testing"
+
+	"basic-auth-proxy/pkg/proxy/provider"
+	"basic-auth-proxy/pkg/revocation"
 )
 
 // fakeProvider records call count and the last ctx for cache assertions.
@@ -35,14 +46,22 @@ type fakeProvider struct {
 	calls  atomic.Int64
 	groups []string
 	err    error
+	// identities, by password, carry the subject and generation of the token Dex issued.
+	identities map[string]provider.Identity
 
 	lastCtx atomic.Pointer[context.Context]
 }
 
-func (p *fakeProvider) ValidateCredentials(ctx context.Context, _, _ string) ([]string, error) {
+func (p *fakeProvider) ValidateCredentials(ctx context.Context, _, password string) (provider.Identity, error) {
 	p.calls.Add(1)
 	p.lastCtx.Store(&ctx)
-	return p.groups, p.err
+	if p.err != nil {
+		return provider.Identity{}, p.err
+	}
+	if identity, ok := p.identities[password]; ok {
+		return identity, nil
+	}
+	return provider.Identity{Groups: p.groups}, nil
 }
 
 // newTestHandler wires a Handler to a fakeProvider and closes the ttlcache
@@ -187,6 +206,269 @@ func TestHandler_UnexpectedCacheTypeIsRefetched(t *testing.T) {
 	}
 	if c := p.calls.Load(); c != 1 {
 		t.Fatalf("provider calls: got %d, want 1 (unexpected cache type must trigger refetch)", c)
+	}
+}
+
+const (
+	janeSubject = "CgRqYW5lEgVsb2NhbA"
+	jdoeSubject = "CiNjbj1qZG9lLG91PXBlb3BsZSxkYz1leGFtcGxlLGRjPW9yZxIEbGRhcA"
+)
+
+// ldapIdentities are the tokens Dex issues for LDAP users, by password: jane signed in twice, before
+// and after a revocation of generation 2.
+func ldapIdentities() map[string]provider.Identity {
+	return map[string]provider.Identity{
+		"jane-old": {Groups: []string{"devs"}, Subject: janeSubject, Generation: 1},
+		"jane-new": {Groups: []string{"devs"}, Subject: janeSubject, Generation: 3},
+		"jdoe":     {Groups: []string{"ops"}, Subject: jdoeSubject},
+	}
+}
+
+// fixedGenerations is a generationSource with the revoked generations known in advance.
+type fixedGenerations map[string]uint64
+
+func (g fixedGenerations) Generation(subject string) uint64 { return g[subject] }
+
+// validateAll checks the credentials of every password of ldapIdentities once.
+func validateAll(t *testing.T, h *Handler) {
+	t.Helper()
+	for _, password := range []string{"jane-old", "jane-new", "jdoe"} {
+		if _, err := h.validateCredentials(t.Context(), "user", password); err != nil {
+			t.Fatalf("validate %s: %v", password, err)
+		}
+	}
+}
+
+// cached reports whether the check of a password of ldapIdentities is cached.
+func cached(h *Handler, password string) bool {
+	_, ok := h.cache.Get(h.cacheKey("user", password))
+	return ok
+}
+
+func TestHandler_RevokeEvictsTheRevokedGenerations(t *testing.T) {
+	t.Parallel()
+
+	p := &fakeProvider{identities: ldapIdentities()}
+	h := newTestHandler(t, p, 10*time.Second, 2*time.Minute)
+
+	validateAll(t, h)
+	validateAll(t, h)
+	if got := p.calls.Load(); got != 3 {
+		t.Fatalf("provider calls = %d, want 3: every check is cached", got)
+	}
+
+	// Generation 2 revokes the older token of jane. Her newer token and the other user stay cached.
+	h.revoke(janeSubject, 2)
+	if cached(h, "jane-old") || !cached(h, "jane-new") || !cached(h, "jdoe") {
+		t.Fatalf("cached after revoking generation 2: jane-old %v, jane-new %v, jdoe %v, want false, true, true",
+			cached(h, "jane-old"), cached(h, "jane-new"), cached(h, "jdoe"))
+	}
+
+	// The same event again, as an update delivers it, evicts nothing more.
+	h.revoke(janeSubject, 2)
+	if !cached(h, "jane-new") || !cached(h, "jdoe") {
+		t.Fatal("the same revocation again evicted a check it does not revoke")
+	}
+
+	// A token without d8_gen has generation 0, and any revocation evicts it.
+	h.revoke(jdoeSubject, 1)
+	if cached(h, "jdoe") {
+		t.Fatal("the check of jdoe is cached after its revocation")
+	}
+
+	// The next requests with the revoked tokens go to Dex.
+	validateAll(t, h)
+	if got := p.calls.Load(); got != 5 {
+		t.Fatalf("provider calls = %d, want 5", got)
+	}
+}
+
+func TestHandler_DoesNotCacheARevokedToken(t *testing.T) {
+	t.Parallel()
+
+	p := &fakeProvider{identities: ldapIdentities()}
+	h := newTestHandler(t, p, 10*time.Second, 2*time.Minute)
+	// The revocation of generation 2 is known before Dex's answer arrives: Dex issued the token of
+	// generation 1 while the revocation was being written.
+	h.revocations = fixedGenerations{janeSubject: 2}
+
+	for i := range 2 {
+		groups, err := h.validateCredentials(t.Context(), "jane", "jane-old")
+		if err != nil {
+			t.Fatalf("call %d: %v", i, err)
+		}
+		if !slices.Equal(groups, []string{"devs"}) {
+			t.Fatalf("call %d: groups = %v, want [devs]", i, groups)
+		}
+	}
+	if got := p.calls.Load(); got != 2 {
+		t.Fatalf("provider calls = %d, want 2: a revoked token is not cached", got)
+	}
+
+	// A token of the current generation is cached as usual.
+	for range 2 {
+		if _, err := h.validateCredentials(t.Context(), "jane", "jane-new"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := p.calls.Load(); got != 3 {
+		t.Fatalf("provider calls = %d, want 3", got)
+	}
+}
+
+func TestHandler_KeepsTheSubjectIndexInStepWithTheCache(t *testing.T) {
+	t.Parallel()
+
+	const ttl = 50 * time.Millisecond
+
+	p := &fakeProvider{identities: ldapIdentities()}
+	h := newTestHandler(t, p, ttl, ttl)
+
+	validateAll(t, h)
+	h.cacheMu.Lock()
+	indexed := h.subjects.len()
+	h.cacheMu.Unlock()
+	if indexed != 3 {
+		t.Fatalf("indexed entries = %d, want 3", indexed)
+	}
+
+	// A failed check replaces the successful one under the same key, and the key leaves the index.
+	h.store(h.cacheKey("user", "jdoe"), cacheEntry{err: errors.New("invalid_grant")}, time.Minute)
+	h.cacheMu.Lock()
+	indexed = h.subjects.len()
+	h.cacheMu.Unlock()
+	if indexed != 2 {
+		t.Fatalf("indexed entries = %d after a failed check, want 2", indexed)
+	}
+
+	// Expired entries leave the index as well.
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		h.cacheMu.Lock()
+		indexed = h.subjects.len()
+		h.cacheMu.Unlock()
+		if indexed == 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("indexed entries = %d long after their TTL, want 0", indexed)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func TestHandler_RevokeRacesWithValidation(t *testing.T) {
+	t.Parallel()
+
+	p := &fakeProvider{identities: ldapIdentities()}
+	h := newTestHandler(t, p, 10*time.Second, 2*time.Minute)
+
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Go(func() {
+			for range 100 {
+				validateAll(t, h)
+			}
+		})
+	}
+	for generation := range uint64(100) {
+		h.revoke(janeSubject, generation)
+	}
+	wg.Wait()
+
+	// After a revocation above every generation nothing of jane stays cached.
+	h.revoke(janeSubject, 100)
+	h.cacheMu.Lock()
+	_, janeIndexed := h.subjects.bySubject[janeSubject]
+	h.cacheMu.Unlock()
+	if janeIndexed {
+		t.Fatal("jane is still indexed after the revocation of every generation")
+	}
+	for _, password := range []string{"jane-old", "jane-new"} {
+		if cached(h, password) {
+			t.Fatalf("the check with %s is still cached", password)
+		}
+	}
+}
+
+// TestHandler_EvictsOnARevocationEvent follows a Revocation object from the API to the cache.
+func TestHandler_EvictsOnARevocationEvent(t *testing.T) {
+	t.Parallel()
+
+	client := fake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(),
+		map[schema.GroupVersionResource]string{revocation.GVR: "RevocationList"})
+	// The watch is fed by hand: an object the fake client creates between the list and the watch of
+	// the informer would never reach it.
+	revocations := watch.NewFake()
+	client.PrependWatchReactor("revocations", k8stesting.DefaultWatchReactor(revocations, nil))
+
+	p := &fakeProvider{identities: ldapIdentities()}
+	h := newTestHandler(t, p, 10*time.Second, 2*time.Minute)
+
+	watcher, err := revocation.New(client, h.revoke)
+	if err != nil {
+		t.Fatalf("revocation.New() error = %v", err)
+	}
+	h.revocations = watcher
+
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		watcher.Run(ctx)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
+
+	validateAll(t, h)
+	if !cached(h, "jane-old") {
+		t.Fatal("the check is not cached")
+	}
+
+	// The controller revokes generation 2 of jane, after Lock, ResetPassword or Logout.
+	sent := make(chan struct{})
+	go func() {
+		defer close(sent)
+		revocations.Add(&unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": "dex.coreos.com/v1",
+			"kind":       "Revocation",
+			"metadata":   map[string]any{"name": "pair-jane-g2", "namespace": revocation.Namespace},
+			"type":       "pair",
+			"subject":    janeSubject,
+			"generation": int64(2),
+			"reason":     "Lock",
+		}})
+	}()
+	select {
+	case <-sent:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the watcher did not take the revocation event")
+	}
+
+	deadline := time.Now().Add(5 * time.Second)
+	for cached(h, "jane-old") {
+		if time.Now().After(deadline) {
+			t.Fatal("the revoked check is still cached")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	if !cached(h, "jane-new") {
+		t.Error("the check with the newer token was evicted as well")
+	}
+	if !cached(h, "jdoe") {
+		t.Error("the check of another user was evicted")
+	}
+
+	// The next request with the revoked token goes to Dex.
+	calls := p.calls.Load()
+	if _, err := h.validateCredentials(t.Context(), "user", "jane-old"); err != nil {
+		t.Fatal(err)
+	}
+	if got := p.calls.Load(); got != calls+1 {
+		t.Fatalf("provider calls = %d, want %d", got, calls+1)
 	}
 }
 
@@ -403,6 +685,111 @@ func TestHandler_ServeHTTP(t *testing.T) {
 				tt.assertLastRequest(t, *obs)
 			}
 		})
+	}
+}
+
+// M4: the address of the end client, which Dex counts the failed password grants of, is the one
+// the ingress controller saw: X-Real-IP from ingress-nginx, else the last hop of X-Forwarded-For
+// from a gateway, else the peer.
+func TestClientAddress(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		remoteAddr string
+		headers    http.Header
+		expected   string
+	}{
+		{
+			name:       "x-real-ip of ingress-nginx",
+			remoteAddr: "10.111.0.5:41234",
+			headers:    http.Header{"X-Real-Ip": {"203.0.113.7"}, "X-Forwarded-For": {"198.51.100.1, 203.0.113.7"}},
+			expected:   "203.0.113.7",
+		},
+		{
+			name:       "the last hop of x-forwarded-for of a gateway",
+			remoteAddr: "10.111.0.6:41234",
+			headers:    http.Header{"X-Forwarded-For": {"198.51.100.1", "192.0.2.10, 203.0.113.8"}},
+			expected:   "203.0.113.8",
+		},
+		{
+			name:       "x-real-ip that a gateway passed from the client",
+			remoteAddr: "10.111.0.6:41234",
+			headers:    http.Header{"X-Real-Ip": {"203.0.113.77"}, "X-Forwarded-For": {"198.51.100.9"}},
+			expected:   "198.51.100.9",
+		},
+		{
+			// The gateway drops X-Forwarded-For of a peer it does not trust and passes X-Real-IP.
+			name:       "x-real-ip without x-forwarded-for",
+			remoteAddr: "10.111.0.6:41234",
+			headers:    http.Header{"X-Real-Ip": {"203.0.113.9"}},
+			expected:   "10.111.0.6",
+		},
+		{
+			name:       "x-real-ip that is not an address",
+			remoteAddr: "10.111.0.6:41234",
+			headers:    http.Header{"X-Real-Ip": {"unknown"}, "X-Forwarded-For": {"203.0.113.9"}},
+			expected:   "203.0.113.9",
+		},
+		{
+			name:       "the peer without the headers",
+			remoteAddr: "[2001:db8::1]:41234",
+			expected:   "2001:db8::1",
+		},
+		{
+			name:       "the peer when x-forwarded-for ends with garbage",
+			remoteAddr: "10.111.0.7:41234",
+			headers:    http.Header{"X-Forwarded-For": {"203.0.113.9, garbage"}},
+			expected:   "10.111.0.7",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			req := httptest.NewRequest(http.MethodGet, "/api", nil)
+			req.RemoteAddr = tt.remoteAddr
+			for k, vs := range tt.headers {
+				for _, v := range vs {
+					req.Header.Add(k, v)
+				}
+			}
+			if got := clientAddress(req); got != tt.expected {
+				t.Errorf("clientAddress = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+// The check of the credentials carries the address of the end client to the provider.
+func TestHandler_ServeHTTPPassesTheClientAddress(t *testing.T) {
+	t.Parallel()
+
+	p := &fakeProvider{groups: []string{"devs"}}
+	h := newTestHandler(t, p, 10*time.Second, 2*time.Minute)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }))
+	t.Cleanup(upstream.Close)
+	u, err := url.Parse(upstream.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.reverseProxy = httputil.NewSingleHostReverseProxy(u)
+
+	req := httptest.NewRequest(http.MethodGet, "/api", nil)
+	req.SetBasicAuth("alice", "ok")
+	req.Header.Set("X-Forwarded-For", "203.0.113.7")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	ctx := p.lastCtx.Load()
+	if ctx == nil {
+		t.Fatal("the provider was not called")
+	}
+	if got := provider.ClientAddress(*ctx); got != "203.0.113.7" {
+		t.Errorf("client address = %q, want 203.0.113.7", got)
 	}
 }
 
@@ -703,6 +1090,14 @@ func TestStripIdentityHeaders(t *testing.T) {
 			in: http.Header{
 				"X-Remote-Extra-Scopes":     []string{"cluster-admin"},
 				"X-Remote-Extra-Department": []string{"infra"},
+				"X-Real-Ip":                 []string{"keep"},
+			},
+			want: http.Header{"X-Real-Ip": []string{"keep"}},
+		},
+		{
+			name: "removes the trusted proxy secret of Dex",
+			in: http.Header{
+				"X-Deckhouse-Trusted-Proxy": []string{"secret"},
 				"X-Real-Ip":                 []string{"keep"},
 			},
 			want: http.Header{"X-Real-Ip": []string{"keep"}},

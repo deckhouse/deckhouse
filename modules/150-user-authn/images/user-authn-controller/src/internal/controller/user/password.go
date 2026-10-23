@@ -132,12 +132,29 @@ func (r *Reconciler) reconcilePassword(
 		}
 		live = fromAPI
 	default:
+		// The cache can lag behind a Password created a moment ago; seeding again then would
+		// delete the sessions the user has just started.
+		created, err := r.passwordInAPI(ctx, encodedName)
+		if err != nil {
+			return passwordView{}, err
+		}
+		if created {
+			break
+		}
+		if err := r.seedGeneration(ctx, user, email, groups, now); err != nil {
+			return passwordView{}, err
+		}
 		if err := r.createPassword(ctx, encodedName, user.Name, email, user.Password, groups, now); err != nil {
 			return passwordView{}, err
 		}
 	}
 
 	return live, nil
+}
+
+// passwordInAPI tells whether the API server has the Password name.
+func (r *Reconciler) passwordInAPI(ctx context.Context, name string) (bool, error) {
+	return r.existsInAPI(ctx, controller.PasswordGVK, name)
 }
 
 func (r *Reconciler) passwordFromAPI(ctx context.Context, name, namespace string) (passwordView, error) {

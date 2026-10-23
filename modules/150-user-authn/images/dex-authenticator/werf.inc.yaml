@@ -131,7 +131,7 @@ imageSpec:
       io.deckhouse.fuzz.engine: go
     env:
       FUZZ_WORKDIR: /src
-      FUZZ_PACKAGES: ". ./pkg/middleware ./pkg/sessions/persistence"
+      FUZZ_PACKAGES: ". ./pkg/middleware ./pkg/sessions/persistence ./pkg/deckhouse/revocation"
       CGO_ENABLED: "0"
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

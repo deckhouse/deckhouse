@@ -17,11 +17,13 @@ limitations under the License.
 package provider
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"math/big"
@@ -36,11 +38,20 @@ import (
 	"time"
 )
 
-// fakeDex answers the password grant and userinfo the way Dex does and records the paths it got.
+const testTrustedProxySecret = "test-proxy-secret"
+
+// dexRequest is what a fake Dex saw of one request.
+type dexRequest struct {
+	path         string
+	realIP       string
+	trustedProxy string
+}
+
+// fakeDex answers the password grant and userinfo the way Dex does and records the requests it got.
 type fakeDex struct {
 	*httptest.Server
-	mu    sync.Mutex
-	paths []string
+	mu       sync.Mutex
+	requests []dexRequest
 }
 
 func newFakeDex(t *testing.T) *fakeDex {
@@ -48,7 +59,11 @@ func newFakeDex(t *testing.T) *fakeDex {
 	d := &fakeDex{}
 	d.Server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		d.mu.Lock()
-		d.paths = append(d.paths, r.URL.Path)
+		d.requests = append(d.requests, dexRequest{
+			path:         r.URL.Path,
+			realIP:       r.Header.Get(RealIPHeader),
+			trustedProxy: r.Header.Get(TrustedProxyHeader),
+		})
 		d.mu.Unlock()
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
@@ -58,9 +73,15 @@ func newFakeDex(t *testing.T) *fakeDex {
 				_, _ = w.Write([]byte(`{"error":"invalid_grant"}`))
 				return
 			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"access_token": "at", "token_type": "bearer", "expires_in": 600})
+			payload := base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"CgRqYW5lEgVsb2NhbA","d8_gen":4}`))
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"access_token": "at",
+				"token_type":   "bearer",
+				"expires_in":   600,
+				"id_token":     "eyJhbGciOiJSUzI1NiJ9." + payload + ".c2lnbmF0dXJl",
+			})
 		case "/userinfo":
-			_ = json.NewEncoder(w).Encode(map[string]any{"sub": "jane", "groups": []string{"admins"}})
+			_ = json.NewEncoder(w).Encode(map[string]any{"sub": "CgRqYW5lEgVsb2NhbA", "groups": []string{"admins"}})
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -69,10 +90,18 @@ func newFakeDex(t *testing.T) *fakeDex {
 	return d
 }
 
-func (d *fakeDex) requested() []string {
+func (d *fakeDex) seen() []dexRequest {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	return slices.Clone(d.paths)
+	return slices.Clone(d.requests)
+}
+
+func (d *fakeDex) requested() []string {
+	paths := []string{}
+	for _, req := range d.seen() {
+		paths = append(paths, req.path)
+	}
+	return paths
 }
 
 // caFile writes the certificate of server as a PEM CA bundle.
@@ -132,12 +161,12 @@ func TestNewLDAP_SendsRequestsToTheDexService(t *testing.T) {
 		t.Fatalf("NewLDAP: %v", err)
 	}
 
-	groups, err := p.ValidateCredentials(t.Context(), "jane", "secret")
+	identity, err := p.ValidateCredentials(t.Context(), "jane", "secret")
 	if err != nil {
 		t.Fatalf("ValidateCredentials: %v", err)
 	}
-	if !slices.Equal(groups, []string{"admins"}) {
-		t.Errorf("groups = %v, want [admins]", groups)
+	if identity.Subject != "CgRqYW5lEgVsb2NhbA" || identity.Generation != 4 || !slices.Equal(identity.Groups, []string{"admins"}) {
+		t.Errorf("identity = %+v, want the subject, generation 4 and [admins]", identity)
 	}
 	if got := dex.requested(); !slices.Equal(got, []string{"/token", "/userinfo"}) {
 		t.Errorf("Dex got %v, want [/token /userinfo]", got)
@@ -218,5 +247,98 @@ func TestNewLDAP_RefusesABadCAFile(t *testing.T) {
 				t.Error("NewLDAP accepted the CA file")
 			}
 		})
+	}
+}
+
+// The password grant and the userinfo request go to the Dex Service with the address of the end
+// client, and the secret Dex trusts it on when one is set. A request to any other address carries
+// neither: the secret never leaves the cluster.
+func TestLDAPProvider_TellsDexTheClient(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name             string
+		toService        bool
+		secret           string
+		client           string
+		wantRealIP       string
+		wantTrustedProxy string
+	}{
+		{
+			name:             "client address and secret",
+			toService:        true,
+			secret:           testTrustedProxySecret,
+			client:           "203.0.113.7",
+			wantRealIP:       "203.0.113.7",
+			wantTrustedProxy: testTrustedProxySecret,
+		},
+		{
+			name:       "no secret: the address only, and Dex counts the connection",
+			toService:  true,
+			client:     "203.0.113.7",
+			wantRealIP: "203.0.113.7",
+		},
+		{
+			name:      "no client address",
+			toService: true,
+			secret:    testTrustedProxySecret,
+		},
+		{
+			name:   "no Dex Service: the issuer address, without the client and the secret",
+			secret: testTrustedProxySecret,
+			client: "203.0.113.7",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			dex := newFakeDex(t)
+			cfg := LDAPConfig{
+				URL:                "https://dex.unreachable.invalid/",
+				CAFile:             caFile(t, dex.Server),
+				TrustedProxySecret: tt.secret,
+				ClientID:           "kubernetes",
+				ClientSecret:       "client-secret",
+				Scopes:             []string{"openid", "groups"},
+				GetUserInfo:        true,
+			}
+			if tt.toService {
+				cfg.DexURL = dex.URL
+			} else {
+				cfg.URL = dex.URL
+			}
+			p, err := NewLDAP(t.Context(), cfg)
+			if err != nil {
+				t.Fatalf("NewLDAP: %v", err)
+			}
+
+			ctx := context.Context(t.Context())
+			if tt.client != "" {
+				ctx = WithClientAddress(ctx, tt.client)
+			}
+			if _, err := p.ValidateCredentials(ctx, "jane", "secret"); err != nil {
+				t.Fatalf("ValidateCredentials: %v", err)
+			}
+
+			if got := dex.requested(); !slices.Equal(got, []string{"/token", "/userinfo"}) {
+				t.Errorf("Dex got %v, want [/token /userinfo]", got)
+			}
+			for _, req := range dex.seen() {
+				if req.realIP != tt.wantRealIP || req.trustedProxy != tt.wantTrustedProxy {
+					t.Errorf("%s: X-Real-IP %q, trusted proxy %q; want %q, %q",
+						req.path, req.realIP, req.trustedProxy, tt.wantRealIP, tt.wantTrustedProxy)
+				}
+			}
+		})
+	}
+}
+
+func TestNewLDAP_RefusesADexURLWithoutAHost(t *testing.T) {
+	t.Parallel()
+
+	if _, err := NewLDAP(t.Context(), LDAPConfig{URL: "https://dex.example.com", DexURL: "dex.d8-user-authn"}); err == nil {
+		t.Fatal("NewLDAP accepted a Dex address without a scheme and host")
 	}
 }

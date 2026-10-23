@@ -152,6 +152,17 @@ rules:
   - create
   - update
   - delete
+# AuthSession: Dex browser sessions; ending the sessions of a user deletes them. The controller
+# never creates a session.
+- apiGroups:
+  - dex.coreos.com
+  resources:
+  - authsessions
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
 - apiGroups:
   - ""
   resources:
@@ -199,6 +210,39 @@ rules:
   - secrets
   verbs:
   - get
+# Revocation objects live in this namespace only: the controller writes the revocations of
+# UserOperations and deleted Users, the revocation feed reads them all, and the leader deletes them
+# past retention.
+- apiGroups:
+  - dex.coreos.com
+  resources:
+  - revocations
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+# A revocation deletes the sign-ins of the pair that Dex has not turned into tokens yet: without
+# it, a code issued before a User was deleted would pass once its UserIdentity is gone. Read
+# through the API server only (never cached: the name of a code is the code), in this namespace.
+- apiGroups:
+  - dex.coreos.com
+  resources:
+  - authcodes
+  - authrequests
+  verbs:
+  - list
+  - delete
+# The revocation feed authenticates DexAuthenticators with the secrets of their Dex clients.
+- apiGroups:
+  - dex.coreos.com
+  resources:
+  - oauth2clients
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - coordination.k8s.io
   resources:

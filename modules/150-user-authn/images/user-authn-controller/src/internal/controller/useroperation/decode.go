@@ -33,10 +33,12 @@ const (
 
 	lockForever = "permanent"
 
-	typeResetPassword specType = "ResetPassword"
-	typeReset2FA      specType = "Reset2FA"
-	typeLock          specType = "Lock"
-	typeUnlock        specType = "Unlock"
+	typeResetPassword         specType = "ResetPassword"
+	typeReset2FA              specType = "Reset2FA"
+	typeLock                  specType = "Lock"
+	typeUnlock                specType = "Unlock"
+	typeLogout                specType = "Logout"
+	typeRequirePasswordChange specType = "RequirePasswordChange"
 
 	phaseSucceeded statusPhase = "Succeeded"
 	phaseFailed    statusPhase = "Failed"
@@ -53,6 +55,7 @@ type statusPhase string
 type operation struct {
 	Name              string
 	Namespace         string
+	UID               string // marks the Revocation objects the operation writes, so that a retry finds them
 	CreationTimestamp metav1.Time
 	Annotations       map[string]string
 	Spec              operationSpec
@@ -67,11 +70,21 @@ type operationSpec struct {
 	InitiatorType string           `json:"initiatorType"`
 	ResetPassword *resetPassword   `json:"resetPassword,omitempty"`
 	Lock          *lockSpec        `json:"lock,omitempty"`
+	Logout        *logoutSpec      `json:"logout,omitempty"`
 }
 
+// operationTarget names an account by email; connectorID and userID narrow it down.
 type operationTarget struct {
-	ConnectorID string `json:"connectorID"`
+	ConnectorID string `json:"connectorID,omitempty"`
 	Email       string `json:"email"`
+	UserID      string `json:"userID,omitempty"`
+}
+
+// logoutSpec narrows a Logout down to one browser session, every session but one, or one client.
+// Without any of them the Logout revokes everything of the pair.
+type logoutSpec struct {
+	Session       string `json:"session,omitempty"`
+	ExceptSession string `json:"exceptSession,omitempty"`
 }
 
 type resetPassword struct {
@@ -98,12 +111,11 @@ type passwordView struct {
 }
 
 type sessionView struct {
-	Name            string
-	Namespace       string
-	UserID          string
-	ConnID          string
-	Email           string
-	RefreshTokenIDs []string
+	Name      string
+	Namespace string
+	UserID    string
+	ConnID    string
+	Email     string
 }
 
 // identityView is a Dex UserIdentity as far as the lookup of spec.target needs it.
@@ -111,13 +123,6 @@ type identityView struct {
 	UserID      string
 	ConnectorID string
 	Email       string
-}
-
-type refreshTokenView struct {
-	Name         string
-	Namespace    string
-	ConnectorID  string
-	ClaimsUserID string
 }
 
 type failedError struct {
@@ -136,6 +141,7 @@ func decodeOperation(obj *unstructured.Unstructured) operation {
 	op := operation{
 		Name:              obj.GetName(),
 		Namespace:         obj.GetNamespace(),
+		UID:               string(obj.GetUID()),
 		CreationTimestamp: obj.GetCreationTimestamp(),
 		Annotations:       obj.GetAnnotations(),
 	}
@@ -203,27 +209,6 @@ func decodeSession(obj *unstructured.Unstructured) (sessionView, error) {
 		Email:     firstNestedString(obj.Object, [][]string{{"email"}}),
 	}
 
-	refreshMap, found, err := unstructured.NestedMap(obj.Object, "refresh")
-	if err != nil {
-		return sessionView{}, fmt.Errorf("offlinesessions %s refresh: %w", obj.GetName(), err)
-	}
-	if found && len(refreshMap) > 0 {
-		ids := make([]string, 0, len(refreshMap))
-		for _, v := range refreshMap {
-			m, ok := v.(map[string]any)
-			if !ok {
-				continue
-			}
-			id, ok := m["ID"].(string)
-			if !ok || id == "" {
-				id, ok = m["id"].(string)
-			}
-			if ok && id != "" {
-				ids = append(ids, id)
-			}
-		}
-		snap.RefreshTokenIDs = ids
-	}
 	return snap, nil
 }
 
@@ -237,18 +222,6 @@ func decodeIdentity(obj *unstructured.Unstructured) (identityView, error) {
 		return identityView{}, err
 	}
 	return identityView{UserID: id.UserID(), ConnectorID: id.ConnectorID(), Email: claims.Email}, nil
-}
-
-func decodeRefreshToken(obj *unstructured.Unstructured) (refreshTokenView, error) {
-	if obj == nil {
-		return refreshTokenView{}, fmt.Errorf("refreshtoken object is nil")
-	}
-	return refreshTokenView{
-		Name:         obj.GetName(),
-		Namespace:    obj.GetNamespace(),
-		ConnectorID:  firstNestedString(obj.Object, [][]string{{"connectorID"}}),
-		ClaimsUserID: firstNestedString(obj.Object, [][]string{{"claims", "userID"}, {"claims", "userId"}}),
-	}, nil
 }
 
 func firstNestedString(obj map[string]any, paths [][]string) string {
@@ -282,6 +255,12 @@ func operationLogKV(op operation) []any {
 			"targetConnector", op.Spec.Target.ConnectorID,
 			"targetEmail", op.Spec.Target.Email,
 		)
+		if op.Spec.Target.UserID != "" {
+			fields = append(fields, "targetUserID", op.Spec.Target.UserID)
+		}
+	}
+	if l := op.Spec.Logout; l != nil {
+		fields = append(fields, "logoutSession", l.Session, "logoutExceptSession", l.ExceptSession)
 	}
 	return fields
 }

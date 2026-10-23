@@ -86,20 +86,21 @@ The module consists of the following components:
      * [Group](/modules/user-authn/cr.html#group): A resource that describes user group.
      * [User](/modules/user-authn/cr.html#user): A resource that describes static user.
      * UserAccount: A resource that describes view of Dex Password, OfflineSessions, and UserIdentity objects for the Deckhouse web UI.
-     * [UserOperation](/modules/user-authn/cr.html#useroperation): A resource that describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
+     * [UserOperation](/modules/user-authn/cr.html#useroperation): A resource that describes an operation to be applied to a user (password reset, forced password change, 2FA reset, lock/unlock, logout).
      * DexProviderCheck: A resource that describes a connectivity check for the specific DexProvider. The check verifies that the provider exists, is enabled, Dex is reachable, and the provider endpoint is reachable. It does not perform a full user authentication flow.
 
    * Deletes expired Users (users whose [`status.expireAt`](/modules/user-authn/cr.html#user-v1-status-expireat) field is in the past).
    * Checks periodically an availability of configured external authentication providers (using DexProviderCheck custom resources).
    * Finds out conflicting TLS-certificates [in external LDAP provider configuration settings](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap) and exports the corresponding metric.
+   * Revokes the sessions of a user on a lock, a password or 2FA reset, a logout and a user deletion: raises the generation of the user's Dex account, writes a Dex Revocation object, and deletes the user's Dex AuthSession and RefreshToken objects.
+   * Serves the revocations to dex-authenticator over HTTPS (the `revocation-feed` Service), so that dex-authenticator ends the revoked sessions within seconds.
 
    User-authn-controller uses `dex.coreos.com` API group custom resources (Password, OfflineSessions, UserIdentity, and RefreshToken used by Dex as a storage) as a backend to manage module custom resources.
 
-1. **User-api**: A component that implements a self-service for users to reset a password for their user account. The service is available to the user only via the DKP web interface and does not require platform administrator rights. The password can only be reset for the current user. User-api validates the incoming requests tokens in dex component. To perform this operation, the component creates UserOperation custom resource of the `ResetPassword` type, which is processed by the user-authn-controller component.
+1. **User-api**: A component that implements self-service operations for the user who is signed in to the DKP web interface: signing out on all devices and changing the password of a local account. It accepts only the ID tokens of the DKP web interface and does not require platform administrator rights. For each operation, the component creates a UserOperation custom resource of the `Logout` or `RequirePasswordChange` type, which is processed by the user-authn-controller component. A ValidatingAdmissionPolicy allows user-api to create only these operations.
 
    It consists of the following containers:
 
-   * **self-signed-generator**: Init container that generates a self-signed certificate when the pod starts.
    * **user-api**: Main container of the service.
 
 1. **Basic-auth-proxy**: An optional component consisting of a single **proxy** container, which is launched when basic authentication is enabled in the settings of one of an external providers. When connecting to the Kubernetes API, the basic-auth-proxy component performs basic user authentication with external providers via dex, caches credentials validation results, and proxies authenticated requests to the Kubernetes API.

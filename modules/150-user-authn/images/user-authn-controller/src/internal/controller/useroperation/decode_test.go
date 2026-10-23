@@ -36,7 +36,7 @@ func TestDecodeOperationMissingSpec(t *testing.T) {
 	}
 }
 
-func TestDecodePasswordAndRefreshNil(t *testing.T) {
+func TestDecodePasswordAndSessionNil(t *testing.T) {
 	t.Parallel()
 
 	if _, err := decodePassword(nil); err == nil {
@@ -45,12 +45,35 @@ func TestDecodePasswordAndRefreshNil(t *testing.T) {
 	if _, err := decodeSession(nil); err == nil {
 		t.Fatal("nil session: want error")
 	}
-	if _, err := decodeRefreshToken(nil); err == nil {
-		t.Fatal("nil refresh token: want error")
+}
+
+func TestDecodeOperationLogout(t *testing.T) {
+	t.Parallel()
+
+	op := decodeOperation(&unstructured.Unstructured{Object: map[string]any{
+		"metadata": map[string]any{"name": "op-1", "uid": "0b7e7f0e"},
+		"spec": map[string]any{
+			"type":          "Logout",
+			"initiatorType": "self",
+			"target":        map[string]any{"email": "jane@example.org", "connectorID": "corp-ldap", "userID": "cn=jane"},
+			"logout":        map[string]any{"session": "sid-a"},
+		},
+	}})
+	if op.DecodeErr != nil {
+		t.Fatalf("DecodeErr = %v", op.DecodeErr)
+	}
+	if op.UID != "0b7e7f0e" || op.Spec.Type != typeLogout {
+		t.Errorf("operation = %+v", op)
+	}
+	if op.Spec.Target == nil || op.Spec.Target.UserID != "cn=jane" || op.Spec.Target.ConnectorID != "corp-ldap" {
+		t.Errorf("target = %+v", op.Spec.Target)
+	}
+	if op.Spec.Logout == nil || op.Spec.Logout.Session != "sid-a" || op.Spec.Logout.ExceptSession != "" {
+		t.Errorf("logout = %+v", op.Spec.Logout)
 	}
 }
 
-func TestDecodeSessionRefreshIDs(t *testing.T) {
+func TestDecodeSessionFields(t *testing.T) {
 	t.Parallel()
 
 	sess, err := decodeSession(&unstructured.Unstructured{Object: map[string]any{
@@ -58,47 +81,12 @@ func TestDecodeSessionRefreshIDs(t *testing.T) {
 		"userID":   "jane",
 		"connID":   "ldap",
 		"email":    "jane@example.com",
-		"refresh": map[string]any{
-			"tok":   map[string]any{"ID": "id-upper", "token": "secret"},
-			"tok2":  map[string]any{"id": "id-lower"},
-			"bad":   "skip-me",
-			"empty": map[string]any{"token": "x"},
-		},
 	}})
 	if err != nil {
 		t.Fatalf("decodeSession: %v", err)
 	}
-	if sess.UserID != "jane" || sess.ConnID != "ldap" {
+	if sess.UserID != "jane" || sess.ConnID != "ldap" || sess.Email != "jane@example.com" {
 		t.Errorf("session = %+v", sess)
-	}
-	want := map[string]struct{}{"id-upper": {}, "id-lower": {}}
-	if len(sess.RefreshTokenIDs) != 2 {
-		t.Fatalf("refresh ids = %v, want 2", sess.RefreshTokenIDs)
-	}
-	for _, id := range sess.RefreshTokenIDs {
-		if _, ok := want[id]; !ok {
-			t.Errorf("unexpected id %q", id)
-		}
-	}
-}
-
-func TestDecodeRefreshTokenClaims(t *testing.T) {
-	t.Parallel()
-
-	rt, err := decodeRefreshToken(&unstructured.Unstructured{Object: map[string]any{
-		"metadata":    map[string]any{"name": "rt"},
-		"connectorID": "local",
-		"claims": map[string]any{
-			"userId":             "uid",
-			"username":           "jane",
-			"preferred_username": "jane-pref",
-		},
-	}})
-	if err != nil {
-		t.Fatalf("decodeRefreshToken: %v", err)
-	}
-	if rt.ConnectorID != "local" || rt.ClaimsUserID != "uid" {
-		t.Errorf("refresh token = %+v", rt)
 	}
 }
 

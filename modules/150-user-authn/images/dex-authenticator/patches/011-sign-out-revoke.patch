@@ -1,0 +1,417 @@
+diff --git a/deckhouse_sign_out_revoke_test.go b/deckhouse_sign_out_revoke_test.go
+new file mode 100644
+index 00000000..a178b1ad
+--- /dev/null
++++ b/deckhouse_sign_out_revoke_test.go
+@@ -0,0 +1,288 @@
++package main
++
++import (
++	"bytes"
++	"encoding/base64"
++	"encoding/pem"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"os"
++	"path/filepath"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/sessions"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
++	"github.com/onsi/ginkgo/v2"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++const signOutRefresh = "ChkzdzRsMnpnb2tnc29odmpucXpqcnY3bG16EhlwYnRpaWNyNmtxcndybHF2M3ZuNmgzcGRy"
++
++// revokeEndpoint is a fake token revocation endpoint of dex that records the requests it gets.
++type revokeEndpoint struct {
++	mu       sync.Mutex
++	requests []*http.Request
++	forms    []url.Values
++}
++
++func (e *revokeEndpoint) handler(answer func(http.ResponseWriter, *http.Request)) http.Handler {
++	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		if err := r.ParseForm(); err != nil {
++			http.Error(w, err.Error(), http.StatusBadRequest)
++			return
++		}
++		e.mu.Lock()
++		e.requests = append(e.requests, r)
++		e.forms = append(e.forms, r.PostForm)
++		e.mu.Unlock()
++		answer(w, r)
++	})
++}
++
++func (e *revokeEndpoint) calls() int {
++	e.mu.Lock()
++	defer e.mu.Unlock()
++
++	return len(e.requests)
++}
++
++// captureLogs returns the buffers of the info and error logs of the test.
++func captureLogs(t *testing.T) (*bytes.Buffer, *bytes.Buffer) {
++	t.Helper()
++
++	var output, errOutput bytes.Buffer
++	logger.SetOutput(&output)
++	logger.SetErrOutput(&errOutput)
++	t.Cleanup(func() {
++		logger.SetOutput(ginkgo.GinkgoWriter)
++		logger.SetErrOutput(ginkgo.GinkgoWriter)
++	})
++
++	return &output, &errOutput
++}
++
++func answerOK(w http.ResponseWriter, _ *http.Request) {
++	w.Header().Set("Cache-Control", "no-store")
++	w.WriteHeader(http.StatusOK)
++}
++
++// signOut signs a session out through the proxy and returns the response.
++func signOut(t *testing.T, session *sessions.SessionState, target string, modifiers ...OptionsModifier) *httptest.ResponseRecorder {
++	t.Helper()
++
++	test, err := NewProcessCookieTestWithOptionsModifiers(modifiers...)
++	require.NoError(t, err)
++	// NewProcessCookieTest replaces the provider with one without credentials.
++	test.proxy.provider.Data().ClientID = clientID
++	test.proxy.provider.Data().ClientSecret = clientSecret
++	test.req = httptest.NewRequest(http.MethodGet, "/oauth2/sign_out"+target, nil)
++	if session != nil {
++		created := time.Now()
++		session.CreatedAt = &created
++		require.NoError(t, test.SaveSession(session))
++	}
++
++	test.rw = httptest.NewRecorder()
++	test.proxy.ServeHTTP(test.rw, test.req)
++	return test.rw
++}
++
++func withRevocationURL(revocationURL string) OptionsModifier {
++	return func(opts *options.Options) {
++		opts.RevocationURL = revocationURL
++		opts.WhitelistDomains = []string{"app.example.com"}
++	}
++}
++
++// assertSignedOut checks that the sign-out redirected and cleared the session cookie.
++func assertSignedOut(t *testing.T, rw *httptest.ResponseRecorder) {
++	t.Helper()
++
++	assert.Equal(t, http.StatusFound, rw.Code)
++	cookies := rw.Result().Cookies()
++	require.NotEmpty(t, cookies)
++	for _, cookie := range cookies {
++		assert.Empty(t, cookie.Value, "the session cookie is cleared")
++	}
++}
++
++func TestSignOutRevokesTheRefreshToken(t *testing.T) {
++	endpoint := &revokeEndpoint{}
++	server := httptest.NewServer(endpoint.handler(answerOK))
++	t.Cleanup(server.Close)
++	output, errOutput := captureLogs(t)
++
++	// The address of the revocation comes from the configuration, whatever the sign-out redirect.
++	rw := signOut(t,
++		&sessions.SessionState{Email: "jane.doe@example.com", IDToken: "id-token", RefreshToken: signOutRefresh},
++		"?rd="+url.QueryEscape("https://app.example.com/token/revoke"),
++		withRevocationURL(server.URL+"/token/revoke"),
++	)
++
++	assertSignedOut(t, rw)
++	assert.Equal(t, "https://app.example.com/token/revoke", rw.Header().Get("Location"))
++	require.Equal(t, 1, endpoint.calls())
++	request := endpoint.requests[0]
++	assert.Equal(t, http.MethodPost, request.Method)
++	assert.Equal(t, "/token/revoke", request.URL.Path)
++	assert.Equal(t, "application/x-www-form-urlencoded", request.Header.Get("Content-Type"))
++	assert.Equal(t, "Basic "+base64.StdEncoding.EncodeToString([]byte(url.QueryEscape(clientID)+":"+url.QueryEscape(clientSecret))),
++		request.Header.Get("Authorization"))
++	assert.Equal(t, url.Values{"token": {signOutRefresh}, "token_type_hint": {"refresh_token"}}, endpoint.forms[0])
++	assert.Empty(t, errOutput.String())
++	assert.NotContains(t, output.String(), signOutRefresh)
++}
++
++func TestSignOutWithoutRevocation(t *testing.T) {
++	tests := []struct {
++		name          string
++		session       *sessions.SessionState
++		revocationURL bool
++	}{
++		{
++			name:          "no session",
++			revocationURL: true,
++		},
++		{
++			name:          "session without a refresh token",
++			session:       &sessions.SessionState{Email: "jane.doe@example.com", IDToken: "id-token"},
++			revocationURL: true,
++		},
++		{
++			name:    "no revocation url",
++			session: &sessions.SessionState{Email: "jane.doe@example.com", RefreshToken: signOutRefresh},
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			endpoint := &revokeEndpoint{}
++			server := httptest.NewServer(endpoint.handler(answerOK))
++			t.Cleanup(server.Close)
++			revocationURL := ""
++			if tt.revocationURL {
++				revocationURL = server.URL + "/token/revoke"
++			}
++
++			rw := signOut(t, tt.session, "", withRevocationURL(revocationURL))
++
++			assert.Equal(t, http.StatusFound, rw.Code)
++			assert.Zero(t, endpoint.calls())
++		})
++	}
++}
++
++// TestSignOutWhenTheRevocationFails checks that any failure of the revocation is a warning and the
++// session is cleared anyway.
++func TestSignOutWhenTheRevocationFails(t *testing.T) {
++	tests := []struct {
++		name        string
++		answer      func(http.ResponseWriter, *http.Request)
++		closed      bool
++		expectedLog string
++	}{
++		{
++			name: "client refused",
++			answer: func(w http.ResponseWriter, _ *http.Request) {
++				w.Header().Set("Content-Type", "application/json")
++				w.WriteHeader(http.StatusUnauthorized)
++				_, _ = w.Write([]byte(`{"error":"invalid_client","error_description":"Invalid client credentials."}`))
++			},
++			expectedLog: `the provider answered 401 "invalid_client"`,
++		},
++		{
++			name: "provider unavailable",
++			answer: func(w http.ResponseWriter, _ *http.Request) {
++				w.WriteHeader(http.StatusServiceUnavailable)
++			},
++			expectedLog: `the provider answered 503 ""`,
++		},
++		{
++			name:        "provider unreachable",
++			answer:      answerOK,
++			closed:      true,
++			expectedLog: "error performing request",
++		},
++		{
++			name: "provider too slow",
++			answer: func(_ http.ResponseWriter, r *http.Request) {
++				<-r.Context().Done()
++			},
++			expectedLog: "context deadline exceeded",
++		},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			endpoint := &revokeEndpoint{}
++			server := httptest.NewServer(endpoint.handler(tt.answer))
++			t.Cleanup(server.Close)
++			if tt.closed {
++				server.Close()
++			}
++			output, errOutput := captureLogs(t)
++
++			start := time.Now()
++			rw := signOut(t,
++				&sessions.SessionState{Email: "jane.doe@example.com", RefreshToken: signOutRefresh},
++				"",
++				withRevocationURL(server.URL+"/token/revoke"),
++			)
++
++			assertSignedOut(t, rw)
++			assert.Less(t, time.Since(start), revocationTimeout+2*time.Second)
++			assert.Contains(t, output.String(), "WARNING: Could not revoke the refresh token of the session")
++			assert.Contains(t, output.String(), tt.expectedLog)
++			assert.Empty(t, errOutput.String())
++			assert.NotContains(t, output.String(), signOutRefresh)
++		})
++	}
++}
++
++// TestSignOutRevocationTrustsTheProviderCA checks that the revocation goes over the TLS of the
++// provider: --provider-ca-file is trusted, the system roots are not.
++func TestSignOutRevocationTrustsTheProviderCA(t *testing.T) {
++	transport := requests.DefaultTransport.(*http.Transport)
++	tlsConfig := transport.TLSClientConfig
++	t.Cleanup(func() { transport.TLSClientConfig = tlsConfig })
++
++	endpoint := &revokeEndpoint{}
++	server := httptest.NewTLSServer(endpoint.handler(answerOK))
++	t.Cleanup(server.Close)
++	caFile := filepath.Join(t.TempDir(), "ca.crt")
++	require.NoError(t, os.WriteFile(caFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw}), 0o600))
++
++	t.Run("provider ca", func(t *testing.T) {
++		rw := signOut(t,
++			&sessions.SessionState{Email: "jane.doe@example.com", RefreshToken: signOutRefresh},
++			"",
++			withRevocationURL(server.URL+"/token/revoke"),
++			func(opts *options.Options) { opts.Providers[0].CAFiles = []string{caFile} },
++		)
++
++		assertSignedOut(t, rw)
++		assert.Equal(t, 1, endpoint.calls())
++	})
++
++	t.Run("another ca", func(t *testing.T) {
++		transport.TLSClientConfig = tlsConfig
++		transport.CloseIdleConnections()
++		output, _ := captureLogs(t)
++
++		rw := signOut(t,
++			&sessions.SessionState{Email: "jane.doe@example.com", RefreshToken: signOutRefresh},
++			"",
++			withRevocationURL(server.URL+"/token/revoke"),
++		)
++
++		assertSignedOut(t, rw)
++		assert.Equal(t, 1, endpoint.calls(), "the server never gets the token")
++		assert.Contains(t, output.String(), "certificate signed by unknown authority")
++	})
++}
+diff --git a/oauthproxy.go b/oauthproxy.go
+index f402d13b..d085c931 100644
+--- a/oauthproxy.go
++++ b/oauthproxy.go
+@@ -36,6 +36,7 @@ import (
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/ip"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/middleware"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests"
+ 	requestutil "github.com/oauth2-proxy/oauth2-proxy/v7/pkg/requests/util"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/upstream"
+@@ -111,6 +112,7 @@ type OAuthProxy struct {
+ 	allowQuerySemicolons bool
+ 	realClientIPParser   ipapi.RealClientIPParser
+ 	trustedIPs           *ip.NetSet
++	revocationURL        string
+ 
+ 	sessionChain      alice.Chain
+ 	headersChain      alice.Chain
+@@ -252,6 +254,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
+ 		forceJSONErrors:      opts.ForceJSONErrors,
+ 		allowQuerySemicolons: opts.AllowQuerySemicolons,
+ 		trustedIPs:           trustedIPs,
++		revocationURL:        opts.RevocationURL,
+ 
+ 		basicAuthValidator: basicAuthValidator,
+ 		basicAuthGroups:    opts.HtpasswdUserGroups,
+@@ -881,6 +884,8 @@ func (p *OAuthProxy) SignOut(rw http.ResponseWriter, req *http.Request) {
+ 		logger.PrintAuthf(scope.Session.Email, req, logger.AuthSuccess, "User signed out")
+ 	}
+ 
++	p.revokeRefreshToken(req)
++
+ 	err = p.ClearSessionCookie(rw, req)
+ 	if err != nil {
+ 		logger.Errorf("Error clearing session cookie: %v", err)
+@@ -914,6 +919,63 @@ func (p *OAuthProxy) replaceIDTokenPlaceholder(rw http.ResponseWriter, req *http
+ 	return fallback
+ }
+ 
++// revocationTimeout bounds the call to the token revocation endpoint on sign-out.
++const revocationTimeout = 3 * time.Second
++
++// revokeRefreshToken revokes the refresh token of the session at the token revocation endpoint of the
++// provider (RFC 7009, --revocation-url) before the session is cleared: a copy of the session cookie
++// carries the refresh token and would restore the session with it. A failure is logged as a warning and
++// the sign-out goes on, the session is cleared anyway.
++func (p *OAuthProxy) revokeRefreshToken(req *http.Request) {
++	if p.revocationURL == "" {
++		return
++	}
++	scope := middlewareapi.GetRequestScope(req)
++	if scope == nil || scope.Session == nil || scope.Session.RefreshToken == "" {
++		return
++	}
++
++	providerData := p.provider.Data()
++	clientSecret, err := providerData.GetClientSecret()
++	if err != nil {
++		logger.Printf("WARNING: Could not revoke the refresh token of the session: %v", err)
++		return
++	}
++
++	// The revocation outlives a browser that goes away after the sign-out request.
++	ctx, cancel := context.WithTimeout(context.WithoutCancel(req.Context()), revocationTimeout)
++	defer cancel()
++
++	// The client credentials are URL-encoded as for the token endpoint (RFC 6749, section 2.3.1).
++	credentials := url.QueryEscape(providerData.ClientID) + ":" + url.QueryEscape(clientSecret)
++	form := url.Values{
++		"token":           {scope.Session.RefreshToken},
++		"token_type_hint": {"refresh_token"},
++	}
++	result := requests.New(p.revocationURL).
++		WithContext(ctx).
++		WithMethod(http.MethodPost).
++		WithBody(strings.NewReader(form.Encode())).
++		SetHeader("Content-Type", "application/x-www-form-urlencoded").
++		SetHeader("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(credentials))).
++		Do()
++	if err := result.Error(); err != nil {
++		logger.Printf("WARNING: Could not revoke the refresh token of the session: %v", err)
++		return
++	}
++	if result.StatusCode() != http.StatusOK {
++		// The OAuth 2.0 error code of the answer, if it has one; its description may quote the request.
++		var oauthError struct {
++			Error string `json:"error"`
++		}
++		code := ""
++		if json.Unmarshal(result.Body(), &oauthError) == nil {
++			code = oauthError.Error
++		}
++		logger.Printf("WARNING: Could not revoke the refresh token of the session: the provider answered %d %q", result.StatusCode(), code)
++	}
++}
++
+ func (p *OAuthProxy) backendLogout(rw http.ResponseWriter, req *http.Request) {
+ 	// Look the session up only for a backend logout: a sign-out without a session is not an error.
+ 	providerData := p.provider.Data()
+diff --git a/pkg/apis/options/options.go b/pkg/apis/options/options.go
+index fe3b4823..75f8b3dc 100644
+--- a/pkg/apis/options/options.go
++++ b/pkg/apis/options/options.go
+@@ -73,6 +73,9 @@ type Options struct {
+ 	RevocationFeedURL    string `flag:"revocation-feed-url" cfg:"revocation_feed_url"`
+ 	RevocationFeedCAFile string `flag:"revocation-feed-ca-file" cfg:"revocation_feed_ca_file"`
+ 
++	// The token revocation endpoint (RFC 7009) of the provider, called on sign-out.
++	RevocationURL string `flag:"revocation-url" cfg:"revocation_url"`
++
+ 	// This is used for backwards compatibility for basic auth users
+ 	LegacyPreferEmailToUser bool `cfg:",internal"`
+ 
+@@ -169,6 +172,7 @@ func NewFlagSet() *pflag.FlagSet {
+ 	flagSet.Bool("gcp-healthchecks", false, "Enable GCP/GKE healthcheck endpoints")
+ 	flagSet.String("revocation-feed-url", "", "https URL of the revocation feed of the user-authn module of Deckhouse: sessions it revokes are refused. Disabled when empty")
+ 	flagSet.String("revocation-feed-ca-file", "", "path to the CA certificate the revocation feed is checked against instead of the system roots")
++	flagSet.String("revocation-url", "", "token revocation endpoint (RFC 7009) of the provider: sign-out revokes the refresh token of the session there. Disabled when empty")
+ 
+ 	flagSet.AddFlagSet(cookieFlagSet())
+ 	flagSet.AddFlagSet(loggingFlagSet())

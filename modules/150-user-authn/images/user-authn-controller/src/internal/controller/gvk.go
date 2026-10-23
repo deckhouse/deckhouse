@@ -41,6 +41,42 @@ var (
 		Version: "v1",
 		Kind:    "UserIdentity",
 	}
+	// AuthSessionGVK is a Dex v2.46 browser session.
+	AuthSessionGVK = schema.GroupVersionKind{
+		Group:   "dex.coreos.com",
+		Version: "v1",
+		Kind:    "AuthSession",
+	}
+	// AuthCodeGVK is a Dex authorization code: a sign-in a client has not exchanged for tokens
+	// yet. The controller deletes the codes of a revoked pair and never caches them: the object
+	// name is the code.
+	AuthCodeGVK = schema.GroupVersionKind{
+		Group:   "dex.coreos.com",
+		Version: "v1",
+		Kind:    "AuthCode",
+	}
+	// AuthRequestGVK is a Dex auth request: a sign-in in progress. The controller deletes the
+	// requests of a revoked pair and never caches them.
+	AuthRequestGVK = schema.GroupVersionKind{
+		Group:   "dex.coreos.com",
+		Version: "v1",
+		Kind:    "AuthRequest",
+	}
+	// RevocationGVK is the record of a revocation: the generation of a pair that was revoked, an
+	// ended browser session, or a revoked grant. Dex and the controller write it; the revocation
+	// feed, the user-authz webhook, and basic-auth-proxy read it.
+	RevocationGVK = schema.GroupVersionKind{
+		Group:   "dex.coreos.com",
+		Version: "v1",
+		Kind:    "Revocation",
+	}
+	// OAuth2ClientGVK is a Dex client. The revocation feed authenticates the clients of
+	// DexAuthenticators with it.
+	OAuth2ClientGVK = schema.GroupVersionKind{
+		Group:   "dex.coreos.com",
+		Version: "v1",
+		Kind:    "OAuth2Client",
+	}
 	UserGVK = schema.GroupVersionKind{
 		Group:   "deckhouse.io",
 		Version: "v1",

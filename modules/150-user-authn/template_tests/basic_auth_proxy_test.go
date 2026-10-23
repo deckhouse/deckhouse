@@ -148,7 +148,9 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 		})
 	}
 
-	Context("With an LDAP provider without scopes", func() {
+	// A pod cannot always reach the public address of Dex (no hairpin NAT), and the proxy crashed
+	// on start when it could not: requests go to the Dex Service, and its certificate is verified.
+	Context("With an LDAP provider", func() {
 		BeforeEach(func() {
 			hec.ValuesSetFromYaml("userAuthn.internal.providers", ldapProvider)
 			hec.HelmRender()
@@ -162,15 +164,6 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 				Field(`spec.template.spec.containers.#(name=="proxy").args`).AsStringSlice()
 			Expect(args).To(ContainElements("--ldap-scope=openid", "--ldap-scope=groups", "--ldap-scope=federated:id"))
 			Expect(args).ToNot(ContainElement("--ldap-scope=offline_access"))
-		})
-	})
-
-	// A pod cannot always reach the public address of Dex (no hairpin NAT), and the proxy crashed
-	// on start when it could not: requests go to the Dex Service, and its certificate is verified.
-	Context("With an LDAP provider", func() {
-		BeforeEach(func() {
-			hec.ValuesSetFromYaml("userAuthn.internal.providers", ldapProvider)
-			hec.HelmRender()
 		})
 
 		It("Should send the requests to the Dex Service and verify its certificate with the Dex CA", func() {
@@ -236,6 +229,129 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 			Expect(spe.Field("spec.volumes.hostPath.allowedValues.#.path").String()).To(MatchJSON(`["/etc/kubernetes/pki/front-proxy-ca.crt","/etc/kubernetes/pki/front-proxy-ca.key"]`))
 			Expect(spe.Field("spec.volumes.hostPath.allowedValues.#.readOnly").String()).To(MatchJSON(`[true,true]`))
 			Expect(spe.Field("spec.network").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("With an LDAP provider", func() {
+		BeforeEach(func() {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", ldapProvider)
+			hec.HelmRender()
+		})
+
+		It("Should let the proxy follow the revocations in its namespace", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			role := hec.KubernetesResource("Role", "d8-user-authn", "basic-auth-proxy")
+			Expect(role.Exists()).To(BeTrue())
+			Expect(role.Field("rules").String()).To(MatchJSON(`[{
+				"apiGroups": ["dex.coreos.com"],
+				"resources": ["revocations"],
+				"verbs": ["get", "list", "watch"]
+			}]`))
+
+			roleBinding := hec.KubernetesResource("RoleBinding", "d8-user-authn", "basic-auth-proxy")
+			Expect(roleBinding.Exists()).To(BeTrue())
+			Expect(roleBinding.Field("roleRef.kind").String()).To(Equal("Role"))
+			Expect(roleBinding.Field("roleRef.name").String()).To(Equal("basic-auth-proxy"))
+			Expect(roleBinding.Field("subjects").String()).To(MatchJSON(`[{
+				"kind": "ServiceAccount",
+				"name": "basic-auth-proxy",
+				"namespace": "d8-user-authn"
+			}]`))
+
+			// The informer authenticates with the token of the service account.
+			deployment := hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy")
+			Expect(deployment.Field("spec.template.spec.serviceAccountName").String()).To(Equal("basic-auth-proxy"))
+			Expect(deployment.Field("spec.template.spec.automountServiceAccountToken").Bool()).To(BeTrue())
+		})
+	})
+
+	// M4: the proxy sends the password grant to Dex inside the cluster with the address of the
+	// end client and the secret Dex trusts it on. The secret is in the Secret of the proxy and in
+	// its environment, never in its arguments.
+	Context("With an LDAP provider and the trusted proxy secret of Dex", func() {
+		BeforeEach(func() {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", ldapProvider)
+			hec.ValuesSet("userAuthn.internal.dexTrustedProxySecret", "trusted-proxy-secret")
+			hec.HelmRender()
+		})
+
+		It("Should give the proxy the in-cluster address of Dex and the secret", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			secret := hec.KubernetesResource("Secret", "d8-user-authn", "basic-auth-cert")
+			Expect(secret.Exists()).To(BeTrue())
+			// base64 of trusted-proxy-secret
+			Expect(secret.Field("data.dex-trusted-proxy-secret").String()).To(Equal("dHJ1c3RlZC1wcm94eS1zZWNyZXQ="))
+
+			proxy := hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy")
+			const container = `spec.template.spec.containers.#(name=="proxy")`
+			args := proxy.Field(container + ".args").AsStringSlice()
+			Expect(args).To(ContainElement("--ldap-dex-url=https://dex.d8-user-authn/"))
+			Expect(proxy.Field(container + ".args").String()).ToNot(ContainSubstring("trusted-proxy-secret"))
+			Expect(proxy.Field(container + `.env.#(name=="DEX_TRUSTED_PROXY_SECRET")`).String()).To(MatchJSON(`{
+				"name": "DEX_TRUSTED_PROXY_SECRET",
+				"valueFrom": {"secretKeyRef": {"name": "basic-auth-cert", "key": "dex-trusted-proxy-secret", "optional": true}}
+			}`))
+		})
+	})
+
+	Context("With an LDAP provider without the trusted proxy secret of Dex", func() {
+		BeforeEach(func() {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", ldapProvider)
+			hec.HelmRender()
+		})
+
+		It("Should leave the secret out", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			secret := hec.KubernetesResource("Secret", "d8-user-authn", "basic-auth-cert")
+			Expect(secret.Exists()).To(BeTrue())
+			Expect(secret.Field("data.dex-trusted-proxy-secret").Exists()).To(BeFalse())
+			// The variable is optional: the proxy starts and sends no secret.
+			proxy := hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy")
+			Expect(proxy.Field(`spec.template.spec.containers.#(name=="proxy").env.#(name=="DEX_TRUSTED_PROXY_SECRET").valueFrom.secretKeyRef.optional`).Bool()).To(BeTrue())
+		})
+	})
+
+	// Crowd and OIDC check passwords past Dex: a revocation does not apply to them, and the proxy
+	// does not read revocations.
+	for _, c := range []struct {
+		name     string
+		provider string
+	}{
+		{"Crowd", crowdProvider},
+		{"OIDC", oidcProvider},
+	} {
+		Context("With a "+c.name+" provider", func() {
+			BeforeEach(func() {
+				hec.ValuesSetFromYaml("userAuthn.internal.providers", c.provider)
+				hec.HelmRender()
+			})
+
+			It("Should not let the proxy read revocations", func() {
+				Expect(hec.RenderError).ToNot(HaveOccurred())
+				proxy := hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy")
+				Expect(proxy.Exists()).To(BeTrue())
+				// Nothing of Dex for a provider that does not go through Dex.
+				Expect(proxy.Field(`spec.template.spec.containers.#(name=="proxy").env.#(name=="DEX_TRUSTED_PROXY_SECRET")`).Exists()).To(BeFalse())
+				Expect(proxy.Field(`spec.template.spec.containers.#(name=="proxy").args`).String()).ToNot(ContainSubstring("--ldap-dex-url"))
+				Expect(hec.KubernetesResource("Role", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeFalse())
+				Expect(hec.KubernetesResource("RoleBinding", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeFalse())
+			})
+		})
+	}
+
+	Context("With an LDAP provider without basic auth", func() {
+		BeforeEach(func() {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", ldapProvider)
+			hec.ValuesSet("userAuthn.internal.providers.0.ldap.enableBasicAuth", false)
+			hec.HelmRender()
+		})
+
+		It("Should not let the proxy read revocations", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(hec.KubernetesResource("Role", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeFalse())
 		})
 	})
 

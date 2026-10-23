@@ -24,10 +24,8 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -367,20 +365,15 @@ func TestUserOperation_CopyDoesNotUndoTheOperation(t *testing.T) {
 	t.Parallel()
 
 	sessionName := naming.OfflineTokenName("admin", naming.LocalConnectorID)
-	c := fake.NewClientBuilder().
-		WithScheme(runtime.NewScheme()).
-		WithRESTMapper(newTestMapper()).
-		WithStatusSubresource(controller.Object(controller.UserOperationGVK)).
-		WithIndex(controller.Object(controller.PasswordGVK), controller.PasswordPairField, controller.PasswordPair).
-		WithObjects(
-			passwordObj("admin", nil),
-			sessionObj(sessionName, map[string]any{
-				"userID": "admin", "connID": naming.LocalConnectorID, "email": "admin@yourcompany.com",
-				"totp": totpSecret, "totpConfirmed": true,
-				"metadata": map[string]any{"name": sessionName, "namespace": naming.DexNamespace, "uid": "session-1"},
-			}),
-			userOperationObj("reset", operationTime, map[string]any{"type": "Reset2FA", "initiatorType": "Admin", "user": "admin"}),
-		).
+	c := newFakeClientBuilder(
+		passwordObj("admin", nil),
+		sessionObj(sessionName, map[string]any{
+			"userID": "admin", "connID": naming.LocalConnectorID, "email": "admin@yourcompany.com",
+			"totp": totpSecret, "totpConfirmed": true,
+			"metadata": map[string]any{"name": sessionName, "namespace": naming.DexNamespace, "uid": "session-1"},
+		}),
+		userOperationObj("reset", operationTime, map[string]any{"type": "Reset2FA", "initiatorType": "Admin", "user": "admin"}),
+	).
 		Build()
 	ops := New(c, c, logr.Discard(), func() time.Time { return operationTime })
 	migration := identitymigration.New(c, c, logr.Discard(), func() time.Time { return operationTime })
@@ -460,20 +453,15 @@ func TestUserOperation_CopyAndOperationInEitherOrder(t *testing.T) {
 				if tt.oldLock {
 					password = passwordObj("admin", map[string]any{"lockedUntil": oldLock.Format(time.RFC3339)})
 				}
-				c := fake.NewClientBuilder().
-					WithScheme(runtime.NewScheme()).
-					WithRESTMapper(newTestMapper()).
-					WithStatusSubresource(controller.Object(controller.UserOperationGVK)).
-					WithIndex(controller.Object(controller.PasswordGVK), controller.PasswordPairField, controller.PasswordPair).
-					WithObjects(
-						password,
-						sessionObj(sessionName, map[string]any{
-							"userID": "admin", "connID": naming.LocalConnectorID, "email": "admin@yourcompany.com",
-							"totp": totpSecret, "totpConfirmed": true,
-							"metadata": map[string]any{"name": sessionName, "namespace": naming.DexNamespace, "uid": "session-1"},
-						}),
-						userOperationObj("op", operationTime, tt.spec),
-					).
+				c := newFakeClientBuilder(
+					password,
+					sessionObj(sessionName, map[string]any{
+						"userID": "admin", "connID": naming.LocalConnectorID, "email": "admin@yourcompany.com",
+						"totp": totpSecret, "totpConfirmed": true,
+						"metadata": map[string]any{"name": sessionName, "namespace": naming.DexNamespace, "uid": "session-1"},
+					}),
+					userOperationObj("op", operationTime, tt.spec),
+				).
 					Build()
 				ops := New(c, c, logr.Discard(), func() time.Time { return operationTime })
 				migration := identitymigration.New(c, c, logr.Discard(), func() time.Time { return operationTime })
@@ -534,14 +522,7 @@ func TestUserOperation_CopyAndOperationInEitherOrder(t *testing.T) {
 
 func newTestReconcilerWithFuncs(t *testing.T, now time.Time, funcs interceptor.Funcs, objs ...client.Object) *Reconciler {
 	t.Helper()
-	c := fake.NewClientBuilder().
-		WithScheme(runtime.NewScheme()).
-		WithRESTMapper(newTestMapper()).
-		WithStatusSubresource(controller.Object(controller.UserOperationGVK)).
-		WithIndex(controller.Object(controller.PasswordGVK), controller.PasswordPairField, controller.PasswordPair).
-		WithObjects(objs...).
-		WithInterceptorFuncs(funcs).
-		Build()
+	c := newFakeClientBuilder(objs...).WithInterceptorFuncs(funcs).Build()
 	return New(c, c, logr.Discard(), func() time.Time { return now })
 }
 

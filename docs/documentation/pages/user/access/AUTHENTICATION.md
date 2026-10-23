@@ -32,7 +32,7 @@ Example of DP authentication interface with username and password input:
 
 ## Changing and resetting a local user's password
 
-If [local authentication](../../admin/configuration/access/authentication/local.html) is configured in the cluster, a user can change or reset their password on their own.
+If [local authentication](../../admin/configuration/access/authentication/local.html) is configured in the cluster, a user can change their password on their own.
 
 ### Password change required by policy or administrator
 
@@ -42,15 +42,17 @@ During login, DP may redirect a local user to the password change form if:
 - The password has expired according to the [configured policy](../../admin/configuration/access/authentication/local.html#configuring-password-policy).
 - An administrator initiated a forced password change.
 
-The form requires the current password, a new password, and confirmation. The new password must comply with the cluster password policy.
+The form asks for a new password and its confirmation, and states why the password must be changed. The new password must comply with the cluster password policy.
 
-### Self-service password reset
+### Changing the password in the web interface
 
-A local user can reset their password in the DP authentication interface. The operation is performed via the [UserOperation](/modules/user-authn/cr.html#useroperation) resource with `initiatorType: self`.
+A local user can change their password in the DP web interface. At the next sign-in, enter the current password in the sign-in form. Then the password change form opens. Enter a new password and its confirmation. The new password must comply with the cluster password policy. Changing the password does not end your sessions.
 
-Self-service reset is available only for local accounts. If you sign in through LDAP, GitHub, or another external provider, contact the administrator of that system.
+The password change is available only for local accounts. If you sign in through LDAP, GitHub, or another external provider, change the password in that system.
 
-After a password reset, active sessions are terminated and you must sign in again with the new password.
+### Signing out on all devices
+
+In the DP web interface, you can sign out on all devices. This ends every session of your account, including the sessions in other applications and the kubeconfig files issued to you. Sign in again to continue working.
 
 ## Enabling Authentication in a Web Application
 

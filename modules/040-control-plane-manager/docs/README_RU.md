@@ -204,6 +204,8 @@ spec:
 - `user-authn.deckhouse.io/name` — отображаемое имя пользователя
 - `user-authn.deckhouse.io/preferred_username` — предпочитаемое имя пользователя
 - `user-authn.deckhouse.io/dex-provider` — идентификатор провайдера Dex (требует scope `federated:id`)
+- `user-authn.deckhouse.io/sub` — claim `sub` токена: пользователь и провайдер Dex в одном идентификаторе
+- `user-authn.deckhouse.io/generation` — поколение учётной записи пользователя в Dex, на котором выдан токен; модуль `user-authn` увеличивает его при отзыве токенов пользователя
 
 Настройка политик аудита подробнее рассмотрена в [одноименной секции FAQ](faq.html#как-настроить-дополнительные-политики-аудита).
 

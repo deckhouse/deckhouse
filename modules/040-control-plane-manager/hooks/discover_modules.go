@@ -96,6 +96,8 @@ func handleAuthDiscoveryModules(_ context.Context, input *go_hook.HookInput) err
 	const (
 		userAuthzWebhookURLPath = "controlPlaneManager.apiserver.authz.webhookURL"
 		userAuthzWebhookCAPath  = "controlPlaneManager.apiserver.authz.webhookCA"
+		// The revocation check of user-authn, served by the user-authz webhook.
+		userAuthnRevocationWebhookURLPath = "controlPlaneManager.internal.authz.revocationWebhookURL"
 
 		userAuthenticationWebhookURLPath = "controlPlaneManager.apiserver.authn.webhookURL"
 		userAuthenticationWebhookCAPath  = "controlPlaneManager.apiserver.authn.webhookCA"
@@ -112,15 +114,25 @@ func handleAuthDiscoveryModules(_ context.Context, input *go_hook.HookInput) err
 	authzWebhookURLExists := input.ConfigValues.Exists(userAuthzWebhookURLPath)
 	authzWebhookCAExists := input.ConfigValues.Exists(userAuthzWebhookCAPath)
 
+	// The revocation check is set only together with the webhook from the same ConfigMap: it is
+	// served by that webhook, on its listener and with its CA. A webhook configured by hand is some
+	// other authorizer, which serves no revocation check.
+	var revocationWebhookURL string
 	if !authzWebhookURLExists && !authzWebhookCAExists {
 		// nothing was configured by hand
 		if len(authZData) > 0 {
 			input.Values.Set(userAuthzWebhookURLPath, authZData["url"])
 			input.Values.Set(userAuthzWebhookCAPath, authZData["ca"])
+			revocationWebhookURL = authZData["revocationURL"]
 		} else {
 			input.Values.Remove(userAuthzWebhookURLPath)
 			input.Values.Remove(userAuthzWebhookCAPath)
 		}
+	}
+	if revocationWebhookURL != "" {
+		input.Values.Set(userAuthnRevocationWebhookURLPath, revocationWebhookURL)
+	} else {
+		input.Values.Remove(userAuthnRevocationWebhookURLPath)
 	}
 
 	authnOIDCIssuerExists := input.ConfigValues.Exists(userAuthnOIDCIssuerURLPath)

@@ -160,4 +160,62 @@
         ```
 
         An instance whose watch keeps failing becomes not ready, so check the readiness of the Pod as well.
+
+  - alert: D8UserAuthzRevocationCheckStale
+    expr: |
+      max by (namespace, pod) (
+        user_authz_webhook_revocation_state{job="user-authz-webhook", namespace="d8-user-authz", state="stale"}
+      ) == 1
+    for: 10m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz-webhook
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The revocation check of the user-authz webhook no longer sees new revocations.
+      description: |-
+        For more than 15 minutes the `user-authz-webhook` instance `{{`{{ $labels.pod }}`}}` has been unable to watch the `Revocation` objects of the `user-authn` module (the objects in `d8-user-authn` that record revoked user credentials).
+
+        The instance keeps refusing the Dex tokens it already knows to be revoked, but a revocation made since its watch broke does not reach it: on the master node of this instance, `kubectl` with the token of a locked or logged-out user keeps working until the token expires.
+
+        Check the webhook's access to the API and its logs:
+
+        ```bash
+        d8 k -n d8-user-authz logs {{`{{ $labels.pod }}`}} -c webhook --tail=100 | grep -i revocation
+        d8 k auth can-i watch revocations.dex.coreos.com -n d8-user-authn --as=system:serviceaccount:d8-user-authz:webhook
+        ```
+
+  - alert: D8UserAuthzRevocationCheckNotSynced
+    expr: |
+      max by (namespace, pod) (
+        user_authz_webhook_revocation_state{job="user-authz-webhook", namespace="d8-user-authz", state="unsynced"}
+      ) == 1
+    for: 10m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz-webhook
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The revocation check of the user-authz webhook has not loaded the revocations.
+      description: |-
+        For more than 10 minutes the `user-authz-webhook` instance `{{`{{ $labels.pod }}`}}` has not loaded the `Revocation` objects of the `user-authn` module (the objects in `d8-user-authn` that record revoked user credentials): it cannot list them, or cannot find out whether the API server serves them.
+
+        Until it loads them, the instance has no opinion about revoked credentials: on the master node of this instance, `kubectl` with the token of a locked or logged-out user keeps working until the token expires. Other authorization decisions are not affected.
+
+        Check the webhook's access to the API and its logs:
+
+        ```bash
+        d8 k -n d8-user-authz logs {{`{{ $labels.pod }}`}} -c webhook --tail=100 | grep -i revocation
+        d8 k auth can-i list revocations.dex.coreos.com -n d8-user-authn --as=system:serviceaccount:d8-user-authz:webhook
+        ```
 {{- end }}

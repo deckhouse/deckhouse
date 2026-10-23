@@ -19,8 +19,8 @@ set -euo pipefail
 
 # Keep the Dex kubernetes-storage CRDs in sync with the Dex we build: the release from oss.yaml
 # with the patches of images/dex/patches applied. The patches change the manifests
-# (100-storage-schema adds useridentities.yaml and authsessions.yaml), so the CRDs come from a
-# patched source tree, never from the upstream release alone.
+# (100-storage-schema adds useridentities.yaml, authsessions.yaml and revocations.yaml), so the
+# CRDs come from a patched source tree, never from the upstream release alone.
 #
 # - Update local CRDs; clones the Dex release and applies the patches (needs git and network):
 #     ./pull_dex_crds.sh
@@ -65,6 +65,7 @@ crds=(
   offlinesessionses.yaml
   passwords.yaml
   refreshtokens.yaml
+  revocations.yaml
   signingkeies.yaml
   useridentities.yaml
 )

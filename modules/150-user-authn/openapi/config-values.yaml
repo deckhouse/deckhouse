@@ -232,6 +232,8 @@ properties:
       Through the Gateway API (the `alb` module) Dex counts the last address of `X-Forwarded-For`: the address the ALB
       saw, or the one a balancer passed when the ALB instance trusts it in `originalIPDetection.setRealIPFrom`. Behind
       a balancer the ALB instance does not trust, every client is counted by the address of the balancer.
+      Basic Authentication to the Kubernetes API through an LDAP provider is counted per address of the client
+      that the platform Ingress controller or Gateway saw: basic-auth-proxy passes on the last hop of `X-Forwarded-For`.
 
       The limit applies to **failed authentication attempts only**. Each request takes a token from the bucket of its IP address,
       and a successful response (HTTP `2xx` or `3xx`) returns the token. Successful logins and refresh-token exchanges

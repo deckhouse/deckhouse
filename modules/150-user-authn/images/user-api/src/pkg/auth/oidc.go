@@ -19,11 +19,13 @@ package auth
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -34,17 +36,21 @@ var (
 	ErrNoAuthHeader    = errors.New("no authorization header")
 	ErrInvalidAuthType = errors.New("invalid authorization type, expected Bearer")
 	ErrTokenValidation = errors.New("token validation failed")
-	ErrMissingUsername = errors.New("missing username claim in token")
+	ErrInvalidSubject  = errors.New("invalid subject claim in token")
 )
 
+// Claims identifies the user a token was issued to. The user is only ever taken from the subject:
+// the name, preferred_username and email claims come from the provider and may collide between
+// users of different providers.
 type Claims struct {
-	Username string
-	Email    string
-	Groups   []string
-	// ConnectorID is the Dex connector that issued the token
-	// (federated_claims.connector_id). The built-in local password DB uses
-	// "local"; external providers use their own connector IDs.
+	// Subject is the sub claim as Dex issued it.
+	Subject string
+	// UserID and ConnectorID are the pair the subject encodes. The built-in local password
+	// database has the connector ID "local"; external providers use their own connector IDs.
+	UserID      string
 	ConnectorID string
+	// Email only names the account of an external provider in a UserOperation target.
+	Email string
 }
 
 type Verifier interface {
@@ -52,14 +58,35 @@ type Verifier interface {
 	ExtractToken(r *http.Request) (string, error)
 }
 
-type OIDCVerifier struct {
-	verifier *oidc.IDTokenVerifier
+// VerifierConfig describes where Dex is and which tokens it issues are accepted.
+type VerifierConfig struct {
+	// ConnectURL is the in-cluster Dex address used for discovery and keys.
+	ConnectURL string
+	// IssuerURL is the public issuer in the "iss" claim. ConnectURL is used when it is empty.
+	IssuerURL string
+	// ClientID is the only client whose ID tokens are accepted.
+	ClientID string
+	// CAFile holds the CA that signed the certificate of Dex. The system roots are used when it is
+	// empty.
+	CAFile string
 }
 
-// NewOIDCVerifier creates a verifier for tokens issued by Dex.
-func NewOIDCVerifier(ctx context.Context, connectURL, issuerURL string) (*OIDCVerifier, error) {
-	// Skip TLS verification: this is in-cluster traffic to the Dex Service,
-	// and user-api is not given the CA of the Dex certificate.
+type OIDCVerifier struct {
+	verifier *oidc.IDTokenVerifier
+	clientID string
+}
+
+// NewOIDCVerifier creates a verifier for the ID tokens Dex issues to cfg.ClientID.
+func NewOIDCVerifier(ctx context.Context, cfg VerifierConfig) (*OIDCVerifier, error) {
+	if cfg.ClientID == "" {
+		return nil, errors.New("client ID is required")
+	}
+
+	tlsConfig, err := dexTLSConfig(cfg.CAFile)
+	if err != nil {
+		return nil, err
+	}
+
 	httpClient := &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
@@ -74,7 +101,7 @@ func NewOIDCVerifier(ctx context.Context, connectURL, issuerURL string) (*OIDCVe
 			IdleConnTimeout:       30 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
+			TLSClientConfig:       tlsConfig,
 		},
 	}
 
@@ -82,40 +109,64 @@ func NewOIDCVerifier(ctx context.Context, connectURL, issuerURL string) (*OIDCVe
 
 	// Tokens carry the public issuer in "iss", so validation pins it. It must
 	// match Dex's configured issuer exactly, including the trailing slash.
-	expectedIssuer := issuerURL
+	expectedIssuer := cfg.IssuerURL
 	if expectedIssuer == "" {
-		expectedIssuer = connectURL
+		expectedIssuer = cfg.ConnectURL
 	}
 
 	// Discovery runs against the in-cluster connectURL; the discovery document
 	// advertises the public issuer, so allow the mismatch.
 	discoveryCtx := clientCtx
-	if expectedIssuer != connectURL {
+	if expectedIssuer != cfg.ConnectURL {
 		discoveryCtx = oidc.InsecureIssuerURLContext(clientCtx, expectedIssuer)
 	}
 
-	provider, err := oidc.NewProvider(discoveryCtx, connectURL)
+	provider, err := oidc.NewProvider(discoveryCtx, cfg.ConnectURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OIDC provider: %w", err)
 	}
 
 	// Fetch JWKS from the in-cluster host: the advertised jwks_uri points at the
 	// public URL, which is unreachable in closed-loop clusters.
-	keysURL, err := internalKeysURL(provider, connectURL)
+	keysURL, err := internalKeysURL(provider, cfg.ConnectURL)
 	if err != nil {
 		return nil, err
 	}
 	keySet := oidc.NewRemoteKeySet(clientCtx, keysURL)
 
-	// SkipClientIDCheck: user-api has no client_id of its own; tokens are issued
-	// to other clients and we only verify signature and extract claims.
+	// Only the ID tokens of one client are accepted: the console signs its users in and forwards
+	// their tokens. A token issued to any other client, kubeconfig included, is refused even though
+	// Dex signed it.
 	verifier := oidc.NewVerifier(expectedIssuer, keySet, &oidc.Config{
-		SkipClientIDCheck: true,
+		ClientID: cfg.ClientID,
 	})
 
 	return &OIDCVerifier{
 		verifier: verifier,
+		clientID: cfg.ClientID,
 	}, nil
+}
+
+// dexTLSConfig verifies the certificate of Dex against the CA in caFile, or against the system
+// roots when caFile is empty. user-api trusts every token signed by the keys it fetches from Dex,
+// so whoever could answer in place of Dex inside the cluster could mint tokens for any user.
+func dexTLSConfig(caFile string) (*tls.Config, error) {
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
+	if caFile == "" {
+		return tlsConfig, nil
+	}
+
+	caPEM, err := os.ReadFile(caFile)
+	if err != nil {
+		return nil, fmt.Errorf("read Dex CA %q: %w", caFile, err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(caPEM) {
+		return nil, fmt.Errorf("no certificate found in Dex CA %q", caFile)
+	}
+	tlsConfig.RootCAs = pool
+
+	return tlsConfig, nil
 }
 
 // internalKeysURL rewrites the advertised jwks_uri scheme/host to the in-cluster
@@ -166,37 +217,33 @@ func (v *OIDCVerifier) Verify(ctx context.Context, token string) (*Claims, error
 	}
 
 	var claims struct {
-		PreferredUsername string   `json:"preferred_username"`
-		Email             string   `json:"email"`
-		Groups            []string `json:"groups"`
-		Name              string   `json:"name"`
-		FederatedClaims   struct {
-			ConnectorID string `json:"connector_id"`
-		} `json:"federated_claims"`
+		AuthorizedParty string `json:"azp"`
+		Email           string `json:"email"`
 	}
-
 	if err := idToken.Claims(&claims); err != nil {
-		return nil, fmt.Errorf("failed to parse claims: %w", err)
+		return nil, fmt.Errorf("%w: parse claims: %v", ErrTokenValidation, err)
 	}
 
-	// Priority: preferred_username > name > email
-	// For local Dex users, 'name' matches the Password CRD username.
-	// 'email' is a fallback for external providers that don't set name/preferred_username.
-	username := claims.PreferredUsername
-	if username == "" {
-		username = claims.Name
+	// The verifier has found the console among the audiences. A token for several audiences is
+	// requested by the client named in azp, and Dex adds the requesting client to the audiences, so
+	// a client that only names the console as a peer gets a token the console is an audience of.
+	// azp tells them apart (OpenID Connect Core 1.0, section 3.1.3.7).
+	if claims.AuthorizedParty != "" && claims.AuthorizedParty != v.clientID {
+		return nil, fmt.Errorf("%w: the token was requested by another client", ErrTokenValidation)
 	}
-	if username == "" {
-		username = claims.Email
+	if len(idToken.Audience) > 1 && claims.AuthorizedParty == "" {
+		return nil, fmt.Errorf("%w: a token for several audiences has no azp claim", ErrTokenValidation)
 	}
-	if username == "" {
-		return nil, ErrMissingUsername
+
+	userID, connectorID, err := ParseSubject(idToken.Subject)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidSubject, err)
 	}
 
 	return &Claims{
-		Username:    username,
+		Subject:     idToken.Subject,
+		UserID:      userID,
+		ConnectorID: connectorID,
 		Email:       claims.Email,
-		Groups:      claims.Groups,
-		ConnectorID: claims.FederatedClaims.ConnectorID,
 	}, nil
 }

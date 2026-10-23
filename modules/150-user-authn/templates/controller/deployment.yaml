@@ -23,9 +23,11 @@ spec:
     - containerName: "user-authn-controller"
       minAllowed:
         {{- include "user_authn_controller_resources" . | nindent 8 }}
+      # The caches of AuthSession, Revocation, and the clients of DexAuthenticators, and the streams
+      # of the revocation feed, come on top of the Dex objects of 1.78.
       maxAllowed:
         cpu: 100m
-        memory: 150Mi
+        memory: 256Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -44,6 +46,8 @@ spec:
     metadata:
       labels:
         app: user-authn-controller
+      annotations:
+        checksum/revocation-feed-tls: {{ include (print $.Template.BasePath "/controller/secret-revocation-feed-tls.yaml") . | sha256sum }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
@@ -67,6 +71,22 @@ spec:
         - containerPort: 9091
           name: metrics
           protocol: TCP
+        # The revocation feed of dex-authenticator, on every replica (Service revocation-feed).
+        - containerPort: 8443
+          name: feed
+          protocol: TCP
+        env:
+        # Revocations are kept for the ID token lifetime and an hour.
+        - name: ID_TOKEN_TTL
+          value: {{ .Values.userAuthn.idTokenTTL | default "10m" | quote }}
+        - name: REVOCATION_FEED_ADDR
+          value: ":8443"
+        - name: REVOCATION_FEED_TLS_DIR
+          value: /etc/revocation-feed/tls
+        volumeMounts:
+        - name: revocation-feed-tls
+          mountPath: /etc/revocation-feed/tls
+          readOnly: true
         startupProbe:
           httpGet:
             path: /healthz
@@ -98,3 +118,7 @@ spec:
 {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "user_authn_controller_resources" . | nindent 12 }}
 {{- end }}
+      volumes:
+      - name: revocation-feed-tls
+        secret:
+          secretName: revocation-feed-tls

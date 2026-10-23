@@ -102,12 +102,7 @@ func TestReconcile_SkipIfEqual(t *testing.T) {
 	var patches atomic.Int32
 	var statusPatches atomic.Int32
 
-	scheme := newTestScheme(t)
-	c := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithRESTMapper(newTestMapper()).
-		WithStatusSubresource(userStatusObject()).
-		WithObjects(namespaceObj(), userObj(adminUserName, adminEmail, adminPassword, "")).
+	c := newFakeClientBuilder(t, namespaceObj(), userObj(adminUserName, adminEmail, adminPassword, "")).
 		WithInterceptorFuncs(interceptor.Funcs{
 			Patch: func(ctx context.Context, cl client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 				patches.Add(1)
@@ -544,15 +539,23 @@ func TestPasswordNameIsFnvNotLocalPrefixed(t *testing.T) {
 
 func newTestReconciler(t *testing.T, now time.Time, objs ...client.Object) *Reconciler {
 	t.Helper()
-	scheme := newTestScheme(t)
-	c := fake.NewClientBuilder().
-		WithScheme(scheme).
+	c := newFakeClientBuilder(t, objs...).Build()
+	return New(c, c, logr.Discard(), func() time.Time { return now })
+}
+
+// newFakeClientBuilder returns a fake client builder with the objects, the status subresource of
+// User, and every index of the controller.
+func newFakeClientBuilder(t *testing.T, objs ...client.Object) *fake.ClientBuilder {
+	t.Helper()
+	builder := fake.NewClientBuilder().
+		WithScheme(newTestScheme(t)).
 		WithRESTMapper(newTestMapper()).
 		WithStatusSubresource(userStatusObject()).
-		WithIndex(controller.Object(controller.PasswordGVK), controller.PasswordPairField, controller.PasswordPair).
-		WithObjects(objs...).
-		Build()
-	return New(c, c, logr.Discard(), func() time.Time { return now })
+		WithObjects(objs...)
+	for _, index := range controller.Indexes() {
+		builder = builder.WithIndex(index.Object, index.Field, index.Extract)
+	}
+	return builder
 }
 
 func newTestScheme(t *testing.T) *runtime.Scheme {
@@ -576,6 +579,11 @@ func newTestMapper() meta.RESTMapper {
 	m.Add(controller.PasswordGVK, meta.RESTScopeNamespace)
 	m.Add(controller.OfflineSessionsGVK, meta.RESTScopeNamespace)
 	m.Add(controller.UserIdentityGVK, meta.RESTScopeNamespace)
+	m.Add(controller.RefreshTokenGVK, meta.RESTScopeNamespace)
+	m.Add(controller.AuthSessionGVK, meta.RESTScopeNamespace)
+	m.Add(controller.RevocationGVK, meta.RESTScopeNamespace)
+	m.Add(controller.AuthCodeGVK, meta.RESTScopeNamespace)
+	m.Add(controller.AuthRequestGVK, meta.RESTScopeNamespace)
 	m.Add(controller.UserGVK, meta.RESTScopeRoot)
 	m.Add(controller.GroupGVK, meta.RESTScopeRoot)
 	m.Add(v1alpha1.SchemeGroupVersion.WithKind("UserAccount"), meta.RESTScopeRoot)

@@ -35,11 +35,13 @@ import (
 )
 
 type Config struct {
-	ListenAddress string
-	DexURL        string
-	IssuerURL     string
-	TLSCertFile   string
-	TLSKeyFile    string
+	ListenAddress   string
+	DexURL          string
+	IssuerURL       string
+	DexCAFile       string
+	ConsoleClientID string
+	TLSCertFile     string
+	TLSKeyFile      string
 }
 
 func main() {
@@ -48,7 +50,7 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   "user-api",
 		Short: "User API service for self-service operations",
-		Long:  "User API service provides self-service operations like password reset for Deckhouse users",
+		Long:  "User API service lets Deckhouse users sign out everywhere and ask for a password change on their own",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return run(cfg)
 		},
@@ -57,6 +59,8 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&cfg.ListenAddress, "listen", ":8443", "Listen address and port")
 	rootCmd.PersistentFlags().StringVar(&cfg.DexURL, "dex-url", "https://dex.d8-user-authn", "In-cluster Dex address for OIDC discovery (reachable in closed-loop clusters)")
 	rootCmd.PersistentFlags().StringVar(&cfg.IssuerURL, "issuer-url", "", "Public Dex issuer URL advertised in token claims (defaults to --dex-url if empty)")
+	rootCmd.PersistentFlags().StringVar(&cfg.DexCAFile, "dex-ca-file", "", "CA certificate file to verify the certificate of Dex (system roots if empty)")
+	rootCmd.PersistentFlags().StringVar(&cfg.ConsoleClientID, "console-client-id", "", "Dex client ID of the console; only its ID tokens are accepted")
 	rootCmd.PersistentFlags().StringVar(&cfg.TLSCertFile, "tls-cert-file", "", "TLS certificate file path")
 	rootCmd.PersistentFlags().StringVar(&cfg.TLSKeyFile, "tls-key-file", "", "TLS private key file path")
 
@@ -76,12 +80,18 @@ func run(cfg *Config) error {
 		"listen", cfg.ListenAddress,
 		"dex_url", cfg.DexURL,
 		"issuer_url", cfg.IssuerURL,
+		"console_client_id", cfg.ConsoleClientID,
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	oidcVerifier, err := auth.NewOIDCVerifier(ctx, cfg.DexURL, cfg.IssuerURL)
+	oidcVerifier, err := auth.NewOIDCVerifier(ctx, auth.VerifierConfig{
+		ConnectURL: cfg.DexURL,
+		IssuerURL:  cfg.IssuerURL,
+		ClientID:   cfg.ConsoleClientID,
+		CAFile:     cfg.DexCAFile,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to create OIDC verifier: %w", err)
 	}
@@ -99,20 +109,16 @@ func run(cfg *Config) error {
 
 	handler := api.NewHandler(oidcVerifier, k8sClient, logger)
 
-	// Rate limiter: 10 requests per second with burst of 20
-	resetLimiter := rate.NewLimiter(rate.Limit(10), 20)
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", handler.Healthz)
-	mux.HandleFunc("GET /readyz", handler.Readyz)
-	mux.HandleFunc("GET /metrics", handler.Metrics)
-	mux.HandleFunc("POST /api/v1/password/reset", rateLimitMiddleware(resetLimiter, handler.ResetPassword))
+	// Rate limiter: 10 requests per second with burst of 20 for all users together; every user also
+	// has a budget of their own, checked once the token names them.
+	limiter := rate.NewLimiter(rate.Limit(10), 20)
 
 	server := &http.Server{
-		Addr:              cfg.ListenAddress,
-		Handler:           mux,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      10 * time.Second,
+		Addr:        cfg.ListenAddress,
+		Handler:     newMux(handler, limiter),
+		ReadTimeout: 10 * time.Second,
+		// A request waits up to 10 seconds for the controller to finish its operation.
+		WriteTimeout:      20 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
@@ -147,10 +153,23 @@ func run(cfg *Config) error {
 	return nil
 }
 
+// newMux routes the self-service endpoints. POST /api/v1/password/reset is gone: it set a password
+// hash for whoever the token named, and any token Dex issued was accepted.
+func newMux(handler *api.Handler, limiter *rate.Limiter) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", handler.Healthz)
+	mux.HandleFunc("GET /readyz", handler.Readyz)
+	mux.HandleFunc("GET /metrics", handler.Metrics)
+	mux.HandleFunc("POST /api/v1/self/logout", rateLimitMiddleware(limiter, handler.SelfLogout))
+	mux.HandleFunc("POST /api/v1/self/password-change", rateLimitMiddleware(limiter, handler.SelfPasswordChange))
+	return mux
+}
+
 func rateLimitMiddleware(limiter *rate.Limiter, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !limiter.Allow() {
 			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Retry-After", "1")
 			w.WriteHeader(http.StatusTooManyRequests)
 			_, _ = w.Write([]byte(`{"error":"rate_limit_exceeded","message":"Too many requests, please try again later"}`))
 			return

@@ -40,6 +40,17 @@ func dexStorageRule(role object_store.KubeObject, resource string) []string {
 	return nil
 }
 
+// dexStorageRules returns every rule of a role on resource of the Dex storage group.
+func dexStorageRules(role object_store.KubeObject, resource string) []gjson.Result {
+	var rules []gjson.Result
+	for _, rule := range role.Field("rules").Array() {
+		if containsString(rule.Get("apiGroups"), "dex.coreos.com") && containsString(rule.Get("resources"), resource) {
+			rules = append(rules, rule)
+		}
+	}
+	return rules
+}
+
 func containsString(list gjson.Result, value string) bool {
 	for _, item := range list.Array() {
 		if item.String() == value {
@@ -91,9 +102,61 @@ var _ = Describe("Module :: user-authn :: helm template :: Dex storage RBAC", fu
 		dexVerbs := dexStorageRule(roles["dex ClusterRole"], "useridentities")
 		Expect(dexVerbs).To(ContainElements("get", "list", "watch", "create", "update", "delete"))
 
-		// The controller writes UserIdentity with Create and Update only.
+		// The controller writes UserIdentity with Create and Update only. It ends sessions; it never
+		// creates one.
 		controllerRole := hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:controller")
 		Expect(dexStorageRule(controllerRole, "useridentities")).To(ConsistOf("get", "list", "watch", "create", "update", "delete"))
-		Expect(dexStorageRule(controllerRole, "authsessions")).To(BeEmpty())
+		Expect(dexStorageRule(controllerRole, "authsessions")).To(ConsistOf("get", "list", "watch", "delete"))
+	})
+
+	// Revocations live in d8-user-authn only: the controller writes and garbage-collects them
+	// there, and the admin kubeconfig manages them with the rest of the Dex storage.
+	It("Should grant revocations to the controller in its namespace only", func() {
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		controllerRole := hec.KubernetesResource("Role", "d8-user-authn", "controller")
+		Expect(controllerRole.Exists()).To(BeTrue())
+		Expect(dexStorageRule(controllerRole, "revocations")).To(ConsistOf("get", "list", "watch", "create", "delete"))
+
+		controllerClusterRole := hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:controller")
+		Expect(dexStorageRule(controllerClusterRole, "revocations")).To(BeEmpty())
+
+		adminKubeconfig := hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:admin-kubeconfig")
+		Expect(dexStorageRule(adminKubeconfig, "revocations")).ToNot(BeEmpty())
+	})
+
+	// A revocation deletes the codes and auth requests of the pair: without that, a code issued
+	// before a User was deleted would pass once its UserIdentity is gone (Dex reads generation 0).
+	// The controller lists them through the API server and deletes them, in d8-user-authn only, and
+	// never watches them: the name of a code is the code.
+	It("Should let the controller list and delete auth codes and auth requests in its namespace only", func() {
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		controllerRole := hec.KubernetesResource("Role", "d8-user-authn", "controller")
+		Expect(controllerRole.Exists()).To(BeTrue())
+		controllerClusterRole := hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:controller")
+		Expect(controllerClusterRole.Exists()).To(BeTrue())
+		for _, resource := range []string{"authcodes", "authrequests"} {
+			Expect(dexStorageRule(controllerRole, resource)).To(ConsistOf("list", "delete"), resource)
+			Expect(dexStorageRule(controllerClusterRole, resource)).To(BeEmpty(), resource)
+		}
+	})
+
+	// Dex writes a Revocation at logout and at /token/revoke (patch 290-revocation) and lists the
+	// type once at start to check that the CRD is installed, so both of its roles grant create
+	// and list alone, in a rule of its own.
+	It("Should let Dex create and list revocations and nothing more", func() {
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		for name, role := range map[string]object_store.KubeObject{
+			"dex ClusterRole": hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:dex:crd"),
+			"dex Role":        hec.KubernetesResource("Role", "d8-user-authn", "dex"),
+		} {
+			Expect(role.Exists()).To(BeTrue(), name)
+			rules := dexStorageRules(role, "revocations")
+			Expect(rules).To(HaveLen(1), name)
+			Expect(rules[0].Get("resources").Value()).To(ConsistOf("revocations"), name)
+			Expect(rules[0].Get("verbs").Value()).To(ConsistOf("create", "list"), name)
+		}
 	})
 })

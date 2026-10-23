@@ -1,0 +1,12 @@
+---
+# The CA of the user-api certificate, for the clients of user-api inside the cluster: the backend of
+# the console reads it to verify https://user-api.d8-user-authn.svc. A CA certificate is public, so
+# every service account may read it (Role user-api-ca-reader in rbac-for-us.yaml).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-api-ca
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-api")) | nindent 2 }}
+data:
+  ca.crt: {{ (.Values.userAuthn.internal.userAPITLS | default dict).ca | default "" | quote }}

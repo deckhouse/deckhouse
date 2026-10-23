@@ -103,13 +103,11 @@ spec:
                     If present with `state: true`, the user cannot authenticate until the specified time
                     or until the lock is manually lifted by an administrator.
 
-                    Administrative actions on the account (lock, unlock, forced password reset, 2FA reset)
-                    are performed via the [UserOperation](#useroperation) resource. Self-service password
-                    reset by the user is also performed via UserOperation (`initiatorType: self`). When an administrator
-                    locks the account or initiates a forced password reset, the user's Dex RefreshToken objects
-                    are deleted, so the user has to re-authenticate when the current ID token expires; for a forced
-                    password reset they are presented with a password change form on the next successful login.
-                    Only a 2FA reset removes the user's 2FA secret.
+                    Actions on the account (lock, unlock, password reset, forced password change, 2FA reset,
+                    logout) are performed via the [UserOperation](#useroperation) resource. A lock, a password
+                    reset, a 2FA reset and a logout end the sessions of the user at once. After a password reset
+                    or a forced password change, the user is presented with a password change form on the next
+                    successful login. Only a 2FA reset removes the user's 2FA secret.
                   properties:
                     state:
                       type: boolean
@@ -234,13 +232,11 @@ spec:
                     If present, the user cannot authenticate until the specified time
                     or until the lock is manually lifted by an administrator.
 
-                    Administrative actions on the account (lock, unlock, forced password reset, 2FA reset)
-                    are performed via the [UserOperation](#useroperation) resource. Self-service password
-                    reset by the user is also performed via UserOperation (`initiatorType: self`). When an administrator
-                    locks the account or initiates a forced password reset, the user's Dex RefreshToken objects
-                    are deleted, so the user has to re-authenticate when the current ID token expires; for a forced
-                    password reset they are presented with a password change form on the next successful login.
-                    Only a 2FA reset removes the user's 2FA secret.
+                    Actions on the account (lock, unlock, password reset, forced password change, 2FA reset,
+                    logout) are performed via the [UserOperation](#useroperation) resource. A lock, a password
+                    reset, a 2FA reset and a logout end the sessions of the user at once. After a password reset
+                    or a forced password change, the user is presented with a password change form on the next
+                    successful login. Only a 2FA reset removes the user's 2FA secret.
                   properties:
                     state:
                       type: boolean

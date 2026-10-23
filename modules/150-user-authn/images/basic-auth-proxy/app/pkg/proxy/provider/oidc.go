@@ -90,22 +90,22 @@ func NewOIDC(ctx context.Context, cfg OIDCConfig) (Provider, error) {
 	}, nil
 }
 
-func (p *OpenIDConnect) ValidateCredentials(ctx context.Context, login, password string) ([]string, error) {
+func (p *OpenIDConnect) ValidateCredentials(ctx context.Context, login, password string) (Identity, error) {
 	p.logger.Info("validate credentials")
 	token, err := p.oauth2.PasswordCredentialsToken(oidc.ClientContext(ctx, p.httpClient), login, password)
 	if err != nil {
-		return nil, err
+		return Identity{}, err
 	}
 	p.logger.Info("validate credentials successful")
 
 	if !p.getUserInfo {
-		return nil, nil
+		return Identity{}, nil
 	}
 
 	p.logger.Info("get user info")
 	info, err := p.oidc.UserInfo(oidc.ClientContext(ctx, p.httpClient), oauth2.StaticTokenSource(token))
 	if err != nil {
-		return nil, err
+		return Identity{}, err
 	}
 	p.logger.Info("get user info successful")
 
@@ -114,7 +114,7 @@ func (p *OpenIDConnect) ValidateCredentials(ctx context.Context, login, password
 		Groups []string `json:"groups"`
 	}{}
 	if err = info.Claims(&claims); err != nil {
-		return nil, err
+		return Identity{}, err
 	}
-	return claims.Groups, nil
+	return Identity{Groups: claims.Groups}, nil
 }

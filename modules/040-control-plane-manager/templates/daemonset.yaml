@@ -128,6 +128,17 @@ memory: 10Mi
 {{- if hasKey .Values.controlPlaneManager.internal "auditPolicy" }}
   {{- $_ := set $tpl_context.apiserver "auditPolicy" .Values.controlPlaneManager.internal.auditPolicy }}
 {{- end }}
+{{- /*
+  The revocation check of user-authn starts with Kubernetes 1.34: below it the answers of an
+  authorization webhook cannot be left uncached (cacheAuthorizedRequests and
+  cacheUnauthorizedRequests appeared in 1.34, and a field kube-apiserver does not know stops it).
+  Neither the authorizer nor its kubeconfig is rendered there.
+*/}}
+{{- if and (hasKey .Values.controlPlaneManager.internal "authz") (semverCompare ">= 1.34" .Values.controlPlaneManager.internal.effectiveKubernetesVersion) }}
+  {{- if .Values.controlPlaneManager.internal.authz.revocationWebhookURL }}
+    {{- $_ := set $tpl_context.apiserver "revocationWebhookURL" .Values.controlPlaneManager.internal.authz.revocationWebhookURL }}
+  {{- end }}
+{{- end }}
 {{- if hasKey .Values.controlPlaneManager.internal "kubeSchedulerExtenders" }}
 {{ $_ := set $tpl_context.scheduler "extenders" .Values.controlPlaneManager.internal.kubeSchedulerExtenders }}
 {{- end }}
@@ -172,6 +183,9 @@ extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
   {{- if $tpl_context.apiserver.webhookURL }}
   {{- $webhookCA := required "controlPlaneManager.apiserver.authz.webhookCA is required when controlPlaneManager.apiserver.authz.webhookURL is set" $tpl_context.apiserver.webhookCA }}
 extra-file-webhook-config.yaml: {{ include "webhookTemplate" (dict "webhookCA" $webhookCA "webhookURL" $tpl_context.apiserver.webhookURL) | b64enc }}
+    {{- if $tpl_context.apiserver.revocationWebhookURL }}
+extra-file-revocation-webhook-config.yaml: {{ include "revocationWebhookTemplate" (dict "webhookCA" $webhookCA "webhookURL" $tpl_context.apiserver.revocationWebhookURL) | b64enc }}
+    {{- end }}
 extra-file-authorization-config.yaml: {{ include "authorizationConfigTemplate" $tpl_context | b64enc }}
   {{- end }}
 
