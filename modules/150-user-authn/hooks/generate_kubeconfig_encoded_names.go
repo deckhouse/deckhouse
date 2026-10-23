@@ -36,13 +36,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 // covers the publishAPI kubeconfig entry. Mirrored verbatim in
 // `templates/dex/kubeconfig-oauth2clients.yaml`,
 // `templates/dex/kubernetes-dex-client-configuration.yaml` and the trustedPeers
-// list in `templates/dex/oauth2client.yaml`. Keep them in sync.
+// list in `templates/dex/kubernetes-oauth2client.yaml`. Keep them in sync.
 const kubeconfigPublishAPIClientID = "kubeconfig-publish-api"
 
 // slugifyKubeconfigID mirrors the slug transform applied to client_id in
 // `templates/dex/kubernetes-dex-client-configuration.yaml`,
 // `templates/dex/kubeconfig-oauth2clients.yaml` and the trustedPeers list in
-// `templates/dex/oauth2client.yaml`. Keep them in sync.
+// `templates/dex/kubernetes-oauth2client.yaml`. Keep them in sync.
 func slugifyKubeconfigID(id string) string {
 	s := strings.ReplaceAll(id, "@", "-at-")
 	s = strings.ReplaceAll(s, ":", "-")

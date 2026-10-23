@@ -21,13 +21,16 @@ import (
 	"encoding/json"
 	"errors"
 	"maps"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"go.uber.org/zap/zapcore"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
@@ -56,6 +59,12 @@ func TestNewManagerOptions(t *testing.T) {
 	if opts.RetryPeriod == nil || opts.RenewDeadline == nil || *opts.RetryPeriod*2 > *opts.RenewDeadline {
 		t.Errorf("RetryPeriod = %v must leave several tries within RenewDeadline = %v", opts.RetryPeriod, opts.RenewDeadline)
 	}
+	if opts.Client.Cache == nil || len(opts.Client.Cache.DisableFor) != 1 {
+		t.Fatalf("client cache = %+v, want Secrets read past the cache", opts.Client.Cache)
+	}
+	if _, ok := opts.Client.Cache.DisableFor[0].(*corev1.Secret); !ok {
+		t.Errorf("DisableFor = %T, want *corev1.Secret: reading a Secret from the cache would start an informer holding Secret data", opts.Client.Cache.DisableFor[0])
+	}
 	if opts.HealthProbeBindAddress != ":9090" {
 		t.Errorf("HealthProbeBindAddress = %q, want %q", opts.HealthProbeBindAddress, ":9090")
 	}
@@ -66,19 +75,64 @@ func TestNewManagerOptions(t *testing.T) {
 		t.Errorf("WebhookServer = %v, want nil", opts.WebhookServer)
 	}
 	// The revocation feed authenticates DexAuthenticators from a cache of their clients without
-	// secrets; every other cached kind is scoped to the Dex namespace too.
-	kinds := map[string]bool{}
+	// secrets; every other cached kind of Dex is scoped to the Dex namespace too.
+	dexKinds := map[string]cache.ByObject{}
 	for obj, byObject := range opts.Cache.ByObject {
-		kind := obj.GetObjectKind().GroupVersionKind().Kind
-		kinds[kind] = true
+		if gvk := obj.GetObjectKind().GroupVersionKind(); gvk.Group == "dex.coreos.com" {
+			dexKinds[gvk.Kind] = byObject
+		}
+	}
+	for _, kind := range []string{"Password", "OfflineSessions", "RefreshToken", "UserIdentity", "AuthSession", "Revocation", "OAuth2Client"} {
+		byObject, ok := dexKinds[kind]
+		if !ok {
+			t.Errorf("no cache config for %s", kind)
+			continue
+		}
 		if byObject.Transform == nil || len(byObject.Namespaces) != 1 {
 			t.Errorf("cache of %s = %+v, want a transform and one namespace", kind, byObject)
 		}
 	}
-	for _, kind := range []string{"Password", "OfflineSessions", "RefreshToken", "UserIdentity", "AuthSession", "Revocation", "OAuth2Client"} {
-		if !kinds[kind] {
-			t.Errorf("no cache config for %s", kind)
+}
+
+// The DexClient reconciler is the only writer of Secrets, so it runs under its own ServiceAccount:
+// the main controller caches no Secret, and the dexclient command caches only the labelled Secrets
+// and the OAuth2Clients, under a lease of its own.
+func TestManagerOptionsSplitTheSecretWriter(t *testing.T) {
+	main, err := newManagerOptions(runtime.NewScheme())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for obj := range main.Cache.ByObject {
+		if _, ok := obj.(*corev1.Secret); ok {
+			t.Error("the main controller must not cache Secrets: it does not run the DexClient reconciler")
 		}
+	}
+
+	dex, err := newDexClientManagerOptions(runtime.NewScheme())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !dex.LeaderElection || dex.LeaderElectionID != dexClientControllerName || dex.LeaderElectionID == controllerName {
+		t.Fatalf("dexclient leader election = %v %q, want a lease of its own", dex.LeaderElection, dex.LeaderElectionID)
+	}
+	if dex.Client.Cache == nil || len(dex.Client.Cache.DisableFor) != 1 {
+		t.Fatalf("client cache = %+v, want Secrets read past the cache", dex.Client.Cache)
+	}
+	var kinds []string
+	for obj, byObject := range dex.Cache.ByObject {
+		switch o := obj.(type) {
+		case *corev1.Secret:
+			kinds = append(kinds, "Secret")
+			if byObject.Namespaces[cache.AllNamespaces].LabelSelector == nil {
+				t.Error("the Secret cache must be scoped by label")
+			}
+		default:
+			kinds = append(kinds, o.GetObjectKind().GroupVersionKind().Kind)
+		}
+	}
+	slices.Sort(kinds)
+	if !slices.Equal(kinds, []string{"OAuth2Client", "Secret"}) {
+		t.Errorf("dexclient caches %v, want only OAuth2Client and Secret", kinds)
 	}
 }
 

@@ -94,9 +94,12 @@ description: Архитектура модуля user-authn в Deckhouse Platfor
    * периодическая проверка доступности настроенных внешних провайдеров аутентификации (используя кастомные ресурсы DexProviderCheck);
    * выявление конфликтующих настроек TLS-сертификатов [в конфигурации подключения стороннего провайдера LDAP](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap) и экспорт соответствующей метрики;
    * отзыв сессий пользователя при блокировке, сбросе пароля или 2FA, выходе и удалении пользователя: увеличение поколения учётной записи пользователя в Dex, запись объекта Dex Revocation и удаление объектов Dex AuthSession и RefreshToken пользователя;
-   * передача отзывов в dex-authenticator по HTTPS (сервис `revocation-feed`), чтобы dex-authenticator завершал отозванные сессии в течение нескольких секунд.
+   * передача отзывов в dex-authenticator по HTTPS (сервис `revocation-feed`), чтобы dex-authenticator завершал отозванные сессии в течение нескольких секунд;
+   * поддержка клиента Dex `kubernetes` (OAuth2Client) и его `trustedPeers`: DexAuthenticator и DexClient с доступом к Kubernetes и статические клиенты из конфигурации модуля.
 
    User-authn-controller при управлении кастомными ресурсами модуля использует в качестве бэкенда кастомные ресурсы Password, OfflineSessions, UserIdentity и RefreshToken API-группы `dex.coreos.com`, используемые провайдером Dex как хранилище.
+
+1. **Dexclient-controller** — контроллер, состоящий из одного контейнера **dexclient-controller** (образ user-authn-controller) и поддерживающий учётные данные каждого [DexClient](/modules/user-authn/cr.html#dexclient): Secret `dex-client-<name>` в пространстве имён DexClient и его клиенты Dex (OAuth2Client). Это единственный компонент модуля, которому разрешено записывать Secret в других пространствах имён; по сети он отдаёт только health и метрики.
 
 1. **User-api** — компонент, реализующий операции, которые пользователь веб-интерфейса DKP выполняет сам: выход на всех устройствах и смену пароля локальной учётной записи. Компонент принимает только ID-токены веб-интерфейса DKP и не требует прав администратора платформы. Для каждой операции компонент создаёт кастомный ресурс UserOperation с типом `Logout` или `RequirePasswordChange`, который обрабатывается компонентом user-authn-controller. ValidatingAdmissionPolicy разрешает user-api создавать только эти операции.
 

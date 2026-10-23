@@ -94,8 +94,11 @@ The module consists of the following components:
    * Finds out conflicting TLS-certificates [in external LDAP provider configuration settings](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap) and exports the corresponding metric.
    * Revokes the sessions of a user on a lock, a password or 2FA reset, a logout and a user deletion: raises the generation of the user's Dex account, writes a Dex Revocation object, and deletes the user's Dex AuthSession and RefreshToken objects.
    * Serves the revocations to dex-authenticator over HTTPS (the `revocation-feed` Service), so that dex-authenticator ends the revoked sessions within seconds.
+   * Keeps the `kubernetes` Dex client (OAuth2Client) and its `trustedPeers`: the DexAuthenticators and DexClients allowed access to Kubernetes, and the static clients of the module configuration.
 
    User-authn-controller uses `dex.coreos.com` API group custom resources (Password, OfflineSessions, UserIdentity, and RefreshToken used by Dex as a storage) as a backend to manage module custom resources.
+
+1. **Dexclient-controller**: A controller that consists of a single **dexclient-controller** container (the image of user-authn-controller) and keeps the credentials of every [DexClient](/modules/user-authn/cr.html#dexclient): the `dex-client-<name>` Secret in the namespace of the DexClient and its Dex clients (OAuth2Client). It is the only component of the module that can write Secrets in other namespaces, and it serves nothing on the network but health and metrics.
 
 1. **User-api**: A component that implements self-service operations for the user who is signed in to the DKP web interface: signing out on all devices and changing the password of a local account. It accepts only the ID tokens of the DKP web interface and does not require platform administrator rights. For each operation, the component creates a UserOperation custom resource of the `Logout` or `RequirePasswordChange` type, which is processed by the user-authn-controller component. A ValidatingAdmissionPolicy allows user-api to create only these operations.
 

@@ -69,14 +69,85 @@
         d8 k -n d8-user-authn describe pods -l app=user-authn-controller
         ```
 
+- name: d8.user-authn.dexclient-controller.availability
+  rules:
+  - alert: D8UserAuthnDexClientControllerUnavailable
+    expr: |
+      (
+        kube_deployment_spec_replicas{
+          namespace="d8-user-authn",
+          deployment="dexclient-controller"
+        }
+        -
+        kube_deployment_status_replicas_available{
+          namespace="d8-user-authn",
+          deployment="dexclient-controller"
+        }
+      ) > 0
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: dexclient-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authn_controller_unavailable: "D8UserAuthnControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authn_controller_unavailable: "D8UserAuthnControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: dexclient-controller has unavailable replicas.
+      description: |-
+        Deckhouse has detected unavailable replicas in the `dexclient-controller` deployment in the `d8-user-authn` namespace.
+
+        While this alert is active, a new DexClient gets no credentials Secret and no Dex client, and changes of DexClients are not applied.
+
+        Check deployment and pod states:
+
+        ```bash
+        d8 k -n d8-user-authn get deploy dexclient-controller
+        d8 k -n d8-user-authn get pods -l app=dexclient-controller
+        d8 k -n d8-user-authn logs deploy/dexclient-controller --all-pods=true
+        ```
+
+  - alert: D8UserAuthnDexClientControllerTargetDown
+    expr: |
+      (
+        sum(up{job="dexclient-controller", namespace="d8-user-authn"}) == 0
+        or
+        absent(up{job="dexclient-controller", namespace="d8-user-authn"})
+      )
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: dexclient-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authn_controller_unavailable: "D8UserAuthnControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authn_controller_unavailable: "D8UserAuthnControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Prometheus is unable to scrape dexclient-controller.
+      description: |-
+        Prometheus cannot scrape metrics from `dexclient-controller` in namespace `d8-user-authn`.
+
+        The controller is down, not Ready (informer cache has not synced), or the PodMonitor is missing. The credentials of DexClients are not kept up to date.
+
+        Check:
+
+        ```bash
+        d8 k -n d8-user-authn get pods -l app=dexclient-controller
+        d8 k -n d8-user-authn describe pods -l app=dexclient-controller
+        ```
+
 - name: d8.user-authn.controller.reconcile
   rules:
   - alert: D8UserAuthnControllerReconcileErrorsHigh
     expr: |
-      sum by (controller) (
+      sum by (job, controller) (
         rate(controller_runtime_reconcile_errors_total{
           namespace="d8-user-authn",
-          job="user-authn-controller"
+          job=~"user-authn-controller|dexclient-controller"
         }[5m])
       ) > 0.1
     for: 10m
@@ -84,20 +155,21 @@
       severity_level: "8"
       tier: cluster
       d8_module: user-authn
-      d8_component: user-authn-controller
+      # The controller the errors come from: user-authn-controller or dexclient-controller.
+      d8_component: "{{ $labels.job }}"
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
       plk_create_group_if_not_exists__d8_user_authn_controller_unavailable: "D8UserAuthnControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_user_authn_controller_unavailable: "D8UserAuthnControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: user-authn-controller reconcile errors are high for {{ $labels.controller }}.
+      summary: "{{ $labels.job }} reconcile errors are high for {{ $labels.controller }}."
       description: |-
-        Controller `{{ $labels.controller }}` has a reconcile error rate above 0.1 errors per second for more than 10 minutes.
+        Controller `{{ $labels.controller }}` of `{{ $labels.job }}` has a reconcile error rate above 0.1 errors per second for more than 10 minutes.
 
         Check logs:
 
         ```bash
-        d8 k -n d8-user-authn logs deploy/user-authn-controller --all-pods=true
+        d8 k -n d8-user-authn logs deploy/{{ $labels.job }} --all-pods=true
         ```
 
 - name: d8.user-authn.controller.identity-migration

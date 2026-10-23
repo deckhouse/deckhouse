@@ -88,22 +88,6 @@ var _ = Describe("Module :: user-authn :: helm template :: sessions of dex", fun
 			sessionsAuthenticatorNames("console", "d8-console")+
 				sessionsAuthenticatorNames("grafana", "d8-monitoring")+
 				sessionsAuthenticatorNames("app", "tenant-ns"))
-		hec.ValuesSetFromYaml("userAuthn.internal.dexClientCRDs", `
-- id: dex-client-portal@tenant-ns
-  encodedID: portal-encoded
-  name: portal
-  namespace: tenant-ns
-  legacyID: dex-client-portal:tenant-ns
-  legacyEncodedID: portal-legacy-encoded
-  clientSecret: secret
-  spec:
-    redirectURIs:
-    - https://portal.tenant.com/callback
-    postLogoutRedirectURIs:
-    - https://portal.tenant.com/
-    backchannelLogoutURI: https://portal.tenant.com/backchannel
-    refreshTokenLifetime: Session
-`)
 		hec.ValuesSetFromYaml("userAuthn.internal.providers", `
 - id: corp
   displayName: Corp
@@ -156,15 +140,6 @@ var _ = Describe("Module :: user-authn :: helm template :: sessions of dex", fun
 			Expect(client.Field("postLogoutRedirectURIs").String()).To(MatchJSON(`["https://console.example.com/"]`))
 			Expect(client.Field("refreshTokenLifetime").Exists()).To(BeFalse())
 			Expect(client.Field("ssoSharedWith").Exists()).To(BeFalse())
-		})
-
-		It("renders the sign-out fields of a DexClient", func() {
-			client := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "portal-encoded")
-			Expect(client.Field("postLogoutRedirectURIs").String()).To(MatchJSON(`["https://portal.tenant.com/"]`))
-			Expect(client.Field("backchannelLogoutURI").String()).To(Equal("https://portal.tenant.com/backchannel"))
-			Expect(client.Field("refreshTokenLifetime").String()).To(Equal("session"))
-			legacy := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "portal-legacy-encoded")
-			Expect(legacy.Field("refreshTokenLifetime").String()).To(Equal("session"))
 		})
 
 		It("signs out of an OIDC provider only when asked", func() {

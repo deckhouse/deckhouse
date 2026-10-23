@@ -28,8 +28,6 @@ import (
 	"net/url"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,23 +76,20 @@ func Key(salt []byte, kind, value string) string {
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil)[:16])
 }
 
-// ClientCache is how the manager caches OAuth2Client objects for the feed: the clients of
-// DexAuthenticators in the Dex namespace, without their secrets (TransformClient).
+// ClientCache is how the manager caches OAuth2Client objects: every client in the Dex namespace,
+// without its secret (TransformClient). The feed picks the clients of DexAuthenticators by
+// DexAuthenticatorLabel itself; the controllers that write clients watch the cache and read the
+// clients they write through the API.
 func ClientCache() (client.Object, cache.ByObject, error) {
-	exists, err := labels.NewRequirement(DexAuthenticatorLabel, selection.Exists, nil)
-	if err != nil {
-		return nil, cache.ByObject{}, fmt.Errorf("select dex-authenticator clients: %w", err)
-	}
 	return controller.Object(controller.OAuth2ClientGVK), cache.ByObject{
 		Namespaces: map[string]cache.Config{naming.DexNamespace: {}},
-		Label:      labels.NewSelector().Add(*exists),
 		Transform:  TransformClient,
 	}, nil
 }
 
-// TransformClient reduces an OAuth2Client to what the feed needs: the name, namespace, labels, and
-// resourceVersion, the client id, and the SHA-256 and the salt derived from the secret. The secret
-// itself is not kept.
+// TransformClient reduces an OAuth2Client to what the feed and the watches of the controllers need:
+// the name, namespace, labels, annotations, and resourceVersion, the client id, and the SHA-256 and
+// the salt derived from the secret. The secret itself is not kept.
 func TransformClient(obj any) (any, error) {
 	switch typed := obj.(type) {
 	case *unstructured.Unstructured:
@@ -121,6 +116,7 @@ func reduceClient(u *unstructured.Unstructured) *unstructured.Unstructured {
 	out.SetName(u.GetName())
 	out.SetNamespace(u.GetNamespace())
 	out.SetLabels(u.GetLabels())
+	out.SetAnnotations(u.GetAnnotations())
 	out.SetResourceVersion(u.GetResourceVersion())
 	out.SetUID(u.GetUID())
 	if id, ok := u.Object["id"].(string); ok {

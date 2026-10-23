@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/labels"
 	toolscache "k8s.io/client-go/tools/cache"
 
 	"user-authn-controller/internal/revocation"
@@ -118,8 +117,8 @@ func TestTransformClient_KeepsNoSecret(t *testing.T) {
 			t.Errorf("%s is kept", field)
 		}
 	}
-	if len(reduced.GetAnnotations()) != 0 {
-		t.Errorf("annotations = %v", reduced.GetAnnotations())
+	if reduced.GetAnnotations()["meta.helm.sh/release-name"] != "user-authn" {
+		t.Errorf("annotations = %v, want them kept for the watches of the controllers", reduced.GetAnnotations())
 	}
 
 	tombstone, err := TransformClient(toolscache.DeletedFinalStateUnknown{Key: "x", Obj: rawClient("a", "s3cr3t", true)})
@@ -132,15 +131,17 @@ func TestTransformClient_KeepsNoSecret(t *testing.T) {
 	}
 }
 
-func TestClientCache_SelectsDexAuthenticators(t *testing.T) {
+func TestClientCache_HoldsEveryClientWithoutSecret(t *testing.T) {
 	t.Parallel()
 
 	_, byObject, err := ClientCache()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !byObject.Label.Matches(labels.Set{DexAuthenticatorLabel: "console"}) || byObject.Label.Matches(labels.Set{"app": "dex"}) {
-		t.Errorf("label selector = %v", byObject.Label)
+	// The controllers that write the clients of DexClients and the kubernetes client watch the
+	// same informer, so it is not narrowed to DexAuthenticators: the feed checks the label itself.
+	if byObject.Label != nil {
+		t.Errorf("label selector = %v, want none", byObject.Label)
 	}
 	if byObject.Transform == nil || len(byObject.Namespaces) != 1 {
 		t.Errorf("cache config = %+v", byObject)

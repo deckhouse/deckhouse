@@ -1,0 +1,117 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dexclient-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dexclient-controller")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authn:dexclient-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dexclient-controller")) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dexclients
+  verbs:
+  - get
+  - list
+  - watch
+# The credentials Secret of a DexClient lives in the namespace of the DexClient, and RBAC cannot
+# narrow a grant by label (the label-scoped informer only saves memory), so this grant covers every
+# Secret in the cluster: a compromise of this pod reads and writes all of them, which is as much as
+# cluster-admin. That is why the DexClient reconciler runs alone under this ServiceAccount: the pod
+# listens only for health and metrics, and parses no input from other pods. The revocation feed,
+# which serves DexAuthenticators in user namespaces, runs in user-authn-controller, which cannot
+# write Secrets.
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:user-authn:dexclient-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dexclient-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:user-authn:dexclient-controller
+subjects:
+- kind: ServiceAccount
+  name: dexclient-controller
+  namespace: d8-{{ .Chart.Name }}
+---
+# The OAuth2Clients of DexClients and the lease live in the module's own namespace, so their grants
+# are here rather than in the ClusterRole.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dexclient-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dexclient-controller")) | nindent 2 }}
+rules:
+- apiGroups:
+  - dex.coreos.com
+  resources:
+  - oauth2clients
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dexclient-controller
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dexclient-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: dexclient-controller
+subjects:
+- kind: ServiceAccount
+  name: dexclient-controller
+  namespace: d8-{{ .Chart.Name }}

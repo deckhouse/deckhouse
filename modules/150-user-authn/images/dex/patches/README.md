@@ -82,8 +82,8 @@ the kubernetes storage, and check that an update never writes the generation.
 **Consumer in Deckhouse:** user-authn-controller (`User` writes the `Password`
 fields, `UserAccount` shows the counters, `UserOperation` raises the
 generation and writes pair revocations, the revocation feed reads
-`Revocation`); the user-authz webhook and basic-auth-proxy (read
-`Revocation`); `templates/dex-client/oauth2client.yaml`,
+`Revocation`, `DexClient` writes the allow-lists of its `OAuth2Client`); the
+user-authz webhook and basic-auth-proxy (read `Revocation`);
 `templates/dex-authenticator/oauth2client.yaml` and `templates/dex/config.yaml`
 (allow-lists); `crds/external/` and `crds/pull_dex_crds.sh`.
 

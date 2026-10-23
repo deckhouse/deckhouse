@@ -497,8 +497,8 @@ type hookGeneration struct {
 
 var hookGenerations = []hookGeneration{
 	{
-		// modules/150-user-authn/hooks/get_dex_client_crds.go and get_dex_authenticator_crds.go
-		// parse the value with strconv.ParseBool and fail closed on anything else.
+		// modules/150-user-authn/hooks/get_dex_authenticator_crds.go and user-authn-controller
+		// (internal/controller/access.go) parse the value with strconv.ParseBool and fail closed on anything else.
 		name: "value honouring",
 		grants: func(value string) bool {
 			granted, err := strconv.ParseBool(value)

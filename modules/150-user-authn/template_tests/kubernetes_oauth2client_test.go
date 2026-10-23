@@ -17,12 +17,18 @@ limitations under the License.
 package template_tests
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
+
+// kubernetesOAuth2ClientName is encoding.ToFnvLikeDex("kubernetes").
+const kubernetesOAuth2ClientName = "nn2wezlsnzsxizltzpzjzzeeeirsk"
 
 var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2client", func() {
 	hec := SetupHelmConfig("")
@@ -43,18 +49,7 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 		hec.ValuesSet("userAuthn.internal.dexTLS.ca", "plainstring")
 	})
 
-	Context("Without dex authenticator", func() {
-		BeforeEach(func() {
-			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorCRDs", `[]`)
-			hec.HelmRender()
-		})
-		It("Should not deploy kubernetes OAuth2Client", func() {
-			Expect(hec.RenderError).ShouldNot(HaveOccurred())
-			Expect(hec.KubernetesResource("OAuth2Client", "d8-user-authn", "nn2wezlsnzsxizltzpzjzzeeeirsk").Exists()).To(BeFalse())
-		})
-	})
-
-	Context("With dex authenticator", func() {
+	Context("Without peers from the module configuration", func() {
 		BeforeEach(func() {
 			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorCRDs", `
 - name: test
@@ -86,64 +81,19 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 `)
 			hec.HelmRender()
 		})
-		It("Should deploy kubernetes OAuth2Client without redirect URIs", func() {
+		// user-authn-controller keeps the client and takes the DexAuthenticator peers from the
+		// DexAuthenticators themselves.
+		It("Should leave the kubernetes OAuth2Client to the controller with no static peers", func() {
 			Expect(hec.RenderError).ShouldNot(HaveOccurred())
+			Expect(hec.KubernetesResource("OAuth2Client", "d8-user-authn", kubernetesOAuth2ClientName).Exists()).To(BeFalse())
 
-			oauth2Client := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "nn2wezlsnzsxizltzpzjzzeeeirsk")
-			Expect(oauth2Client.Exists()).To(BeTrue())
-
-			redirectURIs := oauth2Client.Field("redirectURIs")
-			Expect(redirectURIs.IsArray()).To(BeTrue(), "redirectURIs must render as a list, not a bare key parsed as null")
-			Expect(redirectURIs.Array()).To(BeEmpty())
-
-			// The authenticator still reaches the privileged client through trustedPeers, so the
-			// empty redirectURIs above is not just an empty render.
-			peers := []string{}
-			for _, p := range oauth2Client.Field("trustedPeers").Array() {
-				peers = append(peers, p.String())
-			}
-			Expect(peers).To(ConsistOf("test-d8-test-dex-authenticator"))
+			cm := hec.KubernetesResource("ConfigMap", "d8-user-authn", "kubernetes-oauth2client")
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field("data.trustedPeers").String()).To(Equal("[]"))
 		})
 	})
 
-	Context("With dex authenticator without access to Kubernetes API", func() {
-		BeforeEach(func() {
-			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorCRDs", `
-- name: test
-  encodedName: justForTest
-  namespace: d8-test
-  credentials:
-    appDexSecret: dexSecret
-    cookieSecret: cookieSecret
-  spec:
-    applications:
-    - domain: authenticator.example.com
-      ingressClassName: nginx
-      ingressSecretName: test
-`)
-			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorNames", `
-"test@d8-test":
-  name: "test-dex-authenticator"
-  truncated: false
-  hash: ""
-  secretName: "dex-authenticator-test"
-  secretTruncated: false
-  secretHash: ""
-  ingressNames:
-    "0":
-      name: "test-dex-authenticator"
-      truncated: false
-      hash: ""
-`)
-			hec.HelmRender()
-		})
-		It("Should not deploy kubernetes OAuth2Client", func() {
-			Expect(hec.RenderError).ShouldNot(HaveOccurred())
-			Expect(hec.KubernetesResource("OAuth2Client", "d8-user-authn", "nn2wezlsnzsxizltzpzjzzeeeirsk").Exists()).To(BeFalse())
-		})
-	})
-
-	Context("Full scenario: dex-authenticator + dex-client + publishAPI + kubeconfigGenerator", func() {
+	Context("Full scenario: dex-authenticator + publishAPI + kubeconfigGenerator", func() {
 		BeforeEach(func() {
 			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorCRDs", `
 - name: with-access
@@ -196,38 +146,6 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
       truncated: false
       hash: ""
 `)
-			hec.ValuesSetFromYaml("userAuthn.internal.dexClientCRDs", `
-- id: my-app@d8-test
-  encodedID: nvqxe33pftwgs5dpojstkylhojpwggrcgji
-  legacyID: my-app:d8-test
-  legacyEncodedID: nvqxe33pfvtwk3tfmrqxe33pftwgs5dpojstkylhojpwggrcgji
-  name: my-app
-  namespace: d8-test
-  clientSecret: my-app-secret
-  spec:
-    redirectURIs:
-    - https://my-app.example.com/callback
-    trustedPeers: []
-    allowedGroups: []
-  labels: {}
-  annotations: {}
-  allowAccessToKubernetes: true
-- id: my-app-no-k8s@d8-test
-  encodedID: nvqxe33pftxhi33mmuxgs5dpojstkylhojpwggrcgji
-  legacyID: my-app-no-k8s:d8-test
-  legacyEncodedID: nvqxe33pftxhi33mmuxgs5dpojstkylhojpwggrcgji-legacy
-  name: my-app-no-k8s
-  namespace: d8-test
-  clientSecret: my-app-no-k8s-secret
-  spec:
-    redirectURIs:
-    - https://no-k8s.example.com/callback
-    trustedPeers: []
-    allowedGroups: []
-  labels: {}
-  annotations: {}
-  allowAccessToKubernetes: false
-`)
 			hec.ValuesSet("userAuthn.internal.publishAPI.enabled", true)
 			hec.ValuesSet("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", true)
 			hec.ValuesSet("userAuthn.internal.publishAPI.publishedAPIKubeconfigGeneratorMasterCA", "publish-api-ca")
@@ -254,37 +172,22 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 			hec.HelmRender()
 		})
 
-		It("Should render OAuth2Client with all expected trustedPeers, redirectURIs and secret", func() {
+		It("Should pass the static peers in order and the secret checksum to the controller", func() {
 			Expect(hec.RenderError).ShouldNot(HaveOccurred())
+			Expect(hec.KubernetesResource("OAuth2Client", "d8-user-authn", kubernetesOAuth2ClientName).Exists()).To(BeFalse())
 
-			oauth2Client := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "nn2wezlsnzsxizltzpzjzzeeeirsk")
-			Expect(oauth2Client.Exists()).To(BeTrue())
-
-			Expect(oauth2Client.Field("id").String()).To(Equal("kubernetes"))
-			Expect(oauth2Client.Field("name").String()).To(Equal("kubernetes"))
-			Expect(oauth2Client.Field("secret").String()).To(Equal("plainstring"))
-
-			peers := []string{}
-			for _, p := range oauth2Client.Field("trustedPeers").Array() {
-				peers = append(peers, p.String())
-			}
-			Expect(peers).To(ConsistOf(
-				"with-access-d8-with-access-dex-authenticator",
-				"my-app@d8-test",
+			cm := hec.KubernetesResource("ConfigMap", "d8-user-authn", "kubernetes-oauth2client")
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field("data.trustedPeers").String()).To(MatchJSON(`[
 				"kubeconfig-generator",
 				"kubeconfig-publish-api",
 				"kubeconfig-generator-0",
 				"kubeconfig-plain",
 				"kubeconfig-generator-1",
-				"kubeconfig-prod-eu",
-			))
-
-			// Every peer redirects to its own OAuth2Client, so the privileged kubernetes
-			// client needs no redirect URI of its own. In particular, no tenant-controlled
-			// domain and no leftover kubeconfig web UI callback may reach it.
-			redirectURIs := oauth2Client.Field("redirectURIs")
-			Expect(redirectURIs.IsArray()).To(BeTrue(), "redirectURIs must render as a list, not a bare key parsed as null")
-			Expect(redirectURIs.Array()).To(BeEmpty())
+				"kubeconfig-prod-eu"
+			]`))
+			sum := sha256.Sum256([]byte("plainstring"))
+			Expect(cm.Field("metadata.annotations.checksum/secret").String()).To(Equal(hex.EncodeToString(sum[:])))
 		})
 
 		It("Should render a separate OAuth2Client for each slug-based clientID and for publishAPI", func() {

@@ -132,12 +132,14 @@ var _ = Describe("Module :: user-authn :: helm template :: controller", func() {
 	It("Should give the controller the rights of the revocations", func() {
 		Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
-		// Revocation and the clients of DexAuthenticators live in d8-user-authn only: the Role, not
-		// the ClusterRole.
+		// Revocation and the Dex clients live in d8-user-authn only: the Role, not the ClusterRole.
+		// The controller reads all Dex clients from its cache and writes only the kubernetes client;
+		// the clients of DexClients are written by dexclient-controller.
 		role := hec.KubernetesResource("Role", "d8-user-authn", "controller")
 		Expect(role.Field(`rules.#(resources.0=="revocations").verbs`).String()).To(MatchJSON(`["get","list","watch","create","delete"]`))
 		Expect(role.Field(`rules.#(resources.0=="revocations").apiGroups`).String()).To(MatchJSON(`["dex.coreos.com"]`))
-		Expect(role.Field(`rules.#(resources.0=="oauth2clients").verbs`).String()).To(MatchJSON(`["get","list","watch"]`))
+		Expect(role.Field(`rules.#(resources.0=="oauth2clients")#.verbs`).String()).To(MatchJSON(`[["list","watch","create"],["get","update","delete"]]`))
+		Expect(role.Field(`rules.#(resources.0=="oauth2clients")#.resourceNames`).String()).To(MatchJSON(`[["nn2wezlsnzsxizltzpzjzzeeeirsk"]]`))
 
 		clusterRole := hec.KubernetesGlobalResource("ClusterRole", "d8:user-authn:controller")
 		Expect(clusterRole.Field("rules").String()).ToNot(ContainSubstring("revocations"))

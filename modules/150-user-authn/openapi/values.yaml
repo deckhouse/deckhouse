@@ -232,42 +232,6 @@ properties:
 
           The address goes into the arguments of the DexAuthenticator Deployment, which users of its namespace can read,
           so it holds no credentials. TLS (`rediss://`) and a password are not supported yet.
-      dexClientCRDs:
-        type: array
-        default: []
-        items:
-          type: object
-          properties:
-            id:
-              type: string
-            encodedID:
-              type: string
-            name:
-              type: string
-            namespace:
-              type: string
-            clientSecret:
-              type: string
-            legacyID:
-              type: string
-            legacyEncodedID:
-              type: string
-            labels:
-              type: object
-              default: {}
-              additionalProperties:
-                type: string
-            annotations:
-              type: object
-              default: {}
-              additionalProperties:
-                type: string
-            allowAccessToKubernetes:
-              type: boolean
-            spec:
-              # clients spec is copied from custom resources as is and validated by its spec
-              type: object
-              additionalProperties: true
       dexUsersCRDs:
         type: array
         default: []

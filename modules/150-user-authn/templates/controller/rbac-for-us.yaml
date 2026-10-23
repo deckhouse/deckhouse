@@ -165,8 +165,33 @@ rules:
   - watch
   - patch
   - delete
+# The DexClients allowed access to Kubernetes, for the trustedPeers of the kubernetes OAuth2Client.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dexclients
+  verbs:
+  - get
+  - list
+  - watch
+# Read by metadata only, for the trustedPeers of the kubernetes OAuth2Client.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - dexauthenticators
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - events.k8s.io
   resources:
   - events
   verbs:
@@ -206,12 +231,24 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "user-authn-controller")) | nindent 2 }}
 rules:
+# Secrets of this namespace are read, never written: the client secret of the kubernetes
+# OAuth2Client and the Kerberos keytab a DexProviderCheck looks up by the name in its DexProvider.
+# The Secrets of DexClients are written by dexclient-controller under its own ServiceAccount.
 - apiGroups:
   - ""
   resources:
   - secrets
   verbs:
   - get
+# The static trustedPeers of the kubernetes OAuth2Client.
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
 # Revocation objects live in this namespace only: the controller writes the revocations of
 # UserOperations and deleted Users, the revocation feed reads them all, and the leader deletes them
 # past retention.
@@ -236,15 +273,28 @@ rules:
   verbs:
   - list
   - delete
-# The revocation feed authenticates DexAuthenticators with the secrets of their Dex clients.
+# The revocation feed authenticates DexAuthenticators with the secrets of their Dex clients, read
+# from the cache of all OAuth2Clients of the namespace.
 - apiGroups:
   - dex.coreos.com
   resources:
   - oauth2clients
   verbs:
-  - get
   - list
   - watch
+  - create
+# The controller writes only the kubernetes OAuth2Client: Dex names its object after the FNV hash of
+# the client id kubernetes (kubernetesclient.OAuth2ClientName). create cannot be limited to a name.
+- apiGroups:
+  - dex.coreos.com
+  resources:
+  - oauth2clients
+  resourceNames:
+  - nn2wezlsnzsxizltzpzjzzeeeirsk
+  verbs:
+  - get
+  - update
+  - delete
 - apiGroups:
   - coordination.k8s.io
   resources:

@@ -1,0 +1,26 @@
+{{- /* The kubernetes OAuth2Client is kept by user-authn-controller. Its peers from DexAuthenticators
+and DexClients come from those objects; the ones the module configuration adds come from here. The
+checksum makes the controller rewrite the client when its secret changes. */}}
+{{- $peers := list }}
+{{- if .Values.userAuthn.internal.publishAPI.enabled }}
+  {{- $peers = append $peers "kubeconfig-generator" }}
+  {{- if .Values.userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry }}
+    {{- $peers = append $peers "kubeconfig-publish-api" }}
+  {{- end }}
+{{- end }}
+{{- range $index, $cluster := .Values.userAuthn.kubeconfigGenerator }}
+  {{- $slug := $cluster.id | replace "@" "-at-" | replace ":" "-" }}
+  {{- $peers = append $peers (printf "kubeconfig-generator-%d" $index) }}
+  {{- $peers = append $peers (printf "kubeconfig-%s" $slug) }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubernetes-oauth2client
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
+  annotations:
+    checksum/secret: {{ .Values.userAuthn.internal.kubernetesDexClientAppSecret | sha256sum }}
+data:
+  trustedPeers: {{ $peers | toJson | quote }}

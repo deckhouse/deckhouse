@@ -25,6 +25,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/klog/v2"
@@ -38,7 +39,9 @@ import (
 
 	"user-authn-controller/api/v1alpha1"
 	"user-authn-controller/internal/controller"
+	"user-authn-controller/internal/controller/dexclient"
 	"user-authn-controller/internal/controller/identitymigration"
+	"user-authn-controller/internal/controller/kubernetesclient"
 	"user-authn-controller/internal/controller/providercheck"
 	"user-authn-controller/internal/controller/revoke"
 	"user-authn-controller/internal/controller/tlsconflict"
@@ -53,6 +56,12 @@ import (
 const (
 	controllerName          = "user-authn-controller"
 	leaderElectionNamespace = "d8-user-authn"
+	// dexClientCommand runs the DexClient reconciler alone, in the dexclient-controller Deployment
+	// under a ServiceAccount of its own: it is the only part that writes Secrets, in every
+	// namespace, so it runs without the revocation feed and without any listener but health and
+	// metrics. dexClientControllerName is its lease.
+	dexClientCommand        = "dexclient"
+	dexClientControllerName = "user-authn-dexclient-controller"
 
 	// logLevelEnv selects the zap level (debug, info, warn, error); the default is info, as in
 	// user-authz-controller.
@@ -95,7 +104,14 @@ func main() {
 
 	ctx := ctrl.SetupSignalHandler()
 
-	runtimeManager, err := setupRuntimeManager()
+	setup := setupRuntimeManager
+	if len(os.Args) > 1 {
+		if os.Args[1] != dexClientCommand {
+			exitOnError(logger, fmt.Errorf("unknown command %q", os.Args[1]), "unable to start")
+		}
+		setup = setupDexClientManager
+	}
+	runtimeManager, err := setup()
 	if err != nil {
 		exitOnError(logger, err, "unable to set up runtime manager")
 	}
@@ -146,7 +162,7 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 		return nil, fmt.Errorf("create runtime manager: %w", err)
 	}
 
-	if err = addHealthChecks(runtimeManager); err != nil {
+	if err = addHealthChecks(runtimeManager, apiAccessCheck(runtimeManager.GetAPIReader(), &v1alpha1.UserAccountList{}, "UserAccounts")); err != nil {
 		return nil, err
 	}
 	if err = controller.SetupIndexes(context.Background(), runtimeManager.GetFieldIndexer()); err != nil {
@@ -187,6 +203,9 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 		if err = revocationfeed.Register(context.Background(), runtimeManager, feed); err != nil {
 			return nil, fmt.Errorf("register revocation feed: %w", err)
 		}
+	}
+	if err = kubernetesclient.Register(runtimeManager); err != nil {
+		return nil, fmt.Errorf("register kubernetesclient controller: %w", err)
 	}
 
 	return runtimeManager, nil
@@ -248,22 +267,76 @@ func minDeviceAge(value string) (time.Duration, error) {
 	return age, nil
 }
 
+// setupDexClientManager is the manager of the dexclient command: the DexClient reconciler with
+// the caches it reads, and nothing else.
+func setupDexClientManager() (ctrl.Manager, error) {
+	scheme := runtime.NewScheme()
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		return nil, fmt.Errorf("add client-go scheme: %w", err)
+	}
+	cfg, err := ctrl.GetConfig()
+	if err != nil {
+		return nil, fmt.Errorf("get kubeconfig: %w", err)
+	}
+	opts, err := newDexClientManagerOptions(scheme)
+	if err != nil {
+		return nil, err
+	}
+	runtimeManager, err := ctrl.NewManager(cfg, opts)
+	if err != nil {
+		return nil, fmt.Errorf("create runtime manager: %w", err)
+	}
+	if err = addHealthChecks(runtimeManager, apiAccessCheck(runtimeManager.GetAPIReader(), controller.List(controller.DexClientGVK), "DexClients")); err != nil {
+		return nil, err
+	}
+	if err = dexclient.Register(runtimeManager); err != nil {
+		return nil, fmt.Errorf("register dexclient controller: %w", err)
+	}
+	return runtimeManager, nil
+}
+
 func newManagerOptions(scheme *runtime.Scheme) (manager.Options, error) {
-	byObject := controller.InformerCacheByObject()
 	clients, clientCache, err := revocationfeed.ClientCache()
 	if err != nil {
 		return manager.Options{}, err
 	}
-	byObject[clients] = clientCache
+	byObject, err := controller.MergeCacheByObject(
+		controller.InformerCacheByObject(),
+		kubernetesclient.InformerCacheByObject(),
+		map[client.Object]cache.ByObject{clients: clientCache},
+	)
+	if err != nil {
+		return manager.Options{}, fmt.Errorf("merge informer cache settings: %w", err)
+	}
+	return managerOptions(scheme, controllerName, byObject), nil
+}
 
+// newDexClientManagerOptions caches what the DexClient reconciler watches: the labelled Secrets by
+// metadata and the OAuth2Clients of d8-user-authn without their secrets.
+func newDexClientManagerOptions(scheme *runtime.Scheme) (manager.Options, error) {
+	clients, clientCache, err := revocationfeed.ClientCache()
+	if err != nil {
+		return manager.Options{}, err
+	}
+	byObject, err := controller.MergeCacheByObject(
+		dexclient.InformerCacheByObject(),
+		map[client.Object]cache.ByObject{clients: clientCache},
+	)
+	if err != nil {
+		return manager.Options{}, fmt.Errorf("merge informer cache settings: %w", err)
+	}
+	return managerOptions(scheme, dexClientControllerName, byObject), nil
+}
+
+func managerOptions(scheme *runtime.Scheme, leaderElectionID string, byObject map[client.Object]cache.ByObject) manager.Options {
 	timeout := 10 * time.Second
-	// Leader election is always on. It used to follow HA_MODE, but two pods of this Deployment
-	// exist outside HA too: the non-HA rolling update surges the new pod before the old one is
-	// gone, and both reconcile and write UserAccounts and DexProviderChecks for that window.
+	// Leader election is always on. It used to follow HA_MODE, but two pods of a Deployment exist
+	// outside HA too: the non-HA rolling update surges the new pod before the old one is gone, and
+	// both would reconcile and write the same objects for that window.
 	lease, renew, retry := leaseDuration, renewDeadline, retryPeriod
-	opts := manager.Options{
+	return manager.Options{
 		LeaderElection:                true,
-		LeaderElectionID:              controllerName,
+		LeaderElectionID:              leaderElectionID,
 		LeaderElectionNamespace:       leaderElectionNamespace,
 		LeaderElectionReleaseOnCancel: true,
 		LeaseDuration:                 &lease,
@@ -281,11 +354,12 @@ func newManagerOptions(scheme *runtime.Scheme) (manager.Options, error) {
 		Client: client.Options{
 			Cache: &client.CacheOptions{
 				Unstructured: true,
+				// Secrets are watched by metadata only: a read from the cache would start an
+				// informer holding their data.
+				DisableFor: []client.Object{&corev1.Secret{}},
 			},
 		},
 	}
-
-	return opts, nil
 }
 
 const (
@@ -299,14 +373,14 @@ const (
 // the informers caught up at least once, and api-access, that the controller can read the API
 // under its own identity right now - the informers stay "synced" after access is lost, so with
 // cache-sync alone a controller that could do nothing kept both probes at 200.
-func addHealthChecks(mgr manager.Manager) error {
+func addHealthChecks(mgr manager.Manager, apiAccess healthz.Checker) error {
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		return fmt.Errorf("add healthz check: %w", err)
 	}
 	if err := mgr.AddReadyzCheck("cache-sync", cacheSyncCheck(mgr.GetCache())); err != nil {
 		return fmt.Errorf("add readyz check: %w", err)
 	}
-	if err := mgr.AddReadyzCheck("api-access", apiAccessCheck(mgr.GetAPIReader())); err != nil {
+	if err := mgr.AddReadyzCheck("api-access", apiAccess); err != nil {
 		return fmt.Errorf("add readyz check: %w", err)
 	}
 	return nil
@@ -314,13 +388,13 @@ func addHealthChecks(mgr manager.Manager) error {
 
 // apiAccessCheck reports whether the controller can read the objects it reconciles, bypassing the
 // cache: one list of one object per probe.
-func apiAccessCheck(reader client.Reader) healthz.Checker {
+func apiAccessCheck(reader client.Reader, list client.ObjectList, what string) healthz.Checker {
 	return func(req *http.Request) error {
 		ctx, cancel := context.WithTimeout(req.Context(), apiAccessCheckTimeout)
 		defer cancel()
 
-		if err := reader.List(ctx, &v1alpha1.UserAccountList{}, client.Limit(1)); err != nil {
-			return fmt.Errorf("list UserAccounts: %w", err)
+		if err := reader.List(ctx, list, client.Limit(1)); err != nil {
+			return fmt.Errorf("list %s: %w", what, err)
 		}
 		return nil
 	}

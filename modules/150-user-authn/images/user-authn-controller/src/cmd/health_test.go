@@ -25,6 +25,8 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"user-authn-controller/api/v1alpha1"
 )
 
 type stubSyncCache struct {
@@ -63,11 +65,11 @@ func TestAPIAccessCheck(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
-	if err := apiAccessCheck(stubReader{})(req); err != nil {
+	if err := apiAccessCheck(stubReader{}, &v1alpha1.UserAccountList{}, "UserAccounts")(req); err != nil {
 		t.Fatalf("a reader that answers: %v", err)
 	}
 	forbidden := errors.New(`useraccounts.deckhouse.io is forbidden`)
-	if err := apiAccessCheck(stubReader{err: forbidden})(req); !errors.Is(err, forbidden) {
+	if err := apiAccessCheck(stubReader{err: forbidden}, &v1alpha1.UserAccountList{}, "UserAccounts")(req); !errors.Is(err, forbidden) {
 		t.Fatalf("a reader that is forbidden: got %v, want the cause", err)
 	}
 }

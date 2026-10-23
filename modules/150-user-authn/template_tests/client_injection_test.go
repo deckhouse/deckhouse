@@ -20,16 +20,13 @@ import (
 	"sort"
 
 	"github.com/flant/kube-client/manifest/releaseutil"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/tidwall/gjson"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
-// injectedClusterRoleBinding is a YAML document appended to a value taken from a DexClient or a
-// DexAuthenticator. A line break returns the rendered output to column 0, so unless the value is
-// emitted as a quoted scalar the remaining lines become an extra manifest of the release.
+// injectedClusterRoleBinding is a YAML document appended to a value taken from a DexAuthenticator.
+// A line break returns the rendered output to column 0, so unless the value is emitted as a quoted
+// scalar the remaining lines become an extra manifest of the release.
 const injectedClusterRoleBinding = "\n" +
 	"---\n" +
 	"apiVersion: rbac.authorization.k8s.io/v1\n" +
@@ -46,117 +43,6 @@ const injectedClusterRoleBindingName = "injected-by-a-tenant"
 
 // hostileValue carries a legitimate-looking value followed by the injected document.
 const hostileValue = "tenant@example.test" + injectedClusterRoleBinding
-
-var _ = Describe("Module :: user-authn :: helm template :: DexClient value injection", func() {
-	hec := SetupHelmConfig("")
-
-	BeforeEach(func() {
-		hec.ValuesSet("global.discovery.kubernetesVersion", "1.29.1")
-		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
-		hec.ValuesSet("global.modules.https.mode", "CertManager")
-		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
-		hec.ValuesSet("global.modulesImages.registry.base", "registry.example.com")
-		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler"})
-		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
-		hec.ValuesSet("global.discovery.kubernetesCA", "plainstring")
-
-		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
-		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "plainstring")
-		hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
-		hec.ValuesSet("userAuthn.internal.dexTLS.ca", "plainstring")
-	})
-
-	// Every list field of the DexClient spec is rendered twice: once for the current OAuth2Client
-	// and once for the legacy one below it, at differing indentation.
-	fields := []string{"trustedPeers", "redirectURIs", "allowedEmails", "allowedGroups"}
-
-	for _, field := range fields {
-		Context("With a DexClient carrying a YAML document in "+field, func() {
-			var rendered map[string]string
-
-			BeforeEach(func() {
-				hec.ValuesSetFromYaml("userAuthn.internal.dexClientCRDs", `
-- id: dex-client-tenant@tenant-ns
-  encodedID: "m5zgcztbnzq4x4u44scceizf"
-  name: tenant
-  namespace: tenant-ns
-  spec: {}
-  legacyID: dex-client-tenant:tenant-ns
-  legacyEncodedID: "m5zgcztbnzq4x4u44scceizfxxx"
-  clientSecret: clientSecretValue
-`)
-				hec.ValuesSet("userAuthn.internal.dexClientCRDs.0.spec."+field, []string{hostileValue})
-
-				rendered = map[string]string{}
-				hec.HelmRender(WithFilteredRenderOutput(rendered, []string{"dex-client/oauth2client.yaml"}))
-			})
-
-			It("Should not add an object to the release", func() {
-				Expect(hec.RenderError).ToNot(HaveOccurred())
-
-				Expect(hec.KubernetesGlobalResource("ClusterRoleBinding", injectedClusterRoleBindingName).Exists()).
-					To(BeFalse(), "the value must not become a manifest of its own")
-
-				for path, manifests := range rendered {
-					Expect(renderedKinds(manifests)).To(Equal([]string{"OAuth2Client", "OAuth2Client"}),
-						"%s must render exactly the two OAuth2Client objects", path)
-				}
-			})
-
-			It("Should keep the value a single scalar of both OAuth2Client objects", func() {
-				Expect(hec.RenderError).ToNot(HaveOccurred())
-
-				for _, name := range []string{"m5zgcztbnzq4x4u44scceizf", "m5zgcztbnzq4x4u44scceizfxxx"} {
-					client := hec.KubernetesResource("OAuth2Client", "d8-user-authn", name)
-					Expect(client.Exists()).To(BeTrue())
-					Expect(client.Field(field).AsStringSlice()).To(Equal([]string{hostileValue}))
-				}
-			})
-
-			It("Should keep the rest of both OAuth2Client objects intact", func() {
-				Expect(hec.RenderError).ToNot(HaveOccurred())
-
-				client := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "m5zgcztbnzq4x4u44scceizf")
-				Expect(client.Field("id").String()).To(Equal("dex-client-tenant@tenant-ns"))
-				Expect(client.Field("name").String()).To(Equal("dex-client-tenant@tenant-ns"))
-				Expect(client.Field("secret").String()).To(Equal("clientSecretValue"))
-
-				legacy := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "m5zgcztbnzq4x4u44scceizfxxx")
-				Expect(legacy.Field("id").String()).To(Equal("dex-client-tenant:tenant-ns"))
-				Expect(legacy.Field("name").String()).To(Equal("dex-client-tenant:tenant-ns"))
-				Expect(legacy.Field("secret").String()).To(Equal("clientSecretValue"))
-			})
-		})
-	}
-
-	// YAML reads such a namespace as a number or a boolean unless it is quoted.
-	for _, ns := range []string{"123", "true"} {
-		Context("With a DexClient in the namespace "+ns, func() {
-			BeforeEach(func() {
-				hec.ValuesSetFromYaml("userAuthn.internal.dexClientCRDs", `
-- id: dex-client-tenant@`+ns+`
-  encodedID: "m5zgcztbnzq4x4u44scceizf"
-  name: tenant
-  namespace: "`+ns+`"
-  spec: {}
-  legacyID: dex-client-tenant:`+ns+`
-  legacyEncodedID: "m5zgcztbnzq4x4u44scceizfxxx"
-  clientSecret: clientSecretValue
-`)
-				hec.HelmRender()
-			})
-
-			It("Should render the Secret of the client with the namespace as a string", func() {
-				Expect(hec.RenderError).ToNot(HaveOccurred())
-
-				secret := hec.KubernetesResource("Secret", ns, "dex-client-tenant")
-				Expect(secret.Exists()).To(BeTrue())
-				Expect(secret.Field("metadata.namespace").Type).To(Equal(gjson.String))
-				Expect(secret.Field("metadata.namespace").String()).To(Equal(ns))
-			})
-		})
-	}
-})
 
 // renderedKinds lists the kind of every manifest of a rendered template file, in file order. It
 // splits the stream the way the release does, so a value that stays a single scalar cannot be

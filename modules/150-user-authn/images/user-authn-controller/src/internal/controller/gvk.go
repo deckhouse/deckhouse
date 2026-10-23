@@ -71,7 +71,8 @@ var (
 		Kind:    "Revocation",
 	}
 	// OAuth2ClientGVK is a Dex client. The revocation feed authenticates the clients of
-	// DexAuthenticators with it.
+	// DexAuthenticators with it; user-authn-controller writes the kubernetes client, and
+	// dexclient-controller the clients of DexClients.
 	OAuth2ClientGVK = schema.GroupVersionKind{
 		Group:   "dex.coreos.com",
 		Version: "v1",
@@ -91,6 +92,16 @@ var (
 		Group:   "deckhouse.io",
 		Version: "v1",
 		Kind:    "DexProvider",
+	}
+	DexClientGVK = schema.GroupVersionKind{
+		Group:   "deckhouse.io",
+		Version: "v1",
+		Kind:    "DexClient",
+	}
+	DexAuthenticatorGVK = schema.GroupVersionKind{
+		Group:   "deckhouse.io",
+		Version: "v1",
+		Kind:    "DexAuthenticator",
 	}
 	UserOperationGVK = schema.GroupVersionKind{
 		Group:   "deckhouse.io",

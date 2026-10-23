@@ -232,12 +232,12 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes-dex-client
 			}
 		})
 
-		It("Should include both legacy and new trustedPeers in OAuth2Client", func() {
+		It("Should pass both legacy and new trustedPeers to the controller", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
-			oauth2Client := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "nn2wezlsnzsxizltzpzjzzeeeirsk")
-			Expect(oauth2Client.Exists()).To(BeTrue())
+			cm := hec.KubernetesResource("ConfigMap", "d8-user-authn", "kubernetes-oauth2client")
+			Expect(cm.Exists()).To(BeTrue())
 
-			peers := oauth2Client.Field("trustedPeers").Array()
+			peers := gjson.Parse(cm.Field("data.trustedPeers").String()).Array()
 			peerSet := make(map[string]bool, len(peers))
 			for _, p := range peers {
 				peerSet[p.String()] = true

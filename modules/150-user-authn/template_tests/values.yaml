@@ -5,7 +5,6 @@ userAuthn:
       https:
         mode: SelfSigned
     selfSignedCA: {}
-    dexClientCRDs: []
     dexUsersCRDs: []
     dexAuthenticatorCRDs: []
     providers: []
