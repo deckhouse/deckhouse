@@ -144,6 +144,18 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("enable module by bundle without explicit enabled", func() {
+		suite.setupTestController("enable-module-by-bundle.yaml")
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("disable module not in bundle without explicit enabled", func() {
+		suite.setupTestController("disable-module-not-in-bundle.yaml")
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("global module config", func() {
 		suite.setupTestController("global-config.yaml")
 		configModule := suite.moduleConfig("global")

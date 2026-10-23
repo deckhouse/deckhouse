@@ -256,7 +256,10 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		return ctrl.Result{}, err
 	}
 
-	if !moduleConfig.IsEnabled() {
+	// no explicit enabled — the bundle decides, as without a ModuleConfig
+	byBundle := moduleConfig.Spec.Enabled == nil && module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle)
+
+	if !moduleConfig.IsEnabled() && !byBundle {
 		// delete all pending releases for EnabledByModuleConfig disabled modules
 		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 			releases := new(v1alpha1.ModuleReleaseList)
@@ -314,17 +317,20 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		return ctrl.Result{}, nil
 	}
 
-	if moduleConfig.IsEnabled() {
-		if err := r.enableModule(ctx, module); err != nil {
-			r.logger.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
+	if byBundle {
+		if err := r.enableModuleByBundle(ctx, module); err != nil {
+			r.logger.Error("failed to enable the module by bundle", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
+	} else if err := r.enableModule(ctx, module); err != nil {
+		r.logger.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
 
-		// restore documentation for the re-enabled module from its deployed release
-		if err := r.ensureModuleDocumentation(ctx, module); err != nil {
-			r.logger.Error("failed to ensure module documentation", slog.String("module", module.Name), log.Err(err))
-			return ctrl.Result{}, err
-		}
+	// restore documentation for the re-enabled module from its deployed release
+	if err := r.ensureModuleDocumentation(ctx, module); err != nil {
+		r.logger.Error("failed to ensure module documentation", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
 
 	if module.IsExperimental() {
@@ -569,6 +575,19 @@ func (r *reconciler) enableModule(ctx context.Context, module *v1alpha1.Module) 
 			return false
 		}
 		module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig)
+
+		return true
+	})
+}
+
+// enableModuleByBundle resets EnabledByModuleConfig to Unknown so the module source falls back to the bundle default.
+func (r *reconciler) enableModuleByBundle(ctx context.Context, module *v1alpha1.Module) error {
+	r.logger.Debug("enable the module by bundle", slog.String("module", module.Name))
+	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionUnknown) {
+			return false
+		}
+		module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
 
 		return true
 	})
