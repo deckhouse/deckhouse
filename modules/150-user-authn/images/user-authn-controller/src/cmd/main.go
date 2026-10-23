@@ -49,6 +49,7 @@ import (
 	"user-authn-controller/internal/controller/useraccount"
 	"user-authn-controller/internal/controller/userexpire"
 	"user-authn-controller/internal/controller/useroperation"
+	"user-authn-controller/internal/migration"
 	"user-authn-controller/internal/revocation"
 	"user-authn-controller/internal/revocationfeed"
 )
@@ -206,6 +207,9 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 	}
 	if err = kubernetesclient.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register kubernetesclient controller: %w", err)
+	}
+	if err = migration.Register(runtimeManager); err != nil {
+		return nil, fmt.Errorf("register migrations: %w", err)
 	}
 
 	return runtimeManager, nil

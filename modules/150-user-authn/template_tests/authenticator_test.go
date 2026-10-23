@@ -215,6 +215,8 @@ periodSeconds: 5
 
 			oauth2clientTest := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "justForTest")
 			Expect(oauth2clientTest.Exists()).To(BeTrue())
+			Expect(oauth2clientTest.Field("id").String()).To(Equal("dex-authenticator-test@d8-test"))
+			Expect(oauth2clientTest.Field("name").String()).To(Equal("dex-authenticator-test@d8-test"))
 			Expect(oauth2clientTest.Field("redirectURIs").String()).To(MatchJSON(`["https://authenticator.example.com/dex-authenticator/callback","https://authenticator-two.example.com/dex-authenticator/callback"]`))
 			Expect(oauth2clientTest.Field("secret").String()).To(Equal("dexSecret"))
 			Expect(oauth2clientTest.Field("allowedEmails").String()).To(MatchJSON(`["test@mail.io"]`))
@@ -256,7 +258,7 @@ periodSeconds: 5
 				oauth2proxyArgTest = append(oauth2proxyArgTest, result.String())
 			}
 
-			Expect(oauth2proxyArgTest).Should(ContainElement("--client-id=test-d8-test-dex-authenticator"))
+			Expect(oauth2proxyArgTest).Should(ContainElement("--client-id=dex-authenticator-test@d8-test"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--oidc-issuer-url=https://dex.example.com/"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--redirect-url=/dex-authenticator/callback"))
 			Expect(oauth2proxyArgTest).Should(ContainElement("--set-authorization-header=true"))
@@ -303,7 +305,7 @@ periodSeconds: 5
 				oauth2proxyArgTest2 = append(oauth2proxyArgTest2, result.String())
 			}
 
-			Expect(oauth2proxyArgTest2).Should(ContainElement("--client-id=test-2-d8-test-dex-authenticator"))
+			Expect(oauth2proxyArgTest2).Should(ContainElement("--client-id=dex-authenticator-test-2@d8-test"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--oidc-issuer-url=https://dex.example.com/"))
 			Expect(oauth2proxyArgTest2).Should(ContainElement("--redirect-url=/dex-authenticator/callback"))
 			Expect(oauth2proxyArgTest2).ShouldNot(ContainElement("--set-authorization-header=true"))

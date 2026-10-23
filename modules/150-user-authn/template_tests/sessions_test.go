@@ -177,9 +177,9 @@ var _ = Describe("Module :: user-authn :: helm template :: sessions of dex", fun
 
 		It("shares the sign-in between the web interfaces of the platform only", func() {
 			Expect(authenticatorClient("console").Field("ssoSharedWith").String()).
-				To(MatchJSON(`["grafana-d8-monitoring-dex-authenticator"]`))
+				To(MatchJSON(`["dex-authenticator-grafana@d8-monitoring"]`))
 			Expect(authenticatorClient("grafana").Field("ssoSharedWith").String()).
-				To(MatchJSON(`["console-d8-console-dex-authenticator"]`))
+				To(MatchJSON(`["dex-authenticator-console@d8-console"]`))
 			Expect(authenticatorClient("app").Field("ssoSharedWith").Exists()).To(BeFalse())
 		})
 

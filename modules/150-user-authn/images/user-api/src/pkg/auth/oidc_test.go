@@ -47,7 +47,7 @@ const (
 	// discovery or JWKS from it would fail, proving the code uses the connect host.
 	testPublicIssuer = "https://dex.unreachable.invalid/"
 
-	testConsoleClientID = "console-d8-console-dex-authenticator"
+	testConsoleClientID = "dex-authenticator-console@d8-console"
 	testJaneSubject     = "CgRqYW5lEgVsb2NhbA"
 )
 

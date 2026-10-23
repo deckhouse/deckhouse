@@ -123,7 +123,7 @@ func TestObjectRoundTrip(t *testing.T) {
 		UserID:       "jane",
 		Subject:      Subject("jane", "local"),
 		Generation:   3,
-		Clients:      []string{"console-d8-console-dex-authenticator", "kubeconfig-generator-0"},
+		Clients:      []string{"dex-authenticator-console@d8-console", "kubeconfig-generator-0"},
 		Reason:       ReasonLock,
 		Source:       SourceController,
 		CreatedAt:    created,

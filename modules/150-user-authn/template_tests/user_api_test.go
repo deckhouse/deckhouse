@@ -157,7 +157,7 @@ var _ = Describe("Module :: user-authn :: helm template :: user-api", func() {
 				"--tls-key-file=/certs/tls.key",
 				"--dex-url=https://dex.d8-user-authn.svc",
 				"--dex-ca-file=/certs/dex-ca.crt",
-				"--console-client-id=console-d8-console-dex-authenticator",
+				"--console-client-id=dex-authenticator-console@d8-console",
 			))
 			Expect(container.Get(`volumeMounts.#(name=="tls").mountPath`).String()).To(Equal("/certs"))
 			Expect(deployment.Field(`spec.template.spec.volumes.#(name=="tls").secret.secretName`).String()).To(Equal("user-api-tls"))

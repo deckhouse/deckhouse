@@ -1,6 +1,8 @@
-{{- /* The id of the dex client of a DexAuthenticator. Usage: include "dex_authenticator_client_id" $crd */ -}}
+{{- /* The id of the dex client of a DexAuthenticator: "@" joins name and namespace, which can both */ -}}
+{{- /* contain a dash but not "@". DexAuthenticatorClientID of the hook and of user-authn-controller */ -}}
+{{- /* is the same. Usage: include "dex_authenticator_client_id" $crd */ -}}
 {{- define "dex_authenticator_client_id" -}}
-{{ printf "%s-%s-dex-authenticator" .name .namespace }}
+{{ printf "dex-authenticator-%s@%s" .name .namespace }}
 {{- end -}}
 
 {{- /* Labels that find every dex client of the DexAuthenticators and the resource it belongs to. */ -}}

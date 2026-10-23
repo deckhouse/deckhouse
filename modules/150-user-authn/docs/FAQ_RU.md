@@ -232,7 +232,7 @@ spec:
 {
   "iss": "https://dex.kube.my-domain.com/",
   "sub": "Cg1qb2huLmRvZUBleGFtcGxlEgVsb2NhbA",
-  "aud": "app-name-app-ns-dex-authenticator",
+  "aud": "dex-authenticator-app-name@app-ns",
   "exp": 1757000600,
   "iat": 1757000000,
   "email": "john.doe@example.com",
@@ -247,7 +247,7 @@ spec:
 
 - Для идентификации пользователя используйте поле `email`. Поле `sub` непрозрачно (не является предсказуемым и не может быть использовано как осмысленный идентификатор пользователя вне контекста конкретной системы), а `preferred_username` для статических пользователей пуст (внешние провайдеры аутентификации могут его заполнять).
 - Поле `name` содержит имя объекта (из поля `metadata.name` объекта [User](cr.html#user)), а не отображаемое имя пользователя.
-- Поле `aud` содержит идентификатор клиента аутентификатора (`<name>-<namespace>-dex-authenticator`), а не идентификатор OIDC-клиента вашего приложения. Приложение, проверяющее `aud` по собственному `client_id`, отклонит такой токен.
+- Поле `aud` содержит идентификатор клиента аутентификатора (`dex-authenticator-<name>@<namespace>`), а не идентификатор OIDC-клиента вашего приложения. Приложение, проверяющее `aud` по собственному `client_id`, отклонит такой токен.
 - Подпись проверяйте по JWKS-эндпоинту `https://<DEX_DOMAIN>/keys`, где `<DEX_DOMAIN>` — значение [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate), в котором `%s` заменено на `dex`.
 - Время жизни токена определяется параметром [`idTokenTTL`](configuration.html#parameters-idtokenttl) (по умолчанию 10 минут). DexAuthenticator обновляет токен самостоятельно, поэтому приложение всегда получает актуальный токен.
 

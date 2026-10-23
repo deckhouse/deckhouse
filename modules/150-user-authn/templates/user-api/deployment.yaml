@@ -80,7 +80,7 @@ spec:
         - --issuer-url=https://{{ include "helm_lib_module_public_domain" (list . "dex") }}/
         - --dex-ca-file=/certs/dex-ca.crt
         # Only the console signs users in for user-api: it forwards the ID token its DexAuthenticator holds.
-        - --console-client-id=console-d8-console-dex-authenticator
+        - --console-client-id={{ include "dex_authenticator_client_id" (dict "name" "console" "namespace" "d8-console") }}
         - --tls-cert-file=/certs/tls.crt
         - --tls-key-file=/certs/tls.key
         # Only a trusted device signs the user out of the other devices and asks for a password change.

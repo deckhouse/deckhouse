@@ -47,6 +47,13 @@ import (
 // of the kubernetes OAuth2Client, so its tokens are accepted by kube-apiserver.
 const dexAuthenticatorAllowAccessToKubernetesAnnotation = "dexauthenticator.deckhouse.io/allow-access-to-kubernetes"
 
+// DexAuthenticatorClientID is the id of the OAuth2Client of a DexAuthenticator. Name and namespace
+// may both contain a dash, so they are joined by "@", which neither can contain: joined by a dash,
+// distinct authenticators ("a" in "b-c" and "a-b" in "c") got one client and one secret.
+func DexAuthenticatorClientID(name, namespace string) string {
+	return fmt.Sprintf("dex-authenticator-%s@%s", name, namespace)
+}
+
 type DexAuthenticator struct {
 	ID          string                 `json:"uuid"`
 	EncodedName string                 `json:"encodedName"`
@@ -92,7 +99,7 @@ func applyDexAuthenticatorFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	namespace := obj.GetNamespace()
 
 	id := fmt.Sprintf("%s@%s", name, namespace)
-	encodedName := encoding.ToFnvLikeDex(fmt.Sprintf("%s-%s-dex-authenticator", name, namespace))
+	encodedName := encoding.ToFnvLikeDex(DexAuthenticatorClientID(name, namespace))
 
 	var allowAccessAnnotation *string
 	if value, exists := obj.GetAnnotations()[dexAuthenticatorAllowAccessToKubernetesAnnotation]; exists {

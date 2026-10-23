@@ -67,7 +67,7 @@ func TestKeys_AppendixA(t *testing.T) {
 func TestTransformClient_IsIdempotent(t *testing.T) {
 	t.Parallel()
 
-	once, err := TransformClient(rawClient("console-d8-console-dex-authenticator", "s3cr3t", true))
+	once, err := TransformClient(rawClient("dex-authenticator-console@d8-console", "s3cr3t", true))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestTransformClient_IsIdempotent(t *testing.T) {
 func TestTransformClient_KeepsNoSecret(t *testing.T) {
 	t.Parallel()
 
-	raw := rawClient("console-d8-console-dex-authenticator", "s3cr3t", true)
+	raw := rawClient("dex-authenticator-console@d8-console", "s3cr3t", true)
 	raw.Object["redirectURIs"] = []any{"https://console.example.com/callback"}
 	raw.SetAnnotations(map[string]string{"meta.helm.sh/release-name": "user-authn"})
 
@@ -104,7 +104,7 @@ func TestTransformClient_KeepsNoSecret(t *testing.T) {
 	if _, ok := raw.Object["secret"]; !ok {
 		t.Error("the input object was changed")
 	}
-	if reduced.Object["id"] != "console-d8-console-dex-authenticator" || reduced.GetName() != raw.GetName() ||
+	if reduced.Object["id"] != "dex-authenticator-console@d8-console" || reduced.GetName() != raw.GetName() ||
 		reduced.GetLabels()[DexAuthenticatorLabel] != "console" || reduced.GetResourceVersion() != "7" {
 		t.Errorf("reduced = %v", reduced.Object)
 	}
@@ -154,6 +154,7 @@ func TestAuthenticate(t *testing.T) {
 	reader := newTestReader(t,
 		cachedClient("console", "s3cr3t", true),
 		cachedClient("odd:id", "p@ss:wo%rd", true),
+		cachedClient("dex-authenticator-console@d8-console", "s3cr3t", true),
 		cachedClient("kubernetes", "s3cr3t", false),
 	)
 	tests := []struct {
@@ -165,6 +166,9 @@ func TestAuthenticate(t *testing.T) {
 	}{
 		{name: "dex-authenticator client", id: "console", secret: "s3cr3t", expected: true},
 		{name: "form-encoded credentials", id: url.QueryEscape("odd:id"), secret: url.QueryEscape("p@ss:wo%rd"), expected: true},
+		// The id of a DexAuthenticator joins its name and namespace by "@", which dex-authenticator
+		// sends form-encoded.
+		{name: "dex-authenticator id", id: url.QueryEscape("dex-authenticator-console@d8-console"), secret: "s3cr3t", expected: true},
 		{name: "wrong secret", id: "console", secret: "s3cr3t!"},
 		{name: "unknown client", id: "grafana", secret: "s3cr3t"},
 		{name: "client that is not a dex-authenticator", id: "kubernetes", secret: "s3cr3t"},

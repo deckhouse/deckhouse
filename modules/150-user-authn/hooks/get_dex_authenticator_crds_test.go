@@ -168,7 +168,7 @@ spec:
     ]
   },
   "allowAccessToKubernetes": true,
-  "encodedName": "orsxg5bnorsxg5bnmrsxqllbov2gqzlooruwgylun5zmx4u44scceizf",
+  "encodedName": "mrsxqllbov2gqzlooruwgylun5zc25dfon2ea5dfon2mx4u44scceizf",
   "credentials": {
     "cookieSecret": "dh-test-secret-012345678",
     "appDexSecret": "test"
@@ -227,7 +227,7 @@ spec:
     "sendAuthorizationHeader": false
   },
   "allowAccessToKubernetes": true,
-  "encodedName": "orsxg5bnmq4c2zdbonuge33bojsc2zdfpawwc5lunbsw45djmnqxi33szpzjzzeeeirsk",
+  "encodedName": "mrsxqllbov2gqzlooruwgylun5zc25dfon2eazbyfvsgc43imjxwc4tezpzjzzeeeirsk",
   "credentials": {
     "cookieSecret": "dh-test-secret-012345678",
     "appDexSecret": "test"
@@ -298,7 +298,7 @@ data:
     "sendAuthorizationHeader": false
   },
   "allowAccessToKubernetes": true,
-  "encodedName": "orsxg5bnmq4c23lpnzuxi33snfxgollemv4c2ylvorugk3tunfrwc5dpolf7fhheqqrcgji",
+  "encodedName": "mrsxqllbov2gqzlooruwgylun5zc25dfon2eazbyfvww63tjorxxe2lom7f7fhheqqrcgji",
   "credentials": {
     "cookieSecret": "dh-test-secret-012345678",
     "appDexSecret": "test"

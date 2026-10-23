@@ -36,3 +36,28 @@ see [`internal/adoption`](../adoption/README.md).
   writing the old places, so the copy follows them through watches, a workqueue and metrics rather
   than one pass.
 - **Introduced in:** !736.
+
+## Refresh tokens of the legacy DexAuthenticator client ids
+
+- **Code:** `DexAuthenticatorTokens` in this package.
+- **From:** what Dex keeps for the dex client of a DexAuthenticator under its legacy id
+  `<name>-<namespace>-dex-authenticator`: RefreshToken objects, the references to them in
+  OfflineSessions (the entry of the client in `refresh` and its entries in `grants`), and the client
+  state in browser sessions (`clientStates` of AuthSession).
+- **To:** nothing. The client of the DexAuthenticator is `dex-authenticator-<name>@<namespace>` now,
+  and its users sign in to it again once.
+- **Why:** the chart replaced the client, so Dex refuses these tokens, but its GC deletes a refresh
+  token only after it has gone unused for `refreshTokenValidIfNotUsedFor`, and UserAccount lists the
+  tokens as grants of the old client until then.
+- **How it applies:** on the leader at start, the migration computes the legacy id of every
+  DexAuthenticator and takes an id only when no OAuth2Client has it any more: until Helm prunes the old
+  client the id still belongs to it, and an id another client happens to have is never touched (the
+  DexAuthenticator `kubeconfig` in `foo` and the kubeconfig cluster `foo-dex-authenticator` share
+  `kubeconfig-foo-dex-authenticator`). While an id still has an OAuth2Client, it checks again every 30
+  seconds, reading the cache only (the DexAuthenticators by metadata, the OAuth2Clients by the index of
+  their id), until the id is free or the leader stops; it lists the Dex objects only when an id
+  becomes free that it has not cleaned yet.
+- **Running again:** every step deletes or removes only what is still there, and a reference is
+  removed only if it still names the same refresh token, so a restart halfway does the rest, and a
+  later start finds nothing to do and returns.
+- **Introduced in:** !910.

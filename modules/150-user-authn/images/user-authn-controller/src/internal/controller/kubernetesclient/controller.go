@@ -72,6 +72,12 @@ const (
 	appValue = "kubernetes-client"
 )
 
+// DexAuthenticatorClientID is the id the chart gives the OAuth2Client of a DexAuthenticator (see
+// DexAuthenticatorClientID in the module hooks).
+func DexAuthenticatorClientID(name, namespace string) string {
+	return fmt.Sprintf("dex-authenticator-%s@%s", name, namespace)
+}
+
 var request = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: naming.DexNamespace, Name: ClientID}}
 
 // Reconciler keeps the kubernetes OAuth2Client.
@@ -193,7 +199,7 @@ func (r *Reconciler) peers(ctx context.Context, static []string) ([]string, erro
 	var fromAuthenticators []string
 	for _, a := range authenticators.Items {
 		if allowed(&a, controller.DexAuthenticatorAllowAccessToKubernetesAnnotation) {
-			fromAuthenticators = append(fromAuthenticators, fmt.Sprintf("%s-%s-dex-authenticator", a.Name, a.Namespace))
+			fromAuthenticators = append(fromAuthenticators, DexAuthenticatorClientID(a.Name, a.Namespace))
 		}
 	}
 

@@ -55,7 +55,7 @@ func revocationObject(name, revocationType, subject string, generation any) *uns
 		"connectorID": "local",
 		"userID":      "jane",
 		"subject":     subject,
-		"clients":     []any{"console-d8-console-dex-authenticator"},
+		"clients":     []any{"dex-authenticator-console@d8-console"},
 		"reason":      "Lock",
 		"source":      "user-authn-controller",
 		"createdAt":   "2026-10-16T10:00:00.123456789Z",

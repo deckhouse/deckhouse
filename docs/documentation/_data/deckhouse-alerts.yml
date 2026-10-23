@@ -4829,7 +4829,7 @@ alerts:
       module: user-authn
       edition: ce
       description: |-
-        For more than 15 minutes, no replica of `user-authn-controller` has had a stream of the revocation feed open for the Dex client `{{ $labels.client_id }}`. The client belongs to a DexAuthenticator (the client ID is `<name>-<namespace>-dex-authenticator`).
+        For more than 15 minutes, no replica of `user-authn-controller` has had a stream of the revocation feed open for the Dex client `{{ $labels.client_id }}`. The client belongs to a DexAuthenticator (the client ID is `dex-authenticator-<name>@<namespace>`).
 
         The dex-authenticator of this client works without the feed: a session revoked by a user lock, a password reset, or a logout stops working there only at its next refresh in Dex, within 30 seconds while Dex is reachable, and no later than `idTokenTTL`.
 

@@ -232,7 +232,7 @@ Example of the JWT payload for a static user (the [User](cr.html#user) and [Grou
 {
   "iss": "https://dex.kube.my-domain.com/",
   "sub": "Cg1qb2huLmRvZUBleGFtcGxlEgVsb2NhbA",
-  "aud": "app-name-app-ns-dex-authenticator",
+  "aud": "dex-authenticator-app-name@app-ns",
   "exp": 1757000600,
   "iat": 1757000000,
   "email": "john.doe@example.com",
@@ -247,7 +247,7 @@ When parsing the token in your application, keep in mind the following:
 
 - Use the `email` field to identify the user. The `sub` field is opaque (it is not predictable and cannot be used as a meaningful user identifier outside the context of a specific system), and `preferred_username` is empty for static users (external authentication providers may populate it).
 - The `name` field contains the object's name (from the `metadata.name` field of the [User](cr.html#user) object), not the user's display name.
-- The `aud` field contains the authenticator client identifier (`<name>-<namespace>-dex-authenticator`), not your application's own OIDC client identifier. An application that validates `aud` against its own `client_id` will reject such a token.
+- The `aud` field contains the authenticator client identifier (`dex-authenticator-<name>@<namespace>`), not your application's own OIDC client identifier. An application that validates `aud` against its own `client_id` will reject such a token.
 - Verify the signature with the JWKS endpoint `https://<DEX_DOMAIN>/keys`, where `<DEX_DOMAIN>` is the [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) value with `%s` replaced by `dex`.
 - The token's lifetime is defined by the [`idTokenTTL`](configuration.html#parameters-idtokenttl) parameter (10 minutes by default). DexAuthenticator refreshes the token on its own, so the application always gets a current one.
 

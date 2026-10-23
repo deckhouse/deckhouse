@@ -62,7 +62,7 @@ func TestReconcile_CreatesClientWithAllPeers(t *testing.T) {
 
 	got := getClient(t, c)
 	want := []string{
-		"alpha-apps-dex-authenticator", "zeta-apps-dex-authenticator",
+		"dex-authenticator-alpha@apps", "dex-authenticator-zeta@apps",
 		"dex-client-argocd@argocd", "dex-client-grafana@monitoring",
 		"kubeconfig-generator", "kubeconfig-generator-0", "kubeconfig-cluster-at-example",
 	}
@@ -85,6 +85,26 @@ func TestReconcile_CreatesClientWithAllPeers(t *testing.T) {
 	reconcileOK(t, r)
 	if after := getClient(t, c).GetResourceVersion(); after != before {
 		t.Errorf("second reconcile rewrote the client: resourceVersion %s -> %s", before, after)
+	}
+}
+
+// Name and namespace both may contain a dash: the id must tell "billing" in "prod-team" from
+// "billing-prod" in "team", or the second one shares the access of the first.
+// The template and the hook of the module build the id too: the template tests pin the same value
+// (consoleClientID in template_tests/dex_authenticator_client_id_test.go).
+func TestDexAuthenticatorClientIDOfTheConsole(t *testing.T) {
+	t.Parallel()
+
+	if got := DexAuthenticatorClientID("console", "d8-console"); got != "dex-authenticator-console@d8-console" {
+		t.Errorf("client id of the console = %q, want the one the module renders", got)
+	}
+}
+
+func TestDexAuthenticatorClientIDIsUnique(t *testing.T) {
+	t.Parallel()
+
+	if a, b := DexAuthenticatorClientID("billing", "prod-team"), DexAuthenticatorClientID("billing-prod", "team"); a == b {
+		t.Errorf("distinct authenticators share the client id %q", a)
 	}
 }
 

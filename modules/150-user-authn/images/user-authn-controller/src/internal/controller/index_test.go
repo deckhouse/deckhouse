@@ -111,8 +111,8 @@ func TestPairIndexes(t *testing.T) {
 		{
 			name:     "oauth2 client id",
 			extract:  func(u *unstructured.Unstructured) []string { return OAuth2ClientID(u) },
-			object:   map[string]any{"id": "console-d8-console-dex-authenticator"},
-			expected: []string{"console-d8-console-dex-authenticator"},
+			object:   map[string]any{"id": "dex-authenticator-console@d8-console"},
+			expected: []string{"dex-authenticator-console@d8-console"},
 		},
 	}
 

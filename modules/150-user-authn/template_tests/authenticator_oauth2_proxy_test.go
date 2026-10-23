@@ -173,8 +173,8 @@ var _ = Describe("Module :: user-authn :: helm template :: DexAuthenticator oaut
 		It("finds the dex client of the authenticator by labels", func() {
 			client := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "appEncoded")
 			Expect(client.Exists()).To(BeTrue())
-			Expect(client.Field("id").String()).To(Equal("app-tenant-ns-dex-authenticator"))
-			Expect(client.Field("name").String()).To(Equal("app-tenant-ns-dex-authenticator"))
+			Expect(client.Field("id").String()).To(Equal("dex-authenticator-app@tenant-ns"))
+			Expect(client.Field("name").String()).To(Equal("dex-authenticator-app@tenant-ns"))
 			Expect(client.Field("secret").String()).To(Equal("appSecret"))
 			Expect(client.Field("redirectURIs").String()).To(MatchJSON(`[
 				"https://app.example.com/dex-authenticator/callback",
@@ -188,7 +188,7 @@ var _ = Describe("Module :: user-authn :: helm template :: DexAuthenticator oaut
 
 		It("names the dex client on the objects that route to the authenticator", func() {
 			Expect(authenticatorArgs(hec, "tenant-ns", "app-dex-authenticator")).
-				To(ContainElement("--client-id=app-tenant-ns-dex-authenticator"))
+				To(ContainElement("--client-id=dex-authenticator-app@tenant-ns"))
 			for _, object := range []struct{ kind, name string }{
 				{"Service", "app-dex-authenticator"},
 				{"Ingress", "app-dex-authenticator"},
@@ -199,7 +199,7 @@ var _ = Describe("Module :: user-authn :: helm template :: DexAuthenticator oaut
 				resource := hec.KubernetesResource(object.kind, "tenant-ns", object.name)
 				Expect(resource.Exists()).To(BeTrue(), object.kind+" "+object.name)
 				Expect(resource.Field(`metadata.annotations.dexauthenticator\.deckhouse\.io/client-id`).String()).
-					To(Equal("app-tenant-ns-dex-authenticator"), object.kind+" "+object.name)
+					To(Equal("dex-authenticator-app@tenant-ns"), object.kind+" "+object.name)
 			}
 		})
 	})
