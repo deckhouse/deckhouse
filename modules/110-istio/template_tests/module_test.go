@@ -677,6 +677,17 @@ test.deckhouse.io/annotation: test-value
 			Expect(iopV21.Field("spec.values.meshNetworks").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeTrue())
 		})
+
+		It("alliance-healthcheck must be deployed after the global sidecar injector", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			healthcheck := f.KubernetesResource("Deployment", "d8-istio", "alliance-healthcheck")
+			Expect(healthcheck.Exists()).To(BeTrue())
+			Expect(healthcheck.Field("metadata.annotations.werf\\.io/deploy-dependency-sidecar-injector").String()).To(Equal(
+				"state=present,kind=MutatingWebhookConfiguration,group=admissionregistration.k8s.io,version=v1,name=d8-istio-sidecar-injector-global",
+			))
+			Expect(f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-istio-sidecar-injector-global").Exists()).To(BeTrue())
+		})
 	})
 
 	Context("Two federations expose the same public service hostname", func() {
