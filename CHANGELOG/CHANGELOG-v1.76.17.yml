@@ -3,25 +3,19 @@ candi:
     - summary: >-
         Restored the lost `kubelet-disable-k-panic-check` patch for k8s 1.35, so kubelet no longer enforces
         `kernel.panic=10` on this version.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/424
 ci:
   fixes:
     - summary: add skip docs validation label
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/313
     - summary: Delete tests registry images
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/184
 cloud-provider-azure:
   fixes:
     - summary: use .normal.apiserverEndpoints in data device Secret fallback
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/696
 cloud-provider-vsphere:
   fixes:
     - summary: Fixed master node creation when the datastore is set as a path with parent folders.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/362
 cloud-provider-yandex:
   features:
     - summary: Add support for the `ru-central1-e` zone in Yandex Cloud.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/550
       impact: >-
         A diff will appear in the Terraform state for the base infrastructure: the E zone will be added.
         Because of this, the Terraform check will fail on the first master node. Run `dhctl converge`
@@ -29,25 +23,18 @@ cloud-provider-yandex:
 deckhouse:
   fixes:
     - summary: Restore kubectl plugin lookup in d8 k and d8 kubectl
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/587
 dhctl:
   fixes:
     - summary: Prevent dhctl converge from panicking when kubeconfig is used without an SSH host.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/499
 docs:
   fixes:
     - summary: Removed mentions of Cilium from the inter-cluster cooperation documentation page.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/133
     - summary: Added experimental module enable note to the lifecycle badge.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/492
     - summary: Rendered all versions from oss.yaml versions array.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/705
 documentation:
   features:
     - summary: The in-cluster documentation now includes the guides.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/520
 istio:
   fixes:
     - summary: The Istio operator now recovers Helm releases stuck in the `pending-*` or `uninstalling`
         state.
-      pull_request: https://fox.flant.com/deckhouse/deckhouse/-/merge_requests/261

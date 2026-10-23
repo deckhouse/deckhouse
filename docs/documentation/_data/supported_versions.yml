@@ -19,7 +19,7 @@ osDistributions:
         editions: [ce, cse, be, se, se-plus, ee]
   astra:
     name: Astra Linux Special Edition
-    url: https://astralinux.ru/products/astra-linux-special-edition/
+    url: https://astra.ru/software-services/os/
     ru_support: true
     en_support: false
     versions:
@@ -44,6 +44,10 @@ osDistributions:
         note_content:
           ru: |
             Для работы виртуализации требуется версия ОС не ниже <b>1.8.3</b>.
+      - version: '1.8.5'
+        editions: [ce, cse, be, se, se-plus, ee]
+      - version: '1.8.6'
+        editions: [ce, cse, be, se, se-plus, ee]
   centos:
     name: CentOS
     url: https://www.centos.org/download/
