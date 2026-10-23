@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 6ef0c67fd6..f5afc56ae7 100644
+index 6ef0c67fd6..90c73ea119 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,6 @@
@@ -76,6 +76,15 @@ index 6ef0c67fd6..f5afc56ae7 100644
  	github.com/grafana/regexp v0.0.0-20250905093917-f7b3be9d1853 // indirect
  	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
  	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
+@@ -170,7 +174,7 @@ require (
+ 	github.com/huandu/xstrings v1.5.0 // indirect
+ 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+ 	github.com/json-iterator/go v1.1.12 // indirect
+-	github.com/klauspost/compress v1.18.6 // indirect
++	github.com/klauspost/compress v1.18.7 // indirect
+ 	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
+ 	github.com/lestrrat-go/blackmagic v1.0.3 // indirect
+ 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 @@ -205,7 +209,7 @@ require (
  	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
  	github.com/spf13/afero v1.15.0 // indirect
@@ -104,7 +113,7 @@ index 6ef0c67fd6..f5afc56ae7 100644
  	gopkg.in/inf.v0 v0.9.1 // indirect
  	k8s.io/component-base v0.35.1 // indirect
 diff --git a/go.sum b/go.sum
-index 88d4641cc4..491e7b5b23 100644
+index 88d4641cc4..b74bca9487 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,5 +1,6 @@
@@ -127,6 +136,17 @@ index 88d4641cc4..491e7b5b23 100644
  github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
  github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
  github.com/go-logr/zapr v1.3.0 h1:XGdV8XW8zdwFiwOA2Dryh1gj2KRQyOOoNmBy4EplIcQ=
+@@ -290,8 +291,8 @@ github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnr
+ github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
+ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
+ github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
+-github.com/klauspost/compress v1.18.6 h1:2jupLlAwFm95+YDR+NwD2MEfFO9d4z4Prjl1XXDjuao=
+-github.com/klauspost/compress v1.18.6/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
++github.com/klauspost/compress v1.18.7 h1:aUyZsS4kH3QTKurYhAOwAHxllVPnOthb3vPfnF1Ehjw=
++github.com/klauspost/compress v1.18.7/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
+ github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
+ github.com/kr/pretty v0.3.1/go.mod h1:hoEshYVHaxMs3cyo3Yncou5ZscifuDolrwPKZanG3xk=
+ github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
 @@ -433,8 +434,8 @@ github.com/spf13/pflag v1.0.10 h1:4EBh2KAYBwaONj6b2Ye1GiHfwjqyROoF4RwYO+vPwFk=
  github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
  github.com/spf13/viper v1.21.0 h1:x5S+0EU27Lbphp4UKm1C+1oQO+rKx36vfCoaVebLFSU=
