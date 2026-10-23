@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index d6c10ee83f..ebadeb15c3 100644
+index d6c10ee83f..bd1b8a7c94 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,48 +1,50 @@
@@ -194,6 +194,15 @@ index d6c10ee83f..ebadeb15c3 100644
  	github.com/grafana/regexp v0.0.0-20221122212121-6b5c0a4cb7fd // indirect
  	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
  	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.1 // indirect
+@@ -178,7 +180,7 @@ require (
+ 	github.com/josharian/intern v1.0.0 // indirect
+ 	github.com/josharian/native v1.1.0 // indirect
+ 	github.com/json-iterator/go v1.1.12 // indirect
+-	github.com/klauspost/compress v1.17.4 // indirect
++	github.com/klauspost/compress v1.18.7 // indirect
+ 	github.com/kr/text v0.2.0 // indirect
+ 	github.com/lestrrat-go/backoff/v2 v2.0.8 // indirect
+ 	github.com/lestrrat-go/blackmagic v1.0.2 // indirect
 @@ -190,38 +192,36 @@ require (
  	github.com/mailru/easyjson v0.7.7 // indirect
  	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -268,7 +277,7 @@ index d6c10ee83f..ebadeb15c3 100644
  	gopkg.in/ini.v1 v1.67.0 // indirect
  	k8s.io/component-base v0.29.0 // indirect
 diff --git a/go.sum b/go.sum
-index 10100f8bfd..9b7477f038 100644
+index 10100f8bfd..e095160ee7 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,24 +1,1215 @@
@@ -1884,10 +1893,12 @@ index 10100f8bfd..9b7477f038 100644
  github.com/kisielk/errcheck v1.2.0/go.mod h1:/BMXB+zMLi60iA8Vv6Ksmxu/1UDYcXs4uQLJ+jE2L00=
  github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
  github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
+-github.com/klauspost/compress v1.17.4 h1:Ej5ixsIri7BrIjBkRZLTo6ghwrEtHFk7ijlczPW4fZ4=
+-github.com/klauspost/compress v1.17.4/go.mod h1:/dCuZOvVtNoHsyb+cuJD3itjs3NbnF6KH9zAO4BDxPM=
 +github.com/klauspost/asmfmt v1.3.2/go.mod h1:AG8TuvYojzulgDAMCnYn50l/5QV3Bs/tp6j0HLHbNSE=
 +github.com/klauspost/compress v1.15.9/go.mod h1:PhcZ0MbTNciWF3rruxRgKxI5NkcHHrHUDtV4Yw2GlzU=
- github.com/klauspost/compress v1.17.4 h1:Ej5ixsIri7BrIjBkRZLTo6ghwrEtHFk7ijlczPW4fZ4=
- github.com/klauspost/compress v1.17.4/go.mod h1:/dCuZOvVtNoHsyb+cuJD3itjs3NbnF6KH9zAO4BDxPM=
++github.com/klauspost/compress v1.18.7 h1:aUyZsS4kH3QTKurYhAOwAHxllVPnOthb3vPfnF1Ehjw=
++github.com/klauspost/compress v1.18.7/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
 +github.com/klauspost/cpuid/v2 v2.0.9/go.mod h1:FInQzS24/EEf25PyTYn52gqo7WaD8xa0213Md/qVLRg=
  github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 +github.com/kr/fs v0.1.0/go.mod h1:FFnZGqtBN9Gxj7eW1uZ42v5BccTP0vu6NEaFoC2HwRg=

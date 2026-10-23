@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-e270c5151609ebc66df9e4051c0dcf4b3f85b87ced1468e2d4241a0d6ed88b55",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -27,14 +27,14 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/docker/distribution"
+          "@id": "pkg:golang/github.com/docker/distribution@v2.8.3+incompatible"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "CVE-2026-85747 is in github.com/docker/distribution/registry/client (manifests.Get does not verify the manifest digest). pilot-discovery links only registry/client/auth/challenge (WWW-Authenticate parsing, via go-containerregistry remote/transport); registry/client and registry/proxy are not compiled in. No fixed v2 release exists.",
-      "timestamp": "2026-10-20T15:30:00.000000000Z"
+      "timestamp": "2026-10-23T12:00:00.000000000Z"
     }
   ],
-  "timestamp": "2026-10-20T15:30:00Z"
+  "timestamp": "2026-10-23T12:00:00.000000000Z"
 }

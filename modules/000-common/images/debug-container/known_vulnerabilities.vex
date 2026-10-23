@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-41a5cb02200a981d0e152bffdd0754addf47f69efe2db1b00812aff0a07fe3f3",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 4,
+  "version": 5,
   "statements": [
     {
       "vulnerability": {
@@ -204,8 +204,25 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который помечен как unmaintained. Бинарники istioctl не импортируют golang.org/x/crypto/openpgp; модуль golang.org/x/crypto подтягивается транзитивно (в частности через bcrypt/sprig) без исполняемого пути openpgp. Исправленной версии пакета нет; уязвимый код в данном компоненте не выполняется.",
       "timestamp": "2026-10-14T10:22:11.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-85747",
+        "aliases": [
+          "GHSA-685w-q87j-wqw3"
+        ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/distribution@v2.8.3+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-85747 относится к пакету github.com/docker/distribution/registry/client: функция (*manifests).Get не сверяет полученный манифест с запрошенным дайджестом, а прокси registry/proxy может раздавать подменённый манифест из кэша. В istioctl-1.25 и istioctl-1.27 из модуля собран только пакет registry/client/auth/challenge, он разбирает заголовок WWW-Authenticate; пакетов registry/client и registry/proxy в бинарниках нет. Исправление вышло только в модуле distribution/v3, для v2 исправленной версии нет.",
+      "timestamp": "2026-10-23T12:00:00.000000000Z"
     }
   ],
   "timestamp": "2026-07-22T14:00:00Z",
-  "last_updated": "2026-10-14T10:22:11Z"
+  "last_updated": "2026-10-23T12:00:00Z"
 }
