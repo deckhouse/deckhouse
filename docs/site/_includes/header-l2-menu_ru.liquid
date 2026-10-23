@@ -41,6 +41,65 @@
   {%- when "development-platform" %}{% assign productLockup = "development-platform" %}{% assign lockupH = "37" %}
   {%- when "development-portal" %}{% assign productLockup = "development-platform" %}{% assign lockupH = "37" %}
 {%- endcase %}
+{%- comment -%}
+  Solutions live in the Deckhouse Platform bar, as on deckhouse.ru. The API sends them as a
+  bare link to /solutions/; the site opens it as a two-column panel of solutions with
+  descriptions, which the feed does not carry, so the list is hardcoded here and the
+  item's own title and URL still come from the API.
+  A feed without that item - the copy of the data committed to the repo, which local
+  builds use - gets it inserted after Extensions, so the menu does not silently lose it.
+{%- endcomment -%}
+{%- assign solutionsInFeed = productMenuData.items | where: "url", "/solutions/" | size %}
+{%- assign solutionsInFeedNoSlash = productMenuData.items | where: "url", "/solutions" | size %}
+{%- assign solutionsInFeed = solutionsInFeed | plus: solutionsInFeedNoSlash %}
+{%- capture solutionsPanel %}
+    <div class="sub-menu-container">
+      <ul class="sub-menu sub-menu_solutions">
+        <li data-proofer-ignore>
+          <a href="/solutions/containers">
+            <span>Для контейнеров</span>
+            <p>Микросервисные приложения на&nbsp;любой инфраструктуре</p>
+          </a>
+        </li>
+        <li data-proofer-ignore>
+          <a href="/solutions/virtualization">
+            <span>Для виртуализации</span>
+            <p>Виртуальные машины на&nbsp;современной платформе виртуализации</p>
+          </a>
+        </li>
+        <li data-proofer-ignore>
+          <a href="/solutions/mixed-workloads">
+            <span>Для комбинированных нагрузок</span>
+            <p>Контейнеры и&nbsp;виртуальные машины под&nbsp;единым управлением</p>
+          </a>
+        </li>
+        <li data-proofer-ignore>
+          <a href="/solutions/ai">
+            <span>Для искусственного интеллекта</span>
+            <p>Запуск ИИ&#8288;-&#8288;нагрузок в&nbsp;своей инфраструктуре</p>
+          </a>
+        </li>
+        <li data-proofer-ignore>
+          <a href="/solutions/data-orchestration">
+            <span>Для данных</span>
+            <p>Построение платформ хранения и&nbsp;обработки данных</p>
+          </a>
+        </li>
+        <li data-proofer-ignore>
+          <a href="/solutions/private-cloud">
+            <span>Для частного облака</span>
+            <p>Частное облако с&nbsp;биллингом и&nbsp;управляемыми сервисами</p>
+          </a>
+        </li>
+        <li data-proofer-ignore>
+          <a href="/solutions/hybrid-infrastructure">
+            <span>Для гибридной инфраструктуры</span>
+            <p>Приложения в&nbsp;любых средах под&nbsp;управлением из&nbsp;единой точки</p>
+          </a>
+        </li>
+      </ul>
+    </div>
+{%- endcapture %}
 <div class="header header__product-menu header__product-menu--ru">
   <div class="header__product-menu-inner container">
     <div class="header__product-menu-logo">
@@ -57,10 +116,13 @@
     <ul id="bottom-header-nav" class="nav header__nav header__nav--bottom">
       {%- if productMenuData.items %}
         {%- for item in productMenuData.items %}
-          {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% elsif item.items %}{% assign itemClass='class="header__navigation-item menu-item-has-children menu-item-has-children--bottom"' %}{%- else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
-          <li {{ itemClass }} {%- if item.items %} data-proofer-ignore{% endif %}>
+          {%- if item.url == "/solutions/" or item.url == "/solutions" %}{% assign isSolutions = true %}{% else %}{% assign isSolutions = false %}{% endif %}
+          {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% elsif isSolutions %}{% assign itemClass='class="header__navigation-item header__navigation-item--solutions menu-item-has-children menu-item-has-children--bottom"' %}{% elsif item.items %}{% assign itemClass='class="header__navigation-item menu-item-has-children menu-item-has-children--bottom"' %}{%- else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
+          <li {{ itemClass }} {%- if item.items or isSolutions %} data-proofer-ignore{% endif %}>
             <a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a>
-            {% if item.items %}
+            {% if isSolutions %}
+              {{ solutionsPanel }}
+            {% elsif item.items %}
               <div class="sub-menu-container">
                 <ul class="sub-menu">
                   {% for item in item.items %}
@@ -70,6 +132,12 @@
               </div>
             {% endif %}
           </li>
+          {%- if solutionsInFeed == 0 and productCode == "deckhouse-platform" and item.url == "/products/deckhouse-platform/extensions/" %}
+          <li class="header__navigation-item header__navigation-item--solutions menu-item-has-children menu-item-has-children--bottom" data-proofer-ignore>
+            <a href="/solutions/">Решения</a>
+            {{ solutionsPanel }}
+          </li>
+          {%- endif %}
         {%- endfor %}
       {%- else %}
         <li class="header__navigation-item active" data-proofer-ignore>

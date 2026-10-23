@@ -68,7 +68,7 @@ $panel-gap: 32px; // .sub-menu_products gap
 $panel-radius: 4px;
 $panel-shadow: 0 4px 9px 0 rgba(34, 42, 94, .11);
 $product-col: 290px;
-$solution-col: 324px; // .solutions a min-width, 20.25rem
+$solution-col: 312px; // .menu-solutions .sub-menu column on deckhouse.ru
 
 // Chevron. One glyph for every menu item, drawn as a mask so the colour comes from
 // currentColor - that is how the white caret on the blue button appears without a
@@ -464,42 +464,6 @@ $chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
     p {
       grid-column: 2;
       grid-row: 2;
-      margin: 0;
-      font-size: 14px;
-      font-weight: 300;
-      line-height: 20px;
-      @include mixins.color($text-tertiary);
-    }
-  }
-
-  // Solutions panel: the same two-line item as the products panel, without the icon
-  // column. The site narrows this one to two columns of 20.25rem; Figma drafts it as
-  // four narrow columns, which makes the panel overrun the right-hand gutter.
-  .header__nav--top .sub-menu_solutions {
-    // Fixed columns, not 1fr: the panel is sized by max-content, so flexible columns
-    // stretch to the longest description and every line fits on one row. At 324px the
-    // descriptions wrap to two lines, as they do on the site.
-    display: grid;
-    grid-template-columns: repeat(2, $solution-col);
-    gap: $panel-gap;
-
-    a {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 5.6px;
-    }
-
-    span {
-      font-weight: 400;
-      @include mixins.color($text-primary);
-    }
-
-    a:hover span {
-      @include mixins.color($brand-hover);
-    }
-
-    p {
       margin: 0;
       font-size: 14px;
       font-weight: 300;
@@ -910,6 +874,59 @@ $chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
       visibility: visible;
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  // Solutions (Deckhouse Platform bar only). Measured on deckhouse.ru/products/deckhouse-platform/:
+  // a two-column card of title + description, hung 21px left of the item. Inside the
+  // collapsed mobile card it is an ordinary group - titles only, as on the site.
+  .header__nav--bottom > .header__navigation-item--solutions > .sub-menu-container {
+    @include breakpoints.min-w(xl) {
+      left: -21px;
+    }
+  }
+
+  .header__nav--bottom .sub-menu_solutions {
+    @include breakpoints.min-w(xl) {
+      display: grid;
+      grid-template-columns: repeat(2, $solution-col);
+      gap: $panel-gap;
+      padding: $panel-pad;
+    }
+
+    li {
+      @include breakpoints.min-w(xl) {
+        padding-bottom: 0;
+      }
+    }
+
+    a {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5.6px;
+
+      @include breakpoints.min-w(xl) {
+        white-space: normal;
+      }
+    }
+
+    // 500 / 400 on the site, a step lower here - see the note at the top of the file.
+    span {
+      font-weight: 400;
+    }
+
+    p {
+      display: none;
+      margin: 0;
+      font-size: 14px;
+      font-weight: 300;
+      line-height: 20px;
+      @include mixins.color($text-tertiary);
+
+      @include breakpoints.min-w(xl) {
+        display: block;
+      }
     }
   }
 
@@ -1377,8 +1394,7 @@ $chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
 
   // From the m breakpoint up the drawer is wide enough for the two-column product
   // grid shown in the design; below that it stays a single column.
-  .sub-menu_products,
-  .sub-menu_solutions {
+  .sub-menu_products {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 12px; // .sidebar ul.sub-menu_products gap
@@ -1386,26 +1402,6 @@ $chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'
     @include breakpoints.min-w(m) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       column-gap: 24px;
-    }
-  }
-
-  .sub-menu_solutions a {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-
-    span {
-      font-size: 14px;
-      font-weight: 400;
-      line-height: 16px;
-    }
-
-    p {
-      margin: 0;
-      font-size: 12px;
-      font-weight: 300;
-      line-height: 16px;
-      @include mixins.color($text-tertiary);
     }
   }
 

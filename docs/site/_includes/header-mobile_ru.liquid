@@ -8,10 +8,10 @@
 
   No language toggle here - the design has none, and language-switch.js no-ops without it.
 
-  Products and Solutions are hardcoded here on purpose. The API feed still sends a
-  "Produkty" top-level item, which header-menu-fill-items.html skips by title, and it
-  sends no "Resheniya" item at all. The Russian list is the five products the design
-  ships brand marks for.
+  Products are hardcoded here on purpose. The API feed still sends a "Produkty"
+  top-level item, which header-menu-fill-items.html skips by title. The Russian list is
+  the five products the design ships brand marks for. Solutions moved to the product bar
+  (header-l2-menu_ru.liquid), which carries them on mobile too.
 {%- endcomment -%}
 <div class="header__sidebar header__sidebar--ru">
   <div class="header__sidebar-inner">
@@ -54,55 +54,6 @@
                 <svg class="products__icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.76339 2.83653L21.2021 1L24.3091 8.00192L15.2254 22L-0.309089 22L3.76339 2.83653ZM16.4085 7.46792L8.79675 19.1891L3.15432 19.1891L5.58951 7.77314L16.0707 6.68601L16.4085 7.46792Z" fill="#7960FB"/></svg>
                 <span>Development Portal</span>
                 <p>Управление процессами всех команд разработки в&nbsp;одном окне</p>
-              </a>
-            </li>
-          </ul>
-        </div>
-      </li>
-      <li class="header__navigation-item current-menu-parent menu-item-has-children menu-item-has-children--top" data-proofer-ignore>
-        <a href="#">Решения</a>
-        <div class="sub-menu-container">
-          <ul class="sub-menu sub-menu_solutions">
-            <li data-proofer-ignore>
-              <a href="/solutions/containers">
-                <span>Для контейнеров</span>
-                <p>Микросервисные приложения на&nbsp;любой инфраструктуре</p>
-              </a>
-            </li>
-            <li data-proofer-ignore>
-              <a href="/solutions/virtualization">
-                <span>Для виртуализации</span>
-                <p>Виртуальные машины на&nbsp;современной платформе виртуализации</p>
-              </a>
-            </li>
-            <li data-proofer-ignore>
-              <a href="/solutions/mixed-workloads">
-                <span>Для комбинированных нагрузок</span>
-                <p>Контейнеры и&nbsp;виртуальные машины под&nbsp;единым управлением</p>
-              </a>
-            </li>
-            <li data-proofer-ignore>
-              <a href="/solutions/ai">
-                <span>Для искусственного интеллекта</span>
-                <p>Запуск ИИ&#8288;-&#8288;нагрузок в&nbsp;своей инфраструктуре</p>
-              </a>
-            </li>
-            <li data-proofer-ignore>
-              <a href="/solutions/data-orchestration">
-                <span>Для данных</span>
-                <p>Построение платформ хранения и&nbsp;обработки данных</p>
-              </a>
-            </li>
-            <li data-proofer-ignore>
-              <a href="/solutions/private-cloud">
-                <span>Для частного облака</span>
-                <p>Частное облако с&nbsp;биллингом и&nbsp;управляемыми сервисами</p>
-              </a>
-            </li>
-            <li data-proofer-ignore>
-              <a href="/solutions/hybrid-infrastructure">
-                <span>Для гибридной инфраструктуры</span>
-                <p>Приложения в&nbsp;любых средах под&nbsp;управлением из&nbsp;единой точки</p>
               </a>
             </li>
           </ul>
