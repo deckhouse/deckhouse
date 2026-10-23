@@ -99,3 +99,36 @@
         ```bash
         d8 k -n d8-user-authn logs deploy/user-authn-controller --all-pods=true
         ```
+
+- name: d8.user-authn.controller.identity-migration
+  rules:
+  - alert: D8UserAuthnIdentityMigrationIncomplete
+    expr: |
+      max(
+        d8_user_authn_identity_migration_pending{
+          namespace="d8-user-authn",
+          job="user-authn-controller"
+        }
+      ) > 0
+    for: 30m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: user-authn-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: Dex user data is not fully copied into UserIdentity objects.
+      description: |-
+        For more than 30 minutes, `user-authn-controller` has not finished copying the 2FA (TOTP) secret and the lock of Dex users from OfflineSessions and Password objects into UserIdentity objects.
+
+        Until the copy of a provider and user pair completes, its 2FA secret and lock are stored only in the OfflineSessions and Password objects.
+
+        The controller retries failed pairs by itself. Find the reason in its logs:
+
+        ```bash
+        d8 k -n d8-user-authn logs deploy/user-authn-controller --all-pods=true | grep -E 'identitymigration|UserIdentity'
+        ```
+
+        Typical reasons are API server errors and missing rights on `useridentities.dex.coreos.com`. Pairs that cannot be copied at all, for example an OfflineSessions object that cannot be decoded, are logged as `Not copying the pair into UserIdentity` and do not raise this alert.

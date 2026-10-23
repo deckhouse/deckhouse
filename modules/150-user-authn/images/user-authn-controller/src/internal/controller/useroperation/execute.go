@@ -51,11 +51,11 @@ func (r *Reconciler) execute(ctx context.Context, op operation, now time.Time) e
 	case typeResetPassword:
 		return r.executeResetPassword(ctx, op)
 	case typeReset2FA:
-		return r.executeReset2FA(ctx, op)
+		return r.executeReset2FA(ctx, op, now)
 	case typeLock:
 		return r.executeLock(ctx, op, now)
 	case typeUnlock:
-		return r.executeUnlock(ctx, op)
+		return r.executeUnlock(ctx, op, now)
 	default:
 		return failedf("unsupported operation type: %s", op.Spec.Type)
 	}
@@ -70,9 +70,12 @@ func (r *Reconciler) executeLock(ctx context.Context, op operation, now time.Tim
 	if err != nil {
 		return err
 	}
+	// The old place keeps whole seconds; UserIdentity gets the same instant, so that the copy
+	// recognizes the old-place lock as the one already taken.
+	lockedUntil = lockedUntil.UTC().Truncate(time.Second)
 
 	if op.Spec.Target != nil {
-		return r.lockOfflineSession(ctx, op, lockedUntil)
+		return r.lockOfflineSession(ctx, op, lockedUntil, now)
 	}
 
 	userPassword, err := r.findLocalPassword(ctx, op.Spec.User)
@@ -86,6 +89,9 @@ func (r *Reconciler) executeLock(ctx context.Context, op operation, now time.Tim
 		"lockedUntil", lockedUntil.UTC().Format(time.RFC3339),
 	)...)
 
+	if err := r.lockIdentity(ctx, localPair(*userPassword), lockedUntil, now); err != nil {
+		return err
+	}
 	if err := r.patchMerge(ctx, controller.PasswordGVK, userPassword.Namespace, userPassword.Name, map[string]any{
 		"lockedUntil": lockedUntil.UTC().Format(time.RFC3339),
 		"metadata": map[string]any{
@@ -103,9 +109,9 @@ func (r *Reconciler) executeLock(ctx context.Context, op operation, now time.Tim
 	return nil
 }
 
-func (r *Reconciler) executeUnlock(ctx context.Context, op operation) error {
+func (r *Reconciler) executeUnlock(ctx context.Context, op operation, now time.Time) error {
 	if op.Spec.Target != nil {
-		return r.unlockOfflineSession(ctx, op)
+		return r.unlockOfflineSession(ctx, op, now)
 	}
 
 	userPassword, err := r.findLocalPassword(ctx, op.Spec.User)
@@ -115,14 +121,17 @@ func (r *Reconciler) executeUnlock(ctx context.Context, op operation) error {
 
 	r.log.Info("Unlocking local user password", append(operationLogKV(op), "user", userPassword.Username)...)
 
-	return r.patchMerge(ctx, controller.PasswordGVK, userPassword.Namespace, userPassword.Name, map[string]any{
+	if err := r.patchMerge(ctx, controller.PasswordGVK, userPassword.Namespace, userPassword.Name, map[string]any{
 		"lockedUntil": nil,
 		"metadata": map[string]any{
 			"annotations": map[string]any{
 				lockedByAdministratorAnnot: nil,
 			},
 		},
-	})
+	}); err != nil {
+		return err
+	}
+	return r.unlockIdentity(ctx, localPair(*userPassword), now)
 }
 
 func (r *Reconciler) executeResetPassword(ctx context.Context, op operation) error {
@@ -158,7 +167,7 @@ func (r *Reconciler) executeResetPassword(ctx context.Context, op operation) err
 	return nil
 }
 
-func (r *Reconciler) executeReset2FA(ctx context.Context, op operation) error {
+func (r *Reconciler) executeReset2FA(ctx context.Context, op operation, now time.Time) error {
 	if op.Spec.User == "" {
 		return failed("Reset2FA requires spec.user; it is only supported for local users")
 	}
@@ -174,7 +183,17 @@ func (r *Reconciler) executeReset2FA(ctx context.Context, op operation) error {
 		r.log.Info("Reset2FA: no 2FA objects found, nothing to delete",
 			append(operationLogKV(op), "user", op.Spec.User)...)
 	}
-	return nil
+
+	userPassword, found, err := r.lookupLocalPassword(ctx, op.Spec.User)
+	if err != nil {
+		return err
+	}
+	if !found {
+		// Without a Password there is no local user, and the copy creates no UserIdentity for one.
+		r.log.Info("Reset2FA: no Password, no UserIdentity to reset", append(operationLogKV(op), "user", op.Spec.User)...)
+		return nil
+	}
+	return r.resetIdentityMFA(ctx, localPair(*userPassword), now)
 }
 
 func (r *Reconciler) invalidateLocalUserSessions(ctx context.Context, username, logPrefix string) (bool, error) {
@@ -236,7 +255,7 @@ func (r *Reconciler) invalidateLocalUserSessions(ctx context.Context, username, 
 	return anyDeleted, nil
 }
 
-func (r *Reconciler) lockOfflineSession(ctx context.Context, op operation, lockedUntil time.Time) error {
+func (r *Reconciler) lockOfflineSession(ctx context.Context, op operation, lockedUntil, now time.Time) error {
 	sess, err := r.findOfflineSessionByTarget(ctx, op.Spec.Target)
 	if err != nil {
 		return err
@@ -249,6 +268,9 @@ func (r *Reconciler) lockOfflineSession(ctx context.Context, op operation, locke
 		"lockedUntil", until,
 	)...)
 
+	if err := r.lockIdentity(ctx, externalPair(*sess), lockedUntil, now); err != nil {
+		return err
+	}
 	return r.patchMerge(ctx, controller.OfflineSessionsGVK, sess.Namespace, sess.Name, map[string]any{
 		"lockedUntil":                    until,
 		"incorrectPasswordLoginAttempts": int64(0),
@@ -260,7 +282,7 @@ func (r *Reconciler) lockOfflineSession(ctx context.Context, op operation, locke
 	})
 }
 
-func (r *Reconciler) unlockOfflineSession(ctx context.Context, op operation) error {
+func (r *Reconciler) unlockOfflineSession(ctx context.Context, op operation, now time.Time) error {
 	sess, err := r.findOfflineSessionByTarget(ctx, op.Spec.Target)
 	if err != nil {
 		return err
@@ -268,7 +290,7 @@ func (r *Reconciler) unlockOfflineSession(ctx context.Context, op operation) err
 
 	r.log.Info("Unlocking external user via OfflineSessions", append(operationLogKV(op), "offlinesession", sess.Name)...)
 
-	return r.patchMerge(ctx, controller.OfflineSessionsGVK, sess.Namespace, sess.Name, map[string]any{
+	if err := r.patchMerge(ctx, controller.OfflineSessionsGVK, sess.Namespace, sess.Name, map[string]any{
 		"lockedUntil":                    nil,
 		"incorrectPasswordLoginAttempts": int64(0),
 		"metadata": map[string]any{
@@ -276,20 +298,34 @@ func (r *Reconciler) unlockOfflineSession(ctx context.Context, op operation) err
 				lockedByAdministratorAnnot: nil,
 			},
 		},
-	})
+	}); err != nil {
+		return err
+	}
+	return r.unlockIdentity(ctx, externalPair(*sess), now)
 }
 
 func (r *Reconciler) findLocalPassword(ctx context.Context, username string) (*passwordView, error) {
-	passwords, err := r.listPasswords(ctx)
+	pw, found, err := r.lookupLocalPassword(ctx, username)
 	if err != nil {
 		return nil, err
 	}
+	if !found {
+		return nil, failedf("cannot find password for user: %s", username)
+	}
+	return pw, nil
+}
+
+func (r *Reconciler) lookupLocalPassword(ctx context.Context, username string) (*passwordView, bool, error) {
+	passwords, err := r.listPasswords(ctx)
+	if err != nil {
+		return nil, false, err
+	}
 	for i := range passwords {
 		if passwords[i].Username == username {
-			return &passwords[i], nil
+			return &passwords[i], true, nil
 		}
 	}
-	return nil, failedf("cannot find password for user: %s", username)
+	return nil, false, nil
 }
 
 func (r *Reconciler) findOfflineSessionByTarget(ctx context.Context, target *operationTarget) (*sessionView, error) {

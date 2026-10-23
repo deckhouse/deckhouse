@@ -714,6 +714,8 @@ Delete the user but keep their references in groups:
 d8 iam user delete anton --keep-memberships
 ```
 
+When a user is deleted, manually or after its `ttl` expires, the module also deletes the user's 2FA (TOTP) secret and lock in Dex. A user created again with the same name does not inherit them.
+
 ### Local user operations
 
 Password reset, 2FA reset, and lock/unlock operations are performed via the [UserOperation](cr.html#useroperation) resource. The `initiatorType` field indicates who initiated the operation: an administrator (`admin`) or the user (`self`).

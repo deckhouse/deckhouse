@@ -27,7 +27,22 @@ import (
 	"user-authn-controller/internal/naming"
 )
 
-var secretFields = []string{"hash", "previousHashes", "connectorData", "totp", "token", "obsoleteToken"}
+// secretFields are the top-level keys of Dex storage objects that hold credentials:
+// Password hash and previousHashes, connectorData of OfflineSessions and RefreshToken, the TOTP
+// secret of OfflineSessions, refresh token values, the second factors of UserIdentity
+// (mfaSecrets, webauthnCredentials), and the cookie secret and nonce of AuthSession.
+var secretFields = []string{
+	"hash",
+	"previousHashes",
+	"connectorData",
+	"totp",
+	"token",
+	"obsoleteToken",
+	"mfaSecrets",
+	"webauthnCredentials",
+	"secret",
+	"nonce",
+}
 
 // SecretFields returns Dex credential keys stripped from the informer cache
 // and UserAccount. OfflineSessions.refresh is reduced to token IDs so Reset2FA
@@ -36,8 +51,10 @@ func SecretFields() []string {
 	return slices.Clone(secretFields)
 }
 
-// InformerCacheByObject scopes Password, OfflineSessions, and RefreshToken
-// informers to d8-user-authn and strips Dex secrets before the objects are stored.
+// InformerCacheByObject scopes Password, OfflineSessions, RefreshToken, and UserIdentity
+// informers to d8-user-authn and strips Dex secrets before the objects are stored. Code that
+// needs a secret field (the UserIdentity migration reads the TOTP secret) reads through the
+// API reader instead.
 func InformerCacheByObject() map[client.Object]cache.ByObject {
 	return map[client.Object]cache.ByObject{
 		Object(PasswordGVK): {
@@ -53,6 +70,12 @@ func InformerCacheByObject() map[client.Object]cache.ByObject {
 			Transform: StripDexSecrets,
 		},
 		Object(RefreshTokenGVK): {
+			Namespaces: map[string]cache.Config{
+				naming.DexNamespace: {},
+			},
+			Transform: StripDexSecrets,
+		},
+		Object(UserIdentityGVK): {
 			Namespaces: map[string]cache.Config{
 				naming.DexNamespace: {},
 			},

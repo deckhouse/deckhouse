@@ -61,6 +61,15 @@ crds=(
   signingkeies.yaml
 )
 
+# CRDs that Dex registers itself at start but does not ship in scripts/manifests/crds:
+# useridentities and authsessions (Dex v2.46.0, storage/kubernetes/types.go). The files here
+# are written in the same format by hand. --check requires them to exist, and compares them as
+# soon as the Dex tree ships them; the update mode leaves them alone.
+runtime_crds=(
+  authsessions.yaml
+  useridentities.yaml
+)
+
 if [[ "${mode}" == "check" ]]; then
   if [[ -z "${dex_dir}" ]]; then
     echo "--dex-dir is required in --check mode" >&2
@@ -87,6 +96,21 @@ if [[ "${mode}" == "check" ]]; then
     if ! diff -u "${right}" "${left}" >/dev/null; then
       echo "Dex CRD mismatch for ${crd}." >&2
       echo "Run: ${script_dir}/pull_dex_crds.sh" >&2
+      exit 1
+    fi
+  done
+
+  for crd in "${runtime_crds[@]}"; do
+    left="${dex_crds_dir}/${crd}"
+    right="${dex_dir}/${crd}"
+
+    if [[ ! -f "${left}" ]]; then
+      echo "Missing local CRD file: ${left}" >&2
+      exit 1
+    fi
+    if [[ -f "${right}" ]] && ! diff -u "${right}" "${left}" >/dev/null; then
+      echo "Dex CRD mismatch for ${crd}." >&2
+      echo "Dex ships ${crd} now: move it from runtime_crds to crds and run ${script_dir}/pull_dex_crds.sh" >&2
       exit 1
     fi
   done
@@ -124,3 +148,4 @@ for crd in "${crds[@]}"; do
 done
 
 echo "Updated Dex CRDs from Dex ${dex_tag}."
+echo "Not downloaded, Dex does not ship them: ${runtime_crds[*]}."

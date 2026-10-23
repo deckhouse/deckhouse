@@ -36,9 +36,72 @@ type desiredAccount struct {
 	Status v1alpha1.UserAccountStatus
 }
 
-func projectLocal(pw passwordView, user *userView, now time.Time) desiredAccount {
-	locked := timeLockActive(pw.LockedUntil, now)
-	lockedByAdmin := locked && hasAdminLock(pw.Annotations)
+// lockState is a lock in one place and whether an administrator set it.
+type lockState struct {
+	until   *time.Time
+	byAdmin bool
+}
+
+// laterLock is the lock that ends later. During 1.78 a lock lives in two places, the old one
+// (Password or OfflineSessions) and UserIdentity, and the later one is the one in force.
+func laterLock(a, b lockState) lockState {
+	switch {
+	case a.until == nil:
+		return b
+	case b.until == nil:
+		return a
+	case a.until.After(*b.until):
+		return a
+	case b.until.After(*a.until):
+		return b
+	default:
+		return lockState{until: a.until, byAdmin: a.byAdmin || b.byAdmin}
+	}
+}
+
+func identityLock(ident *identityView) lockState {
+	if ident == nil {
+		return lockState{}
+	}
+	return lockState{until: ident.BlockedUntil, byAdmin: ident.LockedByAdmin}
+}
+
+// externalSource is what is known of an external account: its UserIdentity, its OfflineSessions,
+// or both.
+type externalSource struct {
+	UserID   string
+	ConnID   string
+	Email    string
+	Attempts int64
+	Lock     lockState
+}
+
+func newExternalSource(sess *sessionView, ident *identityView) externalSource {
+	var src externalSource
+	if sess != nil {
+		src = externalSource{
+			UserID:   sess.UserID,
+			ConnID:   sess.ConnID,
+			Email:    sess.Email,
+			Attempts: sess.Attempts,
+			Lock:     lockState{until: sess.LockedUntil, byAdmin: hasAdminLock(sess.Annotations)},
+		}
+	}
+	if ident == nil {
+		return src
+	}
+	src.UserID, src.ConnID = ident.UserID, ident.ConnectorID
+	if src.Email == "" {
+		src.Email = ident.Email
+	}
+	src.Lock = laterLock(src.Lock, identityLock(ident))
+	return src
+}
+
+func projectLocal(pw passwordView, ident *identityView, user *userView, now time.Time) desiredAccount {
+	lock := laterLock(lockState{until: pw.LockedUntil, byAdmin: hasAdminLock(pw.Annotations)}, identityLock(ident))
+	locked := timeLockActive(lock.until, now)
+	lockedByAdmin := locked && lock.byAdmin
 
 	groups := slices.Clone(pw.Groups)
 	userRef := ""
@@ -76,7 +139,7 @@ func projectLocal(pw passwordView, user *userView, now time.Time) desiredAccount
 			ConnectorID:            naming.LocalConnectorID,
 			IncorrectLoginAttempts: pw.Attempts,
 			Locked:                 locked,
-			LockedUntil:            metaTimePtr(pw.LockedUntil),
+			LockedUntil:            metaTimePtr(lock.until),
 			LockedByAdministrator:  lockedByAdmin,
 			UserRef:                userRef,
 			ExpireAt:               expireAt,
@@ -85,26 +148,26 @@ func projectLocal(pw passwordView, user *userView, now time.Time) desiredAccount
 	}
 }
 
-func projectExternal(sess sessionView, providerType string, now time.Time) desiredAccount {
-	locked := timeLockActive(sess.LockedUntil, now)
-	lockedByAdmin := locked && hasAdminLock(sess.Annotations)
+func projectExternal(src externalSource, providerType string, now time.Time) desiredAccount {
+	locked := timeLockActive(src.Lock.until, now)
+	lockedByAdmin := locked && src.Lock.byAdmin
 
 	return desiredAccount{
-		Name: naming.ExternalName(sess.ConnID, sess.UserID),
+		Name: naming.ExternalName(src.ConnID, src.UserID),
 		Labels: map[string]string{
 			v1alpha1.LabelKind:        v1alpha1.KindExternal,
-			v1alpha1.LabelConnectorID: sess.ConnID,
+			v1alpha1.LabelConnectorID: src.ConnID,
 			v1alpha1.LabelLocked:      strconv.FormatBool(locked),
 		},
 		Status: v1alpha1.UserAccountStatus{
-			Email:                  sess.Email,
-			UserID:                 sess.UserID,
+			Email:                  src.Email,
+			UserID:                 src.UserID,
 			Kind:                   v1alpha1.KindExternal,
-			ConnectorID:            sess.ConnID,
+			ConnectorID:            src.ConnID,
 			ProviderType:           providerType,
-			IncorrectLoginAttempts: sess.Attempts,
+			IncorrectLoginAttempts: src.Attempts,
 			Locked:                 locked,
-			LockedUntil:            metaTimePtr(sess.LockedUntil),
+			LockedUntil:            metaTimePtr(src.Lock.until),
 			LockedByAdministrator:  lockedByAdmin,
 		},
 	}
@@ -149,9 +212,7 @@ func isProjectablePassword(pw passwordView) bool {
 	return pw.Email != "" || pw.Username != ""
 }
 
-func isExternalCandidate(sess sessionView) bool {
-	if sess.Email == "" || sess.ConnID == "" {
-		return false
-	}
-	return !strings.EqualFold(sess.ConnID, naming.LocalConnectorID)
+// isExternalConnector tells whether accounts of connID are external: every connector but local.
+func isExternalConnector(connID string) bool {
+	return connID != "" && !strings.EqualFold(connID, naming.LocalConnectorID)
 }

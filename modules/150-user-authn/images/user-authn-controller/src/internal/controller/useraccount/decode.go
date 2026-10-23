@@ -25,21 +25,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"user-authn-controller/internal/controller"
+	"user-authn-controller/internal/useridentity"
 )
 
-const (
-	lockedByAdministratorAnnot = "deckhouse.io/locked-by-administrator"
-
-	providerTypeLDAP  = "LDAP"
-	providerTypeCrowd = "Crowd"
-)
-
-var (
-	lockableProviderTypes = map[string]struct{}{
-		providerTypeLDAP:  {},
-		providerTypeCrowd: {},
-	}
-)
+const lockedByAdministratorAnnot = "deckhouse.io/locked-by-administrator"
 
 // passwordView is a Dex Password without hash/previousHashes.
 type passwordView struct {
@@ -64,6 +53,16 @@ type sessionView struct {
 	ConnID      string
 	Attempts    int64
 	LockedUntil *time.Time
+}
+
+// identityView is a Dex UserIdentity without its second factors (the cache strips them).
+type identityView struct {
+	Name          string
+	UserID        string
+	ConnectorID   string
+	Email         string
+	BlockedUntil  *time.Time
+	LockedByAdmin bool
 }
 
 // userView is a deckhouse.io User without spec.password.
@@ -175,6 +174,32 @@ func decodeSession(obj *unstructured.Unstructured) (sessionView, error) {
 	}, nil
 }
 
+func decodeIdentity(obj *unstructured.Unstructured) (identityView, error) {
+	if obj == nil {
+		return identityView{}, fmt.Errorf("decode useridentity: object is nil")
+	}
+	id := useridentity.FromUnstructured(obj)
+	claims, err := id.Claims()
+	if err != nil {
+		return identityView{}, err
+	}
+	blocked, err := id.BlockedUntil()
+	if err != nil {
+		return identityView{}, err
+	}
+	view := identityView{
+		Name:          obj.GetName(),
+		UserID:        id.UserID(),
+		ConnectorID:   id.ConnectorID(),
+		Email:         claims.Email,
+		LockedByAdmin: id.LockedByAdministrator(),
+	}
+	if !blocked.IsZero() {
+		view.BlockedUntil = &blocked
+	}
+	return view, nil
+}
+
 func decodeUser(obj *unstructured.Unstructured) (userView, error) {
 	var fields userFields
 	if err := controller.DecodeInto(obj, &fields); err != nil {
@@ -207,10 +232,5 @@ func hasAdminLock(annotations map[string]string) bool {
 		return false
 	}
 	_, ok := annotations[lockedByAdministratorAnnot]
-	return ok
-}
-
-func isLockableProvider(providerType string) bool {
-	_, ok := lockableProviderTypes[providerType]
 	return ok
 }

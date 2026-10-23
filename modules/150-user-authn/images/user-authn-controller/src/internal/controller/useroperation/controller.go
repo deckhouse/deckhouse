@@ -37,30 +37,45 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"user-authn-controller/internal/controller"
+	"user-authn-controller/internal/controller/identitymigration"
 	"user-authn-controller/internal/naming"
 )
 
 // maxConcurrentReconciles is 4: UserOperations are rare and list Dex objects.
 const maxConcurrentReconciles = 4
 
-// Reconciler executes UserOperation objects against Dex Password / session CRs.
+// Reconciler executes UserOperation objects against Dex Password, OfflineSessions, and
+// UserIdentity CRs.
 type Reconciler struct {
-	client client.Client
-	log    logr.Logger
-	now    func() time.Time
+	client    client.Client
+	apiReader client.Reader
+	copier    *identitymigration.Copier
+	log       logr.Logger
+	now       func() time.Time
 }
 
-// New constructs a Reconciler. now defaults to time.Now when nil.
-func New(c client.Client, log logr.Logger, now func() time.Time) *Reconciler {
+// New constructs a Reconciler. now defaults to time.Now when nil. apiReader must bypass the
+// cache: UserIdentity and the TOTP secret of OfflineSessions are read fresh before UserIdentity is
+// written. It defaults to c when nil. c must have the Password index of controller.SetupIndexes.
+func New(c client.Client, apiReader client.Reader, log logr.Logger, now func() time.Time) *Reconciler {
 	if now == nil {
 		now = time.Now
 	}
-	return &Reconciler{client: c, log: log, now: now}
+	if apiReader == nil {
+		apiReader = c
+	}
+	return &Reconciler{
+		client:    c,
+		apiReader: apiReader,
+		copier:    identitymigration.NewCopier(c, apiReader, log),
+		log:       log,
+		now:       now,
+	}
 }
 
 // Register wires the UserOperation reconciler onto the manager.
 func Register(mgr manager.Manager) error {
-	r := New(mgr.GetClient(), mgr.GetLogger().WithName("useroperation"), nil)
+	r := New(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetLogger().WithName("useroperation"), nil)
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup useroperation controller: %w", err)
 	}

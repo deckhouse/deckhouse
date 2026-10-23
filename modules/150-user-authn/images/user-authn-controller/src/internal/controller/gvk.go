@@ -34,6 +34,13 @@ var (
 		Version: "v1",
 		Kind:    "RefreshToken",
 	}
+	// UserIdentityGVK is the per-pair (connector, user) record of Dex v2.46: claims, second
+	// factors, lock. Its name is the OfflineSessions name of the same pair.
+	UserIdentityGVK = schema.GroupVersionKind{
+		Group:   "dex.coreos.com",
+		Version: "v1",
+		Kind:    "UserIdentity",
+	}
 	UserGVK = schema.GroupVersionKind{
 		Group:   "deckhouse.io",
 		Version: "v1",

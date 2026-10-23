@@ -139,6 +139,19 @@ rules:
   - list
   - watch
   - delete
+# UserIdentity: the copy from OfflineSessions and Password, the dual write of UserOperation, and
+# the cleanup after a User is deleted.
+- apiGroups:
+  - dex.coreos.com
+  resources:
+  - useridentities
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
 - apiGroups:
   - ""
   resources:

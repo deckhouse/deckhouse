@@ -8,6 +8,9 @@ This directory contains **two groups** of CRDs:
   - These files are **copied from upstream Dex** (repo `dexidp/dex`, directory `scripts/manifests/crds`).
   - **Do not edit them manually.**
   - Stored under `crds/external/` to avoid rendering as Deckhouse module CRDs.
+  - Exception: `useridentities.yaml` and `authsessions.yaml`. Dex v2.46 registers these CRDs itself at start
+    but does not ship them in `scripts/manifests/crds`, so they are written here by hand in the same format
+    (`runtime_crds` in `pull_dex_crds.sh`). The check compares them as soon as the Dex tree ships them.
 
 ### Why Dex CRDs are here
 
@@ -15,6 +18,7 @@ Some hooks (e.g. UserOperation / 2FA reset logic) subscribe to Dex storage objec
 
 - `offlinesessionses.dex.coreos.com`
 - `refreshtokens.dex.coreos.com`
+- `useridentities.dex.coreos.com` (the controller copies OfflineSessions and Password data into it)
 
 On fresh clusters these CRDs may be absent at the moment hooks start. Shipping Dex CRDs with the module
 prevents bootstrap issues like “CRD ... not found”.

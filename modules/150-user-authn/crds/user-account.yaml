@@ -21,9 +21,12 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Controller-projected view of Dex Password and `OfflineSessions` objects for the DP web UI.
+            Controller-projected view of Dex Password, OfflineSessions, and UserIdentity objects for the Deckhouse web UI.
 
-            Do not create or edit UserAccount resources. The `user-authn` controller owns them.
+            The controller keeps one UserAccount for each local user and one for each user who has signed in
+            through any external provider.
+
+            Do not create or edit UserAccount objects. The `user-authn` controller owns them.
             The source of truth for login credentials and session state remains Dex.
           properties:
             spec:
@@ -31,13 +34,13 @@ spec:
               description: |
                 Empty. UserAccount is controller-owned and has no user-editable specification.
 
-                Do not create this resource. The controller projects it from Dex.
+                Do not create UserAccount objects. The controller projects it from Dex.
             status:
               type: object
               description: |
                 Observed account state projected from Dex.
                 
-                This is a DP web UI view only
+                This is a Deckhouse web UI view only
                 and does not store credentials or connector secrets.
               properties:
                 email:
@@ -74,8 +77,9 @@ spec:
                   type: string
                   description: |
                     External identity provider type.
-                    
-                    Typical values for external accounts: `LDAP`, `Crowd`.
+
+                    Equals `spec.type` of the DexProvider, for example `LDAP`, `Crowd`, `OIDC`, `SAML`, or `Github`.
+
                     Empty for local accounts.
                 incorrectLoginAttempts:
                   type: integer

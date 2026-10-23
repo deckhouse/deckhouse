@@ -90,6 +90,9 @@ type passwordView struct {
 	Name      string
 	Namespace string
 	Username  string
+	UserID    string
+	Email     string
+	Groups    []string
 }
 
 type sessionView struct {
@@ -164,10 +167,19 @@ func decodePassword(obj *unstructured.Unstructured) (passwordView, error) {
 	if err != nil {
 		return passwordView{}, fmt.Errorf("password %s username: %w", obj.GetName(), err)
 	}
+	groups, _, err := unstructured.NestedStringSlice(obj.Object, "groups")
+	if err != nil {
+		// groups only seeds the claims of a new UserIdentity; a null or malformed value is no
+		// reason to fail a lock.
+		groups = nil
+	}
 	return passwordView{
 		Name:      obj.GetName(),
 		Namespace: obj.GetNamespace(),
 		Username:  username,
+		UserID:    firstNestedString(obj.Object, [][]string{{"userID"}}),
+		Email:     firstNestedString(obj.Object, [][]string{{"email"}}),
+		Groups:    groups,
 	}, nil
 }
 

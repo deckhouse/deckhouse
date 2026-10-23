@@ -1,0 +1,49 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: useridentities.dex.coreos.com
+spec:
+  group: dex.coreos.com
+  names:
+    kind: UserIdentity
+    listKind: UserIdentityList
+    plural: useridentities
+    singular: useridentity
+  scope: Namespaced
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        x-kubernetes-preserve-unknown-fields: true
+    additionalPrinterColumns:
+      - name: User
+        type: string
+        jsonPath: .userID
+        description: |
+          End-user identifier, as returned by the connector.
+      - name: Connector
+        type: string
+        jsonPath: .connectorID
+        description: |
+          ID of the connector through which the user logged in.
+      - name: Email
+        type: string
+        jsonPath: .claims.email
+        description: |
+          Email claim of the last login.
+      - name: BlockedUntil
+        type: string
+        jsonPath: .blockedUntil
+        description: |
+          Until when logins are refused. 0001-01-01T00:00:00Z when the user is not blocked.
+      - name: LastLogin
+        type: date
+        jsonPath: .lastLogin
+        description: |
+          When the user last completed a login, including the second factor.
+      - name: Age
+        type: date
+        jsonPath: .metadata.creationTimestamp

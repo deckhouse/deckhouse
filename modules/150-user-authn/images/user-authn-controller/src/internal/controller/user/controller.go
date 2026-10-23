@@ -76,7 +76,7 @@ func Register(mgr manager.Manager) error {
 	return nil
 }
 
-// SetupWithManager registers watches for User, Group, and Password.
+// SetupWithManager registers watches for User, Group, Password, and local UserIdentity.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	inDexNS := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetNamespace() == naming.DexNamespace
@@ -88,10 +88,12 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 		For(controller.Object(controller.UserGVK)).
 		Watches(controller.Object(controller.GroupGVK), handler.EnqueueRequestsFromMapFunc(r.mapGroup)).
 		Watches(controller.Object(controller.PasswordGVK), handler.EnqueueRequestsFromMapFunc(r.mapPassword), builder.WithPredicates(inDexNS)).
+		Watches(controller.Object(controller.UserIdentityGVK), handler.EnqueueRequestsFromMapFunc(r.mapUserIdentity), builder.WithPredicates(inDexNS)).
 		Complete(r)
 }
 
 // Reconcile creates, updates, or deletes the Dex Password for req's User and syncs User.status.
+// Once the User is gone it also deletes the Dex record of the local user (cleanupDexRecord).
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	if err := ctx.Err(); err != nil {
 		return reconcile.Result{}, err
@@ -114,6 +116,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	if err := r.cleanupPasswords(ctx, req.Name, userFound, user); err != nil {
 		return reconcile.Result{}, err
+	}
+	if !userFound {
+		if err := r.cleanupDexRecord(ctx, req.Name); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	return reconcile.Result{RequeueAfter: lockRequeue}, nil

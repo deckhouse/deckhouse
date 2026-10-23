@@ -39,6 +39,10 @@ func TestStripDexSecretsRemovesFieldsWithoutMutatingInput(t *testing.T) {
 		"totp":                           "secret-totp",
 		"token":                          "secret-token",
 		"obsoleteToken":                  "secret-obsolete-token",
+		"mfaSecrets":                     map[string]any{"totp": map[string]any{"secret": "secret-mfa"}},
+		"webauthnCredentials":            map[string]any{"key": []any{"secret-credential"}},
+		"secret":                         "secret-session",
+		"nonce":                          "secret-nonce",
 		"incorrectPasswordLoginAttempts": int64(2),
 	}}
 
@@ -123,8 +127,8 @@ func TestInformerCacheByObjectHasTransform(t *testing.T) {
 	t.Parallel()
 
 	byObject := InformerCacheByObject()
-	if len(byObject) != 3 {
-		t.Fatalf("ByObject entries = %d, want 3", len(byObject))
+	if len(byObject) != 4 {
+		t.Fatalf("ByObject entries = %d, want 4", len(byObject))
 	}
 	for obj, cfg := range byObject {
 		if cfg.Transform == nil {
@@ -133,6 +137,70 @@ func TestInformerCacheByObjectHasTransform(t *testing.T) {
 		if _, ok := cfg.Namespaces[naming.DexNamespace]; !ok {
 			t.Errorf("missing namespace %q for %T", naming.DexNamespace, obj)
 		}
+	}
+}
+
+func TestStripDexSecretsRemovesUserIdentityAndSessionSecrets(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		object   map[string]any
+		stripped []string
+		kept     []string
+	}{
+		{
+			name: "user identity",
+			object: map[string]any{
+				"kind":         "UserIdentity",
+				"userID":       "jane",
+				"connectorID":  "local",
+				"claims":       map[string]any{"email": "jane@example.com"},
+				"blockedUntil": "2077-01-01T00:00:00Z",
+				"mfaSecrets": map[string]any{
+					"totp": map[string]any{"secret": "otpauth://totp/x?secret=ABC", "confirmed": true},
+				},
+				"webauthnCredentials": map[string]any{"key": []any{map[string]any{"publicKey": "AAA"}}},
+			},
+			stripped: []string{"mfaSecrets", "webauthnCredentials"},
+			kept:     []string{"userID", "connectorID", "claims", "blockedUntil"},
+		},
+		{
+			name: "auth session",
+			object: map[string]any{
+				"kind":        "AuthSession",
+				"userID":      "jane",
+				"connectorID": "local",
+				"secret":      "cookie-secret",
+				"nonce":       "nonce",
+			},
+			stripped: []string{"secret", "nonce"},
+			kept:     []string{"userID", "connectorID"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := StripDexSecrets(&unstructured.Unstructured{Object: tt.object})
+			if err != nil {
+				t.Fatalf("StripDexSecrets: %v", err)
+			}
+			stripped, ok := got.(*unstructured.Unstructured)
+			if !ok {
+				t.Fatalf("result type %T, want *unstructured.Unstructured", got)
+			}
+			for _, key := range tt.stripped {
+				if _, exists := stripped.Object[key]; exists {
+					t.Errorf("stripped object still has %q", key)
+				}
+			}
+			for _, key := range tt.kept {
+				if _, exists := stripped.Object[key]; !exists {
+					t.Errorf("stripped object lost %q", key)
+				}
+			}
+		})
 	}
 }
 

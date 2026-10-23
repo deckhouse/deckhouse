@@ -39,6 +39,7 @@ rules:
   - authcodes
   - authrequests
   - connectors
+  - authsessions
   - devicerequests
   - devicetokens
   - oauth2clients
@@ -46,6 +47,7 @@ rules:
   - passwords
   - refreshtokens
   - signingkeies
+  - useridentities
   verbs:
   - get
   - list

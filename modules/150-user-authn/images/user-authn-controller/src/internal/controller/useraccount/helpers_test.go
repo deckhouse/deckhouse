@@ -147,20 +147,14 @@ func TestProjectHelpers(t *testing.T) {
 	if !isProjectablePassword(passwordView{Username: "jane"}) {
 		t.Error("username-only should be projectable")
 	}
-	if isExternalCandidate(sessionView{Email: "a@b.c", ConnID: naming.LocalConnectorID}) {
+	if isExternalConnector(naming.LocalConnectorID) || isExternalConnector("LOCAL") {
 		t.Error("local connector is not external")
 	}
-	if !isExternalCandidate(sessionView{Email: "a@b.c", ConnID: "ldap"}) {
-		t.Error("ldap session should be external")
+	if !isExternalConnector("ldap") || !isExternalConnector("github") {
+		t.Error("every other connector is external")
 	}
-	if isExternalCandidate(sessionView{ConnID: "ldap"}) {
-		t.Error("missing email is not external")
-	}
-	if isLockableProvider("Github") {
-		t.Error("github is not lockable")
-	}
-	if !isLockableProvider(providerTypeLDAP) {
-		t.Error("ldap should be lockable")
+	if isExternalConnector("") {
+		t.Error("empty connector is not external")
 	}
 
 	users := []userView{{Name: "jane", Email: "Jane@Example.com"}}

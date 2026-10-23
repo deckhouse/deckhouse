@@ -26,6 +26,7 @@ import (
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,6 +39,7 @@ import (
 	"user-authn-controller/api/v1alpha1"
 	"user-authn-controller/internal/controller"
 	"user-authn-controller/internal/naming"
+	"user-authn-controller/internal/useridentity"
 )
 
 func TestReconcile_LocalPasswordProjectsAttemptsLockEmail(t *testing.T) {
@@ -154,7 +156,7 @@ func TestReconcile_ExpiredLockedUntilUnlocked(t *testing.T) {
 	}
 }
 
-func TestReconcile_ExternalOnlyLDAPOrCrowd(t *testing.T) {
+func TestReconcile_ExternalForEveryProviderType(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
@@ -166,8 +168,9 @@ func TestReconcile_ExternalOnlyLDAPOrCrowd(t *testing.T) {
 	}{
 		{name: "LDAP provider", providerType: "LDAP", wantCreate: true},
 		{name: "Crowd provider", providerType: "Crowd", wantCreate: true},
-		{name: "OIDC provider ignored", providerType: "OIDC", wantCreate: false},
-		{name: "Github provider ignored", providerType: "Github", wantCreate: false},
+		{name: "OIDC provider", providerType: "OIDC", wantCreate: true},
+		{name: "Github provider", providerType: "Github", wantCreate: true},
+		{name: "SAML provider", providerType: "SAML", wantCreate: true},
 	}
 
 	for _, tt := range tests {
@@ -384,6 +387,7 @@ func newTestReconciler(t *testing.T, now time.Time, objs ...client.Object) *Reco
 		WithScheme(scheme).
 		WithRESTMapper(newTestMapper()).
 		WithStatusSubresource(&v1alpha1.UserAccount{}).
+		WithIndex(controller.Object(controller.PasswordGVK), controller.PasswordPairField, controller.PasswordPair).
 		WithObjects(objs...).
 		Build()
 	return New(c, logr.Discard(), func() time.Time { return now })
@@ -406,6 +410,7 @@ func newTestMapper() meta.RESTMapper {
 	})
 	m.Add(controller.PasswordGVK, meta.RESTScopeNamespace)
 	m.Add(controller.OfflineSessionsGVK, meta.RESTScopeNamespace)
+	m.Add(controller.UserIdentityGVK, meta.RESTScopeNamespace)
 	m.Add(controller.DexProviderGVK, meta.RESTScopeRoot)
 	m.Add(controller.UserGVK, meta.RESTScopeRoot)
 	m.Add(v1alpha1.SchemeGroupVersion.WithKind("UserAccount"), meta.RESTScopeRoot)
@@ -478,4 +483,181 @@ func userUnstructured(name, email string, groups []string, expireAt string) *uns
 		},
 		"status": status,
 	}}
+}
+
+func TestReconcile_ExternalFromUserIdentity(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	adminLock := now.Add(48 * time.Hour)
+	autoLock := now.Add(2 * time.Hour)
+	expired := now.Add(-time.Hour)
+
+	tests := []struct {
+		name           string
+		session        map[string]any
+		identity       func(*useridentity.Identity)
+		expectEmail    string
+		expectLocked   bool
+		expectUntil    *time.Time
+		expectByAdmin  bool
+		expectAttempts int64
+	}{
+		{
+			name: "identity only, as Dex v2.46 keeps an OIDC user",
+			identity: func(id *useridentity.Identity) {
+				id.SetClaims(useridentity.Claims{UserID: "sub-1", Email: "bob@example.com"})
+				_ = id.SetBlockedUntil(adminLock)
+				id.SetAdminLock(adminLock)
+			},
+			expectEmail: "bob@example.com", expectLocked: true, expectUntil: &adminLock, expectByAdmin: true,
+		},
+		{
+			name: "dex zero blockedUntil is not a lock",
+			identity: func(id *useridentity.Identity) {
+				id.SetClaims(useridentity.Claims{UserID: "sub-1", Email: "bob@example.com"})
+				id.Object().Object["blockedUntil"] = "0001-01-01T00:00:00Z"
+			},
+			expectEmail: "bob@example.com", expectLocked: false,
+		},
+		{
+			name: "later lock of the two places wins",
+			session: map[string]any{
+				"email": "bob@old.example.com", "lockedUntil": autoLock.Format(time.RFC3339), "incorrectPasswordLoginAttempts": int64(2),
+			},
+			identity: func(id *useridentity.Identity) {
+				id.SetClaims(useridentity.Claims{UserID: "sub-1", Email: "bob@example.com"})
+				_ = id.SetBlockedUntil(adminLock)
+				id.SetAdminLock(adminLock)
+			},
+			expectEmail: "bob@old.example.com", expectLocked: true, expectUntil: &adminLock, expectByAdmin: true, expectAttempts: 2,
+		},
+		{
+			name:    "old-place lock before the copy",
+			session: map[string]any{"email": "bob@example.com", "lockedUntil": autoLock.Format(time.RFC3339)},
+			identity: func(id *useridentity.Identity) {
+				id.SetClaims(useridentity.Claims{UserID: "sub-1", Email: "bob@example.com"})
+				_ = id.SetBlockedUntil(expired)
+				id.SetAdminLock(expired)
+			},
+			expectEmail: "bob@example.com", expectLocked: true, expectUntil: &autoLock, expectByAdmin: false,
+		},
+		{
+			name:        "session only, before the copy",
+			session:     map[string]any{"email": "bob@example.com"},
+			expectEmail: "bob@example.com", expectLocked: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			connID := "corp-oidc"
+			pair := naming.OfflineTokenName("sub-1", connID)
+			objs := []client.Object{providerUnstructured(connID, "OIDC")}
+			if tt.session != nil {
+				fields := map[string]any{"userID": "sub-1", "connID": connID}
+				for k, v := range tt.session {
+					fields[k] = v
+				}
+				objs = append(objs, sessionUnstructured(pair, fields))
+			}
+			if tt.identity != nil {
+				id := useridentity.New("sub-1", connID)
+				tt.identity(id)
+				objs = append(objs, id.Object())
+			}
+			r := newTestReconciler(t, now, objs...)
+			name := naming.ExternalName(connID, "sub-1")
+
+			if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+				t.Fatalf("Reconcile: %v", err)
+			}
+
+			var ua v1alpha1.UserAccount
+			if err := r.client.Get(t.Context(), types.NamespacedName{Name: name}, &ua); err != nil {
+				t.Fatalf("get useraccount: %v", err)
+			}
+			s := ua.Status
+			if s.Email != tt.expectEmail || s.Locked != tt.expectLocked || s.LockedByAdministrator != tt.expectByAdmin {
+				t.Errorf("email = %q, locked = %v, byAdmin = %v; want %q, %v, %v",
+					s.Email, s.Locked, s.LockedByAdministrator, tt.expectEmail, tt.expectLocked, tt.expectByAdmin)
+			}
+			if s.IncorrectLoginAttempts != tt.expectAttempts {
+				t.Errorf("attempts = %d, want %d", s.IncorrectLoginAttempts, tt.expectAttempts)
+			}
+			if tt.expectUntil != nil && (s.LockedUntil == nil || !s.LockedUntil.Equal(&metav1.Time{Time: *tt.expectUntil})) {
+				t.Errorf("lockedUntil = %v, want %v", s.LockedUntil, tt.expectUntil)
+			}
+			if s.ProviderType != "OIDC" || s.Kind != v1alpha1.KindExternal {
+				t.Errorf("providerType = %q, kind = %q", s.ProviderType, s.Kind)
+			}
+		})
+	}
+}
+
+func TestReconcile_LocalLockFromUserIdentity(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	lock := now.Add(time.Hour)
+	pw := passwordUnstructured("pw-jane", map[string]any{"email": "jane@example.com", "username": "jane", "userID": "jane"})
+	id := useridentity.New("jane", naming.LocalConnectorID)
+	if err := id.SetBlockedUntil(lock); err != nil {
+		t.Fatal(err)
+	}
+	id.SetAdminLock(lock)
+	r := newTestReconciler(t, now, pw, id.Object())
+	name := naming.LocalName("jane@example.com")
+
+	res, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}})
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	var ua v1alpha1.UserAccount
+	if err := r.client.Get(t.Context(), types.NamespacedName{Name: name}, &ua); err != nil {
+		t.Fatalf("get useraccount: %v", err)
+	}
+	if !ua.Status.Locked || !ua.Status.LockedByAdministrator {
+		t.Errorf("locked = %v, byAdmin = %v; want the UserIdentity lock", ua.Status.Locked, ua.Status.LockedByAdministrator)
+	}
+	if res.RequeueAfter != time.Hour {
+		t.Errorf("RequeueAfter = %v, want 1h", res.RequeueAfter)
+	}
+}
+
+func TestMapUserIdentity(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	pw := passwordUnstructured("pw-jane", map[string]any{"email": "jane@example.com", "username": "jane", "userID": "jane"})
+	r := newTestReconciler(t, now, pw)
+
+	local := r.mapUserIdentity(t.Context(), useridentity.New("jane", naming.LocalConnectorID).Object())
+	if len(local) != 1 || local[0].Name != naming.LocalName("jane@example.com") {
+		t.Errorf("local = %v, want the account of the Password", local)
+	}
+	external := r.mapUserIdentity(t.Context(), useridentity.New("sub-1", "corp-oidc").Object())
+	if len(external) != 1 || external[0].Name != naming.ExternalName("corp-oidc", "sub-1") {
+		t.Errorf("external = %v", external)
+	}
+	if reqs := r.mapUserIdentity(t.Context(), useridentity.New("ghost", naming.LocalConnectorID).Object()); len(reqs) != 0 {
+		t.Errorf("local identity without a Password = %v", reqs)
+	}
+}
+
+func TestMapDexProviderIncludesUserIdentities(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	r := newTestReconciler(t, now,
+		useridentity.New("sub-1", "corp-oidc").Object(),
+		useridentity.New("sub-2", "other").Object(),
+	)
+
+	reqs := r.mapDexProvider(t.Context(), providerUnstructured("corp-oidc", "OIDC"))
+	if len(reqs) != 1 || reqs[0].Name != naming.ExternalName("corp-oidc", "sub-1") {
+		t.Errorf("requests = %v", reqs)
+	}
 }

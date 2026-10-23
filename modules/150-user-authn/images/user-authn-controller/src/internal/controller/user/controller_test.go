@@ -514,6 +514,7 @@ func newTestReconciler(t *testing.T, now time.Time, objs ...client.Object) *Reco
 		WithScheme(scheme).
 		WithRESTMapper(newTestMapper()).
 		WithStatusSubresource(userStatusObject()).
+		WithIndex(controller.Object(controller.PasswordGVK), controller.PasswordPairField, controller.PasswordPair).
 		WithObjects(objs...).
 		Build()
 	return New(c, c, logr.Discard(), func() time.Time { return now })
@@ -538,6 +539,8 @@ func newTestMapper() meta.RESTMapper {
 	})
 	m.Add(controller.NamespaceGVK, meta.RESTScopeRoot)
 	m.Add(controller.PasswordGVK, meta.RESTScopeNamespace)
+	m.Add(controller.OfflineSessionsGVK, meta.RESTScopeNamespace)
+	m.Add(controller.UserIdentityGVK, meta.RESTScopeNamespace)
 	m.Add(controller.UserGVK, meta.RESTScopeRoot)
 	m.Add(controller.GroupGVK, meta.RESTScopeRoot)
 	m.Add(v1alpha1.SchemeGroupVersion.WithKind("UserAccount"), meta.RESTScopeRoot)

@@ -40,6 +40,7 @@ import (
 	"user-authn-controller/api/v1alpha1"
 	"user-authn-controller/internal/controller"
 	"user-authn-controller/internal/naming"
+	"user-authn-controller/internal/useridentity"
 )
 
 // maxConcurrentReconciles bounds in-flight UserAccount projections. Each
@@ -47,7 +48,9 @@ import (
 // User controller so a create burst is not serialized here.
 const maxConcurrentReconciles = 8
 
-// Reconciler projects Dex Password and OfflineSessions into UserAccount objects.
+// Reconciler projects Dex Password, OfflineSessions, and UserIdentity into UserAccount objects:
+// one per local user (Password, plus the lock in its UserIdentity) and one per user who signed in
+// through any external provider (UserIdentity, OfflineSessions, or both during 1.78).
 type Reconciler struct {
 	client client.Client
 	log    logr.Logger
@@ -83,6 +86,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 		For(&v1alpha1.UserAccount{}).
 		Watches(controller.Object(controller.PasswordGVK), handler.EnqueueRequestsFromMapFunc(r.mapPassword), builder.WithPredicates(inDexNS)).
 		Watches(controller.Object(controller.OfflineSessionsGVK), handler.EnqueueRequestsFromMapFunc(r.mapOfflineSessions), builder.WithPredicates(inDexNS)).
+		Watches(controller.Object(controller.UserIdentityGVK), handler.EnqueueRequestsFromMapFunc(r.mapUserIdentity), builder.WithPredicates(inDexNS)).
 		Watches(controller.Object(controller.DexProviderGVK), handler.EnqueueRequestsFromMapFunc(r.mapDexProvider)).
 		Watches(controller.Object(controller.UserGVK), handler.EnqueueRequestsFromMapFunc(r.mapUser)).
 		Complete(r)
@@ -226,26 +230,56 @@ func (r *Reconciler) desiredLocal(ctx context.Context, name string, now time.Tim
 	if err != nil {
 		return nil, err
 	}
-	desired := projectLocal(pw, user, now)
+	var ident *identityView
+	if pw.UserID != "" {
+		found, ok, err := r.getIdentity(ctx, useridentity.Name(pw.UserID, naming.LocalConnectorID))
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			ident = &found
+		}
+	}
+	desired := projectLocal(pw, ident, user, now)
 	return &desired, nil
 }
 
+// desiredExternal projects the account of any external provider. The pair is known from its
+// UserIdentity or, until the copy reaches it, from its OfflineSessions: both have the name the
+// account name ends with.
 func (r *Reconciler) desiredExternal(ctx context.Context, name string, now time.Time) (*desiredAccount, error) {
-	sess, ok, err := r.getSession(ctx, sessionNameFromAccount(name))
+	pair := sessionNameFromAccount(name)
+	sess, sessFound, err := r.getSession(ctx, pair)
 	if err != nil {
 		return nil, err
 	}
-	if !ok || !isExternalCandidate(sess) || naming.ExternalName(sess.ConnID, sess.UserID) != name {
-		return nil, nil
-	}
-	provider, ok, err := r.getProvider(ctx, sess.ConnID)
+	ident, identFound, err := r.getIdentity(ctx, pair)
 	if err != nil {
 		return nil, err
 	}
-	if !ok || !isLockableProvider(provider.Type) {
+	if !sessFound && !identFound {
 		return nil, nil
 	}
-	desired := projectExternal(sess, provider.Type, now)
+	var sessPtr *sessionView
+	if sessFound {
+		sessPtr = &sess
+	}
+	var identPtr *identityView
+	if identFound {
+		identPtr = &ident
+	}
+	src := newExternalSource(sessPtr, identPtr)
+	if !isExternalConnector(src.ConnID) || naming.ExternalName(src.ConnID, src.UserID) != name {
+		return nil, nil
+	}
+	provider, ok, err := r.getProvider(ctx, src.ConnID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, nil
+	}
+	desired := projectExternal(src, provider.Type, now)
 	return &desired, nil
 }
 
@@ -318,6 +352,22 @@ func (r *Reconciler) getSession(ctx context.Context, name string) (sessionView, 
 		return sessionView{}, false, err
 	}
 	return sess, true, nil
+}
+
+func (r *Reconciler) getIdentity(ctx context.Context, name string) (identityView, bool, error) {
+	obj := controller.Object(controller.UserIdentityGVK)
+	err := r.client.Get(ctx, types.NamespacedName{Name: name, Namespace: naming.DexNamespace}, obj)
+	if apierrors.IsNotFound(err) {
+		return identityView{}, false, nil
+	}
+	if err != nil {
+		return identityView{}, false, fmt.Errorf("get useridentity %s: %w", name, err)
+	}
+	ident, err := decodeIdentity(obj)
+	if err != nil {
+		return identityView{}, false, err
+	}
+	return ident, true, nil
 }
 
 func (r *Reconciler) getProvider(ctx context.Context, name string) (providerView, bool, error) {
@@ -423,6 +473,22 @@ func (r *Reconciler) listSessions(ctx context.Context) ([]sessionView, error) {
 	return out, nil
 }
 
+func (r *Reconciler) listIdentities(ctx context.Context) ([]identityView, error) {
+	list := controller.List(controller.UserIdentityGVK)
+	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace)); err != nil {
+		return nil, fmt.Errorf("list useridentities: %w", err)
+	}
+	out := make([]identityView, 0, len(list.Items))
+	for i := range list.Items {
+		ident, err := decodeIdentity(&list.Items[i])
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, ident)
+	}
+	return out, nil
+}
+
 func (r *Reconciler) listUsers(ctx context.Context) ([]userView, error) {
 	list := controller.List(controller.UserGVK)
 	if err := r.client.List(ctx, list); err != nil {
@@ -463,6 +529,33 @@ func (r *Reconciler) mapOfflineSessions(_ context.Context, obj client.Object) []
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: naming.ExternalName(sess.ConnID, sess.UserID)}}}
 }
 
+// mapUserIdentity maps an external UserIdentity to its account, and a local one to the account
+// of its Password.
+func (r *Reconciler) mapUserIdentity(ctx context.Context, obj client.Object) []reconcile.Request {
+	u, ok := controller.AsUnstructured(obj)
+	if !ok {
+		return nil
+	}
+	ident, err := decodeIdentity(u)
+	if err != nil || ident.ConnectorID == "" {
+		return nil
+	}
+	if isExternalConnector(ident.ConnectorID) {
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: naming.ExternalName(ident.ConnectorID, ident.UserID)}}}
+	}
+
+	passwords := controller.List(controller.PasswordGVK)
+	if err := r.client.List(ctx, passwords, client.InNamespace(naming.DexNamespace), client.MatchingFields{controller.PasswordPairField: u.GetName()}); err != nil {
+		r.log.Error(err, "map useridentity: list passwords", "useridentity", u.GetName())
+		return nil
+	}
+	reqs := make([]reconcile.Request, 0, len(passwords.Items))
+	for i := range passwords.Items {
+		reqs = append(reqs, r.mapPassword(ctx, &passwords.Items[i])...)
+	}
+	return uniqueRequests(reqs)
+}
+
 func (r *Reconciler) mapUser(_ context.Context, obj client.Object) []reconcile.Request {
 	u, ok := controller.AsUnstructured(obj)
 	if !ok {
@@ -501,6 +594,16 @@ func (r *Reconciler) mapDexProvider(ctx context.Context, obj client.Object) []re
 			continue
 		}
 		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: naming.ExternalName(sess.ConnID, sess.UserID)}})
+	}
+	identities, err := r.listIdentities(ctx)
+	if err != nil {
+		return uniqueRequests(reqs)
+	}
+	for _, ident := range identities {
+		if ident.ConnectorID != connID {
+			continue
+		}
+		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: naming.ExternalName(ident.ConnectorID, ident.UserID)}})
 	}
 	return uniqueRequests(reqs)
 }

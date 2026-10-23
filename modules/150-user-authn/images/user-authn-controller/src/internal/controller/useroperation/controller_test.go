@@ -516,9 +516,10 @@ func newTestReconcilerWithLog(t *testing.T, now time.Time, log logr.Logger, objs
 		WithScheme(scheme).
 		WithRESTMapper(newTestMapper()).
 		WithStatusSubresource(statusObj).
+		WithIndex(controller.Object(controller.PasswordGVK), controller.PasswordPairField, controller.PasswordPair).
 		WithObjects(objs...).
 		Build()
-	return New(c, log, func() time.Time { return now })
+	return New(c, c, log, func() time.Time { return now })
 }
 
 func newTestMapper() meta.RESTMapper {
@@ -529,6 +530,7 @@ func newTestMapper() meta.RESTMapper {
 	m.Add(controller.PasswordGVK, meta.RESTScopeNamespace)
 	m.Add(controller.OfflineSessionsGVK, meta.RESTScopeNamespace)
 	m.Add(controller.RefreshTokenGVK, meta.RESTScopeNamespace)
+	m.Add(controller.UserIdentityGVK, meta.RESTScopeNamespace)
 	m.Add(controller.UserOperationGVK, meta.RESTScopeRoot)
 	return m
 }
