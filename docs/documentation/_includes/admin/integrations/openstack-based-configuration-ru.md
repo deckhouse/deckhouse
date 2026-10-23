@@ -347,7 +347,8 @@ apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: SimpleWithInternalNetwork
 simpleWithInternalNetwork:
-  # Обязательный параметр, все узлы кластера должны находиться в одной подсети.
+  # Все узлы кластера должны находиться в одной подсети. Задайте либо имя подсети
+  # в internalSubnetName, либо её UUID в internalSubnetID.
   internalSubnetName: pivot-standard
   # Необязательный параметр, по умолчанию DirectRoutingWithPortSecurityEnabled,
   # также может быть DirectRouting или VXLAN.

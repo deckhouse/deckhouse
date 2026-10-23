@@ -349,7 +349,8 @@ apiVersion: deckhouse.io/v1
 kind: OpenStackClusterConfiguration
 layout: SimpleWithInternalNetwork
 simpleWithInternalNetwork:
-  # Required, all cluster nodes have to be in the same subnet.
+  # All cluster nodes have to be in the same subnet. Set either the subnet name
+  # in internalSubnetName or its UUID in internalSubnetID.
   internalSubnetName: pivot-standard
   # Optional, DirectRoutingWithPortSecurityEnabled by default,
   # may also be DirectRouting or VXLAN.
