@@ -29,8 +29,9 @@ import (
 
 // secretFields are the top-level keys of Dex storage objects that hold credentials:
 // Password hash and previousHashes, connectorData of OfflineSessions and RefreshToken, the TOTP
-// secret of OfflineSessions, refresh token values, the second factors of UserIdentity
-// (mfaSecrets, webauthnCredentials), and the cookie secret and nonce of AuthSession.
+// secret of OfflineSessions, refresh token values, the WebAuthn credentials of UserIdentity, and
+// the cookie secret and nonce of AuthSession. The TOTP secrets of UserIdentity (mfaSecrets) are
+// reduced to mfaSecretFlags instead.
 var secretFields = []string{
 	"hash",
 	"previousHashes",
@@ -38,15 +39,24 @@ var secretFields = []string{
 	"totp",
 	"token",
 	"obsoleteToken",
-	"mfaSecrets",
 	"webauthnCredentials",
 	"secret",
 	"nonce",
 }
 
+// mfaSecretFlags are the keys of an entry of UserIdentity.mfaSecrets that the cache keeps: which
+// factor it is and whether the user confirmed it, for UserAccount. The secret and the counter of
+// the last accepted code are dropped.
+var mfaSecretFlags = []string{
+	"authenticatorID",
+	"type",
+	"confirmed",
+	"createdAt",
+}
+
 // SecretFields returns Dex credential keys stripped from the informer cache
 // and UserAccount. OfflineSessions.refresh is reduced to token IDs so Reset2FA
-// can match sessions that lack userID.
+// can match sessions that lack userID, and UserIdentity.mfaSecrets to mfaSecretFlags.
 func SecretFields() []string {
 	return slices.Clone(secretFields)
 }
@@ -119,6 +129,40 @@ func stripSecretKeys(m map[string]any) {
 		delete(m, key)
 	}
 	reduceRefreshToIDs(m)
+	reduceMFASecretsToFlags(m)
+}
+
+// reduceMFASecretsToFlags keeps UserIdentity.mfaSecrets keys and each entry's mfaSecretFlags,
+// dropping the secrets. Empty or malformed mfaSecrets maps are removed.
+func reduceMFASecretsToFlags(m map[string]any) {
+	raw, ok := m["mfaSecrets"]
+	if !ok {
+		return
+	}
+	secrets, ok := raw.(map[string]any)
+	if !ok {
+		delete(m, "mfaSecrets")
+		return
+	}
+	reduced := make(map[string]any, len(secrets))
+	for id, v := range secrets {
+		entry, ok := v.(map[string]any)
+		if !ok {
+			continue
+		}
+		flags := make(map[string]any, len(mfaSecretFlags))
+		for _, key := range mfaSecretFlags {
+			if value, ok := entry[key]; ok {
+				flags[key] = value
+			}
+		}
+		reduced[id] = flags
+	}
+	if len(reduced) == 0 {
+		delete(m, "mfaSecrets")
+		return
+	}
+	m["mfaSecrets"] = reduced
 }
 
 // reduceRefreshToIDs keeps OfflineSessions.refresh keys and each entry's ID,

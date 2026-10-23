@@ -17,6 +17,8 @@ limitations under the License.
 package controller
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -62,6 +64,13 @@ func TestStripDexSecretsRemovesFieldsWithoutMutatingInput(t *testing.T) {
 		if _, exists := original.Object[key]; !exists {
 			t.Errorf("original object lost %q (must not mutate live object)", key)
 		}
+	}
+	raw, err := json.Marshal(stripped.Object)
+	if err != nil {
+		t.Fatalf("marshal stripped object: %v", err)
+	}
+	if strings.Contains(string(raw), "secret-") {
+		t.Errorf("stripped object still holds a credential: %s", raw)
 	}
 	refresh, ok := stripped.Object["refresh"].(map[string]any)
 	if !ok {
@@ -162,8 +171,8 @@ func TestStripDexSecretsRemovesUserIdentityAndSessionSecrets(t *testing.T) {
 				},
 				"webauthnCredentials": map[string]any{"key": []any{map[string]any{"publicKey": "AAA"}}},
 			},
-			stripped: []string{"mfaSecrets", "webauthnCredentials"},
-			kept:     []string{"userID", "connectorID", "claims", "blockedUntil"},
+			stripped: []string{"webauthnCredentials"},
+			kept:     []string{"userID", "connectorID", "claims", "blockedUntil", "mfaSecrets"},
 		},
 		{
 			name: "auth session",
@@ -201,6 +210,68 @@ func TestStripDexSecretsRemovesUserIdentityAndSessionSecrets(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestStripDexSecretsReducesMFASecretsToFlags(t *testing.T) {
+	t.Parallel()
+
+	original := &unstructured.Unstructured{Object: map[string]any{
+		"kind":   "UserIdentity",
+		"userID": "jane",
+		"mfaSecrets": map[string]any{
+			"totp": map[string]any{
+				"authenticatorID": "totp",
+				"type":            "TOTP",
+				"secret":          "otpauth://totp/x?secret=ABC",
+				"confirmed":       true,
+				"createdAt":       "2026-10-01T10:00:00Z",
+				"lastUsedCounter": int64(59000000),
+			},
+			"broken": "not an entry",
+		},
+	}}
+
+	got, err := StripDexSecrets(original)
+	if err != nil {
+		t.Fatalf("StripDexSecrets: %v", err)
+	}
+	stripped, ok := got.(*unstructured.Unstructured)
+	if !ok {
+		t.Fatalf("result type %T, want *unstructured.Unstructured", got)
+	}
+	secrets, ok := stripped.Object["mfaSecrets"].(map[string]any)
+	if !ok {
+		t.Fatalf("mfaSecrets missing or wrong type: %T", stripped.Object["mfaSecrets"])
+	}
+	if _, exists := secrets["broken"]; exists {
+		t.Error("an entry that is not an object was kept")
+	}
+	entry, ok := secrets["totp"].(map[string]any)
+	if !ok {
+		t.Fatalf("mfaSecrets.totp missing or wrong type: %T", secrets["totp"])
+	}
+	expected := map[string]any{"authenticatorID": "totp", "type": "TOTP", "confirmed": true, "createdAt": "2026-10-01T10:00:00Z"}
+	if len(entry) != len(expected) {
+		t.Errorf("mfaSecrets.totp = %v, want only %v", entry, expected)
+	}
+	for key, value := range expected {
+		if entry[key] != value {
+			t.Errorf("mfaSecrets.totp.%s = %v, want %v", key, entry[key], value)
+		}
+	}
+	origEntry := original.Object["mfaSecrets"].(map[string]any)["totp"].(map[string]any)
+	if origEntry["secret"] != "otpauth://totp/x?secret=ABC" {
+		t.Errorf("original secret mutated: %v", origEntry["secret"])
+	}
+
+	empty := &unstructured.Unstructured{Object: map[string]any{"mfaSecrets": map[string]any{"x": "y"}}}
+	got, err = StripDexSecrets(empty)
+	if err != nil {
+		t.Fatalf("StripDexSecrets: %v", err)
+	}
+	if _, exists := got.(*unstructured.Unstructured).Object["mfaSecrets"]; exists {
+		t.Error("mfaSecrets without an entry was kept")
 	}
 }
 

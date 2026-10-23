@@ -1,0 +1,227 @@
+{{ template "header.html" . }}
+
+<div class="content">
+  {{ if eq .Mode "register" }}
+  <h2 class="content-title">
+    {{ if eq (extra "lang") "en" }}
+    Register security key
+    {{ else }}
+    Регистрация ключа безопасности
+    {{ end }}
+  </h2>
+  <div class="content-text">
+    {{ if eq (extra "lang") "en" }}
+    Register a security key for two-factor authentication.
+    {{ else }}
+    Зарегистрируйте ключ безопасности для двухфакторной аутентификации.
+    {{ end }}
+  </div>
+  {{ else }}
+  <h2 class="content-title">
+    {{ if eq (extra "lang") "en" }}
+    Two-factor authentication
+    {{ else }}
+    Второй фактор аутентификации
+    {{ end }}
+  </h2>
+  <div class="content-text">
+    {{ if eq (extra "lang") "en" }}
+    Use your security key to verify your identity.
+    {{ else }}
+    Подтвердите вход ключом безопасности.
+    {{ end }}
+  </div>
+  {{ end }}
+
+  <div class="login-form">
+    <div id="webauthn-error" class="form-error" style="display: none;"></div>
+    <div id="webauthn-working" class="content-text" style="display: none;">
+      {{ if eq (extra "lang") "en" }}
+      Waiting for security key...
+      {{ else }}
+      Ожидание ключа безопасности...
+      {{ end }}
+    </div>
+
+    <button id="webauthn-btn" type="button" class="btn btn-primary" onclick="startWebAuthn()">
+      {{ if eq .Mode "register" }}
+      {{ if eq (extra "lang") "en" }}Register Security Key{{ else }}Зарегистрировать ключ{{ end }}
+      {{ else }}
+      {{ if eq (extra "lang") "en" }}Use Security Key{{ else }}Использовать ключ{{ end }}
+      {{ end }}
+    </button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const mode = {{ .Mode }};
+  const basePath = window.location.pathname.replace(/\/mfa\/webauthn$/, "");
+
+  {{ if eq (extra "lang") "en" }}
+  const text = {
+    registrationFailed: "Registration failed",
+    authenticationFailed: "Authentication failed",
+    status: "status",
+    notAllowed: "Request was cancelled or timed out. Please try again.",
+    security: "Security key operation not allowed on this domain.",
+    unexpected: "An unexpected error occurred."
+  };
+  {{ else }}
+  const text = {
+    registrationFailed: "Не удалось зарегистрировать ключ",
+    authenticationFailed: "Не удалось проверить ключ",
+    status: "код",
+    notAllowed: "Запрос отменён или время ожидания истекло. Попробуйте ещё раз.",
+    security: "Операция с ключом безопасности на этом домене запрещена.",
+    unexpected: "Непредвиденная ошибка."
+  };
+  {{ end }}
+
+  const params = new URLSearchParams(window.location.search);
+  const reqID = params.get("req");
+  const hmacVal = params.get("hmac");
+  const authenticator = params.get("authenticator");
+
+  function apiParams() {
+    return "req=" + encodeURIComponent(reqID) +
+           "&hmac=" + encodeURIComponent(hmacVal) +
+           "&authenticator=" + encodeURIComponent(authenticator);
+  }
+
+  function showError(msg) {
+    document.getElementById("webauthn-error").textContent = msg;
+    document.getElementById("webauthn-error").style.display = "block";
+    document.getElementById("webauthn-working").style.display = "none";
+    document.getElementById("webauthn-btn").style.display = "";
+  }
+
+  function bufferToBase64url(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let str = "";
+    for (let i = 0; i < bytes.length; i++) {
+      str += String.fromCharCode(bytes[i]);
+    }
+    return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+  }
+
+  function base64urlToBuffer(value) {
+    let base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+    while (base64.length % 4) { base64 += "="; }
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  function handleFetchError(resp, fallbackMsg) {
+    if (resp.ok) { return resp.json(); }
+    return resp.json()
+      .then(function(j) { throw new Error(j.error || fallbackMsg); })
+      .catch(function() { throw new Error(fallbackMsg + " (" + text.status + " " + resp.status + ")"); });
+  }
+
+  function decodeCredentialIDs(list) {
+    if (!list) { return; }
+    for (let i = 0; i < list.length; i++) {
+      list[i].id = base64urlToBuffer(list[i].id);
+    }
+  }
+
+  function formatError(err) {
+    if (err.name === "NotAllowedError") {
+      return text.notAllowed;
+    }
+    if (err.name === "SecurityError") {
+      return text.security;
+    }
+    return err.message || text.unexpected;
+  }
+
+  window.startWebAuthn = function() {
+    document.getElementById("webauthn-error").style.display = "none";
+    document.getElementById("webauthn-working").style.display = "block";
+    document.getElementById("webauthn-btn").style.display = "none";
+
+    if (mode === "register") {
+      doRegister();
+    } else {
+      doLogin();
+    }
+  };
+
+  function doRegister() {
+    fetch(basePath + "/mfa/webauthn/register/begin?" + apiParams(), {method: "POST"})
+      .then(function(resp) { return handleFetchError(resp, text.registrationFailed); })
+      .then(function(options) {
+        options.publicKey.challenge = base64urlToBuffer(options.publicKey.challenge);
+        options.publicKey.user.id = base64urlToBuffer(options.publicKey.user.id);
+        decodeCredentialIDs(options.publicKey.excludeCredentials);
+        return navigator.credentials.create(options);
+      })
+      .then(function(credential) {
+        const body = JSON.stringify({
+          id: credential.id,
+          rawId: bufferToBase64url(credential.rawId),
+          type: credential.type,
+          response: {
+            attestationObject: bufferToBase64url(credential.response.attestationObject),
+            clientDataJSON: bufferToBase64url(credential.response.clientDataJSON)
+          }
+        });
+        return fetch(basePath + "/mfa/webauthn/register/finish?" + apiParams(), {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: body
+        });
+      })
+      .then(function(resp) { return handleFetchError(resp, text.registrationFailed); })
+      .then(function(result) {
+        if (result.redirect) { window.location.href = result.redirect; }
+      })
+      .catch(function(err) { showError(formatError(err)); });
+  }
+
+  function doLogin() {
+    fetch(basePath + "/mfa/webauthn/login/begin?" + apiParams(), {method: "POST"})
+      .then(function(resp) { return handleFetchError(resp, text.authenticationFailed); })
+      .then(function(options) {
+        options.publicKey.challenge = base64urlToBuffer(options.publicKey.challenge);
+        decodeCredentialIDs(options.publicKey.allowCredentials);
+        return navigator.credentials.get(options);
+      })
+      .then(function(assertion) {
+        const body = JSON.stringify({
+          id: assertion.id,
+          rawId: bufferToBase64url(assertion.rawId),
+          type: assertion.type,
+          response: {
+            authenticatorData: bufferToBase64url(assertion.response.authenticatorData),
+            clientDataJSON: bufferToBase64url(assertion.response.clientDataJSON),
+            signature: bufferToBase64url(assertion.response.signature),
+            userHandle: assertion.response.userHandle ? bufferToBase64url(assertion.response.userHandle) : ""
+          }
+        });
+        return fetch(basePath + "/mfa/webauthn/login/finish?" + apiParams(), {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: body
+        });
+      })
+      .then(function(resp) { return handleFetchError(resp, text.authenticationFailed); })
+      .then(function(result) {
+        if (result.redirect) { window.location.href = result.redirect; }
+      })
+      .catch(function(err) { showError(formatError(err)); });
+  }
+
+  // Auto-start login flow (not registration — user should click to register).
+  if (mode === "login") {
+    startWebAuthn();
+  }
+})();
+</script>
+
+{{ template "footer.html" . }}

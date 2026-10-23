@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
+	"user-authn-controller/api/v1alpha1"
 	"user-authn-controller/internal/controller"
 	"user-authn-controller/internal/useridentity"
 )
@@ -55,7 +56,8 @@ type sessionView struct {
 	LockedUntil *time.Time
 }
 
-// identityView is a Dex UserIdentity without its second factors (the cache strips them).
+// identityView is a Dex UserIdentity without its secrets: the cache keeps only the flags of its
+// second factors.
 type identityView struct {
 	Name          string
 	UserID        string
@@ -63,6 +65,12 @@ type identityView struct {
 	Email         string
 	BlockedUntil  *time.Time
 	LockedByAdmin bool
+	// Migrated tells whether the controller has marked the object: until then Dex also reads the
+	// lock from the old place.
+	Migrated  bool
+	Attempts  int64
+	LastLogin *time.Time
+	TwoFactor v1alpha1.UserAccountTwoFactor
 }
 
 // userView is a deckhouse.io User without spec.password.
@@ -187,15 +195,35 @@ func decodeIdentity(obj *unstructured.Unstructured) (identityView, error) {
 	if err != nil {
 		return identityView{}, err
 	}
+	lastLogin, err := id.LastLogin()
+	if err != nil {
+		return identityView{}, err
+	}
+	attempts, err := id.IncorrectPasswordLoginAttempts()
+	if err != nil {
+		return identityView{}, err
+	}
+	totp, err := id.TOTP()
+	if err != nil {
+		return identityView{}, err
+	}
 	view := identityView{
 		Name:          obj.GetName(),
 		UserID:        id.UserID(),
 		ConnectorID:   id.ConnectorID(),
 		Email:         claims.Email,
 		LockedByAdmin: id.LockedByAdministrator(),
+		Migrated:      id.Migrated(),
+		Attempts:      attempts,
 	}
 	if !blocked.IsZero() {
 		view.BlockedUntil = &blocked
+	}
+	if !lastLogin.IsZero() {
+		view.LastLogin = &lastLogin
+	}
+	if totp != nil {
+		view.TwoFactor = v1alpha1.UserAccountTwoFactor{Enrolled: true, Confirmed: totp.Confirmed}
 	}
 	return view, nil
 }

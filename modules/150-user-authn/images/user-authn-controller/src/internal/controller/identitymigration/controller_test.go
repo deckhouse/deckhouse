@@ -752,6 +752,78 @@ func TestReconcile_NothingInTheOldPlaces(t *testing.T) {
 	}
 }
 
+func TestReconcile_MarksAnIdentityWithNothingToCopy(t *testing.T) {
+	t.Parallel()
+
+	lastLogin := testNow.Add(-time.Minute)
+	created := identityObj(t, "sub-1", "corp-oidc", func(id *useridentity.Identity) {
+		id.SetClaims(useridentity.Claims{UserID: "sub-1", Email: "bob@example.com"})
+		if err := id.SetLastLogin(lastLogin); err != nil {
+			t.Fatal(err)
+		}
+	})
+	h := newHarness(t, nil, created)
+	name := useridentity.Name("sub-1", "corp-oidc")
+
+	h.reconcile(t, name)
+
+	id := h.identity(t, name)
+	if !id.Migrated() {
+		t.Fatal("a UserIdentity Dex created for a pair without old places is not marked")
+	}
+	rec := h.record(t, name)
+	if rec.Time != useridentity.FormatTime(testNow) || rec.Source != "" || rec.TOTPFrom != "" || rec.LockFrom != "" {
+		t.Errorf("record = %+v, want only the time: nothing was copied", rec)
+	}
+	claims, _ := id.Claims()
+	got, _ := id.LastLogin()
+	if claims.Email != "bob@example.com" || !got.Equal(lastLogin) {
+		t.Errorf("claims = %+v, lastLogin = %v; the marking changed what Dex wrote", claims, got)
+	}
+	if v := metricValue(t, h.m.results.WithLabelValues(resultMigrated)); v != 1 {
+		t.Errorf("migrated = %v, want 1", v)
+	}
+
+	version := id.Object().GetResourceVersion()
+	h.reconcile(t, name)
+	if again := h.identity(t, name).Object().GetResourceVersion(); again != version {
+		t.Errorf("resourceVersion %s -> %s: a marked UserIdentity was written again", version, again)
+	}
+}
+
+func TestUnmarkedIdentity(t *testing.T) {
+	t.Parallel()
+
+	unmarked := identityObj(t, "sub-1", "corp-oidc", func(*useridentity.Identity) {})
+	marked := identityObj(t, "sub-1", "corp-oidc", func(id *useridentity.Identity) {
+		if err := id.SetRecord(useridentity.Record{Time: testNow.Format(time.RFC3339)}); err != nil {
+			t.Fatal(err)
+		}
+	})
+	pred := unmarkedIdentity()
+
+	tests := []struct {
+		name     string
+		passes   bool
+		expected bool
+	}{
+		{name: "object of the initial list", passes: pred.Create(event.CreateEvent{Object: unmarked, IsInInitialList: true}), expected: false},
+		{name: "Dex created it", passes: pred.Create(event.CreateEvent{Object: unmarked}), expected: true},
+		{name: "created marked", passes: pred.Create(event.CreateEvent{Object: marked}), expected: false},
+		{name: "Dex wrote an unmarked one", passes: pred.Update(event.UpdateEvent{ObjectOld: unmarked, ObjectNew: unmarked}), expected: true},
+		{name: "the controller marked it", passes: pred.Update(event.UpdateEvent{ObjectOld: unmarked, ObjectNew: marked}), expected: false},
+		{name: "deletion", passes: pred.Delete(event.DeleteEvent{Object: unmarked}), expected: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if tt.passes != tt.expected {
+				t.Errorf("passes = %v, want %v", tt.passes, tt.expected)
+			}
+		})
+	}
+}
+
 func TestChangesOf(t *testing.T) {
 	t.Parallel()
 

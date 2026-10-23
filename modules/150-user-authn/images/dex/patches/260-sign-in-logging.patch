@@ -1,0 +1,2886 @@
+diff --git a/connector/atlassiancrowd/atlassiancrowd.go b/connector/atlassiancrowd/atlassiancrowd.go
+index 4dc4d4af..ddec26ff 100644
+--- a/connector/atlassiancrowd/atlassiancrowd.go
++++ b/connector/atlassiancrowd/atlassiancrowd.go
+@@ -157,6 +157,9 @@ func (c *crowdConnector) Login(ctx context.Context, s connector.Scopes, username
+ 	if s.Groups {
+ 		userGroups, err := c.getGroups(ctx, client, s.Groups, ident.Username)
+ 		if err != nil {
++			if groupsErr, ok := connector.AsUserNotInRequiredGroups(err, ident); ok {
++				return connector.Identity{}, false, groupsErr
++			}
+ 			return connector.Identity{}, false, fmt.Errorf("crowd: failed to query groups: %v", err)
+ 		}
+ 		ident.Groups = userGroups
+@@ -199,6 +202,9 @@ func (c *crowdConnector) Refresh(ctx context.Context, s connector.Scopes, ident
+ 	if s.Groups {
+ 		userGroups, err := c.getGroups(ctx, client, s.Groups, newIdent.Username)
+ 		if err != nil {
++			if groupsErr, ok := connector.AsUserNotInRequiredGroups(err, newIdent); ok {
++				return connector.Identity{}, groupsErr
++			}
+ 			return connector.Identity{}, fmt.Errorf("crowd: failed to query groups: %v", err)
+ 		}
+ 		newIdent.Groups = userGroups
+@@ -425,7 +431,11 @@ func (c *crowdConnector) getGroups(ctx context.Context, client *http.Client, gro
+ 	if len(c.Groups) > 0 {
+ 		filteredGroups := groups.Filter(crowdGroups, c.Groups)
+ 		if len(filteredGroups) == 0 {
+-			return nil, fmt.Errorf("crowd: user %q is not in any of the required groups", userLogin)
++			return nil, &connector.UserNotInRequiredGroupsError{
++				Username:   userLogin,
++				UserGroups: connector.FetchedGroups(crowdGroups),
++				Groups:     c.Groups,
++			}
+ 		}
+ 		return filteredGroups, nil
+ 	} else if groupScope {
+diff --git a/connector/atlassiancrowd/atlassiancrowd_allowed_groups_test.go b/connector/atlassiancrowd/atlassiancrowd_allowed_groups_test.go
+new file mode 100644
+index 00000000..e8774f4d
+--- /dev/null
++++ b/connector/atlassiancrowd/atlassiancrowd_allowed_groups_test.go
+@@ -0,0 +1,33 @@
++package atlassiancrowd
++
++import (
++	"context"
++	"errors"
++	"testing"
++
++	"github.com/dexidp/dex/connector"
++)
++
++func TestGetGroupsNotInRequiredGroups(t *testing.T) {
++	s := newTestServer(map[string]TestServerResponse{
++		"/rest/usermanagement/1/user/group/nested?username=testuser": {
++			Body: crowdGroups{Groups: []struct{ Name string }{{Name: "group1"}, {Name: "group2"}}},
++			Code: 200,
++		},
++	})
++	defer s.Close()
++
++	c := newTestCrowdConnector(s.URL)
++	c.Groups = []string{"admins"}
++	_, err := c.getGroups(context.Background(), newClient(), true, "testuser")
++
++	var groupsErr *connector.UserNotInRequiredGroupsError
++	if !errors.As(err, &groupsErr) {
++		t.Fatalf("want *connector.UserNotInRequiredGroupsError, got %T: %v", err, err)
++	}
++	expectEquals(t, *groupsErr, connector.UserNotInRequiredGroupsError{
++		Username:   "testuser",
++		UserGroups: []string{"group1", "group2"},
++		Groups:     []string{"admins"},
++	})
++}
+diff --git a/connector/bitbucketcloud/bitbucketcloud.go b/connector/bitbucketcloud/bitbucketcloud.go
+index 66a1fa71..e77e84e9 100644
+--- a/connector/bitbucketcloud/bitbucketcloud.go
++++ b/connector/bitbucketcloud/bitbucketcloud.go
+@@ -168,6 +168,9 @@ func (b *bitbucketConnector) HandleCallback(s connector.Scopes, connData []byte,
+ 	if b.groupsRequired(s.Groups) {
+ 		groups, err := b.getGroups(ctx, client, s.Groups, user.Username)
+ 		if err != nil {
++			if groupsErr, ok := connector.AsUserNotInRequiredGroups(err, identity); ok {
++				return identity, groupsErr
++			}
+ 			return identity, err
+ 		}
+ 		identity.Groups = groups
+@@ -263,6 +266,9 @@ func (b *bitbucketConnector) Refresh(ctx context.Context, s connector.Scopes, id
+ 	if b.groupsRequired(s.Groups) {
+ 		groups, err := b.getGroups(ctx, client, s.Groups, user.Username)
+ 		if err != nil {
++			if groupsErr, ok := connector.AsUserNotInRequiredGroups(err, identity); ok {
++				return identity, groupsErr
++			}
+ 			return identity, err
+ 		}
+ 		identity.Groups = groups
+@@ -362,7 +368,11 @@ func (b *bitbucketConnector) getGroups(ctx context.Context, client *http.Client,
+ 	if len(b.teams) > 0 {
+ 		filteredTeams := groups.Filter(bitbucketTeams, b.teams)
+ 		if len(filteredTeams) == 0 {
+-			return nil, fmt.Errorf("bitbucket: user %q is not in any of the required teams", userLogin)
++			return nil, &connector.UserNotInRequiredGroupsError{
++				Username:   userLogin,
++				UserGroups: connector.FetchedGroups(bitbucketTeams),
++				Groups:     b.teams,
++			}
+ 		}
+ 		return filteredTeams, nil
+ 	} else if groupScope {
+@@ -417,7 +427,7 @@ func (b *bitbucketConnector) userWorkspaces(ctx context.Context, client *http.Cl
+ 			perm, err := b.userWorkspacePermission(ctx, client, team)
+ 			if err != nil {
+ 				b.logger.Warn("bitbucket: failed to get permission for workspace, skipping permission suffix",
+-					"workspace", team, "error", err)
++					"workspace", team, "err", err)
+ 				continue
+ 			}
+ 			permissionGroups = append(permissionGroups, team+":"+perm)
+diff --git a/connector/bitbucketcloud/bitbucketcloud_allowed_groups_test.go b/connector/bitbucketcloud/bitbucketcloud_allowed_groups_test.go
+new file mode 100644
+index 00000000..775d523e
+--- /dev/null
++++ b/connector/bitbucketcloud/bitbucketcloud_allowed_groups_test.go
+@@ -0,0 +1,32 @@
++package bitbucketcloud
++
++import (
++	"context"
++	"errors"
++	"testing"
++
++	"github.com/dexidp/dex/connector"
++)
++
++func TestGetGroupsNotInRequiredTeams(t *testing.T) {
++	s := newTestServer(map[string]interface{}{
++		"/user/workspaces": workspacesResponse{
++			pagedResponse: pagedResponse{Size: 1, Page: 1, PageLen: 10},
++			Values:        []workspaceAccess{{Workspace: workspaceRef{Slug: "team-1"}}},
++		},
++	})
++	defer s.Close()
++
++	b := bitbucketConnector{apiURL: s.URL, teams: []string{"team-9"}}
++	_, err := b.getGroups(context.Background(), newClient(), true, "jdoe")
++
++	var groupsErr *connector.UserNotInRequiredGroupsError
++	if !errors.As(err, &groupsErr) {
++		t.Fatalf("want *connector.UserNotInRequiredGroupsError, got %T: %v", err, err)
++	}
++	expectEquals(t, *groupsErr, connector.UserNotInRequiredGroupsError{
++		Username:   "jdoe",
++		UserGroups: []string{"team-1"},
++		Groups:     []string{"team-9"},
++	})
++}
+diff --git a/connector/connector.go b/connector/connector.go
+index a9f0fe3a..709c2946 100644
+--- a/connector/connector.go
++++ b/connector/connector.go
+@@ -14,12 +14,54 @@ import (
+ type UserNotInRequiredGroupsError struct {
+ 	UserID string
+ 	Groups []string
++
++	// Username, PreferredUsername and Email name the refused user in the sign-in
++	// log (Deckhouse), with UserID.
++	Username          string
++	PreferredUsername string
++	Email             string
++	// UserGroups are the groups the provider returned for the user. Nil means
++	// the connector refused the user without reading them; FetchedGroups tells a
++	// user without groups apart.
++	UserGroups []string
+ }
+ 
+ func (e *UserNotInRequiredGroupsError) Error() string {
+ 	return fmt.Sprintf("user %q is not in any of the required groups %v", e.UserID, e.Groups)
+ }
+ 
++// AsUserNotInRequiredGroups reports whether err's chain holds a
++// UserNotInRequiredGroupsError, with the fields the connector did not know when
++// it refused the user filled in from identity.
++func AsUserNotInRequiredGroups(err error, identity Identity) (*UserNotInRequiredGroupsError, bool) {
++	var e *UserNotInRequiredGroupsError
++	if !errors.As(err, &e) {
++		return nil, false
++	}
++	if e.UserID == "" {
++		e.UserID = identity.UserID
++	}
++	if e.Username == "" {
++		e.Username = identity.Username
++	}
++	if e.PreferredUsername == "" {
++		e.PreferredUsername = identity.PreferredUsername
++	}
++	if e.Email == "" {
++		e.Email = identity.Email
++	}
++	return e, true
++}
++
++// FetchedGroups returns groups as read from the provider: never nil, so that a
++// user without groups is told apart from a user whose groups were not read.
++func FetchedGroups(groups []string) []string {
++	if groups == nil {
++		return []string{}
++	}
++	return groups
++}
++
+ // ErrIdentityGone reports that the upstream provider answered that the user no
+ // longer exists, or that the access dex holds for the user was revoked. Unlike a
+ // provider that fails to answer, the answer is final: a connector returns it,
+diff --git a/connector/connector_test.go b/connector/connector_test.go
+new file mode 100644
+index 00000000..ff3e6280
+--- /dev/null
++++ b/connector/connector_test.go
+@@ -0,0 +1,35 @@
++package connector
++
++import (
++	"errors"
++	"fmt"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++)
++
++func TestAsUserNotInRequiredGroups(t *testing.T) {
++	refused := &UserNotInRequiredGroupsError{PreferredUsername: "jdoe", Groups: []string{"admins"}}
++	err := fmt.Errorf("get groups: %w", refused)
++
++	got, ok := AsUserNotInRequiredGroups(err, Identity{
++		UserID: "42", Username: "Jane Doe", PreferredUsername: "ignored", Email: "jdoe@example.com",
++	})
++	require.True(t, ok)
++	require.Equal(t, &UserNotInRequiredGroupsError{
++		UserID:            "42",
++		Username:          "Jane Doe",
++		PreferredUsername: "jdoe",
++		Email:             "jdoe@example.com",
++		Groups:            []string{"admins"},
++	}, got, "what the connector knew stays, the rest comes from the identity")
++	require.Nil(t, got.UserGroups, "groups the connector did not read stay unknown")
++
++	_, ok = AsUserNotInRequiredGroups(errors.New("upstream down"), Identity{UserID: "42"})
++	require.False(t, ok)
++}
++
++func TestFetchedGroups(t *testing.T) {
++	require.Equal(t, []string{}, FetchedGroups(nil), "read and empty is not unknown")
++	require.Equal(t, []string{"a"}, FetchedGroups([]string{"a"}))
++}
+diff --git a/connector/github/github.go b/connector/github/github.go
+index b9ae1eba..e7c77da6 100644
+--- a/connector/github/github.go
++++ b/connector/github/github.go
+@@ -267,6 +267,9 @@ func (c *githubConnector) HandleCallback(s connector.Scopes, connData []byte, r
+ 	if c.groupsRequired(s.Groups) {
+ 		groups, err := c.getGroups(ctx, client, s.Groups, user.Login)
+ 		if err != nil {
++			if groupsErr, ok := connector.AsUserNotInRequiredGroups(err, identity); ok {
++				return identity, groupsErr
++			}
+ 			return identity, err
+ 		}
+ 		identity.Groups = groups
+@@ -392,6 +395,9 @@ func (c *githubConnector) Refresh(ctx context.Context, s connector.Scopes, ident
+ 	if c.groupsRequired(s.Groups) {
+ 		groups, err := c.getGroups(ctx, client, s.Groups, user.Login)
+ 		if err != nil {
++			if groupsErr, ok := connector.AsUserNotInRequiredGroups(err, identity); ok {
++				return identity, groupsErr
++			}
+ 			return identity, err
+ 		}
+ 		identity.Groups = groups
+@@ -449,7 +455,7 @@ func (c *githubConnector) groupsForOrgs(ctx context.Context, client *http.Client
+ 		if len(org.Teams) == 0 {
+ 			inOrgNoTeams = true
+ 		} else if teams = groups_pkg.Filter(teams, org.Teams); len(teams) == 0 {
+-			c.logger.Info("user in org but no teams", "user", userName, "org", org.Name)
++			c.logger.Info("user in org but no teams", "username", userName, "org", org.Name)
+ 		}
+ 
+ 		for _, teamName := range teams {
+@@ -459,7 +465,27 @@ func (c *githubConnector) groupsForOrgs(ctx context.Context, client *http.Client
+ 	if inOrgNoTeams || len(groups) > 0 {
+ 		return groups, nil
+ 	}
+-	return groups, fmt.Errorf("github: user %q not in required orgs or teams", userName)
++	// The membership checks do not list the user's orgs: UserGroups stays nil.
++	return groups, &connector.UserNotInRequiredGroupsError{
++		PreferredUsername: userName,
++		Groups:            c.requiredOrgsAndTeams(),
++	}
++}
++
++// requiredOrgsAndTeams lists the orgs and teams a user must belong to, in the
++// form groups are reported in: "org" for an org without teams, "org:team".
++func (c *githubConnector) requiredOrgsAndTeams() []string {
++	var required []string
++	for _, org := range c.orgs {
++		if len(org.Teams) == 0 {
++			required = append(required, org.Name)
++			continue
++		}
++		for _, team := range org.Teams {
++			required = append(required, formatTeamName(org.Name, team))
++		}
++	}
++	return required
+ }
+ 
+ func (c *githubConnector) userGroups(ctx context.Context, client *http.Client) ([]string, error) {
+@@ -763,7 +789,7 @@ func (c *githubConnector) userInOrg(ctx context.Context, client *http.Client, us
+ 	switch resp.StatusCode {
+ 	case http.StatusNoContent:
+ 	case http.StatusFound, http.StatusNotFound:
+-		c.logger.Info("user not in org or application not authorized to read org data", "user", userName, "org", orgName)
++		c.logger.Info("user not in org or application not authorized to read org data", "username", userName, "org", orgName)
+ 	default:
+ 		err = fmt.Errorf("github: unexpected return status: %q", resp.Status)
+ 	}
+diff --git a/connector/github/github_allowed_groups_test.go b/connector/github/github_allowed_groups_test.go
+new file mode 100644
+index 00000000..3fb48b2d
+--- /dev/null
++++ b/connector/github/github_allowed_groups_test.go
+@@ -0,0 +1,37 @@
++package github
++
++import (
++	"context"
++	"errors"
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/dexidp/dex/connector"
++)
++
++func TestGroupsForOrgsNotInRequiredOrgs(t *testing.T) {
++	// The membership check answers 404: the user is in none of the orgs.
++	s := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.WriteHeader(http.StatusNotFound)
++	}))
++	defer s.Close()
++
++	c := githubConnector{
++		apiURL: s.URL,
++		orgs:   []Org{{Name: "org-1"}, {Name: "org-2", Teams: []string{"admins", "sre"}}},
++		logger: slog.New(slog.DiscardHandler),
++	}
++	_, err := c.groupsForOrgs(context.Background(), newClient(), "jdoe")
++
++	var groupsErr *connector.UserNotInRequiredGroupsError
++	if !errors.As(err, &groupsErr) {
++		t.Fatalf("want *connector.UserNotInRequiredGroupsError, got %T: %v", err, err)
++	}
++	expectEquals(t, groupsErr.PreferredUsername, "jdoe")
++	if groupsErr.UserGroups != nil {
++		t.Errorf("the org membership check does not list the user's groups, want nil, got %v", groupsErr.UserGroups)
++	}
++	expectEquals(t, groupsErr.Groups, []string{"org-1", "org-2:admins", "org-2:sre"})
++}
+diff --git a/connector/gitlab/gitlab.go b/connector/gitlab/gitlab.go
+index 8eec5f06..93730509 100644
+--- a/connector/gitlab/gitlab.go
++++ b/connector/gitlab/gitlab.go
+@@ -230,6 +230,9 @@ func (c *gitlabConnector) identity(ctx context.Context, s connector.Scopes, toke
+ 	if c.groupsRequired(s.Groups) {
+ 		groups, err := c.resolveIdentityGroups(ctx, client, s.Groups, user.Username, user.ID)
+ 		if err != nil {
++			if groupsErr, ok := connector.AsUserNotInRequiredGroups(err, identity); ok {
++				return identity, groupsErr
++			}
+ 			return identity, fmt.Errorf("gitlab: get groups: %v", err)
+ 		}
+ 		identity.Groups = groups
+@@ -380,7 +383,11 @@ func (c *gitlabConnector) resolveIdentityGroups(ctx context.Context, client *htt
+ 	if len(c.groups) > 0 {
+ 		filteredGroups := groups.Filter(gitlabGroups, c.groups)
+ 		if len(filteredGroups) == 0 {
+-			return nil, fmt.Errorf("gitlab: user %q is not in any of the required groups", userLogin)
++			return nil, &connector.UserNotInRequiredGroupsError{
++				PreferredUsername: userLogin,
++				UserGroups:        connector.FetchedGroups(gitlabGroups),
++				Groups:            c.groups,
++			}
+ 		}
+ 		return filteredGroups, nil
+ 	} else if groupScope {
+diff --git a/connector/gitlab/gitlab_test.go b/connector/gitlab/gitlab_test.go
+index aba2e960..44cb25a9 100644
+--- a/connector/gitlab/gitlab_test.go
++++ b/connector/gitlab/gitlab_test.go
+@@ -4,6 +4,7 @@ import (
+ 	"context"
+ 	"crypto/tls"
+ 	"encoding/json"
++	"errors"
+ 	"fmt"
+ 	"io"
+ 	"log/slog"
+@@ -433,7 +434,18 @@ func TestLoginWithTeamNonWhitelisted(t *testing.T) {
+ 	_, err = c.HandleCallback(connector.Scopes{Groups: true}, nil, req)
+ 
+ 	expectNotNil(t, err, "HandleCallback error")
+-	expectEquals(t, err.Error(), "gitlab: get groups: gitlab: user \"joebloggs\" is not in any of the required groups")
++	var groupsErr *connector.UserNotInRequiredGroupsError
++	if !errors.As(err, &groupsErr) {
++		t.Fatalf("want *connector.UserNotInRequiredGroupsError, got %T: %v", err, err)
++	}
++	expectEquals(t, *groupsErr, connector.UserNotInRequiredGroupsError{
++		UserID:            "12345678",
++		Username:          "Joe Bloggs",
++		PreferredUsername: "joebloggs",
++		Email:             "some@email.com",
++		UserGroups:        []string{"team-1"},
++		Groups:            []string{"team-2"},
++	})
+ }
+ 
+ func TestRefresh(t *testing.T) {
+diff --git a/connector/google/google.go b/connector/google/google.go
+index 3944010a..70b8437e 100644
+--- a/connector/google/google.go
++++ b/connector/google/google.go
+@@ -281,9 +281,16 @@ func (c *googleConnector) createIdentity(ctx context.Context, identity connector
+ 		}
+ 
+ 		if len(c.groups) > 0 {
++			userGroups := groups
+ 			groups = pkg_groups.Filter(groups, c.groups)
+ 			if len(groups) == 0 {
+-				return identity, fmt.Errorf("google: user %q is not in any of the required groups", claims.Username)
++				return identity, &connector.UserNotInRequiredGroupsError{
++					UserID:     idToken.Subject,
++					Username:   claims.Username,
++					Email:      claims.Email,
++					UserGroups: connector.FetchedGroups(userGroups),
++					Groups:     c.groups,
++				}
+ 			}
+ 		}
+ 	}
+diff --git a/connector/ldap/ldap.go b/connector/ldap/ldap.go
+index a5f791b8..eeb64267 100644
+--- a/connector/ldap/ldap.go
++++ b/connector/ldap/ldap.go
+@@ -633,11 +633,12 @@ func (c *ldapConnector) Login(ctx context.Context, s connector.Scopes, username,
+ 			if ldapErr, ok := err.(*ldap.Error); ok {
+ 				switch ldapErr.ResultCode {
+ 				case ldap.LDAPResultInvalidCredentials:
+-					c.logger.Error("invalid password for user", "user_dn", user.DN)
++					// A refusal caused by the user: the server logs it with the reason.
++					c.logger.Warn("invalid password for user", "user_dn", user.DN, "username", username)
+ 					incorrectPass = true
+ 					return nil
+ 				case ldap.LDAPResultConstraintViolation:
+-					c.logger.Error("constraint violation for user", "user_dn", user.DN, "err", ldapErr.Error())
++					c.logger.Warn("constraint violation for user", "user_dn", user.DN, "username", username, "err", ldapErr.Error())
+ 					incorrectPass = true
+ 					return nil
+ 				}
+diff --git a/connector/microsoft/microsoft.go b/connector/microsoft/microsoft.go
+index 202c5e91..6ad05694 100644
+--- a/connector/microsoft/microsoft.go
++++ b/connector/microsoft/microsoft.go
+@@ -317,6 +317,9 @@ func (c *microsoftConnector) HandleCallback(s connector.Scopes, connData []byte,
+ 	if c.groupsRequired(s.Groups) {
+ 		groups, err := c.getGroups(ctx, client, user.ID)
+ 		if err != nil {
++			if groupsErr, ok := connector.AsUserNotInRequiredGroups(err, identity); ok {
++				return identity, groupsErr
++			}
+ 			return identity, fmt.Errorf("microsoft: get groups: %w", err)
+ 		}
+ 		identity.Groups = groups
+@@ -427,6 +430,9 @@ func (c *microsoftConnector) Refresh(ctx context.Context, s connector.Scopes, id
+ 	if c.groupsRequired(s.Groups) {
+ 		groups, err := c.getGroups(ctx, client, user.ID)
+ 		if err != nil {
++			if groupsErr, ok := connector.AsUserNotInRequiredGroups(err, identity); ok {
++				return identity, groupsErr
++			}
+ 			return identity, fmt.Errorf("microsoft: get groups: %w", err)
+ 		}
+ 		identity.Groups = groups
+@@ -545,7 +551,7 @@ func (c *microsoftConnector) getGroups(ctx context.Context, client *http.Client,
+ 	// ensure that the user is in at least one required group
+ 	filteredGroups := groups_pkg.Filter(userGroups, c.groups)
+ 	if len(c.groups) > 0 && len(filteredGroups) == 0 {
+-		return nil, &connector.UserNotInRequiredGroupsError{UserID: userID, Groups: c.groups}
++		return nil, &connector.UserNotInRequiredGroupsError{UserID: userID, Groups: c.groups, UserGroups: connector.FetchedGroups(userGroups)}
+ 	} else if c.useGroupsAsWhitelist {
+ 		return filteredGroups, nil
+ 	}
+diff --git a/connector/oidc/oidc.go b/connector/oidc/oidc.go
+index ef48fca4..aaaa6b2f 100644
+--- a/connector/oidc/oidc.go
++++ b/connector/oidc/oidc.go
+@@ -712,7 +712,14 @@ func (c *oidcConnector) createIdentity(ctx context.Context, identity connector.I
+ 
+ 			if len(groupMatches) == 0 {
+ 				// No group membership matches found, disallowing
+-				return identity, fmt.Errorf("user not a member of allowed groups")
++				return identity, &connector.UserNotInRequiredGroupsError{
++					UserID:            subject,
++					Username:          name,
++					PreferredUsername: preferredUsername,
++					Email:             email,
++					UserGroups:        connector.FetchedGroups(groups),
++					Groups:            c.allowedGroups,
++				}
+ 			}
+ 
+ 			groups = groupMatches
+diff --git a/connector/oidc/oidc_allowed_groups_test.go b/connector/oidc/oidc_allowed_groups_test.go
+new file mode 100644
+index 00000000..f0586d62
+--- /dev/null
++++ b/connector/oidc/oidc_allowed_groups_test.go
+@@ -0,0 +1,70 @@
++package oidc
++
++import (
++	"errors"
++	"fmt"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/connector"
++)
++
++// TestHandleCallbackNotInAllowedGroups checks that a refused user comes back
++// as a typed error that names the user, so the server can log who was refused.
++func TestHandleCallbackNotInAllowedGroups(t *testing.T) {
++	tests := []struct {
++		name        string
++		groupsRegex string
++		wantGroups  []string
++	}{
++		{name: "groups as returned", wantGroups: []string{"developers", "qa"}},
++		{name: "groups after groupsFilter", groupsRegex: "^dev", wantGroups: []string{"developers"}},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			testServer, err := setupServer(map[string]interface{}{
++				"sub":                "subvalue",
++				"name":               "namevalue",
++				"preferred_username": "jdoe",
++				"email":              "jdoe@example.com",
++				"email_verified":     true,
++				"groups":             []string{"developers", "qa"},
++			}, true)
++			require.NoError(t, err)
++			defer testServer.Close()
++
++			basicAuth := true
++			config := Config{
++				Issuer:               testServer.URL,
++				ClientID:             "clientID",
++				ClientSecret:         "clientSecret",
++				Scopes:               []string{"email", "groups"},
++				RedirectURI:          fmt.Sprintf("%s/callback", testServer.URL),
++				InsecureEnableGroups: true,
++				BasicAuthUnsupported: &basicAuth,
++				AllowedGroups:        []string{"admins", "security"},
++			}
++			config.ClaimMutations.FilterGroupClaims.GroupsFilter = tt.groupsRegex
++			conn, err := newConnector(config)
++			require.NoError(t, err)
++
++			req, err := newRequestWithAuthCode(testServer.URL, "someCode")
++			require.NoError(t, err)
++
++			_, err = conn.HandleCallback(connector.Scopes{Groups: true}, nil, req)
++			require.Error(t, err)
++
++			var groupsErr *connector.UserNotInRequiredGroupsError
++			require.True(t, errors.As(err, &groupsErr), "got %T: %v", err, err)
++			require.Equal(t, &connector.UserNotInRequiredGroupsError{
++				UserID:            "subvalue",
++				Username:          "namevalue",
++				PreferredUsername: "jdoe",
++				Email:             "jdoe@example.com",
++				UserGroups:        tt.wantGroups,
++				Groups:            []string{"admins", "security"},
++			}, groupsErr)
++		})
++	}
++}
+diff --git a/connector/openshift/openshift.go b/connector/openshift/openshift.go
+index 6eda2f15..9c12b941 100644
+--- a/connector/openshift/openshift.go
++++ b/connector/openshift/openshift.go
+@@ -233,7 +233,12 @@ func (c *openshiftConnector) identity(ctx context.Context, s connector.Scopes,
+ 		validGroups := validateAllowedGroups(user.Groups, c.groups)
+ 
+ 		if !validGroups {
+-			return identity, fmt.Errorf("openshift: user %q is not in any of the required groups", user.Name)
++			return identity, &connector.UserNotInRequiredGroupsError{
++				UserID:     user.UID,
++				Username:   user.Name,
++				UserGroups: connector.FetchedGroups(user.Groups),
++				Groups:     c.groups,
++			}
+ 		}
+ 	}
+ 
+diff --git a/connector/saml/saml.go b/connector/saml/saml.go
+index 8ef434b6..d3b1939a 100644
+--- a/connector/saml/saml.go
++++ b/connector/saml/saml.go
+@@ -447,7 +447,8 @@ func (p *provider) HandlePOST(s connector.Scopes, samlResponse, inResponseTo str
+ 
+ 	if len(p.allowedGroups) > 0 && (!s.Groups || p.groupsAttr == "") {
+ 		// allowedGroups set but no groups or groupsAttr. Disallowing.
+-		return ident, fmt.Errorf("user not a member of allowed groups")
++		// The groups were not read: the error reports none.
++		return ident, p.notInAllowedGroups(ident, nil)
+ 	}
+ 
+ 	// Grab the groups.
+@@ -476,7 +477,7 @@ func (p *provider) HandlePOST(s connector.Scopes, samlResponse, inResponseTo str
+ 
+ 	if len(groupMatches) == 0 {
+ 		// No group membership matches found, disallowing
+-		return ident, fmt.Errorf("user not a member of allowed groups")
++		return ident, p.notInAllowedGroups(ident, connector.FetchedGroups(ident.Groups))
+ 	}
+ 
+ 	if p.filterGroups {
+@@ -516,6 +517,20 @@ func (p *provider) Refresh(ctx context.Context, s connector.Scopes, ident connec
+ 	return ident, nil
+ }
+ 
++// notInAllowedGroups is the error for a user the provider authenticated but who
++// holds none of the allowed groups. userGroups are the groups read from the
++// response, nil when they were not read.
++func (p *provider) notInAllowedGroups(ident connector.Identity, userGroups []string) error {
++	return &connector.UserNotInRequiredGroupsError{
++		UserID:            ident.UserID,
++		Username:          ident.Username,
++		PreferredUsername: ident.PreferredUsername,
++		Email:             ident.Email,
++		UserGroups:        userGroups,
++		Groups:            p.allowedGroups,
++	}
++}
++
+ // validateStatus verifies that the response has a good status code or
+ // formats a human readable error based on the bad status.
+ func (p *provider) validateStatus(status *status) error {
+diff --git a/connector/saml/saml_allowed_groups_test.go b/connector/saml/saml_allowed_groups_test.go
+new file mode 100644
+index 00000000..d4c45951
+--- /dev/null
++++ b/connector/saml/saml_allowed_groups_test.go
+@@ -0,0 +1,63 @@
++package saml
++
++import (
++	"encoding/base64"
++	"errors"
++	"log/slog"
++	"os"
++	"sort"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/connector"
++)
++
++// TestHandlePOSTNotInAllowedGroups checks that a refused user comes back as a
++// typed error that names the user and the groups of the response, so the
++// server can log who was refused.
++func TestHandlePOSTNotInAllowedGroups(t *testing.T) {
++	tests := []struct {
++		name       string
++		groups     bool
++		wantGroups []string
++	}{
++		{name: "groups read from the response", groups: true, wantGroups: []string{"Admins", "Everyone"}},
++		{name: "groups not requested", groups: false, wantGroups: nil},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			c := Config{
++				CA:            "testdata/ca.crt",
++				UsernameAttr:  "Name",
++				EmailAttr:     "email",
++				GroupsAttr:    "groups",
++				RedirectURI:   "http://127.0.0.1:5556/dex/callback",
++				AllowedGroups: []string{"Nope"},
++				SSOURL:        "http://foo.bar/",
++			}
++			conn, err := c.openConnector(slog.New(slog.DiscardHandler))
++			require.NoError(t, err)
++			now, err := time.Parse(timeFormat, "2017-04-04T04:34:59.330Z")
++			require.NoError(t, err)
++			conn.now = func() time.Time { return now }
++			resp, err := os.ReadFile("testdata/good-resp.xml")
++			require.NoError(t, err)
++
++			_, err = conn.HandlePOST(connector.Scopes{Groups: tt.groups},
++				base64.StdEncoding.EncodeToString(resp), "6zmm5mguyebwvajyf2sdwwcw6m")
++
++			var groupsErr *connector.UserNotInRequiredGroupsError
++			require.True(t, errors.As(err, &groupsErr), "got %T: %v", err, err)
++			sort.Strings(groupsErr.UserGroups)
++			require.Equal(t, &connector.UserNotInRequiredGroupsError{
++				UserID:     "eric.chiang+okta@coreos.com",
++				Username:   "Eric",
++				Email:      "eric.chiang+okta@coreos.com",
++				UserGroups: tt.wantGroups,
++				Groups:     []string{"Nope"},
++			}, groupsErr)
++		})
++	}
++}
+diff --git a/pkg/logsafe/logsafe.go b/pkg/logsafe/logsafe.go
+new file mode 100644
+index 00000000..3b4dae24
+--- /dev/null
++++ b/pkg/logsafe/logsafe.go
+@@ -0,0 +1,49 @@
++// Package logsafe prepares values that come from users or upstream identity
++// providers for structured logs: control characters are dropped and sizes are
++// bounded, so a hostile or misconfigured provider cannot forge log lines or
++// flood the log with a huge claim.
++package logsafe
++
++import (
++	"fmt"
++	"strings"
++	"unicode"
++	"unicode/utf8"
++)
++
++const (
++	// MaxValueLen is the maximum length of a logged value, in runes.
++	MaxValueLen = 256
++	// MaxValues is the maximum number of values logged from one list.
++	MaxValues = 50
++)
++
++// Value returns s without control characters, cut to MaxValueLen runes.
++func Value(s string) string {
++	clean := strings.Map(func(r rune) rune {
++		if unicode.IsControl(r) || r == utf8.RuneError {
++			return -1
++		}
++		return r
++	}, s)
++	if utf8.RuneCountInString(clean) <= MaxValueLen {
++		return clean
++	}
++	runes := []rune(clean)
++	return string(runes[:MaxValueLen]) + "…"
++}
++
++// Values returns a sanitized copy of values holding at most MaxValues
++// entries. When entries are dropped, the last element says how many.
++// A nil or empty input returns an empty, non-nil slice, so the log shows [].
++func Values(values []string) []string {
++	n := min(len(values), MaxValues)
++	out := make([]string, 0, n+1)
++	for _, v := range values[:n] {
++		out = append(out, Value(v))
++	}
++	if rest := len(values) - n; rest > 0 {
++		out = append(out, fmt.Sprintf("…(+%d more)", rest))
++	}
++	return out
++}
+diff --git a/pkg/logsafe/logsafe_test.go b/pkg/logsafe/logsafe_test.go
+new file mode 100644
+index 00000000..9fc06824
+--- /dev/null
++++ b/pkg/logsafe/logsafe_test.go
+@@ -0,0 +1,66 @@
++package logsafe
++
++import (
++	"fmt"
++	"strings"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++)
++
++func TestValue(t *testing.T) {
++	long := strings.Repeat("日", MaxValueLen+10)
++
++	tests := []struct {
++		name string
++		in   string
++		want string
++	}{
++		{name: "plain", in: "user@example.com", want: "user@example.com"},
++		{name: "empty", in: "", want: ""},
++		{name: "newline injection", in: "admins\n{\"level\":\"INFO\"}", want: "admins{\"level\":\"INFO\"}"},
++		{name: "carriage return and tab", in: "a\rb\tc", want: "abc"},
++		{name: "ansi escape", in: "\x1b[31mred", want: "[31mred"},
++		{name: "invalid utf8", in: "ok\xffok", want: "okok"},
++		{name: "cut by runes", in: long, want: strings.Repeat("日", MaxValueLen) + "…"},
++		{name: "exactly max", in: strings.Repeat("a", MaxValueLen), want: strings.Repeat("a", MaxValueLen)},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			require.Equal(t, tt.want, Value(tt.in))
++		})
++	}
++}
++
++func TestValues(t *testing.T) {
++	many := make([]string, MaxValues+7)
++	for i := range many {
++		many[i] = fmt.Sprintf("g%d", i)
++	}
++
++	tests := []struct {
++		name string
++		in   []string
++		want []string
++	}{
++		{name: "nil", in: nil, want: []string{}},
++		{name: "empty", in: []string{}, want: []string{}},
++		{name: "sanitized", in: []string{"a\nb", "c"}, want: []string{"ab", "c"}},
++		{name: "exactly max", in: many[:MaxValues], want: many[:MaxValues]},
++		{name: "capped", in: many, want: append(append([]string{}, many[:MaxValues]...), "…(+7 more)")},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			got := Values(tt.in)
++			require.NotNil(t, got)
++			require.Equal(t, tt.want, got)
++		})
++	}
++}
++
++func TestValuesDoesNotAliasInput(t *testing.T) {
++	in := []string{"a", "b"}
++	out := Values(in)
++	out[0] = "changed"
++	require.Equal(t, "a", in[0])
++}
+diff --git a/server/allowlist/allowlist.go b/server/allowlist/allowlist.go
+index 9142a2fc..c23640cd 100644
+--- a/server/allowlist/allowlist.go
++++ b/server/allowlist/allowlist.go
+@@ -40,6 +40,13 @@ type NotAllowedError struct {
+ 	Rule        Rule
+ 	ClientID    string
+ 	ConnectorID string
++
++	// UserGroups and AllowedGroups are set when a group list refused the user:
++	// the groups the user had before any list narrowed them, and the list. The
++	// sign-in log reports them; an email list is not reported, it names other
++	// users.
++	UserGroups    []string
++	AllowedGroups []string
+ }
+ 
+ func (e *NotAllowedError) Error() string {
+@@ -55,26 +62,37 @@ func (e *NotAllowedError) Error() string {
+ // too. One missing from storage refuses the user: the login that got this far
+ // had it, so it was removed meanwhile, not unrestricted.
+ func Apply(ctx context.Context, s storage.Storage, client storage.Client, connectorID string, claims *storage.Claims) error {
+-	refuse := func(rule Rule) error {
+-		return &NotAllowedError{Rule: rule, ClientID: client.ID, ConnectorID: connectorID}
++	// conn is the connector read so far, empty before it is read.
++	refuse := func(rule Rule, conn storage.Connector) error {
++		e := &NotAllowedError{Rule: rule, ClientID: client.ID, ConnectorID: connectorID}
++		switch rule {
++		case ClientGroups:
++			e.AllowedGroups = client.AllowedGroups
++		case ConnectorGroups:
++			e.AllowedGroups = conn.AllowedGroups
++		case ClientEmails, ConnectorEmails, ConnectorNotFound:
++			return e
++		}
++		e.UserGroups = slices.Clone(claims.Groups)
++		return e
+ 	}
+ 
+ 	admitted, rule := admitByClient(client, claims.Email, claims.Groups)
+ 	if rule != "" {
+-		return refuse(rule)
++		return refuse(rule, storage.Connector{})
+ 	}
+ 
+ 	conn, err := s.GetConnector(ctx, connectorID)
+ 	switch {
+ 	case errors.Is(err, storage.ErrNotFound):
+-		return refuse(ConnectorNotFound)
++		return refuse(ConnectorNotFound, storage.Connector{})
+ 	case err != nil:
+ 		return fmt.Errorf("get connector %q: %w", connectorID, err)
+ 	}
+ 
+ 	admitted, rule = admitByConnector(conn, claims.Email, admitted)
+ 	if rule != "" {
+-		return refuse(rule)
++		return refuse(rule, conn)
+ 	}
+ 
+ 	claims.Groups = admitted
+diff --git a/server/allowlist/allowlist_test.go b/server/allowlist/allowlist_test.go
+index 40b91ca8..c0fb0ed3 100644
+--- a/server/allowlist/allowlist_test.go
++++ b/server/allowlist/allowlist_test.go
+@@ -216,6 +216,8 @@ func TestApply(t *testing.T) {
+ 		claims         storage.Claims
+ 		expectedGroups []string
+ 		expectedRule   Rule
++		// expectedAllowed is the group list that refuses the user.
++		expectedAllowed []string
+ 	}{
+ 		{
+ 			name:           "client and static connector narrow the groups in turn",
+@@ -232,11 +234,12 @@ func TestApply(t *testing.T) {
+ 			expectedGroups: []string{"guests"},
+ 		},
+ 		{
+-			name:         "client refuses before the connector is read",
+-			client:       client,
+-			connectorID:  "missing",
+-			claims:       storage.Claims{UserID: "ann", Email: "ann@corp.example", Groups: []string{"x"}},
+-			expectedRule: ClientGroups,
++			name:            "client refuses before the connector is read",
++			client:          client,
++			connectorID:     "missing",
++			claims:          storage.Claims{UserID: "ann", Email: "ann@corp.example", Groups: []string{"x"}},
++			expectedRule:    ClientGroups,
++			expectedAllowed: []string{"staff", "guests"},
+ 		},
+ 		{
+ 			name:         "connector refuses what the client admits",
+@@ -246,11 +249,12 @@ func TestApply(t *testing.T) {
+ 			expectedRule: ConnectorEmails,
+ 		},
+ 		{
+-			name:         "connector groups apply to what the client left",
+-			client:       client,
+-			connectorID:  "corp",
+-			claims:       storage.Claims{UserID: "ann", Email: "ann@corp.example", Groups: []string{"guests", "admins"}},
+-			expectedRule: ConnectorGroups,
++			name:            "connector groups apply to what the client left",
++			client:          client,
++			connectorID:     "corp",
++			claims:          storage.Claims{UserID: "ann", Email: "ann@corp.example", Groups: []string{"guests", "admins"}},
++			expectedRule:    ConnectorGroups,
++			expectedAllowed: []string{"staff", "admins"},
+ 		},
+ 		{
+ 			name:         "connector missing from storage refuses the user",
+@@ -274,7 +278,13 @@ func TestApply(t *testing.T) {
+ 
+ 			var notAllowed *NotAllowedError
+ 			require.ErrorAs(t, err, &notAllowed)
+-			require.Equal(t, &NotAllowedError{Rule: tc.expectedRule, ClientID: tc.client.ID, ConnectorID: tc.connectorID}, notAllowed)
++			expected := &NotAllowedError{Rule: tc.expectedRule, ClientID: tc.client.ID, ConnectorID: tc.connectorID}
++			if tc.expectedAllowed != nil {
++				// A group refusal reports the user's own groups, before any list
++				// narrowed them, and the list that refused.
++				expected.UserGroups, expected.AllowedGroups = tc.claims.Groups, tc.expectedAllowed
++			}
++			require.Equal(t, expected, notAllowed)
+ 			require.Equal(t, tc.claims, claims, "a refusal must leave the claims as they were")
+ 		})
+ 	}
+diff --git a/server/authflow/allowlist.go b/server/authflow/allowlist.go
+index 9b80788a..be1e5f08 100644
+--- a/server/authflow/allowlist.go
++++ b/server/authflow/allowlist.go
+@@ -10,6 +10,7 @@ import (
+ 	"net/http"
+ 
+ 	"github.com/dexidp/dex/server/allowlist"
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+@@ -31,8 +32,7 @@ func (h *Handler) checkAllowLists(ctx context.Context, clientID, connectorID str
+ 	err = allowlist.Apply(ctx, h.Storage, client, connectorID, claims)
+ 	var notAllowed *allowlist.NotAllowedError
+ 	if errors.As(err, &notAllowed) {
+-		h.Logger.WarnContext(ctx, "access denied",
+-			"connector_id", connectorID, "client_id", clientID, "user_id", claims.UserID, "rule", notAllowed.Rule)
++		h.Logger.WarnContext(ctx, "access denied", signinlog.NotAllowed(notAllowed, signinlog.ClaimsUser(*claims))...)
+ 	}
+ 	return err
+ }
+diff --git a/server/authflow/callback.go b/server/authflow/callback.go
+index da53ded5..f43e66eb 100644
+--- a/server/authflow/callback.go
++++ b/server/authflow/callback.go
+@@ -11,6 +11,7 @@ import (
+ 	"github.com/gorilla/mux"
+ 
+ 	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/storage"
+ )
+@@ -86,7 +87,7 @@ func (h *Handler) handleConnectorCallback(w http.ResponseWriter, r *http.Request
+ 	}
+ 
+ 	if err != nil {
+-		h.Logger.ErrorContext(r.Context(), "failed to authenticate", "err", err)
++		signinlog.ConnectorError(r.Context(), h.Logger, "failed to authenticate", err, authReq.ConnectorID, authReq.ClientID, signinlog.User{})
+ 		var groupsErr *connector.UserNotInRequiredGroupsError
+ 		if errors.As(err, &groupsErr) {
+ 			h.renderError(r, w, http.StatusForbidden, ErrMsgNotInRequiredGroups)
+@@ -96,15 +97,16 @@ func (h *Handler) handleConnectorCallback(w http.ResponseWriter, r *http.Request
+ 		return
+ 	}
+ 
+-	authReq, err = h.finalizeLogin(ctx, identity, authReq, conn.Connector)
++	finalized, err := h.finalizeLogin(ctx, identity, authReq, conn.Connector)
+ 	if err != nil {
+ 		if h.renderNotAllowed(r, w, err) || h.renderLocked(r, w, err) {
+ 			return
+ 		}
+-		h.Logger.ErrorContext(r.Context(), "failed to finalize login", "err", err)
++		h.logFinalizeError(r.Context(), err, authReq, signinlog.IdentityUser(identity))
+ 		h.renderError(r, w, http.StatusInternalServerError, "Login error.")
+ 		return
+ 	}
++	authReq = finalized
+ 
+ 	// Connector callbacks don't render the remember_me checkbox, so we use the server default.
+ 	// The password login handler reads r.FormValue("remember_me") from the submitted form instead.
+diff --git a/server/authflow/finalize.go b/server/authflow/finalize.go
+index 62bcaffc..4038c148 100644
+--- a/server/authflow/finalize.go
++++ b/server/authflow/finalize.go
+@@ -10,7 +10,9 @@ import (
+ 	"fmt"
+ 
+ 	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/allowlist"
+ 	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+@@ -51,11 +53,12 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 	var blocked *useridentity.BlockedError
+ 	switch {
+ 	case errors.As(err, &blocked):
+-		h.Logger.WarnContext(ctx, "login rejected for locked account",
+-			"connector_id", authReq.ConnectorID, "user_id", identity.UserID, "blocked_until", blocked.Until)
++		h.Logger.WarnContext(ctx, "login rejected for locked account", append(signinlog.Refused(signinlog.ReasonAccountLocked,
++			authReq.ConnectorID, authReq.ClientID, signinlog.ClaimsUser(claims)), "blocked_until", blocked.Until)...)
+ 		return storage.AuthRequest{}, err
+ 	case err != nil:
+-		h.Logger.ErrorContext(ctx, "failed to record user identity", "err", err)
++		h.Logger.ErrorContext(ctx, "failed to record user identity",
++			signinlog.Failed(err, authReq.ConnectorID, authReq.ClientID, signinlog.ClaimsUser(claims))...)
+ 		return storage.AuthRequest{}, err
+ 	}
+ 
+@@ -73,16 +76,12 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 	// (the next-step decision below) see the identity we just stored.
+ 	authReq, _ = updater(authReq)
+ 
+-	email := claims.Email
++	user := signinlog.ClaimsUser(claims)
+ 	if !claims.EmailVerified {
+-		email += " (unverified)"
++		user.Email += " (unverified)"
+ 	}
+-
+-	h.Logger.InfoContext(ctx, "login successful",
+-		"connector_id", authReq.ConnectorID, "client_id", authReq.ClientID,
+-		"user_id", claims.UserID,
+-		"username", claims.Username, "preferred_username", claims.PreferredUsername,
+-		"email", email, "groups", issued.Groups)
++	h.Logger.InfoContext(ctx, "login successful", append(signinlog.Attrs(authReq.ConnectorID, authReq.ClientID, user),
++		"groups", signinlog.Groups(issued.Groups))...)
+ 
+ 	offlineAccessRequested := false
+ 	for _, scope := range authReq.Scopes {
+@@ -138,3 +137,16 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 	// create the session and advance the flow.
+ 	return h.Storage.GetAuthRequest(ctx, authReq.ID)
+ }
++
++// logFinalizeError logs a login that finalizeLogin failed for u. Its refusals,
++// a lock or an allow-list, are logged where they are decided.
++func (h *Handler) logFinalizeError(ctx context.Context, err error, authReq storage.AuthRequest, u signinlog.User) {
++	var (
++		blocked    *useridentity.BlockedError
++		notAllowed *allowlist.NotAllowedError
++	)
++	if errors.As(err, &blocked) || errors.As(err, &notAllowed) {
++		return
++	}
++	h.Logger.ErrorContext(ctx, "failed to finalize login", signinlog.Failed(err, authReq.ConnectorID, authReq.ClientID, u)...)
++}
+diff --git a/server/authflow/lockout.go b/server/authflow/lockout.go
+index 05b74f54..28a6501f 100644
+--- a/server/authflow/lockout.go
++++ b/server/authflow/lockout.go
+@@ -4,19 +4,21 @@ import (
+ 	"errors"
+ 	"net/http"
+ 
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/useridentity"
++	"github.com/dexidp/dex/storage"
+ )
+ 
+ // refuseLocked answers a password check that err refuses for a locked account
+ // and reports whether it did. The answer is the same whatever the password, as
+ // in the v2.44-based Deckhouse dex.
+-func (h *Handler) refuseLocked(w http.ResponseWriter, r *http.Request, err error, connectorID, username string) bool {
++func (h *Handler) refuseLocked(w http.ResponseWriter, r *http.Request, err error, authReq storage.AuthRequest, username string) bool {
+ 	var blocked *useridentity.BlockedError
+ 	if !errors.As(err, &blocked) {
+ 		return false
+ 	}
+-	h.Logger.WarnContext(r.Context(), "login rejected for locked account",
+-		"connector_id", connectorID, "user", username, "blocked_until", blocked.Until)
++	h.Logger.WarnContext(r.Context(), "login attempt for locked account", append(signinlog.Refused(signinlog.ReasonAccountLocked,
++		authReq.ConnectorID, authReq.ClientID, signinlog.User{Username: username}), "blocked_until", blocked.Until)...)
+ 	return h.renderLocked(r, w, err)
+ }
+ 
+diff --git a/server/authflow/password.go b/server/authflow/password.go
+index 26a6c7d3..694b9cfd 100644
+--- a/server/authflow/password.go
++++ b/server/authflow/password.go
+@@ -12,6 +12,7 @@ import (
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/lockout"
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/storage"
+ )
+@@ -74,21 +75,21 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 				if err != nil {
+ 					// SPNEGO handled the request but reported an error (e.g., LDAP lookup failed
+ 					// after successful Kerberos auth). Log error details, show generic message to user.
+-					h.Logger.ErrorContext(ctx, "SPNEGO authentication error", "err", err)
++					signinlog.ConnectorError(ctx, h.Logger, "SPNEGO authentication error", err, authReq.ConnectorID, authReq.ClientID, signinlog.User{})
+ 					h.renderError(r, w, http.StatusUnauthorized, ErrMsgAuthenticationFailed)
+ 					return
+ 				}
+ 				if ident != nil {
+-					authReq, err = h.finalizeLogin(ctx, *ident, authReq, conn.Connector)
++					finalized, err := h.finalizeLogin(ctx, *ident, authReq, conn.Connector)
+ 					if err != nil {
+ 						if h.renderNotAllowed(r, w, err) || h.renderLocked(r, w, err) {
+ 							return
+ 						}
+-						h.Logger.ErrorContext(ctx, "failed to finalize login", "err", err)
++						h.logFinalizeError(ctx, err, authReq, signinlog.IdentityUser(*ident))
+ 						h.renderError(r, w, http.StatusInternalServerError, "Login error.")
+ 						return
+ 					}
+-					http.Redirect(w, r, h.buildContinueURL(authReq), http.StatusSeeOther)
++					http.Redirect(w, r, h.buildContinueURL(finalized), http.StatusSeeOther)
+ 					return
+ 				}
+ 				// handled with no identity typically means the SPNEGO middleware
+@@ -112,12 +113,14 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 			Scopes:      scopes,
+ 			Username:    username,
+ 			Password:    password,
++			ClientID:    authReq.ClientID,
+ 		})
+-		if h.refuseLocked(w, r, err, authReq.ConnectorID, username) {
++		if h.refuseLocked(w, r, err, authReq, username) {
+ 			return
+ 		}
+ 		if err != nil {
+-			h.Logger.ErrorContext(r.Context(), "failed to login user", "err", err)
++			signinlog.ConnectorError(r.Context(), h.Logger, "failed to login user", err,
++				authReq.ConnectorID, authReq.ClientID, signinlog.User{Username: username})
+ 			h.renderError(r, w, http.StatusInternalServerError, ErrMsgLoginError)
+ 			return
+ 		}
+@@ -125,7 +128,8 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 			if err := h.Templates.Password(r, w, r.URL.String(), username, usernamePrompt(pwConn), true, backLink, rememberMe); err != nil {
+ 				h.Logger.ErrorContext(r.Context(), "server template error", "err", err)
+ 			}
+-			h.Logger.ErrorContext(r.Context(), "failed login attempt: Invalid credentials.", "user", username)
++			h.Logger.WarnContext(r.Context(), "failed login attempt: Invalid credentials.", signinlog.Refused(signinlog.ReasonInvalidCredentials,
++				authReq.ConnectorID, authReq.ClientID, signinlog.IdentityUser(identity).Typed(username))...)
+ 			return
+ 		}
+ 		if conn.Type == connectors.LocalConnector {
+@@ -134,14 +138,16 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 			rememberMe := r.FormValue("remember_me") == "on"
+ 			changeURL, err := h.passwordChangeRedirect(ctx, w, authReq, username, &password, rememberMe)
+ 			if err != nil {
+-				h.Logger.ErrorContext(ctx, "failed to apply the password policy", "err", err)
++				h.Logger.ErrorContext(ctx, "failed to apply the password policy",
++					signinlog.Failed(err, authReq.ConnectorID, authReq.ClientID, signinlog.IdentityUser(identity))...)
+ 				h.renderError(r, w, http.StatusInternalServerError, ErrMsgLoginError)
+ 				return
+ 			}
+ 			if changeURL != "" {
+ 				deferred, err := h.deferPasswordChange(ctx, authReq, changeURL)
+ 				if err != nil {
+-					h.Logger.ErrorContext(ctx, "failed to put the password change off", "err", err)
++					h.Logger.ErrorContext(ctx, "failed to put the password change off",
++						signinlog.Failed(err, authReq.ConnectorID, authReq.ClientID, signinlog.IdentityUser(identity))...)
+ 					h.renderError(r, w, http.StatusInternalServerError, ErrMsgLoginError)
+ 					return
+ 				}
+@@ -156,7 +162,7 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 					if h.renderNotAllowed(r, w, err) || h.renderLocked(r, w, err) {
+ 						return
+ 					}
+-					h.Logger.ErrorContext(ctx, "failed to finalize login", "err", err)
++					h.logFinalizeError(ctx, err, authReq, signinlog.IdentityUser(identity))
+ 					h.renderError(r, w, http.StatusInternalServerError, "Login error.")
+ 					return
+ 				}
+@@ -164,15 +170,16 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 				return
+ 			}
+ 		}
+-		authReq, err = h.finalizeLogin(r.Context(), identity, authReq, conn.Connector)
++		finalized, err := h.finalizeLogin(r.Context(), identity, authReq, conn.Connector)
+ 		if err != nil {
+ 			if h.renderNotAllowed(r, w, err) || h.renderLocked(r, w, err) {
+ 				return
+ 			}
+-			h.Logger.ErrorContext(r.Context(), "failed to finalize login", "err", err)
++			h.logFinalizeError(r.Context(), err, authReq, signinlog.IdentityUser(identity))
+ 			h.renderError(r, w, http.StatusInternalServerError, "Login error.")
+ 			return
+ 		}
++		authReq = finalized
+ 
+ 		rememberMe := r.FormValue("remember_me") == "on"
+ 		if err := h.Sessions.CreateOrUpdateAuthSession(ctx, r, w, authReq, rememberMe); err != nil {
+diff --git a/server/authflow/passwordchange.go b/server/authflow/passwordchange.go
+index d2cfc3c9..f7113660 100644
+--- a/server/authflow/passwordchange.go
++++ b/server/authflow/passwordchange.go
+@@ -53,6 +53,7 @@ import (
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/internal"
+ 	"github.com/dexidp/dex/server/passwordpolicy"
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/templates"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/server/useridentity"
+@@ -108,8 +109,8 @@ func (h *Handler) passwordChangeRedirect(ctx context.Context, w http.ResponseWri
+ 	if err := h.bindPasswordChange(ctx, w, authReq); err != nil {
+ 		return "", err
+ 	}
+-	h.Logger.InfoContext(ctx, "password change required",
+-		"connector_id", authReq.ConnectorID, "user_id", stored.UserID, "reason", reason)
++	h.Logger.InfoContext(ctx, passwordChangeRequired[reason],
++		signinlog.Attrs(authReq.ConnectorID, authReq.ClientID, passwordUser(stored))...)
+ 
+ 	q := url.Values{
+ 		"req":          {authReq.ID},
+@@ -240,8 +241,8 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+ 	username := strings.ToLower(r.FormValue("username"))
+ 	// The answer does not say which binding failed.
+ 	if !verifyPasswordChange(authReq, r.FormValue("hmac"), username) || !boundToBrowser(r, authReq) {
+-		h.Logger.WarnContext(ctx, "password change refused: request not bound to the login",
+-			"connector_id", authReq.ConnectorID, "client_id", authReq.ClientID)
++		h.Logger.WarnContext(ctx, "password change refused: request not bound to the login", signinlog.Refused(
++			signinlog.ReasonInvalidCredentials, authReq.ConnectorID, authReq.ClientID, signinlog.User{Username: username})...)
+ 		h.renderError(r, w, http.StatusUnauthorized, "Unauthorized request.")
+ 		return
+ 	}
+@@ -259,8 +260,8 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+ 			return
+ 		}
+ 		if outstanding || !authReq.LoggedIn {
+-			h.Logger.WarnContext(ctx, "password change refused: the second factor of the login is not done",
+-				"connector_id", authReq.ConnectorID, "client_id", authReq.ClientID)
++			h.Logger.WarnContext(ctx, "password change refused: the second factor of the login is not done", signinlog.Refused(
++				signinlog.ReasonInvalidCredentials, authReq.ConnectorID, authReq.ClientID, signinlog.User{Username: username})...)
+ 			h.renderError(r, w, http.StatusUnauthorized, "Unauthorized request.")
+ 			return
+ 		}
+@@ -297,15 +298,15 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+ 	}
+ 	// A pair locked since the login form keeps its password.
+ 	err = useridentity.CheckBlocked(ctx, h.Storage, stored.UserID, authReq.ConnectorID, h.Now())
+-	if h.refuseLocked(w, r, err, authReq.ConnectorID, username) {
++	if h.refuseLocked(w, r, err, authReq, username) {
+ 		return
+ 	}
+ 	if err != nil {
+-		h.Logger.ErrorContext(ctx, "failed to check the lock", "connector_id", authReq.ConnectorID, "err", err)
++		h.Logger.ErrorContext(ctx, "failed to check the lock", signinlog.Failed(err, authReq.ConnectorID, authReq.ClientID, passwordUser(stored))...)
+ 		h.renderError(r, w, http.StatusInternalServerError, ErrMsgLoginError)
+ 		return
+ 	}
+-	if !h.changePassword(w, r, authReq.ConnectorID, page, stored) {
++	if !h.changePassword(w, r, authReq, page, stored) {
+ 		return
+ 	}
+ 	if err := h.unbindPasswordChange(ctx, w, authReq); err != nil {
+@@ -324,22 +325,24 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+ 			Email:  stored.Email,
+ 		})
+ 		if err != nil {
+-			h.Logger.ErrorContext(ctx, "failed to read the user of the password change", "connector_id", authReq.ConnectorID, "err", err)
++			h.Logger.ErrorContext(ctx, "failed to read the user of the password change",
++				signinlog.Failed(err, authReq.ConnectorID, authReq.ClientID, passwordUser(stored))...)
+ 			h.renderError(r, w, http.StatusInternalServerError, ErrMsgLoginError)
+ 			return
+ 		}
+ 
+ 		// The new password is stored first, so a login that fails from here on
+ 		// cannot skip the change.
+-		authReq, err = h.finalizeLogin(ctx, identity, authReq, conn.Connector)
++		finalized, err := h.finalizeLogin(ctx, identity, authReq, conn.Connector)
+ 		if err != nil {
+ 			if h.renderNotAllowed(r, w, err) || h.renderLocked(r, w, err) {
+ 				return
+ 			}
+-			h.Logger.ErrorContext(ctx, "failed to finalize login", "err", err)
++			h.logFinalizeError(ctx, err, authReq, signinlog.IdentityUser(identity))
+ 			h.renderError(r, w, http.StatusInternalServerError, "Login error.")
+ 			return
+ 		}
++		authReq = finalized
+ 	}
+ 	if err := h.Sessions.CreateOrUpdateAuthSession(ctx, r, w, authReq, r.FormValue("remember_me") == "on"); err != nil {
+ 		h.Logger.ErrorContext(ctx, "failed to create/update auth session", "err", err)
+@@ -350,7 +353,7 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+ // changePassword replaces the password of the stored user of page with the new
+ // one the form posts, when the policy accepts it. Otherwise it answers the
+ // request and reports false.
+-func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request, connectorID string, page templates.PasswordChange, stored storage.Password) bool {
++func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request, authReq storage.AuthRequest, page templates.PasswordChange, stored storage.Password) bool {
+ 	ctx := r.Context()
+ 	next := r.PostFormValue("newPassword")
+ 
+@@ -376,7 +379,7 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request, connect
+ 		h.renderError(r, w, http.StatusInternalServerError, ErrMsgLoginError)
+ 		return false
+ 	}
+-	h.Logger.InfoContext(ctx, "password changed", "connector_id", connectorID, "user_id", stored.UserID)
++	h.Logger.InfoContext(ctx, "password changed successfully", signinlog.Attrs(authReq.ConnectorID, authReq.ClientID, passwordUser(stored))...)
+ 	return true
+ }
+ 
+@@ -411,6 +414,19 @@ func (h *Handler) renderPasswordChange(w http.ResponseWriter, r *http.Request, p
+ 	}
+ }
+ 
++// passwordChangeRequired are the log messages of a login sent to the page, as
++// the v2.44-based Deckhouse dex wrote them.
++var passwordChangeRequired = map[passwordpolicy.Reason]string{
++	passwordpolicy.ReasonForced:     "user was forced to change password due to password object requirement",
++	passwordpolicy.ReasonComplexity: "user was forced to change password due to password complexity policy settings",
++	passwordpolicy.ReasonRotation:   "user was forced to change password due to password rotation policy settings",
++}
++
++// passwordUser is the user of a local password for the sign-in log.
++func passwordUser(p storage.Password) signinlog.User {
++	return signinlog.User{ID: p.UserID, Username: p.Username, PreferredUsername: p.PreferredUsername, Email: p.Email}
++}
++
+ // passwordChangeError maps a refusal of passwordpolicy.CheckNew to the page.
+ func passwordChangeError(err error) (templates.PasswordChangeError, string) {
+ 	var weak *passwordpolicy.WeakError
+diff --git a/server/authflow/signinlog_test.go b/server/authflow/signinlog_test.go
+new file mode 100644
+index 00000000..6ca92705
+--- /dev/null
++++ b/server/authflow/signinlog_test.go
+@@ -0,0 +1,270 @@
++package authflow
++
++import (
++	"bytes"
++	"encoding/json"
++	"errors"
++	"log/slog"
++	"net/http"
++	"net/url"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/lockout"
++	"github.com/dexidp/dex/storage"
++)
++
++// logRecorder collects the JSON log lines of a test server.
++type logRecorder struct {
++	mu  sync.Mutex
++	buf bytes.Buffer
++}
++
++func (l *logRecorder) Write(p []byte) (int, error) {
++	l.mu.Lock()
++	defer l.mu.Unlock()
++	return l.buf.Write(p)
++}
++
++func (l *logRecorder) logger() *slog.Logger {
++	return slog.New(slog.NewJSONHandler(l, &slog.HandlerOptions{Level: slog.LevelDebug}))
++}
++
++// lines returns the lines logged so far.
++func (l *logRecorder) lines(t *testing.T) []map[string]any {
++	t.Helper()
++	l.mu.Lock()
++	defer l.mu.Unlock()
++	var lines []map[string]any
++	for _, raw := range bytes.Split(bytes.TrimSpace(l.buf.Bytes()), []byte("\n")) {
++		if len(raw) == 0 {
++			continue
++		}
++		var line map[string]any
++		require.NoError(t, json.Unmarshal(raw, &line), "%s", raw)
++		lines = append(lines, line)
++	}
++	return lines
++}
++
++// line returns the one line logged with msg.
++func (l *logRecorder) line(t *testing.T, msg string) map[string]any {
++	t.Helper()
++	var found []map[string]any
++	for _, line := range l.lines(t) {
++		if line["msg"] == msg {
++			found = append(found, line)
++		}
++	}
++	require.Len(t, found, 1, "lines %q in %v", msg, l.lines(t))
++	return found[0]
++}
++
++// requireScheme checks every line logged so far against the sign-in log scheme:
++// no "user" or "error" keys, and a reason on every warning.
++func (l *logRecorder) requireScheme(t *testing.T) {
++	t.Helper()
++	for _, line := range l.lines(t) {
++		assert.NotContains(t, line, "user", "line %v", line)
++		assert.NotContains(t, line, "error", "line %v", line)
++		if line["level"] == "WARN" {
++			assert.Contains(t, line, "reason", "line %v", line)
++		}
++	}
++}
++
++// fixedCallbackConnector answers every callback with its identity and error.
++type fixedCallbackConnector struct {
++	identity connector.Identity
++	err      error
++}
++
++func (c fixedCallbackConnector) LoginURL(_ connector.Scopes, callbackURL, state string) (string, []byte, error) {
++	return callbackURL + "?state=" + state, nil, nil
++}
++
++func (c fixedCallbackConnector) HandleCallback(connector.Scopes, []byte, *http.Request) (connector.Identity, error) {
++	return c.identity, c.err
++}
++
++func TestSignInLogCallback(t *testing.T) {
++	jane := connector.Identity{
++		UserID: "jane-id", Username: "Jane", PreferredUsername: "jane", Email: "jane@example.com",
++		EmailVerified: true, Groups: []string{"dev", "qa"},
++	}
++	tests := []struct {
++		name     string
++		conn     fixedCallbackConnector
++		client   storage.Client
++		blocked  bool
++		status   int
++		msg      string
++		level    string
++		reason   string
++		expected map[string]any
++	}{
++		{
++			name: "success",
++			conn: fixedCallbackConnector{identity: jane},
++			msg:  "login successful", level: "INFO", status: http.StatusSeeOther,
++			expected: map[string]any{
++				"user_id": "jane-id", "username": "Jane", "preferred_username": "jane", "email": "jane@example.com",
++				"groups": []any{"dev", "qa"},
++			},
++		},
++		{
++			name: "refused by the connector for the groups",
++			conn: fixedCallbackConnector{err: &connector.UserNotInRequiredGroupsError{
++				UserID: "jane-id", Email: "jane@example.com", UserGroups: []string{"dev"}, Groups: []string{"admins"},
++			}},
++			msg: "failed to authenticate", level: "WARN", reason: "not_in_allowed_groups", status: http.StatusForbidden,
++			expected: map[string]any{
++				"user_id": "jane-id", "email": "jane@example.com",
++				"user_groups": []any{"dev"}, "user_groups_count": float64(1), "allowed_groups": []any{"admins"},
++			},
++		},
++		{
++			name: "provider failed",
++			conn: fixedCallbackConnector{err: errors.New("provider unreachable")},
++			msg:  "failed to authenticate", level: "ERROR", status: http.StatusInternalServerError,
++			expected: map[string]any{"err": "provider unreachable"},
++		},
++		{
++			name:   "refused by an allow-list of the client",
++			conn:   fixedCallbackConnector{identity: jane},
++			client: storage.Client{AllowedGroups: []string{"admins"}},
++			msg:    "access denied", level: "WARN", reason: "not_allowed", status: http.StatusUnauthorized,
++			expected: map[string]any{
++				"rule": "client_allowed_groups", "user_id": "jane-id", "email": "jane@example.com",
++				"user_groups": []any{"dev", "qa"}, "allowed_groups": []any{"admins"},
++			},
++		},
++		{
++			name:    "locked",
++			conn:    fixedCallbackConnector{identity: jane},
++			blocked: true,
++			msg:     "login rejected for locked account", level: "WARN", reason: "account_locked", status: http.StatusTooManyRequests,
++			expected: map[string]any{"user_id": "jane-id", "email": "jane@example.com"},
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			var logs logRecorder
++			httpServer, s := newTestHandler(t, func(c *testFlowConfig) { c.Logger = logs.logger() })
++			defer httpServer.Close()
++			ctx := t.Context()
++
++			client := tc.client
++			client.ID, client.RedirectURIs = "app", []string{"https://app.example/cb"}
++			require.NoError(t, s.Storage.CreateClient(ctx, client))
++			require.NoError(t, s.Storage.CreateConnector(ctx, storage.Connector{ID: "idp", Type: "fixed", Name: "IdP", ResourceVersion: "1"}))
++			s.Connectors.Set("idp", connectors.Connector{Type: "fixed", ResourceVersion: "1", Connector: tc.conn})
++			require.NoError(t, s.Storage.CreateAuthRequest(ctx, storage.AuthRequest{
++				ID: "req", ClientID: "app", ConnectorID: "idp", ResponseTypes: []string{"code"},
++				Scopes: []string{"openid", "groups"}, RedirectURI: "https://app.example/cb",
++				Expiry: time.Now().Add(time.Hour), HMACKey: []byte("0123456789abcdef0123456789abcdef"),
++			}))
++			if tc.blocked {
++				require.NoError(t, s.Storage.CreateUserIdentity(ctx, storage.UserIdentity{
++					UserID: "jane-id", ConnectorID: "idp", BlockedUntil: time.Now().Add(time.Hour), Consents: map[string][]string{},
++				}))
++			}
++
++			rr := serve(s, http.MethodGet, "/callback/idp?state=req", nil)
++			require.Equal(t, tc.status, rr.Code, rr.Body.String())
++
++			line := logs.line(t, tc.msg)
++			assert.Equal(t, tc.level, line["level"])
++			assert.Equal(t, "idp", line["connector_id"])
++			assert.Equal(t, "app", line["client_id"])
++			if tc.reason != "" {
++				assert.Equal(t, tc.reason, line["reason"])
++			} else {
++				assert.NotContains(t, line, "reason")
++			}
++			for k, v := range tc.expected {
++				assert.Equal(t, v, line[k], k)
++			}
++			for _, other := range logs.lines(t) {
++				assert.NotEqual(t, "failed to finalize login", other["msg"], "a refusal is not a failure: %v", other)
++			}
++			logs.requireScheme(t)
++		})
++	}
++}
++
++func TestSignInLogPasswordForm(t *testing.T) {
++	var logs logRecorder
++	s := newLocalLoginHandler(t, nil, "Curr3nt-password", nil, func(c *testFlowConfig) {
++		c.Logger = logs.logger()
++		c.Lockout = &lockout.Guard{
++			Storage: c.Storage, Now: time.Now, Logger: c.Logger,
++			Policy: &lockout.Policy{MaxAttempts: 2, Duration: time.Hour},
++		}
++	})
++
++	rr := postPasswordLogin(s, "", localUserEmail, "wrong")
++	require.Equal(t, http.StatusUnauthorized, rr.Code)
++	line := logs.line(t, "failed login attempt: Invalid credentials.")
++	assert.Equal(t, "WARN", line["level"])
++	assert.Equal(t, "invalid_credentials", line["reason"])
++	assert.Equal(t, "local", line["connector_id"])
++	assert.Equal(t, "client", line["client_id"])
++	assert.Equal(t, localUserEmail, line["username"], "the name typed into the form")
++
++	rr = postPasswordLogin(s, "", localUserEmail, "wrong")
++	require.Equal(t, http.StatusTooManyRequests, rr.Code, "the second failure locks")
++	line = logs.line(t, "account locked due to too many failed attempts")
++	assert.Equal(t, "account_locked", line["reason"])
++	assert.Equal(t, localUserID, line["user_id"])
++	assert.Equal(t, "client", line["client_id"])
++	assert.EqualValues(t, 2, line["attempts"])
++
++	rr = postPasswordLogin(s, "", localUserEmail, "Curr3nt-password")
++	require.Equal(t, http.StatusTooManyRequests, rr.Code)
++	lines := 0
++	for _, l := range logs.lines(t) {
++		if l["msg"] == "login attempt for locked account" {
++			lines++
++			assert.Equal(t, "account_locked", l["reason"])
++			assert.Equal(t, "client", l["client_id"])
++			assert.Contains(t, l, "blocked_until")
++		}
++	}
++	assert.Equal(t, 2, lines, "the locking attempt and the next one")
++	logs.requireScheme(t)
++}
++
++func TestSignInLogPasswordChange(t *testing.T) {
++	var logs logRecorder
++	s := newLocalLoginHandler(t, nil, "Curr3nt-password", func(p *storage.Password) {
++		p.RequireResetHashOnNextSuccLogin = true
++	}, func(c *testFlowConfig) { c.Logger = logs.logger() })
++
++	target, cookie := loginToPasswordChange(t, s, "Curr3nt-password")
++	line := logs.line(t, "user was forced to change password due to password object requirement")
++	assert.Equal(t, "INFO", line["level"])
++	assert.Equal(t, localUserID, line["user_id"])
++	assert.NotContains(t, line, "reason", "a password change is not a refusal")
++
++	rr := serve(s, http.MethodPost, target, url.Values{"newPassword": {"N3w-password"}})
++	require.Equal(t, http.StatusUnauthorized, rr.Code)
++	line = logs.line(t, "password change refused: request not bound to the login")
++	assert.Equal(t, "WARN", line["level"])
++	assert.Equal(t, "invalid_credentials", line["reason"])
++	assert.Equal(t, "client", line["client_id"])
++
++	rr = serve(s, http.MethodPost, target, url.Values{"newPassword": {"N3w-password"}}, cookie)
++	require.Equal(t, http.StatusSeeOther, rr.Code, rr.Body.String())
++	line = logs.line(t, "password changed successfully")
++	assert.Equal(t, "INFO", line["level"])
++	assert.Equal(t, "local", line["connector_id"])
++	assert.Equal(t, localUserID, line["user_id"])
++	logs.requireScheme(t)
++}
+diff --git a/server/grants/allowlist.go b/server/grants/allowlist.go
+index baf7b016..14c21105 100644
+--- a/server/grants/allowlist.go
++++ b/server/grants/allowlist.go
+@@ -8,22 +8,23 @@ import (
+ 
+ 	"github.com/dexidp/dex/server/allowlist"
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/signinlog"
+ )
+ 
+ // allowListError maps the outcome of the allow-lists (allowlist.Apply) to the
+ // token response, or returns nil when err is nil. A refused user gets
+-// access_denied with HTTP 401, as from the v2.44-based Deckhouse dex. msg and
+-// attrs make the log line of a refusal.
+-func allowListError(ctx context.Context, logger *slog.Logger, err error, msg string, attrs ...any) *oauth2.Error {
++// access_denied with HTTP 401, as from the v2.44-based Deckhouse dex. msg is the
++// log message of a refusal, u the user of the request.
++func allowListError(ctx context.Context, logger *slog.Logger, err error, msg, connectorID, clientID string, u signinlog.User) *oauth2.Error {
+ 	var notAllowed *allowlist.NotAllowedError
+ 	switch {
+ 	case err == nil:
+ 		return nil
+ 	case errors.As(err, &notAllowed):
+-		logger.WarnContext(ctx, msg, append(attrs, "rule", notAllowed.Rule)...)
++		logger.WarnContext(ctx, msg, signinlog.NotAllowed(notAllowed, u)...)
+ 		return &oauth2.Error{Type: oauth2.AccessDenied, Description: "User is not allowed.", Status: http.StatusUnauthorized}
+ 	default:
+-		logger.ErrorContext(ctx, "failed to apply the allow-lists", append(attrs, "err", err)...)
++		logger.ErrorContext(ctx, "failed to apply the allow-lists", signinlog.Failed(err, connectorID, clientID, u)...)
+ 		return &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError}
+ 	}
+ }
+diff --git a/server/grants/lock.go b/server/grants/lock.go
+index ed7ba32c..23468500 100644
+--- a/server/grants/lock.go
++++ b/server/grants/lock.go
+@@ -7,6 +7,7 @@ import (
+ 	"net/http"
+ 
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/useridentity"
+ )
+ 
+@@ -14,20 +15,29 @@ import (
+ // lock to the token response, or returns nil when err is nil. A locked account
+ // gets access_denied: with HTTP 403 for the lock of an administrator, with HTTP
+ // 429 for an automatic lock after failed password attempts, as from the
+-// v2.44-based Deckhouse dex. attrs name the request in the log line.
+-func identityError(ctx context.Context, logger *slog.Logger, err error, attrs ...any) *oauth2.Error {
++// v2.44-based Deckhouse dex. lockedMsg is the log message of a locked account, u
++// the user of the request.
++func identityError(ctx context.Context, logger *slog.Logger, err error, lockedMsg, connectorID, clientID string, u signinlog.User) *oauth2.Error {
+ 	var blocked *useridentity.BlockedError
+ 	switch {
+ 	case err == nil:
+ 		return nil
+ 	case errors.As(err, &blocked):
+-		logger.WarnContext(ctx, "token request rejected for locked account", append(attrs, "blocked_until", blocked.Until)...)
++		logger.WarnContext(ctx, lockedMsg, append(signinlog.Refused(signinlog.ReasonAccountLocked, connectorID, clientID, u),
++			"blocked_until", blocked.Until)...)
+ 		if blocked.ByAdministrator {
+ 			return &oauth2.Error{Type: oauth2.AccessDenied, Description: "Account locked by an administrator", Status: http.StatusForbidden}
+ 		}
+ 		return &oauth2.Error{Type: oauth2.AccessDenied, Description: "Account locked", Status: http.StatusTooManyRequests}
+ 	default:
+-		logger.ErrorContext(ctx, "failed to read the user identity", append(attrs, "err", err)...)
++		logger.ErrorContext(ctx, "failed to read the user identity", signinlog.Failed(err, connectorID, clientID, u)...)
+ 		return &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError}
+ 	}
+ }
++
++// Log messages of a token request refused for a locked account, as the
++// v2.44-based Deckhouse dex wrote them.
++const (
++	tokenRequestLocked = "token request for locked account"
++	refreshLocked      = "refresh denied: account locked"
++)
+diff --git a/server/grants/password.go b/server/grants/password.go
+index 2e0572ca..6c4afd2e 100644
+--- a/server/grants/password.go
++++ b/server/grants/password.go
+@@ -12,6 +12,7 @@ import (
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/lockout"
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+@@ -71,16 +72,21 @@ func (g *password) Authorize(ctx context.Context, req *Request, client storage.C
+ 		Scopes:      tokens.ParseScopes(req.Scopes),
+ 		Username:    req.Username,
+ 		Password:    req.Password,
++		ClientID:    client.ID,
+ 	})
+ 	var blocked *useridentity.BlockedError
+ 	if errors.As(err, &blocked) {
+-		return nil, identityError(ctx, g.logger, err, "connector_id", g.connectorID, "client_id", client.ID, "user", req.Username)
++		return nil, identityError(ctx, g.logger, err, tokenRequestLocked, g.connectorID, client.ID, signinlog.User{Username: req.Username})
+ 	}
+ 	if err != nil {
+-		g.logger.ErrorContext(ctx, "failed to login user", "err", err)
++		signinlog.ConnectorError(ctx, g.logger, "failed to login user", err, g.connectorID, client.ID,
++			signinlog.User{Username: req.Username}, "grant_type", oauth2.GrantTypePassword)
+ 		return nil, &oauth2.Error{Type: oauth2.InvalidRequest, Description: "Could not login user", Status: http.StatusBadRequest}
+ 	}
+ 	if !ok {
++		g.logger.WarnContext(ctx, "failed login attempt: Invalid credentials.",
++			append(signinlog.Refused(signinlog.ReasonInvalidCredentials, g.connectorID, client.ID, signinlog.IdentityUser(identity).Typed(req.Username)),
++				"grant_type", oauth2.GrantTypePassword)...)
+ 		return nil, &oauth2.Error{Type: oauth2.AccessDenied, Description: "Invalid username or password", Status: http.StatusUnauthorized}
+ 	}
+ 
+@@ -98,7 +104,7 @@ func (g *password) Authorize(ctx context.Context, req *Request, client storage.C
+ 	issued := auth.Claims
+ 	err = allowlist.Apply(ctx, g.storage, client, g.connectorID, &issued)
+ 	if oerr := allowListError(ctx, g.logger, err, "password grant denied by access filter",
+-		"connector_id", g.connectorID, "client_id", client.ID, "user_id", issued.UserID); oerr != nil {
++		g.connectorID, client.ID, signinlog.ClaimsUser(issued)); oerr != nil {
+ 		return nil, oerr
+ 	}
+ 
+@@ -114,8 +120,8 @@ func (g *password) Authorize(ctx context.Context, req *Request, client storage.C
+ 		CoarseLastLogin: true,
+ 		Logger:          g.logger,
+ 	})
+-	if oerr := identityError(ctx, g.logger, err,
+-		"connector_id", g.connectorID, "client_id", client.ID, "user_id", auth.Claims.UserID); oerr != nil {
++	if oerr := identityError(ctx, g.logger, err, tokenRequestLocked,
++		g.connectorID, client.ID, signinlog.ClaimsUser(auth.Claims)); oerr != nil {
+ 		return nil, oerr
+ 	}
+ 	auth.Claims = issued
+diff --git a/server/grants/refresh.go b/server/grants/refresh.go
+index beddf335..350d7a3d 100644
+--- a/server/grants/refresh.go
++++ b/server/grants/refresh.go
+@@ -14,6 +14,7 @@ import (
+ 	"github.com/dexidp/dex/server/internal"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/session"
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+@@ -83,15 +84,15 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 	// them before anything is rotated or read from the connector.
+ 	stored := refreshToken.Claims
+ 	if oerr := g.checkAllowLists(ctx, client, refreshToken, &stored,
+-		"refresh denied by access filter"); oerr != nil {
++		"refresh denied by client access filter"); oerr != nil {
+ 		return nil, oerr
+ 	}
+ 
+ 	// A locked account gets no new tokens. The refresh token is kept, so the
+ 	// session continues once the lock ends.
+ 	err := useridentity.CheckBlocked(ctx, g.storage, refreshToken.Claims.UserID, refreshToken.ConnectorID, g.now())
+-	if oerr := identityError(ctx, g.logger, err,
+-		"connector_id", refreshToken.ConnectorID, "client_id", client.ID, "user_id", refreshToken.Claims.UserID); oerr != nil {
++	if oerr := identityError(ctx, g.logger, err, refreshLocked,
++		refreshToken.ConnectorID, client.ID, signinlog.ClaimsUser(refreshToken.Claims)); oerr != nil {
+ 		return nil, oerr
+ 	}
+ 
+@@ -181,8 +182,7 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ // log line of the refusal.
+ func (g *refresh) checkAllowLists(ctx context.Context, client storage.Client, refreshToken *storage.RefreshToken, claims *storage.Claims, msg string) *oauth2.Error {
+ 	err := allowlist.Apply(ctx, g.storage, client, refreshToken.ConnectorID, claims)
+-	oerr := allowListError(ctx, g.logger, err, msg,
+-		"connector_id", refreshToken.ConnectorID, "client_id", client.ID, "user_id", refreshToken.Claims.UserID)
++	oerr := allowListError(ctx, g.logger, err, msg, refreshToken.ConnectorID, client.ID, signinlog.ClaimsUser(*claims))
+ 
+ 	var notAllowed *allowlist.NotAllowedError
+ 	if errors.As(err, &notAllowed) {
+@@ -321,9 +321,7 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
+ 	var upstreamErr *tokens.UpstreamError
+ 	switch {
+ 	case errors.As(err, &upstreamErr) && upstreamErr.Refused:
+-		g.logger.InfoContext(ctx, "refresh refused by the upstream provider",
+-			"connector_id", refreshToken.ConnectorID, "client_id", refreshToken.ClientID,
+-			"user_id", refreshToken.Claims.UserID)
++		g.logger.WarnContext(ctx, "refresh refused by the upstream provider", upstreamRefusal(upstreamErr.Err, refreshToken)...)
+ 		return &oauth2.Error{
+ 			Type:        oauth2.InvalidGrant,
+ 			Description: "The identity provider refused to refresh the identity.",
+@@ -332,11 +330,23 @@ func (g *refresh) rotateError(ctx context.Context, err error, refreshToken *stor
+ 	case errors.As(err, &upstreamErr):
+ 		// Logged where the connector failed.
+ 	default:
+-		g.logger.ErrorContext(ctx, "failed to rotate refresh token", "err", err)
++		g.logger.ErrorContext(ctx, "failed to rotate refresh token",
++			signinlog.Failed(err, refreshToken.ConnectorID, refreshToken.ClientID, signinlog.ClaimsUser(refreshToken.Claims))...)
+ 	}
+ 	return &oauth2.Error{Type: oauth2.InvalidRequest, Status: http.StatusInternalServerError}
+ }
+ 
++// upstreamRefusal returns the log attributes of a refresh the upstream provider
++// refused with err: for the groups the connector requires, the groups;
++// otherwise the user of the refresh token.
++func upstreamRefusal(err error, refreshToken *storage.RefreshToken) []any {
++	if groupsErr, ok := connector.AsUserNotInRequiredGroups(err, tokens.IdentityFromClaims(refreshToken.Claims)); ok {
++		return append(signinlog.NotInGroups(groupsErr, refreshToken.ConnectorID, refreshToken.ClientID), "err", err)
++	}
++	return append(signinlog.Refused(signinlog.ReasonUpstreamRefused, refreshToken.ConnectorID, refreshToken.ClientID,
++		signinlog.ClaimsUser(refreshToken.Claims)), "err", err)
++}
++
+ // parseRefreshToken decodes the refresh_token parameter, tolerating the legacy
+ // raw-ID form for backward compatibility.
+ func parseRefreshToken(code string) (*internal.RefreshToken, *oauth2.Error) {
+diff --git a/server/grants/signinlog_test.go b/server/grants/signinlog_test.go
+new file mode 100644
+index 00000000..49aca6e4
+--- /dev/null
++++ b/server/grants/signinlog_test.go
+@@ -0,0 +1,121 @@
++package grants
++
++import (
++	"bytes"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"log/slog"
++	"net/http"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/allowlist"
++	"github.com/dexidp/dex/server/signinlog"
++	"github.com/dexidp/dex/server/useridentity"
++	"github.com/dexidp/dex/storage"
++)
++
++// captureLog returns a logger that writes JSON and a function that returns the
++// lines written so far.
++func captureLog(t *testing.T) (*slog.Logger, func() []map[string]any) {
++	t.Helper()
++	var buf bytes.Buffer
++	logger := slog.New(slog.NewJSONHandler(&buf, nil))
++	return logger, func() []map[string]any {
++		raws := bytes.Split(bytes.TrimSpace(buf.Bytes()), []byte("\n"))
++		lines := make([]map[string]any, 0, len(raws))
++		for _, raw := range raws {
++			var line map[string]any
++			require.NoError(t, json.Unmarshal(raw, &line), "%s", raw)
++			lines = append(lines, line)
++		}
++		return lines
++	}
++}
++
++func TestIdentityErrorLog(t *testing.T) {
++	user := signinlog.User{ID: "1", Username: "jane"}
++
++	logger, lines := captureLog(t)
++	oerr := identityError(t.Context(), logger, &useridentity.BlockedError{Until: time.Now().Add(time.Hour)},
++		refreshLocked, "ldap", "kubeconfig", user)
++	require.Equal(t, http.StatusTooManyRequests, oerr.Status)
++	line := lines()[0]
++	require.Equal(t, "WARN", line["level"])
++	require.Equal(t, "refresh denied: account locked", line["msg"])
++	require.Equal(t, "account_locked", line["reason"])
++	require.Equal(t, "ldap", line["connector_id"])
++	require.Equal(t, "kubeconfig", line["client_id"])
++	require.Equal(t, "jane", line["username"])
++	require.Contains(t, line, "blocked_until")
++
++	logger, lines = captureLog(t)
++	oerr = identityError(t.Context(), logger, errors.New("storage down"), tokenRequestLocked, "ldap", "kubeconfig", user)
++	require.Equal(t, http.StatusInternalServerError, oerr.Status)
++	line = lines()[0]
++	require.Equal(t, "ERROR", line["level"])
++	require.Equal(t, "storage down", line["err"])
++	require.NotContains(t, line, "reason")
++
++	require.Nil(t, identityError(t.Context(), logger, nil, tokenRequestLocked, "ldap", "kubeconfig", user))
++}
++
++func TestAllowListErrorLog(t *testing.T) {
++	logger, lines := captureLog(t)
++	refusal := &allowlist.NotAllowedError{
++		Rule: allowlist.ConnectorGroups, ClientID: "app", ConnectorID: "ldap",
++		UserGroups: []string{"dev"}, AllowedGroups: []string{"admins"},
++	}
++	oerr := allowListError(t.Context(), logger, refusal, "password grant denied by access filter",
++		"ldap", "app", signinlog.User{ID: "1", Email: "jane@example.com"})
++	require.Equal(t, http.StatusUnauthorized, oerr.Status)
++	line := lines()[0]
++	require.Equal(t, "WARN", line["level"])
++	require.Equal(t, "password grant denied by access filter", line["msg"])
++	require.Equal(t, "not_allowed", line["reason"])
++	require.Equal(t, "connector_allowed_groups", line["rule"])
++	require.Equal(t, "jane@example.com", line["email"])
++	require.Equal(t, []any{"dev"}, line["user_groups"])
++	require.Equal(t, []any{"admins"}, line["allowed_groups"])
++
++	logger, lines = captureLog(t)
++	oerr = allowListError(t.Context(), logger, errors.New("storage down"), "password grant denied by access filter",
++		"ldap", "app", signinlog.User{ID: "1"})
++	require.Equal(t, http.StatusInternalServerError, oerr.Status)
++	require.Equal(t, "ERROR", lines()[0]["level"])
++}
++
++func TestUpstreamRefusalLog(t *testing.T) {
++	token := &storage.RefreshToken{
++		ClientID:    "kubeconfig",
++		ConnectorID: "gitlab",
++		Claims:      storage.Claims{UserID: "42", Username: "Jane", PreferredUsername: "jane", Email: "jane@example.com"},
++	}
++	logged := func(err error) map[string]any {
++		var buf bytes.Buffer
++		slog.New(slog.NewJSONHandler(&buf, nil)).Warn("refresh refused by the upstream provider", upstreamRefusal(err, token)...)
++		var line map[string]any
++		require.NoError(t, json.Unmarshal(buf.Bytes(), &line))
++		return line
++	}
++
++	gone := logged(fmt.Errorf("gitlab: %w", connector.ErrIdentityGone))
++	require.Equal(t, "upstream_refused", gone["reason"])
++	require.Equal(t, "gitlab", gone["connector_id"])
++	require.Equal(t, "kubeconfig", gone["client_id"])
++	require.Equal(t, "42", gone["user_id"])
++	require.Equal(t, "jane@example.com", gone["email"])
++	require.Contains(t, gone["err"], "identity no longer valid upstream")
++
++	groups := logged(&connector.UserNotInRequiredGroupsError{
++		PreferredUsername: "jane", UserGroups: []string{"dev"}, Groups: []string{"admins"},
++	})
++	require.Equal(t, "not_in_allowed_groups", groups["reason"])
++	require.Equal(t, "42", groups["user_id"], "what the connector did not name comes from the token")
++	require.Equal(t, []any{"dev"}, groups["user_groups"])
++	require.Equal(t, []any{"admins"}, groups["allowed_groups"])
++}
+diff --git a/server/grants/tokenexchange.go b/server/grants/tokenexchange.go
+index 780dcc53..793a9e3a 100644
+--- a/server/grants/tokenexchange.go
++++ b/server/grants/tokenexchange.go
+@@ -10,6 +10,7 @@ import (
+ 	"github.com/dexidp/dex/server/allowlist"
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+@@ -71,27 +72,23 @@ func (g *tokenExchange) Authorize(ctx context.Context, req *Request, client stor
+ 	// may sign in here at all; the token carries the groups they admit.
+ 	claims := tokens.ClaimsFromIdentity(identity)
+ 	err = allowlist.Apply(ctx, g.storage, client, req.ConnectorID, &claims)
++	user := signinlog.IdentityUser(identity)
+ 	if oerr := allowListError(ctx, g.logger, err, "token exchange denied by access filter",
+-		"connector_id", req.ConnectorID, "client_id", client.ID, "user_id", identity.UserID); oerr != nil {
++		req.ConnectorID, client.ID, user); oerr != nil {
+ 		return nil, oerr
+ 	}
+ 	err = useridentity.CheckBlocked(ctx, g.storage, identity.UserID, req.ConnectorID, g.now())
+-	if oerr := identityError(ctx, g.logger, err,
+-		"connector_id", req.ConnectorID, "client_id", client.ID, "user_id", identity.UserID); oerr != nil {
++	if oerr := identityError(ctx, g.logger, err, tokenRequestLocked, req.ConnectorID, client.ID, user); oerr != nil {
+ 		return nil, oerr
+ 	}
+ 
+-	email := identity.Email
+ 	if !identity.EmailVerified {
+-		email += " (unverified)"
++		user.Email += " (unverified)"
+ 	}
+ 	reqType := requestedTokenType(req)
+-	g.logger.InfoContext(ctx, "token exchange successful",
+-		"connector_id", req.ConnectorID, "client_id", client.ID,
+-		"user_id", identity.UserID,
+-		"username", identity.Username, "preferred_username", identity.PreferredUsername,
+-		"email", email, "groups", claims.Groups,
+-		"subject_token_type", req.SubjectTokenType, "requested_token_type", reqType)
++	g.logger.InfoContext(ctx, "token exchange successful", append(signinlog.Attrs(req.ConnectorID, client.ID, user),
++		"groups", signinlog.Groups(claims.Groups),
++		"subject_token_type", req.SubjectTokenType, "requested_token_type", reqType)...)
+ 
+ 	auth := tokens.Authorization{
+ 		Client:      client,
+diff --git a/server/lockout/lockout.go b/server/lockout/lockout.go
+index c5d6ddec..7d647ca3 100644
+--- a/server/lockout/lockout.go
++++ b/server/lockout/lockout.go
+@@ -26,6 +26,7 @@ import (
+ 
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+ )
+@@ -75,6 +76,13 @@ type Attempt struct {
+ 	Scopes      connector.Scopes
+ 	Username    string
+ 	Password    string
++	// ClientID is the client the user signs in to, for the sign-in log.
++	ClientID string
++}
++
++// user is the user of a, for the sign-in log.
++func (a Attempt) user(id, email string) signinlog.User {
++	return signinlog.User{ID: id, Username: a.Username, Email: email}
+ }
+ 
+ // Login checks the password of a with its connector and returns what the
+@@ -139,10 +147,10 @@ func (g *Guard) loginLocal(ctx context.Context, a Attempt, pw connector.Password
+ 	})
+ 	if err != nil {
+ 		// The count stays at the limit, so the next failure locks.
+-		g.Logger.ErrorContext(ctx, "failed to lock account", "connector_id", a.ConnectorID, "user_id", stored.UserID, "err", err)
++		g.Logger.ErrorContext(ctx, "failed to lock account", signinlog.Failed(err, a.ConnectorID, a.ClientID, a.user(stored.UserID, stored.Email))...)
+ 		return identity, false, nil
+ 	}
+-	g.logLocked(ctx, a.ConnectorID, stored.UserID, attempts, until)
++	g.logLocked(ctx, a, a.user(stored.UserID, stored.Email), attempts, until)
+ 	g.updatePassword(ctx, a, "failed to reset the failed login attempts", resetAttempts)
+ 	return identity, false, &useridentity.BlockedError{Until: until}
+ }
+@@ -171,7 +179,7 @@ func (g *Guard) loginExternal(ctx context.Context, a Attempt, pw connector.Passw
+ 		})
+ 		if err != nil && !errors.Is(err, errUnchanged) && !errors.Is(err, storage.ErrNotFound) {
+ 			g.Logger.ErrorContext(ctx, "failed to reset the failed login attempts",
+-				"connector_id", a.ConnectorID, "user_id", identity.UserID, "err", err)
++				signinlog.Failed(err, a.ConnectorID, a.ClientID, a.user(identity.UserID, identity.Email))...)
+ 		}
+ 		return identity, true, nil
+ 	}
+@@ -194,18 +202,19 @@ func (g *Guard) loginExternal(ctx context.Context, a Attempt, pw connector.Passw
+ 	switch {
+ 	case err != nil:
+ 		g.Logger.ErrorContext(ctx, "failed to count a failed login attempt",
+-			"connector_id", a.ConnectorID, "user_id", identity.UserID, "err", err)
++			signinlog.Failed(err, a.ConnectorID, a.ClientID, a.user(identity.UserID, identity.Email))...)
+ 		return identity, false, nil
+ 	case until.IsZero():
+ 		return identity, false, nil
+ 	}
+-	g.logLocked(ctx, a.ConnectorID, identity.UserID, attempts, until)
++	g.logLocked(ctx, a, a.user(identity.UserID, identity.Email), attempts, until)
+ 	return identity, false, &useridentity.BlockedError{Until: until}
+ }
+ 
+-func (g *Guard) logLocked(ctx context.Context, connectorID, userID string, attempts uint64, until time.Time) {
++func (g *Guard) logLocked(ctx context.Context, a Attempt, u signinlog.User, attempts uint64, until time.Time) {
+ 	g.Logger.WarnContext(ctx, "account locked due to too many failed attempts",
+-		"connector_id", connectorID, "user_id", userID, "attempts", attempts, "blocked_until", until)
++		append(signinlog.Refused(signinlog.ReasonAccountLocked, a.ConnectorID, a.ClientID, u),
++			"attempts", attempts, "blocked_until", until)...)
+ }
+ 
+ // errUnchanged aborts an update that has nothing to write.
+@@ -239,7 +248,7 @@ func (g *Guard) updatePassword(ctx context.Context, a Attempt, msg string, chang
+ 		err = g.Storage.UpdatePassword(ctx, a.Username, update)
+ 	}
+ 	if err != nil {
+-		g.Logger.ErrorContext(ctx, msg, "connector_id", a.ConnectorID, "user", a.Username, "err", err)
++		g.Logger.ErrorContext(ctx, msg, signinlog.Failed(err, a.ConnectorID, a.ClientID, a.user("", ""))...)
+ 		return false
+ 	}
+ 	return true
+diff --git a/server/mfa/totp.go b/server/mfa/totp.go
+index 9b7fab48..d9fb5efd 100644
+--- a/server/mfa/totp.go
++++ b/server/mfa/totp.go
+@@ -14,6 +14,7 @@ import (
+ 	"github.com/pquerna/otp"
+ 	"github.com/pquerna/otp/totp"
+ 
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+@@ -180,6 +181,7 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+ 
+ 		ok, counter := validateTOTPCode(generated.Secret(), code, h.Now(), secret.LastUsedCounter)
+ 		if !ok {
++			h.logInvalidTOTP(ctx, authReq, authenticatorID)
+ 			h.renderTOTPPage(secret, true, totpProvider.issuer, authReq.ConnectorID, w, r)
+ 			return
+ 		}
+@@ -203,6 +205,7 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+ 			return old, nil
+ 		}); err != nil {
+ 			if errors.Is(err, errTOTPReplay) || errors.Is(err, errTOTPNotEnrolled) {
++				h.logInvalidTOTP(ctx, authReq, authenticatorID)
+ 				h.renderTOTPPage(secret, true, totpProvider.issuer, authReq.ConnectorID, w, r)
+ 				return
+ 			}
+@@ -227,6 +230,14 @@ func (h *Handler) handleTOTPVerify(w http.ResponseWriter, r *http.Request, ctx c
+ 	}
+ }
+ 
++// logInvalidTOTP logs a wrong or reused code of the second factor, a refusal
++// caused by the user (Deckhouse).
++func (h *Handler) logInvalidTOTP(ctx context.Context, authReq storage.AuthRequest, authenticatorID string) {
++	h.Logger.WarnContext(ctx, "failed TOTP attempt: Invalid credentials.",
++		append(signinlog.Refused(signinlog.ReasonInvalidTOTP, authReq.ConnectorID, authReq.ClientID, signinlog.ClaimsUser(authReq.Claims)),
++			"authenticator", authenticatorID)...)
++}
++
+ func (h *Handler) renderTOTPPage(secret *storage.MFASecret, lastFail bool, issuer, connectorID string, w http.ResponseWriter, r *http.Request) {
+ 	// Prevent browser from caching the TOTP page (contains QR code with secret).
+ 	w.Header().Set("Cache-Control", "no-store")
+diff --git a/server/ratelimit/ratelimit.go b/server/ratelimit/ratelimit.go
+index 7bb04066..c18506d0 100644
+--- a/server/ratelimit/ratelimit.go
++++ b/server/ratelimit/ratelimit.go
+@@ -31,6 +31,7 @@ import (
+ 
+ 	"github.com/dexidp/dex/server/reqctx"
+ 	"github.com/dexidp/dex/server/router"
++	"github.com/dexidp/dex/server/signinlog"
+ )
+ 
+ // Defaults for a Config field that is not positive.
+@@ -190,7 +191,8 @@ func (l *Limiter) take(addr string) (wait time.Duration, ok, isFirstRefusal bool
+ // line per request. The request context carries the client address when the
+ // router resolved one; otherwise the peer address is added here.
+ func (l *Limiter) logRefusal(r *http.Request, addr string) {
+-	attrs := []any{"path", r.URL.Path}
++	// The connector and the client are not known before the handler.
++	attrs := []any{"reason", signinlog.ReasonRateLimited, "path", r.URL.Path}
+ 	if _, ok := r.Context().Value(reqctx.RequestKeyRemoteIP).(string); !ok {
+ 		attrs = append(attrs, string(reqctx.RequestKeyRemoteIP), addr)
+ 	}
+diff --git a/server/server_signinlog_test.go b/server/server_signinlog_test.go
+new file mode 100644
+index 00000000..ff17a471
+--- /dev/null
++++ b/server/server_signinlog_test.go
+@@ -0,0 +1,186 @@
++package server
++
++import (
++	"bytes"
++	"encoding/json"
++	"log/slog"
++	"net/http"
++	"net/url"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/mfa"
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/ratelimit"
++	"github.com/dexidp/dex/storage"
++)
++
++// signInLogs collects the JSON log lines of a test server.
++type signInLogs struct {
++	mu  sync.Mutex
++	buf bytes.Buffer
++}
++
++func (l *signInLogs) Write(p []byte) (int, error) {
++	l.mu.Lock()
++	defer l.mu.Unlock()
++	return l.buf.Write(p)
++}
++
++func (l *signInLogs) lines(t *testing.T) []map[string]any {
++	t.Helper()
++	l.mu.Lock()
++	defer l.mu.Unlock()
++	var lines []map[string]any
++	for _, raw := range bytes.Split(bytes.TrimSpace(l.buf.Bytes()), []byte("\n")) {
++		if len(raw) == 0 {
++			continue
++		}
++		var line map[string]any
++		require.NoError(t, json.Unmarshal(raw, &line), "%s", raw)
++		lines = append(lines, line)
++	}
++	return lines
++}
++
++// last returns the last line logged with msg.
++func (l *signInLogs) last(t *testing.T, msg string) map[string]any {
++	t.Helper()
++	lines := l.lines(t)
++	for i := len(lines) - 1; i >= 0; i-- {
++		if lines[i]["msg"] == msg {
++			return lines[i]
++		}
++	}
++	require.Failf(t, "line not logged", "%q in %v", msg, lines)
++	return nil
++}
++
++// newSignInLogServer is the lock test server (password connector "test",
++// client "test") logging JSON into the returned recorder.
++func newSignInLogServer(t *testing.T, update func(*Config)) (*Server, *signInLogs) {
++	t.Helper()
++	logs := &signInLogs{}
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.Logger = slog.New(slog.NewJSONHandler(logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
++		c.PasswordConnector = "test"
++		c.Now = time.Now
++		if update != nil {
++			update(c)
++		}
++	})
++	t.Cleanup(httpServer.Close)
++	mockConnectorDataTestStorage(t, s.storage)
++	return s, logs
++}
++
++// requireRefusal checks a refusal line of the sign-in log scheme.
++func requireRefusal(t *testing.T, line map[string]any, reason, connectorID string) {
++	t.Helper()
++	assert.Equal(t, "WARN", line["level"], "%v", line)
++	assert.Equal(t, reason, line["reason"], "%v", line)
++	assert.Equal(t, connectorID, line["connector_id"], "%v", line)
++	assert.Equal(t, "test", line["client_id"], "%v", line)
++	assert.NotContains(t, line, "user")
++	assert.NotContains(t, line, "error")
++}
++
++func TestSignInLogTokenEndpoint(t *testing.T) {
++	s, logs := newSignInLogServer(t, nil)
++
++	rr := postToken(t, s, url.Values{
++		"grant_type": {oauth2.GrantTypePassword},
++		"scope":      {"openid email offline_access"},
++		"username":   {"test"},
++		"password":   {"wrong"},
++	})
++	require.Equal(t, http.StatusUnauthorized, rr.Code, rr.Body.String())
++	line := logs.last(t, "failed login attempt: Invalid credentials.")
++	requireRefusal(t, line, "invalid_credentials", "test")
++	assert.Equal(t, "test", line["username"])
++	assert.Equal(t, oauth2.GrantTypePassword, line["grant_type"])
++
++	rr = passwordGrant(t, s)
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	var issued struct {
++		RefreshToken string `json:"refresh_token"`
++	}
++	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &issued))
++
++	setBlockedUntil(t, s, "test", time.Now().Add(time.Hour))
++	requireAccountLocked(t, passwordGrant(t, s))
++	line = logs.last(t, "token request for locked account")
++	requireRefusal(t, line, "account_locked", "test")
++	assert.Equal(t, "test", line["username"])
++	assert.Contains(t, line, "blocked_until")
++
++	requireAccountLocked(t, postToken(t, s, url.Values{
++		"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {issued.RefreshToken},
++	}))
++	line = logs.last(t, "refresh denied: account locked")
++	requireRefusal(t, line, "account_locked", "test")
++	assert.Equal(t, mockUserID, line["user_id"])
++	assert.Equal(t, "kilgore@kilgore.trout", line["email"])
++
++	setBlockedUntil(t, s, "mock", time.Now().Add(time.Hour))
++	requireAccountLocked(t, postToken(t, s, url.Values{
++		"grant_type":         {oauth2.GrantTypeTokenExchange},
++		"connector_id":       {"mock"},
++		"scope":              {"openid"},
++		"subject_token_type": {oauth2.TokenTypeID},
++		"subject_token":      {"foobar"},
++	}))
++	requireRefusal(t, logs.last(t, "token request for locked account"), "account_locked", "mock")
++}
++
++func TestSignInLogTOTP(t *testing.T) {
++	const authenticatorID = "totp"
++	s, logs := newSignInLogServer(t, func(c *Config) {
++		c.MFAProviders = map[string]mfa.Provider{authenticatorID: mfa.NewTOTPProvider("dex", nil)}
++		c.DefaultMFAChain = []string{authenticatorID}
++	})
++	ctx := t.Context()
++	req := storage.AuthRequest{
++		ID: "mfa-req", ClientID: "test", ConnectorID: "mock", RedirectURI: "foo://bar.com/",
++		ResponseTypes: []string{"code"}, Expiry: time.Now().Add(time.Hour), LoggedIn: true,
++		Claims:  storage.Claims{UserID: "u1", Username: "Jane", Email: "u1@example.com"},
++		HMACKey: []byte("0123456789abcdef0123456789abcdef"),
++	}
++	require.NoError(t, s.storage.CreateAuthRequest(ctx, req))
++	require.NoError(t, s.storage.CreateUserIdentity(ctx, storage.UserIdentity{
++		UserID: "u1", ConnectorID: "mock", Claims: req.Claims,
++		MFASecrets: map[string]*storage.MFASecret{authenticatorID: {
++			AuthenticatorID: authenticatorID, Type: "TOTP", Confirmed: true,
++			Secret: "otpauth://totp/dex:u1?issuer=dex&secret=JBSWY3DPEHPK3PXP",
++		}},
++	}))
++
++	target := internal.StepURL("/mfa/totp", req, internal.Authenticator(authenticatorID), url.Values{"authenticator": {authenticatorID}})
++	serveRequest(s, rateLimitedRequest(http.MethodPost, target, url.Values{"totp": {"000000"}}))
++
++	line := logs.last(t, "failed TOTP attempt: Invalid credentials.")
++	requireRefusal(t, line, "invalid_totp", "mock")
++	assert.Equal(t, "u1", line["user_id"])
++	assert.Equal(t, "Jane", line["username"])
++	assert.Equal(t, "u1@example.com", line["email"])
++	assert.Equal(t, authenticatorID, line["authenticator"])
++}
++
++func TestSignInLogRateLimit(t *testing.T) {
++	s, logs := newSignInLogServer(t, func(c *Config) {
++		c.RateLimit = &ratelimit.Config{RequestsPerMinute: 1, Burst: 1}
++	})
++
++	serveRequest(s, badClientTokenRequest(""))
++	require.Equal(t, http.StatusTooManyRequests, serveRequest(s, badClientTokenRequest("")).Code)
++
++	line := logs.last(t, "client address rate limited")
++	assert.Equal(t, "WARN", line["level"])
++	assert.Equal(t, "rate_limited", line["reason"])
++	assert.Equal(t, "/token", line["path"])
++}
+diff --git a/server/signinlog/signinlog.go b/server/signinlog/signinlog.go
+new file mode 100644
+index 00000000..ab420c38
+--- /dev/null
++++ b/server/signinlog/signinlog.go
+@@ -0,0 +1,159 @@
++// Package signinlog owns the attributes and the levels of the sign-in log lines
++// of dex (Deckhouse). Every line about a sign-in, whatever the connector or the
++// flow (login form, connector callback, password change page, second factor,
++// password, refresh-token and token-exchange grants, lockout, allow-lists, rate
++// limit, upstream refresh), has the same attributes:
++//
++//   - connector_id and client_id;
++//   - user_id, username, preferred_username and email, each when known; the
++//     email as the provider gives it;
++//   - groups on a success; user_groups, user_groups_count and allowed_groups on
++//     a refusal for groups;
++//   - reason on every refusal, one of the Reason constants; rule with
++//     ReasonNotAllowed;
++//   - err when an error caused the line.
++//
++// A refusal caused by the user, the identity provider's answer included, is a
++// warning; a failure of dex or of the provider is an error; a success is info.
++// Values that come from users or identity providers go through pkg/logsafe. The
++// keys "user" and "error" are not used. Message texts stay those of upstream and
++// of the v2.44-based Deckhouse dex, which log searches rely on.
++package signinlog
++
++import (
++	"context"
++	"errors"
++	"log/slog"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/pkg/logsafe"
++	"github.com/dexidp/dex/server/allowlist"
++	"github.com/dexidp/dex/storage"
++)
++
++// Reasons of a refused sign-in, the values of the "reason" attribute.
++const (
++	// ReasonInvalidCredentials: a wrong login or password, or a password change
++	// page opened without the sign-in that led to it.
++	ReasonInvalidCredentials = "invalid_credentials"
++	// ReasonInvalidTOTP: a wrong or reused code of the second factor.
++	ReasonInvalidTOTP = "invalid_totp"
++	// ReasonNotInAllowedGroups: the connector refused the user for the groups.
++	ReasonNotInAllowedGroups = "not_in_allowed_groups"
++	// ReasonNotAllowed: an allow-list of the client or the connector refused the
++	// user; the "rule" attribute names it.
++	ReasonNotAllowed = "not_allowed"
++	// ReasonAccountLocked: the (user, connector) pair is locked.
++	ReasonAccountLocked = "account_locked"
++	// ReasonRateLimited: the client address has used up its failed attempts.
++	ReasonRateLimited = "rate_limited"
++	// ReasonUpstreamRefused: the identity provider refused to refresh the user:
++	// the user is gone, the access was revoked or the credential refused.
++	ReasonUpstreamRefused = "upstream_refused"
++)
++
++// User is what is known about the user of a sign-in.
++type User struct {
++	ID                string
++	Username          string
++	PreferredUsername string
++	Email             string
++}
++
++// ClaimsUser is the user of claims.
++func ClaimsUser(c storage.Claims) User {
++	return User{ID: c.UserID, Username: c.Username, PreferredUsername: c.PreferredUsername, Email: c.Email}
++}
++
++// IdentityUser is the user of an identity a connector returned.
++func IdentityUser(i connector.Identity) User {
++	return User{ID: i.UserID, Username: i.Username, PreferredUsername: i.PreferredUsername, Email: i.Email}
++}
++
++// Typed is u with the name typed into a login form as its username when u has
++// none.
++func (u User) Typed(username string) User {
++	if u.Username == "" {
++		u.Username = username
++	}
++	return u
++}
++
++// Attrs returns the attributes that identify a sign-in: the connector, the
++// client, then whatever is known about the user.
++func Attrs(connectorID, clientID string, u User) []any {
++	attrs := []any{
++		"connector_id", logsafe.Value(connectorID),
++		"client_id", logsafe.Value(clientID),
++	}
++	for _, kv := range [...]struct{ key, value string }{
++		{"user_id", u.ID},
++		{"username", u.Username},
++		{"preferred_username", u.PreferredUsername},
++		{"email", u.Email},
++	} {
++		if kv.value != "" {
++			attrs = append(attrs, kv.key, logsafe.Value(kv.value))
++		}
++	}
++	return attrs
++}
++
++// Refused returns the attributes of a sign-in refused for reason.
++func Refused(reason, connectorID, clientID string, u User) []any {
++	return append(Attrs(connectorID, clientID, u), "reason", reason)
++}
++
++// Failed returns the attributes of a sign-in that err failed.
++func Failed(err error, connectorID, clientID string, u User) []any {
++	return append(Attrs(connectorID, clientID, u), "err", err)
++}
++
++// Groups returns the groups of a successful sign-in, for the "groups"
++// attribute.
++func Groups(groups []string) []string {
++	return logsafe.Values(groups)
++}
++
++// NotInGroups returns the attributes of a user a connector refused for the
++// groups: the reason, the user as the connector named him, the groups read from
++// the provider when the connector read them, and the groups it requires.
++func NotInGroups(e *connector.UserNotInRequiredGroupsError, connectorID, clientID string) []any {
++	attrs := Refused(ReasonNotInAllowedGroups, connectorID, clientID, User{
++		ID:                e.UserID,
++		Username:          e.Username,
++		PreferredUsername: e.PreferredUsername,
++		Email:             e.Email,
++	})
++	if e.UserGroups != nil {
++		attrs = append(attrs, "user_groups", logsafe.Values(e.UserGroups), "user_groups_count", len(e.UserGroups))
++	}
++	return append(attrs, "allowed_groups", logsafe.Values(e.Groups))
++}
++
++// NotAllowed returns the attributes of a user u an allow-list refused: the
++// reason, the rule, and for a group list the groups. Email lists are not
++// logged: they name other users.
++func NotAllowed(e *allowlist.NotAllowedError, u User) []any {
++	attrs := append(Refused(ReasonNotAllowed, e.ConnectorID, e.ClientID, u), "rule", string(e.Rule))
++	if e.AllowedGroups != nil {
++		attrs = append(attrs,
++			"user_groups", logsafe.Values(e.UserGroups),
++			"user_groups_count", len(e.UserGroups),
++			"allowed_groups", logsafe.Values(e.AllowedGroups),
++		)
++	}
++	return attrs
++}
++
++// ConnectorError logs err, which a connector returned for a sign-in of u: a
++// user the connector refused for the groups is a refusal and a warning,
++// anything else an error. extra goes at the end of the line.
++func ConnectorError(ctx context.Context, logger *slog.Logger, msg string, err error, connectorID, clientID string, u User, extra ...any) {
++	var groupsErr *connector.UserNotInRequiredGroupsError
++	if errors.As(err, &groupsErr) {
++		logger.WarnContext(ctx, msg, append(append(NotInGroups(groupsErr, connectorID, clientID), "err", err), extra...)...)
++		return
++	}
++	logger.ErrorContext(ctx, msg, append(Failed(err, connectorID, clientID, u), extra...)...)
++}
+diff --git a/server/signinlog/signinlog_test.go b/server/signinlog/signinlog_test.go
+new file mode 100644
+index 00000000..b07c21d9
+--- /dev/null
++++ b/server/signinlog/signinlog_test.go
+@@ -0,0 +1,150 @@
++package signinlog
++
++import (
++	"bytes"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"log/slog"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/allowlist"
++	"github.com/dexidp/dex/storage"
++)
++
++// logged writes one line with attrs at level and returns it as JSON.
++func logged(t *testing.T, level slog.Level, attrs ...any) map[string]any {
++	t.Helper()
++	var buf bytes.Buffer
++	slog.New(slog.NewJSONHandler(&buf, nil)).Log(t.Context(), level, "line", attrs...)
++	var line map[string]any
++	require.NoError(t, json.Unmarshal(buf.Bytes(), &line), "one JSON line: %s", buf.String())
++	return line
++}
++
++func TestAttrs(t *testing.T) {
++	attrs := Attrs("ldap", "kubeconfig", User{
++		ID:       "uid=jane\n{\"level\":\"INFO\"}",
++		Username: "jane",
++		Email:    "jane@example.com",
++	})
++	require.Equal(t, []any{
++		"connector_id", "ldap",
++		"client_id", "kubeconfig",
++		"user_id", `uid=jane{"level":"INFO"}`,
++		"username", "jane",
++		"email", "jane@example.com",
++	}, attrs, "control characters are dropped, unknown attributes left out")
++
++	require.Equal(t, []any{"connector_id", "local", "client_id", ""}, Attrs("local", "", User{}),
++		"the connector and the client are always there")
++}
++
++func TestUsers(t *testing.T) {
++	claims := storage.Claims{UserID: "1", Username: "Jane", PreferredUsername: "jane", Email: "jane@example.com", Groups: []string{"g"}}
++	identity := connector.Identity{UserID: "1", Username: "Jane", PreferredUsername: "jane", Email: "jane@example.com"}
++	want := User{ID: "1", Username: "Jane", PreferredUsername: "jane", Email: "jane@example.com"}
++	require.Equal(t, want, ClaimsUser(claims))
++	require.Equal(t, want, IdentityUser(identity))
++
++	require.Equal(t, "Jane", IdentityUser(identity).Typed("typed").Username, "the identity's name wins")
++	require.Equal(t, User{ID: "1", Username: "typed"}, User{ID: "1"}.Typed("typed"))
++}
++
++func TestRefusedAndFailed(t *testing.T) {
++	line := logged(t, slog.LevelWarn, Refused(ReasonAccountLocked, "local", "app", User{Username: "jane"})...)
++	require.Equal(t, "account_locked", line["reason"])
++	require.Equal(t, "jane", line["username"])
++
++	line = logged(t, slog.LevelError, Failed(errors.New("storage down"), "local", "app", User{})...)
++	require.Equal(t, "storage down", line["err"])
++	require.NotContains(t, line, "reason", "a failure is not a refusal")
++	require.NotContains(t, line, "error")
++}
++
++func TestNotInGroups(t *testing.T) {
++	fetched := logged(t, slog.LevelWarn, NotInGroups(&connector.UserNotInRequiredGroupsError{
++		UserID: "1", Username: "Jane", PreferredUsername: "jane", Email: "jane@example.com",
++		UserGroups: connector.FetchedGroups(nil), Groups: []string{"admins"},
++	}, "oidc", "app")...)
++	require.Equal(t, "not_in_allowed_groups", fetched["reason"])
++	require.Equal(t, "oidc", fetched["connector_id"])
++	require.Equal(t, "app", fetched["client_id"])
++	require.Equal(t, "jane", fetched["preferred_username"])
++	require.Equal(t, "jane@example.com", fetched["email"])
++	require.Equal(t, []any{}, fetched["user_groups"], "read and empty is logged as [], not null")
++	require.EqualValues(t, 0, fetched["user_groups_count"])
++	require.Equal(t, []any{"admins"}, fetched["allowed_groups"])
++
++	unknown := logged(t, slog.LevelWarn, NotInGroups(&connector.UserNotInRequiredGroupsError{
++		PreferredUsername: "jane", Groups: []string{"org"},
++	}, "github", "app")...)
++	require.NotContains(t, unknown, "user_groups", "groups the connector did not read are not logged as none")
++	require.NotContains(t, unknown, "user_groups_count")
++	require.Equal(t, []any{"org"}, unknown["allowed_groups"])
++}
++
++func TestNotAllowed(t *testing.T) {
++	user := User{ID: "1", Email: "jane@example.com"}
++
++	byGroups := logged(t, slog.LevelWarn, NotAllowed(&allowlist.NotAllowedError{
++		Rule: allowlist.ClientGroups, ClientID: "app", ConnectorID: "ldap",
++		UserGroups: []string{"dev", "qa"}, AllowedGroups: []string{"admins"},
++	}, user)...)
++	require.Equal(t, "not_allowed", byGroups["reason"])
++	require.Equal(t, "client_allowed_groups", byGroups["rule"])
++	require.Equal(t, "ldap", byGroups["connector_id"])
++	require.Equal(t, "app", byGroups["client_id"])
++	require.Equal(t, "jane@example.com", byGroups["email"])
++	require.Equal(t, []any{"dev", "qa"}, byGroups["user_groups"])
++	require.EqualValues(t, 2, byGroups["user_groups_count"])
++	require.Equal(t, []any{"admins"}, byGroups["allowed_groups"])
++
++	byEmail := logged(t, slog.LevelWarn, NotAllowed(&allowlist.NotAllowedError{
++		Rule: allowlist.ClientEmails, ClientID: "app", ConnectorID: "ldap",
++	}, user)...)
++	require.Equal(t, "client_allowed_emails", byEmail["rule"])
++	require.NotContains(t, byEmail, "allowed_groups")
++	require.NotContains(t, byEmail, "user_groups", "an email list is not about groups")
++}
++
++func TestConnectorError(t *testing.T) {
++	tests := []struct {
++		name   string
++		err    error
++		level  string
++		reason any
++	}{
++		{
++			name:   "refused for the groups",
++			err:    fmt.Errorf("get groups: %w", &connector.UserNotInRequiredGroupsError{UserID: "1", Groups: []string{"admins"}}),
++			level:  "WARN",
++			reason: "not_in_allowed_groups",
++		},
++		{
++			name:  "provider failed",
++			err:   errors.New("connection refused"),
++			level: "ERROR",
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			var buf bytes.Buffer
++			logger := slog.New(slog.NewJSONHandler(&buf, nil))
++			ConnectorError(t.Context(), logger, "failed to login user", tc.err, "crowd", "app", User{Username: "jane"}, "grant_type", "password")
++
++			var line map[string]any
++			require.NoError(t, json.Unmarshal(buf.Bytes(), &line))
++			require.Equal(t, tc.level, line["level"])
++			require.Equal(t, "failed to login user", line["msg"])
++			require.Equal(t, tc.reason, line["reason"])
++			require.Equal(t, "crowd", line["connector_id"])
++			require.Equal(t, "app", line["client_id"])
++			require.Equal(t, tc.err.Error(), line["err"])
++			require.Equal(t, "password", line["grant_type"])
++		})
++	}
++}
+diff --git a/server/tokens/refresh_lookup.go b/server/tokens/refresh_lookup.go
+index 8ecceb9c..8dc8dd00 100644
+--- a/server/tokens/refresh_lookup.go
++++ b/server/tokens/refresh_lookup.go
+@@ -41,8 +41,11 @@ func LookupRefreshToken(ctx context.Context, s storage.Storage, strategy *Refres
+ 
+ 	// Only check the client when one was provided (introspection does not).
+ 	// https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
++	// The levels follow the sign-in log scheme (260, server/signinlog): a token
++	// refused for what the client sent is a warning, an expired one the normal
++	// end of its life (info); an error is a failure of dex.
+ 	if clientID != nil && refresh.ClientID != *clientID {
+-		logger.ErrorContext(ctx, "trying to claim token for different client", "client_id", *clientID, "refresh_client_id", refresh.ClientID)
++		logger.WarnContext(ctx, "trying to claim token for different client", "client_id", *clientID, "refresh_client_id", refresh.ClientID)
+ 		return nil, ErrRefreshTokenClaimedByOtherClient
+ 	}
+ 
+@@ -56,17 +59,17 @@ func LookupRefreshToken(ctx context.Context, s storage.Storage, strategy *Refres
+ 		case subtle.ConstantTimeCompare([]byte(refresh.ObsoleteToken), []byte(token.Token)) != 1:
+ 			fallthrough
+ 		case refresh.ObsoleteToken == "":
+-			logger.ErrorContext(ctx, "refresh token claimed twice", "token_id", refresh.ID)
++			logger.WarnContext(ctx, "refresh token claimed twice", "token_id", refresh.ID)
+ 			return nil, ErrRefreshTokenInvalid
+ 		}
+ 	}
+ 
+ 	if strategy.CompletelyExpired(refresh.CreatedAt) {
+-		logger.ErrorContext(ctx, "refresh token expired", "token_id", refresh.ID)
++		logger.InfoContext(ctx, "refresh token expired", "token_id", refresh.ID)
+ 		return nil, ErrRefreshTokenExpired
+ 	}
+ 	if strategy.ExpiredBecauseUnused(refresh.LastUsed) {
+-		logger.ErrorContext(ctx, "refresh token expired due to inactivity", "token_id", refresh.ID)
++		logger.InfoContext(ctx, "refresh token expired due to inactivity", "token_id", refresh.ID)
+ 		return nil, ErrRefreshTokenExpired
+ 	}
+ 
+diff --git a/server/tokens/refresh_lookup_test.go b/server/tokens/refresh_lookup_test.go
+new file mode 100644
+index 00000000..79847a96
+--- /dev/null
++++ b/server/tokens/refresh_lookup_test.go
+@@ -0,0 +1,76 @@
++package tokens
++
++import (
++	"bytes"
++	"encoding/json"
++	"log/slog"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++// TestLookupRefreshTokenLogLevels: a refused refresh token logs at the level of the
++// sign-in log scheme (Deckhouse): the normal end of its life is info, a token sent
++// by the wrong client or reused after rotation is a warning; neither is an error of
++// dex.
++func TestLookupRefreshTokenLogLevels(t *testing.T) {
++	now := time.Now()
++	other := "other-client"
++	tests := []struct {
++		name      string
++		strategy  *RefreshStrategy
++		createdAt time.Time
++		lastUsed  time.Time
++		clientID  *string
++		secret    string
++		wantErr   error
++		wantLevel string
++		wantMsg   string
++	}{
++		{
++			name:     "past the absolute lifetime",
++			strategy: NewRefreshStrategy(true, time.Hour, 0, 0, nil), createdAt: now.Add(-2 * time.Hour), lastUsed: now,
++			secret: "secret", wantErr: ErrRefreshTokenExpired, wantLevel: "INFO", wantMsg: "refresh token expired",
++		},
++		{
++			name:     "unused for too long",
++			strategy: NewRefreshStrategy(true, 0, time.Hour, 0, nil), createdAt: now.Add(-2 * time.Hour), lastUsed: now.Add(-2 * time.Hour),
++			secret: "secret", wantErr: ErrRefreshTokenExpired, wantLevel: "INFO", wantMsg: "refresh token expired due to inactivity",
++		},
++		{
++			name:     "sent by another client",
++			strategy: NewRefreshStrategy(true, 0, 0, 0, nil), createdAt: now, lastUsed: now, clientID: &other,
++			secret: "secret", wantErr: ErrRefreshTokenClaimedByOtherClient, wantLevel: "WARN", wantMsg: "trying to claim token for different client",
++		},
++		{
++			name:     "reused after rotation",
++			strategy: NewRefreshStrategy(true, 0, 0, 0, nil), createdAt: now, lastUsed: now,
++			secret: "rotated-away", wantErr: ErrRefreshTokenInvalid, wantLevel: "WARN", wantMsg: "refresh token claimed twice",
++		},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			ctx := t.Context()
++			store := memory.New(slog.New(slog.DiscardHandler))
++			require.NoError(t, store.CreateRefresh(ctx, storage.RefreshToken{
++				ID: "r1", Token: "secret", ClientID: "client-1", ConnectorID: "mock",
++				Claims: storage.Claims{UserID: "u1"}, CreatedAt: tt.createdAt, LastUsed: tt.lastUsed,
++			}))
++			var buf bytes.Buffer
++			logger := slog.New(slog.NewJSONHandler(&buf, nil))
++
++			_, err := LookupRefreshToken(ctx, store, tt.strategy, logger, tt.clientID, &internal.RefreshToken{RefreshId: "r1", Token: tt.secret})
++			require.ErrorIs(t, err, tt.wantErr)
++
++			var line map[string]any
++			require.NoError(t, json.Unmarshal(buf.Bytes(), &line))
++			require.Equal(t, tt.wantLevel, line["level"])
++			require.Equal(t, tt.wantMsg, line["msg"])
++		})
++	}
++}
+diff --git a/server/tokens/refresh_upstream.go b/server/tokens/refresh_upstream.go
+index 8229dc17..04248d71 100644
+--- a/server/tokens/refresh_upstream.go
++++ b/server/tokens/refresh_upstream.go
+@@ -24,6 +24,7 @@ import (
+ 
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/signinlog"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+@@ -136,6 +137,9 @@ type upstreamRefresher struct {
+ 	credentials []credentialRef
+ 	logger      *slog.Logger
+ 	connectorID string
++	// clientID and user name the refresh in the sign-in log.
++	clientID string
++	user     signinlog.User
+ 
+ 	isDone bool
+ 	ident  connector.Identity
+@@ -186,8 +190,15 @@ func (u *upstreamRefresher) identity(ctx context.Context, base connector.Identit
+ 			return u.ident, nil
+ 		}
+ 
+-		u.logger.ErrorContext(ctx, "failed to refresh identity",
+-			"connector_id", u.connectorID, "credential_source", credential.source.String(), "err", err)
++		// The provider's answer is a warning, a provider that fails to answer an
++		// error. Whether the refresh is refused is logged once all credentials
++		// are tried (grants), with the reason.
++		level := slog.LevelError
++		if identityRefused(err) {
++			level = slog.LevelWarn
++		}
++		u.logger.Log(ctx, level, "failed to refresh identity", append(signinlog.Failed(err, u.connectorID, u.clientID, u.user),
++			"credential_source", credential.source.String())...)
+ 		u.isRefused = credentialRefused(err)
+ 		allRefused = allRefused && identityRefused(err)
+ 		lastErr = err
+@@ -250,6 +261,8 @@ func (rt *RefreshStore) RotateUpstream(ctx context.Context, storageToken *storag
+ 			credentials: credentials,
+ 			logger:      rt.logger,
+ 			connectorID: storageToken.ConnectorID,
++			clientID:    storageToken.ClientID,
++			user:        signinlog.User{ID: storageToken.Claims.UserID},
+ 		}
+ 
+ 		rawToken, ident, err := rt.rotate(ctx, storageToken, requestToken, strategy, refresher)
+@@ -393,7 +406,7 @@ func (rt *RefreshStore) retireDeadSharedCredential(ctx context.Context, token *s
+ 		rt.logger.ErrorContext(ctx, "failed to retire refused upstream credential", "err", err)
+ 	default:
+ 		rt.logger.WarnContext(ctx, "upstream provider refused the credential shared by the clients of the user, dropped it so that the next login restores it",
+-			"connector_id", token.ConnectorID, "user_id", token.Claims.UserID)
++			signinlog.Attrs(token.ConnectorID, token.ClientID, signinlog.User{ID: token.Claims.UserID})...)
+ 	}
+ }
+ 

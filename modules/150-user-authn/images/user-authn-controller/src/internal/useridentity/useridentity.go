@@ -69,6 +69,7 @@ const (
 	fieldCreatedAt    = "createdAt"
 	fieldLastLogin    = "lastLogin"
 	fieldBlockedUntil = "blockedUntil"
+	fieldAttempts     = "incorrectPasswordLoginAttempts"
 )
 
 // Claims mirrors the claims of a Dex UserIdentity.
@@ -343,6 +344,24 @@ func (i *Identity) ConfirmTOTP() {
 func (i *Identity) ClearMFA() {
 	delete(i.obj.Object, fieldMFASecrets)
 	delete(i.obj.Object, fieldWebAuthn)
+}
+
+// Migrated reports whether the object carries RecordAnnotation, whatever its value. The
+// transitional patch of Dex 1.78 reads the old places (OfflineSessions, Password) for an object
+// without it, and stops once the annotation is there.
+func (i *Identity) Migrated() bool {
+	_, ok := i.obj.GetAnnotations()[RecordAnnotation]
+	return ok
+}
+
+// IncorrectPasswordLoginAttempts returns the failed-attempt counter Dex keeps on the object for
+// users of external password connectors (LDAP, Atlassian Crowd); local users count on Password.
+func (i *Identity) IncorrectPasswordLoginAttempts() (int64, error) {
+	attempts, err := controller.AsInt64(i.obj.Object[fieldAttempts])
+	if err != nil {
+		return 0, fmt.Errorf("useridentity %s %s: %w", i.obj.GetName(), fieldAttempts, err)
+	}
+	return attempts, nil
 }
 
 // Record returns the controller's record and whether the object has one.

@@ -60,8 +60,28 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 
 			Expect(usersExist).To(BeEmpty())
 			Expect(config).To(ContainSubstring("enablePasswordDB: true"))
+		})
 
-			Expect(gjson.GetBytes(configBytes, "twoFactorAuthn").String()).To(Equal(""))
+		It("Should render the Dex v2.46 configuration format", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			jsonConfig := renderedDexConfig(hec)
+
+			By("signing keys rotate every 6 hours through the signer, not the deprecated expiry.signingKeys")
+			Expect(gjson.GetBytes(jsonConfig, "signer.type").String()).To(Equal("local"))
+			Expect(gjson.GetBytes(jsonConfig, "signer.config.keysRotationPeriod").String()).To(Equal("6h"))
+			Expect(gjson.GetBytes(jsonConfig, "expiry.signingKeys").Exists()).To(BeFalse())
+
+			By("the client address is X-Real-IP from any peer: patch 245 needs trustedProxies unset")
+			Expect(gjson.GetBytes(jsonConfig, "web.clientRemoteIP.header").String()).To(Equal("X-Real-IP"))
+			Expect(gjson.GetBytes(jsonConfig, "web.clientRemoteIP.trustedProxies").Exists()).To(BeFalse())
+
+			By("without 2FA there is no MFA, and the approval page is skipped")
+			Expect(gjson.GetBytes(jsonConfig, "mfa").Exists()).To(BeFalse())
+			Expect(gjson.GetBytes(jsonConfig, "twoFactorAuthn").Exists()).To(BeFalse())
+			Expect(gjson.GetBytes(jsonConfig, "oauth2.skipApprovalScreen").Type).To(Equal(gjson.True))
+
+			By("browser sessions stay off")
+			Expect(gjson.GetBytes(jsonConfig, "sessions").Exists()).To(BeFalse())
 		})
 	})
 
@@ -72,17 +92,42 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 			hec.HelmRender()
 		})
 
-		It("Should add 2FA settings", func() {
+		It("Should render the TOTP authenticator of local users", func() {
 			Expect(hec.RenderError).ToNot(HaveOccurred())
-			dexConfig := hec.KubernetesResource("Secret", "d8-user-authn", "dex")
-			b64Config := dexConfig.Field("data.config\\.yaml").String()
-			configBytes, _ := base64.StdEncoding.DecodeString(b64Config)
+			jsonConfig := renderedDexConfig(hec)
 
-			jsonConfig, err := yaml.YAMLToJSON(configBytes)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(gjson.GetBytes(jsonConfig, "mfa").Raw).To(MatchJSON(`{
+				"authenticators": [{
+					"id": "totp",
+					"type": "TOTP",
+					"config": {"issuer": "Deckhouse (Alpha)"},
+					"connectorTypes": ["local"]
+				}],
+				"defaultMFAChain": ["totp"]
+			}`))
+			Expect(gjson.GetBytes(jsonConfig, "twoFactorAuthn").Exists()).To(BeFalse())
+		})
 
-			Expect(gjson.GetBytes(jsonConfig, "twoFactorAuthn.issuer").String()).To(Equal("Deckhouse (Alpha)"))
-			Expect(gjson.GetBytes(jsonConfig, "twoFactorAuthn.connectors").String()).To(Equal(`["local"]`))
+		It("Should skip the approval page and keep sessions off", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			jsonConfig := renderedDexConfig(hec)
+
+			Expect(gjson.GetBytes(jsonConfig, "oauth2.skipApprovalScreen").Type).To(Equal(gjson.True))
+			Expect(gjson.GetBytes(jsonConfig, "sessions").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("With 2FA and no issuer name", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.staticUsers2FA.enabled", true)
+			hec.HelmRender()
+		})
+
+		It("Should name the issuer Deckhouse", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			jsonConfig := renderedDexConfig(hec)
+
+			Expect(gjson.GetBytes(jsonConfig, "mfa.authenticators.0.config.issuer").String()).To(Equal("Deckhouse"))
 		})
 	})
 
@@ -176,3 +221,13 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 		})
 	})
 })
+
+// renderedDexConfig returns the Dex config of the rendered dex Secret as JSON.
+func renderedDexConfig(hec *Config) []byte {
+	dexConfig := hec.KubernetesResource("Secret", "d8-user-authn", "dex")
+	configBytes, err := base64.StdEncoding.DecodeString(dexConfig.Field("data.config\\.yaml").String())
+	Expect(err).ToNot(HaveOccurred())
+	jsonConfig, err := yaml.YAMLToJSON(configBytes)
+	Expect(err).ToNot(HaveOccurred())
+	return jsonConfig
+}

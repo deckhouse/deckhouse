@@ -83,7 +83,7 @@ func Register(mgr manager.Manager) error {
 }
 
 // SetupWithManager registers watches for UserOperation and Dex objects that
-// must live in the informer cache for lock / session invalidation.
+// must live in the informer cache for target lookup and session invalidation.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	inDexNS := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetNamespace() == naming.DexNamespace
@@ -99,6 +99,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 		Watches(controller.Object(controller.PasswordGVK), warmCache, builder.WithPredicates(inDexNS)).
 		Watches(controller.Object(controller.OfflineSessionsGVK), warmCache, builder.WithPredicates(inDexNS)).
 		Watches(controller.Object(controller.RefreshTokenGVK), warmCache, builder.WithPredicates(inDexNS)).
+		Watches(controller.Object(controller.UserIdentityGVK), warmCache, builder.WithPredicates(inDexNS)).
 		Complete(r)
 }
 

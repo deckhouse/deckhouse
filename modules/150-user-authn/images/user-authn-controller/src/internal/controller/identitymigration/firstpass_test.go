@@ -130,6 +130,14 @@ func TestFirstPass_EnqueuesEveryPairPageByPage(t *testing.T) {
 		passwordObj("idle", "idle@example.com", passwordOpts{}),
 		// Lock expired.
 		passwordObj("expired", "expired@example.com", passwordOpts{lockedUntil: ptr(testNow.Add(-time.Minute))}),
+		// Created by Dex at a login, no old place: to be marked.
+		identityObj(t, "f", "corp-oidc", func(*useridentity.Identity) {}),
+		// Marked already.
+		identityObj(t, "g", "corp-oidc", func(id *useridentity.Identity) {
+			if err := id.SetRecord(useridentity.Record{Time: testNow.Format(time.RFC3339)}); err != nil {
+				t.Fatal(err)
+			}
+		}),
 	}
 	h := newHarness(t, paging.funcs(), objs...)
 	f := newTestFirstPass(h, 2)
@@ -145,6 +153,7 @@ func TestFirstPass_EnqueuesEveryPairPageByPage(t *testing.T) {
 		useridentity.Name("d", "corp-oidc"),
 		useridentity.Name("e", "corp-oidc"),
 		useridentity.Name("locked", naming.LocalConnectorID),
+		useridentity.Name("f", "corp-oidc"),
 	}
 	slices.Sort(expected)
 	if got := drain(h); !slices.Equal(got, expected) {
@@ -155,8 +164,8 @@ func TestFirstPass_EnqueuesEveryPairPageByPage(t *testing.T) {
 			t.Errorf("list limit = %d, want 2", limit)
 		}
 	}
-	if len(paging.limits) < 4 {
-		t.Errorf("lists = %d, want the sessions and the passwords in pages of 2", len(paging.limits))
+	if len(paging.limits) < 5 {
+		t.Errorf("lists = %d, want the sessions, the passwords, and the identities in pages of 2", len(paging.limits))
 	}
 	if got := h.m.progress.value(); got != len(expected) {
 		t.Errorf("pending after the pass = %d, want %d until the pairs are copied", got, len(expected))

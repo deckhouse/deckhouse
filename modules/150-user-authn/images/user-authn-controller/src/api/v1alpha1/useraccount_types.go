@@ -30,8 +30,17 @@ const (
 )
 
 // UserAccountSpec is empty. UserAccount is a controller-projected view of Dex
-// Password and OfflineSessions; there is no user-editable specification.
+// Password, OfflineSessions, and UserIdentity; there is no user-editable specification.
 type UserAccountSpec struct{}
+
+// UserAccountTwoFactor is the second factor (TOTP) Dex keeps for the account, without secrets.
+type UserAccountTwoFactor struct {
+	// Enrolled tells whether Dex holds a TOTP secret for the account.
+	Enrolled bool `json:"enrolled"`
+	// Confirmed tells whether the user entered a code for the secret; until then a sign-in shows
+	// the QR code again.
+	Confirmed bool `json:"confirmed"`
+}
 
 // UserAccountStatus is the observed account state projected from Dex.
 // Credentials and connector secrets are omitted.
@@ -49,13 +58,17 @@ type UserAccountStatus struct {
 	UserRef                string       `json:"userRef,omitempty"`
 	ExpireAt               *metav1.Time `json:"expireAt,omitempty"`
 	Groups                 []string     `json:"groups,omitempty"`
+	// LastLogin is the last sign-in through Dex with every factor done, from UserIdentity.
+	LastLogin *metav1.Time `json:"lastLogin,omitempty"`
+	// TwoFactor is set once Dex keeps a UserIdentity for the account.
+	TwoFactor *UserAccountTwoFactor `json:"twoFactor,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 
-// UserAccount is a cluster-scoped projection of a Dex Password or OfflineSessions object.
+// UserAccount is a cluster-scoped projection of a Dex Password, OfflineSessions, or UserIdentity object.
 type UserAccount struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

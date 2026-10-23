@@ -70,7 +70,8 @@ func localPair(pw passwordView) identityPair {
 	}
 }
 
-// externalPair is the pair of OfflineSessions found by spec.target.
+// externalPair is the pair of an OfflineSessions that spec.target names, before the copy has
+// created its UserIdentity.
 func externalPair(sess sessionView) identityPair {
 	return identityPair{
 		userID:      sess.UserID,

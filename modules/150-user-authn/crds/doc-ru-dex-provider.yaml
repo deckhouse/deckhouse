@@ -434,6 +434,13 @@ spec:
                     nameIDPolicyFormat:
                       description: |
                         Формат NameIDPolicy для запроса к IdP.
+
+                        Если параметр не задан, Dex запрашивает `persistent`.
+
+                        [UserOperation](#useroperation) `Lock` со `spec.target` действует на идентификатор
+                        пользователя, который Dex берёт из NameID. Чтобы такая блокировка работала, используйте
+                        `persistent` или `emailAddress`. При значении `transient` IdP возвращает новый NameID при
+                        каждом входе, и блокировка не действует при следующем входе пользователя.
                     insecureSkipSignatureValidation:
                       description: |
                         Пропустить проверку подписи SAML-ответов. Небезопасно, использовать только для тестирования.

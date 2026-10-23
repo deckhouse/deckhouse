@@ -65,7 +65,7 @@ OIDC-аутентификацию в `kube-apiserver` автоматически
 ### Генерация kubeconfig
 
 После входа пользователь может сгенерировать kubeconfig для kubectl и других утилит Kubernetes в [веб-интерфейсе Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).
-В kubeconfig используется OIDC-токен. Если провайдер аутентификации поддерживает продление сессий, kubeconfig также содержит refresh-токен, и сессия продлевается автоматически.
+В kubeconfig используется OIDC-токен. Если провайдер аутентификации поддерживает продление сессий, kubeconfig также содержит refresh-токен, и сессия продлевается автоматически. Если при продлении провайдер сообщает, что пользователя больше нет или у него отозван доступ, Dex отклоняет refresh-токен с ошибкой `invalid_grant`, и пользователю нужно войти заново.
 
 Параметр [`kubeconfigGenerator`](configuration.html#parameters-kubeconfiggenerator) добавляет другие способы доступа к API-серверу, каждый со своим адресом и сертификатом CA, например для доступа через Bastion-хост или VPN.
 
@@ -79,7 +79,7 @@ OIDC-аутентификацию в `kube-apiserver` автоматически
 * принудительная смена пароля при следующем входе после сброса пароля администратором;
 * блокировка после неудачных попыток входа для пользователей LDAP и Atlassian Crowd (параметр [`passwordPolicy.lockout.applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors));
 * ограничение частоты неудачных попыток входа с одного IP-адреса (параметр [`rateLimit`](configuration.html#parameters-ratelimit));
-* блокировка и разблокировка пользователей с помощью объекта [UserOperation](cr.html#useroperation), в том числе без парольной политики;
+* блокировка и разблокировка пользователей любого провайдера с помощью объекта [UserOperation](cr.html#useroperation), в том числе без парольной политики;
 * списки разрешённых пользователей и групп в [DexClient](cr.html#dexclient) и [DexAuthenticator](cr.html#dexauthenticator), которые Dex проверяет при входе и при каждом запросе с refresh-токеном;
 * ограничение идентичностей, которые может утверждать провайдер (параметр [`spec.allowedIdentities`](cr.html#dexprovider-v1-spec-allowedidentities) DexProvider);
 * вход по Kerberos (SPNEGO) через провайдер LDAP без формы ввода пароля, с проверкой билетов из заголовка `Authorization: Negotiate` по keytab сервиса;

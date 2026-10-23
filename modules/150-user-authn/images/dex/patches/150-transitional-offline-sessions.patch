@@ -1,0 +1,1022 @@
+diff --git a/storage/kubernetes/client.go b/storage/kubernetes/client.go
+index 86d88cf7..6c86a42d 100644
+--- a/storage/kubernetes/client.go
++++ b/storage/kubernetes/client.go
+@@ -73,6 +73,9 @@ type client struct {
+ 	// This is called once the client's Close method is called to signal goroutines,
+ 	// such as the one creating third party resources, to stop.
+ 	cancel context.CancelFunc
++
++	// legacyLocks are the old locks of local users (transitional.go).
++	legacyLocks legacyLockIndex
+ }
+ 
+ // idToName maps an arbitrary ID, such as an email or client ID to a Kubernetes object name.
+diff --git a/storage/kubernetes/storage.go b/storage/kubernetes/storage.go
+index a1c8fed9..58a6d15a 100644
+--- a/storage/kubernetes/storage.go
++++ b/storage/kubernetes/storage.go
+@@ -527,6 +527,7 @@ func (cli *client) UpdatePassword(ctx context.Context, email string, updater fun
+ 
+ 	newPassword := cli.fromStoragePassword(updated)
+ 	newPassword.ObjectMeta = p.ObjectMeta
++	newPassword.legacyPassword = p.legacyPassword
+ 	return cli.put(resourcePassword, p.ObjectMeta.Name, newPassword)
+ }
+ 
+@@ -544,6 +545,7 @@ func (cli *client) UpdateOfflineSessions(ctx context.Context, userID string, con
+ 
+ 		newOfflineSessions := cli.fromStorageOfflineSessions(updated)
+ 		newOfflineSessions.ObjectMeta = o.ObjectMeta
++		newOfflineSessions.legacyOfflineSessions = o.legacyOfflineSessions
+ 		return cli.put(resourceOfflineSessions, o.ObjectMeta.Name, newOfflineSessions)
+ 	})
+ }
+@@ -764,14 +766,24 @@ func (cli *client) UpdateDeviceToken(ctx context.Context, deviceCode string, upd
+ }
+ 
+ func (cli *client) CreateUserIdentity(ctx context.Context, u storage.UserIdentity) error {
+-	return cli.post(resourceUserIdentity, cli.fromStorageUserIdentity(u))
++	newUserIdentity := cli.fromStorageUserIdentity(u)
++	if err := cli.addLegacyState(&newUserIdentity); err != nil {
++		return err
++	}
++	return cli.post(resourceUserIdentity, newUserIdentity)
+ }
+ 
+ func (cli *client) GetUserIdentity(ctx context.Context, userID, connectorID string) (storage.UserIdentity, error) {
+ 	u, err := cli.getUserIdentity(userID, connectorID)
++	if errors.Is(err, storage.ErrNotFound) {
++		return cli.legacyUserIdentity(userID, connectorID)
++	}
+ 	if err != nil {
+ 		return storage.UserIdentity{}, err
+ 	}
++	if err := cli.addLegacyState(&u); err != nil {
++		return storage.UserIdentity{}, err
++	}
+ 	return toStorageUserIdentity(u), nil
+ }
+ 
+@@ -792,6 +804,9 @@ func (cli *client) UpdateUserIdentity(ctx context.Context, userID, connectorID s
+ 		if err != nil {
+ 			return err
+ 		}
++		if err := cli.addLegacyState(&u); err != nil {
++			return err
++		}
+ 
+ 		updated, err := updater(toStorageUserIdentity(u))
+ 		if err != nil {
+diff --git a/storage/kubernetes/transitional.go b/storage/kubernetes/transitional.go
+new file mode 100644
+index 00000000..24968e24
+--- /dev/null
++++ b/storage/kubernetes/transitional.go
+@@ -0,0 +1,224 @@
++package kubernetes
++
++// transitional.go keeps the storage of the v2.44-based Deckhouse dex readable for
++// one release (Deckhouse 1.78). That dex kept the second factor and the lock of a
++// user on OfflineSessions (and the lock of a local user on Password); this dex
++// keeps them on UserIdentity. The user-authn controller copies them over and then
++// marks the identity with migratedAnnotation, but it starts together with this
++// dex, so until it is done:
++//
++//   - the old fields are kept when this dex rewrites an OfflineSessions or a
++//     Password object (the kubernetes storage replaces whole objects, so a field
++//     missing from the struct would be erased), and
++//   - an identity that is not marked yet is read with the old values filled in:
++//     a TOTP secret the identity does not have, and a lock that ends later than
++//     the identity's own. Any write of the identity stores them.
++//   - a pair that has no identity yet but has such values reads as an identity
++//     with them, so a check made before the first login sees them too: a lock
++//     must refuse the user before his password is judged. That identity is not
++//     stored: updates still find nothing, and the first create stores the values.
++//
++// The file and its hooks in storage.go and types.go go away in Deckhouse 1.79.
++
++import (
++	"errors"
++	"fmt"
++	"sync"
++	"time"
++
++	"github.com/dexidp/dex/storage"
++)
++
++const (
++	// migratedAnnotation marks an identity the user-authn controller has filled
++	// from the old fields; from then on the controller keeps them in step itself.
++	migratedAnnotation = "user-authn.deckhouse.io/migrated"
++
++	// legacyTOTPAuthenticatorID is the MFA authenticator the old TOTP secret
++	// belongs to: Deckhouse configures a single TOTP authenticator with this ID.
++	legacyTOTPAuthenticatorID = "totp"
++
++	// localConnectorID is the connector of the users kept as Password objects.
++	localConnectorID = "local"
++)
++
++// legacyOfflineSessions holds the OfflineSessions fields of the v2.44-based
++// Deckhouse dex, with the same JSON names.
++type legacyOfflineSessions struct {
++	Email                          string     `json:"email,omitempty"`
++	TOTP                           string     `json:"totp,omitempty"`
++	TOTPConfirmed                  bool       `json:"totpConfirmed,omitempty"`
++	IncorrectPasswordLoginAttempts uint64     `json:"incorrectPasswordLoginAttempts,omitempty"`
++	LockedUntil                    *time.Time `json:"lockedUntil,omitempty"`
++}
++
++// legacyPassword holds the Password fields of the v2.44-based Deckhouse dex that
++// moved to UserIdentity, with the same JSON names.
++type legacyPassword struct {
++	LockedUntil *time.Time `json:"lockedUntil,omitempty"`
++}
++
++// addLegacyState fills the second factor and the lock that the pair of u still
++// has in the old fields into u, unless the controller has already migrated u.
++// A storage error fails the read: a lock that could not be read must not let the
++// user in.
++func (cli *client) addLegacyState(u *UserIdentity) error {
++	if _, migrated := u.Annotations[migratedAnnotation]; migrated {
++		return nil
++	}
++
++	var lockedUntil time.Time
++	session, err := cli.getOfflineSessions(u.UserID, u.ConnectorID)
++	switch {
++	case err == nil:
++		addLegacyTOTP(u, session)
++		lockedUntil = laterTime(lockedUntil, session.LockedUntil)
++	case !errors.Is(err, storage.ErrNotFound):
++		return fmt.Errorf("read offline sessions for the legacy state of the user identity: %w", err)
++	}
++
++	if u.ConnectorID == localConnectorID {
++		passwordLock, err := cli.legacyPasswordLock(u.UserID, u.Claims.Email)
++		if err != nil {
++			return fmt.Errorf("read password for the legacy state of the user identity: %w", err)
++		}
++		if passwordLock.After(lockedUntil) {
++			lockedUntil = passwordLock
++		}
++	}
++
++	// Only a lock still in force is worth carrying over, and it never shortens
++	// the lock the identity has.
++	if lockedUntil.After(time.Now()) && lockedUntil.After(u.BlockedUntil) {
++		u.BlockedUntil = lockedUntil
++	}
++	return nil
++}
++
++// legacyUserIdentity is the identity of a pair that has no UserIdentity object:
++// the second factor and the lock in force that the old fields hold for it, read
++// as addLegacyState reads them for an identity that is not marked yet. It is not
++// stored; the first write of the identity creates the object, and
++// CreateUserIdentity fills the same values in. A pair with neither has no
++// identity: storage.ErrNotFound.
++func (cli *client) legacyUserIdentity(userID, connectorID string) (storage.UserIdentity, error) {
++	u := UserIdentity{UserID: userID, ConnectorID: connectorID, Claims: Claims{UserID: userID}}
++	if err := cli.addLegacyState(&u); err != nil {
++		return storage.UserIdentity{}, err
++	}
++	if len(u.MFASecrets) == 0 && u.BlockedUntil.IsZero() {
++		return storage.UserIdentity{}, storage.ErrNotFound
++	}
++	return toStorageUserIdentity(u), nil
++}
++
++// legacyPasswordLock returns the old lock of the local user userID, which the
++// v2.44-based dex kept on his Password, or the zero time. An identity names the
++// Password by its email claim. A pair without an identity knows only the user
++// ID, and Password objects are named after the email, so then the lock comes
++// from the index of all Password objects (legacyLockIndex).
++func (cli *client) legacyPasswordLock(userID, email string) (time.Time, error) {
++	if email == "" {
++		return cli.legacyLocks.lockOf(userID, cli.listLegacyPasswordLocks)
++	}
++
++	p, err := cli.getPassword(email)
++	switch {
++	case errors.Is(err, storage.ErrNotFound):
++		return time.Time{}, nil
++	case err != nil:
++		return time.Time{}, err
++	}
++	if p.UserID != userID {
++		return time.Time{}, nil
++	}
++	return laterTime(time.Time{}, p.LockedUntil), nil
++}
++
++// listLegacyPasswordLocks lists every Password object and returns the old locks
++// they hold, by user ID.
++func (cli *client) listLegacyPasswordLocks() (map[string]time.Time, error) {
++	var list PasswordList
++	err := cli.list(resourcePassword, &list)
++	switch {
++	case errors.Is(err, storage.ErrNotFound):
++		return map[string]time.Time{}, nil
++	case err != nil:
++		return nil, err
++	}
++	locks := make(map[string]time.Time)
++	for _, p := range list.Passwords {
++		if lockedUntil := laterTime(locks[p.UserID], p.LockedUntil); !lockedUntil.IsZero() {
++			locks[p.UserID] = lockedUntil
++		}
++	}
++	return locks, nil
++}
++
++// legacyLockIndexTTL is how long an index of the old locks serves. A sign-in
++// attempt of a local user without an identity reads his old lock before his
++// password is checked, so without the index anyone could make dex list every
++// Password object at will. A lock written to the old field only (the
++// controller writes UserIdentity as well) reaches dex within this time.
++const legacyLockIndexTTL = 30 * time.Second
++
++// legacyLockIndex holds the old locks of local users by user ID, from one list
++// of all Password objects, for legacyLockIndexTTL. The zero value is an empty
++// index that lists on first use.
++type legacyLockIndex struct {
++	// mu is held across the list, so that the callers that find the index stale
++	// at the same time wait for one list instead of each making their own.
++	mu       sync.Mutex
++	locks    map[string]time.Time
++	listedAt time.Time
++	// now is the clock; time.Now when nil.
++	now func() time.Time
++}
++
++// lockOf returns the old lock of userID, listing the locks with list first
++// when the index is empty or older than legacyLockIndexTTL. A failed list is
++// returned and not kept.
++func (x *legacyLockIndex) lockOf(userID string, list func() (map[string]time.Time, error)) (time.Time, error) {
++	x.mu.Lock()
++	defer x.mu.Unlock()
++
++	now := time.Now()
++	if x.now != nil {
++		now = x.now()
++	}
++	// A clock that went back makes the index stale too.
++	if x.locks == nil || now.Sub(x.listedAt) >= legacyLockIndexTTL || now.Before(x.listedAt) {
++		locks, err := list()
++		if err != nil {
++			return time.Time{}, err
++		}
++		x.locks, x.listedAt = locks, now
++	}
++	return x.locks[userID], nil
++}
++
++// addLegacyTOTP gives u the TOTP secret of the pair's offline session when u has
++// none, so that a user who enrolled before the update is not asked to enroll
++// again. The values match what the user-authn controller migrates.
++func addLegacyTOTP(u *UserIdentity, session OfflineSessions) {
++	if session.TOTP == "" || u.MFASecrets[legacyTOTPAuthenticatorID] != nil {
++		return
++	}
++	if u.MFASecrets == nil {
++		u.MFASecrets = make(map[string]*storage.MFASecret)
++	}
++	u.MFASecrets[legacyTOTPAuthenticatorID] = &storage.MFASecret{
++		AuthenticatorID: legacyTOTPAuthenticatorID,
++		Type:            "TOTP",
++		Secret:          session.TOTP,
++		Confirmed:       session.TOTPConfirmed,
++		CreatedAt:       session.CreationTimestamp.Time,
++	}
++}
++
++func laterTime(t time.Time, candidate *time.Time) time.Time {
++	if candidate != nil && candidate.After(t) {
++		return *candidate
++	}
++	return t
++}
+diff --git a/storage/kubernetes/transitional_test.go b/storage/kubernetes/transitional_test.go
+new file mode 100644
+index 00000000..338fd971
+--- /dev/null
++++ b/storage/kubernetes/transitional_test.go
+@@ -0,0 +1,692 @@
++package kubernetes
++
++import (
++	"encoding/json"
++	"hash"
++	"hash/fnv"
++	"io"
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"slices"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++)
++
++// fakeAPI is the part of the Kubernetes API the storage uses for single objects:
++// it keeps every object as the JSON last written, so a test sees exactly what dex
++// would leave in the cluster.
++type fakeAPI struct {
++	mu      sync.Mutex
++	objects map[string][]byte
++	fail    map[string]int
++	// collections are the paths a GET lists the objects under.
++	collections map[string]bool
++	// requests are the requests served, as "METHOD path".
++	requests []string
++}
++
++func (f *fakeAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++	f.mu.Lock()
++	defer f.mu.Unlock()
++
++	f.requests = append(f.requests, r.Method+" "+r.URL.Path)
++	if status, ok := f.fail[r.URL.Path]; ok {
++		w.WriteHeader(status)
++		return
++	}
++	switch r.Method {
++	case http.MethodGet:
++		if f.collections[r.URL.Path] {
++			f.writeList(w, r.URL.Path)
++			return
++		}
++		obj, ok := f.objects[r.URL.Path]
++		if !ok {
++			w.WriteHeader(http.StatusNotFound)
++			return
++		}
++		w.Write(obj)
++	case http.MethodPost:
++		body, _ := io.ReadAll(r.Body)
++		var meta struct {
++			Metadata struct {
++				Name string `json:"name"`
++			} `json:"metadata"`
++		}
++		if err := json.Unmarshal(body, &meta); err != nil {
++			w.WriteHeader(http.StatusBadRequest)
++			return
++		}
++		p := r.URL.Path + "/" + meta.Metadata.Name
++		if _, ok := f.objects[p]; ok {
++			w.WriteHeader(http.StatusConflict)
++			return
++		}
++		f.objects[p] = body
++		w.WriteHeader(http.StatusCreated)
++	case http.MethodPut:
++		body, _ := io.ReadAll(r.Body)
++		f.objects[r.URL.Path] = body
++		w.Write(body)
++	case http.MethodDelete:
++		if _, ok := f.objects[r.URL.Path]; !ok {
++			w.WriteHeader(http.StatusNotFound)
++			return
++		}
++		delete(f.objects, r.URL.Path)
++		w.Write([]byte(`{}`))
++	default:
++		w.WriteHeader(http.StatusMethodNotAllowed)
++	}
++}
++
++// writeList answers a list of the objects under collection, in name order.
++func (f *fakeAPI) writeList(w http.ResponseWriter, collection string) {
++	var names []string
++	for p := range f.objects {
++		if name, ok := strings.CutPrefix(p, collection+"/"); ok && !strings.Contains(name, "/") {
++			names = append(names, p)
++		}
++	}
++	slices.Sort(names)
++	items := make([]json.RawMessage, 0, len(names))
++	for _, p := range names {
++		items = append(items, f.objects[p])
++	}
++	body, err := json.Marshal(map[string]any{"items": items})
++	if err != nil {
++		w.WriteHeader(http.StatusInternalServerError)
++		return
++	}
++	w.Write(body)
++}
++
++func newFakeAPIClient(t *testing.T) (*client, *fakeAPI) {
++	t.Helper()
++	api := &fakeAPI{objects: map[string][]byte{}, fail: map[string]int{}, collections: map[string]bool{}}
++	server := httptest.NewServer(api)
++	t.Cleanup(server.Close)
++	cli := &client{
++		client:     server.Client(),
++		baseURL:    server.URL,
++		namespace:  "dex",
++		apiVersion: "dex.coreos.com/v1",
++		logger:     slog.New(slog.DiscardHandler),
++		hash:       func() hash.Hash { return fnv.New64() },
++	}
++	for _, resource := range []string{resourcePassword, resourceOfflineSessions, resourceUserIdentity} {
++		api.collections[api.path(t, cli, resource, "")] = true
++	}
++	return cli, api
++}
++
++// listings counts the lists of resource requested.
++func (f *fakeAPI) listings(t *testing.T, cli *client, resource string) int {
++	t.Helper()
++	request := http.MethodGet + " " + f.path(t, cli, resource, "")
++	f.mu.Lock()
++	defer f.mu.Unlock()
++	n := 0
++	for _, r := range f.requests {
++		if r == request {
++			n++
++		}
++	}
++	return n
++}
++
++// listed reports whether a list of resource was requested.
++func (f *fakeAPI) listed(t *testing.T, cli *client, resource string) bool {
++	t.Helper()
++	request := http.MethodGet + " " + f.path(t, cli, resource, "")
++	f.mu.Lock()
++	defer f.mu.Unlock()
++	return slices.Contains(f.requests, request)
++}
++
++// has reports whether the object resource/name exists.
++func (f *fakeAPI) has(t *testing.T, cli *client, resource, name string) bool {
++	t.Helper()
++	p := f.path(t, cli, resource, name)
++	f.mu.Lock()
++	defer f.mu.Unlock()
++	_, ok := f.objects[p]
++	return ok
++}
++
++func (f *fakeAPI) path(t *testing.T, cli *client, resource, name string) string {
++	t.Helper()
++	u, err := cli.urlFor(cli.apiVersion, cli.namespace, resource, name)
++	require.NoError(t, err)
++	return strings.TrimPrefix(u, cli.baseURL)
++}
++
++func (f *fakeAPI) set(t *testing.T, cli *client, resource, name string, obj map[string]any) {
++	t.Helper()
++	obj["metadata"] = map[string]any{"name": name, "namespace": cli.namespace}
++	raw, err := json.Marshal(obj)
++	require.NoError(t, err)
++	f.mu.Lock()
++	defer f.mu.Unlock()
++	f.objects[f.path(t, cli, resource, name)] = raw
++}
++
++func (f *fakeAPI) get(t *testing.T, cli *client, resource, name string) map[string]any {
++	t.Helper()
++	f.mu.Lock()
++	defer f.mu.Unlock()
++	raw, ok := f.objects[f.path(t, cli, resource, name)]
++	require.True(t, ok, "object %s/%s not found", resource, name)
++	var obj map[string]any
++	require.NoError(t, json.Unmarshal(raw, &obj))
++	return obj
++}
++
++const legacyTOTPURL = "otpauth://totp/Deckhouse:(local)%20jane@example.com?issuer=Deckhouse&secret=JBSWY3DPEHPK3PXP"
++
++func TestUpdateOfflineSessionsKeepsLegacyFields(t *testing.T) {
++	cli, api := newFakeAPIClient(t)
++	name := cli.offlineTokenName("jane", "ldap")
++	lockedUntil := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
++	api.set(t, cli, resourceOfflineSessions, name, map[string]any{
++		"userID":                         "jane",
++		"connID":                         "ldap",
++		"email":                          "jane@example.com",
++		"totp":                           legacyTOTPURL,
++		"totpConfirmed":                  true,
++		"incorrectPasswordLoginAttempts": 2,
++		"lockedUntil":                    lockedUntil,
++	})
++
++	err := cli.UpdateOfflineSessions(t.Context(), "jane", "ldap", func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
++		old.ConnectorData = []byte(`{"refresh":"new"}`)
++		return old, nil
++	})
++	require.NoError(t, err)
++
++	stored := api.get(t, cli, resourceOfflineSessions, name)
++	require.Equal(t, "jane@example.com", stored["email"])
++	require.Equal(t, legacyTOTPURL, stored["totp"])
++	require.Equal(t, true, stored["totpConfirmed"])
++	require.EqualValues(t, 2, stored["incorrectPasswordLoginAttempts"])
++	require.Equal(t, lockedUntil, stored["lockedUntil"])
++	require.NotEmpty(t, stored["connectorData"])
++}
++
++func TestUpdatePasswordKeepsLegacyLock(t *testing.T) {
++	cli, api := newFakeAPIClient(t)
++	name := cli.idToName("jane@example.com")
++	lockedUntil := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
++	api.set(t, cli, resourcePassword, name, map[string]any{
++		"email":       "jane@example.com",
++		"hash":        "aGFzaA==",
++		"userID":      "jane",
++		"lockedUntil": lockedUntil,
++	})
++
++	err := cli.UpdatePassword(t.Context(), "jane@example.com", func(old storage.Password) (storage.Password, error) {
++		old.IncorrectPasswordLoginAttempts = 1
++		return old, nil
++	})
++	require.NoError(t, err)
++
++	stored := api.get(t, cli, resourcePassword, name)
++	require.Equal(t, lockedUntil, stored["lockedUntil"])
++	require.EqualValues(t, 1, stored["incorrectPasswordLoginAttempts"])
++}
++
++func TestGetUserIdentityLegacyState(t *testing.T) {
++	now := time.Now().UTC().Truncate(time.Second)
++	later := now.Add(time.Hour)
++	muchLater := now.Add(24 * time.Hour)
++	earlier := now.Add(-time.Hour)
++
++	type legacy struct {
++		session  map[string]any // OfflineSessions fields of the pair, nil for none
++		password map[string]any // Password fields of jane@example.com, nil for none
++	}
++	tests := []struct {
++		name        string
++		connectorID string
++		identity    map[string]any
++		legacy      legacy
++		wantTOTP    *storage.MFASecret
++		wantBlocked time.Time
++	}{
++		{
++			name:        "confirmed totp of an identity without one",
++			connectorID: "local",
++			legacy:      legacy{session: map[string]any{"totp": legacyTOTPURL, "totpConfirmed": true}},
++			wantTOTP:    &storage.MFASecret{AuthenticatorID: "totp", Type: "TOTP", Secret: legacyTOTPURL, Confirmed: true},
++		},
++		{
++			name:        "unconfirmed totp stays unconfirmed",
++			connectorID: "local",
++			legacy:      legacy{session: map[string]any{"totp": legacyTOTPURL}},
++			wantTOTP:    &storage.MFASecret{AuthenticatorID: "totp", Type: "TOTP", Secret: legacyTOTPURL},
++		},
++		{
++			name:        "own totp wins",
++			connectorID: "local",
++			identity: map[string]any{"mfaSecrets": map[string]any{
++				"totp": map[string]any{"authenticatorID": "totp", "type": "TOTP", "secret": "otpauth://totp/new", "confirmed": true},
++			}},
++			legacy:   legacy{session: map[string]any{"totp": legacyTOTPURL, "totpConfirmed": true}},
++			wantTOTP: &storage.MFASecret{AuthenticatorID: "totp", Type: "TOTP", Secret: "otpauth://totp/new", Confirmed: true},
++		},
++		{
++			name:        "lock of an external user",
++			connectorID: "ldap",
++			legacy:      legacy{session: map[string]any{"lockedUntil": later}},
++			wantBlocked: later,
++		},
++		{
++			name:        "expired lock is not carried over",
++			connectorID: "ldap",
++			legacy:      legacy{session: map[string]any{"lockedUntil": earlier}},
++		},
++		{
++			name:        "later own lock is kept",
++			connectorID: "ldap",
++			identity:    map[string]any{"blockedUntil": muchLater},
++			legacy:      legacy{session: map[string]any{"lockedUntil": later}},
++			wantBlocked: muchLater,
++		},
++		{
++			name:        "later legacy lock extends an own lock",
++			connectorID: "ldap",
++			identity:    map[string]any{"blockedUntil": later},
++			legacy:      legacy{session: map[string]any{"lockedUntil": muchLater}},
++			wantBlocked: muchLater,
++		},
++		{
++			name:        "lock of a local user on the password",
++			connectorID: "local",
++			legacy:      legacy{password: map[string]any{"userID": "jane", "lockedUntil": later}},
++			wantBlocked: later,
++		},
++		{
++			name:        "password of another user is not read",
++			connectorID: "local",
++			legacy:      legacy{password: map[string]any{"userID": "john", "lockedUntil": later}},
++		},
++		{
++			name:        "password lock does not apply to other connectors",
++			connectorID: "ldap",
++			legacy:      legacy{password: map[string]any{"userID": "jane", "lockedUntil": later}},
++		},
++		{
++			name:        "migrated identity is read as stored",
++			connectorID: "local",
++			identity:    map[string]any{"migrated": true},
++			legacy: legacy{
++				session:  map[string]any{"totp": legacyTOTPURL, "totpConfirmed": true, "lockedUntil": later},
++				password: map[string]any{"userID": "jane", "lockedUntil": later},
++			},
++		},
++		{
++			name:        "nothing to carry over",
++			connectorID: "local",
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			cli, api := newFakeAPIClient(t)
++			name := cli.offlineTokenName("jane", tc.connectorID)
++
++			identity := map[string]any{
++				"userID":      "jane",
++				"connectorID": tc.connectorID,
++				"claims":      map[string]any{"userID": "jane", "email": "jane@example.com"},
++			}
++			for k, v := range tc.identity {
++				identity[k] = v
++			}
++			migrated := identity["migrated"] == true
++			delete(identity, "migrated")
++			api.set(t, cli, resourceUserIdentity, name, identity)
++			if migrated {
++				api.setAnnotation(t, cli, resourceUserIdentity, name, migratedAnnotation, now.Format(time.RFC3339))
++			}
++			if tc.legacy.session != nil {
++				tc.legacy.session["userID"] = "jane"
++				tc.legacy.session["connID"] = tc.connectorID
++				api.set(t, cli, resourceOfflineSessions, name, tc.legacy.session)
++			}
++			if tc.legacy.password != nil {
++				tc.legacy.password["email"] = "jane@example.com"
++				api.set(t, cli, resourcePassword, cli.idToName("jane@example.com"), tc.legacy.password)
++			}
++
++			got, err := cli.GetUserIdentity(t.Context(), "jane", tc.connectorID)
++			require.NoError(t, err)
++
++			totp := got.MFASecrets["totp"]
++			if totp != nil {
++				totp.CreatedAt = time.Time{}
++			}
++			require.Equal(t, tc.wantTOTP, totp)
++			require.True(t, tc.wantBlocked.Equal(got.BlockedUntil), "blocked until %v, want %v", got.BlockedUntil, tc.wantBlocked)
++		})
++	}
++}
++
++func (f *fakeAPI) setAnnotation(t *testing.T, cli *client, resource, name, key, value string) {
++	t.Helper()
++	obj := f.get(t, cli, resource, name)
++	meta := obj["metadata"].(map[string]any)
++	meta["annotations"] = map[string]any{key: value}
++	raw, err := json.Marshal(obj)
++	require.NoError(t, err)
++	f.mu.Lock()
++	defer f.mu.Unlock()
++	f.objects[f.path(t, cli, resource, name)] = raw
++}
++
++// TestUserIdentityWritesStoreLegacyState checks that the first write of an
++// identity by this dex keeps what the pair had in the old fields, so it is not
++// lost once the old fields are no longer read.
++func TestUserIdentityWritesStoreLegacyState(t *testing.T) {
++	later := time.Now().Add(time.Hour).UTC().Truncate(time.Second)
++
++	t.Run("update", func(t *testing.T) {
++		cli, api := newFakeAPIClient(t)
++		name := cli.offlineTokenName("jane", "local")
++		api.set(t, cli, resourceUserIdentity, name, map[string]any{"userID": "jane", "connectorID": "local"})
++		api.set(t, cli, resourceOfflineSessions, name, map[string]any{
++			"userID": "jane", "connID": "local", "totp": legacyTOTPURL, "totpConfirmed": true, "lockedUntil": later,
++		})
++
++		err := cli.UpdateUserIdentity(t.Context(), "jane", "local", func(old storage.UserIdentity) (storage.UserIdentity, error) {
++			require.NotNil(t, old.MFASecrets["totp"], "the updater sees the legacy secret")
++			old.MFASecrets["totp"].LastUsedCounter = 42
++			return old, nil
++		})
++		require.NoError(t, err)
++
++		stored := api.get(t, cli, resourceUserIdentity, name)
++		secret := stored["mfaSecrets"].(map[string]any)["totp"].(map[string]any)
++		require.Equal(t, legacyTOTPURL, secret["secret"])
++		require.Equal(t, true, secret["confirmed"])
++		require.EqualValues(t, 42, secret["lastUsedCounter"])
++		require.Equal(t, later.Format(time.RFC3339), stored["blockedUntil"])
++	})
++
++	t.Run("create", func(t *testing.T) {
++		cli, api := newFakeAPIClient(t)
++		name := cli.offlineTokenName("jane", "ldap")
++		api.set(t, cli, resourceOfflineSessions, name, map[string]any{"userID": "jane", "connID": "ldap", "lockedUntil": later})
++
++		err := cli.CreateUserIdentity(t.Context(), storage.UserIdentity{
++			UserID:      "jane",
++			ConnectorID: "ldap",
++			Claims:      storage.Claims{UserID: "jane", Email: "jane@example.com"},
++		})
++		require.NoError(t, err)
++
++		stored := api.get(t, cli, resourceUserIdentity, name)
++		require.Equal(t, later.Format(time.RFC3339), stored["blockedUntil"])
++	})
++}
++
++// TestGetUserIdentityWithoutObject checks a pair that has no identity yet: what
++// the old fields hold for it reads as its identity, so a check made before the
++// first login, the lock before the password, sees it.
++func TestGetUserIdentityWithoutObject(t *testing.T) {
++	now := time.Now().UTC().Truncate(time.Second)
++	later := now.Add(time.Hour)
++	earlier := now.Add(-time.Hour)
++
++	tests := []struct {
++		name        string
++		connectorID string
++		session     map[string]any // OfflineSessions fields of the pair, nil for none
++		password    map[string]any // Password fields of jane@example.com, nil for none
++		wantFound   bool
++		wantTOTP    *storage.MFASecret
++		wantBlocked time.Time
++		// wantList: the Password objects are looked through for the user ID.
++		wantList bool
++	}{
++		{
++			name:        "lock of an external user",
++			connectorID: "ldap",
++			session:     map[string]any{"lockedUntil": later},
++			wantFound:   true,
++			wantBlocked: later,
++		},
++		{
++			name:        "totp of a local user",
++			connectorID: "local",
++			session:     map[string]any{"totp": legacyTOTPURL, "totpConfirmed": true},
++			wantFound:   true,
++			wantTOTP:    &storage.MFASecret{AuthenticatorID: "totp", Type: "TOTP", Secret: legacyTOTPURL, Confirmed: true},
++			wantList:    true,
++		},
++		{
++			name:        "lock of a local user on the password",
++			connectorID: "local",
++			password:    map[string]any{"userID": "jane", "lockedUntil": later},
++			wantFound:   true,
++			wantBlocked: later,
++			wantList:    true,
++		},
++		{
++			name:        "password lock of another user",
++			connectorID: "local",
++			password:    map[string]any{"userID": "john", "lockedUntil": later},
++			wantList:    true,
++		},
++		{
++			name:        "password lock does not apply to other connectors",
++			connectorID: "ldap",
++			password:    map[string]any{"userID": "jane", "lockedUntil": later},
++		},
++		{
++			name:        "expired lock",
++			connectorID: "ldap",
++			session:     map[string]any{"lockedUntil": earlier},
++		},
++		{
++			name:        "offline session without a second factor or a lock",
++			connectorID: "ldap",
++			session:     map[string]any{"incorrectPasswordLoginAttempts": 2},
++		},
++		{
++			name:        "nothing in the old fields",
++			connectorID: "local",
++			wantList:    true,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			cli, api := newFakeAPIClient(t)
++			name := cli.offlineTokenName("jane", tc.connectorID)
++			if tc.session != nil {
++				tc.session["userID"] = "jane"
++				tc.session["connID"] = tc.connectorID
++				api.set(t, cli, resourceOfflineSessions, name, tc.session)
++			}
++			if tc.password != nil {
++				tc.password["email"] = "jane@example.com"
++				api.set(t, cli, resourcePassword, cli.idToName("jane@example.com"), tc.password)
++			}
++
++			got, err := cli.GetUserIdentity(t.Context(), "jane", tc.connectorID)
++
++			assert.Equal(t, tc.wantList, api.listed(t, cli, resourcePassword), "passwords listed")
++			assert.False(t, api.has(t, cli, resourceUserIdentity, name), "a read stores nothing")
++			if !tc.wantFound {
++				require.ErrorIs(t, err, storage.ErrNotFound)
++				return
++			}
++			require.NoError(t, err)
++			assert.Equal(t, "jane", got.UserID)
++			assert.Equal(t, tc.connectorID, got.ConnectorID)
++			assert.Equal(t, storage.Claims{UserID: "jane"}, got.Claims)
++			totp := got.MFASecrets["totp"]
++			if totp != nil {
++				totp.CreatedAt = time.Time{}
++			}
++			assert.Equal(t, tc.wantTOTP, totp)
++			assert.True(t, tc.wantBlocked.Equal(got.BlockedUntil), "blocked until %v, want %v", got.BlockedUntil, tc.wantBlocked)
++		})
++	}
++}
++
++// TestUserIdentityWithoutObjectFirstWrite checks that the identity a pair
++// without one reads as is created, not updated, by the first write: the callers
++// update first and create on storage.ErrNotFound, and the create stores the old
++// values the read showed.
++func TestUserIdentityWithoutObjectFirstWrite(t *testing.T) {
++	later := time.Now().Add(time.Hour).UTC().Truncate(time.Second)
++	ctx := t.Context()
++	cli, api := newFakeAPIClient(t)
++	name := cli.offlineTokenName("jane", "local")
++	api.set(t, cli, resourceOfflineSessions, name, map[string]any{
++		"userID": "jane", "connID": "local", "totp": legacyTOTPURL, "totpConfirmed": true,
++	})
++	api.set(t, cli, resourcePassword, cli.idToName("jane@example.com"), map[string]any{
++		"email": "jane@example.com", "userID": "jane", "lockedUntil": later,
++	})
++
++	read, err := cli.GetUserIdentity(ctx, "jane", "local")
++	require.NoError(t, err)
++	require.NotNil(t, read.MFASecrets["totp"])
++	require.True(t, later.Equal(read.BlockedUntil))
++
++	err = cli.UpdateUserIdentity(ctx, "jane", "local", func(u storage.UserIdentity) (storage.UserIdentity, error) {
++		t.Error("an update of a pair without an identity has nothing to update")
++		return u, nil
++	})
++	require.ErrorIs(t, err, storage.ErrNotFound)
++
++	require.NoError(t, cli.CreateUserIdentity(ctx, storage.UserIdentity{
++		UserID:      "jane",
++		ConnectorID: "local",
++		Claims:      storage.Claims{UserID: "jane", Email: "jane@example.com"},
++	}))
++	stored := api.get(t, cli, resourceUserIdentity, name)
++	secret := stored["mfaSecrets"].(map[string]any)["totp"].(map[string]any)
++	assert.Equal(t, legacyTOTPURL, secret["secret"])
++	assert.Equal(t, true, secret["confirmed"])
++	assert.Equal(t, later.Format(time.RFC3339), stored["blockedUntil"])
++
++	got, err := cli.GetUserIdentity(ctx, "jane", "local")
++	require.NoError(t, err)
++	assert.Equal(t, "jane@example.com", got.Claims.Email, "read from the stored object")
++	assert.Equal(t, read.MFASecrets["totp"].Secret, got.MFASecrets["totp"].Secret)
++	assert.True(t, read.BlockedUntil.Equal(got.BlockedUntil))
++}
++
++func TestUserIdentityLegacyStateReadError(t *testing.T) {
++	cli, api := newFakeAPIClient(t)
++	name := cli.offlineTokenName("jane", "ldap")
++	api.set(t, cli, resourceUserIdentity, name, map[string]any{"userID": "jane", "connectorID": "ldap"})
++	api.fail[api.path(t, cli, resourceOfflineSessions, name)] = http.StatusInternalServerError
++
++	_, err := cli.GetUserIdentity(t.Context(), "jane", "ldap")
++	require.Error(t, err, "a lock that could not be read must not read as no lock")
++
++	err = cli.UpdateUserIdentity(t.Context(), "jane", "ldap", func(old storage.UserIdentity) (storage.UserIdentity, error) {
++		return old, nil
++	})
++	require.Error(t, err)
++
++	err = cli.CreateUserIdentity(t.Context(), storage.UserIdentity{UserID: "jane", ConnectorID: "ldap"})
++	require.Error(t, err)
++
++	require.NoError(t, cli.DeleteUserIdentity(t.Context(), "jane", "ldap"), "deleting does not read the old fields")
++}
++
++func TestUserIdentityWithoutObjectReadError(t *testing.T) {
++	t.Run("offline sessions", func(t *testing.T) {
++		cli, api := newFakeAPIClient(t)
++		api.fail[api.path(t, cli, resourceOfflineSessions, cli.offlineTokenName("jane", "ldap"))] = http.StatusInternalServerError
++
++		_, err := cli.GetUserIdentity(t.Context(), "jane", "ldap")
++		require.Error(t, err)
++		require.NotErrorIs(t, err, storage.ErrNotFound, "a lock that could not be read must not read as no identity")
++	})
++
++	t.Run("passwords", func(t *testing.T) {
++		cli, api := newFakeAPIClient(t)
++		api.fail[api.path(t, cli, resourcePassword, "")] = http.StatusInternalServerError
++
++		_, err := cli.GetUserIdentity(t.Context(), "jane", "local")
++		require.Error(t, err)
++		require.NotErrorIs(t, err, storage.ErrNotFound, "a lock that could not be read must not read as no identity")
++	})
++}
++
++// TestLegacyPasswordLockIndex checks that the sign-in attempts of local users
++// without an identity, which come before any password is checked, list the
++// Password objects at most once per legacyLockIndexTTL, however many there are
++// at once, and that a lock written in between reaches dex once the index is
++// listed again.
++func TestLegacyPasswordLockIndex(t *testing.T) {
++	ctx := t.Context()
++	cli, api := newFakeAPIClient(t)
++	clock := time.Now()
++	cli.legacyLocks.now = func() time.Time { return clock }
++	later := clock.Add(time.Hour).UTC().Truncate(time.Second)
++	api.set(t, cli, resourcePassword, cli.idToName("jane@example.com"), map[string]any{
++		"email": "jane@example.com", "userID": "jane", "lockedUntil": later,
++	})
++	api.set(t, cli, resourcePassword, cli.idToName("john@example.com"), map[string]any{
++		"email": "john@example.com", "userID": "john",
++	})
++
++	const attempts = 32
++	var wg sync.WaitGroup
++	blocked := make([]time.Time, attempts)
++	for i := range attempts {
++		wg.Go(func() {
++			got, err := cli.GetUserIdentity(ctx, "jane", "local")
++			if err == nil {
++				blocked[i] = got.BlockedUntil
++			}
++		})
++	}
++	wg.Wait()
++	for i, b := range blocked {
++		require.True(t, later.Equal(b), "attempt %d: blocked until %v", i, b)
++	}
++	require.Equal(t, 1, api.listings(t, cli, resourcePassword), "parallel attempts wait for one list")
++
++	// A lock written to the old field only, within the interval: not seen yet.
++	api.set(t, cli, resourcePassword, cli.idToName("john@example.com"), map[string]any{
++		"email": "john@example.com", "userID": "john", "lockedUntil": later,
++	})
++	_, err := cli.GetUserIdentity(ctx, "john", "local")
++	require.ErrorIs(t, err, storage.ErrNotFound)
++	require.Equal(t, 1, api.listings(t, cli, resourcePassword))
++
++	clock = clock.Add(legacyLockIndexTTL)
++	got, err := cli.GetUserIdentity(ctx, "john", "local")
++	require.NoError(t, err)
++	require.True(t, later.Equal(got.BlockedUntil), "the lock reaches dex with the next list")
++	require.Equal(t, 2, api.listings(t, cli, resourcePassword))
++
++	// A failed list is not kept: the next attempt lists again.
++	clock = clock.Add(legacyLockIndexTTL)
++	api.fail[api.path(t, cli, resourcePassword, "")] = http.StatusInternalServerError
++	_, err = cli.GetUserIdentity(ctx, "jane", "local")
++	require.Error(t, err)
++	require.NotErrorIs(t, err, storage.ErrNotFound)
++	delete(api.fail, api.path(t, cli, resourcePassword, ""))
++	got, err = cli.GetUserIdentity(ctx, "jane", "local")
++	require.NoError(t, err)
++	require.True(t, later.Equal(got.BlockedUntil))
++	require.Equal(t, 4, api.listings(t, cli, resourcePassword))
++}
+diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
+index 2cb4ea22..2db660a1 100644
+--- a/storage/kubernetes/types.go
++++ b/storage/kubernetes/types.go
+@@ -535,6 +535,9 @@ type Password struct {
+ 	HashUpdatedAt                   time.Time `json:"hashUpdatedAt"`
+ 	RequireResetHashOnNextSuccLogin bool      `json:"requireResetHashOnNextSuccLogin,omitempty"`
+ 	IncorrectPasswordLoginAttempts  uint64    `json:"incorrectPasswordLoginAttempts"`
++
++	// Fields of the previous storage layout, kept for one release (transitional.go).
++	legacyPassword `json:",inline"`
+ }
+ 
+ // PasswordList is a list of Passwords.
+@@ -792,6 +795,9 @@ type OfflineSessions struct {
+ 	ConnID        string                              `json:"connID,omitempty"`
+ 	Refresh       map[string]*storage.RefreshTokenRef `json:"refresh,omitempty"`
+ 	ConnectorData []byte                              `json:"connectorData,omitempty"`
++
++	// Fields of the previous storage layout, kept for one release (transitional.go).
++	legacyOfflineSessions `json:",inline"`
+ }
+ 
+ func (cli *client) fromStorageOfflineSessions(o storage.OfflineSessions) OfflineSessions {

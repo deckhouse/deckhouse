@@ -17,12 +17,18 @@ set -euo pipefail
 # limitations under the License.
 #
 
-# Keep Dex kubernetes-storage CRDs in sync with the Dex version we build.
+# Keep the Dex kubernetes-storage CRDs in sync with the Dex we build: the release from oss.yaml
+# with the patches of images/dex/patches applied. The patches change the manifests
+# (100-storage-schema adds useridentities.yaml and authsessions.yaml), so the CRDs come from a
+# patched source tree, never from the upstream release alone.
 #
-# - Update local CRDs (downloads from GitHub):
+# - Update local CRDs; clones the Dex release and applies the patches (needs git and network):
 #     ./pull_dex_crds.sh
 #
-# - CI check mode (no network): compares our CRDs with a checked-out Dex source tree:
+# - Update local CRDs from a patched Dex source tree (no network):
+#     ./pull_dex_crds.sh --dex-dir /path/to/dex/scripts/manifests/crds
+#
+# - CI check mode (no network): compares our CRDs with a patched Dex source tree:
 #     ./pull_dex_crds.sh --check --dex-dir /path/to/dex/scripts/manifests/crds
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -51,6 +57,7 @@ done
 crds=(
   authcodes.yaml
   authrequests.yaml
+  authsessions.yaml
   connectors.yaml
   devicerequests.yaml
   devicetokens.yaml
@@ -59,14 +66,6 @@ crds=(
   passwords.yaml
   refreshtokens.yaml
   signingkeies.yaml
-)
-
-# CRDs that Dex registers itself at start but does not ship in scripts/manifests/crds:
-# useridentities and authsessions (Dex v2.46.0, storage/kubernetes/types.go). The files here
-# are written in the same format by hand. --check requires them to exist, and compares them as
-# soon as the Dex tree ships them; the update mode leaves them alone.
-runtime_crds=(
-  authsessions.yaml
   useridentities.yaml
 )
 
@@ -100,52 +99,46 @@ if [[ "${mode}" == "check" ]]; then
     fi
   done
 
-  for crd in "${runtime_crds[@]}"; do
-    left="${dex_crds_dir}/${crd}"
-    right="${dex_dir}/${crd}"
-
-    if [[ ! -f "${left}" ]]; then
-      echo "Missing local CRD file: ${left}" >&2
-      exit 1
-    fi
-    if [[ -f "${right}" ]] && ! diff -u "${right}" "${left}" >/dev/null; then
-      echo "Dex CRD mismatch for ${crd}." >&2
-      echo "Dex ships ${crd} now: move it from runtime_crds to crds and run ${script_dir}/pull_dex_crds.sh" >&2
-      exit 1
-    fi
-  done
-
   echo "OK: Dex CRDs match."
   exit 0
 fi
 
-# Extract "tag: vX.Y.Z" from werf.inc.yaml (dex source checkout).
-werf_file="${script_dir}/../images/dex/werf.inc.yaml"
-if [[ ! -f "${werf_file}" ]]; then
-  echo "Cannot find ${werf_file} to detect Dex version." >&2
-  exit 1
-fi
-
-dex_tag="$(
-  awk 'index($0, "dexidp/dex.git") {found=1} found && $1=="tag:" {print $2; exit}' "${werf_file}"
-)"
-if [[ -z "${dex_tag}" ]]; then
-  echo "Cannot detect Dex tag from ${werf_file}." >&2
-  exit 1
-fi
-
-repo="https://raw.githubusercontent.com/dexidp/dex/${dex_tag}/scripts/manifests/crds"
 tmp="$(mktemp -d)"
 trap 'rm -rf "${tmp}"' EXIT
 
-mkdir -p "${dex_crds_dir}"
+source_desc="${dex_dir}"
+if [[ -z "${dex_dir}" ]]; then
+  oss_file="${script_dir}/../oss.yaml"
+  dex_version="$(
+    awk '$1=="-" && $2=="name:" {in_dex=0} $1=="id:" && $2=="dex" {in_dex=1} in_dex && $1=="version:" {print $2; exit}' "${oss_file}"
+  )"
+  if [[ -z "${dex_version}" ]]; then
+    echo "Cannot detect the Dex version from ${oss_file}." >&2
+    exit 1
+  fi
 
+  echo "Cloning Dex v${dex_version}"
+  git clone --quiet --depth 1 --branch "v${dex_version}" https://github.com/dexidp/dex.git "${tmp}/dex"
+  for patch in "${script_dir}"/../images/dex/patches/*.patch; do
+    echo "Applying $(basename "${patch}")"
+    git -C "${tmp}/dex" apply "${patch}"
+  done
+  dex_dir="${tmp}/dex/scripts/manifests/crds"
+  source_desc="Dex v${dex_version} with the patches of images/dex/patches"
+fi
+
+if [[ ! -d "${dex_dir}" ]]; then
+  echo "Dex CRD dir not found: ${dex_dir}" >&2
+  exit 2
+fi
+
+mkdir -p "${dex_crds_dir}"
 for crd in "${crds[@]}"; do
-  url="${repo}/${crd}"
-  echo "Downloading ${url}"
-  curl -fsSL "${url}" > "${tmp}/${crd}"
-  mv "${tmp}/${crd}" "${dex_crds_dir}/${crd}"
+  if [[ ! -f "${dex_dir}/${crd}" ]]; then
+    echo "Missing Dex CRD file: ${dex_dir}/${crd}" >&2
+    exit 1
+  fi
+  cp "${dex_dir}/${crd}" "${dex_crds_dir}/${crd}"
 done
 
-echo "Updated Dex CRDs from Dex ${dex_tag}."
-echo "Not downloaded, Dex does not ship them: ${runtime_crds[*]}."
+echo "Updated Dex CRDs from ${source_desc}."

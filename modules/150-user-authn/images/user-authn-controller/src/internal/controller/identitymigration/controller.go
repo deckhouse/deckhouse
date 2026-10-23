@@ -19,14 +19,20 @@ limitations under the License.
 // pair, the object Dex v2.46 keeps that data in, and keeps the copy up to date while the old
 // Dex is still writing the old places.
 //
-// It runs on the leader in two parts. The first pass pages through every OfflineSessions and
-// every locked Password through the API reader (the cache strips the TOTP secret) and enqueues
-// their pairs. Afterwards the controller copies a pair again when its OfflineSessions or Password
-// changes. Both parts reconcile one pair at a time through the same workqueue.
+// It runs on the leader in two parts. The first pass pages through every OfflineSessions, every
+// locked Password, and every UserIdentity not marked yet through the API reader (the cache strips
+// the TOTP secret) and enqueues their pairs. Afterwards the controller copies a pair again when its
+// OfflineSessions or Password changes, and marks a UserIdentity Dex creates. Both parts reconcile
+// one pair at a time through the same workqueue.
 //
 // A local pair with neither a Password nor a User is what a user deleted before 1.78 left behind.
 // It is not copied, and its OfflineSessions is deleted, so that neither the old Dex nor the copy
 // hands its TOTP secret to a user created again with the same name.
+//
+// Every UserIdentity the controller has reconciled carries the annotation
+// user-authn.deckhouse.io/migrated, including one Dex created for a pair the old places know
+// nothing about: the transitional patch of Dex 1.78 reads the old places for an identity without
+// it on every read.
 package identitymigration
 
 import (
@@ -130,7 +136,7 @@ func newMigrator(
 // d8_user_authn_identity_migration_pending and d8_user_authn_identity_migration_total.
 //
 // Required RBAC: offlinesessionses get, list, watch, delete; passwords get, list, watch; users
-// get; refreshtokens get, list, watch; useridentities get, create, update.
+// get; refreshtokens get, list, watch; useridentities get, list, watch, create, update.
 func Register(mgr manager.Manager) error {
 	if err := registerMetrics(); err != nil {
 		return err
@@ -146,8 +152,9 @@ func Register(mgr manager.Manager) error {
 }
 
 // SetupWithManager watches OfflineSessions and Password for changes that matter to the copy,
-// and the first pass through a channel. Objects of the informers' initial list are left to the
-// first pass, which reads them page by page instead of all at once.
+// UserIdentity objects that are not marked yet, and the first pass through a channel. Objects of
+// the informers' initial list are left to the first pass, which reads them page by page instead of
+// all at once.
 func (m *Migrator) SetupWithManager(mgr manager.Manager) error {
 	inDexNS := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetNamespace() == naming.DexNamespace
@@ -168,6 +175,11 @@ func (m *Migrator) SetupWithManager(mgr manager.Manager) error {
 			controller.Object(controller.PasswordGVK),
 			handler.EnqueueRequestsFromMapFunc(mapPassword),
 			builder.WithPredicates(inDexNS, changesOf(passwordFingerprint)),
+		).
+		Watches(
+			controller.Object(controller.UserIdentityGVK),
+			handler.EnqueueRequestsFromMapFunc(mapByName),
+			builder.WithPredicates(inDexNS, unmarkedIdentity()),
 		).
 		WatchesRawSource(source.Channel(m.events, handler.EnqueueRequestsFromMapFunc(mapByName))).
 		Complete(m)
@@ -194,8 +206,9 @@ func (m *Migrator) syncPair(ctx context.Context, name string) (string, error) {
 	result := resultUnchanged
 	var skipReason string
 	var seen pair
+	var marked bool
 	outcome, err := useridentity.Mutate(ctx, m.apiReader, m.client, name, func(current *useridentity.Identity) (*useridentity.Identity, error) {
-		result, skipReason = resultUnchanged, ""
+		result, skipReason, marked = resultUnchanged, "", false
 		p, reason, err := m.places.readPair(ctx, name)
 		if err != nil {
 			return nil, err
@@ -206,8 +219,11 @@ func (m *Migrator) syncPair(ctx context.Context, name string) (string, error) {
 			return nil, nil
 		}
 		if p.UserID == "" {
-			// Neither OfflineSessions nor Password: nothing to copy.
-			return nil, nil
+			// Neither OfflineSessions nor Password: nothing to copy. A UserIdentity Dex created for
+			// the pair is marked all the same.
+			desired, err := markMigrated(current, now)
+			marked = desired != nil
+			return desired, err
 		}
 		desired, err := plan(current, p, now)
 		if errors.Is(err, errPairMismatch) {
@@ -231,6 +247,9 @@ func (m *Migrator) syncPair(ctx context.Context, name string) (string, error) {
 		m.log.V(1).Info("Not copying the pair into UserIdentity", "pair", name, "reason", skipReason)
 	case skipReason != "":
 		m.log.Info("Not copying the pair into UserIdentity", "pair", name, "reason", skipReason)
+	case marked && outcome == useridentity.OutcomeUpdated:
+		m.log.V(1).Info("Marked the UserIdentity as migrated, the old places hold nothing of the pair", "pair", name)
+		result = resultMigrated
 	case outcome == useridentity.OutcomeCreated || outcome == useridentity.OutcomeUpdated:
 		m.log.Info("Copied the pair into UserIdentity",
 			"pair", name,
@@ -241,6 +260,18 @@ func (m *Migrator) syncPair(ctx context.Context, name string) (string, error) {
 		result = resultMigrated
 	}
 	return result, nil
+}
+
+// markMigrated returns current with a record of what the controller copied, which is nothing, or
+// nil when there is no object or it already has the annotation.
+func markMigrated(current *useridentity.Identity, now time.Time) (*useridentity.Identity, error) {
+	if current == nil || current.Migrated() {
+		return nil, nil
+	}
+	if err := current.SetRecord(useridentity.Record{Time: useridentity.FormatTime(now)}); err != nil {
+		return nil, err
+	}
+	return current, nil
 }
 
 func mapByName(_ context.Context, obj client.Object) []reconcile.Request {
@@ -281,6 +312,22 @@ func changesOf(fingerprint func(*unstructured.Unstructured) any) predicate.Funcs
 			}
 			return !reflect.DeepEqual(fingerprint(oldObj), fingerprint(newObj))
 		},
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return true },
+	}
+}
+
+// unmarkedIdentity passes the UserIdentity objects without the annotation that Dex creates or
+// writes after the informers' initial list; the first pass takes those of the initial list. The
+// controller's own writes carry the annotation and are dropped here.
+func unmarkedIdentity() predicate.Funcs {
+	unmarked := func(obj client.Object) bool {
+		_, ok := obj.GetAnnotations()[useridentity.RecordAnnotation]
+		return !ok
+	}
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return !e.IsInInitialList && unmarked(e.Object) },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return unmarked(e.ObjectNew) },
 		DeleteFunc:  func(event.DeleteEvent) bool { return false },
 		GenericFunc: func(event.GenericEvent) bool { return true },
 	}

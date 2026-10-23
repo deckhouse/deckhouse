@@ -32,5 +32,11 @@ for session in $(d8 k -n d8-user-authn get offlinesessionses.dex.coreos.com -o j
   d8 k -n d8-user-authn delete offlinesessionses.dex.coreos.com "${session}" --ignore-not-found
 done
 
+# Delete user identities created by the SAML connector
+for identity in $(d8 k -n d8-user-authn get useridentities.dex.coreos.com -o json 2>/dev/null | \
+  jq -r '.items[] | select(.connectorID == "saml-demo") | .metadata.name'); do
+  d8 k -n d8-user-authn delete useridentities.dex.coreos.com "${identity}" --ignore-not-found
+done
+
 # Delete Keycloak namespace (includes Deployment, Service, Ingress)
 d8 k delete ns saml-demo --ignore-not-found

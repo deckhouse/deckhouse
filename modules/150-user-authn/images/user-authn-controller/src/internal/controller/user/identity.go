@@ -126,18 +126,39 @@ func (r *Reconciler) dexObjectExists(ctx context.Context, gvk schema.GroupVersio
 	return true, nil
 }
 
-// mapUserIdentity reconciles the user of a local UserIdentity that has no User: one written
-// after the User was deleted, by a copy that read the Password before it went, is removed again.
-func (r *Reconciler) mapUserIdentity(ctx context.Context, obj client.Object) []reconcile.Request {
+// localIdentity reads the UserIdentity of the pair (user, local) from the cache, or nil when Dex
+// keeps none. The user ID of a local user is the one in its Password.
+func (r *Reconciler) localIdentity(ctx context.Context, pw passwordView, userName string) (*useridentity.Identity, error) {
+	userID := pw.UserID
+	if userID == "" {
+		userID = userName
+	}
+	name := useridentity.Name(userID, naming.LocalConnectorID)
+	obj := controller.Object(controller.UserIdentityGVK)
+	err := r.client.Get(ctx, types.NamespacedName{Namespace: naming.DexNamespace, Name: name}, obj)
+	if apierrors.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get useridentity %s: %w", name, err)
+	}
+	ident := useridentity.FromUnstructured(obj)
+	if ident.UserID() != userID || ident.ConnectorID() != naming.LocalConnectorID {
+		return nil, nil
+	}
+	return ident, nil
+}
+
+// mapUserIdentity reconciles the user of a local UserIdentity: its lock goes into User.status, and
+// one written after the User was deleted, by a copy that read the Password before it went, is
+// removed again.
+func (r *Reconciler) mapUserIdentity(_ context.Context, obj client.Object) []reconcile.Request {
 	u, ok := controller.AsUnstructured(obj)
 	if !ok {
 		return nil
 	}
 	id := useridentity.FromUnstructured(u)
 	if id.ConnectorID() != naming.LocalConnectorID || id.UserID() == "" {
-		return nil
-	}
-	if _, found, err := r.getUser(ctx, id.UserID()); err != nil || found {
 		return nil
 	}
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: id.UserID()}}}

@@ -4,7 +4,7 @@
   logo: /images/logos/dex-icon-color.svg
   license: Apache License 2.0
   id: dex
-  version: 2.44.0
+  version: 2.46.0
 
 - name: OAuth2 Proxy
   link: https://github.com/oauth2-proxy/oauth2-proxy

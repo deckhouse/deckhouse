@@ -101,16 +101,17 @@ func TestReconcile_LockLocal(t *testing.T) {
 	}
 }
 
-func TestReconcile_LockLocalTerminatesSessions(t *testing.T) {
+func TestReconcile_LockLocalEndsSessionsKeepsSecondFactor(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	localSession := naming.OfflineTokenName("admin", naming.LocalConnectorID)
 	r := newTestReconciler(t, now,
 		passwordObj("admin", nil),
-		sessionObj("offsess-1", map[string]any{"userID": "admin", "connID": "abcde"}),
-		sessionObj("offsess-2", map[string]any{"userID": "admin", "connID": "abcde2"}),
-		refreshTokenObj("rt-1", "admin"),
-		refreshTokenObj("rt-2", "admin"),
+		sessionObj(localSession, map[string]any{"userID": "admin", "connID": naming.LocalConnectorID, "totp": totpSecret, "totpConfirmed": true}),
+		identityWithTOTP(t, "admin", naming.LocalConnectorID),
+		refreshTokenObj("rt-1", naming.LocalConnectorID, "admin"),
+		refreshTokenObj("rt-2", naming.LocalConnectorID, "admin"),
 		userOperationObj("user-operation-01", now, map[string]any{
 			"type":          "Lock",
 			"initiatorType": "Admin",
@@ -121,11 +122,23 @@ func TestReconcile_LockLocalTerminatesSessions(t *testing.T) {
 	if _, err := r.Reconcile(t.Context(), opRequest("user-operation-01")); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
-	assertDeleted(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, "offsess-1")
-	assertDeleted(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, "offsess-2")
 	assertDeleted(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-1")
 	assertDeleted(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-2")
+	assertSecondFactorKept(t, r, "admin", localSession)
 	assertPhase(t, r, "user-operation-01", "Succeeded", now)
+}
+
+// assertSecondFactorKept checks that the TOTP secret of the local user is still in both places.
+func assertSecondFactorKept(t *testing.T, r *Reconciler, username, session string) {
+	t.Helper()
+	sess := getUnstructured(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, session)
+	if totp, _, _ := unstructured.NestedString(sess.Object, "totp"); totp != totpSecret {
+		t.Errorf("OfflineSessions totp = %q, want the secret kept", totp)
+	}
+	totp, err := getIdentity(t, r, username, naming.LocalConnectorID).TOTP()
+	if err != nil || totp == nil || totp.Secret != totpSecret || !totp.Confirmed {
+		t.Errorf("UserIdentity totp = %+v (%v), want the confirmed secret kept", totp, err)
+	}
 }
 
 func TestReconcile_LockExternal(t *testing.T) {
@@ -243,9 +256,11 @@ func TestReconcile_ResetPassword(t *testing.T) {
 		"user":          "admin",
 		"resetPassword": map[string]any{"newPasswordHash": rawBcryptHash},
 	})
+	localSession := naming.OfflineTokenName("admin", naming.LocalConnectorID)
 	r := newTestReconcilerWithLog(t, now, logr.New(rec), pw, op,
-		sessionObj("offsess-1", map[string]any{"userID": "admin"}),
-		refreshTokenObj("rt-1", "admin"),
+		sessionObj(localSession, map[string]any{"userID": "admin", "connID": naming.LocalConnectorID, "totp": totpSecret, "totpConfirmed": true}),
+		identityWithTOTP(t, "admin", naming.LocalConnectorID),
+		refreshTokenObj("rt-1", naming.LocalConnectorID, "admin"),
 	)
 	if _, err := r.Reconcile(t.Context(), opRequest("user-operation-01")); err != nil {
 		t.Fatalf("Reconcile: %v", err)
@@ -260,8 +275,8 @@ func TestReconcile_ResetPassword(t *testing.T) {
 	if !requireReset {
 		t.Error("requireResetHashOnNextSuccLogin = false, want true")
 	}
-	assertDeleted(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, "offsess-1")
 	assertDeleted(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-1")
+	assertSecondFactorKept(t, r, "admin", localSession)
 	assertPhase(t, r, "user-operation-01", "Succeeded", now)
 
 	uo := getUnstructured(t, r, controller.UserOperationGVK, "", "user-operation-01")
@@ -279,9 +294,14 @@ func TestReconcile_Reset2FADeletesSessions(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	localSession := naming.OfflineTokenName("admin", naming.LocalConnectorID)
+	ldapSession := naming.OfflineTokenName("admin", "corp-ldap")
 	r := newTestReconciler(t, now,
-		sessionObj("offsess-1", map[string]any{"userID": "admin", "connID": "abcde"}),
-		sessionObj("offsess-2", map[string]any{"userID": "admin", "connID": "abcde2"}),
+		passwordObj("admin", nil),
+		sessionObj(localSession, map[string]any{"userID": "admin", "connID": naming.LocalConnectorID}),
+		sessionObj(ldapSession, map[string]any{"userID": "admin", "connID": "corp-ldap"}),
+		refreshTokenObj("rt-local", naming.LocalConnectorID, "admin"),
+		refreshTokenObj("rt-ldap", "corp-ldap", "admin"),
 		userOperationObj("user-operation-01", now, map[string]any{
 			"type":          "Reset2FA",
 			"initiatorType": "Admin",
@@ -291,9 +311,55 @@ func TestReconcile_Reset2FADeletesSessions(t *testing.T) {
 	if _, err := r.Reconcile(t.Context(), opRequest("user-operation-01")); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
-	assertDeleted(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, "offsess-1")
-	assertDeleted(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, "offsess-2")
+	assertDeleted(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, localSession)
+	assertDeleted(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-local")
+	// The LDAP user with the same name keeps their sessions and v2.44 data.
+	getUnstructured(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, ldapSession)
+	getUnstructured(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-ldap")
 	assertPhase(t, r, "user-operation-01", "Succeeded", now)
+}
+
+// A local user and a user of another provider can share a name, an ID, and a preferred username.
+// Lock and ResetPassword of the local user end only the local user's sessions.
+func TestReconcile_EndSessionsOfTheLocalUserOnly(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name string
+		spec map[string]any
+	}{
+		{
+			name: "lock",
+			spec: map[string]any{"type": "Lock", "initiatorType": "Admin", "user": "admin", "lock": map[string]any{"for": "1h"}},
+		},
+		{
+			name: "reset password",
+			spec: map[string]any{
+				"type": "ResetPassword", "initiatorType": "Admin", "user": "admin",
+				"resetPassword": map[string]any{"newPasswordHash": rawBcryptHash},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r := newTestReconciler(t, now,
+				passwordObj("admin", nil),
+				refreshTokenObj("rt-local", naming.LocalConnectorID, "admin"),
+				refreshTokenObj("rt-ldap", "corp-ldap", "admin"),
+				refreshTokenObj("rt-other-local", naming.LocalConnectorID, "jane"),
+				userOperationObj("user-operation-01", now, tt.spec),
+			)
+			if _, err := r.Reconcile(t.Context(), opRequest("user-operation-01")); err != nil {
+				t.Fatalf("Reconcile: %v", err)
+			}
+			assertDeleted(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-local")
+			getUnstructured(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-ldap")
+			getUnstructured(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-other-local")
+			assertPhase(t, r, "user-operation-01", "Succeeded", now)
+		})
+	}
 }
 
 func TestReconcile_Reset2FAMatchesRefreshTokenClaims(t *testing.T) {
@@ -307,8 +373,15 @@ func TestReconcile_Reset2FAMatchesRefreshTokenClaims(t *testing.T) {
 				"console": map[string]any{"ID": "rt-1"},
 			},
 		}),
-		refreshTokenObj("rt-1", "admin"),
-		refreshTokenObj("rt-2", "admin"),
+		sessionObj("offsess-no-userid-ldap", map[string]any{
+			"connID": "corp-ldap",
+			"refresh": map[string]any{
+				"console": map[string]any{"ID": "rt-ldap"},
+			},
+		}),
+		refreshTokenObj("rt-1", naming.LocalConnectorID, "admin"),
+		refreshTokenObj("rt-2", naming.LocalConnectorID, "admin"),
+		refreshTokenObj("rt-ldap", "corp-ldap", "admin"),
 		userOperationObj("user-operation-01", now, map[string]any{
 			"type":          "Reset2FA",
 			"initiatorType": "Admin",
@@ -321,6 +394,8 @@ func TestReconcile_Reset2FAMatchesRefreshTokenClaims(t *testing.T) {
 	assertDeleted(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, "offsess-no-userid")
 	assertDeleted(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-1")
 	assertDeleted(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-2")
+	getUnstructured(t, r, controller.OfflineSessionsGVK, naming.DexNamespace, "offsess-no-userid-ldap")
+	getUnstructured(t, r, controller.RefreshTokenGVK, naming.DexNamespace, "rt-ldap")
 	assertPhase(t, r, "user-operation-01", "Succeeded", now)
 }
 
@@ -424,7 +499,7 @@ func TestReconcile_FailCases(t *testing.T) {
 			name: "reset2FA external target",
 			objs: []client.Object{
 				sessionObj("offsess-1", map[string]any{"userID": "admin"}),
-				refreshTokenObj("rt-1", "admin"),
+				refreshTokenObj("rt-1", naming.LocalConnectorID, "admin"),
 				userOperationObj("user-operation-01", now, map[string]any{
 					"type":          "Reset2FA",
 					"initiatorType": "Admin",
@@ -574,7 +649,9 @@ func sessionObj(name string, fields map[string]any) *unstructured.Unstructured {
 	return &unstructured.Unstructured{Object: obj}
 }
 
-func refreshTokenObj(name, username string) *unstructured.Unstructured {
+// refreshTokenObj is a refresh token Dex issued through connID to the user userID, whose
+// username and preferred username are userID too.
+func refreshTokenObj(name, connID, userID string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": controller.RefreshTokenGVK.GroupVersion().String(),
 		"kind":       controller.RefreshTokenGVK.Kind,
@@ -582,10 +659,12 @@ func refreshTokenObj(name, username string) *unstructured.Unstructured {
 			"name":      name,
 			"namespace": naming.DexNamespace,
 		},
+		"connectorID": connID,
 		"claims": map[string]any{
-			"email":    username + "@yourcompany.com",
-			"username": username,
-			"userID":   "",
+			"email":             userID + "@yourcompany.com",
+			"username":          userID,
+			"preferredUsername": userID,
+			"userID":            userID,
 		},
 	}}
 }

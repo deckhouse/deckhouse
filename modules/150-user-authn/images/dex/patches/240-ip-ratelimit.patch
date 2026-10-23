@@ -1,0 +1,1251 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+index 947db022..ae3a1106 100644
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
+@@ -18,6 +18,7 @@ import (
+ 	"github.com/dexidp/dex/pkg/featureflags"
+ 	"github.com/dexidp/dex/server"
+ 	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/ratelimit"
+ 	"github.com/dexidp/dex/server/signer"
+ 	"github.com/dexidp/dex/storage"
+ 	"github.com/dexidp/dex/storage/ent"
+@@ -78,6 +79,10 @@ type Config struct {
+ 
+ 	// PasswordPolicy is the password policy of local users (passwordpolicy.go).
+ 	PasswordPolicy *PasswordPolicy `json:"passwordPolicy"`
++
++	// RateLimit limits failed attempts per client address on the login form, the
++	// token endpoint and the second factor.
++	RateLimit *RateLimit `json:"rateLimit"`
+ }
+ 
+ // MFAConfig holds multi-factor authentication settings.
+@@ -328,6 +333,38 @@ func (cr *ClientRemoteIP) ParseTrustedProxies() ([]netip.Prefix, error) {
+ 	return trusted, nil
+ }
+ 
++// RateLimit is the limit of failed attempts per client address: a token bucket
++// per address, taken from by every request to a limited route and given back by
++// every response that is not an error. The client address is the one
++// web.clientRemoteIP resolves.
++type RateLimit struct {
++	// Enabled turns the limit on.
++	Enabled bool `json:"enabled"`
++	// PerIP is the bucket of one client address.
++	PerIP RateLimitPerIP `json:"perIP"`
++}
++
++// RateLimitPerIP is the token bucket of one client address. A value that is not
++// positive takes its default, 10.
++type RateLimitPerIP struct {
++	// RequestsPerMinute is the sustained rate of failed attempts.
++	RequestsPerMinute int `json:"requestsPerMinute"`
++	// Burst is how many failed attempts may be made at once.
++	Burst int `json:"burst"`
++}
++
++// config returns the server's rate limit, nil when the limit is off.
++func (rl *RateLimit) config() *ratelimit.Config {
++	if rl == nil || !rl.Enabled {
++		return nil
++	}
++	c := ratelimit.Config{
++		RequestsPerMinute: rl.PerIP.RequestsPerMinute,
++		Burst:             rl.PerIP.Burst,
++	}.WithDefaults()
++	return &c
++}
++
+ type Headers struct {
+ 	// Set the Content-Security-Policy header to HTTP responses.
+ 	// Unset if blank.
+diff --git a/cmd/dex/config_ratelimit_test.go b/cmd/dex/config_ratelimit_test.go
+new file mode 100644
+index 00000000..429fdd2a
+--- /dev/null
++++ b/cmd/dex/config_ratelimit_test.go
+@@ -0,0 +1,65 @@
++package main
++
++import (
++	"testing"
++
++	"github.com/ghodss/yaml"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/ratelimit"
++)
++
++func TestRateLimitConfig(t *testing.T) {
++	// Unknown keys are refused, so a key the struct does not know fails the test.
++	t.Setenv("DEX_CONFIG_DISALLOW_UNKNOWN_FIELDS", "true")
++
++	tests := []struct {
++		name     string
++		raw      string
++		expected *ratelimit.Config
++	}{
++		{
++			name: "as Deckhouse renders it",
++			raw: `
++rateLimit:
++  enabled: true
++  perIP:
++    requestsPerMinute: 20
++    burst: 5
++`,
++			expected: &ratelimit.Config{RequestsPerMinute: 20, Burst: 5},
++		},
++		{
++			name: "defaults",
++			raw: `
++rateLimit:
++  enabled: true
++`,
++			expected: &ratelimit.Config{RequestsPerMinute: 10, Burst: 10},
++		},
++		{
++			name: "disabled",
++			raw: `
++rateLimit:
++  enabled: false
++  perIP:
++    requestsPerMinute: 20
++`,
++		},
++		{
++			name: "absent",
++			raw:  `issuer: https://dex.example.com`,
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			data, err := yaml.YAMLToJSON([]byte(tc.raw))
++			require.NoError(t, err)
++
++			var c Config
++			require.NoError(t, configUnmarshaller(data, &c))
++			assert.Equal(t, tc.expected, c.RateLimit.config())
++		})
++	}
++}
+diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
+index a05a7ea4..7c9edf6d 100644
+--- a/cmd/dex/serve.go
++++ b/cmd/dex/serve.go
+@@ -457,6 +457,12 @@ func runServe(options serveOptions) error {
+ 			"header", serverConfig.RealIPHeader)
+ 	}
+ 
++	serverConfig.RateLimit = c.RateLimit.config()
++	if rl := serverConfig.RateLimit; rl != nil {
++		logger.Info("config rate limit of failed attempts per client address",
++			"requests_per_minute", rl.RequestsPerMinute, "burst", rl.Burst)
++	}
++
+ 	serv, err := server.NewServer(context.Background(), serverConfig)
+ 	if err != nil {
+ 		return fmt.Errorf("failed to initialize server: %v", err)
+diff --git a/server/config.go b/server/config.go
+index 677092f5..9a9af17f 100644
+--- a/server/config.go
++++ b/server/config.go
+@@ -20,6 +20,7 @@ import (
+ 	"github.com/dexidp/dex/server/mfa"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/passwordpolicy"
++	"github.com/dexidp/dex/server/ratelimit"
+ 	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/signer"
+ 	"github.com/dexidp/dex/server/templates"
+@@ -50,6 +51,10 @@ type Config struct {
+ 	RealIPHeader       string
+ 	TrustedRealIPCIDRs []netip.Prefix
+ 
++	// RateLimit limits failed attempts per client address on the routes where a
++	// client proves a secret (rateLimitedRoutes). Nil disables the limit.
++	RateLimit *ratelimit.Config
++
+ 	// List of allowed origins for CORS requests on discovery, token and keys endpoint.
+ 	// If none are indicated, CORS requests are disabled. Passing in "*" will allow any
+ 	// domain.
+diff --git a/server/grants/grants.go b/server/grants/grants.go
+index 19f84fa7..aef60db4 100644
+--- a/server/grants/grants.go
++++ b/server/grants/grants.go
+@@ -16,6 +16,7 @@ import (
+ 	"github.com/dexidp/dex/server/internal"
+ 	"github.com/dexidp/dex/server/lockout"
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/ratelimit"
+ 	"github.com/dexidp/dex/server/router"
+ 	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/tokens"
+@@ -239,6 +240,13 @@ func (h *Handler) dispatch(w http.ResponseWriter, r *http.Request, grantType str
+ 			return true
+ 		}
+ 	}
++	// The rate limit of the client address (when configured) counts failed
++	// credentials: the client secret above and the password of the password
++	// grant. A refresh token, a code or a device code cannot be guessed, and
++	// dex-authenticator refreshes the tokens of all its users from one address.
++	if grantType != oauth2.GrantTypePassword {
++		ratelimit.Exempt(ctx)
++	}
+ 
+ 	// 2. Validate the requested scopes.
+ 	if oerr := h.validateScopes(ctx, client, req, grant.ScopePolicy()); oerr != nil {
+diff --git a/server/ratelimit/ratelimit.go b/server/ratelimit/ratelimit.go
+new file mode 100644
+index 00000000..7bb04066
+--- /dev/null
++++ b/server/ratelimit/ratelimit.go
+@@ -0,0 +1,311 @@
++// Package ratelimit limits failed attempts per client address on the routes
++// where a client proves a secret: the login form of password connectors, the
++// token endpoint and the steps of the second factor.
++//
++// Only failures are counted. A request takes a token from the bucket of its
++// client address before it reaches the handler and gets it back unless the
++// response is an error (status 400 and above), so successful logins, token
++// refreshes and the pages of a login flow do not use up the budget. A handler
++// that finds a request proves no secret a client could guess, such as a refresh
++// token, gives the token back whatever the answer (Exempt). A client address
++// with an empty bucket gets 429 with Retry-After and does not reach the handler.
++//
++// The client address is the one the router resolved for the request (the
++// configured client IP header, see router.ParseRealIP), otherwise the peer
++// address. Buckets live in the memory of one dex replica, so with N replicas a
++// client address gets N times the configured rate: this is a backstop that the
++// account lockout complements, a stricter limit belongs in front of dex.
++package ratelimit
++
++import (
++	"context"
++	"log/slog"
++	"math"
++	"net"
++	"net/http"
++	"strconv"
++	"strings"
++	"sync"
++	"sync/atomic"
++	"time"
++
++	"github.com/dexidp/dex/server/reqctx"
++	"github.com/dexidp/dex/server/router"
++)
++
++// Defaults for a Config field that is not positive.
++const (
++	DefaultRequestsPerMinute = 10
++	DefaultBurst             = 10
++)
++
++// sweepInterval is how often buckets that have filled up again are dropped.
++const sweepInterval = time.Minute
++
++// Config configures a Limiter.
++type Config struct {
++	// RequestsPerMinute is the sustained rate of failed attempts allowed per
++	// client address.
++	RequestsPerMinute int
++	// Burst is how many failed attempts a client address may make at once.
++	Burst int
++}
++
++// WithDefaults returns c with every field that is not positive set to its default.
++func (c Config) WithDefaults() Config {
++	if c.RequestsPerMinute <= 0 {
++		c.RequestsPerMinute = DefaultRequestsPerMinute
++	}
++	if c.Burst <= 0 {
++		c.Burst = DefaultBurst
++	}
++	return c
++}
++
++// Limiter is a token bucket per client address. A full bucket is the same as no
++// bucket, so a bucket is dropped once it has filled up again: the memory held is
++// bounded by the addresses that failed recently, not by every address seen.
++type Limiter struct {
++	perSecond float64
++	burst     float64
++	now       func() time.Time
++	logger    *slog.Logger
++
++	mu        sync.Mutex
++	buckets   map[string]*bucket
++	lastSweep time.Time
++}
++
++// bucket is the state of one client address, guarded by Limiter.mu.
++type bucket struct {
++	tokens  float64
++	updated time.Time
++	// isLimited is set by the first refused request and cleared by the next one
++	// let through, so a client address that keeps hammering is logged once.
++	isLimited bool
++}
++
++// New returns a limiter for c (non-positive fields take their defaults). now is
++// the clock, time.Now when nil.
++func New(c Config, now func() time.Time, logger *slog.Logger) *Limiter {
++	c = c.WithDefaults()
++	if now == nil {
++		now = time.Now
++	}
++	if logger == nil {
++		logger = slog.New(slog.DiscardHandler)
++	}
++	return &Limiter{
++		perSecond: float64(c.RequestsPerMinute) / 60,
++		burst:     float64(c.Burst),
++		now:       now,
++		logger:    logger,
++		buckets:   make(map[string]*bucket),
++		lastSweep: now(),
++	}
++}
++
++// Wrap limits h per client address: a request is refused with 429 while the
++// bucket of its client address is empty, and a response below 400, or any
++// response to a request h exempted, gives the token it took back.
++func (l *Limiter) Wrap(h http.Handler) http.Handler {
++	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		addr := ClientAddress(r)
++
++		wait, ok, isFirstRefusal := l.take(addr)
++		if !ok {
++			if isFirstRefusal {
++				l.logRefusal(r, addr)
++			}
++			w.Header().Set("Retry-After", strconv.Itoa(retryAfterSeconds(wait)))
++			http.Error(w, "Too many requests", http.StatusTooManyRequests)
++			return
++		}
++
++		exempt := new(atomic.Bool)
++		r = r.WithContext(context.WithValue(r.Context(), exemptKey{}, exempt))
++		rec := &statusRecorder{ResponseWriter: w}
++		h.ServeHTTP(rec, r)
++		if rec.status < http.StatusBadRequest || exempt.Load() {
++			l.giveBack(addr)
++		}
++	})
++}
++
++// exemptKey is the context key of the flag Exempt sets.
++type exemptKey struct{}
++
++// Exempt keeps a failure of the request of ctx out of the count of its client
++// address. A handler calls it once it knows the request proves no secret a
++// client could guess: a refresh token, an authorization code or a device code
++// fails for a client that holds no valid one, not for one that guesses. The
++// request was still refused up front if its client address had used up its
++// failures. Outside a limited route, Exempt does nothing.
++func Exempt(ctx context.Context) {
++	if exempt, ok := ctx.Value(exemptKey{}).(*atomic.Bool); ok {
++		exempt.Store(true)
++	}
++}
++
++// Mux returns m with the routes matching patterns limited by l. A pattern that
++// ends in "/" matches every route below it, as in net/http; any other pattern
++// matches only the route of that name. Routes are named as handlers mount them,
++// relative to the issuer path.
++func (l *Limiter) Mux(m router.Mux, patterns ...string) router.Mux {
++	return limitedMux{Mux: m, limiter: l, patterns: patterns}
++}
++
++// take takes a token from the bucket of addr. When the bucket is empty it
++// reports how long until a token is available, and whether this is the first
++// refusal since the client address was last let through.
++func (l *Limiter) take(addr string) (wait time.Duration, ok, isFirstRefusal bool) {
++	l.mu.Lock()
++	defer l.mu.Unlock()
++
++	now := l.now()
++	if now.Sub(l.lastSweep) >= sweepInterval {
++		l.sweepLocked(now)
++	}
++
++	b, found := l.buckets[addr]
++	if !found {
++		b = &bucket{tokens: l.burst, updated: now}
++		l.buckets[addr] = b
++	}
++	l.refillLocked(b, now)
++
++	if b.tokens >= 1 {
++		b.tokens--
++		b.isLimited = false
++		return 0, true, false
++	}
++
++	isFirstRefusal = !b.isLimited
++	b.isLimited = true
++	return time.Duration((1 - b.tokens) / l.perSecond * float64(time.Second)), false, isFirstRefusal
++}
++
++// logRefusal logs that a client address ran out of attempts. It is called for
++// the first refusal only: a client that keeps trying while limited would write a
++// line per request. The request context carries the client address when the
++// router resolved one; otherwise the peer address is added here.
++func (l *Limiter) logRefusal(r *http.Request, addr string) {
++	attrs := []any{"path", r.URL.Path}
++	if _, ok := r.Context().Value(reqctx.RequestKeyRemoteIP).(string); !ok {
++		attrs = append(attrs, string(reqctx.RequestKeyRemoteIP), addr)
++	}
++	l.logger.WarnContext(r.Context(), "client address rate limited", attrs...)
++}
++
++// giveBack returns the token a request took. A bucket dropped in the meantime
++// was full, so there is nothing to return it to.
++func (l *Limiter) giveBack(addr string) {
++	l.mu.Lock()
++	defer l.mu.Unlock()
++
++	b, ok := l.buckets[addr]
++	if !ok {
++		return
++	}
++	l.refillLocked(b, l.now())
++	b.tokens = min(b.tokens+1, l.burst)
++	if b.tokens >= l.burst {
++		delete(l.buckets, addr)
++	}
++}
++
++// refillLocked adds the tokens earned since the bucket was last updated. A clock
++// that went backwards earns nothing.
++func (l *Limiter) refillLocked(b *bucket, now time.Time) {
++	elapsed := now.Sub(b.updated)
++	if elapsed <= 0 {
++		return
++	}
++	b.tokens = min(b.tokens+elapsed.Seconds()*l.perSecond, l.burst)
++	b.updated = now
++}
++
++// sweepLocked drops the buckets that have filled up again.
++func (l *Limiter) sweepLocked(now time.Time) {
++	for addr, b := range l.buckets {
++		l.refillLocked(b, now)
++		if b.tokens >= l.burst {
++			delete(l.buckets, addr)
++		}
++	}
++	l.lastSweep = now
++}
++
++// retryAfterSeconds is the Retry-After value for a wait, at least one second.
++func retryAfterSeconds(wait time.Duration) int {
++	return max(1, int(math.Ceil(wait.Seconds())))
++}
++
++// ClientAddress is the address a request is counted against: the client address
++// the router resolved for it, otherwise the host of the peer address.
++func ClientAddress(r *http.Request) string {
++	if addr, ok := r.Context().Value(reqctx.RequestKeyRemoteIP).(string); ok && addr != "" {
++		return addr
++	}
++	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
++		return host
++	}
++	return r.RemoteAddr
++}
++
++// statusRecorder remembers the status of the response written through it.
++type statusRecorder struct {
++	http.ResponseWriter
++	status int
++}
++
++func (s *statusRecorder) WriteHeader(code int) {
++	// Informational responses precede the final status, which is the one that
++	// tells a failure from a success.
++	if s.status == 0 && code >= http.StatusOK {
++		s.status = code
++	}
++	s.ResponseWriter.WriteHeader(code)
++}
++
++func (s *statusRecorder) Write(b []byte) (int, error) {
++	if s.status == 0 {
++		s.status = http.StatusOK
++	}
++	return s.ResponseWriter.Write(b)
++}
++
++// Unwrap lets http.ResponseController reach the underlying writer.
++func (s *statusRecorder) Unwrap() http.ResponseWriter {
++	return s.ResponseWriter
++}
++
++// limitedMux is a router.Mux that limits the routes matching its patterns.
++// Prefix routes (static assets) are never limited.
++type limitedMux struct {
++	router.Mux
++	limiter  *Limiter
++	patterns []string
++}
++
++func (m limitedMux) Handle(pattern string, h http.Handler) {
++	m.Mux.Handle(pattern, m.wrap(pattern, h))
++}
++
++func (m limitedMux) HandleFunc(pattern string, h http.HandlerFunc) {
++	m.Mux.HandleFunc(pattern, m.wrap(pattern, h).ServeHTTP)
++}
++
++func (m limitedMux) HandleCORS(pattern string, h http.HandlerFunc) {
++	m.Mux.HandleCORS(pattern, m.wrap(pattern, h).ServeHTTP)
++}
++
++func (m limitedMux) wrap(pattern string, h http.Handler) http.Handler {
++	for _, p := range m.patterns {
++		matchesSubtree := strings.HasSuffix(p, "/") && strings.HasPrefix(pattern, p)
++		if pattern == p || matchesSubtree {
++			return m.limiter.Wrap(h)
++		}
++	}
++	return h
++}
+diff --git a/server/ratelimit/ratelimit_test.go b/server/ratelimit/ratelimit_test.go
+new file mode 100644
+index 00000000..d9d4ae30
+--- /dev/null
++++ b/server/ratelimit/ratelimit_test.go
+@@ -0,0 +1,363 @@
++package ratelimit
++
++import (
++	"bytes"
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"strconv"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/reqctx"
++	"github.com/dexidp/dex/server/router"
++)
++
++// testClock is a clock the tests advance by hand.
++type testClock struct {
++	mu  sync.Mutex
++	now time.Time
++}
++
++func (c *testClock) Now() time.Time {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	return c.now
++}
++
++func (c *testClock) advance(d time.Duration) {
++	c.mu.Lock()
++	defer c.mu.Unlock()
++	c.now = c.now.Add(d)
++}
++
++func newTestClock() *testClock {
++	return &testClock{now: time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)}
++}
++
++// statusHandler answers every request with status and counts the requests that
++// reached it.
++type statusHandler struct {
++	mu     sync.Mutex
++	status int
++	calls  int
++}
++
++func (h *statusHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
++	h.mu.Lock()
++	h.calls++
++	status := h.status
++	h.mu.Unlock()
++	w.WriteHeader(status)
++}
++
++func (h *statusHandler) set(status int) {
++	h.mu.Lock()
++	defer h.mu.Unlock()
++	h.status = status
++}
++
++// requestFrom is a request whose client address the router resolved to addr.
++func requestFrom(addr string) *http.Request {
++	r := httptest.NewRequest(http.MethodPost, "/token", nil)
++	return r.WithContext(reqctx.WithRemoteIP(r.Context(), addr))
++}
++
++func serve(h http.Handler, r *http.Request) *httptest.ResponseRecorder {
++	rr := httptest.NewRecorder()
++	h.ServeHTTP(rr, r)
++	return rr
++}
++
++func TestConfigWithDefaults(t *testing.T) {
++	tests := []struct {
++		name     string
++		in       Config
++		expected Config
++	}{
++		{name: "zero", in: Config{}, expected: Config{RequestsPerMinute: 10, Burst: 10}},
++		{name: "negative", in: Config{RequestsPerMinute: -1, Burst: -5}, expected: Config{RequestsPerMinute: 10, Burst: 10}},
++		{name: "set", in: Config{RequestsPerMinute: 30, Burst: 5}, expected: Config{RequestsPerMinute: 30, Burst: 5}},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			assert.Equal(t, tc.expected, tc.in.WithDefaults())
++		})
++	}
++}
++
++func TestLimiterWrapLimitsFailures(t *testing.T) {
++	clock := newTestClock()
++	l := New(Config{RequestsPerMinute: 60, Burst: 3}, clock.Now, nil)
++	next := &statusHandler{status: http.StatusUnauthorized}
++	h := l.Wrap(next)
++
++	for i := range 3 {
++		rr := serve(h, requestFrom("192.0.2.1"))
++		require.Equal(t, http.StatusUnauthorized, rr.Code, "failure %d is within the burst", i+1)
++	}
++
++	rr := serve(h, requestFrom("192.0.2.1"))
++	require.Equal(t, http.StatusTooManyRequests, rr.Code)
++	assert.Equal(t, "1", rr.Header().Get("Retry-After"), "one token a second")
++	assert.Equal(t, 3, next.calls, "a limited request does not reach the handler")
++
++	clock.advance(time.Second)
++	rr = serve(h, requestFrom("192.0.2.1"))
++	assert.Equal(t, http.StatusUnauthorized, rr.Code, "a token earned since lets one more attempt through")
++	rr = serve(h, requestFrom("192.0.2.1"))
++	assert.Equal(t, http.StatusTooManyRequests, rr.Code)
++}
++
++func TestLimiterWrapRetryAfterRoundsUp(t *testing.T) {
++	clock := newTestClock()
++	// Ten a minute: one token every six seconds.
++	l := New(Config{RequestsPerMinute: 10, Burst: 1}, clock.Now, nil)
++	h := l.Wrap(&statusHandler{status: http.StatusUnauthorized})
++
++	serve(h, requestFrom("192.0.2.1"))
++	clock.advance(500 * time.Millisecond)
++
++	rr := serve(h, requestFrom("192.0.2.1"))
++	require.Equal(t, http.StatusTooManyRequests, rr.Code)
++	assert.Equal(t, "6", rr.Header().Get("Retry-After"), "5.5 seconds left, rounded up")
++}
++
++func TestLimiterWrapGivesBackSuccesses(t *testing.T) {
++	clock := newTestClock()
++	l := New(Config{RequestsPerMinute: 1, Burst: 2}, clock.Now, nil)
++	next := &statusHandler{}
++	h := l.Wrap(next)
++
++	for _, status := range []int{http.StatusOK, http.StatusFound, http.StatusSeeOther, http.StatusNotModified} {
++		next.set(status)
++		for range 5 {
++			rr := serve(h, requestFrom("192.0.2.1"))
++			require.Equal(t, status, rr.Code, "a response below 400 never runs into the limit")
++		}
++	}
++
++	next.set(http.StatusBadRequest)
++	serve(h, requestFrom("192.0.2.1"))
++	next.set(http.StatusInternalServerError)
++	serve(h, requestFrom("192.0.2.1"))
++
++	rr := serve(h, requestFrom("192.0.2.1"))
++	assert.Equal(t, http.StatusTooManyRequests, rr.Code, "4xx and 5xx both count as failures")
++}
++
++func TestLimiterWrapStatusWithoutWriteHeader(t *testing.T) {
++	clock := newTestClock()
++	l := New(Config{RequestsPerMinute: 1, Burst: 1}, clock.Now, nil)
++
++	tests := []struct {
++		name    string
++		handler http.HandlerFunc
++	}{
++		{name: "body only", handler: func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok")) }},
++		{name: "nothing written", handler: func(http.ResponseWriter, *http.Request) {}},
++		{name: "early hints first", handler: func(w http.ResponseWriter, _ *http.Request) {
++			w.WriteHeader(http.StatusEarlyHints)
++			w.WriteHeader(http.StatusOK)
++		}},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			h := l.Wrap(tc.handler)
++			for range 3 {
++				rr := serve(h, requestFrom("192.0.2.1"))
++				require.NotEqual(t, http.StatusTooManyRequests, rr.Code, "an implicit 200 is a success")
++			}
++		})
++	}
++}
++
++func TestLimiterWrapCountsClientAddressesSeparately(t *testing.T) {
++	clock := newTestClock()
++	l := New(Config{RequestsPerMinute: 1, Burst: 2}, clock.Now, nil)
++	h := l.Wrap(&statusHandler{status: http.StatusUnauthorized})
++
++	for range 3 {
++		serve(h, requestFrom("192.0.2.1"))
++	}
++	require.Equal(t, http.StatusTooManyRequests, serve(h, requestFrom("192.0.2.1")).Code)
++
++	rr := serve(h, requestFrom("192.0.2.2"))
++	assert.Equal(t, http.StatusUnauthorized, rr.Code, "another client address has a bucket of its own")
++}
++
++func TestExempt(t *testing.T) {
++	clock := newTestClock()
++	l := New(Config{RequestsPerMinute: 1, Burst: 2}, clock.Now, nil)
++	exempt := true
++	h := l.Wrap(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		if exempt {
++			Exempt(r.Context())
++		}
++		w.WriteHeader(http.StatusBadRequest)
++	}))
++
++	for range 5 {
++		require.Equal(t, http.StatusBadRequest, serve(h, requestFrom("192.0.2.1")).Code, "an exempted failure does not count")
++	}
++
++	exempt = false
++	for range 2 {
++		require.Equal(t, http.StatusBadRequest, serve(h, requestFrom("192.0.2.1")).Code, "a failure within the burst")
++	}
++	exempt = true
++	assert.Equal(t, http.StatusTooManyRequests, serve(h, requestFrom("192.0.2.1")).Code,
++		"an exempted request is still refused once the failures that count are used up")
++
++	assert.NotPanics(t, func() { Exempt(t.Context()) }, "outside a limited route nothing happens")
++}
++
++func TestClientAddress(t *testing.T) {
++	tests := []struct {
++		name       string
++		remoteAddr string
++		resolved   string
++		expected   string
++	}{
++		{name: "resolved by the router", remoteAddr: "10.0.0.1:443", resolved: "192.0.2.7", expected: "192.0.2.7"},
++		{name: "peer ipv4", remoteAddr: "10.0.0.1:443", expected: "10.0.0.1"},
++		{name: "peer ipv6", remoteAddr: "[2001:db8::1]:443", expected: "2001:db8::1"},
++		{name: "peer without port", remoteAddr: "10.0.0.1", expected: "10.0.0.1"},
++		{name: "empty resolved address", remoteAddr: "10.0.0.1:443", resolved: "", expected: "10.0.0.1"},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			r := httptest.NewRequest(http.MethodPost, "/token", nil)
++			r.RemoteAddr = tc.remoteAddr
++			if tc.resolved != "" {
++				r = r.WithContext(reqctx.WithRemoteIP(r.Context(), tc.resolved))
++			}
++			assert.Equal(t, tc.expected, ClientAddress(r))
++		})
++	}
++}
++
++func TestLimiterKeepsOnlyBucketsOfRecentFailures(t *testing.T) {
++	clock := newTestClock()
++	l := New(Config{RequestsPerMinute: 60, Burst: 2}, clock.Now, nil)
++	next := &statusHandler{status: http.StatusOK}
++	h := l.Wrap(next)
++
++	for i := range 100 {
++		serve(h, requestFrom("198.51.100."+strconv.Itoa(i)))
++	}
++	assert.Empty(t, l.buckets, "successes leave no bucket behind")
++
++	next.set(http.StatusUnauthorized)
++	serve(h, requestFrom("192.0.2.1"))
++	serve(h, requestFrom("192.0.2.2"))
++	assert.Len(t, l.buckets, 2, "a failure keeps the bucket until it fills up again")
++
++	clock.advance(sweepInterval)
++	next.set(http.StatusOK)
++	serve(h, requestFrom("192.0.2.3"))
++	assert.Empty(t, l.buckets, "the sweep drops buckets that filled up again")
++}
++
++func TestLimiterLogsFirstRefusalOnly(t *testing.T) {
++	clock := newTestClock()
++	var logs bytes.Buffer
++	logger := slog.New(slog.NewTextHandler(&logs, nil))
++	l := New(Config{RequestsPerMinute: 60, Burst: 1}, clock.Now, logger)
++	h := l.Wrap(&statusHandler{status: http.StatusUnauthorized})
++
++	for range 5 {
++		serve(h, requestFrom("192.0.2.1"))
++	}
++	assert.Equal(t, 1, strings.Count(logs.String(), "client address rate limited"), "one line however many refusals")
++
++	clock.advance(time.Second)
++	serve(h, requestFrom("192.0.2.1")) // let through, fails again
++	serve(h, requestFrom("192.0.2.1")) // refused again
++	assert.Equal(t, 2, strings.Count(logs.String(), "client address rate limited"), "a new episode is logged again")
++
++	r := httptest.NewRequest(http.MethodPost, "/auth/local/login", nil)
++	r.RemoteAddr = "203.0.113.9:1234"
++	serve(h, r)
++	serve(h, r)
++	assert.Contains(t, logs.String(), "client_remote_addr=203.0.113.9", "the peer address is named when the router resolved none")
++}
++
++func TestLimiterConcurrentFailures(t *testing.T) {
++	clock := newTestClock()
++	const burst = 20
++	l := New(Config{RequestsPerMinute: 1, Burst: burst}, clock.Now, nil)
++	next := &statusHandler{status: http.StatusUnauthorized}
++	h := l.Wrap(next)
++
++	var wg sync.WaitGroup
++	for range 100 {
++		wg.Go(func() {
++			serve(h, requestFrom("192.0.2.1"))
++		})
++	}
++	wg.Wait()
++
++	assert.Equal(t, burst, next.calls, "exactly the burst reaches the handler")
++}
++
++// recordingMux remembers the handler mounted for each pattern.
++type recordingMux struct {
++	handlers map[string]http.Handler
++}
++
++func (m *recordingMux) Handle(p string, h http.Handler)         { m.handlers[p] = h }
++func (m *recordingMux) HandleFunc(p string, h http.HandlerFunc) { m.handlers[p] = h }
++func (m *recordingMux) HandleCORS(p string, h http.HandlerFunc) { m.handlers[p] = h }
++func (m *recordingMux) HandlePrefix(p string, h http.Handler)   { m.handlers[p] = h }
++
++func TestLimiterMux(t *testing.T) {
++	clock := newTestClock()
++	l := New(Config{RequestsPerMinute: 1, Burst: 1}, clock.Now, nil)
++	rec := &recordingMux{handlers: map[string]http.Handler{}}
++	var m router.Mux = l.Mux(rec, "/token", "/auth/{connector}/login", "/mfa", "/mfa/")
++
++	failing := &statusHandler{status: http.StatusUnauthorized}
++	m.HandleCORS("/token", failing.ServeHTTP)
++	m.HandleCORS("/token/introspect", failing.ServeHTTP)
++	m.HandleFunc("/auth/{connector}/login", failing.ServeHTTP)
++	m.HandleFunc("/auth/{connector}", failing.ServeHTTP)
++	m.HandleFunc("/mfa", failing.ServeHTTP)
++	m.HandleFunc("/mfa/totp", failing.ServeHTTP)
++	m.Handle("/mfa/webauthn/login/finish", failing)
++	m.HandleFunc("/mfactor", failing.ServeHTTP)
++	m.HandlePrefix("/mfa/static", failing)
++
++	limited := map[string]bool{
++		"/token":                     true,
++		"/token/introspect":          false,
++		"/auth/{connector}/login":    true,
++		"/auth/{connector}":          false,
++		"/mfa":                       true,
++		"/mfa/totp":                  true,
++		"/mfa/webauthn/login/finish": true,
++		"/mfactor":                   false,
++		"/mfa/static":                false,
++	}
++	for pattern, isLimited := range limited {
++		t.Run(pattern, func(t *testing.T) {
++			h, ok := rec.handlers[pattern]
++			require.True(t, ok, "the route is mounted")
++
++			// A client address of its own per route, so the routes do not share a bucket.
++			r := requestFrom(pattern)
++			serve(h, r)
++			rr := serve(h, r)
++			if isLimited {
++				assert.Equal(t, http.StatusTooManyRequests, rr.Code)
++			} else {
++				assert.Equal(t, http.StatusUnauthorized, rr.Code)
++			}
++		})
++	}
++}
+diff --git a/server/server.go b/server/server.go
+index eb55db2a..adb8adcb 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -27,6 +27,7 @@ import (
+ 	"github.com/dexidp/dex/server/logout"
+ 	"github.com/dexidp/dex/server/mfa"
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/ratelimit"
+ 	"github.com/dexidp/dex/server/router"
+ 	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/templates"
+@@ -136,7 +137,7 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+ 
+ 	r := mux.NewRouter().SkipClean(true).UseEncodedPath()
+ 	r.NotFoundHandler = http.NotFoundHandler()
+-	s.mount(router.New(router.Config{
++	routes := router.New(router.Config{
+ 		Router:       r,
+ 		IssuerPath:   s.issuerURL.Path,
+ 		Headers:      c.Headers,
+@@ -145,7 +146,11 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+ 		RealIP:       router.ParseRealIP(c.RealIPHeader, c.TrustedRealIPCIDRs),
+ 		CORSOrigins:  c.AllowedOrigins,
+ 		CORSHeaders:  c.AllowedHeaders,
+-	}), c, rc)
++	})
++	if c.RateLimit != nil {
++		routes = ratelimit.New(*c.RateLimit, rc.now, s.logger).Mux(routes, rateLimitedRoutes...)
++	}
++	s.mount(routes, c, rc)
+ 	s.mux = r
+ 
+ 	c.Signer.Start(ctx)
+@@ -223,6 +228,17 @@ func instrumentHandler(registry *prometheus.Registry) func(string, http.Handler)
+ 	}
+ }
+ 
++// rateLimitedRoutes are the routes where a client proves a secret. With
++// Config.RateLimit their failed attempts are limited per client address. A
++// pattern ending in "/" covers every route below it.
++var rateLimitedRoutes = []string{
++	"/token",                    // client authentication, password grant (see grants.Handler.dispatch)
++	"/auth/{connector}/login",   // login form of password connectors
++	authflow.PasswordChangePath, // password change of a login (220)
++	"/mfa",                      // second factor: entry,
++	"/mfa/",                     // TOTP and WebAuthn steps
++}
++
+ // mount wires every domain onto routes. Self-contained domains mount their own
+ // routes through the router.Mux abstraction; this is the only place they are
+ // wired in.
+diff --git a/server/server_ratelimit_test.go b/server/server_ratelimit_test.go
+new file mode 100644
+index 00000000..ae9c733d
+--- /dev/null
++++ b/server/server_ratelimit_test.go
+@@ -0,0 +1,308 @@
++package server
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"net/netip"
++	"net/url"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/authflow"
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/mfa"
++	"github.com/dexidp/dex/server/ratelimit"
++	"github.com/dexidp/dex/server/router"
++	"github.com/dexidp/dex/storage"
++)
++
++// rateLimitTestConfig allows two failed attempts per client address, and no
++// refill within a test: the clock of the test servers does not move.
++var rateLimitTestConfig = &ratelimit.Config{RequestsPerMinute: 1, Burst: 2}
++
++const rateLimitPeer = "192.0.2.10:4711"
++
++func rateLimitedRequest(method, target string, body url.Values) *http.Request {
++	var r *http.Request
++	if body != nil {
++		r = httptest.NewRequest(method, target, strings.NewReader(body.Encode()))
++		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	} else {
++		r = httptest.NewRequest(method, target, nil)
++	}
++	r.RemoteAddr = rateLimitPeer
++	return r
++}
++
++// badClientTokenRequest fails client authentication at the token endpoint, the
++// cheapest failed attempt there is.
++func badClientTokenRequest(clientAddr string) *http.Request {
++	r := rateLimitedRequest(http.MethodPost, "/token", url.Values{"grant_type": {"refresh_token"}, "refresh_token": {"x"}})
++	r.SetBasicAuth("no-such-client", "secret")
++	if clientAddr != "" {
++		r.Header.Set("X-Real-IP", clientAddr)
++	}
++	return r
++}
++
++func serveRequest(s *Server, r *http.Request) *httptest.ResponseRecorder {
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, r)
++	return rr
++}
++
++func TestRateLimitPasswordLogin(t *testing.T) {
++	ctx := t.Context()
++	const connID = "mockPw"
++
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.RateLimit = rateLimitTestConfig
++	})
++	defer httpServer.Close()
++
++	sc := storage.Connector{
++		ID:              connID,
++		Type:            "mockPassword",
++		Name:            "MockPassword",
++		ResourceVersion: "1",
++		Config:          []byte(`{"username": "foo", "password": "password"}`),
++	}
++	require.NoError(t, s.storage.CreateConnector(ctx, sc))
++	_, err := s.connectors.Open(sc)
++	require.NoError(t, err)
++	// The login reads the client of its auth request (allow-lists, 200).
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: "test", RedirectURIs: []string{"cb"}}))
++
++	login := func(password string) *httptest.ResponseRecorder {
++		authReqID := storage.NewID()
++		require.NoError(t, s.storage.CreateAuthRequest(ctx, storage.AuthRequest{
++			ID:            authReqID,
++			ClientID:      "test",
++			ConnectorID:   connID,
++			RedirectURI:   "cb",
++			ResponseTypes: []string{"code"},
++			Expiry:        time.Now().Add(time.Minute),
++		}))
++		form := url.Values{"login": {"foo"}, "password": {password}}
++		return serveRequest(s, rateLimitedRequest(http.MethodPost, "/auth/"+connID+"/login?state="+authReqID, form))
++	}
++
++	for range 5 {
++		require.Equal(t, http.StatusSeeOther, login("password").Code, "a successful login does not count")
++	}
++	for range 2 {
++		require.Equal(t, http.StatusUnauthorized, login("wrong").Code, "a wrong password within the burst")
++	}
++
++	rr := login("wrong")
++	assert.Equal(t, http.StatusTooManyRequests, rr.Code)
++	assert.NotEmpty(t, rr.Header().Get("Retry-After"))
++	assert.Equal(t, http.StatusTooManyRequests, login("password").Code,
++		"once limited, even the right password waits for the bucket to refill")
++}
++
++func TestRateLimitTokenEndpoint(t *testing.T) {
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.RateLimit = rateLimitTestConfig
++	})
++	defer httpServer.Close()
++
++	for range 2 {
++		require.Equal(t, http.StatusUnauthorized, serveRequest(s, badClientTokenRequest("")).Code)
++	}
++	assert.Equal(t, http.StatusTooManyRequests, serveRequest(s, badClientTokenRequest("")).Code)
++
++	// Routes that do not check a secret are not limited.
++	assert.Equal(t, http.StatusOK, serveRequest(s, rateLimitedRequest(http.MethodGet, "/keys", nil)).Code)
++}
++
++// Once the client is authenticated, only the password grant counts at the token
++// endpoint: a refresh token or a code cannot be guessed, and dex-authenticator
++// refreshes the tokens of all its users from the address of its pod.
++func TestRateLimitTokenEndpointCountsCredentialsOnly(t *testing.T) {
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.RateLimit = rateLimitTestConfig
++		c.PasswordConnector = "test"
++	})
++	defer httpServer.Close()
++	mockConnectorDataTestStorage(t, s.storage)
++
++	token := func(form url.Values) int {
++		r := rateLimitedRequest(http.MethodPost, "/token", form)
++		r.SetBasicAuth("test", "barfoo")
++		return serveRequest(s, r).Code
++	}
++	refresh := url.Values{"grant_type": {"refresh_token"}, "refresh_token": {"no-such-token"}}
++	code := url.Values{"grant_type": {"authorization_code"}, "code": {"no-such-code"}, "redirect_uri": {"foo://bar.com/"}}
++	for range 5 {
++		require.Equal(t, http.StatusBadRequest, token(refresh), "a failed refresh does not count")
++		require.Equal(t, http.StatusBadRequest, token(code), "a failed code exchange does not count")
++	}
++
++	wrongPassword := url.Values{"grant_type": {"password"}, "scope": {"openid"}, "username": {"test"}, "password": {"wrong"}}
++	for range 2 {
++		require.Equal(t, http.StatusUnauthorized, token(wrongPassword), "a wrong password within the burst")
++	}
++	assert.Equal(t, http.StatusTooManyRequests, token(wrongPassword))
++	assert.Equal(t, http.StatusTooManyRequests, token(refresh), "the address has used up its failures")
++}
++
++func TestRateLimitTOTP(t *testing.T) {
++	ctx := t.Context()
++	const (
++		connID   = "mock"
++		userID   = "u1"
++		authReq  = "mfa-req"
++		authenID = "totp"
++	)
++
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.RateLimit = rateLimitTestConfig
++		c.MFAProviders = map[string]mfa.Provider{authenID: mfa.NewTOTPProvider("dex", nil)}
++		c.DefaultMFAChain = []string{authenID}
++	})
++	defer httpServer.Close()
++
++	req := storage.AuthRequest{
++		ID:            authReq,
++		ClientID:      "test",
++		ConnectorID:   connID,
++		RedirectURI:   "cb",
++		ResponseTypes: []string{"code"},
++		Expiry:        time.Now().Add(time.Hour),
++		LoggedIn:      true,
++		Claims:        storage.Claims{UserID: userID, Email: "u1@example.com"},
++		HMACKey:       []byte("0123456789abcdef0123456789abcdef"),
++	}
++	require.NoError(t, s.storage.CreateAuthRequest(ctx, req))
++	require.NoError(t, s.storage.CreateUserIdentity(ctx, storage.UserIdentity{
++		UserID:      userID,
++		ConnectorID: connID,
++		Claims:      req.Claims,
++		MFASecrets: map[string]*storage.MFASecret{authenID: {
++			AuthenticatorID: authenID,
++			Type:            "TOTP",
++			Secret:          "otpauth://totp/dex:u1?issuer=dex&secret=JBSWY3DPEHPK3PXP",
++			Confirmed:       true,
++		}},
++	}))
++
++	target := internal.StepURL("/mfa/totp", req, internal.Authenticator(authenID), url.Values{"authenticator": {authenID}})
++	guess := func() *httptest.ResponseRecorder {
++		return serveRequest(s, rateLimitedRequest(http.MethodPost, target, url.Values{"totp": {"not-a-code"}}))
++	}
++
++	for range 2 {
++		require.Equal(t, http.StatusUnauthorized, guess().Code, "a wrong code within the burst")
++	}
++	assert.Equal(t, http.StatusTooManyRequests, guess().Code, "guessing a second factor is limited (D2)")
++}
++
++func TestRateLimitPasswordChange(t *testing.T) {
++	const (
++		authReqID = "change-req"
++		username  = "jane@example.com"
++	)
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.RateLimit = rateLimitTestConfig
++	})
++	defer httpServer.Close()
++
++	req := storage.AuthRequest{
++		ID:            authReqID,
++		ClientID:      "test",
++		ConnectorID:   "local",
++		RedirectURI:   "cb",
++		ResponseTypes: []string{"code"},
++		Expiry:        time.Now().Add(time.Hour),
++		HMACKey:       []byte("0123456789abcdef0123456789abcdef"),
++	}
++	require.NoError(t, s.storage.CreateAuthRequest(t.Context(), req))
++
++	// The URL of the page as a login issues it, without the cookie that login
++	// set in its browser.
++	target := authflow.PasswordChangePath + "?" + url.Values{
++		"req":      {authReqID},
++		"hmac":     {internal.ComputeHMAC(req.HMACKey, authReqID, "step:password-change", username)},
++		"username": {username},
++	}.Encode()
++	guess := func() *httptest.ResponseRecorder {
++		r := rateLimitedRequest(http.MethodPost, target, url.Values{"newPassword": {"N3w-passw0rd"}})
++		r.AddCookie(&http.Cookie{Name: "dex_password_change", Value: "guess"})
++		return serveRequest(s, r)
++	}
++
++	for range 2 {
++		require.Equal(t, http.StatusUnauthorized, guess().Code, "a request not bound to the login within the burst")
++	}
++	assert.Equal(t, http.StatusTooManyRequests, guess().Code, "guessing the binding of the page is limited (R34)")
++}
++
++// TestRateLimitClientAddress checks that the limiter counts the client address
++// the router resolves, so clients behind one ingress pod are counted separately
++// whenever the router takes their address from the header (SC6).
++func TestRateLimitClientAddress(t *testing.T) {
++	peer := netip.MustParsePrefix("192.0.2.10/32")
++
++	tests := []struct {
++		name    string
++		header  string
++		trusted []netip.Prefix
++	}{
++		{name: "header from a trusted proxy", header: "X-Real-IP", trusted: []netip.Prefix{peer}},
++		{name: "header without trusted proxies", header: "X-Real-IP"},
++		{name: "no header", header: ""},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			httpServer, s := newTestServer(t, func(c *Config) {
++				c.RateLimit = rateLimitTestConfig
++				c.RealIPHeader = tc.header
++				c.TrustedRealIPCIDRs = tc.trusted
++			})
++			defer httpServer.Close()
++
++			resolve := router.ParseRealIP(tc.header, tc.trusted)
++			addrOf := func(r *http.Request) string {
++				if tc.header == "" {
++					return ratelimit.ClientAddress(r)
++				}
++				addr, err := resolve(r)
++				require.NoError(t, err)
++				return addr
++			}
++
++			first, second := badClientTokenRequest("198.51.100.1"), badClientTokenRequest("198.51.100.2")
++			separate := addrOf(first) != addrOf(second)
++			if tc.trusted != nil {
++				require.True(t, separate, "a trusted proxy's header names the client")
++			}
++
++			for range 2 {
++				serveRequest(s, badClientTokenRequest("198.51.100.1"))
++			}
++			require.Equal(t, http.StatusTooManyRequests, serveRequest(s, badClientTokenRequest("198.51.100.1")).Code)
++
++			rr := serveRequest(s, badClientTokenRequest("198.51.100.2"))
++			if separate {
++				assert.Equal(t, http.StatusUnauthorized, rr.Code, "another client behind the same proxy has a bucket of its own")
++			} else {
++				assert.Equal(t, http.StatusTooManyRequests, rr.Code, "clients the router cannot tell apart share the peer's bucket")
++			}
++		})
++	}
++}
++
++func TestRateLimitDisabled(t *testing.T) {
++	httpServer, s := newTestServer(t, nil)
++	defer httpServer.Close()
++
++	for range 10 {
++		require.Equal(t, http.StatusUnauthorized, serveRequest(s, badClientTokenRequest("")).Code,
++			"without a rate limit config the routes are as upstream")
++	}
++}

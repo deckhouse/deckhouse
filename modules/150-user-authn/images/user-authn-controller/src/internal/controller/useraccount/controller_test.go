@@ -493,15 +493,24 @@ func TestReconcile_ExternalFromUserIdentity(t *testing.T) {
 	autoLock := now.Add(2 * time.Hour)
 	expired := now.Add(-time.Hour)
 
+	lastLogin := now.Add(-30 * time.Minute)
+	migrated := func(id *useridentity.Identity) {
+		if err := id.SetRecord(useridentity.Record{Time: now.Format(time.RFC3339)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	tests := []struct {
-		name           string
-		session        map[string]any
-		identity       func(*useridentity.Identity)
-		expectEmail    string
-		expectLocked   bool
-		expectUntil    *time.Time
-		expectByAdmin  bool
-		expectAttempts int64
+		name            string
+		session         map[string]any
+		identity        func(*useridentity.Identity)
+		expectEmail     string
+		expectLocked    bool
+		expectUntil     *time.Time
+		expectByAdmin   bool
+		expectAttempts  int64
+		expectLastLogin *time.Time
+		expectTwoFactor *v1alpha1.UserAccountTwoFactor
 	}{
 		{
 			name: "identity only, as Dex v2.46 keeps an OIDC user",
@@ -511,6 +520,7 @@ func TestReconcile_ExternalFromUserIdentity(t *testing.T) {
 				id.SetAdminLock(adminLock)
 			},
 			expectEmail: "bob@example.com", expectLocked: true, expectUntil: &adminLock, expectByAdmin: true,
+			expectTwoFactor: &v1alpha1.UserAccountTwoFactor{},
 		},
 		{
 			name: "dex zero blockedUntil is not a lock",
@@ -521,7 +531,7 @@ func TestReconcile_ExternalFromUserIdentity(t *testing.T) {
 			expectEmail: "bob@example.com", expectLocked: false,
 		},
 		{
-			name: "later lock of the two places wins",
+			name: "before the copy the later lock of the two places wins",
 			session: map[string]any{
 				"email": "bob@old.example.com", "lockedUntil": autoLock.Format(time.RFC3339), "incorrectPasswordLoginAttempts": int64(2),
 			},
@@ -530,7 +540,20 @@ func TestReconcile_ExternalFromUserIdentity(t *testing.T) {
 				_ = id.SetBlockedUntil(adminLock)
 				id.SetAdminLock(adminLock)
 			},
-			expectEmail: "bob@old.example.com", expectLocked: true, expectUntil: &adminLock, expectByAdmin: true, expectAttempts: 2,
+			expectEmail: "bob@example.com", expectLocked: true, expectUntil: &adminLock, expectByAdmin: true, expectAttempts: 2,
+		},
+		{
+			name: "after the copy only UserIdentity counts",
+			session: map[string]any{
+				"email": "bob@example.com", "lockedUntil": autoLock.Format(time.RFC3339), "incorrectPasswordLoginAttempts": int64(4),
+			},
+			identity: func(id *useridentity.Identity) {
+				id.SetClaims(useridentity.Claims{UserID: "sub-1", Email: "bob@example.com"})
+				id.Object().Object["incorrectPasswordLoginAttempts"] = int64(1)
+				_ = id.SetLastLogin(lastLogin)
+				migrated(id)
+			},
+			expectEmail: "bob@example.com", expectLocked: false, expectAttempts: 1, expectLastLogin: &lastLogin,
 		},
 		{
 			name:    "old-place lock before the copy",
@@ -592,6 +615,15 @@ func TestReconcile_ExternalFromUserIdentity(t *testing.T) {
 			if s.ProviderType != "OIDC" || s.Kind != v1alpha1.KindExternal {
 				t.Errorf("providerType = %q, kind = %q", s.ProviderType, s.Kind)
 			}
+			if tt.expectLastLogin != nil && (s.LastLogin == nil || !s.LastLogin.Equal(&metav1.Time{Time: *tt.expectLastLogin})) {
+				t.Errorf("lastLogin = %v, want %v", s.LastLogin, tt.expectLastLogin)
+			}
+			if tt.expectTwoFactor != nil && (s.TwoFactor == nil || *s.TwoFactor != *tt.expectTwoFactor) {
+				t.Errorf("twoFactor = %+v, want %+v", s.TwoFactor, tt.expectTwoFactor)
+			}
+			if tt.identity == nil && s.TwoFactor != nil {
+				t.Errorf("twoFactor = %+v, want none without a UserIdentity", s.TwoFactor)
+			}
 		})
 	}
 }
@@ -624,6 +656,103 @@ func TestReconcile_LocalLockFromUserIdentity(t *testing.T) {
 	}
 	if res.RequeueAfter != time.Hour {
 		t.Errorf("RequeueAfter = %v, want 1h", res.RequeueAfter)
+	}
+}
+
+func TestReconcile_LocalFromMigratedUserIdentity(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	lastLogin := now.Add(-time.Hour)
+	oldLock := now.Add(time.Hour)
+
+	tests := []struct {
+		name            string
+		migrated        bool
+		totpConfirmed   bool
+		expectLocked    bool
+		expectTwoFactor v1alpha1.UserAccountTwoFactor
+	}{
+		{
+			name:            "before the copy the Password lock is in force",
+			migrated:        false,
+			expectLocked:    true,
+			expectTwoFactor: v1alpha1.UserAccountTwoFactor{Enrolled: true},
+		},
+		{
+			name:            "after the copy the Password lock is history",
+			migrated:        true,
+			totpConfirmed:   true,
+			expectLocked:    false,
+			expectTwoFactor: v1alpha1.UserAccountTwoFactor{Enrolled: true, Confirmed: true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			pw := passwordUnstructured("pw-jane", map[string]any{
+				"email": "jane@example.com", "username": "jane", "userID": "jane",
+				"lockedUntil": oldLock.Format(time.RFC3339), "incorrectPasswordLoginAttempts": int64(3),
+			})
+			id := useridentity.New("jane", naming.LocalConnectorID)
+			if err := id.SetLastLogin(lastLogin); err != nil {
+				t.Fatal(err)
+			}
+			// What the cache keeps of a TOTP secret: flags only.
+			id.Object().Object["mfaSecrets"] = map[string]any{
+				"totp": map[string]any{"authenticatorID": "totp", "type": "TOTP", "confirmed": tt.totpConfirmed},
+			}
+			if tt.migrated {
+				if err := id.SetRecord(useridentity.Record{Time: now.Format(time.RFC3339)}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			r := newTestReconciler(t, now, pw, id.Object())
+			name := naming.LocalName("jane@example.com")
+
+			if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+				t.Fatalf("Reconcile: %v", err)
+			}
+
+			var ua v1alpha1.UserAccount
+			if err := r.client.Get(t.Context(), types.NamespacedName{Name: name}, &ua); err != nil {
+				t.Fatalf("get useraccount: %v", err)
+			}
+			s := ua.Status
+			if s.Locked != tt.expectLocked {
+				t.Errorf("locked = %v, want %v", s.Locked, tt.expectLocked)
+			}
+			if s.IncorrectLoginAttempts != 3 {
+				t.Errorf("attempts = %d, want 3: local users count on Password", s.IncorrectLoginAttempts)
+			}
+			if s.LastLogin == nil || !s.LastLogin.Equal(&metav1.Time{Time: lastLogin}) {
+				t.Errorf("lastLogin = %v, want %v", s.LastLogin, lastLogin)
+			}
+			if s.TwoFactor == nil || *s.TwoFactor != tt.expectTwoFactor {
+				t.Errorf("twoFactor = %+v, want %+v", s.TwoFactor, tt.expectTwoFactor)
+			}
+		})
+	}
+}
+
+func TestReconcile_LocalWithoutUserIdentity(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	pw := passwordUnstructured("pw-jane", map[string]any{"email": "jane@example.com", "username": "jane", "userID": "jane"})
+	r := newTestReconciler(t, now, pw)
+	name := naming.LocalName("jane@example.com")
+
+	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: name}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	var ua v1alpha1.UserAccount
+	if err := r.client.Get(t.Context(), types.NamespacedName{Name: name}, &ua); err != nil {
+		t.Fatalf("get useraccount: %v", err)
+	}
+	if ua.Status.LastLogin != nil || ua.Status.TwoFactor != nil {
+		t.Errorf("lastLogin = %v, twoFactor = %+v; want none before the first login", ua.Status.LastLogin, ua.Status.TwoFactor)
 	}
 }
 

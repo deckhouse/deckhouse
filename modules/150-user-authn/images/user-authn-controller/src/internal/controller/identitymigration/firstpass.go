@@ -102,7 +102,7 @@ func (f *FirstPass) Start(ctx context.Context) error {
 		pairs, err := f.run(ctx)
 		if err == nil {
 			f.progress.finishPass()
-			f.log.Info("Enqueued every pair of the old Dex storage places", "pairs", pairs, "took", time.Since(started).String())
+			f.log.Info("Enqueued every pair of the old Dex storage places and every UserIdentity not marked yet", "pairs", pairs, "took", time.Since(started).String())
 			return nil
 		}
 		if ctx.Err() != nil {
@@ -118,8 +118,10 @@ func (f *FirstPass) Start(ctx context.Context) error {
 	}
 }
 
-// run enqueues every OfflineSessions, then every Password locked now: a local user locked before
-// logging in has no OfflineSessions. It returns how many pairs it enqueued.
+// run enqueues every OfflineSessions, then every Password locked now (a local user locked before
+// logging in has no OfflineSessions), then every UserIdentity without the annotation: Dex creates
+// one at every login, also for a pair the old places know nothing about. It returns how many pairs
+// it enqueued; a pair may be counted twice.
 func (f *FirstPass) run(ctx context.Context) (int, error) {
 	pairs := 0
 	err := f.forEachPage(ctx, controller.OfflineSessionsGVK, func(item *unstructured.Unstructured) error {
@@ -141,6 +143,17 @@ func (f *FirstPass) run(ctx context.Context) (int, error) {
 		}
 		pairs++
 		return f.enqueue(ctx, useridentity.Name(userID, naming.LocalConnectorID))
+	})
+	if err != nil {
+		return pairs, err
+	}
+
+	err = f.forEachPage(ctx, controller.UserIdentityGVK, func(item *unstructured.Unstructured) error {
+		if useridentity.FromUnstructured(item).Migrated() {
+			return nil
+		}
+		pairs++
+		return f.enqueue(ctx, item.GetName())
 	})
 	return pairs, err
 }

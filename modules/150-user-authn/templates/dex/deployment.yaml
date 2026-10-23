@@ -68,6 +68,10 @@ spec:
           items:
           - key: config.yaml
             path: config.yaml
+          {{- if include "dex_trusted_proxy_ca" . }}
+          - key: trusted-proxy-ca.crt
+            path: trusted-proxy-ca.crt
+          {{- end }}
       - name: tls
         secret:
           secretName: dex-tls

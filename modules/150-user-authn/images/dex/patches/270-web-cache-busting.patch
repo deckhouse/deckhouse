@@ -1,0 +1,476 @@
+diff --git a/server/templates/passwordchange.go b/server/templates/passwordchange.go
+index a3c4ff35..f0508f5c 100644
+--- a/server/templates/passwordchange.go
++++ b/server/templates/passwordchange.go
+@@ -56,11 +56,13 @@ func (t *Templates) PasswordChange(r *http.Request, w http.ResponseWriter, p Pas
+ 		PasswordPolicy struct {
+ 			ComplexityRequirements string
+ 		}
+-		ReqPath string
++		ReqPath         string
++		BuildIdentifier string
+ 	}{
+-		PostURL:  r.URL.RequestURI(),
+-		Username: p.Username,
+-		ReqPath:  r.URL.RequestURI(),
++		PostURL:         r.URL.RequestURI(),
++		Username:        p.Username,
++		ReqPath:         r.URL.RequestURI(),
++		BuildIdentifier: t.buildID,
+ 	}
+ 
+ 	data.Reason = p.Reason
+diff --git a/server/templates/templates.go b/server/templates/templates.go
+index 5dc3add6..647aaafd 100644
+--- a/server/templates/templates.go
++++ b/server/templates/templates.go
+@@ -2,6 +2,8 @@ package templates
+ 
+ import (
+ 	"cmp"
++	"crypto/sha256"
++	"encoding/hex"
+ 	"fmt"
+ 	"html/template"
+ 	"io"
+@@ -60,6 +62,11 @@ type Templates struct {
+ 	webauthnVerifyTmpl *template.Template
+ 	homeTmpl           *template.Template
+ 	logoutTmpl         *template.Template
++
++	// buildID changes whenever the web assets do. Pages pass it to the header
++	// template as BuildIdentifier, which appends it to the stylesheet URLs, so a
++	// browser does not keep a stylesheet of the previous release.
++	buildID string
+ }
+ 
+ type Config struct {
+@@ -134,13 +141,101 @@ func LoadWebConfig(c Config) (http.Handler, http.Handler, http.HandlerFunc, *Tem
+ 		return nil, nil, nil, nil, fmt.Errorf("read robots.txt dir: %v", err)
+ 	}
+ 
+-	static := http.FileServer(http.FS(staticFiles))
+-	theme := http.FileServer(http.FS(themeFiles))
++	buildID := assetsVersion(c.WebFS)
++	static := cacheControl(http.FileServer(http.FS(staticFiles)), buildID)
++	theme := cacheControl(http.FileServer(http.FS(themeFiles)), buildID)
+ 	robots := func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, string(robotsContent)) }
+ 
+ 	templates, err := loadTemplates(c, "templates")
++	if err != nil {
++		return nil, nil, nil, nil, err
++	}
++	templates.buildID = buildID
++
++	return static, theme, robots, templates, nil
++}
++
++// buildIDQuery is the query parameter that carries the build identifier in the
++// asset URLs of the header template (header.html, "?cache=").
++const buildIDQuery = "cache"
++
++// Cache-Control of the assets: kept for a year under a URL naming the assets this
++// dex serves, otherwise not stored at all.
++const (
++	cacheForever = "public, max-age=31536000, immutable"
++	cacheNever   = "no-store"
++)
+ 
+-	return static, theme, robots, templates, err
++// cacheControl lets a browser keep an asset for long only when its URL names
++// the assets this dex serves: the build identifier the pages link it with. In a
++// rollout, a page of one release may load its stylesheet from a pod of the
++// other, and a browser keeps what it got under the URL it asked for. An answer
++// under another build identifier, or none, is not stored, so a pod never leaves
++// its assets in a browser under a URL of other ones.
++func cacheControl(h http.Handler, buildID string) http.Handler {
++	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.Header().Set("Cache-Control", cacheNever)
++		if r.URL.Query().Get(buildIDQuery) == buildID {
++			w = &cacheForeverWriter{ResponseWriter: w}
++		}
++		h.ServeHTTP(w, r)
++	})
++}
++
++// cacheForeverWriter lets the asset it serves be kept for long when it is
++// served: an error, such as a file missing for a moment, is not kept.
++type cacheForeverWriter struct {
++	http.ResponseWriter
++	isWritten bool
++}
++
++func (w *cacheForeverWriter) WriteHeader(code int) {
++	if !w.isWritten {
++		w.isWritten = true
++		if code == http.StatusOK || code == http.StatusPartialContent || code == http.StatusNotModified {
++			w.Header().Set("Cache-Control", cacheForever)
++		}
++	}
++	w.ResponseWriter.WriteHeader(code)
++}
++
++func (w *cacheForeverWriter) Write(b []byte) (int, error) {
++	if !w.isWritten {
++		w.WriteHeader(http.StatusOK)
++	}
++	return w.ResponseWriter.Write(b)
++}
++
++// Unwrap lets http.ResponseController reach the underlying writer.
++func (w *cacheForeverWriter) Unwrap() http.ResponseWriter {
++	return w.ResponseWriter
++}
++
++// assetsVersion identifies the content of the web assets: a hash of every file
++// that can be read. A version of the dex binary would not do: builds from a
++// source tree without VCS data all report the same one, and the assets may be
++// replaced without rebuilding dex.
++func assetsVersion(fsys fs.FS) string {
++	h := sha256.New()
++	// The walk never fails: whatever cannot be read is skipped, as it cannot be
++	// served either.
++	_ = fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
++		if err != nil || d.IsDir() {
++			return nil
++		}
++		// Stat follows symlinks, as files mounted from a ConfigMap are.
++		if info, err := fs.Stat(fsys, p); err != nil || !info.Mode().IsRegular() {
++			return nil
++		}
++		content, err := fs.ReadFile(fsys, p)
++		if err != nil {
++			return nil
++		}
++		fmt.Fprintf(h, "%s\x00%d\x00", p, len(content))
++		h.Write(content)
++		return nil
++	})
++	return hex.EncodeToString(h.Sum(nil)[:4])
+ }
+ 
+ // loadTemplates parses the expected templates from the provided directory.
+@@ -300,28 +395,31 @@ func (t *Templates) Device(r *http.Request, w http.ResponseWriter, postURL strin
+ 		w.WriteHeader(http.StatusBadRequest)
+ 	}
+ 	data := struct {
+-		PostURL  string
+-		UserCode string
+-		Invalid  bool
+-		ReqPath  string
+-	}{postURL, userCode, lastWasInvalid, r.URL.Path}
++		PostURL         string
++		UserCode        string
++		Invalid         bool
++		ReqPath         string
++		BuildIdentifier string
++	}{postURL, userCode, lastWasInvalid, r.URL.Path, t.buildID}
+ 	return renderTemplate(w, t.deviceTmpl, data)
+ }
+ 
+ func (t *Templates) DeviceSuccess(r *http.Request, w http.ResponseWriter, clientName string) error {
+ 	data := struct {
+-		ClientName string
+-		ReqPath    string
+-	}{clientName, r.URL.Path}
++		ClientName      string
++		ReqPath         string
++		BuildIdentifier string
++	}{clientName, r.URL.Path, t.buildID}
+ 	return renderTemplate(w, t.deviceSuccessTmpl, data)
+ }
+ 
+ func (t *Templates) Login(r *http.Request, w http.ResponseWriter, connectors []ConnectorInfo) error {
+ 	sortConnectors(connectors)
+ 	data := struct {
+-		Connectors []ConnectorInfo
+-		ReqPath    string
+-	}{connectors, r.URL.Path}
++		Connectors      []ConnectorInfo
++		ReqPath         string
++		BuildIdentifier string
++	}{connectors, r.URL.Path, t.buildID}
+ 	return renderTemplate(w, t.loginTmpl, data)
+ }
+ 
+@@ -338,14 +436,16 @@ func (t *Templates) Password(r *http.Request, w http.ResponseWriter, postURL, la
+ 		ReqPath           string
+ 		ShowRememberMe    bool
+ 		RememberMeChecked bool
++		BuildIdentifier   string
+ 	}{
+-		PostURL:        postURL,
+-		BackLink:       backLink,
+-		Username:       lastUsername,
+-		UsernamePrompt: usernamePrompt,
+-		Invalid:        lastWasInvalid,
+-		ReqPath:        r.URL.Path,
+-		ShowRememberMe: rememberMe != nil,
++		PostURL:         postURL,
++		BackLink:        backLink,
++		Username:        lastUsername,
++		UsernamePrompt:  usernamePrompt,
++		Invalid:         lastWasInvalid,
++		ReqPath:         r.URL.Path,
++		ShowRememberMe:  rememberMe != nil,
++		BuildIdentifier: t.buildID,
+ 	}
+ 	if rememberMe != nil {
+ 		data.RememberMeChecked = *rememberMe
+@@ -363,12 +463,13 @@ func (t *Templates) Approval(r *http.Request, w http.ResponseWriter, authReqID,
+ 	}
+ 	sort.Strings(accesses)
+ 	data := struct {
+-		User      string
+-		Client    string
+-		AuthReqID string
+-		Scopes    []string
+-		ReqPath   string
+-	}{username, clientName, authReqID, accesses, r.URL.Path}
++		User            string
++		Client          string
++		AuthReqID       string
++		Scopes          []string
++		ReqPath         string
++		BuildIdentifier string
++	}{username, clientName, authReqID, accesses, r.URL.Path, t.buildID}
+ 	return renderTemplate(w, t.approvalTmpl, data)
+ }
+ 
+@@ -377,13 +478,14 @@ func (t *Templates) TOTPVerify(r *http.Request, w http.ResponseWriter, postURL,
+ 		w.WriteHeader(http.StatusUnauthorized)
+ 	}
+ 	data := struct {
+-		PostURL   string
+-		Invalid   bool
+-		Issuer    string
+-		Connector string
+-		QRCode    string
+-		ReqPath   string
+-	}{postURL, lastWasInvalid, issuer, connector, qrCode, r.URL.Path}
++		PostURL         string
++		Invalid         bool
++		Issuer          string
++		Connector       string
++		QRCode          string
++		ReqPath         string
++		BuildIdentifier string
++	}{postURL, lastWasInvalid, issuer, connector, qrCode, r.URL.Path, t.buildID}
+ 	return renderTemplate(w, t.totpVerifyTmpl, data)
+ }
+ 
+@@ -414,6 +516,7 @@ type HomeData struct {
+ 	LogoutURL           string
+ 	DiscoveryURL        string
+ 	ReqPath             string
++	BuildIdentifier     string
+ }
+ 
+ // HasHome reports whether the home template was loaded.
+@@ -423,6 +526,7 @@ func (t *Templates) HasHome() bool {
+ 
+ func (t *Templates) Home(r *http.Request, w http.ResponseWriter, data HomeData) error {
+ 	data.ReqPath = r.URL.Path
++	data.BuildIdentifier = t.buildID
+ 	return renderTemplate(w, t.homeTmpl, data)
+ }
+ 
+@@ -432,7 +536,8 @@ func (t *Templates) Logout(r *http.Request, w http.ResponseWriter, backURL strin
+ 		LoggedOut        bool
+ 		ShowConfirmation bool
+ 		ReqPath          string
+-	}{backURL, loggedOut, showConfirmation, r.URL.Path}
++		BuildIdentifier  string
++	}{backURL, loggedOut, showConfirmation, r.URL.Path, t.buildID}
+ 	return renderTemplate(w, t.logoutTmpl, data)
+ }
+ 
+@@ -443,15 +548,17 @@ func (t *Templates) WebAuthnVerify(r *http.Request, w http.ResponseWriter, mode,
+ 		Mode            string
+ 		AuthenticatorID string
+ 		ReqPath         string
+-	}{mode, authenticatorID, r.URL.Path}
++		BuildIdentifier string
++	}{mode, authenticatorID, r.URL.Path, t.buildID}
+ 	return renderTemplate(w, t.webauthnVerifyTmpl, data)
+ }
+ 
+ func (t *Templates) OOB(r *http.Request, w http.ResponseWriter, code string) error {
+ 	data := struct {
+-		Code    string
+-		ReqPath string
+-	}{code, r.URL.Path}
++		Code            string
++		ReqPath         string
++		BuildIdentifier string
++	}{code, r.URL.Path, t.buildID}
+ 	return renderTemplate(w, t.oobTmpl, data)
+ }
+ 
+@@ -467,10 +574,11 @@ func RenderError(t *Templates, logger *slog.Logger, r *http.Request, w http.Resp
+ func (t *Templates) Err(r *http.Request, w http.ResponseWriter, errCode int, errMsg string) error {
+ 	w.WriteHeader(errCode)
+ 	data := struct {
+-		ErrType string
+-		ErrMsg  string
+-		ReqPath string
+-	}{http.StatusText(errCode), errMsg, r.URL.Path}
++		ErrType         string
++		ErrMsg          string
++		ReqPath         string
++		BuildIdentifier string
++	}{http.StatusText(errCode), errMsg, r.URL.Path, t.buildID}
+ 	if err := t.errorTmpl.Execute(w, data); err != nil {
+ 		return fmt.Errorf("rendering template %s failed: %s", t.errorTmpl.Name(), err)
+ 	}
+diff --git a/server/templates/templates_buildid_test.go b/server/templates/templates_buildid_test.go
+new file mode 100644
+index 00000000..3c3ecd31
+--- /dev/null
++++ b/server/templates/templates_buildid_test.go
+@@ -0,0 +1,130 @@
++package templates
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++	"testing/fstest"
++
++	"github.com/stretchr/testify/require"
++
++	dexweb "github.com/dexidp/dex/web"
++)
++
++func TestAssetsVersion(t *testing.T) {
++	assets := fstest.MapFS{
++		"static/main.css":        {Data: []byte("body {}")},
++		"themes/light/style.css": {Data: []byte("a {}")},
++		"templates/header.html":  {Data: []byte("<html>")},
++	}
++	version := assetsVersion(assets)
++	require.Len(t, version, 8)
++	require.Equal(t, version, assetsVersion(assets), "the same assets give the same version")
++
++	assets["static/main.css"] = &fstest.MapFile{Data: []byte("body { margin: 0 }")}
++	require.NotEqual(t, version, assetsVersion(assets), "a changed stylesheet gives a new version")
++
++	renamed := fstest.MapFS{
++		"static/other.css":       assets["static/main.css"],
++		"themes/light/style.css": assets["themes/light/style.css"],
++		"templates/header.html":  assets["templates/header.html"],
++	}
++	require.NotEqual(t, assetsVersion(assets), assetsVersion(renamed), "file names count")
++}
++
++// TestPagesCarryBuildIdentifier renders every page with the header that links
++// the stylesheets under the build identifier: a page whose data lacks
++// BuildIdentifier fails to render.
++func TestPagesCarryBuildIdentifier(t *testing.T) {
++	//nolint:dogsled // only the templates are needed here
++	_, _, _, tmpls, err := LoadWebConfig(Config{WebFS: dexweb.FS(), IssuerURL: "https://dex.example.com"})
++	require.NoError(t, err)
++	require.Equal(t, assetsVersion(dexweb.FS()), tmpls.buildID)
++	want := "static/main.css?cache=" + tmpls.buildID
++
++	pages := map[string]func(w http.ResponseWriter, r *http.Request) error{
++		"login": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.Login(r, w, []ConnectorInfo{{ID: "local", Name: "Email"}})
++		},
++		"password": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.Password(r, w, "/auth/local/login", "", "Email", false, "", nil)
++		},
++		"password change": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.PasswordChange(r, w, PasswordChange{Username: "jane@example.com", Reason: "forced"})
++		},
++		"approval": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.Approval(r, w, "req", "jane", "app", []string{"openid"})
++		},
++		"oob": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.OOB(r, w, "code")
++		},
++		"error": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.Err(r, w, http.StatusBadRequest, "bad request")
++		},
++		"device": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.Device(r, w, "/device/auth/verify_code", "", false)
++		},
++		"device success": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.DeviceSuccess(r, w, "app")
++		},
++		"totp verify": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.TOTPVerify(r, w, "/mfa/totp", "dex", "local", "", false)
++		},
++		"webauthn verify": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.WebAuthnVerify(r, w, "login", "webauthn")
++		},
++		"home": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.Home(r, w, HomeData{})
++		},
++		"logout": func(w http.ResponseWriter, r *http.Request) error {
++			return tmpls.Logout(r, w, "", true, false)
++		},
++	}
++	for name, render := range pages {
++		t.Run(name, func(t *testing.T) {
++			w := httptest.NewRecorder()
++			require.NoError(t, render(w, httptest.NewRequest(http.MethodGet, "/auth", nil)))
++			require.Contains(t, w.Body.String(), want)
++		})
++	}
++}
++
++// TestAssetsCacheControl checks that a browser keeps an asset for long only
++// under a URL with the build identifier of this dex: in a rollout, a page of the
++// other release links its own.
++func TestAssetsCacheControl(t *testing.T) {
++	static, theme, _, tmpls, err := LoadWebConfig(Config{WebFS: dexweb.FS(), IssuerURL: "https://dex.example.com"})
++	require.NoError(t, err)
++	current := "?cache=" + tmpls.buildID
++
++	tests := []struct {
++		name    string
++		handler http.Handler
++		target  string
++		status  int
++		isKept  bool
++	}{
++		{name: "stylesheet of this build", handler: static, target: "/main.css" + current, status: http.StatusOK, isKept: true},
++		{name: "theme of this build", handler: theme, target: "/styles.css" + current, status: http.StatusOK, isKept: true},
++		{name: "stylesheet of another build", handler: static, target: "/main.css?cache=0badc0de", status: http.StatusOK},
++		{name: "asset without a build", handler: theme, target: "/logo.png", status: http.StatusOK},
++		{name: "missing asset of this build", handler: static, target: "/missing.css" + current, status: http.StatusNotFound},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			w := httptest.NewRecorder()
++			tc.handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, tc.target, nil))
++			require.Equal(t, tc.status, w.Code)
++			cacheControl := w.Header().Get("Cache-Control")
++			switch {
++			case tc.isKept:
++				require.Equal(t, cacheForever, cacheControl)
++			case tc.status == http.StatusOK:
++				require.Equal(t, cacheNever, cacheControl)
++			default:
++				// net/http drops Cache-Control from the errors it answers.
++				require.NotEqual(t, cacheForever, cacheControl)
++			}
++		})
++	}
++}
+diff --git a/web/templates/header.html b/web/templates/header.html
+index 8cf744e5..4b4a6f69 100644
+--- a/web/templates/header.html
++++ b/web/templates/header.html
+@@ -5,8 +5,8 @@
+     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+     <title>{{ issuer }}</title>
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+-    <link href="{{ url .ReqPath "static/main.css" }}" rel="stylesheet">
+-    <link href="{{ url .ReqPath "theme/styles.css" }}" rel="stylesheet">
++    <link href="{{ printf "%s?cache=%s" (url .ReqPath "static/main.css") .BuildIdentifier }}" rel="stylesheet">
++    <link href="{{ printf "%s?cache=%s" (url .ReqPath "theme/styles.css") .BuildIdentifier }}" rel="stylesheet">
+     <link rel="icon" href="{{ url .ReqPath "theme/favicon.png" }}">
+   </head>
+ 

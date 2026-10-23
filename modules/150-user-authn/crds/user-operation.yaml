@@ -24,9 +24,11 @@ spec:
           description: |
             Describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
 
-            For local users, the `ResetPassword`, `Reset2FA`, and `Lock` operations also delete
-            the user's Dex OfflineSessions and RefreshToken objects. This terminates active
-            offline sessions and requires the user to authenticate again.
+            For local users, the `ResetPassword` and `Lock` operations also delete the user's Dex
+            RefreshToken objects. The sessions of the user in applications and kubeconfig files end when
+            the current ID token expires, and the user has to authenticate again. These operations keep
+            the user's 2FA secret. Only `Reset2FA` removes it, and it also deletes the user's Dex
+            OfflineSessions and RefreshToken objects.
           required:
             - spec
           properties:
@@ -139,9 +141,11 @@ spec:
             (`Succeeded` or `Failed`). Completed operations are automatically deleted after 24 hours.
             To perform a new action, create a new UserOperation.
 
-            For local users, the `ResetPassword`, `Reset2FA`, and `Lock` operations also delete
-            the user's Dex OfflineSessions and RefreshToken objects. This terminates active
-            offline sessions and requires the user to authenticate again.
+            For local users, the `ResetPassword` and `Lock` operations also delete the user's Dex
+            RefreshToken objects. The sessions of the user in applications and kubeconfig files end when
+            the current ID token expires, and the user has to authenticate again. These operations keep
+            the user's 2FA secret. Only `Reset2FA` removes it, and it also deletes the user's Dex
+            OfflineSessions and RefreshToken objects.
           required:
             - spec
           properties:
@@ -153,8 +157,8 @@ spec:
                 - required: [user]
                 - required: [target]
               x-kubernetes-validations:
-                # target identifies an external (LDAP/Crowd/...) account and is
-                # only meaningful for Lock/Unlock against OfflineSessions.
+                # target identifies an account of an external provider and is
+                # only meaningful for Lock/Unlock against its Dex UserIdentity.
                 # ResetPassword and Reset2FA operate on a local user (spec.user).
                 - rule: 'self.type in ["Lock", "Unlock"] || !has(self.target)'
                   message: 'spec.target is only supported for Lock and Unlock operations; ResetPassword and Reset2FA apply to local users (spec.user) only.'
@@ -172,12 +176,19 @@ spec:
                 target:
                   type: object
                   description: |
-                    Identifier of an external (non-local) account managed by an external authentication
-                    provider (LDAP, Atlassian Crowd, etc.).
+                    Identifier of an account of an external authentication provider of any type.
 
-                    The `Lock` and `Unlock` operations against `target` are performed against the
-                    OfflineSessions object that holds the failed-attempt counter and lock state for
-                    the corresponding `(connectorID, email)` pair.
+                    The `Lock` and `Unlock` operations against `target` change the Dex UserIdentity object of
+                    the user who signs in through the `connectorID` provider with this `email`. The lock applies
+                    only to this provider and does not lock a local user or a user of another provider with the
+                    same email. The operation fails if the user has never signed in through the provider or if
+                    more than one user of the provider has this email.
+
+                    The lock applies to the user ID that the provider returns at sign-in. A SAML provider must
+                    return the same ID at every sign-in, with
+                    [`nameIDPolicyFormat`](#dexprovider-v1-spec-saml-nameidpolicyformat) set to `persistent` or
+                    `emailAddress` or not set. With `transient`, every sign-in gets a new ID, and the lock does
+                    not apply to the next sign-in.
                     
                     > Only one of the fields can be specified at the same time: `user` or `target`.
                   required:
@@ -192,9 +203,9 @@ spec:
                     email:
                       type: string
                       description: |
-                        Email of the external user, as reported by the connector.
+                        Email of the external user, as reported by the provider at the user's last sign-in.
 
-                        Stored in `OfflineSessions.email` and used as a stable handle for administrative actions.
+                        The comparison is case-insensitive.
                       x-doc-examples: ['jane.doe@example.org']
                 type:
                   type: string

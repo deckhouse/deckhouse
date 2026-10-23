@@ -42,8 +42,17 @@ type lockState struct {
 	byAdmin bool
 }
 
-// laterLock is the lock that ends later. During 1.78 a lock lives in two places, the old one
-// (Password or OfflineSessions) and UserIdentity, and the later one is the one in force.
+// enforcedLock is the lock Dex enforces on a pair: the one in its UserIdentity. Until the
+// controller marks the UserIdentity as migrated, the transitional Dex patch also reads the lock of
+// the old place (Password or OfflineSessions), and the later of the two is in force.
+func enforcedLock(old lockState, ident *identityView) lockState {
+	if ident != nil && ident.Migrated {
+		return identityLock(ident)
+	}
+	return laterLock(old, identityLock(ident))
+}
+
+// laterLock is the lock that ends later.
 func laterLock(a, b lockState) lockState {
 	switch {
 	case a.until == nil:
@@ -67,39 +76,51 @@ func identityLock(ident *identityView) lockState {
 }
 
 // externalSource is what is known of an external account: its UserIdentity, its OfflineSessions,
-// or both.
+// or both. OfflineSessions keeps the account in place until the copy creates the UserIdentity.
 type externalSource struct {
-	UserID   string
-	ConnID   string
-	Email    string
-	Attempts int64
-	Lock     lockState
+	UserID    string
+	ConnID    string
+	Email     string
+	Attempts  int64
+	Lock      lockState
+	LastLogin *time.Time
+	TwoFactor *v1alpha1.UserAccountTwoFactor
 }
 
 func newExternalSource(sess *sessionView, ident *identityView) externalSource {
 	var src externalSource
+	var oldLock lockState
 	if sess != nil {
 		src = externalSource{
 			UserID:   sess.UserID,
 			ConnID:   sess.ConnID,
 			Email:    sess.Email,
 			Attempts: sess.Attempts,
-			Lock:     lockState{until: sess.LockedUntil, byAdmin: hasAdminLock(sess.Annotations)},
 		}
+		oldLock = lockState{until: sess.LockedUntil, byAdmin: hasAdminLock(sess.Annotations)}
 	}
+	src.Lock = enforcedLock(oldLock, ident)
 	if ident == nil {
 		return src
 	}
 	src.UserID, src.ConnID = ident.UserID, ident.ConnectorID
-	if src.Email == "" {
+	// The claims of the last login; OfflineSessions.email is what the Dex of 1.77 wrote.
+	if ident.Email != "" {
 		src.Email = ident.Email
 	}
-	src.Lock = laterLock(src.Lock, identityLock(ident))
+	// Dex counts failed attempts of external users in UserIdentity; the counter of OfflineSessions
+	// is the one of the Dex of 1.77 and matters only until the pair is migrated.
+	if ident.Migrated || ident.Attempts > src.Attempts {
+		src.Attempts = ident.Attempts
+	}
+	src.LastLogin = ident.LastLogin
+	twoFactor := ident.TwoFactor
+	src.TwoFactor = &twoFactor
 	return src
 }
 
 func projectLocal(pw passwordView, ident *identityView, user *userView, now time.Time) desiredAccount {
-	lock := laterLock(lockState{until: pw.LockedUntil, byAdmin: hasAdminLock(pw.Annotations)}, identityLock(ident))
+	lock := enforcedLock(lockState{until: pw.LockedUntil, byAdmin: hasAdminLock(pw.Annotations)}, ident)
 	locked := timeLockActive(lock.until, now)
 	lockedByAdmin := locked && lock.byAdmin
 
@@ -144,8 +165,25 @@ func projectLocal(pw passwordView, ident *identityView, user *userView, now time
 			UserRef:                userRef,
 			ExpireAt:               expireAt,
 			Groups:                 groups,
+			LastLogin:              identityLastLogin(ident),
+			TwoFactor:              identityTwoFactor(ident),
 		},
 	}
+}
+
+func identityLastLogin(ident *identityView) *metav1.Time {
+	if ident == nil {
+		return nil
+	}
+	return metaTimePtr(ident.LastLogin)
+}
+
+func identityTwoFactor(ident *identityView) *v1alpha1.UserAccountTwoFactor {
+	if ident == nil {
+		return nil
+	}
+	twoFactor := ident.TwoFactor
+	return &twoFactor
 }
 
 func projectExternal(src externalSource, providerType string, now time.Time) desiredAccount {
@@ -169,6 +207,8 @@ func projectExternal(src externalSource, providerType string, now time.Time) des
 			Locked:                 locked,
 			LockedUntil:            metaTimePtr(src.Lock.until),
 			LockedByAdministrator:  lockedByAdmin,
+			LastLogin:              metaTimePtr(src.LastLogin),
+			TwoFactor:              src.TwoFactor,
 		},
 	}
 }

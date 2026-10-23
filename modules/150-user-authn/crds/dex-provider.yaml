@@ -678,6 +678,13 @@ spec:
                       type: string
                       description: |
                         The NameIDPolicy format to request from the IdP.
+
+                        If not set, Dex requests `persistent`.
+
+                        A [UserOperation](#useroperation) `Lock` with `spec.target` applies to the user ID, which
+                        Dex takes from the NameID. Use `persistent` or `emailAddress` for such a lock to work. With
+                        `transient`, the IdP returns a new NameID at every sign-in, and a lock does not apply to the
+                        next sign-in of the user.
                       enum:
                         - 'persistent'
                         - 'emailAddress'

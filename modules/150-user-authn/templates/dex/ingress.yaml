@@ -6,16 +6,30 @@ metadata:
   name: dex
   namespace: d8-{{ .Chart.Name }}
   annotations:
+    # ingress-nginx presents its client certificate to Dex, and Dex trusts the client address in
+    # X-Real-IP only from a connection with that certificate (clientRemoteIP.trustedProxyCAFile).
   {{- if include "helm_lib_module_ingress_nginx_annotations_version_ge" (list $ "1.3.0") }}
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/proxy-ssl-use-controller-certificate: "true"
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
     nginx.ingress.kubernetes.io/ingress-nginx-hsts: "true"
   {{- end }}
   {{- else }}
     nginx.ingress.kubernetes.io/configuration-snippet: |
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
   {{- end }}
+    # A browser sign-in spans several requests. While an old and a new Dex pod run side by side
+    # in a rollout they serve different paths, so a sign-in stays on the pod it started on.
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/affinity-mode: persistent
+    nginx.ingress.kubernetes.io/session-cookie-name: d8-dex-affinity
+    # One cookie for both Ingresses of Dex: without a path ingress-nginx scopes it to the path of the location,
+    # and a sign-in that starts under /auth would pick its pod again for /mfa, /callback and the rest.
+    nginx.ingress.kubernetes.io/session-cookie-path: /
+    nginx.ingress.kubernetes.io/session-cookie-secure: "true"
   {{- include "helm_lib_module_labels" (list . (dict "app" "dex")) | nindent 2 }}
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
@@ -44,13 +58,25 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   annotations:
     nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    # A browser sign-in spans several requests. While an old and a new Dex pod run side by side
+    # in a rollout they serve different paths, so a sign-in stays on the pod it started on.
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/affinity-mode: persistent
+    nginx.ingress.kubernetes.io/session-cookie-name: d8-dex-affinity
+    # One cookie for both Ingresses of Dex: without a path ingress-nginx scopes it to the path of the location,
+    # and a sign-in that starts under /auth would pick its pod again for /mfa, /callback and the rest.
+    nginx.ingress.kubernetes.io/session-cookie-path: /
+    nginx.ingress.kubernetes.io/session-cookie-secure: "true"
   {{- if include "helm_lib_module_ingress_nginx_annotations_version_ge" (list $ "1.3.0") }}
+    nginx.ingress.kubernetes.io/proxy-ssl-use-controller-certificate: "true"
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
     nginx.ingress.kubernetes.io/ingress-nginx-hsts: "true"
   {{- end }}
   {{- else }}
     nginx.ingress.kubernetes.io/configuration-snippet: |
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
+      proxy_ssl_certificate /etc/nginx/ssl/client.crt;
+      proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
   {{- end }}
     nginx.ingress.kubernetes.io/limit-rpm: "1000"
     # Works only for ingress-controllers >=0.40. It is here to not forget to add the annotation after upgrading ingress controller.

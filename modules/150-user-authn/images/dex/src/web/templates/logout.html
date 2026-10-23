@@ -1,0 +1,73 @@
+{{ template "header.html" . }}
+
+<div class="content">
+  {{ if .ShowConfirmation }}
+  <h2 class="content-title">
+      {{ if eq (extra "lang") "en" }}
+      Logging Out
+      {{ else }}
+      Выход
+      {{ end }}
+  </h2>
+  <div class="content-text">
+      {{ if eq (extra "lang") "en" }}
+      Do you want to log out?
+      {{ else }}
+      Выйти из системы?
+      {{ end }}
+  </div>
+  <form method="post" action="{{ .ReqPath }}" class="login-form">
+    <button type="submit" class="btn btn-primary">
+        {{ if eq (extra "lang") "en" }}
+        Log Out
+        {{ else }}
+        Выйти
+        {{ end }}
+    </button>
+  </form>
+  {{ else if .LoggedOut }}
+  <h2 class="content-title">
+      {{ if eq (extra "lang") "en" }}
+      Logged Out
+      {{ else }}
+      Выход выполнен
+      {{ end }}
+  </h2>
+  <div class="content-text">
+      {{ if eq (extra "lang") "en" }}
+      You have been successfully logged out.
+      {{ else }}
+      Вы вышли из системы.
+      {{ end }}
+  </div>
+  {{ else }}
+  <h2 class="content-title">
+      {{ if eq (extra "lang") "en" }}
+      Session Not Found
+      {{ else }}
+      Сеанс не найден
+      {{ end }}
+  </h2>
+  <div class="content-text">
+      {{ if eq (extra "lang") "en" }}
+      No active session found.
+      {{ else }}
+      Активный сеанс не найден.
+      {{ end }}
+  </div>
+  {{ end }}
+
+  {{ if .BackURL }}
+  <div class="form-extra">
+    <a href="{{ .BackURL }}" class="btn btn-primary-outline">
+        {{ if eq (extra "lang") "en" }}
+        Back to Application
+        {{ else }}
+        Вернуться в приложение
+        {{ end }}
+    </a>
+  </div>
+  {{ end }}
+</div>
+
+{{ template "footer.html" . }}

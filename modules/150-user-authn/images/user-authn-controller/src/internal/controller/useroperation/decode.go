@@ -23,6 +23,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"user-authn-controller/internal/useridentity"
 )
 
 const (
@@ -104,12 +106,18 @@ type sessionView struct {
 	RefreshTokenIDs []string
 }
 
+// identityView is a Dex UserIdentity as far as the lookup of spec.target needs it.
+type identityView struct {
+	UserID      string
+	ConnectorID string
+	Email       string
+}
+
 type refreshTokenView struct {
-	Name            string
-	Namespace       string
-	ClaimsUserID    string
-	ClaimsUsername  string
-	ClaimsPreferred string
+	Name         string
+	Namespace    string
+	ConnectorID  string
+	ClaimsUserID string
 }
 
 type failedError struct {
@@ -219,16 +227,27 @@ func decodeSession(obj *unstructured.Unstructured) (sessionView, error) {
 	return snap, nil
 }
 
+func decodeIdentity(obj *unstructured.Unstructured) (identityView, error) {
+	if obj == nil {
+		return identityView{}, fmt.Errorf("useridentity object is nil")
+	}
+	id := useridentity.FromUnstructured(obj)
+	claims, err := id.Claims()
+	if err != nil {
+		return identityView{}, err
+	}
+	return identityView{UserID: id.UserID(), ConnectorID: id.ConnectorID(), Email: claims.Email}, nil
+}
+
 func decodeRefreshToken(obj *unstructured.Unstructured) (refreshTokenView, error) {
 	if obj == nil {
 		return refreshTokenView{}, fmt.Errorf("refreshtoken object is nil")
 	}
 	return refreshTokenView{
-		Name:            obj.GetName(),
-		Namespace:       obj.GetNamespace(),
-		ClaimsUserID:    firstNestedString(obj.Object, [][]string{{"claims", "userID"}, {"claims", "userId"}}),
-		ClaimsUsername:  firstNestedString(obj.Object, [][]string{{"claims", "username"}}),
-		ClaimsPreferred: firstNestedString(obj.Object, [][]string{{"claims", "preferredUsername"}, {"claims", "preferred_username"}}),
+		Name:         obj.GetName(),
+		Namespace:    obj.GetNamespace(),
+		ConnectorID:  firstNestedString(obj.Object, [][]string{{"connectorID"}}),
+		ClaimsUserID: firstNestedString(obj.Object, [][]string{{"claims", "userID"}, {"claims", "userId"}}),
 	}, nil
 }
 

@@ -1,0 +1,723 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+index ae3a1106..c235debc 100644
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
+@@ -3,6 +3,7 @@ package main
+ import (
+ 	"bytes"
+ 	"crypto/tls"
++	"crypto/x509"
+ 	"encoding/base64"
+ 	"encoding/json"
+ 	"fmt"
+@@ -314,6 +315,54 @@ var allowedCurveNames = func() map[string]tls.CurveID {
+ type ClientRemoteIP struct {
+ 	Header         string   `json:"header"`
+ 	TrustedProxies []string `json:"trustedProxies"`
++	// TrustedProxySecret, with no TrustedProxies, trusts Header (or the last
++	// address of X-Forwarded-For) of the requests that present it in
++	// X-Deckhouse-Trusted-Proxy: a proxy whose address cannot be listed, such
++	// as an ingress controller on the host network of any node.
++	TrustedProxySecret string `json:"trustedProxySecret"`
++	// TrustedProxyCAFile, with no TrustedProxies, trusts Header (or the last
++	// address of X-Forwarded-For) of the requests whose client certificate
++	// verifies against the CA certificates in the file for client
++	// authentication and, with TrustedProxyCertOrganization set, names it among
++	// its organizations: the certificate an ingress controller presents to its
++	// backends. The HTTPS listener then asks every client for a certificate but
++	// requires none.
++	TrustedProxyCAFile           string `json:"trustedProxyCAFile"`
++	TrustedProxyCertOrganization string `json:"trustedProxyCertOrganization"`
++}
++
++// trustWarning describes a setting of cr that leaves Header unused, or is
++// empty. It never contains the secret.
++func (cr *ClientRemoteIP) trustWarning() string {
++	switch {
++	case cr.Header != "" && len(cr.TrustedProxies) == 0 && cr.TrustedProxySecret == "" && cr.TrustedProxyCAFile == "":
++		return "web.clientRemoteIP.header is set without web.clientRemoteIP.trustedProxies, trustedProxySecret or trustedProxyCAFile; " +
++			"the header is ignored because any client could spoof it"
++	case (cr.TrustedProxySecret != "" || cr.TrustedProxyCAFile != "") && len(cr.TrustedProxies) > 0:
++		return "web.clientRemoteIP.trustedProxySecret and trustedProxyCAFile are ignored: web.clientRemoteIP.trustedProxies decides whose header is trusted"
++	case (cr.TrustedProxySecret != "" || cr.TrustedProxyCAFile != "") && cr.Header == "":
++		return "web.clientRemoteIP.trustedProxySecret and trustedProxyCAFile have no effect without web.clientRemoteIP.header"
++	case cr.TrustedProxyCAFile != "" && cr.TrustedProxyCertOrganization == "":
++		return "web.clientRemoteIP.trustedProxyCAFile without trustedProxyCertOrganization trusts every client certificate the CA signed"
++	}
++	return ""
++}
++
++// TrustedProxyClientCAs reads TrustedProxyCAFile. It returns nil when the file
++// is not set.
++func (cr *ClientRemoteIP) TrustedProxyClientCAs() (*x509.CertPool, error) {
++	if cr == nil || cr.TrustedProxyCAFile == "" {
++		return nil, nil
++	}
++	pem, err := os.ReadFile(cr.TrustedProxyCAFile)
++	if err != nil {
++		return nil, fmt.Errorf("read trusted proxy CA file: %w", err)
++	}
++	pool := x509.NewCertPool()
++	if !pool.AppendCertsFromPEM(pem) {
++		return nil, fmt.Errorf("trusted proxy CA file %s holds no PEM certificate", cr.TrustedProxyCAFile)
++	}
++	return pool, nil
+ }
+ 
+ func (cr *ClientRemoteIP) ParseTrustedProxies() ([]netip.Prefix, error) {
+diff --git a/cmd/dex/config_clientremoteip_test.go b/cmd/dex/config_clientremoteip_test.go
+new file mode 100644
+index 00000000..0d2f0e76
+--- /dev/null
++++ b/cmd/dex/config_clientremoteip_test.go
+@@ -0,0 +1,79 @@
++package main
++
++import (
++	"encoding/json"
++	"os"
++	"path/filepath"
++	"testing"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++)
++
++func TestClientRemoteIPTrustedProxySecret(t *testing.T) {
++	var c Web
++	require.NoError(t, json.Unmarshal([]byte(`{"clientRemoteIP": {"header": "X-Real-IP", "trustedProxySecret": "s3cret"}}`), &c))
++	assert.Equal(t, ClientRemoteIP{Header: "X-Real-IP", TrustedProxySecret: "s3cret"}, c.ClientRemoteIP)
++}
++
++func TestClientRemoteIPTrustWarning(t *testing.T) {
++	tests := []struct {
++		name    string
++		config  ClientRemoteIP
++		warning string
++	}{
++		{name: "nothing set"},
++		{name: "trusted proxies", config: ClientRemoteIP{Header: "X-Forwarded-For", TrustedProxies: []string{"10.0.0.0/8"}}},
++		{name: "trusted proxy secret", config: ClientRemoteIP{Header: "X-Real-IP", TrustedProxySecret: "s3cret"}},
++		{name: "trusted proxy CA", config: ClientRemoteIP{Header: "X-Real-IP", TrustedProxyCAFile: "/ca.crt", TrustedProxyCertOrganization: "ingress-nginx:auth"}},
++		{
++			name:    "trusted proxy CA without an organization",
++			config:  ClientRemoteIP{Header: "X-Real-IP", TrustedProxyCAFile: "/ca.crt"},
++			warning: "trusts every client certificate the CA signed",
++		},
++		{
++			name:    "header alone",
++			config:  ClientRemoteIP{Header: "X-Real-IP"},
++			warning: "the header is ignored because any client could spoof it",
++		},
++		{
++			name:    "secret and trusted proxies",
++			config:  ClientRemoteIP{Header: "X-Real-IP", TrustedProxies: []string{"10.0.0.0/8"}, TrustedProxySecret: "s3cret"},
++			warning: "trustedProxySecret and trustedProxyCAFile are ignored",
++		},
++		{
++			name:    "secret without a header",
++			config:  ClientRemoteIP{TrustedProxySecret: "s3cret"},
++			warning: "trustedProxySecret and trustedProxyCAFile have no effect",
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			warning := tc.config.trustWarning()
++			if tc.warning == "" {
++				assert.Empty(t, warning)
++				return
++			}
++			assert.Contains(t, warning, tc.warning)
++			assert.NotContains(t, warning, "s3cret", "the secret is never logged")
++		})
++	}
++}
++
++// TestClientRemoteIPTrustedProxyClientCAs reads the CA file of the trusted
++// proxies (Deckhouse): none without the setting, an error for a file that is
++// missing or holds no certificate.
++func TestClientRemoteIPTrustedProxyClientCAs(t *testing.T) {
++	pool, err := (&ClientRemoteIP{}).TrustedProxyClientCAs()
++	require.NoError(t, err)
++	assert.Nil(t, pool)
++
++	dir := t.TempDir()
++	_, err = (&ClientRemoteIP{TrustedProxyCAFile: filepath.Join(dir, "missing.crt")}).TrustedProxyClientCAs()
++	require.Error(t, err)
++
++	empty := filepath.Join(dir, "empty.crt")
++	require.NoError(t, os.WriteFile(empty, []byte("not a certificate"), 0o600))
++	_, err = (&ClientRemoteIP{TrustedProxyCAFile: empty}).TrustedProxyClientCAs()
++	require.Error(t, err)
++}
+diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
+index 7c9edf6d..17c15f10 100644
+--- a/cmd/dex/serve.go
++++ b/cmd/dex/serve.go
+@@ -451,10 +451,14 @@ func runServe(options serveOptions) error {
+ 	if err != nil {
+ 		return fmt.Errorf("failed to parse client remote IP settings: %v", err)
+ 	}
+-	if serverConfig.RealIPHeader != "" && len(serverConfig.TrustedRealIPCIDRs) == 0 {
+-		logger.Warn("web.clientRemoteIP.header is set without web.clientRemoteIP.trustedProxies; "+
+-			"the header is ignored because any client could spoof it",
+-			"header", serverConfig.RealIPHeader)
++	serverConfig.TrustedProxySecret = c.Web.ClientRemoteIP.TrustedProxySecret
++	serverConfig.TrustedProxyClientCAs, err = c.Web.ClientRemoteIP.TrustedProxyClientCAs()
++	if err != nil {
++		return fmt.Errorf("failed to parse client remote IP settings: %v", err)
++	}
++	serverConfig.TrustedProxyCertOrganization = c.Web.ClientRemoteIP.TrustedProxyCertOrganization
++	if warning := c.Web.ClientRemoteIP.trustWarning(); warning != "" {
++		logger.Warn(warning, "header", serverConfig.RealIPHeader)
+ 	}
+ 
+ 	serverConfig.RateLimit = c.RateLimit.config()
+@@ -585,6 +589,12 @@ func runServe(options serveOptions) error {
+ 		if err := applyWebTLSPreferences(baseTLSConfig, c.Web); err != nil {
+ 			return fmt.Errorf("invalid config: %v", err)
+ 		}
++		// A proxy proves itself with its client certificate (Deckhouse): every
++		// client is asked for one, none has to send one, and the handshake does
++		// not judge it. realIPResolver does, for the client address only.
++		if c.Web.ClientRemoteIP.TrustedProxyCAFile != "" {
++			baseTLSConfig.ClientAuth = tls.RequestClientCert
++		}
+ 
+ 		tlsConfig, err := newTLSReloader(logger, c.Web.TLSCert, c.Web.TLSKey, "", baseTLSConfig)
+ 		if err != nil {
+diff --git a/server/config.go b/server/config.go
+index 9a9af17f..25200b26 100644
+--- a/server/config.go
++++ b/server/config.go
+@@ -1,6 +1,7 @@
+ package server
+ 
+ import (
++	"crypto/x509"
+ 	"errors"
+ 	"fmt"
+ 	"io/fs"
+@@ -50,6 +51,15 @@ type Config struct {
+ 	// Header to extract real ip from.
+ 	RealIPHeader       string
+ 	TrustedRealIPCIDRs []netip.Prefix
++	// TrustedProxySecret, with no TrustedRealIPCIDRs, trusts RealIPHeader of
++	// the requests whose router.TrustedProxyHeader carries it (see
++	// router.ParseRealIPFromProxy).
++	TrustedProxySecret string
++	// TrustedProxyClientCAs and TrustedProxyCertOrganization, with no
++	// TrustedRealIPCIDRs, trust RealIPHeader of the requests whose client
++	// certificate verifies against them (Deckhouse; see router.TrustedProxy).
++	TrustedProxyClientCAs        *x509.CertPool
++	TrustedProxyCertOrganization string
+ 
+ 	// RateLimit limits failed attempts per client address on the routes where a
+ 	// client proves a secret (rateLimitedRoutes). Nil disables the limit.
+diff --git a/server/router/realip.go b/server/router/realip.go
+index 80b80eb2..1a5d49cd 100644
+--- a/server/router/realip.go
++++ b/server/router/realip.go
+@@ -1,6 +1,8 @@
+ package router
+ 
+ import (
++	"crypto/subtle"
++	"crypto/x509"
+ 	"net"
+ 	"net/http"
+ 	"net/netip"
+@@ -62,3 +64,101 @@ func ParseRealIP(header string, trusted []netip.Prefix) func(*http.Request) (str
+ 		return remoteAddr, nil
+ 	}
+ }
++
++// TrustedProxyHeader carries the secret by which a proxy proves that it set the
++// client address headers of a request (ParseRealIPFromProxy). The router removes
++// it from every request before the handlers see it, so it is neither logged nor
++// passed on.
++const TrustedProxyHeader = "X-Deckhouse-Trusted-Proxy"
++
++// forwardedForHeader is the chain of addresses each proxy appends the address of
++// its own peer to.
++const forwardedForHeader = "X-Forwarded-For"
++
++// TrustedProxy tells the proxies that cannot be told by their address, such as
++// an ingress controller on the host network of any node (Deckhouse). A request
++// is from one when its TrustedProxyHeader equals Secret (compared in constant
++// time; an empty Secret trusts nothing), or when the client certificate of its
++// connection verifies against ClientCAs for client authentication and, with
++// Organization set, names it among its organizations. The certificate is not
++// required by the TLS handshake: a client without one, or with another one,
++// connects as before and is reported by its peer address.
++type TrustedProxy struct {
++	Secret       string
++	ClientCAs    *x509.CertPool
++	Organization string
++}
++
++// ParseRealIPFromProxy returns a resolver for the proxies trusted tells.
++//
++// For a request from a trusted proxy the client address is the named header
++// when it holds a single address, otherwise the last address of
++// X-Forwarded-For, which the proxy appended (a proxy that drops the client's
++// header and appends to the chain instead, as a Gateway does). Everything to
++// the left of it was sent by the client, so a last entry that is not an
++// address reports the peer address. Every other request is reported by its
++// peer address, whatever its headers say.
++func ParseRealIPFromProxy(header string, trusted TrustedProxy) func(*http.Request) (string, error) {
++	return func(r *http.Request) (string, error) {
++		remoteAddr, _, err := net.SplitHostPort(r.RemoteAddr)
++		if err != nil {
++			return "", err
++		}
++		if !fromTrustedProxy(r, trusted.Secret) && !trusted.certified(r) {
++			return remoteAddr, nil
++		}
++		if ip, err := netip.ParseAddr(strings.TrimSpace(r.Header.Get(header))); err == nil {
++			return ip.String(), nil
++		}
++		if ip, ok := lastForwardedFor(r); ok {
++			return ip.String(), nil
++		}
++		return remoteAddr, nil
++	}
++}
++
++func fromTrustedProxy(r *http.Request, secret string) bool {
++	presented := r.Header.Get(TrustedProxyHeader)
++	if secret == "" || presented == "" {
++		return false
++	}
++	return subtle.ConstantTimeCompare([]byte(presented), []byte(secret)) == 1
++}
++
++// certified reports whether the client certificate of the connection of r is one
++// of a trusted proxy: it verifies against ClientCAs for client authentication,
++// with the certificates the client sent after it as intermediates, and names
++// Organization when that is set.
++func (t TrustedProxy) certified(r *http.Request) bool {
++	if t.ClientCAs == nil || r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
++		return false
++	}
++	leaf := r.TLS.PeerCertificates[0]
++	intermediates := x509.NewCertPool()
++	for _, c := range r.TLS.PeerCertificates[1:] {
++		intermediates.AddCert(c)
++	}
++	if _, err := leaf.Verify(x509.VerifyOptions{
++		Roots:         t.ClientCAs,
++		Intermediates: intermediates,
++		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
++	}); err != nil {
++		return false
++	}
++	return t.Organization == "" || slices.Contains(leaf.Subject.Organization, t.Organization)
++}
++
++// lastForwardedFor returns the last address of the X-Forwarded-For chain of r,
++// over all its header lines.
++func lastForwardedFor(r *http.Request) (netip.Addr, bool) {
++	hops := strings.Split(strings.Join(r.Header.Values(forwardedForHeader), ","), ",")
++	for _, hop := range slices.Backward(hops) {
++		hop = strings.TrimSpace(hop)
++		if hop == "" {
++			continue
++		}
++		ip, err := netip.ParseAddr(hop)
++		return ip, err == nil
++	}
++	return netip.Addr{}, false
++}
+diff --git a/server/router/realip_cert_test.go b/server/router/realip_cert_test.go
+new file mode 100644
+index 00000000..1ed9bb50
+--- /dev/null
++++ b/server/router/realip_cert_test.go
+@@ -0,0 +1,161 @@
++package router
++
++import (
++	"crypto/ecdsa"
++	"crypto/elliptic"
++	"crypto/rand"
++	"crypto/tls"
++	"crypto/x509"
++	"crypto/x509/pkix"
++	"io"
++	"math/big"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++)
++
++// testCA is a certificate authority that signs client certificates in tests.
++type testCA struct {
++	cert *x509.Certificate
++	key  *ecdsa.PrivateKey
++}
++
++func newTestCA(t *testing.T, name string) testCA {
++	t.Helper()
++	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
++	require.NoError(t, err)
++	tmpl := &x509.Certificate{
++		SerialNumber:          big.NewInt(1),
++		Subject:               pkix.Name{CommonName: name},
++		NotBefore:             time.Now().Add(-time.Hour),
++		NotAfter:              time.Now().Add(time.Hour),
++		IsCA:                  true,
++		KeyUsage:              x509.KeyUsageCertSign,
++		BasicConstraintsValid: true,
++	}
++	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
++	require.NoError(t, err)
++	cert, err := x509.ParseCertificate(der)
++	require.NoError(t, err)
++	return testCA{cert: cert, key: key}
++}
++
++func (ca testCA) pool() *x509.CertPool {
++	p := x509.NewCertPool()
++	p.AddCert(ca.cert)
++	return p
++}
++
++// issue signs a certificate for the organization with the extended key usage.
++func (ca testCA) issue(t *testing.T, organization string, usage x509.ExtKeyUsage) *x509.Certificate {
++	t.Helper()
++	cert, _ := ca.issueWithKey(t, organization, usage)
++	return cert
++}
++
++// issueWithKey is issue that also returns the private key of the certificate.
++func (ca testCA) issueWithKey(t *testing.T, organization string, usage x509.ExtKeyUsage) (*x509.Certificate, *ecdsa.PrivateKey) {
++	t.Helper()
++	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
++	require.NoError(t, err)
++	tmpl := &x509.Certificate{
++		SerialNumber: big.NewInt(2),
++		Subject:      pkix.Name{CommonName: "nginx-ingress:main", Organization: []string{organization}},
++		NotBefore:    time.Now().Add(-time.Hour),
++		NotAfter:     time.Now().Add(time.Hour),
++		KeyUsage:     x509.KeyUsageDigitalSignature,
++		ExtKeyUsage:  []x509.ExtKeyUsage{usage},
++	}
++	der, err := x509.CreateCertificate(rand.Reader, tmpl, ca.cert, &key.PublicKey, ca.key)
++	require.NoError(t, err)
++	cert, err := x509.ParseCertificate(der)
++	require.NoError(t, err)
++	return cert, key
++}
++
++// TestParseRealIPFromProxyClientCertificate: the client address header is
++// trusted from a connection whose client certificate the trusted CA signed for
++// client authentication and the pinned organization (Deckhouse), and from no
++// other connection, whatever certificate it presents.
++func TestParseRealIPFromProxyClientCertificate(t *testing.T) {
++	ingressCA := newTestCA(t, "kube-rbac-proxy-ca-key-pair")
++	otherCA := newTestCA(t, "another-ca")
++	trusted := TrustedProxy{ClientCAs: ingressCA.pool(), Organization: "ingress-nginx:auth"}
++
++	tests := []struct {
++		name  string
++		certs []*x509.Certificate
++		plain bool // no TLS at all
++		want  string
++	}{
++		{name: "ingress controller certificate", certs: []*x509.Certificate{ingressCA.issue(t, "ingress-nginx:auth", x509.ExtKeyUsageClientAuth)}, want: "203.0.113.7"},
++		{name: "no client certificate", want: "10.0.0.5"},
++		{name: "plain HTTP", plain: true, want: "10.0.0.5"},
++		{name: "certificate of another CA", certs: []*x509.Certificate{otherCA.issue(t, "ingress-nginx:auth", x509.ExtKeyUsageClientAuth)}, want: "10.0.0.5"},
++		{name: "another organization of the same CA", certs: []*x509.Certificate{ingressCA.issue(t, "prometheus:scraper", x509.ExtKeyUsageClientAuth)}, want: "10.0.0.5"},
++		{name: "server certificate of the same CA", certs: []*x509.Certificate{ingressCA.issue(t, "ingress-nginx:auth", x509.ExtKeyUsageServerAuth)}, want: "10.0.0.5"},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			r := httptest.NewRequest("GET", "/", nil)
++			r.RemoteAddr = "10.0.0.5:4321"
++			r.Header.Set("X-Real-IP", "203.0.113.7")
++			if tc.plain {
++				r.TLS = nil
++			} else {
++				r.TLS = &tls.ConnectionState{PeerCertificates: tc.certs}
++			}
++			got, err := ParseRealIPFromProxy("X-Real-IP", trusted)(r)
++			require.NoError(t, err)
++			require.Equal(t, tc.want, got)
++		})
++	}
++
++	t.Run("secret still trusted next to the certificate", func(t *testing.T) {
++		r := httptest.NewRequest("GET", "/", nil)
++		r.RemoteAddr = "10.0.0.5:4321"
++		r.Header.Set("X-Real-IP", "203.0.113.7")
++		r.Header.Set(TrustedProxyHeader, "s3cret")
++		got, err := ParseRealIPFromProxy("X-Real-IP", TrustedProxy{Secret: "s3cret", ClientCAs: ingressCA.pool(), Organization: "ingress-nginx:auth"})(r)
++		require.NoError(t, err)
++		require.Equal(t, "203.0.113.7", got)
++	})
++}
++
++// TestParseRealIPFromProxyOverTLS: over a real TLS connection to a server that
++// asks for a client certificate without requiring one (Deckhouse), the
++// certificate of the ingress controller is seen and trusted, and a client
++// without one connects and is reported by its peer address.
++func TestParseRealIPFromProxyOverTLS(t *testing.T) {
++	ingressCA := newTestCA(t, "kube-rbac-proxy-ca-key-pair")
++	resolve := ParseRealIPFromProxy("X-Real-IP", TrustedProxy{ClientCAs: ingressCA.pool(), Organization: "ingress-nginx:auth"})
++	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		ip, err := resolve(r)
++		require.NoError(t, err)
++		_, _ = io.WriteString(w, ip)
++	}))
++	srv.TLS = &tls.Config{ClientAuth: tls.RequestClientCert}
++	srv.StartTLS()
++	defer srv.Close()
++
++	get := func(certs []tls.Certificate) string {
++		transport := srv.Client().Transport.(*http.Transport).Clone()
++		transport.TLSClientConfig.Certificates = certs
++		req, err := http.NewRequest("GET", srv.URL, nil)
++		require.NoError(t, err)
++		req.Header.Set("X-Real-IP", "203.0.113.7")
++		resp, err := (&http.Client{Transport: transport}).Do(req)
++		require.NoError(t, err)
++		defer resp.Body.Close()
++		body, err := io.ReadAll(resp.Body)
++		require.NoError(t, err)
++		return string(body)
++	}
++
++	cert, key := ingressCA.issueWithKey(t, "ingress-nginx:auth", x509.ExtKeyUsageClientAuth)
++	require.Equal(t, "203.0.113.7", get([]tls.Certificate{{Certificate: [][]byte{cert.Raw}, PrivateKey: key, Leaf: cert}}))
++	require.Equal(t, "127.0.0.1", get(nil), "a client without a certificate connects and is its peer address")
++}
+diff --git a/server/router/realip_test.go b/server/router/realip_test.go
+index b913c1d3..1862f94b 100644
+--- a/server/router/realip_test.go
++++ b/server/router/realip_test.go
+@@ -149,3 +149,80 @@ func TestParseRealIPMalformedRemoteAddr(t *testing.T) {
+ 	_, err := resolve(r)
+ 	require.Error(t, err)
+ }
++
++func TestParseRealIPFromProxy(t *testing.T) {
++	const (
++		header = "X-Real-IP"
++		secret = "pr0xy-s3cret"
++		peer   = "10.1.2.3:1234"
++	)
++
++	tests := []struct {
++		name         string
++		secret       string
++		presented    []string
++		realIP       string
++		forwardedFor []string
++		want         string
++	}{
++		{name: "no secret header", secret: secret, realIP: "198.51.100.7", want: "10.1.2.3"},
++		{name: "wrong secret", secret: secret, presented: []string{"guess"}, realIP: "198.51.100.7", want: "10.1.2.3"},
++		{name: "secret with a suffix", secret: secret, presented: []string{secret + "x"}, realIP: "198.51.100.7", want: "10.1.2.3"},
++		{name: "no secret configured", presented: []string{""}, realIP: "198.51.100.7", want: "10.1.2.3"},
++		{name: "right secret", secret: secret, presented: []string{secret}, realIP: "198.51.100.7", want: "198.51.100.7"},
++		{name: "right secret, IPv6", secret: secret, presented: []string{secret}, realIP: " 2001:db8::7 ", want: "2001:db8::7"},
++		{
++			name: "right secret, no header: the last hop of the chain", secret: secret, presented: []string{secret},
++			forwardedFor: []string{"203.0.113.9, 198.51.100.7"}, want: "198.51.100.7",
++		},
++		{
++			name: "right secret, chain over several header lines", secret: secret, presented: []string{secret},
++			forwardedFor: []string{"203.0.113.9", "198.51.100.7"}, want: "198.51.100.7",
++		},
++		{
++			name: "right secret, header not an address: the chain", secret: secret, presented: []string{secret},
++			realIP: "198.51.100.7, 203.0.113.9", forwardedFor: []string{"192.0.2.1, 198.51.100.8"}, want: "198.51.100.8",
++		},
++		{
++			name: "right secret, last hop not an address", secret: secret, presented: []string{secret},
++			realIP: "garbage", forwardedFor: []string{"198.51.100.7, garbage"}, want: "10.1.2.3",
++		},
++		{
++			name: "right secret, empty hops skipped", secret: secret, presented: []string{secret},
++			forwardedFor: []string{"198.51.100.7, ,"}, want: "198.51.100.7",
++		},
++		{name: "right secret, no address at all", secret: secret, presented: []string{secret}, want: "10.1.2.3"},
++		{
++			name: "wrong secret, chain ignored", secret: secret, presented: []string{"guess"},
++			forwardedFor: []string{"198.51.100.7"}, want: "10.1.2.3",
++		},
++		{
++			name: "only the first secret header counts", secret: secret, presented: []string{"guess", secret},
++			realIP: "198.51.100.7", want: "10.1.2.3",
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			r := httptest.NewRequest(http.MethodGet, "/auth", nil)
++			r.RemoteAddr = peer
++			for _, v := range tc.presented {
++				r.Header.Add(TrustedProxyHeader, v)
++			}
++			if tc.realIP != "" {
++				r.Header.Set(header, tc.realIP)
++			}
++			for _, v := range tc.forwardedFor {
++				r.Header.Add("X-Forwarded-For", v)
++			}
++
++			got, err := ParseRealIPFromProxy(header, TrustedProxy{Secret: tc.secret})(r)
++			require.NoError(t, err)
++			require.Equal(t, tc.want, got)
++		})
++	}
++
++	r := httptest.NewRequest(http.MethodGet, "/auth", nil)
++	r.RemoteAddr = "no-port"
++	_, err := ParseRealIPFromProxy(header, TrustedProxy{Secret: secret})(r)
++	require.Error(t, err)
++}
+diff --git a/server/router/router.go b/server/router/router.go
+index 6d7712bd..d6fd2e58 100644
+--- a/server/router/router.go
++++ b/server/router/router.go
+@@ -72,6 +72,8 @@ func (m mountMux) wrap(name string, h http.Handler) http.HandlerFunc {
+ 				rCtx = reqctx.WithRemoteIP(rCtx, realIP)
+ 			}
+ 		}
++		// The secret of the trusted proxy has served; no handler gets to log it.
++		r.Header.Del(TrustedProxyHeader)
+ 		m.c.Instrument(name, h)(w, r.WithContext(rCtx))
+ 	}
+ }
+diff --git a/server/router/router_test.go b/server/router/router_test.go
+new file mode 100644
+index 00000000..8730b16c
+--- /dev/null
++++ b/server/router/router_test.go
+@@ -0,0 +1,38 @@
++package router
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/gorilla/mux"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/reqctx"
++)
++
++// The secret of the trusted proxy decides the client address and goes no
++// further: no handler sees it, so none can log or pass it on.
++func TestMuxRemovesTrustedProxySecret(t *testing.T) {
++	const secret = "pr0xy-s3cret"
++	m := New(Config{
++		Router:       mux.NewRouter(),
++		RealIPHeader: "X-Real-IP",
++		RealIP:       ParseRealIPFromProxy("X-Real-IP", TrustedProxy{Secret: secret}),
++		Instrument:   func(_ string, h http.Handler) http.HandlerFunc { return h.ServeHTTP },
++	})
++	var presented, clientAddr string
++	m.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
++		presented = r.Header.Get(TrustedProxyHeader)
++		clientAddr, _ = r.Context().Value(reqctx.RequestKeyRemoteIP).(string)
++	})
++
++	r := httptest.NewRequest(http.MethodPost, "/token", nil)
++	r.RemoteAddr = "10.1.2.3:1234"
++	r.Header.Set(TrustedProxyHeader, secret)
++	r.Header.Set("X-Real-IP", "198.51.100.7")
++	m.(mountMux).c.Router.ServeHTTP(httptest.NewRecorder(), r)
++
++	require.Equal(t, "198.51.100.7", clientAddr)
++	require.Empty(t, presented)
++}
+diff --git a/server/server.go b/server/server.go
+index adb8adcb..5f631bca 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -143,7 +143,7 @@ func newServer(ctx context.Context, c Config) (*Server, error) {
+ 		Headers:      c.Headers,
+ 		RealIPHeader: c.RealIPHeader,
+ 		Instrument:   instrumentHandler(c.PrometheusRegistry),
+-		RealIP:       router.ParseRealIP(c.RealIPHeader, c.TrustedRealIPCIDRs),
++		RealIP:       realIPResolver(c),
+ 		CORSOrigins:  c.AllowedOrigins,
+ 		CORSHeaders:  c.AllowedHeaders,
+ 	})
+@@ -228,6 +228,22 @@ func instrumentHandler(registry *prometheus.Registry) func(string, http.Handler)
+ 	}
+ }
+ 
++// realIPResolver resolves the client address of a request: from the header of
++// a proxy listed in TrustedRealIPCIDRs, as upstream does, or, with none listed,
++// of a proxy that presents TrustedProxySecret or a client certificate that
++// TrustedProxyClientCAs verify. Without any, every request is reported by its
++// peer address.
++func realIPResolver(c Config) func(*http.Request) (string, error) {
++	if len(c.TrustedRealIPCIDRs) == 0 && (c.TrustedProxySecret != "" || c.TrustedProxyClientCAs != nil) {
++		return router.ParseRealIPFromProxy(c.RealIPHeader, router.TrustedProxy{
++			Secret:       c.TrustedProxySecret,
++			ClientCAs:    c.TrustedProxyClientCAs,
++			Organization: c.TrustedProxyCertOrganization,
++		})
++	}
++	return router.ParseRealIP(c.RealIPHeader, c.TrustedRealIPCIDRs)
++}
++
+ // rateLimitedRoutes are the routes where a client proves a secret. With
+ // Config.RateLimit their failed attempts are limited per client address. A
+ // pattern ending in "/" covers every route below it.
+diff --git a/server/server_ratelimit_test.go b/server/server_ratelimit_test.go
+index ae9c733d..086a52b6 100644
+--- a/server/server_ratelimit_test.go
++++ b/server/server_ratelimit_test.go
+@@ -297,6 +297,42 @@ func TestRateLimitClientAddress(t *testing.T) {
+ 	}
+ }
+ 
++// TestRateLimitTrustedProxySecret checks that the limiter counts the client
++// address a proxy that presents the secret names, and a direct caller by its
++// peer address, whatever it writes into the header: it can neither pick a
++// bucket of its own nor use up the bucket of another client.
++func TestRateLimitTrustedProxySecret(t *testing.T) {
++	const secret = "pr0xy-s3cret"
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.RateLimit = rateLimitTestConfig
++		c.RealIPHeader = "X-Real-IP"
++		c.TrustedProxySecret = secret
++	})
++	defer httpServer.Close()
++
++	viaProxy := func(clientAddr, presented string) *http.Request {
++		r := badClientTokenRequest(clientAddr)
++		r.Header.Set(router.TrustedProxyHeader, presented)
++		return r
++	}
++
++	for range 2 {
++		require.Equal(t, http.StatusUnauthorized, serveRequest(s, badClientTokenRequest("198.51.100.1")).Code)
++	}
++	assert.Equal(t, http.StatusTooManyRequests, serveRequest(s, badClientTokenRequest("198.51.100.2")).Code,
++		"without the secret the header is ignored: one bucket for the peer")
++	assert.Equal(t, http.StatusTooManyRequests, serveRequest(s, viaProxy("198.51.100.3", "guess")).Code,
++		"a wrong secret is no secret")
++
++	for range 2 {
++		require.Equal(t, http.StatusUnauthorized, serveRequest(s, viaProxy("198.51.100.1", secret)).Code,
++			"the direct calls did not use up the bucket of the client they named")
++	}
++	assert.Equal(t, http.StatusTooManyRequests, serveRequest(s, viaProxy("198.51.100.1", secret)).Code)
++	assert.Equal(t, http.StatusUnauthorized, serveRequest(s, viaProxy("198.51.100.2", secret)).Code,
++		"another client behind the proxy has a bucket of its own")
++}
++
+ func TestRateLimitDisabled(t *testing.T) {
+ 	httpServer, s := newTestServer(t, nil)
+ 	defer httpServer.Close()

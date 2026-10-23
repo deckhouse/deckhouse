@@ -19,55 +19,100 @@ package user
 import (
 	"testing"
 	"time"
+
+	"user-authn-controller/internal/naming"
+	"user-authn-controller/internal/useridentity"
 )
 
-func TestLockFromPassword(t *testing.T) {
+func TestEnforcedLock(t *testing.T) {
 	t.Parallel()
 
 	now := time.Date(2026, 8, 19, 12, 0, 0, 0, time.UTC)
 	until := now.Add(time.Hour)
+	later := now.Add(2 * time.Hour)
+	policyLock := userLock{
+		State:   true,
+		Reason:  lockReasonPasswordPolicy,
+		Message: lockMessagePasswordPolicy,
+		Until:   until.UTC().Format(time.RFC3339),
+	}
+	adminLock := func(t time.Time) userLock {
+		return userLock{
+			State:   true,
+			Reason:  lockReasonAdministrator,
+			Message: lockMessageAdministrator,
+			Until:   t.UTC().Format(time.RFC3339),
+		}
+	}
+	identity := func(blocked time.Time, admin, migrated bool) *useridentity.Identity {
+		id := useridentity.New("jane", naming.LocalConnectorID)
+		if !blocked.IsZero() {
+			if err := id.SetBlockedUntil(blocked); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if admin {
+			id.SetAdminLock(blocked)
+		}
+		if migrated {
+			if err := id.SetRecord(useridentity.Record{Time: now.Format(time.RFC3339)}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return id
+	}
 
 	tests := []struct {
-		name string
-		pw   passwordView
-		want userLock
+		name  string
+		pw    passwordView
+		ident *useridentity.Identity
+		want  userLock
 	}{
 		{name: "no lock"},
 		{
-			name: "expired lock",
+			name: "expired Password lock",
 			pw:   passwordView{LockedUntil: ptrTime(now.Add(-time.Second))},
 		},
 		{
-			name: "policy lockout",
+			name: "Password lock before the copy",
 			pw:   passwordView{LockedUntil: &until},
-			want: userLock{
-				State:   true,
-				Reason:  lockReasonPasswordPolicy,
-				Message: lockMessagePasswordPolicy,
-				Until:   until.UTC().Format(time.RFC3339),
-			},
+			want: policyLock,
 		},
 		{
-			name: "admin lock",
+			name: "Password admin lock before the copy",
 			pw: passwordView{
 				LockedUntil: &until,
 				Annotations: map[string]string{lockedByAdministratorAnnot: ""},
 			},
-			want: userLock{
-				State:   true,
-				Reason:  lockReasonAdministrator,
-				Message: lockMessageAdministrator,
-				Until:   until.UTC().Format(time.RFC3339),
-			},
+			want: adminLock(until),
+		},
+		{
+			name:  "later UserIdentity lock before the copy",
+			pw:    passwordView{LockedUntil: &until},
+			ident: identity(later, true, false),
+			want:  adminLock(later),
+		},
+		{
+			name:  "migrated UserIdentity without a lock: the Password lock is history",
+			pw:    passwordView{LockedUntil: &until},
+			ident: identity(time.Time{}, false, true),
+		},
+		{
+			name:  "migrated UserIdentity lock",
+			ident: identity(until, false, true),
+			want:  policyLock,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := lockFromPassword(tt.pw, now)
-			if !lockEqual(got, tt.want) {
-				t.Errorf("lockFromPassword() = %+v, want %+v", got, tt.want)
+			lock, err := enforcedLock(tt.pw, tt.ident)
+			if err != nil {
+				t.Fatalf("enforcedLock: %v", err)
+			}
+			if got := statusLock(lock, now); !lockEqual(got, tt.want) {
+				t.Errorf("status lock = %+v, want %+v", got, tt.want)
 			}
 		})
 	}

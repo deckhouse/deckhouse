@@ -1,0 +1,1883 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+index cf66caa0..bee3d5bd 100644
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
+@@ -154,9 +154,8 @@ func (c Config) validateMFA() error {
+ 		return nil
+ 	}
+ 
+-	if !featureflags.SessionsEnabled.Enabled() {
+-		return fmt.Errorf("mfa requires sessions to be enabled (DEX_SESSIONS_ENABLED=true)")
+-	}
++	// MFA does not require sessions: its state lives on the user identity, which
++	// every login records (server/useridentity).
+ 
+ 	knownTypes := map[string]bool{"TOTP": true, "WebAuthn": true}
+ 	ids := make(map[string]bool, len(mfa.Authenticators))
+diff --git a/cmd/dex/config_test.go b/cmd/dex/config_test.go
+index 7d756623..8036610c 100644
+--- a/cmd/dex/config_test.go
++++ b/cmd/dex/config_test.go
+@@ -750,3 +750,15 @@ enablePasswordDB: true
+ 		})
+ 	}
+ }
++
++// MFA works without browser sessions: its state lives on the user identity,
++// which every login records.
++func TestValidateMFAWithoutSessions(t *testing.T) {
++	t.Setenv("DEX_SESSIONS_ENABLED", "false")
++
++	c := Config{MFA: MFAConfig{
++		Authenticators:  []MFAAuthenticator{{ID: "totp", Type: "TOTP", ConnectorTypes: []string{"local"}}},
++		DefaultMFAChain: []string{"totp"},
++	}}
++	require.NoError(t, c.validateMFA())
++}
+diff --git a/server/authflow/dispatch.go b/server/authflow/dispatch.go
+index 02d81d86..6216acb8 100644
+--- a/server/authflow/dispatch.go
++++ b/server/authflow/dispatch.go
+@@ -14,6 +14,7 @@ import (
+ 	"github.com/dexidp/dex/server/consent"
+ 	"github.com/dexidp/dex/server/internal"
+ 	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+@@ -81,6 +82,14 @@ func (h *Handler) dispatch(w http.ResponseWriter, r *http.Request, authReq stora
+ 		}
+ 	}
+ 
++	// Every factor is done, so the login counts: finalizeLogin left LastLogin to
++	// this point because a second factor could follow.
++	if h.MFAEnabled {
++		if err := useridentity.Completed(ctx, h.Storage, authReq.Claims.UserID, authReq.ConnectorID, authReq.AuthTime); err != nil {
++			h.Logger.ErrorContext(ctx, "failed to record the last login", "err", err)
++		}
++	}
++
+ 	// Consent: the "approved" verifier resolves it for this request; otherwise ask
+ 	// whether it can be skipped from persisted state.
+ 	if !consentApproved && !consent.Satisfied(ctx, h.Storage, h.SkipApproval, &authReq) {
+diff --git a/server/authflow/dispatch_test.go b/server/authflow/dispatch_test.go
+new file mode 100644
+index 00000000..e0813f6f
+--- /dev/null
++++ b/server/authflow/dispatch_test.go
+@@ -0,0 +1,65 @@
++package authflow
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/mfa"
++	"github.com/dexidp/dex/storage"
++)
++
++// TestDispatchRecordsLastLoginAfterSecondFactor checks that a login counts as
++// the last login only once its second factor is done, and only once.
++func TestDispatchRecordsLastLoginAfterSecondFactor(t *testing.T) {
++	httpServer, server := newTestHandler(t, func(c *testFlowConfig) {
++		c.MFAProviders = map[string]mfa.Provider{"totp": mfa.NewTOTPProvider("test-issuer", nil)}
++		c.DefaultMFAChain = []string{"totp"}
++	})
++	defer httpServer.Close()
++	ctx := t.Context()
++
++	require.NoError(t, server.Storage.CreateClient(ctx, storage.Client{
++		ID: "example-app", Secret: "secret", RedirectURIs: []string{"https://example.com/callback"},
++	}))
++	authTime := time.Now().Add(-time.Minute).Truncate(time.Second)
++	authReq := storage.AuthRequest{
++		ID: "login-req", ClientID: "example-app", ConnectorID: "mock",
++		ResponseTypes: []string{"code"}, Scopes: []string{"openid"},
++		RedirectURI: "https://example.com/callback", Expiry: time.Now().Add(time.Hour),
++		LoggedIn: true, AuthTime: authTime, Claims: storage.Claims{UserID: "user-1"},
++	}
++	require.NoError(t, server.Storage.CreateAuthRequest(ctx, authReq))
++	require.NoError(t, server.Storage.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "user-1", ConnectorID: "mock"}))
++	lastLogin := func() time.Time {
++		ui, err := server.Storage.GetUserIdentity(ctx, "user-1", "mock")
++		require.NoError(t, err)
++		return ui.LastLogin
++	}
++
++	// The second factor is pending: the dispatcher sends the user to it.
++	w := httptest.NewRecorder()
++	server.dispatch(w, httptest.NewRequest(http.MethodGet, "/auth", nil), authReq, false)
++	require.Equal(t, http.StatusSeeOther, w.Code)
++	require.Contains(t, w.Header().Get("Location"), "/mfa")
++	require.True(t, lastLogin().IsZero())
++
++	// The second factor is done: the login counts from the time the first one passed.
++	authReq.MFAValidated = true
++	w = httptest.NewRecorder()
++	server.dispatch(w, httptest.NewRequest(http.MethodGet, "/auth", nil), authReq, false)
++	require.Equal(t, authTime, lastLogin())
++
++	// A session login continues the login it was issued from and records nothing.
++	require.NoError(t, server.Storage.UpdateUserIdentity(ctx, "user-1", "mock", func(u storage.UserIdentity) (storage.UserIdentity, error) {
++		u.LastLogin = authTime.Add(time.Second)
++		return u, nil
++	}))
++	authReq.ID = "session-req"
++	require.NoError(t, server.Storage.CreateAuthRequest(ctx, authReq))
++	server.dispatch(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/auth", nil), authReq, false)
++	require.Equal(t, authTime.Add(time.Second), lastLogin(), "LastLogin never moves back")
++}
+diff --git a/server/authflow/finalize.go b/server/authflow/finalize.go
+index 9029116e..efa37e77 100644
+--- a/server/authflow/finalize.go
++++ b/server/authflow/finalize.go
+@@ -8,33 +8,16 @@ import (
+ 	"context"
+ 	"errors"
+ 	"fmt"
+-	"time"
+ 
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/tokens"
++	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+ // finalizeLogin associates the user's identity with the current AuthRequest, then returns
+ // the approval page's path.
+ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity, authReq storage.AuthRequest, conn connector.Connector) (storage.AuthRequest, error) {
+-	// Refuse to complete login for a locked account. BlockedUntil lives on the
+-	// persisted UserIdentity, which only exists when the sessions feature is on;
+-	// a first-time login (no stored identity yet) cannot be blocked.
+-	if h.Sessions.Enabled() {
+-		storedIdentity, err := h.Storage.GetUserIdentity(ctx, identity.UserID, authReq.ConnectorID)
+-		switch {
+-		case err == nil:
+-			if !storedIdentity.BlockedUntil.IsZero() && h.Now().Before(storedIdentity.BlockedUntil) {
+-				h.Logger.WarnContext(ctx, "login rejected for locked account",
+-					"connector_id", authReq.ConnectorID, "user_id", identity.UserID, "blocked_until", storedIdentity.BlockedUntil)
+-				return storage.AuthRequest{}, fmt.Errorf("account is locked until %s", storedIdentity.BlockedUntil.Format(time.RFC3339))
+-			}
+-		case !errors.Is(err, storage.ErrNotFound):
+-			return storage.AuthRequest{}, fmt.Errorf("failed to look up user identity: %w", err)
+-		}
+-	}
+-
+ 	claims := storage.Claims{
+ 		UserID:            identity.UserID,
+ 		Username:          identity.Username,
+@@ -43,6 +26,7 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 		EmailVerified:     identity.EmailVerified,
+ 		Groups:            identity.Groups,
+ 	}
++	now := h.Now()
+ 
+ 	// The allow-lists of the client and the connector decide whether the user
+ 	// may sign in here at all, so a refused login records nothing. The request
+@@ -52,11 +36,33 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 		return storage.AuthRequest{}, err
+ 	}
+ 
++	// Record the user identity of every login, whether sessions are enabled or
++	// not, and refuse a locked account before the request is marked logged in:
++	// the second factor and the lock live on the identity. When a second factor
++	// may follow, LastLogin waits for it (see dispatch).
++	err := useridentity.Record(ctx, h.Storage, useridentity.Login{
++		ConnectorID: authReq.ConnectorID,
++		Claims:      claims,
++		Time:        now,
++		Complete:    !h.MFAEnabled,
++		Logger:      h.Logger,
++	})
++	var blocked *useridentity.BlockedError
++	switch {
++	case errors.As(err, &blocked):
++		h.Logger.WarnContext(ctx, "login rejected for locked account",
++			"connector_id", authReq.ConnectorID, "user_id", identity.UserID, "blocked_until", blocked.Until)
++		return storage.AuthRequest{}, err
++	case err != nil:
++		h.Logger.ErrorContext(ctx, "failed to record user identity", "err", err)
++		return storage.AuthRequest{}, err
++	}
++
+ 	updater := func(a storage.AuthRequest) (storage.AuthRequest, error) {
+ 		a.LoggedIn = true
+ 		a.Claims = issued
+ 		a.ConnectorData = identity.ConnectorData
+-		a.AuthTime = h.Now()
++		a.AuthTime = now
+ 		return a, nil
+ 	}
+ 	if err := h.Storage.UpdateAuthRequest(ctx, authReq.ID, updater); err != nil {
+@@ -121,40 +127,6 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 		}
+ 	}
+ 
+-	// Create or update UserIdentity to persist user claims across sessions.
+-	if h.Sessions.Enabled() {
+-		now := h.Now()
+-
+-		_, err := h.Storage.GetUserIdentity(ctx, identity.UserID, authReq.ConnectorID)
+-		switch {
+-		case err != nil && errors.Is(err, storage.ErrNotFound):
+-			ui := storage.UserIdentity{
+-				UserID:      identity.UserID,
+-				ConnectorID: authReq.ConnectorID,
+-				Claims:      claims,
+-				Consents:    make(map[string][]string),
+-				CreatedAt:   now,
+-				LastLogin:   now,
+-			}
+-			if err := h.Storage.CreateUserIdentity(ctx, ui); err != nil {
+-				h.Logger.ErrorContext(ctx, "failed to create user identity", "err", err)
+-				return storage.AuthRequest{}, err
+-			}
+-		case err == nil:
+-			if err := h.Storage.UpdateUserIdentity(ctx, identity.UserID, authReq.ConnectorID, func(old storage.UserIdentity) (storage.UserIdentity, error) {
+-				old.Claims = claims
+-				old.LastLogin = now
+-				return old, nil
+-			}); err != nil {
+-				h.Logger.ErrorContext(ctx, "failed to update user identity", "err", err)
+-				return storage.AuthRequest{}, err
+-			}
+-		default:
+-			h.Logger.ErrorContext(ctx, "failed to get user identity", "err", err)
+-			return storage.AuthRequest{}, err
+-		}
+-	}
+-
+ 	// The identity is persisted; return the finalized request so the caller can
+ 	// create the session and advance the flow.
+ 	return h.Storage.GetAuthRequest(ctx, authReq.ID)
+diff --git a/server/authflow/finalize_test.go b/server/authflow/finalize_test.go
+index 6a06ea46..a78e8be9 100644
+--- a/server/authflow/finalize_test.go
++++ b/server/authflow/finalize_test.go
+@@ -11,6 +11,7 @@ import (
+ 	"github.com/stretchr/testify/require"
+ 
+ 	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/mfa"
+ 	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/storage"
+ )
+@@ -105,3 +106,72 @@ func TestFinalizeLoginLogsClientID(t *testing.T) {
+ 	}
+ 	require.True(t, logged, "finalizeLogin did not log a successful login")
+ }
++
++// Without sessions every login still records the user identity: the second
++// factor, the lock and the last login of every user live on it.
++func TestFinalizeLoginRecordsUserIdentityWithoutSessions(t *testing.T) {
++	httpServer, server := newTestHandler(t, nil)
++	defer httpServer.Close()
++	ctx := t.Context()
++
++	authReq := storage.AuthRequest{ID: "login-req", ClientID: "example-app", Expiry: time.Now().Add(time.Hour), ConnectorID: "mock"}
++	require.NoError(t, server.Storage.CreateClient(ctx, storage.Client{ID: "example-app"}))
++	require.NoError(t, server.Storage.CreateAuthRequest(ctx, authReq))
++
++	ident := connector.Identity{UserID: "user-1", Username: "user", Email: "user@example.com", Groups: []string{"admins"}}
++	finalized, err := server.finalizeLogin(ctx, ident, authReq, nil)
++	require.NoError(t, err)
++
++	ui, err := server.Storage.GetUserIdentity(ctx, "user-1", "mock")
++	require.NoError(t, err)
++	require.Equal(t, storage.Claims{UserID: "user-1", Username: "user", Email: "user@example.com", Groups: []string{"admins"}}, ui.Claims)
++	require.Equal(t, finalized.AuthTime, ui.LastLogin, "no second factor follows, so the login is complete")
++	require.Equal(t, finalized.AuthTime, ui.CreatedAt)
++}
++
++func TestFinalizeLoginBlockedAccountWithoutSessions(t *testing.T) {
++	httpServer, server := newTestHandler(t, nil)
++	defer httpServer.Close()
++	ctx := t.Context()
++
++	authReq := storage.AuthRequest{ID: "login-req", ClientID: "example-app", Expiry: time.Now().Add(time.Hour), ConnectorID: "mock"}
++	require.NoError(t, server.Storage.CreateClient(ctx, storage.Client{ID: "example-app"}))
++	require.NoError(t, server.Storage.CreateAuthRequest(ctx, authReq))
++	lastLogin := time.Now().Add(-time.Hour).Truncate(time.Second)
++	require.NoError(t, server.Storage.CreateUserIdentity(ctx, storage.UserIdentity{
++		UserID: "user-1", ConnectorID: "mock", LastLogin: lastLogin, BlockedUntil: time.Now().Add(time.Hour),
++	}))
++
++	_, err := server.finalizeLogin(ctx, connector.Identity{UserID: "user-1", Email: "user@example.com"}, authReq, nil)
++	require.ErrorContains(t, err, "locked")
++
++	updated, err := server.Storage.GetAuthRequest(ctx, authReq.ID)
++	require.NoError(t, err)
++	require.False(t, updated.LoggedIn, "blocked account must not be logged in")
++	ui, err := server.Storage.GetUserIdentity(ctx, "user-1", "mock")
++	require.NoError(t, err)
++	require.Equal(t, lastLogin, ui.LastLogin, "a refused login is not a last login")
++}
++
++// With MFA configured a second factor may follow, so the login is not complete
++// yet: finalizeLogin records the identity but leaves LastLogin to the dispatcher.
++func TestFinalizeLoginLeavesLastLoginToSecondFactor(t *testing.T) {
++	httpServer, server := newTestHandler(t, func(c *testFlowConfig) {
++		c.MFAProviders = map[string]mfa.Provider{"totp": mfa.NewTOTPProvider("test-issuer", nil)}
++		c.DefaultMFAChain = []string{"totp"}
++	})
++	defer httpServer.Close()
++	ctx := t.Context()
++
++	authReq := storage.AuthRequest{ID: "login-req", ClientID: "example-app", Expiry: time.Now().Add(time.Hour), ConnectorID: "mock"}
++	require.NoError(t, server.Storage.CreateClient(ctx, storage.Client{ID: "example-app"}))
++	require.NoError(t, server.Storage.CreateAuthRequest(ctx, authReq))
++
++	_, err := server.finalizeLogin(ctx, connector.Identity{UserID: "user-1", Email: "user@example.com"}, authReq, nil)
++	require.NoError(t, err)
++
++	ui, err := server.Storage.GetUserIdentity(ctx, "user-1", "mock")
++	require.NoError(t, err)
++	require.Equal(t, "user@example.com", ui.Claims.Email)
++	require.True(t, ui.LastLogin.IsZero())
++}
+diff --git a/server/authflow/sessionlogin.go b/server/authflow/sessionlogin.go
+index bd0200a7..eca470fd 100644
+--- a/server/authflow/sessionlogin.go
++++ b/server/authflow/sessionlogin.go
+@@ -5,6 +5,7 @@ import (
+ 	"net/http"
+ 	"time"
+ 
++	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+@@ -62,6 +63,15 @@ func (h *Handler) trySessionLoginWithSession(ctx context.Context, r *http.Reques
+ 		return false
+ 	}
+ 
++	// A locked pair is not let in from its session. The user goes on to the
++	// login, which refuses him as any login is refused for the lock, and the
++	// session serves again once the lock ends.
++	if err := useridentity.CheckBlockedIdentity(ui, now); err != nil {
++		h.Logger.DebugContext(ctx, "session: account locked, falling back to the login",
++			"session_id", session.ID, "user_id", session.UserID)
++		return false
++	}
++
+ 	// Check max_age: if the user's last authentication is too old, force re-auth.
+ 	if authReq.MaxAge >= 0 {
+ 		if now.Sub(ui.LastLogin) > time.Duration(authReq.MaxAge)*time.Second {
+diff --git a/server/authflow/sessionlogin_test.go b/server/authflow/sessionlogin_test.go
+index 39da51aa..9d135c59 100644
+--- a/server/authflow/sessionlogin_test.go
++++ b/server/authflow/sessionlogin_test.go
+@@ -632,6 +632,29 @@ func TestTrySessionLogin(t *testing.T) {
+ 		assert.False(t, ok)
+ 	})
+ 
++	t.Run("locked pair falls back to the login", func(t *testing.T) {
++		s := newTestSessionServer(t)
++		s.SkipApproval = true
++		authReq := setupSessionLoginFixture(t, s)
++		lock := func(until time.Time) {
++			require.NoError(t, s.Storage.UpdateUserIdentity(ctx, "user-1", "mock", func(u storage.UserIdentity) (storage.UserIdentity, error) {
++				u.BlockedUntil = until
++				return u, nil
++			}))
++		}
++
++		lock(s.Now().Add(time.Hour))
++		ok := s.trySessionLogin(ctx, sessionCookieRequest("test-nonce"), httptest.NewRecorder(), &authReq)
++		assert.False(t, ok, "a locked pair is not let in from its session")
++		stored, err := s.Storage.GetAuthRequest(ctx, authReq.ID)
++		require.NoError(t, err)
++		assert.False(t, stored.LoggedIn)
++
++		lock(s.Now().Add(-time.Second))
++		ok = s.trySessionLogin(ctx, sessionCookieRequest("test-nonce"), httptest.NewRecorder(), &authReq)
++		assert.True(t, ok, "the session serves again once the lock ends")
++	})
++
+ 	t.Run("updates session activity", func(t *testing.T) {
+ 		s := newTestSessionServer(t)
+ 		s.SkipApproval = true
+diff --git a/server/grants/grants.go b/server/grants/grants.go
+index 419d51c8..a29f8ace 100644
+--- a/server/grants/grants.go
++++ b/server/grants/grants.go
+@@ -180,8 +180,8 @@ func (h *Handler) Mount(m router.Mux) {
+ 	h.grants = map[string]Grant{}
+ 	h.register(h.SupportedGrantTypes,
+ 		&clientCredentials{issuer: h.Issuer, logger: h.Logger},
+-		&password{issuer: h.Issuer, storage: h.Storage, logger: h.Logger, connectorID: h.PasswordConnector},
+-		&tokenExchange{issuer: h.Issuer, storage: h.Storage, logger: h.Logger},
++		&password{issuer: h.Issuer, storage: h.Storage, now: h.Now, logger: h.Logger, connectorID: h.PasswordConnector},
++		&tokenExchange{issuer: h.Issuer, storage: h.Storage, now: h.Now, logger: h.Logger},
+ 		&authorizationCode{issuer: h.Issuer, storage: h.Storage, connectors: h.Connectors, now: h.Now, logger: h.Logger},
+ 		&refresh{storage: h.Storage, issuer: h.Issuer, policy: h.RefreshPolicy, sessions: h.Sessions, sessionsEnabled: h.SessionsEnabled, now: h.Now, logger: h.Logger},
+ 		&deviceCode{storage: h.Storage, now: h.Now, logger: h.Logger},
+diff --git a/server/grants/lock.go b/server/grants/lock.go
+new file mode 100644
+index 00000000..dcb7e3c4
+--- /dev/null
++++ b/server/grants/lock.go
+@@ -0,0 +1,29 @@
++package grants
++
++import (
++	"context"
++	"errors"
++	"log/slog"
++	"net/http"
++
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/useridentity"
++)
++
++// identityError maps the outcome of recording a user identity or checking its
++// lock to the token response, or returns nil when err is nil. A locked account
++// gets access_denied with HTTP 429, as from the v2.44-based Deckhouse dex.
++// attrs name the request in the log line.
++func identityError(ctx context.Context, logger *slog.Logger, err error, attrs ...any) *oauth2.Error {
++	var blocked *useridentity.BlockedError
++	switch {
++	case err == nil:
++		return nil
++	case errors.As(err, &blocked):
++		logger.WarnContext(ctx, "token request rejected for locked account", append(attrs, "blocked_until", blocked.Until)...)
++		return &oauth2.Error{Type: oauth2.AccessDenied, Description: "Account locked", Status: http.StatusTooManyRequests}
++	default:
++		logger.ErrorContext(ctx, "failed to read the user identity", append(attrs, "err", err)...)
++		return &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError}
++	}
++}
+diff --git a/server/grants/password.go b/server/grants/password.go
+index 03c43ed5..9391d36b 100644
+--- a/server/grants/password.go
++++ b/server/grants/password.go
+@@ -4,12 +4,14 @@ import (
+ 	"context"
+ 	"log/slog"
+ 	"net/http"
++	"time"
+ 
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/allowlist"
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/tokens"
++	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+@@ -18,6 +20,7 @@ import (
+ type password struct {
+ 	issuer      *tokens.Issuer
+ 	storage     storage.Storage
++	now         func() time.Time
+ 	logger      *slog.Logger
+ 	connectorID string
+ }
+@@ -84,6 +87,23 @@ func (g *password) Authorize(ctx context.Context, req *Request, client storage.C
+ 		"connector_id", g.connectorID, "client_id", client.ID, "user_id", issued.UserID); oerr != nil {
+ 		return nil, oerr
+ 	}
++
++	// A login through the API is a login like any other: it records the user
++	// identity and is refused for a locked account. No second factor follows.
++	// A client may send many of them for one user (basic-auth-proxy), so
++	// LastLogin is kept to the minute.
++	err = useridentity.Record(ctx, g.storage, useridentity.Login{
++		ConnectorID:     g.connectorID,
++		Claims:          auth.Claims,
++		Time:            g.now(),
++		Complete:        true,
++		CoarseLastLogin: true,
++		Logger:          g.logger,
++	})
++	if oerr := identityError(ctx, g.logger, err,
++		"connector_id", g.connectorID, "client_id", client.ID, "user_id", auth.Claims.UserID); oerr != nil {
++		return nil, oerr
++	}
+ 	auth.Claims = issued
+ 
+ 	return issueTokens(ctx, g.logger, g.issuer, auth, "", shouldIssueRefreshToken(conn, req.Scopes))
+diff --git a/server/grants/refresh.go b/server/grants/refresh.go
+index 8c4912f9..57f74a2f 100644
+--- a/server/grants/refresh.go
++++ b/server/grants/refresh.go
+@@ -15,6 +15,7 @@ import (
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/session"
+ 	"github.com/dexidp/dex/server/tokens"
++	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+@@ -86,6 +87,14 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 		return nil, oerr
+ 	}
+ 
++	// A locked account gets no new tokens. The refresh token is kept, so the
++	// session continues once the lock ends.
++	err := useridentity.CheckBlocked(ctx, g.storage, refreshToken.Claims.UserID, refreshToken.ConnectorID, g.now())
++	if oerr := identityError(ctx, g.logger, err,
++		"connector_id", refreshToken.ConnectorID, "client_id", client.ID, "user_id", refreshToken.Claims.UserID); oerr != nil {
++		return nil, oerr
++	}
++
+ 	// Resolved before anything is rotated or read from the connector: a token whose
+ 	// session has ended is not going to produce a token set. Skipped outright when
+ 	// sessions are off — nothing was ever bound to one, so the read would only
+diff --git a/server/grants/tokenexchange.go b/server/grants/tokenexchange.go
+index e93e84aa..780dcc53 100644
+--- a/server/grants/tokenexchange.go
++++ b/server/grants/tokenexchange.go
+@@ -11,6 +11,7 @@ import (
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/tokens"
++	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+@@ -22,6 +23,7 @@ import (
+ type tokenExchange struct {
+ 	issuer  *tokens.Issuer
+ 	storage storage.Storage
++	now     func() time.Time
+ 	logger  *slog.Logger
+ }
+ 
+@@ -73,6 +75,11 @@ func (g *tokenExchange) Authorize(ctx context.Context, req *Request, client stor
+ 		"connector_id", req.ConnectorID, "client_id", client.ID, "user_id", identity.UserID); oerr != nil {
+ 		return nil, oerr
+ 	}
++	err = useridentity.CheckBlocked(ctx, g.storage, identity.UserID, req.ConnectorID, g.now())
++	if oerr := identityError(ctx, g.logger, err,
++		"connector_id", req.ConnectorID, "client_id", client.ID, "user_id", identity.UserID); oerr != nil {
++		return nil, oerr
++	}
+ 
+ 	email := identity.Email
+ 	if !identity.EmailVerified {
+diff --git a/server/kubernetes_fake_test.go b/server/kubernetes_fake_test.go
+new file mode 100644
+index 00000000..b9cc60b4
+--- /dev/null
++++ b/server/kubernetes_fake_test.go
+@@ -0,0 +1,187 @@
++package server
++
++import (
++	"encoding/json"
++	"io"
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"slices"
++	"strconv"
++	"strings"
++	"sync"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/kubernetes"
++)
++
++// fakeKubernetesAPI serves, in memory, the part of the Kubernetes API the
++// kubernetes storage uses, with the optimistic concurrency of the real one: a PUT
++// that carries another resourceVersion than the stored object gets 409 Conflict.
++// Parallel writes of one object conflict as they do in a cluster, which the
++// memory storage, serialized by one mutex, never shows.
++type fakeKubernetesAPI struct {
++	mu      sync.Mutex
++	objects map[string]map[string]any // by path
++	version int
++}
++
++// The path of an object is /apis/<group>/<version>/namespaces/<ns>/<resource>/<name>;
++// a path one segment shorter is the collection of its resource.
++const fakeKubernetesObjectSegments = 7
++
++func (f *fakeKubernetesAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
++	if r.URL.Path == "/version" {
++		writeFakeKubernetesJSON(w, http.StatusOK, map[string]any{"gitVersion": "v1.33.0"})
++		return
++	}
++	segments := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
++	isObject := len(segments) == fakeKubernetesObjectSegments
++
++	f.mu.Lock()
++	defer f.mu.Unlock()
++
++	switch {
++	case r.Method == http.MethodGet && isObject:
++		obj, ok := f.objects[r.URL.Path]
++		if !ok {
++			writeFakeKubernetesJSON(w, http.StatusNotFound, map[string]any{})
++			return
++		}
++		writeFakeKubernetesJSON(w, http.StatusOK, obj)
++	case r.Method == http.MethodGet:
++		f.list(w, r.URL.Path)
++	case r.Method == http.MethodPost:
++		obj, ok := readFakeKubernetesObject(w, r)
++		if !ok {
++			return
++		}
++		p := r.URL.Path + "/" + fakeKubernetesMetadata(obj)["name"].(string)
++		if _, exists := f.objects[p]; exists {
++			writeFakeKubernetesJSON(w, http.StatusConflict, map[string]any{})
++			return
++		}
++		f.store(p, obj)
++		writeFakeKubernetesJSON(w, http.StatusCreated, obj)
++	case r.Method == http.MethodPut && isObject:
++		obj, ok := readFakeKubernetesObject(w, r)
++		if !ok {
++			return
++		}
++		stored, exists := f.objects[r.URL.Path]
++		if !exists {
++			writeFakeKubernetesJSON(w, http.StatusNotFound, map[string]any{})
++			return
++		}
++		if fakeKubernetesMetadata(obj)["resourceVersion"] != fakeKubernetesMetadata(stored)["resourceVersion"] {
++			writeFakeKubernetesJSON(w, http.StatusConflict, map[string]any{})
++			return
++		}
++		f.store(r.URL.Path, obj)
++		writeFakeKubernetesJSON(w, http.StatusOK, obj)
++	case r.Method == http.MethodDelete && isObject:
++		if _, exists := f.objects[r.URL.Path]; !exists {
++			writeFakeKubernetesJSON(w, http.StatusNotFound, map[string]any{})
++			return
++		}
++		delete(f.objects, r.URL.Path)
++		writeFakeKubernetesJSON(w, http.StatusOK, map[string]any{})
++	default:
++		writeFakeKubernetesJSON(w, http.StatusMethodNotAllowed, map[string]any{})
++	}
++}
++
++// store keeps obj at p under a new resourceVersion.
++func (f *fakeKubernetesAPI) store(p string, obj map[string]any) {
++	f.version++
++	fakeKubernetesMetadata(obj)["resourceVersion"] = strconv.Itoa(f.version)
++	f.objects[p] = obj
++}
++
++// list answers the objects of collection, in path order.
++func (f *fakeKubernetesAPI) list(w http.ResponseWriter, collection string) {
++	var paths []string
++	for p := range f.objects {
++		if name, ok := strings.CutPrefix(p, collection+"/"); ok && !strings.Contains(name, "/") {
++			paths = append(paths, p)
++		}
++	}
++	slices.Sort(paths)
++	items := make([]map[string]any, 0, len(paths))
++	for _, p := range paths {
++		items = append(items, f.objects[p])
++	}
++	writeFakeKubernetesJSON(w, http.StatusOK, map[string]any{"items": items})
++}
++
++func readFakeKubernetesObject(w http.ResponseWriter, r *http.Request) (map[string]any, bool) {
++	body, err := io.ReadAll(r.Body)
++	if err != nil {
++		writeFakeKubernetesJSON(w, http.StatusBadRequest, map[string]any{})
++		return nil, false
++	}
++	var obj map[string]any
++	if err := json.Unmarshal(body, &obj); err != nil {
++		writeFakeKubernetesJSON(w, http.StatusBadRequest, map[string]any{})
++		return nil, false
++	}
++	if _, ok := fakeKubernetesMetadata(obj)["name"].(string); !ok {
++		writeFakeKubernetesJSON(w, http.StatusBadRequest, map[string]any{})
++		return nil, false
++	}
++	return obj, true
++}
++
++// fakeKubernetesMetadata returns the metadata of obj, adding it when missing.
++func fakeKubernetesMetadata(obj map[string]any) map[string]any {
++	meta, ok := obj["metadata"].(map[string]any)
++	if !ok {
++		meta = map[string]any{}
++		obj["metadata"] = meta
++	}
++	return meta
++}
++
++func writeFakeKubernetesJSON(w http.ResponseWriter, status int, v any) {
++	w.Header().Set("Content-Type", "application/json")
++	w.WriteHeader(status)
++	_ = json.NewEncoder(w).Encode(v)
++}
++
++// newFakeKubernetesStorage returns the kubernetes storage of dex on a
++// fakeKubernetesAPI.
++func newFakeKubernetesStorage(t *testing.T) storage.Storage {
++	t.Helper()
++	api := httptest.NewServer(&fakeKubernetesAPI{objects: map[string]map[string]any{}})
++	t.Cleanup(api.Close)
++
++	kubeconfig := filepath.Join(t.TempDir(), "kubeconfig")
++	require.NoError(t, os.WriteFile(kubeconfig, []byte(`apiVersion: v1
++kind: Config
++clusters:
++- name: fake
++  cluster:
++    server: `+api.URL+`
++users:
++- name: fake
++  user: {}
++contexts:
++- name: fake
++  context:
++    cluster: fake
++    user: fake
++    namespace: dex
++current-context: fake
++`), 0o600))
++
++	config := kubernetes.Config{KubeConfigFile: kubeconfig, CRDHandling: "check"}
++	s, err := config.Open(slog.New(slog.DiscardHandler))
++	require.NoError(t, err)
++	t.Cleanup(func() { s.Close() })
++	return s
++}
+diff --git a/server/server_grant_lock_test.go b/server/server_grant_lock_test.go
+new file mode 100644
+index 00000000..b582d81d
+--- /dev/null
++++ b/server/server_grant_lock_test.go
+@@ -0,0 +1,212 @@
++package server
++
++import (
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/storage"
++)
++
++// The mock connectors sign in this user.
++const mockUserID = "0-385-28089-0"
++
++func newLockTestServer(t *testing.T) (*httptest.Server, *Server) {
++	t.Helper()
++	return newLockTestServerWith(t, nil)
++}
++
++// newLockTestServerWith is newLockTestServer on st, the memory storage when nil.
++func newLockTestServerWith(t *testing.T, st storage.Storage) (*httptest.Server, *Server) {
++	t.Helper()
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.PasswordConnector = "test"
++		c.Now = time.Now
++		if st != nil {
++			c.Storage = st
++		}
++	})
++	t.Cleanup(httpServer.Close)
++	mockConnectorDataTestStorage(t, s.storage)
++	return httpServer, s
++}
++
++func postToken(t *testing.T, s *Server, form url.Values) *httptest.ResponseRecorder {
++	t.Helper()
++	req := httptest.NewRequest(http.MethodPost, s.issuerURL.String()+"/token", strings.NewReader(form.Encode()))
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	req.SetBasicAuth("test", "barfoo")
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, req)
++	return rr
++}
++
++func passwordGrant(t *testing.T, s *Server) *httptest.ResponseRecorder {
++	t.Helper()
++	return postToken(t, s, url.Values{
++		"grant_type": {oauth2.GrantTypePassword},
++		"scope":      {"openid email offline_access"},
++		"username":   {"test"},
++		"password":   {"test"},
++	})
++}
++
++func setBlockedUntil(t *testing.T, s *Server, connectorID string, until time.Time) {
++	t.Helper()
++	ctx := t.Context()
++	err := s.storage.UpdateUserIdentity(ctx, mockUserID, connectorID, func(u storage.UserIdentity) (storage.UserIdentity, error) {
++		u.BlockedUntil = until
++		return u, nil
++	})
++	if err == storage.ErrNotFound {
++		err = s.storage.CreateUserIdentity(ctx, storage.UserIdentity{UserID: mockUserID, ConnectorID: connectorID, BlockedUntil: until})
++	}
++	require.NoError(t, err)
++}
++
++func requireAccountLocked(t *testing.T, rr *httptest.ResponseRecorder) {
++	t.Helper()
++	require.Equal(t, http.StatusTooManyRequests, rr.Code, rr.Body.String())
++	var resp struct {
++		Error string `json:"error"`
++	}
++	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
++	require.Equal(t, oauth2.AccessDenied, resp.Error)
++}
++
++// A login through the password grant is recorded like a browser login, sessions
++// or not.
++func TestPasswordGrantRecordsUserIdentity(t *testing.T) {
++	_, s := newLockTestServer(t)
++
++	rr := passwordGrant(t, s)
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++
++	ui, err := s.storage.GetUserIdentity(t.Context(), mockUserID, "test")
++	require.NoError(t, err)
++	require.Equal(t, "kilgore@kilgore.trout", ui.Claims.Email)
++	require.False(t, ui.LastLogin.IsZero())
++}
++
++// The user identity keeps the groups the connector gave, whatever the
++// allow-lists of the client let into the tokens; a login they refuse records
++// nothing.
++func TestPasswordGrantRecordsConnectorGroups(t *testing.T) {
++	s := newAllowListServer(t, allowListLimits{client: storage.Client{AllowedGroups: []string{"developers"}}})
++
++	rr := postAllowListToken(t, s, allowListPasswordGrant)
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	require.Equal(t, []string{"developers"}, tokenGroups(t, rr, "id_token"))
++	ui, err := s.storage.GetUserIdentity(t.Context(), allowListUserID, connectors.LocalConnector)
++	require.NoError(t, err)
++	require.Equal(t, allowListGroups, ui.Claims.Groups)
++
++	s = newAllowListServer(t, allowListLimits{client: storage.Client{AllowedGroups: []string{"guests"}}})
++	rr = postAllowListToken(t, s, allowListPasswordGrant)
++	require.Equal(t, http.StatusUnauthorized, rr.Code, rr.Body.String())
++	_, err = s.storage.GetUserIdentity(t.Context(), allowListUserID, connectors.LocalConnector)
++	require.ErrorIs(t, err, storage.ErrNotFound)
++}
++
++// Parallel password grants of one user, as basic-auth-proxy sends them, all get
++// their tokens. On the kubernetes storage they conflict on the user identity
++// whenever each of them writes it.
++func TestParallelPasswordGrants(t *testing.T) {
++	const grants = 32
++	tests := []struct {
++		name    string
++		storage func(t *testing.T) storage.Storage
++	}{
++		{name: "memory storage", storage: func(*testing.T) storage.Storage { return nil }},
++		{name: "kubernetes storage", storage: newFakeKubernetesStorage},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			_, s := newLockTestServerWith(t, tc.storage(t))
++			// No refresh token: one would make every grant rewrite the offline
++			// session of the user as well, an upstream write that conflicts the
++			// same way.
++			form := url.Values{
++				"grant_type": {oauth2.GrantTypePassword},
++				"scope":      {"openid email profile groups"},
++				"username":   {"test"},
++				"password":   {"test"},
++			}
++
++			for round := range 2 { // the first logins of the pair, then the next ones
++				codes := make([]int, grants)
++				var wg sync.WaitGroup
++				for i := range grants {
++					wg.Go(func() {
++						rr := postToken(t, s, form)
++						codes[i] = rr.Code
++					})
++				}
++				wg.Wait()
++				for i, code := range codes {
++					require.Equal(t, http.StatusOK, code, "round %d, grant %d", round, i)
++				}
++			}
++
++			ui, err := s.storage.GetUserIdentity(t.Context(), mockUserID, "test")
++			require.NoError(t, err)
++			require.Equal(t, "kilgore@kilgore.trout", ui.Claims.Email)
++			require.WithinDuration(t, time.Now(), ui.LastLogin, time.Minute)
++		})
++	}
++}
++
++func TestPasswordGrantOfLockedAccount(t *testing.T) {
++	_, s := newLockTestServer(t)
++	setBlockedUntil(t, s, "test", time.Now().Add(time.Hour))
++
++	requireAccountLocked(t, passwordGrant(t, s))
++
++	setBlockedUntil(t, s, "test", time.Now().Add(-time.Second))
++	require.Equal(t, http.StatusOK, passwordGrant(t, s).Code)
++}
++
++func TestRefreshOfLockedAccount(t *testing.T) {
++	_, s := newLockTestServer(t)
++	rr := passwordGrant(t, s)
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	var tokens struct {
++		RefreshToken string `json:"refresh_token"`
++	}
++	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &tokens))
++	require.NotEmpty(t, tokens.RefreshToken)
++	refresh := url.Values{"grant_type": {oauth2.GrantTypeRefreshToken}, "refresh_token": {tokens.RefreshToken}}
++
++	setBlockedUntil(t, s, "test", time.Now().Add(time.Hour))
++	requireAccountLocked(t, postToken(t, s, refresh))
++
++	// The refresh token survives the lock.
++	setBlockedUntil(t, s, "test", time.Time{})
++	require.Equal(t, http.StatusOK, postToken(t, s, refresh).Code)
++}
++
++func TestTokenExchangeOfLockedAccount(t *testing.T) {
++	_, s := newLockTestServer(t)
++	exchange := url.Values{
++		"grant_type":         {oauth2.GrantTypeTokenExchange},
++		"connector_id":       {"mock"},
++		"scope":              {"openid"},
++		"subject_token_type": {oauth2.TokenTypeID},
++		"subject_token":      {"foobar"},
++	}
++
++	rr := postToken(t, s, exchange)
++	require.Equal(t, http.StatusOK, rr.Code, "a user without an identity is not locked: %s", rr.Body.String())
++
++	setBlockedUntil(t, s, "mock", time.Now().Add(time.Hour))
++	requireAccountLocked(t, postToken(t, s, exchange))
++}
+diff --git a/server/server_login_test.go b/server/server_login_test.go
+index 2b715ba0..8d5c9ace 100644
+--- a/server/server_login_test.go
++++ b/server/server_login_test.go
+@@ -2,11 +2,13 @@ package server
+ 
+ import (
+ 	"bytes"
++	"context"
+ 	"encoding/json"
+ 	"errors"
+ 	"fmt"
+ 	"net/http"
+ 	"net/http/httptest"
++	"net/url"
+ 	"strings"
+ 	"testing"
+ 	"time"
+@@ -15,6 +17,7 @@ import (
+ 
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/mfa"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/storage"
+@@ -197,7 +200,7 @@ func TestFinalizeLoginUpdatesUserIdentity(t *testing.T) {
+ 	require.Equal(t, []string{"openid"}, ui.Consents["existing-client"], "existing consents should be preserved")
+ }
+ 
+-func TestFinalizeLoginSkipsUserIdentityWhenDisabled(t *testing.T) {
++func TestFinalizeLoginRecordsUserIdentityWhenDisabled(t *testing.T) {
+ 	ctx := t.Context()
+ 	setSessionsEnabled(t, false)
+ 
+@@ -241,8 +244,9 @@ func TestFinalizeLoginSkipsUserIdentityWhenDisabled(t *testing.T) {
+ 
+ 	require.Equal(t, 303, rr.Code)
+ 
+-	_, err = s.storage.GetUserIdentity(ctx, "0-385-28089-0", connID)
+-	require.ErrorIs(t, err, storage.ErrNotFound, "UserIdentity should not be created when sessions disabled")
++	ui, err := s.storage.GetUserIdentity(ctx, "0-385-28089-0", connID)
++	require.NoError(t, err, "UserIdentity is recorded whether sessions are enabled or not")
++	require.Equal(t, "kilgore@kilgore.trout", ui.Claims.Email)
+ }
+ 
+ func TestHandlePasswordLoginWithSkipApproval(t *testing.T) {
+@@ -298,6 +302,8 @@ func TestHandlePasswordLoginWithSkipApproval(t *testing.T) {
+ 				Expiry:              expiry,
+ 				ResponseTypes:       resTypes,
+ 				ForceApprovalPrompt: false,
++				// A scope that needs consent: the identity every login records has none.
++				Scopes: []string{"email"},
+ 			},
+ 			expectedRes:           "/approval",
+ 			offlineSessionCreated: false,
+@@ -451,6 +457,8 @@ func TestHandleConnectorCallbackWithSkipApproval(t *testing.T) {
+ 				Expiry:              expiry,
+ 				ResponseTypes:       resTypes,
+ 				ForceApprovalPrompt: false,
++				// A scope that needs consent: the identity every login records has none.
++				Scopes: []string{"email"},
+ 			},
+ 			expectedRes:           "/approval",
+ 			offlineSessionCreated: false,
+@@ -784,3 +792,127 @@ func TestConnectorDataPersistence(t *testing.T) {
+ 	require.Equal(t, connectorData, storedSession.ConnectorData,
+ 		"ConnectorData should be persisted in offline session storage")
+ }
++
++// oldPlaceStorage serves the second factor and the lock that the storage of the
++// v2.44-based Deckhouse dex kept outside UserIdentity, the way the transitional
++// kubernetes storage does: a pair without an identity reads as one with that
++// state, which is not stored, and the first create of the identity stores it.
++type oldPlaceStorage struct {
++	storage.Storage
++	old map[oldPlacePair]storage.UserIdentity
++}
++
++type oldPlacePair struct{ userID, connectorID string }
++
++func (s *oldPlaceStorage) oldState(userID, connectorID string) (storage.UserIdentity, bool) {
++	old, ok := s.old[oldPlacePair{userID: userID, connectorID: connectorID}]
++	if !ok {
++		return storage.UserIdentity{}, false
++	}
++	secrets := make(map[string]*storage.MFASecret, len(old.MFASecrets))
++	for id, secret := range old.MFASecrets {
++		secretCopy := *secret
++		secrets[id] = &secretCopy
++	}
++	old.MFASecrets = secrets
++	return old, true
++}
++
++func (s *oldPlaceStorage) GetUserIdentity(ctx context.Context, userID, connectorID string) (storage.UserIdentity, error) {
++	u, err := s.Storage.GetUserIdentity(ctx, userID, connectorID)
++	if errors.Is(err, storage.ErrNotFound) {
++		if old, ok := s.oldState(userID, connectorID); ok {
++			return old, nil
++		}
++	}
++	return u, err
++}
++
++func (s *oldPlaceStorage) CreateUserIdentity(ctx context.Context, u storage.UserIdentity) error {
++	if old, ok := s.oldState(u.UserID, u.ConnectorID); ok {
++		if old.BlockedUntil.After(u.BlockedUntil) {
++			u.BlockedUntil = old.BlockedUntil
++		}
++		for id, secret := range old.MFASecrets {
++			if u.MFASecrets == nil {
++				u.MFASecrets = make(map[string]*storage.MFASecret)
++			}
++			if u.MFASecrets[id] == nil {
++				u.MFASecrets[id] = secret
++			}
++		}
++	}
++	return s.Storage.CreateUserIdentity(ctx, u)
++}
++
++// followRedirects serves rr's redirects within dex and returns the first answer
++// that is not one, with the path it answered.
++func followRedirects(t *testing.T, s *Server, rr *httptest.ResponseRecorder) (*httptest.ResponseRecorder, string) {
++	t.Helper()
++	target := ""
++	for range 5 {
++		if rr.Code != http.StatusSeeOther && rr.Code != http.StatusFound {
++			return rr, target
++		}
++		location, err := url.Parse(rr.Header().Get("Location"))
++		require.NoError(t, err)
++		target = location.Path
++		rr = httptest.NewRecorder()
++		s.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, location.RequestURI(), nil))
++	}
++	t.Fatalf("too many redirects, last to %s", target)
++	return nil, ""
++}
++
++// The first login of a user who enrolled TOTP before the update asks for a code
++// of that secret instead of a new enrollment, and stores the identity with it.
++func TestFirstLoginKeepsOldPlaceTOTP(t *testing.T) {
++	ctx := t.Context()
++	const (
++		connID = "mockPw"
++		secret = "otpauth://totp/Deckhouse:(local)%20kilgore@kilgore.trout?issuer=Deckhouse&secret=JBSWY3DPEHPK3PXP"
++	)
++	var store *oldPlaceStorage
++	httpServer, s := newTestServer(t, func(c *Config) {
++		store = &oldPlaceStorage{Storage: c.Storage, old: map[oldPlacePair]storage.UserIdentity{
++			{userID: mockUserID, connectorID: connID}: {
++				UserID: mockUserID, ConnectorID: connID,
++				MFASecrets: map[string]*storage.MFASecret{"totp": {AuthenticatorID: "totp", Type: "TOTP", Secret: secret, Confirmed: true}},
++			},
++		}}
++		c.Storage = store
++		c.MFAProviders = map[string]mfa.Provider{"totp": mfa.NewTOTPProvider("dex", nil)}
++		c.DefaultMFAChain = []string{"totp"}
++	})
++	defer httpServer.Close()
++
++	sc := storage.Connector{
++		ID: connID, Type: "mockPassword", Name: "MockPassword", ResourceVersion: "1",
++		Config: []byte(`{"username": "foo", "password": "password"}`),
++	}
++	require.NoError(t, s.storage.CreateConnector(ctx, sc))
++	_, err := s.connectors.Open(sc)
++	require.NoError(t, err)
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: "test", RedirectURIs: []string{"https://client.example/cb"}}))
++	require.NoError(t, s.storage.CreateAuthRequest(ctx, storage.AuthRequest{
++		ID: "old-totp", ClientID: "test", ConnectorID: connID, RedirectURI: "https://client.example/cb",
++		ResponseTypes: []string{oauth2.ResponseTypeCode}, Scopes: []string{"openid"},
++		Expiry: time.Now().Add(time.Hour), HMACKey: []byte("0123456789abcdef0123456789abcdef"),
++	}))
++
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/auth/"+connID+"/login?state=old-totp&login=foo&password=password", nil))
++	page, path := followRedirects(t, s, rr)
++
++	require.Equal(t, http.StatusOK, page.Code, page.Body.String())
++	require.Equal(t, "/mfa/totp", path)
++	require.NotContains(t, page.Body.String(), "data:image/png", "a code is asked, no QR code to enroll")
++
++	stored, err := store.Storage.GetUserIdentity(ctx, mockUserID, connID)
++	require.NoError(t, err, "the first login stores the identity")
++	require.Equal(t, "kilgore@kilgore.trout", stored.Claims.Email)
++	require.NotNil(t, stored.MFASecrets["totp"])
++	require.Equal(t, secret, stored.MFASecrets["totp"].Secret)
++	require.True(t, stored.MFASecrets["totp"].Confirmed)
++	require.True(t, stored.LastLogin.IsZero(), "the login is complete only after the code")
++}
+diff --git a/server/useridentity/useridentity.go b/server/useridentity/useridentity.go
+new file mode 100644
+index 00000000..4a372a44
+--- /dev/null
++++ b/server/useridentity/useridentity.go
+@@ -0,0 +1,242 @@
++// Package useridentity keeps the persistent record of a (user, connector) pair,
++// storage.UserIdentity, for every login, whether browser sessions are enabled or
++// not, and answers whether the pair is blocked.
++//
++// Upstream creates the record only when sessions are enabled. Deckhouse keeps the
++// second factor, the lock and the last login of every user on it, so every login
++// path records it, and the lock is checked by every login (the login form, the
++// connector callbacks, SPNEGO, the password change page, a login from a browser
++// session) and by the password, refresh-token and token-exchange grants. The
++// code and device-code exchanges do not check it again: they finish a login that
++// was checked, and the generation of the pair revokes them (290).
++package useridentity
++
++import (
++	"context"
++	"errors"
++	"fmt"
++	"log/slog"
++	"math/rand/v2"
++	"slices"
++	"time"
++
++	"github.com/dexidp/dex/storage"
++)
++
++// BlockedError refuses a login or a token request of a blocked pair.
++type BlockedError struct {
++	Until time.Time
++}
++
++func (e *BlockedError) Error() string {
++	return fmt.Sprintf("account is locked until %s", e.Until.Format(time.RFC3339))
++}
++
++// errUnchanged aborts an update that has nothing to write.
++var errUnchanged = errors.New("useridentity: unchanged")
++
++// lastLoginPrecision is how much older than a login of the password grant the
++// stored LastLogin may stay. UserAccount shows the last login to the minute, and
++// a client may send many such logins a minute for one user (basic-auth-proxy
++// sends one for every request it cannot answer from its cache): writing the
++// identity for each of them makes parallel ones conflict on it.
++const lastLoginPrecision = time.Minute
++
++// A write of the identity that fails is tried identityWriteAttempts times, the
++// second try identityWriteBackoff later with a random share of it on top. The
++// kubernetes storage already retries a conflict with parallel logins of the same
++// user for 0.4 to 0.8 s; the second try here covers the other failures of a
++// write, such as an API request that timed out, and the storages that do not
++// retry a conflict themselves.
++const (
++	identityWriteAttempts = 2
++	identityWriteBackoff  = 10 * time.Millisecond
++)
++
++// Login is a successful first-factor login of a pair.
++type Login struct {
++	ConnectorID string
++	Claims      storage.Claims
++	// Time is when the first factor passed; it becomes the auth time of the login.
++	Time time.Time
++	// Complete reports that no second factor follows, so LastLogin is set now.
++	// Otherwise Completed sets it once the last factor is done.
++	Complete bool
++	// CoarseLastLogin keeps a stored LastLogin younger than lastLoginPrecision
++	// instead of rewriting the identity for this login: the password grant,
++	// which a client may repeat many times a minute and whose auth time is not
++	// taken from LastLogin. A browser login keeps LastLogin exact, as sessions
++	// report it as the auth time.
++	CoarseLastLogin bool
++	// Logger logs a write of the identity given up for the stored one (see
++	// Record). Nil logs nothing.
++	Logger *slog.Logger
++}
++
++// movesLastLogin reports whether a complete login l rewrites the LastLogin
++// stored. LastLogin never moves back.
++func (l Login) movesLastLogin(stored time.Time) bool {
++	if l.CoarseLastLogin {
++		return l.Time.Sub(stored) >= lastLoginPrecision
++	}
++	return stored.Before(l.Time)
++}
++
++// Record records l: it creates the pair's identity or refreshes its claims, and
++// refuses a blocked pair with *BlockedError, writing nothing for it. A login
++// that changes nothing (the same claims, and no LastLogin to move) writes
++// nothing either.
++//
++// An identity that exists but cannot be written after several tries is read
++// instead: the login goes on when it is not blocked, without refreshing the
++// claims or LastLogin, and l.Logger logs the failed write. Only a failed read
++// fails the login.
++func Record(ctx context.Context, s storage.Storage, l Login) error {
++	err := update(ctx, s, l)
++	if !errors.Is(err, storage.ErrNotFound) {
++		return err
++	}
++
++	// The first login of the pair.
++	err = s.CreateUserIdentity(ctx, storage.UserIdentity{
++		UserID:      l.Claims.UserID,
++		ConnectorID: l.ConnectorID,
++		Claims:      l.Claims,
++		Consents:    make(map[string][]string),
++		CreatedAt:   l.Time,
++	})
++	if err != nil && !errors.Is(err, storage.ErrAlreadyExists) {
++		return fmt.Errorf("create user identity: %w", err)
++	}
++
++	// Created meanwhile (by a parallel login or by the user-authn controller), or
++	// created here. The storage may give a new identity state the pair had before
++	// it existed (see storage/kubernetes/transitional.go), a lock included, so the
++	// lock is checked on what was stored, and LastLogin is set only for a login
++	// that is not refused.
++	return update(ctx, s, l)
++}
++
++// update applies l to the stored identity of its pair, trying a failing write
++// again; see Record for a write that keeps failing.
++func update(ctx context.Context, s storage.Storage, l Login) error {
++	updater := func(old storage.UserIdentity) (storage.UserIdentity, error) {
++		if blocked(old, l.Time) {
++			return old, &BlockedError{Until: old.BlockedUntil}
++		}
++		movesLastLogin := l.Complete && l.movesLastLogin(old.LastLogin)
++		if sameClaims(old.Claims, l.Claims) && !movesLastLogin {
++			return old, errUnchanged
++		}
++		old.Claims = l.Claims
++		if movesLastLogin {
++			old.LastLogin = l.Time
++		}
++		return old, nil
++	}
++
++	err := s.UpdateUserIdentity(ctx, l.Claims.UserID, l.ConnectorID, updater)
++	for try := 1; isWriteFailure(err) && try < identityWriteAttempts; try++ {
++		if !wait(ctx, identityWriteBackoff*time.Duration(try)) {
++			break
++		}
++		err = s.UpdateUserIdentity(ctx, l.Claims.UserID, l.ConnectorID, updater)
++	}
++	switch {
++	case err == nil, errors.Is(err, errUnchanged):
++		return nil
++	case !isWriteFailure(err):
++		return err // storage.ErrNotFound or *BlockedError
++	}
++
++	// The identity is there, it could not be written: a login is not refused for
++	// that. The lock is what must hold, and it is read.
++	if rerr := CheckBlocked(ctx, s, l.Claims.UserID, l.ConnectorID, l.Time); rerr != nil {
++		return errors.Join(fmt.Errorf("update user identity: %w", err), rerr)
++	}
++	if l.Logger != nil {
++		l.Logger.WarnContext(ctx, "failed to record the user identity of a login, going on with the stored one",
++			"connector_id", l.ConnectorID, "user_id", l.Claims.UserID, "err", err)
++	}
++	return nil
++}
++
++// isWriteFailure reports whether err is a failure to write an identity, as
++// opposed to the identity missing, the pair blocked or nothing to write.
++func isWriteFailure(err error) bool {
++	return err != nil && !errors.Is(err, errUnchanged) && !errors.Is(err, storage.ErrNotFound) && !isBlocked(err)
++}
++
++// wait waits for about d, a random share of identityWriteBackoff added, and
++// reports false when ctx ends first.
++func wait(ctx context.Context, d time.Duration) bool {
++	timer := time.NewTimer(d + rand.N(identityWriteBackoff))
++	defer timer.Stop()
++	select {
++	case <-ctx.Done():
++		return false
++	case <-timer.C:
++		return true
++	}
++}
++
++// sameClaims reports whether a and b are the same claims; groups compare by
++// content, so a nil list equals an empty one.
++func sameClaims(a, b storage.Claims) bool {
++	return a.UserID == b.UserID &&
++		a.Username == b.Username &&
++		a.PreferredUsername == b.PreferredUsername &&
++		a.Email == b.Email &&
++		a.EmailVerified == b.EmailVerified &&
++		slices.Equal(a.Groups, b.Groups)
++}
++
++// Completed sets LastLogin of the pair to at, the time its login passed the first
++// factor, once every factor of that login is done. LastLogin never moves back, so
++// repeating the call for the same login, or calling it for a login served from a
++// session (whose auth time is the LastLogin it continues), writes nothing. A pair
++// without an identity has nothing to record.
++func Completed(ctx context.Context, s storage.Storage, userID, connectorID string, at time.Time) error {
++	err := s.UpdateUserIdentity(ctx, userID, connectorID, func(old storage.UserIdentity) (storage.UserIdentity, error) {
++		if !old.LastLogin.Before(at) {
++			return old, errUnchanged
++		}
++		old.LastLogin = at
++		return old, nil
++	})
++	if err == nil || errors.Is(err, errUnchanged) || errors.Is(err, storage.ErrNotFound) {
++		return nil
++	}
++	return fmt.Errorf("record last login: %w", err)
++}
++
++// CheckBlocked returns *BlockedError when the pair is blocked at now. A pair
++// without an identity, one that never logged in since the identity was
++// introduced, is not blocked.
++func CheckBlocked(ctx context.Context, s storage.Storage, userID, connectorID string, now time.Time) error {
++	ui, err := s.GetUserIdentity(ctx, userID, connectorID)
++	switch {
++	case errors.Is(err, storage.ErrNotFound):
++		return nil
++	case err != nil:
++		return fmt.Errorf("get user identity: %w", err)
++	}
++	return CheckBlockedIdentity(ui, now)
++}
++
++// CheckBlockedIdentity is CheckBlocked for an identity already read.
++func CheckBlockedIdentity(ui storage.UserIdentity, now time.Time) error {
++	if blocked(ui, now) {
++		return &BlockedError{Until: ui.BlockedUntil}
++	}
++	return nil
++}
++
++func blocked(ui storage.UserIdentity, now time.Time) bool {
++	return now.Before(ui.BlockedUntil)
++}
++
++func isBlocked(err error) bool {
++	var blockedErr *BlockedError
++	return errors.As(err, &blockedErr)
++}
+diff --git a/server/useridentity/useridentity_test.go b/server/useridentity/useridentity_test.go
+new file mode 100644
+index 00000000..d8ab0e14
+--- /dev/null
++++ b/server/useridentity/useridentity_test.go
+@@ -0,0 +1,461 @@
++package useridentity
++
++import (
++	"bytes"
++	"context"
++	"errors"
++	"log/slog"
++	"reflect"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++var (
++	t0     = time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
++	claims = storage.Claims{UserID: "jane", Username: "jane", Email: "jane@example.com", Groups: []string{"admins"}}
++)
++
++func newStorage(t *testing.T) storage.Storage {
++	t.Helper()
++	return memory.New(slog.New(slog.DiscardHandler))
++}
++
++func TestRecord(t *testing.T) {
++	tests := []struct {
++		name          string
++		existing      *storage.UserIdentity
++		complete      bool
++		wantLastLogin time.Time
++		wantCreatedAt time.Time
++	}{
++		{
++			name:          "first login without a second factor",
++			complete:      true,
++			wantLastLogin: t0,
++			wantCreatedAt: t0,
++		},
++		{
++			name:          "first login before a second factor",
++			wantCreatedAt: t0,
++		},
++		{
++			name: "next login keeps what the identity holds",
++			existing: &storage.UserIdentity{
++				UserID: "jane", ConnectorID: "local",
++				Claims:     storage.Claims{UserID: "jane", Email: "old@example.com"},
++				MFASecrets: map[string]*storage.MFASecret{"totp": {Secret: "s", Confirmed: true}},
++				CreatedAt:  t0.Add(-time.Hour), LastLogin: t0.Add(-time.Minute),
++				BlockedUntil: t0.Add(-time.Second), IncorrectPasswordLoginAttempts: 2,
++			},
++			complete:      true,
++			wantLastLogin: t0,
++			wantCreatedAt: t0.Add(-time.Hour),
++		},
++		{
++			name: "next login before a second factor keeps the last login",
++			existing: &storage.UserIdentity{
++				UserID: "jane", ConnectorID: "local",
++				CreatedAt: t0.Add(-time.Hour), LastLogin: t0.Add(-time.Minute),
++			},
++			wantLastLogin: t0.Add(-time.Minute),
++			wantCreatedAt: t0.Add(-time.Hour),
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			ctx := t.Context()
++			s := newStorage(t)
++			if tc.existing != nil {
++				require.NoError(t, s.CreateUserIdentity(ctx, *tc.existing))
++			}
++
++			err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: tc.complete})
++			require.NoError(t, err)
++
++			got, err := s.GetUserIdentity(ctx, "jane", "local")
++			require.NoError(t, err)
++			require.Equal(t, claims, got.Claims)
++			require.Equal(t, tc.wantLastLogin, got.LastLogin)
++			require.Equal(t, tc.wantCreatedAt, got.CreatedAt)
++			if tc.existing != nil {
++				require.Equal(t, tc.existing.MFASecrets, got.MFASecrets)
++				require.Equal(t, tc.existing.BlockedUntil, got.BlockedUntil)
++				require.Equal(t, tc.existing.IncorrectPasswordLoginAttempts, got.IncorrectPasswordLoginAttempts)
++			}
++		})
++	}
++}
++
++func TestRecordBlocked(t *testing.T) {
++	ctx := t.Context()
++	s := newStorage(t)
++	old := storage.UserIdentity{
++		UserID: "jane", ConnectorID: "local",
++		Claims:    storage.Claims{UserID: "jane", Email: "old@example.com"},
++		LastLogin: t0.Add(-time.Hour), BlockedUntil: t0.Add(time.Hour),
++	}
++	require.NoError(t, s.CreateUserIdentity(ctx, old))
++
++	err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++
++	var blocked *BlockedError
++	require.ErrorAs(t, err, &blocked)
++	require.Equal(t, t0.Add(time.Hour), blocked.Until)
++	got, err := s.GetUserIdentity(ctx, "jane", "local")
++	require.NoError(t, err)
++	require.Equal(t, old, got, "a refused login writes nothing")
++}
++
++// createRace creates the identity right before the login creates it, as a
++// parallel login or the user-authn controller can.
++type createRace struct {
++	storage.Storage
++	raced bool
++}
++
++func (s *createRace) CreateUserIdentity(ctx context.Context, u storage.UserIdentity) error {
++	if !s.raced {
++		s.raced = true
++		if err := s.Storage.CreateUserIdentity(ctx, storage.UserIdentity{UserID: u.UserID, ConnectorID: u.ConnectorID, CreatedAt: t0.Add(-time.Hour)}); err != nil {
++			return err
++		}
++	}
++	return s.Storage.CreateUserIdentity(ctx, u)
++}
++
++func TestRecordCreateRace(t *testing.T) {
++	ctx := t.Context()
++	s := &createRace{Storage: newStorage(t)}
++
++	require.NoError(t, Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true}))
++
++	got, err := s.GetUserIdentity(ctx, "jane", "local")
++	require.NoError(t, err)
++	require.Equal(t, claims, got.Claims)
++	require.Equal(t, t0, got.LastLogin)
++	require.Equal(t, t0.Add(-time.Hour), got.CreatedAt)
++}
++
++// lockOnCreate gives a new identity a lock, as the transitional kubernetes
++// storage does for a pair locked before the update.
++type lockOnCreate struct {
++	storage.Storage
++}
++
++func (s lockOnCreate) CreateUserIdentity(ctx context.Context, u storage.UserIdentity) error {
++	u.BlockedUntil = t0.Add(time.Hour)
++	return s.Storage.CreateUserIdentity(ctx, u)
++}
++
++func TestRecordFirstLoginOfLockedPair(t *testing.T) {
++	ctx := t.Context()
++	s := lockOnCreate{Storage: newStorage(t)}
++
++	err := Record(ctx, s, Login{ConnectorID: "ldap", Claims: claims, Time: t0, Complete: true})
++
++	var blocked *BlockedError
++	require.ErrorAs(t, err, &blocked)
++	got, err := s.GetUserIdentity(ctx, "jane", "ldap")
++	require.NoError(t, err)
++	require.True(t, got.LastLogin.IsZero(), "a refused login is not a last login")
++}
++
++// TestRecordWritesOnlyChanges checks that a login writes the identity only for
++// new claims or a LastLogin to move, and that the password grant
++// (CoarseLastLogin) moves LastLogin only once it is a minute old.
++func TestRecordWritesOnlyChanges(t *testing.T) {
++	newClaims := claims
++	newClaims.Groups = []string{"admins", "developers"}
++
++	tests := []struct {
++		name          string
++		lastLogin     time.Time
++		login         Login
++		wantClaims    storage.Claims
++		wantLastLogin time.Time
++	}{
++		{
++			name:          "password grant within a minute of the last login writes nothing",
++			lastLogin:     t0.Add(-59 * time.Second),
++			login:         Login{Claims: claims, Complete: true, CoarseLastLogin: true},
++			wantClaims:    claims,
++			wantLastLogin: t0.Add(-59 * time.Second),
++		},
++		{
++			name:          "password grant a minute after the last login moves it",
++			lastLogin:     t0.Add(-time.Minute),
++			login:         Login{Claims: claims, Complete: true, CoarseLastLogin: true},
++			wantClaims:    claims,
++			wantLastLogin: t0,
++		},
++		{
++			name:          "password grant with new claims within a minute writes the claims",
++			lastLogin:     t0.Add(-time.Second),
++			login:         Login{Claims: newClaims, Complete: true, CoarseLastLogin: true},
++			wantClaims:    newClaims,
++			wantLastLogin: t0.Add(-time.Second),
++		},
++		{
++			name:          "browser login keeps the last login exact",
++			lastLogin:     t0.Add(-time.Second),
++			login:         Login{Claims: claims, Complete: true},
++			wantClaims:    claims,
++			wantLastLogin: t0,
++		},
++		{
++			name:          "browser login before a second factor with the same claims writes nothing",
++			lastLogin:     t0.Add(-time.Hour),
++			login:         Login{Claims: claims},
++			wantClaims:    claims,
++			wantLastLogin: t0.Add(-time.Hour),
++		},
++		{
++			name:          "last login never moves back",
++			lastLogin:     t0.Add(time.Hour),
++			login:         Login{Claims: newClaims, Complete: true},
++			wantClaims:    newClaims,
++			wantLastLogin: t0.Add(time.Hour),
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			ctx := t.Context()
++			s := &countingUpdate{Storage: newStorage(t)}
++			require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{
++				UserID: "jane", ConnectorID: "local", Claims: claims, LastLogin: tc.lastLogin,
++			}))
++			login := tc.login
++			login.ConnectorID, login.Time = "local", t0
++
++			require.NoError(t, Record(ctx, s, login))
++
++			got, err := s.GetUserIdentity(ctx, "jane", "local")
++			require.NoError(t, err)
++			require.Equal(t, tc.wantClaims, got.Claims)
++			require.Equal(t, tc.wantLastLogin, got.LastLogin)
++			wantWrites := 0
++			if !sameClaims(tc.wantClaims, claims) || !tc.wantLastLogin.Equal(tc.lastLogin) {
++				wantWrites = 1
++			}
++			require.Equal(t, wantWrites, s.writes)
++		})
++	}
++}
++
++// countingUpdate counts the writes of an identity.
++type countingUpdate struct {
++	storage.Storage
++	writes int
++}
++
++func (s *countingUpdate) UpdateUserIdentity(ctx context.Context, userID, connectorID string, updater func(storage.UserIdentity) (storage.UserIdentity, error)) error {
++	return s.Storage.UpdateUserIdentity(ctx, userID, connectorID, func(old storage.UserIdentity) (storage.UserIdentity, error) {
++		updated, err := updater(old)
++		if err == nil {
++			s.writes++
++		}
++		return updated, err
++	})
++}
++
++// failingUpdate fails the first failures writes of an identity (every write
++// when negative), as a conflict with writers on other replicas does. The
++// updater still runs on what is stored, as in a storage that writes after it,
++// so a blocked pair is refused and an update with nothing to write ends there.
++type failingUpdate struct {
++	storage.Storage
++	failures int
++	tries    int
++}
++
++var errConflict = errors.New("conflict")
++
++func (s *failingUpdate) UpdateUserIdentity(ctx context.Context, userID, connectorID string, updater func(storage.UserIdentity) (storage.UserIdentity, error)) error {
++	s.tries++
++	if s.failures >= 0 && s.tries > s.failures {
++		return s.Storage.UpdateUserIdentity(ctx, userID, connectorID, updater)
++	}
++	old, err := s.GetUserIdentity(ctx, userID, connectorID)
++	if err != nil {
++		return err
++	}
++	if _, err := updater(old); err != nil {
++		return err
++	}
++	return errConflict
++}
++
++func TestRecordRetriesWrite(t *testing.T) {
++	ctx := t.Context()
++	s := &failingUpdate{Storage: newStorage(t), failures: identityWriteAttempts - 1}
++	require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "jane", ConnectorID: "local"}))
++
++	require.NoError(t, Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true}))
++
++	require.Equal(t, identityWriteAttempts, s.tries)
++	got, err := s.GetUserIdentity(ctx, "jane", "local")
++	require.NoError(t, err)
++	require.Equal(t, claims, got.Claims)
++	require.Equal(t, t0, got.LastLogin)
++}
++
++// A write of an existing identity that keeps failing does not fail the login:
++// the identity is read instead, and its lock still refuses a blocked pair.
++func TestRecordWriteKeepsFailing(t *testing.T) {
++	stored := storage.UserIdentity{
++		UserID: "jane", ConnectorID: "local",
++		Claims:    storage.Claims{UserID: "jane", Email: "old@example.com"},
++		LastLogin: t0.Add(-time.Hour),
++	}
++
++	t.Run("the login goes on with the stored identity", func(t *testing.T) {
++		ctx := t.Context()
++		s := &failingUpdate{Storage: newStorage(t), failures: -1}
++		require.NoError(t, s.CreateUserIdentity(ctx, stored))
++		var logs bytes.Buffer
++
++		err := Record(ctx, s, Login{
++			ConnectorID: "local", Claims: claims, Time: t0, Complete: true,
++			Logger: slog.New(slog.NewTextHandler(&logs, nil)),
++		})
++
++		require.NoError(t, err)
++		require.Equal(t, identityWriteAttempts, s.tries)
++		got, err := s.GetUserIdentity(ctx, "jane", "local")
++		require.NoError(t, err)
++		require.Equal(t, stored, got)
++		require.Contains(t, logs.String(), "level=WARN")
++		require.Contains(t, logs.String(), "failed to record the user identity of a login")
++		require.Contains(t, logs.String(), errConflict.Error())
++	})
++
++	t.Run("a blocked pair is refused", func(t *testing.T) {
++		ctx := t.Context()
++		s := &failingUpdate{Storage: newStorage(t), failures: -1}
++		locked := stored
++		locked.BlockedUntil = t0.Add(time.Hour)
++		require.NoError(t, s.CreateUserIdentity(ctx, locked))
++
++		err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++
++		var blocked *BlockedError
++		require.ErrorAs(t, err, &blocked)
++		require.Equal(t, t0.Add(time.Hour), blocked.Until)
++	})
++
++	t.Run("an identity that cannot be read fails the login", func(t *testing.T) {
++		ctx := t.Context()
++		memory := newStorage(t)
++		require.NoError(t, memory.CreateUserIdentity(ctx, stored))
++		s := &failingUpdate{Storage: failingGet{Storage: memory}, failures: -1}
++
++		err := Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true})
++
++		require.ErrorIs(t, err, errStorage)
++		var blocked *BlockedError
++		require.False(t, errors.As(err, &blocked))
++	})
++
++	t.Run("a canceled login stops trying", func(t *testing.T) {
++		ctx, cancel := context.WithCancel(t.Context())
++		cancel()
++		s := &failingUpdate{Storage: newStorage(t), failures: -1}
++		require.NoError(t, s.CreateUserIdentity(ctx, stored))
++
++		require.NoError(t, Record(ctx, s, Login{ConnectorID: "local", Claims: claims, Time: t0, Complete: true}))
++		require.Equal(t, 1, s.tries)
++	})
++}
++
++// TestSameClaims changes every field of storage.Claims in turn: a field added
++// upstream that sameClaims does not compare fails it.
++func TestSameClaims(t *testing.T) {
++	require.True(t, sameClaims(claims, claims))
++	require.True(t, sameClaims(storage.Claims{Groups: nil}, storage.Claims{Groups: []string{}}))
++
++	typ := reflect.TypeFor[storage.Claims]()
++	for i := range typ.NumField() {
++		field := typ.Field(i)
++		t.Run(field.Name, func(t *testing.T) {
++			changed := claims
++			v := reflect.ValueOf(&changed).Elem().Field(i)
++			switch v.Kind() { //nolint:exhaustive // a new kind of field fails the test below
++			case reflect.String:
++				v.SetString(v.String() + "-changed")
++			case reflect.Bool:
++				v.SetBool(!v.Bool())
++			case reflect.Slice:
++				v.Set(reflect.Append(v, reflect.ValueOf("changed")))
++			default:
++				t.Fatalf("storage.Claims.%s of kind %s: compare it in sameClaims and here", field.Name, v.Kind())
++			}
++			require.False(t, sameClaims(claims, changed))
++		})
++	}
++}
++
++func TestCompleted(t *testing.T) {
++	tests := []struct {
++		name      string
++		lastLogin time.Time
++		at        time.Time
++		want      time.Time
++	}{
++		{name: "login after a second factor", at: t0, want: t0},
++		{name: "repeated for the same login", lastLogin: t0, at: t0, want: t0},
++		{name: "never moves back", lastLogin: t0, at: t0.Add(-time.Hour), want: t0},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			ctx := t.Context()
++			s := newStorage(t)
++			require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "jane", ConnectorID: "local", LastLogin: tc.lastLogin}))
++
++			require.NoError(t, Completed(ctx, s, "jane", "local", tc.at))
++
++			got, err := s.GetUserIdentity(ctx, "jane", "local")
++			require.NoError(t, err)
++			require.Equal(t, tc.want, got.LastLogin)
++		})
++	}
++
++	t.Run("pair without an identity", func(t *testing.T) {
++		require.NoError(t, Completed(t.Context(), newStorage(t), "jane", "local", t0))
++	})
++}
++
++// failingGet fails every read of an identity.
++type failingGet struct {
++	storage.Storage
++}
++
++var errStorage = errors.New("storage unavailable")
++
++func (failingGet) GetUserIdentity(context.Context, string, string) (storage.UserIdentity, error) {
++	return storage.UserIdentity{}, errStorage
++}
++
++func TestCheckBlocked(t *testing.T) {
++	ctx := t.Context()
++	s := newStorage(t)
++	require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "locked", ConnectorID: "ldap", BlockedUntil: t0.Add(time.Hour)}))
++	require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "expired", ConnectorID: "ldap", BlockedUntil: t0.Add(-time.Hour)}))
++	require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{UserID: "free", ConnectorID: "ldap"}))
++
++	var blocked *BlockedError
++	require.ErrorAs(t, CheckBlocked(ctx, s, "locked", "ldap", t0), &blocked)
++	require.Equal(t, t0.Add(time.Hour), blocked.Until)
++	require.NoError(t, CheckBlocked(ctx, s, "expired", "ldap", t0))
++	require.NoError(t, CheckBlocked(ctx, s, "free", "ldap", t0))
++	require.NoError(t, CheckBlocked(ctx, s, "unknown", "ldap", t0), "a pair without an identity is not locked")
++	require.NoError(t, CheckBlocked(ctx, s, "locked", "local", t0), "the lock is per connector")
++
++	err := CheckBlocked(ctx, failingGet{Storage: s}, "locked", "ldap", t0)
++	require.ErrorIs(t, err, errStorage)
++	require.False(t, errors.As(err, &blocked))
++}

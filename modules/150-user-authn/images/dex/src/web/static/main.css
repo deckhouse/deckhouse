@@ -347,6 +347,119 @@ body {
   justify-content: center;
 }
 
+.remember-me {
+  display: flex;
+  align-items: center;
+  column-gap: 8px;
+  color: #6E7084;
+  cursor: pointer;
+}
+
+.remember-me input {
+  width: 16px;
+  height: 16px;
+  accent-color: #004DF2;
+}
+
+/* Home page: the signed-in user and the facts of the session. */
+.dex-identity {
+  text-align: center;
+}
+
+.dex-identity__name {
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
+
+.dex-identity__email {
+  overflow-wrap: anywhere;
+}
+
+.dex-identity__state {
+  white-space: nowrap;
+}
+
+.dex-identity__state--warn {
+  color: #DA0B20;
+}
+
+.dex-facts {
+  margin-top: 16px;
+  border-top: 1px solid #6E708433;
+}
+
+.dex-fact {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 4px 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid #6E708433;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.dex-fact dt {
+  color: #626F84;
+}
+
+.dex-fact dd {
+  overflow-wrap: anywhere;
+}
+
+.dex-fact dd.dex-fact__long {
+  color: #626F84;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.dex-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.dex-groups {
+  max-height: 120px;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.dex-groups li {
+  overflow-wrap: anywhere;
+}
+
+.dex-groups--clipped {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+}
+
+.dex-groups:focus-visible {
+  outline: 2px solid #004DF2;
+  outline-offset: 3px;
+}
+
+.dex-home__actions {
+  margin-top: 16px;
+}
+
+.dex-home__footer {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.dex-home__link {
+  color: #004DF2;
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 512px) {
+  .dex-fact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   .login-page {
     background-color: #004DF2;

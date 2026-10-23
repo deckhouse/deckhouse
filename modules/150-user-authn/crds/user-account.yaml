@@ -86,8 +86,12 @@ spec:
                   format: int64
                   minimum: 0
                   description: |
-                    Number of consecutive incorrect login attempts recorded in Dex Password (local)
-                    or OfflineSessions (external).
+                    Number of consecutive incorrect login attempts recorded in Dex.
+
+                    Dex counts them for local accounts, and for accounts of LDAP and Atlassian Crowd providers
+                    whose type is listed in the
+                    [`passwordPolicy.lockout.applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors)
+                    module parameter.
                 locked:
                   type: boolean
                   description: |
@@ -126,6 +130,38 @@ spec:
                     Groups associated with the account.
                   items:
                     type: string
+                lastLogin:
+                  type: string
+                  format: date-time
+                  description: |
+                    Time of the last sign-in through Dex, in RFC3339 format.
+
+                    Dex records it after the user passes every sign-in step, including 2FA. Basic Authentication to
+                    the API server through an LDAP provider with `enableBasicAuth` updates it too, because it goes
+                    through Dex.
+
+                    For an account that has not signed in since the upgrade to Deckhouse 1.78, this is the time of
+                    its last sign-in that issued a refresh token.
+                twoFactor:
+                  type: object
+                  description: |
+                    State of the 2FA (TOTP) of the account in Dex, without secrets.
+
+                    Set after the first sign-in of the account through Dex.
+                  properties:
+                    enrolled:
+                      type: boolean
+                      description: |
+                        Whether Dex keeps a TOTP secret for the account.
+
+                        Dex creates the secret when it shows the user the QR code at a sign-in.
+                    confirmed:
+                      type: boolean
+                      description: |
+                        Whether the user has entered a code for the TOTP secret.
+
+                        Until then, a sign-in shows the QR code again. A UserOperation of the `Reset2FA` type removes
+                        the secret.
       subresources:
         status: {}
       additionalPrinterColumns:
@@ -148,6 +184,9 @@ spec:
           name: LockedUntil
           type: string
           format: date-time
+        - jsonPath: .status.lastLogin
+          name: LastLogin
+          type: date
         - jsonPath: .metadata.creationTimestamp
           name: Age
           type: date

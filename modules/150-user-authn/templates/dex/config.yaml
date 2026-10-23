@@ -3,6 +3,11 @@ Connector-level identity limits from DexProvider.spec.allowedIdentities. Dex enf
 finalizeLogin for every connector type (patch 020); the identity-assign webhook trusts the same
 fields when it decides who may write the provider. Rendered right after the connector name.
 */ -}}
+{{- /* The CA that signs the client certificate of the ingress-nginx controllers: the CA of kube-rbac-proxy. */ -}}
+{{- define "dex_trusted_proxy_ca" -}}
+  {{- dig "internal" "modules" "kubeRBACProxyCA" "cert" "" (.Values.global | default dict) -}}
+{{- end -}}
+
 {{- define "dex_connector_identity_limits" }}
   {{- with .allowedIdentities }}
     {{- if .emails }}
@@ -37,8 +42,22 @@ fields when it decides who may write the provider. Rendered right after the conn
     https: 0.0.0.0:5556
     tlsKey: /etc/dex/certs/tls.key
     tlsCert: /etc/dex/certs/tls.crt
+    # Dex takes the client address from X-Real-IP only from a trusted proxy. ingress-nginx proves itself
+    # with its client certificate: the platform CA signed it for the ingress-nginx:auth organization. The
+    # controller presents it to any backend an Ingress asks it to, so whoever can create an Ingress with
+    # configuration snippets on that controller can set the address too. The Gateway sends the secret in X-Deckhouse-Trusted-Proxy instead (basic-auth-proxy too, from the global
+    # logout change shipped with this one). The secret is readable by whoever can read the HTTPRoute of
+    # d8-user-authn, so it keeps out a pod that merely reaches the Dex Service, not a reader of that object;
+    # both only guard the address the rate limit counts and the sign-in log shows.
     clientRemoteIP:
       header: X-Real-IP
+      {{- with .Values.userAuthn.internal.dexTrustedProxySecret }}
+      trustedProxySecret: {{ . | quote }}
+      {{- end }}
+      {{- if include "dex_trusted_proxy_ca" . }}
+      trustedProxyCAFile: /etc/dex/config/trusted-proxy-ca.crt
+      trustedProxyCertOrganization: ingress-nginx:auth
+      {{- end }}
   telemetry:
     http: 127.0.0.1:5558
   frontend:
@@ -95,16 +114,27 @@ fields when it decides who may write the provider. Rendered right after the conn
   {{- end }}
   {{- end }}
   {{- with $context.Values.userAuthn.staticUsers2FA }}
-    {{ if .enabled }}
-  twoFactorAuthn:
-    issuer: {{ .issuerName  | quote }}
-    connectors:
-    - local
-    {{- end }}
+  {{- if .enabled }}
+  {{- /* The authenticator ID is a contract: the user-authn controller and the transitional Dex patch keep the
+         TOTP secret of a user under mfaSecrets["totp"]. Patch 210 lets MFA work without sessions. */}}
+  mfa:
+    authenticators:
+    - id: totp
+      type: TOTP
+      config:
+        issuer: {{ .issuerName | default "Deckhouse" | quote }}
+      connectorTypes:
+      - local
+    defaultMFAChain:
+    - totp
   {{- end }}
+  {{- end }}
+  signer:
+    type: local
+    config:
+      keysRotationPeriod: "6h"
   expiry:
     authRequests: "10m"
-    signingKeys: "6h"
     idTokens: {{ $context.Values.userAuthn.idTokenTTL | default "10m" | quote }}
     refreshTokens:
       reuseInterval: "2m"
@@ -128,14 +158,8 @@ fields when it decides who may write the provider. Rendered right after the conn
     {{- if ne $passwordConnector "" }}
     passwordConnector: {{ $passwordConnector | quote }}
     {{- end }}
-  {{- with $context.Values.userAuthn.staticUsers2FA }}
-    {{/* TODO(nabokihms): this is a bug and should be fixed in Dex in the future, otherwise approval skip also skips 2fa */}}
-    {{ if .enabled }}
-    skipApprovalScreen: false
-    {{- else }}
+    {{- /* The second factor is a step of its own since Dex v2.46 and does not need the approval page. */}}
     skipApprovalScreen: true
-    {{- end }}
-  {{- end }}
   {{- if or ($context.Values.userAuthn.internal.dexUsersCRDs) (and (eq (len $context.Values.userAuthn.internal.dexUsersCRDs) 0) (eq (len $context.Values.userAuthn.internal.providers) 0)) }}
   enablePasswordDB: true
   {{- end }}
@@ -395,3 +419,6 @@ metadata:
 data:
   config.yaml: |-
     {{- include "dex_conf" . | b64enc | nindent 4 }}
+  {{- with include "dex_trusted_proxy_ca" . }}
+  trusted-proxy-ca.crt: {{ . | b64enc }}
+  {{- end }}

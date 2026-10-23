@@ -27,6 +27,9 @@ properties:
       kubernetesDexClientAppSecret:
         type: string
         default: ""
+      dexTrustedProxySecret:
+        type: string
+        default: ""
       kubeconfigEncodedNames:
         type: array
         default: []

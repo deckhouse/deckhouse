@@ -196,13 +196,13 @@ properties:
             description: |
               External (non-local) connector types the lockout additionally applies to.
 
-              The built-in `Local` connector is always covered by the lockout policy when this section is configured.
-              Its state is stored in the Password object and does not need to be opted in here.
+              The built-in `Local` connector is always covered by the lockout policy when this section is configured
+              and does not need to be listed here.
 
-              For the listed external connectors, the failed-attempt counter and the lock state are tracked in the
-              OfflineSessions object of the corresponding user (one object per `(user, connector)` pair).
+              For the listed connector types, Dex counts failed attempts and locks each pair of a provider and a user
+              separately. The UserAccount object of the user shows the counter and the lock.
 
-              Manually unlocking a user is supported for every type via a UserOperation.
+              Manually unlocking a user is supported for every provider type via a UserOperation.
             uniqueItems: true
             items:
               type: string
@@ -213,13 +213,30 @@ properties:
     description: |
       Brute-force protection for the password endpoints of Dex.
 
-      When enabled, a per-IP token-bucket rate limiter is installed in front of the `POST /token`
-      and `POST /auth/{connector}/login` endpoints. The client IP address is taken from the `X-Real-IP` header set by the platform Ingress controller.
+      When enabled, Dex limits the failed requests from each client IP address to the following endpoints:
 
-      The limit applies to **failed authentication attempts only**: tokens reserved before
-      the request reaches the Dex handler are returned to the bucket on a successful response
-      (HTTP `2xx`/`3xx`). Therefore, successful logins and refresh-token exchanges do not consume the
-      per-IP budget.
+      - `/token`: Token endpoint: client authentication and the password grant. Other requests of an authenticated client,
+        such as refresh-token requests, do not count.
+      - `/auth/{connector}/login`: Sign-in form of the local, LDAP and Crowd providers.
+      - `/password/change`: Password change page.
+      - `/mfa` and the paths under it: Steps of two-factor authentication (2FA).
+
+      The client IP address is taken from the `X-Real-IP` header that the platform Ingress controller sets.
+      Dex trusts the header only from the proxies of the platform. The Ingress controller proves itself with its
+      client certificate, which the platform CA issued for the `ingress-nginx:auth` organization. The controller
+      presents it to any backend an Ingress asks it to, so whoever can create an Ingress with configuration snippets
+      on that controller can set the address too. The Gateway sends a
+      secret stored in the HTTPRoute object of the module in `d8-user-authn`: whoever can read it can set the address
+      too. For any other request, for example from a pod that calls the Dex Service directly, Dex counts the address
+      of the connection.
+      Through the Gateway API (the `alb` module) Dex counts the last address of `X-Forwarded-For`: the address the ALB
+      saw, or the one a balancer passed when the ALB instance trusts it in `originalIPDetection.setRealIPFrom`. Behind
+      a balancer the ALB instance does not trust, every client is counted by the address of the balancer.
+
+      The limit applies to **failed authentication attempts only**. Each request takes a token from the bucket of its IP address,
+      and a successful response (HTTP `2xx` or `3xx`) returns the token. Successful logins and refresh-token exchanges
+      do not consume the per-IP budget. When the bucket is empty, Dex answers with the `429` status code
+      and the `Retry-After` header.
 
       Limits are tracked in memory in each Dex replica.
       In HA setups, the effective per-IP rate is multiplied by the number of replicas.
@@ -268,8 +285,6 @@ properties:
         default: false
         description: |
           If set to `true`, the local users will be required to use two-factor authentication (2FA) when logging in.
-
-          When 2FA is enabled, Dex also shows the consent screen when users sign in.
       issuerName:
         type: string
         default: "Deckhouse"

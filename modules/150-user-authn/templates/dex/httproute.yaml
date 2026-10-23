@@ -26,6 +26,18 @@ spec:
       name: dex
       port: 443
       weight: 1
+    {{- with .Values.userAuthn.internal.dexTrustedProxySecret }}
+    # The Gateway passes a client's X-Real-IP through, so the header is removed and Dex takes the
+    # address the Gateway appends to X-Forwarded-For.
+    filters:
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        set:
+        - name: X-Deckhouse-Trusted-Proxy
+          value: {{ . | quote }}
+        remove:
+        - X-Real-IP
+    {{- end }}
     matches:
     - path:
         type: PathPrefix

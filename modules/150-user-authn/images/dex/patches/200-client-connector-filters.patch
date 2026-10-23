@@ -1,0 +1,1667 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+index 7b17a95c..cf66caa0 100644
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
+@@ -594,6 +594,12 @@ type Connector struct {
+ 
+ 	Config     connectors.ConnectorConfig `json:"config"`
+ 	GrantTypes []string                   `json:"grantTypes"`
++
++	// Identity limits the server applies to every connector type after the
++	// connector produced an identity. See storage.Connector.
++	AllowedEmails       []string `json:"allowedEmails"`
++	AllowedEmailDomains []string `json:"allowedEmailDomains"`
++	AllowedGroups       []string `json:"allowedGroups"`
+ }
+ 
+ // UnmarshalJSON allows Connector to implement the unmarshaler interface to
+@@ -606,6 +612,10 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
+ 
+ 		Config     json.RawMessage `json:"config"`
+ 		GrantTypes []string        `json:"grantTypes"`
++
++		AllowedEmails       []string `json:"allowedEmails"`
++		AllowedEmailDomains []string `json:"allowedEmailDomains"`
++		AllowedGroups       []string `json:"allowedGroups"`
+ 	}
+ 	if err := configUnmarshaller(b, &conn); err != nil {
+ 		return fmt.Errorf("parse connector: %v", err)
+@@ -648,6 +658,10 @@ func (c *Connector) UnmarshalJSON(b []byte) error {
+ 		ID:         conn.ID,
+ 		Config:     connConfig,
+ 		GrantTypes: conn.GrantTypes,
++
++		AllowedEmails:       conn.AllowedEmails,
++		AllowedEmailDomains: conn.AllowedEmailDomains,
++		AllowedGroups:       conn.AllowedGroups,
+ 	}
+ 	return nil
+ }
+@@ -665,6 +679,10 @@ func ToStorageConnector(c Connector) (storage.Connector, error) {
+ 		Name:       c.Name,
+ 		Config:     data,
+ 		GrantTypes: c.GrantTypes,
++
++		AllowedEmails:       c.AllowedEmails,
++		AllowedEmailDomains: c.AllowedEmailDomains,
++		AllowedGroups:       c.AllowedGroups,
+ 	}, nil
+ }
+ 
+diff --git a/cmd/dex/config_test.go b/cmd/dex/config_test.go
+index 130445c7..7d756623 100644
+--- a/cmd/dex/config_test.go
++++ b/cmd/dex/config_test.go
+@@ -305,6 +305,44 @@ additionalFeatures: [
+ 	}
+ }
+ 
++// TestUnmarshalAllowLists reads the allow-lists in the form the user-authn
++// templates render them: on a connector from DexProvider.spec.allowedIdentities
++// and on a client; a config that dropped them would let everyone in.
++func TestUnmarshalAllowLists(t *testing.T) {
++	rawConfig := []byte(`
++staticClients:
++- id: app
++  allowedEmails:
++  - jane@example.com
++  allowedGroups:
++  - admins
++connectors:
++- type: mockCallback
++  id: corp
++  name: Corp
++  allowedEmails:
++  - "boss@partner.example"
++  allowedEmailDomains:
++  - "corp.example"
++  allowedGroups:
++  - "staff"
++`)
++
++	var c Config
++	require.NoError(t, yaml.Unmarshal(rawConfig, &c))
++
++	require.Len(t, c.StaticClients, 1)
++	require.Equal(t, []string{"jane@example.com"}, c.StaticClients[0].AllowedEmails)
++	require.Equal(t, []string{"admins"}, c.StaticClients[0].AllowedGroups)
++
++	require.Len(t, c.StaticConnectors, 1)
++	conn, err := ToStorageConnector(c.StaticConnectors[0])
++	require.NoError(t, err)
++	require.Equal(t, []string{"boss@partner.example"}, conn.AllowedEmails)
++	require.Equal(t, []string{"corp.example"}, conn.AllowedEmailDomains)
++	require.Equal(t, []string{"staff"}, conn.AllowedGroups)
++}
++
+ func TestUnmarshalConfigWithEnvNoExpand(t *testing.T) {
+ 	// If the env variable DEX_EXPAND_ENV is set and has a "falsy" value, os.ExpandEnv is disabled.
+ 	// ParseBool: "It accepts 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False."
+diff --git a/server/allowlist/allowlist.go b/server/allowlist/allowlist.go
+new file mode 100644
+index 00000000..9142a2fc
+--- /dev/null
++++ b/server/allowlist/allowlist.go
+@@ -0,0 +1,144 @@
++// Package allowlist applies the allow-lists of a client and of a connector to
++// the claims Dex is about to issue for a user. Deckhouse renders them from
++// DexClient and DexAuthenticator (allowedEmails, allowedGroups) and from
++// DexProvider (allowedIdentities); upstream has no equivalent.
++//
++// The interactive login (server/authflow) and the password, refresh-token and
++// token-exchange grants (server/grants) apply them. A login from a browser
++// session does not apply them yet.
++package allowlist
++
++import (
++	"context"
++	"errors"
++	"fmt"
++	"slices"
++	"strings"
++
++	"github.com/dexidp/dex/pkg/groups"
++	"github.com/dexidp/dex/storage"
++)
++
++// Rule names the allow-list that refused a user.
++type Rule string
++
++const (
++	// ClientEmails is Client.AllowedEmails.
++	ClientEmails Rule = "client_allowed_emails"
++	// ClientGroups is Client.AllowedGroups.
++	ClientGroups Rule = "client_allowed_groups"
++	// ConnectorEmails is Connector.AllowedEmails with AllowedEmailDomains.
++	ConnectorEmails Rule = "connector_allowed_emails"
++	// ConnectorGroups is Connector.AllowedGroups.
++	ConnectorGroups Rule = "connector_allowed_groups"
++	// ConnectorNotFound refuses a user of a connector that is gone from storage.
++	ConnectorNotFound Rule = "connector_not_found"
++)
++
++// NotAllowedError refuses a user that an allow-list does not admit.
++type NotAllowedError struct {
++	Rule        Rule
++	ClientID    string
++	ConnectorID string
++}
++
++func (e *NotAllowedError) Error() string {
++	return fmt.Sprintf("user not allowed by %s (client %q, connector %q)", e.Rule, e.ClientID, e.ConnectorID)
++}
++
++// Apply checks the claims of a user who signs in to client through the
++// connector connectorID against the allow-lists of the client, then of the
++// connector, and narrows claims.Groups to the groups both admit. A refused user
++// gets *NotAllowedError, and claims are left as they were.
++//
++// The connector is read from s, which serves the connectors of the config file
++// too. One missing from storage refuses the user: the login that got this far
++// had it, so it was removed meanwhile, not unrestricted.
++func Apply(ctx context.Context, s storage.Storage, client storage.Client, connectorID string, claims *storage.Claims) error {
++	refuse := func(rule Rule) error {
++		return &NotAllowedError{Rule: rule, ClientID: client.ID, ConnectorID: connectorID}
++	}
++
++	admitted, rule := admitByClient(client, claims.Email, claims.Groups)
++	if rule != "" {
++		return refuse(rule)
++	}
++
++	conn, err := s.GetConnector(ctx, connectorID)
++	switch {
++	case errors.Is(err, storage.ErrNotFound):
++		return refuse(ConnectorNotFound)
++	case err != nil:
++		return fmt.Errorf("get connector %q: %w", connectorID, err)
++	}
++
++	admitted, rule = admitByConnector(conn, claims.Email, admitted)
++	if rule != "" {
++		return refuse(rule)
++	}
++
++	claims.Groups = admitted
++	return nil
++}
++
++// admitByClient returns the groups of a user the client admits, or the rule
++// that refuses the user. Emails compare exactly.
++func admitByClient(c storage.Client, email string, userGroups []string) ([]string, Rule) {
++	if len(c.AllowedEmails) > 0 && (email == "" || !slices.Contains(c.AllowedEmails, email)) {
++		return nil, ClientEmails
++	}
++	if len(c.AllowedGroups) > 0 {
++		userGroups = groups.Filter(userGroups, c.AllowedGroups)
++		if len(userGroups) == 0 {
++			return nil, ClientGroups
++		}
++	}
++	return userGroups, ""
++}
++
++// admitByConnector returns the groups of a user the connector admits, or the
++// rule that refuses the user.
++func admitByConnector(c storage.Connector, email string, userGroups []string) ([]string, Rule) {
++	if (len(c.AllowedEmails) > 0 || len(c.AllowedEmailDomains) > 0) && !connectorEmailAllowed(c, email) {
++		return nil, ConnectorEmails
++	}
++	if len(c.AllowedGroups) > 0 {
++		userGroups = groups.Filter(userGroups, c.AllowedGroups)
++		if len(userGroups) == 0 {
++			return nil, ConnectorGroups
++		}
++	}
++	return userGroups, ""
++}
++
++// connectorEmailAllowed reports whether email is one of the connector's emails
++// or belongs to one of its domains: the part of the email after the last '@',
++// matched exactly, so a subdomain is another domain. Both compare
++// case-insensitively.
++func connectorEmailAllowed(c storage.Connector, email string) bool {
++	email = normalize(email)
++	if email == "" {
++		return false
++	}
++	for _, allowed := range c.AllowedEmails {
++		if normalize(allowed) == email {
++			return true
++		}
++	}
++
++	at := strings.LastIndex(email, "@")
++	if at < 0 || at == len(email)-1 {
++		return false
++	}
++	domain := email[at+1:]
++	for _, allowed := range c.AllowedEmailDomains {
++		if normalize(allowed) == domain {
++			return true
++		}
++	}
++	return false
++}
++
++func normalize(s string) string {
++	return strings.ToLower(strings.TrimSpace(s))
++}
+diff --git a/server/allowlist/allowlist_test.go b/server/allowlist/allowlist_test.go
+new file mode 100644
+index 00000000..40b91ca8
+--- /dev/null
++++ b/server/allowlist/allowlist_test.go
+@@ -0,0 +1,306 @@
++package allowlist
++
++import (
++	"context"
++	"errors"
++	"log/slog"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++func TestAdmitByClient(t *testing.T) {
++	tests := []struct {
++		name           string
++		client         storage.Client
++		email          string
++		groups         []string
++		expectedGroups []string
++		expectedRule   Rule
++	}{
++		{
++			name:           "no allow-lists keep the groups",
++			email:          "jane@example.com",
++			groups:         []string{"d8-users", "d8-users-test"},
++			expectedGroups: []string{"d8-users", "d8-users-test"},
++		},
++		{
++			name:           "listed email is admitted",
++			client:         storage.Client{AllowedEmails: []string{"jane@example.com"}},
++			email:          "jane@example.com",
++			groups:         []string{"d8-users"},
++			expectedGroups: []string{"d8-users"},
++		},
++		{
++			name:         "other email is refused",
++			client:       storage.Client{AllowedEmails: []string{"jane@example.com"}},
++			email:        "john@example.com",
++			expectedRule: ClientEmails,
++		},
++		{
++			name:         "email compares exactly",
++			client:       storage.Client{AllowedEmails: []string{"jane@example.com"}},
++			email:        "Jane@example.com",
++			expectedRule: ClientEmails,
++		},
++		{
++			name:         "user without an email is refused by an email list",
++			client:       storage.Client{AllowedEmails: []string{""}},
++			expectedRule: ClientEmails,
++		},
++		{
++			name:           "groups are narrowed to the intersection",
++			client:         storage.Client{AllowedGroups: []string{"d8-users"}},
++			email:          "jane@example.com",
++			groups:         []string{"d8-users", "d8-users-test"},
++			expectedGroups: []string{"d8-users"},
++		},
++		{
++			name:         "empty intersection is refused",
++			client:       storage.Client{AllowedGroups: []string{"d8-users-test"}},
++			email:        "jane@example.com",
++			groups:       []string{"d8-users"},
++			expectedRule: ClientGroups,
++		},
++		{
++			name:         "user without groups is refused by a group list",
++			client:       storage.Client{AllowedGroups: []string{"d8-users"}},
++			email:        "jane@example.com",
++			expectedRule: ClientGroups,
++		},
++		{
++			name:         "email is checked before groups",
++			client:       storage.Client{AllowedEmails: []string{"jane@example.com"}, AllowedGroups: []string{"d8-users"}},
++			email:        "john@example.com",
++			groups:       []string{"d8-users"},
++			expectedRule: ClientEmails,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			groups, rule := admitByClient(tc.client, tc.email, tc.groups)
++			require.Equal(t, tc.expectedRule, rule)
++			require.Equal(t, tc.expectedGroups, groups)
++		})
++	}
++}
++
++func TestAdmitByConnector(t *testing.T) {
++	tests := []struct {
++		name           string
++		conn           storage.Connector
++		email          string
++		groups         []string
++		expectedGroups []string
++		expectedRule   Rule
++	}{
++		{
++			name:           "no limits keep the groups",
++			email:          "jane@example.com",
++			groups:         []string{"a", "b"},
++			expectedGroups: []string{"a", "b"},
++		},
++		{
++			name:           "email compares case-insensitively",
++			conn:           storage.Connector{AllowedEmails: []string{" Jane@Example.com "}},
++			email:          "jane@example.com",
++			groups:         []string{"a"},
++			expectedGroups: []string{"a"},
++		},
++		{
++			name:         "email outside the list is refused",
++			conn:         storage.Connector{AllowedEmails: []string{"jane@example.com"}},
++			email:        "john@example.com",
++			expectedRule: ConnectorEmails,
++		},
++		{
++			name:           "domain compares case-insensitively",
++			conn:           storage.Connector{AllowedEmailDomains: []string{"Contractor.Example"}},
++			email:          "alice@contractor.example",
++			groups:         []string{"a"},
++			expectedGroups: []string{"a"},
++		},
++		{
++			name:         "subdomain is another domain",
++			conn:         storage.Connector{AllowedEmailDomains: []string{"example.com"}},
++			email:        "alice@corp.example.com",
++			expectedRule: ConnectorEmails,
++		},
++		{
++			name:         "domain is the part after the last at sign",
++			conn:         storage.Connector{AllowedEmailDomains: []string{"evil.example"}},
++			email:        `"x@evil.example"@corp.example`,
++			expectedRule: ConnectorEmails,
++		},
++		{
++			name:         "email ending with an at sign has no domain",
++			conn:         storage.Connector{AllowedEmailDomains: []string{""}},
++			email:        "alice@",
++			expectedRule: ConnectorEmails,
++		},
++		{
++			name: "either an email or a domain is enough",
++			conn: storage.Connector{
++				AllowedEmails:       []string{"boss@partner.example"},
++				AllowedEmailDomains: []string{"contractor.example"},
++			},
++			email: "boss@partner.example",
++		},
++		{
++			name:         "email without a domain is refused when only domains are listed",
++			conn:         storage.Connector{AllowedEmailDomains: []string{"contractor.example"}},
++			email:        "alice",
++			expectedRule: ConnectorEmails,
++		},
++		{
++			name:         "user without an email is refused by an email list",
++			conn:         storage.Connector{AllowedEmails: []string{" "}},
++			expectedRule: ConnectorEmails,
++		},
++		{
++			name:           "groups are narrowed to the intersection",
++			conn:           storage.Connector{AllowedGroups: []string{"contractors"}},
++			email:          "alice@contractor.example",
++			groups:         []string{"contractors", "other-team"},
++			expectedGroups: []string{"contractors"},
++		},
++		{
++			name:         "empty intersection is refused",
++			conn:         storage.Connector{AllowedGroups: []string{"contractors"}},
++			email:        "carol@contractor.example",
++			groups:       []string{"other-team"},
++			expectedRule: ConnectorGroups,
++		},
++		{
++			name:         "user without groups is refused by a group list",
++			conn:         storage.Connector{AllowedGroups: []string{"contractors"}},
++			email:        "carol@contractor.example",
++			expectedRule: ConnectorGroups,
++		},
++		{
++			name:         "email is checked before groups",
++			conn:         storage.Connector{AllowedEmailDomains: []string{"contractor.example"}, AllowedGroups: []string{"contractors"}},
++			email:        "bob@other.example",
++			groups:       []string{"contractors"},
++			expectedRule: ConnectorEmails,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			groups, rule := admitByConnector(tc.conn, tc.email, tc.groups)
++			require.Equal(t, tc.expectedRule, rule)
++			require.Equal(t, tc.expectedGroups, groups)
++		})
++	}
++}
++
++func TestApply(t *testing.T) {
++	ctx := t.Context()
++	s := storage.WithStaticConnectors(memory.New(slog.New(slog.DiscardHandler)), []storage.Connector{{
++		ID: "corp", Type: "mock", Name: "Corp",
++		AllowedEmailDomains: []string{"corp.example"},
++		AllowedGroups:       []string{"staff", "admins"},
++	}})
++	require.NoError(t, s.CreateConnector(ctx, storage.Connector{ID: "open", Type: "mock", Name: "Open"}))
++	client := storage.Client{ID: "app", AllowedGroups: []string{"staff", "guests"}}
++
++	tests := []struct {
++		name           string
++		client         storage.Client
++		connectorID    string
++		claims         storage.Claims
++		expectedGroups []string
++		expectedRule   Rule
++	}{
++		{
++			name:           "client and static connector narrow the groups in turn",
++			client:         client,
++			connectorID:    "corp",
++			claims:         storage.Claims{UserID: "ann", Email: "ann@corp.example", Groups: []string{"staff", "guests", "admins"}},
++			expectedGroups: []string{"staff"},
++		},
++		{
++			name:           "connector from storage without limits admits the user",
++			client:         client,
++			connectorID:    "open",
++			claims:         storage.Claims{UserID: "ann", Email: "ann@other.example", Groups: []string{"guests", "x"}},
++			expectedGroups: []string{"guests"},
++		},
++		{
++			name:         "client refuses before the connector is read",
++			client:       client,
++			connectorID:  "missing",
++			claims:       storage.Claims{UserID: "ann", Email: "ann@corp.example", Groups: []string{"x"}},
++			expectedRule: ClientGroups,
++		},
++		{
++			name:         "connector refuses what the client admits",
++			client:       client,
++			connectorID:  "corp",
++			claims:       storage.Claims{UserID: "ann", Email: "ann@other.example", Groups: []string{"staff"}},
++			expectedRule: ConnectorEmails,
++		},
++		{
++			name:         "connector groups apply to what the client left",
++			client:       client,
++			connectorID:  "corp",
++			claims:       storage.Claims{UserID: "ann", Email: "ann@corp.example", Groups: []string{"guests", "admins"}},
++			expectedRule: ConnectorGroups,
++		},
++		{
++			name:         "connector missing from storage refuses the user",
++			connectorID:  "missing",
++			claims:       storage.Claims{UserID: "ann", Email: "ann@corp.example"},
++			expectedRule: ConnectorNotFound,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			claims := tc.claims
++			claims.Groups = append([]string(nil), tc.claims.Groups...)
++
++			err := Apply(ctx, s, tc.client, tc.connectorID, &claims)
++			if tc.expectedRule == "" {
++				require.NoError(t, err)
++				require.Equal(t, tc.expectedGroups, claims.Groups)
++				return
++			}
++
++			var notAllowed *NotAllowedError
++			require.ErrorAs(t, err, &notAllowed)
++			require.Equal(t, &NotAllowedError{Rule: tc.expectedRule, ClientID: tc.client.ID, ConnectorID: tc.connectorID}, notAllowed)
++			require.Equal(t, tc.claims, claims, "a refusal must leave the claims as they were")
++		})
++	}
++}
++
++// failingConnectorStorage fails every connector read.
++type failingConnectorStorage struct {
++	storage.Storage
++}
++
++var errStorage = errors.New("storage unavailable")
++
++func (failingConnectorStorage) GetConnector(context.Context, string) (storage.Connector, error) {
++	return storage.Connector{}, errStorage
++}
++
++// TestApplyStorageError keeps a storage failure apart from a refusal: the user
++// is not refused for it, and the caller answers with a server error.
++func TestApplyStorageError(t *testing.T) {
++	s := failingConnectorStorage{memory.New(slog.New(slog.DiscardHandler))}
++	claims := storage.Claims{UserID: "ann", Email: "ann@corp.example", Groups: []string{"staff"}}
++
++	err := Apply(t.Context(), s, storage.Client{ID: "app"}, "corp", &claims)
++
++	require.ErrorIs(t, err, errStorage)
++	var notAllowed *NotAllowedError
++	require.False(t, errors.As(err, &notAllowed))
++	require.Equal(t, []string{"staff"}, claims.Groups)
++}
+diff --git a/server/authflow/allowlist.go b/server/authflow/allowlist.go
+new file mode 100644
+index 00000000..9b80788a
+--- /dev/null
++++ b/server/authflow/allowlist.go
+@@ -0,0 +1,50 @@
++package authflow
++
++// allowlist.go applies the allow-lists of the client and the connector to a
++// login (Deckhouse; see server/allowlist).
++
++import (
++	"context"
++	"errors"
++	"fmt"
++	"net/http"
++
++	"github.com/dexidp/dex/server/allowlist"
++	"github.com/dexidp/dex/storage"
++)
++
++// checkAllowLists applies the allow-lists of the client clientID and of the
++// connector connectorID to the claims of a user signing in, and narrows
++// claims.Groups to the groups they admit (see allowlist.Apply). A refusal is
++// *allowlist.NotAllowedError, logged here; renderNotAllowed renders it.
++//
++// finalizeLogin calls it before anything is recorded for a login through a
++// connector. A login from a browser session (trySessionLoginWithSession) is to
++// call it the same way, with the claims of the stored user identity; it does
++// not yet.
++func (h *Handler) checkAllowLists(ctx context.Context, clientID, connectorID string, claims *storage.Claims) error {
++	client, err := h.Storage.GetClient(ctx, clientID)
++	if err != nil {
++		return fmt.Errorf("get client %q: %w", clientID, err)
++	}
++
++	err = allowlist.Apply(ctx, h.Storage, client, connectorID, claims)
++	var notAllowed *allowlist.NotAllowedError
++	if errors.As(err, &notAllowed) {
++		h.Logger.WarnContext(ctx, "access denied",
++			"connector_id", connectorID, "client_id", clientID, "user_id", claims.UserID, "rule", notAllowed.Rule)
++	}
++	return err
++}
++
++// renderNotAllowed renders the page of a login that an allow-list refused and
++// reports whether err is such a refusal. The page does not say which list
++// refused the user.
++func (h *Handler) renderNotAllowed(r *http.Request, w http.ResponseWriter, err error) bool {
++	var notAllowed *allowlist.NotAllowedError
++	if !errors.As(err, &notAllowed) {
++		return false
++	}
++	h.renderError(r, w, http.StatusUnauthorized, ErrMsgAccessDenied)
++	return true
++}
+diff --git a/server/authflow/allowlist_test.go b/server/authflow/allowlist_test.go
+new file mode 100644
+index 00000000..719939ca
+--- /dev/null
++++ b/server/authflow/allowlist_test.go
+@@ -0,0 +1,75 @@
++package authflow
++
++import (
++	"bytes"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/allowlist"
++	"github.com/dexidp/dex/storage"
++)
++
++func TestCheckAllowLists(t *testing.T) {
++	var logBuf bytes.Buffer
++	httpServer, server := newTestHandler(t, func(c *testFlowConfig) {
++		c.Logger = slog.New(slog.NewJSONHandler(&logBuf, &slog.HandlerOptions{Level: slog.LevelInfo}))
++	})
++	defer httpServer.Close()
++	ctx := t.Context()
++	require.NoError(t, server.Storage.CreateClient(ctx, storage.Client{ID: "app", AllowedGroups: []string{"staff"}}))
++
++	t.Run("groups are narrowed", func(t *testing.T) {
++		claims := storage.Claims{UserID: "user-1", Email: "user@example.com", Groups: []string{"staff", "x"}}
++		require.NoError(t, server.checkAllowLists(ctx, "app", "mock", &claims))
++		require.Equal(t, []string{"staff"}, claims.Groups)
++	})
++
++	t.Run("refusal is logged", func(t *testing.T) {
++		logBuf.Reset()
++		claims := storage.Claims{UserID: "user-1", Email: "user@example.com", Groups: []string{"x"}}
++		err := server.checkAllowLists(ctx, "app", "mock", &claims)
++
++		var notAllowed *allowlist.NotAllowedError
++		require.ErrorAs(t, err, &notAllowed)
++		var record map[string]any
++		require.NoError(t, json.Unmarshal(logBuf.Bytes(), &record))
++		require.Equal(t, "access denied", record["msg"])
++		require.Equal(t, "WARN", record["level"])
++		require.Equal(t, string(allowlist.ClientGroups), record["rule"])
++		require.Equal(t, "app", record["client_id"])
++		require.Equal(t, "mock", record["connector_id"])
++		require.Equal(t, "user-1", record["user_id"])
++	})
++
++	t.Run("missing client is an error, not a refusal", func(t *testing.T) {
++		claims := storage.Claims{UserID: "user-1", Email: "user@example.com"}
++		err := server.checkAllowLists(ctx, "gone", "mock", &claims)
++
++		require.ErrorIs(t, err, storage.ErrNotFound)
++		var notAllowed *allowlist.NotAllowedError
++		require.False(t, errors.As(err, &notAllowed))
++	})
++}
++
++func TestRenderNotAllowed(t *testing.T) {
++	httpServer, server := newTestHandler(t, nil)
++	defer httpServer.Close()
++
++	refusal := fmt.Errorf("finalize: %w", &allowlist.NotAllowedError{Rule: allowlist.ClientEmails, ClientID: "app", ConnectorID: "mock"})
++	rr := httptest.NewRecorder()
++	require.True(t, server.renderNotAllowed(httptest.NewRequest(http.MethodGet, "/", nil), rr, refusal))
++	require.Equal(t, http.StatusUnauthorized, rr.Code)
++	require.Contains(t, rr.Body.String(), ErrMsgAccessDenied)
++	require.NotContains(t, rr.Body.String(), string(allowlist.ClientEmails), "the page does not name the list")
++
++	rr = httptest.NewRecorder()
++	require.False(t, server.renderNotAllowed(httptest.NewRequest(http.MethodGet, "/", nil), rr, errors.New("storage down")))
++	require.Equal(t, 0, rr.Body.Len(), "other errors are left to the caller")
++}
+diff --git a/server/authflow/callback.go b/server/authflow/callback.go
+index bdc2ee67..d2595476 100644
+--- a/server/authflow/callback.go
++++ b/server/authflow/callback.go
+@@ -98,6 +98,9 @@ func (h *Handler) handleConnectorCallback(w http.ResponseWriter, r *http.Request
+ 
+ 	authReq, err = h.finalizeLogin(ctx, identity, authReq, conn.Connector)
+ 	if err != nil {
++		if h.renderNotAllowed(r, w, err) {
++			return
++		}
+ 		h.Logger.ErrorContext(r.Context(), "failed to finalize login", "err", err)
+ 		h.renderError(r, w, http.StatusInternalServerError, "Login error.")
+ 		return
+diff --git a/server/authflow/errors.go b/server/authflow/errors.go
+index 05291c51..805bfcc3 100644
+--- a/server/authflow/errors.go
++++ b/server/authflow/errors.go
+@@ -27,4 +27,8 @@ const (
+ 	// ErrMsgNotInRequiredGroups is shown when a user authenticates successfully
+ 	// but is not a member of any of the groups required by the connector.
+ 	ErrMsgNotInRequiredGroups = "You are not a member of any of the required groups to authenticate."
++
++	// ErrMsgAccessDenied is shown when an allow-list of the client or the
++	// connector refuses a user who authenticated successfully.
++	ErrMsgAccessDenied = "Access denied. Please contact your administrator."
+ )
+diff --git a/server/authflow/finalize.go b/server/authflow/finalize.go
+index e0adc1a5..9029116e 100644
+--- a/server/authflow/finalize.go
++++ b/server/authflow/finalize.go
+@@ -44,9 +44,17 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 		Groups:            identity.Groups,
+ 	}
+ 
++	// The allow-lists of the client and the connector decide whether the user
++	// may sign in here at all, so a refused login records nothing. The request
++	// carries the groups they admit; the user identity keeps the connector's.
++	issued := claims
++	if err := h.checkAllowLists(ctx, authReq.ClientID, authReq.ConnectorID, &issued); err != nil {
++		return storage.AuthRequest{}, err
++	}
++
+ 	updater := func(a storage.AuthRequest) (storage.AuthRequest, error) {
+ 		a.LoggedIn = true
+-		a.Claims = claims
++		a.Claims = issued
+ 		a.ConnectorData = identity.ConnectorData
+ 		a.AuthTime = h.Now()
+ 		return a, nil
+@@ -67,7 +75,7 @@ func (h *Handler) finalizeLogin(ctx context.Context, identity connector.Identity
+ 		"connector_id", authReq.ConnectorID, "client_id", authReq.ClientID,
+ 		"user_id", claims.UserID,
+ 		"username", claims.Username, "preferred_username", claims.PreferredUsername,
+-		"email", email, "groups", claims.Groups)
++		"email", email, "groups", issued.Groups)
+ 
+ 	offlineAccessRequested := false
+ 	for _, scope := range authReq.Scopes {
+diff --git a/server/authflow/finalize_test.go b/server/authflow/finalize_test.go
+index 71e66364..6a06ea46 100644
+--- a/server/authflow/finalize_test.go
++++ b/server/authflow/finalize_test.go
+@@ -32,6 +32,9 @@ func TestFinalizeLoginBlockedAccount(t *testing.T) {
+ 		Expiry:      time.Now().Add(time.Hour),
+ 		ConnectorID: "mock",
+ 	}
++	// finalizeLogin applies the allow-lists of the request's client, so the
++	// client has to exist.
++	require.NoError(t, server.Storage.CreateClient(ctx, storage.Client{ID: "example-app"}))
+ 	require.NoError(t, server.Storage.CreateAuthRequest(ctx, authReq))
+ 	require.NoError(t, server.Storage.CreateUserIdentity(ctx, storage.UserIdentity{
+ 		UserID:              "user-1",
+@@ -81,6 +84,9 @@ func TestFinalizeLoginLogsClientID(t *testing.T) {
+ 		Expiry:      time.Now().Add(time.Hour),
+ 		ConnectorID: "mock",
+ 	}
++	// finalizeLogin applies the allow-lists of the request's client, so the
++	// client has to exist.
++	require.NoError(t, server.Storage.CreateClient(ctx, storage.Client{ID: "example-app"}))
+ 	require.NoError(t, server.Storage.CreateAuthRequest(ctx, authReq))
+ 
+ 	ident := connector.Identity{UserID: "user-1", Email: "user@example.com"}
+diff --git a/server/authflow/password.go b/server/authflow/password.go
+index e38d54d8..8a00f7fa 100644
+--- a/server/authflow/password.go
++++ b/server/authflow/password.go
+@@ -79,6 +79,9 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 				if ident != nil {
+ 					authReq, err = h.finalizeLogin(ctx, *ident, authReq, conn.Connector)
+ 					if err != nil {
++						if h.renderNotAllowed(r, w, err) {
++							return
++						}
+ 						h.Logger.ErrorContext(ctx, "failed to finalize login", "err", err)
+ 						h.renderError(r, w, http.StatusInternalServerError, "Login error.")
+ 						return
+@@ -115,6 +118,9 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 		}
+ 		authReq, err = h.finalizeLogin(r.Context(), identity, authReq, conn.Connector)
+ 		if err != nil {
++			if h.renderNotAllowed(r, w, err) {
++				return
++			}
+ 			h.Logger.ErrorContext(r.Context(), "failed to finalize login", "err", err)
+ 			h.renderError(r, w, http.StatusInternalServerError, "Login error.")
+ 			return
+diff --git a/server/grants/allowlist.go b/server/grants/allowlist.go
+new file mode 100644
+index 00000000..baf7b016
+--- /dev/null
++++ b/server/grants/allowlist.go
+@@ -0,0 +1,29 @@
++package grants
++
++import (
++	"context"
++	"errors"
++	"log/slog"
++	"net/http"
++
++	"github.com/dexidp/dex/server/allowlist"
++	"github.com/dexidp/dex/server/oauth2"
++)
++
++// allowListError maps the outcome of the allow-lists (allowlist.Apply) to the
++// token response, or returns nil when err is nil. A refused user gets
++// access_denied with HTTP 401, as from the v2.44-based Deckhouse dex. msg and
++// attrs make the log line of a refusal.
++func allowListError(ctx context.Context, logger *slog.Logger, err error, msg string, attrs ...any) *oauth2.Error {
++	var notAllowed *allowlist.NotAllowedError
++	switch {
++	case err == nil:
++		return nil
++	case errors.As(err, &notAllowed):
++		logger.WarnContext(ctx, msg, append(attrs, "rule", notAllowed.Rule)...)
++		return &oauth2.Error{Type: oauth2.AccessDenied, Description: "User is not allowed.", Status: http.StatusUnauthorized}
++	default:
++		logger.ErrorContext(ctx, "failed to apply the allow-lists", append(attrs, "err", err)...)
++		return &oauth2.Error{Type: oauth2.ServerError, Status: http.StatusInternalServerError}
++	}
++}
+diff --git a/server/grants/grants.go b/server/grants/grants.go
+index 04eba65c..419d51c8 100644
+--- a/server/grants/grants.go
++++ b/server/grants/grants.go
+@@ -180,8 +180,8 @@ func (h *Handler) Mount(m router.Mux) {
+ 	h.grants = map[string]Grant{}
+ 	h.register(h.SupportedGrantTypes,
+ 		&clientCredentials{issuer: h.Issuer, logger: h.Logger},
+-		&password{issuer: h.Issuer, logger: h.Logger, connectorID: h.PasswordConnector},
+-		&tokenExchange{issuer: h.Issuer, logger: h.Logger},
++		&password{issuer: h.Issuer, storage: h.Storage, logger: h.Logger, connectorID: h.PasswordConnector},
++		&tokenExchange{issuer: h.Issuer, storage: h.Storage, logger: h.Logger},
+ 		&authorizationCode{issuer: h.Issuer, storage: h.Storage, connectors: h.Connectors, now: h.Now, logger: h.Logger},
+ 		&refresh{storage: h.Storage, issuer: h.Issuer, policy: h.RefreshPolicy, sessions: h.Sessions, sessionsEnabled: h.SessionsEnabled, now: h.Now, logger: h.Logger},
+ 		&deviceCode{storage: h.Storage, now: h.Now, logger: h.Logger},
+diff --git a/server/grants/password.go b/server/grants/password.go
+index 1442f866..03c43ed5 100644
+--- a/server/grants/password.go
++++ b/server/grants/password.go
+@@ -6,6 +6,7 @@ import (
+ 	"net/http"
+ 
+ 	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/allowlist"
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/tokens"
+@@ -16,6 +17,7 @@ import (
+ // exchanges a username and password for tokens via a password-capable connector.
+ type password struct {
+ 	issuer      *tokens.Issuer
++	storage     storage.Storage
+ 	logger      *slog.Logger
+ 	connectorID string
+ }
+@@ -73,5 +75,16 @@ func (g *password) Authorize(ctx context.Context, req *Request, client storage.C
+ 		Nonce:         req.Nonce,
+ 		ConnectorData: identity.ConnectorData,
+ 	}
++
++	// The allow-lists of the client and the connector decide whether the user
++	// may sign in here at all; the tokens carry the groups they admit.
++	issued := auth.Claims
++	err = allowlist.Apply(ctx, g.storage, client, g.connectorID, &issued)
++	if oerr := allowListError(ctx, g.logger, err, "password grant denied by access filter",
++		"connector_id", g.connectorID, "client_id", client.ID, "user_id", issued.UserID); oerr != nil {
++		return nil, oerr
++	}
++	auth.Claims = issued
++
+ 	return issueTokens(ctx, g.logger, g.issuer, auth, "", shouldIssueRefreshToken(conn, req.Scopes))
+ }
+diff --git a/server/grants/refresh.go b/server/grants/refresh.go
+index b0743909..8c4912f9 100644
+--- a/server/grants/refresh.go
++++ b/server/grants/refresh.go
+@@ -9,6 +9,7 @@ import (
+ 	"time"
+ 
+ 	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/allowlist"
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/internal"
+ 	"github.com/dexidp/dex/server/oauth2"
+@@ -77,6 +78,14 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 		return nil, oerr
+ 	}
+ 
++	// The allow-lists may have changed since the login: the stored claims face
++	// them before anything is rotated or read from the connector.
++	stored := refreshToken.Claims
++	if oerr := g.checkAllowLists(ctx, client, refreshToken, &stored,
++		"refresh denied by access filter"); oerr != nil {
++		return nil, oerr
++	}
++
+ 	// Resolved before anything is rotated or read from the connector: a token whose
+ 	// session has ended is not going to produce a token set. Skipped outright when
+ 	// sessions are off — nothing was ever bound to one, so the read would only
+@@ -135,6 +144,13 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 		SessionID:   sessionID,
+ 	}
+ 
++	// The connector may have returned another email or other groups: the
++	// allow-lists decide on them too, and the tokens carry the groups they admit.
++	if oerr := g.checkAllowLists(ctx, client, refreshToken, &auth.Claims,
++		"refresh denied by access filter after upstream refresh"); oerr != nil {
++		return nil, oerr
++	}
++
+ 	accessToken, _, err := g.issuer.SignAccessToken(ctx, auth)
+ 	if err != nil {
+ 		g.logger.ErrorContext(ctx, "failed to create new access token", "err", err)
+@@ -150,6 +166,25 @@ func (g *refresh) Authorize(ctx context.Context, req *Request, client storage.Cl
+ 	return ts.Response(g.now()), nil
+ }
+ 
++// checkAllowLists applies the allow-lists of the client and the connector to
++// claims of the refresh token's user (see allowlist.Apply). A refused user
++// loses the client's refresh token, as a refused login gets none; msg is the
++// log line of the refusal.
++func (g *refresh) checkAllowLists(ctx context.Context, client storage.Client, refreshToken *storage.RefreshToken, claims *storage.Claims, msg string) *oauth2.Error {
++	err := allowlist.Apply(ctx, g.storage, client, refreshToken.ConnectorID, claims)
++	oerr := allowListError(ctx, g.logger, err, msg,
++		"connector_id", refreshToken.ConnectorID, "client_id", client.ID, "user_id", refreshToken.Claims.UserID)
++
++	var notAllowed *allowlist.NotAllowedError
++	if errors.As(err, &notAllowed) {
++		// Through the store, like an ended session: the token and the offline
++		// session's reference to it go together.
++		g.issuer.Refresh.RevokeClients(ctx, refreshToken.Claims.UserID, refreshToken.ConnectorID,
++			[]string{refreshToken.ClientID})
++	}
++	return oerr
++}
++
+ // sessionID returns the sid for the refreshed tokens, and refuses the refresh when
+ // the session has ended and the client asked its tokens to end with it.
+ //
+diff --git a/server/grants/tokenexchange.go b/server/grants/tokenexchange.go
+index 256fcfb6..e93e84aa 100644
+--- a/server/grants/tokenexchange.go
++++ b/server/grants/tokenexchange.go
+@@ -7,6 +7,7 @@ import (
+ 	"time"
+ 
+ 	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/allowlist"
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/tokens"
+@@ -19,8 +20,9 @@ import (
+ // builds its own response from the issuer primitives instead of the standard
+ // Issue mint.
+ type tokenExchange struct {
+-	issuer *tokens.Issuer
+-	logger *slog.Logger
++	issuer  *tokens.Issuer
++	storage storage.Storage
++	logger  *slog.Logger
+ }
+ 
+ func (g *tokenExchange) GrantType() string {
+@@ -63,6 +65,15 @@ func (g *tokenExchange) Authorize(ctx context.Context, req *Request, client stor
+ 		return nil, &oauth2.Error{Type: oauth2.AccessDenied, Status: http.StatusUnauthorized}
+ 	}
+ 
++	// The allow-lists of the client and the connector decide whether the user
++	// may sign in here at all; the token carries the groups they admit.
++	claims := tokens.ClaimsFromIdentity(identity)
++	err = allowlist.Apply(ctx, g.storage, client, req.ConnectorID, &claims)
++	if oerr := allowListError(ctx, g.logger, err, "token exchange denied by access filter",
++		"connector_id", req.ConnectorID, "client_id", client.ID, "user_id", identity.UserID); oerr != nil {
++		return nil, oerr
++	}
++
+ 	email := identity.Email
+ 	if !identity.EmailVerified {
+ 		email += " (unverified)"
+@@ -72,12 +83,12 @@ func (g *tokenExchange) Authorize(ctx context.Context, req *Request, client stor
+ 		"connector_id", req.ConnectorID, "client_id", client.ID,
+ 		"user_id", identity.UserID,
+ 		"username", identity.Username, "preferred_username", identity.PreferredUsername,
+-		"email", email, "groups", identity.Groups,
++		"email", email, "groups", claims.Groups,
+ 		"subject_token_type", req.SubjectTokenType, "requested_token_type", reqType)
+ 
+ 	auth := tokens.Authorization{
+ 		Client:      client,
+-		Claims:      tokens.ClaimsFromIdentity(identity),
++		Claims:      claims,
+ 		Scopes:      req.Scopes,
+ 		ConnectorID: req.ConnectorID,
+ 	}
+diff --git a/server/server_allowlist_test.go b/server/server_allowlist_test.go
+new file mode 100644
+index 00000000..b29a7e25
+--- /dev/null
++++ b/server/server_allowlist_test.go
+@@ -0,0 +1,568 @@
++package server
++
++// Allow-lists of the client and the connector (Deckhouse, server/allowlist) on
++// every path that issues tokens for a user: the login form, SPNEGO, the
++// connector callback, and the password, refresh-token and token-exchange grants.
++
++import (
++	"bytes"
++	"context"
++	"encoding/json"
++	"fmt"
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++	"golang.org/x/crypto/bcrypt"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/storage"
++)
++
++// The local user of the allow-list tests and the mock callback connector's one.
++const (
++	allowListEmail    = "jane@example.com"
++	allowListPassword = "secret"
++	allowListUserID   = "jane-id"
++	mockCallbackEmail = "kilgore@kilgore.trout"
++	mockCallbackUser  = "0-385-28089-0"
++)
++
++var (
++	allowListGroups     = []string{"admins", "developers"}
++	accessDeniedRefusal = `{"error":"access_denied","error_description":"User is not allowed."}`
++)
++
++// allowListLimits are the allow-lists of one test: of the client "app", of the
++// local connector and of the callback connector "corp".
++type allowListLimits struct {
++	client storage.Client
++	local  storage.Connector
++	corp   storage.Connector
++}
++
++// newAllowListServer serves the client "app" (secret "secret"), the local
++// connector with the user jane@example.com in the groups admins and
++// developers, and the callback connector "corp", each with its limits.
++func newAllowListServer(t *testing.T, limits allowListLimits, updateConfig ...func(*Config)) *Server {
++	t.Helper()
++	ctx := t.Context()
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.PasswordConnector = connectors.LocalConnector
++		c.Now = time.Now
++		for _, update := range updateConfig {
++			update(c)
++		}
++	})
++	t.Cleanup(httpServer.Close)
++
++	client := limits.client
++	client.ID, client.Secret, client.RedirectURIs = "app", "secret", []string{"cb"}
++	require.NoError(t, s.storage.CreateClient(ctx, client))
++
++	local := limits.local
++	local.ID, local.Type, local.Name, local.ResourceVersion = connectors.LocalConnector, connectors.LocalConnector, "Email", "1"
++	require.NoError(t, s.storage.CreateConnector(ctx, local))
++	corp := limits.corp
++	corp.ID, corp.Type, corp.Name, corp.ResourceVersion = "corp", "mockCallback", "Corp", "1"
++	require.NoError(t, s.storage.CreateConnector(ctx, corp))
++
++	hash, err := bcrypt.GenerateFromPassword([]byte(allowListPassword), bcrypt.DefaultCost)
++	require.NoError(t, err)
++	require.NoError(t, s.storage.CreatePassword(ctx, storage.Password{
++		Email:    allowListEmail,
++		Username: "jane",
++		UserID:   allowListUserID,
++		Groups:   allowListGroups,
++		Hash:     hash,
++	}))
++	return s
++}
++
++func createAllowListAuthRequest(t *testing.T, s *Server, connectorID string) {
++	t.Helper()
++	require.NoError(t, s.storage.CreateAuthRequest(t.Context(), storage.AuthRequest{
++		ID:            "req",
++		ClientID:      "app",
++		ConnectorID:   connectorID,
++		RedirectURI:   "cb",
++		Expiry:        time.Now().Add(time.Minute),
++		ResponseTypes: []string{oauth2.ResponseTypeCode},
++		Scopes:        []string{"openid", "email", "groups"},
++	}))
++}
++
++// allowListLogin is who signs in, and through which connector.
++type allowListLogin struct {
++	userID      string
++	email       string
++	connectorID string
++	// groups are the user's groups at the connector.
++	groups []string
++}
++
++var (
++	localLogin = allowListLogin{allowListUserID, allowListEmail, connectors.LocalConnector, allowListGroups}
++	corpLogin  = allowListLogin{mockCallbackUser, mockCallbackEmail, "corp", []string{"authors"}}
++)
++
++// requireLoginRefused checks the page of a refused login and that nothing was
++// recorded for it.
++func requireLoginRefused(t *testing.T, s *Server, rr *httptest.ResponseRecorder, login allowListLogin) {
++	t.Helper()
++	require.Equal(t, http.StatusUnauthorized, rr.Code, rr.Body.String())
++	require.Contains(t, rr.Body.String(), "Access denied. Please contact your administrator.")
++	require.NotContains(t, rr.Body.String(), login.email, "the page must not name the user")
++
++	authReq, err := s.storage.GetAuthRequest(t.Context(), "req")
++	require.NoError(t, err)
++	require.False(t, authReq.LoggedIn)
++	_, err = s.storage.GetUserIdentity(t.Context(), login.userID, login.connectorID)
++	require.ErrorIs(t, err, storage.ErrNotFound, "a refused login records nothing")
++}
++
++// requireLoginIssued checks a login that passed: the request carries the groups
++// the allow-lists admit, the user identity keeps the connector's.
++func requireLoginIssued(t *testing.T, s *Server, rr *httptest.ResponseRecorder, login allowListLogin, issued []string) {
++	t.Helper()
++	require.Equal(t, http.StatusSeeOther, rr.Code, rr.Body.String())
++
++	authReq, err := s.storage.GetAuthRequest(t.Context(), "req")
++	require.NoError(t, err)
++	require.True(t, authReq.LoggedIn)
++	require.Equal(t, issued, authReq.Claims.Groups)
++	ui, err := s.storage.GetUserIdentity(t.Context(), login.userID, login.connectorID)
++	require.NoError(t, err)
++	require.Equal(t, login.groups, ui.Claims.Groups)
++}
++
++func TestPasswordLoginAllowLists(t *testing.T) {
++	tests := []struct {
++		name           string
++		limits         allowListLimits
++		expectedGroups []string
++	}{
++		{
++			name:           "no allow-lists",
++			expectedGroups: allowListGroups,
++		},
++		{
++			name:           "client and connector narrow the groups",
++			limits:         allowListLimits{client: storage.Client{AllowedGroups: []string{"developers", "guests"}}, local: storage.Connector{AllowedGroups: []string{"admins", "developers"}}},
++			expectedGroups: []string{"developers"},
++		},
++		{
++			name:   "client email list refuses",
++			limits: allowListLimits{client: storage.Client{AllowedEmails: []string{"john@example.com"}}},
++		},
++		{
++			name:   "client group list refuses",
++			limits: allowListLimits{client: storage.Client{AllowedGroups: []string{"guests"}}},
++		},
++		{
++			name:   "connector domain list refuses",
++			limits: allowListLimits{local: storage.Connector{AllowedEmailDomains: []string{"corp.example"}}},
++		},
++		{
++			name:   "connector group list refuses",
++			limits: allowListLimits{local: storage.Connector{AllowedGroups: []string{"guests"}}},
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			setSessionsEnabled(t, true)
++			s := newAllowListServer(t, tc.limits)
++			createAllowListAuthRequest(t, s, connectors.LocalConnector)
++
++			rr := httptest.NewRecorder()
++			form := url.Values{"login": {allowListEmail}, "password": {allowListPassword}}
++			req := httptest.NewRequest(http.MethodPost, "/auth/local/login?state=req&back=", strings.NewReader(form.Encode()))
++			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++			s.ServeHTTP(rr, req)
++
++			if tc.expectedGroups == nil {
++				requireLoginRefused(t, s, rr, localLogin)
++				return
++			}
++			requireLoginIssued(t, s, rr, localLogin, tc.expectedGroups)
++		})
++	}
++}
++
++func TestSPNEGOLoginAllowLists(t *testing.T) {
++	setSessionsEnabled(t, true)
++	s := newAllowListServer(t, allowListLimits{client: storage.Client{AllowedEmails: []string{"john@example.com"}}})
++	createAllowListAuthRequest(t, s, connectors.LocalConnector)
++
++	local, err := s.connectors.Get(t.Context(), connectors.LocalConnector)
++	require.NoError(t, err)
++	s.connectors.Set(connectors.LocalConnector, connectors.Connector{
++		ResourceVersion: local.ResourceVersion,
++		Connector: spnegoShortCircuit{Identity: connector.Identity{
++			UserID: allowListUserID, Username: "jane", Email: allowListEmail, EmailVerified: true,
++		}},
++	})
++
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/auth/local/login?state=req&back=", nil))
++
++	requireLoginRefused(t, s, rr, localLogin)
++}
++
++func TestConnectorCallbackAllowLists(t *testing.T) {
++	tests := []struct {
++		name           string
++		limits         allowListLimits
++		expectedGroups []string
++	}{
++		{
++			name:           "connector admits the user",
++			limits:         allowListLimits{corp: storage.Connector{AllowedEmails: []string{"Kilgore@Kilgore.Trout"}, AllowedGroups: []string{"authors"}}},
++			expectedGroups: []string{"authors"},
++		},
++		{
++			name:   "connector domain list refuses",
++			limits: allowListLimits{corp: storage.Connector{AllowedEmailDomains: []string{"example.com"}}},
++		},
++		{
++			name:   "client group list refuses",
++			limits: allowListLimits{client: storage.Client{AllowedGroups: []string{"admins"}}},
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			setSessionsEnabled(t, true)
++			s := newAllowListServer(t, tc.limits)
++			createAllowListAuthRequest(t, s, "corp")
++
++			rr := httptest.NewRecorder()
++			s.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/callback/corp?state=req", nil))
++
++			if tc.expectedGroups == nil {
++				requireLoginRefused(t, s, rr, corpLogin)
++				return
++			}
++			requireLoginIssued(t, s, rr, corpLogin, tc.expectedGroups)
++		})
++	}
++}
++
++func postAllowListToken(t *testing.T, s *Server, form url.Values) *httptest.ResponseRecorder {
++	t.Helper()
++	req := httptest.NewRequest(http.MethodPost, "/token", strings.NewReader(form.Encode()))
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	req.SetBasicAuth("app", "secret")
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, req)
++	return rr
++}
++
++var allowListPasswordGrant = url.Values{
++	"grant_type": {oauth2.GrantTypePassword},
++	"scope":      {"openid email groups offline_access"},
++	"username":   {allowListEmail},
++	"password":   {allowListPassword},
++}
++
++// tokenGroups returns the groups claim of the token named field in a token
++// response.
++func tokenGroups(t *testing.T, rr *httptest.ResponseRecorder, field string) []string {
++	t.Helper()
++	var resp map[string]any
++	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
++	token, ok := resp[field].(string)
++	require.True(t, ok, "no %s in %s", field, rr.Body.String())
++
++	claimed, ok := decodeJWTClaims(t, token)["groups"].([]any)
++	require.True(t, ok, "no groups claim")
++	groups := make([]string, 0, len(claimed))
++	for _, g := range claimed {
++		groups = append(groups, fmt.Sprint(g))
++	}
++	return groups
++}
++
++func TestPasswordGrantAllowLists(t *testing.T) {
++	tests := []struct {
++		name           string
++		limits         allowListLimits
++		expectedGroups []string
++	}{
++		{
++			name:           "no allow-lists",
++			expectedGroups: allowListGroups,
++		},
++		{
++			name:           "client and connector narrow the groups",
++			limits:         allowListLimits{client: storage.Client{AllowedGroups: []string{"developers", "guests"}}, local: storage.Connector{AllowedGroups: []string{"admins", "developers"}}},
++			expectedGroups: []string{"developers"},
++		},
++		{
++			name:   "client email list refuses",
++			limits: allowListLimits{client: storage.Client{AllowedEmails: []string{"john@example.com"}}},
++		},
++		{
++			name:   "connector group list refuses",
++			limits: allowListLimits{local: storage.Connector{AllowedGroups: []string{"guests"}}},
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			s := newAllowListServer(t, tc.limits)
++
++			rr := postAllowListToken(t, s, allowListPasswordGrant)
++
++			if tc.expectedGroups == nil {
++				require.Equal(t, http.StatusUnauthorized, rr.Code)
++				require.JSONEq(t, accessDeniedRefusal, rr.Body.String())
++				return
++			}
++			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++			require.Equal(t, tc.expectedGroups, tokenGroups(t, rr, "id_token"))
++		})
++	}
++}
++
++// allowListRefreshConnector stands in for "corp" at the refresh: it answers
++// with the user in groups and counts the refreshes.
++type allowListRefreshConnector struct {
++	groups    []string
++	refreshes *int
++}
++
++func (c allowListRefreshConnector) Refresh(_ context.Context, _ connector.Scopes, ident connector.Identity) (connector.Identity, error) {
++	*c.refreshes++
++	ident.Groups = append([]string(nil), c.groups...)
++	return ident, nil
++}
++
++// createAllowListRefresh stores the refresh token of the client "app" that a
++// login of jane@example.com through "corp" left, with the groups the client
++// admitted then, and returns it as the client presents it.
++func createAllowListRefresh(t *testing.T, s *Server) string {
++	t.Helper()
++	ctx := t.Context()
++	now := time.Now()
++	require.NoError(t, s.storage.CreateRefresh(ctx, storage.RefreshToken{
++		ID:          "refresh",
++		Token:       "token",
++		ClientID:    "app",
++		ConnectorID: "corp",
++		Scopes:      []string{"openid", "email", "groups", "offline_access"},
++		Claims: storage.Claims{
++			UserID:        allowListUserID,
++			Username:      "jane",
++			Email:         allowListEmail,
++			EmailVerified: true,
++			Groups:        []string{"developers"},
++		},
++		// A token without connector data makes the refresh read the offline
++		// session inside the token update, where the memory storage of v2.46.0
++		// deadlocks on its own lock; a first refresh of a new token has it.
++		ConnectorData: []byte(`{}`),
++		CreatedAt:     now,
++		LastUsed:      now,
++	}))
++	require.NoError(t, s.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID:  allowListUserID,
++		ConnID:  "corp",
++		Refresh: map[string]*storage.RefreshTokenRef{"app": {ID: "refresh", ClientID: "app", CreatedAt: now, LastUsed: now}},
++	}))
++
++	raw, err := internal.Marshal(&internal.RefreshToken{RefreshId: "refresh", Token: "token"})
++	require.NoError(t, err)
++	return raw
++}
++
++func TestRefreshAllowLists(t *testing.T) {
++	tests := []struct {
++		name   string
++		limits allowListLimits
++		// upstreamGroups are the groups the connector answers the refresh with.
++		upstreamGroups []string
++		expectedGroups []string
++		// expectedRefreshes is 0 when the stored claims are refused, before the
++		// connector is asked.
++		expectedRefreshes int
++	}{
++		{
++			name:              "lists narrow the groups from the connector again",
++			limits:            allowListLimits{client: storage.Client{AllowedGroups: []string{"developers"}}},
++			upstreamGroups:    allowListGroups,
++			expectedGroups:    []string{"developers"},
++			expectedRefreshes: 1,
++		},
++		{
++			name:           "client email list refuses the stored claims",
++			limits:         allowListLimits{client: storage.Client{AllowedEmails: []string{"john@example.com"}}},
++			upstreamGroups: allowListGroups,
++		},
++		{
++			name:           "connector group list refuses the stored claims",
++			limits:         allowListLimits{corp: storage.Connector{AllowedGroups: []string{"admins"}}},
++			upstreamGroups: allowListGroups,
++		},
++		{
++			name:              "client group list refuses the groups from the connector",
++			limits:            allowListLimits{client: storage.Client{AllowedGroups: []string{"developers"}}},
++			upstreamGroups:    []string{"admins"},
++			expectedRefreshes: 1,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			ctx := t.Context()
++			s := newAllowListServer(t, tc.limits)
++			refreshToken := createAllowListRefresh(t, s)
++			corp, err := s.connectors.Get(ctx, "corp")
++			require.NoError(t, err)
++			var refreshes int
++			s.connectors.Set("corp", connectors.Connector{
++				ResourceVersion: corp.ResourceVersion,
++				Connector:       allowListRefreshConnector{groups: tc.upstreamGroups, refreshes: &refreshes},
++			})
++
++			rr := postAllowListToken(t, s, url.Values{
++				"grant_type":    {oauth2.GrantTypeRefreshToken},
++				"refresh_token": {refreshToken},
++			})
++
++			require.Equal(t, tc.expectedRefreshes, refreshes)
++			if tc.expectedGroups != nil {
++				require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++				require.Equal(t, tc.expectedGroups, tokenGroups(t, rr, "id_token"))
++				return
++			}
++			require.Equal(t, http.StatusUnauthorized, rr.Code)
++			require.JSONEq(t, accessDeniedRefusal, rr.Body.String())
++
++			// The refused user loses the refresh token, with its reference.
++			_, err = s.storage.GetRefresh(ctx, "refresh")
++			require.ErrorIs(t, err, storage.ErrNotFound)
++			offline, err := s.storage.GetOfflineSessions(ctx, allowListUserID, "corp")
++			require.NoError(t, err)
++			require.NotContains(t, offline.Refresh, "app")
++		})
++	}
++}
++
++func TestTokenExchangeAllowLists(t *testing.T) {
++	tests := []struct {
++		name           string
++		limits         allowListLimits
++		expectedGroups []string
++	}{
++		{
++			name:           "client admits the user",
++			limits:         allowListLimits{client: storage.Client{AllowedEmails: []string{mockCallbackEmail}, AllowedGroups: []string{"authors", "editors"}}},
++			expectedGroups: []string{"authors"},
++		},
++		{
++			name:   "client email list refuses",
++			limits: allowListLimits{client: storage.Client{AllowedEmails: []string{"john@example.com"}}},
++		},
++		{
++			name:   "connector domain list refuses",
++			limits: allowListLimits{corp: storage.Connector{AllowedEmailDomains: []string{"example.com"}}},
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			s := newAllowListServer(t, tc.limits)
++
++			rr := postAllowListToken(t, s, url.Values{
++				"grant_type":           {oauth2.GrantTypeTokenExchange},
++				"connector_id":         {"corp"},
++				"scope":                {"openid groups"},
++				"requested_token_type": {oauth2.TokenTypeID},
++				"subject_token_type":   {oauth2.TokenTypeID},
++				"subject_token":        {"subject"},
++			})
++
++			if tc.expectedGroups == nil {
++				require.Equal(t, http.StatusUnauthorized, rr.Code)
++				require.JSONEq(t, accessDeniedRefusal, rr.Body.String())
++				return
++			}
++			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++			// RFC 8693 returns the requested token as access_token.
++			require.Equal(t, tc.expectedGroups, tokenGroups(t, rr, "access_token"))
++		})
++	}
++}
++
++// The success lines of a login and of a token exchange name the groups the
++// tokens carry, not all the groups the connector gave.
++func TestAllowListSuccessLogsIssuedGroups(t *testing.T) {
++	var logs bytes.Buffer
++	s := newAllowListServer(t, allowListLimits{client: storage.Client{AllowedGroups: []string{"authors", "editors"}}},
++		func(c *Config) {
++			c.Logger = slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelInfo}))
++		})
++	corp, err := s.connectors.Get(t.Context(), "corp")
++	require.NoError(t, err)
++	s.connectors.Set("corp", connectors.Connector{
++		ResourceVersion: corp.ResourceVersion,
++		Connector: allowListIdentityConnector{connector.Identity{
++			UserID: mockCallbackUser, Email: mockCallbackEmail, EmailVerified: true, Groups: []string{"authors", "staff"},
++		}},
++	})
++
++	createAllowListAuthRequest(t, s, "corp")
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/callback/corp?state=req", nil))
++	require.Equal(t, http.StatusSeeOther, rr.Code, rr.Body.String())
++
++	rr = postAllowListToken(t, s, url.Values{
++		"grant_type":         {oauth2.GrantTypeTokenExchange},
++		"connector_id":       {"corp"},
++		"scope":              {"openid groups"},
++		"subject_token_type": {oauth2.TokenTypeID},
++		"subject_token":      {"subject"},
++	})
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++
++	logged := map[string][]any{}
++	for line := range strings.Lines(logs.String()) {
++		var record map[string]any
++		require.NoError(t, json.Unmarshal([]byte(line), &record))
++		if msg, _ := record["msg"].(string); strings.HasSuffix(msg, "successful") {
++			logged[msg], _ = record["groups"].([]any)
++		}
++	}
++	require.Equal(t, map[string][]any{
++		"login successful":          {"authors"},
++		"token exchange successful": {"authors"},
++	}, logged)
++}
++
++// allowListIdentityConnector answers the callback and the token exchange with
++// one identity.
++type allowListIdentityConnector struct {
++	identity connector.Identity
++}
++
++func (c allowListIdentityConnector) LoginURL(_ connector.Scopes, callbackURL, state string) (string, []byte, error) {
++	return callbackURL + "?state=" + url.QueryEscape(state), nil, nil
++}
++
++func (c allowListIdentityConnector) HandleCallback(connector.Scopes, []byte, *http.Request) (connector.Identity, error) {
++	return c.identity, nil
++}
++
++func (c allowListIdentityConnector) TokenIdentity(context.Context, string, string) (connector.Identity, error) {
++	return c.identity, nil
++}
+diff --git a/server/server_approval_test.go b/server/server_approval_test.go
+index 96ec3234..fa12a2c8 100644
+--- a/server/server_approval_test.go
++++ b/server/server_approval_test.go
+@@ -112,6 +112,9 @@ func TestSkipApprovalWithExistingConsent(t *testing.T) {
+ 				Scopes:              tc.scopes,
+ 				ForceApprovalPrompt: tc.forcePrompt,
+ 			}
++			// finalizeLogin applies the allow-lists of the request's client, so
++			// the client has to exist.
++			require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: tc.clientID}))
+ 			require.NoError(t, s.storage.CreateAuthRequest(ctx, authReq))
+ 
+ 			rr := httptest.NewRecorder()
+diff --git a/server/server_login_test.go b/server/server_login_test.go
+index fa483b03..2b715ba0 100644
+--- a/server/server_login_test.go
++++ b/server/server_login_test.go
+@@ -101,8 +101,12 @@ func TestFinalizeLoginCreatesUserIdentity(t *testing.T) {
+ 	_, err := s.connectors.Open(sc)
+ 	require.NoError(t, err)
+ 
++	// finalizeLogin applies the allow-lists of the request's client, so the
++	// client has to exist.
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: "test"}))
+ 	authReq := storage.AuthRequest{
+ 		ID:            authReqID,
++		ClientID:      "test",
+ 		ConnectorID:   connID,
+ 		RedirectURI:   "cb",
+ 		Expiry:        expiry,
+@@ -165,8 +169,12 @@ func TestFinalizeLoginUpdatesUserIdentity(t *testing.T) {
+ 		LastLogin: oldTime,
+ 	}))
+ 
++	// finalizeLogin applies the allow-lists of the request's client, so the
++	// client has to exist.
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: "test"}))
+ 	authReq := storage.AuthRequest{
+ 		ID:            authReqID,
++		ClientID:      "test",
+ 		ConnectorID:   connID,
+ 		RedirectURI:   "cb",
+ 		Expiry:        expiry,
+@@ -214,8 +222,12 @@ func TestFinalizeLoginSkipsUserIdentityWhenDisabled(t *testing.T) {
+ 	_, err := s.connectors.Open(sc)
+ 	require.NoError(t, err)
+ 
++	// finalizeLogin applies the allow-lists of the request's client, so the
++	// client has to exist.
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: "test"}))
+ 	authReq := storage.AuthRequest{
+ 		ID:            authReqID,
++		ClientID:      "test",
+ 		ConnectorID:   connID,
+ 		RedirectURI:   "cb",
+ 		Expiry:        expiry,
+@@ -357,6 +369,10 @@ func TestHandlePasswordLoginWithSkipApproval(t *testing.T) {
+ 			if _, err := s.connectors.Open(sc); err != nil {
+ 				t.Fatalf("open connector: %v", err)
+ 			}
++			// finalizeLogin applies the allow-lists of the request's client, so
++			// the client has to exist.
++			tc.authReq.ClientID = "test"
++			require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: "test"}))
+ 			if err := s.storage.CreateAuthRequest(ctx, tc.authReq); err != nil {
+ 				t.Fatalf("failed to create AuthRequest: %v", err)
+ 			}
+@@ -493,6 +509,10 @@ func TestHandleConnectorCallbackWithSkipApproval(t *testing.T) {
+ 			})
+ 			defer httpServer.Close()
+ 
++			// finalizeLogin applies the allow-lists of the request's client, so
++			// the client has to exist.
++			tc.authReq.ClientID = "test"
++			require.NoError(t, s.storage.CreateClient(ctx, storage.Client{ID: "test"}))
+ 			if err := s.storage.CreateAuthRequest(ctx, tc.authReq); err != nil {
+ 				t.Fatalf("failed to create AuthRequest: %v", err)
+ 			}

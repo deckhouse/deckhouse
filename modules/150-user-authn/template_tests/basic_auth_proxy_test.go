@@ -148,6 +148,23 @@ var _ = Describe("Module :: user-authn :: helm template :: basic auth proxy", fu
 		})
 	}
 
+	Context("With an LDAP provider without scopes", func() {
+		BeforeEach(func() {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", ldapProvider)
+			hec.HelmRender()
+		})
+
+		// The proxy checks the password with the password grant and never refreshes: a refresh token
+		// would only rewrite the offline session of the user at every check.
+		It("Should not ask Dex for a refresh token", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			args := hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy").
+				Field(`spec.template.spec.containers.#(name=="proxy").args`).AsStringSlice()
+			Expect(args).To(ContainElements("--ldap-scope=openid", "--ldap-scope=groups", "--ldap-scope=federated:id"))
+			Expect(args).ToNot(ContainElement("--ldap-scope=offline_access"))
+		})
+	})
+
 	// A pod cannot always reach the public address of Dex (no hairpin NAT), and the proxy crashed
 	// on start when it could not: requests go to the Dex Service, and its certificate is verified.
 	Context("With an LDAP provider", func() {

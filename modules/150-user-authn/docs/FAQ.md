@@ -366,19 +366,21 @@ A detailed example is described in the [Usage](/modules/user-authn/usage.html#co
 
 ## How is Dex protected against credential brute-forcing?
 
-Dex limits failed sign-in attempts per client IP address on the password endpoints. Configure the limit with the [`rateLimit`](configuration.html#parameters-ratelimit) parameter. It is turned off by default.
+Dex limits failed sign-in attempts per client IP address on the sign-in form, the token endpoint, the password change page and the 2FA steps. Configure the limit with the [`rateLimit`](configuration.html#parameters-ratelimit) parameter. It is turned off by default.
 
 Dex also locks an account after failed sign-in attempts. Configure the lockout with the [`passwordPolicy.lockout`](configuration.html#parameters-passwordpolicy-lockout) parameter. It applies to local users, and to LDAP and Crowd users if their types are listed in [`applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors).
 
 ## How to find out why a sign-in was refused?
 
-Dex logs every sign-in in JSON. A refusal caused by the user is logged at the `WARN` level with the `reason` field:
+Dex logs every sign-in in JSON. A refused sign-in is logged at the `WARN` level with the `reason` field:
 
-* `invalid_credentials`: The login or the password is wrong.
-* `invalid_totp`: The 2FA code is wrong.
-* `not_in_allowed_groups`: The user is not in the allowed groups.
+* `invalid_credentials`: The login or the password is wrong, or the password change page was opened outside the sign-in that led to it.
+* `invalid_totp`: The 2FA code is wrong or has already been used.
+* `not_in_allowed_groups`: The user is not in the groups that the provider settings require.
 * `not_allowed`: The user is not on an allow-list. The `rule` field names the list.
 * `account_locked`: The user is locked.
+* `rate_limited`: Too many failed attempts came from the client IP address. The line contains the requested `path` instead of the provider, the client and the user.
+* `upstream_refused`: The provider refused to extend the session because the user no longer exists in the provider or has lost access.
 
 The line also contains `connector_id`, `client_id` and the known user attributes, such as `username` and `email`. A group refusal also contains `user_groups` and `allowed_groups`. A failure of Dex or of the provider is logged at the `ERROR` level.
 
@@ -406,7 +408,7 @@ Use the command:
 d8 iam user unlock <USERNAME>
 ```
 
-The command unlocks a local user. To unlock a user of an LDAP or Crowd provider, create a UserOperation with `type: Unlock` and [`spec.target`](cr.html#useroperation-v1-spec-target) as described in [Operations on external users](usage.html#operations-on-external-users-ldapcrowd). A UserOperation with `spec.user` unlocks a local user as well. For a local user, the `ResetPassword`, `Reset2FA` and `Lock` operations also end all active sessions.
+The command unlocks a local user. To unlock a user of an external provider, create a UserOperation with `type: Unlock` and [`spec.target`](cr.html#useroperation-v1-spec-target) as described in [Operations on external users](usage.html#operations-on-external-users). A UserOperation with `spec.user` unlocks a local user as well. For a local user, the `ResetPassword`, `Reset2FA` and `Lock` operations also delete the user's refresh tokens. The sessions of the user in applications and kubeconfig files end when the current ID token expires. Only `Reset2FA` removes the user's 2FA secret.
 
 ## A user was locked automatically — why?
 

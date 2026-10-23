@@ -1,44 +1,80 @@
 diff --git a/server/fuzz_handlers_test.go b/server/fuzz_handlers_test.go
 new file mode 100644
-index 0000000..89e28b2
+index 00000000..72327324
 --- /dev/null
 +++ b/server/fuzz_handlers_test.go
-@@ -0,0 +1,561 @@
+@@ -0,0 +1,716 @@
 +package server
 +
 +import (
-+	"crypto/hmac"
 +	"crypto/sha256"
-+	"encoding/base64"
 +	"encoding/json"
-+	"io"
 +	"log/slog"
 +	"net/http"
 +	"net/http/httptest"
-+	"net/netip"
 +	"net/url"
 +	"os"
 +	"path/filepath"
 +	"strings"
++	"sync"
 +	"testing"
 +	"time"
 +
 +	gosundheit "github.com/AppsFlyer/go-sundheit"
-+	"github.com/gorilla/mux"
-+	"github.com/prometheus/client_golang/prometheus"
 +	"golang.org/x/crypto/bcrypt"
 +
++	"github.com/dexidp/dex/server/authflow"
++	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/lockout"
++	"github.com/dexidp/dex/server/mfa"
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/passwordpolicy"
++	"github.com/dexidp/dex/server/ratelimit"
++	"github.com/dexidp/dex/server/signer"
++	"github.com/dexidp/dex/server/tokens"
 +	"github.com/dexidp/dex/storage"
 +	"github.com/dexidp/dex/storage/memory"
 +)
 +
-+// Fuzz targets cover every Dex HTTP handler that accepts attacker-controlled
-+// input: query, form, headers, cookies, tokens, and path parameters.
++// Fuzz targets for every HTTP handler that accepts attacker-controlled input:
++// query, form, headers, cookies, tokens and path parameters. Each target sends
++// its input through Server.ServeHTTP to one route, so the router, the request
++// context (client address, request ID) and the handler package all run as in
++// production. A target is named after the handler of its route:
 +//
-+// These tests are shipped as the last Deckhouse patch (999-fuzz-handlers)
-+// so they always compile against the fully patched tree. They are not
-+// compiled into the production binary (*_test.go).
++//	FuzzHandleToken             /token                      grants
++//	FuzzHandlePublicKeys        /keys                       discovery
++//	FuzzHandleUserInfo          /userinfo                   userinfo
++//	FuzzHandleIntrospect        /token/introspect           introspection
++//	FuzzHandleAuthorization     /auth                       authflow
++//	FuzzHandleConnectorLogin    /auth/{connector}           authflow
++//	FuzzHandlePasswordLogin     /auth/{connector}/login     authflow
++//	FuzzHandleConnectorCallback /callback[/{connector}]     authflow
++//	FuzzHandlePasswordChange    /password/change            authflow
++//	FuzzHandleApproval          /approval                   consent
++//	FuzzHandleMFA               /mfa                        mfa
++//	FuzzHandleTOTPVerify        /mfa/totp                   mfa
++//	FuzzHandleWebAuthn          /mfa/webauthn[/...]         mfa
++//	FuzzHandleDeviceExchange    /device                     device
++//	FuzzVerifyUserCode          /device/auth/verify_code    device
++//	FuzzHandleDeviceCode        /device/code                device
++//	FuzzHandleDeviceCallback    /device/callback            device
++//	FuzzHandleLogout            /logout[/callback]          logout
++//	FuzzHandleHome              /                           home
++//	FuzzServeHTTP               any route
++//	FuzzAllHandlers             every route above with the same input
++//
++// The file is the last Deckhouse patch (999-fuzz-handlers), so it compiles
++// against the fully patched tree; *_test.go is not built into the binary. Every
++// input gets a server of its own, so an execution costs milliseconds; bound the
++// minimization of new inputs or the engine spends minutes on each:
++//
++//	go test -vet=off -run=^$ -fuzz=^FuzzAllHandlers$ -fuzztime=12h -fuzzminimizetime=10x ./server
 +
++// fuzzSeedRequest is the JSON form of a fuzz input. Any other input is a method
++// selector byte followed by a form-encoded body. In either form $ACCESS_TOKEN,
++// $REFRESH_TOKEN and $ID_TOKEN stand for tokens issued to the fuzz user.
 +type fuzzSeedRequest struct {
 +	Method   string              `json:"method"`
 +	URL      string              `json:"url"`
@@ -48,264 +84,334 @@ index 0000000..89e28b2
 +	Body     string              `json:"body"`
 +}
 +
-+type fuzzTokens struct {
-+	Access  string
-+	Refresh string
++// fuzzRoute is the route a target sends its input to. A URL whose path is not
++// under prefix is sent to path instead, so that mutations stay on the route.
++type fuzzRoute struct {
++	method string
++	path   string
++	prefix string
 +}
 +
-+var fuzzPasswordHash = mustFuzzPasswordHash()
++const (
++	fuzzIssuer       = "http://127.0.0.1"
++	fuzzClientAuth   = "Basic Y2xpZW50OnNlY3JldA==" // client:secret
++	fuzzUserID       = "u"
++	fuzzPwConnector  = "mockpw"
++	fuzzCbConnector  = "mock"
++	fuzzTOTPSecret   = "otpauth://totp/dex:u?issuer=dex&secret=JBSWY3DPEHPK3PXP"
++	fuzzRedirectURI  = "http://127.0.0.1/cb"
++	fuzzAuthReqLogin = "s_pw"
++	fuzzAuthReqLocal = "s_local"
++	fuzzLocalEmail   = "u@example.com"
++	// fuzzChangeCookie is the cookie that binds the password change page of the
++	// local auth request to the browser of its login (220).
++	fuzzChangeCookie = "dex_password_change=fuzz-binding"
++	fuzzAuthReqMFA   = "s_mfa"
++	fuzzAuthReqDone  = "s_done"
 +
-+func mustFuzzPasswordHash() []byte {
-+	h, err := bcrypt.GenerateFromPassword([]byte("p"), bcrypt.MinCost)
++	// The allow-lists of the restricted client (200) refuse every user of the
++	// fuzz server: the login form and the callback for its auth requests, and
++	// the grants for its credentials and refresh token.
++	fuzzRestrictedClient = "restricted"
++	fuzzRestrictedAuth   = "Basic cmVzdHJpY3RlZDpzZWNyZXQ=" // restricted:secret
++	fuzzAuthReqDenied    = "s_denied"
++	fuzzAuthReqDeniedCb  = "s_denied_cb"
++	fuzzDeniedRefreshID  = "refresh-denied"
++)
++
++var fuzzHMACKey = []byte("0123456789abcdef0123456789abcdef")
++
++// fuzzPasswordHash is the hash of the local user's password "p", made once: the
++// local connector refuses hashes below bcrypt.DefaultCost, which are slow to make
++// for every input.
++var fuzzPasswordHash = sync.OnceValue(func() []byte {
++	hash, err := bcrypt.GenerateFromPassword([]byte("p"), bcrypt.DefaultCost)
 +	if err != nil {
 +		panic(err)
 +	}
-+	return h
-+}
++	return hash
++})
 +
-+func fuzzAbsURL(raw string) string {
-+	if raw == "" {
-+		return "http://127.0.0.1/"
-+	}
-+	if strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://") {
-+		return raw
-+	}
-+	if strings.HasPrefix(raw, "/") {
-+		return "http://127.0.0.1" + raw
-+	}
-+	return "http://127.0.0.1/" + raw
-+}
-+
-+func newFuzzRequest(t *testing.T, data []byte, defaultMethod, defaultURL string) *http.Request {
++func newFuzzRequest(t *testing.T, data []byte, route fuzzRoute, toks fuzzTokens) *http.Request {
 +	t.Helper()
-+	if len(data) > 0 && data[0] == '{' {
-+		var sr fuzzSeedRequest
-+		if err := json.Unmarshal(data, &sr); err == nil {
-+			method := sr.Method
-+			if method == "" {
-+				method = defaultMethod
-+			}
-+			rawURL := sr.URL
-+			if rawURL == "" {
-+				rawURL = defaultURL
-+			}
-+			u, err := url.Parse(fuzzAbsURL(rawURL))
-+			if err != nil {
-+				t.Skip(err)
-+			}
-+			if sr.Form != nil {
-+				q := u.Query()
-+				for k, vs := range sr.Form {
-+					for _, v := range vs {
-+						q.Add(k, v)
-+					}
-+				}
-+				u.RawQuery = q.Encode()
-+			}
-+			var body io.Reader = strings.NewReader(sr.Body)
-+			if sr.PostForm != nil && (method == http.MethodPost || method == http.MethodPut || method == http.MethodPatch) {
-+				body = strings.NewReader(sr.PostForm.Encode())
-+			}
-+			req, err := http.NewRequestWithContext(t.Context(), method, u.String(), body)
-+			if err != nil {
-+				t.Skip(err)
-+			}
-+			if sr.Headers != nil {
-+				req.Header = sr.Headers
-+			}
-+			if sr.PostForm != nil && req.Header.Get("Content-Type") == "" {
-+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-+			}
-+			if req.Host == "" {
-+				req.Host = "127.0.0.1"
-+			}
-+			req.RemoteAddr = "127.0.0.1:1"
-+			return req
++	data = []byte(strings.NewReplacer(
++		"$ACCESS_TOKEN", toks.Access,
++		"$REFRESH_TOKEN", toks.Refresh,
++		"$ID_TOKEN", toks.IDToken,
++	).Replace(string(data)))
++	method, rawURL, body := route.method, route.path, ""
++	header := http.Header{}
++
++	var seed fuzzSeedRequest
++	if len(data) > 0 && data[0] == '{' && json.Unmarshal(data, &seed) == nil {
++		if seed.Method != "" {
++			method = seed.Method
 +		}
++		if seed.URL != "" {
++			rawURL = seed.URL
++		}
++		body = seed.Body
++		if seed.PostForm != nil {
++			body = seed.PostForm.Encode()
++			header.Set("Content-Type", "application/x-www-form-urlencoded")
++		}
++		for k, vs := range seed.Headers {
++			for _, v := range vs {
++				header.Add(k, v)
++			}
++		}
++	} else {
++		// Non-JSON input: the first byte picks the method, the rest is the body.
++		methods := []string{route.method, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodHead, http.MethodDelete}
++		if len(data) > 0 {
++			method = methods[int(data[0])%len(methods)]
++			body = string(data[1:])
++		}
++		header.Set("Content-Type", "application/x-www-form-urlencoded")
 +	}
 +
-+	// Non-JSON corpus: first byte picks a method, the rest is the body.
-+	method := defaultMethod
-+	if len(data) > 0 {
-+		switch data[0] % 6 {
-+		case 1:
-+			method = http.MethodPost
-+		case 2:
-+			method = http.MethodPut
-+		case 3:
-+			method = http.MethodPatch
-+		case 4:
-+			method = http.MethodHead
-+		case 5:
-+			method = http.MethodDelete
-+		default:
-+			method = defaultMethod
-+		}
-+	}
-+	body := data
-+	if len(data) > 1 {
-+		body = data[1:]
-+	}
-+	req, err := http.NewRequestWithContext(t.Context(), method, fuzzAbsURL(defaultURL), strings.NewReader(string(body)))
++	u, err := url.Parse(rawURL)
 +	if err != nil {
 +		t.Skip(err)
 +	}
-+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-+	req.Header.Set("X-Forwarded-For", "127.0.0.1")
-+	req.Host = "127.0.0.1"
++	if !strings.HasPrefix(u.Path, route.prefix) {
++		u.Path, u.RawPath = route.path, ""
++	}
++	if seed.Form != nil {
++		q := u.Query()
++		for k, vs := range seed.Form {
++			for _, v := range vs {
++				q.Add(k, v)
++			}
++		}
++		u.RawQuery = q.Encode()
++	}
++
++	req, err := http.NewRequestWithContext(t.Context(), method, fuzzIssuer+u.RequestURI(), strings.NewReader(body))
++	if err != nil {
++		t.Skip(err)
++	}
++	for k, vs := range header {
++		req.Header[k] = vs
++	}
 +	req.RemoteAddr = "127.0.0.1:1"
 +	return req
 +}
 +
-+func mustFuzzServer(t *testing.T) (*Server, fuzzTokens) {
++type fuzzTokens struct {
++	Access  string
++	Refresh string
++	IDToken string
++}
++
++// newFuzzServer builds a server with sessions, a TOTP second factor, every grant
++// type, the rate limit of failed attempts, and storage holding one object of
++// each kind a request can name.
++func newFuzzServer(t *testing.T) (*Server, fuzzTokens) {
 +	t.Helper()
 +	ctx := t.Context()
-+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-+
-+	rl := NewIPRateLimiter(600, 20, time.Minute)
-+	t.Cleanup(rl.Stop)
-+
-+	pp, err := NewPasswordPolicy("fuzz",
-+		WithComplexityLevel("low"),
-+		WithLockoutSettings(5, time.Minute),
-+		WithLockoutApplyToConnectors([]string{"local", "ldap", "mockPassword"}),
-+	)
++	store := memory.New(slog.New(slog.DiscardHandler))
++	sig, err := signer.NewMockSigner(testKey)
 +	if err != nil {
-+		t.Fatalf("password policy: %v", err)
-+	}
-+
-+	config := Config{
-+		Issuer:             "http://127.0.0.1",
-+		Storage:            memory.New(logger),
-+		Web:                WebConfig{Dir: "../web"},
-+		Logger:             logger,
-+		PrometheusRegistry: prometheus.NewRegistry(),
-+		HealthChecker:      gosundheit.New(),
-+		SkipApprovalScreen: true,
-+		PasswordConnector:  "mockpw",
-+		PasswordPolicy:     pp,
-+		RateLimiter:        rl,
-+		RealIPHeader:       "X-Forwarded-For",
-+		TrustedRealIPCIDRs: []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")},
-+		RotateKeysAfter:    24 * time.Hour,
-+		GCFrequency:        24 * time.Hour,
-+		Now:                time.Now,
-+		AllowedGrantTypes: []string{
-+			grantTypeDeviceCode,
-+			grantTypeAuthorizationCode,
-+			grantTypeRefreshToken,
-+			grantTypeTokenExchange,
-+			grantTypeImplicit,
-+			grantTypePassword,
-+		},
++		t.Fatalf("signer: %v", err)
 +	}
 +
 +	for _, c := range []storage.Connector{
-+		{ID: "mock", Type: "mockCallback", Name: "Mock", ResourceVersion: "1"},
-+		{ID: "mockpw", Type: "mockPassword", Name: "MockPW", ResourceVersion: "1", Config: []byte(`{"username":"u","password":"p"}`)},
++		{ID: fuzzCbConnector, Type: "mockCallback", Name: "Mock", ResourceVersion: "1"},
++		{ID: fuzzPwConnector, Type: "mockPassword", Name: "MockPW", ResourceVersion: "1", Config: []byte(`{"username":"u","password":"p"}`)},
++		{ID: "local", Type: connectors.LocalConnector, Name: "Email", ResourceVersion: "1"},
 +	} {
-+		if err := config.Storage.CreateConnector(ctx, c); err != nil && err != storage.ErrAlreadyExists {
++		if err := store.CreateConnector(ctx, c); err != nil {
 +			t.Fatalf("create connector %s: %v", c.ID, err)
 +		}
 +	}
 +
-+	s, err := newServer(ctx, config, staticRotationStrategy(testKey))
++	s, err := newServer(ctx, Config{
++		Issuer:            fuzzIssuer,
++		Storage:           store,
++		Web:               WebConfig{Dir: "../web"},
++		Logger:            slog.New(slog.DiscardHandler),
++		HealthChecker:     gosundheit.New(),
++		Signer:            sig,
++		PasswordConnector: fuzzPwConnector,
++		RealIPHeader:      "X-Forwarded-For",
++		RateLimit:         &ratelimit.Config{RequestsPerMinute: 10, Burst: 10},
++		SessionConfig:     testSessionConfig(),
++		MFAProviders:      map[string]mfa.Provider{"totp": mfa.NewTOTPProvider("dex", []string{"mockPassword"})},
++		DefaultMFAChain:   []string{"totp"},
++		GCFrequency:       24 * time.Hour,
++		Now:               time.Now,
++		// cmd/dex always sets a policy; the server does not default one.
++		RefreshTokenPolicy: tokens.NewRefreshStrategy(true, 0, 0, 0, time.Now),
++		AllowedGrantTypes: []string{
++			oauth2.GrantTypeAuthorizationCode,
++			oauth2.GrantTypeClientCredentials,
++			oauth2.GrantTypeDeviceCode,
++			oauth2.GrantTypeImplicit,
++			oauth2.GrantTypePassword,
++			oauth2.GrantTypeRefreshToken,
++			oauth2.GrantTypeTokenExchange,
++		},
++		PasswordPolicy: &passwordpolicy.Policy{
++			Complexity:       passwordpolicy.Rules{MinLength: 8, Lowercase: true, Uppercase: true, Number: true},
++			HistoryLimit:     3,
++			RotationInterval: 24 * time.Hour,
++		},
++		Lockout: &lockout.Policy{MaxAttempts: 3, Duration: time.Minute, ConnectorTypes: []string{"mockPassword"}},
++	})
 +	if err != nil {
 +		t.Fatalf("newServer: %v", err)
 +	}
-+	if s.refreshTokenPolicy == nil {
-+		p, err := NewRefreshTokenPolicy(logger, false, "", "", "")
++	seedFuzzStorage(t, store)
++	return s, fuzzLogin(t, s)
++}
++
++func seedFuzzStorage(t *testing.T, store storage.Storage) {
++	t.Helper()
++	ctx := t.Context()
++	now := time.Now()
++	claims := storage.Claims{UserID: fuzzUserID, Username: "u", Email: "u@example.com", EmailVerified: true}
++	must := func(what string, err error) {
 +		if err != nil {
-+			t.Fatalf("refresh policy: %v", err)
++			t.Fatalf("create %s: %v", what, err)
 +		}
-+		p.now = config.Now
-+		s.refreshTokenPolicy = p
 +	}
 +
-+	now := time.Now()
-+	if err := s.storage.CreateClient(ctx, storage.Client{
++	must("client", store.CreateClient(ctx, storage.Client{
 +		ID:           "client",
 +		Secret:       "secret",
-+		RedirectURIs: []string{"http://127.0.0.1/cb", deviceCallbackURI},
++		RedirectURIs: []string{fuzzRedirectURI, oauth2.DeviceCallbackURI},
 +		TrustedPeers: []string{"client"},
-+		Public:       true,
-+	}); err != nil && err != storage.ErrAlreadyExists {
-+		t.Fatalf("create client: %v", err)
-+	}
++		Name:         "Client",
++	}))
++	must("restricted client", store.CreateClient(ctx, storage.Client{
++		ID:            fuzzRestrictedClient,
++		Secret:        "secret",
++		RedirectURIs:  []string{fuzzRedirectURI},
++		Name:          "Restricted",
++		AllowedEmails: []string{"nobody@example.com"},
++	}))
++	previous, err := bcrypt.GenerateFromPassword([]byte("Prev1ous"), bcrypt.MinCost)
++	must("previous password hash", err)
++	must("password", store.CreatePassword(ctx, storage.Password{
++		Email: fuzzLocalEmail, Username: "u", UserID: fuzzUserID, Hash: fuzzPasswordHash(), HashUpdatedAt: now,
++		PreviousHashes: [][]byte{previous}, RequireResetHashOnNextSuccLogin: true,
++	}))
++	must("user identity", store.CreateUserIdentity(ctx, storage.UserIdentity{
++		UserID: fuzzUserID, ConnectorID: fuzzPwConnector, Claims: claims,
++		Consents:   map[string][]string{"client": {"openid", "email", "offline_access"}},
++		MFASecrets: map[string]*storage.MFASecret{"totp": {AuthenticatorID: "totp", Type: "TOTP", Secret: fuzzTOTPSecret, Confirmed: true}},
++		CreatedAt:  now, LastLogin: now,
++	}))
 +
-+	if err := s.storage.CreatePassword(ctx, storage.Password{
-+		Email:         "u@example.com",
-+		Username:      "u",
-+		UserID:        "u",
-+		Hash:          fuzzPasswordHash,
-+		HashUpdatedAt: now,
-+	}); err != nil && err != storage.ErrAlreadyExists {
-+		t.Fatalf("create password: %v", err)
-+	}
-+
-+	hmacKey := []byte("0123456789abcdef")
-+	for _, ar := range []storage.AuthRequest{
-+		{
-+			ID: "s", ClientID: "client", ResponseTypes: []string{"code"},
-+			Scopes: []string{"openid", "email", "offline_access"}, RedirectURI: "http://127.0.0.1/cb",
-+			Nonce: "n", State: "s", ConnectorID: "mock", Expiry: now.Add(time.Hour), HMACKey: hmacKey,
-+			PKCE: storage.PKCE{CodeChallengeMethod: "S256", CodeChallenge: "TJRIXgwhrmxBzh3-e2v6zupato5AokdvUCCOUm9QYIA"},
-+		},
-+		{
-+			ID: "s_pw", ClientID: "client", ResponseTypes: []string{"code"},
-+			Scopes: []string{"openid", "email", "offline_access"}, RedirectURI: "http://127.0.0.1/cb",
-+			Nonce: "n", State: "s_pw", ConnectorID: "mockpw", Expiry: now.Add(time.Hour), HMACKey: hmacKey,
-+		},
-+		{
-+			ID: "s_totp", ClientID: "client", ResponseTypes: []string{"code"},
-+			Scopes: []string{"openid", "email", "offline_access"}, RedirectURI: "http://127.0.0.1/cb",
-+			Nonce: "n", State: "s_totp", ConnectorID: "mockpw", Expiry: now.Add(time.Hour), HMACKey: hmacKey,
-+			LoggedIn: true, Claims: storage.Claims{UserID: "u", Username: "u", Email: "u@example.com"},
-+		},
-+	} {
-+		if err := s.storage.CreateAuthRequest(ctx, ar); err != nil && err != storage.ErrAlreadyExists {
-+			t.Fatalf("create auth request %s: %v", ar.ID, err)
++	authReq := func(id string, loggedIn bool) storage.AuthRequest {
++		ar := storage.AuthRequest{
++			ID: id, ClientID: "client", ResponseTypes: []string{"code"},
++			Scopes: []string{"openid", "email", "offline_access"}, RedirectURI: fuzzRedirectURI,
++			Nonce: "n", State: id, ConnectorID: fuzzPwConnector, Expiry: now.Add(time.Hour), HMACKey: fuzzHMACKey,
 +		}
++		if loggedIn {
++			ar.LoggedIn, ar.Claims, ar.AuthTime = true, claims, now
++		}
++		return ar
 +	}
++	must("auth request", store.CreateAuthRequest(ctx, authReq(fuzzAuthReqLogin, false)))
++	local := authReq(fuzzAuthReqLocal, false)
++	local.ConnectorID = "local"
++	binding := sha256.Sum256([]byte(strings.TrimPrefix(fuzzChangeCookie, "dex_password_change=")))
++	local.PasswordChangeBinding = binding[:]
++	must("auth request", store.CreateAuthRequest(ctx, local))
++	must("auth request", store.CreateAuthRequest(ctx, authReq(fuzzAuthReqMFA, true)))
++	done := authReq(fuzzAuthReqDone, true)
++	done.MFAValidated = true
++	must("auth request", store.CreateAuthRequest(ctx, done))
++	denied := authReq(fuzzAuthReqDenied, false)
++	denied.ClientID = fuzzRestrictedClient
++	must("auth request", store.CreateAuthRequest(ctx, denied))
++	deniedCb := authReq(fuzzAuthReqDeniedCb, false)
++	deniedCb.ClientID, deniedCb.ConnectorID = fuzzRestrictedClient, fuzzCbConnector
++	must("auth request", store.CreateAuthRequest(ctx, deniedCb))
++
++	// The refresh token a login through the callback connector left with the
++	// restricted client before its allow-lists changed.
++	cbClaims := storage.Claims{UserID: "0-385-28089-0", Username: "Kilgore Trout", Email: "kilgore@kilgore.trout", EmailVerified: true}
++	must("refresh token", store.CreateRefresh(ctx, storage.RefreshToken{
++		ID: fuzzDeniedRefreshID, Token: "t", ClientID: fuzzRestrictedClient, ConnectorID: fuzzCbConnector,
++		Scopes: []string{"openid", "email", "offline_access"}, Claims: cbClaims, ConnectorData: []byte(`{}`),
++		CreatedAt: now, LastUsed: now,
++	}))
++	must("offline session", store.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID: cbClaims.UserID, ConnID: fuzzCbConnector,
++		Refresh: map[string]*storage.RefreshTokenRef{
++			fuzzRestrictedClient: {ID: fuzzDeniedRefreshID, ClientID: fuzzRestrictedClient, CreatedAt: now, LastUsed: now},
++		},
++	}))
 +
 +	for _, code := range []storage.AuthCode{
-+		{ID: "code-1", ClientID: "client", RedirectURI: "http://127.0.0.1/cb", Nonce: "n", Scopes: []string{"openid", "email", "offline_access"}, ConnectorID: "mock", Claims: storage.Claims{UserID: "u", Username: "u", Email: "u@example.com"}, Expiry: now.Add(30 * time.Minute)},
-+		{ID: "code-pkce", ClientID: "client", RedirectURI: "http://127.0.0.1/cb", Nonce: "n", Scopes: []string{"openid", "email", "offline_access"}, ConnectorID: "mock", Claims: storage.Claims{UserID: "u2", Username: "u2"}, PKCE: storage.PKCE{CodeChallengeMethod: "S256", CodeChallenge: "TJRIXgwhrmxBzh3-e2v6zupato5AokdvUCCOUm9QYIA"}, Expiry: now.Add(30 * time.Minute)},
-+		{ID: "code-plain", ClientID: "client", RedirectURI: "http://127.0.0.1/cb", Nonce: "n", Scopes: []string{"openid", "email", "offline_access"}, ConnectorID: "mock", Claims: storage.Claims{UserID: "u3", Username: "u3"}, PKCE: storage.PKCE{CodeChallengeMethod: "plain", CodeChallenge: "abc123"}, Expiry: now.Add(30 * time.Minute)},
++		{ID: "code-1", PKCE: storage.PKCE{}},
++		{ID: "code-pkce", PKCE: storage.PKCE{CodeChallengeMethod: "S256", CodeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"}},
++		{ID: "code-plain", PKCE: storage.PKCE{CodeChallengeMethod: "plain", CodeChallenge: "abc123"}},
 +	} {
-+		if err := s.storage.CreateAuthCode(ctx, code); err != nil && err != storage.ErrAlreadyExists {
-+			t.Fatalf("create auth code %s: %v", code.ID, err)
-+		}
++		code.ClientID, code.RedirectURI, code.Nonce = "client", fuzzRedirectURI, "n"
++		code.Scopes, code.ConnectorID, code.Claims = []string{"openid", "email", "offline_access"}, fuzzCbConnector, claims
++		code.Expiry = now.Add(30 * time.Minute)
++		must("auth code", store.CreateAuthCode(ctx, code))
 +	}
 +
-+	if err := s.storage.CreateOfflineSessions(ctx, storage.OfflineSessions{
-+		UserID: "u", ConnID: "mockpw", Email: "u@example.com",
-+		TOTP:    "otpauth://totp/Example:u?secret=JBSWY3DPEHPK3PXP&issuer=Example",
-+		Refresh: map[string]*storage.RefreshTokenRef{},
-+	}); err != nil && err != storage.ErrAlreadyExists {
-+		t.Fatalf("create offline session: %v", err)
-+	}
++	must("device request", store.CreateDeviceRequest(ctx, storage.DeviceRequest{
++		UserCode: "ABCD-EFGH", DeviceCode: "device-1", ClientID: "client", ClientSecret: "secret",
++		Scopes: []string{"openid"}, Expiry: now.Add(time.Hour),
++	}))
++	must("device token", store.CreateDeviceToken(ctx, storage.DeviceToken{
++		DeviceCode: "device-1", Status: "pending", Expiry: now.Add(time.Hour), PollIntervalSeconds: 0,
++	}))
++}
 +
++// fuzzLogin signs in through the password grant for tokens that the token,
++// userinfo and introspection targets can present.
++func fuzzLogin(t *testing.T, s *Server) fuzzTokens {
++	t.Helper()
 +	form := url.Values{
-+		"grant_type":   {"authorization_code"},
-+		"code":         {"code-1"},
-+		"redirect_uri": {"http://127.0.0.1/cb"},
++		"grant_type": {oauth2.GrantTypePassword},
++		"username":   {"u"},
++		"password":   {"p"},
++		"scope":      {"openid email offline_access"},
 +	}
-+	req := httptest.NewRequest(http.MethodPost, "http://127.0.0.1/token", strings.NewReader(form.Encode())).WithContext(ctx)
++	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, fuzzIssuer+"/token", strings.NewReader(form.Encode()))
 +	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-+	req.Header.Set("Authorization", "Basic Y2xpZW50OnNlY3JldA==")
++	req.Header.Set("Authorization", fuzzClientAuth)
 +	rr := httptest.NewRecorder()
-+	s.handleToken(rr, req)
++	s.ServeHTTP(rr, req)
++
 +	var out struct {
 +		AccessToken  string `json:"access_token"`
 +		RefreshToken string `json:"refresh_token"`
++		IDToken      string `json:"id_token"`
 +	}
-+	_ = json.Unmarshal(rr.Body.Bytes(), &out)
-+	return s, fuzzTokens{Access: out.AccessToken, Refresh: out.RefreshToken}
++	if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil || out.AccessToken == "" {
++		t.Fatalf("password grant for fuzz tokens: %d %s", rr.Code, rr.Body.String())
++	}
++	return fuzzTokens{Access: out.AccessToken, Refresh: out.RefreshToken, IDToken: out.IDToken}
 +}
 +
-+func withConnector(req *http.Request, id string) *http.Request {
-+	return mux.SetURLVars(req, map[string]string{"connector": id})
++// fuzzPasswordChangeURL is the password change URL the local login issues for
++// username (server/authflow/passwordchange.go), with extra query values.
++func fuzzPasswordChangeURL(username string, extra url.Values) string {
++	q := url.Values{
++		"req":          {fuzzAuthReqLocal},
++		"hmac":         {internal.ComputeHMAC(fuzzHMACKey, fuzzAuthReqLocal, "step:password-change", username)},
++		"username":     {username},
++		"changeReason": {"forced"},
++	}
++	for k, vs := range extra {
++		q[k] = vs
++	}
++	return authflow.PasswordChangePath + "?" + q.Encode()
++}
++
++// fuzzStepURL is the HMAC-protected URL of a flow step, as the server issues it.
++func fuzzStepURL(path, authReqID string, step internal.Step, extra url.Values) string {
++	return internal.StepURL(path, storage.AuthRequest{ID: authReqID, HMACKey: fuzzHMACKey}, step, extra)
 +}
 +
 +func addDiskSeeds(f *testing.F, name string) {
@@ -321,247 +427,296 @@ index 0000000..89e28b2
 +			if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
 +				continue
 +			}
-+			b, err := os.ReadFile(filepath.Join(dir, e.Name()))
-+			if err == nil {
++			if b, err := os.ReadFile(filepath.Join(dir, e.Name())); err == nil {
 +				f.Add(b)
 +			}
 +		}
 +	}
 +}
 +
-+func fuzzHandler(f *testing.F, name string, seeds []string, method, path string, call func(*Server, http.ResponseWriter, *http.Request), prep func(*http.Request, fuzzTokens) *http.Request) {
++// fuzzTarget sends every input to route; prep may fill in credentials the input
++// does not carry.
++func fuzzTarget(f *testing.F, name string, route fuzzRoute, seeds []string, prep func(*http.Request, fuzzTokens)) {
 +	for _, seed := range seeds {
 +		f.Add([]byte(seed))
 +	}
 +	addDiskSeeds(f, name)
 +	f.Add([]byte{})
 +	f.Add([]byte("{not-json"))
-+	f.Add([]byte("grant_type=password&username=u&password=p"))
++	f.Add([]byte("\x01grant_type=password&username=u&password=p"))
 +	f.Fuzz(func(t *testing.T, data []byte) {
-+		s, toks := mustFuzzServer(t)
-+		req := newFuzzRequest(t, data, method, path)
++		s, toks := newFuzzServer(t)
++		req := newFuzzRequest(t, data, route, toks)
 +		if prep != nil {
-+			req = prep(req, toks)
-+		}
-+		if req.Header.Get("X-Forwarded-For") == "" {
-+			req.Header.Set("X-Forwarded-For", "127.0.0.1")
-+		}
-+		call(s, httptest.NewRecorder(), req)
-+	})
-+}
-+
-+func FuzzHandleToken(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandleToken", []string{
-+		`{"method":"POST","url":"/token","postForm":{"grant_type":["authorization_code"],"code":["code-1"],"redirect_uri":["http://127.0.0.1/cb"]},"headers":{"Authorization":["Basic Y2xpZW50OnNlY3JldA=="],"Content-Type":["application/x-www-form-urlencoded"]}}`,
-+		`{"method":"POST","url":"/token","postForm":{"grant_type":["authorization_code"],"code":["code-pkce"],"redirect_uri":["http://127.0.0.1/cb"],"code_verifier":["dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"]},"headers":{"Authorization":["Basic Y2xpZW50OnNlY3JldA=="]}}`,
-+		`{"method":"POST","url":"/token","postForm":{"grant_type":["password"],"username":["u"],"password":["p"],"scope":["openid email"]},"headers":{"Authorization":["Basic Y2xpZW50OnNlY3JldA=="]}}`,
-+		`{"method":"POST","url":"/token","postForm":{"grant_type":["refresh_token"],"refresh_token":["x"]},"headers":{"Authorization":["Basic Y2xpZW50OnNlY3JldA=="]}}`,
-+		`{"method":"POST","url":"/token","postForm":{"grant_type":["urn:ietf:params:oauth:grant-type:token-exchange"],"subject_token":["x"],"subject_token_type":["urn:ietf:params:oauth:token-type:access_token"]},"headers":{"Authorization":["Basic Y2xpZW50OnNlY3JldA=="]}}`,
-+		`{"method":"POST","url":"/token","postForm":{"grant_type":["urn:ietf:params:oauth:grant-type:device_code"],"device_code":["d"],"client_id":["client"]}}`,
-+	}, http.MethodPost, "/token", (*Server).handleToken, nil)
-+}
-+
-+func FuzzHandlePublicKeys(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandlePublicKeys", []string{
-+		`{"method":"GET","url":"/keys"}`,
-+		`{"method":"HEAD","url":"/keys","headers":{"Accept":["application/jwk-set+json"]}}`,
-+	}, http.MethodGet, "/keys", (*Server).handlePublicKeys, nil)
-+}
-+
-+func FuzzHandleUserInfo(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandleUserInfo", []string{
-+		`{"method":"GET","url":"/userinfo","headers":{"Authorization":["Bearer x"]}}`,
-+		`{"method":"POST","url":"/userinfo","headers":{"Authorization":["Bearer "]}}`,
-+	}, http.MethodGet, "/userinfo", (*Server).handleUserInfo, func(req *http.Request, toks fuzzTokens) *http.Request {
-+		if req.Header.Get("Authorization") == "" && toks.Access != "" {
-+			req.Header.Set("Authorization", "Bearer "+toks.Access)
-+		}
-+		return req
-+	})
-+}
-+
-+func FuzzHandleAuthorization(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandleAuthorization", []string{
-+		`{"method":"GET","url":"/auth?response_type=code&client_id=client&redirect_uri=http://127.0.0.1/cb&scope=openid&state=zzz&nonce=n"}`,
-+		`{"method":"GET","url":"/auth?response_type=token&client_id=client&redirect_uri=http://127.0.0.1/cb&scope=openid"}`,
-+		`{"method":"GET","url":"/auth?response_type=code&client_id=client&redirect_uri=https://evil.example/cb&scope=openid"}`,
-+	}, http.MethodGet, "/auth", (*Server).handleAuthorization, nil)
-+}
-+
-+func FuzzHandleConnectorLogin(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandleConnectorLogin", []string{
-+		`{"method":"GET","url":"/auth/mock?state=s"}`,
-+		`{"method":"GET","url":"/auth/missing?state=s"}`,
-+	}, http.MethodGet, "/auth/mock", (*Server).handleConnectorLogin, func(req *http.Request, _ fuzzTokens) *http.Request {
-+		return withConnector(req, "mock")
-+	})
-+}
-+
-+func FuzzHandleConnectorCallback(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandleConnectorCallback", []string{
-+		`{"method":"GET","url":"/callback?state=s&code=code-1"}`,
-+		`{"method":"GET","url":"/callback?state=","headers":{"X-Remote-User":["admin"]}}`,
-+		`{"method":"POST","url":"/callback","postForm":{"SAMLResponse":["PHNhbWw+"],"RelayState":["s"]}}`,
-+	}, http.MethodGet, "/callback", (*Server).handleConnectorCallback, nil)
-+}
-+
-+func FuzzHandlePasswordLogin(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandlePasswordLogin", []string{
-+		`{"method":"POST","url":"/auth/mockpw/login?state=s_pw","postForm":{"login":["u"],"password":["p"]}}`,
-+		`{"method":"POST","url":"/auth/mockpw/login?state=s_pw","postForm":{"login":[""],"password":[""]}}`,
-+		`{"method":"POST","url":"/auth/mockpw/login?state=s_pw","postForm":{"login":["u"],"password":["wrong"]}}`,
-+	}, http.MethodPost, "/auth/mockpw/login?state=s_pw", (*Server).handlePasswordLogin, func(req *http.Request, _ fuzzTokens) *http.Request {
-+		return withConnector(req, "mockpw")
-+	})
-+}
-+
-+func FuzzHandleApproval(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandleApproval", []string{
-+		`{"method":"POST","url":"/approval","postForm":{"req":["s"],"approval":["approve"]}}`,
-+		`{"method":"POST","url":"/approval","postForm":{"req":["s"],"approval":["rejected"]}}`,
-+		`{"method":"GET","url":"/approval?req=s"}`,
-+	}, http.MethodPost, "/approval", (*Server).handleApproval, nil)
-+}
-+
-+func FuzzHandleDeviceToken(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandleDeviceToken", []string{
-+		`{"method":"POST","url":"/token","postForm":{"grant_type":["urn:ietf:params:oauth:grant-type:device_code"],"device_code":["d"],"client_id":["client"]}}`,
-+	}, http.MethodPost, "/token", (*Server).handleDeviceToken, nil)
-+}
-+
-+func FuzzHandleDeviceTokenDeprecated(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandleDeviceTokenDeprecated", []string{
-+		`{"method":"POST","url":"/device/token","postForm":{"grant_type":["urn:ietf:params:oauth:grant-type:device_code"],"device_code":["d"],"client_id":["client"]}}`,
-+	}, http.MethodPost, "/device/token", (*Server).handleDeviceTokenDeprecated, nil)
-+}
-+
-+func FuzzHandleDeviceExchange(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandleDeviceExchange", []string{
-+		`{"method":"GET","url":"/device"}`,
-+		`{"method":"POST","url":"/device","postForm":{"user_code":["ABCD-EFGH"]}}`,
-+		`{"method":"POST","url":"/device","postForm":{"user_code":["bad"]}}`,
-+	}, http.MethodGet, "/device", (*Server).handleDeviceExchange, nil)
-+}
-+
-+func FuzzVerifyUserCode(f *testing.F) {
-+	fuzzHandler(f, "FuzzVerifyUserCode", []string{
-+		`{"method":"POST","url":"/device/auth/verify_code","postForm":{"user_code":["ABCD-EFGH"]}}`,
-+		`{"method":"POST","url":"/device/auth/verify_code","postForm":{"user_code":[""]}}`,
-+	}, http.MethodPost, "/device/auth/verify_code", (*Server).verifyUserCode, nil)
-+}
-+
-+func FuzzHandleDeviceCode(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandleDeviceCode", []string{
-+		`{"method":"POST","url":"/device/code","postForm":{"client_id":["client"],"scope":["openid"]}}`,
-+		`{"method":"POST","url":"/device/code","postForm":{"client_id":[""]}}`,
-+	}, http.MethodPost, "/device/code", (*Server).handleDeviceCode, nil)
-+}
-+
-+func FuzzHandleDeviceCallback(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandleDeviceCallback", []string{
-+		`{"method":"GET","url":"/device/callback?state=u&code=code-1"}`,
-+	}, http.MethodGet, "/device/callback?state=u&code=code-1", (*Server).handleDeviceCallback, nil)
-+}
-+
-+func FuzzHandleIntrospect(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandleIntrospect", []string{
-+		`{"method":"POST","url":"/token/introspect","postForm":{"token":["x"],"token_type_hint":["access_token"]},"headers":{"Authorization":["Basic Y2xpZW50OnNlY3JldA=="]}}`,
-+		`{"method":"POST","url":"/token/introspect","postForm":{"token":[""]}}`,
-+	}, http.MethodPost, "/token/introspect", (*Server).handleIntrospect, func(req *http.Request, toks fuzzTokens) *http.Request {
-+		if req.Header.Get("Authorization") == "" {
-+			req.Header.Set("Authorization", "Basic Y2xpZW50OnNlY3JldA==")
-+		}
-+		if toks.Access != "" && req.PostFormValue("token") == "" && req.FormValue("token") == "" {
-+			// leave fuzzer-supplied body as-is; seed already has token=
-+		}
-+		return req
-+	})
-+}
-+
-+func FuzzHandleTOTPVerify(f *testing.F) {
-+	mac := hmac.New(sha256.New, []byte("0123456789abcdef"))
-+	mac.Write([]byte("s_totp"))
-+	hmacVal := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
-+	fuzzHandler(f, "FuzzHandleTOTPVerify", []string{
-+		`{"method":"GET","url":"/totp?req=s_totp&hmac=` + hmacVal + `"}`,
-+		`{"method":"POST","url":"/totp","postForm":{"req":["s_totp"],"hmac":["` + hmacVal + `"],"totp":["123456"]}}`,
-+		`{"method":"POST","url":"/totp","postForm":{"req":["missing"],"hmac":["x"],"totp":[""]}}`,
-+	}, http.MethodPost, "/totp", (*Server).handleTOTPVerify, nil)
-+}
-+
-+func FuzzHandlePasswordChange(f *testing.F) {
-+	fuzzHandler(f, "FuzzHandlePasswordChange", []string{
-+		`{"method":"GET","url":"/password/change?username=u%40example.com&changeReason=expired"}`,
-+		`{"method":"POST","url":"/password/change","postForm":{"username":["u@example.com"],"currentPassword":["p"],"newPassword":["Newpass1"],"changeReason":["expired"],"back":["http://127.0.0.1/auth"]}}`,
-+		`{"method":"POST","url":"/password/change","postForm":{"username":["u@example.com"],"currentPassword":["p"],"newPassword":["p"]}}`,
-+	}, http.MethodPost, passwordChangeURI, (*Server).handlePasswordChange, nil)
-+}
-+
-+func FuzzServeHTTP(f *testing.F) {
-+	addDiskSeeds(f, "FuzzServeHTTP")
-+	for _, seed := range []string{
-+		`{"method":"GET","url":"/.well-known/openid-configuration"}`,
-+		`{"method":"GET","url":"/healthz"}`,
-+		`{"method":"GET","url":"/robots.txt"}`,
-+		`{"method":"GET","url":"/static/main.css"}`,
-+		`{"method":"GET","url":"/auth?response_type=code&client_id=client&redirect_uri=http://127.0.0.1/cb&scope=openid"}`,
-+		`{"method":"POST","url":"/token","postForm":{"grant_type":["authorization_code"],"code":["code-1"],"redirect_uri":["http://127.0.0.1/cb"]},"headers":{"Authorization":["Basic Y2xpZW50OnNlY3JldA=="]}}`,
-+	} {
-+		f.Add([]byte(seed))
-+	}
-+	f.Fuzz(func(t *testing.T, data []byte) {
-+		s, _ := mustFuzzServer(t)
-+		req := newFuzzRequest(t, data, http.MethodGet, "/")
-+		if req.Header.Get("X-Forwarded-For") == "" {
-+			req.Header.Set("X-Forwarded-For", "127.0.0.1")
++			prep(req, toks)
 +		}
 +		s.ServeHTTP(httptest.NewRecorder(), req)
 +	})
 +}
 +
++func withClientAuth(req *http.Request, _ fuzzTokens) {
++	if req.Header.Get("Authorization") == "" {
++		req.Header.Set("Authorization", fuzzClientAuth)
++	}
++}
++
++func withBearer(req *http.Request, toks fuzzTokens) {
++	if req.Header.Get("Authorization") == "" {
++		req.Header.Set("Authorization", "Bearer "+toks.Access)
++	}
++}
++
++var (
++	routeToken         = fuzzRoute{method: http.MethodPost, path: "/token", prefix: "/token"}
++	routeKeys          = fuzzRoute{method: http.MethodGet, path: "/keys", prefix: "/keys"}
++	routeUserInfo      = fuzzRoute{method: http.MethodGet, path: "/userinfo", prefix: "/userinfo"}
++	routeIntrospect    = fuzzRoute{method: http.MethodPost, path: "/token/introspect", prefix: "/token/introspect"}
++	routeAuthorize     = fuzzRoute{method: http.MethodGet, path: "/auth", prefix: "/auth"}
++	routeConnector     = fuzzRoute{method: http.MethodGet, path: "/auth/" + fuzzCbConnector, prefix: "/auth/"}
++	routePasswordLogin = fuzzRoute{method: http.MethodPost, path: "/auth/" + fuzzPwConnector + "/login", prefix: "/auth/"}
++	routeCallback      = fuzzRoute{method: http.MethodGet, path: "/callback", prefix: "/callback"}
++	routePasswordChg   = fuzzRoute{method: http.MethodPost, path: authflow.PasswordChangePath, prefix: authflow.PasswordChangePath}
++	routeApproval      = fuzzRoute{method: http.MethodPost, path: "/approval", prefix: "/approval"}
++	routeMFA           = fuzzRoute{method: http.MethodGet, path: "/mfa", prefix: "/mfa"}
++	routeTOTP          = fuzzRoute{method: http.MethodPost, path: "/mfa/totp", prefix: "/mfa/totp"}
++	routeWebAuthn      = fuzzRoute{method: http.MethodPost, path: "/mfa/webauthn", prefix: "/mfa/webauthn"}
++	routeDevice        = fuzzRoute{method: http.MethodGet, path: "/device", prefix: "/device"}
++	routeVerifyCode    = fuzzRoute{method: http.MethodPost, path: "/device/auth/verify_code", prefix: "/device/auth/verify_code"}
++	routeDeviceCode    = fuzzRoute{method: http.MethodPost, path: "/device/code", prefix: "/device/code"}
++	routeDeviceCb      = fuzzRoute{method: http.MethodGet, path: oauth2.DeviceCallbackURI, prefix: oauth2.DeviceCallbackURI}
++	routeLogout        = fuzzRoute{method: http.MethodGet, path: "/logout", prefix: "/logout"}
++	routeHome          = fuzzRoute{method: http.MethodGet, path: "/", prefix: "/"}
++)
++
++// fuzzDeniedRefreshToken is the refresh token of the restricted client as the
++// client presents it.
++func fuzzDeniedRefreshToken(f *testing.F) string {
++	f.Helper()
++	token, err := internal.Marshal(&internal.RefreshToken{RefreshId: fuzzDeniedRefreshID, Token: "t"})
++	if err != nil {
++		f.Fatalf("marshal refresh token: %v", err)
++	}
++	return token
++}
++
++func FuzzHandleToken(f *testing.F) {
++	deniedRefresh := fuzzDeniedRefreshToken(f)
++	fuzzTarget(f, "FuzzHandleToken", routeToken, []string{
++		`{"method":"POST","url":"/token","postForm":{"grant_type":["authorization_code"],"code":["code-1"],"redirect_uri":["http://127.0.0.1/cb"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token","postForm":{"grant_type":["authorization_code"],"code":["code-pkce"],"redirect_uri":["http://127.0.0.1/cb"],"code_verifier":["dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token","postForm":{"grant_type":["password"],"username":["u"],"password":["p"],"scope":["openid email"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token","postForm":{"grant_type":["refresh_token"],"refresh_token":["$REFRESH_TOKEN"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token","postForm":{"grant_type":["refresh_token"],"refresh_token":["$REFRESH_TOKEN"],"scope":["openid groups"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token","postForm":{"grant_type":["client_credentials"],"scope":["openid"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token","postForm":{"grant_type":["urn:ietf:params:oauth:grant-type:token-exchange"],"connector_id":["mock"],"subject_token":["$ID_TOKEN"],"subject_token_type":["urn:ietf:params:oauth:token-type:id_token"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`,
++		`{"method":"POST","url":"/token","postForm":{"grant_type":["urn:ietf:params:oauth:grant-type:device_code"],"device_code":["device-1"],"client_id":["client"],"client_secret":["secret"]}}`,
++		`{"method":"POST","url":"/token","postForm":{"grant_type":["password"],"username":["u"],"password":["p"],"scope":["openid email"]},"headers":{"Authorization":["` + fuzzRestrictedAuth + `"]}}`,
++		`{"method":"POST","url":"/token","postForm":{"grant_type":["refresh_token"],"refresh_token":["` + deniedRefresh + `"]},"headers":{"Authorization":["` + fuzzRestrictedAuth + `"]}}`,
++		`{"method":"POST","url":"/token","postForm":{"grant_type":["urn:ietf:params:oauth:grant-type:token-exchange"],"connector_id":["mock"],"subject_token":["$ID_TOKEN"],"subject_token_type":["urn:ietf:params:oauth:token-type:id_token"]},"headers":{"Authorization":["` + fuzzRestrictedAuth + `"]}}`,
++	}, func(req *http.Request, toks fuzzTokens) {
++		withClientAuth(req, toks)
++	})
++}
++
++func FuzzHandlePublicKeys(f *testing.F) {
++	fuzzTarget(f, "FuzzHandlePublicKeys", routeKeys, []string{
++		`{"method":"GET","url":"/keys"}`,
++		`{"method":"OPTIONS","url":"/keys","headers":{"Origin":["http://evil.example"],"Access-Control-Request-Method":["GET"]}}`,
++	}, nil)
++}
++
++func FuzzHandleUserInfo(f *testing.F) {
++	fuzzTarget(f, "FuzzHandleUserInfo", routeUserInfo, []string{
++		`{"method":"GET","url":"/userinfo","headers":{"Authorization":["Bearer $ACCESS_TOKEN"]}}`,
++		`{"method":"GET","url":"/userinfo","headers":{"Authorization":["Bearer x"]}}`,
++		`{"method":"POST","url":"/userinfo","headers":{"Authorization":["Bearer "]}}`,
++		`{"method":"GET","url":"/userinfo"}`,
++	}, withBearer)
++}
++
++func FuzzHandleIntrospect(f *testing.F) {
++	fuzzTarget(f, "FuzzHandleIntrospect", routeIntrospect, []string{
++		`{"method":"POST","url":"/token/introspect","postForm":{"token":["$ACCESS_TOKEN"],"token_type_hint":["access_token"]}}`,
++		`{"method":"POST","url":"/token/introspect","postForm":{"token":["$REFRESH_TOKEN"],"token_type_hint":["refresh_token"]}}`,
++		`{"method":"POST","url":"/token/introspect","postForm":{"token":["x"]}}`,
++		`{"method":"POST","url":"/token/introspect","postForm":{"token":[""]}}`,
++	}, func(req *http.Request, toks fuzzTokens) {
++		withClientAuth(req, toks)
++	})
++}
++
++func FuzzHandleAuthorization(f *testing.F) {
++	fuzzTarget(f, "FuzzHandleAuthorization", routeAuthorize, []string{
++		`{"method":"GET","url":"/auth?response_type=code&client_id=client&redirect_uri=http://127.0.0.1/cb&scope=openid&state=zzz&nonce=n"}`,
++		`{"method":"GET","url":"/auth?response_type=token%20id_token&client_id=client&redirect_uri=http://127.0.0.1/cb&scope=openid&nonce=n&prompt=none"}`,
++		`{"method":"GET","url":"/auth?response_type=code&client_id=client&redirect_uri=https://evil.example/cb&scope=openid"}`,
++		`{"method":"GET","url":"/auth?response_type=code&client_id=client&redirect_uri=http://127.0.0.1/cb&scope=openid&connector_id=mockpw&code_challenge=abc&code_challenge_method=S256&max_age=0&id_token_hint=x"}`,
++		`{"method":"GET","url":"` + fuzzStepURL("/auth", fuzzAuthReqDone, internal.StepContinue, nil) + `"}`,
++		`{"method":"GET","url":"` + fuzzStepURL("/auth", fuzzAuthReqMFA, internal.StepContinue, nil) + `"}`,
++		`{"method":"GET","url":"` + fuzzStepURL("/auth", fuzzAuthReqDone, internal.StepApproved, nil) + `"}`,
++	}, nil)
++}
++
++func FuzzHandleConnectorLogin(f *testing.F) {
++	fuzzTarget(f, "FuzzHandleConnectorLogin", routeConnector, []string{
++		`{"method":"GET","url":"/auth/mock?state=` + fuzzAuthReqLogin + `"}`,
++		`{"method":"GET","url":"/auth/mockpw?state=` + fuzzAuthReqLogin + `"}`,
++		`{"method":"GET","url":"/auth/missing?state=s"}`,
++	}, nil)
++}
++
++func FuzzHandlePasswordLogin(f *testing.F) {
++	fuzzTarget(f, "FuzzHandlePasswordLogin", routePasswordLogin, []string{
++		`{"method":"POST","url":"/auth/mockpw/login?state=` + fuzzAuthReqLogin + `","postForm":{"login":["u"],"password":["p"],"remember_me":["on"]}}`,
++		`{"method":"POST","url":"/auth/mockpw/login?state=` + fuzzAuthReqLogin + `","postForm":{"login":[""],"password":[""]}}`,
++		`{"method":"POST","url":"/auth/mockpw/login?state=` + fuzzAuthReqLogin + `","postForm":{"login":["u"],"password":["wrong"]}}`,
++		`{"method":"GET","url":"/auth/mockpw/login?state=` + fuzzAuthReqLogin + `&back=//evil.example"}`,
++		`{"method":"POST","url":"/auth/mockpw/login?state=` + fuzzAuthReqDenied + `","postForm":{"login":["u"],"password":["p"]}}`,
++		`{"method":"POST","url":"/auth/local/login?state=` + fuzzAuthReqLocal + `&back=/auth","postForm":{"login":["` + fuzzLocalEmail + `"],"password":["p"],"remember_me":["on"]}}`,
++		`{"method":"POST","url":"/auth/local/login?state=` + fuzzAuthReqLocal + `","postForm":{"login":["` + fuzzLocalEmail + `"],"password":["wrong"]}}`,
++	}, nil)
++}
++
++func FuzzHandlePasswordChange(f *testing.F) {
++	rememberMe := url.Values{"remember_me": {"on"}}
++	offSite := url.Values{"back": {"//evil.example"}, "redirect_uri": {"https://evil.example/"}}
++	bound := `"headers":{"Cookie":["` + fuzzChangeCookie + `"]}`
++	fuzzTarget(f, "FuzzHandlePasswordChange", routePasswordChg, []string{
++		`{"method":"GET","url":"` + fuzzPasswordChangeURL(fuzzLocalEmail, nil) + `",` + bound + `}`,
++		`{"method":"POST","url":"` + fuzzPasswordChangeURL(fuzzLocalEmail, rememberMe) + `","postForm":{"newPassword":["N3w-password"]},` + bound + `}`,
++		`{"method":"POST","url":"` + fuzzPasswordChangeURL(fuzzLocalEmail, nil) + `","postForm":{"newPassword":["Prev1ous"]},` + bound + `}`,
++		`{"method":"POST","url":"` + fuzzPasswordChangeURL(fuzzLocalEmail, nil) + `","postForm":{"newPassword":["weak"]},` + bound + `}`,
++		`{"method":"POST","url":"` + fuzzPasswordChangeURL(fuzzLocalEmail, nil) + `","postForm":{"newPassword":["p"]},` + bound + `}`,
++		`{"method":"POST","url":"` + fuzzPasswordChangeURL(fuzzLocalEmail, offSite) + `","postForm":{"newPassword":["N3w-password"]},` + bound + `}`,
++		`{"method":"POST","url":"` + fuzzPasswordChangeURL("admin@example.com", nil) + `","postForm":{"newPassword":["N3w-password"]},` + bound + `}`,
++		`{"method":"POST","url":"` + fuzzPasswordChangeURL(fuzzLocalEmail, nil) + `","postForm":{"newPassword":["N3w-password"]}}`,
++		`{"method":"POST","url":"` + fuzzPasswordChangeURL(fuzzLocalEmail, nil) + `","postForm":{"newPassword":["N3w-password"]},"headers":{"Cookie":["dex_password_change=guess"]}}`,
++		`{"method":"POST","url":"/password/change","postForm":{"req":["` + fuzzAuthReqLocal + `"],"hmac":["x"],"username":["` + fuzzLocalEmail + `"],"newPassword":["N3w-password"]},` + bound + `}`,
++	}, nil)
++}
++
++func FuzzHandleConnectorCallback(f *testing.F) {
++	fuzzTarget(f, "FuzzHandleConnectorCallback", routeCallback, []string{
++		`{"method":"GET","url":"/callback?state=` + fuzzAuthReqLogin + `&code=code-1"}`,
++		`{"method":"GET","url":"/callback/mock?state=","headers":{"X-Remote-User":["admin"]}}`,
++		`{"method":"POST","url":"/callback","postForm":{"SAMLResponse":["PHNhbWw+"],"RelayState":["s"]}}`,
++		`{"method":"GET","url":"/callback?state=` + fuzzAuthReqDeniedCb + `&code=code-1"}`,
++	}, nil)
++}
++
++func FuzzHandleApproval(f *testing.F) {
++	fuzzTarget(f, "FuzzHandleApproval", routeApproval, []string{
++		`{"method":"GET","url":"` + fuzzStepURL("/approval", fuzzAuthReqDone, internal.StepApproval, nil) + `"}`,
++		`{"method":"POST","url":"` + fuzzStepURL("/approval", fuzzAuthReqDone, internal.StepApproval, nil) + `","postForm":{"approval":["approve"]}}`,
++		`{"method":"POST","url":"/approval","postForm":{"req":["` + fuzzAuthReqDone + `"],"hmac":["x"],"approval":["rejected"]}}`,
++	}, nil)
++}
++
++func FuzzHandleMFA(f *testing.F) {
++	fuzzTarget(f, "FuzzHandleMFA", routeMFA, []string{
++		`{"method":"GET","url":"` + fuzzStepURL("/mfa", fuzzAuthReqMFA, internal.StepMFA, nil) + `"}`,
++		`{"method":"GET","url":"/mfa?req=missing&hmac=x"}`,
++	}, nil)
++}
++
++func FuzzHandleTOTPVerify(f *testing.F) {
++	totp := url.Values{"authenticator": {"totp"}}
++	fuzzTarget(f, "FuzzHandleTOTPVerify", routeTOTP, []string{
++		`{"method":"GET","url":"` + fuzzStepURL("/mfa/totp", fuzzAuthReqMFA, internal.Authenticator("totp"), totp) + `"}`,
++		`{"method":"POST","url":"` + fuzzStepURL("/mfa/totp", fuzzAuthReqMFA, internal.Authenticator("totp"), totp) + `","postForm":{"totp":["123456"]}}`,
++		`{"method":"POST","url":"/mfa/totp","postForm":{"req":["missing"],"hmac":["x"],"authenticator":["totp"],"totp":[""]}}`,
++	}, nil)
++}
++
++func FuzzHandleWebAuthn(f *testing.F) {
++	webauthn := url.Values{"authenticator": {"webauthn"}}
++	fuzzTarget(f, "FuzzHandleWebAuthn", routeWebAuthn, []string{
++		`{"method":"GET","url":"` + fuzzStepURL("/mfa/webauthn", fuzzAuthReqMFA, internal.Authenticator("webauthn"), webauthn) + `"}`,
++		`{"method":"POST","url":"/mfa/webauthn/login/begin","postForm":{"req":["` + fuzzAuthReqMFA + `"],"hmac":["x"],"authenticator":["webauthn"]}}`,
++		`{"method":"POST","url":"/mfa/webauthn/register/finish","body":"{\"id\":\"x\",\"response\":{}}","headers":{"Content-Type":["application/json"]}}`,
++	}, nil)
++}
++
++func FuzzHandleDeviceExchange(f *testing.F) {
++	fuzzTarget(f, "FuzzHandleDeviceExchange", routeDevice, []string{
++		`{"method":"GET","url":"/device"}`,
++		`{"method":"GET","url":"/device?user_code=ABCD-EFGH"}`,
++		`{"method":"POST","url":"/device","postForm":{"user_code":["bad"]}}`,
++	}, nil)
++}
++
++func FuzzVerifyUserCode(f *testing.F) {
++	fuzzTarget(f, "FuzzVerifyUserCode", routeVerifyCode, []string{
++		`{"method":"POST","url":"/device/auth/verify_code","postForm":{"user_code":["ABCD-EFGH"]}}`,
++		`{"method":"POST","url":"/device/auth/verify_code","postForm":{"user_code":[""]}}`,
++	}, nil)
++}
++
++func FuzzHandleDeviceCode(f *testing.F) {
++	fuzzTarget(f, "FuzzHandleDeviceCode", routeDeviceCode, []string{
++		`{"method":"POST","url":"/device/code","postForm":{"client_id":["client"],"scope":["openid profile"]}}`,
++		`{"method":"POST","url":"/device/code","postForm":{"client_id":[""]}}`,
++	}, nil)
++}
++
++func FuzzHandleDeviceCallback(f *testing.F) {
++	fuzzTarget(f, "FuzzHandleDeviceCallback", routeDeviceCb, []string{
++		`{"method":"GET","url":"/device/callback?state=device-1&code=code-1"}`,
++		`{"method":"GET","url":"/device/callback?error=access_denied&state=x"}`,
++	}, nil)
++}
++
++func FuzzHandleLogout(f *testing.F) {
++	fuzzTarget(f, "FuzzHandleLogout", routeLogout, []string{
++		`{"method":"GET","url":"/logout?client_id=client&post_logout_redirect_uri=http://127.0.0.1/cb&state=s"}`,
++		`{"method":"GET","url":"/logout?id_token_hint=$ID_TOKEN&post_logout_redirect_uri=http://127.0.0.1/cb"}`,
++		`{"method":"POST","url":"/logout","postForm":{"id_token_hint":["x"],"confirm":["true"]}}`,
++		`{"method":"GET","url":"/logout/callback?state=s"}`,
++		`{"method":"GET","url":"/logout","headers":{"Cookie":["dex_session=garbage"]}}`,
++	}, nil)
++}
++
++func FuzzHandleHome(f *testing.F) {
++	fuzzTarget(f, "FuzzHandleHome", routeHome, []string{
++		`{"method":"GET","url":"/"}`,
++		`{"method":"GET","url":"/","headers":{"Cookie":["dex_session=garbage"]}}`,
++	}, nil)
++}
++
++func FuzzServeHTTP(f *testing.F) {
++	fuzzTarget(f, "FuzzServeHTTP", fuzzRoute{method: http.MethodGet, path: "/"}, []string{
++		`{"method":"GET","url":"/.well-known/openid-configuration"}`,
++		`{"method":"GET","url":"/healthz"}`,
++		`{"method":"GET","url":"/robots.txt"}`,
++		`{"method":"GET","url":"/static/main.css?cache=x"}`,
++		`{"method":"GET","url":"/theme/styles.css"}`,
++		`{"method":"GET","url":"/static/../../etc/passwd"}`,
++		`{"method":"GET","url":"/auth?response_type=code&client_id=client&redirect_uri=http://127.0.0.1/cb&scope=openid"}`,
++	}, nil)
++}
++
++// FuzzAllHandlers sends the same input to every route.
 +func FuzzAllHandlers(f *testing.F) {
 +	addDiskSeeds(f, "FuzzAllHandlers")
 +	addDiskSeeds(f, "FuzzHandleToken")
-+	f.Add([]byte(`{"method":"POST","url":"/token","postForm":{"grant_type":["authorization_code"],"code":["code-1"],"redirect_uri":["http://127.0.0.1/cb"]},"headers":{"Authorization":["Basic Y2xpZW50OnNlY3JldA=="]}}`))
++	f.Add([]byte(`{"method":"POST","url":"/token","postForm":{"grant_type":["authorization_code"],"code":["code-1"],"redirect_uri":["http://127.0.0.1/cb"]},"headers":{"Authorization":["` + fuzzClientAuth + `"]}}`))
 +	f.Add([]byte(`{"method":"GET","url":"/auth?response_type=code&client_id=client&redirect_uri=http://127.0.0.1/cb&scope=openid"}`))
++	f.Add([]byte("\x01login=u&password=p&totp=123456&user_code=ABCD-EFGH"))
 +	f.Fuzz(func(t *testing.T, data []byte) {
-+		s, toks := mustFuzzServer(t)
-+		rr := httptest.NewRecorder
-+
-+		{
-+			req := newFuzzRequest(t, data, http.MethodPost, "/token")
-+			s.handleToken(rr(), req)
-+		}
-+		{
-+			s.handlePublicKeys(rr(), newFuzzRequest(t, data, http.MethodGet, "/keys"))
-+		}
-+		{
-+			req := newFuzzRequest(t, data, http.MethodGet, "/userinfo")
-+			if req.Header.Get("Authorization") == "" && toks.Access != "" {
-+				req.Header.Set("Authorization", "Bearer "+toks.Access)
++		s, toks := newFuzzServer(t)
++		for _, route := range []fuzzRoute{
++			routeToken, routeKeys, routeUserInfo, routeIntrospect, routeAuthorize, routeConnector,
++			routePasswordLogin, routeCallback, routePasswordChg, routeApproval, routeMFA, routeTOTP, routeWebAuthn,
++			routeDevice, routeVerifyCode, routeDeviceCode, routeDeviceCb, routeLogout, routeHome,
++		} {
++			req := newFuzzRequest(t, data, route, toks)
++			switch route {
++			case routeToken, routeIntrospect:
++				withClientAuth(req, toks)
++			case routeUserInfo:
++				withBearer(req, toks)
 +			}
-+			s.handleUserInfo(rr(), req)
++			s.ServeHTTP(httptest.NewRecorder(), req)
 +		}
-+		s.handleAuthorization(rr(), newFuzzRequest(t, data, http.MethodGet, "/auth"))
-+		s.handleConnectorLogin(rr(), withConnector(newFuzzRequest(t, data, http.MethodGet, "/auth/mock"), "mock"))
-+		s.handleConnectorCallback(rr(), newFuzzRequest(t, data, http.MethodGet, "/callback"))
-+		s.handlePasswordLogin(rr(), withConnector(newFuzzRequest(t, data, http.MethodPost, "/auth/mockpw/login?state=s_pw"), "mockpw"))
-+		s.handleApproval(rr(), newFuzzRequest(t, data, http.MethodPost, "/approval"))
-+		s.handleDeviceTokenDeprecated(rr(), newFuzzRequest(t, data, http.MethodPost, "/device/token"))
-+		s.handleDeviceToken(rr(), newFuzzRequest(t, data, http.MethodPost, "/token"))
-+		s.handleDeviceExchange(rr(), newFuzzRequest(t, data, http.MethodGet, "/device"))
-+		s.verifyUserCode(rr(), newFuzzRequest(t, data, http.MethodPost, "/device/auth/verify_code"))
-+		s.handleDeviceCode(rr(), newFuzzRequest(t, data, http.MethodPost, "/device/code"))
-+		s.handleDeviceCallback(rr(), newFuzzRequest(t, data, http.MethodGet, "/device/callback?state=u&code=code-1"))
-+		{
-+			req := newFuzzRequest(t, data, http.MethodPost, "/token/introspect")
-+			if req.Header.Get("Authorization") == "" {
-+				req.Header.Set("Authorization", "Basic Y2xpZW50OnNlY3JldA==")
-+			}
-+			s.handleIntrospect(rr(), req)
-+		}
-+		s.handleTOTPVerify(rr(), newFuzzRequest(t, data, http.MethodPost, "/totp"))
-+		s.handlePasswordChange(rr(), newFuzzRequest(t, data, http.MethodPost, passwordChangeURI))
-+		s.ServeHTTP(rr(), newFuzzRequest(t, data, http.MethodGet, "/.well-known/openid-configuration"))
 +	})
 +}

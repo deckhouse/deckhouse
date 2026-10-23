@@ -861,11 +861,15 @@ spec:
   initiatorType: admin
 ```
 
-#### Operations on external users (LDAP/Crowd)
+#### Operations on external users
 
-For users authenticated through external providers (LDAP, Atlassian Crowd), use the [`spec.target`](cr.html#useroperation-v1-spec-target) field instead of `spec.user`. Only the `Lock` and `Unlock` operation types are supported for external users.
+For users of external providers of any type (LDAP, Atlassian Crowd, OIDC, SAML, GitHub, GitLab, Bitbucket Cloud), use the [`spec.target`](cr.html#useroperation-v1-spec-target) field instead of `spec.user`. Only the `Lock` and `Unlock` operation types are supported for external users.
 
-A lock applies only to sign-ins through the provider set in `connectorID`. It does not block a local user or a user of another provider with the same email. The operation fails if the user has never signed in through this provider.
+A lock applies to one pair of a provider and a user. It blocks only the user of the provider set in `connectorID` and does not block a local user or a user of another provider with the same email. Dex checks the lock at every sign-in through the provider, at every refresh-token request, at token exchange, and at Basic Authentication to the API server through an LDAP provider. For a Crowd or OIDC provider, basic-auth-proxy checks the credentials with the provider directly, so the lock does not apply to Basic Authentication.
+
+The operation fails if the user has never signed in through this provider or if more than one user of the provider has this email.
+
+A lock applies to the user ID that the provider returns at sign-in, so this ID must stay the same at every sign-in of the user. For a SAML provider, set [`nameIDPolicyFormat`](cr.html#dexprovider-v1-spec-saml-nameidpolicyformat) to `persistent` or `emailAddress`, or leave it unset (Dex then requests `persistent`). With `transient`, the provider returns a new ID at every sign-in. A lock then does not apply to the next sign-in of the user, and once the user has signed in twice, the operation fails because more than one user of the provider has the email.
 
 Example — lock an external user by `connectorID` + email for 30 minutes:
 
@@ -894,7 +898,7 @@ Using a UserOperation object has the following specifics:
 - To perform a new action, create a new UserOperation.
 
 {% alert level="warning" %}
-For a local user, the `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex OfflineSessions and RefreshToken objects, so the user must sign in again. A `Lock` of an external user (`spec.target`) blocks sign-in and token refresh until the lock ends.
+For a local user, the `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex RefreshToken objects, so the sessions of the user in applications and kubeconfig files end when the current ID token expires. Only `Reset2FA` removes the user's 2FA secret. A `Lock` of a local or an external user refuses sign-in, refresh-token requests and token exchange until the lock ends.
 {% endalert %}
 
 #### Checking operation status
@@ -921,7 +925,7 @@ To check the operation status, follow these steps:
 
 #### Viewing account state
 
-The module keeps a [UserAccount](cr.html#useraccount) object for each local user and for each user who has signed in through an external provider. It shows whether the account is locked, until when, and how many failed login attempts were counted. Do not create or edit UserAccount objects.
+The module keeps a [UserAccount](cr.html#useraccount) object for each local user and for each user who has signed in through an external provider. It shows when the user last signed in, whether the user has set up 2FA, whether the account is locked, until when, and how many failed login attempts were counted. Do not create or edit UserAccount objects.
 
 To list the accounts, run:
 
@@ -932,6 +936,8 @@ d8 k get useraccounts
 #### Automatic lockout
 
 If the number of failed sign-in attempts exceeds [`passwordPolicy.lockout.maxAttempts`](configuration.html#parameters-passwordpolicy-lockout-maxattempts), Dex locks the user for [`lockout.lockDuration`](configuration.html#parameters-passwordpolicy-lockout-lockduration) and then unlocks them automatically. For LDAP and Crowd users, this works only if the provider type is listed in [`lockout.applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors). Dex does not create a UserOperation for this lockout. To unlock the user earlier, run `d8 iam user unlock` or create a UserOperation of type `Unlock`.
+
+While a local, LDAP or Crowd user is locked, Dex refuses a password sign-in whether the password is correct or not: with the `429` status code and the "Account temporarily locked" page after an automatic lockout, with the `403` status code and the "Account locked by an administrator" page while a lock set by an administrator is in force. The password change page refuses a locked user in the same way. An automatic lockout does not shorten a lock that ends later, including a lock set by an administrator.
 
 ### Adding a user to a group
 
@@ -1079,6 +1085,10 @@ Field description:
 
 To limit failed login attempts per client IP address, use the [`rateLimit`](configuration.html#parameters-ratelimit) parameter.
 
+When a local user signs in with a password that has to change, Dex opens the password change page instead of the application. A password has to change after an administrator resets it with `ResetPassword`, when it does not meet the complexity rules, and when it is older than `rotation.interval`. The page asks only for the new password, twice, because the sign-in form has just checked the current one. If 2FA is enabled, Dex first asks for the code and opens the password change page only after it, so someone who knows only the password cannot change it. After the change, the sign-in continues as usual and opens the application.
+
+The password change page opens only during the sign-in that led to it and in the same browser. If the page is opened in another browser or after the sign-in has expired, Dex does not open it, and the user signs in again.
+
 Example with a custom complexity rules:
 
 {% raw %}
@@ -1135,6 +1145,10 @@ Field description:
 {% alert level="info" %}
 After enabling 2FA, each user must register in the authenticator application during their first login.
 {% endalert %}
+
+Dex asks a local user for the code at every sign-in. Users of external providers sign in without it.
+
+To make a user register the authenticator application again, for example after losing the device, reset the user's 2FA with `d8 iam user reset2fa <USERNAME>` or a UserOperation of the `Reset2FA` type. Other operations, including `Lock` and `ResetPassword`, keep the 2FA secret.
 
 ### Assigning permissions to a user or group
 

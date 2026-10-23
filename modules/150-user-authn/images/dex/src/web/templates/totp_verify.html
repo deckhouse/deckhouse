@@ -11,12 +11,12 @@
   {{ if not (eq .QRCode "") }}
   <div class="content-text">
     {{ if eq (extra "lang") "en" }}
-    Scan the QR code with your authenticator app
+    Scan the QR code with your authenticator app, then enter the code.
     {{ else }}
-    Отсканируйте QR-код в приложении для аутентификации
+    Отсканируйте QR-код в приложении для аутентификации и введите код.
     {{ end }}
     <div class="qr-code-container">
-      <img src="data:image/png;base64, {{ .QRCode }}" alt="QR code"/>
+      <img src="data:image/png;base64,{{ .QRCode }}" alt="QR code" width="200" height="200"/>
     </div>
   </div>
   {{ else }}
@@ -29,21 +29,26 @@
   </div>
   {{ end }}
   <form method="post" action="{{ .PostURL }}" class="login-form">
-    <input tabindex="1" required id="totp" name="totp" type="password" placeholder="{{- if eq (extra "lang") "en" }}One-time password:{{- else }}Одноразовый пароль:{{- end }}" class="input" {{ if .Invalid }} autofocus onfocusout="this.value = this.value.trim()" {{ end }}/>
+    <input tabindex="1" required id="totp" name="totp" type="text"
+           inputmode="numeric" pattern="[0-9]*" maxlength="6"
+           autocomplete="one-time-code"
+           placeholder="{{- if eq (extra "lang") "en" }}One-time code{{- else }}Одноразовый код{{- end }}"
+           class="input"
+           autofocus/>
     {{ if .Invalid }}
     <div id="login-error" class="form-error">
       {{- if eq (extra "lang") "en" }}
-      Invalid or Expired User Code
+      Invalid code. Please try again.
       {{- else }}
-      Неверный или устаревший User Code
+      Неверный код. Попробуйте ещё раз.
       {{- end }}
     </div>
     {{ end }}
     <button tabindex="2" id="submit-login" type="submit" class="btn btn-primary">
       {{ if eq (extra "lang") "en" }}
-      Submit
+      Verify
       {{ else }}
-      Отправить
+      Подтвердить
       {{ end }}
     </button>
   </form>

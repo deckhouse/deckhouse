@@ -34,6 +34,11 @@ spec:
         jsonPath: .claims.email
         description: |
           Email claim of the last login.
+      - name: Attempts
+        type: integer
+        jsonPath: .incorrectPasswordLoginAttempts
+        description: |
+          Consecutive failed password attempts since the last successful login (external password connectors).
       - name: BlockedUntil
         type: string
         jsonPath: .blockedUntil

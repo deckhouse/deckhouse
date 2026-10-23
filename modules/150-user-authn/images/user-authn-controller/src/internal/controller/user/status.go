@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"user-authn-controller/internal/controller"
+	"user-authn-controller/internal/useridentity"
 )
 
 type userStatusPatch struct {
@@ -34,21 +35,65 @@ type userStatusPatch struct {
 	Lock     userLock `json:"lock"`
 }
 
-func lockFromPassword(pw passwordView, now time.Time) userLock {
-	if pw.LockedUntil != nil && pw.LockedUntil.After(now) {
-		lock := userLock{
-			State:   true,
-			Reason:  lockReasonPasswordPolicy,
-			Message: lockMessagePasswordPolicy,
-			Until:   pw.LockedUntil.UTC().Format(time.RFC3339),
+// lockSource is a lock in one place and whether an administrator set it.
+type lockSource struct {
+	until   *time.Time
+	byAdmin bool
+}
+
+// enforcedLock is the lock Dex enforces on the local user: the one in the UserIdentity of the pair
+// (user, local). Until the controller marks that UserIdentity as migrated, the transitional Dex
+// patch also reads the lock of the Password, and the later of the two is in force.
+func enforcedLock(pw passwordView, ident *useridentity.Identity) (lockSource, error) {
+	fromIdentity := lockSource{}
+	if ident != nil {
+		blocked, err := ident.BlockedUntil()
+		if err != nil {
+			return lockSource{}, err
 		}
-		if _, ok := pw.Annotations[lockedByAdministratorAnnot]; ok {
-			lock.Reason = lockReasonAdministrator
-			lock.Message = lockMessageAdministrator
+		if !blocked.IsZero() {
+			fromIdentity = lockSource{until: &blocked, byAdmin: ident.LockedByAdministrator()}
 		}
-		return lock
+		if ident.Migrated() {
+			return fromIdentity, nil
+		}
 	}
-	return userLock{}
+	_, byAdmin := pw.Annotations[lockedByAdministratorAnnot]
+	return laterLock(lockSource{until: pw.LockedUntil, byAdmin: byAdmin}, fromIdentity), nil
+}
+
+// laterLock is the lock that ends later.
+func laterLock(a, b lockSource) lockSource {
+	switch {
+	case a.until == nil:
+		return b
+	case b.until == nil:
+		return a
+	case a.until.After(*b.until):
+		return a
+	case b.until.After(*a.until):
+		return b
+	default:
+		return lockSource{until: a.until, byAdmin: a.byAdmin || b.byAdmin}
+	}
+}
+
+// statusLock is User.status.lock for the lock in force.
+func statusLock(lock lockSource, now time.Time) userLock {
+	if lock.until == nil || !lock.until.After(now) {
+		return userLock{}
+	}
+	status := userLock{
+		State:   true,
+		Reason:  lockReasonPasswordPolicy,
+		Message: lockMessagePasswordPolicy,
+		Until:   lock.until.UTC().Format(time.RFC3339),
+	}
+	if lock.byAdmin {
+		status.Reason = lockReasonAdministrator
+		status.Message = lockMessageAdministrator
+	}
+	return status
 }
 
 func expireAtForUser(user userView, now time.Time) (string, error) {

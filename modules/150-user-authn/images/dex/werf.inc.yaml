@@ -48,8 +48,8 @@ shell:
   install:
     - cd /src
     - git apply /patches/*.patch --verbose
-    # Check after patches are applied: our patches may legitimately update Dex
-    # source CRDs (e.g. additionalPrinterColumns for OfflineSessions); the
+    # Check after patches are applied: our patches change the Dex source CRDs
+    # (100-storage-schema adds the UserIdentity and AuthSession manifests); the
     # snapshot in modules/.../crds/external must match the post-patch source.
     - bash /module_crds/pull_dex_crds.sh --check --dex-dir /src/scripts/manifests/crds
     - rm -rf examples

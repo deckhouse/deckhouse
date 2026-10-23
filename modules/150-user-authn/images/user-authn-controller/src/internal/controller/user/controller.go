@@ -76,7 +76,8 @@ func Register(mgr manager.Manager) error {
 	return nil
 }
 
-// SetupWithManager registers watches for User, Group, Password, and local UserIdentity.
+// SetupWithManager registers watches for User, Group, Password, and local UserIdentity (the lock
+// in User.status, and the cleanup of a deleted User).
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	inDexNS := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		return obj.GetNamespace() == naming.DexNamespace
@@ -148,15 +149,22 @@ func (r *Reconciler) reconcileUser(ctx context.Context, user userView, now time.
 		return 0, err
 	}
 
-	lock := lockFromPassword(live, now)
+	ident, err := r.localIdentity(ctx, live, user.Name)
+	if err != nil {
+		return 0, err
+	}
+	lock, err := enforcedLock(live, ident)
+	if err != nil {
+		return 0, err
+	}
 	if err := r.patchUserStatus(ctx, user, userStatusPatch{
 		ExpireAt: expireAt,
 		Groups:   groups,
-		Lock:     lock,
+		Lock:     statusLock(lock, now),
 	}); err != nil {
 		return 0, err
 	}
-	return controller.RequeueAfterTime(live.LockedUntil, now), nil
+	return controller.RequeueAfterTime(lock.until, now), nil
 }
 
 func (r *Reconciler) getUser(ctx context.Context, name string) (userView, bool, error) {

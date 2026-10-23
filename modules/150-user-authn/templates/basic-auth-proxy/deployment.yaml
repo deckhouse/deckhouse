@@ -160,7 +160,8 @@ spec:
         - --ldap-scope=profile
         - --ldap-scope=email
         - --ldap-scope=groups
-        - --ldap-scope=offline_access
+        {{- /* No offline_access: the proxy only checks the password and never refreshes, and a refresh token
+               would rewrite the offline session of the user at every check. */}}
         - --ldap-scope=federated:id
         {{- end }}
         {{- end }}

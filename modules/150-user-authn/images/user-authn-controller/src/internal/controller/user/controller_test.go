@@ -38,6 +38,7 @@ import (
 	"user-authn-controller/api/v1alpha1"
 	"user-authn-controller/internal/controller"
 	"user-authn-controller/internal/naming"
+	"user-authn-controller/internal/useridentity"
 )
 
 const (
@@ -318,6 +319,40 @@ func TestReconcile_StatusLockFromLockedUntilAndAdminAnnotation(t *testing.T) {
 			}
 			assertNoUserAccount(t, r, adminEmail)
 		})
+	}
+}
+
+func TestReconcile_StatusLockFromUserIdentity(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	until := now.Add(3 * time.Hour)
+	pw := passwordObj(adminEncodedPW, map[string]any{
+		"email":    adminEmail,
+		"username": adminUserName,
+		"userID":   adminUserName,
+		"hash":     liveHash,
+	}, map[string]string{heritageLabel: heritageValue}, nil)
+	id := useridentity.New(adminUserName, naming.LocalConnectorID)
+	if err := id.SetBlockedUntil(until); err != nil {
+		t.Fatal(err)
+	}
+	id.SetAdminLock(until)
+	if err := id.SetRecord(useridentity.Record{Time: now.Format(time.RFC3339)}); err != nil {
+		t.Fatal(err)
+	}
+	r := newTestReconciler(t, now, namespaceObj(), userObj(adminUserName, adminEmail, adminPassword, ""), pw, id.Object())
+
+	res, err := r.Reconcile(t.Context(), userReq(adminUserName))
+	if err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+	if res.RequeueAfter != 3*time.Hour {
+		t.Errorf("RequeueAfter = %v, want 3h so status unlocks when blockedUntil passes", res.RequeueAfter)
+	}
+	lock := userStatusLock(t, getUser(t, r, adminUserName))
+	if !lock.State || lock.Reason != lockReasonAdministrator || lock.Until != until.Format(time.RFC3339) {
+		t.Errorf("lock = %+v, want the administrator lock of the UserIdentity until %s", lock, until.Format(time.RFC3339))
 	}
 }
 

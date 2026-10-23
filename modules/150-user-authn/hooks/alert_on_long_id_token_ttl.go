@@ -30,7 +30,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
-// Dex expiry.signingKeys is hardcoded to 6h. idTokenTTL values >= 6h force Dex to
+// Dex signer.config.keysRotationPeriod is hardcoded to 6h. idTokenTTL values >= 6h force Dex to
 // retain every previous signing key until tokens expire, so the key set grows
 // without bound. ModuleConfig OpenAPI now rejects such values; this hook emits
 // a metric for clusters that still have a long TTL (validation ratcheting does

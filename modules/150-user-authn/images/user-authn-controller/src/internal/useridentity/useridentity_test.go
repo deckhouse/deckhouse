@@ -277,6 +277,52 @@ func TestRecord_BrokenAnnotation(t *testing.T) {
 	}
 }
 
+func TestIdentity_Migrated(t *testing.T) {
+	t.Parallel()
+
+	id := New("jane", naming.LocalConnectorID)
+	if id.Migrated() {
+		t.Fatal("Migrated = true for an object without the annotation")
+	}
+	// Dex checks only that the annotation is there; so does Migrated, even for a broken value.
+	id.Object().SetAnnotations(map[string]string{RecordAnnotation: "true"})
+	if !id.Migrated() {
+		t.Error("Migrated = false for an object with the annotation")
+	}
+}
+
+func TestIdentity_IncorrectPasswordLoginAttempts(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		value     any
+		expected  int64
+		expectErr bool
+	}{
+		{name: "missing", value: nil, expected: 0},
+		{name: "as decoded from json", value: float64(3), expected: 3},
+		{name: "integer", value: int64(5), expected: 5},
+		{name: "not a number", value: "three", expectErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			id := New("alice", "corp-ldap")
+			if tt.value != nil {
+				id.Object().Object["incorrectPasswordLoginAttempts"] = tt.value
+			}
+			got, err := id.IncorrectPasswordLoginAttempts()
+			if (err != nil) != tt.expectErr {
+				t.Fatalf("err = %v, want error %v", err, tt.expectErr)
+			}
+			if got != tt.expected {
+				t.Errorf("attempts = %d, want %d", got, tt.expected)
+			}
+		})
+	}
+}
+
 func loadFixture(t *testing.T) *unstructured.Unstructured {
 	t.Helper()
 	raw, err := os.ReadFile(dexFixture)

@@ -33,6 +33,7 @@ import (
 
 	"user-authn-controller/internal/controller"
 	"user-authn-controller/internal/naming"
+	"user-authn-controller/internal/useridentity"
 )
 
 func (r *Reconciler) execute(ctx context.Context, op operation, now time.Time) error {
@@ -75,7 +76,7 @@ func (r *Reconciler) executeLock(ctx context.Context, op operation, now time.Tim
 	lockedUntil = lockedUntil.UTC().Truncate(time.Second)
 
 	if op.Spec.Target != nil {
-		return r.lockOfflineSession(ctx, op, lockedUntil, now)
+		return r.lockExternal(ctx, op, lockedUntil, now)
 	}
 
 	userPassword, err := r.findLocalPassword(ctx, op.Spec.User)
@@ -103,15 +104,12 @@ func (r *Reconciler) executeLock(ctx context.Context, op operation, now time.Tim
 		return err
 	}
 
-	if _, err := r.invalidateLocalUserSessions(ctx, op.Spec.User, "Locking user"); err != nil {
-		return err
-	}
-	return nil
+	return r.endLocalUserSessions(ctx, localPair(*userPassword).userID, "Locking user")
 }
 
 func (r *Reconciler) executeUnlock(ctx context.Context, op operation, now time.Time) error {
 	if op.Spec.Target != nil {
-		return r.unlockOfflineSession(ctx, op, now)
+		return r.unlockExternal(ctx, op, now)
 	}
 
 	userPassword, err := r.findLocalPassword(ctx, op.Spec.User)
@@ -161,10 +159,7 @@ func (r *Reconciler) executeResetPassword(ctx context.Context, op operation) err
 		return err
 	}
 
-	if _, err := r.invalidateLocalUserSessions(ctx, op.Spec.User, "Resetting user password"); err != nil {
-		return err
-	}
-	return nil
+	return r.endLocalUserSessions(ctx, localPair(*userPassword).userID, "Resetting user password")
 }
 
 func (r *Reconciler) executeReset2FA(ctx context.Context, op operation, now time.Time) error {
@@ -175,7 +170,18 @@ func (r *Reconciler) executeReset2FA(ctx context.Context, op operation, now time
 		return failed("Reset2FA does not support an external target; it is only supported for local users")
 	}
 
-	anyDeleted, err := r.invalidateLocalUserSessions(ctx, op.Spec.User, "Resetting user 2FA")
+	userPassword, found, err := r.lookupLocalPassword(ctx, op.Spec.User)
+	if err != nil {
+		return err
+	}
+	// The User controller writes the username as the userID of a local user, so without a
+	// Password the username is the userID of the Dex objects left behind.
+	userID := op.Spec.User
+	if found {
+		userID = localPair(*userPassword).userID
+	}
+
+	anyDeleted, err := r.invalidateLocalUserSessions(ctx, userID, "Resetting user 2FA")
 	if err != nil {
 		return err
 	}
@@ -184,10 +190,6 @@ func (r *Reconciler) executeReset2FA(ctx context.Context, op operation, now time
 			append(operationLogKV(op), "user", op.Spec.User)...)
 	}
 
-	userPassword, found, err := r.lookupLocalPassword(ctx, op.Spec.User)
-	if err != nil {
-		return err
-	}
 	if !found {
 		// Without a Password there is no local user, and the copy creates no UserIdentity for one.
 		r.log.Info("Reset2FA: no Password, no UserIdentity to reset", append(operationLogKV(op), "user", op.Spec.User)...)
@@ -196,7 +198,24 @@ func (r *Reconciler) executeReset2FA(ctx context.Context, op operation, now time
 	return r.resetIdentityMFA(ctx, localPair(*userPassword), now)
 }
 
-func (r *Reconciler) invalidateLocalUserSessions(ctx context.Context, username, logPrefix string) (bool, error) {
+// endLocalUserSessions deletes the refresh tokens of the local user userID, so that every client
+// has to sign the user in again. The second factor stays: only Reset2FA removes it.
+func (r *Reconciler) endLocalUserSessions(ctx context.Context, userID, logPrefix string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	tokens, err := r.listRefreshTokens(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = r.deleteRefreshTokensOf(ctx, tokens, userID, logPrefix)
+	return err
+}
+
+// invalidateLocalUserSessions deletes the OfflineSessions and the refresh tokens of the local user
+// userID. OfflineSessions is where the Dex of 1.77 keeps the TOTP secret; Reset2FA removes it
+// there too.
+func (r *Reconciler) invalidateLocalUserSessions(ctx context.Context, userID, logPrefix string) (bool, error) {
 	if err := ctx.Err(); err != nil {
 		return false, err
 	}
@@ -217,61 +236,81 @@ func (r *Reconciler) invalidateLocalUserSessions(ctx context.Context, username, 
 		return false, err
 	}
 	for _, sess := range sessions {
-		matchesUser := false
-		if sess.UserID != "" {
-			matchesUser = sess.UserID == username
-		} else if len(sess.RefreshTokenIDs) > 0 {
-			for _, id := range sess.RefreshTokenIDs {
-				rt, ok := tokensByID[id]
-				if !ok {
-					continue
-				}
-				if rt.ClaimsUsername == username || rt.ClaimsUserID == username || rt.ClaimsPreferred == username {
-					matchesUser = true
-					break
-				}
-			}
-		}
-		if !matchesUser {
+		if !sessionOf(sess, userID, tokensByID) {
 			continue
 		}
-		r.log.Info(logPrefix+": deleting OfflineSessions", "user", username, "offlinesession", sess.Name)
+		r.log.Info(logPrefix+": deleting OfflineSessions", "userID", userID, "offlinesession", sess.Name)
 		if err := r.deleteDexObject(ctx, controller.OfflineSessionsGVK, sess.Namespace, sess.Name); err != nil {
 			return anyDeleted, err
 		}
 		anyDeleted = true
 	}
 
-	for _, rt := range tokens {
-		if rt.ClaimsUsername == username || rt.ClaimsUserID == username || rt.ClaimsPreferred == username {
-			r.log.Info(logPrefix+": deleting RefreshToken", "user", username, "refreshtoken", rt.Name)
-			if err := r.deleteDexObject(ctx, controller.RefreshTokenGVK, rt.Namespace, rt.Name); err != nil {
-				return anyDeleted, err
-			}
-			anyDeleted = true
-		}
-	}
+	deleted, err := r.deleteRefreshTokensOf(ctx, tokens, userID, logPrefix)
+	return anyDeleted || deleted, err
+}
 
+// deleteRefreshTokensOf deletes the refresh tokens of the local user userID among tokens.
+func (r *Reconciler) deleteRefreshTokensOf(ctx context.Context, tokens []refreshTokenView, userID, logPrefix string) (bool, error) {
+	var anyDeleted bool
+	for _, rt := range tokens {
+		if !tokenOf(rt, userID) {
+			continue
+		}
+		r.log.Info(logPrefix+": deleting RefreshToken", "userID", userID, "refreshtoken", rt.Name)
+		if err := r.deleteDexObject(ctx, controller.RefreshTokenGVK, rt.Namespace, rt.Name); err != nil {
+			return anyDeleted, err
+		}
+		anyDeleted = true
+	}
 	return anyDeleted, nil
 }
 
-func (r *Reconciler) lockOfflineSession(ctx context.Context, op operation, lockedUntil, now time.Time) error {
-	sess, err := r.findOfflineSessionByTarget(ctx, op.Spec.Target)
+// tokenOf reports whether rt is a refresh token of the local user userID: one that Dex issued
+// through the local connector with the user's ID in the claims. A user of another provider can
+// have the same name, ID or preferred username, and their tokens are not touched.
+func tokenOf(rt refreshTokenView, userID string) bool {
+	return rt.ConnectorID == naming.LocalConnectorID && rt.ClaimsUserID == userID
+}
+
+// sessionOf reports whether sess is the OfflineSessions of the local user userID. An object
+// without a userID is the user's when a refresh token it refers to is.
+func sessionOf(sess sessionView, userID string, tokensByID map[string]refreshTokenView) bool {
+	if sess.UserID != "" {
+		return sess.ConnID == naming.LocalConnectorID && sess.UserID == userID
+	}
+	if sess.ConnID != "" && sess.ConnID != naming.LocalConnectorID {
+		return false
+	}
+	for _, id := range sess.RefreshTokenIDs {
+		if rt, ok := tokensByID[id]; ok && tokenOf(rt, userID) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *Reconciler) lockExternal(ctx context.Context, op operation, lockedUntil, now time.Time) error {
+	target, err := r.findExternalTarget(ctx, op.Spec.Target)
 	if err != nil {
 		return err
 	}
 
 	until := lockedUntil.UTC().Format(time.RFC3339)
-	r.log.Info("Locking external user via OfflineSessions", append(operationLogKV(op),
-		"offlinesession", sess.Name,
+	r.log.Info("Locking external user", append(operationLogKV(op),
+		"connectorID", target.pair.connectorID,
+		"userID", target.pair.userID,
 		"for", op.Spec.Lock.For,
 		"lockedUntil", until,
 	)...)
 
-	if err := r.lockIdentity(ctx, externalPair(*sess), lockedUntil, now); err != nil {
+	if err := r.lockIdentity(ctx, target.pair, lockedUntil, now); err != nil {
 		return err
 	}
-	return r.patchMerge(ctx, controller.OfflineSessionsGVK, sess.Namespace, sess.Name, map[string]any{
+	if target.session == nil {
+		return nil
+	}
+	return r.patchMerge(ctx, controller.OfflineSessionsGVK, target.session.Namespace, target.session.Name, map[string]any{
 		"lockedUntil":                    until,
 		"incorrectPasswordLoginAttempts": int64(0),
 		"metadata": map[string]any{
@@ -282,26 +321,100 @@ func (r *Reconciler) lockOfflineSession(ctx context.Context, op operation, locke
 	})
 }
 
-func (r *Reconciler) unlockOfflineSession(ctx context.Context, op operation, now time.Time) error {
-	sess, err := r.findOfflineSessionByTarget(ctx, op.Spec.Target)
+func (r *Reconciler) unlockExternal(ctx context.Context, op operation, now time.Time) error {
+	target, err := r.findExternalTarget(ctx, op.Spec.Target)
 	if err != nil {
 		return err
 	}
 
-	r.log.Info("Unlocking external user via OfflineSessions", append(operationLogKV(op), "offlinesession", sess.Name)...)
+	r.log.Info("Unlocking external user", append(operationLogKV(op),
+		"connectorID", target.pair.connectorID,
+		"userID", target.pair.userID,
+	)...)
 
-	if err := r.patchMerge(ctx, controller.OfflineSessionsGVK, sess.Namespace, sess.Name, map[string]any{
-		"lockedUntil":                    nil,
-		"incorrectPasswordLoginAttempts": int64(0),
-		"metadata": map[string]any{
-			"annotations": map[string]any{
-				lockedByAdministratorAnnot: nil,
+	if target.session != nil {
+		if err := r.patchMerge(ctx, controller.OfflineSessionsGVK, target.session.Namespace, target.session.Name, map[string]any{
+			"lockedUntil":                    nil,
+			"incorrectPasswordLoginAttempts": int64(0),
+			"metadata": map[string]any{
+				"annotations": map[string]any{
+					lockedByAdministratorAnnot: nil,
+				},
 			},
-		},
-	}); err != nil {
-		return err
+		}); err != nil {
+			return err
+		}
 	}
-	return r.unlockIdentity(ctx, externalPair(*sess), now)
+	return r.unlockIdentity(ctx, target.pair, now)
+}
+
+// externalTarget is the account of an external provider that spec.target names.
+type externalTarget struct {
+	pair identityPair
+	// session is the OfflineSessions of the pair, the place the Dex of 1.77 keeps the lock in.
+	// Dex v2.46 creates none for a user who signed in without offline access.
+	session *sessionView
+}
+
+// findExternalTarget finds the account of spec.target: a UserIdentity of the connector whose
+// claims have the email, or, until the copy creates the UserIdentity, an OfflineSessions of the
+// connector with the email. Every login through Dex v2.46 records the UserIdentity, so any
+// provider type can be targeted. More than one account with the email is an error.
+func (r *Reconciler) findExternalTarget(ctx context.Context, target *operationTarget) (externalTarget, error) {
+	if target == nil {
+		return externalTarget{}, failed("target is nil")
+	}
+	if target.Email == "" || target.ConnectorID == "" {
+		return externalTarget{}, failed("target.connectorID and target.email are required")
+	}
+
+	identities, err := r.listIdentities(ctx)
+	if err != nil {
+		return externalTarget{}, err
+	}
+	sessions, err := r.listSessions(ctx)
+	if err != nil {
+		return externalTarget{}, err
+	}
+	sessionsByPair := make(map[string]*sessionView, len(sessions))
+	for i := range sessions {
+		sess := &sessions[i]
+		if sess.ConnID == target.ConnectorID && sess.UserID != "" {
+			sessionsByPair[useridentity.Name(sess.UserID, sess.ConnID)] = sess
+		}
+	}
+
+	found := map[string]externalTarget{}
+	for _, ident := range identities {
+		if ident.ConnectorID != target.ConnectorID || ident.UserID == "" || !strings.EqualFold(ident.Email, target.Email) {
+			continue
+		}
+		name := useridentity.Name(ident.UserID, ident.ConnectorID)
+		found[name] = externalTarget{
+			pair: identityPair{
+				userID:      ident.UserID,
+				connectorID: ident.ConnectorID,
+				claims:      useridentity.Claims{UserID: ident.UserID, Email: ident.Email},
+			},
+			session: sessionsByPair[name],
+		}
+	}
+	for name, sess := range sessionsByPair {
+		if _, ok := found[name]; ok || !strings.EqualFold(sess.Email, target.Email) {
+			continue
+		}
+		found[name] = externalTarget{pair: externalPair(*sess), session: sess}
+	}
+
+	switch len(found) {
+	case 0:
+		return externalTarget{}, failedf("no account found for connector %q and email %q (the user has likely never signed in through this provider)", target.ConnectorID, target.Email)
+	case 1:
+		for _, t := range found {
+			return t, nil
+		}
+	}
+	return externalTarget{}, failedf("%d accounts of connector %q have email %q; the target is ambiguous", len(found), target.ConnectorID, target.Email)
 }
 
 func (r *Reconciler) findLocalPassword(ctx context.Context, username string) (*passwordView, error) {
@@ -326,32 +439,6 @@ func (r *Reconciler) lookupLocalPassword(ctx context.Context, username string) (
 		}
 	}
 	return nil, false, nil
-}
-
-func (r *Reconciler) findOfflineSessionByTarget(ctx context.Context, target *operationTarget) (*sessionView, error) {
-	if target == nil {
-		return nil, failed("target is nil")
-	}
-	if target.Email == "" || target.ConnectorID == "" {
-		return nil, failed("target.connectorID and target.email are required")
-	}
-
-	sessions, err := r.listSessions(ctx)
-	if err != nil {
-		return nil, err
-	}
-	wantEmail := strings.ToLower(target.Email)
-	for i := range sessions {
-		sess := &sessions[i]
-		if sess.ConnID != target.ConnectorID {
-			continue
-		}
-		if strings.ToLower(sess.Email) != wantEmail {
-			continue
-		}
-		return sess, nil
-	}
-	return nil, failedf("no OfflineSessions found for connector %q and email %q (the user has likely never logged in yet)", target.ConnectorID, target.Email)
 }
 
 func (r *Reconciler) listPasswords(ctx context.Context) ([]passwordView, error) {
@@ -382,6 +469,22 @@ func (r *Reconciler) listSessions(ctx context.Context) ([]sessionView, error) {
 			return nil, err
 		}
 		out = append(out, sess)
+	}
+	return out, nil
+}
+
+func (r *Reconciler) listIdentities(ctx context.Context) ([]identityView, error) {
+	list := controller.List(controller.UserIdentityGVK)
+	if err := r.client.List(ctx, list, client.InNamespace(naming.DexNamespace)); err != nil {
+		return nil, fmt.Errorf("list useridentities: %w", err)
+	}
+	out := make([]identityView, 0, len(list.Items))
+	for i := range list.Items {
+		ident, err := decodeIdentity(&list.Items[i])
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, ident)
 	}
 	return out, nil
 }

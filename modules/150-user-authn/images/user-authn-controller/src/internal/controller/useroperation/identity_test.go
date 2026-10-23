@@ -131,6 +131,81 @@ func TestReconcile_LockExternalWritesUserIdentity(t *testing.T) {
 	}
 }
 
+func TestReconcile_ExternalTargetInUserIdentity(t *testing.T) {
+	t.Parallel()
+
+	oidcIdentity := func(userID, email string) *unstructured.Unstructured {
+		return identityObj(userID, "corp-oidc", func(id *useridentity.Identity) {
+			id.SetClaims(useridentity.Claims{UserID: userID, Email: email})
+		})
+	}
+	lockOp := userOperationObj("user-operation-01", operationTime, map[string]any{
+		"type": "Lock", "initiatorType": "Admin",
+		"target": map[string]any{"connectorID": "corp-oidc", "email": "bob@example.com"},
+		"lock":   map[string]any{"for": "1h"},
+	})
+
+	t.Run("an identity without OfflineSessions is locked", func(t *testing.T) {
+		t.Parallel()
+		r := newTestReconciler(t, operationTime, oidcIdentity("sub-1", "Bob@Example.com"), lockOp.DeepCopy())
+		if _, err := r.Reconcile(t.Context(), opRequest("user-operation-01")); err != nil {
+			t.Fatalf("Reconcile: %v", err)
+		}
+		blocked, _ := getIdentity(t, r, "sub-1", "corp-oidc").BlockedUntil()
+		if !blocked.Equal(operationTime.Add(time.Hour)) {
+			t.Errorf("blockedUntil = %v, want %v", blocked, operationTime.Add(time.Hour))
+		}
+		assertPhase(t, r, "user-operation-01", "Succeeded", operationTime)
+	})
+
+	t.Run("the OfflineSessions of Dex v2.46 has no email and is locked too", func(t *testing.T) {
+		t.Parallel()
+		session := naming.OfflineTokenName("sub-1", "corp-oidc")
+		r := newTestReconciler(t, operationTime,
+			oidcIdentity("sub-1", "bob@example.com"),
+			sessionObj(session, map[string]any{"userID": "sub-1", "connID": "corp-oidc"}),
+			lockOp.DeepCopy(),
+		)
+		if _, err := r.Reconcile(t.Context(), opRequest("user-operation-01")); err != nil {
+			t.Fatalf("Reconcile: %v", err)
+		}
+		if !oldPlaceLocked(t, t.Context(), r.client, "corp-oidc", sessionObj(session, nil)) {
+			t.Error("OfflineSessions lockedUntil not set")
+		}
+		assertPhase(t, r, "user-operation-01", "Succeeded", operationTime)
+	})
+
+	t.Run("two accounts with the email fail the operation", func(t *testing.T) {
+		t.Parallel()
+		r := newTestReconciler(t, operationTime,
+			oidcIdentity("sub-1", "bob@example.com"),
+			oidcIdentity("sub-2", "bob@example.com"),
+			lockOp.DeepCopy(),
+		)
+		if _, err := r.Reconcile(t.Context(), opRequest("user-operation-01")); err != nil {
+			t.Fatalf("Reconcile: %v", err)
+		}
+		assertPhase(t, r, "user-operation-01", "Failed", operationTime)
+		for _, userID := range []string{"sub-1", "sub-2"} {
+			if blocked, _ := getIdentity(t, r, userID, "corp-oidc").BlockedUntil(); !blocked.IsZero() {
+				t.Errorf("%s blockedUntil = %v, want no lock", userID, blocked)
+			}
+		}
+	})
+
+	t.Run("an identity of another connector is not the target", func(t *testing.T) {
+		t.Parallel()
+		other := identityObj("sub-1", "other-oidc", func(id *useridentity.Identity) {
+			id.SetClaims(useridentity.Claims{UserID: "sub-1", Email: "bob@example.com"})
+		})
+		r := newTestReconciler(t, operationTime, other, lockOp.DeepCopy())
+		if _, err := r.Reconcile(t.Context(), opRequest("user-operation-01")); err != nil {
+			t.Fatalf("Reconcile: %v", err)
+		}
+		assertPhase(t, r, "user-operation-01", "Failed", operationTime)
+	})
+}
+
 func TestReconcile_UnlockClearsBothPlaces(t *testing.T) {
 	t.Parallel()
 
@@ -411,7 +486,7 @@ func TestUserOperation_CopyAndOperationInEitherOrder(t *testing.T) {
 				check := func(when string) {
 					t.Helper()
 					id := getIdentityFrom(t, c, "admin", naming.LocalConnectorID)
-					if _, marked, _ := id.Record(); !marked {
+					if !id.Migrated() {
 						t.Fatalf("%s: the UserIdentity is not marked", when)
 					}
 					totp, err := id.TOTP()

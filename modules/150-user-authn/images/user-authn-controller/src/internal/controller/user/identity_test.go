@@ -176,7 +176,7 @@ func TestMapUserIdentity(t *testing.T) {
 		expected []reconcile.Request
 	}{
 		{name: "local identity of a deleted user", obj: localIdentityObj("ghost"), expected: []reconcile.Request{userReq("ghost")}},
-		{name: "local identity of an existing user", obj: localIdentityObj(adminUserName), expected: nil},
+		{name: "local identity of an existing user", obj: localIdentityObj(adminUserName), expected: []reconcile.Request{userReq(adminUserName)}},
 		{name: "external identity", obj: localIdentityObjFor("ghost", "corp-ldap"), expected: nil},
 	}
 

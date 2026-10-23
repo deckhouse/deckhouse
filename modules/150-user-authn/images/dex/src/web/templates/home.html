@@ -1,0 +1,130 @@
+{{ template "header.html" . }}
+
+<div class="content dex-home">
+  {{ if .LoggedIn }}
+  <div class="dex-identity">
+    {{ if .Username }}<h2 class="content-title dex-identity__name">{{ .Username }}</h2>{{ end }}
+    {{ if .Email }}
+    <div class="content-text dex-identity__email">
+      {{ .Email }}
+      {{ if .EmailVerified }}<span class="dex-identity__state">({{ if eq (extra "lang") "en" }}verified{{ else }}подтверждён{{ end }})</span>
+      {{ else }}<span class="dex-identity__state dex-identity__state--warn">({{ if eq (extra "lang") "en" }}not verified{{ else }}не подтверждён{{ end }})</span>{{ end }}
+    </div>
+    {{ end }}
+  </div>
+
+  <dl class="dex-facts">
+    {{ if .ConnectorName }}
+    <div class="dex-fact">
+      <dt>{{ if eq (extra "lang") "en" }}Signed in with{{ else }}Способ входа{{ end }}</dt>
+      <dd>{{ .ConnectorName }}</dd>
+    </div>
+    {{ end }}
+    {{ if .SignedInISO }}
+    <div class="dex-fact">
+      <dt>{{ if eq (extra "lang") "en" }}Signed in{{ else }}Время входа{{ end }}</dt>
+      <dd><time datetime="{{ .SignedInISO }}">{{ .SignedInText }}</time></dd>
+    </div>
+    {{ end }}
+    {{ if .SessionExpiresISO }}
+    <div class="dex-fact">
+      <dt>
+        {{ if .SessionExpiryIsIdle }}
+        {{ if eq (extra "lang") "en" }}Expires if idle{{ else }}Истекает при простое{{ end }}
+        {{ else }}
+        {{ if eq (extra "lang") "en" }}Session ends{{ else }}Сеанс истекает{{ end }}
+        {{ end }}
+      </dt>
+      <dd><time datetime="{{ .SessionExpiresISO }}">{{ .SessionExpiresText }}</time></dd>
+    </div>
+    {{ end }}
+    {{ if .IPAddress }}
+    <div class="dex-fact">
+      <dt>{{ if eq (extra "lang") "en" }}Signed in from{{ else }}IP-адрес входа{{ end }}</dt>
+      <dd>{{ .IPAddress }}</dd>
+    </div>
+    {{ end }}
+    {{ if .Groups }}
+    <div class="dex-fact">
+      <dt id="groups-label">{{ if eq (extra "lang") "en" }}Groups{{ else }}Группы{{ end }} <span class="dex-count">{{ len .Groups }}</span></dt>
+      <dd>
+        <ul class="dex-groups" tabindex="0" aria-labelledby="groups-label">
+          {{ range .Groups }}<li>{{ . }}</li>{{ end }}
+        </ul>
+      </dd>
+    </div>
+    {{ end }}
+    {{ if .UserAgent }}
+    <div class="dex-fact">
+      <dt>{{ if eq (extra "lang") "en" }}Browser{{ else }}Браузер{{ end }}</dt>
+      <dd class="dex-fact__long">{{ .UserAgent }}</dd>
+    </div>
+    {{ end }}
+  </dl>
+
+  <div class="dex-home__actions">
+    <a href="{{ .LogoutURL }}" class="btn btn-primary">
+        {{ if eq (extra "lang") "en" }}
+        Log out
+        {{ else }}
+        Выйти
+        {{ end }}
+    </a>
+  </div>
+  {{ else }}
+  <div class="dex-home__empty">
+    <h2 class="content-title">
+        {{ if eq (extra "lang") "en" }}
+        Not signed in
+        {{ else }}
+        Вход не выполнен
+        {{ end }}
+    </h2>
+    <div class="content-text">
+        {{ if eq (extra "lang") "en" }}
+        Sign in from the application you want to use.
+        {{ else }}
+        Войдите из приложения, которым хотите воспользоваться.
+        {{ end }}
+    </div>
+  </div>
+  {{ end }}
+
+  <div class="dex-home__footer">
+    <a href="{{ .DiscoveryURL }}" class="dex-home__link">
+        {{ if eq (extra "lang") "en" }}
+        OpenID configuration
+        {{ else }}
+        Конфигурация OpenID
+        {{ end }}
+    </a>
+  </div>
+</div>
+
+{{ if .LoggedIn }}
+<script>
+  (function () {
+    // A long group list is capped by CSS; fade its bottom edge while there is
+    // more below, so the cut is visible where scrollbars appear only on scroll.
+    var groups = document.querySelector('.dex-groups');
+    if (groups) {
+      var syncFade = function () {
+        var more = groups.scrollTop + groups.clientHeight < groups.scrollHeight - 1;
+        groups.classList.toggle('dex-groups--clipped', more);
+      };
+      syncFade();
+      groups.addEventListener('scroll', syncFade, {passive: true});
+      window.addEventListener('resize', syncFade, {passive: true});
+    }
+
+    // The server states these in UTC; restate them in the visitor's own zone.
+    document.querySelectorAll('time[datetime]').forEach(function (el) {
+      var date = new Date(el.getAttribute('datetime'));
+      if (isNaN(date.getTime())) return;
+      el.textContent = date.toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'});
+    });
+  })();
+</script>
+{{ end }}
+
+{{ template "footer.html" . }}

@@ -49,8 +49,9 @@ import (
 const maxConcurrentReconciles = 8
 
 // Reconciler projects Dex Password, OfflineSessions, and UserIdentity into UserAccount objects:
-// one per local user (Password, plus the lock in its UserIdentity) and one per user who signed in
-// through any external provider (UserIdentity, OfflineSessions, or both during 1.78).
+// one per local user (Password, plus the lock, last login, and second factor in its UserIdentity)
+// and one per user who signed in through any external provider (UserIdentity, OfflineSessions, or
+// both during 1.78).
 type Reconciler struct {
 	client client.Client
 	log    logr.Logger
@@ -677,7 +678,16 @@ func statusEqual(a, b v1alpha1.UserAccountStatus) bool {
 		a.UserRef == b.UserRef &&
 		metaTimeEqual(a.LockedUntil, b.LockedUntil) &&
 		metaTimeEqual(a.ExpireAt, b.ExpireAt) &&
+		metaTimeEqual(a.LastLogin, b.LastLogin) &&
+		twoFactorEqual(a.TwoFactor, b.TwoFactor) &&
 		slices.Equal(a.Groups, b.Groups)
+}
+
+func twoFactorEqual(a, b *v1alpha1.UserAccountTwoFactor) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
 
 func metaTimeEqual(a, b *metav1.Time) bool {

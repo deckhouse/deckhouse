@@ -65,7 +65,7 @@ If the application supports OIDC itself, create a [DexClient](cr.html#dexclient)
 ### Generating kubeconfig files
 
 After signing in, a user can generate a kubeconfig for kubectl and other Kubernetes tools in the [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html).
-The kubeconfig uses an OIDC token. If the authentication provider supports session extension, the kubeconfig also contains a refresh token, and the session is extended automatically.
+The kubeconfig uses an OIDC token. If the authentication provider supports session extension, the kubeconfig also contains a refresh token, and the session is extended automatically. If the provider reports during the extension that the user no longer exists or has lost access, Dex refuses the refresh token with the `invalid_grant` error, and the user has to sign in again.
 
 The [`kubeconfigGenerator`](configuration.html#parameters-kubeconfiggenerator) parameter adds other ways to reach the API server, each with its own address and CA certificate, for example, for access through a bastion host or a VPN.
 
@@ -79,7 +79,7 @@ The module ships Dex with additional capabilities:
 * A forced password change at the next sign-in after an administrator resets the password
 * Lockout after failed sign-in attempts for LDAP and Atlassian Crowd users (the [`passwordPolicy.lockout.applyToConnectors`](configuration.html#parameters-passwordpolicy-lockout-applytoconnectors) parameter)
 * Per-IP rate limiting of failed sign-in attempts (the [`rateLimit`](configuration.html#parameters-ratelimit) parameter)
-* Locking and unlocking users with the [UserOperation](cr.html#useroperation) object, also without a password policy
+* Locking and unlocking users of any provider with the [UserOperation](cr.html#useroperation) object, also without a password policy
 * Lists of allowed users and groups in [DexClient](cr.html#dexclient) and [DexAuthenticator](cr.html#dexauthenticator) that Dex checks at sign-in and at every refresh-token request
 * Limits on the identities a provider may assert (the [`spec.allowedIdentities`](cr.html#dexprovider-v1-spec-allowedidentities) parameter of DexProvider)
 * Kerberos (SPNEGO) sign-in through the LDAP provider without the password form, with tickets from the `Authorization: Negotiate` header validated by the service keytab

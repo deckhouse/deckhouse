@@ -1,0 +1,1726 @@
+diff --git a/cmd/dex/passwordpolicy.go b/cmd/dex/passwordpolicy.go
+index b97f2d35..88d6dd55 100644
+--- a/cmd/dex/passwordpolicy.go
++++ b/cmd/dex/passwordpolicy.go
+@@ -8,6 +8,7 @@ import (
+ 	"strings"
+ 	"time"
+ 
++	"github.com/dexidp/dex/server/lockout"
+ 	"github.com/dexidp/dex/server/passwordpolicy"
+ )
+ 
+@@ -31,6 +32,9 @@ type PasswordPolicy struct {
+ 
+ 	// Rotation makes passwords expire.
+ 	Rotation *PasswordRotation `json:"rotation"`
++
++	// Lockout locks a user after too many failed password attempts.
++	Lockout *PasswordLockout `json:"lockout"`
+ }
+ 
+ // PasswordComplexity are custom complexity rules. Each flag adds a requirement.
+@@ -49,6 +53,35 @@ type PasswordRotation struct {
+ 	Interval string `json:"interval"`
+ }
+ 
++// PasswordLockout locks a user after too many failed password attempts: local
++// users, and users of the external connectors listed.
++type PasswordLockout struct {
++	// MaxAttempts is the number of consecutive failed attempts that locks.
++	MaxAttempts uint64 `json:"maxAttempts"`
++	// LockDuration is how long the lock lasts, such as "15m" or "1d".
++	LockDuration string `json:"lockDuration"`
++	// ApplyToConnectors are the types of the external password connectors whose
++	// users are locked too, such as "ldap" and "atlassian-crowd".
++	ApplyToConnectors []string `json:"applyToConnectors"`
++}
++
++// lockoutPolicy builds the automatic lockout of the server, nil when the config
++// has none.
++func (p *PasswordPolicy) lockoutPolicy() (*lockout.Policy, error) {
++	if p == nil || p.Lockout == nil {
++		return nil, nil
++	}
++	duration, err := parsePolicyDuration(p.Lockout.LockDuration)
++	if err != nil {
++		return nil, fmt.Errorf("lockout duration: %w", err)
++	}
++	return &lockout.Policy{
++		MaxAttempts:    p.Lockout.MaxAttempts,
++		Duration:       duration,
++		ConnectorTypes: p.Lockout.ApplyToConnectors,
++	}, nil
++}
++
+ // serverPolicy builds the password policy of the server, nil when the section is
+ // absent.
+ func (p *PasswordPolicy) serverPolicy() (*passwordpolicy.Policy, error) {
+diff --git a/cmd/dex/passwordpolicy_test.go b/cmd/dex/passwordpolicy_test.go
+index 5538d7ee..bc4e61d5 100644
+--- a/cmd/dex/passwordpolicy_test.go
++++ b/cmd/dex/passwordpolicy_test.go
+@@ -8,6 +8,7 @@ import (
+ 	"github.com/stretchr/testify/assert"
+ 	"github.com/stretchr/testify/require"
+ 
++	"github.com/dexidp/dex/server/lockout"
+ 	"github.com/dexidp/dex/server/passwordpolicy"
+ )
+ 
+@@ -68,6 +69,32 @@ func TestPasswordPolicyConfig(t *testing.T) {
+ 		HistoryLimit:     5,
+ 		RotationInterval: 30 * 24 * time.Hour,
+ 	}, policy)
++
++	lock, err := c.PasswordPolicy.lockoutPolicy()
++	require.NoError(t, err)
++	assert.Equal(t, &lockout.Policy{
++		MaxAttempts:    3,
++		Duration:       15 * time.Minute,
++		ConnectorTypes: []string{"ldap", "atlassian-crowd"},
++	}, lock)
++}
++
++func TestPasswordPolicyLockoutPolicy(t *testing.T) {
++	var none *PasswordPolicy
++	lock, err := none.lockoutPolicy()
++	require.NoError(t, err)
++	assert.Nil(t, lock)
++
++	lock, err = (&PasswordPolicy{}).lockoutPolicy()
++	require.NoError(t, err)
++	assert.Nil(t, lock, "no lockout section")
++
++	lock, err = (&PasswordPolicy{Lockout: &PasswordLockout{MaxAttempts: 5, LockDuration: "1d"}}).lockoutPolicy()
++	require.NoError(t, err)
++	assert.Equal(t, &lockout.Policy{MaxAttempts: 5, Duration: 24 * time.Hour}, lock)
++
++	_, err = (&PasswordPolicy{Lockout: &PasswordLockout{MaxAttempts: 5}}).lockoutPolicy()
++	require.Error(t, err, "a lockout needs a duration")
+ }
+ 
+ func TestPasswordPolicyServerPolicy(t *testing.T) {
+diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
+index a01447db..a05a7ea4 100644
+--- a/cmd/dex/serve.go
++++ b/cmd/dex/serve.go
+@@ -429,6 +429,9 @@ func runServe(options serveOptions) error {
+ 	if serverConfig.PasswordPolicy, err = c.PasswordPolicy.serverPolicy(); err != nil {
+ 		return fmt.Errorf("invalid password policy config: %v", err)
+ 	}
++	if serverConfig.Lockout, err = c.PasswordPolicy.lockoutPolicy(); err != nil {
++		return fmt.Errorf("invalid password policy config: %v", err)
++	}
+ 
+ 	if featureflags.SessionsEnabled.Enabled() {
+ 		sessionConfig, err := parseSessionConfig(c.Sessions)
+diff --git a/connector/atlassiancrowd/atlassiancrowd.go b/connector/atlassiancrowd/atlassiancrowd.go
+index ca922147..1a96ce4f 100644
+--- a/connector/atlassiancrowd/atlassiancrowd.go
++++ b/connector/atlassiancrowd/atlassiancrowd.go
+@@ -119,6 +119,14 @@ func (c *crowdConnector) Login(ctx context.Context, s connector.Scopes, username
+ 	}
+ 
+ 	if incorrectPass {
++		// Name the user of a wrong password, so that dex can count the failed
++		// attempt and refuse a locked user whatever the password: the user ID and
++		// the email only. A user that cannot be looked up, or a lookup that finds
++		// someone else (the username goes into the query unescaped), stays unnamed.
++		if u, err := c.user(ctx, client, username); err == nil && strings.EqualFold(u.Name, username) {
++			partial := c.identityFromCrowdUser(u)
++			return connector.Identity{UserID: partial.UserID, Email: partial.Email}, false, nil
++		}
+ 		return connector.Identity{}, false, nil
+ 	}
+ 
+diff --git a/connector/atlassiancrowd/atlassiancrowd_test.go b/connector/atlassiancrowd/atlassiancrowd_test.go
+index 17d0422a..b77055f6 100644
+--- a/connector/atlassiancrowd/atlassiancrowd_test.go
++++ b/connector/atlassiancrowd/atlassiancrowd_test.go
+@@ -11,6 +11,8 @@ import (
+ 	"net/http/httptest"
+ 	"reflect"
+ 	"testing"
++
++	"github.com/dexidp/dex/connector"
+ )
+ 
+ func TestUserGroups(t *testing.T) {
+@@ -181,3 +183,50 @@ func expectEquals(t *testing.T, a interface{}, b interface{}) {
+ 		t.Errorf("Expected %+v to equal %+v", a, b)
+ 	}
+ }
++
++// A wrong password names the user, so that dex can count the attempt against
++// him, but only with the user ID and the email, and only when the lookup finds
++// that very user.
++func TestLoginNamesUserOfWrongPassword(t *testing.T) {
++	invalid := TestServerResponse{
++		Body: crowdAuthenticationError{Reason: "INVALID_USER_AUTHENTICATION", Message: "test"},
++		Code: 401,
++	}
++	responses := map[string]TestServerResponse{
++		"/rest/usermanagement/1/session": invalid,
++		"/rest/usermanagement/1/user?username=jane": {
++			Body: crowdUser{Key: "jane-key", Name: "jane", Active: true, Email: "jane@example.com"},
++			Code: 200,
++		},
++		"/rest/usermanagement/1/user?username=alias": {
++			Body: crowdUser{Key: "john-key", Name: "john", Active: true, Email: "john@example.com"},
++			Code: 200,
++		},
++	}
++	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		response, ok := responses[r.RequestURI]
++		if !ok {
++			response = TestServerResponse{Body: crowdAuthenticationError{Reason: "USER_NOT_FOUND"}, Code: 404}
++		}
++		w.Header().Add("Content-Type", "application/json")
++		w.WriteHeader(response.Code)
++		json.NewEncoder(w).Encode(response.Body)
++	}))
++	defer s.Close()
++	c := newTestCrowdConnector(s.URL)
++
++	tests := []struct {
++		username string
++		want     connector.Identity
++	}{
++		{"jane", connector.Identity{UserID: "jane-key", Email: "jane@example.com"}},
++		{"alias", connector.Identity{}},
++		{"nobody", connector.Identity{}},
++	}
++	for _, tc := range tests {
++		ident, valid, err := c.Login(context.Background(), connector.Scopes{Groups: true}, tc.username, "wrong")
++		expectNil(t, err)
++		expectEquals(t, valid, false)
++		expectEquals(t, ident, tc.want)
++	}
++}
+diff --git a/connector/ldap/ldap.go b/connector/ldap/ldap.go
+index 27f93e33..0c78a1d1 100644
+--- a/connector/ldap/ldap.go
++++ b/connector/ldap/ldap.go
+@@ -650,6 +650,12 @@ func (c *ldapConnector) Login(ctx context.Context, s connector.Scopes, username,
+ 		return connector.Identity{}, false, err
+ 	}
+ 	if incorrectPass {
++		// Name the user of a wrong password, so that dex can count the failed
++		// attempt and refuse a locked user whatever the password: the user ID and
++		// the email only. An unknown user (an empty entry) stays unnamed.
++		if partial, err := c.identityFromEntry(user); err == nil {
++			return connector.Identity{UserID: partial.UserID, Email: partial.Email}, false, nil
++		}
+ 		return connector.Identity{}, false, nil
+ 	}
+ 
+diff --git a/server/authflow/callback.go b/server/authflow/callback.go
+index d2595476..da53ded5 100644
+--- a/server/authflow/callback.go
++++ b/server/authflow/callback.go
+@@ -98,7 +98,7 @@ func (h *Handler) handleConnectorCallback(w http.ResponseWriter, r *http.Request
+ 
+ 	authReq, err = h.finalizeLogin(ctx, identity, authReq, conn.Connector)
+ 	if err != nil {
+-		if h.renderNotAllowed(r, w, err) {
++		if h.renderNotAllowed(r, w, err) || h.renderLocked(r, w, err) {
+ 			return
+ 		}
+ 		h.Logger.ErrorContext(r.Context(), "failed to finalize login", "err", err)
+diff --git a/server/authflow/handler.go b/server/authflow/handler.go
+index 811aa4f3..4881e21a 100644
+--- a/server/authflow/handler.go
++++ b/server/authflow/handler.go
+@@ -7,6 +7,7 @@ import (
+ 	"time"
+ 
+ 	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/lockout"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/passwordpolicy"
+ 	"github.com/dexidp/dex/server/router"
+@@ -53,6 +54,9 @@ type Handler struct {
+ 	// PasswordPolicy is the password policy of local users. Nil has no rules, but
+ 	// a password change an administrator forces still applies (passwordchange.go).
+ 	PasswordPolicy *passwordpolicy.Policy
++	// Lockout checks every password the flow takes. Nil checks them with the
++	// connector alone.
++	Lockout *lockout.Guard
+ }
+ 
+ // Mount registers the login routes. The /auth endpoint is both the entry
+diff --git a/server/authflow/lockout.go b/server/authflow/lockout.go
+new file mode 100644
+index 00000000..05b74f54
+--- /dev/null
++++ b/server/authflow/lockout.go
+@@ -0,0 +1,45 @@
++package authflow
++
++import (
++	"errors"
++	"net/http"
++
++	"github.com/dexidp/dex/server/useridentity"
++)
++
++// refuseLocked answers a password check that err refuses for a locked account
++// and reports whether it did. The answer is the same whatever the password, as
++// in the v2.44-based Deckhouse dex.
++func (h *Handler) refuseLocked(w http.ResponseWriter, r *http.Request, err error, connectorID, username string) bool {
++	var blocked *useridentity.BlockedError
++	if !errors.As(err, &blocked) {
++		return false
++	}
++	h.Logger.WarnContext(r.Context(), "login rejected for locked account",
++		"connector_id", connectorID, "user", username, "blocked_until", blocked.Until)
++	return h.renderLocked(r, w, err)
++}
++
++// Pages of a login refused for a locked account.
++const (
++	errMsgLockedByAdministrator = "Account locked by an administrator. Contact your administrator."
++	errMsgTemporarilyLocked     = "Account temporarily locked"
++)
++
++// renderLocked renders the page of a login that err refuses for a locked account
++// and reports whether it did. Every lock refusal of the browser flow gets this
++// page, whether the check before the password or finalizeLogin, which logs its
++// refusal itself, found the lock: HTTP 403 for the lock of an administrator,
++// HTTP 429 for an automatic lock after failed password attempts.
++func (h *Handler) renderLocked(r *http.Request, w http.ResponseWriter, err error) bool {
++	var blocked *useridentity.BlockedError
++	if !errors.As(err, &blocked) {
++		return false
++	}
++	if blocked.ByAdministrator {
++		h.renderError(r, w, http.StatusForbidden, errMsgLockedByAdministrator)
++		return true
++	}
++	h.renderError(r, w, http.StatusTooManyRequests, errMsgTemporarilyLocked)
++	return true
++}
+diff --git a/server/authflow/password.go b/server/authflow/password.go
+index a528bd77..26a6c7d3 100644
+--- a/server/authflow/password.go
++++ b/server/authflow/password.go
+@@ -11,6 +11,7 @@ import (
+ 
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/lockout"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/storage"
+ )
+@@ -80,7 +81,7 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 				if ident != nil {
+ 					authReq, err = h.finalizeLogin(ctx, *ident, authReq, conn.Connector)
+ 					if err != nil {
+-						if h.renderNotAllowed(r, w, err) {
++						if h.renderNotAllowed(r, w, err) || h.renderLocked(r, w, err) {
+ 							return
+ 						}
+ 						h.Logger.ErrorContext(ctx, "failed to finalize login", "err", err)
+@@ -104,7 +105,17 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 		password := r.FormValue("password")
+ 		scopes := tokens.ParseScopes(authReq.Scopes)
+ 
+-		identity, ok, err := pwConn.Login(r.Context(), scopes, username, password)
++		// A locked account is refused before its password is judged.
++		identity, ok, err := h.Lockout.Login(r.Context(), lockout.Attempt{
++			ConnectorID: authReq.ConnectorID,
++			Connector:   conn,
++			Scopes:      scopes,
++			Username:    username,
++			Password:    password,
++		})
++		if h.refuseLocked(w, r, err, authReq.ConnectorID, username) {
++			return
++		}
+ 		if err != nil {
+ 			h.Logger.ErrorContext(r.Context(), "failed to login user", "err", err)
+ 			h.renderError(r, w, http.StatusInternalServerError, ErrMsgLoginError)
+@@ -142,7 +153,7 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 				// page after it, and the page creates the session.
+ 				finalized, err := h.finalizeLogin(ctx, identity, authReq, conn.Connector)
+ 				if err != nil {
+-					if h.renderNotAllowed(r, w, err) {
++					if h.renderNotAllowed(r, w, err) || h.renderLocked(r, w, err) {
+ 						return
+ 					}
+ 					h.Logger.ErrorContext(ctx, "failed to finalize login", "err", err)
+@@ -155,7 +166,7 @@ func (h *Handler) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 		}
+ 		authReq, err = h.finalizeLogin(r.Context(), identity, authReq, conn.Connector)
+ 		if err != nil {
+-			if h.renderNotAllowed(r, w, err) {
++			if h.renderNotAllowed(r, w, err) || h.renderLocked(r, w, err) {
+ 				return
+ 			}
+ 			h.Logger.ErrorContext(r.Context(), "failed to finalize login", "err", err)
+diff --git a/server/authflow/passwordchange.go b/server/authflow/passwordchange.go
+index 34aa09a2..d2cfc3c9 100644
+--- a/server/authflow/passwordchange.go
++++ b/server/authflow/passwordchange.go
+@@ -32,6 +32,8 @@ package authflow
+ // when the request was made. The page of the v2.44-based Deckhouse dex
+ // redirected to any "back" address and served any user named in the query
+ // outside a login.
++//
++// A locked (user, connector) pair is refused here as on the login form (230).
+ 
+ import (
+ 	"context"
+@@ -53,6 +55,7 @@ import (
+ 	"github.com/dexidp/dex/server/passwordpolicy"
+ 	"github.com/dexidp/dex/server/templates"
+ 	"github.com/dexidp/dex/server/tokens"
++	"github.com/dexidp/dex/server/useridentity"
+ 	"github.com/dexidp/dex/storage"
+ )
+ 
+@@ -292,6 +295,16 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+ 		h.renderError(r, w, http.StatusInternalServerError, ErrMsgLoginError)
+ 		return
+ 	}
++	// A pair locked since the login form keeps its password.
++	err = useridentity.CheckBlocked(ctx, h.Storage, stored.UserID, authReq.ConnectorID, h.Now())
++	if h.refuseLocked(w, r, err, authReq.ConnectorID, username) {
++		return
++	}
++	if err != nil {
++		h.Logger.ErrorContext(ctx, "failed to check the lock", "connector_id", authReq.ConnectorID, "err", err)
++		h.renderError(r, w, http.StatusInternalServerError, ErrMsgLoginError)
++		return
++	}
+ 	if !h.changePassword(w, r, authReq.ConnectorID, page, stored) {
+ 		return
+ 	}
+@@ -320,7 +333,7 @@ func (h *Handler) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+ 		// cannot skip the change.
+ 		authReq, err = h.finalizeLogin(ctx, identity, authReq, conn.Connector)
+ 		if err != nil {
+-			if h.renderNotAllowed(r, w, err) {
++			if h.renderNotAllowed(r, w, err) || h.renderLocked(r, w, err) {
+ 				return
+ 			}
+ 			h.Logger.ErrorContext(ctx, "failed to finalize login", "err", err)
+diff --git a/server/config.go b/server/config.go
+index 003f79b6..677092f5 100644
+--- a/server/config.go
++++ b/server/config.go
+@@ -16,6 +16,7 @@ import (
+ 	"github.com/prometheus/client_golang/prometheus"
+ 
+ 	"github.com/dexidp/dex/server/authflow"
++	"github.com/dexidp/dex/server/lockout"
+ 	"github.com/dexidp/dex/server/mfa"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/passwordpolicy"
+@@ -109,6 +110,10 @@ type Config struct {
+ 	// PasswordPolicy is the password policy of local users. Nil has no rules, but
+ 	// a password change an administrator forces still applies.
+ 	PasswordPolicy *passwordpolicy.Policy
++
++	// Lockout locks a user after too many failed password attempts. Nil locks no
++	// one automatically; a lock in force is refused all the same.
++	Lockout *lockout.Policy
+ }
+ 
+ // WebConfig holds the server's frontend templates and asset configuration.
+diff --git a/server/grants/grants.go b/server/grants/grants.go
+index a29f8ace..19f84fa7 100644
+--- a/server/grants/grants.go
++++ b/server/grants/grants.go
+@@ -14,6 +14,7 @@ import (
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/connectors"
+ 	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/server/lockout"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/router"
+ 	"github.com/dexidp/dex/server/session"
+@@ -161,6 +162,9 @@ type Handler struct {
+ 	Sessions            *session.Manager
+ 	SessionsEnabled     bool
+ 	SupportedGrantTypes []string
++	// Lockout checks the password of the password grant. Nil checks it with the
++	// connector alone.
++	Lockout *lockout.Guard
+ 
+ 	grants map[string]Grant
+ }
+@@ -180,7 +184,7 @@ func (h *Handler) Mount(m router.Mux) {
+ 	h.grants = map[string]Grant{}
+ 	h.register(h.SupportedGrantTypes,
+ 		&clientCredentials{issuer: h.Issuer, logger: h.Logger},
+-		&password{issuer: h.Issuer, storage: h.Storage, now: h.Now, logger: h.Logger, connectorID: h.PasswordConnector},
++		&password{issuer: h.Issuer, storage: h.Storage, now: h.Now, logger: h.Logger, connectorID: h.PasswordConnector, lockout: h.Lockout},
+ 		&tokenExchange{issuer: h.Issuer, storage: h.Storage, now: h.Now, logger: h.Logger},
+ 		&authorizationCode{issuer: h.Issuer, storage: h.Storage, connectors: h.Connectors, now: h.Now, logger: h.Logger},
+ 		&refresh{storage: h.Storage, issuer: h.Issuer, policy: h.RefreshPolicy, sessions: h.Sessions, sessionsEnabled: h.SessionsEnabled, now: h.Now, logger: h.Logger},
+diff --git a/server/grants/lock.go b/server/grants/lock.go
+index dcb7e3c4..ed7ba32c 100644
+--- a/server/grants/lock.go
++++ b/server/grants/lock.go
+@@ -12,8 +12,9 @@ import (
+ 
+ // identityError maps the outcome of recording a user identity or checking its
+ // lock to the token response, or returns nil when err is nil. A locked account
+-// gets access_denied with HTTP 429, as from the v2.44-based Deckhouse dex.
+-// attrs name the request in the log line.
++// gets access_denied: with HTTP 403 for the lock of an administrator, with HTTP
++// 429 for an automatic lock after failed password attempts, as from the
++// v2.44-based Deckhouse dex. attrs name the request in the log line.
+ func identityError(ctx context.Context, logger *slog.Logger, err error, attrs ...any) *oauth2.Error {
+ 	var blocked *useridentity.BlockedError
+ 	switch {
+@@ -21,6 +22,9 @@ func identityError(ctx context.Context, logger *slog.Logger, err error, attrs ..
+ 		return nil
+ 	case errors.As(err, &blocked):
+ 		logger.WarnContext(ctx, "token request rejected for locked account", append(attrs, "blocked_until", blocked.Until)...)
++		if blocked.ByAdministrator {
++			return &oauth2.Error{Type: oauth2.AccessDenied, Description: "Account locked by an administrator", Status: http.StatusForbidden}
++		}
+ 		return &oauth2.Error{Type: oauth2.AccessDenied, Description: "Account locked", Status: http.StatusTooManyRequests}
+ 	default:
+ 		logger.ErrorContext(ctx, "failed to read the user identity", append(attrs, "err", err)...)
+diff --git a/server/grants/password.go b/server/grants/password.go
+index 9391d36b..2e0572ca 100644
+--- a/server/grants/password.go
++++ b/server/grants/password.go
+@@ -2,6 +2,7 @@ package grants
+ 
+ import (
+ 	"context"
++	"errors"
+ 	"log/slog"
+ 	"net/http"
+ 	"time"
+@@ -9,6 +10,7 @@ import (
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/allowlist"
+ 	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/lockout"
+ 	"github.com/dexidp/dex/server/oauth2"
+ 	"github.com/dexidp/dex/server/tokens"
+ 	"github.com/dexidp/dex/server/useridentity"
+@@ -23,6 +25,7 @@ type password struct {
+ 	now         func() time.Time
+ 	logger      *slog.Logger
+ 	connectorID string
++	lockout     *lockout.Guard
+ }
+ 
+ func (g *password) GrantType() string {
+@@ -56,12 +59,23 @@ func (g *password) ConnectorID(ctx context.Context, req *Request, client storage
+ }
+ 
+ func (g *password) Authorize(ctx context.Context, req *Request, client storage.Client, conn connectors.Connector) (Responder, error) {
+-	passwordConnector, ok := conn.Connector.(connector.PasswordConnector)
+-	if !ok {
++	if _, ok := conn.Connector.(connector.PasswordConnector); !ok {
+ 		return nil, &oauth2.Error{Type: oauth2.InvalidRequest, Description: "Requested password connector does not correct type.", Status: http.StatusBadRequest}
+ 	}
+ 
+-	identity, ok, err := passwordConnector.Login(ctx, tokens.ParseScopes(req.Scopes), req.Username, req.Password)
++	// A locked account is refused before its password is judged, and a wrong
++	// password counts towards the lockout.
++	identity, ok, err := g.lockout.Login(ctx, lockout.Attempt{
++		ConnectorID: g.connectorID,
++		Connector:   conn,
++		Scopes:      tokens.ParseScopes(req.Scopes),
++		Username:    req.Username,
++		Password:    req.Password,
++	})
++	var blocked *useridentity.BlockedError
++	if errors.As(err, &blocked) {
++		return nil, identityError(ctx, g.logger, err, "connector_id", g.connectorID, "client_id", client.ID, "user", req.Username)
++	}
+ 	if err != nil {
+ 		g.logger.ErrorContext(ctx, "failed to login user", "err", err)
+ 		return nil, &oauth2.Error{Type: oauth2.InvalidRequest, Description: "Could not login user", Status: http.StatusBadRequest}
+diff --git a/server/lockout/lockout.go b/server/lockout/lockout.go
+new file mode 100644
+index 00000000..c5d6ddec
+--- /dev/null
++++ b/server/lockout/lockout.go
+@@ -0,0 +1,297 @@
++// Package lockout guards every password check: the login form and the password
++// grant check a password through Guard.Login, for the local password database
++// and for external password connectors (LDAP, Atlassian Crowd) alike. The
++// password change page takes no password; it refuses a locked pair with
++// useridentity.CheckBlocked.
++//
++// Guard.Login refuses a locked (user, connector) pair before its password is
++// judged, so the answer does not depend on whether the password is right. It
++// counts consecutive failed attempts and, past the limit of the policy, locks the
++// pair for a while; a right password resets the count. The lock is
++// UserIdentity.BlockedUntil, the field an administrator lock sets too, and
++// useridentity.CheckBlocked is the one decision whether a pair is locked.
++//
++// Local users keep their count on the Password object, as the v2.44-based
++// Deckhouse dex did; users of external connectors keep it on their UserIdentity.
++package lockout
++
++import (
++	"context"
++	"errors"
++	"fmt"
++	"log/slog"
++	"slices"
++	"strings"
++	"time"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/useridentity"
++	"github.com/dexidp/dex/storage"
++)
++
++// Policy is the automatic lockout after failed password attempts.
++type Policy struct {
++	// MaxAttempts is the number of consecutive failed attempts that locks the
++	// pair. Zero locks it at the first one, as in the v2.44-based Deckhouse dex.
++	MaxAttempts uint64
++	// Duration is how long the automatic lock lasts.
++	Duration time.Duration
++	// ConnectorTypes are the external password connectors whose users the policy
++	// covers too, such as "ldap" and "atlassian-crowd", in any case. Local users
++	// are always covered.
++	ConnectorTypes []string
++}
++
++// covers reports whether the policy locks users of a connector of type t.
++func (p *Policy) covers(t string) bool {
++	if p == nil {
++		return false
++	}
++	return t == connectors.LocalConnector || slices.ContainsFunc(p.ConnectorTypes, func(c string) bool {
++		return strings.EqualFold(c, t)
++	})
++}
++
++// reached reports whether attempts consecutive failures lock the pair.
++func (p *Policy) reached(attempts uint64) bool {
++	return p != nil && attempts >= p.MaxAttempts
++}
++
++// Guard checks passwords. A nil *Guard checks them with the connector alone.
++type Guard struct {
++	Storage storage.Storage
++	Now     func() time.Time
++	Logger  *slog.Logger
++	// Policy is the automatic lockout. Nil locks no one automatically; a lock
++	// already in force is refused all the same.
++	Policy *Policy
++}
++
++// Attempt is a password presented for a user of a password connector.
++type Attempt struct {
++	ConnectorID string
++	Connector   connectors.Connector
++	Scopes      connector.Scopes
++	Username    string
++	Password    string
++}
++
++// Login checks the password of a with its connector and returns what the
++// connector returns. A locked pair gets *useridentity.BlockedError: before its
++// password is judged for a local user; for a user of an external connector, who
++// is known only once the connector has looked him up, before the result is used.
++// A failed attempt that reaches the limit of the policy locks the pair and gets
++// *useridentity.BlockedError too.
++func (g *Guard) Login(ctx context.Context, a Attempt) (connector.Identity, bool, error) {
++	pw, ok := a.Connector.Connector.(connector.PasswordConnector)
++	if !ok {
++		return connector.Identity{}, false, fmt.Errorf("lockout: connector %q does not take passwords", a.ConnectorID)
++	}
++	if g == nil {
++		return pw.Login(ctx, a.Scopes, a.Username, a.Password)
++	}
++	if a.Connector.Type == connectors.LocalConnector {
++		return g.loginLocal(ctx, a, pw)
++	}
++	return g.loginExternal(ctx, a, pw)
++}
++
++func (g *Guard) loginLocal(ctx context.Context, a Attempt, pw connector.PasswordConnector) (connector.Identity, bool, error) {
++	now := g.Now()
++	stored, err := g.Storage.GetPassword(ctx, a.Username)
++	switch {
++	case errors.Is(err, storage.ErrNotFound):
++		// No such user: nothing to refuse or count.
++		return pw.Login(ctx, a.Scopes, a.Username, a.Password)
++	case err != nil:
++		return connector.Identity{}, false, fmt.Errorf("get password: %w", err)
++	}
++	if err := useridentity.CheckBlocked(ctx, g.Storage, stored.UserID, a.ConnectorID, now); err != nil {
++		return connector.Identity{}, false, err
++	}
++
++	identity, valid, err := pw.Login(ctx, a.Scopes, a.Username, a.Password)
++	switch {
++	case err != nil:
++		return identity, false, err
++	case valid:
++		if stored.IncorrectPasswordLoginAttempts > 0 {
++			g.updatePassword(ctx, a, "failed to reset the failed login attempts", resetAttempts)
++		}
++		return identity, true, nil
++	}
++
++	// The count is kept whether or not a policy locks anyone, as the user-authn
++	// controller shows it.
++	var attempts uint64
++	if !g.updatePassword(ctx, a, "failed to count a failed login attempt", func(p *storage.Password) {
++		p.IncorrectPasswordLoginAttempts++
++		attempts = p.IncorrectPasswordLoginAttempts
++	}) || !g.Policy.reached(attempts) {
++		return identity, false, nil
++	}
++
++	var until time.Time
++	err = g.updateIdentity(ctx, stored.UserID, a.ConnectorID, passwordClaims(stored), now, func(u *storage.UserIdentity) {
++		u.BlockedUntil = later(u.BlockedUntil, now.Add(g.Policy.Duration))
++		until = u.BlockedUntil
++	})
++	if err != nil {
++		// The count stays at the limit, so the next failure locks.
++		g.Logger.ErrorContext(ctx, "failed to lock account", "connector_id", a.ConnectorID, "user_id", stored.UserID, "err", err)
++		return identity, false, nil
++	}
++	g.logLocked(ctx, a.ConnectorID, stored.UserID, attempts, until)
++	g.updatePassword(ctx, a, "failed to reset the failed login attempts", resetAttempts)
++	return identity, false, &useridentity.BlockedError{Until: until}
++}
++
++func (g *Guard) loginExternal(ctx context.Context, a Attempt, pw connector.PasswordConnector) (connector.Identity, bool, error) {
++	now := g.Now()
++	identity, valid, err := pw.Login(ctx, a.Scopes, a.Username, a.Password)
++	if err != nil {
++		return identity, false, err
++	}
++	// The LDAP and Crowd connectors name the user of a wrong password too.
++	if identity.UserID == "" {
++		return identity, valid, nil
++	}
++	if err := useridentity.CheckBlocked(ctx, g.Storage, identity.UserID, a.ConnectorID, now); err != nil {
++		return connector.Identity{}, false, err
++	}
++
++	if valid {
++		err := g.Storage.UpdateUserIdentity(ctx, identity.UserID, a.ConnectorID, func(u storage.UserIdentity) (storage.UserIdentity, error) {
++			if u.IncorrectPasswordLoginAttempts == 0 {
++				return u, errUnchanged
++			}
++			u.IncorrectPasswordLoginAttempts = 0
++			return u, nil
++		})
++		if err != nil && !errors.Is(err, errUnchanged) && !errors.Is(err, storage.ErrNotFound) {
++			g.Logger.ErrorContext(ctx, "failed to reset the failed login attempts",
++				"connector_id", a.ConnectorID, "user_id", identity.UserID, "err", err)
++		}
++		return identity, true, nil
++	}
++	if !g.Policy.covers(a.Connector.Type) {
++		return identity, false, nil
++	}
++
++	var attempts uint64
++	var until time.Time
++	claims := storage.Claims{UserID: identity.UserID, Username: identity.Username, Email: identity.Email}
++	err = g.updateIdentity(ctx, identity.UserID, a.ConnectorID, claims, now, func(u *storage.UserIdentity) {
++		u.IncorrectPasswordLoginAttempts++
++		attempts, until = u.IncorrectPasswordLoginAttempts, time.Time{}
++		if g.Policy.reached(attempts) {
++			u.BlockedUntil = later(u.BlockedUntil, now.Add(g.Policy.Duration))
++			u.IncorrectPasswordLoginAttempts = 0
++			until = u.BlockedUntil
++		}
++	})
++	switch {
++	case err != nil:
++		g.Logger.ErrorContext(ctx, "failed to count a failed login attempt",
++			"connector_id", a.ConnectorID, "user_id", identity.UserID, "err", err)
++		return identity, false, nil
++	case until.IsZero():
++		return identity, false, nil
++	}
++	g.logLocked(ctx, a.ConnectorID, identity.UserID, attempts, until)
++	return identity, false, &useridentity.BlockedError{Until: until}
++}
++
++func (g *Guard) logLocked(ctx context.Context, connectorID, userID string, attempts uint64, until time.Time) {
++	g.Logger.WarnContext(ctx, "account locked due to too many failed attempts",
++		"connector_id", connectorID, "user_id", userID, "attempts", attempts, "blocked_until", until)
++}
++
++// errUnchanged aborts an update that has nothing to write.
++var errUnchanged = errors.New("lockout: unchanged")
++
++// passwordUpdateAttempts bounds the tries of an update of a Password object.
++// Parallel failed logins of one user conflict, and the kubernetes storage does
++// not retry a conflicting write of a Password as it does for a UserIdentity; an
++// attempt left uncounted would let parallel guesses pass the limit.
++const passwordUpdateAttempts = 5
++
++// updatePassword applies change to the Password of the local user of a and
++// reports whether it was stored. A failure is logged with msg and not returned:
++// the static passwords of the config file cannot be written, and their users
++// still log in, as upstream lets them.
++func (g *Guard) updatePassword(ctx context.Context, a Attempt, msg string, change func(*storage.Password)) bool {
++	update := func(p storage.Password) (storage.Password, error) {
++		change(&p)
++		return p, nil
++	}
++	err := g.Storage.UpdatePassword(ctx, a.Username, update)
++	for try := 1; err != nil && try < passwordUpdateAttempts; try++ {
++		if errors.Is(err, storage.ErrNotFound) {
++			return false // deleted meanwhile
++		}
++		select {
++		case <-ctx.Done():
++			return false
++		case <-time.After(time.Duration(try) * 5 * time.Millisecond):
++		}
++		err = g.Storage.UpdatePassword(ctx, a.Username, update)
++	}
++	if err != nil {
++		g.Logger.ErrorContext(ctx, msg, "connector_id", a.ConnectorID, "user", a.Username, "err", err)
++		return false
++	}
++	return true
++}
++
++func resetAttempts(p *storage.Password) { p.IncorrectPasswordLoginAttempts = 0 }
++
++// updateIdentity applies change to the identity of the pair, creating one with
++// claims when the pair has none: a lock or a count may come before any login.
++func (g *Guard) updateIdentity(ctx context.Context, userID, connectorID string, claims storage.Claims, now time.Time, change func(*storage.UserIdentity)) error {
++	update := func(u storage.UserIdentity) (storage.UserIdentity, error) {
++		change(&u)
++		return u, nil
++	}
++	err := g.Storage.UpdateUserIdentity(ctx, userID, connectorID, update)
++	if !errors.Is(err, storage.ErrNotFound) {
++		return err
++	}
++
++	u := storage.UserIdentity{
++		UserID:      userID,
++		ConnectorID: connectorID,
++		Claims:      claims,
++		Consents:    make(map[string][]string),
++		CreatedAt:   now,
++	}
++	change(&u)
++	err = g.Storage.CreateUserIdentity(ctx, u)
++	if errors.Is(err, storage.ErrAlreadyExists) {
++		// Created meanwhile, by a parallel login.
++		return g.Storage.UpdateUserIdentity(ctx, userID, connectorID, update)
++	}
++	return err
++}
++
++// passwordClaims are the claims a login of the local user p would have.
++func passwordClaims(p storage.Password) storage.Claims {
++	return storage.Claims{
++		UserID:            p.UserID,
++		Username:          p.Username,
++		PreferredUsername: p.PreferredUsername,
++		Email:             p.Email,
++		EmailVerified:     p.EmailVerified == nil || *p.EmailVerified,
++		Groups:            p.Groups,
++	}
++}
++
++// later never lets an automatic lock shorten a lock in force, an administrator
++// lock without an end included.
++func later(current, candidate time.Time) time.Time {
++	if current.After(candidate) {
++		return current
++	}
++	return candidate
++}
+diff --git a/server/lockout/lockout_test.go b/server/lockout/lockout_test.go
+new file mode 100644
+index 00000000..ecc11730
+--- /dev/null
++++ b/server/lockout/lockout_test.go
+@@ -0,0 +1,413 @@
++package lockout
++
++import (
++	"context"
++	"errors"
++	"log/slog"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++	"golang.org/x/crypto/bcrypt"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/useridentity"
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++const (
++	userEmail = "jane@example.com"
++	userID    = "jane-id"
++	rightPass = "right"
++)
++
++// stubConnector is a password connector with one user. Like the LDAP and Crowd
++// connectors, it names the user of a wrong password with the user ID and email.
++type stubConnector struct {
++	logins int
++}
++
++func (c *stubConnector) Login(_ context.Context, _ connector.Scopes, username, password string) (connector.Identity, bool, error) {
++	c.logins++
++	if username != "jane" {
++		return connector.Identity{}, false, nil
++	}
++	if password != rightPass {
++		return connector.Identity{UserID: userID, Email: userEmail}, false, nil
++	}
++	return connector.Identity{UserID: userID, Username: "jane", Email: userEmail}, true, nil
++}
++
++func (c *stubConnector) Prompt() string { return "" }
++
++type clock struct{ now time.Time }
++
++func (c *clock) Now() time.Time { return c.now }
++
++func newGuard(t *testing.T, s storage.Storage, policy *Policy) (*Guard, *clock) {
++	t.Helper()
++	c := &clock{now: time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)}
++	return &Guard{Storage: s, Now: c.Now, Logger: slog.New(slog.DiscardHandler), Policy: policy}, c
++}
++
++func newLocalStorage(t *testing.T) storage.Storage {
++	t.Helper()
++	s := memory.New(slog.New(slog.DiscardHandler))
++	hash, err := bcrypt.GenerateFromPassword([]byte(rightPass), bcrypt.DefaultCost)
++	require.NoError(t, err)
++	require.NoError(t, s.CreatePassword(t.Context(), storage.Password{
++		Email: userEmail, Username: "jane", UserID: userID, Hash: hash,
++	}))
++	return s
++}
++
++func localAttempt(s storage.Storage, password string) Attempt {
++	return Attempt{
++		ConnectorID: "local",
++		Connector:   connectors.Connector{Type: connectors.LocalConnector, Connector: connectors.NewPasswordDB(s)},
++		Username:    userEmail,
++		Password:    password,
++	}
++}
++
++func externalAttempt(conn *stubConnector, connectorType, password string) Attempt {
++	return Attempt{
++		ConnectorID: "corp",
++		Connector:   connectors.Connector{Type: connectorType, Connector: conn},
++		Username:    "jane",
++		Password:    password,
++	}
++}
++
++func localAttempts(t *testing.T, s storage.Storage) uint64 {
++	t.Helper()
++	p, err := s.GetPassword(t.Context(), userEmail)
++	require.NoError(t, err)
++	return p.IncorrectPasswordLoginAttempts
++}
++
++func requireBlocked(t *testing.T, err error, until time.Time) {
++	t.Helper()
++	var blocked *useridentity.BlockedError
++	require.ErrorAs(t, err, &blocked)
++	require.True(t, until.Equal(blocked.Until), "blocked until %s, want %s", blocked.Until, until)
++}
++
++func TestLocalLockout(t *testing.T) {
++	ctx := t.Context()
++	s := newLocalStorage(t)
++	g, c := newGuard(t, s, &Policy{MaxAttempts: 3, Duration: time.Hour})
++
++	for attempt := uint64(1); attempt < 3; attempt++ {
++		_, ok, err := g.Login(ctx, localAttempt(s, "wrong"))
++		require.NoError(t, err)
++		require.False(t, ok)
++		require.Equal(t, attempt, localAttempts(t, s))
++	}
++	_, err := s.GetUserIdentity(ctx, userID, "local")
++	require.ErrorIs(t, err, storage.ErrNotFound, "counting writes no identity")
++
++	// The third failure locks and starts the count over.
++	_, ok, err := g.Login(ctx, localAttempt(s, "wrong"))
++	require.False(t, ok)
++	requireBlocked(t, err, c.now.Add(time.Hour))
++	assert.Zero(t, localAttempts(t, s))
++
++	ui, err := s.GetUserIdentity(ctx, userID, "local")
++	require.NoError(t, err)
++	assert.Equal(t, c.now.Add(time.Hour), ui.BlockedUntil)
++	assert.Equal(t, storage.Claims{UserID: userID, Username: "jane", Email: userEmail, EmailVerified: true}, ui.Claims)
++	assert.True(t, ui.LastLogin.IsZero(), "a lock is no login")
++
++	// Locked: the right password is refused and a wrong one is not counted.
++	for _, password := range []string{rightPass, "wrong"} {
++		_, ok, err := g.Login(ctx, localAttempt(s, password))
++		require.False(t, ok)
++		requireBlocked(t, err, c.now.Add(time.Hour))
++	}
++	assert.Zero(t, localAttempts(t, s))
++
++	// Once the lock ends, the right password logs in.
++	c.now = c.now.Add(time.Hour)
++	ident, ok, err := g.Login(ctx, localAttempt(s, rightPass))
++	require.NoError(t, err)
++	require.True(t, ok)
++	assert.Equal(t, userID, ident.UserID)
++}
++
++func TestLocalCountWithoutPolicy(t *testing.T) {
++	ctx := t.Context()
++	s := newLocalStorage(t)
++	g, _ := newGuard(t, s, nil)
++
++	for range 5 {
++		_, ok, err := g.Login(ctx, localAttempt(s, "wrong"))
++		require.NoError(t, err)
++		require.False(t, ok)
++	}
++	assert.Equal(t, uint64(5), localAttempts(t, s), "the count is kept for the user-authn controller")
++
++	_, ok, err := g.Login(ctx, localAttempt(s, rightPass))
++	require.NoError(t, err)
++	require.True(t, ok)
++	assert.Zero(t, localAttempts(t, s), "a right password resets the count")
++
++	_, err = s.GetUserIdentity(ctx, userID, "local")
++	require.ErrorIs(t, err, storage.ErrNotFound)
++}
++
++func TestLocalUnknownUser(t *testing.T) {
++	s := newLocalStorage(t)
++	g, _ := newGuard(t, s, &Policy{MaxAttempts: 1, Duration: time.Hour})
++
++	attempt := localAttempt(s, "wrong")
++	attempt.Username = "nobody@example.com"
++	_, ok, err := g.Login(t.Context(), attempt)
++	require.NoError(t, err)
++	require.False(t, ok)
++	assert.Zero(t, localAttempts(t, s))
++}
++
++// A locked user gets the same answer whatever the password, and the local
++// password is not even checked.
++func TestLockedBeforePassword(t *testing.T) {
++	ctx := t.Context()
++	until := time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)
++	lock := func(t *testing.T, s storage.Storage, connectorID string) {
++		t.Helper()
++		require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{
++			UserID: userID, ConnectorID: connectorID, BlockedUntil: until, Consents: map[string][]string{},
++		}))
++	}
++
++	t.Run("local", func(t *testing.T) {
++		s := memory.New(slog.New(slog.DiscardHandler))
++		require.NoError(t, s.CreatePassword(ctx, storage.Password{Email: userEmail, UserID: userID, Hash: []byte("x")}))
++		lock(t, s, "local")
++		g, _ := newGuard(t, s, nil)
++		conn := &stubConnector{}
++		for _, password := range []string{rightPass, "wrong"} {
++			_, ok, err := g.Login(ctx, Attempt{
++				ConnectorID: "local",
++				Connector:   connectors.Connector{Type: connectors.LocalConnector, Connector: conn},
++				Username:    userEmail,
++				Password:    password,
++			})
++			require.False(t, ok)
++			requireBlocked(t, err, until)
++		}
++		assert.Zero(t, conn.logins, "the password is not checked")
++	})
++
++	t.Run("external", func(t *testing.T) {
++		s := memory.New(slog.New(slog.DiscardHandler))
++		lock(t, s, "corp")
++		g, _ := newGuard(t, s, &Policy{MaxAttempts: 1, Duration: time.Hour, ConnectorTypes: []string{"ldap"}})
++		conn := &stubConnector{}
++		for _, password := range []string{rightPass, "wrong"} {
++			ident, ok, err := g.Login(ctx, externalAttempt(conn, "ldap", password))
++			require.False(t, ok)
++			assert.Empty(t, ident.UserID)
++			requireBlocked(t, err, until)
++		}
++		ui, err := s.GetUserIdentity(ctx, userID, "corp")
++		require.NoError(t, err)
++		assert.Zero(t, ui.IncorrectPasswordLoginAttempts, "a refused attempt is not counted")
++	})
++}
++
++func TestExternalLockout(t *testing.T) {
++	ctx := t.Context()
++	s := memory.New(slog.New(slog.DiscardHandler))
++	g, c := newGuard(t, s, &Policy{MaxAttempts: 2, Duration: time.Hour, ConnectorTypes: []string{"LDAP", "atlassian-crowd"}})
++	conn := &stubConnector{}
++
++	// The first failure creates the identity of a user who never logged in.
++	_, ok, err := g.Login(ctx, externalAttempt(conn, "ldap", "wrong"))
++	require.NoError(t, err)
++	require.False(t, ok)
++	ui, err := s.GetUserIdentity(ctx, userID, "corp")
++	require.NoError(t, err)
++	assert.Equal(t, uint64(1), ui.IncorrectPasswordLoginAttempts)
++	assert.Equal(t, storage.Claims{UserID: userID, Email: userEmail}, ui.Claims)
++	assert.True(t, ui.BlockedUntil.IsZero())
++
++	// A right password resets the count.
++	_, ok, err = g.Login(ctx, externalAttempt(conn, "ldap", rightPass))
++	require.NoError(t, err)
++	require.True(t, ok)
++	ui, err = s.GetUserIdentity(ctx, userID, "corp")
++	require.NoError(t, err)
++	assert.Zero(t, ui.IncorrectPasswordLoginAttempts)
++
++	_, _, err = g.Login(ctx, externalAttempt(conn, "ldap", "wrong"))
++	require.NoError(t, err)
++	_, ok, err = g.Login(ctx, externalAttempt(conn, "ldap", "wrong"))
++	require.False(t, ok)
++	requireBlocked(t, err, c.now.Add(time.Hour))
++	ui, err = s.GetUserIdentity(ctx, userID, "corp")
++	require.NoError(t, err)
++	assert.Zero(t, ui.IncorrectPasswordLoginAttempts)
++	assert.Equal(t, c.now.Add(time.Hour), ui.BlockedUntil)
++}
++
++func TestExternalNotCovered(t *testing.T) {
++	ctx := t.Context()
++	s := memory.New(slog.New(slog.DiscardHandler))
++	g, _ := newGuard(t, s, &Policy{MaxAttempts: 1, Duration: time.Hour, ConnectorTypes: []string{"ldap"}})
++	conn := &stubConnector{}
++
++	_, ok, err := g.Login(ctx, externalAttempt(conn, "keystone", "wrong"))
++	require.NoError(t, err)
++	require.False(t, ok)
++	_, err = s.GetUserIdentity(ctx, userID, "corp")
++	require.ErrorIs(t, err, storage.ErrNotFound, "a connector the policy does not list is not counted")
++
++	// An unknown user is named by no one: nothing to count.
++	attempt := externalAttempt(conn, "ldap", "wrong")
++	attempt.Username = "nobody"
++	_, ok, err = g.Login(ctx, attempt)
++	require.NoError(t, err)
++	require.False(t, ok)
++	_, err = s.GetUserIdentity(ctx, userID, "corp")
++	require.ErrorIs(t, err, storage.ErrNotFound)
++}
++
++// lateLockStorage hides the lock from the check before the password, as if an
++// administrator locked the pair right after it.
++type lateLockStorage struct {
++	storage.Storage
++}
++
++func (s lateLockStorage) GetUserIdentity(ctx context.Context, userID, connectorID string) (storage.UserIdentity, error) {
++	ui, err := s.Storage.GetUserIdentity(ctx, userID, connectorID)
++	ui.BlockedUntil = time.Time{}
++	return ui, err
++}
++
++// An automatic lock never shortens a lock in force, an administrator lock
++// without an end included.
++func TestAutomaticLockNeverShortens(t *testing.T) {
++	ctx := t.Context()
++	forever := time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)
++	newStorage := func(t *testing.T, connectorID string) storage.Storage {
++		s := newLocalStorage(t)
++		require.NoError(t, s.CreateUserIdentity(ctx, storage.UserIdentity{
++			UserID: userID, ConnectorID: connectorID, BlockedUntil: forever, Consents: map[string][]string{},
++		}))
++		return lateLockStorage{s}
++	}
++
++	t.Run("local", func(t *testing.T) {
++		s := newStorage(t, "local")
++		g, _ := newGuard(t, s, &Policy{MaxAttempts: 1, Duration: time.Hour})
++		_, _, err := g.Login(ctx, localAttempt(s, "wrong"))
++		requireBlocked(t, err, forever)
++	})
++
++	t.Run("external", func(t *testing.T) {
++		s := newStorage(t, "corp")
++		g, _ := newGuard(t, s, &Policy{MaxAttempts: 1, Duration: time.Hour, ConnectorTypes: []string{"ldap"}})
++		_, _, err := g.Login(ctx, externalAttempt(&stubConnector{}, "ldap", "wrong"))
++		requireBlocked(t, err, forever)
++	})
++}
++
++// conflictStorage fails the first updates of a Password, as parallel writes of
++// the kubernetes storage do, or every one, as the static passwords do.
++type conflictStorage struct {
++	storage.Storage
++	failures int
++}
++
++func (s *conflictStorage) UpdatePassword(ctx context.Context, email string, updater func(storage.Password) (storage.Password, error)) error {
++	if s.failures != 0 {
++		s.failures--
++		return errors.New("conflict")
++	}
++	return s.Storage.UpdatePassword(ctx, email, updater)
++}
++
++func TestLocalCountRetried(t *testing.T) {
++	ctx := t.Context()
++
++	s := &conflictStorage{Storage: newLocalStorage(t), failures: passwordUpdateAttempts - 1}
++	g, _ := newGuard(t, s, nil)
++	_, ok, err := g.Login(ctx, localAttempt(s, "wrong"))
++	require.NoError(t, err)
++	require.False(t, ok)
++	assert.Equal(t, uint64(1), localAttempts(t, s), "a conflicting write is retried")
++
++	// A Password that cannot be written still answers as a wrong password.
++	s.failures = -1
++	_, ok, err = g.Login(ctx, localAttempt(s, "wrong"))
++	require.NoError(t, err)
++	require.False(t, ok)
++	_, ok, err = g.Login(ctx, localAttempt(s, rightPass))
++	require.NoError(t, err)
++	require.True(t, ok)
++}
++
++func TestNilGuard(t *testing.T) {
++	var g *Guard
++	conn := &stubConnector{}
++	ident, ok, err := g.Login(t.Context(), externalAttempt(conn, "ldap", rightPass))
++	require.NoError(t, err)
++	require.True(t, ok)
++	assert.Equal(t, userID, ident.UserID)
++
++	_, _, err = g.Login(t.Context(), Attempt{Connector: connectors.Connector{Type: "oidc"}})
++	require.Error(t, err, "not a password connector")
++}
++
++// oldPlaceLock reads a pair that has no identity as locked until until, as the
++// transitional kubernetes storage reads a lock the v2.44-based dex kept outside
++// UserIdentity.
++type oldPlaceLock struct {
++	storage.Storage
++	until time.Time
++}
++
++func (s *oldPlaceLock) GetUserIdentity(ctx context.Context, userID, connectorID string) (storage.UserIdentity, error) {
++	u, err := s.Storage.GetUserIdentity(ctx, userID, connectorID)
++	if errors.Is(err, storage.ErrNotFound) {
++		return storage.UserIdentity{UserID: userID, ConnectorID: connectorID, BlockedUntil: s.until}, nil
++	}
++	return u, err
++}
++
++// A pair locked only in the old storage is refused before its password is
++// judged, whatever the password, and nothing is counted or recorded for it.
++func TestOldPlaceLockRefusedBeforePassword(t *testing.T) {
++	for _, password := range []string{rightPass, "wrong"} {
++		t.Run("local user, "+password+" password", func(t *testing.T) {
++			ctx := t.Context()
++			s := &oldPlaceLock{Storage: newLocalStorage(t)}
++			g, c := newGuard(t, s, &Policy{MaxAttempts: 1, Duration: time.Hour})
++			s.until = c.now.Add(time.Hour)
++
++			_, ok, err := g.Login(ctx, localAttempt(s, password))
++			require.False(t, ok)
++			requireBlocked(t, err, s.until)
++			assert.Zero(t, localAttempts(t, s))
++			_, err = s.Storage.GetUserIdentity(ctx, userID, "local")
++			assert.ErrorIs(t, err, storage.ErrNotFound)
++		})
++
++		t.Run("external user, "+password+" password", func(t *testing.T) {
++			ctx := t.Context()
++			s := &oldPlaceLock{Storage: memory.New(slog.New(slog.DiscardHandler))}
++			g, c := newGuard(t, s, &Policy{MaxAttempts: 1, Duration: time.Hour, ConnectorTypes: []string{"ldap"}})
++			s.until = c.now.Add(time.Hour)
++
++			_, ok, err := g.Login(ctx, externalAttempt(&stubConnector{}, "ldap", password))
++			require.False(t, ok)
++			requireBlocked(t, err, s.until)
++			_, err = s.Storage.GetUserIdentity(ctx, userID, "corp")
++			assert.ErrorIs(t, err, storage.ErrNotFound, "a refused attempt is not counted")
++		})
++	}
++}
+diff --git a/server/server.go b/server/server.go
+index fc8495cf..eb55db2a 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -23,6 +23,7 @@ import (
+ 	"github.com/dexidp/dex/server/grants"
+ 	"github.com/dexidp/dex/server/home"
+ 	"github.com/dexidp/dex/server/introspection"
++	"github.com/dexidp/dex/server/lockout"
+ 	"github.com/dexidp/dex/server/logout"
+ 	"github.com/dexidp/dex/server/mfa"
+ 	"github.com/dexidp/dex/server/oauth2"
+@@ -232,6 +233,8 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+ 	// persisted state and config, so mfa and consent are mounted inline like the
+ 	// rest.
+ 	sessions := s.sessions
++	// guard checks every password: the login form and the password grant.
++	guard := &lockout.Guard{Storage: s.storage, Now: rc.now, Logger: s.logger, Policy: c.Lockout}
+ 
+ 	for _, h := range []router.Handler{
+ 		s.discovery,
+@@ -246,6 +249,7 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+ 			Sessions:            sessions,
+ 			SessionsEnabled:     c.SessionConfig != nil,
+ 			SupportedGrantTypes: rc.grantTypes,
++			Lockout:             guard,
+ 		},
+ 		&userinfo.Handler{
+ 			Issuer: s.issuerURL.String(),
+@@ -295,6 +299,7 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+ 			DefaultMFAChain:        c.DefaultMFAChain,
+ 			SkipApproval:           c.SkipApprovalScreen,
+ 			PasswordPolicy:         c.PasswordPolicy,
++			Lockout:                guard,
+ 		},
+ 		&mfa.Handler{
+ 			Storage:         s.storage,
+diff --git a/server/server_lockout_test.go b/server/server_lockout_test.go
+new file mode 100644
+index 00000000..92f4ed60
+--- /dev/null
++++ b/server/server_lockout_test.go
+@@ -0,0 +1,331 @@
++package server
++
++import (
++	"context"
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++	"golang.org/x/crypto/bcrypt"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/connectors"
++	"github.com/dexidp/dex/server/lockout"
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/storage"
++)
++
++const (
++	lockoutUserEmail = "user@example.com"
++	lockoutUserID    = "user-id"
++	lockoutPassword  = "Secret-" + "passw0rd"
++	lockoutAuthReq   = "lockout-req"
++)
++
++// newLocalLockoutServer serves the local connector, for the login form and the
++// password grant, with one local user and an auth request of the form. configure
++// adjusts the server config further.
++func newLocalLockoutServer(t *testing.T, policy *lockout.Policy, update func(*storage.Password), configure ...func(*Config)) *Server {
++	t.Helper()
++	ctx := t.Context()
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.PasswordConnector = "local"
++		c.Lockout = policy
++		for _, f := range configure {
++			f(c)
++		}
++	})
++	t.Cleanup(httpServer.Close)
++
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++		ID: "test", Secret: "barfoo", RedirectURIs: []string{"https://client.example/cb"},
++	}))
++	localConn := storage.Connector{ID: "local", Type: connectors.LocalConnector, Name: "Email", ResourceVersion: "1"}
++	require.NoError(t, s.storage.CreateConnector(ctx, localConn))
++	_, err := s.connectors.Open(localConn)
++	require.NoError(t, err)
++
++	hash, err := bcrypt.GenerateFromPassword([]byte(lockoutPassword), bcrypt.DefaultCost)
++	require.NoError(t, err)
++	p := storage.Password{Email: lockoutUserEmail, Username: "user", UserID: lockoutUserID, Hash: hash, HashUpdatedAt: time.Now()}
++	if update != nil {
++		update(&p)
++	}
++	require.NoError(t, s.storage.CreatePassword(ctx, p))
++
++	require.NoError(t, s.storage.CreateAuthRequest(ctx, storage.AuthRequest{
++		ID: lockoutAuthReq, ClientID: "test", ConnectorID: "local",
++		ResponseTypes: []string{"code"}, Scopes: []string{"openid"}, RedirectURI: "https://client.example/cb",
++		Expiry: time.Now().Add(time.Hour), HMACKey: []byte("0123456789abcdef0123456789abcdef"),
++	}))
++	return s
++}
++
++func serveForm(s *Server, target string, form url.Values) *httptest.ResponseRecorder {
++	req := httptest.NewRequest(http.MethodPost, target, strings.NewReader(form.Encode()))
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	rr := httptest.NewRecorder()
++	s.ServeHTTP(rr, req)
++	return rr
++}
++
++func postLoginForm(s *Server, password string) *httptest.ResponseRecorder {
++	return serveForm(s, "/auth/local/login?state="+lockoutAuthReq, url.Values{"login": {lockoutUserEmail}, "password": {password}})
++}
++
++func localPasswordGrant(t *testing.T, s *Server, password string) *httptest.ResponseRecorder {
++	t.Helper()
++	return postToken(t, s, url.Values{
++		"grant_type": {oauth2.GrantTypePassword},
++		"scope":      {"openid email"},
++		"username":   {lockoutUserEmail},
++		"password":   {password},
++	})
++}
++
++func lockLocalUser(t *testing.T, s *Server, until time.Time) {
++	t.Helper()
++	require.NoError(t, s.storage.CreateUserIdentity(t.Context(), storage.UserIdentity{
++		UserID: lockoutUserID, ConnectorID: "local", BlockedUntil: until, Consents: map[string][]string{},
++	}))
++}
++
++func failedAttempts(t *testing.T, s *Server) uint64 {
++	t.Helper()
++	p, err := s.storage.GetPassword(t.Context(), lockoutUserEmail)
++	require.NoError(t, err)
++	return p.IncorrectPasswordLoginAttempts
++}
++
++// A locked user gets the same answer from the login form and the password grant
++// whatever the password, and the attempts are not counted.
++func TestLockedAccountRefusedBeforePassword(t *testing.T) {
++	s := newLocalLockoutServer(t, &lockout.Policy{MaxAttempts: 1, Duration: time.Hour}, nil)
++	lockLocalUser(t, s, time.Now().Add(time.Hour))
++
++	right, wrong := postLoginForm(s, lockoutPassword), postLoginForm(s, "wrong")
++	assert.Equal(t, http.StatusTooManyRequests, right.Code)
++	assert.Equal(t, right.Code, wrong.Code)
++	assert.Equal(t, right.Body.String(), wrong.Body.String())
++
++	requireAccountLocked(t, localPasswordGrant(t, s, lockoutPassword))
++	requireAccountLocked(t, localPasswordGrant(t, s, "wrong"))
++
++	assert.Zero(t, failedAttempts(t, s))
++}
++
++// The lock of an administrator gets its own answer, 403, whatever the password;
++// once an automatic lock outlasts it, the answer is the automatic lock's again.
++func TestAdministratorLockRefusal(t *testing.T) {
++	tests := []struct {
++		name         string
++		blockedUntil time.Duration
++		formStatus   int
++		formText     string
++		grantStatus  int
++		grantText    string
++	}{
++		{
++			name:         "locked by an administrator",
++			blockedUntil: time.Hour,
++			formStatus:   http.StatusForbidden,
++			formText:     "Account locked by an administrator. Contact your administrator.",
++			grantStatus:  http.StatusForbidden,
++			grantText:    "Account locked by an administrator",
++		},
++		{
++			name:         "an automatic lock outlasts the administrator's",
++			blockedUntil: 2 * time.Hour,
++			formStatus:   http.StatusTooManyRequests,
++			formText:     "Account temporarily locked",
++			grantStatus:  http.StatusTooManyRequests,
++			grantText:    "Account locked",
++		},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			s := newLocalLockoutServer(t, &lockout.Policy{MaxAttempts: 1, Duration: time.Hour}, nil)
++			admin := time.Now().Add(time.Hour).UTC()
++			require.NoError(t, s.storage.CreateUserIdentity(t.Context(), storage.UserIdentity{
++				UserID: lockoutUserID, ConnectorID: "local", Consents: map[string][]string{},
++				BlockedUntil: admin.Add(tt.blockedUntil - time.Hour), AdminLockedUntil: admin,
++			}))
++
++			for _, password := range []string{lockoutPassword, "wrong"} {
++				form := postLoginForm(s, password)
++				assert.Equal(t, tt.formStatus, form.Code)
++				assert.Contains(t, form.Body.String(), tt.formText)
++
++				grant := localPasswordGrant(t, s, password)
++				assert.Equal(t, tt.grantStatus, grant.Code)
++				var resp struct {
++					Error       string `json:"error"`
++					Description string `json:"error_description"`
++				}
++				require.NoError(t, json.Unmarshal(grant.Body.Bytes(), &resp))
++				assert.Equal(t, oauth2.AccessDenied, resp.Error)
++				assert.Equal(t, tt.grantText, resp.Description)
++			}
++			assert.Zero(t, failedAttempts(t, s))
++		})
++	}
++}
++
++func TestLoginFormLockout(t *testing.T) {
++	s := newLocalLockoutServer(t, &lockout.Policy{MaxAttempts: 2, Duration: time.Hour}, nil)
++
++	assert.Equal(t, http.StatusUnauthorized, postLoginForm(s, "wrong").Code, "the form again")
++	assert.Equal(t, uint64(1), failedAttempts(t, s))
++	assert.Equal(t, http.StatusTooManyRequests, postLoginForm(s, "wrong").Code, "the second failure locks")
++	assert.Equal(t, http.StatusTooManyRequests, postLoginForm(s, lockoutPassword).Code)
++
++	ui, err := s.storage.GetUserIdentity(t.Context(), lockoutUserID, "local")
++	require.NoError(t, err)
++	assert.WithinDuration(t, time.Now().Add(time.Hour), ui.BlockedUntil, time.Minute)
++}
++
++func TestPasswordGrantLockout(t *testing.T) {
++	s := newLocalLockoutServer(t, &lockout.Policy{MaxAttempts: 2, Duration: time.Hour}, nil)
++
++	rr := localPasswordGrant(t, s, "wrong")
++	assert.Equal(t, http.StatusUnauthorized, rr.Code, rr.Body.String())
++	requireAccountLocked(t, localPasswordGrant(t, s, "wrong"))
++	requireAccountLocked(t, localPasswordGrant(t, s, lockoutPassword))
++}
++
++// The password change page refuses a user locked after the login form sent him
++// there, and the page keeps his password.
++func TestPasswordChangePageLockout(t *testing.T) {
++	s := newLocalLockoutServer(t, &lockout.Policy{MaxAttempts: 1, Duration: time.Hour}, func(p *storage.Password) {
++		p.RequireResetHashOnNextSuccLogin = true
++	})
++
++	rr := postLoginForm(s, lockoutPassword)
++	require.Equal(t, http.StatusSeeOther, rr.Code, rr.Body.String())
++	changeURL := rr.Header().Get("Location")
++	require.Contains(t, changeURL, "/password/change?")
++	cookies := rr.Result().Cookies()
++	require.NotEmpty(t, cookies, "the login binds the page to the browser")
++
++	lockLocalUser(t, s, time.Now().Add(time.Hour))
++	req := httptest.NewRequest(http.MethodPost, changeURL, strings.NewReader(url.Values{"newPassword": {"N3w-passw0rd"}}.Encode()))
++	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++	for _, c := range cookies {
++		req.AddCookie(c)
++	}
++	rr = httptest.NewRecorder()
++	s.ServeHTTP(rr, req)
++	assert.Equal(t, http.StatusTooManyRequests, rr.Code, "a locked user changes nothing")
++
++	p, err := s.storage.GetPassword(t.Context(), lockoutUserEmail)
++	require.NoError(t, err)
++	require.NoError(t, bcrypt.CompareHashAndPassword(p.Hash, []byte(lockoutPassword)))
++	assert.True(t, p.RequireResetHashOnNextSuccLogin)
++}
++
++// A user locked only in the storage of the v2.44-based dex, who has no user
++// identity yet, is refused before his password is judged like any other locked
++// user: the transitional kubernetes storage (150) reads the old lock as his
++// identity.
++func TestOldPlaceLockRefusedBeforePassword(t *testing.T) {
++	var store *oldPlaceStorage
++	s := newLocalLockoutServer(t, &lockout.Policy{MaxAttempts: 1, Duration: time.Hour}, nil, func(c *Config) {
++		store = &oldPlaceStorage{Storage: c.Storage, old: map[oldPlacePair]storage.UserIdentity{
++			{userID: lockoutUserID, connectorID: "local"}: {UserID: lockoutUserID, ConnectorID: "local", BlockedUntil: time.Now().Add(time.Hour)},
++		}}
++		c.Storage = store
++	})
++
++	right, wrong := postLoginForm(s, lockoutPassword), postLoginForm(s, "wrong")
++	assert.Equal(t, http.StatusTooManyRequests, right.Code, right.Body.String())
++	assert.Equal(t, right.Code, wrong.Code)
++	assert.Equal(t, right.Body.String(), wrong.Body.String())
++
++	requireAccountLocked(t, localPasswordGrant(t, s, lockoutPassword))
++	requireAccountLocked(t, localPasswordGrant(t, s, "wrong"))
++
++	assert.Zero(t, failedAttempts(t, s), "a refused attempt is not counted")
++	_, err := store.Storage.GetUserIdentity(t.Context(), lockoutUserID, "local")
++	assert.ErrorIs(t, err, storage.ErrNotFound, "a refused login records nothing")
++}
++
++// lockOnCreate locks the identity a first login creates, as a lock set between
++// the check before the password and the end of the login would be found.
++type lockOnCreate struct {
++	storage.Storage
++	until time.Time
++}
++
++func (s lockOnCreate) CreateUserIdentity(ctx context.Context, u storage.UserIdentity) error {
++	u.BlockedUntil = s.until
++	return s.Storage.CreateUserIdentity(ctx, u)
++}
++
++// requireLockPage checks the answer of a browser login refused for a lock.
++func requireLockPage(t *testing.T, rr *httptest.ResponseRecorder) {
++	t.Helper()
++	require.Equal(t, http.StatusTooManyRequests, rr.Code, rr.Body.String())
++	require.Contains(t, rr.Body.String(), "Account temporarily locked")
++}
++
++// A lock that only finalizeLogin finds gets the page of the check before the
++// password, on every path of the browser flow that completes a login.
++func TestLockAtFinalizeLoginRendersLockPage(t *testing.T) {
++	ctx := t.Context()
++	lockFirstLogin := func(c *Config) { c.Storage = lockOnCreate{Storage: c.Storage, until: time.Now().Add(time.Hour)} }
++
++	t.Run("login form", func(t *testing.T) {
++		s := newLocalLockoutServer(t, nil, nil, lockFirstLogin)
++		requireLockPage(t, postLoginForm(s, lockoutPassword))
++	})
++
++	t.Run("password change page", func(t *testing.T) {
++		s := newLocalLockoutServer(t, nil, func(p *storage.Password) { p.RequireResetHashOnNextSuccLogin = true }, lockFirstLogin)
++		rr := postLoginForm(s, lockoutPassword)
++		require.Equal(t, http.StatusSeeOther, rr.Code, rr.Body.String())
++
++		req := httptest.NewRequest(http.MethodPost, rr.Header().Get("Location"), strings.NewReader(url.Values{"newPassword": {"N3w-passw0rd"}}.Encode()))
++		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++		for _, c := range rr.Result().Cookies() {
++			req.AddCookie(c)
++		}
++		rr = httptest.NewRecorder()
++		s.ServeHTTP(rr, req)
++		requireLockPage(t, rr)
++	})
++
++	t.Run("connector callback", func(t *testing.T) {
++		s := newLocalLockoutServer(t, nil, nil)
++		require.NoError(t, s.storage.CreateAuthRequest(ctx, storage.AuthRequest{
++			ID: "callback-req", ClientID: "test", ConnectorID: "mock",
++			ResponseTypes: []string{"code"}, Scopes: []string{"openid"}, RedirectURI: "https://client.example/cb",
++			Expiry: time.Now().Add(time.Hour),
++		}))
++		setBlockedUntil(t, s, "mock", time.Now().Add(time.Hour))
++
++		rr := httptest.NewRecorder()
++		s.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/callback/mock?state=callback-req", nil))
++		requireLockPage(t, rr)
++	})
++
++	t.Run("SPNEGO", func(t *testing.T) {
++		s := newLocalLockoutServer(t, nil, nil)
++		local, err := s.connectors.Get(ctx, "local")
++		require.NoError(t, err)
++		s.connectors.Set("local", connectors.Connector{
++			Type: connectors.LocalConnector, ResourceVersion: local.ResourceVersion,
++			Connector: spnegoShortCircuit{Identity: connector.Identity{UserID: lockoutUserID, Email: lockoutUserEmail}},
++		})
++		lockLocalUser(t, s, time.Now().Add(time.Hour))
++
++		rr := httptest.NewRecorder()
++		s.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/auth/local/login?state="+lockoutAuthReq, nil))
++		requireLockPage(t, rr)
++	})
++}
+diff --git a/server/useridentity/useridentity.go b/server/useridentity/useridentity.go
+index 4a372a44..fdd09b01 100644
+--- a/server/useridentity/useridentity.go
++++ b/server/useridentity/useridentity.go
+@@ -26,12 +26,26 @@ import (
+ // BlockedError refuses a login or a token request of a blocked pair.
+ type BlockedError struct {
+ 	Until time.Time
++	// ByAdministrator is true for the lock an administrator set, false for an
++	// automatic lock after failed password attempts.
++	ByAdministrator bool
+ }
+ 
+ func (e *BlockedError) Error() string {
++	if e.ByAdministrator {
++		return fmt.Sprintf("account is locked by an administrator until %s", e.Until.Format(time.RFC3339))
++	}
+ 	return fmt.Sprintf("account is locked until %s", e.Until.Format(time.RFC3339))
+ }
+ 
++// blockedError is the refusal of ui, a blocked identity.
++func blockedError(ui storage.UserIdentity) *BlockedError {
++	return &BlockedError{
++		Until:           ui.BlockedUntil,
++		ByAdministrator: !ui.AdminLockedUntil.IsZero() && ui.AdminLockedUntil.Equal(ui.BlockedUntil),
++	}
++}
++
+ // errUnchanged aborts an update that has nothing to write.
+ var errUnchanged = errors.New("useridentity: unchanged")
+ 
+@@ -122,7 +136,7 @@ func Record(ctx context.Context, s storage.Storage, l Login) error {
+ func update(ctx context.Context, s storage.Storage, l Login) error {
+ 	updater := func(old storage.UserIdentity) (storage.UserIdentity, error) {
+ 		if blocked(old, l.Time) {
+-			return old, &BlockedError{Until: old.BlockedUntil}
++			return old, blockedError(old)
+ 		}
+ 		movesLastLogin := l.Complete && l.movesLastLogin(old.LastLogin)
+ 		if sameClaims(old.Claims, l.Claims) && !movesLastLogin {
+@@ -227,7 +241,7 @@ func CheckBlocked(ctx context.Context, s storage.Storage, userID, connectorID st
+ // CheckBlockedIdentity is CheckBlocked for an identity already read.
+ func CheckBlockedIdentity(ui storage.UserIdentity, now time.Time) error {
+ 	if blocked(ui, now) {
+-		return &BlockedError{Until: ui.BlockedUntil}
++		return blockedError(ui)
+ 	}
+ 	return nil
+ }
+diff --git a/server/useridentity/useridentity_test.go b/server/useridentity/useridentity_test.go
+index d8ab0e14..1e71d86f 100644
+--- a/server/useridentity/useridentity_test.go
++++ b/server/useridentity/useridentity_test.go
+@@ -459,3 +459,33 @@ func TestCheckBlocked(t *testing.T) {
+ 	require.ErrorIs(t, err, errStorage)
+ 	require.False(t, errors.As(err, &blocked))
+ }
++
++func TestCheckBlockedTellsTheAdministratorsLock(t *testing.T) {
++	admin := t0.Add(time.Hour)
++	tests := []struct {
++		name     string
++		identity storage.UserIdentity
++		expected bool
++	}{
++		{
++			name:     "locked by an administrator",
++			identity: storage.UserIdentity{BlockedUntil: admin, AdminLockedUntil: admin},
++			expected: true,
++		},
++		{
++			name:     "an automatic lock outlasts the administrator's",
++			identity: storage.UserIdentity{BlockedUntil: admin.Add(time.Hour), AdminLockedUntil: admin},
++		},
++		{
++			name:     "an automatic lock",
++			identity: storage.UserIdentity{BlockedUntil: admin},
++		},
++	}
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			var blocked *BlockedError
++			require.ErrorAs(t, CheckBlockedIdentity(tt.identity, t0), &blocked)
++			require.Equal(t, tt.expected, blocked.ByAdministrator)
++		})
++	}
++}

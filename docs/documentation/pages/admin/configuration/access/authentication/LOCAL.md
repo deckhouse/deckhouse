@@ -106,7 +106,7 @@ Password reset, 2FA reset, and user lock/unlock operations are performed via the
 
 Use the [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) commands for administrative actions on local users. They create a UserOperation resource with `initiatorType: admin`, wait for the operation to complete, and print the result.
 
-The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex OfflineSessions and RefreshToken objects. This terminates the user's active offline sessions and requires re-authentication.
+The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex RefreshToken objects. The sessions of the user in applications and kubeconfig files end when the current ID token expires, and the user has to authenticate again. Only `Reset2FA` removes the user's 2FA secret.
 
 Examples of using the [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) commands:
 
@@ -184,7 +184,7 @@ spec:
     newPasswordHash: "$2y$10$..."
 ```
 
-For users authenticated through external providers (LDAP, Atlassian Crowd), use [`spec.target`](/modules/user-authn/cr.html#useroperation-v1-spec-target) instead of `spec.user`. Only `Lock` and `Unlock` are supported for external users. Example — lock an external user for 30 minutes:
+For users of external providers of any type (LDAP, Atlassian Crowd, OIDC, SAML, GitHub, GitLab, Bitbucket Cloud), use [`spec.target`](/modules/user-authn/cr.html#useroperation-v1-spec-target) instead of `spec.user`. Only `Lock` and `Unlock` are supported for external users. Example — lock an external user for 30 minutes:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -204,7 +204,7 @@ spec:
 A UserOperation is a **single-use**, **immutable** object: after creation, the hook processes it and writes the result to `status.phase` (`Succeeded` or `Failed`). Completed operations are **automatically deleted** after 24 hours.
 
 {% alert level="warning" %}
-The `ResetPassword`, `Reset2FA`, and `Lock` operations terminate all active sessions of the user (they delete the user's Dex OfflineSessions and RefreshToken objects). The user will be forced to re-authenticate.
+The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex RefreshToken objects. The sessions of the user in applications and kubeconfig files end when the current ID token expires, and the user has to authenticate again. `ResetPassword` and `Lock` keep the user's 2FA secret.
 {% endalert %}
 
 ## Adding a user to a group

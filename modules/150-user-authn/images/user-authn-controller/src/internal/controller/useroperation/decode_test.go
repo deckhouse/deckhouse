@@ -86,7 +86,8 @@ func TestDecodeRefreshTokenClaims(t *testing.T) {
 	t.Parallel()
 
 	rt, err := decodeRefreshToken(&unstructured.Unstructured{Object: map[string]any{
-		"metadata": map[string]any{"name": "rt"},
+		"metadata":    map[string]any{"name": "rt"},
+		"connectorID": "local",
 		"claims": map[string]any{
 			"userId":             "uid",
 			"username":           "jane",
@@ -96,8 +97,8 @@ func TestDecodeRefreshTokenClaims(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeRefreshToken: %v", err)
 	}
-	if rt.ClaimsUserID != "uid" || rt.ClaimsUsername != "jane" || rt.ClaimsPreferred != "jane-pref" {
-		t.Errorf("claims = %+v", rt)
+	if rt.ConnectorID != "local" || rt.ClaimsUserID != "uid" {
+		t.Errorf("refresh token = %+v", rt)
 	}
 }
 

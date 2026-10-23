@@ -85,7 +85,7 @@ The module consists of the following components:
 
      * [Group](/modules/user-authn/cr.html#group): A resource that describes user group.
      * [User](/modules/user-authn/cr.html#user): A resource that describes static user.
-     * UserAccount: A resource that describes view of Dex Password and OfflineSessions objects for the DKP web UI.
+     * UserAccount: A resource that describes view of Dex Password, OfflineSessions, and UserIdentity objects for the Deckhouse web UI.
      * [UserOperation](/modules/user-authn/cr.html#useroperation): A resource that describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
      * DexProviderCheck: A resource that describes a connectivity check for the specific DexProvider. The check verifies that the provider exists, is enabled, Dex is reachable, and the provider endpoint is reachable. It does not perform a full user authentication flow.
 
@@ -93,7 +93,7 @@ The module consists of the following components:
    * Checks periodically an availability of configured external authentication providers (using DexProviderCheck custom resources).
    * Finds out conflicting TLS-certificates [in external LDAP provider configuration settings](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap) and exports the corresponding metric.
 
-   User-authn-controller uses `dex.coreos.com` API group custom resources (Password, OfflineSession and Refreshtoken used by Dex as a storage) as a backend to manage module custom resources.
+   User-authn-controller uses `dex.coreos.com` API group custom resources (Password, OfflineSessions, UserIdentity, and RefreshToken used by Dex as a storage) as a backend to manage module custom resources.
 
 1. **User-api**: A component that implements a self-service for users to reset a password for their user account. The service is available to the user only via the DKP web interface and does not require platform administrator rights. The password can only be reset for the current user. User-api validates the incoming requests tokens in dex component. To perform this operation, the component creates UserOperation custom resource of the `ResetPassword` type, which is processed by the user-authn-controller component.
 
