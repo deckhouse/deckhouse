@@ -195,12 +195,29 @@ type NodeOperationStatus struct {
 	// +optional
 	DrainDeadline *metav1.Time `json:"drainDeadline,omitempty"`
 
+	// Eviction is how far the eviction this operation asked for has got. The
+	// draining controller writes it while the eviction runs.
+	// +optional
+	Eviction *NodeOperationEviction `json:"eviction,omitempty"`
+
 	// Conditions are Drained, EvictionBlocked and Retry (node-manager) and
 	// NodeReported (the node).
 	// +optional
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+// NodeOperationEviction counts the pods a running eviction still waits for.
+type NodeOperationEviction struct {
+	// RemainingPods is how many of the pods the eviction listed are still on
+	// the node, the terminating ones included.
+	RemainingPods int32 `json:"remainingPods"`
+
+	// TerminatingPods are the evicted pods that have not gone yet, as
+	// namespace/name.
+	// +optional
+	TerminatingPods []string `json:"terminatingPods,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -252,6 +252,27 @@ spec:
                     On the `Drain` of a deleted machine, the operation fails with `PreparationTimedOut` at this moment, and the machine is deleted with the pods that did not leave. The field is not set for a `Static` or `CloudStatic` NodeGroup without `nodeDrainTimeoutSecond`, and such a `Drain` has no time limit.
 
                     It is pinned at the moment the eviction is requested, from the NodeGroup's `nodeDrainTimeoutSecond` as it stood then, because that is the bound the draining controller itself started running to. Deriving it again later would let a change to the NodeGroup cut short a drain that is still running.
+                eviction:
+                  type: object
+                  required:
+                    - remainingPods
+                  description: |
+                    Progress of the eviction this operation asked for, written by `node-manager` while the eviction runs.
+
+                    The field appears once the pods to evict are listed and is updated every few seconds. It is removed when the eviction ends. A failed operation keeps the progress it ended on.
+                  properties:
+                    remainingPods:
+                      type: integer
+                      format: int32
+                      minimum: 0
+                      description: |
+                        How many of the pods the eviction listed are still on the node, including the terminating ones. The eviction leaves DaemonSet pods, static pods and finished pods on the node, and they are not counted.
+                    terminatingPods:
+                      type: array
+                      items:
+                        type: string
+                      description: |
+                        Pods that have been evicted and have not stopped yet, as `<namespace>/<name>`.
                 conditions:
                   type: array
                   maxItems: 8

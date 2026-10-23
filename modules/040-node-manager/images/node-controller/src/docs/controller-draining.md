@@ -44,6 +44,7 @@ Node changed, or an eviction finished
   │
   ├─ The eviction has finished →
   │    ├─ asked for by a NodeOperation? → remove its EvictionBlocked condition
+  │    │    and status.eviction
   │    ├─ failed, deadline included → event + "drain-failed=<error>", keep
   │    │    "draining", return the error (the requeue retries it)
   │    └─ succeeded → clear the metric, remove "drain-failed" and "draining",
@@ -53,8 +54,9 @@ Node changed, or an eviction finished
        ├─ node still schedulable? → cordon it → done, the cordon's own event
        │   brings us back (pods must stop arriving before anything empties the node)
        ├─ already cordoned → start the eviction
-       └─ asked for by a NodeOperation? → write the refusals of the last 15s into
-            its EvictionBlocked condition, and come back in 5s
+       └─ asked for by a NodeOperation? → write the pods left into its
+            status.eviction and the refusals of the last 15s into its
+            EvictionBlocked condition, and come back in 5s
 ```
 
 The eviction helper retries a refused eviction, by a PodDisruptionBudget for one,
@@ -62,6 +64,10 @@ every 5 seconds and reports it on its `ErrOut` each time. That output is kept fo
 the running eviction. A refusal not
 repeated for 15 seconds has gone through and is dropped. A finished NodeOperation
 is left with the refusals it ended on.
+
+The pods left are the ones the helper listed for eviction that are still on the
+node, matched by UID as its `waitForDelete` does; those with a `deletionTimestamp`
+are named as terminating. One LIST of the node's pods per report, past the cache.
 
 Every branch edits the node in memory; a single deferred patch at the end of the
 reconcile is the only write. That same deferred step sets `d8_node_draining` from the

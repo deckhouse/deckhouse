@@ -125,6 +125,17 @@ var _ = Describe("The policy that keeps a node to its own report", Ordered, func
 			To(MatchError(ContainSubstring("writes only the NodeReported condition")))
 	})
 
+	// The progress is node-manager's account of the eviction, not the node's.
+	It("refuses a node writing the eviction progress itself", func(ctx context.Context) {
+		op := createOperation(ctx, nodeName, v1alpha1.NodeOperationTypeReboot, &v1alpha1.NodeOperationDrainSpec{Skip: true})
+		Eventually(func(g Gomega) {
+			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseInProgress))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		Expect(asNode.Status().Patch(ctx, op, mergePatch(`{"status":{"eviction":{"remainingPods":0}}}`))).
+			To(MatchError(ContainSubstring("writes only the NodeReported condition")))
+	})
+
 	// An agent that does not remember its report reboots again on an InProgress
 	// Reboot after boot. Refusing its second report is what stops it.
 	It("lets a node report RebootStarted once", func(ctx context.Context) {

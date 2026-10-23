@@ -234,6 +234,47 @@ func evictionBlocked(g Gomega, name string) *metav1.Condition {
 	return meta.FindStatusCondition(op.Status.Conditions, deckhousev1alpha1.NodeOperationConditionEvictionBlocked)
 }
 
+// createGuardedPod creates a running pod on the node whose eviction a PodDisruptionBudget
+// refuses until the budget is deleted.
+func createGuardedPod(name, nodeName string) (*corev1.Pod, *policyv1.PodDisruptionBudget) {
+	// The API server evicts a pending pod without asking its budget, and an unready
+	// one whenever the budget has enough healthy pods without it.
+	pod := createBoundPod(name, nodeName, "")
+	pod.Labels = map[string]string{"app": name}
+	Expect(k8sClient.Update(suiteCtx, pod)).To(Succeed())
+	pod.Status.Phase = corev1.PodRunning
+	pod.Status.Conditions = []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}}
+	Expect(k8sClient.Status().Update(suiteCtx, pod)).To(Succeed())
+
+	// The status a disruption controller would write; envtest runs none. A budget
+	// it has not processed yet is refused with Retry-After, which client-go waits
+	// out itself, ten times over, before the drain hears of it.
+	pdb := &policyv1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: metav1.NamespaceDefault},
+		Spec: policyv1.PodDisruptionBudgetSpec{
+			MinAvailable: ptr.To(intstr.FromInt32(1)),
+			Selector:     &metav1.LabelSelector{MatchLabels: pod.Labels},
+		},
+	}
+	Expect(k8sClient.Create(suiteCtx, pdb)).To(Succeed())
+	pdb.Status = policyv1.PodDisruptionBudgetStatus{
+		ObservedGeneration: pdb.Generation,
+		CurrentHealthy:     1,
+		DesiredHealthy:     1,
+		ExpectedPods:       1,
+	}
+	Expect(k8sClient.Status().Update(suiteCtx, pdb)).To(Succeed())
+	return pod, pdb
+}
+
+// evictionProgress is what the draining controller reports of the eviction on a
+// NodeOperation, nil while it reports nothing.
+func evictionProgress(g Gomega, name string) *deckhousev1alpha1.NodeOperationEviction {
+	op := &deckhousev1alpha1.NodeOperation{}
+	g.Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: name}, op)).To(Succeed())
+	return op.Status.Eviction
+}
+
 // User story: As a cluster operator, I want a node marked for draining to be cordoned and have its
 // non-DaemonSet pods evicted (honoring the NodeGroup's drain timeout) so that I can update or remove
 // the node without disrupting my workloads.
@@ -393,33 +434,7 @@ var _ = Describe("Reporting refused evictions on the NodeOperation that asked fo
 		}
 		Expect(k8sClient.Create(suiteCtx, op)).To(Succeed())
 
-		// The API server evicts a pending pod without asking its budget, and an unready
-		// one whenever the budget has enough healthy pods without it.
-		pod := createBoundPod("app-"+name, name, "")
-		pod.Labels = map[string]string{"app": name}
-		Expect(k8sClient.Update(suiteCtx, pod)).To(Succeed())
-		pod.Status.Phase = corev1.PodRunning
-		pod.Status.Conditions = []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}}
-		Expect(k8sClient.Status().Update(suiteCtx, pod)).To(Succeed())
-
-		// The status a disruption controller would write; envtest runs none. A budget
-		// it has not processed yet is refused with Retry-After, which client-go waits
-		// out itself, ten times over, before the drain hears of it.
-		pdb := &policyv1.PodDisruptionBudget{
-			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: metav1.NamespaceDefault},
-			Spec: policyv1.PodDisruptionBudgetSpec{
-				MinAvailable: ptr.To(intstr.FromInt32(1)),
-				Selector:     &metav1.LabelSelector{MatchLabels: pod.Labels},
-			},
-		}
-		Expect(k8sClient.Create(suiteCtx, pdb)).To(Succeed())
-		pdb.Status = policyv1.PodDisruptionBudgetStatus{
-			ObservedGeneration: pdb.Generation,
-			CurrentHealthy:     1,
-			DesiredHealthy:     1,
-			ExpectedPods:       1,
-		}
-		Expect(k8sClient.Status().Update(suiteCtx, pdb)).To(Succeed())
+		pod, pdb := createGuardedPod("app-"+name, name)
 
 		marker := nodecommon.NodeOperationDrainSource + "/" + string(op.UID)
 		createGroupNode(name, name, map[string]string{nodecommon.DrainingAnnotation: marker})
@@ -437,6 +452,46 @@ var _ = Describe("Reporting refused evictions on the NodeOperation that asked fo
 		Eventually(func(g Gomega) {
 			g.Expect(getNodeState(name).Annotations[nodecommon.DrainedAnnotation]).To(Equal(marker))
 			g.Expect(evictionBlocked(g, name)).To(BeNil())
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+	})
+})
+
+// User story: As a cluster operator, I want a NodeOperation to say how many pods its eviction still
+// waits for and which of them are stopping, so that I can watch the node empty out.
+var _ = Describe("Reporting the eviction progress on the NodeOperation that asked for it", func() {
+	It("counts the pods still on the node and names the evicted ones that have not stopped", func() {
+		name := testenv.UniqueName("drain-progress")
+		op := &deckhousev1alpha1.NodeOperation{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec:       deckhousev1alpha1.NodeOperationSpec{Type: deckhousev1alpha1.NodeOperationTypeDrain, NodeName: name},
+		}
+		Expect(k8sClient.Create(suiteCtx, op)).To(Succeed())
+
+		_, pdb := createGuardedPod("guarded-"+name, name)
+		stuck := createStuckPod("stuck-"+name, name)
+		createBoundPod("gone-"+name, name, "")
+
+		marker := nodecommon.NodeOperationDrainSource + "/" + string(op.UID)
+		createGroupNode(name, name, map[string]string{nodecommon.DrainingAnnotation: marker})
+
+		Eventually(func(g Gomega) {
+			g.Expect(evictionProgress(g, name)).To(Equal(&deckhousev1alpha1.NodeOperationEviction{
+				RemainingPods:   2,
+				TerminatingPods: []string{metav1.NamespaceDefault + "/" + stuck.Name},
+			}))
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+
+		Expect(k8sClient.Delete(suiteCtx, pdb)).To(Succeed())
+		Eventually(func(g Gomega) {
+			fresh := &corev1.Pod{}
+			g.Expect(k8sClient.Get(suiteCtx, client.ObjectKeyFromObject(stuck), fresh)).To(Succeed())
+			fresh.Finalizers = nil
+			g.Expect(k8sClient.Update(suiteCtx, fresh)).To(Succeed())
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeState(name).Annotations[nodecommon.DrainedAnnotation]).To(Equal(marker))
+			g.Expect(evictionProgress(g, name)).To(BeNil())
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
 	})
 })

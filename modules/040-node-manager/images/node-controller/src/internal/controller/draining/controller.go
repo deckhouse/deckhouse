@@ -57,9 +57,9 @@ const (
 	// (modules/030-cloud-provider-aws/hooks/add_termination_metadata.go:37).
 	spotTerminationLabel = "node.deckhouse.io/termination-in-progress"
 
-	// refusalCheckInterval is how often a drain a NodeOperation asked for passes
-	// its refusals on: as often as the helper retries a refused eviction.
-	refusalCheckInterval = 5 * time.Second
+	// evictionReportInterval is how often a drain a NodeOperation asked for passes
+	// its progress and refusals on: as often as the helper retries a refused eviction.
+	evictionReportInterval = 5 * time.Second
 )
 
 // Reconciler empties a node when somebody annotates it, and answers with a
@@ -182,8 +182,8 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node) (_ ct
 
 	// The drain's outcome decides what is written, so it is collected first.
 	if finished, drainErr := r.drains.result(node.Name); finished {
-		// Collecting it forgot its refusals, so the operation hears there are none.
-		if err := r.reportRefusals(ctx, node.Name, state.requestedBy); err != nil {
+		// Collecting it forgot what it told, so the operation hears the eviction is over.
+		if err := r.reportEviction(ctx, node.Name, state.requestedBy); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, r.finishDrain(ctx, logger, node, state.requestedBy, drainErr)
@@ -195,19 +195,24 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node) (_ ct
 	if !strings.HasPrefix(state.requestedBy, nodecommon.NodeOperationDrainSource+"/") {
 		return ctrl.Result{}, nil
 	}
-	// Nothing on the node changes while an eviction is refused, so the passes
-	// that tell the operation come from here.
-	return ctrl.Result{RequeueAfter: refusalCheckInterval}, r.reportRefusals(ctx, node.Name, state.requestedBy)
+	// Nothing on the node changes while pods stop or an eviction is refused, so
+	// the passes that tell the operation come from here.
+	return ctrl.Result{RequeueAfter: evictionReportInterval}, r.reportEviction(ctx, node.Name, state.requestedBy)
 }
 
-// reportRefusals tells the NodeOperation that asked for the drain which of its
-// evictions are refused, and that none are once they stop.
-func (r *Reconciler) reportRefusals(ctx context.Context, nodeName, source string) error {
+// reportEviction tells the NodeOperation that asked for the drain how many pods
+// are left and which of its evictions are refused, and that nothing is once the
+// drain is collected.
+func (r *Reconciler) reportEviction(ctx context.Context, nodeName, source string) error {
 	uid, ofOperation := strings.CutPrefix(source, nodecommon.NodeOperationDrainSource+"/")
 	if !ofOperation {
 		return nil
 	}
 	refusals := r.drains.refusals(nodeName, time.Now())
+	progress, err := r.drains.progress(ctx, nodeName)
+	if err != nil {
+		return err
+	}
 
 	ops := &deckhousev1alpha1.NodeOperationList{}
 	if err := r.Client.List(ctx, ops); err != nil {
@@ -218,7 +223,7 @@ func (r *Reconciler) reportRefusals(ctx context.Context, nodeName, source string
 		if !askedFor(op, nodeName, types.UID(uid)) {
 			continue
 		}
-		if err := r.setEvictionBlocked(ctx, op, refusals); err != nil {
+		if err := r.setEviction(ctx, op, progress, refusals); err != nil {
 			return err
 		}
 	}
@@ -243,14 +248,15 @@ func askedFor(op *deckhousev1alpha1.NodeOperation, nodeName string, uid types.UI
 	return false
 }
 
-// setEvictionBlocked writes the refusals into the operation's EvictionBlocked
-// condition, and removes it when there are none. A finished operation keeps the
-// refusals it ended on.
-func (r *Reconciler) setEvictionBlocked(ctx context.Context, op *deckhousev1alpha1.NodeOperation, refusals []string) error {
+// setEviction writes the progress into the operation's status and the refusals
+// into its EvictionBlocked condition, removing the condition when there are none.
+// A finished operation keeps what it ended on.
+func (r *Reconciler) setEviction(ctx context.Context, op *deckhousev1alpha1.NodeOperation, progress *deckhousev1alpha1.NodeOperationEviction, refusals []string) error {
 	if op.Status.Phase == deckhousev1alpha1.NodeOperationPhaseCompleted || op.Status.Phase == deckhousev1alpha1.NodeOperationPhaseFailed {
 		return nil
 	}
 	before := op.DeepCopy()
+	op.Status.Eviction = progress
 	if len(refusals) == 0 {
 		meta.RemoveStatusCondition(&op.Status.Conditions, deckhousev1alpha1.NodeOperationConditionEvictionBlocked)
 	} else {
@@ -267,7 +273,7 @@ func (r *Reconciler) setEvictionBlocked(ctx context.Context, op *deckhousev1alph
 	}
 	patch := client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{})
 	if err := r.Client.Status().Patch(ctx, op, patch); err != nil {
-		return fmt.Errorf("report the refused evictions to %s: %w", op.Name, err)
+		return fmt.Errorf("report the eviction to %s: %w", op.Name, err)
 	}
 	return nil
 }

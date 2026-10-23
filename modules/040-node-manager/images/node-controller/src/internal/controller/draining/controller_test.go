@@ -790,8 +790,8 @@ func TestTruncateForAnnotation(t *testing.T) {
 
 // The helper repeats a refused eviction every 5s, so a refusal it stopped
 // repeating has gone through and is no longer reported.
-func TestRefusalLog_ReportsTheRefusalsStillRepeated(t *testing.T) {
-	refusals := &refusalLog{lastSeen: map[string]time.Time{}}
+func TestDrainReport_ReportsTheRefusalsStillRepeated(t *testing.T) {
+	refusals := &drainReport{lastSeen: map[string]time.Time{}}
 	for _, line := range []string{"refused b\n", "refused a\n", "refused b\n"} {
 		if _, err := refusals.Write([]byte(line)); err != nil {
 			t.Fatalf("write %q: %v", line, err)

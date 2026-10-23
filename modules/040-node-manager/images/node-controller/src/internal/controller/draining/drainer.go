@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"slices"
 	"strings"
 	"sync"
@@ -29,6 +28,8 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -36,6 +37,7 @@ import (
 
 	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/task"
 )
 
@@ -57,8 +59,8 @@ type drainer struct {
 	ctx        context.Context
 
 	mu sync.Mutex
-	// refused holds what the eviction answered the drain running on each node.
-	refused map[string]*refusalLog
+	// reports holds what the drain running on each node tells about itself.
+	reports map[string]*drainReport
 }
 
 func newDrainer(ctx context.Context, kubeClient kubernetes.Interface) *drainer {
@@ -67,18 +69,32 @@ func newDrainer(ctx context.Context, kubeClient kubernetes.Interface) *drainer {
 		kubeClient: kubeClient,
 		wake:       make(chan event.GenericEvent, wakeBuffer),
 		ctx:        ctx,
-		refused:    map[string]*refusalLog{},
+		reports:    map[string]*drainReport{},
 	}
 }
 
-// refusalLog is the ErrOut of one drain: once the pods to evict are listed, the
-// helper writes there only a line per refused eviction, again on every retry.
-type refusalLog struct {
+// drainReport is what one drain tells about itself: the pods it evicts, once the
+// helper lists them, and its ErrOut, where the helper then writes only a line per
+// refused eviction, again on every retry.
+type drainReport struct {
 	mu       sync.Mutex
+	pods     []corev1.Pod
 	lastSeen map[string]time.Time
 }
 
-func (l *refusalLog) Write(p []byte) (int, error) {
+func (l *drainReport) listed(pods []corev1.Pod) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.pods = pods
+}
+
+func (l *drainReport) evicting() []corev1.Pod {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.pods
+}
+
+func (l *drainReport) Write(p []byte) (int, error) {
 	line := strings.TrimSpace(string(p))
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -88,7 +104,7 @@ func (l *refusalLog) Write(p []byte) (int, error) {
 
 // current returns the refusals repeated within the window, sorted so that an
 // unchanged set reads the same.
-func (l *refusalLog) current(now time.Time) []string {
+func (l *drainReport) current(now time.Time) []string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	var lines []string
@@ -108,9 +124,9 @@ func (d *drainer) wakeSource() source.Source {
 }
 
 func (d *drainer) start(logger logr.Logger, nodeName string, timeout time.Duration) error {
-	refusals := &refusalLog{lastSeen: map[string]time.Time{}}
+	report := &drainReport{lastSeen: map[string]time.Time{}}
 	err := d.tasks.Start(d.ctx, task.TaskID(nodeName),
-		func(ctx context.Context) error { return d.evict(ctx, nodeName, timeout, refusals) },
+		func(ctx context.Context) error { return d.evict(ctx, nodeName, timeout, report) },
 		func(ctx context.Context) { d.wakeNode(ctx, nodeName) },
 	)
 	if errors.Is(err, task.ErrExists) {
@@ -121,42 +137,85 @@ func (d *drainer) start(logger logr.Logger, nodeName string, timeout time.Durati
 	}
 
 	d.mu.Lock()
-	d.refused[nodeName] = refusals
+	d.reports[nodeName] = report
 	d.mu.Unlock()
 	logger.Info("drain started")
 	return nil
 }
 
-// result collects a finished drain, and forgets what its evictions were refused.
+// result collects a finished drain, and forgets what it told about itself.
 func (d *drainer) result(nodeName string) (bool, error) {
 	finished, err := d.tasks.Result(task.TaskID(nodeName))
 	if finished {
-		d.forgetRefusals(nodeName)
+		d.forget(nodeName)
 	}
 	return finished, err
 }
 
 func (d *drainer) cancel(ctx context.Context, nodeName string) (bool, error) {
-	d.forgetRefusals(nodeName)
+	d.forget(nodeName)
 	return d.tasks.Cancel(ctx, task.TaskID(nodeName))
+}
+
+func (d *drainer) reportOf(nodeName string) *drainReport {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.reports[nodeName]
 }
 
 // refusals returns the evictions refused within the window to the drain running
 // on the node; none once it is collected or cancelled.
 func (d *drainer) refusals(nodeName string, now time.Time) []string {
-	d.mu.Lock()
-	refusals := d.refused[nodeName]
-	d.mu.Unlock()
-	if refusals == nil {
+	report := d.reportOf(nodeName)
+	if report == nil {
 		return nil
 	}
-	return refusals.current(now)
+	return report.current(now)
 }
 
-func (d *drainer) forgetRefusals(nodeName string) {
+// progress counts the pods the drain running on the node listed that are still
+// there, matched by UID as the helper's waitForDelete does. Nil until the helper
+// lists them, and once the drain is collected or cancelled.
+func (d *drainer) progress(ctx context.Context, nodeName string) (*deckhousev1alpha1.NodeOperationEviction, error) {
+	report := d.reportOf(nodeName)
+	if report == nil {
+		return nil, nil
+	}
+	listed := report.evicting()
+	if listed == nil {
+		return nil, nil
+	}
+
+	onNode, err := d.kubeClient.CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector("spec.nodeName", nodeName).String(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list the pods of %s: %w", nodeName, err)
+	}
+	current := make(map[types.UID]*corev1.Pod, len(onNode.Items))
+	for i := range onNode.Items {
+		current[onNode.Items[i].UID] = &onNode.Items[i]
+	}
+
+	eviction := &deckhousev1alpha1.NodeOperationEviction{}
+	for _, pod := range listed {
+		live, ok := current[pod.UID]
+		if !ok {
+			continue
+		}
+		eviction.RemainingPods++
+		if live.DeletionTimestamp != nil {
+			eviction.TerminatingPods = append(eviction.TerminatingPods, pod.Namespace+"/"+pod.Name)
+		}
+	}
+	slices.Sort(eviction.TerminatingPods)
+	return eviction, nil
+}
+
+func (d *drainer) forget(nodeName string) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	delete(d.refused, nodeName)
+	delete(d.reports, nodeName)
 }
 
 // wakeNode hands the node back to the workqueue now that its drain is over.
@@ -176,7 +235,7 @@ func (d *drainer) wakeNode(ctx context.Context, nodeName string) {
 	}
 }
 
-func (d *drainer) evict(ctx context.Context, nodeName string, timeout time.Duration, refusals io.Writer) error {
+func (d *drainer) evict(ctx context.Context, nodeName string, timeout time.Duration, report *drainReport) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
@@ -189,7 +248,7 @@ func (d *drainer) evict(ctx context.Context, nodeName string, timeout time.Durat
 	})
 	helper.Ctx = ctx
 
-	if err := runNodeDrain(helper, nodeName, refusals); err != nil {
+	if err := runNodeDrain(helper, nodeName, report); err != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			return fmt.Errorf("drain deadline exceeded after %s: %w", timeout, err)
 		}
@@ -201,11 +260,13 @@ func (d *drainer) evict(ctx context.Context, nodeName string, timeout time.Durat
 // runNodeDrain is kubedrain.RunNodeDrain (go_lib/dependency/k8s/drain/default.go)
 // without its warning about the pods it lists, which went to a discarded ErrOut:
 // ErrOut is the refusals now.
-func runNodeDrain(helper *kubedrain.Helper, nodeName string, refusals io.Writer) error {
+func runNodeDrain(helper *kubedrain.Helper, nodeName string, report *drainReport) error {
 	list, errs := helper.GetPodsForDeletion(nodeName)
 	if errs != nil {
 		return errors.Join(errs...)
 	}
-	helper.ErrOut = refusals
-	return helper.DeleteOrEvictPods(list.Pods())
+	pods := list.Pods()
+	report.listed(pods)
+	helper.ErrOut = report
+	return helper.DeleteOrEvictPods(pods)
 }

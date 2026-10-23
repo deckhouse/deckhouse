@@ -117,6 +117,7 @@ spec:
       "a node may not change the spec of an operation, approving it included; " + request.userInfo.username + " tried to"
   # The node reports through its NodeReported condition and node-manager derives
   # the phase from it; a node writing anything else would decide the outcome.
+  # Every status field by name: a field added to the status has to be added here too.
   - expression: |
       request.operation != "UPDATE" || (
         object.?status.?phase == oldObject.?status.?phase &&
@@ -127,6 +128,7 @@ spec:
         object.?status.?finishedAt == oldObject.?status.?finishedAt &&
         object.?status.?nodeWasUnschedulable == oldObject.?status.?nodeWasUnschedulable &&
         object.?status.?drainDeadline == oldObject.?status.?drainDeadline &&
+        object.?status.?eviction == oldObject.?status.?eviction &&
         object.?status.?bootID == oldObject.?status.?bootID &&
         object.?status.?conditions.orValue([]).filter(c, c.type != "NodeReported") ==
           oldObject.?status.?conditions.orValue([]).filter(c, c.type != "NodeReported"))
