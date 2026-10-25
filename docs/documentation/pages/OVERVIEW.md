@@ -15,21 +15,27 @@ rootLLMStxtURL: /products/kubernetes-platform/documentation/v1/llms.txt
 {% include pdf_download_modal.html %}
 {%- endunless %}
 
-Welcome to the home page of the Deckhouse Platform documentation.
-{% if site.mode != 'module' %}We recommend starting with the [Getting started](/products/kubernetes-platform/gs/) guide for those who haven't yet tried the platform. It provides step-by-step instructions for deploying the platform to any infrastructure.{% endif %}
+Welcome to the Deckhouse Platform documentation homepage. Deckhouse Platform is an AI-driven platform
+for building hybrid distributed infrastructure.
 
-Here are some tips on how to find what you need:
+Here you can find information about installing, configuring, and using the platform,
+as well as descriptions of its features, components, and modules.
 
-- If you know what you're looking for exactly, use the search.
-- Check [this list](reference/revision-comparison.html) if you are looking for information on a particular module.
-- The menu on the left is for searching by scope.
+{% if site.mode != 'module' %}If you are new to Deckhouse Platform,
+we recommend starting with the ["Getting Started"](/products/kubernetes-platform/gs/) section,
+which provides step-by-step instructions for deploying the platform on any infrastructure.{% endif %}
 
-{% if site.mode != 'module' %}Note that the Deckhouse Platform documentation for different versions may vary. Select the version you need from the drop-down list at the top of the page. The list contains up-to-date versions of the documentation.{% endif %}
+To quickly find the information you need:
 
-If you have any questions, feel free to contact us at [Telegram channel]({{ site.social_links[page.lang]['telegram'] }}). We will do our best to help you.
+- Use search if you are looking for a specific Deckhouse Platform feature, parameter, or resource.
+- Go to the [list of modules](/modules/) if you are looking for information about a specific module.
+- Use the sidebar to navigate through the documentation sections.
 
-Commercial Edition users can contact us at [email](mailto:support@deckhouse.io). We will be glad to provide assistance!
+{% if site.mode != 'module' %}The content of the Deckhouse Platform documentation may vary depending on the version.
+Select the required version from the drop-down list at the top of the page.
+The list contains currently supported documentation versions.{% endif %}
 
-Interested in improving Deckhouse Platform? Feel free to open a GitHub [Issue](https://github.com/deckhouse/deckhouse/issues/), suggest an [idea](https://github.com/deckhouse/deckhouse/discussions) or join the list of [contributors](https://github.com/deckhouse/deckhouse/blob/main/CONTRIBUTING.md).
+If you need help:
 
-Feel like you can contribute a lot more? Then join our [team](https://job.flant.ru/)! We look forward to welcoming new professionals!
+- Ask a question in the ["Deckhouse &#124; EN-community"]({{ site.social_links[page.lang]['telegram'] }}) Telegram channel.
+- If you use a commercial edition of Deckhouse Platform, contact technical support at [`support@deckhouse.io`](mailto:support@deckhouse.io).
