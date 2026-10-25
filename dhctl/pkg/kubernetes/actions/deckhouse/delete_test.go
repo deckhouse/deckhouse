@@ -175,7 +175,7 @@ func TestDeletePods(t *testing.T) {
 	})
 }
 
-func TestPatchCAPIMachineDrainTimeouts(t *testing.T) {
+func TestPatchCAPIMachinesForForceDelete(t *testing.T) {
 	ctx := t.Context()
 	fakeClient := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
 		capi.V1beta2.MachineGVR: "MachineList",
@@ -186,6 +186,13 @@ func TestPatchCAPIMachineDrainTimeouts(t *testing.T) {
 
 	worker := newCAPIMachine("worker-machine", "worker", int64(600))
 	master := newCAPIMachine("master-machine", "master", int64(600))
+
+	annotations := map[string]string{
+		capi.NodeManagerPreDrainHookAnnotation:           "node-controller",
+		"machine.cluster.x-k8s.io/exclude-node-draining": "",
+	}
+	worker.SetAnnotations(annotations)
+	master.SetAnnotations(annotations)
 
 	_, err := fakeClient.Dynamic().Resource(capi.V1beta2.MachineGVR).Namespace(worker.GetNamespace()).Create(ctx, worker, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -198,7 +205,7 @@ func TestPatchCAPIMachineDrainTimeouts(t *testing.T) {
 	machines := nonMasterCAPIMachines(ctx, resources.Items)
 	require.Len(t, machines, 1)
 
-	err = patchCAPIMachineDrainTimeouts(ctx, fakeClient, capi.V1beta2, machines)
+	err = patchCAPIMachinesForForceDelete(ctx, fakeClient, capi.V1beta2, machines)
 	require.NoError(t, err)
 
 	worker, err = fakeClient.Dynamic().Resource(capi.V1beta2.MachineGVR).Namespace(worker.GetNamespace()).Get(ctx, worker.GetName(), metav1.GetOptions{})
@@ -207,6 +214,7 @@ func TestPatchCAPIMachineDrainTimeouts(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, found)
 	require.Equal(t, int64(10), got)
+	require.Equal(t, map[string]string{"machine.cluster.x-k8s.io/exclude-node-draining": ""}, worker.GetAnnotations())
 
 	master, err = fakeClient.Dynamic().Resource(capi.V1beta2.MachineGVR).Namespace(master.GetNamespace()).Get(ctx, master.GetName(), metav1.GetOptions{})
 	require.NoError(t, err)
@@ -214,6 +222,7 @@ func TestPatchCAPIMachineDrainTimeouts(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, found)
 	require.Equal(t, int64(600), got)
+	require.Equal(t, annotations, master.GetAnnotations())
 }
 
 func newCAPIMachine(name, nodeGroup string, drainTimeout int64) *unstructured.Unstructured {

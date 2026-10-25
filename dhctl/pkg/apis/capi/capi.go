@@ -38,6 +38,9 @@ const (
 	deploymentsName = "machinedeployments"
 )
 
+// NodeManagerPreDrainHookAnnotation mirrors node-manager's MachineDrainHookAnnotation; only node-controller removes it.
+const NodeManagerPreDrainHookAnnotation = "pre-drain.delete.hook.machine.cluster.x-k8s.io/node-manager"
+
 var preferredVersions = []string{versionV1beta2, versionV1beta1}
 
 type GVRs struct {
