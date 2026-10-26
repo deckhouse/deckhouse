@@ -272,15 +272,12 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 ##@ Generate
 
 ## Run all generate-* jobs in bulk.
-.PHONY: generate render-workflow
+.PHONY: generate
 generate: generate-kubernetes generate-tools generate-docs dmt-gen generate-werf generate-lib-helm
 
 .PHONY: generate-tools
 generate-tools: yq
 	cd tools && go generate -v && cd ..
-
-render-workflow: ## Generate CI workflow instructions.
-	./.github/render-workflows.sh
 
 bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 	cd tools/regcopy; go build -o bin/regcopy
