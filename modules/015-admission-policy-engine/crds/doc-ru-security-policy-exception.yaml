@@ -56,7 +56,11 @@ spec:
                       description: Исключения для параметра `seccompProfile`.
                       properties:
                         allowedValues:
-                          description: Список разрешенных seccomp-профилей.
+                          description: |
+                            Список разрешенных seccomp-профилей.
+
+                            Значение, которое заканчивается на `*`, разрешает все профили, начинающиеся с части до `*`.
+                            Например, `localhost/profiles/*` разрешает `localhost/profiles/app.json` и `localhost/profiles/team/app.json`.
                         metadata:
                           description: Метаданные, связанные с исключением.
                     appArmorProfile:
@@ -126,7 +130,11 @@ spec:
                           items:
                             properties:
                               name:
-                                description: Имя параметра `sysctl`.
+                                description: |
+                                  Имя параметра `sysctl`.
+
+                                  Имя, которое заканчивается на `*`, разрешает все параметры `sysctl`, начинающиеся с части до `*`.
+                                  Например, `net.core.*` разрешает `net.core.rmem_max` и `net.core.somaxconn`.
                               value:
                                 description: Допустимое значение для указанного параметра `sysctl`.
                         metadata:
@@ -188,6 +196,16 @@ spec:
                                 description: Разрешенный путь `hostPath`.
                               readOnly:
                                 description: Значение `readOnly` для `hostPath`.
+                              allowSubPaths:
+                                description: |
+                                  Разрешает пути, вложенные в путь из параметра [path](#securitypolicyexception-v1alpha1-spec-volumes-hostpath-allowedvalues-path).
+
+                                  Если параметр равен `false`, исключение разрешает только точно совпадающий путь.
+                                  Если параметр равен `true`, исключение также разрешает все вложенные пути.
+                                  Пути сравниваются по компонентам, завершающие слеши не учитываются.
+                                  Например, `/var/lib` разрешает `/var/lib`, `/var/lib/` и `/var/lib/docker`, но не разрешает `/var/libvirt` и `/var`.
+
+                                  Параметр [readOnly](#securitypolicyexception-v1alpha1-spec-volumes-hostpath-allowedvalues-readonly) применяется к вложенным путям так же, как к самому пути.
                               metadata:
                                 description: Метаданные, связанные с исключением.
                                 properties:

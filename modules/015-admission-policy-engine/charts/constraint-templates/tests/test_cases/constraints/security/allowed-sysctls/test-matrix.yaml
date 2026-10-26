@@ -550,6 +550,68 @@ spec:
                 value: '16777216'
               - name: kernel.msgmax
                 value: '65536'
+    # An SPE entry name ending with * covers every sysctl with that prefix.
+    - name: 034-allowed-by-exception-sysctl-wildcard
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.sysctls.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-net-core-wildcard
+          spec:
+            securityContext:
+              sysctls:
+                allowedValues:
+                - name: net.core.*
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-net-core-wildcard
+            name: allowed-by-exception-sysctl-wildcard
+          spec:
+            securityContext:
+              sysctls:
+              - name: net.core.rmem_max
+                value: '1'
+    # A wildcard SPE entry does not cover a sysctl outside its prefix.
+    - name: 035-disallowed-by-exception-sysctl-wildcard-mismatch
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.sysctls.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-net-core-wildcard
+          spec:
+            securityContext:
+              sysctls:
+                allowedValues:
+                - name: net.core.*
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-net-core-wildcard
+            name: disallowed-by-exception-sysctl-wildcard-mismatch
+          spec:
+            securityContext:
+              sysctls:
+              - name: kernel.msgmax
+                value: '1'
   - name: security-policy-with-exception
     gatorBlock: security-policy-with-exception
     defaultObjectBase: ''

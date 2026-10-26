@@ -806,6 +806,325 @@ spec:
             - hostPath:
                 path: /proc
               name: proc-volume
+    # An exception with allowSubPaths: true allows a path nested under the allowed one.
+    - name: 026-allowed-by-exception-subpath
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-var-lib-subpaths
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /var/lib
+                  readOnly: false
+                  allowSubPaths: true
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-var-lib-subpaths
+            name: allowed-by-exception-subpath
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-data
+                name: data-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /var/lib/docker
+              name: data-volume
+    # Without allowSubPaths, an exception allows the exact path only.
+    - name: 027-disallowed-by-exception-subpath-without-flag
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-var-lib
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /var/lib
+                  readOnly: false
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-var-lib
+            name: disallowed-by-exception-subpath-without-flag
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-data
+                name: data-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /var/lib/docker
+              name: data-volume
+    # Paths are compared segment by segment, so /var/lib does not cover /var/libvirt.
+    - name: 028-disallowed-by-exception-subpath-sibling-prefix
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-var-lib-subpaths
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /var/lib
+                  readOnly: false
+                  allowSubPaths: true
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-var-lib-subpaths
+            name: disallowed-by-exception-subpath-sibling-prefix
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-data
+                name: data-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /var/libvirt
+              name: data-volume
+    # An exception that allows subpaths read-only does not cover a writable mount.
+    - name: 029-disallowed-by-exception-subpath-readonly-mismatch
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-var-lib-subpaths-ro
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /var/lib
+                  readOnly: true
+                  allowSubPaths: true
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-var-lib-subpaths-ro
+            name: disallowed-by-exception-subpath-readonly-mismatch
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-data
+                name: data-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /var/lib/docker
+              name: data-volume
+    # An exception that allows subpaths read-only covers a read-only mount.
+    - name: 030-allowed-by-exception-subpath-readonly
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-var-lib-subpaths-ro
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /var/lib
+                  readOnly: true
+                  allowSubPaths: true
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-var-lib-subpaths-ro
+            name: allowed-by-exception-subpath-readonly
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-data
+                name: data-volume
+                readOnly: true
+            volumes:
+            - hostPath:
+                path: /var/lib/docker
+              name: data-volume
+    # allowSubPaths covers paths nested at any depth, not only direct children.
+    - name: 031-allowed-by-exception-subpath-deeply-nested
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-var-lib-subpaths
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /var/lib
+                  readOnly: false
+                  allowSubPaths: true
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-var-lib-subpaths
+            name: allowed-by-exception-subpath-deeply-nested
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-data
+                name: data-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /var/lib/containerd/io.containerd.content.v1.content
+              name: data-volume
+    # allowSubPaths does not extend the exception to the parent of the allowed path.
+    - name: 032-disallowed-by-exception-subpath-parent
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-var-lib-subpaths
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /var/lib
+                  readOnly: false
+                  allowSubPaths: true
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-var-lib-subpaths
+            name: disallowed-by-exception-subpath-parent
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-data
+                name: data-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /var
+              name: data-volume
+    # allowSubPaths ignores a trailing slash, so it covers the allowed path written with one.
+    - name: 033-allowed-by-exception-subpath-trailing-slash
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.volumes.hostPath.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-var-lib-subpaths
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - path: /var/lib
+                  readOnly: false
+                  allowSubPaths: true
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-var-lib-subpaths
+            name: allowed-by-exception-subpath-trailing-slash
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              volumeMounts:
+              - mountPath: /host-data
+                name: data-volume
+                readOnly: false
+            volumes:
+            - hostPath:
+                path: /var/lib/
+              name: data-volume
   - name: pss-controller-deployment
     gatorBlock: pss-controller-deployment
     template: ../rendered/constraint-template.yaml
@@ -934,6 +1253,89 @@ spec:
                 - name: host
                   hostPath:
                     path: /tmp
+                containers:
+                - image: nginx
+                  name: nginx
+                  volumeMounts:
+                  - name: host
+                    mountPath: /host
+      exception: ''
+      exceptionRef: ''
+    # A controller whose pod template mounts a nested path is allowed by an SPE with allowSubPaths.
+    - name: controller-allowed-by-spe-subpath-on-pod-template
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.volumes[].hostPath.path
+        scenario: speMatch
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-var-lib-subpaths-ctrl
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - readOnly: false
+                  path: /var/lib
+                  allowSubPaths: true
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-by-spe-subpath-on-pod-template
+          spec:
+            template:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-var-lib-subpaths-ctrl
+              spec:
+                volumes:
+                - name: host
+                  hostPath:
+                    path: /var/lib/docker
+                containers:
+                - image: nginx
+                  name: nginx
+                  volumeMounts:
+                  - name: host
+                    mountPath: /host
+      exception: ''
+      exceptionRef: ''
+    # Without allowSubPaths, the same SPE does not cover the nested path on a controller.
+    - name: controller-denied-by-spe-exact-path-on-pod-template
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.volumes[].hostPath.path
+        scenario: speMismatch
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-var-lib-exact-ctrl
+          spec:
+            volumes:
+              hostPath:
+                allowedValues:
+                - readOnly: false
+                  path: /var/lib
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-denied-by-spe-exact-path-on-pod-template
+          spec:
+            template:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-var-lib-exact-ctrl
+              spec:
+                volumes:
+                - name: host
+                  hostPath:
+                    path: /var/lib/docker
                 containers:
                 - image: nginx
                   name: nginx

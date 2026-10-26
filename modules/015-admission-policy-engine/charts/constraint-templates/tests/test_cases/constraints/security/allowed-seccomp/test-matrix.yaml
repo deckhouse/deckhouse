@@ -879,6 +879,80 @@ spec:
               securityContext:
                 seccompProfile:
                   type: Unconfined
+  - name: security-policy-with-exception
+    gatorBlock: security-policy-with-exception
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    # An SPE value ending with * covers every localhost profile with that prefix, including nested directories.
+    - name: 040-allowed-by-exception-localhost-wildcard
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seccompProfile.allowedValues
+        scenario: speMatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-localhost-profiles-dir
+          spec:
+            securityContext:
+              seccompProfile:
+                allowedValues:
+                - localhost/profiles/*
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-localhost-profiles-dir
+            name: allowed-by-exception-localhost-wildcard
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  localhostProfile: profiles/app.json
+                  type: Localhost
+    # A wildcard SPE value does not cover a localhost profile outside its prefix.
+    - name: 041-disallowed-by-exception-localhost-wildcard-mismatch
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.seccompProfile.allowedValues
+        scenario: speMismatch
+      exception: ''
+      exceptionRef: ''
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-localhost-profiles-dir
+          spec:
+            securityContext:
+              seccompProfile:
+                allowedValues:
+                - localhost/profiles/*
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-localhost-profiles-dir
+            name: disallowed-by-exception-localhost-wildcard-mismatch
+          spec:
+            containers:
+            - image: nginx
+              name: nginx
+              securityContext:
+                seccompProfile:
+                  localhostProfile: other/app.json
+                  type: Localhost
   - name: pss-controller-deployment
     gatorBlock: pss-controller-deployment
     template: ../rendered/constraint-template.yaml
