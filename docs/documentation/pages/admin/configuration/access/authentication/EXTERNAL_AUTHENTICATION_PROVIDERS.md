@@ -10,6 +10,7 @@ DP supports integration with the following external authentication providers and
 
 - [LDAP (for example, Active Directory)](#ldap-integration);
 - [OIDC (for example, Okta, Keycloak, Gluu, Blitz Identity Provider)](#oidc-openid-connect-integration);
+- [SAML 2.0](#saml-20-integration);
 - [GitHub integration](#github-integration);
 - [GitLab integration](#gitlab-integration);
 - [Atlassian Crowd integration](#atlassiancrowd-integration);
@@ -17,7 +18,7 @@ DP supports integration with the following external authentication providers and
 
 {% alert level="info" %}
 Password policies (such as complexity requirements, expiration, history, two-factor authentication, etc.) are fully controlled by the external authentication provider.  
-Deckhouse does not manage passwords or interfere with policy enforcement on the provider side.
+DP does not manage passwords or interfere with policy enforcement on the provider side.
 {% endalert %}
 
 ## General integration workflow
@@ -34,7 +35,7 @@ If the parameter is not specified, no group-based filtering will be applied.
 
    > **Important**: When specifying the redirect URI, substitute the actual value of `publicDomainTemplate` without `%s`.  
    > For example, if `publicDomainTemplate: '%s.sandbox1.deckhouse-docs.flant.com'`, the actual URI would be:  
-   > `https://dex.sandbox20.deckhouse-docs.flant.com/callback`.
+   > `https://dex.sandbox1.deckhouse-docs.flant.com/callback`.
    >
    > To retrieve the Dex address (URI), run:
    >
@@ -90,7 +91,7 @@ If the parameter is not specified, no group-based filtering will be applied.
      metadata:
        name: user-authn
      spec:
-       version: 2
+       version: 3
        enabled: true
        settings:
          kubeconfigGenerator:
@@ -120,6 +121,77 @@ If the parameter is not specified, no group-based filtering will be applied.
 
 After setting up integration in the cluster with an external authentication provider, authentication through it will become possible in the platform's web interfaces. Information on setting up authentication for user applications can be found in the section [Usage → IAM → Authentication](../../../../user/access/authentication.html).
 
+### Limiting the identities of a provider
+
+A user who signs in through a DexProvider gets the email and the groups that the identity provider reports. The email is the Kubernetes username. As a result, users of the provider receive all permissions already granted in the cluster to those email addresses and groups.
+
+To restrict the identities a provider can assert, use the [`spec.allowedIdentities`](/modules/user-authn/cr.html#dexprovider-v1-spec-allowedidentities) parameter:
+
+- `emails` and `emailDomains` describe the emails that the provider may assert. Dex refuses sign-in for any other email.
+- `groups` describes the group names that the provider may assert. Dex keeps only the listed groups in the token and refuses sign-in if none is left.
+
+The limits apply to every provider type, in addition to the group filters of the type, such as `oidc.allowedGroups`, `gitlab.groups` or `crowd.groups`. Group names are compared exactly. Nesting of Group objects does not extend the list.
+
+Dex checks the limits at sign-in, at every refresh-token request and at Basic Authentication to the API server through an LDAP provider. Dex revokes refresh tokens for identities that no longer satisfy the limits, so narrowing the limits ends the existing sessions of the excluded users. For a Crowd or OIDC provider, basic-auth-proxy checks the credentials with the provider directly, so the limits do not apply to Basic Authentication.
+
+The same limits define who can create or change the provider: you must be able to assign every role already granted to the emails and groups that the provider can report. Only a SuperAdmin can create or change a provider without an email limit. A Crowd or OIDC provider with `enableBasicAuth: true` counts as a provider without an email limit, so only a SuperAdmin can create it or turn on `enableBasicAuth` in it.
+
+Example of a provider limited by an email domain and a group:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: contractors
+spec:
+  type: OIDC
+  displayName: Contractors
+  oidc:
+    issuer: https://idp.contractor.example
+    clientID: dex
+    clientSecret: secret
+  allowedIdentities:
+    emailDomains: [contractor.example]
+    groups: [contractors]
+```
+
+The following changes are not checked: changing `clientSecret` or `bindPW`, changing `displayName`, disabling the provider, narrowing the limits, reapplying the same manifest, and deleting the provider. Any other change is checked as connecting a new provider, including enabling a disabled provider.
+
+If the check fails, the error lists the roles that the provider could receive, for example:
+
+```text
+dexproviders.deckhouse.io "corp": the provider can assert identities that already carry roles [user-authz:super-admin]; the requester's can-assign range is basic<=ClusterAdmin and does not cover them. Narrow spec.allowedIdentities (emails, emailDomains, groups) or ask a SuperAdmin
+```
+
+### Checking provider connectivity
+
+The provider page of the DP web UI has the "Check connection" action. It creates a [DexProviderCheck](/modules/user-authn/cr.html#dexprovidercheck) resource and waits until the `user-authn` controller writes the check result to its `status`.
+
+The check verifies the following:
+
+- the specified [DexProvider](/modules/user-authn/cr.html#dexprovider) exists and is enabled;
+- the Dex discovery endpoint inside the cluster is reachable;
+- the endpoint of the external provider is reachable.
+
+For OIDC providers, the discovery document and JWKS are also read. For LDAP providers, TCP/TLS/StartTLS reachability is checked and, if Kerberos is enabled, the presence of the keytab Secret. The check also verifies that the provider accepts the client or service account credentials (GitHub, GitLab, Bitbucket Cloud, Crowd, OIDC, bind in LDAP) and warns about disabled TLS verification and certificates that expire soon. The check does not perform a full sign-in flow and does not check the password of a test user.
+
+To run the check without the web UI, create a DexProviderCheck resource:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProviderCheck
+metadata:
+  name: check-github
+spec:
+  providerName: github
+```
+
+Then read its status:
+
+```shell
+d8 k get dexproviderchecks check-github -o yaml
+```
+
 ### OIDC (OpenID Connect) integration
 
 Authentication via an OIDC provider requires registering a client (or creating an application). Follow your provider's documentation to do this (e.g., [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration), or [Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html)).
@@ -132,7 +204,7 @@ For integration with DexProvider, use the following format: `https://dex.<public
 {% endalert %}
 
 {% alert level="info" %}
-To ensure proper token revocation on logout and to force re-authentication, set the `prompt` parameter to `login`.  
+To ensure proper token revocation on logout and to force re-authentication, set the `promptType` parameter to `login`.  
 This guarantees that the user will be prompted to re-enter credentials during subsequent logins.
 {% endalert %}
 
@@ -197,6 +269,10 @@ If email verification is not enabled in Keycloak, to properly use it as an ident
    - groups
   ```
 
+{% alert level="warning" %}
+With `insecureSkipEmailVerified: true`, Dex accepts unverified email addresses. Permissions are granted by email, so use this parameter only if the identity provider does not let users set an arbitrary email address.
+{% endalert %}
+
 #### Blitz Identity Provider
 
 Example configuration of a provider for integration with Blitz Identity Provider:
@@ -216,7 +292,6 @@ spec:
     clientID: clientID
     clientSecret: clientSecret
     getUserInfo: true
-    insecureSkipEmailVerified: true # Set to true if email verification is not required.
     insecureSkipVerify: false
     issuer: https://yourdomain.idblitz.ru/blitz
     promptType: consent 
@@ -244,7 +319,6 @@ spec:
     issuer: https://my-company.okta.com
     clientID: plainstring
     clientSecret: plainstring
-    insecureSkipEmailVerified: true
     getUserInfo: true
 ```
 
@@ -303,13 +377,14 @@ To configure the SAML Identity Provider:
 1. Export the IdP signing certificate and specify it in the `rootCAData` field of the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
 
 {% alert level="info" %}
-SAML does not natively support refresh tokens. Dex caches the user identity from the initial SAML assertion and returns it on subsequent refresh requests. The session lifetime is controlled by the `expiry.refreshTokens` settings in the [`user-authn`](/modules/user-authn/) module configuration.
+SAML does not support refresh tokens. Dex caches the user data from the first SAML assertion and returns it on subsequent refresh-token requests. The session lifetime is limited by the [`refreshTokenAbsoluteLifetime`](/modules/user-authn/configuration.html#parameters-refreshtokenabsolutelifetime) parameter of the `user-authn` module.
 {% endalert %}
 
 ### LDAP integration
 
 To configure authentication, create a read-only account (service account) in your LDAP directory.  
 This account will be used to perform search queries in the LDAP catalog.
+You can also configure user lockout after failed sign-in attempts for this type of integration. To do this, specify the provider type in the [`passwordPolicy.lockout.applyToConnectors`](/modules/user-authn/configuration.html#parameters-passwordpolicy-lockout-applytoconnectors) parameter of the `user-authn` module.
 
 In the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource, specify the following parameters:
 
@@ -325,8 +400,8 @@ The `bindPW` parameter must contain the password in plain text. Dex does not sup
 
 You can also enable support for:
 
-- Basic Authentication for accessing the Kubernetes API using LDAP credentials. To do this, set the `enableBasicAuth: true` parameter in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource. For more information, see [Access using Basic Authentication](k8s-api-lb.html#access-using-basic-authentication-ldap).
-- Kerberos SSO (SPNEGO) for LDAP. To do this, enable the `spec.ldap.kerberos` block in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource and configure the necessary parameters in it. For more details, see [Kerberos SSO (SPNEGO) for LDAP](k8s-api-lb.html#kerberos-spnego-sso-for-ldap).
+- Basic Authentication for accessing the Kubernetes API using LDAP credentials. To do this, set the [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap-enablebasicauth) parameter in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource. For more information, see [Access using Basic Authentication](k8s-api-lb.html#access-using-basic-authentication-ldap).
+- Kerberos SSO (SPNEGO) for LDAP. To do this, enable the `spec.ldap.kerberos` block in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource, specify the keytab Secret in `keytabSecretName` and configure the other parameters in it. For more details, see [Kerberos SSO (SPNEGO) for LDAP](k8s-api-lb.html#kerberos-spnego-sso-for-ldap).
 
 Example configuration for integrating with Active Directory (Basic Authentication):
 
@@ -340,10 +415,13 @@ spec:
   displayName: Active Directory
   ldap:
     host: ad.example.com:636
-    insecureSkipVerify: true
+    rootCAData: |
+      -----BEGIN CERTIFICATE-----
+      MIIFaDC...
+      -----END CERTIFICATE-----
 
-    bindDN: cn=Administrator,cn=users,dc=example,dc=com
-    bindPW: admin0!
+    bindDN: cn=dex-readonly,cn=users,dc=example,dc=com
+    bindPW: <PASSWORD>
 
     enableBasicAuth: true
 
@@ -375,10 +453,10 @@ To do this, follow these steps:
 1. Go to "Settings → Developer settings → OAuth Apps → New OAuth App", and set the "Authorization callback URL" to `https://dex.<publicDomainTemplate>/callback`.
 1. Use the generated `Client ID` and `Client Secret` in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
 
-If the GitHub organization is managed by a client:
+If the organization restricts third-party applications:
 
-1. Go to "Settings → Applications → Authorized OAuth Apps → `<name of created OAuth App>`" and click "Send Request" to submit an approval request.
-1. Ask the client to approve the request that will be sent to their email.
+1. Go to "Settings → Applications → Authorized OAuth Apps → `<APPLICATION_NAME>`" and click "Send Request" to submit an approval request.
+1. Ask an organization owner to approve the request.
 
 Example configuration for integrating with GitHub:
 
@@ -435,12 +513,14 @@ spec:
 
 In the relevant Atlassian Crowd project, you need to create a new Generic application.
 
+You can also configure user lockout after failed sign-in attempts for this type of integration. To do this, specify the provider type in the [`passwordPolicy.lockout.applyToConnectors`](/modules/user-authn/configuration.html#parameters-passwordpolicy-lockout-applytoconnectors) parameter of the `user-authn` module.
+
 To do this, follow these steps:
 
 1. Go to "Applications → Add application".
 1. Specify the obtained "Application Name" and "Password" in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
 1. When specifying groups in the DexProvider resource, make sure their names are written in lowercase.  
-   This is necessary for correct group matching between Crowd and Deckhouse.
+   This is necessary for correct group matching between Crowd and DP.
 
 Example configuration for integrating with Atlassian Crowd:
 
@@ -456,11 +536,12 @@ spec:
     baseURL: https://crowd.example.com/crowd
     clientID: plainstring
     clientSecret: plainstring
-    enableBasicAuth: true
     groups:
     - administrators
     - users
 ```
+
+Basic Authentication to the Kubernetes API through a Crowd provider ([`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-crowd-enablebasicauth)) bypasses the [identity limits of the provider](#limiting-the-identities-of-a-provider), so only a SuperAdmin can enable it.
 
 ### Bitbucket Cloud Integration
 

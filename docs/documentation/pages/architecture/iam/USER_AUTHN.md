@@ -85,7 +85,7 @@ The module consists of the following components:
 
      * [Group](/modules/user-authn/cr.html#group): A resource that describes user group.
      * [User](/modules/user-authn/cr.html#user): A resource that describes static user.
-     * UserAccount: A resource that describes view of Dex Password, OfflineSessions, and UserIdentity objects for the Deckhouse web UI.
+     * [UserAccount](/modules/user-authn/cr.html#useraccount): A resource that describes view of Dex Password, OfflineSessions, and UserIdentity objects for the Deckhouse web UI.
      * [UserOperation](/modules/user-authn/cr.html#useroperation): A resource that describes an operation to be applied to a user (password reset, forced password change, 2FA reset, lock/unlock, logout).
      * DexProviderCheck: A resource that describes a connectivity check for the specific DexProvider. The check verifies that the provider exists, is enabled, Dex is reachable, and the provider endpoint is reachable. It does not perform a full user authentication flow.
 
@@ -106,7 +106,7 @@ The module consists of the following components:
 
    * **user-api**: Main container of the service.
 
-1. **Basic-auth-proxy**: An optional component consisting of a single **proxy** container, which is launched when basic authentication is enabled in the settings of one of an external providers. When connecting to the Kubernetes API, the basic-auth-proxy component performs basic user authentication with external providers via dex, caches credentials validation results, and proxies authenticated requests to the Kubernetes API.
+1. **Basic-auth-proxy**: An optional component consisting of a single **proxy** container, which is launched when basic authentication is enabled in the settings of one of an external providers. When connecting to the Kubernetes API, the basic-auth-proxy component performs basic user authentication (through Dex for an LDAP provider, directly with the provider for a Crowd or OIDC provider), caches credentials validation results, and proxies authenticated requests to the Kubernetes API.
 
 ## Module interactions
 
@@ -126,7 +126,7 @@ The following external components interact with the module:
 
 1. **Kube-apiserver**: Queries dex when processing Kubernetes API requests made using a kubeconfig file:
 
-   * When starting, kube-apiserver requests the OIDC provider configuration endpoint (Dex in this case) to obtain the `issuer` and the parameters required to validate tokens via the JWKS endpoint.
+   * kube-apiserver reads the OIDC provider configuration (Dex in this case) to obtain the `issuer` and the parameters required to validate tokens via the JWKS endpoint. In Kubernetes 1.30 and later, it reads it through the Dex Service inside the cluster.
    * When receiving a request with an ID token, kube-apiserver verifies its signature using the keys obtained from the JWKS endpoint, then it compares token claims against the server configuration.
 
    More details about connecting to the Kubernetes API using a generated kubeconfig can be found in the [corresponding documentation page](authentication.html#connecting-to-kubernetes-api-using-a-generated-kubeconfig).

@@ -21,10 +21,11 @@ description: Как устроена мультитенантность в Deckh
 
 При создании Project из определенного ProjectTemplate происходит следующее:
 
-1. Переданные [параметры](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) валидируются по OpenAPI-спецификации (параметр [`openAPIV3Schema`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) ресурса [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate)).
-1. Выполняется рендеринг [шаблона для ресурсов](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-resourcestemplate) с помощью [Helm](https://helm.sh/docs/). Значения для рендеринга берутся из параметра [`parameters`](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) ресурса [Project](/modules/multitenancy-manager/cr.html#project).
-1. Создаётся неймспейс с именем, которое совпадает c именем [Project](/modules/multitenancy-manager/cr.html#project).
-1. По очереди создаются все ресурсы, описанные в шаблоне.
+1. Переданные [параметры](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-parameters) валидируются по OpenAPI-спецификации (параметр [`parametersSchema.openAPIV3Schema`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha2-spec-parametersschema-openapiv3schema) ресурса [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate)).
+1. Создаётся неймспейс с тем же именем, что у [Project](/modules/multitenancy-manager/cr.html#project).
+1. Из шаблона создаются объекты проекта. В шаблоне `deckhouse.io/v1alpha2` настройки, например профиль безопасности подов, сетевая изоляция, сбор логов и размещение на узлах, описываются структурированными полями, и контроллер сам создаёт из них нужные объекты в каждом неймспейсе проекта. Другие объекты описываются в `manifests` и применяются с правами роли `d8:project:admin` в неймспейсах проекта, а не с правами контроллера.
+   Шаблон с Helm-текстом в поле [`resourcesTemplate`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha2-spec-resourcestemplate) рендерится через Helm. Эта форма устарела, ни один шаблон не может получить новое поле  `resourcesTemplate`, а шаблон создаётся только через `deckhouse.io/v1alpha2`.
+1. Стандартные поля проекта применяются независимо от шаблона: [`.spec.quota`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-quota) преобразуется в ResourceQuota, а [`.spec.administrators`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-administrators) — в автоматически управляемый [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding).
 
 {% alert level="warning" %}
 При изменении шаблона проекта все созданные проекты будут обновлены в соответствии с новым шаблоном.
@@ -32,17 +33,12 @@ description: Как устроена мультитенантность в Deckh
 
 ### Изоляция проекта
 
-В основе проекта используется механизм изоляции ресурсов в рамках неймспейса.
-Неймспейсы позволяют группировать поды, сервисы, секреты и другие объекты, но не обеспечивают полноценной изоляции.
-Проект расширяет функциональность неймспейсов, предлагая дополнительные инструменты для повышения уровня контроля и безопасности.
+Неймспейс сам по себе не изолирует проект. Проект добавляет следующее:
 
-Для управления уровнем изоляции проекта можно использовать возможности Kubernetes, например:
-
-* **Ресурсы контроля доступа** (AuthorizationRule / RoleBinding) — позволяют управлять взаимодействием объектов внутри неймспейса. С их помощью можно задавать правила и назначать роли, чтобы точно контролировать, кто и что может делать в проекте.
-* **Ресурсы контроля использования нагрузки** (ResourceQuota) — с их помощью можно задать лимиты на использование процессорного времени (CPU), оперативной памяти (RAM), а также количества объектов внутри неймспейса. Это помогает избежать чрезмерной нагрузки и обеспечивает мониторинг за приложениями в рамках проекта.
-* **Ресурсы контроля сетевой связности** (NetworkPolicy) — управляют входящим и исходящим сетевым трафиком в неймспейсе. Таким образом, можно настроить разрешенные подключения между подами, улучшить безопасность и управляемость сетевого взаимодействия в рамках проекта.
-
-Эти инструменты можно комбинировать, чтобы настроить проект в соответствии с требованиями вашего приложения.
+* доступ ко всему проекту через [`.spec.administrators`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-administrators), ProjectRoleBinding и ClusterProjectRoleBinding; обычный RoleBinding в одном неймспейсе допускается для делегируемых ролей;
+* ограничение ресурсов через [`.spec.quota`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-quota), которое применяется как ResourceQuota `d8-project-quota` в основном неймспейсе;
+* сетевую изоляцию через поле [`networkPolicy.mode: Isolated`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha2-spec-networkpolicy-mode) шаблона;
+* профиль безопасности подов через поле [`podSecurityStandard`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha2-spec-podsecuritystandard) шаблона.
 
 ### Управление доступом к cluster-wide-ресурсам
 
@@ -57,11 +53,13 @@ Certificate — ClusterIssuer, RoleBinding — ClusterRole. Модуль поз�
 
 * [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) — регистрирует тип cluster-wide-ресурсов, доступом к которому можно управлять. Такие ресурсы поставляются DP или разработчиками модулей;
 * [GrantableClusterResourceReference](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) — определяет, где используется зарегистрированный cluster-wide-ресурс. Например, какое поле ресурса содержит ссылку на него. Такие ресурсы поставляются модулями;
-* [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) — задаёт правила доступа. Администратор кластера с помощью лейблов выбирает проекты, на которые распространяется политика, определяет разрешённые и запрещённые ресурсы, а также ресурс, используемый по умолчанию;
-* [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) — создаваемый контроллером список cluster-wide-ресурсов, доступных проекту, который предназначен только для чтения.
+* [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) — задаёт правила доступа. В версии `v1alpha2` администратор кластера выбирает проекты, на которые распространяется политика, по лейблам объектов Project (`projectSelector`) и сужает выбор по лейблам неймспейсов проектов (`namespaceSelector`). Политика также определяет разрешённые и запрещённые ресурсы, а также ресурс, используемый по умолчанию;
+* В каждом неймспейсе каждого проекта контроллер поддерживает [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) для каждого GrantableClusterResourceDefinition. Он содержит список cluster-wide-ресурсов, доступных проекту по применимым политикам, и предназначен только для чтения.
 
 Пока администратор не создал ClusterResourceGrantPolicy, доступность ресурсов определяется их регистрацией: ресурсы доступны всем проектам, если в GrantableClusterResourceDefinition задано `defaultAvailability: All` (значение по умолчанию) и ресурс не попадает под фильтры `excluded`.
 Проверка доступа выполняется только для объектов в неймспейсах проектов. Если политика доступа изменяется, уже используемые существующими объектами cluster-wide-ресурсы остаются доступными для этих объектов.
+
+Пока контроллер модуля недоступен, вебхуки отклоняют запросы. До его восстановления объекты зарегистрированных типов (например, PersistentVolumeClaim, Service или RoleBinding) в неймспейсах проектов могут создавать и изменять только компоненты платформы и участники группы `system:masters`. Чтобы контроллер оставался доступным, включите [`highAvailability`](/modules/multitenancy-manager/configuration.html#parameters-highavailability).
 
 Подробное описание механизма управления доступом приведено [в документации модуля `multitenancy-manager`](/modules/multitenancy-manager/#управление-доступом-к-cluster-wide-ресурсам).
 
@@ -93,10 +91,10 @@ Certificate — ClusterIssuer, RoleBinding — ClusterRole. Модуль поз�
     [`ClusterResourceGrantPolicy`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) и
     [`AvailableClusterResource`](/modules/multitenancy-manager/cr.html#availableclusterresource). Формирует
     каталоги `AvailableClusterResource` для проектов и запускает валидирующие/мутирующие admission-вебхуки
-    (`/is-granted`, `/defaults`, `/protect`), которые контролируют, какие кластерные ресурсы проект может
-    ссылать, и подставляют дефолты проекта при CREATE.
+    (`/is-granted`, `/defaults`, `/protect`), которые контролируют, на какие кластерные ресурсы проект может
+    ссылаться, и подставляют значения по умолчанию проекта при CREATE.
 
-   > **Внимание.** Multitenancy-manager имеет права `cluster-admin`, что позволяет создавать любые объекты, описанные в ресурсе ProjectTemplate.
+   > **Внимание.** Multitenancy-manager имеет права `cluster-admin`. Объекты, описанные в поле `manifests` ресурса ProjectTemplate, применяются не с этими правами, а с правами роли `d8:project:admin` в неймспейсах проекта.
 
 ## Взаимодействия модуля
 
@@ -104,7 +102,7 @@ Certificate — ClusterIssuer, RoleBinding — ClusterRole. Модуль поз�
 
 - **Kube-apiserver**:
   - управление кастомными ресурсами Project и ProjectTemplate;
-  - валидация кастомных ресурсов Project, ProjectTemplate, а также стандартного ресурса Namespace;
+  - валидация кастомных ресурсов Project и ProjectTemplate;
   - создание ресурсов, указанных в кастомном ресурсе ProjectTemplate, на основе параметров, заданных в Project.
   - управление кастомными ресурсами GrantableClusterResourceDefinition, GrantableClusterResourceReference, ClusterResourceGrantPolicy и AvailableClusterResource.
   - валидация кастомных ресурсов AvailableClusterResource.

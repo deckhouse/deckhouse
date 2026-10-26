@@ -70,6 +70,8 @@ roleRef:
 EOF
 ```
 
+If the virtualization cluster runs a DP version earlier than 1.78, the `d8:namespace:*` roles do not exist there. In this case, specify the `d8:use:role:manager` role in `roleRef.name`.
+
 ## Generating a kubeconfig
 
 Generate a kubeconfig to be used in the cluster initial configuration file:

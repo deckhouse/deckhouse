@@ -8,7 +8,7 @@ description: "Настройка доступа CI/CD к API Kubernetes в Deckh
 Для аутентификации CI/CD-пайплайнов в API Kubernetes доступны следующие методы:
 - [ServiceAccount](#serviceaccount) — токен Kubernetes ServiceAccount.
 - [Basic Auth](#basic-auth) — логин и пароль через IdP.
-- [Token Exchange](#token-exchange) — обмен токена IdP на токен Dex.
+- [Token Exchange](#обмен-токена-token-exchange) — обмен токена IdP на токен Dex.
 
 ---
 
@@ -60,7 +60,7 @@ EOF
 
 Назначьте необходимые для ServiceAccount права.
 
-Для текущей ролевой модели используйте [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+Для упрощённой ролевой модели используйте [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -80,22 +80,22 @@ EOF
 
 Доступные уровни: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`.
 
-Для экспериментальной ролевой модели используйте [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
+Для гранулярной ролевой модели выдайте роль `d8:project:admin` во всех проектах с помощью [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding). Чтобы выдать доступ только к одному неймспейсу, вместо этого создайте в нём RoleBinding на роль `d8:namespace:admin`:
 
 ```shell
 cat <<EOF | d8 k apply -f -
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+apiVersion: deckhouse.io/v1alpha3
+kind: ClusterProjectRoleBinding
 metadata:
   name: gitlab-runner-access
-subjects:
-- kind: ServiceAccount
-  name: gitlab-runner-deploy
-  namespace: ci-deploy
-roleRef:
-  kind: ClusterRole
-  name: d8:manage:all:manager
-  apiGroup: rbac.authorization.k8s.io
+spec:
+  subjects:
+  - kind: ServiceAccount
+    name: gitlab-runner-deploy
+    namespace: ci-deploy
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:admin
 EOF
 ```
 
@@ -328,11 +328,11 @@ EOF
 Аннотация `dexclient.deckhouse.io/allow-access-to-kubernetes` позволяет клиенту запрашивать токены с `aud=kubernetes`.
 
 {% alert level="warning" %}
-Предоставляемый таким образом доступ к Kubernetes API действует на уровне всего кластера. По этой причине для добавления аннотации или изменения её значения на `"true"` необходимы права на изменение конфигурации модуля `user-authn` — например, роль `d8:manage:permission:module:user-authn:edit`. Прав на создание DexClient в отдельном неймспейсе недостаточно: admission-контроллер отклонит запрос с сообщением, содержащим имя аннотации.
+Предоставляемый таким образом доступ к Kubernetes API действует на уровне всего кластера. По этой причине для добавления аннотации или изменения её значения на `"true"` необходимо право `create` на подресурс `dexclients/allow-access-to-kubernetes` группы API `deckhouse.io` в неймспейсе DexClient. В упрощённой ролевой модели это право есть начиная с уровня `ClusterAdmin`. В гранулярной модели его дают роль `d8:subsystem:iam:manager` и роли, которые её включают, например `d8:system:manager`. Прав на создание DexClient в отдельном неймспейсе недостаточно: admission-политика отклонит запрос с сообщением, содержащим имя аннотации.
 
 Добавление аннотации ограничено независимо от указанного значения, включая `"false"`. Это необходимо для совместимости с предыдущими версиями DP, в которых доступ предоставляется при наличии аннотации независимо от её значения.
 
-Ограничение не распространяется на объект, у которого аннотация уже установлена. Удаление и повторное создание DexClient считается повторным добавлением аннотации. Поэтому GitOps-контроллеру, который пересоздаёт объект вместо его обновления, требуется право `update` на ресурс `moduleconfigs` с именем `user-authn`.
+Ограничение не распространяется на объект, у которого аннотация уже установлена. Удаление и повторное создание DexClient считается повторным добавлением аннотации. Поэтому GitOps-контроллеру, который пересоздаёт объект вместо его обновления, требуется то же право `create` на подресурс `dexclients/allow-access-to-kubernetes`.
 {% endalert %}
 
 Получение client secret:
@@ -360,7 +360,7 @@ DP настраивает kube-apiserver на проверку токенов De
 
 Подробнее о выдаче прав — в разделе [«Выдача прав пользователям и сервисным аккаунтам»](granting.html).
 
-Для текущей ролевой модели используйте [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+Для упрощённой ролевой модели используйте [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -376,22 +376,21 @@ spec:
 EOF
 ```
 
-Для экспериментальной ролевой модели используйте [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
+Для гранулярной ролевой модели выдайте роль `d8:project:admin` во всех проектах с помощью [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding). Чтобы выдать доступ только к одному неймспейсу, вместо этого создайте в нём RoleBinding на роль `d8:namespace:admin`:
 
 ```shell
 cat <<EOF | d8 k apply -f -
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+apiVersion: deckhouse.io/v1alpha3
+kind: ClusterProjectRoleBinding
 metadata:
   name: ci-deployer
-subjects:
-- kind: User
-  name: deployer@example.com
-  apiGroup: rbac.authorization.k8s.io
-roleRef:
-  kind: ClusterRole
-  name: d8:manage:all:manager
-  apiGroup: rbac.authorization.k8s.io
+spec:
+  subjects:
+  - kind: User
+    name: deployer@example.com
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:admin
 EOF
 ```
 
@@ -503,7 +502,7 @@ d8 k --server="https://${API_HOST}" --token="${DEX_TOKEN}" auth whoami -v=8
 **Dex 401** — неверные учётные данные клиента или невалидный subject token.
 
 **API 401** — токен не прошёл проверку. Проверьте:
-- Аннотация `dexclient.deckhouse.io/allow-access-to-kubernetes` на DexClient. Если её нет, проверьте, не отклонил ли admission-контроллер запрос, который должен был её добавить, и не пересоздал ли GitOps-контроллер объект без неё. Добавить аннотацию может только субъект, которому разрешено обновлять ModuleConfig `user-authn`.
+- Аннотация `dexclient.deckhouse.io/allow-access-to-kubernetes` на DexClient. Если её нет, проверьте, не отклонил ли admission-контроллер запрос, который должен был её добавить, и не пересоздал ли GitOps-контроллер объект без неё. Для добавления аннотации необходимо право `create` на подресурс `dexclients/allow-access-to-kubernetes` группы API `deckhouse.io` в неймспейсе DexClient.
 - Scope содержит `audience:server:client_id:kubernetes` и `profile`.
 - Синхронизация времени между CI-раннером и кластером.
 

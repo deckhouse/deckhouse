@@ -10,7 +10,7 @@ description: Особенности аутентификации в Deckhouse Pl
 
 ![Схема взаимодействия при подключении к API Kubernetes с помощью сгенерированного kubeconfig](../../images/user-authn/kubeconfig_dex.svg)
 
-1. **Инициализация**. До запуска kube-apiserver он запрашивает конфигурационный эндпоинт OIDC-провайдера (в данном случае — Dex), чтобы получить информацию об `issuer` и параметры для валидации токенов через JWKS-эндпоинт.
+1. **Инициализация**. kube-apiserver получает конфигурацию OIDC-провайдера (в данном случае — Dex): `issuer` и JWKS-эндпоинт для валидации токенов. В Kubernetes 1.30 и новее он получает её через сервис Dex внутри кластера.
 
 1. **Генерация kubeconfig**. Веб-интерфейс Deckhouse Platform (DP) формирует kubeconfig, в котором сохраняются `ID token` и `refresh token`. Этот файл используется утилитой `kubectl` или другими клиентами Kubernetes.
 
@@ -18,7 +18,9 @@ description: Особенности аутентификации в Deckhouse Pl
 
 ## Защита Dex от подбора логина и пароля
 
-Одному пользователю разрешено только 20 попыток входа. Если указанный лимит израсходован, одна дополнительная попытка будет добавляться каждые 6 секунд.
+Dex ограничивает частоту неудачных попыток входа с одного IP-адреса на эндпоинтах проверки пароля. Ограничение настраивается параметром [`rateLimit`](/modules/user-authn/configuration.html#parameters-ratelimit) и по умолчанию выключено.
+
+Кроме того, Dex блокирует учётную запись после неудачных попыток входа. Блокировка настраивается параметром [`passwordPolicy.lockout`](/modules/user-authn/configuration.html#parameters-passwordpolicy-lockout). Она действует для локальных пользователей, а для пользователей LDAP и Crowd — если их типы указаны в [`applyToConnectors`](/modules/user-authn/configuration.html#parameters-passwordpolicy-lockout-applytoconnectors).
 
 ## Аутентификация с помощью DexAuthenticator
 
@@ -36,12 +38,21 @@ description: Особенности аутентификации в Deckhouse Pl
 
 ## Расширения Dex в DP
 
-DP использует модифицированную версию Dex для поддержки:
+В DP используется Dex с дополнительными возможностями:
 
-* групп для статических учетных записей пользователей и провайдера Bitbucket Cloud (параметр [`bitbucketCloud`](/modules/user-authn/cr.html#dexprovider-v1-spec-bitbucketcloud));
-* передачи параметра `group` клиентам;
-* механизма `obsolete tokens`, который позволяет избежать состояния гонки при продлении токена OIDC-клиентом.
+* группы статических пользователей (объект [Group](/modules/user-authn/cr.html#group));
+* двухфакторная аутентификация (2FA) статических пользователей (параметр [`staticUsers2FA`](/modules/user-authn/configuration.html#parameters-staticusers2fa));
+* парольная политика для статических пользователей: сложность, история паролей, ротация и блокировка после неудачных попыток входа (параметр [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy));
+* принудительная смена пароля при следующем входе после сброса пароля администратором;
+* блокировка после неудачных попыток входа для пользователей LDAP и Atlassian Crowd (параметр [`passwordPolicy.lockout.applyToConnectors`](/modules/user-authn/configuration.html#parameters-passwordpolicy-lockout-applytoconnectors));
+* ограничение частоты неудачных попыток входа с одного IP-адреса (параметр [`rateLimit`](/modules/user-authn/configuration.html#parameters-ratelimit));
+* блокировка и разблокировка пользователей с помощью объекта [UserOperation](/modules/user-authn/cr.html#useroperation), в том числе без парольной политики;
+* списки разрешённых пользователей и групп в [DexClient](/modules/user-authn/cr.html#dexclient) и [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator), которые Dex проверяет при входе и при каждом запросе с refresh-токеном;
+* ограничение идентичностей, которые может утверждать провайдер (параметр [`spec.allowedIdentities`](/modules/user-authn/cr.html#dexprovider-v1-spec-allowedidentities) DexProvider);
+* вход по Kerberos (SPNEGO) через провайдер LDAP без формы ввода пароля, с проверкой билетов из заголовка `Authorization: Negotiate` по keytab сервиса;
+* refresh-токены для провайдера SAML;
+* собственный сертификат CA для провайдера GitLab (параметр [`gitlab.rootCAData`](/modules/user-authn/cr.html#dexprovider-v1-spec-gitlab-rootcadata)).
 
 ## Отказоустойчивый режим
 
-DP поддерживает режим высокой доступности `highAvailability`. При его включении аутентификаторы, отвечающие на `auth request`-запросы, развертываются с учетом требуемой избыточности для обеспечения непрерывной работы. В случае отказа любого из экземпляров аутентификаторов пользовательские аутентификационные сессии не прерываются.
+В отказоустойчивом режиме ([`highAvailability`](/modules/user-authn/configuration.html#parameters-highavailability)) Dex и другие компоненты модуля `user-authn` запускаются в нескольких репликах, поэтому вход продолжает работать при отказе одного пода. DexAuthenticator использует ту же настройку, если в нём не задан собственный параметр [`spec.highAvailability`](/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability).

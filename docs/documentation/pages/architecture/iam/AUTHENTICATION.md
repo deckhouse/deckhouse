@@ -9,7 +9,7 @@ description: Authentication features in Deckhouse Platform.
 
 ![Interaction scheme when connecting to the Kubernetes API using a generated kubeconfig](../../images/user-authn/kubeconfig_dex.svg)
 
-1. **Initialization**. Before the kube-apiserver starts, it requests the configuration endpoint of the OIDC provider (in this case — Dex) to retrieve the `issuer` and JWKS endpoint settings for token validation.
+1. **Initialization**. kube-apiserver reads the configuration of the OIDC provider (in this case — Dex): the `issuer` and the JWKS endpoint for token validation. In Kubernetes 1.30 and later, it reads it through the Dex Service inside the cluster.
 
 1. **Kubeconfig generation**. The Deckhouse Platform (DP) web UI generates a kubeconfig file that includes an `ID token` and a `refresh token`. This file is used by `kubectl` or other Kubernetes clients.
 
@@ -17,7 +17,9 @@ description: Authentication features in Deckhouse Platform.
 
 ## Protection against credential brute-forcing in Dex
 
-Each user is allowed a maximum of 20 login attempts. Once this limit is reached, an additional attempt is allowed every 6 seconds.
+Dex limits failed sign-in attempts per client IP address on the password endpoints. Configure the limit with the [`rateLimit`](/modules/user-authn/configuration.html#parameters-ratelimit) parameter. It is turned off by default.
+
+Dex also locks an account after failed sign-in attempts. Configure the lockout with the [`passwordPolicy.lockout`](/modules/user-authn/configuration.html#parameters-passwordpolicy-lockout) parameter. It applies to local users, and to LDAP and Crowd users if their types are listed in [`applyToConnectors`](/modules/user-authn/configuration.html#parameters-passwordpolicy-lockout-applytoconnectors).
 
 ## Authentication via DexAuthenticator
 
@@ -36,14 +38,21 @@ Each user is allowed a maximum of 20 login attempts. Once this limit is reached,
 
 ## DP-specific Dex extensions
 
-DP uses a modified version of Dex that supports:
+DP ships Dex with additional capabilities:
 
-* Groups for static user accounts and the Bitbucket Cloud provider (via the [`bitbucketCloud`](/modules/user-authn/cr.html#dexprovider-v1-spec-bitbucketcloud) parameter).
-* Passing the `group` claim to clients.
-* The `obsolete tokens` mechanism, which helps prevent race conditions when refreshing tokens in OIDC clients.
+* Groups for static users (the [Group](/modules/user-authn/cr.html#group) object).
+* Two-factor authentication (2FA) for static users (the [`staticUsers2FA`](/modules/user-authn/configuration.html#parameters-staticusers2fa) parameter).
+* A password policy for static users: complexity, password history, rotation and lockout after failed sign-in attempts (the [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) parameter).
+* A forced password change at the next sign-in after an administrator resets the password.
+* Lockout after failed sign-in attempts for LDAP and Atlassian Crowd users (the [`passwordPolicy.lockout.applyToConnectors`](/modules/user-authn/configuration.html#parameters-passwordpolicy-lockout-applytoconnectors) parameter).
+* Per-IP rate limiting of failed sign-in attempts (the [`rateLimit`](/modules/user-authn/configuration.html#parameters-ratelimit) parameter).
+* Locking and unlocking users with the [UserOperation](/modules/user-authn/cr.html#useroperation) object, also without a password policy.
+* Lists of allowed users and groups in [DexClient](/modules/user-authn/cr.html#dexclient) and [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) that Dex checks at sign-in and at every refresh-token request.
+* Limits on the identities a provider may assert (the [`spec.allowedIdentities`](/modules/user-authn/cr.html#dexprovider-v1-spec-allowedidentities) parameter of DexProvider).
+* Kerberos (SPNEGO) sign-in through the LDAP provider without the password form, with tickets from the `Authorization: Negotiate` header validated by the service keytab.
+* Refresh tokens for the SAML provider.
+* A custom CA certificate for the GitLab provider (the [`gitlab.rootCAData`](/modules/user-authn/cr.html#dexprovider-v1-spec-gitlab-rootcadata) parameter).
 
 ## High availability mode
 
-DP supports a high-availability mode via the `highAvailability` setting.  
-When enabled, multiple authenticator instances are deployed with redundancy to ensure continuous service.  
-If any of the authenticators fail, active user authentication sessions are preserved and remain uninterrupted.
+In high availability mode ([`highAvailability`](/modules/user-authn/configuration.html#parameters-highavailability)), Dex and the other `user-authn` components run in several replicas, so sign-in keeps working if one pod fails. DexAuthenticator follows the same setting unless its own [`spec.highAvailability`](/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability) is set.

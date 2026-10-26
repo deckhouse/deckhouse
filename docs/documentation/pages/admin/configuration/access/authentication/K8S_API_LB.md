@@ -28,7 +28,7 @@ To configure access, follow these steps:
    ```
 
 1. Open the [DP web UI](../../../../user/web/ui.html).  
-   The published API becomes available for kubeconfig generation automatically after enabling API publishing (the `apiserver.publishAPI.ingress.enabled` parameter) in the `control-plane-manager` module.  
+   The published API becomes available for kubeconfig generation automatically after enabling API publishing (the [`apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) parameter) in the `control-plane-manager` module.  
 
 1. Generate the `kubectl` configuration.  
    The web UI provides a set of commands to configure `kubectl`.  
@@ -36,8 +36,8 @@ To configure access, follow these steps:
    Authentication will be performed using an OIDC token issued by Dex.  
    If the provider supports session renewal, the configuration will include a `refresh token`, allowing access to be extended without re-authentication.
 
-1. Configure multiple API access points.  
-   In the [`user-authn` module configuration](/modules/user-authn/configuration.html#parameters-kubeconfiggenerator), you can specify multiple connection points (kube-apiserver), each with its own description and CA certificates.  
+1. Configure additional API access points.  
+   In the [`user-authn` module configuration](/modules/user-authn/configuration.html#parameters-kubeconfiggenerator), you can specify additional connection points (kube-apiserver), each with its own description and CA certificates.  
    This may be useful if the cluster is accessible through different networks — for example, via VPN or public IP:
 
    ```yaml
@@ -46,6 +46,9 @@ To configure access, follow these steps:
      - id: direct
        masterURI: https://159.89.5.247:6443
        description: "Direct access to kubernetes API"
+    - id: second
+       masterURI: https://5.6.7.8:6443
+       description: "Second access to kubernetes API"
    ```
 
 ## How API access protection works in Kubernetes
@@ -68,9 +71,10 @@ To configure:
 
 The following will be automatically configured when API publishing is enabled:
 
-- Deckhouse will set the required arguments for the kube-apiserver.
 - A CA certificate will be generated and added to the kubeconfig.
 - Login via Dex with OIDC support will be configured.
+
+The JWT authenticator for Dex does not depend on API publishing. It is enabled together with the [`user-authn`](/modules/user-authn/) module: using the [`control-plane-manager`](/modules/control-plane-manager/) module, DP passes kube-apiserver an AuthenticationConfiguration with a JWT authenticator for Dex.
 
 ## Access using Basic Authentication (LDAP)
 
@@ -79,11 +83,13 @@ In addition to OIDC, you can configure direct access to the API using Basic Auth
 To configure:
 
 1. Enable API publishing (the [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module).
-1. Configure an LDAP provider in the `user-authn` module and enable the [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) option.
+1. Configure an LDAP provider in the `user-authn` module and enable the [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap-enablebasicauth) option.
 
 {% alert level="warning" %}
-Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap-enablebasicauth) enabled.
 {% endalert %}
+
+Basic Authentication is also available for Crowd and OIDC providers (the `enableBasicAuth` parameter in the [`crowd`](/modules/user-authn/cr.html#dexprovider-v1-spec-crowd-enablebasicauth) or [`oidc`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) section). Through an LDAP provider, Basic Authentication goes through Dex and keeps the [identity limits of the provider](external-authentication-providers.html#limiting-the-identities-of-a-provider). Through a Crowd or OIDC provider, it bypasses these limits, so only a SuperAdmin can enable it.
 
 After this, users can configure their `kubeconfig` by specifying their LDAP username and password:
 
@@ -123,7 +129,7 @@ To configure Kerberos (SPNEGO) SSO, LDAP must have an account with read-only pri
 
 Enabling Kerberos (SPNEGO) SSO for LDAP:
 
-1. In AD/KDC, create/provision an SPN `HTTP/<dex-fqdn>` for a service account and generate a keytab.
+1. In AD/KDC, create/provision an SPN `HTTP/<DEX_FQDN>` for a service account and generate a keytab.
 1. In the cluster, create a Secret in the `d8-user-authn` namespace with the `krb5.keytab` data key.
 1. In the LDAP DexProvider resource, enable `spec.ldap.kerberos`:
    - `enabled: true`
@@ -144,8 +150,8 @@ spec:
   displayName: Active Directory
   ldap:
     host: ad.example.com:636
-    bindDN: cn=Administrator,cn=users,dc=example,dc=com
-    bindPW: admin0!
+    bindDN: cn=dex-readonly,cn=users,dc=example,dc=com
+    bindPW: <PASSWORD>
     userSearch:
       baseDN: cn=Users,dc=example,dc=com
       username: sAMAccountName
@@ -162,7 +168,7 @@ spec:
       enabled: true
       keytabSecretName: dex-kerberos-keytab   # Secret in d8-user-authn with key 'krb5.keytab'.
       expectedRealm: EXAMPLE.COM              # Optional, case-insensitive match.
-      usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
+      usernameFromPrincipal: SAMAccountName   # Localpart|SAMAccountName|UserPrincipalName.
       fallbackToPassword: false               # The default is false; if true, a login/password form is rendered when the `Authorization: Negotiate` header is missing or invalid.
 ```
 
@@ -170,3 +176,4 @@ Notes:
 
 - The Secret `dex-kerberos-keytab` must exist in the `d8-user-authn` namespace and have a data key named exactly `krb5.keytab`.
 - A single Dex Pod can serve multiple LDAP+Kerberos providers. Each provider mounts its own keytab; a shared `krb5.conf` is not required (Dex validates tickets offline using the keytab).
+- A DexProvider with `enabled: true` in `spec.ldap.kerberos` must have `keytabSecretName` set, otherwise the object is rejected when saved. To turn Kerberos off and keep its settings, set `enabled: false`.

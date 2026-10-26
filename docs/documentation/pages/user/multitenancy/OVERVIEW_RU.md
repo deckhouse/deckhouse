@@ -11,11 +11,11 @@ lang: ru
 
 * для администраторов платформы:
   * **единообразие** — администраторы могут создавать проекты, используя один и тот же шаблон, что обеспечивает единообразие и упрощает управление;
-  * **безопасность** — проекты обеспечивают изоляцию ресурсов и политик доступа между различными проектами, что поддерживает безопасное многотенантное окружение;
-  * **потребление ресурсов** — администраторы могут легко устанавливать квоты на ресурсы и ограничения для каждого проекта, предотвращая избыточное использование ресурсов.
+  * **безопасность** — проекты обеспечивают изоляцию ресурсов и политик доступа между различными проектами, что поддерживает безопасное мультитенантное окружение;
+  * **потребление ресурсов** — администраторы могут устанавливать квоты на ресурсы и ограничения для каждого проекта, предотвращая избыточное использование ресурсов.
 * для пользователей платформы:
   * **быстрый старт** — разработчики могут запрашивать у администраторов проекты, созданные по готовым шаблонам, что позволяет быстро начать разработку нового приложения;
-  * **изоляция** — каждый проект обеспечивает изолированное окружение, где разработчики могут развертывать и тестировать свои приложения без влияния на другие проекты.
+  * **изоляция** — каждый проект обеспечивает изолированное окружение, где разработчики могут развёртывать и тестировать свои приложения без влияния на другие проекты.
 
 {% alert level="warning" %}
 [Копирование секретов](/modules/secret-copier/) во все неймспейсы не может использоваться совместно с проектами режима мультитенантности.
@@ -24,46 +24,44 @@ lang: ru
 Если в закрытом окружении пользователя окажутся чувствительные данные, это может привести к утечке данных и нарушению модели безопасности.
 {% endalert %}
 
-## Ограничения
+## Дополнительные неймспейсы
 
-Проекты имеют ряд ограничений:
-
-- Создание более одного неймспейса внутри проекта не предусматривается. Если требуется несколько неймспейсов, создайте отдельный проект для каждого из них.
-- Ресурсы шаблона применяются только к одному неймспейсу, имя которого совпадает с именем проекта.
+Проект не ограничен одним неймспейсом: если приложению требуется несколько неймспейсов (например, отдельный под кеш или очереди), администратор кластера, администратор проекта или менеджер проекта (`d8:project:manager`) может добавить их в проект как дополнительные неймспейсы. Права доступа и неймспейс-специфичные политики шаблона (сетевая изоляция, доставка логов) автоматически распространяются на все неймспейсы проекта, а не только на основной. Подробнее — [в разделе «Администрирование»](../../admin/multitenancy/project-management.html#дополнительные-неймспейсы-проекта).
 
 ## Создание проекта
 
-1. Для создания проекта создайте кастомный ресурс [Project](/modules/multitenancy-manager/cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-projecttemplatename).
-2. В параметре [.spec.parameters](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) кастомного ресурса `ProjectTemplate`.
+1. Для создания проекта создайте кастомный ресурс [Project](/modules/multitenancy-manager/cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-projecttemplatename).
+1. Задайте стандартные поля — [.spec.administrators](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-administrators) и [.spec.quota](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-quota), — которые управляются непосредственно ресурсом Project независимо от шаблона.
+1. В параметре [.spec.parameters](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-parameters) укажите значения для секции [.spec.parametersSchema.openAPIV3Schema](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha2-spec-parametersschema-openapiv3schema) кастомного ресурса ProjectTemplate.
 
    Пример создания проекта с помощью [Project](/modules/multitenancy-manager/cr.html#project) из `default` [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) представлен ниже:
 
    ```yaml
-   apiVersion: deckhouse.io/v1alpha2
+   apiVersion: deckhouse.io/v1alpha3
    kind: Project
    metadata:
      name: my-project
    spec:
      description: This is an example from the Deckhouse documentation.
      projectTemplateName: default
+     # Стандартные поля, управляемые самим ресурсом Project независимо от шаблона.
+     administrators:
+       - kind: Group
+         name: k8s-admins
+     quota:
+       requests.cpu: "5"
+       requests.memory: 5Gi
+       requests.storage: 1Gi
+       limits.cpu: "5"
+       limits.memory: 5Gi
+     # Параметры конкретного шаблона.
      parameters:
-       resourceQuota:
-         requests:
-           cpu: 5
-           memory: 5Gi
-           storage: 1Gi
-         limits:
-           cpu: 5
-           memory: 5Gi
        networkPolicy: Isolated
        podSecurityProfile: Restricted
        extendedMonitoringEnabled: true
-       administrators:
-       - subject: Group
-         name: k8s-admins
    ```
 
-3. Для проверки статуса проекта выполните команду:
+1. Для проверки статуса проекта выполните команду:
 
    ```shell
    d8 k get projects my-project
@@ -73,18 +71,18 @@ lang: ru
 
 ### Автоматическое создание проекта для неймспейса
 
-Для неймспейса возможно создать новый проект. Для этого пометьте неймспейс аннотацией `projects.deckhouse.io/adopt`. Например:
+Неймспейс, созданный напрямую (например, с использованием команды `d8 k create ns test`), автоматически становится проектом с тем же именем — никакая аннотация для этого не требуется. Параметры проекта заполняются из текущего состояния неймспейса, поэтому внутри него ничего не меняется; дальше источником истины становится проект.
+
+Создать неймспейс напрямую пользователи могут, только пока параметр [`allowNamespacesWithoutProjects`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) модуля `multitenancy-manager` равен `true` (значение по умолчанию). При `false` напрямую неймспейсы создают только администраторы кластера и системные компоненты, а остальные пользователи создают Project или ProjectNamespace.
+
+Удалить неймспейс такого проекта напрямую нельзя. Чтобы убрать окружение, удалите Project: `d8 k delete project <NAME>` удаляет вместе с ним неймспейс.
+
+Например:
 
 1. Создайте новый неймспейс:
 
    ```shell
    d8 k create ns test
-   ```
-
-1. Пометьте его аннотацией:
-
-   ```shell
-   d8 k annotate ns test projects.deckhouse.io/adopt=""
    ```
 
 1. Убедитесь, что проект создался:
@@ -100,15 +98,15 @@ lang: ru
    NAME        STATE      PROJECT TEMPLATE   DESCRIPTION                                            AGE
    deckhouse   Deployed   virtual            This is a virtual project                              181d
    default     Deployed   virtual            This is a virtual project                              181d
-   test        Deployed   empty                                                                     1m
+   test        Deployed   simple                                                                    1m
    ```
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-Шаблон созданного проекта можно изменить на существующий.
+Чтобы сменить шаблон такого проекта, укажите другой шаблон в `.spec.projectTemplateName`.
 
 {% alert level="warning" %}
-Обратите внимание, что при смене шаблона может возникнуть конфликт ресурсов: если в чарте шаблона прописаны ресурсы, которые уже присутствуют в неймспейсе, то применить шаблон не получится.
+Если в неймспейсе уже есть объект того же типа и с тем же именем, что и объект, который создаёт новый шаблон, например NetworkPolicy `isolated`, проект переходит в состояние `Error`, а условие `ResourcesUpgraded` называет этот объект. Сначала удалите или переименуйте его.
 {% endalert %}
 
 Подробнее о шаблонах проектов и порядке их создания — [в разделе «Администрирование»](../../admin/multitenancy.html).

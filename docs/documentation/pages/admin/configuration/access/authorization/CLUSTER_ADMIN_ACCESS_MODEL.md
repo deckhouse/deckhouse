@@ -12,7 +12,7 @@ The following kubeconfig files are located on the master nodes:
 
 | File | Identity | Purpose |
 | --- | --- | --- |
-| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (`kubeadm:cluster-admins` group) | Machine kubeconfig for kubeadm internals (join, renewal). With the [`user-authz`](/modules/user-authz/) module enabled, RBAC uses `user-authz:cluster-admin` plus an additional ClusterRole. With `user-authz` disabled, the group is bound to the built-in `cluster-admin` role |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (`kubeadm:cluster-admins` group) | Machine kubeconfig for kubeadm internals (join, renewal). The group is bound to the built-in `cluster-admin` role. With the [`user-authz`](/modules/user-authz/) module enabled, the group is additionally bound to two DP ClusterRoles |
 | `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (`system:masters` group) | Break-glass emergency credential. Bypasses RBAC entirely. Restrict access to this file to trusted recovery scenarios |
 | `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Used by kube-controller-manager |
 | `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Used by kube-scheduler |
@@ -21,13 +21,16 @@ The following kubeconfig files are located on the master nodes:
 
 Starting from Kubernetes 1.29, kubeadm generates `admin.conf` with the `kubeadm:cluster-admins` group instead of `system:masters`. This provides RBAC-controlled admin access that can be revoked by removing the `kubeadm:cluster-admins` ClusterRoleBinding(s).
 
-If the [`user-authz`](/modules/user-authz/) module is **disabled**, DP binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (same effective model as a plain kubeadm cluster without extra RBAC).
+DP binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin`, regardless of whether the [`user-authz`](/modules/user-authz/) module is enabled. This is the same effective model as in a plain kubeadm cluster without extra RBAC.
 
-If `user-authz`is **enabled**, the group is bound to `user-authz:cluster-admin`, and a second ClusterRoleBinding adds ClusterRole `d8:control-plane-manager:admin-kubeconfig-supplement` (rules beyond the high-level role, e.g. for certificates and cluster machinery). Together they replace a single wildcard `cluster-admin` for this identity. For full unrestricted access, use `super-admin.conf`.
+If `user-authz` is **enabled**, two more ClusterRoleBindings bind the group to the following ClusterRoles:
+
+- `d8:control-plane-manager:admin-kubeconfig-supplement` — rules for nodes, certificates, and other cluster machinery;
+- `d8:user-authz:admin-kubeconfig` — managing AuthorizationRule and ClusterAuthorizationRule.
 
 ## Recommended admin access
 
-If the [`user-authn`](/modules/user-authn/) module is enabled, use personalized OIDC-based kubeconfig obtained through the DKP web UI. This provides individual accountability and audit trail.
+If the [`user-authn`](/modules/user-authn/) module is enabled, use a personalized OIDC-based kubeconfig obtained through the [DP web interface](../../../../user/web/ui.html). This provides individual accountability and audit trail.
 
 If `user-authn` is disabled, administrators can explicitly use the admin kubeconfig on a master node:
 

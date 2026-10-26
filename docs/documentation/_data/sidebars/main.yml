@@ -79,12 +79,12 @@ entries:
                         ru: Обзор
                       url: /admin/configuration/access/authorization/
                     - title:
-                        en: Current authorization model
-                        ru: Текущая модель авторизации
+                        en: Basic authorization model
+                        ru: Упрощенная модель авторизации
                       url: /admin/configuration/access/authorization/rbac-current.html
                     - title:
-                        en: Experimental authorization model
-                        ru: Экспериментальная модель авторизации
+                        en: Granular authorization model
+                        ru: Гранулярная модель авторизации
                       url: /admin/configuration/access/authorization/rbac-experimental.html
                     - title:
                         en: Cluster admin access model

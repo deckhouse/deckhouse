@@ -5,7 +5,7 @@ description: "Настройка аутентифицированного дос
 lang: ru
 ---
 
-С DP можно использовать аутентификацию при доступе к Kubernetes API. В этом случае пользователь в веб-интерфейсе DP может сгенерировать конфигурацию для `kubectl`, для безопасного доступа к Kubernetes API через балансировщик трафика (Ingress-контроллер).
+С DP можно использовать аутентификацию при доступе к Kubernetes API. В этом случае пользователь в веб-интерфейсе DP может сгенерировать конфигурацию для `kubectl` для безопасного доступа к Kubernetes API через балансировщик трафика (Ingress-контроллер).
 
 Чтобы настроить доступ, выполните следующие шаги:
 
@@ -32,7 +32,7 @@ lang: ru
 
 1. Сгенерируйте конфигурацию `kubectl`. В веб-интерфейсе пользователь получит набор команд для настройки `kubectl`. Эти команды можно скопировать и вставить в консоль. Аутентификация будет производиться по OIDC-токену, выданному Dex. При поддержке провайдером функции продления сессии конфигурация будет включать `refresh token`, что позволит продлевать доступ без повторной аутентификации.
 
-1. Настройте несколько точек подключения к API. В [конфигурации модуля `user-authn`](/modules/user-authn/configuration.html#parameters-kubeconfiggenerator) можно задать несколько точек подключения (kube-apiserver) с описанием и CA-сертификатами для каждой. Это может понадобиться, если кластер доступен через разные сети — например, VPN или публичный IP:
+1. Добавьте дополнительные способы доступа к API-серверу. В [конфигурации модуля `user-authn`](/modules/user-authn/configuration.html#parameters-kubeconfiggenerator) можно задать несколько точек доступа (kube-apiserver) с описанием и CA-сертификатами для каждой. Это может понадобиться, если кластер доступен через разные сети — например, VPN или публичный IP:
 
    ```yaml
    settings:
@@ -40,6 +40,9 @@ lang: ru
      - id: direct
        masterURI: https://159.89.5.247:6443
        description: "Direct access to kubernetes API"
+    - id: second
+       masterURI: https://5.6.7.8:6443
+       description: "Second access to kubernetes API"
    ```
 
 ## Как работает защита доступа к Kubernetes API
@@ -59,9 +62,10 @@ lang: ru
 
 Что будет настроено автоматически при включении публикации API:
 
-- Deckhouse сам настроит необходимые аргументы для kube-apiserver;
 - будет сгенерирован сертификат CA и добавлен в kubeconfig;
 - будет настроен вход через Dex с поддержкой OIDC.
+
+JWT-аутентификатор для Dex не зависит от публикации API. Он включается вместе с модулем [`user-authn`](/modules/user-authn/): DP с помощью модуля [`control-plane-manager`](/modules/control-plane-manager/) передаёт kube-apiserver конфигурацию AuthenticationConfiguration с JWT-аутентификатором для Dex.
 
 ## Доступ с использованием базовой аутентификации (LDAP)
 
@@ -70,11 +74,13 @@ lang: ru
 Для настройки:
 
 1. Включите публикацию API (параметр [`apiserver.publishAPI`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager`).
-1. Настройте провайдер LDAP в модуле `user-authn` и включите в нём опцию [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+1. Настройте провайдер LDAP в модуле `user-authn` и включите в нём опцию [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap-enablebasicauth).
 
 {% alert level="warning" %}
-В кластере может быть только один провайдер с включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+В кластере может быть только один провайдер с включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap-enablebasicauth).
 {% endalert %}
+
+Базовая аутентификация доступна также для провайдеров Crowd и OIDC (параметр `enableBasicAuth` в секции [`crowd`](/modules/user-authn/cr.html#dexprovider-v1-spec-crowd-enablebasicauth) или [`oidc`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth)). Через LDAP-провайдер базовая аутентификация выполняется через Dex и сохраняет [ограничения идентичностей провайдера](external-authentication-providers.html#ограничение-идентичностей-провайдера). Через провайдер Crowd или OIDC она выполняется в обход этих ограничений, поэтому включить её может только SuperAdmin.
 
 После этого пользователи могут настроить свой `kubeconfig`, указав логин и пароль LDAP:
 
@@ -102,11 +108,11 @@ current-context: default
 
 ## SSO по Kerberos (SPNEGO) для LDAP
 
-Dex поддерживает аутентификацию без отображения формы ввода логина/пароля, которая реализуется с помощью механизма Kerberos (SPNEGO) для LDAP‑коннектора. Механизм работает по следующему принципу:
+Dex поддерживает аутентификацию без отображения формы ввода логина/пароля, которая реализуется с помощью механизма Kerberos (SPNEGO) для LDAP-коннектора. Механизм работает по следующему принципу:
 
 1. Браузер, доверяющий хосту Dex, отправляет `Authorization: Negotiate …`.
-1. Dex валидирует Kerberos‑билет по keytab и пропускает форму вводу логина/пароля.
-1. Dex сопоставляет principal с LDAP‑именем, получает группы и завершает OIDC‑поток.
+1. Dex валидирует Kerberos‑билет по keytab и пропускает форму ввода логина/пароля.
+1. Dex сопоставляет principal с LDAP-именем, получает группы и завершает OIDC‑поток.
 
 {% alert level="info" %}
 Для настройки SSO по Kerberos (SPNEGO) в LDAP должна быть учетная запись с правами только на чтение (service account). Подробнее о настройке — в разделе [«Интеграция по LDAP»](external-authentication-providers.html#интеграция-по-ldap).
@@ -114,7 +120,7 @@ Dex поддерживает аутентификацию без отображ�
 
 Включение SSO по Kerberos (SPNEGO) для LDAP:
 
-1. В инфраструктуре клиента должен быть задан SPN `HTTP/<fqdn-dex>` для сервисного аккаунта и сгенерирован keytab.
+1. В инфраструктуре клиента должен быть задан SPN `HTTP/<DEX_FQDN>` для сервисного аккаунта и сгенерирован keytab.
 1. В кластере создайте секрет в неймспейсе `d8-user-authn` с ключом `krb5.keytab`.
 1. В ресурсе DexProvider (тип LDAP) включите блок `spec.ldap.kerberos` и настройте в нём параметры:
    - `enabled: true`;
@@ -123,7 +129,7 @@ Dex поддерживает аутентификацию без отображ�
 
 Dex автоматически смонтирует keytab и начнёт принимать SPNEGO. `krb5.conf` на сервере не обязателен — билеты проверяются по keytab.
 
-Пример настройки SSO по Kerberos (SPNEGO) для LDAP (расширение спецификации LDAP‑провайдера):
+Пример настройки SSO по Kerberos (SPNEGO) для LDAP (расширение спецификации LDAP-провайдера):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -135,8 +141,8 @@ spec:
   displayName: Active Directory
   ldap:
     host: ad.example.com:636
-    bindDN: cn=Administrator,cn=users,dc=example,dc=com
-    bindPW: admin0!
+    bindDN: cn=dex-readonly,cn=users,dc=example,dc=com
+    bindPW: <PASSWORD>
     userSearch:
       baseDN: cn=Users,dc=example,dc=com
       username: sAMAccountName
@@ -153,7 +159,7 @@ spec:
       enabled: true
       keytabSecretName: dex-kerberos-keytab   # Секрет в неймспейсе `d8-user-authn` с ключом 'krb5.keytab'.
       expectedRealm: EXAMPLE.COM              # Опционально, проверка realm (без учёта регистра).
-      usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
+      usernameFromPrincipal: SAMAccountName   # Localpart|SAMAccountName|UserPrincipalName.
       fallbackToPassword: false               # По умолчанию false; если true — при отсутствии/ошибке заголовка `Authorization: Negotiate` будет показана форма ввода логина/пароля.
 ```
 
@@ -161,3 +167,4 @@ spec:
 
 - Секрет `dex-kerberos-keytab` должен находиться в неймспейсе `d8-user-authn` и содержать ключ `krb5.keytab`.
 - Один под Dex может обслуживать несколько LDAP+Kerberos провайдеров. У каждого — свой keytab; `krb5.conf` не требуется (Dex проверяет билеты офлайн по keytab).
+- В DexProvider с `enabled: true` в `spec.ldap.kerberos` должен быть указан `keytabSecretName`, иначе объект не сохранится. Чтобы выключить Kerberos и оставить его настройки, укажите `enabled: false`.

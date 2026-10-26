@@ -18,11 +18,9 @@ and CIS compliance checks performed in the cluster.
 
 ## Accessing scan results
 
-Access to scan results, including the ability to view resources with reports,
-is granted to users with the following [access roles](../../admin/configuration/access/authorization/rbac-experimental.html):
+The `d8:subsystem:security:viewer` [access role](../../admin/configuration/access/authorization/rbac-experimental.html) or higher grants access to the cluster-wide scan results (for example, ClusterComplianceReport) and to the `operator-trivy` module configuration.
 
-- `d8:manage:networking:viewer` or higher
-- `d8:manage:permission:module:operator-trivy:view`
+This role and the namespace roles (`d8:namespace:*`) do not grant access to the scan reports in application namespaces (VulnerabilityReport and others): the `operator-trivy` module ships these permissions separately. To get access to such reports, contact the cluster administrator.
 
 ## Viewing a scan report for your application
 

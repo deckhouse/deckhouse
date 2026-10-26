@@ -39,9 +39,6 @@ If sensitive data is present in a user’s private environment,
 it could lead to a data leak and a security model breach.
 {% endalert %}
 
-## Limitations
+## Additional namespaces
 
-Projects has several limitations:
-
-- Creating more than one namespace within a project is not supported. If you need multiple namespaces, create a separate project for each of them.
-- Template resources are applied only to a single namespace whose name matches the project name.
+A project is not limited to a single namespace: if an application needs several namespaces (for example, a separate one for a cache or a queue), they can be added to the project as [additional namespaces](multitenancy/project-management.html#additional-project-namespaces). The project's access grants and namespaced template policies (network isolation, log shipping) automatically apply to every namespace of the project, not just the main one.

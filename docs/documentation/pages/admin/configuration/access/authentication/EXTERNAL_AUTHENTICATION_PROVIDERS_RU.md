@@ -11,13 +11,14 @@ DP поддерживает подключение следующих внешн
 
 - [LDAP (например, Active Directory)](#интеграция-по-ldap);
 - [OIDC (например, Okta, Keycloak, Gluu, Blitz Identity Provider)](#интеграция-по-oidc-openid-connect);
+- [SAML 2.0](#интеграция-по-saml-20);
 - [GitHub](#интеграция-с-github);
 - [GitLab](#интеграция-с-gitlab);
 - [Atlassian Crowd](#интеграция-с-atlassiancrowd);
 - [Bitbucket Cloud](#интеграция-с-bitbucketcloud).
 
 {% alert level="info" %}
-Политика безопасности паролей (требования к сложности, срок действия, история, двухфакторная аутентификация и т.д.) полностью контролируется внешним провайдером аутентификации. Deckhouse не управляет паролями и не вмешивается в реализацию этих политик на стороне провайдера.
+Политика безопасности паролей (требования к сложности, срок действия, история, двухфакторная аутентификация и т. д.) полностью контролируется внешним провайдером аутентификации. DP не управляет паролями и не вмешивается в реализацию этих политик на стороне провайдера.
 {% endalert %}
 
 ## Общая схема интеграции
@@ -32,7 +33,7 @@ DP поддерживает подключение следующих внешн
     - укажите Redirect URI вида `https://dex.<publicDomainTemplate>/callback`;
     - получите `clientID` и `clientSecret`.
 
-    > **Важно**. При указании Redirect URI подставьте значение `publicDomainTemplate` без `%s`. Например, если указано `publicDomainTemplate: '%s.sandbox1.deckhouse-docs.flant.com'`, то фактический URI будет `https://dex.sandbox20.deckhouse-docs.flant.com/callback`.
+    > **Важно**. При указании Redirect URI подставьте значение `publicDomainTemplate` без `%s`. Например, если указано `publicDomainTemplate: '%s.sandbox1.deckhouse-docs.flant.com'`, то фактический URI будет `https://dex.sandbox1.deckhouse-docs.flant.com/callback`.
     >
     > Для того, чтобы узнать адрес Dex (URI), выполните команду:
     >
@@ -85,7 +86,7 @@ DP поддерживает подключение следующих внешн
      metadata:
        name: user-authn
      spec:
-       version: 2
+       version: 3
        enabled: true
        settings:
          kubeconfigGenerator:
@@ -115,6 +116,77 @@ DP поддерживает подключение следующих внешн
 
 После настройки интеграции в кластере с внешним провайдером аутентификации, аутентификация через него станет возможна в веб-интерфейсах платформы. О настройке аутентификации для пользовательских приложений можно узнать в разделе [Использование → IAM → Аутентификация](../../../../user/access/authentication.html).
 
+### Ограничение идентичностей провайдера
+
+Пользователь, вошедший через DexProvider, получает email и группы, которые сообщает провайдер идентификации. Email служит именем пользователя в Kubernetes. Поэтому провайдер даёт своим пользователям все права, уже выданные в кластере этим email и группам.
+
+Чтобы ограничить набор идентичностей, используйте параметр [`spec.allowedIdentities`](/modules/user-authn/cr.html#dexprovider-v1-spec-allowedidentities):
+
+- `emails` и `emailDomains` описывают email, которые провайдер может утвердить. Для любого другого email Dex отказывает во входе.
+- `groups` описывает имена групп, которые провайдер может утвердить. Dex оставляет в токене только перечисленные группы и отказывает во входе, если не осталось ни одной.
+
+Ограничения действуют для провайдера любого типа в дополнение к фильтрам групп этого типа, например `oidc.allowedGroups`, `gitlab.groups` или `crowd.groups`. Имена групп сравниваются точно. Вложенность объектов Group список не расширяет.
+
+Dex проверяет ограничения при входе, при каждом запросе с refresh-токеном и при базовой аутентификации в API-сервере через LDAP-провайдер. Refresh-токен, который не проходит ограничения, Dex отзывает, поэтому сужение ограничений завершает текущие сессии исключённых пользователей. Для провайдеров Crowd и OIDC basic-auth-proxy проверяет учётные данные напрямую у провайдера, поэтому при базовой аутентификации ограничения не действуют.
+
+Те же ограничения определяют, кто может создать или изменить провайдер: нужно иметь право назначать все роли, уже выданные email и группам, которые провайдер может сообщить. Создать или изменить провайдер без ограничения по email может только SuperAdmin. Провайдер Crowd или OIDC с `enableBasicAuth: true` считается провайдером без ограничения по email, поэтому создать его или включить в нём `enableBasicAuth` может только SuperAdmin.
+
+Пример провайдера, ограниченного доменом email и группой:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: contractors
+spec:
+  type: OIDC
+  displayName: Contractors
+  oidc:
+    issuer: https://idp.contractor.example
+    clientID: dex
+    clientSecret: secret
+  allowedIdentities:
+    emailDomains: [contractor.example]
+    groups: [contractors]
+```
+
+Без проверки выполняются: смена `clientSecret` или `bindPW`, изменение `displayName`, выключение провайдера, сужение ограничений, повторное применение того же манифеста и удаление провайдера. Любое другое изменение проверяется как подключение нового провайдера, в том числе включение выключенного провайдера.
+
+Если проверка не пройдена, в ошибке перечислены роли, которые провайдер мог бы получить, например:
+
+```text
+dexproviders.deckhouse.io "corp": the provider can assert identities that already carry roles [user-authz:super-admin]; the requester's can-assign range is basic<=ClusterAdmin and does not cover them. Narrow spec.allowedIdentities (emails, emailDomains, groups) or ask a SuperAdmin
+```
+
+### Проверка подключения провайдера
+
+На странице провайдера в веб-интерфейсе DP доступно действие «Проверить подключение». Оно создаёт ресурс [DexProviderCheck](/modules/user-authn/cr.html#dexprovidercheck) и ждёт, пока контроллер `user-authn` запишет результат проверки в его `status`.
+
+Проверка выполняется, чтобы убедиться в следующем:
+
+- указанный [DexProvider](/modules/user-authn/cr.html#dexprovider) существует и включён;
+- эндпоинт Dex discovery внутри кластера доступен;
+- эндпоинт внешнего провайдера доступен.
+
+Для OIDC-провайдеров дополнительно читаются discovery-документ и JWKS. Для LDAP-провайдеров проверяется доступность TCP/TLS/StartTLS и, если включён Kerberos, наличие секрета с keytab. Также проверяется, что провайдер принимает учётные данные клиента или сервисной учётной записи (GitHub, GitLab, Bitbucket Cloud, Crowd, OIDC, bind в LDAP), и выводятся предупреждения об отключённой проверке TLS и о сертификатах, срок действия которых скоро истекает. Проверка не выполняет полный сценарий входа и не проверяет пароль тестового пользователя.
+
+Чтобы выполнить проверку без веб-интерфейса, создайте ресурс DexProviderCheck:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProviderCheck
+metadata:
+  name: check-github
+spec:
+  providerName: github
+```
+
+Затем посмотрите его статус:
+
+```shell
+d8 k get dexproviderchecks check-github -o yaml
+```
+
 ### Интеграция по OIDC (OpenID Connect)
 
 Аутентификация через OIDC-провайдера требует регистрации клиента (или создания приложения). Сделайте это по документации вашего провайдера (например, [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration) или [Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html)).
@@ -126,7 +198,7 @@ DP поддерживает подключение следующих внешн
 {% endalert %}
 
 {% alert level="info" %}
-Для обеспечения корректного отзыва токена при выходе из приложения и требования повторной авторизации установите параметр `prompt` в значение `login`. Это гарантирует, что пользователю будет предложено повторно ввести учетные данные при повторной аутентификации.
+Для обеспечения корректного отзыва токена при выходе из приложения и требования повторной авторизации установите параметр `promptType` в значение `login`. Это гарантирует, что пользователю будет предложено повторно ввести учетные данные при повторной аутентификации.
 {% endalert %}
 
 Чтобы настроить детальный (гранулированный) доступ пользователей к приложениям:
@@ -190,6 +262,10 @@ spec:
    - groups
   ```
 
+{% alert level="warning" %}
+При `insecureSkipEmailVerified: true` Dex принимает неподтверждённые email-адреса. Права выдаются по email, поэтому используйте этот параметр, только если провайдер не позволяет пользователям указывать произвольный email.
+{% endalert %}
+
 #### Blitz Identity Provider
 
 Пример настройки провайдера для интеграции с Blitz Identity Provider:
@@ -209,7 +285,6 @@ spec:
     clientID: clientID
     clientSecret: clientSecret
     getUserInfo: true
-    insecureSkipEmailVerified: true # Установить true, если нет необходимости в проверке email пользователя.
     insecureSkipVerify: false
     issuer: https://yourdomain.idblitz.ru/blitz
     promptType: consent 
@@ -237,7 +312,6 @@ spec:
     issuer: https://my-company.okta.com
     clientID: plainstring
     clientSecret: plainstring
-    insecureSkipEmailVerified: true
     getUserInfo: true
 ```
 
@@ -290,17 +364,18 @@ spec:
    - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`;
    - **Формат NameID**: `persistent` или `emailAddress`.
 
-1. Настройте маппинг атрибутов в IdP для отправки атрибутов `email`, `name` (имя пользователя) и `groups` в SAML assertion.
+1. Настройте сопоставление атрибутов в IdP для отправки атрибутов `email`, `name` (имя пользователя) и `groups` в SAML assertion.
 
 1. Экспортируйте сертификат подписи IdP и укажите его в поле `rootCAData` ресурса [DexProvider](/modules/user-authn/cr.html#dexprovider).
 
 {% alert level="info" %}
-SAML не поддерживает refresh tokens нативно. Dex кеширует identity пользователя из первичного SAML assertion и возвращает её при последующих запросах refresh. Время жизни сессии контролируется настройками `expiry.refreshTokens` в конфигурации модуля [`user-authn`](/modules/user-authn/).
+SAML не поддерживает refresh-токены. Dex кеширует данные пользователя из первого SAML-утверждения (assertion) и возвращает их при последующих запросах с refresh-токеном. Время жизни сессии ограничивается параметром [`refreshTokenAbsoluteLifetime`](/modules/user-authn/configuration.html#parameters-refreshtokenabsolutelifetime) модуля `user-authn`.
 {% endalert %}
 
 ### Интеграция по LDAP
 
 Для настройки аутентификации создайте в LDAP учетную запись с правами только на чтение (service account). Эта учетная запись будет использоваться для выполнения поисковых запросов в каталоге LDAP.
+Для этого вида интеграции также можно настроить блокировку пользователя после неудачных попыток входа. Для этого укажите тип провайдера в параметре [`passwordPolicy.lockout.applyToConnectors`](/modules/user-authn/configuration.html#parameters-passwordpolicy-lockout-applytoconnectors) модуля `user-authn`.
 
 В ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider) укажите следующие параметры:​
 
@@ -315,8 +390,8 @@ SAML не поддерживает refresh tokens нативно. Dex кешир
 
 Также вы можете включить поддержку:
 
-- Базовой аутентификации (Basic Authentication) для доступа к Kubernetes API, используя учетные данные LDAP. Для этого установите параметр `enableBasicAuth: true` в ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider). Подробнее в разделе [Доступ с использованием Basic Authentication](k8s-api-lb.html#доступ-с-использованием-базовой-аутентификации-ldap).
-- SSO по Kerberos (SPNEGO) для LDAP. Для этого в ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider) включите блок `spec.ldap.kerberos` и настройте в нём необходимые параметры. Подробнее в разделе [SSO по Kerberos (SPNEGO) для LDAP](k8s-api-lb.html#sso-по-kerberos-spnego-для-ldap).
+- Базовой аутентификации (Basic Authentication) для доступа к Kubernetes API, используя учетные данные LDAP. Для этого установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap-enablebasicauth) в ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider). Подробнее в разделе [«Доступ с использованием Basic Authentication»](k8s-api-lb.html#доступ-с-использованием-базовой-аутентификации-ldap).
+- SSO по Kerberos (SPNEGO) для LDAP. Для этого в ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider) включите блок `spec.ldap.kerberos`, укажите секрет с keytab в `keytabSecretName` и настройте в нём остальные параметры. Подробнее в разделе [«SSO по Kerberos (SPNEGO) для LDAP»](k8s-api-lb.html#sso-по-kerberos-spnego-для-ldap).
 
 Пример настройки провайдера для интеграции с Active Directory (базовая аутентификация):
 
@@ -330,10 +405,13 @@ spec:
   displayName: Active Directory
   ldap:
     host: ad.example.com:636
-    insecureSkipVerify: true
+    rootCAData: |
+      -----BEGIN CERTIFICATE-----
+      MIIFaDC...
+      -----END CERTIFICATE-----
 
-    bindDN: cn=Administrator,cn=users,dc=example,dc=com
-    bindPW: admin0!
+    bindDN: cn=dex-readonly,cn=users,dc=example,dc=com
+    bindPW: <PASSWORD>
 
     enableBasicAuth: true
 
@@ -365,10 +443,10 @@ spec:
 1. Перейдите в «Settings» → «Developer settings» → «OAuth App» → «New OAuth App», и в качестве «Authorization callback URL» укажите адрес `https://dex.<publicDomainTemplate>/callback`.
 1. Полученные `Client ID` и `Client Secret` укажите в [ресурсе DexProvider](/modules/user-authn/cr.html#dexprovider).
 
-Если организация GitHub находится под управлением клиента:
+Если в организации ограничен доступ сторонних приложений:
 
-1. Перейдите в «Settings» → «Applications» → «Authorized OAuth Apps» → `<имя созданного OAuth-приложения>` и нажмите «Send Request» для подтверждения.
-1. Попросите клиента подтвердить запрос, который придет к нему на email.
+1. Перейдите в «Settings» → «Applications» → «Authorized OAuth Apps» → `<APPLICATION_NAME>` и нажмите «Send Request» для подтверждения.
+1. Попросите владельца организации подтвердить запрос.
 
 Пример настройки провайдера для интеграции с GitHub:
 
@@ -424,11 +502,13 @@ spec:
 
 В соответствующем проекте Atlassian Crowd необходимо создать новое Generic-приложение.
 
+Для этого вида интеграции также можно настроить блокировку пользователя после неудачных попыток входа. Для этого укажите тип провайдера в параметре [`passwordPolicy.lockout.applyToConnectors`](/modules/user-authn/configuration.html#parameters-passwordpolicy-lockout-applytoconnectors) модуля `user-authn`.
+
 Для этого выполните следующие шаги:
 
 1. Перейдите в «Applications» → «Add application».
 1. Полученные «Application Name» и «Password» укажите в [ресурсе DexProvider](/modules/user-authn/cr.html#dexprovider).
-1. При указании групп в ресурсе DexProvider убедитесь, что их названия приведены к нижнему регистру (lowercase). Это необходимо для корректного сопоставления групп между Crowd и Deckhouse.
+1. При указании групп в ресурсе DexProvider убедитесь, что их названия приведены к нижнему регистру (lowercase). Это необходимо для корректного сопоставления групп между Crowd и DP.
 
 Пример настройки провайдера для интеграции с Atlassian Crowd:
 
@@ -444,11 +524,12 @@ spec:
     baseURL: https://crowd.example.com/crowd
     clientID: plainstring
     clientSecret: plainstring
-    enableBasicAuth: true
     groups:
     - administrators
     - users
 ```
+
+Базовая аутентификация в API Kubernetes через провайдер Crowd ([`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-crowd-enablebasicauth)) выполняется в обход [ограничений идентичностей провайдера](#ограничение-идентичностей-провайдера), поэтому включить её может только SuperAdmin.
 
 ### Интеграция с Bitbucket Cloud
 

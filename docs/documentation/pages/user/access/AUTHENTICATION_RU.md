@@ -67,17 +67,20 @@ DP позволяет настраивать аутентификацию как
 
 ### Аутентификация через прокси (без поддержки OIDC)
 
-Аутентификация в приложении, которое не умеет самостоятельно обрабатывать запросы на аутентификацию, реализуется с помощью специального прокси-сервера. Он обрабатывает запросы на аутентификацию, также выполняет функции авторизации, скрывая от приложения детали этих процессов.
+Аутентификация в приложении, которое не умеет самостоятельно обрабатывать запросы на аутентификацию, реализуется с помощью специального прокси-сервера. Он обрабатывает запросы на аутентификацию, а также выполняет функции авторизации, скрывая от приложения детали этих процессов.
 
-Чтобы включить аутентификацию для приложения, развернутого в DP выполните следующие шаги:
+Чтобы включить аутентификацию для приложения, развернутого в DP, выполните следующие шаги:
 
-1. Создайте объект [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) в пространстве имен приложения.
+1. Создайте объект [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) в неймспейсе приложения.
 
-   После появления объекта DexAuthenticator, в пространстве имен будет создан набор компонентов, необходимых для работы аутентификации:
+   После появления объекта DexAuthenticator в неймспейсе будет создан набор компонентов, необходимых для работы аутентификации:
    * Deployment, содержащий контейнеры с прокси-сервером аутентификации/авторизации и хранилищем данных Redis;
    * Сервис (Service), ведущий на прокси-сервер аутентификации/авторизации;
-   * Ingress-ресурс (Ingress), который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону сервиса;
+   * если задан `applicationIngressClassName`, Ingress-ресурс (Ingress), который принимает запросы по адресу `https://<applicationDomain>/dex-authenticator` и отправляет их в сторону сервиса;
+   * если задан `gatewayAPI`, HTTPRoute;
    * Секреты (Secret), необходимые для доступа к системе аутентификации DP.
+
+   Имя DexAuthenticator должно быть меткой DNS-1035 длиной не более 63 символов: начинаться со строчной латинской буквы и содержать только строчные латинские буквы, цифры и дефисы. Имя входит в имя его Service, поэтому DexAuthenticator с другим именем создать нельзя.
 
    Пример DexAuthenticator:
 
@@ -91,10 +94,10 @@ DP позволяет настраивать аутентификацию как
      # Namespace, в котором будет развернут Dex authenticator.
      namespace: app-ns
    spec:
-     # Домен вашего приложения. Запросы на него будут перенаправляться для прохождения аутентификацию в Dex.
+     # Домен вашего приложения. Запросы на него будут перенаправляться для прохождения аутентификации в Dex.
      applicationDomain: "app-name.kube.my-domain.com"
      # Отправлять ли `Authorization: Bearer` header приложению. Полезно в связке с auth_request в NGINX.
-     # При значении sendAuthorizationHeader: true добавьте заголовок Authorization в аннотацию nginx.ingress.kubernetes.io/auth-response-headers Ingress приложения.
+     # При значении sendAuthorizationHeader: true добавьте Authorization в аннотацию nginx.ingress.kubernetes.io/auth-response-headers Ingress приложения или в аннотацию alb.network.deckhouse.io/auth-response-headers его HTTPRoute.
      sendAuthorizationHeader: false
      # Имя Secret'а с SSL-сертификатом.
      applicationIngressCertificateSecretName: "ingress-tls"
@@ -114,7 +117,7 @@ DP позволяет настраивать аутентификацию как
 
    Обратите внимание на следующие возможности при настройке аутентификации:
    * В параметре `applicationDomain` DexAuthenticator указывается основной домен приложения. Дополнительные домены можно указать в параметре `additionalApplications.domain`;
-   * Параметры `whitelistSourceRanges` и `additionalApplications.whitelistSourceRanges` позволяют открыть возможность аутентификации в приложении только для указанного списка IP-адресов;
+   * Параметры `whitelistSourceRanges` и `additionalApplications.whitelistSourceRanges` позволяют открыть возможность аутентификации в приложении только для указанного списка IP-адресов. Ограничение действует на эндпоинты `/dex-authenticator`. Чтобы ограничить доступ к самому приложению или пропускать часть сетей без аутентификации, используйте аннотации `nginx.ingress.kubernetes.io/whitelist-source-range` и `nginx.ingress.kubernetes.io/satisfy` Ingress приложения;
 
      О настройке авторизации читайте в разделе [Авторизация](../../admin/configuration/access/authorization/) документации.
 
@@ -127,7 +130,7 @@ DP позволяет настраивать аутентификацию как
       - `<NS>` — значение параметра `metadata.namespace` DexAuthenticator;
       - `<C_DOMAIN>` — домен кластера (параметр [clusterDomain](../../reference/api/cr.html#clusterconfiguration-clusterdomain) ClusterConfiguration, по умолчанию — `cluster.local`).
 
-   Пример (для DexAuthenticator с именем `app-name`, в пространстве имен `app-ns`):
+   Пример (для DexAuthenticator с именем `app-name`, в неймспейсе `app-ns`):
 
    ```yaml
    annotations:
@@ -151,21 +154,21 @@ nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Re
 
 Чтобы включить аутентификацию для такого приложения, выполните следующие шаги:
 
-1. Создайте объект [DexClient](/modules/user-authn/cr.html#dexclient) в пространстве имен приложения.
+1. Создайте объект [DexClient](/modules/user-authn/cr.html#dexclient) в неймспейсе приложения.
 
    После создания объекта DexClient, Deckhouse выполнит следующие действия:
 
    * В системе аутентификации DP будет зарегистрирован OIDC-клиент с идентификатором (`clientID`) вида:  
      `dex-client-<NAME>@<NAMESPACE>`  
      где `<NAME>` и `<NAMESPACE>` — это `metadata.name` и `metadata.namespace` объекта DexClient;
-   * Будет автоматически сгенерирован `clientSecret` и сохранён в виде секрета `dex-client-<NAME>` в том же пространстве имён;
+   * Будет автоматически сгенерирован `clientSecret` и сохранён в виде секрета `dex-client-<NAME>` в том же неймспейсе;
    * Пользователь сможет использовать этот `clientID` и `clientSecret` в своём приложении для настройки OIDC.
 
 1. Укажите допустимые redirect-URI.
    Эти URI определяют, куда провайдер (Dex) может перенаправить пользователя после успешной аутентификации.
 
-1. Ограничьте доступ по группам, если необходимо.  
-   Используйте параметр `allowedGroups`, чтобы указать, какие группы пользователей имеют право входа в приложение через этот клиент.
+1. Ограничьте доступ по группам или email, если необходимо.  
+   Используйте параметры `allowedGroups` и `allowedEmails`, чтобы указать, какие группы пользователей и какие пользователи имеют право входа в приложение через этот клиент.
 
 1. (Опционально). Укажите список доверенных клиентов (`trustedPeers`), если вы хотите разрешить делегирование аутентификации между приложениями.
 

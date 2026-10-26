@@ -1,13 +1,13 @@
 ---
 title: "Local authentication"
 permalink: en/admin/configuration/access/authentication/local.html
-description: "Configure local authentication for Deckhouse Platform with password policies, 2FA support, and group management. OWASP-compliant security implementation."
+description: "Configure local authentication for Deckhouse Platform with password policies, 2FA support, and group management."
 ---
 
 In addition to external authentication providers, DP also supports local authentication.
 
 Local authentication provides user verification and access management with support for configurable password policies, two-factor authentication (2FA), and group management.
-The implementation complies with OWASP recommendations, ensuring reliable protection of access to the cluster and applications without requiring integration with external authentication systems.
+In the module parameters, you can configure password complexity, password history, password rotation, lockout after failed sign-in attempts and per-IP rate limiting of failed attempts. No external authentication system is required.
 
 Local authentication involves creating User and Group resources in the cluster for static users and groups:
 
@@ -80,6 +80,10 @@ If the `htpasswd` command is not available, install the appropriate package:
 * `apache2-htpasswd` — for ALT Linux.
 {% endalert %}
 
+{% alert level="warning" %}
+You cannot create a User whose `spec.email` matches a `User` subject of an existing ClusterAuthorizationRule or AuthorizationRule: the new user would get the permissions of the rule unnoticed. If the match is intentional, add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the User. For details, see [How rules are applied](../authorization/rbac-current.html#how-rules-are-applied).
+{% endalert %}
+
 ## Deleting a user
 
 To delete a local user, use the [`d8 iam user delete`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-delete) command. By default, it also removes the user from all [Group](/modules/user-authn/cr.html#group) resources they belong to.
@@ -106,7 +110,13 @@ Password reset, forced password change, 2FA reset, user lock/unlock and logout o
 
 Use the [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) commands for administrative actions on local users. They create a UserOperation resource with `initiatorType: admin`, wait for the operation to complete, and print the result.
 
+{% alert level="info" %}
+Deleting, recreating, or running a `ResetPassword`, `Reset2FA`, `Lock`, or `Unlock` operation on a user is allowed only if you already have permissions covering the roles that the user receives through their email or group membership, or you are explicitly allowed to assign those roles. The value of the `initiatorType` field does not affect this check: setting `initiatorType: self` does not bypass it. For details, see the [`user-authn` module documentation](/modules/user-authn/usage.html#administrative-operations). The same rule applies to DexProvider objects, see [Limiting the identities of a provider](external-authentication-providers.html#limiting-the-identities-of-a-provider).
+{% endalert %}
+
 The `ResetPassword`, `Reset2FA`, `Lock` and `Logout` operations end the sessions of the user at once, and the user has to authenticate again. For what ends and how fast, see [UserOperation lifecycle and side effects](/modules/user-authn/usage.html#useroperation-lifecycle-and-side-effects). Only `Reset2FA` removes the user's 2FA secret.
+
+After an administrator resets the password with `ResetPassword`, the user signs in with that password once. Dex then asks the user to set a new password that complies with the password policy.
 
 Examples of using the [`d8 iam user`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam) commands:
 
@@ -146,6 +156,8 @@ Examples of using the [`d8 iam user`](/products/kubernetes-platform/documentatio
   d8 iam user lock admin 30m
   ```
 
+  The `d8 iam user lock` command locks a local user and accepts a duration in seconds, minutes or hours, for example `30s`, `10m` or `1h`. To lock a user for several days (`lock.for: 7d`) or permanently (`lock.for: permanent`), create a UserOperation as described in [Creating UserOperation manually](#creating-useroperation-manually).
+
 - User unlock:
 
   ```shell
@@ -156,7 +168,7 @@ By default, commands wait for the operation to complete. To only create a UserOp
 
 ### Self-service operations
 
-In the DP web interface, a user can sign out on all devices, and a local user can change their password. The web interface creates a UserOperation with `initiatorType: self` for the user who is signed in:
+In the Deckhouse web interface, a user can sign out on all devices, and a local user can change their password. The web interface creates a UserOperation with `initiatorType: self` for the user who is signed in:
 
 - Signing out on all devices creates a `Logout` operation. It ends every session of the user, including kubeconfig files.
 - Changing the password creates a `RequirePasswordChange` operation. At the next sign-in, Dex asks for the current password and a new one that complies with the [password policy](#configuring-password-policy). The operation ends no sessions.
@@ -167,7 +179,7 @@ For user-facing password change and reset scenarios, see [Configuring authentica
 
 ### Creating UserOperation manually
 
-When running the `d8 iam user` CLI command is unavailable (e.g. in CI/CD, GitOps, or automation), you can create a [UserOperation](/modules/user-authn/cr.html#useroperation) resource directly. Example — reset a local user's password (the `newPasswordHash` contains a bcrypt hash without Base64 encoding; the hook encodes it automatically):
+When running the `d8 iam user` CLI command is unavailable (e.g. in CI/CD, GitOps, or automation), you can create a [UserOperation](/modules/user-authn/cr.html#useroperation) resource directly. Example — reset a local user's password (the `newPasswordHash` contains a bcrypt hash without Base64 encoding; the module encodes it automatically):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -199,17 +211,33 @@ spec:
     for: "30m"
 ```
 
-A UserOperation is a **single-use**, **immutable** object: after creation, the hook processes it and writes the result to `status.phase` (`Succeeded` or `Failed`). Completed operations are **automatically deleted** after 24 hours.
+A lock applies only to sign-ins through the provider set in `connectorID`. It does not block a local user or a user of another provider with the same email. The operation fails if the user has never signed in through this provider.
+
+A UserOperation is a **single-use** object: after creation, the module processes it and writes the result to `status.phase` (`Succeeded` or `Failed`). A UserOperation runs once, and changes to its spec after creation are ignored. Completed operations are **automatically deleted** after 24 hours.
 
 {% alert level="warning" %}
 The `ResetPassword`, `Reset2FA`, `Lock` and `Logout` operations end the sessions of the user at once, and the user has to authenticate again. For what ends and how fast, see [UserOperation lifecycle and side effects](/modules/user-authn/usage.html#useroperation-lifecycle-and-side-effects). `ResetPassword`, `Lock` and `Logout` keep the user's 2FA secret.
 {% endalert %}
+
+### Viewing account state
+
+The `user-authn` module keeps a [UserAccount](/modules/user-authn/cr.html#useraccount) object for each local user and for each user who has signed in through an external provider. It shows whether the account is locked, until when, and how many failed sign-in attempts were counted. Do not create or edit UserAccount objects.
+
+To list the accounts, run:
+
+```shell
+d8 k get useraccounts
+```
 
 ## Adding a user to a group
 
 {% alert level="warning" %}
 It is forbidden to use users and groups with the `system:` prefix.  
 Authentication attempts by such users or members of such groups will be rejected, and a corresponding warning will appear in the `kube-apiserver` logs.
+{% endalert %}
+
+{% alert level="warning" %}
+You cannot create a Group whose `spec.name` matches a `Group` subject of an existing ClusterAuthorizationRule or AuthorizationRule: the members of the new group would get the permissions of the rule unnoticed. If the match is intentional, add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the Group. For details, see [How rules are applied](../authorization/rbac-current.html#how-rules-are-applied).
 {% endalert %}
 
 The recommended way to manage groups is the [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group) command. Examples:
@@ -264,6 +292,8 @@ Password policy allows controlling password complexity, rotation, and automatic 
 
 An administrator can lock or unlock a user with [`d8 iam user lock` / `unlock`](../../../../cli/d8/reference/#d8-iam) (or a UserOperation) without enabling `passwordPolicy.lockout`. The `lockout` section only turns on automatic lockout after the configured number of failed attempts.
 
+Dex stores an automatic lock itself and does not create a UserOperation for it. Local users are always covered. LDAP and Atlassian Crowd users are locked only if their provider type is listed in [`passwordPolicy.lockout.applyToConnectors`](/modules/user-authn/configuration.html#parameters-passwordpolicy-lockout-applytoconnectors). To limit failed sign-in attempts per client IP address, use the [`rateLimit`](/modules/user-authn/configuration.html#parameters-ratelimit) parameter.
+
 To set up a password policy, use the [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) field in the configuration of the `user-authn` module.
 
 Examples of policies:
@@ -277,7 +307,7 @@ kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     passwordPolicy:
@@ -299,7 +329,7 @@ kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     passwordPolicy:
@@ -328,7 +358,7 @@ kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 2
+  version: 3
   enabled: true
   settings:
     staticUsers2FA:

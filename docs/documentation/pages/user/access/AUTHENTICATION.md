@@ -72,8 +72,11 @@ To enable authentication for an application deployed in DP, follow these steps:
 
    - A Deployment with containers running the authentication/authorization proxy and a Redis data store;
    - A Service pointing to the authentication/authorization proxy;
-   - An Ingress resource that handles requests at `https://<applicationDomain>/dex-authenticator` and forwards them to the proxy Service;
+   - If `applicationIngressClassName` is set, an Ingress resource that handles requests at `https://<applicationDomain>/dex-authenticator` and forwards them to the proxy Service;
+   - If `gatewayAPI` is set, an HTTPRoute;
    - Secrets required for integration with the DP authentication system.
+
+   The DexAuthenticator name must be a DNS-1035 label of at most 63 characters: it starts with a lowercase letter and contains only lowercase letters, digits and hyphens. The name is a part of the name of its Service, so a DexAuthenticator with another name cannot be created.
 
    Example DexAuthenticator manifest:
 
@@ -90,7 +93,7 @@ To enable authentication for an application deployed in DP, follow these steps:
      # Domain name of your application. Requests to this domain will be redirected to Dex for authentication.
      applicationDomain: "app-name.kube.my-domain.com"
      # Whether to send an `Authorization: Bearer` header to the application. Useful with NGINX's auth_request.
-     # If sendAuthorizationHeader is set to true, add the Authorization header to to nginx.ingress.kubernetes.io/auth-response-headers annotation of the application's Ingress.
+     # If sendAuthorizationHeader is true, add Authorization to the nginx.ingress.kubernetes.io/auth-response-headers annotation of the application's Ingress or to the alb.network.deckhouse.io/auth-response-headers annotation of its HTTPRoute.
      sendAuthorizationHeader: false
      # Name of the Secret containing the TLS certificate.
      applicationIngressCertificateSecretName: "ingress-tls"
@@ -111,7 +114,7 @@ To enable authentication for an application deployed in DP, follow these steps:
    Note the following capabilities when configuring authentication:
 
    - The `applicationDomain` parameter in the DexAuthenticator defines the main domain of the application. Additional domains can be specified via the `additionalApplications.domain` parameter.
-   - The `whitelistSourceRanges` and `additionalApplications.whitelistSourceRanges` parameters allow you to restrict authentication access to a specific list of IP addresses.
+   - The `whitelistSourceRanges` and `additionalApplications.whitelistSourceRanges` parameters allow you to restrict authentication access to a specific list of IP addresses. The limit applies to the `/dex-authenticator` endpoints. To restrict access to the application itself, or to let some networks in without authentication, use the `nginx.ingress.kubernetes.io/whitelist-source-range` and `nginx.ingress.kubernetes.io/satisfy` annotations of the application's Ingress.
 
      Refer to the [Authorization](../../admin/configuration/access/authorization/) section for information about configuring authorization.
 
@@ -164,8 +167,8 @@ To enable authentication for such an application, follow these steps:
 1. Specify the allowed redirect URIs.  
    These URIs define where the provider (Dex) can redirect the user after successful authentication.
 
-1. Restrict access by groups, if needed.  
-   Use the `allowedGroups` parameter to specify which user groups are allowed to authenticate via this client.
+1. Restrict access by groups or emails, if needed.  
+   Use the `allowedGroups` and `allowedEmails` parameters to specify which user groups and users are allowed to authenticate via this client.
 
 1. (Optional) Define trusted peers.  
    Use the `trustedPeers` parameter to allow authentication delegation between applications.

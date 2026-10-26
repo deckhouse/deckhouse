@@ -181,6 +181,16 @@ namespaces available to the user instead of `403 Forbidden`. Filtering of
 arbitrary resources via `--scope` is a generalization of the same mechanism,
 enabled explicitly.
 
+If the `console` module older than 1.44.0 is enabled, the namespace list is not filtered: the access levels of ClusterAuthorizationRule and AuthorizationRule and the namespace roles keep the permission to list every namespace.
+
+The same list is returned by the read-only accessiblenamespaces resource, which any authenticated user can request for themselves:
+
+```bash
+d8 k get accessiblenamespaces
+```
+
+This is handy for scripts and interfaces: there is no need to iterate over namespaces and check access to each one.
+
 ## Special case: projects
 
 A `Project` is cluster-scoped, but its visibility follows the same namespace

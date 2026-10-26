@@ -59,7 +59,7 @@ For details on granting permissions, see [Granting permissions to users and serv
 
 Assign the necessary permissions to the ServiceAccount.
 
-For the current role model, use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+For the basic role model, use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -79,22 +79,22 @@ EOF
 
 Available levels: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`.
 
-For the experimental role model, use [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
+For the granular role model, grant the `d8:project:admin` role in all projects with a [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding). To grant access to a single namespace only, create a RoleBinding to the `d8:namespace:admin` role in it instead:
 
 ```shell
 cat <<EOF | d8 k apply -f -
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+apiVersion: deckhouse.io/v1alpha3
+kind: ClusterProjectRoleBinding
 metadata:
   name: gitlab-runner-access
-subjects:
-- kind: ServiceAccount
-  name: gitlab-runner-deploy
-  namespace: ci-deploy
-roleRef:
-  kind: ClusterRole
-  name: d8:manage:all:manager
-  apiGroup: rbac.authorization.k8s.io
+spec:
+  subjects:
+  - kind: ServiceAccount
+    name: gitlab-runner-deploy
+    namespace: ci-deploy
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:admin
 EOF
 ```
 
@@ -327,11 +327,11 @@ EOF
 The annotation `dexclient.deckhouse.io/allow-access-to-kubernetes` allows the client to request tokens with `aud=kubernetes`.
 
 {% alert level="warning" %}
-This grants cluster-wide access to the Kubernetes API. For this reason, adding the annotation or changing it to `"true"` requires access to modify the `user-authn` module configuration — such as the `d8:manage:permission:module:user-authn:edit` role. A namespace-level role that permits creating a DexClient is not enough: the admission-controller rejects the request with a message naming the annotation.
+This grants cluster-wide access to the Kubernetes API. For this reason, adding the annotation or changing it to `"true"` requires the `create` permission on the `dexclients/allow-access-to-kubernetes` subresource of the `deckhouse.io` API group in the DexClient namespace. In the basic role model, this permission is granted at the `ClusterAdmin` level and above. In the granular model, it is granted by the `d8:subsystem:iam:manager` role and the roles that include it, such as `d8:system:manager`. A namespace-level role that permits creating a DexClient is not enough: the admission policy rejects the request with a message naming the annotation.
 
 The addition of the annotation is restricted regardless of the specified value, including `"false"`. This is required to ensure compatibility with previous DP versions where access has been granted when the annotation was present, regardless of its value.
 
-This restriction is not applicable to an object, which already has the annotation assigned. Deletion and recreation of DexClient is treated as another addition of the annotation, so a GitOps controller that recreates the object instead of patching it requires the `update` permission on the `moduleconfigs` resource named `user-authn`.
+This restriction is not applicable to an object, which already has the annotation assigned. Deletion and recreation of DexClient is treated as another addition of the annotation, so a GitOps controller that recreates the object instead of patching it requires the same `create` permission on the `dexclients/allow-access-to-kubernetes` subresource.
 {% endalert %}
 
 Get client secret:
@@ -359,7 +359,7 @@ The set of claims required by kube-apiserver for authentication depends on confi
 
 For details on granting permissions, see [Granting permissions to users and service accounts](granting.html).
 
-For the current role model, use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
+For the basic role model, use [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule):
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -375,22 +375,21 @@ spec:
 EOF
 ```
 
-For the experimental role model, use [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/):
+For the granular role model, grant the `d8:project:admin` role in all projects with a [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding). To grant access to a single namespace only, create a RoleBinding to the `d8:namespace:admin` role in it instead:
 
 ```shell
 cat <<EOF | d8 k apply -f -
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+apiVersion: deckhouse.io/v1alpha3
+kind: ClusterProjectRoleBinding
 metadata:
   name: ci-deployer
-subjects:
-- kind: User
-  name: deployer@example.com
-  apiGroup: rbac.authorization.k8s.io
-roleRef:
-  kind: ClusterRole
-  name: d8:manage:all:manager
-  apiGroup: rbac.authorization.k8s.io
+spec:
+  subjects:
+  - kind: User
+    name: deployer@example.com
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:admin
 EOF
 ```
 
@@ -502,7 +501,7 @@ The output shows which Authorization header is sent. For reliable token usage, u
 **Dex 401** — invalid client credentials or invalid subject token.
 
 **API 401** — token validation failed. Check:
-- Annotation `dexclient.deckhouse.io/allow-access-to-kubernetes` on DexClient. If it is gone, check whether the admission-controller rejected the request that was supposed to add it, or whether a GitOps controller recreated the object without it: only a subject allowed to update the `user-authn` ModuleConfig may add the annotation.
+- Annotation `dexclient.deckhouse.io/allow-access-to-kubernetes` on DexClient. If it is gone, check whether the admission-controller rejected the request that was supposed to add it, or whether a GitOps controller recreated the object without it: adding the annotation requires the `create` permission on the `dexclients/allow-access-to-kubernetes` subresource of the `deckhouse.io` API group in the DexClient namespace.
 - Scope contains `audience:server:client_id:kubernetes` and `profile`.
 - Time synchronization between CI runner and cluster.
 
