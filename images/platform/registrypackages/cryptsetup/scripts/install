@@ -14,6 +14,21 @@
 # limitations under the License.
 
 set -Eeo pipefail
+
+# Each file lands by rename(2): a reader sees the old file or the new one, never half of it.
+install_files() {
+  (cd "$1" && find . ! -type d -exec sh -c '
+    set -e
+    dst=$1
+    shift
+    for f; do
+      tmp="$dst/$f.$$.tmp"
+      mkdir -p "$dst/${f%/*}"
+      cp -Pp "$f" "$tmp"
+      mv -fT "$tmp" "$dst/$f"
+    done' _ "$2" {} +)
+}
+
 mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
-cp -pr opt/deckhouse/bin/* /opt/deckhouse/bin
-cp -pr opt/deckhouse/lib/* /opt/deckhouse/lib
+install_files opt/deckhouse/lib /opt/deckhouse/lib || exit 1
+install_files opt/deckhouse/bin /opt/deckhouse/bin || exit 1
