@@ -1513,10 +1513,6 @@ entries:
             ru: Установка DP в существующий Talos-кластер
           url: /guides/talos-existing-cluster.html
         - title:
-            en: Going to production with virtualization
-            ru: Подготовка виртуализации к production
-          url: /guides/virt-production.html
-        - title:
             en: Migrating VMs from VMware to DP
             ru: Перенос ВМ из VMware в DP
           url: /guides/virt-migrating-from-vmware.html

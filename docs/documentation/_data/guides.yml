@@ -88,18 +88,6 @@
     - cloud
     - production
 - name:
-    ru: "Подготовка виртуализации к production"
-    en: "Going to production with virtualization"
-  link: "virt-production.html"
-  #minutesToRead: 20
-  description:
-    ru: Рекомендации по подготовке кластера Deckhouse Platform с виртуализацией к работе в production-окружении
-    en: Recommendations on preparing a Deckhouse Platform cluster with virtualization for a production environment
-  tags:
-    - baremetal
-    - cloud
-    - production
-- name:
     ru: "Перенос ВМ из VMware в DP"
     en: "Migrating VMs from VMware to DP"
   link: "virt-migrating-from-vmware.html"

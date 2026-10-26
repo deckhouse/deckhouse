@@ -20,7 +20,8 @@ rewrite ^/products/kubernetes-platform/documentation$ /products/kubernetes-platf
 rewrite ^/products/kubernetes-platform/gs$ /products/kubernetes-platform/gs/ permanent;
 rewrite ^/products/kubernetes-platform/guides/?$ /products/kubernetes-platform/documentation/v1/guides/ permanent;
 rewrite ^/products/kubernetes-platform/guides/(.*)$ /products/kubernetes-platform/documentation/v1/guides/$1 permanent;
-rewrite ^/products/virtualization-platform/guides/production\.html$ /products/kubernetes-platform/documentation/v1/guides/virt-production.html permanent;
+rewrite ^(.*)/documentation(/(v[0-9]+|v[0-9]+\.[0-9]+|latest))?/guides/virt-production\.html$ /products/kubernetes-platform/documentation/$2/guides/production.html permanent;
+rewrite ^/products/virtualization-platform/guides/production\.html$ /products/kubernetes-platform/documentation/v1/guides/production.html permanent;
 rewrite ^/products/virtualization-platform/guides/migrating-vms-from-vmware-to-dvp\.html$ /products/kubernetes-platform/documentation/v1/guides/virt-migrating-from-vmware.html permanent;
 rewrite ^/products/virtualization-platform/guides(/.*)?$ /products/kubernetes-platform/documentation/v1/guides/ permanent;
 rewrite ^/products/kubernetes-platform/platform/(.*)$ /products/kubernetes-platform/documentation/v1/$1 redirect;
