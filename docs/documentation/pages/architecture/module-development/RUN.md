@@ -36,7 +36,7 @@ spec:
     dockerCfg: <base64 encoded credentials>
 ```
 
-After the ModuleSource resource is created, DP will start to perform periodic (every three minutes) data synchronization with the module source (fetching information about the modules available in the source).
+After the ModuleSource resource is created, DP will start to perform periodic data synchronization with the module source (fetching information about the modules available in the source). By default, synchronization runs every 30 minutes. To change the interval, use the [`scanInterval`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource-v1alpha1-spec-scaninterval) parameter.
 
 Use the following command to check the synchronization status:
 

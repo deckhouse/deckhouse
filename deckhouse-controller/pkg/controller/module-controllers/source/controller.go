@@ -62,7 +62,8 @@ import (
 const (
 	controllerName = "d8-module-source-controller"
 
-	defaultScanInterval = 3 * time.Minute
+	defaultScanInterval = 30 * time.Minute
+	minScanInterval     = 3 * time.Minute
 
 	maxConcurrentReconciles = 3
 	cacheSyncTimeout        = 3 * time.Minute
@@ -221,8 +222,8 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	span.SetAttributes(attribute.String("source", source.Name))
 
 	scanInterval := defaultScanInterval
-	if interval := source.Spec.ScanInterval; interval != nil && interval.Duration > defaultScanInterval {
-		scanInterval = interval.Duration
+	if interval := source.Spec.ScanInterval; interval != nil {
+		scanInterval = max(interval.Duration, minScanInterval)
 	}
 
 	// generate options for connecting to the registry
