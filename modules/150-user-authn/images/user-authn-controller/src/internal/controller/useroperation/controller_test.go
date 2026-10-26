@@ -20,6 +20,8 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -33,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"user-authn-controller/internal/controller"
@@ -272,6 +275,171 @@ func TestReconcile_ResetPassword(t *testing.T) {
 	joined := strings.Join(rec.msgs, " ")
 	if strings.Contains(joined, rawBcryptHash) || strings.Contains(joined, encodedBcryptHash) {
 		t.Errorf("logs leaked password hash: %q", joined)
+	}
+}
+
+// A reset must put the replaced hash into the history Dex checks on the forced change, or the user could set
+// the pre-reset password again and restart its rotation.
+func TestReconcile_ResetPasswordKeepsHistory(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		limit      uint64
+		setHistory bool
+		history    []any
+		want       []string
+	}{
+		{"no history kept", 0, true, []any{"p1"}, []string{"p1"}},
+		{"history within the limit", 5, true, []any{"p1", "p2"}, []string{"p1", "p2", "old-hash"}},
+		{"first entry of the history", 5, false, nil, []string{"old-hash"}},
+		// Dex writes an empty history as null.
+		{"a null history starts too", 5, true, nil, []string{"old-hash"}},
+		{"history trimmed to a lowered limit", 2, true, []any{"p1", "p2", "p3"}, []string{"p3", "old-hash"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+			extra := map[string]any{"hash": "old-hash"}
+			if tc.setHistory {
+				extra["previousHashes"] = tc.history
+			}
+			r := newTestReconciler(t, now, passwordObj("admin", extra), resetPasswordOp(now))
+			r.passwordHistoryLimit = tc.limit
+			if _, err := r.Reconcile(t.Context(), opRequest("user-operation-01")); err != nil {
+				t.Fatalf("Reconcile: %v", err)
+			}
+
+			got := getUnstructured(t, r, controller.PasswordGVK, naming.DexNamespace, passwordObjectName)
+			assertResetPassword(t, got)
+			history, _, _ := unstructured.NestedStringSlice(got.Object, "previousHashes")
+			if !slices.Equal(history, tc.want) {
+				t.Errorf("previousHashes = %q, want %q", history, tc.want)
+			}
+			assertPhase(t, r, "user-operation-01", "Succeeded", now)
+		})
+	}
+}
+
+// An operation requeued after its patch landed finds its own hash in place: the history must not get it.
+func TestReconcile_ResetPasswordRetriedKeepsHistory(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	pw := passwordObj("admin", map[string]any{"hash": encodedBcryptHash, "previousHashes": []any{"old-hash"}})
+	r := newTestReconciler(t, now, pw, resetPasswordOp(now))
+	r.passwordHistoryLimit = 5
+	if _, err := r.Reconcile(t.Context(), opRequest("user-operation-01")); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	got := getUnstructured(t, r, controller.PasswordGVK, naming.DexNamespace, passwordObjectName)
+	assertResetPassword(t, got)
+	history, _, _ := unstructured.NestedStringSlice(got.Object, "previousHashes")
+	if want := []string{"old-hash"}; !slices.Equal(history, want) {
+		t.Errorf("previousHashes = %q, want %q", history, want)
+	}
+}
+
+// A password changed between the read and the patch fails the test of the hash; the reset reads it again
+// and keeps the new hash in the history rather than the one it read first.
+func TestReconcile_ResetPasswordRereadsConcurrentChange(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 13, 12, 0, 0, 0, time.UTC)
+	pw := passwordObj("admin", map[string]any{"hash": "old-hash", "previousHashes": []any{"p1"}})
+	patches := 0
+	c := fake.NewClientBuilder().
+		WithScheme(runtime.NewScheme()).
+		WithRESTMapper(newTestMapper()).
+		WithStatusSubresource(controller.Object(controller.UserOperationGVK)).
+		WithObjects(pw, resetPasswordOp(now)).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Patch: func(ctx context.Context, c client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+				if patch.Type() != types.JSONPatchType {
+					return c.Patch(ctx, obj, patch, opts...)
+				}
+				patches++
+				if patches == 1 {
+					// Dex changes the password between the read and the patch.
+					changed := controller.Object(controller.PasswordGVK)
+					if err := c.Get(ctx, client.ObjectKeyFromObject(obj), changed); err != nil {
+						t.Fatalf("get password: %v", err)
+					}
+					changed.Object["hash"] = "changed-hash"
+					changed.Object["previousHashes"] = []any{"p1", "old-hash"}
+					if err := c.Update(ctx, changed); err != nil {
+						t.Fatalf("change password: %v", err)
+					}
+				}
+				if err := c.Patch(ctx, obj, patch, opts...); err != nil {
+					// The API server answers a failed JSON patch test with 422; the fake client returns the
+					// json-patch error as is.
+					return apierrors.NewGenericServerResponse(http.StatusUnprocessableEntity, "patch", schema.GroupResource{}, obj.GetName(), err.Error(), 0, false)
+				}
+				return nil
+			},
+		}).
+		Build()
+	r := New(c, logr.Discard(), func() time.Time { return now })
+	r.passwordHistoryLimit = 5
+	if _, err := r.Reconcile(t.Context(), opRequest("user-operation-01")); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	if patches != 2 {
+		t.Errorf("json patches = %d, want 2", patches)
+	}
+	got := getUnstructured(t, r, controller.PasswordGVK, naming.DexNamespace, passwordObjectName)
+	assertResetPassword(t, got)
+	history, _, _ := unstructured.NestedStringSlice(got.Object, "previousHashes")
+	if want := []string{"p1", "old-hash", "changed-hash"}; !slices.Equal(history, want) {
+		t.Errorf("previousHashes = %q, want %q", history, want)
+	}
+}
+
+func TestParseHistoryLimit(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		value   string
+		want    uint64
+		wantErr bool
+	}{
+		{"", 0, false},
+		{"0", 0, false},
+		{"5", 5, false},
+		{"-1", 0, true},
+		{"five", 0, true},
+	}
+	for _, tc := range tests {
+		got, err := parseHistoryLimit(tc.value)
+		if (err != nil) != tc.wantErr || got != tc.want {
+			t.Errorf("parseHistoryLimit(%q) = %d, %v; want %d, error %t", tc.value, got, err, tc.want, tc.wantErr)
+		}
+	}
+}
+
+func resetPasswordOp(now time.Time) *unstructured.Unstructured {
+	return userOperationObj("user-operation-01", now, map[string]any{
+		"type":          "ResetPassword",
+		"initiatorType": "Admin",
+		"user":          "admin",
+		"resetPassword": map[string]any{"newPasswordHash": rawBcryptHash},
+	})
+}
+
+func assertResetPassword(t *testing.T, got *unstructured.Unstructured) {
+	t.Helper()
+	hash, _, _ := unstructured.NestedString(got.Object, "hash")
+	if hash != encodedBcryptHash {
+		t.Errorf("password hash = %q, want encoded bcrypt", hash)
+	}
+	requireReset, _, _ := unstructured.NestedBool(got.Object, "requireResetHashOnNextSuccLogin")
+	if !requireReset {
+		t.Error("requireResetHashOnNextSuccLogin = false, want true")
 	}
 }
 

@@ -67,6 +67,10 @@ spec:
 {{- else }}
           value: "false"
 {{- end }}
+        # The password history Dex keeps (templates/dex/config.yaml): a password reset puts the replaced
+        # password into it, so the forced change cannot set it again.
+        - name: PASSWORD_HISTORY_LIMIT
+          value: {{ dig "passwordPolicy" "passwordHistoryLimit" 0 .Values.userAuthn | quote }}
         ports:
         - containerPort: 9090
           name: healthz

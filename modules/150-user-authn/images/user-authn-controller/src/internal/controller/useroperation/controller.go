@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -46,25 +48,53 @@ const maxConcurrentReconciles = 4
 // Reconciler executes UserOperation objects against Dex Password / session CRs.
 type Reconciler struct {
 	client client.Client
-	log    logr.Logger
-	now    func() time.Time
+	// apiReader reads past the informer cache, which may not have a change of a Password yet.
+	apiReader client.Reader
+	log       logr.Logger
+	now       func() time.Time
+	// passwordHistoryLimit is how many replaced hashes the password policy of Dex keeps; a
+	// ResetPassword adds the replaced hash to them. 0 keeps none.
+	passwordHistoryLimit uint64
 }
 
-// New constructs a Reconciler. now defaults to time.Now when nil.
+// passwordHistoryLimitEnv is userAuthn.passwordPolicy.passwordHistoryLimit, the history of replaced
+// passwords Dex keeps; a ResetPassword operation adds the replaced hash to it. Unset (no password
+// policy) keeps no history, as Dex does.
+const passwordHistoryLimitEnv = "PASSWORD_HISTORY_LIMIT"
+
+// New constructs a Reconciler. now defaults to time.Now when nil. Reads past the cache go to c.
 func New(c client.Client, log logr.Logger, now func() time.Time) *Reconciler {
 	if now == nil {
 		now = time.Now
 	}
-	return &Reconciler{client: c, log: log, now: now}
+	return &Reconciler{client: c, apiReader: c, log: log, now: now}
 }
 
 // Register wires the UserOperation reconciler onto the manager.
 func Register(mgr manager.Manager) error {
 	r := New(mgr.GetClient(), mgr.GetLogger().WithName("useroperation"), nil)
+	r.apiReader = mgr.GetAPIReader()
+	limit, err := parseHistoryLimit(os.Getenv(passwordHistoryLimitEnv))
+	if err != nil {
+		return err
+	}
+	r.passwordHistoryLimit = limit
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup useroperation controller: %w", err)
 	}
 	return nil
+}
+
+// parseHistoryLimit reads the value of passwordHistoryLimitEnv; an empty value keeps no history.
+func parseHistoryLimit(value string) (uint64, error) {
+	if value == "" {
+		return 0, nil
+	}
+	limit, err := strconv.ParseUint(value, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", passwordHistoryLimitEnv, err)
+	}
+	return limit, nil
 }
 
 // SetupWithManager registers watches for UserOperation and Dex objects that
