@@ -166,16 +166,24 @@ spec:
                     resource: deployments
                     subresource: prometheus-metrics
                     name: cert-manager
+          {{- /*
+            On a node short of CPU the proxy answers in seconds. With the default 1s timeout the kubelet
+            restarted it four times in five minutes of a noisy neighbour, although it was only slow.
+          */}}
           livenessProbe:
             httpGet:
               path: /livez
               port: 9404
               scheme: HTTPS
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
           readinessProbe:
             httpGet:
               path: /livez
               port: 9404
               scheme: HTTPS
+            timeoutSeconds: 5
           ports:
           - containerPort: 9404
             name: https-metrics

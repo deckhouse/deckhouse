@@ -96,6 +96,27 @@ preStop:
 			Expect(controller.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring(`--leader-election-retry-period=5s`))
 		})
 
+		// On a node short of CPU the kube-rbac-proxy sidecar answers in seconds; with 1s probes the kubelet
+		// restarted it four times during a five-minute noisy-neighbour test.
+		It("gives the probes of the controller kube-rbac-proxy a 5s timeout and a 60s liveness budget", func() {
+			controller := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			proxy := controller.Field(`spec.template.spec.containers.#(name=="kube-rbac-proxy")`)
+			for _, kind := range []string{"livenessProbe", "readinessProbe"} {
+				Expect(proxy.Get(kind).Exists()).To(BeTrue(), kind)
+				Expect(proxy.Get(kind+".timeoutSeconds").Int()).To(BeNumerically(">=", 5), kind)
+			}
+			liveness := proxy.Get("livenessProbe")
+			period := liveness.Get("periodSeconds").Int()
+			if period == 0 {
+				period = 10 // the Kubernetes default
+			}
+			failures := liveness.Get("failureThreshold").Int()
+			if failures == 0 {
+				failures = 3 // the Kubernetes default
+			}
+			Expect(period * failures).To(BeNumerically(">=", 60))
+		})
+
 		It("gives the controller five minutes to reach the API server at startup", func() {
 			controller := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
 			probe := controller.Field("spec.template.spec.containers.0.startupProbe")
