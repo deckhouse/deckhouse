@@ -550,6 +550,16 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		}
 	}
 
+	if release.GetApplyNow() {
+		delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationApplyNow)
+		needsUpdate = true
+	}
+
+	if release.GetForce() {
+		delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationForce)
+		needsUpdate = true
+	}
+
 	// at least one release for module source is deployed, add finalizer to prevent module source deletion
 	source := new(v1alpha1.ModuleSource)
 	if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
@@ -1146,7 +1156,7 @@ func (r *reconciler) applyRelease(ctx context.Context, mr *v1alpha1.ModuleReleas
 //   - notified=false: Tracks notification delivery status
 //   - Status labels updated to reflect deployment state
 //   - Finalizers added to protect filesystem resources
-//   - Administrative annotations cleared (force, reinstall, applyNow)
+//   - Reinstall annotation cleared (force and applyNow are cleared by handleDeployedRelease)
 //
 // Module Validation Process:
 //   - Configuration validation against current cluster values or ModuleConfig
@@ -1229,13 +1239,9 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 
 		release.ObjectMeta.Labels[v1alpha1.ModuleReleaseLabelStatus] = v1alpha1.ModuleReleaseLabelDeployed
 
-		if release.GetApplyNow() {
-			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationApplyNow)
-		}
-
-		if release.GetForce() {
-			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationForce)
-		}
+		// apply-now and force are cleared by handleDeployedRelease, after the Deployed phase is written:
+		// clearing them here would leave an interrupted deploy Pending without them,
+		// and the first release would then wait for manual approval forever
 
 		if release.GetReinstall() {
 			delete(release.Annotations, v1alpha1.ModuleReleaseAnnotationReinstall)

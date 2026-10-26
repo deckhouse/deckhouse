@@ -46,6 +46,7 @@ import (
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
@@ -152,6 +153,39 @@ func (suite *ReleaseControllerTestSuite) TestCreateReconcile() {
 		repeatTest(func() {
 			mr := suite.getModuleRelease(suite.testMRName)
 			_, err = suite.ctr.handleRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+		})
+	})
+
+	// The deploy is interrupted between the metadata write and the Deployed status write
+	// (e.g. Deckhouse restarts). The first release must keep apply-now, otherwise it waits
+	// for manual approval forever in AutoPatch mode.
+	suite.Run("first release interrupted deploy", func() {
+		interrupted := false
+		interruptDeploy := func(r *reconciler) {
+			r.client = interceptor.NewClient(suite.Suite.Client().Client.(client.WithWatch), interceptor.Funcs{
+				SubResourceUpdate: func(ctx context.Context, c client.Client, subResource string, obj client.Object, opts ...client.SubResourceUpdateOption) error {
+					if mr, ok := obj.(*v1alpha1.ModuleRelease); ok && mr.Status.Phase == v1alpha1.ModuleReleasePhaseDeployed && !interrupted {
+						interrupted = true
+						return apierrors.NewInternalError(errors.New("deploy interrupted"))
+					}
+					return c.SubResource(subResource).Update(ctx, obj, opts...)
+				},
+			})
+		}
+		suite.setupReleaseController(suite.fetchTestFileData("first-release-interrupted-deploy.yaml"), interruptDeploy)
+
+		for i := 0; i < repeatCount && !interrupted; i++ {
+			_, _ = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease(suite.testMRName))
+		}
+		require.True(suite.T(), interrupted, "the deploy never reached the Deployed status write")
+
+		mr := suite.getModuleRelease(suite.testMRName)
+		require.Equal(suite.T(), v1alpha1.ModuleReleasePhasePending, mr.Status.Phase)
+		require.True(suite.T(), mr.GetApplyNow(), "apply-now is lost after the interrupted deploy")
+
+		repeatTest(func() {
+			_, err = suite.ctr.handleRelease(context.TODO(), suite.getModuleRelease(suite.testMRName))
 			require.NoError(suite.T(), err)
 		})
 	})
