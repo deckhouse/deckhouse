@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index b83633d..5f95bb2 100644
+index b83633d..66af0e5 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -2,13 +2,13 @@ module github.com/coredns/coredns
@@ -148,7 +148,7 @@ index b83633d..5f95bb2 100644
  	github.com/json-iterator/go v1.1.12 // indirect
 -	github.com/klauspost/compress v1.18.0 // indirect
 -	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
-+	github.com/klauspost/compress v1.18.4 // indirect
++	github.com/klauspost/compress v1.18.7 // indirect
 +	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
  	github.com/kylelemons/godebug v1.1.0 // indirect
 -	github.com/lufia/plan9stats v0.0.0-20250317134145-8bc96cf8fc35 // indirect
@@ -260,7 +260,7 @@ index b83633d..5f95bb2 100644
  	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
  	sigs.k8s.io/yaml v1.6.0 // indirect
 diff --git a/go.sum b/go.sum
-index 59fe8a0..52cd7c8 100644
+index 59fe8a0..ea19d54 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,5 +1,5 @@
@@ -431,8 +431,8 @@ index 59fe8a0..52cd7c8 100644
 -github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYWRCY2AiWywWQ=
 -github.com/klauspost/cpuid/v2 v2.2.3 h1:sxCkb+qR91z4vsqw4vGGZlDgPz3G7gjaLyK3V8y70BU=
 -github.com/klauspost/cpuid/v2 v2.2.3/go.mod h1:RVVoqg1df56z8g3pUjL/3lE5UfnlrJX8tyFgg4nqhuY=
-+github.com/klauspost/compress v1.18.4 h1:RPhnKRAQ4Fh8zU2FY/6ZFDwTVTxgJ/EMydqSTzE9a2c=
-+github.com/klauspost/compress v1.18.4/go.mod h1:R0h/fSBs8DE4ENlcrlib3PsXS61voFxhIs2DeRhCvJ4=
++github.com/klauspost/compress v1.18.7 h1:aUyZsS4kH3QTKurYhAOwAHxllVPnOthb3vPfnF1Ehjw=
++github.com/klauspost/compress v1.18.7/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
 +github.com/klauspost/cpuid/v2 v2.3.0 h1:S4CRMLnYUhGeDFDqkGriYKdfoFlDnMtqTiI/sFzhA9Y=
 +github.com/klauspost/cpuid/v2 v2.3.0/go.mod h1:hqwkgyIinND0mEev00jJYCxPNVRVXFQeu1XKlok6oO0=
  github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
