@@ -77,3 +77,11 @@ rules:
   - patch
   - delete
   - deletecollection
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - modulesettingsdefinitions
+  verbs:
+  - get
+  - list
+  - watch

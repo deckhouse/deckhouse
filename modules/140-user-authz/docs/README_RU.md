@@ -545,6 +545,7 @@ proxy:
 read:
     - cluster.x-k8s.io/machinedrainrules
     - control-plane.deckhouse.io/controlplaneoperations
+    - deckhouse.io/modulesettingsdefinitions
     - infrastructure.cluster.x-k8s.io/deckhousecontrolplanes
     - infrastructure.cluster.x-k8s.io/staticclusters
     - infrastructure.cluster.x-k8s.io/staticmachines
