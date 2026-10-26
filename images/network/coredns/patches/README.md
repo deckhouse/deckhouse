@@ -31,3 +31,8 @@ Moves `golang.org/x/net` from `v0.58.0` to `v0.60.0` (pulling `golang.org/x/cryp
 - CVE-2026-78663 (`golang.org/x/net`)
 - CVE-2026-78669 (`golang.org/x/net`)
 - CVE-2026-97032 (`golang.org/x/net`)
+
+Moves `github.com/klauspost/compress` from `v1.18.4` to `v1.18.7` to remediate the
+following vulnerabilities:
+
+- CVE-2026-63209 (`github.com/klauspost/compress`)
