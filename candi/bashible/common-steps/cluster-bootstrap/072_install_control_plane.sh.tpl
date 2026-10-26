@@ -15,21 +15,16 @@
 {{ $manifestsDir := "/var/lib/bashible/control-plane" }}
 {{ $kubeconfigDir := "/var/lib/bashible/control-plane/kubeconfig" }}
 
-# Sub-step timing — emit `[bashible-timing] step=071_install_control_plane.sh
-# section=<name> dur=<sec>` so dhctl-side parsing can attribute the (often >200s)
-# total of this step to one of: image-pull waits, kubelet Node registration,
-# RBAC/label/taint setup, or PKI upload.
+# dhctl turns these markers into spans that show where this long step spends its time.
 __sec_start=$(date +%s.%N)
 __sec() {
   local now dur
   now=$(date +%s.%N)
   dur=$(awk -v s="$__sec_start" -v e="$now" 'BEGIN{printf "%.3f", e-s}')
-  echo "[bashible-timing] step=071_install_control_plane.sh section=$1 dur=${dur}s"
+  echo "[bashible-timing] step=072_install_control_plane.sh section=$1 dur=${dur}s"
   __sec_start=$now
 }
 
-# Poll crictl every 2s instead of every 10s — kubelet starts static pods within seconds,
-# so 10s granularity wasted 8-10s per container in practice. Total timeout preserved at 200s.
 check_container_running() {
   local container_name=$1
   local max_retries=100
@@ -50,6 +45,24 @@ check_container_running() {
 
     sleep $sleep_interval
   done
+}
+
+# Get-or-create keeps the step idempotent across bashible retries.
+ensure_crb() {
+  local name=$1 role=$2 subject_kind=$3 subject_name=$4
+  if bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings/${name}" >/dev/null 2>&1; then
+    return 0
+  fi
+  bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings" \
+    -X POST \
+    -H "Content-Type: application/json" \
+    --data "$(jq -nc --arg name "$name" --arg role "$role" --arg kind "$subject_kind" --arg subject "$subject_name" '{
+      apiVersion: "rbac.authorization.k8s.io/v1",
+      kind: "ClusterRoleBinding",
+      metadata: {name: $name},
+      roleRef: {apiGroup: "rbac.authorization.k8s.io", kind: "ClusterRole", name: $role},
+      subjects: [{apiGroup: "rbac.authorization.k8s.io", kind: $kind, name: $subject}]
+    }')" >/dev/null
 }
 
 check_container_running "kubernetes-api-proxy" || exit 1
@@ -73,9 +86,7 @@ anonymous:
   - path: /healthz
 EOF
 
-# Copy all three manifests at once — kubelet starts the static pods concurrently,
-# so we can wait for them concurrently too. Without this each check_container_running
-# blocked for the full kubelet/container start latency serially (~3-5s each wasted).
+# kubelet starts these static pods concurrently, so wait for them concurrently too.
 cp {{ $manifestsDir}}/kube-apiserver.yaml /etc/kubernetes/manifests/kube-apiserver.yaml
 cp {{ $manifestsDir}}/kube-scheduler.yaml /etc/kubernetes/manifests/kube-scheduler.yaml
 cp {{ $manifestsDir}}/kube-controller-manager.yaml /etc/kubernetes/manifests/kube-controller-manager.yaml
@@ -103,6 +114,13 @@ export BB_KUBE_AUTH_TYPE="super-admin-cert"
 export BB_KUBE_APISERVER_URL=""
 bb-curl-helper-extract-super-admin-certs
 
+# CONTAINER_RUNNING comes before the secure port binds, so the first API call could get
+# "connection refused".
+# --max-time 3: bb-wait limits polls, not time; a hung apiserver would otherwise hold
+# each poll for bb-curl-kube's default 60s and stretch the wait to hours.
+bb-wait 'bb-curl-kube /readyz --max-time 3 >/dev/null 2>&1' 200 || exit 1
+__sec wait_apiserver_ready
+
 # admin.conf authenticates as user "kubernetes-admin" in group
 # "kubeadm:cluster-admins" — but that group has NO permissions until the
 # kubeadm:cluster-admins ClusterRoleBinding exists. If the Node-wait loop
@@ -110,45 +128,16 @@ bb-curl-helper-extract-super-admin-certs
 # 403 and the loop would burn its full 200s timeout instead of breaking on
 # the first successful poll (~220s measured on every fresh bootstrap).
 # So: bind via super-admin certs first (they bypass RBAC), then wait.
-# Idempotent via get-or-create guard (step is bashible-retried on failure).
-if ! bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings/kubeadm:cluster-admins" >/dev/null 2>&1; then
-  bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings" \
-    -X POST \
-    -H "Content-Type: application/json" \
-    --data @- >/dev/null <<'EOF'
-{
-  "apiVersion": "rbac.authorization.k8s.io/v1",
-  "kind": "ClusterRoleBinding",
-  "metadata": { "name": "kubeadm:cluster-admins" },
-  "roleRef": {
-    "apiGroup": "rbac.authorization.k8s.io",
-    "kind": "ClusterRole",
-    "name": "cluster-admin"
-  },
-  "subjects": [
-    {
-      "apiGroup": "rbac.authorization.k8s.io",
-      "kind": "Group",
-      "name": "kubeadm:cluster-admins"
-    }
-  ]
-}
-EOF
-fi
+ensure_crb kubeadm:cluster-admins cluster-admin Group kubeadm:cluster-admins
+# kubectl logs/exec during bootstrap; module 040-control-plane-manager later adopts this CRB.
+ensure_crb d8:control-plane-manager:apiserver-kubelet-client system:kubelet-api-admin User kube-apiserver-kubelet-client
 
 export BB_KUBE_AUTH_TYPE="admin-cert"
 export BB_KUBE_APISERVER_URL=""
 bb-curl-helper-extract-admin-certs
 
-# kubelet registers the Node object slightly after the control-plane containers
-# report running, so the label/taint below can race ahead of it. Wait for the
-# Node to appear (≤200s) before touching it.
-for _ in $(seq 1 100); do
-  if bb-curl-kube "/api/v1/nodes/${node_name}" >/dev/null 2>&1; then
-    break
-  fi
-  sleep 2
-done
+# kubelet registers the Node shortly after the containers start; the label/taint below need it.
+bb-wait "bb-curl-kube /api/v1/nodes/${node_name} --max-time 3 >/dev/null 2>&1" 200 || exit 1
 __sec wait_node_register
 
 node_taints_patch="$(
@@ -166,10 +155,8 @@ bb-curl-kube "/api/v1/nodes/${node_name}" \
   --data "$(jq -nc --argjson taints "$node_taints_patch" '{"spec":{"taints":$taints}}')" >/dev/null
 __sec rbac_label_taint
 
-# CIS benchmark purposes
+# CIS benchmark
 chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
-
-# Restrict permissions on admin kubeconfig files for security
 chmod 600 /etc/kubernetes/admin.conf /etc/kubernetes/super-admin.conf 2>/dev/null || true
 
 # Upload pki for deckhouse
@@ -232,36 +219,9 @@ bb-curl-kube "/api/v1/namespaces/kube-system/secrets" \
     '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"d8-pki","namespace":"kube-system"},"type":"Opaque","data":$data}')" >/dev/null
 __sec pki_upload
 
-# Setup kubectl for root user during bootstrap.
-# The control-plane-manager manages this symlink; when the user-authz module is enabled, see controlPlaneManager.rootKubeconfigSymlink.
+# kubectl for root during bootstrap; afterwards control-plane-manager owns this symlink
+# (see controlPlaneManager.rootKubeconfigSymlink).
 if [ ! -f /root/.kube/config ]; then
   mkdir -p /root/.kube
   ln -s /etc/kubernetes/admin.conf /root/.kube/config
-fi
-# Allow kube-apiserver to proxy kubelet requests (kubectl logs/exec/port-forward) during bootstrap.
-# The same CRB is applied with heritage/module labels by module 040-control-plane-manager; nelm adopts it.
-# Idempotent via get-or-create guard (step is bashible-retried on failure).
-if ! bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings/d8:control-plane-manager:apiserver-kubelet-client" >/dev/null 2>&1; then
-  bb-curl-kube "/apis/rbac.authorization.k8s.io/v1/clusterrolebindings" \
-    -X POST \
-    -H "Content-Type: application/json" \
-    --data @- >/dev/null <<'EOF'
-{
-  "apiVersion": "rbac.authorization.k8s.io/v1",
-  "kind": "ClusterRoleBinding",
-  "metadata": { "name": "d8:control-plane-manager:apiserver-kubelet-client" },
-  "roleRef": {
-    "apiGroup": "rbac.authorization.k8s.io",
-    "kind": "ClusterRole",
-    "name": "system:kubelet-api-admin"
-  },
-  "subjects": [
-    {
-      "apiGroup": "rbac.authorization.k8s.io",
-      "kind": "User",
-      "name": "kube-apiserver-kubelet-client"
-    }
-  ]
-}
-EOF
 fi
