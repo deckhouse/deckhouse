@@ -36,6 +36,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"helm.sh/helm/v3/pkg/releaseutil"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -662,6 +663,57 @@ status:
 
 		assert.Len(suite.T(), suite.moduleSource("test-source-3").Finalizers, 0)
 	})
+}
+
+func (suite *ControllerTestSuite) TestScanInterval() {
+	tests := []struct {
+		name     string
+		interval *metav1.Duration
+		want     time.Duration
+	}{
+		{name: "default", want: 30 * time.Minute},
+		{name: "zero", interval: &metav1.Duration{}, want: 3 * time.Minute},
+		{name: "below minimum", interval: &metav1.Duration{Duration: time.Minute}, want: 3 * time.Minute},
+		{name: "minimum", interval: &metav1.Duration{Duration: 3 * time.Minute}, want: 3 * time.Minute},
+		{name: "five minutes", interval: &metav1.Duration{Duration: 5 * time.Minute}, want: 5 * time.Minute},
+		{name: "ten minutes", interval: &metav1.Duration{Duration: 10 * time.Minute}, want: 10 * time.Minute},
+		{name: "explicit default", interval: &metav1.Duration{Duration: 30 * time.Minute}, want: 30 * time.Minute},
+		{name: "above default", interval: &metav1.Duration{Duration: time.Hour}, want: time.Hour},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			const repo = "registry.example.com/modules"
+			raw, err := yaml.Marshal(&v1alpha1.ModuleSource{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1alpha1.SchemeGroupVersion.String(),
+					Kind:       v1alpha1.ModuleSourceKind,
+				},
+				ObjectMeta: metav1.ObjectMeta{Name: "test-source"},
+				Spec: v1alpha1.ModuleSourceSpec{
+					ScanInterval: tt.interval,
+					Registry: v1alpha1.ModuleSourceSpecRegistry{
+						Repo:   repo,
+						Scheme: "HTTPS",
+					},
+				},
+			})
+			require.NoError(suite.T(), err)
+			dc := dependency.NewMockedContainer()
+			dc.CRClientMap = map[string]cr.Client{
+				repo: cr.NewClientMock(suite.T()).ListTagsMock.Return([]string{}, nil),
+			}
+			suite.setupTestController(string(raw), withDependencyContainer(dc))
+
+			result, err := suite.r.handleModuleSource(context.Background(), suite.moduleSource("test-source"))
+			require.NoError(suite.T(), err)
+			require.True(suite.T(), result.Requeue)
+
+			result, err = suite.r.handleModuleSource(context.Background(), suite.moduleSource("test-source"))
+			require.NoError(suite.T(), err)
+			assert.Equal(suite.T(), tt.want, result.RequeueAfter)
+		})
+	}
 }
 
 func (suite *ControllerTestSuite) TestInvalidRegistry() {

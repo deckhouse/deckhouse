@@ -75,6 +75,8 @@ type ModuleSource struct {
 }
 
 type ModuleSourceSpec struct {
+	// ScanInterval defines the frequency of checking the container registry for new modules and their versions.
+	// Defaults to 30 minutes. Explicit intervals shorter than 3 minutes are rounded up to 3 minutes.
 	ScanInterval *metav1.Duration         `json:"scanInterval,omitempty"`
 	Registry     ModuleSourceSpecRegistry `json:"registry"`
 }
