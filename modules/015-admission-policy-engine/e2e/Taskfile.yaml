@@ -1,0 +1,22 @@
+version: '3'
+
+includes:
+  cpu-starvation:
+    taskfile: cpu-starvation/Taskfile.yaml
+    dir: cpu-starvation
+
+tasks:
+  run:
+    desc: Run all admission-policy-engine e2e tests
+    cmds:
+      - task: cpu-starvation:run
+
+  dry-run:
+    desc: Validate all admission-policy-engine e2e tests without a cluster
+    cmds:
+      - task: cpu-starvation:dry-run
+
+  cleanup:
+    desc: Clean up after interrupted admission-policy-engine e2e runs
+    cmds:
+      - task: cpu-starvation:cleanup

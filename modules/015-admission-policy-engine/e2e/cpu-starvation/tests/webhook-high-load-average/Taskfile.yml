@@ -1,0 +1,53 @@
+version: "3"
+
+vars:
+  CONFIG: ../../chainsaw-config.yaml
+
+tasks:
+  run:
+    desc: Run e2e test with JUNIT report (extra chainsaw flags after --, for example -- --set hold=15m)
+    cmds:
+      - mkdir -p ./reports
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-STEP --report-path ./reports/ {{.CLI_ARGS}}
+
+  run:quiet:
+    desc: Run e2e test with suppressed output (only errors, failures, summary)
+    cmds:
+      - mkdir -p ./reports
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-STEP --report-path ./reports/ --quiet {{.CLI_ARGS}}
+
+  lint:test:
+    desc: Validate test YAML against the chainsaw schema
+    cmds:
+      - chainsaw lint test -f chainsaw-test.yaml
+
+  lint:configuration:
+    desc: Validate configuration YAML against the chainsaw schema
+    cmds:
+      - chainsaw lint configuration -f {{.CONFIG}}
+
+  lint:script:
+    desc: Check the syntax of the shared scenario script
+    cmds:
+      - bash -n ../common/scripts/cpu-starvation.sh
+
+  dry-run:
+    # The scenario steps are scripts that need a cluster, so `chainsaw test --no-cluster`
+    # cannot run them; the linters validate the test instead.
+    desc: Validate the test without a cluster
+    cmds:
+      - task: lint:test
+      - task: lint:configuration
+      - task: lint:script
+
+  cleanup:
+    # Undoes what an interrupted run left: see "Cleanup after an interrupted run" in ../../README.md.
+    desc: Clean up after an interrupted run of this scenario (stress pods, VPA mode, resized pods, namespace)
+    cmds:
+      - bash ../common/scripts/cpu-starvation.sh cleanup .
+
+  run:debug:
+    desc: Run test with pause on failure and fail-fast
+    cmds:
+      - mkdir -p ./reports
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-STEP --report-path ./reports/ --pause-on-failure --fail-fast {{.CLI_ARGS}}
