@@ -617,7 +617,7 @@ func helm3DecodeRelease(data string) (*Release, error) {
 	// For backwards compatibility with releases that were stored before
 	// compression was introduced we skip decompression if the
 	// gzip magic header is not found
-	if bytes.Equal(b[0:3], magicGzip) {
+	if bytes.HasPrefix(b, magicGzip) {
 		r, err := gzip.NewReader(bytes.NewReader(b))
 		if err != nil {
 			return nil, err
@@ -649,7 +649,7 @@ func helm2DecodeRelease(data string) (*Release, error) {
 	// For backwards compatibility with releases that were stored before
 	// compression was introduced we skip decompression if the
 	// gzip magic header is not found
-	if bytes.Equal(b[0:3], magicGzip) {
+	if bytes.HasPrefix(b, magicGzip) {
 		r, err := gzip.NewReader(bytes.NewReader(b))
 		if err != nil {
 			return nil, err
