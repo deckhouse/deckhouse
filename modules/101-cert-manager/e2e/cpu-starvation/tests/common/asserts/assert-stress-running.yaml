@@ -1,0 +1,7 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-stress
+status:
+  # Binding: $stress.replicas from `e2e.sh stress-params`.
+  readyReplicas: ($stress.replicas)

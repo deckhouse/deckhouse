@@ -1,0 +1,12 @@
+# Created only with --dry-run=server: passes the validating webhook of cert-manager.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: admission-probe
+spec:
+  secretName: admission-probe-tls
+  dnsNames:
+    - admission-probe.example.test
+  issuerRef:
+    kind: ClusterIssuer
+    name: e2e-cpu-starvation-selfsigned

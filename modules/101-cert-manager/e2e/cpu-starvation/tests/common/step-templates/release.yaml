@@ -1,0 +1,12 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: release
+spec:
+  try:
+    - description: Delete the stress Deployment and mark the end of the pressure
+      script:
+        timeout: 15m
+        content: sh ../common/scripts/e2e.sh release
+        check:
+          ($error == null): true

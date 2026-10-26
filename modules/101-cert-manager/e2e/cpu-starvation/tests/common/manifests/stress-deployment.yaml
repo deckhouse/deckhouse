@@ -1,0 +1,70 @@
+# Burns CPU on one node. The pods are Burstable: together they request the free CPU of the node,
+# which gives them almost all of the node by weight; they have no CPU limit and each runs `threads`
+# busy loops. The noisy neighbour is one pod; the high load average is many pods, each a cgroup of
+# its own, with a few busy loops each (see `e2e.sh stress-params`).
+# The label e2e-test is unique to the suite: `task cleanup` finds the leftovers of the suite by it and
+# never touches the stress Deployments of other suites, which may also use app=cpu-stress.
+# Bindings: $stress (node, cpu and threads per pod, replicas from `e2e.sh stress-params`), $stressImage.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-stress
+  labels:
+    app: cpu-stress
+    e2e-test: cert-manager-cpu-starvation
+spec:
+  replicas: ($stress.replicas)
+  selector:
+    matchLabels:
+      app: cpu-stress
+      e2e-test: cert-manager-cpu-starvation
+  template:
+    metadata:
+      labels:
+        app: cpu-stress
+        e2e-test: cert-manager-cpu-starvation
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchFields:
+                  - key: metadata.name
+                    operator: In
+                    values:
+                      - ($stress.node)
+      tolerations:
+        - operator: Exists
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 1
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: burn
+          image: ($stressImage)
+          command:
+            - sh
+            - -c
+            - for i in $(seq 1 "$BURN_THREADS"); do (while :; do :; done) & done; wait
+          env:
+            # Not N: YAML reads a bare N as the boolean false.
+            - name: BURN_THREADS
+              value: ($stress.threads)
+          resources:
+            requests:
+              cpu: ($stress.cpu)
+              memory: 16Mi
+            limits:
+              # Each busy loop is a forked busybox shell of a few hundred kilobytes.
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL

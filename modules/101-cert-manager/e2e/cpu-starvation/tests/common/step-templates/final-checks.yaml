@@ -1,0 +1,35 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: final-checks
+spec:
+  try:
+    - description: >-
+        Assert that no container of the module restarted, no pod was replaced and no lease changed
+        its holder or transition count since the preflight
+      script:
+        timeout: 15m
+        content: |
+          set -eu
+          sh ../common/scripts/e2e.sh snapshot after
+          sh ../common/scripts/e2e.sh compare before after
+        check:
+          ($error == null): true
+    - description: Assert all pods of the module are Ready and none is in CrashLoopBackOff
+      script:
+        timeout: 6m
+        content: sh ../common/scripts/e2e.sh healthy 60
+        check:
+          ($error == null): true
+  catch:
+    - description: Print the summary of the run
+      script:
+        content: sh ../common/scripts/e2e.sh report
+    - description: Show the pods of the module
+      get:
+        apiVersion: v1
+        kind: Pod
+        namespace: d8-cert-manager
+    - description: Show the events of the module namespace
+      events:
+        namespace: d8-cert-manager

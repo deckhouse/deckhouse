@@ -1,0 +1,15 @@
+# Created only with --dry-run=server: passes the mutating and the validating webhooks of cert-manager.
+# The request is a certificate signing request for admission-probe.example.test; its private key was
+# discarded when it was generated.
+apiVersion: cert-manager.io/v1
+kind: CertificateRequest
+metadata:
+  name: admission-probe
+spec:
+  request: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlJQkhUQ0J3d0lCQURBbk1TVXdJd1lEVlFRRERCeGhaRzFwYzNOcGIyNHRjSEp2WW1VdVpYaGhiWEJzWlM1MApaWE4wTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFWXZyM053dE5vWWR5MlRibi9ySkRuSlBOCk5iYXU4STZvYTB3V0d2QXhsNGVCSDFQbWo4VG5NQnc4bzRWNWQ4aXNWTURjSUdNamhGUzI3aWxGRms4K0ZLQTYKTURnR0NTcUdTSWIzRFFFSkRqRXJNQ2t3SndZRFZSMFJCQ0F3SG9JY1lXUnRhWE56YVc5dUxYQnliMkpsTG1WNApZVzF3YkdVdWRHVnpkREFLQmdncWhrak9QUVFEQWdOSkFEQkdBaUVBMU5KUHhSOGl0YmRQU2R2Q3A2Wm02WHNVCjdYUDk5ejZIeHpQVy9qK0s5UXdDSVFDdUJ6UVl4UVFPaUp4ZEJFeUhZMTIvckJIQ1hpL01TZFRuSW9DVFU2OGMKUEE9PQotLS0tLUVORCBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0K
+  usages:
+    - digital signature
+    - key encipherment
+  issuerRef:
+    kind: ClusterIssuer
+    name: e2e-cpu-starvation-selfsigned

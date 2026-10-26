@@ -1,0 +1,142 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cert-manager-webhook-master-noisy-neighbour
+spec:
+  description: |
+    A noisy neighbour takes the CPU of the master that runs the cert-manager webhook. The stress pod
+    requests all free allocatable CPU of the master and runs one busy loop per CPU. During the whole
+    test a loop creates a Certificate and a CertificateRequest with --dry-run=server about twice a
+    second, so every request passes the webhooks of cert-manager (both use failurePolicy Fail).
+    At most maxAdmissionFailurePercent of the requests may fail in each window, admission must work
+    again within recoverySeconds after the release, and a burst of Certificates issued under the
+    pressure must become Ready within burstBudgetSeconds. The webhook and the controller must not
+    restart, the leases must not change, and the write rates must not grow.
+  concurrent: false
+  timeouts:
+    apply: 60s
+    assert: 3m
+    delete: 5m
+    exec: 5m
+
+  # Override with `task run -- --set <name>=<value>`, for example `--set holdSeconds=900`.
+  bindings:
+    - name: holdSeconds
+      value: (to_string($values.holdSeconds || `300`))
+    - name: afterSeconds
+      value: (to_string($values.afterSeconds || `300`))
+    - name: recoverySeconds
+      value: (to_string($values.recoverySeconds || `120`))
+    - name: threadsFactor
+      value: (to_string($values.threadsFactor || `1`))
+    # 0 runs all busy loops in one pod; otherwise each stress pod runs threadsPerPod loops.
+    - name: threadsPerPod
+      value: (to_string($values.threadsPerPod || `0`))
+    - name: maxStressPods
+      value: (to_string($values.maxStressPods || `100`))
+    - name: certificateCount
+      value: (to_string($values.certificateCount || `30`))
+    - name: burstBudgetSeconds
+      value: (to_string($values.burstBudgetSeconds || `900`))
+    # A small image with sh and seq, pinned by digest.
+    - name: stressImage
+      value: ($values.stressImage || 'mirror.gcr.io/library/busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e')
+    - name: maxAdmissionFailurePercent
+      value: (to_string($values.maxAdmissionFailurePercent || `1`))
+
+  steps:
+    - name: preflight
+      use:
+        template: ../common/step-templates/preflight.yaml
+        with:
+          bindings:
+            - name: target
+              value: webhook
+
+    - name: start-admission-loop
+      try:
+        - description: Start the dry-run admission loop through the cert-manager webhooks
+          script:
+            timeout: 2m
+            env:
+              - name: HOLD
+                value: ($holdSeconds)
+              - name: BUDGET
+                value: ($burstBudgetSeconds)
+              - name: RECOVERY
+                value: ($recoverySeconds)
+              - name: AFTER
+                value: ($afterSeconds)
+            content: sh ../common/scripts/e2e.sh admission-start "$HOLD" "$BUDGET" "$RECOVERY" "$AFTER"
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Stop the admission loop
+          script:
+            timeout: 30s
+            content: sh ../common/scripts/e2e.sh admission-stop
+
+    - name: baseline
+      use:
+        template: ../common/step-templates/baseline.yaml
+
+    - name: pressure
+      use:
+        template: ../common/step-templates/pressure.yaml
+
+    - name: release
+      use:
+        template: ../common/step-templates/release.yaml
+
+    - name: admission-recovers
+      try:
+        - description: Assert a dry-run Certificate passes admission within recoverySeconds after the release
+          script:
+            timeout: 30m
+            env:
+              - name: RECOVERY
+                value: ($recoverySeconds)
+            content: sh ../common/scripts/e2e.sh admission-probe "$RECOVERY"
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the webhook logs
+          podLogs:
+            namespace: d8-cert-manager
+            selector: app=webhook
+            tail: 200
+
+    - name: recovery
+      use:
+        template: ../common/step-templates/recovery.yaml
+
+    - name: after-window
+      use:
+        template: ../common/step-templates/after-window.yaml
+
+    - name: admission-check
+      try:
+        - description: >-
+            Assert that at most maxAdmissionFailurePercent of the admission requests failed in the
+            baseline, under pressure and after it
+          script:
+            timeout: 60s
+            env:
+              - name: MAX_PERCENT
+                value: ($maxAdmissionFailurePercent)
+            content: |
+              set -eu
+              sh ../common/scripts/e2e.sh admission-stop
+              sh ../common/scripts/e2e.sh admission-check "$MAX_PERCENT"
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the webhook logs
+          podLogs:
+            namespace: d8-cert-manager
+            selector: app=webhook
+            tail: 200
+
+    - name: final-checks
+      use:
+        template: ../common/step-templates/final-checks.yaml

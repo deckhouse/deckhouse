@@ -1,0 +1,71 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: preflight
+spec:
+  # Bindings: target (controller or webhook) selects the pod to put under pressure.
+  try:
+    - description: Label the test namespace with the label of the suite, so `task cleanup` can find it
+      script:
+        timeout: 10m
+        content: sh ../common/scripts/e2e.sh label-namespace
+        check:
+          ($error == null): true
+    - description: Assert the cert-manager controller has ready replicas
+      assert:
+        file: ../common/asserts/assert-cert-manager-ready.yaml
+    - description: Assert the cert-manager webhook has ready replicas
+      assert:
+        file: ../common/asserts/assert-webhook-ready.yaml
+    - description: Assert all pods of the module are Ready before the pressure
+      script:
+        timeout: 6m
+        content: sh ../common/scripts/e2e.sh healthy 120
+        check:
+          ($error == null): true
+    - description: Create the self-signed ClusterIssuer of the test (deleted by Chainsaw at the end)
+      apply:
+        file: ../common/manifests/clusterissuer.yaml
+    - description: Wait for the ClusterIssuer to become Ready
+      assert:
+        timeout: 2m
+        file: ../common/asserts/assert-clusterissuer-ready.yaml
+    - description: Select the target pod and record restart counts and leases of the module
+      script:
+        timeout: 15m
+        env:
+          - name: TARGET
+            value: ($target)
+        content: |
+          set -eu
+          sh ../common/scripts/e2e.sh target "$TARGET"
+          sh ../common/scripts/e2e.sh snapshot before
+        check:
+          ($error == null): true
+  catch:
+    - description: Show the pods of the module
+      get:
+        apiVersion: v1
+        kind: Pod
+        namespace: d8-cert-manager
+    - description: Show the events of the module namespace
+      events:
+        namespace: d8-cert-manager
+  cleanup:
+    - description: Stop the background watchers and print the summary of the run
+      script:
+        timeout: 60s
+        content: sh ../common/scripts/e2e.sh cleanup
+    - description: Delete the Project that multitenancy-manager made of the test namespace
+      script:
+        timeout: 5m
+        content: |
+          set -u
+          # With multitenancy-manager the test namespace becomes a Project and cannot be deleted
+          # directly, which fails the namespace cleanup of Chainsaw. Deleting the Project removes the
+          # namespace. Without the module there is no Project and nothing to do.
+          if kubectl get projects.deckhouse.io "$NAMESPACE" >/dev/null 2>&1; then
+            kubectl delete projects.deckhouse.io "$NAMESPACE" --wait=true --timeout=4m
+          fi
+        check:
+          ($error == null): true

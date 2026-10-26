@@ -1,0 +1,30 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: after-window
+spec:
+  # Bindings: afterSeconds (length of the window after the release that is checked for a write storm),
+  # certificateCount (the least number of MODIFIED events of the Certificates in the baseline).
+  try:
+    - description: >-
+        Watch for afterSeconds after the release, then compare MODIFIED events per minute of the
+        pressure and after windows with the baseline
+      script:
+        timeout: 60m
+        env:
+          - name: AFTER
+            value: ($afterSeconds)
+          - name: COUNT
+            value: ($certificateCount)
+        content: |
+          set -eu
+          sh ../common/scripts/e2e.sh wait-window release "$AFTER"
+          sh ../common/scripts/e2e.sh mark end
+          sh ../common/scripts/e2e.sh watch-stop
+          sh ../common/scripts/e2e.sh writes-check "$COUNT"
+        check:
+          ($error == null): true
+  catch:
+    - description: Print the summary of the run
+      script:
+        content: sh ../common/scripts/e2e.sh report

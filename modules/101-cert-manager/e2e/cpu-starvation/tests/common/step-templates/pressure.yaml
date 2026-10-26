@@ -1,0 +1,102 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: pressure
+spec:
+  # Script timeouts exceed the worst case of the API retries in e2e.sh (5 attempts with a 60s deadline each),
+  # so Chainsaw never kills a script that is still waiting for the API and the step log keeps the reason.
+  # Bindings: threadsFactor (busy loops per node CPU), threadsPerPod (0 runs all loops in one pod,
+  # otherwise the loops are spread over pods with threadsPerPod loops each), maxStressPods, stressImage,
+  # holdSeconds, certificateCount, burstBudgetSeconds (time from the burst until all its Certificates
+  # must be Ready).
+  # The pressure window of the write and admission checks starts before the stress Deployment is
+  # created, so the start-up of the stress pods never counts as the baseline. The high-load-average
+  # scenarios mark the pressure even earlier, before the resize of the controller; the first mark wins.
+  try:
+    - description: >-
+        Mark the start of the pressure, then compute the stress pods: their number and their CPU
+        requests, which together take the node allocatable CPU minus the pod requests
+      script:
+        timeout: 10m
+        env:
+          - name: THREADS_FACTOR
+            value: ($threadsFactor)
+          - name: THREADS_PER_POD
+            value: ($threadsPerPod)
+          - name: MAX_PODS
+            value: ($maxStressPods)
+        content: |
+          set -eu
+          sh ../common/scripts/e2e.sh mark pressure
+          sh ../common/scripts/e2e.sh stress-params "$THREADS_FACTOR" "$THREADS_PER_POD" "$MAX_PODS"
+        outputs:
+          - name: stress
+            value: (json_parse($stdout))
+        check:
+          ($error == null): true
+    - description: Start the stress Deployment on the node of the target pod
+      apply:
+        file: ../common/manifests/stress-deployment.yaml
+    - description: Wait until all stress pods run
+      assert:
+        # The high-load-average scenarios start up to maxStressPods pods.
+        timeout: 5m
+        file: ../common/asserts/assert-stress-running.yaml
+    - description: Mark the moment all stress pods run and issue the Certificate burst
+      script:
+        timeout: 10m
+        env:
+          - name: COUNT
+            value: ($certificateCount)
+        content: |
+          set -eu
+          sh ../common/scripts/e2e.sh mark stress-ready
+          sh ../common/scripts/e2e.sh burst pressure "$COUNT"
+        check:
+          ($error == null): true
+    - description: >-
+        Hold the pressure for holdSeconds since all stress pods run and until the burst is Ready; fail
+        when the burst is not Ready within burstBudgetSeconds or a stress pod stops
+      script:
+        timeout: 120m
+        env:
+          - name: HOLD
+            value: ($holdSeconds)
+          - name: COUNT
+            value: ($certificateCount)
+          - name: BUDGET
+            value: ($burstBudgetSeconds)
+        content: sh ../common/scripts/e2e.sh hold "$HOLD" pressure "$COUNT" "$BUDGET"
+        check:
+          ($error == null): true
+  catch:
+    - description: Print the summary of the run
+      script:
+        content: sh ../common/scripts/e2e.sh report
+    - description: Describe the stress pods
+      describe:
+        apiVersion: v1
+        kind: Pod
+        selector: app=cpu-stress,e2e-test=cert-manager-cpu-starvation
+    - description: Show the Certificates of the test
+      get:
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+    - description: Show the pods of the module
+      get:
+        apiVersion: v1
+        kind: Pod
+        namespace: d8-cert-manager
+    - description: Show the controller logs
+      podLogs:
+        namespace: d8-cert-manager
+        selector: app=cert-manager
+        tail: 200
+    - description: Show the events of the module namespace
+      events:
+        namespace: d8-cert-manager
+  cleanup:
+    - description: Delete the stress Deployment if the test stopped under pressure
+      script:
+        timeout: 3m
+        content: kubectl -n "$NAMESPACE" delete deployment cpu-stress --ignore-not-found --wait=true --timeout=120s --request-timeout=60s

@@ -1,0 +1,27 @@
+version: '3'
+
+includes:
+  cpu-starvation:
+    taskfile: cpu-starvation/Taskfile.yaml
+    dir: cpu-starvation
+
+tasks:
+  run:
+    desc: Run all cert-manager e2e tests
+    cmds:
+      - task: cpu-starvation:run
+
+  lint:
+    desc: Validate all cert-manager e2e tests against the Chainsaw schema, without a cluster
+    cmds:
+      - task: cpu-starvation:lint
+
+  dry-run:
+    desc: Dry-Run all cert-manager e2e tests; the scripts still use the current kubectl context
+    cmds:
+      - task: cpu-starvation:dry-run
+
+  cleanup:
+    desc: Remove the leftovers of interrupted cert-manager e2e runs
+    cmds:
+      - task: cpu-starvation:cleanup
