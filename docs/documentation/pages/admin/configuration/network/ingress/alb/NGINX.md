@@ -359,8 +359,13 @@ Available in DP Enterprise Edition and DP Ultimate only.
      addressPool:
        - 192.168.2.100-192.168.2.150
      isDefault: false
+     l2:
+       # Network interfaces that announce the assigned IP addresses.
+       interfaces:
+         - eth1
      nodeSelector:
-       node-role.deckhouse.io/frontend: "" # Load balancer node selector.
+       # Selects nodes that run the L2 load balancer.
+       node-role.deckhouse.io/frontend: ""
      type: L2
    ```
 
@@ -393,7 +398,7 @@ When creating an ingress controller, you can also specify certain IP addresses f
 
 If you need more than one address, also set `network.deckhouse.io/l2-load-balancer-external-ips-count` to the number of addresses allocated from the pool. That value must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`.
 
-See ["Example of using annotations"](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the Service.
+A configuration example is provided in the [Creating a Service and assigning it specific IP addresses from the pool section](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool).
 {% endalert %}
 
 DP will create a LoadBalancer Service with the specified number of IPs:

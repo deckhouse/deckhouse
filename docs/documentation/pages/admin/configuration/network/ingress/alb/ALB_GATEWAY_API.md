@@ -322,6 +322,10 @@ spec:
   addressPool:
     - 192.168.2.100-192.168.2.150
   isDefault: false
+  l2:
+    # Network interfaces that announce the assigned IP addresses.
+    interfaces:
+      - eth1
   nodeSelector:
     node-role.deckhouse.io/frontend: ""
   type: L2

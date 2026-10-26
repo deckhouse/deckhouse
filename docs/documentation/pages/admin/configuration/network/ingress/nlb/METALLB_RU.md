@@ -93,10 +93,23 @@ lang: ru
      addressPool:
        - 192.168.2.100-192.168.2.150
      isDefault: false
+     l2:
+       # Сетевые интерфейсы, с которых анонсируются назначенные IP-адреса.
+       interfaces:
+         - eth1
      nodeSelector:
-       node-role.kubernetes.io/loadbalancer: "" # Селектор узлов-балансировщиков.
+       # Выбирает узлы, на которых работает L2-балансировщик.
+       node-role.kubernetes.io/loadbalancer: ""
      type: L2
    ```
+
+   В этом примере [`spec.nodeSelector`](/modules/metallb/cr.html#metalloadbalancerclass-v1alpha1-spec-nodeselector) выбирает узлы с лейблом `node-role.kubernetes.io/loadbalancer`. Убедитесь, что этот лейбл есть на узлах, которые должны анонсировать IP-адреса Service.
+
+   {% alert level="warning" %}
+   Если параметр [`spec.l2.interfaces`](/modules/metallb/cr.html#metalloadbalancerclass-v1alpha1-spec-l2-interfaces) не задан или содержит пустой список, назначенные IP-адреса анонсируются со всех сетевых интерфейсов выбранных узлов. Укажите интерфейсы, через которые необходимо анонсировать адреса.
+   {% endalert %}
+
+   Если на выбранных узлах есть taints с пользовательскими ключами, разрешите запуск `speaker` на них, как описано в [разделе «Запуск speaker на узлах с пользовательскими taints»](#запуск-speaker-на-узлах-с-пользовательскими-taints).
 
 1. Создайте ресурс Service с аннотацией и именем MetalLoadBalancerClass:
 
@@ -111,7 +124,10 @@ lang: ru
        network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
    spec:
      type: LoadBalancer
-     loadBalancerClass: ingress # Имя MetalLoadBalancerClass.
+     # Выбирает MetalLoadBalancerClass с именем ingress.
+     # Можно не указывать, если в кластере есть MetalLoadBalancerClass с isDefault: true
+     # и не используется режим BGP LoadBalancer.
+     loadBalancerClass: ingress
      ports:
        - port: 8000
          protocol: TCP
@@ -136,7 +152,10 @@ metadata:
     network.deckhouse.io/load-balancer-ips: "192.168.2.102,192.168.2.103,192.168.2.104"
 spec:
   type: LoadBalancer
-  loadBalancerClass: ingress # Имя MetalLoadBalancerClass.
+  # Выбирает MetalLoadBalancerClass с именем ingress.
+  # Можно не указывать, если в кластере есть MetalLoadBalancerClass с isDefault: true
+  # и не используется режим BGP LoadBalancer.
+  loadBalancerClass: ingress
   ports:
     - port: 8000
       protocol: TCP
@@ -157,8 +176,8 @@ d8 k get svc
 
 <!-- markdownlint-disable MD031 -->
 ```console
-NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)        AGE
-nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30544/TCP   11s
+NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)          AGE
+nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   8000:30544/TCP   11s
 ```
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
@@ -275,4 +294,57 @@ IP-адреса сервисов анонсируются напрямую в м
            - mypool
    ```
 
+   В этом примере [`spec.nodeSelector`](/modules/metallb/cr.html#metalloadbalancerconfiguration-v1alpha1-spec-nodeselector) выбирает узлы с лейблом `node-role.deckhouse.io/metallb`. Убедитесь, что этот лейбл есть на узлах, на которых должны работать поды `speaker`.
+
+   Если на выбранных узлах есть taints с пользовательскими ключами, разрешите запуск `speaker` на них, как описано в [разделе «Запуск speaker на узлах с пользовательскими taints»](#запуск-speaker-на-узлах-с-пользовательскими-taints).
+
 1. Настройте BGP-пиринг на сетевом оборудовании.
+
+## Запуск speaker на узлах с пользовательскими taints
+
+Поды компонента `speaker` анонсируют IP-адреса Service и работают как DaemonSet на узлах, выбранных параметром `nodeSelector`:
+в режиме Layer 2 — в [MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass-v1alpha1-spec-nodeselector),
+в режиме BGP — в [MetalLoadBalancerConfiguration](/modules/metallb/cr.html#metalloadbalancerconfiguration-v1alpha1-spec-nodeselector).
+У подов `speaker` есть tolerations только для следующих taints, известных DP:
+
+- `node-role.kubernetes.io/master`;
+- `node-role.kubernetes.io/control-plane`;
+- `node.deckhouse.io/etcd-arbiter`;
+- `dedicated.deckhouse.io` и `dedicated` с любым значением;
+- `DeletionCandidateOfClusterAutoscaler` и `ToBeDeletedByClusterAutoscaler`.
+
+Если на выбранном узле есть taint с другим ключом, `speaker` на нём не запускается и IP-адреса с этого узла не анонсируются.
+
+Чтобы `speaker` запускался на таких узлах, выполните следующие шаги:
+
+1. Добавьте ключ taint в параметр [`customTolerationKeys`](../../../../../reference/api/global.html#parameters-modules-placement-customtolerationkeys) в ModuleConfig `global`.
+   Ключ должен совпадать с ключом taint на узлах, например, заданным в параметре [`spec.nodeTemplate.taints`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-taints) в NodeGroup.
+   Параметр также разрешает запуск на таких узлах остальных системных компонентов (CNI, CSI, мониторинг).
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: global
+   spec:
+     version: 3
+     settings:
+       modules:
+         placement:
+           customTolerationKeys:
+             - dedicated.example.com
+   ```
+
+1. Проверьте, что поды `speaker` запущены на узлах с taint.
+
+   Для режима Layer 2:
+
+   ```shell
+   d8 k -n d8-metallb get pods -l app=l2lb-speaker -o wide
+   ```
+
+   Для режима BGP:
+
+   ```shell
+   d8 k -n d8-metallb get pods -l app=speaker -o wide
+   ```

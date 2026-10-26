@@ -94,10 +94,23 @@ This approach means:
      addressPool:
        - 192.168.2.100-192.168.2.150
      isDefault: false
+     l2:
+       # Network interfaces that announce the assigned IP addresses.
+       interfaces:
+         - eth1
      nodeSelector:
-       node-role.kubernetes.io/loadbalancer: "" # Load balancer node selector.
+       # Selects nodes that run the L2 load balancer.
+       node-role.kubernetes.io/loadbalancer: ""
      type: L2
    ```
+
+   In this example, [`spec.nodeSelector`](/modules/metallb/cr.html#metalloadbalancerclass-v1alpha1-spec-nodeselector) selects nodes with the `node-role.kubernetes.io/loadbalancer` label. Make sure the nodes intended to announce the Service IP addresses have this label.
+
+   {% alert level="warning" %}
+   If the [`spec.l2.interfaces`](/modules/metallb/cr.html#metalloadbalancerclass-v1alpha1-spec-l2-interfaces) parameter is not set or contains an empty list, the assigned IP addresses are announced from all network interfaces of the selected nodes. Specify the interfaces to announce the addresses from.
+   {% endalert %}
+
+   If the selected nodes have taints with custom keys, allow the `speaker` to run on them as described in the [Running speakers on nodes with custom taints section](#running-speakers-on-nodes-with-custom-taints).
 
 1. Create a Service resource with the annotation and name MetalLoadBalancerClass:
 
@@ -112,7 +125,10 @@ This approach means:
        network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
    spec:
      type: LoadBalancer
-     loadBalancerClass: ingress # MetalLoadBalancerClass name.
+     # Selects the MetalLoadBalancerClass named ingress.
+     # Can be omitted if the cluster has a MetalLoadBalancerClass with isDefault: true
+     # and BGP LoadBalancer mode is not used.
+     loadBalancerClass: ingress
      ports:
        - port: 8000
          protocol: TCP
@@ -137,7 +153,10 @@ metadata:
     network.deckhouse.io/load-balancer-ips: "192.168.2.102,192.168.2.103,192.168.2.104"
 spec:
   type: LoadBalancer
-  loadBalancerClass: ingress # MetalLoadBalancerClass name.
+  # Selects the MetalLoadBalancerClass named ingress.
+  # Can be omitted if the cluster has a MetalLoadBalancerClass with isDefault: true
+  # and BGP LoadBalancer mode is not used.
+  loadBalancerClass: ingress
   ports:
     - port: 8000
       protocol: TCP
@@ -158,8 +177,8 @@ Example output:
 
 <!-- markdownlint-disable MD031 -->
 ```console
-NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)        AGE
-nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30544/TCP   11s
+NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)          AGE
+nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   8000:30544/TCP   11s
 ```
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
@@ -278,4 +297,57 @@ Service IP addresses are announced directly to routers (or top-of-rack switches)
            - mypool
    ```
 
+   In this example, [`spec.nodeSelector`](/modules/metallb/cr.html#metalloadbalancerconfiguration-v1alpha1-spec-nodeselector) selects nodes with the `node-role.deckhouse.io/metallb` label. Make sure the nodes intended to run the `speaker` pods have this label.
+
+   If the selected nodes have taints with custom keys, allow the `speaker` to run on them as described in the [Running speakers on nodes with custom taints section](#running-speakers-on-nodes-with-custom-taints).
+
 1. Configure BGP peering on the network equipment.
+
+## Running speakers on nodes with custom taints
+
+The `speaker` pods announce Service IP addresses and run as a DaemonSet on the nodes selected by the `nodeSelector` parameter:
+of [MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass-v1alpha1-spec-nodeselector) in Layer 2 mode
+and of [MetalLoadBalancerConfiguration](/modules/metallb/cr.html#metalloadbalancerconfiguration-v1alpha1-spec-nodeselector) in BGP mode.
+The `speaker` pods tolerate only the following taints known to DP:
+
+- `node-role.kubernetes.io/master`
+- `node-role.kubernetes.io/control-plane`
+- `node.deckhouse.io/etcd-arbiter`
+- `dedicated.deckhouse.io` and `dedicated` with any value
+- `DeletionCandidateOfClusterAutoscaler` and `ToBeDeletedByClusterAutoscaler`
+
+If a selected node has a taint with any other key, the `speaker` is not scheduled on it, and the IP addresses are not announced from that node.
+
+To run the `speaker` on such nodes, follow these steps:
+
+1. Add the taint key to the [`customTolerationKeys`](../../../../../reference/api/global.html#parameters-modules-placement-customtolerationkeys) parameter of the `global` ModuleConfig.
+   The key must match the taint key set on the nodes, for example, in the [`spec.nodeTemplate.taints`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-taints) parameter of NodeGroup.
+   The parameter also allows the other system components (CNI, CSI, monitoring) to run on such nodes.
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: global
+   spec:
+     version: 3
+     settings:
+       modules:
+         placement:
+           customTolerationKeys:
+             - dedicated.example.com
+   ```
+
+1. Check that the `speaker` pods are running on the tainted nodes.
+
+   For Layer 2 mode:
+
+   ```shell
+   d8 k -n d8-metallb get pods -l app=l2lb-speaker -o wide
+   ```
+
+   For BGP mode:
+
+   ```shell
+   d8 k -n d8-metallb get pods -l app=speaker -o wide
+   ```
