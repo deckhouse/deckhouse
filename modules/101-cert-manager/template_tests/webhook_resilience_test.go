@@ -151,6 +151,31 @@ preStop:
 		})
 	})
 
+	// The rule does not depend on the cluster mode; it is checked in its own context.
+	Context("Mutating webhook rules", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManager)
+			f.HelmRender()
+		})
+
+		// The only mutating plugin of the webhook acts on a new CertificateRequest. A wider rule made the API
+		// server call the webhook on every status update of the controller: 529 mutating calls instead of
+		// about 58 while 47 Certificates were issued.
+		It("calls the mutating webhook only for new CertificateRequests", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			mwc := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "cert-manager-webhook")
+			Expect(mwc.Field("webhooks.0.rules").String()).To(MatchYAML(`
+- apiGroups: [cert-manager.io]
+  apiVersions: [v1]
+  operations: [CREATE]
+  resources: [certificaterequests]
+`))
+		})
+	})
+
 	Context("CA rotation in progress", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValuesHa)

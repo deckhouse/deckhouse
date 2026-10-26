@@ -17,17 +17,20 @@ metadata:
 webhooks:
   - name: webhook.cert-manager.io
     timeoutSeconds: 30
+    {{- /*
+      The only mutating plugin of the webhook sets the requester identity on a new CertificateRequest
+      and returns every other request unchanged. A wider rule sends every status update of the controller
+      through one more webhook call, which doubles the admission work when the webhook is short of CPU.
+    */}}
     rules:
       - apiGroups:
           - "cert-manager.io"
-          - "acme.cert-manager.io"
         apiVersions:
           - "v1"
         operations:
           - CREATE
-          - UPDATE
         resources:
-          - "*/*"
+          - "certificaterequests"
     admissionReviewVersions:
     - v1
     # This webhook only accepts v1 cert-manager resources.
