@@ -37,8 +37,11 @@ spec:
     - containerName: dex
       minAllowed:
         {{- include "dex_resources" . | nindent 8 }}
+      {{- /* A login checks a bcrypt hash and a refresh signs a token, so a cluster with steady login traffic
+      needs hundreds of millicores for Dex. VPA follows the usage of the last days, not a short login wave;
+      the probes below keep Dex running through a wave. */}}
       maxAllowed:
-        cpu: 20m
+        cpu: 500m
         memory: 50Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
@@ -153,17 +156,25 @@ spec:
             port: 5559
             scheme: HTTPS
           periodSeconds: 5
+          timeoutSeconds: 5
           failureThreshold: {{ include "dex_startup_failure_threshold" . }}
+        # On a node short of CPU both containers answer in seconds, not milliseconds. With the default
+        # 1s timeout the kubelet restarts a Dex that is only slow, and the growing restart back-off keeps
+        # logins down long after the node recovers.
         livenessProbe:
           httpGet:
             path: /healthz/live
             port: 5559
             scheme: HTTPS
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
         readinessProbe:
           httpGet:
             path: /healthz/ready
             port: 5559
             scheme: HTTPS
+          timeoutSeconds: 5
         volumeMounts:
         - name: original-config
           mountPath: /etc/dex/config
@@ -241,8 +252,12 @@ spec:
             path: /livez
             port: 5559
             scheme: HTTPS
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
         readinessProbe:
           httpGet:
             path: /healthz/ready
             port: 5559
             scheme: HTTPS
+          timeoutSeconds: 5

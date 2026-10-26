@@ -106,4 +106,46 @@ modules:
       emailAttr: mail
 `, int64(2)),
 	)
+
+	// On a node short of CPU a Dex with a small request answers its probes in seconds. With the default 1s timeout
+	// the kubelet restarted it eight times during a 15-minute noisy-neighbour test, and the restart back-off kept
+	// logins down for minutes after the node recovered.
+	It("gives the probes of Dex a 5s timeout and a 60s liveness budget", func() {
+		f.HelmRender()
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		dex := f.KubernetesResource("Deployment", "d8-user-authn", "dex")
+		probes := map[string][]string{
+			"dex":             {"startupProbe", "livenessProbe", "readinessProbe"},
+			"kube-rbac-proxy": {"livenessProbe", "readinessProbe"},
+		}
+		for container, kinds := range probes {
+			c := dex.Field(`spec.template.spec.containers.#(name=="` + container + `")`)
+			for _, kind := range kinds {
+				probe := c.Get(kind)
+				Expect(probe.Exists()).To(BeTrue(), container+" "+kind)
+				Expect(probe.Get("timeoutSeconds").Int()).To(BeNumerically(">=", 5), container+" "+kind)
+			}
+			liveness := c.Get("livenessProbe")
+			period := liveness.Get("periodSeconds").Int()
+			if period == 0 {
+				period = 10 // the Kubernetes default
+			}
+			failures := liveness.Get("failureThreshold").Int()
+			if failures == 0 {
+				failures = 3 // the Kubernetes default
+			}
+			Expect(period*failures).To(BeNumerically(">=", 60), container)
+		}
+	})
+
+	It("lets VPA raise the CPU request of Dex to its steady usage", func() {
+		f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler"]`)
+		f.HelmRender()
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-user-authn", "dex")
+		Expect(vpa.Exists()).To(BeTrue())
+		Expect(vpa.Field(`spec.resourcePolicy.containerPolicies.#(containerName=="dex").maxAllowed.cpu`).String()).To(Equal("500m"))
+	})
 })
