@@ -56,6 +56,9 @@ type Reconciler struct {
 	now       func() time.Time
 	// retention is how long a UserOperation is kept after its creation.
 	retention time.Duration
+	// passwordHistoryLimit is how many replaced hashes the password policy of Dex keeps; a
+	// ResetPassword adds the replaced hash to them. 0 keeps none.
+	passwordHistoryLimit uint64
 }
 
 // New constructs a Reconciler. now defaults to time.Now when nil. apiReader must bypass the
@@ -80,10 +83,12 @@ func New(c client.Client, apiReader client.Reader, log logr.Logger, now func() t
 }
 
 // Register wires the UserOperation reconciler onto the manager. retention is how long an operation
-// is kept after its creation.
-func Register(mgr manager.Manager, retention time.Duration) error {
+// is kept after its creation; passwordHistoryLimit is passwordHistoryLimit of the password policy
+// of Dex, 0 without a history.
+func Register(mgr manager.Manager, retention time.Duration, passwordHistoryLimit uint64) error {
 	r := New(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetLogger().WithName("useroperation"), nil)
 	r.retention = retention
+	r.passwordHistoryLimit = passwordHistoryLimit
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup useroperation controller: %w", err)
 	}

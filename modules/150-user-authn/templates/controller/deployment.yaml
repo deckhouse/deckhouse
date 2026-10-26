@@ -84,6 +84,10 @@ spec:
           value: {{ dig "devices" "trustedAfter" "24h" .Values.userAuthn | quote }}
         - name: USER_OPERATION_RETENTION
           value: {{ dig "retention" "userOperations" "24h" .Values.userAuthn | quote }}
+        # The password history Dex keeps (templates/dex/config.yaml), none without a password policy: a
+        # ResetPassword operation keeps the replaced hash in it, so the forced change cannot set it again.
+        - name: PASSWORD_HISTORY_LIMIT
+          value: {{ dig "passwordPolicy" "passwordHistoryLimit" 0 .Values.userAuthn | quote }}
         {{- with dig "retention" "revocations" "" .Values.userAuthn }}
         # Never shorter than the ID token lifetime and an hour: the controller raises it to that.
         - name: REVOCATION_RETENTION

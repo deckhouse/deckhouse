@@ -184,10 +184,8 @@ func (r *Reconciler) executeResetPassword(ctx context.Context, op operation) (ou
 
 	r.log.Info("Resetting local user password", append(operationLogKV(op), "user", userPassword.Username)...)
 
-	if err := r.patchMerge(ctx, controller.PasswordGVK, userPassword.Namespace, userPassword.Name, map[string]any{
-		"hash":                            base64.StdEncoding.EncodeToString([]byte(rawHash)),
-		"requireResetHashOnNextSuccLogin": true,
-	}); err != nil {
+	encoded := base64.StdEncoding.EncodeToString([]byte(rawHash))
+	if err := r.resetPasswordHash(ctx, userPassword.Namespace, userPassword.Name, encoded); err != nil {
 		return outcome{}, err
 	}
 

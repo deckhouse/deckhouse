@@ -220,6 +220,31 @@ func TestRevocationRetention(t *testing.T) {
 	}
 }
 
+func TestPasswordHistoryLimit(t *testing.T) {
+	for _, tc := range []struct {
+		value   string
+		want    uint64
+		wantErr bool
+	}{
+		{value: "", want: 0},
+		{value: "0", want: 0},
+		{value: "5", want: 5},
+		{value: "-1", wantErr: true},
+		{value: "five", wantErr: true},
+	} {
+		got, err := passwordHistoryLimit(tc.value)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("passwordHistoryLimit(%q) = %v, want an error", tc.value, got)
+			}
+			continue
+		}
+		if err != nil || got != tc.want {
+			t.Errorf("passwordHistoryLimit(%q) = %v, %v; want %v", tc.value, got, err, tc.want)
+		}
+	}
+}
+
 func TestOperationRetention(t *testing.T) {
 	for _, tc := range []struct {
 		value   string

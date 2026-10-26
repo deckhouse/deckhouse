@@ -1,0 +1,143 @@
+diff --git a/connector/ldap/binary_id_test.go b/connector/ldap/binary_id_test.go
+new file mode 100644
+index 00000000..036cc1e2
+--- /dev/null
++++ b/connector/ldap/binary_id_test.go
+@@ -0,0 +1,88 @@
++package ldap
++
++import (
++	"encoding/json"
++	"log/slog"
++	"testing"
++
++	"github.com/go-ldap/ldap/v3"
++	"github.com/stretchr/testify/require"
++)
++
++// rawGUID is an objectGUID of Active Directory as the directory returns it; guidString is its
++// string form, as uuid.UUID(bytes_le=...) of Python prints it.
++var (
++	rawGUID    = []byte{0x2b, 0x1c, 0xd4, 0x7e, 0x83, 0xe2, 0x10, 0x4b, 0x9c, 0xb8, 0xa6, 0xe7, 0xd1, 0xf3, 0x9a, 0x4c}
++	guidString = "7ed41c2b-e283-4b10-9cb8-a6e7d1f39a4c"
++)
++
++func TestFormatGUID(t *testing.T) {
++	require.Equal(t, guidString, formatGUID(rawGUID))
++	sequential := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}
++	require.Equal(t, "03020100-0504-0706-0809-0a0b0c0d0e0f", formatGUID(sequential))
++}
++
++func binaryIDConnector(idAttr string) *ldapConnector {
++	c := &ldapConnector{logger: slog.New(slog.DiscardHandler)}
++	c.UserSearch.IDAttr = idAttr
++	c.UserSearch.NameAttr = "sAMAccountName"
++	c.UserSearch.EmailAttr = "mail"
++	return c
++}
++
++func adUser(attrs map[string][]string) ldap.Entry {
++	attrs["sAMAccountName"] = []string{"jane"}
++	attrs["mail"] = []string{"jane@example.com"}
++	return *ldap.NewEntry("CN=Jane,OU=Users,DC=example,DC=com", attrs)
++}
++
++func TestIdentityFromEntryEncodesBinaryGUIDs(t *testing.T) {
++	for _, attr := range []string{"objectGUID", "mS-DS-ConsistencyGuid"} {
++		t.Run(attr, func(t *testing.T) {
++			ident, err := binaryIDConnector(attr).identityFromEntry(adUser(map[string][]string{attr: {string(rawGUID)}}))
++			require.NoError(t, err)
++			require.Equal(t, guidString, ident.UserID)
++		})
++	}
++}
++
++func TestIdentityFromEntryKeepsOtherIDs(t *testing.T) {
++	for _, tc := range []struct {
++		name, attr, value string
++	}{
++		{"a string attribute", "uid", "jane"},
++		{"a 16-character string attribute", "employeeNumber", "0123456789abcdef"},
++		{"a GUID in its string form already", "objectGUID", guidString},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			ident, err := binaryIDConnector(tc.attr).identityFromEntry(adUser(map[string][]string{tc.attr: {tc.value}}))
++			require.NoError(t, err)
++			require.Equal(t, tc.value, ident.UserID)
++		})
++	}
++}
++
++// The sign-in and the refresh both build the identity from the entry of the user, and the storage
++// keeps the user ID as JSON. The raw GUID does not survive the JSON (its invalid bytes are
++// replaced), so the offline session read back named another user; the string form does, and the
++// refresh computes the same ID again.
++func TestBinaryGUIDSurvivesStorageAndRefresh(t *testing.T) {
++	stored, err := json.Marshal(string(rawGUID))
++	require.NoError(t, err)
++	var readBack string
++	require.NoError(t, json.Unmarshal(stored, &readBack))
++	require.NotEqual(t, string(rawGUID), readBack, "the raw GUID is what broke: JSON does not keep it")
++
++	c := binaryIDConnector("objectGUID")
++	signIn, err := c.identityFromEntry(adUser(map[string][]string{"objectGUID": {string(rawGUID)}}))
++	require.NoError(t, err)
++
++	stored, err = json.Marshal(signIn.UserID)
++	require.NoError(t, err)
++	require.NoError(t, json.Unmarshal(stored, &readBack))
++	require.Equal(t, signIn.UserID, readBack)
++
++	refreshed, err := c.identityFromEntry(adUser(map[string][]string{"objectGUID": {string(rawGUID)}}))
++	require.NoError(t, err)
++	require.Equal(t, signIn.UserID, refreshed.UserID)
++}
+diff --git a/connector/ldap/ldap.go b/connector/ldap/ldap.go
+index eeb64267..39b627a2 100644
+--- a/connector/ldap/ldap.go
++++ b/connector/ldap/ldap.go
+@@ -498,13 +498,43 @@ func (c *ldapConnector) getAttr(e ldap.Entry, name string) string {
+ 	return ""
+ }
+ 
++// binaryGUIDAttrs are the attributes in which Active Directory keeps a GUID as 16 raw bytes:
++// objectGUID, and mS-DS-ConsistencyGuid, which carries the GUID of the user across directories.
++// They are compared in lower case: LDAP attribute names are case-insensitive.
++var binaryGUIDAttrs = map[string]struct{}{
++	"objectguid":            {},
++	"ms-ds-consistencyguid": {},
++}
++
++// userID returns the user ID from the IDAttr attribute of the entry. A binary GUID of Active
++// Directory becomes its string form: as raw bytes it is usually not valid UTF-8, which the proto3
++// subject of the tokens refuses, and the storage of Dex keeps it as JSON, which replaces the
++// invalid bytes, so the identity and the offline sessions read back no longer match the one the
++// connector returns, and the user cannot sign in. Any other value is returned as it is,
++// and so is a GUID attribute that does not hold 16 bytes (a directory that already returns the
++// string form).
++func (c *ldapConnector) userID(e ldap.Entry) string {
++	id := c.getAttr(e, c.UserSearch.IDAttr)
++	if _, binary := binaryGUIDAttrs[strings.ToLower(c.UserSearch.IDAttr)]; binary && len(id) == 16 {
++		return formatGUID([]byte(id))
++	}
++	return id
++}
++
++// formatGUID returns the string form of a binary GUID of Active Directory, as its tools show it:
++// the first three groups are little-endian, the last two are in byte order.
++func formatGUID(b []byte) string {
++	return fmt.Sprintf("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
++		b[3], b[2], b[1], b[0], b[5], b[4], b[7], b[6], b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15])
++}
++
+ func (c *ldapConnector) identityFromEntry(user ldap.Entry) (ident connector.Identity, err error) {
+ 	// If we're missing any attributes, such as email or ID, we want to report
+ 	// an error rather than continuing.
+ 	missing := []string{}
+ 
+ 	// Fill the identity struct using the attributes from the user entry.
+-	if ident.UserID = c.getAttr(user, c.UserSearch.IDAttr); ident.UserID == "" {
++	if ident.UserID = c.userID(user); ident.UserID == "" {
+ 		missing = append(missing, c.UserSearch.IDAttr)
+ 	}
+ 

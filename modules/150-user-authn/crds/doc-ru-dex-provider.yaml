@@ -330,6 +330,8 @@ spec:
                         idAttr:
                           description: |
                             Имя атрибута, из которого будет получен ID пользователя.
+
+                            Поддерживаются двоичные атрибуты GUID в Active Directory, `objectGUID` и `mS-DS-ConsistencyGuid`: ID пользователя в этом случае будет GUID в строковом виде, например `7ed41c2b-e283-4b10-9cb8-a6e7d1f39a4c`.
                         emailAttr:
                           description: |
                             Имя атрибута, из которого будет получен email пользователя.

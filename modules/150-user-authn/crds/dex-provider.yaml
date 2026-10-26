@@ -519,6 +519,8 @@ spec:
                           x-doc-examples: ['uid']
                           description: |
                             LDAP attribute that will be matched to Dex user id entry.
+
+                            The binary GUID attributes of Active Directory, `objectGUID` and `mS-DS-ConsistencyGuid`, are supported: the user ID is then the GUID in its string form, for example `7ed41c2b-e283-4b10-9cb8-a6e7d1f39a4c`.
                         emailAttr:
                           type: string
                           x-doc-examples: ['mail']

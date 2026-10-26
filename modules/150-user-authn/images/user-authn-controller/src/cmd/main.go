@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -83,6 +84,11 @@ const (
 	// kept after its creation.
 	revocationRetentionEnv = "REVOCATION_RETENTION"
 	operationRetentionEnv  = "USER_OPERATION_RETENTION"
+
+	// passwordHistoryLimitEnv is userAuthn.passwordPolicy.passwordHistoryLimit, the history of
+	// replaced passwords Dex keeps; a ResetPassword operation adds the replaced hash to it. Unset
+	// (no password policy) keeps no history, as Dex does.
+	passwordHistoryLimitEnv = "PASSWORD_HISTORY_LIMIT"
 
 	// revocationFeedAddrEnv is where the revocation feed listens, revocationFeedTLSDirEnv where its
 	// certificate is (tls.crt, tls.key). Without the address the feed is off.
@@ -148,6 +154,10 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 	if err != nil {
 		return nil, err
 	}
+	historyLimit, err := passwordHistoryLimit(os.Getenv(passwordHistoryLimitEnv))
+	if err != nil {
+		return nil, err
+	}
 
 	cfg, err := ctrl.GetConfig()
 	if err != nil {
@@ -176,7 +186,7 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 	if err = user.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register user controller: %w", err)
 	}
-	if err = useroperation.Register(runtimeManager, operationRetention); err != nil {
+	if err = useroperation.Register(runtimeManager, operationRetention, historyLimit); err != nil {
 		return nil, fmt.Errorf("register useroperation controller: %w", err)
 	}
 	if err = userexpire.Register(runtimeManager); err != nil {
@@ -254,6 +264,18 @@ func operationRetention(value string) (time.Duration, error) {
 		return 0, fmt.Errorf("%s %q is not positive", operationRetentionEnv, value)
 	}
 	return retention, nil
+}
+
+// passwordHistoryLimit reads how many replaced passwords the password policy keeps; unset is none.
+func passwordHistoryLimit(value string) (uint64, error) {
+	if value == "" {
+		return 0, nil
+	}
+	limit, err := strconv.ParseUint(value, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", passwordHistoryLimitEnv, err)
+	}
+	return limit, nil
 }
 
 // minDeviceAge reads the minimum device age of user-api; unset is a day, zero lets any device.

@@ -2,8 +2,8 @@
 
 Dex v2.46.0 (the `dex` version in `oss.yaml`) plus one patch per zone of
 responsibility, applied in file name order (`git apply /patches/*.patch`).
-Numbering: 1xx storage, 2xx login, 3xx sessions, 4xx startup, 998 dependency
-bumps, 999 fuzz tests.
+Numbering: 1xx storage, 2xx login, 3xx sessions, 4xx connectors, 998
+dependency bumps, 999 fuzz tests.
 A patch changes lines of an earlier patch only when it is a feature on top of
 it; a fix goes into the patch it fixes. Each patch is the plain diff of one
 commit on top of the previous patches (`git diff <commit>^ <commit>`): it
@@ -1020,6 +1020,43 @@ container in `templates/dex/deployment.yaml`, which gives each OIDC provider
 15 s: the deadline plus one probe period.
 
 **Upstream status:** Deckhouse only.
+
+**Depends on:** none.
+
+### 410-ldap-binary-id.patch
+
+**Zone:** the user ID of the LDAP connector. With `idAttr` naming a binary
+attribute of Active Directory, the connector returned the 16 raw bytes of the
+GUID as the user ID. They are usually not valid UTF-8, and the user could not
+sign in: the `sub` claim of the tokens is a proto3 message (`GenSubject`),
+which refuses a string field with invalid UTF-8 (`string field contains invalid
+UTF-8`), and the storage keeps the ID as JSON, which replaces the invalid
+bytes, so the UserIdentity and the offline sessions read back no longer matched
+the one the connector returned (`get user identity: wrong identity retrieved`,
+`get offline session: wrong session retrieved`).
+
+- when `idAttr` is `objectGUID` or `mS-DS-ConsistencyGuid` and the value holds
+  16 bytes, the user ID is the string form of the GUID,
+  `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`, with the first three groups
+  little-endian, as the tools of Active Directory show it;
+- the attribute is recognised by its name, not by the value: a random GUID is
+  valid UTF-8 now and then, and its user must get the same form as everyone
+  else; a value that does not hold 16 bytes (a directory that returns the
+  string form already) and every other attribute are returned as they are;
+- sign-in, the identity of a wrong password, and refresh build the identity in
+  one place, so they agree.
+
+**Upgrade:** a user whose GUID happened to be valid UTF-8 could sign in before.
+The user ID of that user becomes the GUID string, so `sub` changes, and an
+application that tells users apart by `sub` sees a new user; the names of the
+UserIdentity, the lock and the second factor change with it, so the user
+enrolls TOTP again. Every other user of such a provider could not sign in
+before.
+
+**Consumer in Deckhouse:** every `DexProvider` of type LDAP whose
+`userSearch.idAttr` is a binary GUID attribute of Active Directory.
+
+**Upstream status:** Deckhouse only; not handled upstream.
 
 **Depends on:** none.
 

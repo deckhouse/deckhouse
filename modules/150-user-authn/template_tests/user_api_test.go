@@ -121,6 +121,28 @@ var _ = Describe("Module :: user-authn :: helm template :: user-api", func() {
 		}),
 	)
 
+	// A ResetPassword operation of the controller keeps the replaced hash in the password history of Dex,
+	// so both read one passwordHistoryLimit; without a password policy neither keeps a history.
+	DescribeTable("Should give the controller the password history limit of Dex",
+		func(policy, wantEnv, wantDex string) {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", ldapProvider)
+			if policy != "" {
+				hec.ValuesSetFromYaml("userAuthn.passwordPolicy", policy)
+			}
+			hec.HelmRender()
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			controller := hec.KubernetesResource("Deployment", "d8-user-authn", "user-authn-controller")
+			env := controller.Field(`spec.template.spec.containers.0.env.#(name=="PASSWORD_HISTORY_LIMIT").value`)
+			dex := gjson.GetBytes(renderedDexConfig(hec), "passwordPolicy.passwordHistoryLimit")
+			Expect(env.String()).To(Equal(wantEnv))
+			Expect(dex.String()).To(Equal(wantDex))
+		},
+		Entry("no password policy", "", "0", ""),
+		Entry("a history of 3", "{complexityLevel: Fair, passwordHistoryLimit: 3}", "3", "3"),
+		Entry("no history", "{complexityLevel: Fair, passwordHistoryLimit: 0}", "0", "0"),
+	)
+
 	Context("Without static users and without ValidatingAdmissionPolicy support", func() {
 		BeforeEach(func() {
 			// Only external providers: user-api serves them as well.
