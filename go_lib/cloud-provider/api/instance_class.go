@@ -20,6 +20,29 @@ import (
 	"strings"
 )
 
+const (
+	// DefaultEtcdDiskFieldName is the etcd disk field most provider InstanceClasses declare.
+	DefaultEtcdDiskFieldName = "etcdDisk"
+)
+
+// EtcdDiskFieldNamer lets a provider whose InstanceClass spells the etcd disk field differently
+// have the shared rules report its real name.
+type EtcdDiskFieldNamer interface {
+	// EtcdDiskFieldName returns the name of the etcd disk field under spec.
+	EtcdDiskFieldName() string
+}
+
+// EtcdDiskFieldName returns the etcd disk field name to report for a class.
+func EtcdDiskFieldName(class any) string {
+	if namer, ok := class.(EtcdDiskFieldNamer); ok {
+		if name := namer.EtcdDiskFieldName(); name != "" {
+			return name
+		}
+	}
+
+	return DefaultEtcdDiskFieldName
+}
+
 // InstanceClassObject is a provider InstanceClass resource usable by common validation rules.
 //
 // Implementations are instantiated with pointer types, so every provider-defined method

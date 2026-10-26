@@ -99,11 +99,6 @@
   stageDependencies:
     setup: ['**/*']
 - add: /ee/se-plus/modules/030-cloud-provider-zvirt/candi/openapi
-  to: /src/se-plus/modules/030-cloud-provider-zvirt/crds
-  includePaths: ['*instance_class.yaml']
-  stageDependencies:
-    setup: ['**/*']
-- add: /ee/se-plus/modules/030-cloud-provider-zvirt/candi/openapi
   to: /src/se-plus/modules/030-cloud-provider-zvirt/openapi
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
@@ -173,11 +168,6 @@
     setup: ['**/*']
 - add: /ee/modules/030-cloud-provider-vcd/candi/docs
   to: /src/ee/modules/030-cloud-provider-vcd/docs
-  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
-  stageDependencies:
-    setup: ['**/*']
-- add: /ee/se-plus/modules/030-cloud-provider-zvirt/candi/docs
-  to: /src/se-plus/modules/030-cloud-provider-zvirt/docs
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']

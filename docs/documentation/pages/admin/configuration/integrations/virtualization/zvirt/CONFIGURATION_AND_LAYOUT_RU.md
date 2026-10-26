@@ -19,6 +19,13 @@ lang: ru
 ![resources](../../../../images/cloud-provider-zvirt/zvirt-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11447&t=Qb5yyWumzPiTBtfL-0 --->
 
+{% alert level="warning" %}
+Если кластер был установлен со схемой [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration), необходима миграция на конфигурацию через ModuleConfig.
+Пока миграция не выполнена, может срабатывать [алерт `D8CloudProviderZvirtMigrationPending`](../../../../reference/alerts.html#cloud-provider-zvirt-d8cloudproviderzvirtmigrationpending) и блокироваться обновление Deckhouse Platform.
+
+Порядок миграции описан в разделе [«Как мигрировать облачный провайдер на конфигурацию через ModuleConfig?»](../../../../faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec).
+{% endalert %}
+
 Пример конфигурации:
 
 ```yaml

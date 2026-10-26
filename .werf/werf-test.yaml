@@ -41,6 +41,14 @@ git:
   stageDependencies:
     setup:
     - '**/*'
+  # validator and validation-webhook of ee providers replace their pkg module with its in-repository
+  # path; modules-tests-* moves ee modules to /deckhouse/modules and rewrites their imports, so the
+  # pkg module has to be present at the original path as well.
+- add: /ee/se-plus/modules/030-cloud-provider-zvirt/pkg
+  to: /deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/pkg
+  stageDependencies:
+    setup:
+    - '**/*'
   {{ .Files.Get (printf "tools/build_includes/modules-tests-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}

@@ -120,6 +120,7 @@ metadata:
   name: network-ssd-64k
   labels:
     heritage: deckhouse
+    module: cloud-provider-yandex
 parameters:
   typeID: network-ssd
   blockSize: 32Ki
@@ -130,6 +131,7 @@ metadata:
   name: network-ssd
   labels:
     heritage: deckhouse
+    module: cloud-provider-yandex
 parameters:
   typeID: network-ssd
 `
@@ -343,6 +345,34 @@ parameters:
   }
 ]
 `))
+		})
+	})
+
+	// The snapshot is scoped to heritage=deckhouse and module=cloud-provider-yandex: a class with the
+	// same name rendered by another module is not this module's to recreate.
+	foreign := HookExecutionConfigInit(initValuesStringProvision, `{}`)
+
+	Context("Cluster where another module owns a StorageClass with a provisioned name", func() {
+		BeforeEach(func() {
+			foreign.BindingContexts.Set(foreign.GenerateBeforeHelmContext(), foreign.KubeStateSet(`
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: network-ssd-64k
+  labels:
+    heritage: deckhouse
+    module: another-module
+parameters:
+  typeID: network-ssd
+  blockSize: 32Ki
+`))
+			foreign.RunHook()
+		})
+
+		It("Should leave the other module's StorageClass alone", func() {
+			Expect(foreign).To(ExecuteSuccessfully())
+			Expect(foreign.KubernetesGlobalResource("StorageClass", "network-ssd-64k").Exists()).To(BeTrue())
 		})
 	})
 })

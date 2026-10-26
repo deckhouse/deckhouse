@@ -38,11 +38,10 @@ var terraformProviders = []string{
 	"azure",
 }
 
-// External providers (dvp, yandex) are deliberately absent: they carry no candi
+// External providers (dvp, yandex, zvirt) are deliberately absent: they carry no candi
 // entry, their settings arrive with the bundle (see the bundle tests below).
 var tofuProviders = []string{
 	"dynamix",
-	"zvirt",
 	"vsphere",
 	"huaweicloud",
 	"openstack",

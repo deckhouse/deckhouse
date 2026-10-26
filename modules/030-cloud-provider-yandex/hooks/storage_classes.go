@@ -18,25 +18,28 @@ package hooks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"log/slog"
-	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	"github.com/deckhouse/deckhouse/go_lib/regexpset"
+	"github.com/deckhouse/deckhouse/go_lib/hooks/storage_class"
+	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal"
 )
 
 type StorageClass struct {
 	Name      string `json:"name"`
 	Type      string `json:"type"`
 	BlockSize string `json:"blockSize,omitempty"`
+}
+
+func (sc StorageClass) GetName() string {
+	return sc.Name
 }
 
 var defaultStorageClasses = []StorageClass{
@@ -62,119 +65,63 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "module_storageclasses",
+			Name:       "storage_classes",
 			ApiVersion: "storage.k8s.io/v1",
 			Kind:       "StorageClass",
 			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"heritage": "deckhouse"},
+				MatchLabels: map[string]string{
+					"heritage": "deckhouse",
+					"module":   internal.ModuleName,
+				},
 			},
-			FilterFunc: applyModuleStorageClassesFilter,
+			FilterFunc: storage_class.ApplyFilter,
 		},
 	},
-}, storageClasses)
+}, handleStorageClasses)
 
-func applyModuleStorageClassesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var sc = &storagev1.StorageClass{}
-	err := sdk.FromUnstructured(obj, sc)
+// handleStorageClasses publishes the default disk types, with provisionedStorageClasses adding classes
+// or overriding a default one by its exact name, and excludedStorageClasses applied after that, so it
+// filters the provisioned classes too. StorageClass parameters are immutable, so a class whose
+// parameters were changed in the module configuration is deleted and recreated by the templates.
+func handleStorageClasses(_ context.Context, input *go_hook.HookInput) error {
+	var provisioned []StorageClass
+	if raw, ok := input.Values.GetOk("cloudProviderYandex.storage.parameters.provisionedStorageClasses"); ok {
+		if err := json.Unmarshal([]byte(raw.Raw), &provisioned); err != nil {
+			return fmt.Errorf("decode cloudProviderYandex.storage.parameters.provisionedStorageClasses: %w", err)
+		}
+	}
+
+	desired := storage_class.MergeOverridingByName(defaultStorageClasses, provisioned)
+
+	var excludedPatterns []string
+	for _, pattern := range input.Values.Get("cloudProviderYandex.storage.parameters.excludedStorageClasses").Array() {
+		excludedPatterns = append(excludedPatterns, pattern.String())
+	}
+
+	desired, err := storage_class.ExcludeByAnchoredPatterns(desired, excludedPatterns)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
+		return fmt.Errorf("compile cloudProviderYandex.storage.parameters.excludedStorageClasses: %w", err)
 	}
 
-	return sc, nil
-}
+	storage_class.SortByName(desired)
 
-func compileRegexps(patterns []string) (regexpset.RegExpSet, error) {
-	anchored := make([]string, 0, len(patterns))
-	for _, pattern := range patterns {
-		anchored = append(anchored, "^("+pattern+")$")
-	}
+	input.Values.Set("cloudProviderYandex.internal.storageClasses", desired)
 
-	return regexpset.New(anchored...)
-}
-
-func storageClasses(_ context.Context, input *go_hook.HookInput) error {
-	provisionValues := input.Values.Get("cloudProviderYandex.storage.parameters.provisionedStorageClasses").Array()
-
-	provision := make([]StorageClass, 0, len(provisionValues))
-	provisionNames := make(map[string]struct{}, len(provisionValues))
-	for _, sc := range provisionValues {
-		name := sc.Get("name").String()
-
-		provision = append(provision, StorageClass{
-			Name:      name,
-			Type:      sc.Get("type").String(),
-			BlockSize: sc.Get("blockSize").String(),
-		})
-		provisionNames[name] = struct{}{}
-	}
-
-	// StorageClasses defined in `provision` override the ones created by default.
-	// Names are compared exactly: unlike `exclude`, they are names of the StorageClasses
-	// to create, not patterns, and the default names are prefixes of each other
-	// (e.g. `network-ssd` and `network-ssd-nonreplicated`).
-	storageClassesFilteredProvision := make([]StorageClass, 0, len(defaultStorageClasses)+len(provision))
-	for _, storageClass := range defaultStorageClasses {
-		if _, overridden := provisionNames[storageClass.Name]; !overridden {
-			storageClassesFilteredProvision = append(storageClassesFilteredProvision, storageClass)
-		}
-	}
-	storageClassesFilteredProvision = append(storageClassesFilteredProvision, provision...)
-
-	excludeValues := input.Values.Get("cloudProviderYandex.storage.parameters.excludedStorageClasses").Array()
-
-	excludePatterns := make([]string, 0, len(excludeValues))
-	for _, excludePattern := range excludeValues {
-		excludePatterns = append(excludePatterns, excludePattern.String())
-	}
-
-	excludeRegexpSet, err := compileRegexps(excludePatterns)
+	objects, err := sdkobjectpatch.UnmarshalToStruct[storagev1.StorageClass](input.Snapshots, "storage_classes")
 	if err != nil {
-		return fmt.Errorf("storage.parameters.excludedStorageClasses set creation error: %v", err)
+		return fmt.Errorf("unmarshal storage_classes snapshot: %w", err)
 	}
 
-	storageClassesFiltered := make([]StorageClass, 0, len(storageClassesFilteredProvision))
-	for _, storageClass := range storageClassesFilteredProvision {
-		if !excludeRegexpSet.Match(storageClass.Name) {
-			storageClassesFiltered = append(storageClassesFiltered, storageClass)
-		}
-	}
-
-	sort.Slice(storageClassesFiltered, func(i, j int) bool {
-		return storageClassesFiltered[i].Name < storageClassesFiltered[j].Name
-	})
-
-	input.Values.Set("cloudProviderYandex.internal.storageClasses", storageClassesFiltered)
-
-	// StorageClass parameters are immutable, so a StorageClass whose parameters were
-	// changed in the module configuration has to be recreated
-	rawSCs, err := sdkobjectpatch.UnmarshalToStruct[storagev1.StorageClass](input.Snapshots, "module_storageclasses")
-	if err != nil {
-		return fmt.Errorf("unmarshal snapshot module_storageclasses: %w", err)
-	}
-
-	for _, sc := range rawSCs {
-		existedStorageClass := StorageClass{
-			Name:      sc.Name,
-			Type:      sc.Parameters["typeID"],
-			BlockSize: sc.Parameters["blockSize"],
-		}
-
-		if !isModified(storageClassesFiltered, existedStorageClass) {
-			continue
-		}
-
-		input.Logger.Info("Deleting storageclass because its parameters has been changed", slog.String("storage_class", existedStorageClass.Name))
-		input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", existedStorageClass.Name)
-	}
+	storage_class.DeleteChangedObjects(input, objects, desired, storageClassFromObject)
 
 	return nil
 }
 
-func isModified(storageClasses []StorageClass, storageClass StorageClass) bool {
-	for _, sc := range storageClasses {
-		if sc.Name == storageClass.Name && sc != storageClass {
-			return true
-		}
+// storageClassFromObject reads a rendered StorageClass back into the form the module publishes.
+func storageClassFromObject(object storagev1.StorageClass) StorageClass {
+	return StorageClass{
+		Name:      object.Name,
+		Type:      object.Parameters["typeID"],
+		BlockSize: object.Parameters["blockSize"],
 	}
-	return false
 }

@@ -50,6 +50,7 @@ func ValidateInstanceClassesEtcdDisk[
 
 		kind := class.GroupVersionKind().Kind
 		path := getNamedResourcePath(kind, class.GetName())
+		etcdDiskField := cpapi.EtcdDiskFieldName(class)
 		nodeGroups := consumers[class.GetName()]
 
 		hasMaster := false
@@ -65,19 +66,19 @@ func ValidateInstanceClassesEtcdDisk[
 
 		if hasMaster && class.GetEtcdDisk() == nil {
 			result.AddError(
-				fmt.Sprintf("%s.spec.etcdDisk", path),
+				fmt.Sprintf("%s.spec.%s", path, etcdDiskField),
 				CodeMasterEtcdDiskRequired,
 				nil,
-				fmt.Sprintf("%s for NodeGroup master must define spec.etcdDisk", kind),
+				fmt.Sprintf("%s for NodeGroup master must define spec.%s", kind, etcdDiskField),
 			)
 		}
 
 		if hasNonMaster && class.GetEtcdDisk() != nil {
 			result.AddError(
-				fmt.Sprintf("%s.spec.etcdDisk", path),
+				fmt.Sprintf("%s.spec.%s", path, etcdDiskField),
 				CodeEtcdDiskForbiddenForNonMaster,
 				class.GetEtcdDisk(),
-				"InstanceClass.spec.etcdDisk can be used only when class is attached to NodeGroup master",
+				fmt.Sprintf("InstanceClass.spec.%s can be used only when class is attached to NodeGroup master", etcdDiskField),
 			)
 		}
 	}

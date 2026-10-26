@@ -17,41 +17,61 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+
 	"github.com/deckhouse/deckhouse/go_lib/hooks/storage_class"
 )
 
-type SC struct {
-	storage_class.SimpleStorageClass
+type StorageClass struct {
+	Name            string `json:"name"`
+	Type            string `json:"type"`
 	AdditionalField string `json:"additional_field"`
 }
 
-var storageClassesConfig = []storage_class.StorageClass{
-	&SC{
-		SimpleStorageClass: storage_class.SimpleStorageClass{
-			Name: "first-hdd",
-			Type: "first-hdd",
-		},
+func (sc StorageClass) GetName() string {
+	return sc.Name
+}
 
+var defaultStorageClasses = []StorageClass{
+	{
+		Name:            "first-hdd",
+		Type:            "first-hdd",
 		AdditionalField: "first-field",
 	},
-
-	&SC{
-		SimpleStorageClass: storage_class.SimpleStorageClass{
-			Name: "second-hdd",
-			Type: "second-hdd",
-		},
-
+	{
+		Name:            "second-hdd",
+		Type:            "second-hdd",
 		AdditionalField: "second-field",
 	},
-
-	&SC{
-		SimpleStorageClass: storage_class.SimpleStorageClass{
-			Name: "third-ssd",
-			Type: "third-ssd",
-		},
-
+	{
+		Name:            "third-ssd",
+		Type:            "third-ssd",
 		AdditionalField: "third-field",
 	},
 }
 
-var _ = storage_class.RegisterHook("cloudProviderFake", storageClassesConfig)
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
+}, handleStorageClasses)
+
+func handleStorageClasses(_ context.Context, input *go_hook.HookInput) error {
+	excludedPatterns := make([]string, 0, 1)
+	for _, pattern := range input.Values.Get("cloudProviderFake.storageClass.exclude").Array() {
+		excludedPatterns = append(excludedPatterns, pattern.String())
+	}
+
+	desired, err := storage_class.ExcludeByAnchoredPatterns(defaultStorageClasses, excludedPatterns)
+	if err != nil {
+		return fmt.Errorf("compile cloudProviderFake.storageClass.exclude: %w", err)
+	}
+
+	storage_class.SortByName(desired)
+
+	input.Values.Set("cloudProviderFake.internal.storageClasses", desired)
+
+	return nil
+}

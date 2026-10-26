@@ -20,6 +20,13 @@ Key features:
 ![Standard layout in zVirt](../../../../images/cloud-provider-zvirt/zvirt-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11447&t=Qb5yyWumzPiTBtfL-0 --->
 
+{% alert level="warning" %}
+If the cluster was installed with the [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) schema, it must be migrated to the ModuleConfig-based configuration.
+Until the migration is complete, the [`D8CloudProviderZvirtMigrationPending`](../../../../reference/alerts.html#cloud-provider-zvirt-d8cloudproviderzvirtmigrationpending) alert may fire and Deckhouse Platform updates may be blocked.
+
+The migration procedure is described in ["How to migrate a cloud provider to ModuleConfig-based configuration?"](../../../../faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig-based-configurat).
+{% endalert %}
+
 Configuration example:
 
 ```yaml

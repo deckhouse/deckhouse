@@ -701,6 +701,70 @@ alerts:
         The cloud-provider-yandex module is waiting for migration resources to be applied.
       severity: "6"
       markupFormat: markdown
+    - name: D8CloudProviderZvirtMigrationPending
+      sourceFile: ee/se-plus/modules/030-cloud-provider-zvirt/monitoring/prometheus-rules/migration.yaml
+      moduleUrl: 030-cloud-provider-zvirt
+      module: cloud-provider-zvirt
+      edition: se-plus
+      description: |-
+        The `cloud-provider-zvirt` module has detected the legacy `ZvirtClusterConfiguration` secret in the cluster
+        and is waiting for the new migration resources (ModuleConfig v2, CredentialSecret, NodeGroups, InstanceClasses)
+        to be applied before completing the migration.
+
+        To complete the migration, apply the resources from the `d8-migration-resources` Secret:
+
+        ```bash
+        d8 k -n d8-cloud-provider-zvirt get secret d8-migration-resources -o jsonpath='{.data.resources\.yaml}' | base64 -d | d8 k apply -f -
+        ```
+
+        After applying the resources, the alert will disappear automatically once the module
+        detects that all required resources are in place.
+
+        After the migration is complete, the legacy `ZvirtProviderClusterConfiguration` secret is no longer needed
+        and can be deleted manually:
+
+        1. Make sure the cloud discovery data is stored outside the legacy secret. The module reads it from the
+           `d8-candi-cloud-provider-discovery-data` Secret first and uses the legacy secret only as a fallback,
+           so the following command must print a non-empty value:
+
+           ```bash
+           d8 k -n d8-cloud-provider-zvirt get secret d8-candi-cloud-provider-discovery-data -o jsonpath='{.data.cloud-provider-discovery-data\.json}'
+           ```
+
+           If it prints nothing, the discovery data exists only in the legacy secret, and deleting that secret
+           would lose it. Copy the payload over — the key holds exactly the same discovery data dhctl recorded
+           from the infrastructure run:
+
+           ```bash
+           d8 k -n kube-system get secret d8-provider-cluster-configuration \
+             -o jsonpath='{.data.cloud-provider-discovery-data\.json}' | base64 -d > /tmp/zvirt-discovery.json
+
+           d8 k -n d8-cloud-provider-zvirt create secret generic d8-candi-cloud-provider-discovery-data \
+             --from-file=cloud-provider-discovery-data.json=/tmp/zvirt-discovery.json \
+             --dry-run=client -o yaml | d8 k apply -f -
+           ```
+
+        2. Back up the secret. It contains cloud credentials and discovery data, so store the file securely:
+
+           ```bash
+           d8 k -n kube-system get secret d8-provider-cluster-configuration -o yaml > d8-provider-cluster-configuration-backup.yaml
+           ```
+
+        3. Allow the deletion. The secret is protected by an admission webhook and cannot be deleted without the annotation:
+
+           ```bash
+           d8 k -n kube-system annotate secret d8-provider-cluster-configuration deckhouse.io/allow-delete=true
+           ```
+
+        4. Delete the secret:
+
+           ```bash
+           d8 k -n kube-system delete secret d8-provider-cluster-configuration
+           ```
+      summary: |
+        The cloud-provider-zvirt module is waiting for migration resources to be applied.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ClusterAutoscalerManagerPodIsNotReady
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cluster-autoscaler.tpl
       moduleUrl: 040-node-manager
@@ -7465,6 +7529,7 @@ modules-having-alerts:
     - cloud-provider-huaweicloud
     - cloud-provider-openstack
     - cloud-provider-yandex
+    - cloud-provider-zvirt
     - cni-cilium
     - control-plane-manager
     - deckhouse
