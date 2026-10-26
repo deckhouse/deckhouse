@@ -9,11 +9,11 @@ git:
     install:
     - '**/*'
 secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/runtime/deckhouse-cli.git /src/deckhouse-cli
 #  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}

@@ -33,11 +33,11 @@ git:
     setup:
     - '**/*'
 secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   setup:
-  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/runtime/deckhouse-cli.git /src/deckhouse-cli
   - cd /src/deckhouse-cli
   - git describe --tags > VERSION
   - sed -i "s|sh:\ git describe --tags|sh:\ cat VERSION|" Taskfile.yml
