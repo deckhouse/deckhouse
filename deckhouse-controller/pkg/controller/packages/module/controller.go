@@ -16,20 +16,24 @@ package module
 
 import (
 	"context"
+	"crypto/md5"
 	"fmt"
 	"log/slog"
 	"sync"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	ctrlmanager "sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/disk"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
@@ -62,6 +66,10 @@ const (
 	// globalModuleName is the reserved name of the global module, which the engine builds
 	// itself out of the global hooks dir.
 	globalModuleName = "global"
+
+	// documentationDir is the modules dir of the engine, relative to the downloaded modules dir the
+	// documentation controller reads ModuleDocumentation paths against.
+	documentationDir = "/modules"
 )
 
 // RegisterController registers the Module controller with the manager.
@@ -89,7 +97,7 @@ func RegisterController(
 	if err := ctrl.NewControllerManagedBy(runtime).
 		Named(controllerName).
 		For(&v1beta1.Module{}).
-		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
+		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}, currentVersionChanged())).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: maxConcurrentReconciles,
 			CacheSyncTimeout:        cacheSyncTimeout,
@@ -99,6 +107,35 @@ func RegisterController(
 	}
 
 	return nil
+}
+
+// currentVersionChanged passes a Module update whose activated version changed: the version's
+// files are on disk only from then on, so that is when its documentation can be published.
+func currentVersionChanged() predicate.Predicate {
+	return predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldModule, ok := e.ObjectOld.(*v1beta1.Module)
+			if !ok {
+				return false
+			}
+
+			newModule, ok := e.ObjectNew.(*v1beta1.Module)
+			if !ok {
+				return false
+			}
+
+			return activatedVersion(oldModule) != activatedVersion(newModule)
+		},
+	}
+}
+
+// activatedVersion returns the version the engine activated for the module; empty before the first.
+func activatedVersion(module *v1beta1.Module) string {
+	if module.Status.CurrentVersion == nil {
+		return ""
+	}
+
+	return module.Status.CurrentVersion.Version
 }
 
 // reconciler reconciles Module objects.
@@ -231,7 +268,16 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1beta1.M
 		Requirements:    requirements,
 	})
 
-	return r.commit(ctx, module, original, pkg, mpv)
+	if err := r.commit(ctx, module, original, pkg, mpv); err != nil {
+		return err
+	}
+
+	if err := r.ensureDocumentation(ctx, module); err != nil {
+		logger.Error("failed to ensure the module documentation", log.Err(err))
+		return err
+	}
+
+	return nil
 }
 
 // handleEmbedded hands a module the image ships to the package engine. It passes the same package
@@ -349,6 +395,61 @@ func (r *reconciler) commit(ctx context.Context, module, original *v1beta1.Modul
 	if err := r.client.Patch(ctx, module, client.MergeFrom(original)); err != nil {
 		r.logger.Error("failed to patch the module", slog.String("name", module.Name), log.Err(err))
 		return fmt.Errorf("patch module '%s': %w", module.Name, err)
+	}
+
+	return nil
+}
+
+// ensureDocumentation publishes the documentation of the version the engine activated, as a
+// ModuleDocumentation the module controls, so it goes away with the module. Nothing is published
+// before the first activation: until then the files are not on disk. A documentation the module
+// does not control, such as a legacy release's, or one being deleted is left alone.
+func (r *reconciler) ensureDocumentation(ctx context.Context, module *v1beta1.Module) error {
+	version := activatedVersion(module)
+	if version == "" {
+		return nil
+	}
+
+	spec := v1alpha1.ModuleDocumentationSpec{
+		Version:  version,
+		Path:     disk.AttachPath(documentationDir, disk.Instance(module.Name, version)),
+		Checksum: fmt.Sprintf("%x", md5.Sum([]byte(version))),
+	}
+
+	md := new(v1alpha1.ModuleDocumentation)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Name}, md); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("get module documentation '%s': %w", module.Name, err)
+		}
+
+		md = &v1alpha1.ModuleDocumentation{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: module.Name,
+				Labels: map[string]string{
+					v1alpha1.ModuleReleaseLabelModule: module.Name,
+					v1alpha1.ModuleReleaseLabelSource: module.Spec.PackageRepositoryName,
+				},
+				OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(module, v1beta1.ModuleGVK)},
+			},
+			Spec: spec,
+		}
+
+		if err = r.client.Create(ctx, md); err != nil {
+			return fmt.Errorf("create module documentation '%s': %w", module.Name, err)
+		}
+
+		return nil
+	}
+
+	if !md.DeletionTimestamp.IsZero() || !metav1.IsControlledBy(md, module) || md.Spec == spec {
+		return nil
+	}
+
+	patch := client.MergeFrom(md.DeepCopy())
+	md.Spec = spec
+
+	if err := r.client.Patch(ctx, md, patch); err != nil {
+		return fmt.Errorf("patch module documentation '%s': %w", module.Name, err)
 	}
 
 	return nil

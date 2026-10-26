@@ -1,0 +1,86 @@
+---
+apiVersion: deckhouse.io/v1beta1
+kind: Module
+metadata:
+  finalizers:
+  - module.deckhouse.io/statistic-registered
+  name: test-module
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ModulePackageVersion
+    name: deckhouse-test-module-v1.0.1
+    uid: version-uid
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ModulePackage
+    name: test-module
+    uid: package-uid
+  resourceVersion: "3"
+  uid: module-uid
+spec:
+  enabled: true
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+status:
+  currentVersion:
+    version: v1.0.1
+  lastAppliedConfiguration: null
+  tracking: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: test-module
+  resourceVersion: "2"
+  uid: package-uid
+status:
+  usedBy:
+    repositoryName: deckhouse
+    version: v1.0.1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: deckhouse-test-module-v1.0.1
+  resourceVersion: "2"
+  uid: version-uid
+spec:
+  packageName: test-module
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+status:
+  used: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+  resourceVersion: "1"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleDocumentation
+metadata:
+  name: test-module
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ModuleRelease
+    name: test-module-v1.0.0
+    uid: release-uid
+  resourceVersion: "1"
+spec:
+  checksum: legacy-checksum
+  path: /modules/test-module
+  version: v1.0.0
+status: {}

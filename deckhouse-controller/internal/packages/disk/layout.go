@@ -19,6 +19,13 @@ import "path/filepath"
 // deployedDir is the directory containing attached package instances.
 const deployedDir = "deployed"
 
+// Instance is the attach instance of a package version, name@version. The version is part of it, so
+// a Candidate's image never replaces Current's. A version never contains "@": the loader takes it
+// from the mount path after the first "@".
+func Instance(name, version string) string {
+	return name + "@" + version
+}
+
 // AttachPath returns the attachment path for a package instance.
 func AttachPath(workingDir, instance string) string {
 	return filepath.Join(AttachDir(workingDir), instance)

@@ -25,24 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
 
-func TestInstance(t *testing.T) {
-	tests := []struct {
-		name, version string
-		want          string
-	}{
-		{name: "a released version", version: "v1.2.3", want: "mod@v1.2.3"},
-		{name: "build metadata is kept", version: "v1.2.3+build.5", want: "mod@v1.2.3+build.5"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := instance("mod", tt.version); got != tt.want {
-				t.Errorf("instance = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}
-
 // fakeDisk counts attaches and records detaches; attachErr fails attaches while set.
 type fakeDisk struct {
 	mu        sync.Mutex

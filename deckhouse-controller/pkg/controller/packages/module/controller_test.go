@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -98,6 +99,7 @@ func (suite *ControllerTestSuite) SetupSuite() {
 			v1alpha1.SchemeGroupVersion.WithKind("ModulePackage"),
 			v1alpha1.SchemeGroupVersion.WithKind("ModulePackageVersion"),
 			v1alpha1.SchemeGroupVersion.WithKind("PackageRepository"),
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleDocumentation"),
 		},
 		GoldenMode:    reconcilertest.PerDocument,
 		SeedViaCreate: true,
@@ -220,6 +222,52 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.Contains(suite.T(), mod.Finalizers, v1beta1.ModuleFinalizerStatisticRegistered)
 		assert.Equal(suite.T(), versionName, ownerRefName(mod, v1alpha1.ModulePackageVersionKind))
 		assert.Equal(suite.T(), moduleName, ownerRefName(mod, v1alpha1.ModulePackageKind))
+
+		err = suite.Client().Get(ctx, client.ObjectKey{Name: moduleName}, new(v1alpha1.ModuleDocumentation))
+		assert.Truef(suite.T(), apierrors.IsNotFound(err), "no documentation before the first activation, got %v", err)
+	})
+
+	suite.Run("activated version publishes the documentation the module controls", func() {
+		suite.setupController("documentation-published.yaml")
+
+		_, err := suite.ctr.Reconcile(ctx, request(moduleName))
+		require.NoError(suite.T(), err)
+
+		md := suite.getDocumentation(moduleName)
+		assert.Equal(suite.T(), v1alpha1.ModuleDocumentationSpec{
+			Version:  "v1.0.1",
+			Path:     "/modules/deployed/test-module@v1.0.1",
+			Checksum: "f619991470df8b3a8ad907be8bc5fbd4",
+		}, md.Spec)
+
+		owner := metav1.GetControllerOf(md)
+		require.NotNil(suite.T(), owner, "the module must control its documentation")
+		assert.Equal(suite.T(), v1beta1.ModuleKind, owner.Kind)
+		assert.Equal(suite.T(), types.UID("module-uid"), owner.UID)
+	})
+
+	suite.Run("documentation follows the activated version", func() {
+		suite.setupController("documentation-version-switch.yaml")
+
+		_, err := suite.ctr.Reconcile(ctx, request(moduleName))
+		require.NoError(suite.T(), err)
+
+		md := suite.getDocumentation(moduleName)
+		assert.Equal(suite.T(), "v1.0.1", md.Spec.Version)
+		assert.Equal(suite.T(), "/modules/deployed/test-module@v1.0.1", md.Spec.Path,
+			"the engine mounts every version apart, so the path moves with the version")
+		assert.NotEqual(suite.T(), "old-checksum", md.Spec.Checksum)
+	})
+
+	suite.Run("documentation of a legacy release is left alone", func() {
+		suite.setupController("documentation-legacy.yaml")
+
+		_, err := suite.ctr.Reconcile(ctx, request(moduleName))
+		require.NoError(suite.T(), err)
+
+		md := suite.getDocumentation(moduleName)
+		assert.Equal(suite.T(), "v1.0.0", md.Spec.Version)
+		assert.Equal(suite.T(), v1alpha1.ModuleReleaseGVK.Kind, metav1.GetControllerOf(md).Kind)
 	})
 
 	suite.Run("missing package requeues and claims the finalizer", func() {
@@ -429,6 +477,13 @@ func (suite *ControllerTestSuite) getModule(name string) *v1beta1.Module {
 	require.NoError(suite.T(), suite.Client().Get(context.TODO(), client.ObjectKey{Name: name}, mod))
 
 	return mod
+}
+
+func (suite *ControllerTestSuite) getDocumentation(name string) *v1alpha1.ModuleDocumentation {
+	md := new(v1alpha1.ModuleDocumentation)
+	require.NoError(suite.T(), suite.Client().Get(context.TODO(), client.ObjectKey{Name: name}, md))
+
+	return md
 }
 
 func (suite *ControllerTestSuite) getVersion(name string) *v1alpha1.ModulePackageVersion {

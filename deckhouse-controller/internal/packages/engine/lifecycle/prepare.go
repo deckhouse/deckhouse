@@ -84,13 +84,6 @@ type target struct {
 	Embedded bool
 }
 
-// instance is the attach instance, name@version. The version is part of it, so a Candidate's image
-// never replaces Current's. A version never contains "@": the loader takes it from the mount path
-// after the first "@".
-func instance(name, version string) string {
-	return name + "@" + version
-}
-
 // prepared is what a preparation produced so far. Its steps write it; the package Reconciler reads
 // it only after the operation's Done delivered, when the operation goroutine has exited.
 type prepared struct {
@@ -163,7 +156,7 @@ func attach(ctx context.Context, disks Disks, t target) (model.Image, error) {
 		return model.Image{}, err
 	}
 
-	img.Instance = instance(t.Name, t.Version)
+	img.Instance = disk.Instance(t.Name, t.Version)
 	img.Path = disk.AttachPath(d.Dir, img.Instance)
 
 	if err := d.Backend.Attach(ctx, t.Source.Repository, img.Instance, t.Source.Package, t.Version); err != nil {
