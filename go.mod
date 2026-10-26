@@ -11,7 +11,7 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fatih/color v1.19.0 // indirect
-	github.com/flant/addon-operator v1.26.1
+	github.com/flant/addon-operator v1.26.2
 	github.com/flant/kube-client v1.10.0
 	github.com/flant/shell-operator v1.21.3
 	github.com/go-openapi/spec v0.22.9
@@ -80,7 +80,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/slok/kubewebhook/v2 v2.5.0
 	github.com/sylabs/oci-tools v0.19.0
-	github.com/werf/nelm/v2 v2.1.0
+	github.com/werf/nelm/v2 v2.2.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.70.0
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.46.0

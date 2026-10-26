@@ -324,13 +324,13 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 			ExtraLabels:              labels,
 			ExtraAnnotations:         c.opts.ResourcesAnnotations,
 			NoInstallStandaloneCRDs:  true,
-			ReleaseHistoryLimit:      int(c.opts.HistoryMax),
 			ReleaseLabels:            opts.ReleaseLabels,
 			ReleaseInfoAnnotations:   c.opts.ReleaseAnnotations,
 			ReleaseStorageDriver:     c.driver,
 			ForceAdoption:            true,
 		},
-		Timeout: c.opts.Timeout,
+		ReleaseHistoryLimit: int(c.opts.HistoryMax),
+		Timeout:             c.opts.Timeout,
 		// Package releases are serialized by the runtime task pipeline, so the cluster-wide release lock is redundant.
 		LegacyNoReleaseLock: true,
 	}); err != nil {
