@@ -26,18 +26,31 @@ data:
     kind: Pod
     metadata:
       name: helper-pod
+      {{- if $context.Values.global.enabledModules | has "admission-policy-engine-crd" }}
+      labels:
+        security.deckhouse.io/security-policy-exception: {{ include "local_path_provisioner_helper_spe_name" $localPathProvisioner.name }}
+      {{- end }}
     spec:
 {{- include "helm_lib_tolerations" (tuple $context "wildcard") | nindent 6 }}
       securityContext:
         runAsNonRoot: false
         runAsUser: 0
         runAsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: helper-pod
         image: {{ include "helm_lib_module_image" (list $context "helper") }}
         imagePullPolicy: IfNotPresent
         securityContext:
           readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - DAC_OVERRIDE
+            - FOWNER
       imagePullSecrets:
       - name: deckhouse-registry
 {{- end }}

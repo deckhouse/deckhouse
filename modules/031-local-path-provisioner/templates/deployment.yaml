@@ -61,6 +61,9 @@ spec:
       labels:
         app: {{ $context.Chart.Name }}
         name: {{ $localPathProvisioner.name }}
+        {{- if $context.Values.global.enabledModules | has "admission-policy-engine-crd" }}
+        security.deckhouse.io/security-policy-exception: {{ $context.Chart.Name }}
+        {{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $context | sha256sum }}
     spec:

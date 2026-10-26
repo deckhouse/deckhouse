@@ -30,8 +30,8 @@ This patch removes only those two specific checks so that all other
 security-sensitive fields stay forbidden (`initContainers`,
 `ephemeralContainers`, extra containers, custom `volumes`/`volumeMounts`,
 host namespaces, `nodeName`/`serviceAccountName`, `envFrom`/`env.valueFrom`,
-container lifecycle/probes, `sysctls`, `privileged: true`, `capabilities.add`,
-`allowPrivilegeEscalation: true`).
+container lifecycle/probes, `sysctls`, `privileged: true`, `capabilities.add`
+except what `005` allows, `allowPrivilegeEscalation: true`).
 
 `runAsUser=0` / `runAsGroup=0` must remain allowed because the helper container
 manages host-path directories that were originally created by root and
@@ -44,9 +44,9 @@ The patch touches `util.go`.
 Bumps vulnerable transitive Go dependencies of `v0.0.36` (`go.mod`, `go.sum`):
 
 * `github.com/klauspost/compress` `v1.17.11` → `v1.18.7`
-* `golang.org/x/net` `v0.38.0` → `v0.56.0`
-* `golang.org/x/sys` `v0.31.0` → `v0.46.0`
-* `golang.org/x/text` `v0.23.0` → `v0.39.0`
+* `golang.org/x/net` `v0.38.0` → `v0.60.0`
+* `golang.org/x/sys` `v0.31.0` → `v0.48.0`
+* `golang.org/x/text` `v0.23.0` → `v0.42.0`
 * `golang.org/x/mod`, `golang.org/x/sync`, `golang.org/x/term`, `golang.org/x/tools` — bumped to satisfy the module graph
 
 #### Fix CVEs
@@ -62,5 +62,28 @@ Bumps vulnerable transitive Go dependencies of `v0.0.36` (`go.mod`, `go.sum`):
 - CVE-2026-42502
 - CVE-2026-42506
 - CVE-2026-46600
+- CVE-2026-56851
 - CVE-2026-56852
+- CVE-2026-78659
+- CVE-2026-78660
+- CVE-2026-78663
+- CVE-2026-78669
+- CVE-2026-97032
 - GHSA-259r-337f-4rfw
+
+### 005-allow-helperpod-file-capabilities.patch
+
+Deckhouse-specific deviation on top of the same HelperPod template validation.
+Upstream rejects any `capabilities.add` in the template. This patch allows
+`DAC_OVERRIDE` and `FOWNER` and keeps rejecting every other capability.
+
+The helper template drops `ALL` capabilities to satisfy the Pod Security
+Standards for Deckhouse system namespaces, so root in the helper pod loses the
+capabilities it relied on implicitly. Two of them are needed to remove a volume
+directory whose contents belong to other users: `DAC_OVERRIDE` to traverse and
+modify directories closed to root's DAC permissions, `FOWNER` to unlink entries
+in sticky directories owned by other users.
+
+The patch touches `util.go` and `util_test.go`. In `util_test.go` it also expects
+the pod-level `runAsUser: 0` and `runAsGroup: 0` that 003 permits to be
+accepted, so the upstream test suite passes with all patches applied.

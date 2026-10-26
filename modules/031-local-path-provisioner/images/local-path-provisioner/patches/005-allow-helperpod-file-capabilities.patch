@@ -1,0 +1,108 @@
+diff --git a/util.go b/util.go
+index 8902530..135d7fa 100644
+--- a/util.go
++++ b/util.go
+@@ -44,6 +44,11 @@ func loadHelperPodFile(helperPodYaml string, allowUnsafe bool) (*v1.Pod, error)
+ 	return &p, nil
+ }
+ 
++var allowedHelperPodCapabilities = map[v1.Capability]bool{
++	"DAC_OVERRIDE": true,
++	"FOWNER":       true,
++}
++
+ func validateHelperPodTemplate(p *v1.Pod, allowUnsafe bool) error {
+ 	if allowUnsafe {
+ 		return nil
+@@ -107,8 +112,12 @@ func validateHelperPodTemplate(p *v1.Pod, allowUnsafe bool) error {
+ 		if err := forbid(sc.Privileged != nil && *sc.Privileged, "set privileged: true"); err != nil {
+ 			return err
+ 		}
+-		if err := forbid(sc.Capabilities != nil && len(sc.Capabilities.Add) > 0, "add capabilities"); err != nil {
+-			return err
++		if sc.Capabilities != nil {
++			for _, c := range sc.Capabilities.Add {
++				if err := forbid(!allowedHelperPodCapabilities[c], fmt.Sprintf("add capabilities other than DAC_OVERRIDE and FOWNER (got %q)", c)); err != nil {
++					return err
++				}
++			}
+ 		}
+ 		if err := forbid(sc.AllowPrivilegeEscalation != nil && *sc.AllowPrivilegeEscalation, "set allowPrivilegeEscalation: true"); err != nil {
+ 			return err
+diff --git a/util_test.go b/util_test.go
+index 756b3f0..85cf8c5 100644
+--- a/util_test.go
++++ b/util_test.go
+@@ -167,7 +167,7 @@ spec:
+     image: busybox
+ `,
+ 		},
+-		"pod securityContext runAsUser 0 is rejected": {
++		"pod securityContext runAsUser 0 is accepted": {
+ 			helperPodYAML: `
+ apiVersion: v1
+ kind: Pod
+@@ -180,9 +180,8 @@ spec:
+   - name: helper-pod
+     image: busybox
+ `,
+-			wantErr: "must not set pod runAsUser to 0 (root)",
+ 		},
+-		"pod securityContext runAsGroup 0 is rejected": {
++		"pod securityContext runAsGroup 0 is accepted": {
+ 			helperPodYAML: `
+ apiVersion: v1
+ kind: Pod
+@@ -195,7 +194,6 @@ spec:
+   - name: helper-pod
+     image: busybox
+ `,
+-			wantErr: "must not set pod runAsGroup to 0 (root)",
+ 		},
+ 		"pod securityContext sysctls is rejected": {
+ 			helperPodYAML: `
+@@ -247,6 +245,44 @@ spec:
+       capabilities:
+         add:
+         - SYS_ADMIN
++`,
++			wantErr: "must not add capabilities",
++		},
++		"capabilities add of DAC_OVERRIDE and FOWNER is accepted": {
++			helperPodYAML: `
++apiVersion: v1
++kind: Pod
++metadata:
++  name: helper-pod
++spec:
++  containers:
++  - name: helper-pod
++    image: busybox
++    securityContext:
++      allowPrivilegeEscalation: false
++      capabilities:
++        drop:
++        - ALL
++        add:
++        - DAC_OVERRIDE
++        - FOWNER
++`,
++		},
++		"capabilities add of DAC_OVERRIDE with another capability is rejected": {
++			helperPodYAML: `
++apiVersion: v1
++kind: Pod
++metadata:
++  name: helper-pod
++spec:
++  containers:
++  - name: helper-pod
++    image: busybox
++    securityContext:
++      capabilities:
++        add:
++        - DAC_OVERRIDE
++        - CHOWN
+ `,
+ 			wantErr: "must not add capabilities",
+ 		},

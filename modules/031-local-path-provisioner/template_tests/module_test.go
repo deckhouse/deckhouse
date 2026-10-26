@@ -17,12 +17,17 @@ limitations under the License.
 package template_tests
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
+	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 func Test(t *testing.T) {
@@ -59,7 +64,30 @@ internal:
     spec:
       path: "/local3"
 `
+	speModuleValues = `
+internal:
+  localPathProvisioners:
+  - name: test
+    spec:
+      path: "/opt/local-path-provisioner"
+  - name: trailing
+    spec:
+      path: "/opt//trailing/"
+  - name: quoted
+    spec:
+      path: "/opt/a: b #c"
+  - name: a-very-long-local-path-provisioner-name-that-reaches-the-limit
+    spec:
+      path: "/long"
+`
+	speLabel = "security.deckhouse.io/security-policy-exception"
 )
+
+func helperPod(cm object_store.KubeObject) gjson.Result {
+	podJSON, err := yaml.YAMLToJSON([]byte(cm.Field("data.helperPod\\.yaml").String()))
+	Expect(err).ShouldNot(HaveOccurred())
+	return gjson.ParseBytes(podJSON)
+}
 
 var _ = Describe("Module :: local-path-provisioner :: helm template ::", func() {
 	f := SetupHelmConfig(``)
@@ -185,6 +213,95 @@ var _ = Describe("Module :: local-path-provisioner :: helm template ::", func() 
         "teardownCommand": "/manager"
 }`))
 			Expect(lppSCTest3.Field("allowedTopologies").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("With admission-policy-engine-crd enabled", func() {
+		longName := "a-very-long-local-path-provisioner-name-that-reaches-the-limit"
+		longSPEName := fmt.Sprintf("helper-%x", sha256.Sum256([]byte(longName)))[:len("helper-")+16]
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "admission-policy-engine-crd"]`)
+			f.ValuesSetFromYaml("localPathProvisioner", speModuleValues)
+			f.HelmRender()
+		})
+
+		It("Renders the provisioner SecurityPolicyException and labels the Deployments with it", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			spe := f.KubernetesResource("SecurityPolicyException", "d8-local-path-provisioner", "local-path-provisioner")
+			Expect(spe.Exists()).To(BeTrue())
+			Expect(spe.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+			Expect(spe.Field("spec.network.hostPorts").Exists()).To(BeFalse())
+			Expect(spe.Field("spec.securityContext").Exists()).To(BeFalse())
+			Expect(spe.Field("spec.volumes").Exists()).To(BeFalse())
+
+			for _, name := range []string{"test", "trailing", longName} {
+				deployment := f.KubernetesResource("Deployment", "d8-local-path-provisioner", "local-path-provisioner-"+name)
+				Expect(deployment.Exists()).To(BeTrue())
+				Expect(deployment.Field("spec.template.metadata.labels").Map()[speLabel].String()).To(Equal("local-path-provisioner"))
+			}
+		})
+
+		It("Renders a helper SecurityPolicyException per LocalPathProvisioner with the exact host path", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			for name, expected := range map[string]struct{ spe, path string }{
+				"test":     {"helper-test", "/opt/local-path-provisioner/"},
+				"trailing": {"helper-trailing", "/opt/trailing/"},
+				"quoted":   {"helper-quoted", "/opt/a: b #c/"},
+				longName:   {longSPEName, "/long/"},
+			} {
+				spe := f.KubernetesResource("SecurityPolicyException", "d8-local-path-provisioner", expected.spe)
+				Expect(spe.Exists()).To(BeTrue(), name)
+				Expect(spe.Field("spec.securityContext.runAsNonRoot.allowedValue").Bool()).To(BeFalse())
+				Expect(spe.Field("spec.securityContext.runAsUser.allowedValues").String()).To(MatchJSON(`[0]`))
+				Expect(spe.Field("spec.securityContext.capabilities.allowedValues").String()).To(MatchJSON(`{"add":["DAC_OVERRIDE","FOWNER"],"drop":["ALL"]}`))
+				Expect(spe.Field("spec.volumes.types.allowedValues").String()).To(MatchJSON(`["hostPath"]`))
+				Expect(spe.Field("spec.volumes.hostPath.allowedValues.#").Int()).To(Equal(int64(1)))
+				Expect(spe.Field("spec.volumes.hostPath.allowedValues.0.path").String()).To(Equal(expected.path))
+				Expect(spe.Field("spec.volumes.hostPath.allowedValues.0.readOnly").Bool()).To(BeFalse())
+				Expect(spe.Field("spec.network").Exists()).To(BeFalse())
+
+				cm := f.KubernetesResource("ConfigMap", "d8-local-path-provisioner", "local-path-provisioner-"+name)
+				Expect(cm.Exists()).To(BeTrue())
+				Expect(helperPod(cm).Get("metadata.labels").Map()[speLabel].String()).To(Equal(expected.spe))
+			}
+		})
+
+		It("Hardens the helper pod template", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			pod := helperPod(f.KubernetesResource("ConfigMap", "d8-local-path-provisioner", "local-path-provisioner-test"))
+			Expect(pod.Get("spec.securityContext").String()).To(MatchJSON(`{"runAsNonRoot":false,"runAsUser":0,"runAsGroup":0,"seccompProfile":{"type":"RuntimeDefault"}}`))
+			Expect(pod.Get("spec.containers.#").Int()).To(Equal(int64(1)))
+			Expect(pod.Get("spec.containers.0.securityContext").String()).To(MatchJSON(`{"readOnlyRootFilesystem":true,"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"],"add":["DAC_OVERRIDE","FOWNER"]}}`))
+		})
+	})
+
+	Context("Without admission-policy-engine-crd", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("localPathProvisioner", speModuleValues)
+			f.HelmRender()
+		})
+
+		It("Renders no SecurityPolicyExceptions and no exception labels", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			for _, name := range []string{"local-path-provisioner", "helper-test", "helper-trailing"} {
+				Expect(f.KubernetesResource("SecurityPolicyException", "d8-local-path-provisioner", name).Exists()).To(BeFalse())
+			}
+
+			deployment := f.KubernetesResource("Deployment", "d8-local-path-provisioner", "local-path-provisioner-test")
+			Expect(deployment.Field("spec.template.metadata.labels").Map()).NotTo(HaveKey(speLabel))
+
+			pod := helperPod(f.KubernetesResource("ConfigMap", "d8-local-path-provisioner", "local-path-provisioner-test"))
+			Expect(pod.Get("metadata.labels").Exists()).To(BeFalse())
+			Expect(pod.Get("spec.containers.0.securityContext.capabilities.drop").String()).To(MatchJSON(`["ALL"]`))
 		})
 	})
 })
