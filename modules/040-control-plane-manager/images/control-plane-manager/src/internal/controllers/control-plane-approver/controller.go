@@ -17,13 +17,18 @@ limitations under the License.
 package controlplaneapprover
 
 import (
+	"context"
 	"time"
 
 	"golang.org/x/time/rate"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -35,6 +40,12 @@ const (
 	maxConcurrentReconciles = 1
 	cacheSyncTimeout        = 3 * time.Minute
 )
+
+// enqueueApprover maps a Node event to a request of the approver: Reconcile decides on every
+// operation at once and ignores the request name.
+func enqueueApprover(context.Context, client.Object) []reconcile.Request {
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: constants.OperationsApproverControllerName}}}
+}
 
 func Register(mgr manager.Manager) error {
 	r := newReconciler(mgr.GetClient())
@@ -54,6 +65,11 @@ func Register(mgr manager.Manager) error {
 		For(
 			&controlplanev1alpha1.ControlPlaneOperation{},
 			builder.WithPredicates(OperationPredicate()),
+		).
+		Watches(
+			&corev1.Node{},
+			handler.EnqueueRequestsFromMapFunc(enqueueApprover),
+			builder.WithPredicates(NodeReadyPredicate()),
 		).
 		Complete(r)
 }

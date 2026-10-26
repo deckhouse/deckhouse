@@ -222,7 +222,7 @@ func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *l
 		fallthrough
 	case etcdNeedsJoin:
 		logger.Info("etcd needs join, executing idempotent join flow")
-		if err := reconcileEtcdJoin(env.Node, op.Spec.Component, env.Secrets.CPMData, checksumAnnotationsFromSpec(op.Spec), logger); err != nil {
+		if err := reconcileEtcdJoin(env.Node, op.Spec.Component, env.Secrets.CPMData, buildSyncManifestAnnotations(op), logger); err != nil {
 			return StepResult{}, err
 		}
 		return StepResult{Outcome: OutcomeCompleted, Message: joinMessage}, nil

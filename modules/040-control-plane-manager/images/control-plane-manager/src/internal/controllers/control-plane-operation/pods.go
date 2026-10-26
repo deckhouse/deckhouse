@@ -58,7 +58,8 @@ func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1
 		}, nil
 	}
 
-	expected := checksumAnnotationsFromSpec(op.Spec)
+	// Renewal IDs too: a certificate renewal changes only them, and the old pod would pass otherwise.
+	expected := buildSyncManifestAnnotations(op)
 	if !isPodReadyWithChecksums(pod, expected) {
 		logger.Info("pod not ready with expected checksums, requeue", slog.String("pod", podName))
 		return StepResult{
