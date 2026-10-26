@@ -804,6 +804,7 @@ proxy:
     - nodes
 read:
     - control-plane.deckhouse.io/controlplaneoperations
+    - deckhouse.io/modulesettingsdefinitions
     - deckhouse.io/nodestaticpodrequests
     - nfd.k8s-sigs.io/nodefeaturegroups
     - nfd.k8s-sigs.io/nodefeaturerules
