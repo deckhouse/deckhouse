@@ -1,7 +1,7 @@
 ---
 title: Templates
 permalink: en/architecture/marketplace/templates.html
-description: "Helm templates of an Application package: template values, object naming, container images and container registry access, Ingress and application endpoints, labels, and workload health."
+description: "Helm templates of an Application package: template values, object naming, container images and container registry access, Ingress and application endpoints, credentials in the web interface, labels, and workload health."
 ---
 
 {% raw %}
@@ -195,6 +195,37 @@ status:
     - url: https://myapp.my-namespace.apps.example.com/
       description: Web UI
 ```
+
+## Credentials in the web interface
+
+The web interface can show the credentials for signing in next to an application endpoint, for example, the login and password of the administrator account that the application creates during installation. To do this, add a Secret with the login and password to the templates and bind this Secret to the endpoint:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8a-{{ .Application.Instance.Name }}-web-credentials
+  labels:
+    packages.deckhouse.io/application-instance: {{ .Application.Instance.Name }}
+    packages.deckhouse.io/application-ingress: d8a-{{ .Application.Instance.Name }}-web
+type: Opaque
+data:
+  login: {{ "admin" | b64enc }}
+  password: {{ .Values.internal.adminPassword | b64enc }}
+```
+
+The web interface finds the credentials as follows:
+
+- The `packages.deckhouse.io/application-instance` label with the instance name is required. The web interface looks for credentials only among the Secrets with this label in the namespace of the application. DP doesn't add this label to the objects, and the `packages.deckhouse.io/instance` label that DP adds (for details, refer to ["Labels and object protection"](#labels-and-object-protection)) is not taken into account.
+- The `packages.deckhouse.io/application-ingress` label binds the Secret to an Ingress from the templates by its name. The web interface shows the credentials next to the endpoints with the description of this Ingress. A label value can't be longer than 63 characters, so the name of the Ingress must fit this limit.
+- Instead of the label, you can set the endpoint description in the `packages.deckhouse.io/application-endpoint-description` annotation of the Secret. If both are set, the description of the Ingress is used.
+- The web interface shows the credentials only if the application has endpoints with a matching description. Endpoints without a description don't get credentials, so set a description in the annotation of the Ingress instead of `"true"`.
+
+Put the login into the `login` key and the password into the `password` key. The web interface shows every key of `data` as a separate field named after the key, so don't store other data in this Secret.
+
+In the web interface, endpoints with credentials get a button for getting the login and password. The credentials can be obtained only once: after showing them, the web interface adds the `packages.deckhouse.io/showed-credentials: "true"` annotation to the Secret and doesn't offer this Secret again. This restriction applies only to the web interface: users with permission to read Secrets in the namespace can still read the Secret.
+
+Generate the credentials once and keep them unchanged: the web interface doesn't offer a Secret again even if its data changes. Don't generate the password in the template: functions such as `randAlphaNum` give a new value on every render (for details, refer to ["Known issues and troubleshooting"](nelm-annotations.html#known-issues-and-troubleshooting)). Instead, for example, generate it in a hook if the Secret doesn't exist yet, and otherwise take it from the snapshot of the existing Secret. Values set by hooks are kept only in memory, so the hook must restore the password after Deckhouse Platform restarts (for details, refer to ["Hooks"](hooks.html#values)).
 
 ## Restrictions
 
