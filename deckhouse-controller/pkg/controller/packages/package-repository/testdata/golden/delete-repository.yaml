@@ -4,7 +4,7 @@ kind: PackageRepository
 metadata:
   creationTimestamp: null
   name: deckhouse
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   registry:
     ca: test-ca
@@ -14,6 +14,7 @@ spec:
 status:
   lastNewVersions: 0
   partialScanAvailable: false
+  phase: Terminating
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation

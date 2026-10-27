@@ -181,7 +181,9 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 	now := metav1.NewTime(time.Now())
 
 	s.repo.Status.PackagesCount = len(s.repo.Status.Packages)
-	s.repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
+	if s.repo.DeletionTimestamp.IsZero() {
+		s.repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
+	}
 
 	s.repo.Status.LastScanTime = &now
 	s.repo.Status.LastNewVersions = newVersionsTotal
@@ -192,7 +194,9 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 		s.repo.Status.LastChangeTime = &now
 	}
 
-	if err := s.client.Status().Patch(ctx, s.repo, client.MergeFrom(original)); err != nil {
+	// Reject stale scan results if repository deletion has started.
+	patch := client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{})
+	if err := s.client.Status().Patch(ctx, s.repo, patch); err != nil {
 		return fmt.Errorf("update repository status: %w", err)
 	}
 
