@@ -32,12 +32,12 @@
 {%- if page.ee_only == true and page.se_support == true %}
 {% if page.lang == 'ru' %}
 {% alert level="warning" %}
-Установка {{ page.title_main }} в Community Edition недоступна. [Ознакомиться с условиями и ценами](/products/kubernetes-platform/features/) на коммерческие редакции.
+Установка {{ page.title_main }} в Open/Community Edition недоступна. [Ознакомиться с условиями и ценами](/products/kubernetes-platform/features/) на коммерческие редакции.
 {% endalert %}
 <h4>Выберите редакцию Deckhouse Platform</h4>
 {% else %}
 {% alert level="warning" %}
-The {{ page.title_main }} installation is not available in the Community Edition. [See information about commercial editions](/products/kubernetes-platform/).
+The {{ page.title_main }} installation is not available in the Open/Community Edition. [See information about commercial editions](/products/kubernetes-platform/).
 {% endalert %}
 <h4>Select the Deckhouse Platform edition</h4>
 {% endif %}

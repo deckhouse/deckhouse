@@ -56,21 +56,21 @@ getting_started:
     request_trial:
       en: Request free trial
       ru: Запросить бесплатный пробный период
-ce: Community Edition
+ce: Open/Community Edition
 be: Basic Edition
 se: Standard Edition
 se-plus: Standard Edition+
-ee: Enterprise Edition
+ee: Ultimate/Enterprise Edition
 cse: Certified Security Edition
 kubernetes-platform: Deckhouse Platform
 virtualization-platform: Deckhouse Virtualization Platform
 stronghold: Deckhouse Stronghold
-dkp-ce: DP CE
-dkp-se-plus: DP SE+
-dkp-ee: DP EE
+dkp-ce: Deckhouse Platform Open/CE
+dkp-se-plus: Deckhouse Platform SE+
+dkp-ee: Deckhouse Platform Ultimate/EE
 dvp-ee: DVP EE
 dvp-cse: DVP CSE
-dkp-cse-pro: DP CSE Pro
+dkp-cse-pro: Deckhouse Platform CSE Pro
 
 common:
   pdf_download:

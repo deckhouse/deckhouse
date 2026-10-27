@@ -428,7 +428,7 @@ Below are some data structures used in the Jekyll projects.
   ```json
   {
     "ce": {
-      "name": "CE",
+      "name": "Open/CE",
       "versionMapFile": "candi/version_map.yml",
       "modulesDir": "modules",
       "terraformProviders": [
@@ -481,7 +481,7 @@ Below are some data structures used in the Jekyll projects.
       ]
     },
     "ee": {
-      "name": "EE",
+      "name": "Ultimate/EE",
       "modulesDir": "ee/modules",
       "terraformProviders": [
         "huaweicloud"

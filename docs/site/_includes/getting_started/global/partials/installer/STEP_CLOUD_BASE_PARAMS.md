@@ -8,8 +8,8 @@
   <li>
 <p>Select the basic installation parameters:</p>
 <ul>
-  <li>Platform edition. Community Edition is selected by default; you can choose the required edition in the "Add source" drop-down list in the center.<br>
-  If you choose an edition other than Community Edition, enter a name (any value) and the license key you received in the window that opens.
+  <li>Platform edition. Open/Community Edition is selected by default; you can choose the required edition in the "Add source" drop-down list in the center.<br>
+  If you choose an edition other than Open/Community Edition, enter a name (any value) and the license key you received in the window that opens.
 <div class="gs-installer__image">
 <img src="/images/gs/installer/enter-license-key.png" alt="Basic installation parameters" style="width: 100%;">
 </div>
