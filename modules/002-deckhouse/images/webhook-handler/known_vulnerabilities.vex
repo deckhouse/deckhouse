@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 21,
+  "version": 22,
   "statements": [
     {
       "vulnerability": {
@@ -2132,8 +2132,65 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "В штатной топологии webhook-handler серверы webhook-operator доступны напрямую через TCP Service; перед ними нет HTTP-посредника, переводящего успешный CONNECT в непрозрачный туннель. Атакующий не управляет необходимой для описанного request smuggling цепочкой прокси и не может вызвать различную интерпретацию соединения в поставляемой конфигурации. Код Go может вернуть 2xx на CONNECT; исключение не распространяется на добавленные администратором CONNECT-прокси.",
       "timestamp": "2026-10-13T06:04:01Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-111943"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В поставляемом Linux-бинарнике /usr/bin/yq, собранном с Go 1.25.13, отсутствует функция crypto/x509.(*Certificate).Verify. Yq обрабатывает YAML/JSON и локальные файлы; проверка цепочек TLS-сертификатов не выполняется. Уязвимый код проверки недоверенных intermediate CA отсутствует независимо от содержимого входных данных.",
+      "timestamp": "2026-10-22T09:03:50Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-111943"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler валидатор CustomPrometheusRules запускает /usr/local/bin/promtool, собранный с Go 1.25.14, с фиксированными аргументами check rules и путём временного YAML-файла. Пользователь управляет содержимым YAML, но не исполняемым файлом, подкомандой или флагами. Этот путь читает файл и проверяет YAML, PromQL и метки без TLS-соединений и вызова crypto/x509.(*Certificate).Verify. Alert-шаблоны проходят ParseTest через text/template.Parse; функции шаблонов не исполняются. Обоснование ограничено вызовом check rules в webhook-handler и не относится к сетевым подкомандам promtool.",
+      "timestamp": "2026-10-22T09:03:50Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-63209"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/github.com/klauspost/compress@v1.17.9"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler валидатор CustomPrometheusRules запускает /usr/local/bin/promtool с фиксированными аргументами check rules и путём временного YAML-файла. Пользователь управляет содержимым YAML, но не исполняемым файлом, подкомандой или флагами. Этот путь разбирает обычный YAML и PromQL, не обрабатывает S2 dictionaries и не вызывает s2.NewDict или Dict.Encode из github.com/klauspost/compress v1.17.9. Alert-шаблоны только разбираются через text/template.Parse без исполнения функций, поэтому входной YAML не переключает выполнение на уязвимый путь сжатия. Обоснование ограничено вызовом check rules в webhook-handler.",
+      "timestamp": "2026-10-22T09:03:50Z"
     }
   ],
   "timestamp": "2026-02-16T12:00:00Z",
-  "last_updated": "2026-10-13T06:04:01Z"
+  "last_updated": "2026-10-22T09:03:50Z"
 }

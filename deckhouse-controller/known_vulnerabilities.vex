@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 19,
+  "version": 20,
   "statements": [
     {
       "vulnerability": {
@@ -1048,8 +1048,46 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "В штатной топологии Deckhouse серверы контроллера доступны напрямую через TCP Service. Единственный поставляемый HTTP-посредник для debug-сервера использует обычный reverse proxy с авторизацией каждого запроса и переключает соединение в туннель только при ответе 101, а не при успешном CONNECT. Атакующий не управляет необходимым для описанного request smuggling посредником, который иначе трактует CONNECT как непрозрачный туннель. Код Go может вернуть 2xx на CONNECT; исключение относится к поставляемой конфигурации и не распространяется на добавленные администратором CONNECT-прокси.",
       "timestamp": "2026-10-13T06:04:01Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-85747"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/github.com/docker/distribution@v2.8.3+incompatible"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В deckhouse-controller и его копии caps-deckhouse-controller пакет registry/client модуля github.com/docker/distribution v2.8.3+incompatible доступен только через registry/client/auth для обработки статусов и ошибок авторизации (SuccessStatus и HandleErrorResponse). В пути загрузки OCI-манифестов Helm-чартов используется ORAS. Клиент манифестов distribution не создаётся, registry/client.(*manifests).Get не вызывается. Pull-through proxy registry/proxy в контроллер не включён. Уязвимый путь обработки ответа на запрос манифеста по digest недостижим.",
+      "timestamp": "2026-10-22T08:31:24Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-111943"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.13"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В поставляемом Linux-бинарнике /usr/bin/yq, собранном с Go 1.25.13, отсутствует функция crypto/x509.(*Certificate).Verify. Yq обрабатывает YAML/JSON и локальные файлы; проверка цепочек TLS-сертификатов не выполняется. Уязвимый код проверки недоверенных intermediate CA отсутствует независимо от содержимого входных данных.",
+      "timestamp": "2026-10-22T09:03:50Z"
     }
   ],
   "timestamp": "2025-10-09T14:31:31Z",
-  "last_updated": "2026-10-13T06:04:01Z"
+  "last_updated": "2026-10-22T09:03:50Z"
 }
