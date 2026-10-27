@@ -32,6 +32,9 @@ const (
 
 	// ModuleAnnotationEmbedded marks a module that is embedded in the Deckhouse image.
 	ModuleAnnotationEmbedded = "modules.deckhouse.io/embedded"
+
+	// ModuleAnnotationCritical marks a module whose definition declares it critical.
+	ModuleAnnotationCritical = "modules.deckhouse.io/critical"
 )
 
 var (
