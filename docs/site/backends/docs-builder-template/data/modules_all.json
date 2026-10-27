@@ -178,9 +178,6 @@
     ]
   },
   "csi-ceph": {
-    "extensions": [
-      "storage_integration"
-    ],
     "editions": [
       "ce",
       "core",
@@ -277,9 +274,6 @@
     ]
   },
   "csi-nfs": {
-    "extensions": [
-      "storage_integration"
-    ],
     "editions": [
       "ce",
       "core",
