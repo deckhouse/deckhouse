@@ -75,4 +75,48 @@ imageSpec:
   config:
     entrypoint: ["/auth_server"]
 ---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-fuzz
+from: registry.flant.com/deckhouse/ssdlc/ci-images/fuzz-go:34fdc16d905326c2fd7097363059baa398c9a1c0
+final: false
+# Keep the code under test identical to the product's release tag.
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+    add: /src/docker_auth
+    before: install
+# The release tag has no harnesses. Import only the existing test files.
+git:
+  - url: {{ $.SOURCE_REPO }}/deckhouse/3p-docker_auth.git
+    commit: 66b9a9e03e136b447ab17815971045f6bf353c32
+    add: /auth_server/server
+    to: /src/docker_auth/auth_server/server
+    includePaths:
+      - auth_fuzz_test.go
+      - request_fuzz_test.go
+    stageDependencies:
+      install:
+        - '**/*'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/Taskfile.fuzz.yml
+    to: /src/docker_auth/auth_server/Taskfile.yml
+    stageDependencies:
+      install:
+        - Taskfile.fuzz.yml
+secrets:
+  - id: GOPROXY
+    value: {{ $.GOPROXY }}
+shell:
+  install:
+    - cd /src/docker_auth/auth_server
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - rm -rf test/e2e tests/e2e tests/ginkgo
+    - chmod -R a+rwX /src/docker_auth /fuzz/gomod
+imageSpec:
+  config:
+    workingDir: /src/docker_auth/auth_server
+    labels:
+      io.deckhouse.fuzz.engine: go
+    env:
+      FUZZ_WORKDIR: /src/docker_auth/auth_server
+      FUZZ_PACKAGES: "./server"
+      CGO_ENABLED: "0"
+---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
