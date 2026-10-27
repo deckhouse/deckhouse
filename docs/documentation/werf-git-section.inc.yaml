@@ -3,6 +3,14 @@
   to: /srv/jekyll-data/documentation/_data/version_map.yml
   stageDependencies:
     setup: ['**/*']
+# Patch release changelogs for the Release notes page (_plugins/release_notes_patches.rb).
+# Not under _data: Jekyll strips dots from data file names, so the version would be lost.
+- add: /CHANGELOG
+  to: /srv/jekyll-data/documentation/_changelog
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - 'CHANGELOG-v*.*.*.yml'
 - add: /images/kubernetes/kubernetes/conformance
   to: /srv/jekyll-data/documentation/assets/conformance
   stageDependencies:

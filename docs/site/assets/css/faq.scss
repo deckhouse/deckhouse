@@ -49,7 +49,10 @@
     .show__containers--collapse {
         padding-left: 14px;
     }
-    
+}
+
+// Collapsible h3 sections, see assets/js/faq.js.
+.docs.faq__container, .collapsible-sections {
     h3 {
         position: relative;
         display: block;
@@ -115,5 +118,4 @@
             }
         }
     }
-
 }

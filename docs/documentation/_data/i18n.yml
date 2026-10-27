@@ -636,3 +636,19 @@ features:
   requiresSeparateLicenseObservability:
     en: Licensed separately, not included in the DP license cost.
     ru: Лицензируется на отдельных условиях, не включён в стоимость лицензии DP. Подробнее — <a href="https://deckhouse.ru/products/observability-platform/">на странице продукта</a>.
+release_notes:
+  patch_note:
+    en: Patch release descriptions are generated automatically. To expand a description, click the version number.
+    ru: Описания патч-релизов формируются автоматически и доступны только на английском языке. Чтобы раскрыть описание, нажмите на номер версии.
+  know_before_update:
+    en: Know before update
+    ru: Know before update
+  features:
+    en: Features
+    ru: Features
+  fixes:
+    en: Fixes
+    ru: Fixes
+  chore:
+    en: Chore
+    ru: Chore

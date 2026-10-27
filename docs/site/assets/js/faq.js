@@ -1,15 +1,14 @@
+// Collapsible h3 sections: FAQ pages and blocks marked with the collapsible-sections class
+// (for example, patch releases on the Release notes page).
 document.addEventListener('DOMContentLoaded', function () {
-    const faqContainer = document.querySelector('.docs.faq__container');
-    const expandButton = document.querySelector('.show__containers--expand');
-    const collapseButton = document.querySelector('.show__containers--collapse');
+    const containers = document.querySelectorAll('.docs.faq__container, .collapsible-sections');
 
-    if (!faqContainer || !expandButton || !collapseButton) {
+    if (!containers.length) {
         return;
     }
 
-    const faqTitle = faqContainer.querySelectorAll('h3');
-    expandButton.classList.add('active');
-    const faqContent = faqContainer.querySelectorAll('h3 + div');
+    const expandButton = document.querySelector('.show__containers--expand');
+    const collapseButton = document.querySelector('.show__containers--collapse');
     const sectionMap = new Map();
 
     function findContent(element) {
@@ -38,27 +37,28 @@ document.addEventListener('DOMContentLoaded', function () {
         window.scrollTo(0, Math.max(0, scrollTop));
     }
 
-    expandButton.addEventListener('click', () => {
-        expandButton.classList.remove('active');
-        collapseButton.classList.add('active');
-        faqTitle.forEach(title => {
-            title.classList.remove('hide');
+    function setAllCollapsed(collapsed) {
+        sectionMap.forEach((content, title) => {
+            title.classList.toggle('hide', collapsed);
+            content.classList.toggle('hidden', collapsed);
         });
-        faqContent.forEach(content => {
-            content.classList.remove('hidden');
-        });
-    });
+    }
 
-    collapseButton.addEventListener('click', () => {
+    if (expandButton && collapseButton) {
         expandButton.classList.add('active');
-        collapseButton.classList.remove('active');
-        faqTitle.forEach(title => {
-            title.classList.add('hide');
+
+        expandButton.addEventListener('click', () => {
+            expandButton.classList.remove('active');
+            collapseButton.classList.add('active');
+            setAllCollapsed(false);
         });
-        faqContent.forEach(content => {
-            content.classList.add('hidden');
+
+        collapseButton.addEventListener('click', () => {
+            expandButton.classList.add('active');
+            collapseButton.classList.remove('active');
+            setAllCollapsed(true);
         });
-    });
+    }
 
     function showSectionByHash(onlyTarget) {
         const hash = decodeURIComponent(window.location.hash.replace('#', ''));
@@ -90,22 +90,24 @@ document.addEventListener('DOMContentLoaded', function () {
         requestAnimationFrame(() => alignTitleWithViewport(title));
     }
 
-    faqTitle.forEach(title => {
-        const content = findContent(title);
+    containers.forEach(container => {
+        container.querySelectorAll('h3').forEach(title => {
+            const content = findContent(title);
 
-        if (!content) {
-            return;
-        }
+            if (!content) {
+                return;
+            }
 
-        sectionMap.set(title, content);
-        title.classList.add('hide');
-        content.classList.add('hidden');
+            sectionMap.set(title, content);
+            title.classList.add('hide');
+            content.classList.add('hidden');
 
-        title.addEventListener('click', () => {
-            title.classList.toggle('hide');
-            content.classList.toggle('hidden');
+            title.addEventListener('click', () => {
+                title.classList.toggle('hide');
+                content.classList.toggle('hidden');
 
-            requestAnimationFrame(() => alignTitleWithViewport(title));
+                requestAnimationFrame(() => alignTitleWithViewport(title));
+            });
         });
     });
 
