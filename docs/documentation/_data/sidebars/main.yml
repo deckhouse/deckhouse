@@ -1927,6 +1927,10 @@ entries:
                 ru: Модуль service-with-healthchecks
               url: /architecture/network/service-with-healthchecks.html
             - title:
+                en: Static-routing-manager module
+                ru: Модуль static-routing-manager
+              url: /architecture/network/static-routing-manager.html
+            - title:
                 en: DNS modules
                 ru: Модули управления DNS
               url: /architecture/network/dns-modules.html
