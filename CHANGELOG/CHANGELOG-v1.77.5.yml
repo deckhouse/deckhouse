@@ -1,0 +1,156 @@
+admission-policy-engine:
+  fixes:
+    - summary: >-
+        Fixed CVE-2026-114437 in `github.com/go-chi/chi/v5` and CVE-2026-63209 in `github.com/klauspost/compress`.
+candi:
+  fixes:
+    - summary: >-
+        The first master bootstrap waits for `kube-apiserver` readiness instead of failing the control-plane
+        step on `connection refused`.
+cert-manager:
+  fixes:
+    - summary: >-
+        The metrics proxy of the controller is no longer restarted by its liveness probe while its node
+        is short of CPU.
+      impact: The `cert-manager` controller pod restarts.
+cilium-hubble:
+  fixes:
+    - summary: Fixed a known vulnerability in the Hubble relay image.
+cloud-provider-dvp:
+  fixes:
+    - summary: >-
+        Fixed deletion of load balancers backed by ServiceWithHealthchecks, which failed because the child
+        Service is protected by the `heritage - deckhouse` label in the parent cluster.
+cloud-provider-huaweicloud:
+  fixes:
+    - summary: Recreated the etcd disk when a master VM is recreated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20801
+cloud-provider-openstack:
+  fixes:
+    - summary: >-
+        CAPI now mirrors MCM — `configDrive` honors `externalNetworkDHCP`, and additional networks always
+        produce ports
+cloud-provider-vcd:
+  fixes:
+    - summary: >-
+        Fixes the module getting stuck in Error on upgrade from 1.76 because of the immutable selector
+        of the `capcd-controller-manager` Deployment.
+cni-cilium:
+  fixes:
+    - summary: Fixed a known vulnerability in the Cilium images.
+      impact: Cilium agent and operator pods will be restarted.
+cni-flannel:
+  fixes:
+    - summary: Fixed known vulnerabilities in the flanneld image.
+      impact: cni-flannel pods will be restarted.
+control-plane-manager:
+  features:
+    - summary: >-
+        The basic audit policy logs Pod status updates from kubelet with the request body, so container
+        terminations and their reasons get into the audit log.
+  fixes:
+    - summary: Updated Go dependencies of Kubernetes control plane components to fix known vulnerabilities.
+      impact: Control plane components and kubelet will be restarted.
+    - summary: >-
+        The cluster-wide controllers of `control-plane-manager` run in a single pod regardless of the
+        `highAvailability` setting or an etcd arbiter.
+    - summary: >-
+        Control plane components are no longer restarted in parallel when a node is NotReady or after
+        a certificate renewal.
+    - summary: >-
+        Fixed a Deckhouse crash caused by a helm release `Secret` or `ConfigMap` with too short release
+        data.
+    - summary: removed unused executable files from the etcd-backup image
+    - summary: >-
+        In CSE, `availableVersions` in `d8-cluster-kubernetes` lists only Kubernetes versions that can
+        be set.
+deckhouse:
+  features:
+    - summary: Migrated package release management to nelm v2 while keeping the v1 install and delete
+        behaviour.
+  fixes:
+    - summary: >-
+        Restore ClusterAdmin read access to ModuleSettingsDefinition so the console can show module settings
+        again.
+    - summary: Show the Terminating phase while package repositories are being deleted
+    - summary: Update d8 CLI and scoped runtime VEX exceptions for known vulnerabilities.
+deckhouse-controller:
+  fixes:
+    - summary: A module enabled in the bundle is no longer disabled when its ModuleConfig does not set
+        `enabled`.
+    - summary: Module sources now scan the registry every 30 minutes by default, reducing registry load
+istio:
+  fixes:
+    - summary: added limit paralle in common images
+    - summary: Fixed CVE-2026-63209 in istio images.
+    - summary: >-
+        Fixed istio module installation with nelm v2 when Istio is managed by the istio operator (versions
+        below 1.27).
+    - summary: >-
+        Fixed `alliance-healthcheck` keeping the sidecar of the previous Istio version after a `globalVersion`
+        change.
+kube-dns:
+  fixes:
+    - summary: Fixed a known vulnerability in the CoreDNS image.
+      impact: CoreDNS pods will be restarted.
+kube-proxy:
+  fixes:
+    - summary: Fixed known vulnerabilities in the kube-proxy init-container image.
+      impact: kube-proxy pods will be restarted.
+    - summary: Fixed known vulnerabilities in the kube-proxy images.
+      impact: kube-proxy pods will be restarted.
+multitenancy-manager:
+  fixes:
+    - summary: Fixed CVE-2026-63209 in `github.com/klauspost/compress`.
+network-policy-engine:
+  fixes:
+    - summary: Fixed known vulnerabilities in the kube-router image.
+      impact: network-policy-engine pods will be restarted.
+node-local-dns:
+  fixes:
+    - summary: Fixed DNS errors during node-local-dns pod restarts in clusters with Cilium.
+    - summary: Fixed a known vulnerability in the node-local-dns CoreDNS image.
+      impact: node-local-dns pods will be restarted.
+    - summary: Node-local-dns safe updater logic was updated to match the Kubernetes logic.
+      impact: Node-local-dns safe updater will be restarted.
+openvpn:
+  fixes:
+    - summary: Fixed known vulnerabilities in the ovpn-admin and easyrsa-migrator images.
+registry:
+  fixes:
+    - summary: >-
+        In the `Proxy` mode, reuse upstream auth challenges and tokens instead of requesting them before
+        every request to the upstream registry.
+    - summary: >-
+        Fix the registry static pod stuck in `ImagePullBackOff` after a registry image update on a single
+        master in the `Proxy` and `Local` modes.
+registrypackages:
+  fixes:
+    - summary: >-
+        Nodes stop trusting `emSign ECC Root CA - G3` and Comodo `AAA Certificate Services`, the roots
+        behind the compromised eMudhra intermediate CAs.
+      impact: >-
+        TLS connections from nodes to hosts whose certificates chain to `emSign ECC Root CA - G3` or Comodo
+        `AAA Certificate Services` (eMudhra / emSign issued) will fail. Reissue such certificates from
+        another CA before the update.
+    - summary: Update containerdv2 patch
+service-with-healthchecks:
+  fixes:
+    - summary: CVEs were fixed.
+      impact: The controller and agent pods will be restarted.
+user-authn:
+  features:
+    - summary: >-
+        DexAuthenticator logins, logouts, failed and denied logins, CSRF mismatches and failed session
+        refreshes are delivered as security events when the `security-events-manager` module is enabled.
+  fixes:
+    - summary: >-
+        dex-authenticator no longer writes the request headers, cookies included, to the log when the
+        CSRF cookie is missing.
+    - summary: >-
+        A password reset of a local user keeps the replaced password in the password history, and the
+        password change form refuses the current password in every case.
+      impact: >-
+        After a reset, the previous password cannot be reused when passwordHistoryLimit is set; the current
+        password cannot be set again through the change form, and a lowered passwordHistoryLimit applies
+        at the next password change.

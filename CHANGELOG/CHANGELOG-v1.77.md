@@ -58,6 +58,7 @@
     The webhook uses `failurePolicy: Fail`, so while Gatekeeper is unavailable `kubectl debug`
     will not work in user namespaces. System namespaces are excluded from the webhook and are
     not affected.
+ - Control plane components and kubelet will be restarted.
  - CoreDNS pods will be restarted.
  - Creating a `Group` or a `User`, or renaming an existing one, so that `Group.spec.name` matches a group subject or `User.spec.email` matches a user subject of an existing AuthorizationRule or ClusterAuthorizationRule is now rejected, preventing an unintended privilege grant. The email is compared after lowercasing, since that is the form that reaches the token. Set the `user-authz.deckhouse.io/allow-authorization-rule-collision` annotation to `"true"` on the object if the collision is intentional. Already existing objects keep working and only produce a warning. Any declarative flow that manages both the rule and the identity is affected, not only one that deletes and recreates the identity: a first-time apply denies the `Group` or `User` whenever the rule happens to be applied first, and nothing guarantees the order. Add the annotation to such objects before upgrading. Deleting a `Group` or a `User` whose name is still a subject of a rule now produces a warning, since the rule keeps granting that name.
  - Custom roles of the legacy experimental RBACv2 scheme must be migrated to the new `d8:custom:*` scheme before upgrading to DKP 1.78. The `D8UserAuthzLegacyRBACv2CustomRoleFound` alert identifies affected roles. Refer to the `user-authz` module FAQ for migration instructions.
@@ -132,6 +133,7 @@
     
     bound to the subject with a RoleBinding in the same namespace, or with a ClusterRole and a ClusterRoleBinding to grant it cluster-wide.
  - Subjects holding only the user-authn view role or the legacy ClusterAdmin user-authn role can no longer list `passwords.dex.coreos.com` or `offlinesessionses.dex.coreos.com`. Use `User` objects for user inventory instead.
+ - TLS connections from nodes to hosts whose certificates chain to `emSign ECC Root CA - G3` or Comodo `AAA Certificate Services` (eMudhra / emSign issued) will fail. Reissue such certificates from another CA before the update.
  - The CoreDNS and kube-dns components will be restarted after the update.
  - The SSH key and sudo password in `SSHCredentials` (used by CAPS to reach static nodes) are now
     returned as `<omitted>` to callers without `get` on the `sshcredentials/sensitive` subresource,
@@ -216,6 +218,8 @@
     the manager role has to be granted one of those instead.
  - `spec.oidc.scopes` items are now validated against `^\S+$` in both served versions of DexProvider. A scope containing whitespace could never work, because OAuth2 passes scopes as a space-delimited list, but it was previously admitted and silently broke authentication. Stored objects are not invalidated, however a DexProvider holding such a value is rejected on its next write until the value is corrected, which also affects a GitOps flow that reapplies the object unchanged.
  - cilium-agent pods are restarted on all nodes.
+ - cni-flannel pods will be restarted.
+ - kube-proxy pods will be restarted.
  - kube-scheduler will be restarted on all control-plane nodes.
     
     Pod placement changes only for pods that explicitly set `schedulerName: high-node-utilization`;
@@ -223,6 +227,7 @@
     `requests` — the scheduler scores nodes using `NonZeroRequested`, substituting 100m CPU / 200Mi
     memory for containers without requests, which makes bin packing operate on synthetic numbers.
  - metallb pods will be restarted.
+ - network-policy-engine pods will be restarted.
  - node-local-dns pods will be restarted.
 
 ## Features
@@ -336,6 +341,7 @@
  - **[control-plane-manager]** Extend d8:control-plane-manager:admin-kubeconfig-supplement with granular permissions for standard Kubernetes resources not covered by user-authz:cluster-admin. [#19420](https://github.com/deckhouse/deckhouse/pull/19420)
  - **[control-plane-manager]** Moved the encryptionAlgorithm parameter to the control-plane-manager ModuleConfig. [#20497](https://github.com/deckhouse/deckhouse/pull/20497)
  - **[control-plane-manager]** Publish API ingress settings are moved to control-plane-manager module, ingress resource is moved to kube-system namespace. [#18628](https://github.com/deckhouse/deckhouse/pull/18628)
+ - **[control-plane-manager]** The basic audit policy logs Pod status updates from kubelet with the request body, so container terminations and their reasons get into the audit log.
  - **[deckhouse-controller]** Added mechanism for blocking deckhouse release if cluster have alerts with high severity. [#20616](https://github.com/deckhouse/deckhouse/pull/20616)
  - **[deckhouse-controller]** Added resource grant resolving. [#20841](https://github.com/deckhouse/deckhouse/pull/20841)
  - **[deckhouse-controller]** When an Application is deleted, Deckhouse also deletes the objects of the kinds listed in the package's `orphanResources` value that the application left in its namespace.
@@ -427,6 +433,7 @@
  - **[service-with-healthchecks]** Added RBACv1 roles (User and Editor) for ServiceWithHealthchecks resource. [#19625](https://github.com/deckhouse/deckhouse/pull/19625)
  - **[user-authn]** Added the DexProviderCheck resource for on-demand connectivity and credential diagnostics of Dex authentication providers. [#20319](https://github.com/deckhouse/deckhouse/pull/20319)
  - **[user-authn]** Brute-force protection for Dex — per-IP rate limit on password endpoints and account lockout for LDAP/Crowd connectors. [#19542](https://github.com/deckhouse/deckhouse/pull/19542)
+ - **[user-authn]** DexAuthenticator logins, logouts, failed and denied logins, CSRF mismatches and failed session refreshes are delivered as security events when the `security-events-manager` module is enabled.
  - **[user-authn]** Grant kubeadm:cluster-admins group granular full access to module CRDs via dedicated ClusterRole d8:user-authn:admin-kubeconfig. [#19420](https://github.com/deckhouse/deckhouse/pull/19420)
  - **[user-authn]** Reconcile users, passwords, operations, and Dex provider checks in a dedicated controller instead of module hooks. [#22361](https://github.com/deckhouse/deckhouse/pull/22361)
  - **[user-authn]** Update the Dex authentication page to the new Deckhouse branding, with light and dark themes selected by the user's system settings. [#23155](https://github.com/deckhouse/deckhouse/pull/23155)
@@ -462,6 +469,7 @@
  - **[admission-policy-engine]** Changed the default PSS policy to Baseline for unrecognized Deckhouse versions. [#19663](https://github.com/deckhouse/deckhouse/pull/19663)
  - **[admission-policy-engine]** Changed the label for container SecurityPolicyExceptions. [#20678](https://github.com/deckhouse/deckhouse/pull/20678)
  - **[admission-policy-engine]** Disabling the module deletes the webhook configurations before Gatekeeper, so the uninstall no longer blocks `exec` and the Deckhouse queue.
+ - **[admission-policy-engine]** Fixed CVE-2026-114437 in `github.com/go-chi/chi/v5` and CVE-2026-63209 in `github.com/klauspost/compress`.
  - **[admission-policy-engine]** Fixed CVE-2026-78659, CVE-2026-78660, CVE-2026-78663, CVE-2026-78669 and CVE-2026-97032 in `golang.org/x/net` and CVE-2026-56851 in `golang.org/x/text`.
  - **[admission-policy-engine]** Fixed CVEs in the `gatekeeper` and `ratify` images. [#23321](https://github.com/deckhouse/deckhouse/pull/23321)
  - **[admission-policy-engine]** Fixed Gatekeeper policies for `kubectl exec` and `kubectl attach` being skipped in user namespaces.
@@ -499,6 +507,7 @@
  - **[candi]** Removed the Python requirement from bashible bootstrap and switched Registry Packages Proxy package installation to static binaries. [#18626](https://github.com/deckhouse/deckhouse/pull/18626)
  - **[candi]** Retried kube API errors in rpp-get during registry packages discovery. [#19673](https://github.com/deckhouse/deckhouse/pull/19673)
  - **[candi]** Revert feature gate DRADeviceTaints [#21726](https://github.com/deckhouse/deckhouse/pull/21726)
+ - **[candi]** The first master bootstrap waits for `kube-apiserver` readiness instead of failing the control-plane step on `connection refused`.
  - **[candi]** Used a short timeout for deleting MirrorPods. [#20565](https://github.com/deckhouse/deckhouse/pull/20565)
  - **[candi]** containerd v2 no longer starts without the `erofs` snapshotter, and loads the `erofs` module before start. [#22885](https://github.com/deckhouse/deckhouse/pull/22885)
  - **[candi]** kube-apiserver no longer caches watches for `ManifestCheckpointContentChunk` resources from `state-snapshotter`. [#21208](https://github.com/deckhouse/deckhouse/pull/21208)
@@ -507,6 +516,8 @@
  - **[cert-manager]** Fixed CVEs in the cert-manager images. [#23333](https://github.com/deckhouse/deckhouse/pull/23333)
  - **[cert-manager]** Restore the `cert-manager` and `cainjector` permissions that were lost against the upstream chart, including access to `ListenerSet` resources. [#23075](https://github.com/deckhouse/deckhouse/pull/23075)
  - **[cert-manager]** The `spec.certificateOwnerRef` field of a certificate no longer causes an endless Secret update loop when it differs from the global owner reference setting that `cleanupOrphanSecrets` enables in the `CertManager` HTTPS mode, and is applied to an already issued Secret.
+ - **[cert-manager]** The metrics proxy of the controller is no longer restarted by its liveness probe while its node is short of CPU.
+    The `cert-manager` controller pod restarts.
  - **[cert-manager]** The webhook keeps serving requests during a rollout and during a rotation of its CA, and the controller waits for the API server at startup instead of restarting.
  - **[cert-manager]** fix cve [#21986](https://github.com/deckhouse/deckhouse/pull/21986)
  - **[chrony]** Fixed the unit-detection condition in the `disable-ntp-on-node.sh` node step. [#23034](https://github.com/deckhouse/deckhouse/pull/23034)
@@ -514,6 +525,7 @@
     The cilium-hubble components (hubble-ui, hubble-relay) will restart after the update.
  - **[cilium-hubble]** Fixed CVE-2026-29181 in hubble-ui-backend by bumping OpenTelemetry Go to v1.41.0. [#20087](https://github.com/deckhouse/deckhouse/pull/20087)
  - **[cilium-hubble]** Fixed CVE-2026-41520 in hubble-ui-backend. [#20359](https://github.com/deckhouse/deckhouse/pull/20359)
+ - **[cilium-hubble]** Fixed a known vulnerability in the Hubble relay image.
  - **[cilium-hubble]** Fixed known vulnerabilities in the Hubble relay and UI images.
  - **[cloud-provider-aws]** Added a new Bashible step to install `linux-modules-extra` on Ubuntu nodes. [#19415](https://github.com/deckhouse/deckhouse/pull/19415)
  - **[cloud-provider-aws]** Adds SecurityPolicyException for CCM and CSI components, fixes VPA and PodMonitor module guards, migrates hand-written templates to helm_lib helpers. [#21397](https://github.com/deckhouse/deckhouse/pull/21397)
@@ -537,6 +549,7 @@
  - **[cloud-provider-dvp]** Fixed CVEs in the cloud-provider-dvp module. [#20796](https://github.com/deckhouse/deckhouse/pull/20796)
  - **[cloud-provider-dvp]** Fixed LoadBalancer stuck in pending by retrying on conflict when updating ServiceWithHealthchecks and propagating IP to the child cluster service status. [#19590](https://github.com/deckhouse/deckhouse/pull/19590)
  - **[cloud-provider-dvp]** Fixed ModuleConfig access for users with the d8:manage:infrastructure:viewer and d8:manage:infrastructure:manager roles. [#21487](https://github.com/deckhouse/deckhouse/pull/21487)
+ - **[cloud-provider-dvp]** Fixed deletion of load balancers backed by ServiceWithHealthchecks, which failed because the child Service is protected by the `heritage - deckhouse` label in the parent cluster.
  - **[cloud-provider-dvp]** Fixed duplicate volume mounts in the DVP CSI driver on kubelet retries. [#20714](https://github.com/deckhouse/deckhouse/pull/20714)
  - **[cloud-provider-dvp]** Fixed the `D8CloudProviderDVPMigrationPending` alert that kept firing after the migration resources were applied. [#23248](https://github.com/deckhouse/deckhouse/pull/23248)
  - **[cloud-provider-dvp]** Fixes cluster bootstrap getting stuck when `capdvp-controller-manager` and the validation webhook cannot reach the API server and DNS before the CNI is ready. [#23357](https://github.com/deckhouse/deckhouse/pull/23357)
@@ -564,6 +577,7 @@
  - **[cloud-provider-openstack]** Add the missing with-uninitialized toleration strategy for capo-controller-manager. [#21706](https://github.com/deckhouse/deckhouse/pull/21706)
  - **[cloud-provider-openstack]** Bumped Go module dependencies to fix known CVEs in terraform-manager, cloud-controller-manager, cinder-csi-plugin, cloud-data-discoverer; documented GO-2026-5932, CVE-2026-41579 vulnerabilities via VEX. [#20780](https://github.com/deckhouse/deckhouse/pull/20780)
  - **[cloud-provider-openstack]** Bumped helm_lib with liveness probe parameters for the CSI controller. [#19694](https://github.com/deckhouse/deckhouse/pull/19694)
+ - **[cloud-provider-openstack]** CAPI now mirrors MCM — `configDrive` honors `externalNetworkDHCP`, and additional networks always produce ports
  - **[cloud-provider-openstack]** Fixed a permanent cinder-csi-plugin failure after re-authentication in long-running pods. [#20394](https://github.com/deckhouse/deckhouse/pull/20394)
  - **[cloud-provider-openstack]** Fixes cluster bootstrap getting stuck when `capo-controller-manager` cannot reach the API server and DNS before the CNI is ready. [#23357](https://github.com/deckhouse/deckhouse/pull/23357)
  - **[cloud-provider-openstack]** Prevented the OpenStack CCM from deleting Kubernetes nodes when OpenStack temporarily reports an instance as not found. [#20743](https://github.com/deckhouse/deckhouse/pull/20743)
@@ -577,6 +591,7 @@
  - **[cloud-provider-vcd]** Fixes an intermittent "network still in use" error during cluster deletion with the WithNAT placement strategy. [#22329](https://github.com/deckhouse/deckhouse/pull/22329)
  - **[cloud-provider-vcd]** Fixes cluster bootstrap getting stuck when `capcd-controller-manager` cannot reach the API server and DNS before the CNI is ready. [#23357](https://github.com/deckhouse/deckhouse/pull/23357)
  - **[cloud-provider-vcd]** Fixes infra-controller-manager pods scheduling on the same node in HA mode. [#20752](https://github.com/deckhouse/deckhouse/pull/20752)
+ - **[cloud-provider-vcd]** Fixes the module getting stuck in Error on upgrade from 1.76 because of the immutable selector of the `capcd-controller-manager` Deployment.
  - **[cloud-provider-vsphere]** Bumped Go module dependencies to fix known CVEs in terraform-manager, cloud-data-discoverer. [#20780](https://github.com/deckhouse/deckhouse/pull/20780)
  - **[cloud-provider-vsphere]** Bumped helm_lib with liveness probe parameters for the CSI controller. [#19694](https://github.com/deckhouse/deckhouse/pull/19694)
  - **[cloud-provider-vsphere]** Fixed master node creation when the datastore is set as a path with parent folders.
@@ -609,6 +624,8 @@
     Cilium agent pods are restarted to apply the fixes.
  - **[cni-cilium]** Fixed CVE-2026-41520 for the cilium-bugtool util. [#20067](https://github.com/deckhouse/deckhouse/pull/20067)
  - **[cni-cilium]** Fixed Cilium agent CPU overload on nodes with many CPUs. [#19903](https://github.com/deckhouse/deckhouse/pull/19903)
+ - **[cni-cilium]** Fixed a known vulnerability in the Cilium images.
+    Cilium agent and operator pods will be restarted.
  - **[cni-cilium]** Fixed infinite reconciliation of EgressGateway objects and improved status reporting. [#19219](https://github.com/deckhouse/deckhouse/pull/19219)
  - **[cni-cilium]** Fixed known vulnerabilities in the Cilium images.
     Cilium agent and operator pods will be restarted.
@@ -616,6 +633,8 @@
     cilium-agent pods are restarted on all nodes.
  - **[cni-cilium]** Updated Cilium from 1.17.4 to 1.17.17. [#20720](https://github.com/deckhouse/deckhouse/pull/20720)
     The `cni-cilium` components (cilium-agent, operator) will be restarted. A change has been made to the Network Policy that affects the behavior of the `ipBlock: 0.0.0.0/0` rule.
+ - **[cni-flannel]** Fixed known vulnerabilities in the flanneld image.
+    cni-flannel pods will be restarted.
  - **[cni-flannel]** Reverted module stage from Deprecated back to General Availability to stop false deprecation alerts. [#20294](https://github.com/deckhouse/deckhouse/pull/20294)
  - **[cni-simple-bridge]** Fix simple bridge script to add ip rule for two NICs nodes. [#20428](https://github.com/deckhouse/deckhouse/pull/20428)
  - **[common]** Added checks for the `observability` module in `upmeter`. [#18111](https://github.com/deckhouse/deckhouse/pull/18111)
@@ -683,6 +702,7 @@
  - **[control-plane-manager]** Allow change labels and annotations for secret d8-secret-encryption-key [#20103](https://github.com/deckhouse/deckhouse/pull/20103)
  - **[control-plane-manager]** Allowed admins to manage ModuleReleases, ModuleDocumentations, and ModuleSettingsDefinitions. [#19931](https://github.com/deckhouse/deckhouse/pull/19931)
  - **[control-plane-manager]** Bumped vulnerable Go dependencies in control-plane components to close known CVEs. [#21417](https://github.com/deckhouse/deckhouse/pull/21417)
+ - **[control-plane-manager]** Control plane components are no longer restarted in parallel when a node is NotReady or after a certificate renewal.
  - **[control-plane-manager]** Fix dhctl bootstrap failing on CSE clusters with 'apiserver.signature Enforce' on control-plane-manager moduleConfig [#21962](https://github.com/deckhouse/deckhouse/pull/21962)
  - **[control-plane-manager]** Fix kubectl exec through Kubernetes API published with Gateway API.
  - **[control-plane-manager]** Fix the `high-node-utilization` kube-scheduler profile, which spread pods across nodes instead of packing them onto the most loaded ones. [#22527](https://github.com/deckhouse/deckhouse/pull/22527)
@@ -706,8 +726,11 @@
  - **[control-plane-manager]** Skip rebind of ClusterRoleBinding/kubeadm:cluster-admins until the cluster is fully bootstrapped; harden the reconciliation hook. Fixes "cannot change roleRef" on fresh clusters. [#19667](https://github.com/deckhouse/deckhouse/pull/19667)
  - **[control-plane-manager]** The publish API certificate hook no longer deletes the active TLS secret (kube-system/kubernetes-tls) on deckhouse restart. [#22269](https://github.com/deckhouse/deckhouse/pull/22269)
  - **[control-plane-manager]** Update Go dependencies of `control-plane-manager` and `etcd` images and record VEX statements for `GO-2026-5932`. [#22152](https://github.com/deckhouse/deckhouse/pull/22152)
+ - **[control-plane-manager]** Updated Go dependencies of Kubernetes control plane components to fix known vulnerabilities.
+    Control plane components and kubelet will be restarted.
  - **[csi-vsphere]** Migrated storage policy support  from the `cloud-provider-vsphere` module. [#19965](https://github.com/deckhouse/deckhouse/pull/19965)
  - **[csi-vsphere]** resolve vsphere-syncer image from module config instead of 000-common [#22451](https://github.com/deckhouse/deckhouse/pull/22451)
+ - **[deckhouse-controller]** A module enabled in the bundle is no longer disabled when its ModuleConfig does not set `enabled`.
  - **[deckhouse-controller]** A module that conditionally depends on another is no longer disabled when an incompatible version of that dependency is enabled; the enable is rejected instead. [#20334](https://github.com/deckhouse/deckhouse/pull/20334)
  - **[deckhouse-controller]** Deleting an Application now also deletes objects with the `werf.io/ownership: anyone` or `werf.io/resource-policy` annotation, such as Jobs deployed only on install, if the package lists their kinds in `orphanResources`. Only `helm.sh/resource-policy: keep` protects an object.
  - **[deckhouse-controller]** Do not commit the package repository registry checksum when no application could be annotated, which left them all on stale registry settings. [#23126](https://github.com/deckhouse/deckhouse/pull/23126)
@@ -720,6 +743,7 @@
  - **[deckhouse-controller]** Honor a channel-level release suspend for clusters that reach the suspended version through a step-by-step update. [#22745](https://github.com/deckhouse/deckhouse/pull/22745)
     A Deckhouse release suspended on its release channel is no longer applied by clusters that are behind and reach it through a step-by-step update. The suspend flag lives only in the release-channel image; previously it was dropped when the target release was built from its per-version image, so lagging clusters updated to a suspended release anyway.
  - **[deckhouse-controller]** Module releases rendered with nelm no longer raise false absent-resource alerts. [#21834](https://github.com/deckhouse/deckhouse/pull/21834)
+ - **[deckhouse-controller]** Module sources now scan the registry every 30 minutes by default, reducing registry load
  - **[deckhouse-controller]** ModuleDocumentation will not be created for embedded modules. [#21682](https://github.com/deckhouse/deckhouse/pull/21682)
  - **[deckhouse-controller]** Stop the module source registry fan-out from replaying and flooding the main queue with duplicate moduleRun tasks. [#23126](https://github.com/deckhouse/deckhouse/pull/23126)
  - **[deckhouse-controller]** add werf dependency to webhook [#20968](https://github.com/deckhouse/deckhouse/pull/20968)
@@ -750,12 +774,15 @@
  - **[deckhouse]** Prevent NELM resource monitor reflector retries and handle resource namespaces correctly. [#22099](https://github.com/deckhouse/deckhouse/pull/22099)
  - **[deckhouse]** Re-enable kubernetes bindings in webhook-handler reload so hooks using `includeSnapshotsFrom` get populated snapshots. [#20644](https://github.com/deckhouse/deckhouse/pull/20644)
  - **[deckhouse]** Recover from panics in nelm client. [#19808](https://github.com/deckhouse/deckhouse/pull/19808)
+ - **[deckhouse]** Restore ClusterAdmin read access to ModuleSettingsDefinition so the console can show module settings again.
  - **[deckhouse]** Restore ModuleIsInMaintenanceMode alert by switching to d8_module_config_maintenance sourced from ModuleConfig. [#19352](https://github.com/deckhouse/deckhouse/pull/19352)
  - **[deckhouse]** Restore kubectl plugin lookup in d8 k and d8 kubectl
  - **[deckhouse]** Revoke permission to use moduleconfig to user. [#19672](https://github.com/deckhouse/deckhouse/pull/19672)
+ - **[deckhouse]** Show the Terminating phase while package repositories are being deleted
  - **[deckhouse]** Stop reserving platform public hostnames at admission; keep the ModuleConfig field so existing settings still validate. [#22534](https://github.com/deckhouse/deckhouse/pull/22534)
     ValidatingAdmissionPolicy reserved-public-hosts-* is removed. Ingresses that were denied because they matched publicDomainTemplate are allowed again. settings.reservedPublicHosts in ModuleConfig deckhouse remains accepted and is ignored. Enforcement returns in a later release.
  - **[deckhouse]** The reserved public hosts policies no longer make every aggregated apiserver in the cluster watch all ConfigMaps, which left permission-browser-apiserver permanently unready and stopped namespace deletion cluster-wide. [#22462](https://github.com/deckhouse/deckhouse/pull/22462)
+ - **[deckhouse]** Update d8 CLI and scoped runtime VEX exceptions for known vulnerabilities.
  - **[deckhouse]** Update runtime libraries and VEX exceptions for known vulnerabilities
  - **[deckhouse]** Used non-controller ownerRefs for multi-source package CRs. [#20045](https://github.com/deckhouse/deckhouse/pull/20045)
  - **[deckhouse]** bump addon-operator to run the module startup phase unconditionally [#22466](https://github.com/deckhouse/deckhouse/pull/22466)
@@ -818,8 +845,10 @@
  - **[istio]** Fix operator 1.25 startup with containerd v2 and RO rootfs [#21795](https://github.com/deckhouse/deckhouse/pull/21795)
  - **[istio]** Fixed CVEs in Istio as part of the July security update. [#21548](https://github.com/deckhouse/deckhouse/pull/21548)
  - **[istio]** Fixed CVEs in istioctl. [#21496](https://github.com/deckhouse/deckhouse/pull/21496)
+ - **[istio]** Fixed `alliance-healthcheck` keeping the sidecar of the previous Istio version after a `globalVersion` change.
  - **[istio]** Fixed access to api-proxy via ALB. [#21142](https://github.com/deckhouse/deckhouse/pull/21142)
  - **[istio]** Fixed ingressGateway advertise FQDN failing to create a ServiceEntry. [#19395](https://github.com/deckhouse/deckhouse/pull/19395)
+ - **[istio]** Fixed istio module installation with nelm v2 when Istio is managed by the istio operator (versions below 1.27).
  - **[istio]** Fixed nelm rollout ordering for Certificate resources. [#20924](https://github.com/deckhouse/deckhouse/pull/20924)
  - **[istio]** Fixed the discovery_operator_versions_to_install hook to migrate from Istio 1.21 to 1.25. [#19434](https://github.com/deckhouse/deckhouse/pull/19434)
  - **[istio]** Fixed the istio module getting stuck when switching `globalVersion` from 1.21 while proxies are still connected to the 1.21 control plane.
@@ -833,10 +862,16 @@
     module pods will be restarted
  - **[kube-dns]** Bumped Go dependencies in the sts-pods-hosts-appender-webhook and coredns images to fix known CVEs. [#21389](https://github.com/deckhouse/deckhouse/pull/21389)
     The CoreDNS and kube-dns components will be restarted after the update.
+ - **[kube-dns]** Fixed a known vulnerability in the CoreDNS image.
+    CoreDNS pods will be restarted.
  - **[kube-dns]** Fixed known vulnerabilities in the CoreDNS and sts-pods-hosts-appender images.
     CoreDNS pods will be restarted.
  - **[kube-dns]** Fixing of the subsystems list for modules. [#20925](https://github.com/deckhouse/deckhouse/pull/20925)
  - **[kube-dns]** Set resource limits for the `render-etc-hosts-with-cluster-domain-aliases` init container so that pods can be created in namespaces with a ResourceQuota on `limits.cpu`/`limits.memory`. [#23295](https://github.com/deckhouse/deckhouse/pull/23295)
+ - **[kube-proxy]** Fixed known vulnerabilities in the kube-proxy images.
+    kube-proxy pods will be restarted.
+ - **[kube-proxy]** Fixed known vulnerabilities in the kube-proxy init-container image.
+    kube-proxy pods will be restarted.
  - **[kube-proxy]** Fixed kube-proxy failing to start on Kubernetes 1.36 and higher because of the removed `TopologyAwareHints` feature gate. [#23336](https://github.com/deckhouse/deckhouse/pull/23336)
     The `d8-kube-proxy` pods will be restarted on all nodes.
  - **[kube-proxy]** Fixing of the subsystems list for modules. [#20925](https://github.com/deckhouse/deckhouse/pull/20925)
@@ -866,6 +901,7 @@
     `d8 k delete mutatingwebhookconfiguration cluster-objects-grants-defaulting`
     `d8 k delete validatingwebhookconfiguration cluster-objects-grants-validator`
     Nothing has to be done on clusters where the module is enabled.
+ - **[multitenancy-manager]** Fixed CVE-2026-63209 in `github.com/klauspost/compress`.
  - **[multitenancy-manager]** Fixed CVE-2026-78659, CVE-2026-78660, CVE-2026-78663, CVE-2026-78669 and CVE-2026-97032 in `golang.org/x/net`.
  - **[multitenancy-manager]** Fixed vulnerabilities in the `multitenancy-manager` image. [#23361](https://github.com/deckhouse/deckhouse/pull/23361)
  - **[multitenancy-manager]** Grant and project admission webhooks no longer deadlock the Deckhouse queue when the multitenancy-manager backend denies, is slow, or is unreachable. [#20700](https://github.com/deckhouse/deckhouse/pull/20700)
@@ -892,11 +928,16 @@
  - **[network-gateway]** Fixed user and group in ConfigMap [#22296](https://github.com/deckhouse/deckhouse/pull/22296)
     network-gateway pod's will be restarted
  - **[network-gateway]** Updated dnsmasq to v2.92-alt2 to address multiple security vulnerabilities. [#19928](https://github.com/deckhouse/deckhouse/pull/19928)
+ - **[network-policy-engine]** Fixed known vulnerabilities in the kube-router image.
+    network-policy-engine pods will be restarted.
  - **[network-policy-engine]** Reverted module stage from Deprecated back to General Availability to stop false deprecation alerts. [#20294](https://github.com/deckhouse/deckhouse/pull/20294)
  - **[node-local-dns]** Bump Go dependencies in the coredns helper image to fix known CVEs. [#21871](https://github.com/deckhouse/deckhouse/pull/21871)
     The node-local-dns DaemonSet pods will restart after the update.
  - **[node-local-dns]** Bumped Go dependencies in the safe-updater and stale-dns-connections-cleaner images to fix known CVEs. [#21389](https://github.com/deckhouse/deckhouse/pull/21389)
     The `node-local-dns` components will be restarted.
+ - **[node-local-dns]** Fixed DNS errors during node-local-dns pod restarts in clusters with Cilium.
+ - **[node-local-dns]** Fixed a known vulnerability in the node-local-dns CoreDNS image.
+    node-local-dns pods will be restarted.
  - **[node-local-dns]** Fixed known vulnerabilities in the node-local-dns images.
     node-local-dns pods will be restarted.
  - **[node-manager]** A StaticInstance whose StaticMachine was deleted is returned to Pending and becomes available for bootstrapping again instead of staying out of the pool forever.
@@ -966,6 +1007,7 @@
  - **[node-manager]** node-controller no longer removes taints set by other components on the first reconcile of Static and CloudPermanent nodes. [#22988](https://github.com/deckhouse/deckhouse/pull/22988)
  - **[node-manager]** node-controller reads the CAPI instance-class checksum from a helm-rendered ConfigMap instead of a possibly stale MachineTemplate, so MachineDeployments follow InstanceClass changes and their bootstrap Secrets keep a valid token. [#22909](https://github.com/deckhouse/deckhouse/pull/22909)
     CAPI NodeGroups whose MachineDeployment was stuck on an old MachineTemplate are rolled to the current InstanceClass after the update, within maxSurgePerZone/maxUnavailablePerZone. Groups already on the current template are not touched.
+ - **[openvpn]** Fixed known vulnerabilities in the ovpn-admin and easyrsa-migrator images.
  - **[prometheus]** Fixed CVEs in the `alertmanager`, `alerts-receiver`, `grafana-v10`, `memcached`, `mimir`, `prometheus`, `promxy` and `trickster` images by bumping dependencies and rebuilding on the golang builder. [#20395](https://github.com/deckhouse/deckhouse/pull/20395)
     Prometheus, Grafana, Alertmanager, and other monitoring components will be restarted.
  - **[registry-packages-proxy]** Added a fast path for already installed packages and improved logging in rpp-get. [#20015](https://github.com/deckhouse/deckhouse/pull/20015)
@@ -974,6 +1016,7 @@
  - **[registry-packages-proxy]** deckhouse-cli and plugin downloads now work in registries filled by `d8 mirror push`; the proxy probes the cluster repo first, then the edition-trimmed root, and remembers the working one. [#22661](https://github.com/deckhouse/deckhouse/pull/22661)
  - **[registry]** Bump dependencies in registry.
  - **[registry]** Fix the order in which the Unmanaged params are stored for the fallback to the Legacy mode. [#22976](https://github.com/deckhouse/deckhouse/pull/22976)
+ - **[registry]** In the `Proxy` mode, reuse upstream auth challenges and tokens instead of requesting them before every request to the upstream registry.
  - **[registrypackages]** Bump `containerd` v2 to 2.2.7 and patch `crictl` 1.36.0 Go dependencies to fix known CVEs. [#22152](https://github.com/deckhouse/deckhouse/pull/22152)
     Nodes with `ContainerdV2` will restarts the `containerd` service .
  - **[registrypackages]** Bump kubernetes-cni to 1.9.1 and update vulnerable Go dependencies to fix CVEs. [#21963](https://github.com/deckhouse/deckhouse/pull/21963)
@@ -983,6 +1026,9 @@
  - **[registrypackages]** Fix dm-verity devices that could never be closed for containerd 2.2.7 (CSE only). [#22807](https://github.com/deckhouse/deckhouse/pull/22807)
  - **[registrypackages]** Fixed known vulnerabilities in the kubernetes-cni package.
  - **[registrypackages]** Fsync the EROFS layer blob in `containerd` before committing snapshot metadata, so an unclean shutdown can no longer leave an unmountable image layer. [#23145](https://github.com/deckhouse/deckhouse/pull/23145)
+ - **[registrypackages]** Nodes stop trusting `emSign ECC Root CA - G3` and Comodo `AAA Certificate Services`, the roots behind the compromised eMudhra intermediate CAs.
+    TLS connections from nodes to hosts whose certificates chain to `emSign ECC Root CA - G3` or Comodo `AAA Certificate Services` (eMudhra / emSign issued) will fail. Reissue such certificates from another CA before the update.
+ - **[registrypackages]** Update containerdv2 patch
  - **[registrypackages]** Updated `registrypackages/docker-registry` image Go dependencies to fix Go CVEs. [#20377](https://github.com/deckhouse/deckhouse/pull/20377)
  - **[registrypackages]** Updated the Mozilla CA snapshot used by d8-ca-updater and made the build fail on trusted expired certificates. [#20939](https://github.com/deckhouse/deckhouse/pull/20939)
  - **[service-with-healthchecks]** Annotations and labels of a ServiceWithHealthchecks are now copied to the Service created for it. [#22835](https://github.com/deckhouse/deckhouse/pull/22835)
@@ -1004,6 +1050,8 @@
  - **[terraform-manager]** Fixed the `to-tofu-migrator` init container of `terraform-auto-converger` failing to resolve the provider bundle digest, which kept auto-converge from starting.
  - **[user-authn]** A DexAuthenticator with a name longer than 45 characters no longer logs its users out on every run of the hook.
  - **[user-authn]** A DexClient or a DexAuthenticator in a namespace whose name YAML reads as a number or a boolean no longer breaks the user-authn release.
+ - **[user-authn]** A password reset of a local user keeps the replaced password in the password history, and the password change form refuses the current password in every case.
+    After a reset, the previous password cannot be reused when passwordHistoryLimit is set; the current password cannot be set again through the change form, and a lowered passwordHistoryLimit applies at the next password change.
  - **[user-authn]** Added the missing `kubeconfigPublishAPIEncodedName` field to CSE OpenAPI values. [#20864](https://github.com/deckhouse/deckhouse/pull/20864)
  - **[user-authn]** Adding the allow-access-to-kubernetes annotation to a DexClient or a DexAuthenticator now requires cluster-level authority over the user-authn module. [#22358](https://github.com/deckhouse/deckhouse/pull/22358)
     Only a subject allowed to update the user-authn ModuleConfig, or the Deckhouse service account, may add the `dexclient.deckhouse.io/allow-access-to-kubernetes` or `dexauthenticator.deckhouse.io/allow-access-to-kubernetes` annotation. Objects that already carry it keep working and stay editable by their owners as long as they are updated in place. A GitOps controller that deletes and recreates such an object instead of patching it will have the recreation denied, and the object will come back without access to the Kubernetes API unless the controller's service account is allowed to update the user-authn ModuleConfig.
@@ -1124,6 +1172,7 @@
     basic auth. Such users will lose those privileges on update and must be granted
     access through a normal group bound by RBAC instead. Check the basic-auth-proxy logs
     after updating for `dropping group` messages.
+ - **[user-authn]** dex-authenticator no longer writes the request headers, cookies included, to the log when the CSRF cookie is missing.
  - **[user-authn]** fix cve [#21986](https://github.com/deckhouse/deckhouse/pull/21986)
  - **[user-authz]** An AuthorizationRule in a namespace whose name YAML reads as a number, a boolean or null no longer breaks the module's bindings.
  - **[user-authz]** Extend cluster-admin clusterrole  with kubelet-api-admin rights. [#19878](https://github.com/deckhouse/deckhouse/pull/19878)
