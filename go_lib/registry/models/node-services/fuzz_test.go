@@ -281,6 +281,10 @@ func FuzzLocalModeUpstreams(f *testing.F) {
 // rendered into `remoteurl: "<scheme>://<host>"` without breaking out of the
 // scalar, and that it points somewhere the module can actually reach.
 func FuzzUpstreamRegistryValidate(f *testing.F) {
+	// Saved finding c8de8e2172efaea1: URL authorities require IPv6 brackets.
+	f.Add("http", "::A", "/", "", "")
+	f.Add("http", "[::A]", "/", "", "")
+	f.Add("http", "[::A]:5000", "/", "", "")
 	// The upstream Proxy mode points at, then each of the five fields taken in
 	// turn to where it stops being what its sink accepts: the scheme selects
 	// TLS handling, the host and path are joined into the distribution

@@ -286,6 +286,22 @@ func HostWithOptionalPort(value any) error {
 	).Validate(value)
 }
 
+// URLHost validates a host used in a URL authority. Unlike a bare registry
+// address, an IPv6 literal must be bracketed, even when it has no port.
+func URLHost(value any) error {
+	return and(validation.By(EncodableString), stringRule(urlHost)).Validate(value)
+}
+
+func urlHost(raw string) error {
+	if strings.HasPrefix(raw, "[") && strings.HasSuffix(raw, "]") {
+		return bracketsHoldIPv6(raw, raw[1:len(raw)-1])
+	}
+	if net.ParseIP(raw) != nil && strings.ContainsRune(raw, ':') {
+		return errors.New("IPv6 addresses in a URL must be enclosed in brackets")
+	}
+	return hostWithOptionalPort(raw)
+}
+
 func hostWithOptionalPort(raw string) error {
 	if strings.ContainsRune(raw, '/') {
 		return errors.New("must not contain a path separator")

@@ -67,6 +67,7 @@ func TestEmptyIsValidEverywhere(t *testing.T) {
 		"Port":                      Port,
 		"RegistryAccountName":       RegistryAccountName,
 		"HostWithOptionalPort":      HostWithOptionalPort,
+		"URLHost":                   URLHost,
 		"IPWithPort":                IPWithPort,
 		"ProxyEndpoint":             ProxyEndpoint,
 		"MirrorHost":                MirrorHost,
@@ -165,6 +166,32 @@ func TestHostWithOptionalPortIPv6(t *testing.T) {
 		t.Errorf("HostWithOptionalPort(\"fd00::1:5001\") is a bare IPv6 address and must be "+
 			"accepted as one: %v", err)
 	}
+}
+
+func TestURLHost(t *testing.T) {
+	runRule(t, "URLHost", URLHost, []ruleCase{
+		{in: "registry.example.com", accept: true, why: "DNS without a port"},
+		{in: "registry.example.com:5000", accept: true, why: "DNS with a port"},
+		{in: "192.0.2.1", accept: true, why: "IPv4 without a port"},
+		{in: "192.0.2.1:65535", accept: true, why: "IPv4 with a port"},
+		{in: "[::A]", accept: true, why: "IPv6 without a port needs brackets in a URL"},
+		{in: "[::A]:5000", accept: true, why: "IPv6 with a port"},
+		{in: "[::ffff:192.0.2.1]", accept: true, why: "IPv4-mapped IPv6 notation"},
+		{in: "::A", why: "the saved finding produces an invalid URL"},
+		{in: "::1", why: "even numeric IPv6 needs brackets to distinguish its port"},
+		{in: "fd00::1:5000", why: "an unbracketed IPv6 literal is ambiguous"},
+		{in: "[registry.example.com]", why: "brackets require an IPv6 literal"},
+		{in: "[192.0.2.1]", why: "IPv4 does not use brackets"},
+		{in: "[::A]:", why: "an explicit port must not be empty"},
+		{in: "[::A]:0", why: "ports must be in range"},
+		{in: "[::A]:65536", why: "ports must be in range"},
+		{in: "registry.example.com:+5000", why: "ports must contain decimal digits"},
+		{in: "user@registry.example.com", why: "userinfo is not a host"},
+		{in: "registry.example.com/path", why: "a path is not a host"},
+		{in: "registry.example.com?query", why: "a query is not a host"},
+		{in: "registry.example.com#fragment", why: "a fragment is not a host"},
+		{in: "registry.example.com\n", why: "a control character is not a host"},
+	})
 }
 
 func TestHostWithOptionalPort(t *testing.T) {
