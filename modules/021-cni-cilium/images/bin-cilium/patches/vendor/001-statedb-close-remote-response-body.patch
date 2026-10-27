@@ -1,0 +1,39 @@
+diff --git a/vendor/github.com/cilium/statedb/http_client.go b/vendor/github.com/cilium/statedb/http_client.go
+index 49e80ba55e..1e0d84358d 100644
+--- a/vendor/github.com/cilium/statedb/http_client.go
++++ b/vendor/github.com/cilium/statedb/http_client.go
+@@ -77,7 +77,7 @@ func (t *RemoteTable[Obj]) query(ctx context.Context, lowerBound bool, q Query[O
+ 		errChanSend <- err
+ 		return
+ 	}
+-	return remoteGetSeq[Obj](json.NewDecoder(resp.Body), errChanSend), errChan
++	return remoteGetSeq[Obj](resp.Body, json.NewDecoder(resp.Body), errChanSend), errChan
+ }
+ 
+ func (t *RemoteTable[Obj]) Get(ctx context.Context, q Query[Obj]) (iter.Seq2[Obj, Revision], <-chan error) {
+@@ -95,8 +95,9 @@ type responseObject[Obj any] struct {
+ 	Err string `json:"err,omitempty"`
+ }
+ 
+-func remoteGetSeq[Obj any](dec *json.Decoder, errChan chan error) iter.Seq2[Obj, Revision] {
++func remoteGetSeq[Obj any](body io.ReadCloser, dec *json.Decoder, errChan chan error) iter.Seq2[Obj, Revision] {
+ 	return func(yield func(Obj, Revision) bool) {
++		defer body.Close()
+ 		for {
+ 			var resp responseObject[Obj]
+ 			err := dec.Decode(&resp)
+@@ -143,11 +144,12 @@ func (t *RemoteTable[Obj]) Changes(ctx context.Context) (seq iter.Seq2[Change[Ob
+ 		close(errChanSend)
+ 		return
+ 	}
+-	return remoteChangeSeq[Obj](json.NewDecoder(resp.Body), errChanSend), errChan
++	return remoteChangeSeq[Obj](resp.Body, json.NewDecoder(resp.Body), errChanSend), errChan
+ }
+ 
+-func remoteChangeSeq[Obj any](dec *json.Decoder, errChan chan error) iter.Seq2[Change[Obj], Revision] {
++func remoteChangeSeq[Obj any](body io.ReadCloser, dec *json.Decoder, errChan chan error) iter.Seq2[Change[Obj], Revision] {
+ 	return func(yield func(Change[Obj], Revision) bool) {
++		defer body.Close()
+ 		defer close(errChan)
+ 		for {
+ 			var change Change[Obj]

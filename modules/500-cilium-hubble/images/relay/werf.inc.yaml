@@ -9,6 +9,10 @@ import:
   add: /src/cilium
   to: /src/cilium
   before: install
+- from: cni-cilium/bin-cilium-src-artifact
+  add: /src/vendor-patches
+  to: /src/vendor-patches
+  before: install
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
@@ -16,13 +20,14 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  - pm install make bash binutils
+  - pm install make bash binutils git
   setup:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   #
   - cd /src/cilium
   - go mod vendor && go mod download -x
+  - ls /src/vendor-patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /src/vendor-patches/*.patch
   - make DESTDIR=/out/linux/amd64 build-container-hubble-relay install-container-binary-hubble-relay
   - chown 64535:64535 /out/linux/amd64/usr/bin/hubble-relay
   - chmod 0700 /out/linux/amd64/usr/bin/hubble-relay
