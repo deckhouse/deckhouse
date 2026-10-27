@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/types"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
@@ -161,6 +162,18 @@ func fencingControllerHandler(_ context.Context, input *go_hook.HookInput, dc de
 		gracePeriodSeconds := int64(0)
 		for _, pod := range podsToDelete.Items {
 			input.Logger.Warn("Delete pod in namespace on node", slog.String("name", pod.Name), slog.String("namespace", pod.Namespace), slog.String("node", pod.Spec.NodeName))
+
+			// Remove finalizers first.
+			if len(pod.Finalizers) > 0 {
+				input.Logger.Warn("Delete pod's finalizers", slog.String("name", pod.Name), slog.String("namespace", pod.Namespace), slog.String("node", pod.Spec.NodeName))
+				patch := []byte(`{"metadata":{"finalizers":[]}}`)
+				_, err = kubeClient.CoreV1().Pods(pod.Namespace).Patch(context.TODO(), pod.Name, types.MergePatchType, patch, metav1.PatchOptions{})
+				if err != nil {
+					input.Logger.Error("Can't remove pod finalizers", slog.String("name", pod.Name), slog.String("namespace", pod.Namespace), slog.String("node", pod.Spec.NodeName), log.Err(err))
+					continue
+				}
+			}
+
 			err = kubeClient.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{
 				GracePeriodSeconds: &gracePeriodSeconds,
 			})
