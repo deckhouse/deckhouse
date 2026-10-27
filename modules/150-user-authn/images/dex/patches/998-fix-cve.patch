@@ -1,7 +1,16 @@
 diff --git a/go.mod b/go.mod
-index 6a8a2b75..55de1c48 100644
+index 6a8a2b7..e7c3e93 100644
 --- a/go.mod
 +++ b/go.mod
+@@ -14,7 +14,7 @@ require (
+ 	github.com/fsnotify/fsnotify v1.10.1
+ 	github.com/ghodss/yaml v1.0.0
+ 	github.com/go-jose/go-jose/v4 v4.1.5
+-	github.com/go-ldap/ldap/v3 v3.4.14
++	github.com/go-ldap/ldap/v3 v3.4.15
+ 	github.com/go-sql-driver/mysql v1.10.1
+ 	github.com/go-webauthn/webauthn v0.18.2
+ 	github.com/google/cel-go v0.30.0
 @@ -40,7 +40,7 @@ require (
  	go.etcd.io/etcd/client/v3 v3.7.2
  	golang.org/x/crypto v0.57.0
@@ -12,9 +21,20 @@ index 6a8a2b75..55de1c48 100644
  	google.golang.org/api v0.300.0
  	google.golang.org/grpc v1.84.0
 diff --git a/go.sum b/go.sum
-index b02875b5..4e1e9d1d 100644
+index b02875b..3cef9fd 100644
 --- a/go.sum
 +++ b/go.sum
+@@ -83,8 +83,8 @@ github.com/go-asn1-ber/asn1-ber v1.5.8 h1:H9AZkK22UOmfX8J84ubyaZxKJZ3FMHVwn8swoM
+ github.com/go-asn1-ber/asn1-ber v1.5.8/go.mod h1:hEBeB/ic+5LoWskz+yKT7vGhhPYkProFKoKdwZRWMe0=
+ github.com/go-jose/go-jose/v4 v4.1.5 h1:RjgjO2LOtWOJKUC5wpwY9LR3B3vwVAz6JS2YHfYU6eA=
+ github.com/go-jose/go-jose/v4 v4.1.5/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
+-github.com/go-ldap/ldap/v3 v3.4.14 h1:D6PYdEgsaVzsXyr6w/yDC06Ria4uUhWm+Rb+er8lfAs=
+-github.com/go-ldap/ldap/v3 v3.4.14/go.mod h1:S4eJUMUNjDkE0ZJtIZdybwyb03sGGLW6gxXT1Hs8VKA=
++github.com/go-ldap/ldap/v3 v3.4.15 h1:eRB4f4Ecn1POL1mO86+uUDlecmyWsdiJwh60bAUS4UY=
++github.com/go-ldap/ldap/v3 v3.4.15/go.mod h1:jeD0c98EdZQCKKKKe4kTWs5aCf6y+j8KuYsYLznZSQk=
+ github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
+ github.com/go-logr/logr v1.4.4 h1:tG4xh9yMsRCAiodLVTxyrkzSZ9+o0L1Kg/+cPVcbP/8=
+ github.com/go-logr/logr v1.4.4/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 @@ -328,8 +328,8 @@ golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v
  golang.org/x/net v0.0.0-20220722155237-a158d28d115b/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=
  golang.org/x/net v0.6.0/go.mod h1:2Tu9+aMcznHK/AK1HMvgo6xiTLG5rD5rZLDS+rp2Bjs=

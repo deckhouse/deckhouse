@@ -1062,18 +1062,33 @@ before.
 
 ### 998-fix-cve.patch
 
-**Zone:** CVE. Dependency bumps only: the patch changes only `go.mod` and
-`go.sum`. Do not edit it by hand, rebuild it.
+**Zone:** dependency bumps only: the modules that the Dex tag pins at a version
+with a known vulnerability or a known defect. The patch changes only `go.mod`
+and `go.sum`. Do not edit it by hand, rebuild it.
 
 - `golang.org/x/net` v0.59.0 → v0.60.0: GO-2026-6603 (CVE-2026-78659),
   GO-2026-6610 (CVE-2026-78660), GO-2026-6611 (CVE-2026-78669), GO-2026-6612
   (CVE-2026-78663), GO-2026-6617 (CVE-2026-97032).
+- `github.com/go-ldap/ldap/v3` v3.4.14 → v3.4.15: nil dereference in
+  `DecodeControl`. In v3.4.14 the `ControlTypeSyncState`, `ControlTypeSyncDone`
+  and `ControlTypeSyncInfo` branches write to `value.Description` without the
+  `value == nil` check that the `ControlTypePaging` branch above them has.
+  A control that arrives with a single child carries no value, so a response
+  that contains one crashes the client. `DecodeControl` runs on server
+  responses, including those of `Bind` and `Search`, which the LDAP connector
+  uses. Fixed upstream in v3.4.15, which adds the check to all three branches.
 
-Source of the list: `govulncheck ./...` on v2.46.0 (v1.8.0, vulnerability
-database of 2026-10-08). The standard library findings are fixed by the Go
-version of the builder image, not here. GO-2026-5932
-(`golang.org/x/crypto/openpgp`) has no fix and is not imported; it is
-covered by `../known_vulnerabilities.vex` for `golang.org/x/crypto@v0.57.0`.
+Source of each bump:
+
+- `golang.org/x/net`: `govulncheck ./...` on v2.46.0 (v1.8.0, vulnerability
+  database of 2026-10-08);
+- `github.com/go-ldap/ldap/v3`: a Svacer static analysis finding. The defect
+  has no CVE, so `govulncheck` does not report it; keep the bump until Dex
+  requires v3.4.15 or newer.
+
+The standard library findings are fixed by the Go version of the builder
+image, not here. GO-2026-5932 (`golang.org/x/crypto/openpgp`) has no fix and
+is not imported; it is covered by `../known_vulnerabilities.vex` for `golang.org/x/crypto@v0.57.0`.
 
 How to rebuild it (for example, to add or drop a bump), with the Dex tag from
 `oss.yaml`:
@@ -1085,8 +1100,10 @@ for p in $(ls /path/to/patches/*.patch | grep -v -e '/998-' -e '/999-'); do git 
 git add -A && git commit -q -m "patches below 998"
 # Find the vulnerable modules that a newer version fixes.
 govulncheck ./...
-# Bump each of them (the current list is above), then tidy and build.
+# Bump each of them and every module of the current list above, including
+# those that govulncheck does not report, then tidy and build.
 go get golang.org/x/net@v0.60.0
+go get github.com/go-ldap/ldap/v3@v3.4.15
 go mod tidy && go build ./...
 git diff -- go.mod go.sum > /path/to/patches/998-fix-cve.patch
 ```

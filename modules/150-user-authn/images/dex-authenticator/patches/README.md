@@ -211,8 +211,8 @@ The security events of `templates/security-events.yaml` are built from these lin
 
 - **Zone:** `go.mod` and `go.sum`.
 - **Consumer in Deckhouse:** the image scanners.
-- **What it does:** bumps the modules with known vulnerabilities that the tag does not fix yet. The patch changes only
-  `go.mod` and `go.sum`; do not edit it by hand, rebuild it.
+- **What it does:** bumps the modules that the tag pins at a version with a known vulnerability or a known defect.
+  The patch changes only `go.mod` and `go.sum`; do not edit it by hand, rebuild it.
 - **How to rebuild it** (for example, to add or drop a bump), with the tag from `oss.yaml`:
 
   ```shell
@@ -224,13 +224,22 @@ The security events of `templates/security-events.yaml` are built from these lin
   govulncheck ./...
   # Bump each of them (the current list is below), then tidy and build.
   go get golang.org/x/net@v0.60.0
+  go get github.com/redis/go-redis/v9@v9.23.0
   go mod tidy && go build ./...
   git diff -- go.mod go.sum > /path/to/patches/998-fix-cve.patch
   ```
 
-  Drop a bump once the tag requires that version or newer. List the vulnerabilities of every bump below.
-- **Current bumps:** `golang.org/x/net` v0.60.0 (GO-2026-6603, GO-2026-6610, GO-2026-6611, GO-2026-6612,
-  GO-2026-6617).
+  Drop a bump once the tag requires that version or newer. State the reason for every bump below.
+- **Current bumps:**
+
+  - `golang.org/x/net` v0.60.0 — GO-2026-6603, GO-2026-6610, GO-2026-6611, GO-2026-6612, GO-2026-6617.
+  - `github.com/redis/go-redis/v9` v9.23.0 — panic in the `AggMin` and `AggMax` aggregators. In v9.22.0 the branch
+    that handles a failed `toFloat64` conversion calls `a.err.CompareAndSwap(nil, err)`, where `err` is nil, because
+    the method returns earlier when it is not. `atomic.Value.CompareAndSwap` panics on a nil value, so a shard reply
+    that is not numeric, for a command with the `agg_min` or `agg_max` response policy, panics instead of returning
+    an error from `Result()`. Fixed upstream in redis/go-redis#4056 and released in v9.23.0.
+
+  Minimal version selection also moves `go.uber.org/atomic` to v1.12.0 and `github.com/klauspost/cpuid/v2` to v2.4.0.
 - **Not covered by the patch:** the advisories of the Go standard library are fixed by the Go version of the builder
   image; GO-2026-5932 (`golang.org/x/crypto/openpgp`, no fix) is not reachable and is described in
   `known_vulnerabilities.vex`.
