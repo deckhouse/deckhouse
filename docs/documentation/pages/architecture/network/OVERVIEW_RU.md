@@ -22,7 +22,8 @@ extractedLinksMax: 0
 * [`istio`](/modules/istio/) — реализует Service Mesh на основе Istio для централизованного управления сетевым трафиком в кластере;
 * [`alb`](/modules/alb/) — реализует прикладной балансировщик нагрузки (ALB) на основе [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/);
 * [`sdn`](/modules/sdn/) — предоставляет функции программно-определяемых сетей (SDN) в кластере: настройку сетевых интерфейсов на узлах, дополнительные сети для подов и ВМ, underlay-сети и системные сети;
-* [`service-with-healthchecks`](/modules/service-with-healthchecks/) — предоставляет внутренний балансировщик нагрузки с независимыми проверками работоспособности для каждого порта, в отличие от стандартного балансировщика Service Kubernetes.
+* [`service-with-healthchecks`](/modules/service-with-healthchecks/) — предоставляет внутренний балансировщик нагрузки с независимыми проверками работоспособности для каждого порта, в отличие от стандартного балансировщика Service Kubernetes;
+* [`static-routing-manager`](/modules/static-routing-manager/) — управляет статическими маршрутами и правилами `ip rule` на узлах кластера.
 
 Также в подразделе описаны:
 

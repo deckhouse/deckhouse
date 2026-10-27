@@ -22,6 +22,7 @@ The Network subsystem includes the following modules:
 * [`alb`](/modules/alb/): Implements an Application Load Balancer (ALB) based on the [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/).
 * [`sdn`](/modules/sdn/): Provides software-defined networking (SDN) functions in the cluster — node network interface configuration, additional networks for pods and VMs, underlay networks, and system networks.
 * [`service-with-healthchecks`](/modules/service-with-healthchecks/): Provides an internal load balancer with independent health checks for each port, unlike the standard Kubernetes Service load balancer.
+* [`static-routing-manager`](/modules/static-routing-manager/): Manages static routes and `ip rule` entries on cluster nodes.
 
 The subsection also describes:
 
