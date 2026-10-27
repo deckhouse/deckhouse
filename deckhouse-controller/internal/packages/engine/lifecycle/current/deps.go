@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/retry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcesize"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -112,5 +112,5 @@ type digested interface {
 
 // resourceSizer is implemented by objects with per-workload resource overrides (applications).
 type resourceSizer interface {
-	SetResourceRequests(requests []resourcerequests.Request)
+	SetResourceRequests(requests []resourcesize.Request)
 }

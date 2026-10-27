@@ -12,22 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package resourcerequests translates the per-workload resource footprint
+// Package resourcesize translates the per-workload resource footprint
 // declared in a package CR (spec.resourceRequests) into nelm render patches,
 // which nelm applies to the rendered manifests both when it renders the chart
 // and when it installs the release.
 //
 // It knows nothing of the CR types: callers hand it plain requests.
-package resourcerequests
+package resourcesize
 
 import (
 	"encoding/json"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/werf/nelm/v2/pkg/resource/spec"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // Request pins the resource footprint of one workload a package deploys. Kind
@@ -110,27 +108,6 @@ func Patches(requests []Request) ([]spec.Patch, error) {
 	}
 
 	return patches, nil
-}
-
-// Unmatched returns the requests that address none of the rendered resources.
-//
-// That is not an error — a chart may render a workload conditionally, so a
-// request can be legitimately dormant — but it is worth surfacing, since a typo
-// in kind or name looks exactly the same from here.
-func Unmatched(resources []*unstructured.Unstructured, requests []Request) []Request {
-	var unmatched []Request
-
-	for _, request := range requests {
-		matched := slices.ContainsFunc(resources, func(resource *unstructured.Unstructured) bool {
-			return resource != nil && resource.GetKind() == request.Kind && resource.GetName() == request.Name
-		})
-
-		if !matched {
-			unmatched = append(unmatched, request)
-		}
-	}
-
-	return unmatched
 }
 
 // jqProgram builds the jq program that overlays one request onto the workload it

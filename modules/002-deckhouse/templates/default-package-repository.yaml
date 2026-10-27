@@ -13,5 +13,5 @@ spec:
     dockerCfg: {{ $.Values.global.modulesImages.registry.dockercfg }}
     repo: {{ printf "%s/modules" $.Values.global.modulesImages.registry.base }}
     scheme: {{ $.Values.global.modulesImages.registry.scheme | upper }}
-  scanInterval: 3m
+  scanInterval: 6h
 {{- end }}

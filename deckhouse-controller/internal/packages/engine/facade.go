@@ -33,7 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcesize"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
@@ -68,7 +68,7 @@ type Application struct {
 	SettingsVersion int
 	Maintenance     string
 	// ResourceRequests are spec.resourceRequests.
-	ResourceRequests []resourcerequests.Request
+	ResourceRequests []resourcesize.Request
 	// UpdateSettings are the update settings the application follows, already merged by the
 	// controller (spec.update, global.applications.update, the deckhouse ModuleConfig).
 	UpdateSettings releaseupdater.Settings
@@ -112,7 +112,7 @@ type BootApplication struct {
 	// LastApplied is the raw status.lastAppliedConfiguration (checkpointSettings).
 	LastApplied      []byte
 	Maintenance      string
-	ResourceRequests []resourcerequests.Request
+	ResourceRequests []resourcesize.Request
 	// Removing: the Application is being deleted and has a CurrentVersion; Boot restores it to
 	// uninstall it (model.BootPackage.Removing).
 	Removing bool

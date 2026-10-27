@@ -22,7 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/configstate"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcesize"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -112,10 +112,10 @@ func (r *Reconciler) configure(ctx context.Context, config *model.Configuration)
 // mode and the resource requests (SHA-256 of their JSON, sorted keys); it reaches the Report as
 // AcceptedChecksum and AppliedChecksum. The effective values are already in the revision's schema,
 // so the schema version is not part of it.
-func valuesChecksum(values addonutils.Values, maintenance nelm.MaintenanceState, requests []resourcerequests.Request) (string, error) {
+func valuesChecksum(values addonutils.Values, maintenance nelm.MaintenanceState, requests []resourcesize.Request) (string, error) {
 	return configstate.Checksum(struct {
-		Settings         addonutils.Values          `json:"settings"`
-		Maintenance      nelm.MaintenanceState      `json:"maintenance"`
-		ResourceRequests []resourcerequests.Request `json:"resourceRequests"`
+		Settings         addonutils.Values      `json:"settings"`
+		Maintenance      nelm.MaintenanceState  `json:"maintenance"`
+		ResourceRequests []resourcesize.Request `json:"resourceRequests"`
 	}{values, maintenance, requests})
 }

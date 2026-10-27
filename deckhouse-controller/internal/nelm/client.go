@@ -351,42 +351,11 @@ type RenderedResource struct {
 	Regular bool
 }
 
-// JoinManifests renders the regular release resources as a single multi-document
-// YAML string.
-//
-// Helm hooks live in the cluster just for the duration of a hook, and standalone
-// crds/ CRDs are never applied at all because Install passes
-// NoInstallStandaloneCRDs. Both are legitimately absent from the cluster, so they
-// must not reach the release checksum and the absent-resources monitor.
-func JoinManifests(resources []RenderedResource) (string, error) {
-	var result strings.Builder
-
-	for _, resource := range resources {
-		if !resource.Regular {
-			continue
-		}
-
-		marshalled, err := yaml.Marshal(resource.Unstruct)
-		if err != nil {
-			return "", fmt.Errorf("marshal resource: %w", err)
-		}
-
-		if result.Len() > 0 {
-			result.WriteString("---\n")
-		}
-
-		result.Write(marshalled)
-	}
-
-	return result.String(), nil
-}
-
-// RenderResources renders a nelm chart without installing it and returns its
-// resources one by one, classified, with opts.RenderPatches already applied.
-// JoinManifests flattens the result.
+// Render renders a nelm chart without installing it and returns its
+// manifest, classified, with opts.RenderPatches already applied.
 //
 //nolint:nonamedreturns // named returns required for defer/recover to modify return values
-func (c *Client) RenderResources(ctx context.Context, namespace, releaseName string, opts InstallOptions) (out []RenderedResource, err error) {
+func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts InstallOptions) (out string, err error) {
 	ctx, span := otel.Tracer(nelmTracer).Start(ctx, "Render")
 	defer span.End()
 	defer c.recoverPanic("Render", span, &err,
@@ -404,7 +373,7 @@ func (c *Client) RenderResources(ctx context.Context, namespace, releaseName str
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 
-		return nil, err
+		return "", err
 	}
 
 	var valuesSet []string
@@ -443,18 +412,28 @@ func (c *Client) RenderResources(ctx context.Context, namespace, releaseName str
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return nil, fmt.Errorf("render nelm chart '%s': %w", opts.Path, err)
+		return "", fmt.Errorf("render nelm chart '%s': %w", opts.Path, err)
 	}
 
-	rendered := make([]RenderedResource, 0, len(res.Resources))
+	var result strings.Builder
 	for _, resource := range res.Resources {
-		rendered = append(rendered, RenderedResource{
-			Unstruct: resource.Unstruct,
-			Regular:  resource.StoreAs == common.StoreAsRegular,
-		})
+		if resource.StoreAs != common.StoreAsRegular {
+			continue
+		}
+
+		marshalled, err := yaml.Marshal(resource.Unstruct)
+		if err != nil {
+			return "", fmt.Errorf("marshal resource: %w", err)
+		}
+
+		if result.Len() > 0 {
+			result.WriteString("---\n")
+		}
+
+		result.Write(marshalled)
 	}
 
-	return rendered, nil
+	return result.String(), nil
 }
 
 // Delete uninstalls a nelm release

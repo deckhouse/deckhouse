@@ -63,7 +63,7 @@ The `d8 package verify` command reports an error (the `instance-prefix` rule) fo
 The prefix serves the following purposes:
 
 - Several instances of the package can be installed into the same namespace without name conflicts.
-- The `d8a-` prefix is reserved for applications: the `d8a-prefix.deckhouse.io` admission policy forbids users to create, change, and delete objects whose names start with `d8a-`. Deleting Pods is allowed.
+- The `d8a-` prefix is reserved for applications: the `d8a-prefix.deckhouse.io` admission policy forbids users to create, change, and delete objects whose names start with `d8a-`. Deleting Pods and changing Secrets with the `packages.deckhouse.io/initial-secret` label are allowed (for details, refer to ["Credentials in the web interface"](#credentials-in-the-web-interface)).
 - DP adds the same prefix to the names of objects that hooks create, patch, or delete. Therefore, a hook can address an object rendered by the templates by its suffix only (for details, refer to ["Hooks"](hooks.html#object-names)).
 
 Don't use `.Release.Name` in object names: the Helm release of an application is named `<NAMESPACE>.<INSTANCE_NAME>`, and the dot is not allowed in the names of many resource kinds.
@@ -87,7 +87,7 @@ When the Application is deleted, DP finds the objects that the instance has left
 
 Objects with the `heritage: deckhouse` label are protected by the `label-objects.deckhouse.io` admission policy, and objects with the `d8a-` name prefix are protected by the `d8a-prefix.deckhouse.io` policy. As a result:
 
-- Users can't change or delete objects rendered by the templates. To change them manually, for example, when debugging, switch the application to [maintenance mode](lifecycle.html#maintenance-mode).
+- Users can't change or delete objects rendered by the templates. The exception is Secrets with the `packages.deckhouse.io/initial-secret` label: users can change them, but not create or delete them (for details, refer to ["Credentials in the web interface"](#credentials-in-the-web-interface)). To change them manually, for example, when debugging, switch the application to [maintenance mode](lifecycle.html#maintenance-mode).
 - Workloads of the application can't change objects rendered by the templates either.
 - The `d8a-prefix.deckhouse.io` policy doesn't apply to service accounts whose names start with `d8a-`. Workloads that run under such service accounts can manage objects with the `d8a-` prefix they create themselves, while these objects stay protected from users.
 
@@ -208,6 +208,7 @@ metadata:
   labels:
     packages.deckhouse.io/application-instance: {{ .Application.Instance.Name }}
     packages.deckhouse.io/application-ingress: d8a-{{ .Application.Instance.Name }}-web
+    packages.deckhouse.io/initial-secret: "true"
 type: Opaque
 data:
   login: {{ "admin" | b64enc }}
@@ -220,10 +221,13 @@ The web interface finds the credentials as follows:
 - The `packages.deckhouse.io/application-ingress` label binds the Secret to an Ingress from the templates by its name. The web interface shows the credentials next to the endpoints with the description of this Ingress. A label value can't be longer than 63 characters, so the name of the Ingress must fit this limit.
 - Instead of the label, you can set the endpoint description in the `packages.deckhouse.io/application-endpoint-description` annotation of the Secret. If both are set, the description of the Ingress is used.
 - The web interface shows the credentials only if the application has endpoints with a matching description. Endpoints without a description don't get credentials, so set a description in the annotation of the Ingress instead of `"true"`.
+- The `packages.deckhouse.io/initial-secret` label marks the Secret as one-time credentials. DP creates such a Secret once and doesn't update it afterwards: it adds the `werf.io/resource-policy: skip-update` annotation to the Secret (an existing policy is kept, for example, `skip-delete` becomes `skip-delete,skip-update`). The admission policies let users change such a Secret, so the web interface can mark it as shown, and users can change the credentials. Without this label, the policies deny the change, and the credentials can be requested again. DP checks only that the label is present, its value doesn't matter.
 
 Put the login into the `login` key and the password into the `password` key. The web interface shows every key of `data` as a separate field named after the key, so don't store other data in this Secret.
 
 In the web interface, endpoints with credentials get a button for getting the login and password. The credentials can be obtained only once: after showing them, the web interface adds the `packages.deckhouse.io/showed-credentials: "true"` annotation to the Secret and doesn't offer this Secret again. This restriction applies only to the web interface: users with permission to read Secrets in the namespace can still read the Secret.
+
+Since Deckhouse Platform doesn't update a Secret with the `packages.deckhouse.io/initial-secret` label, changes to its template, including `data`, apply only when the Secret is created, for example, in a new instance.
 
 Generate the credentials once and keep them unchanged: the web interface doesn't offer a Secret again even if its data changes. Don't generate the password in the template: functions such as `randAlphaNum` give a new value on every render (for details, refer to ["Known issues and troubleshooting"](nelm-annotations.html#known-issues-and-troubleshooting)). Instead, for example, generate it in a hook if the Secret doesn't exist yet, and otherwise take it from the snapshot of the existing Secret. Values set by hooks are kept only in memory, so the hook must restore the password after Deckhouse Platform restarts (for details, refer to ["Hooks"](hooks.html#values)).
 

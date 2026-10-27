@@ -36,14 +36,12 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm/drift"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcesize"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/envconfig"
@@ -122,7 +120,7 @@ type application interface {
 // overrides from their CR. Optional, like application above: modules do not
 // implement it.
 type resourceSizer interface {
-	GetResourceRequests() []resourcerequests.Request
+	GetResourceRequests() []resourcesize.Request
 }
 
 // Service manages Helm release lifecycle via nelm client.
@@ -240,18 +238,16 @@ func (s *Service) Render(ctx context.Context, namespace string, pkg Package) (st
 	}
 	defer os.Remove(valuesPath)
 
-	requests := resourceRequests(pkg)
-
-	patches, err := resourcerequests.Patches(requests)
+	patches, err := renderPatches(pkg)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return "", fmt.Errorf("build resource request patches: %w", err)
+		return "", err
 	}
 
 	// Render what the package actually gets: the runtime dump reads this, and it
 	// would be misleading if it showed the chart's own sizing rather than the
 	// patched one the install applies.
-	rendered, err := s.render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
+	rendered, err := s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
 		RootValues:  pkg.GetRuntimeValues(),
@@ -259,61 +255,13 @@ func (s *Service) Render(ctx context.Context, namespace string, pkg Package) (st
 			health.LabelKey: pkg.GetName(),
 		},
 		RenderPatches: patches,
-	}, requests)
+	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", err
 	}
 
 	return rendered, nil
-}
-
-// resourceRequests returns the package's per-workload resource overrides, or nil
-// when the feature gate is off or the package carries none.
-//
-// The gate is read here, at the single point the overrides enter the release
-// path, so turning it off leaves the rendered and the installed manifests exactly
-// as the chart renders them.
-func resourceRequests(pkg Package) []resourcerequests.Request {
-	if !app.ResourceRequestsEnabled() {
-		return nil
-	}
-
-	sizer, ok := pkg.(resourceSizer)
-	if !ok {
-		return nil
-	}
-
-	return sizer.GetResourceRequests()
-}
-
-// render renders the chart and returns its regular release manifests, warning
-// about the resource requests that address no rendered workload. opts must carry
-// the requests' patches, so the manifests are the ones the install applies.
-func (s *Service) render(ctx context.Context, namespace, name string, opts nelm.InstallOptions, requests []resourcerequests.Request) (string, error) {
-	rendered, err := s.client.RenderResources(ctx, namespace, name, opts)
-	if err != nil {
-		return "", err
-	}
-
-	if len(requests) > 0 {
-		resources := make([]*unstructured.Unstructured, 0, len(rendered))
-		for _, resource := range rendered {
-			resources = append(resources, resource.Unstruct)
-		}
-
-		// A chart may render a workload conditionally, so a dormant request is not an
-		// error — but a typo in kind or name looks exactly the same from here, and
-		// silently sizing nothing is the worse failure of the two.
-		for _, request := range resourcerequests.Unmatched(resources, requests) {
-			s.logger.Warn("resource request matches no rendered workload",
-				slog.String("name", name),
-				slog.String("kind", request.Kind),
-				slog.String("workload", request.Name))
-		}
-	}
-
-	return nelm.JoinManifests(rendered)
 }
 
 // Delete uninstalls a Helm release by name.
@@ -450,11 +398,9 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, ap
 		slog.String("name", pkg.GetName()),
 		slog.String("namespace", namespace))
 
-	requests := resourceRequests(pkg)
-
 	// The checksum, the absent-resources monitor and the install all have to see
 	// the same manifests, so the same patches go to the render and the install.
-	patches, err := resourcerequests.Patches(requests)
+	patches, err := renderPatches(pkg)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newReasonError(reasonRenderFailed, err)
@@ -462,13 +408,13 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, ap
 
 	// Render chart to get manifests for checksum calculation
 	renderStarted := time.Now()
-	renderedManifests, err := s.render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
+	renderedManifests, err := s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		Path:            pkg.GetPath(),
 		ValuesPaths:     []string{valuesPath},
 		RootValues:      pkg.GetRuntimeValues(),
 		ResourcesLabels: resourcesLabels,
 		RenderPatches:   patches,
-	}, requests)
+	})
 	s.observeOperation(operationTemplate, namespace, pkg.GetName(), renderStarted)
 
 	if err != nil {
@@ -703,14 +649,14 @@ func (s *Service) renderConversionWebhookChart(ctx context.Context, namespace st
 	}
 	defer os.Remove(valuesPath)
 
-	return s.render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
+	return s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		Path:        chartDir,
 		ValuesPaths: []string{valuesPath},
 		RootValues:  pkg.GetRuntimeValues(),
 		ResourcesLabels: map[string]string{
 			health.LabelKey: pkg.GetName(),
 		},
-	}, nil)
+	})
 }
 
 // conversionWebhookTemplates returns paths, relative to path/templates, of the

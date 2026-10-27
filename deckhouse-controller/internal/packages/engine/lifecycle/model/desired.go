@@ -19,7 +19,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcesize"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
@@ -41,7 +41,7 @@ type Configuration struct {
 	Settings    Settings              `json:"settings"`
 	Maintenance nelm.MaintenanceState `json:"maintenance"` // Maintenance is spec.maintenance.
 	// ResourceRequests are Application spec.resourceRequests; nil for modules.
-	ResourceRequests []resourcerequests.Request `json:"resourceRequests"`
+	ResourceRequests []resourcesize.Request `json:"resourceRequests"`
 }
 
 // UpdateMode selects whether an update waits for an update window.
@@ -111,7 +111,7 @@ type BootPackage struct {
 	// they cannot prevent a start, and the restored Current runs before the first Apply; without
 	// them it would reconcile a release the user put into maintenance.
 	Maintenance      nelm.MaintenanceState
-	ResourceRequests []resourcerequests.Request
+	ResourceRequests []resourcesize.Request
 	// Intent is the module's enable intent from Module.spec.enabled; nil means none. It must reach
 	// the scheduler before Resume: an unknown intent falls to the module floor (Disable).
 	Intent *bool

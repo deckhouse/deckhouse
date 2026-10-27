@@ -50,7 +50,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/orphans"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcesize"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -116,7 +116,7 @@ type Application struct {
 	// resourceRequests are the per-workload replicas and container resources from
 	// Application.spec.resourceRequests, set by Current on accept (SetResourceRequests) and read
 	// by the nelm layer under mu.
-	resourceRequests []resourcerequests.Request
+	resourceRequests []resourcesize.Request
 
 	// grantResolver resolves per-project cluster resource grants for settings
 	// fields tagged with x-deckhouse-grantable-resource. Never nil (defaults to NoopResolver).
@@ -620,13 +620,13 @@ func (a *Application) SetMaintenance(state nelm.MaintenanceState) {
 
 // SetResourceRequests records the per-workload resource overrides so the nelm
 // layer can overlay them on the rendered manifests.
-func (a *Application) SetResourceRequests(requests []resourcerequests.Request) {
+func (a *Application) SetResourceRequests(requests []resourcesize.Request) {
 	a.resourceRequests = requests
 }
 
 // GetResourceRequests returns the per-workload resource overrides. Nil means the
 // chart's own sizing stands.
-func (a *Application) GetResourceRequests() []resourcerequests.Request {
+func (a *Application) GetResourceRequests() []resourcesize.Request {
 	return a.resourceRequests
 }
 

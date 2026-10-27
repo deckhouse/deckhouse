@@ -40,7 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/observed"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcerequests"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/resourcesize"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
@@ -600,20 +600,20 @@ func BootOf(ctx context.Context, cli client.Reader, app *v1alpha1.Application) (
 //
 // Everything is copied rather than aliased, because the result outlives this
 // reconcile in the runtime store, where it is compared against the next one.
-func toResourceRequests(requests []v1alpha1.ApplicationResourceRequest) []resourcerequests.Request {
+func toResourceRequests(requests []v1alpha1.ApplicationResourceRequest) []resourcesize.Request {
 	if len(requests) == 0 {
 		return nil
 	}
 
-	out := make([]resourcerequests.Request, 0, len(requests))
+	out := make([]resourcesize.Request, 0, len(requests))
 
 	for _, request := range requests {
-		var containers []resourcerequests.Container
+		var containers []resourcesize.Container
 
 		if len(request.Containers) > 0 {
-			containers = make([]resourcerequests.Container, 0, len(request.Containers))
+			containers = make([]resourcesize.Container, 0, len(request.Containers))
 			for _, container := range request.Containers {
-				containers = append(containers, resourcerequests.Container{
+				containers = append(containers, resourcesize.Container{
 					Name:     container.Name,
 					Requests: toQuantities(container.Resources.Requests),
 					Limits:   toQuantities(container.Resources.Limits),
@@ -627,7 +627,7 @@ func toResourceRequests(requests []v1alpha1.ApplicationResourceRequest) []resour
 			replicas = &value
 		}
 
-		out = append(out, resourcerequests.Request{
+		out = append(out, resourcesize.Request{
 			Kind:       request.Kind,
 			Name:       request.Name,
 			Replicas:   replicas,

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resourcerequests
+package resourcesize
 
 import (
 	"testing"
@@ -28,12 +28,12 @@ const releaseNamespace = "d8-test"
 // apply runs the requests' patches over resources the way nelm does on render,
 // replacing each resource's content with the patched one, and returns the
 // requests that matched none of them.
-func apply(t *testing.T, resources []*unstructured.Unstructured, requests []Request) ([]Request, error) {
+func apply(t *testing.T, resources []*unstructured.Unstructured, requests []Request) error {
 	t.Helper()
 
 	patches, err := Patches(requests)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	compiled, err := spec.CompilePatches(patches)
@@ -48,7 +48,7 @@ func apply(t *testing.T, resources []*unstructured.Unstructured, requests []Requ
 		resource.Object = patched.Object
 	}
 
-	return Unmatched(resources, requests), nil
+	return nil
 }
 
 // parse turns a manifest into the unstructured shape nelm patches.
@@ -113,7 +113,7 @@ spec:
 func TestPatchesOverlaysReplicasAndResources(t *testing.T) {
 	deployment := parse(t, deploymentManifest)
 
-	unmatched, err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
+	err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
 		Kind:     "Deployment",
 		Name:     "controller",
 		Replicas: int32Ptr(3),
@@ -124,7 +124,6 @@ func TestPatchesOverlaysReplicasAndResources(t *testing.T) {
 		}},
 	}})
 	require.NoError(t, err)
-	require.Empty(t, unmatched)
 
 	replicas, found, err := unstructured.NestedInt64(deployment.Object, "spec", "replicas")
 	require.NoError(t, err)
@@ -142,7 +141,7 @@ func TestPatchesOverlaysReplicasAndResources(t *testing.T) {
 func TestPatchesLeavesUnnamedContainersAlone(t *testing.T) {
 	deployment := parse(t, deploymentManifest)
 
-	_, err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
+	err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
 		Kind: "Deployment",
 		Name: "controller",
 		Containers: []Container{
@@ -159,7 +158,7 @@ func TestPatchesLeavesUnnamedContainersAlone(t *testing.T) {
 func TestPatchesResizesInitContainers(t *testing.T) {
 	deployment := parse(t, deploymentManifest)
 
-	_, err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
+	err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
 		Kind:       "Deployment",
 		Name:       "controller",
 		Containers: []Container{{Name: "migrate", Limits: map[string]string{"memory": "64Mi"}}},
@@ -191,7 +190,7 @@ spec:
               image: backup:v1
 `)
 
-	_, err := apply(t, []*unstructured.Unstructured{cronJob}, []Request{{
+	err := apply(t, []*unstructured.Unstructured{cronJob}, []Request{{
 		Kind:       "CronJob",
 		Name:       "backup",
 		Containers: []Container{{Name: "backup", Limits: map[string]string{"memory": "1Gi"}}},
@@ -214,7 +213,7 @@ spec:
       image: probe:v1
 `)
 
-	_, err := apply(t, []*unstructured.Unstructured{pod}, []Request{{
+	err := apply(t, []*unstructured.Unstructured{pod}, []Request{{
 		Kind:       "Pod",
 		Name:       "probe",
 		Containers: []Container{{Name: "probe", Requests: map[string]string{"cpu": "5m"}}},
@@ -223,18 +222,6 @@ spec:
 
 	resources := containerResources(t, pod, "probe", "spec")
 	require.Equal(t, map[string]any{"cpu": "5m"}, resources["requests"])
-}
-
-func TestPatchesReportsUnmatchedRequests(t *testing.T) {
-	deployment := parse(t, deploymentManifest)
-
-	unmatched, err := apply(t, []*unstructured.Unstructured{deployment}, []Request{
-		{Kind: "Deployment", Name: "controller"},
-		{Kind: "StatefulSet", Name: "database", Replicas: int32Ptr(2)},
-	})
-	require.NoError(t, err)
-	require.Len(t, unmatched, 1)
-	require.Equal(t, "database", unmatched[0].Name)
 }
 
 // The CR schema rejects replicas on a kind that has none; the overlay refuses it
@@ -253,7 +240,7 @@ spec:
         - name: agent
 `)
 
-	_, err := apply(t, []*unstructured.Unstructured{daemonSet}, []Request{{
+	err := apply(t, []*unstructured.Unstructured{daemonSet}, []Request{{
 		Kind:     "DaemonSet",
 		Name:     "agent",
 		Replicas: int32Ptr(2),
@@ -269,7 +256,7 @@ metadata:
   name: controller
 `)
 
-	_, err := apply(t, []*unstructured.Unstructured{service}, []Request{{Kind: "Service", Name: "controller"}})
+	err := apply(t, []*unstructured.Unstructured{service}, []Request{{Kind: "Service", Name: "controller"}})
 	require.ErrorContains(t, err, "unsupported workload kind")
 }
 
@@ -277,9 +264,8 @@ func TestPatchesIsANoOpWithoutRequests(t *testing.T) {
 	deployment := parse(t, deploymentManifest)
 	before := deployment.DeepCopy()
 
-	unmatched, err := apply(t, []*unstructured.Unstructured{deployment}, nil)
+	err := apply(t, []*unstructured.Unstructured{deployment}, nil)
 	require.NoError(t, err)
-	require.Empty(t, unmatched)
 	require.Equal(t, before, deployment)
 }
 
@@ -301,7 +287,7 @@ spec:
 `)
 	before := other.DeepCopy()
 
-	_, err := apply(t, []*unstructured.Unstructured{target, other}, []Request{{
+	err := apply(t, []*unstructured.Unstructured{target, other}, []Request{{
 		Kind: "Deployment",
 		Name: "controller",
 		Containers: []Container{
@@ -321,12 +307,11 @@ func TestPatchesSkipNamesThatReadAsRegexp(t *testing.T) {
 	deployment := parse(t, deploymentManifest)
 	before := deployment.DeepCopy()
 
-	unmatched, err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
+	err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
 		Kind:     "Deployment",
 		Name:     "/.*/",
 		Replicas: int32Ptr(5),
 	}})
 	require.NoError(t, err)
-	require.Len(t, unmatched, 1)
 	require.Equal(t, before, deployment)
 }

@@ -109,6 +109,16 @@ spec:
           && object.all(k, k in ["metadata", "spec"] || (k in oldObject && oldObject[k] == object[k]))
           && oldObject.all(k, k in ["metadata", "spec"] || k in object)
         )
+    # allow users to update one-time application credentials: the console marks
+    # them as shown, and nelm leaves them alone since they are skip-update
+    - name: 'exclude-application-credentials'
+      expression: |
+        !(
+          request.operation == "UPDATE"
+          && has(request.kind) && request.kind.group == "" && request.kind.kind == "Secret"
+          && has(oldObject.metadata.labels)
+          && "packages.deckhouse.io/initial-secret" in oldObject.metadata.labels
+        )
   validations:
     - expression: |
         request.userInfo.username.startsWith("system:serviceaccount:d8-")
@@ -204,6 +214,16 @@ spec:
     # allow users to delete application pods
     - name: 'exclude-delete-pods-operations'
       expression: '!(request.operation == "DELETE" && request.resource.resource == "pods")'
+    # allow users to update one-time application credentials: the console marks
+    # them as shown, and nelm leaves them alone since they are skip-update
+    - name: 'exclude-application-credentials'
+      expression: |
+        !(
+          request.operation == "UPDATE"
+          && has(request.kind) && request.kind.group == "" && request.kind.kind == "Secret"
+          && has(oldObject.metadata.labels)
+          && "packages.deckhouse.io/initial-secret" in oldObject.metadata.labels
+        )
   validations:
     # deny all operations with any objects with `d8a-` prefix, except for Pods deletions
     - expression: |

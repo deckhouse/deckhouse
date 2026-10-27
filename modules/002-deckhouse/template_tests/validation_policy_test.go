@@ -343,6 +343,18 @@ func TestLabelObjectsPolicy(t *testing.T) {
 			want:      denied,
 		},
 
+		// -- exclude-application-credentials --------------------------------
+		{
+			name:      "a regular user may update one-time application credentials",
+			request:   updateRequest("Secret", "victor"),
+			oldObject: credentials(),
+			object: serverSideBump(credentials(), func(o object) {
+				o["metadata"].(object)["annotations"] = object{"packages.deckhouse.io/showed-credentials": "true"}
+			}),
+			want:   skipped,
+			detail: "exclude-application-credentials",
+		},
+
 		// -- validations ------------------------------------------------------
 		{
 			name:      "the deckhouse service account may change protected objects",
@@ -477,6 +489,18 @@ func TestApplicationPrefixPolicy(t *testing.T) {
 			detail:    "exclude-delete-pods-operations",
 		},
 
+		// -- exclude-application-credentials --------------------------------
+		{
+			name:      "a regular user may update one-time application credentials",
+			request:   applicationRequest("UPDATE", "Secret", "secrets", "victor"),
+			oldObject: credentials(),
+			object: serverSideBump(credentials(), func(o object) {
+				o["metadata"].(object)["annotations"] = object{"packages.deckhouse.io/showed-credentials": "true"}
+			}),
+			want:   skipped,
+			detail: "exclude-application-credentials",
+		},
+
 		// -- validations ------------------------------------------------------
 		{
 			name:      "a regular user may not change an application object",
@@ -574,6 +598,23 @@ func application(mutate func(o object)) object {
 	return o
 }
 
+// credentials is a one-time credentials Secret an application renders.
+func credentials() object {
+	return object{
+		"apiVersion": "v1",
+		"kind":       "Secret",
+		"metadata": object{
+			"name":            "d8a-console-credentials",
+			"namespace":       "d8a-console",
+			"generation":      int64(1),
+			"resourceVersion": "3001",
+			"managedFields":   []any{object{"manager": "deckhouse"}},
+			"labels":          object{"heritage": "deckhouse", "packages.deckhouse.io/initial-secret": "true"},
+		},
+		"data": object{"password": "ZGgtdGVzdC1zZWNyZXQtMDEyMzQ1Njc4"},
+	}
+}
+
 func applicationUpdate(mutate func(o object)) object { return serverSideBump(application(nil), mutate) }
 
 // applicationRequest builds a request for the prefix policy, which - unlike the
@@ -652,7 +693,9 @@ func moduleSource(mutate func(o object)) object {
 // the metadata fields it bumps itself differ, everything else is up to the request.
 func updated(mutate func(o object)) object { return serverSideBump(deployment(nil), mutate) }
 
-func moduleSourceUpdate(mutate func(o object)) object { return serverSideBump(moduleSource(nil), mutate) }
+func moduleSourceUpdate(mutate func(o object)) object {
+	return serverSideBump(moduleSource(nil), mutate)
+}
 
 func serverSideBump(o object, mutate func(o object)) object {
 	metadata := o["metadata"].(object)
@@ -665,8 +708,8 @@ func serverSideBump(o object, mutate func(o object)) object {
 	return o
 }
 
-func restartedAt(o object)               { templateAnnotations(o)[restartedAtAnnotation] = "2026-08-17T17:55:00Z" }
-func labels(o object) object             { return o["metadata"].(object)["labels"].(object) }
+func restartedAt(o object)   { templateAnnotations(o)[restartedAtAnnotation] = "2026-08-17T17:55:00Z" }
+func labels(o object) object { return o["metadata"].(object)["labels"].(object) }
 func templateAnnotations(o object) object {
 	return o["spec"].(object)["template"].(object)["metadata"].(object)["annotations"].(object)
 }
