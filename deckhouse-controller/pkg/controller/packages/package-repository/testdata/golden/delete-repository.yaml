@@ -3,14 +3,15 @@ apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
   name: deckhouse
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   registry:
     ca: test-ca
     dockerCfg: test-docker-cfg
     repo: registry.example.com/test
     scheme: https
-status: {}
+status:
+  phase: Terminating
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation

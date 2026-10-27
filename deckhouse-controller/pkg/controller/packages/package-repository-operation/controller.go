@@ -318,6 +318,10 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 		r.logger.Info("all packages processed", slog.Int("total", op.Status.Packages.Total))
 
 		if err := svc.UpdateRepositoryStatus(ctx, op.Status.Packages.Processed); err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
 			logger.Warn("failed to update repository status", log.Err(err))
 			// Continue with operation completion even if repository update fails
 		}
