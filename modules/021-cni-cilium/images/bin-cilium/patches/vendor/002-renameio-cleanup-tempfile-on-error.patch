@@ -1,0 +1,27 @@
+diff --git a/vendor/github.com/google/renameio/v2/tempfile.go b/vendor/github.com/google/renameio/v2/tempfile.go
+index edc3e9871c..be4378f01d 100644
+--- a/vendor/github.com/google/renameio/v2/tempfile.go
++++ b/vendor/github.com/google/renameio/v2/tempfile.go
+@@ -234,17 +234,21 @@ func NewPendingFile(path string, opts ...Option) (*PendingFile, error) {
+ 		return nil, err
+ 	}
+ 
++	pf := &PendingFile{File: f, path: cfg.path}
++
+ 	if cfg.chmod != nil {
+ 		if fi, err := f.Stat(); err != nil {
++			pf.Cleanup()
+ 			return nil, err
+ 		} else if fi.Mode()&os.ModePerm != *cfg.chmod {
+ 			if err := f.Chmod(*cfg.chmod); err != nil {
++				pf.Cleanup()
+ 				return nil, err
+ 			}
+ 		}
+ 	}
+ 
+-	return &PendingFile{File: f, path: cfg.path}, nil
++	return pf, nil
+ }
+ 
+ // Symlink wraps os.Symlink, replacing an existing symlink with the same name

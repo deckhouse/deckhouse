@@ -19,6 +19,8 @@ shell:
   - git clone --depth 1 --branch v{{ include "get_oss_version_by_id" (list "cilium" $ ) }} $(cat /run/secrets/SOURCE_REPO)/cilium/cilium.git /src/cilium
   - cd /src/cilium
   - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
+  # Vendor patches are applied after `go mod vendor` in the build images.
+  - mkdir -p /src/vendor-patches && cp /patches/vendor/*.patch /src/vendor-patches/ 2>/dev/null || true
   - rm -rf Documentation
   - rm -rf /src/cilium/.git
 ---
@@ -67,10 +69,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/cilium
   - go mod vendor && go mod verify
-  # Remove compile-time interface assertion in checkmate to fix newer Go versions compatibility (testing.TB interface changed).
-  # This is safe because checkmate is a transitive test dependency, its *C type is not used in Cilium production code as testing.TB,
-  # and this change just stops the compiler from failing on unused code interface checks.
-  - '[ -f vendor/github.com/cilium/checkmate/check.go ] && sed -i "/var _ testing.TB =/d" vendor/github.com/cilium/checkmate/check.go || true'
+  - ls /src/vendor-patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /src/vendor-patches/*.patch
   #
   - |
     {{- include "image-build.build" (set $ "BuildCommand" `make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container`) | indent 4 }}

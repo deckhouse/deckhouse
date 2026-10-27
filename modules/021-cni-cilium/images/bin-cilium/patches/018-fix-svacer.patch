@@ -1,3 +1,59 @@
+diff --git a/pkg/fqdn/name_manager_gc.go b/pkg/fqdn/name_manager_gc.go
+index 9beb98c9ab..8014d2d24e 100644
+--- a/pkg/fqdn/name_manager_gc.go
++++ b/pkg/fqdn/name_manager_gc.go
+@@ -327,6 +327,7 @@ func restoreSelectors(checkpointPath string) (map[api.FQDNSelector]*regexp.Regex
+ 		}
+ 		return nil, fmt.Errorf("failed to open selector checkpoint file: %w", err)
+ 	}
++	defer f.Close()
+ 
+ 	var restoredSelectors []serializedSelector
+ 	err = json.NewDecoder(f).Decode(&restoredSelectors)
+diff --git a/pkg/netns/netns_linux.go b/pkg/netns/netns_linux.go
+index 5e2f1633c2..c6f1ede530 100644
+--- a/pkg/netns/netns_linux.go
++++ b/pkg/netns/netns_linux.go
+@@ -62,6 +62,7 @@ func New() (*NetNS, error) {
+ 		// Restore the OS thread to its original network namespace or implicitly
+ 		// terminate it if something went wrong.
+ 		if err := restoreUnlock(); err != nil {
++			f.Close()
+ 			return fmt.Errorf("restore current netns: %w (terminating OS thread)", err)
+ 		}
+ 
+diff --git a/pkg/node/manager/manager.go b/pkg/node/manager/manager.go
+index bb49e9ef6f..02863fbc7e 100644
+--- a/pkg/node/manager/manager.go
++++ b/pkg/node/manager/manager.go
+@@ -476,6 +476,7 @@ func (m *manager) restoreNodeCheckpoint() {
+ 		l.WithError(err).Error("failed to read node checkpoint file")
+ 		return
+ 	}
++	defer f.Close()
+ 
+ 	r := jsoniter.ConfigFastest.NewDecoder(bufio.NewReader(f))
+ 	var nodeCheckpoint []*nodeTypes.Node
+@@ -512,6 +513,7 @@ func (m *manager) initNodeCheckpointer(minInterval time.Duration) error {
+ 			// down already after sleeping to honor the MinInterval. Hence, we
+ 			// do so ourselves.
+ 			case <-m.checkpointerDone:
++				m.mutex.RUnlock()
+ 				return
+ 			default:
+ 			}
+diff --git a/pkg/option/config.go b/pkg/option/config.go
+index fb6043f49b..9d43de68a5 100644
+--- a/pkg/option/config.go
++++ b/pkg/option/config.go
+@@ -3921,6 +3921,7 @@ func (c *DaemonConfig) diffFromFile() error {
+ 	if err != nil {
+ 		return err
+ 	}
++	defer f.Close()
+ 
+ 	fi, err := f.Stat()
+ 	if err != nil {
 diff --git a/pkg/policy/api/icmp.go b/pkg/policy/api/icmp.go
 index a40bb882af..7ea13e7256 100644
 --- a/pkg/policy/api/icmp.go

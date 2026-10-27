@@ -95,7 +95,19 @@ An ICMP echo reply feature has been added to reply on LoadBalancer's service IP
 
 ## 018-fix-svacer.patch
 
-Fixed svacer DEREF_OF_NULL error in pkg/policy/api/icmp.go
+Fixes for defects reported by the Svacer static analyzer:
+
+- `pkg/policy/api/icmp.go`: DEREF_OF_NULL on an ICMP rule without `type`.
+- `pkg/fqdn/name_manager_gc.go`, `pkg/node/manager/manager.go`, `pkg/option/config.go`:
+  HANDLE_LEAK, checkpoint/config files opened with `os.Open` were never closed. The last two
+  are backports of upstream `14c7d7d469` and `673768ac8b` (v1.19.0); upstream removed the
+  first function altogether (`540f9c378c`).
+- `pkg/netns/netns_linux.go`: HANDLE_LEAK, the new netns handle leaked when restoring the
+  original namespace failed. Not fixed upstream.
+- `pkg/node/manager/manager.go`: NO_UNLOCK, the checkpoint trigger returned on shutdown
+  while holding `m.mutex.RLock()`. Not fixed upstream.
+
+Svacer findings in third-party code are fixed by the patches in `vendor/` (see `vendor/README.md`).
 
 ## 019-ipcache-no-deadlock-on-label-injection.patch
 
@@ -166,3 +178,7 @@ and re-lands the bump (<https://github.com/cilium/cilium/pull/42361>,
 **Remove this patch when upgrading to a Cilium version that already targets
 ebpf >= v0.21.0**, where `applyConstants()` no longer uses the removed method
 and the probes already tolerate `ErrRestrictedKernel`.
+
+## vendor/
+
+Patches for vendored dependencies, applied after `go mod vendor`. See `vendor/README.md`.
