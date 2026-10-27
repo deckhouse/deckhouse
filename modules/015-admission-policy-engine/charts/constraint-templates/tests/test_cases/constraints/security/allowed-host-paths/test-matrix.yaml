@@ -806,7 +806,7 @@ spec:
             - hostPath:
                 path: /proc
               name: proc-volume
-    # An exception with allowSubPaths: true allows a path nested under the allowed one.
+    # An exception with pathType: Prefix allows a path nested under the allowed one.
     - name: 026-allowed-by-exception-subpath
       violations: 'no'
       assertionMessage: ''
@@ -826,7 +826,7 @@ spec:
                 allowedValues:
                 - path: /var/lib
                   readOnly: false
-                  allowSubPaths: true
+                  pathType: Prefix
       object:
         base: admissionPod
         merge:
@@ -846,8 +846,8 @@ spec:
             - hostPath:
                 path: /var/lib/docker
               name: data-volume
-    # Without allowSubPaths, an exception allows the exact path only.
-    - name: 027-disallowed-by-exception-subpath-without-flag
+    # An exception with pathType: Exact allows the exact path only.
+    - name: 027-disallowed-by-exception-subpath-exact-path-type
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -866,13 +866,14 @@ spec:
                 allowedValues:
                 - path: /var/lib
                   readOnly: false
+                  pathType: Exact
       object:
         base: admissionPod
         merge:
           metadata:
             labels:
               security.deckhouse.io/security-policy-exception: allow-var-lib
-            name: disallowed-by-exception-subpath-without-flag
+            name: disallowed-by-exception-subpath-exact-path-type
           spec:
             containers:
             - image: nginx
@@ -905,7 +906,7 @@ spec:
                 allowedValues:
                 - path: /var/lib
                   readOnly: false
-                  allowSubPaths: true
+                  pathType: Prefix
       object:
         base: admissionPod
         merge:
@@ -945,7 +946,7 @@ spec:
                 allowedValues:
                 - path: /var/lib
                   readOnly: true
-                  allowSubPaths: true
+                  pathType: Prefix
       object:
         base: admissionPod
         merge:
@@ -985,7 +986,7 @@ spec:
                 allowedValues:
                 - path: /var/lib
                   readOnly: true
-                  allowSubPaths: true
+                  pathType: Prefix
       object:
         base: admissionPod
         merge:
@@ -1005,7 +1006,7 @@ spec:
             - hostPath:
                 path: /var/lib/docker
               name: data-volume
-    # allowSubPaths covers paths nested at any depth, not only direct children.
+    # pathType: Prefix covers paths nested at any depth, not only direct children.
     - name: 031-allowed-by-exception-subpath-deeply-nested
       violations: 'no'
       assertionMessage: ''
@@ -1025,7 +1026,7 @@ spec:
                 allowedValues:
                 - path: /var/lib
                   readOnly: false
-                  allowSubPaths: true
+                  pathType: Prefix
       object:
         base: admissionPod
         merge:
@@ -1045,7 +1046,7 @@ spec:
             - hostPath:
                 path: /var/lib/containerd/io.containerd.content.v1.content
               name: data-volume
-    # allowSubPaths does not extend the exception to the parent of the allowed path.
+    # pathType: Prefix does not extend the exception to the parent of the allowed path.
     - name: 032-disallowed-by-exception-subpath-parent
       violations: 'yes'
       assertionMessage: ''
@@ -1065,7 +1066,7 @@ spec:
                 allowedValues:
                 - path: /var/lib
                   readOnly: false
-                  allowSubPaths: true
+                  pathType: Prefix
       object:
         base: admissionPod
         merge:
@@ -1085,7 +1086,7 @@ spec:
             - hostPath:
                 path: /var
               name: data-volume
-    # allowSubPaths ignores a trailing slash, so it covers the allowed path written with one.
+    # pathType: Prefix ignores a trailing slash, so it covers the allowed path written with one.
     - name: 033-allowed-by-exception-subpath-trailing-slash
       violations: 'no'
       assertionMessage: ''
@@ -1105,7 +1106,7 @@ spec:
                 allowedValues:
                 - path: /var/lib
                   readOnly: false
-                  allowSubPaths: true
+                  pathType: Prefix
       object:
         base: admissionPod
         merge:
@@ -1261,7 +1262,7 @@ spec:
                     mountPath: /host
       exception: ''
       exceptionRef: ''
-    # A controller whose pod template mounts a nested path is allowed by an SPE with allowSubPaths.
+    # A controller whose pod template mounts a nested path is allowed by an SPE with pathType: Prefix.
     - name: controller-allowed-by-spe-subpath-on-pod-template
       violations: 'no'
       assertionMessage: ''
@@ -1279,7 +1280,7 @@ spec:
                 allowedValues:
                 - readOnly: false
                   path: /var/lib
-                  allowSubPaths: true
+                  pathType: Prefix
       object:
         base: admissionDeployment
         merge:
@@ -1303,7 +1304,7 @@ spec:
                     mountPath: /host
       exception: ''
       exceptionRef: ''
-    # Without allowSubPaths, the same SPE does not cover the nested path on a controller.
+    # Without pathType, the SPE defaults to Exact and does not cover the nested path on a controller.
     - name: controller-denied-by-spe-exact-path-on-pod-template
       violations: 'yes'
       assertionMessage: ''

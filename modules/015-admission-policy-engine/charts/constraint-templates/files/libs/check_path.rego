@@ -6,7 +6,7 @@
 # Usage:
 # - check_hostpath_allowed(volume, allowed_paths, containers, spe_allowed_paths)
 # allowed_paths items: {pathPrefix, readOnly}
-# spe_allowed_paths items: {path, readOnly, allowSubPaths}
+# spe_allowed_paths items: {path, readOnly, pathType}
 # Returns: {"allowed": bool, "msg": string, "detail": object}
 # =============================================================================
 package lib.check_path
@@ -70,15 +70,17 @@ input_hostpath_allowed_exact(allowedPaths, volume, containers) if {
   volume_mount_readonly_allowed(object.get(allowedHostPath, "readOnly", false), volume.name, containers)
 }
 
-# An exception allows only the exact path by default. With allowSubPaths: true
-# it also allows every path nested under it, compared segment by segment:
-# /var/lib allows /var/lib/docker but not /var/libvirt.
+# pathType follows the Ingress path types. Exact, the CRD default, allows only
+# the exact path. Prefix also allows every path nested under it, compared
+# segment by segment: /var/lib allows /var/lib/docker but not /var/libvirt.
+# Any other value matches nothing.
 spe_path_matches(allowedHostPath, path) if {
+  object.get(allowedHostPath, "pathType", "Exact") == "Exact"
   allowedHostPath.path == path
 }
 
 spe_path_matches(allowedHostPath, path) if {
-  object.get(allowedHostPath, "allowSubPaths", false) == true
+  allowedHostPath.pathType == "Prefix"
   path_matches(allowedHostPath.path, path)
 }
 

@@ -376,18 +376,22 @@ spec:
                                 type: boolean
                                 default: false
                                 description: A `readOnly` value for the `hostPath`.
-                              allowSubPaths:
-                                type: boolean
-                                default: false
+                              pathType:
+                                type: string
+                                enum: ["Exact", "Prefix"]
+                                default: Exact
                                 description: |
-                                  Allows paths nested under the path specified in the [path](#securitypolicyexception-v1alpha1-spec-volumes-hostpath-allowedvalues-path) parameter.
+                                  How the [path](#securitypolicyexception-v1alpha1-spec-volumes-hostpath-allowedvalues-path) parameter is matched against the `hostPath` of a volume.
 
-                                  If the parameter is `false`, the exception allows only the exact path.
-                                  If the parameter is `true`, the exception also allows every nested path.
-                                  Paths are compared by their components, and trailing slashes are ignored.
-                                  For example, `/var/lib` allows `/var/lib`, `/var/lib/` and `/var/lib/docker`, but does not allow `/var/libvirt` or `/var`.
+                                  The values follow the path types of an Ingress:
+
+                                  - `Exact` — the exception allows only the exact path;
+                                  - `Prefix` — the exception allows the path and every path nested under it.
+                                    Paths are compared by their components, and trailing slashes are ignored.
+                                    For example, `/var/lib` allows `/var/lib`, `/var/lib/` and `/var/lib/docker`, but does not allow `/var/libvirt` or `/var`.
 
                                   The [readOnly](#securitypolicyexception-v1alpha1-spec-volumes-hostpath-allowedvalues-readonly) parameter applies to nested paths the same way as to the path itself.
+                                x-doc-examples: ["Prefix"]
                               metadata:
                                 type: object
                                 description: Metadata related to the exception.

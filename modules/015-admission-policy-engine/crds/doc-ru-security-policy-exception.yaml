@@ -196,14 +196,16 @@ spec:
                                 description: Разрешенный путь `hostPath`.
                               readOnly:
                                 description: Значение `readOnly` для `hostPath`.
-                              allowSubPaths:
+                              pathType:
                                 description: |
-                                  Разрешает пути, вложенные в путь из параметра [path](#securitypolicyexception-v1alpha1-spec-volumes-hostpath-allowedvalues-path).
+                                  Способ сопоставления параметра [path](#securitypolicyexception-v1alpha1-spec-volumes-hostpath-allowedvalues-path) с `hostPath` тома.
 
-                                  Если параметр равен `false`, исключение разрешает только точно совпадающий путь.
-                                  Если параметр равен `true`, исключение также разрешает все вложенные пути.
-                                  Пути сравниваются по компонентам, завершающие слеши не учитываются.
-                                  Например, `/var/lib` разрешает `/var/lib`, `/var/lib/` и `/var/lib/docker`, но не разрешает `/var/libvirt` и `/var`.
+                                  Значения соответствуют типам путей в Ingress:
+
+                                  - `Exact` — исключение разрешает только точно совпадающий путь;
+                                  - `Prefix` — исключение разрешает путь и все вложенные в него пути.
+                                    Пути сравниваются по компонентам, завершающие слеши не учитываются.
+                                    Например, `/var/lib` разрешает `/var/lib`, `/var/lib/` и `/var/lib/docker`, но не разрешает `/var/libvirt` и `/var`.
 
                                   Параметр [readOnly](#securitypolicyexception-v1alpha1-spec-volumes-hostpath-allowedvalues-readonly) применяется к вложенным путям так же, как к самому пути.
                               metadata:

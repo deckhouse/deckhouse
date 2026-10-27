@@ -92,7 +92,7 @@ test_hostpath_spe_without_readonly_covers_readonly_mounts if {
   result.allowed == true
 }
 
-# SPE with allowSubPaths
+# SPE with pathType
 
 test_hostpath_spe_subpath_denied_by_default if {
   volume := {"name": "data", "hostPath": {"path": "/var/lib/docker"}}
@@ -105,7 +105,7 @@ test_hostpath_spe_subpath_denied_by_default if {
 test_hostpath_spe_subpath_allowed if {
   volume := {"name": "data", "hostPath": {"path": "/var/lib/docker"}}
   containers := [{"volumeMounts": [{"name": "data"}]}]
-  spe_allowed := [{"path": "/var/lib", "readOnly": false, "allowSubPaths": true}]
+  spe_allowed := [{"path": "/var/lib", "readOnly": false, "pathType": "Prefix"}]
   result := check_path.check_hostpath_allowed(volume, [], containers, spe_allowed)
   result.allowed == true
 }
@@ -113,7 +113,7 @@ test_hostpath_spe_subpath_allowed if {
 test_hostpath_spe_subpath_allows_the_path_itself if {
   volume := {"name": "data", "hostPath": {"path": "/var/lib/"}}
   containers := [{"volumeMounts": [{"name": "data"}]}]
-  spe_allowed := [{"path": "/var/lib", "allowSubPaths": true}]
+  spe_allowed := [{"path": "/var/lib", "pathType": "Prefix"}]
   result := check_path.check_hostpath_allowed(volume, [], containers, spe_allowed)
   result.allowed == true
 }
@@ -121,7 +121,7 @@ test_hostpath_spe_subpath_allows_the_path_itself if {
 test_hostpath_spe_subpath_sibling_prefix_denied if {
   volume := {"name": "data", "hostPath": {"path": "/var/libvirt"}}
   containers := [{"volumeMounts": [{"name": "data"}]}]
-  spe_allowed := [{"path": "/var/lib", "allowSubPaths": true}]
+  spe_allowed := [{"path": "/var/lib", "pathType": "Prefix"}]
   result := check_path.check_hostpath_allowed(volume, [], containers, spe_allowed)
   result.allowed == false
 }
@@ -129,7 +129,7 @@ test_hostpath_spe_subpath_sibling_prefix_denied if {
 test_hostpath_spe_subpath_parent_denied if {
   volume := {"name": "data", "hostPath": {"path": "/var"}}
   containers := [{"volumeMounts": [{"name": "data"}]}]
-  spe_allowed := [{"path": "/var/lib", "allowSubPaths": true}]
+  spe_allowed := [{"path": "/var/lib", "pathType": "Prefix"}]
   result := check_path.check_hostpath_allowed(volume, [], containers, spe_allowed)
   result.allowed == false
 }
@@ -137,7 +137,7 @@ test_hostpath_spe_subpath_parent_denied if {
 test_hostpath_spe_subpath_readonly_denied if {
   volume := {"name": "data", "hostPath": {"path": "/var/lib/docker"}}
   containers := [{"volumeMounts": [{"name": "data", "readOnly": false}]}]
-  spe_allowed := [{"path": "/var/lib", "readOnly": true, "allowSubPaths": true}]
+  spe_allowed := [{"path": "/var/lib", "readOnly": true, "pathType": "Prefix"}]
   result := check_path.check_hostpath_allowed(volume, [], containers, spe_allowed)
   result.allowed == false
 }
@@ -145,7 +145,7 @@ test_hostpath_spe_subpath_readonly_denied if {
 test_hostpath_spe_subpath_readonly_allowed if {
   volume := {"name": "data", "hostPath": {"path": "/var/lib/docker"}}
   containers := [{"volumeMounts": [{"name": "data", "readOnly": true}]}]
-  spe_allowed := [{"path": "/var/lib", "readOnly": true, "allowSubPaths": true}]
+  spe_allowed := [{"path": "/var/lib", "readOnly": true, "pathType": "Prefix"}]
   result := check_path.check_hostpath_allowed(volume, [], containers, spe_allowed)
   result.allowed == true
 }
@@ -153,7 +153,31 @@ test_hostpath_spe_subpath_readonly_allowed if {
 test_hostpath_spe_root_subpaths_allowed if {
   volume := {"name": "data", "hostPath": {"path": "/etc/kubernetes"}}
   containers := [{"volumeMounts": [{"name": "data"}]}]
-  spe_allowed := [{"path": "/", "allowSubPaths": true}]
+  spe_allowed := [{"path": "/", "pathType": "Prefix"}]
   result := check_path.check_hostpath_allowed(volume, [], containers, spe_allowed)
   result.allowed == true
+}
+
+test_hostpath_spe_exact_path_type_subpath_denied if {
+  volume := {"name": "data", "hostPath": {"path": "/var/lib/docker"}}
+  containers := [{"volumeMounts": [{"name": "data"}]}]
+  spe_allowed := [{"path": "/var/lib", "pathType": "Exact"}]
+  result := check_path.check_hostpath_allowed(volume, [], containers, spe_allowed)
+  result.allowed == false
+}
+
+test_hostpath_spe_exact_path_type_allowed if {
+  volume := {"name": "data", "hostPath": {"path": "/var/lib"}}
+  containers := [{"volumeMounts": [{"name": "data"}]}]
+  spe_allowed := [{"path": "/var/lib", "pathType": "Exact"}]
+  result := check_path.check_hostpath_allowed(volume, [], containers, spe_allowed)
+  result.allowed == true
+}
+
+test_hostpath_spe_unknown_path_type_denied if {
+  volume := {"name": "data", "hostPath": {"path": "/var/lib"}}
+  containers := [{"volumeMounts": [{"name": "data"}]}]
+  spe_allowed := [{"path": "/var/lib", "pathType": "ImplementationSpecific"}]
+  result := check_path.check_hostpath_allowed(volume, [], containers, spe_allowed)
+  result.allowed == false
 }
