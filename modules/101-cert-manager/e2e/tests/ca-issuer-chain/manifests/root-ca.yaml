@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: e2e-cm-root-ca
+spec:
+  isCA: true
+  commonName: e2e-cm-root-ca
+  secretName: e2e-cm-root-ca
+  duration: 24h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: selfsigned-no-trust

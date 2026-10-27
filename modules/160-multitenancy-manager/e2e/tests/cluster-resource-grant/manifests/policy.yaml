@@ -1,0 +1,17 @@
+apiVersion: multitenancy.deckhouse.io/v1alpha2
+kind: ClusterResourceGrantPolicy
+metadata:
+  name: e2e-mtm-grant
+spec:
+  projectSelector:
+    matchLabels:
+      projects.deckhouse.io/project: e2e-mtm-grant
+  resources:
+    - resourceName: storageclasses
+      allowed:
+        - e2e-mtm-sc-allowed
+      default: e2e-mtm-sc-allowed
+    - resourceName: loadbalancerclasses
+      allowed:
+        - e2e-mtm-lb-allowed
+      default: e2e-mtm-lb-allowed

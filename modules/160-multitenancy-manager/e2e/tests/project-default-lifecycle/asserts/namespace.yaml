@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: e2e-mtm-life
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: e2e-mtm-life
+    projects.deckhouse.io/project-template: default
+    security.deckhouse.io/pod-policy: restricted
+    extended-monitoring.deckhouse.io/enabled: ""
+    e2e-mtm/purpose: lifecycle
+  annotations:
+    projects.deckhouse.io/template-labels: '{"e2e-mtm/purpose":"lifecycle"}'
+status:
+  phase: Active

@@ -58,7 +58,7 @@ func Register(runtimeManager manager.Manager, logger logr.Logger, migration *sta
 		init:    new(sync.WaitGroup),
 		logger:  logger.WithName(controllerName),
 		client:  runtimeManager.GetClient(),
-		manager: namespacemanager.New(runtimeManager.GetClient(), logger),
+		manager: namespacemanager.New(runtimeManager.GetClient(), logger).WithAPIReader(runtimeManager.GetAPIReader()),
 	}
 
 	r.init.Add(1)

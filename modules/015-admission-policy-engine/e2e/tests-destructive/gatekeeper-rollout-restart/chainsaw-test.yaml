@@ -1,0 +1,65 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-policy-engine-gatekeeper-rollout-restart
+spec:
+  description: >-
+    A rollout restart of the Gatekeeper webhook under a continuous dry-run probe replaces every
+    webhook pod without a single request the API server could not hand to the webhook, when the
+    webhook runs in high availability mode. With a single replica the count is reported.
+  timeouts:
+    exec: 15m
+  steps:
+    - name: ensure-module
+      description: Enable the module if needed and wait until it is Ready and bootstrapped
+      try:
+        - description: Enable admission-policy-engine and wait for the bootstrap
+          script:
+            timeout: 20m
+            content: bash ../../tests/common/scripts/ensure-module.sh
+            check:
+              ($error == null): true
+
+    - name: create-namespaces
+      description: >-
+        Create the namespaces of the test with every label set at creation; multitenancy-manager
+        adopts them into Projects and refuses later changes of the managed labels
+      try:
+        - description: Create e2e-ape-rollout
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-rollout
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete the namespaces of the test through their Projects
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-rollout
+
+    - name: rollout-restart-under-probe
+      description: Restart the webhook Deployment while the probe runs and count the webhook errors
+      try:
+        - description: Run the probe over the rollout restart
+          script:
+            timeout: 16m
+            content: bash rollout-under-probe.sh e2e-ape-rollout
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the Gatekeeper Deployment
+          describe:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: gatekeeper-controller-manager
+            namespace: d8-admission-policy-engine
+        - description: Show the Gatekeeper webhook logs
+          podLogs:
+            namespace: d8-admission-policy-engine
+            selector: app=gatekeeper,control-plane=controller-manager
+            container: manager
+            tail: 100
+      cleanup:
+        - description: Wait until the Gatekeeper Deployment is complete again
+          script:
+            timeout: 11m
+            content: kubectl -n d8-admission-policy-engine rollout status deployment/gatekeeper-controller-manager --timeout=10m

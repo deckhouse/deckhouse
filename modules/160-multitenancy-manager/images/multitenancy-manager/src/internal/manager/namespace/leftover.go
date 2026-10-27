@@ -18,6 +18,7 @@ package namespace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -62,7 +63,7 @@ func (m *Manager) CompleteLeftover(ctx context.Context, project *v1alpha3.Projec
 	}
 
 	if !namespace.DeletionTimestamp.IsZero() {
-		if err := m.persistNamespace(ctx, namespace, applyClearRetiredMarkers); err != nil {
+		if err := m.persistNamespace(ctx, namespace, applyClearRetiredMarkers); err != nil && !errors.Is(err, errNamespaceGone) {
 			return false, err
 		}
 		if err := m.deleteLeftoverProject(ctx, project); err != nil {
@@ -87,7 +88,13 @@ func (m *Manager) CompleteLeftover(ctx context.Context, project *v1alpha3.Projec
 		stamped := helm.ApplyReleaseOwnership(ns, helm.ReleaseName(project.Name))
 		cleared := applyClearRetiredMarkers(ns)
 		return stamped || cleared
-	}); err != nil {
+	}); errors.Is(err, errNamespaceGone) {
+		// Deleted since it was read: delete the Project as for a namespace that is already gone.
+		if err := m.deleteLeftoverProject(ctx, project); err != nil {
+			return false, err
+		}
+		return true, nil
+	} else if err != nil {
 		return false, err
 	}
 

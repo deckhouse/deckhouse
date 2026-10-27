@@ -1,0 +1,17 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: ProjectTemplate
+metadata:
+  name: e2e-mtm-tpl
+spec:
+  title: e2e template update
+  description: Template whose change must reach every project created from it.
+  podSecurityStandard: Baseline
+  networkPolicy:
+    mode: NotRestricted
+  namespaceMetadata:
+    labels:
+      e2e-mtm/revision: one
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      properties: {}

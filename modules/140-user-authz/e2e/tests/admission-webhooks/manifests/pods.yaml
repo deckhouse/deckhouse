@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: e2e-authz-wh-system
+  labels:
+    app: e2e-authz-wh-system
+    deckhouse.io/system-resource: "true"
+spec:
+  terminationGracePeriodSeconds: 1
+  tolerations:
+  - operator: Exists
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: agnhost
+    image: registry.k8s.io/e2e-test-images/agnhost:2.53
+    args:
+    - pause
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 64Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: e2e-authz-wh-plain
+  labels:
+    app: e2e-authz-wh-plain
+spec:
+  terminationGracePeriodSeconds: 1
+  tolerations:
+  - operator: Exists
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: agnhost
+    image: registry.k8s.io/e2e-test-images/agnhost:2.53
+    args:
+    - pause
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+        - ALL
+    resources:
+      requests:
+        cpu: 10m
+        memory: 16Mi
+      limits:
+        memory: 64Mi

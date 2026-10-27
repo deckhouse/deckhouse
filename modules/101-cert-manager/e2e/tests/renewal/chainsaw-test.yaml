@@ -1,0 +1,140 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cert-manager-renewal
+spec:
+  description: >-
+    The controller renews certificates without an operator. A Certificate whose renewBefore is
+    one minute short of its duration is renewed by the controller at its renewal time:
+    status.revision grows and the serial number in the Secret changes. A Certificate whose Secret
+    is deleted is reissued: the Secret comes back with a new certificate and status.revision grows.
+  concurrent: false
+
+  catch:
+    - description: Show Certificates in the test namespace on failure
+      get:
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+    - description: Show CertificateRequests in the test namespace on failure
+      get:
+        apiVersion: cert-manager.io/v1
+        kind: CertificateRequest
+    - description: Show events in the test namespace on failure
+      events: {}
+    - description: Show cert-manager controller logs on failure
+      podLogs:
+        namespace: d8-cert-manager
+        selector: app=cert-manager
+        container: cert-manager
+        tail: 200
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled, converged and its ClusterIssuers are Ready
+      use:
+        template: ../common/steps/ensure-cert-manager.yaml
+
+    - name: scheduled-renewal
+      description: >-
+        Issue a short-lived Certificate and wait for the scheduled renewal. Kept as one step,
+        because the captured serial number is not visible across step boundaries
+      try:
+        - description: Create the Certificate with duration 1h and renewBefore 59m
+          create:
+            file: manifests/short-lived.yaml
+        - description: Assert the first revision is Ready
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-short-lived
+              status:
+                revision: 1
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+        - description: Capture the serial number of the first certificate
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: >-
+              kubectl -n "$E2E_NS" get secret e2e-cm-short-lived-tls -o jsonpath='{.data.tls\.crt}'
+              | base64 -d | openssl x509 -noout -serial
+            outputs:
+              - name: firstSerial
+                value: ($stdout)
+        - description: Assert the controller renewed the certificate on schedule (revision 2 or later, Ready)
+          assert:
+            timeout: 4m
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-short-lived
+              status:
+                (revision >= `2`): true
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+        - description: Assert the Secret now holds a certificate with a different serial number
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+              - name: FIRST_SERIAL
+                value: ($firstSerial)
+            content: |
+              current="$(kubectl -n "$E2E_NS" get secret e2e-cm-short-lived-tls -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -noout -serial)"
+              echo "first: $FIRST_SERIAL, current: $current"
+              [ -n "$current" ] && [ "$current" != "$FIRST_SERIAL" ]
+
+    - name: reissue-after-secret-deletion
+      description: Delete the Secret of a Ready Certificate and wait until the controller reissues it
+      try:
+        - description: Create the Certificate
+          create:
+            file: manifests/reissue.yaml
+        - description: Assert the first revision is Ready
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-reissue
+              status:
+                revision: 1
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+        - description: Delete the Secret of the Certificate
+          delete:
+            ref:
+              apiVersion: v1
+              kind: Secret
+              name: e2e-cm-reissue-tls
+        - description: Assert the controller reissued the certificate (revision 2 or later, Ready)
+          assert:
+            timeout: 90s
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-reissue
+              status:
+                (revision >= `2`): true
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+        - description: Assert the Secret is back and verifies against the cluster CA
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/check-cert.sh
+              --namespace "$E2E_NS" --secret e2e-cm-reissue-tls
+              --san "DNS:reissue.e2e-cm.example.test"
+              --issuer-cn cluster-selfsigned-ca --verify

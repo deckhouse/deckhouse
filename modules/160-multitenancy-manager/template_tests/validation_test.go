@@ -19,6 +19,7 @@ package template_tests
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -741,3 +742,78 @@ type stringExpression struct {
 
 func (e stringExpression) GetExpression() string      { return e.expression }
 func (e stringExpression) ReturnTypes() []*celgo.Type { return []*celgo.Type{celgo.StringType} }
+
+var _ = Describe("Module :: multitenancy-manager :: helm template :: heritage policy on a project namespace", func() {
+	hec := SetupHelmConfig("")
+
+	BeforeEach(func() {
+		renderPolicies(hec)
+	})
+
+	It("lets a user relabel a project namespace but not change its ownerReferences", func() {
+		policy := compileRenderedPolicy(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", "d8-multitenancy-manager").ToYaml())
+
+		owner := map[string]any{"apiVersion": "example.com/v1", "kind": "Tenant", "name": "team", "uid": "1"}
+		cases := []struct {
+			name     string
+			username string
+			// owned stores the namespace with the owner before the edit
+			owned   bool
+			edit    func(*unstructured.Unstructured)
+			allowed bool
+		}{
+			{name: "a user adds a label of their own", username: "admin@example.com", allowed: true,
+				edit: func(ns *unstructured.Unstructured) {
+					ns.SetLabels(map[string]string{"heritage": "multitenancy-manager", "team": "a"})
+				}},
+			{name: "a user adds an owner", username: "admin@example.com",
+				edit: func(ns *unstructured.Unstructured) {
+					Expect(unstructured.SetNestedSlice(ns.Object, []any{owner}, "metadata", "ownerReferences")).To(Succeed())
+				}},
+			{name: "the controller adds an owner", username: controllerServiceAccount, allowed: true,
+				edit: func(ns *unstructured.Unstructured) {
+					Expect(unstructured.SetNestedSlice(ns.Object, []any{owner}, "metadata", "ownerReferences")).To(Succeed())
+				}},
+			{name: "a user removes an owner", username: "admin@example.com", owned: true,
+				edit: func(ns *unstructured.Unstructured) { ns.SetOwnerReferences(nil) }},
+			{name: "a user changes the UID of an owner", username: "admin@example.com", owned: true,
+				edit: func(ns *unstructured.Unstructured) {
+					changed := maps.Clone(owner)
+					changed["uid"] = "2"
+					Expect(unstructured.SetNestedSlice(ns.Object, []any{changed}, "metadata", "ownerReferences")).To(Succeed())
+				}},
+			{name: "the garbage collector removes an owner", username: garbageCollector, owned: true, allowed: true,
+				edit: func(ns *unstructured.Unstructured) { ns.SetOwnerReferences(nil) }},
+		}
+		for _, tc := range cases {
+			var owners []any
+			if tc.owned {
+				owners = []any{owner}
+			}
+			allowed, message, err := policy.admit(projectNamespaceUpdate(tc.username, owners, tc.edit), nil)
+			Expect(err).ToNot(HaveOccurred(), tc.name)
+			Expect(allowed).To(Equal(tc.allowed), tc.name)
+			if !allowed {
+				Expect(message).To(ContainSubstring("its spec, finalizers, ownerReferences and the labels"), tc.name)
+			}
+		}
+	})
+})
+
+// projectNamespaceUpdate is an update of the main namespace of the proj project that edit makes. The stored
+// namespace has the given ownerReferences.
+func projectNamespaceUpdate(username string, owners []any, edit func(*unstructured.Unstructured)) admission.Attributes {
+	gvk := schema.GroupVersionKind{Version: "v1", Kind: "Namespace"}
+	gvr := schema.GroupVersionResource{Version: "v1", Resource: "namespaces"}
+	stored := new(unstructured.Unstructured)
+	stored.SetGroupVersionKind(gvk)
+	stored.SetName("proj")
+	stored.SetLabels(map[string]string{"heritage": "multitenancy-manager"})
+	if owners != nil {
+		Expect(unstructured.SetNestedSlice(stored.Object, owners, "metadata", "ownerReferences")).To(Succeed())
+	}
+	updated := stored.DeepCopy()
+	edit(updated)
+	return admission.NewAttributesRecord(updated, stored, gvk, "", "proj", gvr, "", admission.Update, nil, false,
+		&user.DefaultInfo{Name: username, Groups: groupsOf(username)})
+}

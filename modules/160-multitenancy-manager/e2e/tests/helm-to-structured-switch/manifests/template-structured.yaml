@@ -1,0 +1,21 @@
+# The same template moved to the structured fields and manifests in one change: the NetworkPolicy
+# is rendered by networkPolicy.mode under the same kind and name, the ConfigMap by manifests.
+apiVersion: deckhouse.io/v1alpha2
+kind: ProjectTemplate
+metadata:
+  name: e2e-mtm-helm
+spec:
+  description: The template moved to the structured fields.
+  networkPolicy:
+    mode: Isolated
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      properties: {}
+  manifests: |
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: e2e-mtm-info
+    data:
+      source: manifests

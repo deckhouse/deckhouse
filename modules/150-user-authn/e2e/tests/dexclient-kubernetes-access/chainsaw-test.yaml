@@ -1,0 +1,109 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-dexclient-kubernetes-access
+spec:
+  description: >-
+    A DexClient with the annotation dexclient.deckhouse.io/allow-access-to-kubernetes "true" becomes
+    a trusted peer of the `kubernetes` OAuth2Client, requests an ID token for the audience
+    `kubernetes`, and kube-apiserver accepts that token. An annotated DexAuthenticator also makes
+    the module render the `kubernetes` client; the case without it is
+    dexclient-kubernetes-audience.
+  concurrent: false
+
+  catch:
+    - description: Show the OAuth2Client objects on failure
+      script:
+        shell: bash
+        shellArgs: ["-c"]
+        content: kubectl -n d8-user-authn get oauth2clients.dex.coreos.com -o custom-columns=NAME:.metadata.name,ID:.id,PEERS:.trustedPeers
+    - description: Show Dex logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=dex
+        container: dex
+        tail: 50
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: create-user-and-clients
+      description: Create the User, the annotated DexClient and the annotated DexAuthenticator
+      try:
+        - description: Create User e2e-authn-k8s-user
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user dexclient-kubernetes-access e2e-authn-k8s-user e2e-authn-k8s-user@example.com
+        - description: Create DexClient e2e-authn-k8s-client with access to Kubernetes
+          create:
+            file: manifests/dex-client.yaml
+        - description: Create DexAuthenticator e2e-authn-k8s-da with access to Kubernetes
+          create:
+            file: manifests/dex-authenticator.yaml
+        - description: Wait for the client Secret and OAuth2Client
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              wait_dex_client "${NS}" e2e-authn-k8s-client
+      cleanup:
+        - description: Delete the User and the DexAuthenticator
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 7m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              kubectl delete users.deckhouse.io e2e-authn-k8s-user --ignore-not-found
+              bash ../../tests/common/scripts/delete-dex-authenticator.sh "${NS}" e2e-authn-k8s-da
+
+    - name: kubernetes-client-trusts-dexclient
+      description: The `kubernetes` OAuth2Client lists the DexClient and the DexAuthenticator among its trusted peers
+      try:
+        - description: Assert the trusted peers of the kubernetes client contain both clients
+          assert:
+            timeout: 5m
+            resource:
+              apiVersion: dex.coreos.com/v1
+              kind: OAuth2Client
+              metadata:
+                name: nn2wezlsnzsxizltzpzjzzeeeirsk
+                namespace: d8-user-authn
+              id: kubernetes
+              (contains(trustedPeers, join('', ['dex-client-e2e-authn-k8s-client@', $namespace]))): true
+              (contains(trustedPeers, join('', ['e2e-authn-k8s-da-', $namespace, '-dex-authenticator']))): true
+
+    - name: token-for-api-server
+      description: The DexClient gets an ID token for the audience kubernetes, which kube-apiserver accepts
+      try:
+        - description: Sign in with the cross-client audience scope and call kubectl auth whoami with the token
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 12m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              bash ../../tests/common/scripts/whoami-as.sh dexclient-kubernetes-access "${NS}" e2e-authn-k8s-client \
+                e2e-authn-k8s-user e2e-authn-k8s-user@example.com
+              out="$(cat "$(state_dir dexclient-kubernetes-access)/e2e-authn-k8s-user.whoami.json")"
+              jq -e '.status.userInfo.username == "e2e-authn-k8s-user@example.com"' <<<"${out}" >/dev/null \
+                || die "whoami user name is $(jq -c .status.userInfo.username <<<"${out}")"

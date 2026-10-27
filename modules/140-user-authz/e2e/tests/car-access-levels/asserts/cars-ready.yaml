@@ -1,0 +1,70 @@
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-user
+status:
+  bindings: 2
+  (conditions[?type == 'Ready']):
+  - status: 'True'
+    reason: BindingsApplied
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-privileged-user
+status:
+  bindings: 2
+  (conditions[?type == 'Ready']):
+  - status: 'True'
+    reason: BindingsApplied
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-editor
+status:
+  bindings: 2
+  (conditions[?type == 'Ready']):
+  - status: 'True'
+    reason: BindingsApplied
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-admin
+status:
+  bindings: 2
+  (conditions[?type == 'Ready']):
+  - status: 'True'
+    reason: BindingsApplied
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-cluster-editor
+status:
+  bindings: 2
+  (conditions[?type == 'Ready']):
+  - status: 'True'
+    reason: BindingsApplied
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-cluster-admin
+status:
+  bindings: 2
+  (conditions[?type == 'Ready']):
+  - status: 'True'
+    reason: BindingsApplied
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-super-admin
+status:
+  bindings: 1
+  (conditions[?type == 'Ready']):
+  - status: 'True'
+    reason: BindingsApplied

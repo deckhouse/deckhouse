@@ -1,0 +1,145 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: namespace-adoption
+spec:
+  description: >-
+    A namespace created directly becomes a Project of its own: the template is picked from the
+    labels of the namespace (simple without them, default for the extended monitoring label), the
+    parameters keep the namespace as it was (no network isolation), and the namespace can no longer
+    be deleted directly. With allowNamespacesWithoutProjects set to false, a user who may create
+    namespaces through RBAC is refused by the namespace-creation policy, while system:masters is not.
+  concurrent: false
+  catch:
+    - description: Show the adopted projects and namespaces on failure
+      script:
+        content: |
+          kubectl get projects e2e-mtm-adopt-plain e2e-mtm-adopt-mon -o yaml || true
+          kubectl get ns e2e-mtm-adopt-plain e2e-mtm-adopt-mon --show-labels || true
+          kubectl get validatingadmissionpolicies d8-multitenancy-manager-namespace-creation || true
+          kubectl get moduleconfig multitenancy-manager -o yaml || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager module is enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+
+    - name: adopt-namespaces
+      description: >-
+        Create two namespaces directly. They are not Chainsaw resources: the namespace of a project
+        is deleted through its Project, which the cleanup of this step does.
+      try:
+        - description: Create a plain namespace and one with the extended monitoring label
+          script:
+            content: |
+              set -e
+              kubectl create namespace e2e-mtm-adopt-plain
+              kubectl label namespace e2e-mtm-adopt-plain e2e-mtm/origin=kubectl
+              kubectl create -f - <<'YAML'
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: e2e-mtm-adopt-mon
+                labels:
+                  extended-monitoring.deckhouse.io/enabled: "true"
+              YAML
+        - description: >-
+            Assert both namespaces are adopted: simple for the plain one, default with the parameters
+            of its current state for the labelled one
+          assert:
+            timeout: 3m
+            file: asserts/adopted.yaml
+        - description: Assert adoption adds no network isolation to the labelled namespace
+          error:
+            resource:
+              apiVersion: networking.k8s.io/v1
+              kind: NetworkPolicy
+              metadata:
+                name: isolated
+                namespace: e2e-mtm-adopt-mon
+        - description: Assert the namespace of the project cannot be deleted directly, even by system:masters
+          script:
+            bindings:
+              - name: expected
+                value: This resource is managed by e2e-mtm-adopt-plain Project. Manual modification is forbidden.
+            content: >-
+              kubectl delete namespace e2e-mtm-adopt-plain --dry-run=server
+              --as e2e-mtm-cluster-admin --as-group system:masters
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+      cleanup:
+        - description: Delete the adopted projects, which deletes their namespaces
+          script:
+            timeout: 8m
+            content: |
+              set -e
+              kubectl delete project e2e-mtm-adopt-plain e2e-mtm-adopt-mon --ignore-not-found --wait=true --timeout=6m
+              # A namespace that was never adopted has no Project and is deleted directly.
+              kubectl delete namespace e2e-mtm-adopt-plain e2e-mtm-adopt-mon --ignore-not-found --wait=false
+              for ns in e2e-mtm-adopt-plain e2e-mtm-adopt-mon; do
+                kubectl wait --for=delete "namespace/${ns}" --timeout=2m 2>/dev/null || true
+              done
+
+    - name: namespaces-only-through-projects
+      description: >-
+        With allowNamespacesWithoutProjects false, the d8-multitenancy-manager-namespace-creation
+        policy refuses a direct namespace create to everybody but the platform and system:masters
+      try:
+        - description: Create a user who may create namespaces through RBAC
+          create:
+            file: manifests/namespace-creator-rbac.yaml
+        - description: Set allowNamespacesWithoutProjects to false, keeping the other settings
+          script:
+            content: bash ../common/scripts/module-setting.sh set multitenancy-manager allowNamespacesWithoutProjects false
+        - description: Assert Deckhouse renders the namespace-creation policy
+          assert:
+            timeout: 15m
+            resource:
+              apiVersion: admissionregistration.k8s.io/v1
+              kind: ValidatingAdmissionPolicyBinding
+              metadata:
+                name: d8-multitenancy-manager-namespace-creation
+        - description: Assert the user is refused a namespace
+          script:
+            timeout: 3m
+            content: >-
+              bash ../common/scripts/eventually-denied.sh 120
+              'Namespaces can be created only as a part of a project: create a Project, or a ProjectNamespace in the main namespace of a project. The allowNamespacesWithoutProjects parameter of the multitenancy-manager module is false.'
+              kubectl create namespace e2e-mtm-ns-refused --dry-run=server --as e2e-mtm-ns-creator@example.com
+        - description: Assert a member of system:masters still creates a namespace directly
+          script:
+            content: kubectl create namespace e2e-mtm-ns-admitted --dry-run=server --as e2e-mtm-cluster-admin --as-group system:masters
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Put allowNamespacesWithoutProjects back
+          script:
+            content: bash ../common/scripts/module-setting.sh restore multitenancy-manager allowNamespacesWithoutProjects
+        - description: Wait until the namespace-creation policy is gone again, unless the cluster had it before
+          script:
+            timeout: 16m
+            content: |
+              setting="$(kubectl get moduleconfig multitenancy-manager -o jsonpath='{.spec.settings.allowNamespacesWithoutProjects}' 2>/dev/null || true)"
+              if [ "${setting}" = "false" ]; then
+                echo "the cluster sets allowNamespacesWithoutProjects to false itself, the policy stays"
+                exit 0
+              fi
+              for attempt in $(seq 1 180); do
+                if ! kubectl get validatingadmissionpolicybinding d8-multitenancy-manager-namespace-creation >/dev/null 2>&1; then
+                  echo "the namespace-creation policy is gone"
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "the namespace-creation policy is still there"
+              exit 1

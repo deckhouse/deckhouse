@@ -1,0 +1,529 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: webhook-rejections
+spec:
+  description: >-
+    The Project, ProjectTemplate and ProjectNamespace admission checks refuse invalid objects with
+    the exact messages of the module code. Every refused request is a server-side dry run, so
+    nothing is created if a check lets it through. A Project on a template that does not exist is
+    admitted with a warning and reports the missing template in its status.
+  concurrent: false
+  catch:
+    - description: Show the projects of the test on failure
+      script:
+        content: kubectl get projects e2e-mtm-rej e2e-mtm-rej-taken e2e-mtm-notpl -o yaml || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager module is enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+
+    - name: create-base-projects
+      description: >-
+        Create the projects the name checks run against: e2e-mtm-rej, whose namespace exists, and
+        e2e-mtm-rej-taken, whose namespace a ProjectNamespace of e2e-mtm-rej would collide with
+      try:
+        - description: Create the e2e-mtm-rej and e2e-mtm-rej-taken projects
+          create:
+            file: manifests/base-projects.yaml
+        - description: Assert both projects are Deployed and their namespaces exist
+          assert:
+            file: asserts/base-projects.yaml
+
+    - name: project-rejections
+      description: The Project webhook and schema refuse invalid projects
+      try:
+        - description: Assert admission refuses a name with the d8- prefix
+          script:
+            bindings:
+              - name: expected
+                value: 'Projects cannot start with ''d8-'' or ''kube-'''
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: d8-e2e-mtm-reserved
+              spec:
+                projectTemplateName: simple
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses the name of a virtual project
+          script:
+            bindings:
+              - name: expected
+                value: 'the "default" and "deckhouse" project names and the "virtual" project template are reserved for the platform''s virtual projects'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: deckhouse
+              spec:
+                projectTemplateName: simple
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses the virtual template
+          script:
+            bindings:
+              - name: expected
+                value: 'the "default" and "deckhouse" project names and the "virtual" project template are reserved for the platform''s virtual projects'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-rej-virtual
+              spec:
+                projectTemplateName: virtual
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses the name of an existing namespace
+          script:
+            bindings:
+              - name: expected
+                value: 'The ''e2e-mtm-rej'' project cannot be created, a namespace with its name exists'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-rej
+              spec:
+                projectTemplateName: simple
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses parameters that violate the template schema
+          script:
+            bindings:
+              - name: expected
+                value: 'The project ''e2e-mtm-rej-schema'' is invalid: the ''e2e-mtm-rej-schema'' project is not met the OpenAPI schema for the ''default'' project template'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-rej-schema
+              spec:
+                projectTemplateName: default
+                parameters:
+                  networkPolicy: Open
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses a memory quota without a unit
+          script:
+            bindings:
+              - name: expected
+                value: 'requests.memory must include a unit suffix, e.g. 2Gi (bare numbers are interpreted as bytes)'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-rej-quota
+              spec:
+                projectTemplateName: simple
+                quota:
+                  requests.memory: "1024"
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses an administrator under the reserved user prefix
+          script:
+            bindings:
+              - name: expected
+                value: 'administrator name "system:multitenancy-manager:project:e2e-mtm-rej" must not start with system:multitenancy-manager:, which starts the names of the users the multitenancy-manager controller acts as'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-rej-admin
+              spec:
+                projectTemplateName: simple
+                administrators:
+                  - kind: User
+                    name: system:multitenancy-manager:project:e2e-mtm-rej
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses administrators in both the standard field and the parameter
+          script:
+            bindings:
+              - name: expected
+                value: 'spec.administrators and spec.parameters.administrators cannot both be set, because the v1alpha2 version of the project has room for only one of them'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-rej-both
+              spec:
+                projectTemplateName: simple
+                administrators:
+                  - kind: User
+                    name: e2e-mtm-a@example.com
+                parameters:
+                  administrators:
+                    - subject: User
+                      name: e2e-mtm-b@example.com
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses a namespace label the module owns in the parameters
+          script:
+            bindings:
+              - name: expected
+                value: 'The project ''e2e-mtm-rej-label'' is invalid: the parameter ''namespace.labels'' sets namespace labels the module owns:'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-rej-label
+              spec:
+                projectTemplateName: default
+                parameters:
+                  namespace:
+                    labels:
+                      security.deckhouse.io/pod-policy: privileged
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses a project label naming another project
+          script:
+            bindings:
+              - name: expected
+                value: 'the projects.deckhouse.io/project label of the "e2e-mtm-rej-owner" project must be the project name, got "e2e-mtm-other"'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-rej-owner
+                labels:
+                  projects.deckhouse.io/project: e2e-mtm-other
+              spec:
+                projectTemplateName: simple
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses a name longer than 61 characters
+          script:
+            bindings:
+              - name: expected
+                value: 'Project name must be no longer than 61 characters'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-too-long-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+              spec:
+                projectTemplateName: simple
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+
+    - name: project-template-rejections
+      description: The ProjectTemplate webhook and the v1alpha1 create policy refuse invalid templates
+      try:
+        - description: Assert admission refuses the reserved name virtual
+          script:
+            bindings:
+              - name: expected
+                value: 'the ''virtual'' project template name is reserved for the virtual projects ''default'' and ''deckhouse''; choose another name'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha2
+              kind: ProjectTemplate
+              metadata:
+                name: virtual
+              spec:
+                parametersSchema:
+                  openAPIV3Schema:
+                    type: object
+                    properties:
+                      flag:
+                        type: boolean
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses a reference to an undeclared parameter
+          script:
+            bindings:
+              - name: expected
+                value: 'the ''e2e-mtm-rej-tpl'' project template field ''podSecurityStandard'' references parameter ''missing'', but ''missing'' is not declared in spec.parametersSchema.properties'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha2
+              kind: ProjectTemplate
+              metadata:
+                name: e2e-mtm-rej-tpl
+              spec:
+                podSecurityStandard:
+                  fromParam: missing
+                parametersSchema:
+                  openAPIV3Schema:
+                    type: object
+                    properties:
+                      flag:
+                        type: boolean
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses a reference to a parameter of the wrong type
+          script:
+            bindings:
+              - name: expected
+                value: 'the ''e2e-mtm-rej-tpl'' project template field ''networkPolicy.mode'' references parameter ''flag'' of type ''boolean'', but the field requires type ''string'''
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha2
+              kind: ProjectTemplate
+              metadata:
+                name: e2e-mtm-rej-tpl
+              spec:
+                networkPolicy:
+                  mode:
+                    fromParam: flag
+                parametersSchema:
+                  openAPIV3Schema:
+                    type: object
+                    properties:
+                      flag:
+                        type: boolean
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses a literal outside the allowed values
+          script:
+            bindings:
+              - name: expected
+                value: 'the ''e2e-mtm-rej-tpl'' project template field ''podSecurityStandard'' must be one of Privileged, Baseline, Restricted or a {fromParam: <name>} reference, got ''Strict'''
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha2
+              kind: ProjectTemplate
+              metadata:
+                name: e2e-mtm-rej-tpl
+              spec:
+                podSecurityStandard: Strict
+                parametersSchema:
+                  openAPIV3Schema:
+                    type: object
+                    properties:
+                      flag:
+                        type: boolean
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses a new Helm resourcesTemplate
+          script:
+            bindings:
+              - name: expected
+                value: 'the ''e2e-mtm-rej-tpl'' project template cannot get a new resourcesTemplate: the field is deprecated'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha2
+              kind: ProjectTemplate
+              metadata:
+                name: e2e-mtm-rej-tpl
+              spec:
+                parametersSchema:
+                  openAPIV3Schema:
+                    type: object
+                    properties:
+                      flag:
+                        type: boolean
+                resourcesTemplate: |
+                  apiVersion: v1
+                  kind: ConfigMap
+                  metadata:
+                    name: e2e-mtm
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses a create through deckhouse.io/v1alpha1
+          script:
+            bindings:
+              - name: expected
+                value: 'A ProjectTemplate is created through deckhouse.io/v1alpha2. deckhouse.io/v1alpha1 is deprecated and serves only the templates created through it.'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha1
+              kind: ProjectTemplate
+              metadata:
+                name: e2e-mtm-rej-tpl
+              spec:
+                parametersSchema:
+                  openAPIV3Schema:
+                    type: object
+                    properties:
+                      flag:
+                        type: boolean
+                resourcesTemplate: |
+                  apiVersion: v1
+                  kind: ConfigMap
+                  metadata:
+                    name: e2e-mtm
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses a reference to a grant policy that does not exist
+          script:
+            bindings:
+              - name: expected
+                value: 'the ''e2e-mtm-rej-tpl'' project template references ClusterResourceGrantPolicy ''e2e-mtm-missing'' which does not exist'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha2
+              kind: ProjectTemplate
+              metadata:
+                name: e2e-mtm-rej-tpl
+              spec:
+                grantPolicies:
+                  - e2e-mtm-missing
+                parametersSchema:
+                  openAPIV3Schema:
+                    type: object
+                    properties:
+                      flag:
+                        type: boolean
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses a namespace label the module owns
+          script:
+            bindings:
+              - name: expected
+                value: 'the ''e2e-mtm-rej-tpl'' project template field ''namespaceMetadata.labels'' sets labels the module owns:'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha2
+              kind: ProjectTemplate
+              metadata:
+                name: e2e-mtm-rej-tpl
+              spec:
+                namespaceMetadata:
+                  labels:
+                    projects.deckhouse.io/project: e2e-mtm-other
+                parametersSchema:
+                  openAPIV3Schema:
+                    type: object
+                    properties:
+                      flag:
+                        type: boolean
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+
+    - name: projectnamespace-rejections
+      description: The ProjectNamespace webhook refuses a resulting name that belongs to another project
+      try:
+        - description: Assert admission refuses a ProjectNamespace whose resulting namespace belongs to another project
+          script:
+            bindings:
+              - name: expected
+                value: 'namespace "e2e-mtm-rej-taken" already exists and is not owned by project "e2e-mtm-rej"'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ProjectNamespace
+              metadata:
+                name: taken
+                namespace: e2e-mtm-rej
+              spec:
+                name: taken
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert admission refuses a ProjectNamespace outside the main namespace of a project
+          script:
+            bindings:
+              - name: expected
+                value: 'namespace "kube-system" is not the main namespace of a project; ProjectNamespace may only be created in a project''s main namespace'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ProjectNamespace
+              metadata:
+                name: e2e-mtm-sys
+                namespace: kube-system
+              spec:
+                name: e2e-mtm-sys
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+
+    - name: unknown-template
+      description: >-
+        A project on a template that does not exist is admitted with a warning and then reports the
+        missing template: state Error and the ProjectTemplateFound condition False
+      try:
+        - description: Assert a dry-run create is admitted with the warning about the missing template
+          script:
+            bindings:
+              - name: expected
+                value: The project template not found
+            content: kubectl create --dry-run=server -f manifests/project-unknown-template.yaml
+            check:
+              ($error == null): true
+              (contains($stderr, $expected)): true
+        - description: Create the e2e-mtm-notpl project on the missing template
+          create:
+            file: manifests/project-unknown-template.yaml
+        - description: Assert the project is in the Error state with ProjectTemplateFound False
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-notpl
+              status:
+                state: Error
+                (conditions[?type == 'ProjectTemplateFound'] | [0].status): 'False'
+                (conditions[?type == 'ProjectTemplateFound'] | [0].message): The project template not found
+        - description: Assert no namespace is created for the project
+          error:
+            resource:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: e2e-mtm-notpl

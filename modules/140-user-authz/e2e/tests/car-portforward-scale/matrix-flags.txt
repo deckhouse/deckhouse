@@ -1,0 +1,10 @@
+# e2e-authz-flags: Editor with portForwarding and allowScale; e2e-authz-noflags: Editor only.
+e2e-authz-flags    create  -     pods          portforward  @ns  yes
+e2e-authz-flags    get     -     pods          portforward  @ns  yes
+e2e-authz-flags    patch   apps  deployments   scale        @ns  yes
+e2e-authz-flags    update  apps  statefulsets  scale        @ns  yes
+e2e-authz-flags    get     apps  deployments   scale        @ns  yes
+e2e-authz-noflags  create  -     pods          portforward  @ns  no
+e2e-authz-noflags  patch   apps  deployments   scale        @ns  no
+e2e-authz-noflags  update  apps  statefulsets  scale        @ns  no
+e2e-authz-noflags  create  apps  deployments   -            @ns  yes

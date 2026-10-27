@@ -1,0 +1,84 @@
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-user
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: User
+  subjects:
+  - kind: User
+    name: e2e-authz-user
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-privileged-user
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: PrivilegedUser
+  subjects:
+  - kind: User
+    name: e2e-authz-privileged-user
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-editor
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: Editor
+  subjects:
+  - kind: User
+    name: e2e-authz-editor
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-admin
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: Admin
+  subjects:
+  - kind: User
+    name: e2e-authz-admin
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-cluster-editor
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: ClusterEditor
+  subjects:
+  - kind: User
+    name: e2e-authz-cluster-editor
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-cluster-admin
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: ClusterAdmin
+  subjects:
+  - kind: User
+    name: e2e-authz-cluster-admin
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-level-super-admin
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: SuperAdmin
+  subjects:
+  - kind: User
+    name: e2e-authz-super-admin

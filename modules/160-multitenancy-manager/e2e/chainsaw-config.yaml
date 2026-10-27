@@ -1,0 +1,23 @@
+apiVersion: chainsaw.kyverno.io/v1alpha2
+kind: Configuration
+metadata:
+  name: multitenancy-manager-e2e
+spec:
+  # Every namespace that belongs to no project is adopted into a Project of its own, and the
+  # namespace of a project cannot be deleted directly (only through its Project). An ephemeral
+  # chainsaw-* namespace would therefore fail its own cleanup. The tests run in the existing
+  # `default` namespace, which is never adopted and which Chainsaw neither creates nor deletes,
+  # and every object they create names its namespace explicitly.
+  namespace:
+    name: default
+  timeouts:
+    apply: 60s
+    assert: 5m
+    error: 2m
+    delete: 6m
+    cleanup: 10m
+    exec: 6m
+  execution:
+    parallel: 1
+  discovery:
+    testFile: chainsaw-test.yaml

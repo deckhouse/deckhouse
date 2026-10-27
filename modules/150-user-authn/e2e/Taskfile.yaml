@@ -1,0 +1,54 @@
+version: '3'
+
+vars:
+  REPORTS: '{{.E2E_REPORTS_DIR | default "./reports"}}'
+  # Every test runs in this namespace: multitenancy-manager adopts new namespaces into Projects,
+  # so the suite does not use the ephemeral namespaces of Chainsaw.
+  NAMESPACE: e2e-authn
+
+env:
+  # Shared helpers of the module suites (delete-namespace.sh, create-namespace.sh, module-enabled.sh,
+  # wait-deckhouse-queue.sh). The CI bundle sets E2E_LIB_DIR; in a checkout it is
+  # testing/e2e/lib of the repository.
+  E2E_LIB_DIR:
+    sh: >-
+      if [ -n "${E2E_LIB_DIR:-}" ]; then echo "${E2E_LIB_DIR}";
+      else echo "$(git -C "{{.TASKFILE_DIR}}" rev-parse --show-toplevel)/testing/e2e/lib"; fi
+  E2E_STATE_DIR: /tmp/e2e-authn-state
+
+tasks:
+  run:
+    desc: Run the functional user-authn e2e tests
+    cmds:
+      - defer: bash tests/common/scripts/restore-modules.sh
+      - defer: bash "${E2E_LIB_DIR}/delete-namespace.sh" {{.NAMESPACE}}
+      - mkdir -p {{.REPORTS}}
+      # Leftovers of a run that was killed before its cleanup would break this one.
+      - bash tests/common/scripts/restore-modules.sh
+      - bash "${E2E_LIB_DIR}/delete-namespace.sh" {{.NAMESPACE}}
+      - bash "${E2E_LIB_DIR}/create-namespace.sh" {{.NAMESPACE}}
+      - >-
+        chainsaw test --test-dir tests --config chainsaw-config.yaml --namespace {{.NAMESPACE}}
+        --report-format JUNIT-TEST --report-path {{.REPORTS}} --report-name user-authn
+
+  run:destructive:
+    desc: Run the destructive user-authn e2e tests (rollout restarts of the components under a probe)
+    cmds:
+      - defer: bash tests/common/scripts/restore-modules.sh
+      - defer: bash "${E2E_LIB_DIR}/delete-namespace.sh" {{.NAMESPACE}}
+      - mkdir -p {{.REPORTS}}
+      # Leftovers of a run that was killed before its cleanup would break this one.
+      - bash tests/common/scripts/restore-modules.sh
+      - bash "${E2E_LIB_DIR}/delete-namespace.sh" {{.NAMESPACE}}
+      - bash "${E2E_LIB_DIR}/create-namespace.sh" {{.NAMESPACE}}
+      - >-
+        chainsaw test --test-dir tests-destructive --config chainsaw-config.yaml --namespace {{.NAMESPACE}}
+        --report-format JUNIT-TEST --report-path {{.REPORTS}} --report-name user-authn-destructive
+
+  lint:
+    desc: Lint the Chainsaw configuration, every test of both suites and every script
+    cmds:
+      - chainsaw lint configuration -f chainsaw-config.yaml
+      - for f in tests/*/chainsaw-test.yaml tests-destructive/*/chainsaw-test.yaml; do echo "$f"; chainsaw lint test -f "$f" || exit 1; done
+      - for f in tests/common/scripts/*.sh tests/*/scripts/*.sh tests-destructive/*/scripts/*.sh; do [ -e "$f" ] || continue; bash -n "$f" || exit 1; done
+      - for f in "${E2E_LIB_DIR}"/*.sh; do bash -n "$f" || exit 1; done

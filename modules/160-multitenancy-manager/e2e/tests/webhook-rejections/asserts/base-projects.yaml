@@ -1,0 +1,27 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-rej
+status:
+  state: Deployed
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-rej-taken
+status:
+  state: Deployed
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: e2e-mtm-rej
+  labels:
+    projects.deckhouse.io/project: e2e-mtm-rej
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: e2e-mtm-rej-taken
+  labels:
+    projects.deckhouse.io/project: e2e-mtm-rej-taken

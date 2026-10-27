@@ -2037,3 +2037,59 @@ properties:
 		})
 	}
 }
+
+// The garbage collector deletes a Project whose owner is gone, past the project delete check, so an
+// update may not give a Project an owner: one that does not exist, or exists under another UID, deletes
+// it and, through its finalizer, all its namespaces. Removing an owner deletes nothing and passes. The
+// copies of the namespace owners are recorded by the controller alone: a user may not add or change the
+// record, and may remove it only together with the copies it lists. The controller passes.
+func TestHandle_OwnerReferencesAreNotAdded(t *testing.T) {
+	v := newValidator(t)
+	ctx := context.Background()
+
+	owner := metav1.OwnerReference{APIVersion: "v1", Kind: "Namespace", Name: "victim", UID: "00000000-0000-0000-0000-000000000001"}
+	plain := projectWithParameters(nil)
+	owned := plain.DeepCopy()
+	owned.OwnerReferences = []metav1.OwnerReference{owner}
+
+	resp := v.Handle(ctx, updateRequest(t, "alice", plain, owned))
+	assert.False(t, resp.Allowed, "an added owner is refused")
+	assert.Contains(t, resp.Result.Message, `the ownerReferences of the "foo" Project cannot be added or changed`)
+
+	changed := owned.DeepCopy()
+	changed.OwnerReferences[0].UID = "00000000-0000-0000-0000-000000000002"
+	resp = v.Handle(ctx, updateRequest(t, "alice", owned, changed))
+	assert.False(t, resp.Allowed, "a changed owner is refused")
+
+	resp = v.Handle(ctx, updateRequest(t, "alice", owned, plain))
+	assert.True(t, resp.Allowed, "a removed owner deletes nothing")
+
+	resp = v.Handle(ctx, updateRequest(t, "alice", owned, owned))
+	assert.True(t, resp.Allowed, "the owners the Project has stay")
+
+	recorded := plain.DeepCopy()
+	recorded.Annotations = map[string]string{v1alpha3.ProjectAnnotationNamespaceOwners: string(owner.UID)}
+	resp = v.Handle(ctx, updateRequest(t, "alice", plain, recorded))
+	assert.False(t, resp.Allowed, "the record of the copied owners is the controller's")
+	assert.Contains(t, resp.Result.Message, v1alpha3.ProjectAnnotationNamespaceOwners)
+	resp = v.Handle(ctx, updateRequest(t, "alice", recorded, plain))
+	assert.True(t, resp.Allowed, "a record without the owners it lists is removed, as a whole-object replace does")
+
+	copied := owned.DeepCopy()
+	copied.Annotations = map[string]string{v1alpha3.ProjectAnnotationNamespaceOwners: string(owner.UID)}
+	resp = v.Handle(ctx, updateRequest(t, "alice", copied, plain))
+	assert.True(t, resp.Allowed, "the copies and their record are removed together, as a whole-object replace does")
+	resp = v.Handle(ctx, updateRequest(t, "alice", copied, owned))
+	assert.False(t, resp.Allowed, "a record is not removed while a copy it lists stays")
+	assert.Contains(t, resp.Result.Message, v1alpha3.ProjectAnnotationNamespaceOwners)
+	resp = v.Handle(ctx, updateRequest(t, "alice", copied, copied))
+	assert.True(t, resp.Allowed, "the record stays as it is")
+
+	rewritten := copied.DeepCopy()
+	rewritten.Annotations[v1alpha3.ProjectAnnotationNamespaceOwners] = "00000000-0000-0000-0000-000000000002"
+	resp = v.Handle(ctx, updateRequest(t, "alice", copied, rewritten))
+	assert.False(t, resp.Allowed, "the record of the copied owners is not changed by users")
+
+	resp = v.Handle(ctx, updateRequest(t, rolebindingwebhook.ControllerServiceAccount, plain, owned))
+	assert.True(t, resp.Allowed, "the controller copies the owners of the namespace")
+}

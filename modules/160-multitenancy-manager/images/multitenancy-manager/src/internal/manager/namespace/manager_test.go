@@ -211,6 +211,70 @@ func TestAdopt_Idempotent(t *testing.T) {
 	assert.Len(t, projects.Items, 1)
 }
 
+// TestAdopt_SkipsTerminatingNamespace: a namespace that is being deleted gets no Project and no Helm
+// ownership. Its Project would outlive it and have the project reconcile recreate the namespace.
+func TestAdopt_SkipsTerminatingNamespace(t *testing.T) {
+	ns := namespace("foo", nil, nil)
+	ns.Finalizers = []string{"kubernetes"}
+	m, c := newManager(t, ns)
+	require.NoError(t, c.Delete(context.Background(), ns))
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, ns))
+	require.False(t, ns.DeletionTimestamp.IsZero())
+
+	_, err := m.Adopt(context.Background(), ns)
+	require.NoError(t, err)
+
+	err = c.Get(context.Background(), client.ObjectKey{Name: "foo"}, new(v1alpha3.Project))
+	assert.True(t, apierrors.IsNotFound(err), "a terminating namespace must not be adopted")
+	live := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, live))
+	assert.Empty(t, live.Annotations[helm.ResourceAnnotationReleaseName])
+}
+
+// TestAdopt_SkipsNamespaceDeletedMeanwhile: the namespace the caller holds is stale, and the namespace
+// was deleted after it was read. The conflict re-reads it, finds it terminating and adopts nothing.
+func TestAdopt_SkipsNamespaceDeletedMeanwhile(t *testing.T) {
+	ns := namespace("foo", nil, nil)
+	ns.Finalizers = []string{"kubernetes"}
+	m, c := newManager(t, ns)
+	stale := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, stale))
+	require.NoError(t, c.Delete(context.Background(), ns))
+
+	_, err := m.Adopt(context.Background(), stale)
+	require.NoError(t, err)
+
+	err = c.Get(context.Background(), client.ObjectKey{Name: "foo"}, new(v1alpha3.Project))
+	assert.True(t, apierrors.IsNotFound(err), "a namespace deleted during adoption must not be adopted")
+}
+
+// TestAdopt_SkipsNamespaceGone: the namespace is gone by the time it is adopted.
+func TestAdopt_SkipsNamespaceGone(t *testing.T) {
+	ns := namespace("foo", map[string]string{helm.ResourceLabelManagedBy: helm.ManagedByHelm},
+		map[string]string{helm.ResourceAnnotationReleaseName: "foo"})
+	m, c := newManager(t)
+
+	_, err := m.Adopt(context.Background(), ns)
+	require.NoError(t, err)
+
+	err = c.Get(context.Background(), client.ObjectKey{Name: "foo"}, new(v1alpha3.Project))
+	assert.True(t, apierrors.IsNotFound(err), "a namespace that is gone must not be adopted")
+}
+
+// TestAdopt_SkipsUnstampedNamespaceGone: the namespace is gone before Adopt stamps it. The update of
+// the namespace finds nothing, which is no error, and no Project is created.
+func TestAdopt_SkipsUnstampedNamespaceGone(t *testing.T) {
+	ns := namespace("foo", nil, nil)
+	ns.ResourceVersion = "1"
+	m, c := newManager(t)
+
+	_, err := m.Adopt(context.Background(), ns)
+	require.NoError(t, err, "a namespace that is gone is no error")
+
+	err = c.Get(context.Background(), client.ObjectKey{Name: "foo"}, new(v1alpha3.Project))
+	assert.True(t, apierrors.IsNotFound(err), "a namespace that is gone must not be adopted")
+}
+
 func TestMigrate_ConvertsNamespaceManagedProject(t *testing.T) {
 	ns := namespace("foo", map[string]string{
 		v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,

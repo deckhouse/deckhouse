@@ -1,0 +1,38 @@
+# Access matrix of the namespace roles (templates/rbacv2/global/namespace): viewer < user < manager < admin < superadmin.
+e2e-authz-ns-viewer      get     -                          pods          -       @ns  yes
+e2e-authz-ns-user        get     -                          pods          -       @ns  yes
+e2e-authz-ns-manager     get     -                          pods          -       @ns  yes
+e2e-authz-ns-admin       get     -                          pods          -       @ns  yes
+e2e-authz-ns-superadmin  get     -                          pods          -       @ns  yes
+e2e-authz-ns-viewer      get     -                          pods          log     @ns  yes
+#
+# view_secrets, access_terminal and delete_pods aggregate to user.
+e2e-authz-ns-viewer      get     -                          secrets       -       @ns  no
+e2e-authz-ns-user        get     -                          secrets       -       @ns  yes
+e2e-authz-ns-viewer      create  -                          pods          exec    @ns  no
+e2e-authz-ns-user        create  -                          pods          exec    @ns  yes
+e2e-authz-ns-user        delete  -                          pods          -       @ns  yes
+e2e-authz-ns-user        create  -                          pods          portforward  @ns  yes
+#
+# manage_resources aggregates to manager.
+e2e-authz-ns-user        create  apps                       deployments   -       @ns  no
+e2e-authz-ns-manager     create  apps                       deployments   -       @ns  yes
+e2e-authz-ns-manager     create  -                          secrets       -       @ns  yes
+#
+# manage_security, manage_quotas and manage_limits aggregate to admin.
+e2e-authz-ns-manager     create  rbac.authorization.k8s.io  rolebindings  -       @ns  no
+e2e-authz-ns-admin       create  rbac.authorization.k8s.io  rolebindings  -       @ns  yes
+e2e-authz-ns-manager     create  -                          resourcequotas  -     @ns  no
+e2e-authz-ns-admin       create  -                          resourcequotas  -     @ns  yes
+#
+# manage_serviceaccount_tokens aggregates to superadmin.
+e2e-authz-ns-admin       create  -                          serviceaccounts  token  @ns  no
+e2e-authz-ns-superadmin  create  -                          serviceaccounts  token  @ns  yes
+#
+# A RoleBinding grants nothing outside its namespace.
+e2e-authz-ns-superadmin  get     -                          pods          -       e2e-authz-rbacv2-other  no
+e2e-authz-ns-admin       create  apps                       deployments   -       e2e-authz-rbacv2-other  no
+#
+# Every holder of a namespace role reads the cluster dictionaries through d8:dict.
+e2e-authz-ns-viewer      list    storage.k8s.io             storageclasses  -     -    yes
+e2e-authz-ns-superadmin  list    networking.k8s.io          ingressclasses  -     -    yes

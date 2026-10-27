@@ -1,0 +1,89 @@
+# Access matrix of the basic access levels, derived from templates/cluster-roles.yaml.
+# Columns: USER VERB GROUP RESOURCE SUBRESOURCE NAMESPACE EXPECT ("-" = empty, "@ns" = test namespace).
+#
+# Read access shared by every level.
+e2e-authz-user               get     -                    pods                      -        @ns  yes
+e2e-authz-privileged-user    get     -                    pods                      -        @ns  yes
+e2e-authz-editor             get     -                    pods                      -        @ns  yes
+e2e-authz-admin              get     -                    pods                      -        @ns  yes
+e2e-authz-cluster-editor     get     -                    pods                      -        @ns  yes
+e2e-authz-cluster-admin      get     -                    pods                      -        @ns  yes
+e2e-authz-super-admin        get     -                    pods                      -        @ns  yes
+e2e-authz-user               list    apps                 deployments               -        @ns  yes
+e2e-authz-user               get     -                    pods                      log      @ns  yes
+e2e-authz-user               get     -                    nodes                     -        -    yes
+e2e-authz-user               list    storage.k8s.io       storageclasses            -        -    yes
+#
+# Secrets: PrivilegedUser reads them, Editor writes them.
+e2e-authz-user               get     -                    secrets                   -        @ns  no
+e2e-authz-privileged-user    get     -                    secrets                   -        @ns  yes
+e2e-authz-privileged-user    create  -                    secrets                   -        @ns  no
+e2e-authz-editor             get     -                    secrets                   -        @ns  yes
+e2e-authz-editor             create  -                    secrets                   -        @ns  yes
+e2e-authz-cluster-editor     create  -                    secrets                   -        @ns  yes
+#
+# exec, attach and pod deletion start at PrivilegedUser.
+e2e-authz-user               create  -                    pods                      exec     @ns  no
+e2e-authz-privileged-user    create  -                    pods                      exec     @ns  yes
+e2e-authz-privileged-user    create  -                    pods                      attach   @ns  yes
+e2e-authz-privileged-user    delete  -                    pods                      -        @ns  yes
+e2e-authz-user               delete  -                    pods                      -        @ns  no
+e2e-authz-super-admin        create  -                    pods                      exec     @ns  yes
+#
+# Application objects are written from Editor on.
+e2e-authz-user               create  apps                 deployments               -        @ns  no
+e2e-authz-privileged-user    create  apps                 deployments               -        @ns  no
+e2e-authz-editor             create  apps                 deployments               -        @ns  yes
+e2e-authz-admin              create  apps                 deployments               -        @ns  yes
+e2e-authz-cluster-editor     create  apps                 deployments               -        @ns  yes
+e2e-authz-cluster-admin      create  apps                 deployments               -        @ns  yes
+e2e-authz-super-admin        create  apps                 deployments               -        @ns  yes
+e2e-authz-editor             create  -                    configmaps                -        @ns  yes
+e2e-authz-privileged-user    create  -                    configmaps                -        @ns  no
+#
+# Pods, ServiceAccount tokens, Roles and RoleBindings are Admin rules, which ClusterEditor does not include.
+e2e-authz-editor             create  -                    pods                      -        @ns  no
+e2e-authz-admin              create  -                    pods                      -        @ns  yes
+e2e-authz-cluster-editor     create  -                    pods                      -        @ns  no
+e2e-authz-cluster-admin      create  -                    pods                      -        @ns  yes
+e2e-authz-editor             create  -                    serviceaccounts           token    @ns  no
+e2e-authz-admin              create  -                    serviceaccounts           token    @ns  yes
+e2e-authz-cluster-editor     create  -                    serviceaccounts           token    @ns  no
+e2e-authz-editor             create  rbac.authorization.k8s.io  rolebindings        -        @ns  no
+e2e-authz-admin              create  rbac.authorization.k8s.io  rolebindings        -        @ns  yes
+e2e-authz-cluster-editor     create  rbac.authorization.k8s.io  rolebindings        -        @ns  no
+e2e-authz-cluster-admin      create  rbac.authorization.k8s.io  rolebindings        -        @ns  yes
+e2e-authz-admin              create  deckhouse.io         authorizationrules        -        @ns  yes
+e2e-authz-editor             create  deckhouse.io         authorizationrules        -        @ns  no
+#
+# Cluster-wide application objects start at ClusterEditor.
+e2e-authz-admin              create  apps                 daemonsets                -        @ns  no
+e2e-authz-cluster-editor     create  apps                 daemonsets                -        @ns  yes
+e2e-authz-admin              create  storage.k8s.io       storageclasses            -        -    no
+e2e-authz-cluster-editor     create  storage.k8s.io       storageclasses            -        -    yes
+e2e-authz-cluster-editor     list    rbac.authorization.k8s.io  clusterroles        -        -    yes
+e2e-authz-admin              list    rbac.authorization.k8s.io  clusterroles        -        -    no
+#
+# Cluster service objects start at ClusterAdmin.
+e2e-authz-cluster-editor     delete  -                    namespaces                -        -    no
+e2e-authz-cluster-admin      delete  -                    namespaces                -        -    yes
+e2e-authz-cluster-editor     create  deckhouse.io         clusterauthorizationrules -        -    no
+e2e-authz-cluster-admin      create  deckhouse.io         clusterauthorizationrules -        -    yes
+e2e-authz-cluster-editor     create  rbac.authorization.k8s.io  clusterrolebindings -        -    no
+e2e-authz-cluster-admin      create  rbac.authorization.k8s.io  clusterrolebindings -        -    yes
+# Admin may create NetworkPolicies on clusters where a module aggregates that into
+# user-authz:admin:custom, so only the ClusterAdmin side is fixed here.
+e2e-authz-cluster-admin      create  networking.k8s.io    networkpolicies           -        @ns  yes
+e2e-authz-cluster-admin      get     -                    nodes                     proxy    -    yes
+e2e-authz-cluster-editor     get     -                    nodes                     proxy    -    no
+#
+# Only SuperAdmin deletes nodes; port-forward and scale need the dedicated flags (see car-portforward-scale).
+e2e-authz-cluster-admin      delete  -                    nodes                     -        -    no
+e2e-authz-super-admin        delete  -                    nodes                     -        -    yes
+e2e-authz-cluster-admin      create  -                    pods                      portforward  @ns  no
+e2e-authz-super-admin        create  -                    pods                      portforward  @ns  yes
+e2e-authz-cluster-admin      patch   apps                 deployments               scale    @ns  no
+e2e-authz-super-admin        patch   apps                 deployments               scale    @ns  yes
+#
+# A subject without a rule gets nothing.
+e2e-authz-nobody             get     -                    pods                      -        @ns  no

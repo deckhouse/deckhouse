@@ -1,0 +1,3 @@
+# The custom capability aggregates to the viewer namespace role.
+e2e-authz-cap-viewer  get     e2e-authz.example.com  widgets  -  @ns  yes
+e2e-authz-cap-viewer  create  e2e-authz.example.com  widgets  -  @ns  no

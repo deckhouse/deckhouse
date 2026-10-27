@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -28,6 +29,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
+	namespacemanager "controller/internal/manager/namespace"
 )
 
 func (m *Manager) updateVirtualProject(ctx context.Context, project *v1alpha3.Project, namespaces []string) error {
@@ -198,6 +200,16 @@ func (m *Manager) prepareProject(ctx context.Context, project *v1alpha3.Project)
 			project.Labels[v1alpha3.ResourceLabelProject] = project.Name
 
 			delete(project.Annotations, v1alpha3.ProjectAnnotationRequireSync)
+
+			// The Project of an adopted namespace keeps the owners of the namespace, also when it was
+			// adopted before the copy was made or the owners changed since (see MirrorNamespaceOwners).
+			namespace := new(corev1.Namespace)
+			switch err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, namespace); {
+			case err == nil:
+				namespacemanager.MirrorNamespaceOwners(project, namespace)
+			case !apierrors.IsNotFound(err):
+				return fmt.Errorf("get the '%s' namespace: %w", project.Name, err)
+			}
 
 			if !controllerutil.ContainsFinalizer(project, v1alpha3.ProjectFinalizer) {
 				controllerutil.AddFinalizer(project, v1alpha3.ProjectFinalizer)

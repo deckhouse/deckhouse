@@ -1,0 +1,6 @@
+{
+  "apiVersion": "deckhouse.io/v1alpha3",
+  "kind": "Project",
+  "metadata": {"name": "e2e-mtm-probe"},
+  "spec": {"projectTemplateName": "default"}
+}

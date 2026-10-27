@@ -1,0 +1,319 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-webhooks
+spec:
+  description: >-
+    Exercise the validating webhooks of user-authz against the live API server and match the
+    exact messages of webhooks/validating/*.py: ClusterAuthorizationRule subjects, the
+    multitenancy-only fields and RE2 patterns, ClusterRoleBindings to scoped roles, reserved
+    ClusterRole names and aggregation labels, the heritage label, project-management
+    escalation through a Role, and exec into or edits of objects marked
+    deckhouse.io/system-resource=true. Rejections are checked with --dry-run=server or with
+    actions that change nothing, so a regression cannot leave objects behind.
+  timeouts:
+    apply: 60s
+    assert: 3m
+    error: 2m
+    delete: 2m
+    exec: 3m
+
+  catch:
+    - description: Show the pods of the test namespace
+      get:
+        apiVersion: v1
+        kind: Pod
+    - description: Show events of the test namespace
+      events: {}
+    - description: Show the webhook-handler logs
+      podLogs:
+        namespace: d8-system
+        selector: app=webhook-handler
+        tail: 200
+
+  steps:
+    - name: prerequisites
+      description: Verify that the user-authz module and its controller are Ready
+      try:
+        - description: Wait for module user-authz and the user-authz-controller Deployment
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-user-authz.sh
+
+    - name: setup
+      description: Create an Editor and a SuperAdmin rule, a system pod, a plain pod and a system ConfigMap
+      try:
+        - description: Apply the Editor and SuperAdmin ClusterAuthorizationRules
+          apply:
+            file: manifests/cars.yaml
+        - description: Assert the SuperAdmin binding exists
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-wh-superadmin:super-admin
+              roleRef:
+                name: user-authz:super-admin
+        - description: Assert the Editor binding exists
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-wh-editor:editor
+        - description: Create the system pod and the plain pod
+          apply:
+            file: manifests/pods.yaml
+        - description: Create the system ConfigMap
+          apply:
+            file: manifests/system-configmap.yaml
+        - description: Assert the system pod is Running
+          assert:
+            resource:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                labels:
+                  app: e2e-authz-wh-system
+              status:
+                phase: Running
+        - description: Assert the plain pod is Running
+          assert:
+            resource:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                labels:
+                  app: e2e-authz-wh-plain
+              status:
+                phase: Running
+
+    - name: car-subjects
+      description: cluster_authorization_rule.py rejects malformed subjects
+      try:
+        - description: A ServiceAccount subject without a namespace is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                'Namespace for the ServiceAccount e2e-authz-wh-sa is not provided' \
+                -- kubectl apply --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-wh-subjects
+              spec:
+                accessLevel: User
+                subjects:
+                - kind: ServiceAccount
+                  name: e2e-authz-wh-sa
+              YAML
+        - description: A User subject with a namespace is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                'Namespace for the User e2e-authz-wh-user must not be provided' \
+                -- kubectl apply --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-wh-subjects
+              spec:
+                accessLevel: User
+                subjects:
+                - kind: User
+                  name: e2e-authz-wh-user
+                  namespace: default
+              YAML
+
+    - name: car-multitenancy-fields
+      description: >-
+        multitenancy.py rejects a limitNamespaces pattern RE2 cannot compile in any mode, and the
+        multitenancy fields while enableMultiTenancy is off
+      try:
+        - description: A lookahead in limitNamespaces is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                "limitNamespaces entry '(?=prod)prod-.*' in ClusterAuthorizationRule 'e2e-authz-wh-re2' has lookahead, which the authorization webhook's regular expression engine (RE2) cannot compile." \
+                -- kubectl apply --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-wh-re2
+              spec:
+                accessLevel: User
+                limitNamespaces:
+                - '(?=prod)prod-.*'
+                subjects:
+                - kind: User
+                  name: e2e-authz-wh-re2
+              YAML
+        - description: limitNamespaces is rejected while multitenancy is off (accepted when it is on)
+          script:
+            content: |
+              set -eu
+              state="$(kubectl -n d8-user-authz get configmap d8-user-authz-multitenancy-state -o jsonpath='{.data.enableMultiTenancy}')"
+              echo "d8-user-authz-multitenancy-state: enableMultiTenancy=${state}"
+              manifest='
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-wh-mt
+              spec:
+                accessLevel: User
+                limitNamespaces:
+                - e2e-authz
+                subjects:
+                - kind: User
+                  name: e2e-authz-wh-mt
+              '
+              if [ "${state}" = "true" ]; then
+                echo "NOTICE: multitenancy is enabled in this cluster, checking the opposite branch: the rule must be accepted"
+                printf '%s\n' "${manifest}" | bash ../common/scripts/expect.sh allowed -- kubectl apply --dry-run=server -f -
+              else
+                printf '%s\n' "${manifest}" | bash ../common/scripts/expect.sh denied \
+                  "You must enable userAuthz.enableMultiTenancy to use the limitNamespaces option in ClusterAuthorizationRule 'e2e-authz-wh-mt'" \
+                  -- kubectl apply --dry-run=server -f -
+              fi
+
+    - name: clusterrolebinding-scope
+      description: role_binding.py rejects ClusterRoleBindings to namespace roles and capabilities, even for a cluster administrator
+      try:
+        - description: A ClusterRoleBinding to d8:namespace:viewer is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                "ClusterRole 'd8:namespace:viewer' is a scoped role and cannot be granted through a ClusterRoleBinding (it would apply in every namespace)." \
+                -- kubectl create clusterrolebinding e2e-authz-wh-scoped --dry-run=server \
+                  --clusterrole=d8:namespace:viewer --user=e2e-authz-wh-user
+        - description: A ClusterRoleBinding to a namespace capability is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                "ClusterRole 'd8:namespace-capability:kubernetes:view_resources' is a capability and cannot be granted through a ClusterRoleBinding" \
+                -- kubectl create clusterrolebinding e2e-authz-wh-capability --dry-run=server \
+                  --clusterrole=d8:namespace-capability:kubernetes:view_resources --user=e2e-authz-wh-user
+        - description: A RoleBinding to the same namespace role is accepted
+          script:
+            content: |
+              bash ../common/scripts/expect.sh allowed \
+                -- kubectl -n "${NAMESPACE}" create rolebinding e2e-authz-wh-scoped --dry-run=server \
+                  --clusterrole=d8:namespace:viewer --user=e2e-authz-wh-user
+
+    - name: clusterrole-labels
+      description: cluster_roles.py and system_roles.py protect the names and labels the platform roles rely on
+      try:
+        - description: A foreign platform aggregation label is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                'ClusterRole "e2e-authz-wh-foreign" carries the aggregation label of the "namespace" lineage but is not labeled "rbac.deckhouse.io/kind: custom-capability": only a custom capability may aggregate into a platform role.' \
+                -- kubectl apply --dry-run=server -f - <<'YAML'
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: e2e-authz-wh-foreign
+                labels:
+                  rbac.deckhouse.io/aggregate-to-namespace-as: admin
+              rules:
+              - apiGroups: [""]
+                resources: ["nodes"]
+                verbs: ["delete"]
+              YAML
+        - description: A ClusterRole name with the reserved d8 prefix is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                'ClusterRole names with the "d8:" prefix are reserved for Deckhouse. Use the "d8:custom:" prefix for custom roles and capabilities.' \
+                -- kubectl create clusterrole d8:e2e-authz-wh-reserved --dry-run=server --verb=get --resource=pods
+        - description: A ClusterRole with the heritage deckhouse label is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                'ClusterRole "e2e-authz-wh-heritage" has forbidden label "heritage:deckhouse"' \
+                -- kubectl apply --dry-run=server -f - <<'YAML'
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: e2e-authz-wh-heritage
+                labels:
+                  heritage: deckhouse
+              rules:
+              - apiGroups: [""]
+                resources: ["pods"]
+                verbs: ["get"]
+              YAML
+
+    - name: role-escalation
+      description: >-
+        role_escalation.py rejects a Role that grants mutating access to project-management
+        resources, even when its author holds every permission (SuperAdmin) and RBAC would
+        allow it
+      try:
+        - description: A Role granting create on projects.deckhouse.io is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                'Role "e2e-authz-wh-escalate" must not grant mutating access to Deckhouse project-management resources' \
+                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-superadmin apply --dry-run=server -f - <<'YAML'
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: Role
+              metadata:
+                name: e2e-authz-wh-escalate
+              rules:
+              - apiGroups: ["deckhouse.io"]
+                resources: ["projects"]
+                verbs: ["create"]
+              YAML
+        - description: A Role granting only read access to pods is accepted
+          script:
+            content: |
+              bash ../common/scripts/expect.sh allowed \
+                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-superadmin create role e2e-authz-wh-reader \
+                  --dry-run=server --verb=get --resource=pods
+
+    - name: system-resource-exec
+      description: >-
+        system_resources.py rejects exec into a pod labeled deckhouse.io/system-resource=true for
+        an Editor, and lets the Editor exec into other pods and a SuperAdmin into the system pod
+      try:
+        - description: Editor exec into the system pod is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                'Pod "e2e-authz-wh-system" is a Deckhouse system resource (label deckhouse.io/system-resource=true); exec into it is allowed only for a superadmin of this namespace or project, a system superadmin or a cluster administrator' \
+                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor exec e2e-authz-wh-system -c agnhost -- /agnhost
+        - description: Editor exec into the plain pod is allowed
+          script:
+            content: |
+              bash ../common/scripts/expect.sh allowed \
+                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor exec e2e-authz-wh-plain -c agnhost -- /agnhost
+        - description: SuperAdmin exec into the system pod is allowed
+          script:
+            content: |
+              bash ../common/scripts/expect.sh allowed \
+                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-superadmin exec e2e-authz-wh-system -c agnhost -- /agnhost
+
+    - name: system-resource-edit
+      description: system_resources.py rejects edits of an object labeled deckhouse.io/system-resource=true by an Editor
+      try:
+        - description: Editor update of the system ConfigMap is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                'ConfigMap "e2e-authz-wh-system" is a Deckhouse system resource (label deckhouse.io/system-resource=true) placed in this namespace. It can be modified or deleted only by a superadmin of this namespace or project, a system superadmin or a cluster administrator' \
+                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor label configmap e2e-authz-wh-system \
+                  --dry-run=server e2e-authz-touched=true
+        - description: Editor deletion of the system ConfigMap is rejected
+          script:
+            content: |
+              bash ../common/scripts/expect.sh denied \
+                'ConfigMap "e2e-authz-wh-system" is a Deckhouse system resource' \
+                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-editor delete configmap e2e-authz-wh-system --dry-run=server
+        - description: SuperAdmin update of the system ConfigMap is allowed
+          script:
+            content: |
+              bash ../common/scripts/expect.sh allowed \
+                -- kubectl -n "${NAMESPACE}" --as e2e-authz-wh-superadmin label configmap e2e-authz-wh-system \
+                  --dry-run=server e2e-authz-touched=true

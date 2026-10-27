@@ -1,0 +1,155 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-dex-authenticator-app
+spec:
+  description: >-
+    An application behind ingress-nginx is protected by a DexAuthenticator. An anonymous request
+    is redirected to sign in, the user signs in to Dex with a password, and the session cookie set
+    by the authenticator lets requests reach the application, which receives the user email in the
+    X-Auth-Request-Email header. The case needs an IngressNginxController and fails with an
+    explicit message when the cluster has none.
+  concurrent: false
+
+  catch:
+    - description: Show pods, Ingresses and DexAuthenticators in the test namespace on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        env:
+          - name: NS
+            value: ($namespace)
+        content: |
+          kubectl -n "${NS}" get pods,services,ingresses,dexauthenticators.deckhouse.io -o wide
+          kubectl -n "${NS}" describe ingress e2e-authn-app
+    - description: Show events in the test namespace on failure
+      events: {}
+    - description: Show the authenticator logs on failure
+      podLogs:
+        selector: app=dex-authenticator
+        container: dex-authenticator
+        tail: 100
+    - description: Show Dex logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=dex
+        container: dex
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: ingress-controller-present
+      description: The case needs ingress-nginx; it fails here with an explicit message when there is no controller
+      try:
+        - description: Find an IngressNginxController with a Ready controller pod
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              ingress_discover
+
+    - name: create-user-and-app
+      description: Create the User in the allowed Group and the echo application
+      try:
+        - description: Create User e2e-authn-app-user
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user dex-authenticator-app e2e-authn-app-user e2e-authn-app-user@example.com
+        - description: Create Group e2e-authn-app-group with the user
+          create:
+            file: manifests/group.yaml
+        - description: Create the agnhost netexec Deployment and its Service
+          create:
+            file: manifests/app.yaml
+        - description: Assert the application is available
+          assert:
+            timeout: 3m
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: e2e-authn-app
+              status:
+                availableReplicas: 1
+      cleanup:
+        - description: Delete the User
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: kubectl delete users.deckhouse.io e2e-authn-app-user --ignore-not-found
+
+    - name: protect-app
+      description: Create the DexAuthenticator and the application Ingress with the auth annotations
+      try:
+        - description: Create the DexAuthenticator for the public domain of the application and its Ingress
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/setup.sh
+        - description: Assert the module rendered the authenticator Deployment and it is available
+          assert:
+            timeout: 5m
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: e2e-authn-app-dex-authenticator
+                labels:
+                  deckhouse.io/dex-authenticator-for: e2e-authn-app
+              status:
+                (availableReplicas >= `1`): true
+        - description: Assert the module rendered the /dex-authenticator Ingress
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: e2e-authn-app-dex-authenticator
+              spec:
+                rules:
+                  - http:
+                      paths:
+                        - path: /dex-authenticator
+      cleanup:
+        - description: Delete the DexAuthenticator and wait until the module removes its objects
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            env:
+              - name: NS
+                value: ($namespace)
+            timeout: 6m
+            content: |
+              kubectl -n "${NS}" delete ingress e2e-authn-app --ignore-not-found
+              bash ../../tests/common/scripts/delete-dex-authenticator.sh "${NS}" e2e-authn-app
+
+    - name: browser-flow
+      description: Anonymous requests are redirected; after signing in the application answers with the user email
+      try:
+        - description: Walk through the sign-in and request the application with the session cookie
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 8m
+            content: bash scripts/flow.sh

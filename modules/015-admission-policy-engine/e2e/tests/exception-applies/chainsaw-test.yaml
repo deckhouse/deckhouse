@@ -1,0 +1,107 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-policy-engine-exception-applies
+spec:
+  description: >-
+    A SecurityPolicyException admits a pod that Baseline denies, but only for the pod that refers
+    to it with the security.deckhouse.io/security-policy-exception label. Gatekeeper reads the
+    exception from its inventory, so the admission is retried until the exception is synced.
+  timeouts:
+    exec: 20m
+  steps:
+    - name: ensure-module
+      description: Enable the module if needed and wait until it is Ready and bootstrapped
+      try:
+        - description: Enable admission-policy-engine and wait for the bootstrap
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh
+            check:
+              ($error == null): true
+
+    - name: create-namespaces
+      description: >-
+        Create the namespaces of the test with every label set at creation; multitenancy-manager
+        adopts them into Projects and refuses later changes of the managed labels
+      try:
+        - description: Create e2e-ape-exception with security.deckhouse.io/pod-policy=baseline, security.deckhouse.io/pod-policy-action=deny
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-exception security.deckhouse.io/pod-policy=baseline security.deckhouse.io/pod-policy-action=deny
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete the namespaces of the test through their Projects
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-exception
+
+    - name: denied-without-exception
+      description: Baseline denies a pod on the host network before any exception exists
+      try:
+        - description: A host-network pod is denied
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-exception
+              --name host-network
+              --patch '.spec.hostNetwork = true'
+              --match 'd8-pod-security-baseline-deny'
+              --match 'The hostNetwork or hostPort are not allowed'
+            check:
+              ($error == null): true
+
+    - name: exception-admits-labelled-pod
+      description: >-
+        With the exception in place, the pod that refers to it is admitted, a pod without the label
+        and a pod that refers to a missing exception are still denied
+      try:
+        - description: Create the SecurityPolicyException
+          apply:
+            file: manifests/exception.yaml
+        - description: The host-network pod with the exception label is admitted
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect allow --namespace e2e-ape-exception
+              --name host-network-excepted --timeout 300
+              --patch '.spec.hostNetwork = true | .metadata.labels["security.deckhouse.io/security-policy-exception"] = "e2e-ape-allow-hostnetwork"'
+            check:
+              ($error == null): true
+        - description: The same pod without the label is denied
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-exception
+              --name host-network --timeout 60
+              --patch '.spec.hostNetwork = true'
+              --match 'The hostNetwork or hostPort are not allowed'
+            check:
+              ($error == null): true
+        - description: A pod referring to a missing exception is denied
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-exception
+              --name host-network-missing --timeout 60
+              --patch '.spec.hostNetwork = true | .metadata.labels["security.deckhouse.io/security-policy-exception"] = "e2e-ape-missing"'
+              --match 'The hostNetwork or hostPort are not allowed'
+            check:
+              ($error == null): true
+        - description: The exception does not widen other rules, a privileged container with the label is denied
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-exception
+              --name privileged-excepted --timeout 60
+              --patch '.metadata.labels["security.deckhouse.io/security-policy-exception"] = "e2e-ape-allow-hostnetwork" | .spec.containers[0].securityContext |= (.privileged = true | del(.allowPrivilegeEscalation))'
+              --match 'Privileged container is not allowed'
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the exception
+          get:
+            apiVersion: deckhouse.io/v1alpha1
+            kind: SecurityPolicyException
+            namespace: e2e-ape-exception
+        - description: Show the Gatekeeper sync configuration
+          get:
+            apiVersion: config.gatekeeper.sh/v1alpha1
+            kind: Config
+            namespace: d8-admission-policy-engine
+            name: config

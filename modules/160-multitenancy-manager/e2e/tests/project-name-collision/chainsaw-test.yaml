@@ -1,0 +1,100 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: project-name-collision
+spec:
+  description: >-
+    A project named like an additional namespace of another project (<project>-<suffix>) is a
+    separate project: the Project webhook admits it with a warning that says so, and the
+    controller sends the NamedLikeAdditionalNamespace Warning event on the new project. The
+    MultitenancyManagerProjectNamedLikeAdditionalNamespace alert is not checked (see README).
+  concurrent: false
+  catch:
+    - description: Show the projects and the events on failure
+      script:
+        content: |
+          kubectl get projects e2e-mtm-col e2e-mtm-col-extra -o wide || true
+          kubectl -n default get events --field-selector reason=NamedLikeAdditionalNamespace || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager module is enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+
+    - name: create-base-project
+      description: Create the e2e-mtm-col project
+      try:
+        - description: Create the e2e-mtm-col project
+          create:
+            file: manifests/project-base.yaml
+        - description: Assert the project is Deployed
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-col
+              status:
+                state: Deployed
+
+    - name: suffixed-project
+      description: A project named <project>-<suffix> is admitted with a warning and gets a Warning event
+      try:
+        - description: Assert the dry-run create is admitted with the warning of the Project webhook
+          script:
+            bindings:
+              - name: expected
+                value: 'Project "e2e-mtm-col-extra" is not an additional namespace of project "e2e-mtm-col". It is created as a separate project with a namespace of its own. To add a namespace to project "e2e-mtm-col", create a ProjectNamespace in the "e2e-mtm-col" namespace instead.'
+            content: kubectl create --dry-run=server -f manifests/project-suffixed.yaml
+            check:
+              ($error == null): true
+              (contains($stderr, $expected)): true
+        - description: Create the e2e-mtm-col-extra project
+          create:
+            file: manifests/project-suffixed.yaml
+        - description: Assert the project is a separate project with a namespace of its own
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-col-extra
+              status:
+                state: Deployed
+                namespaces:
+                  - name: e2e-mtm-col-extra
+                    kind: Main
+        - description: Remember the UID of the e2e-mtm-col-extra project
+          script:
+            content: kubectl get project e2e-mtm-col-extra -o jsonpath='{.metadata.uid}'
+            check:
+              ($error == null): true
+              ($stdout != ''): true
+            outputs:
+              - name: projectUid
+                value: ($stdout)
+        - description: Assert the controller sent the NamedLikeAdditionalNamespace Warning event on this project
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: v1
+              kind: Event
+              metadata:
+                namespace: default
+              type: Warning
+              reason: NamedLikeAdditionalNamespace
+              involvedObject:
+                kind: Project
+                name: e2e-mtm-col-extra
+                # An event of a project of the same name left by an earlier run does not count.
+                uid: ($projectUid)
+              (contains(message, 'It is not an additional namespace of project e2e-mtm-col.')): true

@@ -1,0 +1,11 @@
+# The annotation makes the client a trusted peer of the `kubernetes` client, so it may
+# request ID tokens with the audience the API server accepts.
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: e2e-authn-login-client
+  annotations:
+    dexclient.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  redirectURIs:
+    - http://127.0.0.1:65535/callback

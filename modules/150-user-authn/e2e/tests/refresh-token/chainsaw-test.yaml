@@ -1,0 +1,190 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-refresh-token
+spec:
+  description: >-
+    A client that signed a user in with offline_access refreshes the tokens: every refresh returns
+    a new ID token, and a refresh after the reuse interval (2m) rotates the refresh token. An
+    administrator lock (UserOperation Lock) ends the sessions of the user: Dex RefreshToken objects
+    are deleted and refresh fails with HTTP 400 even after the Unlock, while a new sign-in works.
+  concurrent: false
+
+  catch:
+    - description: Show the RefreshToken objects of the user on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        content: |
+          kubectl -n d8-user-authn get refreshtokens.dex.coreos.com -o json \
+            | jq '.items[] | select(.claims.username == "e2e-authn-refresh-user") | {name: .metadata.name, clientID, createdAt, lastUsed}'
+    - description: Show Dex logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=dex
+        container: dex
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: create-user-and-client
+      description: Create the User and a DexClient, and sign in with offline_access
+      try:
+        - description: Create User e2e-authn-refresh-user
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user refresh-token e2e-authn-refresh-user e2e-authn-refresh-user@example.com
+        - description: Create DexClient e2e-authn-refresh-client
+          create:
+            file: manifests/dex-client.yaml
+        - description: Wait for the client Secret and OAuth2Client
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              wait_dex_client "${NS}" e2e-authn-refresh-client
+        - description: Sign in with offline_access
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/get-token.sh refresh-token "${NS}" e2e-authn-refresh-client
+              e2e-authn-refresh-user e2e-authn-refresh-user@example.com
+      cleanup:
+        - description: Delete the User
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: kubectl delete users.deckhouse.io e2e-authn-refresh-user --ignore-not-found
+
+    - name: rotation
+      description: >-
+        A refresh right after the sign-in returns a new ID token; a refresh after
+        expiry.refreshTokens.reuseInterval (2m) also rotates the refresh token
+      try:
+        - description: Refresh with the token from the sign-in
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/refresh.sh ok
+        - description: Wait past the reuse interval of 2 minutes that the module configures
+          sleep:
+            duration: 125s
+        - description: Refresh again; the refresh token must be rotated
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/refresh.sh rotated
+
+    - name: refresh-while-locked
+      description: An administrator lock ends the sessions; after the Unlock only a new sign-in works
+      try:
+        - description: Lock the user for one hour
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-refresh-lock
+              spec:
+                user: e2e-authn-refresh-user
+                type: Lock
+                initiatorType: admin
+                lock:
+                  for: 1h
+        - description: Assert the Lock succeeded
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-refresh-lock
+              status:
+                phase: Succeeded
+        - description: Assert the RefreshToken objects of the user were deleted
+          assert:
+            timeout: 1m
+            resource:
+              (length(x_k8s_list($client, 'dex.coreos.com/v1', 'RefreshToken', 'd8-user-authn').items[?claims.username == 'e2e-authn-refresh-user'])): 0
+        - description: Assert refresh with the last refresh token fails with HTTP 400
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/refresh.sh revoked
+        - description: Unlock the user
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-refresh-unlock
+              spec:
+                user: e2e-authn-refresh-user
+                type: Unlock
+                initiatorType: admin
+        - description: Assert the Unlock succeeded
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-refresh-unlock
+              status:
+                phase: Succeeded
+        - description: Assert the old refresh token stays revoked after the Unlock
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/refresh.sh revoked
+        - description: Sign in again and refresh the new session
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              bash ../../tests/common/scripts/get-token.sh refresh-token "${NS}" e2e-authn-refresh-client e2e-authn-refresh-user e2e-authn-refresh-user@example.com
+              bash scripts/refresh.sh ok

@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-rr
+spec:
+  description: A project whose release must survive a restart of the controller untouched.
+  projectTemplateName: default
+  administrators:
+    - kind: User
+      name: e2e-mtm-rr-admin@example.com
+  quota:
+    requests.cpu: "1"

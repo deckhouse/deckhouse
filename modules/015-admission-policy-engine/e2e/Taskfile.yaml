@@ -1,22 +1,86 @@
 version: '3'
 
+# The CPU starvation scenarios stress a node for 10-15 minutes each, so neither `run` nor
+# `run:destructive` includes them: run them on demand with `task run:cpu-starvation`, or in the
+# e2e pipeline with E2E_MODULE_TESTS_TARGET=run:cpu-starvation.
 includes:
   cpu-starvation:
     taskfile: cpu-starvation/Taskfile.yaml
     dir: cpu-starvation
 
+vars:
+  REPORTS: '{{.E2E_REPORTS_DIR | default "./reports"}}'
+
+  # Chainsaw would otherwise create an ephemeral namespace per test, which multitenancy-manager
+  # adopts into a Project and then refuses to let Chainsaw delete. The suite namespace is created
+  # here, passed to Chainsaw with --namespace, and deleted through its Project afterwards.
+  SUITE_NAMESPACE: e2e-ape
+
+env:
+  # Shared helpers of the module suites (delete-namespace.sh, create-namespace.sh, module-enabled.sh,
+  # wait-deckhouse-queue.sh). The CI bundle sets E2E_LIB_DIR; in a checkout it is
+  # testing/e2e/lib of the repository.
+  E2E_LIB_DIR:
+    sh: >-
+      if [ -n "${E2E_LIB_DIR:-}" ]; then echo "${E2E_LIB_DIR}";
+      else echo "$(git -C "{{.TASKFILE_DIR}}" rev-parse --show-toplevel)/testing/e2e/lib"; fi
+  # The shared namespace helpers refuse a name outside the suite.
+  E2E_NAMESPACE_PREFIX: e2e-ape
+  E2E_STATE_DIR: /tmp/e2e-ape-state
+
 tasks:
   run:
-    desc: Run all admission-policy-engine e2e tests
+    desc: Run the functional admission-policy-engine e2e tests
+    cmds:
+      - defer: bash "${E2E_LIB_DIR}/module-enabled.sh" restore admission-policy-engine "${E2E_STATE_DIR}"
+      - defer: bash "${E2E_LIB_DIR}/delete-namespace.sh" {{.SUITE_NAMESPACE}}
+      # Namespaces and cluster-scoped objects of the tests that a killed run leaves behind.
+      - defer: bash tests/common/scripts/cleanup-leftovers.sh
+      - bash tests/common/scripts/cleanup-leftovers.sh
+      - bash "${E2E_LIB_DIR}/create-namespace.sh" {{.SUITE_NAMESPACE}}
+      - mkdir -p {{.REPORTS}}
+      - >-
+        chainsaw test --test-dir tests --config chainsaw-config.yaml
+        --namespace {{.SUITE_NAMESPACE}}
+        --report-format JUNIT-TEST --report-path {{.REPORTS}} --report-name admission-policy-engine
+
+  run:destructive:
+    desc: Run the destructive admission-policy-engine e2e tests (Gatekeeper outage and rollout restart)
+    cmds:
+      - defer: bash "${E2E_LIB_DIR}/module-enabled.sh" restore admission-policy-engine "${E2E_STATE_DIR}"
+      - defer: bash "${E2E_LIB_DIR}/delete-namespace.sh" {{.SUITE_NAMESPACE}}
+      - defer: bash tests/common/scripts/cleanup-leftovers.sh
+      # Deferred commands run in reverse order: Gatekeeper is back before the namespaces are deleted.
+      - defer: bash tests/common/scripts/restore-gatekeeper.sh
+      # A run killed before its cleanup may have left Gatekeeper scaled down and objects behind.
+      - bash tests/common/scripts/restore-gatekeeper.sh
+      - bash tests/common/scripts/cleanup-leftovers.sh
+      - bash "${E2E_LIB_DIR}/create-namespace.sh" {{.SUITE_NAMESPACE}}
+      - mkdir -p {{.REPORTS}}
+      - >-
+        chainsaw test --test-dir tests-destructive --config chainsaw-config.yaml
+        --namespace {{.SUITE_NAMESPACE}}
+        --report-format JUNIT-TEST --report-path {{.REPORTS}} --report-name admission-policy-engine-destructive
+
+  lint:
+    desc: Lint the Chainsaw configuration, every test of both suites and every script
+    cmds:
+      - chainsaw lint configuration -f chainsaw-config.yaml
+      - for f in tests/*/chainsaw-test.yaml tests-destructive/*/chainsaw-test.yaml; do echo "$f"; chainsaw lint test -f "$f" || exit 1; done
+      - for f in tests/common/scripts/*.sh tests/*/*.sh tests-destructive/*/*.sh; do [ -e "$f" ] || continue; bash -n "$f" || exit 1; done
+      - for f in "${E2E_LIB_DIR}"/*.sh; do bash -n "$f" || exit 1; done
+
+  run:cpu-starvation:
+    desc: Run the admission-policy-engine CPU starvation e2e tests (stress a node; on demand only)
     cmds:
       - task: cpu-starvation:run
 
   dry-run:
-    desc: Validate all admission-policy-engine e2e tests without a cluster
+    desc: Dry-run the admission-policy-engine CPU starvation e2e tests; the scripts still use the current kubectl context
     cmds:
       - task: cpu-starvation:dry-run
 
   cleanup:
-    desc: Clean up after interrupted admission-policy-engine e2e runs
+    desc: Remove the leftovers of interrupted admission-policy-engine CPU starvation runs
     cmds:
       - task: cpu-starvation:cleanup

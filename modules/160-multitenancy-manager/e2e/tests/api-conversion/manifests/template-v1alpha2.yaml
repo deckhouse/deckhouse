@@ -1,0 +1,13 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: ProjectTemplate
+metadata:
+  name: e2e-mtm-conv
+spec:
+  description: A template that deckhouse.io/v1alpha1 can describe in full.
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      properties:
+        size:
+          type: string
+          default: small

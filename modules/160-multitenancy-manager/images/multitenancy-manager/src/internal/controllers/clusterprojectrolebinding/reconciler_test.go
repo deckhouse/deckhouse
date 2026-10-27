@@ -36,6 +36,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"controller/apis/deckhouse.io/v1alpha3"
@@ -360,4 +362,73 @@ func TestReconcile_DefaultBudgetKeepsSmallFanOutsFast(t *testing.T) {
 	if elapsed := time.Since(started); elapsed > 5*time.Second {
 		t.Fatalf("fan-out of three projects took %v, the budget is seconds", elapsed)
 	}
+}
+
+// TestReconcile_WritesStatusWhenANamespaceFails: a project whose namespace refuses the RoleBinding --
+// here it is missing -- must not keep the status from being written. The binding still reaches the
+// other projects, boundProjects counts only the projects it reached, Ready is False and names the failing namespace,
+// and the error is returned so the reconcile is retried.
+func TestReconcile_WritesStatusWhenANamespaceFails(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, rbacv1.AddToScheme(scheme))
+	require.NoError(t, v1alpha3.AddToScheme(scheme))
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(
+			cprb("global-viewer", "d8:project:viewer"),
+			project("alpha", false, "alpha"),
+			project("orphan", false, "orphan"),
+		).
+		WithStatusSubresource(&v1alpha3.ClusterProjectRoleBinding{}).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+				if obj.GetNamespace() == "orphan" {
+					return k8serrors.NewNotFound(corev1.Resource("namespaces"), "orphan")
+				}
+				return cl.Create(ctx, obj, opts...)
+			},
+		}).
+		Build()
+	r := &Reconciler{Client: c}
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "global-viewer"}})
+	require.Error(t, err, "the failed namespace must be retried")
+	assert.ErrorContains(t, err, `namespaces "orphan" not found`)
+
+	name := rolebinding.CPRBServiceName("global-viewer")
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "alpha", Name: name}, &rbacv1.RoleBinding{}),
+		"the other projects still get the binding")
+
+	got := &v1alpha3.ClusterProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "global-viewer"}, got))
+	assert.Equal(t, int32(1), got.Status.BoundProjects, "only alpha is bound")
+	ready := findCondition(got.Status.Conditions, v1alpha3.ClusterProjectRoleBindingConditionReady)
+	require.NotNil(t, ready, "the Ready condition must be written")
+	assert.Equal(t, corev1.ConditionFalse, ready.Status)
+	assert.Equal(t, "the RoleBinding could not be written in 1 namespace(s): orphan", ready.Message)
+}
+
+func findCondition(conditions []v1alpha3.Condition, condType string) *v1alpha3.Condition {
+	for i := range conditions {
+		if conditions[i].Type == condType {
+			return &conditions[i]
+		}
+	}
+	return nil
+}
+
+// The namespace watch wakes the bindings only on the creation of a project namespace: the restore of a
+// deleted main namespace changes nothing the project watch sees.
+func TestProjectNamespaceCreated(t *testing.T) {
+	t.Parallel()
+
+	project := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "proj", Labels: map[string]string{v1alpha3.ResourceLabelProject: "proj"}}}
+	plain := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "plain"}}
+	p := projectNamespaceCreated()
+
+	assert.True(t, p.Create(event.CreateEvent{Object: project}), "a project namespace is created")
+	assert.False(t, p.Create(event.CreateEvent{Object: plain}), "a namespace outside a project is created")
+	assert.False(t, p.Update(event.UpdateEvent{ObjectOld: project, ObjectNew: project}))
+	assert.False(t, p.Delete(event.DeleteEvent{Object: project}))
+	assert.False(t, p.Generic(event.GenericEvent{Object: project}))
 }

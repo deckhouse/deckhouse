@@ -1,0 +1,93 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: api-conversion
+spec:
+  description: >-
+    The conversion webhooks translate between the served versions: a deckhouse.io/v1alpha2 Project
+    has its administrators and quota lifted into the v1alpha3 standard fields, which the controller
+    then applies, and a v1alpha3 Project reads back through v1alpha2 with them in the parameters.
+    A ClusterResourceGrantPolicy and a ProjectTemplate written as the newer version read back
+    through the older one.
+  concurrent: false
+  catch:
+    - description: Show the converted objects on failure
+      script:
+        content: |
+          kubectl get projects.v1alpha3.deckhouse.io e2e-mtm-conv-old e2e-mtm-conv-new -o yaml || true
+          kubectl get projects.v1alpha2.deckhouse.io e2e-mtm-conv-old e2e-mtm-conv-new -o yaml || true
+          kubectl get clusterresourcegrantpolicies.v1alpha1.multitenancy.deckhouse.io e2e-mtm-conv -o yaml || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager module is enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+        - description: Assert deckhouse.io/v1alpha1 of Project is no longer served
+          assert:
+            resource:
+              apiVersion: apiextensions.k8s.io/v1
+              kind: CustomResourceDefinition
+              metadata:
+                name: projects.deckhouse.io
+              spec:
+                (versions[?name == 'v1alpha1'] | [0].served): false
+                (versions[?name == 'v1alpha2'] | [0].served): true
+                (versions[?name == 'v1alpha3'] | [0].storage): true
+
+    - name: project-up-conversion
+      description: A v1alpha2 Project gets the v1alpha3 standard fields, and the controller applies them
+      try:
+        - description: Create the e2e-mtm-conv-old project through deckhouse.io/v1alpha2
+          create:
+            file: manifests/project-v1alpha2.yaml
+        - description: Assert the standard fields, the quota and the administrators binding through deckhouse.io/v1alpha3
+          assert:
+            file: asserts/project-old.yaml
+
+    - name: project-down-conversion
+      description: A v1alpha3 Project reads back through v1alpha2 in the legacy layout
+      try:
+        - description: Create the e2e-mtm-conv-new project through deckhouse.io/v1alpha3
+          create:
+            file: manifests/project-v1alpha3.yaml
+        - description: Assert the project is Deployed
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-conv-new
+              status:
+                state: Deployed
+        - description: Assert the project read through deckhouse.io/v1alpha2 has the administrators and the nested quota in the parameters
+          assert:
+            file: asserts/project-new.yaml
+
+    - name: policy-conversion
+      description: A v1alpha2 ClusterResourceGrantPolicy reads back through v1alpha1
+      try:
+        - description: Create the e2e-mtm-conv policy through multitenancy.deckhouse.io/v1alpha2
+          create:
+            file: manifests/policy-v1alpha2.yaml
+        - description: Assert the selectors read through multitenancy.deckhouse.io/v1alpha1
+          assert:
+            file: asserts/policy-v1alpha1.yaml
+
+    - name: template-conversion
+      description: A v1alpha2 ProjectTemplate without fields of its own reads back through v1alpha1
+      try:
+        - description: Create the e2e-mtm-conv template through deckhouse.io/v1alpha2
+          create:
+            file: manifests/template-v1alpha2.yaml
+        - description: Assert the template read through deckhouse.io/v1alpha1 keeps its description and schema
+          assert:
+            file: asserts/template-v1alpha1.yaml

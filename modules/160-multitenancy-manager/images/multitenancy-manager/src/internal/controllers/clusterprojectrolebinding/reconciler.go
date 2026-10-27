@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -169,11 +170,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	started := time.Now()
 	defer func() { fanOutDuration.Observe(time.Since(started).Seconds()) }()
 	var errs []error
+	var failed []string
+	// failedProjects are the projects with a namespace the binding did not reach; boundProjects
+	// counts only the projects the binding is applied to in every namespace.
+	failedProjects := make(map[string]struct{})
 	written := 0
 	for ns, project := range target {
 		wrote, err := r.upsertRoleBinding(ctx, cprb, ns, project)
 		if err != nil {
 			errs = append(errs, err)
+			failed = append(failed, ns)
+			failedProjects[project] = struct{}{}
 			continue
 		}
 		if !wrote {
@@ -185,17 +192,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	pruned, err := r.pruneRoleBindings(ctx, cprb.Name, target)
-	if err != nil {
-		errs = append(errs, err)
+	pruned, pruneErr := r.pruneRoleBindings(ctx, cprb.Name, target)
+	if pruneErr != nil {
+		errs = append(errs, pruneErr)
 	}
 
+	// The status is written whatever the fan-out did: a namespace that refuses the binding -- one
+	// that is missing or terminating -- must not leave every ClusterProjectRoleBinding of the cluster
+	// without its status. Ready says which namespaces failed, and the error below retries them.
+	readyStatus, readyMessage := corev1.ConditionTrue, ""
 	if len(errs) > 0 {
-		return ctrl.Result{}, errors.Join(errs...)
+		readyStatus, readyMessage = corev1.ConditionFalse, rolebinding.FanOutFailureMessage(failed, pruneErr != nil)
 	}
 
 	// Write status only when it actually changed: an unconditional write would bump the condition
 	// timestamps and re-enqueue this object through the For() watch, causing a reconcile hot-loop.
+	boundProjects -= len(failedProjects)
 	boundProjects32 := int32(min(boundProjects, 1<<31-1))
 	changed := false
 	if cprb.Status.ObservedGeneration != cprb.Generation {
@@ -206,13 +218,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		cprb.Status.BoundProjects = boundProjects32
 		changed = true
 	}
-	if v1alpha3.SetCondition(&cprb.Status.Conditions, v1alpha3.ClusterProjectRoleBindingConditionReady, corev1.ConditionTrue, "") {
+	if v1alpha3.SetCondition(&cprb.Status.Conditions, v1alpha3.ClusterProjectRoleBindingConditionReady, readyStatus, readyMessage) {
 		changed = true
 	}
 	if changed {
 		if err := r.Status().Update(ctx, cprb); err != nil {
-			return ctrl.Result{}, fmt.Errorf("update status: %w", err)
+			errs = append(errs, fmt.Errorf("update status: %w", err))
 		}
+	}
+
+	if len(errs) > 0 {
+		return ctrl.Result{}, errors.Join(errs...)
 	}
 
 	// A pass that wrote and deleted no role binding and left the status as it was changed nothing; it
@@ -292,6 +308,24 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Watches(&v1alpha3.Project{}, enqueueAll, builder.WithPredicates(rolebinding.ProjectFanoutPredicate())).
 		Watches(&rbacv1.RoleBinding{}, enqueueByOwnedRoleBinding).
+		Watches(&corev1.Namespace{}, enqueueAll, builder.WithPredicates(projectNamespaceCreated())).
 		Named("cluster-project-role-binding").
 		Complete(r)
+}
+
+// projectNamespaceCreated lets through the creation of a project namespace. A main namespace deleted
+// and created again by the project reconcile leaves the namespace set of the project as it was, so
+// the project watch does not see it, and the retries of the fan-out into the namespace while it was
+// terminating have backed off by then. Without this watch the RoleBindings would come back into the
+// namespace only on the next retry, minutes later.
+func projectNamespaceCreated() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			_, ok := e.Object.GetLabels()[v1alpha3.ResourceLabelProject]
+			return ok
+		},
+		UpdateFunc:  func(event.UpdateEvent) bool { return false },
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+	}
 }

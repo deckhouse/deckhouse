@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: e2e-mtm-uid-5000
+  namespace: e2e-mtm-spol
+spec:
+  tolerations:
+    - operator: Exists
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 5000
+    runAsGroup: 1500
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: pause
+      image: registry.k8s.io/e2e-test-images/agnhost:2.53
+      args: ["pause"]
+      resources:
+        requests:
+          cpu: 10m
+          memory: 16Mi
+        limits:
+          cpu: 50m
+          memory: 64Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]

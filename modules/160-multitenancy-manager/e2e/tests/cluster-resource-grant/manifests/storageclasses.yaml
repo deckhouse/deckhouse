@@ -1,0 +1,17 @@
+# Two StorageClasses with a provisioner nobody serves: the test only creates PersistentVolumeClaims
+# with a server-side dry run, so nothing is ever provisioned.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: e2e-mtm-sc-allowed
+provisioner: e2e.deckhouse.io/none
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: e2e-mtm-sc-denied
+provisioner: e2e.deckhouse.io/none
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer

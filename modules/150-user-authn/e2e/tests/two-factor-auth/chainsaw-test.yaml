@@ -1,0 +1,170 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-two-factor-auth
+spec:
+  description: >-
+    With staticUsers2FA enabled, a local user who passed the password form must enter a TOTP code.
+    The first time the page shows the enrollment QR code; a wrong code is refused, the right one
+    (computed from the key Dex stored for the user) leads through the approval page to the
+    authorization code. The next sign-in asks for a code without the QR code. A UserOperation
+    Reset2FA deletes the key, so the user enrolls again. The original settings are restored.
+  concurrent: false
+
+  catch:
+    - description: Show the OfflineSessions of the user without the TOTP key on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        content: |
+          kubectl -n d8-user-authn get offlinesessionses.dex.coreos.com -o json \
+            | jq '.items[] | select(.userID == "e2e-authn-2fa-user") | {name: .metadata.name, connID, totpConfirmed, hasTOTP: (.totp != null)}'
+    - description: Show Dex logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=dex
+        container: dex
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: create-user-and-client
+      description: Create the User and a DexClient to run the sign-in flow with
+      try:
+        - description: Create User e2e-authn-2fa-user
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user two-factor-auth e2e-authn-2fa-user e2e-authn-2fa-user@example.com
+        - description: Create DexClient e2e-authn-2fa-client
+          create:
+            file: manifests/dex-client.yaml
+        - description: Wait for the client Secret and OAuth2Client
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              wait_dex_client "${NS}" e2e-authn-2fa-client
+      cleanup:
+        - description: Delete the User
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: kubectl delete users.deckhouse.io e2e-authn-2fa-user --ignore-not-found
+
+    - name: enable-2fa
+      description: Turn on staticUsers2FA and wait until Dex runs with it
+      try:
+        - description: Merge staticUsers2FA into ModuleConfig user-authn and wait for convergence
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 25m
+            content: bash ../../tests/common/scripts/mc-settings.sh apply '{"staticUsers2FA":{"enabled":true}}'
+        - description: Wait until the Dex configuration has twoFactorAuthn and Dex rolled out
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              wait_dex_config 600 '^ *twoFactorAuthn:'
+      cleanup:
+        - description: Restore the original ModuleConfig user-authn spec
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 25m
+            content: bash ../../tests/common/scripts/mc-settings.sh restore
+
+    - name: enroll-and-sign-in
+      description: The first sign-in enrolls the TOTP key; the next one asks for a code only
+      try:
+        - description: Sign in with the password and enroll the TOTP key
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 8m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/totp-login.sh enroll
+        - description: Assert Dex marked the TOTP key of the user as confirmed
+          assert:
+            timeout: 1m
+            resource:
+              (x_k8s_list($client, 'dex.coreos.com/v1', 'OfflineSessions', 'd8-user-authn').items[?userID == 'e2e-authn-2fa-user' && connID == 'local']):
+                (length(@)): 1
+                ([0].totpConfirmed): true
+        - description: Sign in again with the password and a TOTP code
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 3m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/totp-login.sh known
+
+    - name: reset-2fa
+      description: A UserOperation Reset2FA deletes the TOTP key, so the user enrolls again
+      try:
+        - description: Create UserOperation e2e-authn-2fa-reset of type Reset2FA
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-2fa-reset
+              spec:
+                user: e2e-authn-2fa-user
+                type: Reset2FA
+                initiatorType: admin
+        - description: Assert the operation succeeded
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-2fa-reset
+              status:
+                phase: Succeeded
+        - description: Assert the OfflineSessions object with the TOTP key is gone
+          assert:
+            timeout: 1m
+            resource:
+              (length(x_k8s_list($client, 'dex.coreos.com/v1', 'OfflineSessions', 'd8-user-authn').items[?userID == 'e2e-authn-2fa-user' && connID == 'local'])): 0
+        - description: Assert the next sign-in shows the enrollment QR code again
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 3m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/totp-login.sh enroll

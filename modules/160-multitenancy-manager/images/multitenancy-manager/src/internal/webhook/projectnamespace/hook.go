@@ -37,6 +37,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/rolebinding"
+	"controller/internal/validate"
 )
 
 // maxNamespaceNameLength is the Kubernetes limit on a namespace (RFC1123 label) name.
@@ -77,6 +78,19 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 	// alone, and the object would never go away, nor would the main namespace it lives in.
 	if !pns.DeletionTimestamp.IsZero() {
 		return admission.Allowed("")
+	}
+
+	// The garbage collector deletes a ProjectNamespace whose owner is gone, and its finalizer deletes
+	// the additional namespace, so an added owner would delete it without the right to delete either.
+	if req.Operation == admissionv1.Update &&
+		req.UserInfo.Username != rolebinding.ControllerServiceAccount && req.UserInfo.Username != rolebinding.DeckhouseServiceAccount {
+		old := new(v1alpha3.ProjectNamespace)
+		if err := yaml.Unmarshal(req.OldObject.Raw, old); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		if reason := validate.AddedOwnerReference(v1alpha3.ProjectNamespaceKind, pns.Namespace+"/"+pns.Name, old.OwnerReferences, pns.OwnerReferences); reason != "" {
+			return admission.Denied(reason)
+		}
 	}
 
 	// The object must live in the main namespace of an existing, non-virtual project. The main

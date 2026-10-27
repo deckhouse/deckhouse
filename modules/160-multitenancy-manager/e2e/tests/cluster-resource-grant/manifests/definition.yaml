@@ -1,0 +1,9 @@
+# A value-backed registration of the suite's own, to check that removing a
+# GrantableClusterResourceDefinition removes its AvailableClusterResource from the projects.
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: GrantableClusterResourceDefinition
+metadata:
+  name: e2e-mtm-widgets
+spec:
+  enforcement: Managed
+  defaultAvailability: All

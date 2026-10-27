@@ -1,0 +1,31 @@
+# A template with a Helm text. No template can get a new resourcesTemplate through the regular
+# path, so the test creates it as system:sudouser, which the ProjectTemplate webhook skips: the
+# state a cluster upgraded from an older release is in.
+apiVersion: deckhouse.io/v1alpha2
+kind: ProjectTemplate
+metadata:
+  name: e2e-mtm-helm
+spec:
+  description: A template that still renders from a Helm text.
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      properties: {}
+  resourcesTemplate: |
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: isolated
+      namespace: {{ .projectName | quote }}
+    spec:
+      podSelector: {}
+      policyTypes:
+        - Ingress
+    ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: e2e-mtm-info
+      namespace: {{ .projectName | quote }}
+    data:
+      source: helm

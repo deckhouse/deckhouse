@@ -51,8 +51,8 @@ import (
 // interface rather than the concrete client lets Handle/upgradeResources be unit-tested with a fake
 // (the concrete *helm.Client satisfies it).
 type helmClient interface {
-	Upgrade(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate, beforeUpgrade helm.BeforeUpgrade) (helm.ReleaseOutcome, error)
-	UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string, beforeUpgrade helm.BeforeUpgrade) (helm.ReleaseOutcome, error)
+	Upgrade(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate, beforeUpgrade helm.BeforeUpgrade, reapply bool) (helm.ReleaseOutcome, error)
+	UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string, beforeUpgrade helm.BeforeUpgrade, reapply bool) (helm.ReleaseOutcome, error)
 	AnalyzeRendered(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) (helm.ReleaseOutcome, error)
 	AnalyzeManifests(project *v1alpha3.Project, manifests string) (helm.ReleaseOutcome, error)
 	RenderManifests(project *v1alpha3.Project, manifests string, parametersSchema map[string]any) (string, error)
@@ -384,22 +384,41 @@ func (m *Manager) handleTemplate(ctx context.Context, project *v1alpha3.Project)
 // structured fields onto the project namespace as it is in the cluster and applied via UpgradeManifests;
 // a template that still carries a resourcesTemplate string is rendered through the legacy helm engine.
 // Either way an upgrade is prepared for what it drops from the deployed revision first (see transition.go).
+//
+// A project whose main namespace is gone is reapplied even when its release is up to date: the release
+// hash says nothing about the cluster, and the namespace controller leaves a deleted project namespace
+// to this reconcile. The reapply recreates the namespace with the objects of the release, the unmanaged
+// ones of the main namespace included, and drops the record of the last apply of spec.manifests, so that reconcileManifests applies
+// those objects in this reconcile instead of after manifestsReapply. A namespace that is still
+// terminating is not reapplied: its objects cannot be created yet, and its deletion wakes the project.
+//
+// A Project that is being deleted is not upgraded at all: the garbage collector may be deleting it
+// together with its namespace, and an upgrade with a changed release hash would create the namespace
+// again just as a reapply would. Its deletion wakes the project, and the reconcile then deletes it.
 func (m *Manager) upgradeResources(ctx context.Context, project *v1alpha3.Project, template *v1alpha2.ProjectTemplate) ([]helm.BindingRoleRef, error) {
-	if isStructured(template) {
-		liveLabels := map[string]string{}
-		namespace := new(corev1.Namespace)
-		switch err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, namespace); {
-		case err == nil:
-			liveLabels = namespace.Labels
-		case !apierrors.IsNotFound(err):
-			return nil, fmt.Errorf("get the '%s' namespace: %w", project.Name, err)
-		}
+	if !project.DeletionTimestamp.IsZero() {
+		return nil, nil
+	}
 
+	liveLabels := map[string]string{}
+	reapply := false
+	namespace := new(corev1.Namespace)
+	switch err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, namespace); {
+	case err == nil:
+		liveLabels = namespace.Labels
+	case apierrors.IsNotFound(err):
+		reapply = true
+		m.manifestsApplied.Delete(project.Name)
+	default:
+		return nil, fmt.Errorf("get the '%s' namespace: %w", project.Name, err)
+	}
+
+	if isStructured(template) {
 		manifests, err := render.ManifestsOnto(template, project, liveLabels)
 		if err != nil {
 			return nil, fmt.Errorf("render the project template: %w", err)
 		}
-		outcome, err := m.helmClient.UpgradeManifests(ctx, project, manifests, m.beforeUpgrade(project))
+		outcome, err := m.helmClient.UpgradeManifests(ctx, project, manifests, m.beforeUpgrade(project), reapply)
 		if err != nil {
 			return nil, err
 		}
@@ -418,7 +437,7 @@ func (m *Manager) upgradeResources(ctx context.Context, project *v1alpha3.Projec
 	}
 
 	legacy := LegacyTemplate(template)
-	outcome, err := m.helmClient.Upgrade(ctx, project, legacy, m.beforeUpgrade(project))
+	outcome, err := m.helmClient.Upgrade(ctx, project, legacy, m.beforeUpgrade(project), reapply)
 	if err != nil {
 		return nil, err
 	}

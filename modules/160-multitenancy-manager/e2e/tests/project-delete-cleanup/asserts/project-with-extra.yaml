@@ -1,0 +1,39 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectNamespace
+metadata:
+  name: extra
+  namespace: e2e-mtm-del
+status:
+  namespace: e2e-mtm-del-extra
+  (conditions[?type == 'Ready'] | [0].status): 'True'
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: e2e-mtm-del-extra
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: e2e-mtm-del
+    projects.deckhouse.io/project-namespace: extra
+    projects.deckhouse.io/project-template: default
+    # inherited from the main namespace
+    security.deckhouse.io/pod-policy: baseline
+---
+# The template objects fan out into the additional namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isolated
+  namespace: e2e-mtm-del-extra
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-del
+status:
+  state: Deployed
+  namespaces:
+    - name: e2e-mtm-del
+      kind: Main
+    - name: e2e-mtm-del-extra
+      kind: Additional

@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: e2e-authn-hook-groups
+spec:
+  email: e2e-authn-hook-groups@example.com
+  password: not-a-real-hash
+  groups:
+    - e2e-authn-hook-a

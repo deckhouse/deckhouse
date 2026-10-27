@@ -1,0 +1,31 @@
+# Makes the module run cainjector, so all three components can be restarted. The webhook never
+# fires: it matches only ConfigMaps with a label nobody sets, in the test namespace only.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: e2e-cm-restart-cainjector
+  annotations:
+    cert-manager.io/inject-ca-from: (join('/', [$namespace, 'e2e-cm-restart-ca']))
+webhooks:
+  - name: e2e-cm-restart-cainjector.e2e.deckhouse.io
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    failurePolicy: Ignore
+    timeoutSeconds: 1
+    clientConfig:
+      service:
+        name: e2e-cm-restart
+        namespace: ($namespace)
+        path: /validate
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: ($namespace)
+    objectSelector:
+      matchLabels:
+        e2e-cm-restart.deckhouse.io/never: "true"
+    rules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["configmaps"]
+        scope: Namespaced

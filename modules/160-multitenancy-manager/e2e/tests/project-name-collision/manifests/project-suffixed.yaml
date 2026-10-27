@@ -1,0 +1,7 @@
+# Named like an additional namespace of e2e-mtm-col, but a separate project.
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-col-extra
+spec:
+  projectTemplateName: simple

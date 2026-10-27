@@ -1,0 +1,32 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-helm
+status:
+  state: Deployed
+  (keptObjects == null || length(keptObjects) == `0`): true
+  (conditions[?type == 'ManifestsApplied'] | [0].status): 'True'
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isolated
+  namespace: e2e-mtm-helm
+  uid: ($npUID)
+  labels:
+    heritage: multitenancy-manager
+spec:
+  (contains(policyTypes, 'Egress')): true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: e2e-mtm-info
+  namespace: e2e-mtm-helm
+  uid: ($cmUID)
+  labels:
+    projects.deckhouse.io/project: e2e-mtm-helm
+    projects.deckhouse.io/source: manifests
+  (labels."projects.deckhouse.io/kept-from-helm-template" == null): true
+data:
+  source: manifests

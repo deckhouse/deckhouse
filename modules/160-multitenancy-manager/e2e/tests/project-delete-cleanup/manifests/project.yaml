@@ -1,0 +1,10 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-del
+spec:
+  description: Deletion of a project with an additional namespace.
+  projectTemplateName: default
+  parameters:
+    networkPolicy: Isolated
+    requiredRequests: false

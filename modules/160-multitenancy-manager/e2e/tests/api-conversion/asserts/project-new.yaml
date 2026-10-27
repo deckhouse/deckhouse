@@ -1,0 +1,20 @@
+# Read through deckhouse.io/v1alpha2: the standard fields go back into the parameters.
+apiVersion: deckhouse.io/v1alpha2
+kind: Project
+metadata:
+  name: e2e-mtm-conv-new
+spec:
+  parameters:
+    administrators:
+      - subject: Group
+        name: e2e-mtm-conv-admins
+    resourceQuota:
+      requests:
+        cpu: "1"
+      limits:
+        memory: 2Gi
+  (administrators == null): true
+  (quota == null): true
+status:
+  namespaces:
+    - e2e-mtm-conv-new

@@ -54,6 +54,12 @@ type postRenderer struct {
 	logger         logr.Logger
 	warning        error
 	isFirstInstall bool
+	// restoreMainNamespace renders the unmanaged objects of the main namespace on an upgrade, which
+	// recreates a main namespace that is gone (see createsUnmanaged).
+	restoreMainNamespace bool
+	// clusterScoped holds the cluster-scoped api versions, keyed as versions is. createsUnmanaged
+	// reads it on restoreMainNamespace; nil means none.
+	clusterScoped map[string]struct{}
 	// referencedRoles collects the roleRefs of every binding object the template renders.
 	referencedRoles []BindingRoleRef
 	// manifests, when non-empty, is the source the post-renderer processes instead of the chart's
@@ -159,14 +165,14 @@ func (r *postRenderer) processObject(object *unstructured.Unstructured, core **u
 	isUnmanaged := false
 	if _, ok := labels[v1alpha3.ResourceLabelUnmanaged]; ok {
 		isUnmanaged = true
-		// Include unmanaged resources only on first install to create them once
-		// On subsequent upgrades, skip them so they won't be updated
-		if !r.isFirstInstall {
+		// Include unmanaged resources only where they are created (see createsUnmanaged), so that
+		// later upgrades do not update them
+		if !r.createsUnmanaged(object) {
 			r.logger.Info("the resource is unmanaged and will be skipped (not first install)", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
 			return nil
 		}
-		// On first install, include unmanaged resources but mark them to not be tracked
-		r.logger.Info("the resource is unmanaged but will be created on first install", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind())
+		// Include the unmanaged resource but mark it to not be tracked
+		r.logger.Info("the resource is unmanaged but will be created", "project", r.project.Name, "resource", object.GetName(), "kind", object.GetKind(), "firstInstall", r.isFirstInstall)
 		// Add Helm resource-policy annotation to prevent deletion on release uninstall
 		annotations := object.GetAnnotations()
 		if len(annotations) == 0 {
@@ -288,6 +294,30 @@ func recordTemplateLabels(namespace *unstructured.Unstructured) error {
 	annotations[naming.TemplateLabelsAnnotation] = string(record)
 	namespace.SetAnnotations(annotations)
 	return nil
+}
+
+// createsUnmanaged reports whether an unmanaged object is rendered. A first install renders every
+// one. An upgrade that recreates a main namespace that is gone renders only the main namespace and
+// the namespaced objects that land in it: they went with it. An unmanaged object in an additional
+// namespace or a cluster-scoped one may still be there, changed by hand or stripped of its Helm
+// ownership, and the upgrade would take it over and patch it back to the template, or fail on it and
+// leave the main namespace missing. Any other upgrade renders none.
+func (r *postRenderer) createsUnmanaged(object *unstructured.Unstructured) bool {
+	if r.isFirstInstall {
+		return true
+	}
+	if !r.restoreMainNamespace {
+		return false
+	}
+	if object.GetKind() == "Namespace" {
+		return object.GetName() == r.project.Name
+	}
+	if _, ok := r.clusterScoped[fmt.Sprintf("%s/%s", object.GetAPIVersion(), object.GetKind())]; ok {
+		return false
+	}
+	// an empty namespace and one outside the project both end up in the main namespace below
+	ns := object.GetNamespace()
+	return ns == "" || ns == r.project.Name || !r.isProjectNamespace(ns)
 }
 
 // isProjectNamespace reports whether ns is the project's main namespace or one of its additional

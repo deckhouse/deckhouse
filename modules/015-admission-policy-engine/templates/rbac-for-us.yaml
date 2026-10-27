@@ -138,6 +138,22 @@ rules:
       - update
       - watch
   - apiGroups:
+      - externaldata.gatekeeper.sh
+    resources:
+      - providers/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - connection.gatekeeper.sh
+    resources:
+      - connections/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
       - mutations.gatekeeper.sh
     resources:
       - assign
@@ -152,6 +168,17 @@ rules:
       - patch
       - update
       - watch
+  - apiGroups:
+      - mutations.gatekeeper.sh
+    resources:
+      - assign/status
+      - assignimage/status
+      - assignmetadata/status
+      - modifyset/status
+    verbs:
+      - get
+      - patch
+      - update
   - apiGroups:
       - policy
     resourceNames:

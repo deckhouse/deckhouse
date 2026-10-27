@@ -1,0 +1,155 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-nested-groups
+spec:
+  description: >-
+    A user who is a member of a Group nested in another Group belongs to both. The controller
+    lists both groups in User status and in the Dex Password, and the groups claim of the ID token
+    carries both. After the parent Group is deleted, only the direct group remains.
+  concurrent: false
+
+  catch:
+    - description: Show the User and the Groups on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        content: |
+          kubectl get users.deckhouse.io e2e-authn-nest-user -o jsonpath='{.status}'; echo
+          kubectl get groups.deckhouse.io e2e-authn-nest-child e2e-authn-nest-parent-object -o yaml --ignore-not-found
+    - description: Show controller logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=user-authn-controller
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: create-objects
+      description: Create the User, the child and the parent Group, and a DexClient
+      try:
+        - description: Create User e2e-authn-nest-user
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user nested-groups e2e-authn-nest-user e2e-authn-nest-user@example.com
+        - description: Create the child Group with the user and the parent Group with the child
+          create:
+            file: manifests/groups.yaml
+        - description: Create DexClient e2e-authn-nest-client
+          create:
+            file: manifests/dex-client.yaml
+        - description: Wait for the client Secret and OAuth2Client
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              wait_dex_client "${NS}" e2e-authn-nest-client
+      cleanup:
+        - description: Delete the User
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: kubectl delete users.deckhouse.io e2e-authn-nest-user --ignore-not-found
+
+    - name: both-groups
+      description: The user belongs to the direct and to the parent group
+      try:
+        - description: Assert User status lists both groups
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: User
+              metadata:
+                name: e2e-authn-nest-user
+              status:
+                groups:
+                  - e2e-authn-nest-child
+                  - e2e-authn-nest-parent
+        - description: Assert the Dex Password lists both groups
+          assert:
+            timeout: 2m
+            resource:
+              (x_k8s_list($client, 'dex.coreos.com/v1', 'Password', 'd8-user-authn').items[?username == 'e2e-authn-nest-user']):
+                (length(@)): 1
+                (sort([0].groups)): [e2e-authn-nest-child, e2e-authn-nest-parent]
+        - description: Sign in and assert the groups claim carries both groups
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              bash ../../tests/common/scripts/get-token.sh nested-groups "${NS}" e2e-authn-nest-client e2e-authn-nest-user e2e-authn-nest-user@example.com
+              claims="$(jwt_claims "$(jq -r .id_token "$(state_dir nested-groups)/e2e-authn-nest-user.tokens.json")")"
+              jq -e '(.groups | index("e2e-authn-nest-child") != null) and (.groups | index("e2e-authn-nest-parent") != null)' <<<"${claims}" >/dev/null \
+                || die "groups claim is $(jq -c .groups <<<"${claims}"), expected both groups"
+              log "groups claim: $(jq -c .groups <<<"${claims}")"
+
+    - name: parent-deleted
+      description: After the parent Group is deleted, only the direct group remains
+      try:
+        - description: Delete the parent Group
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: Group
+              name: e2e-authn-nest-parent-object
+        - description: Assert User status lists the direct group only
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: User
+              metadata:
+                name: e2e-authn-nest-user
+              status:
+                groups:
+                  - e2e-authn-nest-child
+        - description: Assert the Dex Password lists the direct group only
+          assert:
+            timeout: 2m
+            resource:
+              (x_k8s_list($client, 'dex.coreos.com/v1', 'Password', 'd8-user-authn').items[?username == 'e2e-authn-nest-user']):
+                (length(@)): 1
+                (sort([0].groups)): [e2e-authn-nest-child]
+        - description: Sign in again and assert the groups claim no longer has the parent group
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              bash ../../tests/common/scripts/get-token.sh nested-groups "${NS}" e2e-authn-nest-client e2e-authn-nest-user e2e-authn-nest-user@example.com
+              claims="$(jwt_claims "$(jq -r .id_token "$(state_dir nested-groups)/e2e-authn-nest-user.tokens.json")")"
+              jq -e '.groups == ["e2e-authn-nest-child"]' <<<"${claims}" >/dev/null \
+                || die "groups claim is $(jq -c .groups <<<"${claims}"), expected only e2e-authn-nest-child"
+              log "groups claim: $(jq -c .groups <<<"${claims}")"

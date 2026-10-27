@@ -1,0 +1,66 @@
+# RoleBindings of the granular role model, one per namespace role.
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: e2e-authz-ns-viewer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:namespace:viewer
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: e2e-authz-ns-viewer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: e2e-authz-ns-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:namespace:user
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: e2e-authz-ns-user
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: e2e-authz-ns-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:namespace:manager
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: e2e-authz-ns-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: e2e-authz-ns-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:namespace:admin
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: e2e-authz-ns-admin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: e2e-authz-ns-superadmin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:namespace:superadmin
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: e2e-authz-ns-superadmin

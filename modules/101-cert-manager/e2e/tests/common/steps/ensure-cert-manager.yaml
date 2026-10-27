@@ -1,0 +1,72 @@
+# Makes sure the cert-manager module is enabled and converged, the webhook is available
+# and the ClusterIssuers shipped by the module are Ready.
+# Script paths are relative to the directory of the test that uses the template.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: ensure-cert-manager
+spec:
+  try:
+    - description: Enable the module if needed and wait until the Module is Ready and the Deckhouse queue is empty
+      script:
+        timeout: 20m
+        content: bash "${E2E_LIB_DIR}/module-enabled.sh" ensure cert-manager "${E2E_STATE_DIR}"
+    - description: Assert the controller Deployment has an available replica
+      assert:
+        timeout: 5m
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: cert-manager
+            namespace: d8-cert-manager
+          status:
+            (availableReplicas >= `1`): true
+    - description: Assert the webhook Deployment has an available replica
+      assert:
+        timeout: 5m
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: webhook
+            namespace: d8-cert-manager
+          status:
+            (availableReplicas >= `1`): true
+    - description: Assert the ClusterIssuer selfsigned (CA issuer backed by the module CA) is Ready
+      assert:
+        timeout: 2m
+        resource:
+          apiVersion: cert-manager.io/v1
+          kind: ClusterIssuer
+          metadata:
+            name: selfsigned
+          status:
+            (conditions[?type == 'Ready']):
+              - status: 'True'
+    - description: Assert the ClusterIssuer selfsigned-no-trust (SelfSigned issuer) is Ready
+      assert:
+        timeout: 2m
+        resource:
+          apiVersion: cert-manager.io/v1
+          kind: ClusterIssuer
+          metadata:
+            name: selfsigned-no-trust
+          status:
+            (conditions[?type == 'Ready']):
+              - status: 'True'
+  catch:
+    - description: Show the cert-manager Module on failure
+      get:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: Module
+        name: cert-manager
+    - description: Show the pods of the module on failure
+      get:
+        apiVersion: v1
+        kind: Pod
+        namespace: d8-cert-manager
+    - description: Show the ClusterIssuers on failure
+      get:
+        apiVersion: cert-manager.io/v1
+        kind: ClusterIssuer

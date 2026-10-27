@@ -1,0 +1,250 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cert-manager-webhook-rejects-invalid
+spec:
+  description: >-
+    The validating webhook webhook.cert-manager.io rejects invalid cert-manager resources with
+    the messages of cert-manager v1.20 validation. Every request is a server-side dry run, so
+    the webhook is called but nothing is stored. A valid Certificate and a valid Issuer pass
+    the same dry run first, which proves the rejections come from validation and not from an
+    unavailable webhook (failurePolicy is Fail).
+  concurrent: false
+
+  catch:
+    - description: Show the webhook pods on failure
+      get:
+        apiVersion: v1
+        kind: Pod
+        namespace: d8-cert-manager
+        selector: app=webhook
+    - description: Show the webhook logs on failure
+      podLogs:
+        namespace: d8-cert-manager
+        selector: app=webhook
+        container: webhook
+        tail: 200
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled, converged and its ClusterIssuers are Ready
+      use:
+        template: ../common/steps/ensure-cert-manager.yaml
+
+    - name: valid-resources-pass
+      description: As a control, a valid Certificate and a valid Issuer pass the server-side dry run
+      try:
+        - description: Dry-run a valid Certificate
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: |
+              kubectl -n "$E2E_NS" create --dry-run=server -o name -f - <<'EOF'
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-valid
+              spec:
+                secretName: e2e-cm-valid
+                duration: 2h
+                renewBefore: 30m
+                dnsNames: [valid.e2e-cm.example.test]
+                ipAddresses: [192.0.2.1]
+                issuerRef: {kind: ClusterIssuer, name: selfsigned}
+              EOF
+            check:
+              ($error == null): true
+              (contains($stdout, 'certificate.cert-manager.io/e2e-cm-valid')): true
+        - description: Dry-run a valid Issuer
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: |
+              kubectl -n "$E2E_NS" create --dry-run=server -o name -f - <<'EOF'
+              apiVersion: cert-manager.io/v1
+              kind: Issuer
+              metadata:
+                name: e2e-cm-valid
+              spec:
+                selfSigned: {}
+              EOF
+            check:
+              ($error == null): true
+
+    - name: renew-before-exceeds-duration
+      description: "Certificate with renewBefore longer than duration is rejected"
+      try:
+        - description: "Dry-run the certificate with renewBefore longer than duration and match the rejection message"
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: |
+              kubectl -n "$E2E_NS" create --dry-run=server -f - <<'EOF'
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-renew-before-exceeds-duration
+              spec:
+                secretName: e2e-cm-renew-before-exceeds-duration
+                duration: 1h
+                renewBefore: 2h
+                dnsNames: [a.e2e-cm.example.test]
+                issuerRef: {kind: ClusterIssuer, name: selfsigned}
+              EOF
+            check:
+              ($error != null): true
+              (contains($stderr, 'admission webhook "webhook.cert-manager.io" denied the request')): true
+              (contains($stderr, 'certificate duration 1h0m0s must be greater than renewBefore 2h0m0s')): true
+
+    - name: renew-before-too-short
+      description: "Certificate with renewBefore below the 5 minute minimum is rejected"
+      try:
+        - description: "Dry-run the certificate with renewBefore below the 5 minute minimum and match the rejection message"
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: |
+              kubectl -n "$E2E_NS" create --dry-run=server -f - <<'EOF'
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-renew-before-too-short
+              spec:
+                secretName: e2e-cm-renew-before-too-short
+                renewBefore: 1m
+                dnsNames: [a.e2e-cm.example.test]
+                issuerRef: {kind: ClusterIssuer, name: selfsigned}
+              EOF
+            check:
+              ($error != null): true
+              (contains($stderr, 'admission webhook "webhook.cert-manager.io" denied the request')): true
+              (contains($stderr, 'certificate renewBefore must be greater than 5m0s')): true
+
+    - name: no-subject
+      description: "Certificate without commonName and without any SAN is rejected"
+      try:
+        - description: "Dry-run the certificate without commonName and without any SAN and match the rejection message"
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: |
+              kubectl -n "$E2E_NS" create --dry-run=server -f - <<'EOF'
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-no-subject
+              spec:
+                secretName: e2e-cm-no-subject
+                issuerRef: {kind: ClusterIssuer, name: selfsigned}
+              EOF
+            check:
+              ($error != null): true
+              (contains($stderr, 'admission webhook "webhook.cert-manager.io" denied the request')): true
+              (contains($stderr, 'at least one of commonName (from the commonName field or from a literalSubject), dnsNames, emailSANs, ipAddresses, otherNames, or uriSANs must be set')): true
+
+    - name: invalid-ip-address
+      description: "Certificate with a malformed IP SAN is rejected"
+      try:
+        - description: "Dry-run the certificate with a malformed IP SAN and match the rejection message"
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: |
+              kubectl -n "$E2E_NS" create --dry-run=server -f - <<'EOF'
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-invalid-ip-address
+              spec:
+                secretName: e2e-cm-invalid-ip-address
+                ipAddresses: ["999.0.2.1"]
+                issuerRef: {kind: ClusterIssuer, name: selfsigned}
+              EOF
+            check:
+              ($error != null): true
+              (contains($stderr, 'admission webhook "webhook.cert-manager.io" denied the request')): true
+              (contains($stderr, 'spec.ipAddresses[0]')): true
+              (contains($stderr, 'invalid IP address')): true
+
+    - name: unknown-issuer-kind
+      description: "Certificate whose issuerRef.kind is neither Issuer nor ClusterIssuer and has no group is rejected"
+      try:
+        - description: "Dry-run the certificate whose issuerRef.kind is neither Issuer nor ClusterIssuer and has no group and match the rejection message"
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: |
+              kubectl -n "$E2E_NS" create --dry-run=server -f - <<'EOF'
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-unknown-issuer-kind
+              spec:
+                secretName: e2e-cm-unknown-issuer-kind
+                dnsNames: [a.e2e-cm.example.test]
+                issuerRef: {kind: Foo, name: selfsigned}
+              EOF
+            check:
+              ($error != null): true
+              (contains($stderr, 'admission webhook "webhook.cert-manager.io" denied the request')): true
+              (contains($stderr, 'spec.issuerRef.kind')): true
+              (contains($stderr, 'must be one of Issuer or ClusterIssuer (did you forget to set spec.issuerRef.kind.group?)')): true
+
+    - name: missing-issuer-ref
+      description: "Certificate without issuerRef (rejected by the CRD schema before the webhook is called) is rejected"
+      try:
+        - description: "Dry-run the certificate without issuerRef (rejected by the CRD schema before the webhook is called) and match the rejection message"
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: |
+              kubectl -n "$E2E_NS" create --dry-run=server -f - <<'EOF'
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-missing-issuer-ref
+              spec:
+                secretName: e2e-cm-missing-issuer-ref
+                dnsNames: [a.e2e-cm.example.test]
+              EOF
+            check:
+              ($error != null): true
+              "(contains($stderr, 'spec.issuerRef: Required value'))": true
+
+    - name: issuer-without-type
+      description: An Issuer without any issuer type is rejected
+      try:
+        - description: Dry-run an Issuer with an empty spec and match the rejection message
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: |
+              kubectl -n "$E2E_NS" create --dry-run=server -f - <<'EOF'
+              apiVersion: cert-manager.io/v1
+              kind: Issuer
+              metadata:
+                name: e2e-cm-no-type
+              spec: {}
+              EOF
+            check:
+              ($error != null): true
+              (contains($stderr, 'admission webhook "webhook.cert-manager.io" denied the request')): true
+              (contains($stderr, 'at least one issuer must be configured')): true

@@ -1,0 +1,108 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-policy-engine-gatekeeper-unavailable
+spec:
+  description: >-
+    With the Gatekeeper webhook scaled to zero, a pod in a user namespace is rejected with
+    "failed calling webhook" (failurePolicy Fail), pods in d8-system and kube-system are still
+    admitted (failurePolicy Ignore), and exec into a system pod is rejected (deny-exec-heritage
+    keeps failurePolicy Fail). After the restore admission works and enforces again.
+  timeouts:
+    exec: 15m
+  steps:
+    - name: ensure-module
+      description: Enable the module if needed and wait until it is Ready and bootstrapped
+      try:
+        - description: Enable admission-policy-engine and wait for the bootstrap
+          script:
+            timeout: 20m
+            content: bash ../../tests/common/scripts/ensure-module.sh
+            check:
+              ($error == null): true
+
+    - name: create-namespaces
+      description: >-
+        Create the namespaces of the test with every label set at creation; multitenancy-manager
+        adopts them into Projects and refuses later changes of the managed labels
+      try:
+        - description: Create e2e-ape-down with security.deckhouse.io/pod-policy=baseline, security.deckhouse.io/pod-policy-action=deny
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-down security.deckhouse.io/pod-policy=baseline security.deckhouse.io/pod-policy-action=deny
+            check:
+              ($error == null): true
+        - description: Admission works before the outage
+          script:
+            content: bash ../../tests/common/scripts/probe.sh --expect allow --namespace e2e-ape-down --name before --timeout 120
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete the namespaces of the test through their Projects
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-down
+
+    - name: webhook-unavailable
+      description: Scale the webhook to zero and check how each webhook fails
+      try:
+        - description: Take Gatekeeper down and run the outage checks
+          script:
+            timeout: 12m
+            content: bash take-down.sh e2e-ape-down
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the Gatekeeper Deployment
+          describe:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: gatekeeper-controller-manager
+            namespace: d8-admission-policy-engine
+      finally:
+        - description: Scale Gatekeeper back and wait until admission works
+          script:
+            timeout: 12m
+            content: bash restore.sh e2e-ape-down
+      cleanup:
+        - description: Make sure Gatekeeper is restored even if the finally block failed
+          script:
+            timeout: 12m
+            content: bash restore.sh e2e-ape-down
+
+    - name: admission-recovered
+      description: After the restore the policies are enforced again and compliant pods are admitted
+      try:
+        - description: A privileged container is denied by Baseline again
+          script:
+            content: >-
+              bash ../../tests/common/scripts/probe.sh --expect deny --namespace e2e-ape-down
+              --name privileged --timeout 300
+              --patch '.spec.containers[0].securityContext |= (.privileged = true | del(.allowPrivilegeEscalation))'
+              --match 'Privileged container is not allowed'
+            check:
+              ($error == null): true
+        - description: A compliant pod is admitted
+          script:
+            content: bash ../../tests/common/scripts/probe.sh --expect allow --namespace e2e-ape-down --name compliant --timeout 120
+            check:
+              ($error == null): true
+        - description: The Gatekeeper Deployment is available
+          wait:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: gatekeeper-controller-manager
+            namespace: d8-admission-policy-engine
+            timeout: 5m
+            for:
+              condition:
+                name: Available
+                value: 'True'
+      catch:
+        - description: Show the Gatekeeper pods
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: d8-admission-policy-engine
+        - description: Show the events of the module namespace
+          events:
+            namespace: d8-admission-policy-engine

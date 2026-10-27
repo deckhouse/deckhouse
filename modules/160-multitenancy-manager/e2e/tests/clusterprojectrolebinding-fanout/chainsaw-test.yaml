@@ -1,0 +1,159 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: clusterprojectrolebinding-fanout
+spec:
+  description: >-
+    A ClusterProjectRoleBinding grants its role in every non-virtual project, a project created
+    after the binding included, and not in the namespaces of the virtual projects. Deleting it
+    removes the fanned-out RoleBindings. The webhook refuses a role outside the project prefixes.
+    The status of the binding is checked in tests/clusterprojectrolebinding-status: its Ready
+    condition also depends on the namespaces of the other suites, which are projects too.
+  concurrent: false
+  catch:
+    - description: Show the binding and its RoleBindings on failure
+      script:
+        content: |
+          kubectl get clusterprojectrolebinding e2e-mtm-auditors -o yaml || true
+          kubectl get rolebindings -A --field-selector metadata.name=d8:cprb:e2e-mtm-auditors || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager and user-authz modules are enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+        - description: Ensure the user-authz module is Ready (it aggregates the d8:project:* roles)
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh user-authz
+
+    - name: bind-existing-project
+      description: The binding fans out into a project that exists before it
+      try:
+        - description: Create the e2e-mtm-cprb-a project
+          create:
+            file: manifests/project-a.yaml
+        - description: Assert the project is Deployed
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-cprb-a
+              status:
+                state: Deployed
+        - description: Create the e2e-mtm-auditors ClusterProjectRoleBinding
+          create:
+            file: manifests/cprb.yaml
+        - description: Assert the RoleBinding exists in the namespace of the project
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: RoleBinding
+              metadata:
+                name: d8:cprb:e2e-mtm-auditors
+                namespace: e2e-mtm-cprb-a
+              roleRef:
+                name: d8:project:viewer
+              subjects:
+                - kind: Group
+                  name: e2e-mtm-auditors
+
+    - name: bind-new-project
+      description: A project created after the binding gets the RoleBinding as well
+      try:
+        - description: Create the e2e-mtm-cprb-b project
+          create:
+            file: manifests/project-b.yaml
+        - description: Assert the RoleBinding appears in the namespace of the new project
+          assert:
+            timeout: 3m
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: RoleBinding
+              metadata:
+                name: d8:cprb:e2e-mtm-auditors
+                namespace: e2e-mtm-cprb-b
+              roleRef:
+                name: d8:project:viewer
+        - description: Assert a member of the group can list pods in the new project
+          script:
+            timeout: 3m
+            content: |
+              for attempt in $(seq 1 30); do
+                answer="$(kubectl auth can-i list pods -n e2e-mtm-cprb-b --as e2e-mtm-auditor@example.com --as-group e2e-mtm-auditors 2>/dev/null || true)"
+                if [ "${answer}" = "yes" ]; then
+                  echo "the group member can list pods in e2e-mtm-cprb-b"
+                  exit 0
+                fi
+                sleep 5
+              done
+              exit 1
+        - description: Assert the binding does not reach the default namespace of the virtual project
+          error:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: RoleBinding
+              metadata:
+                name: d8:cprb:e2e-mtm-auditors
+                namespace: default
+
+    - name: webhook-rejection
+      description: The ClusterProjectRoleBinding webhook refuses a role outside the project prefixes
+      try:
+        - description: Assert a binding to cluster-admin is refused
+          script:
+            bindings:
+              - name: expected
+                value: 'ClusterRole "cluster-admin" cannot be granted via a project role binding'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ClusterProjectRoleBinding
+              metadata:
+                name: e2e-mtm-cluster-admins
+              spec:
+                subjects:
+                  - kind: Group
+                    name: e2e-mtm-auditors
+                roleRef:
+                  kind: ClusterRole
+                  name: cluster-admin
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+
+    - name: unbind
+      description: Deleting the binding removes its RoleBindings from every project
+      try:
+        - description: Delete the ClusterProjectRoleBinding
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ClusterProjectRoleBinding
+              name: e2e-mtm-auditors
+        - description: Assert the RoleBinding is gone from the first project
+          error:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: RoleBinding
+              metadata:
+                name: d8:cprb:e2e-mtm-auditors
+                namespace: e2e-mtm-cprb-a
+        - description: Assert the RoleBinding is gone from the second project
+          error:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: RoleBinding
+              metadata:
+                name: d8:cprb:e2e-mtm-auditors
+                namespace: e2e-mtm-cprb-b

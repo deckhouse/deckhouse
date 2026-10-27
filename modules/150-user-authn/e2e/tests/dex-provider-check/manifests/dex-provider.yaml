@@ -1,0 +1,13 @@
+# Disabled, so the module does not add it to the Dex configuration and Dex is not restarted.
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: e2e-authn-check-disabled
+spec:
+  type: OIDC
+  displayName: e2e disabled provider
+  enabled: false
+  oidc:
+    issuer: https://e2e-authn-issuer.example.com/
+    clientID: e2e-authn-not-a-client
+    clientSecret: e2e-authn-not-a-secret

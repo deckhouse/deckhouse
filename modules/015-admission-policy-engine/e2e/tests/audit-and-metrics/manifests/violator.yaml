@@ -1,0 +1,34 @@
+# Restricted-compliant except for the writable root filesystem the policy forbids.
+# The test does not need it to run: the audit lists objects from the API server.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: e2e-ape-audit-violator
+  namespace: e2e-ape-audit
+spec:
+  automountServiceAccountToken: false
+  terminationGracePeriodSeconds: 1
+  tolerations:
+    - operator: Exists
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: app
+      image: registry.k8s.io/e2e-test-images/agnhost:2.53
+      args: ["pause"]
+      resources:
+        requests:
+          cpu: 10m
+          memory: 16Mi
+        limits:
+          cpu: 50m
+          memory: 32Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: false
+        capabilities:
+          drop: ["ALL"]

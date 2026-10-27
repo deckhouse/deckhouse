@@ -404,15 +404,15 @@ func TestClient_ReleaseRunsBeforeUpgrade(t *testing.T) {
 		return nil
 	}
 
-	_, err := c.Upgrade(ctx, project, text("first"), record)
+	_, err := c.Upgrade(ctx, project, text("first"), record, false)
 	require.NoError(t, err)
 	assert.Empty(t, changes, "a first install replaces nothing")
 
-	_, err = c.Upgrade(ctx, project, text("first"), record)
+	_, err = c.Upgrade(ctx, project, text("first"), record, false)
 	require.NoError(t, err)
 	assert.Empty(t, changes, "a release that is up to date is not upgraded")
 
-	outcome, err := c.Upgrade(ctx, project, text("second"), record)
+	outcome, err := c.Upgrade(ctx, project, text("second"), record, false)
 	require.NoError(t, err)
 	assert.True(t, outcome.Applied)
 	require.Len(t, changes, 1)
@@ -432,13 +432,13 @@ func TestClient_ReleaseRunsBeforeUpgrade(t *testing.T) {
 
 	manifests := "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: native\n"
 	refused := errors.New("refused")
-	_, err = c.UpgradeManifests(ctx, project, manifests, func(context.Context, ReleaseChange) error { return refused })
+	_, err = c.UpgradeManifests(ctx, project, manifests, func(context.Context, ReleaseChange) error { return refused }, false)
 	require.ErrorIs(t, err, refused)
 	current, err = c.CurrentRelease(ctx, project.Name)
 	require.NoError(t, err)
 	assert.Equal(t, 2, current.Revision, "an error before the upgrade leaves the release as it is")
 
-	_, err = c.UpgradeManifests(ctx, project, manifests, record)
+	_, err = c.UpgradeManifests(ctx, project, manifests, record, false)
 	require.NoError(t, err)
 	require.Len(t, changes, 2)
 	assert.True(t, changes[1].Native)
@@ -470,9 +470,9 @@ func TestClient_ReleaseRollsBackBeforeUpgrade(t *testing.T) {
 			ResourcesTemplate: "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: " + configMap + "\n",
 		}}
 	}
-	_, err := c.Upgrade(ctx, project, text("first"), nil)
+	_, err := c.Upgrade(ctx, project, text("first"), nil, false)
 	require.NoError(t, err)
-	_, err = c.Upgrade(ctx, project, text("second"), nil)
+	_, err = c.Upgrade(ctx, project, text("second"), nil, false)
 	require.NoError(t, err)
 
 	deployed, err := c.conf.Releases.Get("proj", 2)
@@ -492,10 +492,44 @@ func TestClient_ReleaseRollsBackBeforeUpgrade(t *testing.T) {
 		func(_ context.Context, change ReleaseChange) error {
 			changes = append(changes, change)
 			return nil
-		})
+		}, false)
 	require.NoError(t, err)
 	require.Len(t, changes, 1)
 	assert.Equal(t, 5, changes[0].Deployed.Revision, "the revision the rollback deployed")
 	assert.Contains(t, changes[0].Deployed.Objects, ReleaseObject{APIVersion: "v1", Kind: "ConfigMap", Namespace: "proj", Name: "failed"})
 	assert.NotContains(t, changes[0].Deployed.Objects, ReleaseObject{APIVersion: "v1", Kind: "ConfigMap", Namespace: "proj", Name: "second"})
+}
+
+// A release that is up to date is upgraded all the same when the caller asks to reapply it: the hash
+// covers only the render, so the objects of a release deleted from the cluster (a project namespace
+// deleted directly) come back only through an upgrade.
+//
+// The fake kube client of the test cannot show that the upgrade creates the missing objects; the e2e
+// test project-namespace-restored covers that.
+func TestClient_ReleaseReappliesUpToDateRelease(t *testing.T) {
+	t.Parallel()
+
+	c := newReleaseClient(t)
+	ctx := context.Background()
+	project := &v1alpha3.Project{}
+	project.Name = "proj"
+	project.Spec.ProjectTemplateName = "custom"
+	manifests := "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: native\n"
+
+	outcome, err := c.UpgradeManifests(ctx, project, manifests, nil, false)
+	require.NoError(t, err)
+	require.True(t, outcome.Applied, "the first install applies the release")
+
+	outcome, err = c.UpgradeManifests(ctx, project, manifests, nil, false)
+	require.NoError(t, err)
+	assert.False(t, outcome.Applied, "an up-to-date release is not upgraded without reapply")
+
+	outcome, err = c.UpgradeManifests(ctx, project, manifests, nil, true)
+	require.NoError(t, err)
+	assert.True(t, outcome.Applied, "reapply upgrades an up-to-date release")
+
+	current, err := c.CurrentRelease(ctx, project.Name)
+	require.NoError(t, err)
+	require.NotNil(t, current)
+	assert.Equal(t, 2, current.Revision, "the reapply is a new revision")
 }

@@ -1,0 +1,331 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-user-lockout
+spec:
+  description: >-
+    With passwordPolicy.lockout (maxAttempts 3) Dex locks a local user after three wrong passwords
+    and refuses even the right one with HTTP 429. The controller reports the lock in User
+    status.lock (PasswordPolicyLockout) and in the UserAccount. A UserOperation Unlock lifts it.
+    A UserOperation Lock locks the user by an administrator (LockedByAdministrator) until the
+    next Unlock. The original ModuleConfig settings are restored afterwards.
+  concurrent: false
+
+  catch:
+    - description: Show the User without the password hash on failure
+      script:
+        shell: bash
+        shellArgs: ["-c"]
+        content: kubectl get users.deckhouse.io e2e-authn-lock-user -o json | jq 'del(.spec.password)'
+    - description: Show the UserOperations of the test on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        content: kubectl get useroperations.deckhouse.io -o wide | grep -E 'NAME|e2e-authn-lock' || true
+    - description: Show the UserAccount and the Dex Password of the user on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        content: |
+          kubectl get useraccounts.deckhouse.io -o json | jq '.items[] | select(.status.userRef == "e2e-authn-lock-user") | {metadata: {name: .metadata.name, labels: .metadata.labels}, status}'
+          kubectl -n d8-user-authn get passwords.dex.coreos.com -o json | jq '.items[] | select(.username == "e2e-authn-lock-user") | {name: .metadata.name, annotations: .metadata.annotations, incorrectPasswordLoginAttempts, lockedUntil}'
+    - description: Show Dex logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=dex
+        container: dex
+        tail: 100
+    - description: Show controller logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=user-authn-controller
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: create-user-and-client
+      description: Create the User and a DexClient to run the sign-in flow with
+      try:
+        - description: Create User e2e-authn-lock-user
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user user-lockout e2e-authn-lock-user e2e-authn-lock-user@example.com
+        - description: Create DexClient e2e-authn-lock-client
+          create:
+            file: manifests/dex-client.yaml
+        - description: Wait for the client Secret and OAuth2Client
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              wait_dex_client "${NS}" e2e-authn-lock-client
+      cleanup:
+        - description: Delete the User and the UserOperations of the test
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              kubectl delete users.deckhouse.io e2e-authn-lock-user --ignore-not-found
+              kubectl delete useroperations.deckhouse.io e2e-authn-lock-unlock e2e-authn-lock-admin e2e-authn-lock-unlock-admin --ignore-not-found
+
+    - name: enable-lockout
+      description: Turn on passwordPolicy.lockout and wait until Dex runs with it
+      try:
+        - description: Merge the password policy into ModuleConfig user-authn and wait for convergence
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 25m
+            content: >-
+              bash ../../tests/common/scripts/mc-settings.sh apply
+              '{"passwordPolicy":{"complexityLevel":"None","passwordHistoryLimit":0,"lockout":{"maxAttempts":3,"lockDuration":"15m"}}}'
+        - description: Wait until the Dex configuration has the lockout and Dex rolled out
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              wait_dex_config 600 'maxAttempts: 3$'
+      cleanup:
+        - description: Restore the original ModuleConfig user-authn spec
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 25m
+            content: bash ../../tests/common/scripts/mc-settings.sh restore
+
+    - name: lockout-after-failed-attempts
+      description: Three wrong passwords lock the account, after which the right password is refused too
+      try:
+        - description: Sign in with the right password first, which also resets the failed-attempt counter
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/login-expect.sh user-lockout "${NS}" e2e-authn-lock-client
+              e2e-authn-lock-user e2e-authn-lock-user@example.com code
+        - description: Post wrong passwords until the account is locked on the third one
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 2m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/fail-until-locked.sh
+        - description: Assert the right password is refused with HTTP 429 now
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 2m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/login-expect.sh user-lockout "${NS}" e2e-authn-lock-client
+              e2e-authn-lock-user e2e-authn-lock-user@example.com locked
+        - description: Assert User status.lock reports the password policy lockout
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: User
+              metadata:
+                name: e2e-authn-lock-user
+              status:
+                lock:
+                  state: true
+                  reason: PasswordPolicyLockout
+                  message: Locked due to too many failed login attempts
+                  (until != null): true
+        - description: Assert the UserAccount is locked by the policy, not by an administrator
+          assert:
+            timeout: 2m
+            resource:
+              (x_k8s_list($client, 'deckhouse.io/v1alpha1', 'UserAccount', '').items[?status.userRef == 'e2e-authn-lock-user']):
+                (length(@)): 1
+                ([0].status.locked): true
+                ([0].status.lockedByAdministrator == `true`): false
+                ([0].status.lockedUntil != null): true
+                ([0].metadata.labels."userauthn.deckhouse.io/locked"): 'true'
+
+    - name: unlock-by-user-operation
+      description: A UserOperation Unlock lifts the lockout before it expires
+      try:
+        - description: Create UserOperation e2e-authn-lock-unlock of type Unlock
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-lock-unlock
+              spec:
+                user: e2e-authn-lock-user
+                type: Unlock
+                initiatorType: admin
+        - description: Assert the operation succeeded
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-lock-unlock
+              status:
+                phase: Succeeded
+                (completedAt != null): true
+        - description: Assert User status.lock is cleared
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: User
+              metadata:
+                name: e2e-authn-lock-user
+              status:
+                lock:
+                  state: false
+        - description: Assert the UserAccount is not locked
+          assert:
+            timeout: 2m
+            resource:
+              (x_k8s_list($client, 'deckhouse.io/v1alpha1', 'UserAccount', '').items[?status.userRef == 'e2e-authn-lock-user']):
+                (length(@)): 1
+                ([0].metadata.labels."userauthn.deckhouse.io/locked"): 'false'
+        - description: Assert the user can sign in again
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/login-expect.sh user-lockout "${NS}" e2e-authn-lock-client
+              e2e-authn-lock-user e2e-authn-lock-user@example.com code
+
+    - name: lock-by-administrator
+      description: A UserOperation Lock locks the user until an Unlock, whatever the password
+      try:
+        - description: Create UserOperation e2e-authn-lock-admin of type Lock for one hour
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-lock-admin
+              spec:
+                user: e2e-authn-lock-user
+                type: Lock
+                initiatorType: admin
+                lock:
+                  for: 1h
+        - description: Assert the operation succeeded
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-lock-admin
+              status:
+                phase: Succeeded
+        - description: Assert User status.lock reports the administrator lock
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: User
+              metadata:
+                name: e2e-authn-lock-user
+              status:
+                lock:
+                  state: true
+                  reason: LockedByAdministrator
+                  message: Locked by administrator
+        - description: Assert the UserAccount is locked by an administrator
+          assert:
+            timeout: 2m
+            resource:
+              (x_k8s_list($client, 'deckhouse.io/v1alpha1', 'UserAccount', '').items[?status.userRef == 'e2e-authn-lock-user']):
+                (length(@)): 1
+                ([0].status.locked): true
+                ([0].status.lockedByAdministrator): true
+        - description: Assert the right password is refused with HTTP 429
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 2m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/login-expect.sh user-lockout "${NS}" e2e-authn-lock-client
+              e2e-authn-lock-user e2e-authn-lock-user@example.com locked
+        - description: Create UserOperation e2e-authn-lock-unlock-admin of type Unlock
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-lock-unlock-admin
+              spec:
+                user: e2e-authn-lock-user
+                type: Unlock
+                initiatorType: admin
+        - description: Assert the Unlock succeeded and User status.lock is cleared
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: User
+              metadata:
+                name: e2e-authn-lock-user
+              status:
+                lock:
+                  state: false
+        - description: Assert the user can sign in again
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/login-expect.sh user-lockout "${NS}" e2e-authn-lock-client
+              e2e-authn-lock-user e2e-authn-lock-user@example.com code

@@ -1,0 +1,174 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: drift-and-protection
+spec:
+  description: >-
+    The objects a project manages are protected by the d8-multitenancy-manager admission policies:
+    a project administrator cannot delete the administrators binding, a cluster administrator
+    (system:masters) cannot change a template object or a module-owned namespace label but can set
+    a label of their own on the namespace. A change that gets past the policies (system:sudouser)
+    or a removed own label of the Project is reverted by the controller.
+  concurrent: false
+  bindings:
+    - name: managedMessage
+      value: This resource is managed by e2e-mtm-drift Project. Manual modification is forbidden.
+  catch:
+    - description: Show the project and its managed objects on failure
+      script:
+        content: |
+          kubectl get project e2e-mtm-drift -o yaml || true
+          kubectl -n e2e-mtm-drift get resourcequota d8-project-quota -o yaml || true
+          kubectl get ns e2e-mtm-drift --show-labels || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager and user-authz modules are enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+        - description: Ensure the user-authz module is Ready (it aggregates the d8:project:admin role)
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh user-authz
+
+    - name: create-project
+      description: Create a project with an administrator and a quota
+      try:
+        - description: Create the e2e-mtm-drift project
+          create:
+            file: manifests/project.yaml
+        - description: Assert the project is Deployed and its quota is in place
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-drift
+              status:
+                state: Deployed
+        - description: Assert the controller created the quota from spec.quota
+          assert:
+            resource:
+              apiVersion: v1
+              kind: ResourceQuota
+              metadata:
+                name: d8-project-quota
+                namespace: e2e-mtm-drift
+              spec:
+                hard:
+                  requests.cpu: "2"
+        - description: Wait until RBAC lets the project administrator delete ProjectRoleBindings, so a refusal below comes from admission
+          script:
+            timeout: 3m
+            content: |
+              for attempt in $(seq 1 30); do
+                answer="$(kubectl auth can-i delete projectrolebindings.deckhouse.io -n e2e-mtm-drift --as e2e-mtm-drift-admin@example.com 2>/dev/null || true)"
+                if [ "${answer}" = "yes" ]; then
+                  echo "the project administrator may delete ProjectRoleBindings"
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "the d8:project:admin role does not let the administrator delete ProjectRoleBindings"
+              exit 1
+
+    - name: project-admin-refused
+      description: A project administrator cannot delete the administrators binding the controller manages
+      try:
+        - description: Assert the delete of d8-administrators by the project administrator is refused
+          script:
+            content: >-
+              kubectl -n e2e-mtm-drift delete projectrolebinding d8-administrators --dry-run=server
+              --as e2e-mtm-drift-admin@example.com
+            check:
+              ($error != null): true
+              (contains($stderr, $managedMessage)): true
+
+    - name: cluster-admin-refused
+      description: >-
+        system:masters is not exempt from the policies: a template object and the module-owned
+        namespace labels cannot be changed directly, a label of the administrator's own can
+      try:
+        - description: Assert a label on the isolated NetworkPolicy is refused for a system:masters member
+          script:
+            content: >-
+              kubectl -n e2e-mtm-drift label networkpolicy isolated e2e-mtm/touched=yes --dry-run=server
+              --as e2e-mtm-cluster-admin --as-group system:masters
+            check:
+              ($error != null): true
+              (contains($stderr, $managedMessage)): true
+        - description: Assert a change of the pod security label of the namespace is refused for a system:masters member
+          script:
+            bindings:
+              - name: expected
+                value: 'The namespace belongs to the e2e-mtm-drift Project:'
+            content: >-
+              kubectl label namespace e2e-mtm-drift security.deckhouse.io/pod-policy=privileged --overwrite
+              --dry-run=server --as e2e-mtm-cluster-admin --as-group system:masters
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert a label the module does not own is accepted on the project namespace
+          script:
+            content: >-
+              kubectl label namespace e2e-mtm-drift e2e-mtm/owner=platform --dry-run=server
+              --as e2e-mtm-cluster-admin --as-group system:masters
+            check:
+              ($error == null): true
+
+    - name: drift-reverted
+      description: >-
+        A change that bypasses the policies deliberately (system:sudouser) is reverted: the controller
+        watches the quota and puts spec.quota back
+      try:
+        - description: Change the quota as system:sudouser
+          script:
+            content: >-
+              kubectl -n e2e-mtm-drift patch resourcequota d8-project-quota --type merge
+              -p '{"spec":{"hard":{"requests.cpu":"7"}}}'
+              --as system:sudouser --as-group system:masters
+        - description: Assert the controller restores the quota from spec.quota within 60s
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: v1
+              kind: ResourceQuota
+              metadata:
+                name: d8-project-quota
+                namespace: e2e-mtm-drift
+              spec:
+                hard:
+                  requests.cpu: "2"
+
+    - name: own-label-restored
+      description: >-
+        Removing the template label of the Project is admitted with a warning, and the controller
+        puts the label back
+      try:
+        - description: Assert removing the label is admitted with the warning of the Project webhook
+          script:
+            bindings:
+              - name: expected
+                value: 'the projects.deckhouse.io/project-template label of the "e2e-mtm-drift" project is set by the multitenancy-manager controller, which puts it back'
+            content: kubectl label project e2e-mtm-drift projects.deckhouse.io/project-template-
+            check:
+              ($error == null): true
+              (contains($stderr, $expected)): true
+        - description: Assert the controller puts the label back
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-drift
+                labels:
+                  projects.deckhouse.io/project-template: default

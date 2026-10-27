@@ -1,0 +1,20 @@
+# A custom namespace capability. The "d8:custom:namespace-capability:" name prefix, the
+# custom-capability kind and the namespace scope are what the rbacv2-cluster-roles webhook
+# requires of a ClusterRole that carries a platform aggregation label.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:custom:namespace-capability:e2e-authz-widgets
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+    rbac.deckhouse.io/kind: custom-capability
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/aggregate-to-namespace-as: viewer
+rules:
+- apiGroups:
+  - e2e-authz.example.com
+  resources:
+  - widgets
+  verbs:
+  - get
+  - list

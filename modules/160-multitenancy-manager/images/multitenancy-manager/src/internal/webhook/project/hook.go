@@ -50,6 +50,38 @@ import (
 	rolebindingwebhook "controller/internal/webhook/rolebinding"
 )
 
+// namespaceOwnersChange returns a denial message when an update sets the projects.deckhouse.io/namespace-owners
+// annotation, which records the ownerReferences the controller copied to the Project from its main
+// namespace, and an empty string otherwise. Adding the annotation or changing its value would make the
+// controller drop a Project's own ownerReference as a copy, so both are refused. Removing it is let
+// through when the copies it records leave with it: a manifest that replaces the whole Project (kubectl
+// replace, Argo CD with Replace=true) carries neither, and the controller copies the owners of the
+// namespace and the record back. A removal that keeps a copy is refused, as the copy would then count
+// as an ownerReference of the Project's own and outlive its removal from the namespace.
+func namespaceOwnersChange(old, project *v1alpha3.Project) string {
+	oldRecord, oldOK := old.Annotations[v1alpha3.ProjectAnnotationNamespaceOwners]
+	record, ok := project.Annotations[v1alpha3.ProjectAnnotationNamespaceOwners]
+	switch {
+	case ok && (!oldOK || record != oldRecord):
+		return fmt.Sprintf("the %s annotation of the %q project is set by the multitenancy-manager controller",
+			v1alpha3.ProjectAnnotationNamespaceOwners, project.Name)
+	case oldOK && !ok:
+		for _, uid := range strings.Split(oldRecord, ",") {
+			uid = strings.TrimSpace(uid)
+			if uid == "" {
+				continue
+			}
+			for _, ref := range project.OwnerReferences {
+				if string(ref.UID) == uid {
+					return fmt.Sprintf("the %s annotation of the %q project cannot be removed while the ownerReference %s %q it records stays: remove both or neither",
+						v1alpha3.ProjectAnnotationNamespaceOwners, project.Name, ref.Kind, ref.Name)
+				}
+			}
+		}
+	}
+	return ""
+}
+
 // ownLabelChange checks an update against the labels the controller stamps on every Project. Grant
 // policies select projects by them, so pointing projects.deckhouse.io/project-template at a template the
 // project does not use is refused, as it would move the project into or out of policies. Removing either
@@ -164,6 +196,14 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		}
 		reason, labelWarnings := ownLabelChange(old, project)
 		if reason != "" {
+			return admission.Denied(reason)
+		}
+		// The garbage collector deletes a Project whose owner is gone, past the project delete check,
+		// and the controller keeps the owners it copies from the main namespace in the annotation.
+		if reason := validate.AddedOwnerReference(v1alpha3.ProjectKind, project.Name, old.OwnerReferences, project.OwnerReferences); reason != "" {
+			return admission.Denied(reason)
+		}
+		if reason := namespaceOwnersChange(old, project); reason != "" {
 			return admission.Denied(reason)
 		}
 		warnings = append(warnings, labelWarnings...)

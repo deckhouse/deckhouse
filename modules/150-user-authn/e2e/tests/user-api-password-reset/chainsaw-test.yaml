@@ -1,0 +1,115 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-user-api-password-reset
+spec:
+  description: >-
+    user-api serves the self-service password reset at POST /api/v1/password/reset. It refuses a
+    request without a bearer token (401) and a hash that is not bcrypt (400). With the ID token of
+    a local user and a bcrypt hash it answers 202 and creates a UserOperation ResetPassword with
+    initiatorType self, which the controller completes; Dex then accepts only the new password.
+  concurrent: false
+
+  catch:
+    - description: Show user-api pods and the UserOperations on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        content: |
+          kubectl -n d8-user-authn get pods -l app=user-api -o wide
+          kubectl get useroperations.deckhouse.io -o wide | grep -E 'NAME|e2e-authn-api-user' || true
+    - description: Show user-api logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=user-api
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: create-user-and-client
+      description: Create the User and a DexClient; user-api runs while local users exist
+      try:
+        - description: Create User e2e-authn-api-user
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user user-api-password-reset e2e-authn-api-user e2e-authn-api-user@example.com
+        - description: Create DexClient e2e-authn-api-client
+          create:
+            file: manifests/dex-client.yaml
+        - description: Wait for the client Secret and OAuth2Client
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              wait_dex_client "${NS}" e2e-authn-api-client
+        - description: Assert the user-api Deployment is available
+          assert:
+            timeout: 5m
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: user-api
+                namespace: d8-user-authn
+              status:
+                (availableReplicas >= `1`): true
+      cleanup:
+        - description: Delete the User and the UserOperation created by user-api
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              op="$(cat "${E2E_STATE_DIR:-/tmp/e2e-authn-state}/user-api-password-reset/operation" 2>/dev/null || true)"
+              [ -n "${op}" ] && kubectl delete useroperations.deckhouse.io "${op}" --ignore-not-found
+              kubectl delete users.deckhouse.io e2e-authn-api-user --ignore-not-found
+
+    - name: self-service-reset
+      description: The user resets the password through user-api with its ID token
+      try:
+        - description: Sign in to get an ID token
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/get-token.sh user-api-password-reset "${NS}" e2e-authn-api-client
+              e2e-authn-api-user e2e-authn-api-user@example.com
+        - description: Call the endpoint without a token, with a hash that is not bcrypt and with a valid hash
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 2m
+            content: bash scripts/call-user-api.sh
+        - description: Assert the UserOperation succeeded and Dex accepts only the new password
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 5m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/check-reset.sh

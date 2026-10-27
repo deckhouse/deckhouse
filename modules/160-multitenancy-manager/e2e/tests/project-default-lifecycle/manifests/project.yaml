@@ -1,0 +1,19 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-life
+spec:
+  description: Lifecycle of a project created from the default template.
+  projectTemplateName: default
+  administrators:
+    - kind: User
+      name: e2e-mtm-life-admin@example.com
+  quota:
+    requests.cpu: "2"
+    requests.memory: 2Gi
+  parameters:
+    podSecurityProfile: Restricted
+    extendedMonitoringEnabled: true
+    namespace:
+      labels:
+        e2e-mtm/purpose: lifecycle

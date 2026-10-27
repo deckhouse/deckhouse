@@ -1,0 +1,251 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: mt-limit-namespaces
+spec:
+  description: >-
+    Turn the multitenancy mode on (ModuleConfig user-authz, settings.enableMultiTenancy) and
+    verify the namespace limits of ClusterAuthorizationRule as enforced by the authorization
+    webhook through kube-apiserver: limitNamespaces, rules without limits and the system
+    namespaces, allowAccessToSystemNamespaces and namespaceSelector. Verify that
+    permission-browser-apiserver agrees: AccessibleNamespaces lists only the allowed namespaces,
+    BulkSubjectAccessReview matches SubjectAccessReview, and WhoCan names the subject. The
+    original ModuleConfig is restored and the test waits until kube-apiserver runs without the
+    webhook again.
+  timeouts:
+    apply: 60s
+    assert: 3m
+    error: 2m
+    delete: 3m
+    cleanup: 40m
+    exec: 10m
+
+  catch:
+    - description: Show the evidence about the webhook Pods, DaemonSet, events and VPA
+      script:
+        content: bash ../common/scripts/webhook-evidence.sh catch
+    - description: Show the test rules
+      get:
+        apiVersion: deckhouse.io/v1
+        kind: ClusterAuthorizationRule
+        selector: e2e.deckhouse.io/suite=user-authz
+    - description: Show the multitenancy state, the webhook and permission-browser Pods and the kube-apiserver flags
+      script:
+        content: |
+          kubectl -n d8-user-authz get configmap d8-user-authz-multitenancy-state -o yaml
+          kubectl -n d8-user-authz get pods -o wide
+          kubectl get apiservice v1alpha1.authorization.deckhouse.io -o wide
+          kubectl -n kube-system get pods -l component=kube-apiserver -o json \
+            | jq -r '.items[] | .metadata.name + " " + ([.spec.containers[0].command[]?, .spec.containers[0].args[]?] | map(select(startswith("--authorization"))) | join(" "))'
+          kubectl get moduleconfig user-authz -o yaml
+    - description: Show the authorization webhook logs
+      podLogs:
+        namespace: d8-user-authz
+        selector: app=user-authz-webhook
+        container: webhook
+        tail: 200
+    - description: Show permission-browser-apiserver logs
+      podLogs:
+        namespace: d8-user-authz
+        selector: app=permission-browser-apiserver
+        tail: 200
+
+  steps:
+    - name: prerequisites
+      description: Verify that the user-authz module and its controller are Ready
+      try:
+        - description: Wait for module user-authz and the user-authz-controller Deployment
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-user-authz.sh
+
+    - name: enable-multitenancy
+      description: >-
+        Set enableMultiTenancy=true and wait until the authorization webhook, permission-browser
+        and every kube-apiserver run with it (control-plane-manager restarts kube-apiserver)
+      try:
+        - description: Enable the multitenancy mode and wait for the whole chain
+          script:
+            timeout: 40m
+            content: bash ../common/scripts/multitenancy.sh enable
+      cleanup:
+        - description: Restore ModuleConfig user-authz and wait until kube-apiserver runs without the webhook
+          script:
+            timeout: 40m
+            content: bash ../common/scripts/multitenancy.sh restore
+
+    - name: create-tenant-namespace
+      description: Create the second tenant namespace, labeled for the namespaceSelector rule
+      try:
+        - description: Apply namespace e2e-authz-mt-b
+          script:
+            # The label is what the namespaceSelector rule selects; it is set at creation because
+            # multitenancy-manager refuses later label changes of an adopted namespace.
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-authz-mt-b e2e-authz-mt-selected=true
+
+      cleanup:
+        - description: Delete namespace e2e-authz-mt-b (its Project when multitenancy-manager adopted it)
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-authz-mt-b
+
+    - name: create-rules
+      description: >-
+        Create the four rules. The multitenancy admission webhook reads the mode from a
+        ConfigMap snapshot, so the creation is retried for a short while after the switch.
+      try:
+        - description: Apply the rules, retrying while the admission webhook still sees the mode as off
+          script:
+            timeout: 5m
+            content: |
+              set -u
+              for attempt in $(seq 1 36); do
+                if sed "s/@NAMESPACE@/${NAMESPACE}/" manifests/cars.yaml | kubectl apply -f -; then
+                  exit 0
+                fi
+                echo "attempt ${attempt} failed, retrying"
+                sleep 5
+              done
+              exit 1
+        - description: Assert the limited rule is Ready
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-mt-limited
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+      cleanup:
+        - description: Delete the rules before the mode is switched off
+          script:
+            timeout: 5m
+            content: kubectl delete -f manifests/cars.yaml --ignore-not-found --wait=true
+
+    - name: namespace-limits
+      description: Compare the decisions of kube-apiserver with the multitenancy matrix
+      try:
+        - description: Evaluate matrix.txt (the authorizer cache of kube-apiserver keeps a decision up to 5 minutes)
+          script:
+            timeout: 12m
+            content: bash ../common/scripts/sar-check.sh matrix.txt 600
+        - description: Assert the deny reasons of the authorization webhook
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -eu
+              . ../common/scripts/lib.sh
+              ns_reason="$(sar_decide e2e-authz-mt-limited get "" pods "" e2e-authz-mt-b)"
+              echo "limited, get pods in e2e-authz-mt-b: ${ns_reason}"
+              case "${ns_reason}" in
+                "deny either you have no access to the namespace or the namespace does not exist"*) ;;
+                *) echo "unexpected decision or reason" >&2; exit 1 ;;
+              esac
+              cluster_reason="$(sar_decide e2e-authz-mt-limited list "" pods "" "")"
+              echo "limited, list pods in all namespaces: ${cluster_reason}"
+              case "${cluster_reason}" in
+                "deny making cluster-scoped requests for namespaced resources is not allowed"*) ;;
+                *) echo "unexpected decision or reason" >&2; exit 1 ;;
+              esac
+        - description: Cross-check through kubectl auth can-i --as
+          script:
+            content: |
+              set -eu
+              own="$(kubectl auth can-i get pods -n "${NAMESPACE}" --as e2e-authz-mt-limited 2>&1)" || true
+              echo "e2e-authz-mt-limited in ${NAMESPACE}: ${own}"
+              test "${own}" = yes
+              # A kubectl failure must not pass for "no": the answer has to be "no", followed by
+              # the reason of the webhook when kubectl prints one.
+              out="$(kubectl auth can-i get pods -n e2e-authz-mt-b --as e2e-authz-mt-limited 2>&1)" || true
+              echo "e2e-authz-mt-limited in e2e-authz-mt-b: ${out}"
+              case "${out}" in
+                no|"no - "*) ;;
+                *) echo "expected no, got: ${out}" >&2; exit 1 ;;
+              esac
+
+    - name: accessible-namespaces
+      description: Verify the AccessibleNamespaces API of permission-browser-apiserver for the limited and the unlimited user
+      try:
+        - description: The limited user sees the suite namespace only, the unlimited user both tenants but no system namespace
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 5m
+            content: |
+              set -u
+              check() {
+                limited="$(kubectl get accessiblenamespaces.authorization.deckhouse.io --as e2e-authz-mt-limited \
+                  -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')" || return 1
+                nolimit="$(kubectl get accessiblenamespaces.authorization.deckhouse.io --as e2e-authz-mt-nolimit \
+                  -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')" || return 1
+                echo "limited: $(echo ${limited})"
+                echo "nolimit: $(echo ${nolimit} | head -c 2000)"
+                grep -qx "${NAMESPACE}" <<<"${limited}" || return 1
+                ! grep -qx e2e-authz-mt-b <<<"${limited}" || return 1
+                ! grep -qx d8-system <<<"${limited}" || return 1
+                grep -qx "${NAMESPACE}" <<<"${nolimit}" || return 1
+                grep -qx e2e-authz-mt-b <<<"${nolimit}" || return 1
+                ! grep -qx kube-system <<<"${nolimit}" || return 1
+                ! grep -qx d8-system <<<"${nolimit}" || return 1
+              }
+              for attempt in $(seq 1 36); do
+                if check; then
+                  echo "AccessibleNamespaces match"
+                  exit 0
+                fi
+                echo "attempt ${attempt}: AccessibleNamespaces do not match yet"
+                sleep 5
+              done
+              exit 1
+        - description: Getting the suite namespace succeeds for the limited user (positive control)
+          script:
+            content: kubectl get accessiblenamespace.authorization.deckhouse.io "${NAMESPACE}" --as e2e-authz-mt-limited -o name
+        - description: Getting a namespace outside the limits returns the NotFound of AccessibleNamespace
+          script:
+            content: kubectl get accessiblenamespace.authorization.deckhouse.io e2e-authz-mt-b --as e2e-authz-mt-limited
+            check:
+              ($error != null): true
+              (contains($stderr, 'accessiblenamespaces.authorization.deckhouse.io "e2e-authz-mt-b" not found')): true
+
+    - name: permission-browser-reviews
+      description: Verify that BulkSubjectAccessReview and WhoCan agree with the decisions of kube-apiserver
+      try:
+        - description: BulkSubjectAccessReview allows the limited user in the suite namespace and not in e2e-authz-mt-b
+          script:
+            content: |
+              set -eu
+              out="$(kubectl create -o json -f - <<JSON
+              {
+                "apiVersion": "authorization.deckhouse.io/v1alpha1",
+                "kind": "BulkSubjectAccessReview",
+                "spec": {
+                  "user": "e2e-authz-mt-limited",
+                  "groups": ["system:authenticated"],
+                  "requests": [
+                    {"resourceAttributes": {"namespace": "${NAMESPACE}", "verb": "create", "group": "apps", "resource": "deployments"}},
+                    {"resourceAttributes": {"namespace": "e2e-authz-mt-b", "verb": "create", "group": "apps", "resource": "deployments"}}
+                  ]
+                }
+              }
+              JSON
+              )"
+              echo "${out}" | jq '.status'
+              echo "${out}" | jq -e '.status.results[0].allowed == true and (.status.results[1].allowed // false) == false' >/dev/null
+        - description: WhoCan create deployments in the suite namespace names the limited user
+          script:
+            content: |
+              set -eu
+              out="$(kubectl create -o json -f - <<JSON
+              {
+                "apiVersion": "authorization.deckhouse.io/v1alpha1",
+                "kind": "WhoCan",
+                "spec": {
+                  "resourceAttributes": {"namespace": "${NAMESPACE}", "verb": "create", "group": "apps", "resource": "deployments"}
+                }
+              }
+              JSON
+              )"
+              echo "${out}" | jq '.status | {users: (.users // [] | map(select(startswith("e2e-authz-")))), evaluationError}'
+              echo "${out}" | jq -e '(.status.users // []) | index("e2e-authz-mt-limited") != null' >/dev/null

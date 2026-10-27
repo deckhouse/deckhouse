@@ -1,0 +1,87 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-dex-provider-check
+spec:
+  description: >-
+    The controller runs a DexProviderCheck once and records the result. A check must be named
+    after its provider (canonicalCheckName); the controller deletes a check whose provider does not
+    exist. A check of a disabled provider passes providerExists and fails at providerEnabled,
+    without probing the provider.
+  concurrent: false
+
+  catch:
+    - description: Show the DexProviderChecks of the test on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        content: kubectl get dexproviderchecks.deckhouse.io e2e-authn-check-missing e2e-authn-check-disabled -o yaml --ignore-not-found
+    - description: Show controller logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=user-authn-controller
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: missing-provider
+      description: >-
+        The controller deletes a check whose provider does not exist
+        (providercheck/controller.go, Reconcile)
+      try:
+        - description: Create DexProviderCheck e2e-authn-check-missing for a provider that does not exist
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: DexProviderCheck
+              metadata:
+                name: e2e-authn-check-missing
+              spec:
+                providerName: e2e-authn-check-missing
+                initiatorType: Admin
+        - description: Assert the controller deleted the check
+          error:
+            timeout: 1m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: DexProviderCheck
+              metadata:
+                name: e2e-authn-check-missing
+
+    - name: disabled-provider
+      description: A check of a disabled provider fails at providerEnabled
+      try:
+        - description: Create the disabled DexProvider e2e-authn-check-disabled
+          create:
+            file: manifests/dex-provider.yaml
+        - description: Create DexProviderCheck e2e-authn-check-disabled
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: DexProviderCheck
+              metadata:
+                name: e2e-authn-check-disabled
+              spec:
+                providerName: e2e-authn-check-disabled
+                initiatorType: Admin
+        - description: Assert the check found the provider and failed at providerEnabled without probing it
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: DexProviderCheck
+              metadata:
+                name: e2e-authn-check-disabled
+              status:
+                phase: Failed
+                (checks[?name == 'providerExists']):
+                  - status: Succeeded
+                (checks[?name == 'providerEnabled']):
+                  - status: Failed
+                    message: DexProvider "e2e-authn-check-disabled" is disabled
+                (length(checks[?name == 'oidcDiscovery'])): 0

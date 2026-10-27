@@ -1,0 +1,30 @@
+# kube-rbac-proxy of gatekeeper-audit authorizes a scrape as `get` on the prometheus-metrics
+# subresource of the gatekeeper-audit Deployment.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: e2e-ape-metrics-reader
+  namespace: e2e-ape-audit
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: e2e-ape-metrics-reader
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments/prometheus-metrics"]
+    resourceNames: ["gatekeeper-audit"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: e2e-ape-metrics-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: e2e-ape-metrics-reader
+subjects:
+  - kind: ServiceAccount
+    name: e2e-ape-metrics-reader
+    namespace: e2e-ape-audit

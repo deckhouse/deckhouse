@@ -1,0 +1,228 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: rollout-restart-under-probe
+spec:
+  description: >-
+    A rollout restart of the multitenancy-manager Deployment while an admission probe sends a
+    server-side dry-run create of a Project and of a ProjectRoleBinding every 200ms: no request
+    fails, none with "failed calling webhook" in particular. After the restart the controller does
+    not render the existing project again (the revision of its Helm release and its generation
+    stay the same), and the rollout leaves pods of a single revision (the condition of the
+    MultitenancyManagerPreviousRevisionStillRunning alert).
+  concurrent: false
+  bindings:
+    - name: workDir
+      value: /tmp/e2e-mtm-rollout-restart
+  catch:
+    - description: Show the controller pods, the Deployment and the events on failure
+      script:
+        content: |
+          kubectl -n d8-multitenancy-manager get deploy,rs,pods -o wide --show-labels || true
+          kubectl -n d8-multitenancy-manager get events --sort-by=.lastTimestamp | tail -n 50 || true
+          kubectl get project e2e-mtm-rr -o yaml || true
+    - description: Show the probe failures on failure
+      script:
+        env:
+          - name: WORK_DIR
+            value: ($workDir)
+        content: |
+          echo "requests: $(wc -l < "${WORK_DIR}/requests" 2>/dev/null || echo 0)"
+          head -n 50 "${WORK_DIR}/failures" 2>/dev/null || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 300
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager module is enabled, converged and its Deployment is available
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../../tests/common/scripts/ensure-module.sh multitenancy-manager
+        - description: Assert the controller Deployment is fully available
+          script:
+            timeout: 6m
+            content: kubectl -n d8-multitenancy-manager rollout status deployment/multitenancy-manager --timeout=5m
+
+    - name: create-project
+      description: Create a project and remember the state of its release
+      try:
+        - description: Create the e2e-mtm-rr project
+          create:
+            file: manifests/project.yaml
+        - description: Assert the project is Deployed
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-rr
+              status:
+                state: Deployed
+        - description: Remember the Helm release revision and the generation of the project once it settles
+          script:
+            env:
+              - name: WORK_DIR
+                value: ($workDir)
+            content: |
+              set -eu
+              rm -rf "${WORK_DIR}"
+              mkdir -p "${WORK_DIR}"
+              # The first reconcile may still render the project after Deployed: the baseline is
+              # taken once the revision and the generation stay the same for 6 reads 5 seconds apart.
+              last=""
+              stable=0
+              for attempt in $(seq 1 48); do
+                current="$(bash ../../tests/common/scripts/helm-revision.sh e2e-mtm-rr) $(kubectl get project e2e-mtm-rr -o jsonpath='{.metadata.generation}')"
+                if [ "${current}" = "${last}" ]; then
+                  stable=$((stable + 1))
+                else
+                  stable=1
+                  last="${current}"
+                fi
+                [ "${stable}" -ge 6 ] && break
+                sleep 5
+              done
+              [ "${stable}" -ge 6 ] || { echo "the revision and generation did not settle within 4 minutes: ${last}"; exit 1; }
+              echo "${last}" | cut -d' ' -f1 > "${WORK_DIR}/revision.before"
+              echo "${last}" | cut -d' ' -f2 > "${WORK_DIR}/generation.before"
+              echo "revision $(cat "${WORK_DIR}/revision.before"), generation $(cat "${WORK_DIR}/generation.before")"
+              [ "$(cat "${WORK_DIR}/revision.before")" -ge 1 ]
+      cleanup:
+        - description: Stop the probe if it still runs and remove its work directory at the end of the test
+          script:
+            env:
+              - name: WORK_DIR
+                value: ($workDir)
+            content: |
+              pid="$(cat "${WORK_DIR}/probe.pid" 2>/dev/null || true)"
+              args="$([ -n "${pid}" ] && ps -o args= -p "${pid}" 2>/dev/null || true)"
+              case "${args}" in
+                *probe.sh*) kill -TERM "-${pid}" 2>/dev/null || kill "${pid}" 2>/dev/null || true ;;
+              esac
+              rm -rf "${WORK_DIR}"
+
+    - name: restart-under-probe
+      description: Restart the controller while the probe runs, and keep probing 60s after the rollout
+      try:
+        - description: Start the admission probe in the background
+          script:
+            env:
+              - name: WORK_DIR
+                value: ($workDir)
+            content: |
+              set -eu
+              setsid nohup bash scripts/probe.sh "${WORK_DIR}" manifests > "${WORK_DIR}/probe.log" 2>&1 < /dev/null &
+              sleep 10
+              requests="$(wc -l < "${WORK_DIR}/requests")"
+              failures="$(wc -l < "${WORK_DIR}/failures")"
+              echo "before the restart: ${requests} requests, ${failures} failures"
+              head -n 5 "${WORK_DIR}/failures"
+              # At least 5 requests in 10 seconds: the probe is fast enough to see a short outage.
+              [ "${requests}" -ge 5 ] && [ "${failures}" -eq 0 ]
+        - description: Rollout restart the controller and wait until the rollout finishes
+          script:
+            timeout: 12m
+            env:
+              - name: WORK_DIR
+                value: ($workDir)
+            content: |
+              set -eu
+              date -u +%Y-%m-%dT%H:%M:%SZ > "${WORK_DIR}/restart.started"
+              kubectl -n d8-multitenancy-manager rollout restart deployment/multitenancy-manager
+              kubectl -n d8-multitenancy-manager rollout status deployment/multitenancy-manager --timeout=10m
+              # The new pod holds its controllers until the old one is gone and the lease is taken;
+              # keep probing past that.
+              sleep 60
+        - description: Stop the probe
+          script:
+            env:
+              - name: WORK_DIR
+                value: ($workDir)
+            content: |
+              touch "${WORK_DIR}/stop"
+              for attempt in $(seq 1 30); do
+                kill -0 "$(cat "${WORK_DIR}/probe.pid")" 2>/dev/null || break
+                sleep 1
+              done
+              cat "${WORK_DIR}/probe.log"
+        - description: Assert no admission request failed during the restart, none with "failed calling webhook"
+          script:
+            env:
+              - name: WORK_DIR
+                value: ($workDir)
+            content: |
+              set -u
+              requests="$(wc -l < "${WORK_DIR}/requests")"
+              failures="$(wc -l < "${WORK_DIR}/failures")"
+              webhook_failures="$(grep -c 'failed calling webhook' "${WORK_DIR}/failures" || true)"
+              echo "${requests} requests, ${failures} failures, ${webhook_failures} with 'failed calling webhook'"
+              head -n 20 "${WORK_DIR}/failures"
+              if [ "${requests}" -lt 100 ]; then
+                echo "the probe sent too few requests to cover the restart"
+                exit 1
+              fi
+              [ "${webhook_failures}" -eq 0 ] && [ "${failures}" -eq 0 ]
+      finally:
+        - description: Make sure the probe is stopped
+          script:
+            env:
+              - name: WORK_DIR
+                value: ($workDir)
+            content: |
+              touch "${WORK_DIR}/stop" 2>/dev/null || true
+              pid="$(cat "${WORK_DIR}/probe.pid" 2>/dev/null || true)"
+              [ -n "${pid}" ] && kill "${pid}" 2>/dev/null || true
+              true
+        - description: Make sure the controller Deployment is available again
+          script:
+            timeout: 11m
+            content: kubectl -n d8-multitenancy-manager rollout status deployment/multitenancy-manager --timeout=10m
+
+    - name: no-rerender
+      description: >-
+        The new controller does not render the existing project again, and the rollout leaves pods
+        of one revision only
+      try:
+        - description: Assert the Helm release revision and the generation of the project did not change
+          script:
+            timeout: 3m
+            env:
+              - name: WORK_DIR
+                value: ($workDir)
+            content: |
+              set -eu
+              # Let the controller finish the startup reconcile of every project and template.
+              sleep 60
+              revision="$(bash ../../tests/common/scripts/helm-revision.sh e2e-mtm-rr)"
+              generation="$(kubectl get project e2e-mtm-rr -o jsonpath='{.metadata.generation}')"
+              echo "revision $(cat "${WORK_DIR}/revision.before") -> ${revision}, generation $(cat "${WORK_DIR}/generation.before") -> ${generation}"
+              [ "${revision}" = "$(cat "${WORK_DIR}/revision.before")" ] && [ "${generation}" = "$(cat "${WORK_DIR}/generation.before")" ]
+        - description: Assert the project is still Deployed
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-rr
+              status:
+                state: Deployed
+        - description: Assert the pending and running controller pods belong to a single revision
+          script:
+            timeout: 4m
+            content: |
+              for attempt in $(seq 1 36); do
+                hashes="$(kubectl -n d8-multitenancy-manager get pods -l app=multitenancy-manager -o json \
+                  | jq -r '[.items[] | select(.status.phase == "Pending" or .status.phase == "Running") | .metadata.labels["pod-template-hash"]] | unique | length')"
+                if [ "${hashes}" = "1" ]; then
+                  echo "the controller pods belong to one revision"
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "pods of ${hashes} revisions are still pending or running"
+              exit 1

@@ -1,0 +1,139 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cert-manager-owner-ref
+spec:
+  description: >-
+    Checks the Deckhouse patch 001-certificate_owner_ref, which adds spec.certificateOwnerRef to
+    Certificate. The field overrides the controller flag --enable-certificate-owner-ref, which
+    the module sets only with https.mode CertManager and cleanupOrphanSecrets, so the test does
+    not depend on the cluster configuration. With certificateOwnerRef true the Secret is owned by
+    the Certificate and is garbage-collected with it; with false the Secret has no owner reference
+    and survives the deletion of the Certificate.
+  concurrent: false
+
+  catch:
+    - description: Show Certificates in the test namespace on failure
+      get:
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+    - description: Show Secrets in the test namespace on failure
+      get:
+        apiVersion: v1
+        kind: Secret
+    - description: Show events in the test namespace on failure
+      events: {}
+    - description: Show cert-manager controller logs on failure
+      podLogs:
+        namespace: d8-cert-manager
+        selector: app=cert-manager
+        container: cert-manager
+        tail: 200
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled, converged and its ClusterIssuers are Ready
+      use:
+        template: ../common/steps/ensure-cert-manager.yaml
+
+    - name: assert-crd-has-field
+      description: Assert the Certificate CRD served by the cluster contains the patched field
+      try:
+        - description: Assert spec.certificateOwnerRef is in the v1 schema of certificates.cert-manager.io
+          assert:
+            resource:
+              apiVersion: apiextensions.k8s.io/v1
+              kind: CustomResourceDefinition
+              metadata:
+                name: certificates.cert-manager.io
+              (spec.versions[?name == 'v1'] | [0].schema.openAPIV3Schema.properties.spec.properties.certificateOwnerRef.type): boolean
+
+    - name: issue-certificates
+      description: Issue one Certificate with certificateOwnerRef true and one with false
+      try:
+        - description: Create the Certificate with certificateOwnerRef true
+          create:
+            file: manifests/certificate-true.yaml
+        - description: Create the Certificate with certificateOwnerRef false
+          create:
+            file: manifests/certificate-false.yaml
+        - description: Assert the Certificate with certificateOwnerRef true is Ready
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-owner-true
+              spec:
+                certificateOwnerRef: true
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+        - description: Assert the Certificate with certificateOwnerRef false is Ready
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-owner-false
+              spec:
+                certificateOwnerRef: false
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+        - description: Assert the Secret of the true Certificate is owned by that Certificate
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: e2e-cm-owner-true-tls
+                (ownerReferences[?kind == 'Certificate' && name == 'e2e-cm-owner-true' && apiVersion == 'cert-manager.io/v1'] | length(@)): 1
+        - description: Assert the Secret of the false Certificate has no owner reference to a Certificate
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: e2e-cm-owner-false-tls
+                (length(ownerReferences || `[]`)): 0
+
+    - name: delete-certificates
+      description: Delete both Certificates and check what happens to their Secrets
+      try:
+        - description: Delete the Certificate with certificateOwnerRef true
+          delete:
+            ref:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              name: e2e-cm-owner-true
+        - description: Delete the Certificate with certificateOwnerRef false
+          delete:
+            ref:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              name: e2e-cm-owner-false
+        - description: Assert the owned Secret is garbage-collected
+          error:
+            timeout: 60s
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: e2e-cm-owner-true-tls
+        - description: Give the garbage collector time to act on the other Secret as well
+          sleep:
+            duration: 20s
+        - description: Assert the Secret without an owner reference is kept
+          assert:
+            timeout: 10s
+            resource:
+              apiVersion: v1
+              kind: Secret
+              type: kubernetes.io/tls
+              metadata:
+                name: e2e-cm-owner-false-tls

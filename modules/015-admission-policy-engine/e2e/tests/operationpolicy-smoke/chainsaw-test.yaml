@@ -1,0 +1,123 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-policy-engine-operationpolicy-smoke
+spec:
+  description: >-
+    One OperationPolicy with allowedRepos, requiredResources and disallowedImageTags. Each field is
+    rendered into its constraint and denies the pod that breaks it; a compliant pod is admitted;
+    a Deployment is checked at the controller level as podSecurityStandards.controllerValidation
+    says.
+  timeouts:
+    exec: 20m
+  steps:
+    - name: ensure-module
+      description: Enable the module if needed and wait until it is Ready and bootstrapped
+      try:
+        - description: Enable admission-policy-engine and wait for the bootstrap
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh
+            check:
+              ($error == null): true
+
+    - name: create-namespaces
+      description: >-
+        Create the namespaces of the test with every label set at creation; multitenancy-manager
+        adopts them into Projects and refuses later changes of the managed labels
+      try:
+        - description: Create e2e-ape-op with security.deckhouse.io/pod-policy=privileged
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-op security.deckhouse.io/pod-policy=privileged
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete the namespaces of the test through their Projects
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-op
+
+    - name: create-operationpolicy
+      description: Create the OperationPolicy and wait until its constraints are enforced
+      try:
+        - description: Create the OperationPolicy
+          apply:
+            file: manifests/operationpolicy.yaml
+        - description: Wait for every constraint rendered from the policy
+          script:
+            content: >-
+              bash ../common/scripts/wait-constraints.sh 600
+              d8allowedrepos/e2e-ape-op
+              d8requiredresources/e2e-ape-op
+              d8disallowedtags/e2e-ape-op
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the OperationPolicy
+          get:
+            apiVersion: deckhouse.io/v1alpha1
+            kind: OperationPolicy
+            name: e2e-ape-op
+
+    - name: fields-deny
+      description: Every field denies the pod that breaks it
+      try:
+        - description: An image outside the allowed repositories is denied
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-op
+              --name bad-repo --timeout 120
+              --patch '.spec.containers[0].image = "docker.io/library/busybox:1.36"'
+              --match '\[e2e-ape-op\]'
+              --match 'container <app> has an invalid image repo <docker.io/library/busybox:1.36>'
+            check:
+              ($error == null): true
+        - description: A container without a memory limit is denied
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-op
+              --name no-limits --timeout 120
+              --patch 'del(.spec.containers[0].resources.limits)'
+              --match 'container <app> does not have <.*memory.*> limits defined'
+            check:
+              ($error == null): true
+        - description: >-
+            A container without a cpu request is denied. The cpu limit is dropped as well, because
+            the API server defaults a missing request to the limit before admission.
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-op
+              --name no-cpu-request --timeout 120
+              --patch 'del(.spec.containers[0].resources.requests.cpu, .spec.containers[0].resources.limits.cpu)'
+              --match 'container <app> does not have <.*cpu.*> requests defined'
+            check:
+              ($error == null): true
+        - description: A disallowed tag is denied
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-op
+              --name latest-tag --timeout 120
+              --patch '.spec.containers[0].image = "registry.k8s.io/e2e-test-images/agnhost:latest"'
+              --match 'container <app> uses a disallowed tag'
+            check:
+              ($error == null): true
+        - description: A compliant pod is admitted
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect allow --namespace e2e-ape-op
+              --name compliant --timeout 60
+            check:
+              ($error == null): true
+
+    - name: controller-validation
+      description: A Deployment that breaks the policy is checked at the controller level
+      try:
+        - description: Check a violating and a compliant Deployment
+          script:
+            content: bash check-controller-validation.sh
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the kinds the repository constraint matches
+          script:
+            content: kubectl get d8allowedrepos e2e-ape-op -o jsonpath='{.spec.match.kinds}'

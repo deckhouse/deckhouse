@@ -36,7 +36,6 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"helm.sh/helm/v3/pkg/storage/driver"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/rest"
 
@@ -180,8 +179,8 @@ type ReleaseOutcome struct {
 
 // Upgrade renders a legacy resourcesTemplate (helm-string) template and installs/upgrades the project
 // release from it. beforeUpgrade, if given, runs where the upgrade is about to replace a deployed
-// revision (see release).
-func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate, beforeUpgrade BeforeUpgrade) (ReleaseOutcome, error) {
+// revision (see release). reapply upgrades a release that is up to date as well (see release).
+func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, template *v1alpha1.ProjectTemplate, beforeUpgrade BeforeUpgrade, reapply bool) (ReleaseOutcome, error) {
 	values := buildValues(project, template, templateParameters(project, template))
 
 	// Repeated here rather than left to admission: the release is applied with cluster-admin, and a
@@ -199,6 +198,7 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, templat
 		hash:          helmTextHash(c.templates, values),
 		beforeApply:   beforeApply,
 		beforeUpgrade: beforeUpgrade,
+		reapply:       reapply,
 	})
 }
 
@@ -208,8 +208,8 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha3.Project, templat
 // while Helm still drives the release lifecycle (install/upgrade/prune/history). The hash is taken
 // over the rendered manifests so a structural or parameter change re-applies the release.
 // beforeUpgrade, if given, runs where the upgrade is about to replace a deployed revision (see
-// release).
-func (c *Client) UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string, beforeUpgrade BeforeUpgrade) (ReleaseOutcome, error) {
+// release). reapply upgrades a release that is up to date as well (see release).
+func (c *Client) UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string, beforeUpgrade BeforeUpgrade, reapply bool) (ReleaseOutcome, error) {
 	// No injection check on this path: the parameters never reach a template engine here -- the
 	// objects are built from the schema and handed to the post-renderer as they are.
 	return c.release(ctx, project, releaseSource{
@@ -218,6 +218,7 @@ func (c *Client) UpgradeManifests(ctx context.Context, project *v1alpha3.Project
 		hash:          hashString(manifests),
 		manifests:     manifests,
 		beforeUpgrade: beforeUpgrade,
+		reapply:       reapply,
 	})
 }
 
@@ -236,6 +237,12 @@ type releaseSource struct {
 	// beforeUpgrade, if given, runs after beforeApply where an upgrade is about to replace a
 	// deployed revision, with what the upgrade does to it.
 	beforeUpgrade BeforeUpgrade
+	// reapply skips the up-to-date short circuit. The release hash covers only what is rendered, not
+	// what is in the cluster, so a release whose objects were deleted -- the project namespace and
+	// everything in it -- still looks up to date. An upgrade creates every object of the release that
+	// is missing. The unmanaged objects of the template, which otherwise only a first install creates,
+	// are rendered too, but only those in the main namespace (see postRenderer.restoreMainNamespace).
+	reapply bool
 }
 
 // release runs the shared install/upgrade machinery: discovery, history lookup, up-to-date short
@@ -247,7 +254,7 @@ func (c *Client) release(ctx context.Context, project *v1alpha3.Project, source 
 		return ReleaseOutcome{}, errRenderOnly
 	}
 
-	versions, err := c.discoverAPI()
+	versions, clusterScoped, err := c.discoverAPI()
 	if err != nil {
 		return ReleaseOutcome{}, fmt.Errorf("discover api: %w", err)
 	}
@@ -293,8 +300,11 @@ func (c *Client) release(ctx context.Context, project *v1alpha3.Project, source 
 	releaseutil.Reverse(releases, releaseutil.SortByRevision)
 	if releaseHash, ok := releases[0].Labels[v1alpha3.ReleaseLabelHashsum]; ok {
 		if releaseHash == source.hash && releases[0].Info.Status == release.StatusDeployed {
-			c.logger.V(1).Info("the release is up to date", "release", rel, "namespace", project.Name)
-			return ReleaseOutcome{Applied: false}, nil
+			if !source.reapply {
+				c.logger.V(1).Info("the release is up to date", "release", rel, "namespace", project.Name)
+				return ReleaseOutcome{Applied: false}, nil
+			}
+			c.logger.Info("the release is up to date, reapply it to restore the missing objects", "release", rel, "namespace", project.Name)
 		}
 	}
 
@@ -331,6 +341,8 @@ func (c *Client) release(ctx context.Context, project *v1alpha3.Project, source 
 
 	post := newPostRenderer(project, versions, c.logger, isFirstInstall)
 	post.manifests = source.manifests
+	post.restoreMainNamespace = source.reapply
+	post.clusterScoped = clusterScoped
 	upgrade := action.NewUpgrade(c.conf)
 	upgrade.Install = true
 	upgrade.MaxHistory = int(c.opts.HistoryMax)
@@ -386,30 +398,36 @@ func (c *Client) history(rel string) ([]*release.Release, error) {
 	return releases, nil
 }
 
-// discoverAPI returns api versions, they will be used in the post renderer. The discovery client API
+// discoverAPI returns the api versions served by the cluster and, of them, the cluster-scoped ones,
+// both keyed by "<group/version>/<kind>"; the post renderer uses them. The discovery client API
 // (ServerGroupsAndResources) accepts neither a context nor a deadline, so this call cannot be bound
 // by ctx; it is limited only by the REST client's own transport timeout.
-func (c *Client) discoverAPI() (map[string]struct{}, error) {
+func (c *Client) discoverAPI() (map[string]struct{}, map[string]struct{}, error) {
 	dc, err := c.conf.RESTClientGetter.ToDiscoveryClient()
 	if err != nil {
-		return nil, fmt.Errorf("get discovery client: %w", err)
+		return nil, nil, fmt.Errorf("get discovery client: %w", err)
 	}
 
 	dc.Invalidate()
 
-	var resources []*metav1.APIResourceList
-	if _, resources, err = dc.ServerGroupsAndResources(); err != nil {
-		return nil, fmt.Errorf("discover api: %w", err)
+	_, resources, err := dc.ServerGroupsAndResources()
+	if err != nil {
+		return nil, nil, fmt.Errorf("discover api: %w", err)
 	}
 
 	versions := make(map[string]struct{})
+	clusterScoped := make(map[string]struct{})
 	for _, resourcesList := range resources {
 		for _, resource := range resourcesList.APIResources {
-			versions[filepath.Join(resourcesList.GroupVersion, resource.Kind)] = struct{}{}
+			version := filepath.Join(resourcesList.GroupVersion, resource.Kind)
+			versions[version] = struct{}{}
+			if !resource.Namespaced {
+				clusterScoped[version] = struct{}{}
+			}
 		}
 	}
 
-	return versions, nil
+	return versions, clusterScoped, nil
 }
 
 // helmReleaseNameMaxLen is Helm's hard limit on release names (helm.sh/helm/v3/pkg/action rejects

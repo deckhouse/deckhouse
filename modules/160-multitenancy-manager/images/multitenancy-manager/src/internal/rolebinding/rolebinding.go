@@ -267,3 +267,29 @@ func ProjectFanoutPredicate() predicate.Predicate {
 		},
 	}
 }
+
+// MaxFailedNamespacesInMessage caps the namespaces the Ready condition names, so that a fan-out failing
+// across a large cluster does not write an unbounded condition message.
+const MaxFailedNamespacesInMessage = 10
+
+// FanOutFailureMessage is the message of the Ready=False condition of a ProjectRoleBinding or a
+// ClusterProjectRoleBinding after a fan-out that failed in the given namespaces, or in the prune of stale RoleBindings. It names the namespaces in a stable order,
+// and only them: the error texts vary between reconciles and would rewrite the status every retry.
+func FanOutFailureMessage(failed []string, pruneFailed bool) string {
+	var parts []string
+	if len(failed) > 0 {
+		names := slices.Sorted(slices.Values(failed))
+		if len(names) > MaxFailedNamespacesInMessage {
+			names = names[:MaxFailedNamespacesInMessage]
+		}
+		part := fmt.Sprintf("the RoleBinding could not be written in %d namespace(s): %s", len(failed), strings.Join(names, ", "))
+		if len(failed) > len(names) {
+			part += fmt.Sprintf(" and %d more", len(failed)-len(names))
+		}
+		parts = append(parts, part)
+	}
+	if pruneFailed {
+		parts = append(parts, "stale RoleBindings could not be deleted")
+	}
+	return strings.Join(parts, "; ")
+}

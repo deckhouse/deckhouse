@@ -1,0 +1,3 @@
+# The rule is gone.
+e2e-authz-lifecycle  get     -     pods         -  @ns  no
+e2e-authz-lifecycle  list    apps  deployments  -  @ns  no

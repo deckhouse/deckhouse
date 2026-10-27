@@ -18,12 +18,14 @@ package projectrolebinding
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,6 +33,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -571,4 +574,52 @@ func TestMembershipMayChange(t *testing.T) {
 
 	assert.True(t, membershipMayChange().Create(event.CreateEvent{Object: labelled("proj")}), "create")
 	assert.True(t, membershipMayChange().Delete(event.DeleteEvent{Object: labelled("proj")}), "delete")
+}
+
+// A namespace of the project that refuses the RoleBinding -- here a terminating additional namespace --
+// must not keep the status from being written. The binding still reaches the other namespaces, Ready is
+// False and names the failing namespace, and the error is returned so the reconcile is retried. Once
+// the namespace accepts the binding, Ready is True again.
+func TestReconcile_WritesStatusWhenANamespaceFails(t *testing.T) {
+	scheme := runtime.NewScheme()
+	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, rbacv1.AddToScheme, v1alpha3.AddToScheme} {
+		require.NoError(t, add(scheme))
+	}
+	refuse := true
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(prb("viewers", "proj", "d8:project:viewer"), project("proj", "proj", "proj-extra")).
+		WithStatusSubresource(&v1alpha3.ProjectRoleBinding{}).
+		WithIndex(&v1alpha3.ProjectRoleBinding{}, subjectNamespaceIndex, subjectNamespaces).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+				if refuse && obj.GetNamespace() == "proj-extra" {
+					return k8serrors.NewForbidden(rbacv1.Resource("rolebindings"), obj.GetName(),
+						errors.New("namespace proj-extra is being terminated"))
+				}
+				return cl.Create(ctx, obj, opts...)
+			},
+		}).
+		Build()
+	r := &Reconciler{Client: c}
+	request := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: "proj", Name: "viewers"}}
+
+	_, err := r.Reconcile(context.Background(), request)
+	require.Error(t, err, "the failed namespace must be retried")
+	assert.ErrorContains(t, err, "being terminated")
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Namespace: "proj", Name: rolebinding.PRBServiceName("viewers")}, &rbacv1.RoleBinding{}),
+		"the other namespaces still get the binding")
+
+	got := &v1alpha3.ProjectRoleBinding{}
+	require.NoError(t, c.Get(context.Background(), request.NamespacedName, got))
+	assert.Equal(t, got.Generation, got.Status.ObservedGeneration)
+	ready := condition(t, got, v1alpha3.ProjectRoleBindingConditionReady)
+	assert.Equal(t, corev1.ConditionFalse, ready.Status)
+	assert.Equal(t, "the RoleBinding could not be written in 1 namespace(s): proj-extra", ready.Message)
+
+	refuse = false
+	_, err = r.Reconcile(context.Background(), request)
+	require.NoError(t, err)
+	require.NoError(t, c.Get(context.Background(), request.NamespacedName, got))
+	assert.Equal(t, corev1.ConditionTrue, condition(t, got, v1alpha3.ProjectRoleBindingConditionReady).Status)
 }

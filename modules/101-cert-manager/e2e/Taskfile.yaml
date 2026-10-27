@@ -1,27 +1,72 @@
 version: '3'
 
+# The CPU starvation scenarios stress a node for 10-15 minutes each, so neither `run` nor
+# `run:destructive` includes them: run them on demand with `task run:cpu-starvation`, or in the
+# e2e pipeline with E2E_MODULE_TESTS_TARGET=run:cpu-starvation.
 includes:
   cpu-starvation:
     taskfile: cpu-starvation/Taskfile.yaml
     dir: cpu-starvation
 
+vars:
+  REPORTS: '{{.E2E_REPORTS_DIR | default "./reports"}}'
+  # Every test runs in this suite namespace instead of a Chainsaw ephemeral one: multitenancy-manager
+  # adopts new namespaces into Projects and refuses their deletion, see testing/e2e/lib/delete-namespace.sh.
+  NAMESPACE: e2e-cm
+
+env:
+  # Shared helpers of the module suites (delete-namespace.sh, create-namespace.sh, module-enabled.sh,
+  # wait-deckhouse-queue.sh). The CI bundle sets E2E_LIB_DIR; in a checkout it is
+  # testing/e2e/lib of the repository.
+  E2E_LIB_DIR:
+    sh: >-
+      if [ -n "${E2E_LIB_DIR:-}" ]; then echo "${E2E_LIB_DIR}";
+      else echo "$(git -C "{{.TASKFILE_DIR}}" rev-parse --show-toplevel)/testing/e2e/lib"; fi
+  E2E_STATE_DIR: /tmp/e2e-cm-state
+
 tasks:
   run:
-    desc: Run all cert-manager e2e tests
+    desc: Run the functional cert-manager e2e tests
+    cmds:
+      - defer: bash "${E2E_LIB_DIR}/module-enabled.sh" restore-all "${E2E_STATE_DIR}"
+      - defer: bash "${E2E_LIB_DIR}/delete-namespace.sh" {{.NAMESPACE}}
+      - bash "${E2E_LIB_DIR}/create-namespace.sh" {{.NAMESPACE}}
+      - mkdir -p {{.REPORTS}}
+      - >-
+        chainsaw test --test-dir tests --config chainsaw-config.yaml --namespace {{.NAMESPACE}}
+        --report-format JUNIT-TEST --report-path {{.REPORTS}} --report-name cert-manager
+
+  run:destructive:
+    desc: Run the destructive cert-manager e2e tests (restart of the module components under load)
+    cmds:
+      - defer: bash "${E2E_LIB_DIR}/module-enabled.sh" restore-all "${E2E_STATE_DIR}"
+      - defer: bash "${E2E_LIB_DIR}/delete-namespace.sh" {{.NAMESPACE}}
+      - bash "${E2E_LIB_DIR}/create-namespace.sh" {{.NAMESPACE}}
+      - mkdir -p {{.REPORTS}}
+      - >-
+        chainsaw test --test-dir tests-destructive --config chainsaw-config.yaml --namespace {{.NAMESPACE}}
+        --report-format JUNIT-TEST --report-path {{.REPORTS}} --report-name cert-manager-destructive
+
+  lint:
+    desc: Lint the Chainsaw configuration and every test of both suites
+    cmds:
+      - chainsaw lint configuration -f chainsaw-config.yaml
+      - for f in tests/*/chainsaw-test.yaml tests-destructive/*/chainsaw-test.yaml; do echo "$f"; chainsaw lint test -f "$f" || exit 1; done
+      - for f in tests/common/scripts/*.sh tests-destructive/*/*.sh; do [ -e "$f" ] || continue; bash -n "$f" || exit 1; done
+      - for f in "${E2E_LIB_DIR}"/*.sh; do bash -n "$f" || exit 1; done
+      - task: cpu-starvation:lint
+
+  run:cpu-starvation:
+    desc: Run the cert-manager CPU starvation e2e tests (stress a node; on demand only)
     cmds:
       - task: cpu-starvation:run
 
-  lint:
-    desc: Validate all cert-manager e2e tests against the Chainsaw schema, without a cluster
-    cmds:
-      - task: cpu-starvation:lint
-
   dry-run:
-    desc: Dry-Run all cert-manager e2e tests; the scripts still use the current kubectl context
+    desc: Dry-run the cert-manager CPU starvation e2e tests; the scripts still use the current kubectl context
     cmds:
       - task: cpu-starvation:dry-run
 
   cleanup:
-    desc: Remove the leftovers of interrupted cert-manager e2e runs
+    desc: Remove the leftovers of interrupted cert-manager CPU starvation runs
     cmds:
       - task: cpu-starvation:cleanup

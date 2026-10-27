@@ -18,6 +18,7 @@ package namespace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -46,14 +47,26 @@ const WorkLimit = 8
 
 type Manager struct {
 	client client.Client
+	// reader reads a namespace past the informer cache where a stale copy would decide wrongly: whether
+	// a namespace about to be adopted is still there and not terminating. It is client unless
+	// WithAPIReader sets it.
+	reader client.Reader
 	logger logr.Logger
 }
 
 func New(client client.Client, logger logr.Logger) *Manager {
 	return &Manager{
 		client: client,
+		reader: client,
 		logger: logger.WithName("namespace-manager"),
 	}
+}
+
+// WithAPIReader makes the manager read the namespaces it checks and re-reads from reader, normally the
+// API reader of the controller manager, instead of the informer cache.
+func (m *Manager) WithAPIReader(reader client.Reader) *Manager {
+	m.reader = reader
+	return m
 }
 
 // Init waits for the webhook server and then migrates the projects left over from the previous
@@ -86,19 +99,50 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 // Adopt turns a namespace that belongs to no project into a project of its own. The template is
 // picked from what the namespace already carries and the parameters reproduce its current state, so
 // the first render changes nothing inside the namespace.
+//
+// A namespace that is being deleted, or is already gone, is not adopted. Its Project would outlive it,
+// and the project reconcile recreates a missing project namespace, so adopting it would bring back
+// a namespace its owner has just deleted. The namespace is checked once more past the cache before
+// the Project is created.
 func (m *Manager) Adopt(ctx context.Context, namespace *corev1.Namespace) (ctrl.Result, error) {
+	if !namespace.DeletionTimestamp.IsZero() {
+		return ctrl.Result{}, nil
+	}
 	if delay := helm.StampHoldoff(namespace); delay > 0 {
 		return ctrl.Result{RequeueAfter: delay}, nil
 	}
 
 	// One write: Helm ownership (needed even when a same-name Project already exists)
 	// plus leftover retired markers. Callers already hold the namespace; do not Get it again.
+	terminating := false
 	if err := m.persistNamespace(ctx, namespace, func(ns *corev1.Namespace) bool {
+		if !ns.DeletionTimestamp.IsZero() {
+			terminating = true
+			return false
+		}
 		stamped := helm.ApplyReleaseOwnership(ns, helm.ReleaseName(ns.Name))
 		cleared := applyClearRetiredMarkers(ns)
 		return stamped || cleared
-	}); err != nil {
+	}); errors.Is(err, errNamespaceGone) {
+		m.logger.Info("the namespace is gone, do not adopt it", "namespace", namespace.Name)
+		return ctrl.Result{}, nil
+	} else if err != nil {
 		return ctrl.Result{}, err
+	}
+	if terminating {
+		m.logger.Info("the namespace is being deleted, do not adopt it", "namespace", namespace.Name)
+		return ctrl.Result{}, nil
+	}
+	live := new(corev1.Namespace)
+	switch err := m.reader.Get(ctx, client.ObjectKey{Name: namespace.Name}, live); {
+	case apierrors.IsNotFound(err):
+		m.logger.Info("the namespace is gone, do not adopt it", "namespace", namespace.Name)
+		return ctrl.Result{}, nil
+	case err != nil:
+		return ctrl.Result{}, fmt.Errorf("get the '%s' namespace: %w", namespace.Name, err)
+	case !live.DeletionTimestamp.IsZero():
+		m.logger.Info("the namespace is being deleted, do not adopt it", "namespace", namespace.Name)
+		return ctrl.Result{}, nil
 	}
 
 	project := new(v1alpha3.Project)
@@ -121,8 +165,11 @@ func (m *Manager) Adopt(ctx context.Context, namespace *corev1.Namespace) (ctrl.
 			Parameters:          ParametersFor(namespace, template),
 		},
 	}
+	// The owners of the namespace own its Project too, so that the garbage collector deletes both
+	// instead of the project reconcile creating the namespace again (see MirrorNamespaceOwners).
+	MirrorNamespaceOwners(project, live)
 
-	m.logger.Info("adopt the namespace into a project", "namespace", namespace.Name, "template", template)
+	m.logger.Info("adopt the namespace into a project", "namespace", namespace.Name, "template", template, "owners", len(project.OwnerReferences))
 	if err := m.client.Create(ctx, project); err != nil && !apierrors.IsAlreadyExists(err) {
 		return ctrl.Result{}, fmt.Errorf("create the '%s' project: %w", project.Name, err)
 	}
@@ -197,7 +244,10 @@ func (m *Manager) migrateProject(ctx context.Context, project *v1alpha3.Project)
 			stamped := helm.ApplyReleaseOwnership(ns, helm.ReleaseName(project.Name))
 			cleared := applyClearRetiredMarkers(ns)
 			return stamped || cleared
-		}); err != nil {
+		}); errors.Is(err, errNamespaceGone) {
+			// Deleted since it was read: the same as a namespace not created yet.
+			namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: project.Name}}
+		} else if err != nil {
 			return err
 		}
 	}
@@ -223,7 +273,7 @@ func (m *Manager) sweepRetiredMarkers(ctx context.Context) error {
 		}
 		name := ns.Name
 		g.Go(func() error {
-			if err := m.persistNamespace(gctx, ns, applyClearRetiredMarkers); err != nil {
+			if err := m.persistNamespace(gctx, ns, applyClearRetiredMarkers); err != nil && !errors.Is(err, errNamespaceGone) {
 				m.logger.Error(err, "failed to clear retired namespace markers", "namespace", name)
 			}
 			return nil
@@ -242,11 +292,20 @@ func HasRetiredMarkers(obj metav1.Object) bool {
 
 // ClearRetiredMarkers strips leftover retired-model glue from an already-fetched namespace.
 func (m *Manager) ClearRetiredMarkers(ctx context.Context, ns *corev1.Namespace) error {
-	return m.persistNamespace(ctx, ns, applyClearRetiredMarkers)
+	if err := m.persistNamespace(ctx, ns, applyClearRetiredMarkers); err != nil && !errors.Is(err, errNamespaceGone) {
+		return err
+	}
+	return nil
 }
 
+// errNamespaceGone is returned by persistNamespace for a namespace that no longer exists. Whether that
+// is an error is up to the caller: a namespace that is gone has no markers left to clear, but it must
+// not be adopted, and the leftover Project of it must be deleted rather than given a template.
+var errNamespaceGone = errors.New("the namespace is gone")
+
 // persistNamespace applies mutate to an already-fetched namespace and writes once.
-// On conflict it re-gets and retries; a no-op mutate does not touch the API.
+// On conflict it re-gets and retries; a no-op mutate does not touch the API. A namespace that is gone
+// is reported with errNamespaceGone.
 func (m *Manager) persistNamespace(ctx context.Context, ns *corev1.Namespace, mutate func(*corev1.Namespace) bool) error {
 	if ns == nil {
 		return nil
@@ -255,6 +314,8 @@ func (m *Manager) persistNamespace(ctx context.Context, ns *corev1.Namespace, mu
 	if mutate(ns) {
 		if err := m.client.Update(ctx, ns); err == nil {
 			return nil
+		} else if apierrors.IsNotFound(err) {
+			return errNamespaceGone
 		} else if !apierrors.IsConflict(err) {
 			return fmt.Errorf("update the '%s' namespace: %w", name, err)
 		}
@@ -264,16 +325,18 @@ func (m *Manager) persistNamespace(ctx context.Context, ns *corev1.Namespace, mu
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		fresh := new(corev1.Namespace)
-		if err := m.client.Get(ctx, client.ObjectKey{Name: name}, fresh); err != nil {
+		if err := m.reader.Get(ctx, client.ObjectKey{Name: name}, fresh); err != nil {
 			if apierrors.IsNotFound(err) {
-				return nil
+				return errNamespaceGone
 			}
 			return fmt.Errorf("get the '%s' namespace: %w", name, err)
 		}
 		if !mutate(fresh) {
 			return nil
 		}
-		if err := m.client.Update(ctx, fresh); err != nil {
+		if err := m.client.Update(ctx, fresh); apierrors.IsNotFound(err) {
+			return errNamespaceGone
+		} else if err != nil {
 			return fmt.Errorf("update the '%s' namespace: %w", name, err)
 		}
 		return nil

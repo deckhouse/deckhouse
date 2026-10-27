@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: e2e-authn-hook-target-reset
+spec:
+  type: ResetPassword
+  target:
+    connectorID: e2e-authn-ldap
+    email: e2e-authn-hook@example.com
+  resetPassword:
+    newPasswordHash: not-a-real-hash

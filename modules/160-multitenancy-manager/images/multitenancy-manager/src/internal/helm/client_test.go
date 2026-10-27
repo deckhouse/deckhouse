@@ -819,7 +819,7 @@ func TestNewRenderOnly(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, manifests, "kind: Namespace")
 
-	_, err = client.UpgradeManifests(context.Background(), project, manifests, nil)
+	_, err = client.UpgradeManifests(context.Background(), project, manifests, nil, false)
 	require.ErrorIs(t, err, errRenderOnly)
 	require.ErrorIs(t, client.Delete(context.Background(), project.Name), errRenderOnly)
 
@@ -885,4 +885,89 @@ func TestDebugLogKeepsHelmProblemsVisible(t *testing.T) {
 		"warning: upgrade left something behind":                                        "info",
 		"WARNING: The Kubernetes server has an orphaned API service. Server reports: x": "info",
 	}, levels)
+}
+
+// An upgrade that recreates a main namespace that is gone renders the unmanaged objects of that
+// namespace, which went with it, and leaves out the unmanaged objects that may have survived: those in
+// an additional namespace and the cluster-scoped ones. A first install renders every unmanaged object,
+// and any other upgrade renders none.
+func TestUnmanagedResourcesRestoreMainNamespace(t *testing.T) {
+	t.Parallel()
+
+	const manifest = `
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: main
+  namespace: test
+  labels:
+    projects.deckhouse.io/unmanaged: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: no-namespace
+  labels:
+    projects.deckhouse.io/unmanaged: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: foreign
+  namespace: another-project
+  labels:
+    projects.deckhouse.io/unmanaged: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: extra
+  namespace: test-extra
+  labels:
+    projects.deckhouse.io/unmanaged: "true"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-wide
+  labels:
+    projects.deckhouse.io/unmanaged: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: managed
+  namespace: test-extra
+`
+	clusterScoped := map[string]struct{}{
+		"v1/Namespace": {},
+		"rbac.authorization.k8s.io/v1/ClusterRole": {},
+	}
+	renderNames := func(t *testing.T, firstInstall, restore bool) []string {
+		t.Helper()
+		project := &v1alpha3.Project{}
+		project.Name = "test"
+		project.Status.Namespaces = []v1alpha3.NamespaceStatus{{Name: "test"}, {Name: "test-extra"}}
+		post := newPostRenderer(project, nil, ctrl.Log.WithName("test"), firstInstall)
+		post.restoreMainNamespace = restore
+		post.clusterScoped = clusterScoped
+		out, err := post.Run(bytes.NewBufferString(manifest))
+		require.NoError(t, err)
+		var names []string
+		for _, raw := range releaseutil.SplitManifests(out.String()) {
+			object, ok, err := parseManifest(raw)
+			require.NoError(t, err)
+			if ok && object.GetKind() != "Namespace" {
+				names = append(names, object.GetNamespace()+"/"+object.GetName())
+			}
+		}
+		return names
+	}
+
+	assert.ElementsMatch(t, []string{"test/main", "test/no-namespace", "test/foreign", "test-extra/extra", "test/cluster-wide", "test-extra/managed"},
+		renderNames(t, true, false), "a first install renders every unmanaged object")
+	assert.ElementsMatch(t, []string{"test/main", "test/no-namespace", "test/foreign", "test-extra/managed"},
+		renderNames(t, false, true), "a restore renders only the unmanaged objects of the main namespace")
+	assert.ElementsMatch(t, []string{"test-extra/managed"},
+		renderNames(t, false, false), "any other upgrade renders no unmanaged object")
 }

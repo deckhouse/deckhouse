@@ -1,0 +1,169 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-conversion
+spec:
+  description: >-
+    The conversion webhooks serve every version of DexAuthenticator and DexProvider. A
+    DexAuthenticator stored through v1 reads in v2alpha1 as a list of applications whose first
+    entry carries the main domain, class, sign-out URL and source ranges; one stored through
+    v2alpha1 reads in v1 with the first application in spec and the rest in additionalApplications;
+    one stored through v1alpha1 reads unchanged in v1. A DexProvider teamNameField changes case
+    between v1alpha1 (slug) and v1 (Slug).
+  concurrent: false
+
+  catch:
+    - description: Show the DexAuthenticators of the test in every version on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        env:
+          - name: NS
+            value: ($namespace)
+        content: |
+          for v in v1 v2alpha1 v1alpha1; do
+            echo "--- ${v}"
+            kubectl -n "${NS}" get "dexauthenticators.${v}.deckhouse.io" -o yaml
+          done
+          kubectl get dexproviders.v1.deckhouse.io e2e-authn-conv-github e2e-authn-conv-github-v1 -o yaml --ignore-not-found | grep -v clientSecret
+    - description: Show the webhook handler logs on failure
+      podLogs:
+        namespace: d8-system
+        selector: app=webhook-handler
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: create-objects
+      description: Create DexAuthenticators through three API versions and DexProviders through two
+      try:
+        - description: Create DexAuthenticator e2e-authn-conv-v1 through v1
+          create:
+            file: manifests/dex-authenticator-v1.yaml
+        - description: Create DexAuthenticator e2e-authn-conv-v2 through v2alpha1
+          create:
+            file: manifests/dex-authenticator-v2alpha1.yaml
+        - description: Create DexAuthenticator e2e-authn-conv-v1alpha1 through v1alpha1
+          create:
+            file: manifests/dex-authenticator-v1alpha1.yaml
+        - description: Create disabled DexProvider e2e-authn-conv-github through v1alpha1
+          create:
+            file: manifests/dex-provider-v1alpha1.yaml
+        - description: Create disabled DexProvider e2e-authn-conv-github-v1 through v1
+          create:
+            file: manifests/dex-provider-v1.yaml
+      cleanup:
+        - description: Delete the DexAuthenticators and wait until the module removes their objects
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            env:
+              - name: NS
+                value: ($namespace)
+            timeout: 10m
+            content: |
+              set -e
+              for name in e2e-authn-conv-v1 e2e-authn-conv-v2 e2e-authn-conv-v1alpha1; do
+                bash ../../tests/common/scripts/delete-dex-authenticator.sh "${NS}" "${name}"
+              done
+
+    - name: dex-authenticator-v1-to-v2alpha1
+      description: A DexAuthenticator stored through v1 reads in v2alpha1 as a list of applications
+      try:
+        - description: Assert the v2alpha1 view of e2e-authn-conv-v1
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v2alpha1
+              kind: DexAuthenticator
+              metadata:
+                name: e2e-authn-conv-v1
+              spec:
+                (applicationDomain == null): true
+                (additionalApplications == null): true
+                applications:
+                  - domain: e2e-authn-conv-main.example.com
+                    ingressClassName: e2e-authn-unused
+                    signOutURL: /logout
+                    whitelistSourceRanges:
+                      - 192.0.2.0/24
+                  - domain: e2e-authn-conv-extra.example.com
+                    ingressClassName: e2e-authn-unused
+
+    - name: dex-authenticator-v2alpha1-to-v1
+      description: A DexAuthenticator stored through v2alpha1 reads in v1 with the first application in spec
+      try:
+        - description: Assert the v1 view of e2e-authn-conv-v2
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: DexAuthenticator
+              metadata:
+                name: e2e-authn-conv-v2
+              spec:
+                (applications == null): true
+                applicationDomain: e2e-authn-conv-v2-main.example.com
+                applicationIngressClassName: e2e-authn-unused
+                signOutURL: /logout
+                additionalApplications:
+                  - domain: e2e-authn-conv-v2-extra.example.com
+                    ingressClassName: e2e-authn-unused
+        - description: Assert the module renders an Ingress for the additional application of e2e-authn-conv-v2
+          assert:
+            timeout: 3m
+            resource:
+              (length(x_k8s_list($client, 'networking.k8s.io/v1', 'Ingress', $namespace).items[?metadata.labels."deckhouse.io/dex-authenticator-for" == 'e2e-authn-conv-v2' && spec.rules[0].host == 'e2e-authn-conv-v2-extra.example.com'])): 1
+
+    - name: dex-authenticator-v1alpha1-to-v1
+      description: A DexAuthenticator stored through v1alpha1 reads unchanged in v1 and back in v1alpha1
+      try:
+        - description: Assert the v1 view of e2e-authn-conv-v1alpha1
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: DexAuthenticator
+              metadata:
+                name: e2e-authn-conv-v1alpha1
+              spec:
+                applicationDomain: e2e-authn-conv-old.example.com
+                applicationIngressClassName: e2e-authn-unused
+        - description: Assert the v1alpha1 view of e2e-authn-conv-v1
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: DexAuthenticator
+              metadata:
+                name: e2e-authn-conv-v1
+              spec:
+                applicationDomain: e2e-authn-conv-main.example.com
+                additionalApplications:
+                  - domain: e2e-authn-conv-extra.example.com
+
+    - name: dex-provider-conversion
+      description: The case of DexProvider teamNameField changes between v1alpha1 and v1
+      try:
+        - description: Assert the v1 view of the provider stored through v1alpha1 has teamNameField Slug
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: DexProvider
+              metadata:
+                name: e2e-authn-conv-github
+              spec:
+                github:
+                  teamNameField: Slug
+        - description: Assert the v1alpha1 view of the provider stored through v1 has teamNameField both
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: DexProvider
+              metadata:
+                name: e2e-authn-conv-github-v1
+              spec:
+                github:
+                  teamNameField: both

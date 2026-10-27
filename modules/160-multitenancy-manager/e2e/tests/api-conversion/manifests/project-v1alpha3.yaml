@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-conv-new
+spec:
+  projectTemplateName: simple
+  administrators:
+    - kind: Group
+      name: e2e-mtm-conv-admins
+  quota:
+    requests.cpu: "1"
+    limits.memory: 2Gi

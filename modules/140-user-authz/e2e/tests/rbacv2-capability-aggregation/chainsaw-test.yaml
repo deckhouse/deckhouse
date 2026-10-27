@@ -1,0 +1,131 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: rbacv2-capability-aggregation
+spec:
+  description: >-
+    Verify the capability aggregation of the granular role model. The capabilities the module
+    ships must be aggregated into their roles: d8:namespace-capability:user-authz:view into
+    d8:namespace:viewer, d8:namespace-capability:user-authz:edit into d8:namespace:manager and
+    d8:system-capability:user-authz:edit into d8:subsystem:security:manager and
+    d8:system:manager. A custom namespace capability must reach d8:namespace:viewer and every
+    role above it, grant its rules to a viewer RoleBinding and leave with its ClusterRole.
+  timeouts:
+    apply: 60s
+    assert: 2m
+    error: 2m
+    delete: 2m
+    exec: 5m
+
+  catch:
+    - description: Show the custom capability
+      get:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        name: d8:custom:namespace-capability:e2e-authz-widgets
+    - description: Show the viewer and admin namespace roles
+      script:
+        content: kubectl get clusterrole d8:namespace:viewer d8:namespace:admin -o yaml
+
+  steps:
+    - name: prerequisites
+      description: Verify that the user-authz module and its controller are Ready
+      try:
+        - description: Wait for module user-authz and the user-authz-controller Deployment
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-user-authz.sh
+
+    - name: module-capabilities
+      description: Verify that the capabilities of user-authz are aggregated into the platform roles
+      try:
+        - description: Assert d8:namespace:viewer reads AuthorizationRules
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: d8:namespace:viewer
+              (length((rules || `[]`)[?contains(resources || `[]`, 'authorizationrules') && contains(verbs, 'get')]) > `0`): true
+        - description: Assert d8:namespace:manager writes AuthorizationRules
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: d8:namespace:manager
+              (length((rules || `[]`)[?contains(resources || `[]`, 'authorizationrules') && contains(verbs, 'create')]) > `0`): true
+        - description: Assert d8:namespace:viewer does not write AuthorizationRules
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: d8:namespace:viewer
+              (length((rules || `[]`)[?contains(resources || `[]`, 'authorizationrules') && contains(verbs, 'create')])): 0
+        - description: Assert d8:subsystem:security:manager writes ClusterAuthorizationRules
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: d8:subsystem:security:manager
+              (length((rules || `[]`)[?contains(resources || `[]`, 'clusterauthorizationrules') && contains(verbs, 'create')]) > `0`): true
+        - description: Assert d8:system:manager writes ClusterAuthorizationRules
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: d8:system:manager
+              (length((rules || `[]`)[?contains(resources || `[]`, 'clusterauthorizationrules') && contains(verbs, 'create')]) > `0`): true
+
+    - name: custom-capability
+      description: Create a custom namespace capability and a viewer RoleBinding
+      try:
+        - description: Apply the custom capability
+          apply:
+            file: manifests/custom-capability.yaml
+        - description: Apply the viewer RoleBinding
+          apply:
+            file: manifests/rolebinding.yaml
+        - description: Assert d8:namespace:viewer aggregated the custom rule
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: d8:namespace:viewer
+              (length((rules || `[]`)[?contains(apiGroups || `[]`, 'e2e-authz.example.com')]) > `0`): true
+        - description: Assert d8:namespace:admin aggregated the custom rule through the role chain
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: d8:namespace:admin
+              (length((rules || `[]`)[?contains(apiGroups || `[]`, 'e2e-authz.example.com')]) > `0`): true
+        - description: Evaluate matrix.txt
+          script:
+            content: bash ../common/scripts/sar-check.sh matrix.txt 120
+
+    - name: remove-custom-capability
+      description: Delete the custom capability and verify that the viewer loses only its rules
+      try:
+        - description: Delete the custom capability
+          delete:
+            ref:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              name: d8:custom:namespace-capability:e2e-authz-widgets
+        - description: Assert d8:namespace:viewer dropped the custom rule
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: d8:namespace:viewer
+              (length((rules || `[]`)[?contains(apiGroups || `[]`, 'e2e-authz.example.com')])): 0
+        - description: Evaluate matrix-removed.txt
+          script:
+            content: bash ../common/scripts/sar-check.sh matrix-removed.txt 120

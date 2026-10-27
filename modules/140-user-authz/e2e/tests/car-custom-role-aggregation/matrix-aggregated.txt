@@ -1,0 +1,6 @@
+# The custom role extends Editor and every level above it, not the levels below.
+e2e-authz-agg-user           get  e2e-authz.example.com  widgets  -  @ns  no
+e2e-authz-agg-editor         get  e2e-authz.example.com  widgets  -  @ns  yes
+e2e-authz-agg-editor         list e2e-authz.example.com  widgets  -  @ns  yes
+e2e-authz-agg-editor         create e2e-authz.example.com  widgets  -  @ns  no
+e2e-authz-agg-cluster-admin  get  e2e-authz.example.com  widgets  -  @ns  yes

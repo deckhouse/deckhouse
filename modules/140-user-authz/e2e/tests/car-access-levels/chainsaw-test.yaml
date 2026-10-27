@@ -1,0 +1,106 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: car-access-levels
+spec:
+  description: >-
+    Create one ClusterAuthorizationRule per basic access level (User, PrivilegedUser, Editor,
+    Admin, ClusterEditor, ClusterAdmin, SuperAdmin) and verify that user-authz-controller
+    renders the expected ClusterRoleBindings and reports Ready, and that the API server makes
+    exactly the decisions of the reference matrix derived from templates/cluster-roles.yaml.
+  timeouts:
+    apply: 60s
+    assert: 90s
+    error: 2m
+    delete: 2m
+    exec: 10m
+
+  catch:
+    - description: Show the test ClusterAuthorizationRules
+      get:
+        apiVersion: deckhouse.io/v1
+        kind: ClusterAuthorizationRule
+        selector: e2e.deckhouse.io/suite=user-authz
+    - description: Show the ClusterRoleBindings of the test rules
+      script:
+        content: kubectl get clusterrolebindings -o wide | grep -E 'NAME|user-authz:e2e-authz-level-' || true
+    - description: Show user-authz-controller logs
+      podLogs:
+        namespace: d8-user-authz
+        selector: app=user-authz-controller
+        tail: 200
+
+  steps:
+    - name: prerequisites
+      description: Verify that the user-authz module and its controller are Ready
+      try:
+        - description: Wait for module user-authz and the user-authz-controller Deployment
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-user-authz.sh
+
+    - name: create-rules
+      description: Create a ClusterAuthorizationRule for every access level
+      try:
+        - description: Apply the seven ClusterAuthorizationRules
+          apply:
+            file: manifests/cars.yaml
+        - description: Assert every rule reports Ready with the expected number of bindings
+          assert:
+            file: asserts/cars-ready.yaml
+
+    - name: assert-bindings
+      description: >-
+        Verify the bindings the controller renders: user-authz:<rule>:<level> to
+        user-authz:<level> for every rule, plus user-authz:<rule>:<level>:custom to the aggregated
+        custom role for every level except SuperAdmin
+      try:
+        - description: Assert the access-level and aggregated-custom ClusterRoleBindings
+          assert:
+            file: asserts/bindings.yaml
+        - description: Assert SuperAdmin gets no aggregated-custom binding
+          error:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-level-super-admin:super-admin:custom
+
+    - name: access-matrix
+      description: Compare SubjectAccessReview decisions for every level with the reference matrix
+      try:
+        - description: Evaluate matrix.txt until every decision matches
+          script:
+            timeout: 6m
+            content: bash ../common/scripts/sar-check.sh matrix.txt 180
+
+    - name: can-i-impersonation
+      description: >-
+        Cross-check a few decisions through kubectl auth can-i --as, the path an administrator
+        uses, to make sure impersonated requests are authorized the same way
+      try:
+        - description: Editor may create Deployments in the test namespace
+          script:
+            content: kubectl auth can-i create deployments.apps -n "${NAMESPACE}" --as e2e-authz-editor
+            check:
+              ($error == null): true
+              (contains($stdout, 'yes')): true
+        - description: User may not create Deployments in the test namespace
+          script:
+            content: kubectl auth can-i create deployments.apps -n "${NAMESPACE}" --as e2e-authz-user
+            check:
+              ($error != null): true
+              (contains($stdout, 'no')): true
+        - description: PrivilegedUser may exec into pods, User may not
+          script:
+            content: |
+              set -eu
+              # The subresource goes into --subresource: kubectl reads "pods/exec" as the pod named
+              # "exec", that is "create pods", which PrivilegedUser may not do.
+              # Each answer is printed before it is checked; a kubectl failure must not pass for "no".
+              priv="$(kubectl auth can-i create pods --subresource=exec -n "${NAMESPACE}" --as e2e-authz-privileged-user 2>&1)" || true
+              echo "PrivilegedUser, create pods/exec: ${priv}"
+              user="$(kubectl auth can-i create pods --subresource=exec -n "${NAMESPACE}" --as e2e-authz-user 2>&1)" || true
+              echo "User, create pods/exec: ${user}"
+              test "${priv}" = yes
+              test "${user}" = no

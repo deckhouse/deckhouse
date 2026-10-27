@@ -1,0 +1,33 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectRoleBinding
+metadata:
+  name: viewers
+  namespace: e2e-mtm-prb
+status:
+  (conditions[?type == 'Ready'] | [0].status): 'True'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:prb:viewers
+  namespace: e2e-mtm-prb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:project:viewer
+subjects:
+  - kind: User
+    name: e2e-mtm-viewer@example.com
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:prb:viewers
+  namespace: e2e-mtm-prb-extra
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:project:viewer
+subjects:
+  - kind: User
+    name: e2e-mtm-viewer@example.com

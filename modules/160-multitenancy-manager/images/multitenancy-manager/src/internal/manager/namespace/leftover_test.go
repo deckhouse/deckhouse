@@ -20,11 +20,16 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
@@ -116,4 +121,41 @@ func TestCompleteLeftover_InfersWhenNamespaceFree(t *testing.T) {
 	assert.Equal(t, TemplateDefault, got.Spec.ProjectTemplateName)
 	assert.NotContains(t, got.Labels, v1alpha3.ProjectLabelManagedByNamespace)
 	assert.Equal(t, false, got.Spec.Parameters["requiredRequests"])
+}
+
+// TestCompleteLeftover_DeletesWhenNamespaceGoneMeanwhile: the namespace is read live, and it is deleted
+// before the ownership is stamped on it. The leftover Project is deleted as for a namespace that is
+// already gone, and gets no template: with one, the project reconcile would recreate the namespace.
+func TestCompleteLeftover_DeletesWhenNamespaceGoneMeanwhile(t *testing.T) {
+	ns := namespace("foo", map[string]string{
+		v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
+	}, nil)
+	wrap := project("foo", map[string]string{
+		v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
+	}, "")
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, v1alpha3.AddToScheme(scheme))
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ns, wrap).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Update: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+				if _, isNamespace := obj.(*corev1.Namespace); isNamespace {
+					return apierrors.NewNotFound(corev1.Resource("namespaces"), obj.GetName())
+				}
+				return cl.Update(ctx, obj, opts...)
+			},
+		}).
+		Build()
+	m := New(c, logr.Discard())
+
+	deleted, err := m.CompleteLeftover(context.Background(), wrap)
+	require.NoError(t, err)
+	assert.True(t, deleted, "a leftover whose namespace is gone is deleted")
+
+	got := new(v1alpha3.Project)
+	err = c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got)
+	require.True(t, apierrors.IsNotFound(err) || !got.DeletionTimestamp.IsZero(), "the leftover Project must be deleted: %v", err)
+	if err == nil {
+		assert.Empty(t, got.Spec.ProjectTemplateName, "the leftover Project must get no template")
+	}
 }

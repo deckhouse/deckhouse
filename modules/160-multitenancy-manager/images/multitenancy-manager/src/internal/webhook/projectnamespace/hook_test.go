@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
+	authnv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/rolebinding"
 )
 
 func newValidator(t *testing.T, objs ...client.Object) *validator {
@@ -396,4 +398,40 @@ func TestHandle_CreateInNonMainNamespaceStillDenied(t *testing.T) {
 	resp := v.Handle(context.Background(), createRequest(t, "ghost", pns("backend")))
 	assert.False(t, resp.Allowed)
 	assert.Contains(t, resp.Result.Message, "is not the main namespace of a project")
+}
+
+// The garbage collector deletes a ProjectNamespace whose owner is gone, and its finalizer deletes the
+// additional namespace, so an update may not add or change an owner. Removing one passes, and so does
+// the controller.
+func TestHandle_OwnerReferencesAreNotAdded(t *testing.T) {
+	ctx := context.Background()
+	ownerUpdate := func(user string, old, updated *v1alpha3.ProjectNamespace) admission.Request {
+		t.Helper()
+		old.Namespace, updated.Namespace = "team-a", "team-a"
+		oldRaw, err := json.Marshal(old)
+		require.NoError(t, err)
+		newRaw, err := json.Marshal(updated)
+		require.NoError(t, err)
+		return admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
+			Operation: admissionv1.Update,
+			Namespace: "team-a",
+			UserInfo:  authnv1.UserInfo{Username: user},
+			Object:    runtime.RawExtension{Raw: newRaw},
+			OldObject: runtime.RawExtension{Raw: oldRaw},
+		}}
+	}
+	v := newValidator(t, projectObj("team-a", false))
+	plain := pns("backend")
+	owned := plain.DeepCopy()
+	owned.OwnerReferences = []metav1.OwnerReference{{APIVersion: "v1", Kind: "Namespace", Name: "victim", UID: "00000000-0000-0000-0000-000000000001"}}
+
+	resp := v.Handle(ctx, ownerUpdate("alice", plain, owned))
+	assert.False(t, resp.Allowed, "an added owner is refused")
+	assert.Contains(t, resp.Result.Message, `the ownerReferences of the "team-a/backend" ProjectNamespace cannot be added or changed`)
+
+	resp = v.Handle(ctx, ownerUpdate("alice", owned, plain.DeepCopy()))
+	assert.True(t, resp.Allowed, "a removed owner deletes nothing")
+
+	resp = v.Handle(ctx, ownerUpdate(rolebinding.ControllerServiceAccount, plain.DeepCopy(), owned.DeepCopy()))
+	assert.True(t, resp.Allowed, "the controller is not refused")
 }

@@ -1,0 +1,18 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-spol
+spec:
+  description: The UID and GID ranges of the secure template.
+  projectTemplateName: secure
+  parameters:
+    allowedUIDs:
+      min: 1000
+      max: 2000
+    allowedGIDs:
+      min: 1000
+      max: 2000
+    requiredRequests: false
+    namespace:
+      labels:
+        security.deckhouse.io/pod-policy-action: deny

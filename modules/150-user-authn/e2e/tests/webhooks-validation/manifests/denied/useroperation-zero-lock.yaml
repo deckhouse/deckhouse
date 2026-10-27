@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: e2e-authn-hook-zero-lock
+spec:
+  user: e2e-authn-hook-user1
+  type: Lock
+  lock:
+    for: 0s

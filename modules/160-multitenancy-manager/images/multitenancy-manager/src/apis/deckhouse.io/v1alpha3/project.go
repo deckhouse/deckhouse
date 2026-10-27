@@ -56,6 +56,11 @@ const (
 
 	ProjectAnnotationRequireSync = "projects.deckhouse.io/require-sync"
 
+	// ProjectAnnotationNamespaceOwners lists, comma-separated, the UIDs of the ownerReferences the
+	// controller copied to the Project from its main namespace. The controller manages only these
+	// entries of the Project's ownerReferences and leaves the others as they are.
+	ProjectAnnotationNamespaceOwners = "projects.deckhouse.io/namespace-owners"
+
 	ProjectFinalizer = "projects.deckhouse.io/project-exists"
 
 	ProjectLabelVirtualProject = "projects.deckhouse.io/virtual-project"

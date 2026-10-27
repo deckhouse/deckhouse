@@ -1,0 +1,84 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: helm-to-structured-switch
+spec:
+  description: >-
+    A template that renders from a Helm text is moved to the structured fields and manifests in one
+    change. The objects keep their UIDs: the NetworkPolicy that networkPolicy.mode renders under the
+    same kind and name is updated in place, and the ConfigMap that manifests renders is taken over
+    instead of being deleted and created again. The project ends Deployed with no kept objects.
+  concurrent: false
+  catch:
+    - description: Show the template, the project and the objects on failure
+      script:
+        content: |
+          kubectl get projecttemplate e2e-mtm-helm -o yaml || true
+          kubectl get project e2e-mtm-helm -o yaml || true
+          kubectl -n e2e-mtm-helm get networkpolicy isolated configmap e2e-mtm-info -o yaml || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 300
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager and user-authz modules are enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+        - description: Ensure the user-authz module is Ready (manifests are applied with the d8:project:admin role)
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh user-authz
+
+    - name: helm-template
+      description: Create the Helm text template as system:sudouser and a project from it
+      try:
+        - description: Create the e2e-mtm-helm template with a resourcesTemplate
+          script:
+            content: kubectl create -f manifests/template-helm.yaml --as system:sudouser --as-group system:masters
+        - description: Create the e2e-mtm-helm project
+          create:
+            file: manifests/project.yaml
+        - description: Assert the project is Deployed and the Helm text rendered both objects
+          assert:
+            file: asserts/helm-rendered.yaml
+      cleanup:
+        - description: Delete the project and then the template
+          script:
+            timeout: 8m
+            content: |
+              set -e
+              kubectl delete project e2e-mtm-helm --ignore-not-found --wait=true --timeout=6m
+              kubectl delete projecttemplate e2e-mtm-helm --ignore-not-found --wait=true --timeout=1m
+
+    - name: switch
+      description: Move the template to the structured fields and manifests and check the objects kept their UIDs
+      try:
+        - description: Remember the UIDs of the objects the Helm text rendered
+          script:
+            content: |
+              kubectl -n e2e-mtm-helm get networkpolicy isolated -o jsonpath='{.metadata.uid}'
+            outputs:
+              - name: npUID
+                value: ($stdout)
+        - description: Remember the UID of the ConfigMap
+          script:
+            content: |
+              kubectl -n e2e-mtm-helm get configmap e2e-mtm-info -o jsonpath='{.metadata.uid}'
+            outputs:
+              - name: cmUID
+                value: ($stdout)
+        - description: Replace the Helm text with the structured fields and manifests in one change
+          script:
+            content: kubectl replace -f manifests/template-structured.yaml
+        - description: >-
+            Assert the project is Deployed without kept objects, the NetworkPolicy is the same object
+            with the structured spec, and the ConfigMap is the same object taken over by manifests
+          assert:
+            timeout: 5m
+            file: asserts/structured-rendered.yaml

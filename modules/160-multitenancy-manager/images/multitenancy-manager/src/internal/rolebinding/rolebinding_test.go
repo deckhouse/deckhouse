@@ -18,6 +18,7 @@ package rolebinding
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -215,4 +216,21 @@ func TestProjectFanoutChanged(t *testing.T) {
 func upsertForTest(ctx context.Context, c client.Client, params UpsertParams, setOwner func(*rbacv1.RoleBinding) error) error {
 	_, err := UpsertServiceRoleBinding(ctx, c, params, setOwner)
 	return err
+}
+
+func TestFanOutFailureMessage(t *testing.T) {
+	failed := []string{"b", "a"}
+	assert.Equal(t, "the RoleBinding could not be written in 2 namespace(s): a, b",
+		FanOutFailureMessage(failed, false))
+	assert.Equal(t, []string{"b", "a"}, failed, "the slice of the caller is not sorted in place")
+	assert.Equal(t, "stale RoleBindings could not be deleted", FanOutFailureMessage(nil, true))
+
+	many := make([]string, 0, MaxFailedNamespacesInMessage+2)
+	for i := range MaxFailedNamespacesInMessage + 2 {
+		many = append(many, fmt.Sprintf("ns-%02d", i))
+	}
+	msg := FanOutFailureMessage(many, true)
+	assert.Contains(t, msg, "in 12 namespace(s): ns-00, ")
+	assert.Contains(t, msg, "ns-09 and 2 more; stale RoleBindings could not be deleted")
+	assert.NotContains(t, msg, "ns-10")
 }

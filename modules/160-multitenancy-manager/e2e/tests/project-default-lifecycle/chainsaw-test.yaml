@@ -1,0 +1,111 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: project-default-lifecycle
+spec:
+  description: >-
+    A Project created from the built-in default template reaches the Deployed state, gets its
+    namespace with the project labels and the template objects (the isolated NetworkPolicy, the
+    ResourceQuota and the administrators binding of the standard fields), follows a change of its
+    parameters, and goes away together with its namespace and Helm release when it is deleted.
+  concurrent: false
+  catch:
+    - description: Show the project on failure
+      get:
+        apiVersion: deckhouse.io/v1alpha3
+        kind: Project
+        name: e2e-mtm-life
+        format: yaml
+    - description: Show the objects in the project namespace on failure
+      script:
+        content: kubectl -n e2e-mtm-life get networkpolicies,resourcequotas,rolebindings,projectrolebindings -o wide || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager and user-authz modules are enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+        - description: Ensure the user-authz module is Ready (it aggregates the d8:project:* roles)
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh user-authz
+        - description: Assert the built-in default template is ready
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha2
+              kind: ProjectTemplate
+              metadata:
+                name: default
+              status:
+                ready: true
+
+    - name: create-project
+      description: Create a project from the default template with administrators, a quota and parameters
+      try:
+        - description: Create the e2e-mtm-life project
+          create:
+            file: manifests/project.yaml
+        - description: Assert the project is Deployed and every reconcile condition is True
+          assert:
+            file: asserts/project-deployed.yaml
+
+    - name: assert-rendered
+      description: Verify the namespace and the objects the template and the standard fields render
+      try:
+        - description: Assert the namespace carries the project, template, pod security and monitoring labels
+          assert:
+            file: asserts/namespace.yaml
+        - description: Assert the NetworkPolicy, quota, administrators binding, its fan-out, the grant catalog and the Helm release
+          assert:
+            file: asserts/rendered-objects.yaml
+
+    - name: change-parameters
+      description: A change of the project parameters is rendered into the namespace
+      try:
+        - description: Switch the pod security profile from Restricted to Baseline
+          patch:
+            file: manifests/project-baseline-patch.yaml
+        - description: Assert the namespace label follows the parameter
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: e2e-mtm-life
+                labels:
+                  security.deckhouse.io/pod-policy: baseline
+        - description: Assert the project is Deployed again
+          assert:
+            file: asserts/project-deployed.yaml
+
+    - name: delete-project
+      description: Deleting the project removes its namespace and its Helm release
+      try:
+        - description: Delete the project and wait until it is gone
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              name: e2e-mtm-life
+        - description: Assert the namespace is gone
+          error:
+            resource:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: e2e-mtm-life
+        - description: Assert no Helm release Secret of the project is left
+          script:
+            content: kubectl -n d8-multitenancy-manager get secrets -l owner=helm,name=e2e-mtm-life -o name
+            check:
+              ($error == null): true
+              ($stdout == ''): true

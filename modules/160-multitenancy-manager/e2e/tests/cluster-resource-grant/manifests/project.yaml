@@ -1,0 +1,10 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-grant
+spec:
+  description: Access to cluster-wide resources through a ClusterResourceGrantPolicy.
+  projectTemplateName: simple
+  administrators:
+    - kind: User
+      name: e2e-mtm-grant-admin@example.com

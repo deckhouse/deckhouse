@@ -1,0 +1,102 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cert-manager-rollout-restart-under-load
+spec:
+  description: >-
+    A rollout restart of the controller, the webhook and cainjector does not break clients.
+    While a load generator creates a Certificate every 2 seconds and deletes older ones, the
+    three Deployments are restarted one after another. No kubectl call may fail (no
+    "failed calling webhook", x509 or connection errors from webhook.cert-manager.io), and every
+    remaining Certificate becomes Ready. cainjector is enabled through the hook with an annotated
+    ValidatingWebhookConfiguration, so that all three components exist.
+  concurrent: false
+
+  catch:
+    - description: Show the Deployments of the module on failure
+      get:
+        apiVersion: apps/v1
+        kind: Deployment
+        namespace: d8-cert-manager
+    - description: Show the pods of the module on failure
+      get:
+        apiVersion: v1
+        kind: Pod
+        namespace: d8-cert-manager
+    - description: Show events of the module namespace on failure
+      events:
+        namespace: d8-cert-manager
+    - description: Show webhook logs on failure
+      podLogs:
+        namespace: d8-cert-manager
+        selector: app=webhook
+        container: webhook
+        tail: 200
+    - description: Show controller logs on failure
+      podLogs:
+        namespace: d8-cert-manager
+        selector: app=cert-manager
+        container: cert-manager
+        tail: 200
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled, converged and its ClusterIssuers are Ready
+      use:
+        template: ../../tests/common/steps/ensure-cert-manager.yaml
+
+    - name: enable-cainjector
+      description: Make the hook enable cainjector with an annotated ValidatingWebhookConfiguration
+      try:
+        - description: Create the Certificate whose CA is injected
+          create:
+            file: manifests/certificate.yaml
+        - description: Create the annotated ValidatingWebhookConfiguration
+          create:
+            file: manifests/validatingwebhookconfiguration.yaml
+            template: true
+        - description: Assert the cainjector Deployment is available
+          assert:
+            timeout: 10m
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: cainjector
+                namespace: d8-cert-manager
+              status:
+                (availableReplicas >= `1`): true
+
+    - name: restart-under-load
+      description: Restart controller, webhook and cainjector one after another under Certificate churn
+      try:
+        - description: Run the load generator and the restarts, then check errors and readiness
+          script:
+            timeout: 15m
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: bash ./restart-under-load.sh "$E2E_NS"
+      cleanup:
+        - description: Stop the load generator if the script was killed before its EXIT trap ran
+          script:
+            timeout: 30s
+            content: |
+              if [ -f /tmp/e2e-cm-load-generator.pid ]; then
+                kill "$(cat /tmp/e2e-cm-load-generator.pid)" 2>/dev/null || true
+                rm -f /tmp/e2e-cm-load-generator.pid
+              fi
+        - description: Wait until all three Deployments are fully rolled out again
+          script:
+            timeout: 10m
+            content: |
+              for d in cert-manager webhook cainjector; do
+                kubectl -n d8-cert-manager rollout status "deployment/$d" --timeout=3m || exit 1
+              done
+        - description: Delete the remaining load Certificates before the namespace goes away
+          script:
+            timeout: 3m
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: kubectl -n "$E2E_NS" delete certificate -l e2e-cm-load=true --ignore-not-found --wait=true

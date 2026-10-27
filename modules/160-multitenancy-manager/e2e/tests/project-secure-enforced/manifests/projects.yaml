@@ -1,0 +1,27 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-sec
+spec:
+  description: Enforcement of the secure template.
+  projectTemplateName: secure
+  quota:
+    requests.cpu: "1"
+    requests.memory: 1Gi
+    limits.cpu: "2"
+    limits.memory: 2Gi
+  parameters:
+    # Gatekeeper denies Pod Security Standard violations in this namespace whatever the
+    # cluster-wide enforcementAction of admission-policy-engine is.
+    namespace:
+      labels:
+        security.deckhouse.io/pod-policy-action: deny
+---
+# A separate project without network isolation: the source of the cross-project traffic.
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-peer
+spec:
+  description: Source of the traffic that the isolated project must not admit.
+  projectTemplateName: simple

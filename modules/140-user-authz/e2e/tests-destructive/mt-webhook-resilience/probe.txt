@@ -1,0 +1,6 @@
+# Probed continuously while a component restarts. Every review carries a unique name.
+# The Editor without limits must stay allowed in the test namespace (a miss is a false deny),
+# the limited Editor must stay refused outside its namespace (a hit is a false allow).
+e2e-authz-res-editor   get     -     pods         -  @ns                         yes
+e2e-authz-res-limited  create  apps  deployments  -  @ns                         yes
+e2e-authz-res-limited  get     -     pods         -  e2e-authz-resilience-other  no

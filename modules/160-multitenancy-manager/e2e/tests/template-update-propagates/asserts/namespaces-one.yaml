@@ -1,0 +1,33 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-upd-a
+status:
+  state: Deployed
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: e2e-mtm-upd-a
+  labels:
+    projects.deckhouse.io/project: e2e-mtm-upd-a
+    projects.deckhouse.io/project-template: e2e-mtm-tpl
+    security.deckhouse.io/pod-policy: baseline
+    e2e-mtm/revision: one
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-upd-b
+status:
+  state: Deployed
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: e2e-mtm-upd-b
+  labels:
+    projects.deckhouse.io/project: e2e-mtm-upd-b
+    projects.deckhouse.io/project-template: e2e-mtm-tpl
+    security.deckhouse.io/pod-policy: baseline
+    e2e-mtm/revision: one

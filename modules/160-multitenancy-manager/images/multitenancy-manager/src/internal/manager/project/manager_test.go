@@ -31,6 +31,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -52,6 +53,8 @@ type fakeHelmClient struct {
 	analyzeCalls   int
 	seenManifests  string
 	upgradeCalls   int
+	// reapplies records the reapply argument of every Upgrade and UpgradeManifests call.
+	reapplies []bool
 	// change, when set, is what an upgrade does to the deployed release: Upgrade and UpgradeManifests
 	// hand it to their BeforeUpgrade and return its error.
 	change *helm.ReleaseChange
@@ -75,15 +78,17 @@ func (f *fakeHelmClient) CurrentRelease(context.Context, string) (*helm.ProjectR
 	return f.current, nil
 }
 
-func (f *fakeHelmClient) UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string, beforeUpgrade helm.BeforeUpgrade) (helm.ReleaseOutcome, error) {
+func (f *fakeHelmClient) UpgradeManifests(ctx context.Context, project *v1alpha3.Project, manifests string, beforeUpgrade helm.BeforeUpgrade, reapply bool) (helm.ReleaseOutcome, error) {
 	f.upgradeCalls++
+	f.reapplies = append(f.reapplies, reapply)
 	f.seenManifests = manifests
 	f.seenNamespaces = append([]v1alpha3.NamespaceStatus(nil), project.Status.Namespaces...)
 	return f.upgrade(ctx, beforeUpgrade)
 }
 
-func (f *fakeHelmClient) Upgrade(ctx context.Context, _ *v1alpha3.Project, _ *v1alpha1.ProjectTemplate, beforeUpgrade helm.BeforeUpgrade) (helm.ReleaseOutcome, error) {
+func (f *fakeHelmClient) Upgrade(ctx context.Context, _ *v1alpha3.Project, _ *v1alpha1.ProjectTemplate, beforeUpgrade helm.BeforeUpgrade, reapply bool) (helm.ReleaseOutcome, error) {
 	f.upgradeCalls++
+	f.reapplies = append(f.reapplies, reapply)
 	return f.upgrade(ctx, beforeUpgrade)
 }
 
@@ -152,6 +157,55 @@ func TestUpgradeResourcesReusesApplyOutcome(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, refs, 1)
 	assert.Equal(t, 0, fh.analyzeCalls, "an applied release must not trigger a second post-render pass")
+}
+
+// TestUpgradeResourcesReappliesWithoutTheNamespace: on both render paths the release is reapplied
+// only while the main namespace of the project is missing. A namespace that is still terminating is
+// not reapplied, its objects cannot be created yet; a namespace that is there is upgraded as usual,
+// only on a change. A reapply also drops the record of the last apply of spec.manifests.
+func TestUpgradeResourcesReappliesWithoutTheNamespace(t *testing.T) {
+	legacy := &v1alpha2.ProjectTemplate{
+		ObjectMeta: metav1.ObjectMeta{Name: "legacy"},
+		Spec:       v1alpha2.ProjectTemplateSpec{ResourcesTemplate: "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cm\n"},
+	}
+	for name, template := range map[string]*v1alpha2.ProjectTemplate{
+		"structured": structuredTemplate(),
+		"helm text":  legacy,
+	} {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}
+
+			m, c := newManager(t)
+			fh := &fakeHelmClient{}
+			m.helmClient = fh
+
+			// missing
+			m.manifestsApplied.Store(project.Name, appliedManifests{digest: "d", at: time.Now()})
+			_, err := m.upgradeResources(ctx, project, template)
+			require.NoError(t, err)
+			_, recorded := m.manifestsApplied.Load(project.Name)
+			assert.False(t, recorded, "a reapply must drop the record of the last manifests apply")
+
+			// terminating
+			terminating := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "proj", Finalizers: []string{"kubernetes"}}}
+			require.NoError(t, c.Create(ctx, terminating))
+			require.NoError(t, c.Delete(ctx, terminating))
+			_, err = m.upgradeResources(ctx, project, template)
+			require.NoError(t, err)
+
+			// gone, then there again
+			require.NoError(t, c.Get(ctx, client.ObjectKey{Name: "proj"}, terminating))
+			terminating.Finalizers = nil
+			require.NoError(t, c.Update(ctx, terminating))
+			require.NoError(t, c.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}))
+			_, err = m.upgradeResources(ctx, project, template)
+			require.NoError(t, err)
+
+			assert.Equal(t, []bool{true, false, false}, fh.reapplies,
+				"the release is reapplied only while the project namespace is missing")
+		})
+	}
 }
 
 var errBoom = errors.New("boom")
@@ -717,4 +771,49 @@ func TestEnsureVirtualProjectsStampsTheProjectLabel(t *testing.T) {
 		assert.Equal(t, name, got.Labels[v1alpha3.ResourceLabelProject], name)
 		assert.Equal(t, "true", got.Labels[v1alpha3.ProjectLabelVirtualProject], name)
 	}
+}
+
+// TestPrepareProjectMirrorsTheNamespaceOwners: a Project adopted before its owners were copied gets the
+// owners of its main namespace on the next reconcile, and a Project whose namespace has none -- one a
+// user created -- keeps its ownerReferences as they are.
+func TestPrepareProjectMirrorsTheNamespaceOwners(t *testing.T) {
+	tenant := metav1.OwnerReference{APIVersion: "example.com/v1", Kind: "Tenant", Name: "team", UID: "uid-tenant"}
+	own := metav1.OwnerReference{APIVersion: "example.com/v1", Kind: "Release", Name: "gitops", UID: "uid-own"}
+
+	adopted := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "adopted"}, Spec: v1alpha3.ProjectSpec{ProjectTemplateName: "simple"}}
+	adoptedNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "adopted", OwnerReferences: []metav1.OwnerReference{tenant}}}
+	created := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "created", OwnerReferences: []metav1.OwnerReference{own}},
+		Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "simple"},
+	}
+	createdNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "created"}}
+	m, c := newManager(t, adopted, adoptedNamespace, created, createdNamespace)
+
+	require.NoError(t, m.prepareProject(context.Background(), adopted))
+	require.NoError(t, m.prepareProject(context.Background(), created))
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "adopted"}, got))
+	assert.Equal(t, []metav1.OwnerReference{tenant}, got.OwnerReferences)
+	assert.Equal(t, "uid-tenant", got.Annotations[v1alpha3.ProjectAnnotationNamespaceOwners])
+
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "created"}, got))
+	assert.Equal(t, []metav1.OwnerReference{own}, got.OwnerReferences, "a user-created Project is left as it is")
+	assert.NotContains(t, got.Annotations, v1alpha3.ProjectAnnotationNamespaceOwners)
+}
+
+// TestUpgradeResourcesSkipsADeletingProject: a Project that is being deleted -- by the garbage collector
+// together with its namespace -- is not upgraded, so that neither a reapply nor an upgrade with a changed
+// release hash creates its namespace again.
+func TestUpgradeResourcesSkipsADeletingProject(t *testing.T) {
+	ctx := context.Background()
+	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "proj", DeletionTimestamp: ptr.To(metav1.Now())}}
+	m, _ := newManager(t)
+	fh := &fakeHelmClient{}
+	m.helmClient = fh
+
+	_, err := m.upgradeResources(ctx, project, structuredTemplate())
+	require.NoError(t, err)
+	assert.Zero(t, fh.upgradeCalls, "a Project that is being deleted is not upgraded")
+	assert.Zero(t, fh.analyzeCalls, "nor are its manifests analyzed")
 }

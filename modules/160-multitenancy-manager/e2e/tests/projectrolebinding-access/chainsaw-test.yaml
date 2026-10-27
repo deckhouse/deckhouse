@@ -1,0 +1,246 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: projectrolebinding-access
+spec:
+  description: >-
+    A ProjectRoleBinding grants its role in every namespace of the project, a namespace added later
+    included, and nowhere else. The ProjectRoleBinding webhook refuses roles outside the project
+    prefixes, ServiceAccounts of another project, a binding outside the main namespace of a
+    project, and a role the requester may not bind (privilege escalation by a project administrator).
+  concurrent: false
+  catch:
+    - description: Show the bindings of the project on failure
+      script:
+        content: |
+          kubectl -n e2e-mtm-prb get projectrolebindings -o yaml || true
+          kubectl get rolebindings -A -l projects.deckhouse.io/project=e2e-mtm-prb -o wide || true
+          kubectl get ns -l projects.deckhouse.io/project=e2e-mtm-prb || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager and user-authz modules are enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+        - description: Ensure the user-authz module is Ready (it aggregates the d8:project:* roles)
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh user-authz
+
+    - name: create-project
+      description: Create a project with an administrator and an additional namespace
+      try:
+        - description: Create the e2e-mtm-prb project
+          create:
+            file: manifests/project.yaml
+        - description: Assert the project is Deployed, so that its main namespace exists
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-prb
+              status:
+                state: Deployed
+        - description: Create the extra ProjectNamespace in the main namespace
+          create:
+            file: manifests/projectnamespace-extra.yaml
+        - description: Assert the additional namespace is Ready
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ProjectNamespace
+              metadata:
+                name: extra
+                namespace: e2e-mtm-prb
+              status:
+                namespace: e2e-mtm-prb-extra
+                (conditions[?type == 'Ready'] | [0].status): 'True'
+
+    - name: fan-out
+      description: The binding fans out into every namespace of the project as d8:prb:<name> RoleBindings
+      try:
+        - description: Create the viewers ProjectRoleBinding
+          create:
+            file: manifests/prb-viewers.yaml
+        - description: Assert the binding is Ready and its RoleBindings exist in the main and the additional namespace
+          assert:
+            file: asserts/fan-out.yaml
+        - description: Assert the viewer can list pods in the additional namespace and nothing more
+          script:
+            timeout: 3m
+            content: |
+              set -u
+              viewer=e2e-mtm-viewer@example.com
+              can() { kubectl auth can-i "$@" --as "${viewer}" 2>/dev/null || true; }
+              for attempt in $(seq 1 30); do
+                if [ "$(can list pods -n e2e-mtm-prb-extra)" = "yes" ]; then
+                  break
+                fi
+                sleep 5
+              done
+              list_extra="$(can list pods -n e2e-mtm-prb-extra)"
+              list_main="$(can list pods -n e2e-mtm-prb)"
+              create_main="$(can create pods -n e2e-mtm-prb)"
+              list_default="$(can list pods -n default)"
+              echo "list extra=${list_extra} list main=${list_main} create main=${create_main} list default=${list_default}"
+              [ "${list_extra}" = "yes" ] && [ "${list_main}" = "yes" ] && [ "${create_main}" = "no" ] && [ "${list_default}" = "no" ]
+
+    - name: namespace-added-later
+      description: A namespace added to the project after the binding gets the RoleBinding too
+      try:
+        - description: Create the late ProjectNamespace
+          create:
+            file: manifests/projectnamespace-late.yaml
+        - description: Assert the RoleBinding of the binding appears in the new namespace
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: RoleBinding
+              metadata:
+                name: d8:prb:viewers
+                namespace: e2e-mtm-prb-late
+              roleRef:
+                name: d8:project:viewer
+
+    - name: webhook-rejections
+      description: The ProjectRoleBinding webhook refuses bindings that would break the project boundary
+      try:
+        - description: Assert a binding to a role outside the project prefixes is refused
+          script:
+            bindings:
+              - name: expected
+                value: 'ClusterRole "cluster-admin" cannot be granted via a project role binding; allowed: d8:project:*, d8:namespace:*, their capabilities and d8:custom:*'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ProjectRoleBinding
+              metadata:
+                name: e2e-mtm-cluster-admin
+                namespace: e2e-mtm-prb
+              spec:
+                subjects:
+                  - kind: User
+                    name: e2e-mtm-viewer@example.com
+                roleRef:
+                  kind: ClusterRole
+                  name: cluster-admin
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert a ServiceAccount of a namespace outside the project is refused
+          script:
+            bindings:
+              - name: expected
+                value: 'ServiceAccount subject namespace "kube-system" must belong to project "e2e-mtm-prb"'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ProjectRoleBinding
+              metadata:
+                name: e2e-mtm-foreign-sa
+                namespace: e2e-mtm-prb
+              spec:
+                subjects:
+                  - kind: ServiceAccount
+                    name: default
+                    namespace: kube-system
+                roleRef:
+                  kind: ClusterRole
+                  name: d8:project:viewer
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert a binding outside the main namespace of a project is refused
+          script:
+            bindings:
+              - name: expected
+                value: 'namespace "e2e-mtm-prb-extra" is not the main namespace of a project'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ProjectRoleBinding
+              metadata:
+                name: e2e-mtm-misplaced
+                namespace: e2e-mtm-prb-extra
+              spec:
+                subjects:
+                  - kind: User
+                    name: e2e-mtm-viewer@example.com
+                roleRef:
+                  kind: ClusterRole
+                  name: d8:project:viewer
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+
+    - name: privilege-escalation
+      description: >-
+        A project administrator binds the roles they hold bind on (d8:project:viewer) and is refused
+        a role they may not bind (d8:project:superadmin)
+      try:
+        - description: Wait until RBAC lets the project administrator create ProjectRoleBindings
+          script:
+            timeout: 3m
+            content: |
+              for attempt in $(seq 1 30); do
+                answer="$(kubectl auth can-i create projectrolebindings.deckhouse.io -n e2e-mtm-prb --as e2e-mtm-prb-admin@example.com 2>/dev/null || true)"
+                [ "${answer}" = "yes" ] && exit 0
+                sleep 5
+              done
+              echo "the d8:project:admin role does not let the administrator create ProjectRoleBindings"
+              exit 1
+        - description: Assert the project administrator may bind d8:project:viewer
+          script:
+            content: |
+              kubectl create --dry-run=server --as e2e-mtm-prb-admin@example.com -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ProjectRoleBinding
+              metadata:
+                name: e2e-mtm-delegated
+                namespace: e2e-mtm-prb
+              spec:
+                subjects:
+                  - kind: User
+                    name: e2e-mtm-viewer@example.com
+                roleRef:
+                  kind: ClusterRole
+                  name: d8:project:viewer
+              YAML
+            check:
+              ($error == null): true
+        - description: Assert the project administrator is refused d8:project:superadmin
+          script:
+            bindings:
+              - name: expected
+                value: 'user "e2e-mtm-prb-admin@example.com" is not allowed to bind ClusterRole "d8:project:superadmin"'
+            content: |
+              kubectl create --dry-run=server --as e2e-mtm-prb-admin@example.com -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ProjectRoleBinding
+              metadata:
+                name: e2e-mtm-escalation
+                namespace: e2e-mtm-prb
+              spec:
+                subjects:
+                  - kind: User
+                    name: e2e-mtm-viewer@example.com
+                roleRef:
+                  kind: ClusterRole
+                  name: d8:project:superadmin
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true

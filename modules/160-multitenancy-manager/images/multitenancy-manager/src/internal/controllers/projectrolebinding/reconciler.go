@@ -143,18 +143,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// does not block the rest of the project (relevant at scale). With every subject left out the
 	// RoleBindings stay, without subjects, so they grant nothing and need no other handling.
 	var errs []error
+	var failed []string
 	for _, ns := range target {
 		if err := r.upsertRoleBinding(ctx, prb, ns, related, subjects); err != nil {
 			errs = append(errs, err)
+			failed = append(failed, ns)
 		}
 	}
 
-	if err := r.pruneRoleBindings(ctx, prb.Name, prb.Namespace, target); err != nil {
-		errs = append(errs, err)
+	pruneErr := r.pruneRoleBindings(ctx, prb.Name, prb.Namespace, target)
+	if pruneErr != nil {
+		errs = append(errs, pruneErr)
 	}
 
+	// The status is written whatever the fan-out did: a namespace of the project that refuses the
+	// binding -- one that is missing or terminating -- must not leave the binding without its status.
+	// Ready says which namespaces failed, and the error below retries them.
+	readyStatus, readyMessage := corev1.ConditionTrue, ""
 	if len(errs) > 0 {
-		return ctrl.Result{}, errors.Join(errs...)
+		readyStatus, readyMessage = corev1.ConditionFalse, rolebinding.FanOutFailureMessage(failed, pruneErr != nil)
 	}
 
 	// Write status only when it actually changed: an unconditional write would bump the condition
@@ -164,7 +171,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		prb.Status.ObservedGeneration = prb.Generation
 		changed = true
 	}
-	if v1alpha3.SetCondition(&prb.Status.Conditions, v1alpha3.ProjectRoleBindingConditionReady, corev1.ConditionTrue, "") {
+	if v1alpha3.SetCondition(&prb.Status.Conditions, v1alpha3.ProjectRoleBindingConditionReady, readyStatus, readyMessage) {
 		changed = true
 	}
 	bound, leftOutMessage := corev1.ConditionTrue, ""
@@ -177,7 +184,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	if changed {
 		if err := r.Status().Update(ctx, prb); err != nil {
-			return ctrl.Result{}, fmt.Errorf("update status: %w", err)
+			return ctrl.Result{}, errors.Join(append(errs, fmt.Errorf("update status: %w", err))...)
 		}
 	}
 
@@ -185,6 +192,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// is written, so a restart or a new leader does not send it again.
 	if leftOutChanged && len(leftOut) > 0 && r.Recorder != nil {
 		r.Recorder.Event(prb, corev1.EventTypeWarning, reasonSubjectsLeftOut, leftOutMessage)
+	}
+
+	if len(errs) > 0 {
+		return ctrl.Result{}, errors.Join(errs...)
 	}
 
 	log.Info("the project role binding reconciled", "namespaces", len(target), "subjectsLeftOut", len(leftOut))
