@@ -526,6 +526,14 @@ func TestApplicationPrefixPolicy(t *testing.T) {
 			detail:    "application prefix",
 		},
 		{
+			name:      "a regular user may not scale an application object",
+			request:   applicationRequest("UPDATE", "Scale", "deployments", "victor"),
+			oldObject: applicationScale(1),
+			object:    applicationScale(2),
+			want:      denied,
+			detail:    "application prefix",
+		},
+		{
 			name:      "objects outside the prefix are none of this policy's business",
 			request:   applicationRequest("UPDATE", "Deployment", "deployments", "victor"),
 			oldObject: application(func(o object) { o["metadata"].(object)["name"] = "console-backend" }),
@@ -616,6 +624,16 @@ func credentials() object {
 }
 
 func applicationUpdate(mutate func(o object)) object { return serverSideBump(application(nil), mutate) }
+
+// applicationScale is what the scale subresource hands to admission: the parent's name, none of its labels.
+func applicationScale(replicas int64) object {
+	return object{
+		"apiVersion": "autoscaling/v1",
+		"kind":       "Scale",
+		"metadata":   object{"name": "d8a-console-backend", "namespace": "d8a-console"},
+		"spec":       object{"replicas": replicas},
+	}
+}
 
 // applicationRequest builds a request for the prefix policy, which - unlike the
 // label-objects one - reads request.resource.resource to let pod deletions pass.

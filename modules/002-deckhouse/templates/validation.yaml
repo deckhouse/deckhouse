@@ -198,7 +198,8 @@ spec:
       - apiGroups: ["*"]
         apiVersions: ["*"]
         operations:  ["CREATE", "UPDATE", "DELETE"]
-        resources:   ["*"]
+        # `*` leaves subresources out, and `kubectl scale` goes through `<resource>/scale`
+        resources:   ["*", "*/scale"]
   matchConditions:
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system", "system:serviceaccounts:d8-cni-cilium"].exists(e, (e in request.userInfo.groups)))'
@@ -302,7 +303,8 @@ spec:
       - apiGroups: ["*"]
         apiVersions: ["*"]
         operations:  ["CREATE", "UPDATE", "DELETE"]
-        resources:   ["*"]
+        # `*` leaves subresources out, and `kubectl scale` goes through `<resource>/scale`
+        resources:   ["*", "*/scale"]
   matchConditions:
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system", "system:serviceaccounts:d8-cni-cilium"].exists(e, (e in request.userInfo.groups)))'
