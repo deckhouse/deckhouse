@@ -34,6 +34,7 @@ spec:
     nodeLabels:
       node.deckhouse.io/cgroup: cgroup2fs
       node.deckhouse.io/group: master
+      node.deckhouse.io/system-type: Immutable
       node.deckhouse.io/type: CloudPermanent
     resourceReservation:
       mode: Auto

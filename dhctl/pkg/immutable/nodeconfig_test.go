@@ -91,6 +91,12 @@ func TestNodeConfigCloudProviderFollowsTheClusterType(t *testing.T) {
 	require.Equal(t, nodeTypeCloudPermanent, inCloud.Spec.Kubelet.NodeLabels[nodeTypeLabel])
 }
 
+func TestNodeConfigNamesTheSystemTypeOfTheMaster(t *testing.T) {
+	nodeConfig, err := buildNodeConfig(t.Context(), nodeConfigInput{NodeName: "master-0", MetaConfig: testMetaConfig(t)})
+	require.NoError(t, err)
+	require.Equal(t, systemTypeImmutable, nodeConfig.Spec.Kubelet.NodeLabels[systemTypeLabel])
+}
+
 func TestSysextDigestsMissing(t *testing.T) {
 	metaConfig := testMetaConfig(t)
 	delete(metaConfig.Images["registrypackages"], "kubeletSysext1349")

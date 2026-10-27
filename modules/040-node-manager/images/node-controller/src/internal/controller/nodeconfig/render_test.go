@@ -312,6 +312,18 @@ func TestRenderNodeLabelsPublishesTheCgroupLayout(t *testing.T) {
 	require.True(t, kubeletMaySetLabel(cgroupLabel))
 }
 
+func TestRenderNodeLabelsPublishesTheSystemType(t *testing.T) {
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "master"},
+		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeCloudPermanent},
+	}
+
+	labels := renderNodeLabels(ng)
+
+	require.Equal(t, internalv1alpha1.NodeLabelValue(v1.SystemTypeImmutable), labels[nodecommon.NodeSystemTypeLabel])
+	require.True(t, kubeletMaySetLabel(nodecommon.NodeSystemTypeLabel))
+}
+
 // Settings a NodeGroup accepts but the agent's schema does not: passed through,
 // they render a NodeConfig the API server rejects, and the node never receives
 // one — a tuning setting takes the node out of the cluster instead.

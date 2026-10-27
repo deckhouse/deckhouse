@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -139,6 +140,7 @@ var _ = Describe("MasterNodeGroup controller", Ordered, func() {
 
 		master := getMaster()
 		Expect(master.Spec.NodeType).To(Equal(deckhousev1.NodeTypeCloudPermanent))
+		Expect(master.Spec.SystemType).To(BeEmpty(), "a bashible master group keeps the default")
 
 		Expect(master.Spec.NodeTemplate).NotTo(BeNil())
 		Expect(master.Spec.NodeTemplate.Labels).To(Equal(map[string]string{
@@ -245,6 +247,25 @@ var _ = Describe("MasterNodeGroup controller reconcile", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(getMaster().Spec.NodeType).To(Equal(deckhousev1.NodeTypeStatic))
+	})
+
+	It("creates an Immutable master NodeGroup when a master is a Deckhouse Engine node", func() {
+		deleteMaster()
+
+		node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+			Name: "engine-master-0",
+			Labels: map[string]string{
+				common.NodeGroupLabel:      masterNodeGroupName,
+				common.NodeSystemTypeLabel: string(deckhousev1.SystemTypeImmutable),
+			},
+		}}
+		Expect(k8sClient.Create(suiteCtx, node)).To(Succeed())
+		DeferCleanup(func() { Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, node))).To(Succeed()) })
+
+		_, err := reconcileMaster()
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(getMaster().Spec.SystemType).To(Equal(deckhousev1.SystemTypeImmutable))
 	})
 
 	// The node type is not guessable: a CloudPermanent master group on a static cluster is wrong,

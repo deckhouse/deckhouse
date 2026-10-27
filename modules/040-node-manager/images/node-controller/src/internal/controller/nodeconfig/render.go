@@ -269,6 +269,8 @@ func renderNodeLabels(ng *v1.NodeGroup) map[string]internalv1alpha1.NodeLabelVal
 	labels := map[string]internalv1alpha1.NodeLabelValue{
 		nodecommon.NodeGroupLabel: internalv1alpha1.NodeLabelValue(ng.Name),
 		nodecommon.NodeTypeLabel:  internalv1alpha1.NodeLabelValue(ng.Spec.NodeType),
+		// masternodegroup creates the master group Immutable from it; the installer sets it on the first master.
+		nodecommon.NodeSystemTypeLabel: internalv1alpha1.NodeLabelValue(v1.SystemTypeImmutable),
 		// A Deckhouse Engine node is cgroup v2 by construction, and the cluster learns
 		// that from this label alone (node-manager raises alerts otherwise).
 		// The installer sets it on the first master; the render must keep it.

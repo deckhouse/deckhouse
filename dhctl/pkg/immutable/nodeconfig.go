@@ -226,6 +226,7 @@ func nodeKubelet(metaConfig *config.MetaConfig, kubernetesVersion string, podsPe
 		NodeLabels: map[string]string{
 			global.NodeGroupLabel: nodeGroupOrMaster(nodeGroupName),
 			nodeTypeLabel:         nodeType,
+			systemTypeLabel:       systemTypeImmutable,
 			cgroupLabel:           "cgroup2fs", // Deckhouse Engine's only layout; bashible probes it in 092_set_cgroup_type.sh.tpl
 		},
 		// Nobody can approve a serving CSR until Deckhouse is installed, and

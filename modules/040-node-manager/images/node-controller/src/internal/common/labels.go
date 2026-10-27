@@ -20,6 +20,9 @@ const (
 	// Node labels
 	NodeGroupLabel = "node.deckhouse.io/group"
 	NodeTypeLabel  = "node.deckhouse.io/type"
+	// NodeSystemTypeLabel is set by kubelet on a Deckhouse Engine node, the first master included:
+	// it is how the master NodeGroup learns its systemType before dhctl applies the configured one.
+	NodeSystemTypeLabel = "node.deckhouse.io/system-type"
 
 	// Update annotations
 	ApprovedAnnotation           = "update.node.deckhouse.io/approved"

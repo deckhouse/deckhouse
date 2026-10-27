@@ -35,6 +35,7 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -93,11 +94,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 		return ctrl.Result{}, err
 	}
 
-	logger.Info("creating the master NodeGroup", "clusterType", clusterType)
+	systemType, err := r.readMasterSystemType(ctx)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	logger.Info("creating the master NodeGroup", "clusterType", clusterType, "systemType", systemType)
 
 	// The NodeGroup validating webhook is served by node-controller itself, so a create issued
 	// before the webhook server listens is rejected; the workqueue backoff covers that window.
-	if err := r.Client.Create(ctx, withFinalizer(masterNodeGroup(clusterType))); err != nil {
+	if err := r.Client.Create(ctx, withFinalizer(masterNodeGroup(clusterType, systemType))); err != nil {
 		if errors.IsAlreadyExists(err) {
 			return ctrl.Result{}, nil
 		}
@@ -206,10 +212,28 @@ func (r *Reconciler) readClusterType(ctx context.Context) (string, error) {
 	return cfg.ClusterType, nil
 }
 
+// A Deckhouse Engine master registers with the label before Deckhouse runs. A group without
+// systemType reads as bashible's until dhctl applies the configured one, and the master would get
+// a Mutable NodeConfig, whose systemType cannot change.
+func (r *Reconciler) readMasterSystemType(ctx context.Context) (deckhousev1.SystemType, error) {
+	nodes := &corev1.NodeList{}
+	if err := r.Client.List(ctx, nodes, client.MatchingLabels{common.NodeGroupLabel: masterNodeGroupName}); err != nil {
+		return "", fmt.Errorf("list the master nodes: %w", err)
+	}
+
+	for _, node := range nodes.Items {
+		if node.Labels[common.NodeSystemTypeLabel] == string(deckhousev1.SystemTypeImmutable) {
+			return deckhousev1.SystemTypeImmutable, nil
+		}
+	}
+
+	return "", nil
+}
+
 // masterNodeGroup builds the metadata-only NodeGroup the master nodes are registered into. The
 // master Node itself is created by kubeadm through bashible, so this object carries no cloud
 // instance settings — on a cloud cluster the masters are CloudPermanent.
-func masterNodeGroup(clusterType string) *deckhousev1.NodeGroup {
+func masterNodeGroup(clusterType string, systemType deckhousev1.SystemType) *deckhousev1.NodeGroup {
 	nodeType := deckhousev1.NodeTypeCloudPermanent
 	if clusterType == clusterTypeStatic {
 		nodeType = deckhousev1.NodeTypeStatic
@@ -218,7 +242,8 @@ func masterNodeGroup(clusterType string) *deckhousev1.NodeGroup {
 	return &deckhousev1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: masterNodeGroupName},
 		Spec: deckhousev1.NodeGroupSpec{
-			NodeType: nodeType,
+			NodeType:   nodeType,
+			SystemType: systemType,
 			Disruptions: &deckhousev1.DisruptionsSpec{
 				ApprovalMode: deckhousev1.DisruptionApprovalModeManual,
 			},

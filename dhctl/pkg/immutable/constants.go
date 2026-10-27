@@ -84,6 +84,9 @@ const APIServerPort = 6443
 const (
 	nodeTypeLabel = "node.deckhouse.io/type"
 	cgroupLabel   = "node.deckhouse.io/cgroup"
+	// Mirrors NodeSystemTypeLabel of
+	// modules/040-node-manager/images/node-controller/src/internal/common/labels.go.
+	systemTypeLabel = "node.deckhouse.io/system-type"
 
 	// The two nodeTypeLabel values a master can have.
 	// Mirrors NodeType of node-controller/src/api/deckhouse.io/v1.
