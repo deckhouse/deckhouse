@@ -20,8 +20,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -40,7 +42,8 @@ type CacheEntry struct {
 }
 
 type Cache struct {
-	storage map[string]*CacheEntry
+	storage  map[string]*CacheEntry
+	inflight map[string]struct{}
 	sync.RWMutex
 	logger        *log.Logger
 	root          string
@@ -51,13 +54,20 @@ type Cache struct {
 
 func NewCache(logger *log.Logger, root string, retentionSize uint64, metrics *Metrics) *Cache {
 	storage := make(map[string]*CacheEntry)
-	return &Cache{
+	c := &Cache{
 		storage:       storage,
+		inflight:      make(map[string]struct{}),
 		logger:        logger,
 		root:          root,
 		retentionSize: retentionSize,
 		metrics:       metrics,
 	}
+
+	if err := os.RemoveAll(c.tmpDir()); err != nil {
+		logger.Warn("failed to remove leftover temporary files", slog.String("path", c.tmpDir()), log.Err(err))
+	}
+
+	return c
 }
 
 func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
@@ -72,9 +82,7 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 	// check if file hash is correct
 	if !c.checkHashIsOK(entry.layerDigest) {
 		c.logger.Warn("entry with digest is corrupted, marking it", slog.String("digest", digest))
-		c.Lock()
-		c.storage[digest].isCorrupted = true
-		c.Unlock()
+		c.markCorrupted(digest, entry.layerDigest)
 		return 0, nil, cache.ErrEntryNotFound
 	}
 
@@ -89,16 +97,33 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 
 	stat, err := file.Stat()
 	if err != nil {
+		file.Close()
 		return 0, nil, err
 	}
 
 	c.logger.Info("found file with size in the cache", slog.String("digest", digest), slog.String("name", stat.Name()), slog.Int64("size", stat.Size()))
 
-	c.Lock()
-	c.storage[digest].lastAccessTime = time.Now()
-	c.Unlock()
+	c.touch(digest)
 
 	return stat.Size(), file, nil
+}
+
+func (c *Cache) markCorrupted(digest string, layerDigest string) {
+	c.Lock()
+	defer c.Unlock()
+
+	if entry, ok := c.storage[digest]; ok && entry.layerDigest == layerDigest {
+		entry.isCorrupted = true
+	}
+}
+
+func (c *Cache) touch(digest string) {
+	c.Lock()
+	defer c.Unlock()
+
+	if entry, ok := c.storage[digest]; ok {
+		entry.lastAccessTime = time.Now()
+	}
 }
 
 func (c *Cache) Set(digest string, layerDigest string, reader io.Reader) error {
@@ -118,6 +143,12 @@ func (c *Cache) Set(digest string, layerDigest string, reader io.Reader) error {
 		return nil
 	}
 
+	if !c.startFill(layerDigest) {
+		c.logger.Info("layer is already being written to the cache, skipping", slog.String("digest", digest), slog.String("layer_digest", layerDigest))
+		return nil
+	}
+	defer c.finishFill(layerDigest)
+
 	path := c.layerDigestToPath(layerDigest)
 
 	err := os.MkdirAll(filepath.Dir(path), 0755)
@@ -125,21 +156,21 @@ func (c *Cache) Set(digest string, layerDigest string, reader io.Reader) error {
 		return err
 	}
 
-	file, err := os.Create(path)
+	tmpPath, size, err := c.writeTemp(layerDigest, reader)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
-	size, err := io.Copy(file, reader)
-	if err != nil {
+	c.Lock()
+	defer c.Unlock()
+
+	if err := os.Rename(tmpPath, path); err != nil {
+		_ = os.Remove(tmpPath)
 		return err
 	}
 
 	c.logger.Info("wrote file with digest to the cache dir", slog.String("digest", digest), slog.String("path", path), slog.Int64("size", size))
 
-	c.RLock()
-	defer c.RUnlock()
 	c.storage[digest] = &CacheEntry{
 		lastAccessTime: time.Now(),
 		layerDigest:    layerDigest,
@@ -148,6 +179,55 @@ func (c *Cache) Set(digest string, layerDigest string, reader io.Reader) error {
 
 	c.metrics.CacheSize.Add(float64(size))
 	return nil
+}
+
+func (c *Cache) startFill(layerDigest string) bool {
+	c.Lock()
+	defer c.Unlock()
+
+	if _, ok := c.inflight[layerDigest]; ok {
+		return false
+	}
+
+	c.inflight[layerDigest] = struct{}{}
+
+	return true
+}
+
+func (c *Cache) finishFill(layerDigest string) {
+	c.Lock()
+	defer c.Unlock()
+
+	delete(c.inflight, layerDigest)
+}
+
+func (c *Cache) writeTemp(layerDigest string, reader io.Reader) (string, int64, error) {
+	if err := os.MkdirAll(c.tmpDir(), 0755); err != nil {
+		return "", 0, err
+	}
+
+	file, err := os.CreateTemp(c.tmpDir(), layerDigest+"-*")
+	if err != nil {
+		return "", 0, err
+	}
+
+	hash := sha256.New()
+
+	size, err := io.Copy(io.MultiWriter(file, hash), reader)
+	if closeErr := file.Close(); err == nil {
+		err = closeErr
+	}
+
+	if hsum := fmt.Sprintf("%x", hash.Sum(nil)); err == nil && hsum != layerDigest {
+		err = errors.Errorf("content of layer %s has sha256 %s", layerDigest, hsum)
+	}
+
+	if err != nil {
+		_ = os.Remove(file.Name())
+		return "", 0, err
+	}
+
+	return file.Name(), size, nil
 }
 
 func (c *Cache) Reconcile(ctx context.Context) {
@@ -161,7 +241,7 @@ func (c *Cache) Reconcile(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if len(c.storage) == 0 {
+			if c.storageLen() == 0 {
 				c.logger.Info("storage map is empty")
 				continue
 			}
@@ -190,11 +270,9 @@ func (c *Cache) deleteOrphanedOrCorruptedEntries() {
 func (c *Cache) deleteFiles() {
 	c.logger.Info("starting cache delete files")
 	c.RLock()
-	layerDigests := make(map[string]struct{}, len(c.storage))
-	for _, v := range c.storage {
-		layerDigests[v.layerDigest] = struct{}{}
-	}
-	c.RUnlock()
+	defer c.RUnlock()
+
+	layerDigests := c.layerDigestsLocked()
 
 	files := c.getFileList()
 	for _, file := range files {
@@ -218,60 +296,118 @@ func (c *Cache) deleteFiles() {
 
 func (c *Cache) checkFilesHash() {
 	c.logger.Info("starting cache files hash check")
+	c.RLock()
+	layerDigests := c.layerDigestsLocked()
+	c.RUnlock()
+
+	corrupted := make(map[string]struct{})
+
+	for layerDigest := range layerDigests {
+		if !c.checkHashIsOK(layerDigest) {
+			corrupted[layerDigest] = struct{}{}
+		}
+	}
+
 	c.Lock()
 	defer c.Unlock()
+
 	for k, v := range c.storage {
-		if !c.checkHashIsOK(v.layerDigest) {
+		if _, ok := corrupted[v.layerDigest]; ok {
 			c.logger.Warn("entry with digest is corrupted, marking it", slog.String("digest", k))
-			c.storage[k].isCorrupted = true
+
+			v.isCorrupted = true
 		}
 	}
 }
 
 func (c *Cache) applyRetentionPolicy() {
 	c.logger.Info("starting cache retention policy")
-	for {
-		usagePercent := int(float64(c.calculateCacheSize()) / float64(c.retentionSize) * 100)
-		if usagePercent < HighUsagePercent {
-			c.logger.Info("current cache usage low, compaction is not needed", slog.Int("usage_percent", usagePercent), slog.Int("high_usage_percent", HighUsagePercent))
+	c.Lock()
+	defer c.Unlock()
+
+	layerSizes := c.layerSizesLocked()
+
+	var size int64
+	for _, layerSize := range layerSizes {
+		size += layerSize
+	}
+
+	usagePercent := int(float64(size) / float64(c.retentionSize) * 100)
+	if usagePercent < HighUsagePercent {
+		c.logger.Info("current cache usage low, compaction is not needed", slog.Int("usage_percent", usagePercent), slog.Int("high_usage_percent", HighUsagePercent))
+		return
+	}
+
+	c.logger.Info("need to compact cache, current usage is high", slog.Int("usage_percent", usagePercent), slog.Int("high_usage_percent", HighUsagePercent))
+
+	highUsageSize := int64(c.retentionSize) * HighUsagePercent / 100
+
+	layerRefs := make(map[string]int, len(layerSizes))
+	for _, v := range c.storage {
+		layerRefs[v.layerDigest]++
+	}
+
+	digests := slices.SortedFunc(maps.Keys(c.storage), func(a, b string) int {
+		return c.storage[a].lastAccessTime.Compare(c.storage[b].lastAccessTime)
+	})
+
+	for _, digest := range digests {
+		if size < highUsageSize {
 			return
 		}
 
-		c.logger.Info("need to compact cache, current usage is high", slog.Int("usage_percent", usagePercent), slog.Int("high_usage_percent", HighUsagePercent))
+		layerDigest := c.storage[digest].layerDigest
+		delete(c.storage, digest)
 
-		// sort descending by last access time
-		var oldestDigest string
-		lowestTime := time.Now()
-
-		c.Lock()
-		for k, v := range c.storage {
-			if lowestTime.Compare(v.lastAccessTime) >= 0 {
-				oldestDigest = k
-			}
+		layerRefs[layerDigest]--
+		if layerRefs[layerDigest] == 0 {
+			size -= layerSizes[layerDigest]
 		}
-		delete(c.storage, oldestDigest)
-		c.Unlock()
 	}
 }
 
-func (c *Cache) calculateCacheSize() int64 {
-	files := c.getFileList()
-	var size int64
+func (c *Cache) layerSizesLocked() map[string]int64 {
+	layerSizes := make(map[string]int64)
 
-	for _, file := range files {
-		stat, err := os.Stat(file)
+	for layerDigest := range c.layerDigestsLocked() {
+		stat, err := os.Stat(c.layerDigestToPath(layerDigest))
 		if err != nil {
-			c.logger.Warn("failed to stat file", slog.String("path", file), log.Err(err))
+			c.logger.Warn("failed to stat file", slog.String("layer_digest", layerDigest), log.Err(err))
 			continue
 		}
-		size += stat.Size()
+
+		layerSizes[layerDigest] = stat.Size()
 	}
 
-	return size
+	return layerSizes
+}
+
+func (c *Cache) storageLen() int {
+	c.RLock()
+	defer c.RUnlock()
+
+	return len(c.storage)
+}
+
+func (c *Cache) layerDigestsLocked() map[string]struct{} {
+	layerDigests := make(map[string]struct{}, len(c.storage))
+	for _, v := range c.storage {
+		layerDigests[v.layerDigest] = struct{}{}
+	}
+
+	return layerDigests
 }
 
 func (c *Cache) layerDigestToPath(digest string) string {
-	return filepath.Join(c.root, "packages", digest[:2], digest)
+	return filepath.Join(c.packagesDir(), digest[:2], digest)
+}
+
+func (c *Cache) packagesDir() string {
+	return filepath.Join(c.root, "packages")
+}
+
+func (c *Cache) tmpDir() string {
+	return filepath.Join(c.root, "tmp")
 }
 
 func (c *Cache) storageGetOK(digest string) (*CacheEntry, bool) {
@@ -333,7 +469,8 @@ func (c *Cache) checkHashIsOK(layerDigest string) bool {
 
 func (c *Cache) getFileList() []string {
 	var files []string
-	err := filepath.Walk(c.root, func(path string, info os.FileInfo, err error) error {
+
+	err := filepath.Walk(c.packagesDir(), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
