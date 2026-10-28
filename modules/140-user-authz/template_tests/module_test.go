@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -1238,6 +1239,73 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(deploy.Field("spec.template.spec.containers.0.ports.0.name").String()).To(Equal("https"))
 		})
 
+		It("Should let every authenticated user create a SelfScopedAccessReview", func() {
+			role := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:self-scoped-access-reviewer")
+			Expect(role.Exists()).To(BeTrue())
+			Expect(role.Field("rules").String()).To(MatchJSON(
+				`[{"apiGroups":["authorization.deckhouse.io"],"resources":["selfscopedaccessreviews"],"verbs":["create"]}]`))
+
+			binding := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:self-scoped-access-reviewer:system-authenticated")
+			Expect(binding.Exists()).To(BeTrue())
+			Expect(binding.Field("roleRef.name").String()).To(Equal("d8:user-authz:self-scoped-access-reviewer"))
+			Expect(binding.Field("subjects").String()).To(MatchJSON(
+				`[{"apiGroup":"rbac.authorization.k8s.io","kind":"Group","name":"system:authenticated"}]`))
+		})
+
+		// The multitenancy-manager state is read at run time from the state ConfigMap, so toggling
+		// the module does not roll permission-browser.
+		It("Should let permission-browser read the multitenancy state, not take it as an argument", func() {
+			deploy := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+			for _, arg := range deploy.Field("spec.template.spec.containers.0.args").AsStringSlice() {
+				Expect(arg).NotTo(HavePrefix("--multitenancy-manager-enabled"))
+			}
+
+			role := f.KubernetesResource("Role", "d8-user-authz", "permission-browser-apiserver:multitenancy-state-reader")
+			Expect(role.Exists()).To(BeTrue())
+			Expect(role.Field("rules").String()).To(MatchJSON(
+				`[{"apiGroups":[""],"resources":["configmaps"],"resourceNames":["d8-user-authz-multitenancy-state"],"verbs":["get","list","watch"]}]`))
+			binding := f.KubernetesResource("RoleBinding", "d8-user-authz", "permission-browser-apiserver:multitenancy-state-reader")
+			Expect(binding.Exists()).To(BeTrue())
+			Expect(binding.Field("roleRef.name").String()).To(Equal("permission-browser-apiserver:multitenancy-state-reader"))
+			Expect(binding.Field("subjects").String()).To(MatchJSON(
+				`[{"kind":"ServiceAccount","name":"permission-browser-apiserver","namespace":"d8-user-authz"}]`))
+		})
+
+		It("Should tell permission-browser that the authorization webhook is not in the chain without control-plane-manager", func() {
+			deploy := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+			Expect(deploy.Field("spec.template.spec.containers.0.args").AsStringSlice()).
+				To(ContainElement("--authorization-webhook-enabled=false"))
+		})
+
+		Context("With control-plane-manager", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd", "prometheus", "control-plane-manager"]`)
+				f.HelmRender()
+			})
+
+			It("Should tell permission-browser that the authorization webhook is in the chain", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				deploy := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+				Expect(deploy.Field("spec.template.spec.containers.0.args").AsStringSlice()).
+					To(ContainElement("--authorization-webhook-enabled=true"))
+			})
+		})
+
+		Context("Without the control-plane configurator", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd", "prometheus", "control-plane-manager"]`)
+				f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", false)
+				f.HelmRender()
+			})
+
+			It("Should tell permission-browser that the authorization webhook is not in the chain", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				deploy := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+				Expect(deploy.Field("spec.template.spec.containers.0.args").AsStringSlice()).
+					To(ContainElement("--authorization-webhook-enabled=false"))
+			})
+		})
+
 		It("Should configure APIService correctly", func() {
 			apiService := f.KubernetesGlobalResource("APIService", "v1alpha1.authorization.deckhouse.io")
 			Expect(apiService.Field("spec.group").String()).To(Equal("authorization.deckhouse.io"))
@@ -1360,6 +1428,35 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			// The kube-rbac-proxy CA in the same template stays gated on MultiTenancy.
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "kube-rbac-proxy-ca.crt").Exists()).To(BeFalse())
 		})
+	})
+
+	// permission-browser and the scope filter of kube-apiserver read multitenancyManagerEnabled to
+	// refuse the projects and project scopes while multitenancy-manager is off. CE has no
+	// permission browser, but the kube-apiserver reads the key there too, so it has to render in
+	// every edition.
+	Context("Multitenancy-manager state", func() {
+		for _, edition := range []string{"CE", "BE", "SE", "EE", "FE"} {
+			for _, enabled := range []bool{true, false} {
+				Context("in "+edition+" with multitenancy-manager enabled="+strconv.FormatBool(enabled), func() {
+					BeforeEach(func() {
+						modules := `["operator-prometheus", "operator-prometheus-crd"]`
+						if enabled {
+							modules = `["operator-prometheus", "operator-prometheus-crd", "multitenancy-manager"]`
+						}
+						f.ValuesSetFromYaml("global.enabledModules", modules)
+						f.ValuesSet("global.deckhouseEdition", edition)
+						f.HelmRender()
+					})
+
+					It("Should mirror whether multitenancy-manager is enabled", func() {
+						Expect(f.RenderError).ShouldNot(HaveOccurred())
+						state := f.KubernetesResource("ConfigMap", "d8-user-authz", "d8-user-authz-multitenancy-state")
+						Expect(state.Exists()).To(BeTrue())
+						Expect(state.Field("data.multitenancyManagerEnabled").String()).To(Equal(strconv.FormatBool(enabled)))
+					})
+				})
+			}
+		}
 	})
 
 	Context("Namespace access permissions based on edition", func() {

@@ -31,6 +31,11 @@ metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
   enableMultiTenancy: {{ if .Values.userAuthz.enableMultiTenancy }}"true"{{ else }}"false"{{ end }}
+  # Read at run time by permission-browser and by the scope filter of kube-apiserver, in every
+  # edition: while multitenancy-manager is off, the projects and project scopes are refused with
+  # 400 instead of being resolved from project labels the module no longer maintains. A ConfigMap
+  # rather than an argument, so toggling the module restarts neither of them.
+  multitenancyManagerEnabled: {{ if has "multitenancy-manager" .Values.global.enabledModules }}"true"{{ else }}"false"{{ end }}
 {{- if .Values.userAuthz.enableMultiTenancy }}
 ---
 {{- include "helm_lib_kube_rbac_proxy_ca_certificate" (list . (printf "d8-%s"  .Chart.Name)) }}

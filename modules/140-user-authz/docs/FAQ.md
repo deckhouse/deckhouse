@@ -1222,6 +1222,145 @@ d8 k get accessiblenamespaces
 
 This is convenient for scripts and interfaces: there is no need to iterate over namespaces checking access to each one.
 
+## How does an interface find out where a user may perform an action?
+
+With the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), the SelfScopedAccessReview resource answers for the user who creates it where actions are allowed within a [filtering scope](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/filtered-listing.html): in the whole cluster, in how many namespaces of the scope and, on request, in which ones. One query replaces an access check per namespace. The namespaces are counted by the rule that filters a list sent with the same scope, so a section built on the answer opens exactly when its list has objects to return.
+
+Any authenticated user can create the resource, and it answers only about the caller. A query with the `spec.user`, `spec.groups`, `spec.uid` or `spec.extra` fields is refused.
+
+Example query from a console page that shows deployments of all projects, offers to create one and shows pod logs:
+
+```shell
+d8 k create -o yaml -f - <<EOF
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: SelfScopedAccessReview
+spec:
+  scope: projects
+  requests:
+  - group: apps
+    resource: deployments
+    verbs: [list, watch]
+  - group: apps
+    resource: deployments
+    verbs: [create]
+    includeNamespaces: true
+  - group: ""
+    resource: pods
+    subresource: log
+    verbs: [get]
+    includeNamespaces: true
+EOF
+```
+
+Answer for a user who administers the `shop-dev` and `shop-stage` namespaces of a project and has read access without pod logs in `shop-prod`:
+
+```yaml
+status:
+  results:
+  - allowed: true
+    cluster: false
+    count: 3
+  - allowed: true
+    cluster: false
+    count: 2
+    namespaces: [shop-dev, shop-stage]
+  - allowed: true
+    cluster: false
+    count: 2
+    namespaces: [shop-dev, shop-stage]
+```
+
+Answer for a cluster administrator. The namespaces are neither counted nor listed, even with `includeNamespaces: true`:
+
+```yaml
+status:
+  results:
+  - allowed: true
+    cluster: true
+  - allowed: true
+    cluster: true
+  - allowed: true
+    cluster: true
+```
+
+Answer for a user who can only read deployments in the `billing-prod` namespace of another project:
+
+```yaml
+status:
+  results:
+  - allowed: true
+    cluster: false
+    count: 1
+  - allowed: false
+    cluster: false
+    count: 0
+    namespaces: []
+  - allowed: false
+    cluster: false
+    count: 0
+    namespaces: []
+```
+
+The query fields:
+
+- `spec.scope`: Scope of the `X-Deckhouse-Scope` header, `accessible`, `projects`, `system` or `project`.
+- `spec.project`: Project of the `project` scope.
+- `spec.requests`: Actions to check. Each sets the API group (`group`, empty for the core group), the resource (`resource`), the subresource if any (`subresource`) and the verbs (`verbs`). `includeNamespaces: true` asks for the names of the namespaces.
+
+The `status.results` list has an entry per request, in the same order:
+
+- `allowed`: The action is allowed in the whole cluster or in at least one namespace of the scope.
+- `cluster`: The action is allowed in the whole cluster. The namespaces are then neither counted nor listed.
+- `count`: Number of namespaces of the scope where the action is allowed.
+- `namespaces`: Those namespaces, sorted, when the request sets `includeNamespaces: true`. An empty list means none.
+- `reason`: `NotFilterable` when the action on a namespaced resource cannot be answered by namespaces: the list of the resource is not filtered by scope. Only a permission in the whole cluster allows such an action.
+- `evaluationError`: Reason why this request could not be checked. The other requests are answered.
+
+The namespaces are counted as follows:
+
+- A namespace counts when every verb of the request is allowed in it. A request for `list` and `watch` counts the namespaces where both are allowed.
+- Only the namespaces the user sees in the `accessiblenamespaces` list are counted and named.
+- For `get`, `list` and `watch` of a resource, the answer names the namespaces the list with the same scope returns objects from.
+- Other verbs and subresources, for example `create` or `pods/log`, are checked in every namespace of the scope.
+- `get`, `list` and `watch` of `namespaces` are answered with the accessible namespaces whatever the scope, as the list of namespaces is filtered.
+- `get`, `list` and `watch` of `deckhouse.io/projects` are answered with every accessible namespace: each stands for its project, and a namespace without the `projects.deckhouse.io/project` label for the virtual project `multitenancy-manager` counts it in, `deckhouse` for `d8-*`, `kube-*`, `upmeter-*` and namespaces with the `heritage: deckhouse` or `heritage: upmeter` label, `default` for the rest. So `count` and `namespaces` name namespaces, not projects: a project with three accessible namespaces counts three. A user who may list namespaces in the whole cluster sees every project and gets `cluster: true`.
+- `update`, `patch` and `delete` of `namespaces` and their subresources are checked for every namespace of the scope, with that namespace as the target: the `ClusterAuthorizationRule` limits apply to them.
+- `create` and `deletecollection` of `namespaces`, every write of `deckhouse.io/projects`, and every action on another cluster-scoped resource, such as `nodes` or `ModuleConfig`, are allowed only by a permission in the whole cluster. Without one the answer is `allowed: false`, with no `count` and no `reason`.
+- A read of a namespaced resource the scope does not filter gets `reason: NotFilterable` unless it is allowed in the whole cluster. These are resources without `list`, resources of aggregated APIs such as `metrics.k8s.io`, and resources the cluster does not serve, `deckhouse.io/projects` without the `multitenancy-manager` module included: their lists with a scope are refused.
+- In the `projects` and `project` scopes, a namespace with an empty `projects.deckhouse.io/project` label belongs to no project. The answer for `deckhouse.io/projects` counts it for its virtual project, as described above.
+- The `accessible` and `system` scopes include the `default`, `kube-*` and `d8-*` namespaces, as their lists do. The `system` and `projects` scopes can overlap: the namespaces of a project named `d8`, such as `d8-x`, belong to both.
+
+The answer describes authorization, the decision whether the user may perform the action on the resource. Admission can still refuse a write of a particular object:
+
+- update and delete of objects with the `deckhouse.io/system-resource=true` label for users below the `superadmin` level;
+- update and delete of objects that `multitenancy-manager` creates in project namespaces, and deletion of a project namespace;
+- creation of a namespace while the `allowNamespacesWithoutProjects` parameter of the [`multitenancy-manager` module](/modules/multitenancy-manager/configuration.html) is `false`;
+- creation of a ProjectRoleBinding or a ProjectNamespace outside the main namespace of the project;
+- creation of users, groups and `ClusterAuthorizationRule` objects with rights beyond the user's own.
+
+The answer cannot express a permission for named objects only (`resourceNames` in a role): it asks about a resource without an object name, so such a permission is not counted. A change of rules or bindings reaches the answer within seconds, while the API server can keep its previous decision for a repeated request for up to 30 seconds.
+
+While the `ClusterAuthorizationRules` are not yet loaded or no longer tracked, the whole query is answered with `503` and the `Retry-After` header: the API server refuses requests in that state too, and an answer computed without the rules would read as a refusal.
+
+The answer applies the `ClusterAuthorizationRule` limits whenever the authorization webhook of `user-authz` is enabled through the `controlPlaneConfigurator.enabled` parameter and the `control-plane-manager` module, which puts it into the API server configuration, is enabled. If a third-party authorization webhook is set by hand in the `apiserver.authz.webhookURL` parameter of the `control-plane-manager` module, the API server may not apply these limits, while the answer still does.
+
+To keep an interface consistent with the data it shows, follow these rules:
+
+1. Ask with the scope of the list the page shows.
+1. Show a section when `allowed` is `true`.
+1. Cache answers per scope and project.
+1. Treat an empty list returned with a scope as the absence of objects, not as missing permissions.
+1. Take the namespaces of a creation form from `namespaces` of a request with `includeNamespaces: true`.
+
+The `projects` and `project` scopes require the `multitenancy-manager` module. Without it, a query with these scopes is refused with `400`, and the `accessible` and `system` scopes work as usual. The cluster then serves no projects, and requests for `deckhouse.io/projects` get `reason: NotFilterable` unless they are allowed in the whole cluster.
+
+The server answers with an error in the following cases:
+
+- `400`: The query is invalid. Examples are an unknown scope, more than 1000 requests, more than five requests with `includeNamespaces: true`, more than 16 verbs in one request, or more than 10,000,000 checks of a verb in a namespace. A user with 10,000 namespaces reaches the last bound with 1000 requests of one verb, or 500 requests of two: split such a query into several.
+- `429`: The same user has 30 queries in progress.
+- `504`: The query was not answered within 10 seconds.
+- `503`: `permission-browser-apiserver` is unavailable, or it has not loaded the `ClusterAuthorizationRules` yet (with `Retry-After`).
+
 ## How do I protect objects that my module places in user namespaces?
 
 The marker is a **label**, `deckhouse.io/system-resource: "true"`, on the object itself — not an annotation. For edits and deletes the objects to protect are selected on the API server side, in the admission `matchConditions`, and those read labels; for `exec`, `attach` and `port-forward` the admission object is the connect request rather than the pod, so the webhook reads the pod itself — its labels again. Either way an object marked with an annotation is not seen and stays open, with nothing to say so. Put the label on every namespaced object your module places into user namespaces (pods, services, PVCs, secrets, custom resources): it then becomes writable by `superadmin` and cluster administrators only, and its pods reachable by `exec`, `attach` and `port-forward` only for them.
