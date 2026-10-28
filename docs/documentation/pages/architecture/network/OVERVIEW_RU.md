@@ -16,6 +16,8 @@ extractedLinksMax: 0
 * [`node-local-dns`](/modules/node-local-dns/) — разворачивает кеширующий DNS-сервер на каждом узле кластера и экспортирует данные в Prometheus для анализа работы DNS в кластере [на дашборде Grafana](/modules/node-local-dns/#grafana-dashboard);
 * [`kube-proxy`](/modules/kube-proxy/) — управляет компонентами kube-proxy для сетевого взаимодействия и балансировки нагрузки в кластере;
 * [`cni-cilium`](/modules/cni-cilium/) — обеспечивает работу сети в кластере Kubernetes с помощью CNI Cilium;
+* [`cni-flannel`](/modules/cni-flannel/) — обеспечивает работу сети между узлами кластера на основе проекта [Flannel](https://github.com/flannel-io/flannel);
+* [`cni-simple-bridge`](/modules/cni-simple-bridge/) — обеспечивает базовую работу сети для подов, с ограниченной функциональностью по сравнению с другими CNI-модулями платформы;
 * [`cilium-hubble`](/modules/cilium-hubble/) — обеспечивает визуализацию сетевого стека кластера, если включен Cilium CNI;
 * [`ingress-nginx`](/modules/ingress-nginx/) — устанавливает и управляет [Ingress NGINX Controller](https://kubernetes.github.io/ingress-nginx/) с помощью кастомных ресурсов;
 * [`metallb`](/modules/metallb/) — реализует механизм LoadBalancer для сервисов в bare-metal-кластерах;
