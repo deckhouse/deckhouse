@@ -15,6 +15,7 @@
 package proxy
 
 import (
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	pkgCache "github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 )
 
@@ -51,4 +53,29 @@ func TestServe_packageLabelsIsNotFound(t *testing.T) {
 	defer resp.Body.Close()
 
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+type skippingCache struct{}
+
+func (skippingCache) Get(string) (int64, io.ReadCloser, error) {
+	return 0, nil, pkgCache.ErrEntryNotFound
+}
+
+func (skippingCache) Set(string, string, io.Reader) error {
+	return nil
+}
+
+func TestGetPackageCachedStreamsBodyWhenSetSkipsReading(t *testing.T) {
+	body := []byte("package body")
+	registryClient := &fakeCLIRegistryClient{packageBody: body, layerDigest: "layer"}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.test/deckhouse", Scheme: "https"}}
+
+	size, reader, err := GetPackageCached(t.Context(), nopCLILogger{}, getter, registryClient, skippingCache{}, "sha256:pkg", registry.DefaultRepository, "", false, nil)
+	require.NoError(t, err)
+	defer reader.Close()
+
+	got, err := io.ReadAll(reader)
+	require.NoError(t, err)
+	require.Equal(t, int64(len(body)), size)
+	require.Equal(t, body, got)
 }
