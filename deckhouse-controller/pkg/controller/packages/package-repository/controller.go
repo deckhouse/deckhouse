@@ -225,6 +225,14 @@ func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.Pac
 
 	logger.Info("deleting PackageRepository")
 
+	if packageRepository.Status.Phase != v1alpha1.PackageRepositoryPhaseTerminating {
+		original := packageRepository.DeepCopy()
+		packageRepository.Status.Phase = v1alpha1.PackageRepositoryPhaseTerminating
+		if err := r.client.Status().Patch(ctx, packageRepository, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("set terminating phase: %w", err)
+		}
+	}
+
 	appPackages := &v1alpha1.ApplicationPackageList{}
 	if err := r.client.List(ctx, appPackages); err != nil && !meta.IsNoMatchError(err) {
 		return fmt.Errorf("list application packages: %w", err)

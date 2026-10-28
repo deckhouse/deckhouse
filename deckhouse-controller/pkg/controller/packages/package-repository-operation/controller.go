@@ -313,6 +313,10 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 
 		repo := svc.GetRepository()
 		if err := r.updateRepositoryStatus(ctx, repo, op.Status.Packages.Processed); err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{}, err
+			}
+
 			logger.Warn("failed to update repository status", log.Err(err))
 			// Continue with operation completion even if repository update fails
 		}
@@ -526,7 +530,9 @@ func (r *reconciler) updateRepositoryStatus(ctx context.Context, repo *v1alpha1.
 	now := metav1.NewTime(time.Now())
 
 	repo.Status.PackagesCount = len(repo.Status.Packages)
-	repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
+	if repo.DeletionTimestamp.IsZero() {
+		repo.Status.Phase = v1alpha1.PackageRepositoryPhaseActive
+	}
 
 	repo.Status.LastScanTime = &now
 	repo.Status.LastNewVersions = newVersionsTotal
@@ -537,7 +543,9 @@ func (r *reconciler) updateRepositoryStatus(ctx context.Context, repo *v1alpha1.
 		repo.Status.LastChangeTime = &now
 	}
 
-	if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+	// Reject stale scan results if repository deletion has started.
+	patch := client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{})
+	if err := r.client.Status().Patch(ctx, repo, patch); err != nil {
 		return fmt.Errorf("update repository status: %w", err)
 	}
 
