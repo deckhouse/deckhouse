@@ -1306,6 +1306,23 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			})
 		})
 
+		It("Should give SelfScopedAccessReview its own API priority level", func() {
+			schema := f.KubernetesGlobalResource("FlowSchema", "d8-user-authz-scoped-access-reviews")
+			Expect(schema.Exists()).To(BeTrue())
+			Expect(schema.Field("spec.priorityLevelConfiguration.name").String()).To(Equal("d8-user-authz-scoped-access-reviews"))
+			Expect(schema.Field("spec.distinguisherMethod.type").String()).To(Equal("ByUser"))
+			Expect(schema.Field("spec.rules").String()).To(MatchJSON(`[{
+				"subjects": [{"kind": "Group", "group": {"name": "system:authenticated"}}],
+				"resourceRules": [{"apiGroups": ["authorization.deckhouse.io"], "resources": ["selfscopedaccessreviews"], "verbs": ["create"], "clusterScope": true}]
+			}]`))
+
+			level := f.KubernetesGlobalResource("PriorityLevelConfiguration", "d8-user-authz-scoped-access-reviews")
+			Expect(level.Exists()).To(BeTrue())
+			Expect(level.Field("spec.type").String()).To(Equal("Limited"))
+			Expect(level.Field("spec.limited.nominalConcurrencyShares").Int()).To(BeEquivalentTo(20))
+			Expect(level.Field("spec.limited.limitResponse.type").String()).To(Equal("Queue"))
+		})
+
 		It("Should configure APIService correctly", func() {
 			apiService := f.KubernetesGlobalResource("APIService", "v1alpha1.authorization.deckhouse.io")
 			Expect(apiService.Field("spec.group").String()).To(Equal("authorization.deckhouse.io"))

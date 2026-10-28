@@ -29,9 +29,12 @@ Using the `--scope` flag, you can define namespaces the resources will be return
 | Value | What is returned |
 |---|---|
 | `accessible` | Objects from every namespace where the user's RBAC allows the given operation on the given resource |
-| `projects` | Objects from namespaces belonging to any [project](/modules/multitenancy-manager/cr.html#project) |
-| `project:<name>` | Objects from the namespaces of one specific project |
+| `projects` | Objects from namespaces belonging to any [project](/modules/multitenancy-manager/cr.html#project), that is, namespaces with a non-empty value of the `projects.deckhouse.io/project` label |
+| `project:<name>` | Objects from the namespaces of one specific project. The name must be a valid project name |
 | `system` | Objects from system namespaces only: `default` and namespaces whose names start with `d8-` or `kube-`. This is a fixed list of namespaces defined by their names and independent of projects. Other namespaces that neither belong to a project nor match the list of system namespaces are not returned when setting either `system` or `projects` scope |
+
+The `projects` and `project:<name>` scopes require the [`multitenancy-manager`](/modules/multitenancy-manager/) module.
+While the module is disabled, requests with these scopes are rejected with the `400 Bad Request` error.
 
 ### Examples
 
@@ -116,7 +119,11 @@ Response semantics:
 | No headers | Standard Kubernetes behavior (the `403 Forbidden` error for a user without permissions) |
 | Header present but RBAC denied the request | `200 OK` with a list of objects from accessible namespaces (the list can be empty) |
 | Header present, and the user has cluster-wide permissions | `200 OK`. The filtering is applied by namespace classification only (for example, `system` keeps only `default`, `d8-*`, and `kube-*` namespaces) |
-| The user has no cluster-wide permissions, and an invalid header value is submitted | `403 Forbidden` (fail-closed) |
+| Invalid header value: an unknown scope, `X-Deckhouse-Project` without `X-Deckhouse-Scope: project`, or a project name that is not a valid name | `400 Bad Request` for every user, before the permissions are checked |
+| The `projects` or `project` scope while the `multitenancy-manager` module is disabled | `400 Bad Request` |
+| `get` of an object outside the resulting set of namespaces | `404 Not Found`, as for an object that does not exist |
+| RBAC denied the request, and `permission-browser` cannot answer now: it does not answer in time, is overloaded, or is unreachable | `503 Service Unavailable` with the `Retry-After` header; no objects are returned |
+| RBAC denied the request, and the access boundary cannot be computed for another reason | `403 Forbidden` (fail-closed) |
 
 When using client-go, add the headers via `rest.Config.WrapTransport`.
 
@@ -141,9 +148,9 @@ When using client-go, add the headers via `rest.Config.WrapTransport`.
      the [`multitenancy-manager`](/modules/multitenancy-manager/) module assigns to project namespaces. Resolved by a direct
      request to kube-apiserver and does not depend on the user.
    - **Access boundary** (with RBAC floor in the mechanism's code): Which
-     namespaces are actually available to the user for *this resource and this operation*. Computed via the `authorization.deckhouse.io` API
-     (the [`user-authz`](/modules/user-authz/) module): the intersection of `AccessibleNamespaces` and
-     `BulkSubjectAccessReview` results for the exact pair (`resource`, `verb`). Applied
+     namespaces are actually available to the user for *this resource and this operation*. Computed with one `SelfScopedAccessReview`
+     request to the `authorization.deckhouse.io` API (the [`user-authz`](/modules/user-authz/) module) for the exact
+     resource, subresource, and verb, the same answer the web interface uses to decide what to show. Applied
      whenever RBAC denies the request.
 
    Only objects from namespaces in the final set make it into the response.
@@ -152,6 +159,12 @@ When using client-go, add the headers via `rest.Config.WrapTransport`.
    namespaces changes "on the fly" (for example, permissions granted or revoked, or a namespace
    was moved to another project), it synthesizes `ADDED`/`DELETED` events for the
    affected objects without the client reconnecting.
+
+   The set is refreshed every second. A synthesized `DELETED` event carries the last `resourceVersion` of the stream.
+   If the set cannot be refreshed (for example, `permission-browser` does not respond), the stream keeps the previous set for up to 60 seconds, then sends an error and closes.
+   The client reconnects and gets `503 Service Unavailable` while `permission-browser` cannot answer, or `403 Forbidden` while the set cannot be computed for another reason.
+   If the `multitenancy-manager` module is disabled while a watch with the `projects` or `project` scope is open, the stream sends a `400 Bad Request` error and closes at once.
+   If `permission-browser` answers that the user may now perform the request in the whole cluster, the stream sends `410 Gone` and closes, and the client lists again.
 
 The mechanism supports all built-in namespaced Kubernetes resources and namespaced resources defined via CRD.
 
@@ -165,10 +178,14 @@ The mechanism supports all built-in namespaced Kubernetes resources and namespac
   manually they can't access objects out of what their RBAC allows. The check is made for each
   pair (`resource`, `verb`). Therefore, for example, a user with the `get secrets` permission in a namespace can't
   access pods in it.
-- **Using the fail-closed model.** If the `authorization.deckhouse.io` API is unavailable
-  (for example, if the `user-authz` module is disabled or `permission-browser` does not respond),
-  the access boundary cannot be computed — a denied user gets the standard
-  `403 Forbidden` response.
+- **Using the fail-closed model.** If the `authorization.deckhouse.io` API is not served
+  (for example, if the `user-authz` module is disabled, or `permission-browser` does not serve
+  `SelfScopedAccessReview` yet during an update), the access boundary cannot be computed — a denied user gets the standard
+  `403 Forbidden` response. The same response is returned when `permission-browser` allows the operation in the whole cluster
+  while kube-apiserver has denied it: the mechanism never answers with all namespaces.
+  If `permission-browser` cannot answer now (it does not answer in time, answers `429 Too Many Requests` or a `5xx` error,
+  or is unreachable), a scoped request gets `503 Service Unavailable` with the `Retry-After` header instead: the access is
+  unknown rather than denied, and the client may retry. Neither response returns any objects.
 - **Indistinguishable refusals.** Requests like `project:<someone else's>` and
   `project:<nonexistent>` result in identical empty responses and project
   existence is not disclosed.
@@ -195,7 +212,13 @@ This is handy for scripts and interfaces: there is no need to iterate over names
 
 A `Project` is cluster-scoped, but its visibility follows the same namespace
 boundary: a user sees a project when they can see any of its namespaces — the
-main one or an additional one. Filtering applies unconditionally here as well,
+main one or an additional one. A namespace belongs to a project only when its
+`projects.deckhouse.io/project` label has a non-empty value; the project is never
+derived from the namespace name. A namespace without the label shows the virtual project
+that `multitenancy-manager` counts it in: `deckhouse` for `d8-*`, `kube-*`, `upmeter-*`
+and namespaces with the `heritage: deckhouse` or `heritage: upmeter` label, `default` for the
+rest. A user who may list namespaces in the whole cluster sees every project, both
+virtual ones included. Filtering applies unconditionally here as well,
 so `d8 k get projects` returns the accessible subset instead of
 `403 Forbidden`, and a `get` of a project unavailable for the user answers `NotFound`.
 
@@ -205,11 +228,23 @@ the listing before the filter could narrow it. As a result,
 `d8 k auth can-i list projects` answers `no` for such a user while the listing
 itself works and returns their projects. Writing projects is unaffected.
 
+## Monitoring
+
+kube-apiserver exports the following metrics of the mechanism:
+
+| Metric | Meaning |
+|---|---|
+| `apiserver_scopefilter_allowed_set_failures_total` | Requests answered with an error because the access boundary could not be computed, by the `operation` label (`list`, `get`, `watch`) and the `reason` label: `unavailable` (`permission-browser` cannot answer now, the request got `503 Service Unavailable`) or `denied` (any other failure, the request got `403 Forbidden`) |
+| `apiserver_scopefilter_cluster_disagreements_total` | Requests kube-apiserver denied while `permission-browser` allowed them in the whole cluster, answered with `403 Forbidden` |
+| `apiserver_scopefilter_watch_refresh_failures_total` | Failed refreshes of the namespace set of an open watch, timeouts included |
+| `apiserver_scopefilter_watch_closed_total` | Watches closed by the mechanism, by the `reason` label: `refresh_failures` (the set could not be refreshed for 60 seconds), `overflow` (the client did not read the events in time), `multitenancy_disabled` (the `projects` and `project` scopes are no longer served) or `access_changed` (the user may now perform the request in the whole cluster) |
+
 ## Components involved
 
 | Component | Role |
 |---|---|
 | [Deckhouse CLI](../../../../cli/d8/)| Supports the `--scope` flag and transforms its values into headers |
 | kube-apiserver (DP patch) | Bypasses `403 Forbidden` and provides filtering at the storage layer |
-| [`user-authz`](/modules/user-authz/) (`permission-browser`) | Defines the access boundary via `AccessibleNamespaces` and `BulkSubjectAccessReview` |
+| [`user-authz`](/modules/user-authz/) (`permission-browser`) | Defines the access boundary via `SelfScopedAccessReview` |
 | [`multitenancy-manager`](/modules/multitenancy-manager/) | Provides namespace classification based on the `projects.deckhouse.io/project` label |
+| [`user-authz`](/modules/user-authz/) (the `d8-user-authz-multitenancy-state` ConfigMap) | Tells kube-apiserver whether the `multitenancy-manager` module is enabled, in every edition |
