@@ -15,8 +15,10 @@
 package schedule
 
 import (
+	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule/rule"
 )
@@ -107,7 +109,9 @@ type Unconverged struct {
 
 // UnconvergedNode is one unconverged node; WaitsFor is empty while its gate is open.
 type UnconvergedNode struct {
-	Order    Order // Order is the effective order the tier rule gates by.
+	Revision string // Revision is the node's revision, the one its Current runs.
+	Order    Order  // Order is the effective order the tier rule gates by.
+	// WaitsFor is global, the nodes of the lowest unconverged tier, or a dependency or AnyOf member.
 	WaitsFor string
 }
 
@@ -122,11 +126,43 @@ func (s *Scheduler) Unconverged() Unconverged {
 	}
 
 	unconverged := s.lowestUnconverged()
+	front := s.tierFront(unconverged)
+
 	for _, n := range s.nodes {
 		if (n.module || n.name == GlobalNode) && !n.converged {
-			res.Nodes[n.name] = UnconvergedNode{Order: n.effectiveOrder, WaitsFor: s.blockerOf(n, unconverged)}
+			waitsFor := s.blockerOf(n, unconverged)
+			// The tier rule held it (blockerOf checks it right after the barrier): name the nodes
+			// that must converge first instead of the tier.
+			if waitsFor != GlobalNode && unconverged < n.effectiveOrder {
+				waitsFor = front
+			}
+
+			res.Nodes[n.name] = UnconvergedNode{Revision: n.revision, Order: n.effectiveOrder, WaitsFor: waitsFor}
 		}
 	}
 
 	return res
+}
+
+// frontLimit bounds the names tierFront lists; the rest are counted.
+const frontLimit = 3
+
+// tierFront names the unconverged nodes of the lowest unconverged tier, sorted: what every node of a
+// higher tier waits for now.
+func (s *Scheduler) tierFront(unconverged Order) string {
+	var names []string
+
+	for _, n := range s.nodes {
+		if !n.converged && n.effectiveOrder == unconverged {
+			names = append(names, n.name)
+		}
+	}
+
+	slices.Sort(names)
+
+	if len(names) > frontLimit {
+		return fmt.Sprintf("%s +%d", strings.Join(names[:frontLimit], ", "), len(names)-frontLimit)
+	}
+
+	return strings.Join(names, ", ")
 }

@@ -289,12 +289,16 @@ func printConverge() error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "PACKAGE\tORDER\tSTATE\tWAITS-FOR\tERROR")
+	fmt.Fprintln(w, "PACKAGE\tVERSION\tORDER\tSTATE\tWAITS-FOR\tERROR")
 
 	for _, name := range slices.Sorted(maps.Keys(dump.Packages)) {
 		p := dump.Packages[name]
 
-		state, waitsFor, failure := "running", "-", "-"
+		version, state, waitsFor, failure := "-", "running", "-", "-"
+		if p.Version != "" {
+			version = p.Version
+		}
+
 		if p.WaitsFor != "" {
 			state, waitsFor = "waiting", p.WaitsFor
 		}
@@ -303,7 +307,7 @@ func printConverge() error {
 			state, failure = "error", p.Error
 		}
 
-		fmt.Fprintf(w, "%s\t%d\t%s\t%s\t%s\n", name, p.Order, state, waitsFor, failure)
+		fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\t%s\n", name, version, p.Order, state, waitsFor, failure)
 	}
 
 	return w.Flush()

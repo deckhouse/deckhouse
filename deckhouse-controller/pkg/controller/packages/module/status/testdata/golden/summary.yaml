@@ -81,6 +81,11 @@
   state: Failed
   tip: Check helm history and events in the d8-system namespace. Resolve resource
     conflicts (namespace, CRD, RBAC). The controller will retry on the next reconcile.
+- case: install/ScalingForbidden
+  message: 'Installation failed: the module does not allow the requested replicas'
+  state: Failed
+  tip: The condition message names the workload. Change or remove its replicas in
+    the module's resource requests; until then the replicas stay as they are.
 - case: install/fallback
   message: 'Installation failed: ReleaseDeleteFailed'
   state: Failed
@@ -144,6 +149,11 @@
   tip: Resources in the cluster are inconsistent. Check helm history and events in
     the d8-system namespace. Resolve resource conflicts. If needed, roll back manually
     via helm rollback.
+- case: update/ScalingForbidden
+  message: 'Update failed: the new version does not allow the requested replicas'
+  state: Failed
+  tip: The condition message names the workload. Change or remove its replicas in
+    the module's resource requests; until then the replicas stay as they are.
 - case: update/fallback
   message: 'Update failed: ReleaseDeleteFailed; previous version is no longer running'
   state: Failed
@@ -197,6 +207,12 @@
   tip: Check events in the d8-system namespace and helm history. Resolve resource
     conflicts (foreign ownership, finalizers, CRD mismatches). The controller will
     retry reconcile automatically.
+- case: reconcile/ScalingForbidden
+  message: 'Reconcile failed: the module does not allow the requested replicas; previously
+    applied manifests stay in place'
+  state: Degraded
+  tip: The condition message names the workload. Change or remove its replicas in
+    the module's resource requests; until then the replicas stay as they are.
 - case: reconcile/fallback
   message: 'Reconcile failed: ReleaseDeleteFailed'
   state: Degraded

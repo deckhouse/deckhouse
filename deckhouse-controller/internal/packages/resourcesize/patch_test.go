@@ -15,6 +15,8 @@
 package resourcesize
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,8 +28,8 @@ import (
 const releaseNamespace = "d8-test"
 
 // apply runs the requests' patches over resources the way nelm does on render,
-// replacing each resource's content with the patched one, and returns the
-// requests that matched none of them.
+// replacing each resource's content with the patched one, and returns the first
+// error building or applying them.
 func apply(t *testing.T, resources []*unstructured.Unstructured, requests []Request) error {
 	t.Helper()
 
@@ -43,7 +45,9 @@ func apply(t *testing.T, resources []*unstructured.Unstructured, requests []Requ
 		meta := spec.NewResourceMetaFromUnstructured(resource, releaseNamespace, "chart/templates/workload.yaml")
 
 		patched, err := spec.ApplyPatches(t.Context(), compiled, meta, releaseNamespace, resource)
-		require.NoError(t, err)
+		if err != nil {
+			return err
+		}
 
 		resource.Object = patched.Object
 	}
@@ -314,4 +318,140 @@ func TestPatchesSkipNamesThatReadAsRegexp(t *testing.T) {
 	}})
 	require.NoError(t, err)
 	require.Equal(t, before, deployment)
+}
+
+// scalableDeployment renders a Deployment with the given replicas line and
+// annotations, so the scale guards can be checked against the chart's value.
+func scalableDeployment(t *testing.T, replicas string, annotations map[string]string) *unstructured.Unstructured {
+	t.Helper()
+
+	deployment := parse(t, `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller
+spec:
+  `+replicas+`
+  template:
+    spec:
+      containers:
+        - name: controller
+`)
+	deployment.SetAnnotations(annotations)
+
+	return deployment
+}
+
+// renderedReplicas reads spec.replicas of a patched workload.
+func renderedReplicas(t *testing.T, resource *unstructured.Unstructured) int64 {
+	t.Helper()
+
+	replicas, found, err := unstructured.NestedInt64(resource.Object, "spec", "replicas")
+	require.NoError(t, err)
+	require.True(t, found)
+
+	return replicas
+}
+
+// requireScalingError asserts err carries a scaling error with message, as ScalingError finds it
+// through nelm's wrapping.
+func requireScalingError(t *testing.T, err error, message string) {
+	t.Helper()
+
+	require.Error(t, err)
+	require.Equal(t, message, ScalingError(fmt.Errorf("render chart: %w", err)))
+}
+
+func TestScalingErrorIgnoresOtherErrors(t *testing.T) {
+	require.Empty(t, ScalingError(errors.New("boom")))
+	require.Empty(t, ScalingError(nil))
+}
+
+func TestPatchesRefuseScalingWhenScaleDisabled(t *testing.T) {
+	for _, requested := range []int32{1, 5} {
+		deployment := scalableDeployment(t, "replicas: 3", map[string]string{annotationScaleDisabled: "true"})
+
+		err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
+			Kind:     "Deployment",
+			Name:     "controller",
+			Replicas: int32Ptr(requested),
+		}})
+		requireScalingError(t, err, "Deployment 'controller' does not allow its replicas to change")
+	}
+}
+
+func TestPatchesRefuseScalingDownWhenScaleDownDisabled(t *testing.T) {
+	deployment := scalableDeployment(t, "replicas: 3", map[string]string{annotationScaleDownDisabled: "true"})
+
+	err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
+		Kind:     "Deployment",
+		Name:     "controller",
+		Replicas: int32Ptr(1),
+	}})
+	requireScalingError(t, err, "Deployment 'controller' does not allow its replicas to go below 3")
+}
+
+func TestPatchesScaleUpWhenScaleDownDisabled(t *testing.T) {
+	deployment := scalableDeployment(t, "replicas: 3", map[string]string{annotationScaleDownDisabled: "true"})
+
+	err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
+		Kind:     "Deployment",
+		Name:     "controller",
+		Replicas: int32Ptr(5),
+	}})
+	require.NoError(t, err)
+	require.Equal(t, int64(5), renderedReplicas(t, deployment))
+}
+
+// Asking for the chart's own value changes nothing, so neither guard objects.
+func TestPatchesKeepChartReplicasUnderGuards(t *testing.T) {
+	for _, annotation := range []string{annotationScaleDisabled, annotationScaleDownDisabled} {
+		deployment := scalableDeployment(t, "replicas: 3", map[string]string{annotation: "true"})
+
+		err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
+			Kind:     "Deployment",
+			Name:     "controller",
+			Replicas: int32Ptr(3),
+		}})
+		require.NoError(t, err)
+		require.Equal(t, int64(3), renderedReplicas(t, deployment))
+	}
+}
+
+// Only the exact value "true" arms a guard.
+func TestPatchesIgnoreGuardsNotSetToTrue(t *testing.T) {
+	deployment := scalableDeployment(t, "replicas: 3", map[string]string{
+		annotationScaleDisabled:     "false",
+		annotationScaleDownDisabled: "True",
+	})
+
+	err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
+		Kind:     "Deployment",
+		Name:     "controller",
+		Replicas: int32Ptr(0),
+	}})
+	require.NoError(t, err)
+	require.Equal(t, int64(0), renderedReplicas(t, deployment))
+}
+
+// A chart that leaves replicas unset runs one, as Kubernetes defaults it.
+func TestPatchesTreatUnsetReplicasAsOne(t *testing.T) {
+	deployment := scalableDeployment(t, "", map[string]string{annotationScaleDownDisabled: "true"})
+
+	err := apply(t, []*unstructured.Unstructured{deployment}, []Request{{
+		Kind:     "Deployment",
+		Name:     "controller",
+		Replicas: int32Ptr(0),
+	}})
+	requireScalingError(t, err, "Deployment 'controller' does not allow its replicas to go below 1")
+
+	deployment = scalableDeployment(t, "", map[string]string{annotationScaleDownDisabled: "true"})
+
+	err = apply(t, []*unstructured.Unstructured{deployment}, []Request{{
+		Kind:     "Deployment",
+		Name:     "controller",
+		Replicas: int32Ptr(1),
+	}})
+	require.NoError(t, err)
+	require.Equal(t, int64(1), renderedReplicas(t, deployment))
 }

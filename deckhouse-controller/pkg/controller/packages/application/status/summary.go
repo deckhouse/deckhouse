@@ -106,6 +106,11 @@ var summaryTable = map[phase]map[string]advice{
 			"Installation failed: Helm could not apply manifests",
 			"Check helm history and events in the application namespace. Resolve resource conflicts (namespace, CRD, RBAC). The controller will retry on the next reconcile.",
 		},
+		model.ReasonScalingForbidden: {
+			stateFailed,
+			"Installation failed: the application does not allow the requested replicas",
+			"The condition message names the workload. Change or remove its replicas in spec.resourceRequests; until then the replicas stay as they are.",
+		},
 	},
 
 	// Update entries bake the "stalled vs failed" split into the state field:
@@ -153,6 +158,11 @@ var summaryTable = map[phase]map[string]advice{
 			"Update failed: Helm could not apply manifests for the new version; previous version is no longer serving",
 			"Resources in the cluster are inconsistent. Check helm history and events in the namespace. Resolve resource conflicts. If needed, roll back manually via helm rollback.",
 		},
+		model.ReasonScalingForbidden: {
+			stateFailed,
+			"Update failed: the new version does not allow the requested replicas",
+			"The condition message names the workload. Change or remove its replicas in spec.resourceRequests; until then the replicas stay as they are.",
+		},
 
 		// Workload gate. The manifests are applied, so the update is still in
 		// flight rather than failed — except a degraded workload, which is the
@@ -196,6 +206,11 @@ var summaryTable = map[phase]map[string]advice{
 			stateDegraded,
 			"Reconcile failed: Helm could not apply manifests",
 			"Check events in the namespace and helm history. Resolve resource conflicts (foreign ownership, finalizers, CRD mismatches). The controller will retry reconcile automatically.",
+		},
+		model.ReasonScalingForbidden: {
+			stateDegraded,
+			"Reconcile failed: the application does not allow the requested replicas; previously applied manifests stay in place",
+			"The condition message names the workload. Change or remove its replicas in spec.resourceRequests; until then the replicas stay as they are.",
 		},
 		"Degraded": {
 			stateDegraded,

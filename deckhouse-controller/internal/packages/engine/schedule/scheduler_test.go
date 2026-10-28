@@ -275,6 +275,37 @@ func (s *SchedulerSuite) TestOrderTierGate() {
 	s.Contains(gated(s.collectEvents()), "functional")
 }
 
+// TestUnconvergedNamesRevisionAndBlocker confirms the debug view of the convergence: every
+// unconverged module with the revision being converged and what holds its gate, a tier named by the
+// nodes of the lowest unconverged one.
+func (s *SchedulerSuite) TestUnconvergedNamesRevisionAndBlocker() {
+	s.activateGlobal()
+
+	for _, p := range []*testPackage{
+		{name: "deckhouse", version: mustVersion("1.0.0"), module: true, revision: "v1.0.0", constraints: schedule.Constraints{Order: 2}},
+		{name: "cni", version: mustVersion("1.0.0"), module: true, revision: "v1.0.0", constraints: schedule.Constraints{Order: 2}},
+		{name: "node-manager", version: mustVersion("1.0.0"), module: true, revision: "v1.0.0", constraints: schedule.Constraints{Order: 40}},
+		{name: "console", version: mustVersion("2.0.0"), module: true, revision: "v2.0.0", constraints: schedule.Constraints{Order: schedule.FunctionalOrder}},
+	} {
+		s.Require().NoError(s.addNode(p))
+	}
+
+	// The modules' revisions are Global's inputs: it is the barrier again until it runs.
+	s.Equal("global", s.sched.Unconverged().Nodes["console"].WaitsFor)
+	s.converge(globalName)
+
+	s.Equal(map[string]schedule.UnconvergedNode{
+		"deckhouse":    {Revision: "v1.0.0", Order: 2},
+		"cni":          {Revision: "v1.0.0", Order: 2},
+		"node-manager": {Revision: "v1.0.0", Order: 40, WaitsFor: "cni, deckhouse"},
+		"console":      {Revision: "v2.0.0", Order: schedule.FunctionalOrder, WaitsFor: "cni, deckhouse"},
+	}, s.sched.Unconverged().Nodes)
+
+	s.converge("deckhouse")
+	s.converge("cni")
+	s.Equal("node-manager", s.sched.Unconverged().Nodes["console"].WaitsFor)
+}
+
 // TestDisabledNodeUnblocksHigherTier exercises "a disabled node is converged":
 // a lower-tier node that loses eligibility must not stall higher tiers via the
 // order-tier gate.

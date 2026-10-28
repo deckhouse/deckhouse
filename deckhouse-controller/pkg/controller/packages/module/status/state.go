@@ -310,15 +310,15 @@ func hooksReason(reason string) string {
 }
 
 // manifestsSignal is ManifestsApplied: ApplyingManifests is progress, not a failure, so it is
-// Unknown with applying set; ReleaseDeleteFailed (a failing disable) passes through; everything
-// else is ManifestsApplyFailed.
+// Unknown with applying set; ReleaseDeleteFailed (a failing disable) and ScalingForbidden (the
+// user's resource requests) pass through; everything else is ManifestsApplyFailed.
 func manifestsSignal(c model.Condition) (signal, bool) {
 	if c.Status == model.ConditionFalse && c.Reason == model.ReasonApplyingManifests {
 		return signal{}, true
 	}
 
 	reason := model.ReasonManifestsApplyFailed
-	if c.Reason == model.ReasonReleaseDeleteFailed {
+	if c.Reason == model.ReasonReleaseDeleteFailed || c.Reason == model.ReasonScalingForbidden {
 		reason = c.Reason
 	}
 

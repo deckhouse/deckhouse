@@ -85,6 +85,9 @@ const (
 	ReasonHookInitializationFailed = "HookInitializationFailed"
 	ReasonHookFailed               = "HookFailed"
 	ReasonManifestsApplyFailed     = "ManifestsApplyFailed"
+	// ReasonScalingForbidden: the chart forbids the replicas a package's resource requests ask
+	// for; the release service reports it under the same string.
+	ReasonScalingForbidden = "ScalingForbidden"
 	// ReasonApplyingManifests: ManifestsApplied is false while nelm applies a changed release.
 	ReasonApplyingManifests   = "ApplyingManifests"
 	ReasonReleaseDeleteFailed = "ReleaseDeleteFailed"

@@ -22,9 +22,11 @@ package resourcesize
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/itchyny/gojq"
 	"github.com/werf/nelm/v2/pkg/resource/spec"
 )
 
@@ -77,6 +79,45 @@ var replicaKinds = map[string]struct{}{
 	"ReplicaSet":  {},
 }
 
+const (
+	// annotationScaleDisabled on a rendered workload forbids changing its replicas.
+	annotationScaleDisabled = "packages.deckhouse.io/scale-disabled"
+	// annotationScaleDownDisabled on a rendered workload forbids lowering its replicas.
+	annotationScaleDownDisabled = "packages.deckhouse.io/scale-down-disabled"
+)
+
+// scalingErrorKey marks the jq error value of a forbidden replicas change, so ScalingError tells
+// it from any other failure of a render patch.
+const scalingErrorKey = "scalingError"
+
+// replicasProgram sets spec.replicas to %[1]d, failing the render with a scaling error when the
+// chart forbids the change by annotation. The chart's value, 1 when unset as in Kubernetes, is the
+// baseline; asking for that same value is not scaling.
+const replicasProgram = `((.metadata.annotations // {}) as $annotations | (.spec.replicas // 1) as $current |
+if $annotations[%[2]q] == "true" and %[1]d != $current
+then error({%[4]q: "\(.kind) '\(.metadata.name)' does not allow its replicas to change"})
+elif $annotations[%[3]q] == "true" and %[1]d < $current
+then error({%[4]q: "\(.kind) '\(.metadata.name)' does not allow its replicas to go below \($current)"})
+else .spec.replicas = %[1]d end)`
+
+// ScalingError returns the message of a replicas change the chart forbids, found anywhere in err's
+// chain; "" for any other error.
+func ScalingError(err error) string {
+	var valueErr gojq.ValueError
+	if !errors.As(err, &valueErr) {
+		return ""
+	}
+
+	value, ok := valueErr.Value().(map[string]any)
+	if !ok {
+		return ""
+	}
+
+	message, _ := value[scalingErrorKey].(string)
+
+	return message
+}
+
 // Patches translates the requests into nelm render patches, one per request that
 // changes anything.
 //
@@ -126,7 +167,7 @@ func jqProgram(request Request) (string, error) {
 			return "", fmt.Errorf("kind does not have replicas")
 		}
 
-		steps = append(steps, fmt.Sprintf(".spec.replicas = %d", *request.Replicas))
+		steps = append(steps, fmt.Sprintf(replicasProgram, *request.Replicas, annotationScaleDisabled, annotationScaleDownDisabled, scalingErrorKey))
 	}
 
 	for _, container := range request.Containers {

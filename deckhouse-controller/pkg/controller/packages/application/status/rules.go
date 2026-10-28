@@ -44,13 +44,14 @@ const (
 	// RequirementsUnmet, SettingsInvalid), its preparation failed
 	// (AttachFailed, LoadFromFilesystemFailed), it is being applied
 	// (ApplyingManifests) or the new version's first run failed
-	// (HookInitializationFailed, HookFailed, ManifestsApplyFailed); True once
+	// (HookInitializationFailed, HookFailed, ManifestsApplyFailed,
+	// ScalingForbidden); True once
 	// the new version's own run succeeded.
 	ConditionUpdateInstalled = "UpdateInstalled"
 
 	// ConditionReady reflects user-facing readiness of the application.
 	// Possible reasons: HookInitializationFailed, HookFailed,
-	// ManifestsApplyFailed, ReleaseDeleteFailed, ApplyingManifests,
+	// ManifestsApplyFailed, ScalingForbidden, ReleaseDeleteFailed, ApplyingManifests,
 	// SettingsChanged, Ready (when True).
 	ConditionReady = "Ready"
 
@@ -63,14 +64,14 @@ const (
 	// ConditionManaged reflects whether the controller is actively managing the
 	// application. Settings-only failures do not break it.
 	// Possible reasons: HookInitializationFailed, HookFailed,
-	// ManifestsApplyFailed, ReleaseDeleteFailed, ApplyingManifests,
+	// ManifestsApplyFailed, ScalingForbidden, ReleaseDeleteFailed, ApplyingManifests,
 	// SettingsChanged, NoResourceReconciliation (maintenance applied), Managed.
 	ConditionManaged = "Managed"
 
 	// ConditionConfigurationApplied reflects whether the desired configuration —
 	// settings, hooks, manifests — was applied.
 	// Possible reasons: SettingsInvalid, HookInitializationFailed, HookFailed,
-	// ManifestsApplyFailed, ReleaseDeleteFailed, ApplyingManifests,
+	// ManifestsApplyFailed, ScalingForbidden, ReleaseDeleteFailed, ApplyingManifests,
 	// SettingsChanged, ConfigurationApplied (when True).
 	ConditionConfigurationApplied = "ConfigurationApplied"
 )

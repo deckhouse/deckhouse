@@ -419,6 +419,12 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, ap
 
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
+
+		// A forbidden replicas change is the user's to fix: report only its message, not nelm's chain.
+		if message := resourcesize.ScalingError(err); message != "" {
+			return newReasonError(reasonScalingForbidden, errors.New(message))
+		}
+
 		return newReasonError(reasonRenderFailed, err)
 	}
 

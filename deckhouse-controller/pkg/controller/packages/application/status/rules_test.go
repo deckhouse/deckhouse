@@ -381,6 +381,21 @@ func TestReconcile(t *testing.T) {
 			summary: stateDegraded,
 		},
 		{
+			name: "replicas the chart forbids keep their own reason",
+			report: func() model.Report {
+				r := running(v1)
+				r.Current.ManifestsApplied = failed(model.ReasonScalingForbidden)
+				return r
+			},
+			obs: ready,
+			want: healthy(map[string]cond{
+				ConditionReady:                wantFalse(model.ReasonScalingForbidden),
+				ConditionManaged:              wantFalse(model.ReasonScalingForbidden),
+				ConditionConfigurationApplied: wantFalse(model.ReasonScalingForbidden),
+			}),
+			summary: stateDegraded,
+		},
+		{
 			name: "applying a changed release: no flap",
 			report: func() model.Report {
 				r := running(v1)
