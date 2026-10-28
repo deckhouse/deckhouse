@@ -1,0 +1,355 @@
+diff --git a/pkg/controlplane/apiserver/aggregator.go b/pkg/controlplane/apiserver/aggregator.go
+index 37d5265d59d..1a15330d964 100644
+--- a/pkg/controlplane/apiserver/aggregator.go
++++ b/pkg/controlplane/apiserver/aggregator.go
+@@ -45,6 +45,7 @@ import (
+ 	informers "k8s.io/kube-aggregator/pkg/client/informers/externalversions/apiregistration/v1"
+ 	"k8s.io/kube-aggregator/pkg/controllers/autoregister"
+ 
++	"k8s.io/kubernetes/pkg/controlplane/apiserver/licensewarning"
+ 	"k8s.io/kubernetes/pkg/controlplane/apiserver/options"
+ 	"k8s.io/kubernetes/pkg/controlplane/controller/crdregistration"
+ )
+@@ -85,6 +86,14 @@ func CreateAggregatorConfig(
+ 		}
+ 	}
+ 
++	// Deckhouse: add the license warning right after authorization. Only the
++	// aggregator's chain serves requests, the delegated servers are called
++	// through their unprotected handlers.
++	licenseWarningHandlerChainBuilder := genericConfig.BuildHandlerChainFunc
++	genericConfig.BuildHandlerChainFunc = func(apiHandler http.Handler, c *genericapiserver.Config) http.Handler {
++		return licenseWarningHandlerChainBuilder(licensewarning.WithWarning(apiHandler), c)
++	}
++
+ 	// copy the etcd options so we don't mutate originals.
+ 	// we assume that the etcd options have been completed already.  avoid messing with anything outside
+ 	// of changes to StorageConfig as that may lead to unexpected behavior when the options are applied.
+diff --git a/pkg/controlplane/apiserver/licensewarning/licensewarning.go b/pkg/controlplane/apiserver/licensewarning/licensewarning.go
+new file mode 100644
+index 00000000000..548451a5fed
+--- /dev/null
++++ b/pkg/controlplane/apiserver/licensewarning/licensewarning.go
+@@ -0,0 +1,114 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++// Package licensewarning is a Deckhouse addition: while the Deckhouse
++// EffectiveLicense object asks for it, kube-apiserver adds a license warning
++// to the resource responses of every user who is not a system: one.
++package licensewarning
++
++import (
++	"context"
++	"net/http"
++	"strings"
++	"sync/atomic"
++	"time"
++
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apimachinery/pkg/util/wait"
++	"k8s.io/apiserver/pkg/endpoints/request"
++	"k8s.io/apiserver/pkg/warning"
++	"k8s.io/client-go/dynamic"
++	"k8s.io/klog/v2"
++)
++
++// Message is the warning text, kubectl prints it to stderr.
++const Message = "Deckhouse: the cluster does not have enough licenses. Please add licenses."
++
++const (
++	objectName       = "deckhouse-platform"
++	pollInterval     = time.Minute
++	requestTimeout   = 10 * time.Second
++	errorLogInterval = 10 * time.Minute
++)
++
++var gvr = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "effectivelicenses"}
++
++// skippedUserAgentPrefix is dhctl: it works under the admin kubeconfig (user
++// kubernetes-admin, not system:), makes hundreds of requests per run and would
++// only write the warning to its log on every one. Everyone else gets the
++// warning, so kubectl under any name, GUIs and curl need no list.
++const skippedUserAgentPrefix = "dhctl/"
++
++// active is the last known status.apiWarning, written by Run and read by WithWarning.
++var active atomic.Bool
++
++// Run reads status.apiWarning of the EffectiveLicense object every minute until ctx is done.
++// The first read waits a full interval: right after start the CRD informer is not
++// synced yet and the apiserver answers 503 instead of 404.
++func Run(ctx context.Context, client dynamic.Interface) {
++	var lastErrorLog time.Time
++	_ = wait.PollUntilContextCancel(ctx, pollInterval, false, func(ctx context.Context) (bool, error) {
++		if err := poll(ctx, client); err != nil && time.Since(lastErrorLog) >= errorLogInterval {
++			lastErrorLog = time.Now()
++			klog.ErrorS(err, "licensewarning: failed to read EffectiveLicense, keeping the last known state", "name", objectName, "active", active.Load())
++		}
++		return false, nil
++	})
++}
++
++func poll(ctx context.Context, client dynamic.Interface) error {
++	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
++	defer cancel()
++
++	warn := false
++	obj, err := client.Resource(gvr).Get(ctx, objectName, metav1.GetOptions{})
++	switch {
++	case apierrors.IsNotFound(err):
++		// No CRD or no object: licensing is not installed, or the cluster is not bootstrapped yet.
++	case err != nil:
++		return err
++	default:
++		warn, _, _ = unstructured.NestedBool(obj.Object, "status", "apiWarning")
++	}
++	if active.Swap(warn) != warn {
++		klog.InfoS("licensewarning: state changed", "active", warn)
++	}
++	return nil
++}
++
++// WithWarning adds Message to the response of a resource request when the
++// license warning is active and the user is not a system: one (service
++// accounts, nodes, control plane components), unless the client is dhctl.
++// It must run after authentication and impersonation, inside the warning recorder.
++//
++// Non-resource requests are skipped: clients cache discovery and OpenAPI
++// responses with all headers and keep the stored warning on 304, so it would
++// outlive the license problem. Resource responses are never cached.
++func WithWarning(handler http.Handler) http.Handler {
++	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
++		if active.Load() && !strings.HasPrefix(req.UserAgent(), skippedUserAgentPrefix) {
++			info, isInfo := request.RequestInfoFrom(req.Context())
++			u, isUser := request.UserFrom(req.Context())
++			if isInfo && info.IsResourceRequest && isUser && !strings.HasPrefix(u.GetName(), "system:") {
++				warning.AddWarning(req.Context(), "", Message)
++			}
++		}
++		handler.ServeHTTP(w, req)
++	})
++}
+diff --git a/pkg/controlplane/apiserver/licensewarning/licensewarning_test.go b/pkg/controlplane/apiserver/licensewarning/licensewarning_test.go
+new file mode 100644
+index 00000000000..2ae01429ab9
+--- /dev/null
++++ b/pkg/controlplane/apiserver/licensewarning/licensewarning_test.go
+@@ -0,0 +1,166 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package licensewarning
++
++import (
++	"context"
++	"errors"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++
++	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/util/sets"
++	"k8s.io/apiserver/pkg/authentication/user"
++	"k8s.io/apiserver/pkg/endpoints/request"
++	"k8s.io/apiserver/pkg/warning"
++	dynamicfake "k8s.io/client-go/dynamic/fake"
++	clienttesting "k8s.io/client-go/testing"
++)
++
++func effectiveLicense(status map[string]interface{}) runtime.Object {
++	return &unstructured.Unstructured{Object: map[string]interface{}{
++		"apiVersion": "deckhouse.io/v1alpha1",
++		"kind":       "EffectiveLicense",
++		"metadata":   map[string]interface{}{"name": objectName},
++		"status":     status,
++	}}
++}
++
++func TestPoll(t *testing.T) {
++	cases := []struct {
++		name    string
++		objects []runtime.Object
++		before  bool
++		want    bool
++	}{
++		{name: "no object", before: true, want: false},
++		{name: "apiWarning true", objects: []runtime.Object{effectiveLicense(map[string]interface{}{"apiWarning": true})}, want: true},
++		{name: "apiWarning false", objects: []runtime.Object{effectiveLicense(map[string]interface{}{"apiWarning": false})}, before: true, want: false},
++		{name: "no apiWarning field", objects: []runtime.Object{effectiveLicense(map[string]interface{}{"licensed": false})}, before: true, want: false},
++	}
++	for _, tc := range cases {
++		t.Run(tc.name, func(t *testing.T) {
++			active.Store(tc.before)
++			if err := poll(context.Background(), dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(), tc.objects...)); err != nil {
++				t.Fatalf("poll: %v", err)
++			}
++			if got := active.Load(); got != tc.want {
++				t.Errorf("active = %v, want %v", got, tc.want)
++			}
++		})
++	}
++}
++
++func TestPollErrorKeepsState(t *testing.T) {
++	for _, before := range []bool{true, false} {
++		active.Store(before)
++		client := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
++		client.PrependReactor("get", "effectivelicenses", func(clienttesting.Action) (bool, runtime.Object, error) {
++			return true, nil, errors.New("connection refused")
++		})
++		if err := poll(context.Background(), client); err == nil {
++			t.Fatal("poll: expected an error")
++		}
++		if got := active.Load(); got != before {
++			t.Errorf("active = %v, want the previous %v", got, before)
++		}
++	}
++}
++
++type recorder []string
++
++func (r *recorder) AddWarning(_, text string) { *r = append(*r, text) }
++
++func TestWithWarning(t *testing.T) {
++	const kubectl = "kubectl/v1.35.0 (linux/amd64) kubernetes/66452049"
++	// The same prefixes as the apiserver's RequestInfoResolver.
++	resolver := &request.RequestInfoFactory{APIPrefixes: sets.NewString("api", "apis"), GrouplessAPIPrefixes: sets.NewString("api")}
++	cases := []struct {
++		name      string
++		active    bool
++		user      string
++		userAgent string
++		path      string // defaults to /api/v1/namespaces
++		noInfo    bool
++		warn      bool
++	}{
++		{name: "kubectl", active: true, user: "admin@example.com", userAgent: kubectl, warn: true},
++		{name: "kubectl as kubernetes-admin", active: true, user: "kubernetes-admin", userAgent: kubectl, warn: true},
++		{name: "kubectl symlinked as k", active: true, user: "admin@example.com", userAgent: "k/v1.35.0 (linux/amd64) kubernetes/66452049", warn: true},
++		{name: "k9s", active: true, user: "admin@example.com", userAgent: "k9s/v0.0.0 (darwin/arm64) kubernetes/$Format", warn: true},
++		{name: "browser (Lens, Headlamp)", active: true, user: "admin@example.com", userAgent: "Mozilla/5.0 (X11; Linux x86_64)", warn: true},
++		{name: "helm", active: true, user: "admin@example.com", userAgent: "Helm/3.16.2", warn: true},
++		{name: "curl", active: true, user: "admin@example.com", userAgent: "curl/8.7.1", warn: true},
++		{name: "no user agent", active: true, user: "admin@example.com", warn: true},
++		{name: "dhctl", active: true, user: "kubernetes-admin", userAgent: "dhctl/v1.70.0 (linux/amd64) kubernetes/$Format"},
++		{name: "service account", active: true, user: "system:serviceaccount:default:default", userAgent: kubectl},
++		{name: "node", active: true, user: "system:node:master-0", userAgent: kubectl},
++		{name: "no user", active: true, userAgent: kubectl},
++		{name: "inactive", user: "admin@example.com", userAgent: kubectl},
++		{name: "CRD", active: true, user: "admin@example.com", userAgent: kubectl, path: "/apis/deckhouse.io/v1alpha1/effectivelicenses", warn: true},
++		{name: "aggregated API", active: true, user: "admin@example.com", userAgent: kubectl, path: "/apis/metrics.k8s.io/v1beta1/nodes", warn: true},
++		{name: "subresource", active: true, user: "admin@example.com", userAgent: kubectl, path: "/api/v1/namespaces/default/pods/web/log", warn: true},
++		{name: "watch", active: true, user: "admin@example.com", userAgent: kubectl, path: "/api/v1/namespaces?watch=true", warn: true},
++		{name: "discovery /api", active: true, user: "admin@example.com", userAgent: kubectl, path: "/api"},
++		{name: "discovery /apis", active: true, user: "admin@example.com", userAgent: kubectl, path: "/apis"},
++		{name: "discovery /api/v1", active: true, user: "admin@example.com", userAgent: kubectl, path: "/api/v1"},
++		{name: "discovery group version", active: true, user: "admin@example.com", userAgent: kubectl, path: "/apis/deckhouse.io/v1alpha1"},
++		{name: "openapi v2", active: true, user: "admin@example.com", userAgent: kubectl, path: "/openapi/v2"},
++		{name: "openapi v3", active: true, user: "admin@example.com", userAgent: kubectl, path: "/openapi/v3/apis/apps/v1?hash=0123"},
++		{name: "version", active: true, user: "admin@example.com", userAgent: kubectl, path: "/version"},
++		{name: "no request info", active: true, user: "admin@example.com", userAgent: kubectl, noInfo: true},
++	}
++	for _, tc := range cases {
++		t.Run(tc.name, func(t *testing.T) {
++			active.Store(tc.active)
++			var got recorder
++			ctx := warning.WithWarningRecorder(context.Background(), &got)
++			if tc.user != "" {
++				ctx = request.WithUser(ctx, &user.DefaultInfo{Name: tc.user})
++			}
++			path := tc.path
++			if path == "" {
++				path = "/api/v1/namespaces"
++			}
++			req := httptest.NewRequest(http.MethodGet, path, nil)
++			if !tc.noInfo {
++				info, err := resolver.NewRequestInfo(req)
++				if err != nil {
++					t.Fatalf("NewRequestInfo: %v", err)
++				}
++				ctx = request.WithRequestInfo(ctx, info)
++			}
++			req = req.WithContext(ctx)
++			req.Header.Set("User-Agent", tc.userAgent)
++
++			called := false
++			WithWarning(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { called = true })).ServeHTTP(httptest.NewRecorder(), req)
++
++			if !called {
++				t.Fatal("the wrapped handler was not called")
++			}
++			if tc.warn && (len(got) != 1 || got[0] != Message) {
++				t.Errorf("warnings = %q, want exactly %q", got, Message)
++			}
++			if !tc.warn && len(got) != 0 {
++				t.Errorf("warnings = %q, want none", got)
++			}
++		})
++	}
++}
+diff --git a/pkg/controlplane/apiserver/server.go b/pkg/controlplane/apiserver/server.go
+index 26bf8c1210f..5ecb5e54088 100644
+--- a/pkg/controlplane/apiserver/server.go
++++ b/pkg/controlplane/apiserver/server.go
+@@ -34,6 +34,7 @@ import (
+ 	"k8s.io/apiserver/pkg/server/dynamiccertificates"
+ 	serverstorage "k8s.io/apiserver/pkg/server/storage"
+ 	utilfeature "k8s.io/apiserver/pkg/util/feature"
++	"k8s.io/client-go/dynamic"
+ 	clientgoinformers "k8s.io/client-go/informers"
+ 	"k8s.io/client-go/kubernetes"
+ 	zpagesfeatures "k8s.io/component-base/zpages/features"
+@@ -42,6 +43,7 @@ import (
+ 	"k8s.io/klog/v2"
+ 	"k8s.io/utils/clock"
+ 
++	"k8s.io/kubernetes/pkg/controlplane/apiserver/licensewarning"
+ 	"k8s.io/kubernetes/pkg/controlplane/controller/apiserverleasegc"
+ 	"k8s.io/kubernetes/pkg/controlplane/controller/clusterauthenticationtrust"
+ 	"k8s.io/kubernetes/pkg/controlplane/controller/leaderelection"
+@@ -143,6 +145,15 @@ func (c completedConfig) New(name string, delegationTarget genericapiserver.Dele
+ 	if err != nil {
+ 		return nil, err
+ 	}
++	// Deckhouse: keep the license warning state fresh, the filter is wired in CreateAggregatorConfig.
++	licenseClient, err := dynamic.NewForConfig(s.GenericAPIServer.LoopbackClientConfig)
++	if err != nil {
++		return nil, err
++	}
++	s.GenericAPIServer.AddPostStartHookOrDie("deckhouse-license-warning", func(hookContext genericapiserver.PostStartHookContext) error {
++		go licensewarning.Run(hookContext, licenseClient)
++		return nil
++	})
+ 	if len(c.SystemNamespaces) > 0 {
+ 		s.GenericAPIServer.AddPostStartHookOrDie("start-system-namespaces-controller", func(hookContext genericapiserver.PostStartHookContext) error {
+ 			go systemnamespaces.NewController(c.SystemNamespaces, client, s.VersionedInformers.Core().V1().Namespaces()).Run(hookContext.Done())

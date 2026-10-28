@@ -281,4 +281,20 @@ With `cpuManagerPolicyOptions: full-pcpus-only: "true"` the static policy checks
 
 1.33-1.35 still have the SMT check inline in `Allocate` (upstream later moved it to `enforceSMTAlignment`), so only the order of the two blocks changes; 1.36 takes the upstream change as is. The upstream unit test is carried. 1.37+ already ships the fix. `NodeGroup` `spec.kubelet.topologyManager` with policy `Restricted` or `SingleNumaNode` enables `full-pcpus-only`, so the patch is needed there.
 
-The patch is carried on 1.33 (`020`), 1.34 (`021`), 1.35 (`020`) and 1.36 (`019`).
+### license-warning.patch
+
+While a Deckhouse cluster does not have enough licenses, kube-apiserver adds a warning to the resource responses of every user who is not a `system:` one. The request is served as usual, kubectl prints the warning to stderr:
+
+```console
+$ kubectl get nodes
+Warning: Deckhouse: the cluster does not have enough licenses. Please add licenses.
+```
+
+- A post-start hook reads `EffectiveLicense` `deckhouse-platform` (`deckhouse.io/v1alpha1`) through the loopback client every minute (the first time a minute after start, when the CRD informer is synced) and keeps its `status.apiWarning`. The licensing controller of deckhouse-controller computes this field, the patch has no rules or clock of its own. No CRD or no object (404) means no warning, so editions and clusters without licensing are not affected. Any other error keeps the last known state and is logged at most once per 10 minutes.
+- A filter wraps the API handler of the aggregator (`BuildHandlerChainFunc` in `CreateAggregatorConfig`). It runs after authentication, impersonation and authorization for every API, including CRDs and aggregated APIs. It adds the warning to resource requests (`RequestInfo.IsResourceRequest`) when the user name does not start with `system:`, so service accounts, nodes and control plane components do not get it and every human client does: kubectl under any name, d8, Helm, werf, k9s, Lens, Headlamp, oc, curl. The only exception is dhctl (User-Agent starting with `dhctl/`): it works under the admin kubeconfig, makes hundreds of requests per run and would only write the warning to its log on every one, client-go logs every warning by default.
+
+Discovery (`/api`, `/apis`, group versions), `/openapi/*`, `/version` and other non-resource paths never get the warning. kubectl and Helm keep discovery and OpenAPI responses in `~/.kube/cache/http` with all headers and revalidate them by ETag: on a 304 the stored `Warning` stays, and OpenAPI v3 `?hash=` responses are served from the cache without a request for a year. A warning there would outlive the license problem. Resource responses carry `Cache-Control: no-cache, private` and no ETag, and client-go does not cache them, so their warning is always current. Commands that make no resource requests (`kubectl version`, `api-resources`, `api-versions`, `explain`) print no warning.
+
+While the warning is active, `kubectl --warnings-as-errors` fails on every command that requests resources. A watch gets the warning once, when it starts.
+
+The code is in a new package, `pkg/controlplane/apiserver/licensewarning`, `server.go` and `aggregator.go` only wire it.
