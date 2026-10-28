@@ -4723,9 +4723,9 @@ DP CSE организует:
 
 - создание или использование существующего объекта AppProject;
 - подготовку целевого неймспейса для приложения;
-- создание объекта Application, описывающего источник приложения и правила синхронизации;
 - создание приложения через веб-интерфейс Argo CD;
-- создание приложения с помощью CLI-утилиты `argocd`.
+- создание приложения с помощью CLI-утилиты `argocd`;
+- создание объекта Application, описывающего источник приложения и правила синхронизации.
 
 {% endraw %}
 {% alert level="info" %}
@@ -4756,6 +4756,10 @@ AppProject — кастомный ресурс Argo CD, который зада�
 
 По умолчанию в Argo CD существует проект `default`, который не ограничивает репозитории, кластеры и неймспейсы. Для production-окружений создайте отдельные объекты AppProject, чтобы ограничить доступ к репозиториям, кластерам и неймспейсам.
 
+{% alert level="warning" %}
+По умолчанию создавать объекты AppProject могут только администратор кластера (пользователь с ролью `SuperAdmin`) и администратор экземпляра Argo CD.
+{% endalert %}
+
 Манифест объекта AppProject `default`:
 
 ```yaml
@@ -4777,17 +4781,14 @@ spec:
 
 #### 7.2.3 Подготовка неймспейса
 
-Перед развёртыванием приложения создайте целевой неймспейс. Добавьте к неймспейсу лейбл `argocd.argoproj.io/managed-by`. Лейбл указывает, какой экземпляр Argo CD управляет ресурсами в этом неймспейсе.
+Перед развёртыванием приложения убедитесь, что у целевого неймспейса есть лейбл `argocd.argoproj.io/managed-by`, указывающий, какой экземпляр Argo CD управляет ресурсами в этом неймспейсе. Если лейбл отсутствует, обратитесь к администратору для его настройки.
 
 Пример манифеста неймспейса `demo` с лейблом `argocd.argoproj.io/managed-by`:
 
-```yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: demo
-  labels:
-    argocd.argoproj.io/managed-by: argocd
+```console
+d8 k get ns demo --show-labels
+NAME   STATUS   AGE     LABELS
+demo   Active   5d18h   argocd.argoproj.io/managed-by=argocd,kubernetes.io/metadata.name=demo
 ```
 
 В этом примере неймспейсом `demo` управляет экземпляр Argo CD, развёрнутый в неймспейсе `argocd`.
@@ -4796,11 +4797,81 @@ metadata:
 
 Приложение в Argo CD можно создать несколькими способами:
 
-- декларативно — с помощью объекта Application (п. 7.2.4.1);
-- интерактивно — через веб-интерфейс Argo CD (п. 7.2.4.2);
-- с помощью CLI-утилиты `argocd` (п. 7.2.4.3).
+- интерактивно — через веб-интерфейс Argo CD (п. 7.2.4.1);
+- с помощью CLI-утилиты `argocd` (п. 7.2.4.2);
+- декларативно — с помощью объекта Application (п. 7.2.4.3).
 
-##### 7.2.4.1 Создание приложения с помощью объекта Application
+##### 7.2.4.1 Создание приложения через веб-интерфейс Argo CD
+
+Чтобы создать приложение через веб-интерфейс Argo CD, выполните действия:
+
+1. Откройте веб-интерфейс нужного экземпляра Argo CD.
+1. Перейдите в раздел «Applications».
+1. Нажмите «New App».
+1. Укажите имя приложения, проект, репозиторий, ревизию, путь к манифестам или чарту, а также целевой кластер и неймспейс.
+1. Если нужно, настройте автоматическую синхронизацию и дополнительные параметры.
+1. Нажмите «Create».
+
+Поля формы в веб-интерфейсе соответствуют основным параметрам объекта Application: проекту, источнику приложения, целевому кластеру, неймспейсу и политике синхронизации.
+
+##### 7.2.4.2 Создание приложения с помощью CLI-утилиты argocd
+
+С помощью CLI-утилиты `argocd` можно создавать и сопровождать приложения из командной строки. Бинарный файл `argocd` можно загрузить из раздела «Documentation» веб-интерфейса Argo CD.
+
+Перед созданием приложения аутентифицируйтесь с помощью команды:
+
+```bash
+argocd login <ДОМЕН_ARGOCD>:443
+```
+
+Здесь `<ДОМЕН_ARGOCD>` — доменное имя экземпляра Argo CD.
+
+{% endraw %}
+{% alert level="info" %}
+Если вы аутентифицируетесь через SSO, добавьте к команде `argocd login` флаг `--sso`.
+{% endalert %}
+{% raw %}
+
+Пример команды, которая создаёт приложение `guestbook` с автоматической синхронизацией:
+
+```bash
+argocd app create guestbook --repo https://github.com/argoproj/argocd-example-apps.git --path guestbook --dest-namespace demo --dest-server https://kubernetes.default.svc --directory-recurse --sync-policy automated --self-heal --auto-prune
+```
+
+В примере в каталоге `guestbook` репозитория `https://github.com/argoproj/argocd-example-apps.git` находятся манифесты приложения `guestbook`. Образ контейнера, который указан в манифестах, должен быть доступен в хранилище образов контейнеров, настроенном в кластере DP CSE.
+
+В команде указываются источник приложения, целевой кластер, неймспейс и политика синхронизации.
+
+Чтобы просмотреть статус развёрнутого приложения, выполните команду `argocd app get <ИМЯ_ПРИЛОЖЕНИЯ>`. Здесь `<ИМЯ_ПРИЛОЖЕНИЯ>` — имя приложения в Argo CD. Пример команды и её вывода для приложения `guestbook`:
+
+```console
+argocd app get guestbook
+Name:               argocd/guestbook
+Project:            default
+Server:             https://kubernetes.default.svc
+Namespace:          demo
+URL:                https://<ДОМЕН_ARGOCD>/applications/guestbook
+Source:
+- Repo:             https://github.com/argoproj/argocd-example-apps.git
+  Target:
+  Path:             guestbook
+SyncWindow:         Sync Allowed
+Sync Policy:        Automated (Prune)
+Sync Status:        Synced to  (<ХЕШ_КОММИТА>)
+Health Status:      Healthy
+
+GROUP  KIND        NAMESPACE  NAME          STATUS  HEALTH   HOOK  MESSAGE
+apps   Deployment  demo       guestbook-ui  Synced  Healthy        deployment.apps/guestbook-ui unchanged
+       Service     demo       guestbook-ui  Synced  Healthy
+```
+
+##### 7.2.4.3 Создание приложения с помощью объекта Application
+
+{% endraw %}
+{% alert level="warning" %}
+Перед созданием объекта Application убедитесь, что у вас есть необходимые права в неймспейсе, в котором запущен экземпляр Argo CD (в примерах ниже — `argocd`). По умолчанию создавать объекты Application может только администратор кластера (пользователь с уровнем доступа `SuperAdmin`).
+{% endalert %}
+{% raw %}
 
 Приложение описывает объект Application. В объекте Application укажите:
 
@@ -4835,6 +4906,8 @@ spec:
       selfHeal: true
 ```
 
+В примере в качестве источника используется Git-репозиторий `https://github.com/argoproj/argocd-example-apps`. В каталоге `helm-guestbook` этого репозитория находится Helm-чарт приложения. Образ контейнера, который указан в чарте, должен быть доступен в хранилище образов контейнеров, настроенном в кластере DP CSE. Для работы с вашим приложением укажите адрес своего репозитория и путь к каталогу с манифестами или чартом.
+
 Когда объект Application создан, Argo CD начинает отслеживать состояние приложения и синхронизировать приложение с содержимым репозитория. В результате в неймспейсе `demo` появятся ресурсы приложения `demo`. Чтобы проверить ресурсы, выполните команду `d8 k -n demo get deployment,svc,pod`. Пример вывода:
 
 ```console
@@ -4847,68 +4920,6 @@ service/demo-helm-guestbook   ClusterIP   10.222.177.84   <none>        80/TCP  
 
 NAME                                       READY   STATUS    RESTARTS   AGE
 pod/demo-helm-guestbook-66d5d69ccd-xfkb7   1/1     Running   0          15s
-```
-
-##### 7.2.4.2 Создание приложения через веб-интерфейс Argo CD
-
-Чтобы создать приложение через веб-интерфейс Argo CD, выполните действия:
-
-1. Откройте веб-интерфейс нужного экземпляра Argo CD.
-1. Перейдите в раздел «Applications».
-1. Нажмите «New App».
-1. Укажите имя приложения, проект, репозиторий, ревизию, путь к манифестам или чарту, а также целевой кластер и неймспейс.
-1. Если нужно, настройте автоматическую синхронизацию и дополнительные параметры.
-1. Нажмите «Create».
-
-Поля формы в веб-интерфейсе соответствуют основным параметрам объекта Application: проекту, источнику приложения, целевому кластеру, неймспейсу и политике синхронизации.
-
-##### 7.2.4.3 Создание приложения с помощью CLI-утилиты argocd
-
-С помощью CLI-утилиты `argocd` можно создавать и сопровождать приложения из командной строки. Бинарный файл `argocd` можно загрузить из раздела «Documentation» веб-интерфейса Argo CD.
-
-Перед созданием приложения аутентифицируйтесь с помощью команды:
-
-```bash
-argocd login <ДОМЕН_ARGOCD>:443
-```
-
-Здесь `<ДОМЕН_ARGOCD>` — доменное имя экземпляра Argo CD.
-
-{% endraw %}
-{% alert level="info" %}
-Если вы аутентифицируетесь через SSO, добавьте к команде `argocd login` флаг `--sso`.
-{% endalert %}
-{% raw %}
-
-Пример команды, которая создаёт приложение `guestbook` с автоматической синхронизацией:
-
-```bash
-argocd app create guestbook --repo https://github.com/argoproj/argocd-example-apps.git --path guestbook --dest-namespace demo --dest-server https://kubernetes.default.svc --directory-recurse --sync-policy automated --self-heal --auto-prune
-```
-
-Как и в объекте Application, в команде задают источник приложения, целевой кластер, неймспейс и политику синхронизации.
-
-Чтобы просмотреть статус развёрнутого приложения, выполните команду `argocd app get <ИМЯ_ПРИЛОЖЕНИЯ>`. Здесь `<ИМЯ_ПРИЛОЖЕНИЯ>` — имя приложения в Argo CD. Пример команды и её вывода для приложения `guestbook`:
-
-```console
-argocd app get guestbook
-Name:               argocd/guestbook
-Project:            default
-Server:             https://kubernetes.default.svc
-Namespace:          demo
-URL:                https://argocd.192.168.0.235.sslip.io/applications/guestbook
-Source:
-- Repo:             https://github.com/argoproj/argocd-example-apps.git
-  Target:
-  Path:             guestbook
-SyncWindow:         Sync Allowed
-Sync Policy:        Automated (Prune)
-Sync Status:        Synced to  (8088f4c)
-Health Status:      Healthy
-
-GROUP  KIND        NAMESPACE  NAME          STATUS  HEALTH   HOOK  MESSAGE
-apps   Deployment  demo       guestbook-ui  Synced  Healthy        deployment.apps/guestbook-ui unchanged
-       Service     demo       guestbook-ui  Synced  Healthy
 ```
 
 ### 7.3 Конфигурация проекта
@@ -6293,7 +6304,7 @@ icon: https://example.org/mychart-icon.svg
 description: This is My Chart
 home: https://example.org
 sources:
-  - https://github.com/my/chart
+  - https://git.example.com/my/chart
 keywords:
   - apps
 annotations:
@@ -8006,7 +8017,7 @@ Icon: https://example.org/mychart-icon.svg
 Description: This is My Chart
 Home: https://example.org
 Sources:
-  - https://github.com/my/chart
+  - https://git.example.com/my/chart
 Keywords:
   - apps
 Annotations:
