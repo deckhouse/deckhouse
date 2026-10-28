@@ -164,7 +164,7 @@ spec:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
           valueFrom:
             fieldRef:
-              fieldPath: status.podIP
+              fieldPath: status.hostIP
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             excludePaths:
