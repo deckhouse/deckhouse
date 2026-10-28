@@ -6,8 +6,8 @@ import:
   add: /check-kernel-version
   to: /check-kernel-version
   before: setup
-- from: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
-  add: /relocate/bin/true
+- from: {{ .ModuleName }}/{{ .ImageName }}-pm-artifact
+  add: /relocate-pm/bin/true
   to: /bin/true
   before: setup
 - from: common/pause
@@ -17,12 +17,8 @@ import:
 imageSpec:
   config:
     entrypoint: [ "/check-kernel-version" ]
----
-{{- $binaries := "/bin/true" }}
----
-image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
-from: common/relocate-artifact
-final: false
-shell:
- setup:
-   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+{{- include "pm_binaries_artifact" (dict
+      "Images" $.Images
+      "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
+      "packages" "coreutils"
+      "binaries" "/usr/bin/true:/bin/true") }}

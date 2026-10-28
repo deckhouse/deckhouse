@@ -27,7 +27,7 @@ import:
 image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
 final: false
 fromCacheVersion: "2025-09-10-2"
-from: common/relocate-artifact
+from: {{ index $.Images "builder/distroless" }}
 shell:
   install:
   - mkdir -p /relocate/sbin

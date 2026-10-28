@@ -26,7 +26,7 @@ import:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
 final: false
-from: common/relocate-artifact
+from: {{ index $.Images "builder/distroless" }}
 shell:
   install:
   - mkdir -p /relocate/sbin

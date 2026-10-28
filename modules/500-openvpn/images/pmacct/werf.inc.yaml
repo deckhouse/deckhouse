@@ -1,9 +1,9 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
-- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /relocate
+- from: {{ .ModuleName }}/{{ .ImageName }}-pm-artifact
+  add: /relocate-pm
   to: /
   before: setup
 imageSpec:
@@ -31,7 +31,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: common/relocate-artifact
+from: {{ index $.Images "builder/distroless" }}
 import:
 - from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -39,12 +39,15 @@ import:
   before: install
 shell:
   beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y build-essential libpcap-devel libjansson-devel
+  - pm install build-base autoconf automake libtool pkgconf libpcap-pwru-devel jansson-devel
   install:
   - cd /src
   - ./autogen.sh
-  - ./configure --prefix=/usr --enable-jansson
+  - ./configure --prefix=/usr --enable-jansson CFLAGS="-std=gnu17 -O2"
   - make
-  - make install
-  - /binary_replace.sh -i "/usr/sbin/pmacctd" -o /relocate
+{{- include "pm_built_binaries_artifact" (dict
+      "Images" $.Images
+      "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
+      "from" (printf "%s/%s-artifact" $.ModuleName $.ImageName)
+      "packages" "libpcap-pwru jansson libstdc++"
+      "binaries" "/src/src/pmacctd:/usr/sbin/pmacctd") }}

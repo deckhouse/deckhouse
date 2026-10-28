@@ -1,7 +1,6 @@
-{{- $binaries := "/usr/sbin/conntrack /usr/lib64/libnetfilter_conntrack.so* /bin/mknod" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/openvpn/src/openvpn/openvpn
@@ -11,11 +10,14 @@ import:
   add: /src/entrypoint
   to: /entrypoint
   before: setup
-- from: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-  add: /relocate
+- from: {{ .ModuleName }}/{{ .ImageName }}-pm-artifact
+  add: /relocate-pm
   to: /
   before: setup
 {{- include "image mount points" . }}
+shell:
+  setup:
+  - /usr/bin/unlink /sbin
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
@@ -106,14 +108,8 @@ shell:
   - autoreconf -vi
   - ./configure --enable-static --disable-shared --disable-debug --disable-unit-tests --disable-lzo --disable-lz4 --disable-plugin-auth-pam --disable-plugin-down-root --disable-dco
   - make LIBS="-all-static -lcap-ng"
----
-image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-final: false
-from: common/relocate-artifact
-shell:
-  beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y conntrack-tools coreutils
-  - find /var/lib/apt/lists /var/cache/apt -type f -exec rm -f {} +
-  install:
-  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+{{- include "pm_binaries_artifact" (dict
+      "Images" $.Images
+      "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
+      "packages" "conntrack-tools coreutils"
+      "binaries" "/usr/sbin/conntrack /usr/bin/mknod /usr/bin/unlink") }}

@@ -1,5 +1,4 @@
 {{- $gitCommit := "e5bf819db34227cc739963059d72582a73ea1613" }}
-{{- $binaries := "/bin/bash" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: common/distroless
@@ -24,9 +23,13 @@ import:
   add: /src/frontend/static
   to: /app/frontend/static
   before: setup
-- from: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-  add: /relocate
+- from: {{ .ModuleName }}/{{ .ImageName }}-pm-artifact
+  add: /relocate-pm
   to: /
+  before: setup
+- from: {{ .ModuleName }}/openssl-artifact
+  add: /openssl/usr/local/bin
+  to: /bin
   before: setup
 imageSpec:
   config:
@@ -91,16 +94,8 @@ shell:
   - cd /src/frontend
   - npm install
   - npm run build
----
-image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
-final: false
-from: common/relocate-artifact
-import:
-- from: {{ .ModuleName }}/openssl-artifact
-  add: /openssl
-  to: /openssl
-  before: install
-shell:
-  install:
-  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-  - cp /openssl/usr/local/bin/* /relocate/bin/
+{{- include "pm_binaries_artifact" (dict
+      "Images" $.Images
+      "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
+      "packages" "bash"
+      "binaries" "/usr/bin/bash:/bin/bash") }}

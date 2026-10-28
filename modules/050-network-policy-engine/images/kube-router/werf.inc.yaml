@@ -1,14 +1,4 @@
 {{- $kuberouterVersion := include "get_oss_version_by_id" (list "kuberouter" $ ) }}
-{{- $binaries := "/usr/lib64/libnetfilter_conntrack.so* /usr/sbin/ipset /usr/sbin/ip /usr/sbin/conntrack" }}
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-final: false
-from: common/relocate-artifact
-shell:
-  beforeInstall:
-  - apt-get install -y ipset conntrack-tools
-  install:
-  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
@@ -50,10 +40,10 @@ shell:
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=${GIT_COMMIT} -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=${BUILD_DATE}" -o kube-router cmd/kube-router/kube-router.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /relocate
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-pm-artifact
+  add: /relocate-pm
   to: /
   before: setup
 - from: {{ .ModuleName }}/kube-router-artifact
@@ -61,7 +51,15 @@ import:
   to: /opt/bin/kube-router
   before: setup
 {{- include "image mount points" . }}
+shell:
+  setup:
+  - /usr/bin/unlink /sbin
 imageSpec:
   config:
     entrypoint: ["/opt/bin/kube-router"]
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
+{{- include "pm_binaries_artifact" (dict
+      "Images" $.Images
+      "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
+      "packages" "coreutils ipset conntrack-tools iproute2 libc"
+      "binaries" "/usr/bin/unlink /usr/sbin/ipset /usr/sbin/conntrack /usr/bin/ip") }}
