@@ -1,0 +1,1058 @@
+diff --git a/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml b/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
+index 8a77e69..012a977 100644
+--- a/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
++++ b/vertical-pod-autoscaler/deploy/vpa-v1-crd-gen.yaml
+@@ -420,6 +420,21 @@ spec:
+                             when OOM is detected.
+                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                           x-kubernetes-int-or-string: true
++                        recommendationFactor:
++                          additionalProperties:
++                            anyOf:
++                            - type: integer
++                            - type: string
++                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
++                            x-kubernetes-int-or-string: true
++                          description: |-
++                            Per-resource multiplier applied to the recommendation computed from
++                            usage, after the recommender's safety margin and before minAllowed and
++                            maxAllowed. Keys are cpu and memory; values are quantities with at most
++                            two decimal places, greater than zero and up to 10 inclusive. A missing
++                            key means 1. The multiplier affects target, lowerBound and upperBound;
++                            uncappedTarget keeps the value computed without it.
++                          type: object
+                         startupBoost:
+                           description: |-
+                             startupBoost specifies the startup boost policy for the container.
+@@ -720,7 +735,7 @@ spec:
+                             description: |-
+                               The most recent recommended resources target computed by the autoscaler
+                               for the controlled pods, based only on actual resource usage, not taking
+-                              into account the ContainerResourcePolicy.
++                              into account the ContainerResourcePolicy, including recommendationFactor.
+                               May differ from the Recommendation if the actual resource usage causes
+                               the target to violate the ContainerResourcePolicy (lower than MinAllowed
+                               or higher that MaxAllowed).
+@@ -808,7 +823,7 @@ spec:
+                           description: |-
+                             The most recent recommended resources target computed by the autoscaler
+                             for the controlled pods, based only on actual resource usage, not taking
+-                            into account the ContainerResourcePolicy.
++                            into account the ContainerResourcePolicy, including recommendationFactor.
+                             May differ from the Recommendation if the actual resource usage causes
+                             the target to violate the ContainerResourcePolicy (lower than MinAllowed
+                             or higher that MaxAllowed).
+diff --git a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation.go b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation.go
+index 769d6c2..671e5b9 100644
+--- a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation.go
++++ b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation.go
+@@ -18,6 +18,8 @@ package vpa
+ 
+ import (
+ 	"fmt"
++	"maps"
++	"slices"
+ 
+ 	corev1 "k8s.io/api/core/v1"
+ 	apires "k8s.io/apimachinery/pkg/api/resource"
+@@ -25,6 +27,7 @@ import (
+ 
+ 	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+ 	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/features"
++	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/recommendationfactor"
+ )
+ 
+ // VPAValidationOptions contains the different settings for VPA validation
+@@ -252,6 +255,10 @@ func validateVPASpecResourcePolicy(resourcePolicy *vpa_types.PodResourcePolicy,
+ 			}
+ 		}
+ 
++		if len(policy.RecommendationFactor) > 0 {
++			allErrs = append(allErrs, validateRecommendationFactor(policy.RecommendationFactor, policyPath.Child("recommendationFactor"))...)
++		}
++
+ 		if policy.StartupBoost != nil {
+ 			allErrs = append(allErrs, validateVPASpecStartupBoost(policy.StartupBoost, policyPath.Child("startupBoost"), opts)...)
+ 		}
+@@ -260,6 +267,26 @@ func validateVPASpecResourcePolicy(resourcePolicy *vpa_types.PodResourcePolicy,
+ 	return allErrs
+ }
+ 
++// validateRecommendationFactor validates the keys and values of a container policy's recommendationFactor.
++// Keys are visited in sorted order so that the errors are reported in a deterministic order.
++func validateRecommendationFactor(factors corev1.ResourceList, fldPath *field.Path) field.ErrorList {
++	allErrs := field.ErrorList{}
++
++	for _, name := range slices.Sorted(maps.Keys(factors)) {
++		keyPath := fldPath.Key(string(name))
++		if !slices.Contains(recommendationfactor.SupportedResources, name) {
++			allErrs = append(allErrs, field.NotSupported(keyPath, string(name), recommendationfactor.SupportedResources))
++			continue
++		}
++
++		if _, err := recommendationfactor.Parse(factors[name]); err != nil {
++			allErrs = append(allErrs, field.Invalid(keyPath, recommendationfactor.ValueOf(err), err.Error()))
++		}
++	}
++
++	return allErrs
++}
++
+ func validateVPASpecStartupBoost(startupBoost *vpa_types.StartupBoost, fldPath *field.Path, opts VPAValidationOptions) field.ErrorList {
+ 	allErrs := field.ErrorList{}
+ 
+diff --git a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation_test.go b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation_test.go
+index 559a482..db32e2d 100644
+--- a/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation_test.go
++++ b/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa/validation_test.go
+@@ -245,6 +245,56 @@ func TestAllowPerVPAConfig(t *testing.T) {
+ 	}
+ }
+ 
++// vpaWithRecommendationFactor returns a valid VPA whose single wildcard container policy carries the given factors.
++func vpaWithRecommendationFactor(mode *vpa_types.ContainerScalingMode, factors corev1.ResourceList) vpa_types.VerticalPodAutoscaler {
++	updateMode := vpa_types.UpdateModeOff
++	return vpa_types.VerticalPodAutoscaler{
++		Spec: vpa_types.VerticalPodAutoscalerSpec{
++			TargetRef: &autoscalingv1.CrossVersionObjectReference{
++				Kind: "Deployment",
++				Name: "my-app",
++			},
++			UpdatePolicy: &vpa_types.PodUpdatePolicy{
++				UpdateMode: &updateMode,
++			},
++			ResourcePolicy: &vpa_types.PodResourcePolicy{
++				ContainerPolicies: []vpa_types.ContainerResourcePolicy{
++					{
++						ContainerName:        "*",
++						Mode:                 mode,
++						RecommendationFactor: factors,
++					},
++				},
++			},
++		},
++	}
++}
++
++func TestValidateRecommendationFactorErrorOrder(t *testing.T) {
++	vpa := vpaWithRecommendationFactor(nil, corev1.ResourceList{
++		memory:                 resource.MustParse("0"),
++		cpu:                    resource.MustParse("11"),
++		corev1.ResourceStorage: resource.MustParse("2"),
++		"hugepages-2Mi":        resource.MustParse("2"),
++	})
++	opts := VPAValidationOptions{IsVPACreate: true}
++	expected := []string{
++		"spec.resourcePolicy.containerPolicies[0].recommendationFactor[cpu]",
++		"spec.resourcePolicy.containerPolicies[0].recommendationFactor[hugepages-2Mi]",
++		"spec.resourcePolicy.containerPolicies[0].recommendationFactor[memory]",
++		"spec.resourcePolicy.containerPolicies[0].recommendationFactor[storage]",
++	}
++
++	// Map iteration order is random, so repeat to make an unsorted implementation fail reliably.
++	for range 20 {
++		var got []string
++		for _, err := range validateVPA(&vpa, opts) {
++			got = append(got, err.Field)
++		}
++		assert.Equal(t, expected, got)
++	}
++}
++
+ func TestValidateVPA(t *testing.T) {
+ 	badUpdateMode := vpa_types.UpdateMode("bad")
+ 	validUpdateMode := vpa_types.UpdateModeOff
+@@ -1358,6 +1408,74 @@ func TestValidateVPA(t *testing.T) {
+ 			},
+ 			opts: VPAValidationOptions{IsVPACreate: true, AllowInPlace: true},
+ 		},
++		{
++			name: "valid recommendationFactor",
++			vpa:  vpaWithRecommendationFactor(&validScalingMode, corev1.ResourceList{cpu: resource.MustParse("1.2"), memory: resource.MustParse("0.87")}),
++			opts: VPAValidationOptions{IsVPACreate: true},
++		},
++		{
++			name: "valid recommendationFactor boundaries",
++			vpa:  vpaWithRecommendationFactor(&validScalingMode, corev1.ResourceList{cpu: resource.MustParse("10"), memory: resource.MustParse("1.25")}),
++			opts: VPAValidationOptions{IsVPACreate: true},
++		},
++		{
++			name: "recommendationFactor with scaling mode Off",
++			vpa:  vpaWithRecommendationFactor(&scalingModeOff, corev1.ResourceList{cpu: resource.MustParse("1.2")}),
++			opts: VPAValidationOptions{IsVPACreate: true},
++		},
++		{
++			name:        "recommendationFactor zero",
++			vpa:         vpaWithRecommendationFactor(&validScalingMode, corev1.ResourceList{cpu: resource.MustParse("0")}),
++			opts:        VPAValidationOptions{IsVPACreate: true},
++			expectError: errors.New(`spec.resourcePolicy.containerPolicies[0].recommendationFactor[cpu]: Invalid value: "0": must be greater than 0`),
++		},
++		{
++			name:        "recommendationFactor negative",
++			vpa:         vpaWithRecommendationFactor(&validScalingMode, corev1.ResourceList{cpu: resource.MustParse("-1")}),
++			opts:        VPAValidationOptions{IsVPACreate: true},
++			expectError: errors.New(`spec.resourcePolicy.containerPolicies[0].recommendationFactor[cpu]: Invalid value: "-1": must be greater than 0`),
++		},
++		{
++			name:        "recommendationFactor above max",
++			vpa:         vpaWithRecommendationFactor(&validScalingMode, corev1.ResourceList{memory: resource.MustParse("11")}),
++			opts:        VPAValidationOptions{IsVPACreate: true},
++			expectError: errors.New(`spec.resourcePolicy.containerPolicies[0].recommendationFactor[memory]: Invalid value: "11": must be less than or equal to 10`),
++		},
++		{
++			name:        "recommendationFactor slightly above max",
++			vpa:         vpaWithRecommendationFactor(&validScalingMode, corev1.ResourceList{cpu: resource.MustParse("10.001")}),
++			opts:        VPAValidationOptions{IsVPACreate: true},
++			expectError: errors.New(`spec.resourcePolicy.containerPolicies[0].recommendationFactor[cpu]: Invalid value: "10.001": must be less than or equal to 10`),
++		},
++		{
++			name:        "recommendationFactor huge quantity",
++			vpa:         vpaWithRecommendationFactor(&validScalingMode, corev1.ResourceList{cpu: resource.MustParse("1Gi")}),
++			opts:        VPAValidationOptions{IsVPACreate: true},
++			expectError: errors.New(`spec.resourcePolicy.containerPolicies[0].recommendationFactor[cpu]: Invalid value: "1073741824": must be less than or equal to 10`),
++		},
++		{
++			name:        "recommendationFactor huge exponent",
++			vpa:         vpaWithRecommendationFactor(&validScalingMode, corev1.ResourceList{cpu: resource.MustParse("1e1000")}),
++			opts:        VPAValidationOptions{IsVPACreate: true},
++			expectError: errors.New(`spec.resourcePolicy.containerPolicies[0].recommendationFactor[cpu]: Invalid value: "10e999": must be less than or equal to 10`),
++		},
++		{
++			name:        "recommendationFactor too precise",
++			vpa:         vpaWithRecommendationFactor(&validScalingMode, corev1.ResourceList{memory: resource.MustParse("1.234")}),
++			opts:        VPAValidationOptions{IsVPACreate: true},
++			expectError: errors.New(`spec.resourcePolicy.containerPolicies[0].recommendationFactor[memory]: Invalid value: "1.234": must have at most two decimal places`),
++		},
++		{
++			name:        "recommendationFactor unsupported resource",
++			vpa:         vpaWithRecommendationFactor(&validScalingMode, corev1.ResourceList{corev1.ResourceEphemeralStorage: resource.MustParse("2")}),
++			opts:        VPAValidationOptions{IsVPACreate: true},
++			expectError: errors.New(`spec.resourcePolicy.containerPolicies[0].recommendationFactor[ephemeral-storage]: Unsupported value: "ephemeral-storage": supported values: "cpu", "memory"`),
++		},
++		{
++			name: "empty recommendationFactor",
++			vpa:  vpaWithRecommendationFactor(&validScalingMode, corev1.ResourceList{}),
++			opts: VPAValidationOptions{IsVPACreate: true},
++		},
+ 	}
+ 	for _, tc := range tests {
+ 		t.Run(fmt.Sprintf("test case: %s", tc.name), func(t *testing.T) {
+diff --git a/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go b/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go
+index 4d907c9..4a6741e 100644
+--- a/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go
++++ b/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go
+@@ -292,6 +292,14 @@ type ContainerResourcePolicy struct {
+ 	// for the container. The default is no maximum.
+ 	// +optional
+ 	MaxAllowed corev1.ResourceList `json:"maxAllowed,omitempty"`
++	// Per-resource multiplier applied to the recommendation computed from
++	// usage, after the recommender's safety margin and before minAllowed and
++	// maxAllowed. Keys are cpu and memory; values are quantities with at most
++	// two decimal places, greater than zero and up to 10 inclusive. A missing
++	// key means 1. The multiplier affects target, lowerBound and upperBound;
++	// uncappedTarget keeps the value computed without it.
++	// +optional
++	RecommendationFactor corev1.ResourceList `json:"recommendationFactor,omitempty"`
+ 
+ 	// Specifies the type of recommendations that will be computed
+ 	// (and possibly applied) by VPA.
+@@ -420,7 +428,7 @@ type RecommendedContainerResources struct {
+ 	UpperBound corev1.ResourceList `json:"upperBound,omitempty"`
+ 	// The most recent recommended resources target computed by the autoscaler
+ 	// for the controlled pods, based only on actual resource usage, not taking
+-	// into account the ContainerResourcePolicy.
++	// into account the ContainerResourcePolicy, including recommendationFactor.
+ 	// May differ from the Recommendation if the actual resource usage causes
+ 	// the target to violate the ContainerResourcePolicy (lower than MinAllowed
+ 	// or higher that MaxAllowed).
+diff --git a/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/zz_generated.deepcopy.go b/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/zz_generated.deepcopy.go
+index 496e5a2..d0f73ce 100644
+--- a/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/zz_generated.deepcopy.go
++++ b/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/zz_generated.deepcopy.go
+@@ -49,6 +49,13 @@ func (in *ContainerResourcePolicy) DeepCopyInto(out *ContainerResourcePolicy) {
+ 			(*out)[key] = val.DeepCopy()
+ 		}
+ 	}
++	if in.RecommendationFactor != nil {
++		in, out := &in.RecommendationFactor, &out.RecommendationFactor
++		*out = make(corev1.ResourceList, len(*in))
++		for key, val := range *in {
++			(*out)[key] = val.DeepCopy()
++		}
++	}
+ 	if in.ControlledResources != nil {
+ 		in, out := &in.ControlledResources, &out.ControlledResources
+ 		*out = new([]corev1.ResourceName)
+diff --git a/vertical-pod-autoscaler/pkg/recommender/logic/estimator.go b/vertical-pod-autoscaler/pkg/recommender/logic/estimator.go
+index b30f07c..ffb7af7 100644
+--- a/vertical-pod-autoscaler/pkg/recommender/logic/estimator.go
++++ b/vertical-pod-autoscaler/pkg/recommender/logic/estimator.go
+@@ -66,6 +66,16 @@ type memoryMarginEstimator struct {
+ 	baseEstimator  MemoryEstimator
+ }
+ 
++// recommendation factors
++
++type cpuRecommendationFactorEstimator struct {
++	baseEstimator CPUEstimator
++}
++
++type memoryRecommendationFactorEstimator struct {
++	baseEstimator MemoryEstimator
++}
++
+ type cpuConfidenceMultiplier struct {
+ 	multiplier         float64
+ 	exponent           float64
+@@ -134,6 +144,30 @@ func WithMemoryMargin(marginFraction float64, baseEstimator MemoryEstimator) Mem
+ 	return &memoryMarginEstimator{marginFraction: marginFraction, baseEstimator: baseEstimator}
+ }
+ 
++// GetCPUEstimation returns the CPU estimation of the base estimator multiplied by the
++// CPU recommendation factor of the given AggregateContainerState.
++func (e *cpuRecommendationFactorEstimator) GetCPUEstimation(s *model.AggregateContainerState) model.ResourceAmount {
++	return model.ScaleResource(e.baseEstimator.GetCPUEstimation(s), s.GetRecommendationFactor(model.ResourceCPU))
++}
++
++// GetMemoryEstimation returns the memory estimation of the base estimator multiplied by the
++// memory recommendation factor of the given AggregateContainerState.
++func (e *memoryRecommendationFactorEstimator) GetMemoryEstimation(s *model.AggregateContainerState) model.ResourceAmount {
++	return model.ScaleResource(e.baseEstimator.GetMemoryEstimation(s), s.GetRecommendationFactor(model.ResourceMemory))
++}
++
++// WithCPURecommendationFactor returns a CPUEstimator that multiplies the base estimator
++// by the CPU recommendation factor of the container.
++func WithCPURecommendationFactor(baseEstimator CPUEstimator) CPUEstimator {
++	return &cpuRecommendationFactorEstimator{baseEstimator: baseEstimator}
++}
++
++// WithMemoryRecommendationFactor returns a MemoryEstimator that multiplies the base estimator
++// by the memory recommendation factor of the container.
++func WithMemoryRecommendationFactor(baseEstimator MemoryEstimator) MemoryEstimator {
++	return &memoryRecommendationFactorEstimator{baseEstimator: baseEstimator}
++}
++
+ // WithCPUConfidenceMultiplier return a CPUEstimator estimator
+ func WithCPUConfidenceMultiplier(multiplier, exponent float64, baseEstimator CPUEstimator, confidenceInterval time.Duration) CPUEstimator {
+ 	return &cpuConfidenceMultiplier{
+diff --git a/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go b/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go
+index cb9d600..5f5af0a 100644
+--- a/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go
++++ b/vertical-pod-autoscaler/pkg/recommender/logic/recommender.go
+@@ -63,6 +63,8 @@ type RecommendedContainerResources struct {
+ 	LowerBound model.Resources
+ 	// Recommended maximum amount of resources.
+ 	UpperBound model.Resources
++	// Target computed without the recommendation factor; exported as the status uncappedTarget.
++	UncappedTarget model.Resources
+ }
+ 
+ type podResourceRecommender struct {
+@@ -74,6 +76,10 @@ type podResourceRecommender struct {
+ 	upperBoundMemory MemoryEstimator
+ 	minCPUMillicores float64
+ 	minMemoryMb      float64
++	// uncappedTargetCPU and uncappedTargetMemory are set only by GetRecommendedPodResources;
++	// the recommender returned by CreatePodResourceRecommender leaves them nil.
++	uncappedTargetCPU    CPUEstimator
++	uncappedTargetMemory MemoryEstimator
+ }
+ 
+ func (r *podResourceRecommender) GetRecommendedPodResources(containerNameToAggregateStateMap model.ContainerNameToAggregateStateMap) RecommendedPodResources {
+@@ -86,15 +92,20 @@ func (r *podResourceRecommender) GetRecommendedPodResources(containerNameToAggre
+ 	minCPU := model.ScaleResource(model.CPUAmountFromCores(r.minCPUMillicores*0.001), fraction)
+ 	minMemory := model.ScaleResource(model.MemoryAmountFromBytes(r.minMemoryMb*1024*1024), fraction)
+ 
++	// The recommendation factor is applied inside the minimum-resource wrappers, so the
++	// minimum is a floor for the recommendation after it was multiplied. The uncapped target
++	// skips the factor and keeps the same floor.
+ 	recommender := &podResourceRecommender{
+-		targetCPU:        WithCPUMinResource(minCPU, r.targetCPU),
+-		targetMemory:     WithMemoryMinResource(minMemory, r.targetMemory),
+-		lowerBoundCPU:    WithCPUMinResource(minCPU, r.lowerBoundCPU),
+-		lowerBoundMemory: WithMemoryMinResource(minMemory, r.lowerBoundMemory),
+-		upperBoundCPU:    WithCPUMinResource(minCPU, r.upperBoundCPU),
+-		upperBoundMemory: WithMemoryMinResource(minMemory, r.upperBoundMemory),
+-		minCPUMillicores: r.minCPUMillicores,
+-		minMemoryMb:      r.minMemoryMb,
++		targetCPU:            WithCPUMinResource(minCPU, WithCPURecommendationFactor(r.targetCPU)),
++		targetMemory:         WithMemoryMinResource(minMemory, WithMemoryRecommendationFactor(r.targetMemory)),
++		lowerBoundCPU:        WithCPUMinResource(minCPU, WithCPURecommendationFactor(r.lowerBoundCPU)),
++		lowerBoundMemory:     WithMemoryMinResource(minMemory, WithMemoryRecommendationFactor(r.lowerBoundMemory)),
++		upperBoundCPU:        WithCPUMinResource(minCPU, WithCPURecommendationFactor(r.upperBoundCPU)),
++		upperBoundMemory:     WithMemoryMinResource(minMemory, WithMemoryRecommendationFactor(r.upperBoundMemory)),
++		minCPUMillicores:     r.minCPUMillicores,
++		minMemoryMb:          r.minMemoryMb,
++		uncappedTargetCPU:    WithCPUMinResource(minCPU, r.targetCPU),
++		uncappedTargetMemory: WithMemoryMinResource(minMemory, r.targetMemory),
+ 	}
+ 
+ 	for containerName, aggregatedContainerState := range containerNameToAggregateStateMap {
+@@ -109,10 +120,12 @@ func (r *podResourceRecommender) estimateContainerResources(s *model.AggregateCo
+ 	target := model.Resources{model.ResourceCPU: r.targetCPU.GetCPUEstimation(s), model.ResourceMemory: r.targetMemory.GetMemoryEstimation(s)}
+ 	lowerBound := model.Resources{model.ResourceCPU: r.lowerBoundCPU.GetCPUEstimation(s), model.ResourceMemory: r.lowerBoundMemory.GetMemoryEstimation(s)}
+ 	upperBound := model.Resources{model.ResourceCPU: r.upperBoundCPU.GetCPUEstimation(s), model.ResourceMemory: r.upperBoundMemory.GetMemoryEstimation(s)}
++	uncappedTarget := model.Resources{model.ResourceCPU: r.uncappedTargetCPU.GetCPUEstimation(s), model.ResourceMemory: r.uncappedTargetMemory.GetMemoryEstimation(s)}
+ 	return RecommendedContainerResources{
+-		FilterControlledResources(target, resources),
+-		FilterControlledResources(lowerBound, resources),
+-		FilterControlledResources(upperBound, resources),
++		Target:         FilterControlledResources(target, resources),
++		LowerBound:     FilterControlledResources(lowerBound, resources),
++		UpperBound:     FilterControlledResources(upperBound, resources),
++		UncappedTarget: FilterControlledResources(uncappedTarget, resources),
+ 	}
+ }
+ 
+@@ -177,14 +190,14 @@ func CreatePodResourceRecommender(config RecommendationConfig) PodResourceRecomm
+ 	lowerBoundCPU = WithCPUConfidenceMultiplier(0.001, -2.0, lowerBoundCPU, config.ConfidenceIntervalCPU)
+ 	lowerBoundMemory = WithMemoryConfidenceMultiplier(0.001, -2.0, lowerBoundMemory, config.ConfidenceIntervalMemory)
+ 	return &podResourceRecommender{
+-		targetCPU,
+-		targetMemory,
+-		lowerBoundCPU,
+-		lowerBoundMemory,
+-		upperBoundCPU,
+-		upperBoundMemory,
+-		config.PodMinCPUMillicores,
+-		config.PodMinMemoryMb,
++		targetCPU:        targetCPU,
++		targetMemory:     targetMemory,
++		lowerBoundCPU:    lowerBoundCPU,
++		lowerBoundMemory: lowerBoundMemory,
++		upperBoundCPU:    upperBoundCPU,
++		upperBoundMemory: upperBoundMemory,
++		minCPUMillicores: config.PodMinCPUMillicores,
++		minMemoryMb:      config.PodMinMemoryMb,
+ 	}
+ }
+ 
+@@ -204,7 +217,7 @@ func MapToListOfRecommendedContainerResources(resources RecommendedPodResources,
+ 					Target:         model.ResourcesAsResourceList(recommendation.Target, format.HumanizeMemory, format.RoundCPUMillicores, format.RoundMemoryBytes),
+ 					LowerBound:     model.ResourcesAsResourceList(recommendation.LowerBound, format.HumanizeMemory, format.RoundCPUMillicores, format.RoundMemoryBytes),
+ 					UpperBound:     model.ResourcesAsResourceList(recommendation.UpperBound, format.HumanizeMemory, format.RoundCPUMillicores, format.RoundMemoryBytes),
+-					UncappedTarget: model.ResourcesAsResourceList(recommendation.Target, format.HumanizeMemory, format.RoundCPUMillicores, format.RoundMemoryBytes),
++					UncappedTarget: model.ResourcesAsResourceList(recommendation.UncappedTarget, format.HumanizeMemory, format.RoundCPUMillicores, format.RoundMemoryBytes),
+ 				}},
+ 			}
+ 		}
+@@ -226,7 +239,7 @@ func MapToListOfRecommendedContainerResources(resources RecommendedPodResources,
+ 			Target:         model.ResourcesAsResourceList(resources[name].Target, format.HumanizeMemory, format.RoundCPUMillicores, format.RoundMemoryBytes),
+ 			LowerBound:     model.ResourcesAsResourceList(resources[name].LowerBound, format.HumanizeMemory, format.RoundCPUMillicores, format.RoundMemoryBytes),
+ 			UpperBound:     model.ResourcesAsResourceList(resources[name].UpperBound, format.HumanizeMemory, format.RoundCPUMillicores, format.RoundMemoryBytes),
+-			UncappedTarget: model.ResourcesAsResourceList(resources[name].Target, format.HumanizeMemory, format.RoundCPUMillicores, format.RoundMemoryBytes),
++			UncappedTarget: model.ResourcesAsResourceList(resources[name].UncappedTarget, format.HumanizeMemory, format.RoundCPUMillicores, format.RoundMemoryBytes),
+ 		})
+ 	}
+ 	recommendation := &vpa_types.RecommendedPodResources{
+diff --git a/vertical-pod-autoscaler/pkg/recommender/logic/recommender_test.go b/vertical-pod-autoscaler/pkg/recommender/logic/recommender_test.go
+index 9cee460..ea7b364 100644
+--- a/vertical-pod-autoscaler/pkg/recommender/logic/recommender_test.go
++++ b/vertical-pod-autoscaler/pkg/recommender/logic/recommender_test.go
+@@ -187,3 +187,123 @@ func TestMapToListOfRecommendedContainerResources(t *testing.T) {
+ 		})
+ 	}
+ }
++
++// newRecommendationFactorTestRecommender returns a recommender whose estimators are all constant
++// (cpuCores and memoryBytes), with the pod minimums set to 25m CPU and 250Mi memory.
++func newRecommendationFactorTestRecommender(cpuCores, memoryBytes float64) *podResourceRecommender {
++	constCPU := NewConstCPUEstimator(model.CPUAmountFromCores(cpuCores))
++	constMemory := NewConstMemoryEstimator(model.MemoryAmountFromBytes(memoryBytes))
++	return &podResourceRecommender{
++		targetCPU:        constCPU,
++		targetMemory:     constMemory,
++		lowerBoundCPU:    constCPU,
++		lowerBoundMemory: constMemory,
++		upperBoundCPU:    constCPU,
++		upperBoundMemory: constMemory,
++		minCPUMillicores: 25,
++		minMemoryMb:      250,
++	}
++}
++
++func TestRecommendationFactorApplied(t *testing.T) {
++	recommender := newRecommendationFactorTestRecommender(0.1, 1000*1024*1024)
++	states := model.ContainerNameToAggregateStateMap{
++		"container-1": &model.AggregateContainerState{RecommendationFactor: map[model.ResourceName]float64{model.ResourceCPU: 1.2, model.ResourceMemory: 0.1}},
++	}
++
++	got := recommender.GetRecommendedPodResources(states)["container-1"]
++
++	wantCPU := model.CPUAmountFromCores(0.12)                    // 100m * 1.2
++	wantMemory := model.MemoryAmountFromBytes(250 * 1024 * 1024) // 1000Mi * 0.1 = 100Mi, so the 250Mi floor wins
++	for _, bound := range []struct {
++		name string
++		res  model.Resources
++	}{
++		{"Target", got.Target},
++		{"LowerBound", got.LowerBound},
++		{"UpperBound", got.UpperBound},
++	} {
++		assert.Equal(t, wantCPU, bound.res[model.ResourceCPU], bound.name)
++		assert.Equal(t, wantMemory, bound.res[model.ResourceMemory], bound.name)
++	}
++	// The raw target is computed without the factor, but with the same floor.
++	assert.Equal(t, model.CPUAmountFromCores(0.1), got.UncappedTarget[model.ResourceCPU])
++	assert.Equal(t, model.MemoryAmountFromBytes(1000*1024*1024), got.UncappedTarget[model.ResourceMemory])
++}
++
++func TestRecommendationFactorDefault(t *testing.T) {
++	recommender := newRecommendationFactorTestRecommender(0.1, 1000*1024*1024)
++	// A state without factors, such as a zero-value state, recommends the plain estimation.
++	states := model.ContainerNameToAggregateStateMap{"container-1": &model.AggregateContainerState{}}
++
++	got := recommender.GetRecommendedPodResources(states)["container-1"]
++
++	assert.Equal(t, model.CPUAmountFromCores(0.1), got.Target[model.ResourceCPU])
++	assert.Equal(t, model.MemoryAmountFromBytes(1000*1024*1024), got.Target[model.ResourceMemory])
++	assert.Equal(t, got.UncappedTarget, got.Target)
++}
++
++func TestRecommendationFactorRespectsControlledResources(t *testing.T) {
++	recommender := newRecommendationFactorTestRecommender(0.1, 1000*1024*1024)
++	states := model.ContainerNameToAggregateStateMap{
++		"container-1": &model.AggregateContainerState{
++			ControlledResources:  &[]model.ResourceName{model.ResourceMemory},
++			RecommendationFactor: map[model.ResourceName]float64{model.ResourceCPU: 2},
++		},
++	}
++
++	got := recommender.GetRecommendedPodResources(states)["container-1"]
++
++	for _, bound := range []struct {
++		name string
++		res  model.Resources
++	}{
++		{"Target", got.Target},
++		{"LowerBound", got.LowerBound},
++		{"UpperBound", got.UpperBound},
++		{"UncappedTarget", got.UncappedTarget},
++	} {
++		assert.NotContains(t, bound.res, model.ResourceCPU, bound.name)
++		assert.Equal(t, model.MemoryAmountFromBytes(1000*1024*1024), bound.res[model.ResourceMemory], bound.name)
++	}
++}
++
++func TestRecommendationFactorUncappedTargetKeepsMinResources(t *testing.T) {
++	recommender := newRecommendationFactorTestRecommender(0.001, 1e6)
++	// Even the doubled estimations stay below the minimums of 25m and 250Mi.
++	states := model.ContainerNameToAggregateStateMap{
++		"container-1": &model.AggregateContainerState{RecommendationFactor: map[model.ResourceName]float64{model.ResourceCPU: 2, model.ResourceMemory: 2}},
++	}
++
++	got := recommender.GetRecommendedPodResources(states)["container-1"]
++
++	// The uncapped target differs from the target only by the factor, so the minimums are a floor for it too.
++	assert.Equal(t, model.CPUAmountFromCores(0.025), got.UncappedTarget[model.ResourceCPU])
++	assert.Equal(t, model.MemoryAmountFromBytes(250*1024*1024), got.UncappedTarget[model.ResourceMemory])
++	assert.Equal(t, got.Target, got.UncappedTarget)
++}
++
++func TestMapToListOfRecommendedContainerResourcesUncappedTarget(t *testing.T) {
++	// With a CPU rounding step of 10m, the target of 114m is exported as 120m and the uncapped target of 95m as 100m.
++	rec := RecommendedContainerResources{
++		Target:         model.Resources{model.ResourceCPU: model.CPUAmountFromCores(0.114), model.ResourceMemory: model.MemoryAmountFromBytes(1e6)},
++		UncappedTarget: model.Resources{model.ResourceCPU: model.CPUAmountFromCores(0.095), model.ResourceMemory: model.MemoryAmountFromBytes(5e5)},
++	}
++	cases := map[string]RecommendedPodResources{
++		"single container (fast path)": {"a": rec},
++		"two containers":               {"a": rec, "b": rec},
++	}
++	for name, resources := range cases {
++		t.Run(name, func(t *testing.T) {
++			out := MapToListOfRecommendedContainerResources(resources, RecommendationFormat{RoundCPUMillicores: 10, RoundMemoryBytes: 1})
++
++			assert.Len(t, out.ContainerRecommendations, len(resources))
++			for _, got := range out.ContainerRecommendations {
++				assert.Equal(t, int64(120), got.Target.Cpu().MilliValue(), got.ContainerName)
++				assert.Equal(t, int64(1e6), got.Target.Memory().Value(), got.ContainerName)
++				assert.Equal(t, int64(100), got.UncappedTarget.Cpu().MilliValue(), got.ContainerName)
++				assert.Equal(t, int64(5e5), got.UncappedTarget.Memory().Value(), got.ContainerName)
++			}
++		})
++	}
++}
+diff --git a/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go b/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go
+index 29d8c72..307f3dc 100644
+--- a/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go
++++ b/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go
+@@ -48,6 +48,7 @@ import (
+ 	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+ 	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/features"
+ 	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/util"
++	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/recommendationfactor"
+ )
+ 
+ // ContainerNameToAggregateStateMap maps a container name to AggregateContainerState
+@@ -124,6 +125,9 @@ type AggregateContainerState struct {
+ 	MemoryAggregationIntervalDuration time.Duration
+ 	MemoryAggregationIntervalCount    int64
+ 	ControlledResources               *[]ResourceName
++	// RecommendationFactor holds the per-resource factors that scale the recommendation computed
++	// from usage. A missing resource means 1. Entries come only from valid container policy values.
++	RecommendationFactor map[ResourceName]float64
+ 
+ 	mutex sync.RWMutex
+ }
+@@ -339,6 +343,7 @@ func (a *AggregateContainerState) UpdateFromPolicy(resourcePolicy *vpa_types.Con
+ 	if resourcePolicy != nil && resourcePolicy.ControlledResources != nil {
+ 		a.ControlledResources = ResourceNamesApiToModel(*resourcePolicy.ControlledResources)
+ 	}
++	a.updateRecommendationFactorFromPolicy(resourcePolicy)
+ 
+ 	// Per VPA components - feature flag "PerVPAConfig" must be enabled
+ 	if resourcePolicy != nil {
+@@ -376,6 +381,41 @@ func (a *AggregateContainerState) UpdateFromPolicy(resourcePolicy *vpa_types.Con
+ 	}
+ }
+ 
++// GetRecommendationFactor returns the recommendation factor of the resource, or 1 when none is set.
++func (a *AggregateContainerState) GetRecommendationFactor(name ResourceName) float64 {
++	if factor, found := a.RecommendationFactor[name]; found {
++		return factor
++	}
++	return 1
++}
++
++// updateRecommendationFactorFromPolicy sets the recommendation factors from the resource policy.
++// The factors are dropped first, so a factor removed from the policy stops applying. Only the
++// supported resources are read. Other keys are skipped silently, and an invalid value is logged
++// and leaves its resource without a factor; the admission controller rejects both, so they reach
++// the recommender only if it was bypassed.
++func (a *AggregateContainerState) updateRecommendationFactorFromPolicy(resourcePolicy *vpa_types.ContainerResourcePolicy) {
++	a.RecommendationFactor = nil
++	if resourcePolicy == nil || len(resourcePolicy.RecommendationFactor) == 0 {
++		return
++	}
++	for _, name := range recommendationfactor.SupportedResources {
++		q, found := resourcePolicy.RecommendationFactor[name]
++		if !found {
++			continue
++		}
++		factor, err := recommendationfactor.Parse(q)
++		if err != nil {
++			klog.InfoS("Ignoring invalid recommendationFactor", "containerName", resourcePolicy.ContainerName, "resource", name, "value", recommendationfactor.ValueOf(err), "err", err)
++			continue
++		}
++		if a.RecommendationFactor == nil {
++			a.RecommendationFactor = make(map[ResourceName]float64, len(recommendationfactor.SupportedResources))
++		}
++		a.RecommendationFactor[ResourceName(name)] = factor
++	}
++}
++
+ // AggregateStateByContainerName takes a set of AggregateContainerStates and merge them
+ // grouping by the container name. The result is a map from the container name to the aggregation
+ // from all input containers with the given name.
+diff --git a/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state_test.go b/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state_test.go
+index 6e340b3..2e2f1a4 100644
+--- a/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state_test.go
++++ b/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state_test.go
+@@ -22,6 +22,7 @@ import (
+ 
+ 	"github.com/stretchr/testify/assert"
+ 	corev1 "k8s.io/api/core/v1"
++	"k8s.io/apimachinery/pkg/api/resource"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/labels"
+ 	featuregatetesting "k8s.io/component-base/featuregate/testing"
+@@ -392,6 +393,51 @@ func TestUpdateFromPolicyMemoryAggregationIntervalCount(t *testing.T) {
+ 	}
+ }
+ 
++func TestGetRecommendationFactorDefaultsToOne(t *testing.T) {
++	for _, cs := range []*AggregateContainerState{NewAggregateContainerState(), {}} {
++		assert.Equal(t, 1.0, cs.GetRecommendationFactor(ResourceCPU))
++		assert.Equal(t, 1.0, cs.GetRecommendationFactor(ResourceMemory))
++	}
++}
++
++func TestUpdateFromPolicyRecommendationFactor(t *testing.T) {
++	factor := func(kv ...string) corev1.ResourceList {
++		list := corev1.ResourceList{}
++		for i := 0; i < len(kv); i += 2 {
++			list[corev1.ResourceName(kv[i])] = resource.MustParse(kv[i+1])
++		}
++		return list
++	}
++	testCases := []struct {
++		name       string
++		policy     *vpa_types.ContainerResourcePolicy
++		wantCPU    float64
++		wantMemory float64
++	}{
++		{"both set", &vpa_types.ContainerResourcePolicy{RecommendationFactor: factor("cpu", "1.2", "memory", "0.87")}, 1.2, 0.87},
++		{"cpu only at max", &vpa_types.ContainerResourcePolicy{RecommendationFactor: factor("cpu", "10")}, 10, 1},
++		{"two decimal places", &vpa_types.ContainerResourcePolicy{RecommendationFactor: factor("memory", "1.25")}, 1, 1.25},
++		{"no field", &vpa_types.ContainerResourcePolicy{}, 1, 1},
++		{"nil policy", nil, 1, 1},
++		{"zero ignored", &vpa_types.ContainerResourcePolicy{RecommendationFactor: factor("cpu", "0")}, 1, 1},
++		{"negative ignored", &vpa_types.ContainerResourcePolicy{RecommendationFactor: factor("cpu", "-1")}, 1, 1},
++		{"above max ignored", &vpa_types.ContainerResourcePolicy{RecommendationFactor: factor("memory", "11")}, 1, 1},
++		{"too precise ignored", &vpa_types.ContainerResourcePolicy{RecommendationFactor: factor("cpu", "1.234")}, 1, 1},
++		{"unknown resource ignored", &vpa_types.ContainerResourcePolicy{RecommendationFactor: factor("ephemeral-storage", "2")}, 1, 1},
++		{"invalid memory does not discard valid cpu", &vpa_types.ContainerResourcePolicy{RecommendationFactor: factor("cpu", "1.5", "memory", "11")}, 1.5, 1},
++		{"unknown resource does not discard valid memory", &vpa_types.ContainerResourcePolicy{RecommendationFactor: factor("ephemeral-storage", "2", "memory", "0.5")}, 1, 0.5},
++	}
++	for _, tc := range testCases {
++		t.Run(tc.name, func(t *testing.T) {
++			cs := NewAggregateContainerState()
++			cs.RecommendationFactor = map[ResourceName]float64{ResourceCPU: 5, ResourceMemory: 5} // stale values must be reset
++			cs.UpdateFromPolicy(tc.policy)
++			assert.InDelta(t, tc.wantCPU, cs.GetRecommendationFactor(ResourceCPU), 1e-9)
++			assert.InDelta(t, tc.wantMemory, cs.GetRecommendationFactor(ResourceMemory), 1e-9)
++		})
++	}
++}
++
+ func TestAggregateContainerStateIsExpiredWithCustomIntervalCount(t *testing.T) {
+ 	defaultInterval := GetAggregationsConfig().MemoryAggregationIntervalDuration
+ 	customCount := int64(4)
+diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/vpa.go b/vertical-pod-autoscaler/pkg/recommender/routines/vpa.go
+index 62a6a81..15d3704 100644
+--- a/vertical-pod-autoscaler/pkg/recommender/routines/vpa.go
++++ b/vertical-pod-autoscaler/pkg/recommender/routines/vpa.go
+@@ -34,6 +34,7 @@ func isNoopContainerPolicy(policy *vpa_types.ContainerResourcePolicy) bool {
+ 	}
+ 	return len(policy.MinAllowed) == 0 &&
+ 		len(policy.MaxAllowed) == 0 &&
++		len(policy.RecommendationFactor) == 0 &&
+ 		policy.ControlledResources == nil &&
+ 		policy.ControlledValues == nil &&
+ 		policy.OOMBumpUpRatio == nil &&
+diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go b/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go
+index 392c59e..5ae9706 100644
+--- a/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go
++++ b/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go
+@@ -8,6 +8,7 @@ import (
+ 	"github.com/stretchr/testify/assert"
+ 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+ 	v1 "k8s.io/api/core/v1"
++	"k8s.io/apimachinery/pkg/api/resource"
+ 	"k8s.io/apimachinery/pkg/labels"
+ 
+ 	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+@@ -88,6 +89,42 @@ func TestGetContainerNameToAggregateStateMapByScopeValue(t *testing.T) {
+ 	assert.Empty(t, grouped[""])
+ }
+ 
++func TestIsNoopContainerPolicyRecommendationFactor(t *testing.T) {
++	assert.True(t, isNoopContainerPolicy(&vpa_types.ContainerResourcePolicy{ContainerName: "*"}))
++	assert.False(t, isNoopContainerPolicy(&vpa_types.ContainerResourcePolicy{
++		ContainerName:        "*",
++		RecommendationFactor: v1.ResourceList{v1.ResourceCPU: resource.MustParse("1.2")},
++	}))
++}
++
++func TestAggregateStateMapsCarryRecommendationFactor(t *testing.T) {
++	vpa := setupDaemonSetVpaForBenchmark(t, 2, true)
++
++	// Assigning the policy directly leaves the cluster state aggregations untouched, so the factor
++	// can reach the returned states only through the policy handling in the routines package.
++	vpa.ResourcePolicy = &vpa_types.PodResourcePolicy{
++		ContainerPolicies: []vpa_types.ContainerResourcePolicy{{
++			ContainerName:        "*",
++			RecommendationFactor: v1.ResourceList{v1.ResourceCPU: resource.MustParse("1.2")},
++		}},
++	}
++
++	states := GetContainerNameToAggregateStateMap(vpa)
++	if assert.Contains(t, states, "agent") {
++		assert.InDelta(t, 1.2, states["agent"].GetRecommendationFactor(model.ResourceCPU), 1e-9)
++		assert.Equal(t, 1.0, states["agent"].GetRecommendationFactor(model.ResourceMemory))
++	}
++
++	grouped := GetContainerNameToAggregateStateMapByScopeValue(vpa)
++	assert.Len(t, grouped, 2)
++	for scopeValue, groupStates := range grouped {
++		if assert.Contains(t, groupStates, "agent", "scope value %q", scopeValue) {
++			assert.InDelta(t, 1.2, groupStates["agent"].GetRecommendationFactor(model.ResourceCPU), 1e-9, "scope value %q", scopeValue)
++			assert.Equal(t, 1.0, groupStates["agent"].GetRecommendationFactor(model.ResourceMemory), "scope value %q", scopeValue)
++		}
++	}
++}
++
+ func BenchmarkDaemonSetAggregationNoScope1000Pods(b *testing.B) {
+ 	vpa := setupDaemonSetVpaForBenchmark(b, 1000, false)
+ 	b.ReportAllocs()
+@@ -106,7 +143,7 @@ func BenchmarkDaemonSetAggregationScope1000Groups(b *testing.B) {
+ 	}
+ }
+ 
+-func setupDaemonSetVpaForBenchmark(b *testing.B, podCount int, scoped bool) *model.Vpa {
++func setupDaemonSetVpaForBenchmark(b testing.TB, podCount int, scoped bool) *model.Vpa {
+ 	b.Helper()
+ 	cluster := model.NewClusterState(time.Minute)
+ 	selector, err := labels.Parse("app=daemon")
+diff --git a/vertical-pod-autoscaler/pkg/utils/recommendationfactor/recommendationfactor.go b/vertical-pod-autoscaler/pkg/utils/recommendationfactor/recommendationfactor.go
+new file mode 100644
+index 0000000..507dfbb
+--- /dev/null
++++ b/vertical-pod-autoscaler/pkg/utils/recommendationfactor/recommendationfactor.go
+@@ -0,0 +1,118 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++// Package recommendationfactor parses the per-resource factor that scales VPA recommendations.
++package recommendationfactor
++
++import (
++	"errors"
++	"fmt"
++
++	corev1 "k8s.io/api/core/v1"
++	"k8s.io/apimachinery/pkg/api/resource"
++)
++
++// MaxFactor is the largest accepted recommendation factor.
++const MaxFactor = 10.0
++
++// SupportedResources are the resources a recommendation factor can be set for.
++var SupportedResources = []corev1.ResourceName{corev1.ResourceCPU, corev1.ResourceMemory}
++
++const centiScale = resource.Scale(-2)
++
++// plainDecimalScaleLimit is the exclusive bound on the absolute decimal scale (the number of
++// fractional digits, or the number of trailing zeros) for which a rejected quantity is rendered in
++// its exact decimal form.
++const plainDecimalScaleLimit = 100
++
++var (
++	errNotPositive = errors.New("must be greater than 0")
++	errTooLarge    = fmt.Errorf("must be less than or equal to %g", MaxFactor)
++	errTooPrecise  = errors.New("must have at most two decimal places")
++)
++
++// InvalidError is the error Parse returns for a quantity that is not a valid recommendation
++// factor. Value is a short rendering of the quantity, safe to put into messages and logs
++// whatever the quantity looks like; Reason says why the quantity was rejected.
++type InvalidError struct {
++	Value  string
++	Reason error
++}
++
++func (e *InvalidError) Error() string { return e.Reason.Error() }
++
++func (e *InvalidError) Unwrap() error { return e.Reason }
++
++// ValueOf returns the rendering of the rejected quantity carried by an error from Parse, or an
++// empty string for any other error.
++func ValueOf(err error) string {
++	var invalid *InvalidError
++	if errors.As(err, &invalid) {
++		return invalid.Value
++	}
++	return ""
++}
++
++// Parse returns the recommendation factor encoded in q. The factor must be greater than 0,
++// at most MaxFactor, and have at most two decimal places. Every error is an *InvalidError.
++func Parse(q resource.Quantity) (float64, error) {
++	if q.Sign() <= 0 {
++		return 0, newInvalidError(q, errNotPositive)
++	}
++	// Range and precision are checked on the exact quantity, because MilliValue() rounds sub-milli
++	// values up and wraps on int64 overflow. Exact comparison rescales inf.Dec values, which takes
++	// minutes for inputs such as 1e1000000000, so a cheap float64 estimate rejects extreme magnitudes
++	// first. It decides only values far from the limits: more than 5% above MaxFactor, or below
++	// 0.009 (every value in (0, 0.01) has more than two decimal places).
++	approx := q.AsApproximateFloat64()
++	if approx > MaxFactor*1.05 {
++		return 0, newInvalidError(q, errTooLarge)
++	}
++	if approx < 0.009 {
++		return 0, newInvalidError(q, errTooPrecise)
++	}
++	if q.CmpInt64(int64(MaxFactor)) > 0 {
++		return 0, newInvalidError(q, errTooLarge)
++	}
++	if _, exact := q.AsScale(centiScale); !exact {
++		return 0, newInvalidError(q, errTooPrecise)
++	}
++	return float64(q.MilliValue()) / 1000, nil
++}
++
++func newInvalidError(q resource.Quantity, reason error) error {
++	return &InvalidError{Value: displayValue(q), Reason: reason}
++}
++
++// displayValue renders q for human-readable messages. Unlike AsDec().String(), which allocates
++// gigabytes for an exponent such as 1e1000000000, it returns a short string at a cost that does not
++// grow with the exponent:
++//   - a mantissa beyond int64 prints as an approximate float formatted with %g;
++//   - otherwise, a quantity with an absolute decimal scale below plainDecimalScaleLimit prints as an
++//     exact decimal;
++//   - any other quantity prints in the canonical exponent form, for example 10e99.
++func displayValue(q resource.Quantity) string {
++	dec := q.AsDec()
++	if !dec.UnscaledBig().IsInt64() {
++		return fmt.Sprintf("%g", q.AsApproximateFloat64())
++	}
++	if scale := dec.Scale(); scale > -plainDecimalScaleLimit && scale < plainDecimalScaleLimit {
++		return dec.String()
++	}
++	// q.String() is not used here: it echoes the input string cached by ParseQuantity, which can be
++	// arbitrarily long, and for the DecimalSI format it drops an exponent that has no SI suffix.
++	return resource.NewDecimalQuantity(*dec, resource.DecimalExponent).String()
++}
+diff --git a/vertical-pod-autoscaler/pkg/utils/recommendationfactor/recommendationfactor_test.go b/vertical-pod-autoscaler/pkg/utils/recommendationfactor/recommendationfactor_test.go
+new file mode 100644
+index 0000000..5ddf4e7
+--- /dev/null
++++ b/vertical-pod-autoscaler/pkg/utils/recommendationfactor/recommendationfactor_test.go
+@@ -0,0 +1,141 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package recommendationfactor
++
++import (
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	"k8s.io/apimachinery/pkg/api/resource"
++)
++
++// mustReturnQuickly runs f and fails the test if it does not return within a few seconds, so that a
++// regression to an unbounded computation shows up as a failure instead of a hung test run.
++func mustReturnQuickly(t *testing.T, f func()) {
++	t.Helper()
++	done := make(chan struct{})
++	go func() {
++		defer close(done)
++		f()
++	}()
++	select {
++	case <-done:
++	case <-time.After(5 * time.Second):
++		t.Fatal("did not return within 5s")
++	}
++}
++
++func parse(t *testing.T, q resource.Quantity) (factor float64, err error) {
++	t.Helper()
++	mustReturnQuickly(t, func() { factor, err = Parse(q) })
++	return factor, err
++}
++
++func display(t *testing.T, q resource.Quantity) (s string) {
++	t.Helper()
++	mustReturnQuickly(t, func() { s = displayValue(q) })
++	return s
++}
++
++func TestParse(t *testing.T) {
++	valid := map[string]float64{
++		"1": 1, "1.2": 1.2, "0.87": 0.87, "1.25": 1.25, "10": 10, "0.01": 0.01,
++		"100m": 0.1, "1.20000000000000000000": 1.2,
++	}
++	for in, want := range valid {
++		got, err := parse(t, resource.MustParse(in))
++		assert.NoError(t, err, in)
++		assert.InDelta(t, want, got, 1e-9, in)
++	}
++	invalid := map[string]string{
++		"0":      "must be greater than 0",
++		"-1":     "must be greater than 0",
++		"-1.234": "must be greater than 0",
++		"11":     "must be less than or equal to 10",
++		"10.001": "must be less than or equal to 10",
++		"1Gi":    "must be less than or equal to 10",
++		"1.234":  "must have at most two decimal places",
++		"0.004":  "must have at most two decimal places",
++		"5m":     "must have at most two decimal places",
++		// Sub-milli fractions just below a valid factor, and magnitudes beyond the int64 milli range.
++		"1.1999":                 "must have at most two decimal places",
++		"0.0099":                 "must have at most two decimal places",
++		"9.9999":                 "must have at most two decimal places",
++		"1.00000000000000000001": "must have at most two decimal places",
++		"1106804644422573097":    "must be less than or equal to 10",
++		"-9223372036854775807":   "must be greater than 0",
++		// An exponent this large makes exact comparisons take minutes, so it has to be rejected up front.
++		"1e1000000000": "must be less than or equal to 10",
++	}
++	for in, want := range invalid {
++		_, err := parse(t, resource.MustParse(in))
++		assert.EqualError(t, err, want, in)
++		assert.LessOrEqual(t, len(ValueOf(err)), 64, in)
++	}
++
++	// ParseQuantity itself needs minutes for "1e-1000000000", so build the quantity directly.
++	_, err := parse(t, *resource.NewScaledQuantity(1, -1000000000))
++	assert.EqualError(t, err, "must have at most two decimal places")
++	assert.LessOrEqual(t, len(ValueOf(err)), 64)
++}
++
++func TestValueOf(t *testing.T) {
++	_, err := Parse(resource.MustParse("1.234"))
++	assert.Equal(t, "1.234", ValueOf(err))
++	assert.Equal(t, "", ValueOf(assert.AnError))
++	assert.Equal(t, "", ValueOf(nil))
++}
++
++func TestDisplayValue(t *testing.T) {
++	cases := map[string]string{
++		"1.234":  "1.234",
++		"0":      "0",
++		"-1":     "-1",
++		"1Gi":    "1073741824",
++		"10.001": "10.001",
++		// A decimal scale of 100 or more switches to the canonical form.
++		"1e100":  "10e99",
++		"1e1000": "10e999",
++		// A mantissa beyond int64 is shown as an approximate float.
++		"12345678901234567890123": "1.2345678901234568e+22",
++	}
++	for in, want := range cases {
++		assert.Equal(t, want, display(t, resource.MustParse(in)), in)
++	}
++
++	// The exact decimal form is used while the decimal scale is strictly between -100 and 100.
++	assert.Equal(t, "1"+strings.Repeat("0", 99), display(t, *resource.NewScaledQuantity(1, 99)))
++	assert.Equal(t, "0."+strings.Repeat("0", 98)+"1", display(t, *resource.NewScaledQuantity(1, -99)))
++
++	// The boundary itself switches to the canonical exponent form. A quantity built in code has the
++	// DecimalSI format, whose own String() has no suffix for such an exponent and drops it.
++	assert.Equal(t, "10e99", display(t, *resource.NewScaledQuantity(1, 100)))
++	// ParseQuantity rounds every non-zero value below 1n up to 1n, so "1e-100" parses to 1n and cannot
++	// stand for the negative boundary. 100e-102 is 100 * 10^-102, which is 10^-100.
++	assert.Equal(t, "100e-102", display(t, *resource.NewScaledQuantity(1, -100)))
++
++	// An input string cached in the quantity must not be echoed back: this exponent is padded with
++	// 100000 zeros, and the canonical form of the value is short.
++	assert.Equal(t, "1e999", display(t, resource.MustParse("1e"+strings.Repeat("0", 100000)+"999")))
++
++	// The exact decimal form of these two takes gigabytes, so the rendering has to stay short and fast.
++	// ParseQuantity itself needs minutes for "1e-1000000000", so build that quantity directly.
++	assert.LessOrEqual(t, len(display(t, *resource.NewScaledQuantity(1, -1000000000))), 64)
++	assert.LessOrEqual(t, len(display(t, resource.MustParse("1e1000000000"))), 64)
++}

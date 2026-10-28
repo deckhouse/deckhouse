@@ -168,6 +168,29 @@ spec:
                           - "Off"
                           type: string
                           x-doc-default: 'Auto'
+                        recommendationFactor:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: |-
+                            Per-resource multiplier for the recommendation computed from usage.
+                            It is applied after the recommender's own safety margin and before
+                            `minAllowed` and `maxAllowed`. `1.2` increases the recommendation
+                            by 20%, `0.87` decreases it by 13%. The result never goes below
+                            the module-wide minimum recommendation.
+
+                            Keys are `cpu` and `memory`. Values are quantities written as
+                            strings with at most two decimal places, for example `"1.25"`.
+                            The allowed range is greater than zero and up to `10` inclusive.
+                            A missing key means `1`.
+
+                            The multiplier affects `target`, `lowerBound` and `upperBound`.
+                            `uncappedTarget` keeps the value computed without the multiplier.
+                            Limits follow requests proportionally, as usual.
+                          type: object
                       type: object
                     type: array
                 type: object
@@ -373,7 +396,7 @@ spec:
                               The most recent recommended resources target
                               computed by the autoscaler for the controlled pods, based
                               only on actual resource usage, not taking into account
-                              the `ContainerResourcePolicy`.
+                              the `ContainerResourcePolicy`, including `recommendationFactor`.
                               
                               May differ from the Recommendation
                               if the actual resource usage causes the target to violate
@@ -464,7 +487,8 @@ spec:
                             The most recent recommended resources target
                             computed by the autoscaler for the controlled pods, based
                             only on actual resource usage, not taking into account
-                            the `ContainerResourcePolicy`. May differ from the Recommendation
+                            the `ContainerResourcePolicy`, including
+                            `recommendationFactor`. May differ from the Recommendation
                             if the actual resource usage causes the target to violate
                             the `ContainerResourcePolicy` (lower than MinAllowed or
                             higher that MaxAllowed). Used only as status indication,
