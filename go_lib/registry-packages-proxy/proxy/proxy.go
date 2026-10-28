@@ -397,10 +397,10 @@ func GetPackageCached(
 		defer pipeWriter.Close()
 
 		err := pkgCache.Set(digest, layerDigest, teeReader)
-		if err == nil {
-			return
+		if err != nil {
+			logger.Errorf("cache set for digest %q: %v", digest, err)
 		}
-		logger.Errorf("cache set for digest %q: %v", digest, err)
+
 		_, err = io.Copy(pipeWriter, registryReader)
 		if err != nil {
 			logger.Errorf("copy registry reader to pipe for digest %q: %v", digest, err)
