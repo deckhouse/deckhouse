@@ -21,3 +21,13 @@ global:
         # Until the modules violating PSS restricted are fixed or get SecurityPolicyExceptions.
         pod-security-standards:
           impact: warn
+    # The rules of the module rbac.yaml declaration. Every module still keeps its RBAC in templates, so sync
+    # reports the missing rbac.yaml in each of them; the rules stay warnings until the modules are declared.
+    rbac:
+      rules:
+        contract:
+          impact: warn
+        coverage:
+          impact: warn
+        sync:
+          impact: warn

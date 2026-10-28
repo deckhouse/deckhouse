@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-DMT_VERSION=0.2.6
+DMT_VERSION=0.2.7
 
 function install_dmt() {
   platform_name=$(uname -m)
