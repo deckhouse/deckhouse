@@ -151,7 +151,9 @@ When using client-go, add the headers via `rest.Config.WrapTransport`.
      namespaces are actually available to the user for *this resource and this operation*. Computed with one `SelfScopedAccessReview`
      request to the `authorization.deckhouse.io` API (the [`user-authz`](/modules/user-authz/) module) for the exact
      resource, subresource, and verb, the same answer the web interface uses to decide what to show. Applied
-     whenever RBAC denies the request.
+     whenever RBAC denies the request. The boundary also includes the namespaces where a RoleBinding grants
+     permissions to every authenticated user (the `system:authenticated` group), although the namespace list
+     does not show them.
 
    Only objects from namespaces in the final set make it into the response.
 

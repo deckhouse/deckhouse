@@ -25,6 +25,9 @@ import (
 // authorizationConfigPath is the source of truth for who the webhook is asked about.
 const authorizationConfigPath = "../../../modules/040-control-plane-manager/templates/_authorization_config.tpl"
 
+// authorizationWebhookName is the name of the user-authz authorizer in that template.
+const authorizationWebhookName = "user-authz-webhook"
+
 // The list in exempt.go is a copy of the CEL in the AuthorizationConfiguration, and a copy that
 // nothing checks is a copy that drifts. This reads the template and fails when the two stop
 // agreeing, in either direction: a condition added there and not here makes permission-browser
@@ -55,12 +58,27 @@ func TestExemptionsMirrorTheAuthorizationConfig(t *testing.T) {
 		`'!(request.user == "system:anonymous" && has(request.nonResourceAttributes) && request.nonResourceAttributes.path in ["/livez", "/readyz", "/healthz"])'`,
 	}
 
+	// Only the conditions of this webhook count: the template has other authorizers, such as the
+	// revocation check of user-authn, and their matchConditions select requests for themselves.
 	var got []string
+	inWebhook := false
+	found := false
 	for _, line := range strings.Split(string(raw), "\n") {
 		line = strings.TrimSpace(line)
-		if expression, ok := strings.CutPrefix(line, "- expression: "); ok {
-			got = append(got, strings.TrimSpace(expression))
+		switch {
+		case strings.HasPrefix(line, "- type: "):
+			inWebhook = false
+		case line == "name: "+authorizationWebhookName:
+			inWebhook = true
+			found = true
+		case inWebhook:
+			if expression, ok := strings.CutPrefix(line, "- expression: "); ok {
+				got = append(got, strings.TrimSpace(expression))
+			}
 		}
+	}
+	if !found {
+		t.Fatalf("the template has no authorizer named %q: it was renamed, and this check has to follow it", authorizationWebhookName)
 	}
 
 	if len(got) != len(want) {

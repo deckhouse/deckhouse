@@ -58,7 +58,7 @@ spec:
                     Разрешить/запретить масштабировать (выполнять scale) объекты Deployment и StatefulSet.
                 allowAccessToSystemNamespaces:
                   description: |
-                    Разрешить пользователю доступ в системные неймспейсы (`kube-*`, `d8-*`, `default`, `antiopa`, `loghouse`).
+                    Разрешить пользователю доступ в системные неймспейсы (`kube-*`, `d8-*`, `default`).
 
                     Требует параметра [enableMultiTenancy](configuration.html#parameters-enablemultitenancy). Пока он выключен, правило с этим полем отклоняется, а правило, в котором поле уже задано, применяется без ограничений по неймспейсам — во всех неймспейсах кластера.
 
@@ -170,7 +170,7 @@ spec:
                     Разрешить/запретить масштабировать (выполнять scale) объекты Deployment и StatefulSet.
                 allowAccessToSystemNamespaces:
                   description: |
-                    Разрешить пользователю доступ в системные неймспейсы (`kube-*`, `d8-*`, `default`, `antiopa`, `loghouse`).
+                    Разрешить пользователю доступ в системные неймспейсы (`kube-*`, `d8-*`, `default`).
 
                     Требует параметра [enableMultiTenancy](configuration.html#parameters-enablemultitenancy). Пока он выключен, правило с этим полем отклоняется, а правило, в котором поле уже задано, применяется без ограничений по неймспейсам — во всех неймспейсах кластера.
 
@@ -183,7 +183,7 @@ spec:
 
                     Если параметр `namespaceSelector` указан, значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны либо все неймспейсы с лейблами, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия (включая системные неймспейсы), либо все неймспейсы (включая системные), если указан параметр `namespaceSelector.matchAny`.
 
-                    Если параметр `namespaceSelector` не указан, набор доступных неймспейсов определяется значением параметров `limitNamespaces` и `allowAccessToSystemNamespaces`. Если не указан ни один из параметров `namespaceSelector`, `limitNamespaces` и `allowAccessToSystemNamespaces`, будут доступны все неймспейсы, за исключением системных (`kube-*`, `d8-*`, `default`, `antiopa`, `loghouse`).
+                    Если параметр `namespaceSelector` не указан, набор доступных неймспейсов определяется значением параметров `limitNamespaces` и `allowAccessToSystemNamespaces`. Если не указан ни один из параметров `namespaceSelector`, `limitNamespaces` и `allowAccessToSystemNamespaces`, будут доступны все неймспейсы, за исключением системных (`kube-*`, `d8-*`, `default`).
 
                     Требует параметра [enableMultiTenancy](configuration.html#parameters-enablemultitenancy). Пока он выключен, правило с этим полем отклоняется, а правило, в котором поле уже задано, применяется без ограничений по неймспейсам — во всех неймспейсах кластера.
 

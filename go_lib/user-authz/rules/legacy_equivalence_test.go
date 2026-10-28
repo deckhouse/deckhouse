@@ -38,8 +38,9 @@ package rules
 //     generated or fuzzed: a disagreement on a shape outside the list is unreachable from here.
 //
 // Deliberate differences are asserted rather than hidden, at the bottom of the file: the namespaced
-// ones in TestLegacyEquivalence_DeliberateDifferences, and the cluster-scoped one - the 403 that
-// should have been a 404 - in TestLegacyEquivalence_ClusterScoped.
+// ones in TestLegacyEquivalence_DeliberateDifferences and TestLegacyEquivalence_RetiredSystemNamespaces,
+// and the cluster-scoped one - the 403 that should have been a 404 - in
+// TestLegacyEquivalence_ClusterScoped.
 
 import (
 	"fmt"
@@ -253,8 +254,9 @@ func libraryDenied(dir *Directory, user string, groups []string, ns string, nsLa
 
 // ------------------------------------------------------------- the comparison
 
-// equivalenceNamespaces covers a regular namespace, each system pattern, the two legacy ones, and a
-// namespace whose labels a selector can match.
+// equivalenceNamespaces covers a regular namespace, each system pattern, and a namespace whose labels
+// a selector can match. antiopa and loghouse are left out: they are no longer system namespaces
+// (TestLegacyEquivalence_RetiredSystemNamespaces).
 var equivalenceNamespaces = map[string]labels.Set{
 	"team-a":      {"tier": "app"},
 	"team-b":      {},
@@ -263,8 +265,6 @@ var equivalenceNamespaces = map[string]labels.Set{
 	"kube-public": {},
 	"d8-system":   {"pick": "yes"},
 	"default":     {},
-	"antiopa":     {},
-	"loghouse":    {"pick": "yes"},
 }
 
 func selectorMatchLabels(m map[string]string) *NamespaceSelector {
@@ -474,6 +474,80 @@ func TestLegacyEquivalence_DeliberateDifferences(t *testing.T) {
 	}
 	if !libraryDenied(dir, "alice", nil, "team-b", labels.Set{}) {
 		t.Error("and it must not open anything beyond itself")
+	}
+}
+
+// TestLegacyEquivalence_RetiredSystemNamespaces records that antiopa and loghouse, the namespaces of
+// the components that preceded Deckhouse, are no longer system namespaces: a rule without
+// allowAccessToSystemNamespaces opens them like any other namespace. Without filters, and with a
+// limit that matches them, they are now open; a limit that does not match them keeps them closed,
+// and selectors and the system flag treat them as before.
+func TestLegacyEquivalence_RetiredSystemNamespaces(t *testing.T) {
+	t.Parallel()
+	subject := Subject{Kind: "User", Name: "alice"}
+	cases := []struct {
+		name       string
+		rule       Rule
+		legacy     bool
+		library    bool
+		namespaces map[string]labels.Set
+	}{
+		{
+			name:       "no filters: closed before, open now",
+			rule:       Rule{},
+			legacy:     true,
+			library:    false,
+			namespaces: map[string]labels.Set{"antiopa": {}, "loghouse": {}},
+		},
+		{
+			name:       "a limit that does not name them keeps them closed",
+			rule:       Rule{LimitNamespaces: []string{"team-a"}},
+			legacy:     true,
+			library:    true,
+			namespaces: map[string]labels.Set{"antiopa": {}, "loghouse": {}},
+		},
+		{
+			name:       "a limit that names them opens them only with the system flag before, always now",
+			rule:       Rule{LimitNamespaces: []string{"antiopa", "loghouse"}},
+			legacy:     true,
+			library:    false,
+			namespaces: map[string]labels.Set{"antiopa": {}, "loghouse": {}},
+		},
+		{
+			name:       "the system flag opens them in both",
+			rule:       Rule{AllowAccessToSystemNamespaces: true},
+			legacy:     false,
+			library:    false,
+			namespaces: map[string]labels.Set{"antiopa": {}, "loghouse": {}},
+		},
+		{
+			name:       "a matching selector opens them in both",
+			rule:       Rule{NamespaceSelector: selectorMatchLabels(map[string]string{"pick": "yes"})},
+			legacy:     false,
+			library:    false,
+			namespaces: map[string]labels.Set{"antiopa": {"pick": "yes"}, "loghouse": {"pick": "yes"}},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			rule := c.rule
+			rule.Name = "rule"
+			rule.Subjects = []Subject{subject}
+			legacyDir, ok := legacyBuildDirectory([]Rule{rule})
+			if !ok {
+				t.Fatalf("the reference implementation abandoned the build for %+v", rule)
+			}
+			dir, _ := NewBuilder().Build([]Rule{rule})
+			for ns, nsLabels := range c.namespaces {
+				if got := legacyDenied(legacyDir, "alice", nil, ns, nsLabels); got != c.legacy {
+					t.Errorf("%s: the webhook denied=%v, want %v", ns, got, c.legacy)
+				}
+				if got := libraryDenied(dir, "alice", nil, ns, nsLabels); got != c.library {
+					t.Errorf("%s: the library denies=%v, want %v", ns, got, c.library)
+				}
+			}
+		})
 	}
 }
 

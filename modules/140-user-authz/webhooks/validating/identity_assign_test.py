@@ -1350,9 +1350,9 @@ class TestSystemNamespaceReach(unittest.TestCase):
         self.assertFalse(self.reaches(spec))
 
     def test_system_namespace_names(self):
-        for name in ("d8-system", "kube-system", "default", "upmeter-probe", "antiopa", "loghouse", None):
+        for name in ("d8-system", "kube-system", "default", "upmeter-probe", None):
             self.assertTrue(assign.is_system_namespace_name(name), name)
-        for name in ("app", "d8system", "kubernetes-apps"):
+        for name in ("app", "d8system", "kubernetes-apps", "antiopa", "loghouse"):
             self.assertFalse(assign.is_system_namespace_name(name), name)
 
 

@@ -367,7 +367,7 @@ func TestBuild_NoFilters(t *testing.T) {
 	if !bob.NamespaceFiltersAbsent || !bob.HasAnyFilters() {
 		t.Fatalf("a rule without filters still gates the system namespaces: %+v", bob)
 	}
-	for ns, want := range map[string]bool{"team-a": true, "kube-system": false, "d8-system": false, "default": false, "antiopa": false} {
+	for ns, want := range map[string]bool{"team-a": true, "kube-system": false, "d8-system": false, "default": false, "antiopa": true, "loghouse": true} {
 		if got, _ := NamespaceAllowed(&bob, ns, noLabels); got != want {
 			t.Errorf("bob in %s = %v, want %v", ns, got, want)
 		}
@@ -581,7 +581,7 @@ func TestFromUnstructured_AndProject(t *testing.T) {
 
 func TestIsSystemNamespace(t *testing.T) {
 	t.Parallel()
-	for ns, want := range map[string]bool{"kube-system": true, "d8-monitoring": true, "default": true, "antiopa": true, "loghouse": true, "team-a": false, "kube": false, "d8": false, "defaults": false} {
+	for ns, want := range map[string]bool{"kube-system": true, "d8-monitoring": true, "default": true, "antiopa": false, "loghouse": false, "team-a": false, "kube": false, "d8": false, "defaults": false} {
 		if got := IsSystemNamespace(ns); got != want {
 			t.Errorf("IsSystemNamespace(%q) = %v, want %v", ns, got, want)
 		}

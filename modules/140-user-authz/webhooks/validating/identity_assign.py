@@ -454,11 +454,11 @@ NAMESPACE_NAME_LABEL = "kubernetes.io/metadata.name"
 
 def is_system_namespace_name(name: Any) -> bool:
     """Whether a namespace name is a system one: those a rule without allowAccessToSystemNamespaces does
-    not open (go_lib/user-authz/rules/system.go: kube-*, d8-*, default, antiopa, loghouse) and upmeter-*,
-    which multitenancy-manager never turns into a project either."""
+    not open (go_lib/user-authz/rules/system.go: kube-*, d8-*, default) and upmeter-*, which
+    multitenancy-manager never turns into a project either."""
     if not isinstance(name, str):
         return True
-    return name.startswith(("kube-", "d8-", "upmeter-")) or name in ("default", "antiopa", "loghouse")
+    return name.startswith(("kube-", "d8-", "upmeter-")) or name == "default"
 
 
 def _selector_names_only_applications(selector: Any) -> bool:

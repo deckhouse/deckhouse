@@ -130,7 +130,7 @@ spec:
                     - cse-lite
                     - cse-pro
                   description: |
-                    Allow access to system namespaces (`kube-*`, `d8-*`, `default`, `antiopa`, `loghouse`).
+                    Allow access to system namespaces (`kube-*`, `d8-*`, `default`).
 
                     Requires the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) parameter. While it is disabled, a rule with this field is refused, and a rule that already has it is applied without its namespace limits, in every namespace of the cluster.
 
@@ -347,7 +347,7 @@ spec:
                     - cse-lite
                     - cse-pro
                   description: |
-                    Allow access to system namespaces (`kube-*`, `d8-*`, `default`, `antiopa`, `loghouse`).
+                    Allow access to system namespaces (`kube-*`, `d8-*`, `default`).
 
                     Requires the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) parameter. While it is disabled, a rule with this field is refused, and a rule that already has it is applied without its namespace limits, in every namespace of the cluster.
 
@@ -368,7 +368,7 @@ spec:
 
                     If the `namespaceSelector` parameter is specified, the values of the `limitNamespaces` and `allowAccessToSystemNamespaces` parameters are **ignored**. If the `namespaceSelector.matchAny` field is specified, then all namespaces (including system namespaces) will be accessible. Otherwise, only the namespaces with labels matching the `namespaceSelector.labelSelector` conditions will be accessible (including system namespaces).
 
-                    If the `namespaceSelector` parameter is not specified, then the set of available namespaces is determined by the value of the `limitNamespaces` and `allowAccessToSystemNamespaces` parameters. If none of the parameters `namespaceSelector`, `limitNamespaces` and `allowAccessToSystemNamespaces` are specified, then all namespaces will be available, except for the system ones (`kube-*`, `d8-*`, `default`, `antiopa`, `loghouse`).
+                    If the `namespaceSelector` parameter is not specified, then the set of available namespaces is determined by the value of the `limitNamespaces` and `allowAccessToSystemNamespaces` parameters. If none of the parameters `namespaceSelector`, `limitNamespaces` and `allowAccessToSystemNamespaces` are specified, then all namespaces will be available, except for the system ones (`kube-*`, `d8-*`, `default`).
 
                     Requires the [enableMultiTenancy](configuration.html#parameters-enablemultitenancy) parameter. While it is disabled, a rule with this field is refused, and a rule that already has it is applied without its namespace limits, in every namespace of the cluster.
 

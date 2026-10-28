@@ -19,13 +19,13 @@ package rules
 import "strings"
 
 // IsSystemNamespace reports whether the namespace is one a rule without allowAccessToSystemNamespaces
-// must not open: the kube-* and d8-* namespaces, default, and the namespaces of the components that
-// preceded Deckhouse (antiopa, loghouse), which some clusters still carry.
+// must not open: the kube-* and d8-* namespaces and default. It is the same list as the system scope
+// of the filtered listing.
 func IsSystemNamespace(namespace string) bool {
 	switch {
 	case strings.HasPrefix(namespace, "kube-"), strings.HasPrefix(namespace, "d8-"):
 		return true
-	case namespace == "default", namespace == "antiopa", namespace == "loghouse":
+	case namespace == "default":
 		return true
 	}
 	return false
