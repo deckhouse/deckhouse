@@ -150,6 +150,46 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 		})
 	})
 
+	Context("Cluster that is not bootstrapped yet", func() {
+		// The in-cluster registry proxy answers `registry.d8-system.svc` on the host network of
+		// whichever master runs it, and before bootstrap there is no cluster DNS to find it with.
+		// A typo in the values path would silently leave the alias on the loopback address, which
+		// is the very failure this wiring exists to prevent -- so it is asserted, not read.
+		hostAliases := func() string {
+			return f.KubernetesResource("Deployment", "d8-system", "deckhouse").
+				Field("spec.template.spec.hostAliases").String()
+		}
+
+		It("points the alias at the node the hook found", func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+			f.ValuesSet("deckhouse.internal.inclusterProxyAddress", "192.168.199.233")
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(hostAliases()).To(MatchYAML(`
+- ip: "192.168.199.233"
+  hostnames:
+  - registry.d8-system.svc
+`))
+		})
+
+		It("falls back to the loopback address when there is no proxy to point at", func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(hostAliases()).To(MatchYAML(`
+- ip: "127.0.0.1"
+  hostnames:
+  - registry.d8-system.svc
+`))
+		})
+	})
+
 	Context("Cluster with deckhouse on system node", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)

@@ -18,6 +18,13 @@ properties:
       chrootMode:
         type: boolean
         default: false
+      inclusterProxyAddress:
+        type: string
+        description: |
+          Address of a node running a Ready in-cluster registry proxy Pod, used as the hostAlias
+          for `registry.d8-system.svc` until the cluster is bootstrapped. Absent when no such Pod
+          is running, and the alias falls back to the loopback address.
+        x-examples: ["192.168.199.233"]
       reservedPublicHosts:
         type: object
         default: {}

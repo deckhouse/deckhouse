@@ -395,7 +395,7 @@ spec:
 {{- else }}
       dnsPolicy: Default
       hostAliases:
-      - ip: "127.0.0.1"
+      - ip: {{ .Values.deckhouse.internal.inclusterProxyAddress | default "127.0.0.1" | quote }}
         hostnames:
         - "registry.d8-system.svc"
 {{- end}}
