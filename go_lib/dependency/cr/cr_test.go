@@ -362,6 +362,134 @@ func TestClient_Image(t *testing.T) {
 	})
 }
 
+func TestClient_Digest(t *testing.T) {
+	testImage, err := random.Image(1024, 1)
+	require.NoError(t, err)
+
+	rawManifest, err := testImage.RawManifest()
+	require.NoError(t, err)
+	wantDigest, err := testImage.Digest()
+	require.NoError(t, err)
+	mediaType, err := testImage.MediaType()
+	require.NoError(t, err)
+
+	// a valid but distinct digest reported by HEAD for the "multiarch" index tag
+	indexDigest := "sha256:" + string(bytes.Repeat([]byte("b"), 64))
+
+	var headCount, getCount atomic.Int64
+
+	registryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v2/":
+			w.WriteHeader(http.StatusOK)
+
+		// "headless" simulates a registry that does not answer HEAD on a manifest,
+		// forcing the GET fallback in Digest.
+		case "/v2/test/repo/manifests/headless":
+			if r.Method == http.MethodHead {
+				headCount.Add(1)
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+			getCount.Add(1)
+			w.Header().Set("Content-Type", string(mediaType))
+			w.Header().Set("Docker-Content-Digest", wantDigest.String())
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(rawManifest)
+
+		case "/v2/test/repo/manifests/notfound":
+			w.WriteHeader(http.StatusNotFound)
+
+		// "multiarch" answers HEAD with an image index; GET (remote.Image) resolves it to a
+		// platform child with a different digest, so Digest must not trust the HEAD result.
+		case "/v2/test/repo/manifests/multiarch":
+			if r.Method == http.MethodHead {
+				headCount.Add(1)
+				w.Header().Set("Content-Type", "application/vnd.oci.image.index.v1+json")
+				w.Header().Set("Docker-Content-Digest", indexDigest)
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			getCount.Add(1)
+			w.Header().Set("Content-Type", string(mediaType))
+			w.Header().Set("Docker-Content-Digest", wantDigest.String())
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(rawManifest)
+
+		case "/v2/test/repo/manifests/latest":
+			w.Header().Set("Content-Type", string(mediaType))
+			w.Header().Set("Docker-Content-Digest", wantDigest.String())
+			w.Header().Set("Content-Length", fmt.Sprint(len(rawManifest)))
+			if r.Method == http.MethodHead {
+				headCount.Add(1)
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			getCount.Add(1)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(rawManifest)
+
+		default:
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("test-blob-content"))
+		}
+	}))
+	defer registryServer.Close()
+
+	registryHost := registryServer.URL[7:] // remove "http://"
+
+	newClient := func(t *testing.T) Client {
+		t.Helper()
+		client, err := NewClient(registryHost+"/test/repo", WithInsecureSchema(true))
+		require.NoError(t, err)
+		return client
+	}
+
+	t.Run("digest is fetched with a HEAD request, without a GET", func(t *testing.T) {
+		headCount.Store(0)
+		getCount.Store(0)
+
+		digest, err := newClient(t).Digest(context.Background(), "latest")
+		require.NoError(t, err)
+
+		assert.Equal(t, wantDigest.String(), digest)
+		assert.Positive(t, headCount.Load(), "HEAD should be used to fetch the digest")
+		assert.Zero(t, getCount.Load(), "no GET should be issued when HEAD succeeds")
+	})
+
+	t.Run("falls back to GET when the registry refuses HEAD", func(t *testing.T) {
+		headCount.Store(0)
+		getCount.Store(0)
+
+		digest, err := newClient(t).Digest(context.Background(), "headless")
+		require.NoError(t, err)
+
+		assert.Equal(t, wantDigest.String(), digest)
+		assert.Positive(t, headCount.Load(), "HEAD should be attempted first")
+		assert.Positive(t, getCount.Load(), "GET fallback should run after HEAD is refused")
+	})
+
+	t.Run("falls back to GET when HEAD reports an index", func(t *testing.T) {
+		headCount.Store(0)
+		getCount.Store(0)
+
+		digest, err := newClient(t).Digest(context.Background(), "multiarch")
+		require.NoError(t, err)
+
+		// GET resolves the index to a platform child, so Digest must return the GET
+		// digest, not the index digest that HEAD advertised.
+		assert.Equal(t, wantDigest.String(), digest)
+		assert.NotEqual(t, indexDigest, digest)
+		assert.Positive(t, headCount.Load(), "HEAD should be attempted first")
+		assert.Positive(t, getCount.Load(), "GET fallback should run when HEAD reports an index")
+	})
+
+	t.Run("returns an error for a missing image", func(t *testing.T) {
+		_, err := newClient(t).Digest(context.Background(), "notfound")
+		require.Error(t, err)
+	})
+}
+
 func TestClient_ListTags(t *testing.T) {
 	// Create a test HTTP server that acts as a registry
 	registryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
