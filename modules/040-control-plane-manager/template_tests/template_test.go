@@ -414,6 +414,26 @@ apiserver:
 		})
 	})
 
+	Context("Allowed Kubernetes versions", func() {
+		allowedVersions := func() []string {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
+			Expect(ds.Exists()).To(BeTrue())
+			return strings.Split(ds.Field(`spec.template.spec.containers.#(name=="control-plane-manager").env.#(name=="ALLOWED_KUBERNETES_VERSIONS").value`).String(), ",")
+		}
+
+		// Compared with the CE render, not with literals: version_map changes every release.
+		It("keeps only the first and the last version in CSE", func() {
+			f.HelmRender()
+			all := allowedVersions()
+			Expect(len(all)).To(BeNumerically(">", 2), "needs a middle version for CSE to drop")
+
+			f.ValuesSet("global.deckhouseEdition", "CSE")
+			f.HelmRender()
+			Expect(allowedVersions()).To(Equal([]string{all[0], all[len(all)-1]}))
+		})
+	})
+
 	Context("Control plane metrics scrape stack", func() {
 		Context("With prometheus module enabled", func() {
 			BeforeEach(func() {

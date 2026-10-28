@@ -104,15 +104,17 @@ func LoadVersionSettingsFromEnv() (VersionSettings, error) {
 
 // Not only informational: the ModuleConfig admission webhook rejects a kubernetesVersion outside this
 // list, so changing the formula changes what operators may set.
+//
+// Filtered by value, not by position: in CSE the list holds only the first and the last version, so
+// a neighbour in the list is not necessarily one minor away.
 func (s VersionSettings) Available(maxUsedVersion string) []string {
-	for i, v := range s.Supported {
-		if v == maxUsedVersion {
-			// available versions from (maxUsed - 1) to newest
-			return s.Supported[max(i-1, 0):]
+	available := make([]string, 0, len(s.Supported))
+	for _, v := range s.Supported {
+		// From (maxUsed - 1) to newest.
+		if version.Compare(v, maxUsedVersion) >= 0 || version.Hops(v, maxUsedVersion) == 1 {
+			available = append(available, v)
 		}
 	}
 
-	// Not in the supported list: usually older than everything this release ships. It can also be
-	// newer, after a Deckhouse downgrade — the admission floor check catches that case.
-	return s.Supported
+	return available
 }
