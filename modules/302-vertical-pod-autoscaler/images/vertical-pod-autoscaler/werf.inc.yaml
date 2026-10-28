@@ -43,7 +43,12 @@ shell:
     - go build -ldflags="-s -w" -o /admission-controller
 
     - cd /src/vertical-pod-autoscaler/pkg/recommender
-    - go build -ldflags="-s -w" -o /recommender
+    - |
+      {{- $buildContext := deepCopy $ -}}
+      {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+      {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-s -w" -o /recommender` -}}
+      {{- $_ := set $buildContext "ProjectName" (printf "%s/recommender" $.ModuleName) -}}
+      {{- include "image-build.build" $buildContext | indent 6 }}
 
     - cd /src/vertical-pod-autoscaler/pkg/updater
     - go build -ldflags="-s -w" -o /updater
