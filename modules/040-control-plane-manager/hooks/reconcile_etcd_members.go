@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -80,7 +81,9 @@ func reconcicleEtcdFilterNode(unstructured *unstructured.Unstructured) (go_hook.
 	}
 
 	var internalIP, externalIP string
+	addresses := make([]string, 0, len(node.Status.Addresses))
 	for _, adr := range node.Status.Addresses {
+		addresses = append(addresses, adr.Address)
 		switch adr.Type {
 		case corev1.NodeInternalIP:
 			internalIP = adr.Address
@@ -90,7 +93,8 @@ func reconcicleEtcdFilterNode(unstructured *unstructured.Unstructured) (go_hook.
 		}
 	}
 	etcdNode := recicleEtcdNode{
-		Name: node.Name,
+		Name:      node.Name,
+		Addresses: addresses,
 	}
 
 	if internalIP != "" {
@@ -103,8 +107,9 @@ func reconcicleEtcdFilterNode(unstructured *unstructured.Unstructured) (go_hook.
 }
 
 type recicleEtcdNode struct {
-	IP   string
-	Name string
+	IP        string
+	Name      string
+	Addresses []string
 }
 
 func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -121,6 +126,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 
 	etcdServersEndpoints := make([]string, 0, len(snaps))
 	discoveredEtcdNodesMap := make(map[string]string, len(snaps))
+	discoveredEtcdNodesAddresses := make(map[string]struct{}, len(snaps))
 	for node, err := range sdkobjectpatch.SnapshotIter[recicleEtcdNode](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over ETCD Nodes snapshots: %v", err)
@@ -134,6 +140,9 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 		}
 
 		discoveredEtcdNodesMap[node.Name] = node.IP
+		for _, addr := range node.Addresses {
+			discoveredEtcdNodesAddresses[addr] = struct{}{}
+		}
 		etcdServersEndpoints = append(etcdServersEndpoints, fmt.Sprintf("https://%s:2379", node.IP))
 	}
 
@@ -153,29 +162,31 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 	}
 
 	etcdVotingMembers := make([]string, 0, len(etcdMembersResp.Members))
+	removeListIDs := make([]uint64, 0)
 	for _, mem := range etcdMembersResp.Members {
-		if mem.IsLearner {
+		ip, isKnownNode := discoveredEtcdNodesMap[mem.Name]
+
+		switch {
+		// A member gets its name only after its etcd starts. Until then a learner of a joining master is matched by peer URL host.
+		// Voters are not exempt: an unstarted voter counts toward quorum, and the join flow promotes only started learners.
+		case mem.IsLearner && mem.Name == "" && hasPeerOnKnownNode(mem.PeerURLs, discoveredEtcdNodesAddresses):
+			input.Logger.Warn("skipping unstarted etcd learner of a known node", slog.Uint64("member_id", mem.ID), slog.Any("peer_urls", mem.PeerURLs))
+		case !isKnownNode:
+			removeListIDs = append(removeListIDs, mem.ID)
+			input.Logger.Warn("added etcd member to remove list", slog.Uint64("member_id", mem.ID), slog.String("member_name", mem.Name))
+		case mem.IsLearner:
 			input.Logger.Warn("found learner etcd member, will be skipped", slog.Uint64("member_id", mem.ID), slog.String("member_name", mem.Name))
-			continue
-		}
-		if ip, ok := discoveredEtcdNodesMap[mem.Name]; ok {
+		default:
 			etcdVotingMembers = append(etcdVotingMembers, fmt.Sprintf("https://%s:2379", ip))
 		}
 	}
 	input.Values.Set("controlPlaneManager.internal.etcdServers", etcdVotingMembers)
 
-	removeListIDs := make([]uint64, 0)
-	for _, mem := range etcdMembersResp.Members {
-		if _, ok := discoveredEtcdNodesMap[mem.Name]; !ok {
-			removeListIDs = append(removeListIDs, mem.ID)
-			input.Logger.Warn("added etcd member to remove list", slog.Uint64("member_id", mem.ID), slog.String("member_name", mem.Name))
-		}
-	}
-
 	input.Logger.Warn("etcd members to remove", slog.Any("remove_list_i_ds", removeListIDs))
 
-	if len(removeListIDs) == len(etcdMembersResp.Members) {
-		return fmt.Errorf("attempting do delete every single member from etcd cluster. Exiting")
+	// Learners do not count: the cluster cannot work without a voting member.
+	if len(etcdVotingMembers) == 0 {
+		return fmt.Errorf("attempting to delete every voting member from etcd cluster. Exiting")
 	}
 
 	for _, rm := range removeListIDs {
@@ -187,4 +198,21 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 	}
 
 	return nil
+}
+
+// hasPeerOnKnownNode reports whether any peer URL (e.g. "https://192.168.1.4:2380") points to one of the node addresses.
+func hasPeerOnKnownNode(peerURLs []string, nodeAddresses map[string]struct{}) bool {
+	for _, peerURL := range peerURLs {
+		parsed, err := url.Parse(peerURL)
+		if err != nil {
+			continue
+		}
+
+		peerIP := parsed.Hostname()
+		if _, isKnown := nodeAddresses[peerIP]; isKnown {
+			return true
+		}
+	}
+
+	return false
 }

@@ -147,10 +147,142 @@ status:
 
 			It("Should exit with error: remove all members", func() {
 				Expect(f).ShouldNot(ExecuteSuccessfully())
-				Expect(f.GoHookError).Should(MatchError("attempting do delete every single member from etcd cluster. Exiting"))
+				Expect(f.GoHookError).Should(MatchError("attempting to delete every voting member from etcd cluster. Exiting"))
 			})
 		})
 	})
+	Context("Unstarted etcd members", func() {
+		newMasterState := reconcileStartState + `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: main-master-3
+  labels:
+    node-role.kubernetes.io/control-plane: ""
+status:
+  addresses:
+    - address: 192.168.1.4
+      type: InternalIP
+    - address: 10.0.0.4
+      type: InternalIP
+`
+		withMember := func(m *etcdserverpb.Member) []*etcdserverpb.Member {
+			return append(append([]*etcdserverpb.Member{}, reconcileEtcdMembers...), m)
+		}
+
+		Context("Learner of a joining master has not started yet", func() {
+			BeforeEach(func() {
+				testHelperSetETCDMembers(withMember(&etcdserverpb.Member{ID: 444, PeerURLs: []string{"https://192.168.1.4:2380"}, IsLearner: true}))
+				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + newMasterState))
+				f.RunHook()
+			})
+
+			It("Keeps the learner", func() {
+				Expect(f).Should(ExecuteSuccessfully())
+				resp, _ := dependency.TestDC.EtcdClient.MemberList(context.TODO())
+				Expect(resp.Members).To(HaveLen(4))
+			})
+		})
+
+		Context("Unstarted voter with a peer URL of a known node", func() {
+			BeforeEach(func() {
+				testHelperSetETCDMembers(withMember(&etcdserverpb.Member{ID: 444, PeerURLs: []string{"https://192.168.1.4:2380"}}))
+				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + newMasterState))
+				f.RunHook()
+			})
+
+			It("Removes the voter", func() {
+				Expect(f).Should(ExecuteSuccessfully())
+				resp, _ := dependency.TestDC.EtcdClient.MemberList(context.TODO())
+				Expect(resp.Members).To(HaveLen(3))
+				for _, m := range resp.Members {
+					Expect(m.ID).NotTo(Equal(uint64(444)))
+				}
+			})
+		})
+
+		Context("Unstarted learner of a node that no longer exists", func() {
+			BeforeEach(func() {
+				testHelperSetETCDMembers(withMember(&etcdserverpb.Member{ID: 444, PeerURLs: []string{"https://192.168.1.99:2380"}, IsLearner: true}))
+				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + newMasterState))
+				f.RunHook()
+			})
+
+			It("Removes the learner", func() {
+				Expect(f).Should(ExecuteSuccessfully())
+				resp, _ := dependency.TestDC.EtcdClient.MemberList(context.TODO())
+				Expect(resp.Members).To(HaveLen(3))
+				for _, m := range resp.Members {
+					Expect(m.ID).NotTo(Equal(uint64(444)))
+				}
+			})
+		})
+
+		Context("Started learner of a node that no longer exists", func() {
+			BeforeEach(func() {
+				testHelperSetETCDMembers(withMember(&etcdserverpb.Member{ID: 444, Name: "main-master-9", PeerURLs: []string{"https://192.168.1.4:2380"}, IsLearner: true}))
+				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + reconcileStartState))
+				f.RunHook()
+			})
+
+			It("Removes the learner", func() {
+				Expect(f).Should(ExecuteSuccessfully())
+				resp, _ := dependency.TestDC.EtcdClient.MemberList(context.TODO())
+				Expect(resp.Members).To(HaveLen(3))
+			})
+		})
+	})
+
+	Context("All old masters are gone while a new master is joining", func() {
+		onlyNewMasterState := `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: main-master-3
+  labels:
+    node-role.kubernetes.io/control-plane: ""
+status:
+  addresses:
+    - address: 192.168.1.4
+      type: InternalIP
+`
+		withLearner := func(learner *etcdserverpb.Member) []*etcdserverpb.Member {
+			return append(append([]*etcdserverpb.Member{}, reconcileEtcdMembers...), learner)
+		}
+
+		Context("Learner has not started yet", func() {
+			BeforeEach(func() {
+				testHelperSetETCDMembers(withLearner(&etcdserverpb.Member{ID: 444, PeerURLs: []string{"https://192.168.1.4:2380"}, IsLearner: true}))
+				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + onlyNewMasterState))
+				f.RunHook()
+			})
+
+			It("Should exit with error and keep every member", func() {
+				Expect(f).ShouldNot(ExecuteSuccessfully())
+				Expect(f.GoHookError).Should(MatchError("attempting to delete every voting member from etcd cluster. Exiting"))
+				resp, _ := dependency.TestDC.EtcdClient.MemberList(context.TODO())
+				Expect(resp.Members).To(HaveLen(4))
+			})
+		})
+
+		Context("Learner has already started", func() {
+			BeforeEach(func() {
+				testHelperSetETCDMembers(withLearner(&etcdserverpb.Member{ID: 444, Name: "main-master-3", PeerURLs: []string{"https://192.168.1.4:2380"}, IsLearner: true}))
+				f.BindingContexts.Set(f.KubeStateSet(testETCDSecret + onlyNewMasterState))
+				f.RunHook()
+			})
+
+			It("Should exit with error and keep every member", func() {
+				Expect(f).ShouldNot(ExecuteSuccessfully())
+				Expect(f.GoHookError).Should(MatchError("attempting to delete every voting member from etcd cluster. Exiting"))
+				resp, _ := dependency.TestDC.EtcdClient.MemberList(context.TODO())
+				Expect(resp.Members).To(HaveLen(4))
+			})
+		})
+	})
+
 	Context("Etcd-arbiter node support", func() {
 		BeforeEach(func() {
 			reconcileEtcdMembersWithEtcdArbiter := []*etcdserverpb.Member{
