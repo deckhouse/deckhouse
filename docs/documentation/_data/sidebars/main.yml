@@ -1895,6 +1895,14 @@ entries:
                 ru: Модуль cni-cilium
               url: /architecture/network/cni-cilium.html
             - title:
+                en: Cni-flannel module
+                ru: Модуль cni-flannel
+              url: /architecture/network/cni-flannel.html
+            - title:
+                en: Cni-simple-bridge module
+                ru: Модуль cni-simple-bridge
+              url: /architecture/network/cni-simple-bridge.html
+            - title:
                 en: Cilium-hubble module
                 ru: Модуль cilium-hubble
               url: /architecture/network/cilium-hubble.html
