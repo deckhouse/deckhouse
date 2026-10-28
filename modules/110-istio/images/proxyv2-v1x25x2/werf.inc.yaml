@@ -106,7 +106,11 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - go mod vendor
-  - common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent
+  - |
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "BuildCommand" `common/scripts/gobuild.sh /src/istio/out/ -tags=agent,disable_pgv /src/istio/pilot/cmd/pilot-agent` -}}
+    {{- include "image-build.build" $buildContext | indent 4 }}
   #
   - strip /src/istio/out/pilot-agent
   #

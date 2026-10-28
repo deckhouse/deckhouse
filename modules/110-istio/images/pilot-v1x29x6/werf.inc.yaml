@@ -58,7 +58,11 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - export LDFLAGS='-extldflags -static -s -w'
   - go mod download
-  - common/scripts/gobuild.sh /src/istio/out/ -tags=disable_pgv /src/istio/pilot/cmd/pilot-discovery/
+  - |
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "BuildCommand" `common/scripts/gobuild.sh /src/istio/out/ -tags=disable_pgv /src/istio/pilot/cmd/pilot-discovery/` -}}
+    {{- include "image-build.build" $buildContext | indent 4 }}
   - strip /src/istio/out/pilot-discovery
   - chmod 0700 /src/istio/out/pilot-discovery
   - chown 64535:64535 /src/istio/out/pilot-discovery

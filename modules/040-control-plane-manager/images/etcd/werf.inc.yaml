@@ -67,6 +67,14 @@ shell:
       {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-s -w" -o /etcd .` -}}
       {{- include "image-build.build" $buildContext | indent 6 }}
     - cd ..
-    - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
+    # etcdctl is shipped by control-plane-manager/etcd-backup, so it is analyzed as that project
+    - cd etcdctl
+    - |
+      {{- $etcdctlBuildContext := deepCopy $ -}}
+      {{- $_ := set $etcdctlBuildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+      {{- $_ := set $etcdctlBuildContext "BuildCommand" `go build -ldflags="-s -w" -o /etcdctl .` -}}
+      {{- $_ := set $etcdctlBuildContext "ProjectName" (printf "%s/etcd-backup" $.ModuleName) -}}
+      {{- include "image-build.build" $etcdctlBuildContext | indent 6 }}
+    - cd ..
     - cd etcdutl && go build -ldflags="-s -w" -o /etcdutl . && cd ..
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
