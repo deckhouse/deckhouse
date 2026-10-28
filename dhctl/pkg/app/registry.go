@@ -15,13 +15,15 @@
 package app
 
 import (
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
-func DefineImgBundleFlags(cmd *kingpin.CmdClause, o *options.RegistryOptions) {
-	cmd.Flag("img-bundle-path", `Path to the directory with tar or chunk.tar image bundles created by the 'd8 mirror pull' command for Local registry mode.`).
-		Envar(configEnvName("IMG_BUNDLE_PATH")).
-		StringVar(&o.ImgBundlePath)
+func DefineImgBundleFlags(cmd *cobra.Command, o *options.RegistryOptions) {
+	StringFlag(cmd.Flags(), Flag{
+		Name: "img-bundle-path",
+		Env:  "DHCTL_CLI_IMG_BUNDLE_PATH",
+		Help: `Path to the directory with tar or chunk.tar image bundles created by the 'd8 mirror pull' command for Local registry mode.`,
+	}, &o.ImgBundlePath)
 }

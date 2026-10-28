@@ -20,12 +20,10 @@ import (
 	"time"
 
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -47,8 +45,8 @@ If you understand what you are doing, you can use the flag "--yes-i-am-sane-and-
 `
 )
 
-func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+func DefineDestroyCommand(cmd *cobra.Command, opts *options.Options) {
+	app.DefineSSHFlags(cmd, opts)
 	// Without kube flags a cluster whose nodes run no SSH server was impossible
 	// to delete: the infrastructure state lives in the cluster, and reaching it
 	// needs a kubeconfig, not a shell on a node.
@@ -60,19 +58,14 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 	app.DefinePreflight(cmd, &opts.Preflight)
 	app.DefineTFResourceManagementTimeout(cmd, &opts.Cache)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 		l := logger.FromContext(ctx)
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		params := app.ProviderParams(&opts.Global, logger.FromContext(ctx))
-
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
-			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
-			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
-		)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.CLIProviders(ctx, opts, providerinitializer.CLIProvidersOptions{})
 		if err != nil {
 			// No SSH hosts is not a failure any more: it is what an immutable
 			// cluster looks like. Converge already tolerates it the same way.
@@ -143,5 +136,5 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 
 		return nil
-	})
+	}
 }

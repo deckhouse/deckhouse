@@ -18,8 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	libcon "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg"
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/kube"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/settings"
 	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
@@ -130,32 +132,23 @@ func CreateProviders(ctx context.Context, config string, isDebug bool, tmpDir st
 
 	cleanuper := callback.NewCallback()
 
-	params := settings.ProviderParams{
-		Logger:      dhlog.FromContext(ctx),
-		IsDebug:     isDebug,
-		NodeTmpPath: app.DeckhouseNodeTmpPath,
-		NodeBinPath: app.DeckhouseNodeBinPath,
-		TmpDir:      tmpDir,
-	}
+	params := app.NewProviderParams(dhlog.FromContext(ctx), isDebug, tmpDir)
 
-	providerOpts, err := providerOptions(config, options, cleanuper)
+	ssh, err := connectionConfig(config, params, options.allowMissingConnectionConfig)
 	if err != nil {
-		return nil, nil, cleanuper.AsFunc(), err
+		return nil, nil, cleanuper.AsFunc(), fmt.Errorf("connection config: %w", err)
 	}
 
-	sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerOpts...)
+	kubeCfg, err := kubeConfig(options, cleanuper)
+	if err != nil {
+		return nil, nil, cleanuper.AsFunc(), fmt.Errorf("kube config: %w", err)
+	}
+
+	sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, kubeCfg, providerinitializer.GetProvidersOptions{SSH: ssh})
 	if err != nil {
 		if !options.allowMissingHostsFromCache || !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 			return nil, nil, cleanuper.AsFunc(), fmt.Errorf("initializing providers: %w", err)
 		}
-	}
-
-	if sshProviderInitializer == nil && options.allowMissingConnectionConfig {
-		// Config must be non-nil: lib-connection dereferences it while cloning the connection.
-		sshProviderInitializer = providerinitializer.NewSSHProviderInitializer(
-			settings.NewBaseProviders(params),
-			&sshconfig.ConnectionConfig{Config: &sshconfig.Config{}},
-		)
 	}
 
 	if sshProviderInitializer != nil {
@@ -167,33 +160,39 @@ func CreateProviders(ctx context.Context, config string, isDebug bool, tmpDir st
 	return sshProviderInitializer, kubeProvider, cleanuper.AsFunc(), nil
 }
 
-func providerOptions(config string, options *CreateProvidersOptions, cleanuper *callback.Callback) ([]providerinitializer.ProviderOptions, error) {
+// connectionConfig is the SSH connection a request carries. Without one the operation runs without
+// SSH, or with a hostless, keyless connection when it is written against a present one.
+func connectionConfig(config string, params settings.ProviderParams, allowMissing bool) (*sshconfig.ConnectionConfig, error) {
+	if config != "" {
+		return sshconfig.ParseConnectionConfig(strings.NewReader(config), settings.NewBaseProviders(params), sshconfig.ParseWithRequiredSSHHost(false))
+	}
+
+	if !allowMissing {
+		return nil, nil
+	}
+	// Config must be non-nil: lib-connection dereferences it while cloning the connection.
+	return &sshconfig.ConnectionConfig{Config: &sshconfig.Config{}}, nil
+}
+
+// kubeConfig is the Kubernetes route of a request: its kubeconfig, written to a temp file, else its
+// API server endpoint, else over SSH. The endpoint is the older of the two direct routes, so a
+// kubeconfig wins wherever a request carries both.
+func kubeConfig(options *CreateProvidersOptions, cleanuper *callback.Callback) (*kube.Config, error) {
 	if options.kubeConfig == "" {
-		// The API server endpoint is the older of the two direct routes, so a
-		// kubeconfig wins wherever a request carries both.
 		if options.apiServer.Defined() {
-			return []providerinitializer.ProviderOptions{
-				providerinitializer.WithConnectionConfig(config),
-				providerinitializer.WithConnectionConfigOnly(),
-				providerinitializer.WithKubeRestConfig(options.apiServer.RestConfig()),
-			}, nil
+			return &kube.Config{RestConfig: options.apiServer.RestConfig()}, nil
 		}
 
-		return []providerinitializer.ProviderOptions{providerinitializer.WithConnectionConfig(config)}, nil
+		return &kube.Config{}, nil
 	}
 
 	kubeConfigPath, cleanup, err := util.WriteDefaultTempFile([]byte(options.kubeConfig))
 	cleanuper.Add(cleanup)
-
 	if err != nil {
 		return nil, fmt.Errorf("writing kubeconfig: %w", err)
 	}
 
-	return []providerinitializer.ProviderOptions{
-		providerinitializer.WithConnectionConfig(config),
-		providerinitializer.WithConnectionConfigOnly(),
-		// The Commander generates the kubeconfig it sends, so its current-context is the only
-		// one that can be meant.
-		providerinitializer.WithKubeConfig(kubeConfigPath, "", false),
-	}, nil
+	// The Commander generates the kubeconfig it sends, so its current-context is the only one that
+	// can be meant.
+	return &kube.Config{KubeConfig: kubeConfigPath}, nil
 }

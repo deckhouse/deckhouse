@@ -33,6 +33,7 @@ import (
 	"testing"
 	"time"
 
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/settings"
 	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/stretchr/testify/require"
@@ -1524,7 +1525,7 @@ func TestOpenImmutableChannelNamesBothAddresses(t *testing.T) {
 	bctx.immutable.hosts = map[string]string{bctx.immutable.masterNodeName: "192.168.0.43"}
 	// A bastion with no usable credentials: the open fails, which is the point,
 	// and it fails without waiting on the network.
-	b.SSHProviderInitializer = providerinitializer.NewSSHProviderInitializer(nil,
+	b.SSHProviderInitializer = providerinitializer.NewSSHProviderInitializer(settings.NewBaseProviders(settings.ProviderParams{TmpDir: t.TempDir()}),
 		&sshconfig.ConnectionConfig{Config: &sshconfig.Config{
 			BastionHost: "127.0.0.1",
 			BastionPort: new(1),

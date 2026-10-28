@@ -15,20 +15,27 @@
 package app
 
 import (
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 // DefineKubeFlags registers Kubernetes-API flags, writing into o.
-func DefineKubeFlags(cmd *kingpin.CmdClause, o *options.KubeOptions) {
-	cmd.Flag("kubeconfig", "Path to kubernetes config file.").
-		Envar(configEnvName("KUBE_CONFIG")).
-		StringVar(&o.Config)
-	cmd.Flag("kubeconfig-context", "Context from kubernetes config to connect to Kubernetes API.").
-		Envar(configEnvName("KUBE_CONFIG_CONTEXT")).
-		StringVar(&o.ConfigContext)
-	cmd.Flag("kube-client-from-cluster", "Use in-cluster Kubernetes API access.").
-		Envar(configEnvName("KUBE_CLIENT_FROM_CLUSTER")).
-		BoolVar(&o.InCluster)
+func DefineKubeFlags(cmd *cobra.Command, o *options.KubeOptions) {
+	flags := cmd.Flags()
+	StringFlag(flags, Flag{
+		Name: "kubeconfig",
+		Env:  "DHCTL_CLI_KUBE_CONFIG",
+		Help: "Path to kubernetes config file.",
+	}, &o.Config)
+	StringFlag(flags, Flag{
+		Name: "kubeconfig-context",
+		Env:  "DHCTL_CLI_KUBE_CONFIG_CONTEXT",
+		Help: "Context from kubernetes config to connect to Kubernetes API.",
+	}, &o.ConfigContext)
+	BoolFlag(flags, Flag{
+		Name: "kube-client-from-cluster",
+		Env:  "DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER",
+		Help: "Use in-cluster Kubernetes API access.",
+	}, &o.InCluster)
 }

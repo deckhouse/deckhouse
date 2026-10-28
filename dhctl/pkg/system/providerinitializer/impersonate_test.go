@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/kube"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/settings"
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/stretchr/testify/require"
@@ -82,10 +83,7 @@ func connectToAPIServer(t *testing.T, kubeconfig string) {
 		TmpDir: t.TempDir(),
 	}
 
-	sshProviderInitializer, kubeProvider, err := GetProviders(ctx, params,
-		WithConnectionConfigOnly(),
-		WithKubeConfig(kubeconfig, "", false),
-	)
+	sshProviderInitializer, kubeProvider, err := GetProviders(ctx, params, &kube.Config{KubeConfig: kubeconfig}, GetProvidersOptions{})
 	require.NoError(t, err)
 	require.Nil(t, sshProviderInitializer, "a kubeconfig connection needs no SSH provider")
 	require.NotNil(t, kubeProvider)

@@ -17,56 +17,75 @@ package app
 import (
 	"fmt"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 // DefineCacheFlags registers infrastructure (terraform/tofu) state-cache flags into o.
-func DefineCacheFlags(cmd *kingpin.CmdClause, o *options.CacheOptions) {
-	cmd.Flag("cache-dir", "Directory to store the cache.").
-		Envar(configEnvName("CACHE_DIR")).
-		StringVar(&o.Dir)
+func DefineCacheFlags(cmd *cobra.Command, o *options.CacheOptions) {
+	flags := cmd.Flags()
+	StringFlag(flags, Flag{
+		Name: "cache-dir",
+		Env:  "DHCTL_CLI_CACHE_DIR",
+		Help: "Directory to store the cache.",
+	}, &o.Dir)
 
-	cmd.Flag("use-cache", fmt.Sprintf(`Behaviour for using infrastructure state cache. May be:
+	EnumFlag(flags, Flag{
+		Name: "use-cache",
+		Env:  "DHCTL_CLI_USE_CACHE",
+		Help: fmt.Sprintf(`Behaviour for using infrastructure state cache. May be:
 	%s - ask the user (Default)
    	%s - use cache
 	%s  - don't use cache
-	`, options.UseStateCacheAsk, options.UseStateCacheYes, options.UseStateCacheNo)).
-		Envar(configEnvName("USE_CACHE")).
-		Default(options.UseStateCacheAsk).
-		EnumVar(&o.UseTfCache, options.UseStateCacheAsk, options.UseStateCacheYes, options.UseStateCacheNo)
+	`, options.UseStateCacheAsk, options.UseStateCacheYes, options.UseStateCacheNo),
+	}, &o.UseTfCache, options.UseStateCacheAsk, options.UseStateCacheYes, options.UseStateCacheNo)
 
-	cmd.Flag("kube-cache-store-kubeconfig", "Path to the kubernetes config file for storing the cache in a kubernetes secret").
-		Envar(configEnvName("CACHE_STORE_KUBE_CONFIG")).
-		StringVar(&o.KubeConfig)
-	cmd.Flag("kube-cachestore-kubeconfig-context", "Context from the kubernetes config to connect to the Kubernetes API, for storing the cache in a kubernetes secret").
-		Envar(configEnvName("CACHE_STORE_KUBE_CONFIG_CONTEXT")).
-		StringVar(&o.KubeConfigContext)
-	cmd.Flag("kube-cachestore-kube-client-from-cluster", "Use in-cluster Kubernetes API access, for storing the cache in a kubernetes secret").
-		Envar(configEnvName("CACHE_STORE_KUBE_CLIENT_FROM_CLUSTER")).
-		BoolVar(&o.KubeConfigInCluster)
-	cmd.Flag("kube-cachestore-namespace", "Namespace for storing the cache in a kubernetes secret").
-		Envar(configEnvName("CACHE_STORE_KUBE_NAMESPACE")).
-		StringVar(&o.KubeNamespace)
-	cmd.Flag("kube-cachestore-labels", "List of labels for cache secrets").
-		Envar(configEnvName("CACHE_STORE_KUBE_LABELS")).
-		StringMapVar(&o.KubeLabels)
-	cmd.Flag("kube-cachestore-name", "Name of the cache secret").
-		Envar(configEnvName("CACHE_STORE_KUBE_NAME")).
-		StringVar(&o.KubeName)
+	StringFlag(flags, Flag{
+		Name: "kube-cache-store-kubeconfig",
+		Env:  "DHCTL_CLI_CACHE_STORE_KUBE_CONFIG",
+		Help: "Path to the kubernetes config file for storing the cache in a kubernetes secret",
+	}, &o.KubeConfig)
+	StringFlag(flags, Flag{
+		Name: "kube-cachestore-kubeconfig-context",
+		Env:  "DHCTL_CLI_CACHE_STORE_KUBE_CONFIG_CONTEXT",
+		Help: "Context from the kubernetes config to connect to the Kubernetes API, for storing the cache in a kubernetes secret",
+	}, &o.KubeConfigContext)
+	BoolFlag(flags, Flag{
+		Name: "kube-cachestore-kube-client-from-cluster",
+		Env:  "DHCTL_CLI_CACHE_STORE_KUBE_CLIENT_FROM_CLUSTER",
+		Help: "Use in-cluster Kubernetes API access, for storing the cache in a kubernetes secret",
+	}, &o.KubeConfigInCluster)
+	StringFlag(flags, Flag{
+		Name: "kube-cachestore-namespace",
+		Env:  "DHCTL_CLI_CACHE_STORE_KUBE_NAMESPACE",
+		Help: "Namespace for storing the cache in a kubernetes secret",
+	}, &o.KubeNamespace)
+	PairsFlag(flags, Flag{
+		Name: "kube-cachestore-labels",
+		Env:  "DHCTL_CLI_CACHE_STORE_KUBE_LABELS",
+		Help: "List of labels for cache secrets",
+	}, &o.KubeLabels)
+	StringFlag(flags, Flag{
+		Name: "kube-cachestore-name",
+		Env:  "DHCTL_CLI_CACHE_STORE_KUBE_NAME",
+		Help: "Name of the cache secret",
+	}, &o.KubeName)
 }
 
 // DefineDropCacheFlags registers --yes-i-want-to-drop-cache.
-func DefineDropCacheFlags(cmd *kingpin.CmdClause, o *options.CacheOptions) {
-	cmd.Flag("yes-i-want-to-drop-cache", "All cached information will be deleted from your local cache.").
-		Default("false").
-		BoolVar(&o.DropCache)
+func DefineDropCacheFlags(cmd *cobra.Command, o *options.CacheOptions) {
+	BoolFlag(cmd.Flags(), Flag{
+		Name: "yes-i-want-to-drop-cache",
+		Help: "All cached information will be deleted from your local cache.",
+	}, &o.DropCache)
 }
 
 // DefineTFResourceManagementTimeout registers the infrastructure resource-management timeout override.
-func DefineTFResourceManagementTimeout(cmd *kingpin.CmdClause, o *options.CacheOptions) {
-	cmd.Flag("tf-resource-management-timeout", "Redefine infrastructure resource management timeouts").
-		Envar(configEnvName("DHCTL_TF_RESOURCE_MANAGEMENT_TIMEOUT")).
-		StringVar(&o.ResourceManagementTimeout)
+func DefineTFResourceManagementTimeout(cmd *cobra.Command, o *options.CacheOptions) {
+	StringFlag(cmd.Flags(), Flag{
+		Name: "tf-resource-management-timeout",
+		Env:  "DHCTL_CLI_DHCTL_TF_RESOURCE_MANAGEMENT_TIMEOUT",
+		Help: "Redefine infrastructure resource management timeouts",
+	}, &o.ResourceManagementTimeout)
 }

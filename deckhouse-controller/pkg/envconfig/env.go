@@ -69,14 +69,11 @@ const (
 	EnvTracingOTLPInsecure      = "TRACING_OTLP_INSECURE"
 	EnvTracingOTLPTLSSkipVerify = "TRACING_OTLP_TLS_SKIP_VERIFY"
 
-	// Options forwarded to the embedded dhctl CLI. EnvDhctlCLIFile backs dhctl's
-	// own --file flag; the controller reads it only to tell whether the user named
-	// an input source at all.
+	// Options forwarded to the embedded dhctl CLI.
 	EnvLoggerType          = "DECKHOUSE_LOGGER_TYPE"
 	EnvEditor              = "DECKHOUSE_EDITOR"
 	EnvKubeConfigInCluster = "DECKHOUSE_KUBE_CONFIG_IN_CLUSTER"
 	EnvTmpDir              = "DECKHOUSE_TMP_DIR"
-	EnvDhctlCLIFile        = "DHCTL_CLI_FILE"
 
 	// Helm engine settings the nelm client picks up. EnvKubeContext is also
 	// Config.KubeContext.

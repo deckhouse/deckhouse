@@ -15,34 +15,39 @@
 package app
 
 import (
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 // DefineRenderConfigFlags registers --bundle-dir.
-func DefineRenderConfigFlags(cmd *kingpin.CmdClause, o *options.RenderOptions) {
-	cmd.Flag("bundle-dir", "Directory to render the bashible bundle into.").
-		Envar(configEnvName("BUNDLE_DIR")).
-		StringVar(&o.BashibleBundleDir)
+func DefineRenderConfigFlags(cmd *cobra.Command, o *options.RenderOptions) {
+	StringFlag(cmd.Flags(), Flag{
+		Name: "bundle-dir",
+		Env:  "DHCTL_CLI_BUNDLE_DIR",
+		Help: "Directory to render the bashible bundle into.",
+	}, &o.BashibleBundleDir)
 }
 
 // DefineEditorConfigFlags registers --editor.
-func DefineEditorConfigFlags(cmd *kingpin.CmdClause, o *options.RenderOptions) {
-	cmd.Flag("editor", "Your favourite editor.").
-		Envar(configEnvName("EDITOR")).
-		StringVar(&o.Editor)
+func DefineEditorConfigFlags(cmd *cobra.Command, o *options.RenderOptions) {
+	StringFlag(cmd.Flags(), Flag{Name: "editor", Env: "DHCTL_CLI_EDITOR", Help: "Your favourite editor."}, &o.Editor)
 }
 
 // DefineInputOutputRenderFlags registers --file and --output.
-func DefineInputOutputRenderFlags(cmd *kingpin.CmdClause, o *options.RenderOptions) {
-	cmd.Flag("file", "Input file name with YAML-documents.").
-		Short('f').
-		Envar(configEnvName("FILE")).
-		StringVar(&o.ParseInputFile)
+func DefineInputOutputRenderFlags(cmd *cobra.Command, o *options.RenderOptions) {
+	flags := cmd.Flags()
+	StringFlag(flags, Flag{
+		Name:  "file",
+		Short: "f",
+		Env:   "DHCTL_CLI_FILE",
+		Help:  "Input file name with YAML-documents.",
+	}, &o.ParseInputFile)
 
-	cmd.Flag("output", "Output format (JSON or YAML).").
-		Short('o').
-		Envar(configEnvName("OUTPUT")).
-		EnumVar(&o.ParseOutput, "yaml", "json")
+	EnumFlag(flags, Flag{
+		Name:  "output",
+		Short: "o",
+		Env:   "DHCTL_CLI_OUTPUT",
+		Help:  "Output format (JSON or YAML).",
+	}, &o.ParseOutput, "yaml", "json")
 }

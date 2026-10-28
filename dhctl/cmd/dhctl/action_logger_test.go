@@ -18,10 +18,15 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
+	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 // TestRootWritesFileAndTTY pins that the debug-log pointer reaches the terminal as well as the
@@ -39,4 +44,26 @@ func TestRootWritesFileAndTTY(t *testing.T) {
 	if !strings.Contains(tty.String(), "Debug log file") {
 		t.Fatalf("tty missing notice: %q", tty.String())
 	}
+}
+
+// Environment errors arrive before the real logger: they must read as text on stderr, not as
+// debug-file JSON.
+func TestFallbackLoggerWritesText(t *testing.T) {
+	stderr, err := os.Create(filepath.Join(t.TempDir(), "stderr"))
+	require.NoError(t, err)
+
+	orig := os.Stderr
+	os.Stderr = stderr
+
+	t.Cleanup(func() { os.Stderr = orig })
+
+	l := newActionIniter(options.New()).Logger()
+	l.Debug("bootstrap")
+	l.Error(`--resources-timeout: time: invalid duration "x"`)
+
+	out, err := os.ReadFile(stderr.Name())
+	require.NoError(t, err)
+	require.Contains(t, string(out), `--resources-timeout: time: invalid duration "x"`)
+	require.NotContains(t, string(out), `"level"`)
+	require.NotContains(t, string(out), "bootstrap")
 }

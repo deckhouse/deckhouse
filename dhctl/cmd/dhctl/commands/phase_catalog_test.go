@@ -15,38 +15,30 @@
 package commands
 
 import (
+	"bytes"
 	"encoding/json"
-	"io"
-	"os"
+	"errors"
 	"testing"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
 
 func phaseCatalogExec(t *testing.T) phases.TitlesCatalog {
-	origStdout := os.Stdout
-	r, w, err := os.Pipe()
-	require.NoError(t, err)
-	os.Stdout = w
+	var out bytes.Buffer
 
-	app := kingpin.New("dhctl", "test")
-	DefinePhaseCatalogCommand(app.Command("phase-catalog", "test"), options.New())
-
-	_, err = app.Parse([]string{"phase-catalog"})
-	os.Stdout = origStdout
-	require.NoError(t, err)
-	require.NoError(t, w.Close())
-
-	out, err := io.ReadAll(r)
-	require.NoError(t, err)
+	cmd := &cobra.Command{Use: "phase-catalog"}
+	DefinePhaseCatalogCommand(cmd, options.New())
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{})
+	require.NoError(t, cmd.Execute())
 
 	var ret phases.TitlesCatalog
-	require.NoError(t, json.Unmarshal(out, &ret))
+	require.NoError(t, json.Unmarshal(out.Bytes(), &ret))
 
 	require.NotEmpty(t, ret.Phases)
 	require.NotEmpty(t, ret.SubPhases)
@@ -76,4 +68,17 @@ func TestDefinePhaseCatalogCommand(t *testing.T) {
 
 	expected := titles.ToCatalog()
 	assert.EqualValues(t, expected, got)
+}
+
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("broken pipe") }
+
+// A catalog that could not be written is a failed run: a reader of a closed pipe gets nothing.
+func TestPhaseCatalogWriteError(t *testing.T) {
+	cmd := &cobra.Command{Use: "phase-catalog"}
+	DefinePhaseCatalogCommand(cmd, options.New())
+	cmd.SetOut(failingWriter{})
+	cmd.SetArgs([]string{})
+	require.ErrorContains(t, cmd.Execute(), "broken pipe")
 }

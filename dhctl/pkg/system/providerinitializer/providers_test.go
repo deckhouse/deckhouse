@@ -18,10 +18,12 @@ import (
 	"crypto/ed25519"
 	"encoding/pem"
 	"os"
-	"path/filepath"
+	"strings"
 	"testing"
 
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/kube"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/settings"
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
@@ -37,61 +39,41 @@ sshPort: 22
 sudoPassword: test
 `
 
-// plantPrivateKey gives the process a $HOME holding a usable private key, which is what the argv
-// arm of getProviderInitializer picks up when no SSH flags are passed. Without it the outcome of
-// that arm depends on the keys the machine running the test happens to have.
-func plantPrivateKey(t *testing.T) {
+// writePrivateKey writes an unencrypted private key to path.
+func writePrivateKey(t *testing.T, path string) {
 	t.Helper()
-
-	home := t.TempDir()
-	require.NoError(t, os.MkdirAll(filepath.Join(home, ".ssh"), 0o700))
 
 	_, key, err := ed25519.GenerateKey(nil)
 	require.NoError(t, err)
 
 	block, err := ssh.MarshalPrivateKey(key, "")
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(home, ".ssh", "id_rsa"), pem.EncodeToMemory(block), 0o600))
-
-	t.Setenv("HOME", home)
+	require.NoError(t, os.WriteFile(path, pem.EncodeToMemory(block), 0o600))
 }
 
-func TestGetProviderInitializerConnectionConfigOnly(t *testing.T) {
-	tests := []struct {
-		name    string
-		opts    []ProviderOptions
-		wantNil bool
-	}{
-		{
-			name:    "connection config only, and none supplied, means the operation runs without ssh",
-			opts:    []ProviderOptions{WithConnectionConfig(""), WithConnectionConfigOnly()},
-			wantNil: true,
-		},
-		{
-			name: "connection config only still parses the config it is given",
-			opts: []ProviderOptions{WithConnectionConfig(connectionConfigWithoutHosts), WithConnectionConfigOnly()},
-		},
-		{
-			name: "without the option an empty config still falls back to the process arguments",
-			opts: []ProviderOptions{WithConnectionConfig("")},
-		},
-	}
+// GetProviders takes the connections it is given and nothing else: without an SSH connection
+// Kubernetes over SSH is refused at once, the process arguments and environment are not consulted.
+func TestGetProvidersTakesOnlyWhatItIsGiven(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("DHCTL_CLI_SSH_HOSTS", "10.0.0.1")
+	t.Setenv("DHCTL_CLI_SSH_USER", "ubuntu")
+	t.Setenv("KUBECONFIG", "")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			plantPrivateKey(t)
+	params := settings.ProviderParams{Logger: dhlog.Discard(), TmpDir: options.DefaultTmpDir()}
 
-			params := settings.ProviderParams{Logger: dhlog.Discard(), TmpDir: options.DefaultTmpDir()}
-			initializer, err := getProviderInitializer(t.Context(), settings.NewBaseProviders(params), tt.opts...)
-			require.NoError(t, err)
+	sshProviderInitializer, kubeProvider, err := GetProviders(t.Context(), params, &kube.Config{}, GetProvidersOptions{})
+	require.ErrorIs(t, err, ErrSSHHostRequiredForKubernetesConnection)
+	require.Nil(t, sshProviderInitializer)
+	require.Nil(t, kubeProvider)
 
-			if tt.wantNil {
-				require.Nil(t, initializer)
+	hostless, err := sshconfig.ParseConnectionConfig(strings.NewReader(connectionConfigWithoutHosts), settings.NewBaseProviders(params), sshconfig.ParseWithRequiredSSHHost(false))
+	require.NoError(t, err)
 
-				return
-			}
-
-			require.NotNil(t, initializer)
-		})
-	}
+	// The hosts may still come from the state cache later, unless the command needs them now.
+	sshProviderInitializer, kubeProvider, err = GetProviders(t.Context(), params, &kube.Config{}, GetProvidersOptions{SSH: hostless, RequireKube: true})
+	require.ErrorIs(t, err, ErrSSHHostRequiredForKubernetesConnection)
+	require.NotNil(t, sshProviderInitializer)
+	require.Nil(t, kubeProvider)
+	require.Equal(t, "ubuntu", sshProviderInitializer.GetConfig().Config.User)
+	require.Empty(t, sshProviderInitializer.GetConfig().Hosts)
 }

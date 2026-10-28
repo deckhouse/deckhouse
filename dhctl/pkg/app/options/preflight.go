@@ -134,7 +134,7 @@ func (o *PreflightOptions) DisabledChecks() []string {
 // Normalize is the one place a skip name is turned from what the user typed into what the runner
 // matches: comma-separated lists are split, whitespace is trimmed, retired names are mapped to
 // current ones, duplicates are dropped, and anything left over is refused with the closest known
-// name. It is called from the kingpin PreAction and from the gRPC request path, so a typo is
+// name. It is called from the command's pre-run hook and from the gRPC request path, so a typo is
 // caught wherever it arrives — the server used to accept one silently and run every check.
 func (o *PreflightOptions) Normalize() error {
 	known := GeneratedChecks()

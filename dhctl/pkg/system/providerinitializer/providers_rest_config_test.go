@@ -17,6 +17,7 @@ package providerinitializer
 import (
 	"testing"
 
+	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/kube"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/provider"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/settings"
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
@@ -33,17 +34,14 @@ func restConfigTestSettings() *settings.BaseProviders {
 	})
 }
 
-// TestWithKubeRestConfigNeedsNoSSH pins the contract Deckhouse Commander relies on:
+// TestKubeRestConfigNeedsNoSSH pins the contract Deckhouse Commander relies on:
 // once an API server endpoint is supplied, the Kubernetes connection is served
 // without any SSH provider at all - no session to a master, no kubectl proxy there.
 // Passing a nil SSH initializer is the assertion: over SSH, lib-connection refuses.
-func TestWithKubeRestConfigNeedsNoSSH(t *testing.T) {
+func TestKubeRestConfigNeedsNoSSH(t *testing.T) {
 	sett := restConfigTestSettings()
 
-	cfg, err := resolveKubeConfig(t.Context(), sett, newProviderOptions(
-		WithConnectionConfig(connectionConfigWithoutHosts),
-		WithKubeRestConfig(&rest.Config{Host: "https://ampg-api-server.example:6443", BearerToken: "token"}),
-	))
+	cfg, err := impersonateKubeConfig(t.Context(), &kube.Config{RestConfig: &rest.Config{Host: "https://ampg-api-server.example:6443", BearerToken: "token"}})
 	require.NoError(t, err)
 	require.True(t, cfg.IsRest())
 	require.False(t, cfg.OverSSH())
@@ -51,34 +49,20 @@ func TestWithKubeRestConfigNeedsNoSSH(t *testing.T) {
 	runner, err := provider.GetRunnerInterface(t.Context(), cfg, sett, nil)
 	require.NoError(t, err)
 	require.IsType(t, &provider.RunnerInterfaceNoAction{}, runner)
+
+	_, kubeProvider, err := GetProviders(t.Context(), settings.ProviderParams{Logger: dhlog.Discard(), TmpDir: t.TempDir()}, cfg, GetProvidersOptions{})
+	require.NoError(t, err)
+	require.NotNil(t, kubeProvider)
 }
 
-// TestWithKubeRestConfigIsNotImpersonated: a kubeconfig is rewritten to act as
+// TestKubeRestConfigIsNotImpersonated: a kubeconfig is rewritten to act as
 // the impersonated user, an endpoint the caller already authenticated is not -
 // the token Commander sends is the identity, as it was up to v1.76.
-func TestWithKubeRestConfigIsNotImpersonated(t *testing.T) {
+func TestKubeRestConfigIsNotImpersonated(t *testing.T) {
 	restConfig := &rest.Config{Host: "https://ampg-api-server.example:6443", BearerToken: "token"}
 
-	cfg, err := resolveKubeConfig(t.Context(), restConfigTestSettings(), newProviderOptions(
-		WithKubeRestConfig(restConfig),
-	))
+	cfg, err := impersonateKubeConfig(t.Context(), &kube.Config{RestConfig: restConfig})
 	require.NoError(t, err)
 	require.Same(t, restConfig, cfg.RestConfig)
 	require.Empty(t, cfg.RestConfig.Impersonate.UserName)
-}
-
-// TestWithoutKubeRestConfigGoesOverSSH is the other half of the contract: a request
-// that carries no API server endpoint keeps the SSH path it has always had.
-func TestWithoutKubeRestConfigGoesOverSSH(t *testing.T) {
-	sett := restConfigTestSettings()
-
-	cfg, err := resolveKubeConfig(t.Context(), sett, newProviderOptions(
-		WithConnectionConfig(connectionConfigWithoutHosts),
-	))
-	require.NoError(t, err)
-	require.False(t, cfg.IsRest())
-	require.True(t, cfg.OverSSH())
-
-	_, err = provider.GetRunnerInterface(t.Context(), cfg, sett, nil)
-	require.Error(t, err)
 }

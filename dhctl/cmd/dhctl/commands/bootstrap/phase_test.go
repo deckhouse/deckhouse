@@ -19,11 +19,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
@@ -58,21 +58,11 @@ func TestInstallDeckhousePhase_RunsAgainstAnExhaustedCache(t *testing.T) {
 	opts.Global.GlobalHooksModule = filepath.Join(deckhouseDir, "global-hooks")
 	opts.Global.VersionMap = filepath.Join(candiDir, "version_map.yml")
 
-	kpApp := kingpin.New("dhctl", "")
-	kpApp.Terminate(func(int) {})
-
-	cmd := kpApp.Command("install-deckhouse", "")
-	cmd.PreAction(kpcontext.SetContextToAction(t.Context()))
+	cmd := &cobra.Command{Use: "install-deckhouse", SilenceUsage: true, SilenceErrors: true}
 	DefineBootstrapInstallDeckhouseCommand(cmd, opts)
 
-	// The connection flags are parsed out of os.Args by lib-connection, several frames below the
-	// command action, and the arguments of the test binary are not flags it knows.
-	args := os.Args
-	os.Args = []string{"dhctl"}
-
-	defer func() { os.Args = args }()
-
-	_, err := kpApp.Parse([]string{"install-deckhouse", "--config", eksConfigFixture})
+	cmd.SetArgs([]string{"--config", eksConfigFixture})
+	err := cmd.ExecuteContext(t.Context())
 
 	require.Error(t, err, "no cluster is reachable from a test, so the command has to fail somewhere")
 	require.NotContains(t, err.Error(), "marked as exhausted",
@@ -81,4 +71,20 @@ func TestInstallDeckhousePhase_RunsAgainstAnExhaustedCache(t *testing.T) {
 	require.IsType(t, &utilcache.DummyCache{}, statecache.Global(),
 		"install-deckhouse reads its cluster through the flags, so it must leave the bootstrap state cache alone",
 	)
+}
+
+// base-infra builds an SSH provider like every phase. lib-connection used to read DHCTL_CLI_SSH_*
+// for it on its own; now the variables reach the connection only through the command's flags.
+func TestBaseInfrastructureTakesSSHFromTheEnvironment(t *testing.T) {
+	t.Setenv("DHCTL_CLI_SSH_AGENT_PRIVATE_KEYS", "/keys/id_ed25519")
+	t.Setenv("DHCTL_CLI_SSH_USER", "ubuntu")
+	t.Setenv("DHCTL_CLI_CONFIG", "config.yml")
+
+	opts := options.New()
+	cmd := &cobra.Command{Use: "base-infra"}
+	DefineBaseInfrastructureCommand(cmd, opts)
+
+	require.NoError(t, app.ApplyEnvironment(cmd))
+	require.Equal(t, []string{"/keys/id_ed25519"}, opts.SSH.AgentPrivateKeys)
+	require.Equal(t, "ubuntu", opts.SSH.User)
 }

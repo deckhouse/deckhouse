@@ -17,18 +17,14 @@ package commands
 import (
 	"context"
 	"fmt"
-	"io"
-	"os"
 
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
-	"gopkg.in/alecthomas/kingpin.v2"
-	"sigs.k8s.io/yaml"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -62,7 +58,7 @@ func loadConfigForRender(ctx context.Context, command string, opts *options.Opti
 	return metaConfig, nil
 }
 
-func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+func DefineRenderBashibleBundle(cmd *cobra.Command, opts *options.Options) {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
@@ -90,12 +86,12 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 		return renderBashibleBundle(ctx, metaConfig, opts)
 	}
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 		l := logger.FromContext(ctx)
 
 		return logger.RunProcess(ctx, l, "Prepare Bashible Bundle", runFunc)
-	})
+	}
 }
 
 // renderBashibleBundle writes the first master's bundle, the one bootstrap runs: its node
@@ -119,7 +115,7 @@ func renderBashibleBundle(ctx context.Context, metaConfig *config.MetaConfig, op
 	)
 }
 
-func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+func DefineRenderMasterBootstrap(cmd *cobra.Command, opts *options.Options) {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
@@ -150,15 +146,15 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, &opts.Global)
 	}
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 		l := logger.FromContext(ctx)
 
 		return logger.RunProcess(ctx, l, "Prepare Bashible Bundle", runFunc)
-	})
+	}
 }
 
-func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+func DefineRenderControlPlaneAndPKI(cmd *cobra.Command, opts *options.Options) {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineRenderConfigFlags(cmd, &opts.Render)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
@@ -206,103 +202,10 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause, opts *options.Option
 		return template.PreparePKI(templateController, "localhost", "127.0.0.1", "127.0.0.1", controlPlaneConfig)
 	}
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 		l := logger.FromContext(ctx)
 
 		return logger.RunProcess(ctx, l, "Prepare Kubeadm Config", runFunc)
-	})
-}
-
-func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
-	app.DefineInputOutputRenderFlags(cmd, &opts.Render)
-
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
-
-		var err error
-		var metaConfig *config.MetaConfig
-
-		validatorProvider := infrastructureprovider.MetaConfigValidatorProvider()
-
-		// Should be fixed in kingpin repo or shell-operator and others should migrate to github.com/alecthomas/kingpin.
-		// https://github.com/flant/kingpin/pull/1
-		// replace gopkg.in/alecthomas/kingpin.v2 => github.com/flant/kingpin is not working
-		if opts.Render.ParseInputFile == "" {
-			data, err := io.ReadAll(os.Stdin)
-			if err != nil {
-				return fmt.Errorf("read configs from stdin: %v", err)
-			}
-
-			metaConfig, err = config.ParseConfigFromData(
-				ctx,
-				string(data),
-				validatorProvider,
-				&opts.Global,
-				config.ValidateOptionStrictUnmarshal(true),
-			)
-			if err != nil {
-				return err
-			}
-		} else {
-			metaConfig, err = config.ParseConfig(ctx, []string{opts.Render.ParseInputFile}, validatorProvider, &opts.Global)
-			if err != nil {
-				return err
-			}
-		}
-
-		output := metaConfig.MarshalFullConfig()
-		switch opts.Render.ParseOutput {
-		case "yaml":
-			output, _ = yaml.JSONToYAML(output)
-		case "json":
-		default:
-			return fmt.Errorf("unknown output type: %s", opts.Render.ParseOutput)
-		}
-
-		fmt.Print(string(output))
-		return nil
-	})
-}
-
-func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
-	app.DefineInputOutputRenderFlags(cmd, &opts.Render)
-
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
-
-		var err error
-		var data []byte
-
-		if opts.Render.ParseInputFile == "" {
-			data, err = io.ReadAll(os.Stdin)
-			if err != nil {
-				return fmt.Errorf("read cloud-discovery-data from stdin: %v", err)
-			}
-		} else {
-			data, err = os.ReadFile(opts.Render.ParseInputFile)
-			if err != nil {
-				return fmt.Errorf("loading input file: %v", err)
-			}
-		}
-
-		schemaStore := config.NewSchemaStore(&opts.Global)
-		_, err = schemaStore.Validate(ctx, &data)
-		if err != nil {
-			return fmt.Errorf("validate cloud_discovery_data: %v", err)
-		}
-
-		var output []byte
-		switch opts.Render.ParseOutput {
-		case "yaml":
-			output, _ = yaml.JSONToYAML(data)
-		case "json":
-			output = data
-		default:
-			return fmt.Errorf("unknown output type: %s", opts.Render.ParseOutput)
-		}
-
-		fmt.Print(string(output))
-		return nil
-	})
+	}
 }

@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/session"
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -180,8 +181,8 @@ func ParseConnectionConfig(
 }
 
 // ConnectionConfigParser parses an SSH connection config file and writes the
-// result back into the supplied options struct. The parser is invoked from
-// kingpin Action when --connection-config is set.
+// result back into the supplied options struct. The SSH flag hook invokes it
+// when --connection-config is set.
 type ConnectionConfigParser struct {
 	opts *options.Options
 }
@@ -208,26 +209,9 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 		return fmt.Errorf("Parsing ssh config from file: %w", err)
 	}
 
-	pathToPassPhrase := make(options.PrivateKeyFileToPassphrase)
-
-	keysPaths := make([]string, 0, len(cfg.SSHConfig.SSHAgentPrivateKeys))
+	keys := make([]sshconfig.AgentPrivateKey, 0, len(cfg.SSHConfig.SSHAgentPrivateKeys))
 	for _, key := range cfg.SSHConfig.SSHAgentPrivateKeys {
-		f, err := os.CreateTemp(p.opts.Global.TmpDir, "ssh-key-*")
-		if err != nil {
-			return fmt.Errorf("unable to create temp file: %w", err)
-		}
-
-		if _, err := f.Write([]byte(strings.TrimSpace(key.Key) + "\n")); err != nil {
-			return fmt.Errorf("unable to write temp file %s: %w", f.Name(), err)
-		}
-
-		fullPath := f.Name()
-
-		keysPaths = append(keysPaths, fullPath)
-		if len(key.Passphrase) > 0 {
-			dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Passphrase for key %s added to the map", fullPath))
-			pathToPassPhrase[fullPath] = key.Passphrase
-		}
+		keys = append(keys, sshconfig.AgentPrivateKey{Key: strings.TrimSpace(key.Key) + "\n", Passphrase: key.Passphrase})
 	}
 
 	hosts := make([]session.Host, 0, len(cfg.SSHHosts))
@@ -245,7 +229,7 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 		port = strconv.Itoa(int(*cfg.SSHConfig.SSHPort))
 	}
 
-	p.opts.SSH.PrivateKeys = keysPaths
+	p.opts.SSH.PrivateKeys = keys
 	p.opts.SSH.BastionHost = cfg.SSHConfig.SSHBastionHost
 	p.opts.SSH.BastionPort = bastionPort
 	p.opts.SSH.BastionUser = cfg.SSHConfig.SSHBastionUser
@@ -257,8 +241,6 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 	p.opts.SSH.BastionPass = cfg.SSHConfig.SSHBastionPassword
 	p.opts.SSH.LegacyMode = cfg.SSHConfig.LegacyMode
 	p.opts.SSH.ModernMode = cfg.SSHConfig.ModernMode
-	// todo it is ugly solution
-	p.opts.SSH.PrivateKeysToPassPhrasesFromConfig = pathToPassPhrase
 
 	return nil
 }

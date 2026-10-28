@@ -12,44 +12,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Mirror of the parse-* helpers from dhctl/cmd/dhctl/commands/config.go.
-// Drift is enforced by tools/check-dhctl-cmd-drift.sh.
-
-package dhctlcli
+package configcmd
 
 import (
 	"fmt"
 	"io"
 	"os"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 )
 
-func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+func DefineCommandParseClusterConfiguration(cmd *cobra.Command, opts *options.Options) {
 	app.DefineInputOutputRenderFlags(cmd, &opts.Render)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 
-		var err error
-		var metaConfig *config.MetaConfig
+		var (
+			err        error
+			metaConfig *config.MetaConfig
+		)
 
 		validatorProvider := infrastructureprovider.MetaConfigValidatorProvider()
 
-		// Should be fixed in kingpin repo or shell-operator and others should migrate to github.com/alecthomas/kingpin.
-		// https://github.com/flant/kingpin/pull/1
-		// replace gopkg.in/alecthomas/kingpin.v2 => github.com/flant/kingpin is not working
-		if opts.Render.ParseInputFile == "" {
-			data, err := io.ReadAll(os.Stdin)
+		// Without --file the documents come from stdin.
+		if readsStdin(&opts.Render) {
+			data, err := io.ReadAll(cmd.InOrStdin())
 			if err != nil {
-				return fmt.Errorf("read configs from stdin: %v", err)
+				return fmt.Errorf("read configs from stdin: %w", err)
 			}
 
 			metaConfig, err = config.ParseConfigFromData(
@@ -70,57 +66,77 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 		}
 
 		output := metaConfig.MarshalFullConfig()
+
 		switch opts.Render.ParseOutput {
 		case "yaml":
-			output, _ = yaml.JSONToYAML(output)
+			if output, err = yaml.JSONToYAML(output); err != nil {
+				return fmt.Errorf("convert cluster configuration to YAML: %w", err)
+			}
 		case "json":
 		default:
 			return fmt.Errorf("unknown output type: %s", opts.Render.ParseOutput)
 		}
 
-		fmt.Print(string(output))
+		if _, err := fmt.Fprint(cmd.OutOrStdout(), string(output)); err != nil {
+			return fmt.Errorf("print cluster configuration: %w", err)
+		}
+
 		return nil
-	})
+	}
 }
 
-func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+// readsStdin is no --file or a lone dash: kingpin read "-" as an empty value.
+func readsStdin(o *options.RenderOptions) bool {
+	return o.ParseInputFile == "" || o.ParseInputFile == "-"
+}
+
+func DefineCommandParseCloudDiscoveryData(cmd *cobra.Command, opts *options.Options) {
 	app.DefineInputOutputRenderFlags(cmd, &opts.Render)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 
-		var err error
-		var data []byte
+		var (
+			err  error
+			data []byte
+		)
 
-		if opts.Render.ParseInputFile == "" {
-			data, err = io.ReadAll(os.Stdin)
+		if readsStdin(&opts.Render) {
+			data, err = io.ReadAll(cmd.InOrStdin())
 			if err != nil {
-				return fmt.Errorf("read cloud-discovery-data from stdin: %v", err)
+				return fmt.Errorf("read cloud-discovery-data from stdin: %w", err)
 			}
 		} else {
 			data, err = os.ReadFile(opts.Render.ParseInputFile)
 			if err != nil {
-				return fmt.Errorf("loading input file: %v", err)
+				return fmt.Errorf("loading input file: %w", err)
 			}
 		}
 
 		schemaStore := config.NewSchemaStore(&opts.Global)
+
 		_, err = schemaStore.Validate(ctx, &data)
 		if err != nil {
-			return fmt.Errorf("validate cloud_discovery_data: %v", err)
+			return fmt.Errorf("validate cloud_discovery_data: %w", err)
 		}
 
 		var output []byte
+
 		switch opts.Render.ParseOutput {
 		case "yaml":
-			output, _ = yaml.JSONToYAML(data)
+			if output, err = yaml.JSONToYAML(data); err != nil {
+				return fmt.Errorf("convert cloud discovery data to YAML: %w", err)
+			}
 		case "json":
 			output = data
 		default:
 			return fmt.Errorf("unknown output type: %s", opts.Render.ParseOutput)
 		}
 
-		fmt.Print(string(output))
+		if _, err := fmt.Fprint(cmd.OutOrStdout(), string(output)); err != nil {
+			return fmt.Errorf("print cloud discovery data: %w", err)
+		}
+
 		return nil
-	})
+	}
 }

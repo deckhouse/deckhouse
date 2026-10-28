@@ -23,26 +23,21 @@ import (
 
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/retry"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+func DefineTestSSHConnectionCommand(cmd *cobra.Command, opts *options.Options) {
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 
-		params, err := app.DefaultProviderParams(ctx, &opts.Global)
-		if err != nil {
-			return err
-		}
-		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
+		sshProviderInitializer, err := providerinitializer.CLISSHProviderInitializer(ctx, opts)
 		if err != nil {
 			return err
 		}
@@ -68,32 +63,29 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Option
 		TestCommandDelay()
 
 		return nil
-	})
+	}
 }
 
-func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+func DefineTestSCPCommand(cmd *cobra.Command, opts *options.Options) {
 	var SrcPath string
 	var DstPath string
 	var Data string
 	var Direction string
 
-	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 
-	cmd.Flag("src", "source path").Short('s').StringVar(&SrcPath)
-	cmd.Flag("dst", "destination path").Short('d').StringVar(&DstPath)
-	cmd.Flag("data", "data to test uploadbytes method").StringVar(&Data)
-	cmd.Flag("way", "transfer direction: 'up' to upload to remote or 'down' to download from remote").Short('w').StringVar(&Direction)
+	flags := cmd.Flags()
+	app.StringFlag(flags, app.Flag{Name: "src", Short: "s", Help: "source path"}, &SrcPath)
+	app.StringFlag(flags, app.Flag{Name: "dst", Short: "d", Help: "destination path"}, &DstPath)
+	app.StringFlag(flags, app.Flag{Name: "data", Help: "data to test uploadbytes method"}, &Data)
+	app.StringFlag(flags, app.Flag{Name: "way", Short: "w", Help: "transfer direction: 'up' to upload to remote or 'down' to download from remote"}, &Direction)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 		l := logger.FromContext(ctx)
 
-		params, err := app.DefaultProviderParams(ctx, &opts.Global)
-		if err != nil {
-			return err
-		}
-		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
+		sshProviderInitializer, err := providerinitializer.CLISSHProviderInitializer(ctx, opts)
 		if err != nil {
 			return err
 		}
@@ -151,29 +143,23 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		}
 
 		return nil
-	})
+	}
 }
 
-func DefineTestUploadExecCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+func DefineTestUploadExecCommand(cmd *cobra.Command, opts *options.Options) {
 	var ScriptPath string
 	var Sudo bool
 
-	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineBecomeFlags(cmd, &opts.Become)
-	cmd.Flag("script", "source path").
-		StringVar(&ScriptPath)
-	cmd.Flag("sudo", "source path").Short('s').
-		BoolVar(&Sudo)
+	app.StringFlag(cmd.Flags(), app.Flag{Name: "script", Help: "source path"}, &ScriptPath)
+	app.BoolFlag(cmd.Flags(), app.Flag{Name: "sudo", Short: "s", Help: "source path"}, &Sudo)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(c *cobra.Command, _ []string) error {
+		ctx := c.Context()
 		l := logger.FromContext(ctx)
 
-		params, err := app.DefaultProviderParams(ctx, &opts.Global)
-		if err != nil {
-			return err
-		}
-		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
+		sshProviderInitializer, err := providerinitializer.CLISSHProviderInitializer(ctx, opts)
 		if err != nil {
 			return err
 		}
@@ -210,32 +196,24 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 		l.Info(fmt.Sprintf("Got %d symbols", len(stdout)))
 
 		return nil
-	})
+	}
 }
 
-func DefineTestBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+func DefineTestBundle(cmd *cobra.Command, opts *options.Options) {
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 
 	var bundleDirFlag string
 	var scriptNameFlag string
 
-	cmd.Flag("bundle-dir", "path of a bundle root directory").
-		Short('d').
-		StringVar(&bundleDirFlag)
-	cmd.Flag("bundle-script", "path of a bundle main script").
-		Short('s').
-		StringVar(&scriptNameFlag)
+	app.StringFlag(cmd.Flags(), app.Flag{Name: "bundle-dir", Short: "d", Help: "path of a bundle root directory"}, &bundleDirFlag)
+	app.StringFlag(cmd.Flags(), app.Flag{Name: "bundle-script", Short: "s", Help: "path of a bundle main script"}, &scriptNameFlag)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(c *cobra.Command, _ []string) error {
+		ctx := c.Context()
 		l := logger.FromContext(ctx)
 
-		params, err := app.DefaultProviderParams(ctx, &opts.Global)
-		if err != nil {
-			return err
-		}
-		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
+		sshProviderInitializer, err := providerinitializer.CLISSHProviderInitializer(ctx, opts)
 		if err != nil {
 			return err
 		}
@@ -271,5 +249,5 @@ func DefineTestBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.Cm
 		l.Info(fmt.Sprintf("Got %d symbols", len(stdout)))
 
 		return nil
-	})
+	}
 }

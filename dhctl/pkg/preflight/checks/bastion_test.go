@@ -130,8 +130,8 @@ func testPrivateKey(t *testing.T, passphrase string) string {
 	return string(pem.EncodeToMemory(block))
 }
 
-// writeKeyFile writes a key where dhctl writes it. Inline sshAgentPrivateKeys from a connection
-// config end up in temp files, so most keys reach this code as paths.
+// writeKeyFile writes a key file, as --ssh-agent-private-keys gives it. A connection config gives
+// its keys inline.
 func writeKeyFile(t *testing.T, pemKey string) string {
 	t.Helper()
 
@@ -153,7 +153,7 @@ func TestBastionAuthMethods(t *testing.T) {
 			{Key: writeKeyFile(t, testPrivateKey(t, "")), IsPath: true},
 		}}
 
-		methods, cleanup, err := bastionAuthMethods(cfg)
+		methods, cleanup, err := bastionAuthMethods(cfg, os.Getenv("SSH_AUTH_SOCK"))
 		defer cleanup()
 
 		require.NoError(t, err)
@@ -166,7 +166,7 @@ func TestBastionAuthMethods(t *testing.T) {
 			{Key: testPrivateKey(t, "")},
 		}}
 
-		methods, cleanup, err := bastionAuthMethods(cfg)
+		methods, cleanup, err := bastionAuthMethods(cfg, os.Getenv("SSH_AUTH_SOCK"))
 		defer cleanup()
 
 		require.NoError(t, err)
@@ -179,7 +179,7 @@ func TestBastionAuthMethods(t *testing.T) {
 			{Key: writeKeyFile(t, testPrivateKey(t, "secret")), IsPath: true, Passphrase: "secret"},
 		}}
 
-		methods, cleanup, err := bastionAuthMethods(cfg)
+		methods, cleanup, err := bastionAuthMethods(cfg, os.Getenv("SSH_AUTH_SOCK"))
 		defer cleanup()
 
 		require.NoError(t, err)
@@ -192,7 +192,7 @@ func TestBastionAuthMethods(t *testing.T) {
 			{Key: writeKeyFile(t, testPrivateKey(t, "secret")), IsPath: true, Passphrase: "not-it"},
 		}}
 
-		_, cleanup, err := bastionAuthMethods(cfg)
+		_, cleanup, err := bastionAuthMethods(cfg, os.Getenv("SSH_AUTH_SOCK"))
 		defer cleanup()
 
 		require.Error(t, err)
@@ -205,7 +205,7 @@ func TestBastionAuthMethods(t *testing.T) {
 			{Key: filepath.Join(t.TempDir(), "absent"), IsPath: true},
 		}}
 
-		_, cleanup, err := bastionAuthMethods(cfg)
+		_, cleanup, err := bastionAuthMethods(cfg, os.Getenv("SSH_AUTH_SOCK"))
 		defer cleanup()
 
 		require.Error(t, err)
@@ -218,7 +218,7 @@ func TestBastionAuthMethods(t *testing.T) {
 		noAgent(t)
 		cfg := &sshconfig.Config{BastionPassword: "hunter2"}
 
-		methods, cleanup, err := bastionAuthMethods(cfg)
+		methods, cleanup, err := bastionAuthMethods(cfg, os.Getenv("SSH_AUTH_SOCK"))
 		defer cleanup()
 
 		require.NoError(t, err)
@@ -232,7 +232,7 @@ func TestBastionAuthMethods(t *testing.T) {
 			BastionPassword: "hunter2",
 		}
 
-		methods, cleanup, err := bastionAuthMethods(cfg)
+		methods, cleanup, err := bastionAuthMethods(cfg, os.Getenv("SSH_AUTH_SOCK"))
 		defer cleanup()
 
 		require.NoError(t, err)
@@ -244,7 +244,7 @@ func TestBastionAuthMethods(t *testing.T) {
 		// while dialing gets "attempted methods [none]" from the far end.
 		noAgent(t)
 
-		_, cleanup, err := bastionAuthMethods(&sshconfig.Config{})
+		_, cleanup, err := bastionAuthMethods(&sshconfig.Config{}, os.Getenv("SSH_AUTH_SOCK"))
 		defer cleanup()
 
 		require.Error(t, err)
@@ -267,7 +267,7 @@ func TestBastionAuthMethods(t *testing.T) {
 
 		t.Setenv("SSH_AUTH_SOCK", socket)
 
-		methods, cleanup, err := bastionAuthMethods(&sshconfig.Config{})
+		methods, cleanup, err := bastionAuthMethods(&sshconfig.Config{}, os.Getenv("SSH_AUTH_SOCK"))
 		defer cleanup()
 
 		require.NoError(t, err)
@@ -277,7 +277,7 @@ func TestBastionAuthMethods(t *testing.T) {
 	t.Run("SSH_AUTH_SOCK pointing at nothing", func(t *testing.T) {
 		t.Setenv("SSH_AUTH_SOCK", filepath.Join(t.TempDir(), "not-a-socket"))
 
-		_, cleanup, err := bastionAuthMethods(&sshconfig.Config{})
+		_, cleanup, err := bastionAuthMethods(&sshconfig.Config{}, os.Getenv("SSH_AUTH_SOCK"))
 		defer cleanup()
 
 		// No agent, no keys, no password: the socket being dead adds nothing rather than

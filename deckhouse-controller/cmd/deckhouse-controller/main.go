@@ -185,17 +185,9 @@ func main() {
 	// deckhouse-controller registry.
 	registry.DefineRegistryCommand(rootCmd, logger)
 
-	// dhctlcli command builders previously relied on dhctl/pkg/app package-level
-	// globals. They now read configuration from a dedicated *options.Options;
-	// the kingpin Envar bindings in dhctl/pkg/app are gated by flag registration
-	// (DefineGlobalFlags / DefineKubeFlags) which we do not invoke, so we seed
-	// the options struct directly from deployer-controlled env vars here.
-	//
-	// dhctl/cmd/dhctl/commands/{edit,config}.go remain kingpin-based and the
-	// internal/dhctlcli mirror is enforced to stay in sync via
-	// tools/check-dhctl-cmd-drift.sh, so we bridge those commands into the
-	// cobra root via stub commands with DisableFlagParsing that delegate the
-	// remaining argv to a kingpin Application built on the fly.
+	// The dhctl commands read *options.Options seeded here from the deployer's DECKHOUSE_* variables.
+	// Seeding precedes flag registration: a seeded field that has a flag gets the value as its
+	// default, and argv or the flag's DHCTL_CLI_* variable still win.
 	{
 		dhctlOpts := options.New()
 		dhctlOpts.Global.LoggerType = envconfig.EnvOr(envconfig.EnvLoggerType, "json")
@@ -222,7 +214,7 @@ func main() {
 		dhctlOpts.Global.VersionMap = options.DefaultVersionMap
 		dhctlOpts.Global.EnsureCandiAvailable = false
 
-		dhctlcli.RegisterCobraBridges(rootCmd, fileName, dhctlOpts)
+		dhctlcli.RegisterDhctlCommands(rootCmd, dhctlOpts)
 	}
 
 	// Make "start" the default action when no subcommand is given.

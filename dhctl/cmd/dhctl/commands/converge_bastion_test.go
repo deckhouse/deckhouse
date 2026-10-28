@@ -118,7 +118,7 @@ func bastionOnlyInitializer(t *testing.T) *providerinitializer.SSHProviderInitia
 	host, port := splitHostPort(t, startFakeBastion(t))
 
 	return providerinitializer.NewSSHProviderInitializer(
-		settings.NewBaseProviders(settings.ProviderParams{}),
+		settings.NewBaseProviders(settings.ProviderParams{TmpDir: t.TempDir()}),
 		&sshconfig.ConnectionConfig{Config: (&sshconfig.Config{
 			BastionHost:     host,
 			BastionPort:     &port,

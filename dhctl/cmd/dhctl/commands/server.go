@@ -15,21 +15,20 @@
 package commands
 
 import (
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/singlethreaded"
 )
 
-func DefineServerCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+func DefineServerCommand(cmd *cobra.Command, opts *options.Options) {
 	app.DefineServerFlags(cmd, &opts.Server)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 
 		return server.Serve(
 			ctx,
@@ -44,14 +43,14 @@ func DefineServerCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin
 				RequestsCounterMaxDuration: opts.Server.RequestsCounterMaxDuration,
 			},
 		)
-	})
+	}
 }
 
-func DefineSingleThreadedServerCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+func DefineSingleThreadedServerCommand(cmd *cobra.Command, opts *options.Options) {
 	app.DefineServerFlags(cmd, &opts.Server)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 
 		return singlethreaded.Serve(
 			ctx,
@@ -64,5 +63,5 @@ func DefineSingleThreadedServerCommand(cmd *kingpin.CmdClause, opts *options.Opt
 				},
 			},
 		)
-	})
+	}
 }

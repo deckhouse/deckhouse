@@ -18,11 +18,10 @@ import (
 	"fmt"
 
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
@@ -30,25 +29,17 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+func DefineTestControlPlaneManagerReadyCommand(cmd *cobra.Command, opts *options.Options) {
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineKubeFlags(cmd, &opts.Kube)
 	app.DefineControlPlaneFlags(cmd, &opts.ControlPlane, false)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 		l := logger.FromContext(ctx)
 
-		params := app.ProviderParams(&opts.Global, logger.FromContext(ctx))
-
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
-			ctx,
-			params,
-			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
-			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
-			providerinitializer.WithRequiredKubeProvider(),
-		)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.CLIProviders(ctx, opts, providerinitializer.CLIProvidersOptions{RequireKube: true})
 		if err != nil {
 			return err
 		}
@@ -78,28 +69,20 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause, opts *opt
 		}
 
 		return nil
-	})
+	}
 }
 
-func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+func DefineTestControlPlaneNodeReadyCommand(cmd *cobra.Command, opts *options.Options) {
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineKubeFlags(cmd, &opts.Kube)
 	app.DefineControlPlaneFlags(cmd, &opts.ControlPlane, true)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 		l := logger.FromContext(ctx)
 
-		params := app.ProviderParams(&opts.Global, logger.FromContext(ctx))
-
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
-			ctx,
-			params,
-			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
-			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
-			providerinitializer.WithRequiredKubeProvider(),
-		)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.CLIProviders(ctx, opts, providerinitializer.CLIProvidersOptions{RequireKube: true})
 		if err != nil {
 			return err
 		}
@@ -135,5 +118,5 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause, opts *option
 		l.Info("Control plane manager node is ready")
 
 		return nil
-	})
+	}
 }

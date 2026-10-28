@@ -19,41 +19,32 @@ import (
 	"fmt"
 
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
-func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+func DefineDeckhouseRemoveDeployment(cmd *cobra.Command, opts *options.Options) {
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineKubeFlags(cmd, &opts.Kube)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 		l := logger.FromContext(ctx)
-
-		params := app.ProviderParams(&opts.Global, logger.FromContext(ctx))
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
-			ctx,
-			params,
-			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
-			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
-			providerinitializer.WithRequiredKubeProvider(),
-		)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.CLIProviders(ctx, opts, providerinitializer.CLIProvidersOptions{RequireKube: true})
 		if err != nil {
 			return err
 		}
@@ -74,33 +65,26 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 
 			return deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)
 		})
-	})
+	}
 }
 
-func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+func DefineDeckhouseCreateDeployment(cmd *cobra.Command, opts *options.Options) {
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineKubeFlags(cmd, &opts.Kube)
 
 	var dryRun bool
-	cmd.Flag("dry-run", "Output the deployment YAML").BoolVar(&dryRun)
+	app.BoolFlag(cmd.Flags(), app.Flag{Name: "dry-run", Help: "Output the deployment YAML"}, &dryRun)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 		l := logger.FromContext(ctx)
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		params := app.ProviderParams(&opts.Global, logger.FromContext(ctx))
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
-			ctx,
-			params,
-			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
-			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
-			providerinitializer.WithRequiredKubeProvider(),
-		)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.CLIProviders(ctx, opts, providerinitializer.CLIProvidersOptions{RequireKube: true})
 		if err != nil {
 			return err
 		}
@@ -136,7 +120,9 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 				return err
 			}
 
-			fmt.Println(string(out))
+			if _, err := fmt.Fprintln(cmd.OutOrStdout(), string(out)); err != nil {
+				return fmt.Errorf("print manifest: %w", err)
+			}
 			return nil
 		}
 
@@ -158,5 +144,5 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 
 			return nil
 		})
-	})
+	}
 }

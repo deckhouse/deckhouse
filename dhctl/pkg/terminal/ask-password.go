@@ -17,87 +17,28 @@ package terminal
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
-	terminal "golang.org/x/term"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"golang.org/x/term"
 )
 
-// AskBecomePassword reads a sudo/become password from stdin and stores it in o.BecomePass
-// when o.AskBecomePass is set. No-op otherwise.
-func AskBecomePassword(o *options.BecomeOptions) error {
-	if o == nil || !o.AskBecomePass {
-		return nil
-	}
-
-	data, err := readPassword("[sudo] Password: ")
-	if err != nil {
-		return err
-	}
-
-	o.BecomePass = string(data)
-	return nil
-}
-
-func AskPassword(prompt string) ([]byte, error) {
+// AskPassword reads a secret from the terminal on stdin without echo. The prompt goes through the
+// logger, shown in compact output too, so the user sees what is asked for.
+func AskPassword(ctx context.Context, prompt string) ([]byte, error) {
 	fd := int(os.Stdin.Fd())
-
-	if !terminal.IsTerminal(fd) {
+	if !term.IsTerminal(fd) {
 		return nil, fmt.Errorf("stdin is not a terminal, cannot read password")
 	}
 
-	ctx := context.Background()
-	dhlog.FromContext(ctx).InfoContext(ctx, prompt)
-	data, err := terminal.ReadPassword(fd)
-	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint())
+	logger := dhlog.FromContext(ctx)
+	logger.InfoContext(ctx, prompt, dhlog.ShowInCompacted())
 
+	data, err := term.ReadPassword(fd)
+
+	logger.InfoContext(ctx, "", dhlog.ShowInCompacted())
 	if err != nil {
 		return nil, fmt.Errorf("read secret: %w", err)
-	}
-
-	return data, nil
-}
-
-// AskBastionPassword reads a bastion password from stdin and stores it in o.BastionPass.
-//
-// The prompt is skipped when AskBastionPass is unset, when legacy mode is forced,
-// or when private keys are configured and modern mode is not forced (matching the
-// previous package-global behavior).
-func AskBastionPassword(o *options.SSHOptions) error {
-	if o == nil || !o.AskBastionPass || o.LegacyMode || (len(o.PrivateKeys) > 0 && !o.ModernMode) {
-		return nil
-	}
-
-	data, err := readPassword("[bastion] Password: ")
-	if err != nil {
-		return err
-	}
-
-	o.BastionPass = string(data)
-	return nil
-}
-
-func readPassword(prompt string) ([]byte, error) {
-	ctx := context.Background()
-	fd := int(os.Stdin.Fd())
-
-	var data []byte
-	var err error
-
-	if !terminal.IsTerminal(fd) {
-		data, err = io.ReadAll(os.Stdin)
-	} else {
-		dhlog.FromContext(ctx).InfoContext(ctx, prompt)
-		data, err = terminal.ReadPassword(fd)
-	}
-
-	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprint())
-
-	if err != nil {
-		return nil, fmt.Errorf("read password: %v", err)
 	}
 	return data, nil
 }

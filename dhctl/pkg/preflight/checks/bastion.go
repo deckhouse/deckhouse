@@ -87,7 +87,7 @@ func (c BastionAvailabilityCheck) Run(ctx context.Context) (string, error) {
 	addr := net.JoinHostPort(sshCfg.BastionHost, bastionPort(sshCfg))
 	user := sshCfg.BastionUser
 
-	authMethods, cleanup, err := bastionAuthMethods(sshCfg)
+	authMethods, cleanup, err := bastionAuthMethods(sshCfg, c.SSHProviderInitializer.GetSettings().AuthSock())
 	if err != nil {
 		// No key, no agent and no password: nothing about that changes on a second attempt.
 		return "", preflight.Permanent(&preflight.Failure{
@@ -174,9 +174,9 @@ func (c BastionAvailabilityCheck) Run(ctx context.Context) (string, error) {
 }
 
 // bastionAuthMethods builds the ssh auth methods used to reach the bastion:
-// public keys from the connection config, the running ssh-agent (if any) and an
+// public keys from the connection config, the ssh-agent at authSock (if any) and an
 // optional bastion password. The returned cleanup closes the ssh-agent socket.
-func bastionAuthMethods(cfg *sshconfig.Config) ([]ssh.AuthMethod, func(), error) {
+func bastionAuthMethods(cfg *sshconfig.Config, authSock string) ([]ssh.AuthMethod, func(), error) {
 	cleanup := func() {}
 
 	signers, err := bastionSigners(cfg.PrivateKeys)
@@ -189,8 +189,8 @@ func bastionAuthMethods(cfg *sshconfig.Config) ([]ssh.AuthMethod, func(), error)
 		methods = append(methods, ssh.PublicKeys(signers...))
 	}
 
-	if sock := os.Getenv("SSH_AUTH_SOCK"); sock != "" {
-		if agentConn, err := net.Dial("unix", sock); err == nil {
+	if authSock != "" {
+		if agentConn, err := net.Dial("unix", authSock); err == nil {
 			cleanup = func() { _ = agentConn.Close() }
 			methods = append(methods, ssh.PublicKeysCallback(agent.NewClient(agentConn).Signers))
 		}
@@ -207,9 +207,8 @@ func bastionAuthMethods(cfg *sshconfig.Config) ([]ssh.AuthMethod, func(), error)
 	return methods, cleanup, nil
 }
 
-// bastionSigners parses the connection config private keys into ssh signers.
-// dhctl writes inline sshAgentPrivateKeys to temp files, so most keys arrive as
-// paths (IsPath); inline PEM keys are handled too.
+// bastionSigners parses the connection config private keys into ssh signers: files of
+// --ssh-agent-private-keys (IsPath) and the keys of a connection config as text.
 func bastionSigners(keys []sshconfig.AgentPrivateKey) ([]ssh.Signer, error) {
 	signers := make([]ssh.Signer, 0, len(keys))
 	for _, k := range keys {

@@ -161,7 +161,7 @@ func ParseHosts(raw []string) (map[string]string, error) {
 // place the flag is normalised: a name read anywhere else has to be the key
 // ParseHosts stored the address under. Empty halves mean the value is not a pair.
 func ParseHost(pair string) (string, string) {
-	// Both halves are trimmed: kingpin splits an envar on newlines and trims only
+	// Both halves are trimmed: dhctl splits an envar on newlines and trims only
 	// the trailing one, and the spaces an operator puts around the "=" belong to
 	// neither the node name nor the address.
 	name, address, _ := strings.Cut(pair, "=")

@@ -3,7 +3,7 @@ module github.com/deckhouse/deckhouse/dhctl
 go 1.26.4
 
 require (
-	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection v0.17.0
+	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection v0.18.1
 	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl v0.24.0
 	fox.flant.com/deckhouse/cluster-and-infrastructure/libs/oteljsonl v0.1.1
 	github.com/BurntSushi/toml v1.5.0
@@ -43,6 +43,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.12.1
 	github.com/vbauerster/mpb/v8 v8.12.0
@@ -67,7 +68,6 @@ require (
 	golang.org/x/term v0.45.0
 	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12
-	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.34.8
@@ -91,8 +91,6 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/STARRY-S/zip v0.2.3 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
-	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
-	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/araddon/dateparse v0.0.0-20190622164848-0fb0a474d195 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -215,7 +213,6 @@ require (
 	github.com/sorairolake/lzip-go v0.3.8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/ulikunitz/xz v0.5.15 // indirect
 	github.com/vbatts/tar-split v0.12.2 // indirect
@@ -255,9 +252,6 @@ require (
 
 // Remove 'in body' from errors, fix for Go 1.16 (https://github.com/go-openapi/validate/pull/138).
 replace github.com/go-openapi/validate => github.com/flant/go-openapi-validate v0.19.12-flant.0
-
-// replace with master branch to work with single dash
-replace gopkg.in/alecthomas/kingpin.v2 => github.com/alecthomas/kingpin v1.3.8-0.20200323085623-b6657d9477a6
 
 replace go.cypherpunks.ru/gogost/v5 v5.13.0 => github.com/flant/gogost/v5 v5.13.0
 

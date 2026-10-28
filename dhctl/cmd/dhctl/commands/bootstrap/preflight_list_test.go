@@ -19,6 +19,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
@@ -41,7 +43,13 @@ func TestPreflightListCoversEveryCheck(t *testing.T) {
 // TestPreflightListPrintsATable checks the shape an operator actually reads.
 func TestPreflightListPrintsATable(t *testing.T) {
 	var out bytes.Buffer
-	if err := printPreflightChecks(&out); err != nil {
+
+	cmd := &cobra.Command{Use: "list"}
+	DefinePreflightListCommand(cmd, options.New())
+	cmd.SetOut(&out)
+	cmd.SetArgs([]string{})
+
+	if err := cmd.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 

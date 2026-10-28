@@ -19,12 +19,10 @@ import (
 	"fmt"
 
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -33,8 +31,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
-func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+func DefineBootstrapInstallDeckhouseCommand(cmd *cobra.Command, opts *options.Options) {
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineTFResourceManagementTimeout(cmd, &opts.Cache)
@@ -46,19 +44,13 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 	// too.
 	app.DefinePreflight(cmd, &opts.Preflight)
 
-	forceVerboseLogging(cmd, opts)
-
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
-			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
-			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
-		)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.CLIProviders(ctx, opts, providerinitializer.CLIProvidersOptions{})
 		if err != nil {
 			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
@@ -76,30 +68,24 @@ func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause, opts *option
 		})
 
 		return bootstraper.InstallDeckhouse(ctx)
-	})
+	}
 }
 
-func DefineCreateResourcesCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+func DefineCreateResourcesCommand(cmd *cobra.Command, opts *options.Options) {
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineConfigsForResourcesPhaseFlags(cmd, &opts.Global)
-	app.DefineResourcesFlags(cmd, &opts.Bootstrap, false)
+	app.DefineResourcesFlags(cmd, &opts.Bootstrap)
 	app.DefineKubeFlags(cmd, &opts.Kube)
 	app.DefineCacheFlags(cmd, &opts.Cache)
 
-	forceVerboseLogging(cmd, opts)
-
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params,
-			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
-			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
-		)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.CLIProviders(ctx, opts, providerinitializer.CLIProvidersOptions{})
 		if err != nil {
 			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
@@ -116,11 +102,11 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause, opts *options.Options)
 			Options:                opts,
 		})
 		return bootstraper.CreateResources(ctx)
-	})
+	}
 }
 
-func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
+func DefineBootstrapAbortCommand(cmd *cobra.Command, opts *options.Options) {
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineCacheFlags(cmd, &opts.Cache)
@@ -135,14 +121,13 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 	// not be skipped from the command line at all, while the gRPC path could skip them.
 	app.DefinePreflight(cmd, &opts.Preflight)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.CLIProviders(ctx, opts, providerinitializer.CLIProvidersOptions{})
 		if err != nil {
 			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
@@ -181,29 +166,30 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause, opts *options.Options) 
 		}
 
 		return nil
-	})
+	}
 }
 
-func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+func DefineBaseInfrastructureCommand(cmd *cobra.Command, opts *options.Options) {
 	app.DefineConfigFlags(cmd, &opts.Global)
 	app.DefineCacheFlags(cmd, &opts.Cache)
 	app.DefineDropCacheFlags(cmd, &opts.Cache)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)
+	// The SSH provider below is built from these flags. lib-connection used to read their
+	// DHCTL_CLI_* variables for this command on its own.
+	app.DefineSSHFlags(cmd, opts)
+	app.DefineBecomeFlags(cmd, &opts.Become)
 	// This command creates the cloud infrastructure, so the configuration checks run ahead of it
 	// the same way they do in a full bootstrap — and the flags that turn them off have to exist
 	// here too, or a check the operator can skip in `dhctl bootstrap` becomes unskippable here.
 	app.DefinePreflight(cmd, &opts.Preflight)
 
-	forceVerboseLogging(cmd, opts)
-
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 
 		span := telemetry.SpanFromContext(ctx)
 		span.SetAttributes(opts.ToSpanAttributes()...)
 
-		params := app.ProviderParams(&opts.Global, dhlog.FromContext(ctx))
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.CLIProviders(ctx, opts, providerinitializer.CLIProvidersOptions{})
 		if err != nil {
 			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 				return err
@@ -224,14 +210,5 @@ func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause, opts *options.Optio
 		cache.GetGlobalTmpCleaner().DisableCleanup("Create base infra for cluster")
 
 		return err
-	})
-}
-
-// forceVerboseLogging makes the command behave as if -v/--verbose was passed,
-// regardless of what the user actually specified on the command line.
-func forceVerboseLogging(cmd *kingpin.CmdClause, opts *options.Options) {
-	cmd.PreAction(func(c *kingpin.ParseContext) error {
-		opts.Global.ShowProgress = true
-		return nil
-	})
+	}
 }

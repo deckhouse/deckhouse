@@ -15,7 +15,7 @@
 package app
 
 import (
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
@@ -23,8 +23,10 @@ import (
 // DefineImmutableHostsFlags declares where the machines of a static cluster of
 // immutable nodes are. Repeatable, like --ssh-host, and for the same reason:
 // one flag per machine reads better than one flag with a list in it.
-func DefineImmutableHostsFlags(cmd *kingpin.CmdClause, opts *options.BootstrapOptions) {
-	cmd.Flag("master-host", "Control-plane machine of a static cluster as <node-name>=<address>, can be specified multiple times").
-		Envar(configEnvName("MASTER_HOSTS")).
-		StringsVar(&opts.MasterHostsRaw)
+func DefineImmutableHostsFlags(cmd *cobra.Command, opts *options.BootstrapOptions) {
+	StringsFlag(cmd.Flags(), Flag{
+		Name: "master-host",
+		Env:  "DHCTL_CLI_MASTER_HOSTS",
+		Help: "Control-plane machine of a static cluster as <node-name>=<address>, can be specified multiple times",
+	}, &opts.MasterHostsRaw)
 }

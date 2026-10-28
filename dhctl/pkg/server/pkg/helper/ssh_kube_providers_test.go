@@ -15,10 +15,6 @@
 package helper
 
 import (
-	"crypto/ed25519"
-	"encoding/pem"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/settings"
@@ -26,7 +22,6 @@ import (
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/ssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -130,29 +125,7 @@ func TestSSHProviderOrNil(t *testing.T) {
 	}
 }
 
-// plantSSHKey gives the process a $HOME holding a usable private key, which is what the argv arm
-// of the provider initializer picks up when the caller passes no SSH flags. The key is what makes
-// the test below meaningful: with an unusable one that arm fails, and failing looks the same as
-// not being taken at all.
-func plantSSHKey(t *testing.T) {
-	t.Helper()
-
-	home := t.TempDir()
-	require.NoError(t, os.MkdirAll(filepath.Join(home, ".ssh"), 0o700))
-
-	_, key, err := ed25519.GenerateKey(nil)
-	require.NoError(t, err)
-
-	block, err := ssh.MarshalPrivateKey(key, "")
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(home, ".ssh", "id_rsa"), pem.EncodeToMemory(block), 0o600))
-
-	t.Setenv("HOME", home)
-}
-
 func TestCreateProvidersKubeConfigWithoutConnectionConfig(t *testing.T) {
-	plantSSHKey(t)
-
 	sshProviderInitializer, kubeProvider, cleanup, err := CreateProviders(
 		t.Context(), "", false, t.TempDir(),
 		WithKubeConfig(kubeconfigYAML),
@@ -181,11 +154,8 @@ func TestCreateProvidersAllowMissingConnectionConfig(t *testing.T) {
 // TestCreateProvidersAPIServerWithoutConnectionConfig covers the case Deckhouse
 // Commander hits for clusters it reaches only through its AMPG tunnel: an API
 // server endpoint and no SSH connection config. The kube provider must come up
-// anyway, and the SSH flags of the dhctl-server process must not be mistaken for
-// the cluster's.
+// anyway.
 func TestCreateProvidersAPIServerWithoutConnectionConfig(t *testing.T) {
-	plantSSHKey(t)
-
 	sshProviderInitializer, kubeProvider, cleanup, err := CreateProviders(
 		t.Context(), "", false, t.TempDir(),
 		WithAPIServer(&APIServerConnection{
@@ -196,6 +166,30 @@ func TestCreateProvidersAPIServerWithoutConnectionConfig(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, sshProviderInitializer)
 	require.NotNil(t, kubeProvider)
+	require.NoError(t, cleanup())
+}
+
+// A request with neither a connection config nor a direct Kubernetes route has nothing to connect
+// with. The process the server runs in is not consulted: neither its arguments nor its environment
+// nor the keys in its home directory.
+func TestCreateProvidersWithoutAnyConnection(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("DHCTL_CLI_SSH_HOSTS", "10.0.0.1")
+	t.Setenv("KUBECONFIG", "")
+
+	sshProviderInitializer, kubeProvider, cleanup, err := CreateProviders(t.Context(), "", false, t.TempDir())
+	require.ErrorIs(t, err, providerinitializer.ErrSSHHostRequiredForKubernetesConnection)
+	require.Nil(t, sshProviderInitializer)
+	require.Nil(t, kubeProvider)
+	require.NoError(t, cleanup())
+
+	// Bootstrap is written against a present initializer: it takes the hosts from its state later
+	// and builds the kube provider from the initializer then.
+	sshProviderInitializer, kubeProvider, cleanup, err = CreateProviders(t.Context(), "", false, t.TempDir(), AllowMissingHostsFromCache(), AllowMissingConnectionConfig())
+	require.NoError(t, err)
+	require.NotNil(t, sshProviderInitializer)
+	require.Empty(t, sshProviderInitializer.GetConfig().Hosts)
+	require.Nil(t, kubeProvider)
 	require.NoError(t, cleanup())
 }
 

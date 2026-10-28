@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	sshconfig "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/config"
 	"fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-connection/pkg/ssh/session"
 	otattribute "go.opentelemetry.io/otel/attribute"
 )
@@ -28,12 +29,11 @@ import (
 // is not provided.
 const DefaultSSHAgentPrivateKeys = "~/.ssh/id_rsa"
 
-// PrivateKeyFileToPassphrase maps an SSH private key file path to its passphrase.
-type PrivateKeyFileToPassphrase = map[string]string
-
 // SSHOptions groups all SSH-related runtime configuration.
 type SSHOptions struct {
-	PrivateKeys []string
+	// PrivateKeys are the keys the connection offers: files of --ssh-agent-private-keys, or the text
+	// of the --connection-config keys, which lib-connection writes under the tmp dir when it connects.
+	PrivateKeys []sshconfig.AgentPrivateKey
 
 	ConnectionConfigPath string
 	AgentPrivateKeys     []string
@@ -52,37 +52,21 @@ type SSHOptions struct {
 	LegacyMode bool
 	ModernMode bool
 
-	// PrivateKeysToPassPhrasesFromConfig is populated by the connection-config parser.
-	PrivateKeysToPassPhrasesFromConfig PrivateKeyFileToPassphrase
+	ForceNoPrivateKeys        bool
+	UseAgentWithNoPrivateKeys bool
 }
 
 // NewSSHOptions returns SSHOptions with defaults derived from $USER.
 func NewSSHOptions() SSHOptions {
 	user := os.Getenv("USER")
 	return SSHOptions{
-		PrivateKeys:                        make([]string, 0),
-		AgentPrivateKeys:                   make([]string, 0),
-		Hosts:                              make([]session.Host, 0),
-		HostsRaw:                           make([]string, 0),
-		User:                               user,
-		BastionUser:                        user,
-		PrivateKeysToPassPhrasesFromConfig: make(PrivateKeyFileToPassphrase),
+		PrivateKeys:      make([]sshconfig.AgentPrivateKey, 0),
+		AgentPrivateKeys: make([]string, 0),
+		Hosts:            make([]session.Host, 0),
+		HostsRaw:         make([]string, 0),
+		User:             user,
+		BastionUser:      user,
 	}
-}
-
-// ProcessConnectionConfigFlags fills PrivateKeys from AgentPrivateKeys, applying
-// the default agent key when no key is configured. It used to live in pkg/app
-// as the unexported processConnectionConfigFlags.
-func (o *SSHOptions) ProcessConnectionConfigFlags() error {
-	if len(o.AgentPrivateKeys) == 0 {
-		o.AgentPrivateKeys = append(o.AgentPrivateKeys, DefaultSSHAgentPrivateKeys)
-	}
-	keys, err := ParseSSHPrivateKeyPaths(o.AgentPrivateKeys)
-	if err != nil {
-		return fmt.Errorf("ssh private keys: %w", err)
-	}
-	o.PrivateKeys = keys
-	return nil
 }
 
 func (o *SSHOptions) ToSpanAttributes() []otattribute.KeyValue {

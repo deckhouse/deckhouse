@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
@@ -34,28 +33,18 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+func DefineInfrastructureConvergeExporterCommand(cmd *cobra.Command, opts *options.Options) {
 	app.DefineKubeFlags(cmd, &opts.Kube)
 	app.DefineConvergeExporterFlags(cmd, &opts.Converge)
-	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 
 		options.ResolveAndApplyPaths(&opts.Global, options.ConvergerPodsSpiCheckPaths...)
 
-		params, err := app.DefaultProviderParams(ctx, &opts.Global)
-		if err != nil {
-			return err
-		}
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
-			ctx,
-			params,
-			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
-			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
-			providerinitializer.WithRequiredKubeProvider(),
-		)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.CLIProviders(ctx, opts, providerinitializer.CLIProvidersOptions{RequireKube: true})
 		if err != nil {
 			return err
 		}
@@ -84,30 +73,20 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 		exporter.Start(ctx)
 
 		return nil
-	})
+	}
 }
 
-func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+func DefineInfrastructureCheckCommand(cmd *cobra.Command, opts *options.Options) {
 	app.DefineKubeFlags(cmd, &opts.Kube)
 	app.DefineOutputFlag(cmd, &opts.Converge)
-	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineCacheFlags(cmd, &opts.Cache)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 
-		params, err := app.DefaultProviderParams(ctx, &opts.Global)
-		if err != nil {
-			return err
-		}
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
-			ctx,
-			params,
-			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
-			providerinitializer.WithKubeConfig(opts.Kube.Config, opts.Kube.ConfigContext, opts.Kube.InCluster),
-			providerinitializer.WithRequiredKubeProvider(),
-		)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.CLIProviders(ctx, opts, providerinitializer.CLIProvidersOptions{RequireKube: true})
 		if err != nil {
 			return err
 		}
@@ -180,13 +159,14 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			return fmt.Errorf("Failed to format check result: %w", err)
 		}
 
-		// todo(log): why do not use logger?
-		fmt.Print(string(data))
+		if _, err := fmt.Fprint(cmd.OutOrStdout(), string(data)); err != nil {
+			return fmt.Errorf("print check result: %w", err)
+		}
 
 		if provider.NeedToUseTofu() && needMigrationToTofu {
 			dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Need to migrate to tofu: %v", needMigrationToTofu), dhlog.ShowInCompacted())
 		}
 
 		return provider.Cleanup()
-	})
+	}
 }

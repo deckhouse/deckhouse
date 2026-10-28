@@ -280,7 +280,7 @@ func TestParseHostsSplitsNameAndAddress(t *testing.T) {
 	require.Equal(t, map[string]string{"master-0": "10.0.0.11", "master-1": "10.0.0.12"}, hosts)
 }
 
-// kingpin splits DHCTL_CLI_MASTER_HOSTS on newlines and trims only the trailing
+// dhctl splits DHCTL_CLI_MASTER_HOSTS on newlines and trims only the trailing
 // one, so an indented multi-line envar reaches ParseHosts with the indentation
 // still on the node name, where it fails much later and much less clearly.
 func TestParseHostsTrimsEnvarIndentation(t *testing.T) {

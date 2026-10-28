@@ -15,22 +15,29 @@
 package app
 
 import (
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 // DefineAutoConvergeFlags registers the auto-converge service flags.
-func DefineAutoConvergeFlags(cmd *kingpin.CmdClause, o *options.AutoConvergeOptions) {
-	cmd.Flag("converge-interval", "Period to converge infrastructure state").
-		Envar(configEnvName("CONVERGE_INTERVAL")).
-		DurationVar(&o.ApplyInterval)
+func DefineAutoConvergeFlags(cmd *cobra.Command, o *options.AutoConvergeOptions) {
+	flags := cmd.Flags()
+	DurationFlag(flags, Flag{
+		Name: "converge-interval",
+		Env:  "DHCTL_CLI_CONVERGE_INTERVAL",
+		Help: "Period to converge infrastructure state",
+	}, &o.ApplyInterval)
 
-	cmd.Flag("listen-address", "Address to expose metrics").
-		Envar(configEnvName("LISTEN_ADDRESS")).
-		StringVar(&o.ListenAddress)
+	StringFlag(flags, Flag{
+		Name: "listen-address",
+		Env:  "DHCTL_CLI_LISTEN_ADDRESS",
+		Help: "Address to expose metrics",
+	}, &o.ListenAddress)
 
-	cmd.Flag("node-name", "Name of the node where the auto-converger pod is running").
-		Envar(configEnvName("RUNNING_NODE_NAME")).
-		StringVar(&o.RunningNodeName)
+	StringFlag(flags, Flag{
+		Name: "node-name",
+		Env:  "DHCTL_CLI_RUNNING_NODE_NAME",
+		Help: "Name of the node where the auto-converger pod is running",
+	}, &o.RunningNodeName)
 }

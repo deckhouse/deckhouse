@@ -23,13 +23,12 @@ import (
 	"syscall"
 
 	dhlog "fox.flant.com/deckhouse/cluster-and-infrastructure/libs/lib-dhctl/pkg/logger"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
@@ -39,18 +38,14 @@ const (
 	userName    = "local"
 )
 
-func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+func DefineSessionCommand(cmd *cobra.Command, opts *options.Options) {
+	app.DefineSSHFlags(cmd, opts)
 	app.DefineBecomeFlags(cmd, &opts.Become)
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		ctx := cmd.Context()
 
-		params, err := app.DefaultProviderParams(ctx, &opts.Global)
-		if err != nil {
-			return err
-		}
-		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
+		sshProviderInitializer, err := providerinitializer.CLISSHProviderInitializer(ctx, opts)
 		if err != nil {
 			return err
 		}
@@ -88,7 +83,7 @@ func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 		l.InfoContext(ctx, "Exiting SSH tunnel...", dhlog.ShowInCompacted())
 
 		return nil
-	})
+	}
 }
 
 func localKubeConfig(ctx context.Context, apiServerURL string) error {

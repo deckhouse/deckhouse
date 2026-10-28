@@ -377,7 +377,8 @@ shell:
     {{- $rootContext.Files.Get (printf "%sdeckhouse-controller/files/vimrc.local" $rootContext.prefix) | nindent 4 }}
     EOD
 
-    echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
+    echo '. /usr/share/bash-completion/bash_completion' >> /etc/bashrc
+    echo 'eval "$(dhctl completion bash)"' >> /etc/bashrc
     echo '{{- $context.CI_COMMIT_TAG }}' > /deckhouse/version
     echo '{{- $context.Env | default "unknown" }}' > /deckhouse/edition
 

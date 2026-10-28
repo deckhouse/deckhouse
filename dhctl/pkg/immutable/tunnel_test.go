@@ -103,7 +103,7 @@ func openChannelThroughFakeBastion(ctx context.Context, t *testing.T, bastion *f
 	address, stop, err := OpenBastionChannel(
 		ctx,
 		&sshconfig.ConnectionConfig{Config: config.FillDefaults()},
-		settings.NewBaseProviders(settings.ProviderParams{}),
+		settings.NewBaseProviders(settings.ProviderParams{TmpDir: t.TempDir()}),
 		targetHost,
 		targetPort,
 		"test",

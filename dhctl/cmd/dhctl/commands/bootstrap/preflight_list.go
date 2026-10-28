@@ -17,12 +17,11 @@ package bootstrap
 import (
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"strings"
 	"text/tabwriter"
 
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -36,10 +35,10 @@ import (
 // description, and from documentation that had drifted — it named three checks that do not exist
 // and omitted fifteen that do. A failure report now prints the flag that skips it, and this
 // prints the rest of them.
-func DefinePreflightListCommand(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause {
-	return cmd.Action(func(_ *kingpin.ParseContext) error {
-		return printPreflightChecks(os.Stdout)
-	})
+func DefinePreflightListCommand(cmd *cobra.Command, _ *options.Options) {
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		return printPreflightChecks(cmd.OutOrStdout())
+	}
 }
 
 func printPreflightChecks(out io.Writer) error {

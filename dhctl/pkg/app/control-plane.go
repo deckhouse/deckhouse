@@ -15,24 +15,25 @@
 package app
 
 import (
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 // DefineControlPlaneFlags registers the control-plane test-target flags into o.
-func DefineControlPlaneFlags(cmd *kingpin.CmdClause, o *options.ControlPlaneOptions, ipRequired bool) {
-	cmd.Flag("control-plane-node-hostname", "Control plane node hostname to check").
-		Envar(configEnvName("CONTROL_PLANE_NODE_HOSTNAME")).
-		Required().
-		StringVar(&o.Hostname)
+func DefineControlPlaneFlags(cmd *cobra.Command, o *options.ControlPlaneOptions, ipRequired bool) {
+	flags := cmd.Flags()
+	StringFlag(flags, Flag{
+		Name:     "control-plane-node-hostname",
+		Env:      "DHCTL_CLI_CONTROL_PLANE_NODE_HOSTNAME",
+		Help:     "Control plane node hostname to check",
+		Required: true,
+	}, &o.Hostname)
 
-	ipFlag := cmd.Flag("control-plane-node-ip", "Control plane node IP to check").
-		Envar(configEnvName("CONTROL_PLANE_NODE_IP"))
-
-	if ipRequired {
-		ipFlag.Required()
-	}
-
-	ipFlag.StringVar(&o.IP)
+	StringFlag(flags, Flag{
+		Name:     "control-plane-node-ip",
+		Env:      "DHCTL_CLI_CONTROL_PLANE_NODE_IP",
+		Help:     "Control plane node IP to check",
+		Required: ipRequired,
+	}, &o.IP)
 }

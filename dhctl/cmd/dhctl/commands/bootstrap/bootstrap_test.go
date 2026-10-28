@@ -17,8 +17,8 @@ package bootstrap
 import (
 	"testing"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
@@ -32,12 +32,10 @@ func TestDefineBootstrapCommand_DefinesTheKubeFlags(t *testing.T) {
 	t.Parallel()
 
 	opts := options.New()
-	cmd := DefineBootstrapCommand(kingpin.New("dhctl", "").Command("bootstrap", ""), opts)
+	cmd := &cobra.Command{Use: "bootstrap"}
+	DefineBootstrapCommand(cmd, opts)
 
-	defined := make([]string, 0)
-	for _, flag := range cmd.Model().Flags {
-		defined = append(defined, flag.Name)
+	for _, name := range []string{"kubeconfig", "kubeconfig-context", "kube-client-from-cluster"} {
+		require.NotNil(t, cmd.Flags().Lookup(name), name)
 	}
-
-	require.Subset(t, defined, []string{"kubeconfig", "kubeconfig-context", "kube-client-from-cluster"})
 }
