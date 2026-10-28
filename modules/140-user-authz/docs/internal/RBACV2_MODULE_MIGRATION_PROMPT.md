@@ -13,6 +13,10 @@ Like the script, it keeps the legacy object and puts the new one beside it behin
 one branch of the module serves clusters on either side of 1.78. A module that supports only 1.78
 and later does not need that; tell the agent so, and it drops the legacy branch.
 
+The agent checks the result with the `contract` rule of dmt v0.2.7 or newer when dmt is installed.
+Moving the module's RBAC to `rbac.yaml` is a separate step (Step 7): the agent does it only when you
+ask for it, after the migration is committed.
+
 Teams working in Cursor can keep it as a skill instead: save the text below the line as
 `.cursor/skills/rbacv2-migration/SKILL.md`, prefixed with a frontmatter block carrying `name:
 rbacv2-migration` and a one-line `description`, and invoke it by name.
@@ -66,7 +70,12 @@ Do not:
 - rename or move files, reorder keys, reindent, or reformat anything you are not changing — the diff
   must stay reviewable line by line;
 - edit module documentation, CI, chart values or Go code;
-- invent labels or annotations beyond the ones listed here.
+- invent labels or annotations beyond the ones listed here;
+- run `dmt lint --fix` for Steps 1–6. From dmt v0.2.7 on, `--fix` writes `rbac.yaml` into the module
+  and then rewrites its RBAC templates from it, which is Step 7 and only on request. In Steps 1–6 run
+  `dmt lint` without `--fix`.
+
+Step 7 widens this scope, and only when the person running you asks for it.
 
 ## Step 1. Inventory
 
@@ -443,6 +452,22 @@ And every migrated object satisfies the contract the platform tests
 - no legacy subsystem label is left on it (`deckhouse`, `infrastructure`, `kubernetes`, `networking`);
 - `rbac.deckhouse.io/delegatable` appears on no capability at all.
 
+If dmt v0.2.7 or newer is installed, check the same contract with it. Its `contract` rule is a port
+of `testing/rbacv2` and needs no `rbac.yaml`:
+
+```shell
+dmt --version
+dmt lint --linter rbac .          # without --fix
+```
+
+There must be no `contract` finding. A legacy object behind the version gate is not reported, so a
+module that serves both models passes. Check first that the module's `.dmtlint.yaml` does not set
+`linters-settings.rbac.impact` below `warn` (`ignored`): `contract` falls back to it and does not run,
+and no findings then proves nothing; report such a setting instead of relying on the check. A finding about `module.yaml` `subsystems` means they differ
+from the subsystems the system capabilities aggregate into: fix the label or report it, do not edit
+`module.yaml` on your own. The `sync` finding "rbac.yaml is missing" is expected and is not part of
+this migration (Step 7). If dmt is older or not installed, say so in the report; do not install it.
+
 ## Step 6. Report
 
 Finish with a short report, in this shape:
@@ -472,10 +497,156 @@ Tests referencing role names: <n>
   <path:line> — <the name it expects>
 
 Checks: renders at 1.77.5 / 1.78.0 / dev <objects of the expected model | error>,
-        files outside scope <none|list>
+        files outside scope <none|list>,
+        dmt contract <no findings | n findings, listed above | dmt <version> too old or not installed>
 ```
 
 Stop and ask instead of guessing when: a file defines a role rather than a capability; an object does
 not match the legacy naming pattern; the module ships actions other than `view`/`edit`; a capability
 has no aggregation label at all (it would land in no role); or the scope of a resource cannot be
 established from the repository.
+
+## Step 7. Only on request: the module's RBAC in rbac.yaml
+
+Do this step only when the person running you asks for it, and only after the migration above is
+committed. It moves the module's whole RBAC into one declaration, `rbac.yaml` in the module root, from
+which dmt writes `templates/rbacv2/`, `templates/user-authz-cluster-roles.yaml`,
+`templates/**/rbac-for-us.yaml` and `templates/rbac-to-us.yaml`. The format is in the README of the
+`rbac` linter of dmt (github.com/deckhouse/dmt, `pkg/linters/rbac/README.md`, section "The module RBAC
+declaration"); read it before you start.
+
+The result is two commits, and the line between them matters: commit 1 is only what dmt wrote, so
+anyone can reproduce it; commit 2 is what a person decided. Never edit a file by hand before commit 1,
+and never put a decision of yours into it.
+
+### 7.1. Preconditions
+
+Check all of these and stop if one fails:
+
+```shell
+dmt --version                       # v0.2.7 or newer
+dmt lint --linter rbac .            # no contract findings (Step 5)
+git status --short                  # empty: commit 1 must hold only dmt output
+```
+
+Find out which values render every RBAC object. Look for `{{ if }}` around RBAC objects in
+`templates/` and in the openapi of the module for the flags they test. If some objects are off with the
+default values, prepare a values file that turns them on and use it as `--values-file` in every run, or
+use `--matrix`. Name the values you chose in the report. Do not run `dmt lint --fix` without
+`--linter rbac`: it would apply the fixes of other linters too.
+
+If the module keeps both schemes behind the version gate (Step 3b, `rbacv2_new_scheme` in
+`templates/`), dmt takes this step only part of the way, by design and not as a bug:
+
+- `sync` compares the 1.78 branch of a gated template with `rbac.yaml` and skips the legacy branch;
+- `--fix` never rewrites a gated template, since the rewrite would drop the legacy branch;
+- run 1 does not take the rights of the gated `templates/rbacv2/` into `rbac.yaml`, so their resources
+  get `noAccess: "TODO"`.
+
+Say so to the person running you before you start. For such a module, the levels of those resources
+are written into `rbac.yaml` by hand after the 1.78 branch (a decision of 7.3), the gated templates stay
+hand-written, and their `sync` finding "The autofix leaves the file as it is" goes away once the
+declaration and the 1.78 branch agree. Do not edit a gated template to make a finding go away.
+
+### 7.2. Commit 1: the bare dmt run
+
+The move takes two fixes that depend on each other: write `rbac.yaml` from the templates, then the
+templates from `rbac.yaml`. A run of `--fix` applies only the fixes of what `dmt lint` found at the start
+of that run and does not lint again, so the runs go in a chain:
+
+- run 1 writes `rbac.yaml` from the render and touches no template (there was no declaration at the
+  start of the run);
+- run 2 compares the templates with the new declaration, rewrites those that differ and creates the
+  missing files; a template it cannot rewrite without losses is left as it is, with a finding;
+- the first run that changes nothing is the last one.
+
+Run this loop and nothing else:
+
+```shell
+git add -A .
+for i in 1 2 3 4 5; do
+  dmt lint --linter rbac --fix . >/dev/null      # plus --values-file <file> or --matrix, the same every run
+  if [ -z "$(git status --porcelain . | grep -v '^[MADR] ')" ]; then
+    echo "converged after $i run(s)"; break
+  fi
+  git add -A .
+  [ "$i" = 5 ] && echo "NOT converged after 5 runs: stop and report"
+done
+[ -f rbac.yaml ] || echo "no rbac.yaml: dmt did not run, see its errors above"
+git status --short .
+```
+
+The loop leaves the errors of dmt on the terminal. If dmt printed an error (no dmt, a render error, a
+wrong values file), the loop proves nothing even when it says "converged": stop and report the error.
+If it prints "NOT converged after 5 runs", stop and report it as a dmt bug, with the files each run
+changed. Otherwise commit the staged files as commit 1, with a message that says it is the bare output
+of `dmt lint --linter rbac --fix`, how many runs it took and with which values.
+
+Then read what dmt wrote and what it reports:
+
+```shell
+sed -n '1,/^apiVersion:/p' rbac.yaml        # the notes on top: what the declaration does not carry
+grep -n 'TODO' rbac.yaml
+dmt lint --linter rbac .
+```
+
+### 7.3. Commit 2: the decisions
+
+Sort every `TODO`, note and finding into one of two groups.
+
+Do it yourself, mechanically, and list it in the report:
+
+- a template the declaration puts into another file (dmt never moves objects between files and never
+  deletes a file): move or rename the file as the finding says, so that the object is not described
+  twice;
+- the comments of the templates: carry them next to the matching entries of `rbac.yaml`, and add a
+  header to `rbac.yaml` naming the templates dmt writes from it;
+- a tool of the repository that reads the moved or renamed templates (a generator, a test, an audit
+  policy): rerun it and include its output, or report it if you cannot.
+
+Ask the person running you, with your proposal and its evidence, and do not decide alone:
+
+- every `noAccess: "TODO"`: grant levels to the CRD, or which reason to write. Propose "no user role
+  grants it today" only after you have checked the templates for such grants;
+- every other `TODO` (`scope` of a resource without a CRD, a `when` dmt could not read, a namespaced
+  resource at the system level): say what the templates do today. Keep what they do today unless told
+  otherwise: this step must not change who has access;
+- anything the format cannot carry that keeps `--fix` off a file (`imagePullSecrets` of a
+  ServiceAccount, a Role that a declared account only binds but that lives in its `rbac-for-us.yaml`,
+  labels or annotations of a legacy role or capability): propose the change, for example moving
+  `imagePullSecrets` into the pod spec or moving the Role to a file the declaration does not write;
+- an object dmt writes from the declaration that the templates did not have before, such as the
+  system capabilities `view`/`edit` of a subsystem: say what access it would add. Excluding it from
+  `sync` in `.dmtlint.yaml` (`linters-settings.rbac.exclude-rules.sync`) keeps `--fix` from writing it
+  back.
+
+After the answers, edit `rbac.yaml` and the files above, then run the loop from 7.2 again with the same
+values: an edit of the declaration is rewritten into the templates by the next run, and what follows
+from that rewrite is seen only by the run after it. Commit the result as commit 2, with a message that
+lists each decision and who took it.
+
+### 7.4. Acceptance
+
+```shell
+dmt lint --linter rbac .                          # nothing: no TODO, no sync, no coverage finding
+dmt lint --linter rbac --fix . && git status -s   # changes nothing
+```
+
+Run both with the default values and with the values of the loop (and `--matrix` if you used it). For
+a module behind the version gate (7.1), the gated templates must agree with `rbac.yaml` too: no `sync`
+finding on them either, and the legacy branch must render as before.
+Then render the chart on the base commit and on the result with the same values, and compare the RBAC
+objects (kind, name, namespace, rules, roleRef, subjects). They must be the same except for what
+commit 2 changes on purpose; list each difference in the report.
+
+### 7.5. Report for Step 7
+
+```text
+rbac.yaml: commit 1 <sha>, <n> dmt runs, values <default | file | --matrix>
+  files dmt wrote: <list>
+Decisions (commit 2 <sha>): <n>
+  <rbac.yaml path or entry> — <decision>, <taken by: person | mechanical>
+Left hand-written: <objects the declaration does not own, with the reason dmt gave>
+Checks: rbac lint <clean | findings>, --fix <no change | changes>,
+        render vs base <same | differences listed>
+```
