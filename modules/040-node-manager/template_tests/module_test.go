@@ -1789,6 +1789,35 @@ metadata:
 		})
 	})
 
+	// A hostNetwork pod gets status.podIP from the node addresses, and kubelet resolves it to ""
+	// while the node has none yet. kube-rbac-proxy then binds 0.0.0.0 and takes the port the
+	// controller binds on 127.0.0.1. status.hostIP fails instead, so the container waits.
+	Context("Node-controller kube-rbac-proxy listen address", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerStatic)
+			setBashibleAPIServerTLSValues(f)
+		})
+
+		It("uses status.hostIP on the host network before bootstrap", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "node-controller")
+			Expect(deploy.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
+			Expect(deploy.Field(rbacProxyListenAddressFieldPath).String()).To(Equal("status.hostIP"))
+		})
+
+		It("uses status.podIP on the pod network after bootstrap", func() {
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "node-controller")
+			Expect(deploy.Field("spec.template.spec.hostNetwork").Exists()).To(BeFalse())
+			Expect(deploy.Field(rbacProxyListenAddressFieldPath).String()).To(Equal("status.podIP"))
+		})
+	})
+
 	Context("Static", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerStatic)
@@ -2337,6 +2366,7 @@ metadata:
 			Expect(capiVPA.Field("spec.resourcePolicy.containerPolicies.0.minAllowed.memory").String()).To(Equal("50Mi"))
 			Expect(capiVPA.Field("spec.resourcePolicy.containerPolicies.0.maxAllowed.cpu").String()).To(Equal("20m"))
 			Expect(capiVPA.Field("spec.resourcePolicy.containerPolicies.0.maxAllowed.memory").String()).To(Equal("256Mi"))
+			Expect(capiDeploy.Field(rbacProxyListenAddressFieldPath).String()).To(Equal("status.hostIP"))
 		}
 
 		Context("Scale from zero annotations", func() {

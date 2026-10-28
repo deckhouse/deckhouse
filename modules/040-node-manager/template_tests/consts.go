@@ -17,3 +17,5 @@ limitations under the License.
 package template_tests
 
 const nodeManagerNamespace = "d8-cloud-instance-manager"
+
+const rbacProxyListenAddressFieldPath = `spec.template.spec.containers.#(name=="kube-rbac-proxy").env.#(name=="KUBE_RBAC_PROXY_LISTEN_ADDRESS").valueFrom.fieldRef.fieldPath`

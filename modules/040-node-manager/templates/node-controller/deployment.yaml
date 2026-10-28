@@ -145,7 +145,7 @@ spec:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
           valueFrom:
             fieldRef:
-              fieldPath: status.podIP
+              fieldPath: {{ if .Values.global.clusterIsBootstrapped }}status.podIP{{ else }}status.hostIP{{ end }}
         - name: KUBE_RBAC_PROXY_CONFIG
           value: |
             excludePaths:
