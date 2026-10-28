@@ -1877,6 +1877,7 @@ ccc: ddd
 
 			capiDeploy := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "capi-controller-manager")
 			Expect(capiDeploy.Exists()).To(BeTrue())
+			Expect(capiDeploy.Field(rbacProxyListenAddressFieldPath).String()).To(Equal("status.hostIP"))
 		}
 
 		Context("Scale from zero annotations", func() {
