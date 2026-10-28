@@ -1466,7 +1466,7 @@ apiserver:
 				// Ensure authz webhook is fail-closed but bypasses core control-plane identities to avoid deadlocks.
 				Expect(authzConfigYaml).To(ContainSubstring("failurePolicy: Deny"))
 				Expect(authzConfigYaml).To(ContainSubstring("matchConditions:"))
-				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user in ["system:aggregator", "system:kube-aggregator", "system:kube-controller-manager", "system:kube-scheduler", "kubernetes-admin", "kube-apiserver-kubelet-client", "capi-controller-manager", "system:volume-scheduler"])'`))
+				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user in ["system:aggregator", "system:kube-aggregator", "system:kube-controller-manager", "system:kube-scheduler", "kubernetes-admin", "kube-apiserver-kubelet-client", "capi-controller-manager", "system:volume-scheduler", "kubernetes-api-proxy"])'`))
 				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:node:"))'`))
 				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:serviceaccount:kube-system:"))'`))
 				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:serviceaccount:d8-"))'`))
@@ -1515,6 +1515,76 @@ apiserver:
 				Expect(f.RenderError).Should(HaveOccurred())
 				Expect(f.RenderError.Error()).To(ContainSubstring("controlPlaneManager.apiserver.authz.webhookCA is required"))
 			})
+		})
+
+		// kubernetes-api-proxy on each node probes /readyz of each kube-apiserver and reads the
+		// EndpointSlice default/kubernetes with its client certificate. If these requests go to the
+		// webhook and the webhook is down, kube-apiserver denies them (failurePolicy: Deny). Then the
+		// proxies on all nodes see that kube-apiserver as not ready and keep an old list of upstreams.
+		// RBAC limits the access of kubernetes-api-proxy.
+		Context("requests of kubernetes-api-proxy", func() {
+			for _, version := range []string{"1.33", "1.34", "1.35", "1.36", "1.37"} {
+				Context("Kubernetes "+version, func() {
+					BeforeEach(func() {
+						f.ValuesSetFromYaml("controlPlaneManager", webhookTestValues)
+						f.ValuesSet("controlPlaneManager.internal.effectiveKubernetesVersion", version)
+						f.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", version)
+						f.HelmRender()
+					})
+
+					It("go to RBAC and not to the user-authz webhook", func() {
+						Expect(f.RenderError).ShouldNot(HaveOccurred())
+						secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+						raw, err := base64.StdEncoding.DecodeString(secret.Field("data.extra-file-authorization-config\\.yaml").String())
+						Expect(err).ShouldNot(HaveOccurred())
+						config, err := loadAuthorizationConfiguration(raw)
+						Expect(err).ShouldNot(HaveOccurred(), "kube-apiserver %s would not start with this configuration", version)
+
+						names := make([]string, 0, len(config.Authorizers))
+						for _, a := range config.Authorizers {
+							names = append(names, a.Name)
+						}
+						Expect(names).To(Equal([]string{"node", "user-authz-webhook", "rbac"}))
+						webhook := config.Authorizers[1].Webhook
+
+						groups := []string{"node-manager:kubernetes-api-proxy", "system:authenticated"}
+						for _, tc := range []struct {
+							name     string
+							user     string
+							review   authorizationv1.SubjectAccessReviewSpec
+							expected bool
+						}{
+							{name: "/readyz probe", user: "kubernetes-api-proxy", expected: false, review: authorizationv1.SubjectAccessReviewSpec{
+								NonResourceAttributes: &authorizationv1.NonResourceAttributes{Path: "/readyz", Verb: "get"},
+							}},
+							{name: "/livez probe", user: "kubernetes-api-proxy", expected: false, review: authorizationv1.SubjectAccessReviewSpec{
+								NonResourceAttributes: &authorizationv1.NonResourceAttributes{Path: "/livez", Verb: "get"},
+							}},
+							{name: "/healthz probe", user: "kubernetes-api-proxy", expected: false, review: authorizationv1.SubjectAccessReviewSpec{
+								NonResourceAttributes: &authorizationv1.NonResourceAttributes{Path: "/healthz", Verb: "get"},
+							}},
+							{name: "list of EndpointSlice default/kubernetes", user: "kubernetes-api-proxy", expected: false, review: authorizationv1.SubjectAccessReviewSpec{
+								ResourceAttributes: &authorizationv1.ResourceAttributes{Verb: "list", Group: "discovery.k8s.io", Resource: "endpointslices", Namespace: "default", Name: "kubernetes"},
+							}},
+							{name: "get of EndpointSlice default/kubernetes", user: "kubernetes-api-proxy", expected: false, review: authorizationv1.SubjectAccessReviewSpec{
+								ResourceAttributes: &authorizationv1.ResourceAttributes{Verb: "get", Group: "discovery.k8s.io", Resource: "endpointslices", Namespace: "default", Name: "kubernetes"},
+							}},
+							{name: "/readyz request of another user", user: "jane@example.com", expected: true, review: authorizationv1.SubjectAccessReviewSpec{
+								NonResourceAttributes: &authorizationv1.NonResourceAttributes{Path: "/readyz", Verb: "get"},
+							}},
+							{name: "user with a similar name", user: "kubernetes-api-proxy-2", expected: true, review: authorizationv1.SubjectAccessReviewSpec{
+								NonResourceAttributes: &authorizationv1.NonResourceAttributes{Path: "/readyz", Verb: "get"},
+							}},
+						} {
+							tc.review.User = tc.user
+							tc.review.Groups = groups
+							matched, err := webhookMatches(webhook, &authorizationv1.SubjectAccessReview{Spec: tc.review})
+							Expect(err).ShouldNot(HaveOccurred(), tc.name)
+							Expect(matched).To(Equal(tc.expected), tc.name)
+						}
+					})
+				})
+			}
 		})
 
 		// The revocation check of user-authn: an authorizer of its own, served by the user-authz webhook,

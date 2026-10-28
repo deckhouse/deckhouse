@@ -50,7 +50,7 @@ func TestExemptionsMirrorTheAuthorizationConfig(t *testing.T) {
 	}
 
 	want := []string{
-		`'!(request.user in ["system:aggregator", "system:kube-aggregator", "system:kube-controller-manager", "system:kube-scheduler", "kubernetes-admin", "kube-apiserver-kubelet-client", "capi-controller-manager", "system:volume-scheduler"])'`,
+		`'!(request.user in ["system:aggregator", "system:kube-aggregator", "system:kube-controller-manager", "system:kube-scheduler", "kubernetes-admin", "kube-apiserver-kubelet-client", "capi-controller-manager", "system:volume-scheduler", "kubernetes-api-proxy"])'`,
 		`'!(request.user.startsWith("system:node:"))'`,
 		`'!(request.user.startsWith("system:serviceaccount:kube-system:"))'`,
 		`'!(request.user.startsWith("system:serviceaccount:d8-"))'`,
@@ -103,6 +103,7 @@ func TestExemptFromWebhook(t *testing.T) {
 		{"kubernetes-admin", true},
 		{"capi-controller-manager", true},
 		{"system:volume-scheduler", true},
+		{"kubernetes-api-proxy", true},
 		{"system:aggregator", true},
 		{"system:kube-aggregator", true},
 		{"kube-apiserver-kubelet-client", true},
@@ -125,6 +126,7 @@ func TestExemptFromWebhook(t *testing.T) {
 		// The condition matches the whole name, not a prefix of it.
 		{"kubernetes-admin-2", false},
 		{"system:kube-scheduler-shadow", false},
+		{"kubernetes-api-proxy-2", false},
 	} {
 		if got := ExemptFromWebhook(tc.username); got != tc.exempt {
 			t.Errorf("ExemptFromWebhook(%q) = %v, want %v", tc.username, got, tc.exempt)

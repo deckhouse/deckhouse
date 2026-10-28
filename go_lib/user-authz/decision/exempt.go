@@ -34,6 +34,7 @@ var exemptUsers = map[string]struct{}{
 	"kube-apiserver-kubelet-client":  {},
 	"capi-controller-manager":        {},
 	"system:volume-scheduler":        {},
+	"kubernetes-api-proxy":           {},
 }
 
 // exemptPrefixes are the identity prefixes the same matchConditions exclude.

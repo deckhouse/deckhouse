@@ -39,7 +39,10 @@ authorizers:
         # Exclude core control-plane identities from authz-webhook to avoid deadlocks:
         # if kube-apiserver cannot authorize these components, the cluster may not be able to recover.
         # Includes CAPI controllers observed in SubjectAccessReview logs (e.g. "capi-controller-manager").
-        - expression: '!(request.user in ["system:aggregator", "system:kube-aggregator", "system:kube-controller-manager", "system:kube-scheduler", "kubernetes-admin", "kube-apiserver-kubelet-client", "capi-controller-manager", "system:volume-scheduler"])'
+        # kubernetes-api-proxy serves the connections from the node to the API servers. It does health
+        # checks of the API servers and reads only the EndpointSlice "kubernetes". RBAC limits its access
+        # (Role node-manager:kubernetes-api-proxy).
+        - expression: '!(request.user in ["system:aggregator", "system:kube-aggregator", "system:kube-controller-manager", "system:kube-scheduler", "kubernetes-admin", "kube-apiserver-kubelet-client", "capi-controller-manager", "system:volume-scheduler", "kubernetes-api-proxy"])'
 
         # Nodes should not depend on the webhook: kubelet requests go via Node authorizer and are required
         # for node registration/heartbeats; blocking them may break the cluster.
