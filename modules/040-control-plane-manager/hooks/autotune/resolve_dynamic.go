@@ -102,7 +102,7 @@ func (r *dynamicResolver) resolve(ctx context.Context, deps resolveDeps, kind re
 	}
 
 	cooldownAge := readCooldownAges(deps, kind, measurement, now)
-	return r.proposeRequests(measurement, kind, usage, baseline.byComponent, cooldownAge), nil
+	return r.proposeRequests(measurement, kind, usage, baseline.byComponent, cooldownAge, someFetchFailed), nil
 }
 
 // Re-reports the shortfall because the hook expires the metric group on every
@@ -181,6 +181,7 @@ func (r *dynamicResolver) proposeRequests(
 	usage usageByComponent,
 	baseline requestsByComponent,
 	cooldownAge map[string]time.Duration,
+	someFetchFailed bool,
 ) resolvedRequests {
 	proposed := make(requestsByComponent, len(controlPlaneComponents))
 	raising := make(map[string]bool)
@@ -205,6 +206,11 @@ func (r *dynamicResolver) proposeRequests(
 
 	result := resolvedRequests{byComponent: proposed, resolver: resolverDynamic}
 	if len(raising) == 0 {
+		// A complete measurement asks for no raise, so the one held back earlier is gone. After a failed
+		// fetch the component behind it may still need it, and dropping the deficit would flap the alert.
+		if !someFetchFailed {
+			measurement.PendingRaiseSum = 0
+		}
 		result.deficit = r.state.refreshPendingRaiseDeficit(kind, r.headroom[kind])
 		return result
 	}

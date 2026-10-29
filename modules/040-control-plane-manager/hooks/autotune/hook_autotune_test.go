@@ -19,6 +19,7 @@ package autotune
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -547,6 +548,62 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: autotune", func()
 			st := autotuneCMState(f)
 			Expect(st[resourceCPU].PendingRaiseSum).To(Equal(int64(2000)))
 			Expect(*st[resourceCPU].Components[componentKubeApiserver].AppliedMilliCPU).To(Equal(int64(50)))
+		})
+	})
+
+	Context("Schedule: a blocked raise that is no longer needed", func() {
+		BeforeEach(func() {
+			now := dependency.TestDC.GetClock().Now().UTC()
+			tiny := generateMasterNodesConfig([]masterNode{{
+				cpu: "1", memory: "2Gi", capCPU: "1", capMem: "2Gi",
+			}})
+			st := completeAutotuneState(50, 50000000, now.Add(-100*time.Hour))
+			st[resourceCPU].PendingRaiseSum = 2000
+			// Usage fell back to the applied requests, so nothing asks for a raise.
+			for _, c := range controlPlaneComponents {
+				usage[c] = map[resourceKind]float64{resourceCPU: 0.05, resourceMemory: 50000000}
+			}
+			f.KubeStateSet(tiny + autotuneStateYAML(st) + cpmResourcesRequestsMC("", ""))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			f.RunHook()
+		})
+
+		It("clears pendingRaiseSum and reports no deficit", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(usageCalls).To(BeNumerically(">", 0))
+			Expect(deficitMetric(f, resourceCPU)).To(Equal(float64(-1)))
+			Expect(autotuneCMState(f)[resourceCPU].PendingRaiseSum).To(Equal(int64(0)))
+		})
+	})
+
+	Context("Schedule: a blocked raise when a usage fetch fails", func() {
+		BeforeEach(func() {
+			now := dependency.TestDC.GetClock().Now().UTC()
+			tiny := generateMasterNodesConfig([]masterNode{{
+				cpu: "1", memory: "2Gi", capCPU: "1", capMem: "2Gi",
+			}})
+			st := completeAutotuneState(50, 50000000, now.Add(-100*time.Hour))
+			st[resourceCPU].PendingRaiseSum = 2000
+			for _, c := range controlPlaneComponents {
+				usage[c] = map[resourceKind]float64{resourceCPU: 0.05, resourceMemory: 50000000}
+			}
+			fetchComponentUsage = func(_ context.Context, _ dependency.Container, component string, resourceName resourceKind) (float64, bool, error) {
+				usageCalls++
+				if component == componentKubeApiserver && resourceName == resourceCPU {
+					return 0, false, errors.New("metrics API is unavailable")
+				}
+				return usage[component][resourceName], true, nil
+			}
+			f.KubeStateSet(tiny + autotuneStateYAML(st) + cpmResourcesRequestsMC("", ""))
+			f.BindingContexts.Set(f.GenerateScheduleContext("0 3 * * *"))
+			f.RunHook()
+		})
+
+		// kube-apiserver may still need the raise held back earlier, so the shortfall stays reported.
+		It("keeps pendingRaiseSum and re-reports the deficit", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(deficitMetric(f, resourceCPU)).To(Equal(float64(1100)))
+			Expect(autotuneCMState(f)[resourceCPU].PendingRaiseSum).To(Equal(int64(2000)))
 		})
 	})
 
