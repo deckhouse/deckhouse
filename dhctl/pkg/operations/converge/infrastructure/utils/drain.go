@@ -38,42 +38,69 @@ type DrainOptions struct {
 	Force bool
 }
 
-func GetDrainConfirmation(commanderMode bool) func(string) bool {
+// DrainPrompts are the questions asked when a drain times out. Retry runs the drain
+// again without forcing anything; SkipDrain lets the node go without a full drain.
+type DrainPrompts struct {
+	Retry     func(string) bool
+	SkipDrain func(string) bool
+}
+
+func GetDrainPrompts(commanderMode bool) DrainPrompts {
+	// Commander has no one to answer: retrying would loop forever, so it keeps
+	// skipping the drain as before.
 	if commanderMode {
-		return func(msg string) bool {
-			return input.NewConfirmation().WithMessage(msg).WithYesByDefault().Ask()
+		return DrainPrompts{
+			Retry: func(string) bool { return false },
+			SkipDrain: func(msg string) bool {
+				return input.NewConfirmation().WithMessage(msg).WithYesByDefault().Ask()
+			},
 		}
 	}
 
-	return func(msg string) bool {
+	ask := func(msg string) bool {
 		return input.NewConfirmation().WithMessage(msg).Ask()
 	}
+
+	return DrainPrompts{Retry: ask, SkipDrain: ask}
 }
 
-func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, confirm func(string) bool, opts DrainOptions) error {
+func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, prompts DrainPrompts, opts DrainOptions) error {
 	// todo it is deeper for pass from command root, use app package directly
 	if app.SkipDrainingNodes() {
 		log.InfoF("Skipping draining node %s because draining disabled by env\n", nodeName)
 		return nil
 	}
 
-	err := retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 5, 10*time.Second).
-		RunContext(ctx, func() error {
-			return drainNode(ctx, kubeCl, nodeName, opts)
-		})
-	if err != nil {
-		if goerrors.Is(err, kubedrain.ErrDrainTimeout) {
-			if confirm("Cannot drain node, because process was timeout. Do we continue without full-fledged drain?") {
-				log.WarnLn("Continue without full-fledged drain")
-				return nil
-			}
+	return drainWithPrompts(ctx, nodeName, prompts, func() error {
+		return drainNode(ctx, kubeCl, nodeName, opts)
+	})
+}
 
+func drainWithPrompts(ctx context.Context, nodeName string, prompts DrainPrompts, drain func() error) error {
+	for {
+		err := retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 10, 10*time.Second).RunContext(ctx, drain)
+		if err == nil || !goerrors.Is(err, kubedrain.ErrDrainTimeout) {
 			return err
 		}
+
+		// kubedrain reports a cancelled context as a timeout too. A cancelled converge must
+		// stop here: in commander mode the skip question would otherwise delete the node.
+		if ctx.Err() != nil {
+			return err
+		}
+
+		if prompts.Retry(fmt.Sprintf("Cannot drain node '%s' because the process timed out. Retry draining?", nodeName)) {
+			log.InfoF("Retrying drain of node '%s'\n", nodeName)
+			continue
+		}
+
+		if prompts.SkipDrain(fmt.Sprintf("Continue deleting node '%s' without a full-fledged drain?", nodeName)) {
+			log.WarnF("Continuing without a full-fledged drain of node '%s'\n", nodeName)
+			return nil
+		}
+
 		return err
 	}
-
-	return nil
 }
 
 func drainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, opts DrainOptions) error {

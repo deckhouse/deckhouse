@@ -122,7 +122,7 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 		return fmt.Errorf("failed to check etcd has no member '%s': %v", nodeName, err)
 	}
 
-	err = infra_utils.TryToDrainNode(ctx, kubeCl, nodeName, infra_utils.GetDrainConfirmation(commanderMode), infra_utils.DrainOptions{Force: true})
+	err = infra_utils.TryToDrainNode(ctx, kubeCl, nodeName, infra_utils.GetDrainPrompts(commanderMode), infra_utils.DrainOptions{Force: true})
 	if err != nil {
 		return fmt.Errorf("failed to drain node '%s': %v", nodeName, err)
 	}

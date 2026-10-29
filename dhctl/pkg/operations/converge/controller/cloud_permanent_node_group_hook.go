@@ -38,7 +38,7 @@ func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestr
 }
 
 func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (bool, error) {
-	err := infra_utils.TryToDrainNode(ctx, h.getter.KubeClient(), h.nodeToDestroy, infra_utils.GetDrainConfirmation(h.commanderMode), infra_utils.DrainOptions{Force: false})
+	err := infra_utils.TryToDrainNode(ctx, h.getter.KubeClient(), h.nodeToDestroy, infra_utils.GetDrainPrompts(h.commanderMode), infra_utils.DrainOptions{Force: false})
 	if err != nil {
 		return false, err
 	}
