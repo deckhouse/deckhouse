@@ -6105,6 +6105,39 @@ alerts:
         Critical errors found in CoreDNS.
       severity: "5"
       markupFormat: markdown
+    - name: KubernetesServiceExternalIPsDeprecated
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/service-external-ips.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        There are `{{ $value }}` Service(s) in user namespaces that use the `spec.externalIPs` field. Services in the `d8-*` and `kube-system` namespaces are not checked.
+
+        The `spec.externalIPs` field is officially deprecated in Kubernetes because of the [CVE-2020-8554](https://github.com/kubernetes/kubernetes/issues/97076) security vulnerability. Starting with Kubernetes 1.36, the API server returns a warning for every request that sets this field. Support for the field will be removed in future Kubernetes versions.
+
+        Plan the migration of the affected Services to a supported way of exposing them, for example:
+
+        - A Service of the `LoadBalancer` type. In bare-metal clusters, use the [`metallb` module](https://deckhouse.io/modules/metallb/) to assign addresses.
+        - A Service of the `NodePort` type.
+        - An Ingress or Gateway API resource for HTTP(S) traffic.
+
+        For details, refer to the [Kubernetes announcement](https://kubernetes.io/blog/2026/05/14/kubernetes-v1-36-deprecation-and-removal-of-service-externalips/).
+
+        To list the affected Services with their namespaces and external IP addresses, run:
+
+        ```bash
+        d8 k get services -A -o json | jq -r '["NAMESPACE", "NAME", "TYPE", "EXTERNAL-IPS"], (.items[] | select(.spec.externalIPs) | select(.metadata.namespace | test("^(d8-.*|kube-system)$") | not) | [.metadata.namespace, .metadata.name, .spec.type, (.spec.externalIPs | join(","))]) | @tsv' | column -t
+        ```
+
+        Alternatively, run the following Prometheus query:
+
+        ```prometheus
+        max by (namespace, service, external_ip) (kube_service_spec_external_ip{namespace!~"d8-.*|kube-system"})
+        ```
+      summary: |
+        The cluster has Services that use the deprecated spec.externalIPs field.
+      severity: "6"
+      markupFormat: markdown
     - name: L2LoadBalancerOrphanServiceFound
       sourceFile: ee/se/modules/380-metallb/monitoring/prometheus-rules/services.yaml
       moduleUrl: 380-metallb
