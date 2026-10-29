@@ -40,7 +40,7 @@ This policy implements the following rules:
 - Log create and delete operations for ServiceAccount resources.
 - Log create/update/delete/patch operations for Role and ClusterRole resources.
 - Log create/update/delete operations for ClusterRoleBinding resources.
-- Log attach and ephemeral container related pod subresource operations.
+- Log exec, attach and ephemeral container related pod subresource operations.
 - Log creation of VirtualMachineOperation resources with request/response payload.
 - Log create/update/patch/delete operations for virtualization.deckhouse.io resources.
 - Log update/patch operations for internal virtualization subresources.

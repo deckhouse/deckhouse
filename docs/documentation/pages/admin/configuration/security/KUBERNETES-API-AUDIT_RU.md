@@ -40,7 +40,7 @@ Kubernetes поддерживает настройку аудита через �
 - Логировать операции create/delete для ресурсов ServiceAccount.
 - Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.
 - Логировать операции create/update/delete для ресурсов ClusterRoleBinding.
-- Логировать операции с pod subresource для attach и ephemeral-контейнеров.
+- Логировать операции с pod subresource для exec, attach и ephemeral-контейнеров.
 - Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.
 - Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io.
 - Логировать операции update/patch для внутренних virtualization subresources.

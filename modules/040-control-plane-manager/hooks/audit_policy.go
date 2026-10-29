@@ -409,12 +409,12 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 	}
 
 	{
-		descriptionEN := "Log attach and ephemeral container related pod subresource operations."
-		descriptionRU := "Логировать операции с pod subresource для attach и ephemeral-контейнеров."
+		descriptionEN := "Log exec, attach and ephemeral container related pod subresource operations."
+		descriptionRU := "Логировать операции с pod subresource для exec, attach и ephemeral-контейнеров."
 		rule := audit.PolicyRule{
 			Level: audit.LevelRequest,
 			Resources: []audit.GroupResources{{
-				Resources: []string{"pods/attach", "pods/ephemeralcontainers"},
+				Resources: []string{"pods/exec", "pods/attach", "pods/ephemeralcontainers"},
 			}},
 			Verbs: []string{"get", "patch", "create"},
 			OmitStages: []audit.Stage{

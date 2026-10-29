@@ -92,7 +92,7 @@ Deckhouse Platform uses the following audit rules, which can be extended by user
 - [Log create and delete operations for ServiceAccount resources.](#rule-17)
 - [Log create/update/delete/patch operations for Role and ClusterRole resources.](#rule-18)
 - [Log create/update/delete operations for ClusterRoleBinding resources.](#rule-19)
-- [Log attach and ephemeral container related pod subresource operations.](#rule-20)
+- [Log exec, attach and ephemeral container related pod subresource operations.](#rule-20)
 - [Log creation of VirtualMachineOperation resources with request/response payload.](#rule-21)
 - [Log create/update/patch/delete operations for virtualization.deckhouse.io resources.](#rule-22)
 - [Log update/patch operations for internal virtualization subresources.](#rule-23)
@@ -511,7 +511,7 @@ omitStages:
 ```
 
 <a id="rule-20"></a>
-20\. Log attach and ephemeral container related pod subresource operations.
+20\. Log exec, attach and ephemeral container related pod subresource operations.
 
 ```yaml
 level: Request
@@ -521,6 +521,7 @@ verbs:
   - create
 resources:
   - resources:
+      - pods/exec
       - pods/attach
       - pods/ephemeralcontainers
 omitStages:
@@ -975,7 +976,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 20: Log attach and ephemeral container related pod subresource operations.
+  # 20: Log exec, attach and ephemeral container related pod subresource operations.
   - level: Request
     verbs:
       - get
@@ -983,6 +984,7 @@ rules:
       - create
     resources:
       - resources:
+          - pods/exec
           - pods/attach
           - pods/ephemeralcontainers
     omitStages:

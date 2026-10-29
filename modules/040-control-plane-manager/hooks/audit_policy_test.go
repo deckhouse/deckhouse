@@ -26,6 +26,7 @@ package hooks
 import (
 	"encoding/base64"
 	"fmt"
+	"slices"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -291,6 +292,28 @@ rules:
 			Expect(podStatusRule).To(BeNumerically(">=", 0), "Request-level rule for kubelet pods/status updates was not found")
 			Expect(systemNamespacesRule).To(BeNumerically(">=", 0), "system namespaces rule was not found")
 			Expect(podStatusRule).To(BeNumerically("<", systemNamespacesRule), "pods/status rule must precede the system namespaces rule")
+		})
+
+		It("must log pods/exec requests sent with the get and create verbs", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			data, _ := base64.StdEncoding.DecodeString(f.ValuesGet("controlPlaneManager.internal.auditPolicy").String())
+			var policy audit.Policy
+			_ = yaml.UnmarshalStrict(data, &policy)
+
+			var podExecRule *audit.PolicyRule
+			for i, r := range policy.Rules {
+				if r.Level != audit.LevelRequest || len(r.Users) > 0 || len(r.UserGroups) > 0 || len(r.Namespaces) > 0 {
+					continue
+				}
+				for _, gr := range r.Resources {
+					if gr.Group == "" && slices.Contains(gr.Resources, "pods/exec") {
+						podExecRule = &policy.Rules[i]
+					}
+				}
+			}
+
+			Expect(podExecRule).ToNot(BeNil(), "Request-level rule for pods/exec was not found")
+			Expect(podExecRule.Verbs).To(ContainElements("get", "create"), "pods/exec rule must match both WebSocket (get) and SPDY (create) exec requests")
 		})
 	})
 
