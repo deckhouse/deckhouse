@@ -19,12 +19,16 @@ package manager
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
+	"slices"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -73,9 +77,14 @@ func (c *staticPodConfigurator) configureOptions(opts *controllerruntime.Options
 					constants.KubeSystemNamespace: {},
 				},
 			},
+			// Only control-plane pods are watched or read from the cache. Without the selector every
+			// control-plane node would hold every kube-system pod, including a kubernetes-api-proxy
+			// mirror pod per cluster node.
 			&corev1.Pod{}: {
 				Namespaces: map[string]cache.Config{
-					constants.KubeSystemNamespace: {},
+					constants.KubeSystemNamespace: {
+						LabelSelector: controlPlanePodsSelector(),
+					},
 				},
 			},
 			// Reads bypass the cache (DisableFor above), so this informer exists only for the
@@ -134,6 +143,18 @@ func (c *staticPodConfigurator) configureOptions(opts *controllerruntime.Options
 			},
 		},
 	}
+}
+
+// controlPlanePodsSelector matches the pods the controllers watch: the control-plane static pods
+// and the control-plane-manager pods.
+func controlPlanePodsSelector() labels.Selector {
+	components := slices.AppendSeq([]string{constants.ControlPlaneManagerComponentLabelValue}, maps.Values(controlplanev1alpha1.ComponentRegistry()))
+	req, err := labels.NewRequirement(constants.StaticPodComponentLabelKey, selection.In, components)
+	if err != nil {
+		// The key and values are constants, so this is a programming error.
+		panic(fmt.Sprintf("build control-plane pods selector: %v", err))
+	}
+	return labels.NewSelector().Add(*req)
 }
 
 func (c *staticPodConfigurator) configureRuntimeManager(runtimeManager manager.Manager) error {
