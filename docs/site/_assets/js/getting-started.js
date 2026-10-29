@@ -212,6 +212,14 @@ function update_parameter(sourceDataName = '', searchKey = '', replacePattern = 
   }
 }
 
+function getDockerAuthFromToken(username, password) {
+  return btoa(username + ':' + password);
+}
+
+function getDockerConfigFromToken(registry, username, password) {
+  return btoa('{"auths": { "' + registry + '": { "username": "' + username + '", "password": "' + password + '", "auth": "' + getDockerAuthFromToken(username, password) + '"}}}');
+}
+
 function updateTextInSnippet(snippetSelector = '', replacePattern = '', value = '') {
   $(snippetSelector).each(function (index) {
     let content = ($(this)[0]) ? $(this)[0].textContent : null;
@@ -326,11 +334,15 @@ function handlerRejectData(licenseToken, messageElement, inputField, message = n
   inputField.addClass('license-token-input--error');
 }
 
-// Update license token in config (spec.settings.registry.unmanaged.license) and docker config
+// Update license token in config (spec.settings.registry.unmanaged.license,
+// InitConfiguration deckhouse.registryDockerCfg) and docker config
 function update_license_parameters(newtoken = '') {
 
   if ($.cookie("demotoken") || $.cookie("license-token") || newtoken !== '') {
+    let registry = document.documentElement.lang === 'ru' ? 'registry.deckhouse.ru' : 'registry.deckhouse.io';
+    let username = 'license-token';
     let matchStringLicense = '<YOUR_ACCESS_STRING_IS_HERE>';
+    let matchStringDockerCfg = '<YOUR_ACCESS_STRING_IS_HERE>';
     let matchStringDockerLogin = 'echo <LICENSE_TOKEN>';
     let password = $.cookie("license-token") ? $.cookie("license-token") : $.cookie("demotoken");
     let passwordHash = btoa(password);
@@ -338,6 +350,7 @@ function update_license_parameters(newtoken = '') {
     if (newtoken) {
       if (password) {
         matchStringLicense = password;
+        matchStringDockerCfg = getDockerConfigFromToken(registry, username, password);
         matchStringDockerLogin = 'base64 -d <<< ' + passwordHash;
       }
       password = newtoken;
@@ -349,6 +362,7 @@ function update_license_parameters(newtoken = '') {
     let replacePartStringDockerLogin = 'base64 -d <<< ' + passwordHash;
 
     update_parameter(password, 'license', matchStringLicense, null, '[config-yml]');
+    update_parameter(getDockerConfigFromToken(registry, username, password), 'registryDockerCfg', matchStringDockerCfg, null, '[config-yml]');
     update_parameter(replacePartStringDockerLogin, '', matchStringDockerLogin, null, '[docker-run]');
     update_parameter(replacePartStringDockerLogin, '', matchStringDockerLogin, null, '[docker-run-windows]');
     $('.highlight code').filter(function () {

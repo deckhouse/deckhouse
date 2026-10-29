@@ -1,3 +1,17 @@
+# [<en>] Deckhouse installation settings.
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
+# [<ru>] Параметры установки Deckhouse.
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  # [<en>] Address of the container registry with Deckhouse images.
+  # [<ru>] Адрес хранилища образов контейнеров Deckhouse.
+  imagesRepo: registry.deckhouse.io/deckhouse/<REVISION>
+  # [<en>] Base64-encoded Docker configuration to access the container registry (generated automatically from your license key).
+  # [<ru>] Строка авторизации в формате Base64 для доступа к хранилищу образов контейнеров (сгенерирована автоматически из вашего лицензионного ключа).
+  registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
+---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
@@ -13,13 +27,6 @@ spec:
     bundle: Minimal
     releaseChannel: Stable
     logLevel: Info
-    # [<en>] Settings for accessing the container registry with Deckhouse images.
-    # [<ru>] Настройки для доступа к хранилищу образов контейнеров с образами Deckhouse.
-    registry:
-      mode: Unmanaged
-      unmanaged:
-        imagesRepo: registry.deckhouse.io/deckhouse/<REVISION>
-        license: <YOUR_ACCESS_STRING_IS_HERE>
 ---
 # [<en>] Global Deckhouse settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
