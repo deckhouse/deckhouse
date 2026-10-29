@@ -300,6 +300,11 @@ loop:
 		}
 	}
 
+	// A cancelled scan closes manifestsC too, so the loop can end on a partial scan.
+	if err := context.Cause(ctx); err != nil {
+		return "", err
+	}
+
 	result := strings.Builder{}
 	for k := range allK8sWithDeprecations {
 		result.WriteString(k + ",")
@@ -451,7 +456,9 @@ func (h *helmDeprecatedAPIsProcessor) getHelm3Releases(client k8s.Client, releas
 			release.Namespace = secret.Namespace
 			release.HelmVersion = "3"
 
-			releasesC <- release
+			if err := h.send(releasesC, release); err != nil {
+				return err
+			}
 			h.totalHelm3Releases++
 		}
 
@@ -505,7 +512,9 @@ func (h *helmDeprecatedAPIsProcessor) getHelm2Releases(client k8s.Client, releas
 			release.Namespace = cm.Namespace
 			release.HelmVersion = "2"
 
-			releasesC <- release
+			if err := h.send(releasesC, release); err != nil {
+				return err
+			}
 			h.totalHelm2Releases++
 		}
 
@@ -518,6 +527,17 @@ func (h *helmDeprecatedAPIsProcessor) getHelm2Releases(client k8s.Client, releas
 	}
 
 	return nil
+}
+
+// send blocks until the scan reader takes the release or the scan is cancelled:
+// a cancelled reader stops draining releasesC, and a plain send would block forever.
+func (h *helmDeprecatedAPIsProcessor) send(releasesC chan<- *Release, release *Release) error {
+	select {
+	case releasesC <- release:
+		return nil
+	case <-h.ctx.Done():
+		return context.Cause(h.ctx)
+	}
 }
 
 // expiredContinue returns the token to resume a paginated list whose continue token
@@ -572,6 +592,8 @@ func (h *helmDeprecatedAPIsProcessor) FetchHelmManifests(client k8s.Client) chan
 	releasesC := h.getHelmReleases(client)
 
 	go func() {
+		defer close(manifestsC)
+
 		for rel := range releasesC {
 			if h.ctx.Err() != nil {
 				// return on cancelled context
@@ -593,11 +615,13 @@ func (h *helmDeprecatedAPIsProcessor) FetchHelmManifests(client k8s.Client) chan
 				resource.HelmReleaseInfo.Namespace = rel.Namespace
 				resource.HelmReleaseInfo.Version = rel.HelmVersion
 
-				manifestsC <- resource
+				select {
+				case manifestsC <- resource:
+				case <-h.ctx.Done():
+					return
+				}
 			}
 		}
-
-		close(manifestsC)
 	}()
 
 	return manifestsC
