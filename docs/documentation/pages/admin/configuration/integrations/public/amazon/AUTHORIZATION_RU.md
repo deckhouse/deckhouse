@@ -67,6 +67,7 @@ lang: ru
                 "ec2:DeleteVpc",
                 "ec2:DescribeAccountAttributes",
                 "ec2:DescribeAddresses",
+                "ec2:DescribeAddressesAttribute",
                 "ec2:DescribeAvailabilityZones",
                 "ec2:DescribeImages",
                 "ec2:DescribeInstanceAttribute",
