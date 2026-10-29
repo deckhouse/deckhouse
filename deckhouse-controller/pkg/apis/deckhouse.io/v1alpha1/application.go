@@ -243,6 +243,8 @@ type ApplicationResourceRequest struct {
 	// Number of workload replicas.
 	//
 	// Applies only to workloads that support replica management: Deployment, StatefulSet, and ReplicaSet.
+	//
+	// If the application deploys a HorizontalPodAutoscaler for the workload, its `minReplicas` and `maxReplicas` are set to this value, so the number of replicas does not change. The value `0` applies only to the workload: HorizontalPodAutoscaler does not scale a workload with no replicas.
 	// +kubebuilder:validation:Minimum=0
 	// +optional
 	// +crd-enricher:deckhouse:documentation:examples=3
@@ -293,6 +295,8 @@ type ApplicationContainerResourceRequest struct {
 	// Specified values are merged with the settings from the application package separately for each resource. For example, if only `memory` is specified, the `cpu` value from the package is retained.
 	//
 	// Resource requests or limits defined in the package cannot be removed. Their values can only be overridden.
+	//
+	// If the application deploys a VerticalPodAutoscaler for the workload, the specified `cpu` and `memory` requests are set as both `minAllowed` and `maxAllowed` in its policy for the container, so VPA does not change them. If `cpu` or `memory` limits are specified, VPA does not change the container's limits (`controlledValues: RequestsOnly`).
 	// +optional
 	// +crd-enricher:raw:properties.claims.description="List of resource claims used by the container.\n\nEach entry references a resource claim defined in `pod.spec.resourceClaims`. Requires the `DynamicResourceAllocation` feature gate to be enabled.\n\nThis field is immutable. It can only be set for containers."
 	// +crd-enricher:raw:properties.claims.items.description="Resource claim used by the container."
