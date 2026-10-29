@@ -108,13 +108,16 @@ func applyCertDates(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlpla
 		if cs == nil {
 			continue
 		}
+		// Status may hold a later observation whose operation is already deleted; a stored time from
+		// the future (node clock ran ahead) is not trusted, or it would freeze the dates until then.
+		if sn.at.Before(&cs.LastCertObserveTime) && !cs.LastCertObserveTime.After(time.Now()) {
+			continue
+		}
 		if len(sn.state.CertificatesExpirationTime) > 0 {
 			// Clone: the source map belongs to a cached operation object and must not be aliased into status.
 			cs.CertificatesExpirationTime = maps.Clone(sn.state.CertificatesExpirationTime)
 		}
-		if cs.LastCertObserveTime.IsZero() || sn.at.After(cs.LastCertObserveTime.Time) {
-			cs.LastCertObserveTime = sn.at
-		}
+		cs.LastCertObserveTime = sn.at
 	}
 }
 

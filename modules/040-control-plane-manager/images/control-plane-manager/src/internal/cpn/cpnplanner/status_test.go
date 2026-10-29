@@ -551,3 +551,98 @@ func TestComputeStatusReportCarriesConditionsUntouched(t *testing.T) {
 	report := ComputeStatusReport(cpn, nil)
 	require.Equal(t, cpn.Status.Conditions, report.Conditions)
 }
+
+func TestComputeStatusReportCertDates(t *testing.T) {
+	older := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	newer := older.Add(time.Hour)
+	olderExpiry := older.Add(365 * 24 * time.Hour)
+	newerExpiry := newer.Add(365 * 24 * time.Hour)
+
+	observed := func(cpn *controlplanev1alpha1.ControlPlaneNode, name string, at, expiry time.Time) controlplanev1alpha1.ControlPlaneOperation {
+		op := opFor(cpn, controlplanev1alpha1.OperationComponentEtcd, name, true, at)
+		op.Spec.Steps = append(op.Spec.Steps, controlplanev1alpha1.StepCertObserve)
+		op.Status.Conditions = []metav1.Condition{{
+			Type:               controlplanev1alpha1.CPOConditionCompleted,
+			Status:             metav1.ConditionTrue,
+			Reason:             controlplanev1alpha1.CPOReasonOperationCompleted,
+			LastTransitionTime: metav1.NewTime(at),
+		}}
+		op.Status.ObservedState = &controlplanev1alpha1.ObservedComponentState{
+			CertificatesExpirationTime: map[string]metav1.Time{"server.crt": metav1.NewTime(expiry)},
+		}
+		return op
+	}
+
+	tests := []struct {
+		name       string
+		statusAt   time.Time // zero: no observation in status yet
+		status     time.Time
+		ops        func(cpn *controlplanev1alpha1.ControlPlaneNode) []controlplanev1alpha1.ControlPlaneOperation
+		wantAt     time.Time
+		wantExpiry time.Time
+	}{
+		{
+			name: "first observation fills the status",
+			ops: func(cpn *controlplanev1alpha1.ControlPlaneNode) []controlplanev1alpha1.ControlPlaneOperation {
+				return []controlplanev1alpha1.ControlPlaneOperation{observed(cpn, "etcd-op", older, olderExpiry)}
+			},
+			wantAt:     older,
+			wantExpiry: olderExpiry,
+		},
+		{
+			name: "later observation wins regardless of list order",
+			ops: func(cpn *controlplanev1alpha1.ControlPlaneNode) []controlplanev1alpha1.ControlPlaneOperation {
+				return []controlplanev1alpha1.ControlPlaneOperation{
+					observed(cpn, "etcd-op-newer", newer, newerExpiry),
+					observed(cpn, "etcd-op-older", older, olderExpiry),
+				}
+			},
+			wantAt:     newer,
+			wantExpiry: newerExpiry,
+		},
+		{
+			name:     "newer observation replaces the status",
+			statusAt: older,
+			status:   olderExpiry,
+			ops: func(cpn *controlplanev1alpha1.ControlPlaneNode) []controlplanev1alpha1.ControlPlaneOperation {
+				return []controlplanev1alpha1.ControlPlaneOperation{observed(cpn, "etcd-op", newer, newerExpiry)}
+			},
+			wantAt:     newer,
+			wantExpiry: newerExpiry,
+		},
+		{
+			name:     "older observation does not roll back the status after the newer operation is deleted",
+			statusAt: newer,
+			status:   newerExpiry,
+			ops: func(cpn *controlplanev1alpha1.ControlPlaneNode) []controlplanev1alpha1.ControlPlaneOperation {
+				return []controlplanev1alpha1.ControlPlaneOperation{observed(cpn, "etcd-op-older", older, olderExpiry)}
+			},
+			wantAt:     newer,
+			wantExpiry: newerExpiry,
+		},
+		{
+			name:     "status time from a clock that ran ahead does not freeze newer observations",
+			statusAt: time.Now().Add(48 * time.Hour),
+			status:   olderExpiry,
+			ops: func(cpn *controlplanev1alpha1.ControlPlaneNode) []controlplanev1alpha1.ControlPlaneOperation {
+				return []controlplanev1alpha1.ControlPlaneOperation{observed(cpn, "etcd-op", newer, newerExpiry)}
+			},
+			wantAt:     newer,
+			wantExpiry: newerExpiry,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cpn := baseCPN()
+			cpn.Status = inSyncStatus(tt.status)
+			cpn.Status.Components.Etcd.LastCertObserveTime = metav1.NewTime(tt.statusAt)
+
+			report := ComputeStatusReport(cpn, tt.ops(cpn))
+
+			require.Equal(t, metav1.NewTime(tt.wantAt), report.Components.Etcd.LastCertObserveTime)
+			require.Equal(t, map[string]metav1.Time{"server.crt": metav1.NewTime(tt.wantExpiry)},
+				report.Components.Etcd.CertificatesExpirationTime)
+		})
+	}
+}
