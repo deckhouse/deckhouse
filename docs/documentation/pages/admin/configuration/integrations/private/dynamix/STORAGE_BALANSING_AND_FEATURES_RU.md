@@ -6,34 +6,38 @@ lang: ru
 
 ## Хранилище
 
-Хранение данных в облаке Basis Dynamix осуществляется с использованием:
+Размещение дисков виртуальных машин в Basis Dynamix определяет политика хранения (storage policy). Она задаёт набор доступных аккаунту пар из storage endpoint и пула, а также лимит IOPS. Конкретное размещение диска внутри политики выбирает Basis Dynamix.
 
-- [`storageEndpoint`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-storageendpoint) — имя хранилища, предоставленное провайдером;
-- [`pool`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-pool) — имя пула хранения внутри указанного хранилища;
-- [`rootDiskSizeGb`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-rootdisksizegb) — размер корневого диска каждой виртуальной машины (в гигабайтах).
-
-Эти параметры задаются в секции instanceClass как для [master-узлов](../../../../glossary.html#master-node), так и для рабочих групп узлов (NodeGroup).
+Политику хранения для дисков всех виртуальных машин кластера задаёт параметр [`storagePolicy`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-storagepolicy) в корне DynamixClusterConfiguration. Чтобы группа узлов использовала другую политику хранения, укажите `storagePolicy` в её `instanceClass`, в том числе в `masterNodeGroup.instanceClass`, или в [DynamixInstanceClass](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass-v1-spec-storagepolicy). Размер корневого диска каждой виртуальной машины в гигабайтах задаёт параметр [`rootDiskSizeGb`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-masternodegroup-instanceclass-rootdisksizegb).
 
 Пример настройки:
 
 ```yaml
+storagePolicy: storage_policy01
 masterNodeGroup:
   replicas: 1
   instanceClass:
     rootDiskSizeGb: 50
-    storageEndpoint: SharedTatlin_G1_SEP
-    pool: pool_a
 ```
 
-{% alert level="info" %}
-В текущей версии поддерживается только одно хранилище на [группу узлов](../../../../glossary.html#node-group).
-{% endalert %}
+Для каждой политики хранения в статусе `ENABLED` модуль создаёт StorageClass. Правила именования StorageClass и способ исключить их из кластера описаны [в FAQ модуля](/modules/cloud-provider-dynamix/faq.html#какие-storageclass-создаёт-модуль).
+
+Отключайте политику хранения в Basis Dynamix, только когда её не используют узлы и тома кластера. При отключении политики модуль отвязывает её [от группы ресурсов кластера](/modules/cloud-provider-dynamix/environment.html#политики-хранения-в-группе-ресурсов-кластера) и удаляет её StorageClass.
+
+### Смена политики хранения
+
+Политика хранения диска задаётся при создании виртуальной машины и для существующей машины не меняется. Поэтому при смене политики хранения модуль пересоздаёт узлы с типом [`CloudEphemeral`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype):
+
+- при смене `storagePolicy` в DynamixInstanceClass — узлы групп, которые используют этот DynamixInstanceClass;
+- при смене `storagePolicy` в корне DynamixClusterConfiguration — узлы всех групп, в том числе групп с собственной политикой хранения.
+
+Master-узлы и узлы групп из `nodeGroups` модуль не пересоздаёт. Новая политика хранения применяется к такому узлу только при его повторном создании.
 
 ## Балансировка нагрузки
 
 Платформа Basis Dynamix не предоставляет встроенного балансировщика нагрузки. Для организации входящего трафика в кластер Deckhouse Platform рекомендуются следующие подходы:
 
-1. Внешний балансировщик. Если в вашей инфраструктуре есть внешний балансировщик (аппаратный или программный), настройте проброс портов 80 и 443 на [frontend-узлы](../../../../glossary.html#frontend-node) кластера.
+1. Внешний балансировщик. Если в вашей инфраструктуре есть внешний балансировщик (аппаратный или программный), настройте проброс портов 80 и 443 на frontend-узлы кластера.
 
 1. Использование MetalLB. Для обеспечения отказоустойчивой балансировки можно использовать MetalLB в L2-режиме.
 
@@ -42,7 +46,7 @@ masterNodeGroup:
 - Выделите отдельную L2-сеть с DHCP и доступом в интернет.
 - Настройте диапазон IP-адресов, из которого MetalLB будет анонсировать адреса.
 - Обеспечьте подключение этой сети к frontend-узлам кластера.
-- В конфигурации VirtualMachine Template оставьте сетевые интерфейсы пустыми — Deckhouse создаст их автоматически.
+- В конфигурации VirtualMachine Template оставьте сетевые интерфейсы пустыми. Deckhouse Platform создаст их автоматически.
 
 {% alert level="info" %}
 Поддержка BGP-режима зависит от сетевой инфраструктуры и не гарантируется в Basis Dynamix.

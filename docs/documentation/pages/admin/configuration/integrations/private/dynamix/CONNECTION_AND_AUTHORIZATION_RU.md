@@ -15,7 +15,7 @@ lang: ru
 - настройку параметров виртуальных машин (CPU, RAM, диск, сеть);
 - поддержку внешней и внутренней сетей, включая настройку CIDR и DNS;
 - работу с несколькими схемами размещения — с внешней или комбинированной сетью;
-- управление хранением данных через pool и storage endpoint.
+- размещение дисков по политике хранения (storage policy).
 
 ## Требования
 
@@ -23,18 +23,20 @@ lang: ru
 Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
 {% endalert %}
 
-Для интеграции Deckhouse Platform (DP) с Basis Dynamix необходимы:
+Для интеграции Deckhouse Platform с Basis Dynamix необходимы:
 
+- Basis Dynamix версии 4.6 или новее, иначе установку остановит [preflight-проверка](../../../../installing/#проверки-перед-началом-установки);
 - доступ к API-контроллеру и SSO-контур Basis Dynamix;
 - данные учётной записи (account) и параметры приложения ([`appId`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-provider-appid) и [`appSecret`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-provider-appsecret));
+- доступ учётной записи [к группам пользовательского API Basis Dynamix](/modules/cloud-provider-dynamix/environment.html#права-учётной-записи);
 - размещённый в облаке cloud-образ операционной системы;
 - внешняя сеть ([`externalNetwork`](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass-v1-spec-externalnetwork)) и, при необходимости, параметры внутренней сети (CIDR, DNS);
-- сведения о хранилище (pool и storage endpoint);
+- имя политики хранения, доступной аккаунту ([`storagePolicy`](/modules/cloud-provider-dynamix/cluster_configuration.html#dynamixclusterconfiguration-storagepolicy));
 - публичный SSH-ключ для доступа к узлам кластера.
 
 ## Подготовка cloud-образа
 
-Для развёртывания виртуальных машин DP использует cloud-образы операционных систем, подготовленные вендорами для работы в виртуальной среде. Эти образы, как правило, включают:
+Для развёртывания виртуальных машин Deckhouse Platform использует cloud-образы операционных систем, подготовленные вендорами для работы в виртуальной среде. Эти образы, как правило, включают:
 
 - `cloud-init`;
 - драйверы виртуального оборудования;

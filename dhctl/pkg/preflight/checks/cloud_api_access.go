@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 
@@ -110,6 +111,11 @@ func (c CloudAPICheck) Run(ctx context.Context) (string, error) {
 	defer tun.Stop()
 
 	if err := c.request(ctx, cloudAPIConfig, proxyURL, throughProxy); err != nil {
+		if !throughProxy {
+			if unresolved := c.unresolvedFromNode(ctx, sshClient, cloudAPIConfig); unresolved != nil {
+				return "", unresolved
+			}
+		}
 		return "", err
 	}
 
@@ -295,6 +301,34 @@ func (c CloudAPICheck) proxyOrNetworkFix(cloudAPIConfig *cca.CloudAPIConfig, pro
 		"give the master node egress to %s through a NAT, a route or a security group. Check %s",
 		cloudAPIConfig.URL.Host, cloudAPIConfig.Field,
 	)
+}
+
+// unresolvedFromNode asks the node whether it can resolve the API host at all, and names that as
+// the cause when it cannot.
+//
+// Through the tunnel a name the master cannot resolve does not come back as a DNS error: sshd
+// fails to dial and closes the forwarded channel, and the request here sees only "connection
+// reset by peer". On Dynamix that is how a node with no DNS server showed up, and the cause was in
+// the debug log alone. getent goes through NSS the way the node's own clients do, /etc/hosts
+// included; its status 2 is "not found". Anything else — no getent, a session that is gone — says
+// nothing about DNS, and the transport error stands.
+func (c CloudAPICheck) unresolvedFromNode(ctx context.Context, node nodeCommandRunner, cloudAPIConfig *cca.CloudAPIConfig) error {
+	hostname := cloudAPIConfig.URL.Hostname()
+	if net.ParseIP(hostname) != nil {
+		return nil
+	}
+
+	err := node.Command("getent", "ahosts", hostname).Run(ctx)
+	if status, ok := exitStatus(err); !ok || status != 2 {
+		return nil
+	}
+
+	return &preflight.Failure{
+		Checked:  fmt.Sprintf("GET %s from the master node", cloudAPIConfig.URL),
+		Observed: fmt.Sprintf("the master node cannot resolve %s", hostname),
+		Expected: "an answer from the API",
+		Fix:      nodeResolverFix(c.MetaConfig, hostname),
+	}
 }
 
 // tunnelFailure separates "the forward was refused" from "the local end could not be opened".

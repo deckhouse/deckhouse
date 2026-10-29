@@ -672,6 +672,7 @@ dhctl bootstrap \
 - `--preflight-skip-check=instance-class-provider` — пропуск проверки соответствия ресурсов [InstanceClass](../glossary.html#instance-class) облачному провайдеру;
 - `--preflight-skip-check=cloud-node-network-cidr-intersection` — пропуск проверки пересечения подсетей кластера с сетью, в которой облако создаёт узлы;
 - `--preflight-skip-check=cloud-ssh-key-matches-public-key` — пропуск проверки соответствия приватного ключа dhctl и `sshPublicKey`, который установит облако;
+- `--preflight-skip-check=dynamix-storage-policy` — пропуск проверки того, что версия Basis Dynamix 4.6 или новее, а каждая политика хранения из DynamixClusterConfiguration находится в статусе `ENABLED` и доступна аккаунту;
 - `--preflight-skip-check=static-instances-ip-duplication` — пропуск проверки уникальности адресов StaticInstances;
 - `--preflight-skip-check=immutable-installer-images` — пропуск проверки того, что образ установщика содержит запрошенный control plane Kubernetes;
 - `--preflight-skip-check=immutable-kubeconfig-kept` — пропуск проверки того, что admin kubeconfig сохраняется вне удаляемого dhctl каталога;

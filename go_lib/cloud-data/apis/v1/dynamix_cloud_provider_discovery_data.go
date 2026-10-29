@@ -15,14 +15,20 @@
 package v1
 
 type DynamixCloudProviderDiscoveryData struct {
-	APIVersion       string                   `json:"apiVersion,omitempty"`
-	Kind             string                   `json:"kind,omitempty"`
-	StorageEndpoints []DynamixStorageEndpoint `json:"storageEndpoints,omitempty"`
+	APIVersion      string                 `json:"apiVersion,omitempty"`
+	Kind            string                 `json:"kind,omitempty"`
+	StoragePolicies []DynamixStoragePolicy `json:"storagePolicies,omitempty"`
 }
 
-type DynamixStorageEndpoint struct {
-	Name      string   `json:"name"`
-	Pools     []string `json:"pools"`
-	IsEnabled bool     `json:"isEnabled,omitempty"`
-	IsDefault bool     `json:"isDefault,omitempty"`
+// DynamixStoragePolicy is a storage policy available to the account the cluster
+// runs under. Deckhouse creates one StorageClass per policy; the platform picks
+// the actual storage endpoint and pool inside the policy on its own.
+//
+// The cloud-data-discoverer publishes only policies in the ENABLED state, so
+// there is no isEnabled flag here. There is no isDefault flag either: the
+// default StorageClass is the user's choice (storageClass.default), not the
+// cloud's.
+type DynamixStoragePolicy struct {
+	Name      string `json:"name"`
+	LimitIOPS uint64 `json:"limitIOPS"`
 }

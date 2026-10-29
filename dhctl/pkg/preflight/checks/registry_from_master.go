@@ -17,6 +17,7 @@ package checks
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -57,10 +58,7 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("dhctl was given no cluster configuration")
 	}
 
-	registry := c.MetaConfig.Registry.Settings.RemoteData
-	address, _ := registry.AddressAndPath()
-	registryURL := registryV2URL(c.MetaConfig)
-	endpoint := registryURL.String()
+	target := c.target()
 
 	// In Local mode the registry is the bundle dhctl serves on this machine (127.0.0.1), and the
 	// master reaches it through the SSH reverse tunnel the bootstrap opens after these checks. Asked
@@ -70,7 +68,7 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 	if c.MetaConfig.Registry.IsLocal() {
 		return "", preflight.NotApplicable(
 			"the images come from the bundle dhctl serves at %s, which the master reaches through "+
-				"the SSH tunnel the bootstrap opens later", address)
+				"the SSH tunnel the bootstrap opens later", target.address)
 	}
 
 	// A node that is configured to reach the registry through a proxy is not expected to reach it
@@ -81,10 +79,10 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("reading ClusterConfiguration.proxy: %w", err)
 	}
-	if proxyURL != nil && !utils.ShouldSkipProxyCheck(registryURL, noProxy) {
+	if proxyURL != nil && !utils.ShouldSkipProxyCheck(target.url, noProxy) {
 		return "", preflight.NotApplicable(
 			"the nodes reach %s through the proxy in ClusterConfiguration.proxy, which "+
-				"registry-access-through-proxy is what asks about", address)
+				"registry-access-through-proxy is what asks about", target.address)
 	}
 
 	nodeInterface, err := c.nodeInterface(ctx)
@@ -94,12 +92,34 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 	if nodeInterface == nil {
 		return "", preflight.NotApplicable("dhctl was given no SSH host to make the request from")
 	}
+
+	return c.requestFromNode(ctx, nodeInterface, target)
+}
+
+// target is the registry the node is asked about, read out of the configuration once.
+func (c RegistryFromMasterCheck) target() registryTarget {
+	registry := c.MetaConfig.Registry.Settings.RemoteData
+	address, _ := registry.AddressAndPath()
+	registryURL := registryV2URL(c.MetaConfig)
+
+	return registryTarget{
+		url:         registryURL,
+		address:     address,
+		mode:        c.registryMode(),
+		hasCA:       registry.CA != "",
+		resolverFix: nodeResolverFix(c.MetaConfig, registryURL.Hostname()),
+	}
+}
+
+// requestFromNode makes the request to target from the node and reads the node's answer.
+func (c RegistryFromMasterCheck) requestFromNode(ctx context.Context, nodeInterface nodeCommandRunner, target registryTarget) (string, error) {
+	endpoint := target.url.String()
 	host := hostPhrase(nodeInterface)
 
 	// The node is asked with whatever it has. curl and wget are what a Deckhouse-supported
 	// distribution ships; if neither is there the question cannot be asked from here, and saying
 	// so is better than reporting the registry as unreachable.
-	probe, err := nodeRegistryProbe(ctx, nodeInterface, registry.CA != "")
+	probe, err := nodeRegistryProbe(ctx, nodeInterface, target.hasCA)
 	if err != nil {
 		return "", preflight.NotApplicable("neither curl nor wget is installed on %s", host)
 	}
@@ -108,8 +128,11 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 	stdout, _, runErr := cmd.Output(ctx)
 	status := strings.TrimSpace(string(stdout))
 
-	if runErr != nil && status == "" {
-		observed, fix := probe.classify(runErr, registryURL.Hostname(), address, c.registryMode())
+	// curl prints 000 for the status when no response came back at all, so that is not a status
+	// the registry gave: the exit status is what says what happened. Reading the 000 instead
+	// reported a node that could not resolve the registry as "the node got HTTP 000".
+	if runErr != nil && (status == "" || status == "000") {
+		observed, fix := probe.classify(runErr, target)
 		return "", &preflight.Failure{
 			Checked:  fmt.Sprintf("GET %s from %s", endpoint, host),
 			Observed: observed,
@@ -123,13 +146,13 @@ func (c RegistryFromMasterCheck) Run(ctx context.Context) (string, error) {
 	// exactly as good as 200 for the question being asked here.
 	switch status {
 	case "200", "401":
-		return fmt.Sprintf("%s answers from %s (HTTP %s)", address, host, status), nil
+		return fmt.Sprintf("%s answers from %s (HTTP %s)", target.address, host, status), nil
 	case "":
 		return "", &preflight.Failure{
 			Checked:  fmt.Sprintf("GET %s from %s", endpoint, host),
 			Observed: "the node got no answer",
 			Expected: "an answer from the registry API to the node",
-			Fix:      fmt.Sprintf("give the node egress to %s, or set ClusterConfiguration.proxy", address),
+			Fix:      fmt.Sprintf("give the node egress to %s, or set ClusterConfiguration.proxy", target.address),
 		}
 	default:
 		return "", &preflight.Failure{
@@ -159,7 +182,20 @@ type registryProbe struct {
 	binary string
 	args   func(endpoint string) []string
 	// classify turns the probe's exit status into what went wrong and what to do about it.
-	classify func(err error, hostname, address, mode string) (observed, fix string)
+	classify func(err error, target registryTarget) (observed, fix string)
+}
+
+// registryTarget is the registry the node is asked about, and what a failed probe is explained
+// in terms of.
+type registryTarget struct {
+	// url is the /v2/ endpoint the probe requests.
+	url     *url.URL
+	address string
+	mode    string
+	// hasCA says the configuration carries a CA for the registry, which the probe then trusts.
+	hasCA bool
+	// resolverFix is what to do about a node that cannot resolve the registry: see nodeResolverFix.
+	resolverFix string
 }
 
 // curlExitCodes are the ones worth telling apart. They are the four things that stop a node from
@@ -169,39 +205,37 @@ type registryProbe struct {
 // The name not resolving is the one worth the most: it is what a node with the wrong resolver
 // does, and it surfaces from bashible as "etcd not running after 200s", because crictl could not
 // resolve the registry and never pulled the image. Nothing in that message mentions DNS.
-func curlClassify(err error, hostname, address, mode string) (string, string) {
+func curlClassify(err error, target registryTarget) (string, string) {
 	status, ok := exitStatus(err)
 	if !ok {
-		return "the node could not reach the registry", registryEgressFix(address)
+		return "the node could not reach the registry", registryEgressFix(target.address)
 	}
 
 	switch status {
 	case 6:
-		return fmt.Sprintf("the node cannot resolve %s", hostname),
-			fmt.Sprintf("check /etc/resolv.conf on the node and give it a resolver that knows %s, "+
-				"or add the address to /etc/hosts on the node", hostname)
+		return fmt.Sprintf("the node cannot resolve %s", target.url.Hostname()), target.resolverFix
 	case 7:
-		return fmt.Sprintf("the node could not connect to %s", address), registryEgressFix(address)
+		return fmt.Sprintf("the node could not connect to %s", target.address), registryEgressFix(target.address)
 	case 28:
-		return fmt.Sprintf("the node timed out reaching %s", address), registryEgressFix(address)
+		return fmt.Sprintf("the node timed out reaching %s", target.address), registryEgressFix(target.address)
 	case 35, 60:
 		return "the node rejected the registry certificate",
 			fmt.Sprintf("put the registry CA into %s, or correct the certificate the registry serves",
-				registryCAField(mode))
+				registryCAField(target.mode))
 	default:
-		return "the node could not reach the registry", registryEgressFix(address)
+		return "the node could not reach the registry", registryEgressFix(target.address)
 	}
 }
 
 // wgetClassify is the same question of a node with no curl. wget collapses every network failure
 // into one status, so only the certificate is separable.
-func wgetClassify(err error, _, address, mode string) (string, string) {
+func wgetClassify(err error, target registryTarget) (string, string) {
 	if status, ok := exitStatus(err); ok && status == 5 {
 		return "the node rejected the registry certificate",
 			fmt.Sprintf("put the registry CA into %s, or correct the certificate the registry serves",
-				registryCAField(mode))
+				registryCAField(target.mode))
 	}
-	return "the node could not reach the registry", registryEgressFix(address)
+	return "the node could not reach the registry", registryEgressFix(target.address)
 }
 
 func registryEgressFix(address string) string {

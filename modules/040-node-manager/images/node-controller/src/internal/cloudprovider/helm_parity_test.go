@@ -173,6 +173,62 @@ func TestOpenStackClusterTemplateToleratesMissingEndpoint(t *testing.T) {
 	require.False(t, found)
 }
 
+// TestDynamixClusterTemplateGivesNameserversToStandardOnly: on the Standard layout a node has only
+// the external network, which may hand out no DNS server, so capd writes the configured ones into
+// its cloud-init. StandardWithInternalNetwork gets the same servers from its ViNS and must keep
+// getting them from there.
+func TestDynamixClusterTemplateGivesNameserversToStandardOnly(t *testing.T) {
+	registration := Registration{
+		CAPIClusterName:       "dynamix",
+		CAPIClusterKind:       "DynamixCluster",
+		CAPIClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1alpha1",
+	}
+	template, err := newClusterTemplate(
+		readFixtureFile(t, "ee/modules/030-cloud-provider-dynamix", "capi/cluster.yaml"),
+		registration,
+	)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		provider map[string]any
+		want     []any
+	}{
+		{
+			name:     "Standard with nameservers",
+			provider: map[string]any{"layout": "Standard", "nameservers": []any{"10.4.9.254", "10.4.9.253"}},
+			want:     []any{"10.4.9.254", "10.4.9.253"},
+		},
+		{
+			name:     "Standard without nameservers",
+			provider: map[string]any{"layout": "Standard", "nameservers": []any{}},
+		},
+		{
+			name:     "StandardWithInternalNetwork leaves them to the ViNS",
+			provider: map[string]any{"layout": "StandardWithInternalNetwork", "nameservers": []any{"10.4.9.254"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			object, err := template.Render(RenderData{
+				Provider: tt.provider,
+				Cluster:  machinetemplate.ClusterFacts{Name: "dynamix", Namespace: capiNamespace},
+				Prefix:   "test-prefix",
+			})
+			require.NoError(t, err)
+
+			nameservers, found, err := unstructured.NestedSlice(object.Object, "spec", "nameservers")
+			require.NoError(t, err)
+			if tt.want == nil {
+				require.False(t, found, "spec.nameservers is rendered: %v", nameservers)
+				return
+			}
+			require.Equal(t, tt.want, nameservers)
+		})
+	}
+}
+
 // requireRecordedInputs pins every golden to the inputs it was rendered from. The files under
 // testdata/helm are frozen output of a deleted chart and cannot be re-rendered, so this is what
 // catches a changed fixture whose inputs.yaml was not updated to match. Regenerate with

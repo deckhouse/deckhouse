@@ -243,14 +243,24 @@ because a field the old snapshot never recorded compares as absent against its c
 the value in the cluster before widening the list, or pair the change with a release note.
 
 Leave it out unless you mean it. A cloud-provider config field applies to every NodeGroup in the
-cluster, so listing one turns a single edit into a fleet-wide rollout. Six of the seven migrated
-providers declare nothing here: their config feeds the machine, but changing it was never a reason
-to recreate one.
+cluster, so listing one turns a single edit into a fleet-wide rollout. Most migrated providers
+declare nothing here: their config feeds the machine, but changing it was never a reason to
+recreate one.
 
-List a field when a user-visible promise depends on it. The one in-tree example is vcd's
-`metadata`, which `VCDClusterConfiguration` documents as recreating CloudEphemeral nodes: the v1
-checksum hashed it, and leaving it out would have turned that promise into silence while the
-template kept rendering the new value into every machine created later.
+List a field when a user-visible promise depends on it. Two in-tree examples, and both promises are
+written in the provider's own `*ClusterConfiguration`:
+
+- vcd's `metadata`, which the schema documents as recreating CloudEphemeral nodes: the v1 checksum
+  hashed it, and leaving it out would have turned that promise into silence while the template kept
+  rendering the new value into every machine created later.
+- dynamix's `storagePolicy`, the cluster-wide default the machine template falls back to when a
+  DynamixInstanceClass names none. Dynamix places the boot disk when the VM is created and cannot
+  move it, so a node that outlived the edit would be running in a policy its configuration no
+  longer names.
+
+Note what the second one costs, because it is inherent to the mechanism rather than to dynamix: the
+comparison sees the config field, not the effective value, so the edit also recreates the machines
+of a NodeGroup whose InstanceClass overrides the field and whose rendered object does not change.
 
 ## machineDeployment.additionalFields
 
@@ -298,7 +308,20 @@ takes one fixture per provider and requires:
 2. the `rolloutFields` decision to match the v1 checksum decision for every mutated field, with
    every deliberate difference listed and justified in the test.
 
-Add your provider there before merging a migration. Self-check list:
+Add your provider there before merging a migration.
+
+**Adding a field after the migration.** The v1 side is a frozen snapshot, so it has no answer about
+a field that did not exist when it was taken: the archived template cannot render it and the
+archived checksum cannot hash it, and every comparison reports the new field itself as a
+difference. Name such a path in the fixture's `postV1Fields`, with the reason — one entry per axis
+it appears on (`instanceClass.`, `provider.`, `rendered.`), and nothing else about your provider
+stops being compared. The claim is verified, not taken on trust: `TestPostV1FieldsAreReal` reads the
+archived files and fails if the v1 checksum does react to the field or the v1 template does render
+it, so an entry cannot switch off a comparison v1 could have answered. Do not edit the v1 snapshot
+to match: it exists to outlive the v1 files, and mirroring the change into it would make parity pass
+by construction.
+
+Self-check list:
 
 - [ ] `version: v2`, non-empty `template`, non-empty `rolloutFields`.
 - [ ] No `metadata` in the rendered object.
@@ -308,3 +331,4 @@ Add your provider there before merging a migration. Self-check list:
 - [ ] `rolloutFields` covers everything the cloud cannot change on a live VM, and nothing that
       is not a property of the VM.
 - [ ] Parity fixture added, both parity tests green.
+- [ ] Every `postV1Fields` entry carries a reason, and `TestPostV1FieldsAreReal` is green.

@@ -658,6 +658,7 @@ Configuration checks (the `PreInfraPreflights` phase):
 - `--preflight-skip-check=instance-class-provider`: Skip the check that InstanceClass resources match the cloud provider.
 - `--preflight-skip-check=cloud-node-network-cidr-intersection`: Skip the check that the cluster subnets do not overlap the cloud network the nodes are created on.
 - `--preflight-skip-check=cloud-ssh-key-matches-public-key`: Skip the check that a private key dhctl holds matches the `sshPublicKey` the cloud will install.
+- `--preflight-skip-check=dynamix-storage-policy`: Skip the check that Basis Dynamix is version 4.6 or newer and that every storage policy named in DynamixClusterConfiguration is `ENABLED` and available to the account.
 - `--preflight-skip-check=static-instances-ip-duplication`: Skip the check for duplicate StaticInstance addresses.
 - `--preflight-skip-check=immutable-installer-images`: Skip the check that the installer image carries the requested Kubernetes control plane.
 - `--preflight-skip-check=immutable-kubeconfig-kept`: Skip the check that the admin kubeconfig is written outside the directory dhctl cleans up.

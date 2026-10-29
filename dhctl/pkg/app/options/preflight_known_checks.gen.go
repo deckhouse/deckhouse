@@ -14,6 +14,7 @@ var generatedPreflightChecks = []string{
 	"deckhouse-user",
 	"dhctl-edition",
 	"dhctl-version",
+	"dynamix-storage-policy",
 	"host-network-cidr-intersection",
 	"immutable-api-reachable",
 	"immutable-installer-images",

@@ -18,6 +18,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -41,6 +42,12 @@ func TestRegistryFromMasterClassifiesTheCause(t *testing.T) {
 		hostname = "registry.company.my"
 		address  = "registry.company.my:5000"
 	)
+	target := registryTarget{
+		url:         &url.URL{Scheme: "https", Host: address, Path: "/v2/"},
+		address:     address,
+		mode:        "Direct",
+		resolverFix: nodeResolverFix(nil, hostname),
+	}
 
 	tests := []struct {
 		name string
@@ -87,7 +94,7 @@ func TestRegistryFromMasterClassifiesTheCause(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			observed, fix := curlClassify(&fakeSSHExitError{status: tt.status}, hostname, address, "Direct")
+			observed, fix := curlClassify(&fakeSSHExitError{status: tt.status}, target)
 
 			assert.Contains(t, observed, tt.wantObserved)
 			assert.Contains(t, fix, tt.wantFix)
@@ -99,7 +106,7 @@ func TestRegistryFromMasterClassifiesTheCause(t *testing.T) {
 
 	t.Run("an error with no exit status at all", func(t *testing.T) {
 		// The command never ran — a dropped session, say. There is nothing to classify.
-		observed, fix := curlClassify(errors.New("session closed"), hostname, address, "Direct")
+		observed, fix := curlClassify(errors.New("session closed"), target)
 
 		assert.Contains(t, observed, "could not reach the registry")
 		assert.Contains(t, fix, "egress")
@@ -107,10 +114,10 @@ func TestRegistryFromMasterClassifiesTheCause(t *testing.T) {
 
 	t.Run("wget separates only the certificate", func(t *testing.T) {
 		// It collapses every network failure into one status, so claiming more would be a guess.
-		observed, _ := wgetClassify(&fakeSSHExitError{status: 5}, hostname, address, "Direct")
+		observed, _ := wgetClassify(&fakeSSHExitError{status: 5}, target)
 		assert.Contains(t, observed, "certificate")
 
-		observed, fix := wgetClassify(&fakeSSHExitError{status: 4}, hostname, address, "Direct")
+		observed, fix := wgetClassify(&fakeSSHExitError{status: 4}, target)
 		assert.Contains(t, observed, "could not reach the registry")
 		assert.Contains(t, fix, "egress")
 	})
