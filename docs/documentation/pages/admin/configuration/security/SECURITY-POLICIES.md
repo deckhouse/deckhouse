@@ -4,7 +4,7 @@ permalink: en/admin/configuration/security/policies.html
 description: "Configure security policies in Deckhouse Platform using Gatekeeper and Pod Security Standards. Policy enforcement, compliance, and cluster security management."
 ---
 
-Deckhouse Platform (DP) lets you manage application security in the cluster using a set of admission policies.
+Deckhouse Platform (DP) lets you manage application security in the cluster using a set of [admission policies](../../../glossary.html#admission-policy).
 These are rules that apply to objects (such as Pods and Services) at the time of their creation and modification in the cluster (but not during their operation), based on the information provided in their manifests. These policies are designed to formalize the parameters that are permitted or prohibited in object manifests. Support for admission policies in the DP cluster is implemented using the [`admission-policy-engine`](/modules/admission-policy-engine/) module.
 
 In the DP policies are divided into three categories:
@@ -28,7 +28,7 @@ Depending on how pods are created, there are differences in how the API generate
 
 ## Pod validation when policies are modified or added
 
-For all three policy categories (Pod Security Standards, operational, and security policies), there is no provision for automatically recreating existing pods when changing existing policies or adding new ones. Pods that existed prior to changes being made to the policy in use or prior to a new policy being added will continue to run until they are restarted. Upon restart, they will be validated against the new rules.
+For all three policy categories ([Pod Security Standards](../../../glossary.html#pod-security-standards), operational, and security policies), there is no provision for automatically recreating existing pods when changing existing policies or adding new ones. Pods that existed prior to changes being made to the policy in use or prior to a new policy being added will continue to run until they are restarted. Upon restart, they will be validated against the new rules.
 
 DP provides alerts for such cases.
 Each alert fires once for each policy and namespace with violating objects:
@@ -131,10 +131,10 @@ Allowed policy enforcement modes:
 
 - `deny`: Blocks actions from being executed.
 - `dryrun`: Does not affect execution and used for debugging.
-  Event information can be viewed in the Deckhouse web UI or with `d8 k`.
+  Event information can be viewed in the [Deckhouse web UI](../../../glossary.html#web-ui) or with `d8 k`.
 - `warn`: Works like `dryrun` but also displays a warning with the reason the action would have been denied in `deny` mode.
 
-By default, Pod Security Standards policies in DP are enforced in `deny` mode.
+By default, [Pod Security Standards](../../../glossary.html#pod-security-standards) policies in DP are enforced in `deny` mode.
 In this mode, application Pods that do not comply with the policies cannot be run in the cluster.
 
 As with policy assignment, enforcement mode can be set:
@@ -163,7 +163,7 @@ These checks cannot be tuned from outside the platform.
 The labels that govern them, and the workloads they cover, belong to the module that owns the namespace, and Deckhouse Platform returns both to their declared state the next time it applies the configuration.
 A module exempts its own workloads where necessary with a SecurityPolicyException that it ships with the module.
 
-OperationPolicy and SecurityPolicy resources also apply to system namespaces in `warn` mode.
+OperationPolicy and SecurityPolicy resources also apply to [system namespaces](../../../glossary.html#system-namespace) in `warn` mode.
 A policy with `enforcementAction: Deny` blocks workloads in application namespaces and only reports violations in a system namespace.
 No label of the namespace changes that: a module that hardens its own namespace raises the Pod Security Standards there, which has no effect on a policy written for application workloads.
 
@@ -317,7 +317,7 @@ spec:
 
 This policy defines basic operational requirements for cluster objects,
 including allowed container registries, required resources and probes, restrictions on using images with the `latest` tag,
-allowed priority classes, and other settings that improve application security and stability.
+allowed [priority classes](../../../glossary.html#priority-class), and other settings that improve application security and stability.
 
 To assign this operational policy, add the `operation-policy.deckhouse.io/enabled=true` label to the target namespace:
 
@@ -724,7 +724,7 @@ This allows custom policies to allow or deny `kubectl exec` and `kubectl attach`
 
 #### Built-in policy for `heritage: deckhouse` label on Pods
 
-To protect system components managed by Deckhouse,
+To protect [system components](../../../glossary.html#system-component) managed by Deckhouse,
 the `admission-policy-engine` module includes a built-in policy `D8DenyExecHeritage`
 that forbids running `kubectl exec` and `kubectl attach` operations to all Pods with the `heritage: deckhouse` label.
 
@@ -821,12 +821,12 @@ Key data and checks for `CONNECT` validation:
 ## Image signature verification
 
 {% alert level="warning" %}
-Available in the following DP editions: EE, Ultimate.
+Available in the following DP [editions](../../../glossary.html#edition): EE, Ultimate.
 
 Cosign versions up to v2 are supported. Versions v3 and above are not supported.
 {% endalert %}
 
-DP supports container image signature verification using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).  
+DP supports container [image signature verification](../../../glossary.html#image-signature-verification) using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).  
 Container image signature verification allows you to ensure their integrity (that the image has not been modified since its creation) and authenticity (that the image was created by a trusted source). You can enable container image signature verification in the cluster using the [policies.verifyImageSignatures](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter of the SecurityPolicy.  
 
 Images are signed by creating a special tag in the container registry that contains the image signature.  
@@ -959,4 +959,4 @@ If you use an alternative solution for security policy management in a DP cluste
 - `kube-system`
 - all namespaces with the `d8-*` prefix (for example, `d8-system`)
 
-Without these exceptions, policies may block or disrupt system component operations.
+Without these exceptions, policies may block or disrupt [system component](../../../glossary.html#system-component) operations.

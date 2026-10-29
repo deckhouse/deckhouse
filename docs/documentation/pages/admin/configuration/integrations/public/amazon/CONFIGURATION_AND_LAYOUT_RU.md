@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/public/amazon/layout.html
 lang: ru
 ---
 
-Данный раздел описывает схемы размещения кластера в инфраструктуре AWS и связанные с ними параметры. Выбор схемы (layout) влияет на способ назначения публичных IP-адресов, работу NAT и возможность подключения к узлам.
+Данный раздел описывает [схемы размещения](../../../../glossary.html#layout) кластера в инфраструктуре AWS и связанные с ними параметры. Выбор схемы (layout) влияет на способ назначения публичных IP-адресов, работу NAT и возможность подключения к узлам.
 
 ## WithoutNAT
 
@@ -59,14 +59,14 @@ tags:
 
 ## WithNAT
 
-{% alert level="warning" %} В данной схеме NAT Gateway всегда создается в зоне `a`. Если узлы кластера размещены в других зонах, то при сбое зоны a кластер может стать недоступным. Bastion-хост обязателен для подключения к узлам. {% endalert %}
+{% alert level="warning" %} В данной схеме NAT Gateway всегда создается в зоне `a`. Если узлы кластера размещены в других зонах, то при сбое зоны a кластер может стать недоступным. [Bastion-хост](../../../../glossary.html#bastion-host) обязателен для подключения к узлам. {% endalert %}
 
 В этой схеме размещения NAT Gateway используется для выхода в интернет, а публичные IP-адреса узлам не присваиваются. Доступ к узлам возможен только через bastion-хост, размещаемый в отдельной подсети.
 
 ![resources](../../../../images/cloud-provider-aws/aws-withnat.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-9864&t=Qb5yyWumzPiTBtfL-0 --->
 
-Пример конфигурации схемы размещения:
+Пример конфигурации [схемы размещения](../../../../glossary.html#layout):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -151,7 +151,7 @@ dhctl converge
 
 ## Внутренняя адресация и подсети
 
-[Параметр `nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) определяет диапазон адресов, который будет распределен по зонам доступности. Этот диапазон должен соответствовать или быть вложенным в [`vpcNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-vpcnetworkcidr). Подсети автоматически создаются на основании количества зон региона.
+[Параметр `nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) определяет диапазон адресов, который будет распределен по [зонам доступности](../../../../glossary.html#availability-zone). Этот диапазон должен соответствовать или быть вложенным в [`vpcNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-vpcnetworkcidr). Подсети автоматически создаются на основании количества зон региона.
 
 Пример:
 
@@ -165,7 +165,7 @@ vpcNetworkCIDR: 10.241.0.0/16
 Группы безопасности (security groups) в AWS используются для управления входящим и исходящим сетевым трафиком на виртуальные машины. В DP они позволяют:
 
 - разрешить подключение к узлам кластера с других подсетей;
-- открыть доступ к приложениям, размещённым на статических узлах;
+- открыть доступ к приложениям, размещённым на [статических узлах](../../../../glossary.html#static-node);
 - ограничить или разрешить доступ к внешним ресурсам в соответствии с требованиями безопасности.
 
 Если задан параметр [`disableDefaultSecurityGroup: false`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup), при создании кластера DP создаёт группы безопасности по умолчанию:
@@ -178,7 +178,7 @@ vpcNetworkCIDR: 10.241.0.0/16
 - `<CLUSTER_PREFIX>-loadbalancer` — используется балансировщиками нагрузки:
   - разрешение любого входящего трафика из CIDR, указанных в [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist);
   - разрешение любого исходящего трафика к группе `<CLUSTER_PREFIX>-node`.
-- `<CLUSTER_PREFIX>-ssh-accessible` — создаётся, если задан [`sshAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-sshallowlist), и разрешает входящий трафик по протоколу TCP и порту `22` из указанных CIDR (по умолчанию `0.0.0.0/0`). Назначается master-узлам или bastion-хосту в схеме WithNAT.
+- `<CLUSTER_PREFIX>-ssh-accessible` — создаётся, если задан [`sshAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-sshallowlist), и разрешает входящий трафик по протоколу TCP и порту `22` из указанных CIDR (по умолчанию `0.0.0.0/0`). Назначается [master-узлам](../../../../glossary.html#master-node) или [bastion-хосту](../../../../glossary.html#bastion-host) в схеме WithNAT.
 
 Помимо групп по умолчанию, к узлам можно подключить собственные группы безопасности, созданные в облаке заранее.
 
@@ -187,7 +187,7 @@ vpcNetworkCIDR: 10.241.0.0/16
 | Тип узлов              | Где указывать                                                                 |
 |------------------------|-------------------------------------------------------------------------------|
 | Master-узлы            | В [поле `masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса AWSClusterConfiguration |
-| Статические worker-узлы| В [поле `nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) того же ресурса |
+| Статические [worker-узлы](../../../../glossary.html#worker-node)| В [поле `nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) того же ресурса |
 | Эфемерные узлы         | В объекте AWSInstanceClass, в [поле `spec.additionalSecurityGroups`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups)         |
 
 Во всех случаях параметр `additionalSecurityGroups` принимает массив строк — имен (ID) групп безопасности в AWS.
@@ -262,7 +262,7 @@ IPv4 CIDR у обоих VPC должен различаться.
    dhctl bootstrap-phase base-infra --config config
    ```
 
-1. Запустите вручную bastion-хост в подсети `<CLUSTER_PREFIX>-public-0`.
+1. Запустите вручную [bastion-хост](../../../../glossary.html#bastion-host) в подсети `<CLUSTER_PREFIX>-public-0`.
 
 1. Продолжите установку кластера. На вопрос про кеш Terraform ответьте `y`:
 
@@ -291,6 +291,6 @@ IPv4 CIDR у обоих VPC должен различаться.
 
 ## Прерываемые узлы
 
-Прерываемые виртуальные машины в AWS называются spot-инстансами. Чтобы группа узлов заказывала их, установите параметр [`spot`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-spot) ресурса AWSInstanceClass в `true`.
+Прерываемые виртуальные машины в AWS называются spot-инстансами. Чтобы [группа узлов](../../../../glossary.html#node-group) заказывала их, установите параметр [`spot`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-spot) ресурса AWSInstanceClass в `true`.
 
 Порядок создания таких узлов и особенности их работы описаны в разделе [«Как создать прерываемые узлы в AWS?»](/modules/cloud-provider-aws/faq.html#как-создать-прерываемые-узлы-в-aws).

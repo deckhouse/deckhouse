@@ -13,7 +13,7 @@ description: Архитектура компонента Virtualization API мо
    - [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) — ресурс, описывающий конфигурацию и статус виртуальной машины (ВМ);
    - [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) — ресурс, описывающий набор параметров для ресурсов [VirtualMachine](/modules/virtualization/cr.html#virtualmachine), таких как спецификации CPU и RAM, `NodeSelector` и `Tolerations`;
    - [VirtualMachinePool](/modules/virtualization/early-access/cr.html#virtualmachinepool) — ресурс, декларативно управляющий группой одинаковых ВМ;
-   - [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) — ресурс, описывающий желаемую конфигурацию диска ВМ;
+   - [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) — ресурс, описывающий желаемую конфигурацию [диска ВМ](../../glossary.html#vm-disk);
    - [VirtualImage](/modules/virtualization/cr.html#virtualimage) — ресурс, описывающий:
      - образ диска ВМ, который может использоваться в качестве источника данных для новых ресурсов [VirtualDisk](/modules/virtualization/cr.html#virtualdisk);
      - установочный образ ISO, который может быть смонтирован в ресурс [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) напрямую.
@@ -39,7 +39,7 @@ description: Архитектура компонента Virtualization API мо
 
    Субресурсами управляет компонент virtualization-api.
 
-Компонент Virtualization API модуля для управления ВМ, дисками и образами ВМ использует в качестве бэкенда кастомные ресурсы KubeVirt.
+Компонент Virtualization API модуля для управления ВМ, дисками и [образами ВМ](../../glossary.html#vm-image) использует в качестве бэкенда кастомные ресурсы KubeVirt.
 
 {% alert level="info" %}
 [KubeVirt](https://github.com/kubevirt/kubevirt) — это Open Source-проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он обеспечивает совместную работу традиционных ВМ и контейнерных рабочих нагрузок в одном кластере Kubernetes, предоставляя единую плоскость управления.
@@ -75,7 +75,7 @@ Virtualization API состоит из следующих компонентов
      В качестве бэкенда virtualization-controller использует кастомные ресурсы из API-группы `kubevirt.io`.
 
    - валидация ресурсов из API-группы `virtualization.deckhouse.io` с помощью механизма [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/);
-   - запуск подов `dvcr-importer`, `dvcr-uploader`, `pvc-importer` и др. для импорта и загрузки дисков и образов ВМ. Подробнее об импорте и загрузке образов и дисков ВМ описано в разделе [«Импорт и загрузка образов и дисков ВМ»](import.html);
+   - запуск подов `dvcr-importer`, `dvcr-uploader`, `pvc-importer` и др. для импорта и загрузки дисков и образов ВМ. Подробнее об импорте и загрузке образов и [дисков ВМ](../../glossary.html#vm-disk) описано в разделе [«Импорт и загрузка образов и дисков ВМ»](import.html);
    - выполнение операций над ВМ посредством запросов к некоторым субресурсам API-группы `subresources.virtualization.deckhouse.io`, например `virtualmachines/freeze` и `virtualmachines/unfreeze`.
 
    Компонент содержит следующие контейнеры:

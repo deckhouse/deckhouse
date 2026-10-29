@@ -21,11 +21,11 @@ including the number of nodes in the cluster, the number of running Pods, and ot
 
 For more detailed information, hover the mouse cursor over any element to display a tooltip.
 
-Below the component info blocks, there are quick links to dashboards for specific cluster components,
+Below the component info blocks, there are quick links to [dashboards](../../glossary.html#dashboard) for specific cluster components,
 such as node monitoring, system resource usage, and network interaction statistics.
 
 On the left side, you'll find a section with links to the cluster's available web interfaces,
-as well as a block showing the cluster update method and the scheduled update windows (if configured).
+as well as a block showing the cluster update method and the scheduled [update windows](../../glossary.html#update-window) (if configured).
 
 In the top left corner of the main page is a button that opens the side menu,
 which contains links to Grafana's core sections.
@@ -109,7 +109,7 @@ including the number of agents running on nodes and their load.
 
 ![Loki Logs](../../images/grafana/loki_logs.png)
 
-The Ingress Nginx group contains dashboards related to Ingress controllers:
+The Ingress Nginx group contains dashboards related to [Ingress controllers](../../glossary.html#ingress-controller):
 
 - "Namespace Detail" displays a breakdown of components within a specific namespace.
   You can filter by namespace, Ingress, Service, and other parameters.
@@ -223,16 +223,16 @@ The Kubernetes Cluster group contains dashboards related to the Kubernetes clust
 
 ### Viewing security event logs
 
-Security event logs are available through the Grafana web UI.
+[Security event](../../glossary.html#security-event) logs are available through the Grafana web UI.
 The relevant dashboards are grouped under the "Security" folder:
 
-- Admission policy engine. Contains information related to the operation of security policies,
+- [Admission policy](../../glossary.html#admission-policy) engine. Contains information related to the operation of security policies,
   including a number of denied actions due to policy violations, breakdown of denials by type, and event logs.
   The event log for policy-related security violations is available in the OPA Violations panel.
 
   ![Admission policy engine](../../images/grafana/admission-policy-engine.png)
 
-- CIS Kubernetes Benchmark. A dashboard with the results of a configuration audit for compliance with established best practices.
+- [CIS Kubernetes Benchmark](../../glossary.html#cis-compliance-check). A dashboard with the results of a configuration audit for compliance with established best practices.
   It provides summary information with no detailed view.
   This dashboard is available when the [operator-trivy](/modules/operator-trivy/) module is enabled.
 
@@ -243,7 +243,7 @@ The relevant dashboards are grouped under the "Security" folder:
 
   ![Kubernetes audit logs](../../images/grafana/kubernetes-audit-logs.png)
 
-- Runtime audit engine logs. Includes logs of Linux kernel and cluster API server security audit events.
+- [Runtime audit](../../glossary.html#runtime-audit) engine logs. Includes logs of Linux kernel and cluster API server security audit events.
 
   ![Runtime audit engine logs](../../images/grafana/runtime-audit-engine-logs.png)
 

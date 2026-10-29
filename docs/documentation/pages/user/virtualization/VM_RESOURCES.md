@@ -5,7 +5,7 @@ description: "CPU and memory resources of a virtual machine: core count, the cor
 search: VM cores, coreFraction, VM memory, CPU topology, sizing
 ---
 
-The CPU resources of a machine are defined by the number of cores and the core fraction, and the allowed combinations are limited by the virtual machine (VM) class.
+The CPU resources of a machine are defined by the number of cores and the [core fraction](../../glossary.html#vm-core-fraction), and the allowed combinations are limited by the virtual machine (VM) class.
 
 ## Configuring CPU and coreFraction
 
@@ -23,7 +23,7 @@ In this example, the machine gets two virtual cores and a guaranteed 20% of the 
 If `coreFraction` isn't set, each virtual core gets 100% of a physical one.
 
 {% alert level="info" %}
-An administrator can restrict the set of allowed `coreFraction` values in the sizing policy of the VM class, and then you have to choose from them.
+An administrator can restrict the set of allowed `coreFraction` values in the [sizing policy](../../glossary.html#sizing-policy) of the VM class, and then you have to choose from them.
 {% endalert %}
 
 The guaranteed share is taken into account when selecting a node, so a machine doesn't start where the node can't provide the guarantees to all machines placed on it. The figure shows two machines with one core each, the first with `coreFraction: 20%` and the second with `coreFraction: 80%`.
@@ -35,7 +35,7 @@ The guaranteed share is taken into account when selecting a node, so a machine d
 Deckhouse Platform (DP) can pick the CPU time share on its own, following how much the machine consumes.
 
 {% alert level="info" %}
-The feature is available in commercial DP editions and is in the Alpha stage. It requires the enabled [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module, which picks the core fraction, and the `HotplugCPUAndMemoryWithInPlaceResize` feature in the module settings. The feature works with Kubernetes 1.33 or later, both on the control plane and on every node running VMs.
+The feature is available in commercial DP [editions](../../glossary.html#edition) and is in the Alpha stage. It requires the enabled [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module, which picks the core fraction, and the `HotplugCPUAndMemoryWithInPlaceResize` feature in the module settings. The feature works with Kubernetes 1.33 or later, both on the control plane and on every node running VMs.
 {% endalert %}
 
 Instead of a fixed percentage, you can set `coreFraction: Auto`. Then DP picks the fraction, raising it when the machine lacks CPU and lowering it when the machine is idle. The number of cores and the amount of memory stay unchanged, and the new fraction applies without a restart.
@@ -94,9 +94,9 @@ spec:
       coreFractions: [20, 50, 100]
 ```
 
-With such a policy, a machine with two cores falls into the first range, gets from 1 to 8 GiB of memory and one of the values 5%, 10%, 20%, 50%, or 100%. A machine with six cores falls into the second range, where 5 to 16 GiB of memory is available and the core fraction is 20%, 50%, or 100%.
+With such a policy, a machine with two cores falls into the first range, gets from 1 to 8 GiB of memory and one of the values 5%, 10%, 20%, 50%, or 100%. A machine with six cores falls into the second range, where 5 to 16 GiB of memory is available and the [core fraction](../../glossary.html#vm-core-fraction) is 20%, 50%, or 100%.
 
-The policy also limits oversubscription. For example, the minimum value `coreFraction: 20%` guarantees each machine one fifth of a core, which means oversubscription doesn't exceed 5 to 1.
+The policy also limits [oversubscription](../../glossary.html#cpu-oversubscription). For example, the minimum value `coreFraction: 20%` guarantees each machine one fifth of a core, which means oversubscription doesn't exceed 5 to 1.
 
 If the machine configuration doesn't match the policy, the `SizingPolicyMatched` condition with the `False` status appears in the status. Such a machine keeps running, but you can't save changes to its configuration until the resources are brought in line with the policy. The same happens when an administrator changes the policy of a class whose machines are already running.
 

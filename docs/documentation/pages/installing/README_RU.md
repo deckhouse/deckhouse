@@ -44,9 +44,9 @@ relatedLinks:
 
 Установить DP можно в следующих вариантах:
 
-- **В поддерживаемом облаке.** Установщик автоматически создает и настраивает все необходимые ресурсы (включая виртуальные машины, сетевые объекты и т.д.), разворачивает кластер Kubernetes и устанавливает DP. Полный список поддерживаемых облачных провайдеров доступен в разделе [«Интеграция с IaaS»](../admin/integrations/public/overview.html).
+- **В поддерживаемом облаке.** [Установщик](../glossary.html#installer) автоматически создает и настраивает все необходимые ресурсы (включая виртуальные машины, сетевые объекты и т.д.), разворачивает кластер Kubernetes и устанавливает DP. Полный список поддерживаемых [облачных провайдеров](../glossary.html#cloud-provider) доступен в разделе [«Интеграция с IaaS»](../admin/integrations/public/overview.html).
 
-- **На серверах bare metal (в том числе гибридные кластеры) или в неподдерживаемых облаках**. Установщик настраивает указанные в конфигурации серверы или виртуальные машины, разворачивает кластер Kubernetes и устанавливает DP. Пошаговые инструкции по развертыванию на bare metal можно найти в разделе [«Быстрый старт» → «Deckhouse Platform на bare metal»]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm/step2.html).
+- **На серверах bare metal (в том числе [гибридные кластеры](../glossary.html#hybrid-cluster)) или в неподдерживаемых облаках**. Установщик настраивает указанные в конфигурации серверы или виртуальные машины, разворачивает кластер Kubernetes и устанавливает DP. Пошаговые инструкции по развертыванию на bare metal можно найти в разделе [«Быстрый старт» → «Deckhouse Platform на bare metal»]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm/step2.html).
 
 - **В существующем кластере Kubernetes.** Установщик разворачивает DP и интегрирует его с текущей инфраструктурой. Пошаговые инструкции по развертыванию в существующем кластере можно найти в разделе [«Быстрый старт» → «Deckhouse Platform в существующем кластере»]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/existing/step2.html).
 
@@ -77,9 +77,9 @@ relatedLinks:
 {% endalert %}
 
 - На каждом узле, где будут работать ВМ, нужен процессор с поддержкой инструкций Intel-VT (VMX) или AMD-V (SVM), а сама аппаратная виртуализация должна быть включена в настройках BIOS/UEFI.
-- На всех узлах кластера должна стоять одна версия ядра Linux. Различия в версиях приводят к несовместимости системных вызовов и работы с ресурсами, из-за чего живая миграция ВМ работает нестабильно.
+- На всех узлах кластера должна стоять одна версия ядра Linux. Различия в версиях приводят к несовместимости системных вызовов и работы с ресурсами, из-за чего [живая миграция](../glossary.html#live-migration) ВМ работает нестабильно.
 - Для узлов на базе Astra Linux требуется версия платформы не ниже 1.8.3: в более ранних версиях есть ошибка, мешающая работе виртуализации.
-- Диски и образы ВМ создаются на основе ресурсов PersistentVolume, поэтому в кластере нужно одно или несколько [поддерживаемых хранилищ](../admin/configuration/storage/): локальное или реплицируемое хранилище SDS, Ceph, NFS, TATLIN.UNIFIED (Yadro), Huawei Dorado или HPE 3par. Задайте также [StorageClass по умолчанию](../admin/configuration/storage/supported-storage.html#назначение-storageclass-по-умолчанию).
+- Диски и [образы ВМ](../glossary.html#vm-image) создаются на основе ресурсов PersistentVolume, поэтому в кластере нужно одно или несколько [поддерживаемых хранилищ](../admin/configuration/storage/): локальное или [реплицируемое хранилище](../glossary.html#replicated-storage) [SDS](../glossary.html#sds), Ceph, NFS, TATLIN.UNIFIED (Yadro), Huawei Dorado или HPE 3par. Задайте также [StorageClass по умолчанию](../admin/configuration/storage/supported-storage.html#назначение-storageclass-по-умолчанию).
 - Заранее выберите подсети, из которых ВМ будут получать IP-адреса. Они задаются параметром `virtualMachineCIDRs` и не должны пересекаться с адресным пространством подов (`podSubnetCIDR`) и сервисов (`serviceSubnetCIDR`).
 - Кластер с виртуализацией рассчитан на `1000` узлов и `50000` виртуальных машин.
 
@@ -91,7 +91,7 @@ relatedLinks:
 
 ### Файл конфигурации установки
 
-Файл конфигурации установки состоит из YAML-секций (документов) и содержит настройки DP, а также описание (манифесты) объектов и ресурсов кластера, которые будут созданы после установки. Файл конфигурации установки используется в CLI-установщике и передается с помощью параметра `--config` (см. далее).
+[Файл конфигурации установки](../glossary.html#installation-config) состоит из YAML-секций (документов) и содержит настройки DP, а также описание (манифесты) объектов и ресурсов кластера, которые будут созданы после установки. Файл конфигурации установки используется в CLI-установщике и передается с помощью параметра `--config` (см. далее).
 
 Список обязательных и опциональных объектов и ресурсов кластера, которые могут понадобиться в файле конфигурации установки:
 
@@ -103,9 +103,9 @@ relatedLinks:
 
 1. [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — параметры кластера, развертываемого на серверах bare-metal (в том числе гибридного кластера) или виртуальных машинах в неподдерживаемых облаках. Является **обязательным**, кроме случая, когда DP устанавливается в уже существующий кластер Kubernetes.
 
-   Для добавления группы узлов (объект [NodeGroup](/modules/node-manager/cr.html#nodegroup)) под рабочую нагрузку в кластер могут понадобиться также объекты [StaticInstance](/modules/node-manager/cr.html#staticinstance) и [SSHCredentials](/modules/node-manager/cr.html#sshcredentials).
+   Для добавления [группы узлов](../glossary.html#node-group) (объект [NodeGroup](/modules/node-manager/cr.html#nodegroup)) под рабочую нагрузку в кластер могут понадобиться также объекты [StaticInstance](/modules/node-manager/cr.html#staticinstance) и [SSHCredentials](/modules/node-manager/cr.html#sshcredentials).
 
-1. `<PROVIDER>ClusterConfiguration` — параметры интеграции с облачным провайдером. Является **обязательным** при интеграции DP с [поддерживаемой облачной инфраструктурой](../admin/integrations/public/overview.html).
+1. `<PROVIDER>ClusterConfiguration` — параметры интеграции с [облачным провайдером](../glossary.html#cloud-provider). Является **обязательным** при интеграции DP с [поддерживаемой облачной инфраструктурой](../admin/integrations/public/overview.html).
 
    > При интеграции с виртуализацией Deckhouse ресурс DVPClusterConfiguration не используется. Его заменяют ModuleConfig [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) и связанные с ним ресурсы, описанные в разделе [«Схемы размещения и настройка DVP»](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html).
 
@@ -135,15 +135,15 @@ relatedLinks:
 
    Модули, часто настраиваемые при установке:
 
-   * [`global`](/products/kubernetes-platform/documentation/v1/reference/api/global.html) — глобальные настройки DP для указания параметров, которые используются по умолчанию всеми модулями и компонентами (шаблон DNS-имен, StorageClass, настройки расположения компонентов модулей и т.д.);
-   * [`deckhouse`](/modules/deckhouse/configuration.html) — настройки доступа к хранилищу образов, желаемый канал обновлений и другие параметры;
+   * [`global`](/products/kubernetes-platform/documentation/v1/reference/api/global.html) — [глобальные настройки](../glossary.html#global-settings) DP для указания параметров, которые используются по умолчанию всеми модулями и компонентами ([шаблон DNS-имен](../glossary.html#public-domain-template), StorageClass, настройки расположения компонентов модулей и т.д.);
+   * [`deckhouse`](/modules/deckhouse/configuration.html) — настройки доступа к хранилищу образов, желаемый [канал обновлений](../glossary.html#release-channel) и другие параметры;
    * [`user-authn`](/modules/user-authn/configuration.html) — отвечает за единую систему аутентификации;
-   * [`cni-cilium`](/modules/cni-cilium/configuration.html) — отвечает за работу сети в кластере (например, используется при установке DP на bare metal, в закрытом окружении, на РЕД-виртуализации и на SpaceVM);
+   * [`cni-cilium`](/modules/cni-cilium/configuration.html) — отвечает за работу сети в кластере (например, используется при установке DP на bare metal, в [закрытом окружении](../glossary.html#private-environment), на РЕД-виртуализации и на SpaceVM);
    * [`virtualization`](/modules/virtualization/configuration.html) — отвечает за запуск виртуальных машин в кластере, [включается сразу при установке](#установка-виртуализации) или позже.
 
-   Если кластер изначально создается с узлами, выделенными для определенных типов нагрузки (например, системные узлы или узлы для мониторинга), рекомендуется в конфигурации модулей, использующих тома постоянного хранилища, явно задавать параметр `nodeSelector` (например, в [параметре `nodeSelector`](/modules/prometheus/configuration.html#parameters-nodeselector) ModuleConfig `prometheus` для модуля `prometheus`).
+   Если кластер изначально создается с узлами, выделенными для определенных типов нагрузки (например, [системные узлы](../glossary.html#system-node) или узлы для мониторинга), рекомендуется в конфигурации модулей, использующих тома постоянного хранилища, явно задавать параметр `nodeSelector` (например, в [параметре `nodeSelector`](/modules/prometheus/configuration.html#parameters-nodeselector) ModuleConfig `prometheus` для модуля `prometheus`).
 
-1. [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) — параметры создаваемого балансировщика HTTP/HTTPS-трафика (Ingress-контроллера).
+1. [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) — параметры создаваемого балансировщика HTTP/HTTPS-трафика ([Ingress-контроллера](../glossary.html#ingress-controller)).
 
 1. [NodeGroup](/modules/node-manager/cr.html#nodegroup) — параметры группы узлов. Необходим для добавления узлов под рабочую нагрузку в кластер.
 
@@ -466,7 +466,7 @@ spec:
 
 ### Post-bootstrap-скрипт
 
-Установщик позволяет выполнить пользовательский скрипт на одном из master-узлов после завершения установки (post-bootstrap-скрипт). Такой скрипт может использоваться для:
+[Установщик](../glossary.html#installer) позволяет выполнить пользовательский скрипт на одном из [master-узлов](../glossary.html#master-node) после завершения установки ([post-bootstrap-скрипт](../glossary.html#post-bootstrap-script)). Такой скрипт может использоваться для:
 
 * дополнительной настройки кластера;
 * сбора диагностической информации;
@@ -527,7 +527,7 @@ fi
 ## Установка
 
 {% alert level="info" %}
-При установке коммерческой редакции Deckhouse Platform из публичного хранилища образов `registry.deckhouse.ru` необходимо предварительно пройти аутентификацию с использованием лицензионного ключа:
+При установке коммерческой [редакции](../glossary.html#edition) Deckhouse Platform из публичного хранилища образов `registry.deckhouse.ru` необходимо предварительно пройти аутентификацию с использованием [лицензионного ключа](../glossary.html#license-key):
 
 ```shell
 docker login -u license-token registry.deckhouse.ru
@@ -535,7 +535,7 @@ docker login -u license-token registry.deckhouse.ru
 
 {% endalert %}
 
-Команда для запуска контейнера с установщиком из публичного хранилища образов контейнеров Deckhouse:
+Команда для запуска контейнера с [установщиком](../glossary.html#installer) из публичного хранилища образов контейнеров Deckhouse:
 
 ```shell
 docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.ru/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
@@ -549,7 +549,7 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.ru/deckhouse/<
    - файл конфигурации;
    - файл ресурсов и т. д.
 1. `<RELEASE_CHANNEL>` — [канал обновлений](/modules/deckhouse/configuration.html#parameters-releasechannel) в формате kebab-case:
-   - `alpha` — для канала обновлений Alpha;
+   - `alpha` — для [канала обновлений](../glossary.html#release-channel) Alpha;
    - `beta` — для канала обновлений Beta;
    - `early-access` — для канала обновлений Early Access;
    - `stable` — для канала обновлений Stable;
@@ -566,7 +566,7 @@ docker run -it --pull=always \
 
 Установка DP осуществляется в контейнере установщика с помощью команды `dhctl`:
 
-* Для запуска установки DP с развертыванием нового кластера (все случаи, кроме установки в существующий кластер) используйте команду `dhctl bootstrap`.
+* Для запуска установки DP с развертыванием нового кластера (все случаи, кроме [установки в существующий кластер](../glossary.html#existing-cluster-mode)) используйте команду `dhctl bootstrap`.
 * Для установки DP в уже существующий кластер используйте команду `dhctl bootstrap-phase install-deckhouse`.
 
 {% alert level="info" %}
@@ -583,7 +583,7 @@ dhctl bootstrap \
 
 Где:
 
-- `/config.yml` — файл конфигурации установки;
+- `/config.yml` — [файл конфигурации установки](../glossary.html#installation-config);
 - `<SSH_USER>` — имя пользователя для подключения по SSH к серверу;
 - `--ssh-agent-private-keys` — файл приватного SSH-ключа для подключения по SSH.
 - `<SSH_PRIVATE_KEY_FILE>` — имя приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
@@ -591,7 +591,7 @@ dhctl bootstrap \
 ### Проверки перед началом установки
 
 {% alert level="info" %}
-Начиная с версии 1.74, модули DP устанавливаются в виде образов в формате EROFS, подключаемых только для чтения, что защищает их от изменения после установки. Этот механизм включается автоматически, если на узле, где работает контроллер DP (по умолчанию — master-узел), в ядре зарегистрирована файловая система `erofs`. DP загружает этот модуль ядра только на узлах с containerd v2, поэтому при использовании containerd v1 на master-узлах загрузку `erofs` нужно обеспечить средствами операционной системы. Иначе DP будет устанавливать модули обычным способом, без защиты их целостности и без отдельного алерта. Подробнее — в разделе [«Защита целостности модулей DP»](../architecture/security/integrity-control.html#защита-целостности-модулей-dp).
+Начиная с версии 1.74, модули DP устанавливаются в виде образов в формате EROFS, подключаемых только для чтения, что защищает их от изменения после установки. Этот механизм включается автоматически, если на узле, где работает контроллер DP (по умолчанию — [master-узел](../glossary.html#master-node)), в ядре зарегистрирована файловая система `erofs`. DP загружает этот модуль ядра только на узлах с containerd v2, поэтому при использовании containerd v1 на master-узлах загрузку `erofs` нужно обеспечить средствами операционной системы. Иначе DP будет устанавливать модули обычным способом, без защиты их целостности и без отдельного алерта. Подробнее — в разделе [«Защита целостности модулей DP»](../architecture/security/integrity-control.html#защита-целостности-модулей-dp).
 {% endalert %}
 
 {% offtopic title="Схема выполнения проверок, выполняемых установщиком перед началом установки..." %}
@@ -612,7 +612,7 @@ dhctl bootstrap \
    - На сервере установлено корректное время.
    - Адресное пространство подов (`podSubnetCIDR`) и сервисов (`serviceSubnetCIRD`) кластера не пересекаются.
 
-1. Проверки для установки статического и гибридного кластера:
+1. Проверки для установки статического и [гибридного кластера](../glossary.html#hybrid-cluster):
    - Указан только один параметр `--ssh-host`. Для статической конфигурации кластера можно задать только один IP-адрес для настройки первого master-узла.
    - Должна быть возможность подключения по SSH с использованием указанных данных аутентификации.
    - Должна быть возможность установки SSH-туннеля до сервера (или виртуальной машины) master-узла.
@@ -645,9 +645,9 @@ dhctl bootstrap \
    - Адресное пространство подов (`podSubnetCIDR`), сервисов (`serviceSubnetCIRD`) и внутренней сети кластера (`internalNetworkCIDRs`) не пересекаются.
    - На сервере (ВМ) нет конфликтов с локальной служебной учетной записью `deckhouse`: пользователь и группа либо отсутствуют, либо пользователь имеет UID и основной GID `64535`, группа имеет GID `64535`, пользователь не имеет прав `sudo`, а UID/GID `64535` не заняты другими учетными записями. Подробнее — в разделе [«Локальная служебная учетная запись `deckhouse`»](#локальная-служебная-учетная-запись-deckhouse).
 
-1. Проверки для установки облачного кластера:
+1. Проверки для установки [облачного кластера](../glossary.html#cloud-cluster):
    - Конфигурация виртуальной машины master-узла удовлетворяет минимальным требованиям.
-   - API облачного провайдера доступно с узлов кластера.
+   - API [облачного провайдера](../glossary.html#cloud-provider) доступно с узлов кластера.
    - Проверка конфигурации [Yandex Cloud с NAT Instance](/modules/cloud-provider-yandex/layouts.html#withnatinstance).
 
 {% offtopic title="Список флагов пропуска проверок..." %}
@@ -666,10 +666,10 @@ dhctl bootstrap \
 - `--preflight-skip-check=registry-required-images` — пропуск проверки того, что в хранилище есть сами образы релиза, а не только тег;
 - `--preflight-skip-check=dhctl-edition` — пропуск проверки соответствия редакции установщика и редакции образа Deckhouse;
 - `--preflight-skip-check=dhctl-version` — пропуск проверки соответствия версии инсталлятора версии образа Deckhouse;
-- `--preflight-skip-check=bastion-availability` — пропуск проверки доступности bastion-хоста;
+- `--preflight-skip-check=bastion-availability` — пропуск проверки доступности [bastion-хоста](../glossary.html#bastion-host);
 - `--preflight-skip-check=cloud-disk-name-length` — пропуск проверки того, что префикс кластера не делает имена дисков слишком длинными;
 - `--preflight-skip-check=cloud-master-system-requirements` — пропуск проверки соответствия instance class master-узла минимальным требованиям;
-- `--preflight-skip-check=instance-class-provider` — пропуск проверки соответствия ресурсов InstanceClass облачному провайдеру;
+- `--preflight-skip-check=instance-class-provider` — пропуск проверки соответствия ресурсов [InstanceClass](../glossary.html#instance-class) облачному провайдеру;
 - `--preflight-skip-check=cloud-node-network-cidr-intersection` — пропуск проверки пересечения подсетей кластера с сетью, в которой облако создаёт узлы;
 - `--preflight-skip-check=cloud-ssh-key-matches-public-key` — пропуск проверки соответствия приватного ключа dhctl и `sshPublicKey`, который установит облако;
 - `--preflight-skip-check=static-instances-ip-duplication` — пропуск проверки уникальности адресов StaticInstances;
@@ -677,7 +677,7 @@ dhctl bootstrap \
 - `--preflight-skip-check=immutable-kubeconfig-kept` — пропуск проверки того, что admin kubeconfig сохраняется вне удаляемого dhctl каталога;
 - `--preflight-skip-check=immutable-kubeconfig-out` — пропуск проверки того, что для admin kubeconfig задан путь сохранения;
 - `--preflight-skip-check=immutable-machines-availability` — пропуск проверки доступности машин, указанных в `--master-host`;
-- `--preflight-skip-check=immutable-post-bootstrap-script` — пропуск проверки отсутствия post-bootstrap-скрипта;
+- `--preflight-skip-check=immutable-post-bootstrap-script` — пропуск проверки отсутствия [post-bootstrap-скрипта](../glossary.html#post-bootstrap-script);
 - `--preflight-skip-check=immutable-signature-mode` — пропуск проверки отключенного режима подписи control plane;
 - `--preflight-skip-check=immutable-supported-provider` — пропуск проверки поддержки платформы для immutable master-узла.
 
@@ -716,7 +716,7 @@ dhctl bootstrap \
 - `--preflight-skip-check=registry-access-from-master` — пропуск проверки доступности хранилища образов с самого master-узла;
 - `--preflight-skip-check=immutable-api-reachable` — пропуск проверки того, что порт API первого immutable master-узла отвечает.
 
-Подсети кластера и `publicDomainTemplate` не относятся к preflight-проверкам: они читают только
+Подсети кластера и `publicDomainTemplate` не относятся к [preflight-проверкам](../glossary.html#preflight-checks): они читают только
 конфигурацию, поэтому проверяются при её загрузке — одинаково в `dhctl config`, в converge и при
 bootstrap. Пропустить их флагом нельзя.
 
@@ -728,8 +728,8 @@ bootstrap. Пропустить их флагом нельзя.
 `ssh-credential` — и `ssh-connectivity`.
 
 Проверки, которые относятся к самой машине, называются `node-*`, а те, что относятся к доступу, —
-`ssh-*`. И те, и другие выполняются и на облачном master-узле, и на статическом узле. С префиксом
-`static-` выполняются проверки, применимые исключительно к статическому кластеру. Имена переименованных проверок принимаются флагом `--preflight-skip-check`.
+`ssh-*`. И те, и другие выполняются и на облачном master-узле, и на [статическом узле](../glossary.html#static-node). С префиксом
+`static-` выполняются проверки, применимые исключительно к [статическому кластеру](../glossary.html#static-cluster). Имена переименованных проверок принимаются флагом `--preflight-skip-check`.
 
 Проверки узла — `sudo-installed`, `sudo-allowed`, `python-modules`, `resolve-localhost`,
 `time-drift`, `node-hostname`, `node-disk-space`, `node-leftovers`,
@@ -761,7 +761,7 @@ bootstrap. Пропустить их флагом нельзя.
 
 Компоненты DP используют UID/GID `64535` для запуска непривилегированных процессов и доступа к своим файлам на узле. Локальный пользователь и группа `deckhouse` закрепляют эти идентификаторы за DP и позволяют ОС отображать имя `deckhouse` вместо числовых UID/GID в выводе `ps`, `top` и `ls`. Процессы, запущенные от имени пользователя `deckhouse`, могут отображаться в выводе `ps` и `top` — это штатная ситуация. Они принадлежат компонентам DP и не являются пользовательскими сеансами.
 
-Если учетная запись отсутствует, bashible создает ее с оболочкой `/sbin/nologin`, без пароля и прав `sudo`. В `/etc/passwd` для пользователя указан домашний каталог по умолчанию (обычно `/home/deckhouse`). Bashible создает этот каталог отдельно как базовый каталог для домашних каталогов пользователей, заданных ресурсами `NodeUser`; сама служебная учетная запись `deckhouse` не предназначена для входа и хранения пользовательских файлов. Учетная запись не должна предоставляться через AD или LDAP.
+Если учетная запись отсутствует, [bashible](../glossary.html#bashible) создает ее с оболочкой `/sbin/nologin`, без пароля и прав `sudo`. В `/etc/passwd` для пользователя указан домашний каталог по умолчанию (обычно `/home/deckhouse`). Bashible создает этот каталог отдельно как базовый каталог для домашних каталогов пользователей, заданных ресурсами `NodeUser`; сама служебная учетная запись `deckhouse` не предназначена для входа и хранения пользовательских файлов. Учетная запись не должна предоставляться через AD или LDAP.
 
 Имя `deckhouse` и UID/GID `64535` зарезервированы для DP и не настраиваются. Не удаляйте и не переименовывайте пользователя или группу, не меняйте их UID/GID и не назначайте пользователю права `sudo`. Preflight-проверка допускает отсутствие пользователя и группы либо их наличие, если пользователь имеет UID и основной GID `64535`, группа имеет GID `64535`, а пользователь не имеет прав `sudo`. Установка завершается ошибкой, если имя используется с другими идентификаторами или UID/GID `64535` заняты другими учетными записями.
 
@@ -783,10 +783,10 @@ dhctl bootstrap-phase abort
 
 ## Установка виртуализации
 
-Виртуализация включается ресурсом ModuleConfig `virtualization` и разворачивает свои компоненты в неймспейсе `d8-virtualization`. Ресурс можно задать сразу в файле конфигурации установки либо применить в готовом кластере.
+Виртуализация включается ресурсом ModuleConfig `virtualization` и разворачивает свои компоненты в неймспейсе `d8-virtualization`. Ресурс можно задать сразу в [файле конфигурации установки](../glossary.html#installation-config) либо применить в готовом кластере.
 
 {% alert level="warning" %}
-Включение виртуализации перезапускает kubelet, containerd и агенты сетевого модуля на всех узлах, где предполагается запуск виртуальных машин. Это необходимо для настройки связности containerd и хранилища образов DVCR.
+Включение виртуализации перезапускает kubelet, containerd и агенты сетевого модуля на всех узлах, где предполагается запуск виртуальных машин. Это необходимо для настройки связности containerd и хранилища образов [DVCR](../glossary.html#dvcr).
 {% endalert %}
 
 В минимальной конфигурации задаются размер хранилища образов и подсети, из которых виртуальные машины получают адреса:
@@ -828,11 +828,11 @@ virtualization   900      deckhouse   Ready   True      True
 
 ### Размещение компонентов виртуализации по узлам
 
-Распределение компонентов по узлам зависит от конфигурации кластера. В нём могут быть только master-узлы, на которых работают и компоненты control plane, и нагрузка; master-узлы и worker-узлы; master-узлы, system-узлы и worker-узлы; либо другие сочетания. Под worker-узлами здесь понимаются узлы без ограничений (taints), мешающих запуску обычной рабочей нагрузки.
+Распределение компонентов по узлам зависит от конфигурации кластера. В нём могут быть только [master-узлы](../glossary.html#master-node), на которых работают и компоненты control plane, и нагрузка; master-узлы и [worker-узлы](../glossary.html#worker-node); master-узлы, system-узлы и worker-узлы; либо другие сочетания. Под worker-узлами здесь понимаются узлы без ограничений (taints), мешающих запуску обычной рабочей нагрузки.
 
 Компоненты Deckhouse Platform (DP) распределяет по приоритету, и если в кластере есть подходящий тип узлов, компонент попадёт на него. За что отвечает каждый компонент, описано в разделе [«Подсистема Virtualization»](../architecture/virtualization/).
 
-| Название компонента           | Группа узлов      | Комментарий                                                                                               |
+| Название компонента           | [Группа узлов](../glossary.html#node-group)      | Комментарий                                                                                               |
 |-------------------------------|-------------------|-----------------------------------------------------------------------------------------------------------|
 | `virt-operator-*`             | system/master     |                                                                                                           |
 | `virt-api-*`                  | master            |                                                                                                           |
@@ -841,7 +841,7 @@ virtualization   900      deckhouse   Ready   True      True
 | `virtualization-api-*`        | master            |                                                                                                           |
 | `virtualization-controller-*` | master            |                                                                                                           |
 | `dvcr-*`                      | system            | На узле должно быть доступно хранилище. При отсутствии system-узлов компонент размещается на worker-узле. |
-| `virtualization-audit-*`      | master            | Доступен в коммерческих редакциях DP.                                                                     |
+| `virtualization-audit-*`      | master            | Доступен в коммерческих [редакциях](../glossary.html#edition) DP.                                                                     |
 | `virtualization-dra-*`        | Отдельные узлы    | Доступен в коммерческих редакциях DP.                                                                     |
 | `vm-route-forge-*`            | Все узлы кластера |                                                                                                           |
 
@@ -875,7 +875,7 @@ virtualization   900      deckhouse   Ready   True      True
 <div id="установка-deckhouse-kubernetes-platform-из-стороннего-registry"></div>
 
 {% alert level="info" %}
-Подробнее с установкой и обновлением DP в закрытом окружении можно ознакомиться в руководствах [«Установка DP в закрытом окружении»](../guides/private-environment.html) и [«Обновление DP в закрытом окружении»](../guides/airgapped-update.html).
+Подробнее с установкой и обновлением DP в [закрытом окружении](../glossary.html#private-environment) можно ознакомиться в руководствах [«Установка DP в закрытом окружении»](../guides/private-environment.html) и [«Обновление DP в закрытом окружении»](../guides/airgapped-update.html).
 {% endalert %}
 
 ### Установка из стороннего хранилища образов контейнеров
@@ -1004,7 +1004,7 @@ echo "$MYRESULTSTRING"
    * `Remote storage` должно иметь значение `https://registry.deckhouse.ru/`.
    * `Auto blocking enabled` и `Not found cache enabled` могут быть выключены для отладки; в противном случае их следует включить.
    * `Maximum Metadata Age` должно быть равно `0`.
-   * Если планируется использовать коммерческую редакцию Deckhouse Platform, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
+   * Если планируется использовать коммерческую [редакцию](../glossary.html#edition) Deckhouse Platform, флажок `Authentication` должен быть включен, а связанные поля должны быть заполнены следующим образом:
      * `Authentication Type` должно иметь значение `Username`.
      * `Username` должно иметь значение `license-token`.
      * `Password` должно содержать ключ лицензии Deckhouse Platform.
@@ -1045,7 +1045,7 @@ echo "$MYRESULTSTRING"
    * в поле «Name» укажите имя эндпоинта на свое усмотрение;
    * в поле «Endpoint URL» укажите `https://registry.deckhouse.ru`;
    * в поле «Access ID» укажите `license-token`;
-   * в поле «Access Secret» укажите свой лицензионный ключ Deckhouse Platform;
+   * в поле «Access Secret» укажите свой [лицензионный ключ](../glossary.html#license-key) Deckhouse Platform;
    * задайте остальные параметры по своему усмотрению;
    * нажмите «ОК», чтобы подтвердить создание эндпоинта для хранилища образов.
 
@@ -1071,7 +1071,7 @@ echo "$MYRESULTSTRING"
 {% endalert %}
 
 {% alert level="info" %}
-О текущем статусе версий на каналах обновлений можно узнать на [releases.deckhouse.ru](https://releases.deckhouse.ru).
+О текущем статусе версий на [каналах обновлений](../glossary.html#release-channel) можно узнать на [releases.deckhouse.ru](https://releases.deckhouse.ru).
 {% endalert %}
 
 - [Скачайте и установите утилиту Deckhouse CLI](../cli/d8/).
@@ -1205,8 +1205,8 @@ echo "$MYRESULTSTRING"
 - `--no-installer` — пропустить загрузку образов инсталлятора Deckhouse;
 - `--only-extra-images` — загрузить только дополнительные образы модулей без загрузки основных образов модулей;
 - `--skip-vex-images` — пропустить загрузку VEX-образов;
-- `--include-platform` = `CONSTRAINT` — загрузить релизы Deckhouse Platform по semver-ограничению. Параметр нельзя использовать одновременно с `--since-version` и `--deckhouse-tag`. Значение ограничения всегда заключайте в кавычки: `>` и `<` являются shell-перенаправлениями. Примеры: `--include-platform ">=1.64 <=1.68"`, `--include-platform "~1.65.0"`, `--include-platform "^1.65.0"`, `--include-platform "1.65.0"`, `--include-platform "=v1.65.3"` или `--include-platform "=v1.65.3+stable"`;
-- `--include-module` / `-i` = `name[@Major.Minor]` — загрузить определенный набор модулей по принципу белого списка (и, при необходимости, их минимальных версий). Укажите несколько раз, чтобы добавить в белый список больше модулей. Эти флаги игнорируются, если используются совместно с `--no-modules`.
+- `--include-platform` = `CONSTRAINT` — загрузить [релизы Deckhouse Platform](../glossary.html#dp-release) по semver-ограничению. Параметр нельзя использовать одновременно с `--since-version` и `--deckhouse-tag`. Значение ограничения всегда заключайте в кавычки: `>` и `<` являются shell-перенаправлениями. Примеры: `--include-platform ">=1.64 <=1.68"`, `--include-platform "~1.65.0"`, `--include-platform "^1.65.0"`, `--include-platform "1.65.0"`, `--include-platform "=v1.65.3"` или `--include-platform "=v1.65.3+stable"`;
+- `--include-module` / `-i` = `name[@Major.Minor]` — загрузить определенный [набор модулей](../glossary.html#module-bundle) по принципу белого списка (и, при необходимости, их минимальных версий). Укажите несколько раз, чтобы добавить в белый список больше модулей. Эти флаги игнорируются, если используются совместно с `--no-modules`.
 
   Поддерживаются следующие синтаксисы для указания версий модулей. Если используются операторы `>=` или `<=`, заключайте в кавычки все значение флага:
   - `module-name@1.3.0` — загрузка версий с semver ^ ограничением (^1.3.0), включая v1.3.0, v1.3.3, v1.4.1;
@@ -1220,7 +1220,7 @@ echo "$MYRESULTSTRING"
 - `--include-package` = `name[@version]` — загрузить определенный набор пакетов по принципу белого списка. Для указания версий и semver-ограничений используется тот же синтаксис, что и у `--include-module`, включая правила использования кавычек.
 - `--exclude-package` = `name[@version]` — пропустить загрузку определенного набора пакетов по принципу черного списка. Игнорируется, если используется `--include-package`.
 - `--modules-path-suffix` — изменить суффикс пути к репозиторию модулей в основном репозитории DP. По умолчанию используется суффикс `/modules` (так, например, полный путь к репозиторию с модулями будет выглядеть как `registry.deckhouse.ru/deckhouse/EDITION/modules`);
-- `--since-version=X.Y` — скачать все версии DP, начиная с указанной минорной версии. Параметр будет проигнорирован, если указанная версия выше, чем версия на канале обновлений Rock Solid. Параметр не может быть использован одновременно с параметром `--deckhouse-tag`;
+- `--since-version=X.Y` — скачать все версии DP, начиная с указанной [минорной версии](../glossary.html#minor-version). Параметр будет проигнорирован, если указанная версия выше, чем версия на канале обновлений Rock Solid. Параметр не может быть использован одновременно с параметром `--deckhouse-tag`;
 - `--deckhouse-tag` — скачать только конкретную версию DP (без учета каналов обновлений). Параметр не может быть использован одновременно с параметром `--since-version`;
 - `--installer-tag=TAG` — скачать конкретный тег инсталлятора Deckhouse. Если параметр не указан, используется тег `latest`;
 - `--proxy-registry` — использовать proxy/cache-хранилище, которое не поддерживает registry catalog API. Требует `--include-platform`, если платформа не пропущена через `--no-platform`, и хотя бы один `--include-module`, если модули не пропущены через `--no-modules`. Нельзя использовать вместе с `--deckhouse-tag` или `--since-version`;
@@ -1230,7 +1230,7 @@ echo "$MYRESULTSTRING"
 - `--source-login` и `--source-password` — данные для аутентификации в стороннем хранилище образов;
 - `--tls-skip-verify` — отключить проверку TLS-сертификата;
 - `--insecure` — обращаться к хранилищам образов по HTTP;
-- `--images-bundle-chunk-size=N` — максимальный размер файлов (в ГБ), на которые нужно разбить архив образов. В результате работы вместо одного файла архива образов будет создан набор CHUNK-файлов (например, `d8.tar.NNNN.chunk`). Чтобы загрузить образы из такого набора файлов, укажите в команде `d8 mirror push` имя файла без суффикса `.NNNN.chunk` (например, `d8.tar` для файлов `d8.tar.NNNN.chunk`);
+- `--images-bundle-chunk-size=N` — максимальный размер файлов (в ГБ), на которые нужно разбить [архив образов](../glossary.html#mirror-image-bundle). В результате работы вместо одного файла архива образов будет создан набор CHUNK-файлов (например, `d8.tar.NNNN.chunk`). Чтобы загрузить образы из такого набора файлов, укажите в команде `d8 mirror push` имя файла без суффикса `.NNNN.chunk` (например, `d8.tar` для файлов `d8.tar.NNNN.chunk`);
 - `--tmp-dir` — путь к директории для временных файлов, который будет использоваться во время операций загрузки и выгрузки образов. Вся обработка выполняется в этом каталоге. Он должен иметь достаточный объем свободного дискового пространства, чтобы вместить весь загружаемый пакет образов. По умолчанию используется поддиректория `.tmp` в директории с пакетами образов.
 
 Дополнительные параметры конфигурации для семейства команд `d8 mirror` доступны в виде переменных окружения:
@@ -1262,7 +1262,7 @@ echo "$MYRESULTSTRING"
 
 - После загрузки образов в хранилище образов можно переходить к установке DP. Воспользуйтесь [руководством по быстрому старту](/products/kubernetes-platform/gs/bm-private/step2.html).
 
-  При запуске установщика используйте хранилище образов, в которое ранее были загружены образы, а не официальное публичное хранилище образов DP. Для примера выше адрес запуска установщика будет иметь вид `corp.company.com:5000/sys/deckhouse/install:stable` вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
+  При запуске [установщика](../glossary.html#installer) используйте хранилище образов, в которое ранее были загружены образы, а не официальное публичное хранилище образов DP. Для примера выше адрес запуска установщика будет иметь вид `corp.company.com:5000/sys/deckhouse/install:stable` вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
 
   В [секции параметров `registry`](/modules/deckhouse/configuration.html#parameters-registry) ModuleConfig `deckhouse` при установке также используйте адрес вашего хранилища образов и данные авторизации (с версии DP 1.75). Устаревший способ — использование [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (параметры [`imagesRepo`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [`registryDockerCfg`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg)).
 
@@ -1321,7 +1321,7 @@ echo "$MYRESULTSTRING"
 
 {% endofftopic %}
 
-Для настройки DP на работу с прокси-сервером используйте [параметр `proxy`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) ресурса ClusterConfiguration.
+Для настройки DP на работу с прокси-сервером используйте [параметр `proxy`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) ресурса [ClusterConfiguration](../glossary.html#cluster-configuration).
 
 Пример:
 

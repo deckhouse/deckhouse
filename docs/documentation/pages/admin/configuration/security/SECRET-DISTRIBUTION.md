@@ -23,9 +23,9 @@ when pulling container images or working with Ceph RBD storage.
 
 ### Incompatibility with multitenancy mode
 
-The automatic secret distribution mechanism is not compatible with the [multitenancy mode](../../multitenancy.html).
+The automatic [secret distribution](../../../glossary.html#secret-distribution) mechanism is not compatible with the [multitenancy mode](../../multitenancy.html).
 
-Multitenancy mode creates isolated environments for users within projects.
+Multitenancy mode creates isolated environments for users within [projects](../../../glossary.html#project).
 Automatically distributing secrets to all namespaces may violate this security model.
 If sensitive data accidentally reaches a user’s isolated environment, it may lead to data exposure.
 

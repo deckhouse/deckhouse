@@ -34,13 +34,13 @@ Dex also locks an account after failed sign-in attempts. Configure the lockout w
 
 1. **Passing the token to the application**. DexAuthenticator sets the `Authorization` HTTP header with the `ID token` from Redis.  
    This may be optional for some applications, such as Upmeter, where other authorization mechanisms are used.  
-   However, for applications like the Kubernetes Dashboard, this behavior is critical, as the Dashboard forwards the `ID token` to access the Kubernetes API on behalf of the user.
+   However, for applications like the Kubernetes [Dashboard](../../glossary.html#dashboard), this behavior is critical, as the Dashboard forwards the `ID token` to access the Kubernetes API on behalf of the user.
 
 ## DP-specific Dex extensions
 
 DP ships Dex with additional capabilities:
 
-* Groups for static users (the [Group](/modules/user-authn/cr.html#group) object).
+* Groups for [static users](../../glossary.html#static-user) (the [Group](/modules/user-authn/cr.html#group) object).
 * Two-factor authentication (2FA) for static users (the [`staticUsers2FA`](/modules/user-authn/configuration.html#parameters-staticusers2fa) parameter).
 * A password policy for static users: complexity, password history, rotation and lockout after failed sign-in attempts (the [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy) parameter).
 * A forced password change at the next sign-in after an administrator resets the password.
@@ -55,4 +55,4 @@ DP ships Dex with additional capabilities:
 
 ## High availability mode
 
-In high availability mode ([`highAvailability`](/modules/user-authn/configuration.html#parameters-highavailability)), Dex and the other `user-authn` components run in several replicas, so sign-in keeps working if one pod fails. DexAuthenticator follows the same setting unless its own [`spec.highAvailability`](/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability) is set.
+In [high availability mode](../../glossary.html#ha-mode) ([`highAvailability`](/modules/user-authn/configuration.html#parameters-highavailability)), Dex and the other `user-authn` components run in several replicas, so sign-in keeps working if one pod fails. DexAuthenticator follows the same setting unless its own [`spec.highAvailability`](/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability) is set.

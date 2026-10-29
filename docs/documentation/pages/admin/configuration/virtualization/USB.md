@@ -6,10 +6,10 @@ search: USB devices, USB passthrough, NodeUSBDevice, usbip
 ---
 
 {% alert level="info" %}
-USB device passthrough is available in commercial Deckhouse Platform (DP) editions.
+USB [device passthrough](../../../glossary.html#device-passthrough) is available in commercial Deckhouse Platform (DP) [editions](../../../glossary.html#edition).
 {% endalert %}
 
-USB device passthrough to virtual machines (VMs) is handled by the `virtualization-dra` system component, which needs three kernel modules on the node:
+USB device passthrough to virtual machines (VMs) is handled by the `virtualization-dra` [system component](../../../glossary.html#system-component), which needs three kernel modules on the node:
 
 - `usbip_core`
 - `usbip_host`
@@ -48,7 +48,7 @@ A USB device travels from the node to a virtual machine in four steps:
 
 1. Once the namespace is assigned, DP creates a [USBDevice](/modules/virtualization/cr.html#usbdevice) resource in it.
 
-1. The project owner attaches the [USBDevice](/modules/virtualization/cr.html#usbdevice) device to a virtual machine by adding it to the [`.spec.usbDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-usbdevices) parameter of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
+1. The [project](../../../glossary.html#project) owner attaches the [USBDevice](/modules/virtualization/cr.html#usbdevice) device to a virtual machine by adding it to the [`.spec.usbDevices`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-usbdevices) parameter of the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
 
 ## Discovered devices (NodeUSBDevice)
 
@@ -146,11 +146,11 @@ Logitech Webcam C920 (046d:082d)
 
 {% endtabs %}
 
-The project owner sees the devices assigned to their project in the **Virtualization** → **USB devices** section of that project.
+The [project](../../../glossary.html#project) owner sees the devices assigned to their project in the **Virtualization** → **USB devices** section of that project.
 
 ## Requirements and limitations
 
-When planning USB device passthrough, consider the following requirements and limitations:
+When planning USB [device passthrough](../../../glossary.html#device-passthrough), consider the following requirements and limitations:
 
 - A node where USB devices must be detected has to carry the `virtualization.deckhouse.io/usbip=true` label and run containerd version 2, otherwise the `virtualization-dra` component doesn't start there.
 - A device is passed to a virtual machine over the network using USBIP, so the VM can run on a node other than the one the device is physically connected to.

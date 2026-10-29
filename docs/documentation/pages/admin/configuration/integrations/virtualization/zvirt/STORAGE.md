@@ -6,7 +6,7 @@ permalink: en/admin/integrations/virtualization/zvirt/storage.html
 ## Storage
 
 In a cluster hosted on a zVirt infrastructure, Storage Domains are used within the scope of the specified [`clusterID`](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration-clusterid).
-All virtual machine disks are created within the designated storage domain.
+All [virtual machine disks](../../../../glossary.html#vm-disk) are created within the designated storage domain.
 
 ### Requirements
 
@@ -44,7 +44,7 @@ To handle incoming traffic, the following approaches are recommended:
 
 1. Use an external load balancer.
    If your infrastructure already has a hardware or software load balancer,
-   configure port forwarding (for example, `80/443`) to the cluster's frontend nodes.
+   configure port forwarding (for example, `80/443`) to the cluster's [frontend nodes](../../../../glossary.html#frontend-node).
 1. Use MetalLB.
    For fault-tolerant load balancing within the cluster, you can use MetalLB in Layer 2 (L2) mode.
 

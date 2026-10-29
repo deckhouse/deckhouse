@@ -20,8 +20,8 @@ spec:
 {% alert level="warning" %}
 A change to the [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-nodeselector) block affects all virtual machines of the class at once. Those running on nodes that no longer match the new conditions have to be moved:
 
-- In commercial editions, Deckhouse Platform (DP) migrates such VMs to suitable nodes.
-- In DP Open, the VMs are restarted, and the restart time depends on the [`.spec.disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) parameter of the virtual machine, which defaults to `Manual` and requires the project owner's approval.
+- In commercial [editions](../../../glossary.html#edition), Deckhouse Platform (DP) migrates such VMs to suitable nodes.
+- In DP Open, the VMs are restarted, and the restart time depends on the [`.spec.disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) parameter of the virtual machine, which defaults to `Manual` and requires the [project](../../../glossary.html#project) owner's approval.
 {% endalert %}
 
 To do the same in the web interface, in the [VM class creation form](vm-classes.html#virtualmachineclass-settings):

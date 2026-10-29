@@ -14,7 +14,7 @@ lang: ru
 
 ### Требования к кластерам
 
-* У всех кластеров, входящих в мультикластер, значение параметра [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса ClusterConfiguration должно совпадать. По умолчанию используется значение `cluster.local`.
+* У всех кластеров, входящих в [мультикластер](../../../../glossary.html#multicluster), значение параметра [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса [ClusterConfiguration](../../../../glossary.html#cluster-configuration) должно совпадать. По умолчанию используется значение `cluster.local`.
 
 * Подсети сервисов и подов в параметрах [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) ресурса ClusterConfiguration должны быть уникальными для каждого кластера.
 
@@ -24,7 +24,7 @@ lang: ru
   > Если IP-адреса сервисов или подов пересекутся между кластерами, то под маршрутизирующие, запрещающие или разрешающие правила Istio могут попасть запросы из подов других кластеров.
   > Пересечение подсетей сервисов и подов не рекомендуется (подробнее — [в документации Istio](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
 
-По умолчанию поды разных кластеров взаимодействуют через Istio ingress gateway (режим [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks)). Если поды двух кластеров доступны друг другу напрямую (плоская сеть), задайте параметр [`spec.enableIngressGateway`](/modules/istio/cr.html#istiomulticluster-v1alpha1-spec-enableingressgateway) равным `false` в обоих кластерах — в IstioMulticluster, который описывает другой кластер.
+По умолчанию поды разных кластеров взаимодействуют через [Istio ingress gateway](../../../../glossary.html#istio-ingress-gateway) (режим [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks)). Если поды двух кластеров доступны друг другу напрямую (плоская сеть), задайте параметр [`spec.enableIngressGateway`](/modules/istio/cr.html#istiomulticluster-v1alpha1-spec-enableingressgateway) равным `false` в обоих кластерах — в IstioMulticluster, который описывает другой кластер.
 
 {% alert level="warning" %}
 В мультикластере могут участвовать только рабочие нагрузки в режиме сайдкаров. Подробнее — в разделе [Ограничения ambient mesh](/modules/istio/#ограничения-ambient-mesh).

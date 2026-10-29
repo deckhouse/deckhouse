@@ -6,13 +6,13 @@ search: sdn, программно-определяемые сети, cni
 description: Архитектура модуля sdn в Deckhouse Platform.
 ---
 
-Модуль [`sdn`](/modules/sdn/) предоставляет функции программно-определяемых сетей (SDN, Software Defined Networking) в Deckhouse Platform (DP):
+Модуль [`sdn`](/modules/sdn/) предоставляет функции [программно-определяемых сетей](../../glossary.html#sdn) (SDN, Software Defined Networking) в Deckhouse Platform (DP):
 
 - настройку сетевых интерфейсов на узлах;
-- дополнительные сети для подов и виртуальных машин;
-- IPAM (IP Address Management) для дополнительных сетей. Механизм IPAM  позволяет выделять IPv4-адреса из пулов и назначать их на дополнительные сетевые интерфейсы подов, подключаемых к кластерным сетям (ClusterNetwork) и сетям проекта (Network);
-- underlay-сети для проброса аппаратных сетевых устройств;
-- системные сети для служебного трафика на узлах.
+- [дополнительные сети](../../glossary.html#additional-network) для подов и виртуальных машин;
+- [IPAM](../../glossary.html#sdn-ipam) (IP Address Management) для дополнительных сетей. Механизм IPAM  позволяет выделять IPv4-адреса из пулов и назначать их на дополнительные сетевые интерфейсы подов, подключаемых к [кластерным сетям](../../glossary.html#cluster-network) (ClusterNetwork) и [сетям проекта](../../glossary.html#project-network) (Network);
+- [underlay-сети](../../glossary.html#underlay-network) для проброса аппаратных сетевых устройств;
+- [системные сети](../../glossary.html#system-network) для служебного трафика на узлах.
 
 Модуль работает со следующими кастомными ресурсами API-группы `network.deckhouse.io`:
 
@@ -21,7 +21,7 @@ description: Архитектура модуля sdn в Deckhouse Platform.
 - [ClusterNetwork](/modules/sdn/cr.html#clusternetwork) — определяет общедоступную сеть в масштабе всего кластера;
 - [IPAddress](/modules/sdn/cr.html#ipaddress) — представляет запрос на IPv4-адрес для дополнительного сетевого интерфейса пода, подключённого к сети проекта;
 - [IPAddressLease](/modules/sdn/cr.html#ipaddresslease) — запись резервирования выделенного IP-адреса, предотвращающая его повторное присвоение;
-- [IPAddressPool](/modules/sdn/cr.html#ipaddresspool) — определяет пул IPv4-адресов в рамках пользовательского неймспейса, используемый для IPAM в сети проекта;
+- [IPAddressPool](/modules/sdn/cr.html#ipaddresspool) — определяет пул IPv4-адресов в рамках [пользовательского неймспейса](../../glossary.html#user-namespace), используемый для IPAM в сети проекта;
 - [Network](/modules/sdn/cr.html#network) — namespaced-ресурс, создаёт выделенную сеть проекта на основе класса сети, заданного администратором в ресурсе NetworkClass;
 - [NetworkClass](/modules/sdn/cr.html#networkclass) — задаёт диапазон VLAN-тегов и узловые сетевые интерфейсы, на основе которых пользователи могут создавать собственные ресурсы Network;
 - [NodeNetworkInterface](/modules/sdn/cr.html#nodenetworkinterface) — описывает сетевой интерфейс на узле, используется как для обнаружения существующих интерфейсов, так и для создания новых (VLAN, Bond);
@@ -61,7 +61,7 @@ description: Архитектура модуля sdn в Deckhouse Platform.
    - настраивает сетевые интерфейсы узла (агрегация портов, объединение в бридж, настройка VLAN-интерфейсов);
    - поднимает дополнительные, underlay- и системные сети;
    - реализует CNI-сервер, к которому по Unix-сокету обращается компонент d8-sdn;
-   - реализует драйвер Dynamic Resource Allocation (DRA) для API-группы `network.deckhouse.io`, регистрируясь в качестве DRA-плагина в kubelet для проброса физических и виртуальных сетевых устройств в под. Функционал доступен в редакциях DP Ultimate/EE, Certified Core/CSE Lite (1.73), Certified Pro/CSE Pro (1.73).
+   - реализует драйвер Dynamic Resource Allocation (DRA) для API-группы `network.deckhouse.io`, регистрируясь в качестве DRA-плагина в kubelet для проброса физических и виртуальных сетевых устройств в под. Функционал доступен в [редакциях](../../glossary.html#edition) DP Ultimate/EE, Certified Core/CSE Lite (1.73), Certified Pro/CSE Pro (1.73).
 
    Agent отвечает за перевод конфигураций узлов кластера и запущенных на них подов в низкоуровневые настройки для сетевых интерфейсов и eBPF-программ, которые реально обрабатывают трафик.
 
@@ -84,7 +84,7 @@ description: Архитектура модуля sdn в Deckhouse Platform.
 
 1. **Scheduler** (Deployment) — расширение (extender) для kube-scheduler, предлагает узлы для размещения подов в соответствии с настройками сетевых интерфейсов подов.
 
-1. **Cni-plugin-cleaner** (DaemonSet) — Helm `pre-delete` [хук модуля](../../module-development/structure/#hooks), запускаемый контроллером Deckhouse перед удалением модуля [`sdn`](/modules/sdn/), который запускается на каждом узле и удаляет файлы CNI-плагина (исполняемый файл в `/opt/cni/bin` и конфигурацию в `/etc/cni/net.d`), установленные компонентом agent. Не участвует в штатной работе модуля.
+1. **Cni-plugin-cleaner** (DaemonSet) — Helm `pre-delete` [хук модуля](../../module-development/structure/#hooks), запускаемый [контроллером Deckhouse](../../glossary.html#deckhouse-controller) перед удалением модуля [`sdn`](/modules/sdn/), который запускается на каждом узле и удаляет файлы CNI-плагина (исполняемый файл в `/opt/cni/bin` и конфигурацию в `/etc/cni/net.d`), установленные компонентом agent. Не участвует в штатной работе модуля.
 
 1. **Cni-plugin-cleaner-waiter** (Job) — Helm `pre-delete` [хук модуля](../../module-development/structure/#hooks), запускаемый контроллером Deckhouse перед удалением модуля [`sdn`](/modules/sdn/), который ожидает завершения работы DaemonSet `cni-plugin-cleaner` на всех узлах кластера, прежде чем Helm разрешит завершить удаление релиза модуля.
 
@@ -106,7 +106,7 @@ description: Архитектура модуля sdn в Deckhouse Platform.
    - валидирует кастомные ресурсы API-группы `network.deckhouse.io`;
    - мутирует ресурсы NodeNetworkInterface и Pod.
 
-1. **Kube-scheduler** — отправляет на вебхук `sdn-scheduler-extender` запросы на планирование подов, использующих программно-определяемые сети.
+1. **Kube-scheduler** — отправляет на вебхук `sdn-scheduler-extender` запросы на планирование подов, использующих [программно-определяемые сети](../../glossary.html#sdn).
 
 1. **Containerd** — запускает исполняемый файл d8-sdn с определёнными командами в соответствии со спецификацией CNI, например ADD при создании сетевого пространства имён пода и DEL при его удалении.
 

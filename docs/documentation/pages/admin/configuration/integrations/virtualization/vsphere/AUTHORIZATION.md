@@ -13,10 +13,10 @@ The following prerequisites must be met for Deckhouse Platform to work correctly
 - Networks with DHCP and Internet access;
 - Shared Datastore resources available on all ESXi hosts in use;
 - vSphere version `7.x` or `8.x` with support for [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion);
-- vCenter accessible from inside the cluster from the master nodes;
+- vCenter accessible from inside the cluster from the [master nodes](../../../../glossary.html#master-node);
 - A configured Datacenter that includes the following objects:
   1. VirtualMachine template:
-     - The virtual machine image must use `Virtual machines with hardware version 15 or later` — this is required for online resize support.
+     - The [virtual machine image](../../../../glossary.html#vm-image) must use `Virtual machines with hardware version 15 or later` — this is required for online resize support.
      - The image must include the `open-vm-tools`, `cloud-init`, and [`cloud-init-vmware-guestinfo`](https://github.com/vmware-archive/cloud-init-vmware-guestinfo#installation) packages if the `cloud-init` version is lower than `21.3`.
   1. Network:
      - The network must be available on all ESXi hosts where virtual machines are planned to be created.
@@ -123,7 +123,7 @@ enabled
 {% endalert %}
 
 {% alert %}
-DP creates VM disks of type `eagerZeroedThick`, but the type of disks of created VMs may be changed without notification according to the `VM Storage Policy` settings in vSphere.  
+DP creates [VM disks](../../../../glossary.html#vm-disk) of type `eagerZeroedThick`, but the type of disks of created VMs may be changed without notification according to the `VM Storage Policy` settings in vSphere.  
 For more details, see the [documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
 {% endalert %}
 

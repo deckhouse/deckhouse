@@ -8,9 +8,9 @@ permalink: en/admin/configuration/platform-scaling/control-plane/updating-and-ve
 The control plane update process in DP is fully automated.
 
 - DP supports the latest five Kubernetes versions.
-- You can roll back the control plane one minor version and upgrade forward several minor versions — one at a time.
-- Patch versions (e.g., `1.27.3` → `1.27.5`) are updated automatically with Deckhouse and cannot be managed manually.
-- Minor versions are set manually using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter in the ClusterConfiguration resource.
+- You can roll back the control plane one [minor version](../../../../glossary.html#minor-version) and upgrade forward several minor versions — one at a time.
+- [Patch versions](../../../../glossary.html#patch-version) (e.g., `1.27.3` → `1.27.5`) are updated automatically with Deckhouse and cannot be managed manually.
+- Minor versions are set manually using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter in the [ClusterConfiguration](../../../../glossary.html#cluster-configuration) resource.
 
 ### Changing the Kubernetes version
 
@@ -55,15 +55,15 @@ The [`control-plane-manager`](/modules/control-plane-manager/) module includes t
 
 The `d8-cluster-kubernetes` ConfigMap displays:
 
-- **Component status**: Versions of control plane components (kube-apiserver, kube-scheduler, kube-controller-manager) on each master node.
+- **Component status**: Versions of control plane components (kube-apiserver, kube-scheduler, kube-controller-manager) on each [master node](../../../../glossary.html#master-node).
 - **Node progress**: How many nodes have been updated and the total count.
 - **Target and current version**: The desired version from configuration and the actual state during the update.
 - **Version mismatch**: If any components are running a version different from the target (including newer than desired).
 - **Version lists**:
-  - `supportedVersions`: Lists minor Kubernetes versions supported in the current DP release.
+  - `supportedVersions`: Lists minor Kubernetes versions supported in the current [DP release](../../../../glossary.html#dp-release).
   - `availableVersions`: Lists versions that can be selected for upgrade or downgrade in the *current* cluster. The set is limited by the highest minor version ever installed on the cluster and by the rule that downgrade proceeds one minor at a time.
 - **`maxUsedKubernetesVersion`**: The highest minor version the cluster has ever converged onto. It only ever rises, and it is what limits how far the version can be rolled back.
-- **`automaticVersion`**: Minor version that will be used when the update mode is `Automatic`. It describes the installed DP build rather than the state of the cluster.
+- **`automaticVersion`**: Minor version that will be used when the [update mode](../../../../glossary.html#update-mode) is `Automatic`. It describes the installed DP build rather than the state of the cluster.
 
 During `ControlPlaneUpdating`, `status.progress` reflects overall upgrade progress across intermediate minor versions. For a multi-hop upgrade (for example, 1.33 → 1.35), the percentage increases as each hop completes, not only when every control plane component reaches the final target.
 
@@ -273,7 +273,7 @@ metadata:
 
 #### Intermediate step of a multi-hop upgrade (e.g. 1.33 → 1.35)
 
-In the configuration, the target Kubernetes version may be several minor versions ahead of the current cluster version. In this case, the upgrade is performed step by step through intermediate minor versions.
+In the configuration, the target Kubernetes version may be several [minor versions](../../../../glossary.html#minor-version) ahead of the current cluster version. In this case, the upgrade is performed step by step through intermediate minor versions.
 
 The `status.currentVersion` field reflects the current upgrade step (the active minor version the cluster is being brought to at the moment). Within a single step, individual control plane components may temporarily run different minor versions.
 

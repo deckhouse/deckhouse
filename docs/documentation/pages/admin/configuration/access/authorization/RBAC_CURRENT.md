@@ -4,7 +4,7 @@ permalink: en/admin/configuration/access/authorization/rbac-current.html
 description: "Configure the basic RBAC authorization model in Deckhouse Platform. User-authz module setup, ClusterRole management, and role-based access control configuration."
 ---
 
-To use the basic role model, the [`user-authz`](/modules/user-authz/) module must be enabled in the cluster.
+To use the basic [role model](../../../../glossary.html#rbac), the [`user-authz`](/modules/user-authz/) module must be enabled in the cluster.
 This module creates a set of cluster roles (ClusterRole) suitable for most user and group access management tasks.
 
 {% alert level="warning" %}
@@ -15,24 +15,24 @@ The models are not resource-compatible â€” automatic conversion is impossible â€
 
 Key features of the basic role model:
 
-- Implements a role-based end-to-end authorization subsystem that extends the standard RBAC functionality.
+- Implements a role-based end-to-end authorization [subsystem](../../../../glossary.html#subsystem) that extends the standard RBAC functionality.
 - Access is configured with the custom resources [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) and [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule), on top of Kubernetes RBAC.
 - Controls access to scaling tools (via the `allowScale` parameter in the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-allowscale) or [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-allowscale) resource).
 - Controls access to port forwarding (via the `portForwarding` parameter in the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-portforwarding) or [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-portforwarding) resource).
 - Manages the list of allowed namespaces using the labelSelector format (via the `namespaceSelector` parameter in the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector) resource).
-- Namespace restrictions (multitenancy mode, `namespaceSelector`, `limitNamespaces`) are available in the DP Ultimate/EE, Certified Lite, Certified Pro, BE, SE, SE+, and CSE editions.
+- Namespace restrictions (multitenancy mode, `namespaceSelector`, `limitNamespaces`) are available in the DP Ultimate/EE, Certified Lite, Certified Pro, BE, SE, SE+, and CSE [editions](../../../../glossary.html#edition).
 
 ## High-level roles used in the basic model
 
 In addition to RBAC, the basic role model implemented via the [`user-authz`](/modules/user-authz/) module
-provides a convenient set of high-level roles:
+provides a convenient set of [high-level roles](../../../../glossary.html#high-level-role):
 
 | Role | Examples of allowed actions | Limitations |
 |------|-----------------------------|-------------|
 | **User** | View Pods, logs, and Deployments | Can't access secrets, ports, or containers |
 | **PrivilegedUser** | Access containers (via `kubectl exec`), view secrets, remove Pods | Can't modify a Deployment or Service |
 | **Editor** | Create and remove a Deployment, Service, or ConfigMap | Can't access a ReplicaSet or ClusterRoles |
-| **Admin** | Create and modify Pods, create ServiceAccount tokens (`serviceaccounts/token`), manage Role, RoleBinding, and AuthorizationRule objects, delete auxiliary objects (for example, ReplicaSet and the challenges and orders of the `acme.cert-manager.io` group) | Can't access cluster-wide resources |
+| **Admin** | Create and modify Pods, create ServiceAccount tokens (`serviceaccounts/token`), [manage Role](../../../../glossary.html#manage-role), RoleBinding, and AuthorizationRule objects, delete auxiliary objects (for example, ReplicaSet and the challenges and orders of the `acme.cert-manager.io` group) | Can't access cluster-wide resources |
 | **ClusterEditor** | Manage a limited set of cluster-wide objects used in application tasks: DaemonSet, StorageClass, CustomResourceDefinition, GatewayClass, and the objects that modules add at this level (for example, KeepalivedInstance) | Can't manage namespaces, quotas, ClusterRole (read-only access), and ClusterRoleBinding |
 | **ClusterAdmin** | Manage cluster-wide service objects: namespaces, quotas, NetworkPolicy, the proxy subresources of nodes, ClusterAuthorizationRule, ClusterRole, and ClusterRoleBinding | Can create ClusterAuthorizationRule objects only up to the `ClusterAdmin` level, and ClusterRoleBinding objects only to roles whose permissions it already holds |
 | **SuperAdmin** | Any actions are allowed (including `*` in RBAC), but with consideration to `limitNamespaces` | Limitations can be applied only using cluster policies |
@@ -45,7 +45,7 @@ The `limitNamespaces` and `allowAccessToSystemNamespaces` parameters of the [Clu
 
 In multitenancy mode, if the authorization webhook becomes unavailable, requests are **denied**, not allowed: the webhook runs before RBAC and is configured with `failurePolicy: Deny`, so a request it cannot answer does not reach RBAC. The exception is the identities listed in `matchConditions` of the AuthorizationConfiguration: control plane components, `kubernetes-api-proxy`, kubelets, the ServiceAccounts of the `kube-system` and `d8-*` namespaces, and anonymous kube-apiserver health probes (`/livez`, `/readyz`, `/healthz`) bypass the webhook, so the cluster keeps running and Deckhouse can restore the webhook.
 
-Some platform components place their objects into user namespaces (for example, Dex authenticator pods) and label them `deckhouse.io/system-resource: "true"`. Of the basic model levels, only `SuperAdmin` allows modifying and deleting such objects and running `exec`, `attach`, and `port-forward` in such pods: the subjects of a rule with this level receive the `user-authz:super-admin` role and count as cluster administrators. For details, see [Admin level restrictions and superadmin rights](rbac-experimental.html#admin-level-restrictions-and-superadmin-rights).
+Some platform components place their objects into [user namespaces](../../../../glossary.html#user-namespace) (for example, Dex authenticator pods) and label them `deckhouse.io/system-resource: "true"`. Of the basic model levels, only `SuperAdmin` allows modifying and deleting such objects and running `exec`, `attach`, and `port-forward` in such pods: the subjects of a rule with this level receive the `user-authz:super-admin` role and count as cluster administrators. For details, see [Admin level restrictions and superadmin rights](rbac-experimental.html#admin-level-restrictions-and-superadmin-rights).
 
 ## Default access list for each high-level role
 

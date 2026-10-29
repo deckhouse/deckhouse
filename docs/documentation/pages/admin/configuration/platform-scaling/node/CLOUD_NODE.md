@@ -6,9 +6,9 @@ description: "Manage cloud nodes in Deckhouse Platform including CloudEphemeral,
 
 In Deckhouse Platform (DP), cloud nodes can be of the following types:
 
-- **CloudEphemeral** — temporary nodes that are automatically created and deleted.
-- **CloudPermanent** — permanent nodes managed manually via `replicas`.
-- **CloudStatic** — static cloud nodes. The machines are created manually or by external tools and DP connects them to the cluster and manages them just like the regular nodes.
+- **[CloudEphemeral](../../../../glossary.html#cloud-ephemeral-node)** — temporary nodes that are automatically created and deleted.
+- **[CloudPermanent](../../../../glossary.html#cloud-permanent-node)** — permanent nodes managed manually via `replicas`.
+- **[CloudStatic](../../../../glossary.html#cloud-static-node)** — static cloud nodes. The machines are created manually or by external tools and DP connects them to the cluster and manages them just like the regular nodes.
 
 Below are instructions for adding and configuring each type.
 
@@ -18,7 +18,7 @@ CloudEphemeral nodes are automatically created and managed within the cluster us
 
 To add nodes:
 
-1. Ensure that the cloud provider module is enabled. For example: [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/), [`cloud-provider-aws`](/modules/cloud-provider-aws/).
+1. Ensure that the [cloud provider](../../../../glossary.html#cloud-provider) module is enabled. For example: [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/), [`cloud-provider-aws`](/modules/cloud-provider-aws/).
 
 1. Create an [InstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) object with the machine configuration. This object describes the parameters of the virtual machines to be created in the cloud.
 
@@ -70,7 +70,7 @@ To add nodes:
 
 ## Configuration for CloudEphemeral NodeGroups
 
-NodeGroups of CloudEphemeral type are designed for automatic scaling by creating and removing virtual machines in the cloud using the Machine Controller Manager (MCM). This type of groups is commonly used in cloud-based DP clusters.
+NodeGroups of [CloudEphemeral](../../../../glossary.html#cloud-ephemeral-node) type are designed for automatic scaling by creating and removing virtual machines in the cloud using the Machine Controller Manager (MCM). This type of groups is commonly used in cloud-based DP clusters.
 
 Node configuration is defined in the `cloudInstances` section and includes parameters for scaling, zoning, fault tolerance, and prioritization.
 
@@ -90,7 +90,7 @@ spec:
 
 ## Modifying the cloud provider configuration in a cluster
 
-The configuration of the cloud provider used in a cloud or hybrid cluster is stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` is the name/code of the provider. For example, for the OpenStack provider, the structure is called [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}{% endif %}/modules/cloud-provider-openstack/cluster_configuration.html).
+The configuration of the [cloud provider](../../../../glossary.html#cloud-provider) used in a cloud or [hybrid cluster](../../../../glossary.html#hybrid-cluster) is stored in the `<PROVIDER_NAME>ClusterConfiguration` structure, where `<PROVIDER_NAME>` is the name/code of the provider. For example, for the OpenStack provider, the structure is called [OpenStackClusterConfiguration]({% if site.mode == 'module' and site.d8Revision == 'CE' %}{{ site.urls[page.lang] }}{% endif %}/modules/cloud-provider-openstack/cluster_configuration.html).
 
 Regardless of the cloud provider used, its settings can be modified using the following command:
 
@@ -100,7 +100,7 @@ d8 system edit provider-cluster-configuration
 
 ## NodeGroup autoscaling
 
-In Deckhouse Platform (DP), node group autoscaling is performed based on resource demands (CPU and memory) by the `Cluster Autoscaler` component, which is part of the [`node-manager`](/modules/node-manager/) module.
+In Deckhouse Platform (DP), [node group autoscaling](../../../../glossary.html#node-group-autoscaling) is performed based on resource demands (CPU and memory) by the `Cluster Autoscaler` component, which is part of the [`node-manager`](/modules/node-manager/) module.
 
 Autoscaling is triggered only when there are Pending pods that cannot be scheduled on existing nodes due to insufficient resources (e.g., CPU or memory). In this case, `Cluster Autoscaler` attempts to add nodes based on the NodeGroup configuration.
 
@@ -109,7 +109,7 @@ Key scaling parameters are defined in the [`cloudInstances`](/modules/node-manag
 - `minPerZone`: The minimum number of virtual machines per zone. This number is always maintained, even with no workload.
 - `maxPerZone`: The maximum number of nodes that can be created per zone. This defines the upper scaling limit.
 - `maxUnavailablePerZone`: Limits the number of unavailable nodes during updates, deletions, or creation.
-- `standby`: Optional parameter that allows pre-provisioning standby nodes.
+- `standby`: Optional parameter that allows pre-provisioning [standby nodes](../../../../glossary.html#standby-node).
 - `priority`: Integer priority of the group. When scaling, `Cluster Autoscaler` prefers groups with a higher `priority` value. This allows you to define scaling order among multiple NodeGroups. You can control the rate at which nodes are switched to lower-priority groups on demand (for more details, see the [FAQ](../../../../faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in)).
 
 Example configuration of a NodeGroup with autoscaling:
@@ -189,7 +189,7 @@ There are two ways to solve this problem:
 {% alert level="info" %}
 DP tolerates the `dedicated` key by default, so we recommend using the `dedicated` key with any value for taints on your dedicated nodes.
 
-To use custom keys for taints (e.g., `dedicated.client.com`), you must add the key's value to the `modules.placement.customTolerationKeys` parameter. This way, Deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
+To use custom keys for taints (e.g., `dedicated.client.com`), you must add the key's value to the `modules.placement.customTolerationKeys` parameter. This way, Deckhouse can deploy [system components](../../../../glossary.html#system-component) (e.g., `cni-flannel`) to these dedicated nodes.
 {% endalert %}
 
 ### Accelerating node provisioning in the cloud during horizontal application scaling
@@ -248,7 +248,7 @@ Additional settings for cloud nodes can be defined using [NodeGroupConfiguration
 - Add root certificates.
 - Configure trust for private image registries, etc.
 
-NodeGroupConfiguration is applied to new nodes at creation time, including CloudEphemeral nodes.
+NodeGroupConfiguration is applied to new nodes at creation time, including [CloudEphemeral nodes](../../../../glossary.html#cloud-ephemeral-node).
   
 {% alert level="info" %}  
 NodeGroupConfiguration applies only to nodes with a specified operating system image (`bundle`).  
@@ -504,9 +504,9 @@ spec:
 
 ## Adding CloudPermanent nodes to a cloud cluster
 
-To add `CloudPermanent` nodes to a DP cloud cluster:
+To add `CloudPermanent` nodes to a DP [cloud cluster](../../../../glossary.html#cloud-cluster):
 
-1. Make sure that the corresponding cloud provider module is enabled, for example, [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/), or [`cloud-provider-aws`](/modules/cloud-provider-aws/).
+1. Make sure that the corresponding [cloud provider](../../../../glossary.html#cloud-provider) module is enabled, for example, [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/), or [`cloud-provider-aws`](/modules/cloud-provider-aws/).
 
    You can check the status of a specific module using the following command:
 
@@ -520,7 +520,7 @@ To add `CloudPermanent` nodes to a DP cloud cluster:
    d8 k -n d8-system get module cloud-provider-yandex
    ```
 
-1. Add a `CloudPermanent` node group to the `nodeGroups` section of the `(Provider)ClusterConfiguration` object. `CloudPermanent` nodes are managed by Terraform built into DP.
+1. Add a `CloudPermanent` [node group](../../../../glossary.html#node-group) to the `nodeGroups` section of the `(Provider)ClusterConfiguration` object. `CloudPermanent` nodes are managed by Terraform built into DP.
 
    To edit the configuration of a running cluster, use the following command:
 
@@ -553,7 +553,7 @@ To add `CloudPermanent` nodes to a DP cloud cluster:
 
    Field names and structure may differ for other cloud providers. Refer to the `(Provider)ClusterConfiguration` specification or the documentation for the corresponding cloud provider, for example, [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration).
 
-1. Start the DP installer container on your local computer or an administrative host. Use an image with the same edition and version as the cluster:
+1. Start the DP [installer](../../../../glossary.html#installer) container on your local computer or an administrative host. Use an image with the same [edition](../../../../glossary.html#edition) and version as the cluster:
 
    ```shell
    docker run --pull=always --rm -it \
@@ -571,7 +571,7 @@ To add `CloudPermanent` nodes to a DP cloud cluster:
      --ssh-agent-private-keys /tmp/.ssh/<KEY>
    ```
 
-1. Apply the configuration. For the `--ssh-user` parameter, specify a user that can connect to the master node over SSH and execute commands using `sudo`:
+1. Apply the configuration. For the `--ssh-user` parameter, specify a user that can connect to the [master node](../../../../glossary.html#master-node) over SSH and execute commands using `sudo`:
 
    ```shell
    dhctl converge \
@@ -599,13 +599,13 @@ Deckhouse Platform can run on top of Managed Kubernetes services, such as GKE an
 
 ## Adding a CloudStatic node to a cluster
 
-Adding a static node can be done manually or using the Cluster API Provider Static (CAPS).
+Adding a [static node](../../../../glossary.html#static-node) can be done manually or using the [Cluster API Provider Static](../../../../glossary.html#caps) (CAPS).
 
 ### Manually
 
 Follow the steps below to add a new static node (e.g., VM or bare metal server) to the cluster:
 
-1. For [CloudStatic nodes](/modules/node-manager/cr.html#nodegroup) in the following cloud providers, refer to the steps outlined in the documentation:
+1. For [CloudStatic nodes](/modules/node-manager/cr.html#nodegroup) in the following [cloud providers](../../../../glossary.html#cloud-provider), refer to the steps outlined in the documentation:
    - [For AWS](/modules/cloud-provider-aws/faq.html#adding-cloudstatic-nodes-to-a-cluster)
    - [For GCP](/modules/cloud-provider-gcp/faq.html#adding-cloudstatic-nodes-to-a-cluster)
    - [For YC](/modules/cloud-provider-yandex/faq.html#adding-cloudstatic-nodes-to-a-cluster)
@@ -814,11 +814,11 @@ This example shows how you can use filters in the [StaticInstance](/modules/node
 
 ## Adding master nodes in a cloud cluster
 
-To add master nodes in a cloud cluster:
+To add [master nodes](../../../../glossary.html#master-node) in a [cloud cluster](../../../../glossary.html#cloud-cluster):
 
 1. Make sure the [`control-plane-manager`](/modules/control-plane-manager/) module is enabled.
 
-1. Open the ClusterConfiguration file (e.g., OpenStackClusterConfiguration).
+1. Open the [ClusterConfiguration](../../../../glossary.html#cluster-configuration) file (e.g., OpenStackClusterConfiguration).
 
 1. Add or update the `masterNodeGroup` section:
 
@@ -951,7 +951,7 @@ status:
     type: Ready
 ```
 
-**Updating**: A node group contains at least one node in which there is an annotation with the prefix `update.node.deckhouse.io` (for example, `update.node.deckhouse.io/waiting-for-approval`).
+**Updating**: A [node group](../../../../glossary.html#node-group) contains at least one node in which there is an annotation with the prefix `update.node.deckhouse.io` (for example, `update.node.deckhouse.io/waiting-for-approval`).
 
 **WaitingForDisruptiveApproval**: A node group contains at least one node that has an annotation `update.node.deckhouse.io/disruption-required` and
 there is no annotation `update.node.deckhouse.io/disruption-approved`.

@@ -134,4 +134,4 @@ lang: ru
    Preserve client IP addresses = Off
    ```
 
-1. Перезагрузите узлы кластера по одному, включая master-узлы.
+1. Перезагрузите узлы кластера по одному, включая [master-узлы](../../../../glossary.html#master-node).

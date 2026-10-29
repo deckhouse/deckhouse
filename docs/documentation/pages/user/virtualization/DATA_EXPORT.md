@@ -23,7 +23,7 @@ An example of exporting a disk, with the command run on a cluster node:
 d8 data export download -n <NAMESPACE> vd/<VD_NAME> -o file.img
 ```
 
-An example of exporting a disk snapshot, with the command run on a cluster node:
+An example of exporting a [disk snapshot](../../glossary.html#vm-snapshot), with the command run on a cluster node:
 
 ```shell
 d8 data export download -n <NAMESPACE> vds/<VD_SNAPSHOT_NAME> -o file.img
@@ -35,7 +35,7 @@ If you export data from somewhere other than a cluster node (for example, from y
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Stop the virtual machine the disk is attached to. While the disk is in use, the **Download** item isn't available.
 1. Go to **Virtualization** → **Disks**.
 1. In the row of the disk you need, click the ellipsis button and select **Download**.

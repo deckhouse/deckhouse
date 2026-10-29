@@ -24,12 +24,12 @@ description: Архитектура модуля node-manager для CloudStatic
 ## Компоненты модуля
 
 {% alert level="info" %}
-Bashible — это ключевой компонент подсистемы Cluster & Infrastructure, обеспечивающий работу модуля `node-manager`. При этом он не является компонентом модуля, поскольку работает на уровне ОС в качестве системной службы. Bashible подробно описан в [соответствующем разделе документации](bashible.html)
+[Bashible](../../../glossary.html#bashible) — это ключевой компонент подсистемы Cluster & Infrastructure, обеспечивающий работу модуля `node-manager`. При этом он не является компонентом модуля, поскольку работает на уровне ОС в качестве системной службы. Bashible подробно описан в [соответствующем разделе документации](bashible.html)
 {% endalert %}
 
 Модуль, управляющий CloudStatic-узлами, состоит из следующих компонентов:
 
-1. **Bashible-api-server** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), развернутый на master-узлах. Генерирует bashible-скрипты из шаблонов, хранящихся в кастомных ресурсах. При обращении к kube-apiserver за ресурсами, содержащими бандлы bashible, kube-apiserver перенаправляет запрос в bashible-api-server и возвращает сформированный результат. Подробнее с описанием работы bashible и bashible-api-server можно ознакомиться в [соответствующем разделе документации](bashible.html).
+1. **[Bashible-api-server](../../../glossary.html#bashible-api-server)** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), развернутый на [master-узлах](../../../glossary.html#master-node). Генерирует bashible-скрипты из шаблонов, хранящихся в кастомных ресурсах. При обращении к kube-apiserver за ресурсами, содержащими [бандлы bashible](../../../glossary.html#bashible-bundle), kube-apiserver перенаправляет запрос в bashible-api-server и возвращает сформированный результат. Подробнее с описанием работы bashible и bashible-api-server можно ознакомиться в [соответствующем разделе документации](bashible.html).
 
 1. **Node-controller** (Deployment) — контроллер, управляющий жизненным циклом кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup). Node-controller выполняет следующие операции:
 
@@ -48,7 +48,7 @@ Bashible — это ключевой компонент подсистемы Clu
    * **node-controller** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контроллера.
 
-1. **Node-group-exporter** (Deployment) — компонент, экспортирующий метрики ресурса NodeGroup в формате Prometheus, содержащие информацию о количестве узлов в каждой группе узлов: общее количество, количество узлов в статусе `Ready`, количество узлов в ошибке, минимальное и максимальное количество узлов в группе и т.д.
+1. **Node-group-exporter** (Deployment) — компонент, экспортирующий метрики ресурса NodeGroup в формате Prometheus, содержащие информацию о количестве узлов в каждой [группе узлов](../../../glossary.html#node-group): общее количество, количество узлов в статусе `Ready`, количество узлов в ошибке, минимальное и максимальное количество узлов в группе и т.д.
 
    Компонент включает в себя следующие контейнеры:
 
@@ -62,11 +62,11 @@ Bashible — это ключевой компонент подсистемы Clu
    * **control-plane-manager** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контроллера.
 
-1. **Caps-controller-manager** (Deployment) — CAPI Provider Static (CAPS), реализация провайдера декларативного управления статическими узлами (серверами bare metal или виртуальными машинами) для проекта [Cluster API Kubernetes](https://github.com/kubernetes-sigs/cluster-api). Работает как дополнение к capi-controller-manager.
+1. **Caps-controller-manager** (Deployment) — CAPI Provider Static ([CAPS](../../../glossary.html#caps)), реализация провайдера декларативного управления [статическими узлами](../../../glossary.html#static-node) (серверами bare metal или виртуальными машинами) для проекта [Cluster API Kubernetes](https://github.com/kubernetes-sigs/cluster-api). Работает как дополнение к capi-controller-manager.
 
    CAPS представляет собой дополнительный слой абстракции над существующим функционалом DP по автоматической настройке и очистке статических узлов с помощью скриптов, генерируемых для каждой группы узлов. Компонент не привязан к конкретному облаку. Подробнее про работу CAPS можно почитать в [документации модуля `node-manager`](/modules/node-manager/#работа-со-статическими-узлами).
 
-1. **Fencing-agent** (DaemonSet) и **fencing-controller** — компоненты, реализующие механизм fencing. Принцип работы компонентов подробно разобран [в описании параметра `spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) ресурса NodeGroup. Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](/modules/node-manager/faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов) документации модуля `node-manager`.
+1. **Fencing-agent** (DaemonSet) и **fencing-controller** — компоненты, реализующие механизм [fencing](../../../glossary.html#fencing). Принцип работы компонентов подробно разобран [в описании параметра `spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) ресурса NodeGroup. Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](/modules/node-manager/faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов) документации модуля `node-manager`.
 
 ## Взаимодействия модуля
 

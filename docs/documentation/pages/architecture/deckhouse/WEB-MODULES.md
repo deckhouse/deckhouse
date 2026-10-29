@@ -7,7 +7,7 @@ description: Architecture of the Deckhouse Platform modules that provide the sys
 
 ## Console module
 
-The [`console`](/modules/console/) module implements the web interface of Deckhouse Platform (DP), simplifying platform management and enabling the system state monitoring.
+The [`console`](/modules/console/) module implements the [web interface of Deckhouse](../../glossary.html#web-ui) Platform (DP), simplifying platform management and enabling the system state monitoring.
 
 ### Module architecture
 
@@ -42,9 +42,9 @@ The module consists of the following components:
    * Detecting DP and Kubernetes versions.
    * Loading metrics and logs.
    * Loading platform availability information.
-   * Downloading VM disks (when the [`virtualization`](/modules/virtualization/) and [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) modules are enabled).
+   * Downloading [VM disks](../../glossary.html#vm-disk) (when the [`virtualization`](/modules/virtualization/) and [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) modules are enabled).
 
-1. **Observability-gw**: Consists of a single **nginx** container and proxies requests to Grafana to embed dashboards into the platform's main web UI, as well as to work with metrics and logs for the selected project.
+1. **Observability-gw**: Consists of a single **nginx** container and proxies requests to Grafana to embed [dashboards](../../glossary.html#dashboard) into the platform's main web UI, as well as to work with metrics and logs for the selected project.
 
 ### Module interactions
 

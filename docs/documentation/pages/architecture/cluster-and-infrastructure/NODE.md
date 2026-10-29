@@ -9,20 +9,20 @@ description: Node management in Deckhouse Platform — node types, provisioning 
 
 In Deckhouse Platform (DP), nodes are divided into the following types:
 
-- **CloudEphemeral**: Nodes are automatically provisioned, created, and deleted in the configured cloud provider.
-- **CloudPermanent**: Persistent nodes created and updated by the [`node-manager`](/modules/node-manager/) module. The nodes differ in that their configuration comes not from the [NodeGroup](/modules/node-manager/cr.html#nodegroup) custom resource, but from a special resource &lt;PROVIDER&gt;ClusterConfiguration (for example, [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html) for AWS). Also, an important difference is that to apply a node configuration, you need to run `dhctl converge` (by running the DP installer). An example of a CloudPermanent node in a cloud cluster is a cluster master node.
-- **CloudStatic**: Created manually or by any external tools, located in the same cloud that is integrated with one of the cloud provider modules:
+- **[CloudEphemeral](../../../glossary.html#cloud-ephemeral-node)**: Nodes are automatically provisioned, created, and deleted in the configured [cloud provider](../../../glossary.html#cloud-provider).
+- **[CloudPermanent](../../../glossary.html#cloud-permanent-node)**: Persistent nodes created and updated by the [`node-manager`](/modules/node-manager/) module. The nodes differ in that their configuration comes not from the [NodeGroup](/modules/node-manager/cr.html#nodegroup) custom resource, but from a special resource &lt;PROVIDER&gt;[ClusterConfiguration](../../../glossary.html#cluster-configuration) (for example, [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html) for AWS). Also, an important difference is that to apply a node configuration, you need to run `dhctl converge` (by running the DP [installer](../../../glossary.html#installer)). An example of a CloudPermanent node in a [cloud cluster](../../../glossary.html#cloud-cluster) is a cluster [master node](../../../glossary.html#master-node).
+- **[CloudStatic](../../../glossary.html#cloud-static-node)**: Created manually or by any external tools, located in the same cloud that is integrated with one of the cloud provider modules:
   - CloudStatic nodes have several features related to integration with the cloud provider. These nodes are managed by the `cloud-controller-manager` component, resulting in:
     - Zone and region metadata being automatically added to the Node object.
     - When the virtual machine is deleted in the cloud, the corresponding Node object is also removed from the cluster.
-    - CSI driver can be used to attach cloud volumes.
-- **Static**: Static node hosted on a bare-metal server or a virtual machine. In the case of a cloud environment, the `cloud-controller-manager` component does not manage such a node — even if one of the cloud providers is enabled. To learn more about working with static nodes, refer to the [`node-manager` documentation](/modules/node-manager/#working-with-static-nodes).
+    - [CSI driver](../../../glossary.html#csi-driver) can be used to attach cloud volumes.
+- **Static**: [Static node](../../../glossary.html#static-node) hosted on a bare-metal server or a virtual machine. In the case of a cloud environment, the `cloud-controller-manager` component does not manage such a node — even if one of the cloud providers is enabled. To learn more about working with static nodes, refer to the [`node-manager` documentation](/modules/node-manager/#working-with-static-nodes).
 
 {% alert level="info" %}
 For Deckhouse Virtualization Platform (DVP), the DVPClusterConfiguration resource is not used. The CloudPermanent node parameters are set in the [NodeGroup](/modules/node-manager/cr.html#nodegroup), [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass), and [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) ModuleConfig resources.
 {% endalert %}
 
-Nodes are added to the cluster by creating a NodeGroup object, which describes the type, parameters, and configuration of the node group. For CloudEphemeral groups, DP interprets this object and automatically creates the corresponding nodes, registering them in the Kubernetes cluster. For other types (e.g., CloudPermanent or Static), node creation and registration must be done manually or via external tools.
+Nodes are added to the cluster by creating a NodeGroup object, which describes the type, parameters, and configuration of the [node group](../../../glossary.html#node-group). For CloudEphemeral groups, DP interprets this object and automatically creates the corresponding nodes, registering them in the Kubernetes cluster. For other types (e.g., CloudPermanent or Static), node creation and registration must be done manually or via external tools.
 
 Hybrid groups are also supported, where a single NodeGroup can include both Static nodes deployed in the cloud and static (bare-metal or virtual machine) nodes. For example, the main load may be handled by bare-metal servers, while cloud instances are used as scalable additions during peak loads.
 
@@ -38,7 +38,7 @@ DP automatically deploys cluster nodes by performing the following **idempotent*
   - Required packages are installed from distribution repositories.
   - Kernel parameters, logging settings, log rotation, and other system parameters are configured.
 - Installation of required versions of `containerd` and kubelet, and registration of the node in the Kubernetes cluster.
-- Kubernetes-api-proxy setup and updating the upstream list for balancing requests from the node to the Kubernetes API.
+- [Kubernetes-api-proxy](../../../glossary.html#kubernetes-api-proxy) setup and updating the upstream list for balancing requests from the node to the Kubernetes API.
 
 ### Maintaining node state
 
@@ -82,16 +82,16 @@ Two node scaling modes are available:
 
 ## Working with Static nodes
 
-When working with static nodes, [node-manager](/modules/node-manager/) functions are limited as follows:
+When working with [static nodes](../../../glossary.html#static-node), [node-manager](/modules/node-manager/) functions are limited as follows:
 
 - **No node provisioning.** Resource allocation (bare-metal servers, VMs, etc.) is manual. Further configuration (joining the cluster, monitoring, etc.) can be fully or partially automated.
-- **No auto-scaling.** Maintaining node count in a group is available using Cluster API Provider Static (via the `staticInstances.count` parameter). DP tries to keep the specified node count in the group, removing excessive nodes and configuring the new ones (from StaticInstance resources in *Pending* state).
+- **No auto-scaling.** Maintaining node count in a group is available using [Cluster API Provider Static](../../../glossary.html#caps) (via the `staticInstances.count` parameter). DP tries to keep the specified node count in the group, removing excessive nodes and configuring the new ones (from StaticInstance resources in *Pending* state).
 
 Node configuration, draining, adding to the cluster and removal can be performed in one of the following ways:
 
 - **Manually** using prepared scripts.
 
-  To configure a server (VM) and add a node to the cluster, download and run a bootstrap script. It's generated for each static NodeGroup and stored in the secret `d8-cloud-instance-manager/manual-bootstrap-for-<NODEGROUP-NAME>`.
+  To configure a server (VM) and add a node to the cluster, download and run a [bootstrap script](../../../glossary.html#bootstrap-script). It's generated for each static NodeGroup and stored in the secret `d8-cloud-instance-manager/manual-bootstrap-for-<NODEGROUP-NAME>`.
 
   To remove a node from the cluster and wipe the server (VM), use the `/var/lib/bashible/cleanup_static_node.sh` script (already present on each static node).
 
@@ -111,7 +111,7 @@ Node configuration, draining, adding to the cluster and removal can be performed
 
 Grouping and managing nodes as a group means that all group nodes will share metadata from the `NodeGroup` custom resource.
 
-Monitoring features for node groups include:
+Monitoring features for [node groups](../../../glossary.html#node-group) include:
 
 - Grouped node parameter charts
 - Grouped node availability alerts
@@ -123,7 +123,7 @@ The Instance resource in Kubernetes represents a definition of an ephemeral virt
 
 The object has no specification. Its status includes:
 
-1. Reference to InstanceClass if available.
+1. Reference to [InstanceClass](../../../glossary.html#instance-class) if available.
 1. Reference to the Kubernetes Node object.
 1. Current machine status.
 1. Info on how to check machine creation logs (available during machine creation).

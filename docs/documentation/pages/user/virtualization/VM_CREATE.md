@@ -11,9 +11,9 @@ To create a virtual machine (VM), use the [VirtualMachine](/modules/virtualizati
 - the resources required for the virtual machine to run (CPU, memory, disks, and images);
 - the placement rules for the virtual machine on cluster nodes;
 - the bootloader settings and optimal parameters for the guest OS;
-- the virtual machine startup policy and the policy for applying changes;
+- the virtual machine [startup policy](../../glossary.html#vm-run-policy) and the policy for applying changes;
 - the initial configuration scripts (cloud-init);
-- the list of block devices.
+- the list of [block devices](../../glossary.html#vm-block-device).
 
 For a full description of virtual machine configuration parameters, see the [configuration reference](/modules/virtualization/cr.html#virtualmachine).
 
@@ -102,11 +102,11 @@ The following steps show how to start an Ubuntu 24.04 virtual machine on the dis
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Click **Create**.
 1. In the form that opens, enter `linux-vm` in the **Name** field.
-1. In the **Resources** section, set `1` in the **CPU cores** field, `10%` in the **Core fraction** field, and `1Gi` in the **Memory size** field.
+1. In the **Resources** section, set `1` in the **CPU cores** field, `10%` in the **[Core fraction](../../glossary.html#vm-core-fraction)** field, and `1Gi` in the **Memory size** field.
 1. In the **Disks** section, click **Add**.
 1. In the **Disks / Images** window that opens, select **Existing** and pick the `linux-vm-root` disk from the list.
 1. Scroll down to the **Cloud-init** toggle and enable it.
@@ -167,7 +167,7 @@ In the `Starting` phase, the dependent resources are ready and Deckhouse Platfor
 d8 k get vm <VM_NAME> -o json | jq '.status.conditions[] | select(.type=="Running")'
 ```
 
-In the `Migrating` phase, the machine moves to another node by live migration. The migration doesn't start or gets interrupted if the CPU instruction sets on the nodes are incompatible, the kernel versions differ, no node matches the placement rules, or the suitable nodes lack resources. The `Migrating` condition together with the [`.status.migrationState`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-migrationstate) block shows the migration progress:
+In the `Migrating` phase, the machine moves to another node by [live migration](../../glossary.html#live-migration). The migration doesn't start or gets interrupted if the CPU instruction sets on the nodes are incompatible, the kernel versions differ, no node matches the placement rules, or the suitable nodes lack resources. The `Migrating` condition together with the [`.status.migrationState`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-migrationstate) block shows the migration progress:
 
 ```shell
 d8 k get vm <VM_NAME> -o json | jq '.status | {condition: .conditions[] | select(.type=="Migrating"), migrationState}'
@@ -183,12 +183,12 @@ For a running machine, a few conditions are worth watching:
 - `FirmwareUpToDate` with the `False` status means that it's time to update the VM firmware.
 - `ConfigurationApplied` with the `False` status means that the specified configuration hasn't been applied to the running machine yet.
 - `AwaitingRestartToApplyConfiguration` with the `True` status means that some of the changes apply only after a restart, and you have to perform it manually.
-- `SizingPolicyMatched` with the `False` status means that the machine resources don't match the sizing policy of its class. Until you bring the parameters in line with the policy, you can't save configuration changes.
+- `SizingPolicyMatched` with the `False` status means that the machine resources don't match the [sizing policy](../../glossary.html#sizing-policy) of its class. Until you bring the parameters in line with the policy, you can't save configuration changes.
 - `Migratable` shows whether the machine can be moved by live migration. The condition is computed only for a running VM, and a powered-off one doesn't have it. The `False` status with the `VirtualMachineNoMigrationTarget` reason means that the machine itself is suitable for migration, but there's no suitable node in the cluster. The `True` status with the `VirtualMachineWaitingForMigrationTarget` reason means that suitable nodes exist, but none of them can accept the machine right now, and this state resolves on its own.
 
 ### Eviction from a node
 
-The `EvictionRequired` condition appears when the node with your VM is put into maintenance mode. If the node was only made unschedulable with the `d8 k cordon` command but maintenance hasn't started, the condition doesn't appear.
+The `EvictionRequired` condition appears when the node with your VM is put into [maintenance mode](../../glossary.html#maintenance-mode). If the node was only made unschedulable with the `d8 k cordon` command but maintenance hasn't started, the condition doesn't appear.
 
 The condition message tells you what will happen to the machine, namely a live migration without stopping the guest OS, a restart by DP with the cluster administrator's permission, or waiting until the machine is restarted. A machine that can be moved by live migration isn't restarted just to free the node. Until the eviction starts, the condition is only a warning, because maintenance can be canceled.
 
@@ -198,10 +198,10 @@ After a restart, the machine starts on another suitable node. If there's no such
 
 The web interface shows the phase of a machine, its resources, and current problems on the machine page.
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the VM you need from the list and click its name.
 
-The page header shows the current VM phase, its IP address, class, resource configuration, the number of attached disks and images, the node it's placed on, whether the guest OS agent is running, and the time since startup. The page itself is split into the **Configuration**, **Monitoring**, **Operations**, **Events**, **VNC**, **TTY**, **Network policies**, **Snapshots**, **Diagnostics**, **Meta**, and **YAML** tabs.
+The page header shows the current VM phase, its IP address, class, resource configuration, the number of attached disks and images, the node it's placed on, whether the [guest OS agent](../../glossary.html#vm-guest-agent) is running, and the time since startup. The page itself is split into the **Configuration**, **Monitoring**, **Operations**, **Events**, **VNC**, **TTY**, **[Network policies](../../glossary.html#network-policy)**, **Snapshots**, **Diagnostics**, **Meta**, and **YAML** tabs.
 
-On the **Configuration** tab of a running VM, usage charts appear next to the **CPU cores** and **Memory size** fields. In the **Disks** block, each device shows its boot order number, name, size, status, attachment method, storage class, and current disk load. In the **Networks** block, the network name, its status, and the IP and MAC addresses are shown, and the main cluster network is labeled **Main**.
+On the **Configuration** tab of a running VM, usage charts appear next to the **CPU cores** and **Memory size** fields. In the **Disks** block, each device shows its boot order number, name, size, status, attachment method, storage class, and current disk load. In the **Networks** block, the network name, its status, and the IP and MAC addresses are shown, and the [main cluster network](../../glossary.html#main-network) is labeled **Main**.

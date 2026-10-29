@@ -6,7 +6,7 @@ search: политика сайзинга, sizingPolicy, coreFraction, памя�
 lang: ru
 ---
 
-Блок [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) задаёт, какие сочетания ядер, доли ядра и памяти разрешены виртуальным машинам (ВМ) этого класса.
+Блок [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) задаёт, какие сочетания ядер, [доли ядра](../../../glossary.html#vm-core-fraction) и памяти разрешены виртуальным машинам (ВМ) этого класса.
 
 {% alert level="warning" %}
 Изменения в блоке [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) затрагивают уже существующие виртуальные машины.
@@ -46,12 +46,12 @@ lang: ru
 Внутри диапазона задаются требования к памяти и к доле ядра:
 
 - `memory` — минимум и максимум памяти. Указывается либо на весь диапазон, либо на одно ядро через вложенный блок `memory.perCore`.
-- `coreFractions` — список разрешённых долей ядра, например `[25, 50, 100]` для 25%, 50% и 100%. Если владелец проекта задал параметр `coreFraction` виртуальной машины явно, значение должно быть из этого списка.
+- `coreFractions` — список разрешённых долей ядра, например `[25, 50, 100]` для 25%, 50% и 100%. Если владелец [проекта](../../../glossary.html#project) задал параметр `coreFraction` виртуальной машины явно, значение должно быть из этого списка.
 - `defaultCoreFraction` — доля ядра, которую получит виртуальная машина, если `coreFraction` в ней не задан. Значение должно входить в список `coreFractions`. Когда параметр не указан, применяется 100%.
 
 Правило, в котором нет ни `memory`, ни `coreFractions`, ничего не ограничивает, поэтому задавайте хотя бы одно из них.
 
-В коммерческих редакциях DP параметру `defaultCoreFraction` можно задать значение `Auto`. Тогда долю ядра для ВМ без явного `coreFraction` подбирает [вертикальное автомасштабирование](../../../user/virtualization/vm-resources.html#автоматический-corefraction-auto). `Auto` — это режим, а не доля ядра, поэтому в списке `coreFractions` его быть не должно.
+В коммерческих [редакциях](../../../glossary.html#edition) DP параметру `defaultCoreFraction` можно задать значение `Auto`. Тогда долю ядра для ВМ без явного `coreFraction` подбирает [вертикальное автомасштабирование](../../../user/virtualization/vm-resources.html#автоматический-corefraction-auto). `Auto` — это режим, а не доля ядра, поэтому в списке `coreFractions` его быть не должно.
 
 ```yaml
 spec:
@@ -193,7 +193,7 @@ spec:
       coreFractions: [100]
 ```
 
-Как настроить политики сайзинга в веб-интерфейсе в [форме создания классов ВМ](vm-classes.html#настройки-virtualmachineclass):
+Как настроить [политики сайзинга](../../../glossary.html#sizing-policy) в веб-интерфейсе в [форме создания классов ВМ](vm-classes.html#настройки-virtualmachineclass):
 
 1. Нажмите кнопку «Добавить» в блоке «Правила выделения ресурсов для виртуальных машин».
 1. В блоке «ЦП» в поле «Мин» укажите `1`, а в поле «Макс» — `4`.

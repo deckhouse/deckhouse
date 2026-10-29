@@ -24,7 +24,7 @@ relatedLinks:
 
 1. Дождитесь, пока модуль перейдёт в состояние `Ready`.
 
-   Проверить состояние модуля можно в веб-интерфейсе DP или с помощью команды:
+   Проверить состояние модуля можно в [веб-интерфейсе DP](../../../../../glossary.html#web-ui) или с помощью команды:
 
    ```bash
    d8 k get module operator-argo -w
@@ -138,7 +138,7 @@ argocd-server-76597597f9-kfqdl        1/1     Running   0          35m
 
 ### Включение режима высокой доступности
 
-Чтобы включить режим высокой доступности, установите параметр [`spec.ha.enabled: true`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) в объекте ArgoCD.
+Чтобы включить [режим высокой доступности](../../../../../glossary.html#ha-mode), установите параметр [`spec.ha.enabled: true`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) в объекте ArgoCD.
 
 Пример:
 

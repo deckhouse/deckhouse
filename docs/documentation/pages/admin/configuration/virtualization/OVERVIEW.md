@@ -10,7 +10,7 @@ Deckhouse Platform (DP) runs virtual machines (VMs) in the same cluster as conta
 DP lets you do the following:
 
 - Prepare cluster nodes for running virtual machines.
-- Store cluster-wide images and provide projects with storage for disks.
+- Store cluster-wide images and provide [projects](../../../glossary.html#project) with storage for disks.
 - Define the machine parameters that project owners can use.
 - Pass node devices through to machines.
 
@@ -26,7 +26,7 @@ As guest systems, DP supports operating systems running on the `x86` and `x86-64
 
 Machine images and disks take up space in the cluster, and an administrator configures how they are stored.
 
-DP keeps uploaded images in its own DVCR storage. Its size, storage class, and the schedule for cleaning up stale data are covered in [Virtual machine image storage](image-storage.html). The storage classes that projects create disks and images from are listed in [Storage for virtual machine disks and images](storage-classes.html).
+DP keeps uploaded images in its own [DVCR](../../../glossary.html#dvcr) storage. Its size, storage class, and the schedule for cleaning up stale data are covered in [Virtual machine image storage](image-storage.html). The storage classes that projects create disks and images from are listed in [Storage for virtual machine disks and images](storage-classes.html).
 
 Cluster-wide images are prepared by an administrator: project owners create disks from them without uploading the same data again. How to create such images and in what form to store them is covered in [Cluster images of virtual machines](cluster-images.html).
 
@@ -46,7 +46,7 @@ Running machines also affect other areas of DP configuration:
 
 - [Virtual machine networking](../network/vm-network.html): Subnets that machines get addresses from.
 - [Maintenance of nodes running virtual machines](../platform-scaling/node/vm-node-maintenance.html): Taking a node out for maintenance without losing machines.
-- [Virtual machine fault tolerance and balancing](../high-reliability-and-availability/vm-reliability.html): Rebalancing and ColdStandby.
+- [Virtual machine fault tolerance and balancing](../high-reliability-and-availability/vm-reliability.html): Rebalancing and [ColdStandby](../../../glossary.html#coldstandby).
 - [Virtualization event audit](../security/events/virtualization-audit.html): The log of actions on virtualization resources.
 
 For how virtualization works internally, refer to the [Virtualization subsystem](../../../architecture/virtualization/) section; for the full list of resources and their parameters, refer to the [reference](/modules/virtualization/cr.html). The [Virtual machines](../../../user/virtualization/) section is addressed to a project owner.

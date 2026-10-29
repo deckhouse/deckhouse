@@ -622,6 +622,121 @@ Additional behavior:
 - `linkRewriteEnable: false` (or the key being absent) disables the feature entirely — the HTML is left untouched.
 - Regex flavour differs between the two implementations: Jekyll uses Ruby regexp (backrefs `\1`, `\2`), Hugo uses Go RE2 (`$1`, `$2`, no backreferences in patterns). Keep patterns simple to avoid divergence between the two configs.
 
+## Glossary
+
+The glossary is a single page of the DP documentation (`/products/kubernetes-platform/documentation/v1/glossary.html`) with one section per term. Any documentation page can link to a term; the link gets a tooltip with the short definition, and a click leads to the term on the glossary page. The same mechanism works for the DP documentation, embedded modules and external modules (Hugo), because all of them share `docs/site/_includes/head-site.html`.
+
+### Term files
+
+Terms live in the Jekyll collection `docs/documentation/_glossary/`: one Markdown file per term and language, `<id>.md` (English) and `<id>_RU.md` (Russian). The file name is the term id: latin kebab-case, never renamed (it is the anchor other pages link to). Front matter has three fields, body is the full description in Markdown:
+
+```yaml
+---
+title: Project
+description: A mechanism for isolating and managing workloads in Deckhouse Platform.
+lang: en
+---
+
+Projects provide isolation and are compatible with Kubernetes [namespaces](glossary.html#namespace).
+```
+
+- `description` is the short definition shown in the tooltip: one or two sentences of inline Markdown. Inline code, emphasis and links are allowed, block elements (lists, headings, code blocks) are not. Links inside it must be `glossary.html#<id>` or a path from the documentation root (the tooltip script resolves them against the glossary page), never a path relative to another page.
+- The body is rendered on the glossary page after the short definition. Link to other terms as `glossary.html#<id>`, to other pages of the DP documentation by their path from the documentation root (`admin/multitenancy.html`).
+- Keep the English and Russian files of a term in the same change.
+
+### How to link to a term
+
+Use an ordinary Markdown link to the glossary page with the term id as the anchor. The link text is any form of the word. There is no language segment in the path: the site picks the language by domain, and the in-cluster documentation module adds `/<lang>/` by its link rewriting rules.
+
+| From | Link |
+| --- | --- |
+| A DP documentation page (`docs/documentation/pages/**`) | relative path to the documentation root, for example `[projects](../../../glossary.html#project)` from `pages/admin/configuration/access/` |
+| An embedded module (`modules/*/docs`, `ee/**/docs`) or an external module | `[projects](/products/kubernetes-platform/documentation/v1/glossary.html#project)` |
+| A CRD or OpenAPI description (`crds/*.yaml`, `openapi/*.yaml`, `doc-ru-*.yaml`) | the same absolute link inside the Markdown of `description` |
+| The body of another term (`_glossary/*.md`) | `[namespace](glossary.html#namespace)` |
+
+### Rendering
+
+- `docs/documentation/pages/GLOSSARY.md` and `GLOSSARY_RU.md` render the page with `_includes/glossary.liquid`: terms sorted by title, `<h2 id="<id>">` per term, then `description` and the body.
+- `docs/documentation/glossary.json` and `glossary-ru.json` publish `{ "<id>": {"title", "description"} }` with `_includes/glossary-json.liquid`; `description` is the inline Markdown rendered to HTML without the wrapping paragraph; full descriptions are not included, so the file stays small.
+- `docs/site/assets/js/glossary.js` (loaded from `head-site.html`) finds links inside `.post-content` whose path ends with `/glossary.html` and has an anchor, adds the `glossary-term` class and, on the first hover or focus (or when the browser is idle after load), fetches the JSON next to the glossary page once and creates interactive tippy tooltips (links inside a tooltip are clickable, relative ones are resolved against the glossary page). Pages without glossary links make no request. The style of `.glossary-term` is in `docs/site/_sass/components/common/_tooltip.scss`.
+
+### Linking terms automatically
+
+Links to glossary terms on the pages under `docs/documentation/pages` are placed by a script, not by hand:
+
+```bash
+make docs-glossary-link           # report: what would be linked, per page and per term
+make docs-glossary-link APPLY=1   # write the links
+```
+
+The rules the script follows:
+
+- A term is linked at its first mention in a second-level section (the text before the first H2 counts as a section). In later sections it is linked again only if the previous link to the same term is more than 60 lines above, so short pages get one link per term and long pages get a link where the reader has scrolled past the previous one.
+- Headings, code blocks (fenced, also inside lists), inline code, existing links, Liquid tags, HTML tags, block-level HTML elements and names in «quotes» (UI elements) are never changed.
+- A term that is already linked in a section is skipped, so the script can be re-run at any time: it only adds links to new or changed text and never removes any. Review the diff before committing: the patterns match word forms, not meaning.
+
+Two options of the script itself help to check a term before writing anything:
+
+```bash
+python3 tools/docs/glossary/link_terms.py --pages docs/documentation/pages/admin/configuration/update   # one directory only
+python3 tools/docs/glossary/link_terms.py --context project,edition                                      # every match of these terms with context
+```
+
+### Term patterns (`term-patterns.yaml`)
+
+The script cannot find terms by their titles alone: Russian words change their endings («канал обновлений», «каналу обновлений», «каналов обновлений»), some terms have several spellings, and some words mean the DP concept only in part of the documentation. `tools/docs/glossary/term-patterns.yaml` describes, for every term id from `_glossary/`, what to look for and where:
+
+```yaml
+skip:          # terms that exist in the glossary but are too generic to link automatically
+  - cluster
+  - system
+terms:
+  release-channel:
+    en: ['release channels?']
+    ru: ['канал\w{0,3} обновлени[йя]']
+  project:
+    paths: ['user/', 'admin/configuration/multitenancy', 'admin/configuration/access']
+    en: ['projects?']
+    ru: ['проект(а|у|ом|е|ы|ов|ам|ами|ах)?']
+  alb:
+    paths: ['admin/configuration/network']
+    en: ['(?-i:ALB)']
+    ru: ['(?-i:ALB)']
+```
+
+- `en` and `ru` are Python regular expressions, matched case-insensitively with word boundaries added around them; the matched text becomes the link text, so endings are kept. Use `(?-i:...)` for tokens that must keep their case (acronyms, `CloudEphemeral`).
+- `paths` restricts a term to pages whose path, relative to `docs/documentation/pages`, starts with one of the prefixes. Use it when the word means something else elsewhere: `project` is not linked on cloud provider or Argo CD pages, `ALB` is not linked where it means the AWS load balancer.
+- `skip` lists glossary terms that are not linked automatically because they appear on almost every page (`api`, `cluster`, `system`, `workload`, `namespace`, `module`, `alert`, `control-plane`). They can still be linked by hand.
+
+The file must stay in sync with `_glossary/`: every term id must be either under `terms` or in `skip`, and nothing else may be listed. The script refuses to run otherwise and names the ids that differ.
+
+### Adding or changing a term
+
+There are two ways to add a term. Both start with the same files; they differ in how the links from the pages appear.
+
+**Recommended: with automatic linking.**
+
+1. Create `_glossary/<id>.md` and `_glossary/<id>_RU.md` with `title`, `description` and `lang` in the front matter and the full description in the body. The id is the file name, it is the anchor other pages link to, so do not rename it later.
+1. Add the id to `term-patterns.yaml`: regular expressions for `en` and `ru` word forms, and `paths` if the word means something else outside its section.
+1. Check the patterns: `python3 tools/docs/glossary/link_terms.py --context <id>` prints every match with its context, nothing is written yet.
+1. Run `make docs-glossary-link APPLY=1` and review the diff: the first mention of the term in every section of every page becomes a link. The same command links the term on pages written later.
+1. Run `make docs-glossary-check`.
+
+**Manual: without scripts.**
+
+1. Create the same two files in `_glossary/`.
+1. Put a link to `glossary.html#<id>` on the pages where the term is needed, with an ordinary Markdown link (see the table above). Jekyll builds the glossary page and `glossary.json` from the files, and the link gets its tooltip, so no script or `make` target is required.
+1. Add the id to the `skip` list of `term-patterns.yaml`. This is the only connection to the scripts: `make docs-glossary-link` refuses to run while a term is listed neither under `terms` nor in `skip`. A term in `skip` is never linked automatically; move it under `terms` later to switch to the recommended way.
+
+`make docs-glossary-check` runs in CI for both ways: it verifies that both language files exist and that every `glossary.html#<anchor>` in the documentation points to an existing term.
+
+Changing the text of a term needs no other action. Removing a term breaks the links to its anchor: `make docs-glossary-check` lists the pages to fix.
+
+### Checks
+
+`make docs-glossary-check` (`tools/docs/glossary/check.sh`) verifies that every term has both language files with non-empty `title` and `description`, that ids are kebab-case and that every `glossary.html#<anchor>` in the documentation, module docs, CRDs and OpenAPI schemas points to an existing term. Term files are also covered by `make lint-markdown` and `make docs-spellcheck`.
+
 ## Search
 
 This feature allows you to display a contextual message above the "ready" search message to inform users about what they're searching in.

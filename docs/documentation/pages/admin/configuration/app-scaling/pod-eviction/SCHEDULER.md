@@ -36,7 +36,7 @@ The process of assigning pods to nodes in DP involves several key phases. The sc
 
 In the Filtering phase, filtering plugins are activated. These plugins evaluate all available nodes and select only those that meet certain conditions (e.g., taints, nodePorts, nodeName, unschedulable, and others).
 
-If the nodes are distributed across different availability zones, DP alternates between zones during selection to avoid placing all pods in a single zone. For example, if the nodes are distributed like this:
+If the nodes are distributed across different [availability zones](../../../../glossary.html#availability-zone), DP alternates between zones during selection to avoid placing all pods in a single zone. For example, if the nodes are distributed like this:
 
 ```console
 Zone 1: Node 1, Node 2, Node 3, Node 4
@@ -146,7 +146,7 @@ Main placement configuration options:
 
 1. Using taints and tolerations — unlike `nodeSelector`, taints are used to prevent pods from being scheduled on a node unless they have a matching toleration. This ensures that only specific services run on a given node. Example:
 
-   Suppose you have a node named `kube-frontend-1` that is dedicated exclusively to Ingress controllers. Apply a taint to the node:
+   Suppose you have a node named `kube-frontend-1` that is dedicated exclusively to [Ingress controllers](../../../../glossary.html#ingress-controller). Apply a taint to the node:
 
    ```console
    d8 k taint node kube-frontend-1 node-role/frontend="":NoExecute
@@ -173,7 +173,7 @@ Main placement configuration options:
    This mechanism allows:
 
    - Divide nodes into zones — for example, dedicating some for Ingress controllers and others for system services (Prometheus, VPN, CoreDNS).
-   - Isolate critical applications from system components, avoiding resource contention.
+   - Isolate critical applications from [system components](../../../../glossary.html#system-component), avoiding resource contention.
 
 ### Scheduler profiles
 
@@ -204,7 +204,7 @@ DP analyzes the state of the cluster every 15 minutes and evicts pods that match
 
 ### Considering pod Priority Classes
 
-DP defines a set of priority classes that determine the importance of pods and the order in which they are evicted during workload redistribution.
+DP defines a set of [priority classes](../../../../glossary.html#priority-class) that determine the importance of pods and the order in which they are evicted during workload redistribution.
 
 If the cluster lacks resources, lower-priority pods may be evicted in favor of higher-priority ones. This ensures that critical services remain operational even when nodes are overloaded.
 
@@ -237,7 +237,7 @@ spec:
 
   - The pod is in the `d8-*` or `kube-system` namespace;
   - The pod has the `priorityClassName` set to `system-cluster-critical` or `system-node-critical`;
-  - The pod is using local storage;
+  - The pod is using [local storage](../../../../glossary.html#local-storage);
   - The pod is managed by a DaemonSet;
   - Evicting the pod would violate a [Pod Disruption Budget (PDB)](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/);
   - There are no available nodes to reschedule the evicted pod.
@@ -258,7 +258,7 @@ Each of these fields supports standard `matchExpressions` and `matchLabels` synt
 
 ### How to enable or disable pod eviction
 
-To enable the pod redistribution feature, you need to enable the [`descheduler`](/modules/descheduler/) module.
+To enable the [pod redistribution](../../../../glossary.html#pod-redistribution) feature, you need to enable the [`descheduler`](/modules/descheduler/) module.
 
 You can do this in one of the following ways:
 

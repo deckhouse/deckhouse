@@ -6,7 +6,7 @@ lang: ru
 search: PackageRepository, package repository, container registry, репозиторий пакетов, хранилище образов, сканирование
 ---
 
-Чтобы подключить Deckhouse Platform (DP) к репозиторию пакетов приложений, используйте ресурс [PackageRepository](../../../reference/api/cr.html#packagerepository). После создания ресурса DP сканирует репозиторий и создаёт объект [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) для каждой обнаруженной версии пакета.
+Чтобы подключить Deckhouse Platform (DP) к репозиторию [пакетов приложений](../../../glossary.html#marketplace-package), используйте ресурс [PackageRepository](../../../reference/api/cr.html#packagerepository). После создания ресурса DP сканирует репозиторий и создаёт объект [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) для каждой обнаруженной версии пакета.
 
 Пример манифеста PackageRepository:
 
@@ -84,7 +84,7 @@ d8 k get packagerepository <REPOSITORY_NAME>
 | `Phase` | Фаза репозитория. После первого успешного сканирования будет указано `Active` |
 | `Scan` | Время последнего успешного сканирования |
 | `Repository` | Адрес репозитория ([`spec.registry.repo`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-registry-repo)) |
-| `Packages` | Количество пакетов в репозитории |
+| `Packages` | Количество [пакетов](../../../glossary.html#marketplace-package) в репозитории |
 | `MSG` | Сообщение условия `LastScanSucceeded`, например, ошибка последнего сканирования |
 
 Чтобы получить подробную информацию о статусе, выполните следующую команду:

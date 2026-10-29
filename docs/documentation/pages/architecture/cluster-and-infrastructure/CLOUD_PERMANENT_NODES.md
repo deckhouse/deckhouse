@@ -5,7 +5,7 @@ search: cloudpermanent nodes
 description: Architecture of the node-manager module for CloudPermanent nodes.
 ---
 
-This page describes the architecture of the [`node-manager`](/modules/node-manager/) module for CloudPermanent nodes.
+This page describes the architecture of the [`node-manager`](/modules/node-manager/) module for [CloudPermanent nodes](../../../glossary.html#cloud-permanent-node).
 
 ## Module architecture
 
@@ -23,12 +23,12 @@ The Level 2 C4 architecture of the [`node-manager`](/modules/node-manager/) modu
 ## Module components
 
 {% alert level="info" %}
-Bashible is a key component of the Cluster & Infrastructure subsystem that enables the operation of the `node-manager` module. However, it is not part of the module itself, as it runs at the OS level as a system service. For Bashible details, refer to the [corresponding documentation section](bashible.html).
+[Bashible](../../../glossary.html#bashible) is a key component of the Cluster & Infrastructure subsystem that enables the operation of the `node-manager` module. However, it is not part of the module itself, as it runs at the OS level as a system service. For Bashible details, refer to the [corresponding documentation section](bashible.html).
 {% endalert %}
 
 The module managing CloudPermanent nodes consists of the following components:
 
-1. **Bashible-api-server**: A [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/) deployed on master nodes. It generates bashible scripts from templates stored in custom resources. When kube-apiserver receives a request for resources containing bashible bundles, it forwards the request to bashible-api-server and returns the generated result. For more details about bashible and bashible-api-server, refer to the [corresponding documentation section](bashible.html).
+1. **[Bashible-api-server](../../../glossary.html#bashible-api-server)**: A [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/) deployed on [master nodes](../../../glossary.html#master-node). It generates bashible scripts from templates stored in custom resources. When kube-apiserver receives a request for resources containing [bashible bundles](../../../glossary.html#bashible-bundle), it forwards the request to bashible-api-server and returns the generated result. For more details about bashible and bashible-api-server, refer to the [corresponding documentation section](bashible.html).
 
 1. **Node-controller** (Deployment): A controller that manages [NodeGroup](/modules/node-manager/cr.html#nodegroup) custom resources lifecycle. Node-controller performs the following operations:
 
@@ -47,14 +47,14 @@ The module managing CloudPermanent nodes consists of the following components:
    * **node-controller**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to controller metrics.
 
-1. **Node-group-exporter** (Deployment): A component that exports NodeGroup resource metrics in Prometheus format, containing information about the number of nodes in each node group: the total number, the number of nodes in the `Ready` status, the number of nodes in error, the minimum and maximum number of nodes in the group, etc.
+1. **Node-group-exporter** (Deployment): A component that exports NodeGroup resource metrics in Prometheus format, containing information about the number of nodes in each [node group](../../../glossary.html#node-group): the total number, the number of nodes in the `Ready` status, the number of nodes in error, the minimum and maximum number of nodes in the group, etc.
 
    The component includes:
 
    * **node-group-exporter**: Main container.
    * **kube-rbac-proxy** Sidecar container providing an RBAC-based authorization proxy for secure access to exporter metrics.
 
-1. **Fencing-agent** (DaemonSet) and **fencing-controller**: Components that implement the fencing mechanism. The operation principles of both components are described in detail in the [`spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) parameter description of the NodeGroup resource. For details on how the fencing mechanism handles different node types, refer to [FAQ](/modules/node-manager/faq.html#how-the-fencing-mechanism-handles-different-node-types) in the `node-manager` module documentation.
+1. **Fencing-agent** (DaemonSet) and **fencing-controller**: Components that implement the [fencing](../../../glossary.html#fencing) mechanism. The operation principles of both components are described in detail in the [`spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) parameter description of the NodeGroup resource. For details on how the fencing mechanism handles different node types, refer to [FAQ](/modules/node-manager/faq.html#how-the-fencing-mechanism-handles-different-node-types) in the `node-manager` module documentation.
 
 ## Module interactions
 
@@ -82,7 +82,7 @@ The following external components interact with the module:
 
 ## Architecture features specific to CloudPermanent nodes
 
-1. Nodes are persistent and are created, managed, and deleted by the user. Node management is performed not directly in the infrastructure but via the **dhctl** utility executed as part of the DP installer.
+1. Nodes are persistent and are created, managed, and deleted by the user. Node management is performed not directly in the infrastructure but via the **dhctl** utility executed as part of the DP [installer](../../../glossary.html#installer).
 1. `Terraform-manager` is a [module](/modules/terraform-manager/) used for automated management of cloud infrastructure resources. It checks the Terraform state and applies non-destructive changes to infrastructure resources. The module architecture is described on the [corresponding documentation page](../infrastructure/terraform-manager.html).
 1. **Csi-driver** is used to provision disks in the cloud infrastructure.
 1. **Cloud-controller-manager** is used to provision load balancers and other infrastructure resources according to its specification.

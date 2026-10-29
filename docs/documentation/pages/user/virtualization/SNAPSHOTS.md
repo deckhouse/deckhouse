@@ -5,11 +5,11 @@ description: "Snapshots of disks and virtual machines: data consistency, creatin
 search: snapshots, VirtualDiskSnapshot, VirtualMachineSnapshot, restore
 ---
 
-Snapshots let you capture the current state of a resource for later recovery or [cloning](vm-cloning.html). A disk snapshot saves only the data of the selected disk, while a virtual machine (VM) snapshot includes the VM parameters and the state of all its disks.
+Snapshots let you capture the current state of a resource for later recovery or [cloning](vm-cloning.html). A [disk snapshot](../../glossary.html#vm-snapshot) saves only the data of the selected disk, while a virtual machine (VM) snapshot includes the VM parameters and the state of all its disks.
 
 ## Consistent snapshots
 
-Snapshots can be consistent or inconsistent. The `requiredConsistency` parameter is responsible for this, and its default value is `true`, which means that a consistent snapshot is required.
+Snapshots can be consistent or inconsistent. The `requiredConsistency` parameter is responsible for this, and its default value is `true`, which means that a [consistent snapshot](../../glossary.html#vm-consistent-snapshot) is required.
 
 A consistent snapshot captures a coherent and integral state of the disk data. You can create such a snapshot when one of the following conditions is met:
 
@@ -17,10 +17,10 @@ A consistent snapshot captures a coherent and integral state of the disk data. Y
 - the virtual machine is powered off;
 - [`qemu-guest-agent`](vm-provisioning.html#guest-os-agent) is installed and running in the guest OS. When the snapshot is created, it temporarily pauses ("freezes") the file system to keep the data coherent.
 
-An inconsistent snapshot may not reflect a coherent state of the virtual machine disks and its components. Such a snapshot is created if the VM is running and `qemu-guest-agent` isn't installed or isn't running in the guest OS.
+An inconsistent snapshot may not reflect a coherent state of the [virtual machine disks](../../glossary.html#vm-disk) and its components. Such a snapshot is created if the VM is running and `qemu-guest-agent` isn't installed or isn't running in the guest OS.
 If the snapshot manifest explicitly specifies `requiredConsistency: false` but `qemu-guest-agent` is running, an attempt to freeze the file system is still made so that the snapshot comes out consistent.
 
-QEMU Guest Agent supports hook scripts that prepare applications for a snapshot without stopping services, keeping the state coherent at the application level. Configuring hook scripts is described in [Guest OS agent](vm-provisioning.html#guest-os-agent).
+[QEMU Guest Agent](../../glossary.html#vm-guest-agent) supports hook scripts that prepare applications for a snapshot without stopping services, keeping the state coherent at the application level. Configuring hook scripts is described in [Guest OS agent](vm-provisioning.html#guest-os-agent).
 
 {% alert level="warning" %}
 When recovering from such a snapshot, file system integrity problems are possible, because the data state may be incoherent.
@@ -88,8 +88,8 @@ The `true` value in the `CONSISTENT` column means that the snapshot is consisten
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
-1. Go to **Virtualization** → **Disk snapshots**.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
+1. Go to **Virtualization** → **[Disk snapshots](../../glossary.html#vm-snapshot)**.
 1. Click **Create**.
 1. In the **Create resource** window that opens, enter the snapshot name in the **Name** field.
 1. On the **Configuration** tab, select the disk to take the snapshot from in the **Virtual disk name** field.
@@ -283,11 +283,11 @@ d8 k get vmop <VMOP_NAME> -o json | jq '.status.resources'
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the virtual machine you need from the list and click the ellipsis button.
 1. In the menu that opens, select **Restore**.
-1. In the **Machine recovery** window that opens, select the snapshot in the **Virtual machine snapshot name** field.
+1. In the **Machine recovery** window that opens, select the snapshot in the **[Virtual machine snapshot](../../glossary.html#vm-snapshot) name** field.
 1. In the **Recovery mode** field, select `Strict` or `BestEffort`.
 1. Click **Restore**.
 

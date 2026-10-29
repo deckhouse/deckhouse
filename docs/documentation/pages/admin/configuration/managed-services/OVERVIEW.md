@@ -4,7 +4,7 @@ permalink: en/admin/configuration/managed-services/
 description: "Administration of managed services in Deckhouse Platform"
 ---
 
-Managed services in Deckhouse Platform let you run ready-to-use application services in a cluster, such as databases, message queues, and big data services, without having to manage their lifecycle manually. DP handles the technical tasks of administration, scaling, backup, and updates, while the administrator manages managed services at the level of classes, limits, and architectural decisions.
+[Managed services](../../../glossary.html#managed-service) in Deckhouse Platform let you run ready-to-use application services in a cluster, such as databases, message queues, and big data services, without having to manage their lifecycle manually. DP handles the technical tasks of administration, scaling, backup, and updates, while the administrator manages managed services at the level of classes, limits, and architectural decisions.
 
 ## How it works
 

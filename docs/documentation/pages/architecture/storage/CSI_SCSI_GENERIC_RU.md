@@ -42,7 +42,7 @@ description: Архитектура модуля csi-scsi-generic в Deckhouse P
     * **controller** — основной контейнер;
     * **iscsi-command-service** — сайдкар-контейнер, реализующий обнаружение SCSI-устройств.
 
-1. **CSI-драйвер (`csi-scsi-generic`)** — реализация CSI-драйвера, использующего provisioner `scsi-generic.csi.storage.deckhouse.io`. С архитектурой CSI-драйвера `csi-scsi-generic` можно ознакомиться [в соответствующем разделе документации](../../storage/csi-drivers/csi-driver-scsi-generic.html).
+1. **[CSI-драйвер](../../../glossary.html#csi-driver) (`csi-scsi-generic`)** — реализация CSI-драйвера, использующего provisioner `scsi-generic.csi.storage.deckhouse.io`. С архитектурой CSI-драйвера `csi-scsi-generic` можно ознакомиться [в соответствующем разделе документации](../../storage/csi-drivers/csi-driver-scsi-generic.html).
 
 ## Взаимодействия модуля
 

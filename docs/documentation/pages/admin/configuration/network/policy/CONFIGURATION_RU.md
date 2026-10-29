@@ -16,7 +16,7 @@ relatedLinks:
     url: https://docs.cilium.io/en/v1.17/security/host-firewall/
 ---
 
-Сетевые политики ограничивают сетевое взаимодействие подов друг с другом, с внешними системами и узлами кластера. В Deckhouse Platform (DP) реализация сетевых политик зависит от выбранного CNI.
+[Сетевые политики](../../../../glossary.html#network-policy) ограничивают сетевое взаимодействие подов друг с другом, с внешними системами и узлами кластера. В Deckhouse Platform (DP) реализация сетевых политик зависит от выбранного CNI.
 
 ## Реализация сетевых политик в DP
 
@@ -25,7 +25,7 @@ relatedLinks:
 - В кластерах с модулем [`cni-cilium`](/modules/cni-cilium/) реализация встроена в Cilium и поддерживает три формата политик:
   - стандартный [NetworkPolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) — namespaced-ресурс с правилами для уровней L3 и L4;
   - [CiliumNetworkPolicy](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/#ciliumnetworkpolicy) — namespaced-ресурс с правилами L3–L7;
-  - [CiliumClusterwideNetworkPolicy](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/#ciliumclusterwidenetworkpolicy) — cluster-scoped-ресурс, дополнительно поддерживает `nodeSelector` для защиты узлов (host firewall).
+  - [CiliumClusterwideNetworkPolicy](https://docs.cilium.io/en/v1.17/network/kubernetes/policy/#ciliumclusterwidenetworkpolicy) — cluster-scoped-ресурс, дополнительно поддерживает `nodeSelector` для защиты узлов ([host firewall](../../../../glossary.html#host-firewall)).
 - В кластерах с модулем `cni-flannel` или другим CNI без поддержки политик обработку обеспечивает модуль [`network-policy-engine`](/modules/network-policy-engine/) на базе [kube-router](https://github.com/cloudnativelabs/kube-router). Поддерживается только стандартный NetworkPolicy уровней L3 и L4. Политики транслируются в правила `iptables` и `ipset` на каждом узле.
 
 {% alert level="warning" %}

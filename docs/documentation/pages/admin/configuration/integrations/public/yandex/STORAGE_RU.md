@@ -10,7 +10,7 @@ lang: ru
 - автоматическое создание StorageClass;
 - использование балансировщиков нагрузки;
 - особенности применения изменений;
-- работу с CloudStatic-узлами и bastion-хостами.
+- работу с CloudStatic-узлами и [bastion-хостами](../../../../glossary.html#bastion-host).
 
 ## Хранилище (CSI и StorageClass)
 
@@ -97,14 +97,14 @@ d8 k edit mc global
 Если параметр `defaultClusterStorageClass` не указан, DP определяет StorageClass, используемый по умолчанию, в следующем порядке:
 
 - StorageClass с аннотацией `storageclass.kubernetes.io/is-default-class='true'` (если такой имеется в кластере).
-- Первый StorageClass по алфавиту среди тех, что автоматически создаются облачным провайдером.
+- Первый StorageClass по алфавиту среди тех, что автоматически создаются [облачным провайдером](../../../../glossary.html#cloud-provider).
 - По умолчанию значение параметра `defaultClusterStorageClass` — пустая строка (`""`).
 
 ### Изменение размера PVC
 
 Размер существующего PVC можно увеличить путем изменения значения параметра `spec.resources.requests.storage` без остановки и пересоздания использующего его пода.
 
-После изменения значения `spec.resources.requests.storage` CSI-драйвер последовательно:
+После изменения значения `spec.resources.requests.storage` [CSI-драйвер](../../../../glossary.html#csi-driver) последовательно:
 
 - увеличивает размер диска в Yandex Cloud;
 - обновляет размер связанного PersistentVolume;
@@ -365,7 +365,7 @@ metadata:
 1. `yandex.cpi.flant.com/loadbalancer-external` — включает создание внешнего (external) LB для данного Service (используйте, если нужно явно создать внешний балансировщик). Переопределяет поведение по умолчанию.
 1. `yandex.cpi.flant.com/target-group-name-prefix` — задаёт префикс имени целевой группы, которую использует LoadBalancer. Аннотация на Service определяет целевую группу, но не выбирает узлы. Чтобы включить узлы в целевую группу, задайте аннотацию с тем же значением в параметре [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) ресурса NodeGroup. Yandex Cloud Controller Manager включает в целевую группу все подходящие узлы с таким значением аннотации независимо от их NodeGroup. Имя целевой группы формируется как `<ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>`.
 
-Если для control plane или master-узлов создаются отдельные целевые группы, добавьте на master-узлы лейбл `node.kubernetes.io/exclude-from-external-load-balancers: ""`. Это предотвратит попытки контроллера автоматически добавлять master-узлы в новые целевые группы для балансировщиков.
+Если для control plane или [master-узлов](../../../../glossary.html#master-node) создаются отдельные целевые группы, добавьте на master-узлы лейбл `node.kubernetes.io/exclude-from-external-load-balancers: ""`. Это предотвратит попытки контроллера автоматически добавлять master-узлы в новые целевые группы для балансировщиков.
 Если вы создаёте собственный балансировщик для master-узлов и хотите, чтобы YCC также мог размещать свои балансировщики на master-узлах, заранее создайте целевую группу с именем по маске `${CLUSTER-NAME}${VPC.ID}`.
 
 #### Использование отдельной целевой группы для NodeGroup
@@ -461,7 +461,7 @@ DP не пересоздаёт уже существующие объекты Ma
 
 Это поведение помогает избежать лишних операций и простоя существующих узлов, однако требует ручного вмешательства при необходимости пересоздать машины.
 
-Если вы изменили [настройки провайдера](/modules/cloud-provider-yandex/configuration.html) в [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) `cloud-provider-yandex` (например, параметры провайдера, схемы размещения или подсетей), чтобы изменения вступили в силу, выполните команду:
+Если вы изменили [настройки провайдера](/modules/cloud-provider-yandex/configuration.html) в [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) `cloud-provider-yandex` (например, параметры провайдера, [схемы размещения](../../../../glossary.html#layout) или подсетей), чтобы изменения вступили в силу, выполните команду:
 
 ```shell
 dhctl converge
@@ -475,13 +475,13 @@ dhctl converge
 
 DP намеренно не учитывает параметр `networkType` при определении необходимости пересоздания CloudEphemeral-узлов в MCM. Если бы он учитывался, обновление DP привело бы к пересозданию CloudEphemeral-узлов во всех кластерах, где `networkType` уже указан, даже если его значение не изменялось.
 
-В Cluster API параметр `networkType` учитывается при определении необходимости пересоздания узлов, поэтому его изменение запускает их обновление автоматически. Новые CloudEphemeral NodeGroup в Yandex по умолчанию используют CAPI.
+В Cluster API параметр `networkType` учитывается при определении необходимости пересоздания узлов, поэтому его изменение запускает их обновление автоматически. Новые [CloudEphemeral](../../../../glossary.html#cloud-ephemeral-node) NodeGroup в Yandex по умолчанию используют CAPI.
 
 Если вы изменили `networkType` в кластере на MCM и хотите, чтобы новое значение применилось к уже существующим CloudEphemeral-узлам, пересоздайте их вручную — инструкция в [документации](/modules/node-manager/faq.html#как-пересоздать-эфемерные-машины-в-облаке-с-новой-конфигурацией).
 
 ## Интеграция вручную созданных ВМ
 
-DP позволяет подключать существующие виртуальные машины в Yandex Cloud к Kubernetes-кластеру в качестве узлов. Такие узлы называются CloudStatic, поскольку они не управляются напрямую [модулем `node-manager`](/modules/node-manager/), но могут использоваться в составе кластера.
+DP позволяет подключать существующие виртуальные машины в Yandex Cloud к Kubernetes-кластеру в качестве узлов. Такие узлы называются [CloudStatic](../../../../glossary.html#cloud-static-node), поскольку они не управляются напрямую [модулем `node-manager`](/modules/node-manager/), но могут использоваться в составе кластера.
 
 Чтобы вручную подключить виртуальную машину в качестве CloudStatic-узла, необходимо:
 

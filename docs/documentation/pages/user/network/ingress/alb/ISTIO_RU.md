@@ -19,7 +19,7 @@ relatedLinks:
 
 ### Публикация приложений с использованием Ingress NGINX {#публикация-приложений-с-использованием-ingress-nginx}
 
-Для публикации приложения средствами Ingress NGINX администратор кластера должен настроить Ingress-контроллер, добавив к нему сайдкар от Istio.
+Для публикации приложения средствами Ingress NGINX администратор кластера должен настроить [Ingress-контроллер](../../../../glossary.html#ingress-controller), добавив к нему сайдкар от Istio.
 
 Для публикации приложения подготовьте Ingress-ресурс, который ссылается на сервис. Укажите `ingressClassName` контроллера с Istio-сайдкаром (значение сообщит администратор). Обязательные аннотации для Ingress-ресурса:
 
@@ -74,7 +74,7 @@ spec:
 
 ### Публикация приложений с использованием ресурса Istio Ingress Gateway {#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway}
 
-Для публикации приложения средствами Istio Ingress Gateway администратор кластера должен создать ресурс [IngressIstioController](/modules/istio/cr.html).
+Для публикации приложения средствами [Istio Ingress Gateway](../../../../glossary.html#istio-ingress-gateway) администратор кластера должен создать ресурс [IngressIstioController](/modules/istio/cr.html).
 
 Для публикации приложения с использованием ресурса Istio Ingress Gateway создайте ресурс Gateway. В поле `spec.selector` укажите лейбл, ссылающийся на `ingressGatewayClass`, и имя Secret, полученные от администратора кластера:
 

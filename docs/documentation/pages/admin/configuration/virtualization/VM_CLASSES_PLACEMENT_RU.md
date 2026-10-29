@@ -21,8 +21,8 @@ spec:
 {% alert level="warning" %}
 Изменение блока [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-nodeselector) затрагивает все виртуальные машины класса сразу. Те из них, что работают на узлах, переставших подходить под новые условия, придётся переместить:
 
-- в коммерческих редакциях Deckhouse Platform (DP) переносит такие ВМ на подходящие узлы;
-- в DP Open ВМ перезапускаются, а момент перезапуска зависит от параметра [`.spec.disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) виртуальной машины, который по умолчанию равен `Manual` и требует подтверждения владельца проекта.
+- в коммерческих [редакциях](../../../glossary.html#edition) Deckhouse Platform (DP) переносит такие ВМ на подходящие узлы;
+- в DP Open ВМ перезапускаются, а момент перезапуска зависит от параметра [`.spec.disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) виртуальной машины, который по умолчанию равен `Manual` и требует подтверждения владельца [проекта](../../../glossary.html#project).
 {% endalert %}
 
 Как выполнить операцию в веб-интерфейсе в [форме создания классов ВМ](vm-classes.html#настройки-virtualmachineclass):

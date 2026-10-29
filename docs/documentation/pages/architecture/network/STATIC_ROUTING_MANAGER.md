@@ -40,7 +40,7 @@ Agent runs on every cluster node and performs the following actions:
 - Watches SDNInternalNodeRoutingTable and SDNInternalNodeIPRuleSet custom resources and updates their status.
 - Applies the static routes and `ip rule` entries to the node's kernel routing table.
 
-The SDNInternalNodeRoutingTable and SDNInternalNodeIPRuleSet custom resources are created by the Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module for each cluster node matching the `nodeSelector` of the IPRuleSet and RoutingTable resources.
+The SDNInternalNodeRoutingTable and SDNInternalNodeIPRuleSet custom resources are created by the [Deckhouse controller](../../glossary.html#deckhouse-controller) of the [`deckhouse`](/modules/deckhouse/) module for each cluster node matching the `nodeSelector` of the IPRuleSet and RoutingTable resources.
 
 ## Module interactions
 

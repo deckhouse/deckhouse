@@ -12,7 +12,7 @@ Kubelet — это агент, который работает на каждом
 
 ## Манифесты статических подов
 
-Kubelet запускает компоненты control plane из манифестов статических подов, расположенных в директории `/etc/kubernetes/manifests`. В Deckhouse Platform kubelet обрабатывает в этой директории только файлы с расширением `.yaml` или `.yml`.
+Kubelet запускает компоненты control plane из манифестов [статических подов](../../glossary.html#static-pod), расположенных в директории `/etc/kubernetes/manifests`. В Deckhouse Platform kubelet обрабатывает в этой директории только файлы с расширением `.yaml` или `.yml`.
 
 Файлы с другими расширениями, например `kube-apiserver.backup`, `kube-apiserver.yaml.bak`, swap-файлы редакторов или другие временные файлы, игнорируются. Это предотвращает случайную обработку резервных копий и файлов, не являющихся манифестами, как манифестов статических подов.
 
@@ -35,7 +35,7 @@ Kubelet контролирует состояние контейнеров вс�
 Kubelet также взаимодействует со следующими компонентами:
 
 1. **Containerd** — отправляет команды для управления жизненным циклом контейнеров на узле, используя для этого [Container Runtime Interface (CRI)](https://kubernetes.io/docs/concepts/containers/cri/);
-1. **Kubernetes-api-proxy** — проксирует запросы к kube-apiserver, отправляемые на адрес `localhost`. Входит в состав модуля [`control-plane-manager`](/modules/control-plane-manager/);
+1. **[Kubernetes-api-proxy](../../glossary.html#kubernetes-api-proxy)** — проксирует запросы к kube-apiserver, отправляемые на адрес `localhost`. Входит в состав модуля [`control-plane-manager`](/modules/control-plane-manager/);
 1. **Kube-apiserver-healthcheck** — проверяет состояние kube-apiserver.
 
 С kubelet взаимодействуют следующие компоненты:

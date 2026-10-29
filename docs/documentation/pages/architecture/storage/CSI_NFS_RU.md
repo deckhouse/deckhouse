@@ -29,7 +29,7 @@ description: Архитектура модуля csi-nfs в Deckhouse Platform.
 
 1. **Controller** — контроллер, обслуживающий кастомные ресурсы [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass). Ресурс NFSStorageClass определяет конфигурацию для создаваемого Kubernetes StorageClass, который использует provisioner `nfs.csi.k8s.io`.
 
-   В создаваемом StorageClass задаются параметры подключения к NFS-серверу, reclaim policy, volume binding mode и другие параметры. Эти параметры затем использует provisioner CSI-драйвера `csi-nfs` при управлении NFS-томами.
+   В создаваемом StorageClass задаются параметры подключения к NFS-серверу, reclaim policy, volume binding mode и другие параметры. Эти параметры затем использует provisioner [CSI-драйвера](../../../glossary.html#csi-driver) `csi-nfs` при управлении NFS-томами.
 
    Также controller устанавливает лейбл `storage.deckhouse.io/csi-nfs-node` для узлов кластера в соответствии со значением параметра [`spec.workloadNodes.nodeSelector`](/modules/csi-nfs/cr.html#nfsstorageclass-v1alpha1-spec-workloadnodes-nodeselector) кастомного ресурса NFSStorageClass.
 

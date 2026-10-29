@@ -4,7 +4,7 @@ permalink: en/user/configuration/app-scaling/priority-classes.html
 description: "Using priority classes in Deckhouse Platform: configuration examples, preemption demonstration, and practical diagnostics."
 ---
 
-A priority class defines which pods are more important when a node runs out of resources. You can assign a class in a Deployment manifest, verify preemption, and figure out why a pod is stuck in `Pending`.
+A [priority class](../../../glossary.html#priority-class) defines which pods are more important when a node runs out of resources. You can assign a class in a Deployment manifest, verify preemption, and figure out why a pod is stuck in `Pending`.
 
 ## Using a priority class in a Deployment
 
@@ -64,7 +64,7 @@ You cannot change the `priorityClassName` field of a running pod. This field is 
 
 ## Step-by-step preemption demonstration
 
-This example shows how the scheduler preempts a lower-priority pod when a node lacks sufficient resources for a higher-priority pod. First, a pod with the `develop` class (`1000`) is started on a worker node and consumes most of the free resources. Then a pod with the `production-high` class (`9000`) is created with the same `requests` — there is no room left on the node, and the scheduler preempts the lower-priority pod in favor of the new one.
+This example shows how the scheduler preempts a lower-priority pod when a node lacks sufficient resources for a higher-priority pod. First, a pod with the `develop` class (`1000`) is started on a [worker node](../../../glossary.html#worker-node) and consumes most of the free resources. Then a pod with the `production-high` class (`9000`) is created with the same `requests` — there is no room left on the node, and the scheduler preempts the lower-priority pod in favor of the new one.
 
 In the examples, replace `worker-0` with the name of your worker node.
 
@@ -199,7 +199,7 @@ default     68s         Normal   Preempted   pod/low-priority-pod   Preempted by
 
 ## Environment separation by priority
 
-A namespace itself does not affect preemption: the scheduler compares only pod priority classes, regardless of which namespaces the pods are in. To protect production workloads, use a lower priority class in test and develop environments (`develop`, `staging`), and a higher one in production (`production-low`, `production-medium`, `production-high`).
+A namespace itself does not affect preemption: the scheduler compares only pod [priority classes](../../../glossary.html#priority-class), regardless of which namespaces the pods are in. To protect production workloads, use a lower priority class in test and develop environments (`develop`, `staging`), and a higher one in production (`production-low`, `production-medium`, `production-high`).
 
 ## Protecting stateful applications
 
@@ -434,7 +434,7 @@ default     30s         Warning   FailedPreemption   pod/high-priority-pod     n
 
 The message `no preemption victims found for pod` usually means there are no lower-priority pods on the node that can be preempted for the new pod. For a walkthrough of this case, see [Practical check when no suitable pods are available](#practical-check-when-no-suitable-pods-are-available).
 
-A pod may also fail to start for reasons unrelated to the priority class: for example, there are no suitable nodes because of taints and tolerations. In that case, events show `FailedScheduling` with messages such as `untolerated taint(s)`, not `FailedPreemption`.
+A pod may also fail to start for reasons unrelated to the [priority class](../../../glossary.html#priority-class): for example, there are no suitable nodes because of taints and tolerations. In that case, events show `FailedScheduling` with messages such as `untolerated taint(s)`, not `FailedPreemption`.
 
 For possible cluster-level actions, see [Operations and diagnostics](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#operations-and-diagnostics).
 
@@ -491,7 +491,7 @@ For cluster-level actions, see [Operations and diagnostics](/products/kubernetes
 
 ### Practical example "Pod limit per node"
 
-Even when CPU and memory become available, the maximum number of pods per node can prevent a high-priority pod from starting.
+Even when CPU and memory become available, the [maximum number of pods per node](../../../glossary.html#pod-limit-per-node) can prevent a high-priority pod from starting.
 
 Check the pod limit on the node:
 

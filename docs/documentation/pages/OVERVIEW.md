@@ -38,4 +38,4 @@ The list contains currently supported documentation versions.{% endif %}
 If you need help:
 
 - Ask a question in the ["Deckhouse &#124; EN-community"]({{ site.social_links[page.lang]['telegram'] }}) Telegram channel.
-- If you use a commercial edition of Deckhouse Platform, contact technical support at [`support@deckhouse.io`](mailto:support@deckhouse.io).
+- If you use a commercial [edition](glossary.html#edition) of Deckhouse Platform, contact technical support at [`support@deckhouse.io`](mailto:support@deckhouse.io).

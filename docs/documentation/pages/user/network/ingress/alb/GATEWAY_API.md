@@ -12,9 +12,9 @@ relatedLinks:
 
 ## Publishing applications using the Kubernetes Gateway API
 
-Applications can be published through a cluster-wide gateway (a ClusterALBInstance created by the cluster administrator) or through a dedicated gateway in the application namespace (an ALBInstance).
+Applications can be published through a [cluster-wide gateway](../../../../glossary.html#alb-managed-gateway) (a ClusterALBInstance created by the cluster administrator) or through a dedicated gateway in the application namespace (an ALBInstance).
 
-Creating the managed Gateway (ClusterALBInstance or ALBInstance, inlets, enabling the module) is an administrator task. Infrastructure setup is described in ["Enabling the module and creating a Gateway"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#creating-a-gateway-object).
+Creating the managed Gateway (ClusterALBInstance or ALBInstance, [inlets](../../../../glossary.html#inlet), enabling the module) is an administrator task. Infrastructure setup is described in ["Enabling the module and creating a Gateway"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#creating-a-gateway-object).
 
 This scenario assumes that the ClusterALBInstance or ALBInstance object has already been created and has reached the `Ready` state. Ask the administrator for the name and namespace of the managed Gateway, or read the Gateway name from the instance's [`status.gateway`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status) field:
 

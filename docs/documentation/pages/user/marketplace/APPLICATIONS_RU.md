@@ -6,7 +6,7 @@ lang: ru
 search: Application, install application, application conditions, установка приложения, условия приложения, обновление приложения, удаление приложения
 ---
 
-В этом разделе описан порядок просмотра доступных версий пакетов а также, установка, обновление и удаление приложений.
+В этом разделе описан порядок просмотра доступных версий [пакетов](../../glossary.html#marketplace-package) а также, установка, обновление и удаление приложений.
 
 ## Просмотр доступных версий пакетов
 
@@ -70,7 +70,7 @@ spec:
 ```
 
 {% alert level="info" %}
-Секция настроек `spec.settings` проверяется по OpenAPI-схеме, определённой в пакете. Если схема отклоняет настройки, Application не создаётся. Схема опубликована [в поле `status.packageSchemas.settingsSchema`](../../reference/api/cr.html#applicationpackageversion-v1alpha1-status-packageschemas-settingsschema) объекта ApplicationPackageVersion пакета.
+Секция настроек `spec.settings` проверяется по OpenAPI-схеме, определённой в [пакете](../../glossary.html#marketplace-package). Если схема отклоняет настройки, Application не создаётся. Схема опубликована [в поле `status.packageSchemas.settingsSchema`](../../reference/api/cr.html#applicationpackageversion-v1alpha1-status-packageschemas-settingsschema) объекта ApplicationPackageVersion пакета.
 {% endalert %}
 
 ### Ограничения на имена
@@ -149,7 +149,7 @@ status:
 
 ## Установка нескольких экземпляров
 
-Один и тот же пакет можно установить несколько раз в одном или разных неймспейсах, каждый раз с отдельным именем и настройками. Например, можно создать два экземпляра Redis: один для кеширования, другой для сессий:
+Один и тот же [пакет](../../glossary.html#marketplace-package) можно установить несколько раз в одном или разных неймспейсах, каждый раз с отдельным именем и настройками. Например, можно создать два экземпляра Redis: один для кеширования, другой для сессий:
 
 ```yaml
 # Экземпляр для кеширования.
@@ -211,7 +211,7 @@ d8 k delete applications -n <NAMESPACE> <APPLICATION_NAME>
 
 ### Можно ли обновлять приложение автоматически?
 
-Нет. В текущей реализации для обновления нужно вручную изменить [поле `spec.packageVersion`](../../reference/api/cr.html#application-v1alpha1-spec-packageversion). Автоматическое обновление приложений через каналы обновлений будет реализовано в одной из следующих версий.
+Нет. В текущей реализации для обновления нужно вручную изменить [поле `spec.packageVersion`](../../reference/api/cr.html#application-v1alpha1-spec-packageversion). Автоматическое обновление приложений через [каналы обновлений](../../glossary.html#release-channel) будет реализовано в одной из следующих версий.
 
 ### Может ли Application зависеть от другого Application?
 

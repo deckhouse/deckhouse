@@ -6,15 +6,15 @@ lang: en
 
 ## Deleting a cluster deployed with a cloud provider
 
-Perform the following steps to delete a cluster deployed with a cloud provider
+Perform the following steps to delete a cluster deployed with a [cloud provider](../glossary.html#cloud-provider)
 
-1. Find out the release channel set in the cluster. To do this, run the command:
+1. Find out the [release channel](../glossary.html#release-channel) set in the cluster. To do this, run the command:
 
    ```shell
    kubectl get mc deckhouse  -o jsonpath='{.spec.settings.releaseChannel}'
    ```
 
-2. Run the Deckhouse installer:
+2. Run the Deckhouse [installer](../glossary.html#installer):
 
    ```shell
    docker run --pull=always -it [<MOUNT_OPTIONS>] \
@@ -23,7 +23,7 @@ Perform the following steps to delete a cluster deployed with a cloud provider
 
    where:
    - `<MOUNT_OPTIONS>` — parameters for mounting files in the installer container, such as SSH access keys;
-   - `<DECKHOUSE_REVISION>` — the Deckhouse [edition](../revision-comparison.html) (e. g., `ee` — for the Enterprise Edition, `ce` — for the Community Edition, etc.)
+   - `<DECKHOUSE_REVISION>` — the Deckhouse [edition](../revision-comparison.html) (e. g., `ee` — for the [Enterprise Edition](../glossary.html#edition), `ce` — for the Community Edition, etc.)
    - `<RELEASE_CHANNEL>` — the Deckhouse [release channel](/modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case:
      - `alpha` — for the *Alpha* release channel;
      - `beta` — for the *Beta* release channel;
@@ -50,15 +50,15 @@ Perform the following steps to delete a cluster deployed with a cloud provider
 
    where:
    - `<USER>` — the user of the remote machine that ran the installation. If `<USER>` needs to perform actions via `sudo`, add the `--ask-become-pass` flag;
-   - `<MASTER_IP>` — the IP address of the cluster's master node.
+   - `<MASTER_IP>` — the IP address of the cluster's [master node](../glossary.html#master-node).
 
 The installer will then connect to the cluster, retrieve the necessary data, and delete all the resources and objects in the cloud that were created during the DP installation and operation.
 
 ## Deleting a hybrid cluster
 
-Follow these steps to delete a hybrid cluster consisting of the nodes that were automatically deployed in the cloud as well as the static nodes that were manually plugged in:
+Follow these steps to delete a [hybrid cluster](../glossary.html#hybrid-cluster) consisting of the nodes that were automatically deployed in the cloud as well as the [static nodes](../glossary.html#static-node) that were manually plugged in:
 
-1. First, [delete](/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) all the [extra nodes](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) (CloudStatic and Static) that were manually plugged in.
+1. First, [delete](/modules/node-manager/faq.html#how-to-clean-up-a-node-for-adding-to-the-cluster) all the [extra nodes](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) ([CloudStatic](../glossary.html#cloud-static-node) and Static) that were manually plugged in.
 
 2. Find out the release channel set in the cluster. To do this, run the command:
 
@@ -74,10 +74,10 @@ Follow these steps to delete a hybrid cluster consisting of the nodes that were 
    ```
 
    where:
-   - `<MOUNT_OPTIONS>` — parameters for mounting files in the installer container, such as SSH access keys;
+   - `<MOUNT_OPTIONS>` — parameters for mounting files in the [installer](../glossary.html#installer) container, such as SSH access keys;
    - `<DECKHOUSE_REVISION>` — the Deckhouse [edition](../revision-comparison.html) (e. g., `ee` — for the Enterprise Edition, `ce` — for the Community Edition, etc.)
    - `<RELEASE_CHANNEL>` — the Deckhouse [release channel](/modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case:
-     - `alpha` — for the *Alpha* release channel;
+     - `alpha` — for the *Alpha* [release channel](../glossary.html#release-channel);
      - `beta` — for the *Beta* release channel;
      - `early-access` — for the *Early Access* release channel;
      - `stable` — for the *Stable* release channel;
@@ -128,7 +128,7 @@ Follow the steps below to delete a cluster that has been manually installed (e.g
 
    where:
    - `<MOUNT_OPTIONS>` — parameters for mounting files in the installer container, such as SSH access keys;
-   - `<DECKHOUSE_REVISION>` — the Deckhouse [edition](../revision-comparison.html) (e.g., `ee` — for the Enterprise Edition, `ce` — for the Community Edition, etc.)
+   - `<DECKHOUSE_REVISION>` — the Deckhouse [edition](../revision-comparison.html) (e.g., `ee` — for the [Enterprise Edition](../glossary.html#edition), `ce` — for the Community Edition, etc.)
    - `<RELEASE_CHANNEL>` — the Deckhouse [release channel](/modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case:
      - `alpha` — for the *Alpha* release channel;
      - `beta` — for the *Beta* release channel;
@@ -136,7 +136,7 @@ Follow the steps below to delete a cluster that has been manually installed (e.g
      - `stable` — for the *Stable* release channel;
      - `rock-solid` — for the *Rock Solid* release channel.
 
-   Below is an example command to run the Deckhouse CE installer container:
+   Below is an example command to run the Deckhouse CE [installer](../glossary.html#installer) container:
 
    ```shell
    docker run -it --pull=always \
@@ -155,7 +155,7 @@ Follow the steps below to delete a cluster that has been manually installed (e.g
 
    where:
    - `<USER>` — the user of the remote machine that ran the installation. If `<USER>` needs to perform actions via `sudo`, add the `--ask-become-pass` flag;
-   - `<MASTER_IP>` — the IP address of the cluster's master node;
+   - `<MASTER_IP>` — the IP address of the cluster's [master node](../glossary.html#master-node);
    - `<SSH_PRIVATE_KEY_FILE>`: Name of private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
 
 The installer will then connect to the master node and delete all Deckhouse and Kubernetes cluster components on it.

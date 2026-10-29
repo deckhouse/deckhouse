@@ -4,7 +4,7 @@ permalink: en/admin/configuration/access/authentication/k8s-api-lb.html
 description: "Configure authenticated access to Kubernetes API through load balancer in Deckhouse Platform. Secure kubectl access via Ingress controller with authentication."
 ---
 
-DP allows using authentication when accessing the Kubernetes API. In this case, a user can generate a `kubectl` configuration via the DP web UI to securely access the Kubernetes API through a traffic balancer (Ingress controller).
+DP allows using authentication when accessing the Kubernetes API. In this case, a user can generate a `kubectl` configuration via the [DP web UI](../../../../glossary.html#web-ui) to securely access the Kubernetes API through a traffic balancer ([Ingress controller](../../../../glossary.html#ingress-controller)).
 
 To configure access, follow these steps:
 

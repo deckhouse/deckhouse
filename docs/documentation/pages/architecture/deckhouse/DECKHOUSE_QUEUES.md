@@ -7,17 +7,17 @@ description: Description of queue processing in the Deckhouse controller in Deck
 
 The [`deckhouse`](/modules/deckhouse/) module implements the core of Deckhouse Platform (DP), performing various platform management operations using a queueing mechanism. For more information about the module architecture, refer to the [corresponding documentation section](./deckhouse.html).
 
-The Deckhouse controller implements addon-operator and marketplace queues.
+The [Deckhouse controller](../../glossary.html#deckhouse-controller) implements addon-operator and marketplace queues.
 
 ## Addon-operator queues
 
-The **addon-operator queues** are the primary processing mechanism for built-in and external DP modules. The queue is implemented in [shell-operator](https://github.com/flant/shell-operator) and extended with [addon-operator](https://github.com/flant/addon-operator) task types. The Deckhouse controller synchronizes [ModuleConfig](../../reference/api/cr.html#moduleconfig) custom resources and updates global or module values for addon-operator.
+The **[addon-operator queues](../../glossary.html#addon-operator-queue)** are the primary processing mechanism for built-in and external DP modules. The queue is implemented in [shell-operator](https://github.com/flant/shell-operator) and extended with [addon-operator](https://github.com/flant/addon-operator) task types. The Deckhouse controller synchronizes [ModuleConfig](../../reference/api/cr.html#moduleconfig) custom resources and updates global or module values for addon-operator.
 
 Task types:
 
 | Task                               | Function                                                                            |
 |------------------------------------|-------------------------------------------------------------------------------------|
-| GlobalHookRun                      | Runs global hooks (`onStartup`, `beforeAll`, `afterAll`, `kubernetes`, `schedule`)           |
+| GlobalHookRun                      | Runs global [hooks](../../glossary.html#module-hook) (`onStartup`, `beforeAll`, `afterAll`, `kubernetes`, `schedule`)           |
 | GlobalHookEnableKubernetesBindings | Enables Kubernetes monitors from global hooks                                         |
 | GlobalHookWaitKubernetesSynchronization | Blocks the queue until global hooks with `executeHookOnSynchronization: true` complete |
 | GlobalHookEnableScheduleBindings   | Registers cron tasks in the addon-operator scheduler                                 |
@@ -35,8 +35,8 @@ Addon-operator queue types:
 
 | Queue       | Name                                   | Purpose                                                                                      |
 |-------------|----------------------------------------|----------------------------------------------------------------------------------------------|
-| Main        | `main`                                 | Runs global hooks at startup, installs critical modules, configures and deletes modules          |
-| Parallel    | `parallel_queue_0` ... `parallel_queue_19` | Parallel ModuleRun with module dependencies taken into account (20 queues)                  |
+| Main        | `main`                                 | Runs global hooks at startup, installs [critical modules](../../glossary.html#critical-module), configures and deletes modules          |
+| Parallel    | `parallel_queue_0` ... `parallel_queue_19` | Parallel ModuleRun with [module dependencies](../../glossary.html#module-dependencies) taken into account (20 queues)                  |
 | Hook queues | From task config ([hook](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md)) | Tasks for a specific module and global hooks |
 
 Each queue is a separate pipeline with one worker. The queue has the following properties:
@@ -71,9 +71,9 @@ The module processing order in the ConvergeModules task is determined by several
 - Module *weight*: Numeric module processing order. The higher the number, the later the module is processed. The weight is taken from the `weight` parameter in module `module.yaml`; if missing or set to 0, the default weight 900 is used. If no module config file exists, the weight is taken from the numeric prefix of the module directory name (for example, `040-node-manager` means weight 40). If the weight cannot be obtained from the directory name, weight 100 is used.
 - Module dependencies: A list of modules that must be installed before the current module.
 
-Based on these attributes, the Deckhouse controller scheduler defines processing order according to the following principles:
+Based on these attributes, the [Deckhouse controller](../../glossary.html#deckhouse-controller) scheduler defines processing order according to the following principles:
 
-- For critical modules, module weight is considered in ascending order and tasks are put into the `main` queue.
+- For critical modules, [module weight](../../glossary.html#module-weight) is considered in ascending order and tasks are put into the `main` queue.
 - For non-critical modules, module weight is not considered and tasks are put into `parallel_queue_0..19`.
 - For all modules, dependencies on other modules are considered.
 
@@ -93,7 +93,7 @@ To view addon-operator queues, use the `d8 system queue list` command.
 
 ## Marketplace queues
 
-The **Marketplace queues** are a queue implementation used by [Marketplace](../marketplace/) functionality.
+The **[Marketplace](../../glossary.html#marketplace) queues** are a queue implementation used by [Marketplace](../marketplace/) functionality.
 
 Each queue served by the Deckhouse controller for Marketplace has the following properties:
 
@@ -108,7 +108,7 @@ Queue types:
 | Name                           | Purpose                                                           |
 |--------------------------------|-------------------------------------------------------------------|
 | `{packageName}`                  | Lifecycle: Deploy, Load, Configure, Enable, Run, Disable, Undeploy |
-| `{packageName}/{hookQueue}`      | Running hooks triggered by Kubernetes or schedule events (queue from hook binding)          |
+| `{packageName}/{hookQueue}`      | Running [hooks](../../glossary.html#module-hook) triggered by Kubernetes or schedule events (queue from hook binding)          |
 | `{packageName}/{hookQueue}/sync` | Hook synchronization at startup (WaitForSynchronization)         |
 
 Task types:

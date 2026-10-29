@@ -6,11 +6,11 @@ lang: ru
 search: application hooks, ApplicationHookInput, ApplicationHookConfig, settingscheck, beforeDeleteHelm, хуки приложения, валидация настроек, привязки хуков
 ---
 
-Хуки Application разрабатываются на Go с использованием [module-sdk](https://github.com/deckhouse/module-sdk). Deckhouse Platform (DP) запускает их на определённых этапах жизненного цикла приложения, при изменении объектов Kubernetes и по расписанию. Хуки подготавливают values для шаблонов, создают и изменяют объекты в неймспейсе приложения и проверяют настройки.
+[Хуки](../../glossary.html#module-hook) Application разрабатываются на Go с использованием [module-sdk](https://github.com/deckhouse/module-sdk). Deckhouse Platform (DP) запускает их на определённых этапах жизненного цикла приложения, при изменении объектов Kubernetes и по расписанию. Хуки подготавливают values для шаблонов, создают и изменяют объекты в неймспейсе приложения и проверяют настройки.
 
 ## Бинарный файл хуков
 
-Все хуки пакета компилируются в один бинарный файл Go. В заготовке пакета исходный код находится в `hooks/batch/`, а `d8 package build` собирает бинарный файл по инструкциям из `hooks/hooks.yaml` и помещает его в bundle пакета.
+Все хуки [пакета](../../glossary.html#marketplace-package) компилируются в один бинарный файл Go. В заготовке пакета исходный код находится в `hooks/batch/`, а `d8 package build` собирает бинарный файл по инструкциям из `hooks/hooks.yaml` и помещает его в [bundle пакета](../../glossary.html#marketplace-package-bundle).
 
 Каждый хук регистрируется с помощью `registry.RegisterFunc`, а функция `main` вызывает `app.Run`:
 
@@ -102,12 +102,12 @@ func handle(_ context.Context, input *pkg.ApplicationHookInput) error {
 
 ## Привязки и порядок выполнения
 
-Структура `pkg.ApplicationHookConfig` определяет, когда запускается хук:
+Структура `pkg.ApplicationHookConfig` определяет, когда запускается [хук](../../glossary.html#module-hook):
 
 | Поле | Когда запускается хук |
 |---|---|
-| `OnStartup` | Один раз после чтения пакета: при установке, после изменения версии пакета и после перезапуска DP. Хук не получает снимки (snapshots) |
-| `OnBeforeHelm` | В каждом цикле согласования перед применением шаблонов |
+| `OnStartup` | Один раз после чтения [пакета](../../glossary.html#marketplace-package): при установке, после изменения версии пакета и после перезапуска DP. Хук не получает снимки (snapshots) |
+| `OnBeforeHelm` | В каждом [цикле согласования](../../glossary.html#application-reconciliation) перед применением шаблонов |
 | `OnAfterHelm` | В каждом цикле согласования после применения шаблонов. Если хук меняет values, DP применяет шаблоны ещё раз |
 | `OnBeforeDeleteHelm` | Перед удалением Helm-релиза: при удалении Application или когда требования пакета перестают выполняться. При изменении версии пакета хук не запускается |
 | `OnAfterDeleteHelm` | После удаления Helm-релиза в тех же случаях, что и `OnBeforeDeleteHelm` |
@@ -162,7 +162,7 @@ func handle(_ context.Context, input *pkg.ApplicationHookInput) error {
 | `APIVersion`, `Kind` | Версия API и тип объектов. Поддерживаются только типы уровня неймспейса |
 | `NameSelector`, `LabelSelector`, `FieldSelector` | Выбор объектов |
 | `JqFilter` | Выражение jq, которое применяется к каждому объекту. Снимок содержит результаты выражения. Без выражения снимок содержит объекты целиком |
-| `ExecuteHookOnEvents` | `false` — обновлять снимок без запуска хука при изменении объектов. По умолчанию: `true` |
+| `ExecuteHookOnEvents` | `false` — обновлять снимок без запуска [хука](../../glossary.html#module-hook) при изменении объектов. По умолчанию: `true` |
 | `ExecuteHookOnSynchronization` | `false` — не запускать хук при синхронизации. По умолчанию: `true` |
 | `WaitForSynchronization` | `false` — не ждать синхронизации привязки перед следующими этапами. Действует, только если задано поле `Queue` хука. По умолчанию: `true` |
 | `AllowFailure` | Игнорировать ошибки хука при синхронизации |
@@ -172,10 +172,10 @@ func handle(_ context.Context, input *pkg.ApplicationHookInput) error {
 - DP всегда ограничивает привязки неймспейсом приложения, поэтому в структуре нет селектора неймспейсов.
 - При каждом запуске хук получает снимки всех своих привязок: текущее состояние объектов, а не событие, вызвавшее запуск.
 - Хуки `OnBeforeHelm`, `OnAfterHelm`, `OnBeforeDeleteHelm` и `OnAfterDeleteHelm` тоже получают снимки.
-- DP синхронизирует привязки в начале каждого цикла согласования: хуки с включённым `ExecuteHookOnSynchronization` запускаются с полным списком объектов.
+- DP синхронизирует привязки в начале каждого [цикла согласования](../../glossary.html#application-reconciliation): хуки с включённым `ExecuteHookOnSynchronization` запускаются с полным списком объектов.
 - `NameSelector` сравнивается с фактическими именами объектов, включая префикс `d8a-<INSTANCE_NAME>-`.
 
-Конфигурация хука одинакова для всех экземпляров пакета, поэтому селекторы не могут ссылаться на имя экземпляра. Если в один неймспейс может быть установлено несколько экземпляров пакета, добавьте лейбл экземпляра в снимок и сравнивайте её с `input.Instance.Name()`. Объекты, отрендеренные из шаблонов, имеют лейбл `packages.deckhouse.io/instance`:
+Конфигурация хука одинакова для всех экземпляров [пакета](../../glossary.html#marketplace-package), поэтому селекторы не могут ссылаться на имя экземпляра. Если в один неймспейс может быть установлено несколько экземпляров пакета, добавьте лейбл экземпляра в снимок и сравнивайте её с `input.Instance.Name()`. Объекты, отрендеренные из шаблонов, имеют лейбл `packages.deckhouse.io/instance`:
 
 ```go
 JqFilter: `{"name": .metadata.name, "instance": .metadata.labels["packages.deckhouse.io/instance"]}`,
@@ -225,7 +225,7 @@ DP добавляет префикс `d8a-<INSTANCE_NAME>-` к имени объ
 | `OnAfterHelm` | DP применяет шаблоны ещё раз |
 | `OnStartup`, `OnBeforeHelm`, синхронизация | Values используются при применении шаблонов в том же цикле |
 
-`input.Settings` доступен только для чтения: хуки не могут менять настройки приложения.
+`input.Settings` доступен только для чтения: [хуки](../../glossary.html#module-hook) не могут менять настройки приложения.
 
 ## Хук валидации настроек
 
@@ -266,7 +266,7 @@ func Check(_ context.Context, input settingscheck.Input) settingscheck.Result {
 }
 ```
 
-Чтобы зарегистрировать проверку, передайте её в `app.Run` в бинарном файле хуков: `app.Run(app.WithSettingsCheck(Check))`. Пакет может содержать только один хук валидации настроек.
+Чтобы зарегистрировать проверку, передайте её в `app.Run` в бинарном файле хуков: `app.Run(app.WithSettingsCheck(Check))`. [Пакет](../../glossary.html#marketplace-package) может содержать только один хук валидации настроек.
 
 DP вызывает проверку в следующих случаях:
 

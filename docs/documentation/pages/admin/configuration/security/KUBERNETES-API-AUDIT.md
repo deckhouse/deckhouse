@@ -76,7 +76,7 @@ spec:
 
 ## Configuring a custom audit policy
 
-To create an advanced Kubernetes API audit policy, follow these steps:
+To create an advanced [Kubernetes API audit](../../../../glossary.html#kubernetes-api-audit) policy, follow these steps:
 
 1. Enable the [`auditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) parameter
    in the `control-plane-manager` module configuration:
@@ -141,7 +141,7 @@ rules:                          # Set of rules for auditing
     namespaces:                  # Namespaces that the rule covers
 ```
 
-The `rules` array describes the audit rules.
+The `rules` array describes the [audit rules](../../../../glossary.html#runtime-audit-rule).
 Each rule contains the following fields:
 
 - `level` — The detail level of the logged event.
@@ -263,7 +263,7 @@ rules:
 
 ## Working with the audit log file
 
-On DP master nodes, it is assumed that a log collection tool (`log-shipper`, `promtail`, or `filebeat`) is installed
+On DP [master nodes](../../../../glossary.html#master-node), it is assumed that a log collection tool (`log-shipper`, `promtail`, or `filebeat`) is installed
 to monitor the `/var/log/kube-audit/audit.log` file.
 
 The log rotation settings for this file are predefined and cannot be changed:

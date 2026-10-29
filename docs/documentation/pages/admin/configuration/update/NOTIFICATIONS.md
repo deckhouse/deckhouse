@@ -11,7 +11,7 @@ This helps you plan updates and prepare for them in advance.
 Conditions for sending notifications to external systems:
 
 - DP is operating in [automatic update mode](configuration.html#automatic-update-mode).
-- A minor version update is planned (notifications are not sent for patch versions).
+- A [minor version](../../../glossary.html#minor-version) update is planned (notifications are not sent for [patch versions](../../../glossary.html#patch-version)).
 - A webhook for notifications is configured.
 
 ## Alerts in the monitoring system
@@ -29,7 +29,7 @@ This helps avoid disruptions and ensures the cluster remains stable after the up
 
 ## Configuring notifications
 
-In the `Auto` update mode, you can [configure](/modules/deckhouse/configuration.html#parameters-update-notification) a webhook call to receive a notification about an upcoming minor DP version update.
+In the `Auto` [update mode](../../../glossary.html#update-mode), you can [configure](/modules/deckhouse/configuration.html#parameters-update-notification) a webhook call to receive a notification about an upcoming minor DP version update.
 
 Additionally, notifications are generated not only for Deckhouse updates but also for updates of any modules, including individual ones.  
 In some cases, the system may initiate multiple notifications simultaneously (10–20 notifications) at approximately 15-second intervals.
@@ -44,7 +44,7 @@ Specifying a webhook is optional: if the [`update.notification.webhook`](/module
 
 After a new minor DP version appears in the selected update channel but before it is applied in the cluster, a [POST request](/modules/deckhouse/configuration.html#parameters-update-notification-webhook) will be sent to the configured webhook address.
 
-The [minimalNotificationTime](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter allows postponing the update installation for a defined period, providing time to react to the notification while respecting update windows.  
+The [minimalNotificationTime](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter allows postponing the update installation for a defined period, providing time to react to the notification while respecting [update windows](../../../glossary.html#update-window).  
 If the webhook is unavailable, each failed attempt to send the notification will postpone the update by the same amount, which may lead to the update being indefinitely deferred.
 
 {% alert level="warning" %}
@@ -139,7 +139,7 @@ func main() {
 ### Supported notifications parameters
 
 - `update.notification.webhook`: URL for sending notifications.
-  A POST request with update information is sent as soon as a new minor version appears on the selected release channel,
+  A POST request with update information is sent as soon as a new [minor version](../../../glossary.html#minor-version) appears on the selected [release channel](../../../glossary.html#release-channel),
   but before the update is installed in the cluster.
 - `update.notification.auth`: Authentication parameters for calling the webhook.
   If this parameter is not set, authentication is not used.
@@ -226,8 +226,8 @@ Field descriptions:
 
 - `subject`: Release subject ("Deckhouse" for Deckhouse releases or "Module" for module releases).
 - `moduleName`: Module name (present only for module releases).
-- `version`: Minor version number (a string).
+- `version`: [Minor version](../../../glossary.html#minor-version) number (a string).
 - `requirements`: Object with requirements for the new version (for example, the minimum Kubernetes version).
 - `changelogLink`: Link to the changelog describing changes in the new minor version.
-- `applyTime`: Scheduled update date and time in RFC3339 format with the configured update windows considered.
+- `applyTime`: Scheduled update date and time in RFC3339 format with the configured [update windows](../../../glossary.html#update-window) considered.
 - `message`: A short text notification about the available minor version and its scheduled installation time.

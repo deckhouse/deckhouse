@@ -9,7 +9,7 @@ lang: ru
 - Подключение облачных дисков через CSI;
 - Автоматическое создание StorageClass;
 - Использование LoadBalancer;
-- Доступ через bastion-хост;
+- Доступ через [bastion-хост](../../../../glossary.html#bastion-host);
 - Подключение вручную созданных CloudStatic-узлов.
 
 ## Хранилище (CSI и StorageClass)
@@ -94,7 +94,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-foo,subnet-bar"
 ```
 
-Это особенно важно при ручной настройке Ingress-контроллеров или нестандартной схеме размещения узлов.
+Это особенно важно при ручной настройке [Ingress-контроллеров](../../../../glossary.html#ingress-controller) или нестандартной [схеме размещения](../../../../glossary.html#layout) узлов.
 
 Чтобы получить список текущих подсетей, используемых в установке DP, выполните команду:
 
@@ -129,7 +129,7 @@ d8 k -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"
 d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
 ```
 
-Если значение пустое, возьмите его из устаревшего параметра [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) ресурса ClusterConfiguration (префикс перенесён в ModuleConfig `global`):
+Если значение пустое, возьмите его из устаревшего параметра [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) ресурса [ClusterConfiguration](../../../../glossary.html#cluster-configuration) (префикс перенесён в ModuleConfig `global`):
 
 ```shell
 d8 k -n kube-system get secret d8-cluster-configuration -o json | \

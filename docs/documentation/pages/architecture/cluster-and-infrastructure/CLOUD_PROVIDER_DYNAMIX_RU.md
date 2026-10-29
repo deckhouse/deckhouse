@@ -27,7 +27,7 @@ description: Архитектура модуля cloud-provider-dynamix в Deckh
 
 Модуль состоит из следующих компонентов:
 
-1. **Capd-controller-manager** — Kubernetes Cluster API Provider для Basis Dynamix. [Cluster API](https://github.com/kubernetes-sigs/cluster-api) является расширением для Kubernetes, которое дает возможность управлять Kubernetes-кластерами как кастомными ресурсами внутри другого Kubernetes-кластера. Cluster API Provider позволяет для кластеров под управлением Cluster API заказывать виртуальные машины в инфраструктуре облачного провайдера, в данном случае Basis Dynamix. Capd-controller-manager работает со следующими кастомными ресурсами:
+1. **Capd-controller-manager** — Kubernetes Cluster API Provider для Basis Dynamix. [Cluster API](https://github.com/kubernetes-sigs/cluster-api) является расширением для Kubernetes, которое дает возможность управлять Kubernetes-кластерами как кастомными ресурсами внутри другого Kubernetes-кластера. Cluster API Provider позволяет для кластеров под управлением Cluster API заказывать виртуальные машины в инфраструктуре [облачного провайдера](../../../glossary.html#cloud-provider), в данном случае Basis Dynamix. Capd-controller-manager работает со следующими кастомными ресурсами:
 
    * DynamixCluster — описание кластера на базе Basis Dynamix;
    * DynamixMachineTemplate — шаблон с описанием характеристик создаваемых машин в облаке;
@@ -59,7 +59,7 @@ description: Архитектура модуля cloud-provider-dynamix в Deckh
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-4. **CSI-драйвер (dynamix)** — реализация CSI-драйвера для Basis Dynamix. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться на [соответствующей странице документации](../../storage/csi-drivers/csi-driver.html).
+4. **[CSI-драйвер](../../../glossary.html#csi-driver) (dynamix)** — реализация CSI-драйвера для Basis Dynamix. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться на [соответствующей странице документации](../../storage/csi-drivers/csi-driver.html).
 
    CSI-драйвер (dynamix) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 

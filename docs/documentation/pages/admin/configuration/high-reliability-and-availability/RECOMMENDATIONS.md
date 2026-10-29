@@ -8,7 +8,7 @@ Below are the recommended roles and number of nodes for various components.
 
 ## Master nodes
 
-To ensure cluster fault tolerance, **always** use at least three master nodes.
+To ensure cluster fault tolerance, **always** use at least three [master nodes](../../../glossary.html#master-node).
 This number ensures uninterrupted cluster operation and lets you update master nodes safely.
 More than three nodes are unnecessary,
 and two nodes are insufficient to maintain alignment (quorum) in case of issues in one of the nodes.
@@ -18,8 +18,8 @@ since it manages key components that keep the cluster running.
 
 ## Frontend nodes
 
-Frontend nodes balance incoming traffic.
-Ingress controllers run on them.
+[Frontend nodes](../../../glossary.html#frontend-node) balance incoming traffic.
+[Ingress controllers](../../../glossary.html#ingress-controller) run on them.
 Use more than one frontend node.
 These nodes must be able to handle traffic in case at least one frontend node fails.
 
@@ -28,10 +28,10 @@ If there are three, each node must be able to handle at least a 150% load increa
 
 ## Monitoring nodes
 
-Monitoring nodes run Grafana, Prometheus, and other monitoring components.
+[Monitoring nodes](../../../glossary.html#monitoring-node) run Grafana, Prometheus, and other monitoring components.
 In heavily loaded clusters with multiple alerts and large metric volumes,
 it's recommended that you allocate dedicated nodes for monitoring.
-Otherwise, monitoring components will run on system nodes.
+Otherwise, monitoring components will run on [system nodes](../../../glossary.html#system-node).
 
 When dedicating nodes for monitoring, it's important they use fast disks (at least 400 IOPS).
 
@@ -82,7 +82,7 @@ The component also provides the following metrics to Grafana:
 ## Delaying node reboot or shutdown while critical pods are running
 
 {% alert level="info" %}
-Available in the EE and Ultimate editions.
+Available in the EE and Ultimate [editions](../../../glossary.html#edition).
 {% endalert %}
 
 DP supports a mechanism for delaying the shutdown or reboot of a node if it is running stateful applications or virtual machines (VMs). This is implemented by the `d8-shutdown-inhibitor` service of the [`node-manager`](/modules/node-manager/) module.
@@ -92,7 +92,7 @@ The delay is triggered if pods with the label `pod.deckhouse.io/inhibit-node-shu
 ### Enabling a node shutdown delay
 
 {% alert level="warning" %}
-To decide whether to block a node shutdown, DP additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only master node in the cluster, the shutdown block will not be applied to it.
+To decide whether to block a node shutdown, DP additionally queries the NodeGroup. If the current node belongs to the `master` group and it is the only [master node](../../../glossary.html#master-node) in the cluster, the shutdown block will not be applied to it.
 {% endalert %}
 
 To enable the mechanism that delays a node's restart or shutdown, add the label `pod.deckhouse.io/inhibit-node-shutdown` to the Pod (for a Deployment, specify the label in the pod template).

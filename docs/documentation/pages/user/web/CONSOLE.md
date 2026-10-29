@@ -11,7 +11,7 @@ The Deckhouse Platform (DP) web UI provides access to cluster management, includ
 
 To open the web UI, do as follows:
 
-1. Enter `console.<CLUSTER_NAME_TEMPLATE>` in the browser address bar, where `<CLUSTER_NAME_TEMPLATE>` is a string corresponding to the cluster DNS name template specified in the global parameter [`modules.publicDomainTemplate`](../../reference/api/global.html#parameters-modules-publicdomaintemplate). The address format may differ depending on the system configuration. Contact your administrator to find out the URL.
+1. Enter `console.<CLUSTER_NAME_TEMPLATE>` in the browser address bar, where `<CLUSTER_NAME_TEMPLATE>` is a string corresponding to the cluster [DNS name template](../../glossary.html#public-domain-template) specified in the global parameter [`modules.publicDomainTemplate`](../../reference/api/global.html#parameters-modules-publicdomaintemplate). The address format may differ depending on the system configuration. Contact your administrator to find out the URL.
 
 1. During the first login, enter the user credentials provided by the security administrator.
    After successful authentication, the main page of the web UI opens. The page contains the following sections:
@@ -37,7 +37,7 @@ Main elements of the web UI:
 
 - **"Deckhouse" and "Kubernetes" panels**: Display the current Kubernetes version and general platform information.
 - **"Tools" panel**: Contains buttons for quick access to the following sections:
-  - "Kubernetes dashboard"
+  - "Kubernetes [dashboard](../../glossary.html#dashboard)"
   - "Documentation"
   - "Grafana" (metrics monitoring)
   - "Prometheus" (metrics collection and storage)
@@ -45,7 +45,7 @@ Main elements of the web UI:
   - "Component availability"
   - "Kubeconfig generator"
 - **"Warnings" panel**: Displays errors, pending updates, and active alerts.
-- **"Node groups with issues" panel**: Analyzes node health and displays problematic groups.
+- **"[Node groups](../../glossary.html#node-group) with issues" panel**: Analyzes node health and displays problematic groups.
 - **"Subsystem statuses" panel**: Displays the state of cluster services.
 - **Resource monitoring**: Includes charts and indicators showing load changes.
 - **Sidebar menu**: Navigation through the main sections (the visibility of sections depends on the user access level).
@@ -56,7 +56,7 @@ Main elements of the web UI:
 
 ### "Updates" subsection
 
-The "Updates" subsection contains information about DP releases.
+The "Updates" subsection contains information about [DP releases](../../glossary.html#dp-release).
 
 !["Updates" subsection interface](../../images/console/releases.png)
 
@@ -71,7 +71,7 @@ The "Modules" subsection lists enabled and disabled modules. A filter is availab
 This subsection provides access to critical DP cluster settings:
 
 - **"Global cluster settings"**: Configuration of the DNS name template and the list of tolerations.
-- **"Global module settings"**: Configuration of the high availability mode, and fields for specifying IngressClass and StorageClass.
+- **"Global module settings"**: Configuration of the [high availability mode](../../glossary.html#ha-mode), and fields for specifying IngressClass and StorageClass.
 - **"HTTPS operating mode"**: Configuration of security certificates.
 - **"Kubernetes control plane component resources"**: Configuration of the number of allocated CPU cores and memory size.
 
@@ -112,7 +112,7 @@ The lower part of the form contains additional settings, including node update p
 
 ![Editing node system parameters in the "Node groups" subsection](../../images/console/system-management-nodes-node-groups-worker-2.png)
 
-The node group card displays:
+The [node group](../../glossary.html#node-group) card displays:
 
 - Node type and Kubernetes version
 - Total number of nodes, their readiness and update status
@@ -139,7 +139,7 @@ The form lets you specify the required parameters for the new node group.
 
 ### "Instance classes" subsection
 
-This subsection is intended for managing instance classes used in the cluster.
+This subsection is intended for managing [instance classes](../../glossary.html#instance-class) used in the cluster.
 The class list can be sorted.
 
 !["Instance classes" subsection interface](../../images/console/system-management-dvpinstanceclasses-deckhouse-io.png)
@@ -159,7 +159,7 @@ The node card displays:
 - Current node state
 - Group
 - Date and time
-- Availability zone
+- [Availability zone](../../glossary.html#availability-zone)
 - Internal and external IP addresses
 - Container runtime in use
 - Kernel version
@@ -204,7 +204,7 @@ Additional fields are available for changing the SSH port and adding extra SSH a
 
 ### "Projects" subsection
 
-This subsection is intended for creating projects based on prepared templates that define the set of resources to be created and their parameters.
+This subsection is intended for creating [projects](../../glossary.html#project) based on prepared templates that define the set of resources to be created and their parameters.
 
 During project creation, the following operations are performed:
 
@@ -284,7 +284,7 @@ If necessary, you can block a user or reset a password.
 
 ### "Ingress controllers" subsection
 
-This subsection displays information about the current Ingress controllers responsible for traffic routing inside the DP cluster.
+This subsection displays information about the current [Ingress controllers](../../glossary.html#ingress-controller) responsible for traffic routing inside the DP cluster.
 If necessary, you can sort the list of controllers and add new ones.
 
 The "Nginx Ingress controllers" card displays its main parameters:
@@ -296,7 +296,7 @@ The "Nginx Ingress controllers" card displays its main parameters:
 
 The lower part of the card contains monitoring charts for CPU usage, memory usage, network traffic, and requests per second (RPS), allowing you to monitor controller performance. The "Create from" option is available for cloning the configuration, and the "Delete" option is available for removing the Ingress controller.
 
-The "Add" button in the upper-right corner allows you to select the type of a new inbound connection (inlet) for the Ingress controller.
+The "Add" button in the upper-right corner allows you to select the type of a new inbound connection ([inlet](../../glossary.html#inlet)) for the Ingress controller.
 Available options:
 
 - HostPort
@@ -342,7 +342,7 @@ This subsection is intended for scanning container images for vulnerabilities (C
 The subsection contains the "Vulnerability reports" and "Scanned namespaces" tabs:
 
 - "Vulnerability reports" tab displays the results of the latest scans. It provides information about the scanned object, including its name, namespace, type, and resource name, as well as the container and the image in use. If no vulnerabilities are found, a green indicator is displayed. The "Rescan" button allows you to perform a new scan.
-- "Scanned namespaces" tab is intended for managing namespaces that are subject to scanning. The interface supports sorting by name and scan parameters. You can optionally hide system namespaces. The required namespaces can be selected for scanning, and scans can be started using the "Rescan" button. Reports for each object are also available for viewing.
+- "Scanned namespaces" tab is intended for managing namespaces that are subject to scanning. The interface supports sorting by name and scan parameters. You can optionally hide [system namespaces](../../glossary.html#system-namespace). The required namespaces can be selected for scanning, and scans can be started using the "Rescan" button. Reports for each object are also available for viewing.
 
 !["CVE scanner" subsection interface](../../images/console/scaner_cve.png)
 
@@ -376,7 +376,7 @@ This subsection is intended for configuring data export to a local or external P
 
 ### "Grafana data sources" subsection
 
-In this subsection, you can configure Grafana integration with various data sources used in dashboards and visualize data.
+In this subsection, you can configure Grafana integration with various data sources used in [dashboards](../../glossary.html#dashboard) and visualize data.
 
 To create a new data source, specify its name, type, URL, access parameters, and authentication settings.
 

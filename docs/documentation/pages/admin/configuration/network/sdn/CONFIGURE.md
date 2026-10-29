@@ -6,11 +6,11 @@ description: |
 search: software-defined networks, VLAN interfaces, additional networks, underlay networks
 ---
 
-To use SDN in a DP cluster, you need to prepare the infrastructure for enabling the [`sdn`](/modules/sdn/) module, as well as perform some preparatory actions after enabling it.
+To use [SDN](../../../../glossary.html#sdn) in a DP cluster, you need to prepare the infrastructure for enabling the [`sdn`](/modules/sdn/) module, as well as perform some preparatory actions after enabling it.
 
 ## Preparing the infrastructure for enabling the `sdn` module
 
-Before using additional software-defined networks (hereinafter referred to as additional networks) in a cluster, preliminary infrastructure preparation is required:
+Before using additional software-defined networks (hereinafter referred to as [additional networks](../../../../glossary.html#additional-network)) in a cluster, preliminary infrastructure preparation is required:
 
 * **For creating additional networks based on tagged VLANs:**
   * Allocate VLAN ID ranges on the data center switches and configure them on the corresponding switch interfaces.
@@ -171,7 +171,7 @@ Example configuring a bond interface:
 
 ## Configuring and connecting additional virtual networks for use in application pods
 
-The Deckhouse Platform provides the ability to declaratively manage additional networks for application workloads (pods, virtual machines). At the same time:
+The Deckhouse Platform provides the ability to declaratively manage [additional networks](../../../../glossary.html#additional-network) for application workloads (pods, virtual machines). At the same time:
 
 * Each additional network implies a single L2 data exchange domain.
 * Within the Pod’s network namespace, an additional network is represented as a tap interface.
@@ -179,7 +179,7 @@ The Deckhouse Platform provides the ability to declaratively manage additional n
   * **Tagged VLAN**: Communication between Pods on different Nodes uses VLAN-tagged packets and the infrastructure’s network equipment for switching. This method allows to create up to 4096 additional networks within a single cluster.
   * **Direct access to a Node’s network interface**: Communication between Pods on different Nodes uses the local network interfaces of the Nodes.
 * From a network management perspective, there are two types of networks:
-  * **[Cluster network](#creating-a-publicly-accessible-network-cluster)**: A network available in all projects, under administrator management. Example: a public WAN network or a shared network for cross-project traffic.
+  * **[Cluster network](#creating-a-publicly-accessible-network-cluster)**: A network available in all [projects](../../../../glossary.html#project), under administrator management. Example: a public WAN network or a shared network for cross-project traffic.
   * **[Project network](#creating-a-project-network-user-network)**: A network available within a Namespace, under user management.
 
 Custom resources [ClusterNetwork](/modules/sdn/cr.html#clusternetwork), [Network](/modules/sdn/cr.html#network), and [NetworkClass](/modules/sdn/cr.html#networkclass) are used to configure and connect additional networks for application pods.
@@ -301,7 +301,7 @@ spec:
           nic-group: extra
 ```
 
-Upon user request, the administrator provides them with the name of the created NetworkClass, which is used when creating the project network.
+Upon user request, the administrator provides them with the name of the created NetworkClass, which is used when creating the [project network](../../../../glossary.html#project-network).
 
 An example of creating a custom network using the NetworkClass resource administrator is described in the section ["Creating a project network (user network)"](../../../../user/network/sdn/dedicated.html#creating-a-project-network-user-network).
 
@@ -377,11 +377,11 @@ right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b2
 
 ### IPAM: IP address pools for additional networks
 
-The IPAM mechanism allows you to automatically allocate and assign **IPv4 addresses** for additional network interfaces of pods connected to [cluster networks](#creating-a-publicly-accessible-network-cluster) and [project networks](#creating-a-project-network-user-network).
+The [IPAM](../../../../glossary.html#sdn-ipam) mechanism allows you to automatically allocate and assign **IPv4 addresses** for additional network interfaces of pods connected to [cluster networks](#creating-a-publicly-accessible-network-cluster) and [project networks](#creating-a-project-network-user-network).
 
 #### Principles and features of IPAM in DP
 
-For each required IP address, a object [IPAddress](/modules/sdn/cr.html#ipaddress) ([ClusterIPAddress](/modules/sdn/cr.html#clusteripaddress) — for cluster networks) is created and used, which references the project network or cluster network. The controller allocates an address from the pool and stores the result in `status.address`, `status.network`, `status.routes` of the IPAddress (ClusterIPAddress) object. The agent on the node assigns an IP address and routes to the interface inside the pod and sets the `status.conditions[Attached]` and `status.usedByPods` fields of the IPAddress (ClusterIPAddress) object.
+For each required IP address, a object [IPAddress](/modules/sdn/cr.html#ipaddress) ([ClusterIPAddress](/modules/sdn/cr.html#clusteripaddress) — for [cluster networks](../../../../glossary.html#cluster-network)) is created and used, which references the project network or cluster network. The controller allocates an address from the pool and stores the result in `status.address`, `status.network`, `status.routes` of the IPAddress (ClusterIPAddress) object. The agent on the node assigns an IP address and routes to the interface inside the pod and sets the `status.conditions[Attached]` and `status.usedByPods` fields of the IPAddress (ClusterIPAddress) object.
 
 ##### Protection against conflicts when reusing IP addresses
 
@@ -449,9 +449,9 @@ This feature is designed for high-performance workloads that require direct acce
 
 ### Key features
 
-DP implements the following features for working with underlay networks:
+DP implements the following features for working with [underlay networks](../../../../glossary.html#underlay-network):
 
-* **Hardware device passthrough**: Physical network interfaces (PF/VF) are directly exposed to pods, bypassing the kernel network stack for maximum performance.
+* **Hardware [device passthrough](../../../../glossary.html#device-passthrough)**: Physical network interfaces (PF/VF) are directly exposed to pods, bypassing the kernel network stack for maximum performance.
 * **SR-IOV configuration**: Automatic configuration of SR-IOV on selected Physical Functions to create Virtual Functions, allowing multiple pods to share the same hardware.
 * **DPDK support**: Devices can be bound in different modes suitable for DPDK workloads:
   * **VFIO-PCI**: Explicitly connects a network device to the pod by binding it to the `vfio-pci` driver. The corresponding VFIO device files (e.g., `/dev/vfio/vfio0`) are mounted into the pod for userspace access.
@@ -475,7 +475,7 @@ To create underlay networks for forwarding hardware devices to pods, a custom re
 
 #### Prerequisites for DPDK applications
 
-Before configuring UnderlayNetwork resources, you must prepare the cluster's worker nodes for DPDK applications:
+Before configuring UnderlayNetwork resources, you must prepare the cluster's [worker nodes](../../../../glossary.html#worker-node) for DPDK applications:
 
 * Configure [hugepages](#configuring-hugepages).
 * Configure [Topology Manager](#configuring-topology-manager).
@@ -715,9 +715,9 @@ d8 k label namespace mydpdk direct-nic-access.network.deckhouse.io/enabled=""
 
 ## Configuring and connecting system networks (service networks)
 
-System networks (service networks) are intended for internal traffic at the node level (e.g., for storage, management, etc.) and are not used as additional pod networks.
+[System networks](../../../../glossary.html#system-network) (service networks) are intended for internal traffic at the node level (e.g., for storage, management, etc.) and are not used as additional pod networks.
 
-Additional service networks are created on cluster nodes on top of existing underlay networks. The custom resource [SystemNetwork](/modules/sdn/cr.html#systemnetwork) is used for this purpose. System networks obtain IP addresses from the [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) during IPAM configuration.
+Additional service networks are created on cluster nodes on top of existing [underlay networks](../../../../glossary.html#underlay-network). The custom resource [SystemNetwork](/modules/sdn/cr.html#systemnetwork) is used for this purpose. System networks obtain IP addresses from the [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) during [IPAM](../../../../glossary.html#sdn-ipam) configuration.
 
 Principles and features of system networks:
 

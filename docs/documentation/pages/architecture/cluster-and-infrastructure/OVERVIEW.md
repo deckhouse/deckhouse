@@ -14,14 +14,14 @@ The Cluster & Infrastructure subsystem is responsible for the infrastructure lay
 This section describes:
 
 * The mechanisms for managing all node types used in DP, as well as [hybrid node groups and clusters](node-management/hybrid-nodegroups-and-clusters.html).
-* [Bashible](node-management/bashible.html) service, which is a key component of the Cluster & Infrastructure subsystem. Bashible is used by the [`node-manager`](/modules/node-manager/) module to manage node configuration.
+* [Bashible](node-management/bashible.html) service, which is a key component of the Cluster & Infrastructure subsystem. [Bashible](../../glossary.html#bashible) is used by the [`node-manager`](/modules/node-manager/) module to manage node configuration.
 
 The Cluster & Infrastructure subsystem also includes the following modules:
 
 * [`chrony`](/modules/chrony/): Provides time synchronization across all cluster nodes.
 * [`registry-packages-proxy`](/modules/registry-packages-proxy/): Provides an internal proxy server for container registry packages.
 * [`terraform-manager`](/modules/terraform-manager/): Provides tools for managing Terraform state within a Kubernetes cluster.
-* Modules for cloud providers supported by DP:
+* Modules for [cloud providers](../../glossary.html#cloud-provider) supported by DP:
 
   * [`cloud-provider-aws`](/modules/cloud-provider-aws/)
   * [`cloud-provider-azure`](/modules/cloud-provider-azure/)

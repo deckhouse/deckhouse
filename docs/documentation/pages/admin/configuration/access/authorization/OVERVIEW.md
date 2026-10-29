@@ -13,7 +13,7 @@ DP supports two role models:
 
 - [Granular](../authorization/rbac-experimental.html) (recommended). Access permissions are configured the standard Kubernetes RBAC way:
   by creating [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) or [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resources — or, for project-wide access, the [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) and [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) resources of the `multitenancy-manager` module.
-- [Basic](../authorization/rbac-current.html). The end-to-end authorization subsystem extends the standard RBAC mechanism
+- [Basic](../authorization/rbac-current.html). The end-to-end authorization [subsystem](../../../../glossary.html#subsystem) extends the standard RBAC mechanism
   with custom resources — [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) and [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule). Support for this model will be discontinued in future releases.
 
 Both models are supported by the [`user-authz`](/modules/user-authz/) module and can be used at the same time — the permissions they grant are summed up (for details, see the [`user-authz` module FAQ](/modules/user-authz/faq.html#can-the-basic-and-the-granular-role-based-models-be-used-at-the-same-time)).
@@ -58,13 +58,13 @@ In Kubernetes, service accounts (ServiceAccount) are special accounts used to au
 They enable applications and services to securely communicate with the Kubernetes API.
 
 {% alert level="warning" %}
-Do not create ServiceAccounts for external systems in `kube-system` or in namespaces whose names start with `d8-`. The authorization webhook does not check the ServiceAccounts of these namespaces, so the namespace limits of a ClusterAuthorizationRule (`namespaceSelector`, `limitNamespaces`, `allowAccessToSystemNamespaces`) do not apply to them. Their access level applies in every namespace of the cluster, including system namespaces.
+Do not create ServiceAccounts for external systems in `kube-system` or in namespaces whose names start with `d8-`. The authorization webhook does not check the ServiceAccounts of these namespaces, so the namespace limits of a ClusterAuthorizationRule (`namespaceSelector`, `limitNamespaces`, `allowAccessToSystemNamespaces`) do not apply to them. Their access level applies in every namespace of the cluster, including [system namespaces](../../../../glossary.html#system-namespace).
 {% endalert %}
 
 You may need to create a ServiceAccount with access to the Kubernetes API, for example, when setting up application deployment through a CI system. To create a ServiceAccount and grant it access, follow these steps:
 
 {% alert level="info" %}
-The example uses the basic role model.
+The example uses the basic [role model](../../../../glossary.html#rbac).
 {% endalert %}
 
 1. Create a namespace for CI and a ServiceAccount in it:
@@ -142,7 +142,7 @@ The example uses the basic role model.
         ```
 
    * If there is no direct access to the API server, use one of the following options:
-      * enable access to the API server through the Ingress controller (the [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module) and specify the addresses requests will come from (the [whitelistSourceRanges](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-whitelistsourceranges) parameter);
+      * enable access to the API server through the [Ingress controller](../../../../glossary.html#ingress-controller) (the [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) parameter of the `control-plane-manager` module) and specify the addresses requests will come from (the [whitelistSourceRanges](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-whitelistsourceranges) parameter);
       * specify the addresses requests will come from in a separate Ingress controller (the [acceptRequestsFrom](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter).
 
    * If a non-public CA is used:

@@ -5,13 +5,13 @@ search: sdn, software-defined networking, cni
 description: Architecture of the sdn module in Deckhouse Platform.
 ---
 
-The [`sdn`](/modules/sdn/) module provides software-defined networking (SDN) functions in Deckhouse Platform (DP):
+The [`sdn`](/modules/sdn/) module provides software-defined networking ([SDN](../../glossary.html#sdn)) functions in Deckhouse Platform (DP):
 
 - Configuring network interfaces on nodes.
-- Additional networks for pods and virtual machines.
-- IPAM (IP Address Management) for additional networks. The IPAM mechanism allocates IPv4 addresses from pools and assigns them to additional network interfaces of pods connected to cluster networks (ClusterNetwork) and project networks (Network).
-- Underlay networks for passing through hardware network devices.
-- System networks for node-level service traffic.
+- [Additional networks](../../glossary.html#additional-network) for pods and virtual machines.
+- [IPAM](../../glossary.html#sdn-ipam) (IP Address Management) for additional networks. The IPAM mechanism allocates IPv4 addresses from pools and assigns them to additional network interfaces of pods connected to [cluster networks](../../glossary.html#cluster-network) (ClusterNetwork) and [project networks](../../glossary.html#project-network) (Network).
+- [Underlay networks](../../glossary.html#underlay-network) for passing through hardware network devices.
+- [System networks](../../glossary.html#system-network) for node-level service traffic.
 
 The module works with the following custom resources of the `network.deckhouse.io` API group:
 
@@ -20,7 +20,7 @@ The module works with the following custom resources of the `network.deckhouse.i
 - [ClusterNetwork](/modules/sdn/cr.html#clusternetwork): Defines a publicly available network at the cluster scope.
 - [IPAddress](/modules/sdn/cr.html#ipaddress): Represents a request for an IPv4 address for an additional network interface of a pod connected to a project network.
 - [IPAddressLease](/modules/sdn/cr.html#ipaddresslease): A reservation record for an allocated IP address that prevents it from being assigned again.
-- [IPAddressPool](/modules/sdn/cr.html#ipaddresspool): Defines a pool of IPv4 addresses within a user namespace, used for IPAM in a project network.
+- [IPAddressPool](/modules/sdn/cr.html#ipaddresspool): Defines a pool of IPv4 addresses within a [user namespace](../../glossary.html#user-namespace), used for IPAM in a project network.
 - [Network](/modules/sdn/cr.html#network): A namespaced resource that creates a dedicated project network based on a network class provided by the administrator in a NetworkClass resource.
 - [NetworkClass](/modules/sdn/cr.html#networkclass): Defines a range of VLAN tags and node network interfaces that users can base their own Network resources on.
 - [NodeNetworkInterface](/modules/sdn/cr.html#nodenetworkinterface): Describes a network interface on a node, used both to discover existing interfaces and to create new ones (VLAN, Bond).
@@ -60,7 +60,7 @@ The module consists of the following components:
    * Configures node network interfaces (port bonding, bridging, VLAN interface configuration).
    * Brings up additional, underlay, and system networks.
    * Implements a CNI server that the d8-sdn component connects to over a Unix socket.
-   * Implements a Dynamic Resource Allocation (DRA) driver for the `network.deckhouse.io` API group, registering itself as a DRA plugin with kubelet, for passing physical and virtual network devices through to a pod. This functionality is available in the DP Ultimate/EE, Certified Core/CSE Lite (1.73), and Certified Pro/CSE Pro (1.73) editions.
+   * Implements a Dynamic Resource Allocation (DRA) driver for the `network.deckhouse.io` API group, registering itself as a DRA plugin with kubelet, for passing physical and virtual network devices through to a pod. This functionality is available in the DP Ultimate/EE, Certified Core/CSE Lite (1.73), and Certified Pro/CSE Pro (1.73) [editions](../../glossary.html#edition).
 
    The agent translates cluster node and pod configurations into low-level network interface and eBPF program settings that actually process traffic.
 
@@ -83,7 +83,7 @@ The module consists of the following components:
 
 1. **Scheduler** (Deployment): a kube-scheduler extender that suggests nodes for pod placement according to the pods' network interface settings.
 
-1. **Cni-plugin-cleaner** (DaemonSet): a Helm `pre-delete` [module hook](../../module-development/structure/#hooks), triggered by the Deckhouse controller before the [`sdn`](/modules/sdn/) module is removed. It runs on every node and deletes the CNI plugin files (the executable in `/opt/cni/bin` and the configuration in `/etc/cni/net.d`) installed by the agent component. It does not take part in the module's normal operation.
+1. **Cni-plugin-cleaner** (DaemonSet): a Helm `pre-delete` [module hook](../../module-development/structure/#hooks), triggered by the [Deckhouse controller](../../glossary.html#deckhouse-controller) before the [`sdn`](/modules/sdn/) module is removed. It runs on every node and deletes the CNI plugin files (the executable in `/opt/cni/bin` and the configuration in `/etc/cni/net.d`) installed by the agent component. It does not take part in the module's normal operation.
 
 1. **Cni-plugin-cleaner-waiter** (Job): a Helm `pre-delete` [module hook](../../module-development/structure/#hooks), triggered by the Deckhouse controller before the [`sdn`](/modules/sdn/) module is removed, that waits for the `cni-plugin-cleaner` DaemonSet to finish on every cluster node before Helm is allowed to complete removing the module release.
 
@@ -105,7 +105,7 @@ The following external components interact with the module:
    * Validates custom resources of the `network.deckhouse.io` API group.
    * Mutates NodeNetworkInterface and Pod resources.
 
-1. **Kube-scheduler**: Sends requests to the `sdn-scheduler-extender` webhook for scheduling pods that use software-defined networks.
+1. **Kube-scheduler**: Sends requests to the `sdn-scheduler-extender` webhook for scheduling pods that use [software-defined networks](../../glossary.html#sdn).
 
 1. **Containerd**: Runs the d8-sdn executable file with certain commands according to the CNI specification, for example, ADD when creating a pod's network namespace and DEL when removing it.
 

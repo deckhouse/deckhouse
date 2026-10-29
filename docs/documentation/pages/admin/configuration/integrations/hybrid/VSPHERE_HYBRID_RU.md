@@ -6,21 +6,21 @@ search: гибрид с vSphere
 description: Подготовка к гибридной интеграции с VMware vSphere в Deckhouse Platform.
 ---
 
-Далее описан процесс добавления узлов из vSphere в существующий статический кластер Deckhouse Platform (DP).
+Далее описан процесс добавления узлов из vSphere в существующий [статический кластер](../../../glossary.html#static-cluster) Deckhouse Platform (DP).
 
 Для интеграции с vSphere используется модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/). Он обеспечивает взаимодействие DP с vCenter, получение информации о виртуальных машинах, работу с параметрами размещения и интеграцию с инфраструктурными возможностями vSphere.
 
 В разделе описаны два способа добавления узлов:
 
 - **Автоматическое создание узлов в vSphere**. DP создаёт виртуальные машины через API vSphere. Параметры ВМ задаются ресурсом [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), а требуемое количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
-- **Подключение вручную созданных узлов через bootstrap-скрипт**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html).
+- **Подключение вручную созданных узлов через [bootstrap-скрипт](../../../glossary.html#bootstrap-script)**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html).
 
 ## Предварительные требования для vSphere
 
 Перед началом убедитесь, что выполнены следующие условия:
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
-- Между сетью статических узлов и сетью виртуальных машин во vSphere настроена [сетевая связность](./overview.html#общие-сетевые-требования). Узлы vSphere, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
+- Между сетью [статических узлов](../../../glossary.html#static-node) и сетью виртуальных машин во vSphere настроена [сетевая связность](./overview.html#общие-сетевые-требования). Узлы vSphere, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 - Выполнены требования из раздела [«Подключение и авторизация в VMware vSphere»](../virtualization/vsphere/authorization.html):
   - настроен доступ к vCenter;
   - подготовлена учётная запись vSphere с необходимыми привилегиями;
@@ -122,8 +122,8 @@ description: Подготовка к гибридной интеграции с 
    Где:
 
    - [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) описывает параметры виртуальной машины, которая будет создана во vSphere;
-   - [NodeGroup](/modules/node-manager/cr.html#nodegroup) описывает группу узлов, которую DP должен поддерживать в кластере;
-   - `nodeType: CloudEphemeral` означает, что узлы будут создаваться автоматически через облачный провайдер;
+   - [NodeGroup](/modules/node-manager/cr.html#nodegroup) описывает [группу узлов](../../../glossary.html#node-group), которую DP должен поддерживать в кластере;
+   - `nodeType: CloudEphemeral` означает, что узлы будут создаваться автоматически через [облачный провайдер](../../../glossary.html#cloud-provider);
    - `cloudInstances.classReference` указывает на VsphereInstanceClass;
    - `cloudInstances.zones` должен содержать зоны из списка `zones` в ModuleConfig.
 
@@ -264,7 +264,7 @@ description: Подготовка к гибридной интеграции с 
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-1. Получите bootstrap-скрипт для созданной NodeGroup:
+1. Получите [bootstrap-скрипт](../../../glossary.html#bootstrap-script) для созданной NodeGroup:
 
    ```shell
    NODE_GROUP=cloud-static
@@ -296,7 +296,7 @@ description: Подготовка к гибридной интеграции с 
 
    После запуска bootstrap-скрипт установит необходимые компоненты, настроит container runtime, kubelet и подключит узел к кластеру.
 
-1. На master-узле проверьте появление нового узла:
+1. На [master-узле](../../../glossary.html#master-node) проверьте появление нового узла:
 
    ```shell
    d8 k get nodes -o wide

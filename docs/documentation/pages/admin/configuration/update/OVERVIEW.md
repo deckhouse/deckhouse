@@ -14,16 +14,16 @@ For details on each channel, refer to the [Architecture](../../../architecture/u
 
 {% alert level="warning" %}
 DP does not support version downgrades.
-After a release is installed, rolling the platform back to an earlier minor or patch version is not possible.
+After a release is installed, rolling the platform back to an earlier minor or [patch version](../../../glossary.html#patch-version) is not possible.
 
 When [switching to a more stable channel](../../../architecture/updating.html#switching-to-a-more-stable-channel),
 the platform remains on the current release until a newer version becomes available on that channel.
 
-Rolling back by one minor version is possible only for the [Kubernetes (control plane) version](../platform-scaling/control-plane/updating-and-versioning.html), not for the DP version.
+Rolling back by one [minor version](../../../glossary.html#minor-version) is possible only for the [Kubernetes (control plane) version](../platform-scaling/control-plane/updating-and-versioning.html), not for the DP version.
 {% endalert %}
 
 You can configure the update process.
-Both automatic and manual modes are supported, as well as update windows and other parameters.
+Both automatic and manual modes are supported, as well as [update windows](../../../glossary.html#update-window) and other parameters.
 See [Update configuration](configuration.html#update-modes) for details.
 
 An alerting system is used to track the update status and quickly report any issues.
@@ -33,7 +33,7 @@ The following features are supported:
 
 - [Release notifications](notifications.html#configuring-notifications): DP can send release notifications via webhooks.
 - [Retrieving the changelog](../../../architecture/updating.html#retrieving-the-changelog):
-  Each DP release includes a changelog, available both in the cluster and as part of the release notification.
+  Each [DP release](../../../glossary.html#dp-release) includes a changelog, available both in the cluster and as part of the release notification.
 - [Checking dependencies before update](../../../architecture/updating.html#checking-dependencies-before-update):
   Checks for component dependencies before proceeding with an update to prevent conflicts.
 

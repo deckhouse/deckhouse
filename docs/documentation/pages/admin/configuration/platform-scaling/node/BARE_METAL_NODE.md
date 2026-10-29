@@ -25,7 +25,7 @@ For more details on sizing resources for a bare-metal cluster, see the [“Hardw
 
    In this resource, specify the `Static` node type. For all NodeGroup objects in the cluster, Deckhouse automatically generates a `bootstrap.sh` script used to add nodes to the group. When adding nodes manually, you need to copy this script to the server and run it.
 
-   You can obtain the script from the Deckhouse web interface under the “Node Groups → Scripts” tab or via the following `d8 k` command:
+   You can obtain the script from the Deckhouse web interface under the “[Node Groups](../../../../glossary.html#node-group) → Scripts” tab or via the following `d8 k` command:
 
    ```shell
    d8 k -n d8-cloud-instance-manager get secrets manual-bootstrap-for-worker -ojsonpath="{.data.bootstrap\.sh}"
@@ -38,7 +38,7 @@ For more details on sizing resources for a bare-metal cluster, see the [“Hardw
 ### Automatic method
 
 {% alert level="warning" %}
-If you have previously increased the number of master nodes in the cluster in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), before adding nodes using automatic method, [make sure](../control-plane/scaling-and-changing-master-nodes.html#adding-master-nodes-to-a-static-or-hybrid-cluster) that they will not be "captured".
+If you have previously increased the number of [master nodes](../../../../glossary.html#master-node) in the cluster in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), before adding nodes using automatic method, [make sure](../control-plane/scaling-and-changing-master-nodes.html#adding-master-nodes-to-a-static-or-hybrid-cluster) that they will not be "captured".
 {% endalert %}
 
 DP supports automatic addition of physical (bare-metal) servers to the cluster without the need to manually run an installation script on each node. To enable this:
@@ -100,7 +100,7 @@ DP supports automatic addition of physical (bare-metal) servers to the cluster w
    - `Running`: The server is successfully configured and the node has joined the cluster.
    - `Cleaning`: The server is being cleaned up and the node is being removed from the cluster.
 
-   These states reflect the current stage of node management. CAPS automatically transitions a StaticInstance between these states depending on whether a node needs to be added or removed from a group.
+   These states reflect the current stage of node management. [CAPS](../../../../glossary.html#caps) automatically transitions a StaticInstance between these states depending on whether a node needs to be added or removed from a group.
 
 1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource describing how DP should use these servers:
 
@@ -137,7 +137,7 @@ After the node group is created, a script for adding servers to the group will b
 
 ## Modifying a static cluster configuration
 
-The static cluster settings are stored in the [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) structure.
+The [static cluster](../../../../glossary.html#static-cluster) settings are stored in the [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) structure.
 
 To modify the static cluster parameters, run the following command:
 
@@ -148,7 +148,7 @@ d8 system edit static-cluster-configuration
 ## Moving a static node between NodeGroups
 
 {% alert level="warning" %}
-During the migration of static nodes between [NodeGroups](/modules/node-manager/cr.html#nodegroup), the node is cleaned up and bootstrapped again, and the `Node` object is recreated.
+During the migration of [static nodes](../../../../glossary.html#static-node) between [NodeGroups](/modules/node-manager/cr.html#nodegroup), the node is cleaned up and bootstrapped again, and the `Node` object is recreated.
 {% endalert %}
 
 1. Create a new NodeGroup resource, for example named `front`, which will manage the static node labeled `role: front`:
@@ -263,7 +263,7 @@ Node updates involve disruption. Depending on the `disruption` settings for the 
 If a node is managed by [CAPS](#automatic-method), you can't change its associated NodeGroup.  
 The only option is to [delete the StaticInstance](#deleting-a-staticinstance) and create a new one.
 
-To move an existing manually added static node from one NodeGroup to another, you need to update the group label on the node:
+To move an existing manually added [static node](../../../../glossary.html#static-node) from one NodeGroup to another, you need to update the group label on the node:
 
 ```shell
 d8 k label node --overwrite <node_name> node.deckhouse.io/group=<new_node_group_name>

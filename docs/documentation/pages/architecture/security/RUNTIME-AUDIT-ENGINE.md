@@ -5,7 +5,7 @@ search: security audit, audit rules, falco, runtime-audit-engine
 description: Architecture of the runtime-audit-engine module in Deckhouse Platform.
 ---
 
-The [`runtime-audit-engine`](/modules/runtime-audit-engine/) module implements [runtime auditing](./runtime-audit.html) in Deckhouse Platform (DP) based on the [Falco](https://falco.org/) threat detection system. The module collects Linux kernel events and Kubernetes API audit events (using the `k8saudit` plugin), enriches them with Kubernetes Pod metadata, and generates security events according to configured rules. Audit rules are defined using the [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
+The [`runtime-audit-engine`](/modules/runtime-audit-engine/) module implements [runtime auditing](./runtime-audit.html) in Deckhouse Platform (DP) based on the [Falco](https://falco.org/) threat detection system. The module collects Linux kernel events and [Kubernetes API audit](../../glossary.html#kubernetes-api-audit) events (using the `k8saudit` plugin), enriches them with Kubernetes Pod metadata, and generates [security events](../../glossary.html#security-event) according to configured rules. [Audit rules](../../glossary.html#runtime-audit-rule) are defined using the [FalcoAuditRules](/modules/runtime-audit-engine/cr.html#falcoauditrules) custom resource.
 
 When the module is enabled, the `control-plane-configurator` ConfigMap is created in the `d8-runtime-audit-engine` namespace with the audit webhook URL and CA. The [`control-plane-manager`](/modules/control-plane-manager/) module detects this ConfigMap and configures the control plane to send Kubernetes API audit events to the `runtime-audit-engine` module.
 

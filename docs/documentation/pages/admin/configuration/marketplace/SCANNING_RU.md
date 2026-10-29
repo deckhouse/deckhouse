@@ -6,7 +6,7 @@ lang: ru
 search: PackageRepositoryOperation, scanning, scan operation, сканирование, операция сканирования, репозиторий пакетов
 ---
 
-В Deckhouse Platform (DP) сканирование репозиториев пакетов настраивается с помощью объектов [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation). Каждая операция сканирования обнаруживает новые версии пакетов и создаёт для них объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion). DP создаёт операции автоматически, но их также можно создавать вручную.
+В Deckhouse Platform (DP) сканирование репозиториев [пакетов](../../../glossary.html#marketplace-package) настраивается с помощью объектов [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation). Каждая операция сканирования обнаруживает новые версии пакетов и создаёт для них объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion). DP создаёт операции автоматически, но их также можно создавать вручную.
 
 ## Просмотр операций сканирования
 
@@ -93,7 +93,7 @@ d8 system package scan <REPOSITORY_NAME>
 
 ### Полное сканирование
 
-Чтобы выполнить полное сканирование репозитория пакетов, укажите [параметр `spec.update.fullScan: true`](../../../reference/api/cr.html#packagerepositoryoperation-v1alpha1-spec-update-fullscan) в PackageRepositoryOperation. В этом режиме проверяются все доступные версии пакетов, а не только версии выше уже обнаруженных.
+Чтобы выполнить полное сканирование репозитория [пакетов](../../../glossary.html#marketplace-package), укажите [параметр `spec.update.fullScan: true`](../../../reference/api/cr.html#packagerepositoryoperation-v1alpha1-spec-update-fullscan) в PackageRepositoryOperation. В этом режиме проверяются все доступные версии пакетов, а не только версии выше уже обнаруженных.
 
 При `spec.update.fullScan: false` (по умолчанию) обрабатываются только SemVer-теги с версией выше последней версии пакета, уже обработанной в кластере.
 
@@ -101,5 +101,5 @@ d8 system package scan <REPOSITORY_NAME>
 
 Запускайте полное сканирование в следующих случаях:
 
-- версия пакета была опубликована после более высокой версии, например, патч для предыдущей минорной версии;
+- версия пакета была опубликована после более высокой версии, например, патч для предыдущей [минорной версии](../../../glossary.html#minor-version);
 - в кластере отсутствуют ресурсы [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) для версий, доступных в репозитории пакетов.

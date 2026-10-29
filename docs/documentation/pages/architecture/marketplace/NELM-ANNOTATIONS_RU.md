@@ -372,7 +372,7 @@ data:
 
 {% endraw %}
 {% alert level="warning" %}
-DP не предоставляет ключ для расшифровки секретов Nelm, поэтому в пакетах Application нельзя использовать `werf_secret_file`, каталог `secret/` и `secret-values.yaml`.
+DP не предоставляет ключ для расшифровки секретов Nelm, поэтому в [пакетах](../../glossary.html#marketplace-package) Application нельзя использовать `werf_secret_file`, каталог `secret/` и `secret-values.yaml`.
 {% endalert %}
 {% raw %}
 

@@ -12,14 +12,14 @@ Integration with Yandex Cloud uses the [`cloud-provider-yandex`](/modules/cloud-
 This section describes two ways to add nodes:
 
 - **Automatic node creation in Yandex Cloud**. DP creates virtual machines through the Yandex Cloud API. VM parameters are defined by the [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) resource, and the required number of nodes and placement zones are defined by the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with the `CloudEphemeral` type.
-- **Connecting manually created nodes through a bootstrap script**. A virtual machine is created by the user in advance and connected to the cluster using the DP bootstrap script. This scenario uses [NodeGroup](/modules/node-manager/cr.html#nodegroup) with the `CloudStatic` type.
+- **Connecting manually created nodes through a [bootstrap script](../../../glossary.html#bootstrap-script)**. A virtual machine is created by the user in advance and connected to the cluster using the DP bootstrap script. This scenario uses [NodeGroup](/modules/node-manager/cr.html#nodegroup) with the `CloudStatic` type.
 
 ## Prerequisites
 
 Before you begin, make sure that the following conditions are met:
 
 - The cluster was created with the [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype) parameter, and its nodes meet the [minimum system requirements](/products/kubernetes-platform/guides/hardware-requirements.html).
-- ["Network connectivity"](./overview.html#general-network-requirements) is configured between the network of static nodes and the Yandex Cloud VPC. Yandex Cloud nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the ["Network interaction"](../../../../reference/network_interaction.html) and ["Network policy configuration"](../../configuration/network/policy/configuration.html) sections. When using Cilium with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
+- ["Network connectivity"](./overview.html#general-network-requirements) is configured between the network of [static nodes](../../../glossary.html#static-node) and the Yandex Cloud VPC. Yandex Cloud nodes added to the cluster have access to the Kubernetes API, DNS, and the required addresses according to the ["Network interaction"](../../../../reference/network_interaction.html) and ["Network policy configuration"](../../configuration/network/policy/configuration.html) sections. When using Cilium with pod traffic tunneling, the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) mode is selected according to the network connectivity between sites.
 - The requirements from the ["Connection and authorization in Yandex Cloud"](../public/yandex/authorization.html) section are met:
   - A service account is prepared.
   - A folder where resources will be created is selected.
@@ -27,7 +27,7 @@ Before you begin, make sure that the following conditions are met:
 
 ## Adding automatically created nodes
 
-To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.cloud/en/docs/cli/) (`yc`). You can use it on the administrator's workstation. The `yc` CLI is not required on the cluster master node: only the prepared manifests need to be applied in the cluster.
+To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.cloud/en/docs/cli/) (`yc`). You can use it on the administrator's workstation. The `yc` CLI is not required on the cluster [master node](../../../glossary.html#master-node): only the prepared manifests need to be applied in the cluster.
 
 1. Get the identifiers of the cloud and folder where nodes will be created:
 
@@ -69,7 +69,7 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
 
    - `NETWORK_ID` — VPC network ID;
    - `SUBNET_ID` — ID of the subnet where nodes will be created;
-   - `ZONE` — availability zone that corresponds to the selected subnet, for example `ru-central1-a`;
+   - `ZONE` — [availability zone](../../../glossary.html#availability-zone) that corresponds to the selected subnet, for example `ru-central1-a`;
    - `ROUTE_TABLE_ID` — ID of the route table attached to the subnet. It is shown in the `ROUTE TABLE ID` column of the `yc vpc subnet list` output.
 
    For details, see ["Connecting and authorizing in Yandex Cloud"](../public/yandex/authorization.html).
@@ -255,12 +255,12 @@ To run the preparation commands, you need the [Yandex Cloud CLI](https://yandex.
    Where:
 
    - YandexInstanceClass describes the parameters of the virtual machine that will be created in Yandex Cloud;
-   - `mainSubnet` — ID of the subnet from which the created nodes must have access to the static cluster nodes;
-   - NodeGroup describes the node group that DP must maintain in the cluster;
-   - `nodeType: CloudEphemeral` means that nodes will be created automatically through the cloud provider;
+   - `mainSubnet` — ID of the subnet from which the created nodes must have access to the [static cluster](../../../glossary.html#static-cluster) nodes;
+   - NodeGroup describes the [node group](../../../glossary.html#node-group) that DP must maintain in the cluster;
+   - `nodeType: CloudEphemeral` means that nodes will be created automatically through the [cloud provider](../../../glossary.html#cloud-provider);
    - `cloudInstances.zones` must contain zones from the `zones` list in the module settings.
 
-   In the `WithoutNAT` layout, the created nodes get a public IP address. To keep the nodes of the group on internal addresses only, set the [`assignPublicIPAddress: false`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-assignpublicipaddress) parameter in the YandexInstanceClass and provide the nodes with another way out to the internet, for example through a subnet NAT gateway.
+   In the `WithoutNAT` [layout](../../../glossary.html#layout), the created nodes get a public IP address. To keep the nodes of the group on internal addresses only, set the [`assignPublicIPAddress: false`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-assignpublicipaddress) parameter in the YandexInstanceClass and provide the nodes with another way out to the internet, for example through a subnet NAT gateway.
 
 1. Apply the manifest:
 
@@ -343,7 +343,7 @@ Before you begin, make sure that the following conditions are met:
    - `<USER>`: Username for SSH access to the virtual machine.
    - `<SSH_PUBLIC_KEY>`: Administrator's public SSH key.
 
-1. On the master node, create a file with the NodeGroup manifest and specify the node group name. In this example and the following steps, the `yc-manual` name is used. For example, `yandex-manual-nodegroup.yaml`:
+1. On the [master node](../../../glossary.html#master-node), create a file with the NodeGroup manifest and specify the [node group](../../../glossary.html#node-group) name. In this example and the following steps, the `yc-manual` name is used. For example, `yandex-manual-nodegroup.yaml`:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -373,7 +373,7 @@ Before you begin, make sure that the following conditions are met:
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-1. On the master node, get the bootstrap script for the created NodeGroup:
+1. On the master node, get the [bootstrap script](../../../glossary.html#bootstrap-script) for the created NodeGroup:
 
    ```shell
    NODE_GROUP=yc-manual

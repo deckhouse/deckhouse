@@ -28,7 +28,7 @@ The module consists of the following components:
 
 1. **Controller**: It reconciles [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) custom resources. NFSStorageClass defines the configuration for the created Kubernetes StorageClass, which uses the `nfs.csi.k8s.io` provisioner.
 
-   The created StorageClass configures the NFS server connection settings, a reclaim policy, the volume binding mode, etc. These settings are used by the provisioner of the `csi-nfs` CSI driver when managing NFS-based volumes.
+   The created StorageClass configures the NFS server connection settings, a reclaim policy, the volume binding mode, etc. These settings are used by the provisioner of the `csi-nfs` [CSI driver](../../../glossary.html#csi-driver) when managing NFS-based volumes.
 
    Also the controller sets the `storage.deckhouse.io/csi-nfs-node` label on the cluster nodes according to the [`spec.workloadNodes.nodeSelector`](/modules/csi-nfs/cr.html#nfsstorageclass-v1alpha1-spec-workloadnodes-nodeselector) parameter value of the NFSStorageClass custom resource.
 

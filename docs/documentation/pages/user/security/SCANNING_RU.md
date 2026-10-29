@@ -12,9 +12,9 @@ Deckhouse Platform (DP) соответствует рекомендациям [C
 {% endalert %}
 
 Для постоянного мониторинга соответствия требованиям CIS в каждом кластере DP автоматически выполняются проверки.
-Результаты этих проверок представлены в виде отчётов и доступны в Grafana на дашборде `Security / CIS Kubernetes Benchmark`.
+Результаты этих проверок представлены в виде отчётов и доступны в Grafana на [дашборде](../../glossary.html#dashboard) `Security / CIS Kubernetes Benchmark`.
 
-DP предоставляет встроенное средство для автоматического поиска уязвимостей в контейнерных образах на основе проекта [Trivy](https://github.com/aquasecurity/trivy).
+DP предоставляет встроенное средство для автоматического поиска уязвимостей в контейнерных образах на основе [проекта](../../glossary.html#project) [Trivy](https://github.com/aquasecurity/trivy).
 
 Ниже приведены команды для просмотра и фильтрации отчётов о результатах сканирования уязвимостей и CIS compliance-проверок, выполненных в кластере.
 
@@ -64,7 +64,7 @@ DP предоставляет встроенное средство для ав�
 
   ![Пример дашборда в Grafana](../../images/operator-trivy/trivy-image-vulnerability-dashboard.png)
 
-- `Security/CIS Kubernetes Benchmark` — результаты проверки соответствия кластера требованиям CIS Kubernetes Benchmark.
+- `Security/CIS Kubernetes Benchmark` — результаты проверки соответствия кластера требованиям [CIS Kubernetes Benchmark](../../glossary.html#cis-compliance-check).
 
   ![Пример дашборда в Grafana](../../images/operator-trivy/cis-kubernetes-benchmark-dashboard.png)
 
@@ -79,7 +79,7 @@ DP предоставляет встроенное средство для ав�
   - [ConfigAuditReport](scanning.html#configauditreport) — ошибки конфигурации Kubernetes-объектов;
   - [ExposedSecretReport](scanning.html#exposedsecretreport) — утечки секретов в контейнерах.
 
-DP использует набор кастомных ресурсов, разработанных проектом [Trivy Operator от Aqua Security](https://aquasecurity.github.io/trivy-operator/), для представления результатов сканирования уязвимостей, анализа конфигурации и проверки соответствия кластера требованиям безопасности.
+DP использует набор кастомных ресурсов, разработанных [проектом](../../glossary.html#project) [Trivy Operator от Aqua Security](https://aquasecurity.github.io/trivy-operator/), для представления результатов сканирования уязвимостей, анализа конфигурации и проверки соответствия кластера требованиям безопасности.
 
 Ниже приведено описание ключевых CRD, создаваемых [operator-trivy](/modules/operator-trivy/), с примерами и ссылками на официальную документацию.
 

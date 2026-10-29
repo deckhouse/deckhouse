@@ -30,8 +30,8 @@ Using the `--scope` flag, you can define namespaces the resources will be return
 |---|---|
 | `accessible` | Objects from every namespace where the user's RBAC allows the given operation on the given resource |
 | `projects` | Objects from namespaces belonging to any [project](/modules/multitenancy-manager/cr.html#project), that is, namespaces with a non-empty value of the `projects.deckhouse.io/project` label |
-| `project:<name>` | Objects from the namespaces of one specific project. The name must be a valid project name |
-| `system` | Objects from system namespaces only: `default` and namespaces whose names start with `d8-` or `kube-`. This is a fixed list of namespaces defined by their names and independent of projects. Other namespaces that neither belong to a project nor match the list of system namespaces are not returned when setting either `system` or `projects` scope |
+| `project:<name>` | Objects from the namespaces of one specific [project](../../../../glossary.html#project). The name must be a valid project name |
+| `system` | Objects from [system namespaces](../../../../glossary.html#system-namespace) only: `default` and namespaces whose names start with `d8-` or `kube-`. This is a fixed list of namespaces defined by their names and independent of projects. Other namespaces that neither belong to a project nor match the list of system namespaces are not returned when setting either `system` or `projects` scope |
 
 The `projects` and `project:<name>` scopes require the [`multitenancy-manager`](/modules/multitenancy-manager/) module.
 While the module is disabled, requests with these scopes are rejected with the `400 Bad Request` error.
@@ -73,7 +73,7 @@ d8 k get pods -A --scope=accessible -w
 Details:
 
 - Using `--scope` without the `-A` flag is rejected with an error because filtering a single namespace's listing is meaningless.
-- If the `d8 k get <resource> -A` command without `--scope` fails with `403 Forbidden`, Deckhouse CLI suggests suitable `--scope` variants.
+- If the `d8 k get <resource> -A` command without `--scope` fails with `403 Forbidden`, [Deckhouse CLI](../../../../glossary.html#deckhouse-cli) suggests suitable `--scope` variants.
 - Shell completion works for the `--scope` flag values, including the names of
   existing projects (`--scope=project:<TAB>`).
 
@@ -103,7 +103,7 @@ curl -H "Authorization: Bearer $TOKEN" \
      https://<kube-apiserver>/api/v1/pods
 ```
 
-Example of listing the Deployment objects of one project:
+Example of listing the Deployment objects of one [project](../../../../glossary.html#project):
 
 ```shell
 curl -H "Authorization: Bearer $TOKEN" \
@@ -189,7 +189,7 @@ The mechanism supports all built-in namespaced Kubernetes resources and namespac
   or is unreachable), a scoped request gets `503 Service Unavailable` with the `Retry-After` header instead: the access is
   unknown rather than denied, and the client may retry. Neither response returns any objects.
 - **Indistinguishable refusals.** Requests like `project:<someone else's>` and
-  `project:<nonexistent>` result in identical empty responses and project
+  `project:<nonexistent>` result in identical empty responses and [project](../../../../glossary.html#project)
   existence is not disclosed.
 
 ## Special case: namespaces

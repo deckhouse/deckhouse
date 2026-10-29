@@ -5,7 +5,7 @@ search: istio, service mesh, ambient, federation, multicluster, sidecar
 description: Architecture of the istio module in Deckhouse Platform.
 ---
 
-The [`istio`](/modules/istio/) module implements a Service Mesh based on [Istio](https://istio.io/) for centralized management of network traffic in Deckhouse Platform (DP). The module provides mTLS (Mutual Transport Layer Security), request authorization, traffic routing, load balancing, and observability of interactions between applications.
+The [`istio`](/modules/istio/) module implements a [Service Mesh](../../glossary.html#service-mesh) based on [Istio](https://istio.io/) for centralized management of network traffic in Deckhouse Platform (DP). The module provides mTLS (Mutual Transport Layer Security), request authorization, traffic routing, load balancing, and observability of interactions between applications.
 
 The [`istio`](/modules/istio/) module allows several Istio versions to run at the same time. The module's [`globalVersion`](/modules/istio/configuration.html#parameters-globalversion) parameter specifies which Istio version is used by default for namespaces labeled `istio-injection: enabled`. If a namespace needs to use an Istio version other than the default one, it is labeled with the label corresponding to the Istio revision instead, for example, `istio.io/rev: v1x27`.
 
@@ -13,9 +13,9 @@ The module works with the following custom resources.
 
 Resources managed directly by the module (the `deckhouse.io` group):
 
-* [IngressIstioController](/modules/istio/cr.html#ingressistiocontroller): Describes an Istio ingress gateway instance serving the selected gateway class.
-* [IstioFederation](/modules/istio/cr.html#istiofederation): Marks one or more remote clusters as trusted for mesh federation (available in the Enterprise Edition and Ultimate).
-* [IstioMulticluster](/modules/istio/cr.html#istiomulticluster): Marks one or more remote clusters as trusted for a multicluster configuration (available in the Enterprise Edition and Ultimate).
+* [IngressIstioController](/modules/istio/cr.html#ingressistiocontroller): Describes an [Istio ingress gateway](../../glossary.html#istio-ingress-gateway) instance serving the selected gateway class.
+* [IstioFederation](/modules/istio/cr.html#istiofederation): Marks one or more remote clusters as trusted for mesh federation (available in the [Enterprise Edition](../../glossary.html#edition) and Ultimate).
+* [IstioMulticluster](/modules/istio/cr.html#istiomulticluster): Marks one or more remote clusters as trusted for a [multicluster](../../glossary.html#multicluster) configuration (available in the Enterprise Edition and Ultimate).
 * [WaypointInstance](/modules/istio/cr.html#waypointinstance): Describes a waypoint ambient proxy created by the waypoint-controller component (available in the Enterprise Edition and Ultimate).
 
 The module also installs and uses the standard [Istio](https://istio.io/) custom resources (the `networking.istio.io`, `security.istio.io`, `telemetry.istio.io`, and `extensions.istio.io` groups — VirtualService, DestinationRule, Gateway, PeerAuthentication, and others). For more details, see the [Istio custom resource reference](/modules/istio/istio-cr.html).
@@ -67,7 +67,7 @@ The module consists of the following components:
 
    DP only supports the operator for Istio version 1.25.
 
-   The component watches the Istio and IstioRevision custom resources and uses them to create the `istiod-<VERSION>` Deployment, a Service, and a ConfigMap. Webhook management for validation and mutation is deliberately disabled in the operator; it is handled by the Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module when the module's Helm chart is applied.
+   The component watches the Istio and IstioRevision custom resources and uses them to create the `istiod-<VERSION>` Deployment, a Service, and a ConfigMap. Webhook management for validation and mutation is deliberately disabled in the operator; it is handled by the [Deckhouse controller](../../glossary.html#deckhouse-controller) of the [`deckhouse`](/modules/deckhouse/) module when the module's Helm chart is applied.
 
    It consists of a single container:
 
@@ -105,7 +105,7 @@ The module consists of the following components:
 
    Authentication of Kiali web interface users is performed by the [`user-authn`](/modules/user-authn/) module through a dedicated dex-authenticator.
 
-1. **Istio-config-analyzer-&lt;VERSION&gt;** (Deployment): component that performs periodic service mesh configuration analysis (`istioctl analyze`) and exports the analysis results as Prometheus metrics.
+1. **Istio-config-analyzer-&lt;VERSION&gt;** (Deployment): component that performs periodic [service mesh](../../glossary.html#service-mesh) configuration analysis (`istioctl analyze`) and exports the analysis results as Prometheus metrics.
 
    The component is created by the Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module for each Istio revision if the [`.settings.configAnalysis.enabled`](/modules/istio/configuration.html#parameters-configanalysis-enabled) module parameter is set to `true` (enabled by default).
 
@@ -169,7 +169,7 @@ The following additional components are created when Istio runs in ambient mode:
 Cross-cluster interaction ([federation](/modules/istio/#federation) or [multicluster](/modules/istio/#multicluster)) is only available between DP clusters, since DP installs a modified version of Istio that is not compatible with vanilla Istio in other clusters.
 {% endalert %}
 
-The following additional components are created when Istio runs in federation or multicluster mode:
+The following additional components are created when Istio runs in federation or [multicluster](../../glossary.html#multicluster) mode:
 
 1. **Metadata-exporter** (Deployment): component that provides public cluster metadata (the CA root certificate, public keys, endpoint addresses) to remote clusters for configuring cross-cluster interaction ([federation](/modules/istio/#federation) or [multicluster](/modules/istio/#multicluster)).
 
@@ -239,7 +239,7 @@ The module interacts with the following components:
    * Reads Pod, Namespace, Node, Service, Secret, ConfigMap, Job, CronJob, Deployment, DaemonSet, ReplicaSet, and StatefulSet resources.
 
 1. **The [`user-authn`](/modules/user-authn/) module**: Authenticates Kiali web interface users.
-1. **Trickster**: Queries service mesh traffic metrics for the Kiali web interface.
+1. **Trickster**: Queries [service mesh](../../glossary.html#service-mesh) traffic metrics for the Kiali web interface.
 1. **Remote DP cluster**:
 
    * Checks the availability of the mesh connection between clusters.
@@ -255,7 +255,7 @@ The following external components interact with the module:
 1. **Prometheus-main**: Collects metrics from all module components.
 1. **Containerd**: Runs CNI plugin binaries.
 1. **Load balancer**: Balances incoming traffic to ingress-gateway-controller.
-1. **Gateway/Ingress controller**: Forwards the authenticated user request to the Kiali web interface. Depends on the chosen method of publishing resources: using the Ingress controller of the [`ingress-nginx`](/modules/ingress-nginx/) module or the Gateway controller of the [`alb`](/modules/alb/) module.
+1. **Gateway/[Ingress controller](../../glossary.html#ingress-controller)**: Forwards the authenticated user request to the Kiali web interface. Depends on the chosen method of publishing resources: using the Ingress controller of the [`ingress-nginx`](/modules/ingress-nginx/) module or the Gateway controller of the [`alb`](/modules/alb/) module.
 1. **Remote DP cluster**:
 
    * Requests the cluster's public metadata.

@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/storage/external/hpe.html
 lang: ru
 ---
 
-В Deckhouse реализована поддержка систем хранения данных (СХД) HPE 3PAR для управления томами в Kubernetes с использованием CSI-драйвера. Такая интеграция обеспечивает надежное, масштабируемое и высокопроизводительное хранилище, подходящее для критически важных рабочих нагрузок. Для работы с системами хранения HPE 3PAR применяется [модуль `csi-hpe`](/modules/csi-hpe/), с помощью которого можно создавать StorageClass в Kubernetes через создание ресурса [HPEStorageClass](/modules/csi-hpe/cr.html#hpestorageclass).
+В Deckhouse реализована поддержка систем хранения данных (СХД) HPE 3PAR для управления томами в Kubernetes с использованием [CSI-драйвера](../../../../glossary.html#csi-driver). Такая интеграция обеспечивает надежное, масштабируемое и высокопроизводительное хранилище, подходящее для критически важных рабочих нагрузок. Для работы с системами хранения HPE 3PAR применяется [модуль `csi-hpe`](/modules/csi-hpe/), с помощью которого можно создавать StorageClass в Kubernetes через создание ресурса [HPEStorageClass](/modules/csi-hpe/cr.html#hpestorageclass).
 
 {% alert level="warning" %}
 Создание StorageClass для CSI-драйвера `csi.hpe.com` пользователем запрещено.

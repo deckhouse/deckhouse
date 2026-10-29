@@ -115,7 +115,7 @@ Entities are sources and destinations of traffic that make it easier to describe
 
 - `host` — the pod's own node, including the host's own traffic;
 - `remote-node` — other cluster nodes;
-- `kube-apiserver` — the Kubernetes API server (used by host firewall);
+- `kube-apiserver` — the Kubernetes API server (used by [host firewall](../../../../glossary.html#host-firewall));
 - `cluster` — every pod and node in the cluster;
 - `world` — anything outside the cluster;
 - `health` — Cilium health endpoints;
@@ -355,7 +355,7 @@ spec:
   egress: []
 ```
 
-DNS is also subject to network policies, so egress to the cluster DNS service over UDP/53 and TCP/53 must be allowed explicitly:
+DNS is also subject to [network policies](../../../../glossary.html#network-policy), so egress to the cluster DNS service over UDP/53 and TCP/53 must be allowed explicitly:
 
 ```yaml
 apiVersion: cilium.io/v2

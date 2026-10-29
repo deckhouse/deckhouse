@@ -55,7 +55,7 @@ description: Архитектура модуля user-authn в Deckhouse Platfor
 
 Модуль состоит из следующих компонентов:
 
-1. **Dex** — федеративный провайдер OpenID Connect, поддерживающий работу со статическими пользователями и интеграцию с внешними провайдерами аутентификации, такими как SAML, GitLab или GitHub. Модуль использует модифицированную версию [Dex](https://github.com/dexidp/dex) для поддержки:
+1. **Dex** — федеративный провайдер OpenID Connect, поддерживающий работу со [статическими пользователями](../../glossary.html#static-user) и интеграцию с внешними провайдерами аутентификации, такими как SAML, GitLab или GitHub. Модуль использует модифицированную версию [Dex](https://github.com/dexidp/dex) для поддержки:
 
    * групп для статических учетных записей пользователей;
    * двухфакторной аутентификации (2FA);
@@ -72,7 +72,7 @@ description: Архитектура модуля user-authn в Deckhouse Platfor
 
 1. **Dex-authenticator** — [middleware](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/static/img/simplified-architecture.svg)-сервис для аутентификации запросов к приложениям через сервис аутентификации кластера DP.
 
-   При соответствующей настройке Ingress-контроллера (через модуль `auth_request` NGINX) запросы сначала направляются в dex-authenticator для аутентификации.
+   При соответствующей настройке [Ingress-контроллера](../../glossary.html#ingress-controller) (через модуль `auth_request` NGINX) запросы сначала направляются в dex-authenticator для аутентификации.
 
    Состоит из следующих контейнеров:
 
@@ -86,7 +86,7 @@ description: Архитектура модуля user-authn в Deckhouse Platfor
 
      * [Group](/modules/user-authn/cr.html#group) — ресурс, описывающий статическую группу;
      * [User](/modules/user-authn/cr.html#user) — ресурс, описывающий статического пользователя;
-     * [UserAccount](/modules/user-authn/cr.html#useraccount) — ресурс, описывающий представление объектов Dex Password, OfflineSessions и UserIdentity для веб-интерфейса Deckhouse;
+     * [UserAccount](/modules/user-authn/cr.html#useraccount) — ресурс, описывающий представление объектов Dex Password, OfflineSessions и UserIdentity для [веб-интерфейса Deckhouse](../../glossary.html#web-ui);
      * [UserOperation](/modules/user-authn/cr.html#useroperation) — ресурс, описывающий операции над пользователем (сброс пароля, принудительная смена пароля, сброс 2FA, блокировка/разблокировка, выход);
      * DexProviderCheck — ресурс, описывающий проверку доступности конкретного провайдера Dex. Проверка подтверждает, что провайдер существует, активен, Dex доступен, а эндпоинт провайдера достижим. При этом не выполняется полная процедура аутентификации пользователя.
 

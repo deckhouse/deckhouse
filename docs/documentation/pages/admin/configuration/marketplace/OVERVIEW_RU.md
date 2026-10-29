@@ -9,7 +9,7 @@ relatedLinks:
     url: ../../../user/marketplace/
 ---
 
-Marketplace — это система управления пакетами (packages) в Deckhouse Platform (DP). Она позволяет администраторам подключать репозитории пакетов, обнаруживать доступные пакеты и предоставлять пользователям проектов возможность установки приложений из этих пакетов.
+[Marketplace](../../../glossary.html#marketplace) — это система управления [пакетами](../../../glossary.html#marketplace-package) (packages) в Deckhouse Platform (DP). Она позволяет администраторам подключать репозитории пакетов, обнаруживать доступные пакеты и предоставлять пользователям [проектов](../../../glossary.html#project) возможность установки приложений из этих пакетов.
 
 {% alert level="info" %}
 Marketplace доступен в DP, начиная с версии 1.76.
@@ -38,8 +38,8 @@ Marketplace доступен в DP, начиная с версии 1.76.
 | [PackageRepository](../../../reference/api/cr.html#packagerepository) | — | Кластер | Репозиторий пакетов и параметры его сканирования |
 | [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation) | `pro` | Кластер | Операция сканирования репозитория |
 | [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) | `apv` | Кластер | Обнаруженная версия пакета |
-| [ApplicationPackage](../../../reference/api/cr.html#applicationpackage) | `ap` | Кластер | Сводная информация о пакете: репозитории, в которых он доступен, версии, на которые указывают каналы обновлений, и приложения, которые его используют |
-| [Application](../../../reference/api/cr.html#application) | — | Неймспейс | Установленный экземпляр приложения, которым управляет пользователь |
+| [ApplicationPackage](../../../reference/api/cr.html#applicationpackage) | `ap` | Кластер | Сводная информация о пакете: репозитории, в которых он доступен, версии, на которые указывают [каналы обновлений](../../../glossary.html#release-channel), и приложения, которые его используют |
+| [Application](../../../reference/api/cr.html#application) | — | Неймспейс | Установленный [экземпляр приложения](../../../glossary.html#application-instance), которым управляет пользователь |
 
 В разделе [«Репозитории пакетов»](package-repository.html) описан порядок подключения репозитория и проверки его состояния.
 

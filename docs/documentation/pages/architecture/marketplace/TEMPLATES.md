@@ -256,5 +256,5 @@ DP determines whether the application is running from its Deployments and Statef
 
 {% endraw %}
 {% alert level="warning" %}
-The package must contain at least one Deployment or StatefulSet. Otherwise, the `Scaled` condition stays `Unknown`, and the application never reaches the `Installed` and `Ready` states.
+The [package](../../glossary.html#marketplace-package) must contain at least one Deployment or StatefulSet. Otherwise, the `Scaled` condition stays `Unknown`, and the application never reaches the `Installed` and `Ready` states.
 {% endalert %}

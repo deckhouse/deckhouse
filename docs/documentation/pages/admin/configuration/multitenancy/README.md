@@ -4,12 +4,12 @@ permalink: en/admin/multitenancy.html
 description: Multitenancy
 ---
 
-Multitenancy is the ability to create isolated environments (projects) within a Kubernetes cluster.
+Multitenancy is the ability to create isolated environments ([projects](../glossary.html#project)) within a Kubernetes cluster.
 Projects are similar to namespaces but offer more capabilities.
 While namespaces are used for logical separation of resources in Kubernetes,
 they do not, for example, restrict network communication, pod resource consumption, or host directory mounts.
 These limitations make namespaces insufficient for modern development needs.
-By default, namespaces also do not include logging, auditing, and vulnerability scanning.
+By default, namespaces also do not include logging, auditing, and [vulnerability scanning](../glossary.html#vulnerability-scanning).
 
 Using projects helps address these limitations and offers the following benefits:
 
@@ -35,7 +35,7 @@ Using projects helps address these limitations and offers the following benefits
 
 This mode creates isolated environments for users within their projects,
 while [`secret-copier`](/modules/secret-copier/) automatically distributes secrets to all namespaces.
-If sensitive data is present in a user’s private environment,
+If sensitive data is present in a user’s [private environment](../glossary.html#private-environment),
 it could lead to a data leak and a security model breach.
 {% endalert %}
 

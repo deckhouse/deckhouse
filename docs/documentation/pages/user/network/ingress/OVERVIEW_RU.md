@@ -5,7 +5,7 @@ permalink: ru/user/network/ingress/
 lang: ru
 ---
 
-Балансировщики Network Load Balancer (NLB) и Application Load Balancer (ALB) используются для предоставления внешнего доступа к приложениям, развернутым в кластере под управлением Deckhouse Platform.
+Балансировщики Network Load Balancer (NLB) и Application Load Balancer (ALB) используются для предоставления внешнего доступа к приложениям, развернутым в [кластере под управлением Deckhouse Platform](../../../glossary.html#dp-managed-cluster).
 
 ## Особенности и назначение NLB
 

@@ -10,7 +10,7 @@ You can configure the publication of the OpenVPN server in several ways:
 1. Select one or more external IP addresses for connection.
 1. Choose one of the connection methods:
    - via external IP address (`ExternalIP`) — if there are nodes with public IPs;
-   - using `LoadBalancer` — for all cloud providers and their deployment schemes that support LoadBalancer provisioning;
+   - using `LoadBalancer` — for all [cloud providers](../../../../../glossary.html#cloud-provider) and their deployment schemes that support LoadBalancer provisioning;
    - `Direct` — manually configure the traffic path from the cluster entry point to the OpenVPN pod.
 
 ### Example for bare-metal clusters

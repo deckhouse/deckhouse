@@ -5,7 +5,7 @@ description: "Initial guest system configuration through cloud-init and Sysprep,
 search: cloud-init, Sysprep, provisioning, guest OS agent, qemu-guest-agent
 ---
 
-On the first boot of a virtual machine (VM), the guest system is configured by an initialization script, and after that Deckhouse Platform (DP) communicates with it through the guest OS agent.
+On the first boot of a virtual machine (VM), the guest system is configured by an initialization script, and after that Deckhouse Platform (DP) communicates with it through the [guest OS agent](../../glossary.html#vm-guest-agent).
 
 ## VM initialization scripts
 
@@ -119,7 +119,7 @@ spec:
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Create a virtual machine or select an existing one and click its name.
 1. On the **Configuration** tab, scroll down to the **Cloud-init** toggle and enable it.
@@ -176,9 +176,9 @@ spec:
 
 ## Guest OS agent
 
-Install QEMU Guest Agent in the guest system so that DP can interact with the operating system inside the VM. The agent is needed for three things:
+Install [QEMU Guest Agent](../../glossary.html#vm-guest-agent) in the guest system so that DP can interact with the operating system inside the VM. The agent is needed for three things:
 
-- it makes consistent disk and VM snapshots possible;
+- it makes consistent disk and [VM snapshots](../../glossary.html#vm-snapshot) possible;
 - it reports information about the running system, and that information lands in the [`.status.guestOSInfo`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-status-guestosinfo) block;
 - it shows that the operating system has actually booted, rather than just the virtual machine having started.
 

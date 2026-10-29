@@ -15,7 +15,7 @@ relatedLinks:
     url: troubleshooting.html
 ---
 
-Host firewall — это режим работы Cilium, в котором сетевые политики применяются не к подам, а к самим узлам кластера. В DP host firewall настраивается ресурсами [CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html) с полем `nodeSelector`. Доступен только в кластерах с модулем [`cni-cilium`](/modules/cni-cilium/).
+[Host firewall](../../../../glossary.html#host-firewall) — это режим работы Cilium, в котором [сетевые политики](../../../../glossary.html#network-policy) применяются не к подам, а к самим узлам кластера. В DP host firewall настраивается ресурсами [CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html) с полем `nodeSelector`. Доступен только в кластерах с модулем [`cni-cilium`](/modules/cni-cilium/).
 
 {% alert level="danger" %}
 Ошибка в host-политиках может привести к потере SSH-доступа к узлам, нарушению работы control plane и недоступности kubelet или etcd. Включайте host firewall только через режим [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) и после проверки вердиктов в Hubble.
@@ -25,16 +25,16 @@ Host firewall — это режим работы Cilium, в котором се�
 
 CiliumClusterwideNetworkPolicy с `nodeSelector` применяется к специальному эндпоинту узла с лейблом `reserved:host` и фильтрует входящий и исходящий трафик узла (включая трафик подов в режиме `hostNetwork`). Политики для подов с `endpointSelector` на host-endpoint не действуют — это разные сущности.
 
-Host-политики не заменяют сетевую защиту инфраструктуры (физический файрвол, security groups облачного провайдера) — они работают как дополнительный уровень фильтрации внутри кластера.
+Host-политики не заменяют сетевую защиту инфраструктуры (физический файрвол, security groups [облачного провайдера](../../../../glossary.html#cloud-provider)) — они работают как дополнительный уровень фильтрации внутри кластера.
 
 ## Безопасный порядок включения
 
 Внедрение host firewall выполняется по шагам с использованием режима аудита:
 
 1. Включите [`policyAuditMode: true`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) в настройках модуля `cni-cilium`. В этом режиме политики не блокируют трафик, а только логируют вердикты.
-1. Примените набор host-политик. Минимум — политика для control plane (пример приведён ниже) и политики для worker-узлов с разрешёнными SSH и сервисными портами.
+1. Примените набор host-политик. Минимум — политика для control plane (пример приведён ниже) и политики для [worker-узлов](../../../../glossary.html#worker-node) с разрешёнными SSH и сервисными портами.
 1. Проверьте вердикты в Hubble UI и через `hubble observe --type policy-verdict`. Все ожидаемые соединения должны иметь `verdict=ALLOWED`. Всё, что попадает в `verdict=AUDITED`, после отключения режима аудита будет заблокировано.
-1. Доработайте политики, пока в логе не останется неожиданных `AUDITED`-записей. Особое внимание уделите трафику kubelet, etcd, kube-apiserver, ingress-контроллеров, мониторинга и DNS.
+1. Доработайте политики, пока в логе не останется неожиданных `AUDITED`-записей. Особое внимание уделите трафику kubelet, etcd, kube-apiserver, [ingress-контроллеров](../../../../glossary.html#ingress-controller), мониторинга и DNS.
 1. Отключите режим аудита (`policyAuditMode: false`).
 
 При обнаружении проблемы после отключения режима аудита быстрее всего восстановить связность через временное возвращение `policyAuditMode: true` или удаление CiliumClusterwideNetworkPolicy. Способы экстренного восстановления описаны в [Emergency Recovery документации Cilium](https://docs.cilium.io/en/v1.17/security/host-firewall/#emergency-recovery).
@@ -116,7 +116,7 @@ spec:
 
 ## Пример: разрешения для worker-узлов
 
-Разрешает worker-узлам обмен трафиком внутри кластера, обращения к API-серверу и DNS:
+Разрешает [worker-узлам](../../../../glossary.html#worker-node) обмен трафиком внутри кластера, обращения к API-серверу и DNS:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -139,4 +139,4 @@ spec:
         - remote-node
 ```
 
-Этот пример — стартовая точка. Дополните политику разрешениями для мониторинга, ingress-контроллеров, балансировщиков и SSH согласно вашей конфигурации.
+Этот пример — стартовая точка. Дополните политику разрешениями для мониторинга, [ingress-контроллеров](../../../../glossary.html#ingress-controller), балансировщиков и SSH согласно вашей конфигурации.

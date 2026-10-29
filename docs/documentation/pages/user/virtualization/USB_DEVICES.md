@@ -6,7 +6,7 @@ search: USB in a VM, USB passthrough, USBDevice, attaching a device
 ---
 
 {% alert level="info" %}
-USB device passthrough is available in commercial Deckhouse Platform (DP) editions.
+USB [device passthrough](../../glossary.html#device-passthrough) is available in commercial Deckhouse Platform (DP) [editions](../../glossary.html#edition).
 {% endalert %}
 
 DP supports USB device passthrough to virtual machines (VMs) using DRA (Dynamic Resource Allocation). The physical device is connected to a cluster node, and the virtual machine works with it as if the device were plugged into the machine itself.
@@ -89,7 +89,7 @@ After the VM is created or updated, the USB device is attached to the specified 
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the VM you need from the list and click its name.
 1. On the **Configuration** tab, scroll down to the **USB devices** section and click **Add**.

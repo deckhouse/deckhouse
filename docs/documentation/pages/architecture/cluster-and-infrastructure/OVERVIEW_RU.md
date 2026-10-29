@@ -15,14 +15,14 @@ extractedLinksMax: 0
 В разделе описаны:
 
 * Механизмы управления всеми используемыми в DP типами узлов, а также [гибридными группами узлов и кластерами](node-management/hybrid-nodegroups-and-clusters.html).
-* Служба [bashible](node-management/bashible.html), которая является ключевым компонентом подсистемы Cluster & Infrastructure. Bashible используется модулем [`node-manager`](/modules/node-manager/) для управления конфигурацией узлов.
+* Служба [bashible](node-management/bashible.html), которая является ключевым компонентом подсистемы Cluster & Infrastructure. [Bashible](../../glossary.html#bashible) используется модулем [`node-manager`](/modules/node-manager/) для управления конфигурацией узлов.
 
 В подсистему Cluster & Infrastructure также входят следующие модули:
 
 * [`chrony`](/modules/chrony/) — обеспечивает синхронизацию времени на всех узлах кластера;
 * [`registry-packages-proxy`](/modules/registry-packages-proxy/) — предоставляет внутренний прокси-сервер для пакетов хранилища образов контейнеров;
 * [`terraform-manager`](/modules/terraform-manager/) — предоставляет инструменты для работы с состоянием Terraform в Kubernetes-кластере;
-* модули облачных провайдеров, поддерживаемых DP:
+* модули [облачных провайдеров](../../glossary.html#cloud-provider), поддерживаемых DP:
 
   * [`cloud-provider-aws`](/modules/cloud-provider-aws/);
   * [`cloud-provider-azure`](/modules/cloud-provider-azure/);

@@ -12,8 +12,8 @@ extractedLinksMax: 0
 
 В подсистему Storage входят следующие модули:
 
-* [`local-path-provisioner`](/modules/local-path-provisioner/) — предоставляет локальное хранилище на узлах Kubernetes с использованием томов `HostPath` и создает ресурсы StorageClass для управления выделением локального хранилища;
-* [`snapshot-controller`](/modules/snapshot-controller/) — включает поддержку снимков для совместимых CSI-драйверов в кластере Kubernetes;
+* [`local-path-provisioner`](/modules/local-path-provisioner/) — предоставляет [локальное хранилище](../../glossary.html#local-storage) на узлах Kubernetes с использованием томов `HostPath` и создает ресурсы StorageClass для управления выделением локального хранилища;
+* [`snapshot-controller`](/modules/snapshot-controller/) — включает поддержку снимков для совместимых [CSI-драйверов](../../glossary.html#csi-driver) в кластере Kubernetes;
 * [`sds-local-volume`](/modules/sds-local-volume/) — управляет локальными блочными хранилищами на базе LVM и позволяет создавать ресурсы StorageClass в Kubernetes с помощью кастомного ресурса [LocalStorageClass](/modules/sds-local-volume/cr.html#localstorageclass);
 * [`sds-node-configurator`](/modules/sds-node-configurator/) — управляет блочными устройствами и LVM на узлах Kubernetes-кластера через [кастомные ресурсы](/modules/sds-node-configurator/stable/cr.html);
 * [`sds-replicated-volume`](/modules/sds-replicated-volume/) — управляет реплицируемым блочным хранилищем на базе DRBD. В качестве control plane используется LINSTOR;

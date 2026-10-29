@@ -4,7 +4,7 @@ permalink: en/architecture/marketplace/settings.html
 description: "Settings and values schemas of an Application package: validation, defaults, CEL rules, grantable resources, immutable fields, and web interface form extensions."
 ---
 
-The user configures an application instance in the [`spec.settings`](../../reference/api/cr.html#application-v1alpha1-spec-settings) field of the Application resource. The package describes the allowed settings with an OpenAPI schema. Deckhouse Platform (DP) validates the settings against this schema, applies default values, and passes the result to templates and hooks. The DP web interface builds the application settings form from the same schema.
+The user configures an [application instance](../../glossary.html#application-instance) in the [`spec.settings`](../../reference/api/cr.html#application-v1alpha1-spec-settings) field of the Application resource. The [package](../../glossary.html#marketplace-package) describes the allowed settings with an OpenAPI schema. Deckhouse Platform (DP) validates the settings against this schema, applies default values, and passes the result to templates and [hooks](../../glossary.html#module-hook). The DP web interface builds the application settings form from the same schema.
 
 ## Schema files
 
@@ -71,9 +71,9 @@ Fields declared only inside `oneOf`, `anyOf`, or `allOf` branches are also rejec
 | When | What DP checks | Result of a failed check |
 |---|---|---|
 | An Application is created or changed | The settings schema published in ApplicationPackageVersion, including CEL rules that don't reference `oldSelf`, and fields with `x-deckhouse-immutable` | The request is rejected |
-| The settings of an installed application are changed (`spec.packageVersion` matches the installed version) | Additionally: CEL rules that reference `oldSelf`, availability of grantable resources, and the [settings validation hook](hooks.html#settings-validation-hook) | The request is rejected |
+| The settings of an installed application are changed (`spec.packageVersion` matches the installed version) | Additionally: CEL rules that reference `oldSelf`, availability of [grantable resources](../../glossary.html#grantable-resource), and the [settings validation hook](hooks.html#settings-validation-hook) | The request is rejected |
 | DP applies the settings | The same as in the previous row | The settings are not applied, the error is reported in the Application conditions |
-| A hook changes values | The `openapi/values.yaml` schema, including CEL rules | The hook fails |
+| A [hook](../../glossary.html#module-hook) changes values | The `openapi/values.yaml` schema, including CEL rules | The hook fails |
 
 ### CEL rules
 

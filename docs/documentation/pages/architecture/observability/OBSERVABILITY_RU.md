@@ -6,13 +6,13 @@ search: observability, grafana, alertmanager, dashboard, дашборд, alert, 
 description: Архитектура модуля observability в Deckhouse Platform.
 ---
 
-Модуль [`observability`](/modules/observability/) расширяет функциональность модуля [`prometheus`](/modules/prometheus/) и [веб-интерфейса Deckhouse](/modules/console/), предоставляя дополнительные возможности для гибкого управления метриками, дашбордами и алертами, а также средства разграничения доступа к ним.
+Модуль [`observability`](/modules/observability/) расширяет функциональность модуля [`prometheus`](/modules/prometheus/) и [веб-интерфейса Deckhouse](/modules/console/), предоставляя дополнительные возможности для гибкого управления метриками, [дашбордами](../../glossary.html#dashboard) и алертами, а также средства разграничения доступа к ним.
 
 Возможности модуля:
 
 * **Управление дашбордами** — модуль позволяет пользователям добавлять собственные дашборды в формате Grafana.
 * **Управление группами триггеров и метрик** — модуль позволяет создавать и настраивать собственные группы триггеров и метрик.
-* **Настройка уведомлений** — модуль позволяет настраивать каналы уведомлений (Telegram, Slack, электронная почта, вебхуки), политики уведомлений, а также дает возможность отключать уведомления при необходимости.
+* **Настройка уведомлений** — модуль позволяет настраивать [каналы уведомлений](../../glossary.html#alert-notification-channel) (Telegram, Slack, электронная почта, вебхуки), политики уведомлений, а также дает возможность отключать уведомления при необходимости.
 * **Работа с алертами** — модуль предоставляет информацию об активных алертах, а также сохраняет историю завершенных алертов.
 * **Предоставление стандартных источников данных**.
 * **Поддержка пользовательских источников данных** — модуль дополнительно к предоставляемому набору стандартных источников данных позволяет добавить пользовательские.
@@ -69,7 +69,7 @@ description: Архитектура модуля observability в Deckhouse Plat
 
 1. **Opagent** (DaemonSet) — агент, предназначенный для сбора метрик с операционной системы и прикладного программного обеспечения, установленного на серверы. Разработан компанией «Флант» для [Deckhouse Observability Platform (DOP)](/products/observability-platform/) на основе [Okagent (агента Okmeter)](https://okmeter.ru/docs/features/), входящего в состав системы мониторинга [Okmeter](https://okmeter.ru/docs/overview/).
 
-   В модуле [`observability`](/modules/observability/) opAgent подключается к managed-сервисам, таким как [`managed-postgres`](/modules/managed-postgres/), [`managed-memcached`](/modules/managed-memcached/), [`managed-kafka`](/modules/managed-kafka/) и другим (список поддерживаемых сервисов постоянно расширяется), собирает с них метрики, после чего отправляет их в компонент prometheus-main модуля [`prometheus`](/modules/prometheus/). Если включен модуль [`observability-platform`](/modules/observability-platform/), opAgent собирает метрики с узлов кластера и отправляет их в [DOP](/products/observability-platform/).
+   В модуле [`observability`](/modules/observability/) opAgent подключается к [managed-сервисам](../../glossary.html#managed-service), таким как [`managed-postgres`](/modules/managed-postgres/), [`managed-memcached`](/modules/managed-memcached/), [`managed-kafka`](/modules/managed-kafka/) и другим (список поддерживаемых сервисов постоянно расширяется), собирает с них метрики, после чего отправляет их в компонент prometheus-main модуля [`prometheus`](/modules/prometheus/). Если включен модуль [`observability-platform`](/modules/observability-platform/), opAgent собирает метрики с узлов кластера и отправляет их в [DOP](/products/observability-platform/).
 
    OpAgent отправляет собранные данные по протоколу [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/):
 

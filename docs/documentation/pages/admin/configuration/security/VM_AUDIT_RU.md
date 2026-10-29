@@ -9,15 +9,15 @@ lang: ru
 Аудит фиксирует действия с виртуальными машинами (ВМ) и с самим модулем, чтобы вы могли разобрать инцидент и восстановить последовательность событий.
 
 {% alert level="info" %}
-Доступно в коммерческих редакциях Deckhouse Platform (DP).
+Доступно в коммерческих [редакциях](../../../../glossary.html#edition) Deckhouse Platform (DP).
 {% endalert %}
 
 ## Включение аудита
 
-Чтобы включить аудит событий безопасности, выполните следующие шаги:
+Чтобы включить аудит [событий безопасности](../../../../glossary.html#security-event), выполните следующие шаги:
 
 1. Включите модули [`log-shipper`](/modules/log-shipper/) и [`runtime-audit-engine`](/modules/runtime-audit-engine/).
-1. Включите аудит API Kubernetes, задав [`.spec.settings.apiserver.auditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) в значение `true` в модуле [`control-plane-manager`](/modules/control-plane-manager/).
+1. Включите [аудит API Kubernetes](../../../../glossary.html#kubernetes-api-audit), задав [`.spec.settings.apiserver.auditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) в значение `true` в модуле [`control-plane-manager`](/modules/control-plane-manager/).
 1. Задайте [`.spec.settings.audit.enabled`](/modules/virtualization/configuration.html#parameters-audit-enabled) в значение `true` в настройках модуля:
 
    ```yaml
@@ -37,7 +37,7 @@ lang: ru
 - `Manage VM` — создание, изменение или удаление ресурса [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).
 - `Control VM` — изменение состояния ВМ, в том числе запуск, остановка, перезапуск, миграция и вытеснение через ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation), а также остановка или перезапуск из гостевой ОС и аварийное завершение работы.
 - `Module control` — создание, изменение, выключение или удаление [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig).
-- `Virtualization control` — создание или удаление системного компонента модуля в неймспейсе `d8-virtualization`.
+- `Virtualization control` — создание или удаление [системного компонента](../../../../glossary.html#system-component) модуля в неймспейсе `d8-virtualization`.
 - `Integrity check` — несовпадение контрольной суммы конфигурации ВМ с эталонной.
 - `Forbidden operation` — попытка выполнить запрещённую операцию.
 

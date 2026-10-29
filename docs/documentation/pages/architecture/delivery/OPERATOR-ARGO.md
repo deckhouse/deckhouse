@@ -36,7 +36,7 @@ The Level 2 C4 architecture of the [`operator-argo`](/modules/operator-argo/) mo
 
   ![Operator-argo module operator architecture](../../images/architecture/delivery/c4-l2-operator-argo-operator.svg)
 
-- Argo CD instance deployment scenario with Redis in a non-HA configuration:
+- Argo CD instance [deployment scenario](../../glossary.html#deployment-scenario) with Redis in a non-HA configuration:
 
   ![Operator-argo module architecture with Redis non-HA](../../images/architecture/delivery/c4-l2-operator-argo.svg)
 
@@ -44,7 +44,7 @@ The Level 2 C4 architecture of the [`operator-argo`](/modules/operator-argo/) mo
 
   ![Operator-argo module architecture with Redis HA](../../images/architecture/delivery/c4-l2-operator-argo-ha.svg)
 
-- Argo CD instance deployment scenario in a [principal cluster](https://argocd-agent.readthedocs.io/stable/concepts/components-terminology/) for a multicluster setup (the diagram shows only differences from the primary deployment scenario):
+- Argo CD instance deployment scenario in a [principal cluster](https://argocd-agent.readthedocs.io/stable/concepts/components-terminology/) for a [multicluster](../../glossary.html#multicluster) setup (the diagram shows only differences from the primary deployment scenario):
 
   ![Operator-argo module architecture with Principal](../../images/architecture/delivery/c4-l2-operator-argo-principal.svg)
 
@@ -130,7 +130,7 @@ The module consists of the following components:
 
    For more details on operation, refer to the [Argo CD Notifications documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/notifications/).
 
-1. **&lt;ArgoCD name&gt;-dex-server** (Deployment): Argocd-dex-server. Optional component for user authentication in Argo CD, acting as an OIDC provider (OpenID Connect) based on [Dex](https://github.com/dexidp/dex). The component enables user login through various external authentication providers (LDAP, GitHub, GitLab, SAML, Azure AD, and others) and supports static users defined in Dex configuration.
+1. **&lt;ArgoCD name&gt;-dex-server** (Deployment): Argocd-dex-server. Optional component for user authentication in Argo CD, acting as an OIDC provider (OpenID Connect) based on [Dex](https://github.com/dexidp/dex). The component enables user login through various external authentication providers (LDAP, GitHub, GitLab, SAML, Azure AD, and others) and supports [static users](../../glossary.html#static-user) defined in Dex configuration.
 
    It consists of the following containers:
 
@@ -169,7 +169,7 @@ The module consists of the following components:
    Argocd-operator-controller-manager deploys this component if [`.spec.ha.enabled`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-ha-enabled) in the ArgoCD custom resource is `true`.
 
    {% alert level="info" %}
-   The following components are used to implement a secure and scalable multicluster setup in Argo CD:
+   The following components are used to implement a secure and scalable [multicluster](../../glossary.html#multicluster) setup in Argo CD:
    - Principal: The central control point. It stores state and distributes tasks.
    - Agent: The executor in each target cluster. It applies manifests and reports back.
 

@@ -16,7 +16,7 @@ relatedLinks:
     url: host_firewall.html
 ---
 
-This page covers commands and techniques for inspecting applied network policies and investigating connectivity issues. Some tools require the [`cni-cilium`](/modules/cni-cilium/) module — this is noted explicitly.
+This page covers commands and techniques for inspecting applied [network policies](../../../../glossary.html#network-policy) and investigating connectivity issues. Some tools require the [`cni-cilium`](/modules/cni-cilium/) module — this is noted explicitly.
 
 ## Inspecting an applied policy
 

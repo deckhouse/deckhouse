@@ -4,12 +4,12 @@ description: "Overview of the monitoring system in Deckhouse Platform. Ready-mad
 permalink: en/user/monitoring/
 ---
 
-This section is intended for project users of the Deckhouse Platform (DP).
+This section is intended for [project](../../glossary.html#project) users of the Deckhouse Platform (DP).
 
 DP includes a built-in monitoring system
 that provides convenient tools for observing the state of the infrastructure and applications.
 
-By default, DP provides a predefined set of dashboards and alerts that help track key application health metrics.
+By default, DP provides a predefined set of [dashboards](../../glossary.html#dashboard) and alerts that help track key application health metrics.
 They are available through the "Monitoring" section of the [Deckhouse web interface](/modules/console/).
 
 In addition, users can:

@@ -3,7 +3,7 @@ title: Layouts and configuration in Amazon Web Services
 permalink: en/admin/integrations/public/amazon/layout.html
 ---
 
-This section describes cluster layouts in AWS infrastructure and their related parameters.
+This section describes cluster [layouts](../../../../glossary.html#layout) in AWS infrastructure and their related parameters.
 The selected layout affects how public IP addresses are assigned, NAT usage, and how nodes are accessed.
 
 ## WithoutNAT
@@ -63,10 +63,10 @@ tags:
 {% alert level="warning" %}
 In this layout, the NAT Gateway is always created in zone `a`.
 If cluster nodes are placed in other zones, a failure in zone a may cause the cluster to become unavailable.
-A bastion host is required to connect to the nodes.
+A [bastion host](../../../../glossary.html#bastion-host) is required to connect to the nodes.
 {% endalert %}
 
-In this layout, a NAT Gateway is used for accessing the internet, and nodes do not receive public IP addresses.
+In this [layout](../../../../glossary.html#layout), a NAT Gateway is used for accessing the internet, and nodes do not receive public IP addresses.
 Access to nodes is only possible through a bastion host, which is placed in a separate subnet.
 
 ![WithNAT layout in AWS](../../../../images/cloud-provider-aws/aws-withnat.png)
@@ -126,10 +126,10 @@ tags:
 The [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) resource describes the cluster settings and is used by Deckhouse Platform (DP) to:
 
 - Define the layout and network CIDRs.
-- Configure master and worker nodes.
+- Configure master and [worker nodes](../../../../glossary.html#worker-node).
 - Specify AWS API connection parameters (such as access keys and region).
 - Define common and custom tags.
-- Configure the bastion host (for the WithNAT layout).
+- Configure the [bastion host](../../../../glossary.html#bastion-host) (for the WithNAT [layout](../../../../glossary.html#layout)).
 
 Required fields:
 
@@ -157,7 +157,7 @@ dhctl converge
 
 ## Internal addressing and subnets
 
-The [`nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) parameter defines the address range to be split among availability zones.
+The [`nodeNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodenetworkcidr) parameter defines the address range to be split among [availability zones](../../../../glossary.html#availability-zone).
 This range must match or be a subset of [`vpcNetworkCIDR`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-vpcnetworkcidr).
 Subnets are automatically created based on the number of zones in the region.
 
@@ -174,7 +174,7 @@ AWS security groups are used to manage incoming and outgoing traffic to virtual 
 In DP, they can be used to:
 
 - Allow access to cluster nodes from other subnets.
-- Open access to applications running on static nodes.
+- Open access to applications running on [static nodes](../../../../glossary.html#static-node).
 - Restrict or allow access to external resources based on security policies.
 
 When the [`disableDefaultSecurityGroup: false`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) parameter is set, DP creates the following default security groups when a cluster is created:
@@ -187,7 +187,7 @@ When the [`disableDefaultSecurityGroup: false`](/modules/cloud-provider-aws/clus
 - `<CLUSTER_PREFIX>-loadbalancer`, used by load balancers:
   - Allows any incoming traffic from the CIDRs listed in [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist).
   - Allows any outgoing traffic to the `<CLUSTER_PREFIX>-node` group.
-- `<CLUSTER_PREFIX>-ssh-accessible`, created if [`sshAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-sshallowlist) is set. It allows incoming traffic over the TCP protocol on port `22` from the listed CIDRs (default `0.0.0.0/0`). It is assigned to master nodes or to the bastion host in the WithNAT layout.
+- `<CLUSTER_PREFIX>-ssh-accessible`, created if [`sshAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-sshallowlist) is set. It allows incoming traffic over the TCP protocol on port `22` from the listed CIDRs (default `0.0.0.0/0`). It is assigned to [master nodes](../../../../glossary.html#master-node) or to the bastion host in the WithNAT layout.
 
 In addition to the default groups, you can attach custom security groups created in the cloud beforehand.
 
@@ -196,7 +196,7 @@ You can assign additional security groups in the following cases:
 | Node type              | Where to configure                                                                 |
 |------------------------|-------------------------------------------------------------------------------|
 | Master nodes            | In the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) field of the AWSClusterConfiguration resource |
-| Static worker nodes | In the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) field of the same resource |
+| Static [worker nodes](../../../../glossary.html#worker-node) | In the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) field of the same resource |
 | Ephemeral nodes         | In the [`spec.additionalSecurityGroups`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups) field of the AWSInstanceClass object         |
 
 In all cases, the `additionalSecurityGroups` parameter must be an array of strings (AWS security group IDs or names).
@@ -234,7 +234,7 @@ To configure peering, follow these steps:
 ## Configuring access via bastion host
 
 To access nodes in private subnets, use the [`withNAT.bastionInstance`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-withnat-bastioninstance) parameter in AWSClusterConfiguration.
-The bastion host is provisioned with the infrastructure according to the `instanceClass` settings.
+The [bastion host](../../../../glossary.html#bastion-host) is provisioned with the infrastructure according to the `instanceClass` settings.
 
 The following scenarios are supported:
 
@@ -303,6 +303,6 @@ Compatibility with other parameters:
 
 ## Preemptible nodes
 
-Preemptible virtual machines in AWS are called Spot Instances. To make a node group order them, set the [`spot`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-spot) parameter of the AWSInstanceClass resource to `true`.
+Preemptible virtual machines in AWS are called Spot Instances. To make a [node group](../../../../glossary.html#node-group) order them, set the [`spot`](/modules/cloud-provider-aws/cr.html#awsinstanceclass-v1-spec-spot) parameter of the AWSInstanceClass resource to `true`.
 
 How to create such nodes and how they behave is described in ["How to create preemptible nodes in AWS?"](/modules/cloud-provider-aws/faq.html#how-to-create-preemptible-nodes-in-aws).

@@ -4,7 +4,7 @@ permalink: en/admin/configuration/logging/delivery.html
 description: "Configure log collection and delivery in Deckhouse Platform. Centralized logging from pods and nodes to internal or external storage systems with filtering and routing."
 ---
 
-Deckhouse Platform (DP) provides log collection and delivery from cluster nodes and pods to internal or external storage systems.
+Deckhouse Platform (DP) provides log collection and delivery from cluster nodes and pods to internal or [external storage](../../../glossary.html#external-storage) systems.
 
 DP allows you to:
 
@@ -12,7 +12,7 @@ DP allows you to:
 - Filter logs by labels, message content, and other criteria.
 - Send logs to multiple storage systems simultaneously (e.g., Loki and Elasticsearch).
 - Enrich logs with Kubernetes metadata.
-- Use log buffering to improve performance.
+- Use [log buffering](../../../glossary.html#log-buffering) to improve performance.
 
 The general mechanism of log collection, delivery, and filtering is described in detail in the [Architecture](../../../architecture/observability/logging.html) section.
 

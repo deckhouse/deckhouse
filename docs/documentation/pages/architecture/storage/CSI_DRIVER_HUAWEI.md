@@ -5,7 +5,7 @@ search: csi-huawei, csi driver
 description: Architecture of the csi-huawei CSI driver in Deckhouse Platform.
 ---
 
-The `csi-huawei` CSI driver is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage volumes on Huawei storage systems in Deckhouse Platform (DP).
+The `csi-huawei` [CSI driver](../../../glossary.html#csi-driver) is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage volumes on Huawei storage systems in Deckhouse Platform (DP).
 
 ## Driver architecture
 
@@ -84,7 +84,7 @@ The following external components interact with the driver:
 
 1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-   * Checks CSI driver livenessProbe.
+   * Checks [CSI driver](../../../glossary.html#csi-driver) livenessProbe.
    * Registers the Node Plugin.
    * Calls `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, and `NodeUnpublishVolume` RPCs in the Node Plugin.
 

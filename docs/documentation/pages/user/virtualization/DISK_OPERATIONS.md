@@ -62,7 +62,7 @@ You can grow a disk even while it's attached to a running virtual machine (VM). 
 
 You can change the size from the virtual machine page:
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the VM the disk is attached to from the list and click its name.
 1. On the **Configuration** tab, in the **Disks** section, click the pencil icon next to the disk size.
@@ -83,7 +83,7 @@ Or from the disk page itself:
 
 ## Migrating disks to other storage
 
-In commercial Deckhouse Platform (DP) editions, you can move a disk to another storage by changing its storage class. The move works both for disks defined in the VM specification and for disks attached as a separate resource.
+In commercial Deckhouse Platform (DP) [editions](../../glossary.html#edition), you can move a disk to another storage by changing its storage class. The move works both for disks defined in the VM specification and for disks attached as a separate resource.
 
 {% alert level="warning" %}
 The virtual machine must be in the `Running` phase, and the source and target storage must be of the same type. You can't move a disk from a file system volume to a block device or the other way around.
@@ -98,7 +98,7 @@ d8 k patch vd disk --type=merge --patch '{"spec":{"persistentVolumeClaim":{"stor
 d8 k edit vd disk
 ```
 
-After that, a live migration of the VM starts, during which the disk moves to the new storage.
+After that, a [live migration](../../glossary.html#live-migration) of the VM starts, during which the disk moves to the new storage.
 
 If you need to move several disks of the same machine, change the storage class one disk at a time:
 

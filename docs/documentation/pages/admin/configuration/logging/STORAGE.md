@@ -4,11 +4,11 @@ permalink: en/admin/configuration/logging/storage.html
 description: "Configure short-term log storage in Deckhouse Platform using Grafana Loki. Log collection, storage management, and centralized logging solution setup."
 ---
 
-Deckhouse Platform (DP) provides a built-in solution for short-term log storage based on the [Grafana Loki](https://grafana.com/oss/loki/) project.
+Deckhouse Platform (DP) provides a built-in solution for [short-term log storage](../../../glossary.html#short-term-log-storage) based on the [Grafana Loki](https://grafana.com/oss/loki/) project.
 
 The storage is deployed in the cluster and integrated with the log collection system.
 After configuring [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig), [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig), and [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination) resources,
-logs automatically flow from all system components.
+logs automatically flow from all [system components](../../../glossary.html#system-component).
 The configured storage is added to Grafana as a data source for visualization and analysis.
 
 Log collection from user applications is configured separately.
@@ -17,8 +17,8 @@ Short-term storage parameters are set in the [`loki`](/modules/loki/configuratio
 You can configure disk size and retention period, specify the StorageClass to use, and set resource limits.
 
 {% alert level="warning" %}
-Short-term storage based on Grafana Loki does not support high availability mode.
-For long-term storage of important logs, use external storage.
+Short-term storage based on Grafana Loki does not support [high availability mode](../../../glossary.html#ha-mode).
+For [long-term storage](../../../glossary.html#longterm-storage) of important logs, use [external storage](../../../glossary.html#external-storage).
 {% endalert %}
 
 ## Integration with Grafana Cloud

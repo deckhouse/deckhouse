@@ -31,7 +31,7 @@ The Istio proxy, which runs as a sidecar container, also consumes resources and 
 - Each Envoy stores information about all Services in the cluster, which requires memory.
   The larger the cluster, the more memory Envoy consumes. The solution is the [Sidecar](/modules/istio/istio-cr.html#sidecar) custom resource.
 
-It is also important to prepare the Ingress controller and the application's Ingress resources:
+It is also important to prepare the [Ingress controller](../../glossary.html#ingress-controller) and the application's Ingress resources:
 
 - Enable [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) in the IngressNginxController resource.
 - Add annotations to the application's Ingress resources:

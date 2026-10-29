@@ -6,7 +6,7 @@ description: Architecture for collecting, processing, and delivering security ev
 ---
 
 The [`security-events-manager`](/modules/security-events-manager/) module within Deckhouse Platform (DP) performs declarative collection, processing,
-normalization, and delivery of security events extracted from logs of applications
+normalization, and delivery of [security events](../../glossary.html#security-event) extracted from logs of applications
 and Kubernetes infrastructure components.
 
 A security event is a structured record of an action or fact that is significant from an information security perspective.
@@ -195,7 +195,7 @@ In a practical scenario, the architecture works along the following chain:
 5. Filtering and routing rules are applied.
 6. Events are delivered to target storages and analytics systems.
 
-The result is a unified and manageable flow of security events
+The result is a unified and manageable flow of [security events](../../glossary.html#security-event)
 suitable for monitoring, investigations, and long-term auditing.
 
 ## Supported security events

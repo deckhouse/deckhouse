@@ -6,8 +6,8 @@ description: "Grant RBAC permissions to users and service accounts in Deckhouse 
 
 To grant permissions in Deckhouse Platform (DP), you need to define a `subjects` block. Its format and contents depend on the resource type:
 
-- In [AuthorizationRule and ClusterAuthorizationRule](#granting-permissions-using-authorizationrule-and-clusterauthorizationrule-basic-role-model) resources (basic role model), as well as [ProjectRoleBinding and ClusterProjectRoleBinding](#granting-permissions-using-clusterrolebinding-and-rolebinding-granular-role-model) of the `multitenancy-manager` module (granular role model, project scope) — use the [`subjects`](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-subjects) block shown below.
-- In standard Kubernetes [RoleBinding and ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resources (granular role model, namespace/subsystem/whole-platform scope), the format differs: for `kind: User` and `kind: Group`, a `subjects` item additionally requires the `apiGroup: rbac.authorization.k8s.io` field (not needed for `kind: ServiceAccount`). For details, see the examples in [Granting permissions using ClusterRoleBinding and RoleBinding](#granting-permissions-using-clusterrolebinding-and-rolebinding-granular-role-model) below.
+- In [AuthorizationRule and ClusterAuthorizationRule](#granting-permissions-using-authorizationrule-and-clusterauthorizationrule-basic-role-model) resources (basic [role model](../../../../glossary.html#rbac)), as well as [ProjectRoleBinding and ClusterProjectRoleBinding](#granting-permissions-using-clusterrolebinding-and-rolebinding-granular-role-model) of the `multitenancy-manager` module (granular role model, [project](../../../../glossary.html#project) scope) — use the [`subjects`](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-subjects) block shown below.
+- In standard Kubernetes [RoleBinding and ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resources (granular role model, namespace/[subsystem](../../../../glossary.html#subsystem)/whole-platform scope), the format differs: for `kind: User` and `kind: Group`, a `subjects` item additionally requires the `apiGroup: rbac.authorization.k8s.io` field (not needed for `kind: ServiceAccount`). For details, see the examples in [Granting permissions using ClusterRoleBinding and RoleBinding](#granting-permissions-using-clusterrolebinding-and-rolebinding-granular-role-model) below.
 
 For users, it should be specified in the following format:
 
@@ -18,7 +18,7 @@ subjects:
 ```
 
 {% alert level="warning" %}
-If you are using the [`user-authn`](/modules/user-authn/) module and static users, make sure to specify the user’s email in `subjects`,
+If you are using the [`user-authn`](/modules/user-authn/) module and [static users](../../../../glossary.html#static-user), make sure to specify the user’s email in `subjects`,
 not the name of the [User](/modules/user-authn/cr.html#user) resource.
 {% endalert %}
 
@@ -84,7 +84,7 @@ use the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizat
 It is applied cluster-wide.
 
 {% alert level="info" %}
-In multitenancy mode, a ClusterAuthorizationRule without [`namespaceSelector`](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector) does not grant access to system namespaces: they require [`namespaceSelector.matchAny: true`](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector-matchany) or the deprecated [`allowAccessToSystemNamespaces: true`](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-allowaccesstosystemnamespaces).
+In multitenancy mode, a ClusterAuthorizationRule without [`namespaceSelector`](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector) does not grant access to [system namespaces](../../../../glossary.html#system-namespace): they require [`namespaceSelector.matchAny: true`](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector-matchany) or the deprecated [`allowAccessToSystemNamespaces: true`](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-allowaccesstosystemnamespaces).
 {% endalert %}
 
 If needed, you can restrict the scope of permissions granted via [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) to one or several namespaces.
@@ -118,10 +118,10 @@ The `namespaceSelector` and `limitNamespaces` parameters only restrict access to
 
 ## Granting permissions using ClusterRoleBinding and RoleBinding (granular role model)
 
-When using the granular role model in DP,
-you can grant permissions to users via the [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) and [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resources — or, to grant access across all namespaces of a project at once, the [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) and [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) resources of the `multitenancy-manager` module.
+When using the granular [role model](../../../../glossary.html#rbac) in DP,
+you can grant permissions to users via the [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) and [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) resources — or, to grant access across all namespaces of a [project](../../../../glossary.html#project) at once, the [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) and [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) resources of the `multitenancy-manager` module.
 
-Roles of the granular model operate in one of four scopes — namespace, project, subsystem, or the whole platform — each with its own role name format and access levels. For details, see [Role scopes](rbac-experimental.html#role-scopes) in the granular role model documentation.
+Roles of the granular model operate in one of four scopes — namespace, project, [subsystem](../../../../glossary.html#subsystem), or the whole platform — each with its own role name format and access levels. For details, see [Role scopes](rbac-experimental.html#role-scopes) in the granular role model documentation.
 
 {% alert level="info" %}
 Access can also be granted without writing YAML manifests, with the access grant wizard in the [Deckhouse web UI](../../../../user/web/ui.html). The wizard walks you through the steps (who gets access → where → at which level), picks the binding kind itself (RoleBinding, ClusterRoleBinding, ProjectRoleBinding, or ClusterProjectRoleBinding), and lets you assemble a custom role from ready-made capabilities.

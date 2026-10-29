@@ -29,7 +29,7 @@ d8 system edit cluster-configuration
 {% alert level="warning" %}
 На узлах с Ubuntu в AWS модуль ядра `erofs`, необходимый для containerd v2, поставляется отдельным пакетом `linux-modules-extra`. DP устанавливает его автоматически, но для части ядер, преимущественно устаревших, этот пакет больше не публикуется в APT-репозитории. В этом случае установка пропускается, в логах узла появляется предупреждение, узел получает лейбл `node.deckhouse.io/containerd-v2-unsupported`, и по нему срабатывает [алерт `D8NodeContainerdV2NotSupported`](../../../../reference/alerts.html#node-manager-d8nodecontainerdv2notsupported).
 
-Проблема подтверждена на ядрах `5.15.0-1028-aws`, `6.8.0-1024-aws` и `6.8.0-1029-aws`. Чтобы мигрировать такие узлы, переключите группу узлов на более свежий AMI или ядро, в котором есть `erofs`.
+Проблема подтверждена на ядрах `5.15.0-1028-aws`, `6.8.0-1024-aws` и `6.8.0-1029-aws`. Чтобы мигрировать такие узлы, переключите [группу узлов](../../../../glossary.html#node-group) на более свежий AMI или ядро, в котором есть `erofs`.
 
 Перед миграцией проверьте, есть ли в кластере такие узлы: сверьтесь с алертами и списком узлов с этим лейблом (команды приведены ниже).
 {% endalert %}
@@ -63,7 +63,7 @@ ls -l /etc/containerd/conf.d
 
 Включение containerd v2 возможно двумя способами:
 
-1. **Для всего кластера**. Укажите значение `ContainerdV2` в параметре [`defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) ресурса ClusterConfiguration. Это значение будет применяться ко всем [NodeGroup](/modules/node-manager/cr.html#nodegroup), в которых явно не указан [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
+1. **Для всего кластера**. Укажите значение `ContainerdV2` в параметре [`defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) ресурса [ClusterConfiguration](../../../../glossary.html#cluster-configuration). Это значение будет применяться ко всем [NodeGroup](/modules/node-manager/cr.html#nodegroup), в которых явно не указан [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
 
    Пример:
 

@@ -5,13 +5,13 @@ search: observability, grafana, alertmanager, dashboard
 description: Architecture of the observability module in Deckhouse Platform.
 ---
 
-The `observability` module extends the functionality of the [`prometheus`](/modules/prometheus/) module and the [Deckhouse web UI](/modules/console/), providing additional capabilities for flexible management of metrics, dashboards, and alerts, as well as access control mechanisms for them.
+The `observability` module extends the functionality of the [`prometheus`](/modules/prometheus/) module and the [Deckhouse web UI](/modules/console/), providing additional capabilities for flexible management of metrics, [dashboards](../../glossary.html#dashboard), and alerts, as well as access control mechanisms for them.
 
 Module capabilities:
 
 * **Dashboard management**: Allows users to add their own dashboards in Grafana format.
 * **Alerting and recording rule group management**: Allows creating and configuring custom alerting and recording rule groups.
-* **Notification configuration**: Allows configuring notification channels (Telegram, Slack, email, and webhooks), notification policies, and disabling notifications when needed.
+* **Notification configuration**: Allows configuring [notification channels](../../glossary.html#alert-notification-channel) (Telegram, Slack, email, and webhooks), notification policies, and disabling notifications when needed.
 * **Alert management**: Provides information about active alerts and stores the history of resolved alerts.
 * **Standard data sources provisioning**.
 * **Custom data sources support**: The module allows you to add custom data sources in addition to the provided set of standard data sources.
@@ -63,13 +63,13 @@ The module consists of the following components:
 
    * **nginx**: Sidecar container that is an NGINX proxy server, which is used to publish static files. It is an [open-source project](https://github.com/nginx/nginx).
 
-1. **Label-enforcer**: A component that authorizes and proxies user requests to metrics (prometheus-main via the label-proxy service) and logs (loki via the logs-gateway service) sources, specified in the Datasource resources of grafana component API. Label-enforcer verifies RBAC access to monitoring data based on user rights, retrieves a list of available namespaces, and enriches requests with labels to filter requested data within user namespaces. For more information about metrics access control, refer to the [module documentation](/modules/observability/metrics.html). Label-enforcer handles both metrics read and write requests.
+1. **Label-enforcer**: A component that authorizes and proxies user requests to metrics (prometheus-main via the label-proxy service) and logs (loki via the logs-gateway service) sources, specified in the Datasource resources of grafana component API. Label-enforcer verifies RBAC access to monitoring data based on user rights, retrieves a list of available namespaces, and enriches requests with labels to filter requested data within [user namespaces](../../glossary.html#user-namespace). For more information about metrics access control, refer to the [module documentation](/modules/observability/metrics.html). Label-enforcer handles both metrics read and write requests.
 
    It consists of a single container named **enforcer**.
 
 1. **Opagent** (DaemonSet): An agent designed to collect metrics from both the operating system and the application software installed on the servers. OpAgent is developed by Flant for the [Deckhouse Observability Platform (DOP)](/products/observability-platform/) based on Okagent (Okmeter agent), that is also a part of the [Okmeter](https://okmeter.io/) monitoring system.
 
-   In the [`observability`](/modules/observability/) module, opAgent connects to managed services, such as [`managed-postgres`](/modules/managed-postgres/), [`managed-memcached`](/modules/managed-memcached/), [`managed-kafka`](/modules/managed-kafka/), and others (the list of supported managed services is constantly expanding), collects metrics from them, and sends them to prometheus-main component of the [`prometheus`](/modules/prometheus/) module. If the [`observability-platform`](/modules/observability-platform/) module is enabled, opAgent collects metrics from the cluster nodes and sends them to [DOP](/products/observability-platform/).
+   In the [`observability`](/modules/observability/) module, opAgent connects to [managed services](../../glossary.html#managed-service), such as [`managed-postgres`](/modules/managed-postgres/), [`managed-memcached`](/modules/managed-memcached/), [`managed-kafka`](/modules/managed-kafka/), and others (the list of supported managed services is constantly expanding), collects metrics from them, and sends them to prometheus-main component of the [`prometheus`](/modules/prometheus/) module. If the [`observability-platform`](/modules/observability-platform/) module is enabled, opAgent collects metrics from the cluster nodes and sends them to [DOP](/products/observability-platform/).
 
    OpAgent sends the collected data using the [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/) protocol:
 

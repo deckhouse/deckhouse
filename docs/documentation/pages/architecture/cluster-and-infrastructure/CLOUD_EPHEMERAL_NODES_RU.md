@@ -24,12 +24,12 @@ description: Архитектура модуля node-manager для CloudEpheme
 ## Компоненты модуля
 
 {% alert level="info" %}
-Bashible — это ключевой компонент подсистемы Cluster & Infrastructure, обеспечивающий работу модуля `node-manager`. При этом он не является компонентом модуля, поскольку работает на уровне ОС в качестве системной службы. Bashible подробно описан в [соответствующем разделе документации](bashible.html)
+[Bashible](../../../glossary.html#bashible) — это ключевой компонент подсистемы Cluster & Infrastructure, обеспечивающий работу модуля `node-manager`. При этом он не является компонентом модуля, поскольку работает на уровне ОС в качестве системной службы. Bashible подробно описан в [соответствующем разделе документации](bashible.html)
 {% endalert %}
 
 Модуль, управляющий CloudEphemeral-узлами, состоит из следующих компонентов:
 
-1. **Bashible-api-server** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), развернутый на master-узлах. Генерирует bashible-скрипты из шаблонов, хранящихся в кастомных ресурсах. При обращении к kube-apiserver за ресурсами, содержащими бандлы bashible, kube-apiserver перенаправляет запрос в bashible-api-server и возвращает сформированный результат. Подробнее с описанием работы bashible и bashible-api-server можно ознакомиться в [соответствующем разделе документации](bashible.html).
+1. **[Bashible-api-server](../../../glossary.html#bashible-api-server)** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), развернутый на [master-узлах](../../../glossary.html#master-node). Генерирует bashible-скрипты из шаблонов, хранящихся в кастомных ресурсах. При обращении к kube-apiserver за ресурсами, содержащими [бандлы bashible](../../../glossary.html#bashible-bundle), kube-apiserver перенаправляет запрос в bashible-api-server и возвращает сформированный результат. Подробнее с описанием работы bashible и bashible-api-server можно ознакомиться в [соответствующем разделе документации](bashible.html).
 
 1. **Node-controller** (Deployment) — контроллер, управляющий жизненным циклом кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup). Node-controller выполняет следующие операции:
 
@@ -48,7 +48,7 @@ Bashible — это ключевой компонент подсистемы Clu
    * **node-controller** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контроллера.
 
-1. **Node-group-exporter** (Deployment) — компонент, экспортирующий метрики ресурса NodeGroup в формате Prometheus, содержащие информацию о количестве узлов в каждой группе узлов: общее количество, количество узлов в статусе `Ready`, количество узлов в ошибке, минимальное и максимальное количество узлов в группе и т.д.
+1. **Node-group-exporter** (Deployment) — компонент, экспортирующий метрики ресурса NodeGroup в формате Prometheus, содержащие информацию о количестве узлов в каждой [группе узлов](../../../glossary.html#node-group): общее количество, количество узлов в статусе `Ready`, количество узлов в ошибке, минимальное и максимальное количество узлов в группе и т.д.
 
    Компонент включает в себя следующие контейнеры:
 
@@ -69,9 +69,9 @@ Bashible — это ключевой компонент подсистемы Clu
    * **cluster-autoscaler** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам **cluster-autoscaler**.
 
-1. **Fencing-agent** (DaemonSet) и **fencing-controller** — компоненты, реализующие механизм fencing. Принцип работы компонентов подробно разобран [в описании параметра `spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) ресурса NodeGroup. Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](/modules/node-manager/faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов) документации модуля `node-manager`.
+1. **Fencing-agent** (DaemonSet) и **fencing-controller** — компоненты, реализующие механизм [fencing](../../../glossary.html#fencing). Принцип работы компонентов подробно разобран [в описании параметра `spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) ресурса NodeGroup. Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](/modules/node-manager/faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов) документации модуля `node-manager`.
 
-1. **Standby-holder** (Deployment) — под для резервирования узлов. При включенном параметре [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) кастомного ресурса NodeGroup в соответствующей группе узлов во всех [зонах](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) создаются резервные узлы.
+1. **Standby-holder** (Deployment) — под для резервирования узлов. При включенном параметре [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) кастомного ресурса NodeGroup в соответствующей группе узлов во всех [зонах](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) создаются [резервные узлы](../../../glossary.html#standby-node).
 
    Резервный узел — это узел кластера, на котором резервируются ресурсы, доступные в любой момент для масштабирования. Наличие такого узла позволяет cluster-autoscaler не ждать инициализации узла (которая может занимать несколько минут), а сразу размещать на нем нагрузку.
 
@@ -108,14 +108,14 @@ Bashible — это ключевой компонент подсистемы Clu
 
    * выполняет validating- и conversion-вебхуки node-controller;
    * выполняет mutating- и validating-вебхуки capi-controller-manager;
-   * пересылает в bashible-api-server запросы на ресурсы bashible.
+   * пересылает в [bashible-api-server](../../../glossary.html#bashible-api-server) запросы на ресурсы [bashible](../../../glossary.html#bashible).
 
 1. **Prometheus-main** — сбор метрик компонентов модуля `node-manager`.
 
 ## Особенности архитектуры, специфичные для CloudEphemeral-узлов
 
 1. Узлы эфемерны, автоматически создаются и удаляются модулем.
-1. Для взаимодействия с инфраструктурой облака необходим установленный и настроенный облачный провайдер (`cloud-provider-*` на схеме). Включает также csi-driver и cloud-controller-manager.
+1. Для взаимодействия с инфраструктурой облака необходим установленный и настроенный [облачный провайдер](../../../glossary.html#cloud-provider) (`cloud-provider-*` на схеме). Включает также csi-driver и cloud-controller-manager.
 1. **Capi-controller-manager** — компонент, обеспечивающий жизненный цикл самого кластера и его узлов. Не заказывает узлы в облаке самостоятельно, работает с кастомными ресурсами более высокого уровня, не привязанного к инфраструктуре. Генерирует инфраструктурные кастомные ресурсы, оставляя всю работу для инфраструктурного провайдера, который развертывается модулем конкретного облачного провайдера `cloud-provider`.
 1. **Cluster-autoscaler** — обеспечивает автомасштабирование узлов кластера.
 1. Поддерживается резервирование узлов.

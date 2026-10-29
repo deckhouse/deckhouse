@@ -57,7 +57,7 @@ For a comparison with `ingress-nginx` and terminology notes, read ["Comparison o
 
 ### Istio
 
-An ALB based on the [`istio`](/modules/istio/) module supports traffic management in a service mesh.
+An ALB based on the [`istio`](/modules/istio/) module supports traffic management in a [service mesh](../../../../glossary.html#service-mesh).
 Use an Istio-based ALB for:
 
 - Routing for [canary deployment](../canary-deployment.html) and similar scenarios.
@@ -82,7 +82,7 @@ Before publishing an application, check which ALB mechanisms are enabled and con
    d8 k get ingressclass
    ```
 
-1. For Gateway API — verify that [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) or [ALBInstance](/modules/alb/cr.html#albinstance) exists and is in the `Ready` state, then find the managed Gateway and ListenerSet objects:
+1. For Gateway API — verify that [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) or [ALBInstance](/modules/alb/cr.html#albinstance) exists and is in the `Ready` state, then find the [managed Gateway](../../../../glossary.html#alb-managed-gateway) and ListenerSet objects:
 
    ```shell
    d8 k get clusteralbinstances,albinstances --all-namespaces

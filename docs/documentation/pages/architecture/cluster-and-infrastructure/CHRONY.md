@@ -26,7 +26,7 @@ The Level 2 C4 architecture of the [`chrony`](/modules/chrony/) module its inter
 
 The module consists of the following components:
 
-1. **Chrony-master**: Time synchronization service on cluster master nodes with external NTP servers.
+1. **Chrony-master**: Time synchronization service on cluster [master nodes](../../../glossary.html#master-node) with external NTP servers.
 
    It consists of the following containers:
 

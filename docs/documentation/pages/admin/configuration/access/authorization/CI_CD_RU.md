@@ -283,7 +283,7 @@ deploy:
 
 {% endraw %}
 
-Переменные `K8S_SERVER`, `K8S_USER`, `K8S_PASSWORD` задаются в настройках CI/CD проекта.
+Переменные `K8S_SERVER`, `K8S_USER`, `K8S_PASSWORD` задаются в настройках CI/CD [проекта](../../../../glossary.html#project).
 
 ---
 

@@ -59,10 +59,10 @@ The module consists of the following components:
 
    The original Prometheus or Deckhouse Prom++ can be used in prometheus-longterm too. Prometheus-longterm has the same set of containers as in prometheus-main, as well as operation principles.
 
-3. **Grafana-v10**: Optional Grafana component that provides a web interface for visualizing monitoring data. Grafana displays dashboards supplied with DP modules. Grafana could work in High Availability mode, does not store state, and is configured with [custom resources](/modules/prometheus/cr.html#grafanaadditionaldatasource). Grafana is enabled by default, but it can be disabled using the [`settings.grafana.enabled`](/modules/prometheus/configuration.html#parameters-grafana-enabled) parameter.
+3. **Grafana-v10**: Optional Grafana component that provides a web interface for visualizing monitoring data. Grafana displays [dashboards](../../glossary.html#dashboard) supplied with DP modules. Grafana could work in [High Availability mode](../../glossary.html#ha-mode), does not store state, and is configured with [custom resources](/modules/prometheus/cr.html#grafanaadditionaldatasource). Grafana is enabled by default, but it can be disabled using the [`settings.grafana.enabled`](/modules/prometheus/configuration.html#parameters-grafana-enabled) parameter.
 
    {% alert level="info" %}
-   Grafana-v10 will be disabled in the future DP releases. To view the monitoring dashboards, use the [Deckhouse web UI](/modules/console/).
+   Grafana-v10 will be disabled in the future [DP releases](../../glossary.html#dp-release). To view the monitoring dashboards, use the [Deckhouse web UI](/modules/console/).
    {% endalert %}
 
    It consists of the following containers:
@@ -98,7 +98,7 @@ The module consists of the following components:
    In the future DP releases, alerts-receiver will be removed from the [`prometheus`](/modules/prometheus/) module. The Alertmanager component of the [`observability`](/modules/observability/) module will be used to receive all alerts.
    {% endalert %}
 
-7. **Alerts-receiver**: A server compatible with [Alertmanager](https://github.com/prometheus/alertmanager) API. Alerts-receiver receives basic alerts from prometheus-main, creates the [ClusterAlert](/modules/prometheus/cr.html#clusteralert) custom resources based on them, updates their statuses and deletes them if the alert is no longer active. The ClusterAlert custom resources are used to inform DP users on active alerts and are displayed in the Deckhouse web UI. Alerts-receiver is developed by Flant. It consists of one container.
+7. **Alerts-receiver**: A server compatible with [Alertmanager](https://github.com/prometheus/alertmanager) API. Alerts-receiver receives basic alerts from prometheus-main, creates the [ClusterAlert](/modules/prometheus/cr.html#clusteralert) custom resources based on them, updates their statuses and deletes them if the alert is no longer active. The ClusterAlert custom resources are used to inform DP users on active alerts and are displayed in the [Deckhouse web UI](../../glossary.html#web-ui). Alerts-receiver is developed by Flant. It consists of one container.
 
 ## Module interactions
 

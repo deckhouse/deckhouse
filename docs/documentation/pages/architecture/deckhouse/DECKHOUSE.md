@@ -21,15 +21,15 @@ The module manages the following custom resources in the `deckhouse.io` API grou
   - [ModulePullOverride](../../reference/api/cr.html#modulepulloverride): Description of module version selection overrides.
   - [ModuleRelease](../../reference/api/cr.html#modulerelease): Description, publication, and tracking of module releases.
   - [ModuleSettingsDefinition](../../reference/api/cr.html#modulesettingsdefinition): Schema, versions, and transformation rules for module settings.
-  - [ModuleSource](../../reference/api/cr.html#modulesource): Description of a module source, repository, or storage.
+  - [ModuleSource](../../reference/api/cr.html#modulesource): Description of a [module source](../../glossary.html#module-source), repository, or storage.
   - [ModuleUpdatePolicy](../../reference/api/cr.html#moduleupdatepolicy): Rules for module updates and version transition automation.
 
 - Platform management:
-  - [DeckhouseRelease](../../reference/api/cr.html#deckhouserelease): An object that defines the DP release (version) and platform update policy.
+  - [DeckhouseRelease](../../reference/api/cr.html#deckhouserelease): An object that defines the [DP release](../../glossary.html#dp-release) (version) and platform update policy.
 
 - Package management ([Marketplace](../marketplace/)):
-  - [Application](../../reference/api/cr.html#application): An installed instance of an application package and its settings.
-  - [ApplicationPackage](../../reference/api/cr.html#applicationpackage): Aggregated information about a package: the repositories that provide it, the versions the release channels point to, and the applications that use it.
+  - [Application](../../reference/api/cr.html#application): An installed [instance of an application](../../glossary.html#application-instance) package and its settings.
+  - [ApplicationPackage](../../reference/api/cr.html#applicationpackage): Aggregated information about a package: the repositories that provide it, the versions the [release channels](../../glossary.html#release-channel) point to, and the applications that use it.
   - [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion): A discovered package version: its metadata, OpenAPI schemas, and requirements.
   - [PackageRepository](../../reference/api/cr.html#packagerepository): Connection to a container registry with packages and the scan schedule.
   - [PackageRepositoryOperation](../../reference/api/cr.html#packagerepositoryoperation): A scan operation that discovers package versions in a repository.
@@ -65,7 +65,7 @@ The module consists of the following components:
 
    The controller coordinates platform management tasks using the [queueing mechanism](./queues.html).
 
-   The Deckhouse controller can run in standard mode or in [hook](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) isolation mode. To enable it, create the `chroot-mode` ConfigMap in the `d8-system` namespace. In isolation mode, shell hooks and module enable scripts run in a chroot environment with a limited set of mounted directories, isolating them from the controller container file system.
+   The [Deckhouse controller](../../glossary.html#deckhouse-controller) can run in standard mode or in [hook](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) isolation mode. To enable it, create the `chroot-mode` ConfigMap in the `d8-system` namespace. In isolation mode, shell [hooks](../../glossary.html#module-hook) and module enable scripts run in a chroot environment with a limited set of mounted directories, isolating them from the controller container file system.
 
    If [High Availability (HA)](../../admin/configuration/high-reliability-and-availability/) mode is enabled, multiple Deckhouse controller instances are started. To ensure correct behavior, Deckhouse controllers perform leader election using the `deckhouse-leader-election` Lease resource. The controller elected as leader performs all platform management operations.
 
@@ -76,8 +76,8 @@ The module consists of the following components:
    | [`logLevel`](/modules/deckhouse/configuration.html#parameters-loglevel) | Logging level |
    | [`bundle`](/modules/deckhouse/configuration.html#parameters-bundle) | Set of modules enabled by default |
    | [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) | Release channel |
-   | [`update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) | Update mode |
-   | [`update.windows.days`](/modules/deckhouse/configuration.html#parameters-update-windows) | Update windows |
+   | [`update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) | [Update mode](../../glossary.html#update-mode) |
+   | [`update.windows.days`](/modules/deckhouse/configuration.html#parameters-update-windows) | [Update windows](../../glossary.html#update-window) |
 
    For details about module settings, refer to the [module documentation section](/modules/deckhouse/).
 

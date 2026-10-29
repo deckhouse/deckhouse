@@ -6,14 +6,14 @@ search: istio, service mesh, ambient, federation, multicluster, sidecar
 description: Архитектура модуля istio в Deckhouse Platform.
 ---
 
-Модуль [`istio`](/modules/istio/) реализует Service Mesh (сервис-меш) на основе [Istio](https://istio.io/) для централизованного управления сетевым трафиком в Deckhouse Platform (DP). Модуль обеспечивает mTLS (Mutual Transport Layer Security), авторизацию запросов, маршрутизацию трафика, балансировку нагрузки и наблюдаемость взаимодействий между приложениями.
+Модуль [`istio`](/modules/istio/) реализует Service Mesh ([сервис-меш](../../glossary.html#service-mesh)) на основе [Istio](https://istio.io/) для централизованного управления сетевым трафиком в Deckhouse Platform (DP). Модуль обеспечивает mTLS (Mutual Transport Layer Security), авторизацию запросов, маршрутизацию трафика, балансировку нагрузки и наблюдаемость взаимодействий между приложениями.
 
 Модуль [`istio`](/modules/istio/) предоставляет возможность одновременной работы нескольких версий Istio. В параметре модуля [`globalVersion`](/modules/istio/configuration.html#parameters-globalversion) указывается какая версия Istio будет использоваться по-умолчанию для тех неймспейсов, у которых установлен лейбл `istio-injection: enabled`. В случае, если требуется использовать версию Istio, отличную от версии по-умолчанию, для неймспейсов устанавливается лейбл, соответствующий ревизии Istio, например, `istio.io/rev: v1x27`.
 
 Модуль работает со следующими кастомными ресурсами API-группы `deckhouse.io`:
 
-- [IngressIstioController](/modules/istio/cr.html#ingressistiocontroller) — описывает инстанс Istio ingress gateway, обслуживающий выбранный класс шлюза;
-- [IstioFederation](/modules/istio/cr.html#istiofederation) — назначает один или несколько удалённых кластеров доверенными для федерации сервис-меш (доступно в редакциях DP EE, Ultimate);
+- [IngressIstioController](/modules/istio/cr.html#ingressistiocontroller) — описывает инстанс [Istio ingress gateway](../../glossary.html#istio-ingress-gateway), обслуживающий выбранный класс шлюза;
+- [IstioFederation](/modules/istio/cr.html#istiofederation) — назначает один или несколько удалённых кластеров доверенными для федерации сервис-меш (доступно в [редакциях](../../glossary.html#edition) DP EE, Ultimate);
 - [IstioMulticluster](/modules/istio/cr.html#istiomulticluster) — назначает один или несколько удалённых кластеров доверенными для multicluster-конфигурации (доступно в редакциях DP EE, Ultimate);
 - [WaypointInstance](/modules/istio/cr.html#waypointinstance) — описывает ambient-прокси waypoint, создаваемый компонентом waypoint-controller (доступно в редакциях DP EE, Ultimate).
 
@@ -66,7 +66,7 @@ description: Архитектура модуля istio в Deckhouse Platform.
 
    В DP поддерживается работа оператора только для версии Istio 1.25.
 
-   Компонент отслеживает кастомные ресурсы Istio и IstioRevision и на их основе создаёт Deployment `istiod-<VERSION>`, Service и ConfigMap. Управление вебхуками для валидации и мутации принудительно отключено в операторе, этим занимается контроллер Deckhouse модуля [`deckhouse`](/modules/deckhouse/) при применении Helm-чарта модуля.
+   Компонент отслеживает кастомные ресурсы Istio и IstioRevision и на их основе создаёт Deployment `istiod-<VERSION>`, Service и ConfigMap. Управление вебхуками для валидации и мутации принудительно отключено в операторе, этим занимается [контроллер Deckhouse](../../glossary.html#deckhouse-controller) модуля [`deckhouse`](/modules/deckhouse/) при применении Helm-чарта модуля.
 
    Состоит из одного контейнера:
 
@@ -104,7 +104,7 @@ description: Архитектура модуля istio в Deckhouse Platform.
 
    Аутентификация пользователей веб-интерфейса Kiali выполняется модулем [`user-authn`](/modules/user-authn/) через отдельный dex-authenticator.
 
-1. **Istio-config-analyzer-\<VERSION>** (Deployment) — компонент, выполняющий периодический анализ конфигурации сервис-меш (`istioctl analyze`) и экспортирующий результаты анализа в виде метрик Prometheus.
+1. **Istio-config-analyzer-\<VERSION>** (Deployment) — компонент, выполняющий периодический анализ конфигурации [сервис-меш](../../glossary.html#service-mesh) (`istioctl analyze`) и экспортирующий результаты анализа в виде метрик Prometheus.
 
    Компонент создаётся контроллером Deckhouse модуля [`deckhouse`](/modules/deckhouse/) для каждой ревизии Istio, если параметр [`.settings.configAnalysis.enabled`](/modules/istio/configuration.html#parameters-configanalysis-enabled) в настройках модуля принимает значение `true` (по умолчанию — `true`).
 
@@ -168,7 +168,7 @@ description: Архитектура модуля istio в Deckhouse Platform.
 Возможности межкластерного взаимодействия ([федерация](/modules/istio/#федерация) или [мультикластер](/modules/istio/#мультикластер)) доступны только между кластерами DP, так как в DP устанавливается модифицированный Istio, не совместимый с ванильным Istio других кластеров.
 {% endalert %}
 
-В режиме федерации или мультикластера Istio дополнительно создаются следующие компоненты:
+В режиме федерации или [мультикластера](../../glossary.html#multicluster) Istio дополнительно создаются следующие компоненты:
 
 1. **Metadata-exporter** (Deployment) — компонент, предоставляющий публичные метаданные кластера (корневой сертификат CA, публичные ключи, адреса эндпоинтов) удалённым кластерам для настройки межкластерного взаимодействия ([федерация](/modules/istio/#федерация) или [мультикластер](/modules/istio/#мультикластер)).
 
@@ -238,7 +238,7 @@ description: Архитектура модуля istio в Deckhouse Platform.
    - получает ресурсы Pod, Namespace, Node, Service, Secret, ConfigMap, Job, CronJob, Deployment, DaemonSet, ReplicaSet и StatefulSet.
 
 1. **Модуль [`user-authn`](/modules/user-authn/)** — выполняет аутентификацию пользователей веб-интерфейса Kiali.
-1. **Trickster** — запрашивает метрики трафика сервис-меш для веб-интерфейса Kiali.
+1. **Trickster** — запрашивает метрики трафика [сервис-меш](../../glossary.html#service-mesh) для веб-интерфейса Kiali.
 1. **Внешний кластер DP**:
 
    - проверяет доступность меш-соединения между кластерами;
@@ -254,7 +254,7 @@ description: Архитектура модуля istio в Deckhouse Platform.
 1. **Prometheus-main** — собирает метрики всех компонентов модуля.
 1. **Containerd** — запускает исполняемые файлы CNI-плагинов.
 1. **Балансировщик нагрузки** — балансирует входящий трафик к ingress-gateway-controller.
-1. **Gateway/Ingress-контроллер** — пересылает авторизованный запрос пользователя к веб-интерфейсу Kiali. Зависит от выбранного способа публикации ресурсов: с использованием Ingress-контроллера модуля [`ingress-nginx`](/modules/ingress-nginx/) или с использованием Gateway-контроллера модуля [`alb`](/modules/alb/).
+1. **Gateway/[Ingress-контроллер](../../glossary.html#ingress-controller)** — пересылает авторизованный запрос пользователя к веб-интерфейсу Kiali. Зависит от выбранного способа публикации ресурсов: с использованием Ingress-контроллера модуля [`ingress-nginx`](/modules/ingress-nginx/) или с использованием Gateway-контроллера модуля [`alb`](/modules/alb/).
 1. **Удалённый кластер DP**:
 
    - запрашивает публичные метаданные кластера;

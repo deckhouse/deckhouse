@@ -11,7 +11,7 @@ During its operation DP automatically creates backups of configuration and data 
 
 If the etcd cluster is not functioning and cannot be restored from a backup, you can attempt to recover it from scratch by following the steps below.
 
-1. On all nodes that are part of your etcd cluster, **except one**, delete the `etcd.yaml` manifest located in `/etc/kubernetes/manifests/`. This will leave only one active node, from which the multi-master cluster state will be restored.
+1. On all nodes that are part of your etcd cluster, **except one**, delete the `etcd.yaml` manifest located in `/etc/kubernetes/manifests/`. This will leave only one active node, from which the [multi-master cluster](../../../../glossary.html#multi-master) state will be restored.
 1. On the remaining node, open the `etcd.yaml` manifest and add the `--force-new-cluster` flag under `spec.containers.command`.
 1. After the cluster is successfully restored, remove the `--force-new-cluster` flag.
 
@@ -21,7 +21,7 @@ This operation is destructive: it completely wipes the existing data and initial
 
 ## Restoring a master node when kubelet fails to load control plane components
 
-Such a situation may occur if images of the control plane components on the master were deleted in a cluster that has a single master node (e.g., the directory `/var/lib/containerd` was deleted). In this case, kubelet cannot pull images of the control plane components when restarted since the master node lacks authorization parameters required for accessing `registry.deckhouse.io`.
+Such a situation may occur if images of the control plane components on the master were deleted in a cluster that has a single [master node](../../../../glossary.html#master-node) (e.g., the directory `/var/lib/containerd` was deleted). In this case, kubelet cannot pull images of the control plane components when restarted since the master node lacks authorization parameters required for accessing `registry.deckhouse.io`.
 
 Below is an instruction on how you can restore the master node.
 
@@ -99,7 +99,7 @@ Be careful: these actions completely erase the previous data and form a new etcd
 
 ### Recovering etcd after panic: unexpected removal of unknown remote peer error
 
-1. Find the `etcdutl` utility on the master node and copy the executable to `/usr/local/bin/`:
+1. Find the `etcdutl` utility on the [master node](../../../../glossary.html#master-node) and copy the executable to `/usr/local/bin/`:
 
    ```shell
    cp $(find /var/lib/containerd/ \
@@ -176,7 +176,7 @@ In clusters with three or more etcd members, periodic etcd defragmentation is en
 Before defragmenting, [back up etcd](../../backup/backup-and-restore.html#creating-backups-with-deckhouse-cli).
 {% endalert %}
 
-To view the size of the etcd database on a specific node before and after defragmentation, use the command (where `NODE_NAME` is the name of the master node):
+To view the size of the etcd database on a specific node before and after defragmentation, use the command (where `NODE_NAME` is the name of the [master node](../../../../glossary.html#master-node)):
 
 ```bash
 d8 k -n kube-system exec -it etcd-NODE_NAME -- /usr/bin/etcdctl \

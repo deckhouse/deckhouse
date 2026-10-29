@@ -5,7 +5,7 @@ description: A guide to installing the Deckhouse Platform in a private environme
 lang: en
 ---
 
-This guide describes how to deploy a Deckhouse Platform (DP) cluster in a private environment with no direct access to the DP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../reference/supported_versions.html#linux).
+This guide describes how to deploy a Deckhouse Platform (DP) cluster in a [private environment](../glossary.html#private-environment) with no direct access to the DP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../reference/supported_versions.html#linux).
 
 ## Private environment specifics
 
@@ -17,7 +17,7 @@ Key specifics:
   User applications (pods) do not receive these variables from the cluster configuration automatically. To give them Internet access via a proxy, you must set the environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, and, if needed, `NO_PROXY`) explicitly in manifests. Depending on corporate policy, application access may be arranged in other ways—for example, by allowing direct egress from nodes.
 * A container registry with DP images is deployed separately with access from inside the perimeter, and the cluster is configured to use it with the required permissions.
 
-Cluster nodes are usually accessed through a dedicated physical server or virtual machine called a bastion host. A proxy for access to external resources from the internal network is deployed according to your network policy and infrastructure architecture; depending on requirements, it may run on the bastion host or on a separate machine.
+Cluster nodes are usually accessed through a dedicated physical server or virtual machine called a [bastion host](../glossary.html#bastion-host). A proxy for access to external resources from the internal network is deployed according to your [network policy](../glossary.html#network-policy) and infrastructure architecture; depending on requirements, it may run on the bastion host or on a separate machine.
 A private container registry should preferably run on a separate VM or server in the internal network. Colocating the registry on the bastion host is not recommended for production. An exception may be lab or simplified stand-alone setups for limited use cases.
 
 {% alert level="info" %}
@@ -39,7 +39,7 @@ A proxy server is used for other kinds of traffic:
 
 ## Infrastructure selection
 
-This guide describes deploying a cluster in a private environment consisting of one master node and one worker node.
+This guide describes deploying a cluster in a private environment consisting of one [master node](../glossary.html#master-node) and one [worker node](../glossary.html#worker-node).
 
 You will need:
 
@@ -134,9 +134,9 @@ systemctl status registry.service
 {% endtab %}
 {% tab "Harbor" %}
 
-Later sections of this guide use Harbor as the example. It supports policy configuration and role-based access control (RBAC), vulnerability scanning, and marking trusted artifacts. Harbor is a CNCF project.
+Later sections of this guide use Harbor as the example. It supports policy configuration and role-based access control (RBAC), [vulnerability scanning](../glossary.html#vulnerability-scanning), and marking trusted artifacts. Harbor is a CNCF project.
 
-Install the latest Harbor release from the project’s [GitHub releases page](https://github.com/goharbor/harbor/releases). Download the installer archive from the desired release, selecting the asset with `harbor-offline-installer` in its name.
+Install the latest Harbor release from the project’s [GitHub releases page](https://github.com/goharbor/harbor/releases). Download the [installer](../glossary.html#installer) archive from the desired release, selecting the asset with `harbor-offline-installer` in its name.
 
 <div style="text-align: center;">
 <img src="../images/guides/install_to_private_environment/download-harbor-installer.png" alt="Downloading the Harbor installer...">
@@ -145,7 +145,7 @@ Install the latest Harbor release from the project’s [GitHub releases page](ht
 Copy the download URL. For example, for `harbor-offline-installer-v2.14.1.tgz` it will look like this: `https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz`.
 
 Connect via SSH to the **virtual machine where Harbor will run** and download the archive using any convenient method.
-If that VM has no direct Internet access, download the archive on your workstation or on the bastion host, then copy it to the Harbor VM.
+If that VM has no direct Internet access, download the archive on your workstation or on the [bastion host](../glossary.html#bastion-host), then copy it to the Harbor VM.
 
 {% offtopic title="How to download the archive with wget..." %}
 Run the command (use the current URL):
@@ -178,7 +178,7 @@ On **the same VM**, install [Docker](https://docs.docker.com/engine/install/) an
 Before deploying the registry, generate a self-signed TLS certificate.
 
 {% alert level="info" %}
-Due to access restrictions in a private environment, it is not possible to obtain certificates from services such as Let's Encrypt, since the service will not be able to perform the validation required to issue a certificate.
+Due to access restrictions in a [private environment](../glossary.html#private-environment), it is not possible to obtain certificates from services such as Let's Encrypt, since the service will not be able to perform the validation required to issue a certificate.
 
 There are several ways to generate certificates. This guide describes one of them. If needed, use any other suitable approach or provide an existing certificate.
 {% endalert %}
@@ -651,7 +651,7 @@ On the Harbor VM, add an entry to `/etc/hosts` that maps the `registry.local` do
 ```
 
 {% alert level="warning" %}
-In some cloud providers (for example, Yandex Cloud), changes to `/etc/hosts` may be reverted after a virtual machine reboot. A note about this is typically shown at the beginning of the `/etc/hosts` file.
+In some [cloud providers](../glossary.html#cloud-provider) (for example, Yandex Cloud), changes to `/etc/hosts` may be reverted after a virtual machine reboot. A note about this is typically shown at the beginning of the `/etc/hosts` file.
 
 ```text
 # Your system has configured 'manage_etc_hosts' as True.
@@ -738,7 +738,7 @@ Harbor configuration is now complete.
 The next step is to copy DP component images from the public Deckhouse Platform registry to Harbor.
 
 {% alert level="info" %}
-The steps in this section require the Deckhouse CLI. Install it on the host from which you will mirror images to the private registry — in this guide, the bastion host. For installation instructions, see  [the Deckhouse CLI documentation](../cli/d8/).
+The steps in this section require the [Deckhouse CLI](../glossary.html#deckhouse-cli). Install it on the host from which you will mirror images to the private registry — in this guide, the [bastion host](../glossary.html#bastion-host). For installation instructions, see  [the Deckhouse CLI documentation](../cli/d8/).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -778,7 +778,7 @@ Downloading images takes a significant amount of time. To avoid losing progress 
 
 Download DP images into a dedicated directory using `d8 mirror pull`.
 
-By default, `d8 mirror pull` downloads current DP releases, vulnerability scanner databases (if included in your edition), and officially shipped modules.
+By default, `d8 mirror pull` downloads current [DP releases](../glossary.html#dp-release), vulnerability scanner databases (if included in your [edition](../glossary.html#edition)), and officially shipped modules.
 
 Run the following command to download current image versions. Replace the placeholders with your values: `<EDITION>`, `<LICENSE_KEY>`, and optionally the target directory path:
 
@@ -790,9 +790,9 @@ where:
 
 - `--source` — DP image registry address
 - `<EDITION>` — DP edition code (for example, `ee`, `se`, `se-plus`). The default is `ee` (Enterprise Edition), so `--source` may be omitted
-- `--license` — DP license key for authentication to the official registry
+- `--license` — DP [license key](../glossary.html#license-key) for authentication to the official registry
 - `<LICENSE_KEY>` — your license key
-- `/home/ubuntu/d8-bundle` — directory for downloaded image bundles (created automatically if missing).
+- `/home/ubuntu/d8-bundle` — directory for downloaded [image bundles](../glossary.html#mirror-image-bundle) (created automatically if missing).
 
 If the download is interrupted, run the command again to resume, as long as no more than 24 hours have passed since it stopped.
 
@@ -915,7 +915,7 @@ The images are now available in the private container registry.
 
 ## Signing in to the registry to run the installer
 
-Use the host from which you will run the installer (in this guide, the bastion host). On that host, `registry.local` must resolve to the Harbor VM (via `/etc/hosts` or DNS).
+Use the host from which you will run the [installer](../glossary.html#installer) (in this guide, the [bastion host](../glossary.html#bastion-host)). On that host, `registry.local` must resolve to the Harbor VM (via `/etc/hosts` or DNS).
 Configure Docker to trust the TLS registry the same way as on the Harbor host: create `/etc/docker/certs.d/registry.local/` and place the required certificates there (copy them from the Harbor VM or generate again).
 
 Sign in to Harbor so Docker can pull the [dhctl](../installing/) installer image:
@@ -978,12 +978,12 @@ For proper resource sizing, read [the production preparation guide](production.h
 
 ### Mapping registry.local to the Harbor VM
 
-On the servers where the master and worker nodes will run, make the `registry.local` hostname resolve to the Harbor VM’s internal IP address in the private network.
+On the servers where the master and [worker nodes](../glossary.html#worker-node) will run, make the `registry.local` hostname resolve to the Harbor VM’s internal IP address in the private network.
 
-Connect to each server in turn and add a line to `/etc/hosts` (and, if your cloud provider manages the file, update the cloud template as well).
+Connect to each server in turn and add a line to `/etc/hosts` (and, if your [cloud provider](../glossary.html#cloud-provider) manages the file, update the cloud template as well).
 
 {% offtopic title="How to connect to a server without external access..." %}
-To connect via SSH to a server without external access, you can use the Bastion host as a jump host.
+To connect via SSH to a server without external access, you can use the [Bastion host](../glossary.html#bastion-host) as a jump host.
 
 There are two ways to connect:
 
@@ -1018,7 +1018,7 @@ There are two ways to connect:
 
 ### Configuring SSH access to the master node
 
-To install DP, add the public part of your SSH key to `.ssh/authorized_keys` for the user on the future master node that will be used to install the platform.
+To install DP, add the public part of your SSH key to `.ssh/authorized_keys` for the user on the future [master node](../glossary.html#master-node) that will be used to install the platform.
 
 Run the commands as `root` (substitute the public part of your SSH key):
 
@@ -1048,7 +1048,7 @@ ssh -J ubuntu@<BASTION_IP> <USER>@<NODE_IP>
 ### Creating a user for the worker node
 
 {% alert level="info" %}
-The following prepares the node for Cluster API Provider Static (CAPS). If you prefer to add static nodes manually with the bootstrap script, you can skip this subsection and the later CAPS steps: create a `Static` NodeGroup, take the script from the Secret, and run it on the server as described in [the documentation (manual method)](../admin/configuration/platform-scaling/node/bare-metal-node.html).
+The following prepares the node for [Cluster API Provider Static](../glossary.html#caps) (CAPS). If you prefer to add [static nodes](../glossary.html#static-node) manually with the [bootstrap script](../glossary.html#bootstrap-script), you can skip this subsection and the later CAPS steps: create a `Static` NodeGroup, take the script from the Secret, and run it on the server as described in [the documentation (manual method)](../admin/configuration/platform-scaling/node/bare-metal-node.html).
 {% endalert %}
 
 On the **master node**, generate an SSH key with an empty passphrase:
@@ -1091,7 +1091,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 {% endofftopic %}
 
 {% offtopic title="If you are using an Astra Linux family OS..." %}
-On Astra Linux systems that use the Parsec mandatory integrity control module, set the maximum integrity level for the `caps` user:
+On Astra Linux systems that use the Parsec mandatory [integrity control](../glossary.html#integrity-control) module, set the maximum integrity level for the `caps` user:
 
 ```bash
 pdpl-user -i 63 caps
@@ -1101,7 +1101,7 @@ pdpl-user -i 63 caps
 
 ## Preparing the configuration file
 
-The configuration file for a private environment differs from [bare metal](/products/kubernetes-platform/gs/bm/step2.html) in several ways. Take `config.yml` from [step 4](/products/kubernetes-platform/gs/bm/step4.html) of the bare metal guide and apply the changes below.
+The configuration file for a [private environment](../glossary.html#private-environment) differs from [bare metal](/products/kubernetes-platform/gs/bm/step2.html) in several ways. Take `config.yml` from [step 4](/products/kubernetes-platform/gs/bm/step4.html) of the bare metal guide and apply the changes below.
 
 If cluster nodes need outbound access via a proxy, deploy the proxy ahead of time—preferably on a dedicated machine with Internet access.
 
@@ -1141,7 +1141,7 @@ You should see a container named `squid` in the list.
 
 {% endofftopic %}
 
-* In ClusterConfiguration, set proxy parameters **if** the environment uses a proxy for external access:
+* In [ClusterConfiguration](../glossary.html#cluster-configuration), set proxy parameters **if** the environment uses a proxy for external access:
 
   ```yaml
   # Proxy server settings.
@@ -1369,11 +1369,11 @@ internalNetworkCIDRs:
 
 {% endofftopic %}
 
-The installation configuration file is ready.
+The [installation configuration file](../glossary.html#installation-config) is ready.
 
 ## Installing DP
 
-Copy the prepared configuration file to the host from which you run the installation (for example, `~/deckhouse` on the bastion). Go to that directory and start the installer:
+Copy the prepared configuration file to the host from which you run the installation (for example, `~/deckhouse` on the bastion). Go to that directory and start the [installer](../glossary.html#installer):
 
 ```bash
 docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" registry.local/deckhouse/<EDITION>/install:stable bash
@@ -1393,7 +1393,7 @@ After the image is pulled and the container starts successfully, you will see a 
 [deckhouse] root@guide-bastion / #
 ```
 
-Start the DP installation with the following command (specify the master node’s internal IP address):
+Start the DP installation with the following command (specify the [master node](../glossary.html#master-node)’s internal IP address):
 
 ```bash
 dhctl bootstrap --ssh-user=<USER> --ssh-host=<MASTER_IP> --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
@@ -1426,7 +1426,7 @@ If the installation completes successfully, you will see the following message:
 
 ## Adding nodes to the cluster
 
-Add a worker node to the cluster.
+Add a [worker node](../glossary.html#worker-node) to the cluster.
 
 Perform the following steps:
 
@@ -1450,7 +1450,7 @@ Perform the following steps:
   sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"defaultClusterStorageClass\":\"localpath\"}}}"
   ```
 
-* Create the `worker` NodeGroup and add a node using Cluster API Provider Static (CAPS):
+* Create the `worker` NodeGroup and add a node using [Cluster API Provider Static](../glossary.html#caps) (CAPS):
 
   ```bash
   sudo -i d8 k create -f - <<EOF
@@ -1577,7 +1577,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 
 ### Creating a user to access the cluster web-interface
 
-Create the `user.yml` file on the master node containing the user account, group, and access rights:
+Create the `user.yml` file on the [master node](../glossary.html#master-node) containing the user account, group, and access rights:
 
 ```yaml
 # Static user data.
@@ -1663,7 +1663,7 @@ DP is installed and running. You can use the web UIs to manage the cluster:
 
 * **Deckhouse Console** — cluster and core component management. URL: **console.test.local**. You can download the `d8` CLI from this UI.
 * **Documentation** — documentation for the DP version running in the cluster. URL: **documentation.test.local**.
-* **Monitoring** — Grafana dashboards shipped with DP. URL: **grafana.test.local** (Prometheus UI path: **/prometheus/**). More in the [monitoring documentation](../admin/configuration/monitoring/).
+* **Monitoring** — Grafana [dashboards](../glossary.html#dashboard) shipped with DP. URL: **grafana.test.local** (Prometheus UI path: **/prometheus/**). More in the [monitoring documentation](../admin/configuration/monitoring/).
 * **Status page** — overall DP and component status. URL: **status.test.local**.
 * **Upmeter** — SLA tracking by component and period. URL: **upmeter.test.local**.
 * **Production readiness** — follow the [production preparation guide](production.html) before taking real traffic.

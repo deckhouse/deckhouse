@@ -8,8 +8,8 @@ This section covers the following additional aspects of integrating Deckhouse Pl
 - Connecting cloud disks using CSI.
 - Automatic StorageClass creation.
 - Using LoadBalancer.
-- Accessing via bastion host.
-- Connecting manually created CloudStatic nodes.
+- Accessing via [bastion host](../../../../glossary.html#bastion-host).
+- Connecting manually created [CloudStatic nodes](../../../../glossary.html#cloud-static-node).
 
 ## Storage (CSI and StorageClass)
 
@@ -105,7 +105,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-foo,subnet-bar"
 ```
 
-This is especially important when manually configuring Ingress controllers or using non-standard node layout.
+This is especially important when manually configuring [Ingress controllers](../../../../glossary.html#ingress-controller) or using non-standard node [layout](../../../../glossary.html#layout).
 
 To retrieve the current list of subnets used in your DP setup, run the following:
 
@@ -140,7 +140,7 @@ To get the `prefix`, use the following command:
 d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
 ```
 
-If the value is empty, get it from the deprecated [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) parameter of ClusterConfiguration (the prefix has moved to the ModuleConfig `global`):
+If the value is empty, get it from the deprecated [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) parameter of [ClusterConfiguration](../../../../glossary.html#cluster-configuration) (the prefix has moved to the ModuleConfig `global`):
 
 ```shell
 d8 k -n kube-system get secret d8-cluster-configuration -o json | \

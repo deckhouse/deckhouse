@@ -28,7 +28,7 @@ The module consists of the following components:
 
 1. **Cloud-controller-manager**: It is an implementation of [cloud controller manager](https://kubernetes.io/docs/concepts/architecture/cloud-controller/) for AWS. It provides interaction with the AWS cloud and performs the following functions:
 
-   * Implements a 1:1 relationship between a Node resource in Kubernetes and a VM in a cloud provider. To do this:
+   * Implements a 1:1 relationship between a Node resource in Kubernetes and a VM in a [cloud provider](../../../glossary.html#cloud-provider). To do this:
 
      * It fills the `spec.providerId` and `NodeInfo` fields of the Node resource.
      * It checks for a VM in the cloud and deletes the Node resource in the cluster if it is missing.
@@ -49,7 +49,7 @@ The module consists of the following components:
    * **cloud-data-discoverer**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cloud-data-discoverer metrics.
 
-1. **CSI driver (aws)**: It is an implementation of the CSI driver for AWS. To study the `cloud-provider-*` CSI driver typical architecture, refer to [the corresponding documentation](../../storage/csi-drivers/csi-driver.html) section.
+1. **[CSI driver](../../../glossary.html#csi-driver) (aws)**: It is an implementation of the CSI driver for AWS. To study the `cloud-provider-*` CSI driver typical architecture, refer to [the corresponding documentation](../../storage/csi-drivers/csi-driver.html) section.
 
 1. **Node-termination-handler**: [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler). It is responsible for gracefully handling the termination of EC2 instances in the Kubernetes control plane.
 
@@ -97,7 +97,7 @@ Indirect interactions:
 1. The `cloud-provider-aws` module provides [`node-manager`](/modules/node-manager/) with following artifacts:
 
    * Provider-specific custom resource templates to be used by `cloud-provider-aws` to create VMs in the cloud.
-   * The `kube-system/d8-node-manager-cloud-provider` Secret, which contains all the necessary settings to connect to the cloud and to create CloudEphemeral nodes. These settings are registered in the provider-specific custom resources created based on the templates mentioned above.
+   * The `kube-system/d8-node-manager-cloud-provider` Secret, which contains all the necessary settings to connect to the cloud and to create [CloudEphemeral nodes](../../../glossary.html#cloud-ephemeral-node). These settings are registered in the provider-specific custom resources created based on the templates mentioned above.
 
 1. The `cloud-provider-aws` module provides Terraform/OpenTofu components for AWS cloud used when building the [`dhctl`](https://github.com/deckhouse/deckhouse/tree/main/dhctl) executable file for the [`terraform-manager`](/modules/terraform-manager/) module, such as:
 

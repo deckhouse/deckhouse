@@ -203,7 +203,7 @@ NetworkPolicy is defined for L4 (TCP, UDP, optionally SCTP). Behavior for other 
 
 ## Enforcement without Cilium: the `network-policy-engine` module
 
-In clusters without Cilium, the [`network-policy-engine`](/modules/network-policy-engine/) module enforces policies on top of [kube-router](https://github.com/cloudnativelabs/kube-router). It deploys a DaemonSet in the `d8-system` namespace; kube-router runs as a Network Policy Controller and [translates policies into `iptables` and `ipset` rules](https://cloudnativelabs.github.io/post/2017-05-1-kube-network-policies/) on every node:
+In clusters without Cilium, the [`network-policy-engine`](/modules/network-policy-engine/) module enforces policies on top of [kube-router](https://github.com/cloudnativelabs/kube-router). It deploys a DaemonSet in the `d8-system` namespace; kube-router runs as a [Network Policy](../../../../glossary.html#network-policy) Controller and [translates policies into `iptables` and `ipset` rules](https://cloudnativelabs.github.io/post/2017-05-1-kube-network-policies/) on every node:
 
 - each policy becomes its own `KUBE-NWPLCY-*` chain;
 - each isolated pod gets a `KUBE-POD-SPECIFIC-FW-*` chain;

@@ -18,7 +18,7 @@ description: Architecture of the monitoring in Deckhouse Platform.
 | **prometheus-longterm**     | Additional Prometheus storing sparse data samples from the main prometheus-main                                                                                                                                                                                                      |
 | **aggregating-proxy**       | Aggregating and caching proxy that combines main and longterm into one source. Helps avoid data gaps when one of the Prometheus instances is unavailable.                                                                                                                                     |
 | **memcached**               | In-memory data caching service.                                                                                                                                                                                                                                                 |
-| **grafana**                 | UI for displaying metrics in dashboard format.                                                                                                                                                                                                                                                  |
+| **grafana**                 | UI for displaying metrics in [dashboard](../../glossary.html#dashboard) format.                                                                                                                                                                                                                                                  |
 | **metrics-adapter**         | Component providing Kubernetes API for accessing metrics. Required for proper VPA operation.                                                                                                                                                                                          |
 | **Various exporters**    | Set of ready-made Prometheus exporters for all necessary metrics: `kube-state-metrics`, `node-exporter`, `oomkill-exporter`, `image-availability-exporter`.                                                                                                                                     |
 | **upmeter**                 | Module for assessing DP component availability.                                                                                                                                                                                                                                                  |
@@ -186,11 +186,11 @@ Availability assessment in DP is performed by the [upmeter](/modules/upmeter/) m
 
 Composition of the [upmeter](/modules/upmeter/) module:
 
-- **agent**: Works on master nodes and performs availability probes, sends results to the server.
+- **agent**: Works on [master nodes](../../glossary.html#master-node) and performs [availability probes](../../glossary.html#availability-probe), sends results to the server.
 - **upmeter**: Collects results and maintains an API server for their extraction.
 - **front**:
   - **status**: Shows availability level for the last 10 minutes (requires authorization, but it can be disabled);
-  - **webui**: Shows a dashboard with statistics on probes and availability groups (requires authorization).
+  - **webui**: Shows a [dashboard](../../glossary.html#dashboard) with statistics on probes and availability groups (requires authorization).
 - **smoke-mini**: Maintains continuous *smoke testing* using StatefulSet.
 
 The module sends about 100 metric readings every 5 minutes. This value depends on the number of enabled Deckhouse Platform modules.

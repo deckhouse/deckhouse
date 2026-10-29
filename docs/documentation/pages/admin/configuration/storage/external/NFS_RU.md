@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/storage/external/nfs.html
 lang: ru
 ---
 
-Deckhouse Platform (DP) поддерживает интеграцию с Network File System (NFS), обеспечивая возможность использования сетевых файловых хранилищ в качестве томов Kubernetes. [Модуль `csi-nfs`](/modules/csi-nfs/) предоставляет CSI-драйвер для подключения NFS-серверов и создания PersistentVolume на их основе.
+Deckhouse Platform (DP) поддерживает интеграцию с Network File System (NFS), обеспечивая возможность использования сетевых файловых хранилищ в качестве томов Kubernetes. [Модуль `csi-nfs`](/modules/csi-nfs/) предоставляет [CSI-драйвер](../../../../glossary.html#csi-driver) для подключения NFS-серверов и создания PersistentVolume на их основе.
 
 На этой странице представлены инструкции по настройке NFS-хранилища в DP, включая подключение к NFS-серверу, создание StorageClass, настройку безопасности RPC-with-TLS, а также проверку работоспособности системы.
 
@@ -92,7 +92,7 @@ TLS на узлах автоматически останавливается с
 
 Для поддержки работы с NFS-хранилищем включите [модуль `csi-nfs`](/modules/csi-nfs/), который позволяет создавать StorageClass в Kubernetes с помощью пользовательских ресурсов [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass). После включения модуля на узлах кластера произойдёт:
 
-- Регистрация CSI-драйвера;
+- Регистрация [CSI-драйвера](../../../../glossary.html#csi-driver);
 - Запуск сервисных подов `csi-nfs` и создание необходимых компонентов.
 
 ```shell

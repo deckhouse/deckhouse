@@ -7,10 +7,10 @@ lang: ru
 
 В Deckhouse Platform авторизация реализована на основе стандартного механизма Role-Based Access Control (RBAC) Kubernetes. Это позволяет гибко управлять правами доступа для различных пользователей, групп и сервисных аккаунтов, обеспечивая безопасность и контроль над операциями в кластере.
 
-Платформа поддерживает две ролевые модели:
+Платформа поддерживает две [ролевые модели](../../../../glossary.html#rbac):
 
-- [Гранулярная](../authorization/rbac-experimental.html) (рекомендуется к использованию). Права доступа настраиваются стандартным для RBAC Kubernetes способом: с помощью создания ресурсов [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) или [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/), а для доступа сразу ко всем неймспейсам проекта — ресурсов [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) и [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) модуля `multitenancy-manager`.
-- [Упрощённая](../authorization/rbac-current.html). Подсистема сквозной авторизации расширяет стандартный RBAC-механизм за счёт пользовательских ресурсов — [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) и [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule). Поддержка этой модели будет прекращена в будущих релизах.
+- [Гранулярная](../authorization/rbac-experimental.html) (рекомендуется к использованию). Права доступа настраиваются стандартным для RBAC Kubernetes способом: с помощью создания ресурсов [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) или [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/), а для доступа сразу ко всем неймспейсам [проекта](../../../../glossary.html#project) — ресурсов [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) и [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) модуля `multitenancy-manager`.
+- [Упрощённая](../authorization/rbac-current.html). [Подсистема](../../../../glossary.html#subsystem) сквозной авторизации расширяет стандартный RBAC-механизм за счёт пользовательских ресурсов — [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) и [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule). Поддержка этой модели будет прекращена в будущих релизах.
 
 Обе модели поддерживаются модулем [`user-authz`](/modules/user-authz/) и могут использоваться одновременно — права, которые они предоставляют, суммируются (подробнее — в [FAQ](/modules/user-authz/faq.html#можно-ли-использовать-упрощённую-и-гранулярную-ролевые-модели-одновременно) модуля `user-authz`). Выбор модели зависит от требований безопасности и сценариев использования.
 
@@ -131,7 +131,7 @@ lang: ru
         ```
 
    * Если прямого доступа до API-сервера нет, используйте один из следующих вариантов:
-      * включите доступ к API-серверу через Ingress-контроллер (параметр [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager`) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-whitelistsourceranges));
+      * включите доступ к API-серверу через [Ingress-контроллер](../../../../glossary.html#ingress-controller) (параметр [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager`) и укажите адреса, с которых будут идти запросы (параметр [whitelistSourceRanges](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-whitelistsourceranges));
       * укажите адреса, с которых будут идти запросы, в отдельном Ingress-контроллере (параметр [acceptRequestsFrom](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom)).
 
    * Если используется непубличный CA:

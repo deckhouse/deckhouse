@@ -8,7 +8,7 @@ search: public domains DP
 
 This page lists the reserved DNS names that Deckhouse Platform (DP) uses. The names are given in the [table below](#list-of-reserved-dns-names).
 
-Use the list if the cluster DNS name template (the [`modules.publicDomainTemplate`](api/global.html#parameters-modules-publicdomaintemplate) parameter of the `global` ModuleConfig) is not a wildcard template (for example, `%s-kube.company.my`). In this case, add an A or CNAME record for each name. The record value is the public IP address of the Ingress controller (the HTTP/HTTPS traffic load balancer).
+Use the list if the cluster [DNS name template](../glossary.html#public-domain-template) (the [`modules.publicDomainTemplate`](api/global.html#parameters-modules-publicdomaintemplate) parameter of the `global` ModuleConfig) is not a wildcard template (for example, `%s-kube.company.my`). In this case, add an A or CNAME record for each name. The record value is the public IP address of the [Ingress controller](../glossary.html#ingress-controller) (the HTTP/HTTPS traffic load balancer).
 
 To get the command for adding the DNS names to the local hosts file, use the hosts file data generator.
 

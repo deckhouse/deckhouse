@@ -6,7 +6,7 @@ lang: en
 search: Application, install application, application conditions, installing application, updating application, deleting application
 ---
 
-This section describes how to browse available package versions, as well as how to install, update, and delete applications.
+This section describes how to browse available [package](../../glossary.html#marketplace-package) versions, as well as how to install, update, and delete applications.
 
 ## Browsing available package versions
 
@@ -70,7 +70,7 @@ spec:
 ```
 
 {% alert level="info" %}
-The `spec.settings` section is validated against the OpenAPI schema defined in the package. If the schema rejects your settings, the Application is not created. The schema is published in the [`status.packageSchemas.settingsSchema`](../../reference/api/cr.html#applicationpackageversion-v1alpha1-status-packageschemas-settingsschema) field of the package's ApplicationPackageVersion object.
+The `spec.settings` section is validated against the OpenAPI schema defined in the [package](../../glossary.html#marketplace-package). If the schema rejects your settings, the Application is not created. The schema is published in the [`status.packageSchemas.settingsSchema`](../../reference/api/cr.html#applicationpackageversion-v1alpha1-status-packageschemas-settingsschema) field of the package's ApplicationPackageVersion object.
 {% endalert %}
 
 ### Naming constraints
@@ -149,7 +149,7 @@ For `status.summary` field descriptions, refer to the [Application](../../refere
 
 ## Installing multiple instances
 
-The same package can be installed multiple times in the same or different namespaces, each with a separate name and settings. For example, two Redis instances can be created: one for caching and one for sessions:
+The same [package](../../glossary.html#marketplace-package) can be installed multiple times in the same or different namespaces, each with a separate name and settings. For example, two Redis instances can be created: one for caching and one for sessions:
 
 ```yaml
 # Caching instance.
@@ -211,7 +211,7 @@ When an Application is deleted, DP deletes the Kubernetes objects of the applica
 
 ### Can an application be updated automatically?
 
-No. In the current implementation, updates require a manual change to [`spec.packageVersion`](../../reference/api/cr.html#application-v1alpha1-spec-packageversion). Automatic application updates via release channels are planned for future versions.
+No. In the current implementation, updates require a manual change to [`spec.packageVersion`](../../reference/api/cr.html#application-v1alpha1-spec-packageversion). Automatic application updates via [release channels](../../glossary.html#release-channel) are planned for future versions.
 
 ### Can an Application depend on another Application?
 

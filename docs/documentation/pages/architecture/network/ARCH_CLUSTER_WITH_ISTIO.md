@@ -16,7 +16,7 @@ The Istio components are divided into two categories:
 
 ![Cluster-level Istio architecture](../../images/istio/istio-architecture.png)
 
-All data plane services are grouped into a service mesh with the following features:
+All data plane services are grouped into a [service mesh](../../glossary.html#service-mesh) with the following features:
 
 * It has a common namespace for generating service ID in the following format: `<TrustDomain>/ns/<Namespace>/sa/<ServiceAccount>`.
   Each service mesh has a TrustDomain ID (in this case, it matches the cluster domain),
@@ -39,12 +39,12 @@ Control plane components:
       (configuring DNAT to intercept application traffic).
     * Routing readiness and liveness probes through the sidecar-proxy.
 * **Operator**: Installs all the resources required to operate a specific version of the control plane.
-* **Kiali**: Dashboard for monitoring and controlling Istio resources as well as user services managed by Istio:
+* **Kiali**: [Dashboard](../../glossary.html#dashboard) for monitoring and controlling Istio resources as well as user services managed by Istio:
   * Visualizing relationships between services.
   * Diagnosing problematic relationships.
   * Diagnosing control plane health.
 
-With Istio enabled, the Ingress controller behavior is changed as follows:
+With Istio enabled, the [Ingress controller](../../glossary.html#ingress-controller) behavior is changed as follows:
 
 * A sidecar proxy is added to the controller Pods.
   It only handles traffic from the controller to the application services (the [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter of the IngressNginxController resource).
@@ -85,7 +85,7 @@ The consumption of data plane resources (istio sidecars) is affected by many fac
 * Size of requests and responses
 * Protocol (HTTP/TCP)
 * Number of CPU cores
-* Complexity of the service mesh configuration
+* Complexity of the [service mesh](../../glossary.html#service-mesh) configuration
 
 A rough estimate of the overhead for an istio sidecar instance is 0.5 vCPU for 1000 requests/sec and 50 MB RAM.
 

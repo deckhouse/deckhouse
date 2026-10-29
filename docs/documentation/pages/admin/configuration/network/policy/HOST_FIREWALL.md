@@ -14,7 +14,7 @@ relatedLinks:
     url: troubleshooting.html
 ---
 
-A host firewall is a Cilium mode where network policies apply to cluster nodes themselves rather than to pods. In DP, you configure it through [CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html) with the `nodeSelector` field. Available only in clusters with the [`cni-cilium`](/modules/cni-cilium/) module.
+A [host firewall](../../../../glossary.html#host-firewall) is a Cilium mode where [network policies](../../../../glossary.html#network-policy) apply to cluster nodes themselves rather than to pods. In DP, you configure it through [CiliumClusterwideNetworkPolicy](cilium_networkpolicy.html) with the `nodeSelector` field. Available only in clusters with the [`cni-cilium`](/modules/cni-cilium/) module.
 
 {% alert level="danger" %}
 A bug in host policies can break SSH access, control plane operation, kubelet, or etcd. Always roll out host firewall through [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) and verify verdicts in Hubble before enforcing.
@@ -33,7 +33,7 @@ Roll out a host firewall in stages, using audit mode:
 1. Set [`policyAuditMode: true`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) in the `cni-cilium` module configuration. In audit mode, policies do not block traffic; they only log verdicts.
 1. Apply the host policy set. At a minimum: a control plane policy (an example is provided below) and worker-node policies that allow SSH and required service ports.
 1. Inspect verdicts in Hubble UI and via `hubble observe --type policy-verdict`. Expected traffic must be `verdict=ALLOWED`; anything in `verdict=AUDITED` would be blocked once audit mode is off.
-1. Tune the policies until no unexpected `AUDITED` entries remain. Pay close attention to kubelet, etcd, kube-apiserver, ingress controllers, monitoring, and DNS.
+1. Tune the policies until no unexpected `AUDITED` entries remain. Pay close attention to kubelet, etcd, kube-apiserver, [ingress controllers](../../../../glossary.html#ingress-controller), monitoring, and DNS.
 1. Turn audit mode off (`policyAuditMode: false`).
 
 If something breaks after enforcement, the fastest recovery path is to re-enable audit mode or delete the CiliumClusterwideNetworkPolicy. Detailed recovery steps are in [Cilium Emergency Recovery](https://docs.cilium.io/en/v1.17/security/host-firewall/#emergency-recovery).
@@ -44,7 +44,7 @@ The host firewall policy set you maintain must explicitly configure the followin
 
 - access from kube-apiserver to kubelet and webhook endpoints (ports 10250, 10255, and component webhook ports);
 - inter-node access on etcd ports (2379, 2380), only between control plane nodes;
-- access from worker nodes to the API server;
+- access from [worker nodes](../../../../glossary.html#worker-node) to the API server;
 - BGP and service ports if MetalLB or a third-party load balancer is in use;
 - platform component ports in the 4200–4299 range, listed in the [platform component network interaction list](/products/kubernetes-platform/documentation/v1/reference/network_interaction.html);
 - SSH from trusted administrative addresses;
@@ -115,7 +115,7 @@ Replace the subnets with the ones used for administrative access. Do not leave `
 
 ## Example: baseline for worker nodes
 
-Allows worker nodes to exchange traffic inside the cluster, reach the API server, and resolve DNS:
+Allows [worker nodes](../../../../glossary.html#worker-node) to exchange traffic inside the cluster, reach the API server, and resolve DNS:
 
 ```yaml
 apiVersion: cilium.io/v2
@@ -138,4 +138,4 @@ spec:
         - remote-node
 ```
 
-This is a starting point. Extend the policy with rules for monitoring, ingress controllers, load balancers, and SSH that match your setup.
+This is a starting point. Extend the policy with rules for monitoring, [ingress controllers](../../../../glossary.html#ingress-controller), load balancers, and SSH that match your setup.

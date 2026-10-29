@@ -21,7 +21,7 @@ Any minor network delays can significantly degrade service quality due to the ab
 One possible solution is to install a DNS server on each node.
 In Deckhouse Platform, this is implemented using the [`node-local-dns`](/modules/node-local-dns/) module.
 
-When using a caching DNS server,
+When using a [caching DNS server](../../glossary.html#caching-dns-server),
 external requests (that are not already cached) will still be attempted to resolve through the internal zone chain first.
 Under high load (for example, with many repeated requests per second for the same records, which is common),
 caching is enough to significantly improve DNS resolution performance.
@@ -49,7 +49,7 @@ Key characteristics of the CoreDNS configuration:
 
 ## Grafana dashboard
 
-The `Kubernetes / DNS (node local)` dashboard displays:
+The `Kubernetes / DNS (node local)` [dashboard](../../glossary.html#dashboard) displays:
 
 - General charts (providing an overall view of DNS performance),
 - Per-node charts (helping investigate node-specific issues identified in the general charts),

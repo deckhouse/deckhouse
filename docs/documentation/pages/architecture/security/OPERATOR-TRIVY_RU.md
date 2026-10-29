@@ -16,7 +16,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Pla
 
 В API-группу `trivy.deckhouse.io` входят следующие ресурсы:
 
-- [ClusterComplianceReport](/modules/operator-trivy/cr.html#clustercompliancereport) — хранит сводный отчёт о соответствии кластера требованиям безопасности (например, CIS Kubernetes Benchmark);
+- [ClusterComplianceReport](/modules/operator-trivy/cr.html#clustercompliancereport) — хранит сводный отчёт о соответствии кластера требованиям безопасности (например, [CIS Kubernetes Benchmark](../../glossary.html#cis-compliance-check));
 - ClusterConfigAuditReport — хранит результаты аудита конфигурации Kubernetes-объектов на уровне кластера;
 - ClusterInfraAssessmentReport — хранит результаты проверок безопасности инфраструктуры Kubernetes на уровне кластера;
 - ClusterRbacAssessmentReport — хранит результаты проверки настроек управления доступом на основе ролей (RBAC) на уровне кластера;
@@ -35,7 +35,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Pla
 В API-группу `spdx.softwarecomposition.kubescape.io` входят следующие ресурсы:
 
 - ApplicationProfiles — хранит профиль поведения приложения в рантайме (системные вызовы, запускаемые процессы, доступ к файлам, HTTP-эндпоинты);
-- CollapseConfigurations — задаёт параметры объединения динамических путей, эндпоинтов и сетевых адресов для уменьшения объёма рантайм-профилей;
+- CollapseConfigurations — задаёт параметры объединения динамических путей, эндпоинтов и сетевых адресов для уменьшения объёма [рантайм-профилей](../../glossary.html#runtime-profile);
 - ConfigurationScanSummaries — хранит сводку результатов проверок конфигурации для группы рабочих нагрузок в заданной области (например, неймспейсе);
 - ContainerProfiles — хранит профиль отдельного контейнера, включая рантайм-поведение и сетевые взаимодействия;
 - GeneratedNetworkPolicies — хранит сгенерированные на основе наблюдаемого трафика объекты NetworkPolicy;
@@ -94,7 +94,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Pla
 
 1. **Trivy-server** (StatefulSet) — компонент реализует сервис сканирования безопасности, базируется на основе Open Source-проекта [Trivy](https://github.com/aquasecurity/trivy).
 
-   Trivy-server при старте и впоследствии регулярно обновляет базу данных уязвимостей из образа формата Open Container Initiative (OCI).
+   Trivy-server при старте и впоследствии регулярно обновляет [базу данных уязвимостей](../../glossary.html#vulnerability-database) из образа формата Open Container Initiative (OCI).
 
    Trivy-server обрабатывает запросы от других компонентов модуля (operator, registry-scanner, trivy-provider, задачи сканирования), выполняет запрошенное сканирование и возвращает результат.
 
@@ -125,7 +125,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Pla
    - метаданные сохраняются в базе данных SQLite;
    - тело объектов сохраняется в gob-формате в каталоге `/data`.
 
-1. **Node-agent** (DaemonSet) — опциональный компонент с одним контейнером **node-agent**, который запускается на всех узлах кластера в привилегированном режиме, и, используя eBPF-подпрограммы, наблюдает за поведением контейнеров и формирует рантайм-профили.
+1. **Node-agent** (DaemonSet) — опциональный компонент с одним контейнером **node-agent**, который запускается на всех узлах кластера в привилегированном режиме, и, используя eBPF-подпрограммы, наблюдает за поведением контейнеров и формирует [рантайм-профили](../../glossary.html#runtime-profile).
 
    Node-agent сохраняет рантайм-профили в кастомных ресурсах ApplicationProfile и NetworkNeighborhood (в компоненте security-storage). Подробнее с работой node-agent можно ознакомиться [в разделе документации модуля](/modules/operator-trivy/stable/runtime_map.html).
 
@@ -165,7 +165,7 @@ description: Архитектура модуля operator-trivy в Deckhouse Pla
    - отслеживание ресурсов Pod, ReplicaSet, ReplicationController, StatefulSet, DaemonSet, CronJob и Job;
    - создание, обновление и удаление ресурсов Secret, ConfigMap и Job.
 
-1. [**Registry**](/modules/registry/) — загрузка OCI-образов с базой уязвимостей и базой БДУ.
+1. [**Registry**](/modules/registry/) — загрузка OCI-образов с [базой уязвимостей](../../glossary.html#vulnerability-database) и базой БДУ.
 
 1. **Хранилище образов** — сканирование образов
 

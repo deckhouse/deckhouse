@@ -15,7 +15,7 @@ Until the migration is completed, the `D8CloudProviderDVPMigrationPending` alert
 See: [How to migrate a cloud provider to ModuleConfig-based configuration](../../../../faq.html#how-to-migrate-a-cloud-provider-to-moduleconfig-based-configurat).
 {% endalert %}
 
-Example of the layout configuration:
+Example of the [layout](../../../../glossary.html#layout) configuration:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -89,12 +89,12 @@ spec:
 
 ## Configuration
 
-The built-in virtualization cloud provider parameters are set in four resources:
+The built-in virtualization [cloud provider](../../../../glossary.html#cloud-provider) parameters are set in four resources:
 
-- The [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) of the `cloud-provider-dvp` module defines the layout and the parent cluster connection parameters.
+- The [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) of the `cloud-provider-dvp` module defines the [layout](../../../../glossary.html#layout) and the parent cluster connection parameters.
 - The `d8-credentials` Secret in the `d8-cloud-provider-dvp` namespace stores the credentials for accessing the parent cluster API. Its format is covered in the [Credentials Secret](authorization.html#credentials-secret) section.
 - The [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) resource describes the virtual machine parameters.
-- The [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource describes the node groups and references the instance class.
+- The [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource describes the [node groups](../../../../glossary.html#node-group) and references the [instance class](../../../../glossary.html#instance-class).
 
 To modify the provider settings in a running cluster, edit the ModuleConfig:
 

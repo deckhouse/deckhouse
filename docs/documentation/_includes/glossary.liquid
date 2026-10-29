@@ -1,0 +1,15 @@
+{%- comment -%}
+Renders the glossary page from the `glossary` collection (_glossary/<id>.md, <id>_RU.md).
+The term id is the file name without the language suffix; it is used as the heading anchor
+and as the key in glossary.json (see _includes/glossary-json.liquid).
+`description` is inline Markdown: it is rendered here and, as HTML, in glossary.json.
+{%- endcomment -%}
+{%- assign terms = site.glossary | where: "lang", page.lang | sort_natural: "title" %}
+<div class="glossary" markdown="0">
+{%- for term in terms %}
+{%- assign term_id = term.path | split: "/" | last | remove: "_RU.md" | remove: ".md" %}
+<h2 id="{{ term_id }}">{{ term.title }}</h2>
+{{ term.description | markdownify }}
+{{ term.content | markdownify }}
+{%- endfor %}
+</div>

@@ -6,7 +6,7 @@ search: deckhouse virtualization container registry, dvcr
 description: Архитектура компонента DVCR модуля virtualization в Deckhouse Platform.
 ---
 
-Компонент Deckhouse Virtualization Container Registry (DVCR) модуля [`virtualization`](/modules/virtualization/) — это специализированное хранилище образов контейнеров для хранения и кеширования образов виртуальных машин (ВМ). Virtualization-controller компонента [Virtualization-API](api.html) модуля [`virtualization`](/modules/virtualization/) позволяет импортировать хранящиеся в DVCR образы в PVC-тома, используемые в качестве дисков ВМ, управляемых KubeVirt. Подробнее об импорте и загрузке образов и дисков ВМ описано в разделе [«Импорт и загрузка образов и дисков ВМ»](import.html).
+Компонент Deckhouse Virtualization Container Registry ([DVCR](../../glossary.html#dvcr)) модуля [`virtualization`](/modules/virtualization/) — это специализированное хранилище образов контейнеров для хранения и кеширования образов виртуальных машин (ВМ). Virtualization-controller компонента [Virtualization-API](api.html) модуля [`virtualization`](/modules/virtualization/) позволяет импортировать хранящиеся в DVCR образы в PVC-тома, используемые в качестве [дисков ВМ](../../glossary.html#vm-disk), управляемых KubeVirt. Подробнее об импорте и загрузке образов и дисков ВМ описано в разделе [«Импорт и загрузка образов и дисков ВМ»](import.html).
 
 {% alert level="info" %}
 [KubeVirt](https://github.com/kubevirt/kubevirt) — это Open Source-проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он обеспечивает совместную работу традиционных ВМ и контейнерных рабочих нагрузок в одном кластере Kubernetes, предоставляя единую плоскость управления.
@@ -29,7 +29,7 @@ description: Архитектура компонента DVCR модуля virtu
 
 DVCR состоит из следующих компонентов:
 
-1. **Dvcr** — хранилище образов на базе [Distribution](https://github.com/distribution/distribution). Distribution — это Open Source-проект, который является основой для хранения и распределения контейнерных образов и другого контента с использованием спецификации [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec). Dvcr используется для хранения и кеширования образов ВМ.
+1. **Dvcr** — хранилище образов на базе [Distribution](https://github.com/distribution/distribution). Distribution — это Open Source-проект, который является основой для хранения и распределения контейнерных образов и другого контента с использованием спецификации [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec). Dvcr используется для хранения и кеширования [образов ВМ](../../glossary.html#vm-image).
 
    Компонент содержит следующие контейнеры:
 

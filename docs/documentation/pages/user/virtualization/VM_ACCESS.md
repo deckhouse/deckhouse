@@ -5,7 +5,7 @@ description: "Connecting to a virtual machine over the serial console, VNC, and 
 search: connecting to a VM, console, VNC, SPICE, runPolicy, starting a VM
 ---
 
-You can connect to a running machine from the command line and from the web interface, while the run policy controls whether the machine is running at all.
+You can connect to a running machine from the command line and from the web interface, while the [run policy](../../glossary.html#vm-run-policy) controls whether the machine is running at all.
 
 ## Connecting to a virtual machine
 
@@ -56,7 +56,7 @@ d8 v ssh cloud@linux-vm
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the VM you need from the list and click its name.
 1. Go to the **TTY** tab to work with the serial console, or to the **VNC** tab to connect over VNC.
@@ -100,7 +100,7 @@ spec:
 
 Together with SPICE, the machine gets a virtio-gpu video adapter. If the guest system has no driver for it, as in Windows 7 and Windows XP, set another adapter model with the `virtualization.deckhouse.io/video` annotation, using the `vga`, `bochs`, or `ramfb` value.
 
-A shared clipboard, a resize to the client window, and a local cursor are added by the SPICE guest agent. Install it in the guest system, on Linux it's the `spice-vdagent` package, on Windows it's `spice-guest-tools`.
+A shared clipboard, a resize to the client window, and a local cursor are added by the SPICE [guest agent](../../glossary.html#vm-guest-agent). Install it in the guest system, on Linux it's the `spice-vdagent` package, on Windows it's `spice-guest-tools`.
 
 Connecting requires the `remote-viewer` client from the `virt-viewer` package, and the `d8 v spice` command opens it for you. If you don't have such a client, run the proxy alone and connect with your own client to the port the command prints:
 
@@ -116,7 +116,7 @@ SPICE reserves memory whether a client is connected or not. This memory is part 
 
 ## Startup policy and VM state management
 
-The startup policy determines how Deckhouse Platform (DP) maintains the machine state. It's set by the [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy) parameter:
+The [startup policy](../../glossary.html#vm-run-policy) determines how Deckhouse Platform (DP) maintains the machine state. It's set by the [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy) parameter:
 
 - `AlwaysOnUnlessStoppedManually`: The default option. The machine always runs, and you can stop it only manually.
 - `AlwaysOn`: The machine always runs, and even after a shutdown from the guest OS DP starts it again.
@@ -175,7 +175,7 @@ d8 k get vmop
 
 The startup policy is set on the machine page:
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the VM you need from the list and click its name.
 1. On the **Configuration** tab, scroll down to the **Life cycle** section.

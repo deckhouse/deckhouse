@@ -4,11 +4,11 @@ permalink: en/architecture/marketplace/hooks.html
 description: "Go hooks for Deckhouse Platform Marketplace Applications: module-sdk hooks binary, bindings and execution order, ApplicationHookInput, Kubernetes bindings, object operations, values, and the settings validation hook."
 ---
 
-Application hooks are written in Go using [module-sdk](https://github.com/deckhouse/module-sdk). Deckhouse Platform (DP) runs them at certain stages of the application lifecycle, on changes of Kubernetes objects, and on schedule. Hooks prepare values for templates, create and change objects in the application namespace, and validate settings.
+Application [hooks](../../glossary.html#module-hook) are written in Go using [module-sdk](https://github.com/deckhouse/module-sdk). Deckhouse Platform (DP) runs them at certain stages of the application lifecycle, on changes of Kubernetes objects, and on schedule. Hooks prepare values for templates, create and change objects in the application namespace, and validate settings.
 
 ## Hooks binary
 
-All hooks of a package are compiled into a single Go binary. In the package skeleton, the sources are located in `hooks/batch/`, and `d8 package build` builds the binary according to `hooks/hooks.yaml` and puts it into the package bundle.
+All hooks of a [package](../../glossary.html#marketplace-package) are compiled into a single Go binary. In the package skeleton, the sources are located in `hooks/batch/`, and `d8 package build` builds the binary according to `hooks/hooks.yaml` and puts it into the [package bundle](../../glossary.html#marketplace-package-bundle).
 
 Each hook is registered with `registry.RegisterFunc`, and the `main` function calls `app.Run`:
 
@@ -100,21 +100,21 @@ func handle(_ context.Context, input *pkg.ApplicationHookInput) error {
 
 ## Bindings and execution order
 
-The `pkg.ApplicationHookConfig` structure defines when the hook runs:
+The `pkg.ApplicationHookConfig` structure defines when the [hook](../../glossary.html#module-hook) runs:
 
 | Field | When the hook runs |
 |---|---|
-| `OnStartup` | Once after the package is loaded: on installation, after the package version changes, and after DP restarts. The hook doesn't get snapshots |
-| `OnBeforeHelm` | In every reconciliation run, before the templates are applied |
+| `OnStartup` | Once after the [package](../../glossary.html#marketplace-package) is loaded: on installation, after the package version changes, and after DP restarts. The hook doesn't get snapshots |
+| `OnBeforeHelm` | In every [reconciliation run](../../glossary.html#application-reconciliation), before the templates are applied |
 | `OnAfterHelm` | In every reconciliation run, after the templates are applied. If the hook changes values, DP applies the templates again |
 | `OnBeforeDeleteHelm` | Before the Helm release is uninstalled: when the Application is deleted or when the package requirements stop being met. The hook doesn't run when the package version changes |
 | `OnAfterDeleteHelm` | After the Helm release is uninstalled, in the same cases as `OnBeforeDeleteHelm` |
 | `Schedule` | On schedule in the crontab format |
-| `Kubernetes` | When the watched objects in the application namespace change, and during the synchronization of the binding (for details, refer to ["Kubernetes bindings"](#kubernetes-bindings)) |
+| `Kubernetes` | When the watched objects in the application namespace change, and during the synchronization of the [binding](../../glossary.html#hook-binding) (for details, refer to ["Kubernetes bindings"](#kubernetes-bindings)) |
 
 Other fields:
 
-- `Queue`: Name of the queue for the `Schedule` and `Kubernetes` bindings of the hook (default: `main`). These bindings run in a queue separate from the lifecycle stages, so they can run at the same time as `OnBeforeHelm` or `OnAfterHelm` hooks.
+- `Queue`: Name of the queue for the `Schedule` and `Kubernetes` bindings of the hook (default: `main`). These bindings run in a queue separate from the [lifecycle stages](../../glossary.html#module-lifecycle-stage), so they can run at the same time as `OnBeforeHelm` or `OnAfterHelm` hooks.
 - `AllowFailure` and `Settings` are not supported for applications.
 
 Hooks with the same binding run in the ascending order of `Order` (the `pkg.OrderedConfig` field). The sequence of lifecycle stages is described in ["Lifecycle and debugging"](lifecycle.html#installation-pipeline).
@@ -160,7 +160,7 @@ The `pkg.ApplicationKubernetesConfig` structure describes the objects the hook w
 | `APIVersion`, `Kind` | API version and kind of the objects. Only namespaced kinds are supported |
 | `NameSelector`, `LabelSelector`, `FieldSelector` | Selection of objects |
 | `JqFilter` | jq expression applied to each object. The snapshot contains the results of the expression. Without the expression, the snapshot contains full objects |
-| `ExecuteHookOnEvents` | `false` — update the snapshot without running the hook when the objects change. Default: `true` |
+| `ExecuteHookOnEvents` | `false` — update the snapshot without running the [hook](../../glossary.html#module-hook) when the objects change. Default: `true` |
 | `ExecuteHookOnSynchronization` | `false` — don't run the hook during the synchronization. Default: `true` |
 | `WaitForSynchronization` | `false` — don't wait for the synchronization of the binding before the next stages. It takes effect only if the `Queue` field of the hook is set. Default: `true` |
 | `AllowFailure` | Ignore errors of the hook during the synchronization |
@@ -170,10 +170,10 @@ Behavior:
 - DP always restricts the bindings to the application namespace, so the structure has no namespace selector.
 - On every run, the hook gets the snapshots of all its bindings: the current state of the objects, not the event that triggered the run.
 - `OnBeforeHelm`, `OnAfterHelm`, `OnBeforeDeleteHelm`, and `OnAfterDeleteHelm` hooks get the snapshots too.
-- DP synchronizes the bindings at the beginning of every reconciliation run: hooks with `ExecuteHookOnSynchronization` enabled run with the full list of objects.
+- DP synchronizes the bindings at the beginning of every [reconciliation run](../../glossary.html#application-reconciliation): hooks with `ExecuteHookOnSynchronization` enabled run with the full list of objects.
 - `NameSelector` matches the actual object names, including the `d8a-<INSTANCE_NAME>-` prefix.
 
-The hook configuration is the same for all instances of the package, so selectors can't refer to the instance name. If several instances of the package can be installed into the same namespace, add the instance label to the snapshot and compare it with `input.Instance.Name()`. Objects rendered from the templates carry the `packages.deckhouse.io/instance` label:
+The hook configuration is the same for all instances of the [package](../../glossary.html#marketplace-package), so selectors can't refer to the instance name. If several instances of the package can be installed into the same namespace, add the instance label to the snapshot and compare it with `input.Instance.Name()`. Objects rendered from the templates carry the `packages.deckhouse.io/instance` label:
 
 ```go
 JqFilter: `{"name": .metadata.name, "instance": .metadata.labels["packages.deckhouse.io/instance"]}`,
@@ -215,7 +215,7 @@ As a result, a hook can change only the objects of its own instance. Objects wit
 - After the hook completes, DP validates the values against `openapi/values.yaml`. The schema must include the settings schema with `x-extend` (for details, refer to ["Application settings"](settings.html#schema-files)): the settings are located at the root of the values, and undeclared fields fail the validation.
 - The values changes are kept in memory. After DP restarts or the package version changes, they are lost until the hooks run again.
 
-What happens after the values change depends on the binding:
+What happens after the values change depends on the [binding](../../glossary.html#hook-binding):
 
 | Binding | Result |
 |---|---|
@@ -223,7 +223,7 @@ What happens after the values change depends on the binding:
 | `OnAfterHelm` | DP applies the templates again |
 | `OnStartup`, `OnBeforeHelm`, synchronization | The values are used when the templates are applied in the same run |
 
-`input.Settings` is read-only: hooks can't change the application settings.
+`input.Settings` is read-only: [hooks](../../glossary.html#module-hook) can't change the application settings.
 
 ## Settings validation hook
 
@@ -264,7 +264,7 @@ func Check(_ context.Context, input settingscheck.Input) settingscheck.Result {
 }
 ```
 
-To register the check, pass it to `app.Run` in the hooks binary: `app.Run(app.WithSettingsCheck(Check))`. A package can contain only one settings validation hook.
+To register the check, pass it to `app.Run` in the hooks binary: `app.Run(app.WithSettingsCheck(Check))`. A [package](../../glossary.html#marketplace-package) can contain only one settings validation hook.
 
 DP calls the check in the following cases:
 

@@ -54,3 +54,18 @@
         }
     }
 }
+
+// Links to glossary terms (class added by assets/js/glossary.js). Scoped with
+// .post-content to win over ".docs a" and ".docs a:not(...):hover" in docs.css,
+// which is loaded after site.css and would otherwise colour the link blue and
+// turn the dotted underline solid on hover. The term keeps the colour of the
+// surrounding text; only the dotted underline marks it.
+.docs .post-content a.glossary-term {
+    &,
+    &:hover {
+        color: inherit;
+        text-decoration: underline dotted;
+        text-underline-offset: 0.2em;
+        cursor: help;
+    }
+}

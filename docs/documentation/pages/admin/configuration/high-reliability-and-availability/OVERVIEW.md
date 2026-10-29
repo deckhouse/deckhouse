@@ -9,23 +9,23 @@ that define the stability of the infrastructure.
 Deckhouse Platform (DP) ensures high availability (HA) and fault tolerance
 through built-in mechanisms and modules.
 
-When HA mode is enabled, critical cluster components are launched with the necessary redundancy
+When [HA mode](../../../glossary.html#ha-mode) is enabled, critical cluster components are launched with the necessary redundancy
 to guarantee their continuous operation.
 Even if a single instance fails, services can continue functioning without downtime.
 For more information on enabling HA mode, refer to [Managing HA mode](enable.html).
 
-If the cluster has more than one master node, HA mode is automatically enabled,
+If the cluster has more than one [master node](../../../glossary.html#master-node), HA mode is automatically enabled,
 both during the initial deployment and when additional nodes are added later.
 Recommended roles and number of nodes can be found in [Recommendations for configuring cluster nodes and preventing overload](recommendations.html).
 
-DP provides chaos engineering tools to test cluster resilience.
+DP provides [chaos engineering](../../../glossary.html#chaos-engineering) tools to test cluster resilience.
 These tools let you deliberately or randomly disrupt individual components and observe the infrastructure's response.
 For information on configuring these tools, refer to [Chaos engineering](chaos-engineering.html).
 
 You can further increase cluster fault tolerance by enabling inter-cluster communication
-based on the Service Mesh mode of the [`istio`](/modules/istio/) module.
-In this mode, federation is configured between multiple clusters.
+based on the [Service Mesh](../../../glossary.html#service-mesh) mode of the [`istio`](/modules/istio/) module.
+In this mode, [federation](../../../glossary.html#federation) is configured between multiple clusters.
 In case of failures in one cluster, the load is automatically redistributed to others.
 For configuration details, refer to [Federation](../network/alliance/federation.html).
 
-Virtual machines also survive node failures and overload. Rebalancing moves them off loaded nodes by live migration, and the ColdStandby mechanism brings machines back into operation after a node fails. For details, refer to [Virtual machine fault tolerance and balancing](./vm-reliability.html).
+Virtual machines also survive node failures and overload. Rebalancing moves them off loaded nodes by [live migration](../../../glossary.html#live-migration), and the [ColdStandby](../../../glossary.html#coldstandby) mechanism brings machines back into operation after a node fails. For details, refer to [Virtual machine fault tolerance and balancing](./vm-reliability.html).

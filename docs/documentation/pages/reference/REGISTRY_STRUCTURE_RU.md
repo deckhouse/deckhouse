@@ -10,7 +10,7 @@ search: хранилище контейнеров, container registry
 
 ## Хранилище образов сертифицированной версии
 
-Хранилище образов Deckhouse Platform Certified Security Edition (DP CSE, сертифицированная ФСТЭК России редакция DP) расположено по адресу `registry-cse.deckhouse.ru/deckhouse/cse`. Оно одержит все [модули и компоненты](/products/kubernetes-platform/features/), включенные в комплект поставки.
+Хранилище образов Deckhouse Platform Certified Security Edition (DP CSE, сертифицированная ФСТЭК России [редакция](../glossary.html#edition) DP) расположено по адресу `registry-cse.deckhouse.ru/deckhouse/cse`. Оно одержит все [модули и компоненты](/products/kubernetes-platform/features/), включенные в комплект поставки.
 
 Ключевые особенности:
 

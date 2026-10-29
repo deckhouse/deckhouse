@@ -16,7 +16,7 @@ relatedLinks:
 
 This guide describes migration from the `ingress-nginx` module to the `alb` module. Within this migration, application publishing transitions from the Ingress API to the Gateway API.
 
-The guide covers model differences, preparing `alb` module infrastructure with ClusterALBInstance or ALBInstance and a managed Gateway, migrating applications to the Gateway API, migrating Deckhouse  Platform (DP) system interfaces, switching traffic to the `alb` module, and rolling back if needed.
+The guide covers model differences, preparing `alb` module infrastructure with ClusterALBInstance or ALBInstance and a [managed Gateway](../../../../../glossary.html#alb-managed-gateway), migrating applications to the Gateway API, migrating Deckhouse  Platform (DP) system interfaces, switching traffic to the `alb` module, and rolling back if needed.
 
 Procedure:
 
@@ -92,7 +92,7 @@ Consistent with the Gateway API conflict-resolution model, the `alb` module buil
 
 ## Step 1. Preparing alb module infrastructure {#step-1-preparing-alb-infrastructure}
 
-On this step, choose the `alb` module instance type (ClusterALBInstance or ALBInstance), configure the inlet, and prepare TLS certificates for the Gateway API entry point.
+On this step, choose the `alb` module instance type (ClusterALBInstance or ALBInstance), configure the [inlet](../../../../../glossary.html#inlet), and prepare TLS certificates for the Gateway API entry point.
 
 ### Choosing ALBInstance or ClusterALBInstance
 
@@ -148,7 +148,7 @@ When migrating these parameters, consider the following:
 - Configure HostPort parameters for ClusterALBInstance only. Specify at least one port.
 - Preserve the required source CIDR restrictions in [`spec.acceptRequestsFrom`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-acceptrequestsfrom).
 - Configure trusted proxy CIDRs explicitly. Do not trust client-IP headers from arbitrary sources.
-- Verify `loadBalancerSourceRanges` behavior with the target load balancer implementation. The value is passed to the `LoadBalancer` Service. Cloud providers may not support or may ignore this parameter.
+- Verify `loadBalancerSourceRanges` behavior with the target load balancer implementation. The value is passed to the `LoadBalancer` Service. [Cloud providers](../../../../../glossary.html#cloud-provider) may not support or may ignore this parameter.
 
 The inlet type is immutable for both ClusterALBInstance and ALBInstance. To change the inlet, create a new instance with the same `gatewayName`, validate traffic, switch to it, and delete the old instance.
 
@@ -165,7 +165,7 @@ Instructions for configuring an HTTP-01 issuer with the Gateway API solver are i
 To finish preparing the infrastructure, do the following:
 
 1. Create a ClusterALBInstance or ALBInstance with the selected inlet and the parameters from the tables above.
-1. Wait until the instance and the managed Gateway are ready.
+1. Wait until the instance and the [managed Gateway](../../../../../glossary.html#alb-managed-gateway) are ready.
 1. Prepare separate Certificate resources and Secret objects for the Gateway API path when Issuer or ClusterIssuer resources with HTTP-01 solvers are used at the same time.
 
 ## Step 2. Migrating DP interfaces {#step-2-migrating-dkp-interfaces}
@@ -240,7 +240,7 @@ Pass all related resources as input so the converter can preserve the supported 
 
    In the URL, query parameter names are lowercase: `gateway`, `scope`, and `ingress-class`. In the example, their values are placeholders in angle brackets and uppercase:
 
-   - `<GATEWAY_NAMESPACE>` — namespace of the managed Gateway from the instance status in step 1;
+   - `<GATEWAY_NAMESPACE>` — namespace of the [managed Gateway](../../../../../glossary.html#alb-managed-gateway) from the instance status in step 1;
    - `<GATEWAY_NAME>` — name of the managed Gateway from the same status.
 
      The `<GATEWAY_NAMESPACE>/<GATEWAY_NAME>` pair is the value of the `gateway` parameter. Use the default value `d8-alb/public-gw` only if it matches your Gateway.
@@ -368,7 +368,7 @@ The setting applies to every Ingress served by the controller. Before expanding 
 
 The `migrationGateway` parameter works by forwarding an already-accepted, and if needed re-encrypted, HTTP or HTTPS request to the target Service, so it is not supported where nginx does not perform this processing:
 
-- With the `HostPortWithSSLPassthrough` and `LoadBalancerWithSSLPassthrough` inlets — with TLS passthrough, nginx does not decrypt traffic and cannot determine which request to forward.
+- With the `HostPortWithSSLPassthrough` and `LoadBalancerWithSSLPassthrough` [inlets](../../../../../glossary.html#inlet) — with TLS passthrough, nginx does not decrypt traffic and cannot determine which request to forward.
 - With the `HostWithFailover` inlet — this inlet always uses Proxy Protocol, and `migrationGateway` does not support sending Proxy Protocol to the target Service.
 - With `enableIstioSidecar` — traffic is handled by the Istio sidecar rather than directly by nginx.
 
@@ -431,11 +431,11 @@ To switch traffic through DNS, do the following:
 1. Lower the DNS TTL in advance.
 1. Change each application DNS record from the Ingress NGINX Controller address to the Gateway API entry-point address.
 
-When the Ingress NGINX Controller uses a `LoadBalancer` Service provisioned by the Kubernetes cloud provider, the source and target controllers normally have separate load balancer IP addresses or hostnames.
+When the Ingress NGINX Controller uses a `LoadBalancer` Service provisioned by the Kubernetes [cloud provider](../../../../../glossary.html#cloud-provider), the source and target controllers normally have separate load balancer IP addresses or hostnames.
 
 Use weighted DNS records for a gradual switch only if the DNS provider supports them.
 
-A provider-managed load balancer does not normally allow node-by-node migration between two independently managed Service objects.
+A provider-managed load balancer does not normally allow node-by-node migration between two independently [managed Service](../../../../../glossary.html#managed-service) objects.
 
 If MetalLB or another implementation uses a fixed address, the same address cannot be assigned to both Service objects simultaneously. Transfer it only during a coordinated cutover.
 
@@ -493,7 +493,7 @@ Before shifting production traffic:
 - Test every hostname and protocol through the Gateway API entry-point address or with `migrationGateway`, including TLS certificates, redirects, authentication, long-lived connections, and application-specific policies.
 - Verify preservation of the client address, Proxy Protocol or forwarded-header processing, source restrictions, and load balancer health checks.
 - If HTTP-01 bridging is still required, keep `http01CertificateSolverBridging` enabled until DNS or the load balancer is switched.
-- Confirm that metrics, logs, alerts, and dashboards identify traffic and errors on both controllers.
+- Confirm that metrics, logs, alerts, and [dashboards](../../../../../glossary.html#dashboard) identify traffic and errors on both controllers.
 - Keep Ingress resources, the Ingress NGINX Controller, its external entry point, and valid certificates available throughout the rollback window.
 - Choose the switching method above and define rollback criteria.
 

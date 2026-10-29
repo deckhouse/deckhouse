@@ -54,7 +54,7 @@ Using a generated kubeconfig and a basic authentication:
 
 The module consists of the following components:
 
-1. **Dex**: Federated OpenID Connect provider that supports static users and integration with external authentication providers such as SAML, GitLab, or GitHub. The module uses a modified version of [Dex](https://github.com/dexidp/dex) to support:
+1. **Dex**: Federated OpenID Connect provider that supports [static users](../../glossary.html#static-user) and integration with external authentication providers such as SAML, GitLab, or GitHub. The module uses a modified version of [Dex](https://github.com/dexidp/dex) to support:
 
    * Groups for static user accounts.
    * Two-factor authentication (2FA).
@@ -71,7 +71,7 @@ The module consists of the following components:
 
 1. **Dex-authenticator**: [Middleware](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/static/img/simplified-architecture.svg) service used to authenticate requests to applications through the DP cluster authentication service.
 
-   When the Ingress controller is configured accordingly (using the NGINX `auth_request` module), requests are first forwarded to dex-authenticator for authentication.
+   When the [Ingress controller](../../glossary.html#ingress-controller) is configured accordingly (using the NGINX `auth_request` module), requests are first forwarded to dex-authenticator for authentication.
 
    It consists of the following containers:
 
@@ -85,7 +85,7 @@ The module consists of the following components:
 
      * [Group](/modules/user-authn/cr.html#group): A resource that describes user group.
      * [User](/modules/user-authn/cr.html#user): A resource that describes static user.
-     * [UserAccount](/modules/user-authn/cr.html#useraccount): A resource that describes view of Dex Password, OfflineSessions, and UserIdentity objects for the Deckhouse web UI.
+     * [UserAccount](/modules/user-authn/cr.html#useraccount): A resource that describes view of Dex Password, OfflineSessions, and UserIdentity objects for the [Deckhouse web UI](../../glossary.html#web-ui).
      * [UserOperation](/modules/user-authn/cr.html#useroperation): A resource that describes an operation to be applied to a user (password reset, forced password change, 2FA reset, lock/unlock, logout).
      * DexProviderCheck: A resource that describes a connectivity check for the specific DexProvider. The check verifies that the provider exists, is enabled, Dex is reachable, and the provider endpoint is reachable. It does not perform a full user authentication flow.
 

@@ -4,7 +4,7 @@ permalink: en/admin/configuration/marketplace/scanning.html
 description: "Monitor and manage package repository scanning operations in Deckhouse Platform Marketplace. View scan history, check progress, and trigger manual scans with PackageRepositoryOperation."
 ---
 
-Deckhouse Platform (DP) uses [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation) objects to configure package repository scanning. Each scan operation discovers new package versions and creates [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) objects for them. DP creates operations automatically, but you can also create them manually.
+Deckhouse Platform (DP) uses [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation) objects to configure [package](../../../glossary.html#marketplace-package) repository scanning. Each scan operation discovers new package versions and creates [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) objects for them. DP creates operations automatically, but you can also create them manually.
 
 ## Viewing scan operations
 
@@ -91,7 +91,7 @@ This command creates a PackageRepositoryOperation with [`spec.type: Update`](../
 
 ### Full scanning
 
-To run a full scanning of a package repository, set the [`spec.update.fullScan: true`](../../../reference/api/cr.html#packagerepositoryoperation-v1alpha1-spec-update-fullscan) parameter in a PackageRepositoryOperation. In this mode, all available package versions are scanned, not only the ones higher than discovered previously.
+To run a full scanning of a [package](../../../glossary.html#marketplace-package) repository, set the [`spec.update.fullScan: true`](../../../reference/api/cr.html#packagerepositoryoperation-v1alpha1-spec-update-fullscan) parameter in a PackageRepositoryOperation. In this mode, all available package versions are scanned, not only the ones higher than discovered previously.
 
 With `spec.update.fullScan: false` (by default), only the SemVer tags with a version higher than the package version already processed in the cluster are processed.
 
@@ -99,5 +99,5 @@ Automatic operations perform a full repository scan until the first successful s
 
 Use the full scanning in the following cases:
 
-- A package version was published after a newer version, for example, a patch for a previous minor version.
+- A package version was published after a newer version, for example, a patch for a previous [minor version](../../../glossary.html#minor-version).
 - [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) resources are missing from the cluster for versions available in the package repository.

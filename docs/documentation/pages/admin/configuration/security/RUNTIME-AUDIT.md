@@ -23,7 +23,7 @@ DP uses two main sources of events:
 - Linux kernel events — via the eBPF driver for the [Falco](https://falco.org/) threat detection system.
 - [Kubernetes API audit](./kubernetes-api-audit.html) events — via integration with [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) and a webhook interface.
 
-For details about the runtime audit architecture, refer to ["Runtime audit architecture"](../../../../architecture/security/runtime-audit.html).
+For details about the [runtime audit](../../../../glossary.html#runtime-audit) architecture, refer to ["Runtime audit architecture"](../../../../architecture/security/runtime-audit.html).
 
 ## Minimum requirements
 
@@ -76,7 +76,7 @@ All available runtime audit parameters are listed in the [`runtime-audit-engine`
 {% alert level="info" %}
 Webhook configuration is not required if the [`control-plane-manager`](/modules/control-plane-manager/) module is enabled.
 In this case, when the [`runtime-audit-engine`](/modules/runtime-audit-engine/) module is enabled,
-the settings for collecting Kubernetes API audit events will be applied automatically.
+the settings for collecting [Kubernetes API audit](../../../../glossary.html#kubernetes-api-audit) events will be applied automatically.
 {% endalert %}
 
 To configure the webhook for receiving audit events from `kube-apiserver`:
@@ -105,15 +105,15 @@ To configure the webhook for receiving audit events from `kube-apiserver`:
    ```
 
 1. Specify the path to the configuration file with the `--audit-webhook-config-file` flag in the `kube-apiserver` manifest.
-1. (**Optional**) To collect Kubernetes API audit events from not only system but also user namespaces, configure [audit policies](./kubernetes-api-audit.html#configuring-a-custom-audit-policy).
+1. (**Optional**) To collect Kubernetes API audit events from not only system but also [user namespaces](../../../../glossary.html#user-namespace), configure [audit policies](./kubernetes-api-audit.html#configuring-a-custom-audit-policy).
 
 ## Working with audit rules
 
-Runtime audit event analysis is based on rules that define suspicious behavior criteria.
+[Runtime audit](../../../../glossary.html#runtime-audit) event analysis is based on rules that define suspicious behavior criteria.
 DP includes:
 
 - **Built-in rules**, including:
-  - Kubernetes audit rules (located in the `falco` container at `/etc/falco/k8s_audit_rules.yaml`).
+  - Kubernetes [audit rules](../../../../glossary.html#runtime-audit-rule) (located in the `falco` container at `/etc/falco/k8s_audit_rules.yaml`).
   
   To configure the list of built-in rules,
   use the [`settings.builtInRulesList`](/modules/runtime-audit-engine/configuration.html#parameters-builtinruleslist) parameter
@@ -215,7 +215,7 @@ Example conversion result:
 
 ## Log collection and alerts
 
-DP exports runtime audit events as Prometheus metrics,
+DP exports [runtime audit](../../../../glossary.html#runtime-audit) events as Prometheus metrics,
 allowing you to set up log collection and alerts via resources of the [`log-shipper`](/modules/log-shipper/) and [`observability`](/modules/observability/) modules.
 This makes it possible to:
 
@@ -257,7 +257,7 @@ To create alerts for critical events:
 1. Make sure the [`observability`](/modules/observability/) module is enabled.
 1. Create a ClusterObservabilityMetricsRulesGroup or ObservabilityMetricsRulesGroup resource:
 
-   - [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup): Intended for cluster-wide rules applied to system namespaces.
+   - [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup): Intended for cluster-wide rules applied to [system namespaces](../../../../glossary.html#system-namespace).
    - [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup): Intended for rules that operate within a specific namespace.
 
 Configuration example:
@@ -310,7 +310,7 @@ The event severity is carried by two labels: `priority` holds a numeric value, a
 
 ## Debugging and simulating events
 
-For debugging and simulating runtime audit events in DP, you can use:
+For debugging and simulating [runtime audit](../../../../glossary.html#runtime-audit) events in DP, you can use:
 
 - The `event-generator` utility.
 - The `/test` HTTP endpoint of the `falcosidekick` service.
@@ -341,7 +341,7 @@ spec:
 #### Falco
 
 The [`event-generator`](https://github.com/falcosecurity/event-generator) utility allows you to generate
-various suspicious actions (for example, system calls or Kubernetes API audit events).
+various suspicious actions (for example, system calls or [Kubernetes API audit](../../../../glossary.html#kubernetes-api-audit) events).
 
 Run the following command to generate a test set of events in a Kubernetes cluster:
 

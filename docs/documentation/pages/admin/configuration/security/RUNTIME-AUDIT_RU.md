@@ -24,7 +24,7 @@ DP использует два основных источника событи�
 - события ядра Linux — с помощью eBPF-драйвера для [системы обнаружения угроз Falco](https://falco.org/);
 - события [аудита API Kubernetes](./kubernetes-api-audit.html) — через интеграцию с механизмом [Kubernetes auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) и вебхук-интерфейс.
 
-Подробности об архитектуре рантайм-аудита можно найти [в разделе «Архитектура рантайм-аудита»](../../../../architecture/security/runtime-audit.html).
+Подробности об архитектуре [рантайм-аудита](../../../../glossary.html#runtime-audit) можно найти [в разделе «Архитектура рантайм-аудита»](../../../../architecture/security/runtime-audit.html).
 
 ## Минимальные требования
 
@@ -78,7 +78,7 @@ DP использует два основных источника событи�
 {% alert level="info" %}
 Настройка вебхука не требуется, если включён модуль [`control-plane-manager`](/modules/control-plane-manager/).
 В этом случае при включении модуля [`runtime-audit-engine`](/modules/runtime-audit-engine/)
-настройки сбора событий аудита API Kubernetes применятся автоматически.
+настройки сбора событий [аудита API Kubernetes](../../../../glossary.html#kubernetes-api-audit) применятся автоматически.
 {% endalert %}
 
 Чтобы настроить вебхук на получение событий аудита от `kube-apiserver`, выполните следующие шаги:
@@ -108,12 +108,12 @@ DP использует два основных источника событи�
 
 1. Укажите путь к созданному файлу конфигурации с помощью флага `--audit-webhook-config-file` в манифесте `kube-apiserver`.
 1. (**Опционально**) Чтобы собирать события аудита API Kubernetes не только из системных,
-   но и пользовательских неймспейсов,
+   но и [пользовательских неймспейсов](../../../../glossary.html#user-namespace),
    настройте [политики аудита](./kubernetes-api-audit.html#настройка-собственной-политики-аудита).
 
 ## Работа с правилами аудита
 
-Для анализа событий рантайм-аудита используются правила, определяющие критерии подозрительного поведения.
+Для анализа событий [рантайм-аудита](../../../../glossary.html#runtime-audit) используются правила, определяющие критерии подозрительного поведения.
 В DP предусмотрены:
 
 - **встроенные правила**, включая:
@@ -220,11 +220,11 @@ go run main.go -input /path/to/falco/rule_example.yaml > ./my-rules-cr.yaml
 
 ## Сбор логов и оповещения
 
-DP экспортирует события рантайм-аудита в формате метрик Prometheus,
+DP экспортирует события [рантайм-аудита](../../../../glossary.html#runtime-audit) в формате метрик Prometheus,
 по которым можно настроить сбор логов и оповещения с помощью ресурсов модулей [`log-shipper`](/modules/log-shipper/) и [`observability`](/modules/observability/).
 Это позволяет:
 
-- подключить внешнее хранилище для сбора логов (например, Loki или Elasticsearch);
+- подключить [внешнее хранилище](../../../../glossary.html#external-storage) для сбора логов (например, Loki или Elasticsearch);
 - настроить оповещения о критических событиях.
 
 ### Настройка сбора логов и событий
@@ -261,7 +261,7 @@ spec:
 1. Убедитесь, что включён [модуль `observability`](/modules/observability/).
 1. Создайте ресурс ClusterObservabilityMetricsRulesGroup или ObservabilityMetricsRulesGroup:
 
-   - [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup) — предназначен для cluster-wide-правил, применяемых к системным неймспейсам;
+   - [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup) — предназначен для cluster-wide-правил, применяемых к [системным неймспейсам](../../../../glossary.html#system-namespace);
    - [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup) — предназначен для правил, работающих в рамках конкретного неймспейса.
 
 Пример конфигурации:
@@ -314,7 +314,7 @@ d8 k -n d8-monitoring exec -it prometheus-main-0 prometheus -- \
 
 ## Отладка и эмуляция событий
 
-Для отладки и эмуляции событий рантайм-аудита в DP можно использовать:
+Для отладки и эмуляции событий [рантайм-аудита](../../../../glossary.html#runtime-audit) в DP можно использовать:
 
 - утилиту `event-generator`;
 - HTTP-эндпоинт `/test` сервиса `falcosidekick`.
@@ -343,7 +343,7 @@ spec:
 #### Falco
 
 Утилита [`event-generator`](https://github.com/falcosecurity/event-generator) позволяет генерировать
-различные подозрительные действия (например, системные вызовы или события аудита API Kubernetes).
+различные подозрительные действия (например, системные вызовы или события [аудита API Kubernetes](../../../../glossary.html#kubernetes-api-audit)).
 
 Используйте следующую команду для запуска тестового набора событий в кластере Kubernetes:
 

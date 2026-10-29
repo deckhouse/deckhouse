@@ -5,11 +5,11 @@ search: csi driver, csi-driver, container storage interface
 description: Overview of the CSI driver architecture in Deckhouse Platform.
 ---
 
-A CSI driver (plugin) is used to manage persistent storage volumes in Deckhouse Platform (DP).
+A [CSI driver](../../../glossary.html#csi-driver) (plugin) is used to manage persistent storage volumes in Deckhouse Platform (DP).
 
 [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) is a standard interface that unifies access to storage systems and simplifies integration of different storage systems into clusters.
 
-The CSI driver is included in DP modules named `cloud-provider-*` and `csi-*`. Although each supported cloud provider or storage system uses its own implementation of the CSI specification, the architecture of the CSI driver is the same across all implementations. Implementations may differ in the set of supported capabilities and components.
+The CSI driver is included in DP modules named `cloud-provider-*` and `csi-*`. Although each supported [cloud provider](../../../glossary.html#cloud-provider) or storage system uses its own implementation of the CSI specification, the architecture of the CSI driver is the same across all implementations. Implementations may differ in the set of supported capabilities and components.
 
 The following is a description of the reference CSI driver architecture used in DP. It includes all possible components and implements the full functionality used by DP modules.
 
@@ -67,7 +67,7 @@ The CSI driver consists of the following components:
    * **node-driver-registrar**: Sidecar container that registers the Node Plugin with [kubelet](../../kubernetes-and-scheduling/kubelet.html). It calls the RPC methods `GetPluginInfo` and `NodeGetInfo` in the node container to retrieve plugin and node information. Communication with the node container occurs over gRPC via a Unix socket.
 
 {% alert level="info" %}
-Some sidecar containers from the external controller list (for example, snapshotter) may be absent in the Deployment of specific `cloud-provider-*` or `csi-*` modules if the corresponding functionality is not supported by the CSI driver implementation.
+Some sidecar containers from the external controller list (for example, snapshotter) may be absent in the Deployment of specific `cloud-provider-*` or `csi-*` modules if the corresponding functionality is not supported by the [CSI driver](../../../glossary.html#csi-driver) implementation.
 {% endalert %}
 
 ## Driver interactions

@@ -12,7 +12,7 @@ The section consists of the following subsections:
 * [C4 model](c4-model.html): Overview of the C4 model used to visualize the platform architecture,
   as well as a description of the DP architecture at levels 1 and 2 of the C4 model.
 * [Modules](module-development/): Description of the DP module architecture.
-* [Disaster resilience](disaster-resilience/): Description of the disaster resilience approaches implemented in DP.
+* [Disaster resilience](disaster-resilience/): Description of the [disaster resilience](../glossary.html#disaster-resilience) approaches implemented in DP.
 * [Updating](updating.html): Description of the DP update mechanisms.
 * Description of platform component architecture divided in the following subsystems:
   * [Deckhouse subsystem](deckhouse/)
@@ -35,7 +35,7 @@ DP is a platform for managing Kubernetes clusters in various infrastructures —
 The platform includes:
 
 * A Kubernetes cluster.
-* The Deckhouse controller and the modules it manages.
+* The [Deckhouse controller](../glossary.html#deckhouse-controller) and the modules it manages.
 * [Bashible](cluster-and-infrastructure/node-management/bashible.html),
   an agent running as a service on cluster nodes that executes bash scripts to manage nodes.
 
@@ -62,7 +62,7 @@ are not installed when DP is installed into an existing Managed Kubernetes clust
 Module contents:
 
 * Helm charts
-* [Addon-operator](https://github.com/flant/addon-operator/) hooks
+* [Addon-operator](https://github.com/flant/addon-operator/) [hooks](../glossary.html#module-hook)
 * Build rules for module components (Deckhouse components)
 * Other related files
 

@@ -100,7 +100,7 @@ If the parameter is not specified, no group-based filtering will be applied.
            description: "Direct access to kubernetes API"
      ```
 
-   - To publish the Kubernetes API via an Ingress controller or Gateway API, enable the [`apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) parameter in the `control-plane-manager` module settings:
+   - To publish the Kubernetes API via an [Ingress controller](../../../../glossary.html#ingress-controller) or Gateway API, enable the [`apiserver.publishAPI.ingress.enabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi-ingress-enabled) parameter in the `control-plane-manager` module settings:
 
      ```yaml
      apiVersion: deckhouse.io/v1alpha1
@@ -165,7 +165,7 @@ dexproviders.deckhouse.io "corp": the provider can assert identities that alread
 
 ### Checking provider connectivity
 
-The provider page of the DP web UI has the "Check connection" action. It creates a [DexProviderCheck](/modules/user-authn/cr.html#dexprovidercheck) resource and waits until the `user-authn` controller writes the check result to its `status`.
+The provider page of the [DP web UI](../../../../glossary.html#web-ui) has the "Check connection" action. It creates a [DexProviderCheck](/modules/user-authn/cr.html#dexprovidercheck) resource and waits until the `user-authn` controller writes the check result to its `status`.
 
 The check verifies the following:
 
@@ -200,7 +200,7 @@ Specify the `clientID` and `clientSecret` obtained during setup in the [DexProvi
 
 {% alert level="info" %}
 When registering an application with any OIDC provider, you must specify a redirect URI.  
-For integration with DexProvider, use the following format: `https://dex.<publicDomainTemplate>/callback`, where [`publicDomainTemplate`](../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) is the DNS name template of your cluster as defined in the `global` module.
+For integration with DexProvider, use the following format: `https://dex.<publicDomainTemplate>/callback`, where [`publicDomainTemplate`](../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) is the [DNS name template](../../../../glossary.html#public-domain-template) of your cluster as defined in the `global` module.
 {% endalert %}
 
 {% alert level="info" %}
@@ -477,7 +477,7 @@ spec:
 
 ### GitLab integration
 
-You need to create a new application in your GitLab project.
+You need to create a new application in your GitLab [project](../../../../glossary.html#project).
 
 To do this, follow these steps:
 

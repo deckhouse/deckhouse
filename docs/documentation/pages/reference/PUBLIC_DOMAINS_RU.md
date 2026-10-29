@@ -9,7 +9,7 @@ search: публичные домены DP
 
 На странице перечислены зарезервированные DNS-имена, которые использует Deckhouse Platform (DP). Имена приведены в [таблице ниже](#список-зарезервированных-dns-имён).
 
-Список нужен, если шаблон DNS-имён кластера ([параметр `modules.publicDomainTemplate`](api/global.html#parameters-modules-publicdomaintemplate) ресурса ModuleConfig `global`) — не wildcard-шаблон (например, `%s-kube.company.my`). В этом случае добавьте для каждого имени A- или CNAME-запись. Значение записи — публичный IP-адрес Ingress-контроллера (балансировщика HTTP/HTTPS-трафика).
+Список нужен, если [шаблон DNS-имён](../glossary.html#public-domain-template) кластера ([параметр `modules.publicDomainTemplate`](api/global.html#parameters-modules-publicdomaintemplate) ресурса ModuleConfig `global`) — не wildcard-шаблон (например, `%s-kube.company.my`). В этом случае добавьте для каждого имени A- или CNAME-запись. Значение записи — публичный IP-адрес [Ingress-контроллера](../glossary.html#ingress-controller) (балансировщика HTTP/HTTPS-трафика).
 
 Чтобы получить команду для добавления DNS-имён в локальный hosts-файл, используйте генератор данных для hosts-файла.
 

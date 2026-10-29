@@ -5,7 +5,7 @@ description: "Attaching disks and images to a virtual machine through the specif
 search: attaching a disk, VirtualMachineBlockDeviceAttachment, VMBDA, CD-ROM, boot order
 ---
 
-You can attach disks and images to a virtual machine (VM). They're described as block devices (BlockDevices).
+You can attach disks and images to a virtual machine (VM). They're described as [block devices](../../glossary.html#vm-block-device) (BlockDevices).
 
 Block device types and access modes:
 
@@ -30,7 +30,7 @@ Disks attached through [VirtualMachineBlockDeviceAttachment](/modules/virtualiza
 
 You can attach a disk to a running VM only when the storage is available on the cluster node where the virtual machine runs. When creating and updating a VM, and when creating a [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment), the placement rules (`nodeSelector`, `affinity`, `tolerations`) of the volume, the virtual machine, and the VM class are taken into account, and they have to share at least one valid placement. If the VM is already running on a specific node, the new disk has to be available on that node.
 
-While a live migration of the machine is preparing the target node, a disk can be neither attached nor detached. A new [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) resource stays in the `Pending` phase with the `BlockedByMigration` reason in the `Attached` condition, and a deleted one stays in the `Terminating` phase, and both finish once the migration completes. While the migration is still queued and the target node isn't being prepared yet, attaching and detaching work as usual.
+While a [live migration](../../glossary.html#live-migration) of the machine is preparing the target node, a disk can be neither attached nor detached. A new [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) resource stays in the `Pending` phase with the `BlockedByMigration` reason in the `Attached` condition, and a deleted one stays in the `Terminating` phase, and both finish once the migration completes. While the migration is still queued and the target node isn't being prepared yet, attaching and detaching work as usual.
 
 ## Attaching through the VM specification
 
@@ -76,7 +76,7 @@ To detach a disk, remove it from the list. With `enableParavirtualization: false
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the VM you need from the list and click its name.
 1. On the **Configuration** tab, scroll down to the **Disks** section.
@@ -93,7 +93,7 @@ To detach a disk, remove it from the list. With `enableParavirtualization: false
 
 ## Attaching through VirtualMachineBlockDeviceAttachment
 
-The [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) resource attaches and detaches a block device on a VM without touching its specification. It suits automation and the cases where the user doesn't have the rights to edit the machine.
+The [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) resource attaches and detaches a [block device](../../glossary.html#vm-block-device) on a VM without touching its specification. It suits automation and the cases where the user doesn't have the rights to edit the machine.
 
 The device is attached when the resource moves to the `Attached` phase. The other phases are described in the [`.status.phase`](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment-v1alpha2-status-phase) field, and the [`.status.conditions`](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment-v1alpha2-status-conditions) block shows the reason for a delay.
 

@@ -3,7 +3,7 @@ title: Layouts and configuration in Microsoft Azure
 permalink: en/admin/integrations/public/azure/layout.html
 ---
 
-This section describes the cluster deployment layout in Microsoft Azure infrastructure and the associated parameters.
+This section describes the cluster deployment [layout](../../../../glossary.html#layout) in Microsoft Azure infrastructure and the associated parameters.
 
 ## Standard
 
@@ -14,8 +14,8 @@ Standard is the supported deployment layout with the following characteristics:
 - Up to 64,000 SNAT ports are available per public IP address.
 - A NAT Gateway is supported and billable.
   It allows using static public IP addresses for SNAT.
-- Public IPs can be assigned to both master nodes and nodes created via Terraform.
-- If the master node does not have a public IP, a bastion host and VNet peering between clusters are required.
+- Public IPs can be assigned to both [master nodes](../../../../glossary.html#master-node) and nodes created via Terraform.
+- If the master node does not have a public IP, a [bastion host](../../../../glossary.html#bastion-host) and VNet peering between clusters are required.
 - Peering between the cluster's VNet and other VNets is supported.
 
 When a cluster is created, Deckhouse Platform (DP) creates a Network Security Group (NSG) named after the cluster prefix and associates it with the node subnet.

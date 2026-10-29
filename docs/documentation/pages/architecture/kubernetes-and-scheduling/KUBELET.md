@@ -11,7 +11,7 @@ Kubelet is an agent that runs on every node in a Kubernetes cluster. It ensures 
 
 ## Static pod manifests
 
-Kubelet starts control plane components from static pod manifests located in the `/etc/kubernetes/manifests` directory. In Deckhouse Platform, kubelet processes only files with the `.yaml` or `.yml` extension in this directory.
+Kubelet starts control plane components from [static pod](../../glossary.html#static-pod) manifests located in the `/etc/kubernetes/manifests` directory. In Deckhouse Platform, kubelet processes only files with the `.yaml` or `.yml` extension in this directory.
 
 Files with other extensions, such as `kube-apiserver.backup`, `kube-apiserver.yaml.bak`, editor swap files, or other temporary files, are ignored. This prevents accidental processing of backup or non-manifest files as static pod manifests.
 
@@ -34,7 +34,7 @@ Kubelet monitors the state of containers in all pods running on the node, includ
 Kubelet also interacts with the following components:
 
 1. **Containerd**: Receives commands from kubelet to manage the container lifecycle on the node via the [Container Runtime Interface (CRI)](https://kubernetes.io/docs/concepts/containers/cri/).
-1. **Kubernetes-api-proxy**: Proxies requests to kube-apiserver that are sent to the `localhost` address. It is part of the [`control-plane-manager`](/modules/control-plane-manager/) module.
+1. **[Kubernetes-api-proxy](../../glossary.html#kubernetes-api-proxy)**: Proxies requests to kube-apiserver that are sent to the `localhost` address. It is part of the [`control-plane-manager`](/modules/control-plane-manager/) module.
 1. **Kube-apiserver-healthcheck**: Checks the health of kube-apiserver.
 
 The following components interact with kubelet:

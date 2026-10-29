@@ -12,15 +12,15 @@ The platform supports:
 
 - Management of incoming and outgoing traffic.
 - Configuration of inter-cluster communication.
-- Management of network policies and routing.
+- Management of [network policies](../../../glossary.html#network-policy) and routing.
 - DNS management within the Kubernetes cluster.
 
 ## Configuring and managing incoming traffic
 
-[Incoming traffic](../network/ingress/) is managed using Ingress controllers.
+[Incoming traffic](../network/ingress/) is managed using [Ingress controllers](../../../glossary.html#ingress-controller).
 These controllers route user requests to the appropriate applications and services based on rules defined in Ingress resources.
-In DP, traffic can be managed at both the network level (NLB – Network Load Balancer)
-and the application level (ALB – Application Load Balancer).
+In DP, traffic can be managed at both the network level ([NLB](../../../glossary.html#nlb) – Network Load Balancer)
+and the application level ([ALB](../../../glossary.html#alb) – Application Load Balancer).
 
 ## Managing outgoing traffic
 
@@ -31,7 +31,7 @@ Configuring outgoing traffic enables connection control and filtering,
 which is especially important for secure integrations with external APIs and services.
 This can be achieved by defining policies that allow or block specific traffic flows.
 
-Outgoing traffic management is implemented using the Egress Gateway feature
+Outgoing traffic management is implemented using the [Egress Gateway](../../../glossary.html#egress-gateway) feature
 (provided by the [`cni-cilium`](/modules/cni-cilium/) module) as well as Istio tools (via the [`istio`](/modules/istio/) module).
 
 ## Internal network configuration

@@ -14,9 +14,9 @@ relatedLinks:
     url: "https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/system-configuration/patching"
 ---
 
-Эта инструкция подходит для ситуации, когда Kubernetes-кластер на базе [Talos Linux](https://www.siderolabs.com/talos-linux) уже создан и работает: control plane запущен, worker-узлы присоединены, CNI установлен, а Kubernetes API доступен через `d8 k`.
+Эта инструкция подходит для ситуации, когда Kubernetes-кластер на базе [Talos Linux](https://www.siderolabs.com/talos-linux) уже создан и работает: control plane запущен, [worker-узлы](../glossary.html#worker-node) присоединены, CNI установлен, а Kubernetes API доступен через `d8 k`.
 
-Deckhouse Platform (DP) устанавливается поверх готового Kubernetes-кластера в режиме установки в существующий кластер. В примере используется Deckhouse Platform Open, [канал обновлений `EarlyAccess`](/modules/deckhouse/configuration.html#parameters-releasechannel) и [набор модулей `Managed`](/modules/deckhouse/configuration.html#parameters-bundle).
+Deckhouse Platform (DP) устанавливается поверх готового Kubernetes-кластера в режиме [установки в существующий кластер](../glossary.html#existing-cluster-mode). В примере используется Deckhouse Platform Open, [канал обновлений `EarlyAccess`](/modules/deckhouse/configuration.html#parameters-releasechannel) и [набор модулей `Managed`](/modules/deckhouse/configuration.html#parameters-bundle).
 
 В этой схеме:
 
@@ -41,7 +41,7 @@ Deckhouse Platform (DP) устанавливается поверх готово
 - HTTPS-доступ к `registry.deckhouse.ru` с компьютера и узлов кластера;
 - `talosctl` и talosconfig, если административный kubeconfig ещё не получен.
 
-SSH к Talos-узлам не нужен: установщик работает через Kubernetes API.
+SSH к Talos-узлам не нужен: [установщик](../glossary.html#installer) работает через Kubernetes API.
 
 Перед установкой рекомендуется сделать снимок etcd средствами Talos и сохранить исходные talosconfig и kubeconfig.
 
@@ -129,7 +129,7 @@ chmod 600 "$ADMIN_KUBECONFIG"
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" auth whoami
 ```
 
-Для установки нужен стабильный административный доступ. Административный kubeconfig Talos обычно использует группу `system:masters`. Пользовательский OIDC kubeconfig для установки нежелателен: после включения модуля DP `user-authz` права такого пользователя в системных неймспейсах могут измениться.
+Для установки нужен стабильный административный доступ. Административный kubeconfig Talos обычно использует группу `system:masters`. Пользовательский OIDC kubeconfig для установки нежелателен: после включения модуля DP `user-authz` права такого пользователя в [системных неймспейсах](../glossary.html#system-namespace) могут измениться.
 
 Проверьте основные разрешения:
 
@@ -199,14 +199,14 @@ DP не должна одновременно с Talos или внешним и�
 - `cni-cilium`;
 - `kube-dns`;
 - `kube-proxy`;
-- модули облачных провайдеров (`cloud-provider-*`);
+- модули [облачных провайдеров](../glossary.html#cloud-provider) (`cloud-provider-*`);
 - `registry-packages-proxy`.
 
 {% alert level="warning" %}
 Если в Talos-кластере уже установлен Cilium, включать модуль DP `cni-cilium` нельзя: два оператора не должны одновременно управлять одним CNI.
 {% endalert %}
 
-Набор модулей `Managed` включает `ingress-nginx`, `cert-manager`, `local-path-provisioner`, VPA, мониторинг и модуль `user-authz`. До установки проверьте, нет ли в кластере их внешних аналогов:
+[Набор модулей](../glossary.html#module-bundle) `Managed` включает `ingress-nginx`, `cert-manager`, `local-path-provisioner`, VPA, мониторинг и модуль `user-authz`. До установки проверьте, нет ли в кластере их внешних аналогов:
 
 ```bash
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" get storageclass
@@ -215,12 +215,12 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" get deployments -A
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" get crd
 ```
 
-Если компонент уже установлен, заранее определите единственного владельца. Не запускайте одновременно два Ingress-контроллера, два `cert-manager` или два VPA.
+Если компонент уже установлен, заранее определите единственного владельца. Не запускайте одновременно два [Ingress-контроллера](../glossary.html#ingress-controller), два `cert-manager` или два VPA.
 Если управление компонентом остаётся за внешним решением, явно отключите соответствующий модуль DP через ModuleConfig с `spec.enabled: false`. Если компонентом должна управлять DP, перед установкой отключите или удалите его внешний аналог.
 
 ## Подготовка kubeconfig для контейнера установщика
 
-Установщик запускается внутри Docker. Ему нужна переносимая копия kubeconfig, которая не ссылается на файлы сертификатов и ключей, доступные только на компьютере пользователя.
+[Установщик](../glossary.html#installer) запускается внутри Docker. Ему нужна переносимая копия kubeconfig, которая не ссылается на файлы сертификатов и ключей, доступные только на компьютере пользователя.
 
 Создайте такую копию:
 
@@ -293,7 +293,7 @@ grep -n $'\t' "$CONFIG_FILE"
 
 ## Запуск установщика Deckhouse Platform Open
 
-Тег установщика должен соответствовать `releaseChannel` в конфигурации. Для `EarlyAccess` используется тег `early-access`.
+Тег [установщика](../glossary.html#installer) должен соответствовать `releaseChannel` в конфигурации. Для `EarlyAccess` используется тег `early-access`.
 
 Проверьте наличие файлов:
 
@@ -388,7 +388,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules control-plane-manager node-man
 
 Все перечисленные модули должны иметь `ENABLED: False`.
 
-Проверьте модули облачных провайдеров:
+Проверьте модули [облачных провайдеров](../glossary.html#cloud-provider):
 
 ```bash
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules -o wide | grep -E '(^NAME|^cloud-provider-)'

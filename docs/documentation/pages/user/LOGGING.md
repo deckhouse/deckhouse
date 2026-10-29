@@ -5,7 +5,7 @@ permalink: en/user/logging/
 ---
 
 Deckhouse Platform (DP) provides log collection and delivery from cluster nodes and pods
-to internal or external storage systems.
+to internal or [external storage](../../glossary.html#external-storage) systems.
 
 DP allows you to:
 
@@ -13,7 +13,7 @@ DP allows you to:
 - Filter logs by labels, message content and other attributes.
 - Send logs to multiple storage systems simultaneously (e.g., Loki and Elasticsearch).
 - Enrich logs with Kubernetes metadata.
-- Use log buffering to improve performance.
+- Use [log buffering](../../glossary.html#log-buffering) to improve performance.
 - Store logs in internal short-term storage based on Grafana Loki.
 
 The general mechanism of log collection, delivery and filtering is described in detail [in the "Architecture" section](../../architecture/observability/logging.html).

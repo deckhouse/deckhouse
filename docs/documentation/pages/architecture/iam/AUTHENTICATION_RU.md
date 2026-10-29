@@ -12,7 +12,7 @@ description: Особенности аутентификации в Deckhouse Pl
 
 1. **Инициализация**. kube-apiserver получает конфигурацию OIDC-провайдера (в данном случае — Dex): `issuer` и JWKS-эндпоинт для валидации токенов. В Kubernetes 1.30 и новее он получает её через сервис Dex внутри кластера.
 
-1. **Генерация kubeconfig**. Веб-интерфейс Deckhouse Platform (DP) формирует kubeconfig, в котором сохраняются `ID token` и `refresh token`. Этот файл используется утилитой `kubectl` или другими клиентами Kubernetes.
+1. **Генерация kubeconfig**. [Веб-интерфейс Deckhouse](../../glossary.html#web-ui) Platform (DP) формирует kubeconfig, в котором сохраняются `ID token` и `refresh token`. Этот файл используется утилитой `kubectl` или другими клиентами Kubernetes.
 
 1. **Аутентификация при обращении к API**. При получении запроса с `ID token`, kube-apiserver проверяет его подпись, используя ключи, полученные с JWKS-эндпоинта. Затем проверяются значения claim'ов `iss` (issuer) и `aud` (audience) токена на соответствие конфигурации сервера.
 
@@ -40,7 +40,7 @@ Dex ограничивает частоту неудачных попыток в
 
 В DP используется Dex с дополнительными возможностями:
 
-* группы статических пользователей (объект [Group](/modules/user-authn/cr.html#group));
+* группы [статических пользователей](../../glossary.html#static-user) (объект [Group](/modules/user-authn/cr.html#group));
 * двухфакторная аутентификация (2FA) статических пользователей (параметр [`staticUsers2FA`](/modules/user-authn/configuration.html#parameters-staticusers2fa));
 * парольная политика для статических пользователей: сложность, история паролей, ротация и блокировка после неудачных попыток входа (параметр [`passwordPolicy`](/modules/user-authn/configuration.html#parameters-passwordpolicy));
 * принудительная смена пароля при следующем входе после сброса пароля администратором;

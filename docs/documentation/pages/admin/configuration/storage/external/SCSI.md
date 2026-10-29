@@ -3,7 +3,7 @@ title: "SCSI-based data storage"
 permalink: en/admin/configuration/storage/external/scsi.html
 ---
 
-Deckhouse Platform (DP) supports managing storage connected via iSCSI or Fibre Channel, enabling working with volumes at the block device level. This allows for the integration of storage systems with Kubernetes and management through a CSI driver.
+Deckhouse Platform (DP) supports managing storage connected via iSCSI or Fibre Channel, enabling working with volumes at the block device level. This allows for the integration of storage systems with Kubernetes and management through a [CSI driver](../../../../glossary.html#csi-driver).
 
 This page provides instructions for connecting SCSI devices in DP, creating SCSITarget, StorageClass, and verifying system functionality.
 

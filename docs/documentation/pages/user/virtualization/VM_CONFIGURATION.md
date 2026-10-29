@@ -14,7 +14,7 @@ You can change the configuration of a virtual machine (VM) at any time after cre
 | [`.spec.liveMigrationPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-livemigrationpolicy)                         | Right away                                                                                                                                                                                   |
 | [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy)                                             | Right away                                                                                                                                                                                   |
 | [`.spec.disruptions.restartApprovalMode`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-disruptions-restartapprovalmode) | Right away                                                                                                                                                                                   |
-| [`.spec.affinity`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-affinity)                                               | Right away in commercial DP editions, a restart is required in DP Open                                                                                                                       |
+| [`.spec.affinity`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-affinity)                                               | Right away in commercial DP [editions](../../glossary.html#edition), a restart is required in DP Open                                                                                                                       |
 | [`.spec.nodeSelector`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-nodeselector)                                       | Right away in commercial DP editions, a restart is required in DP Open                                                                                                                       |
 | [`.spec.cpu.cores`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-cpu-cores)                                             | Without a restart if [changing the number of cores without a restart](#changing-the-number-of-cores-without-a-restart) is enabled in commercial DP editions, otherwise a restart is required |
 | [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks)                                               | Adding and removing networks applies on a running VM if the guest OS supports attaching interfaces on the fly                                                                                |
@@ -114,7 +114,7 @@ spec:
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the VM you need from the list and click its name.
 1. Make the changes on the **Configuration** tab. If the machine has to be restarted, DP shows a warning and the list of pending changes.
@@ -126,7 +126,7 @@ spec:
 
 ## Changing the number of cores without a restart
 
-You can change the number of cores of a running machine without rebooting it, if the change is applicable through live migration. Within the current CPU topology, you can both add and remove cores.
+You can change the number of cores of a running machine without rebooting it, if the change is applicable through [live migration](../../glossary.html#live-migration). Within the current [CPU topology](../../glossary.html#vm-cpu-topology), you can both add and remove cores.
 
 The feature is disabled by default. To enable it, an administrator adds `HotplugCPUWithLiveMigration` to the [`.spec.settings.featureGates`](/modules/virtualization/configuration.html#parameters-featuregates) parameter:
 
@@ -207,7 +207,7 @@ spec:
 
 In the web interface, the toggle is called **Change memory without reboot** and is located in the same place, in the **Experimental features** block of the module settings.
 
-When the feature is enabled, the new [`.spec.memory.size`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-memory-size) value is greater than the current one, and the machine allows migration, DP applies the change by live migration. A restart is required if the memory is reduced, if the original size is less than 1 GiB, or if the machine can't be migrated. Without a restart, memory grows up to 256 GiB, the ceiling built into the machine configuration at first start.
+When the feature is enabled, the new [`.spec.memory.size`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-memory-size) value is greater than the current one, and the machine allows migration, DP applies the change by [live migration](../../glossary.html#live-migration). A restart is required if the memory is reduced, if the original size is less than 1 GiB, or if the machine can't be migrated. Without a restart, memory grows up to 256 GiB, the ceiling built into the machine configuration at first start.
 
 {% tabs vm-memory-change %}
 
@@ -223,7 +223,7 @@ d8 k patch vm linux-vm --type merge -p '{"spec":{"memory":{"size":"4Gi"}}}'
 
 {% tab "Using the web interface" %}
 
-1. Go to the **Projects** tab and select the project you need.
+1. Go to the **[Projects](../../glossary.html#project)** tab and select the project you need.
 1. Go to **Virtualization** → **Virtual machines**.
 1. Select the VM you need from the list and click its name.
 1. On the **Configuration** tab, in the **Resources** section, set the new value in the **Memory size** field.

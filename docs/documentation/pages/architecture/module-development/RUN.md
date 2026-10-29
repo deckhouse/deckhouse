@@ -18,7 +18,7 @@ Follow these steps to run the module in a cluster:
 
 Deckhouse Platform (DP) can work with the following types of modules:
 
-- Built-in modules. These are included in DP. Their release cycle is tied to the DP release cycle.
+- [Built-in modules](../../../glossary.html#built-in-module). These are included in DP. Their release cycle is tied to the [DP release](../../../glossary.html#dp-release) cycle.
 - Modules from [module source](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source). The release cycle for these modules is not tied to the DP release cycle.
 
 Create a [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource to set the source to fetch module information from. This resource will contain the address of the container registry to pull modules from, authentication parameters, and other settings.
@@ -36,7 +36,7 @@ spec:
     dockerCfg: <base64 encoded credentials>
 ```
 
-After the ModuleSource resource is created, DP will start to perform periodic data synchronization with the module source (fetching information about the modules available in the source). By default, synchronization runs every 30 minutes. To change the interval, use the [`scanInterval`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource-v1alpha1-spec-scaninterval) parameter.
+After the ModuleSource resource is created, DP will start to perform periodic data synchronization with the [module source](../../../glossary.html#module-source) (fetching information about the modules available in the source). By default, synchronization runs every 30 minutes. To change the interval, use the [`scanInterval`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource-v1alpha1-spec-scaninterval) parameter.
 
 Use the following command to check the synchronization status:
 
@@ -252,7 +252,7 @@ status:
   phase: Ready
 ```
 
-In the Module, you can see the current installed version of the module, its size, the source from which it was downloaded, its dependencies, and the release channel.
+In the Module, you can see the current installed version of the module, its size, the source from which it was downloaded, its dependencies, and the [release channel](../../../glossary.html#release-channel).
 
 In case of any errors, the module will enter the `Error` phase:
 
@@ -335,8 +335,8 @@ Follow these steps to deploy a module from a different module source:
 
 ### Module update policy
 
-The module update policy refers to the rules that DP uses to update modules in the cluster. It is set by the [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource with the following settings:
-- module update mode (automatic, manual, updates are disabled);
+The [module update policy](../../../glossary.html#module-update-policy) refers to the rules that DP uses to update modules in the cluster. It is set by the [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource with the following settings:
+- module [update mode](../../../glossary.html#update-mode) (automatic, manual, updates are disabled);
 - the release channel to use for updates;
 - time windows for automatic updates during which the module update is permitted.
 

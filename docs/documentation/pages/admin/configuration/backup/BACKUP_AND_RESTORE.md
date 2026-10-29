@@ -8,7 +8,7 @@ description: "Setting up backup and recovery in the Deckhouse Platform. Manual c
 
 ### Restoring a cluster with a single control plane node
 
-To properly restore the cluster, follow these steps on the master node:
+To properly restore the cluster, follow these steps on the [master node](../../../glossary.html#master-node):
 
 1. Prepare the `etcdutl` utility. Locate and copy the executable on the node:
 
@@ -123,9 +123,9 @@ To properly restore the cluster, follow these steps on the master node:
 
 ### Restoring a multi-master cluster
 
-To properly restore a multi-master cluster, follow these steps:
+To properly restore a [multi-master cluster](../../../glossary.html#multi-master), follow these steps:
 
-1. Enable High Availability (HA) mode. This is necessary to preserve at least one Prometheus replica and its PVC, since HA is disabled by default in single-master clusters.
+1. Enable High Availability (HA) mode. This is necessary to preserve at least one Prometheus replica and its PVC, since HA is disabled by default in [single-master clusters](../../../glossary.html#single-master).
 
 1. Enable maintenance mode on the remaining master node to prevent `control-plane-manager` from creating new operations on it during the restore procedure (CPM will continue to remove components from the nodes being detached):
 
@@ -135,9 +135,9 @@ To properly restore a multi-master cluster, follow these steps:
 
 1. Switch the cluster to single master mode:
 
-   - In a cloud cluster, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
-   - In a static cluster, remove any unnecessary master nodes from the `control-plane` role by following the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself) and then remove them from the cluster.
-   - In a static cluster with the configured HA mode based on two master nodes and an arbiter node, remove the arbiter node and additional master nodes.
+   - In a [cloud cluster](../../../glossary.html#cloud-cluster), follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
+   - In a [static cluster](../../../glossary.html#static-cluster), remove any unnecessary master nodes from the `control-plane` role by following the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself) and then remove them from the cluster.
+   - In a static cluster with the configured [HA mode](../../../glossary.html#ha-mode) based on two master nodes and an [arbiter node](../../../glossary.html#arbiter-node), remove the arbiter node and additional master nodes.
    - In a cloud cluster with the configured HA mode based on two master nodes and an arbiter node, use the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#reducing-the-number-of-master-nodes-in-a-cloud-cluster) to remove the additional master nodes and the arbiter node.
 
 1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#restoring-a-cluster-with-a-single-control-plane-node) for restoring a cluster with a single control-plane node.
@@ -194,7 +194,7 @@ In the example below, `etcd-backup.snapshot` is a [etcd shapshot](#backing-up-et
   
 - Resulting executable `build/auger`, and also the `snapshot` from the backup copy of etcd must be uploaded on master-node, on which following actions would be performed.
 
-Following actions are performed on a master node, to which `etcd snapshot` file and `auger` tool were copied:
+Following actions are performed on a [master node](../../../glossary.html#master-node), to which `etcd snapshot` file and `auger` tool were copied:
 
 1. Set the correct access permissions for the backup file:
 
@@ -347,7 +347,7 @@ Before applying any change to a control plane component (`etcd`, `kube-apiserver
 /etc/kubernetes/deckhouse/backup/<Component>/<operation-name>/
 ```
 
-The `control-plane-manager` module keeps the 7 most recent operations per component. Older backups are removed automatically. The contents of a backup directory depend on the component. For example, for `kube-apiserver`, its static pod manifest, TLS certificates, and the `admin.conf` file are saved:
+The `control-plane-manager` module keeps the 7 most recent operations per component. Older backups are removed automatically. The contents of a backup directory depend on the component. For example, for `kube-apiserver`, its [static pod](../../../glossary.html#static-pod) manifest, TLS certificates, and the `admin.conf` file are saved:
 
 ```text
 /etc/kubernetes/deckhouse/backup/KubeAPIServer/kubeapiserver-ef53e5-n2snk/
@@ -434,7 +434,7 @@ Restoring files from a backup only reverts their on-disk state. If the change yo
 ## Restoring objects after changing the master node IP address
 
 {% alert level="warning" %}
-This section describes a scenario where only the IP address of the master node has changed, and all other objects in the etcd backup (such as CA certificates) remain valid. It assumes the restoration is performed in a single-master-node cluster.
+This section describes a scenario where only the IP address of the [master node](../../../glossary.html#master-node) has changed, and all other objects in the etcd backup (such as CA certificates) remain valid. It assumes the restoration is performed in a single-master-node cluster.
 {% endalert %}
 
 To restore etcd objects after changing the master node's IP address, follow these steps:
@@ -602,7 +602,7 @@ Once these steps are completed, the cluster will be successfully restored and fu
 
 ## Creating backups with Deckhouse CLI
 
-Deckhouse CLI (`d8`) provides the `backup` command for creating backups of various cluster components:
+[Deckhouse CLI](../../../glossary.html#deckhouse-cli) (`d8`) provides the `backup` command for creating backups of various cluster components:
 
 - `etcd`: Snapshot of the Deckhouse key-value data store.
 - `cluster-config`: Archive containing key configuration objects of the cluster.
@@ -653,7 +653,7 @@ To configure automatic etcd backups, use the [`control-plane-manager`](/modules/
 |---------------------------|-----------------------------------------------------------------------------|
 | `etcd.backup.enabled`     | Enables daily etcd backup.                                                  |
 | `etcd.backup.cronSchedule`| Cron-formatted schedule for running the backup. Local time of `kube-controller-manager` is used. |
-| `etcd.backup.hostPath`    | Path on master nodes where etcd backup archives will be stored.             |
+| `etcd.backup.hostPath`    | Path on [master nodes](../../../glossary.html#master-node) where etcd backup archives will be stored.             |
 
 Example configuration fragment:
 

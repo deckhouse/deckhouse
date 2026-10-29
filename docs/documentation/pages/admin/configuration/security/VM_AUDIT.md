@@ -8,15 +8,15 @@ search: virtualization audit, security events, virtualization-audit, VM audit
 The audit records actions on virtual machines (VMs) and on the module itself, so that you can investigate an incident and reconstruct the sequence of events.
 
 {% alert level="info" %}
-Available in commercial Deckhouse Platform (DP) editions.
+Available in commercial Deckhouse Platform (DP) [editions](../../../../glossary.html#edition).
 {% endalert %}
 
 ## Enabling the audit
 
-To enable the security event audit, follow these steps:
+To enable the [security event](../../../../glossary.html#security-event) audit, follow these steps:
 
 1. Enable the [`log-shipper`](/modules/log-shipper/) and [`runtime-audit-engine`](/modules/runtime-audit-engine/) modules.
-1. Enable the Kubernetes API audit by setting [`.spec.settings.apiserver.auditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) to `true` in the [`control-plane-manager`](/modules/control-plane-manager/) module.
+1. Enable the [Kubernetes API audit](../../../../glossary.html#kubernetes-api-audit) by setting [`.spec.settings.apiserver.auditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) to `true` in the [`control-plane-manager`](/modules/control-plane-manager/) module.
 1. Set [`.spec.settings.audit.enabled`](/modules/virtualization/configuration.html#parameters-audit-enabled) to `true` in the module settings:
 
    ```yaml
@@ -36,7 +36,7 @@ The event type is recorded in the `type` field. The audit distinguishes the foll
 - `Manage VM`: Creating, updating, or deleting a [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
 - `Control VM`: A change of the VM state, including start, stop, restart, migration, and eviction through the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource, as well as a shutdown or restart from the guest OS and an abnormal termination.
 - `Module control`: Creating, updating, disabling, or deleting a [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig).
-- `Virtualization control`: Creating or deleting a system component of the module in the `d8-virtualization` namespace.
+- `Virtualization control`: Creating or deleting a [system component](../../../../glossary.html#system-component) of the module in the `d8-virtualization` namespace.
 - `Integrity check`: A mismatch between the VM configuration checksum and the reference one.
 - `Forbidden operation`: An attempt to perform a forbidden operation.
 

@@ -14,7 +14,7 @@ relatedLinks:
     url: /modules/alb/
 ---
 
-To implement an Application Load Balancer (ALB) using the [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/), the [`alb`](/modules/alb/) module is used.
+To implement an Application Load Balancer ([ALB](../../../../../glossary.html#alb)) using the [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/), the [`alb`](/modules/alb/) module is used.
 
 The `alb` module implements an Application Load Balancer and allows you to publish applications through Kubernetes Gateway API. It deploys and configures the infrastructure for receiving and routing external requests, and also verifies the user configuration of the Gateway API.
 
@@ -43,7 +43,7 @@ For a capability comparison with `ingress-nginx`, open the ["Comparison of the i
 
 Gateway API separates responsibilities between cluster and namespace administrators and application developers:
 
-- Cluster administrator — manages traffic infrastructure through ClusterALBInstance or ALBInstance (cluster-wide Gateway).
+- Cluster administrator — manages traffic infrastructure through ClusterALBInstance or ALBInstance ([cluster-wide Gateway](../../../../../glossary.html#alb-managed-gateway)).
 - Namespace administrator — manages ALBInstance and ListenerSet (hostname, TLS, ports) within a namespace.
 - Application developers — define routes (HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, UDPRoute).
 
@@ -63,10 +63,10 @@ The characteristics and differences between them are described in the table:
 | :--- | :--- | :--- |
 | Purpose | Deploy a cluster-wide Gateway object | Deploy a local Gateway object |
 | Typical use case | - Common entry point (cluster-wide gateway).<br> - System gateway for publishing web interfaces of Deckhouse Platform (DP) service components and other modules (may require ["Steps before enabling"](#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster)).<br> - Platform gateway | Dedicated gateway for an application or team in a dedicated namespace |
-| Supported inlet types | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer), [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) | [`LoadBalancer`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-loadbalancer), [`ClusterIP`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-clusterip) |
+| Supported [inlet](../../../../../glossary.html#inlet) types | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer), [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) | [`LoadBalancer`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-loadbalancer), [`ClusterIP`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-clusterip) |
 | Proxy implementation | Envoy Proxy | Envoy Proxy |
 | Deployment type | DaemonSet | Deployment |
-| Placement of ListenerSet objects and routes | In any user namespace | In the same namespace as the ALBInstance object (required) |
+| Placement of ListenerSet objects and routes | In any [user namespace](../../../../../glossary.html#user-namespace) | In the same namespace as the ALBInstance object (required) |
 | Access level | Cluster administrator | Namespace administrator |
 
 Creating a ClusterALBInstance object or an ALBInstance object results in creation of a managed Gateway object in the cluster. At the same time:
@@ -83,7 +83,7 @@ In addition to Gateway API infrastructure configuration, user settings are valid
 
 An inlet defines how external traffic reaches the Envoy Proxy that serves the Gateway object:
 
-- [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) — traffic is accepted through a Service of type `LoadBalancer` (cloud providers or bare metal with MetalLB). Available for both ClusterALBInstance and ALBInstance.
+- [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) — traffic is accepted through a Service of type `LoadBalancer` ([cloud providers](../../../../../glossary.html#cloud-provider) or bare metal with MetalLB). Available for both ClusterALBInstance and ALBInstance.
 - [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) — traffic is accepted on node ports without an external load balancer. Available for ClusterALBInstance only.
 - [`ClusterIP`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-clusterip) — traffic is accepted through a Service of type `ClusterIP`, without an external entry point (for example, for internal traffic). Available for ALBInstance only.
 
@@ -95,7 +95,7 @@ Publishing an application includes enabling the module, creating a managed Gatew
 
 ### Steps before enabling {#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster}
 
-Before enabling and configuring ALB in a DP cluster, do the following:
+Before enabling and configuring [ALB](../../../../../glossary.html#alb) in a DP cluster, do the following:
 
 - Verify that the [requirements](/modules/alb/configuration.html#requirements) for the `alb` module are met.
 - If you need to publish service domains — web interfaces of [DP service components](../../../../../user/web/ui.html) and other modules — set the global parameter [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate). Without this parameter, system HTTPRoute, Gateway, and ListenerSet objects for service domains will not work correctly, and the web interfaces will not be published. If you do not need to publish service domains, you can leave this parameter unset. Details are in ["Publishing service domains"](#publishing-service-domains).
@@ -106,7 +106,7 @@ Before enabling and configuring ALB in a DP cluster, do the following:
 
 Enable the `alb` module as described in [Enabling the module](/modules/alb/configuration.html#enable).
 
-Create a ClusterALBInstance or ALBInstance resource. This creates and configures the managed Gateway object.
+Create a ClusterALBInstance or ALBInstance resource. This creates and configures the [managed Gateway](../../../../../glossary.html#alb-managed-gateway) object.
 
 {% alert level="warning" %}
 Manual modification of Gateway objects managed by the module is not allowed.
@@ -163,7 +163,7 @@ Placement of ListenerSet objects depends on the type of Gateway object in use:
 
 In both cases, place the ListenerSet in the same namespace as the associated HTTPRoute, GRPCRoute, and TLSRoute objects. In that case, you do not need additional setup such as creating a [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/).
 
-In ListenerSet, use ports `80` and `443` for HTTP/HTTPS. These are Gateway API listener ports. They are not the same as the [`hostPort.httpPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpport) and [`hostPort.httpsPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpsport) parameters of the HostPort inlet, which set ports on the node.
+In ListenerSet, use ports `80` and `443` for HTTP/HTTPS. These are Gateway API listener ports. They are not the same as the [`hostPort.httpPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpport) and [`hostPort.httpsPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpsport) parameters of the HostPort [inlet](../../../../../glossary.html#inlet), which set ports on the node.
 
 TCPRoute and UDPRoute objects that use TCP and UDP ports from [`additionalPorts`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-additionalports) attach directly to the corresponding Gateway listener.
 
@@ -236,7 +236,7 @@ After applying the changes, check the ClusterALBInstance status:
 d8 k get clusteralbinstances
 ```
 
-The ClusterALBInstance must reach the `Ready` state and create the managed Gateway. After that, ListenerSet and HTTPRoute objects appear in the corresponding system namespaces.
+The ClusterALBInstance must reach the `Ready` state and create the [managed Gateway](../../../../../glossary.html#alb-managed-gateway). After that, ListenerSet and HTTPRoute objects appear in the corresponding [system namespaces](../../../../../glossary.html#system-namespace).
 
 {% alert level="info" %}
 Currently, not all DP modules are available through the Gateway API. Do not disable the `ingress-nginx` module or delete related objects until the required web interfaces are published through the Gateway API and validated.
@@ -273,12 +273,12 @@ If DP system domains need to move to another Gateway object, complete these step
 
 ## Examples for different environments {#infrastructure-examples}
 
-This section describes traffic reception in different environments and operations on an already deployed ALB. Full CR field reference: [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) and [ALBInstance](/modules/alb/cr.html#albinstance). Additional examples are also available in the [`alb` module examples](/modules/alb/examples.html).
+This section describes traffic reception in different environments and operations on an already deployed [ALB](../../../../../glossary.html#alb). Full CR field reference: [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) and [ALBInstance](/modules/alb/cr.html#albinstance). Additional examples are also available in the [`alb` module examples](/modules/alb/examples.html).
 
 {% tabs Traffic reception %}
 {% tab "Cloud provider" %}
 
-Example ClusterALBInstance with the [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) inlet for a cloud provider:
+Example ClusterALBInstance with the [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) [inlet](../../../../../glossary.html#inlet) for a [cloud provider](../../../../../glossary.html#cloud-provider):
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -311,7 +311,7 @@ spec:
 {% endtab %}
 {% tab "Bare metal with MetalLB" %}
 
-To accept traffic on bare metal using the MetalLB load balancer, enable the [`metallb`](/modules/metallb/) module and create a MetalLoadBalancerClass object with an address pool. Place MetalLB balancers on the same nodes as the Envoy Proxy pods of the `alb` module (typically frontend nodes labeled `node-role.deckhouse.io/frontend`):
+To accept traffic on bare metal using the MetalLB load balancer, enable the [`metallb`](/modules/metallb/) module and create a MetalLoadBalancerClass object with an address pool. Place MetalLB balancers on the same nodes as the Envoy Proxy pods of the `alb` module (typically [frontend nodes](../../../../../glossary.html#frontend-node) labeled `node-role.deckhouse.io/frontend`):
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -425,7 +425,7 @@ spec:
         protocol: TCP
 ```
 
-The controller adds a corresponding TCP/UDP traffic handler to the managed Gateway object with a section name ([`sectionName`](https://gateway-api.sigs.k8s.io/references/spec/)) like `tcp-port-9000`. To attach a TCPRoute to it, specify the Gateway name and the matching `sectionName` in the route:
+The controller adds a corresponding TCP/UDP traffic handler to the [managed Gateway](../../../../../glossary.html#alb-managed-gateway) object with a section name ([`sectionName`](https://gateway-api.sigs.k8s.io/references/spec/)) like `tcp-port-9000`. To attach a TCPRoute to it, specify the Gateway name and the matching `sectionName` in the route:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -534,7 +534,7 @@ ALBs implemented using the Kubernetes Gateway API in a DP cluster can be used in
 
 ### Alongside ingress-nginx {#alongside-ingress-nginx}
 
-ALBs implemented using the Kubernetes Gateway API can run in a cluster alongside ["ALB with Ingress NGINX Controller"](nginx.html). In that case, use a separate ClusterIssuer object for each ALB type so that certificate settings and lifecycles are managed independently. The same external hostname must not be served by both ALBs at once without an explicit split at the DNS or external load balancer layer.
+ALBs implemented using the Kubernetes Gateway API can run in a cluster alongside ["ALB with Ingress NGINX Controller"](nginx.html). In that case, use a separate ClusterIssuer object for each [ALB](../../../../../glossary.html#alb) type so that certificate settings and lifecycles are managed independently. The same external hostname must not be served by both ALBs at once without an explicit split at the DNS or external load balancer layer.
 
 {% alert level="info" %}
 For the DP gateway, a ClusterIssuer object is automatically created by default. This same ClusterIssuer object is used to issue certificates for system domains.
@@ -613,7 +613,7 @@ You cannot enable `enableHTTP3` and `useProxyProtocol` at the same time: if both
 Keep the following in mind:
 
 - HTTP/3 uses QUIC over UDP. Make sure the load balancer and network rules allow UDP on the HTTPS port (usually `443`), not only TCP.
-- For the `LoadBalancer` inlet, confirm that the cloud or MetalLB load balancer accepts UDP on the required port.
+- For the `LoadBalancer` [inlet](../../../../../glossary.html#inlet), confirm that the cloud or MetalLB load balancer accepts UDP on the required port.
 - Clients must support HTTP/3. From a workstation, verify with:
 
 ```shell
@@ -626,7 +626,7 @@ If `curl` was built without HTTP/3, use a QUIC-capable client or check UDP port 
 
 The `alb` module supports adding GeoIP fields to HTTP request headers based on [MaxMind GeoIP/GeoLite2](https://dev.maxmind.com/geoip/) databases.
 
-Currently, the following database editions can be used:
+Currently, the following database [editions](../../../../../glossary.html#edition) can be used:
 
 - GeoIP2-Anonymous-IP;
 - GeoIP2-City;
@@ -644,7 +644,7 @@ Choose how GeoIP databases are obtained:
 {% tabs GeoIP database source %}
 {% tab "Downloading databases from MaxMind" %}
 
-To use GeoIP and download databases directly from MaxMind servers, first create a Secret containing the license key, for example:
+To use GeoIP and download databases directly from MaxMind servers, first create a Secret containing the [license key](../../../../../glossary.html#license-key), for example:
 
 ```bash
 d8 k -n prod create secret generic geoip-license \
@@ -802,7 +802,7 @@ Use this section to check that the gateway is ready and to answer common first-s
   d8 k -n d8-alb get gateway
   ```
 
-- With the LoadBalancer inlet, get the address from the load balancer Service (usually in the `d8-alb` namespace) and point DNS for the ListenerSet hostname to it:
+- With the LoadBalancer [inlet](../../../../../glossary.html#inlet), get the address from the load balancer Service (usually in the `d8-alb` namespace) and point DNS for the ListenerSet hostname to it:
 
   ```bash
   d8 k -n d8-alb get svc

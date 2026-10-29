@@ -40,7 +40,7 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
 
 1. **Сloud-controller-manager** — [Kubernetes External Cloud Provider for VMware Cloud Director](https://github.com/vmware-archive/cloud-provider-for-cloud-director), реализация [cloud сontroller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для VMware Cloud Director. Компонент обеспечивает интеграцию с облаком VMware Cloud Director и выполняет следующие функции:
 
-   * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в облачном провайдере. Для этого:
+   * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в [облачном провайдере](../../../glossary.html#cloud-provider). Для этого:
 
      * заполняет поля `spec.providerID` и `nodeInfo` ресурса Node;
      * проверяет наличие виртуальной машины в облаке и при ее отсутствии удаляет ресурс Node в кластере.
@@ -66,7 +66,7 @@ description: Архитектура модуля cloud-provider-vcd в Deckhouse
 
    * **infra-controller-manager**.
 
-1. **CSI-драйвер (VCD)** — реализация CSI-драйвера для VMware Cloud Director. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver.html). В модуле `cloud-provider-vcd` используется [CSI driver for VMware Cloud Director Named Independent Disks](https://github.com/vmware-archive/cloud-director-named-disk-csi-driver).
+1. **[CSI-драйвер](../../../glossary.html#csi-driver) (VCD)** — реализация CSI-драйвера для VMware Cloud Director. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver.html). В модуле `cloud-provider-vcd` используется [CSI driver for VMware Cloud Director Named Independent Disks](https://github.com/vmware-archive/cloud-director-named-disk-csi-driver).
 
    CSI-драйвер (VCD) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 

@@ -9,7 +9,7 @@ This page provides a general overview of the container image registries used to 
 
 ## Commercial editions container registry
 
-The registry contains modules and components available in the commercial DP editions:
+The registry contains modules and components available in the commercial DP [editions](../glossary.html#edition):
 
 - EE (address `registry.deckhouse.io/deckhouse/ee`).
 - SE (address `registry.deckhouse.io/deckhouse/se`).

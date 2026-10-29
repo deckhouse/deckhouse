@@ -4,7 +4,7 @@ permalink: en/admin/configuration/marketplace/package-repository.html
 description: "Connect a package repository to Deckhouse Platform Marketplace using PackageRepository. Configure authentication, scan intervals, and monitor repository status."
 ---
 
-To connect Deckhouse Platform (DP) to an application package repository, use the [PackageRepository](../../../reference/api/cr.html#packagerepository) resource. Once the resource is created, DP scans the repository and creates an [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) object for each discovered package version.
+To connect Deckhouse Platform (DP) to an [application package](../../../glossary.html#marketplace-package) repository, use the [PackageRepository](../../../reference/api/cr.html#packagerepository) resource. Once the resource is created, DP scans the repository and creates an [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) object for each discovered package version.
 
 Example of a PackageRepository manifest:
 
@@ -82,7 +82,7 @@ Output columns:
 | `Phase` | Repository phase. Displayed as `Active` after the first successful scan |
 | `Scan` | Time of the last successful scan |
 | `Repository` | Repository address ([`spec.registry.repo`](../../../reference/api/cr.html#packagerepository-v1alpha1-spec-registry-repo)) |
-| `Packages` | Number of packages in the repository |
+| `Packages` | Number of [packages](../../../glossary.html#marketplace-package) in the repository |
 | `MSG` | Message of the `LastScanSucceeded` condition, for example, the error of the last scan |
 
 For detailed information about the status, use the following command:

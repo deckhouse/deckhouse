@@ -6,21 +6,21 @@ search: гибрид с Yandex Cloud
 description: Подготовка к гибридной интеграции с Yandex Cloud в Deckhouse Platform.
 ---
 
-Далее описан процесс добавления узлов из Yandex Cloud в существующий статический кластер Deckhouse Platform (DP).
+Далее описан процесс добавления узлов из Yandex Cloud в существующий [статический кластер](../../../glossary.html#static-cluster) Deckhouse Platform (DP).
 
 Для интеграции с Yandex Cloud используется модуль [`cloud-provider-yandex`](/modules/cloud-provider-yandex/). Он обеспечивает взаимодействие DP с API Yandex Cloud, получение информации об облачной инфраструктуре, создание виртуальных машин, работу с сетевыми параметрами и подключение узлов к существующему кластеру.
 
 В разделе описаны два способа добавления узлов:
 
 - **Автоматическое создание узлов в Yandex Cloud**. DP создаёт виртуальные машины через API Yandex Cloud. Параметры ВМ задаются ресурсом [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass), а количество узлов и зоны размещения задаются ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudEphemeral`.
-- **Подключение вручную созданных узлов через bootstrap-скрипт**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudStatic`.
+- **Подключение вручную созданных узлов через [bootstrap-скрипт](../../../glossary.html#bootstrap-script)**. Виртуальная машина создаётся пользователем заранее и подключается к кластеру с помощью bootstrap-скрипта DP. Для такого сценария используется [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом `CloudStatic`.
 
 ## Предварительные требования
 
 Перед началом убедитесь, что выполнены следующие условия:
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype), а его узлы отвечают [минимальным системным требованиям](/products/kubernetes-platform/guides/hardware-requirements.html).
-- Между сетью статических узлов и VPC Yandex Cloud настроена [сетевая связность](./overview.html#общие-сетевые-требования). Добавляемые узлы Yandex Cloud должны иметь доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов должен быть выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
+- Между сетью [статических узлов](../../../glossary.html#static-node) и VPC Yandex Cloud настроена [сетевая связность](./overview.html#общие-сетевые-требования). Добавляемые узлы Yandex Cloud должны иметь доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов должен быть выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 - Выполнены требования из раздела [«Подключение и авторизация в Yandex Cloud»](../public/yandex/authorization.html):
   - подготовлен сервисный аккаунт;
   - выбран каталог, в котором будут создаваться ресурсы;
@@ -28,7 +28,7 @@ description: Подготовка к гибридной интеграции с 
 
 ## Добавление автоматически создаваемых узлов
 
-Для выполнения подготовительных команд нужен [Yandex Cloud CLI](https://yandex.cloud/ru/docs/cli/) (`yc`). Его можно использовать на рабочей машине администратора. На master-узле кластера `yc` не требуется: в кластере нужно применить только подготовленные манифесты.
+Для выполнения подготовительных команд нужен [Yandex Cloud CLI](https://yandex.cloud/ru/docs/cli/) (`yc`). Его можно использовать на рабочей машине администратора. На [master-узле](../../../glossary.html#master-node) кластера `yc` не требуется: в кластере нужно применить только подготовленные манифесты.
 
 1. Получите идентификаторы облака и каталога, в котором будут создаваться узлы:
 
@@ -70,7 +70,7 @@ description: Подготовка к гибридной интеграции с 
 
    - `NETWORK_ID` — ID VPC-сети;
    - `SUBNET_ID` — ID подсети, в которой будут создаваться узлы;
-   - `ZONE` — зона доступности, соответствующая выбранной подсети, например `ru-central1-a`;
+   - `ZONE` — [зона доступности](../../../glossary.html#availability-zone), соответствующая выбранной подсети, например `ru-central1-a`;
    - `ROUTE_TABLE_ID` — ID таблицы маршрутизации, привязанной к подсети. Он есть в колонке `ROUTE TABLE ID` вывода `yc vpc subnet list`.
 
    Подробнее в разделе [«Подключение и авторизация в Yandex Cloud»](../public/yandex/authorization.html).
@@ -256,12 +256,12 @@ description: Подготовка к гибридной интеграции с 
    Где:
 
    - YandexInstanceClass описывает параметры виртуальной машины, которая будет создана в Yandex Cloud;
-   - `mainSubnet` — ID подсети, из которой создаваемые узлы должны иметь доступ к статическим узлам кластера;
-   - NodeGroup описывает группу узлов, которую DP должен поддерживать в кластере;
-   - `nodeType: CloudEphemeral` означает, что узлы будут создаваться автоматически через облачного провайдера;
+   - `mainSubnet` — ID подсети, из которой создаваемые узлы должны иметь доступ к [статическим узлам](../../../glossary.html#static-node) кластера;
+   - NodeGroup описывает [группу узлов](../../../glossary.html#node-group), которую DP должен поддерживать в кластере;
+   - `nodeType: CloudEphemeral` означает, что узлы будут создаваться автоматически через [облачного провайдера](../../../glossary.html#cloud-provider);
    - `cloudInstances.zones` должен содержать зоны из списка `zones` в настройках модуля.
 
-   В схеме размещения `WithoutNAT` создаваемые узлы получают публичный IP-адрес. Чтобы узлы группы работали только с внутренними адресами, задайте в YandexInstanceClass параметр [`assignPublicIPAddress: false`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-assignpublicipaddress) и обеспечьте им выход в интернет другим способом, например через NAT-шлюз подсети.
+   В [схеме размещения](../../../glossary.html#layout) `WithoutNAT` создаваемые узлы получают публичный IP-адрес. Чтобы узлы группы работали только с внутренними адресами, задайте в YandexInstanceClass параметр [`assignPublicIPAddress: false`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-assignpublicipaddress) и обеспечьте им выход в интернет другим способом, например через NAT-шлюз подсети.
 
 1. Примените манифест:
 
@@ -344,7 +344,7 @@ description: Подготовка к гибридной интеграции с 
    - `<USER>` — имя пользователя для SSH-доступа к виртуальной машине;
    - `<SSH_PUBLIC_KEY>` — публичный SSH-ключ администратора.
 
-1. На master-узле создайте файл с манифестом NodeGroup, указав имя группы узлов (в примере здесь и далее используется имя `yc-manual`). Например, `yandex-manual-nodegroup.yaml`:
+1. На [master-узле](../../../glossary.html#master-node) создайте файл с манифестом NodeGroup, указав имя [группы узлов](../../../glossary.html#node-group) (в примере здесь и далее используется имя `yc-manual`). Например, `yandex-manual-nodegroup.yaml`:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -373,7 +373,7 @@ description: Подготовка к гибридной интеграции с 
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->
 
-1. На master-узле получите bootstrap-скрипт для созданной NodeGroup:
+1. На master-узле получите [bootstrap-скрипт](../../../glossary.html#bootstrap-script) для созданной NodeGroup:
 
    ```shell
    NODE_GROUP=yc-manual

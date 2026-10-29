@@ -5,7 +5,7 @@ permalink: en/admin/integrations/private/huaweicloud/storage.html
 
 ## Storage
 
-Deckhouse Platform provisions disks in Huawei Cloud using the CSI driver.
+Deckhouse Platform provisions disks in Huawei Cloud using the [CSI driver](../../../../glossary.html#csi-driver).
 Storage type is configured via parameters in the HuaweiCloudClusterConfiguration resource,
 specifically the [`volumeTypeMap`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-masternodegroup-volumetypemap) field.
 
@@ -32,13 +32,13 @@ spec:
   rootDiskType: GPSSD
 ```
 
-It is recommended that you use the fastest available disk types supported in the cloud provider's region.
+It is recommended that you use the fastest available disk types supported in the [cloud provider](../../../../glossary.html#cloud-provider)'s region.
 
 ## Load balancing
 
 Load balancing in Huawei Cloud is handled via Elastic Load Balancer (ELB) services.
 To access the load balancer API, the IAM policy must include the [`ELB FullAccess`](./authorization.html) permission.
 
-In the [Standard](./layout.html#standard) layout, the [`enableEIP`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-standard-enableeip) parameter is available to assign Elastic IPs to master nodes.
+In the [Standard](./layout.html#standard) [layout](../../../../glossary.html#layout), the [`enableEIP`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-standard-enableeip) parameter is available to assign Elastic IPs to [master nodes](../../../../glossary.html#master-node).
 
 By default, nodes managed by the Cluster API do not receive public IP addresses.

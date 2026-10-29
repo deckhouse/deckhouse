@@ -58,6 +58,10 @@ output: web
 collections:
   faq:
     output: false
+  # Glossary terms: one Markdown file per term and language in _glossary/
+  # (<id>.md, <id>_RU.md). Rendered by pages/GLOSSARY*.md and glossary*.json.
+  glossary:
+    output: false
 
 exclude:
 - .idea/

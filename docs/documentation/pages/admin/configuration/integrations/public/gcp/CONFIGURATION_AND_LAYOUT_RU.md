@@ -6,7 +6,7 @@ lang: ru
 
 ## Схемы размещения
 
-Данный раздел описывает возможные схемы размещения узлов кластера в инфраструктуре Google Cloud Platform (GCP) и связанные с ними настройки. От выбора схемы (layout) зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам.
+Данный раздел описывает возможные [схемы размещения](../../../../glossary.html#layout) узлов кластера в инфраструктуре Google Cloud Platform (GCP) и связанные с ними настройки. От выбора схемы (layout) зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам.
 
 DP поддерживает две схемы размещения ресурсов в облаке GCP.
 
@@ -14,9 +14,9 @@ DP поддерживает две схемы размещения ресурс�
 
 * Для кластера создается отдельная VPC с [Cloud NAT](https://cloud.google.com/nat/docs/overview).
 * Узлы в кластере не имеют публичных IP-адресов.
-* Публичные IP-адреса можно назначить на статические и master-узлы:
+* Публичные IP-адреса можно назначить на статические и [master-узлы](../../../../glossary.html#master-node):
   * при этом будет использоваться One-to-One NAT для отображения публичного IP-адреса в IP-адрес узла (следует помнить, что CloudNAT в этом случае использоваться не будет).
-* Если master-узел не имеет публичного IP-адреса, для установки и доступа в кластер необходим дополнительный инстанс с публичным IP-адресом (например, bastion-хост).
+* Если master-узел не имеет публичного IP-адреса, для установки и доступа в кластер необходим дополнительный инстанс с публичным IP-адресом (например, [bastion-хост](../../../../glossary.html#bastion-host)).
 * Между VPC кластера и другими VPC можно настроить пиринговое соединение.
 
 ![resources](../../../../images/cloud-provider-gcp/gcp-standard.png)
@@ -30,7 +30,7 @@ DP поддерживает две схемы размещения ресурс�
 Собственные правила файрвола применяются к узлам через дополнительные network tags ([`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
 
 - для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration);
-- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration);
+- для [статических узлов](../../../../glossary.html#static-node) — в параметре [`nodeGroups[].instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration);
 - для эфемерных узлов — в параметре [`spec.additionalNetworkTags`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) ресурса [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
 
 Пример конфигурации схемы размещения:
@@ -171,7 +171,7 @@ provider:
 
 ## Конфигурация
 
-Интеграции с GCP осуществляется с помощью [ресурса GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration), который описывает конфигурацию облачного кластера в GCP и используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DP настраивается автоматически, исходя из выбранной схемы размещения.
+Интеграции с GCP осуществляется с помощью [ресурса GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration), который описывает конфигурацию [облачного кластера](../../../../glossary.html#cloud-cluster) в GCP и используется [облачным провайдером](../../../../glossary.html#cloud-provider), если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DP настраивается автоматически, исходя из выбранной [схемы размещения](../../../../glossary.html#layout).
 
 Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 
@@ -217,7 +217,7 @@ provider:
   serviceAccountJSON: "<SERVICE_ACCOUNT_JSON>"
 ```
 
-Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](/modules/node-manager/cr.html#nodegroup), в котором также указывается название используемого для этой группы узлов инстанс-класса ([параметр `cloudInstances.classReference`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) NodeGroup). Инстанс-класс для cloud-провайдера GCP — это кастомный ресурс [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
+Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](/modules/node-manager/cr.html#nodegroup), в котором также указывается название используемого для этой [группы узлов](../../../../glossary.html#node-group) [инстанс-класса](../../../../glossary.html#instance-class) ([параметр `cloudInstances.classReference`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) NodeGroup). Инстанс-класс для cloud-провайдера GCP — это кастомный ресурс [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass), в котором указываются конкретные параметры самих машин.
 
 Также для работы автоматически создаются StorageClass'ы, покрывающие все варианты дисков в GCP:
 
@@ -279,7 +279,7 @@ spec:
 d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
 ```
 
-Если значение пустое, возьмите его из устаревшего параметра [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) ресурса ClusterConfiguration (префикс перенесён в ModuleConfig `global`):
+Если значение пустое, возьмите его из устаревшего параметра [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) ресурса [ClusterConfiguration](../../../../glossary.html#cluster-configuration) (префикс перенесён в ModuleConfig `global`):
 
 ```shell
 d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
@@ -288,6 +288,6 @@ d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."
 
 ## Прерываемые узлы
 
-Прерываемые виртуальные машины в Google Cloud называются preemptible-инстансами. Чтобы группа узлов заказывала их, установите параметр [`preemptible`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-preemptible) ресурса GCPInstanceClass в `true`.
+Прерываемые виртуальные машины в Google Cloud называются preemptible-инстансами. Чтобы [группа узлов](../../../../glossary.html#node-group) заказывала их, установите параметр [`preemptible`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-preemptible) ресурса GCPInstanceClass в `true`.
 
 Порядок создания таких узлов и особенности их работы описаны в разделе [«Как создать прерываемые узлы в GCP?»](/modules/cloud-provider-gcp/faq.html#как-создать-прерываемые-узлы-в-gcp).

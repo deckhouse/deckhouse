@@ -5,7 +5,7 @@ description: "Настройка упрощённой модели RBAC-авто
 lang: ru
 ---
 
-Для реализации упрощённой ролевой модели в кластере должен быть включён модуль [`user-authz`](/modules/user-authz/).
+Для реализации упрощённой [ролевой модели](../../../../glossary.html#rbac) в кластере должен быть включён модуль [`user-authz`](/modules/user-authz/).
 Модуль создаёт набор кластерных ролей (ClusterRole), подходящий для большинства задач по управлению доступом пользователей и групп.
 
 {% alert level="warning" %}
@@ -21,11 +21,11 @@ lang: ru
 - Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-allowscale) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-allowscale)).
 - Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-portforwarding) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-portforwarding)).
 - Управление списком разрешённых неймспейсов в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
-- Ограничение по неймспейсам (режим мультитенантности, `namespaceSelector`, `limitNamespaces`) доступно в редакциях DP Ultimate/EE, Certified Lite, Certified Pro, BE, SE, SE+ и CSE.
+- Ограничение по неймспейсам (режим мультитенантности, `namespaceSelector`, `limitNamespaces`) доступно в [редакциях](../../../../glossary.html#edition) DP Ultimate/EE, Certified Lite, Certified Pro, BE, SE, SE+ и CSE.
 
 ## Высокоуровневые роли, используемые для реализации модели
 
-Для реализации упрощённой ролевой модели с помощью модуля [`user-authz`](/modules/user-authz/), кроме использования RBAC, можно использовать удобный набор высокоуровневых ролей:
+Для реализации упрощённой ролевой модели с помощью модуля [`user-authz`](/modules/user-authz/), кроме использования RBAC, можно использовать удобный набор [высокоуровневых ролей](../../../../glossary.html#high-level-role):
 
 | Роль             | Примеры доступных действий                                                                                                              | Ограничения                                  |
 |------------------|-----------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------|
@@ -45,7 +45,7 @@ lang: ru
 
 В режиме мультитенантности, если вебхук авторизации станет недоступен, запросы будут **запрещаться**, а не разрешаться: вебхук стоит перед RBAC и настроен с `failurePolicy: Deny`, поэтому запрос, на который он не смог ответить, до RBAC не доходит. Исключение — идентичности, перечисленные в `matchConditions` ресурса AuthorizationConfiguration: компоненты control plane, `kubernetes-api-proxy`, kubelet, ServiceAccount'ы неймспейсов `kube-system` и `d8-*`, а также анонимные проверки работоспособности kube-apiserver (`/livez`, `/readyz`, `/healthz`) вебхук не проверяет, поэтому кластер продолжает работать, а Deckhouse может восстановить вебхук.
 
-Некоторые компоненты платформы размещают свои объекты в пользовательских неймспейсах (например, поды Dex-аутентификатора) и помечают их лейблом `deckhouse.io/system-resource: "true"`. Из уровней упрощённой модели изменять и удалять такие объекты, а также выполнять `exec`, `attach` и `port-forward` в такие поды позволяет только `SuperAdmin`: субъекты правила с этим уровнем получают роль `user-authz:super-admin` и считаются администраторами кластера. Подробнее — в разделе [«Ограничения уровня admin и права superadmin»](rbac-experimental.html#ограничения-уровня-admin-и-права-superadmin).
+Некоторые компоненты платформы размещают свои объекты в [пользовательских неймспейсах](../../../../glossary.html#user-namespace) (например, поды Dex-аутентификатора) и помечают их лейблом `deckhouse.io/system-resource: "true"`. Из уровней упрощённой модели изменять и удалять такие объекты, а также выполнять `exec`, `attach` и `port-forward` в такие поды позволяет только `SuperAdmin`: субъекты правила с этим уровнем получают роль `user-authz:super-admin` и считаются администраторами кластера. Подробнее — в разделе [«Ограничения уровня admin и права superadmin»](rbac-experimental.html#ограничения-уровня-admin-и-права-superadmin).
 
 ## Список доступа для каждой высокоуровневой роли по умолчанию
 

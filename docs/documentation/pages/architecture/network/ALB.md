@@ -10,7 +10,7 @@ The [`alb`](/modules/alb/) module implements an application load balancer (ALB, 
 The module works with the following custom resources of the `network.deckhouse.io` API group:
 
 - [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance): Defines a cluster-wide ALB (data plane) instance, used for shared or platform-level Gateways.
-- [ALBInstance](/modules/alb/cr.html#albinstance): Defines an ALB instance within a user namespace, used for application- or project-level Gateways.
+- [ALBInstance](/modules/alb/cr.html#albinstance): Defines an ALB instance within a [user namespace](../../glossary.html#user-namespace), used for application- or project-level Gateways.
 
 For more details about module configuration and usage examples, refer to the [corresponding documentation section](/modules/alb/).
 
@@ -79,11 +79,11 @@ The module consists of the following components:
    * Persistent data storage (restarting components does not cause repeated requests to MaxMind servers).
    * The ability to specify your own mirror for downloading the databases.
 
-   The gateway-controller creates this component programmatically for every ClusterALBInstance/ALBInstance, only if the [`spec.geoIP.licenseKeySecretRef`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-geoip-licensekeysecretref) parameter — a reference to the Secret holding the MaxMind license key — is set on the resource.
+   The gateway-controller creates this component programmatically for every ClusterALBInstance/ALBInstance, only if the [`spec.geoIP.licenseKeySecretRef`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-geoip-licensekeysecretref) parameter — a reference to the Secret holding the MaxMind [license key](../../glossary.html#license-key) — is set on the resource.
 
    It consists of a single **geoproxy** container.
 
-1. **Module-cleanup-waiter** (Job): a Helm `pre-delete` hook of the module, launched by the Deckhouse controller before the [`alb`](/modules/alb/) module is removed. It waits for the gateway-controller to finish cleaning up the module's resources, and only then allows the release removal to complete. It does not take part in the module's normal operation.
+1. **Module-cleanup-waiter** (Job): a Helm `pre-delete` hook of the module, launched by the [Deckhouse controller](../../glossary.html#deckhouse-controller) before the [`alb`](/modules/alb/) module is removed. It waits for the gateway-controller to finish cleaning up the module's resources, and only then allows the release removal to complete. It does not take part in the module's normal operation.
 
 ## Module interactions
 

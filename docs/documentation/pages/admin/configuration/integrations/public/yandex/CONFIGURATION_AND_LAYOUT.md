@@ -5,7 +5,7 @@ permalink: en/admin/integrations/public/yandex/layout.html
 
 ## Layouts
 
-This section describes the possible node placement layouts in Yandex Cloud infrastructure and the related configuration options. The layout is specified by the [`layout`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-layout) parameter in the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module.
+This section describes the possible node placement [layouts](../../../../glossary.html#layout) in Yandex Cloud infrastructure and the related configuration options. The layout is specified by the [`layout`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-layout) parameter in the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module.
 The selected layout affects networking behavior, availability of public IP addresses, outgoing traffic routing,
 and how nodes are accessed.
 
@@ -19,7 +19,7 @@ behind a specific NAT Gateway in third-party services.
 {% endalert %}
 
 {% alert level="warning" %}
-Because nodes are created without public IP addresses in this layout, the master node must be accessible over SSH from the machine where `dhctl` is running: either directly over a private network or through a bastion host.
+Because nodes are created without public IP addresses in this layout, the [master node](../../../../glossary.html#master-node) must be accessible over SSH from the machine where `dhctl` is running: either directly over a private network or through a [bastion host](../../../../glossary.html#bastion-host).
 If the master node is not directly accessible, run the installation with the `--ssh-bastion-host`, `--ssh-bastion-user`, and, if needed, `--ssh-bastion-port` parameters.
 {% endalert %}
 
@@ -174,9 +174,9 @@ spec:
 ```
 
 {% alert level="info" %}
-In this example, master and worker nodes are created without public IP addresses and without additional external network interfaces. Outbound traffic from the cluster subnets goes through the NAT instance.
+In this example, master and [worker nodes](../../../../glossary.html#worker-node) are created without public IP addresses and without additional external network interfaces. Outbound traffic from the cluster subnets goes through the NAT instance.
 
-The NAT instance is not automatically used by the `dhctl` installer as a bastion host or jump host. To install the cluster, the master node must be accessible over SSH from the machine where `dhctl` is running: either directly or through a bastion host.
+The NAT instance is not automatically used by the `dhctl` [installer](../../../../glossary.html#installer) as a bastion host or jump host. To install the cluster, the master node must be accessible over SSH from the machine where `dhctl` is running: either directly or through a bastion host.
 
 If the master node does not have a public IP address or is not directly accessible, run the installation with the `--ssh-bastion-host` and `--ssh-bastion-user` parameters.
 
@@ -185,12 +185,12 @@ If you need to connect directly to a master node using a public IP address, spec
 
 ## Configuration
 
-The Yandex Cloud provider parameters are defined in four resources:
+The Yandex [Cloud provider](../../../../glossary.html#cloud-provider) parameters are defined in four resources:
 
 - The [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module defines the [layout](#layouts), the [network parameters](#network-parameters-and-security), and the cloud and folder IDs.
 - The `d8-credentials` Secret in the `d8-cloud-provider-yandex` namespace stores the service account key. Its format is described in ["Credentials Secret"](authorization.html#credentials-secret).
 - [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) describes the virtual machine parameters.
-- [NodeGroup](/modules/node-manager/cr.html#nodegroup) describes the node groups and refers to an instance class. The master node group is described by the same resource with the [`CloudPermanent`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html) type.
+- [NodeGroup](/modules/node-manager/cr.html#nodegroup) describes the [node groups](../../../../glossary.html#node-group) and refers to an [instance class](../../../../glossary.html#instance-class). The [master node](../../../../glossary.html#master-node) group is described by the same resource with the [`CloudPermanent`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html) type.
 
 To change the provider settings in a running cluster, edit the ModuleConfig:
 
@@ -214,7 +214,7 @@ If the module settings had the `storageClass.default` parameter, set the default
 
 ### Configuration example
 
-Below is a minimal configuration of a cluster with the Standard layout, one master node, and one group of worker nodes:
+Below is a minimal configuration of a cluster with the Standard [layout](../../../../glossary.html#layout), one master node, and one group of worker nodes:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -305,7 +305,7 @@ in a DP cluster deployed in Yandex Cloud.
 
 ### Internal node addressing
 
-The [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) parameter defines the IP address range that is split between availability zones
+The [`nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) parameter defines the IP address range that is split between [availability zones](../../../../glossary.html#availability-zone)
 and applied to the internal node interfaces. The parameter belongs to the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module:
 
 ```yaml
@@ -328,7 +328,7 @@ DP divides this subnet into four equal parts and creates one internal subnet fro
 - ru-central1-e
 - ru-central1-d
 
-The nodes of the matching zone are connected to the created subnet. The division happens in every layout. When the [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) parameter is set, DP creates no subnets and uses the ones listed there.
+The nodes of the matching zone are connected to the created subnet. The division happens in every [layout](../../../../glossary.html#layout). When the [`existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap) parameter is set, DP creates no subnets and uses the ones listed there.
 
 {% alert level="info" %}
 A subnet accepts only one route table, so two clusters with the [`cni-simple-bridge`](/modules/cni-simple-bridge/) module cannot use the same subnets.
@@ -337,7 +337,7 @@ To deploy such clusters in shared subnets, use the [`cni-cilium`](/modules/cni-c
 
 ### Assigning external IP addresses and outgoing traffic
 
-The [`externalSubnetIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalsubnetids) parameter belongs to the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module and is set per node group:
+The [`externalSubnetIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalsubnetids) parameter belongs to the `nodes.parameters` section of the ModuleConfig resource of the [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) module and is set per [node group](../../../../glossary.html#node-group):
 
 - the key is the node group name;
 - the value is the list of Yandex Cloud subnet IDs that the external network interfaces of that group's nodes are attached to, in the order of the zones.
@@ -503,7 +503,7 @@ To configure the rules of the security group:
    d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
    ```
 
-   If the value is empty, get it from the deprecated [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) parameter of ClusterConfiguration (the prefix has moved to the ModuleConfig `global`):
+   If the value is empty, get it from the deprecated [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) parameter of [ClusterConfiguration](../../../../glossary.html#cluster-configuration) (the prefix has moved to the ModuleConfig `global`):
 
    ```bash
    d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \
@@ -522,8 +522,8 @@ To configure the rules of the security group:
 
 ## Configuring access via bastion host
 
-To connect to nodes located in private subnets (for example, when using the Standard or WithNATInstance layout),
-you can use a bastion host, an intermediary VM with a public IP address that provides SSH access to the nodes.
+To connect to nodes located in private subnets (for example, when using the Standard or WithNATInstance [layout](../../../../glossary.html#layout)),
+you can use a [bastion host](../../../../glossary.html#bastion-host), an intermediary VM with a public IP address that provides SSH access to the nodes.
 
 To configure access, follow these steps:
 

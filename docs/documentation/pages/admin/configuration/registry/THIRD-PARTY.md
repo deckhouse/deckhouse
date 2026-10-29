@@ -6,13 +6,13 @@ permalink: en/admin/configuration/registry/third-party.html
 {% alert level="warning" %}
 This page applies only to Managed Kubernetes clusters. Registry management through the `registry` module is not available in these clusters.
 
-For clusters fully managed by Deckhouse Platform (DP), registry settings are configured using the [`registry`](/modules/registry/) module (or, in clusters still running its previous implementation, in the [`registry`](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration). For configuration examples and descriptions of the implementations, see ["Managing the registry in DP-managed clusters"](managing-interaction.html).
+For [clusters fully managed by Deckhouse Platform](../../../glossary.html#dp-managed-cluster) (DP), registry settings are configured using the [`registry`](/modules/registry/) module (or, in clusters still running its previous implementation, in the [`registry`](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration). For configuration examples and descriptions of the implementations, see ["Managing the registry in DP-managed clusters"](managing-interaction.html).
 
 The information on this page applies to clusters that use containerd v1 or containerd v2 as their primary container runtime. However, containerd v2 is the current standard for DP. If you need to migrate to containerd v2, refer to the section ["Migrating container runtime to containerd v2"](../platform-scaling/node/migrating.html) to verify availability and perform the migration.
 {% endalert %}
 
 {% alert level="warning" %}
-Using registries other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in commercial editions of the Deckhouse Platform.
+Using registries other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in commercial [editions](../../../glossary.html#edition) of the Deckhouse Platform.
 {% endalert %}
 
 {% alert level="info" %}
@@ -72,7 +72,7 @@ To switch the cluster to use an external registry, follow these steps:
    ```
 
 1. Wait until the `registry` Pod reaches the `Ready` status. If the Pod is in the `ImagePullBackoff` state, restart it.
-1. Wait for bashible to apply the new settings on the master node.
+1. Wait for [bashible](../../../glossary.html#bashible) to apply the new settings on the [master node](../../../glossary.html#master-node).
 
    Check the bashible system service log on the master node, for example, using the following command:
 

@@ -19,7 +19,7 @@ description: Архитектура Istio на уровне кластера Dec
 
 ![Архитектура Istio на уровне кластера](../../images/istio/istio-architecture.png)
 
-Все сервисы из data plane группируются в сервис-меш (service mesh). Его характеристики:
+Все сервисы из data plane группируются в [сервис-меш](../../glossary.html#service-mesh) (service mesh). Его характеристики:
 
 * Общий неймспейс для генерации идентификатора сервиса в формате `<TrustDomain>/ns/<Namespace>/sa/<ServiceAccount>`. У каждого сервис-меш есть идентификатор TrustDomain, который в данном случае совпадает с доменом кластера. Например, `mycluster.local/ns/myns/sa/myapp`.
 * Аутентификация сервисов внутри одного сервис-меш с помощью доверенных корневых сертификатов.
@@ -43,7 +43,7 @@ description: Архитектура Istio на уровне кластера Dec
   * диагностика проблемных связей;
   * диагностика состояния control plane.
 
-С включенным Istio поведение Ingress-контроллера изменяется следующим образом:
+С включенным Istio поведение [Ingress-контроллера](../../glossary.html#ingress-controller) изменяется следующим образом:
 
 * К подам контроллера добавляется sidecar-proxy, который обслуживает только трафик от контроллера в сторону прикладных сервисов (параметр [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) ресурса IngressNginxController).
 * Сервисы, которые не находятся под управлением Istio, продолжают работать в прежнем режиме, без перехвата запросов сайдкаром контроллера.

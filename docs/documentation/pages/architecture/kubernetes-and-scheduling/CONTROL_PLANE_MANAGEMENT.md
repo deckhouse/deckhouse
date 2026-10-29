@@ -7,7 +7,7 @@ description: Architecture and functions of the control-plane-manager module in D
 
 ## Control-plane-manager module
 
-Cluster control plane components are managed by the [`control-plane-manager`](/modules/control-plane-manager/) module, which runs on all master nodes (nodes labeled with `node-role.kubernetes.io/control-plane: ""`).
+Cluster control plane components are managed by the [`control-plane-manager`](/modules/control-plane-manager/) module, which runs on all [master nodes](../../glossary.html#master-node) (nodes labeled with `node-role.kubernetes.io/control-plane: ""`).
 
 The module operates with the following custom resources:
 
@@ -24,7 +24,7 @@ Control plane management functions:
 * **Certificate management**: Issuing, renewing, and rotating certificates required for control plane operation. Ensures automatic and secure control plane configuration and allows additional Subject Alternative Names (SAN) to be added for secure access to the Kubernetes API.
 * **Component configuration**: Automatic generation of the required configuration files and manifests for control plane components.
 * **Component upgrade and downgrade**: Maintains consistent component versions across the cluster.
-* **Management of etcd cluster configuration**: Scaling master nodes and migrating between single-master and multi-master configurations.
+* **Management of etcd cluster configuration**: Scaling master nodes and migrating between [single-master](../../glossary.html#single-master) and [multi-master](../../glossary.html#multi-master) configurations.
 * **Management of kubeconfig**: Maintains an up-to-date configuration for using `kubectl` on cluster nodes. Generates, renews, and updates the kubeconfig with *cluster-admin* privileges and creates a symbolic link for the `root` user so that the kubeconfig is used by default.
 * **Scheduler extension**: Enables external plugins via webhooks using the [KubeSchedulerWebhookConfiguration](/modules/control-plane-manager/cr.html#kubeschedulerwebhookconfiguration) resource. This allows advanced scheduling logic when planning cluster loads, for example:
 
@@ -79,7 +79,7 @@ The module consists of the following components:
      * **image-holder-kube-scheduler**
      * **image-holder-etcd**
 
-1. **kubernetes-api-proxy** (static pods): Additional proxy server configured on each master node to handle requests to `localhost`. By default, it proxies requests to the local **kube-apiserver** instance. If the latter is unavailable, it sequentially queries the remaining **kube-apiserver** instances. It includes the following containers:
+1. **[kubernetes-api-proxy](../../glossary.html#kubernetes-api-proxy)** ([static pods](../../glossary.html#static-pod)): Additional proxy server configured on each master node to handle requests to `localhost`. By default, it proxies requests to the local **kube-apiserver** instance. If the latter is unavailable, it sequentially queries the remaining **kube-apiserver** instances. It includes the following containers:
 
    * **kubernetes-api-proxy**: [NGINX](https://github.com/nginx/nginx)-based proxy server.
    * **kubernetes-api-proxy-reloader**: Sidecar container that restarts the proxy server when its configuration changes. Developed by Flant.
@@ -94,7 +94,7 @@ The module consists of the following components:
 
    * **kube-rbac-proxy***: Container with an authorization proxy based on Kubernetes RBAC, providing secure access for metrics of the components of the cluster control plane. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
 
-1. **control-plane-proxy-etcd-arbiter** (DaemonSet): Optional component that is installed in the cluster when the [`prometheus`](/modules/prometheus/) module is enabled, if the cluster operates [in HA mode with two master nodes and an arbiter node](../../admin/configuration/high-reliability-and-availability/enable.html#configuring-ha-mode-with-two-master-nodes-and-an-arbiter-node). In this case, Control-plane-proxy-etcd-arbiter runs on the arbiter node and forwards authorized requests for metrics to the etcd instance running on it.
+1. **control-plane-proxy-etcd-arbiter** (DaemonSet): Optional component that is installed in the cluster when the [`prometheus`](/modules/prometheus/) module is enabled, if the cluster operates [in HA mode with two master nodes and an arbiter node](../../admin/configuration/high-reliability-and-availability/enable.html#configuring-ha-mode-with-two-master-nodes-and-an-arbiter-node). In this case, Control-plane-proxy-etcd-arbiter runs on the [arbiter node](../../glossary.html#arbiter-node) and forwards authorized requests for metrics to the etcd instance running on it.
 
    It consists of a single container:
 

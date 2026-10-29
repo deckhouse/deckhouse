@@ -37,7 +37,7 @@ lang: ru
 
 Модуль `metallb` устраняет эти ограничения. Он предоставляет [ресурс MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass), который позволяет:
 
-- связать группу узлов с пулом IP-адресов с помощью `nodeSelector`;
+- связать [группу узлов](../../../../../glossary.html#node-group) с пулом IP-адресов с помощью `nodeSelector`;
 - создать стандартный объект Service с типом LoadBalancer и указать имя нужного MetalLoadBalancerClass;
 - через аннотацию определить количество IP-адресов для L2-анонсирования.
 
@@ -319,7 +319,7 @@ IP-адреса сервисов анонсируются напрямую в м
 
 1. Добавьте ключ taint в параметр [`customTolerationKeys`](../../../../../reference/api/global.html#parameters-modules-placement-customtolerationkeys) в ModuleConfig `global`.
    Ключ должен совпадать с ключом taint на узлах, например, заданным в параметре [`spec.nodeTemplate.taints`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-taints) в NodeGroup.
-   Параметр также разрешает запуск на таких узлах остальных системных компонентов (CNI, CSI, мониторинг).
+   Параметр также разрешает запуск на таких узлах остальных [системных компонентов](../../../../../glossary.html#system-component) (CNI, CSI, мониторинг).
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

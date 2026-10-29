@@ -7,7 +7,7 @@ lang: ru
 search: global settings, global configuration, platform settings, default settings, global parameters, глобальные настройки, глобальная конфигурация, настройки платформы, настройки по умолчанию, глобальные параметры
 ---
 
-Глобальные настройки Deckhouse Platform позволяют вам настраивать параметры, которые используются по умолчанию всеми модулями и компонентами. Некоторые модули могут переопределять часть этих параметров (это можно узнать в разделе настройки соответствующего модуля в документации модуля).
+[Глобальные настройки](../../glossary.html#global-settings) Deckhouse Platform позволяют вам настраивать параметры, которые используются по умолчанию всеми модулями и компонентами. Некоторые модули могут переопределять часть этих параметров (это можно узнать в разделе настройки соответствующего модуля в документации модуля).
 
 {% alert level="info" %}
 Практические навыки администрирования платформы подробно разобраны в курсе [«Администрирование Deckhouse Platform»](https://deckhouse.ru/courses/basics-administration-deckhouse-kubernetes-platform/) в [Deckhouse Академии](https://deckhouse.ru/academy/).
@@ -16,7 +16,7 @@ search: global settings, global configuration, platform settings, default settin
 Глобальные настройки Deckhouse хранятся в ModuleConfig `global`.
 
 {% alert %}
-В параметре [publicDomainTemplate](#parameters-modules-publicdomaintemplate) указывается шаблон DNS-имен, с учётом которого некоторые модули Deckhouse создают Ingress-ресурсы. Если параметр не указан, Ingress-ресурсы создаваться не будут.
+В параметре [publicDomainTemplate](#parameters-modules-publicdomaintemplate) указывается [шаблон DNS-имен](../../glossary.html#public-domain-template), с учётом которого некоторые модули Deckhouse создают Ingress-ресурсы. Если параметр не указан, Ingress-ресурсы создаваться не будут.
 
 Если у вас нет возможности заводить wildcard-записи DNS, для тестирования можно воспользоваться сервисом [sslip.io](https://sslip.io) или его аналогами.
 

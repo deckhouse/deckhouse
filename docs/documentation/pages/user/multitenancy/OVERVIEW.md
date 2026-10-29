@@ -5,12 +5,12 @@ permalink: en/user/multitenancy/
 lang: en
 ---
 
-Multitenancy is the ability to create isolated environments (projects) within a Kubernetes cluster.
+Multitenancy is the ability to create isolated environments ([projects](../../glossary.html#project)) within a Kubernetes cluster.
 Projects are similar to namespaces but offer more capabilities.
 While namespaces are used for logical separation of resources in Kubernetes,
 they do not, for example, restrict network communication, pod resource consumption, or host directory mounts.
 These limitations make namespaces insufficient for modern development needs.
-By default, namespaces also do not include logging, auditing, and vulnerability scanning.
+By default, namespaces also do not include logging, auditing, and [vulnerability scanning](../../glossary.html#vulnerability-scanning).
 
 Using projects helps address these limitations and offers the following benefits:
 
@@ -33,7 +33,7 @@ Using projects helps address these limitations and offers the following benefits
 
 This mode creates isolated environments for users within their projects,
 while `secret-copier` automatically distributes secrets to all namespaces.
-If sensitive data is present in a user’s private environment,
+If sensitive data is present in a user’s [private environment](../../glossary.html#private-environment),
 it could lead to a data leak and a security model breach.
 {% endalert %}
 
@@ -76,7 +76,7 @@ A project is not limited to a single namespace: if an application needs several 
        extendedMonitoringEnabled: true
    ```
 
-1. To check the project status, run the following command:
+1. To check the [project](../../glossary.html#project) status, run the following command:
 
    ```shell
    d8 k get projects my-project
@@ -88,7 +88,7 @@ A project is not limited to a single namespace: if an application needs several 
 
 A namespace created directly (for example, `d8 k create ns test`) automatically becomes a project with the same name — no annotation is required. The project parameters are filled in from the current state of the namespace, so nothing inside it changes; from then on the project is the source of truth for it.
 
-Users can create a namespace directly only while the [`allowNamespacesWithoutProjects`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) parameter of the `multitenancy-manager` module is `true` (the default). With `false`, only cluster administrators and system components create namespaces directly, and other users create a Project or a ProjectNamespace instead.
+Users can create a namespace directly only while the [`allowNamespacesWithoutProjects`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) parameter of the `multitenancy-manager` module is `true` (the default). With `false`, only cluster administrators and [system components](../../glossary.html#system-component) create namespaces directly, and other users create a Project or a ProjectNamespace instead.
 
 The namespace of such a project cannot be deleted directly. To remove the environment, delete the Project: `d8 k delete project <NAME>` deletes the namespace with it.
 
@@ -142,7 +142,7 @@ To view available resources of a specific type and the value used by default, sp
 d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 ```
 
-If you see a message such as `[multitenancy] <KIND> "<OBJECT_NAME>" references "<RESOURCE_NAME>" which is not available to project "<PROJECT_NAME>"` when creating or modifying a resource, the specified cluster-wide resource is unavailable to the project. Select an available resource from the corresponding AvailableClusterResource or ask the cluster administrator to add it.
+If you see a message such as `[multitenancy] <KIND> "<OBJECT_NAME>" references "<RESOURCE_NAME>" which is not available to project "<PROJECT_NAME>"` when creating or modifying a resource, the specified cluster-wide resource is unavailable to the [project](../../glossary.html#project). Select an available resource from the corresponding AvailableClusterResource or ask the cluster administrator to add it.
 
 For some fields, automatic default value assignment can be configured. For example, if `storageClassName` is not specified when creating a PersistentVolumeClaim, the StorageClass used by default in the project can be automatically assigned to this field.
 

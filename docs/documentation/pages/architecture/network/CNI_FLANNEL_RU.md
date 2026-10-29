@@ -37,12 +37,12 @@ description: Архитектура модуля cni-flannel в Deckhouse Platfo
 
    * **cni-migration-init-checker** — init-контейнер, ожидающий завершения процесса миграции с другого CNI-плагина, если такая миграция была запущена;
    * **iptables-wrapper-init** — init-контейнер, выполняющий подготовку необходимых для работы с iptables исполняемых файлов;
-   * **handle-vxlan-offload** — опциональный init-контейнер, исправляющий настройки UDP-сегментации на сетевом интерфейсе узла. Создаётся контроллером Deckhouse, если параметр [`podNetworkMode`](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) принимает значение `VXLAN`;
+   * **handle-vxlan-offload** — опциональный init-контейнер, исправляющий настройки UDP-сегментации на сетевом интерфейсе узла. Создаётся [контроллером Deckhouse](../../glossary.html#deckhouse-controller), если параметр [`podNetworkMode`](/modules/cni-flannel/configuration.html#parameters-podnetworkmode) принимает значение `VXLAN`;
    * **kube-flannel** — основной контейнер.
 
 1. **Flannel (CNI-плагин)** — исполняемый файл, запускаемый компонентом containerd в соответствии со [спецификацией CNI](https://www.cni.dev/docs/spec/#cni-operations), например ADD при создании сетевого пространства имён пода и DEL при его удалении.
 
-   При запуске компонент читает параметры подсети из файла `/run/flannel/subnet.env` и делегирует создание сетевого интерфейса пода CNI-плагину `bridge`, который, в свою очередь, запрашивает выделение IP-адреса у плагина IP Address Management (IPAM) `host-local`. Оба плагина, `bridge` и `host-local`, являются стандартными [Open Source-плагинами CNI](https://github.com/containernetworking/plugins), устанавливаемыми на каждый узел кластера независимо от этого модуля, в рамках установки kubelet.
+   При запуске компонент читает параметры подсети из файла `/run/flannel/subnet.env` и делегирует создание сетевого интерфейса пода CNI-плагину `bridge`, который, в свою очередь, запрашивает выделение IP-адреса у плагина IP Address Management ([IPAM](../../glossary.html#sdn-ipam)) `host-local`. Оба плагина, `bridge` и `host-local`, являются стандартными [Open Source-плагинами CNI](https://github.com/containernetworking/plugins), устанавливаемыми на каждый узел кластера независимо от этого модуля, в рамках установки kubelet.
 
 ## Взаимодействия модуля
 

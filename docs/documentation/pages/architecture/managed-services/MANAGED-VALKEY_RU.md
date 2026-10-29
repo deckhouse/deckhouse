@@ -35,7 +35,7 @@ description: Архитектура модуля managed-valkey в Deckhouse Pla
 
 1. **Managed-valkey-operator** (Deployment) — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   - согласование состояния кастомных ресурсов [Valkey](/modules/managed-valkey/cr.html#valkey) во всех пользовательских неймспейсах. Кастомные ресурсы Valkey и ValkeyClass определяют настройки инстанса Valkey;
+   - согласование состояния кастомных ресурсов [Valkey](/modules/managed-valkey/cr.html#valkey) во всех [пользовательских неймспейсах](../../glossary.html#user-namespace). Кастомные ресурсы Valkey и ValkeyClass определяют настройки инстанса Valkey;
 
    - создание и управление кастомным ресурсом [Certificate](https://cert-manager.io/docs/usage/certificate/) и ресурсами StatefulSet, Secret, ConfigMap и PersistentVolumeClaim, относящимися к инстансу Valkey.
 

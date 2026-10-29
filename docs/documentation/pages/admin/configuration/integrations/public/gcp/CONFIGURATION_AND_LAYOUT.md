@@ -5,7 +5,7 @@ permalink: en/admin/integrations/public/gcp/configuration-and-layout-scheme.html
 
 ## Layouts
 
-This section describes the possible node placement layouts in Google Cloud Platform (GCP) infrastructure
+This section describes the possible node placement [layouts](../../../../glossary.html#layout) in Google Cloud Platform (GCP) infrastructure
 and the related configuration options.
 The selected layout affects networking behavior, availability of public IP addresses, outgoing traffic routing,
 and how nodes are accessed.
@@ -16,11 +16,11 @@ Deckhouse Platform (DP) supports two layouts for deploying resources in GCP.
 
 - A dedicated VPC is created for the cluster along with [Cloud NAT](https://cloud.google.com/nat/docs/overview).
 - Cluster nodes do not have public IP addresses by default.
-- Public IP addresses can be assigned to static and master nodes:
+- Public IP addresses can be assigned to static and [master nodes](../../../../glossary.html#master-node):
   - In this case, One-to-One NAT is used to map the public IP address to the node's internal IP address
     (Cloud NAT will not be used in this scenario).
 - If the master node does not have a public IP address, an additional instance with a public IP address
-  (for example, a bastion host) is required for cluster installation and access.
+  (for example, a [bastion host](../../../../glossary.html#bastion-host)) is required for cluster installation and access.
 - Peering can be configured between the cluster's VPC and other VPCs.
 
 ![Standard layout in GCP](../../../../images/cloud-provider-gcp/gcp-standard.png)
@@ -34,7 +34,7 @@ When a cluster is created, DP creates the following firewall rules in the cluste
 Custom firewall rules are applied to nodes through additional network tags ([`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
 
 - For master nodes, in the [`masterNodeGroup.instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) parameter of the [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) resource.
-- For static nodes, in the [`nodeGroups[].instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) parameter of the [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) resource.
+- For [static nodes](../../../../glossary.html#static-node), in the [`nodeGroups[].instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) parameter of the [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) resource.
 - For ephemeral nodes, in the [`spec.additionalNetworkTags`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) parameter of the [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) resource.
 
 Example layout configuration:
@@ -177,9 +177,9 @@ provider:
 ## Configuration
 
 Integration with GCP is handled via the [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) resource,
-which describes the cloud cluster configuration in GCP
-and is used by the cloud provider when the control plane is hosted in the cloud.
-The responsible DP module configures itself automatically based on the selected layout.
+which describes the [cloud cluster](../../../../glossary.html#cloud-cluster) configuration in GCP
+and is used by the [cloud provider](../../../../glossary.html#cloud-provider) when the control plane is hosted in the cloud.
+The responsible DP module configures itself automatically based on the selected [layout](../../../../glossary.html#layout).
 
 To update the configuration of a running cluster, run the following command:
 
@@ -226,7 +226,7 @@ provider:
 ```
 
 Machine provisioning and parameters are configured in the [NodeGroup](/modules/node-manager/cr.html#nodegroup) custom resource,
-where the instance class for the node group is specified (the [`cloudInstances.classReference`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) parameter).
+where the [instance class](../../../../glossary.html#instance-class) for the [node group](../../../../glossary.html#node-group) is specified (the [`cloudInstances.classReference`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) parameter).
 For GCP, the instance class is a [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) custom resource that defines the machine parameters.
 
 DP also automatically creates StorageClasses that cover all available disk types in GCP:
@@ -289,7 +289,7 @@ You can find the cluster prefix by running the following command:
 d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
 ```
 
-If the value is empty, get it from the deprecated [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) parameter of ClusterConfiguration (the prefix has moved to the ModuleConfig `global`):
+If the value is empty, get it from the deprecated [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) parameter of [ClusterConfiguration](../../../../glossary.html#cluster-configuration) (the prefix has moved to the ModuleConfig `global`):
 
 ```shell
 d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
@@ -298,6 +298,6 @@ d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."
 
 ## Preemptible nodes
 
-Preemptible virtual machines in Google Cloud are called preemptible instances. To make a node group order them, set the [`preemptible`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-preemptible) parameter of the GCPInstanceClass resource to `true`.
+Preemptible virtual machines in Google Cloud are called preemptible instances. To make a [node group](../../../../glossary.html#node-group) order them, set the [`preemptible`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-preemptible) parameter of the GCPInstanceClass resource to `true`.
 
 How to create such nodes and how they behave is described in ["How to create preemptible nodes in GCP?"](/modules/cloud-provider-gcp/faq.html#how-to-create-preemptible-nodes-in-gcp).

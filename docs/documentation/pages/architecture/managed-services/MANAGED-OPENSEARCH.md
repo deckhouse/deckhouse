@@ -10,8 +10,8 @@ The module provides:
 
 * **Automatic Deployment**: Creates an OpenSearch instance using a simple YAML configuration.
 * **Configuration Management**: Separate [OpensearchClass](/modules/managed-opensearch/cr.html#opensearchclass) resource for templating service creation and flexible validation of user parameters.
-* **Class-oriented Management**: Supports sizing policies and CEL validations.
-* **Long-term Storage**: Supports PersistentVolumeClaim parameters for data.
+* **Class-oriented Management**: Supports [sizing policies](../../glossary.html#sizing-policy) and CEL validations.
+* **[Long-term Storage](../../glossary.html#longterm-storage)**: Supports PersistentVolumeClaim parameters for data.
 * **Status**: Displays the current status of the deployed OpenSearch instance.
 
 For more details about module settings and usage examples, refer to the [module documentation](/modules/managed-opensearch/).
@@ -36,7 +36,7 @@ The module consists of the following components:
 
 1. **Managed-opensearch-operator** (Deployment): Kubernetes operator consisting of a single container **manager** that performs the following operations:
 
-   * Reconciles [Opensearch](/modules/managed-opensearch/cr.html#opensearch) custom resources in all user namespaces. The Opensearch and OpensearchClass custom resources define the settings of the OpenSearch instance.
+   * Reconciles [Opensearch](/modules/managed-opensearch/cr.html#opensearch) custom resources in all [user namespaces](../../glossary.html#user-namespace). The Opensearch and OpensearchClass custom resources define the settings of the OpenSearch instance.
 
    * Creates and manages StatefulSet, Service, Secret, and PersistentVolumeClaim resources related to the OpenSearch instance.
 

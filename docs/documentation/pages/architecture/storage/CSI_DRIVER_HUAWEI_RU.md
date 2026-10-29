@@ -6,7 +6,7 @@ search: csi-huawei, csi driver
 description: Архитектура CSI-драйвера csi-huawei в Deckhouse Platform.
 ---
 
-CSI-драйвер `csi-huawei` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для работы с томами на СХД Huawei в Deckhouse Platform (DP).
+[CSI-драйвер](../../../glossary.html#csi-driver) `csi-huawei` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для работы с томами на СХД Huawei в Deckhouse Platform (DP).
 
 ## Архитектура драйвера
 
@@ -85,7 +85,7 @@ CSI-драйвер `csi-huawei` состоит из следующих комп�
 
 1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-   * проверяет livenessProbe CSI-драйвера;
+   * проверяет livenessProbe [CSI-драйвера](../../../glossary.html#csi-driver);
    * регистрирует Node Plugin;
    * вызывает RPC `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume` и `NodeUnpublishVolume` в Node Plugin.
 

@@ -15,8 +15,8 @@ The Observability subsystem includes the following modules:
 * [`operator-prometheus`](/modules/operator-prometheus/): Installs [Prometheus Operator](https://github.com/coreos/prometheus-operator), which automates the deployment and management of [Prometheus](https://prometheus.io/) instances.
 * [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/): Allows HPA and VPA autoscalers to use monitoring metrics when making scaling decisions.
 * [`log-shipper`](/modules/log-shipper/): Simplifies log collection setup in Kubernetes clusters.
-* [`loki`](/modules/loki/): Deploys a short-term log storage system in the cluster based on [Grafana Loki](https://grafana.com/oss/loki/).
-* [`observability`](/modules/observability/): Extends the functionality of the [`prometheus`](/modules/prometheus/) module and the [Deckhouse web UI](/modules/console/), providing additional capabilities for flexible management of metrics, dashboards, and alerts, as well as access control mechanisms for them.
+* [`loki`](/modules/loki/): Deploys a [short-term log storage](../../glossary.html#short-term-log-storage) system in the cluster based on [Grafana Loki](https://grafana.com/oss/loki/).
+* [`observability`](/modules/observability/): Extends the functionality of the [`prometheus`](/modules/prometheus/) module and the [Deckhouse web UI](/modules/console/), providing additional capabilities for flexible management of metrics, [dashboards](../../glossary.html#dashboard), and alerts, as well as access control mechanisms for them.
 * [`extended-monitoring`](/modules/extended-monitoring/): Enhances cluster monitoring by deploying additional Prometheus exporters that help detect potential issues before they affect service operation.
 * [`monitoring-custom`](/modules/monitoring-custom/): Simplifies monitoring configuration for user applications by requiring only a specific label to be set for the target application.
 * [`monitoring-kubernetes`](/modules/monitoring-kubernetes/): Provides transparent and timely monitoring of all cluster nodes and key infrastructure components.

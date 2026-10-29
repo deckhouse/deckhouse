@@ -30,7 +30,7 @@ description: Архитектура модуля deckhouse в Deckhouse Platform
 
 - управление пакетами ([Marketplace](../marketplace/)):
   - [Application](../../reference/api/cr.html#application) — установленный экземпляр пакета приложения и его настройки;
-  - [ApplicationPackage](../../reference/api/cr.html#applicationpackage) — сводная информация о пакете: репозитории, в которых он доступен, версии, на которые указывают каналы обновлений, и приложения, которые его используют;
+  - [ApplicationPackage](../../reference/api/cr.html#applicationpackage) — сводная информация о пакете: репозитории, в которых он доступен, версии, на которые указывают [каналы обновлений](../../glossary.html#release-channel), и приложения, которые его используют;
   - [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) — обнаруженная версия пакета: её метаданные, OpenAPI-схемы и требования;
   - [PackageRepository](../../reference/api/cr.html#packagerepository) — подключение к хранилищу образов с пакетами и расписание сканирования;
   - [PackageRepositoryOperation](../../reference/api/cr.html#packagerepositoryoperation) — операция сканирования, которая обнаруживает версии пакетов в репозитории;
@@ -66,7 +66,7 @@ description: Архитектура модуля deckhouse в Deckhouse Platform
 
    Контроллер координирует задачи по управлению платформой с использованием [механизма очередей](./queues.html).
 
-   Контроллер Deckhouse может быть запущен в стандартном режиме или в режиме изоляции [хуков](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md). Для этого необходимо создать ConfigMap `chroot-mode` в неймспейсе `d8-system`. В режиме изоляции shell-хуки и скрипты включения модулей выполняются в chroot-окружении с ограниченным набором смонтированных каталогов, что изолирует их от файловой системы контейнера контроллера.
+   [Контроллер Deckhouse](../../glossary.html#deckhouse-controller) может быть запущен в стандартном режиме или в режиме изоляции [хуков](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md). Для этого необходимо создать ConfigMap `chroot-mode` в неймспейсе `d8-system`. В режиме изоляции shell-хуки и скрипты включения модулей выполняются в chroot-окружении с ограниченным набором смонтированных каталогов, что изолирует их от файловой системы контейнера контроллера.
 
    Если включен режим [высокой доступности (High Availability, HA)](../../admin/configuration/high-reliability-and-availability/), запускается несколько экземпляров контроллера Deckhouse. Для обеспечения корректной работы контроллеры Deckhouse проводят выборы лидера с использованием ресурса Lease `deckhouse-leader-election`. Контроллер, который был избран как лидер, берёт на себя выполнение всех операций по управлению платформой.
 
@@ -75,10 +75,10 @@ description: Архитектура модуля deckhouse в Deckhouse Platform
    | Параметр в конфигурации модуля | Описание |
    | ------------------------------ | -------- |
    | [`logLevel`](/modules/deckhouse/configuration.html#parameters-loglevel) | Уровень логирования |
-   | [`bundle`](/modules/deckhouse/configuration.html#parameters-bundle) | Набор модулей, включенных по умолчанию |
+   | [`bundle`](/modules/deckhouse/configuration.html#parameters-bundle) | [Набор модулей](../../glossary.html#module-bundle), включенных по умолчанию |
    | [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) | Канал обновлений |
-   | [`update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) | Режим обновлений |
-   | [`update.windows.days`](/modules/deckhouse/configuration.html#parameters-update-windows) | Окна обновлений |
+   | [`update.mode`](/modules/deckhouse/configuration.html#parameters-update-mode) | [Режим обновлений](../../glossary.html#update-mode) |
+   | [`update.windows.days`](/modules/deckhouse/configuration.html#parameters-update-windows) | [Окна обновлений](../../glossary.html#update-window) |
 
    Подробнее с описанием настроек модуля можно ознакомиться [в разделе документации модуля](/modules/deckhouse/).
 
@@ -90,7 +90,7 @@ description: Архитектура модуля deckhouse в Deckhouse Platform
   
 1. **Webhook-handler** (Deployment) — состоит из одного контейнера **handler** и реализует универсальный вебхук для конверсий и валидации кастомных ресурсов, находящихся под управлением DP.
 
-   Компонент следит за кастомными ресурсами [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook) и [ValidationWebhook](/modules/deckhouse/latest/cr.html#validationwebhook) и на их основе создаёт из шаблона Python-файлы хуков для [shell-operator](https://github.com/flant/shell-operator). При получении запросов от `kube-apiserver` на валидацию или конверсию ресурсов shell-operator запускает необходимый хук и возвращает результат обработки.
+   Компонент следит за кастомными ресурсами [ConversionWebhook](/modules/deckhouse/latest/cr.html#conversionwebhook) и [ValidationWebhook](/modules/deckhouse/latest/cr.html#validationwebhook) и на их основе создаёт из шаблона Python-файлы [хуков](../../glossary.html#module-hook) для [shell-operator](https://github.com/flant/shell-operator). При получении запросов от `kube-apiserver` на валидацию или конверсию ресурсов shell-operator запускает необходимый хук и возвращает результат обработки.
 
 1. **Cni-migration-manager** (Deployment) — опциональный компонент, запускающийся на узлах control plane и состоящий из одного контейнера **manager**. Компонент управляет процессом смены сетевого плагина (CNI) в кластере DP и фиксирует текущее состояние в кастомном ресурсе CNIMigration. Поддерживается миграция на плагины Flannel, Simple bridge, Cilium. Подробнее с переключением CNI в кластере можно ознакомиться [в соответствующем руководстве](../../guides/cni-migration.html).
 

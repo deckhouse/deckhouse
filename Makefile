@@ -353,6 +353,14 @@ docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linu
 docs-linkscheck: ## Build documentation and run checker of html links.
 	@bash tools/docs/link-checker/run.sh
 
+.PHONY: docs-glossary-check
+docs-glossary-check: ## Check the documentation glossary: term files, front matter and glossary.html#<id> links.
+	@bash tools/docs/glossary/check.sh
+
+.PHONY: docs-glossary-link
+docs-glossary-link: ## Link the first mention of glossary terms on documentation pages (report only; run with APPLY=1 to write).
+	@python3 tools/docs/glossary/link_terms.py $(if $(APPLY),--apply,)
+
 .PHONY: docs-spellcheck
 docs-spellcheck: ## Check the spelling in the documentation.
   ##~ Options: file="path/to/file" (Specify a path to a specific file)

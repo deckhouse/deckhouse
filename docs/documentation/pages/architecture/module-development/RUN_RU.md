@@ -19,7 +19,7 @@ description: Запуск модуля в кластере Deckhouse Platform с
 
 Deckhouse Platform (DP) может работать со следующими видами модулей:
 
-- Встроенные модули. Входят в состав DP. Релизный цикл привязан к релизному циклу DP.
+- [Встроенные модули](../../../glossary.html#built-in-module). Входят в состав DP. Релизный цикл привязан к релизному циклу DP.
 - Модули из [источника модулей](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей). Релизный цикл таких модулей не привязан к релизному циклу DP.
 
 Чтобы указать, откуда кластеру получать информацию о модулях, создайте ресурс [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). В нем задаются адрес хранилища образов контейнеров, из которого DP будет загружать модули, параметры аутентификации и другие настройки доступа.
@@ -37,7 +37,7 @@ spec:
     dockerCfg: <base64 encoded credentials>
 ```
 
-После создания ресурса ModuleSource DP начнет выполнять периодическую синхронизацию данных с источником модулей (загружать информацию о модулях, доступных в источнике). По умолчанию синхронизация выполняется раз в 30 минут. Изменить интервал можно в [параметре `scanInterval`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource-v1alpha1-spec-scaninterval).
+После создания ресурса ModuleSource DP начнет выполнять периодическую синхронизацию данных с [источником модулей](../../../glossary.html#module-source) (загружать информацию о модулях, доступных в источнике). По умолчанию синхронизация выполняется раз в 30 минут. Изменить интервал можно в [параметре `scanInterval`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource-v1alpha1-spec-scaninterval).
 
 Проверить состояние синхронизации можно с помощью следующей команды:
 
@@ -338,8 +338,8 @@ d8 system module approve <module-name> <version>
 
 ### Политика обновления модуля
 
-Политика обновления модуля — это правила, по которым DP обновляет модули в кластере. Она определяется ресурсом [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy), в котором можно настроить:
-- режим обновления модуля (автоматический, ручной, обновления отключены);
+[Политика обновления модуля](../../../glossary.html#module-update-policy) — это правила, по которым DP обновляет модули в кластере. Она определяется ресурсом [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy), в котором можно настроить:
+- [режим обновления](../../../glossary.html#update-mode) модуля (автоматический, ручной, обновления отключены);
 - канал стабильности, используемый при обновлении;
 - окна автоматического обновления, в пределах которых разрешено обновление модуля.
 
@@ -458,7 +458,7 @@ module-two                   Available   False     False
   {: .nowrap-default }
   <!-- markdownlint-enable MD031 -->
 
-По аналогии [с DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (ресурсом релиза DP) у модулей есть аналогичный ресурс — [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease). DP создает ModuleRelease исходя из того, что хранится в хранилище образов.
+По аналогии [с DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (ресурсом [релиза DP](../../../glossary.html#dp-release)) у модулей есть аналогичный ресурс — [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease). DP создает ModuleRelease исходя из того, что хранится в хранилище образов.
 При поиске проблем с модулем проверьте также доступные в кластере ModuleRelease:
 
 ```shell

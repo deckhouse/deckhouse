@@ -5,7 +5,7 @@ permalink: en/admin/integrations/virtualization/vsphere/layout.html
 
 ## Standard
 
-The Standard layout is intended for deploying a cluster within the vSphere infrastructure
+The Standard [layout](../../../../glossary.html#layout) is intended for deploying a cluster within the vSphere infrastructure
 with full control over resources, networking, and storage.
 
 Key features:

@@ -7,7 +7,7 @@ relatedLinks:
     url: ../../../../user/configuration/app-scaling/priority-classes.html
 ---
 
-Deckhouse Platform (DP) creates a set of priority classes (PriorityClass) in the cluster and assigns them to its components. Applications can use these classes by setting the `priorityClassName` field. The scheduler takes pod priority into account: if resources are insufficient, pods with lower priority are preempted first.
+Deckhouse Platform (DP) creates a set of [priority classes](../../../../glossary.html#priority-class) (PriorityClass) in the cluster and assigns them to its components. Applications can use these classes by setting the `priorityClassName` field. The scheduler takes pod priority into account: if resources are insufficient, pods with lower priority are preempted first.
 
 For example, if a pod with the `production-low` class cannot be scheduled due to insufficient resources, the scheduler first preempts pods with a lower priority, such as `develop`, then `cluster-low`, and so on. If `priorityClassName` is not set, the pod is treated as having the lowest priority.
 
@@ -59,7 +59,7 @@ A PriorityClass resource manifest uses the following fields:
 - `description` — class description.
 
 {% alert level="warning" %}
-Be careful with the `globalDefault: true` field. If you enable it for an additional class, that class will be assigned to pods that do not explicitly specify `priorityClassName`, which may cause unexpected preemption of system components.
+Be careful with the `globalDefault: true` field. If you enable it for an additional class, that class will be assigned to pods that do not explicitly specify `priorityClassName`, which may cause unexpected preemption of [system components](../../../../glossary.html#system-component).
 {% endalert %}
 
 Apply the manifest to the cluster:
@@ -111,7 +111,7 @@ Without the `terminationGracePeriodSeconds` parameter on a pod, an immediate ter
 
 ### Differences between priority classes and other resource management mechanisms
 
-Priority classes (PriorityClass) serve a different purpose from other resource management mechanisms:
+[Priority classes](../../../../glossary.html#priority-class) (PriorityClass) serve a different purpose from other resource management mechanisms:
 
 | Mechanism | Purpose | Difference from priority classes |
 |-----------|---------|----------------------------------|
@@ -129,11 +129,11 @@ Possible cluster-level causes:
 - Available CPU and memory are distributed across multiple nodes, and no single node has enough resources to accommodate the pod, even after preemption.
 - No eligible pods can be preempted because all pods on the target node have equal or higher priority. How to check — see the [Practical check when no suitable pods are available](/products/kubernetes-platform/documentation/v1/user/configuration/app-scaling/priority-classes.html#practical-check-when-no-suitable-pods-are-available) user section.
 - No nodes satisfy the pod's scheduling requirements, for example because of taints that the pod does not tolerate.
-- The pod limit per node (`Capacity.pods`) has been reached. Preemption cannot resolve this condition because replacing one pod with another does not reduce the total pod count.
+- The [pod limit per node](../../../../glossary.html#pod-limit-per-node) (`Capacity.pods`) has been reached. Preemption cannot resolve this condition because replacing one pod with another does not reduce the total pod count.
 
 What you can do:
 
-1. Add worker nodes or redistribute workloads if available resources are spread across different nodes.
+1. Add [worker nodes](../../../../glossary.html#worker-node) or redistribute workloads if available resources are spread across different nodes.
 1. Free resources on the overloaded node by removing or relocating less critical pods.
 1. Review the density of DaemonSet and system pods on the node.
 1. If needed, assign the application a higher priority class [from Available priority classes](#available-priority-classes).

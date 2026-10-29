@@ -6,7 +6,7 @@ description: "Configure and manage Kubernetes control plane in Deckhouse Platfor
 
 ## Main features
 
-Deckhouse Platform (DP) manages control plane components using the [`control-plane-manager`](/modules/control-plane-manager/) module, which runs on all master nodes (nodes with the label `node-role.kubernetes.io/control-plane: ""`).
+Deckhouse Platform (DP) manages control plane components using the [`control-plane-manager`](/modules/control-plane-manager/) module, which runs on all [master nodes](../../../../glossary.html#master-node) (nodes with the label `node-role.kubernetes.io/control-plane: ""`).
 
 The control plane management functionality includes:
 
@@ -16,7 +16,7 @@ The control plane management functionality includes:
 
 - Upgrade/downgrade of components. DP supports consistent version upgrades or downgrades of the control plane, helping maintain version uniformity across the cluster.
 
-- Managing the etcd cluster configuration and its members. DP scales master nodes and performs migrations between single-master and multi-master modes.
+- Managing the etcd cluster configuration and its members. DP scales master nodes and performs migrations between [single-master](../../../../glossary.html#single-master) and [multi-master](../../../../glossary.html#multi-master) modes.
 
 - Periodic defragmentation of etcd. In clusters with three or more etcd members, this feature is enabled by default.
 
@@ -100,7 +100,7 @@ How to verify that [`control-plane-manager`](/modules/control-plane-manager/) is
 
    Ensure that all pods are in the `Running` or `Completed` state.
 
-1. Verify that master nodes are in the `Ready` state:
+1. Verify that [master nodes](../../../../glossary.html#master-node) are in the `Ready` state:
 
    ```shell
    d8 k get nodes -l node-role.kubernetes.io/control-plane
@@ -128,7 +128,7 @@ How to verify that [`control-plane-manager`](/modules/control-plane-manager/) is
    ```
 
 {% alert level="warning" %}
-Before performing heavy operations (e.g., transitioning from single-master to multi-master or upgrading the Kubernetes version), it is recommended to wait until all tasks in the queues are completed.
+Before performing heavy operations (e.g., transitioning from [single-master](../../../../glossary.html#single-master) to [multi-master](../../../../glossary.html#multi-master) or upgrading the Kubernetes version), it is recommended to wait until all tasks in the queues are completed.
 {% endalert %}
 
 ## Certificate management
@@ -173,7 +173,7 @@ Features of kubelet certificate rotation in Deckhouse Platform:
 
 ### Manual renewal of control plane certificates
 
-If the master nodes were offline for an extended period (e.g., the servers were shut down), some control plane certificates may become outdated. In such cases, automatic renewal will not occur upon reboot — manual intervention is required.
+If the [master nodes](../../../../glossary.html#master-node) were offline for an extended period (e.g., the servers were shut down), some control plane certificates may become outdated. In such cases, automatic renewal will not occur upon reboot — manual intervention is required.
 
 To manually renew the control plane certificates, use the `kubeadm` utility on each master node:
 
@@ -215,7 +215,7 @@ spec:
 ```
 
 {% alert level="warning" %}
-The shorter the timeouts, the more frequently system components check node status and plan pod rescheduling. This increases the load on the control plane, so choose values that match your requirements for high availability and performance.
+The shorter the timeouts, the more frequently [system components](../../../../glossary.html#system-component) check node status and plan pod rescheduling. This increases the load on the control plane, so choose values that match your requirements for high availability and performance.
 {% endalert %}
 
 ## Forcibly disabling IPv6 on cluster nodes
@@ -252,7 +252,7 @@ After applying the resource, the GRUB settings will be updated and the cluster n
 
 ## etcd periodic defragmentation configuration
 
-In clusters with three or more etcd members (3 and more master nodes or 2 and more master nodes if an etcd-arbiter is present), this feature is enabled by default. Defragmentation runs once a day at exactly 1:00 a.m. server time.
+In clusters with three or more etcd members (3 and more [master nodes](../../../../glossary.html#master-node) or 2 and more master nodes if an etcd-arbiter is present), this feature is enabled by default. Defragmentation runs once a day at exactly 1:00 a.m. server time.
 
 {% alert level="warning" %}
 Enabling periodic defragmentation in a cluster with a single master node causes the control plane to be temporarily unavailable each time it runs.

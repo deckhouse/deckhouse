@@ -11,7 +11,7 @@ and DNS integration for convenient service discovery.
 They also support various access scenarios and ensure isolation and security of network traffic.
 
 If necessary, you can use either the standard Service-based load balancer
-or the advanced load balancer based on the [`service-with-healthchecks`](/modules/service-with-healthchecks/) module.
+or the [advanced load balancer](../../glossary.html#advanced-load-balancer) based on the [`service-with-healthchecks`](/modules/service-with-healthchecks/) module.
 
 ## Standard load balancer
 
@@ -115,7 +115,7 @@ spec:
 
 ## Advanced load balancer
 
-The advanced load balancer is implemented using the ServiceWithHealthcheck resources from the [`service-with-healthchecks`](/modules/service-with-healthchecks/) module.
+The [advanced load balancer](../../glossary.html#advanced-load-balancer) is implemented using the ServiceWithHealthcheck resources from the [`service-with-healthchecks`](/modules/service-with-healthchecks/) module.
 
 Unlike the standard load balancer where readiness probes are tied to container states,
 the ServiceWithHealthcheck–based load balancer allows you to configure active probes for individual TCP ports.
@@ -125,7 +125,7 @@ This way, each load balancer serving the same Pod can operate independently from
 
 The load balancer consists of two components:
 
-- Controller — runs on cluster master nodes and manages ServiceWithHealthcheck resources.
+- Controller — runs on cluster [master nodes](../../glossary.html#master-node) and manages ServiceWithHealthcheck resources.
 - Agents — run on every cluster node and perform probes for Pods running on that node.
 
 The ServiceWithHealthcheck load balancer is designed to be CNI-independent
@@ -152,7 +152,7 @@ to route traffic to workloads in the cluster in the usual way (via `kube-proxy` 
 {% alert level="warning" %}
 To use advanced load balancers:
 
-- Configure the network policies for the project where ServiceWithHealthchecks load balancers will be used.
+- Configure the [network policies](../../glossary.html#network-policy) for the [project](../../glossary.html#project) where ServiceWithHealthchecks load balancers will be used.
 - If necessary, manually switch to using ServiceWithHealthchecks instead of standard load balancers (replace the existing Service objects with ServiceWithHealthchecks).
 
 For more details, see the [`service-with-healthchecks`](/modules/service-with-healthchecks/configuration.html) module documentation.

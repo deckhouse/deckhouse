@@ -10,7 +10,7 @@ The following recommendations may be of less importance for a test or developmen
 ## Release channel and update mode
 
 {% alert %}
-Use the `EarlyAccess` or `Stable` release channel. Configure [auto-update window](/modules/deckhouse/usage.html#update-windows-configuration) or select [manual mode](/modules/deckhouse/usage.html#manual-update-confirmation).
+Use the `EarlyAccess` or `Stable` [release channel](../glossary.html#release-channel). Configure [auto-update window](/modules/deckhouse/usage.html#update-windows-configuration) or select [manual mode](/modules/deckhouse/usage.html#manual-update-confirmation).
 {% endalert %}
 
 Select the [release channel](../reference/release-channels.html) and [update mode](/modules/deckhouse/configuration.html#parameters-update-mode) that suit your needs. The more stable the release channel is, the later you will have the chance to use the new features.
@@ -25,7 +25,7 @@ If you have more than one cluster in a production environment, make sure that th
 Even in very busy and critical clusters, it is not a good idea to disable the use of the release channel. The best strategy is a scheduled update. If you are using a Deckhouse Platform release in your cluster that has not received an update in over six months, you will have a hard time getting help quickly should a problem arise.
 {% endalert %}
 
-The [update windows](/modules/deckhouse/configuration.html#parameters-update-windows) management allows you to schedule automatic platform release updates when your cluster is not experiencing peak load.
+The [update windows](/modules/deckhouse/configuration.html#parameters-update-windows) management allows you to schedule automatic platform [release](../glossary.html#dp-release) updates when your cluster is not experiencing peak load.
 
 ## Kubernetes version
 
@@ -35,7 +35,7 @@ Use the automatic [Kubernetes version selection](../reference/api/cr.html#cluste
 
 In most cases, opt for the automatic selection of the Kubernetes version. In the platform, this behavior is set by default, but it can be changed with the [kubernetesVersion](../reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter. Upgrading the Kubernetes version in the cluster has no effect on applications and is done in a [consistent and secure fashion](/modules/control-plane-manager/#version-control).
 
-If the automatic Kubernetes version selection is enabled, the platform can upgrade the Kubernetes version in the cluster together with the platform update (when upgrading a minor version). If the Kubernetes version in the [kubernetesVersion](../reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter is set explicitly, the platform may not upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
+If the automatic Kubernetes version selection is enabled, the platform can upgrade the Kubernetes version in the cluster together with the platform update (when upgrading a [minor version](../glossary.html#minor-version)). If the Kubernetes version in the [kubernetesVersion](../reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter is set explicitly, the platform may not upgrade to a newer version at some point if the Kubernetes version used in the cluster is no longer supported.
 
 You must decide for yourself whether to use automatic version selection or set a specific version and update it manually every now and then.
 
@@ -44,18 +44,18 @@ If your application uses outdated versions of resources or depends on a particul
 ## Resource requirements
 
 {% alert %}
-Use at least 4 CPUs / 8 GB RAM for infrastructure nodes (2 CPUs / 4 GB RAM for frontend nodes). For master and monitoring nodes, fast disks are recommended.
+Use at least 4 CPUs / 8 GB RAM for [infrastructure nodes](../glossary.html#infrastructure-node) (2 CPUs / 4 GB RAM for [frontend nodes](../glossary.html#frontend-node)). For master and [monitoring nodes](../glossary.html#monitoring-node), fast disks are recommended.
 {% endalert %}
 
 The following resource minimums are recommended for infrastructure nodes, depending on their role in the cluster:
 
-- **Master node** — 8 CPU, 16GB RAM, 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS);
+- **[Master node](../glossary.html#master-node)** — 8 CPU, 16GB RAM, 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS);
 - **Frontend node** — 2 CPU, 4GB RAM, 50 GB of disk space;
 - **Monitoring node** (for high-load clusters) — 6 CPU, 12GB RAM, <a href="#storage">50 / 150*</a> GB of disk space on a fast disk (400+ IOPS).
-- **System node**:
+- **[System node](../glossary.html#system-node)**:
   - 4 CPU, 8 GB RAM, <a href="#storage">50 / 150*</a> GB of disk space — if there are dedicated monitoring nodes in the cluster;
   - 8 CPU, 16 GB RAM, <a href="#storage">60 / 160*</a> GB of disk space on a fast disk (400+ IOPS) — if there are no dedicated monitoring nodes in the cluster.
-- **Worker node** — the requirements are similar to those for the master node, but largely depend on the nature of the load running on the node (nodes).
+- **[Worker node](../glossary.html#worker-node)** — the requirements are similar to those for the master node, but largely depend on the nature of the load running on the node (nodes).
 
 Additional recommendations:<span id="storage"></span>
 
@@ -82,7 +82,7 @@ Three master nodes with fast 400+ IOPS disks are highly recommended for a cluste
 
 Use three master nodes in all cases, as they are sufficient for fault tolerance. Also, with three nodes, you can safely update the cluster's control plane as well as the master nodes. Extra master nodes are not needed, while 2 nodes (or any even number) do not make a quorum.
 
-The master node configuration for cloud clusters can be configured using the [masterNodeGroup](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup) parameter.
+The master node configuration for [cloud clusters](../glossary.html#cloud-cluster) can be configured using the [masterNodeGroup](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-masternodegroup) parameter.
 
 Reference:
 
@@ -94,10 +94,10 @@ Reference:
 {% alert %}
 Use two or more frontend nodes.
 
-Use inlet `LoadBalancer` for OpenStack-based clouds and cloud services where automatic balancer ordering is not supported (AWS, GCP, Azure, etc.). Use inlet  `HostPort` with an external load balancer for bare metal or vSphere.
+Use [inlet](../glossary.html#inlet) `LoadBalancer` for OpenStack-based clouds and cloud services where automatic balancer ordering is not supported (AWS, GCP, Azure, etc.). Use inlet  `HostPort` with an external load balancer for bare metal or vSphere.
 {% endalert %}
 
-Frontend nodes are used for balancing incoming traffic. Such nodes are allocated for Ingress controllers. The [NodeGroup](/modules/node-manager/cr.html#nodegroup) of the frontend nodes has a `node-role.deckhouse.io/frontend` label. Read more about [allocating nodes for specific load types...](../admin/configuration/#advanced-scheduling)
+Frontend nodes are used for balancing incoming traffic. Such nodes are allocated for [Ingress controllers](../glossary.html#ingress-controller). The [NodeGroup](/modules/node-manager/cr.html#nodegroup) of the frontend nodes has a `node-role.deckhouse.io/frontend` label. Read more about [allocating nodes for specific load types...](../admin/configuration/#advanced-scheduling)
 
 Use more than one frontend node. Frontend nodes must be able to still handle traffic even if one of the frontend nodes fails.
 
@@ -110,7 +110,7 @@ When deploying the platform in a cloud infrastructure where provisioning of load
 In environments where automatic load balancer provisioning is not supported (bare metal clusters, vSphere, custom OpenStack solutions), use the `HostPort` or `HostPortWithProxyProtocol` inlet. In this case, you can either add some A&#8209;records to DNS for the corresponding domain or use an external load-balancing service (e.g., Cloudflare, Qrator solutions, or configure metallb).
 
 {% alert level="warning" %}
-The `HostWithFailover` inlet is suitable for clusters with a single frontend node. It reduces the time that the Ingress controller is unavailable during updates. This type of inlet is suitable for important development environments, but **not recommended for production**.
+The `HostWithFailover` inlet is suitable for clusters with a single [frontend node](../glossary.html#frontend-node). It reduces the time that the Ingress controller is unavailable during updates. This type of inlet is suitable for important development environments, but **not recommended for production**.
 {% endalert %}
 
 The algorithm for choosing an inlet:
@@ -120,7 +120,7 @@ The algorithm for choosing an inlet:
 ### Monitoring nodes
 
 {% alert %}
-For high-load clusters, use two monitoring nodes equipped with fast disks.
+For high-load clusters, use two [monitoring nodes](../glossary.html#monitoring-node) equipped with fast disks.
 {% endalert %}
 
 Monitoring nodes are used to run Grafana, Prometheus, and other monitoring components. The [NodeGroup](/modules/node-manager/cr.html#nodegroup) for monitoring nodes has the `node-role.deckhouse.io/monitoring` label attached.
@@ -129,7 +129,7 @@ In high-load clusters, where many alerts are generated and many metrics are coll
 
 When allocating monitoring nodes, it is important to allocate fast disks to them. You can do so by providing a dedicated `storageClass` on fast disks for all platform components (global parameter [storageClass](../reference/api/global.html#parameters-modules-storageclass)) or allocate a dedicated `storageClass` to monitoring components only [storageClass](/modules/prometheus/configuration.html#parameters-storageclass) and [longtermStorageClass](/modules/prometheus/configuration.html#parameters-longtermstorageclass) parameters of the `prometheus` module.
 
-If the cluster is initially created with nodes allocated for a specific type of workload (system nodes, nodes for monitoring, etc.), explicitly specify the corresponding `nodeSelector` parameter in the module configuration for modules that use persistent storage volumes (for example, for the `prometheus` module). For the `prometheus` module, this parameter is [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector).
+If the cluster is initially created with nodes allocated for a specific type of workload ([system nodes](../glossary.html#system-node), nodes for monitoring, etc.), explicitly specify the corresponding `nodeSelector` parameter in the module configuration for modules that use persistent storage volumes (for example, for the `prometheus` module). For the `prometheus` module, this parameter is [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector).
 
 ### System nodes
 
@@ -151,15 +151,15 @@ Plan the cluster subnets before installation, because you cannot change them aft
 
 You set the pod subnet ([`podSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetcidr)), the service subnet ([`serviceSubnetCIDR`](/modules/control-plane-manager/configuration.html#parameters-network-servicesubnetcidr)), and the node subnet size ([`podSubnetNodeCIDRPrefix`](/modules/control-plane-manager/configuration.html#parameters-network-podsubnetnodecidrprefix)) when you install the cluster. Select the pod and service subnets so that they do not overlap with each other or with the node network. Changing these parameters in a running cluster can break it, so the platform blocks such changes. If you need other subnets, recreate the cluster.
 
-The node subnet size defines how many pods fit on a node. By default, the pod limit per node, the [`kubelet.maxPods`](/modules/node-manager/cr.html#nodegroup-v1-spec-kubelet-maxpods) parameter of the node group, is calculated from this size. The mapping between the subnet size and the pod limit is listed in the [Pod limit per node](high-pod-density.html#pod-limit-per-node) section.
+The node subnet size defines how many pods fit on a node. By default, the [pod limit per node](../glossary.html#pod-limit-per-node), the [`kubelet.maxPods`](/modules/node-manager/cr.html#nodegroup-v1-spec-kubelet-maxpods) parameter of the [node group](../glossary.html#node-group), is calculated from this size. The mapping between the subnet size and the pod limit is listed in the [Pod limit per node](high-pod-density.html#pod-limit-per-node) section.
 
 ### Storage
 
 {% alert %}
-Use replicated storage for production data and set a default StorageClass.
+Use [replicated storage](../glossary.html#replicated-storage) for production data and set a default StorageClass.
 {% endalert %}
 
-Workloads keep persistent data in PersistentVolume volumes, so connect at least one of the [supported storage types](../admin/configuration/storage/) to the cluster. For production, use storage with data replication between nodes, for example, [replicated storage based on DRBD](../admin/configuration/storage/sds/lvm-replicated.html), so the data stays available if a node fails. If you use software-defined storage (SDS), add dedicated disks for data to its nodes.
+Workloads keep persistent data in PersistentVolume volumes, so connect at least one of the [supported storage types](../admin/configuration/storage/) to the cluster. For production, use storage with data replication between nodes, for example, [replicated storage based on DRBD](../admin/configuration/storage/sds/lvm-replicated.html), so the data stays available if a node fails. If you use [software-defined storage](../glossary.html#sds) (SDS), add dedicated disks for data to its nodes.
 
 Set the default StorageClass in the [`defaultClusterStorageClass`](../reference/api/global.html#parameters-defaultclusterstorageclass) global parameter. Volumes that do not specify a storage class explicitly get this class.
 
@@ -175,7 +175,7 @@ A cluster with VMs must meet the following requirements:
 - CPUs of nodes for VMs support Intel-VT (VMX) or AMD-V (SVM) instructions, and hardware virtualization is enabled in BIOS or UEFI settings.
 - All cluster nodes run the same Linux kernel version.
 
-The same kernel version is necessary for stable VM live migration, because system calls and resource handling differ between kernel versions.
+The same kernel version is necessary for stable VM [live migration](../glossary.html#live-migration), because system calls and resource handling differ between kernel versions.
 
 {% alert level="warning" %}
 Use virtual machines instead of physical servers as nodes only for demonstration purposes. In this case, enable nested virtualization.
@@ -183,7 +183,7 @@ Use virtual machines instead of physical servers as nodes only for demonstration
 
 #### Number of VMs per node
 
-The number of VMs per node is limited by the [pod limit](#cluster-subnets), which VMs, containers, and system components share. A running VM with disks usually occupies two pods, because besides the VM pod, a service pod runs on the node and attaches the VM disks and images. It serves disks added with the [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) resource and all disks of a VM with paravirtualization enabled (the [`.spec.enableParavirtualization`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-enableparavirtualization) parameter, enabled by default). During live migration, the same pods start on the target node, so take them into account when you select the node subnet size.
+The number of VMs per node is limited by the [pod limit](#cluster-subnets), which VMs, containers, and [system components](../glossary.html#system-component) share. A running VM with disks usually occupies two pods, because besides the VM pod, a service pod runs on the node and attaches the [VM disks](../glossary.html#vm-disk) and images. It serves disks added with the [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) resource and all disks of a VM with paravirtualization enabled (the [`.spec.enableParavirtualization`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-enableparavirtualization) parameter, enabled by default). During live migration, the same pods start on the target node, so take them into account when you select the node subnet size.
 
 #### VM subnets
 
@@ -199,17 +199,17 @@ By default, live migration traffic goes through the main node network, competes 
 
 #### Running VMs on master nodes
 
-You need to run VMs on master nodes if the cluster has no separate nodes for workloads, for example, in a single-node cluster. To run VMs on master nodes, remove the taints from the `master` node group in the [`nodeTemplate.taints`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-taints) parameter or set tolerations for the selected VMs. Set tolerations in a VM with the [`.spec.tolerations`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-tolerations) parameter or in a VM class with the [`.spec.tolerations`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-tolerations) parameter. Removing the taints lets any workload run on master nodes, and tolerations let only the VMs that have them run there.
+You need to run VMs on [master nodes](../glossary.html#master-node) if the cluster has no separate nodes for workloads, for example, in a [single-node cluster](../glossary.html#single-node-cluster). To run VMs on master nodes, remove the taints from the `master` node group in the [`nodeTemplate.taints`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-taints) parameter or set tolerations for the selected VMs. Set tolerations in a VM with the [`.spec.tolerations`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-tolerations) parameter or in a VM class with the [`.spec.tolerations`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-tolerations) parameter. Removing the taints lets any workload run on master nodes, and tolerations let only the VMs that have them run there.
 
 #### Storage for VM disks
 
 VM disks and images are stored in PersistentVolume volumes, so select storage for them according to the recommendations in the [Storage](#storage) section. If VM disks will be stored in software-defined storage, take their size into account when you add disks to the nodes of this storage.
 
-Live migration of VMs with local disks is available only in commercial Deckhouse Platform editions, where the disks move together with the VM. In Deckhouse Platform Open, a VM with a local disk cannot move to another node, so you have to stop it during node maintenance.
+Live migration of VMs with local disks is available only in commercial Deckhouse Platform [editions](../glossary.html#edition), where the disks move together with the VM. In Deckhouse Platform Open, a VM with a local disk cannot move to another node, so you have to stop it during node maintenance.
 
 #### Image storage
 
-The platform stores VM images in the internal image storage (DVCR), which runs as a single instance on one persistent volume. The storage class and size of this volume are set in the [`dvcr.storage`](/modules/virtualization/configuration.html#parameters-dvcr-storage) parameter of the `virtualization` module. After the volume is created, you can only increase its size, and you cannot change its storage class, so select the class in advance. Use replicated storage for DVCR so that the images stay available if a node fails.
+The platform stores [VM images](../glossary.html#vm-image) in the internal image storage ([DVCR](../glossary.html#dvcr)), which runs as a single instance on one persistent volume. The storage class and size of this volume are set in the [`dvcr.storage`](/modules/virtualization/configuration.html#parameters-dvcr-storage) parameter of the `virtualization` module. After the volume is created, you can only increase its size, and you cannot change its storage class, so select the class in advance. Use replicated storage for DVCR so that the images stay available if a node fails.
 
 #### VM classes
 
@@ -225,7 +225,7 @@ The CPU type of a class is set by the [`.spec.cpu.type`](/modules/virtualization
 
 The other CPU types are described in the [Virtual processor of virtual machines](../admin/configuration/virtualization/vm-classes-cpu.html) section.
 
-The [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) parameter sets the sizing policies of a class. The policies limit the number of cores, the memory size, and the core fraction for VMs of this class. The core fraction is the part of physical core CPU time that the platform guarantees to a VM. The allowed fraction values in the `coreFractions` parameter define how strong CPU oversubscription can be. Oversubscription configuration is described in the [CPU oversubscription for virtual machines](../admin/configuration/virtualization/cpu-oversubscription.html) section.
+The [`.spec.sizingPolicies`](/modules/virtualization/cr.html#virtualmachineclass-v1alpha3-spec-sizingpolicies) parameter sets the [sizing policies](../glossary.html#sizing-policy) of a class. The policies limit the number of cores, the memory size, and the [core fraction](../glossary.html#vm-core-fraction) for VMs of this class. The core fraction is the part of physical core CPU time that the platform guarantees to a VM. The allowed fraction values in the `coreFractions` parameter define how strong [CPU oversubscription](../glossary.html#cpu-oversubscription) can be. Oversubscription configuration is described in the [CPU oversubscription for virtual machines](../admin/configuration/virtualization/cpu-oversubscription.html) section.
 
 ## Access control
 

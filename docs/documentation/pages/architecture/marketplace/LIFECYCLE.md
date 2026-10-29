@@ -4,7 +4,7 @@ permalink: en/architecture/marketplace/lifecycle.html
 description: "How Deckhouse Platform installs, updates, reconciles, and deletes an Application: admission checks, requirements, the order of hooks and Helm operations, deletion and orphan resources, resource restoration, deployment tracking, maintenance mode, and debugging tools."
 ---
 
-This page describes how Deckhouse Platform (DP) runs an application instance and which tools help to debug a package.
+This page describes how Deckhouse Platform (DP) runs an [application instance](../../glossary.html#application-instance) and which tools help to debug a [package](../../glossary.html#marketplace-package).
 
 ## Admission checks
 
@@ -13,20 +13,20 @@ When an [Application](../../reference/api/cr.html#application) is created or cha
 - The Application name is at most 24 characters long.
 - The ApplicationPackage exists, and the ApplicationPackageVersion for the specified repository, package, and version exists and has its metadata loaded.
 - The settings match the settings schema of the package version (for details, refer to ["Application settings"](settings.html#when-settings-are-validated)).
-- The cluster meets the [package requirements](application-development.html#requirements): the Kubernetes and DP versions and the module dependencies. The rejection message names the unmet requirement, the required value, and the value in the cluster.
+- The cluster meets the [package requirements](application-development.html#requirements): the Kubernetes and DP versions and the [module dependencies](../../glossary.html#module-dependencies). The rejection message names the unmet requirement, the required value, and the value in the cluster.
 
 ## Installation pipeline
 
 DP processes each application instance in a separate queue, step by step:
 
-1. **Download.** DP downloads the package bundle of the specified version from the repository.
-2. **Load.** DP reads `package.yaml`, the schemas, and `images_digests.json`, and discovers the hooks.
+1. **Download.** DP downloads the [package bundle](../../glossary.html#marketplace-package-bundle) of the specified version from the repository.
+2. **Load.** DP reads `package.yaml`, the schemas, and `images_digests.json`, and discovers the [hooks](../../glossary.html#module-hook).
 3. **Scheduling.** DP waits until the package requirements are met: the cluster bootstrap is complete, the Kubernetes and DP versions match the constraints, and the modules from `requirements.modules` are enabled. While DP waits for the modules the application depends on, the Application's [`status.summary`](../../reference/api/cr.html#application-v1alpha1-status-summary) field reports it.
 4. **Configuration.** DP validates and applies the settings.
-5. **Hook initialization.** DP enables the `schedule` bindings and the Kubernetes monitors of the hooks and runs the `Synchronization` of the Kubernetes bindings. The first time after the package is loaded, DP also runs `onStartup` hooks.
+5. **Hook initialization.** DP enables the `schedule` [bindings](../../glossary.html#hook-binding) and the Kubernetes monitors of the hooks and runs the `Synchronization` of the Kubernetes bindings. The first time after the package is loaded, DP also runs `onStartup` hooks.
 6. **Apply.** DP runs `beforeHelm` hooks, renders the templates and applies them with Nelm, and then runs `afterHelm` hooks. If `afterHelm` hooks change values, DP applies the templates again.
 
-Steps 4–6 form a reconciliation run. In the apply step, DP upgrades the Helm release only if it is needed: on the first installation, if the last release revision is not deployed, if the rendered manifests have changed, or if some resources are missing in the cluster.
+Steps 4–6 form a [reconciliation run](../../glossary.html#application-reconciliation). In the apply step, DP upgrades the Helm release only if it is needed: on the first installation, if the last release revision is not deployed, if the rendered manifests have changed, or if some resources are missing in the cluster.
 
 The order of hook bindings and the handling of hook errors are described in ["Hooks"](hooks.html#bindings-and-execution-order).
 
@@ -107,9 +107,9 @@ Each item of the list contains the following fields:
 - `kind`: Kind of the objects, for example, `Job`.
 - `version`: API version of the kind: `<GROUP>/<VERSION>`, for example, `batch/v1`, or only `<VERSION>`, for example, `v1`. A version without a group matches the kind in every API group that serves it at this version, so `kind: Job` with `version: v1` matches the `batch/v1` Jobs too. To match the kind in one group only, specify the group.
 
-Declare the field in `openapi/values.yaml` rather than in `openapi/settings.yaml`, so that users can't change the list in `spec.settings`. DP reads the list from the values of the current package version when the Application is deleted. If earlier versions of the package created objects of other kinds, keep these kinds in the list.
+Declare the field in `openapi/values.yaml` rather than in `openapi/settings.yaml`, so that users can't change the list in `spec.settings`. DP reads the list from the values of the current [package](../../glossary.html#marketplace-package) version when the Application is deleted. If earlier versions of the package created objects of other kinds, keep these kinds in the list.
 
-DP deletes the objects of the listed kinds that are located in the namespace of the Application and carry the `packages.deckhouse.io/instance: <INSTANCE_NAME>` label. The object names don't matter. DP adds the label to every object rendered from the templates, including Helm hooks (for details, refer to ["Templates"](templates.html#labels-and-object-protection)). Objects created by workloads and hooks don't get the label automatically, so set it yourself. For example, a hook sets the label to the instance name:
+DP deletes the objects of the listed kinds that are located in the namespace of the Application and carry the `packages.deckhouse.io/instance: <INSTANCE_NAME>` label. The object names don't matter. DP adds the label to every object rendered from the templates, including Helm [hooks](../../glossary.html#module-hook) (for details, refer to ["Templates"](templates.html#labels-and-object-protection)). Objects created by workloads and hooks don't get the label automatically, so set it yourself. For example, a hook sets the label to the instance name:
 
 ```go
 input.PatchCollector.CreateOrUpdate(&corev1.ConfigMap{
@@ -132,7 +132,7 @@ DP doesn't delete:
 - Objects that are already being deleted.
 - Objects of cluster-wide kinds and of kinds that the cluster doesn't serve, for example, custom resources whose CustomResourceDefinition is not installed. DP skips such kinds and writes a warning to its log.
 
-DP deletes orphan resources only when the Application is deleted. When the application is [suspended](#suspension) or its package version changes, the objects stay, because the application can use them again. If the package of the application isn't loaded when the Application is deleted, for example, because DP failed to download the package bundle, DP uninstalls the Helm release but doesn't delete orphan resources.
+DP deletes [orphan resources](../../glossary.html#application-orphan-resources) only when the Application is deleted. When the application is [suspended](#suspension) or its package version changes, the objects stay, because the application can use them again. If the package of the application isn't loaded when the Application is deleted, for example, because DP failed to download the [package bundle](../../glossary.html#marketplace-package-bundle), DP uninstalls the Helm release but doesn't delete orphan resources.
 
 If DP fails to list or delete the objects, for example, when the API server is unavailable, DP deletes the rest of the objects and retries the step. If the `orphanResources` value is not a list of kinds, DP writes an error to its log and removes the Application without deleting orphan resources.
 
@@ -140,7 +140,7 @@ DP writes every deleted object, every object with the `helm.sh/resource-policy: 
 
 ## Resource restoration
 
-DP remembers the resources rendered from the templates and checks every 4–5 minutes that all of them exist in the cluster. If a resource is missing, DP starts a reconciliation run, and the resource is created again.
+DP remembers the resources rendered from the templates and checks every 4–5 minutes that all of them exist in the cluster. If a resource is missing, DP starts a [reconciliation run](../../glossary.html#application-reconciliation), and the resource is created again.
 
 DP checks only whether the resources exist, not their contents. The check is paused while hooks run and is disabled in [maintenance mode](#maintenance-mode).
 
@@ -160,7 +160,7 @@ Whether the application is running after the apply is determined from its Deploy
 
 ## Maintenance mode
 
-To debug or tweak an installed application manually, switch it to maintenance mode:
+To debug or tweak an installed application manually, switch it to [maintenance mode](../../glossary.html#no-resource-reconciliation):
 
 ```yaml
 spec:
@@ -171,7 +171,7 @@ In maintenance mode:
 
 - DP stops applying the templates: changes of settings and values are not reflected in the resources. Hooks keep running.
 - Deleted resources are not restored.
-- DP labels the resources rendered from the templates with `maintenance.deckhouse.io/no-resource-reconciliation`, and the admission policies stop protecting them, so the resources can be changed manually. To add the label, DP applies the templates once when the mode is enabled.
+- DP labels the resources rendered from the templates with `maintenance.deckhouse.io/no-resource-reconciliation`, and the [admission policies](../../glossary.html#admission-policy) stop protecting them, so the resources can be changed manually. To add the label, DP applies the templates once when the mode is enabled.
 - The [`ApplicationIsInMaintenanceMode`](../../reference/alerts.html#deckhouse-applicationisinmaintenancemode) alert fires.
 
 To return the application to normal operation, remove the `spec.maintenance` field. DP applies the templates, which restores the managed state of the resources and removes the label.
@@ -180,7 +180,7 @@ To return the application to normal operation, remove the `spec.maintenance` fie
 
 ### Application status
 
-The following fields of the Application [status](../../reference/api/cr.html#application-v1alpha1-status) are useful when you develop a package:
+The following fields of the Application [status](../../reference/api/cr.html#application-v1alpha1-status) are useful when you develop a [package](../../glossary.html#marketplace-package):
 
 | Field | Description |
 |---|---|
@@ -211,13 +211,13 @@ The output contains values and container registry credentials. Only cluster admi
   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller packages render <NAMESPACE>.<INSTANCE_NAME>
   ```
 
-- To show the loaded package (path, definition, image digests, repository, values, hooks, and internal conditions), run the following command:
+- To show the loaded package (path, definition, image digests, repository, values, [hooks](../../glossary.html#module-hook), and internal conditions), run the following command:
 
   ```bash
   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller packages dump --name <NAMESPACE>.<INSTANCE_NAME>
   ```
 
-- To show the snapshots of the hook Kubernetes bindings, run the following command:
+- To show the snapshots of the hook Kubernetes [bindings](../../glossary.html#hook-binding), run the following command:
 
   ```bash
   d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller packages snapshots <NAMESPACE>.<INSTANCE_NAME>

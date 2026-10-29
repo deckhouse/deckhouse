@@ -1,0 +1,690 @@
+# Patterns used by tools/docs/glossary/link_terms.py to find glossary terms in
+# documentation pages. One entry per term id (file name in
+# docs/documentation/_glossary/). Each language lists Python regular
+# expressions; they are compiled case-insensitively with word boundaries
+# added around them. Use (?-i:...) for tokens that must keep their case.
+# A term listed in `skip` is not linked automatically: it is too generic
+# to be linked on every page. `paths` restricts a term to pages whose path
+# (relative to docs/documentation/pages) starts with one of the prefixes:
+# use it for words that mean something else outside their section.
+skip:
+  - virtual-machine
+  - api
+  - cluster
+  - system
+  - workload
+  - namespace
+  - module
+  - alert
+  - control-plane
+terms:
+  additional-project-namespace:
+    en: ['additional project namespaces?']
+    ru: ['дополнительн\w{2,3} неймспейс\w{0,3} проекта']
+  admission-policy:
+    en: ['admission polic(y|ies)']
+    ru: ['admission-политик\w{1,3}']
+  air-gapped-cluster:
+    en: ['air-gapped clusters?']
+    ru: ['изолированн\w{2,3} кластер\w{0,3}']
+  alb:
+    paths: ['admin/configuration/network']
+    en: ['(?-i:ALB)']
+    ru: ['(?-i:ALB)']
+  arbiter-node:
+    en: ['arbiter nodes?']
+    ru: ['arbiter-уз(ел|л\w{1,3})']
+  bashible:
+    en: ['bashible']
+    ru: ['bashible']
+  bastion-host:
+    en: ['bastion hosts?']
+    ru: ['bastion-хост\w{0,3}']
+  bootstrap-script:
+    en: ['bootstrap scripts?']
+    ru: ['bootstrap-скрипт\w{0,3}']
+  bpflb:
+    en: ['(?-i:bpfLB)']
+    ru: ['(?-i:bpfLB)']
+  caps:
+    en: ['Cluster API Provider Static', '(?-i:CAPS)']
+    ru: ['Cluster API Provider Static', '(?-i:CAPS)']
+  chaos-engineering:
+    en: ['chaos engineering']
+    ru: ['хаос-инжиниринг\w{0,2}']
+  cloud-cluster:
+    en: ['cloud clusters?']
+    ru: ['облачн\w{2,3} кластер\w{0,3}']
+  cloud-ephemeral-node:
+    en: ['(?-i:CloudEphemeral)( nodes?)?']
+    ru: ['уз(ел|л\w{1,3}) (типа )?(?-i:CloudEphemeral)', '(?-i:CloudEphemeral)']
+  cloud-permanent-node:
+    en: ['(?-i:CloudPermanent)( nodes?)?']
+    ru: ['уз(ел|л\w{1,3}) (типа )?(?-i:CloudPermanent)', '(?-i:CloudPermanent)']
+  cloud-provider:
+    en: ['cloud providers?']
+    ru: ['облачн\w{2,3} провайдер\w{0,3}']
+  cloud-static-node:
+    en: ['(?-i:CloudStatic)( nodes?)?']
+    ru: ['уз(ел|л\w{1,3}) (типа )?(?-i:CloudStatic)', '(?-i:CloudStatic)']
+  cluster-configuration:
+    en: ['(?-i:ClusterConfiguration)']
+    ru: ['(?-i:ClusterConfiguration)']
+  coldstandby:
+    en: ['(?-i:ColdStandby)']
+    ru: ['(?-i:ColdStandby)']
+  component-registry:
+    en: ['(DP|Deckhouse Platform) components? registry', 'registry of (DP|Deckhouse Platform) components']
+    ru: ['хранилищ\w{1,2} образов компонентов (DP|Deckhouse Platform)']
+  cpu-oversubscription:
+    en: ['CPU oversubscription', 'oversubscription']
+    ru: ['переподписк\w{1,2}( (на )?CPU)?']
+  device-passthrough:
+    en: ['device passthrough']
+    ru: ['проброс\w{0,2} устройств\w{0,2}']
+  disruptive-update:
+    en: ['disruptive updates?']
+    ru: ['disruptive-обновлени\w{1,3}']
+  dp-managed-cluster:
+    en: ['clusters? (fully )?managed by (DP|Deckhouse Platform)', 'DP-managed clusters?']
+    ru: ['кластер\w{0,3},? полностью управляем\w{2,3} (DP|Deckhouse Platform)', 'кластер\w{0,3} под управлением (DP|Deckhouse Platform)']
+  dsr:
+    en: ['(?-i:DSR)']
+    ru: ['(?-i:DSR)']
+  dvcr:
+    en: ['(?-i:DVCR)']
+    ru: ['(?-i:DVCR)']
+  edition:
+    en: ['(?:(?:Community|Basic|Standard|Standard Plus|Enterprise|Certified Security|Flant) )?editions?']
+    ru: ['редакци\w{1,2}']
+  egress-gateway:
+    en: ['egress gateways?']
+    ru: ['egress-шлюз\w{0,3}', 'egress gateway']
+  extended-monitoring:
+    en: ['extended monitoring']
+    ru: ['расширенн\w{2,3} мониторинг\w{0,2}']
+  federation:
+    paths: ['admin/configuration/network', 'admin/configuration/high-reliability-and-availability', 'user/']
+    en: ['federation']
+    ru: ['федераци\w{1,2}']
+  fencing:
+    en: ['fencing']
+    ru: ['fencing']
+  frontend-node:
+    en: ['front-?end nodes?']
+    ru: ['frontend-уз(ел|л\w{1,3})']
+  global-settings:
+    en: ['global settings']
+    ru: ['глобальн\w{2,3} настро\w{2,4}']
+  ha-mode:
+    en: ['HA mode', 'high availability mode']
+    ru: ['режим\w{0,2} HA', 'режим\w{0,2} высокой доступности']
+  high-level-role:
+    en: ['high-level roles?']
+    ru: ['высокоуровнев\w{2,3} рол\w{1,3}']
+  host-firewall:
+    en: ['host firewall']
+    ru: ['host firewall']
+  hybrid-cluster:
+    en: ['hybrid clusters?']
+    ru: ['гибридн\w{2,3} кластер\w{0,3}']
+  in-cluster-cache:
+    en: ['in-cluster (image )?cache']
+    ru: ['внутрикластерн\w{2,3} кеш\w{0,2}( образов)?']
+  ingress-controller:
+    en: ['ingress controllers?']
+    ru: ['ingress-контроллер\w{0,3}']
+  inlet:
+    en: ['inlets?']
+    ru: ['инлет\w{0,3}']
+  installer:
+    en: ['installer']
+    ru: ['установщик\w{0,2}']
+  instance-class:
+    en: ['instance class(es)?', '(?-i:InstanceClass)']
+    ru: ['инстанс-класс\w{0,3}', '(?-i:InstanceClass)']
+  kubernetes-api-audit:
+    en: ['Kubernetes API audit', 'audit of (the )?Kubernetes API']
+    ru: ['аудит\w{0,2} (событий )?API Kubernetes']
+  layout:
+    paths: ['admin/configuration/integrations', 'installing/', 'guides/']
+    en: ['layouts?']
+    ru: ['схем\w{1,2} размещения']
+  live-migration:
+    en: ['live migrations?']
+    ru: ['жив\w{2,3} миграци\w{1,2}']
+  local-storage:
+    en: ['local storage']
+    ru: ['локальн\w{2,3} хранилищ\w{1,2}']
+  log-buffering:
+    en: ['log buffering', 'buffering of logs']
+    ru: ['буферизаци\w{1,2} логов']
+  log-pipeline:
+    en: ['log pipelines?']
+    ru: ['pipeline\w{0,2} логов', 'пайплайн\w{0,2} логов']
+  longterm-storage:
+    en: ['long-?term (metrics )?storage']
+    ru: ['долговременн\w{2,3} хранилищ\w{1,2}( метрик)?']
+  main-project-namespace:
+    en: ['main project namespaces?']
+    ru: ['основн\w{2,3} неймспейс\w{0,3} проекта']
+  maintenance-mode:
+    paths: ['admin/configuration/platform-scaling/node', 'admin/configuration/high-reliability-and-availability', 'admin/configuration/virtualization', 'user/virtualization', 'architecture/virtualization', 'architecture/cluster-and-infrastructure']
+    en: ['maintenance mode']
+    ru: ['режим\w{0,2} обслуживания( узла)?']
+  managed-service:
+    en: ['managed services?']
+    ru: ['managed-сервис\w{0,3}']
+  manage-role:
+    en: ['manage roles?']
+    ru: ['manage-рол\w{1,3}']
+  marketplace:
+    en: ['(?-i:Marketplace)']
+    ru: ['(?-i:Marketplace)']
+  master-node:
+    en: ['master nodes?']
+    ru: ['master-уз(ел|л\w{1,3})']
+  module-bundle:
+    en: ['module bundles?', 'bundles? of modules']
+    ru: ['набор\w{0,3} модулей']
+  monitoring-node:
+    en: ['monitoring nodes?']
+    ru: ['уз(ел|л\w{1,3}) мониторинга']
+  multicluster:
+    en: ['multi-?clusters?']
+    ru: ['мультикластер\w{0,3}']
+  multi-master:
+    en: ['multi-master( clusters?)?']
+    ru: ['мультимастерн\w{2,3}( кластер\w{0,3})?']
+  network-policy:
+    en: ['network polic(y|ies)']
+    ru: ['сетев\w{2,3} политик\w{1,3}']
+  nlb:
+    paths: ['admin/configuration/network']
+    en: ['(?-i:NLB)']
+    ru: ['(?-i:NLB)']
+  node-group-autoscaling:
+    en: ['node group autoscaling', 'autoscaling of node groups']
+    ru: ['автомасштабировани\w{1,2} групп\w{1,3} узлов']
+  node-group:
+    en: ['node groups?']
+    ru: ['групп\w{1,3} узлов']
+  pod-redistribution:
+    en: ['pod redistribution', 'redistribution of pods']
+    ru: ['перераспределени\w{1,2} подов']
+  pod-security-standards:
+    en: ['Pod Security Standards']
+    ru: ['Pod Security Standards']
+  priority-class:
+    en: ['priority class(es)?']
+    ru: ['класс\w{0,3} приоритет\w{1,2}']
+  project-features:
+    en: ['project features']
+    ru: ['возможност\w{1,3} проекта']
+  project:
+    paths: ['user/', 'admin/configuration/multitenancy', 'admin/configuration/access', 'admin/configuration/virtualization', 'admin/configuration/managed-services', 'admin/configuration/marketplace', 'admin/configuration/network/sdn', 'admin/configuration/security/SECRET-DISTRIBUTION', 'admin/configuration/platform-scaling/node/VM_NODE_MAINTENANCE', 'architecture/iam']
+    en: ['projects?']
+    ru: ['проект(а|у|ом|е|ы|ов|ам|ами|ах)?']
+  project-namespace-features:
+    en: ['project namespace features']
+    ru: ['возможност\w{1,3} неймспейс\w{0,3} проекта']
+  protected-parameters:
+    en: ['protected parameters?']
+    ru: ['защищ[её]нн\w{2,3} параметр\w{0,3}']
+  rbac:
+    en: ['role model']
+    ru: ['ролев\w{2,3} модел\w{1,3}']
+  registry-mode:
+    en: ['registry (management )?modes?']
+    ru: ['режим\w{0,2} управления registry']
+  release-channel:
+    en: ['release channels?']
+    ru: ['канал\w{0,3} обновлени[йя]']
+  replicated-storage:
+    en: ['replicated storage']
+    ru: ['реплицируем\w{2,3} хранилищ\w{1,2}']
+  runtime-audit:
+    en: ['runtime audit']
+    ru: ['рантайм-аудит\w{0,2}']
+  sdn:
+    en: ['software-defined networks?', '(?-i:SDN)']
+    ru: ['программно-определяем\w{2,3} сет\w{1,3}', '(?-i:SDN)']
+  sds:
+    en: ['software-defined storage', '(?-i:SDS)']
+    ru: ['программно-определяем\w{2,3} хранилищ\w{1,2}', '(?-i:SDS)']
+  secret-distribution:
+    en: ['secret distribution', 'distribution of secrets']
+    ru: ['распространени\w{1,2} секретов']
+  security-event:
+    en: ['security events?']
+    ru: ['событи\w{1,2} безопасности']
+  service-mesh:
+    en: ['service mesh']
+    ru: ['сервис-меш\w{0,2}']
+  short-term-log-storage:
+    en: ['short-term log storage']
+    ru: ['кратковременн\w{2,3} хранени\w{1,2} логов']
+  single-master:
+    en: ['single-master( clusters?)?']
+    ru: ['кластер\w{0,3} с одним master-узлом']
+  sizing-policy:
+    en: ['sizing polic(y|ies)']
+    ru: ['политик\w{1,3} сайзинга']
+  sla-monitoring:
+    en: ['SLA monitoring']
+    ru: ['мониторинг\w{0,2} SLA']
+  standby-node:
+    en: ['standby nodes?']
+    ru: ['резервн\w{2,3} уз(ел|л\w{1,3})']
+  static-cluster:
+    en: ['static clusters?']
+    ru: ['статическ\w{2,3} кластер\w{0,3}']
+  static-node:
+    en: ['static nodes?']
+    ru: ['статическ\w{2,3} уз(ел|л\w{1,3})']
+  static-user:
+    en: ['static users?']
+    ru: ['статическ\w{2,3} пользовател\w{1,3}']
+  subsystem:
+    paths: ['admin/configuration/access/authorization', 'architecture/iam']
+    en: ['subsystems?']
+    ru: ['подсистем\w{1,3}']
+  system-component:
+    en: ['system components?']
+    ru: ['системн\w{2,3} компонент\w{0,3}']
+  system-namespace:
+    en: ['system namespaces?']
+    ru: ['системн\w{2,3} неймспейс\w{0,3}']
+  system-node:
+    en: ['system nodes?']
+    ru: ['системн\w{2,3} уз(ел|л\w{1,3})']
+  thick-volume:
+    en: ['thick volumes?']
+    ru: ['thick-том\w{0,3}']
+  thin-volume:
+    en: ['thin volumes?']
+    ru: ['thin-том\w{0,3}']
+  update-mode:
+    en: ['update modes?']
+    ru: ['режим\w{0,2} обновлени[йя]']
+  update-window:
+    en: ['update windows?']
+    ru: ['ок(но|на|он|нам|нами|нах|ну|ном|не) обновлений']
+  user-namespace:
+    en: ['user namespaces?']
+    ru: ['пользовательск\w{2,3} неймспейс\w{0,3}']
+  use-role:
+    en: ['use roles?']
+    ru: ['use-рол\w{1,3}']
+  vm-rebalancing:
+    en: ['VM rebalancing', 'rebalancing of (virtual machines|VMs)']
+    ru: ['перебалансировк\w{1,2} (ВМ|виртуальных машин)']
+  vulnerability-scanning:
+    en: ['vulnerability scanning', 'scanning for vulnerabilities']
+    ru: ['сканировани\w{1,2} (образов )?на уязвимости']
+
+  # --- terms from the user, architecture, guides, installing and reference sections ---
+  vm-image:
+    en: ['(virtual machine|VM) images?']
+    ru: ['образ\w{0,3} (виртуальн\w{2,3} машин\w{1,2}|ВМ)']
+  vm-disk:
+    en: ['(virtual machine|VM) disks?']
+    ru: ['диск\w{0,3} (виртуальн\w{2,3} машин\w{1,2}|ВМ)']
+  vm-snapshot:
+    en: ['(disk|VM|virtual machine) snapshots?', 'snapshots? of (a |the )?(disk|VM|virtual machine)']
+    ru: ['сним(ок|к\w{1,3}) (диск\w{1,2}|ВМ|виртуальн\w{2,3} машин\w{1,2})']
+  vm-consistent-snapshot:
+    en: ['consistent snapshots?']
+    ru: ['консистентн\w{2,3} сним(ок|к\w{1,3})']
+  vm-guest-agent:
+    en: ['guest (OS )?agents?', 'QEMU Guest Agent']
+    ru: ['агент\w{0,2} гостевой ОС', 'QEMU Guest Agent']
+  vm-provisioning:
+    paths: ['user/virtualization']
+    en: ['(VM|virtual machine) provisioning', 'initial (VM )?provisioning']
+    ru: ['начальн\w{2,3} инициализаци\w{1,2}']
+  vm-run-policy:
+    en: ['(run|startup) polic(y|ies)']
+    ru: ['политик\w{1,3} запуска']
+  vm-migration-policy:
+    en: ['migration polic(y|ies)']
+    ru: ['политик\w{1,3} миграции']
+  vm-core-fraction:
+    en: ['core fraction']
+    ru: ['дол\w{1,3} ядра']
+  vm-cpu-topology:
+    en: ['CPU topology']
+    ru: ['топологи\w{1,2} CPU']
+  vm-lifecycle:
+    en: ['(virtual machine|VM) life ?cycle']
+    ru: ['жизненн\w{2,3} цикл\w{0,2} (виртуальн\w{2,3} машин\w{1,2}|ВМ)']
+  vm-eviction:
+    en: ['(VM|virtual machine) eviction', 'eviction of (a |the )?(VM|virtual machine)']
+    ru: ['вытеснени\w{1,2} (ВМ|виртуальн\w{2,3} машин\w{1,2})']
+  vm-clone:
+    en: ['(VM|virtual machine) clon(e|es|ing)', 'cloning (a |of )?(VM|virtual machine)']
+    ru: ['клон\w{0,3} (ВМ|виртуальн\w{2,3} машин\w{1,2})', 'клонировани\w{1,2} (ВМ|виртуальн\w{2,3} машин\w{1,2})']
+  vm-pool:
+    en: ['(virtual machine|VM) pools?']
+    ru: ['пул\w{0,3} (ВМ|виртуальн\w{2,3} машин)']
+  vm-pool-reclaim-policy:
+    paths: ['user/virtualization', 'admin/configuration/virtualization', 'architecture/virtualization']
+    en: ['reclaim polic(y|ies)']
+    ru: ['политик\w{1,3} reclaim']
+  vm-block-device:
+    paths: ['user/virtualization/VM_BLOCK_DEVICES', 'user/virtualization/VM_CREATE', 'user/virtualization/VM_CONFIGURATION']
+    en: ['block devices?']
+    ru: ['блочн\w{2,3} устройств\w{0,2}']
+  vm-disk-export:
+    paths: ['user/virtualization', 'admin/configuration/virtualization', 'architecture/virtualization']
+    en: ['(disk )?data export', 'export of disk data']
+    ru: ['экспорт\w{0,2} данных( диска)?']
+  vm-placement:
+    en: ['(VM|virtual machine) placement']
+    ru: ['размещени\w{1,2} (ВМ|виртуальн\w{2,3} машин)']
+  virtual-machine:
+    en: []
+    ru: []
+  web-ui:
+    en: ['(Deckhouse|DP) web UI', 'web interface of (Deckhouse|DP)']
+    ru: ['веб-интерфейс\w{0,2} (Deckhouse|DP)']
+  end-to-end-authentication:
+    en: ['end-to-end authentication']
+    ru: ['сквозн\w{2,3} аутентификаци\w{1,2}']
+  secrets-store:
+    paths: ['architecture/security', 'user/web', 'admin/configuration/security', 'user/security']
+    en: ['secrets stores?']
+    ru: ['хранилищ\w{1,2} секретов']
+  stronghold-secrets-engine:
+    en: ['secrets engines?']
+    ru: ['механизм\w{0,3} секретов']
+  stronghold-sealing:
+    paths: ['user/web', 'architecture/security']
+    en: ['seal(ing|ed)']
+    ru: ['запечатыван\w{2,3}', 'запечатан\w{2,3}']
+  stronghold-lease:
+    paths: ['user/web']
+    en: ['leases?']
+    ru: ['аренд\w{1,3}']
+  additional-network:
+    paths: ['admin/configuration/network/sdn', 'user/network/sdn', 'user/network/virtualization', 'architecture/network/SDN']
+    en: ['additional networks?']
+    ru: ['дополнительн\w{2,3} сет\w{1,3}']
+  cluster-network:
+    paths: ['admin/configuration/network/sdn', 'user/network/sdn', 'user/network/virtualization', 'architecture/network/SDN']
+    en: ['cluster networks?']
+    ru: ['кластерн\w{2,3} сет\w{1,3}']
+  project-network:
+    paths: ['user/network', 'admin/configuration/network', 'architecture/network']
+    en: ['project networks?', 'user networks?']
+    ru: ['сет\w{1,3} проекта', 'пользовательск\w{2,3} сет\w{1,3}']
+  main-network:
+    paths: ['user/network', 'admin/configuration/network', 'architecture/network', 'user/virtualization']
+    en: ['main (cluster )?network']
+    ru: ['основн\w{2,3} сет\w{1,3}( кластера)?']
+  system-network:
+    paths: ['user/network', 'admin/configuration/network', 'architecture/network']
+    en: ['system networks?']
+    ru: ['системн\w{2,3} сет\w{1,3}']
+  underlay-network:
+    en: ['underlay networks?']
+    ru: ['underlay-сет\w{1,3}']
+  sdn-ipam:
+    paths: ['user/network', 'admin/configuration/network', 'architecture/network']
+    en: ['(?-i:IPAM)']
+    ru: ['(?-i:IPAM)']
+  advanced-load-balancer:
+    en: ['advanced load balancers?']
+    ru: ['расширенн\w{2,3} балансировщик\w{0,3}']
+  alb-managed-gateway:
+    en: ['managed Gateway', 'cluster-wide gateways?']
+    ru: ['управляем\w{2,3} Gateway', 'общекластерн\w{2,3} шлюз\w{0,3}']
+  istio-ingress-gateway:
+    en: ['Istio Ingress Gateway']
+    ru: ['Istio Ingress Gateway']
+  canary-deployment:
+    en: ['canary deployments?']
+    ru: ['canary-развёртывани\w{1,2}', 'canary-деплой\w{0,2}']
+  caching-dns-server:
+    en: ['caching DNS servers?']
+    ru: ['кеширующ\w{2,3} DNS-сервер\w{0,3}']
+  integrity-control:
+    en: ['integrity control']
+    ru: ['контрол\w{1,2} целостности']
+  image-signature-verification:
+    en: ['image signature verification', 'verification of image signatures']
+    ru: ['проверк\w{1,2} подпис\w{1,2} образов']
+  runtime-audit-rule:
+    paths: ['admin/configuration/security', 'user/security', 'architecture/security']
+    en: ['audit rules?']
+    ru: ['правил\w{1,3} аудита']
+  runtime-profile:
+    en: ['runtime profiles?']
+    ru: ['рантайм-профил\w{1,3}']
+  cis-compliance-check:
+    en: ['CIS (compliance )?checks?', 'CIS Kubernetes Benchmark']
+    ru: ['проверк\w{1,2} (соответствия )?CIS', 'CIS Kubernetes Benchmark']
+  automatic-certificate-issuance:
+    en: ['automatic (certificate )?issuance( of certificates)?']
+    ru: ['автоматическ\w{2,3} выпуск\w{0,2} сертификат\w{1,3}']
+  vulnerability-database:
+    en: ['vulnerability databases?']
+    ru: ['баз\w{1,2} (данных )?уязвимостей']
+  license-key:
+    en: ['license keys?']
+    ru: ['лицензионн\w{2,3} ключ\w{0,3}']
+  dashboard:
+    en: ['dashboards?']
+    ru: ['дашборд\w{0,3}']
+  alert-notification-channel:
+    en: ['notification channels?']
+    ru: ['канал\w{0,3} уведомлений']
+  alert-severity:
+    en: ['alert severity', 'severity of (an |the )?alert']
+    ru: ['критичност\w{1,2} алерт\w{1,3}']
+  availability-probe:
+    en: ['availability probes?']
+    ru: ['проб\w{1,3} доступности']
+  marketplace-package:
+    paths: ['architecture/marketplace', 'user/marketplace', 'admin/configuration/marketplace']
+    en: ['(application )?packages?']
+    ru: ['пакет\w{0,3}( приложени[яй])?']
+  application-instance:
+    en: ['application instances?', 'instances? of (an |the )?application']
+    ru: ['экземпляр\w{0,3} приложени[яй]']
+  no-resource-reconciliation:
+    paths: ['architecture/marketplace', 'user/marketplace', 'admin/configuration/marketplace', 'architecture/module-development']
+    en: ['maintenance mode', '(?-i:NoResourceReconciliation)']
+    ru: ['режим\w{0,2} обслуживания', '(?-i:NoResourceReconciliation)']
+  marketplace-package-bundle:
+    en: ['package bundles?']
+    ru: ['bundle\w{0,2} пакета']
+  application-orphan-resources:
+    en: ['orphan resources?']
+    ru: ['orphan-ресурс\w{0,3}']
+  application-reconciliation:
+    en: ['reconciliation runs?']
+    ru: ['цикл\w{0,3} согласования']
+  application-suspension:
+    en: ['application suspension', 'suspension of (an |the )?application']
+    ru: ['приостановк\w{1,2} приложени[яй]']
+  application-endpoints:
+    en: ['application endpoints?']
+    ru: ['адрес\w{0,3} приложения']
+  grantable-resource:
+    en: ['grantable (cluster-wide )?resources?']
+    ru: ['(?-i:x-deckhouse-grantable-resource)']
+  deletion-confirmation:
+    en: ['deletion confirmation', 'confirmation of deletion']
+    ru: ['подтверждени\w{1,2} удаления']
+  deckhouse-controller:
+    en: ['Deckhouse controller']
+    ru: ['контроллер\w{0,3} Deckhouse']
+  module-hook:
+    paths: ['architecture/deckhouse', 'architecture/module-development', 'architecture/marketplace', 'architecture/OVERVIEW']
+    en: ['hooks?']
+    ru: ['хук\w{0,3}']
+  hook-binding:
+    paths: ['architecture/module-development', 'architecture/marketplace']
+    en: ['bindings?']
+    ru: ['биндинг\w{0,3}']
+  module-source:
+    en: ['module sources?']
+    ru: ['источник\w{0,3} модулей']
+  built-in-module:
+    en: ['built-in modules?', 'embedded modules?']
+    ru: ['встроенн\w{2,3} модул\w{1,3}']
+  module-from-source:
+    en: ['modules? from (a |the )?(module )?source']
+    ru: ['модул\w{1,3} из источника']
+  module-update-policy:
+    en: ['module update polic(y|ies)', 'update polic(y|ies) of (a |the )?module']
+    ru: ['политик\w{1,3} обновления модул\w{1,3}']
+  module-lifecycle-stage:
+    en: ['lifecycle stages?', 'maturity stages?']
+    ru: ['стади\w{1,2} жизненного цикла', 'стади\w{1,2} зрелости']
+  module-dependencies:
+    en: ['module dependencies', 'dependencies of (a |the )?module']
+    ru: ['зависимост\w{1,3} модул\w{1,3}']
+  module-conditional-dependency:
+    en: ['conditional dependenc(y|ies)']
+    ru: ['условн\w{2,3} зависимост\w{1,3}']
+  module-artifacts:
+    en: ['module artifacts?']
+    ru: ['артефакт\w{0,3} модуля']
+  module-weight:
+    en: ['module weight', 'weight of (a |the )?module']
+    ru: ['вес\w{0,2} модул\w{1,3}']
+  critical-module:
+    en: ['critical modules?']
+    ru: ['критичн\w{2,3} модул\w{1,3}']
+  module-exclusive-group:
+    en: ['exclusive groups?']
+    ru: ['эксклюзивн\w{2,3} групп\w{1,3}']
+  module-accessibility:
+    en: ['module accessibility', 'accessibility of (a |the )?module']
+    ru: ['доступност\w{1,2} модул\w{1,3}']
+  module-settings-conversion:
+    paths: ['architecture/module-development']
+    en: ['conversions?']
+    ru: ['конверси\w{1,3}']
+  module-update-from-to:
+    paths: ['architecture/module-development']
+    en: ['(?-i:from-to)']
+    ru: ['(?-i:from-to)']
+  addon-operator-queue:
+    en: ['addon-operator queues?', 'queues? of addon-operator']
+    ru: ['очеред\w{1,3} addon-operator']
+  dp-release:
+    en: ['(DP|Deckhouse Platform) releases?']
+    ru: ['релиз\w{0,3} (DP|Deckhouse Platform)']
+  patch-version:
+    en: ['patch versions?']
+    ru: ['патч-верси\w{1,3}']
+  minor-version:
+    en: ['minor versions?']
+    ru: ['минорн\w{2,3} верси\w{1,3}']
+  release-channel-image:
+    en: ['release channel images?', '(?-i:release-channel) images?']
+    ru: ['образ\w{0,3} канала обновлений', 'образ\w{0,3} (?-i:release-channel)']
+  suspended-release:
+    en: ['suspended releases?']
+    ru: ['приостановленн\w{2,3} релиз\w{0,3}']
+  mirror-image-bundle:
+    en: ['image bundles?']
+    ru: ['архив\w{0,3} образов']
+  deckhouse-cli:
+    en: ['Deckhouse CLI']
+    ru: ['Deckhouse CLI']
+  public-domain-template:
+    en: ['DNS name templates?', '(?-i:publicDomainTemplate)']
+    ru: ['шаблон\w{0,3} DNS-им[её]н', '(?-i:publicDomainTemplate)']
+  kubernetes-conformance:
+    en: ['Kubernetes conformance', 'conformance tests?']
+    ru: ['conformance-тест\w{0,3}']
+  worker-node:
+    en: ['worker nodes?']
+    ru: ['worker-уз(ел|л\w{1,3})']
+  infrastructure-node:
+    en: ['infrastructure nodes?']
+    ru: ['инфраструктурн\w{2,3} уз(ел|л\w{1,3})']
+  hybrid-node-group:
+    en: ['hybrid node groups?']
+    ru: ['гибридн\w{2,3} групп\w{1,3} узлов']
+  single-node-cluster:
+    en: ['single-node clusters?']
+    ru: ['одноузлов\w{2,3} кластер\w{0,3}']
+  deployment-scenario:
+    en: ['deployment scenarios?']
+    ru: ['сценари\w{1,3} развёртывания']
+  existing-cluster-mode:
+    en: ['existing[- ]cluster mode', 'installation into an existing cluster']
+    ru: ['установк\w{1,2} в существующий кластер']
+  private-environment:
+    en: ['private environments?']
+    ru: ['закрыт\w{2,3} окружени\w{1,2}']
+  installation-config:
+    en: ['installation configuration files?']
+    ru: ['файл\w{0,3} конфигурации установки']
+  preflight-checks:
+    en: ['preflight checks?', 'pre-installation checks?']
+    ru: ['preflight-проверк\w{1,3}', 'предварительн\w{2,3} проверк\w{1,3}']
+  post-bootstrap-script:
+    en: ['post-bootstrap scripts?']
+    ru: ['post-bootstrap-скрипт\w{0,3}']
+  deckhouse-user:
+    en: ['(?-i:deckhouse) (system )?user']
+    ru: ['(системн\w{2,3} )?пользовател\w{1,3} (?-i:deckhouse)']
+  managing-cluster:
+    en: ['managing clusters?']
+    ru: ['управляющ\w{2,3} кластер\w{0,3}']
+  managed-cluster:
+    paths: ['architecture/deckhouse/CLUSTER_MANAGEMENT']
+    en: ['managed clusters?']
+    ru: ['управляем\w{2,3} кластер\w{0,3}']
+  bashible-bundle:
+    en: ['bashible bundles?']
+    ru: ['бандл\w{0,3} bashible', 'bundle\w{0,2} bashible']
+  bashible-api-server:
+    en: ['bashible-api-server']
+    ru: ['bashible-api-server']
+  kubernetes-api-proxy:
+    en: ['kubernetes-api-proxy']
+    ru: ['kubernetes-api-proxy']
+  static-pod:
+    en: ['static pods?']
+    ru: ['статическ\w{2,3} под(а|у|ом|е|ы|ов|ам|ами|ах)?']
+  pod-limit-per-node:
+    en: ['pod limit per node', 'maximum number of pods (on|per) (a |the )?node']
+    ru: ['лимит\w{0,2} подов на уз(ел|ле)']
+  csi-driver:
+    en: ['CSI drivers?']
+    ru: ['CSI-драйвер\w{0,3}']
+  external-storage:
+    en: ['external storage']
+    ru: ['внешн\w{2,3} хранилищ\w{1,2}']
+  scheduler-extender:
+    en: ['scheduler extenders?']
+    ru: ['расширени\w{1,2} планировщика']
+  availability-zone:
+    en: ['availability zones?']
+    ru: ['зон\w{1,3} доступности']
+  region:
+    paths: ['architecture/disaster-resistance', 'guides/']
+    en: ['regions?']
+    ru: ['регион\w{0,3}']
+  disaster-resilience:
+    en: ['disaster resilience']
+    ru: ['катастрофоустойчивост\w{1,2}']
+  geo-distribution:
+    en: ['geo-?distribution']
+    ru: ['геораспредел[её]нност\w{0,2}', 'геораспределени\w{1,2}']
+  geo-reserving:
+    en: ['geo-?reserv(ing|ation)']
+    ru: ['георезервировани\w{1,2}']
+  active-active:
+    en: ['(?-i:active-active)']
+    ru: ['(?-i:active-active)']
+  active-standby:
+    en: ['(?-i:active-standby)']
+    ru: ['(?-i:active-standby)']

@@ -27,7 +27,7 @@ description: Архитектура модуля csi-vsphere в Deckhouse Platfo
 
 Модуль состоит из следующих компонентов:
 
-1. **Cloud-data-discoverer** — отвечает за сбор данных из API VMware vSphere и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется CSI-драйвером для управления томами.
+1. **Cloud-data-discoverer** — отвечает за сбор данных из API VMware vSphere и предоставление их в виде секрета `kube-system/d8-cloud-provider-discovery-data`. Этот секрет содержит параметры конкретного облака, которые используется [CSI-драйвером](../../../glossary.html#csi-driver) для управления томами.
 
    Состоит из следующих контейнеров:
 

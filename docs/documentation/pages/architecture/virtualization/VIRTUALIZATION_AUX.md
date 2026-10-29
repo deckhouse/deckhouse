@@ -7,7 +7,7 @@ description: Architecture of auxiliary components of virtualization module in De
 
 The [`virtualization`](/modules/virtualization/) module uses components that implement the following auxiliary functions:
 
-- Security events audit.
+- [Security events](../../glossary.html#security-event) audit.
 - Forwarding USB devices to virtual machines (VMs).
 - Updating network routes.
 - Deleting resources before deactivating the [`virtualization`](/modules/virtualization/) module.
@@ -76,7 +76,7 @@ The Level 2 C4 architecture of other [`virtualization`](/modules/virtualization/
 
 1. **Vm-route-forge**: A controller that monitors [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) custom resources of the `virtualization.deckhouse.io` API group and updates network routes on the node via Linux netlink/eBPF in routing tables used by [CNI Cilium](/modules/cni-cilium/) for routing traffic between VMs.
 
-1. **Pre-delete-hook** (Job): A Job started by the Deckhouse controller before the [`virtualization`](/modules/virtualization/) module is deleted. It removes the InternalVirtualizationKubeVirt custom resource named `config`.
+1. **Pre-delete-hook** (Job): A Job started by the [Deckhouse controller](../../glossary.html#deckhouse-controller) before the [`virtualization`](/modules/virtualization/) module is deleted. It removes the InternalVirtualizationKubeVirt custom resource named `config`.
 
 ### Interactions
 

@@ -82,7 +82,7 @@ ALB на основе модуля [`istio`](/modules/istio/) поддержив
    d8 k get ingressclass
    ```
 
-1. Для Gateway API — убедитесь, что есть готовый [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) или [ALBInstance](/modules/alb/cr.html#albinstance) в состоянии `Ready`, затем найдите управляемый Gateway и ListenerSet:
+1. Для Gateway API — убедитесь, что есть готовый [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) или [ALBInstance](/modules/alb/cr.html#albinstance) в состоянии `Ready`, затем найдите [управляемый Gateway](../../../../glossary.html#alb-managed-gateway) и ListenerSet:
 
    ```shell
    d8 k get clusteralbinstances,albinstances --all-namespaces

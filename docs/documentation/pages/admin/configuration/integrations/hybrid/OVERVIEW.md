@@ -6,15 +6,15 @@ search: hybrid, hybrid cluster, hybrid integration
 description: General principles of hybrid integration in Deckhouse Platform.
 ---
 
-A hybrid cluster is a static Deckhouse Platform (DP) cluster extended with nodes placed in the infrastructure of a supported provider, such as Yandex Cloud, VMware Cloud Director or VMware vSphere.
+A [hybrid cluster](../../../glossary.html#hybrid-cluster) is a static Deckhouse Platform (DP) cluster extended with nodes placed in the infrastructure of a supported provider, such as Yandex Cloud, VMware Cloud Director or VMware vSphere.
 
 In this scenario, the control plane and the initial cluster nodes remain part of the static DP cluster, while additional nodes are added through the corresponding provider module. These nodes can be created automatically through the provider API or connected manually if the virtual machines were created in advance.
 
-This approach allows you to expand an existing static cluster without creating a separate Kubernetes cluster: increase compute capacity, place some workloads in another infrastructure, or gradually migrate services there. Applications still use a single Kubernetes control plane: the same API, shared resources, and unified mechanisms for scheduling, monitoring, updates, and operations.
+This approach allows you to expand an existing [static cluster](../../../glossary.html#static-cluster) without creating a separate Kubernetes cluster: increase compute capacity, place some workloads in another infrastructure, or gradually migrate services there. Applications still use a single Kubernetes control plane: the same API, shared resources, and unified mechanisms for scheduling, monitoring, updates, and operations.
 
-Hybrid integration is performed on top of an already deployed static DP cluster ([`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype)). Then the corresponding cloud provider module is enabled, allowing DP to obtain information about the external infrastructure and create or connect additional nodes.
+Hybrid integration is performed on top of an already deployed static DP cluster ([`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype)). Then the corresponding [cloud provider](../../../glossary.html#cloud-provider) module is enabled, allowing DP to obtain information about the external infrastructure and create or connect additional nodes.
 
-Depending on the provider, nodes can be added automatically through the provider API or connected manually by running a bootstrap script on pre-created virtual machines.
+Depending on the provider, nodes can be added automatically through the provider API or connected manually by running a [bootstrap script](../../../glossary.html#bootstrap-script) on pre-created virtual machines.
 
 The general principles of hybrid integration are described on this page. The procedure for preparing the infrastructure and adding nodes depends on the provider being used and is described in separate guides:
 
@@ -47,7 +47,7 @@ Connectivity must provide:
 - access from connected nodes to the Kubernetes API of the initial cluster;
 - access from connected nodes to DNS servers;
 - access from connected nodes to the container image registry and other external services required to download images and packages;
-- access from the control plane and system components to the connected nodes for kubelet, networking components, monitoring, and Kubernetes service operations;
+- access from the control plane and [system components](../../../glossary.html#system-component) to the connected nodes for kubelet, networking components, monitoring, and Kubernetes service operations;
 - access from DP components that interact with the provider infrastructure to the corresponding provider API.
 
 The full list of required connections is provided in the [Network interaction](../../../../reference/network_interaction.html) section, and access restriction recommendations are provided in the [Configuring network policies](../../configuration/network/policy/configuration.html) section.

@@ -179,6 +179,10 @@ The keys are listed in `i18n/en.yaml` and `i18n/ru.yaml` of the template.
   CR field anchors have the form `cr.html#<kind>-<version>-<field-path>` in lowercase,
   for example `cr.html#clusteralbinstance-v1alpha1-spec-inlet`.
   Module parameter anchors have the form `configuration.html#parameters-<parameter-path>` in lowercase, for example `configuration.html#parameters-https-mode`.
+- **Glossary terms.** Link to a term of the DP glossary with an ordinary Markdown link to the glossary page and the term id as the anchor:
+  `[projects](/products/kubernetes-platform/documentation/v1/glossary.html#project)`. The link text is any form of the word.
+  The site shows the short definition in a tooltip and the click leads to the term. The same link works inside CRD and OpenAPI descriptions.
+  Term ids are the file names in `docs/documentation/_glossary/` of the DP repository.
 - **Link rewriting.** The site can rewrite, unwrap or filter links by rules in the site configuration.
   A link with the title `keep-link`, `[text](url "keep-link")`, is never rewritten.
 - **Mermaid.** A fenced code block with the `mermaid` language renders as a diagram.

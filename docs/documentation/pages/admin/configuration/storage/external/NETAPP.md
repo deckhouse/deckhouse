@@ -3,7 +3,7 @@ title: "NetApp data storage"
 permalink: en/admin/configuration/storage/external/netapp.html
 ---
 
-Deckhouse Platform (DP) implements support for NetApp data storage systems for volume management in Kubernetes using CSI driver. This integration provides reliable, scalable, and high-performance storage suitable for critical workloads. For working with NetApp storage systems, the [`csi-netapp` module](/modules/csi-netapp/) is used, which allows creating StorageClass in Kubernetes through creating a [NetappStorageClass](/modules/csi-netapp/cr.html#netappstorageclass) resource.
+Deckhouse Platform (DP) implements support for NetApp data storage systems for volume management in Kubernetes using [CSI driver](../../../../glossary.html#csi-driver). This integration provides reliable, scalable, and high-performance storage suitable for critical workloads. For working with NetApp storage systems, the [`csi-netapp` module](/modules/csi-netapp/) is used, which allows creating StorageClass in Kubernetes through creating a [NetappStorageClass](/modules/csi-netapp/cr.html#netappstorageclass) resource.
 
 {% alert level="warning" %}
 Creating StorageClass for `csi.netapp.com` CSI driver by users is prohibited.

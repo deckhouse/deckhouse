@@ -35,7 +35,7 @@ The module consists of the following components:
 
 1. **Managed-hive-metastore-operator** (Deployment): Kubernetes operator consisting of a single container **manager** that performs the following operations:
 
-   * Reconciles [HiveMetastore](/modules/managed-hive-metastore/cr.html#hive-metastore) custom resources in all user namespaces. The HiveMetastore and HiveMetastoreClass custom resources define the settings of the HMS instance.
+   * Reconciles [HiveMetastore](/modules/managed-hive-metastore/cr.html#hive-metastore) custom resources in all [user namespaces](../../glossary.html#user-namespace). The HiveMetastore and HiveMetastoreClass custom resources define the settings of the HMS instance.
 
    * Creates and manages the [Certificate](https://cert-manager.io/docs/usage/certificate/) custom resource and Deployment, Service, and Secret resources related to the HMS instance.
 

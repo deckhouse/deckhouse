@@ -26,7 +26,7 @@ The Level 2 C4 architecture of the [`cloud-provider-dvp`](/modules/cloud-provide
 
 The module consists of the following components:
 
-1. **Capdvp-controller-manager**: Kubernetes Cluster API Provider for DVP. [Cluster API](https://github.com/kubernetes-sigs/cluster-api) is an extension for Kubernetes that allows you to manage Kubernetes clusters as custom resources inside another Kubernetes cluster. Cluster API Provider allows clusters running the Cluster API to order virtual machines in the cloud provider's infrastructure, DVP in this case.  Capdvp-controller-manager works with the following custom resources:
+1. **Capdvp-controller-manager**: Kubernetes Cluster API Provider for DVP. [Cluster API](https://github.com/kubernetes-sigs/cluster-api) is an extension for Kubernetes that allows you to manage Kubernetes clusters as custom resources inside another Kubernetes cluster. Cluster API Provider allows clusters running the Cluster API to order virtual machines in the [cloud provider](../../../glossary.html#cloud-provider)'s infrastructure, DVP in this case.  Capdvp-controller-manager works with the following custom resources:
 
    * DeckhouseCluster: Description of a DVP-based cluster.
    * DeckhouseMachineTemplate: Template describing the characteristics of the machines created in the cloud.
@@ -51,14 +51,14 @@ The module consists of the following components:
 
    * **dvp-cloud-controller-manager**.
 
-3. **Cloud-data-discoverer**: It is responsible for collecting data from the cloud provider's API and providing it as a `kube-system/d8-cloud-provider-discovery-data` Secret. This secret contains the parameters of a specific cloud used by other components of the `cloud-provider-dvp` module. For example, for DVP, these are parameters such as a list of availability zones, StorageClass resources, etc.
+3. **Cloud-data-discoverer**: It is responsible for collecting data from the cloud provider's API and providing it as a `kube-system/d8-cloud-provider-discovery-data` Secret. This secret contains the parameters of a specific cloud used by other components of the `cloud-provider-dvp` module. For example, for DVP, these are parameters such as a list of [availability zones](../../../glossary.html#availability-zone), StorageClass resources, etc.
 
    It consists of the following containers:
 
    * **cloud-data-discoverer**: Main container.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the cloud-data-discoverer metrics.
 
-4. **CSI driver (DVP)**: It is an implementation of the CSI driver for DVP. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../../storage/csi-drivers/csi-driver.html).
+4. **[CSI driver](../../../glossary.html#csi-driver) (DVP)**: It is an implementation of the CSI driver for DVP. To study the `cloud-provider-*` CSI driver typical architecture, refer to the [corresponding documentation page](../../storage/csi-drivers/csi-driver.html).
 
    CSI driver (DVP) does not support snapshots. For this reason, the `csi-controller` Pod does not include the snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter )) sidecar container.
 
@@ -92,7 +92,7 @@ Indirect interactions:
 1. The `cloud-provider-dvp` module provides [`node-manager`](/modules/node-manager/) with following artifacts:
 
    * Provider-specific Cluster API custom resource templates to be used by `cloud-provider-dvp` to create VMs in the cloud.
-   * The `kube-system/d8-node-manager-cloud-provider` Secret, which contains all the necessary settings to connect to the cloud and to create CloudEphemeral nodes. These settings are registered in the provider-specific Cluster API custom resources created based on the templates mentioned above.
+   * The `kube-system/d8-node-manager-cloud-provider` Secret, which contains all the necessary settings to connect to the cloud and to create [CloudEphemeral nodes](../../../glossary.html#cloud-ephemeral-node). These settings are registered in the provider-specific Cluster API custom resources created based on the templates mentioned above.
 
 2. The `cloud-provider-dvp` module provides Terraform/OpenTofu components for DVP cloud used when building the [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl) executable file for the [`terraform-manager`](/modules/terraform-manager/) module, such as:
 

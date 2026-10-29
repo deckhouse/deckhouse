@@ -6,7 +6,7 @@ lang: ru
 search: Application troubleshooting, application conditions, диагностика приложений, условия приложения, логи приложения
 ---
 
-В этом разделе описан порядок решения типичных проблем при работе с приложениями Marketplace.
+В этом разделе описан порядок решения типичных проблем при работе с приложениями [Marketplace](../../glossary.html#marketplace).
 
 ## Проверка наличия кастомных ресурсов Marketplace
 
@@ -114,7 +114,7 @@ d8 k logs -n <NAMESPACE> deployments/d8a-<APPLICATION_NAME>-<SUFFIX>
 
 | Причина | Условия | Значение и что проверить |
 |---|---|---|
-| `Pending` | `Installed`, `UpdateInstalled` | DP ждёт возможности установить версию, например, пока не будут включены модули из `requirements.modules` пакета. Попросите администратора проверить эти модули |
+| `Pending` | `Installed`, `UpdateInstalled` | DP ждёт возможности установить версию, например, пока не будут включены модули из `requirements.modules` [пакета](../../glossary.html#marketplace-package). Попросите администратора проверить эти модули |
 | `RequirementsUnmet` | `Installed` | Кластер не удовлетворяет требованиям пакета. В сообщении указано невыполненное требование |
 | `DownloadFailed` | `Installed`, `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | DP не удаётся загрузить версию пакета. Попросите администратора проверить PackageRepository и доступ к репозиторию |
 | `LoadFromFilesystemFailed` | `Installed`, `UpdateInstalled`, `Ready` | DP не удаётся прочитать загруженный пакет. Обратитесь к разработчику пакета |
@@ -124,5 +124,5 @@ d8 k logs -n <NAMESPACE> deployments/d8a-<APPLICATION_NAME>-<SUFFIX>
 | `ApplyingManifests`, `SettingsChanged` | `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | Не является ошибкой. DP применяет манифесты или изменённые настройки |
 | `Reconciling` | `Scaled` | Идёт развёртывание рабочей нагрузки. Имя нагрузки указано в сообщении |
 | `Degraded` | `Scaled` | Рабочую нагрузку не удалось развернуть. Проверьте события и поды рабочей нагрузки с помощью команды `d8 k describe` |
-| `NoResourceReconciliation` | `Managed` | Приложение находится в режиме обслуживания (поле `spec.maintenance`) |
+| `NoResourceReconciliation` | `Managed` | Приложение находится в [режиме обслуживания](../../glossary.html#no-resource-reconciliation) (поле `spec.maintenance`) |
 | `Deleting` | Все | Приложение удаляется |

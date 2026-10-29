@@ -6,7 +6,7 @@ search: multitenancy, ProjectTemplate, Project, project isolation
 description: How multitenancy works in Deckhouse Platform.
 ---
 
-The [`multitenancy-manager`](/modules/multitenancy-manager/) module allows you to create isolated projects within the Deckhouse Platform (DP). Projects provide resource quotas, network isolation, and security features that go beyond standard namespaces.
+The [`multitenancy-manager`](/modules/multitenancy-manager/) module allows you to create isolated [projects](../../glossary.html#project) within the Deckhouse Platform (DP). Projects provide resource quotas, network isolation, and security features that go beyond standard namespaces.
 
 For more details about module configuration and usage examples, refer to the [corresponding documentation section](/modules/multitenancy-manager/).
 
@@ -83,7 +83,7 @@ The module consists of the following components:
 
 - **Multitenancy-manager**: The component consists of a single **multitenancy-manager** container and provides the following functions:
 
-  - Managing the Project and ProjectTemplate custom resources.
+  - Managing the [Project](../../glossary.html#project) and ProjectTemplate custom resources.
   - Validating the Project and ProjectTemplate custom resources.
   - Creating the resources specified in the ProjectTemplate custom resource based on the parameters set in Project.
   - Managing the grants mechanism for cluster-wide resources — the

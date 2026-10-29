@@ -5,7 +5,7 @@ description: Cluster fault tolerance testing
 ---
 
 {% alert level="warning" %}
-Chaos engineering mode can only be enabled for node groups with [`nodeType: CloudEphemeral`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype).
+[Chaos engineering](../../../glossary.html#chaos-engineering) mode can only be enabled for [node groups](../../../glossary.html#node-group) with [`nodeType: CloudEphemeral`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype).
 {% endalert %}
 
 Enable chaos engineering mode for a node group in one of the following ways:
@@ -41,6 +41,6 @@ Enable chaos engineering mode for a node group in one of the following ways:
    ```
 
 1. If the [`console`](/modules/console/) module is enabled in the cluster,
-  open the Deckhouse web UI, go to the settings of the desired node group under **Nodes** — **Node Groups**,
+  open the [Deckhouse web UI](../../../glossary.html#web-ui), go to the settings of the desired node group under **Nodes** — **Node Groups**,
   and enable Chaos Monkey in the **Chaos monkey settings** section
   by specifying the time intervals in the corresponding fields.

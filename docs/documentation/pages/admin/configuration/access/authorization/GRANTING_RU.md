@@ -7,8 +7,8 @@ lang: ru
 
 Для выдачи прав в Deckhouse Platform (DP) указывается блок `subjects`. Его формат и состав зависят от типа ресурса:
 
-- в ресурсах [AuthorizationRule и ClusterAuthorizationRule](#предоставление-прав-с-помощью-authorizationrule-и-clusterauthorizationrule-упрощённая-ролевая-модель) (упрощённая модель), а также [ProjectRoleBinding и ClusterProjectRoleBinding](#предоставление-прав-с-помощью-clusterrolebinding-и-rolebinding-гранулярная-ролевая-модель) модуля `multitenancy-manager` (гранулярная модель, уровень проекта) — используется [блок `subjects`](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-subjects), показанный ниже;
-- в стандартных ресурсах Kubernetes [RoleBinding и ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) (гранулярная модель, уровень неймспейса, подсистемы или всей платформы) формат отличается: для `kind: User` и `kind: Group` в элементе `subjects` дополнительно обязательно поле `apiGroup: rbac.authorization.k8s.io` (для `kind: ServiceAccount` оно не требуется). Подробнее — в примерах в разделе [«Предоставление прав с помощью ClusterRoleBinding и RoleBinding»](#предоставление-прав-с-помощью-clusterrolebinding-и-rolebinding-гранулярная-ролевая-модель) ниже.
+- в ресурсах [AuthorizationRule и ClusterAuthorizationRule](#предоставление-прав-с-помощью-authorizationrule-и-clusterauthorizationrule-упрощённая-ролевая-модель) (упрощённая модель), а также [ProjectRoleBinding и ClusterProjectRoleBinding](#предоставление-прав-с-помощью-clusterrolebinding-и-rolebinding-гранулярная-ролевая-модель) модуля `multitenancy-manager` (гранулярная модель, уровень [проекта](../../../../glossary.html#project)) — используется [блок `subjects`](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-subjects), показанный ниже;
+- в стандартных ресурсах Kubernetes [RoleBinding и ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/) (гранулярная модель, уровень неймспейса, [подсистемы](../../../../glossary.html#subsystem) или всей платформы) формат отличается: для `kind: User` и `kind: Group` в элементе `subjects` дополнительно обязательно поле `apiGroup: rbac.authorization.k8s.io` (для `kind: ServiceAccount` оно не требуется). Подробнее — в примерах в разделе [«Предоставление прав с помощью ClusterRoleBinding и RoleBinding»](#предоставление-прав-с-помощью-clusterrolebinding-и-rolebinding-гранулярная-ролевая-модель) ниже.
 
 Для пользователя он указывается в формате:
 
@@ -19,7 +19,7 @@ subjects:
 ```
 
 {% alert level="warning" %}
-В случае использования [модуля `user-authn`](/modules/user-authn/) и статических пользователей, указывайте в `subjects` именно email пользователя, а не имя [ресурса User](/modules/user-authn/cr.html#user).
+В случае использования [модуля `user-authn`](/modules/user-authn/) и [статических пользователей](../../../../glossary.html#static-user), указывайте в `subjects` именно email пользователя, а не имя [ресурса User](/modules/user-authn/cr.html#user).
 {% endalert %}
 
 или
@@ -41,7 +41,7 @@ subjects:
 
 ## Предоставление прав с помощью AuthorizationRule и ClusterAuthorizationRule (упрощённая ролевая модель)
 
-В упрощённой ролевой модели Deckhouse Platform для предоставления прав пользователям можно использовать ресурсы [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) и [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule).
+В упрощённой [ролевой модели](../../../../glossary.html#rbac) Deckhouse Platform для предоставления прав пользователям можно использовать ресурсы [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) и [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule).
 
 {% alert level="warning" %}
 Поддержка упрощённой ролевой модели будет прекращена в будущих релизах. Для новых ролей используйте [гранулярную ролевую модель](#предоставление-прав-с-помощью-clusterrolebinding-и-rolebinding-гранулярная-ролевая-модель) ниже — её можно использовать одновременно с упрощённой моделью, так как права из обеих моделей суммируются.
@@ -79,7 +79,7 @@ spec:
 Если нужно предоставить права пользователю во всех неймспейсах (например, для предоставления прав администратора), используйте ресурс [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule). Он действует во всем кластере.
 
 {% alert level="info" %}
-В режиме multitenancy ClusterAuthorizationRule без [`namespaceSelector`](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector) не предоставляет доступ в системные неймспейсы: для них нужен [`namespaceSelector.matchAny: true`](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector-matchany) или устаревший [`allowAccessToSystemNamespaces: true`](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-allowaccesstosystemnamespaces).
+В режиме multitenancy ClusterAuthorizationRule без [`namespaceSelector`](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector) не предоставляет доступ в [системные неймспейсы](../../../../glossary.html#system-namespace): для них нужен [`namespaceSelector.matchAny: true`](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector-matchany) или устаревший [`allowAccessToSystemNamespaces: true`](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-allowaccesstosystemnamespaces).
 {% endalert %}
 
 При необходимости можно ограничить область действия прав, предоставляемых с помощью [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule), одним или несколькими неймспейсами. Для этого в его манифесте укажите соответствующие ограничения (но, если позволяет возможность, рекомендуемый вариант для этого — использование [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule)). Пример:
@@ -109,9 +109,9 @@ spec:
 
 ## Предоставление прав с помощью ClusterRoleBinding и RoleBinding (гранулярная ролевая модель)
 
-При использовании гранулярной ролевой модели в Deckhouse Platform для предоставления прав пользователям можно использовать ресурсы [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) и [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/), а для выдачи доступа сразу ко всем неймспейсам проекта — ресурсы [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) и [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) модуля `multitenancy-manager`.
+При использовании гранулярной [ролевой модели](../../../../glossary.html#rbac) в Deckhouse Platform для предоставления прав пользователям можно использовать ресурсы [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) и [RoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/role-binding-v1/), а для выдачи доступа сразу ко всем неймспейсам [проекта](../../../../glossary.html#project) — ресурсы [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) и [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) модуля `multitenancy-manager`.
 
-Роли гранулярной модели действуют в одной из четырёх областей — неймспейс, проект, подсистема или вся платформа, — каждая со своим форматом имени роли и уровнями доступа. Подробнее — в разделе [«Области действия ролей»](rbac-experimental.html#области-действия-ролей).
+Роли гранулярной модели действуют в одной из четырёх областей — неймспейс, проект, [подсистема](../../../../glossary.html#subsystem) или вся платформа, — каждая со своим форматом имени роли и уровнями доступа. Подробнее — в разделе [«Области действия ролей»](rbac-experimental.html#области-действия-ролей).
 
 {% alert level="info" %}
 Выдать доступ можно и без написания YAML-манифестов — с помощью мастера выдачи доступа в [веб-интерфейсе Deckhouse](../../../../user/web/ui.html). Мастер проводит по шагам (кому выдать доступ → где → с каким уровнем), сам выбирает вид привязки (RoleBinding, ClusterRoleBinding, ProjectRoleBinding или ClusterProjectRoleBinding) и позволяет собрать собственную роль из готовых capabilities.

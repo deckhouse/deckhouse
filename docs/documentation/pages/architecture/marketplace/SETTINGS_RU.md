@@ -6,7 +6,7 @@ lang: ru
 search: application settings, settings.yaml, x-deckhouse-validations, x-deckhouse-immutable, x-deckhouse-ui, настройки приложения, схема настроек, валидация настроек
 ---
 
-Пользователь настраивает экземпляр приложения [в поле `spec.settings`](../../reference/api/cr.html#application-v1alpha1-spec-settings) ресурса Application. Пакет описывает допустимые настройки OpenAPI-схемой. Deckhouse Platform (DP) проверяет настройки по этой схеме, подставляет значения по умолчанию и передаёт результат в шаблоны и хуки. Веб-интерфейс DP строит по этой же схеме форму настроек приложения.
+Пользователь настраивает [экземпляр приложения](../../glossary.html#application-instance) [в поле `spec.settings`](../../reference/api/cr.html#application-v1alpha1-spec-settings) ресурса Application. [Пакет](../../glossary.html#marketplace-package) описывает допустимые настройки OpenAPI-схемой. Deckhouse Platform (DP) проверяет настройки по этой схеме, подставляет значения по умолчанию и передаёт результат в шаблоны и [хуки](../../glossary.html#module-hook). [Веб-интерфейс DP](../../glossary.html#web-ui) строит по этой же схеме форму настроек приложения.
 
 ## Файлы схем
 
@@ -75,7 +75,7 @@ properties:
 | Application создаётся или изменяется | Схема настроек, опубликованная в ApplicationPackageVersion, включая правила CEL без `oldSelf`, и поля с `x-deckhouse-immutable` | Запрос отклоняется |
 | Изменяются настройки установленного приложения (`spec.packageVersion` совпадает с установленной версией) | Дополнительно: правила CEL с `oldSelf`, доступность ресурсов по грантам и [хук валидации настроек](hooks.html#хук-валидации-настроек) | Запрос отклоняется |
 | DP применяет настройки | То же, что в предыдущей строке | Настройки не применяются, ошибка отражается в условиях Application |
-| Хук меняет values | Схема `openapi/values.yaml`, включая правила CEL | Хук завершается с ошибкой |
+| [Хук](../../glossary.html#module-hook) меняет values | Схема `openapi/values.yaml`, включая правила CEL | Хук завершается с ошибкой |
 
 ### Правила CEL
 

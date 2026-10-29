@@ -5,7 +5,7 @@ search: csi-nfs, nfs
 description: Overview of the CSI driver architecture for NFS-based volumes in Deckhouse Platform.
 ---
 
-The CSI driver `csi-nfs` is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage NFS-based volumes in Deckhouse Platform (DP).
+The [CSI driver](../../../glossary.html#csi-driver) `csi-nfs` is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage NFS-based volumes in Deckhouse Platform (DP).
 
 ## Driver architecture
 
@@ -68,7 +68,7 @@ The `csi-nfs` CSI driver consists of the following components:
 
    * **net-handshake-checker**: Init-container. It runs [`tlshd`](https://github.com/oracle/ktls-utils) one time to check kernel TLS handshake support.
 
-   * **node**: Main container implementing CSI driver functionality through the gRPC services Identity Service and Node Service according to the [CSI specification](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface).
+   * **node**: Main container implementing [CSI driver](../../../glossary.html#csi-driver) functionality through the gRPC services Identity Service and Node Service according to the [CSI specification](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface).
 
    * **tlshd**: Sidecar container that provides an RPC-with-TLS connection.
 

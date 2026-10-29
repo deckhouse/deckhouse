@@ -60,7 +60,7 @@ Core components of the `commander` module include:
 
    * UI API: Manages cluster, template, and workspace settings.
    * External API for integrations and automation: Operates on clusters, tasks, templates, projects, roles, and more.
-   * API for cluster-manager: Exchanges cluster task states and processes deployment and configuration phases of managed clusters.
+   * API for cluster-manager: Exchanges cluster task states and processes deployment and configuration phases of [managed clusters](../../glossary.html#managed-cluster).
    * API for `commander-agent`: Authorizes and receives agent metrics, and provides target configuration for a managed cluster.
 
    Backend provides the following capabilities:
@@ -101,7 +101,7 @@ Core components of the `commander` module include:
 
 1. **Cluster-manager** (Deployment): Executes tasks requested by backend to deploy managed DP clusters and manage their configuration.
 
-   When a new cluster is created, cluster-manager creates the following resources in the `d8-commander` namespace of the managing cluster:
+   When a new cluster is created, cluster-manager creates the following resources in the `d8-commander` namespace of the [managing cluster](../../glossary.html#managing-cluster):
 
    * Deployment and Secret named `dhctl-<REGISTRY_HASH>-<VERSION>`: Runs [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) in gRPC server mode. Cluster-manager uses RPC calls to install and configure a DP cluster.
    * To process incoming `commander-agent` connections and implement a reverse interaction channel with the control plane of the corresponding cluster:
@@ -205,7 +205,7 @@ Service components of the `commander` module include:
 
 1. **Audits-cleaner** (CronJob): Runs once a day and deletes old audit logs.
 
-   The Deckhouse controller of the [`deckhouse`](/modules/deckhouse/) module creates audits-cleaner if the [`settings.featureFlags.auditsRetentionDays`](/modules/commander/admin_guide.html#audit-log-retention--auditsretentiondays) module parameter is set and defines the audit log retention period.
+   The [Deckhouse controller](../../glossary.html#deckhouse-controller) of the [`deckhouse`](/modules/deckhouse/) module creates audits-cleaner if the [`settings.featureFlags.auditsRetentionDays`](/modules/commander/admin_guide.html#audit-log-retention--auditsretentiondays) module parameter is set and defines the audit log retention period.
 
    Contains the following containers:
 
@@ -264,7 +264,7 @@ The module interacts with the following components:
    * Works with Deployment, Service, Secret, and Ingress resources in the `d8-commander` namespace.
    * Authorizes requests.
 
-1. **Container registry**: Retrieves available DP releases by release channels.
+1. **Container registry**: Retrieves available [DP releases](../../glossary.html#dp-release) by [release channels](../../glossary.html#release-channel).
 
 1. **PostgreSQL instance**: Stores cluster states and metadata, tasks, tokens, projects, billing parameters, and reports.
 
@@ -294,7 +294,7 @@ The module consists of one **agent** component and one **commander-agent** conta
 
 Agent performs the following actions:
 
-* Brings managed cluster configuration in line with target configuration received from `commander` module backend.
+* Brings [managed cluster](../../glossary.html#managed-cluster) configuration in line with target configuration received from `commander` module backend.
 * Collects managed cluster metrics:
   * `CPU cores`: Number of node CPU cores.
   * `Memory`: Total node memory in GiB.
@@ -304,7 +304,7 @@ Agent performs the following actions:
 * Collects cluster availability information.
 * Establishes a secure connection to the managing DP cluster.
 * Sends metrics and cluster availability information to the managing DP cluster.
-* Configures user authentication via the Dex provider of the managing cluster.
+* Configures user authentication via the Dex provider of the [managing cluster](../../glossary.html#managing-cluster).
 * If billing is enabled in the managing cluster, creates a [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) custom resource to send metrics to the billing service of the managing DP cluster.
 
 ### Module interactions

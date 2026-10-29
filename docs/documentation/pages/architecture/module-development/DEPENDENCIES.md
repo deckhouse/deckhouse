@@ -9,7 +9,7 @@ This section covers the dependencies you can set for the module.
 
 Dependencies are a set of conditions (requirements) that must be met in order for Deckhouse Platform to be able to run a module.
 
-Deckhouse Platform (DP) supports the following module dependencies:
+Deckhouse Platform (DP) supports the following [module dependencies](../../../glossary.html#module-dependencies):
 
 - [Deckhouse Platform version](#deckhouse-kubernetes-platform-version-dependency);
 - [Kubernetes version](#kubernetes-version-dependency);
@@ -90,7 +90,7 @@ For testing, you can set the `TEST_EXTENDER_KUBERNETES_VERSION` environment vari
 Deckhouse checks whether the dependency is met in the following cases:
 
 1. **When installing or upgrading a module**
-   If the Kubernetes version does not meet the requirements specified in the release module dependencies, the latter will not be installed or upgraded.
+   If the Kubernetes version does not meet the requirements specified in the release [module dependencies](../../../glossary.html#module-dependencies), the latter will not be installed or upgraded.
   
    Below is an example of the ModuleRelease resource for which the Kubernetes version does not meet the module requirements:
 
@@ -147,7 +147,7 @@ Deckhouse checks whether the dependency is met in the following cases:
 ## Dependency on the version of other modules
 
 Dependencies on other modules describe the conditions for enabling, updating, and disabling a module.
-A module in the Deckhouse Platform may have required and conditional dependencies on versions of other modules.
+A module in the Deckhouse Platform may have required and [conditional dependencies](../../../glossary.html#module-conditional-dependency) on versions of other modules.
 
 ### Required dependencies
 
@@ -198,7 +198,7 @@ requirements:
     test: ">v0.22.1 !optional"
 ```
 
-> The following sections describes restrictions on the use of conditional module dependencies and provides examples of settings where:
+> The following sections describes restrictions on the use of conditional [module dependencies](../../../glossary.html#module-dependencies) and provides examples of settings where:
 >
 > - `prometheus` — the target module for which an conditional dependency is specified;
 > - `test` — a module that can be used in conjunction with the target module.

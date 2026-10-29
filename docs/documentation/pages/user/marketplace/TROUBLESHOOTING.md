@@ -6,7 +6,7 @@ lang: en
 search: Application troubleshooting, application conditions, diagnosing applications, application logs
 ---
 
-In this section, you can learn how to solve typical issues when working with Marketplace applications.
+In this section, you can learn how to solve typical issues when working with [Marketplace](../../glossary.html#marketplace) applications.
 
 ## Verifying Marketplace custom resources
 
@@ -114,7 +114,7 @@ The following table specifies the most common reasons for listed [conditions](..
 
 | Reason | Conditions | Meaning and what to check |
 |---|---|---|
-| `Pending` | `Installed`, `UpdateInstalled` | DP is waiting to install the version, for example, until the modules from `requirements.modules` of the package are enabled. Ask the administrator to check these modules |
+| `Pending` | `Installed`, `UpdateInstalled` | DP is waiting to install the version, for example, until the modules from `requirements.modules` of the [package](../../glossary.html#marketplace-package) are enabled. Ask the administrator to check these modules |
 | `RequirementsUnmet` | `Installed` | The cluster doesn't meet the package requirements. The message names the unmet requirement |
 | `DownloadFailed` | `Installed`, `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | DP can't download the package version. Ask the administrator to check the PackageRepository and access to the repository |
 | `LoadFromFilesystemFailed` | `Installed`, `UpdateInstalled`, `Ready` | DP can't read the downloaded package. Contact the package developer |
@@ -124,5 +124,5 @@ The following table specifies the most common reasons for listed [conditions](..
 | `ApplyingManifests`, `SettingsChanged` | `UpdateInstalled`, `ConfigurationApplied`, `Managed`, `Ready` | Not an error. DP is applying the manifests or the changed settings |
 | `Reconciling` | `Scaled` | A workload is rolling out. The message names the workload |
 | `Degraded` | `Scaled` | A workload failed to roll out. Check the events and the pods of the workload with `d8 k describe` |
-| `NoResourceReconciliation` | `Managed` | The application is in maintenance mode (the `spec.maintenance` field) |
+| `NoResourceReconciliation` | `Managed` | The application is in [maintenance mode](../../glossary.html#no-resource-reconciliation) (the `spec.maintenance` field) |
 | `Deleting` | All | The application is being deleted |

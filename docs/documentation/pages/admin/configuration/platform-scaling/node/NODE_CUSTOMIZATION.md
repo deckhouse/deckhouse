@@ -26,7 +26,7 @@ To automate actions on group nodes, use the [NodeGroupConfiguration](/modules/no
 
 - Collecting information on the node and performing similar tasks.
 
-The NodeGroupConfiguration resource allows you to define execution priority for scripts, limit execution to specific node groups or OS types.
+The NodeGroupConfiguration resource allows you to define execution priority for scripts, limit execution to specific [node groups](../../../../glossary.html#node-group) or OS types.
 
 The script code is specified in the `content` field of the resource. When a script is created on a node, the content passes through the [Go Template](https://pkg.go.dev/text/template) templating engine, which adds a layer of logic to script generation. A dynamic context with a set of variables is available in the template.
 
@@ -134,7 +134,7 @@ post-install() {
 
 ## Monitoring script execution
 
-Applying NodeGroupConfiguration triggers an update of the **`bashible` configuration of the node group** in the specified groups. DP automatically detects the change in this configuration and then sets the `UPTODATE` field (in the output of the `d8 k get nodegroup` command) to `0`. The `UPTODATE` field shows how many nodes have already been brought to the **target `bashible` configuration of the node group**; a value of `0` means that no node has been brought to the target `bashible` configuration yet (i.e., the update has not been applied to any node).
+Applying NodeGroupConfiguration triggers an update of the **`bashible` configuration of the [node group](../../../../glossary.html#node-group)** in the specified groups. DP automatically detects the change in this configuration and then sets the `UPTODATE` field (in the output of the `d8 k get nodegroup` command) to `0`. The `UPTODATE` field shows how many nodes have already been brought to the **target `bashible` configuration of the node group**; a value of `0` means that no node has been brought to the target `bashible` configuration yet (i.e., the update has not been applied to any node).
 
 DP controls the start of updates on nodes via the `update.node.deckhouse.io/approved` annotation on the `Node` object. By default, the update runs simultaneously on one node from each group. Update parallelism is defined by the [`maxConcurrent`](/modules/node-manager/cr.html#nodegroup-v1-spec-update-maxconcurrent) parameter in the node group configuration. When DP selects a node to update (taking the queue and `maxConcurrent` into account), it sets the `update.node.deckhouse.io/approved` annotation, after which the `bashible` service on that node begins applying the **target `bashible` configuration of the node group**.
 
@@ -335,7 +335,7 @@ After the configurations are applied, bootstrap and reboot the nodes to apply th
 General information about preparing GPU nodes, installing drivers, and verifying GPU operation is provided in the [How do I work with GPU nodes](/modules/node-manager/faq.html#how-do-i-work-with-gpu-nodes) section.
 {% endalert %}
 
-In a single-node cluster that uses the `MIG` strategy, the MIG configuration must be reapplied manually after each node reboot.
+In a [single-node cluster](../../../../glossary.html#single-node-cluster) that uses the `MIG` strategy, the MIG configuration must be reapplied manually after each node reboot.
 
 This limitation applies to the current MIG implementation, which uses the `nvidia-mig-manager` component.
 
@@ -473,7 +473,7 @@ Done
 Adding custom settings will trigger a restart of the `containerd` service.
 {% endalert %}
 
-Bashible on nodes merges main Deckhouse containerd config with configs from:
+[Bashible](../../../../glossary.html#bashible) on nodes merges main Deckhouse containerd config with configs from:
 
 - `/etc/containerd/conf.d/*.toml` — if containerd v1 is used as the CRI on the cluster nodes.
 - `/etc/containerd/conf2.d/*.toml` — if containerd v2 is used as the CRI on the cluster nodes.

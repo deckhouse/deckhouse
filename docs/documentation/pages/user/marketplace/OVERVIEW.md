@@ -4,13 +4,13 @@ permalink: en/user/marketplace/
 description: "Using Marketplace in Deckhouse Platform. Browse available application packages, install them into your namespace, and manage their lifecycle."
 ---
 
-Marketplace lets you install ready-made applications into your namespace from the repositories connected by the cluster administrator. Each application is installed as an [Application](../../reference/api/cr.html#application) resource and can exist in multiple independent instances, for example, separate Redis instances for caching and for sessions in the same namespace.
+[Marketplace](../../glossary.html#marketplace) lets you install ready-made applications into your namespace from the repositories connected by the cluster administrator. Each application is installed as an [Application](../../reference/api/cr.html#application) resource and can exist in multiple independent instances, for example, separate Redis instances for caching and for sessions in the same namespace.
 
 {% alert level="info" %}
 Marketplace and the Application resource are available in Deckhouse Platform starting from version 1.76.
 {% endalert %}
 
-To learn about connecting package repositories and managing repository scanning, refer to ["Administration"](../../admin/configuration/marketplace/).
+To learn about connecting [package](../../glossary.html#marketplace-package) repositories and managing repository scanning, refer to ["Administration"](../../admin/configuration/marketplace/).
 
 For the Marketplace architecture, including core concepts, application development and configuration, templates, Nelm annotations, hooks, and the application lifecycle, refer to ["Architecture"](../../architecture/marketplace/).
 

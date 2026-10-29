@@ -48,7 +48,7 @@ Additional features:
 
 - NAT Gateway is supported.
   You can explicitly define the number of public IP addresses for SNAT using the [`natGatewayPublicIpCount`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-standard-natgatewaypublicipcount) parameter.
-- VNet peering can be configured, including with a bastion host or other VNets in the cloud.
+- VNet peering can be configured, including with a [bastion host](../../../../glossary.html#bastion-host) or other VNets in the cloud.
 - Service Endpoints are supported.
   They provide secure and direct connections to Azure services without using public IPs.
   For more details, refer to [Integration with Microsoft Azure services](services.html).

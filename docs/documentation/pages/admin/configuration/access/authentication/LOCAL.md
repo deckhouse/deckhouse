@@ -9,7 +9,7 @@ In addition to external authentication providers, DP also supports local authent
 Local authentication provides user verification and access management with support for configurable password policies, two-factor authentication (2FA), and group management.
 In the module parameters, you can configure password complexity, password history, password rotation, lockout after failed sign-in attempts and per-IP rate limiting of failed attempts. No external authentication system is required.
 
-Local authentication involves creating User and Group resources in the cluster for static users and groups:
+Local authentication involves creating User and Group resources in the cluster for [static users](../../../../glossary.html#static-user) and groups:
 
 - A [User](/modules/user-authn/cr.html#user) object stores user information, including email and a hashed password (the password is not stored in plain text).
 - A [Group](/modules/user-authn/cr.html#group) object defines a list of users grouped together.
@@ -368,7 +368,7 @@ spec:
 
 Field description:
 
-* `enabled`: Enables or disables 2FA for all static users.
+* `enabled`: Enables or disables 2FA for all [static users](../../../../glossary.html#static-user).
 * `issuerName`: Name displayed in the authenticator application when adding an account.
 
 {% alert level="info" %}

@@ -4,7 +4,7 @@ permalink: en/admin/configuration/access/authorization/cluster-admin-access-mode
 description: "Admin access model for the Deckhouse Platform cluster"
 ---
 
-Deckhouse Platform (DP) supports the presence of multiple kubeconfig files on master nodes (this feature is implemented by the [`control-plane-manager`](/modules/control-plane-manager/) module). Understanding their purpose is important for secure cluster administration.
+Deckhouse Platform (DP) supports the presence of multiple kubeconfig files on [master nodes](../../../../glossary.html#master-node) (this feature is implemented by the [`control-plane-manager`](/modules/control-plane-manager/) module). Understanding their purpose is important for secure cluster administration.
 
 ## Kubeconfig files on master nodes
 

@@ -63,7 +63,7 @@ The module consists of the following components:
 
      1. **Access verification**. Distribution validates the token and the `claims` contained in it, and then begins the image download session.
 
-1. **Registry-nodeservices** (`Proxy` or `Local` modes): A container registry based on Distribution running on control plane (master) nodes. The registry is launched as a static pod, and its lifecycle is managed by the registry-nodeservices-manager component. The data is stored in the directory `/opt/deckhouse/registry` on the control plane (master) nodes.
+1. **Registry-nodeservices** (`Proxy` or `Local` modes): A container registry based on Distribution running on control plane (master) nodes. The registry is launched as a [static pod](../../glossary.html#static-pod), and its lifecycle is managed by the registry-nodeservices-manager component. The data is stored in the directory `/opt/deckhouse/registry` on the control plane (master) nodes.
 
    Registry-nodeservices consists of the following containers:
 

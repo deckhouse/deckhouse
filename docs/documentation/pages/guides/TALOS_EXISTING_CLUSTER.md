@@ -14,9 +14,9 @@ relatedLinks:
     url: "https://docs.siderolabs.com/talos/v1.13/configure-your-talos-cluster/system-configuration/patching"
 ---
 
-This guide applies to an existing, operational Kubernetes cluster based on [Talos Linux](https://www.siderolabs.com/talos-linux): the control plane is running, worker nodes have joined the cluster, a CNI is installed, and the Kubernetes API is accessible with `d8 k`.
+This guide applies to an existing, operational Kubernetes cluster based on [Talos Linux](https://www.siderolabs.com/talos-linux): the control plane is running, [worker nodes](../glossary.html#worker-node) have joined the cluster, a CNI is installed, and the Kubernetes API is accessible with `d8 k`.
 
-Deckhouse Platform (DP) is installed on top of the existing Kubernetes cluster in existing-cluster mode. This example uses Deckhouse Platform Open, the [`EarlyAccess` release channel](/modules/deckhouse/configuration.html#parameters-releasechannel), and the [`Managed` bundle](/modules/deckhouse/configuration.html#parameters-bundle).
+Deckhouse Platform (DP) is installed on top of the existing Kubernetes cluster in [existing-cluster mode](../glossary.html#existing-cluster-mode). This example uses Deckhouse Platform Open, the [`EarlyAccess` release channel](/modules/deckhouse/configuration.html#parameters-releasechannel), and the [`Managed` bundle](/modules/deckhouse/configuration.html#parameters-bundle).
 
 In this setup:
 
@@ -41,7 +41,7 @@ The following tools and access are required on the computer from which the insta
 - HTTPS access to `registry.deckhouse.io` from both the computer and the cluster nodes
 - `talosctl` and talosconfig if an administrative kubeconfig has not yet been obtained
 
-SSH access to Talos nodes is not required: the installer communicates with the cluster through the Kubernetes API.
+SSH access to Talos nodes is not required: the [installer](../glossary.html#installer) communicates with the cluster through the Kubernetes API.
 
 Before installation, it is recommended to create an etcd snapshot using Talos and save the original talosconfig and kubeconfig.
 
@@ -129,7 +129,7 @@ Check how Kubernetes identifies the user:
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" auth whoami
 ```
 
-Installation requires stable administrative access. A Talos administrative kubeconfig usually uses the `system:masters` group. Using an OIDC user kubeconfig for the installation is not recommended: after the DP `user-authz` module is enabled, that user's access to system namespaces may change.
+Installation requires stable administrative access. A Talos administrative kubeconfig usually uses the `system:masters` group. Using an OIDC user kubeconfig for the installation is not recommended: after the DP `user-authz` module is enabled, that user's access to [system namespaces](../glossary.html#system-namespace) may change.
 
 Verify the required permissions:
 
@@ -215,12 +215,12 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" get deployments -A
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" get crd
 ```
 
-If a component is already installed, choose a single owner before proceeding. Do not run two ingress controllers, two `cert-manager` installations, or two VPA installations at the same time.
+If a component is already installed, choose a single owner before proceeding. Do not run two [ingress controllers](../glossary.html#ingress-controller), two `cert-manager` installations, or two VPA installations at the same time.
 If an external solution remains responsible for the component, explicitly disable the corresponding DP module using a ModuleConfig with `spec.enabled: false`. If DP is to manage the component, disable or remove the external counterpart before installation.
 
 ## Preparing a kubeconfig for the installer container
 
-The installer runs inside Docker. It requires a portable kubeconfig that does not reference certificate and key files available only on the user's computer.
+The [installer](../glossary.html#installer) runs inside Docker. It requires a portable kubeconfig that does not reference certificate and key files available only on the user's computer.
 
 Create a portable copy:
 
@@ -293,7 +293,7 @@ The first command must print `YAML OK`; the second command must not print anythi
 
 ## Running the Deckhouse Platform Open installer
 
-The installer tag must match the `releaseChannel` in the configuration. The `early-access` tag is used for `EarlyAccess`.
+The [installer](../glossary.html#installer) tag must match the `releaseChannel` in the configuration. The `early-access` tag is used for `EarlyAccess`.
 
 Check that the files exist:
 
@@ -388,7 +388,7 @@ d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules control-plane-manager node-man
 
 All listed modules must have `ENABLED: False`.
 
-Check the cloud provider modules:
+Check the [cloud provider](../glossary.html#cloud-provider) modules:
 
 ```bash
 d8 k --kubeconfig="$ADMIN_KUBECONFIG" get modules -o wide | grep -E '(^NAME|^cloud-provider-)'

@@ -4,7 +4,7 @@ permalink: en/admin/multitenancy/project-management.html
 description: Project management
 ---
 
-Deckhouse Platform includes a set of templates for creating projects. They are cumulative: each one includes the capabilities of the previous one and adds its own. Parameter values are set in the `.spec.parameters` field of a Project:
+Deckhouse Platform includes a set of templates for creating [projects](../../glossary.html#project). They are cumulative: each one includes the capabilities of the previous one and adds its own. Parameter values are set in the `.spec.parameters` field of a Project:
 
 - `simple` is a minimal template that creates only the project namespace. Use it when you only need an isolated namespace managed as a project, while access and restrictions are configured through the [standard project fields](#standard-project-fields) and [project role bindings](#granting-access-within-a-project).
 
@@ -12,7 +12,7 @@ Deckhouse Platform includes a set of templates for creating projects. They are c
   - `namespace.labels` and `namespace.annotations` — extra labels and annotations for the project namespace.
   - `requiredRequests` (default `false`) — rendered only if the parameter is declared in the template schema and is `true`. If `true`, the project pods must specify CPU and memory requests (an OperationPolicy in the `Deny` mode).
 
-- `default` is a template for basic project use cases. On top of the namespace, it sets up network isolation, a pod security profile, extended monitoring, and log shipping.
+- `default` is a template for basic project use cases. On top of the namespace, it sets up network isolation, a pod security profile, [extended monitoring](../../glossary.html#extended-monitoring), and log shipping.
 
   Parameters (in addition to the ones for `simple`):
   - `networkPolicy` — `Isolated` (default) allows incoming traffic only from the project namespaces, Prometheus, the ingress-nginx controller and the service-with-healthchecks agent, and outgoing traffic only to the project namespaces and to DNS in `kube-system`; `NotRestricted` allows all traffic.
@@ -86,7 +86,7 @@ To create a project, follow these steps:
    ```
 
    {% alert level="info" %}
-   The Project API is served as `deckhouse.io/v1alpha3`. `v1alpha2` manifests keep working: a conversion webhook automatically lifts `parameters.administrators` and `parameters.resourceQuota` into the `.spec.administrators` and `.spec.quota` standard fields. If one administrator does not fit `.spec.administrators` (for example, it has `accessLevel`), the whole list stays in `parameters`, and `.spec.administrators` is not filled. The same holds for a quota with anything other than quantities (for example, `scopes`), for a quota with the number `0` anywhere in it, and for an empty list or quota.
+   The [Project](../../glossary.html#project) API is served as `deckhouse.io/v1alpha3`. `v1alpha2` manifests keep working: a conversion webhook automatically lifts `parameters.administrators` and `parameters.resourceQuota` into the `.spec.administrators` and `.spec.quota` standard fields. If one administrator does not fit `.spec.administrators` (for example, it has `accessLevel`), the whole list stays in `parameters`, and `.spec.administrators` is not filled. The same holds for a quota with anything other than quantities (for example, `scopes`), for a quota with the number `0` anywhere in it, and for an empty list or quota.
    The `deckhouse.io/v1alpha1` version is no longer served, and the API server refuses a manifest with `apiVersion: deckhouse.io/v1alpha1`. Before applying such a manifest, change `apiVersion` to `deckhouse.io/v1alpha3`, rename `spec.projectTypeName` to `spec.projectTemplateName` (a ProjectTemplate with that name must exist) and `spec.template` to `spec.parameters`, and move `administrators` and `resourceQuota` from the parameters to `.spec.administrators` and `.spec.quota`.
    {% endalert %}
 
@@ -103,12 +103,12 @@ To create a project, follow these steps:
 A namespace created directly (for example, `d8 k create ns test`) automatically becomes a project with the same name — no annotation is required:
 
 - the template is picked from what the namespace already carries: `secure` if it has the `security-scanning.deckhouse.io/enabled` label, `default` if it has `security.deckhouse.io/pod-policy` or `extended-monitoring.deckhouse.io/enabled`, and `simple` otherwise;
-- the project parameters are filled in from the current state of the namespace, so nothing inside it changes: the network policy stays unrestricted and the Pod Security Standard keeps the value the namespace already had;
+- the project parameters are filled in from the current state of the namespace, so nothing inside it changes: the [network policy](../../glossary.html#network-policy) stays unrestricted and the Pod Security Standard keeps the value the namespace already had;
 - from then on the project is the source of truth and is edited like any other project. The namespace of the project cannot be deleted directly: the request is refused with the `Manual modification is forbidden` message. To remove the environment, delete the Project: `d8 k delete project <NAME>` deletes the namespace with it and returns once the namespace is gone. Only a user allowed to delete the namespace can delete its Project (see [Additional project namespaces](#additional-project-namespaces)).
 
-Users can create a namespace directly only while the [`allowNamespacesWithoutProjects`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) parameter is `true` (the default). With `false`, only cluster administrators (`system:masters`, `system:sudouser`), Deckhouse, the module controller and system components create namespaces directly. Other users create a Project or a ProjectNamespace instead.
+Users can create a namespace directly only while the [`allowNamespacesWithoutProjects`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) parameter is `true` (the default). With `false`, only cluster administrators (`system:masters`, `system:sudouser`), Deckhouse, the module controller and [system components](../../glossary.html#system-component) create namespaces directly. Other users create a Project or a ProjectNamespace instead.
 
-System namespaces (`d8-*`, `kube-*`, `upmeter-*`, `default`, and anything labeled `heritage: deckhouse` or `heritage: upmeter`) are never adopted this way: they belong to the virtual `deckhouse`/`default` projects (see [Virtual projects](#virtual-projects)). A namespace whose name is longer than 61 characters is not adopted either: that is the Project name limit.
+[System namespaces](../../glossary.html#system-namespace) (`d8-*`, `kube-*`, `upmeter-*`, `default`, and anything labeled `heritage: deckhouse` or `heritage: upmeter`) are never adopted this way: they belong to the virtual `deckhouse`/`default` projects (see [Virtual projects](#virtual-projects)). A namespace whose name is longer than 61 characters is not adopted either: that is the Project name limit.
 
 A namespace that gets the `default` or `secure` template because of its monitoring or scanning label and has no `security.deckhouse.io/pod-policy` label gets `podSecurityProfile: ""`. The project puts no such label on it, and the [default policy](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) of the `admission-policy-engine` module keeps applying to it.
 
@@ -178,7 +178,7 @@ A project can be named after another project with a dash and a suffix (`foo-bar`
 
 ## Project status and diagnostics
 
-The `.status.state` field of a project is either `Deployed` (all project resources are in sync, or the objects of `manifests` wait for their binding) or `Error`. The cause of an error is described in the conditions (`.status.conditions`):
+The `.status.state` field of a [project](../../glossary.html#project) is either `Deployed` (all project resources are in sync, or the objects of `manifests` wait for their binding) or `Error`. The cause of an error is described in the conditions (`.status.conditions`):
 
 ```shell
 d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.status}: {.message}{"\n"}{end}'
@@ -223,7 +223,7 @@ When the source object (a binding, the quota field, etc.) is removed, the corres
 
 Besides the user-created projects, the `d8 k get projects` list always contains two **virtual** projects (labeled `projects.deckhouse.io/virtual-project: "true"`):
 
-- `deckhouse` — groups system namespaces (`d8-*`, `kube-*`, `upmeter-*`, `heritage: deckhouse` / `heritage: upmeter`);
+- `deckhouse` — groups [system namespaces](../../glossary.html#system-namespace) (`d8-*`, `kube-*`, `upmeter-*`, `heritage: deckhouse` / `heritage: upmeter`);
 - `default` — groups remaining namespaces that do not belong to any project (the `default` namespace itself).
 
 Virtual-project status is rebuilt from the live namespace list: a deleted namespace disappears from that list. Virtual projects do not recreate namespaces.
@@ -246,7 +246,7 @@ spec:
   name: cache   # The my-project-cache namespace will be created.
 ```
 
-You can check the project composition in its status:
+You can check the [project](../../glossary.html#project) composition in its status:
 
 ```shell
 d8 k get project my-project -o jsonpath='{.status.namespaces}'
@@ -267,7 +267,7 @@ The rules for working with ProjectNamespace:
 The following automatically applies in **all** namespaces of the project (the main and the additional ones alike):
 
 - **Access**: the [ProjectRoleBinding](#granting-access-within-a-project) and [ClusterProjectRoleBinding](#granting-access-within-a-project) bindings, including the automatic access of the project administrators. When a new namespace is added, all existing bindings fan out into it without any user action.
-- **Namespaced template objects**: the network policy (`networkPolicy.mode: Isolated`) and the log collection setup (`logShipping`) are created in every namespace of the project. The network isolation allows traffic between the namespaces of one project. A Helm `resourcesTemplate` creates its objects in the main namespace unless an object names another namespace of the project. So does [`manifests`](/modules/multitenancy-manager/usage.html#describing-other-objects-in-manifests), whose objects are not applied while one of them names a namespace outside the project.
+- **Namespaced template objects**: the [network policy](../../glossary.html#network-policy) (`networkPolicy.mode: Isolated`) and the log collection setup (`logShipping`) are created in every namespace of the project. The network isolation allows traffic between the namespaces of one project. A Helm `resourcesTemplate` creates its objects in the main namespace unless an object names another namespace of the project. So does [`manifests`](/modules/multitenancy-manager/usage.html#describing-other-objects-in-manifests), whose objects are not applied while one of them names a namespace outside the project.
 - **Cluster-scoped template policies** (`OperationPolicy`, the `SecurityPolicy` from `allowedUIDs`/`allowedGIDs`): they select namespaces by the `projects.deckhouse.io/project` label, that is, they cover the whole project.
 - **Inherited labels**: the pod security profile (`security.deckhouse.io/pod-policy`), extended monitoring (`extended-monitoring.deckhouse.io/enabled`), vulnerability scanning (`security-scanning.deckhouse.io/enabled`), the template label (`projects.deckhouse.io/project-template`) and the labels the template sets through `namespaceMetadata.labels` are synced from the main namespace to the additional ones. The sync is complete: if a feature is turned off or a label is removed in the template, the label is removed from the additional namespaces as well. The labels of the template are listed in the `projects.deckhouse.io/template-labels` annotation of each project namespace; they are changed through the Project or its ProjectTemplate, and a direct edit of one on an additional namespace is reverted. Thanks to the template label, the [cluster resource availability rules](#managing-access-to-cluster-wide-resources) also apply in all namespaces of the project.
 
@@ -315,7 +315,7 @@ d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/
 
 ## Standard project fields
 
-Project administrators and resource quotas are not project template parameters — they are top-level fields of the [Project](/modules/multitenancy-manager/cr.html#project) resource and work with any template (including `simple`):
+[Project](../../glossary.html#project) administrators and resource quotas are not project template parameters — they are top-level fields of the [Project](/modules/multitenancy-manager/cr.html#project) resource and work with any template (including `simple`):
 
 - [`.spec.administrators`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-administrators) — a list of subjects (`kind: User` or `kind: Group` and `name`) that receive administrative access to the project. The controller implements this access through an auto-generated [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) named `d8-administrators` in the project's main namespace. A name cannot start with `system:multitenancy-manager:`, the prefix of the users that the controller acts as.
 - [`.spec.quota`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-quota) — a set of hard [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) limits (for example, `requests.cpu`, `limits.memory`). The controller maintains a `ResourceQuota` in the project's main namespace and reports current usage in `.status.usage`. For `memory` and `storage`, a unit is required (for example, `2Gi`). Numbers without a unit mean bytes, and all of them except 0 are rejected. An update that leaves such a value as it was is accepted with a warning, and so is a create through `deckhouse.io/v1alpha2` with such numbers in `parameters.resourceQuota`.
@@ -326,7 +326,7 @@ A Helm `resourcesTemplate` that renders a ResourceQuota or an AuthorizationRule 
 
 ## Granting access within a project
 
-To grant access to project namespaces for users beyond the project administrators, use role bindings that reference cluster-wide roles and fan out into the appropriate project namespaces automatically:
+To grant access to project namespaces for users beyond the project administrators, [use role](../../glossary.html#use-role) bindings that reference cluster-wide roles and fan out into the appropriate project namespaces automatically:
 
 - [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) (namespaced, short name `prb`) — grants a role within a **single** project. It must be created in the project's main namespace. The controller creates a RoleBinding in every namespace of that project.
 - [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding) (cluster-scoped, short name `cprb`) — grants a role across **all** non-virtual projects.
@@ -377,7 +377,7 @@ spec:
 
 ### Roles available in a RoleBinding inside a project
 
-Besides the project bindings, a plain RoleBinding can also be used inside a project namespace — the role then applies in that single namespace only. However, in projects the set of roles available to a plain RoleBinding is restricted: only cluster roles carrying the `rbac.deckhouse.io/delegatable: "true"` label are allowed. Among the built-in ones these are the `d8:namespace:*` and `d8:project:*` roles, as well as the access-level roles of the basic role model (`user-authz:user`, `user-authz:privileged-user`, `user-authz:editor`, `user-authz:admin`).
+Besides the [project](../../glossary.html#project) bindings, a plain RoleBinding can also be used inside a project namespace — the role then applies in that single namespace only. However, in projects the set of roles available to a plain RoleBinding is restricted: only cluster roles carrying the `rbac.deckhouse.io/delegatable: "true"` label are allowed. Among the built-in ones these are the `d8:namespace:*` and `d8:project:*` roles, as well as the access-level roles of the basic [role model](../../glossary.html#rbac) (`user-authz:user`, `user-authz:privileged-user`, `user-authz:editor`, `user-authz:admin`).
 
 A RoleBinding to any other cluster role (for example, `cluster-admin`, system roles, or capabilities) is rejected in a project with the message `references "<role>" which is not available to project`. This protects the project isolation from being bypassed by binding to an overly broad role.
 
@@ -391,15 +391,15 @@ The restriction applies in the namespaces of every project, including the ones a
 
 ## Structured templates
 
-Starting with the `deckhouse.io/v1alpha2` API version, a project template is described by **structured fields** — instead of a text Helm template, you declaratively specify which settings the project namespaces get. The controller itself creates the corresponding objects (network policies, security policies, log collection settings, etc.) from these fields in every namespace of the project and keeps them up to date. Other objects of the project namespaces are described in [`manifests`](/modules/multitenancy-manager/usage.html#describing-other-objects-in-manifests).
+Starting with the `deckhouse.io/v1alpha2` API version, a project template is described by **structured fields** — instead of a text Helm template, you declaratively specify which settings the project namespaces get. The controller itself creates the corresponding objects ([network policies](../../glossary.html#network-policy), security policies, log collection settings, etc.) from these fields in every namespace of the project and keeps them up to date. Other objects of the project namespaces are described in [`manifests`](/modules/multitenancy-manager/usage.html#describing-other-objects-in-manifests).
 
 Available fields (all optional; the complete reference is [in the ProjectTemplate resource description](/modules/multitenancy-manager/cr.html#projecttemplate)):
 
 | Field | What it configures |
 |-------|--------------------|
 | `podSecurityStandard` | Pod security profile: `Privileged`, `Baseline`, or `Restricted`. |
-| `networkPolicy.mode` | Network isolation: `Isolated` (traffic is only allowed within the project and from the platform system components) or `NotRestricted`. |
-| `features.monitoring` | Extended monitoring of the project namespaces. |
+| `networkPolicy.mode` | Network isolation: `Isolated` (traffic is only allowed within the project and from the platform [system components](../../glossary.html#system-component)) or `NotRestricted`. |
+| `features.monitoring` | [Extended monitoring](../../glossary.html#extended-monitoring) of the project namespaces. |
 | `features.vulnerabilityScanning` | Scanning of container images for vulnerabilities. |
 | `logShipping.clusterDestinationRef` | Collecting the logs of the project pods into the given destination (`ClusterLogDestination`). |
 | `nodeSelector`, `tolerations` | Placing the pods of the main namespace on dedicated nodes. |
@@ -457,7 +457,7 @@ spec:
           default: Isolated
 ```
 
-A project using such a template:
+A [project](../../glossary.html#project) using such a template:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3
@@ -568,7 +568,7 @@ data:
 
 Objects with the `projects.deckhouse.io/unmanaged` label:
 
-- are created **only once**, when the project release is first installed, so an object added to the template later is not created in existing projects;
+- are created **only once**, when the [project](../../glossary.html#project) release is first installed, so an object added to the template later is not created in existing projects;
 - **are not updated** when the template changes;
 - are not tracked in the project status;
 - get the `projects.deckhouse.io/project` and `projects.deckhouse.io/project-template` labels, but **not** the `heritage: multitenancy-manager` label;
@@ -676,7 +676,7 @@ To implement validation for resources with a different label (for example, `heri
 
 ## Managing access to cluster-wide resources
 
-The `multitenancy-manager` module allows cluster administrators to define, for each project, which cluster-wide resources (such as StorageClass, ClusterIssuer, ClusterRole, and LoadBalancerClass) can be used from project namespaces and which values are used by default.
+The `multitenancy-manager` module allows cluster administrators to define, for each [project](../../glossary.html#project), which cluster-wide resources (such as StorageClass, ClusterIssuer, ClusterRole, and LoadBalancerClass) can be used from project namespaces and which values are used by default.
 
 This mechanism works independently of RBAC. RBAC determines *who can create and modify* objects, while the cluster-wide resource access mechanism determines *which resources* those objects can use.
 

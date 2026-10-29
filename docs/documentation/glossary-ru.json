@@ -1,0 +1,9 @@
+---
+layout: none
+searchable: false
+sitemap_include: false
+permalink: ru/glossary.json
+lang: ru
+---
+
+{%- include glossary-json.liquid %}

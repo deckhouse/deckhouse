@@ -37,7 +37,7 @@ The module consists of the following components:
 
 1. **Managed-postgres-operator**: Kubernetes operator consisting of a single container **manager** that performs the following operations:
 
-   * It reconciles [Postgres](/modules/managed-postgres/stable/cr.html#postgres) custom resources in all user namespaces. The Postgres resource defines the settings of the PostgreSQL cluster, including the topology and the replication mode, PostgreSQL instances configuration, and other parameters such as lists of logical databases and internal users.
+   * It reconciles [Postgres](/modules/managed-postgres/stable/cr.html#postgres) custom resources in all [user namespaces](../../glossary.html#user-namespace). The Postgres resource defines the settings of the PostgreSQL cluster, including the topology and the replication mode, PostgreSQL instances configuration, and other parameters such as lists of logical databases and internal users.
 
    * It reconciles [PostgresSnapshot](/modules/managed-postgres/stable/cr.html#postgressnapshot) custom resources. PostgresSnapshot resource designed for [PostgreSQL instances backup and restore](/modules/managed-postgres/stable/snapshots.html);
 

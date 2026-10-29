@@ -6,7 +6,7 @@ lang: ru
 
 ## Схемы размещения
 
-Данный раздел описывает возможные схемы размещения узлов кластера в инфраструктуре Yandex Cloud и связанные с ними настройки. От выбора схемы зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам. Схема размещения задаётся параметром [`layout`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-layout) в ресурсе ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/).
+Данный раздел описывает возможные [схемы размещения](../../../../glossary.html#layout) узлов кластера в инфраструктуре Yandex Cloud и связанные с ними настройки. От выбора схемы зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам. Схема размещения задаётся параметром [`layout`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-layout) в ресурсе ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/).
 
 ### Standard
 
@@ -15,7 +15,7 @@ lang: ru
 {% endalert %}
 
 {% alert level="warning" %}
-Так как в данной схеме размещения узлы создаются без публичных IP-адресов, для установки кластера на master-узел должен быть SSH-доступ с машины, на которой запускается dhctl: напрямую по приватной сети или через bastion-хост.
+Так как в данной схеме размещения узлы создаются без публичных IP-адресов, для установки кластера на [master-узел](../../../../glossary.html#master-node) должен быть SSH-доступ с машины, на которой запускается dhctl: напрямую по приватной сети или через [bastion-хост](../../../../glossary.html#bastion-host).
 Если master-узел недоступен напрямую, запускайте установку с параметрами `--ssh-bastion-host`, `--ssh-bastion-user` и, при необходимости, `--ssh-bastion-port`.
 {% endalert %}
 
@@ -166,7 +166,7 @@ spec:
 ```
 
 {% alert level="info" %}
-В примере master и worker-узлы создаются без публичных IP-адресов и без дополнительных внешних сетевых интерфейсов. Исходящий трафик из подсетей кластера проходит через NAT-инстанс.
+В примере master и [worker-узлы](../../../../glossary.html#worker-node) создаются без публичных IP-адресов и без дополнительных внешних сетевых интерфейсов. Исходящий трафик из подсетей кластера проходит через NAT-инстанс.
 
 NAT-инстанс не используется инсталлятором `dhctl` автоматически в качестве bastion-хоста или jump-хоста. Для установки кластера на master-узел должен быть SSH-доступ с машины, на которой запускается `dhctl`: напрямую или через bastion-хост.
 
@@ -177,12 +177,12 @@ NAT-инстанс не используется инсталлятором `dhc
 
 ## Конфигурация
 
-Параметры облачного провайдера Yandex Cloud задаются в четырёх ресурсах:
+Параметры [облачного провайдера](../../../../glossary.html#cloud-provider) Yandex Cloud задаются в четырёх ресурсах:
 
 - [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) задаёт [схему размещения](#схемы-размещения), [сетевые параметры](#сетевые-параметры-и-безопасность) и идентификаторы облака и каталога;
 - секрет `d8-credentials` в неймспейсе `d8-cloud-provider-yandex` хранит ключ сервисного аккаунта, его формат описан в разделе [«Секрет с учётными данными»](authorization.html#секрет-с-учётными-данными);
 - [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) описывает параметры виртуальных машин;
-- [NodeGroup](/modules/node-manager/cr.html#nodegroup) описывает группы узлов и ссылается на инстанс-класс. Группа master-узлов описывается такой же группой с типом [`CloudPermanent`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html).
+- [NodeGroup](/modules/node-manager/cr.html#nodegroup) описывает [группы узлов](../../../../glossary.html#node-group) и ссылается на [инстанс-класс](../../../../glossary.html#instance-class). Группа [master-узлов](../../../../glossary.html#master-node) описывается такой же группой с типом [`CloudPermanent`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html).
 
 Чтобы изменить настройки провайдера в работающем кластере, отредактируйте ModuleConfig:
 
@@ -206,7 +206,7 @@ dhctl converge
 
 ### Пример конфигурации
 
-Ниже приведён пример минимальной конфигурации кластера со схемой размещения Standard, одним master-узлом и одной группой рабочих узлов:
+Ниже приведён пример минимальной конфигурации кластера со [схемой размещения](../../../../glossary.html#layout) Standard, одним master-узлом и одной группой рабочих узлов:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -296,7 +296,7 @@ spec:
 
 ### Внутренняя адресация узлов кластера
 
-[Параметр `nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) задаёт диапазон IP-адресов, который распределяется между зонами доступности и применяется к внутренним интерфейсам узлов. Параметр задаётся в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/):
+[Параметр `nodeNetworkCIDR`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-nodenetworkcidr) задаёт диапазон IP-адресов, который распределяется между [зонами доступности](../../../../glossary.html#availability-zone) и применяется к внутренним интерфейсам узлов. Параметр задаётся в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -318,7 +318,7 @@ spec:
 - ru-central1-e
 - ru-central1-d
 
-К созданной подсети подключаются узлы соответствующей зоны. Деление выполняется во всех схемах размещения. Если задан [параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap), DP подсети не создаёт и использует указанные в нём.
+К созданной подсети подключаются узлы соответствующей зоны. Деление выполняется во всех [схемах размещения](../../../../glossary.html#layout). Если задан [параметр `existingZoneToSubnetIDMap`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-existingzonetosubnetidmap), DP подсети не создаёт и использует указанные в нём.
 
 {% alert level="info" %}
 К подсети привязывается только одна таблица маршрутизации, поэтому два кластера с модулем [`cni-simple-bridge`](/modules/cni-simple-bridge/) не могут использовать одни и те же подсети. Чтобы развернуть такие кластеры в общих подсетях, используйте модуль [`cni-cilium`](/modules/cni-cilium/).
@@ -326,7 +326,7 @@ spec:
 
 ### Назначение внешних IP-адресов и исходящего трафика
 
-[Параметр `externalSubnetIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalsubnetids) задаётся в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) отдельно для каждой группы узлов:
+[Параметр `externalSubnetIDs`](/modules/cloud-provider-yandex/configuration.html#parameters-nodes-parameters-externalsubnetids) задаётся в секции `nodes.parameters` ресурса ModuleConfig модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) отдельно для каждой [группы узлов](../../../../glossary.html#node-group):
 
 - ключ — имя группы узлов;
 - значение — список идентификаторов подсетей Yandex Cloud, в которые подключаются внешние сетевые интерфейсы узлов этой группы, в порядке зон размещения.
@@ -487,7 +487,7 @@ spec:
    d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
    ```
 
-   Если значение пустое, возьмите его из устаревшего параметра [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) ресурса ClusterConfiguration (префикс перенесён в ModuleConfig `global`):
+   Если значение пустое, возьмите его из устаревшего параметра [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) ресурса [ClusterConfiguration](../../../../glossary.html#cluster-configuration) (префикс перенесён в ModuleConfig `global`):
 
    ```bash
    d8 k get secrets -n kube-system d8-cluster-configuration -ojson | \
@@ -506,7 +506,7 @@ spec:
 
 ## Настройка доступа через bastion-хост
 
-Для подключения к узлам, находящимся в приватных подсетях (например, при использовании схемы размещения Standard или WithNATInstance), используется bastion-хост, промежуточная машина с публичным IP-адресом, через которую выполняется SSH-доступ к узлам.
+Для подключения к узлам, находящимся в приватных подсетях (например, при использовании [схемы размещения](../../../../glossary.html#layout) Standard или WithNATInstance), используется [bastion-хост](../../../../glossary.html#bastion-host), промежуточная машина с публичным IP-адресом, через которую выполняется SSH-доступ к узлам.
 
 Для настройки доступа выполните следующие шаги:
 

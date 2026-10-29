@@ -9,12 +9,12 @@ ensuring security both at the component level and across the platform as a whole
 
 To continuously monitor CIS compliance, DP automatically runs checks in every cluster.
 The results of these checks are presented in reports
-and available in Grafana on the `Security / CIS Kubernetes Benchmark` dashboard.
+and available in Grafana on the `Security / CIS Kubernetes Benchmark` [dashboard](../../glossary.html#dashboard).
 
-DP provides a built-in tool for automated container image vulnerability scanning based on [Trivy](https://github.com/aquasecurity/trivy).
+DP provides a built-in tool for automated container image [vulnerability scanning](../../glossary.html#vulnerability-scanning) based on [Trivy](https://github.com/aquasecurity/trivy).
 
 Below are commands for viewing and filtering reports from vulnerability scans
-and CIS compliance checks performed in the cluster.
+and [CIS compliance checks](../../glossary.html#cis-compliance-check) performed in the cluster.
 
 ## Accessing scan results
 
@@ -77,7 +77,7 @@ In the cluster:
   - [ConfigAuditReport](#configauditreport): Misconfigurations in Kubernetes objects.
   - [ExposedSecretReport](#exposedsecretreport): Exposed secrets in containers.
 
-DP uses a set of custom resources developed by the [Aqua Security Trivy Operator](https://aquasecurity.github.io/trivy-operator/) project
+DP uses a set of custom resources developed by the [Aqua Security Trivy Operator](https://aquasecurity.github.io/trivy-operator/) [project](../../glossary.html#project)
 to represent vulnerability scan results, configuration analysis, and cluster compliance checks.
 
 Below is a description of the key CRDs created by [operator-trivy](/modules/operator-trivy/), with examples and links to official documentation.
@@ -652,7 +652,7 @@ Report structure:
   These results are based on aggregated reports from various security scanners.
 
 {% alert level="info" %}
-You can also review the compliance report in the Grafana dashboard `Security / CIS Kubernetes Benchmark`.
+You can also review the compliance report in the Grafana [dashboard](../../glossary.html#dashboard) `Security / CIS Kubernetes Benchmark`.
 {% endalert %}
 
 Example:

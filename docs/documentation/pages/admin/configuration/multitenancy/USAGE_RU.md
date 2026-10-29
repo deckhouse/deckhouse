@@ -5,7 +5,7 @@ description: Управление проектами
 lang: ru
 ---
 
-В Deckhouse Platform есть набор шаблонов для создания проектов. Они кумулятивны: каждый следующий включает возможности предыдущего и добавляет свои. Значения параметров задаются в поле `.spec.parameters` ресурса Project:
+В Deckhouse Platform есть набор шаблонов для создания [проектов](../../glossary.html#project). Они кумулятивны: каждый следующий включает возможности предыдущего и добавляет свои. Значения параметров задаются в поле `.spec.parameters` ресурса Project:
 
 - `simple` — минимальный шаблон, создающий только неймспейс проекта. Используйте его, когда требуется только изолированный неймспейс, управляемый как проект, а доступ и ограничения настраиваются через [стандартные поля](#стандартные-поля-проекта) и [привязки ролей проекта](#предоставление-доступа-внутри-проекта).
 
@@ -13,7 +13,7 @@ lang: ru
   - `namespace.labels` и `namespace.annotations` — дополнительные лейблы и аннотации неймспейса проекта.
   - `requiredRequests` (по умолчанию `false`) — рендерится, только если параметр объявлен в схеме шаблона и равен `true`. Если `true`, у подов проекта должны быть заданы CPU и memory requests (OperationPolicy в режиме `Deny`).
 
-- `default` — шаблон для базовых сценариев использования проектов. В дополнение к неймспейсу он настраивает сетевую изоляцию, профиль безопасности подов, расширенный мониторинг и доставку логов.
+- `default` — шаблон для базовых сценариев использования проектов. В дополнение к неймспейсу он настраивает сетевую изоляцию, профиль безопасности подов, [расширенный мониторинг](../../glossary.html#extended-monitoring) и доставку логов.
 
   Параметры (кроме перечисленных для `simple`):
   - `networkPolicy` — `Isolated` (по умолчанию) разрешает входящий трафик только из неймспейсов проекта, от Prometheus, контроллера ingress-nginx и агента service-with-healthchecks, а исходящий — только в неймспейсы проекта и к DNS в `kube-system`; `NotRestricted` разрешает весь трафик.
@@ -22,14 +22,14 @@ lang: ru
   - `clusterLogDestinationName` — имя ресурса ClusterLogDestination, в который отправлять логи проекта. Если не задан, логи проекта никуда не отправляются.
   - `requiredRequests` (в этом шаблоне по умолчанию `true`) — если `true`, у подов проекта должны быть заданы CPU и memory requests (OperationPolicy в режиме Deny). При adopt существующего неймспейса параметр выставляется в `false`, чтобы не блокировать уже работающие нагрузки.
 
-- `secure` — включает все возможности шаблона `default`, а также ограничение пользователей и групп внутри контейнеров, аудит их обращений к ядру и сканирование образов на уязвимости.
+- `secure` — включает все возможности шаблона `default`, а также ограничение пользователей и групп внутри контейнеров, аудит их обращений к ядру и [сканирование образов на уязвимости](../../glossary.html#vulnerability-scanning).
 
   Параметры (кроме перечисленных для `default`):
   - `allowedUIDs` и `allowedGIDs` — диапазоны (`min`, `max`) идентификаторов, допустимых для пользователей и групп внутри контейнеров проекта. См. [Security Context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod).
   - `runtimeAuditEnabled` (по умолчанию `false`) — правила аудита обращений к ядру, выявляющие вредоносную активность. Работают, только если задан диапазон UID/GID.
   - `securityScanningEnabled` (по умолчанию `true`) — периодическое сканирование запускаемых образов на известные уязвимости (CVE) средствами Trivy, раз в 24 часа.
 
-- `secure-with-dedicated-nodes` — включает все возможности шаблона `secure`, а также размещение подов основного неймспейса проекта на выделенных узлах.
+- `secure-with-dedicated-nodes` — включает все возможности шаблона `secure`, а также размещение подов [основного неймспейса проекта](../../glossary.html#main-project-namespace) на выделенных узлах.
 
   Параметры (кроме перечисленных для `secure`). Если задан `dedicatedNodes`, в нём должно быть хотя бы одно из двух полей. Без `dedicatedNodes` поды не размещаются на выделенных узлах:
   - `dedicatedNodes.nodeSelector` — селектор узлов основного неймспейса. Он объединяется с селектором узлов каждого пода в этом неймспейсе, а под с конфликтующим селектором отклоняется.
@@ -91,7 +91,7 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o yaml
    Версия `deckhouse.io/v1alpha1` больше не обслуживается, и API-сервер отклоняет манифест с `apiVersion: deckhouse.io/v1alpha1`. Перед применением такого манифеста замените `apiVersion` на `deckhouse.io/v1alpha3`, переименуйте `spec.projectTypeName` в `spec.projectTemplateName` (ProjectTemplate с таким именем должен существовать) и `spec.template` в `spec.parameters`, а `administrators` и `resourceQuota` перенесите из параметров в `.spec.administrators` и `.spec.quota`.
    {% endalert %}
 
-1. Для проверки статуса проекта выполните команду:
+1. Для проверки статуса [проекта](../../glossary.html#project) выполните команду:
 
    ```shell
    d8 k get projects my-project
@@ -104,12 +104,12 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o yaml
 Неймспейс, созданный напрямую (например, с использованием команды `d8 k create ns test`), автоматически становится проектом с тем же именем — никакая аннотация для этого не требуется:
 
 - шаблон подбирается по тому, что на неймспейсе уже есть: `secure` — при лейбле `security-scanning.deckhouse.io/enabled`, `default` — при `security.deckhouse.io/pod-policy` или `extended-monitoring.deckhouse.io/enabled`, иначе `simple`;
-- параметры проекта заполняются из текущего состояния неймспейса, поэтому внутри него ничего не меняется: сетевая политика остаётся неограниченной, а Pod Security Standard сохраняет то значение, которое уже было;
+- параметры проекта заполняются из текущего состояния неймспейса, поэтому внутри него ничего не меняется: [сетевая политика](../../glossary.html#network-policy) остаётся неограниченной, а Pod Security Standard сохраняет то значение, которое уже было;
 - дальше источником истины становится проект, и он редактируется как любой другой. Удалить неймспейс проекта напрямую нельзя: запрос отклоняется с сообщением `Manual modification is forbidden`. Чтобы убрать окружение, удалите Project: `d8 k delete project <NAME>` удаляет вместе с ним неймспейс и возвращает управление, когда неймспейс исчезнет. Удалить Project может только пользователь, которому разрешено удалять его неймспейс (подробнее — в разделе [«Дополнительные неймспейсы проекта»](#дополнительные-неймспейсы-проекта)).
 
-Создать неймспейс напрямую пользователи могут, только пока параметр [`allowNamespacesWithoutProjects`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) равен `true` (значение по умолчанию). При `false` напрямую неймспейсы создают только администраторы кластера (`system:masters`, `system:sudouser`), Deckhouse, контроллер модуля и системные компоненты. Остальные пользователи создают Project или ProjectNamespace.
+Создать неймспейс напрямую пользователи могут, только пока параметр [`allowNamespacesWithoutProjects`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) равен `true` (значение по умолчанию). При `false` напрямую неймспейсы создают только администраторы кластера (`system:masters`, `system:sudouser`), Deckhouse, контроллер модуля и [системные компоненты](../../glossary.html#system-component). Остальные пользователи создают Project или ProjectNamespace.
 
-Системные неймспейсы (`d8-*`, `kube-*`, `upmeter-*`, `default` и всё с лейблом `heritage: deckhouse` или `heritage: upmeter`) в проекты таким образом не превращаются — они относятся к виртуальным проектам `deckhouse`/`default` (подробнее — в разделе [«Виртуальные проекты»](#виртуальные-проекты)). Неймспейс длиннее 61 символа тоже не превращается в проект: это лимит имени Project.
+[Системные неймспейсы](../../glossary.html#system-namespace) (`d8-*`, `kube-*`, `upmeter-*`, `default` и всё с лейблом `heritage: deckhouse` или `heritage: upmeter`) в проекты таким образом не превращаются — они относятся к виртуальным проектам `deckhouse`/`default` (подробнее — в разделе [«Виртуальные проекты»](#виртуальные-проекты)). Неймспейс длиннее 61 символа тоже не превращается в проект: это лимит имени Project.
 
 Неймспейс, который из-за лейбла мониторинга или сканирования получает шаблон `default` или `secure` и у которого нет лейбла `security.deckhouse.io/pod-policy`, получает `podSecurityProfile: ""`. Проект не ставит на него этот лейбл, и к нему по-прежнему применяется [политика по умолчанию](/modules/admission-policy-engine/configuration.html#parameters-podsecuritystandards-defaultpolicy) модуля `admission-policy-engine`.
 
@@ -175,11 +175,11 @@ spec:
 - имя не может совпадать с именем существующего неймспейса или неймспейса, который занял ресурс [ProjectNamespace](#дополнительные-неймспейсы-проекта) (имя занято с момента создания ProjectNamespace, даже если контроллер ещё не создал неймспейс);
 - имя не может совпадать с именем неймспейса, чьи ServiceAccount всё ещё указаны среди субъектов ClusterProjectRoleBinding или ProjectRoleBinding проекта, к имени которого новое имя добавляет дефис и суффикс (`foo` для `foo-extra`). Такие субъекты часто остаются от удалённого дополнительного неймспейса. Сначала удалите их из привязки.
 
-Проект может называться как другой проект с дефисом и суффиксом (`foo-bar` рядом с `foo`). Это отдельный проект со своим неймспейсом, а не дополнительный неймспейс проекта `foo`, поэтому шаблон, администраторы, квота и привязки проекта `foo` на него не распространяются. Вебхук пропускает такой проект с предупреждением, а контроллер отправляет Warning-событие `NamedLikeAdditionalNamespace` на новый проект. Все такие пары проектов показывает алерт [`MultitenancyManagerProjectNamedLikeAdditionalNamespace`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-multitenancymanagerprojectnamedlikeadditionalnamespace). Чтобы добавить неймспейс в проект, создайте ресурс [ProjectNamespace](#дополнительные-неймспейсы-проекта).
+Проект может называться как другой проект с дефисом и суффиксом (`foo-bar` рядом с `foo`). Это отдельный проект со своим неймспейсом, а не [дополнительный неймспейс проекта](../../glossary.html#additional-project-namespace) `foo`, поэтому шаблон, администраторы, квота и привязки проекта `foo` на него не распространяются. Вебхук пропускает такой проект с предупреждением, а контроллер отправляет Warning-событие `NamedLikeAdditionalNamespace` на новый проект. Все такие пары проектов показывает алерт [`MultitenancyManagerProjectNamedLikeAdditionalNamespace`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-multitenancymanagerprojectnamedlikeadditionalnamespace). Чтобы добавить неймспейс в проект, создайте ресурс [ProjectNamespace](#дополнительные-неймспейсы-проекта).
 
 ## Статус и диагностика проекта
 
-Поле `.status.state` проекта принимает значение `Deployed` (все ресурсы проекта синхронизированы или объекты из `manifests` ждут своей привязки) либо `Error`. Причина ошибки описывается в условиях (`.status.conditions`):
+Поле `.status.state` [проекта](../../glossary.html#project) принимает значение `Deployed` (все ресурсы проекта синхронизированы или объекты из `manifests` ждут своей привязки) либо `Error`. Причина ошибки описывается в условиях (`.status.conditions`):
 
 ```shell
 d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.status}: {.message}{"\n"}{end}'
@@ -224,7 +224,7 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 
 Помимо созданных пользователями проектов, в списке `d8 k get projects` всегда присутствуют два **виртуальных** проекта (лейбл `projects.deckhouse.io/virtual-project: "true"`):
 
-- `deckhouse` — системные неймспейсы (`d8-*`, `kube-*`, `upmeter-*`, `heritage: deckhouse` / `heritage: upmeter`);
+- `deckhouse` — [системные неймспейсы](../../glossary.html#system-namespace) (`d8-*`, `kube-*`, `upmeter-*`, `heritage: deckhouse` / `heritage: upmeter`);
 - `default` — остальные неймспейсы без своего проекта (сам неймспейс `default`).
 
 Статус виртуального проекта заново формируется из текущего списка неймспейсов: удалённый неймспейс из этого списка пропадает. Виртуальные проекты неймспейсы не создают заново.
@@ -235,7 +235,7 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 
 ## Дополнительные неймспейсы проекта
 
-Если приложению требуется несколько неймспейсов (например, отдельный под кеш или очереди), добавьте их в проект ресурсом [ProjectNamespace](/modules/multitenancy-manager/cr.html#projectnamespace). Ресурс создаётся **в основном неймспейсе проекта**. Итоговый неймспейс получает имя `<имя проекта>-<spec.name>`:
+Если приложению требуется несколько неймспейсов (например, отдельный под кеш или очереди), добавьте их в проект ресурсом [ProjectNamespace](/modules/multitenancy-manager/cr.html#projectnamespace). Ресурс создаётся **в [основном неймспейсе проекта](../../glossary.html#main-project-namespace)**. Итоговый неймспейс получает имя `<имя проекта>-<spec.name>`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3
@@ -247,7 +247,7 @@ spec:
   name: cache   # Будет создан неймспейс my-project-cache.
 ```
 
-Проверить состав проекта можно по его статусу:
+Проверить состав [проекта](../../glossary.html#project) можно по его статусу:
 
 ```shell
 d8 k get project my-project -o jsonpath='{.status.namespaces}'
@@ -268,9 +268,9 @@ d8 k get project my-project -o jsonpath='{.status.namespaces}'
 Автоматически действует во **всех** неймспейсах проекта (и в основном, и в дополнительных):
 
 - **Доступ**: привязки [ProjectRoleBinding](#предоставление-доступа-внутри-проекта) и [ClusterProjectRoleBinding](#предоставление-доступа-внутри-проекта), включая автоматический доступ администраторов проекта. При добавлении нового неймспейса все существующие привязки разворачиваются в него без каких-либо действий со стороны пользователя.
-- **Namespaced-объекты шаблона**: сетевая политика (`networkPolicy.mode: Isolated`) и настройка сбора логов (`logShipping`) создаются в каждом неймспейсе проекта. Сетевая изоляция при этом разрешает трафик между неймспейсами одного проекта. Helm-шаблон `resourcesTemplate` создаёт свои объекты в основном неймспейсе, если в объекте не указан другой неймспейс проекта. Так же поступает [`manifests`](/modules/multitenancy-manager/usage.html#описание-других-объектов-в-manifests), объекты которого не применяются, если хотя бы один из них указывает неймспейс вне проекта.
+- **Namespaced-объекты шаблона**: [сетевая политика](../../glossary.html#network-policy) (`networkPolicy.mode: Isolated`) и настройка сбора логов (`logShipping`) создаются в каждом неймспейсе проекта. Сетевая изоляция при этом разрешает трафик между неймспейсами одного проекта. Helm-шаблон `resourcesTemplate` создаёт свои объекты в основном неймспейсе, если в объекте не указан другой неймспейс проекта. Так же поступает [`manifests`](/modules/multitenancy-manager/usage.html#описание-других-объектов-в-manifests), объекты которого не применяются, если хотя бы один из них указывает неймспейс вне проекта.
 - **Кластерные политики шаблона** (`OperationPolicy`, `SecurityPolicy` из `allowedUIDs`/`allowedGIDs`): выбирают неймспейсы по лейблу `projects.deckhouse.io/project`, то есть покрывают весь проект.
-- **Наследуемые лейблы**: профиль безопасности подов (`security.deckhouse.io/pod-policy`), расширенный мониторинг (`extended-monitoring.deckhouse.io/enabled`), сканирование уязвимостей (`security-scanning.deckhouse.io/enabled`), лейбл шаблона (`projects.deckhouse.io/project-template`) и лейблы, которые шаблон задаёт через `namespaceMetadata.labels`, синхронизируются с основного неймспейса на дополнительные. Синхронизация полная: если функцию выключили или лейбл убрали в шаблоне, лейбл снимется и с дополнительных неймспейсов. Лейблы шаблона перечислены в аннотации `projects.deckhouse.io/template-labels` каждого неймспейса проекта; их меняют через Project или его ProjectTemplate, а прямая правка такого лейбла на дополнительном неймспейсе откатывается. Благодаря лейблу шаблона [правила доступности кластерных ресурсов](#управление-доступом-к-cluster-wide-ресурсам) тоже действуют во всех неймспейсах проекта.
+- **Наследуемые лейблы**: профиль безопасности подов (`security.deckhouse.io/pod-policy`), [расширенный мониторинг](../../glossary.html#extended-monitoring) (`extended-monitoring.deckhouse.io/enabled`), сканирование уязвимостей (`security-scanning.deckhouse.io/enabled`), лейбл шаблона (`projects.deckhouse.io/project-template`) и лейблы, которые шаблон задаёт через `namespaceMetadata.labels`, синхронизируются с основного неймспейса на дополнительные. Синхронизация полная: если функцию выключили или лейбл убрали в шаблоне, лейбл снимется и с дополнительных неймспейсов. Лейблы шаблона перечислены в аннотации `projects.deckhouse.io/template-labels` каждого неймспейса проекта; их меняют через Project или его ProjectTemplate, а прямая правка такого лейбла на дополнительном неймспейсе откатывается. Благодаря лейблу шаблона [правила доступности кластерных ресурсов](#управление-доступом-к-cluster-wide-ресурсам) тоже действуют во всех неймспейсах проекта.
 
 Действуют только в **основном** неймспейсе:
 
@@ -280,7 +280,7 @@ d8 k get project my-project -o jsonpath='{.status.namespaces}'
 - лейблы отслеживания GitOps-инструментов (`app.kubernetes.io/instance`, `argocd.argoproj.io/*`, `kustomize.toolkit.fluxcd.io/*`, `helm.toolkit.fluxcd.io/*`, `kapp.k14s.io/*`), даже если их задаёт шаблон;
 - аннотации размещения на узлах (из полей `nodeSelector` и `tolerations` шаблона).
 
-Когда неймспейс [становится проектом автоматически](#автоматическое-создание-проекта-для-неймспейса), его собственные лейблы и аннотации не копируются в Project, поэтому дополнительные неймспейсы проекта их не наследуют. Исключение составляют лейблы профиля безопасности, мониторинга и сканирования: при переходе в проект они становятся параметрами проекта. Чтобы другой лейбл такого неймспейса был и на дополнительных неймспейсах, задайте его в `spec.parameters.namespace.labels` ресурса Project либо поставьте его на каждый дополнительный неймспейс напрямую.
+Когда неймспейс [становится проектом автоматически](#автоматическое-создание-проекта-для-неймспейса), его собственные лейблы и аннотации не копируются в Project, поэтому [дополнительные неймспейсы проекта](../../glossary.html#additional-project-namespace) их не наследуют. Исключение составляют лейблы профиля безопасности, мониторинга и сканирования: при переходе в проект они становятся параметрами проекта. Чтобы другой лейбл такого неймспейса был и на дополнительных неймспейсах, задайте его в `spec.parameters.namespace.labels` ресурса Project либо поставьте его на каждый дополнительный неймспейс напрямую.
 
 ### Лейблы неймспейсов проекта
 
@@ -316,9 +316,9 @@ d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/
 
 ## Стандартные поля проекта
 
-Администраторы проекта и квоты ресурсов не являются параметрами шаблона — это поля верхнего уровня ресурса [Project](/modules/multitenancy-manager/cr.html#project), работающие с любым шаблоном (включая `simple`):
+Администраторы [проекта](../../glossary.html#project) и квоты ресурсов не являются параметрами шаблона — это поля верхнего уровня ресурса [Project](/modules/multitenancy-manager/cr.html#project), работающие с любым шаблоном (включая `simple`):
 
-- [`.spec.administrators`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-administrators) — список субъектов (`kind: User` или `kind: Group` и `name`), получающих административный доступ к проекту. Контроллер реализует этот доступ через автоматически создаваемый [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) `d8-administrators` в основном неймспейсе проекта. Имя не может начинаться с `system:multitenancy-manager:` — префикса пользователей, от имени которых действует контроллер.
+- [`.spec.administrators`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-administrators) — список субъектов (`kind: User` или `kind: Group` и `name`), получающих административный доступ к проекту. Контроллер реализует этот доступ через автоматически создаваемый [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) `d8-administrators` в [основном неймспейсе проекта](../../glossary.html#main-project-namespace). Имя не может начинаться с `system:multitenancy-manager:` — префикса пользователей, от имени которых действует контроллер.
 - [`.spec.quota`](/modules/multitenancy-manager/cr.html#project-v1alpha3-spec-quota) — набор жёстких лимитов [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) (например, `requests.cpu`, `limits.memory`). Контроллер поддерживает `ResourceQuota` в основном неймспейсе проекта и сообщает текущее потребление в `.status.usage`. Для `memory` и `storage` необходимо указывать единицу измерения (например, `2Gi`). Числа без единицы измерения означают байты, и все они, кроме 0, отклоняются. Обновление, которое оставляет такое значение прежним, принимается с предупреждением, как и создание через `deckhouse.io/v1alpha2` с такими числами в `parameters.resourceQuota`.
 
 {% alert level="warning" %}
@@ -378,7 +378,7 @@ spec:
 
 ### Роли, доступные в RoleBinding внутри проекта
 
-Кроме проектных привязок, внутри неймспейса проекта можно использовать и обычный RoleBinding — тогда роль действует только в этом одном неймспейсе. Но в проектах набор ролей, доступных для обычного RoleBinding, ограничен: разрешены только кластерные роли с лейблом `rbac.deckhouse.io/delegatable: "true"`. Из встроенных это роли `d8:namespace:*` и `d8:project:*`, а также роли уровней доступа упрощённой ролевой модели (`user-authz:user`, `user-authz:privileged-user`, `user-authz:editor`, `user-authz:admin`).
+Кроме проектных привязок, внутри неймспейса [проекта](../../glossary.html#project) можно использовать и обычный RoleBinding — тогда роль действует только в этом одном неймспейсе. Но в проектах набор ролей, доступных для обычного RoleBinding, ограничен: разрешены только кластерные роли с лейблом `rbac.deckhouse.io/delegatable: "true"`. Из встроенных это роли `d8:namespace:*` и `d8:project:*`, а также роли уровней доступа упрощённой [ролевой модели](../../glossary.html#rbac) (`user-authz:user`, `user-authz:privileged-user`, `user-authz:editor`, `user-authz:admin`).
 
 RoleBinding на любую другую кластерную роль (например, `cluster-admin`, системные роли или capabilities) в проекте будет отклонён с сообщением `references "<роль>" which is not available to project`. Это защита от обхода изоляции проекта через привязку к слишком широкой роли.
 
@@ -392,15 +392,15 @@ d8 k label clusterrole d8:custom:namespace:developer rbac.deckhouse.io/delegatab
 
 ## Структурированные шаблоны
 
-Начиная с API-версии `deckhouse.io/v1alpha2`, шаблон проекта описывается **структурированными полями** — вместо текстового Helm-шаблона вы декларативно указываете, какие настройки получат неймспейсы проекта. Контроллер сам создаёт из этих полей нужные объекты (сетевые политики, политики безопасности, настройки сбора логов и т. д.) в каждом неймспейсе проекта и поддерживает их в актуальном состоянии. Другие объекты неймспейсов проекта описываются в [`manifests`](/modules/multitenancy-manager/usage.html#описание-других-объектов-в-manifests).
+Начиная с API-версии `deckhouse.io/v1alpha2`, шаблон проекта описывается **структурированными полями** — вместо текстового Helm-шаблона вы декларативно указываете, какие настройки получат неймспейсы проекта. Контроллер сам создаёт из этих полей нужные объекты ([сетевые политики](../../glossary.html#network-policy), политики безопасности, настройки сбора логов и т. д.) в каждом неймспейсе проекта и поддерживает их в актуальном состоянии. Другие объекты неймспейсов проекта описываются в [`manifests`](/modules/multitenancy-manager/usage.html#описание-других-объектов-в-manifests).
 
 Доступные поля (все — необязательные; полный справочник — [в описании ресурса ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate)):
 
 | Поле | Что настраивает |
 |------|-----------------|
 | `podSecurityStandard` | Профиль безопасности подов: `Privileged`, `Baseline` или `Restricted` |
-| `networkPolicy.mode` | Сетевая изоляция: `Isolated` (трафик разрешён только внутри проекта и от системных компонентов платформы) или `NotRestricted` |
-| `features.monitoring` | Расширенный мониторинг неймспейсов проекта |
+| `networkPolicy.mode` | Сетевая изоляция: `Isolated` (трафик разрешён только внутри проекта и от [системных компонентов](../../glossary.html#system-component) платформы) или `NotRestricted` |
+| `features.monitoring` | [Расширенный мониторинг](../../glossary.html#extended-monitoring) неймспейсов проекта |
 | `features.vulnerabilityScanning` | Сканирование образов контейнеров на уязвимости |
 | `logShipping.clusterDestinationRef` | Сбор логов подов проекта в указанное хранилище (`ClusterLogDestination`) |
 | `nodeSelector`, `tolerations` | Размещение подов основного неймспейса на выделенных узлах |
@@ -458,7 +458,7 @@ spec:
           default: Isolated
 ```
 
-Проект, использующий такой шаблон:
+[Проект](../../glossary.html#project), использующий такой шаблон:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3
@@ -569,7 +569,7 @@ data:
 
 Объекты с лейблом `projects.deckhouse.io/unmanaged`:
 
-- создаются **только один раз**, при первой установке релиза проекта, поэтому объект, добавленный в шаблон позже, в существующих проектах не создаётся;
+- создаются **только один раз**, при первой установке релиза [проекта](../../glossary.html#project), поэтому объект, добавленный в шаблон позже, в существующих проектах не создаётся;
 - **не обновляются** при изменении шаблона;
 - не отслеживаются в статусе проекта;
 - получают лейблы `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но **не получают** лейбл `heritage: multitenancy-manager`;
@@ -677,7 +677,7 @@ data:
 
 ## Управление доступом к cluster-wide-ресурсам
 
-Модуль `multitenancy-manager` позволяет администраторам кластера определять для каждого проекта, какие
+Модуль `multitenancy-manager` позволяет администраторам кластера определять для каждого [проекта](../../glossary.html#project), какие
 cluster-wide-ресурсы (например, StorageClass, ClusterIssuer, ClusterRole, LoadBalancerClass) можно
 использовать из неймспейсов проектов, и какое значение используется по умолчанию.
 

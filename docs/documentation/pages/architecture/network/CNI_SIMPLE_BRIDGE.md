@@ -30,7 +30,7 @@ The Level 2 C4 architecture of the [`cni-simple-bridge`](/modules/cni-simple-bri
 
 The module consists of the following components:
 
-1. **Simple-bridge** (DaemonSet): Runs on every cluster node and prepares the CNI plugin for operation. To do this, it obtains the pod subnet from the `spec.podCIDR` field of the Node resource and builds the configuration for running the `bridge` executable, which containerd invokes on every creation or removal of a pod's network namespace. When invoked, `bridge` requests an IP address from the `host-local` IP Address Management (IPAM) plugin.
+1. **Simple-bridge** (DaemonSet): Runs on every cluster node and prepares the CNI plugin for operation. To do this, it obtains the pod subnet from the `spec.podCIDR` field of the Node resource and builds the configuration for running the `bridge` executable, which containerd invokes on every creation or removal of a pod's network namespace. When invoked, `bridge` requests an IP address from the `host-local` IP Address Management ([IPAM](../../glossary.html#sdn-ipam)) plugin.
 
    `bridge` and `host-local` are standard [Open Source CNI plugins](https://github.com/containernetworking/plugins), installed on every cluster node independently of this module, as part of kubelet installation.
 

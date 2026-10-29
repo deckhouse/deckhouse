@@ -6,7 +6,7 @@ permalink: en/user/access/authentication.html
 
 ## Overview
 
-Authentication is the process of verifying a user's identity. In Deckhouse Platform (DP), end-to-end authentication is implemented, allowing user verification when accessing any DP interface or cluster resources. Cluster users can also use DP to enable authentication for their applications.
+Authentication is the process of verifying a user's identity. In Deckhouse Platform (DP), [end-to-end authentication](../../glossary.html#end-to-end-authentication) is implemented, allowing user verification when accessing any DP interface or cluster resources. Cluster users can also use DP to enable authentication for their applications.
 
 Depending on the DP configuration, authentication can use either an internal user database or external authentication providers. Connecting an external provider allows the use of existing credentials (e.g., LDAP, GitLab, GitHub, etc.) for access. It also enables using the same credentials to authenticate in multiple DP clusters.
 

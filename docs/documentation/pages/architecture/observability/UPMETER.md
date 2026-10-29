@@ -5,7 +5,7 @@ search: upmeter, availability, component health
 description: Architecture of the upmeter module in Deckhouse Platform.
 ---
 
-The [`upmeter`](/modules/upmeter/) module continuously checks Deckhouse Platform (DP) availability and cluster component health. Probe results are displayed on dashboards.
+The [`upmeter`](/modules/upmeter/) module continuously checks Deckhouse Platform (DP) availability and cluster component health. Probe results are displayed on [dashboards](../../glossary.html#dashboard).
 
 To learn more about module settings and usage examples, see the [`upmeter` configuration page](/modules/upmeter/configuration.html).
 
@@ -44,13 +44,13 @@ The module includes the following components:
    - **migrator**: Init container that applies SQL migrations to the component SQLite database.
    - **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC for secure access to the upmeter API.
 
-1. **Upmeter-agent** (DaemonSet) runs on master nodes and regularly executes the following probe groups:
+1. **Upmeter-agent** (DaemonSet) runs on [master nodes](../../glossary.html#master-node) and regularly executes the following probe groups:
 
    - Control-plane: API server availability and controller health checks.
    - Deckhouse: DP cluster health and [`deckhouse`](/modules/deckhouse) module controller checks.
    - Extensions: Checks that every extension has at least one `Ready` Pod.
    - Load-balancing: Checks availability of network load balancing services.
-   - Monitoring-and-autoscaling: Checks that the Observability subsystem is healthy and gathers metrics from system components.
+   - Monitoring-and-autoscaling: Checks that the Observability subsystem is healthy and gathers metrics from [system components](../../glossary.html#system-component).
    - Nginx: Checks that every Ingress NGINX Controller has at least one `Ready` Pod.
    - Nodegroups: Checks the number of `desired` nodes in each NodeGroup.
    - Synthetic: Checks network connectivity between cluster nodes with HTTP requests to smoke-mini-[a-e].
@@ -64,7 +64,7 @@ The module includes the following components:
    - Controller-manager: Upmeter-agent creates a StatefulSet named `upmeter-probe-controller-manager` with an intentionally missing container in the Pod spec, verifies that the target Pod is created and reaches the expected state, and then removes the StatefulSet.
    - Cert-manager: Upmeter-agent creates a self-signed Certificate named `upmeter-probe-cert-manager`, verifies that cert-manager created the related Secret, and then removes the Certificate and Secret.
 
-   The following flow is used to check the deckhouse controller:
+   The following flow is used to check the [deckhouse controller](../../glossary.html#deckhouse-controller):
 
    - Upmeter-agent creates or updates the custom resource UpmeterHookProbe.
    - The deckhouse controller watches this resource and runs a hook to update it.
@@ -86,7 +86,7 @@ The module includes the following components:
 
 1. **Status** (Deployment) includes a single **status** container and serves a web page with the current availability status of all DP components.
 
-1. **Webui** (Deployment) includes a single **webui** container and serves a dashboard with per-component availability history.
+1. **Webui** (Deployment) includes a single **webui** container and serves a [dashboard](../../glossary.html#dashboard) with per-component availability history.
 
 ## Module interactions
 

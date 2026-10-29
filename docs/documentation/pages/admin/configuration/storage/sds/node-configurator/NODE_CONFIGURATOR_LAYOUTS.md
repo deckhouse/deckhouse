@@ -575,7 +575,7 @@ To configure the [`sds-replicated-volume`](/modules/sds-replicated-volume/) modu
 The following describes the procedure for configuring additional disks for the case of initial deployment and configuration of the cluster when connecting to nodes via SSH. If you already have a running cluster and are adding additional disks to its nodes, it is recommended to create and configure VGs using the [LVMVolumeGroup](./usage.html#creating-an-lvmvolumegroup-resource) resource instead of executing the commands below on the node.
 {% endalert %}
 
-In this scenario, two partitions are used on each disk: one for storing SDS data that is not replicated and another for SDS data that is replicated. The first partition of each disk is used to create a mirror, and the second is used to create a separate VG without mirroring. This allows for the most efficient use of disk space.
+In this scenario, two partitions are used on each disk: one for storing [SDS](../../../../../glossary.html#sds) data that is not replicated and another for SDS data that is replicated. The first partition of each disk is used to create a mirror, and the second is used to create a separate VG without mirroring. This allows for the most efficient use of disk space.
 
 To configure a node with additional disks according to the "Partial mirror" scenario, follow these steps:
 

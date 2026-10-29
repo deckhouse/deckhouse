@@ -55,7 +55,7 @@ Options for organizing incoming traffic load balancing:
 
 1. **Via an external load balancer**.
    If your infrastructure includes an external load balancer (for example, NSX-T),
-   you can route traffic directly to the cluster's frontend nodes.
+   you can route traffic directly to the cluster's [frontend nodes](../../../../glossary.html#frontend-node).
 
 1. **Via MetalLB**.
    For fault-tolerant load balancing within the cluster, it is recommended that you use MetalLB in BGP mode.

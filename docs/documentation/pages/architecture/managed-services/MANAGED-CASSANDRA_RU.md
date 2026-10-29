@@ -34,7 +34,7 @@ description: Архитектура модуля managed-cassandra в Deckhouse 
 
 1. **Managed-cassandra-operator** (Deployment) — оператор Kubernetes, состоящий из одного контейнера **manager** и выполняющий следующие операции:
 
-   - согласование состояния кастомных ресурсов [Cassandra](/modules/managed-cassandra/cr.html#cassandra) во всех пользовательских неймспейсах. Кастомные ресурсы Cassandra и CassandraClass определяют настройки инстанса Cassandra;
+   - согласование состояния кастомных ресурсов [Cassandra](/modules/managed-cassandra/cr.html#cassandra) во всех [пользовательских неймспейсах](../../glossary.html#user-namespace). Кастомные ресурсы Cassandra и CassandraClass определяют настройки инстанса Cassandra;
 
    - создание и управление ресурсами StatefulSet, Service, Secret и PersistentVolumeClaim, относящимися к инстансу Cassandra;
 

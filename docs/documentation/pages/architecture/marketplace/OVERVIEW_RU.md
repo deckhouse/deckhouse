@@ -6,7 +6,7 @@ lang: ru
 search: marketplace architecture, package abstraction, application module, архитектура marketplace, абстракция package
 ---
 
-Marketplace — это система управления пакетами (packages) в Deckhouse Platform (DP). Пакеты могут быть двух типов:
+[Marketplace](../../glossary.html#marketplace) — это система управления [пакетами](../../glossary.html#marketplace-package) (packages) в Deckhouse Platform (DP). Пакеты могут быть двух типов:
 
 - **Application** — пользовательская нагрузка, развёртываемая в неймспейсе;
 - **Module** — расширение возможностей кластера.
@@ -31,7 +31,7 @@ Marketplace доступен в DP, начиная с версии 1.76.
 
 - в разделе [«Настройки приложения»](settings.html) описаны OpenAPI-схемы настроек и values: валидация, значения по умолчанию и расширения, управляющие формой настроек в веб-интерфейсе;
 
-- в разделе [«Шаблоны»](templates.html) описаны значения, доступные шаблонам Application, именование объектов, образы контейнеров, Ingress и адреса приложения;
+- в разделе [«Шаблоны»](templates.html) описаны значения, доступные шаблонам Application, именование объектов, образы контейнеров, Ingress и [адреса приложения](../../glossary.html#application-endpoints);
 
 - в разделе [«Аннотации Nelm»](nelm-annotations.html) описан полный набор аннотаций Nelm, которые используются в шаблонах Application для управления порядком развёртывания, жизненным циклом ресурсов, отслеживанием готовности и выводом логов;
 

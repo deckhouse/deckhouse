@@ -66,7 +66,7 @@ Example response if the user does not have access permissions:
 }
 ```
 
-In **multitenancy** mode, the namespace restrictions of the [basic role model](rbac-current.html) (ClusterAuthorizationRule/AuthorizationRule) are enforced by the authorization webhook. The answer of the API server already includes the decision of the webhook. To see the answer of the webhook alone, run the following command as root on a master node:
+In **multitenancy** mode, the namespace restrictions of the [basic role model](rbac-current.html) (ClusterAuthorizationRule/AuthorizationRule) are enforced by the authorization webhook. The answer of the API server already includes the decision of the webhook. To see the answer of the webhook alone, run the following command as root on a [master node](../../../../glossary.html#master-node):
 
 ```shell
 cat  <<EOF | 2>&1 d8 k --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status
@@ -151,4 +151,4 @@ The answer is returned in the `status` field (it contains the `users`, `groups`,
 
 The right to create `WhoCan` queries is granted by the `d8:user-authz:who-can-checker` cluster role. It is not bound to anyone by default: the result of a query reveals the access subjects in all namespaces, so grant it only to trusted administrators through a ClusterRoleBinding.
 
-The managers of the `iam` and `security` subsystems can build reports about other subjects and create `WhoCan` queries as well. This right comes with the `d8:subsystem-capability:iam:inspect_access` capability of the `d8:subsystem:iam:manager` and `d8:subsystem:security:manager` roles, so the roles above them have it too (`d8:subsystem:iam:superadmin`, `d8:subsystem:security:superadmin`, `d8:system:manager`, and `d8:system:superadmin`). For details on both resources, see the [`user-authz` module FAQ](/modules/user-authz/faq.html#how-do-i-find-out-what-a-specific-user-group-or-serviceaccount-is-allowed-to-do).
+The managers of the `iam` and `security` [subsystems](../../../../glossary.html#subsystem) can build reports about other subjects and create `WhoCan` queries as well. This right comes with the `d8:subsystem-capability:iam:inspect_access` capability of the `d8:subsystem:iam:manager` and `d8:subsystem:security:manager` roles, so the roles above them have it too (`d8:subsystem:iam:superadmin`, `d8:subsystem:security:superadmin`, `d8:system:manager`, and `d8:system:superadmin`). For details on both resources, see the [`user-authz` module FAQ](/modules/user-authz/faq.html#how-do-i-find-out-what-a-specific-user-group-or-serviceaccount-is-allowed-to-do).

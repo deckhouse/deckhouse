@@ -17,7 +17,7 @@ relatedLinks:
     url: /modules/metallb/
 ---
 
-Для реализации ALB средствами [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
+Для реализации [ALB](../../../../../glossary.html#alb) средствами [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
 
 {% alert level="info" %}
 В 2025 году Ingress NGINX был [переведён](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) в режим сопровождения без планов активного развития новых возможностей. Дальнейшее развитие средств балансировки входящего трафика в Kubernetes ориентировано на [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
@@ -28,7 +28,7 @@ relatedLinks:
 {% endalert %}
 
 Модуль `ingress-nginx` устанавливает Ingress NGINX Controller и управляет им с помощью кастомных ресурсов.
-Если узлов для размещения Ingress-контроллера больше одного, он устанавливается в отказоустойчивом режиме, с учётом особенностей инфраструктуры как облачных, так и bare-metal-сред, а также различных типов Kubernetes-кластеров.
+Если узлов для размещения [Ingress-контроллера](../../../../../glossary.html#ingress-controller) больше одного, он устанавливается в отказоустойчивом режиме, с учётом особенностей инфраструктуры как облачных, так и bare-metal-сред, а также различных типов Kubernetes-кластеров.
 
 Поддерживается одновременный запуск нескольких экземпляров Ingress-контроллеров с независимой конфигурацией: одного основного и произвольного количества дополнительных.
 Это, например, позволяет разделять внешние и внутренние (intranet) Ingress-ресурсы приложений.
@@ -75,7 +75,7 @@ relatedLinks:
 * `ingress`-ресурсы;
 * `location` (в nginx).
 
-Все графики сгруппированы в дашборды Grafana. С любого графика можно перейти к более детальному представлению: например, при просмотре статистики по `namespace` — на дашборд по `vhosts` в этом `namespace` и далее по иерархии.
+Все графики сгруппированы в [дашборды](../../../../../glossary.html#dashboard) Grafana. С любого графика можно перейти к более детальному представлению: например, при просмотре статистики по `namespace` — на дашборд по `vhosts` в этом `namespace` и далее по иерархии.
 
 ## Статистика
 
@@ -128,13 +128,13 @@ relatedLinks:
 
 При создании балансировщика используются все доступные в кластере зоны.
 
-В каждой зоне балансировщик получает собственный публичный IP. Если в зоне есть экземпляр с Ingress-контроллером, A-запись с IP-адресом балансировщика из этой зоны автоматически добавляется к доменному имени балансировщика.
+В каждой зоне балансировщик получает собственный публичный IP. Если в зоне есть экземпляр с [Ingress-контроллером](../../../../../glossary.html#ingress-controller), A-запись с IP-адресом балансировщика из этой зоны автоматически добавляется к доменному имени балансировщика.
 
 Если в зоне не остаётся экземпляров с Ingress-контроллером, тогда IP автоматически убирается из DNS.
 
 В том случае, если в зоне всего один экземпляр с Ingress-контроллером, при перезапуске пода IP-адрес балансировщика этой зоны временно исключается из DNS.
 
-IngressNginxController с инлетом [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) и аннотациями AWS NLB:
+IngressNginxController с [инлетом](../../../../../glossary.html#inlet) [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) и аннотациями AWS [NLB](../../../../../glossary.html#nlb):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -218,7 +218,7 @@ spec:
 
 ### Пример для bare metal
 
-IngressNginxController с инлетом [`HostWithFailover`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) на frontend-узлах:
+IngressNginxController с инлетом [`HostWithFailover`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) на [frontend-узлах](../../../../../glossary.html#frontend-node):
 
 ```yaml
 apiVersion: deckhouse.io/v1

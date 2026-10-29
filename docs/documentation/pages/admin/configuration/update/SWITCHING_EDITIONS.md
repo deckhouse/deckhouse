@@ -23,11 +23,11 @@ Summary:
 {% endcapture %}
 
 {% capture take_care_of_the_internal_modules %}
-1. Determine the list of internal modules used in the cluster that are not supported in DP new edition. To do this, follow these steps:
+1. Determine the list of internal modules used in the cluster that are not supported in DP new [edition](../../../glossary.html#edition). To do this, follow these steps:
 
    <!REMOVE_FOR_CE>
 
-   1. Set the environment variable with the license key for the edition you plan to switch to:
+   1. Set the environment variable with the [license key](../../../glossary.html#license-key) for the edition you plan to switch to:
 
       ```shell
       LICENSE_TOKEN=<LICENSE_KEY>
@@ -194,7 +194,7 @@ Summary:
 {% endcapture %}
 
 {% capture bashible_sync_wait %}
-Wait for the bashible service to synchronize (the `UPTODATE` column value for a NodeGroup must match `NODES`):
+Wait for the [bashible](../../../glossary.html#bashible) service to synchronize (the `UPTODATE` column value for a NodeGroup must match `NODES`):
 
 ```shell
 d8 k get ng -o custom-columns=NAME:.metadata.name,NODES:.status.nodes,READY:.status.ready,UPTODATE:.status.upToDate
@@ -569,11 +569,11 @@ When selecting a switching method, consider how the DP container image repositor
 
 There are two ways to work with the DP container image registry:
 
-- Using the [`registry`](/modules/registry/) module — **(recommended)** — the configuration for working with the DP registry is specified in the [`registry`](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module parameters (ModuleConfig `deckhouse`). This method provides a smoother transition process and automatic verification that the required images are present. If your cluster uses this method for working with the DP container registry, use the section ["Switching Using the registry Module"](#switching-using-the-registry-module) to switch editions.
+- Using the [`registry`](/modules/registry/) module — **(recommended)** — the configuration for working with the DP registry is specified in the [`registry`](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module parameters (ModuleConfig `deckhouse`). This method provides a smoother transition process and automatic verification that the required images are present. If your cluster uses this method for working with the DP container registry, use the section ["Switching Using the registry Module"](#switching-using-the-registry-module) to switch [editions](../../../glossary.html#edition).
 
 - Without using the `registry` module — the configuration for working with the DP registry is set during cluster installation [in `InitConfiguration`](../../../reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), and the [`registry.mode`](/modules/deckhouse/configuration. html#parameters-registry-mode) of the `deckhouse` module (ModuleConfig `deckhouse`) is set to `Unmanaged`, and the [`registry.unmanaged`](/modules/deckhouse/configuration.html#parameters-registry-unmanaged) parameter of the `deckhouse` module is not specified.
 
-  This method is the only one available for managed Kubernetes clusters where the control plane is managed by a cloud provider rather than DP (e.g. Amazon EKS, Azure AKS, Google GKE, etc.).
+  This method is the only one available for managed Kubernetes clusters where the control plane is managed by a [cloud provider](../../../glossary.html#cloud-provider) rather than DP (e.g. Amazon EKS, Azure AKS, Google GKE, etc.).
 
   If your cluster uses this method for managing the DP container image repository, refer to the section ["Switching without using the registry module"](#switching-without-the-registry-module) to switch versions.
 
@@ -681,7 +681,7 @@ There are two ways to work with the DP container image registry:
    d8 k get pods -A | awk 'NR==1 || /^d8-/' | grep -E 'ImagePullBackOff|ErrImagePull'
    ```
 
-   For each problematic module, run the following commands **on all master nodes**, specifying the module name:
+   For each problematic module, run the following commands **on all [master nodes](../../../glossary.html#master-node)**, specifying the module name:
 
    ```shell
    rm -rf /var/lib/deckhouse/downloaded/<MODULE_NAME>/

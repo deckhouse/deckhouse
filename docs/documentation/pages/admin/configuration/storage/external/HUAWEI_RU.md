@@ -4,7 +4,7 @@ permalink: ru/admin/configuration/storage/external/huawei.html
 lang: ru
 ---
 
-В Deckhouse предусмотрена поддержка систем хранения данных (СХД) Huawei Dorado, позволяющая управлять томами в Kubernetes с использованием CSI-драйвера через создание пользовательских ресурсов [HuaweiStorageClass](/modules/csi-huawei/cr.html#huaweistorageclass). Это решение обеспечивает высокую производительность и отказоустойчивость хранения данных, что делает его оптимальным выбором для критически важных рабочих нагрузок.
+В Deckhouse предусмотрена поддержка систем хранения данных (СХД) Huawei Dorado, позволяющая управлять томами в Kubernetes с использованием [CSI-драйвера](../../../../glossary.html#csi-driver) через создание пользовательских ресурсов [HuaweiStorageClass](/modules/csi-huawei/cr.html#huaweistorageclass). Это решение обеспечивает высокую производительность и отказоустойчивость хранения данных, что делает его оптимальным выбором для критически важных рабочих нагрузок.
 
 {% alert level="warning" %}
 Создание StorageClass для CSI-драйвера `csi.huawei.com` пользователем запрещено.

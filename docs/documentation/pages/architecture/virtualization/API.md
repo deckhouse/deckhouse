@@ -12,7 +12,7 @@ The Virtualization API component of the [`virtualization`](/modules/virtualizati
    - [VirtualMachine](/modules/virtualization/cr.html#virtualmachine): A resource that describes the virtual machine (VM) configuration and status.
    - [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass): A resource that describes a set of parameters for [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resources, such as CPU and RAM specification, `NodeSelector`, and `Tolerations`.
    - [VirtualMachinePool](/modules/virtualization/early-access/cr.html#virtualmachinepool): A resource that declaratively manages a group of identical VMs.
-   - [VirtualDisk](/modules/virtualization/cr.html#virtualdisk): A resource that describes desired VM disk configuration.
+   - [VirtualDisk](/modules/virtualization/cr.html#virtualdisk): A resource that describes desired [VM disk](../../glossary.html#vm-disk) configuration.
    - [VirtualImage](/modules/virtualization/cr.html#virtualimage): A resource that describes:
      - a VM disk image that can be used as a data source for new [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) resources.
      - an ISO installation image that can be mounted directly into a [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
@@ -76,7 +76,7 @@ Virtualization API consists of the following components:
      Virtualization-controller uses `kubevirt.io` API group custom resources as a backend.
 
    - Validation of `virtualization.deckhouse.io` API group resources using the [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) mechanism.
-   - Launching `dvcr-importer`, `dvcr-uploader` and `pvc-importer` pods to import and upload VM disks and images. For more details, see [Importing and uploading VM images and disks](import.html).
+   - Launching `dvcr-importer`, `dvcr-uploader` and `pvc-importer` pods to import and upload [VM disks](../../glossary.html#vm-disk) and images. For more details, see [Importing and uploading VM images and disks](import.html).
    - Performing operations on VMs by making requests to some subresources of the `subresources.virtualization.deckhouse.io` API group, for example `virtualmachines/freeze` and `virtualmachines/unfreeze`.
 
    The component consists of the following containers:

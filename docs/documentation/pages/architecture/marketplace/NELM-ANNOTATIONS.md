@@ -367,7 +367,7 @@ data:
 
 {% endraw %}
 {% alert level="warning" %}
-DP doesn't provide a decryption key for Nelm secrets, so Application packages can't use `werf_secret_file`, the `secret/` directory, or `secret-values.yaml`.
+DP doesn't provide a decryption key for Nelm secrets, so [Application packages](../../glossary.html#marketplace-package) can't use `werf_secret_file`, the `secret/` directory, or `secret-values.yaml`.
 {% endalert %}
 {% raw %}
 

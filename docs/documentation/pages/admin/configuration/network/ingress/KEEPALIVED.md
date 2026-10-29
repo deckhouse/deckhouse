@@ -17,7 +17,7 @@ In the following example, there are three public IP addresses on three front nod
 Each virtual IP address is assigned to a separate VRRP group.
 Thus, each address "jumps" independently of the others,
 and if there are three nodes in the cluster with the `node-role.deckhouse.io/frontend: ""` labels,
-each IP address gets its own master node.
+each IP address gets its own [master node](../../../../glossary.html#master-node).
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

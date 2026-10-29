@@ -5,16 +5,16 @@ search: hybrid cluster, hybrid node group
 description: Architecture of hybrid node groups and hybrid clusters in Deckhouse Platform.
 ---
 
-It is important to distinguish between hybrid node groups and hybrid clusters:
+It is important to distinguish between hybrid [node groups](../../../glossary.html#node-group) and [hybrid clusters](../../../glossary.html#hybrid-cluster):
 
-- **Hybrid node groups** may include both Static nodes deployed in the cloud and servers deployed in the customer's on-premises data center (bare metal or virtual machines).
+- **[Hybrid node groups](../../../glossary.html#hybrid-node-group)** may include both [Static nodes](../../../glossary.html#static-node) deployed in the cloud and servers deployed in the customer's on-premises data center (bare metal or virtual machines).
 
   For example, the primary workload may run on bare-metal servers, while cloud instances are used as a scalable addition during peak loads. Since nodes of the same type (Static) are used both in the customer's data center and in the cloud, the architecture of the [`node-manager`](/modules/node-manager/) module in this case corresponds to the [Static node variant](static-nodes.html). The only mandatory requirement is the presence of L3 connectivity between the on-premises data center and the cloud. For example, [Yandex Cloud](https://yandex.cloud/) provides a [Cloud Interconnect](https://yandex.cloud/en/docs/interconnect/concepts/) mechanism.
 
 - **Hybrid clusters** are DP clusters that simultaneously include:
 
   - NodeGroup with Static nodes deployed in the customer's on-premises data center (bare metal or virtual machines).
-  - NodeGroup with CloudEphemeral nodes deployed in the cloud.
+  - NodeGroup with [CloudEphemeral nodes](../../../glossary.html#cloud-ephemeral-node) deployed in the cloud.
 
   In this case, the components required to manage both node types are deployed. The architecture of the [`node-manager`](/modules/node-manager/) module corresponds to the [Static node variant](static-nodes.html). In addition, components required for CloudEphemeral nodes are deployed:
 

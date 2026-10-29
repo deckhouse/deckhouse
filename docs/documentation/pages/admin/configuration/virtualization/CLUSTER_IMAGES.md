@@ -5,15 +5,15 @@ description: "Cluster images of virtual machines: types and formats, creating an
 search: cluster image, ClusterVirtualImage, image formats, image upload
 ---
 
-An image holds the contents of a disk that project owners use to create virtual machine disks. A cluster image, [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage), is available in every namespace and project of the cluster, so an image uploaded once serves all projects at once.
+An image holds the contents of a disk that [project](../../../glossary.html#project) owners use to create [virtual machine disks](../../../glossary.html#vm-disk). A cluster image, [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage), is available in every namespace and project of the cluster, so an image uploaded once serves all projects at once.
 
 An image appears in the cluster in three steps:
 
 1. The administrator creates a [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resource and specifies a data source in it.
-1. Deckhouse Platform (DP) downloads the image from that source to the internal storage (DVCR).
+1. Deckhouse Platform (DP) downloads the image from that source to the internal storage ([DVCR](../../../glossary.html#dvcr)).
 1. The downloaded image becomes available for creating disks.
 
-The image source can be an HTTP server hosting the image file, a container image registry, or a file on your computer that you upload from the command line. You can also create an image from another image, from a virtual machine disk, or from a disk snapshot.
+The image source can be an HTTP server hosting the image file, a container image registry, or a file on your computer that you upload from the command line. You can also create an image from another image, from a virtual machine disk, or from a [disk snapshot](../../../glossary.html#vm-snapshot).
 
 The `PHASE` column in the `d8 k get cvi` output shows the progress of image creation; for its values, see the [`.status.phase`](/modules/virtualization/cr.html#clustervirtualimage-v1alpha2-status-phase) field. To follow the creation in real time, add the `-w` flag. If an image stays not ready for a long time, check the [`.status.conditions`](/modules/virtualization/cr.html#clustervirtualimage-v1alpha2-status-conditions) block and the `d8 k describe cvi` output for the reason.
 

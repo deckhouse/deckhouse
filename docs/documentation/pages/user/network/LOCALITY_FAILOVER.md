@@ -22,7 +22,7 @@ Zones are determined based on node labels in the following hierarchy:
 - `topology.kubernetes.io/zone`
 - `topology.kubernetes.io/region`
 
-This is useful for inter-cluster failover when used together with multicluster configurations.
+This is useful for inter-cluster failover when used together with [multicluster](../../glossary.html#multicluster) configurations.
 
 {% alert level="warning" %}
 To enable Locality Failover,

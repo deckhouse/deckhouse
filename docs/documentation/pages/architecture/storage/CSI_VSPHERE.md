@@ -26,7 +26,7 @@ The Level 2 C4 architecture of the [`csi-vsphere`](/modules/csi-vsphere/) module
 
 The module consists of the following components:
 
-1. **Cloud-data-discoverer**: It is responsible for collecting data from the VMware vSphere API and providing it as a `kube-system/d8-cloud-provider-discovery-data` Secret. This secret contains the parameters of a specific cloud used CSI driver for volume management.
+1. **Cloud-data-discoverer**: It is responsible for collecting data from the VMware vSphere API and providing it as a `kube-system/d8-cloud-provider-discovery-data` Secret. This secret contains the parameters of a specific cloud used [CSI driver](../../../glossary.html#csi-driver) for volume management.
 
    It consists of the following containers:
 

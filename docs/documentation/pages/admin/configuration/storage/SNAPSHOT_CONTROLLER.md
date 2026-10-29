@@ -3,7 +3,7 @@ title: "Configuring volume snapshot creation"
 permalink: en/admin/configuration/storage/snapshot-controller.html
 ---
 
-Deckhouse Platform supports volume snapshot creation for CSI drivers in a Kubernetes cluster.
+Deckhouse Platform supports volume snapshot creation for [CSI drivers](../../../glossary.html#csi-driver) in a Kubernetes cluster.
 
 Snapshots capture the state of a volume at a specific point in time and can be used for data recovery or volume cloning. The ability to create snapshots depends on the capabilities of the CSI driver in use.
 
@@ -64,5 +64,5 @@ spec:
 ```
 
 {% alert level="warning" %}
-Not all CSI drivers support restoring volumes from snapshots. Ensure that your driver provides the required capabilities.
+Not all [CSI drivers](../../../glossary.html#csi-driver) support restoring volumes from snapshots. Ensure that your driver provides the required capabilities.
 {% endalert %}

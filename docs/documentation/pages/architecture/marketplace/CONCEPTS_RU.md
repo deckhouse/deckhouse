@@ -6,7 +6,7 @@ lang: ru
 search: package types, application constraints, CRD model, типы пакетов, ограничения приложения, модель ресурсов
 ---
 
-В этом разделе описаны типы пакетов, модель ресурсов, ограничения Application и этапы установки приложения из пакета.
+В этом разделе описаны типы [пакетов](../../glossary.html#marketplace-package), модель ресурсов, ограничения Application и этапы установки приложения из пакета.
 
 ## Типы пакетов
 
@@ -23,7 +23,7 @@ search: package types, application constraints, CRD model, типы пакето
 
 ## Модель ресурсов
 
-Marketplace Deckhouse Platform (DP) использует пять кастомных ресурсов:
+[Marketplace](../../glossary.html#marketplace) Deckhouse Platform (DP) использует пять кастомных ресурсов:
 
 <script src="/assets/js/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true });</script>
@@ -41,8 +41,8 @@ flowchart TD
 | [PackageRepository](../../reference/api/cr.html#packagerepository) | — | Кластер | Подключение к хранилищу образов и настройка расписания сканирования |
 | [PackageRepositoryOperation](../../reference/api/cr.html#packagerepositoryoperation) | `pro` | Кластер | Операция сканирования, которая обнаруживает версии |
 | [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) | `apv` | Кластер | Одна на каждую обнаруженную версию пакета. Содержит метаданные, OpenAPI-схемы и требования |
-| [ApplicationPackage](../../reference/api/cr.html#applicationpackage) | `ap` | Кластер | Сводная информация о пакете: какие репозитории содержат пакет, на какие версии указывают каналы обновлений, сколько экземпляров его используют |
-| [Application](../../reference/api/cr.html#application) | — | Неймспейс | Установленный экземпляр приложения. Управляет развёртыванием через Nelm |
+| [ApplicationPackage](../../reference/api/cr.html#applicationpackage) | `ap` | Кластер | Сводная информация о пакете: какие репозитории содержат пакет, на какие версии указывают [каналы обновлений](../../glossary.html#release-channel), сколько экземпляров его используют |
+| [Application](../../reference/api/cr.html#application) | — | Неймспейс | Установленный [экземпляр приложения](../../glossary.html#application-instance). Управляет развёртыванием через Nelm |
 
 ### Содержимое ApplicationPackageVersion
 
@@ -51,12 +51,12 @@ flowchart TD
 | Содержимое | Поле |
 | --- | --- |
 | Локализованное описание пакета (`en`/`ru`) | `status.packageMetadata.description` |
-| Стадия зрелости пакета (`Preview`, `General Availability` и другие) | `status.packageMetadata.stage` |
+| [Стадия зрелости](../../glossary.html#module-lifecycle-stage) пакета (`Preview`, `General Availability` и другие) | `status.packageMetadata.stage` |
 | Ограничения на версии DP и Kubernetes, а также зависимости от модулей (`mandatory`, `conditional`, `anyOf`, `noneOf`) | `status.packageMetadata.requirements` |
-| Параметры подтверждения удаления приложения. Подробнее — [в подразделе «Подтверждение удаления»](application-development.html#подтверждение-удаления) | `status.packageMetadata.disableOptions` |
+| Параметры [подтверждения удаления](../../glossary.html#deletion-confirmation) приложения. Подробнее — [в подразделе «Подтверждение удаления»](application-development.html#подтверждение-удаления) | `status.packageMetadata.disableOptions` |
 | Изменения в версии пакета из `changelog.yaml` | `status.packageMetadata.changelog` |
 | Схема OpenAPI v3 для проверки `Application.spec.settings` | `status.packageSchemas.settingsSchema` |
-| Схема OpenAPI v3 для итоговых values, передаваемых в хуки и шаблоны | `status.packageSchemas.valuesSchema` |
+| Схема OpenAPI v3 для итоговых values, передаваемых в [хуки](../../glossary.html#module-hook) и шаблоны | `status.packageSchemas.valuesSchema` |
 
 ## Этапы установки приложения из пакета
 
@@ -67,7 +67,7 @@ flowchart TD
 3. В ходе операции DP сканирует репозиторий и создаёт объекты [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) для каждой обнаруженной версии.
 4. Пользователь создаёт [Application](../../reference/api/cr.html#application) в своём неймспейсе, указывая имя репозитория пакетов ([`packageRepositoryName`](../../reference/api/cr.html#application-v1alpha1-spec-packagerepositoryname)), имя пакета приложения ([`packageName`](../../reference/api/cr.html#application-v1alpha1-spec-packagename)) и версию ([`packageVersion`](../../reference/api/cr.html#application-v1alpha1-spec-packageversion)).
 5. DP проверяет `spec.settings` по `settingsSchema` из соответствующего ApplicationPackageVersion.
-6. Nelm разворачивает Helm-шаблоны из bundle пакета.
+6. Nelm разворачивает Helm-шаблоны из [bundle пакета](../../glossary.html#marketplace-package-bundle).
 7. Ход развёртывания отражает условие (condition) `Installed` ресурса Application — до завершения установки это единственное условие ресурса. Когда оно становится `True`, появляются остальные условия (`ConfigurationApplied`, `Scaled`, `Ready` и другие).
 
 ## Ограничения Application

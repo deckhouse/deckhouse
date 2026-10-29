@@ -36,7 +36,7 @@ The module consists of the following components:
 
 1. **Managed-starrocks-operator** (Deployment): Kubernetes operator consisting of a single container **manager** that performs the following operations:
 
-   * Reconciles [Starrocks](/modules/managed-starrocks/cr.html#starrocks) custom resources in all user namespaces. The Starrocks and StarrocksClass custom resources define the settings of the StarRocks instance.
+   * Reconciles [Starrocks](/modules/managed-starrocks/cr.html#starrocks) custom resources in all [user namespaces](../../glossary.html#user-namespace). The Starrocks and StarrocksClass custom resources define the settings of the StarRocks instance.
 
    * Creates and manages the [Certificate](https://cert-manager.io/docs/usage/certificate/) custom resource and StatefulSet, Service, Secret, ConfigMap, and PersistentVolumeClaim resources related to the StarRocks instance.
 

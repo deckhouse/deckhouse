@@ -32,7 +32,7 @@ description: Архитектура модуля csi-ceph в Deckhouse Platform.
     * [CephClusterConnection](/modules/csi-ceph/stable/cr.html#cephclusterconnection) — параметры подключения к кластеру Ceph;
     * [CephStorageClass](/modules/csi-ceph/stable/cr.html#cephstorageclass) —  определяет конфигурацию для создаваемого Kubernetes StorageClass.
 
-    В CephStorageClass задается тип storage-класса (`CephFS`, `RBD`), reclaim policy, параметры подключения к кластеру Ceph, а также специфичные для каждого storage-класса дополнительные параметры. В зависимости от типа storage-класса эти параметры используются provisioner’ом CSI-драйвера `rbd.csi.ceph.com` или `cephfs.csi.ceph.com` при управлении томами.
+    В CephStorageClass задается тип storage-класса (`CephFS`, `RBD`), reclaim policy, параметры подключения к кластеру Ceph, а также специфичные для каждого storage-класса дополнительные параметры. В зависимости от типа storage-класса эти параметры используются provisioner’ом [CSI-драйвера](../../../glossary.html#csi-driver) `rbd.csi.ceph.com` или `cephfs.csi.ceph.com` при управлении томами.
 
     Кастомный ресурс [CephMetadataBackup](/modules/csi-ceph/cr.html#cephmetadatabackup) используется в сценариях миграции и восстановления, реализованных хуками модуля, а не основным runtime-контроллером.
 

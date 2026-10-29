@@ -29,7 +29,7 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
 
 1. **Cloud-controller-manager** — реализация [cloud controller manager](https://kubernetes.io/ru/docs/concepts/architecture/cloud-controller/) для AWS. Компонент обеспечивает интеграцию с облаком AWS и выполняет следующие функции:
 
-   * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в облачном провайдере. Для этого:
+   * реализует связь 1:1 между объектом узла в Kubernetes (Node) и виртуальной машиной в [облачном провайдере](../../../glossary.html#cloud-provider). Для этого:
 
      * заполняет поля `spec.providerID` и `nodeInfo` ресурса Node;
      * проверяет наличие виртуальной машины в облаке и при ее отсутствии удаляет ресурс Node в кластере.
@@ -50,7 +50,7 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-1. **CSI-драйвер (aws)** — реализация CSI-драйвера для AWS. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver.html).
+1. **[CSI-драйвер](../../../glossary.html#csi-driver) (aws)** — реализация CSI-драйвера для AWS. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver.html).
 
 1. **Node-termination-handler** — [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler), отвечает за обработку DP событий от сервисов AWS о недоступности экземпляров EC2.
 

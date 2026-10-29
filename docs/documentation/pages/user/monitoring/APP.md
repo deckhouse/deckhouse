@@ -74,7 +74,7 @@ For advanced configuration options, refer to [additional annotations](#additiona
        prometheus.deckhouse.io/tls: "true"  # If metrics are provided over HTTP, do not specify this annotation.
      ```
 
-1. When using service mesh [Istio](../../admin/configuration/network/internal/encrypting-pods.html) in STRICT mTLS mode,
+1. When using [service mesh](../../glossary.html#service-mesh) [Istio](../../admin/configuration/network/internal/encrypting-pods.html) in STRICT mTLS mode,
    specify the following annotation for metrics collection on Service or Pod: `prometheus.deckhouse.io/istio-mtls: "true"`.
    It is important that application metrics should be exported over HTTP protocol without TLS.
 

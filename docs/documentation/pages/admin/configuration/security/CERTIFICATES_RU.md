@@ -12,7 +12,7 @@ Deckhouse Platform (DP) предоставляет встроенные сред
 - заказ сертификатов во всех поддерживаемых источниках, таких как [Let’s Encrypt](https://letsencrypt.org/), [HashiCorp Vault](https://developer.hashicorp.com/vault), [Venafi](https://docs.venafi.com/);
 - выпуск самоподписанных сертификатов;
 - автоматический перевыпуск и контроль срока действия сертификатов;
-- установку `cm-acme-http-solver` на master-узлы и выделенные узлы.
+- установку `cm-acme-http-solver` на [master-узлы](../../../glossary.html#master-node) и выделенные узлы.
 
 На этой странице описаны доступные в DP возможности управления сертификатами,
 а также порядок работы с издателями сертификатов.

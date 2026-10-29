@@ -9,12 +9,12 @@ Node load changes over time, and nodes sometimes fail. Deckhouse Platform (DP) b
 
 ## VM rebalancing
 
-Over time, the distribution of virtual machines across nodes stops being even. The [`descheduler`](/modules/descheduler/) module restores the balance by moving VMs with live migration, without interrupting them. Enable this module, and the distribution is maintained without your involvement.
+Over time, the distribution of virtual machines across nodes stops being even. The [`descheduler`](/modules/descheduler/) module restores the balance by moving VMs with [live migration](../../../glossary.html#live-migration), without interrupting them. Enable this module, and the distribution is maintained without your involvement.
 
 Rebalancing solves two tasks:
 
 - It evens out the load. DP tracks how much CPU is reserved on each node and, when a node reserves more than 80%, moves some VMs to the nodes that reserve less than 50%.
-- It restores correct placement. DP checks whether the current node meets the VM requirements and the rules of mutual VM placement. For example, if the rules forbid keeping certain VMs on the same node, the extra ones are moved.
+- It restores correct placement. DP checks whether the current node meets the VM requirements and the rules of mutual [VM placement](../../../glossary.html#vm-placement). For example, if the rules forbid keeping certain VMs on the same node, the extra ones are moved.
 
 DP sets the rebalancing parameters itself: with the `descheduler` module enabled, it creates a [Descheduler](/modules/descheduler/cr.html#descheduler) resource named `virtualization` and selects in it only the machines that can be moved by live migration. How the eviction strategies work is covered in [Pod eviction](../app-scaling/pod-eviction/scheduler.html).
 
@@ -50,11 +50,11 @@ Rebalancing covers only the VMs that can leave their node by live migration. A V
 
 A slowdown of a virtual machine has two different causes. The guest OS is either busy with its own computations, or waiting for the node to give it processor time. From the outside both cases look the same, as a loaded processor of the machine.
 
-DP metrics tell them apart, so you don't have to log in to the guest system. The "Virtualization VM Happiness" Grafana dashboard shows how long each machine waits for a processor and what it lacks, as well as which nodes are loaded more than the rest.
+DP metrics tell them apart, so you don't have to log in to the guest system. The "Virtualization VM Happiness" Grafana [dashboard](../../../glossary.html#dashboard) shows how long each machine waits for a processor and what it lacks, as well as which nodes are loaded more than the rest.
 
 What to do next depends on which of the causes is confirmed.
 
-- **The machine consumes its entire guaranteed processor share.** Moving it to another node doesn't help, because the same share is guaranteed there. Raise the core fraction [`.spec.cpu.coreFraction`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-cpu-corefraction) or reduce the number of virtual cores, so that the guest OS doesn't spread the load across the cores that get no processor time. With the `Auto` value, DP picks the share from actual consumption, so you can't change it manually and have to change the number of cores or set an explicit percentage.
+- **The machine consumes its entire guaranteed processor share.** Moving it to another node doesn't help, because the same share is guaranteed there. Raise the [core fraction](../../../glossary.html#vm-core-fraction) [`.spec.cpu.coreFraction`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-cpu-corefraction) or reduce the number of virtual cores, so that the guest OS doesn't spread the load across the cores that get no processor time. With the `Auto` value, DP picks the share from actual consumption, so you can't change it manually and have to change the number of cores or set an explicit percentage.
 - **The machine waits for processor time without consuming its guaranteed share.** The node doesn't deliver the declared guarantee, and moving the machine to a less loaded node eliminates the delays.
 
 The guarantee isn't absolute under [CPU oversubscription](../virtualization/cpu-oversubscription.html). Processor time is distributed between machines in proportion to their shares, so a machine with a few loaded cores among many competing ones can get less than it's guaranteed.
@@ -69,16 +69,16 @@ DP measures storage and network latency by comparison with the rest of the clust
 
 ## ColdStandby
 
-The ColdStandby mechanism returns a virtual machine to service after the failure of the node it was running on.
+The [ColdStandby](../../../glossary.html#coldstandby) mechanism returns a virtual machine to service after the failure of the node it was running on.
 
 For the mechanism to work, meet two requirements:
 
-- The [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy) run policy of the virtual machine must be set to `AlwaysOnUnlessStoppedManually` or `AlwaysOn`.
+- The [`.spec.runPolicy`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-runpolicy) [run policy](../../../glossary.html#vm-run-policy) of the virtual machine must be set to `AlwaysOnUnlessStoppedManually` or `AlwaysOn`.
 - The [Fencing](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) mechanism must be enabled on the nodes that run virtual machines.
 
-Without Fencing, the mechanism doesn't work. An unavailable VM doesn't move in that case, but stays on the failed node and resumes together with it.
+Without [Fencing](../../../glossary.html#fencing), the mechanism doesn't work. An unavailable VM doesn't move in that case, but stays on the failed node and resumes together with it.
 
-Here's the recovery sequence, using a cluster of three nodes, `master`, `workerA`, and `workerB`, where Fencing is enabled on both worker nodes and the `linux-vm` VM runs on `workerA`:
+Here's the recovery sequence, using a cluster of three nodes, `master`, `workerA`, and `workerB`, where Fencing is enabled on both [worker nodes](../../../glossary.html#worker-node) and the `linux-vm` VM runs on `workerA`:
 
 1. The `workerA` node fails, for example because of a power or network loss.
 1. The controller checks node availability and finds that `workerA` doesn't respond.

@@ -233,7 +233,7 @@ d8 k -n d8-sds-local-volume logs -l app=sds-local-volume-controller
 
 ## Перемещение данных между PVC
 
-Скопируйте следующий скрипт в файл `migrate.sh` на любом master-узле:
+Скопируйте следующий скрипт в файл `migrate.sh` на любом [master-узле](../../../../glossary.html#master-node):
 
 ```shell
 #!/bin/bash

@@ -15,7 +15,7 @@ Not all module folders and files are required. In short, you can use the followi
 - In the [images](#images) folder, place instructions for building container images used by the module.
 
   If the templates only use addresses of *external* images, you don't need to create a folder.
-- If the module should respond to events or interact with the Kubernetes API, you need to create hooks that should be placed in the [hooks](#hooks) folder.
+- If the module should respond to events or interact with the Kubernetes API, you need to create [hooks](../../../glossary.html#module-hook) that should be placed in the [hooks](#hooks) folder.
 - Place the module documentation in the [docs](#docs) folder. If the module documentation is missing, the module will not appear in the list of modules in the documentation web interface in the cluster.
 - If the module has auxiliary Helm charts, place them in the [charts](#charts) folder.
 - If the module needs to create custom resources (CRD), place their specifications in the [crds](#crds) folder.
@@ -130,7 +130,7 @@ To render CRDs from the `/crds` directory in the site documentation or documenta
 ## docs
 
 {% alert %}
-The module [lifecycle](../versioning/#module-lifecycle) is specified in [module.yaml](#moduleyaml). The availability of the module in the editions of the Deckhouse Platform is not determined by the module developer.
+The module [lifecycle](../versioning/#module-lifecycle) is specified in [module.yaml](#moduleyaml). The availability of the module in the [editions](../../../glossary.html#edition) of the Deckhouse Platform is not determined by the module developer.
 {% endalert %}
 
 The `/docs` directory contains the module documentation. The following nested directories aren't involved in the documentation building process:
@@ -264,7 +264,7 @@ You need a file with the appropriate suffix for each language, for example `imag
 
 ## hooks
 
-The `/hooks/batch` directory contains the module's hooks. A hook is an executable file executed in response to an event. Hooks are also used by the module for dynamic interaction with Kubernetes API. For example, they can be used to handle events related to the creation or deletion of objects in a cluster.
+The `/hooks/batch` directory contains the module's [hooks](../../../glossary.html#module-hook). A hook is an executable file executed in response to an event. Hooks are also used by the module for dynamic interaction with Kubernetes API. For example, they can be used to handle events related to the creation or deletion of objects in a cluster.
 
 [Get to know](../#before-you-start) the concept of hooks before you start developing your own hook. You can use the [Go library](https://github.com/deckhouse/module-sdk) by the Deckhouse team to speed up the development of hooks.
 
@@ -649,16 +649,16 @@ accessibility:
 
 Parameter description:
 
-- `accessibility`: *Object.* Root block for configuring module accessibility.
-- `editions`: *Object.* Set of keys representing edition names.
+- `accessibility`: *Object.* Root block for configuring [module accessibility](../../../glossary.html#module-accessibility).
+- `editions`: *Object.* Set of keys representing [edition](../../../glossary.html#edition) names.
   Each edition can have its own accessibility settings.
 - `_default`: *Object.* Default configuration used when no settings are defined for a specific edition.
 - `available`: *Boolean.* Defines whether the module is available in the specified edition.
-- `enabledInBundles`: *Array of strings.* Module bundles in which the module is enabled by default.
+- `enabledInBundles`: *Array of strings.* [Module bundles](../../../glossary.html#module-bundle) in which the module is enabled by default.
   Supported module bundles (the full contents of each bundle are listed on [this page](../../../admin/configuration/#module-bundles)):
   - `Default`: Recommended set of modules for running a cluster.
     Includes monitoring, authorization control, networking, and other essential components.
-  - `Managed`: Set of modules for clusters managed by cloud providers (for example, Google Kubernetes Engine).
+  - `Managed`: Set of modules for clusters managed by [cloud providers](../../../glossary.html#cloud-provider) (for example, Google Kubernetes Engine).
   - `Minimal`: Minimal set that includes only the current module.
 
     {% alert level="warning" %}

@@ -8,14 +8,14 @@ The web interface for managing secrets (Stronghold web interface) is designed fo
 
 It allows you to:
 
-- View and configure secrets engines, add and edit secrets.
+- View and configure [secrets engines](../../glossary.html#stronghold-secrets-engine), add and edit secrets.
 - Manage authentication methods, user groups, and entities.
-- Control permissions, leases, and security policies.
+- Control permissions, [leases](../../glossary.html#stronghold-lease), and security policies.
 
 ## Accessing the stronghold web UI
 
 To open the web UI, enter `stronghold.<CLUSTER_NAME_TEMPLATE>` in your browser's address bar,
-where `<CLUSTER_NAME_TEMPLATE>` is the DNS name template of the cluster
+where `<CLUSTER_NAME_TEMPLATE>` is the [DNS name template](../../glossary.html#public-domain-template) of the cluster
 defined in the global `modules.publicDomainTemplate` parameter.
 
 1. On your first login, enter the user credentials.
@@ -85,7 +85,7 @@ To add a new secret, follow these steps:
 
     ![Add a new secret](../../images/stronghold/add-form.png)
 
-To add a new secrets engine:
+To add a new [secrets engine](../../glossary.html#stronghold-secrets-engine):
 
 1. Click **Enable new engine**.
 
@@ -214,7 +214,7 @@ Available actions:
 
 ### Managing temporary access to secrets and resources (leases)
 
-To manage leases (temporary access to secrets and resources), click **Leases**.
+To manage [leases](../../glossary.html#stronghold-lease) (temporary access to secrets and resources), click **Leases**.
 A search box will open that lets you find lease details by ID.
 
 ![Leases](../../images/stronghold/leases.png)
@@ -295,7 +295,7 @@ The left pane contains a navigation menu.
 
 The cental pane contains the following two tabs:
 
-- **Dashboard** with a number of unique clients for the current month and buttons to change the period.
+- **[Dashboard](../../glossary.html#dashboard)** with a number of unique clients for the current month and buttons to change the period.
 
   ![Monitoring](../../images/stronghold/monitoring.png)
 
@@ -307,7 +307,7 @@ The cental pane contains the following two tabs:
 
 The "Seal Stronghold" section provides means to seal or unseal the secrets storage.
 The left pane contains a navigation menu.
-The cental pane contains a button for sealing or unsealing the secret storage (depending on its current state).
+The cental pane contains a button for [sealing](../../glossary.html#stronghold-sealing) or unsealing the secret storage (depending on its current state).
 
 When the storage is sealed, [stronghold](/modules/stronghold/) can't read or write secrets.
 

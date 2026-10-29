@@ -7,7 +7,7 @@ relatedLinks:
     url: ../../../user/marketplace/
 ---
 
-Marketplace is a package management system in Deckhouse Platform (DP). It lets administrators connect package repositories, discover available packages, and make them available to project users to install applications.
+[Marketplace](../../../glossary.html#marketplace) is a [package](../../../glossary.html#marketplace-package) management system in Deckhouse Platform (DP). It lets administrators connect package repositories, discover available packages, and make them available to [project](../../../glossary.html#project) users to install applications.
 
 {% alert level="info" %}
 Marketplace is available in DP starting from version 1.76.
@@ -36,8 +36,8 @@ The following resources are used for working with the Marketplace:
 | [PackageRepository](../../../reference/api/cr.html#packagerepository) | — | Cluster | Package repository and its scanning settings |
 | [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation) | `pro` | Cluster | A repository scanning operation |
 | [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion) | `apv` | Cluster | Discovered version of a package |
-| [ApplicationPackage](../../../reference/api/cr.html#applicationpackage) | `ap` | Cluster | Package summary: the repositories it's available in, the versions the release channels point to, and the applications that use it |
-| [Application](../../../reference/api/cr.html#application) | — | Namespace | Installed application instance managed by a user |
+| [ApplicationPackage](../../../reference/api/cr.html#applicationpackage) | `ap` | Cluster | Package summary: the repositories it's available in, the versions the [release channels](../../../glossary.html#release-channel) point to, and the applications that use it |
+| [Application](../../../reference/api/cr.html#application) | — | Namespace | Installed [application instance](../../../glossary.html#application-instance) managed by a user |
 
 The ["Package repositories"](package-repository.html) section describes how to connect a repository and check its status.
 

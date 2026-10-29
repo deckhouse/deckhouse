@@ -6,13 +6,13 @@ permalink: en/admin/configuration/network/alliance/multicluster.html
 ## Multicluster of Istio funds
 
 {% alert level="info" %}
-Available only in DP Enterprise Edition (EE) and DP Ultimate.
+Available only in DP [Enterprise Edition](../../../../glossary.html#edition) (EE) and DP Ultimate.
 {% endalert %}
 
 ### Requirements for clusters
 
 * Cluster domains in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter
-  of the ClusterConfiguration resource must be the same for all multicluster members. The default value is `cluster.local`.
+  of the [ClusterConfiguration](../../../../glossary.html#cluster-configuration) resource must be the same for all [multicluster](../../../../glossary.html#multicluster) members. The default value is `cluster.local`.
 
 * Pod and Service subnets in the [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)
   and [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) parameters
@@ -26,7 +26,7 @@ Available only in DP Enterprise Edition (EE) and DP Ultimate.
   > If the IP addresses of services or pods in different clusters match, requests from other pods in other clusters may mistakenly fall under the Istio's rules.
   > The intersection of subnets of services and pods is not recommended ([source](https://istio.io/latest/docs/ops/deployment/deployment-models/#network-models)).
 
-By default, pods from different clusters communicate through the Istio ingress gateway ([multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode). If the pods of two clusters are directly reachable from each other (flat network), set [`spec.enableIngressGateway`](/modules/istio/cr.html#istiomulticluster-v1alpha1-spec-enableingressgateway) to `false` in both clusters, in the IstioMulticluster that describes the other cluster.
+By default, pods from different clusters communicate through the [Istio ingress gateway](../../../../glossary.html#istio-ingress-gateway) ([multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode). If the pods of two clusters are directly reachable from each other (flat network), set [`spec.enableIngressGateway`](/modules/istio/cr.html#istiomulticluster-v1alpha1-spec-enableingressgateway) to `false` in both clusters, in the IstioMulticluster that describes the other cluster.
 
 {% alert level="warning" %}
 Only sidecar-mode workloads can take part in a multicluster. For details, refer to [Ambient mesh limitations](/modules/istio/#ambient-mesh-limitations).

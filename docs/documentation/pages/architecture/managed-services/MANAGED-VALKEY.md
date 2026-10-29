@@ -35,7 +35,7 @@ The module consists of the following components:
 
 1. **Managed-valkey-operator** (Deployment): Kubernetes operator consisting of a single container **manager** that performs the following operations:
 
-   * It reconciles [Valkey](/modules/managed-valkey/cr.html#valkey) custom resources in all user namespaces. The Valkey and ValkeyClass custom resources define the settings of the Valkey instance.
+   * It reconciles [Valkey](/modules/managed-valkey/cr.html#valkey) custom resources in all [user namespaces](../../glossary.html#user-namespace). The Valkey and ValkeyClass custom resources define the settings of the Valkey instance.
 
    * It creates and manages StatefulSet, Secret, ConfigMap, and PersistentVolumeClaim resources related to the Valkey instance.
 

@@ -6,7 +6,7 @@ description: "Configure KUMA and antivirus software integration in Deckhouse Pla
 
 Deckhouse Platform (DP) supports integration with Kaspersky Unified Monitoring and Analysis Platform (KUMA),
 a unified monitoring and analysis system by Kaspersky Lab.
-As part of the integration, security events and audit logs from the cluster are sent to KUMA for further analysis.
+As part of the integration, [security events](../../../glossary.html#security-event) and audit logs from the cluster are sent to KUMA for further analysis.
 
 ## Sending logs to KUMA
 
@@ -207,8 +207,8 @@ List of Deckhouse service directories (also available [CSV format](/products/kub
 | Directory | Purpose |
 | --------- | ------- |
 | `/etc/cni/` (any node) | CNI module configuration files |
-| `/etc/kubernetes` (any node) | Static pod manifests, PKI certificate files |
-| `/mnt/kubernetes-data` (master node) | Only present in clusters deployed in the cloud when a separate disk is used for the etcd database |
+| `/etc/kubernetes` (any node) | [Static pod](../../../glossary.html#static-pod) manifests, PKI certificate files |
+| `/mnt/kubernetes-data` ([master node](../../../glossary.html#master-node)) | Only present in clusters deployed in the cloud when a separate disk is used for the etcd database |
 | `/mnt/vector-data` (any node, `log-shipper` module) | Service data for log delivery status |
 | `/opt/cni/bin/` (any node) | CNI module executables |
 | `/opt/deckhouse/bin/` (any node) | Executables required for Deckhouse operation |

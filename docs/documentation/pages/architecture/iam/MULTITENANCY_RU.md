@@ -6,7 +6,7 @@ search: мультитенантность, ProjectTemplate, Project, изоля
 description: Как устроена мультитенантность в Deckhouse Platform.
 ---
 
-Модуль [`multitenancy-manager`](/modules/multitenancy-manager/) позволяет создавать изолированные проекты в Deckhouse Platform (DP). Проекты обеспечивают квоты ресурсов, сетевую изоляцию и функции безопасности, выходящие за рамки стандартных неймспейсов.
+Модуль [`multitenancy-manager`](/modules/multitenancy-manager/) позволяет создавать изолированные [проекты](../../glossary.html#project) в Deckhouse Platform (DP). Проекты обеспечивают квоты ресурсов, сетевую изоляцию и функции безопасности, выходящие за рамки стандартных неймспейсов.
 
 Подробнее с настройками модуля и примерами его использования можно ознакомиться в [соответствующем разделе документации](/modules/multitenancy-manager/).
 
@@ -90,7 +90,7 @@ Certificate — ClusterIssuer, RoleBinding — ClusterRole. Модуль поз�
     [`GrantableClusterResourceReference`](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference),
     [`ClusterResourceGrantPolicy`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) и
     [`AvailableClusterResource`](/modules/multitenancy-manager/cr.html#availableclusterresource). Формирует
-    каталоги `AvailableClusterResource` для проектов и запускает валидирующие/мутирующие admission-вебхуки
+    каталоги `AvailableClusterResource` для [проектов](../../glossary.html#project) и запускает валидирующие/мутирующие admission-вебхуки
     (`/is-granted`, `/defaults`, `/protect`), которые контролируют, на какие кластерные ресурсы проект может
     ссылаться, и подставляют значения по умолчанию проекта при CREATE.
 

@@ -9,7 +9,7 @@ This section covers additional aspects of Deckhouse Platform (DP) integration wi
 - Automatic StorageClass creation.
 - Use of load balancers.
 - Specifics of applying changes.
-- Working with CloudStatic nodes and bastion hosts.
+- Working with [CloudStatic nodes](../../../../glossary.html#cloud-static-node) and [bastion hosts](../../../../glossary.html#bastion-host).
 
 ## Storage (CSI and StorageClass)
 
@@ -103,14 +103,14 @@ kubectl edit mc global
 If `defaultClusterStorageClass` is not specified, DP determines the default StorageClass in the following order:
 
 - A StorageClass with the annotation `storageclass.kubernetes.io/is-default-class='true'` (if it exists in the cluster).
-- The first StorageClass in alphabetical order auto-created by the cloud provider.
+- The first StorageClass in alphabetical order auto-created by the [cloud provider](../../../../glossary.html#cloud-provider).
 - The default value of `defaultClusterStorageClass` is an empty string (`""`).
 
 ### Resizing a PVC
 
 You can increase the size of an existing PVC by changing the value of the `spec.resources.requests.storage` parameter, without stopping or recreating the pod that uses it.
 
-After the value of `spec.resources.requests.storage` is changed, the CSI driver performs the following operations:
+After the value of `spec.resources.requests.storage` is changed, the [CSI driver](../../../../glossary.html#csi-driver) performs the following operations:
 
 - increases the size of the disk in Yandex Cloud;
 - updates the size of the associated PersistentVolume;
@@ -374,7 +374,7 @@ The following annotations are supported by Yandex Cloud Controller Manager:
 1. `yandex.cpi.flant.com/loadbalancer-external` — enables creation of an external LB for this Service (use it when you need to explicitly create an external load balancer). Overrides the default behavior.
 1. `yandex.cpi.flant.com/target-group-name-prefix` — specifies the name prefix of the target group used by the LoadBalancer. The annotation on the Service identifies the target group but does not select nodes. To include nodes in the target group, set the same annotation value in [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) in the NodeGroup. Yandex Cloud Controller Manager includes all suitable nodes carrying this annotation value, regardless of their NodeGroup. The target group name is formed as `<ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>`.
 
-If separate target groups are created for the control plane or master nodes, add the label `node.kubernetes.io/exclude-from-external-load-balancers: ""` to the master nodes. This prevents the controller from automatically adding master nodes to new target groups for load balancers.
+If separate target groups are created for the control plane or [master nodes](../../../../glossary.html#master-node), add the label `node.kubernetes.io/exclude-from-external-load-balancers: ""` to the master nodes. This prevents the controller from automatically adding master nodes to new target groups for load balancers.
 If you create your own load balancer for master nodes and want YCC to also be able to place its load balancers on master nodes, pre-create a target group with a name matching the pattern `${CLUSTER-NAME}${VPC.ID}`.
 
 #### Using a separate target group for a NodeGroup
@@ -470,7 +470,7 @@ Node recreation occurs only when:
 
 This behavior helps prevent unnecessary operations and node idling, but it means you must manually recreate VMs if needed.
 
-If you change the [provider settings](/modules/cloud-provider-yandex/configuration.html) in the `cloud-provider-yandex` [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) (for example, the provider parameters, the layout, or the subnets),
+If you change the [provider settings](/modules/cloud-provider-yandex/configuration.html) in the `cloud-provider-yandex` [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) (for example, the provider parameters, the [layout](../../../../glossary.html#layout), or the subnets),
 run the following command to apply the changes:
 
 ```shell
@@ -481,7 +481,7 @@ This command reconciles the cluster state with the configuration defined in the 
 
 ## Changing `networkType` does not recreate CloudEphemeral nodes
 
-In clusters that use Machine Controller Manager (MCM), changing the [`networkType`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-networktype) parameter in a YandexInstanceClass resource does not trigger automatic recreation of existing CloudEphemeral nodes. Although the MachineClass is updated, the network acceleration type of existing virtual machines in Yandex Cloud remains unchanged.
+In clusters that use Machine Controller Manager (MCM), changing the [`networkType`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-networktype) parameter in a YandexInstanceClass resource does not trigger automatic recreation of existing [CloudEphemeral nodes](../../../../glossary.html#cloud-ephemeral-node). Although the MachineClass is updated, the network acceleration type of existing virtual machines in Yandex Cloud remains unchanged.
 
 DP intentionally does not take the `networkType` parameter into account when determining whether CloudEphemeral nodes should be recreated in MCM. If it did, updating DP would recreate CloudEphemeral nodes in all clusters where `networkType` is specified, even if its value had not changed.
 
@@ -492,7 +492,7 @@ If you changed `networkType` in an MCM-based cluster and want the new value to a
 ## Integrating manually created VMs
 
 DP allows you to connect existing VMs in Yandex Cloud to the Kubernetes cluster as nodes.
-These nodes are called CloudStatic and they are not directly managed by the [`node-manager`](/modules/node-manager/) module
+These nodes are called [CloudStatic](../../../../glossary.html#cloud-static-node) and they are not directly managed by the [`node-manager`](/modules/node-manager/) module
 but can still be used in the cluster.
 
 To manually connect a VM as a CloudStatic node, follow these steps:

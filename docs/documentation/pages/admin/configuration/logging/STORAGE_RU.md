@@ -5,11 +5,11 @@ description: "Настройка кратковременного хранени
 lang: ru
 ---
 
-Deckhouse Platform (DP) предоставляет встроенное решение для кратковременного хранения логов на базе проекта [Grafana Loki](https://grafana.com/oss/loki/).
+Deckhouse Platform (DP) предоставляет встроенное решение для [кратковременного хранения логов](../../../glossary.html#short-term-log-storage) на базе проекта [Grafana Loki](https://grafana.com/oss/loki/).
 
 Хранилище разворачивается в кластере и интегрируется с системой сбора логов.
 После настройки ресурсов [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig), [PodLoggingConfig](/modules/log-shipper/cr.html#podloggingconfig) и [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination)
-логи автоматически поступают со всех системных компонентов.
+логи автоматически поступают со всех [системных компонентов](../../../glossary.html#system-component).
 Настроенное хранилище добавляется в Grafana в качестве источника данных для визуализации и анализа.
 
 Сбор логов с пользовательских приложений настраивается отдельно.
@@ -18,8 +18,8 @@ Deckhouse Platform (DP) предоставляет встроенное реше
 В том числе возможно настроить размер диска и срок хранения, задать используемый StorageClass и ресурсы.
 
 {% alert level="warning" %}
-Кратковременное хранилище на базе Grafana Loki не поддерживает работу в режиме высокой доступности.
-Для долговременного хранения важных логов используйте внешнее хранилище.
+Кратковременное хранилище на базе Grafana Loki не поддерживает работу в [режиме высокой доступности](../../../glossary.html#ha-mode).
+Для долговременного хранения важных логов используйте [внешнее хранилище](../../../glossary.html#external-storage).
 {% endalert %}
 
 ## Интеграция с Grafana Cloud

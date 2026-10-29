@@ -67,7 +67,7 @@ EOF
 }
 ```
 
-В режиме мультитенантности ограничения по неймспейсам [упрощённой ролевой модели](rbac-current.html) (ClusterAuthorizationRule/AuthorizationRule) применяет вебхук авторизации. Ответ API-сервера уже учитывает решение вебхука. Чтобы получить ответ только вебхука, выполните на master-узле от имени root следующую команду:
+В режиме мультитенантности ограничения по неймспейсам [упрощённой ролевой модели](rbac-current.html) (ClusterAuthorizationRule/AuthorizationRule) применяет вебхук авторизации. Ответ API-сервера уже учитывает решение вебхука. Чтобы получить ответ только вебхука, выполните на [master-узле](../../../../glossary.html#master-node) от имени root следующую команду:
 
 ```shell
 cat  <<EOF | 2>&1 d8 k --kubeconfig /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml create --raw / -f - | jq .status

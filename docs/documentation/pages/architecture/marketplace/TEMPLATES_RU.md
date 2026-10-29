@@ -258,5 +258,5 @@ DP определяет, работает ли приложение, тольк�
 
 {% endraw %}
 {% alert level="warning" %}
-Пакет должен содержать хотя бы один Deployment или StatefulSet. Иначе условие `Scaled` остаётся в состоянии `Unknown`, и приложение никогда не переходит в состояния `Installed` и `Ready`.
+[Пакет](../../glossary.html#marketplace-package) должен содержать хотя бы один Deployment или StatefulSet. Иначе условие `Scaled` остаётся в состоянии `Unknown`, и приложение никогда не переходит в состояния `Installed` и `Ready`.
 {% endalert %}
