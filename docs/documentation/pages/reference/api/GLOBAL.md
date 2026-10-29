@@ -35,10 +35,6 @@ spec:
     defaultClusterStorageClass: 'default-fast'
     modules:
       publicDomainTemplate: '%s.kube.company.my'
-      resourcesRequests:
-        controlPlane:
-          cpu: 1000m
-          memory: 500M
       placement:
         customTolerationKeys:
         - dedicated.example.com

@@ -39,6 +39,27 @@ serviceSubnetCIDR: 10.99.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 ---
+# control-plane-manager module settings.
+# https://deckhouse.io/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    apiserver:
+      # Enabling access to the Kubernetes API through Ingress.
+      # https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
+---
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
 internalNetworkCIDRs:
@@ -75,14 +96,6 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
-    # Enabling access to the Kubernetes API through Ingress.
-    # https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
-    publishAPI:
-      enabled: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

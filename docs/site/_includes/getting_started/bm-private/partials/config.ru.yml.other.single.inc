@@ -25,6 +25,31 @@ proxy:
   httpsProxy: <HTTPS_PROXY_ADDRESS>
   noProxy: <NO_PROXY_LIST>
 ---
+# [<en>] control-plane-manager module settings.
+# [<en>] https://deckhouse.io/modules/control-plane-manager/configuration.html
+# [<ru>] Настройки модуля control-plane-manager.
+# [<ru>] https://deckhouse.ru/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    apiserver:
+      # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
+      # [<ru>] https://deckhouse.ru/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      # [<en>] Enabling access to the API server through Ingress.
+      # [<en>] https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
+---
 # [<en>] Configuration to automatically remove the taint from the master node for single node cluster operation.
 # [<ru>] Конфигурация для автоматического снятия taint c master-узла кластера для работы в режиме единственного узла.
 apiVersion: deckhouse.io/v1
@@ -116,16 +141,6 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: FromIngressSecret
-    # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
-    # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
-    publishAPI:
-      enabled: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

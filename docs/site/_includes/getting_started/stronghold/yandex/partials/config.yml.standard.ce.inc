@@ -26,6 +26,31 @@ kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 defaultCRI: "ContainerdV2"
 ---
+# [<en>] control-plane-manager module settings.
+# [<en>] https://deckhouse.io/modules/control-plane-manager/configuration.html
+# [<ru>] Настройки модуля control-plane-manager.
+# [<ru>] https://deckhouse.ru/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    apiserver:
+      # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
+      # [<ru>] https://deckhouse.ru/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      # [<en>] Enabling access to the API server through Ingress.
+      # [<en>] https://deckhouse.io/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
+---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
@@ -84,16 +109,6 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
-    # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
-    # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
-    publishAPI:
-      enabled: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] stronghold module settings.
 # [<en>] https://deckhouse.io/modules/stronghold/configuration.html

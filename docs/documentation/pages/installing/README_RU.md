@@ -169,6 +169,25 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: cluster.local
 ---
+# Настройки модуля control-plane-manager.
+# https://deckhouse.ru/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    apiserver:
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
+---
 apiVersion: deckhouse.io/v1
 kind: AzureClusterConfiguration
 layout: Standard
@@ -228,12 +247,6 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
-    publishAPI:
-      enabled: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -323,6 +336,25 @@ serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: cluster.local
 ---
+# Настройки модуля control-plane-manager.
+# https://deckhouse.ru/modules/control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    apiserver:
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
+---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
@@ -380,12 +412,6 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
-    publishAPI:
-      enabled: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
