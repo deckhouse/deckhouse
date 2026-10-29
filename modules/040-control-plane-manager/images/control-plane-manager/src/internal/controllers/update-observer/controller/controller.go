@@ -23,6 +23,7 @@ import (
 	"go.yaml.in/yaml/v2"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -101,7 +102,7 @@ func RegisterController(mgr manager.Manager) error {
 			}).
 		Watches(
 			&v1.NodeGroup{},
-			&handler.EnqueueRequestForObject{},
+			handler.EnqueueRequestsFromMapFunc(configMapRequest),
 			builder.WithPredicates(getNodeGroupPredicate()),
 		).
 		Complete(r)
@@ -109,6 +110,15 @@ func RegisterController(mgr manager.Manager) error {
 
 // Reacts only when data["spec"] changed: this controller writes that block itself, so the filter's
 // job is to keep its own write from feeding back.
+// configMapRequest maps an event to the key the ConfigMap watch enqueues. Reconcile ignores the key,
+// and a key per NodeGroup would start a RequeueAfter polling loop of its own.
+func configMapRequest(context.Context, client.Object) []reconcile.Request {
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{
+		Namespace: common.KubeSystemNamespace,
+		Name:      common.ConfigMapName,
+	}}}
+}
+
 func getConfigMapSpecPredicate() predicate.Predicate {
 	parseSpec := func(cm *corev1.ConfigMap) Spec {
 		var spec Spec
