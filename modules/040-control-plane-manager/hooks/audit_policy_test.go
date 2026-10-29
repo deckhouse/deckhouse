@@ -29,12 +29,34 @@ import (
 	"slices"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	auditinternal "k8s.io/apiserver/pkg/apis/audit"
 	audit "k8s.io/apiserver/pkg/apis/audit/v1"
+	auditpolicy "k8s.io/apiserver/pkg/audit/policy"
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
+
+// auditLevel evaluates the generated audit policy as kube-apiserver does
+// and returns the audit level of a non-resource GET request.
+// A nil user is a request that failed authentication.
+func auditLevel(f *HookExecutionConfig, u user.Info, path string) auditinternal.Level {
+	data, err := base64.StdEncoding.DecodeString(f.ValuesGet("controlPlaneManager.internal.auditPolicy").String())
+	Expect(err).ToNot(HaveOccurred())
+	policy, err := auditpolicy.LoadPolicyFromBytes(data)
+	Expect(err).ToNot(HaveOccurred())
+
+	attrs := authorizer.AttributesRecord{
+		User: u,
+		Verb: "get",
+		Path: path,
+	}
+	return auditpolicy.NewPolicyRuleEvaluator(policy).EvaluatePolicyRule(attrs).Level
+}
 
 var _ = Describe("Modules :: control-plane-manager :: hooks :: audit_policy ::", func() {
 	const (
@@ -314,6 +336,54 @@ rules:
 
 			Expect(podExecRule).ToNot(BeNil(), "Request-level rule for pods/exec was not found")
 			Expect(podExecRule.Verbs).To(ContainElements("get", "create"), "pods/exec rule must match both WebSocket (get) and SPDY (create) exec requests")
+		})
+	})
+
+	Context("Cluster started with basic audit policies and a custom policy that logs all requests", func() {
+		var (
+			proxyUser     = &user.DefaultInfo{Name: "kubernetes-api-proxy", Groups: []string{"system:authenticated"}}
+			adminUser     = &user.DefaultInfo{Name: "admin", Groups: []string{"system:authenticated"}}
+			anonymousUser = &user.DefaultInfo{Name: "system:anonymous", Groups: []string{"system:unauthenticated"}}
+		)
+
+		BeforeEach(func() {
+			f.ValuesSet("controlPlaneManager.apiserver.basicAuditPolicyEnabled", true)
+			f.ValuesSet("controlPlaneManager.apiserver.auditPolicyEnabled", true)
+			f.BindingContexts.Set(f.KubeStateSet(policySecret(policyA)))
+			f.RunHook()
+		})
+
+		DescribeTable("audit level of a GET request evaluated by the kube-apiserver policy checker",
+			func(u user.Info, path string, expected auditinternal.Level) {
+				Expect(f).To(ExecuteSuccessfully())
+				Expect(auditLevel(f, u, path)).To(Equal(expected))
+			},
+			Entry("authenticated /readyz probe is not logged", proxyUser, "/readyz", auditinternal.LevelNone),
+			Entry("authenticated /readyz/<check> probe is not logged", proxyUser, "/readyz/etcd", auditinternal.LevelNone),
+			Entry("authenticated /livez probe is not logged", adminUser, "/livez", auditinternal.LevelNone),
+			Entry("authenticated /healthz probe is not logged", adminUser, "/healthz", auditinternal.LevelNone),
+			Entry("anonymous /livez probe is not logged", anonymousUser, "/livez", auditinternal.LevelNone),
+			Entry("anonymous /healthz probe is not logged", anonymousUser, "/healthz", auditinternal.LevelNone),
+			Entry("anonymous /readyz probe is not logged", anonymousUser, "/readyz", auditinternal.LevelNone),
+			Entry("authenticated /version request is logged by the custom policy", adminUser, "/version", auditinternal.LevelMetadata),
+			Entry("authenticated /readyzz request is logged by the custom policy", adminUser, "/readyzz", auditinternal.LevelMetadata),
+			Entry("anonymous /version request is logged", anonymousUser, "/version", auditinternal.LevelMetadata),
+			Entry("/readyz request with failed authentication is logged", nil, "/readyz", auditinternal.LevelMetadata),
+			Entry("/livez request with failed authentication is logged", nil, "/livez", auditinternal.LevelMetadata),
+		)
+	})
+
+	Context("Cluster started with a custom policy that logs all requests and disabled basic audit policies", func() {
+		BeforeEach(func() {
+			f.ValuesSet("controlPlaneManager.apiserver.basicAuditPolicyEnabled", false)
+			f.ValuesSet("controlPlaneManager.apiserver.auditPolicyEnabled", true)
+			f.BindingContexts.Set(f.KubeStateSet(policySecret(policyA)))
+			f.RunHook()
+		})
+
+		It("must log health probes as the custom policy requires", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(auditLevel(f, &user.DefaultInfo{Name: "kubernetes-api-proxy", Groups: []string{"system:authenticated"}}, "/readyz")).To(Equal(auditinternal.LevelMetadata))
 		})
 	})
 

@@ -13,8 +13,6 @@ The **first matching rule** determines the logging level.
 
 ## Policy structure
 
-Deckhouse Platform (DP) deploys a basic audit policy by default, which can be extended with user-defined rules.
-
 [Kubernetes documentation](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy)
 [Policy resource field structure](https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/#audit-k8s-io-v1-PolicyRule)
 
@@ -72,41 +70,29 @@ If a request comes from a user who belongs to at least one group listed in `user
 
 ## Built-in audit rules
 
-Deckhouse Platform uses the following audit rules, which can be extended by users:
-- [Do not log frequent updates for `Endpoints`, `EndpointSlices`, and `Events`.](#rule-1)
-- [Do not log leader election operations on `Lease` resources.](#rule-2)
-- [Do not log cert-manager leader election ConfigMaps.](#rule-3)
-- [Do not log VerticalPodAutoscalerCheckpoints resources.](#rule-4)
-- [Do not log PATCH operations on `VerticalPodAutoscaler` from recommender.](#rule-5)
-- [Do not log UpmeterHookProbes resources.](#rule-6)
-- [Do not log any operations in `d8-upmeter` namespace.](#rule-7)
-- [Do not log ingress-nginx leader election updates in ConfigMaps.](#rule-8)
-- [Do not log dex health-check create/delete operations on `AuthRequest` resources.](#rule-9)
-- [Log create and delete operations for Node resources with request/response payload.](#rule-10)
-- [Log kubectl logs requests (pods/log) at Metadata level.](#rule-11)
-- [Log create/update/patch/delete operations from system service accounts (`kube-system`, `d8-*`).](#rule-12)
-- [Log create/update/patch/delete operations for Pod resources.](#rule-13)
-- [Log Pod status updates from kubelet (pods/status) with the request body to capture container terminations and their reasons.](#rule-14)
-- [Log create/update/patch/delete operations in system namespaces (`kube-system`, `d8-*`).](#rule-15)
-- [Log all LIST operations in all namespaces.](#rule-16)
-- [Log create and delete operations for ServiceAccount resources.](#rule-17)
-- [Log create/update/delete/patch operations for Role and ClusterRole resources.](#rule-18)
-- [Log create/update/delete operations for ClusterRoleBinding resources.](#rule-19)
-- [Log exec, attach and ephemeral container related pod subresource operations.](#rule-20)
-- [Log creation of VirtualMachineOperation resources with request/response payload.](#rule-21)
-- [Log create/update/patch/delete operations for virtualization.deckhouse.io resources.](#rule-22)
-- [Log update/patch operations for internal virtualization subresources.](#rule-23)
-- [Log GET operations for subresources.virtualization.deckhouse.io API group.](#rule-24)
-- [Log create/update/patch/delete operations for `Pod` resources.](#rule-25)
-- [Log create/update/patch/delete operations in `d8-virtualization` namespace.](#rule-26)
-- [Log create/update/patch/delete operations for ModuleConfig resources.](#rule-27)
-- [Do not log requests from authenticated users.](#rule-28)
-- [Log all remaining (unauthenticated) requests at Metadata level.](#rule-29)
+Deckhouse Platform (DP) deploys a basic audit policy by default, which can be extended with user-defined rules.
 
-### Rule manifests
+The policy implements the following rules:
 
-<a id="rule-1"></a>
-1\. Do not log frequent updates for `Endpoints`, `EndpointSlices`, and `Events`.
+{% offtopic title="Do not log health probes (<code>/readyz</code>, <code>/livez</code>, <code>/healthz</code>). This rule does not apply to requests that fail authentication." %}
+
+```yaml
+level: None
+userGroups:
+  - system:authenticated
+  - system:unauthenticated
+nonResourceURLs:
+  - /readyz
+  - /readyz/*
+  - /livez
+  - /livez/*
+  - /healthz
+  - /healthz/*
+```
+
+{% endofftopic %}
+
+{% offtopic title="Do not log frequent updates for <code>Endpoints</code>, <code>EndpointSlices</code>, and <code>Events</code>." %}
 
 ```yaml
 level: None
@@ -117,8 +103,9 @@ resources:
       - events
 ```
 
-<a id="rule-2"></a>
-2\. Do not log leader election operations on `Lease` resources.
+{% endofftopic %}
+
+{% offtopic title="Do not log leader election operations on <code>Lease</code> resources." %}
 
 ```yaml
 level: None
@@ -128,8 +115,9 @@ resources:
       - leases
 ```
 
-<a id="rule-3"></a>
-3\. Do not log cert-manager leader election ConfigMaps.
+{% endofftopic %}
+
+{% offtopic title="Do not log cert-manager leader election ConfigMaps." %}
 
 ```yaml
 level: None
@@ -141,8 +129,9 @@ resources:
       - cert-manager-controller
 ```
 
-<a id="rule-4"></a>
-4\. Do not log VerticalPodAutoscalerCheckpoints resources.
+{% endofftopic %}
+
+{% offtopic title="Do not log VerticalPodAutoscalerCheckpoints resources." %}
 
 ```yaml
 level: None
@@ -152,8 +141,9 @@ resources:
       - verticalpodautoscalercheckpoints
 ```
 
-<a id="rule-5"></a>
-5\. Do not log PATCH operations on `VerticalPodAutoscaler` from recommender.
+{% endofftopic %}
+
+{% offtopic title="Do not log PATCH operations on <code>VerticalPodAutoscaler</code> from recommender." %}
 
 ```yaml
 level: None
@@ -167,8 +157,9 @@ resources:
       - verticalpodautoscalers
 ```
 
-<a id="rule-6"></a>
-6\. Do not log UpmeterHookProbes resources.
+{% endofftopic %}
+
+{% offtopic title="Do not log UpmeterHookProbes resources." %}
 
 ```yaml
 level: None
@@ -178,8 +169,9 @@ resources:
       - upmeterhookprobes
 ```
 
-<a id="rule-7"></a>
-7\. Do not log any operations in `d8-upmeter` namespace.
+{% endofftopic %}
+
+{% offtopic title="Do not log any operations in <code>d8-upmeter</code> namespace." %}
 
 ```yaml
 level: None
@@ -187,8 +179,9 @@ namespaces:
   - d8-upmeter
 ```
 
-<a id="rule-8"></a>
-8\. Do not log ingress-nginx leader election updates in ConfigMaps.
+{% endofftopic %}
+
+{% offtopic title="Do not log ingress-nginx leader election updates in ConfigMaps." %}
 
 ```yaml
 level: None
@@ -203,8 +196,9 @@ namespaces:
   - d8-ingress-nginx
 ```
 
-<a id="rule-9"></a>
-9\. Do not log dex health-check create/delete operations on `AuthRequest` resources.
+{% endofftopic %}
+
+{% offtopic title="Do not log dex health-check create/delete operations on <code>AuthRequest</code> resources." %}
 
 ```yaml
 level: None
@@ -221,8 +215,9 @@ namespaces:
   - d8-user-authn
 ```
 
-<a id="rule-10"></a>
-10\. Log create and delete operations for Node resources with request/response payload.
+{% endofftopic %}
+
+{% offtopic title="Log create and delete operations for Node resources with request/response payload." %}
 
 ```yaml
 level: RequestResponse
@@ -234,8 +229,9 @@ resources:
       - nodes
 ```
 
-<a id="rule-11"></a>
-11\. Log kubectl logs requests (pods/log) at Metadata level.
+{% endofftopic %}
+
+{% offtopic title="Log kubectl logs requests (pods/log) at Metadata level." %}
 
 ```yaml
 level: Metadata
@@ -244,8 +240,9 @@ resources:
       - pods/log
 ```
 
-<a id="rule-12"></a>
-12\. Log create/update/patch/delete operations from system service accounts (`kube-system`, `d8-*`).
+{% endofftopic %}
+
+{% offtopic title="Log create/update/patch/delete operations from system service accounts (<code>kube-system</code>, <code>d8-*</code>)." %}
 
 ```yaml
 level: Metadata
@@ -376,8 +373,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-13"></a>
-13\. Log create/update/patch/delete operations for Pod resources.
+{% endofftopic %}
+
+{% offtopic title="Log create/update/patch/delete operations for Pod resources." %}
 
 ```yaml
 level: Request
@@ -393,8 +391,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-14"></a>
-14\. Log Pod status updates from kubelet (pods/status) with the request body to capture container terminations and their reasons.
+{% endofftopic %}
+
+{% offtopic title="Log Pod status updates from kubelet (pods/status) with the request body to capture container terminations and their reasons." %}
 
 ```yaml
 level: Request
@@ -410,8 +409,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-15"></a>
-15\. Log create/update/patch/delete operations in system namespaces (`kube-system`, `d8-*`).
+{% endofftopic %}
+
+{% offtopic title="Log create/update/patch/delete operations in system namespaces (<code>kube-system</code>, <code>d8-*</code>)." %}
 
 ```yaml
 level: Metadata
@@ -458,8 +458,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-16"></a>
-16\. Log all LIST operations in all namespaces.
+{% endofftopic %}
+
+{% offtopic title="Log all LIST operations in all namespaces." %}
 
 ```yaml
 level: Metadata
@@ -467,8 +468,9 @@ verbs:
   - list
 ```
 
-<a id="rule-17"></a>
-17\. Log create and delete operations for ServiceAccount resources.
+{% endofftopic %}
+
+{% offtopic title="Log create and delete operations for ServiceAccount resources." %}
 
 ```yaml
 level: Metadata
@@ -482,8 +484,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-18"></a>
-18\. Log create/update/delete/patch operations for Role and ClusterRole resources.
+{% endofftopic %}
+
+{% offtopic title="Log create/update/delete/patch operations for Role and ClusterRole resources." %}
 
 ```yaml
 level: Request
@@ -501,8 +504,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-19"></a>
-19\. Log create/update/delete operations for ClusterRoleBinding resources.
+{% endofftopic %}
+
+{% offtopic title="Log create/update/delete operations for ClusterRoleBinding resources." %}
 
 ```yaml
 level: Request
@@ -518,8 +522,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-20"></a>
-20\. Log exec, attach and ephemeral container related pod subresource operations.
+{% endofftopic %}
+
+{% offtopic title="Log exec, attach and ephemeral container related pod subresource operations." %}
 
 ```yaml
 level: Request
@@ -536,8 +541,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-21"></a>
-21\. Log creation of VirtualMachineOperation resources with request/response payload.
+{% endofftopic %}
+
+{% offtopic title="Log creation of VirtualMachineOperation resources with request/response payload." %}
 
 ```yaml
 level: RequestResponse
@@ -549,8 +555,9 @@ resources:
       - virtualmachineoperations
 ```
 
-<a id="rule-22"></a>
-22\. Log create/update/patch/delete operations for virtualization.deckhouse.io resources.
+{% endofftopic %}
+
+{% offtopic title="Log create/update/patch/delete operations for virtualization.deckhouse.io resources." %}
 
 ```yaml
 level: Metadata
@@ -563,8 +570,9 @@ resources:
   - group: virtualization.deckhouse.io
 ```
 
-<a id="rule-23"></a>
-23\. Log update/patch operations for internal virtualization subresources.
+{% endofftopic %}
+
+{% offtopic title="Log update/patch operations for internal virtualization subresources." %}
 
 ```yaml
 level: Metadata
@@ -577,8 +585,9 @@ resources:
       - internalvirtualizationvirtualmachineinstances
 ```
 
-<a id="rule-24"></a>
-24\. Log GET operations for subresources.virtualization.deckhouse.io API group.
+{% endofftopic %}
+
+{% offtopic title="Log GET operations for subresources.virtualization.deckhouse.io API group." %}
 
 ```yaml
 level: Metadata
@@ -588,8 +597,9 @@ resources:
   - group: subresources.virtualization.deckhouse.io
 ```
 
-<a id="rule-25"></a>
-25\. Log create/update/patch/delete operations for `Pod` resources.
+{% endofftopic %}
+
+{% offtopic title="Log create/update/patch/delete operations for <code>Pod</code> resources." %}
 
 ```yaml
 level: Metadata
@@ -603,8 +613,9 @@ resources:
       - pods
 ```
 
-<a id="rule-26"></a>
-26\. Log create/update/patch/delete operations in `d8-virtualization` namespace.
+{% endofftopic %}
+
+{% offtopic title="Log create/update/patch/delete operations in <code>d8-virtualization</code> namespace." %}
 
 ```yaml
 level: Metadata
@@ -617,8 +628,9 @@ namespaces:
   - d8-virtualization
 ```
 
-<a id="rule-27"></a>
-27\. Log create/update/patch/delete operations for ModuleConfig resources.
+{% endofftopic %}
+
+{% offtopic title="Log create/update/patch/delete operations for ModuleConfig resources." %}
 
 ```yaml
 level: Metadata
@@ -633,8 +645,9 @@ resources:
       - moduleconfigs
 ```
 
-<a id="rule-28"></a>
-28\. Do not log requests from authenticated users.
+{% endofftopic %}
+
+{% offtopic title="Do not log requests from authenticated users." %}
 
 ```yaml
 level: None
@@ -642,12 +655,15 @@ userGroups:
   - system:authenticated
 ```
 
-<a id="rule-29"></a>
-29\. Log all remaining (unauthenticated) requests at Metadata level.
+{% endofftopic %}
+
+{% offtopic title="Log all remaining (unauthenticated) requests at Metadata level." %}
 
 ```yaml
 level: Metadata
 ```
+
+{% endofftopic %}
 
 ## Full policy example
 
@@ -655,7 +671,20 @@ level: Metadata
 apiVersion: audit.k8s.io/v1
 kind: Policy
 rules:
-  # 1: Do not log frequent updates for `Endpoints`, `EndpointSlices`, and `Events`.
+  # 1: Do not log health probes (`/readyz`, `/livez`, `/healthz`). This rule does not apply to requests that fail authentication.
+  - level: None
+    userGroups:
+      - system:authenticated
+      - system:unauthenticated
+    nonResourceURLs:
+      - /readyz
+      - /readyz/*
+      - /livez
+      - /livez/*
+      - /healthz
+      - /healthz/*
+
+  # 2: Do not log frequent updates for `Endpoints`, `EndpointSlices`, and `Events`.
   - level: None
     resources:
       - resources:
@@ -663,14 +692,14 @@ rules:
           - endpointslices
           - events
 
-  # 2: Do not log leader election operations on `Lease` resources.
+  # 3: Do not log leader election operations on `Lease` resources.
   - level: None
     resources:
       - group: coordination.k8s.io
         resources:
           - leases
 
-  # 3: Do not log cert-manager leader election ConfigMaps.
+  # 4: Do not log cert-manager leader election ConfigMaps.
   - level: None
     resources:
       - resources:
@@ -679,14 +708,14 @@ rules:
           - cert-manager-cainjector-leader-election
           - cert-manager-controller
 
-  # 4: Do not log VerticalPodAutoscalerCheckpoints resources.
+  # 5: Do not log VerticalPodAutoscalerCheckpoints resources.
   - level: None
     resources:
       - group: autoscaling.k8s.io
         resources:
           - verticalpodautoscalercheckpoints
 
-  # 5: Do not log PATCH operations on `VerticalPodAutoscaler` from recommender.
+  # 6: Do not log PATCH operations on `VerticalPodAutoscaler` from recommender.
   - level: None
     users:
       - system:serviceaccount:kube-system:d8-vertical-pod-autoscaler-recommender
@@ -697,19 +726,19 @@ rules:
         resources:
           - verticalpodautoscalers
 
-  # 6: Do not log UpmeterHookProbes resources.
+  # 7: Do not log UpmeterHookProbes resources.
   - level: None
     resources:
       - group: deckhouse.io
         resources:
           - upmeterhookprobes
 
-  # 7: Do not log any operations in `d8-upmeter` namespace.
+  # 8: Do not log any operations in `d8-upmeter` namespace.
   - level: None
     namespaces:
       - d8-upmeter
 
-  # 8: Do not log ingress-nginx leader election updates in ConfigMaps.
+  # 9: Do not log ingress-nginx leader election updates in ConfigMaps.
   - level: None
     users:
       - system:serviceaccount:d8-ingress-nginx:ingress-nginx
@@ -721,7 +750,7 @@ rules:
     namespaces:
       - d8-ingress-nginx
 
-  # 9: Do not log dex health-check create/delete operations on `AuthRequest` resources.
+  # 10: Do not log dex health-check create/delete operations on `AuthRequest` resources.
   - level: None
     users:
       - system:serviceaccount:d8-user-authn:dex
@@ -735,7 +764,7 @@ rules:
     namespaces:
       - d8-user-authn
 
-  # 10: Log create and delete operations for Node resources with request/response payload.
+  # 11: Log create and delete operations for Node resources with request/response payload.
   - level: RequestResponse
     verbs:
       - create
@@ -744,13 +773,13 @@ rules:
       - resources:
           - nodes
 
-  # 11: Log kubectl logs requests (pods/log) at Metadata level.
+  # 12: Log kubectl logs requests (pods/log) at Metadata level.
   - level: Metadata
     resources:
       - resources:
           - pods/log
 
-  # 12: Log create/update/patch/delete operations from system service accounts (`kube-system`, `d8-*`).
+  # 13: Log create/update/patch/delete operations from system service accounts (`kube-system`, `d8-*`).
   - level: Metadata
     users:
       - system:serviceaccount:d8-cert-manager:cainjector
@@ -878,7 +907,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 13: Log create/update/patch/delete operations for Pod resources.
+  # 14: Log create/update/patch/delete operations for Pod resources.
   - level: Request
     verbs:
       - create
@@ -891,7 +920,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 14: Log Pod status updates from kubelet (pods/status) with the request body to capture container terminations and their reasons.
+  # 15: Log Pod status updates from kubelet (pods/status) with the request body to capture container terminations and their reasons.
   - level: Request
     userGroups:
       - system:nodes
@@ -904,7 +933,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 15: Log create/update/patch/delete operations in system namespaces (`kube-system`, `d8-*`).
+  # 16: Log create/update/patch/delete operations in system namespaces (`kube-system`, `d8-*`).
   - level: Metadata
     verbs:
       - create
@@ -948,12 +977,12 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 16: Log all LIST operations in all namespaces.
+  # 17: Log all LIST operations in all namespaces.
   - level: Metadata
     verbs:
       - list
 
-  # 17: Log create and delete operations for ServiceAccount resources.
+  # 18: Log create and delete operations for ServiceAccount resources.
   - level: Metadata
     verbs:
       - create
@@ -964,7 +993,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 18: Log create/update/delete/patch operations for Role and ClusterRole resources.
+  # 19: Log create/update/delete/patch operations for Role and ClusterRole resources.
   - level: Request
     verbs:
       - create
@@ -979,7 +1008,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 19: Log create/update/delete operations for ClusterRoleBinding resources.
+  # 20: Log create/update/delete operations for ClusterRoleBinding resources.
   - level: Request
     verbs:
       - create
@@ -992,7 +1021,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 20: Log exec, attach and ephemeral container related pod subresource operations.
+  # 21: Log exec, attach and ephemeral container related pod subresource operations.
   - level: Request
     verbs:
       - get
@@ -1006,7 +1035,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 21: Log creation of VirtualMachineOperation resources with request/response payload.
+  # 22: Log creation of VirtualMachineOperation resources with request/response payload.
   - level: RequestResponse
     verbs:
       - create
@@ -1015,7 +1044,7 @@ rules:
         resources:
           - virtualmachineoperations
 
-  # 22: Log create/update/patch/delete operations for virtualization.deckhouse.io resources.
+  # 23: Log create/update/patch/delete operations for virtualization.deckhouse.io resources.
   - level: Metadata
     verbs:
       - create
@@ -1025,7 +1054,7 @@ rules:
     resources:
       - group: virtualization.deckhouse.io
 
-  # 23: Log update/patch operations for internal virtualization subresources.
+  # 24: Log update/patch operations for internal virtualization subresources.
   - level: Metadata
     verbs:
       - update
@@ -1035,14 +1064,14 @@ rules:
         resources:
           - internalvirtualizationvirtualmachineinstances
 
-  # 24: Log GET operations for subresources.virtualization.deckhouse.io API group.
+  # 25: Log GET operations for subresources.virtualization.deckhouse.io API group.
   - level: Metadata
     verbs:
       - get
     resources:
       - group: subresources.virtualization.deckhouse.io
 
-  # 25: Log create/update/patch/delete operations for `Pod` resources.
+  # 26: Log create/update/patch/delete operations for `Pod` resources.
   - level: Metadata
     verbs:
       - create
@@ -1053,7 +1082,7 @@ rules:
       - resources:
           - pods
 
-  # 26: Log create/update/patch/delete operations in `d8-virtualization` namespace.
+  # 27: Log create/update/patch/delete operations in `d8-virtualization` namespace.
   - level: Metadata
     verbs:
       - create
@@ -1063,7 +1092,7 @@ rules:
     namespaces:
       - d8-virtualization
 
-  # 27: Log create/update/patch/delete operations for ModuleConfig resources.
+  # 28: Log create/update/patch/delete operations for ModuleConfig resources.
   - level: Metadata
     verbs:
       - create
@@ -1078,12 +1107,12 @@ rules:
   ############
   # User-defined rules from secret kube-system/audit-policy are inserted here
   ############
-  # 28: Do not log requests from authenticated users.
+  # 29: Do not log requests from authenticated users.
   - level: None
     userGroups:
       - system:authenticated
 
-  # 29: Log all remaining (unauthenticated) requests at Metadata level.
+  # 30: Log all remaining (unauthenticated) requests at Metadata level.
   - level: Metadata
 
 ```

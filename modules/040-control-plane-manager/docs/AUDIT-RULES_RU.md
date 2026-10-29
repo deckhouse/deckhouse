@@ -73,40 +73,26 @@ rules:                       # Набор правил для аудита
 В Deckhouse Platform (DP) по умолчанию разворачивается базовая политика аудита, которая может быть дополнена пользовательскими правилами.
 
 В этой политике реализованы следующие правила:
-- [Не логировать частые обновления `Endpoints`, `EndpointSlices` и `Events`.](#rule-1)
-- [Не логировать операции выбора лидера на ресурсах `Lease`.](#rule-2)
-- [Не логировать ConfigMap cert-manager, используемые для выбора лидера.](#rule-3)
-- [Не логировать ресурсы VerticalPodAutoscalerCheckpoints.](#rule-4)
-- [Не логировать PATCH-операции `VerticalPodAutoscaler` от recommender.](#rule-5)
-- [Не логировать ресурсы UpmeterHookProbes.](#rule-6)
-- [Не логировать любые операции в неймспейсе `d8-upmeter`.](#rule-7)
-- [Не логировать обновления ConfigMap ingress-nginx для выборов лидера.](#rule-8)
-- [Не логировать операции create/delete `AuthRequest` от health-check dex.](#rule-9)
-- [Логировать операции create/delete для ресурсов Node с телом запроса/ответа.](#rule-10)
-- [Логировать запросы kubectl logs (pods/log) на уровне Metadata.](#rule-11)
-- [Логировать операции create/update/patch/delete от системных ServiceAccount (`kube-system`, `d8-*`).](#rule-12)
-- [Логировать операции create/update/patch/delete для ресурсов Pod.](#rule-13)
-- [Логировать обновления статуса Pod от kubelet (pods/status) с телом запроса, чтобы фиксировать остановки контейнеров и их причины.](#rule-14)
-- [Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).](#rule-15)
-- [Логировать все LIST-запросы во всех неймспейсах.](#rule-16)
-- [Логировать операции create/delete для ресурсов ServiceAccount.](#rule-17)
-- [Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.](#rule-18)
-- [Логировать операции create/update/delete для ресурсов ClusterRoleBinding.](#rule-19)
-- [Логировать операции с pod subresource для exec, attach и ephemeral-контейнеров.](#rule-20)
-- [Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.](#rule-21)
-- [Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io.](#rule-22)
-- [Логировать операции update/patch для внутренних virtualization subresources.](#rule-23)
-- [Логировать GET-операции для API-группы subresources.virtualization.deckhouse.io.](#rule-24)
-- [Логировать операции create/update/patch/delete для ресурсов `Pod`.](#rule-25)
-- [Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`.](#rule-26)
-- [Логировать операции create/update/patch/delete для ресурсов ModuleConfig.](#rule-27)
-- [Не логировать запросы аутентифицированных пользователей.](#rule-28)
-- [Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata.](#rule-29)
 
-### Манифесты правил
+{% offtopic title="Не логировать проверки состояния (<code>/readyz</code>, <code>/livez</code>, <code>/healthz</code>). Правило не действует для запросов, не прошедших аутентификацию." %}
 
-<a id="rule-1"></a>
-1\. Не логировать частые обновления `Endpoints`, `EndpointSlices` и `Events`.
+```yaml
+level: None
+userGroups:
+  - system:authenticated
+  - system:unauthenticated
+nonResourceURLs:
+  - /readyz
+  - /readyz/*
+  - /livez
+  - /livez/*
+  - /healthz
+  - /healthz/*
+```
+
+{% endofftopic %}
+
+{% offtopic title="Не логировать частые обновления <code>Endpoints</code>, <code>EndpointSlices</code> и <code>Events</code>." %}
 
 ```yaml
 level: None
@@ -117,8 +103,9 @@ resources:
       - events
 ```
 
-<a id="rule-2"></a>
-2\. Не логировать операции выбора лидера на ресурсах `Lease`.
+{% endofftopic %}
+
+{% offtopic title="Не логировать операции выбора лидера на ресурсах <code>Lease</code>." %}
 
 ```yaml
 level: None
@@ -128,8 +115,9 @@ resources:
       - leases
 ```
 
-<a id="rule-3"></a>
-3\. Не логировать ConfigMap cert-manager, используемые для выбора лидера.
+{% endofftopic %}
+
+{% offtopic title="Не логировать ConfigMap cert-manager, используемые для выбора лидера." %}
 
 ```yaml
 level: None
@@ -141,8 +129,9 @@ resources:
       - cert-manager-controller
 ```
 
-<a id="rule-4"></a>
-4\. Не логировать ресурсы VerticalPodAutoscalerCheckpoints.
+{% endofftopic %}
+
+{% offtopic title="Не логировать ресурсы VerticalPodAutoscalerCheckpoints." %}
 
 ```yaml
 level: None
@@ -152,8 +141,9 @@ resources:
       - verticalpodautoscalercheckpoints
 ```
 
-<a id="rule-5"></a>
-5\. Не логировать PATCH-операции `VerticalPodAutoscaler` от recommender.
+{% endofftopic %}
+
+{% offtopic title="Не логировать PATCH-операции <code>VerticalPodAutoscaler</code> от recommender." %}
 
 ```yaml
 level: None
@@ -167,8 +157,9 @@ resources:
       - verticalpodautoscalers
 ```
 
-<a id="rule-6"></a>
-6\. Не логировать ресурсы UpmeterHookProbes.
+{% endofftopic %}
+
+{% offtopic title="Не логировать ресурсы UpmeterHookProbes." %}
 
 ```yaml
 level: None
@@ -178,8 +169,9 @@ resources:
       - upmeterhookprobes
 ```
 
-<a id="rule-7"></a>
-7\. Не логировать любые операции в неймспейсе `d8-upmeter`.
+{% endofftopic %}
+
+{% offtopic title="Не логировать любые операции в неймспейсе <code>d8-upmeter</code>." %}
 
 ```yaml
 level: None
@@ -187,8 +179,9 @@ namespaces:
   - d8-upmeter
 ```
 
-<a id="rule-8"></a>
-8\. Не логировать обновления ConfigMap ingress-nginx для выборов лидера.
+{% endofftopic %}
+
+{% offtopic title="Не логировать обновления ConfigMap ingress-nginx для выборов лидера." %}
 
 ```yaml
 level: None
@@ -203,8 +196,9 @@ namespaces:
   - d8-ingress-nginx
 ```
 
-<a id="rule-9"></a>
-9\. Не логировать операции create/delete `AuthRequest` от health-check dex.
+{% endofftopic %}
+
+{% offtopic title="Не логировать операции create/delete <code>AuthRequest</code> от health-check dex." %}
 
 ```yaml
 level: None
@@ -221,8 +215,9 @@ namespaces:
   - d8-user-authn
 ```
 
-<a id="rule-10"></a>
-10\. Логировать операции create/delete для ресурсов Node с телом запроса/ответа.
+{% endofftopic %}
+
+{% offtopic title="Логировать операции create/delete для ресурсов Node с телом запроса/ответа." %}
 
 ```yaml
 level: RequestResponse
@@ -234,8 +229,9 @@ resources:
       - nodes
 ```
 
-<a id="rule-11"></a>
-11\. Логировать запросы kubectl logs (pods/log) на уровне Metadata.
+{% endofftopic %}
+
+{% offtopic title="Логировать запросы kubectl logs (pods/log) на уровне Metadata." %}
 
 ```yaml
 level: Metadata
@@ -244,8 +240,9 @@ resources:
       - pods/log
 ```
 
-<a id="rule-12"></a>
-12\. Логировать операции create/update/patch/delete от системных ServiceAccount (`kube-system`, `d8-*`).
+{% endofftopic %}
+
+{% offtopic title="Логировать операции create/update/patch/delete от системных ServiceAccount (<code>kube-system</code>, <code>d8-*</code>)." %}
 
 ```yaml
 level: Metadata
@@ -376,8 +373,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-13"></a>
-13\. Логировать операции create/update/patch/delete для ресурсов Pod.
+{% endofftopic %}
+
+{% offtopic title="Логировать операции create/update/patch/delete для ресурсов Pod." %}
 
 ```yaml
 level: Request
@@ -393,8 +391,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-14"></a>
-14\. Логировать обновления статуса Pod от kubelet (pods/status) с телом запроса, чтобы фиксировать остановки контейнеров и их причины.
+{% endofftopic %}
+
+{% offtopic title="Логировать обновления статуса Pod от kubelet (pods/status) с телом запроса, чтобы фиксировать остановки контейнеров и их причины." %}
 
 ```yaml
 level: Request
@@ -410,8 +409,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-15"></a>
-15\. Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).
+{% endofftopic %}
+
+{% offtopic title="Логировать операции create/update/patch/delete в системных неймспейсах (<code>kube-system</code>, <code>d8-*</code>)." %}
 
 ```yaml
 level: Metadata
@@ -458,8 +458,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-16"></a>
-16\. Логировать все LIST-запросы во всех неймспейсах.
+{% endofftopic %}
+
+{% offtopic title="Логировать все LIST-запросы во всех неймспейсах." %}
 
 ```yaml
 level: Metadata
@@ -467,8 +468,9 @@ verbs:
   - list
 ```
 
-<a id="rule-17"></a>
-17\. Логировать операции create/delete для ресурсов ServiceAccount.
+{% endofftopic %}
+
+{% offtopic title="Логировать операции create/delete для ресурсов ServiceAccount." %}
 
 ```yaml
 level: Metadata
@@ -482,8 +484,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-18"></a>
-18\. Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.
+{% endofftopic %}
+
+{% offtopic title="Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole." %}
 
 ```yaml
 level: Request
@@ -501,8 +504,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-19"></a>
-19\. Логировать операции create/update/delete для ресурсов ClusterRoleBinding.
+{% endofftopic %}
+
+{% offtopic title="Логировать операции create/update/delete для ресурсов ClusterRoleBinding." %}
 
 ```yaml
 level: Request
@@ -518,8 +522,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-20"></a>
-20\. Логировать операции с pod subresource для exec, attach и ephemeral-контейнеров.
+{% endofftopic %}
+
+{% offtopic title="Логировать операции с pod subresource для exec, attach и ephemeral-контейнеров." %}
 
 ```yaml
 level: Request
@@ -536,8 +541,9 @@ omitStages:
   - RequestReceived
 ```
 
-<a id="rule-21"></a>
-21\. Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.
+{% endofftopic %}
+
+{% offtopic title="Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа." %}
 
 ```yaml
 level: RequestResponse
@@ -549,8 +555,9 @@ resources:
       - virtualmachineoperations
 ```
 
-<a id="rule-22"></a>
-22\. Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io.
+{% endofftopic %}
+
+{% offtopic title="Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io." %}
 
 ```yaml
 level: Metadata
@@ -563,8 +570,9 @@ resources:
   - group: virtualization.deckhouse.io
 ```
 
-<a id="rule-23"></a>
-23\. Логировать операции update/patch для внутренних virtualization subresources.
+{% endofftopic %}
+
+{% offtopic title="Логировать операции update/patch для внутренних virtualization subresources." %}
 
 ```yaml
 level: Metadata
@@ -577,8 +585,9 @@ resources:
       - internalvirtualizationvirtualmachineinstances
 ```
 
-<a id="rule-24"></a>
-24\. Логировать GET-операции для API-группы subresources.virtualization.deckhouse.io.
+{% endofftopic %}
+
+{% offtopic title="Логировать GET-операции для API-группы subresources.virtualization.deckhouse.io." %}
 
 ```yaml
 level: Metadata
@@ -588,8 +597,9 @@ resources:
   - group: subresources.virtualization.deckhouse.io
 ```
 
-<a id="rule-25"></a>
-25\. Логировать операции create/update/patch/delete для ресурсов `Pod`.
+{% endofftopic %}
+
+{% offtopic title="Логировать операции create/update/patch/delete для ресурсов <code>Pod</code>." %}
 
 ```yaml
 level: Metadata
@@ -603,8 +613,9 @@ resources:
       - pods
 ```
 
-<a id="rule-26"></a>
-26\. Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`.
+{% endofftopic %}
+
+{% offtopic title="Логировать операции create/update/patch/delete в неймспейсе <code>d8-virtualization</code>." %}
 
 ```yaml
 level: Metadata
@@ -617,8 +628,9 @@ namespaces:
   - d8-virtualization
 ```
 
-<a id="rule-27"></a>
-27\. Логировать операции create/update/patch/delete для ресурсов ModuleConfig.
+{% endofftopic %}
+
+{% offtopic title="Логировать операции create/update/patch/delete для ресурсов ModuleConfig." %}
 
 ```yaml
 level: Metadata
@@ -633,8 +645,9 @@ resources:
       - moduleconfigs
 ```
 
-<a id="rule-28"></a>
-28\. Не логировать запросы аутентифицированных пользователей.
+{% endofftopic %}
+
+{% offtopic title="Не логировать запросы аутентифицированных пользователей." %}
 
 ```yaml
 level: None
@@ -642,12 +655,15 @@ userGroups:
   - system:authenticated
 ```
 
-<a id="rule-29"></a>
-29\. Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata.
+{% endofftopic %}
+
+{% offtopic title="Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata." %}
 
 ```yaml
 level: Metadata
 ```
+
+{% endofftopic %}
 
 ## Пример полной политики
 
@@ -655,7 +671,20 @@ level: Metadata
 apiVersion: audit.k8s.io/v1
 kind: Policy
 rules:
-  # 1: Не логировать частые обновления `Endpoints`, `EndpointSlices` и `Events`.
+  # 1: Не логировать проверки состояния (`/readyz`, `/livez`, `/healthz`). Правило не действует для запросов, не прошедших аутентификацию.
+  - level: None
+    userGroups:
+      - system:authenticated
+      - system:unauthenticated
+    nonResourceURLs:
+      - /readyz
+      - /readyz/*
+      - /livez
+      - /livez/*
+      - /healthz
+      - /healthz/*
+
+  # 2: Не логировать частые обновления `Endpoints`, `EndpointSlices` и `Events`.
   - level: None
     resources:
       - resources:
@@ -663,14 +692,14 @@ rules:
           - endpointslices
           - events
 
-  # 2: Не логировать операции выбора лидера на ресурсах `Lease`.
+  # 3: Не логировать операции выбора лидера на ресурсах `Lease`.
   - level: None
     resources:
       - group: coordination.k8s.io
         resources:
           - leases
 
-  # 3: Не логировать ConfigMap cert-manager, используемые для выбора лидера.
+  # 4: Не логировать ConfigMap cert-manager, используемые для выбора лидера.
   - level: None
     resources:
       - resources:
@@ -679,14 +708,14 @@ rules:
           - cert-manager-cainjector-leader-election
           - cert-manager-controller
 
-  # 4: Не логировать ресурсы VerticalPodAutoscalerCheckpoints.
+  # 5: Не логировать ресурсы VerticalPodAutoscalerCheckpoints.
   - level: None
     resources:
       - group: autoscaling.k8s.io
         resources:
           - verticalpodautoscalercheckpoints
 
-  # 5: Не логировать PATCH-операции `VerticalPodAutoscaler` от recommender.
+  # 6: Не логировать PATCH-операции `VerticalPodAutoscaler` от recommender.
   - level: None
     users:
       - system:serviceaccount:kube-system:d8-vertical-pod-autoscaler-recommender
@@ -697,19 +726,19 @@ rules:
         resources:
           - verticalpodautoscalers
 
-  # 6: Не логировать ресурсы UpmeterHookProbes.
+  # 7: Не логировать ресурсы UpmeterHookProbes.
   - level: None
     resources:
       - group: deckhouse.io
         resources:
           - upmeterhookprobes
 
-  # 7: Не логировать любые операции в неймспейсе `d8-upmeter`.
+  # 8: Не логировать любые операции в неймспейсе `d8-upmeter`.
   - level: None
     namespaces:
       - d8-upmeter
 
-  # 8: Не логировать обновления ConfigMap ingress-nginx для выборов лидера.
+  # 9: Не логировать обновления ConfigMap ingress-nginx для выборов лидера.
   - level: None
     users:
       - system:serviceaccount:d8-ingress-nginx:ingress-nginx
@@ -721,7 +750,7 @@ rules:
     namespaces:
       - d8-ingress-nginx
 
-  # 9: Не логировать операции create/delete `AuthRequest` от health-check dex.
+  # 10: Не логировать операции create/delete `AuthRequest` от health-check dex.
   - level: None
     users:
       - system:serviceaccount:d8-user-authn:dex
@@ -735,7 +764,7 @@ rules:
     namespaces:
       - d8-user-authn
 
-  # 10: Логировать операции create/delete для ресурсов Node с телом запроса/ответа.
+  # 11: Логировать операции create/delete для ресурсов Node с телом запроса/ответа.
   - level: RequestResponse
     verbs:
       - create
@@ -744,13 +773,13 @@ rules:
       - resources:
           - nodes
 
-  # 11: Логировать запросы kubectl logs (pods/log) на уровне Metadata.
+  # 12: Логировать запросы kubectl logs (pods/log) на уровне Metadata.
   - level: Metadata
     resources:
       - resources:
           - pods/log
 
-  # 12: Логировать операции create/update/patch/delete от системных ServiceAccount (`kube-system`, `d8-*`).
+  # 13: Логировать операции create/update/patch/delete от системных ServiceAccount (`kube-system`, `d8-*`).
   - level: Metadata
     users:
       - system:serviceaccount:d8-cert-manager:cainjector
@@ -878,7 +907,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 13: Логировать операции create/update/patch/delete для ресурсов Pod.
+  # 14: Логировать операции create/update/patch/delete для ресурсов Pod.
   - level: Request
     verbs:
       - create
@@ -891,7 +920,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 14: Логировать обновления статуса Pod от kubelet (pods/status) с телом запроса, чтобы фиксировать остановки контейнеров и их причины.
+  # 15: Логировать обновления статуса Pod от kubelet (pods/status) с телом запроса, чтобы фиксировать остановки контейнеров и их причины.
   - level: Request
     userGroups:
       - system:nodes
@@ -904,7 +933,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 15: Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).
+  # 16: Логировать операции create/update/patch/delete в системных неймспейсах (`kube-system`, `d8-*`).
   - level: Metadata
     verbs:
       - create
@@ -948,12 +977,12 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 16: Логировать все LIST-запросы во всех неймспейсах.
+  # 17: Логировать все LIST-запросы во всех неймспейсах.
   - level: Metadata
     verbs:
       - list
 
-  # 17: Логировать операции create/delete для ресурсов ServiceAccount.
+  # 18: Логировать операции create/delete для ресурсов ServiceAccount.
   - level: Metadata
     verbs:
       - create
@@ -964,7 +993,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 18: Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.
+  # 19: Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.
   - level: Request
     verbs:
       - create
@@ -979,7 +1008,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 19: Логировать операции create/update/delete для ресурсов ClusterRoleBinding.
+  # 20: Логировать операции create/update/delete для ресурсов ClusterRoleBinding.
   - level: Request
     verbs:
       - create
@@ -992,7 +1021,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 20: Логировать операции с pod subresource для exec, attach и ephemeral-контейнеров.
+  # 21: Логировать операции с pod subresource для exec, attach и ephemeral-контейнеров.
   - level: Request
     verbs:
       - get
@@ -1006,7 +1035,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 21: Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.
+  # 22: Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.
   - level: RequestResponse
     verbs:
       - create
@@ -1015,7 +1044,7 @@ rules:
         resources:
           - virtualmachineoperations
 
-  # 22: Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io.
+  # 23: Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io.
   - level: Metadata
     verbs:
       - create
@@ -1025,7 +1054,7 @@ rules:
     resources:
       - group: virtualization.deckhouse.io
 
-  # 23: Логировать операции update/patch для внутренних virtualization subresources.
+  # 24: Логировать операции update/patch для внутренних virtualization subresources.
   - level: Metadata
     verbs:
       - update
@@ -1035,14 +1064,14 @@ rules:
         resources:
           - internalvirtualizationvirtualmachineinstances
 
-  # 24: Логировать GET-операции для API-группы subresources.virtualization.deckhouse.io.
+  # 25: Логировать GET-операции для API-группы subresources.virtualization.deckhouse.io.
   - level: Metadata
     verbs:
       - get
     resources:
       - group: subresources.virtualization.deckhouse.io
 
-  # 25: Логировать операции create/update/patch/delete для ресурсов `Pod`.
+  # 26: Логировать операции create/update/patch/delete для ресурсов `Pod`.
   - level: Metadata
     verbs:
       - create
@@ -1053,7 +1082,7 @@ rules:
       - resources:
           - pods
 
-  # 26: Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`.
+  # 27: Логировать операции create/update/patch/delete в неймспейсе `d8-virtualization`.
   - level: Metadata
     verbs:
       - create
@@ -1063,7 +1092,7 @@ rules:
     namespaces:
       - d8-virtualization
 
-  # 27: Логировать операции create/update/patch/delete для ресурсов ModuleConfig.
+  # 28: Логировать операции create/update/patch/delete для ресурсов ModuleConfig.
   - level: Metadata
     verbs:
       - create
@@ -1078,12 +1107,12 @@ rules:
   ############
   # Здесь вставляются пользовательские правила из секрета kube-system/audit-policy
   ############
-  # 28: Не логировать запросы аутентифицированных пользователей.
+  # 29: Не логировать запросы аутентифицированных пользователей.
   - level: None
     userGroups:
       - system:authenticated
 
-  # 29: Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata.
+  # 30: Логировать все оставшиеся (неаутентифицированные) запросы на уровне Metadata.
   - level: Metadata
 
 ```

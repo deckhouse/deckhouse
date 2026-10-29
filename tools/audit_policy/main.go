@@ -21,6 +21,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -291,6 +292,7 @@ func generateDetailedAuditRulesDoc(path, lang string) error {
 type detailedRuleTemplateData struct {
 	Index       int
 	Description string
+	TitleHTML   string
 	RuleYAML    string
 }
 
@@ -330,6 +332,7 @@ func buildDetailedAuditRulesPage(rules []cpmhooks.AuditPolicyRuleWithDescription
 		detailedRules = append(detailedRules, detailedRuleTemplateData{
 			Index:       i + 1,
 			Description: description,
+			TitleHTML:   descriptionToHTMLTitle(description),
 			RuleYAML:    ruleYAML,
 		})
 
@@ -363,6 +366,16 @@ func buildDetailedAuditRulesPage(rules []cpmhooks.AuditPolicyRuleWithDescription
 	}
 	tplPath := filepath.Join(cwd(), "tools", "audit_policy", "templates", tplName)
 	return renderTemplateFromFile(tplPath, data)
+}
+
+var inlineCodeRe = regexp.MustCompile("`([^`]+)`")
+
+// descriptionToHTMLTitle converts a rule description with Markdown inline code
+// into HTML for the title attribute of the offtopic Liquid tag: the tag renders
+// the title as is, without Markdown, and its parser stops at a double quote.
+func descriptionToHTMLTitle(description string) string {
+	escaped := html.EscapeString(description)
+	return inlineCodeRe.ReplaceAllString(escaped, "<code>$1</code>")
 }
 
 type compactGroupResources struct {

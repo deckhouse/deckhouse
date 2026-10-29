@@ -116,21 +116,43 @@ func TestCompactRuleYAML_UsesTwoSpacesIndentation(t *testing.T) {
 	}
 }
 
-func TestBuildDetailedAuditRulesPage_HasRuleLinksAndAnchors(t *testing.T) {
+func TestDescriptionToHTMLTitle(t *testing.T) {
+	cases := map[string]string{
+		"Do not log health probes (`/readyz`, `/livez`).": "Do not log health probes (<code>/readyz</code>, <code>/livez</code>).",
+		"Log all LIST operations.":                        "Log all LIST operations.",
+		`Log "quoted" <names> & more`:                     "Log &#34;quoted&#34; &lt;names&gt; &amp; more",
+	}
+
+	for in, want := range cases {
+		if got := descriptionToHTMLTitle(in); got != want {
+			t.Fatalf("descriptionToHTMLTitle(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestBuildDetailedAuditRulesPage_RendersOfftopicBlocks(t *testing.T) {
 	rules, err := cpmhooks.BuiltInAuditPolicyRulesForDocumentation()
 	if err != nil {
 		t.Fatalf("BuiltInAuditPolicyRulesForDocumentation returned error: %v", err)
 	}
 
-	page, err := buildDetailedAuditRulesPage(rules, "en")
-	if err != nil {
-		t.Fatalf("buildDetailedAuditRulesPage returned error: %v", err)
-	}
+	for _, lang := range []string{"en", "ru"} {
+		page, err := buildDetailedAuditRulesPage(rules, lang)
+		if err != nil {
+			t.Fatalf("buildDetailedAuditRulesPage(%s) returned error: %v", lang, err)
+		}
 
-	if !strings.Contains(page, "- [") || !strings.Contains(page, "](#rule-1)") {
-		t.Fatalf("rules list does not contain links to detailed blocks:\n%s", page)
-	}
-	if !strings.Contains(page, `<a id="rule-1"></a>`) {
-		t.Fatalf("detailed rules section does not contain anchor for rule-1")
+		if got := strings.Count(page, "{% offtopic title=\""); got != len(rules) {
+			t.Fatalf("%s page has %d offtopic blocks, want %d:\n%s", lang, got, len(rules), page)
+		}
+		if got := strings.Count(page, "{% endofftopic %}"); got != len(rules) {
+			t.Fatalf("%s page has %d endofftopic tags, want %d", lang, got, len(rules))
+		}
+		if strings.Contains(page, "title=\"") && !strings.Contains(page, "<code>") {
+			t.Fatalf("%s page titles do not render inline code as HTML", lang)
+		}
+		if strings.Contains(page, "title=\"`") || strings.Contains(page, "`\" %}") {
+			t.Fatalf("%s page contains Markdown backticks in offtopic titles", lang)
+		}
 	}
 }

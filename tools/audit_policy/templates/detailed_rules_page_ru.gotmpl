@@ -73,19 +73,14 @@ rules:                       # Набор правил для аудита
 В Deckhouse Platform (DP) по умолчанию разворачивается базовая политика аудита, которая может быть дополнена пользовательскими правилами.
 
 В этой политике реализованы следующие правила:
-
-{{- range .DetailedRules }}
-- [{{ .Description }}](#rule-{{ .Index }})
-{{- end }}
-
-### Манифесты правил
 {{- range .DetailedRules }}
 
-<a id="rule-{{ .Index }}"></a>
-{{ .Index }}\. {{ .Description }}
+{% offtopic title="{{ .TitleHTML }}" %}
 
 ```yaml
 {{ .RuleYAML }}```
+
+{% endofftopic %}
 {{- end }}
 
 ## Пример полной политики

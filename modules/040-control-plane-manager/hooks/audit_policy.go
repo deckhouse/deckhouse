@@ -164,6 +164,21 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo, doc
 		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
 	}
 
+	{
+		// Keep this rule first. The basic rules come before the custom rules from the `audit-policy` Secret,
+		// and a custom rule that logs all requests must not log the health probes from all nodes.
+		// A request that fails authentication has no user. It does not match `UserGroups`,
+		// thus the audit log keeps the 401 responses.
+		descriptionEN := "Do not log health probes (`/readyz`, `/livez`, `/healthz`). This rule does not apply to requests that fail authentication."
+		descriptionRU := "Не логировать проверки состояния (`/readyz`, `/livez`, `/healthz`). Правило не действует для запросов, не прошедших аутентификацию."
+		rule := audit.PolicyRule{
+			Level:           audit.LevelNone,
+			UserGroups:      []string{"system:authenticated", "system:unauthenticated"},
+			NonResourceURLs: []string{"/readyz", "/readyz/*", "/livez", "/livez/*", "/healthz", "/healthz/*"},
+		}
+		appendPolicyRuleWithDescription(policy, docs, AuditPolicySectionBasic, descriptionEN, descriptionRU, rule)
+	}
+
 	appendDropResourcesRule(
 		audit.GroupResources{Group: "", Resources: []string{"endpoints", "endpointslices", "events"}},
 		"Do not log frequent updates for `Endpoints`, `EndpointSlices`, and `Events`.",
