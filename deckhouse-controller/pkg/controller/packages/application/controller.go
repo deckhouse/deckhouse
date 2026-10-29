@@ -621,6 +621,18 @@ func toResourceRequests(requests []v1alpha1.ApplicationResourceRequest) []resour
 			}
 		}
 
+		var claimTemplates []resourcesize.VolumeClaimTemplate
+
+		if len(request.VolumeClaimTemplates) > 0 {
+			claimTemplates = make([]resourcesize.VolumeClaimTemplate, 0, len(request.VolumeClaimTemplates))
+			for _, template := range request.VolumeClaimTemplates {
+				claimTemplates = append(claimTemplates, resourcesize.VolumeClaimTemplate{
+					Name:    template.Name,
+					Storage: template.Storage.String(),
+				})
+			}
+		}
+
 		var replicas *int32
 		if request.Replicas != nil {
 			value := *request.Replicas
@@ -628,10 +640,11 @@ func toResourceRequests(requests []v1alpha1.ApplicationResourceRequest) []resour
 		}
 
 		out = append(out, resourcesize.Request{
-			Kind:       request.Kind,
-			Name:       request.Name,
-			Replicas:   replicas,
-			Containers: containers,
+			Kind:                 request.Kind,
+			Name:                 request.Name,
+			Replicas:             replicas,
+			Containers:           containers,
+			VolumeClaimTemplates: claimTemplates,
 		})
 	}
 

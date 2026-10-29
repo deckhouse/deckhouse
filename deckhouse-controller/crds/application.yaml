@@ -109,14 +109,14 @@ spec:
                 - v1.0.0
               resourceRequests:
                 description: |-
-                  Resource settings and replica counts for workloads deployed by the application.
+                  Resource settings, replica counts, and disk sizes for workloads deployed by the application.
 
-                  Specified values override the settings provided by the application package. Workloads and containers not listed in this parameter retain their settings from the package.
+                  Specified values override the settings provided by the application package. Workloads, containers, and disks not listed in this parameter retain their settings from the package.
 
                   Each workload is identified by a combination of kind (`kind`) and name (`name`). Only one entry is allowed for each combination.
                 items:
-                  description: Resource settings and replica count for a single application
-                    workload.
+                  description: Resource settings, replica count, and disk sizes for
+                    a single application workload.
                   properties:
                     containers:
                       description: |-
@@ -233,6 +233,42 @@ spec:
                       type: integer
                       x-doc-examples:
                       - 3
+                    volumeClaimTemplates:
+                      description: |-
+                        Disk sizes for the StatefulSet's volume claim templates.
+
+                        Applies only to StatefulSet. Each template is identified by its name, the `metadata.name` of an entry in `spec.volumeClaimTemplates`. If the specified template does not exist in the StatefulSet, the entry is ignored.
+
+                        The size cannot be less than the size of the existing disks: a disk can only be expanded. Expanding requires the StorageClass of the disks to allow volume expansion (`allowVolumeExpansion: true`).
+                      items:
+                        description: Disk size for a single volume claim template
+                          of a StatefulSet.
+                        properties:
+                          name:
+                            description: Name of the volume claim template in the
+                              StatefulSet.
+                            minLength: 1
+                            type: string
+                            x-doc-examples:
+                            - data
+                          storage:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: Disk size requested from the template for
+                              each StatefulSet replica.
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-doc-examples:
+                            - 10Gi
+                            x-kubernetes-int-or-string: true
+                        required:
+                        - name
+                        - storage
+                        type: object
+                      type: array
+                      x-kubernetes-list-map-keys:
+                      - name
+                      x-kubernetes-list-type: map
                   required:
                   - kind
                   - name
@@ -241,6 +277,9 @@ spec:
                   - message: replicas can only be set for Deployment, StatefulSet
                       and ReplicaSet
                     rule: 'has(self.replicas) ? self.kind in [''Deployment'',''StatefulSet'',''ReplicaSet'']
+                      : true'
+                  - message: volumeClaimTemplates can only be set for StatefulSet
+                    rule: 'has(self.volumeClaimTemplates) ? self.kind == ''StatefulSet''
                       : true'
                 type: array
                 x-kubernetes-list-map-keys:

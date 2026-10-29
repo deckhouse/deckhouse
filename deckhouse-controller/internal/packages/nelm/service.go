@@ -36,6 +36,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/nelm"
@@ -131,6 +132,10 @@ type Service struct {
 	client         *nelm.Client // nelm client for Helm operations
 	monitorManager *drift.Manager
 
+	// kube grows the disks of a release and recreates its StatefulSets before nelm applies it
+	// (volumes.go).
+	kube kubernetes.Interface
+
 	timeout time.Duration // bounds one release apply
 
 	// observations receive the release progress, the endpoints and "no workloads" (observe.go).
@@ -166,6 +171,7 @@ func NewService(kubeClient *klient.Client, observations observations, metricStor
 		observations:   observations,
 		metrics:        metricStorage,
 		monitorManager: drift.New(kubeClient, nelmClient, logger),
+		kube:           kubeClient,
 		logger:         logger.Named(nelmServiceTracer),
 	}
 }
@@ -468,6 +474,13 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, ap
 
 	ctx, stopDeadline := s.withApplyDeadline(ctx, progress)
 	defer stopDeadline()
+
+	// nelm cannot resize a volume claim template on its own: the claims are grown and the
+	// StatefulSet is deleted, its pods left running, for the install to create it again.
+	if err = s.expandClaims(ctx, namespace, pkg, renderedManifests); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return newReasonError(reasonExpandVolumesFailed, err)
+	}
 
 	// Install or upgrade the release
 	installStarted := time.Now()

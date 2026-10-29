@@ -36,6 +36,7 @@ const (
 	reasonCheckReleaseFailed     = "CheckReleaseFailed"
 	reasonApplyManifestsFailed   = "ApplyManifestsFailed"
 	reasonScalingForbidden       = "ScalingForbidden"
+	reasonExpandVolumesFailed    = "ExpandVolumesFailed"
 )
 
 // observations is the part of the observation store the release service writes, as the only

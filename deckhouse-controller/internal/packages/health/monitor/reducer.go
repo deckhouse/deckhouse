@@ -15,7 +15,10 @@
 package monitor
 
 import (
+	"slices"
+
 	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // WorkloadHealth is the per-workload health classification produced by the
@@ -103,6 +106,13 @@ func reduceDeployment(d *appsv1.Deployment) WorkloadStatus {
 func reduceStatefulSet(ss *appsv1.StatefulSet) WorkloadStatus {
 	s := WorkloadStatus{Kind: "StatefulSet", Name: ss.Name}
 
+	// Deleted with its pods left running, as an apply recreates it to resize its volume claim
+	// templates: the pods keep serving until the StatefulSet is back to adopt them.
+	if ss.DeletionTimestamp != nil && slices.Contains(ss.Finalizers, metav1.FinalizerOrphanDependents) {
+		s.Health = InProgress
+		s.Cause = "recreation in progress"
+		return s
+	}
 	if ss.DeletionTimestamp != nil {
 		s.Health = Terminating
 		s.Cause = "deletion in progress"

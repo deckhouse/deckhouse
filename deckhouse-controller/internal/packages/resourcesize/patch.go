@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package resourcesize translates the per-workload resource footprint
-// declared in a package CR (spec.resourceRequests) into nelm render patches,
-// which nelm applies to the rendered manifests both when it renders the chart
-// and when it installs the release.
+// Package resourcesize translates the per-workload resource footprint declared
+// in a package CR (spec.resourceRequests) - replicas, container resources and
+// the disk sizes of volume claim templates - into nelm render patches, which
+// nelm applies to the rendered manifests both when it renders the chart and when
+// it installs the release.
 //
 // It knows nothing of the CR types: callers hand it plain requests.
 package resourcesize
@@ -33,6 +34,10 @@ import (
 // Request pins the resource footprint of one workload a package deploys. Kind
 // and Name address the workload; both are required and together they are unique,
 // which the CR schema enforces with a keyed list.
+//
+// The field added for disks is omitted when empty, so a request that does not
+// use it encodes as before and the settings checksum built from it does not
+// change.
 type Request struct {
 	// Kind of the workload, one of the kinds in podSpecPaths.
 	Kind string `json:"kind"`
@@ -43,6 +48,18 @@ type Request struct {
 	Replicas *int32 `json:"replicas,omitempty"`
 	// Containers to resize, addressed by name.
 	Containers []Container `json:"containers"`
+	// VolumeClaimTemplates to resize, addressed by name. Only meaningful for a
+	// StatefulSet.
+	VolumeClaimTemplates []VolumeClaimTemplate `json:"volumeClaimTemplates,omitempty"`
+}
+
+// VolumeClaimTemplate pins the storage one volume claim template of a
+// StatefulSet requests, a quantity in string form already validated by the CR
+// schema. It sizes only the claims the StatefulSet creates from now on: the
+// claims it has already created are not in the release.
+type VolumeClaimTemplate struct {
+	Name    string `json:"name"`
+	Storage string `json:"storage"`
 }
 
 // Container pins the compute resources of one container inside a workload.
@@ -160,6 +177,12 @@ func jqProgram(request Request) (string, error) {
 		return "", fmt.Errorf("unsupported workload kind")
 	}
 
+	// The CR schema rejects volume claim templates on any other kind, like
+	// replicas below.
+	if len(request.VolumeClaimTemplates) > 0 && request.Kind != "StatefulSet" {
+		return "", fmt.Errorf("kind does not have volume claim templates")
+	}
+
 	var steps []string
 
 	if request.Replicas != nil {
@@ -206,6 +229,28 @@ func jqProgram(request Request) (string, error) {
 			// a missing list as empty.
 			steps = append(steps, fmt.Sprintf("(%s.%s) += %s", resources, list.field, literal))
 		}
+	}
+
+	for _, template := range request.VolumeClaimTemplates {
+		// An empty size is skipped rather than written, like an empty list of a
+		// container.
+		if template.Storage == "" {
+			continue
+		}
+
+		name, err := json.Marshal(template.Name)
+		if err != nil {
+			return "", fmt.Errorf("encode volume claim template name: %w", err)
+		}
+
+		storage, err := json.Marshal(template.Storage)
+		if err != nil {
+			return "", fmt.Errorf("encode volume claim template '%s' storage: %w", template.Name, err)
+		}
+
+		// []? yields nothing for an absent list, so a template the StatefulSet
+		// does not have is ignored, as the CR field documents.
+		steps = append(steps, fmt.Sprintf("(.spec.volumeClaimTemplates[]? | select(.metadata.name == %s) | .spec.resources.requests.storage) = %s", name, storage))
 	}
 
 	return strings.Join(steps, " | "), nil

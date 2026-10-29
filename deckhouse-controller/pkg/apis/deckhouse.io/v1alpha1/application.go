@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"github.com/Masterminds/semver/v3"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -141,9 +142,9 @@ type ApplicationSpec struct {
 	// +crd-enricher:deckhouse:documentation:examples=NoResourceReconciliation
 	Maintenance string `json:"maintenance,omitempty"`
 
-	// Resource settings and replica counts for workloads deployed by the application.
+	// Resource settings, replica counts, and disk sizes for workloads deployed by the application.
 	//
-	// Specified values override the settings provided by the application package. Workloads and containers not listed in this parameter retain their settings from the package.
+	// Specified values override the settings provided by the application package. Workloads, containers, and disks not listed in this parameter retain their settings from the package.
 	//
 	// Each workload is identified by a combination of kind (`kind`) and name (`name`). Only one entry is allowed for each combination.
 	// +listType=map
@@ -225,8 +226,9 @@ type ApplicationUpdateBlockOnAlerts struct {
 	Severity *int32 `json:"severity,omitempty"`
 }
 
-// Resource settings and replica count for a single application workload.
+// Resource settings, replica count, and disk sizes for a single application workload.
 // +kubebuilder:validation:XValidation:rule="has(self.replicas) ? self.kind in ['Deployment','StatefulSet','ReplicaSet'] : true",message="replicas can only be set for Deployment, StatefulSet and ReplicaSet"
+// +kubebuilder:validation:XValidation:rule="has(self.volumeClaimTemplates) ? self.kind == 'StatefulSet' : true",message="volumeClaimTemplates can only be set for StatefulSet"
 type ApplicationResourceRequest struct {
 	// Kind of workload for which resource settings are specified.
 	// +kubebuilder:validation:Enum=Deployment;StatefulSet;DaemonSet;ReplicaSet;Pod;Job;CronJob
@@ -253,6 +255,28 @@ type ApplicationResourceRequest struct {
 	// +listMapKey=name
 	// +optional
 	Containers []ApplicationContainerResourceRequest `json:"containers,omitempty"`
+
+	// Disk sizes for the StatefulSet's volume claim templates.
+	//
+	// Applies only to StatefulSet. Each template is identified by its name, the `metadata.name` of an entry in `spec.volumeClaimTemplates`. If the specified template does not exist in the StatefulSet, the entry is ignored.
+	//
+	// The size cannot be less than the size of the existing disks: a disk can only be expanded. Expanding requires the StorageClass of the disks to allow volume expansion (`allowVolumeExpansion: true`).
+	// +listType=map
+	// +listMapKey=name
+	// +optional
+	VolumeClaimTemplates []ApplicationVolumeClaimTemplateResourceRequest `json:"volumeClaimTemplates,omitempty"`
+}
+
+// Disk size for a single volume claim template of a StatefulSet.
+type ApplicationVolumeClaimTemplateResourceRequest struct {
+	// Name of the volume claim template in the StatefulSet.
+	// +kubebuilder:validation:MinLength=1
+	// +crd-enricher:deckhouse:documentation:examples=data
+	Name string `json:"name"`
+
+	// Disk size requested from the template for each StatefulSet replica.
+	// +crd-enricher:deckhouse:documentation:examples=10Gi
+	Storage resource.Quantity `json:"storage"`
 }
 
 // Resource settings for a single workload container.

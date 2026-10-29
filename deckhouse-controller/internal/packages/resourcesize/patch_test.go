@@ -15,6 +15,7 @@
 package resourcesize
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -303,6 +304,132 @@ spec:
 
 	require.Equal(t, before, other)
 	require.Nil(t, containerResources(t, target, "kube-rbac-proxy", "spec", "template", "spec"))
+}
+
+const statefulSetManifest = `
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:v1
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 10Gi
+    - metadata:
+        name: wal
+      spec:
+        accessModes: [ReadWriteOnce]
+`
+
+// templateStorage digs out the storage a volume claim template of the
+// StatefulSet requests.
+func templateStorage(t *testing.T, statefulSet *unstructured.Unstructured, name string) string {
+	t.Helper()
+
+	templates, found, err := unstructured.NestedSlice(statefulSet.Object, "spec", "volumeClaimTemplates")
+	require.NoError(t, err)
+	require.True(t, found)
+
+	for _, entry := range templates {
+		template, ok := entry.(map[string]any)
+		require.True(t, ok)
+
+		if templateName, _, _ := unstructured.NestedString(template, "metadata", "name"); templateName == name {
+			storage, _, err := unstructured.NestedString(template, "spec", "resources", "requests", "storage")
+			require.NoError(t, err)
+
+			return storage
+		}
+	}
+
+	t.Fatalf("volume claim template %q not found", name)
+
+	return ""
+}
+
+func TestPatchesResizesVolumeClaimTemplates(t *testing.T) {
+	statefulSet := parse(t, statefulSetManifest)
+
+	err := apply(t, []*unstructured.Unstructured{statefulSet}, []Request{{
+		Kind: "StatefulSet",
+		Name: "postgres",
+		VolumeClaimTemplates: []VolumeClaimTemplate{
+			{Name: "data", Storage: "100Gi"},
+			// The chart's template requests no storage; the patch writes it.
+			{Name: "wal", Storage: "20Gi"},
+			// A template the StatefulSet does not have is ignored, not created.
+			{Name: "absent", Storage: "5Gi"},
+		},
+	}})
+	require.NoError(t, err)
+
+	require.Equal(t, "100Gi", templateStorage(t, statefulSet, "data"))
+	require.Equal(t, "20Gi", templateStorage(t, statefulSet, "wal"))
+
+	templates, _, err := unstructured.NestedSlice(statefulSet.Object, "spec", "volumeClaimTemplates")
+	require.NoError(t, err)
+	require.Len(t, templates, 2)
+}
+
+// The templates are resized in the same program as the replicas and the
+// containers of the StatefulSet, so each step must leave the next its input.
+func TestPatchesResizeTemplatesAlongWithTheWorkload(t *testing.T) {
+	statefulSet := parse(t, statefulSetManifest)
+
+	err := apply(t, []*unstructured.Unstructured{statefulSet}, []Request{{
+		Kind:                 "StatefulSet",
+		Name:                 "postgres",
+		Replicas:             int32Ptr(3),
+		Containers:           []Container{{Name: "postgres", Limits: map[string]string{"memory": "1Gi"}}},
+		VolumeClaimTemplates: []VolumeClaimTemplate{{Name: "data", Storage: "100Gi"}},
+	}})
+	require.NoError(t, err)
+
+	replicas, _, err := unstructured.NestedInt64(statefulSet.Object, "spec", "replicas")
+	require.NoError(t, err)
+	require.Equal(t, int64(3), replicas)
+
+	resources := containerResources(t, statefulSet, "postgres", "spec", "template", "spec")
+	require.Equal(t, map[string]any{"memory": "1Gi"}, resources["limits"])
+
+	require.Equal(t, "100Gi", templateStorage(t, statefulSet, "data"))
+}
+
+// The CR schema rejects volume claim templates on any kind but StatefulSet; the
+// overlay refuses them too, like replicas.
+func TestPatchesRejectVolumeClaimTemplatesOfOtherKinds(t *testing.T) {
+	err := apply(t, []*unstructured.Unstructured{parse(t, deploymentManifest)}, []Request{{
+		Kind:                 "Deployment",
+		Name:                 "controller",
+		VolumeClaimTemplates: []VolumeClaimTemplate{{Name: "data", Storage: "1Gi"}},
+	}})
+	require.ErrorContains(t, err, "volume claim templates")
+}
+
+// The checksum of the accepted configuration is built from the encoded requests,
+// so a request that does not use the disk field must encode exactly as it did
+// before it existed: otherwise every Application with resource requests would
+// see its configuration change on upgrade and run again.
+func TestRequestWithoutDisksEncodesAsBefore(t *testing.T) {
+	encoded, err := json.Marshal(Request{
+		Kind:       "Deployment",
+		Name:       "controller",
+		Replicas:   int32Ptr(2),
+		Containers: []Container{{Name: "controller", Limits: map[string]string{"cpu": "1"}}},
+	})
+	require.NoError(t, err)
+	require.Equal(t, `{"kind":"Deployment","name":"controller","replicas":2,"containers":[{"name":"controller","limits":{"cpu":"1"}}]}`, string(encoded))
 }
 
 // nelm reads a name wrapped in slashes as a regexp; no object can be named that
