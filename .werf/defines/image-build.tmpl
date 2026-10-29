@@ -12,6 +12,9 @@
 
 {{- define "image-build.build" }}
 {{-   if eq $.SVACE_ENABLED "true" }}
+{{-     with env "CI_PIPELINE_ID" "" }}
+echo "Svace build for pipeline {{ . }}"
+{{-     end }}
 echo "Using svace for build"
 svace build --init --clear-build-dir {{ get . "SvaceBuildOptions" }} {{ .BuildCommand }}
 {{- if hasKey . "SvaceImportSettings" }}
