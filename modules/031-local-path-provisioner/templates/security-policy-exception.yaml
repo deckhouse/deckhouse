@@ -39,7 +39,7 @@ spec:
       metadata:
         description: |
           Helper pods of LocalPathProvisioner {{ $localPathProvisioner.name }} run as root: they create and
-          remove volume directories under {{ $localPathProvisioner.spec.path }}, which is created on the node by root.
+          remove volume directories under {{ $localPathProvisioner.spec.path | quote }}, which is created on the node by root.
     runAsUser:
       allowedValues:
         - 0
