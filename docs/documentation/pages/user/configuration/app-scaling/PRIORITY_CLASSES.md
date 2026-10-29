@@ -4,13 +4,15 @@ permalink: en/user/configuration/app-scaling/priority-classes.html
 description: "Using priority classes in Deckhouse Platform: configuration examples, preemption demonstration, and practical diagnostics."
 ---
 
-A [priority class](../../../glossary.html#priority-class) defines which pods are more important when a node runs out of resources. You can assign a class in a Deployment manifest, verify preemption, and figure out why a pod is stuck in `Pending`.
+A [priority class](../../../glossary.html#priority-class) defines which workloads are more important when a node runs out of resources. You can assign a class in a Deployment manifest, verify preemption, and figure out why a pod is stuck in `Pending`.
+
+The priority class of a virtual machine (VM) is passed to its `virt-launcher` pod, so the scheduler uses the same rules to choose which VMs to preempt as it does for pods.
 
 ## Using a priority class in a Deployment
 
-Deckhouse Platform (DP) already provides a set of priority classes. The following example shows how to use a priority class in a Deployment pod template.
+Deckhouse Platform already provides a set of priority classes. The following example shows how to use a priority class in a Deployment pod template.
 
-Create a file `deployment-with-priority.yaml` to deploy an application with the DP predefined class `production-high` (value `9000`, see [Available priority classes](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#available-priority-classes)):
+Create a file `deployment-with-priority.yaml` to deploy an application with the Deckhouse Platform predefined class `production-high` (value `9000`, see [Available priority classes](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#available-priority-classes)):
 
 ```yaml
 apiVersion: apps/v1
@@ -59,7 +61,7 @@ my-app-7d8f9b5c4f-9w5r8   production-high   9000
 ```
 
 {% alert level="warning" %}
-You cannot change the `priorityClassName` field of a running pod. This field is immutable. To change the priority, update the template in the Deployment and recreate the pods.
+You cannot change the `priorityClassName` field of a running pod. This field is immutable. To change the priority, update the template in the Deployment and recreate the pods. For a VM, change the priority class in its specification and restart the VM if required.
 {% endalert %}
 
 ## Step-by-step preemption demonstration
@@ -212,6 +214,8 @@ This example uses a combination of three mechanisms to protect stateful applicat
 - A high `priorityClassName` — in the example, the StatefulSet uses `production-medium` (`6000`). For real critical stateful applications, usually use `production-high` (`9000`) or higher; see [Available priority classes](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#available-priority-classes). This reduces the likelihood that the pods will be selected for preemption.
 - PodDisruptionBudget (PDB) guarantees a minimum number of running replicas (for example, `minAvailable: 5`).
 - The `terminationGracePeriodSeconds` parameter gives the application time to write data to disk and close transactions before the pod terminates (30–60 seconds is recommended).
+
+Do not create a PodDisruptionBudget for VMs: it does not affect [VM eviction](../../../glossary.html#vm-eviction). The time for a graceful guest operating system (OS) shutdown is set by the `.spec.terminationGracePeriodSeconds` parameter in the VM specification.
 
 ### Demo of stateful application protection
 
