@@ -93,6 +93,10 @@ const (
 	// its leftovers. The way out for a package that cannot be restored, e.g. one missing from the
 	// registry. No effect on a resource not being deleted.
 	PackageAnnotationForceRemove = "packages.deckhouse.io/force-remove"
+
+	// PackageAnnotationAllowDisabling confirms disabling or deleting a package whose version asks
+	// for confirmation; the Module controller removes it once the module is disabled.
+	PackageAnnotationAllowDisabling = "packages.deckhouse.io/allow-disabling"
 )
 
 // IsForceRemoved reports whether obj is being deleted with PackageAnnotationForceRemove set to "true".

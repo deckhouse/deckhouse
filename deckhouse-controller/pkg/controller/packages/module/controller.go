@@ -384,7 +384,8 @@ func requirementsOf(mpv *v1alpha1.ModulePackageVersion) (schedule.Constraints, e
 
 // commit records the package and the version as the module's owners and clears the registry
 // annotation in one patch. Both references are non-controller and block owner deletion, so
-// neither the package nor the version can disappear from under a running module.
+// neither the package nor the version can disappear from under a running module. A disabled
+// module spends its disable confirmation, so the next disabling asks for it again.
 func (r *reconciler) commit(ctx context.Context, module, original *v1beta1.Module, mp *v1alpha1.ModulePackage, mpv *v1alpha1.ModulePackageVersion) error {
 	ctrlutils.ReplaceOwnerReferences(module,
 		ctrlutils.OwnerReference(v1alpha1.ModulePackageVersionGVK, mpv.Name, mpv.UID),
@@ -392,9 +393,44 @@ func (r *reconciler) commit(ctx context.Context, module, original *v1beta1.Modul
 	)
 	delete(module.Annotations, v1alpha1.PackageAnnotationRegistrySpecChanged)
 
+	disabled := module.Spec.Enabled != nil && !*module.Spec.Enabled
+	if disabled {
+		delete(module.Annotations, v1alpha1.PackageAnnotationAllowDisabling)
+	}
+
 	if err := r.client.Patch(ctx, module, client.MergeFrom(original)); err != nil {
 		r.logger.Error("failed to patch the module", slog.String("name", module.Name), log.Err(err))
 		return fmt.Errorf("patch module '%s': %w", module.Name, err)
+	}
+
+	if disabled {
+		return r.spendConfigConfirmation(ctx, module.Name)
+	}
+
+	return nil
+}
+
+// spendConfigConfirmation removes the allow-disabling annotation from the module's ModuleConfig, if any.
+func (r *reconciler) spendConfigConfirmation(ctx context.Context, name string) error {
+	config := new(v1alpha1.ModuleConfig)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: name}, config); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+
+		return fmt.Errorf("get module config '%s': %w", name, err)
+	}
+
+	if _, ok := config.Annotations[v1alpha1.PackageAnnotationAllowDisabling]; !ok {
+		return nil
+	}
+
+	patch := client.MergeFrom(config.DeepCopy())
+	delete(config.Annotations, v1alpha1.PackageAnnotationAllowDisabling)
+
+	if err := r.client.Patch(ctx, config, patch); err != nil {
+		r.logger.Error("failed to remove the allow-disabling annotation", slog.String("name", name), log.Err(err))
+		return fmt.Errorf("patch module config '%s': %w", name, err)
 	}
 
 	return nil

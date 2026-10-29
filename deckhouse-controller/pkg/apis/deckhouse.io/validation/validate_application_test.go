@@ -1185,3 +1185,91 @@ func (s *applicationValidationHandlerSuite) TestImmutableFieldFindsTheCurrentVer
 	s.Require().False(response.Allowed)
 	s.Contains(response.Result.Message, "b")
 }
+
+// confirmedDeletion is the message the running version asks to confirm deletion with.
+const confirmedDeletion = "Deleting the application destroys its data."
+
+// TestDeleteRequiresConfirmation verifies a running application whose version asks for confirmation is not deleted.
+func (s *applicationValidationHandlerSuite) TestDeleteRequiresConfirmation() {
+	app := runningApplication()
+
+	response := s.submitDelete(app, "admin", confirmationAPV(app, true))
+
+	s.False(response.Allowed)
+	s.Contains(response.Result.Message, confirmedDeletion)
+	s.Contains(response.Result.Message, v1alpha1.PackageAnnotationAllowDisabling)
+}
+
+// TestDeleteWithAllowDisablingAnnotationIsAllowed verifies the annotation confirms the deletion.
+func (s *applicationValidationHandlerSuite) TestDeleteWithAllowDisablingAnnotationIsAllowed() {
+	app := runningApplication()
+	app.Annotations = map[string]string{v1alpha1.PackageAnnotationAllowDisabling: "true"}
+
+	s.True(s.submitDelete(app, "admin", confirmationAPV(app, true)).Allowed)
+}
+
+// TestDeleteWithoutConfirmationIsAllowed verifies a version that asks for nothing does not guard the deletion.
+func (s *applicationValidationHandlerSuite) TestDeleteWithoutConfirmationIsAllowed() {
+	app := runningApplication()
+
+	s.True(s.submitDelete(app, "admin", confirmationAPV(app, false)).Allowed)
+}
+
+// TestDeleteOfNeverRunApplicationIsAllowed verifies an application with no running version is deleted freely.
+func (s *applicationValidationHandlerSuite) TestDeleteOfNeverRunApplicationIsAllowed() {
+	app := runningApplication()
+	apv := confirmationAPV(app, true)
+	app.Status.CurrentVersion = nil
+
+	s.True(s.submitDelete(app, "admin", apv).Allowed)
+}
+
+// TestDeleteByNamespaceTeardownIsAllowed verifies deleting the namespace is not blocked by its applications.
+func (s *applicationValidationHandlerSuite) TestDeleteByNamespaceTeardownIsAllowed() {
+	app := runningApplication()
+
+	s.True(s.submitDelete(app, namespaceControllerServiceAccount, confirmationAPV(app, true)).Allowed)
+}
+
+// TestDeleteByDeckhouseIsAllowed verifies the controller deletes applications without confirmation.
+func (s *applicationValidationHandlerSuite) TestDeleteByDeckhouseIsAllowed() {
+	app := runningApplication()
+
+	s.True(s.submitDelete(app, deckhouseServiceAccount, confirmationAPV(app, true)).Allowed)
+}
+
+// runningApplication is an application running the version its spec names.
+func runningApplication() *v1alpha1.Application {
+	app := newApplication("repo", "pkg", "v1.0.0")
+	app.Status.CurrentVersion = &v1alpha1.ApplicationStatusVersion{Version: "v1.0.0"}
+
+	return app
+}
+
+// confirmationAPV is the running version of app, asking for disable confirmation when confirmation is set.
+func confirmationAPV(app *v1alpha1.Application, confirmation bool) *v1alpha1.ApplicationPackageVersion {
+	apv := newAPV(v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion), false, nil)
+	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
+		DisableOptions: &v1alpha1.PackageDisableOptions{
+			Confirmation: confirmation,
+			Messages:     &v1alpha1.PackageDisableMessages{En: confirmedDeletion},
+		},
+	}
+
+	return apv
+}
+
+// submitDelete submits a DELETE of app by user; like the API server, it carries the stored object only.
+func (s *applicationValidationHandlerSuite) submitDelete(app *v1alpha1.Application, user string, apvs ...*v1alpha1.ApplicationPackageVersion) *admissionv1.AdmissionResponse {
+	s.T().Helper()
+
+	objs := make([]client.Object, 0, len(apvs))
+	for _, apv := range apvs {
+		objs = append(objs, apv)
+	}
+
+	review := newModuleConfigAdmissionReview("DELETE", nil, app)
+	review.Request.UserInfo.Username = user
+
+	return callHandler(s.T(), applicationValidationHandler(newFakeClient(s.T(), objs...), &fakePackageManager{}), review)
+}

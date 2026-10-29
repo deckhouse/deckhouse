@@ -1875,6 +1875,12 @@ alerts:
         ```bash
         d8 k annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disabling-
         ```
+
+        With Module v2 enabled, remove the `packages.deckhouse.io/allow-disabling` annotation instead:
+
+        ```bash
+        d8 k annotate moduleconfig {{ $labels.module }} packages.deckhouse.io/allow-disabling-
+        ```
       summary: |
         The ModuleConfig annotation for allowing module disabling is set.
       severity: "4"

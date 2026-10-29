@@ -2281,7 +2281,7 @@ func TestModuleConfigValidationHandlerV2_Enabling(t *testing.T) {
 
 // TestModuleConfigValidationHandlerV2_DisableConfirmation covers the confirmation the package version may ask for.
 func TestModuleConfigValidationHandlerV2_DisableConfirmation(t *testing.T) {
-	allowDisable := map[string]string{v1alpha1.ModuleConfigAnnotationAllowDisable: "true"}
+	allowDisable := map[string]string{v1alpha1.PackageAnnotationAllowDisabling: "true"}
 	confirm := &v1alpha1.ModulePackageVersionStatusMetadata{
 		DisableOptions: &v1alpha1.PackageDisableOptions{
 			Confirmation: true,
@@ -2313,6 +2313,29 @@ func TestModuleConfigValidationHandlerV2_DisableConfirmation(t *testing.T) {
 			currentlyEnabled: true,
 			newConfig:        newModuleConfigV2(boolPtr(false), nil, allowDisable),
 			oldConfig:        newModuleConfigV2(boolPtr(true), nil, nil),
+			wantAllowed:      true,
+		},
+		{
+			name:             "update: the rejection names the package annotation",
+			operation:        "UPDATE",
+			currentlyEnabled: true,
+			newConfig:        newModuleConfigV2(boolPtr(false), nil, nil),
+			oldConfig:        newModuleConfigV2(boolPtr(true), nil, nil),
+			wantMessage:      "Please annotate ModuleConfig with `" + v1alpha1.PackageAnnotationAllowDisabling + "=true`",
+		},
+		{
+			name:             "update: the legacy modules annotation no longer confirms",
+			operation:        "UPDATE",
+			currentlyEnabled: true,
+			newConfig:        newModuleConfigV2(boolPtr(false), nil, map[string]string{v1alpha1.ModuleConfigAnnotationAllowDisable: "true"}),
+			oldConfig:        newModuleConfigV2(boolPtr(true), nil, nil),
+			wantMessage:      confirmationMessage,
+		},
+		{
+			name:             "delete: the allow-disabling annotation lets it through",
+			operation:        "DELETE",
+			currentlyEnabled: true,
+			oldConfig:        newModuleConfigV2(boolPtr(true), nil, allowDisable),
 			wantAllowed:      true,
 		},
 		{

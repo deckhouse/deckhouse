@@ -331,6 +331,12 @@
         d8 k annotate moduleconfig {{ $labels.module }} modules.deckhouse.io/allow-disabling-
         ```
 
+        With Module v2 enabled, remove the `packages.deckhouse.io/allow-disabling` annotation instead:
+
+        ```bash
+        d8 k annotate moduleconfig {{ $labels.module }} packages.deckhouse.io/allow-disabling-
+        ```
+
   - alert: ModuleAtConflict
     expr: max by (module) (d8_module_at_conflict) >= 1
     labels:

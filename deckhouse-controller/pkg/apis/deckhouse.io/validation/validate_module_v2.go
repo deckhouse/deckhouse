@@ -72,6 +72,7 @@ func moduleRequestFrom(module *v1beta1.Module) *moduleRequest {
 		enabled:         module.Spec.Enabled,
 		settingsVersion: module.Spec.SettingsVersion,
 		versionField:    "spec.settingsVersion",
+		kind:            v1beta1.ModuleGVK.Kind,
 		settings:        module.Spec.Settings,
 		annotations:     module.Annotations,
 	}
@@ -139,7 +140,7 @@ func (v *moduleValidatorV2Handler) validateDelete(ctx context.Context, module *v
 		return res, err
 	}
 
-	if hasAllowDisableAnnotation(module.Annotations) || !v.packages.IsPackageEnabled(module.Name) {
+	if hasAllowDisablingAnnotation(module.Annotations) || !v.packages.IsPackageEnabled(module.Name) {
 		return allowResult(nil)
 	}
 
@@ -151,7 +152,7 @@ func (v *moduleValidatorV2Handler) validateDelete(ctx context.Context, module *v
 		return allowResult(nil)
 	}
 
-	if res, err := confirmationRejectionV2(&moduleTarget{module: module, version: version}); res != nil || err != nil {
+	if res, err := confirmationRejectionV2(req, &moduleTarget{module: module, version: version}); res != nil || err != nil {
 		return res, err
 	}
 

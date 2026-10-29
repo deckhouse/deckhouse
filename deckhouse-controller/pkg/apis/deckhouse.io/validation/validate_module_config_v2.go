@@ -73,8 +73,10 @@ type moduleRequest struct {
 	settingsVersion int
 	// versionField names the settings version field of the object in messages.
 	versionField string
-	settings     *v1alpha1.MappedFields
-	annotations  map[string]string
+	// kind names the object to annotate in the disable confirmation message.
+	kind        string
+	settings    *v1alpha1.MappedFields
+	annotations map[string]string
 }
 
 // moduleConfigRequest reads a ModuleConfig; nil stays nil.
@@ -88,6 +90,7 @@ func moduleConfigRequest(cfg *v1alpha1.ModuleConfig) *moduleRequest {
 		enabled:         cfg.Spec.Enabled,
 		settingsVersion: cfg.Spec.Version,
 		versionField:    "spec.version",
+		kind:            v1alpha1.ModuleConfigGVK.Kind,
 		settings:        cfg.Spec.Settings,
 		annotations:     cfg.Annotations,
 	}
@@ -224,13 +227,13 @@ func (v *moduleConfigValidatorV2) validateDelete(ctx context.Context, cfg *v1alp
 		return res, err
 	}
 
-	if !hasAllowDisableAnnotation(cfg.Annotations) && v.packages.IsPackageEnabled(cfg.Name) {
+	if !hasAllowDisablingAnnotation(cfg.Annotations) && v.packages.IsPackageEnabled(cfg.Name) {
 		target, _, err := v.resolveTarget(ctx, cfg.Name)
 		if err != nil {
 			return nil, err
 		}
 
-		if res, err := confirmationRejectionV2(target); res != nil || err != nil {
+		if res, err := confirmationRejectionV2(req, target); res != nil || err != nil {
 			return res, err
 		}
 	}
@@ -278,7 +281,7 @@ func (v *moduleConfigValidatorV2) validateApply(ctx context.Context, cfg, oldCfg
 		return res, err
 	}
 
-	v.shared.setAllowedToDisableMetric(cfg, allowedToDisableMetricValue(cfg, v.packages.IsPackageEnabled(cfg.Name)))
+	v.shared.setAllowedToDisableMetric(cfg, allowedToDisablePackageMetricValue(req, v.packages.IsPackageEnabled(cfg.Name)))
 
 	return allowResult(warnings)
 }
@@ -378,8 +381,8 @@ func (v *moduleValidatorV2) validatePackage(ctx context.Context, req, oldReq *mo
 		}
 	}
 
-	if oldEnabled && !newEnabled && !hasAllowDisableAnnotation(req.annotations) && (oldReq == nil || !hasAllowDisableAnnotation(oldReq.annotations)) {
-		if res, err := confirmationRejectionV2(target); res != nil || err != nil {
+	if oldEnabled && !newEnabled && !hasAllowDisablingAnnotation(req.annotations) && (oldReq == nil || !hasAllowDisablingAnnotation(oldReq.annotations)) {
+		if res, err := confirmationRejectionV2(req, target); res != nil || err != nil {
 			return nil, res, err
 		}
 	}
@@ -494,26 +497,45 @@ func (v *moduleValidatorV2) validateEnabling(req *moduleRequest, target *moduleT
 }
 
 // confirmationRejectionV2 rejects when the package version asks for disable confirmation; an unknown target is not guarded.
-func confirmationRejectionV2(target *moduleTarget) (*kwhvalidating.ValidatorResult, error) {
+func confirmationRejectionV2(req *moduleRequest, target *moduleTarget) (*kwhvalidating.ValidatorResult, error) {
 	if target == nil || target.version.Status.PackageMetadata == nil {
 		return nil, nil
 	}
 
-	options := target.version.Status.PackageMetadata.DisableOptions
-	if options == nil {
+	return packageDisableRejection(target.version.Status.PackageMetadata.DisableOptions, req.kind, fmt.Sprintf("the '%s' module", req.name))
+}
+
+// packageDisableRejection rejects disabling a package whose options ask for confirmation; kind names the object to annotate.
+func packageDisableRejection(options *v1alpha1.PackageDisableOptions, kind, subject string) (*kwhvalidating.ValidatorResult, error) {
+	if options == nil || !options.Confirmation {
 		return nil, nil
 	}
 
-	message := fmt.Sprintf("the '%s' module requires confirmation to be disabled", target.module.Name)
+	reason := subject + " requires confirmation to be disabled"
 	if options.Messages != nil && strings.TrimSpace(options.Messages.En) != "" {
-		message = strings.TrimSpace(options.Messages.En)
+		reason = strings.TrimSpace(options.Messages.En)
 	}
 
-	if reason, ok := disableConfirmationReason(message, options.Confirmation); ok {
-		return rejectResult(reason)
+	if !strings.HasSuffix(reason, ".") {
+		reason += "."
 	}
 
-	return nil, nil
+	return rejectResult(fmt.Sprintf("%s Please annotate %s with `%s=true` if you're sure that you want to disable it.", reason, kind, v1alpha1.PackageAnnotationAllowDisabling))
+}
+
+// hasAllowDisablingAnnotation reports whether the package object confirms disabling.
+func hasAllowDisablingAnnotation(annotations map[string]string) bool {
+	_, ok := annotations[v1alpha1.PackageAnnotationAllowDisabling]
+	return ok
+}
+
+// allowedToDisablePackageMetricValue is 1 when the config keeps the module enabled while confirming disabling, and 0 otherwise.
+func allowedToDisablePackageMetricValue(req *moduleRequest, defaultEnabled bool) float64 {
+	if hasAllowDisablingAnnotation(req.annotations) && req.enabledOr(defaultEnabled) {
+		return 1
+	}
+
+	return 0
 }
 
 // decodeOldObject decodes the stored object an UPDATE replaces; failing is the safe direction.

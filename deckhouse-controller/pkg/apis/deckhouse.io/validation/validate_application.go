@@ -42,16 +42,25 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
-// maxApplicationNameLength limits the instance name: it prefixes the name of every object
-// the application creates, and those must fit the 63-character Kubernetes name limit.
-const maxApplicationNameLength = 24
+const (
+	// maxApplicationNameLength limits the instance name: it prefixes the name of every object
+	// the application creates, and those must fit the 63-character Kubernetes name limit.
+	maxApplicationNameLength = 24
 
-// applicationValidationHandler validates Application create and update requests.
+	// namespaceControllerServiceAccount deletes the applications of a namespace being deleted.
+	namespaceControllerServiceAccount = "system:serviceaccount:kube-system:namespace-controller"
+)
+
+// applicationValidationHandler validates Application create, update and delete requests.
 func applicationValidationHandler(cli client.Client, manager packageManager) http.Handler {
 	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		app, ok := obj.(*v1alpha1.Application)
 		if !ok {
 			return nil, fmt.Errorf("expect Application as unstructured, got %T", obj)
+		}
+
+		if review.Operation == kwhmodel.OperationDelete {
+			return validateApplicationDelete(ctx, cli, review, app)
 		}
 
 		// no sense to check already deleted app
@@ -116,6 +125,43 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 	})
 
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
+}
+
+// validateApplicationDelete rejects deleting a running application whose version asks for disable confirmation,
+// unless the application carries the allow-disabling annotation.
+func validateApplicationDelete(ctx context.Context, cli client.Client, review *kwhmodel.AdmissionReview, app *v1alpha1.Application) (*kwhvalidating.ValidatorResult, error) {
+	// the controller and the namespace teardown delete applications on their own, a confirmed or a terminating one is let go
+	user := review.UserInfo.Username
+	if user == deckhouseServiceAccount || user == namespaceControllerServiceAccount || hasAllowDisablingAnnotation(app.Annotations) || !app.DeletionTimestamp.IsZero() {
+		return allowResult(nil)
+	}
+
+	// an application that never ran has nothing to disable
+	running := app.Status.CurrentVersion
+	if running == nil || running.Version == "" {
+		return allowResult(nil)
+	}
+
+	apv := new(v1alpha1.ApplicationPackageVersion)
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, running.Version)
+	if err := cli.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
+		if apierrors.IsNotFound(err) {
+			return allowResult(nil)
+		}
+
+		return nil, fmt.Errorf("get application package version '%s': %w", apvName, err)
+	}
+
+	if apv.Status.PackageMetadata == nil {
+		return allowResult(nil)
+	}
+
+	subject := fmt.Sprintf("the '%s/%s' application", app.Namespace, app.Name)
+	if res, err := packageDisableRejection(apv.Status.PackageMetadata.DisableOptions, v1alpha1.ApplicationKind, subject); res != nil || err != nil {
+		return res, err
+	}
+
+	return allowResult(nil)
 }
 
 // admission is what a request is validated against, decided once per request.

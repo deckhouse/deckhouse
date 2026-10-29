@@ -159,7 +159,7 @@ func withEnabled(module *v1beta1.Module, enabled bool) *v1beta1.Module {
 func TestModuleValidationHandlerV2(t *testing.T) {
 	const user = "kubernetes-admin"
 
-	allowDisable := map[string]string{v1alpha1.ModuleConfigAnnotationAllowDisable: "true"}
+	allowDisable := map[string]string{v1alpha1.PackageAnnotationAllowDisabling: "true"}
 	confirm := &v1alpha1.ModulePackageVersionStatusMetadata{
 		DisableOptions: &v1alpha1.PackageDisableOptions{
 			Confirmation: true,
@@ -273,6 +273,19 @@ func TestModuleValidationHandlerV2(t *testing.T) {
 			objs:             []client.Object{newMPV(confirm, nil)},
 			currentlyEnabled: true,
 			wantMessage:      confirmationMessage,
+		},
+		{
+			name:      "the allow-disabling annotation lets the delete through",
+			operation: "DELETE",
+			username:  user,
+			oldModule: func() *v1beta1.Module {
+				module := newModuleV2(true)
+				module.Annotations = allowDisable
+				return module
+			}(),
+			objs:             []client.Object{newMPV(confirm, nil)},
+			currentlyEnabled: true,
+			wantAllowed:      true,
 		},
 		{
 			name:        "deleting a disabled module is allowed",

@@ -100,6 +100,7 @@ func (suite *ControllerTestSuite) SetupSuite() {
 			v1alpha1.SchemeGroupVersion.WithKind("ModulePackageVersion"),
 			v1alpha1.SchemeGroupVersion.WithKind("PackageRepository"),
 			v1alpha1.SchemeGroupVersion.WithKind("ModuleDocumentation"),
+			v1alpha1.SchemeGroupVersion.WithKind("ModuleConfig"),
 		},
 		GoldenMode:    reconcilertest.PerDocument,
 		SeedViaCreate: true,
@@ -365,6 +366,28 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.Contains(suite.T(), annotations, "packages.deckhouse.io/keep-me")
 	})
 
+	suite.Run("disabled module spends the disable confirmation", func() {
+		suite.setupController("allow-disabling-spent.yaml")
+
+		_, err := suite.ctr.Reconcile(ctx, request(moduleName))
+		require.NoError(suite.T(), err)
+
+		annotations := suite.getModule(moduleName).Annotations
+		assert.NotContains(suite.T(), annotations, v1alpha1.PackageAnnotationAllowDisabling)
+		assert.Contains(suite.T(), annotations, "packages.deckhouse.io/keep-me")
+		assert.NotContains(suite.T(), suite.getModuleConfig(moduleName).Annotations, v1alpha1.PackageAnnotationAllowDisabling)
+	})
+
+	suite.Run("enabled module keeps the disable confirmation", func() {
+		suite.setupController("allow-disabling-kept.yaml")
+
+		_, err := suite.ctr.Reconcile(ctx, request(moduleName))
+		require.NoError(suite.T(), err)
+
+		assert.Contains(suite.T(), suite.getModule(moduleName).Annotations, v1alpha1.PackageAnnotationAllowDisabling)
+		assert.Contains(suite.T(), suite.getModuleConfig(moduleName).Annotations, v1alpha1.PackageAnnotationAllowDisabling)
+	})
+
 	suite.Run("embedded module reaches the engine as embedded, not as released", func() {
 		suite.setupController("embedded.yaml")
 
@@ -477,6 +500,13 @@ func (suite *ControllerTestSuite) getModule(name string) *v1beta1.Module {
 	require.NoError(suite.T(), suite.Client().Get(context.TODO(), client.ObjectKey{Name: name}, mod))
 
 	return mod
+}
+
+func (suite *ControllerTestSuite) getModuleConfig(name string) *v1alpha1.ModuleConfig {
+	config := new(v1alpha1.ModuleConfig)
+	require.NoError(suite.T(), suite.Client().Get(context.TODO(), client.ObjectKey{Name: name}, config))
+
+	return config
 }
 
 func (suite *ControllerTestSuite) getDocumentation(name string) *v1alpha1.ModuleDocumentation {
