@@ -97,6 +97,14 @@ const (
 	// PackageAnnotationAllowDisabling confirms disabling or deleting a package whose version asks
 	// for confirmation; the Module controller removes it once the module is disabled.
 	PackageAnnotationAllowDisabling = "packages.deckhouse.io/allow-disabling"
+
+	// PackageAnnotationDevTag, set by a developer on a Module, runs the module from this tag of its
+	// repository instead of spec.packageVersion; removing it returns the module to spec.packageVersion.
+	PackageAnnotationDevTag = "packages.deckhouse.io/dev-tag"
+
+	// PackageAnnotationDevDigest is the digest PackageAnnotationDevTag was last resolved to; only
+	// the Module controller writes it, and runs the module from it while the registry is unreachable.
+	PackageAnnotationDevDigest = "packages.deckhouse.io/dev-digest"
 )
 
 // IsForceRemoved reports whether obj is being deleted with PackageAnnotationForceRemove set to "true".

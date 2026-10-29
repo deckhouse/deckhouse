@@ -1926,6 +1926,7 @@ func TestModuleConfigValidationHandlerV2_Settings(t *testing.T) {
 	tests := []struct {
 		name           string
 		installed      bool
+		dev            bool
 		convert        bool
 		version        int
 		settings       map[string]any
@@ -2013,6 +2014,24 @@ func TestModuleConfigValidationHandlerV2_Settings(t *testing.T) {
 			wantMessage:    "replicas out of range",
 			wantRuntime:    true,
 		},
+		{
+			name:           "dev: only the dev build validates, the package version schema and chain are not used",
+			dev:            true,
+			convert:        true,
+			version:        3,
+			settings:       map[string]any{"storageClass": "fast"},
+			validateResult: settingscheck.Result{Valid: true},
+			wantAllowed:    true,
+			wantRuntime:    true,
+		},
+		{
+			name:           "dev: a dev build rejection is returned",
+			dev:            true,
+			settings:       map[string]any{"replicas": "2"},
+			validateResult: settingscheck.Result{Valid: false, Message: "replicas out of range"},
+			wantMessage:    "replicas out of range",
+			wantRuntime:    true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -2023,7 +2042,14 @@ func TestModuleConfigValidationHandlerV2_Settings(t *testing.T) {
 				mpv = withConversions(mpv, renameCountConversion)
 			}
 
-			handler := newTestHandlerV2(t, manager, false, newModuleV2(tt.installed), mpv)
+			module := newModuleV2(tt.installed)
+			if tt.dev {
+				module.Status.CurrentVersion = &v1beta1.ModuleStatusVersion{
+					Version: "dev-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+				}
+			}
+
+			handler := newTestHandlerV2(t, manager, false, module, mpv)
 
 			cfg := newModuleConfigV2(nil, tt.settings, nil)
 			if tt.version != 0 {

@@ -39,6 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	packageschema "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema/cel"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
@@ -131,6 +132,14 @@ func (t *moduleTarget) installed() bool {
 	current := t.module.Status.CurrentVersion
 
 	return current != nil && current.Version != "" && current.Version == t.module.Spec.PackageVersion
+}
+
+// dev reports whether the activated version is a dev build (registry.DevVersion): no package version
+// publishes its schema, so only its object can check settings.
+func (t *moduleTarget) dev() bool {
+	current := t.module.Status.CurrentVersion
+
+	return current != nil && registry.IsDevVersion(current.Version)
 }
 
 // ranBefore reports whether any version has run; one that never ran has frozen no immutable field.
@@ -394,6 +403,10 @@ func (v *moduleValidatorV2) validatePackage(ctx context.Context, req, oldReq *mo
 // request's settings version to the latest one by the conversions the version publishes, then checked
 // against its schema and, on UPDATE, its transition rules, both sides at the latest version.
 func (v *moduleValidatorV2) validateSettings(ctx context.Context, req, oldReq *moduleRequest, target *moduleTarget) ([]string, *kwhvalidating.ValidatorResult, error) {
+	if target.dev() {
+		return v.validateByObject(ctx, req)
+	}
+
 	converter, err := settingsConverter(target.version.Status.PackageSchemas)
 	if err != nil {
 		return nil, nil, fmt.Errorf("the '%s' module settings conversions: %w", req.name, err)
@@ -407,16 +420,12 @@ func (v *moduleValidatorV2) validateSettings(ctx context.Context, req, oldReq *m
 
 	warnings := obsoleteSettingsWarnings(req.versionField, req.settingsVersion, req.settings.GetMap(), converter)
 	if target.installed() {
-		res, err := v.packages.ValidatePackageSettings(ctx, req.name, req.settingsVersion, req.settings.GetMap())
-		if err != nil {
-			return nil, nil, fmt.Errorf("validate the '%s' module settings: %w", req.name, err)
-		}
-		if !res.Valid {
-			reject, err := rejectResult(res.Message)
-			return nil, reject, err
+		objectWarnings, res, err := v.validateByObject(ctx, req)
+		if res != nil || err != nil {
+			return nil, res, err
 		}
 
-		warnings = append(warnings, res.Warnings...)
+		warnings = append(warnings, objectWarnings...)
 	}
 
 	storage, err := settingsSchemaStorage(target.version.Status.PackageSchemas)
@@ -465,6 +474,21 @@ func (v *moduleValidatorV2) validateSettings(ctx context.Context, req, oldReq *m
 	}
 
 	return warnings, nil, nil
+}
+
+// validateByObject checks the settings with the activated object, which converts older settings.
+func (v *moduleValidatorV2) validateByObject(ctx context.Context, req *moduleRequest) ([]string, *kwhvalidating.ValidatorResult, error) {
+	res, err := v.packages.ValidatePackageSettings(ctx, req.name, req.settingsVersion, req.settings.GetMap())
+	if err != nil {
+		return nil, nil, fmt.Errorf("validate the '%s' module settings: %w", req.name, err)
+	}
+
+	if !res.Valid {
+		reject, err := rejectResult(res.Message)
+		return nil, reject, err
+	}
+
+	return res.Warnings, nil, nil
 }
 
 // validateEnabling runs the checks a disabled module must pass to be enabled: experimental gate, requirements, exclusive group.

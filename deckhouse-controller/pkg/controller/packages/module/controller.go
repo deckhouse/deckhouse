@@ -44,6 +44,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module/status"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -62,6 +63,8 @@ const (
 	// removalRequeueAfter is how often a running teardown is re-checked. Its end reaches only the
 	// status queue, not this controller, so the only way to notice is to ask the engine again.
 	removalRequeueAfter = 5 * time.Second
+	// devScanInterval is how often a dev tag is resolved again, so a new push is picked up.
+	devScanInterval = 3 * time.Minute
 
 	// globalModuleName is the reserved name of the global module, which the engine builds
 	// itself out of the global hooks dir.
@@ -77,14 +80,16 @@ func RegisterController(
 	sync *sync.WaitGroup,
 	runtime ctrlmanager.Manager,
 	manager packageManager,
+	dc dependency.Container,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		init:    sync,
-		client:  runtime.GetClient(),
-		manager: manager,
-		status:  status.NewService(runtime.GetClient(), manager, logger),
-		logger:  logger.Named(controllerName),
+		init:     sync,
+		client:   runtime.GetClient(),
+		manager:  manager,
+		registry: registry.NewService(dc, logger),
+		status:   status.NewService(runtime.GetClient(), manager, logger),
+		logger:   logger.Named(controllerName),
 	}
 
 	if err := runtime.Add(ctrlmanager.RunnableFunc(func(ctx context.Context) error {
@@ -140,11 +145,12 @@ func activatedVersion(module *v1beta1.Module) string {
 
 // reconciler reconciles Module objects.
 type reconciler struct {
-	init    *sync.WaitGroup
-	client  client.Client
-	manager packageManager
-	status  *status.Service
-	logger  *log.Logger
+	init     *sync.WaitGroup
+	client   client.Client
+	manager  packageManager
+	registry *registry.Service
+	status   *status.Service
+	logger   *log.Logger
 }
 
 // packageManager hands modules and Global's settings to the package engine (engine.Engine).
@@ -194,11 +200,16 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
+	// a dev tag is followed: the next scan picks up a new push
+	if isDev(module) {
+		return ctrl.Result{RequeueAfter: devScanInterval}, nil
+	}
+
 	return ctrl.Result{}, nil
 }
 
-// handleCreateOrUpdate validates the module's package and version, moves the module
-// onto them and hands it to the package engine.
+// handleCreateOrUpdate claims the finalizer and routes the module to its handler: global,
+// embedded, dev or default, in that order.
 func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1beta1.Module) error {
 	logger := r.logger.With(slog.String("name", module.Name))
 
@@ -232,6 +243,18 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1beta1.M
 	if module.IsEmbedded() {
 		return r.handleEmbedded(ctx, module, original)
 	}
+
+	// A dev module runs from its dev tag; the spec version stays its owner to return to.
+	if isDev(module) {
+		return r.handleDev(ctx, module, original)
+	}
+
+	return r.handleDefault(ctx, module, original)
+}
+
+// handleDefault hands a released module to the package engine at spec.packageVersion.
+func (r *reconciler) handleDefault(ctx context.Context, module, original *v1beta1.Module) error {
+	logger := r.logger.With(slog.String("name", module.Name))
 
 	pkg, mpv, err := r.resolvePackage(ctx, module)
 	if err != nil {
@@ -268,6 +291,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1beta1.M
 		Requirements:    requirements,
 	})
 
+	// the module left dev mode: the pinned digest goes with it
+	delete(module.Annotations, v1alpha1.PackageAnnotationDevDigest)
+
 	if err := r.commit(ctx, module, original, pkg, mpv); err != nil {
 		return err
 	}
@@ -278,6 +304,87 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1beta1.M
 	}
 
 	return nil
+}
+
+// handleDev hands the module to the package engine at the digest its dev tag points to, as the
+// immutable version registry.DevVersion. The spec version stays used and the module's owner: it is
+// what removing the tag returns to, so a module without a released version cannot run a dev tag.
+// The image's own constraints are checked by the engine's final gate, so none are passed.
+func (r *reconciler) handleDev(ctx context.Context, module, original *v1beta1.Module) error {
+	logger := r.logger.With(slog.String("name", module.Name))
+
+	pkg, mpv, err := r.resolvePackage(ctx, module)
+	if err != nil {
+		return err
+	}
+
+	repo := new(v1alpha1.PackageRepository)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: module.Spec.PackageRepositoryName}, repo); err != nil {
+		logger.Error("get package repository", log.Err(err))
+		return fmt.Errorf("get package repository '%s': %w", module.Spec.PackageRepositoryName, err)
+	}
+
+	remote := registry.BuildRemote(repo)
+
+	digest, err := r.resolveDevDigest(ctx, module, remote)
+	if err != nil {
+		return err
+	}
+
+	if err := r.relink(ctx, module, pkg, mpv); err != nil {
+		logger.Error("failed to relink the module", log.Err(err))
+		return err
+	}
+
+	r.manager.ApplyModule(engine.Module{
+		Name:            module.Name,
+		Version:         registry.DevVersion(digest),
+		Repository:      remote,
+		Settings:        module.Spec.Settings.GetMap(),
+		SettingsVersion: module.Spec.SettingsVersion,
+		Maintenance:     module.Spec.Maintenance,
+		Enabled:         module.Spec.Enabled,
+	})
+
+	metav1.SetMetaDataAnnotation(&module.ObjectMeta, v1alpha1.PackageAnnotationDevDigest, digest)
+
+	if err := r.commit(ctx, module, original, pkg, mpv); err != nil {
+		return err
+	}
+
+	if err := r.ensureDocumentation(ctx, module); err != nil {
+		logger.Error("failed to ensure the module documentation", log.Err(err))
+		return err
+	}
+
+	return nil
+}
+
+// resolveDevDigest resolves the module's dev tag; while the registry fails it keeps the pinned
+// digest, so an outage neither stalls the module nor hands the engine an older one.
+func (r *reconciler) resolveDevDigest(ctx context.Context, module *v1beta1.Module, remote registry.Remote) (string, error) {
+	tag := module.Annotations[v1alpha1.PackageAnnotationDevTag]
+
+	digest, err := r.registry.GetImageDigest(ctx, remote, module.Name, tag)
+	if err == nil {
+		return digest, nil
+	}
+
+	pinned := module.Annotations[v1alpha1.PackageAnnotationDevDigest]
+	if pinned == "" {
+		r.logger.Error("resolve the dev tag", slog.String("name", module.Name), slog.String("tag", tag), log.Err(err))
+		return "", fmt.Errorf("resolve dev tag '%s': %w", tag, err)
+	}
+
+	r.logger.Warn("resolve the dev tag, keep the pinned digest",
+		slog.String("name", module.Name), slog.String("tag", tag), slog.String("digest", pinned), log.Err(err))
+
+	return pinned, nil
+}
+
+// isDev reports whether the module runs from a dev tag; an embedded module never does.
+func isDev(module *v1beta1.Module) bool {
+	return !module.IsEmbedded() && module.Name != globalModuleName && module.Annotations[v1alpha1.PackageAnnotationDevTag] != ""
 }
 
 // handleEmbedded hands a module the image ships to the package engine. It passes the same package
@@ -444,6 +551,11 @@ func (r *reconciler) ensureDocumentation(ctx context.Context, module *v1beta1.Mo
 	version := activatedVersion(module)
 	if version == "" {
 		return nil
+	}
+
+	// the version becomes the path the documentation is read from: one from status must not leave the disk
+	if err := disk.ValidVersion(version); err != nil {
+		return fmt.Errorf("publish the documentation of the '%s' module: %w", module.Name, err)
 	}
 
 	spec := v1alpha1.ModuleDocumentationSpec{

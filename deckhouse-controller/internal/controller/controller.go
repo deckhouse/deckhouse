@@ -181,7 +181,7 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 		return nil, fmt.Errorf("register module package version controller: %w", err)
 	}
 
-	err = module.RegisterController(synced, runtime, manager, logger)
+	err = module.RegisterController(synced, runtime, manager, dc, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register module controller: %w", err)
 	}

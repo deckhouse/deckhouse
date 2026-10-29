@@ -376,7 +376,7 @@ func (b *Backend) download(ctx context.Context, repo registry.Remote, packageDir
 	}()
 
 	// download/extract into a temporary directory, then atomically publish it as <packageDir>/<version>
-	if err = b.registry.Download(ctx, repo, tempDir, name, version); err != nil {
+	if err = b.registry.Download(ctx, repo, tempDir, name, registry.PullTag(version)); err != nil {
 		return fmt.Errorf("download package: %w", err)
 	}
 

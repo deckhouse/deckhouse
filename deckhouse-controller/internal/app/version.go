@@ -20,8 +20,13 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
-// devPackageVersion is what a "dev" binary's packages carry, matching the package runtime.
-const devPackageVersion = "v2.0.0"
+const (
+	// devDeckhouseVersion is what a "dev" binary's packages carry, matching the package runtime.
+	devDeckhouseVersion = "v2.0.0"
+	// DevModuleVersion is what a module running from a dev tag reports to dependency checks: a
+	// high fixed version, so the lower bounds of its dependents pass.
+	DevModuleVersion = "v9.9.9"
+)
 
 // EmbeddedPackageVersion reduces a Deckhouse version to the one every package the image ships
 // carries: major.minor.patch, so a single version name spans every build of a release. A "dev"
@@ -29,7 +34,7 @@ const devPackageVersion = "v2.0.0"
 // every caller naming the same version even when the result is no legal object name.
 func EmbeddedPackageVersion() string {
 	if Version == "dev" {
-		return devPackageVersion
+		return devDeckhouseVersion
 	}
 
 	parsed, err := semver.NewVersion(Version)

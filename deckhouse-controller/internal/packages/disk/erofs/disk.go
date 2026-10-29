@@ -342,7 +342,7 @@ func (b *Backend) download(ctx context.Context, repo registry.Remote, packageDir
 		return fmt.Errorf("create package dir: %w", err)
 	}
 
-	rootHash, err := b.registry.GetImageRootHash(ctx, repo, name, version)
+	rootHash, err := b.registry.GetImageRootHash(ctx, repo, name, registry.PullTag(version))
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("get image root hash: %w", err)
@@ -378,7 +378,7 @@ func (b *Backend) download(ctx context.Context, repo registry.Remote, packageDir
 		}
 	}()
 
-	img, err := b.registry.GetImageReader(ctx, repo, name, version)
+	img, err := b.registry.GetImageReader(ctx, repo, name, registry.PullTag(version))
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("get image reader: %w", err)

@@ -156,6 +156,11 @@ func attach(ctx context.Context, disks Disks, t target) (model.Image, error) {
 		return model.Image{}, err
 	}
 
+	// the version becomes a path: one from a resource (spec, status at Boot) must not leave the disk
+	if err := disk.ValidVersion(t.Version); err != nil {
+		return model.Image{}, err
+	}
+
 	img.Instance = disk.Instance(t.Name, t.Version)
 	img.Path = disk.AttachPath(d.Dir, img.Instance)
 

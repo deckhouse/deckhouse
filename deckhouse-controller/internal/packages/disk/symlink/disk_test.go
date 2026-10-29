@@ -42,11 +42,11 @@ type mockDownloader struct {
 // Download writes a package marker file and optionally returns a configured failure.
 func (m *mockDownloader) Download(_ context.Context, _ registry.Remote, out, packageName, tag string) error {
 	m.calls++
-	if err := os.MkdirAll(out, 0755); err != nil {
+	if err := os.MkdirAll(out, 0o755); err != nil {
 		return err
 	}
 	markerFile := filepath.Join(out, "package.yaml")
-	if err := os.WriteFile(markerFile, []byte("name: "+packageName+"\nversion: "+tag), 0644); err != nil {
+	if err := os.WriteFile(markerFile, []byte("name: "+packageName+"\nversion: "+tag), 0o644); err != nil {
 		return err
 	}
 	if m.downloadErr != nil {
@@ -65,9 +65,9 @@ var errAny = errors.New("any error expected")
 func setupVersionDir(t *testing.T, basePath, version, markerContent string) string {
 	t.Helper()
 	versionPath := filepath.Join(basePath, version)
-	require.NoError(t, os.MkdirAll(versionPath, 0755))
+	require.NoError(t, os.MkdirAll(versionPath, 0o755))
 	if markerContent != "" {
-		require.NoError(t, os.WriteFile(filepath.Join(versionPath, "version"), []byte(markerContent), 0644))
+		require.NoError(t, os.WriteFile(filepath.Join(versionPath, "version"), []byte(markerContent), 0o644))
 	}
 	return versionPath
 }
@@ -75,7 +75,7 @@ func setupVersionDir(t *testing.T, basePath, version, markerContent string) stri
 // setupSymlink creates a symlink from deployed to target.
 func setupSymlink(t *testing.T, deployed, target string) {
 	t.Helper()
-	require.NoError(t, os.MkdirAll(filepath.Dir(deployed), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Dir(deployed), 0o755))
 	require.NoError(t, os.Symlink(target, deployed))
 }
 
@@ -188,8 +188,8 @@ func TestAttachReusesCompletedVersion(t *testing.T) {
 	downloader := &mockDownloader{}
 	deployer, packageDir, deployed := setupBackend(tmpDir, downloader)
 	versionPath := filepath.Join(packageDir, "1.0.0")
-	require.NoError(t, os.MkdirAll(versionPath, 0755))
-	require.NoError(t, os.WriteFile(filepath.Join(versionPath, "package.yaml"), []byte("name: my-package\nversion: cached"), 0644))
+	require.NoError(t, os.MkdirAll(versionPath, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(versionPath, "package.yaml"), []byte("name: my-package\nversion: cached"), 0o644))
 
 	repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
 
@@ -200,6 +200,21 @@ func TestAttachReusesCompletedVersion(t *testing.T) {
 	content, err := os.ReadFile(filepath.Join(deployed, "package.yaml"))
 	require.NoError(t, err)
 	assert.Contains(t, string(content), "version: cached")
+}
+
+// TestAttachPullsDevVersionByDigest verifies that a dev version is pulled by its digest and stored under its version.
+func TestAttachPullsDevVersionByDigest(t *testing.T) {
+	tmpDir := t.TempDir()
+	deployer, packageDir, _ := setupBackend(tmpDir, &mockDownloader{})
+	version := registry.DevVersion("sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+
+	repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
+
+	require.NoError(t, deployer.Attach(context.Background(), repo, "my-package@"+version, "my-package", version))
+
+	content, err := os.ReadFile(filepath.Join(packageDir, version, "package.yaml"))
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "version: "+registry.PullTag(version))
 }
 
 // TestAttach verifies symlink deployment across create, replace, cancel, and downgrade paths.
@@ -217,7 +232,7 @@ func TestAttach(t *testing.T) {
 			version: "1.0.0",
 			setup: func(t *testing.T, packageDir, deployed string) {
 				setupVersionDir(t, packageDir, "1.0.0", "1.0.0")
-				require.NoError(t, os.MkdirAll(filepath.Dir(deployed), 0755))
+				require.NoError(t, os.MkdirAll(filepath.Dir(deployed), 0o755))
 			},
 			checkResult: func(t *testing.T, packageDir, deployed string) {
 				versionPath := filepath.Join(packageDir, "1.0.0")
@@ -368,7 +383,7 @@ func TestDetach(t *testing.T) {
 func newCleanupBackend(t *testing.T) (*symlink.Backend, string) {
 	t.Helper()
 	appsRoot := filepath.Join(t.TempDir(), "root", "apps")
-	require.NoError(t, os.MkdirAll(appsRoot, 0755))
+	require.NoError(t, os.MkdirAll(appsRoot, 0o755))
 	return symlink.NewBackend(new(mockDownloader), appsRoot, log.NewNop()), appsRoot
 }
 
@@ -492,7 +507,7 @@ func TestCleanup(t *testing.T) {
 			setup: func(t *testing.T, appsRoot string) []deployer.PreservePackage {
 				v := makePackageVersion(t, appsRoot, "repo-a", "pkg-1", "1.0.0")
 				deployedRoot := filepath.Join(appsRoot, "deployed")
-				require.NoError(t, os.MkdirAll(deployedRoot, 0755))
+				require.NoError(t, os.MkdirAll(deployedRoot, 0o755))
 				rel, err := filepath.Rel(deployedRoot, v)
 				require.NoError(t, err)
 				require.NoError(t, os.Symlink(rel, filepath.Join(deployedRoot, "alias")))
@@ -507,8 +522,8 @@ func TestCleanup(t *testing.T) {
 			name: "non_symlink_entry_in_deployed_left_alone",
 			setup: func(t *testing.T, appsRoot string) []deployer.PreservePackage {
 				deployedRoot := filepath.Join(appsRoot, "deployed")
-				require.NoError(t, os.MkdirAll(deployedRoot, 0755))
-				require.NoError(t, os.WriteFile(filepath.Join(deployedRoot, "stray.txt"), []byte("x"), 0644))
+				require.NoError(t, os.MkdirAll(deployedRoot, 0o755))
+				require.NoError(t, os.WriteFile(filepath.Join(deployedRoot, "stray.txt"), []byte("x"), 0o644))
 				return nil
 			},
 			check: func(t *testing.T, appsRoot string) {
@@ -534,7 +549,7 @@ func TestCleanup(t *testing.T) {
 		{
 			name: "preserve_with_missing_version_collapses_empty_dirs",
 			setup: func(t *testing.T, appsRoot string) []deployer.PreservePackage {
-				require.NoError(t, os.MkdirAll(filepath.Join(appsRoot, "repo-a", "pkg-1"), 0755))
+				require.NoError(t, os.MkdirAll(filepath.Join(appsRoot, "repo-a", "pkg-1"), 0o755))
 				return []deployer.PreservePackage{preserved("repo-a", "pkg-1", "1.0.0")}
 			},
 			check: func(t *testing.T, appsRoot string) {
@@ -613,7 +628,7 @@ func TestLifecycle(t *testing.T) {
 			deployer, packageDir, deployed := setupBackend(tmpDir, new(mockDownloader))
 
 			// Create parent directory for deployed symlink
-			require.NoError(t, os.MkdirAll(filepath.Dir(deployed), 0755))
+			require.NoError(t, os.MkdirAll(filepath.Dir(deployed), 0o755))
 
 			repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
 			ctx := context.Background()

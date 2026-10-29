@@ -16,6 +16,7 @@ package update_test
 
 import (
 	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -23,11 +24,13 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	et "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/enginetest"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/retry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule/rule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
@@ -453,6 +456,52 @@ func (s *updateSuite) TestC9ApplicationManualModeIgnoresWindows() {
 	d.Policy = model.Policy{Mode: model.UpdateModeManual, Windows: &et.Window{}}
 	k.Engine.Apply(d)
 	k.WaitReport(app.Name, "updated", func(r model.Report) bool { return et.Running(r, v2) })
+}
+
+// C10: a dev revision is an ordinary update: release → dev → newer dev → release, each activated
+// after its AddNode with the previous revision detached last; the dev object reports the dev version.
+func (s *updateSuite) TestC10DevRevisionsAreOrdinaryUpdates() {
+	k := s.k
+	devA := registry.DevVersion("sha256:" + strings.Repeat("a", 64))
+	devB := registry.DevVersion("sha256:" + strings.Repeat("b", 64))
+
+	mark := k.Mark()
+	k.ApplyModule(et.Module(mod, devA), true)
+	s.waitRunning(devA)
+	s.inOrder(mark, "attach:"+mod+"@"+devA, "load:"+mod+"@"+devA, "add-node:"+mod+"@"+devA,
+		"detach:"+mod+"@"+v1, "upgraded:"+mod+"@"+app.DevModuleVersion)
+
+	mark = k.Mark()
+	k.ApplyModule(et.Module(mod, devB), true)
+	s.waitRunning(devB)
+	s.inOrder(mark, "attach:"+mod+"@"+devB, "add-node:"+mod+"@"+devB, "detach:"+mod+"@"+devA)
+
+	mark = k.Mark()
+	k.ApplyModule(et.Module(mod, v1), true)
+	s.waitRunning(v1)
+	s.inOrder(mark, "attach:"+mod+"@"+v1, "add-node:"+mod+"@"+v1, "detach:"+mod+"@"+devB)
+	s.Equal([]string{mod + "@" + v1}, k.Disk.Attached())
+}
+
+// C10: a newer push while a dev Candidate prepares releases it; the newer one activates.
+func (s *updateSuite) TestC10NewerPushReleasesTheDevCandidate() {
+	k := s.k
+	devA := registry.DevVersion("sha256:" + strings.Repeat("a", 64))
+	devB := registry.DevVersion("sha256:" + strings.Repeat("b", 64))
+
+	release := k.Faults.Block("load:" + mod + "@" + devA)
+	defer release()
+
+	mark := k.Mark()
+	k.ApplyModule(et.Module(mod, devA), true)
+	k.WaitLog(mark, "blocked:load:"+mod+"@"+devA)
+
+	k.ApplyModule(et.Module(mod, devB), true)
+	release()
+	s.waitRunning(devB)
+	s.inOrder(mark, "detach:"+mod+"@"+devA, "add-node:"+mod+"@"+devB, "detach:"+mod+"@"+v1)
+	s.Equal(-1, k.Index(mark, "add-node:"+mod+"@"+devA), "the released Candidate never activated")
+	s.Equal([]string{mod + "@" + devB}, k.Disk.Attached())
 }
 
 func (s *updateSuite) waitRunning(version string) {

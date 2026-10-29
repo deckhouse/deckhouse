@@ -52,6 +52,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/project"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/controller/reconcilertest"
@@ -111,7 +112,7 @@ func (suite *ControllerTestSuite) setupController(filename string) {
 	suite.Seed(filename)
 
 	suite.manager = newPackageManagerStub(suite.T())
-	suite.ctr = reconcilerFor(suite.T(), suite.Client(), suite.manager)
+	suite.ctr = registerController(suite.T(), suite.Client(), suite.manager, new(sync.WaitGroup))
 }
 
 // reconcilerFor registers the controller with nothing to wait for: a zero WaitGroup returns
@@ -132,8 +133,9 @@ func registerController(
 ) reconcile.Reconciler {
 	t.Helper()
 
+	dc := dependency.NewMockedContainer()
 	mgr := &managerStub{scheme: testScheme(t), client: cl}
-	require.NoError(t, module.RegisterController(init, mgr, manager, log.NewNop()))
+	require.NoError(t, module.RegisterController(init, mgr, manager, dc, log.NewNop()))
 
 	require.Len(t, mgr.runnables, 2, "the controller and the status runnable must be registered")
 
@@ -809,7 +811,8 @@ func failFirstModulePatch() func(context.Context, client.WithWatch, client.Objec
 	failed := false
 
 	return func(ctx context.Context, cl client.WithWatch, obj client.Object, patch client.Patch,
-		opts ...client.PatchOption) error {
+		opts ...client.PatchOption,
+	) error {
 		if _, ok := obj.(*v1beta1.Module); ok && !failed {
 			failed = true
 

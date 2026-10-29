@@ -14,7 +14,11 @@
 
 package disk
 
-import "path/filepath"
+import (
+	"fmt"
+	"path/filepath"
+	"strings"
+)
 
 // deployedDir is the directory containing attached package instances.
 const deployedDir = "deployed"
@@ -24,6 +28,16 @@ const deployedDir = "deployed"
 // from the mount path after the first "@".
 func Instance(name, version string) string {
 	return name + "@" + version
+}
+
+// ValidVersion checks that version can key a stored image and an instance: a single path element,
+// never "..", and never "@" (the loader takes the version after the first "@").
+func ValidVersion(version string) error {
+	if !filepath.IsLocal(version) || strings.ContainsAny(version, `/\@`) {
+		return fmt.Errorf("invalid package version %q", version)
+	}
+
+	return nil
 }
 
 // AttachPath returns the attachment path for a package instance.

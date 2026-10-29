@@ -338,6 +338,90 @@ func TestDeleteUnresolvableModules(t *testing.T) {
 	})
 }
 
+func TestSyncDevModules(t *testing.T) {
+	ctx := context.Background()
+
+	released := func(name string) *v1beta1.Module {
+		return &v1beta1.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Spec:       v1beta1.ModuleSpec{PackageRepositoryName: "deckhouse-modules", PackageVersion: "v1.2.3"},
+		}
+	}
+
+	t.Run("an override is carried to the dev tag and deleted", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), released("echo"), testModulePullOverride("echo", "pr333"))
+		require.NoError(t, s.sync(ctx))
+
+		module := getModule(t, cl, "echo")
+		assert.Equal(t, "pr333", module.Annotations[v1alpha1.PackageAnnotationDevTag])
+		assert.Equal(t, "v1.2.3", module.Spec.PackageVersion, "the release version stays the one to return to")
+		assert.Empty(t, listModulePullOverrideNames(t, cl), "the finalizer is dropped and the override deleted")
+	})
+
+	t.Run("the next start carries nothing again", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), released("echo"), testModulePullOverride("echo", "pr333"))
+		require.NoError(t, s.sync(ctx))
+
+		version := getModule(t, cl, "echo").ResourceVersion
+
+		require.NoError(t, s.sync(ctx))
+		assert.Equal(t, version, getModule(t, cl, "echo").ResourceVersion)
+	})
+
+	t.Run("an override of a missing module is only deleted", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), testModulePullOverride("echo", "pr333"))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Empty(t, listModuleNamesExceptGlobal(t, cl))
+		assert.Empty(t, listModulePullOverrideNames(t, cl))
+	})
+
+	t.Run("an override of an embedded module is only deleted", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+
+		s, cl := newTestSyncer(t, "v1.80.0", dir, testModulePullOverride("echo", "pr333"))
+		require.NoError(t, s.sync(ctx))
+
+		assert.NotContains(t, getModule(t, cl, "echo").Annotations, v1alpha1.PackageAnnotationDevTag)
+		assert.Empty(t, listModulePullOverrideNames(t, cl))
+	})
+
+	t.Run("an override being deleted is not carried", func(t *testing.T) {
+		deleting := testModulePullOverride("echo", "pr333")
+		deleting.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), released("echo"), deleting)
+		require.NoError(t, s.sync(ctx))
+
+		assert.NotContains(t, getModule(t, cl, "echo").Annotations, v1alpha1.PackageAnnotationDevTag)
+		assert.Empty(t, listModulePullOverrideNames(t, cl))
+	})
+}
+
+// testModulePullOverride is an override of the module to tag, with the finalizer its old controller set.
+func testModulePullOverride(name, tag string) *v1alpha2.ModulePullOverride {
+	return &v1alpha2.ModulePullOverride{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Finalizers: []string{v1alpha2.ModulePullOverrideFinalizer}},
+		Spec:       v1alpha2.ModulePullOverrideSpec{ImageTag: tag},
+	}
+}
+
+// listModulePullOverrideNames returns the names of the overrides left in the cluster.
+func listModulePullOverrideNames(t *testing.T, cl client.Client) []string {
+	t.Helper()
+
+	overrides := new(v1alpha2.ModulePullOverrideList)
+	require.NoError(t, cl.List(context.Background(), overrides))
+
+	names := make([]string, 0, len(overrides.Items))
+	for _, override := range overrides.Items {
+		names = append(names, override.Name)
+	}
+
+	return names
+}
+
 func testModuleConfig(name string) *v1alpha1.ModuleConfig {
 	return &v1alpha1.ModuleConfig{ObjectMeta: metav1.ObjectMeta{Name: name}}
 }
@@ -361,18 +445,29 @@ func TestSyncModulesReleaseChannel(t *testing.T) {
 		return dir
 	}
 
-	t.Run("an embedded module follows the channel of the deckhouse config", func(t *testing.T) {
+	t.Run("an embedded module follows no channel, whatever Deckhouse follows", func(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t), deckhouseConfig("EarlyAccess"))
 		require.NoError(t, s.sync(ctx))
 
-		assert.Equal(t, "EarlyAccess", getModule(t, cl, "echo").Spec.ReleaseChannel)
+		assert.Empty(t, getModule(t, cl, "echo").Spec.ReleaseChannel, "the image ships it, off no channel")
 	})
 
-	t.Run("with no deckhouse config the build channel applies", func(t *testing.T) {
-		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t))
+	t.Run("the channel of an existing embedded module is cleared", func(t *testing.T) {
+		existing := &v1beta1.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
+			Spec: v1beta1.ModuleSpec{
+				PackageRepositoryName: "embedded",
+				PackageVersion:        "v1.79.0",
+				ReleaseChannel:        "Stable",
+			},
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t), existing)
 		require.NoError(t, s.sync(ctx))
 
-		assert.Equal(t, "Stable", getModule(t, cl, "echo").Spec.ReleaseChannel)
+		module := getModule(t, cl, "echo")
+		assert.Empty(t, module.Spec.ReleaseChannel)
+		assert.Equal(t, "v1.80.0", module.Spec.PackageVersion, "every start brings the module to the image")
 	})
 
 	t.Run("a released module follows the channel of its update policy", func(t *testing.T) {

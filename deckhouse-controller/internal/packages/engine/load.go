@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	globalmodule "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -89,7 +90,8 @@ func (l *packageLoader) loadApplication(ctx context.Context, image model.Image) 
 }
 
 // loadModule loads a downloaded or an embedded module. An embedded module gets image.Version (its
-// definition carries none), so the object and its node agree.
+// definition carries none), so the object and its node agree. A dev image gets app.DevModuleVersion:
+// its version (dev-<digest>) is no semver for the dependency checks.
 func (l *packageLoader) loadModule(ctx context.Context, image model.Image) (model.Package, error) {
 	var (
 		conf *modules.Config
@@ -106,6 +108,10 @@ func (l *packageLoader) loadModule(ctx context.Context, image model.Image) (mode
 		}
 
 		conf.Repository = image.Source.Repository
+
+		if registry.IsDevVersion(image.Version) {
+			conf.Definition.Version = app.DevModuleVersion
+		}
 	}
 
 	conf.Patcher = l.shared.patcher

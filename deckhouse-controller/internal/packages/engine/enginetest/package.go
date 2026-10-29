@@ -28,12 +28,14 @@ import (
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/lifecycle/model"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule/rule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/engine/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 )
 
@@ -83,9 +85,15 @@ func newPackage(k *Kit, kind model.Kind, image model.Image, spec Spec) *Package 
 		}
 	}
 
+	// a dev image reports the fixed dev version, as the engine's loader adapter does
+	version := image.Version
+	if registry.IsDevVersion(version) {
+		version = app.DevModuleVersion
+	}
+
 	return &Package{
 		name:     image.Name,
-		version:  semver.MustParse(image.Version),
+		version:  semver.MustParse(version),
 		path:     image.Path,
 		spec:     spec,
 		kit:      k,
