@@ -95,9 +95,11 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 			return fmt.Errorf("Could not get NodeInterface: %w", err)
 		}
 
-		_, err = InstallDeckhouse(
+		kubeClient := (&client.KubernetesClient{KubeClient: kubeCl}).WithNodeInterface(nodeInterface)
+
+		return installDeckhouseAndApplyDeferredSettings(
 			ctx,
-			(&client.KubernetesClient{KubeClient: kubeCl}).WithNodeInterface(nodeInterface),
+			kubeClient,
 			installConfig,
 			InstallDeckhouseParams{
 				BeforeDeckhouseTask: func() error { return nil },
@@ -105,8 +107,6 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 				DeckhouseTimeout:    b.Options.Bootstrap.DeckhouseTimeout,
 			},
 		)
-
-		return err
 	}
 
 	interactive := input.IsTerminal() && !b.Options.Global.ShowProgress

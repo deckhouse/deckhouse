@@ -208,6 +208,30 @@ func applyPostBootstrapModuleConfigs(
 	return nil
 }
 
+// installDeckhouseAndApplyDeferredSettings also applies the settings InstallDeckhouse defers:
+// bootstrap-phase create-resources runs as a separate invocation and gets no InstallDeckhouseResult.
+func installDeckhouseAndApplyDeferredSettings(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	cfg *config.DeckhouseInstaller,
+	params InstallDeckhouseParams,
+) error {
+	result, err := InstallDeckhouse(ctx, kubeCl, cfg, params)
+	if err != nil {
+		return fmt.Errorf("install deckhouse: %w", err)
+	}
+
+	if err := applyPostBootstrapModuleConfigs(ctx, kubeCl, result.ManifestResult.WithResourcesMCTasks); err != nil {
+		return fmt.Errorf("apply deferred module config settings: %w", err)
+	}
+
+	if err := RunPostInstallTasks(ctx, kubeCl, result); err != nil {
+		return fmt.Errorf("run post-install tasks: %w", err)
+	}
+
+	return nil
+}
+
 func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, result *InstallDeckhouseResult) error {
 	ctx, span := telemetry.StartSpan(ctx, "RunPostInstallTasks")
 	defer span.End()
