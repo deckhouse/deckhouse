@@ -92,7 +92,7 @@ rules:                       # Набор правил для аудита
 - [Логировать операции create/delete для ресурсов ServiceAccount.](#rule-17)
 - [Логировать операции create/update/delete/patch для ресурсов Role и ClusterRole.](#rule-18)
 - [Логировать операции create/update/delete для ресурсов ClusterRoleBinding.](#rule-19)
-- [Логировать операции с pod subresource для attach и ephemeral-контейнеров.](#rule-20)
+- [Логировать операции с pod subresource для exec, attach и ephemeral-контейнеров.](#rule-20)
 - [Логировать создание ресурсов VirtualMachineOperation с телом запроса/ответа.](#rule-21)
 - [Логировать операции create/update/patch/delete для ресурсов virtualization.deckhouse.io.](#rule-22)
 - [Логировать операции update/patch для внутренних virtualization subresources.](#rule-23)
@@ -519,7 +519,7 @@ omitStages:
 ```
 
 <a id="rule-20"></a>
-20\. Логировать операции с pod subresource для attach и ephemeral-контейнеров.
+20\. Логировать операции с pod subresource для exec, attach и ephemeral-контейнеров.
 
 ```yaml
 level: Request
@@ -529,6 +529,7 @@ verbs:
   - create
 resources:
   - resources:
+      - pods/exec
       - pods/attach
       - pods/ephemeralcontainers
 omitStages:
@@ -991,7 +992,7 @@ rules:
     omitStages:
       - RequestReceived
 
-  # 20: Логировать операции с pod subresource для attach и ephemeral-контейнеров.
+  # 20: Логировать операции с pod subresource для exec, attach и ephemeral-контейнеров.
   - level: Request
     verbs:
       - get
@@ -999,6 +1000,7 @@ rules:
       - create
     resources:
       - resources:
+          - pods/exec
           - pods/attach
           - pods/ephemeralcontainers
     omitStages:
