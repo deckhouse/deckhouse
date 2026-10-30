@@ -198,6 +198,10 @@ spec:
             {{- end }}
             - mountPath: /tmp
               name: install-cni-tmp
+            # Legacy iptables creates its lock at /run/xtables.lock, and the root filesystem is read-only.
+            # As in upstream, the lock is local to the container and is not shared with kube-proxy or the CNI.
+            - mountPath: /run
+              name: install-cni-run
           resources:
             requests:
               {{- include "istio_cni_resources" . | nindent 14 }}
@@ -291,4 +295,8 @@ spec:
             type: DirectoryOrCreate
         - name: install-cni-tmp
           emptyDir: {}
+        - name: install-cni-run
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
 {{- end }}
