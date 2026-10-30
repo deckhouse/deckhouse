@@ -3,6 +3,7 @@ dirs:
 - /host/etc/cni/net.d
 - /tmp/istio-cni
 - /var/run/istio-cni
+- /run
 - /run/istio-cni
 - /host/proc
 - /var/run/ztunnel
