@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 20,
+  "version": 22,
   "statements": [
     {
       "vulnerability": {
@@ -948,8 +948,84 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "В d8 github.com/containerd/containerd v1.7.27 поступает транзитивно через werf/delivery-kit для операций с OCI-образами. Уязвимость обработки opaque whiteout находится в функции applyNaive пакета github.com/containerd/containerd/archive. Этот пакет не входит в граф зависимостей d8 для Linux amd64 и не включается в бинарники. Используемый пакет archive/compression обрабатывает сжатые потоки и не импортирует обработчик распаковки archive; уязвимый код отсутствует.",
       "timestamp": "2026-10-22T08:31:24Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-114437"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse-cli",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/github.com/go-chi/chi/v5@v5.3.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В d8 middleware chi импортируется логированием Rekor только для доступа к RequestIDKey. Выбранные исходники зависимостей сборок Linux, macOS и Windows не вызывают и не регистрируют ClientIPFromXFF. Уязвимое извлечение адреса клиента из X-Forwarded-For не выполняется.",
+      "timestamp": "2026-10-29T09:19:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116585"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse-cli",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/github.com/go-jose/go-jose/v3@v3.0.5"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В поставляемых CLI-сборках d8 для Linux, macOS и Windows из github.com/go-jose/go-jose/v3 остаются только инициализатор пакета и вспомогательный JSON-код. Функции разбора JWE и расшифрования CBC-HMAC отсутствуют в таблицах Go-функций, включая имена inline-функций. ParseEncrypted и CBC-HMAC decrypt не включены в бинарники; уязвимая обработка шифротекста не может выполняться.",
+      "timestamp": "2026-10-29T09:42:26Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116586"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse-cli",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/github.com/go-jose/go-jose/v3@v3.0.5"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В поставляемых CLI-сборках d8 для Linux, macOS и Windows из github.com/go-jose/go-jose/v3 остаются только инициализатор пакета и вспомогательный JSON-код. Уязвимый рекурсивный JSON-декодер не включён в бинарники: Unmarshal и методы decodeState из go-jose/v3/json отсутствуют в таблицах Go-функций, включая имена inline-функций. Оставшиеся encoder/scanner-функции не вызывают этот декодер; переполнение стека при рекурсивном разборе JSON недостижимо.",
+      "timestamp": "2026-10-29T09:42:26Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-116587"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse-cli",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/github.com/go-jose/go-jose/v3@v3.0.5"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В поставляемых CLI-сборках d8 для Linux, macOS и Windows из github.com/go-jose/go-jose/v3 остаются только инициализатор пакета и вспомогательный JSON-код. JSONWebKey.UnmarshalJSON и rsaPrivateKey отсутствуют в таблицах Go-функций, включая имена inline-функций. Разбор недоверенных JWK и проверка переданных в них RSA private key через go-jose/v3 не выполняются; уязвимый путь расходования CPU не включён в бинарники.",
+      "timestamp": "2026-10-29T09:42:26Z"
     }
   ],
   "timestamp": "2026-01-16T12:00:00Z",
-  "last_updated": "2026-10-22T08:31:24Z"
+  "last_updated": "2026-10-29T09:42:26Z"
 }
