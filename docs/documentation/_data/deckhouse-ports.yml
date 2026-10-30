@@ -560,6 +560,16 @@ groups:
     description:
       en: "`virtualization` `virt-handler` console server"
       ru: "Сервер консоли `virt-handler` модуля `virtualization`"
+  - ports: "4102"
+    protocol: TCP
+    description:
+      en: "`virtualization` `virt-synchronization-controller` API that synchronizes the state of VM migrations between clusters. Used only with the `Peering` feature gate; the nodes of the other cluster connect to it"
+      ru: "API `virt-synchronization-controller` модуля `virtualization` для синхронизации состояния миграции ВМ между кластерами. Используется только с фичегейтом `Peering`; к нему подключаются узлы другого кластера"
+  - ports: "4103"
+    protocol: TCP
+    description:
+      en: "`virtualization` `virt-synchronization-controller` health check. Used only with the `Peering` feature gate"
+      ru: "Проверка состояния `virt-synchronization-controller` модуля `virtualization`. Используется только с фичегейтом `Peering`"
   - ports: "4106"
     protocol: TCP
     description:
