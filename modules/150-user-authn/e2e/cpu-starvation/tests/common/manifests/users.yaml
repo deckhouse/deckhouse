@@ -1,0 +1,26 @@
+# Two throwaway local users of the load. The password is random per run and lives only in the load
+# pod; ($passwordHash) is its bcrypt hash printed by the init container of that pod.
+# Login workers and refresh workers use different users, so the login workers do not evict the
+# refresh tokens through the per-client device limit of Dex. The ttl removes a user that a failed
+# cleanup left behind.
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: (join('-', ['e2e-cpu-login', $namespace]))
+  labels:
+    e2e-test: user-authn-cpu-starvation
+spec:
+  email: (join('', ['e2e-cpu-login-', $namespace, '@example.test']))
+  password: ($passwordHash)
+  ttl: 6h
+---
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: (join('-', ['e2e-cpu-refresh', $namespace]))
+  labels:
+    e2e-test: user-authn-cpu-starvation
+spec:
+  email: (join('', ['e2e-cpu-refresh-', $namespace, '@example.test']))
+  password: ($passwordHash)
+  ttl: 6h

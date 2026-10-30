@@ -1,0 +1,124 @@
+# The load generator. It runs on a node other than the Dex node ($dexNode), so the pressure starves
+# Dex and not the load. It sends the load to the Dex pod under test ($dexURL), not to the Service, so
+# a second Dex replica does not take a part of it. The init container makes a random password and prints its bcrypt hash; musl
+# crypt() of the Alpine image computes bcrypt, Python 3.12 still ships the crypt module.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dex-load
+  labels:
+    app: dex-load
+spec:
+  serviceAccountName: dex-load
+  terminationGracePeriodSeconds: 5
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchFields:
+              - key: metadata.name
+                operator: NotIn
+                values:
+                  - ($dexNode)
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  volumes:
+    - name: scripts
+      configMap:
+        name: dex-load-scripts
+    - name: data
+      emptyDir: {}
+  initContainers:
+    - name: hash
+      image: ($image)
+      command:
+        - python3
+        - -I
+        - -W
+        - ignore
+        - -c
+        - |
+          import secrets
+          password = secrets.token_urlsafe(24)
+          try:
+              import crypt
+              hashed = crypt.crypt(password, crypt.mksalt(crypt.METHOD_BLOWFISH, rounds=1024))
+          except (ImportError, AttributeError):
+              import bcrypt
+              hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt(10)).decode()
+          if not hashed or not hashed.startswith("$2"):
+              raise SystemExit("bcrypt is not available in this image")
+          with open("/data/password", "w") as f:
+              f.write(password)
+          print("HASH " + hashed)
+      volumeMounts:
+        - name: data
+          mountPath: /data
+      resources:
+        requests: {cpu: 10m, memory: 32Mi}
+        limits: {memory: 64Mi}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities: {drop: [ALL]}
+  containers:
+    - name: load
+      image: ($image)
+      command: ["python3", "-I", "/scripts/dexload.py"]
+      env:
+        - name: DEX_URL
+          value: ($dexURL)
+        - name: CLIENT_ID
+          value: (join('', ['dex-client-dex-load@', $namespace]))
+        - name: CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: dex-client-dex-load
+              key: clientSecret
+        - name: LOGIN_EMAIL
+          value: (join('', ['e2e-cpu-login-', $namespace, '@example.test']))
+        - name: REFRESH_EMAIL
+          value: (join('', ['e2e-cpu-refresh-', $namespace, '@example.test']))
+        - name: PASSWORD_FILE
+          value: /data/password
+        - name: OUT
+          value: /data/flows.log
+        - name: LOGIN_WORKERS
+          value: ($loginWorkers)
+        - name: REFRESH_WORKERS
+          value: ($refreshWorkers)
+        - name: PAUSE
+          value: ($pause)
+      volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+        - name: data
+          mountPath: /data
+      resources:
+        requests: {cpu: 200m, memory: 64Mi}
+        limits: {memory: 256Mi}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities: {drop: [ALL]}
+    - name: watch
+      image: ($image)
+      command: ["python3", "-I", "/scripts/writewatch.py"]
+      env:
+        - name: WATCH
+          value: coordination.k8s.io/v1/leases@d8-user-authn,deckhouse.io/v1alpha1/useraccounts,dex.coreos.com/v1/refreshtokens@d8-user-authn
+        - name: OUT
+          value: /data/writes.log
+      volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+        - name: data
+          mountPath: /data
+      resources:
+        requests: {cpu: 20m, memory: 32Mi}
+        limits: {memory: 128Mi}
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities: {drop: [ALL]}

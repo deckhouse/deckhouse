@@ -1,5 +1,13 @@
 version: '3'
 
+# The CPU starvation scenarios stress a node for 10-15 minutes each, so neither `run` nor
+# `run:destructive` includes them: run them on demand with `task run:cpu-starvation`, or in the
+# e2e pipeline with E2E_MODULE_TESTS_TARGET=run:cpu-starvation.
+includes:
+  cpu-starvation:
+    taskfile: cpu-starvation/Taskfile.yaml
+    dir: cpu-starvation
+
 vars:
   REPORTS: '{{.E2E_REPORTS_DIR | default "./reports"}}'
   # Every test runs in this namespace: multitenancy-manager adopts new namespaces into Projects,
@@ -52,3 +60,14 @@ tasks:
       - for f in tests/*/chainsaw-test.yaml tests-destructive/*/chainsaw-test.yaml; do echo "$f"; chainsaw lint test -f "$f" || exit 1; done
       - for f in tests/common/scripts/*.sh tests/*/scripts/*.sh tests-destructive/*/scripts/*.sh; do [ -e "$f" ] || continue; bash -n "$f" || exit 1; done
       - for f in "${E2E_LIB_DIR}"/*.sh; do bash -n "$f" || exit 1; done
+      - task: cpu-starvation:lint
+
+  run:cpu-starvation:
+    desc: Run the user-authn CPU starvation e2e tests (stress a node; on demand only)
+    cmds:
+      - task: cpu-starvation:run
+
+  cleanup:
+    desc: Remove the leftovers of interrupted user-authn CPU starvation runs
+    cmds:
+      - task: cpu-starvation:cleanup

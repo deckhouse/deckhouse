@@ -115,11 +115,14 @@ Run the suites from this directory:
 ```shell
 task run
 task run:destructive
+task run:cpu-starvation
 task lint
 ```
 
 The reports are written to `E2E_REPORTS_DIR` or, when it is not set, to `./reports`.
 `run` takes about 25 minutes: three cases change the module settings, and each change restarts Dex twice.
+`run:cpu-starvation` runs the scenarios of `cpu-starvation/` on demand only:
+they stress a node, so neither `run` nor `run:destructive` includes them.
 
 ## Cases that are not automated
 
