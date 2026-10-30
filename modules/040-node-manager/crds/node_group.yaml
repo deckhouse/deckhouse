@@ -591,7 +591,7 @@ spec:
                         > **Warning.** This parameter does nothing if CRI type is `Docker`.
                     containerLogMaxFiles:
                       type: integer
-                      minimum: 1
+                      minimum: 2
                       maximum: 20
                       default: 4
                       description: |
@@ -1261,7 +1261,7 @@ spec:
                         > **Warning.** This parameter does nothing if CRI type is `Docker`.
                     containerLogMaxFiles:
                       type: integer
-                      minimum: 1
+                      minimum: 2
                       maximum: 20
                       default: 4
                       description: |
@@ -2249,7 +2249,7 @@ spec:
                         Maximum log file size before it is rotated.
                     containerLogMaxFiles:
                       type: integer
-                      minimum: 1
+                      minimum: 2
                       maximum: 20
                       default: 4
                       description: |
