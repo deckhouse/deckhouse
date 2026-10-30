@@ -7,7 +7,7 @@ directory.
 
 Bumps Go dependencies in the root `go.mod`/`go.sum` (and the `go` directive in `go.work` where needed) to fix known CVEs in the Kubernetes binaries, including `kube-proxy`. The build runs `GOWORK=off go mod vendor` after the patches are applied, so only the root module files are changed; staging modules pick up the new versions through MVS.
 
-Current bumps on all versions: `golang.org/x/net` v0.60.0 (with `golang.org/x/crypto` v0.57.0 and `golang.org/x/text` v0.42.0), `google.golang.org/grpc` v1.83.2, `go.opentelemetry.io/otel`, `otel/sdk`, `otel/exporters/otlp/otlptrace` and `otlptracegrpc` v1.45.0 (with `go.opentelemetry.io/proto/otlp` v1.11.0). On 1.33-1.35 this moves `otlptracegrpc` from v1.33.0/v1.34.0 to v1.45.0 and drops the no longer used `github.com/cenkalti/backoff/v4`.
+Current bumps on all versions: `golang.org/x/net` v0.62.0 (with `golang.org/x/crypto` v0.58.0 and `golang.org/x/text` v0.43.0), `google.golang.org/grpc` v1.83.2, `go.opentelemetry.io/otel`, `otel/sdk`, `otel/exporters/otlp/otlptrace` and `otlptracegrpc` v1.45.0 (with `go.opentelemetry.io/proto/otlp` v1.11.0). On 1.33-1.35 this moves `otlptracegrpc` from v1.33.0/v1.34.0 to v1.45.0 and drops the no longer used `github.com/cenkalti/backoff/v4`.
 
 The patch is carried on 1.33 through 1.37 and must apply first (`000`), before patches that touch `go.work.sum` or source code. Regenerate it with `go get` on the upstream tag with the whole patch set applied. Remove the bumps once the upstream patch release ships the same or newer versions.
 
