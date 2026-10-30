@@ -100,7 +100,7 @@ func TestKubeletTopologyManagerPolicies(t *testing.T) {
 				} else {
 					require.NotContains(t, config, "reservedMemory")
 				}
-				require.Equal(t, "70m", config["systemReserved"].(map[string]interface{})["cpu"], "Auto CPU reserve must stay unchanged")
+				require.Equal(t, "$(system_reserved_cpu)", config["systemReserved"].(map[string]interface{})["cpu"], "Auto CPU reserve must be calculated")
 				require.NotContains(t, config, "reservedSystemCPUs")
 				require.Equal(t, "50Mi", config["containerLogMaxSize"])
 				require.EqualValues(t, 4, config["containerLogMaxFiles"])

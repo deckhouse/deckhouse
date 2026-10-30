@@ -204,7 +204,12 @@ func TestKubeletApprovalProjection(t *testing.T) {
 			c["reservedMemory"].([]interface{})[0].(map[string]interface{})["limits"].(map[string]interface{})["memory"] = "1"
 		}, true},
 		{"system reservation", func(c map[string]interface{}) { c["systemReserved"].(map[string]interface{})["memory"] = "2Gi" }, true},
-		{"fractional CPU differs", func(c map[string]interface{}) { c["systemReserved"].(map[string]interface{})["cpu"] = "500m" }, true},
+		{"sub-core CPU differs", func(c map[string]interface{}) { c["systemReserved"].(map[string]interface{})["cpu"] = "80m" }, false},
+		{"fractional CPU differs", func(c map[string]interface{}) { c["systemReserved"].(map[string]interface{})["cpu"] = "500m" }, false},
+		{"exactly one CPU is still one CPU", func(c map[string]interface{}) { c["systemReserved"].(map[string]interface{})["cpu"] = "1000m" }, false},
+		{"integer one CPU is still one CPU", func(c map[string]interface{}) { c["systemReserved"].(map[string]interface{})["cpu"] = 1 }, false},
+		{"fraction above one CPU rounds up to two", func(c map[string]interface{}) { c["systemReserved"].(map[string]interface{})["cpu"] = "1001m" }, true},
+		{"integer two CPUs differ", func(c map[string]interface{}) { c["systemReserved"].(map[string]interface{})["cpu"] = 2 }, true},
 		{"foreign system reservation", func(c map[string]interface{}) { c["systemReserved"].(map[string]interface{})["pid"] = "100" }, false},
 		{"ephemeral-storage reservation", func(c map[string]interface{}) {
 			c["systemReserved"].(map[string]interface{})["ephemeral-storage"] = "5Gi"

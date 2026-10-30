@@ -87,6 +87,7 @@ func TestKubeletNUMAMemoryDistribution(t *testing.T) {
 }
 
 func TestKubeletMemoryQuantizationAndAuto(t *testing.T) {
+	var autoCPU string
 	for _, tc := range []struct{ mib, reserve string }{
 		{"3072", "257698038"}, {"4095", "257698038"},
 		{"4096", "343597384"}, {"4097", "343597384"}, {"5119", "343597384"},
@@ -99,7 +100,13 @@ func TestKubeletMemoryQuantizationAndAuto(t *testing.T) {
 			result := executeKubeletStep(t, map[string]interface{}{"resourceReservation": map[string]interface{}{"mode": "Auto"}}, tc.mib, nil)
 			config := result.success(t)
 			require.Equal(t, tc.reserve, config["systemReserved"].(map[string]interface{})["memory"])
-			require.Equal(t, "70m", config["systemReserved"].(map[string]interface{})["cpu"])
+			cpu := config["systemReserved"].(map[string]interface{})["cpu"].(string)
+			require.Regexp(t, `^[0-9]+m$`, cpu)
+			if autoCPU == "" {
+				autoCPU = cpu
+			} else {
+				require.Equal(t, autoCPU, cpu, "Auto CPU reserve must not depend on memory")
+			}
 		})
 	}
 	// Same bucket must produce the identical full config, even on a second run.

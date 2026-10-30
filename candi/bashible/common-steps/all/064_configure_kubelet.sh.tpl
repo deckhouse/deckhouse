@@ -242,6 +242,60 @@ function eviction_soft_threshold_memory_available {
   echo -n "${return}"
 }
 
+{{- if eq $resourceReservationMode "Auto" }}
+# https://cloud.google.com/kubernetes-engine/docs/concepts/plan-node-sizes ("CPU reservations"), also used by EKS:
+# 6% of the first core, 1% of the second, 0.5% of the third and fourth, 0.25% of every core above four.
+# Online CPUs are counted, as kubelet counts them for the node capacity.
+function dynamic_cpu_sizing {
+  awk -v cores="$(getconf _NPROCESSORS_ONLN)" 'BEGIN {
+    millicores = 60
+    if (cores > 1) millicores += 10
+    if (cores > 2) millicores += 5 * ((cores < 4 ? cores : 4) - 2)
+    if (cores > 4) millicores += 2.5 * (cores - 4)
+    printf "%dm", millicores
+  }'
+}
+
+# CPU requested by the pods of the node, in millicores. Over-counts on purpose: init containers and
+# pod-level requests are added instead of taking the larger, so a wrong answer only keeps the old
+# reservation longer, it never lets kubelet reject a pod.
+function node_cpu_requests {
+  local node pods
+  node="$(bb-d8-node-name)" && [[ -n "${node}" ]] || return 1
+  pods="$(bb-curl-kube /api/v1/pods --get --data-urlencode "fieldSelector=spec.nodeName=${node}")" || return 1
+  jq -er '
+    def millicores: tostring | if endswith("m") then .[:-1] | tonumber else tonumber * 1000 end;
+    [.items[] | select(.status.phase != "Succeeded" and .status.phase != "Failed") | .spec
+      | (.containers + (.initContainers // []))[].resources.requests.cpu, .resources.requests.cpu, .overhead.cpu
+      | values | millicores] | add // 0 | ceil' <<< "${pods}"
+}
+
+# A kubelet restart re-admits every pod bound to the node against the new allocatable and rejects
+# (or, for a critical pod, preempts) whatever no longer fits. So a changed reservation is written
+# only while the pods fit; otherwise the applied one stays until bashible runs this step again
+# (next configuration change or reboot).
+function system_reserved_cpu {
+  local desired applied requested allocatable
+  desired="$(dynamic_cpu_sizing)"
+  applied="$(/opt/deckhouse/bin/yq '.systemReserved.cpu // ""' /var/lib/kubelet/config.yaml 2>/dev/null)"
+  # Nothing to keep: first run, or no cpu reserved yet (0m would also break the static CPU manager).
+  if [[ -z "${applied}" || "${applied}" == "${desired}" ]]; then
+    echo -n "${desired}"
+    return 0
+  fi
+  allocatable=$(( $(getconf _NPROCESSORS_ONLN) * 1000 - ${desired%m} ))
+  if ! requested="$(node_cpu_requests)"; then
+    bb-log-warning "systemReserved.cpu stays at '${applied}' instead of '${desired}': cannot get the pods of the node to check that they fit"
+  elif (( requested <= allocatable )); then
+    echo -n "${desired}"
+    return 0
+  else
+    bb-log-warning "systemReserved.cpu stays at '${applied}' instead of '${desired}': pods request ${requested}m of ${allocatable}m allocatable; retried on the next configuration change or reboot"
+  fi
+  echo -n "${applied}"
+}
+{{- end }}
+
 {{- $topologyManager := dig "kubelet" "topologyManager" (dict) .nodeGroup }}
 {{- $topologyPolicy := dig "policy" "None" $topologyManager }}
 {{- $pinning := ne $topologyPolicy "None" }}
@@ -505,7 +559,7 @@ serializeImagePulls: false
 syncFrequency: 1m0s
 {{- if eq $resourceReservationMode "Auto" }}
 systemReserved:
-  cpu: 70m
+  cpu: "$(system_reserved_cpu)"
   memory: "${system_reserved_memory}"
   ephemeral-storage: 1Gi
 {{- else if eq $resourceReservationMode "Static" }}
@@ -559,9 +613,10 @@ EOF
 {{- if $pinning }}
 
 # Changing these makes kubelet re-admit running pods under the new policy.
-# Only cpu and memory of systemReserved feed the managers.
+# CPU counts as whole reserved CPUs, rounded up as the CPU manager.
 function kubelet_pinning_fields {
-  /opt/deckhouse/bin/yq -o=json -I=0 '[.cpuManagerPolicy, .cpuManagerPolicyOptions, .memoryManagerPolicy, .reservedMemory, .systemReserved.cpu, .systemReserved.memory, .topologyManagerPolicy, .topologyManagerScope] | sort_keys(..)' "$1"
+  /opt/deckhouse/bin/yq -o=json -I=0 '[.cpuManagerPolicy, .cpuManagerPolicyOptions, .memoryManagerPolicy, .reservedMemory, .systemReserved.cpu, .systemReserved.memory, .topologyManagerPolicy, .topologyManagerScope] | sort_keys(..)' "$1" |
+    jq -c '.[4] |= (if . == null then 0 elif type == "number" then ceil elif endswith("m") then (sub("m$"; "") | tonumber | . / 1000 | ceil) else (tonumber | ceil) end)'
 }
 
 # Unknown answer fails the step before config is written: bashible retries it, no blind drain.
