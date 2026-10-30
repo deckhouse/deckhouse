@@ -16,11 +16,14 @@ package context
 
 import (
 	"context"
+	"crypto/sha256"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -37,6 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
+	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 )
 
@@ -47,6 +51,20 @@ type KubeClientSwitcher struct {
 
 	// slogger is used for this switcher's own logging output.
 	slogger *slog.Logger
+
+	// keptUnknownHost is the host the user passed that no master state lists and that
+	// switching disabled keeps: the refresh after every master warns about it only once.
+	keptUnknownHost string
+
+	// masterIPs caches addresses extracted from each master state. A refresh receives
+	// all master states, but usually only one has changed, so unchanged states should
+	// not invoke Terraform/OpenTofu output again.
+	masterIPs map[string]masterIPsEntry
+}
+
+type masterIPsEntry struct {
+	stateHash [sha256.Size]byte
+	ips       infrastructure.OutputMasterIPs
 }
 
 type KubeClientSwitcherParams struct {
@@ -324,6 +342,111 @@ type replaceKubeClientParams struct {
 	appendPKey    *session.AgentPrivateKey
 }
 
+// ErrSSHClientSwitchFailed marks a failure after the converge lock stopped being renewed
+// and the SSH client was torn down. Such a run holds neither a working connection nor a
+// renewed lock, so it must stop instead of changing the next node.
+var ErrSSHClientSwitchFailed = errors.New("switching the SSH client failed")
+
+// errIPExtraction marks a failed "output" of a single node state. Picking a host to
+// connect to can do without that node; any other failure is not about the node.
+var errIPExtraction = errors.New("cannot extract IPs")
+
+// RefreshMasterHostsFromStates makes the Terraform states of the masters the SSH inventory
+// and returns it. In Commander, which has no SSH client, only the persisted hosts cache is
+// refreshed. The client keeps its connection while the machine it is connected to is still
+// a master, and moves to the remaining ones only once that machine is gone. All addresses
+// are extracted before anything changes: a failed extraction leaves the session and the
+// saved master hosts as they were. Addresses already read stay in masterIPs, keyed by the
+// state they were read from.
+func (s *KubeClientSwitcher) RefreshMasterHostsFromStates(ctx context.Context, nodesState map[string][]byte) ([]session.Host, error) {
+	if len(nodesState) == 0 {
+		return nil, fmt.Errorf("Empty node states for refreshing control-plane SSH hosts")
+	}
+
+	// Commander has no SSH client; this cache is compatibility bookkeeping only and its
+	// refresh must not turn an infrastructure operation into a failure.
+	if s.ctx.CommanderMode() {
+		hosts, err := s.masterHostsFromStates(ctx, nodesState, s.bastionHostFromConfig(), newLazySSHIPExtractor(s), true)
+		if err != nil {
+			s.warn("Cannot refresh control-plane hosts cache: %v", err)
+			return nil, nil
+		}
+
+		// An empty list would replace every saved host, as the SSH path refuses to.
+		if len(hosts) == 0 {
+			s.warn("Cannot refresh control-plane hosts cache: the states have no control-plane addresses")
+			return nil, nil
+		}
+
+		s.saveMasterHosts(ctx, hosts)
+		return hosts, nil
+	}
+
+	// A run over the Kubernetes API alone, such as converge-migration in the auto-converger
+	// pod, has no SSH inventory to rebuild. Asking for a provider there fails the converge.
+	if !s.ctx.SSHProviderInitializer.CheckHosts(ctx) {
+		s.debug("Refresh control-plane SSH hosts skipped: converge has no SSH hosts")
+		return nil, nil
+	}
+
+	sshProvider, err := s.ctx.SSHProviderInitializer.GetSSHProvider(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	sshCl, err := sshProvider.Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.refreshSSHHosts(ctx, sshProvider, sshCl, nodesState, newLazySSHIPExtractor(s))
+}
+
+func (s *KubeClientSwitcher) refreshSSHHosts(ctx context.Context, sshProvider libcon.SSHProvider, sshCl libcon.SSHClient, nodesState map[string][]byte, ipExtractor sshHostExtractor) ([]session.Host, error) {
+	sess := sshCl.Session()
+
+	hosts, err := s.masterHostsFromStates(ctx, nodesState, sess.BastionHost, ipExtractor, true)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(hosts) == 0 {
+		return nil, fmt.Errorf("Cannot refresh control-plane SSH hosts: no available hosts found in node states")
+	}
+
+	currentHost := sess.Host()
+
+	switch {
+	case setHostsKeepingCurrent(sess, hosts):
+		s.debug("Control-plane SSH hosts refreshed, the client stays on %s", currentHost)
+	case s.params.DisableSwitch:
+		// DHCTL_CLI_NO_SWITCH_TO_NODE_USER keeps the client as it is, on the host the user
+		// passed. That can be a name or an address no state lists, of a machine that is
+		// still there: it stays first, and the masters from the states are for reconnects.
+		const msg = "SSH host %s is not found among control-plane addresses in the states, and switching clients is disabled: keeping it"
+		if s.keptUnknownHost != currentHost {
+			s.keptUnknownHost = currentHost
+			s.warn(msg, currentHost)
+		} else {
+			s.debug(msg, currentHost)
+		}
+
+		if current := session.CurrentHost(sess); current.Host != "" {
+			setHostsKeepingCurrent(sess, append([]session.Host{current}, hosts...))
+		} else {
+			sess.SetAvailableHosts(hosts)
+		}
+	default:
+		s.debug("SSH host %s is not a control-plane node anymore, switching the client to the remaining ones", currentHost)
+		if err := s.refreshSSHClient(ctx, sshProvider, sshCl, hosts); err != nil {
+			return nil, err
+		}
+	}
+
+	s.saveMasterHosts(ctx, hosts)
+	return hosts, nil
+}
+
 func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params replaceKubeClientParams) error {
 	if len(params.state) == 0 {
 		return fmt.Errorf("Empty node states for replacing client")
@@ -345,67 +468,170 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 
 	settings := sshCl.Session()
 
-	availableHosts := make([]session.Host, 0, len(params.state))
-
-	ipExtractor, err := newSSHIPExtractor(s)
+	availableHosts, err := s.masterHostsFromStates(ctx, params.state, settings.BastionHost, newLazySSHIPExtractor(s), false)
 	if err != nil {
 		return err
-	}
-
-	for nodeName, stateBytes := range params.state {
-		ip, err := ipExtractor.getIPForSSH(s.ctx.Ctx(), &sshIPExtractorParams{
-			nodeName: nodeName,
-			state:    stateBytes,
-			settings: settings,
-		})
-		if err != nil {
-			return err
-		}
-
-		if ip != "" {
-			availableHosts = append(availableHosts, session.Host{Host: ip, Name: nodeName})
-		}
 	}
 
 	if len(availableHosts) == 0 {
 		return fmt.Errorf("Cannot switch clients: no available hosts found in node states")
 	}
 
-	if s.lockRunner != nil {
-		s.lockRunner.Stop()
-	}
-
-	s.debug("Stopping kube proxies for replacing kube client")
-
-	// todo during migrate to lib-connection
-	// please use .*Switch.* function in ssh provider
-	// also because we will use kube provider
-	// setting kube client not needed
-
-	s.debug("Creating new ssh client for replacing kube client")
-
 	sess := session.NewSession(session.Input{
-		User:           params.convergeState.NodeUserCredentials.Name,
-		Port:           settings.Port,
-		BastionHost:    settings.BastionHost,
-		BastionPort:    settings.BastionPort,
-		BastionUser:    settings.BastionUser,
-		ExtraArgs:      settings.ExtraArgs,
-		AvailableHosts: availableHosts,
-		BecomePass:     params.convergeState.NodeUserCredentials.Password,
+		User:            params.convergeState.NodeUserCredentials.Name,
+		Port:            settings.Port,
+		BastionHost:     settings.BastionHost,
+		BastionPort:     settings.BastionPort,
+		BastionUser:     settings.BastionUser,
+		BastionPassword: settings.BastionPassword,
+		ExtraArgs:       settings.ExtraArgs,
+		AvailableHosts:  availableHosts,
+		BecomePass:      params.convergeState.NodeUserCredentials.Password,
 	})
 
 	pkeys := privateKeysForSwitch(sshCl.PrivateKeys(), params.appendPKey)
 
-	newSSHClient, err := sshProvider.SwitchClient(ctx, sess, pkeys)
+	return s.switchSSHClient(ctx, sshProvider, sess, pkeys)
+}
+
+type sshHostExtractor interface {
+	masterIPs(ctx context.Context, params *sshIPExtractorParams) (infrastructure.OutputMasterIPs, error)
+}
+
+// lazySSHIPExtractor avoids preparing a temporary directory and an output executor when
+// every address is already cached from an earlier state read or the apply outputs.
+type lazySSHIPExtractor struct {
+	switcher *KubeClientSwitcher
+	delegate *sshIPExtractor
+}
+
+func newLazySSHIPExtractor(s *KubeClientSwitcher) *lazySSHIPExtractor {
+	return &lazySSHIPExtractor{switcher: s}
+}
+
+func (e *lazySSHIPExtractor) masterIPs(ctx context.Context, params *sshIPExtractorParams) (infrastructure.OutputMasterIPs, error) {
+	if e.delegate == nil {
+		extractor, err := newSSHIPExtractor(e.switcher)
+		if err != nil {
+			return infrastructure.OutputMasterIPs{}, err
+		}
+
+		e.delegate = extractor
+	}
+
+	return e.delegate.masterIPs(ctx, params)
+}
+
+// masterHostsFromStates extracts the SSH address of every master from its state. A state
+// without addresses is skipped: its machine is not there yet. With strict, a failed
+// "output" fails the whole call, so the caller never acts on a partial inventory; without
+// it the node is skipped, which is enough to pick a host to connect to.
+func (s *KubeClientSwitcher) masterHostsFromStates(ctx context.Context, nodesState map[string][]byte, bastionHost string, ipExtractor sshHostExtractor, strict bool) ([]session.Host, error) {
+	availableHosts := make([]session.Host, 0, len(nodesState))
+
+	for nodeName, stateBytes := range nodesState {
+		ips, err := s.masterIPsFromState(ctx, nodeName, stateBytes, ipExtractor)
+		if err != nil {
+			if strict || !errors.Is(err, errIPExtraction) {
+				return nil, err
+			}
+
+			s.warn("%v\nSkipping adding node to ssh client", err)
+			continue
+		}
+
+		if ips.SSH == "" && ips.Internal == "" {
+			s.warn("IPs for node '%s' not found. Skipping adding node to ssh client", nodeName)
+			continue
+		}
+
+		// Through a bastion only the internal address is routable.
+		ip := ips.SSH
+		if bastionHost != "" {
+			ip = ips.Internal
+		}
+
+		s.debug("Using IP '%s' for node %s (bastion host: '%s')", ip, nodeName, bastionHost)
+
+		if ip != "" {
+			availableHosts = append(availableHosts, session.Host{Host: ip, Name: nodeName})
+		}
+	}
+
+	sort.Sort(session.SortByName(availableHosts))
+	return availableHosts, nil
+}
+
+// masterIPsFromState reads both addresses of a master from its state, once per state.
+// The pair is kept rather than the address picked from it, for the pick depends on the
+// bastion of the caller. A failure is not kept: the next call reads the state again.
+func (s *KubeClientSwitcher) masterIPsFromState(ctx context.Context, nodeName string, state []byte, ipExtractor sshHostExtractor) (infrastructure.OutputMasterIPs, error) {
+	stateHash := sha256.Sum256(state)
+	if entry, ok := s.masterIPs[nodeName]; ok && entry.stateHash == stateHash {
+		return entry.ips, nil
+	}
+
+	ips, err := ipExtractor.masterIPs(ctx, &sshIPExtractorParams{nodeName: nodeName, state: state})
 	if err != nil {
-		return fmt.Errorf("failed to start SSH client: %w", err)
+		return infrastructure.OutputMasterIPs{}, err
+	}
+
+	s.rememberMasterIPs(nodeName, stateHash, ips)
+	return ips, nil
+}
+
+// RememberMasterIPs keeps the addresses an apply has just read from the new state of a
+// master, so the refresh that follows the apply does not read them from it again.
+func (s *KubeClientSwitcher) RememberMasterIPs(nodeName string, state []byte, sshIP, internalIP string) {
+	s.rememberMasterIPs(nodeName, sha256.Sum256(state), infrastructure.OutputMasterIPs{SSH: sshIP, Internal: internalIP})
+}
+
+func (s *KubeClientSwitcher) rememberMasterIPs(nodeName string, stateHash [sha256.Size]byte, ips infrastructure.OutputMasterIPs) {
+	if s.masterIPs == nil {
+		s.masterIPs = make(map[string]masterIPsEntry)
+	}
+
+	s.masterIPs[nodeName] = masterIPsEntry{stateHash: stateHash, ips: ips}
+}
+
+// refreshSSHClient moves the client to the given hosts, for the one it is connected to is
+// gone. Everything else about the session stays: the same user reaches the same kind of
+// machine through the same bastion.
+func (s *KubeClientSwitcher) refreshSSHClient(ctx context.Context, sshProvider libcon.SSHProvider, sshCl libcon.SSHClient, hosts []session.Host) error {
+	sess := sshCl.Session().Copy()
+	sess.SetAvailableHosts(hosts)
+
+	return s.switchSSHClient(ctx, sshProvider, sess, sshCl.PrivateKeys())
+}
+
+func (s *KubeClientSwitcher) switchSSHClient(ctx context.Context, sshProvider libcon.SSHProvider, sess *session.Session, privateKeys []session.AgentPrivateKey) error {
+	// The lease is renewed through the kube client being replaced. Deleting it for that
+	// time would let someone else take it, so only its renewal stops.
+	if s.lockRunner != nil {
+		s.lockRunner.PauseRenew()
+	}
+
+	s.debug("Creating new ssh client for replacing kube client")
+
+	// Nothing renews or deletes the paused lease when the replacement cannot complete.
+	// Explain why the next converge may have to wait for it to expire.
+	lockLeft := func() {
+		if s.lockRunner != nil {
+			s.warn("The converge lock is no longer renewed and may stay in the cluster until its lease expires: the next converge may wait for it.")
+		}
+	}
+
+	newSSHClient, err := sshProvider.SwitchClient(ctx, sess, privateKeys)
+	if err != nil {
+		lockLeft()
+		return fmt.Errorf("%w: failed to start SSH client: %w", ErrSSHClientSwitchFailed, err)
 	}
 
 	s.debug("SSH client started for replacing kube client")
 
 	if err := newSSHClient.RefreshPrivateKeys(ctx); err != nil {
-		return fmt.Errorf("Failed to refresh ssh agent private keys: %w", err)
+		lockLeft()
+		return fmt.Errorf("%w: failed to refresh ssh agent private keys: %w", ErrSSHClientSwitchFailed, err)
 	}
 
 	s.debug("Private keys refreshed for replacing kube client")
@@ -413,9 +639,9 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 	if s.lockRunner != nil {
 		s.debugStartOperation("reset lock after replacing kube client")
 
-		err := s.lockRunner.ResetLock(s.ctx.Ctx())
-		if err != nil {
-			return fmt.Errorf("Failed to reset lock: %w", err)
+		if err := s.lockRunner.ResetLock(s.ctx.Ctx()); err != nil {
+			lockLeft()
+			return fmt.Errorf("%w: failed to reset lock: %w", ErrSSHClientSwitchFailed, err)
 		}
 
 		s.debug("lock was reset after replacing kube client")
@@ -431,6 +657,49 @@ func privateKeysForSwitch(current []session.AgentPrivateKey, additional *session
 	}
 
 	return privateKeys
+}
+
+// setHostsKeepingCurrent replaces the hosts of a live session and keeps the one it is
+// connected to. SetAvailableHosts selects the first host, so the current one goes first:
+// otherwise the session would name one machine while its connection is open to another.
+// It reports false, leaving the session as it is, when the current host is not among hosts.
+func setHostsKeepingCurrent(sess *session.Session, hosts []session.Host) bool {
+	currentHost := sess.Host()
+	i := slices.IndexFunc(hosts, func(h session.Host) bool { return h.Host == currentHost })
+	if currentHost == "" || i < 0 {
+		return false
+	}
+
+	ordered := append([]session.Host{hosts[i]}, slices.Delete(slices.Clone(hosts), i, i+1)...)
+	sess.SetAvailableHosts(ordered)
+
+	return true
+}
+
+func (s *KubeClientSwitcher) bastionHostFromConfig() string {
+	if s.ctx.SSHProviderInitializer == nil {
+		return ""
+	}
+
+	connectionConfig := s.ctx.SSHProviderInitializer.GetConfig()
+	if connectionConfig == nil || connectionConfig.Config == nil {
+		return ""
+	}
+
+	return connectionConfig.Config.BastionHost
+}
+
+func (s *KubeClientSwitcher) saveMasterHosts(ctx context.Context, hosts []session.Host) {
+	if s.ctx.StateCache() == nil {
+		return
+	}
+
+	hostsByName := make(map[string]string, len(hosts))
+	for _, host := range hosts {
+		hostsByName[host.Name] = host.Host
+	}
+
+	statecache.SaveMasterHostsToCache(ctx, s.ctx.StateCache(), hostsByName)
 }
 
 func (s *KubeClientSwitcher) tmpDirForConverger() (string, error) {
@@ -639,7 +908,6 @@ func (s *KubeClientSwitcher) debugStartOperation(action string) {
 type sshIPExtractorParams struct {
 	nodeName string
 	state    []byte
-	settings *session.Session
 }
 
 type sshIPExtractor struct {
@@ -663,55 +931,30 @@ func newSSHIPExtractor(s *KubeClientSwitcher) (*sshIPExtractor, error) {
 	}, nil
 }
 
-func (e *sshIPExtractor) getIPForSSH(ctx context.Context, params *sshIPExtractorParams) (string, error) {
+func (e *sshIPExtractor) masterIPs(ctx context.Context, params *sshIPExtractorParams) (infrastructure.OutputMasterIPs, error) {
 	executor, err := e.getExecutor(ctx, params)
 	if err != nil {
-		return "", err
+		return infrastructure.OutputMasterIPs{}, err
 	}
 
 	// do not cleanup provider after getting output executor!
 
 	statePath, err := e.prepareState(params)
 	if err != nil {
-		return "", err
+		return infrastructure.OutputMasterIPs{}, err
 	}
-
-	nodeName := params.nodeName
+	defer func() {
+		if err := os.Remove(statePath); err != nil {
+			e.switcher.debug("Cannot remove temporary state %s: %v", statePath, err)
+		}
+	}()
 
 	addresses, err := infrastructure.GetMasterIPAddressForSSH(ctx, statePath, executor)
 	if err != nil {
-		e.switcher.warn(
-			"Cannot extract IPs for node '%s':\n%v\nSkipping adding node to ssh client",
-			nodeName,
-			err,
-		)
-		return "", nil
+		return infrastructure.OutputMasterIPs{}, fmt.Errorf("%w for node '%s': %w", errIPExtraction, params.nodeName, err)
 	}
 
-	sshIP := addresses.SSH
-	internal := addresses.Internal
-
-	if sshIP == "" && internal == "" {
-		e.switcher.warn("IPs for node '%s' not found. Skipping adding node to ssh client", nodeName)
-		return "", nil
-	}
-
-	bastion := params.settings.BastionHost
-
-	if bastion != "" {
-		e.switcher.debug(
-			"Using node internal IP '%s' for node %s because bastion host '%s' was passed",
-			internal,
-			nodeName,
-			bastion,
-		)
-
-		return internal, nil
-	}
-
-	e.switcher.debug("Using direct ssh IP '%s' for node %s", sshIP, nodeName)
-
-	return sshIP, nil
+	return *addresses, nil
 }
 
 func (e *sshIPExtractor) getExecutor(ctx context.Context, params *sshIPExtractorParams) (infrastructure.OutputExecutor, error) {
@@ -750,7 +993,8 @@ func (e *sshIPExtractor) prepareState(params *sshIPExtractorParams) (string, err
 
 	e.switcher.debug("State path for extracting IP for node %s: %s", nodeName, statePath)
 
-	err := os.WriteFile(statePath, params.state, 0o644)
+	// the state can hold secrets of the cloud provider
+	err := os.WriteFile(statePath, params.state, 0o600)
 	if err != nil {
 		return "", fmt.Errorf("Failed to write infrastructure state for %s in %s: %w", nodeName, statePath, err)
 	}

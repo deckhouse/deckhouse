@@ -25,8 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	libcon "github.com/deckhouse/lib-connection/pkg"
-	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -37,17 +35,14 @@ import (
 )
 
 type HookForDestroyPipeline struct {
-	getter            kubernetes.KubeClientProviderWithCtx
-	sshProvider       libcon.SSHProvider
-	nodeToDestroy     string
-	oldMasterIPForSSH string
-	commanderMode     bool
+	getter        kubernetes.KubeClientProviderWithCtx
+	nodeToDestroy string
+	commanderMode bool
 }
 
-func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, sshProvider libcon.SSHProvider, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
+func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
 		getter:        getter,
-		sshProvider:   sshProvider,
 		nodeToDestroy: nodeToDestroy,
 		commanderMode: commanderMode,
 	}
@@ -68,12 +63,9 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" {
-		h.oldMasterIPForSSH = ""
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Got empty master IP for ssh for node %s. Skipping removal of control-plane from node.", h.nodeToDestroy))
 		return false, nil
 	}
-
-	h.oldMasterIPForSSH = masterIP
 
 	kubeClient, err := h.getter.KubeClientCtx(ctx)
 	if err != nil {
@@ -93,21 +85,11 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	return false, nil
 }
 
-func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
-	if h.commanderMode {
-		return nil
-	}
-
-	cl, err := h.sshProvider.Client(ctx)
-	if err != nil {
-		dhlog.FromContext(ctx).DebugContext(ctx, "Node interface is not ssh")
-		return nil
-	}
-
-	if h.oldMasterIPForSSH != "" {
-		cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToDestroy})
-	}
-
+// AfterAction leaves the SSH session alone. Removing the destroyed node from it here would
+// move the host the session names without moving its open connection. The client was moved
+// off this node before the destroy, and MasterNodeGroupController rebuilds the inventory
+// from the remaining states after it.
+func (h *HookForDestroyPipeline) AfterAction(context.Context, infrastructure.RunnerInterface) error {
 	return nil
 }
 

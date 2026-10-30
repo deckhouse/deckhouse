@@ -27,7 +27,6 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/settings"
-	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -47,12 +46,10 @@ type ClientSwitcher interface {
 
 type HookForUpdatePipeline struct {
 	*Checker
-	kubeGetter        kubernetes.KubeClientProviderWithCtx
-	sshProvider       libcon.SSHProvider
-	nodeToConverge    string
-	oldMasterIPForSSH string
-	commanderMode     bool
-	clientSwitcher    ClientSwitcher
+	kubeGetter     kubernetes.KubeClientProviderWithCtx
+	nodeToConverge string
+	commanderMode  bool
+	clientSwitcher ClientSwitcher
 }
 
 func NewHookForUpdatePipeline(
@@ -84,7 +81,6 @@ func NewHookForUpdatePipeline(
 	return &HookForUpdatePipeline{
 		Checker:       checker,
 		kubeGetter:    kubeGetter,
-		sshProvider:   sshProvider,
 		commanderMode: commanderMode,
 	}
 }
@@ -140,7 +136,6 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 
 	masterIP := outputs.MasterIPForSSH
 	if masterIP == "" {
-		h.oldMasterIPForSSH = ""
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Got empty master IP for ssh for node %s.", h.nodeToConverge))
 		return false, nil
 	}
@@ -150,8 +145,6 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 			return false, err
 		}
 	}
-
-	h.oldMasterIPForSSH = masterIP
 
 	kubeClient, err := h.kubeGetter.KubeClientCtx(ctx)
 	if err != nil {
@@ -171,6 +164,9 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	return false, nil
 }
 
+// AfterAction leaves the SSH session alone. Changing hosts here could move the host the
+// session names without moving its open connection. MasterNodeGroupController rebuilds
+// the inventory from all the states after the apply.
 func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
 	if runner.GetChangesInPlan() != plan.HasDestructiveChanges {
 		return nil
@@ -184,18 +180,6 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner, nil)
 	if err != nil {
 		return fmt.Errorf("failed to get master node pipeline outputs: %w", err)
-	}
-
-	if !h.commanderMode {
-		cl, err := h.sshProvider.Client(ctx)
-		if err != nil {
-			panic("Node interface is not ssh")
-		}
-
-		if h.oldMasterIPForSSH != "" {
-			cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
-		}
-		cl.Session().AddAvailableHosts(session.Host{Host: outputs.MasterIPForSSH, Name: h.nodeToConverge})
 	}
 
 	// Before waiting for the master node to be listed as a member of the etcd cluster,

@@ -54,6 +54,10 @@ type NodeGroupController struct {
 	desiredReplicas int
 	layoutStep      infrastructure.Step
 
+	// nodesToDelete are taken out of state.State before the nodes are updated, while
+	// their machines keep running until deleteNodes destroys them.
+	nodesToDelete []nodeToDeleteInfo
+
 	globalOptions *options.GlobalOptions
 }
 
@@ -95,6 +99,8 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	c.nodesToDelete = nodesToDeleteInfo
 
 	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Nodes to delete: %d. Starting to update nodes", len(nodesToDeleteInfo)))
 
@@ -375,11 +381,6 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 		return err
 	}
 
-	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
-	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
-	}
-
 	for _, nodeName := range nodeNames {
 		processTitle := fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", nodeName, c.name, replicas)
 
@@ -392,6 +393,13 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 			err = c.nodeGroup.updateNode(ctx, nodeName)
 			if err != nil {
 				return err
+			}
+
+			// The update can have switched the SSH client, and the kube client tunnelled
+			// through the old one with it: the provider hands out a new one.
+			kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+			if err != nil {
+				return fmt.Errorf("Could not get kube client: %w", err)
 			}
 
 			// we hide deckhouse logs because we always have config
@@ -410,8 +418,10 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 			// - after making a plan, before converging a node, we get confirmation from user for start converge
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeName, err))
 
-			// in commander mode returns immediately, because we can break all master nodes
-			if ctx.CommanderMode() {
+			// Commander stops after the first failure to avoid breaking multiple master nodes.
+			// A lost SSH client stops it the same way, for the lock is not renewed any more,
+			// and so does an SSH inventory that could not follow a changed master state.
+			if ctx.CommanderMode() || errors.Is(err, context.ErrSSHClientSwitchFailed) || errors.Is(err, errMasterHostsRefreshFailed) {
 				break
 			}
 		}

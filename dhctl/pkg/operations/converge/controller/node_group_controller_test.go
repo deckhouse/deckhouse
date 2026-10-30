@@ -125,7 +125,7 @@ func Test_getNodesToDeleteInfo(t *testing.T) {
 			state := make(map[string][]byte)
 
 			for _, node := range test.nodes {
-				state[node] = nil
+				state[node] = []byte(node)
 			}
 
 			nodeToDeleteInfo, err := getNodesToDeleteInfo(t.Context(), test.replicas, state)
@@ -141,9 +141,23 @@ func Test_getNodesToDeleteInfo(t *testing.T) {
 
 			for _, node := range nodeToDeleteInfo {
 				deleted = append(deleted, node.name)
+				require.Equal(t, []byte(node.name), node.state, "the node to delete carries its own state")
 			}
 
 			require.Equal(t, test.deleted, deleted)
+
+			// The nodes to delete leave the passed states: the masters are updated and the
+			// SSH inventory is refreshed from what remains, and a node about to be destroyed
+			// must not come back into it.
+			remaining := make([]string, 0, len(state))
+			for node := range state {
+				remaining = append(remaining, node)
+			}
+
+			for _, node := range deleted {
+				require.NotContains(t, remaining, node)
+			}
+			require.Len(t, remaining, len(test.nodes)-len(deleted))
 		})
 	}
 }

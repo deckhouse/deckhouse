@@ -15,6 +15,7 @@
 package lease
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -177,5 +178,140 @@ func TestAcquireExistingExpiredForeignLease(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, storedLease.Spec.HolderIdentity)
 		require.Equal(t, "new-holder", *storedLease.Spec.HolderIdentity)
+	})
+}
+
+type fakeKubeGetter struct {
+	client *client.KubernetesClient
+}
+
+func (g fakeKubeGetter) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
+	return g.client, nil
+}
+
+// Converge re-takes its own lease after pausing its renewal for an SSH client switch.
+// The force it does that with must renew a live lease of its own identity and still
+// refuse a live lease somebody else holds.
+func TestAcquireExistingActiveLeaseWithForce(t *testing.T) {
+	newLiveLease := func(holder string) *coordinationv1.Lease {
+		duration := int32(300)
+		renewTime := metav1.NewMicroTime(time.Now())
+
+		return &coordinationv1.Lease{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-lock", Namespace: "default"},
+			Spec: coordinationv1.LeaseSpec{
+				HolderIdentity:       &holder,
+				RenewTime:            &renewTime,
+				LeaseDurationSeconds: &duration,
+			},
+		}
+	}
+
+	newLock := func(kubeClient *client.KubernetesClient) *LeaseLock {
+		return &LeaseLock{
+			getter: fakeKubeGetter{client: kubeClient},
+			config: LeaseLockConfig{
+				Name:                 "test-lock",
+				Namespace:            "default",
+				Identity:             "converge",
+				LeaseDurationSeconds: 300,
+				RetryWaitDuration:    time.Millisecond,
+			},
+		}
+	}
+
+	t.Run("own live lease is renewed", func(t *testing.T) {
+		kubeClient := client.NewFakeKubernetesClient()
+		existingLease, err := kubeClient.CoordinationV1().Leases("default").
+			Create(t.Context(), newLiveLease("converge"), metav1.CreateOptions{})
+		require.NoError(t, err)
+
+		updatedLease, err := newLock(kubeClient).acquireExistingLease(t.Context(), kubeClient, existingLease, true)
+
+		require.NoError(t, err)
+		require.Equal(t, "converge", *updatedLease.Spec.HolderIdentity)
+	})
+
+	t.Run("foreign live lease is refused", func(t *testing.T) {
+		kubeClient := client.NewFakeKubernetesClient()
+		existingLease := newLiveLease("terraform-auto-converger")
+
+		updatedLease, err := newLock(kubeClient).acquireExistingLease(t.Context(), kubeClient, existingLease, true)
+
+		require.ErrorContains(t, err, "terraform-auto-converger")
+		require.Nil(t, updatedLease)
+		require.Equal(t, "terraform-auto-converger", *existingLease.Spec.HolderIdentity)
+	})
+}
+
+// pausingGetter stops the renewal the moment a renew reaches for the kube client, the
+// way converge pauses it to replace the SSH client that kube client runs over.
+type pausingGetter struct {
+	lock   *LeaseLock
+	client *client.KubernetesClient
+}
+
+func (g *pausingGetter) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
+	if g.lock != nil {
+		g.lock.StopAutoRenew()
+		g.lock = nil
+	}
+
+	return g.client, nil
+}
+
+// A renew in flight when the renewal is paused fails on the client being replaced. That
+// failure must not reach OnRenewError: in converge it sends SIGINT and kills a run whose
+// lease was already taken again.
+func TestRenewFailingAfterStopDoesNotReportError(t *testing.T) {
+	run := func(t *testing.T, pause bool) bool {
+		identity := "converge"
+		renewErrors := make(chan error, 1)
+		getter := &pausingGetter{client: client.NewFakeKubernetesClient()}
+
+		lock := NewLeaseLock(getter, LeaseLockConfig{
+			Name:                 "test-lock",
+			Namespace:            "default",
+			Identity:             identity,
+			LeaseDurationSeconds: 2,
+			RenewEverySeconds:    1,
+			RetryWaitDuration:    10 * time.Millisecond,
+			OnRenewError:         func(err error) { renewErrors <- err },
+		})
+		// the fake cluster has no such lease, so every renew fails
+		lock.lease = &coordinationv1.Lease{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-lock", Namespace: "default"},
+			Spec:       coordinationv1.LeaseSpec{HolderIdentity: &identity},
+		}
+		if pause {
+			getter.lock = lock
+		}
+
+		done := make(chan struct{})
+		go func() {
+			lock.startAutoRenew(t.Context())
+			close(done)
+		}()
+
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Fatal("autorenew did not stop")
+		}
+
+		select {
+		case <-renewErrors:
+			return true
+		default:
+			return false
+		}
+	}
+
+	t.Run("paused while renewing", func(t *testing.T) {
+		require.False(t, run(t, true))
+	})
+
+	t.Run("not paused", func(t *testing.T) {
+		require.True(t, run(t, false))
 	})
 }
