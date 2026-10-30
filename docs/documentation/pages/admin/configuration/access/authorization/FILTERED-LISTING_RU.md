@@ -74,6 +74,87 @@ d8 k get pods -A --scope=accessible -w
 - Если команда `d8 k get <resource> -A` без указания `--scope` завершается ошибкой `403 Forbidden`, ⁠[Deckhouse CLI](../../../../glossary.html#deckhouse-cli) подсказывает подходящие варианты использования флага.
 - Для значений флага `--scope` работает автоматическое дополнение в командной оболочке (shell completion), включая имена существующих проектов (`--scope=project:<TAB>`).
 
+#### Пример запроса интерфейсом данных о том, где пользователю разрешены действия
+
+При включённом режиме мультитенантности ([`enableMultiTenancy`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)) можно использовать ресурс SelfScopedAccessReview для запроса информации о том, в каких неймспейсах пользователю разрешены действия. Запрос предоставляет создавшему его пользователю информацию о том, где ему разрешены действия в пределах [области фильтрации](#области-фильтрации-ресурсов). Один запрос возвращает сведения о доступных неймспейсах без отдельных запросов для каждого из них. Неймспейсы считаются по тому же правилу, по которому фильтруется список с той же областью, поэтому раздел, построенный на ответе, открывается ровно тогда, когда в его списке есть объекты.
+
+Создать ресурс может любой аутентифицированный пользователь, и ответ касается только его самого. Запрос с полями `spec.user`, `spec.groups`, `spec.uid` или `spec.extra` отклоняется.
+
+Пример запроса от страницы веб-интерфейса Deckhouse, которая показывает Deployment всех проектов, предлагает создать новый и показывает логи подов:
+
+```shell
+d8 k create -o yaml -f - <<EOF
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: SelfScopedAccessReview
+spec:
+  scope: projects
+  requests:
+  - group: apps
+    resource: deployments
+    verbs: [list, watch]
+  - group: apps
+    resource: deployments
+    verbs: [create]
+    includeNamespaces: true
+  - group: ""
+    resource: pods
+    subresource: log
+    verbs: [get]
+    includeNamespaces: true
+EOF
+```
+
+Пример ответа пользователю, который администрирует неймспейсы `shop-dev` и `shop-stage` проекта и только читает `shop-prod` без доступа к логам подов:
+
+```yaml
+status:
+  results:
+  - allowed: true
+    cluster: false
+    count: 3
+  - allowed: true
+    cluster: false
+    count: 2
+    namespaces: [shop-dev, shop-stage]
+  - allowed: true
+    cluster: false
+    count: 2
+    namespaces: [shop-dev, shop-stage]
+```
+
+Пример ответа администратору кластера. Неймспейсы не считаются и не перечисляются даже при `includeNamespaces: true`:
+
+```yaml
+status:
+  results:
+  - allowed: true
+    cluster: true
+  - allowed: true
+    cluster: true
+  - allowed: true
+    cluster: true
+```
+
+Пример ответа пользователю, который может только читать Deployment в неймспейсе `billing-prod` другого проекта:
+
+```yaml
+status:
+  results:
+  - allowed: true
+    cluster: false
+    count: 1
+  - allowed: false
+    cluster: false
+    count: 0
+    namespaces: []
+  - allowed: false
+    cluster: false
+    count: 0
+    namespaces: []
+```
+
+Подробная информация о ресурсе (запросе) SelfScopedAccessReview (принцип работы, описания полей запроса и ответа, описания ошибок и рекомендации по использованию) — [в документации модуля `user-authz`](/modules/user-authz/faq.html#как-интерфейсу-узнать-где-пользователю-разрешено-действие).
+
 ## Использование из собственного кода (HTTP API)
 
 CLI является лишь транспортным механизмом. Фильтрацию включают два HTTP-заголовка запроса к
@@ -143,7 +224,7 @@ curl -H "Authorization: Bearer $TOKEN" \
    - **Классификация** — какие неймспейсы соответствуют значению
      `--scope`. Определяется лейблом `projects.deckhouse.io/project`,
      которым [модуль `multitenancy-manager`](/modules/multitenancy-manager/) помечает неймспейсы проектов.
-     Резолвится прямым запросом к kube-apiserver и не зависит от пользователя.
+     Определяется прямым запросом к kube-apiserver и не зависит от пользователя.
    - **Граница доступа** (в коде механизма — RBAC floor) — какие неймспейсы
      пользователю реально доступны для *данного ресурса и данной операции*.
      Вычисляется одним запросом `SelfScopedAccessReview` к API `authorization.deckhouse.io`

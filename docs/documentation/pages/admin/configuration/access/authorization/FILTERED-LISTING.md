@@ -77,6 +77,87 @@ Details:
 - Shell completion works for the `--scope` flag values, including the names of
   existing projects (`--scope=project:<TAB>`).
 
+#### Example of an interface query for where the user may perform actions
+
+With the multitenancy mode enabled ([`enableMultiTenancy`](/modules/user-authz/configuration.html#parameters-enablemultitenancy)), you can use the SelfScopedAccessReview resource to request information about the namespaces in which the user is allowed to perform actions. The query gives the user who creates it information on where actions are allowed for them within a [filtering scope](#resource-filtering-scopes). One query replaces an access check per namespace. The namespaces are counted by the rule that filters a list sent with the same scope, so a section built on the answer opens exactly when its list has objects to return.
+
+Any authenticated user can create the resource, and it answers only about the caller. A query with the `spec.user`, `spec.groups`, `spec.uid` or `spec.extra` fields is refused.
+
+Example query from a Deckhouse web interface page that shows deployments of all projects, offers to create one and shows pod logs:
+
+```shell
+d8 k create -o yaml -f - <<EOF
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: SelfScopedAccessReview
+spec:
+  scope: projects
+  requests:
+  - group: apps
+    resource: deployments
+    verbs: [list, watch]
+  - group: apps
+    resource: deployments
+    verbs: [create]
+    includeNamespaces: true
+  - group: ""
+    resource: pods
+    subresource: log
+    verbs: [get]
+    includeNamespaces: true
+EOF
+```
+
+Example answer for a user who administers the `shop-dev` and `shop-stage` namespaces of a project and has read access without pod logs in `shop-prod`:
+
+```yaml
+status:
+  results:
+  - allowed: true
+    cluster: false
+    count: 3
+  - allowed: true
+    cluster: false
+    count: 2
+    namespaces: [shop-dev, shop-stage]
+  - allowed: true
+    cluster: false
+    count: 2
+    namespaces: [shop-dev, shop-stage]
+```
+
+Example answer for a cluster administrator. The namespaces are neither counted nor listed, even with `includeNamespaces: true`:
+
+```yaml
+status:
+  results:
+  - allowed: true
+    cluster: true
+  - allowed: true
+    cluster: true
+  - allowed: true
+    cluster: true
+```
+
+Example answer for a user who can only read deployments in the `billing-prod` namespace of another project:
+
+```yaml
+status:
+  results:
+  - allowed: true
+    cluster: false
+    count: 1
+  - allowed: false
+    cluster: false
+    count: 0
+    namespaces: []
+  - allowed: false
+    cluster: false
+    count: 0
+    namespaces: []
+```
+
+For details on the SelfScopedAccessReview resource (query), including how it works, the query and answer fields, errors and usage recommendations, refer to the [`user-authz` module documentation](/modules/user-authz/faq.html#how-does-an-interface-find-out-where-a-user-may-perform-an-action).
+
 ## Using from your own code (HTTP API)
 
 The CLI is just a transport mechanism. The filtering is enabled by two HTTP request headers

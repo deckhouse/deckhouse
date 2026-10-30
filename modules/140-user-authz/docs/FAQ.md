@@ -1224,11 +1224,11 @@ This is convenient for scripts and interfaces: there is no need to iterate over 
 
 ## How does an interface find out where a user may perform an action?
 
-With the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), the SelfScopedAccessReview resource answers for the user who creates it where actions are allowed within a [filtering scope](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/filtered-listing.html): in the whole cluster, in how many namespaces of the scope and, on request, in which ones. One query replaces an access check per namespace. The namespaces are counted by the rule that filters a list sent with the same scope, so a section built on the answer opens exactly when its list has objects to return.
+With the multitenancy mode enabled ([`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy)), the SelfScopedAccessReview resource gives the user who creates it with information about the namespaces in which they are allowed to perform actions within the [filtering scope](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/filtered-listing.html): in the whole cluster, in how many namespaces of the scope and, on request, in which ones. One query replaces an access check per namespace. The namespaces are counted by the rule that filters a list sent with the same scope, so a section built on the answer opens exactly when its list has objects to return.
 
 Any authenticated user can create the resource, and it answers only about the caller. A query with the `spec.user`, `spec.groups`, `spec.uid` or `spec.extra` fields is refused.
 
-Example query from a console page that shows deployments of all projects, offers to create one and shows pod logs:
+Example query from a Deckhouse web interface page that shows deployments of all projects, offers to create one and shows pod logs:
 
 ```shell
 d8 k create -o yaml -f - <<EOF
@@ -1252,7 +1252,7 @@ spec:
 EOF
 ```
 
-Answer for a user who administers the `shop-dev` and `shop-stage` namespaces of a project and has read access without pod logs in `shop-prod`:
+Example answer for a user who administers the `shop-dev` and `shop-stage` namespaces of a project and has read access without pod logs in `shop-prod`:
 
 ```yaml
 status:
@@ -1270,7 +1270,7 @@ status:
     namespaces: [shop-dev, shop-stage]
 ```
 
-Answer for a cluster administrator. The namespaces are neither counted nor listed, even with `includeNamespaces: true`:
+Example answer for a cluster administrator. The namespaces are neither counted nor listed, even with `includeNamespaces: true`:
 
 ```yaml
 status:
@@ -1283,7 +1283,7 @@ status:
     cluster: true
 ```
 
-Answer for a user who can only read deployments in the `billing-prod` namespace of another project:
+Example answer for a user who can only read deployments in the `billing-prod` namespace of another project:
 
 ```yaml
 status:
@@ -1303,27 +1303,27 @@ status:
 
 The query fields:
 
-- `spec.scope`: Scope of the `X-Deckhouse-Scope` header, `accessible`, `projects`, `system` or `project`.
+- `spec.scope`: Scope of the `X-Deckhouse-Scope` header ([filtering scope](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/filtered-listing.html)): `accessible`, `projects`, `system` or `project`.
 - `spec.project`: Project of the `project` scope.
 - `spec.requests`: Actions to check. Each sets the API group (`group`, empty for the core group), the resource (`resource`), the subresource if any (`subresource`) and the verbs (`verbs`). `includeNamespaces: true` asks for the names of the namespaces.
 
-The `status.results` list has an entry per request, in the same order:
+The `status.results` list has an entry per request, in the same order as the requests in the SelfScopedAccessReview:
 
 - `allowed`: The action is allowed in the whole cluster or in at least one namespace of the scope.
 - `cluster`: The action is allowed in the whole cluster. The namespaces are then neither counted nor listed.
 - `count`: Number of namespaces of the scope where the action is allowed.
-- `namespaces`: Those namespaces, sorted, when the request sets `includeNamespaces: true`. An empty list means none.
+- `namespaces`: Namespaces of the scope where the action is allowed, sorted alphabetically, when the request sets `includeNamespaces: true`. An empty list means none.
 - `reason`: `NotFilterable` when the action on a namespaced resource cannot be answered by namespaces: the list of the resource is not filtered by scope. Only a permission in the whole cluster allows such an action.
 - `evaluationError`: Reason why this request could not be checked. The other requests are answered.
 
-The namespaces are counted as follows:
+The namespaces where the action is allowed are counted as follows:
 
 - A namespace counts when every verb of the request is allowed in it. A request for `list` and `watch` counts the namespaces where both are allowed.
 - Only the namespaces the user sees in the `accessiblenamespaces` list are counted and named, and the namespaces where a RoleBinding grants access to every authenticated user (the `system:authenticated` group): RBAC opens them to the user, and the filtered list returns their objects.
 - For `get`, `list` and `watch` of a resource, the answer names the namespaces the list with the same scope returns objects from.
 - Other verbs and subresources, for example `create` or `pods/log`, are checked in every namespace of the scope.
 - `get`, `list` and `watch` of `namespaces` are answered with the accessible namespaces whatever the scope, as the list of namespaces is filtered.
-- `get`, `list` and `watch` of `deckhouse.io/projects` are answered with every accessible namespace: each stands for its project, and a namespace without the `projects.deckhouse.io/project` label for the virtual project `multitenancy-manager` counts it in, `deckhouse` for `d8-*`, `kube-*`, `upmeter-*` and namespaces with the `heritage: deckhouse` or `heritage: upmeter` label, `default` for the rest. So `count` and `namespaces` name namespaces, not projects: a project with three accessible namespaces counts three. A user who may list namespaces in the whole cluster sees every project and gets `cluster: true`.
+- `get`, `list` and `watch` of `deckhouse.io/projects` are answered with every accessible namespace: each stands for its project, and a namespace without the `projects.deckhouse.io/project` label for the virtual project `multitenancy-manager` counts it in, `deckhouse` for `d8-*`, `kube-*`, `upmeter-*` and namespaces with the `heritage: deckhouse` or `heritage: upmeter` label, `default` for the rest. So `count` and `namespaces` list namespaces, not projects: a project with three accessible namespaces counts three. A user who may list namespaces in the whole cluster sees every project and gets `cluster: true`.
 - `update`, `patch` and `delete` of `namespaces` and their subresources are checked for every namespace of the scope, with that namespace as the target: the `ClusterAuthorizationRule` limits apply to them.
 - When a request for `namespaces` combines a read with a write, a namespace opened to every authenticated user but missing from `accessiblenamespaces` counts only if `get` is allowed in it and `list` and `watch` in the whole cluster, as the API server checks them.
 - `create` and `deletecollection` of `namespaces`, every write of `deckhouse.io/projects`, and every action on another cluster-scoped resource, such as `nodes` or `ModuleConfig`, are allowed only by a permission in the whole cluster. Without one the answer is `allowed: false`, with no `count` and no `reason`.
@@ -1343,7 +1343,7 @@ The answer cannot express a permission for named objects only (`resourceNames` i
 
 While the `ClusterAuthorizationRules` are not yet loaded or no longer tracked, the whole query is answered with `503` and the `Retry-After` header: the API server refuses requests in that state too, and an answer computed without the rules would read as a refusal.
 
-The answer applies the `ClusterAuthorizationRule` limits whenever the authorization webhook of `user-authz` is enabled through the `controlPlaneConfigurator.enabled` parameter and the `control-plane-manager` module, which puts it into the API server configuration, is enabled. If a third-party authorization webhook is set by hand in the `apiserver.authz.webhookURL` parameter of the `control-plane-manager` module, the API server may not apply these limits, while the answer still does.
+The answer applies the `ClusterAuthorizationRule` limits whenever the authorization webhook of `user-authz` is enabled through the [`controlPlaneConfigurator.enabled`](configuration.html#parameters-controlplaneconfigurator) parameter and the `control-plane-manager` module, which puts it into the API server configuration, is enabled. If a third-party authorization webhook is set by hand in the [`apiserver.authz.webhookURL`](/modules/control-plane-manager/configuration.html#parameters-apiserver-authz-webhookurl) parameter of the `control-plane-manager` module, the API server may not apply these limits, while the answer still does.
 
 To keep an interface consistent with the data it shows, follow these rules:
 
@@ -1353,7 +1353,7 @@ To keep an interface consistent with the data it shows, follow these rules:
 1. Treat an empty list returned with a scope as the absence of objects, not as missing permissions.
 1. Take the namespaces of a creation form from `namespaces` of a request with `includeNamespaces: true`.
 
-The `projects` and `project` scopes require the `multitenancy-manager` module. Without it, a query with these scopes is refused with `400`, and the `accessible` and `system` scopes work as usual. The cluster then serves no projects, and requests for `deckhouse.io/projects` get `reason: NotFilterable` unless they are allowed in the whole cluster.
+The `projects` and `project` scopes require the [`multitenancy-manager`](/modules/multitenancy-manager/) module to be enabled in the cluster. Without it, a query with these scopes is refused with `400`, and the `accessible` and `system` scopes work as usual. The cluster then serves no projects, and requests for `deckhouse.io/projects` get `reason: NotFilterable` unless they are allowed in the whole cluster.
 
 The server answers with an error in the following cases:
 
