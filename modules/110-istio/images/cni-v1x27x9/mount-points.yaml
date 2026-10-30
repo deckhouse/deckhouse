@@ -2,6 +2,7 @@ dirs:
 - /host/opt/cni/bin
 - /host/etc/cni/net.d
 - /var/run/istio-cni
+- /run
 - /run/istio-cni
 - /tmp/istio-cni
 - /host/proc
