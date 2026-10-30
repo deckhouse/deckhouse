@@ -249,7 +249,12 @@ properties:
             properties:
               service:
                 type: string
-                description: Collector hostname reachable from the mesh (for example a Kubernetes Service DNS name).
+                description: |
+                  OpenTelemetry collector service. The format is `[<namespace>/]<hostname>`.
+
+                  `<hostname>` must be the full hostname of a Service, including the cluster domain (for example, `opentelemetry-collector.observability.svc.cluster.local`), or a ServiceEntry host. Short names and IP addresses do not work. Specify `<namespace>` only if this hostname exists in several namespaces.
+
+                  If Istio cannot find the service, spans are not exported.
                 example: "opentelemetry-collector.observability.svc.cluster.local"
               port:
                 type: integer
@@ -279,9 +284,12 @@ properties:
             properties:
               address:
                 type: string
-                description: Network address of zipkin collector in `<host>:<port>` format (FQDN/IP and port allowed by the regex).
+                description: |
+                  Network address of the Zipkin collector in `<host>:<port>` format.
+
+                  If [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled) is `true`, `<host>` must be the full hostname of a service known to Istio, including the cluster domain, for example `zipkin.myjaeger.svc.cluster.local` for a Kubernetes Service. Short names (such as `zipkin.myjaeger.svc`) and IP addresses do not work in this mode.
                 pattern: '[0-9a-zA-Z\.-]+'
-                example: "zipkin.myjaeger.svc:9411"
+                example: "zipkin.myjaeger.svc.cluster.local:9411"
       kiali:
         type: object
         description: |

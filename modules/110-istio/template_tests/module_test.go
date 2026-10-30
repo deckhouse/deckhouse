@@ -231,10 +231,52 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(mesh.Field("spec.tracing").Exists()).To(BeFalse())
 		})
 
+		It("neither registers nor references deckhouse-tracing when tracing is disabled but a collector is configured", func() {
+			f.ValuesSet("istio.telemetryAPI.enabled", true)
+			f.ValuesSet("istio.tracing.enabled", false)
+			f.ValuesSet("istio.tracing.collector.zipkin.address", "jaeger-collector.tracing.svc.cluster.local:9411")
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2"]`)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(mesh.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+			Expect(mesh.Field("spec.tracing").Exists()).To(BeFalse())
+
+			providers := f.KubernetesResource("Istio", "d8-istio", "v1x25x2").Field("spec.values.meshConfig.extensionProviders")
+			Expect(providers.Get("#.name").String()).To(Equal(`["d8-main"]`))
+		})
+
+		It("uses legacy tracing and does not reference deckhouse-tracing on an operator-free control plane without Telemetry API mode", func() {
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.27":
+  revision: "v1x27"
+  fullVersion: "1.27.9"
+  imageSuffix: "V1x27x9"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.27"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
+			f.ValuesSet("istio.tracing.enabled", true)
+			f.ValuesSet("istio.tracing.collector.zipkin.address", "jaeger-collector.tracing.svc.cluster.local:9411")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			mesh := f.KubernetesResource("Telemetry", "d8-istio", "d8-main")
+			Expect(mesh.Field("spec.metrics.0.providers.0.name").String()).To(Equal("prometheus"))
+			Expect(mesh.Field("spec.tracing").Exists()).To(BeFalse())
+
+			meshConfig := f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x27").Field("data.mesh").String()
+			Expect(meshConfig).To(ContainSubstring(`address: "jaeger-collector.tracing.svc.cluster.local:9411"`))
+			Expect(meshConfig).NotTo(ContainSubstring("deckhouse-tracing"))
+		})
+
 		It("adds tracing to d8-main Telemetry and Zipkin extension provider when tracing uses collector.zipkin", func() {
 			f.ValuesSet("istio.telemetryAPI.enabled", true)
 			f.ValuesSet("istio.tracing.enabled", true)
-			f.ValuesSet("istio.tracing.collector.zipkin.address", "jaeger-collector.tracing.svc:9411")
+			f.ValuesSet("istio.tracing.collector.zipkin.address", "jaeger-collector.tracing.svc.cluster.local:9411")
 			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
 			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
 			f.HelmRender()
@@ -250,7 +292,9 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			foundZipkinEP := false
 			for _, ep := range istioV25.Field("spec.values.meshConfig.extensionProviders").Array() {
 				if ep.Get("name").String() == "deckhouse-tracing" {
-					Expect(ep.Get("zipkin.address").String()).To(Equal("jaeger-collector.tracing.svc:9411"))
+					Expect(ep.Get("zipkin.service").String()).To(Equal("jaeger-collector.tracing.svc.cluster.local"))
+					Expect(ep.Get("zipkin.port").Int()).To(Equal(int64(9411)))
+					Expect(ep.Get("zipkin.address").Exists()).To(BeFalse())
 					foundZipkinEP = true
 				}
 			}
@@ -262,7 +306,9 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			foundZipkinIOP := false
 			for _, ep := range iopV21.Field("spec.meshConfig.extensionProviders").Array() {
 				if ep.Get("name").String() == "deckhouse-tracing" {
-					Expect(ep.Get("zipkin.address").String()).To(Equal("jaeger-collector.tracing.svc:9411"))
+					Expect(ep.Get("zipkin.service").String()).To(Equal("jaeger-collector.tracing.svc.cluster.local"))
+					Expect(ep.Get("zipkin.port").Int()).To(Equal(int64(9411)))
+					Expect(ep.Get("zipkin.address").Exists()).To(BeFalse())
 					foundZipkinIOP = true
 				}
 			}

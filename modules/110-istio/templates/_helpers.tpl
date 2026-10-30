@@ -41,24 +41,36 @@
 {{- end -}}
 
 {{- define "istioTracingProvider" -}}
-  {{- $otel := $.Values.istio.tracing.collector.opentelemetry | default dict -}}
-  {{- $zipkin := $.Values.istio.tracing.collector.zipkin | default dict -}}
-  {{- if and $otel.service $otel.port -}}
+  {{- $telemetryAPI := $.Values.istio.telemetryAPI | default dict -}}
+  {{- if and $.Values.istio.tracing.enabled $telemetryAPI.enabled -}}
+    {{- $otel := $.Values.istio.tracing.collector.opentelemetry | default dict -}}
+    {{- $zipkin := $.Values.istio.tracing.collector.zipkin | default dict -}}
+    {{- if and $otel.service $otel.port -}}
 - name: deckhouse-tracing
   opentelemetry:
     service: {{ $otel.service | quote }}
     port: {{ $otel.port }}
-    {{- if $otel.http }}
+      {{- if $otel.http }}
     http:
       path: {{ default "/v1/traces" $otel.http.path | quote }}
-      {{- if $otel.http.timeout }}
+        {{- if $otel.http.timeout }}
       timeout: {{ $otel.http.timeout | quote }}
+        {{- end }}
       {{- end }}
-    {{- end }}
-  {{- else if $zipkin.address }}
+    {{- else if $zipkin.address }}
+      {{- /*
+        The Zipkin extension provider has no address field, so split <host>:<port> into service and port.
+        The schema does not enforce this format, so check it before the split.
+      */ -}}
+      {{- if not (regexMatch "^[^:]+:[0-9]+$" $zipkin.address) -}}
+        {{- fail (printf "istio.tracing.collector.zipkin.address %q must be in <host>:<port> format" $zipkin.address) -}}
+      {{- end -}}
+      {{- $parts := splitList ":" $zipkin.address }}
 - name: deckhouse-tracing
   zipkin:
-    address: {{ $zipkin.address | quote }}
+    service: {{ first $parts | quote }}
+    port: {{ last $parts }}
+    {{- end }}
   {{- end }}
 {{- end -}}
 

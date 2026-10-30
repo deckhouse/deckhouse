@@ -107,7 +107,12 @@ properties:
               Нужны `service` и `port` (по умолчанию gRPC OTLP; для HTTP укажите `http.path`). Не применяется при `telemetryAPI.enabled: false`.
             properties:
               service:
-                description: Имя хоста коллектора, доступного из mesh (например DNS Service в Kubernetes).
+                description: |
+                  Сервис коллектора OpenTelemetry. Формат значения — `[<namespace>/]<hostname>`.
+
+                  В `<hostname>` укажите полное имя Service, включая домен кластера (например, `opentelemetry-collector.observability.svc.cluster.local`), или хост из ServiceEntry. Короткие имена и IP-адреса не работают. `<namespace>` указывайте, только если такой хост есть в нескольких неймспейсах.
+
+                  Если Istio не найдёт сервис, спаны не будут экспортироваться.
               port:
                 description: Порт коллектора (например `4317` для gRPC OTLP).
               http:
@@ -124,7 +129,10 @@ properties:
               При включённой трассировке: в legacy — обязателен `address`; в Telemetry API — если не настроен [`collector.opentelemetry`](#parameters-tracing-collector-opentelemetry).
             properties:
               address:
-                description: Сетевой адрес zipkin-коллектора в формате `<хост>:<порт>` (FQDN или IP согласно шаблону в схеме).
+                description: |
+                  Сетевой адрес коллектора Zipkin в формате `<хост>:<порт>`.
+
+                  Если [`telemetryAPI.enabled`](#parameters-telemetryapi-enabled) равен `true`, в качестве `<хост>` укажите полное имя сервиса, известного Istio, включая домен кластера, например `zipkin.myjaeger.svc.cluster.local` для Kubernetes Service. Короткие имена (например, `zipkin.myjaeger.svc`) и IP-адреса в этом режиме не работают.
       kiali:
         description: |
           Настройки отображения span'ов в Kiali.
