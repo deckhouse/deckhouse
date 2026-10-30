@@ -16,8 +16,7 @@
 
 # Scales the Gatekeeper webhook to zero and checks what the webhooks do without it:
 #   - a pod in a user namespace is rejected with `failed calling webhook` (failurePolicy: Fail);
-#   - a pod in d8-system and kube-system is admitted (the system webhooks use failurePolicy: Ignore);
-#   - exec into a pod of a system namespace is rejected (deny-exec-heritage keeps failurePolicy: Fail).
+#   - a pod in d8-system and kube-system is admitted (the system webhooks use failurePolicy: Ignore).
 #
 # Deckhouse renders replicas into the Deployment and may put them back on the next converge of the
 # module. The checks take seconds, and the script verifies after them that the Deployment was still
@@ -37,17 +36,6 @@ if [[ ! -f "${state_file}" ]]; then
   kubectl -n "${APE_NS}" get deployment "${GATEKEEPER_DEPLOY}" -o jsonpath='{.spec.replicas}' > "${state_file}"
 fi
 log "Original replicas of ${GATEKEEPER_DEPLOY}: $(cat "${state_file}")"
-
-exec_webhook=false
-if webhook_present "deny-exec-heritage.admission-policy-engine.deckhouse.io"; then
-  exec_webhook=true
-else
-  # Absence is correct only for a build whose version is `dev`, as in check-exec-heritage.sh.
-  # The version is read while Gatekeeper still runs: exec into d8-system is admitted then.
-  version="$(kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- cat /deckhouse/version 2>&1 | tr -d '[:space:]' || true)"
-  [[ "${version}" == "dev" ]] \
-    || fail "the deny-exec-heritage webhook is not rendered while the Deckhouse version is '${version}', not 'dev'"
-fi
 
 wait_down() {
   # 90 seconds covers the 60-second termination grace period of the webhook pods. Three attempts of
@@ -69,15 +57,6 @@ check_outage() {
     --match 'admission-policy-engine\.deckhouse\.io' || return 1
   bash "${probe}" --expect allow --namespace d8-system --name e2e-ape-system-pod --timeout 30 || return 1
   bash "${probe}" --expect allow --namespace kube-system --name e2e-ape-system-pod --timeout 30 || return 1
-  if [[ "${exec_webhook}" == "true" ]]; then
-    local pod out
-    pod="$(kubectl -n d8-system get pod -l app=deckhouse,leader=true -o jsonpath='{.items[0].metadata.name}')"
-    out="$(kubectl -n d8-system exec "${pod}" -c deckhouse -- true 2>&1 || true)"
-    log "exec into d8-system/${pod}: ${out}"
-    grep -q 'failed calling webhook "deny-exec-heritage.admission-policy-engine.deckhouse.io"' <<<"${out}" || return 1
-  else
-    log "NOT APPLICABLE: the deny-exec-heritage webhook is not rendered (Deckhouse version 'dev'), exec is not checked"
-  fi
 }
 
 for attempt in 1 2 3; do

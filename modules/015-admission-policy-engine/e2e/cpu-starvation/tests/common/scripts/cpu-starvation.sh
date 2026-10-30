@@ -38,8 +38,7 @@ VWC_NAME="d8-admission-policy-engine-config"
 MODULE_WEBHOOKS="admission-policy-engine.deckhouse.io
 exec-attach.admission-policy-engine.deckhouse.io
 system-namespaces.admission-policy-engine.deckhouse.io
-system-namespaces-enforce.admission-policy-engine.deckhouse.io
-deny-exec-heritage.admission-policy-engine.deckhouse.io"
+system-namespaces-enforce.admission-policy-engine.deckhouse.io"
 WEBHOOK_SELECTOR="app=gatekeeper,control-plane=controller-manager"
 AUDIT_SELECTOR="app=gatekeeper,control-plane=audit-controller"
 TARGET_CONTAINER="manager"

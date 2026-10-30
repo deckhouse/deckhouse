@@ -167,7 +167,7 @@ Check each one before you trust a comparison.
   Deployment review by default. Comparing that against a historical Pod number compares two different inputs.
   Move the controller samples aside first; `../AGENTS.md` carries the exact commands.
 - **Timings are not comparable between runs.** On a workstation the same configuration varied by up to 7x
-  between consecutive runs: `deny-exec-heritage` on the violation path measured 356k, 522k and 72k `ns/op`
+  between consecutive runs: `deny-exec-heritage` (since removed) on the violation path measured 356k, 522k and 72k `ns/op`
   with an identical 783 `allocs/op`. Use `allocs/op` and `B/op`, which reproduce to under 1%, and treat
   `ns/op` as an order-of-magnitude signal only.
 - **Cost per pair is not uniform, so shares cannot be inferred from counts.** Controller kinds account for

@@ -8,7 +8,7 @@ spec:
     violation only warns, unless the namespace opts in with
     security.deckhouse.io/enable-security-policy-check=true, where the Pod Security Standards are
     enforced; a user SecurityPolicy that spans every namespace denies in user namespaces and only
-    warns in system ones; exec into a heritage pod is denied.
+    warns in system ones.
   timeouts:
     exec: 20m
   steps:
@@ -201,19 +201,3 @@ spec:
         - description: Show the constraints rendered from the policy
           script:
             content: kubectl get d8readonlyrootfilesystem -o yaml
-
-    - name: exec-into-heritage-pod-denied
-      description: Exec into a pod labelled heritage=deckhouse in a system namespace is denied for a cluster administrator
-      try:
-        - description: Check exec into a heritage pod and into a plain pod
-          script:
-            timeout: 10m
-            content: bash check-exec-heritage.sh d8-e2e-ape-enforce
-            check:
-              ($error == null): true
-      catch:
-        - description: Show the exec targets
-          get:
-            apiVersion: v1
-            kind: Pod
-            namespace: d8-e2e-ape-enforce

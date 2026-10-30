@@ -221,11 +221,12 @@ admissionPolicyEngine:
 
 			config := f.KubernetesResource("Config", "d8-admission-policy-engine", "config")
 			Expect(config.Exists()).To(BeTrue())
-			Expect(config.Field("spec.sync.syncOnly").Array()).To(HaveLen(3))
+			Expect(config.Field("spec.sync.syncOnly").Array()).To(HaveLen(2))
 			// Namespace is required by D8GpuResourceRestriction.
 			Expect(config.Field(`spec.sync.syncOnly.#(kind=="Namespace").version`).String()).To(Equal("v1"))
-			Expect(config.Field(`spec.sync.syncOnly.#(kind=="Pod").version`).String()).To(Equal("v1"))
 			Expect(config.Field(`spec.sync.syncOnly.#(kind=="SecurityPolicyException").group`).String()).To(Equal("deckhouse.io"))
+			// No template reads Pods from the inventory, and a Pod sync is a full-cluster one.
+			Expect(config.Field(`spec.sync.syncOnly.#(kind=="Pod")`).Exists()).To(BeFalse())
 		})
 
 		It("All operation policy constraints must have valid YAML", func() {

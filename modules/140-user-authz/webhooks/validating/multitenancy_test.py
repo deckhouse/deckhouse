@@ -362,6 +362,71 @@ class TestMultiTenancyValidationForCarsAndModuleConfig(unittest.TestCase):
                 tests.assert_validation_allowed(self, self.run_hook(ctx_json), None)
 
 
+class TestModuleConfigCreate(unittest.TestCase):
+    """The webhook matches CREATE as well, where the request carries no oldObject. Reading the
+    previous settings from it used to fail every CREATE that did not enable multitenancy explicitly
+    -- `d8 s module enable user-authz` on a fresh cluster among them -- with an internal error."""
+
+    @staticmethod
+    def create_context(**kwargs) -> DotMap:
+        ctx = json.loads(factories.prepare_module_config_binding_context(**kwargs))
+        request = ctx["review"]["request"]
+        request["operation"] = "CREATE"
+        request["oldObject"] = None
+        return DotMap(ctx)
+
+    def run_hook(self, ctx: DotMap):
+        return hook.testrun(multitenancy.main, [ctx])
+
+    def test_create_without_the_field_and_rules_without_restricted_fields_is_allowed(self):
+        for scenario, state in [["multitenancy enabled", True], ["multitenancy disabled", False], ["no state ConfigMap", None]]:
+            with self.subTest(scenario):
+                ctx = self.create_context(module_enable_multitenancy_field=None,
+                                          cars=factories.build_three_not_multitenancy_related_cars(),
+                                          current_multitenancy_state=state)
+                tests.assert_validation_allowed(self, self.run_hook(ctx), None)
+
+    def test_create_without_the_field_is_allowed_while_multitenancy_is_enabled(self):
+        ctx = self.create_context(module_enable_multitenancy_field=None,
+                                  cars=factories.build_three_mixed_multitenancy_related_and_not_related_cars(),
+                                  current_multitenancy_state=True)
+        tests.assert_validation_allowed(self, self.run_hook(ctx), None)
+
+    def test_create_with_rules_using_restricted_fields_is_denied_by_the_rules(self):
+        for scenario, field in [["field absent", None], ["field false", False]]:
+            with self.subTest(scenario):
+                ctx = self.create_context(module_enable_multitenancy_field=field,
+                                          cars=factories.build_three_mixed_multitenancy_related_and_not_related_cars(),
+                                          current_multitenancy_state=False)
+                tests.assert_validation_deny(self, self.run_hook(ctx), "; ".join([
+                    "You must enable userAuthz.enableMultiTenancy to use the allowAccessToSystemNamespaces flag in ClusterAuthorizationRule 'user1'",
+                    "You must enable userAuthz.enableMultiTenancy to use the namespaceSelector option in ClusterAuthorizationRule 'user1'",
+                    "You must enable userAuthz.enableMultiTenancy to use the limitNamespaces option in ClusterAuthorizationRule 'user1'",
+                    "You must enable userAuthz.enableMultiTenancy to use the allowAccessToSystemNamespaces flag in ClusterAuthorizationRule 'user3'",
+                    "You must enable userAuthz.enableMultiTenancy to use the namespaceSelector option in ClusterAuthorizationRule 'user3'",
+                    "You must enable userAuthz.enableMultiTenancy to use the limitNamespaces option in ClusterAuthorizationRule 'user3'",
+                ]))
+
+    def test_create_enabling_multitenancy_is_allowed(self):
+        ctx = self.create_context(module_enable_multitenancy_field=True,
+                                  cars=factories.build_three_mixed_multitenancy_related_and_not_related_cars(),
+                                  current_multitenancy_state=False)
+        tests.assert_validation_allowed(self, self.run_hook(ctx), None)
+
+    def test_create_without_settings_is_not_an_internal_error(self):
+        for scenario, settings in [["no settings key", "absent"], ["settings: null", None]]:
+            with self.subTest(scenario):
+                ctx = self.create_context(module_enable_multitenancy_field=None,
+                                          cars=factories.build_three_not_multitenancy_related_cars(),
+                                          current_multitenancy_state=False)
+                spec = ctx.review.request.object.spec
+                if settings == "absent":
+                    del spec["settings"]
+                else:
+                    spec.settings = None
+                tests.assert_validation_allowed(self, self.run_hook(ctx), None)
+
+
 class _FilteredCAR:
     """A d8-user-authz-cars snapshot item: the name and the restricted fields of the rule.
 

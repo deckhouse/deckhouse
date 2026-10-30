@@ -44,8 +44,17 @@ spec:
       - apiGroups: ["*"]
         apiVersions: ["*"]
         operations:  ["CREATE", "UPDATE", "DELETE"]
-        resources:   ["*"]
+        # `*` leaves subresources out. `kubectl debug` adds a container to a running Pod through
+        # pods/ephemeralcontainers, whose admission object is the Pod itself, so the heritage binding
+        # selects it by the Pod labels like any other change. The scale subresource is reviewed as a
+        # Scale, which carries no labels for the binding to select by: the scale of Deployments,
+        # StatefulSets, ReplicaSets and ReplicationControllers is left to the heritage-subresources
+        # ValidationWebhook of the webhook-handler, together with exec, attach and port-forward.
+        resources:   ["*", "pods/ephemeralcontainers"]
   matchConditions:
+    # The heritage-subresources ValidationWebhook repeats exclude-groups, exclude-users and the
+    # validation below as its own matchConditions, plus system:masters; the template tests hold
+    # them in step.
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
     - name: 'exclude-users'
@@ -143,7 +152,8 @@ spec:
       - apiGroups: ["*"]
         apiVersions: ["*"]
         operations:  ["CREATE", "UPDATE", "DELETE"]
-        resources:   ["*"]
+        # `*` leaves subresources out, and `kubectl scale` goes through `<resource>/scale`
+        resources:   ["*", "*/scale"]
   matchConditions:
     - name: 'exclude-groups'
       expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system", "system:serviceaccounts:d8-cni-cilium"].exists(e, (e in request.userInfo.groups)))'

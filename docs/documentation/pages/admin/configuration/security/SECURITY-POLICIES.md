@@ -719,21 +719,16 @@ spec:
 
 ### Preventing exec and attach operations to specific Pods
 
-The `admission-policy-engine` module's webhook routes `CONNECT` requests for `pods/exec` and `pods/attach` through Gatekeeper.
+The `admission-policy-engine` module's webhook routes `CONNECT` requests for `pods/exec` and `pods/attach`
+in namespaces other than `d8-*` and `kube-*` through Gatekeeper.
 This allows custom policies to allow or deny `kubectl exec` and `kubectl attach` operations.
 
-#### Built-in policy for `heritage: deckhouse` label on Pods
+#### Pods labeled `heritage: deckhouse`
 
-To protect [system components](../../../glossary.html#system-component) managed by Deckhouse,
-the `admission-policy-engine` module includes a built-in policy `D8DenyExecHeritage`
-that forbids running `kubectl exec` and `kubectl attach` operations to all Pods with the `heritage: deckhouse` label.
-
-This policy doesn't apply to the following users
-who are allowed to run `kubectl exec` and `kubectl attach` operations to Pods labeled with `heritage: deckhouse`:
-
-- `system:sudouser`
-- service accounts from `d8-*` namespaces (`system:serviceaccount:d8-*`)
-- service accounts from `kube-*` namespaces (`system:serviceaccount:kube-*`)
+Exec, attach, port-forward and debug into Pods of [system components](../../../glossary.html#system-component)
+labeled `heritage: deckhouse` are denied by the `deckhouse` module for everyone but Deckhouse system users,
+whether or not `admission-policy-engine` is enabled.
+See [the FAQ of the `deckhouse` module](/modules/deckhouse/faq.html).
 
 #### Custom policy example
 

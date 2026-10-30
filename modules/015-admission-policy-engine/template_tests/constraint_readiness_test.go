@@ -67,6 +67,8 @@ admissionPolicyEngine:
 	Context("When only some constraint CRDs exist", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("admissionPolicyEngine.internal.readyConstraintKinds", `["D8HostNetwork"]`)
+			// The webhook configuration is rendered once a resource is tracked.
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedConstraintResources", `[{"apiGroups":[""],"resources":["pods"]}]`)
 			f.HelmRender()
 		})
 

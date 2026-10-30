@@ -261,6 +261,33 @@ d8 k -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 
 Подробнее можно почитать в [официальной документации](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).
 
+В под с лейблом `heritage: deckhouse` ephemeral container добавить нельзя, см. следующий раздел.
+
+## Кто может выполнять exec в поды Deckhouse и масштабировать объекты Deckhouse?
+
+Только системные пользователи Deckhouse. Всем остальным, включая администраторов кластера и суперадминов, модуль `deckhouse` запрещает в любом неймспейсе:
+
+- `kubectl exec`, `kubectl attach`, `kubectl cp`, `kubectl port-forward` и `kubectl debug` в под с лейблом `heritage: deckhouse`. Port-forward к сервису попадает в один из его подов и запрещается так же;
+- `kubectl scale` для Deployment, StatefulSet, ReplicaSet и ReplicationController с лейблом `heritage: deckhouse`, если объект не находится в режиме обслуживания, то есть не помечен лейблом `maintenance.deckhouse.io/no-resource-reconciliation`.
+
+Лейбл проверяется на самом объекте: под без `heritage: deckhouse` не защищён, даже если лейбл есть у его Deployment.
+
+Запреты не действуют на:
+
+- `system:sudouser`;
+- `dhctl` и `observability`;
+- сервисные аккаунты из неймспейсов `d8-*` и `kube-*` (`system:serviceaccount:d8-*`, `system:serviceaccount:kube-*`), в том числе контроллеры Deckhouse и horizontal pod autoscaler из `kube-controller-manager`;
+- компоненты control plane Kubernetes (`system:apiserver`, `system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`) и узлы (группа `system:nodes`);
+- группу `system:masters`, то есть `super-admin.conf` на master-узле. На `admin.conf` (группа `kubeadm:cluster-admins`) запреты действуют.
+
+Кроме `system:masters`, это те же пользователи, которым разрешено изменять объекты с лейблом `heritage: deckhouse`. Запреты не зависят от модуля `admission-policy-engine`.
+
+Проверку выполняют поды `webhook-handler` в неймспейсе `d8-system`, и при их отказе запрос отклоняется. Пока `webhook-handler` недоступен, `kubectl exec`, `attach`, `cp`, `port-forward` в любой под и `kubectl scale` любых Deployment, StatefulSet, ReplicaSet и ReplicationController запрещены во всех неймспейсах всем, кроме перечисленных выше пользователей, независимо от лейбла. Чтобы попасть в под для диагностики, выполните команду от имени `system:sudouser` в группе `system:sudousers` (для этого нужно право на impersonate обоих) или воспользуйтесь `super-admin.conf` на master-узле. Группа нужна для exec: модуль `user-authz` проверяет exec на том же `webhook-handler` и исключает группу, а не пользователя:
+
+```shell
+d8 k --as=system:sudouser --as-group=system:sudousers -n d8-system exec -it <pod_name> -- sh
+```
+
 ## Как отлаживать проблемы на узлах с помощью ephemeral containers?
 
 Выполните следующую команду:

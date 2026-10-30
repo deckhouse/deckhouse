@@ -26,9 +26,18 @@ rules:
   resources: ["secrets","endpoints","configmaps","namespaces", "nodes", "services"]
   verbs: ["get", "list", "watch"]
 - apiGroups: [""]
-  # pods: live `get` of the exec target pod by the user-authz rbacv2-system-resource-exec webhook (the
-  # admission object is PodExecOptions, so the target pod is fetched on demand — no all-pods watch).
+  # pods: live `get` of the exec target pod by the user-authz rbacv2-system-resource-exec webhook and
+  # the heritage-subresources webhook (the admission object is PodExecOptions, so the target pod is
+  # fetched on demand — no all-pods watch).
   resources: ["pods"]
+  verbs: ["get"]
+- apiGroups: ["apps"]
+  # The heritage-subresources webhook reads the object behind a scale request by name to see its
+  # labels, since the Scale object it reviews has none: the kinds its rules route there and nothing else.
+  resources: ["deployments", "statefulsets", "replicasets"]
+  verbs: ["get"]
+- apiGroups: [""]
+  resources: ["replicationcontrollers"]
   verbs: ["get"]
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources: ["clusterroles", "clusterrolebindings"]

@@ -167,7 +167,7 @@ Reading this the way the sections above intend:
 - Memory (210–228Mi) sits well above the 128Mi request on **both** pods, in a
   cluster with only 143 pods and 2 SecurityPolicy CRs — that's steady-state
   base cost (compiled ConstraintTemplates + the full-cluster Pod sync
-  required by the built-in exec-heritage constraint + the 299-CRD discovery
+  the since removed exec-heritage constraint required + the 299-CRD discovery
   tree), not a leak specific to this deployment. Section 2 also shows no
   memory limit is set, so nothing bounds it.
 - CPU on the audit pod is a flat 249m across both samples here (not spiky in
@@ -283,10 +283,11 @@ things.
 ### `gatekeeper-audit`: scales with pod count, not with request rate
 
 Audit is periodic and full-cluster, so its cost scales with **how much
-there is to sync and re-check** (dominated by pod count, since the built-in
-`D8DenyExecHeritage` constraint forces a full-cluster Pod sync regardless of
-configuration - see AGENTS.md finding 3). It does *not* scale with admission
-traffic at all.
+there is to sync and re-check**. The calibration below was measured while the
+built-in `D8DenyExecHeritage` constraint forced a full-cluster Pod sync, which
+made pod count dominate; that constraint and the sync are gone (see AGENTS.md
+finding 3), so the model overstates the cost on large clusters. It does *not*
+scale with admission traffic at all.
 
 ```
 k = (measured CPU-seconds per cycle) / (pod count at measurement time)

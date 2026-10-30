@@ -261,6 +261,33 @@ d8 k -n <namespace_name> debug -it <pod_name> --image=ubuntu <container_name>
 
 More info in [official documentation](https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/#ephemeral-container).
 
+An ephemeral container cannot be added to a Pod labeled `heritage: deckhouse`, see the next section.
+
+## Who can exec into Deckhouse Pods and scale Deckhouse objects?
+
+Only Deckhouse system users. The `deckhouse` module denies the following operations to everyone else, cluster administrators and superadmins included, in every namespace:
+
+- `kubectl exec`, `kubectl attach`, `kubectl cp`, `kubectl port-forward` and `kubectl debug` into a Pod labeled `heritage: deckhouse`. A port-forward to a Service ends up in one of its Pods and is denied the same way;
+- `kubectl scale` of a Deployment, StatefulSet, ReplicaSet or ReplicationController labeled `heritage: deckhouse`, unless the object is under maintenance, that is, labeled `maintenance.deckhouse.io/no-resource-reconciliation`.
+
+The label is checked on the object itself: a Pod without `heritage: deckhouse` is not protected, even if its Deployment carries the label.
+
+The checks do not apply to:
+
+- `system:sudouser`;
+- `dhctl` and `observability`;
+- service accounts from `d8-*` and `kube-*` namespaces (`system:serviceaccount:d8-*`, `system:serviceaccount:kube-*`), the Deckhouse controllers and the horizontal pod autoscaler of `kube-controller-manager` among them;
+- the Kubernetes control plane components (`system:apiserver`, `system:kube-controller-manager`, `system:kube-scheduler`, `system:volume-scheduler`) and nodes (the `system:nodes` group);
+- the `system:masters` group, that is, `super-admin.conf` on a master node. `admin.conf` (the `kubeadm:cluster-admins` group) is subject to the checks.
+
+Apart from `system:masters`, these are the users who may also change objects labeled `heritage: deckhouse`. The checks do not depend on the `admission-policy-engine` module.
+
+The checks run in the `webhook-handler` Pods of the `d8-system` namespace and fail closed. While `webhook-handler` is unavailable, `kubectl exec`, `attach`, `cp`, `port-forward` into any Pod and `kubectl scale` of any Deployment, StatefulSet, ReplicaSet or ReplicationController are denied in every namespace for everyone but the users listed above, whether or not the target is labeled. To get in for diagnostics, run the command as `system:sudouser` in the `system:sudousers` group, which needs the right to impersonate both, or use `super-admin.conf` on a master node. The group is needed for exec because the `user-authz` module checks exec on the same `webhook-handler` and exempts the group rather than the user:
+
+```shell
+d8 k --as=system:sudouser --as-group=system:sudousers -n d8-system exec -it <pod_name> -- sh
+```
+
 ## How to debug node problems with ephemeral containers?
 
 Run the following command:

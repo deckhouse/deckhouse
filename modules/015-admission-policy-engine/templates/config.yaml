@@ -10,9 +10,6 @@ spec:
       - group: "deckhouse.io"
         version: "v1alpha1"
         kind: "SecurityPolicyException"
-      - group: ""
-        version: "v1"
-        kind: "Pod"
 {{- /* Namespaces are looked up via data.inventory by the D8GpuResourceRestriction constraint template */}}
       - group: ""
         version: "v1"

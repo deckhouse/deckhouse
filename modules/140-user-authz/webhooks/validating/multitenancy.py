@@ -105,7 +105,8 @@ def _validate(ctx: DotMap) -> tuple[list[str], list[str]]:
         field_errors, field_warnings = validate_car_multitenancy_related_fields(req.object)
         return errors + field_errors, warnings + field_warnings
     elif kind == "moduleconfig":
-        settings = req.object.spec.settings
+        # A ModuleConfig may come without settings, or with `settings: null`.
+        settings = req.object.spec.settings or DotMap()
         field_present = "enableMultiTenancy" in settings
 
         # don't check existing CARs if the request explicitly enables MultiTenancy...
@@ -122,7 +123,9 @@ def _validate(ctx: DotMap) -> tuple[list[str], list[str]]:
         # removal is itself a potential disable (e.g. on editions where the schema default
         # is false) — it must fall through to validating the CARs below, not take this
         # shortcut based on the pre-request ConfigMap state.
-        old_settings = req.oldObject.spec.settings
+        #
+        # A CREATE has no oldObject: there was no value before, so the field counts as absent.
+        old_settings = (req.oldObject.spec.settings if req.oldObject else None) or DotMap()
         was_present = "enableMultiTenancy" in old_settings
         if not field_present and not was_present and is_multitenancy_enabled(ctx):
             return [], []

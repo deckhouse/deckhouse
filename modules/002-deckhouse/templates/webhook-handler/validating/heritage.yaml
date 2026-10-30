@@ -1,0 +1,70 @@
+{{- /*
+  The subresources label-objects.deckhouse.io cannot judge: exec, attach and port-forward into a Pod
+  labeled `heritage: deckhouse`, and the scale subresource of an object with that label. Neither
+  admission object carries the labels, so the hook reads the target; see
+  webhooks/validating/heritage.py.
+
+  Rendered where the heritage binding of that policy is, so a `dev` build leaves both open alike.
+*/}}
+{{- if ne .Values.global.deckhouseVersion "dev" }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: heritage-subresources
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: heritage-subresources.deckhouse.io
+  group: main
+  # The exemptions of label-objects.deckhouse.io, word for word: its exclude-groups and exclude-users
+  # conditions, and its validation, which lets through every service account of a `d8-*` or `kube-*`
+  # namespace. Evaluated by the API server, so whoever keeps the cluster running -- Deckhouse, the
+  # controllers, the HPA in kube-controller-manager, `system:sudouser` -- never waits on this hook,
+  # and does not need it to be up: that includes exec into the webhook-handler pods themselves when
+  # they are what is broken.
+  #
+  # Plus one exemption of its own, `system:masters`, as on the user-authz exec webhook of this
+  # handler: super-admin.conf on a master node is the way in when the handler is down, since the
+  # webhook fails closed on every exec and scale, labeled target or not. `kubeadm:cluster-admins`
+  # (admin.conf) stays subject to the check. The template tests hold the webhook to exactly
+  # label-objects plus this group.
+  matchConditions:
+  - name: exclude-groups
+    expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system"].exists(e, (e in request.userInfo.groups)))'
+  - name: exclude-users
+    expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
+  - name: exclude-system-serviceaccounts
+    expression: '!(request.userInfo.username.startsWith("system:serviceaccount:d8-") || request.userInfo.username.startsWith("system:serviceaccount:kube-"))'
+  - name: exclude-group-system-masters
+    expression: '!("system:masters" in request.userInfo.groups)'
+  rules:
+  - apiGroups:   [""]
+    apiVersions: ["*"]
+    operations:  ["CONNECT"]
+    resources:   ["pods/exec", "pods/attach", "pods/portforward"]
+    scope:       "Namespaced"
+  # `kubectl scale` sends a PATCH, which reaches admission as an UPDATE. The built-in scalable kinds
+  # only: the hook reads the parent, and the webhook-handler may read these and nothing else. A CRD
+  # with a scale subresource stays as open as it was.
+  - apiGroups:   ["apps"]
+    apiVersions: ["*"]
+    operations:  ["UPDATE"]
+    resources:   ["deployments/scale", "statefulsets/scale", "replicasets/scale"]
+    scope:       "Namespaced"
+  - apiGroups:   [""]
+    apiVersions: ["*"]
+    operations:  ["UPDATE"]
+    resources:   ["replicationcontrollers/scale"]
+    scope:       "Namespaced"
+  # Fail closed, as the policy this completes: an open port-forward is the hole being closed, and an
+  # unavailable handler must not reopen it. What it costs while the handler is down is exec,
+  # port-forward and manual scaling for users outside the exemptions above, the same as the
+  # user-authz exec webhook on this handler already costs for exec.
+  failurePolicy: Fail
+  # One live read by name per request; anything slower than this is an API server in trouble.
+  timeoutSeconds: 5
+handler:
+  # The code of the hook is webhooks/validating/heritage.py, where its unit tests import it.
+  python: |
+    {{- (required "webhooks/validating/heritage.py is missing" (.Files.Get "webhooks/validating/heritage.py")) | nindent 4 }}
+{{- end }}

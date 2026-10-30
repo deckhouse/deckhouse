@@ -109,13 +109,6 @@ wait_default_sa() {
   done
 }
 
-# webhook_present NAME prints nothing and succeeds when the ValidatingWebhookConfiguration of the
-# module contains the webhook NAME.
-webhook_present() {
-  kubectl get validatingwebhookconfiguration "${APE_VWC}" -o json \
-    | jq -e --arg n "$1" '[.webhooks[]?.name] | index($n) != null' >/dev/null
-}
-
 # wait_deckhouse_queue waits until the Deckhouse main queue is empty twice in a row, so that a
 # ModuleConfig change has been rendered. See testing/e2e/lib/wait-deckhouse-queue.sh.
 wait_deckhouse_queue() {

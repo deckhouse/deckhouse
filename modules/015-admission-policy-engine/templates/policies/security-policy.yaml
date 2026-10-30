@@ -9,25 +9,6 @@
   {{- end }}
 {{- end }}
 
-{{- /* Exec and attach into the platform's own pods, not tied to a SecurityPolicy. */}}
-{{- if ne .Values.global.deckhouseVersion "dev" }}
----
-apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: D8DenyExecHeritage
-metadata:
-  name: deny-exec-heritage-pods
-  {{- include "helm_lib_module_labels" (list . (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
-spec:
-  enforcementAction: deny
-  match:
-    kinds:
-      - apiGroups: [""]
-        kinds: ["PodExecOptions", "PodAttachOptions"]
-    scope: Namespaced
-    namespaces:
-      {{- include "system_namespaces" . | fromYamlArray | toYaml | nindent 6 }}
-{{- end }}
-
 {{- end }}
 {{- end }}
 

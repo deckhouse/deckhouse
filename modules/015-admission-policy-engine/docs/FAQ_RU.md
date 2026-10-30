@@ -591,17 +591,9 @@ spec:
 
 ## Как запретить операции kubectl exec и kubectl attach в определённые поды?
 
-Вебхук модуля `admission-policy-engine` направляет запросы `CONNECT` для `pods/exec` и `pods/attach` через Gatekeeper. Это позволяет создавать пользовательские политики для разрешения или запрета операций `kubectl exec` и `kubectl attach`.
+Вебхук модуля `admission-policy-engine` направляет запросы `CONNECT` для `pods/exec` и `pods/attach` в неймспейсах, кроме `d8-*` и `kube-*`, через Gatekeeper. Это позволяет создавать пользовательские политики для разрешения или запрета операций `kubectl exec` и `kubectl attach`.
 
-### Встроенная политика для подов с heritage: deckhouse
-
-Для защиты системных компонентов под управлением Deckhouse в модуле `admission-policy-engine` предусмотрена встроенная политика `D8DenyExecHeritage`, которая запрещает выполнение операций `kubectl exec` и `kubectl attach` во все поды с лейблом `heritage: deckhouse`.
-
-Политика не распространяется на следующих пользователей, которым разрешены операции `kubectl exec` и `kubectl attach` в поды с лейблом `heritage: deckhouse`:
-
-- `system:sudouser`;
-- сервисные аккаунты из неймспейсов `d8-*` (`system:serviceaccount:d8-*`);
-- сервисные аккаунты из неймспейсов `kube-*` (`system:serviceaccount:kube-*`).
+Exec, attach, port-forward и debug в поды с лейблом `heritage: deckhouse` запрещает модуль `deckhouse` всем, кроме системных пользователей Deckhouse, независимо от того, включён ли `admission-policy-engine`. Подробнее — в [FAQ модуля `deckhouse`](/modules/deckhouse/faq.html).
 
 ### Встроенная политика для финалайзеров
 

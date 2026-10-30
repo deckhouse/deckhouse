@@ -5,9 +5,8 @@ metadata:
 spec:
   description: >-
     With the Gatekeeper webhook scaled to zero, a pod in a user namespace is rejected with
-    "failed calling webhook" (failurePolicy Fail), pods in d8-system and kube-system are still
-    admitted (failurePolicy Ignore), and exec into a system pod is rejected (deny-exec-heritage
-    keeps failurePolicy Fail). After the restore admission works and enforces again.
+    "failed calling webhook" (failurePolicy Fail), and pods in d8-system and kube-system are still
+    admitted (failurePolicy Ignore). After the restore admission works and enforces again.
   timeouts:
     exec: 15m
   steps:

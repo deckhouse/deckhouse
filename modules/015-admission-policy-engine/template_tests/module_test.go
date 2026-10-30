@@ -335,18 +335,19 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 
-		It("Renders ValidatingWebhookConfiguration with deny-exec-heritage webhook only", func() {
-			denyExecHeritageRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CONNECT"],"resources":["pods/exec","pods/attach"]}]`
-			checkVWC(f, 1, denyExecHeritageRules)
+		It("Renders no ValidatingWebhookConfiguration while no resource is tracked", func() {
+			// Every webhook routes the tracked resources, so with none there is nothing to render.
+			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
+			Expect(vw.Exists()).To(BeFalse())
 		})
 	})
 
 	Context("Cluster with deckhouse on master node with bootstrapped module and trackedConstraintResources", func() {
 		BeforeEach(func() {
 			f.ValuesSet("admissionPolicyEngine.internal.bootstrapped", true)
-			// The second entry is what constraint-exporter derives from `D8DenyExecHeritage`, which
-			// every non-dev cluster has. It must not bring exec and attach back onto a webhook with
-			// an objectSelector.
+			// The second entry is what constraint-exporter derives from a constraint on
+			// `PodExecOptions`. It must not bring exec and attach back onto a webhook with an
+			// objectSelector.
 			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedConstraintResources",
 				`[{"apiGroups":[""],"resources":["pods"]},{"apiGroups":[""],"resources":["pods/attach","pods/exec"],"operations":["CONNECT"]}]`)
 			f.HelmRender()
@@ -356,13 +357,12 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 
-		It("Renders ValidatingWebhookConfiguration with main, exec-attach, the two system-namespace webhooks and deny-exec-heritage", func() {
+		It("Renders ValidatingWebhookConfiguration with main, exec-attach and the two system-namespace webhooks", func() {
 			mainRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups":["constraints.gatekeeper.sh"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["*"],"scope":"*"},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/ephemeralcontainers"],"operations":["UPDATE"]}]`
-			// The system-namespaces webhook leaves out exec and attach: deny-exec-heritage already routes them.
+			// The system-namespace webhooks leave out exec and attach: nothing routes them in system namespaces.
 			systemNamespacesRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups":["constraints.gatekeeper.sh"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["*"],"scope":"*"},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/ephemeralcontainers"],"operations":["UPDATE"]}]`
 			execAttachRules := `[{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/exec","pods/attach"],"operations":["CONNECT"]}]`
-			denyExecHeritageRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CONNECT"],"resources":["pods/exec","pods/attach"]}]`
-			checkVWC(f, 5, mainRules, execAttachRules, systemNamespacesRules, systemNamespacesRules, denyExecHeritageRules)
+			checkVWC(f, 4, mainRules, execAttachRules, systemNamespacesRules, systemNamespacesRules)
 
 			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
 			systemNamespacesExpr := `has(request.namespace) && (request.namespace.startsWith("d8-") || request.namespace.startsWith("kube-"))`
@@ -407,10 +407,6 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 				`[{"key":"security.deckhouse.io/enable-security-policy-check","operator":"NotIn","values":["true"]}]`))
 			Expect(vw.Field("webhooks.3.namespaceSelector.matchExpressions").String()).To(MatchJSON(
 				`[{"key":"security.deckhouse.io/enable-security-policy-check","operator":"In","values":["true"]}]`))
-
-			// Exec and attach stay the one deliberate Fail path in system namespaces.
-			Expect(vw.Field("webhooks.4.name").String()).To(Equal("deny-exec-heritage.admission-policy-engine.deckhouse.io"))
-			Expect(vw.Field("webhooks.4.failurePolicy").String()).To(Equal("Fail"))
 		})
 
 		It("Routes exec and attach only through webhooks without an objectSelector", func() {
@@ -433,7 +429,6 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			}
 			Expect(execWebhooks).To(Equal([]string{
 				"exec-attach.admission-policy-engine.deckhouse.io",
-				"deny-exec-heritage.admission-policy-engine.deckhouse.io",
 			}))
 		})
 
@@ -563,12 +558,11 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			f.ValuesSet("global.deckhouseVersion", "test")
 		})
 
-		It("Leaves out the exec webhook, and only that one", func() {
+		It("Renders the same webhooks as any other build", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			// A dev build ships no `deny-exec-heritage`, which is a development convenience and
-			// predates the system-namespace webhooks. The two of them must still be rendered, or a
-			// dev cluster would lose the checks in its own namespaces along with the exec one.
+			// The exec webhook for heritage pods was the one a dev build left out. It moved to the
+			// deckhouse module, and nothing here depends on the version any more.
 			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
 			Expect(vw.Exists()).To(BeTrue())
 			names := []string{}
