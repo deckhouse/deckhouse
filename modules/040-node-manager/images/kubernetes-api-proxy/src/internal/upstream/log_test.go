@@ -42,7 +42,7 @@ func TestList_LogsOutsideLock(t *testing.T) {
 	t.Cleanup(func() { close(w.release) })
 
 	list, _, _ := newTestList(t, "m0", "m1")
-	list.round(context.Background())
+	list.round(context.Background(), list.beginRound())
 	list.logger = log.NewLogger(log.WithOutput(w), log.WithLevel(slog.LevelInfo))
 
 	go list.Down(NewUpstream("m0", nil))

@@ -142,7 +142,7 @@ func (s *sim) round(st step) {
 	s.resolveStalls()
 	s.seed(st)
 	s.loadProbes(st.probes)
-	s.list.round(context.Background())
+	s.list.round(context.Background(), s.list.beginRound())
 
 	for _, addr := range st.downs {
 		s.list.Down(NewUpstream(addr, nil))

@@ -26,7 +26,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/util/json"
+	"k8s.io/klog/v2"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
@@ -46,6 +48,8 @@ func main() {
 		log.WithLevel(cfg.SLogLevel()),
 		log.WithHandlerType(log.JSONHandlerType),
 	)
+	// client-go writes through klog. Send these logs to the JSON logger.
+	klog.SetLogger(logr.FromSlogHandler(logger.Handler()))
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -121,22 +125,58 @@ func main() {
 
 	sigCh := make(chan os.Signal, 2)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	<-sigCh
+
+	if err := stop(sigCh, cfg.ShutdownDelay, logger, cancel, srv, lb); err != nil {
+		logger.Error("shutdown error", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	logger.Info("stopped")
+}
+
+// stop waits for a stop signal, then stops discovery, the health server and
+// the load balancer.
+//
+// After the first signal the proxy continues to serve for delay. On a node
+// shutdown kubelet sends SIGTERM to the proxy and to other node-critical pods
+// at the same time. These pods and kubelet write their last state through the
+// proxy. A second signal ends the delay at once.
+func stop(
+	sigCh <-chan os.Signal,
+	delay time.Duration,
+	logger *log.Logger,
+	cancel context.CancelFunc,
+	srv *http.Server,
+	lb *apilb.LoadBalancer,
+) error {
+	sig := <-sigCh
+
+	if delay > 0 {
+		logger.Info("stop signal received, serve until the shutdown delay ends",
+			slog.String("signal", sig.String()),
+			slog.Duration("delay", delay),
+		)
+
+		timer := time.NewTimer(delay)
+		select {
+		case <-timer.C:
+		case sig = <-sigCh:
+			timer.Stop()
+			logger.Info("second stop signal received, end the shutdown delay", slog.String("signal", sig.String()))
+		}
+	}
 
 	logger.Info("shutting down...")
 	cancel()
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// The health server waits for a connection without a request for up to
+	// 5s. Do not wait so long: the proxy must exit soon after the shutdown delay.
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Second)
+	defer shutdownCancel()
 
 	_ = srv.Shutdown(shutdownCtx)
-	if err := lb.Shutdown(); err != nil {
-		logger.Error("shutdown error", slog.String("error", err.Error()))
-		shutdownCancel()
-		os.Exit(1)
-	}
 
-	shutdownCancel()
-	logger.Info("stopped")
+	return lb.Shutdown()
 }
 
 func configureMainUpstreamList(
@@ -146,6 +186,7 @@ func configureMainUpstreamList(
 	listOptions := []uopts.ListOption{
 		uopts.WithHealthcheckInterval(cfg.HealthInterval),
 		uopts.WithHealthcheckTimeout(cfg.HealthTimeout),
+		uopts.WithFailStep(cfg.FailStepInterval, cfg.FailStepWindow),
 		uopts.WithDownHold(cfg.DialTimeout),
 		uopts.WithStallTimeout(cfg.StallTimeout),
 		uopts.WithLogger(logger),

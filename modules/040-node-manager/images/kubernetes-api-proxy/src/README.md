@@ -80,10 +80,46 @@ down or retried, and their latency does not feed the budget.
 
 ### Control path
 
-`upstream.List` probes every upstream once per `--health-interval` with
-`GET /readyz` and a `--health-timeout` budget (500ms). Probes share one
-keep-alive HTTPS transport from `rest.TransportFor` (HTTP/2 when the
-apiserver offers it), so a probe normally travels over a warm connection.
+`upstream.List` probes every upstream once per round with `GET /readyz`
+and a `--health-timeout` budget (500ms). Probes share one keep-alive HTTPS
+transport from client-go (HTTP/2 when the apiserver offers it),
+so a probe normally travels over a warm connection.
+
+Each probe connection has `TCP_USER_TIMEOUT` equal to `--health-timeout`
+(Linux only). When the network drops packets without a reset, the kernel
+closes the connection after this time, and the next probe dials a new one.
+Without it, the probes wait on the old connection for the next kernel
+retransmission, and an upstream becomes ready again up to a few seconds
+after the network is back.
+
+The rounds run one after another. A round starts `--health-interval`
+±`--health-jitter` (1s ±20%) after the start of the previous round. If the
+previous round ends later, the round starts when the previous round ends.
+With the defaults a round takes not more than `--health-timeout` (500ms), so
+in normal mode the next round always starts on the interval.
+The first round starts at once, the second after a random part of the
+interval.
+
+A round sends one probe to each upstream. An upstream that does not answer
+`ready` fails the round.
+
+Fail-step. A round in which no upstream answered `ready` starts a failure
+episode. After a round that ends in the first `--fail-step-window` (30s) of
+the episode, the next round starts `--fail-step-interval` (500ms) with the
+same jitter after the start of that round, or when that round ends if it ends
+later. A round with a hung upstream takes `--health-timeout`, so with the
+defaults the rounds start every 500 to 600ms. When the window ends, the
+normal interval applies until the episode ends. The first round with a `ready` upstream ends the episode; the next failure starts a
+new episode with a new window. `--fail-step-window=0` disables fail-step.
+
+The proxy logs the start and the end of fail-step at Warn, once per episode.
+`fail-step started` has `reason` (`no upstream is ready`), `interval` and
+`window`. `fail-step stopped` has `reason` (`an upstream is ready` or
+`the fail-step window ended`) and `duration` (the time from the start of the
+episode). The first round after the end of the window logs the end: with
+`the fail-step window ended` if no upstream is ready, or with
+`an upstream is ready` if one is. So `duration` can be a little longer than
+the window.
 
 A probe ends in one of four results: `ready` (200), `not-ready` (any other
 status), `timeout` (no answer within the budget on an established
@@ -186,8 +222,9 @@ the stalled upstream is closed. Clients reconnect through the normal pick,
 which prefers the witness because the stalled upstream is already in the
 `failed` tier.
 
-The check repeats every 4-5 seconds while the upstream stays silent, and
-each time it closes only the connections still open to it. Nothing is
+The check repeats every 3 to 4.2 seconds while the upstream stays silent:
+the stall timeout plus up to 1.2 seconds until the next round applies. Each
+time it closes only the connections still open to it. Nothing is
 closed when:
 
 - there is no witness, nobody is ready, or there is only one upstream;
@@ -205,8 +242,9 @@ On the client side every in-flight request on the connection fails at
 once and the connection is dropped. Watches resume from their last
 resourceVersion without a relist, and the next request dials a new
 connection that lands on a live apiserver. The close comes at most about
-4.7 seconds after the hang starts: up to 1.7 seconds until a round's probe
-times out, plus the stall timeout. Lease renewals then go through well
+4.7 seconds after the hang starts: up to 1.2 seconds until the next round
+starts, up to 0.5 seconds until its probe times out, plus the stall
+timeout. Lease renewals then go through well
 before their deadlines.
 
 A close is logged at Warn as `closed client connections to a stalled
@@ -245,25 +283,54 @@ go build ./cmd/kubernetes-api-proxy
 
 ```bash
 go run ./cmd/kubernetes-api-proxy \
-  --listen-addr=0.0.0.0 \
+  --listen-address=0.0.0.0 \
   --listen-port=7443 \
-  --health-listen=:8080 \
+  --health-listen=127.0.0.1:6480 \
   --log-level=info
 ```
 
 ## Health Endpoints
 
 - `GET /healthz` → always `200 OK`
-- `GET /readyz` → always `200 OK` ('cause in pressure situations it will try to balance traffic into default Kubernetes Service)
-- `GET /upstreams` → `isHealthy` (some upstream outside the `failed` tier) and the state of every upstream: `score`, `tier`, `effectiveTier`, `missing`, `lastProbe`, `warm`, `downed`, `held`, `stalling`, `evictions` (for debugging)
+- `GET /readyz` → always `200 OK`: with no ready upstream the proxy still sends connections to the upstream with the best state (also from the `failed` tier); only with an empty upstream list it sends them to the fallback upstreams or to the default Kubernetes Service
+- `GET /upstreams` → a JSON object:
+  - `isHealthy`: some upstream is outside the `failed` tier.
+  - `probeSeq`: `CLOCK_BOOTTIME` in ms at the start of the last applied probe round; strictly increases. It is one number for all upstreams. If the clock gives the same value as for the previous started round, or less, the number is the previous number plus 1. So a round with a number larger than a moment T on the same clock started after T. The number grows also after a proxy restart, and a change of the wall clock has no effect on it. `0` means that no round is complete.
+  - `probeOK`: the result of that round. `true` when at least one upstream answered `ready`; `false` when no upstream did or the upstream list is empty.
+  - `nodes`: the state of every upstream: `score`, `tier`, `effectiveTier`, `missing`, `lastProbe`, `warm`, `downed`, `held`, `stalling`, `evictions` (for debugging) and `lastReadyAgoMs`.
+    - `lastReadyAgoMs`: the time in milliseconds since the last probe of this upstream that answered `ready`. The time starts at the answer, not at the end of the round: a slow upstream in the same round does not delay it. The field is not there when the upstream did not answer `ready` since the proxy started.
+
+  `probeSeq`, `probeOK` and `lastReadyAgoMs` are critical for fencing. The fencing agent of node-manager reads them on every node to decide if the node sees the control plane: `probeSeq` tells that a round started after a given moment, `probeOK` gives the result of that round, and `lastReadyAgoMs` gives the age of the last `ready` answer. Do not remove these fields or change their meaning without a change in the fencing agent.
+
+  `probeSeq`, `probeOK` and `lastReadyAgoMs` came in one version of the proxy. A response with `probeSeq` comes from a proxy that has these three fields.
+
+  Example (the `nodes` item is shortened):
+
+  ```json
+  {
+    "isHealthy": true,
+    "probeSeq": 8123456,
+    "probeOK": true,
+    "nodes": [
+      {
+        "upstream": "10.0.0.1:6443",
+        "score": 3,
+        "tier": 1,
+        "lastProbe": "ready",
+        "lastReadyAgoMs": 310
+      }
+    ]
+  }
+  ```
 
 ## CLI Flags and Environment Variables
 
 ### Core Configuration
-- `--listen-addr` (env: `LISTEN_ADDRESS`, default `0.0.0.0`)
-- `--listen-port` (env: `LISTEN_PORT`, default `7443`)
-- `--health-listen` (env: `HEALTH_LISTEN`, default `:8080`)
+- `--listen-address` (env: `LISTEN_ADDRESS`, default `127.0.0.1`)
+- `--listen-port` (env: `LISTEN_PORT`, default `6445`)
+- `--health-listen` (env: `HEALTH_LISTEN`, default `127.0.0.1:6480`): the address of `/healthz`, `/readyz` and `/upstreams`. The static pod manifest of bashible (step `051_pull_and_configure_kubernetes_api_proxy`) sets the same address, and the dhctl preflight check of the ports (`candi/bashible/preflight/check_ports.sh.tpl`) checks that the port is free before the bootstrap
 - `--log-level` (env: `LOG_LEVEL`, default `info`) — `debug|info|warn|error`
+- `--shutdown-delay` (default `3s`): how long the proxy continues to serve after the first `SIGTERM` or `SIGINT` before it closes the listener; see the Shutdown section below. `0` closes the listener at once
 
 ### Connection Settings
 - `--dial-timeout` (default `5s`): also how long a `Down` or `Silent` upstream is held in the `failed` tier; `0` dials with a 10s limit
@@ -272,9 +339,14 @@ go run ./cmd/kubernetes-api-proxy \
 - `--tcp-user-timeout` (default `5s`): `0` leaves the kernel default
 
 ### Health Check Settings
-- `--health-interval` (default `1s`)
+
+The static pod manifest does not set these flags, thus the defaults apply on every node.
+
+- `--health-interval` (default `1s`), must be positive: the time between the starts of two probe rounds, or more if a round takes longer
 - `--health-timeout` (default `500ms`), must be positive
-- `--health-jitter` (default `0.2`)
+- `--health-jitter` (default `0.2`), in `[0, 1]`: applies to the normal and the fail-step interval
+- `--fail-step-interval` (default `500ms`), must be positive: the time between the starts of two rounds during fail-step, or more if a round takes longer
+- `--fail-step-window` (default `30s`), must not be negative: the longest fail-step period in one failure episode; `0` disables fail-step
 - `--stall-timeout` (default `3s`): how long the extra `/readyz` to a timed-out upstream may go unanswered before its client connections are closed, provided another upstream has answered 200 for twice as long; `0` disables
 
 ### Discovery Settings
@@ -334,9 +406,9 @@ spec:
           image: kubernetes-api-proxy:0.0.1
           imagePullPolicy: IfNotPresent
           args:
-            - "--listen-addr=0.0.0.0"
+            - "--listen-address=0.0.0.0"
             - "--listen-port=6445"
-            - "--health-listen=:8080"
+            - "--health-listen=127.0.0.1:6480"
             - "--log-level=debug"
           ports:
             - name: https
@@ -344,19 +416,20 @@ spec:
               hostPort: 6445
               protocol: TCP
             - name: health
-              containerPort: 8080
-              hostPort: 8080
+              containerPort: 6480
               protocol: TCP
           readinessProbe:
             httpGet:
               path: /readyz
               port: health
+              host: 127.0.0.1
             initialDelaySeconds: 2
             periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /healthz
               port: health
+              host: 127.0.0.1
             initialDelaySeconds: 2
             periodSeconds: 10
           resources:
@@ -416,7 +489,7 @@ spec:
       args:
         - "--listen-address=0.0.0.0"
         - "--listen-port=6445"
-        - "--health-listen=:6480"
+        - "--health-listen=127.0.0.1:6480"
         - "--log-level=debug"
         - "--as-static-pod=true"
         - "--fallback-file=/var/run/kubernetes.io/kap/upstreams.json"
@@ -432,12 +505,14 @@ spec:
         httpGet:
           path: /readyz
           port: health
+          host: 127.0.0.1
         initialDelaySeconds: 2
         periodSeconds: 5
       livenessProbe:
         httpGet:
           path: /healthz
           port: health
+          host: 127.0.0.1
         initialDelaySeconds: 2
         periodSeconds: 10
       resources:
@@ -477,10 +552,32 @@ kubectl apply -f deploy/daemonset.yaml
 
 ## Operational Notes
 
-- Readiness reflects upstream health only; the proxy itself is always alive on `/healthz`
+- `/healthz` and `/readyz` always answer `200`; the upstream state is only in `/upstreams`
 - A probe timeout demotes an upstream but does not exclude it: under a cluster-wide slowdown traffic keeps flowing to every apiserver
 - Jitter (`--health-jitter`) staggers health checks to reduce synchronized load
 - TLS settings apply to health checks only; data path is raw TCP proxying
+
+### Shutdown
+
+On a node shutdown kubelet sends `SIGTERM` to the proxy and to the other node-critical pods at the same time. These pods and kubelet write their last state to the apiserver through the proxy. Thus after the first `SIGTERM` or `SIGINT` the proxy continues to work for `--shutdown-delay` (3s) and logs `stop signal received, serve until the shutdown delay ends`:
+
+- the listener accepts and proxies new connections, and open connections continue to work;
+- the probes, fail-step and discovery continue;
+- `/healthz`, `/readyz` and `/upstreams` continue to answer `200`.
+
+Then the proxy logs `shutting down...` and stops discovery. Then it closes the health server, which gets at most 1s to close its connections. Then it closes the listener and stops the probes and fail-step. Open proxied connections are not closed by the proxy: they end when the process exits. A second `SIGTERM` or `SIGINT` ends the delay at once (log `second stop signal received, end the shutdown delay`).
+
+The static pod has the priority `2000001000` (`system-node-critical`) and no `terminationGracePeriodSeconds`, thus its grace period is 30s. On a node shutdown kubelet uses the smaller period of the priority group from `shutdownGracePeriodByPodPriority` (bashible step `064_configure_kubelet`). When this period ends, kubelet kills the process (`SIGKILL`). The time from the first signal until `127.0.0.1:6445` closes is:
+
+| Event | Grace period | Port `6445` closes after the signal |
+|---|---|---|
+| Worker shutdown | 5s | at 3s to 4s: the proxy closes it |
+| Master shutdown | 25s | at 3s to 4s: the proxy closes it |
+| Pod deletion or manifest change | 30s | at 3s to 4s: the proxy closes it |
+
+The delay (3s) and the shutdown of the health server (at most 1s) take less than the smallest group period (5s on a worker). Thus on workers and on masters the proxy closes the listener itself and the log has the `shutting down...` line.
+
+On a pod deletion or a manifest change kubelet starts the new container after the old one stops. Thus the delay makes the restart 3s longer, but the time while the port is closed does not change.
 
 ## Project Structure
 

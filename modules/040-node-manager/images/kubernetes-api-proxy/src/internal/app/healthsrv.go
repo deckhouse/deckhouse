@@ -26,10 +26,14 @@ import (
 type healthChecker interface {
 	Healthy() (bool, error)
 	Nodes() ([]upstream.ExportNode, error)
+	Probe() (uint64, bool)
 }
 
-// NewHealthServer constructs an HTTP server exposing /healthz (always OK) and
-// /readyz (OK only if the load balancer reports at least one healthy upstream).
+// NewHealthServer constructs an HTTP server exposing /healthz and /readyz
+// (always OK: with no ready upstream the proxy still sends connections to the
+// upstream with the best state; only with an empty upstream list it sends them
+// to the fallback upstreams or to the default Kubernetes Service) and
+// /upstreams (always OK, with the upstream state).
 func NewHealthServer(addr string, lb healthChecker) *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
@@ -43,10 +47,13 @@ func NewHealthServer(addr string, lb healthChecker) *http.Server {
 	mux.HandleFunc("/upstreams", func(w http.ResponseWriter, _ *http.Request) {
 		isHealthy, _ := lb.Healthy()
 		nodes, _ := lb.Nodes()
+		probeSeq, probeOK := lb.Probe()
 
 		var statusMap = make(map[string]interface{})
 		statusMap["isHealthy"] = isHealthy
 		statusMap["nodes"] = nodes
+		statusMap["probeSeq"] = probeSeq
+		statusMap["probeOK"] = probeOK
 
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(statusMap)

@@ -153,6 +153,11 @@ func (lb *LoadBalancer) Nodes() ([]upstream.ExportNode, error) {
 	return lb.lb.MainUpstreamList.ExportNodes()
 }
 
+// Probe returns the number and the result of the last probe round.
+func (lb *LoadBalancer) Probe() (uint64, bool) {
+	return lb.lb.MainUpstreamList.Probe()
+}
+
 func (lb *LoadBalancer) Start() error {
 	return lb.lb.Start()
 }

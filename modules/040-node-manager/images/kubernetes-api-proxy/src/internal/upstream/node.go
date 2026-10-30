@@ -30,10 +30,11 @@ type node struct {
 	warm      bool
 	unsettled bool
 
-	answeredAt time.Time
-	readySince time.Time
-	stalling   bool
-	evictions  int
+	answeredAt  time.Time
+	readySince  time.Time
+	lastReadyAt time.Time
+	stalling    bool
+	evictions   int
 }
 
 func (n node) lastProbe() string {
@@ -42,6 +43,16 @@ func (n node) lastProbe() string {
 	}
 
 	return n.lastKind.String()
+}
+
+func (n node) lastReadyAgo(now time.Time) *int64 {
+	if n.lastReadyAt.IsZero() {
+		return nil
+	}
+
+	ms := now.Sub(n.lastReadyAt).Milliseconds()
+
+	return &ms
 }
 
 func (n node) witnesses(start, now time.Time, window time.Duration) bool {
@@ -61,4 +72,7 @@ type ExportNode struct {
 	Held          bool    `json:"held"`
 	Stalling      bool    `json:"stalling"`
 	Evictions     int     `json:"evictions"`
+	// LastReadyAgoMs is the time in milliseconds since the last probe that
+	// answered ready. It is nil when the upstream was never ready.
+	LastReadyAgoMs *int64 `json:"lastReadyAgoMs,omitempty"`
 }

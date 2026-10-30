@@ -42,9 +42,14 @@ type Config struct {
 	HealthJitter   float64
 	StallTimeout   time.Duration
 
+	FailStepInterval time.Duration
+	FailStepWindow   time.Duration
+
 	ProxyHealthListen string
 
 	LogLevel string
+
+	ShutdownDelay time.Duration
 
 	// Discovery
 	DiscoverPeriod time.Duration
@@ -74,6 +79,21 @@ func (c Config) SLogLevel() slog.Level {
 	return lvl
 }
 
+// Probe defaults. The static pod manifest does not set the probe flags, thus
+// these values apply on every node.
+const (
+	defaultHealthInterval   = time.Second
+	defaultHealthTimeout    = 500 * time.Millisecond
+	defaultHealthJitter     = 0.2
+	defaultFailStepInterval = 500 * time.Millisecond
+	defaultFailStepWindow   = 30 * time.Second
+)
+
+// defaultShutdownDelay and the shutdown of the health server stay below the 5s
+// that kubelet gives to node-critical pods on a worker shutdown. Thus the proxy
+// closes the listener before kubelet kills it.
+const defaultShutdownDelay = 3 * time.Second
+
 // Parse reads command-line flags & environment variables and returns the
 // resulting Config. Unknown flags will cause Parse to exit via flag.Parse.
 func Parse() Config {
@@ -86,12 +106,16 @@ func Parse() Config {
 	firstByteTimeout := flag.Duration("first-byte-timeout", 3*time.Second, "Floor of the per-upstream wait for the first byte on a new upstream connection before retrying another upstream; 0 disables the wait")
 	keepAlivePeriod := flag.Duration("keepalive-period", 1*time.Second, "TCP keepalive period for connections")
 	tcpUserTimeout := flag.Duration("tcp-user-timeout", 5*time.Second, "TCP_USER_TIMEOUT for connections (Linux only)")
-	healthInterval := flag.Duration("health-interval", 1*time.Second, "Upstream healthcheck interval")
-	healthTimeout := flag.Duration("health-timeout", 500*time.Millisecond, "Upstream healthcheck timeout")
-	healthJitter := flag.Float64("health-jitter", 0.2, "Jitter factor for healthcheck interval (0..1 recommended)")
+	healthInterval := flag.Duration("health-interval", defaultHealthInterval, "Upstream healthcheck interval")
+	healthTimeout := flag.Duration("health-timeout", defaultHealthTimeout, "Upstream healthcheck timeout")
+	healthJitter := flag.Float64("health-jitter", defaultHealthJitter, "Jitter factor for healthcheck interval (0..1 recommended)")
+	failStepInterval := flag.Duration("fail-step-interval", defaultFailStepInterval, "Healthcheck interval while no upstream is ready (fail-step)")
+	failStepWindow := flag.Duration("fail-step-window", defaultFailStepWindow, "Longest fail-step period in one failure episode; 0 disables fail-step")
 	stallTimeout := flag.Duration("stall-timeout", 3*time.Second, "Close client connections pinned to an apiserver whose /readyz gave no answer for this long while another apiserver has served 200 for twice as long; 0 disables")
-	proxyHealthListen := flag.String("health-listen", getenvDefault("HEALTH_LISTEN", "127.0.0.1:4300"), "address for HTTP health endpoints (e.g., :8080)")
+	// The static pod manifest of bashible sets the same address.
+	proxyHealthListen := flag.String("health-listen", getenvDefault("HEALTH_LISTEN", "127.0.0.1:6480"), "Address for the HTTP endpoints /healthz, /readyz and /upstreams (e.g., 127.0.0.1:6480)")
 	logLevel := flag.String("log-level", getenvDefault("LOG_LEVEL", "info"), "Log level: debug|info|warn|error")
+	shutdownDelay := flag.Duration("shutdown-delay", defaultShutdownDelay, "How long the proxy continues to serve after the first SIGTERM or SIGINT before it closes the listener; a second signal ends the delay; 0 closes the listener at once")
 
 	// Discovery
 	discoverPeriod := flag.Duration("discover-period", 5*time.Second, "How often to refresh kube-apiserver EndpointSlices")
@@ -109,6 +133,7 @@ func Parse() Config {
 	cfg.ListenPort = *listenPort
 
 	cfg.LogLevel = *logLevel
+	cfg.ShutdownDelay = *shutdownDelay
 
 	cfg.DialTimeout = *dialTimeout
 	cfg.FirstByteTimeout = *firstByteTimeout
@@ -117,6 +142,8 @@ func Parse() Config {
 	cfg.HealthInterval = *healthInterval
 	cfg.HealthTimeout = *healthTimeout
 	cfg.HealthJitter = *healthJitter
+	cfg.FailStepInterval = *failStepInterval
+	cfg.FailStepWindow = *failStepWindow
 	cfg.StallTimeout = *stallTimeout
 	cfg.ProxyHealthListen = *proxyHealthListen
 

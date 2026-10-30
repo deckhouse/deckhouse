@@ -37,6 +37,7 @@ import (
 	"time"
 
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/transport"
 )
 
 type testCA struct {
@@ -222,6 +223,7 @@ type probeFixture struct {
 	files  probeFiles
 	server *probeServer
 	u      *Upstream
+	dial   *transport.DialHolder
 }
 
 func newProbeFixture(t *testing.T) probeFixture {
@@ -235,6 +237,7 @@ func newProbeFixture(t *testing.T) probeFixture {
 		files:  files,
 		server: server,
 		u:      NewUpstream(server.addr(), files.getter),
+		dial:   probeDial(time.Second),
 	}
 }
 
@@ -244,7 +247,7 @@ func (f probeFixture) probe(t *testing.T, timeout time.Duration) probeResult {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	r, err := f.u.probe(ctx)
+	r, err := f.u.probe(ctx, f.dial)
 	if err != nil {
 		t.Fatalf("probe() error = %v", err)
 	}
@@ -321,7 +324,7 @@ func TestProbe_NoConnectionIsHard(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 			defer cancel()
 
-			r, err := u.probe(ctx)
+			r, err := u.probe(ctx, f.dial)
 			if err != nil {
 				t.Fatalf("probe() error = %v", err)
 			}
@@ -338,6 +341,31 @@ func TestProbe_ReusesConnection(t *testing.T) {
 
 	for range 50 {
 		f.probe(t, time.Second)
+	}
+
+	if got := f.server.conns.Load(); got != 1 {
+		t.Errorf("server connections = %d, want 1", got)
+	}
+}
+
+// The probes of a List use one cached transport: a new transport for each
+// probe dials a new connection each time and grows the transport cache.
+func TestList_ProbesShareOneTransport(t *testing.T) {
+	f := newProbeFixture(t)
+
+	list, err := newList(nil, byAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for range 20 {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		r, err := list.probe(ctx, f.u)
+		cancel()
+
+		if err != nil || r.kind != probeReady {
+			t.Fatalf("probe() = %v, %v, want %v", r.kind, err, probeReady)
+		}
 	}
 
 	if got := f.server.conns.Load(); got != 1 {
@@ -372,7 +400,7 @@ func TestProbe_BrokenCAIsGetterError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	if _, err := f.u.probe(ctx); err == nil {
+	if _, err := f.u.probe(ctx, f.dial); err == nil {
 		t.Fatal("probe() error = nil, want transport error")
 	}
 }
@@ -389,7 +417,7 @@ func TestProbe_EmptyCAIsHard(t *testing.T) {
 func TestProbe_NilGetterIsError(t *testing.T) {
 	u := NewUpstream("127.0.0.1:1", nil)
 
-	if _, err := u.probe(context.Background()); !errors.Is(err, errNoProbeConfig) {
+	if _, err := u.probe(context.Background(), nil); !errors.Is(err, errNoProbeConfig) {
 		t.Errorf("probe() error = %v, want %v", err, errNoProbeConfig)
 	}
 }

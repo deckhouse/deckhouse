@@ -18,6 +18,7 @@ package upstream
 
 import (
 	"context"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -483,7 +484,7 @@ func assertSameModel(t *testing.T, step int, off, on *List) {
 		got[i].Stalling, got[i].Evictions = false, 0
 	}
 
-	if !slices.Equal(got, want) {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("step %d: model with stall probes = %+v, want %+v", step, got, want)
 	}
 }

@@ -21,12 +21,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptrace"
 	"sync/atomic"
 	"time"
 
-	"k8s.io/client-go/rest"
+	"github.com/siderolabs/tcpproxy"
+	"k8s.io/client-go/transport"
 
 	"kubernetes-api-proxy/pkg/kubernetes"
 )
@@ -92,8 +94,8 @@ type probeResult struct {
 	latency time.Duration
 }
 
-func (u *Upstream) probe(ctx context.Context) (probeResult, error) {
-	rt, err := u.transport()
+func (u *Upstream) probe(ctx context.Context, dial *transport.DialHolder) (probeResult, error) {
+	rt, err := u.transport(dial)
 	if err != nil {
 		return probeResult{}, err
 	}
@@ -110,7 +112,7 @@ func (u *Upstream) probe(ctx context.Context) (probeResult, error) {
 	return classify(status, err, gotConn.Load(), time.Since(start)), nil
 }
 
-func (u *Upstream) transport() (http.RoundTripper, error) {
+func (u *Upstream) transport(dial *transport.DialHolder) (http.RoundTripper, error) {
 	if u.probeConfig == nil {
 		return nil, errNoProbeConfig
 	}
@@ -120,15 +122,47 @@ func (u *Upstream) transport() (http.RoundTripper, error) {
 		return nil, fmt.Errorf("probe config: %w", err)
 	}
 
-	// TransportFor caches transports by TLS settings, CA bytes included:
-	// unchanged files hit the cache and reuse the warm connection, a rewritten
-	// ca.crt yields a fresh transport without restarting the proxy.
-	rt, err := rest.TransportFor(cfg)
+	tc, err := cfg.TransportConfig()
+	if err != nil {
+		return nil, fmt.Errorf("transport config: %w", err)
+	}
+
+	tc.DialHolder = dial
+
+	// transport.New keeps transports in a cache. The key includes the TLS
+	// settings, the CA bytes and the dial. When the files do not change, the
+	// probe gets the cached transport and its warm connection. A new ca.crt
+	// gives a new transport without a restart of the proxy.
+	rt, err := transport.New(tc)
 	if err != nil {
 		return nil, fmt.Errorf("build transport: %w", err)
 	}
 
 	return rt, nil
+}
+
+// probeDial returns the dial for the probe transport. Each List keeps one
+// value, because the transport cache compares the dial by its pointer.
+//
+// The dial sets TCP_USER_TIMEOUT of each probe connection to the probe
+// timeout (Linux only). When the network drops packets, the kernel closes the
+// connection after this time, and the next probe dials a new connection.
+// Without the option, the probes wait on the old connection for the next
+// retransmission, which can come some seconds after the network is available
+// again.
+func probeDial(userTimeout time.Duration) *transport.DialHolder {
+	var d net.Dialer
+
+	return &transport.DialHolder{Dial: func(ctx context.Context, network, addr string) (net.Conn, error) {
+		c, err := d.DialContext(ctx, network, addr)
+		if err != nil {
+			return nil, err
+		}
+
+		_ = tcpproxy.SetTCPUserTimeout(c, userTimeout)
+
+		return c, nil
+	}}
 }
 
 func get(ctx context.Context, rt http.RoundTripper, addr string) (int, error) {

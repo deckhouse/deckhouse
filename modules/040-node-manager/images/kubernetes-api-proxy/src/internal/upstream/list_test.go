@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -118,7 +119,7 @@ func newTestList(t *testing.T, addrs ...string) (*List, *fakeProbes, *fakeClock)
 }
 
 func round(list *List) {
-	list.round(context.Background())
+	list.round(context.Background(), list.beginRound())
 }
 
 func picks(t *testing.T, list *List, n int) map[string]int {
@@ -163,6 +164,11 @@ func TestList_NewList(t *testing.T) {
 		{name: "invalid jitter range", options: []ListOption{WithHealthCheckJitter(-0.5)}, wantErr: true},
 		{name: "zero timeout", options: []ListOption{WithHealthcheckTimeout(0)}, wantErr: true},
 		{name: "negative timeout", options: []ListOption{WithHealthcheckTimeout(-time.Second)}, wantErr: true},
+		{name: "zero interval", options: []ListOption{WithHealthcheckInterval(0)}, wantErr: true},
+		{name: "valid fail-step", options: []ListOption{WithFailStep(200*time.Millisecond, 4300*time.Millisecond)}},
+		{name: "fail-step off", options: []ListOption{WithFailStep(200*time.Millisecond, 0)}},
+		{name: "zero fail-step interval", options: []ListOption{WithFailStep(0, time.Second)}, wantErr: true},
+		{name: "negative fail-step window", options: []ListOption{WithFailStep(200*time.Millisecond, -time.Second)}, wantErr: true},
 	}
 
 	for _, tt := range tests {
@@ -688,7 +694,7 @@ func TestRound_CancelledContextChangesNothing(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	list.round(ctx)
+	list.round(ctx, list.beginRound())
 
 	if n := exported(t, list, "m0"); n.Tier != tierFailed || n.Score != initialScore {
 		t.Errorf("m0 = %+v, want untouched", n)
@@ -923,8 +929,13 @@ func TestProbeAll_ParallelWithTimeout(t *testing.T) {
 		return probeResult{kind: probeSoft}, nil
 	}
 
+	list, err := newList(nil, byAddr, WithHealthcheckTimeout(100*time.Millisecond), withProbe(block))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	start := time.Now()
-	out := probeAll(context.Background(), ups("a", "b", "c"), 100*time.Millisecond, block, nil)
+	out := list.probeAll(context.Background(), ups("a", "b", "c"))
 
 	if elapsed := time.Since(start); elapsed >= 300*time.Millisecond {
 		t.Errorf("three blocked probes with 100ms timeout took %v, want parallel and bounded", elapsed)
@@ -1237,7 +1248,7 @@ func TestDown_UnknownUpstreamIsNoop(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !slices.Equal(before, after) {
+	if !reflect.DeepEqual(before, after) {
 		t.Errorf("nodes changed by an unknown upstream: %+v -> %+v", before, after)
 	}
 }

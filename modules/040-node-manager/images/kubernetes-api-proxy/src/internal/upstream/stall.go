@@ -90,6 +90,10 @@ func (list *List) recordStallLocked(b *Upstream, start time.Time, r probeResult,
 	switch {
 	case r.kind.answered():
 		list.answerLocked(i, r.kind, now)
+
+		if r.kind == probeReady {
+			list.readyLocked(i, now)
+		}
 	case stalled:
 		return list.stalledLocked(i, start, now)
 	}

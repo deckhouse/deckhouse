@@ -18,6 +18,8 @@ package upstream
 
 import (
 	"context"
+	"encoding/json"
+	"math/rand/v2"
 	"sync"
 	"testing"
 	"time"
@@ -64,10 +66,65 @@ func TestList_ConcurrentAccess(t *testing.T) {
 	wg.Wait()
 
 	list.Reconcile(both)
-	list.round(context.Background())
+	list.round(context.Background(), list.beginRound())
 
 	if _, err := list.Pick(); err != nil {
 		t.Fatalf("Pick() after churn error = %v", err)
+	}
+}
+
+// No race on score: rounds in fail-step update score while /upstreams data
+// is read.
+func TestList_NoRaceOnScore(t *testing.T) {
+	probes := newFakeProbes()
+	slow := func(ctx context.Context, u *Upstream) (probeResult, error) {
+		time.Sleep(time.Duration(rand.IntN(3)) * time.Millisecond)
+
+		return probes.probe(ctx, u)
+	}
+
+	list, err := NewList(ups("m0", "m1"),
+		WithHealthcheckInterval(time.Millisecond),
+		WithFailStep(time.Millisecond, time.Hour),
+		WithStallTimeout(time.Millisecond),
+		withProbe(slow),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(list.Shutdown)
+
+	deadline := time.Now().Add(300 * time.Millisecond)
+	kinds := []probeKind{probeReady, probeNotReady, probeSoft, probeHard}
+
+	var wg sync.WaitGroup
+
+	wg.Go(func() {
+		for time.Now().Before(deadline) {
+			probes.set("m0", kinds[rand.IntN(len(kinds))], time.Millisecond)
+			probes.set("m1", kinds[rand.IntN(len(kinds))], time.Millisecond)
+			time.Sleep(time.Millisecond)
+		}
+	})
+
+	for range 4 {
+		wg.Go(func() {
+			for time.Now().Before(deadline) {
+				nodes, _ := list.ExportNodes()
+				if _, err := json.Marshal(nodes); err != nil {
+					t.Error(err)
+				}
+
+				_, _ = list.Probe()
+				_ = list.cycleDelay(1)
+				time.Sleep(100 * time.Microsecond)
+			}
+		})
+	}
+	wg.Wait()
+
+	if seq, _ := list.Probe(); seq == 0 {
+		t.Error("no round applied")
 	}
 }
 

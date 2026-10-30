@@ -19,29 +19,49 @@ package upstream
 import (
 	"context"
 	"log/slog"
+	"slices"
 	"time"
 )
 
-func (list *List) round(ctx context.Context) {
+// beginRound returns the number of a new round: the node boot clock
+// (CLOCK_BOOTTIME) in milliseconds at the start of the round, or the number
+// of the previous started round plus 1 if that is not larger. So the numbers
+// always grow, also across proxy restarts, and the wall clock has no effect.
+func (list *List) beginRound() uint64 {
+	list.mu.Lock()
+	defer list.mu.Unlock()
+
+	list.startedSeq = max(list.boot(), list.startedSeq+1)
+
+	return list.startedSeq
+}
+
+// round probes every upstream and applies the result. It returns true when
+// fail-step is active after the round.
+func (list *List) round(ctx context.Context, seq uint64) bool {
 	backends := list.backends()
-	out := probeAll(ctx, backends, list.healthcheckTimeout, list.probe, list.logger)
+	out := list.probeAll(ctx, backends)
 
 	if ctx.Err() != nil {
-		return
+		return false
 	}
 
 	now := list.now()
 
 	list.mu.Lock()
-	stalls := list.applyRoundLocked(backends, out, now)
+	stalls := list.applyRoundLocked(seq, backends, out, now)
+	failStep := list.failStepLocked(now)
 	list.unlockAndLog()
 
 	for _, b := range stalls {
 		list.startStall(ctx, b, now)
 	}
+
+	return failStep
 }
 
-func (list *List) applyRoundLocked(backends []*Upstream, out []outcome, now time.Time) []*Upstream {
+func (list *List) applyRoundLocked(seq uint64, backends []*Upstream, out []outcome, now time.Time) []*Upstream {
+	list.recordRoundLocked(seq, out, now)
 	list.markWarmLocked(backends, out)
 
 	nobodyReady := list.switchModeLocked(list.voteLocked(backends, out))
@@ -53,6 +73,44 @@ func (list *List) applyRoundLocked(backends []*Upstream, out []outcome, now time
 	}
 
 	return list.stallsLocked(backends, out)
+}
+
+// recordRoundLocked stores the number and the result of the round, tracks
+// the failure episode and logs the start and the end of fail-step.
+func (list *List) recordRoundLocked(seq uint64, out []outcome, now time.Time) {
+	list.probeSeq = seq
+	list.probeOK = slices.ContainsFunc(out, func(o outcome) bool { return o.ok && o.value.kind == probeReady })
+
+	switch {
+	case list.probeOK:
+		// The first ready round can come after the end of the window. Log the
+		// end of fail-step if it is not logged yet.
+		if !list.failSince.IsZero() && !list.failStepOver {
+			list.noteFailStepStopLocked("an upstream is ready", now)
+		}
+
+		list.failSince = time.Time{}
+	case list.failSince.IsZero():
+		list.failSince = now
+		// With a zero window fail-step does not start, and there is no end to log.
+		list.failStepOver = !list.failStepLocked(now)
+
+		if !list.failStepOver {
+			list.warnListLocked("fail-step started",
+				slog.String("reason", "no upstream is ready"),
+				slog.String("interval", list.failStepInterval.String()),
+				slog.String("window", list.failStepWindow.String()))
+		}
+	case !list.failStepOver && !list.failStepLocked(now):
+		list.failStepOver = true
+		list.noteFailStepStopLocked("the fail-step window ended", now)
+	}
+}
+
+func (list *List) noteFailStepStopLocked(reason string, now time.Time) {
+	list.warnListLocked("fail-step stopped",
+		slog.String("reason", reason),
+		slog.String("duration", now.Sub(list.failSince).String()))
 }
 
 func (list *List) stallsLocked(backends []*Upstream, out []outcome) []*Upstream {

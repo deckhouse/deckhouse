@@ -209,8 +209,9 @@ spec:
 {{- /*
   # Multi-master only. On SIGTERM kube-apiserver turns /readyz red and removes
   # itself from the kubernetes Service endpoints at once, then keeps serving for
-  # the delay: kubernetes-api-proxy needs 3.2-6s to see the red /readyz, Service
-  # routing a few seconds more. Then it answers new requests with 429 and
+  # the delay: kubernetes-api-proxy needs up to 1.7s to see the red /readyz
+  # (up to 1.2s when the apiserver answers at once), Service routing a few
+  # seconds more. Then it answers new requests with 429 and
   # Retry-After until in-flight requests drain. On a single master the delay
   # would only extend the time the Service has no endpoints.
 */}}
