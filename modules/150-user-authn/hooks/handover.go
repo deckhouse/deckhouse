@@ -33,6 +33,7 @@ var handoverKinds = []handover.Kind{
 	dexClientSecrets,
 	dexClientOAuth2Clients,
 	kubernetesOAuth2Client,
+	dexPasswords,
 }
 
 const handoverQueue = "/modules/user-authn/handover"

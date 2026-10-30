@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/flant/addon-operator/sdk"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -54,6 +55,7 @@ func newHandoverFakeClient(objs ...runtime.Object) *dynamicfake.FakeDynamicClien
 		dexClientGVR:    "DexClientList",
 		secretGVR:       "SecretList",
 		oauth2ClientGVR: "OAuth2ClientList",
+		passwordGVR:     "PasswordList",
 	}, objs...)
 }
 
@@ -134,6 +136,11 @@ func TestHandoverProtectsChartObjects(t *testing.T) {
 func TestHandoverProtectWithoutCRDs(t *testing.T) {
 	c := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), map[schema.GroupVersionResource]string{
 		dexClientGVR: "DexClientList",
+		passwordGVR:  "PasswordList",
+	})
+	// The API server answers a list of a resource it does not serve with NotFound.
+	c.PrependReactor("list", "passwords", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, apierrors.NewNotFound(passwordGVR.GroupResource(), "")
 	})
 	if _, err := handover.Protect(context.Background(), c, handoverKinds); err != nil {
 		t.Fatalf("Protect: %v", err)

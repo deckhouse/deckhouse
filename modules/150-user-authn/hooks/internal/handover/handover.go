@@ -22,12 +22,20 @@ limitations under the License.
 // application configured with the old one. Both release engines honour the
 // `helm.sh/resource-policy: keep` annotation on the live object, so Protect stamps it on every
 // object of a Kind the release still owns, right before the release runs, and fails the run if
-// any is left unprotected. The controller adopts the objects and removes the annotation together
-// with the ownership metadata, after which Protect leaves them alone.
+// any is left unprotected. The controller adopts the Secrets and OAuth2Clients and removes the
+// annotation together with the ownership metadata, after which Protect leaves them alone.
 //
-// Nothing is removed when the module is disabled: the OAuth2Clients go with the d8-user-authn
-// namespace, and the Secrets of DexClients are owned by their DexClients. A Secret that outlives
-// a disabled module keeps its value, so the applications using it survive re-enabling.
+// Dex Passwords, which the chart of 1.76 rendered, are not adopted: the controller keeps the keep
+// policy on every Password and leaves the release annotations in place. Their Kind therefore
+// returns only the Passwords that are not protected yet, and a protected one does not count as
+// owned. A Password the controller would recreate comes from User.spec.password, the password the
+// User was created with, so pruning one loses the password changed in Dex, the password history
+// and the lockout state.
+//
+// Nothing is removed when the module is disabled: the OAuth2Clients and Passwords go with the
+// d8-user-authn namespace, and the Secrets of DexClients are owned by their DexClients. A Secret
+// that outlives a disabled module keeps its value, so the applications using it survive
+// re-enabling.
 //
 // Moving another kind to the controller means adding a Kind to the list the module hooks pass
 // here; neither the hooks nor this package change.
@@ -40,7 +48,10 @@ limitations under the License.
 // keeps working in Dex until the next update, whose controller removes the objects of deleted
 // DexClients. To remove them at once, delete the Secret dex-client-<name> in the namespace of the
 // DexClient and its OAuth2Clients in d8-user-authn, or remove the helm.sh/resource-policy
-// annotation from them before deleting the DexClient.
+// annotation from them before deleting the DexClient. The same holds for a User deleted on that
+// version: its Password stays, and the user can still log in until the next update, whose
+// controller deletes the Passwords of deleted Users. To remove it at once, delete the Password of
+// the user in d8-user-authn as well.
 package handover
 
 import (
