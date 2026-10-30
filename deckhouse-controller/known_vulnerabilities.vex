@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 19,
+  "version": 21,
   "statements": [
     {
       "vulnerability": {
@@ -751,8 +751,84 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "В Linux-бинарнике yq отсутствуют ReverseProxy и функции HTTP/2. Проксирование между HTTP/2 и HTTP/1 не выполняется.",
       "timestamp": "2026-10-12T13:20:23Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-85747"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/github.com/docker/distribution@v2.8.3+incompatible"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В deckhouse-controller и caps-deckhouse-controller из github.com/docker/distribution v2.8.3+incompatible включён только пакет registry/client/auth/challenge, который go-containerregistry использует для разбора HTTP authentication challenges. Пакеты registry/client и registry/proxy отсутствуют в графе зависимостей Linux-бинарника. Уязвимая функция registry/client.(*manifests).Get не включается в контроллер; OCI-манифесты обрабатываются другими registry-клиентами.",
+      "timestamp": "2026-10-29T09:12:56Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-114437"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/deckhouse/deckhouse",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/github.com/go-chi/chi/v5@v5.3.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "deckhouse-controller и caps-deckhouse-controller не регистрируют middleware.ClientIPFromXFF. Их API, admission, conversion и debug-серверы используют обработку ошибок, логирование, проверку Content-Type и профилирование без извлечения адреса клиента из X-Forwarded-For. Уязвимый путь определения клиентского IP не выполняется.",
+      "timestamp": "2026-10-29T09:19:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78661"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.60.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В поставляемом Linux-бинарнике yq отсутствуют HTML-парсер и его методы Parse/ParseFragment из golang.org/x/net/html. В таблице функций сохранён только инициализатор пакета html; уязвимый код разбора и рендеринга HTML не включён.",
+      "timestamp": "2026-10-29T09:36:06Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97045"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.60.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В поставляемом Linux-бинарнике yq отсутствуют HTML-renderer и функции Render/childTextNodesAreLiteral из golang.org/x/net/html. В таблице функций сохранён только инициализатор пакета html; уязвимый код разбора и рендеринга HTML не включён.",
+      "timestamp": "2026-10-29T09:36:06Z"
     }
   ],
   "timestamp": "2025-10-09T14:31:31Z",
-  "last_updated": "2026-10-13T06:04:01Z"
+  "last_updated": "2026-10-29T09:36:06Z"
 }

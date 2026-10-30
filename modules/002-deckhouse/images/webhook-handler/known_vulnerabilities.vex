@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 19,
+  "version": 21,
   "statements": [
     {
       "vulnerability": {
@@ -1378,8 +1378,136 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "В webhook-handler promtool вызывается валидатором CustomPrometheusRules командой promtool check rules для временного YAML-файла. CheckRules проверяет YAML, PromQL и синтаксис текстовых шаблонов; преобразование имён профилем precis.Nickname не выполняется. Символы golang.org/x/text/secure/precis и Nickname отсутствуют в бинарнике.",
       "timestamp": "2026-10-12T13:42:01Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-111943"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib@v1.25.14"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler валидатор CustomPrometheusRules запускает /usr/local/bin/promtool, собранный с Go 1.25.14, с фиксированными аргументами check rules и путём временного YAML-файла. Пользователь управляет содержимым YAML, но не исполняемым файлом, подкомандой или флагами. Этот путь читает файл и проверяет YAML, PromQL и метки без TLS-соединений и вызова crypto/x509.(*Certificate).Verify. Alert-шаблоны проходят ParseTest через text/template.Parse; функции шаблонов не исполняются. Обоснование ограничено вызовом check rules в webhook-handler и не относится к сетевым подкомандам promtool.",
+      "timestamp": "2026-10-29T09:12:56Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-63209"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/github.com/klauspost/compress@v1.17.9"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В webhook-handler валидатор CustomPrometheusRules запускает /usr/local/bin/promtool с фиксированными аргументами check rules и путём временного YAML-файла. Пользователь управляет содержимым YAML, но не исполняемым файлом, подкомандой или флагами. Этот путь разбирает обычный YAML и PromQL, не обрабатывает S2 dictionaries и не вызывает s2.NewDict или Dict.Encode из github.com/klauspost/compress v1.17.9. Alert-шаблоны только разбираются через text/template.Parse без исполнения функций, поэтому входной YAML не переключает выполнение на уязвимый путь сжатия. Обоснование ограничено вызовом check rules в webhook-handler.",
+      "timestamp": "2026-10-29T09:12:56Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-114437"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-chi/chi/v5@v5.3.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "webhook-operator не регистрирует middleware.ClientIPFromXFF. Его admission, conversion и debug-серверы используют обработку ошибок, структурированное логирование и проверку Content-Type без извлечения адреса клиента из X-Forwarded-For. Уязвимый путь определения клиентского IP не выполняется.",
+      "timestamp": "2026-10-29T09:19:20Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78661"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.60.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В поставляемом Linux-бинарнике yq отсутствуют HTML-парсер и его методы Parse/ParseFragment из golang.org/x/net/html. В таблице функций сохранён только инициализатор пакета html; уязвимый код разбора и рендеринга HTML не включён.",
+      "timestamp": "2026-10-29T09:36:06Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97045"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/mikefarah/yq/v4",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.60.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В поставляемом Linux-бинарнике yq отсутствуют HTML-renderer и функции Render/childTextNodesAreLiteral из golang.org/x/net/html. В таблице функций сохранён только инициализатор пакета html; уязвимый код разбора и рендеринга HTML не включён.",
+      "timestamp": "2026-10-29T09:36:06Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78661"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В поставляемом Linux-бинарнике promtool отсутствуют HTML-парсер и его методы Parse/ParseFragment из golang.org/x/net/html. В таблице функций бинарника нет функций пакета golang.org/x/net/html. Webhook вызывает promtool с фиксированными аргументами check rules для проверки YAML и PromQL; уязвимый HTML-код не включён.",
+      "timestamp": "2026-10-29T09:36:06Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97045"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "В поставляемом Linux-бинарнике promtool отсутствуют HTML-renderer и функции Render/childTextNodesAreLiteral из golang.org/x/net/html. В таблице функций бинарника нет функций пакета golang.org/x/net/html. Webhook вызывает promtool с фиксированными аргументами check rules для проверки YAML и PromQL; уязвимый HTML-код не включён.",
+      "timestamp": "2026-10-29T09:36:06Z"
     }
   ],
   "timestamp": "2026-02-16T12:00:00Z",
-  "last_updated": "2026-10-13T06:04:01Z"
+  "last_updated": "2026-10-29T09:36:06Z"
 }
