@@ -39,8 +39,11 @@ spec:
                   - worker
               path:
                 type: string
+                pattern: '^/[^"\\\s\p{Cc}]*$'
                 description: |
                   Node root path for PV's.
+
+                  An absolute path without quotes, backslashes, whitespace and control characters.
                 x-doc-examples: ["/opt/local-path-provisioner"]
               reclaimPolicy:
                 type: string
