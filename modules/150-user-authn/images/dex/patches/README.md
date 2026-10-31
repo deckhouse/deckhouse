@@ -1177,5 +1177,12 @@ It lists the `go.mod` requirements that the patch set changes over the upstream 
 
 | Module | Upstream | Patched |
 |---|---|---|
-| `golang.org/x/net` | v0.59.0 | v0.60.0 |
+| `github.com/go-jose/go-jose/v4` | v4.1.5 | v4.1.6 |
+| `github.com/go-ldap/ldap/v3` | v3.4.14 | v3.4.15 |
+| `golang.org/x/crypto` | v0.57.0 | v0.58.0 |
+| `golang.org/x/net` | v0.59.0 | v0.62.0 |
+| `golang.org/x/sync` | v0.23.0 | v0.24.0 |
+| `golang.org/x/sys` | v0.48.0 | v0.49.0 |
+| `golang.org/x/text` | v0.42.0 | v0.43.0 |
+| `golang.org/x/tools` | v0.49.0 | v0.51.0 |
 <!-- cvefix:end -->
