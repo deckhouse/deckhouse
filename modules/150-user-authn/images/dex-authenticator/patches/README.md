@@ -138,6 +138,7 @@ It lists the `go.mod` requirements that the patch set changes over the upstream 
 | `cloud.google.com/go/auth/oauth2adapt` | — | v0.2.8 |
 | `cloud.google.com/go/auth` | — | v0.18.2 |
 | `github.com/felixge/httpsnoop` | — | v1.0.4 |
+| `github.com/go-jose/go-jose/v4` | v4.1.4 | v4.1.6 |
 | `github.com/go-logr/stdr` | — | v1.2.2 |
 | `github.com/google/s2a-go` | v0.1.4 | v0.1.9 |
 | `github.com/googleapis/enterprise-certificate-proxy` | v0.2.3 | v0.3.11 |
@@ -149,12 +150,12 @@ It lists the `go.mod` requirements that the patch set changes over the upstream 
 | `go.opentelemetry.io/otel/metric` | — | v1.44.0 |
 | `go.opentelemetry.io/otel/trace` | — | v1.44.0 |
 | `go.opentelemetry.io/otel` | — | v1.44.0 |
-| `golang.org/x/crypto` | v0.46.0 | v0.57.0 |
-| `golang.org/x/net` | v0.48.0 | v0.60.0 |
+| `golang.org/x/crypto` | v0.46.0 | v0.58.0 |
+| `golang.org/x/net` | v0.48.0 | v0.62.0 |
 | `golang.org/x/oauth2` | v0.34.0 | v0.36.0 |
-| `golang.org/x/sync` | v0.19.0 | v0.23.0 |
-| `golang.org/x/sys` | v0.39.0 | v0.48.0 |
-| `golang.org/x/text` | v0.32.0 | v0.42.0 |
+| `golang.org/x/sync` | v0.19.0 | v0.24.0 |
+| `golang.org/x/sys` | v0.39.0 | v0.49.0 |
+| `golang.org/x/text` | v0.32.0 | v0.43.0 |
 | `google.golang.org/api` | v0.126.0 | v0.264.0 |
 | `google.golang.org/genproto/googleapis/rpc` | v0.0.0-20251202230838-ff82c1b0f217 | v0.0.0-20260526163538-3dc84a4a5aaa |
 | `google.golang.org/grpc` | v1.79.3 | v1.83.2 |
