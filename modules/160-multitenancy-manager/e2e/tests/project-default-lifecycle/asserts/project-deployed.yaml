@@ -1,0 +1,20 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-life
+  labels:
+    projects.deckhouse.io/project: e2e-mtm-life
+    projects.deckhouse.io/project-template: default
+  (contains(finalizers, 'projects.deckhouse.io/project-exists')): true
+# The controller records the generation it rendered (manager.go, SetObservedGeneration), so a
+# Deployed status left from the previous generation does not match.
+(status.observedGeneration == metadata.generation): true
+status:
+  state: Deployed
+  namespaces:
+    - name: e2e-mtm-life
+      kind: Main
+  (conditions[?type == 'ProjectTemplateFound'] | [0].status): 'True'
+  (conditions[?type == 'Validated'] | [0].status): 'True'
+  (conditions[?type == 'ResourcesUpgraded'] | [0].status): 'True'
+  (conditions[?type == 'StandardFieldsApplied'] | [0].status): 'True'

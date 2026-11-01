@@ -1,0 +1,205 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: clusterprojectrolebinding-status
+spec:
+  description: >-
+    A ClusterProjectRoleBinding reports its status even when one project namespace refuses the
+    RoleBinding. The namespace of a project is held in Terminating by a ConfigMap finalizer, so no
+    new object can be created in it. The binding still reaches the other projects, boundProjects is
+    at least one, and Ready is False and names the terminating namespace. On a shared cluster other
+    projects add to boundProjects, so the unit test TestReconcile_WritesStatusWhenANamespaceFails,
+    not this test, checks that the field counts only the projects the binding reached.
+    Once the namespace is gone, the controller creates it again, the RoleBinding comes back into it
+    without waiting for the backed-off retries, and Ready no longer names the namespace.
+  concurrent: false
+  catch:
+    - description: Show the binding and the held project on failure
+      script:
+        content: |
+          kubectl get clusterprojectrolebinding e2e-mtm-status-auditors -o yaml || true
+          kubectl get project e2e-mtm-status-held -o yaml || true
+          kubectl get namespace e2e-mtm-status-held -o yaml || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager and user-authz modules are enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+        - description: Ensure the user-authz module is Ready (it aggregates the d8:project:* roles)
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh user-authz
+
+    - name: leftovers
+      description: Remove what an interrupted earlier run of this test left behind
+      try:
+        - description: Release a held namespace and delete the leftover binding and projects
+          script:
+            timeout: 6m
+            content: |
+              # system:sudouser also removes the e2e.deckhouse.io/hold finalizer of earlier versions
+              # of this test, which the deny-deckhouse-finalizers policy keeps from other users.
+              kubectl patch configmap e2e-mtm-hold -n e2e-mtm-status-held --type=merge \
+                -p '{"metadata":{"finalizers":null}}' --as system:sudouser --as-group system:masters \
+                2>/dev/null || true
+              kubectl delete clusterprojectrolebinding e2e-mtm-status-auditors \
+                --ignore-not-found --wait=true --timeout=2m
+              kubectl delete project e2e-mtm-status-held e2e-mtm-status-ok \
+                --ignore-not-found --wait=true --timeout=4m
+
+    - name: partial-fan-out
+      description: The binding writes its status while one project namespace is terminating
+      try:
+        - description: Create the e2e-mtm-status-held project
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-status-held
+              spec:
+                projectTemplateName: simple
+        - description: Create the e2e-mtm-status-ok project
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-status-ok
+              spec:
+                projectTemplateName: simple
+        - description: Assert the e2e-mtm-status-held project is Deployed
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-status-held
+              status:
+                state: Deployed
+        - description: Assert the e2e-mtm-status-ok project is Deployed
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-status-ok
+              status:
+                state: Deployed
+        - description: Create a ConfigMap with a finalizer that holds the namespace in Terminating
+          script:
+            content: |
+              kubectl create -f - <<'YAML'
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: e2e-mtm-hold
+                namespace: e2e-mtm-status-held
+                finalizers:
+                  - e2e-mtm.example.com/hold
+              YAML
+        - description: Delete the namespace past the admission policies without waiting for it
+          script:
+            content: >-
+              kubectl delete namespace e2e-mtm-status-held --wait=false
+              --as system:sudouser --as-group system:masters
+        - description: Assert the namespace is Terminating
+          assert:
+            resource:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: e2e-mtm-status-held
+              status:
+                phase: Terminating
+        - description: Create the e2e-mtm-status-auditors ClusterProjectRoleBinding
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ClusterProjectRoleBinding
+              metadata:
+                name: e2e-mtm-status-auditors
+              spec:
+                subjects:
+                  - kind: Group
+                    name: e2e-mtm-status-auditors
+                roleRef:
+                  kind: ClusterRole
+                  name: d8:project:viewer
+        - description: Assert the RoleBinding reaches the project whose namespace is intact
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: RoleBinding
+              metadata:
+                name: d8:cprb:e2e-mtm-status-auditors
+                namespace: e2e-mtm-status-ok
+              roleRef:
+                name: d8:project:viewer
+        - description: Assert the binding reports at least one bound project and Ready=False naming the terminating namespace
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ClusterProjectRoleBinding
+              metadata:
+                name: e2e-mtm-status-auditors
+              status:
+                (boundProjects >= `1`): true
+                (conditions[?type == 'Ready'] | [0].status): 'False'
+                (contains(conditions[?type == 'Ready'] | [0].message, 'e2e-mtm-status-held')): true
+      finally:
+        - description: Release the namespace by removing the finalizer of the ConfigMap
+          script:
+            content: >-
+              kubectl patch configmap e2e-mtm-hold -n e2e-mtm-status-held --type=merge
+              -p '{"metadata":{"finalizers":null}}' --as system:sudouser --as-group system:masters || true
+
+    - name: namespace-restored
+      description: Once the namespace is gone, the controller recreates it and the binding reaches it again
+      try:
+        - description: Assert the namespace of the project is Active again
+          assert:
+            timeout: 3m
+            resource:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: e2e-mtm-status-held
+                labels:
+                  projects.deckhouse.io/project: e2e-mtm-status-held
+              status:
+                phase: Active
+        - description: Assert the RoleBinding is back in the recreated namespace
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: RoleBinding
+              metadata:
+                name: d8:cprb:e2e-mtm-status-auditors
+                namespace: e2e-mtm-status-held
+              roleRef:
+                name: d8:project:viewer
+        # Ready=True is not asserted: it also depends on the namespaces of other suites, which are
+        # projects too (see README.md).
+        - description: Assert the Ready condition no longer names the recreated namespace
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ClusterProjectRoleBinding
+              metadata:
+                name: e2e-mtm-status-auditors
+              status:
+                (contains(conditions[?type == 'Ready'] | [0].message || '', 'e2e-mtm-status-held')): false

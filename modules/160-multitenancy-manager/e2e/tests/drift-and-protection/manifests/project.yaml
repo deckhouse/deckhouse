@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-drift
+spec:
+  description: Protection of the objects a project manages.
+  projectTemplateName: default
+  administrators:
+    - kind: User
+      name: e2e-mtm-drift-admin@example.com
+  quota:
+    requests.cpu: "2"

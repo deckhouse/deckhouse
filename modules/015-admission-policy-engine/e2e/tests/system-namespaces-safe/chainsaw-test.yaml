@@ -1,0 +1,219 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-policy-engine-system-namespaces-safe
+spec:
+  description: >-
+    System namespaces stay safe. Platform workloads are not blocked; in a d8-* namespace a
+    violation only warns, unless the namespace opts in with
+    security.deckhouse.io/enable-security-policy-check=true, where the Pod Security Standards are
+    enforced; a user SecurityPolicy that spans every namespace denies in user namespaces and only
+    warns in system ones; exec into a heritage pod is denied.
+  timeouts:
+    exec: 20m
+  steps:
+    - name: ensure-module
+      description: Enable the module if needed and wait until it is Ready and bootstrapped
+      try:
+        - description: Enable admission-policy-engine and wait for the bootstrap
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh
+            check:
+              ($error == null): true
+
+    - name: create-namespaces
+      description: >-
+        Create the namespaces of the test with every label set at creation; multitenancy-manager
+        adopts them into Projects and refuses later changes of the managed labels
+      try:
+        - description: Create e2e-ape-system
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-system
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete the namespaces of the test through their Projects
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-system
+
+    - name: platform-workloads-healthy
+      description: No controller in a system namespace is blocked by the module and the module pods are Ready
+      try:
+        - description: Check the controllers and events of the system namespaces
+          script:
+            content: bash check-platform-health.sh
+            check:
+              ($error == null): true
+
+    - name: create-system-namespaces
+      description: >-
+        Create a plain system namespace and one that opted into enforcement the way a module does
+        it. Both are created on behalf of the Deckhouse service account, the only identity allowed
+        to create d8-* namespaces and to set the heritage label.
+      try:
+        - description: Create d8-e2e-ape-warn without labels
+          script:
+            content: bash ../common/scripts/d8-namespace.sh create d8-e2e-ape-warn
+            check:
+              ($error == null): true
+        - description: Create d8-e2e-ape-enforce with the opt-in labels
+          script:
+            content: >-
+              bash ../common/scripts/d8-namespace.sh create d8-e2e-ape-enforce
+              heritage=deckhouse
+              security.deckhouse.io/enable-security-policy-check=true
+              security.deckhouse.io/pod-policy-action=deny
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete d8-e2e-ape-enforce
+          script:
+            content: bash ../common/scripts/d8-namespace.sh delete d8-e2e-ape-enforce
+        - description: Delete d8-e2e-ape-warn
+          script:
+            content: bash ../common/scripts/d8-namespace.sh delete d8-e2e-ape-warn
+
+    - name: system-namespace-only-warns
+      description: >-
+        In a system namespace without the opt-in label the Pod Security Standards are evaluated by
+        the warn-only d8-pod-security-*-system constraints, so violations are admitted with a warning
+      try:
+        - description: A privileged container is admitted with a Baseline warning
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect warn --namespace d8-e2e-ape-warn
+              --name privileged --timeout 180
+              --patch '.spec.containers[0].securityContext |= (.privileged = true | del(.allowPrivilegeEscalation))'
+              --match 'd8-pod-security-baseline-system'
+              --match 'Privileged container is not allowed'
+            check:
+              ($error == null): true
+        - description: A root container is admitted with a Restricted warning
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect warn --namespace d8-e2e-ape-warn
+              --name root-user --timeout 60
+              --patch '.spec.securityContext |= (.runAsUser = 0 | .runAsNonRoot = false)'
+              --match 'd8-pod-security-restricted-system'
+              --match 'is attempting to run as disallowed user'
+            check:
+              ($error == null): true
+
+    - name: opted-in-system-namespace-enforces
+      description: >-
+        security.deckhouse.io/enable-security-policy-check=true routes the namespace to the
+        enforcing webhook and constraints, so both standards deny there
+      try:
+        - description: A privileged container is denied
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace d8-e2e-ape-enforce
+              --name privileged --timeout 600
+              --patch '.spec.containers[0].securityContext |= (.privileged = true | del(.allowPrivilegeEscalation))'
+              --match 'd8-pod-security-baseline-deny-d8'
+              --match 'Privileged container is not allowed'
+            check:
+              ($error == null): true
+        - description: A root container is denied by the Restricted standard
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace d8-e2e-ape-enforce
+              --name root-user --timeout 120
+              --patch '.spec.securityContext |= (.runAsUser = 0 | .runAsNonRoot = false)'
+              --match 'd8-pod-security-restricted-deny-d8'
+              --match 'is attempting to run as disallowed user'
+            check:
+              ($error == null): true
+        - description: A compliant pod is admitted
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect allow --namespace d8-e2e-ape-enforce
+              --name compliant --timeout 60
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the constraints for opted-in system namespaces
+          script:
+            content: kubectl get d8privilegedcontainer,d8allowedusers -o custom-columns=KIND:.kind,NAME:.metadata.name,ACTION:.spec.enforcementAction,NS_SELECTOR:.spec.match.namespaceSelector.matchExpressions
+
+    - name: user-policy-only-warns-in-system-namespaces
+      description: >-
+        A denying SecurityPolicy that spans every namespace is split: it denies in user namespaces
+        and warns, through d8-system-default-<name>, in every system namespace, opted in or not
+      try:
+        - description: Create the SecurityPolicy
+          apply:
+            file: manifests/securitypolicy.yaml
+        - description: Wait for the user-scoped and the system-scoped constraints
+          script:
+            content: >-
+              bash ../common/scripts/wait-constraints.sh 600
+              d8readonlyrootfilesystem/e2e-ape-sp-system
+              d8readonlyrootfilesystem/d8-system-default-e2e-ape-sp-system
+            check:
+              ($error == null): true
+        - description: The system-scoped variant warns and selects only system namespaces
+          assert:
+            resource:
+              apiVersion: constraints.gatekeeper.sh/v1beta1
+              kind: D8ReadOnlyRootFilesystem
+              metadata:
+                name: d8-system-default-e2e-ape-sp-system
+              spec:
+                enforcementAction: warn
+                match:
+                  namespaces:
+                    - d8-*
+                    - kube-*
+        - description: A writable root filesystem is denied in a user namespace
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-system
+              --name writable-root --timeout 120
+              --patch '.metadata.labels["e2e-ape-sp-system"] = "true" | .spec.containers[0].securityContext.readOnlyRootFilesystem = false'
+              --match '\[e2e-ape-sp-system\]'
+              --match 'only read-only root filesystem container is allowed'
+            check:
+              ($error == null): true
+        - description: The same pod only warns in the opted-in system namespace
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect warn --namespace d8-e2e-ape-enforce
+              --name writable-root --timeout 120
+              --patch '.metadata.labels["e2e-ape-sp-system"] = "true" | .spec.containers[0].securityContext.readOnlyRootFilesystem = false'
+              --match 'd8-system-default-e2e-ape-sp-system'
+              --match 'only read-only root filesystem container is allowed'
+            check:
+              ($error == null): true
+        - description: The same pod only warns in the plain system namespace
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect warn --namespace d8-e2e-ape-warn
+              --name writable-root --timeout 120
+              --patch '.metadata.labels["e2e-ape-sp-system"] = "true" | .spec.containers[0].securityContext.readOnlyRootFilesystem = false'
+              --match 'd8-system-default-e2e-ape-sp-system'
+              --match 'only read-only root filesystem container is allowed'
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the constraints rendered from the policy
+          script:
+            content: kubectl get d8readonlyrootfilesystem -o yaml
+
+    - name: exec-into-heritage-pod-denied
+      description: Exec into a pod labelled heritage=deckhouse in a system namespace is denied for a cluster administrator
+      try:
+        - description: Check exec into a heritage pod and into a plain pod
+          script:
+            timeout: 10m
+            content: bash check-exec-heritage.sh d8-e2e-ape-enforce
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the exec targets
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: d8-e2e-ape-enforce

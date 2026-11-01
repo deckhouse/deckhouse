@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: e2e-authz-wh-system
+  labels:
+    deckhouse.io/system-resource: "true"
+data:
+  purpose: e2e

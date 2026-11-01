@@ -1,0 +1,162 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: project-delete-cleanup
+spec:
+  description: >-
+    A ProjectNamespace adds an additional namespace to a project, which inherits the template
+    labels and objects. The projects/delete webhook refuses a user who may delete the project but
+    not each of its namespaces, naming the namespace. Deleting the project as a cluster
+    administrator removes the main and the additional namespace, the ProjectNamespace and the Helm
+    release.
+  concurrent: false
+  catch:
+    - description: Show the project and its namespaces on failure
+      script:
+        content: |
+          kubectl get project e2e-mtm-del -o yaml || true
+          kubectl -n e2e-mtm-del get projectnamespaces -o yaml || true
+          kubectl get ns -l projects.deckhouse.io/project=e2e-mtm-del -o wide || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager module is enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+
+    - name: create-project-with-additional-namespace
+      description: Create a project and an additional namespace through a ProjectNamespace
+      try:
+        - description: Create the e2e-mtm-del project
+          create:
+            file: manifests/project.yaml
+        - description: Assert the project is Deployed
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-del
+              status:
+                state: Deployed
+        - description: Create the extra ProjectNamespace in the main namespace
+          create:
+            file: manifests/projectnamespace.yaml
+        - description: Assert the additional namespace exists, inherits the template labels and objects and is listed on the project
+          assert:
+            file: asserts/project-with-extra.yaml
+
+    - name: projectnamespace-placement-refused
+      description: A ProjectNamespace is accepted only in the main namespace of a project
+      try:
+        - description: Assert a ProjectNamespace in the additional namespace is refused
+          script:
+            bindings:
+              - name: expected
+                value: 'namespace "e2e-mtm-del-extra" is not the main namespace of a project; ProjectNamespace may only be created in a project''s main namespace'
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ProjectNamespace
+              metadata:
+                name: nested
+                namespace: e2e-mtm-del-extra
+              spec:
+                name: nested
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert a ProjectNamespace in the default namespace of the virtual project is refused
+          script:
+            bindings:
+              - name: expected
+                value: ProjectNamespace cannot be created in a virtual project namespace
+            content: |
+              kubectl create --dry-run=server -f - <<'YAML'
+              apiVersion: deckhouse.io/v1alpha3
+              kind: ProjectNamespace
+              metadata:
+                name: e2e-mtm-virtual
+                namespace: default
+              spec:
+                name: e2e-mtm-virtual
+              YAML
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+
+    - name: delete-refused-without-namespace-rights
+      description: >-
+        The projects/delete webhook checks that the requester may delete each namespace of the
+        project and names the first namespace the requester may not delete
+      try:
+        - description: Create a user who may delete projects but no namespaces
+          create:
+            file: manifests/deleter-rbac.yaml
+        - description: >-
+            Assert the delete is refused and names the main namespace (repeated while RBAC picks up
+            the new ClusterRoleBinding)
+          script:
+            timeout: 2m
+            content: >-
+              bash ../common/scripts/eventually-denied.sh 60
+              'user "e2e-mtm-deleter@example.com" may not delete the "e2e-mtm-del" project: deleting it deletes the "e2e-mtm-del" namespace, and the user is not allowed to delete that namespace'
+              kubectl delete project e2e-mtm-del --dry-run=server --as e2e-mtm-deleter@example.com
+        - description: Let the user delete the main namespace only
+          create:
+            file: manifests/main-namespace-delete-rbac.yaml
+        - description: Assert the delete is still refused and now names the additional namespace
+          script:
+            timeout: 2m
+            content: >-
+              bash ../common/scripts/eventually-denied.sh 60
+              'may not delete the "e2e-mtm-del" project: deleting it deletes the "e2e-mtm-del-extra" namespace, and the user is not allowed to delete that namespace'
+              kubectl delete project e2e-mtm-del --dry-run=server --as e2e-mtm-deleter@example.com
+        - description: Assert the project is still there
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-del
+              status:
+                state: Deployed
+
+    - name: delete-project
+      description: Deleting the project removes both namespaces, the ProjectNamespace and the Helm release
+      try:
+        - description: Delete the project as the cluster administrator and wait until it is gone
+          delete:
+            ref:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              name: e2e-mtm-del
+        - description: Assert the main namespace is gone
+          error:
+            resource:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: e2e-mtm-del
+        - description: Assert the additional namespace is gone
+          error:
+            resource:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: e2e-mtm-del-extra
+        - description: Assert no Helm release Secret of the project is left
+          script:
+            content: kubectl -n d8-multitenancy-manager get secrets -l owner=helm,name=e2e-mtm-del -o name
+            check:
+              ($error == null): true
+              ($stdout == ''): true

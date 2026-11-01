@@ -1,0 +1,7 @@
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: e2e-authn-refresh-client
+spec:
+  redirectURIs:
+    - http://127.0.0.1:65535/callback

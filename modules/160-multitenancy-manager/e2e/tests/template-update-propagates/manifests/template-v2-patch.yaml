@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: ProjectTemplate
+metadata:
+  name: e2e-mtm-tpl
+spec:
+  podSecurityStandard: Restricted
+  networkPolicy:
+    mode: Isolated
+  namespaceMetadata:
+    labels:
+      e2e-mtm/revision: two

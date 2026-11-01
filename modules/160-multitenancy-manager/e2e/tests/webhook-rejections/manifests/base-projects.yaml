@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-rej
+spec:
+  projectTemplateName: simple
+---
+# Named like an additional namespace of e2e-mtm-rej on purpose: it is a separate project, and a
+# ProjectNamespace "taken" of e2e-mtm-rej must not take its namespace.
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-rej-taken
+spec:
+  projectTemplateName: simple

@@ -1,0 +1,136 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: template-update-propagates
+spec:
+  description: >-
+    A change of a custom ProjectTemplate reaches every project created from it within 60 seconds
+    (namespace labels, pod security profile, network isolation), after which the projects settle:
+    their resourceVersion and the revision of their Helm release stay the same, so the change does
+    not start a reconcile loop. A template in use cannot be deleted.
+  concurrent: false
+  catch:
+    - description: Show the template and its projects on failure
+      script:
+        content: |
+          kubectl get projecttemplate e2e-mtm-tpl -o yaml || true
+          kubectl get projects e2e-mtm-upd-a e2e-mtm-upd-b -o yaml || true
+          kubectl get ns e2e-mtm-upd-a e2e-mtm-upd-b --show-labels || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 300
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager module is enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+
+    - name: create-template-and-projects
+      description: Create a custom template and two projects from it
+      try:
+        - description: Create the e2e-mtm-tpl template
+          create:
+            file: manifests/template-v1.yaml
+        - description: Assert the template is ready
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha2
+              kind: ProjectTemplate
+              metadata:
+                name: e2e-mtm-tpl
+              status:
+                ready: true
+        - description: Create the e2e-mtm-upd-a and e2e-mtm-upd-b projects
+          create:
+            file: manifests/projects.yaml
+        - description: Assert both namespaces carry the first revision of the template
+          assert:
+            file: asserts/namespaces-one.yaml
+        - description: Assert the NotRestricted mode renders no NetworkPolicy
+          error:
+            resource:
+              apiVersion: networking.k8s.io/v1
+              kind: NetworkPolicy
+              metadata:
+                name: isolated
+                namespace: e2e-mtm-upd-a
+
+    - name: template-delete-refused
+      description: A template that projects use cannot be deleted
+      try:
+        - description: Assert a dry-run delete of the template is refused and names a project that uses it
+          script:
+            bindings:
+              - name: expected
+                value: "The 'e2e-mtm-tpl' project template cannot be deleted, it is used in the 'e2e-mtm-upd-"
+            content: kubectl delete projecttemplate e2e-mtm-tpl --dry-run=server
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+
+    - name: update-template
+      description: Change the template and wait at most 60 seconds for both projects to follow
+      try:
+        - description: Switch the template to Restricted, Isolated and the second revision label
+          patch:
+            file: manifests/template-v2-patch.yaml
+        - description: Assert both namespaces get the second revision and the isolated NetworkPolicy within 60s
+          assert:
+            timeout: 60s
+            file: asserts/namespaces-two.yaml
+        - description: Assert both projects report the generation of the changed template
+          script:
+            timeout: 3m
+            content: |
+              set -eu
+              generation="$(kubectl get projecttemplate e2e-mtm-tpl -o jsonpath='{.metadata.generation}')"
+              for attempt in $(seq 1 24); do
+                a="$(kubectl get project e2e-mtm-upd-a -o jsonpath='{.status.templateGeneration}')"
+                b="$(kubectl get project e2e-mtm-upd-b -o jsonpath='{.status.templateGeneration}')"
+                if [ "${a}" = "${generation}" ] && [ "${b}" = "${generation}" ]; then
+                  echo "both projects are rendered from template generation ${generation}"
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "template generation ${generation}, projects report '${a}' and '${b}'"
+              exit 1
+
+    - name: no-reconcile-loop
+      description: >-
+        After the change settles, the projects are not written again: their resourceVersion and the
+        revision of their Helm release stay the same for 45 seconds
+      try:
+        - description: Assert the resourceVersion and the Helm release revision of both projects do not change
+          script:
+            timeout: 3m
+            content: |
+              set -eu
+              snapshot() {
+                for p in e2e-mtm-upd-a e2e-mtm-upd-b; do
+                  rv="$(kubectl get project "${p}" -o jsonpath='{.metadata.resourceVersion}')"
+                  revision="$(bash ../common/scripts/helm-revision.sh "${p}")"
+                  if [ -z "${rv}" ] || [ -z "${revision}" ] || [ "${revision}" = "0" ]; then
+                    echo "could not read the state of ${p}: rv='${rv}' revision='${revision}'" >&2
+                    return 1
+                  fi
+                  printf '%s rv=%s revision=%s\n' "${p}" "${rv}" "${revision}"
+                done
+              }
+              # Let the reconciles that the change itself started finish.
+              sleep 15
+              before="$(snapshot)" || exit 1
+              echo "${before}"
+              sleep 45
+              after="$(snapshot)" || exit 1
+              echo "${after}"
+              if [ "${before}" != "${after}" ]; then
+                echo "the projects were written again without a change: a reconcile loop"
+                exit 1
+              fi

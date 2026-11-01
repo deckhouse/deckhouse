@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: e2e-authn-conv-github-v1
+spec:
+  type: Github
+  displayName: e2e conversion v1
+  enabled: false
+  github:
+    clientID: e2e-authn-not-a-client
+    clientSecret: e2e-authn-not-a-secret
+    teamNameField: Both

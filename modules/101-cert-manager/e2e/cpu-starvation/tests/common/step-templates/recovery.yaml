@@ -1,0 +1,41 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: recovery
+spec:
+  # Bindings: recoverySeconds (time the module has to work normally again after the release).
+  # Both waits share one deadline: the release mark plus recoverySeconds.
+  try:
+    - description: >-
+        Issue three Certificates and wait until they and all pods of the module are Ready within
+        recoverySeconds after the release
+      script:
+        timeout: 30m
+        env:
+          - name: RECOVERY
+            value: ($recoverySeconds)
+        content: |
+          set -eu
+          sh ../common/scripts/e2e.sh burst recovery 3
+          sh ../common/scripts/e2e.sh burst-wait recovery 3 "$RECOVERY" release
+          sh ../common/scripts/e2e.sh healthy "$RECOVERY" release
+        check:
+          ($error == null): true
+  catch:
+    - description: Print the summary of the run
+      script:
+        content: sh ../common/scripts/e2e.sh report
+    - description: Show the Certificates of the test
+      get:
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+    - description: Show the pods of the module
+      get:
+        apiVersion: v1
+        kind: Pod
+        namespace: d8-cert-manager
+    - description: Show the controller logs
+      podLogs:
+        namespace: d8-cert-manager
+        selector: app=cert-manager
+        tail: 200

@@ -1,0 +1,86 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-policy-engine-mutation
+spec:
+  description: >-
+    Gatekeeper mutation works end to end: an Assign and an AssignMetadata make Deckhouse render the
+    mutating webhook for pods, and a pod of the matched namespace comes back from a dry run with
+    both mutations, while a pod of another namespace is untouched. The ValidatingAdmissionPolicies
+    of the module reject mutators that Gatekeeper would silently ignore.
+  timeouts:
+    exec: 20m
+  steps:
+    - name: ensure-module
+      description: Enable the module if needed and wait until it is Ready and bootstrapped
+      try:
+        - description: Enable admission-policy-engine and wait for the bootstrap
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh
+            check:
+              ($error == null): true
+
+    - name: create-namespaces
+      description: >-
+        Create the namespaces of the test with every label set at creation; multitenancy-manager
+        adopts them into Projects and refuses later changes of the managed labels
+      try:
+        - description: Create e2e-ape-mutation
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-mutation
+            check:
+              ($error == null): true
+        - description: Create e2e-ape-mutation-other
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-mutation-other
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete the namespaces of the test through their Projects
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-mutation e2e-ape-mutation-other
+
+    - name: invalid-mutators-rejected
+      description: Mutators with a location or value Gatekeeper cannot apply are rejected at apply time
+      try:
+        - description: Dry-run every invalid mutator
+          script:
+            content: bash check-invalid-mutators.sh
+            check:
+              ($error == null): true
+
+    - name: create-mutators
+      description: >-
+        Create the mutators. Their effect is checked on a pod in the next step, which waits for the
+        converge that renders the mutating webhook; the mutator status is checked separately below
+      try:
+        - description: Create the Assign and the AssignMetadata
+          apply:
+            file: manifests/mutators.yaml
+
+    - name: pod-mutated
+      description: A pod of the matched namespace is mutated, a pod of another namespace is not
+      try:
+        - description: The pod of the matched namespace carries the label and the grace period
+          script:
+            timeout: 11m
+            content: bash check-mutation.sh e2e-ape-mutation mutated
+            check:
+              ($error == null): true
+        - description: The pod of the other namespace is untouched
+          script:
+            content: bash check-mutation.sh e2e-ape-mutation-other untouched
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the mutating webhook configuration
+          get:
+            apiVersion: admissionregistration.k8s.io/v1
+            kind: MutatingWebhookConfiguration
+            name: d8-admission-policy-engine-config
+        - description: Show the kinds the exporter tracks for mutation
+          script:
+            content: kubectl -n d8-admission-policy-engine get configmap constraint-exporter -o jsonpath='{.data.mutate-resources\.yaml}'
+

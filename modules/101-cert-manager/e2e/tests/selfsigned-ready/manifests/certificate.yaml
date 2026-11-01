@@ -1,0 +1,20 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: e2e-cm-selfsigned
+spec:
+  secretName: e2e-cm-selfsigned-tls
+  commonName: e2e-cm-selfsigned.example.test
+  dnsNames:
+    - e2e-cm-selfsigned.example.test
+    - alt.e2e-cm-selfsigned.example.test
+  ipAddresses:
+    - 192.0.2.10
+    - 198.51.100.20
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: selfsigned

@@ -1,0 +1,16 @@
+apiVersion: chainsaw.kyverno.io/v1alpha2
+kind: Configuration
+metadata:
+  name: user-authn-e2e
+spec:
+  timeouts:
+    apply: 60s
+    assert: 5m
+    error: 5m
+    delete: 5m
+    cleanup: 30m
+    exec: 10m
+  execution:
+    parallel: 1
+  discovery:
+    testFile: chainsaw-test.yaml

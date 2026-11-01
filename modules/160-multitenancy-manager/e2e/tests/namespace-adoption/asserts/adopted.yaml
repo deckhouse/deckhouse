@@ -1,0 +1,43 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-adopt-plain
+spec:
+  projectTemplateName: simple
+status:
+  state: Deployed
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: e2e-mtm-adopt-plain
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: e2e-mtm-adopt-plain
+    projects.deckhouse.io/project-template: simple
+    # a label of the namespace's own stays on it
+    e2e-mtm/origin: kubectl
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-adopt-mon
+spec:
+  projectTemplateName: default
+  parameters:
+    networkPolicy: NotRestricted
+    podSecurityProfile: ""
+    extendedMonitoringEnabled: true
+    requiredRequests: false
+status:
+  state: Deployed
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: e2e-mtm-adopt-mon
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: e2e-mtm-adopt-mon
+    projects.deckhouse.io/project-template: default
+    extended-monitoring.deckhouse.io/enabled: "true"

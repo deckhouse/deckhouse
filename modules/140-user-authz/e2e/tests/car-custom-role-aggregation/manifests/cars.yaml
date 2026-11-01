@@ -1,0 +1,36 @@
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-agg-user
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: User
+  subjects:
+  - kind: User
+    name: e2e-authz-agg-user
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-agg-editor
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: Editor
+  subjects:
+  - kind: User
+    name: e2e-authz-agg-editor
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-agg-cluster-admin
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: ClusterAdmin
+  subjects:
+  - kind: User
+    name: e2e-authz-agg-cluster-admin

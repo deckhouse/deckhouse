@@ -1,0 +1,7 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: e2e-cm-ca
+spec:
+  ca:
+    secretName: e2e-cm-root-ca

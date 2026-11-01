@@ -1,0 +1,12 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectRoleBinding
+metadata:
+  name: viewers
+  namespace: e2e-mtm-prb
+spec:
+  subjects:
+    - kind: User
+      name: e2e-mtm-viewer@example.com
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:viewer

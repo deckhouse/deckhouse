@@ -1,0 +1,24 @@
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-wh-editor
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: Editor
+  subjects:
+  - kind: User
+    name: e2e-authz-wh-editor
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-wh-superadmin
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: SuperAdmin
+  subjects:
+  - kind: User
+    name: e2e-authz-wh-superadmin

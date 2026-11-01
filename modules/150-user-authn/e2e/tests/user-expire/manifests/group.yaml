@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: e2e-authn-expire-group
+spec:
+  name: e2e-authn-expire-group
+  members:
+    - kind: User
+      name: e2e-authn-expire-user
+    - kind: User
+      name: e2e-authn-expire-keep

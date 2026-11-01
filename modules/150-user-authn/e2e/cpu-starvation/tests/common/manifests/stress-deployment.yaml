@@ -1,0 +1,54 @@
+# The CPU burner on the Dex node: ($replicas) Burstable pods without a CPU limit. Each pod requests
+# ($cpuRequest), so together they request the free CPU of the node computed by the test, and burns
+# ($threads) busy loops. Each pod is its own cgroup, so the CPU scheduler weighs Dex against every pod.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cpu-stress
+  labels:
+    app: cpu-stress
+spec:
+  replicas: (to_number($replicas))
+  selector:
+    matchLabels:
+      app: cpu-stress
+  template:
+    metadata:
+      labels:
+        app: cpu-stress
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchFields:
+                  - key: metadata.name
+                    operator: In
+                    values:
+                      - ($dexNode)
+      tolerations:
+        - operator: Exists
+      terminationGracePeriodSeconds: 1
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: burn
+          image: ($image)
+          command: ["sh", "-c", "for i in $(seq 1 $BURN_THREADS); do (while :; do :; done) & done; wait"]
+          env:
+            # Not N: YAML 1.1 reads a bare N as false.
+            - name: BURN_THREADS
+              value: ($threads)
+          resources:
+            requests:
+              cpu: ($cpuRequest)
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}

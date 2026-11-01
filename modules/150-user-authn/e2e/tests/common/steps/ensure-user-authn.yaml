@@ -1,0 +1,66 @@
+# Makes sure the user-authn module is enabled and converged, Dex answers on its Service
+# and the controller is available. Script paths are relative to the directory of the
+# test that uses the template.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: ensure-user-authn
+spec:
+  try:
+    - description: Enable the module if needed and wait until the Module is Ready and the Deckhouse queue is empty
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        timeout: 25m
+        content: bash ../../tests/common/scripts/ensure-module.sh
+    - description: Assert the Dex Deployment has an available replica
+      assert:
+        timeout: 5m
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: dex
+            namespace: d8-user-authn
+          status:
+            (availableReplicas >= `1`): true
+    - description: Assert the user-authn-controller Deployment has an available replica
+      assert:
+        timeout: 5m
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: user-authn-controller
+            namespace: d8-user-authn
+          status:
+            (availableReplicas >= `1`): true
+    - description: Assert Dex serves its OpenID discovery document with the issuer the API server trusts
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        timeout: 5m
+        content: |
+          set -euo pipefail
+          source ../../tests/common/scripts/lib.sh
+          dex_discover
+          check() {
+            dex_curl "${DEX_ISSUER}/.well-known/openid-configuration" | jq -e --arg iss "${DEX_ISSUER}" '(.issuer | rtrimstr("/")) == $iss'
+          }
+          wait_for 240 "Dex discovery at ${DEX_ISSUER}" check
+  catch:
+    - description: Show the user-authn Module on failure
+      get:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: Module
+        name: user-authn
+    - description: Show the pods of the module on failure
+      get:
+        apiVersion: v1
+        kind: Pod
+        namespace: d8-user-authn
+    - description: Show the events of the module namespace on failure
+      events:
+        namespace: d8-user-authn

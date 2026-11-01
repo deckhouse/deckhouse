@@ -1,0 +1,320 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-rollout-restart-under-probe
+spec:
+  description: >-
+    A rollout restart of Dex, of a DexAuthenticator, of user-api and of user-authn-controller loses
+    no request: a probe calls the Dex discovery document, the authenticator /ping and the user-api
+    /healthz every 200 ms through their Services and must get HTTP 200 every time. With two nodes
+    for the module the case enables highAvailability (two replicas, maxUnavailable 1); with one node
+    it checks the rolling update of a single replica (maxSurge 1) and logs that choice. A
+    UserOperation created while no controller replica runs is processed once the controller starts
+    again. The original settings are restored and the components are healthy afterwards.
+  concurrent: false
+
+  catch:
+    - description: Show the pods of the module and of the authenticator on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        env:
+          - name: NS
+            value: ($namespace)
+        content: |
+          kubectl -n d8-user-authn get pods -o wide
+          kubectl -n "${NS}" get pods -l app=dex-authenticator -o wide
+    - description: Show the events of the module namespace on failure
+      events:
+        namespace: d8-user-authn
+    - description: Show the events of the test namespace on failure
+      events: {}
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../../tests/common/steps/ensure-user-authn.yaml
+
+    - name: enable-ha
+      description: >-
+        Choose the mode by the nodes the module can use; in HA mode turn on highAvailability and wait
+        for two replicas of Dex and the controller
+      try:
+        - description: Choose HA mode (two eligible nodes) or single-replica mode (one) and log the choice
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            content: bash scripts/check-nodes.sh
+        - description: In HA mode, merge highAvailability into ModuleConfig user-authn and wait for the Deckhouse queue
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 25m
+            env:
+              # The replica waits below report a cluster that cannot place two replicas.
+              - name: E2E_SKIP_ROLLOUT_WAIT
+                value: "1"
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              if [[ "$(cat "$(state_dir rollout-restart-under-probe)/mode")" != "ha" ]]; then
+                log "Single-replica mode: highAvailability is left as it is"
+                exit 0
+              fi
+              bash ../../tests/common/scripts/mc-settings.sh apply '{"highAvailability":true}'
+        - description: Wait for the ready Dex replicas of the mode
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            content: bash scripts/wait-ha.sh d8-user-authn dex
+        - description: Wait for the ready controller replicas of the mode
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            content: bash scripts/wait-ha.sh d8-user-authn user-authn-controller
+      cleanup:
+        - description: Restore the original ModuleConfig user-authn spec and wait until the components are healthy
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 25m
+            content: |
+              set -e
+              bash ../../tests/common/scripts/mc-settings.sh restore
+              kubectl -n d8-user-authn rollout status deployment/user-api --timeout=10m || true
+
+    - name: create-objects
+      description: Create a User (user-api runs while local users exist) and a DexAuthenticator
+      try:
+        - description: Create User e2e-authn-ha-user
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user rollout-restart-under-probe e2e-authn-ha-user e2e-authn-ha-user@example.com
+        - description: Create DexAuthenticator e2e-authn-ha, with highAvailability in HA mode
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              ha=false
+              [[ "$(cat "$(state_dir rollout-restart-under-probe)/mode")" == "ha" ]] && ha=true
+              sed "s/highAvailability: true/highAvailability: ${ha}/" manifests/dex-authenticator.yaml | kubectl -n "${NS}" apply -f -
+        - description: Wait for the ready user-api replicas of the mode
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            content: bash scripts/wait-ha.sh d8-user-authn user-api
+        - description: Wait for the ready authenticator replicas of the mode
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/wait-ha.sh "${NS}" e2e-authn-ha-dex-authenticator
+      cleanup:
+        - description: Delete the DexAuthenticator, the User and the UserOperations of the test
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            env:
+              - name: NS
+                value: ($namespace)
+            timeout: 7m
+            content: |
+              kubectl delete useroperations.deckhouse.io e2e-authn-ha-lock e2e-authn-ha-unlock --ignore-not-found
+              kubectl delete users.deckhouse.io e2e-authn-ha-user --ignore-not-found
+              bash ../../tests/common/scripts/delete-dex-authenticator.sh "${NS}" e2e-authn-ha
+
+    - name: restart-under-probe
+      description: Restart every component while the probe runs, then check that no request failed
+      try:
+        - description: Start the probe in the background
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            env:
+              - name: NS
+                value: ($namespace)
+            timeout: 3m
+            content: |
+              dir="${E2E_STATE_DIR:-/tmp/e2e-authn-state}/rollout-restart-under-probe"
+              mkdir -p "${dir}"
+              rm -f "${dir}/probe.log" "${dir}/probe.pid"
+              setsid nohup bash scripts/probe.sh </dev/null >"${dir}/probe.out" 2>&1 &
+              # The probe resolves the Service addresses before its first request; on a slow API
+              # that takes a while, so the log is polled instead of a fixed sleep.
+              for _ in $(seq 1 120); do
+                [[ -s "${dir}/probe.log" ]] && { echo "the probe is running"; exit 0; }
+                if [[ -s "${dir}/probe.pid" ]] && ! kill -0 "$(cat "${dir}/probe.pid")" 2>/dev/null; then
+                  echo "FAIL: the probe exited before its first request:"
+                  cat "${dir}/probe.out"
+                  exit 1
+                fi
+                sleep 1
+              done
+              echo "FAIL: the probe wrote no request in 2 minutes:"
+              cat "${dir}/probe.out"
+              exit 1
+        - description: Restart Dex and wait for the rollout
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 10m
+            content: |
+              set -e
+              kubectl -n d8-user-authn rollout restart deployment/dex
+              kubectl -n d8-user-authn rollout status deployment/dex --timeout=9m
+        - description: Restart the authenticator and wait for the rollout
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 10m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -e
+              kubectl -n "${NS}" rollout restart deployment/e2e-authn-ha-dex-authenticator
+              kubectl -n "${NS}" rollout status deployment/e2e-authn-ha-dex-authenticator --timeout=9m
+        - description: Restart user-api and wait for the rollout
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 10m
+            content: |
+              set -e
+              kubectl -n d8-user-authn rollout restart deployment/user-api
+              kubectl -n d8-user-authn rollout status deployment/user-api --timeout=9m
+        - description: Restart the controller and wait for the rollout
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 10m
+            content: |
+              set -e
+              kubectl -n d8-user-authn rollout restart deployment/user-authn-controller
+              kubectl -n d8-user-authn rollout status deployment/user-authn-controller --timeout=9m
+        - description: >-
+            Stop every controller replica, create a UserOperation Lock while none runs, check it stays
+            unprocessed, then start the replicas again
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 10m
+            content: |
+              set -euo pipefail
+              # The replicas are recorded in E2E_STATE_DIR: the `finally` of the step and
+              # restore-modules.sh put them back if this script is killed on its timeout.
+              bash ../../tests/common/scripts/controller-replicas.sh stop
+              trap 'bash ../../tests/common/scripts/controller-replicas.sh restore' EXIT
+              for _ in $(seq 1 36); do
+                [[ -z "$(kubectl -n d8-user-authn get pods -l app=user-authn-controller -o name)" ]] && break
+                sleep 5
+              done
+              [[ -z "$(kubectl -n d8-user-authn get pods -l app=user-authn-controller -o name)" ]] \
+                || { echo "FAIL: controller pods are still running 3 minutes after the scale to 0"; exit 1; }
+              kubectl create -f - <<EOF
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-ha-lock
+                labels:
+                  e2e.user-authn.deckhouse.io/suite: "true"
+              spec:
+                user: e2e-authn-ha-user
+                type: Lock
+                initiatorType: admin
+                lock:
+                  for: 10m
+              EOF
+              sleep 10
+              phase="$(kubectl get useroperations.deckhouse.io e2e-authn-ha-lock -o jsonpath='{.status.phase}')"
+              [[ -z "${phase}" ]] || { echo "FAIL: the operation was processed while no controller ran (${phase})"; exit 1; }
+              trap - EXIT
+              bash ../../tests/common/scripts/controller-replicas.sh restore
+        - description: Assert the controller that started again processed the UserOperation created while none ran
+          assert:
+            timeout: 3m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-ha-lock
+              status:
+                phase: Succeeded
+        - description: Create a UserOperation Unlock after the restart
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-ha-unlock
+              spec:
+                user: e2e-authn-ha-user
+                type: Unlock
+                initiatorType: admin
+        - description: Assert the Unlock succeeded
+          assert:
+            timeout: 3m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-ha-unlock
+              status:
+                phase: Succeeded
+        - description: Let the probe run 15 more seconds after the last rollout
+          sleep:
+            duration: 15s
+        - description: >-
+            Stop the probe and assert that every request got HTTP 200 (in single-replica mode a failure
+            right after a VPA eviction of the only pod is reported, not counted)
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 2m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/verdict.sh
+      finally:
+        - description: Stop the probe in any case
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: touch "${E2E_STATE_DIR:-/tmp/e2e-authn-state}/rollout-restart-under-probe/probe.stop"
+        - description: Start the controller replicas again if the step that stopped them was killed
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            content: bash ../../tests/common/scripts/controller-replicas.sh restore

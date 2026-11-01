@@ -1,0 +1,169 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: project-secure-enforced
+spec:
+  description: >-
+    A Project from the built-in secure template enforces what the template promises: Gatekeeper
+    refuses a privileged pod (Pod Security Standard Baseline), the ResourceQuota of spec.quota
+    refuses a pod over the quota, and the isolated NetworkPolicy lets traffic in from the same
+    project and blocks it from another project.
+  concurrent: false
+  catch:
+    - description: Show the projects on failure
+      script:
+        content: kubectl get projects e2e-mtm-sec e2e-mtm-peer -o yaml || true
+    - description: Show the pods and policies of the namespaces on failure
+      script:
+        content: |
+          kubectl -n e2e-mtm-sec get pods,networkpolicies,resourcequotas -o wide || true
+          kubectl -n e2e-mtm-peer get pods -o wide || true
+          kubectl get operationpolicies,securitypolicies -l projects.deckhouse.io/project=e2e-mtm-sec || true
+    - description: Show the events of the secure namespace on failure
+      events:
+        namespace: e2e-mtm-sec
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: >-
+        Make sure multitenancy-manager and admission-policy-engine (which enforces the Pod
+        Security Standards and the OperationPolicy of the template) are enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+        - description: Ensure the admission-policy-engine module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh admission-policy-engine
+        - description: Assert the OperationPolicy kind is served
+          assert:
+            resource:
+              apiVersion: apiextensions.k8s.io/v1
+              kind: CustomResourceDefinition
+              metadata:
+                name: operationpolicies.deckhouse.io
+
+    - name: create-projects
+      description: Create the secure project and a peer project without network isolation
+      try:
+        - description: Create the e2e-mtm-sec and e2e-mtm-peer projects
+          create:
+            file: manifests/projects.yaml
+        - description: Assert the secure project renders its namespace labels, NetworkPolicy, OperationPolicy and quota
+          assert:
+            file: asserts/secure-rendered.yaml
+        - description: Assert the peer project is Deployed
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-peer
+              status:
+                state: Deployed
+
+    - name: start-workloads
+      description: >-
+        Create the netexec server and the two clients now, so that their image is pulled while the
+        admission checks below run
+      try:
+        - description: Create the netexec server and the two clients
+          create:
+            file: manifests/workloads.yaml
+
+    - name: privileged-pod-rejected
+      description: >-
+        Gatekeeper refuses a privileged container in the project namespace. The deny constraint for
+        the pod-policy-action label may need a converge of admission-policy-engine, so the request
+        is repeated until it is refused.
+      try:
+        - description: Assert a dry-run create of a privileged pod is refused by the Baseline policy
+          script:
+            timeout: 11m
+            content: >-
+              bash ../common/scripts/eventually-denied.sh 600 'Privileged container is not allowed'
+              kubectl create --dry-run=server -f manifests/privileged-pod.yaml
+
+    - name: over-quota-pod-rejected
+      description: The d8-project-quota ResourceQuota from spec.quota refuses a pod that does not fit
+      try:
+        - description: Assert a dry-run create of a pod requesting 3 CPU is refused by the project quota
+          script:
+            bindings:
+              - name: expected
+                value: 'exceeded quota: d8-project-quota'
+            content: kubectl create --dry-run=server -f manifests/over-quota-pod.yaml
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+
+    - name: network-isolation
+      description: >-
+        The isolated NetworkPolicy admits traffic from the namespaces of the same project and
+        blocks traffic from another project
+      try:
+        - description: >-
+            Assert the server and both clients are Ready. On a fresh cluster the first pull of the
+            agnhost image took almost 7 minutes, hence the long timeout.
+          assert:
+            timeout: 12m
+            file: asserts/workloads-ready.yaml
+        - description: Assert a client in the same project reaches the server
+          script:
+            timeout: 3m
+            content: |
+              set -u
+              ip="$(kubectl -n e2e-mtm-sec get pod server -o jsonpath='{.status.podIP}')"
+              for attempt in $(seq 1 20); do
+                if kubectl -n e2e-mtm-sec exec client -- /agnhost connect "${ip}:8080" --timeout=3s; then
+                  echo "connected from the same project on attempt ${attempt}"
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "the client in the same project could not reach ${ip}:8080"
+              exit 1
+        - description: >-
+            Control: assert the client in the other project works and reaches an address outside the
+            isolated project (the kubernetes Service), so a failure below means blocked traffic
+          script:
+            timeout: 3m
+            content: |
+              set -u
+              api="$(kubectl -n default get service kubernetes -o jsonpath='{.spec.clusterIP}')"
+              [ -n "${api}" ] || { echo "no ClusterIP of the kubernetes Service"; exit 1; }
+              for attempt in $(seq 1 12); do
+                if kubectl -n e2e-mtm-peer exec client -- /agnhost connect "${api}:443" --timeout=3s; then
+                  echo "the client in e2e-mtm-peer reaches ${api}:443"
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "the client in e2e-mtm-peer cannot reach ${api}:443, the control fails"
+              exit 1
+        - description: Assert a connection from another project to the server times out, three times in a row
+          script:
+            timeout: 3m
+            content: |
+              set -u
+              ip="$(kubectl -n e2e-mtm-sec get pod server -o jsonpath='{.status.podIP}')"
+              [ -n "${ip}" ] || { echo "the server has no pod IP"; exit 1; }
+              for attempt in 1 2 3; do
+                if out="$(kubectl -n e2e-mtm-peer exec client -- /agnhost connect "${ip}:8080" --timeout=3s 2>&1)"; then
+                  echo "the client in e2e-mtm-peer reached ${ip}:8080 on attempt ${attempt}, the isolation does not hold"
+                  exit 1
+                fi
+                case "${out}" in
+                  *TIMEOUT*) echo "attempt ${attempt}: ${out}" ;;
+                  *) echo "attempt ${attempt} failed without TIMEOUT, not a sign of a dropped connection: ${out}"; exit 1 ;;
+                esac
+                sleep 2
+              done
+              echo "traffic from another project is dropped"

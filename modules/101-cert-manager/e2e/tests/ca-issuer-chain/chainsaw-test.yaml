@@ -1,0 +1,121 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cert-manager-ca-issuer-chain
+spec:
+  description: >-
+    Builds a private PKI with the module issuers. The ClusterIssuer `selfsigned-no-trust` issues
+    a self-signed CA certificate (isCA), a namespaced Issuer `e2e-cm-ca` uses its Secret, and a leaf
+    Certificate issued by that Issuer becomes Ready. `openssl verify` of the leaf against
+    ca.crt succeeds, and ca.crt is the CA certificate created in the first step.
+  concurrent: false
+
+  catch:
+    - description: Show Certificates in the test namespace on failure
+      get:
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+    - description: Show Issuers in the test namespace on failure
+      get:
+        apiVersion: cert-manager.io/v1
+        kind: Issuer
+    - description: Show CertificateRequests in the test namespace on failure
+      get:
+        apiVersion: cert-manager.io/v1
+        kind: CertificateRequest
+    - description: Show events in the test namespace on failure
+      events: {}
+    - description: Show cert-manager controller logs on failure
+      podLogs:
+        namespace: d8-cert-manager
+        selector: app=cert-manager
+        container: cert-manager
+        tail: 200
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled, converged and its ClusterIssuers are Ready
+      use:
+        template: ../common/steps/ensure-cert-manager.yaml
+
+    - name: issue-root-ca
+      description: Issue a self-signed CA certificate with the ClusterIssuer selfsigned-no-trust
+      try:
+        - description: Create the CA Certificate
+          create:
+            file: manifests/root-ca.yaml
+        - description: Assert the CA Certificate is Ready within 60 seconds
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-root-ca
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+        - description: >-
+            Assert the CA certificate is self-signed (issuer CN is its own CN), has CA:TRUE and
+            ca.crt equals tls.crt
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/check-cert.sh
+              --namespace "$E2E_NS" --secret e2e-cm-root-ca
+              --issuer-cn e2e-cm-root-ca --is-ca --verify
+              --ca-equals "$E2E_NS/e2e-cm-root-ca/tls.crt"
+
+    - name: create-ca-issuer
+      description: Create the namespaced Issuer `e2e-cm-ca` backed by the CA Secret
+      try:
+        - description: Create the Issuer
+          create:
+            file: manifests/issuer.yaml
+        - description: Assert the Issuer is Ready
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Issuer
+              metadata:
+                name: e2e-cm-ca
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: KeyPairVerified
+
+    - name: issue-leaf
+      description: Issue a leaf certificate with the Issuer `e2e-cm-ca` and verify the chain
+      try:
+        - description: Create the leaf Certificate
+          create:
+            file: manifests/leaf.yaml
+        - description: Assert the leaf Certificate is Ready within 60 seconds
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-leaf
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+        - description: >-
+            Assert the leaf is issued by e2e-cm-root-ca, carries the DNS SAN, verifies against
+            ca.crt, and ca.crt is the CA certificate of the Issuer
+          script:
+            timeout: 60s
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/check-cert.sh
+              --namespace "$E2E_NS" --secret e2e-cm-leaf-tls
+              --san "DNS:leaf.e2e-cm-chain.example.test"
+              --issuer-cn e2e-cm-root-ca --verify
+              --ca-equals "$E2E_NS/e2e-cm-root-ca/tls.crt"

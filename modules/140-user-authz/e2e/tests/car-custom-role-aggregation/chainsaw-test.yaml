@@ -1,0 +1,124 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: car-custom-role-aggregation
+spec:
+  description: >-
+    A ClusterRole annotated with user-authz.deckhouse.io/access-level extends that access level
+    and every level above it. Verify that the module hook mirrors the annotation into the label,
+    that kube-controller-manager aggregates the rules into user-authz:editor:custom and
+    user-authz:cluster-admin:custom but not into user-authz:user:custom, and that the subjects of
+    the rules gain and lose the access accordingly.
+  timeouts:
+    apply: 60s
+    assert: 5m
+    error: 2m
+    delete: 2m
+    exec: 8m
+
+  catch:
+    - description: Show the custom role
+      get:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        name: e2e-authz-custom-editor
+    - description: Show the aggregated custom roles of the Editor and User levels
+      script:
+        content: kubectl get clusterrole user-authz:editor:custom user-authz:user:custom -o yaml
+    - description: Show the Deckhouse log lines of the custom role hook
+      script:
+        content: kubectl -n d8-system logs deploy/deckhouse -c deckhouse --tail=2000 | grep -i 'custom_rbac_roles\|custom_cluster_roles' | tail -n 50 || true
+
+  steps:
+    - name: prerequisites
+      description: Verify that the user-authz module and its controller are Ready
+      try:
+        - description: Wait for module user-authz and the user-authz-controller Deployment
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-user-authz.sh
+
+    - name: create-rules
+      description: Create User, Editor and ClusterAdmin rules for three test users
+      try:
+        - description: Apply the three ClusterAuthorizationRules
+          apply:
+            file: manifests/cars.yaml
+        - description: Assert the Editor rule is Ready
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-agg-editor
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+
+    - name: create-custom-role
+      description: Create a ClusterRole annotated with access level Editor
+      try:
+        - description: Apply ClusterRole e2e-authz-custom-editor
+          apply:
+            file: manifests/custom-role.yaml
+        - description: Assert the hook mirrored the annotation into the access-level label
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: e2e-authz-custom-editor
+                labels:
+                  user-authz.deckhouse.io/access-level: Editor
+
+    - name: assert-aggregation
+      description: Verify which aggregated custom roles picked the rules up
+      try:
+        - description: Assert user-authz:editor:custom contains the custom rule
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: user-authz:editor:custom
+              (length((rules || `[]`)[?contains(apiGroups || `[]`, 'e2e-authz.example.com')]) > `0`): true
+        - description: Assert user-authz:cluster-admin:custom contains the custom rule
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: user-authz:cluster-admin:custom
+              (length((rules || `[]`)[?contains(apiGroups || `[]`, 'e2e-authz.example.com')]) > `0`): true
+        - description: Assert user-authz:user:custom does not contain the custom rule
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: user-authz:user:custom
+              (length((rules || `[]`)[?contains(apiGroups || `[]`, 'e2e-authz.example.com')])): 0
+        - description: Evaluate matrix-aggregated.txt
+          script:
+            content: bash ../common/scripts/sar-check.sh matrix-aggregated.txt 120
+
+    - name: delete-custom-role
+      description: Delete the custom role and verify that the aggregated access disappears
+      try:
+        - description: Delete ClusterRole e2e-authz-custom-editor
+          delete:
+            ref:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              name: e2e-authz-custom-editor
+        - description: Assert user-authz:editor:custom no longer contains the custom rule
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRole
+              metadata:
+                name: user-authz:editor:custom
+              (length((rules || `[]`)[?contains(apiGroups || `[]`, 'e2e-authz.example.com')])): 0
+        - description: Evaluate matrix-removed.txt
+          script:
+            content: bash ../common/scripts/sar-check.sh matrix-removed.txt 120

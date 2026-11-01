@@ -1,0 +1,90 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-policy-engine-protected-pod-labels
+spec:
+  description: >-
+    The labels that take a workload out of Gatekeeper are reserved. The ValidatingAdmissionPolicies
+    of the module deny a pod with security.deckhouse.io/skip-pss-check=true and a pod or a pod
+    template with gatekeeper.sh/operation=webhook for a user, and admit the webhook label for the
+    Deckhouse service account.
+  timeouts:
+    exec: 10m
+  steps:
+    - name: ensure-module
+      description: Enable the module if needed and wait until it is Ready and bootstrapped
+      try:
+        - description: Enable admission-policy-engine and wait for the bootstrap
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh
+            check:
+              ($error == null): true
+
+    - name: create-namespaces
+      description: >-
+        Create the namespaces of the test with every label set at creation; multitenancy-manager
+        adopts them into Projects and refuses later changes of the managed labels
+      try:
+        - description: Create e2e-ape-labels
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-labels
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete the namespaces of the test through their Projects
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-labels
+
+    - name: skip-pss-label
+      description: A pod cannot switch off the Pod Security Standards with the skip label
+      try:
+        - description: A pod with security.deckhouse.io/skip-pss-check=true is denied
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-labels
+              --name skip-pss --timeout 60
+              --patch '.metadata.labels["security.deckhouse.io/skip-pss-check"] = "true"'
+              --match 'deny-pods-with-skip-pss-label'
+              --match "Pods with label 'security.deckhouse.io/skip-pss-check=true' are not allowed"
+            check:
+              ($error == null): true
+        - description: Another value of the label is admitted
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect allow --namespace e2e-ape-labels
+              --name skip-pss-false --timeout 60
+              --patch '.metadata.labels["security.deckhouse.io/skip-pss-check"] = "false"'
+            check:
+              ($error == null): true
+
+    - name: webhook-operation-label
+      description: A user workload cannot pose as a Gatekeeper webhook pod
+      try:
+        - description: A pod with gatekeeper.sh/operation=webhook is denied
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --namespace e2e-ape-labels
+              --name webhook-label --timeout 60
+              --patch '.metadata.labels["gatekeeper.sh/operation"] = "webhook"'
+              --match "Pods with label 'gatekeeper.sh/operation=webhook' are not allowed"
+            check:
+              ($error == null): true
+        - description: A Deployment with the label in its pod template is denied
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect deny --kind deployment --namespace e2e-ape-labels
+              --name webhook-label --timeout 60
+              --patch '.metadata.labels["gatekeeper.sh/operation"] = "webhook"'
+              --match 'Setting gatekeeper.sh/operation=webhook in pod template is forbidden'
+            check:
+              ($error == null): true
+        - description: The Deckhouse service account may set the label
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect allow --namespace e2e-ape-labels
+              --name webhook-label-deckhouse --timeout 60 --as-deckhouse
+              --patch '.metadata.labels["gatekeeper.sh/operation"] = "webhook"'
+            check:
+              ($error == null): true

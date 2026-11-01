@@ -1,0 +1,114 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-dexclient-kubernetes-audience
+spec:
+  description: >-
+    A DexClient with the annotation dexclient.deckhouse.io/allow-access-to-kubernetes "true" alone,
+    without any DexAuthenticator, publishAPI or kubeconfigGenerator, makes the module render the
+    `kubernetes` OAuth2Client with the DexClient among its trusted peers, and kube-apiserver accepts
+    the ID token the DexClient requests for the audience `kubernetes`. Before the DexClient is
+    created the case switches off API publication and kubeconfigGenerator for its duration. When an
+    annotated DexAuthenticator or DexClient of another module keeps the client rendered, the run
+    logs NOT PROVEN and checks the end-to-end path only; the template test
+    kubernetes_oauth2client_test.go is the regression guard of the DexClient-only path.
+  concurrent: false
+
+  catch:
+    - description: Show the OAuth2Client objects on failure
+      script:
+        shell: bash
+        shellArgs: ["-c"]
+        content: kubectl -n d8-user-authn get oauth2clients.dex.coreos.com -o custom-columns=NAME:.metadata.name,ID:.id,PEERS:.trustedPeers
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: no-other-trigger
+      description: >-
+        Nothing else may render the `kubernetes` client: switch off API publication and
+        kubeconfigGenerator (restored afterwards), fail on annotated DexAuthenticators or DexClients,
+        and wait until the client is gone
+      try:
+        - description: Remove every other trigger and assert the kubernetes OAuth2Client is absent
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 40m
+            content: bash scripts/no-other-trigger.sh
+      cleanup:
+        - description: Restore ModuleConfig control-plane-manager and user-authn if the case changed them
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 40m
+            content: |
+              set -e
+              bash ../../tests/common/scripts/mc-settings.sh restore control-plane-manager
+              bash ../../tests/common/scripts/mc-settings.sh restore
+
+    - name: create-user-and-client
+      description: Create the User and the annotated DexClient
+      try:
+        - description: Create User e2e-authn-k8s-aud-user
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user dexclient-kubernetes-audience e2e-authn-k8s-aud-user e2e-authn-k8s-aud-user@example.com
+        - description: Create DexClient e2e-authn-k8s-aud-client with access to Kubernetes
+          create:
+            file: manifests/dex-client.yaml
+        - description: Wait for the client Secret and OAuth2Client
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              wait_dex_client "${NS}" e2e-authn-k8s-aud-client
+      cleanup:
+        - description: Delete the User
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            content: kubectl delete users.deckhouse.io e2e-authn-k8s-aud-user --ignore-not-found
+
+    - name: kubernetes-client-trusts-dexclient
+      description: The `kubernetes` OAuth2Client exists and lists the DexClient among its trusted peers
+      try:
+        - description: Assert the trusted peers of the kubernetes client contain dex-client-e2e-authn-k8s-aud-client@NAMESPACE
+          assert:
+            timeout: 5m
+            resource:
+              apiVersion: dex.coreos.com/v1
+              kind: OAuth2Client
+              metadata:
+                name: nn2wezlsnzsxizltzpzjzzeeeirsk
+                namespace: d8-user-authn
+              id: kubernetes
+              (contains(trustedPeers, join('', ['dex-client-e2e-authn-k8s-aud-client@', $namespace]))): true
+
+    - name: token-for-api-server
+      description: The DexClient gets an ID token for the audience kubernetes, which kube-apiserver accepts
+      try:
+        - description: Sign in with the cross-client audience scope and call kubectl auth whoami with the token
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 12m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/whoami-as.sh dexclient-kubernetes-audience "${NS}"
+              e2e-authn-k8s-aud-client e2e-authn-k8s-aud-user e2e-authn-k8s-aud-user@example.com

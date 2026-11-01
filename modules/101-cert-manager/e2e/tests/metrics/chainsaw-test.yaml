@@ -1,0 +1,70 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cert-manager-metrics
+spec:
+  description: >-
+    The controller exports the metrics that the module alerts are built on. For a Ready Certificate
+    the metrics endpoint behind kube-rbac-proxy (port 9404) exposes
+    certmanager_certificate_ready_status with condition True and
+    certmanager_certificate_expiration_timestamp_seconds. The alerts themselves are not
+    triggered, because each of them has a `for` duration of 10 minutes or more.
+  concurrent: false
+
+  catch:
+    - description: Show the controller pods on failure
+      get:
+        apiVersion: v1
+        kind: Pod
+        namespace: d8-cert-manager
+        selector: app=cert-manager
+    - description: Show kube-rbac-proxy logs of the controller on failure
+      podLogs:
+        namespace: d8-cert-manager
+        selector: app=cert-manager
+        container: kube-rbac-proxy
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled, converged and its ClusterIssuers are Ready
+      use:
+        template: ../common/steps/ensure-cert-manager.yaml
+
+    - name: issue-certificate
+      description: Create the metrics reader identity and a Ready Certificate
+      try:
+        - description: Create the ServiceAccount, and the Role and RoleBinding in d8-cert-manager
+          create:
+            file: manifests/rbac.yaml
+            template: true
+        - description: Create the Certificate
+          create:
+            file: manifests/certificate.yaml
+        - description: Assert the Certificate is Ready
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-metrics
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+
+    - name: scrape-metrics
+      description: Scrape the controller metrics and look for the series of the test Certificate
+      try:
+        - description: >-
+            Assert one controller pod exposes the ready status (condition True, value 1) and the
+            expiration timestamp of the test Certificate
+          script:
+            timeout: 4m
+            env:
+              - name: E2E_NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/scrape-metrics.sh "$E2E_NS" e2e-cm-metrics-reader 180
+              "^certmanager_certificate_ready_status\{[^}]*condition=\"True\"[^}]*name=\"e2e-cm-metrics\"[^}]*\} 1$"
+              "^certmanager_certificate_expiration_timestamp_seconds\{[^}]*name=\"e2e-cm-metrics\"[^}]*\} [0-9.e+]+$"

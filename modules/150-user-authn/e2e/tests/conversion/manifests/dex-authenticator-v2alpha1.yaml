@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v2alpha1
+kind: DexAuthenticator
+metadata:
+  name: e2e-authn-conv-v2
+spec:
+  applications:
+    - domain: e2e-authn-conv-v2-main.example.com
+      ingressClassName: e2e-authn-unused
+      signOutURL: /logout
+    - domain: e2e-authn-conv-v2-extra.example.com
+      ingressClassName: e2e-authn-unused

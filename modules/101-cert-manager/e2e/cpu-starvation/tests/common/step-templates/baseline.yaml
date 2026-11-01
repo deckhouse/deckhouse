@@ -1,0 +1,60 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: baseline
+spec:
+  # Bindings: holdSeconds (length of the baseline window), certificateCount, burstBudgetSeconds;
+  # recoverySeconds and afterSeconds only set the deadline of the background watches.
+  try:
+    - description: Start watching MODIFIED events of the module leases and of the test Certificates
+      script:
+        timeout: 2m
+        env:
+          - name: HOLD
+            value: ($holdSeconds)
+          - name: BUDGET
+            value: ($burstBudgetSeconds)
+          - name: RECOVERY
+            value: ($recoverySeconds)
+          - name: AFTER
+            value: ($afterSeconds)
+        content: |
+          set -eu
+          sh ../common/scripts/e2e.sh watch-start "$HOLD" "$BUDGET" "$RECOVERY" "$AFTER"
+          sh ../common/scripts/e2e.sh mark baseline
+        check:
+          ($error == null): true
+    - description: >-
+        Issue a burst of Certificates without pressure, wait for the rest of the baseline window and
+        mark its end. The pressure phase issues a burst of the same size, so the write rates of both
+        windows compare.
+      script:
+        timeout: 60m
+        env:
+          - name: HOLD
+            value: ($holdSeconds)
+          - name: COUNT
+            value: ($certificateCount)
+          - name: BUDGET
+            value: ($burstBudgetSeconds)
+        content: |
+          set -eu
+          sh ../common/scripts/e2e.sh burst baseline "$COUNT"
+          sh ../common/scripts/e2e.sh burst-wait baseline "$COUNT" "$BUDGET"
+          sh ../common/scripts/e2e.sh wait-window baseline "$HOLD"
+          sh ../common/scripts/e2e.sh mark baseline-end
+        check:
+          ($error == null): true
+  catch:
+    - description: Print the summary of the run
+      script:
+        content: sh ../common/scripts/e2e.sh report
+    - description: Show the Certificates of the test
+      get:
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+    - description: Show the controller logs
+      podLogs:
+        namespace: d8-cert-manager
+        selector: app=cert-manager
+        tail: 200

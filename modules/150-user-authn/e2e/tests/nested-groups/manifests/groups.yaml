@@ -1,0 +1,20 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: e2e-authn-nest-child
+spec:
+  name: e2e-authn-nest-child
+  members:
+    - kind: User
+      name: e2e-authn-nest-user
+---
+# Nested groups are referenced by spec.name, not by metadata.name.
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: e2e-authn-nest-parent-object
+spec:
+  name: e2e-authn-nest-parent
+  members:
+    - kind: Group
+      name: e2e-authn-nest-child

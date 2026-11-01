@@ -1,0 +1,26 @@
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-res-editor
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: Editor
+  subjects:
+  - kind: User
+    name: e2e-authz-res-editor
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: e2e-authz-res-limited
+  labels:
+    e2e.deckhouse.io/suite: user-authz
+spec:
+  accessLevel: Editor
+  limitNamespaces:
+  - "@NAMESPACE@"
+  subjects:
+  - kind: User
+    name: e2e-authz-res-limited

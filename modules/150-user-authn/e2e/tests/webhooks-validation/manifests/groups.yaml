@@ -1,0 +1,13 @@
+# Group A names Group B as a member before B exists (a warning, not an error), so that
+# creating B with A as a member closes a cycle.
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: e2e-authn-hook-group-a
+spec:
+  name: e2e-authn-hook-a
+  members:
+    - kind: Group
+      name: e2e-authn-hook-b
+    - kind: User
+      name: e2e-authn-hook-user1

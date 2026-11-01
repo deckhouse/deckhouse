@@ -1,0 +1,12 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: e2e-cm-metrics
+spec:
+  secretName: e2e-cm-metrics-tls
+  dnsNames:
+    - metrics.e2e-cm.example.test
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: selfsigned

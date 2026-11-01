@@ -1,0 +1,7 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: DexAuthenticator
+metadata:
+  name: e2e-authn-conv-v1alpha1
+spec:
+  applicationDomain: e2e-authn-conv-old.example.com
+  applicationIngressClassName: e2e-authn-unused

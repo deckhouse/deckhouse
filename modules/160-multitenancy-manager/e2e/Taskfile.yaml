@@ -1,0 +1,47 @@
+version: '3'
+
+vars:
+  REPORTS: '{{.E2E_REPORTS_DIR | default "./reports"}}'
+
+env:
+  # Shared helpers of the module suites (delete-namespace.sh, create-namespace.sh, module-enabled.sh,
+  # wait-deckhouse-queue.sh). The CI bundle sets E2E_LIB_DIR; in a checkout it is
+  # testing/e2e/lib of the repository.
+  E2E_LIB_DIR:
+    sh: >-
+      if [ -n "${E2E_LIB_DIR:-}" ]; then echo "${E2E_LIB_DIR}";
+      else echo "$(git -C "{{.TASKFILE_DIR}}" rev-parse --show-toplevel)/testing/e2e/lib"; fi
+  # ensure-module.sh and module-setting.sh record here what they change in ModuleConfig objects,
+  # and restore-modules.sh puts it back after each suite.
+  E2E_STATE_DIR: /tmp/e2e-mtm-state
+
+tasks:
+  run:
+    desc: Run the functional multitenancy-manager e2e tests
+    cmds:
+      - defer: bash tests/common/scripts/restore-modules.sh
+      - mkdir -p {{.REPORTS}}
+      # Leftovers of a run that was killed before its cleanup would break this one.
+      - bash tests/common/scripts/restore-modules.sh
+      - >-
+        chainsaw test --test-dir tests --config chainsaw-config.yaml
+        --report-format JUNIT-TEST --report-path {{.REPORTS}} --report-name multitenancy-manager
+
+  run:destructive:
+    desc: Run the destructive multitenancy-manager e2e tests (controller restart under an admission probe)
+    cmds:
+      - defer: bash tests/common/scripts/restore-modules.sh
+      - mkdir -p {{.REPORTS}}
+      # Leftovers of a run that was killed before its cleanup would break this one.
+      - bash tests/common/scripts/restore-modules.sh
+      - >-
+        chainsaw test --test-dir tests-destructive --config chainsaw-config.yaml
+        --report-format JUNIT-TEST --report-path {{.REPORTS}} --report-name multitenancy-manager-destructive
+
+  lint:
+    desc: Lint the Chainsaw configuration, every test of both suites and the shell scripts
+    cmds:
+      - chainsaw lint configuration -f chainsaw-config.yaml
+      - for f in tests/*/chainsaw-test.yaml tests-destructive/*/chainsaw-test.yaml; do echo "$f"; chainsaw lint test -f "$f" || exit 1; done
+      - for f in tests/common/scripts/*.sh tests/*/scripts/*.sh tests-destructive/*/scripts/*.sh; do [ -e "$f" ] || continue; bash -n "$f" || exit 1; done
+      - for f in "${E2E_LIB_DIR}"/*.sh; do bash -n "$f" || exit 1; done

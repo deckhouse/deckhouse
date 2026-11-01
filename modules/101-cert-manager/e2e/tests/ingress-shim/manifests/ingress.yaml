@@ -1,0 +1,26 @@
+# The IngressClass does not exist on purpose: ingress-shim of cert-manager handles every Ingress
+# with the annotation regardless of its class, and no ingress controller picks this one up, so
+# the test does not publish anything through the cluster ingress controllers.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: e2e-cm-shim
+  annotations:
+    cert-manager.io/cluster-issuer: selfsigned
+spec:
+  ingressClassName: e2e-cm-no-controller
+  tls:
+    - hosts:
+        - shim.e2e-cm.example.test
+      secretName: e2e-cm-shim-tls
+  rules:
+    - host: shim.e2e-cm.example.test
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: e2e-cm-shim
+                port:
+                  number: 80

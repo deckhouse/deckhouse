@@ -1,0 +1,134 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-user-expire
+spec:
+  description: >-
+    A User with spec.ttl 2m gets status.expireAt two minutes after its creation. When that time
+    passes, the controller removes the User from every Group and deletes it, together with its
+    Dex Password and UserAccount. A User without ttl in the same Group stays.
+  concurrent: false
+
+  catch:
+    - description: Show the Users and the Group of the test on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        content: |
+          kubectl get users.deckhouse.io e2e-authn-expire-user e2e-authn-expire-keep -o yaml --ignore-not-found | grep -v 'password:'
+          kubectl get groups.deckhouse.io e2e-authn-expire-group -o yaml --ignore-not-found
+    - description: Show controller logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=user-authn-controller
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: create-users-and-group
+      description: Create a User with ttl 2m, a User without ttl and a Group with both
+      try:
+        - description: Create the Users
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user user-expire e2e-authn-expire-user e2e-authn-expire-user@example.com 2m
+              create_user user-expire e2e-authn-expire-keep e2e-authn-expire-keep@example.com
+        - description: Create Group e2e-authn-expire-group
+          create:
+            file: manifests/group.yaml
+      cleanup:
+        - description: Delete the Users
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: kubectl delete users.deckhouse.io e2e-authn-expire-user e2e-authn-expire-keep --ignore-not-found
+
+    - name: expire-at-set
+      description: The controller creates the Dex Password and sets status.expireAt to the creation time plus the ttl
+      try:
+        # The Password is checked first: with ttl 2m it is still there after the timeout of this
+        # assert, so the check cannot race the expiry.
+        - description: Assert the Dex Password of the expiring user exists
+          assert:
+            timeout: 1m
+            resource:
+              (length(x_k8s_list($client, 'dex.coreos.com/v1', 'Password', 'd8-user-authn').items[?username == 'e2e-authn-expire-user'])): 1
+        - description: Assert the expiring User has status.expireAt and its group, the other one has no expireAt
+          assert:
+            timeout: 1m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: User
+              metadata:
+                name: e2e-authn-expire-user
+              status:
+                (expireAt != null): true
+                groups:
+                  - e2e-authn-expire-group
+        - description: Assert expireAt is about two minutes after the creation of the User
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              user="$(kubectl get users.deckhouse.io e2e-authn-expire-user -o json)"
+              created="$(date -d "$(jq -r .metadata.creationTimestamp <<<"${user}")" +%s)"
+              expire="$(date -d "$(jq -r .status.expireAt <<<"${user}")" +%s)"
+              delta=$(( expire - created ))
+              echo "expireAt is ${delta}s after creationTimestamp"
+              (( delta >= 110 && delta <= 180 )) || { echo "FAIL: expected about 120s"; exit 1; }
+              [[ "$(kubectl get users.deckhouse.io e2e-authn-expire-keep -o jsonpath='{.status.expireAt}')" == "" ]] \
+                || { echo "FAIL: a User without ttl must have no expireAt"; exit 1; }
+
+    - name: user-expired
+      description: After expireAt the User is deleted and removed from the Group, with its Password and UserAccount
+      try:
+        - description: Assert the expiring User is deleted within four minutes
+          error:
+            timeout: 4m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: User
+              metadata:
+                name: e2e-authn-expire-user
+        - description: Assert the Group keeps only the User without ttl
+          assert:
+            timeout: 1m
+            resource:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: Group
+              metadata:
+                name: e2e-authn-expire-group
+              spec:
+                members:
+                  - kind: User
+                    name: e2e-authn-expire-keep
+        - description: Assert the Dex Password of the expired user is deleted
+          assert:
+            timeout: 2m
+            resource:
+              (length(x_k8s_list($client, 'dex.coreos.com/v1', 'Password', 'd8-user-authn').items[?username == 'e2e-authn-expire-user'])): 0
+        - description: Assert the UserAccount of the expired user is deleted
+          assert:
+            timeout: 2m
+            resource:
+              (length(x_k8s_list($client, 'deckhouse.io/v1alpha1', 'UserAccount', '').items[?status.email == 'e2e-authn-expire-user@example.com'])): 0
+        - description: Assert the User without ttl is still there
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: User
+              metadata:
+                name: e2e-authn-expire-keep

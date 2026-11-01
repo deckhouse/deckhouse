@@ -1,0 +1,27 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-helm
+status:
+  state: Deployed
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isolated
+  namespace: e2e-mtm-helm
+  labels:
+    heritage: multitenancy-manager
+spec:
+  policyTypes:
+    - Ingress
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: e2e-mtm-info
+  namespace: e2e-mtm-helm
+  labels:
+    heritage: multitenancy-manager
+data:
+  source: helm

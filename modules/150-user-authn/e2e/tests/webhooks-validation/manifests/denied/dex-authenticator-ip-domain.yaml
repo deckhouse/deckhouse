@@ -1,0 +1,7 @@
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: e2e-authn-hook-ip
+spec:
+  applicationDomain: 10.0.0.1
+  applicationIngressClassName: e2e-authn-unused

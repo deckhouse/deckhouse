@@ -1,0 +1,9 @@
+# The OAuth2 client of the load. Deckhouse registers it in Dex as dex-client-dex-load@<NAMESPACE>
+# and writes its secret to the Secret dex-client-dex-load of the test namespace.
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: dex-load
+spec:
+  redirectURIs:
+    - http://localhost:8000/callback

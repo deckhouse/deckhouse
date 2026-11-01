@@ -1,0 +1,101 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: security-policy-in-template
+spec:
+  description: >-
+    The allowedUIDs and allowedGIDs parameters of the secure template render a SecurityPolicy of
+    admission-policy-engine that selects the project namespaces, and Gatekeeper refuses a pod that
+    runs as a user outside the range while a pod inside the range is admitted.
+  concurrent: false
+  catch:
+    - description: Show the project and its SecurityPolicy on failure
+      script:
+        content: |
+          kubectl get project e2e-mtm-spol -o yaml || true
+          kubectl get securitypolicies -l projects.deckhouse.io/project=e2e-mtm-spol -o yaml || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: Make sure multitenancy-manager and admission-policy-engine are enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+        - description: Ensure the admission-policy-engine module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh admission-policy-engine
+        - description: Assert the SecurityPolicy kind is served
+          assert:
+            resource:
+              apiVersion: apiextensions.k8s.io/v1
+              kind: CustomResourceDefinition
+              metadata:
+                name: securitypolicies.deckhouse.io
+
+    - name: render-security-policy
+      description: The project renders the SecurityPolicy with the UID and GID ranges
+      try:
+        - description: Create the e2e-mtm-spol project
+          create:
+            file: manifests/project.yaml
+        - description: Assert the project is Deployed
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-spol
+              status:
+                state: Deployed
+        - description: >-
+            Assert the SecurityPolicy (named after the first 8 hex digits of the SHA-256 of the
+            project name) denies users and groups outside 1000-2000 in the project namespaces
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha1
+              kind: SecurityPolicy
+              metadata:
+                name: allowed-uid-gid-164d343a
+                labels:
+                  projects.deckhouse.io/project: e2e-mtm-spol
+              spec:
+                enforcementAction: Deny
+                policies:
+                  runAsUser:
+                    rule: MustRunAs
+                    ranges:
+                      - min: 1000
+                        max: 2000
+                  runAsGroup:
+                    rule: MustRunAs
+                    ranges:
+                      - min: 1000
+                        max: 2000
+                match:
+                  namespaceSelector:
+                    labelSelector:
+                      matchLabels:
+                        projects.deckhouse.io/project: e2e-mtm-spol
+
+    - name: enforce-security-policy
+      description: Gatekeeper enforces the ranges once admission-policy-engine has rendered the constraint
+      try:
+        - description: Assert a pod running as UID 5000 is refused
+          script:
+            timeout: 11m
+            content: >-
+              bash ../common/scripts/eventually-denied.sh 600 'is attempting to run as disallowed user'
+              kubectl create --dry-run=server -f manifests/pod-uid-5000.yaml
+        - description: Assert a pod running as UID 1500 is admitted
+          script:
+            content: kubectl create --dry-run=server -f manifests/pod-uid-1500.yaml
+            check:
+              ($error == null): true

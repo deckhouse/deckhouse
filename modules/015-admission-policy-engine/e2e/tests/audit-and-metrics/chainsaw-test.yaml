@@ -1,0 +1,117 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-policy-engine-audit-and-metrics
+spec:
+  description: >-
+    The audit finds a violation that already exists in the cluster. A warn-only SecurityPolicy
+    admits a pod with a writable root filesystem with a warning; within two audit cycles
+    (--audit-interval=60) the constraint reports totalViolations of at least 1 with the pod in
+    status.violations, and the constraint exporter exports it as
+    d8_gatekeeper_exporter_constraint_violations.
+  timeouts:
+    exec: 20m
+  steps:
+    - name: ensure-module
+      description: Enable the module if needed and wait until it is Ready and bootstrapped
+      try:
+        - description: Enable admission-policy-engine and wait for the bootstrap
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh
+            check:
+              ($error == null): true
+
+    - name: create-namespaces
+      description: >-
+        Create the namespaces of the test with every label set at creation; multitenancy-manager
+        adopts them into Projects and refuses later changes of the managed labels
+      try:
+        - description: Create e2e-ape-audit
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-audit
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete the namespaces of the test through their Projects
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-audit
+
+    - name: create-warn-policy
+      description: Create the warn-only SecurityPolicy and wait until its constraint is enforced
+      try:
+        - description: Create the SecurityPolicy
+          apply:
+            file: manifests/securitypolicy.yaml
+        - description: Wait for the constraint
+          script:
+            content: bash ../common/scripts/wait-constraints.sh 600 d8readonlyrootfilesystem/e2e-ape-sp-audit
+            check:
+              ($error == null): true
+        - description: The constraint keeps the warn action of the policy
+          assert:
+            resource:
+              apiVersion: constraints.gatekeeper.sh/v1beta1
+              kind: D8ReadOnlyRootFilesystem
+              metadata:
+                name: e2e-ape-sp-audit
+              spec:
+                enforcementAction: warn
+
+    - name: create-violating-pod
+      description: The violating pod is admitted with a warning and stays in the cluster
+      try:
+        - description: The warn action admits the pod with the policy warning
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect warn --namespace e2e-ape-audit
+              --name e2e-ape-audit-probe --timeout 120
+              --patch '.spec.containers[0].securityContext.readOnlyRootFilesystem = false'
+              --match '\[e2e-ape-sp-audit\]'
+              --match 'only read-only root filesystem container is allowed'
+            check:
+              ($error == null): true
+        - description: Create the violating pod
+          apply:
+            file: manifests/violator.yaml
+
+    - name: audit-reports-violation
+      description: Within two audit cycles the constraint status reports the pod
+      try:
+        - description: Poll totalViolations and the violation entry of the constraint
+          script:
+            timeout: 6m
+            content: bash check-audit.sh
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the constraint status
+          script:
+            content: kubectl get d8readonlyrootfilesystem e2e-ape-sp-audit -o jsonpath='{.status}'
+        - description: Show the audit logs
+          podLogs:
+            namespace: d8-admission-policy-engine
+            selector: app=gatekeeper,control-plane=audit-controller
+            container: manager
+            tail: 100
+
+    - name: exporter-metric
+      description: The constraint exporter exports the violation found by the audit
+      try:
+        - description: Create a service account allowed to scrape the exporter
+          apply:
+            file: manifests/metrics-reader.yaml
+        - description: Scrape the exporter until it reports the violation
+          script:
+            timeout: 7m
+            content: bash check-exporter-metric.sh
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the exporter logs
+          podLogs:
+            namespace: d8-admission-policy-engine
+            selector: app=gatekeeper,control-plane=audit-controller
+            container: constraint-exporter
+            tail: 50

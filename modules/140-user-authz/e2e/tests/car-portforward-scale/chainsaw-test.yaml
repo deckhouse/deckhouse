@@ -1,0 +1,164 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: car-portforward-scale
+spec:
+  description: >-
+    Verify the portForwarding and allowScale flags of ClusterAuthorizationRule. Each flag adds
+    one binding (user-authz:<rule>:port-forward to user-authz:port-forward,
+    user-authz:<rule>:scale to user-authz:scale) and grants pods/portforward or the scale
+    subresource of Deployments and StatefulSets, which no basic level below SuperAdmin grants.
+    Switching a flag off removes its binding and its access.
+  timeouts:
+    apply: 60s
+    assert: 60s
+    error: 60s
+    delete: 2m
+    exec: 5m
+
+  catch:
+    - description: Show the test ClusterAuthorizationRules
+      get:
+        apiVersion: deckhouse.io/v1
+        kind: ClusterAuthorizationRule
+        selector: e2e.deckhouse.io/suite=user-authz
+    - description: Show the ClusterRoleBindings of the test rules
+      script:
+        content: kubectl get clusterrolebindings -o wide | grep -E 'NAME|user-authz:e2e-authz-(no)?flags:' || true
+    - description: Show user-authz-controller logs
+      podLogs:
+        namespace: d8-user-authz
+        selector: app=user-authz-controller
+        tail: 200
+
+  steps:
+    - name: prerequisites
+      description: Verify that the user-authz module and its controller are Ready
+      try:
+        - description: Wait for module user-authz and the user-authz-controller Deployment
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-user-authz.sh
+
+    - name: create-rules
+      description: Create an Editor rule with both flags and an Editor rule without them
+      try:
+        - description: Create ClusterAuthorizationRule e2e-authz-flags
+          apply:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-flags
+                labels:
+                  e2e.deckhouse.io/suite: user-authz
+              spec:
+                accessLevel: Editor
+                portForwarding: true
+                allowScale: true
+                subjects:
+                  - kind: User
+                    name: e2e-authz-flags
+        - description: Create ClusterAuthorizationRule e2e-authz-noflags
+          apply:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-noflags
+                labels:
+                  e2e.deckhouse.io/suite: user-authz
+              spec:
+                accessLevel: Editor
+                subjects:
+                  - kind: User
+                    name: e2e-authz-noflags
+        - description: Assert the rule with flags is Ready with four bindings
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-flags
+              status:
+                bindings: 4
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+
+    - name: assert-flag-bindings
+      description: Verify the port-forward and scale bindings of the rule with flags
+      try:
+        - description: Assert user-authz:e2e-authz-flags:port-forward binds user-authz:port-forward
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-flags:port-forward
+              roleRef:
+                kind: ClusterRole
+                name: user-authz:port-forward
+              subjects:
+                - kind: User
+                  name: e2e-authz-flags
+        - description: Assert user-authz:e2e-authz-flags:scale binds user-authz:scale
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-flags:scale
+              roleRef:
+                kind: ClusterRole
+                name: user-authz:scale
+        - description: Assert the rule without flags has no port-forward binding
+          error:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-noflags:port-forward
+        - description: Assert the rule without flags has no scale binding
+          error:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-noflags:scale
+
+    - name: flag-decisions
+      description: Compare the decisions on pods/portforward and the scale subresources
+      try:
+        - description: Evaluate matrix-flags.txt
+          script:
+            content: bash ../common/scripts/sar-check.sh matrix-flags.txt 120
+
+    - name: switch-portforward-off
+      description: Switch portForwarding off and verify that only the port-forward access goes away
+      try:
+        - description: Patch spec.portForwarding to false
+          patch:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: ClusterAuthorizationRule
+              metadata:
+                name: e2e-authz-flags
+              spec:
+                portForwarding: false
+        - description: Assert the port-forward binding is removed
+          error:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-flags:port-forward
+        - description: Assert the scale binding is kept
+          assert:
+            resource:
+              apiVersion: rbac.authorization.k8s.io/v1
+              kind: ClusterRoleBinding
+              metadata:
+                name: user-authz:e2e-authz-flags:scale
+        - description: Evaluate matrix-portforward-off.txt
+          script:
+            content: bash ../common/scripts/sar-check.sh matrix-portforward-off.txt 60

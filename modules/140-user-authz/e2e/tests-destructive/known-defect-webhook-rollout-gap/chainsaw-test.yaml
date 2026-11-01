@@ -1,0 +1,120 @@
+# KNOWN MODULE DEFECT - skipped until the module is fixed; re-enable together with the fix.
+#
+# A rollout restart of the authorization webhook leaves kube-apiserver without a webhook to call:
+# the DaemonSet runs on the host network (ee/be/modules/140-user-authz/templates/webhook/daemonset.yaml:92,
+# port 40443 at :101) with the default RollingUpdate strategy (maxSurge 0, no updateStrategy in
+# the template, daemonset.yaml:70-76), kube-apiserver calls it only on the node-local endpoint
+# https://127.0.0.1:40443/ (templates/webhook/configmap-control-plane-configurator.yaml:10) and denies
+# on any webhook error (modules/040-control-plane-manager/templates/_authorization_config.tpl:38,
+# failurePolicy: Deny). Between the termination of the old Pod and the readiness of the new one,
+# every request of a subject the webhook decides for is denied with an evaluationError.
+#
+# The check below is unchanged: zero false denies, false allows and errors under the probe.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: known-defect-webhook-rollout-gap
+spec:
+  skip: true
+  description: >-
+    Known module defect, skipped. With the multitenancy mode on, a rollout restart of the
+    authorization webhook DaemonSet must not deny or fail a single authorization request.
+  timeouts:
+    apply: 60s
+    assert: 3m
+    error: 2m
+    delete: 3m
+    cleanup: 40m
+    exec: 15m
+
+  catch:
+    - description: Show the evidence about the webhook Pods, DaemonSet, events and VPA
+      script:
+        content: bash ../../tests/common/scripts/webhook-evidence.sh catch
+    - description: Show the Pods, DaemonSet and Deployments of d8-user-authz
+      script:
+        content: |
+          kubectl -n d8-user-authz get daemonsets,deployments,pods -o wide
+          kubectl -n d8-user-authz get daemonset user-authz-webhook -o jsonpath='{.spec.template.spec.nodeSelector}'; echo
+          kubectl -n d8-user-authz get events --sort-by=.lastTimestamp | tail -n 40
+    - description: Show the authorization webhook logs
+      podLogs:
+        namespace: d8-user-authz
+        selector: app=user-authz-webhook
+        container: webhook
+        tail: 200
+    - description: Show user-authz-controller logs
+      podLogs:
+        namespace: d8-user-authz
+        selector: app=user-authz-controller
+        tail: 200
+
+  steps:
+    - name: prerequisites
+      description: Verify that the user-authz module and its controller are Ready
+      try:
+        - description: Wait for module user-authz and the user-authz-controller Deployment
+          script:
+            timeout: 20m
+            content: bash ../../tests/common/scripts/ensure-user-authz.sh
+
+    - name: enable-multitenancy
+      description: Set enableMultiTenancy=true and wait until the authorization webhook serves every kube-apiserver
+      try:
+        - description: Enable the multitenancy mode and wait for the whole chain
+          script:
+            timeout: 40m
+            content: bash ../../tests/common/scripts/multitenancy.sh enable
+      cleanup:
+        - description: Restore ModuleConfig user-authz and wait until kube-apiserver runs without the webhook
+          script:
+            timeout: 40m
+            content: bash ../../tests/common/scripts/multitenancy.sh restore
+
+    - name: create-rules
+      description: Create an unlimited and a limited Editor rule and wait until the webhook enforces them
+      try:
+        - description: Create namespace e2e-authz-resilience-other
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-authz-resilience-other
+        - description: Apply the rules, retrying while the admission webhook still sees the mode as off
+          script:
+            timeout: 5m
+            content: |
+              set -u
+              for attempt in $(seq 1 36); do
+                if sed "s/@NAMESPACE@/${NAMESPACE}/" ../mt-webhook-resilience/manifests/cars.yaml | kubectl apply -f -; then
+                  exit 0
+                fi
+                echo "attempt ${attempt} failed, retrying"
+                sleep 5
+              done
+              exit 1
+        - description: Wait until the decisions are enforced
+          script:
+            timeout: 12m
+            content: bash ../../tests/common/scripts/sar-check.sh ../mt-webhook-resilience/ready.txt 600
+      cleanup:
+        - description: Delete the rules before the mode is switched off
+          script:
+            timeout: 5m
+            content: kubectl delete -f ../mt-webhook-resilience/manifests/cars.yaml -f ../mt-webhook-resilience/manifests/late-car.yaml --ignore-not-found --wait=true
+        - description: Delete namespace e2e-authz-resilience-other (its Project when multitenancy-manager adopted it)
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-authz-resilience-other
+
+    - name: webhook-rollout-restart
+      description: >-
+        Restart the authorization webhook DaemonSet under the probe. The webhook listens on the
+        host network of every master and kube-apiserver calls it on 127.0.0.1:40443 with
+        failurePolicy Deny, so any gap between the old and the new Pod shows up as false denies.
+      try:
+        - description: Probe while the DaemonSet restarts; zero false denies, false allows and errors are allowed
+          script:
+            timeout: 15m
+            content: >-
+              bash ../../tests/common/scripts/probe-during.sh ../mt-webhook-resilience/probe.txt 20 0 0 --
+              bash -c 'kubectl -n d8-user-authz rollout restart daemonset/user-authz-webhook
+              && kubectl -n d8-user-authz rollout status daemonset/user-authz-webhook --timeout=10m'
+

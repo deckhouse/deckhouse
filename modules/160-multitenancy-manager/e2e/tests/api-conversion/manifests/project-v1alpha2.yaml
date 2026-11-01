@@ -1,0 +1,18 @@
+# Written as deckhouse.io/v1alpha2: the conversion webhook lifts the administrators and the quota
+# out of the parameters into the standard fields of deckhouse.io/v1alpha3.
+apiVersion: deckhouse.io/v1alpha2
+kind: Project
+metadata:
+  name: e2e-mtm-conv-old
+spec:
+  projectTemplateName: simple
+  parameters:
+    administrators:
+      - subject: User
+        name: e2e-mtm-conv-old@example.com
+    resourceQuota:
+      requests:
+        cpu: "1"
+        memory: 1Gi
+      limits:
+        cpu: "2"

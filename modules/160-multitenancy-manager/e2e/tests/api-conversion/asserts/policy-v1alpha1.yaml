@@ -1,0 +1,13 @@
+# Read through multitenancy.deckhouse.io/v1alpha1: the v1alpha2 namespaceSelector is the v1alpha1
+# projectSelector, and the v1alpha2 projectSelector travels in an annotation.
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: ClusterResourceGrantPolicy
+metadata:
+  name: e2e-mtm-conv
+  annotations:
+    multitenancy.deckhouse.io/v1alpha2-project-selector: '{"matchLabels":{"e2e-mtm/conversion":"project"}}'
+spec:
+  projectSelector:
+    matchLabels:
+      e2e-mtm/conversion: namespace
+  (namespaceSelector == null): true

@@ -1,0 +1,129 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-rate-limit
+spec:
+  description: >-
+    With rateLimit enabled (1 request per minute, burst 2), repeated failed sign-ins from one
+    client address are throttled by Dex with HTTP 429 "Too many requests" and a Retry-After
+    header. Successful sign-ins do not consume the budget: seven of them in a row from one
+    address pass without a retry. The original settings are restored.
+  concurrent: false
+
+  catch:
+    - description: Show Dex logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=dex
+        container: dex
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: create-user-and-client
+      description: Create a User and a DexClient to run the sign-in flow with
+      try:
+        - description: Create User e2e-authn-rate-user
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user rate-limit e2e-authn-rate-user e2e-authn-rate-user@example.com
+        - description: Create DexClient e2e-authn-rate-client
+          create:
+            file: manifests/dex-client.yaml
+        - description: Wait for the client Secret and OAuth2Client
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              wait_dex_client "${NS}" e2e-authn-rate-client
+      cleanup:
+        - description: Delete the User
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: kubectl delete users.deckhouse.io e2e-authn-rate-user --ignore-not-found
+
+    - name: enable-rate-limit
+      description: Turn on rateLimit and wait until Dex runs with it
+      try:
+        - description: Merge rateLimit into ModuleConfig user-authn and wait for convergence
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 25m
+            content: >-
+              bash ../../tests/common/scripts/mc-settings.sh apply
+              '{"rateLimit":{"enabled":true,"perIP":{"requestsPerMinute":1,"burst":2}}}'
+        - description: Wait until the Dex configuration has the rate limit and Dex rolled out
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              wait_dex_config 600 'requestsPerMinute: 1$'
+      cleanup:
+        - description: Restore the original ModuleConfig user-authn spec
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 25m
+            content: bash ../../tests/common/scripts/mc-settings.sh restore
+
+    - name: successful-sign-ins-not-throttled
+      description: Successful sign-ins do not spend the budget of the address
+      try:
+        - description: Wait until Dex serves sign-ins with the new configuration
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/login-expect.sh rate-limit "${NS}" e2e-authn-rate-client
+              e2e-authn-rate-user e2e-authn-rate-user@example.com code
+        - description: Sign in seven times in a row from one address without retries; none may get HTTP 429
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 3m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/success-not-throttled.sh
+
+    - name: throttle
+      description: Failed sign-ins from one address end with HTTP 429 and Retry-After
+      try:
+        - description: Post wrong credentials until Dex answers HTTP 429
+          script:
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 3m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/throttle.sh

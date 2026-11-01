@@ -1,0 +1,13 @@
+# Warn admits the violating pod, so the violation exists in the cluster for the audit to find.
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: e2e-ape-sp-audit
+spec:
+  enforcementAction: Warn
+  match:
+    namespaceSelector:
+      matchNames:
+        - e2e-ape-audit
+  policies:
+    readOnlyRootFilesystem: true

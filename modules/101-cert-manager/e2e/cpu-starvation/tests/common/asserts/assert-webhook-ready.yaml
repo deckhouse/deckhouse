@@ -1,0 +1,7 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook
+  namespace: d8-cert-manager
+status:
+  (readyReplicas >= `1`): true

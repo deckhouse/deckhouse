@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: ClusterProjectRoleBinding
+metadata:
+  name: e2e-mtm-auditors
+spec:
+  subjects:
+    - kind: Group
+      name: e2e-mtm-auditors
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:viewer

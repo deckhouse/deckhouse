@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: e2e-mtm-pvc
+  namespace: e2e-mtm-grant
+spec:
+  storageClassName: e2e-mtm-sc-denied
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi

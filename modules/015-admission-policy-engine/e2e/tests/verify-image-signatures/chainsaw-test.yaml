@@ -1,0 +1,114 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: admission-policy-engine-verify-image-signatures
+spec:
+  description: >-
+    verifyImageSignatures of a SecurityPolicy (SE+, EE, FE) deploys Ratify and the
+    D8VerifyImageSignatures constraint. An image that matches the policy reference but is not
+    signed with the policy key is denied; an image outside the reference is admitted without a
+    verification.
+  timeouts:
+    exec: 20m
+  steps:
+    - name: ensure-module
+      description: Enable the module if needed and wait until it is Ready and bootstrapped
+      try:
+        - description: Enable admission-policy-engine and wait for the bootstrap
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh
+            check:
+              ($error == null): true
+
+    - name: create-namespaces
+      description: >-
+        Create the namespaces of the test with every label set at creation; multitenancy-manager
+        adopts them into Projects and refuses later changes of the managed labels
+      try:
+        - description: Create e2e-ape-signatures with security.deckhouse.io/pod-policy=privileged
+          script:
+            content: bash "${E2E_LIB_DIR}/create-namespace.sh" e2e-ape-signatures security.deckhouse.io/pod-policy=privileged
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Delete the namespaces of the test through their Projects
+          script:
+            timeout: 6m
+            content: bash "${E2E_LIB_DIR}/delete-namespace.sh" e2e-ape-signatures
+
+    - name: create-securitypolicy
+      description: Create the policy with a generated key and wait for Ratify and the constraint
+      try:
+        - description: Create the SecurityPolicy
+          script:
+            content: bash create-policy.sh
+            check:
+              ($error == null): true
+        - description: Wait for the Ratify Deployment
+          script:
+            timeout: 11m
+            content: |
+              set -e
+              for i in $(seq 1 120); do
+                kubectl -n d8-admission-policy-engine get deployment ratify >/dev/null 2>&1 && break
+                sleep 5
+              done
+              kubectl -n d8-admission-policy-engine rollout status deployment/ratify --timeout=5m
+            check:
+              ($error == null): true
+        - description: Wait for the constraint
+          script:
+            content: bash ../common/scripts/wait-constraints.sh 300 d8verifyimagesignatures/e2e-ape-sp-signatures
+            check:
+              ($error == null): true
+        - description: Wait for status.byPod of the ratify-provider Provider
+          script:
+            content: bash ../common/scripts/wait-constraints.sh --field active 300 providers.externaldata.gatekeeper.sh/ratify-provider
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the provider status errors of the Gatekeeper audit pod
+          script:
+            content: |
+              kubectl -n d8-admission-policy-engine logs -l app=gatekeeper,control-plane=audit-controller -c manager --tail=2000 | grep -iE 'forbidden|provider status' | tail -20 || true
+        - description: Show the Ratify pods
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: d8-admission-policy-engine
+            selector: app=ratify
+        - description: Show the Ratify logs
+          podLogs:
+            namespace: d8-admission-policy-engine
+            selector: app=ratify
+            tail: 50
+      cleanup:
+        - description: Delete the SecurityPolicy
+          script:
+            content: kubectl delete securitypolicy e2e-ape-sp-signatures --ignore-not-found
+
+    - name: unsigned-image-denied
+      description: The agnhost image has no signature made with the generated key, so it is denied
+      try:
+        - description: >-
+            The pod with the agnhost image is denied because its signature does not verify with the
+            policy key. A denial caused by a failed fetch of the image does not count.
+          script:
+            content: bash check-unsigned-denied.sh
+            check:
+              ($error == null): true
+        - description: An image outside the policy reference is admitted
+          script:
+            content: >-
+              bash ../common/scripts/probe.sh --expect allow --namespace e2e-ape-signatures
+              --name other-image --timeout 60
+              --patch '.spec.containers[0].image = "registry.k8s.io/pause:3.10"'
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the Ratify logs
+          podLogs:
+            namespace: d8-admission-policy-engine
+            selector: app=ratify
+            tail: 100

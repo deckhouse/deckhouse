@@ -1,0 +1,244 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: user-authn-useroperation-reset-password
+spec:
+  description: >-
+    A UserOperation ResetPassword replaces the Dex password hash, wipes the hash from its own spec,
+    deletes the refresh tokens of the user and forces a password change on the next sign-in. The old
+    password and the old refresh token stop working; the new password leads to the change page, and
+    the changed password signs in. Invalid operations end in phase Failed with the reason.
+  concurrent: false
+
+  catch:
+    - description: Show the UserOperations of the test on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        content: |
+          kubectl get useroperations.deckhouse.io -o json \
+            | jq '.items[] | select(.metadata.name | startswith("e2e-authn-reset")) | {name: .metadata.name, spec: (.spec | del(.resetPassword)), status}'
+    - description: Show the Dex Password of the user on failure
+      script:
+        # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+        shell: bash
+        shellArgs: ["-c"]
+        content: |
+          kubectl -n d8-user-authn get passwords.dex.coreos.com -o json \
+            | jq '.items[] | select(.username == "e2e-authn-reset-user") | {name: .metadata.name, requireResetHashOnNextSuccLogin, hashUpdatedAt}'
+    - description: Show Dex logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=dex
+        container: dex
+        tail: 100
+    - description: Show controller logs on failure
+      podLogs:
+        namespace: d8-user-authn
+        selector: app=user-authn-controller
+        tail: 100
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled and converged and Dex answers
+      use:
+        template: ../common/steps/ensure-user-authn.yaml
+
+    - name: create-user-and-client
+      description: Create the User and a DexClient to run the sign-in flow with
+      try:
+        - description: Create User e2e-authn-reset-user
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              create_user useroperation-reset-password e2e-authn-reset-user e2e-authn-reset-user@example.com
+        - description: Create DexClient e2e-authn-reset-client
+          create:
+            file: manifests/dex-client.yaml
+        - description: Wait for the client Secret and OAuth2Client
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 11m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: |
+              set -euo pipefail
+              source ../../tests/common/scripts/lib.sh
+              wait_dex_client "${NS}" e2e-authn-reset-client
+      cleanup:
+        - description: Delete the User and the UserOperations of the test
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: |
+              kubectl delete users.deckhouse.io e2e-authn-reset-user --ignore-not-found
+              kubectl delete useroperations.deckhouse.io e2e-authn-reset-op e2e-authn-reset-nouser --ignore-not-found
+
+    - name: sign-in-before-reset
+      description: Sign in with offline_access, so the user holds a refresh token
+      try:
+        - description: Run the authorization code flow and exchange the code for tokens
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/get-token.sh useroperation-reset-password "${NS}" e2e-authn-reset-client
+              e2e-authn-reset-user e2e-authn-reset-user@example.com
+        - description: Assert Dex stored a refresh token for the user
+          assert:
+            timeout: 1m
+            resource:
+              (length(x_k8s_list($client, 'dex.coreos.com/v1', 'RefreshToken', 'd8-user-authn').items[?claims.username == 'e2e-authn-reset-user']) > `0`): true
+
+    - name: reset-password
+      description: Reset the password with a UserOperation
+      try:
+        - description: Create UserOperation e2e-authn-reset-op with the bcrypt hash of a new password
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: bash scripts/create-reset.sh e2e-authn-reset-op e2e-authn-reset-user
+        - description: Assert the operation succeeded and the hash was wiped from its spec
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-reset-op
+              spec:
+                (resetPassword == null): true
+              status:
+                phase: Succeeded
+        - description: Assert the Dex Password requires a password change on the next sign-in
+          assert:
+            timeout: 1m
+            resource:
+              (x_k8s_list($client, 'dex.coreos.com/v1', 'Password', 'd8-user-authn').items[?username == 'e2e-authn-reset-user']):
+                (length(@)): 1
+                ([0].requireResetHashOnNextSuccLogin): true
+        - description: Assert the refresh tokens of the user were deleted
+          assert:
+            timeout: 1m
+            resource:
+              (length(x_k8s_list($client, 'dex.coreos.com/v1', 'RefreshToken', 'd8-user-authn').items[?claims.username == 'e2e-authn-reset-user'])): 0
+
+    - name: old-credentials-rejected
+      description: The old refresh token and the old password stop working
+      try:
+        - description: Assert refreshing with the old refresh token fails with HTTP 400
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 1m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/check-old-refresh.sh
+        - description: Assert the old password gets HTTP 401
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 1m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/login-expect.sh useroperation-reset-password "${NS}" e2e-authn-reset-client
+              e2e-authn-reset-user e2e-authn-reset-user@example.com invalid
+
+    - name: forced-password-change
+      description: The new password leads to the forced change page; after the change the user signs in
+      try:
+        - description: Sign in with the new password and change it on the forced change page
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 3m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: bash scripts/forced-change.sh
+        - description: Assert the Dex Password no longer requires a change
+          assert:
+            timeout: 1m
+            resource:
+              (x_k8s_list($client, 'dex.coreos.com/v1', 'Password', 'd8-user-authn').items[?username == 'e2e-authn-reset-user']):
+                (length(@)): 1
+                ([0].requireResetHashOnNextSuccLogin == `true`): false
+        - description: Assert the changed password signs in
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            timeout: 6m
+            env:
+              - name: NS
+                value: ($namespace)
+            content: >-
+              bash ../../tests/common/scripts/login-expect.sh useroperation-reset-password "${NS}" e2e-authn-reset-client
+              e2e-authn-reset-user e2e-authn-reset-user@example.com code
+              "${E2E_STATE_DIR:-/tmp/e2e-authn-state}/useroperation-reset-password/changed.password"
+
+    - name: invalid-operations-fail
+      description: Invalid ResetPassword operations end in phase Failed with the reason
+      try:
+        - description: Create a ResetPassword operation with a hash that is not bcrypt
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-reset-bad-hash
+              spec:
+                user: e2e-authn-reset-user
+                type: ResetPassword
+                initiatorType: admin
+                resetPassword:
+                  newPasswordHash: not-a-bcrypt-hash
+        - description: Assert the operation failed because the hash is not bcrypt
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-reset-bad-hash
+              status:
+                phase: Failed
+                message: resetPassword.newPasswordHash must be a raw bcrypt hash starting with $2
+        - description: Create a ResetPassword operation for a user that does not exist
+          script:
+            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
+            shell: bash
+            shellArgs: ["-c"]
+            content: bash scripts/create-reset.sh e2e-authn-reset-nouser e2e-authn-nobody
+        - description: Assert the operation failed because there is no such user
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: UserOperation
+              metadata:
+                name: e2e-authn-reset-nouser
+              status:
+                phase: Failed
+                message: 'cannot find password for user: e2e-authn-nobody'

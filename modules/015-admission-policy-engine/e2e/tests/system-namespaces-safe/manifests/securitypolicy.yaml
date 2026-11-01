@@ -1,0 +1,15 @@
+# Names no namespace, so it spans user and system namespaces and the module splits it into a
+# denying constraint for user namespaces and a warn-only d8-system-default-* one for system
+# namespaces. The pod label keeps it away from every workload but the probes of the test.
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: e2e-ape-sp-system
+spec:
+  enforcementAction: Deny
+  match:
+    labelSelector:
+      matchLabels:
+        e2e-ape-sp-system: "true"
+  policies:
+    readOnlyRootFilesystem: true

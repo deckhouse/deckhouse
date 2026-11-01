@@ -1,0 +1,82 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: project-namespace-restored
+spec:
+  description: >-
+    The main namespace of a Project that is deleted directly (past the admission policies, as
+    system:sudouser) is recreated by the controller with the project labels, although the release of
+    the project has not changed, and the Project stays Deployed.
+  concurrent: false
+  catch:
+    - description: Show the project on failure
+      script:
+        content: kubectl get project e2e-mtm-restored -o yaml || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager module is enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+
+    - name: delete-namespace
+      description: Create a project, delete its namespace directly and wait for the controller to restore it
+      try:
+        - description: Create the e2e-mtm-restored project
+          create:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-restored
+              spec:
+                projectTemplateName: simple
+        - description: Assert the project is Deployed
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-restored
+              status:
+                state: Deployed
+        - description: Delete the namespace past the admission policies and wait until it is gone
+          script:
+            timeout: 3m
+            content: >-
+              kubectl delete namespace e2e-mtm-restored --wait=true --timeout=2m
+              --as system:sudouser --as-group system:masters
+        - description: Assert the controller recreates the namespace of the project within 2 minutes
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: e2e-mtm-restored
+                labels:
+                  heritage: multitenancy-manager
+                  projects.deckhouse.io/project: e2e-mtm-restored
+              status:
+                phase: Active
+        # status.namespaces is absent until a reconcile lists the recreated namespace, and a JMESPath
+        # error on null fails the assert at once instead of retrying it, so null is read as [].
+        - description: Assert the project is Deployed with its namespace
+          assert:
+            timeout: 2m
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-restored
+              status:
+                state: Deployed
+                (length(namespaces[?name == 'e2e-mtm-restored'] || `[]`)): 1

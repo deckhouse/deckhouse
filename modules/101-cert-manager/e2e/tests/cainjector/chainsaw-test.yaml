@@ -1,0 +1,97 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cert-manager-cainjector
+spec:
+  description: >-
+    The module enables cainjector on demand. The hook discover_cainjector_usage sets
+    certManager.internal.enableCAInjector when a ValidatingWebhookConfiguration,
+    MutatingWebhookConfiguration, CRD or APIService carries a cert-manager.io/inject-ca-*
+    annotation. A ValidatingWebhookConfiguration annotated with inject-ca-from makes the
+    cainjector Deployment available, and cainjector writes ca.crt of the Certificate Secret
+    into clientConfig.caBundle. If cainjector already runs in the cluster, only the injection
+    is checked.
+  concurrent: false
+
+  catch:
+    - description: Show the test ValidatingWebhookConfiguration on failure
+      get:
+        apiVersion: admissionregistration.k8s.io/v1
+        kind: ValidatingWebhookConfiguration
+        name: e2e-cm-cainjector
+    - description: Show the Deployments of the module on failure
+      get:
+        apiVersion: apps/v1
+        kind: Deployment
+        namespace: d8-cert-manager
+    - description: Show cainjector logs on failure
+      podLogs:
+        namespace: d8-cert-manager
+        selector: app=cainjector
+        container: cainjector
+        tail: 200
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled, converged and its ClusterIssuers are Ready
+      use:
+        template: ../common/steps/ensure-cert-manager.yaml
+
+    - name: issue-certificate
+      description: Issue the Certificate whose CA is injected
+      try:
+        - description: Create the Certificate
+          create:
+            file: manifests/certificate.yaml
+        - description: Assert the Certificate is Ready
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-cainjector
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+
+    - name: inject-ca
+      description: Create the annotated ValidatingWebhookConfiguration and wait for the injection
+      try:
+        - description: >-
+            Record whether cainjector already ran before the test, so the log shows whether this case
+            exercised the hook-driven enablement or only the injection
+          script:
+            timeout: 30s
+            content: |
+              if kubectl -n d8-cert-manager get deployment cainjector >/dev/null 2>&1; then
+                echo "cainjector already deployed before the test: only the injection is exercised"
+              else
+                echo "cainjector not deployed before the test: the hook has to enable it"
+              fi
+        - description: Create the ValidatingWebhookConfiguration with cert-manager.io/inject-ca-from
+          create:
+            file: manifests/validatingwebhookconfiguration.yaml
+            template: true
+        - description: >-
+            Assert the cainjector Deployment is available. The hook enables it and Deckhouse
+            renders the module again, which takes a few minutes
+          assert:
+            timeout: 10m
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: cainjector
+                namespace: d8-cert-manager
+              status:
+                (availableReplicas >= `1`): true
+        - description: Assert caBundle of the webhook equals ca.crt of the Certificate Secret
+          assert:
+            timeout: 5m
+            resource:
+              apiVersion: admissionregistration.k8s.io/v1
+              kind: ValidatingWebhookConfiguration
+              metadata:
+                name: e2e-cm-cainjector
+              (webhooks[0].clientConfig.caBundle == x_k8s_get($client, 'v1', 'Secret', $namespace, 'e2e-cm-cainjector-tls').data."ca.crt"): true

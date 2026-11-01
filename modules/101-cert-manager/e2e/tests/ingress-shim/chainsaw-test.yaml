@@ -1,0 +1,96 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cert-manager-ingress-shim
+spec:
+  description: >-
+    ingress-shim creates a Certificate for an Ingress annotated with cert-manager.io/cluster-issuer.
+    The Certificate is named after the TLS secretName, carries the TLS hosts as dnsNames, references
+    the annotated ClusterIssuer, is owned by the Ingress and becomes Ready. Deleting the Ingress
+    garbage-collects the Certificate.
+  concurrent: false
+
+  catch:
+    - description: Show Ingresses in the test namespace on failure
+      get:
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+    - description: Show Certificates in the test namespace on failure
+      get:
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+    - description: Show events in the test namespace on failure
+      events: {}
+    - description: Show cert-manager controller logs on failure
+      podLogs:
+        namespace: d8-cert-manager
+        selector: app=cert-manager
+        container: cert-manager
+        tail: 200
+
+  steps:
+    - name: prerequisites
+      description: Make sure the module is enabled, converged and its ClusterIssuers are Ready
+      use:
+        template: ../common/steps/ensure-cert-manager.yaml
+
+    - name: create-ingress
+      description: Create the annotated Ingress and wait for the Certificate that ingress-shim creates
+      try:
+        - description: Create the Ingress annotated with cert-manager.io/cluster-issuer selfsigned
+          create:
+            file: manifests/ingress.yaml
+        - description: Assert the Certificate created by ingress-shim has the expected spec and owner
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-shim-tls
+                (ownerReferences[?kind == 'Ingress' && name == 'e2e-cm-shim'] | length(@)): 1
+              spec:
+                secretName: e2e-cm-shim-tls
+                dnsNames:
+                  - shim.e2e-cm.example.test
+                issuerRef:
+                  kind: ClusterIssuer
+                  name: selfsigned
+        - description: Assert the Certificate is Ready
+          assert:
+            timeout: 60s
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-shim-tls
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+        - description: Assert the TLS Secret referenced by the Ingress exists
+          assert:
+            timeout: 30s
+            resource:
+              apiVersion: v1
+              kind: Secret
+              type: kubernetes.io/tls
+              metadata:
+                name: e2e-cm-shim-tls
+
+    - name: delete-ingress
+      description: Delete the Ingress and check that its Certificate goes away with it
+      try:
+        - description: Delete the Ingress
+          delete:
+            ref:
+              apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              name: e2e-cm-shim
+        - description: Assert the Certificate owned by the Ingress is garbage-collected
+          error:
+            timeout: 60s
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: e2e-cm-shim-tls

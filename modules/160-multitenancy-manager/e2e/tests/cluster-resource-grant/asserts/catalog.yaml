@@ -1,0 +1,25 @@
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: AvailableClusterResource
+metadata:
+  name: storageclasses
+  namespace: e2e-mtm-grant
+status:
+  grantedResourceKind: StorageClass
+  default: e2e-mtm-sc-allowed
+  availableCount: 1
+  available:
+    - name: e2e-mtm-sc-allowed
+      default: true
+      fields:
+        provisioner: e2e.deckhouse.io/none
+        reclaimPolicy: Delete
+        volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: AvailableClusterResource
+metadata:
+  name: loadbalancerclasses
+  namespace: e2e-mtm-grant
+status:
+  default: e2e-mtm-lb-allowed
+  availableCount: 1

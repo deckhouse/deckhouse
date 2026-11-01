@@ -1,0 +1,23 @@
+# A user who may create namespaces through RBAC, so that a refusal comes from the
+# namespace-creation admission policy.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: e2e-mtm-namespace-creator
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: e2e-mtm-namespace-creator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: e2e-mtm-namespace-creator
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: e2e-mtm-ns-creator@example.com

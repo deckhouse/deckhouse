@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: e2e-mtm-lb
+  namespace: e2e-mtm-grant
+spec:
+  type: LoadBalancer
+  loadBalancerClass: e2e-mtm-lb-denied
+  selector:
+    app: e2e-mtm
+  ports:
+    - port: 80
+      targetPort: 8080

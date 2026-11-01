@@ -1,0 +1,16 @@
+apiVersion: chainsaw.kyverno.io/v1alpha2
+kind: Configuration
+metadata:
+  name: cert-manager-e2e
+spec:
+  timeouts:
+    apply: 60s
+    assert: 5m
+    error: 5m
+    delete: 5m
+    cleanup: 5m
+    exec: 5m
+  execution:
+    parallel: 1
+  discovery:
+    testFile: chainsaw-test.yaml

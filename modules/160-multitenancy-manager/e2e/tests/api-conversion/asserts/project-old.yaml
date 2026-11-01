@@ -1,0 +1,38 @@
+# Read through deckhouse.io/v1alpha3: the parameters are lifted into the standard fields.
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-conv-old
+spec:
+  administrators:
+    - kind: User
+      name: e2e-mtm-conv-old@example.com
+  quota:
+    requests.cpu: "1"
+    requests.memory: 1Gi
+    limits.cpu: "2"
+  (parameters.administrators == null): true
+  (parameters.resourceQuota == null): true
+status:
+  state: Deployed
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: d8-project-quota
+  namespace: e2e-mtm-conv-old
+spec:
+  hard:
+    requests.cpu: "1"
+    requests.memory: 1Gi
+    limits.cpu: "2"
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectRoleBinding
+metadata:
+  name: d8-administrators
+  namespace: e2e-mtm-conv-old
+spec:
+  subjects:
+    - kind: User
+      name: e2e-mtm-conv-old@example.com

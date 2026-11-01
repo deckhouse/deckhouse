@@ -1,0 +1,55 @@
+# CPU burners pinned to one node. `cpu-starvation.sh stress-start` replaces the __PLACEHOLDERS__
+# and applies the result to the test namespace.
+#
+# The Pods are Burstable: together they request the free CPU of the node and have no CPU limit,
+# so they take every idle cycle while the module pods keep only the share that their own requests
+# give them. The noisy neighbour mode runs one replica; the high load average mode runs many
+# replicas, because every Pod is a cgroup of its own and competes with the module on its own.
+# The memory limit keeps a mistake in the burner from hurting the node.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: __NAME__
+  labels:
+    e2e-test: ape-cpu-starvation
+    app: ape-cpu-stress
+spec:
+  replicas: __REPLICAS__
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ape-cpu-stress
+      ape-cpu-stress/name: __NAME__
+  template:
+    metadata:
+      labels:
+        e2e-test: ape-cpu-starvation
+        app: ape-cpu-stress
+        ape-cpu-stress/name: __NAME__
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 1
+      enableServiceLinks: false
+      nodeSelector:
+        kubernetes.io/hostname: __HOSTNAME__
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: burner
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - 'for i in $(seq 1 "$BURN_THREADS"); do (while :; do :; done) & done; wait'
+          env:
+            # Not `N`: YAML 1.1 parsers read a bare N as boolean false.
+            - name: BURN_THREADS
+              value: "__THREADS__"
+          resources:
+            requests:
+              cpu: __CPU_REQUEST__
+              memory: 4Mi
+            limits:
+              memory: 32Mi

@@ -1,0 +1,69 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isolated
+  namespace: e2e-mtm-life
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: e2e-mtm-life
+    projects.deckhouse.io/project-template: default
+spec:
+  podSelector: {}
+  (contains(policyTypes, 'Ingress')): true
+  (contains(policyTypes, 'Egress')): true
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: d8-project-quota
+  namespace: e2e-mtm-life
+  labels:
+    heritage: multitenancy-manager
+    projects.deckhouse.io/project: e2e-mtm-life
+    projects.deckhouse.io/managed-by: controller
+spec:
+  hard:
+    requests.cpu: "2"
+    requests.memory: 2Gi
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectRoleBinding
+metadata:
+  name: d8-administrators
+  namespace: e2e-mtm-life
+  labels:
+    projects.deckhouse.io/managed-by: controller
+spec:
+  subjects:
+    - kind: User
+      name: e2e-mtm-life-admin@example.com
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:admin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:prb:d8-administrators
+  namespace: e2e-mtm-life
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:project:admin
+---
+apiVersion: multitenancy.deckhouse.io/v1alpha1
+kind: AvailableClusterResource
+metadata:
+  name: storageclasses
+  namespace: e2e-mtm-life
+status:
+  grantedResourceKind: StorageClass
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: d8-multitenancy-manager
+  labels:
+    owner: helm
+    name: e2e-mtm-life
+    status: deployed

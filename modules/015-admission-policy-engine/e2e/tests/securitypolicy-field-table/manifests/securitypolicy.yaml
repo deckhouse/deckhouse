@@ -1,0 +1,33 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: e2e-ape-sp-fields
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      matchNames:
+        - e2e-ape-sp-fields
+  policies:
+    allowPrivileged: false
+    allowPrivilegeEscalation: false
+    allowHostNetwork: false
+    allowHostPID: false
+    allowHostIPC: false
+    allowedHostPaths:
+      - pathPrefix: /var/e2e-ape
+        readOnly: true
+    allowedCapabilities:
+      - NET_BIND_SERVICE
+    requiredDropCapabilities:
+      - ALL
+    runAsUser:
+      rule: MustRunAs
+      ranges:
+        - min: 1000
+          max: 65534
+    seccompProfiles:
+      allowedProfiles:
+        - RuntimeDefault
+    readOnlyRootFilesystem: true
+    automountServiceAccountToken: false

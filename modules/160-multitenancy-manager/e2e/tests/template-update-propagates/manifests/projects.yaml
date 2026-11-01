@@ -1,0 +1,13 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-upd-a
+spec:
+  projectTemplateName: e2e-mtm-tpl
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-upd-b
+spec:
+  projectTemplateName: e2e-mtm-tpl

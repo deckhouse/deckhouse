@@ -1,0 +1,15 @@
+apiVersion: mutations.gatekeeper.sh/v1
+kind: AssignMetadata
+metadata:
+  name: e2e-ape-invalid-assignmetadata
+spec:
+  match:
+    scope: Namespaced
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces: ["e2e-ape-mutation"]
+  location: spec.priorityClassName
+  parameters:
+    assign:
+      value: "e2e"

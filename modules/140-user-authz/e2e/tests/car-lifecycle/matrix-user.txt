@@ -1,0 +1,4 @@
+# The rule was narrowed to User.
+e2e-authz-lifecycle  get     -     pods         -  @ns  yes
+e2e-authz-lifecycle  get     -     secrets      -  @ns  no
+e2e-authz-lifecycle  create  apps  deployments  -  @ns  no

@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: e2e-cm-leaf
+spec:
+  secretName: e2e-cm-leaf-tls
+  dnsNames:
+    - leaf.e2e-cm-chain.example.test
+  usages:
+    - server auth
+    - digital signature
+    - key encipherment
+  issuerRef:
+    group: cert-manager.io
+    kind: Issuer
+    name: e2e-cm-ca

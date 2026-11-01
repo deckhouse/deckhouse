@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: server
+  namespace: e2e-mtm-sec
+status:
+  (conditions[?type == 'Ready'] | [0].status): 'True'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: client
+  namespace: e2e-mtm-sec
+status:
+  (conditions[?type == 'Ready'] | [0].status): 'True'
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: client
+  namespace: e2e-mtm-peer
+status:
+  (conditions[?type == 'Ready'] | [0].status): 'True'

@@ -1,0 +1,25 @@
+# Lets the user delete the main namespace only: the namespace is the object and the namespace of
+# the request, so a RoleBinding inside it counts, as it does for `kubectl delete namespace`.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: e2e-mtm-namespace-deleter
+  namespace: e2e-mtm-del
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: e2e-mtm-namespace-deleter
+  namespace: e2e-mtm-del
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: e2e-mtm-namespace-deleter
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: e2e-mtm-deleter@example.com

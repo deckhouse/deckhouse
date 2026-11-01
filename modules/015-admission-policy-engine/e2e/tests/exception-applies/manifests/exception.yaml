@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: e2e-ape-allow-hostnetwork
+  namespace: e2e-ape-exception
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: The e2e test checks that an exception admits a pod Baseline denies.

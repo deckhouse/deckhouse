@@ -1,0 +1,265 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: ape-cpu-webhook-noisy-neighbour
+spec:
+  description: >-
+    Noisy neighbour on the node of gatekeeper-controller-manager: a Burstable pod takes all free
+    CPU of the node while an allow/deny dry-run admission loop runs. The webhook must keep
+    answering, the module must not restart or flood the API server, and it must recover after
+    the release.
+  timeouts:
+    apply: 60s
+    assert: 300s
+    delete: 300s
+    cleanup: 20m
+    exec: 15m
+  bindings:
+    # Override a binding with `task run -- --set <name>=<value>` (passed to `chainsaw test`).
+    - name: hold
+      value: (to_string($values.hold || '5m'))
+    - name: recovery
+      value: (to_string($values.recovery || '120s'))
+    - name: baselineWindow
+      value: (to_string($values.baselineWindow || '3m'))
+    - name: afterWindow
+      value: (to_string($values.afterWindow || '5m'))
+    - name: auditRecovery
+      value: (to_string($values.auditRecovery || '5m'))
+    - name: threadsFactor
+      value: (to_string($values.threadsFactor || '1'))
+    - name: stressImage
+      value: (to_string($values.stressImage || 'mirror.gcr.io/library/busybox:1.36'))
+    - name: maxFailurePercent
+      value: (to_string($values.maxFailurePercent || '1'))
+    - name: probeInterval
+      value: (to_string($values.probeInterval || '0.5'))
+
+  steps:
+    - name: preflight
+      description: >-
+        Check that the module is healthy, label the test namespace for the Baseline standard
+        with the deny action, find the target pods and check that the admission probes work.
+      try:
+        - description: Save the settings and check the preconditions
+          script:
+            env:
+              - name: TARGET
+                value: controller-manager
+              - name: MODE
+                value: noisy-neighbour
+              - name: CPU_LIMIT
+                value: 'false'
+              - name: HOLD
+                value: ($hold)
+              - name: RECOVERY
+                value: ($recovery)
+              - name: BASELINE_WINDOW
+                value: ($baselineWindow)
+              - name: AFTER_WINDOW
+                value: ($afterWindow)
+              - name: AUDIT_RECOVERY
+                value: ($auditRecovery)
+              - name: THREADS_FACTOR
+                value: ($threadsFactor)
+              - name: STRESS_IMAGE
+                value: ($stressImage)
+              - name: MAX_FAILURE_PERCENT
+                value: ($maxFailurePercent)
+              - name: PROBE_INTERVAL
+                value: ($probeInterval)
+            content: bash ../common/scripts/cpu-starvation.sh preflight
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the module pods
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: d8-admission-policy-engine
+        - description: Show the events of the module namespace
+          events:
+            namespace: d8-admission-policy-engine
+        - description: Show the stress pods and the tail of the probe log
+          script:
+            content: |
+              kubectl -n "$NAMESPACE" get pods -o wide
+              tail -n 20 "reports/state-$NAMESPACE/probes.log" 2>/dev/null || true
+
+    - name: freeze-vpa
+      description: >-
+        Switch the VerticalPodAutoscaler of the target Deployment to updateMode Off, so its
+        updater neither evicts nor resizes the target during the test. The cleanup restores the
+        original mode.
+      try:
+        - description: Freeze the VPA of the target
+          script:
+            content: bash ../common/scripts/cpu-starvation.sh freeze-vpa
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Restore the VPA update mode
+          script:
+            content: bash ../common/scripts/cpu-starvation.sh restore-vpa
+
+    - name: start-observers
+      description: >-
+        Snapshot the module pods, leases and the ValidatingWebhookConfiguration, then start the
+        background observers: the admission probe loop, the watches of leases and Gatekeeper
+        status objects, and the ValidatingWebhookConfiguration poll.
+      try:
+        - description: Start the background observers
+          script:
+            content: bash ../common/scripts/cpu-starvation.sh start-observers
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Stop the background observers
+          script:
+            content: bash ../common/scripts/cpu-starvation.sh stop-observers
+
+    - name: baseline
+      description: >-
+        Collect the baseline: probe results and write rates without pressure.
+      try:
+        - description: Wait for the baseline window
+          script:
+            timeout: 70m
+            content: bash ../common/scripts/cpu-starvation.sh baseline
+            check:
+              ($error == null): true
+
+    - name: start-pressure
+      description: >-
+        Compute the free CPU of every target node (allocatable minus the requests of its pods)
+        and start a Burstable stress Deployment there: one pod that requests it all and runs one
+        burner thread per CPU.
+      try:
+        - description: Start the stress Deployments
+          script:
+            timeout: 30m
+            content: bash ../common/scripts/cpu-starvation.sh stress-start
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the module pods
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: d8-admission-policy-engine
+        - description: Show the events of the module namespace
+          events:
+            namespace: d8-admission-policy-engine
+        - description: Show the stress pods and the tail of the probe log
+          script:
+            content: |
+              kubectl -n "$NAMESPACE" get pods -o wide
+              tail -n 20 "reports/state-$NAMESPACE/probes.log" 2>/dev/null || true
+      cleanup:
+        - description: Delete the stress Deployments
+          script:
+            timeout: 5m
+            content: bash ../common/scripts/cpu-starvation.sh stress-delete
+
+    - name: hold-pressure
+      description: >-
+        Keep the pressure for the hold time while the probes and the watches run.
+      try:
+        - description: Hold the pressure
+          script:
+            timeout: 70m
+            content: bash ../common/scripts/cpu-starvation.sh hold
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the module pods
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: d8-admission-policy-engine
+        - description: Show the events of the module namespace
+          events:
+            namespace: d8-admission-policy-engine
+        - description: Show the stress pods and the tail of the probe log
+          script:
+            content: |
+              kubectl -n "$NAMESPACE" get pods -o wide
+              tail -n 20 "reports/state-$NAMESPACE/probes.log" 2>/dev/null || true
+
+    - name: release-and-recover
+      description: >-
+        Delete the stress Deployments and wait until the module pods are Ready, the compliant
+        Pod is allowed and the privileged Pod is denied, within the recovery budget.
+      try:
+        - description: Release the pressure and wait for recovery
+          script:
+            timeout: 30m
+            content: bash ../common/scripts/cpu-starvation.sh release
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the module pods
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: d8-admission-policy-engine
+        - description: Show the events of the module namespace
+          events:
+            namespace: d8-admission-policy-engine
+        - description: Show the stress pods and the tail of the probe log
+          script:
+            content: |
+              kubectl -n "$NAMESPACE" get pods -o wide
+              tail -n 20 "reports/state-$NAMESPACE/probes.log" 2>/dev/null || true
+
+    - name: observe-after-release
+      description: >-
+        Keep observing after the release and wait for an audit cycle that ends after it.
+      try:
+        - description: Observe after the release
+          script:
+            timeout: 70m
+            content: bash ../common/scripts/cpu-starvation.sh after
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the module pods
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: d8-admission-policy-engine
+        - description: Show the events of the module namespace
+          events:
+            namespace: d8-admission-policy-engine
+        - description: Show the stress pods and the tail of the probe log
+          script:
+            content: |
+              kubectl -n "$NAMESPACE" get pods -o wide
+              tail -n 20 "reports/state-$NAMESPACE/probes.log" 2>/dev/null || true
+
+    - name: analyse
+      description: >-
+        Stop the observers and assert: probe failures within the budget, no admitted privileged
+        Pod, no write storm, the ValidatingWebhookConfiguration never disappeared, no restarts
+        or replaced pods, leases unchanged, the audit ran after the release.
+      try:
+        - description: Analyse the observations
+          script:
+            timeout: 5m
+            content: bash ../common/scripts/cpu-starvation.sh analyse
+            check:
+              ($error == null): true
+      catch:
+        - description: Show the module pods
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: d8-admission-policy-engine
+        - description: Show the events of the module namespace
+          events:
+            namespace: d8-admission-policy-engine
+        - description: Show the stress pods and the tail of the probe log
+          script:
+            content: |
+              kubectl -n "$NAMESPACE" get pods -o wide
+              tail -n 20 "reports/state-$NAMESPACE/probes.log" 2>/dev/null || true

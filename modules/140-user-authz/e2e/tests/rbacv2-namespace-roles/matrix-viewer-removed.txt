@@ -1,0 +1,2 @@
+# The viewer RoleBinding is deleted.
+e2e-authz-ns-viewer      get     -                          pods          -       @ns  no

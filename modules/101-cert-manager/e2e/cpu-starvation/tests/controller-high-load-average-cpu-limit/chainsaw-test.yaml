@@ -1,0 +1,125 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cert-manager-controller-high-load-average-cpu-limit
+spec:
+  description: |
+    The high-load-average scenario with CFS quota throttling on top. The test raises the CPU request
+    of the controller container in place to its peak usage in the baseline (at least laRequestCpu)
+    and sets a CPU limit equal to the request, then starts many stress pods on the node
+    (threadsFactor busy loops per CPU, threadsPerPod loops per pod, at most maxStressPods pods), which
+    together request the rest of the node. A burst of Certificates issued under the pressure must become Ready
+    within burstBudgetSeconds. At the release the limit is raised to the CPU count of the node,
+    because a limit cannot be removed in place. The controller must not restart, must keep its
+    lease, must not write more than before the pressure, and must issue Certificates again within
+    recoverySeconds. The cleanup recreates the controller pod from its Deployment template.
+  concurrent: false
+  timeouts:
+    apply: 60s
+    assert: 3m
+    delete: 5m
+    exec: 5m
+
+  # Override with `task run -- --set <name>=<value>`, for example `--set holdSeconds=900`.
+  bindings:
+    - name: holdSeconds
+      value: (to_string($values.holdSeconds || `300`))
+    - name: afterSeconds
+      value: (to_string($values.afterSeconds || `300`))
+    - name: recoverySeconds
+      value: (to_string($values.recoverySeconds || `120`))
+    - name: threadsFactor
+      value: (to_string($values.threadsFactor || `60`))
+    # 0 runs all busy loops in one pod; otherwise each stress pod runs threadsPerPod loops.
+    - name: threadsPerPod
+      value: (to_string($values.threadsPerPod || `4`))
+    - name: maxStressPods
+      value: (to_string($values.maxStressPods || `100`))
+    - name: certificateCount
+      value: (to_string($values.certificateCount || `30`))
+    - name: burstBudgetSeconds
+      value: (to_string($values.burstBudgetSeconds || `600`))
+    # A small image with sh and seq, pinned by digest.
+    - name: stressImage
+      value: ($values.stressImage || 'mirror.gcr.io/library/busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e')
+    - name: laRequestCpu
+      value: ($values.laRequestCpu || '150m')
+
+  steps:
+    - name: require-in-place-resize
+      try:
+        - description: Assert the cluster supports in-place pod resize (Kubernetes 1.33 or newer)
+          script:
+            timeout: 10m
+            content: sh ../common/scripts/e2e.sh require-resize
+            check:
+              ($error == null): true
+
+    - name: preflight
+      use:
+        template: ../common/step-templates/preflight.yaml
+        with:
+          bindings:
+            - name: target
+              value: controller
+
+    - name: baseline
+      use:
+        template: ../common/step-templates/baseline.yaml
+
+    - name: raise-cpu-request
+      description: >-
+        Raise the CPU request of the controller container to its peak usage in the baseline, at least
+        laRequestCpu, and set a CPU limit equal to the request, so CFS quota throttles the controller
+      try:
+        - description: Mark the start of the pressure and resize the controller container in place, without a restart
+          script:
+            timeout: 20m
+            env:
+              - name: MIN_CPU
+                value: ($laRequestCpu)
+            content: |
+              set -eu
+              # The resize belongs to the pressure window of the write check, not to the baseline.
+              sh ../common/scripts/e2e.sh mark pressure
+              CPU=$(sh ../common/scripts/e2e.sh la-request "$MIN_CPU")
+              sh ../common/scripts/e2e.sh resize requests "$CPU"
+              sh ../common/scripts/e2e.sh resize limits "$CPU"
+            check:
+              ($error == null): true
+      cleanup:
+        - description: Recreate the controller pod from the Deployment template to drop the raised resources
+          script:
+            timeout: 20m
+            content: sh ../common/scripts/e2e.sh reset-target
+            check:
+              ($error == null): true
+
+    - name: pressure
+      use:
+        template: ../common/step-templates/pressure.yaml
+
+    - name: release
+      use:
+        template: ../common/step-templates/release.yaml
+
+    - name: lift-cpu-limit
+      try:
+        - description: Raise the CPU limit of the controller container to the CPU count of its node
+          script:
+            timeout: 10m
+            content: sh ../common/scripts/e2e.sh lift-limit
+            check:
+              ($error == null): true
+
+    - name: recovery
+      use:
+        template: ../common/step-templates/recovery.yaml
+
+    - name: after-window
+      use:
+        template: ../common/step-templates/after-window.yaml
+
+    - name: final-checks
+      use:
+        template: ../common/step-templates/final-checks.yaml

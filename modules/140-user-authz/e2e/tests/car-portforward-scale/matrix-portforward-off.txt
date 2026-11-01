@@ -1,0 +1,3 @@
+# portForwarding was switched off, allowScale stays on.
+e2e-authz-flags    create  -     pods          portforward  @ns  no
+e2e-authz-flags    patch   apps  deployments   scale        @ns  yes

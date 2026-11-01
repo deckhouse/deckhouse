@@ -1,0 +1,7 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectNamespace
+metadata:
+  name: extra
+  namespace: e2e-mtm-prb
+spec:
+  name: extra

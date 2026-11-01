@@ -1,0 +1,23 @@
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: e2e-authn-flow-client
+spec:
+  redirectURIs:
+    - http://127.0.0.1:65535/callback
+  secretMetadata:
+    labels:
+      e2e.user-authn.deckhouse.io/secret: client
+    annotations:
+      e2e.user-authn.deckhouse.io/note: dex-client-flow
+---
+# Only members of a group nobody is in may use this client.
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: e2e-authn-flow-restricted
+spec:
+  redirectURIs:
+    - http://127.0.0.1:65535/callback
+  allowedGroups:
+    - e2e-authn-nobody-group

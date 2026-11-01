@@ -1,0 +1,153 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cluster-resource-grant
+spec:
+  description: >-
+    A ClusterResourceGrantPolicy narrows the StorageClasses and LoadBalancer classes a project may
+    use: the AvailableClusterResource catalog of the project lists only the granted names with the
+    catalog fields, a PersistentVolumeClaim with a class that is not granted is coerced to the
+    project default with a warning, a Service with a class that is not granted is refused, and a
+    Service without a class gets the project default. Removing a GrantableClusterResourceDefinition
+    removes its AvailableClusterResource from the project.
+  concurrent: false
+  catch:
+    - description: Show the policy, the catalog and the registrations on failure
+      script:
+        content: |
+          kubectl get clusterresourcegrantpolicy e2e-mtm-grant -o yaml || true
+          kubectl -n e2e-mtm-grant get availableclusterresources -o yaml || true
+          kubectl get grantableclusterresourcedefinitions || true
+    - description: Show the multitenancy-manager controller logs on failure
+      podLogs:
+        namespace: d8-multitenancy-manager
+        selector: app=multitenancy-manager
+        container: multitenancy-manager
+        tail: 200
+  steps:
+    - name: prerequisites
+      description: Make sure the multitenancy-manager and user-authz modules are enabled and converged
+      try:
+        - description: Ensure the multitenancy-manager module is Ready
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh multitenancy-manager
+        - description: Ensure the user-authz module is Ready (it aggregates the d8:project:admin role)
+          script:
+            timeout: 20m
+            content: bash ../common/scripts/ensure-module.sh user-authz
+        - description: Assert the module registers StorageClasses and LoadBalancer classes
+          assert:
+            resource:
+              apiVersion: multitenancy.deckhouse.io/v1alpha1
+              kind: GrantableClusterResourceReference
+              metadata:
+                name: storageclasses-pvc
+              status:
+                bound: true
+
+    - name: grant
+      description: Create the StorageClasses, the project and the policy that grants one class of each kind
+      try:
+        - description: Create the e2e-mtm-sc-allowed and e2e-mtm-sc-denied StorageClasses
+          create:
+            file: manifests/storageclasses.yaml
+        - description: Create the e2e-mtm-grant project
+          create:
+            file: manifests/project.yaml
+        - description: Assert the project is Deployed
+          assert:
+            resource:
+              apiVersion: deckhouse.io/v1alpha3
+              kind: Project
+              metadata:
+                name: e2e-mtm-grant
+              status:
+                state: Deployed
+        - description: Create the e2e-mtm-grant ClusterResourceGrantPolicy
+          create:
+            file: manifests/policy.yaml
+        - description: Assert the catalog of the project lists only the granted names, the defaults and the StorageClass fields
+          assert:
+            timeout: 4m
+            file: asserts/catalog.yaml
+        - description: Wait until RBAC lets the project administrator create PVCs and Services, so the results below come from the grant webhooks
+          script:
+            timeout: 3m
+            content: |
+              for attempt in $(seq 1 30); do
+                pvc="$(kubectl auth can-i create persistentvolumeclaims -n e2e-mtm-grant --as e2e-mtm-grant-admin@example.com 2>/dev/null || true)"
+                svc="$(kubectl auth can-i create services -n e2e-mtm-grant --as e2e-mtm-grant-admin@example.com 2>/dev/null || true)"
+                if [ "${pvc}" = "yes" ] && [ "${svc}" = "yes" ]; then
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "the project administrator may not create PVCs (${pvc}) or Services (${svc})"
+              exit 1
+
+    - name: enforce
+      description: The grant webhooks coerce, refuse and default the references of a project user
+      try:
+        - description: Assert a PVC with a class that is not granted is coerced to the project default with a warning
+          script:
+            bindings:
+              - name: expected
+                value: '[multitenancy] PersistentVolumeClaim "e2e-mtm-pvc": $.spec.storageClassName "e2e-mtm-sc-denied" is not available to project "e2e-mtm-grant" and was replaced with the project default "e2e-mtm-sc-allowed"'
+            content: >-
+              kubectl create --dry-run=server -f manifests/pvc-denied-class.yaml
+              --as e2e-mtm-grant-admin@example.com -o jsonpath='{.spec.storageClassName}'
+            check:
+              ($error == null): true
+              ($stdout): e2e-mtm-sc-allowed
+              (contains($stderr, $expected)): true
+        - description: Assert a LoadBalancer Service with a class that is not granted is refused
+          script:
+            bindings:
+              - name: expected
+                value: '[multitenancy] Service "e2e-mtm-lb" references "e2e-mtm-lb-denied" which is not available to project "e2e-mtm-grant". Ask the cluster administrator to grant it.'
+            content: >-
+              kubectl create --dry-run=server -f manifests/service-denied-class.yaml
+              --as e2e-mtm-grant-admin@example.com
+            check:
+              ($error != null): true
+              (contains($stderr, $expected)): true
+        - description: Assert a LoadBalancer Service without a class gets the project default
+          script:
+            content: >-
+              kubectl create --dry-run=server -f manifests/service-no-class.yaml
+              --as e2e-mtm-grant-admin@example.com -o jsonpath='{.spec.loadBalancerClass}'
+            check:
+              ($error == null): true
+              ($stdout): e2e-mtm-lb-allowed
+
+    - name: definition-removal
+      description: Removing a GrantableClusterResourceDefinition removes its AvailableClusterResource from the project
+      try:
+        - description: Create the e2e-mtm-widgets registration
+          create:
+            file: manifests/definition.yaml
+        - description: Assert the project gets the AvailableClusterResource of the registration
+          assert:
+            timeout: 3m
+            resource:
+              apiVersion: multitenancy.deckhouse.io/v1alpha1
+              kind: AvailableClusterResource
+              metadata:
+                name: e2e-mtm-widgets
+                namespace: e2e-mtm-grant
+        - description: Delete the e2e-mtm-widgets registration
+          delete:
+            ref:
+              apiVersion: multitenancy.deckhouse.io/v1alpha1
+              kind: GrantableClusterResourceDefinition
+              name: e2e-mtm-widgets
+        - description: Assert the AvailableClusterResource is removed from the project
+          error:
+            timeout: 3m
+            resource:
+              apiVersion: multitenancy.deckhouse.io/v1alpha1
+              kind: AvailableClusterResource
+              metadata:
+                name: e2e-mtm-widgets
+                namespace: e2e-mtm-grant

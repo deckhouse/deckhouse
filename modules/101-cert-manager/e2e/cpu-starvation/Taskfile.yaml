@@ -1,0 +1,46 @@
+version: "3"
+
+includes:
+  controller-high-load-average:
+    taskfile: ./tests/controller-high-load-average/Taskfile.yml
+    dir: ./tests/controller-high-load-average
+  controller-high-load-average-cpu-limit:
+    taskfile: ./tests/controller-high-load-average-cpu-limit/Taskfile.yml
+    dir: ./tests/controller-high-load-average-cpu-limit
+  controller-noisy-neighbour:
+    taskfile: ./tests/controller-noisy-neighbour/Taskfile.yml
+    dir: ./tests/controller-noisy-neighbour
+  webhook-master-noisy-neighbour:
+    taskfile: ./tests/webhook-master-noisy-neighbour/Taskfile.yml
+    dir: ./tests/webhook-master-noisy-neighbour
+
+tasks:
+  run:
+    desc: Run all cert-manager CPU starvation e2e tests
+    cmds:
+      - task: controller-noisy-neighbour:run
+      - task: controller-high-load-average:run
+      - task: controller-high-load-average-cpu-limit:run
+      - task: webhook-master-noisy-neighbour:run
+
+  lint:
+    desc: Validate the tests and the configuration against the Chainsaw schema, without a cluster
+    cmds:
+      - task: controller-noisy-neighbour:lint:test
+      - task: controller-high-load-average:lint:test
+      - task: controller-high-load-average-cpu-limit:lint:test
+      - task: webhook-master-noisy-neighbour:lint:test
+      - task: controller-noisy-neighbour:lint:configuration
+
+  dry-run:
+    desc: Run all tests with --no-cluster; the scripts still use the current kubectl context
+    cmds:
+      - task: controller-noisy-neighbour:dry-run
+      - task: controller-high-load-average:dry-run
+      - task: controller-high-load-average-cpu-limit:dry-run
+      - task: webhook-master-noisy-neighbour:dry-run
+
+  cleanup:
+    desc: Remove the leftovers of interrupted runs from the current kubectl context and this machine
+    cmds:
+      - sh ./tests/common/scripts/cleanup-leftovers.sh

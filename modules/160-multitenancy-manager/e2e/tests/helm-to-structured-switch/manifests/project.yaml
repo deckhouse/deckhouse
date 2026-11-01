@@ -1,0 +1,7 @@
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: e2e-mtm-helm
+spec:
+  description: A project that moves from a Helm text to the structured fields.
+  projectTemplateName: e2e-mtm-helm

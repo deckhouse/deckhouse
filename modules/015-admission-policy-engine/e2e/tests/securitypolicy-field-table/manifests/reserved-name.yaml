@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: d8-system-default-e2e-ape-reserved
+spec:
+  match:
+    namespaceSelector:
+      matchNames:
+        - e2e-ape-sp-fields
+  policies:
+    allowPrivileged: false

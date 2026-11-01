@@ -1,0 +1,23 @@
+apiVersion: chainsaw.kyverno.io/v1alpha2
+kind: Configuration
+metadata:
+  name: user-authn-cpu-starvation-e2e
+spec:
+  timeouts:
+    apply: 60s
+    assert: 5m
+    error: 5m
+    delete: 5m
+    cleanup: 10m
+    exec: 10m
+  execution:
+    failFast: true
+    parallel: 1
+  discovery:
+    testFile: chainsaw-test.yaml
+  # The label lets `task cleanup` find the namespaces of interrupted runs.
+  namespace:
+    template:
+      metadata:
+        labels:
+          e2e-test: user-authn-cpu-starvation
