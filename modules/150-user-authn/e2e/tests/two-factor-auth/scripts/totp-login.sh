@@ -76,8 +76,9 @@ code="$(totp_code "${secret}")"
 if [[ "${mode}" == "enroll" ]]; then
   wrong="$(printf '%06d' $(( (10#${code} + 500000) % 1000000 )))"
   out="$(page --data-urlencode "totp=${wrong}" "${totp_url}")"
-  # Dex renders the TOTP page again with HTTP 200 and an error (server/mfa/totp.go, renderTOTPPage).
-  [[ "${out%% *}" == "200" ]] && grep -q "Invalid code" "${AUTH_BODY}" \
+  # Dex renders the TOTP page again with HTTP 401 and an error (server/templates/templates.go, TOTPVerify);
+  # the theme of the module words the error in the language of the page, so the check finds its block.
+  [[ "${out%% *}" == "401" ]] && grep -q 'id="login-error"' "${AUTH_BODY}" \
     || die "a wrong TOTP code must be refused: '${out%%\?*}' $(html_text "${AUTH_BODY}" | head -c 300)"
   log "A wrong TOTP code is refused"
   code="$(totp_code "${secret}")"

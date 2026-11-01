@@ -1,13 +1,13 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
-  name: user-authn-user-api-password-reset
+  name: user-authn-user-api-password-change
 spec:
   description: >-
-    user-api serves the self-service password reset at POST /api/v1/password/reset. It refuses a
-    request without a bearer token (401) and a hash that is not bcrypt (400). With the ID token of
-    a local user and a bcrypt hash it answers 202 and creates a UserOperation ResetPassword with
-    initiatorType self, which the controller completes; Dex then accepts only the new password.
+    user-api no longer serves POST /api/v1/password/reset (404). Its self-service password change at
+    POST /api/v1/self/password-change refuses a request without a bearer token (401) and the token of
+    a device signed in less than devices.trustedAfter ago (403), and creates no UserOperation then.
+    The suite does not change devices.trustedAfter.
   concurrent: false
 
   catch:
@@ -42,7 +42,7 @@ spec:
             content: |
               set -euo pipefail
               source ../../tests/common/scripts/lib.sh
-              create_user user-api-password-reset e2e-authn-api-user e2e-authn-api-user@example.com
+              create_user user-api-password-change e2e-authn-api-user e2e-authn-api-user@example.com
         - description: Create DexClient e2e-authn-api-client
           create:
             file: manifests/dex-client.yaml
@@ -71,18 +71,15 @@ spec:
               status:
                 (availableReplicas >= `1`): true
       cleanup:
-        - description: Delete the User and the UserOperation created by user-api
+        - description: Delete the User
           script:
             # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
             shell: bash
             shellArgs: ["-c"]
-            content: |
-              op="$(cat "${E2E_STATE_DIR:-/tmp/e2e-authn-state}/user-api-password-reset/operation" 2>/dev/null || true)"
-              [ -n "${op}" ] && kubectl delete useroperations.deckhouse.io "${op}" --ignore-not-found
-              kubectl delete users.deckhouse.io e2e-authn-api-user --ignore-not-found
+            content: kubectl delete users.deckhouse.io e2e-authn-api-user --ignore-not-found
 
-    - name: self-service-reset
-      description: The user resets the password through user-api with its ID token
+    - name: self-service-password-change
+      description: The user asks user-api for a password change with the ID token of a new device
       try:
         - description: Sign in to get an ID token
           script:
@@ -94,22 +91,12 @@ spec:
               - name: NS
                 value: ($namespace)
             content: >-
-              bash ../../tests/common/scripts/get-token.sh user-api-password-reset "${NS}" e2e-authn-api-client
+              bash ../../tests/common/scripts/get-token.sh user-api-password-change "${NS}" e2e-authn-api-client
               e2e-authn-api-user e2e-authn-api-user@example.com
-        - description: Call the endpoint without a token, with a hash that is not bcrypt and with a valid hash
+        - description: Call the removed endpoint, and the password change without a token and from a new device
           script:
             # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
             shell: bash
             shellArgs: ["-c"]
             timeout: 2m
             content: bash scripts/call-user-api.sh
-        - description: Assert the UserOperation succeeded and Dex accepts only the new password
-          script:
-            # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
-            shell: bash
-            shellArgs: ["-c"]
-            timeout: 5m
-            env:
-              - name: NS
-                value: ($namespace)
-            content: bash scripts/check-reset.sh

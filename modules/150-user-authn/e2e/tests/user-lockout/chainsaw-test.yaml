@@ -7,7 +7,7 @@ spec:
     With passwordPolicy.lockout (maxAttempts 3) Dex locks a local user after three wrong passwords
     and refuses even the right one with HTTP 429. The controller reports the lock in User
     status.lock (PasswordPolicyLockout) and in the UserAccount. A UserOperation Unlock lifts it.
-    A UserOperation Lock locks the user by an administrator (LockedByAdministrator) until the
+    A UserOperation Lock locks the user by an administrator (LockedByAdministrator, HTTP 403) until the
     next Unlock. The original ModuleConfig settings are restored afterwards.
   concurrent: false
 
@@ -283,7 +283,7 @@ spec:
                 (length(@)): 1
                 ([0].status.locked): true
                 ([0].status.lockedByAdministrator): true
-        - description: Assert the right password is refused with HTTP 429
+        - description: Assert the right password is refused with HTTP 403
           script:
             # Chainsaw runs scripts with /bin/sh (dash on the master); the scripts are bash.
             shell: bash
@@ -294,7 +294,7 @@ spec:
                 value: ($namespace)
             content: >-
               bash ../../tests/common/scripts/login-expect.sh user-lockout "${NS}" e2e-authn-lock-client
-              e2e-authn-lock-user e2e-authn-lock-user@example.com locked
+              e2e-authn-lock-user e2e-authn-lock-user@example.com locked-by-administrator
         - description: Create UserOperation e2e-authn-lock-unlock-admin of type Unlock
           create:
             resource:

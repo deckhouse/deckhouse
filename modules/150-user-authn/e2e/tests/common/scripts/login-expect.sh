@@ -21,6 +21,8 @@
 # EXPECT:
 #   code     Dex issues an authorization code (retried while Dex restarts);
 #   locked   Dex answers 429 with "Account temporarily locked" even for the right password;
+#   locked-by-administrator
+#            Dex answers 403 with "Account locked by an administrator" even for the right password;
 #   invalid  Dex answers 401 with the login form and no code.
 # The password is the one create_user stored, or the content of PASSWORD_FILE.
 set -Eeuo pipefail
@@ -53,6 +55,18 @@ case "${expect}" in
       sleep 5
     done
     log "User ${user} is locked: HTTP 429 'Account temporarily locked' for the right password"
+    ;;
+  locked-by-administrator)
+    deadline=$(( $(date +%s) + 60 ))
+    while :; do
+      dex_authorize "${email}" "${password}" "${client_id}" "${TEST_REDIRECT_URI}" "${TEST_SCOPE}"
+      if [[ "${AUTH_STATUS}" == "403" && -z "${AUTH_CODE}" ]] && grep -q "Account locked by an administrator" "${AUTH_BODY}"; then
+        break
+      fi
+      (( $(date +%s) < deadline )) || die "a user ${user} locked by an administrator must get HTTP 403 'Account locked by an administrator': $(auth_describe)"
+      sleep 5
+    done
+    log "User ${user} is locked by an administrator: HTTP 403 for the right password"
     ;;
   invalid)
     dex_authorize "${email}" "${password}" "${client_id}" "${TEST_REDIRECT_URI}" "${TEST_SCOPE}"
