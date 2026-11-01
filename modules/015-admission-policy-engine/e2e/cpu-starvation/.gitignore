@@ -1,3 +1,0 @@
-# Chainsaw JUnit reports and the scenario state (probe and watch logs) are runtime artifacts
-# and must not be committed.
-reports/

@@ -1,3 +1,0 @@
-# The custom capability is deleted.
-e2e-authz-cap-viewer  get     e2e-authz.example.com  widgets  -  @ns  no
-e2e-authz-cap-viewer  get     -                      pods     -  @ns  yes
