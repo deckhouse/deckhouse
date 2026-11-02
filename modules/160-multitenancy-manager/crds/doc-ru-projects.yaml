@@ -132,6 +132,96 @@ spec:
                     Обновление, которое оставляет такое значение прежним, принимается с предупреждением, как и создание через `deckhouse.io/v1alpha2`, в котором такое значение приходит из `parameters.resourceQuota`.
 
                     Нельзя задавать вместе с `parameters.resourceQuota`.
+                grants:
+                  description: |
+                    Cluster-wide-ресурсы, доступные неймспейсам проекта, в дополнение к тем, что даёт его шаблон.
+
+                    Контроллер превращает их в управляемые объекты ClusterResourceGrantPolicy с именами `project-<PROJECT_NAME>-*`, владелец которых — проект. Для изменения поля нужно право на создание объектов ClusterResourceGrantPolicy. `deckhouse.io/v1alpha2` не может описать это поле, поэтому запись проекта с грантами через эту версию, в том числе запись его статуса, отклоняется.
+                  properties:
+                    resources:
+                      description: |
+                        Правила доступа к cluster-wide-ресурсам для неймспейсов проекта в формате [`resources`](cr.html#projecttemplate-v1alpha2-spec-resources) шаблона ProjectTemplate.
+
+                        Контроллер превращает их в ClusterResourceGrantPolicy `project-<PROJECT_NAME>-inline`, которая применяется к каждому неймспейсу проекта.
+                      items:
+                        description: |
+                          Настройки доступа к одному типу cluster-wide-ресурсов.
+                        properties:
+                          resourceName:
+                            description: Имя GrantableClusterResourceDefinition, который регистрирует тип cluster-wide-ресурсов.
+                          allowed:
+                            description: |
+                              Список имён cluster-wide-ресурсов, доступных проекту.
+
+                              Объединяется с ресурсами, выбранными с помощью `allowedSelector`.
+                          allowedSelector:
+                            description: |
+                              Селектор лейблов cluster-wide-ресурсов, доступных проекту.
+
+                              Объединяется с ресурсами из `allowed`. Применяется только к cluster-wide-ресурсам, которые представлены объектами Kubernetes.
+                            properties:
+                              matchLabels:
+                                description: |
+                                  Набор лейблов cluster-wide-ресурсов.
+
+                                  Должны совпадать все указанные лейблы.
+                              matchExpressions:
+                                description: |
+                                  Список выражений селектора лейблов.
+
+                                  Должны выполняться все выражения.
+                                items:
+                                  properties:
+                                    key:
+                                      description: Ключ лейбла, к которому применяется выражение.
+                                    operator:
+                                      description: Оператор, задающий отношение между ключом и набором значений.
+                                    values:
+                                      description: Список значений лейбла.
+                          denied:
+                            description: |
+                              Список имён cluster-wide-ресурсов, недоступных проекту.
+
+                              Запрещающие правила имеют приоритет над `allowed` и `allowedSelector`.
+                          deniedSelector:
+                            description: |
+                              Селектор лейблов cluster-wide-ресурсов, недоступных проекту.
+
+                              Запрещающие правила имеют приоритет над `allowed` и `allowedSelector`.
+                            properties:
+                              matchLabels:
+                                description: |
+                                  Набор лейблов cluster-wide-ресурсов.
+
+                                  Должны совпадать все указанные лейблы.
+                              matchExpressions:
+                                description: |
+                                  Список выражений селектора лейблов.
+
+                                  Должны выполняться все выражения.
+                                items:
+                                  properties:
+                                    key:
+                                      description: Ключ лейбла, к которому применяется выражение.
+                                    operator:
+                                      description: Оператор, задающий отношение между ключом и набором значений.
+                                    values:
+                                      description: Список значений лейбла.
+                          default:
+                            description: |
+                              Имя cluster-wide-ресурса, который проект использует по умолчанию.
+
+                              Переопределяет значение, определённое с помощью `defaultFrom` в GrantableClusterResourceDefinition.
+                          availabilityDefault:
+                            description: |
+                              Доступность cluster-wide-ресурсов этого типа, которые не указаны в `allowed`, `allowedSelector`, `denied` и `deniedSelector`.
+
+                              Переопределяет `defaultAvailability` в GrantableClusterResourceDefinition. Если задан `allowed` или `allowedSelector`, а это поле не задано, остальные ресурсы этого типа проекту недоступны.
+                    grantPolicies:
+                      description: |
+                        Ссылки на библиотечные объекты ClusterResourceGrantPolicy (созданные без `projectSelector` и `namespaceSelector`).
+
+                        Для каждой ссылки контроллер создаёт и поддерживает отдельную управляемую политику `project-<PROJECT_NAME>-<POLICY_NAME>`, копирует в неё ресурсы библиотечной политики и привязывает их к каждому неймспейсу проекта.
                 parameters:
                   description: |
                     Значения параметров, которые шаблон объявляет в [`parametersSchema`](cr.html#projecttemplate-v1alpha2-spec-parametersschema).

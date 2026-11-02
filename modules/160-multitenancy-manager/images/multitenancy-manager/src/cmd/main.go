@@ -56,6 +56,7 @@ import (
 	templatecontroller "controller/internal/controller/template"
 	grantcontrollers "controller/internal/controllers"
 	clusterprojectrolebindingcontroller "controller/internal/controllers/clusterprojectrolebinding"
+	projectgrantscontroller "controller/internal/controllers/projectgrants"
 	projectnamescontroller "controller/internal/controllers/projectnames"
 	projectnamespacecontroller "controller/internal/controllers/projectnamespace"
 	projectquotacontroller "controller/internal/controllers/projectquota"
@@ -183,6 +184,16 @@ func main() {
 		Scheme: runtimeManager.GetScheme(),
 	}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "register template grants reconciler")
+	}
+
+	// register the project grant materializer: turns spec.grants of a project into managed
+	// ClusterResourceGrantPolicy objects.
+	if err = (&projectgrantscontroller.Reconciler{
+		Client:   runtimeManager.GetClient(),
+		Scheme:   runtimeManager.GetScheme(),
+		Recorder: runtimeManager.GetEventRecorderFor(controllerName),
+	}).SetupWithManager(runtimeManager); err != nil {
+		fatal(logger, err, "register project grants reconciler")
 	}
 
 	// register namespace controller

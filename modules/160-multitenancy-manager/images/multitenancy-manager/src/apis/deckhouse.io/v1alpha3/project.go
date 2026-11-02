@@ -25,6 +25,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	grantsv1alpha1 "controller/api/v1alpha1"
 )
 
 const (
@@ -231,6 +233,43 @@ type ProjectSpec struct {
 	// in helm values format that map to the open-api specification
 	// from the ValuesSchema ProjectTemplate field
 	Parameters map[string]any `json:"parameters,omitempty"`
+
+	// Grants are the cluster-wide resources the namespaces of the project may use, on top of the
+	// ones its template grants. The controller turns them into managed ClusterResourceGrantPolicy
+	// objects named project-<project>-*.
+	Grants *ProjectGrants `json:"grants,omitempty"`
+}
+
+// ProjectGrants are the grants of one project, in the format of the grants of a ProjectTemplate.
+type ProjectGrants struct {
+	// Resources are the rules of access to cluster-wide resources, turned into the
+	// project-<project>-inline policy.
+	Resources []grantsv1alpha1.GrantResource `json:"resources,omitempty"`
+	// GrantPolicies reference library ClusterResourceGrantPolicy objects (without a selector), each
+	// copied into a project-<project>-<policy> policy.
+	GrantPolicies []string `json:"grantPolicies,omitempty"`
+}
+
+// IsEmpty reports whether the grants grant nothing.
+func (g *ProjectGrants) IsEmpty() bool {
+	return g == nil || (len(g.Resources) == 0 && len(g.GrantPolicies) == 0)
+}
+
+func (g *ProjectGrants) DeepCopy() *ProjectGrants {
+	if g == nil {
+		return nil
+	}
+	out := new(ProjectGrants)
+	if g.Resources != nil {
+		out.Resources = make([]grantsv1alpha1.GrantResource, len(g.Resources))
+		for i := range g.Resources {
+			g.Resources[i].DeepCopyInto(&out.Resources[i])
+		}
+	}
+	if g.GrantPolicies != nil {
+		out.GrantPolicies = slices.Clone(g.GrantPolicies)
+	}
+	return out
 }
 
 func (p *ProjectSpec) DeepCopy() *ProjectSpec {
@@ -250,6 +289,7 @@ func (p *ProjectSpec) DeepCopyInto(newObj *ProjectSpec) {
 	if p.Quota != nil {
 		newObj.Quota = p.Quota.DeepCopy()
 	}
+	newObj.Grants = p.Grants.DeepCopy()
 	if p.Parameters != nil {
 		// Parameters hold arbitrary JSON (nested maps/slices) from the template values, so a
 		// shallow per-key copy would share nested references with the cached object. DeepCopyJSON

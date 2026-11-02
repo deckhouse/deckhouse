@@ -73,6 +73,32 @@ webhooks:
         namespace: d8-multitenancy-manager
         port: 9443
         path: /validate/v1alpha3/projects
+  # A write of the status through deckhouse.io/v1alpha2 would erase spec.grants of the project as a write
+  # of the project itself does, so the same exclusions apply and the handler runs the erasure check
+  # only: the controller writes the status through v1alpha3 and is excluded anyway.
+  - name: project-status.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha3
+        resources:
+          - projects/status
+        operations:
+          - UPDATE
+        scope: Cluster
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    {{- $excludeSystemWriters | nindent 4 }}
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | default "" | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha3/projects/status
   # Deleting a project deletes its namespaces, so the requester must be allowed to delete each of
   # them. The check is a webhook of its own with the same exclusions as the one above, since a DELETE
   # carries no project to validate.

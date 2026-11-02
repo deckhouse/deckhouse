@@ -154,7 +154,7 @@ flowchart LR
 1. Значение [`availabilityDefault`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault) в записях ClusterResourceGrantPolicy, которые применяются к проекту. Если в записи задан `allowed` или `allowedSelector` без `availabilityDefault`, все ресурсы вне её списков недоступны. Если хотя бы одна применимая запись задаёт `All`, это значение имеет приоритет над `None` в других записях.
 1. Значение [`defaultAvailability`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) в GrantableClusterResourceDefinition.
 
-Решает первый подходящий шаг. Шаги 2–4 объединяют записи всех ClusterResourceGrantPolicy, которые применяются к проекту, включая служебные политики его шаблона.
+Решает первый подходящий шаг. Шаги 2–4 объединяют записи всех ClusterResourceGrantPolicy, которые применяются к проекту, включая служебные политики его шаблона и самого проекта.
 
 #### Подстановка значений по умолчанию
 

@@ -314,6 +314,150 @@ spec:
                       - type: integer
                       - type: string
                     x-kubernetes-int-or-string: true
+                grants:
+                  description: |
+                    Cluster-wide resources available to the namespaces of the project, added to the ones its template grants.
+
+                    The controller turns them into managed ClusterResourceGrantPolicy objects named `project-<PROJECT_NAME>-*`, owned by the project. Changing the field needs the right to create ClusterResourceGrantPolicy objects. `deckhouse.io/v1alpha2` cannot describe the field, so a write of a project with grants through that version, a write of its status included, is refused.
+                  type: object
+                  properties:
+                    resources:
+                      description: |
+                        Rules of access to cluster-wide resources for the namespaces of the project, in the format of [`resources`](cr.html#projecttemplate-v1alpha2-spec-resources) of a ProjectTemplate.
+
+                        The controller turns them into the `project-<PROJECT_NAME>-inline` ClusterResourceGrantPolicy, which applies to every namespace of the project.
+                      type: array
+                      items:
+                        description: |
+                          Access settings for one type of cluster-wide resource.
+                        type: object
+                        required:
+                          - resourceName
+                        properties:
+                          resourceName:
+                            description: Name of the GrantableClusterResourceDefinition that registers the type of cluster-wide resource.
+                            type: string
+                          allowed:
+                            description: |
+                              List of names of cluster-wide resources available to the project.
+
+                              Combined with the resources selected with `allowedSelector`.
+                            type: array
+                            items:
+                              type: string
+                          allowedSelector:
+                            description: |
+                              Label selector of cluster-wide resources available to the project.
+
+                              Combined with the resources listed in `allowed`. Applies only to cluster-wide resources represented by Kubernetes objects.
+                            type: object
+                            x-kubernetes-map-type: atomic
+                            properties:
+                              matchLabels:
+                                description: |
+                                  Set of labels of cluster-wide resources.
+
+                                  All specified labels must match.
+                                type: object
+                                additionalProperties:
+                                  type: string
+                              matchExpressions:
+                                description: |
+                                  List of label selector expressions.
+
+                                  All expressions must match.
+                                type: array
+                                x-kubernetes-list-type: atomic
+                                items:
+                                  type: object
+                                  required:
+                                    - key
+                                    - operator
+                                  properties:
+                                    key:
+                                      description: Label key to which the expression applies.
+                                      type: string
+                                    operator:
+                                      description: Operator that defines the relationship between the key and the set of values.
+                                      type: string
+                                    values:
+                                      description: List of label values.
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                      items:
+                                        type: string
+                          denied:
+                            description: |
+                              List of names of cluster-wide resources unavailable to the project.
+
+                              Deny rules take precedence over `allowed` and `allowedSelector`.
+                            type: array
+                            items:
+                              type: string
+                          deniedSelector:
+                            description: |
+                              Label selector of cluster-wide resources unavailable to the project.
+
+                              Deny rules take precedence over `allowed` and `allowedSelector`.
+                            type: object
+                            x-kubernetes-map-type: atomic
+                            properties:
+                              matchLabels:
+                                description: |
+                                  Set of labels of cluster-wide resources.
+
+                                  All specified labels must match.
+                                type: object
+                                additionalProperties:
+                                  type: string
+                              matchExpressions:
+                                description: |
+                                  List of label selector expressions.
+
+                                  All expressions must match.
+                                type: array
+                                x-kubernetes-list-type: atomic
+                                items:
+                                  type: object
+                                  required:
+                                    - key
+                                    - operator
+                                  properties:
+                                    key:
+                                      description: Label key to which the expression applies.
+                                      type: string
+                                    operator:
+                                      description: Operator that defines the relationship between the key and the set of values.
+                                      type: string
+                                    values:
+                                      description: List of label values.
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                      items:
+                                        type: string
+                          default:
+                            description: |
+                              Name of the cluster-wide resource used by default in the project.
+
+                              Overrides the value determined with `defaultFrom` in the GrantableClusterResourceDefinition.
+                            type: string
+                          availabilityDefault:
+                            description: |
+                              Availability of the cluster-wide resources of this type that `allowed`, `allowedSelector`, `denied` and `deniedSelector` do not name.
+
+                              Overrides `defaultAvailability` of the GrantableClusterResourceDefinition. If `allowed` or `allowedSelector` is set and this field is not, all other resources of this type are unavailable to the project.
+                            type: string
+                            enum:
+                              - All
+                              - None
+                    grantPolicies:
+                      description: |
+                        References to library ClusterResourceGrantPolicy objects (created without `projectSelector` and `namespaceSelector`).
+
+                        The controller creates and maintains one managed policy per reference, `project-<PROJECT_NAME>-<POLICY_NAME>`, copying its resources and binding them to every namespace of the project.
+                      type: array
+                      items:
+                        type: string
                 parameters:
                   additionalProperties:
                     x-kubernetes-preserve-unknown-fields: true

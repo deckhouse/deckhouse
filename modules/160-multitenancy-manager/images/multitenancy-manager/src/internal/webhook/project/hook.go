@@ -109,13 +109,17 @@ func ownLabelChange(old, project *v1alpha3.Project) (string, []string) {
 }
 
 func Register(runtimeManager manager.Manager, helmClient *helm.Client, quotaKeys quota.Discovery) {
-	hook := &webhook.Admission{Handler: &validator{
+	handler := &validator{
 		client:     runtimeManager.GetClient(),
 		helmClient: helmClient,
 		reader:     runtimeManager.GetAPIReader(),
 		quotaKeys:  quotaKeys,
-	}}
-	runtimeManager.GetWebhookServer().Register("/validate/v1alpha3/projects", hook)
+	}
+	server := runtimeManager.GetWebhookServer()
+	server.Register("/validate/v1alpha3/projects", &webhook.Admission{Handler: handler})
+	// The status subresource is a webhook of its own (see templates/admission/validation.yaml) that
+	// runs the erasure check of a write through deckhouse.io/v1alpha2 and nothing else.
+	server.Register("/validate/v1alpha3/projects/status", &webhook.Admission{Handler: &statusValidator{validator: handler}})
 }
 
 type validator struct {
@@ -123,8 +127,9 @@ type validator struct {
 	helmClient *helm.Client
 	// reader is the direct API reader for the role bindings that still name the ServiceAccounts of
 	// the project's namespace, whose informers the cache would start inside the request on a replica
-	// that is not the leader, and for the ProjectNamespaces that claim the project's name, which the
-	// cache may not have seen yet.
+	// that is not the leader, for the ProjectNamespaces that claim the project's name, and for the
+	// projects whose grants may take the same managed policy name, which the cache may not have seen
+	// yet.
 	reader client.Reader
 	// quotaKeys looks up the resources the count/ keys of spec.quota name. Optional.
 	quotaKeys quota.Discovery
@@ -296,6 +301,17 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Denied(denied)
 	}
 	warnings = append(warnings, quotaWarnings...)
+
+	if resp := v.v1alpha2GrantsErasure(ctx, req, project); !resp.Allowed {
+		return resp
+	}
+	denied, err = v.checkGrants(ctx, req, project, storedProject(req), privileged)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	if denied != "" {
+		return admission.Denied(denied)
+	}
 
 	if req.Operation == admissionv1.Update {
 		// pass triggered projects

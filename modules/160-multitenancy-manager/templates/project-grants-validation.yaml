@@ -1,0 +1,50 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $policyName := "d8-multitenancy-manager-project-grants" }}
+---
+# The controller turns spec.grants of a Project into ClusterResourceGrantPolicy objects named
+# project-<project>-*, labelled with the project and owned by it. The names are reserved for it: a
+# policy someone made under such a name would be refused to the project as a collision, or, made after
+# the project, would stand where the project's grants should be. A managed policy is changed and
+# deleted by the controller alone, through spec.grants of its project; the garbage collector of
+# kube-controller-manager deletes it with the project. A policy named project-* made before the names
+# were reserved can still be changed and deleted.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["multitenancy.deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["clusterresourcegrantpolicies"]
+  matchConditions:
+    - name: 'exclude-the-controller'
+      expression: '!(request.userInfo.username in ["system:serviceaccount:d8-multitenancy-manager:multitenancy-manager", "system:serviceaccount:d8-system:deckhouse", "system:sudouser"]) && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:kube-system")'
+  variables:
+    - name: managedLabel
+      expression: '"multitenancy.deckhouse.io/managed-by-project"'
+    - name: wasManaged
+      expression: 'oldObject != null && has(oldObject.metadata.labels) && variables.managedLabel in oldObject.metadata.labels'
+    - name: isManaged
+      expression: 'object != null && has(object.metadata.labels) && variables.managedLabel in object.metadata.labels'
+  validations:
+    - expression: 'request.operation != "CREATE" || !request.name.startsWith("project-")'
+      reason: Forbidden
+      message: 'The names that start with project- are reserved for the ClusterResourceGrantPolicy objects the multitenancy-manager controller makes from spec.grants of a Project. Choose another name, or set the grants in spec.grants of the project.'
+    - expression: '!variables.wasManaged && !variables.isManaged'
+      reason: Forbidden
+      message: 'This ClusterResourceGrantPolicy is made by the multitenancy-manager controller from spec.grants of a Project. Change spec.grants of the project instead.'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+{{- end }}

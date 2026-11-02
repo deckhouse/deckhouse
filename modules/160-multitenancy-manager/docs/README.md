@@ -147,7 +147,7 @@ If multiple rules apply to a cluster-wide resource, its availability is determin
 1. The [`availabilityDefault`](./cr.html#clusterresourcegrantpolicy-v1alpha2-spec-resources-availabilitydefault) value in the ClusterResourceGrantPolicy entries that apply to the project. If an entry sets `allowed` or `allowedSelector` without `availabilityDefault`, every resource not on its lists is unavailable. If one applicable entry sets `All`, it wins over `None` in the others.
 1. The [`defaultAvailability`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) value in GrantableClusterResourceDefinition.
 
-The first matching step decides. Steps 2–4 combine the entries of all ClusterResourceGrantPolicy objects that apply to the project, including the service policies of its template.
+The first matching step decides. Steps 2–4 combine the entries of all ClusterResourceGrantPolicy objects that apply to the project, including the service policies of its template and of the project itself.
 
 #### Assigning default values
 

@@ -205,7 +205,9 @@ def v1alpha2_to_v1alpha3(self, obj: dict) -> tuple[str | None, dict]:
 # v1alpha3 -> v1alpha2 pushes administrators and quota back into spec.parameters so that older
 # clients reading v1alpha2 keep seeing the legacy layout. A standard field takes the place of the
 # parameter it is lifted from; a parameter the up conversion left in place comes back as it is.
-# The number 0 goes back as the string "0", the only 0 the up conversion lifts again.
+# The number 0 goes back as the string "0", the only 0 the up conversion lifts again. v1alpha2 has
+# no place for spec.grants, which is dropped; the Project webhook refuses a write through v1alpha2 of
+# a project that has grants, since it would erase them.
 def v1alpha3_to_v1alpha2(self, obj: dict) -> tuple[str | None, dict]:
     obj["apiVersion"] = "deckhouse.io/v1alpha2"
     spec = obj.get("spec")
@@ -220,6 +222,7 @@ def v1alpha3_to_v1alpha2(self, obj: dict) -> tuple[str | None, dict]:
     if isinstance(spec, dict):
         spec.pop("administrators", None)
         spec.pop("quota", None)
+        spec.pop("grants", None)
 
     namespaces = self._status_namespaces(obj)
     if isinstance(namespaces, list):

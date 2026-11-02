@@ -97,6 +97,7 @@ To create a project, follow these steps:
 
 The Project API is served as `deckhouse.io/v1alpha3`. `v1alpha2` manifests keep working: a conversion webhook lifts `parameters.administrators` and `parameters.resourceQuota` into the `.spec.administrators` and `.spec.quota` standard fields automatically. If one administrator does not fit `.spec.administrators` (for example, it has `accessLevel`), the whole list stays in `parameters` and `.spec.administrators` is not filled. The same holds for a quota with anything other than quantities (for example, `scopes`), for a quota with the number `0` anywhere in it, and for an empty list or quota. A template that checks a value with `with` skips the number `0` and sets no limit, while in `.spec.quota` it would be a hard limit of zero. The string `"0"` is lifted into `.spec.quota` as such a limit. A `v1alpha2` client reads a `0` from `.spec.quota` as the string `"0"`.
 A project cannot set `.spec.administrators` together with `parameters.administrators`, or `.spec.quota` together with `parameters.resourceQuota`.
+The `spec.grants` field exists only in `deckhouse.io/v1alpha3`: a change of a project that has it through `deckhouse.io/v1alpha2` is refused, see [Granting cluster-wide resources to one project](#granting-cluster-wide-resources-to-one-project).
 
 The `deckhouse.io/v1alpha1` version is no longer served, and the API server refuses a manifest with `apiVersion: deckhouse.io/v1alpha1`. Before applying such a manifest, change `apiVersion` to `deckhouse.io/v1alpha3`, rename `spec.projectTypeName` to `spec.projectTemplateName` (a ProjectTemplate with that name must exist) and `spec.template` to `spec.parameters`, and move `administrators` and `resourceQuota` from the parameters to `.spec.administrators` and `.spec.quota`.
 
@@ -1135,6 +1136,10 @@ The webhooks and policies of the module have different exclusion lists:
 - The **`d8-multitenancy-manager-manifests` ValidatingAdmissionPolicy** checks only the users that the controller applies `manifests` as, whose names start with `system:multitenancy-manager:project:`, and refuses them to create an AuthorizationRule of the `Admin` access level, to raise one to this level or to add subjects to one of this level. Nobody else is checked by it.
 - The **`d8-multitenancy-manager-v1alpha1-template-create` ValidatingAdmissionPolicy** refuses every create of a ProjectTemplate through `deckhouse.io/v1alpha1` and lets nobody through, `system:sudouser`, `system:masters` and the platform components included. The refusal of a new `resourcesTemplate` through `deckhouse.io/v1alpha2` belongs to the ProjectTemplate webhook, so the requesters that the webhook skips, `system:sudouser` among them, can still create a template with a Helm text that way.
 - The **`d8-multitenancy-manager-namespace-ownership` ValidatingAdmissionPolicy** keeps the `projects.deckhouse.io/project` label and the labels and annotations that the module sets on a project namespace. It lets through only this module's controller and `d8-system:deckhouse`. Everyone else is refused, `system:sudouser` and `system:masters` included.
+- The **`d8-multitenancy-manager-project-grants` ValidatingAdmissionPolicy** keeps the ClusterResourceGrantPolicy objects that the controller makes from `spec.grants` of a Project.
+  It refuses to create an object whose name starts with `project-`, and to create, change or delete an object that has the `multitenancy.deckhouse.io/managed-by-project` label.
+  It lets through this module's controller, `d8-system:deckhouse`, `system:sudouser` and the service accounts of the `kube-system` namespace, the garbage collector among them.
+  Everyone else is refused, `system:masters` included.
 - The **`d8-multitenancy-manager-kept-objects` ValidatingAdmissionPolicy** guards the objects listed in `.status.keptObjects` of a project. It lets through this module's controller, the users whose names start with `system:multitenancy-manager:`, `system:sudouser` and the system users and groups of the policy that guards the `heritage: multitenancy-manager` objects. Anyone else may change such an object only with the right to make the same change across the cluster.
 
 The `/is-granted` and `/defaults` webhooks, which check writes of objects that reference cluster-wide resources in project namespaces (see [Managing access to cluster-wide resources](#managing-access-to-cluster-wide-resources)), skip `system:masters` together with the platform components. The `/protect` webhook keeps AvailableClusterResource read-only. It lets through the controller, the platform components and `system:masters`.
@@ -1231,7 +1236,7 @@ A [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) (`multitenanc
 
 - `projectSelector` is matched against the labels of the Project object. It selects every namespace of a project at once, including an additional namespace created later, so use it to select a project as a whole. The module puts the `projects.deckhouse.io/project: <PROJECT_NAME>` and `projects.deckhouse.io/project-template: <PROJECT_TEMPLATE_NAME>` labels on every Project, so a project can also be selected by its name or template. The virtual projects carry only the first of these labels. The two labels cannot be set to another project or template. A manifest that replaces a whole Project may leave them out. The request is admitted with a warning, and the module puts the labels back. The template label of a Project changes as soon as `spec.projectTemplateName` changes. The same label on the namespaces shows the template they were rendered from, and the service policies of a template select namespaces by it.
 - `namespaceSelector` is matched against the labels of the Namespace. It narrows the choice to some namespaces of the selected projects, or of all projects when `projectSelector` is not set. For example, it can select only the main namespace (the `projects.deckhouse.io/project-namespace` label does not exist) or only the namespaces labeled by a template.
-- A policy with **neither** selector matches no project on its own. Such a policy is a library policy, applied to a project through `grantPolicies` of its ProjectTemplate. An explicit empty selector (`{}`) matches everything.
+- A policy with **neither** selector matches no project on its own. Such a policy is a library policy, applied to a project through `grantPolicies` of its ProjectTemplate or of the Project itself (`spec.grants.grantPolicies`). An explicit empty selector (`{}`) matches everything.
 
 The namespaces of the [virtual projects](#virtual-projects) `deckhouse` and `default` are never covered, even by `{}`.
 
@@ -1475,6 +1480,40 @@ spec:
 ```
 
 For each source, the controller creates a service policy named `template-<template>-<source>` (for `spec.resources` — `template-<template>-inline`). A template that references a policy named `inline` is rejected, and so is a template whose service policy names would match those of another template. A reference to a non-existent policy or to a policy with either selector is rejected when the template is created or updated. A service policy selects the namespaces of the template's projects with `namespaceSelector` by their `projects.deckhouse.io/project-template` label. The label is set when the template renders, so after a project switches to another template, the rules of the old template apply until the new one has rendered.
+
+#### Granting cluster-wide resources to one project
+
+A project can be given cluster-wide resources of its own, on top of the ones its template grants, in [`spec.grants`](cr.html#project-v1alpha3-spec-grants) of the Project. The field has the format of the template fields: `resources` with the rules themselves and `grantPolicies` with the names of library ClusterResourceGrantPolicy objects.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha3
+kind: Project
+metadata:
+  name: my-project
+spec:
+  projectTemplateName: my-template
+  grants:
+    resources:
+      - resourceName: storageclasses
+        allowed: ["fast"]
+    grantPolicies:
+      - corporate-issuers
+```
+
+For each source, the controller creates a service policy named `project-<PROJECT_NAME>-<SOURCE>` (for `resources`, `project-<PROJECT_NAME>-inline`), owned by the project and selecting it with `projectSelector` by its `projects.deckhouse.io/project` label, so the policy applies to every namespace of the project, the ones created later included.
+Deleting the project deletes its service policies.
+The rules of the project and of its template combine as the rules of any two policies do: the allowed resources add up, and a resource that one of them denies stays unavailable.
+
+The field has these rules:
+
+- Changing `spec.grants` needs the right to create ClusterResourceGrantPolicy objects, the same right as creating such a policy directly. A user who may only change a project cannot grant it cluster-wide resources.
+- The references and the names are checked like those of a template.
+  A reference to a policy named `inline`, to a missing policy or to a policy with a selector is rejected.
+  An empty or invalid `allowedSelector` or `deniedSelector` in `resources` is rejected.
+  A `spec.grants` whose service policy names would match a policy that is not the project's, or the service policies of another project, is rejected, and so is a `spec.grants` whose service policy name is not a valid object name, which a very long name of a referenced policy causes.
+- If a service policy cannot be applied, or a referenced policy is deleted later, the controller records a Warning event on the Project. The other sources stay applied, and a source removed from `spec.grants` is revoked all the same. A policy that is created again is picked up without waiting.
+- The names that start with `project-` are reserved for the service policies, and a service policy is changed only through `spec.grants` of its project.
+- `deckhouse.io/v1alpha2` has no place for the field, so a change of a project that has `spec.grants` through that version, a write of its status included, is rejected: it would erase the field. Change such a project through `deckhouse.io/v1alpha3`.
 
 ### For project users
 

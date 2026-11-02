@@ -249,6 +249,12 @@ class TestQuotaRoundTrip(unittest.TestCase):
         self.assertEqual(got["spec"], {"parameters": {"resourceQuota": {
             "requests": {"nvidia.com/gpu": 2, "": "3"}, "limits": {"cpu": "1"}, "": "4", "pods": "0"}}})
 
+    def test_grants_do_not_go_down(self):
+        # v1alpha2 has no place for them; the Project webhook keeps a write through v1alpha2 from erasing them
+        grants = {"resources": [{"resourceName": "storageclasses", "allowed": ["fast"]}], "grantPolicies": ["web"]}
+        got = convert("v1alpha3_to_v1alpha2", project("v1alpha3", {"grants": grants, "parameters": {"x": 1}}))
+        self.assertEqual(got["spec"], {"parameters": {"x": 1}})
+
     def test_empty_standard_fields_go_down(self):
         # An empty list or map is a value to jq, so it replaces the parameter.
         got = convert("v1alpha3_to_v1alpha2", project("v1alpha3", {"administrators": [], "quota": {},
