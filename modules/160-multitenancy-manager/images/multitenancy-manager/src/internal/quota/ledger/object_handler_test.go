@@ -24,10 +24,13 @@ import (
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -66,7 +69,8 @@ func callObject(t *testing.T, h http.Handler, body []byte) *admissionv1.Admissio
 
 func TestObjectHandler(t *testing.T) {
 	s := vmState()
-	h := &ObjectHandler{Family: FamilyVM, Evaluator: evaluator.VirtualMachine{}, State: s, Gate: serving, Metrics: NewMetrics(prometheus.NewRegistry())}
+	h := &ObjectHandler{Family: FamilyVM, Evaluator: evaluator.VirtualMachine{}, NewObject: func() runtime.Object { return new(unstructured.Unstructured) },
+		State: s, Gate: serving, Metrics: NewMetrics(prometheus.NewRegistry())}
 
 	response := callObject(t, h, vmReview(t, admissionv1.Create, "one", 0, 6))
 	assert.True(t, response.Allowed)
@@ -99,7 +103,7 @@ func TestObjectHandler(t *testing.T) {
 func TestObjectHandlerSharesTheLimitOfASource(t *testing.T) {
 	s := vmState()
 	sources := &Handler{}
-	h := &ObjectHandler{Family: FamilyVM, Evaluator: evaluator.VirtualMachine{},
+	h := &ObjectHandler{Family: FamilyVM, Evaluator: evaluator.VirtualMachine{}, NewObject: func() runtime.Object { return new(unstructured.Unstructured) },
 		State: s, Gate: serving, Metrics: NewMetrics(prometheus.NewRegistry()), Sources: sources}
 	source := sourceOf(httptest.NewRequest(http.MethodPost, "/", nil).RemoteAddr)
 	for range perSourceLimit {
@@ -120,7 +124,7 @@ func TestObjectHandlerSharesTheLimitOfASource(t *testing.T) {
 // by what it puts.
 func TestObjectHandlerTakesAnUnreadableOldObjectAsNothing(t *testing.T) {
 	s := vmState()
-	h := &ObjectHandler{Family: FamilyVM, Evaluator: evaluator.VirtualMachine{},
+	h := &ObjectHandler{Family: FamilyVM, Evaluator: evaluator.VirtualMachine{}, NewObject: func() runtime.Object { return new(unstructured.Unstructured) },
 		State: s, Gate: serving, Metrics: NewMetrics(prometheus.NewRegistry())}
 	review := new(admissionv1.AdmissionReview)
 	require.NoError(t, json.Unmarshal(vmReview(t, admissionv1.Update, "one", 2, 2), review))
@@ -129,4 +133,75 @@ func TestObjectHandlerTakesAnUnreadableOldObjectAsNothing(t *testing.T) {
 	require.NoError(t, err)
 	response := callObject(t, h, body)
 	assert.True(t, response.Allowed, response.Result)
+}
+
+func lbReview(t *testing.T, name string) []byte {
+	t.Helper()
+	raw, err := json.Marshal(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "a", ResourceVersion: "10"},
+		Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer}})
+	require.NoError(t, err)
+	body, err := json.Marshal(admissionv1.AdmissionReview{TypeMeta: metav1.TypeMeta{APIVersion: "admission.k8s.io/v1", Kind: "AdmissionReview"},
+		Request: &admissionv1.AdmissionRequest{UID: "uid-lb", Namespace: "a", Name: name, Operation: admissionv1.Create, Object: runtime.RawExtension{Raw: raw}}})
+	require.NoError(t, err)
+	return body
+}
+
+// Every answer of the webhooks of the families echoes the uid of the request, a refusal too: the API
+// server takes an answer without it for an invalid one and fails the request with an internal error.
+func TestObjectHandlersEchoTheUIDOnEveryAnswer(t *testing.T) {
+	families := []struct {
+		name   string
+		uid    types.UID
+		body   func(name string) []byte
+		object func() runtime.Object
+		eval   evaluator.Evaluator
+		state  func(limit string) *State
+	}{
+		{name: "vm", uid: "uid-vm", body: func(name string) []byte { return vmReview(t, admissionv1.Create, name, 0, 4) },
+			object: func() runtime.Object { return new(unstructured.Unstructured) }, eval: evaluator.VirtualMachine{},
+			state: func(limit string) *State {
+				s := NewState()
+				s.SetProjectQuota(pq("p", rl(cores, limit)))
+				s.SetNamespace(ns("a", "p"))
+				return s
+			}},
+		{name: "lb", uid: "uid-lb", body: func(name string) []byte { return lbReview(t, name) },
+			object: func() runtime.Object { return new(corev1.Service) }, eval: evaluator.LoadBalancer{},
+			state: func(limit string) *State {
+				s := NewState()
+				s.SetProjectQuota(pq("p", rl(lbAddresses, limit)))
+				s.SetNamespace(ns("a", "p"))
+				return s
+			}},
+	}
+	for _, family := range families {
+		cases := []struct {
+			result string
+			limit  string
+			gate   GateFunc
+			full   bool
+			susp   bool
+		}{
+			{result: ResultAllowed, limit: "100", gate: serving},
+			{result: ResultExceeded, limit: "0", gate: serving},
+			{result: ResultNotLeader, limit: "100", gate: func() (string, string) { return ResultNotLeader, "test" }},
+			{result: ResultOverload, limit: "100", gate: serving, full: true},
+			{result: ResultSuspended, limit: "0", gate: serving, susp: true},
+		}
+		for _, tc := range cases {
+			t.Run(family.name+"/"+tc.result, func(t *testing.T) {
+				sources := &Handler{}
+				if tc.full {
+					for range perSourceLimit {
+						sources.enter(sourceOf(httptest.NewRequest(http.MethodPost, "/", nil).RemoteAddr))
+					}
+				}
+				h := &ObjectHandler{Family: family.name, Evaluator: family.eval, NewObject: family.object, State: family.state(tc.limit),
+					Gate: tc.gate, Metrics: NewMetrics(prometheus.NewRegistry()), Sources: sources, Suspended: func() bool { return tc.susp }}
+				response := callObject(t, h, family.body("one"))
+				assert.Equal(t, family.uid, response.UID)
+				assert.InDelta(t, 1, testutil.ToFloat64(h.Metrics.Requests.WithLabelValues(tc.result)), 0, "the answer is the one of the case")
+			})
+		}
+	}
 }

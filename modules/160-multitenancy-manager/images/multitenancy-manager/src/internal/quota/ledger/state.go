@@ -220,7 +220,7 @@ func (s *State) SetProjectQuota(pq *v1alpha1.ProjectQuota) {
 	canonical := quota.Canonical(pq.Spec.Hard)
 	p.hard = quota.ResourceQuotaHard(canonical)
 	s.rebuildLocked(pq.Name)
-	p.familyHard = map[string]corev1.ResourceList{FamilyVM: quota.VMHard(canonical)}
+	p.familyHard = map[string]corev1.ResourceList{FamilyVM: quota.VMHard(canonical), FamilyLB: quota.LBHard(canonical)}
 	s.rebuildFamiliesLocked(pq.Name)
 }
 
@@ -436,6 +436,13 @@ func (s *State) Covers(listed []metav1.Object) bool {
 		case *v1alpha1.ProjectQuota:
 			if _, ok := s.projects[o.Name]; !ok {
 				return false
+			}
+		case *corev1.Service:
+			if o.Spec.Type == corev1.ServiceTypeLoadBalancer {
+				entry, ok := s.objects[FamilyLB][objectKey(o.Namespace, o.Name)]
+				if !ok || entry.rv < ParseResourceVersion(o.ResourceVersion) {
+					return false
+				}
 			}
 		case *unstructured.Unstructured:
 			if o.GroupVersionKind().Kind == virtualMachineGVK.Kind {

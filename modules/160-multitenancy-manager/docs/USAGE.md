@@ -255,7 +255,7 @@ The built-in templates of adopted projects are rewritten by the controller, so a
 | `projects.deckhouse.io/project-template: <PROJECT_TEMPLATE_NAME>` | ✓ | ✓ | The project template; the cluster resource availability rules match by it |
 | `heritage: multitenancy-manager` | ✓ | ✓ | The namespace is managed by the project controller: its `spec`, finalizers and the labels listed in this table are changed through the Project; other labels and annotations may be changed directly |
 | `projects.deckhouse.io/quota: pending`, `projects.deckhouse.io/quota: enforced` | ✓ | ✓ | The namespace belongs to a project with a [quota](#project-quota); only the controller sets the label |
-| `quota.projects.deckhouse.io/vm: enforced` | ✓ | ✓ | The quota of the project has keys of [virtual machines](#virtual-machines-in-a-project-quota) |
+| `quota.projects.deckhouse.io/vm: enforced`, `quota.projects.deckhouse.io/lb: enforced` | ✓ | ✓ | The quota of the project has keys of [virtual machines](#virtual-machines-in-a-project-quota) or of [load balancers](#load-balancers-in-a-project-quota) |
 | `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (inherited) | Policies and features from the project template |
 | Labels from the template's `namespaceMetadata.labels` | ✓ | ✓ (inherited) | Labels of the project template. They are listed in the `projects.deckhouse.io/template-labels` annotation of the namespace and changed through the Project or its ProjectTemplate |
 | Any other label set on a namespace directly or by a GitOps tool, including the labels a namespace had before it became a project | — | — | Not set by the module. The project release neither reverts nor restores it, and the additional namespaces do not inherit it |
@@ -300,7 +300,7 @@ A namespace that already belongs to another Helm release (its `meta.helm.sh/rele
 
 Existing RoleBinding and AuthorizationRule objects inside the namespace keep working after adoption. The namespace Admin is **not** copied into `.spec.administrators` and does **not** become `d8:project:admin`: that role additionally manages ProjectRoleBinding resources, which is a wider contract than in-namespace Admin. To make the team lead a project administrator, a platform operator adds them to `.spec.administrators` or creates a ProjectRoleBinding. The namespace Admin role allows only `get`, `list` and `watch` on the Namespace object.
 
-The labels and annotations the module sets — `heritage`, `projects.deckhouse.io/*`, `quota.projects.deckhouse.io/vm`, `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled`, `app.kubernetes.io/managed-by`, `meta.helm.sh/*`, the node-selector and tolerations annotations — are changed through the Project and its template;
+The labels and annotations the module sets — `heritage`, `projects.deckhouse.io/*`, `quota.projects.deckhouse.io/vm`, `quota.projects.deckhouse.io/lb`, `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled`, `app.kubernetes.io/managed-by`, `meta.helm.sh/*`, the node-selector and tolerations annotations — are changed through the Project and its template;
 any other label or annotation (`istio-injection`, a Pod Security label, a GitOps tracking annotation) can still be set directly on the Namespace by anyone whose RBAC allows it, and the controller does not touch it. The `spec` and finalizers of the Namespace, and its deletion, stay with the controller.
 
 This includes the labels and annotations the namespace had before it became a project.
@@ -429,9 +429,9 @@ A ProjectQuota and `.spec.quota` accept the following keys:
 - `<CLASS>.storageclass.storage.k8s.io/requests.storage` and `<CLASS>.storageclass.storage.k8s.io/persistentvolumeclaims`, `<CLASS>.deviceclass.resource.k8s.io/devices`;
 - `count/<RESOURCE>[.<GROUP>]` for a namespaced resource the API server serves, for example `count/ingresses.networking.k8s.io`;
 - `projectNamespaces`, an alias of `count/projectnamespaces.deckhouse.io`: the number of [ProjectNamespace](cr.html#projectnamespace) objects of the project, that is, of its additional namespaces. The alias is expanded in the ResourceQuota objects, and the object keeps it as written.
-- the keys of [virtual machines](#virtual-machines-in-a-project-quota), which no ResourceQuota counts.
+- the keys of [virtual machines](#virtual-machines-in-a-project-quota) and of [load balancers](#load-balancers-in-a-project-quota), which no ResourceQuota counts.
 
-Refused are `resourcequotas` and `count/resourcequotas` (`d8-project-quota` takes one in every namespace by itself), the count of a cluster-scoped resource such as `count/namespaces`, a resource misspelled in a served group, a `count/` key of a resource that lacks one of the verbs create, list, watch and delete, the keys with the reserved `projectquota.deckhouse.io/` prefix, and the keys of load balancers, which the project quota does not count yet.
+Refused are `resourcequotas` and `count/resourcequotas` (`d8-project-quota` takes one in every namespace by itself), the count of a cluster-scoped resource such as `count/namespaces`, a resource misspelled in a served group, a `count/` key of a resource that lacks one of the verbs create, list, watch and delete, and the keys with the reserved `projectquota.deckhouse.io/` prefix.
 A `count/` key of a group the API server does not serve yet is accepted with a warning: nothing counts it until the module that provides the group is enabled, and `Enforced` is `False` with the `KeyNotServed` reason until then.
 A change that keeps a key the object already has is accepted with a warning even when the key would be refused now.
 
@@ -458,6 +458,34 @@ The namespaces of such a project carry the `quota.projects.deckhouse.io/vm: enfo
 While the `virtualization` module is disabled, the keys count nothing, and `Enforced` is `False` with the `KeyNotServed` reason. The quota is accepted with a warning when the API server does not serve VirtualMachine.
 
 The pod of a virtual machine counts in `requests.*` and `limits.*` as well, twice while the machine migrates. A quota that has both the keys of virtual machines and the keys of pods (`cpu`, `memory`, `requests.*`, `limits.*`) is accepted with a warning. Limit virtual machines with their keys and containers with `requests.*` and `limits.*`.
+
+### Load balancers in a project quota
+
+A project quota limits the Services of type LoadBalancer of the project by their class, by their pool and by the external addresses they take.
+No ResourceQuota counts these keys, so they do not go into `d8-project-quota`: the quota ledger checks every create of a Service that is or was of type LoadBalancer, and every change of its `spec` or of the `network.deckhouse.io/metal-load-balancer-class`, `network.deckhouse.io/l2-load-balancer-external-ips-count`, `network.deckhouse.io/load-balancer-ips` and `network.deckhouse.io/load-balancer-pool` annotations, in the namespaces of a project whose quota has them, and counts the Services itself in these keys:
+
+- `<CLASS>.loadbalancerclass.network.deckhouse.io/services`: Number of load balancers of the `<CLASS>` class.
+- `<CLASS>.loadbalancerclass.network.deckhouse.io/addresses`: External addresses of the `<CLASS>` class.
+- `<POOL>.loadbalancerpool.network.deckhouse.io/addresses`: Addresses taken from the `<POOL>` pool of the BGP mode.
+- `loadbalancers.network.deckhouse.io/addresses`: All external addresses of the project.
+
+The number of load balancers of any class is limited by the ordinary `services.loadbalancers` key.
+
+The class of a Service is the one the `metallb` module serves it with. It comes from the first source that applies:
+
+- The class the `metallb` module has bound the Service to in its status, even if no such MetalLoadBalancerClass exists
+- `spec.loadBalancerClass`, when such a MetalLoadBalancerClass exists
+- The `network.deckhouse.io/metal-load-balancer-class` annotation, when such a MetalLoadBalancerClass exists
+- The MetalLoadBalancerClass with `isDefault: true`
+- `spec.loadBalancerClass` without a check, the class of another load balancer controller
+- `default`, the load balancers of a cloud provider
+
+Where the API server does not serve MetalLoadBalancerClass, no class is checked: the class is `spec.loadBalancerClass`, else `default`, and the annotation, which only the `metallb` module reads, does not count.
+The quota ledger notices within 30 seconds that the `metallb` module has been enabled or disabled, and counts the load balancers again without a restart.
+
+A Service with the `network.deckhouse.io/load-balancer-pool` annotation takes one address of that pool. Any other Service takes the number of addresses from its `network.deckhouse.io/l2-load-balancer-external-ips-count` annotation when the value is a number above one, and one address when the annotation has any other value. The `network.deckhouse.io/load-balancer-ips` annotation only picks which addresses the Service takes, as the `metallb` module assigns them.
+
+Every Service of type LoadBalancer counts its own addresses, also when it shares an address with other Services under the `network.deckhouse.io/load-balancer-shared-ip-key` annotation: two Services that share one address take two addresses of the quota. The namespaces of such a project carry the `quota.projects.deckhouse.io/lb: enforced` label, which the controller sets.
 
 ### Clusters where Deckhouse Platform does not manage the control plane
 
@@ -495,7 +523,7 @@ What the response says:
 | `403 ... exceeded quota: d8-project-quota, project <PROJECT_NAME>: requested: ..., used: ..., limited: ... (<N> namespaces)` | The sum of project `<PROJECT_NAME>` would go over the limits of its ProjectQuota. Raise `spec.hard` or delete what the project does not need; `status.topNamespaces` shows where the usage is. |
 | `403 ... exceeded quota: d8-project-quota, requested: ...` (no `project`) | The usage of this namespace alone, with the object, would go over a limit of the project, which every `d8-project-quota` ResourceQuota contains. The quota plugin of the API server refuses it before the sum of the project is checked. |
 | `503 ... project quota ledger unavailable (<CAUSE>), retry` | The ledger does not answer for a moment, for example while its leader changes. Retry; if it lasts longer than a minute, see the `D8ProjectQuotaLedgerDown` alert. |
-| `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io": ...`, or the same with `quota-vm.multitenancy-manager.deckhouse.io` | The API server does not reach the ledger: no replica runs, the network, or the certificate. While the Service points at a frozen leader, the quota plugin of the API server retries the call, so each such create waits up to about 8 seconds until the address of the leader is taken out of the Service: in about 3.5 seconds by the other replica, in up to about 15 seconds by Deckhouse when no replica answers. |
+| `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io": ...`, or the same with `quota-vm.multitenancy-manager.deckhouse.io` or `quota-lb.multitenancy-manager.deckhouse.io` | The API server does not reach the ledger: no replica runs, the network, or the certificate. While the Service points at a frozen leader, the quota plugin of the API server retries the call, so each such create waits up to about 8 seconds until the address of the leader is taken out of the Service: in about 3.5 seconds by the other replica, in up to about 15 seconds by Deckhouse when no replica answers. |
 | `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-pending' ...` | The `d8-project-quota` of a new namespace is not calculated yet. Retry in a few seconds; if it lasts, see the `Enforced` condition of the ProjectQuota and check the controller and kube-controller-manager. |
 | `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-guard' ...` | The `d8-project-quota` of the namespace is missing, has scopes or is not calculated at all yet. Retry in a few seconds; otherwise check the controller and kube-controller-manager. |
 | `500 ... resource quota evaluation timed out` | The quota admission of the API server is overloaded; see the `D8ResourceQuotaAdmissionDegraded` alert. |

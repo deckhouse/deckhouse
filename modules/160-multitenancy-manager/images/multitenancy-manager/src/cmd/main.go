@@ -64,6 +64,7 @@ import (
 	"controller/internal/helm"
 	"controller/internal/jsonpath"
 	"controller/internal/quota"
+	"controller/internal/quota/evaluator"
 	"controller/internal/quota/ledger"
 	"controller/internal/rolebinding"
 	"controller/internal/startup"
@@ -361,6 +362,8 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 			&corev1.ConfigMap{}: {Namespaces: map[string]cache.Config{quota.ConfigNamespace: {}}},
 			&corev1.Secret{}: {Namespaces: map[string]cache.Config{quota.ConfigNamespace: {}},
 				Field: fields.OneTermEqualSelector("metadata.name", quota.LedgerCertsSecretName)},
+			// the ProjectQuota controller sums the load balancers; the Services keep only what it counts by
+			&corev1.Service{}: {Transform: evaluator.TrimService},
 		}},
 		// The grant-violation series (d8_cluster_objects_grant_violated), the project-name pairs
 		// (d8_multitenancy_project_named_like_additional_namespace), the handovers that have not

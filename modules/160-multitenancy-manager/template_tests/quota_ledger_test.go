@@ -17,6 +17,8 @@ limitations under the License.
 package template_tests
 
 import (
+	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/ext"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/tidwall/gjson"
@@ -40,18 +42,29 @@ const (
 var _ = Describe("Module :: multitenancy-manager :: helm template :: quota ledger ::", func() {
 	hec := SetupHelmConfig("")
 
-	It("calls the ledger on the virtual machines only where the virtualization module is enabled", func() {
+	It("calls the ledger on the load balancers, and on the virtual machines only where the virtualization module is enabled", func() {
 		renderQuota(hec, true)
 		Expect(hec.RenderError).ShouldNot(HaveOccurred())
-		Expect(hec.KubernetesGlobalResource("ValidatingWebhookConfiguration", quotaLedgerWebhook).Field("webhooks").Array()).To(HaveLen(1))
-		Expect(ledgerEnv(hec, "QUOTA_LEDGER_FAMILIES").Exists()).To(BeFalse())
+		webhooks := hec.KubernetesGlobalResource("ValidatingWebhookConfiguration", quotaLedgerWebhook).Field("webhooks").Array()
+		Expect(webhooks).To(HaveLen(2))
+		lb := webhooks[1]
+		Expect(lb.Get("name").String()).To(Equal("quota-lb.multitenancy-manager.deckhouse.io"))
+		Expect(lb.Get("failurePolicy").String()).To(Equal("Fail"))
+		Expect(lb.Get("rules.0.resources").String()).To(MatchJSON(`["services"]`))
+		Expect(lb.Get("rules.0.operations").String()).To(MatchJSON(`["CREATE","UPDATE"]`))
+		Expect(lb.Get("namespaceSelector").String()).To(MatchJSON(`{"matchLabels":{"quota.projects.deckhouse.io/lb":"enforced"}}`))
+		Expect(lb.Get("matchConditions.0.expression").String()).To(ContainSubstring(`object.spec.type == "LoadBalancer"`))
+		Expect(lb.Get("clientConfig.service.path").String()).To(Equal("/validate/quota-lb"))
+		Expect(ledgerEnv(hec, "QUOTA_LEDGER_FAMILIES").Get("value").String()).To(Equal("lb"))
+		// the controller reads the same families: the keys of a disabled family count nothing
+		Expect(hec.KubernetesResource("ConfigMap", quotaLedgerNamespace, "quota-ledger-config").Field("data.families").String()).To(Equal("lb"))
 
 		hec.ValuesSet("global.enabledModules", []string{"vertical-pod-autoscaler", "control-plane-manager", "virtualization"})
 		hec.HelmRender(WithAPIVersions("admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy", "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding"))
 		Expect(hec.RenderError).ShouldNot(HaveOccurred())
-		webhooks := hec.KubernetesGlobalResource("ValidatingWebhookConfiguration", quotaLedgerWebhook).Field("webhooks").Array()
-		Expect(webhooks).To(HaveLen(2))
-		vm := webhooks[1]
+		webhooks = hec.KubernetesGlobalResource("ValidatingWebhookConfiguration", quotaLedgerWebhook).Field("webhooks").Array()
+		Expect(webhooks).To(HaveLen(3))
+		vm := webhooks[2]
 		Expect(vm.Get("name").String()).To(Equal("quota-vm.multitenancy-manager.deckhouse.io"))
 		Expect(vm.Get("failurePolicy").String()).To(Equal("Fail"))
 		Expect(vm.Get("rules.0.apiGroups").String()).To(MatchJSON(`["virtualization.deckhouse.io"]`))
@@ -59,7 +72,8 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: quota ledge
 		Expect(vm.Get("rules.0.operations").String()).To(MatchJSON(`["CREATE","UPDATE"]`))
 		Expect(vm.Get("namespaceSelector").String()).To(MatchJSON(`{"matchLabels":{"quota.projects.deckhouse.io/vm":"enforced"}}`))
 		Expect(vm.Get("clientConfig.service.path").String()).To(Equal("/validate/quota-vm"))
-		Expect(ledgerEnv(hec, "QUOTA_LEDGER_FAMILIES").Get("value").String()).To(Equal("vm"))
+		Expect(ledgerEnv(hec, "QUOTA_LEDGER_FAMILIES").Get("value").String()).To(Equal("lb,vm"))
+		Expect(hec.KubernetesResource("ConfigMap", quotaLedgerNamespace, "quota-ledger-config").Field("data.families").String()).To(Equal("lb,vm"))
 	})
 
 	Context("on a control plane Deckhouse manages", func() {
@@ -137,7 +151,7 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: quota ledge
 					listed = append(listed, resource.String())
 				}
 			}
-			Expect(listed).To(ContainElements("resourcequotas", "namespaces", "projectquotas", "virtualmachines"))
+			Expect(listed).To(ContainElements("resourcequotas", "namespaces", "projectquotas", "virtualmachines", "services", "metalloadbalancerclasses"))
 		})
 
 		It("lets only the ledger, Deckhouse and kube-system write the route and the lease of the ledger", func() {
@@ -222,3 +236,54 @@ func ledgerEnv(hec *Config, name string) gjson.Result {
 	}
 	return gjson.Result{}
 }
+
+// webhookCondition evaluates a match condition of a webhook the way the API server binds it.
+func webhookCondition(expression string, operation string, object, oldObject map[string]any) bool {
+	env, err := cel.NewEnv(ext.Strings(), cel.Variable("object", cel.DynType), cel.Variable("oldObject", cel.DynType), cel.Variable("request", cel.DynType))
+	Expect(err).ShouldNot(HaveOccurred())
+	ast, issues := env.Compile(expression)
+	Expect(issues.Err()).ShouldNot(HaveOccurred(), expression)
+	program, err := env.Program(ast)
+	Expect(err).ShouldNot(HaveOccurred())
+	var old any
+	if oldObject != nil {
+		old = oldObject
+	}
+	out, _, err := program.Eval(map[string]any{"object": object, "oldObject": old, "request": map[string]any{"operation": operation}})
+	Expect(err).ShouldNot(HaveOccurred(), expression)
+	return out.Value() == true
+}
+
+var _ = Describe("Module :: multitenancy-manager :: helm template :: quota ledger :: object webhooks ::", func() {
+	hec := SetupHelmConfig("")
+
+	It("calls the ledger only on a change the quota counts", func() {
+		hec.ValuesSet("global.enabledModules", []string{"vertical-pod-autoscaler", "control-plane-manager", "virtualization"})
+		renderQuota(hec, true)
+		hec.ValuesSet("global.enabledModules", []string{"vertical-pod-autoscaler", "control-plane-manager", "virtualization"})
+		hec.HelmRender(WithAPIVersions("admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy", "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding"))
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+		webhooks := hec.KubernetesGlobalResource("ValidatingWebhookConfiguration", quotaLedgerWebhook).Field("webhooks").Array()
+		Expect(webhooks).To(HaveLen(3))
+
+		lb := webhooks[1].Get("matchConditions.1.expression").String()
+		svc := func(annotations map[string]any, finalizers ...any) map[string]any {
+			return map[string]any{"metadata": map[string]any{"annotations": annotations, "finalizers": finalizers},
+				"spec": map[string]any{"type": "LoadBalancer", "ports": []any{map[string]any{"port": int64(80)}}}}
+		}
+		base := map[string]any{"network.deckhouse.io/load-balancer-ips": "10.0.0.1"}
+		Expect(webhookCondition(lb, "CREATE", svc(base), nil)).To(BeTrue())
+		Expect(webhookCondition(lb, "UPDATE", svc(base, "metallb"), svc(base))).To(BeFalse(), "a finalizer is not counted")
+		Expect(webhookCondition(lb, "UPDATE", svc(map[string]any{"network.deckhouse.io/load-balancer-ips": "10.0.0.1,10.0.0.2"}), svc(base))).To(BeTrue())
+		Expect(webhookCondition(lb, "UPDATE", svc(map[string]any{"network.deckhouse.io/load-balancer-shared-ip-key": "k"}), svc(map[string]any{}))).To(BeFalse(),
+			"a shared address counts per Service, so the key is not counted")
+
+		vm := webhooks[2].Get("matchConditions.0.expression").String()
+		machine := func(cores int64, labels map[string]any) map[string]any {
+			return map[string]any{"metadata": map[string]any{"labels": labels}, "spec": map[string]any{"cpu": map[string]any{"cores": cores}}}
+		}
+		Expect(webhookCondition(vm, "CREATE", machine(2, nil), nil)).To(BeTrue())
+		Expect(webhookCondition(vm, "UPDATE", machine(2, map[string]any{"a": "b"}), machine(2, nil))).To(BeFalse())
+		Expect(webhookCondition(vm, "UPDATE", machine(4, nil), machine(2, nil))).To(BeTrue())
+	})
+})

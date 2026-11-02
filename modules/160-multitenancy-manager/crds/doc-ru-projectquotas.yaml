@@ -34,7 +34,12 @@ spec:
                     `virtualmachines.virtualization.deckhouse.io/memory`,
                     `virtualmachines.virtualization.deckhouse.io/gpus` и
                     `<GPU_CLASS>.gpuclass.virtualization.deckhouse.io/gpus`; эти ключи не считает ни один
-                    ResourceQuota, поэтому в `d8-project-quota` они не попадают.
+                    ResourceQuota, поэтому в `d8-project-quota` они не попадают. Сервисы типа LoadBalancer
+                    ограничиваются по классу, пулу и адресам ключами
+                    `<CLASS>.loadbalancerclass.network.deckhouse.io/services`,
+                    `<CLASS>.loadbalancerclass.network.deckhouse.io/addresses`,
+                    `<POOL>.loadbalancerpool.network.deckhouse.io/addresses` и
+                    `loadbalancers.network.deckhouse.io/addresses`, которые туда тоже не попадают.
 
                     Ключи `resourcequotas`, `count/resourcequotas`, счётчик cluster-wide-ресурса и ресурс с опечаткой
                     отклоняются. Ключ `count/` группы, которую API-сервер ещё не обслуживает, принимается с

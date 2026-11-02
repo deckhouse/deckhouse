@@ -73,6 +73,7 @@ var ManagedNamespaceLabels = []string{
 	// the labels the admission policies and the webhooks of the project quota select namespaces by
 	"projects.deckhouse.io/quota",
 	"quota.projects.deckhouse.io/vm",
+	"quota.projects.deckhouse.io/lb",
 	"multitenancy.deckhouse.io/project-managed-by-namespace",
 	"security.deckhouse.io/pod-policy",
 	"extended-monitoring.deckhouse.io/enabled",

@@ -186,13 +186,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		slices.Sort(notCounted)
 	}
 	vm.count = vm.label && len(notCounted) == 0 && !slices.ContainsFunc(notServed, func(key string) bool { return evaluator.IsVMKey(corev1.ResourceName(key)) })
+	lb := familyPlan{label: len(quota.LBHard(hard)) > 0}
+	lb.count = lb.label
+	var balancers evaluator.LoadBalancer
+	if lb.count {
+		balancers = r.loadBalancerClasses(ctx)
+	}
 
 	// a namespace whose quota could not be set up is reported in the status before the error is
 	// returned, so the status does not claim a quota that is not there
 	var namespaces []quota.Namespace
 	var namespacesErr error
 	if projectFound {
-		namespaces, namespacesErr = r.reconcileNamespaces(ctx, pq, rqHard, vm)
+		namespaces, namespacesErr = r.reconcileNamespaces(ctx, pq, rqHard, families{vm: vm, lb: lb, balancers: balancers})
 		if namespaces == nil && namespacesErr != nil {
 			return reconcile.Result{}, namespacesErr
 		}
@@ -279,7 +285,7 @@ func (r *Reconciler) ensureOwner(ctx context.Context, pq *v1alpha1.ProjectQuota,
 // returns what it found in each. A namespace that is going is not counted: it loses the label. A
 // namespace that fails is returned with its error, the others are still reconciled, and the errors
 // are joined.
-func (r *Reconciler) reconcileNamespaces(ctx context.Context, pq *v1alpha1.ProjectQuota, rqHard corev1.ResourceList, vm familyPlan) ([]quota.Namespace, error) {
+func (r *Reconciler) reconcileNamespaces(ctx context.Context, pq *v1alpha1.ProjectQuota, rqHard corev1.ResourceList, plan families) ([]quota.Namespace, error) {
 	list := new(corev1.NamespaceList)
 	if err := r.List(ctx, list, client.MatchingLabels{v1alpha3.ResourceLabelProject: pq.Name}); err != nil {
 		return nil, fmt.Errorf("list the namespaces of the project: %w", err)
@@ -299,7 +305,7 @@ func (r *Reconciler) reconcileNamespaces(ctx context.Context, pq *v1alpha1.Proje
 			}
 			continue
 		}
-		found, err := r.reconcileNamespace(ctx, pq, ns, rqHard, vm)
+		found, err := r.reconcileNamespace(ctx, pq, ns, rqHard, plan)
 		if err != nil {
 			errs = append(errs, err)
 			found.Problem = err.Error()
@@ -335,10 +341,17 @@ type familyPlan struct {
 	count bool
 }
 
+// families is what the quota of a project asks of its namespaces for every family of objects.
+type families struct {
+	vm, lb familyPlan
+	// balancers evaluates the load balancers with the default class of the cluster.
+	balancers evaluator.LoadBalancer
+}
+
 // reconcileNamespace keeps the ResourceQuota and the labels of one namespace and finds its usage: the
 // one of the ResourceQuota and the one of the objects of the families.
 func (r *Reconciler) reconcileNamespace(ctx context.Context, pq *v1alpha1.ProjectQuota, ns *corev1.Namespace, rqHard corev1.ResourceList,
-	vm familyPlan,
+	plan families,
 ) (quota.Namespace, error) {
 	found := quota.Namespace{Name: ns.Name}
 	rq, err := r.ensureResourceQuota(ctx, pq, ns, rqHard)
@@ -349,23 +362,33 @@ func (r *Reconciler) reconcileNamespace(ctx context.Context, pq *v1alpha1.Projec
 	}
 	found.Used = rq.Status.Used.DeepCopy()
 	found.Calculated = quota.Calculated(rq, rqHard)
-	// the webhook of the family selects the namespace before it turns enforced: the pending guard holds
-	// the creates until then, and an object made between the two labels would not be checked
-	if err := r.ensureFamilyLabel(ctx, ns, quota.VMLabel, vm.label); err != nil {
+	// the webhooks of the families select the namespace before it turns enforced: the pending guard
+	// holds the creates until then, and an object made between the two labels would not be checked
+	if err := r.ensureFamilyLabel(ctx, ns, quota.VMLabel, plan.vm.label); err != nil {
+		return found, err
+	}
+	if err := r.ensureFamilyLabel(ctx, ns, quota.LBLabel, plan.lb.label); err != nil {
 		return found, err
 	}
 	if found.Labelled, err = r.ensureLabel(ctx, ns, found.Calculated); err != nil {
 		return found, err
 	}
-	if vm.count {
+	if found.Used == nil {
+		found.Used = corev1.ResourceList{}
+	}
+	if plan.vm.count {
 		usage, err := r.virtualMachineUsage(ctx, ns.Name)
 		if err != nil {
 			return found, err
 		}
-		if found.Used == nil {
-			found.Used = corev1.ResourceList{}
-		}
 		maps.Copy(found.Used, usage)
+	}
+	if plan.lb.count {
+		services := new(corev1.ServiceList)
+		if err := r.List(ctx, services, client.InNamespace(ns.Name)); err != nil {
+			return found, fmt.Errorf("list the services of the %s namespace: %w", ns.Name, err)
+		}
+		maps.Copy(found.Used, plan.balancers.SumLoadBalancers(services.Items))
 	}
 	return found, nil
 }
@@ -390,6 +413,18 @@ func (r *Reconciler) ensureFamilyLabel(ctx context.Context, ns *corev1.Namespace
 		return fmt.Errorf("label the %s namespace %s: %w", ns.Name, label, err)
 	}
 	return nil
+}
+
+// loadBalancerClasses is the evaluator of the load balancers with the MetalLoadBalancerClass objects
+// of the cluster, without them when the kind is not served.
+func (r *Reconciler) loadBalancerClasses(ctx context.Context) evaluator.LoadBalancer {
+	classes := new(unstructured.UnstructuredList)
+	classes.SetGroupVersionKind(schema.GroupVersionKind{Group: "network.deckhouse.io", Version: "v1alpha1", Kind: "MetalLoadBalancerClassList"})
+	if err := r.List(ctx, classes); err != nil {
+		return evaluator.LoadBalancer{}
+	}
+	defaultClass, names := evaluator.ClassesOf(classes.Items)
+	return evaluator.LoadBalancer{DefaultClass: defaultClass, Classes: names}
 }
 
 // virtualMachineUsage sums what the virtual machines of a namespace take, by the evaluator the ledger
@@ -507,12 +542,14 @@ func (r *Reconciler) holdNamespace(ctx context.Context, ns *corev1.Namespace) er
 func (r *Reconciler) removeLabel(ctx context.Context, ns *corev1.Namespace) error {
 	_, quotaLabel := ns.Labels[quota.NamespaceLabel]
 	_, vmLabel := ns.Labels[quota.VMLabel]
-	if !quotaLabel && !vmLabel {
+	_, lbLabel := ns.Labels[quota.LBLabel]
+	if !quotaLabel && !vmLabel && !lbLabel {
 		return nil
 	}
 	patch := client.MergeFrom(ns.DeepCopy())
 	delete(ns.Labels, quota.NamespaceLabel)
 	delete(ns.Labels, quota.VMLabel)
+	delete(ns.Labels, quota.LBLabel)
 	if err := r.Patch(ctx, ns, patch); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("unlabel the %s namespace: %w", ns.Name, err)
 	}

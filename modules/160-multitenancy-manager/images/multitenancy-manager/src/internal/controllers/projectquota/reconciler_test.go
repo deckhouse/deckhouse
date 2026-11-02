@@ -862,3 +862,49 @@ func TestReconcileCountsVirtualMachines(t *testing.T) {
 	f.reconcile()
 	assert.NotContains(t, f.namespace(projectName).Labels, quota.VMLabel)
 }
+
+// A quota with keys of load balancers labels the namespaces for the webhook of the family and shows
+// the load balancers in its usage, with the default class of the cluster for a Service without one.
+func TestReconcileCountsLoadBalancers(t *testing.T) {
+	class := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "network.deckhouse.io/v1alpha1", "kind": "MetalLoadBalancerClass",
+		"metadata": map[string]any{"name": "l2-default"}, "spec": map[string]any{"isDefault": true},
+	}}
+	lb := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "web", Namespace: projectName}, Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer}}
+	f := newFixture(t, "true", project(), projectNamespace(projectName, nil), lb, class,
+		projectQuota(rl("pods", "10", "l2-default.loadbalancerclass.network.deckhouse.io/services", "2", "loadbalancers.network.deckhouse.io/addresses", "2")))
+	f.reconcile()
+	f.count(projectName, rl("pods", "0"))
+	f.reconcile()
+
+	assert.Equal(t, quota.LabelEnforced, f.namespace(projectName).Labels[quota.LBLabel])
+	used := f.quota().Status.Used
+	services := used["l2-default.loadbalancerclass.network.deckhouse.io/services"]
+	addresses := used["loadbalancers.network.deckhouse.io/addresses"]
+	assert.Equal(t, int64(1), services.Value())
+	assert.Equal(t, int64(1), addresses.Value())
+}
+
+// A quota with keys of load balancers only gives the ResourceQuota no limits. Its namespaces are
+// enforced at once, or a namespace labelled pending at birth would refuse every object for good.
+func TestReconcileEnforcesAQuotaOfLoadBalancersOnly(t *testing.T) {
+	lb := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "web", Namespace: projectName}, Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer}}
+	f := newFixture(t, "true", project(),
+		projectNamespace(projectName, nil),
+		projectNamespace(projectName+"-db", map[string]string{quota.NamespaceLabel: quota.LabelPending}),
+		lb,
+		projectQuota(rl("default.loadbalancerclass.network.deckhouse.io/services", "2", "loadbalancers.network.deckhouse.io/addresses", "2")))
+	f.reconcile()
+
+	for _, ns := range []string{projectName, projectName + "-db"} {
+		assert.Empty(t, f.resourceQuota(ns).Spec.Hard)
+		labels := f.namespace(ns).Labels
+		assert.Equal(t, quota.LabelEnforced, labels[quota.NamespaceLabel], ns)
+		assert.Equal(t, quota.LabelEnforced, labels[quota.LBLabel], ns)
+	}
+	pq := f.quota()
+	enforced := condition(pq, v1alpha1.ProjectQuotaConditionEnforced)
+	assert.Equal(t, metav1.ConditionTrue, enforced.Status, enforced.Message)
+	addresses := pq.Status.Used["loadbalancers.network.deckhouse.io/addresses"]
+	assert.Equal(t, int64(1), addresses.Value())
+}

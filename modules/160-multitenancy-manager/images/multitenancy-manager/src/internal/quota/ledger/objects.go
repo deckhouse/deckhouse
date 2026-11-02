@@ -34,8 +34,13 @@ import (
 // of a quota, so an approval is pending under the name of the object until the informer shows the
 // version it made.
 
-// FamilyVM is the family of the virtual machines.
-const FamilyVM = "vm"
+// The families of objects.
+const (
+	// FamilyVM is the family of the virtual machines.
+	FamilyVM = "vm"
+	// FamilyLB is the family of the Services of type LoadBalancer.
+	FamilyLB = "lb"
+)
 
 // objectEntry is an object of a family as the ledger knows it.
 type objectEntry struct {
@@ -113,6 +118,14 @@ func (s *State) seeVersionLocked(rv uint64) {
 	}
 }
 
+// KnowsObject reports whether the ledger holds the object.
+func (s *State) KnowsObject(family, namespace, name string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, ok := s.objects[family][objectKey(namespace, name)]
+	return ok
+}
+
 // ObjectUsed returns the usage the informer last showed for the object, and whether the ledger knows
 // the object.
 func (s *State) ObjectUsed(family, namespace, name string) (corev1.ResourceList, bool) {
@@ -123,6 +136,19 @@ func (s *State) ObjectUsed(family, namespace, name string) (corev1.ResourceList,
 		return nil, false
 	}
 	return o.used.DeepCopy(), true
+}
+
+// RefreshObject replaces the usage of an object the informer shows in the same version: what the
+// object takes changed without the object, as the classes of the load balancers do.
+func (s *State) RefreshObject(family, namespace, name string, used corev1.ResourceList) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	o, ok := s.familyLocked(family)[objectKey(namespace, name)]
+	if !ok {
+		return
+	}
+	o.used = used.DeepCopy()
+	s.recomputeObjectLocked(family, o)
 }
 
 // DeleteObject forgets an object the informer shows deleted, and its approval.

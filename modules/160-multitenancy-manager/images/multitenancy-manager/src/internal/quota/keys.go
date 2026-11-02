@@ -177,6 +177,17 @@ func vmAndPodKeys(hard corev1.ResourceList) string {
 		"the keys of pods too, twice while the machine migrates, so the project reaches those limits sooner than its virtual machines say"
 }
 
+// LBHard returns the limits of a canonical quota of the lb family.
+func LBHard(canonical corev1.ResourceList) corev1.ResourceList {
+	out := corev1.ResourceList{}
+	for key, value := range canonical {
+		if evaluator.IsLBKey(key) {
+			out[key] = value.DeepCopy()
+		}
+	}
+	return out
+}
+
 // VMHard returns the limits of a canonical quota of the vm family.
 func VMHard(canonical corev1.ResourceList) corev1.ResourceList {
 	out := corev1.ResourceList{}
@@ -210,6 +221,8 @@ func keyRefusal(key corev1.ResourceName, discovery Discovery) (string, Served, e
 			return "", ServedUnknown, fmt.Errorf("look up the virtual machines: %w", err)
 		}
 		return "", served, nil
+	case evaluator.IsLBKey(key):
+		return "", ServedUnknown, nil
 	case isFutureFamily(name):
 		return "the project quota does not count this family of keys yet", ServedUnknown, nil
 	case slices.Contains(standardKeys, key),

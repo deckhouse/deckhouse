@@ -25,7 +25,8 @@ import (
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"controller/internal/quota/evaluator"
 )
@@ -35,6 +36,8 @@ import (
 type ObjectHandler struct {
 	Family    string
 	Evaluator evaluator.Evaluator
+	// NewObject returns an empty object of the family to read a request into.
+	NewObject func() runtime.Object
 	State     *State
 	Gate      GateFunc
 	Metrics   *Metrics
@@ -108,12 +111,14 @@ func (h *ObjectHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // inputOf reads the write from the request: the usage of the object and of the object it replaces.
 func (h *ObjectHandler) inputOf(req *admissionv1.AdmissionRequest) (ObjectInput, error) {
 	in := ObjectInput{Family: h.Family, Namespace: req.Namespace, Name: req.Name, DryRun: req.DryRun != nil && *req.DryRun}
-	written := new(unstructured.Unstructured)
-	if err := json.Unmarshal(req.Object.Raw, &written.Object); err != nil {
+	written := h.NewObject()
+	if err := json.Unmarshal(req.Object.Raw, written); err != nil {
 		return in, fmt.Errorf("read the object: %w", err)
 	}
 	if in.Name == "" {
-		in.Name = written.GetName()
+		if accessor, err := meta.Accessor(written); err == nil {
+			in.Name = accessor.GetName()
+		}
 	}
 	var err error
 	if in.NewUsed, err = h.Evaluator.Usage(written); err != nil {
@@ -123,11 +128,13 @@ func (h *ObjectHandler) inputOf(req *admissionv1.AdmissionRequest) (ObjectInput,
 		in.OldUsed = corev1.ResourceList{}
 		return in, nil
 	}
-	old := new(unstructured.Unstructured)
-	if err := json.Unmarshal(req.OldObject.Raw, &old.Object); err != nil {
+	old := h.NewObject()
+	if err := json.Unmarshal(req.OldObject.Raw, old); err != nil {
 		return in, fmt.Errorf("read the old object: %w", err)
 	}
-	in.OldRV = ParseResourceVersion(old.GetResourceVersion())
+	if accessor, err := meta.Accessor(old); err == nil {
+		in.OldRV = ParseResourceVersion(accessor.GetResourceVersion())
+	}
 	// An old object that does not evaluate is taken as using nothing, so that a write that fixes it
 	// is judged by what it puts instead of refused.
 	if in.OldUsed, err = h.Evaluator.Usage(old); err != nil {

@@ -46,6 +46,8 @@ const (
 	// VMLabel marks a namespace of a project whose quota has keys of the vm family: the webhook of the
 	// family is called there. Its value is LabelEnforced.
 	VMLabel = "quota.projects.deckhouse.io/vm"
+	// LBLabel marks a namespace of a project whose quota has keys of the lb family.
+	LBLabel = "quota.projects.deckhouse.io/lb"
 
 	// ConfigMapName is the ConfigMap Helm renders with the facts of the cluster the quota depends on.
 	ConfigMapName = "quota-ledger-config"

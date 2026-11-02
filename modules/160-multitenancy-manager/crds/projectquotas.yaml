@@ -74,7 +74,11 @@ spec:
                     `virtualmachines.virtualization.deckhouse.io/memory`,
                     `virtualmachines.virtualization.deckhouse.io/gpus` and
                     `<GPU_CLASS>.gpuclass.virtualization.deckhouse.io/gpus`; no ResourceQuota counts these keys, so
-                    they do not go into `d8-project-quota`.
+                    they do not go into `d8-project-quota`. The Services of type LoadBalancer are limited by class,
+                    pool and address with `<CLASS>.loadbalancerclass.network.deckhouse.io/services`,
+                    `<CLASS>.loadbalancerclass.network.deckhouse.io/addresses`,
+                    `<POOL>.loadbalancerpool.network.deckhouse.io/addresses` and
+                    `loadbalancers.network.deckhouse.io/addresses`, which do not go into it either.
 
                     `resourcequotas`, `count/resourcequotas`, the count of a cluster-scoped resource and a misspelled
                     resource are refused. A `count/` key of a group the API server does not serve yet is accepted with a

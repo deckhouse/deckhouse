@@ -5,7 +5,7 @@
 
 {{- /* The families of objects the quota ledger counts besides the ResourceQuota objects: the ones whose module is enabled, comma-separated. */ -}}
 {{- define "multitenancy_manager_quota_ledger_families" -}}
-{{- $families := list -}}
+{{- $families := list "lb" -}}
 {{- if has "virtualization" .Values.global.enabledModules -}}
 {{- $families = append $families "vm" -}}
 {{- end -}}

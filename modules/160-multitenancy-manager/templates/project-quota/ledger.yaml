@@ -85,6 +85,44 @@ webhooks:
         namespace: d8-multitenancy-manager
         port: 443
         path: /validate/quota-ledger
+  # The load balancers of the projects whose quota limits them by class, by pool or by address: no
+  # ResourceQuota counts these keys, so the ledger answers on the Service itself, when it is or was of
+  # type LoadBalancer, in the namespaces the controller labels for the family.
+  - name: quota-lb.multitenancy-manager.deckhouse.io
+    rules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["services"]
+        operations: ["CREATE", "UPDATE"]
+        scope: Namespaced
+    namespaceSelector:
+      matchLabels:
+        quota.projects.deckhouse.io/lb: enforced
+    # Only a create, or a change of what the quota counts: the spec or the annotations the class, the
+    # addresses and the pool of a load balancer come from. A controller that writes the metadata of a
+    # Service is not held by a ledger that does not answer.
+    {{- $annotations := list "network.deckhouse.io/metal-load-balancer-class" "network.deckhouse.io/l2-load-balancer-external-ips-count" "network.deckhouse.io/load-balancer-ips" "network.deckhouse.io/load-balancer-pool" }}
+    {{- $changed := list }}
+    {{- range $annotations }}
+    {{- $changed = append $changed (printf "(has(object.metadata.annotations) && \"%s\" in object.metadata.annotations ? object.metadata.annotations[\"%s\"] : \"\") != (has(oldObject.metadata.annotations) && \"%s\" in oldObject.metadata.annotations ? oldObject.metadata.annotations[\"%s\"] : \"\")" . . . .) }}
+    {{- end }}
+    matchConditions:
+      - name: a-load-balancer
+        expression: 'object.spec.type == "LoadBalancer" || (oldObject != null && oldObject.spec.type == "LoadBalancer")'
+      - name: a-change-the-quota-counts
+        expression: {{ printf "request.operation == \"CREATE\" || object.spec != oldObject.spec || %s" (join " || " $changed) | squote }}
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    sideEffects: None
+    timeoutSeconds: {{ include "multitenancy_manager_quota_ledger_webhook_timeout" . }}
+    admissionReviewVersions: ["v1"]
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.quotaLedgerCert.ca | default "" | b64enc }}
+      service:
+        name: multitenancy-manager-quota-ledger
+        namespace: d8-multitenancy-manager
+        port: 443
+        path: /validate/quota-lb
   {{- if has "vm" (splitList "," (include "multitenancy_manager_quota_ledger_families" .)) }}
   # The virtual machines of the projects whose quota limits them by their specification: no
   # ResourceQuota counts these keys, so the ledger answers on the VirtualMachine itself, in the namespaces
@@ -193,5 +231,14 @@ spec:
           resources: ["virtualmachines"]
           clusterScope: true
           namespaces: ["*"]
+          verbs: ["get", "list", "watch"]
+        - apiGroups: [""]
+          resources: ["services"]
+          clusterScope: true
+          namespaces: ["*"]
+          verbs: ["get", "list", "watch"]
+        - apiGroups: ["network.deckhouse.io"]
+          resources: ["metalloadbalancerclasses"]
+          clusterScope: true
           verbs: ["get", "list", "watch"]
 {{- end }}

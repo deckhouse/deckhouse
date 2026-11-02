@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -100,11 +101,18 @@ type Options struct {
 // virtualMachineGVK is the kind the vm family counts.
 var virtualMachineGVK = schema.GroupVersionKind{Group: "virtualization.deckhouse.io", Version: "v1alpha2", Kind: "VirtualMachine"}
 
-// served reports whether the API server serves the resource of the kind.
+// served reports whether the API server serves the resource of the kind; an error counts as not
+// served.
 func served(config *rest.Config, gvk schema.GroupVersionKind, resource string) bool {
+	isServed, err := lookupServed(config, gvk, resource)
+	return err == nil && isServed
+}
+
+// lookupServed reports whether the API server serves the resource of the kind, or why it cannot tell.
+func lookupServed(config *rest.Config, gvk schema.GroupVersionKind, resource string) (bool, error) {
 	client, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
-		return false
+		return false, fmt.Errorf("create the discovery client: %w", err)
 	}
 	// a failed call is tried again, so that one error does not drop a family until the next check
 	var resources *metav1.APIResourceList
@@ -116,16 +124,25 @@ func served(config *rest.Config, gvk schema.GroupVersionKind, resource string) b
 			time.Sleep(time.Second)
 		}
 	}
-	if err != nil {
-		return false
+	switch {
+	case apierrors.IsNotFound(err):
+		return false, nil
+	case err != nil:
+		return false, fmt.Errorf("discover %s: %w", gvk.GroupVersion(), err)
 	}
 	for _, r := range resources.APIResources {
 		if r.Name == resource {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
+
+// metalLoadBalancerClassGVK is the kind the default class of the load balancers comes from.
+var metalLoadBalancerClassGVK = schema.GroupVersionKind{Group: "network.deckhouse.io", Version: "v1alpha1", Kind: "MetalLoadBalancerClass"}
+
+// countsLoadBalancers reports whether the ledger counts the lb family.
+func (o Options) countsLoadBalancers() bool { return slices.Contains(o.Families, FamilyLB) }
 
 // countsVirtualMachines reports whether the ledger counts the vm family.
 func (o Options) countsVirtualMachines() bool { return slices.Contains(o.Families, FamilyVM) }
@@ -178,10 +195,17 @@ type runner struct {
 	stopping  atomic.Bool
 	ready     atomic.Bool
 	suspended atomic.Bool
+	// watchClasses tells that the MetalLoadBalancerClass objects are served and watched, and
+	// lbClasses holds the evaluator of the load balancers with the classes the ledger sees now.
+	watchClasses atomic.Bool
+	lbClasses    atomic.Pointer[evaluator.LoadBalancer]
 	// awaitsVirtualMachines tells that the ledger is to count the virtual machines but they were not
 	// served when it started.
 	awaitsVirtualMachines bool
-	lastTick              atomic.Int64
+	// lbMu serializes the handlers of the Services and of the classes, so that a Service is never
+	// recorded with classes older than the ones a refresh of all the Services already applied.
+	lbMu     sync.Mutex
+	lastTick atomic.Int64
 
 	nonces  *Nonces
 	canary  *Canary
@@ -233,16 +257,27 @@ func Run(ctx context.Context, opts Options) error {
 	// A quorum list of a resource that is not served would fail and keep the ledger from answering
 	// at all. The ledger starts without the family and restarts once the resource is served: the
 	// module that provides it may come up after this one.
-	waitForVM := opts.countsVirtualMachines() && !served(opts.Config, virtualMachineGVK, "virtualmachines")
-	r.awaitsVirtualMachines = waitForVM
-	if waitForVM {
+	// The MetalLoadBalancerClass objects the lb family takes the classes from are followed while the
+	// ledger runs instead (followClasses): they are not in the quorum list, and a restart of both
+	// replicas at once would leave the webhook without a leader for a moment.
+	type kind struct {
+		gvk      schema.GroupVersionKind
+		resource string
+	}
+	var waitFor []kind
+	r.awaitsVirtualMachines = opts.countsVirtualMachines() && !served(opts.Config, virtualMachineGVK, "virtualmachines")
+	if r.awaitsVirtualMachines {
 		opts.Logger.Info("the virtual machines are not served yet; the ledger restarts to count them once they are")
 		opts.Families = slices.DeleteFunc(slices.Clone(opts.Families), func(family string) bool { return family == FamilyVM })
-		r.opts = opts
+		waitFor = append(waitFor, kind{virtualMachineGVK, "virtualmachines"})
 	}
+	if opts.countsLoadBalancers() {
+		r.watchClasses.Store(served(opts.Config, metalLoadBalancerClassGVK, "metalloadbalancerclasses"))
+	}
+	r.opts = opts
 	ctx, restart := context.WithCancelCause(ctx)
 	defer restart(nil)
-	if waitForVM {
+	if len(waitFor) > 0 {
 		go func() {
 			ticker := time.NewTicker(servedCheckEvery)
 			defer ticker.Stop()
@@ -252,9 +287,11 @@ func Run(ctx context.Context, opts Options) error {
 					return
 				case <-ticker.C:
 				}
-				if served(opts.Config, virtualMachineGVK, "virtualmachines") {
-					restart(errFamilyServed)
-					return
+				for _, k := range waitFor {
+					if served(opts.Config, k.gvk, k.resource) {
+						restart(errFamilyServed)
+						return
+					}
 				}
 			}
 		}()
@@ -296,6 +333,10 @@ func Run(ctx context.Context, opts Options) error {
 	}()
 	if !r.cache.WaitForCacheSync(ctx) {
 		return errors.New("the informers of the ledger did not sync")
+	}
+	r.loadClasses(ctx)
+	if opts.countsLoadBalancers() {
+		go r.followClasses(ctx)
 	}
 
 	r.ready.Store(true)
@@ -369,7 +410,7 @@ func Run(ctx context.Context, opts Options) error {
 }
 
 // errFamilyServed restarts the ledger: a family it waited for is served now.
-var errFamilyServed = errors.New("restart to count the virtual machines, which the API server serves now")
+var errFamilyServed = errors.New("restart to count the objects of a family, which the API server serves now")
 
 // servedCheckEvery is how often a ledger that waits for a family checks whether it is served.
 const servedCheckEvery = 30 * time.Second
@@ -394,6 +435,8 @@ func newCache(config *rest.Config, scheme *runtime.Scheme, countsVirtualMachines
 				Namespaces: map[string]cache.Config{Namespace: {}},
 				Field:      fields.OneTermEqualSelector("metadata.name", SuspendConfigMap),
 			},
+			// every Service of the cluster, with only what the lb family counts it by
+			&corev1.Service{}: {Transform: evaluator.TrimService},
 		},
 		DefaultTransform: cache.TransformStripManagedFields(),
 	}
@@ -447,6 +490,18 @@ func (r *runner) watch(ctx context.Context) error {
 			},
 		},
 	}
+	if r.opts.countsLoadBalancers() {
+		handlers[&corev1.Service{}] = toolscache.ResourceEventHandlerFuncs{
+			AddFunc:    func(obj any) { r.onService(obj) },
+			UpdateFunc: func(_, obj any) { r.onService(obj) },
+			DeleteFunc: func(obj any) {
+				if svc, ok := unwrap(obj).(*corev1.Service); ok {
+					r.state.DeleteObject(FamilyLB, svc.Namespace, svc.Name)
+					r.deleted.record(svc)
+				}
+			},
+		}
+	}
 	if r.opts.countsVirtualMachines() {
 		handlers[newVirtualMachine()] = toolscache.ResourceEventHandlerFuncs{
 			AddFunc:    func(obj any) { r.onVirtualMachine(obj) },
@@ -467,6 +522,81 @@ func (r *runner) watch(ctx context.Context) error {
 		if _, err := informer.AddEventHandler(funcs); err != nil {
 			return fmt.Errorf("watch %T: %w", object, err)
 		}
+	}
+	if r.watchClasses.Load() {
+		return r.watchClassObjects(ctx)
+	}
+	return nil
+}
+
+func newLoadBalancerClass() *unstructured.Unstructured {
+	class := new(unstructured.Unstructured)
+	class.SetGroupVersionKind(metalLoadBalancerClassGVK)
+	return class
+}
+
+// watchClassObjects feeds the events of the MetalLoadBalancerClass objects into the classes of the
+// load balancers. On a started cache it returns once the informer has synced.
+func (r *runner) watchClassObjects(ctx context.Context) error {
+	informer, err := r.cache.GetInformer(ctx, newLoadBalancerClass())
+	if err != nil {
+		return fmt.Errorf("get the informer of the load balancer classes: %w", err)
+	}
+	if _, err := informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+		AddFunc:    func(any) { r.onLoadBalancerClass(ctx) },
+		UpdateFunc: func(_, _ any) { r.onLoadBalancerClass(ctx) },
+		DeleteFunc: func(any) { r.onLoadBalancerClass(ctx) },
+	}); err != nil {
+		return fmt.Errorf("watch the load balancer classes: %w", err)
+	}
+	return nil
+}
+
+// followClasses keeps the classes of the load balancers in step with whether the API server serves
+// their kind: the metallb module may be enabled or disabled while the ledger runs. When the kind
+// comes, the ledger starts to watch it and evaluates the load balancers with the classes; when it
+// goes, the ledger stops and evaluates them as where the kind was never served.
+func (r *runner) followClasses(ctx context.Context) {
+	ticker := time.NewTicker(servedCheckEvery)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+		isServed, err := lookupServed(r.opts.Config, metalLoadBalancerClassGVK, "metalloadbalancerclasses")
+		if err != nil {
+			r.log.Error(err, "check whether the load balancer classes are served")
+			continue
+		}
+		if err := r.setClassesServed(ctx, isServed); err != nil {
+			r.log.Error(err, "follow the load balancer classes")
+		}
+	}
+}
+
+// setClassesServed starts or stops watching the load balancer classes when whether their kind is
+// served changed.
+func (r *runner) setClassesServed(ctx context.Context, isServed bool) error {
+	switch {
+	case isServed && !r.watchClasses.Load():
+		if err := r.watchClassObjects(ctx); err != nil {
+			return err
+		}
+		r.watchClasses.Store(true)
+		r.onLoadBalancerClass(ctx)
+		r.log.Info("the load balancer classes are served now; the load balancers are counted under them")
+	case !isServed && r.watchClasses.Load():
+		r.watchClasses.Store(false)
+		if err := r.cache.RemoveInformer(ctx, newLoadBalancerClass()); err != nil {
+			r.log.Error(err, "stop the informer of the load balancer classes")
+		}
+		r.lbMu.Lock()
+		defer r.lbMu.Unlock()
+		r.lbClasses.Store(&evaluator.LoadBalancer{})
+		r.refreshLoadBalancers(ctx)
+		r.log.Info("the load balancer classes are not served any more; the load balancers are counted by the classes they name")
 	}
 	return nil
 }
@@ -489,6 +619,130 @@ func (r *runner) onQuota(obj any) {
 		if confirmed := r.state.SetQuota(rq); confirmed > 0 {
 			r.metrics.PendingResolved.WithLabelValues("confirmed").Add(float64(confirmed))
 		}
+	}
+}
+
+// routes are the webhooks the ledger answers.
+func (r *runner) routes() *http.ServeMux {
+	handler := &Handler{State: r.state, Gate: r.gate, Metrics: r.metrics, Nonces: r.nonces, Suspended: r.suspended.Load}
+	mux := http.NewServeMux()
+	mux.Handle("/validate/quota-ledger", handler)
+	if r.opts.countsLoadBalancers() {
+		mux.Handle("/validate/quota-lb", &ObjectHandler{Family: FamilyLB, Evaluator: liveLoadBalancer{r}, NewObject: func() runtime.Object { return new(corev1.Service) },
+			State: r.state, Gate: r.gate, Metrics: r.metrics, Suspended: r.suspended.Load, Sources: &Handler{}})
+	}
+	// The webhook of the virtual machines is there as soon as the module that serves them is enabled,
+	// before the ledger counts them: until it does, it answers that it cannot count them yet rather than
+	// with a missing path.
+	if r.opts.countsVirtualMachines() || r.awaitsVirtualMachines {
+		gate := r.gate
+		if r.awaitsVirtualMachines {
+			gate = func() (string, string) { return ResultSyncing, "the virtual machines are not counted yet" }
+		}
+		mux.Handle("/validate/quota-vm", &ObjectHandler{Family: FamilyVM, Evaluator: evaluator.VirtualMachine{},
+			NewObject: func() runtime.Object { return new(unstructured.Unstructured) }, State: r.state, Gate: gate,
+			Metrics: r.metrics, Suspended: r.suspended.Load, Sources: &Handler{}})
+	}
+	return mux
+}
+
+// liveLoadBalancer is the evaluator of the lb family with the default class the ledger sees now.
+type liveLoadBalancer struct{ r *runner }
+
+func (l liveLoadBalancer) Family() string { return FamilyLB }
+
+func (l liveLoadBalancer) Usage(object runtime.Object) (corev1.ResourceList, error) {
+	return l.r.loadBalancers().Usage(object)
+}
+
+func (r *runner) loadBalancers() evaluator.LoadBalancer {
+	if lb := r.lbClasses.Load(); lb != nil {
+		return *lb
+	}
+	return evaluator.LoadBalancer{}
+}
+
+// onService records what a Service takes. A Service that is not a load balancer and that the ledger
+// does not know is not recorded at all. A load balancer is recorded even when its usage cannot be
+// read, as using nothing: catch-up waits for an entry of every load balancer it lists, and one
+// Service with a bad annotation must not keep the ledger from syncing.
+func (r *runner) onService(obj any) {
+	svc, ok := unwrap(obj).(*corev1.Service)
+	if !ok {
+		return
+	}
+	r.lbMu.Lock()
+	defer r.lbMu.Unlock()
+	lb := r.loadBalancers()
+	usage, err := lb.Usage(svc)
+	if err != nil {
+		r.log.Error(err, "evaluate a load balancer", "namespace", svc.Namespace, "name", svc.Name)
+		usage = corev1.ResourceList{}
+	}
+	if svc.Spec.Type != corev1.ServiceTypeLoadBalancer && len(usage) == 0 && !r.state.KnowsObject(FamilyLB, svc.Namespace, svc.Name) {
+		return
+	}
+	r.state.SetObject(FamilyLB, svc.Namespace, svc.Name, ParseResourceVersion(svc.ResourceVersion), usage)
+}
+
+// loadClasses takes the classes of the load balancers once the informers synced. Where the kind is
+// served the ledger holds a list of them from then on, an empty one too: no event comes for a cluster
+// without a MetalLoadBalancerClass, and without a list a named class would be counted as it is.
+func (r *runner) loadClasses(ctx context.Context) {
+	if r.watchClasses.Load() {
+		r.onLoadBalancerClass(ctx)
+	}
+}
+
+// onLoadBalancerClass takes the classes of the load balancers anew and, when they changed, evaluates
+// the load balancers again: a Service without a class, or with one that does not exist, takes the
+// default one.
+func (r *runner) onLoadBalancerClass(ctx context.Context) {
+	// an event that comes after the kind went away must not start its informer again
+	if !r.watchClasses.Load() {
+		return
+	}
+	classes := new(unstructured.UnstructuredList)
+	classes.SetGroupVersionKind(metalLoadBalancerClassGVK.GroupVersion().WithKind(metalLoadBalancerClassGVK.Kind + "List"))
+	if err := r.cache.List(ctx, classes); err != nil {
+		r.log.Error(err, "list the load balancer classes")
+		return
+	}
+	defaultClass, names := evaluator.ClassesOf(classes.Items)
+	r.lbMu.Lock()
+	defer r.lbMu.Unlock()
+	// the kind may have gone while the classes were listed; setClassesServed drops them under lbMu
+	if !r.watchClasses.Load() {
+		return
+	}
+	// a list of no classes differs from no list at all, which the kind that is not served leaves
+	previous := r.lbClasses.Load()
+	if previous != nil && previous.Classes != nil && previous.DefaultClass == defaultClass && maps.Equal(previous.Classes, names) {
+		return
+	}
+	r.lbClasses.Store(&evaluator.LoadBalancer{DefaultClass: defaultClass, Classes: names})
+	r.refreshLoadBalancers(ctx)
+}
+
+// refreshLoadBalancers evaluates every load balancer again with the classes the ledger holds now. The
+// caller holds lbMu.
+func (r *runner) refreshLoadBalancers(ctx context.Context) {
+	services := new(corev1.ServiceList)
+	if err := r.cache.List(ctx, services); err != nil {
+		r.log.Error(err, "list the load balancers")
+		return
+	}
+	lb := r.loadBalancers()
+	for i := range services.Items {
+		svc := &services.Items[i]
+		if svc.Spec.Type != corev1.ServiceTypeLoadBalancer {
+			continue
+		}
+		usage, err := lb.Usage(svc)
+		if err != nil {
+			continue
+		}
+		r.state.RefreshObject(FamilyLB, svc.Namespace, svc.Name, usage)
 	}
 }
 
@@ -958,25 +1212,6 @@ func (r *runner) resolve(ctx context.Context, before time.Time, settle bool) {
 	}
 }
 
-// routes are the webhooks the ledger answers.
-func (r *runner) routes() *http.ServeMux {
-	handler := &Handler{State: r.state, Gate: r.gate, Metrics: r.metrics, Nonces: r.nonces, Suspended: r.suspended.Load}
-	mux := http.NewServeMux()
-	mux.Handle("/validate/quota-ledger", handler)
-	// The webhook of the virtual machines is there as soon as the module that serves them is enabled,
-	// before the ledger counts them: until it does, it answers that it cannot count them yet rather than
-	// with a missing path.
-	if r.opts.countsVirtualMachines() || r.awaitsVirtualMachines {
-		gate := r.gate
-		if r.awaitsVirtualMachines {
-			gate = func() (string, string) { return ResultSyncing, "the virtual machines are not counted yet" }
-		}
-		mux.Handle("/validate/quota-vm", &ObjectHandler{Family: FamilyVM, Evaluator: evaluator.VirtualMachine{}, State: r.state, Gate: gate,
-			Metrics: r.metrics, Suspended: r.suspended.Load, Sources: &Handler{}})
-	}
-	return mux
-}
-
 // resolveObjects settles the approvals of objects older than the time with a quorum read of the
 // object: the write did not go in, or the informer is late. Without settle only the approvals the
 // read shows written are settled.
@@ -987,6 +1222,10 @@ func (r *runner) resolveObjects(ctx context.Context, before time.Time, settle bo
 		before = time.Time{}
 	}
 	for _, aged := range aged {
+		if aged.Family == FamilyLB {
+			r.resolveService(ctx, aged, before)
+			continue
+		}
 		if aged.Family != FamilyVM {
 			continue
 		}
@@ -1007,6 +1246,29 @@ func (r *runner) resolveObjects(ctx context.Context, before time.Time, settle bo
 		r.state.ResolveObject(aged.Family, aged.Namespace, aged.Name, before, true, ParseResourceVersion(vm.GetResourceVersion()), usage)
 		r.metrics.PendingResolved.WithLabelValues("object").Inc()
 	}
+}
+
+// resolveService settles the approvals of a Service with a quorum read.
+func (r *runner) resolveService(ctx context.Context, aged AgedObject, before time.Time) {
+	svc := new(corev1.Service)
+	err := r.reader.Get(ctx, client.ObjectKey{Namespace: aged.Namespace, Name: aged.Name}, svc)
+	switch {
+	case apierrors.IsNotFound(err):
+		r.state.ResolveObject(aged.Family, aged.Namespace, aged.Name, before, false, 0, nil)
+		return
+	case err != nil:
+		r.log.Error(err, "read the object of a pending approval", "namespace", aged.Namespace, "name", aged.Name)
+		return
+	}
+	r.lbMu.Lock()
+	defer r.lbMu.Unlock()
+	lb := r.loadBalancers()
+	usage, err := lb.Usage(svc)
+	if err != nil {
+		usage = corev1.ResourceList{}
+	}
+	r.state.ResolveObject(aged.Family, aged.Namespace, aged.Name, before, true, ParseResourceVersion(svc.ResourceVersion), usage)
+	r.metrics.PendingResolved.WithLabelValues("object").Inc()
 }
 
 // catchUp takes a quorum list of what the ledger watches and waits until the informers and the state
@@ -1061,6 +1323,13 @@ func (r *runner) quorumLists(ctx context.Context) ([]quorumList, error) {
 		{&corev1.ResourceQuotaList{}, &corev1.ResourceQuotaList{}, []client.ListOption{client.MatchingFields{"metadata.name": v1alpha3.ProjectQuotaName}}},
 		{&corev1.NamespaceList{}, &corev1.NamespaceList{}, []client.ListOption{client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(*inProject)}}},
 		{&v1alpha1.ProjectQuotaList{}, &v1alpha1.ProjectQuotaList{}, nil},
+	}
+	if r.opts.countsLoadBalancers() {
+		kinds = append(kinds, struct {
+			list    client.ObjectList
+			cached  client.ObjectList
+			options []client.ListOption
+		}{&corev1.ServiceList{}, &corev1.ServiceList{}, nil})
 	}
 	if r.opts.countsVirtualMachines() {
 		kinds = append(kinds, struct {
