@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/restmapper"
@@ -57,6 +58,7 @@ import (
 	"controller/internal/helm"
 	"controller/internal/jsonpath"
 	"controller/internal/quota"
+	"controller/internal/quota/ledger"
 	"controller/internal/rolebinding"
 	"controller/internal/startup"
 	clusterprojectrolebindingwebhook "controller/internal/webhook/clusterprojectrolebinding"
@@ -113,6 +115,11 @@ const (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == quotaLedgerMode {
+		runQuotaLedger()
+		return
+	}
+
 	// setup logger
 	logger := ctrl.Log.WithName(controllerName)
 	setupLogging()
@@ -391,4 +398,35 @@ func setupLogging(opts ...zap.Opts) logr.Logger {
 	ctrl.SetLogger(logger)
 	klog.SetLogger(logger)
 	return logger
+}
+
+// quotaLedgerMode is the argument that runs the binary as the quota-ledger container of the pod: the
+// webhook that keeps the sum of a project quota, apart from the controllers and their webhooks, so
+// that it has a runtime and a memory limit of its own.
+const quotaLedgerMode = "quota-ledger"
+
+func runQuotaLedger() {
+	logger := setupLogging().WithName(quotaLedgerMode)
+
+	runID, err := ledger.NewRunID()
+	if err != nil {
+		fatal(logger, err, "make the run identifier")
+	}
+	opts := ledger.Options{
+		Config: ctrl.GetConfigOrDie(),
+		Self: ledger.Self{
+			PodName: os.Getenv(podNameEnv),
+			PodUID:  types.UID(os.Getenv("POD_UID")),
+			PodIP:   os.Getenv("POD_IP"),
+			RunID:   runID,
+		},
+		CertDir:        "/quota-ledger-certs",
+		Logger:         logger,
+		WebhookAddress: ":9444",
+		HealthAddress:  ":9445",
+		MetricsAddress: "127.0.0.1:9192",
+	}
+	if err := ledger.Run(ctrl.SetupSignalHandler(), opts); err != nil {
+		fatal(logger, err, "run the quota ledger")
+	}
 }

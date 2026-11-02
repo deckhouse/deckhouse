@@ -26,6 +26,15 @@ spec:
         maxAllowed:
           cpu: 1000m
           memory: 2000Mi
+      {{- if eq (include "multitenancy_manager_control_plane_managed" .) "true" }}
+      - containerName: quota-ledger
+        minAllowed:
+          cpu: 100m
+          memory: 128Mi
+        maxAllowed:
+          cpu: 500m
+          memory: 256Mi
+      {{- end }}
       {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 6 }}
 {{- end }}
 ---
@@ -36,7 +45,18 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
 spec:
+  {{- if eq (include "multitenancy_manager_control_plane_managed" .) "true" }}
+  # The quota ledger is a fail-closed webhook on every counted create in a project with a quota: the
+  # second replica takes the lease over when the first one stops, even on a single master.
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  {{- else }}
   {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  {{- end }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
@@ -62,6 +82,11 @@ spec:
         - name: certs
           secret:
             secretName: admission-webhook-certs
+        {{- if eq (include "multitenancy_manager_control_plane_managed" .) "true" }}
+        - name: quota-ledger-certs
+          secret:
+            secretName: quota-ledger-certs
+        {{- end }}
       containers:
         - name: multitenancy-manager
           image: {{ include "helm_lib_module_image" (list . "multitenancyManager") }}
@@ -97,6 +122,58 @@ spec:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
               {{- include "controller_resources" . | nindent 14 }}
+        {{- if eq (include "multitenancy_manager_control_plane_managed" .) "true" }}
+        # The quota ledger: the webhook on the status writes of d8-project-quota that keeps the sum of a
+        # project quota. It is the same binary in a container of its own, so that its decisions do not
+        # share a runtime and a memory limit with the rendering of projects. Its readiness says only
+        # that the process runs: the route to the leader is the EndpointSlice the ledger writes itself.
+        - name: quota-ledger
+          image: {{ include "helm_lib_module_image" (list . "multitenancyManager") }}
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
+          imagePullPolicy: 'IfNotPresent'
+          args: ["quota-ledger"]
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: GOMEMLIMIT
+              value: "200MiB"
+          ports:
+            - containerPort: 9444
+              name: quota-ledger
+              protocol: TCP
+            - containerPort: 9445
+              name: ledger-health
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 9445
+            periodSeconds: 10
+            failureThreshold: 6
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 9445
+          volumeMounts:
+            - mountPath: /quota-ledger-certs
+              name: quota-ledger-certs
+              readOnly: true
+          resources:
+            requests:
+              {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
+              cpu: 100m
+              memory: 128Mi
+        {{- end }}
         # The violation series name the project, the object and the field that was refused -- a
         # per-tenant inventory. The controller keeps its metrics endpoint on loopback and this proxy
         # publishes it, authorizing every scrape against the deployments/prometheus-metrics
@@ -139,6 +216,16 @@ spec:
                       resource: deployments
                       subresource: prometheus-metrics
                       name: multitenancy-manager
+                - upstream: http://127.0.0.1:9192/metrics
+                  path: /quota-ledger/metrics
+                  authorization:
+                    resourceAttributes:
+                      namespace: d8-multitenancy-manager
+                      apiGroup: apps
+                      apiVersion: v1
+                      resource: deployments
+                      subresource: prometheus-metrics
+                      name: multitenancy-manager
           ports:
             - containerPort: 9091
               name: https-metrics
@@ -155,7 +242,11 @@ metadata:
   namespace: d8-multitenancy-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
 spec:
+  {{- if eq (include "multitenancy_manager_control_plane_managed" .) "true" }}
+  minAvailable: 1
+  {{- else }}
   minAvailable: {{ include "helm_lib_is_ha_to_value" (list . 1 0) }}
+  {{- end }}
   selector:
     matchLabels:
       app: multitenancy-manager

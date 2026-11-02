@@ -1,0 +1,146 @@
+{{- if eq (include "multitenancy_manager_control_plane_managed" .) "true" }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: quota-ledger-certs
+  namespace: d8-multitenancy-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ .Values.multitenancyManager.internal.quotaLedgerCert.crt | default "" | b64enc | quote }}
+  tls.key: {{ .Values.multitenancyManager.internal.quotaLedgerCert.key | default "" | b64enc | quote }}
+  ca.crt: {{ .Values.multitenancyManager.internal.quotaLedgerCert.ca | default "" | b64enc | quote }}
+---
+# No selector: the leader of the ledger writes its own address into the EndpointSlice of the Service,
+# a follower whose leader stopped renewing the lease takes it out, and an empty slice makes a call fail
+# at once. A route kept by kube-controller-manager would hang the calls for as long as a lost master
+# takes the leader of kube-controller-manager with it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: multitenancy-manager-quota-ledger
+  namespace: d8-multitenancy-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: https
+      port: 443
+      targetPort: 9444
+      protocol: TCP
+---
+# The sum of a project quota. The quota plugin of the API server writes the status of every quota of
+# a namespace before it admits an object there, and a denied write denies the object. Only the writes
+# of d8-project-quota by the plugin, in the namespaces the quota applies in, are sent here. A call fails
+# closed: an unreachable ledger stops the counted creates in the projects with a quota, and nothing
+# else. The timeout is the one the ledger counts its fence with.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: d8-multitenancy-manager-quota-ledger
+  annotations:
+    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=multitenancy-manager,namespace=d8-multitenancy-manager
+    werf.io/deploy-dependency-service: state=present,kind=Service,name=multitenancy-manager-quota-ledger,namespace=d8-multitenancy-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+webhooks:
+  - name: quota-ledger.multitenancy-manager.deckhouse.io
+    rules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["resourcequotas/status"]
+        operations: ["UPDATE"]
+        scope: Namespaced
+    namespaceSelector:
+      matchExpressions:
+        - key: projects.deckhouse.io/quota
+          operator: In
+          values: ["pending", "enforced"]
+    matchConditions:
+      - name: the-quota-plugin-writes-the-project-quota
+        expression: 'request.userInfo.username == "system:apiserver" && request.name == "d8-project-quota"'
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    sideEffects: None
+    timeoutSeconds: {{ include "multitenancy_manager_quota_ledger_webhook_timeout" . }}
+    admissionReviewVersions: ["v1"]
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.quotaLedgerCert.ca | default "" | b64enc }}
+      service:
+        name: multitenancy-manager-quota-ledger
+        namespace: d8-multitenancy-manager
+        port: 443
+        path: /validate/quota-ledger
+---
+# The renewals of the ledger lease must not queue behind the workloads of the cluster: a renewal later
+# than the fence stops the answers. The lease goes with the leader elections of the control plane.
+apiVersion: flowcontrol.apiserver.k8s.io/v1
+kind: FlowSchema
+metadata:
+  name: d8-multitenancy-manager-quota-ledger
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  matchingPrecedence: 900
+  priorityLevelConfiguration:
+    name: leader-election
+  distinguisherMethod:
+    type: ByUser
+  rules:
+    - subjects:
+        - kind: ServiceAccount
+          serviceAccount:
+            name: multitenancy-manager
+            namespace: d8-multitenancy-manager
+      resourceRules:
+        - apiGroups: ["coordination.k8s.io"]
+          resources: ["leases"]
+          namespaces: ["d8-multitenancy-manager"]
+          verbs: ["get", "create", "update"]
+---
+# The quorum lists the leader starts from and the watches of its informers get a level of their own,
+# not the shared d8-serviceaccounts level, so a new leader is not held behind other lists.
+apiVersion: flowcontrol.apiserver.k8s.io/v1
+kind: PriorityLevelConfiguration
+metadata:
+  name: d8-multitenancy-manager-quota-ledger
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  type: Limited
+  limited:
+    nominalConcurrencyShares: 20
+    lendablePercent: 0
+    limitResponse:
+      type: Queue
+      queuing:
+        queues: 16
+        queueLengthLimit: 50
+        handSize: 4
+---
+apiVersion: flowcontrol.apiserver.k8s.io/v1
+kind: FlowSchema
+metadata:
+  name: d8-multitenancy-manager-quota-ledger-sync
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  matchingPrecedence: 910
+  priorityLevelConfiguration:
+    name: d8-multitenancy-manager-quota-ledger
+  distinguisherMethod:
+    type: ByUser
+  rules:
+    - subjects:
+        - kind: ServiceAccount
+          serviceAccount:
+            name: multitenancy-manager
+            namespace: d8-multitenancy-manager
+      resourceRules:
+        - apiGroups: [""]
+          resources: ["resourcequotas", "namespaces"]
+          clusterScope: true
+          namespaces: ["*"]
+          verbs: ["get", "list", "watch"]
+        - apiGroups: ["deckhouse.io"]
+          resources: ["projectquotas"]
+          clusterScope: true
+          verbs: ["get", "list", "watch"]
+{{- end }}

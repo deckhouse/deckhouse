@@ -4,6 +4,22 @@
 {{- end -}}
 
 {{- /*
+  The intervals of the quota ledger. The ledger refuses to start when lease - fence - webhook timeout is
+  below 9 seconds, and the webhook of the ledger takes its timeoutSeconds from here, so the two cannot
+  disagree.
+*/ -}}
+{{- define "multitenancy_manager_quota_ledger_webhook_timeout" -}}
+1
+{{- end -}}
+{{- define "multitenancy_manager_quota_ledger_timing" -}}
+leaseSeconds: "17"
+renewDeadlineSeconds: "10"
+retryPeriodSeconds: "1"
+fenceSeconds: "7"
+webhookTimeoutSeconds: {{ include "multitenancy_manager_quota_ledger_webhook_timeout" . | quote }}
+{{- end -}}
+
+{{- /*
   What both guards of a quota namespace look at, the pending one and the enforced one, so that the two
   cannot drift apart. The objects that cannot wait for the quota are left out by excludeResourceRules:
   the API server checks the match constraints before it looks the parameter of a binding up, so the

@@ -95,6 +95,7 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: namespace c
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", `{}`)
 		f.ValuesSetFromYaml("multitenancyManager.internal.admissionWebhookCert", `{"ca": "test-ca", "crt": "test", "key": "test"}`)
+		f.ValuesSetFromYaml("multitenancyManager.internal.quotaLedgerCert", `{"ca": "test-ca", "crt": "test", "key": "test"}`)
 		f.ApplyOpenAPIDefaults()
 	})
 

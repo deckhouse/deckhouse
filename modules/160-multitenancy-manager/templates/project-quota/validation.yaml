@@ -219,4 +219,53 @@ metadata:
 spec:
   policyName: {{ $policyName }}-projectquota-status
   validationActions: [Deny, Audit]
+---
+# The route to the quota ledger and its lease are written by the ledger alone: its leader publishes
+# its address in the EndpointSlice of the ledger Service, a follower takes a stale one out, and the
+# garbage collector deletes the slice with the pod of the leader. Anyone else who could write them
+# could send the status writes of every project quota to a pod of their choosing or stop the answers.
+# kube-proxy and the CNI take every EndpointSlice labelled with the name of the Service, so a slice of
+# another name with that label, now or before the write, is held the same way. The Service has no
+# selector, so kube-controller-manager mirrors an Endpoints object of its name into such a slice: that
+# object and the Service itself, which Deckhouse renders, are held too.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}-quota-ledger-route
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["discovery.k8s.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["endpointslices"]
+      - apiGroups:   ["coordination.k8s.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["leases"]
+      - apiGroups:   [""]
+        apiVersions: ["v1"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["endpoints", "services"]
+  matchConditions:
+    - name: 'the-route-of-the-ledger'
+      expression: >-
+        request.namespace == "d8-multitenancy-manager" && (request.name == "multitenancy-manager-quota-ledger"
+        || [object, oldObject].exists(o, o != null && has(o.metadata.labels) && "kubernetes.io/service-name" in o.metadata.labels
+        && o.metadata.labels["kubernetes.io/service-name"] == "multitenancy-manager-quota-ledger"))
+  validations:
+    - expression: 'request.userInfo.username in ["{{ $controller }}", "{{ $deckhouse }}", "system:sudouser"] || request.userInfo.groups.exists(g, g == "system:serviceaccounts:kube-system")'
+      reason: Forbidden
+      message: 'The route of the project quota ledger, its Service, Endpoints, EndpointSlice and lease, is written by the multitenancy-manager ledger and Deckhouse only.'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-quota-ledger-route
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}-quota-ledger-route
+  validationActions: [Deny, Audit]
 {{- end }}

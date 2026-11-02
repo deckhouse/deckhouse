@@ -35,4 +35,16 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"
       action: keep
+  # the series of the quota ledger, d8_multitenancy_quota_ledger_*, without project names
+  - port: https-metrics
+    scheme: https
+    path: /quota-ledger/metrics
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    relabelings:
+    - targetLabel: tier
+      replacement: cluster
 {{- end }}

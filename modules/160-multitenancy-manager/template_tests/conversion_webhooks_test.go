@@ -54,6 +54,9 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: conversion 
 		f.ValuesSet("multitenancyManager.internal.admissionWebhookCert.ca", "test")
 		f.ValuesSet("multitenancyManager.internal.admissionWebhookCert.crt", "test")
 		f.ValuesSet("multitenancyManager.internal.admissionWebhookCert.key", "test")
+		f.ValuesSet("multitenancyManager.internal.quotaLedgerCert.ca", "test")
+		f.ValuesSet("multitenancyManager.internal.quotaLedgerCert.crt", "test")
+		f.ValuesSet("multitenancyManager.internal.quotaLedgerCert.key", "test")
 		f.HelmRender()
 	})
 
@@ -140,6 +143,7 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: conversion 
 			https: `{mode: CertManager, certManager: {clusterIssuerName: letsencrypt}}`,
 			internal: `
 admissionWebhookCert: {ca: plainstring, crt: plainstring, key: plainstring}
+quotaLedgerCert: {ca: plainstring, crt: plainstring, key: plainstring}
 grantWebhookRules: [{apiGroup: rbac.authorization.k8s.io, resource: rolebindings}]
 `,
 		}),

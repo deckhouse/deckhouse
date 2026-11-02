@@ -57,6 +57,10 @@ func renderQuota(hec *Config, controlPlaneManaged bool) {
 	hec.ValuesSet("multitenancyManager.internal.admissionWebhookCert.ca", "test")
 	hec.ValuesSet("multitenancyManager.internal.admissionWebhookCert.crt", "test")
 	hec.ValuesSet("multitenancyManager.internal.admissionWebhookCert.key", "test")
+	// the ledger has a certificate of its own, told apart from the one of the other webhooks
+	hec.ValuesSet("multitenancyManager.internal.quotaLedgerCert.ca", "ledger-test")
+	hec.ValuesSet("multitenancyManager.internal.quotaLedgerCert.crt", "ledger-test")
+	hec.ValuesSet("multitenancyManager.internal.quotaLedgerCert.key", "ledger-test")
 	hec.HelmRender(WithAPIVersions(
 		"admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy",
 		"admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding",

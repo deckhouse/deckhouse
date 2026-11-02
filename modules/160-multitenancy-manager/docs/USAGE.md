@@ -408,6 +408,14 @@ How the quota applies:
   d8 k get resourcequota -A -l projects.deckhouse.io/project=my-project
   ```
 
+- In a namespace labelled `projects.deckhouse.io/quota: enforced`, creating an object that takes the usage of the whole project over a limit is denied with HTTP 403:
+
+  ```text
+  admission webhook "quota-ledger.multitenancy-manager.deckhouse.io" denied the request: exceeded quota: d8-project-quota, project my-project: requested: requests.cpu=500m, used: requests.cpu=19800m, limited: requests.cpu=20 (3 namespaces)
+  ```
+
+  The webhook, called the quota ledger, keeps the sum of every project in the memory of its leader in the `quota-ledger` container of the module pod. While no replica answers (for a few seconds when the leader changes), a counted create in a namespace of a quota project fails with `project quota ledger unavailable (<CAUSE>), retry`; deletions, running objects and namespaces without the quota are not affected. A Deployment or a Job retries such a create by itself. The same answer comes at once, with the `too many approvals of the project are not confirmed yet` cause, for a write that would wait for the earlier approvals of its project to be confirmed while two writes from the same API server already wait: the third waiting write of a project from one API server gets a 503, and its controller retries it.
+- The sum is not checked for a request with `--dry-run=server`: the API server does not write the usage of a dry run. The quota of the namespace is still checked.
 - The `Enforced` condition says whether the quota applies in every namespace, and the `Exceeded` condition whether the usage is above a limit. A limit may be lowered below the current usage: the change is accepted with a warning, nothing running is evicted, and `Exceeded` is `True` with the `HardLowered` reason. The [`D8ProjectQuotaExceeded`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-d8projectquotaexceeded) alert fires then.
 
 ### Keys of a project quota

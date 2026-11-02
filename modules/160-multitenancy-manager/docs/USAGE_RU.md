@@ -410,6 +410,14 @@ spec:
   d8 k get resourcequota -A -l projects.deckhouse.io/project=my-project
   ```
 
+- В неймспейсе с лейблом `projects.deckhouse.io/quota: enforced` создание объекта, после которого потребление всего проекта выходит за лимит, отклоняется с HTTP 403:
+
+  ```text
+  admission webhook "quota-ledger.multitenancy-manager.deckhouse.io" denied the request: exceeded quota: d8-project-quota, project my-project: requested: requests.cpu=500m, used: requests.cpu=19800m, limited: requests.cpu=20 (3 namespaces)
+  ```
+
+  Вебхук, который называется счётчиком квот, хранит сумму каждого проекта в памяти своего лидера в контейнере `quota-ledger` пода модуля. Пока не отвечает ни одна реплика (несколько секунд при смене лидера), создание учитываемого квотой объекта в неймспейсе проекта с квотой завершается ошибкой `project quota ledger unavailable (<CAUSE>), retry`; удаления, работающие объекты и неймспейсы без квоты это не затрагивает. Deployment или Job повторяют такое создание сами. Тот же ответ сразу, с причиной `too many approvals of the project are not confirmed yet`, получает запись, которой пришлось бы ждать подтверждения прежних одобрений своего проекта, пока от того же API-сервера уже ждут две записи: третья ожидающая запись проекта от одного API-сервера получает 503, и её контроллер повторяет запрос.
+- Для запроса с `--dry-run=server` сумма не проверяется: API-сервер не записывает потребление при пробном запуске. Квота неймспейса при этом проверяется.
 - Условие `Enforced` говорит, действует ли квота во всех неймспейсах, а условие `Exceeded` — превышен ли какой-то лимит. Лимит можно опустить ниже текущего потребления: изменение принимается с предупреждением, ничто из работающего не вытесняется, а `Exceeded` становится `True` с причиной `HardLowered`. В этом случае срабатывает алерт [`D8ProjectQuotaExceeded`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-d8projectquotaexceeded).
 
 ### Ключи квоты проекта
