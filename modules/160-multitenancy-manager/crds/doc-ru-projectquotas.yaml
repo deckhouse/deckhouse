@@ -1,0 +1,79 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Единый лимит на сумму потребления ресурсов по всем неймспейсам проекта.
+
+            Имя объекта — имя проекта. Контроллер ставит ResourceQuota `d8-project-quota` с лимитами `spec.hard`
+            в каждый неймспейс проекта, в том числе созданный позже, поэтому потребление каждого неймспейса
+            считается его собственным ResourceQuota, и ни один неймспейс в одиночку не может использовать больше, чем весь проект. В статусе
+            видна сумма потребления по неймспейсам.
+
+            Заданное поле `Project.spec.quota` превращается в ProjectQuota проекта, а его очистка удаляет соответствующий
+            ProjectQuota. Созданный явно ProjectQuota при изменении `Project.spec.quota` не меняется и не удаляется.
+            Задать `Project.spec.quota` также нельзя, пока не удалён соответствующий созданный явно ProjectQuota.
+          properties:
+            spec:
+              properties:
+                hard:
+                  description: |
+                    Лимиты проекта в формате `ResourceQuota.spec.hard`, например `requests.cpu: "100"`.
+
+                    Допустимы ключи, которые ResourceQuota считает в неймспейсе: `cpu`, `memory`, `requests.*`,
+                    `limits.*`, `pods`, `services`, `services.loadbalancers`, `services.nodeports`, `persistentvolumeclaims`,
+                    `configmaps`, `secrets`, `replicationcontrollers`, `ephemeral-storage`, ключи классов хранилищ и
+                    классов устройств, запросы расширенных ресурсов и `count/<RESOURCE>[.<GROUP>]` для
+                    namespaced-ресурса, который обслуживает API-сервер. `projectNamespaces` — псевдоним
+                    `count/projectnamespaces.deckhouse.io`, число объектов ProjectNamespace проекта.
+
+                    Ключи `resourcequotas`, `count/resourcequotas`, счётчик cluster-wide-ресурса и ресурс с опечаткой
+                    отклоняются. Ключ `count/` группы, которую API-сервер ещё не обслуживает, принимается с
+                    предупреждением и ничего не считает, пока не включён модуль, который эту группу предоставляет.
+            status:
+              properties:
+                hard:
+                  description: Лимиты, которые применяет контроллер, — `spec.hard` с раскрытым псевдонимом.
+                used:
+                  description: Потребление проекта, просуммированное по всем его неймспейсам.
+                namespaceCount:
+                  description: Число неймспейсов проекта.
+                topNamespaces:
+                  description: |
+                    Неймспейсы, ближе всего подошедшие к лимиту, не больше 50. Потребление каждого неймспейса — в его
+                    ResourceQuota `d8-project-quota`.
+                  items:
+                    properties:
+                      name:
+                        description: Имя неймспейса.
+                      used:
+                        description: Потребление неймспейса.
+                observedGeneration:
+                  description: Последнее поколение объекта, обработанное контроллером.
+                conditions:
+                  description: |
+                    Состояние квоты:
+
+                    - Если `Enforced` установлен в `True`, то квота применяется во всех неймспейсах проекта. Если `Enforced` установлен в `False`, то в `reason` указывается причина, по которой это произошло:
+                      `ControlPlaneNotManaged` (control plane ведёт не Deckhouse Platform, поэтому
+                      сумма не ограничивается), `ProjectNotFound` (проекта с таким именем нет), `KeyNotServed`
+                      (API-сервер ещё не обслуживает ресурс ключа `count/`) или `KeyRollout` (ResourceQuota
+                      `d8-project-quota` какого-то неймспейса ещё не создан или не рассчитан со всеми лимитами).
+                    - Если `Exceeded` установлен в `True`, то потребление проекта выше квоты по какому-то ключу. Причина в `reason`
+                      показывает, как возникло превышение: `HardLowered` (лимит задан ниже потребления — изменением
+                      или при создании квоты) или `Overshoot` (потребление выросло за лимит).
+                  items:
+                    properties:
+                      type:
+                        description: Тип условия.
+                      status:
+                        description: "Состояние условия: `True`, `False` или `Unknown`."
+                      reason:
+                        description: Причина состояния условия.
+                      message:
+                        description: Сообщение с подробностями состояния условия.
+                      observedGeneration:
+                        description: Поколение объекта, для которого выставлено условие.
+                      lastTransitionTime:
+                        description: Время последнего изменения условия.

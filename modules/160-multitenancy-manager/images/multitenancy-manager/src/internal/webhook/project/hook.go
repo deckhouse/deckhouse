@@ -44,6 +44,7 @@ import (
 	"controller/internal/helm"
 	projectmanager "controller/internal/manager/project"
 	"controller/internal/naming"
+	"controller/internal/quota"
 	"controller/internal/rolebinding"
 	"controller/internal/validate"
 	projectnamespacewebhook "controller/internal/webhook/projectnamespace"
@@ -107,11 +108,12 @@ func ownLabelChange(old, project *v1alpha3.Project) (string, []string) {
 	return "", warnings
 }
 
-func Register(runtimeManager manager.Manager, helmClient *helm.Client) {
+func Register(runtimeManager manager.Manager, helmClient *helm.Client, quotaKeys quota.Discovery) {
 	hook := &webhook.Admission{Handler: &validator{
 		client:     runtimeManager.GetClient(),
 		helmClient: helmClient,
 		reader:     runtimeManager.GetAPIReader(),
+		quotaKeys:  quotaKeys,
 	}}
 	runtimeManager.GetWebhookServer().Register("/validate/v1alpha3/projects", hook)
 }
@@ -124,6 +126,8 @@ type validator struct {
 	// that is not the leader, and for the ProjectNamespaces that claim the project's name, which the
 	// cache may not have seen yet.
 	reader client.Reader
+	// quotaKeys looks up the resources the count/ keys of spec.quota name. Optional.
+	quotaKeys quota.Discovery
 }
 
 // apiReader is the reader for the role bindings and the ProjectNamespace claims: the direct API reader
@@ -283,6 +287,15 @@ func (v *validator) Handle(ctx context.Context, req admission.Request) admission
 		return admission.Denied(denied)
 	}
 	warnings = append(warnings, standardFieldWarnings...)
+
+	denied, quotaWarnings, err := v.checkQuota(ctx, req.UserInfo, project, storedProject(req), privileged)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	if denied != "" {
+		return admission.Denied(denied)
+	}
+	warnings = append(warnings, quotaWarnings...)
 
 	if req.Operation == admissionv1.Update {
 		// pass triggered projects

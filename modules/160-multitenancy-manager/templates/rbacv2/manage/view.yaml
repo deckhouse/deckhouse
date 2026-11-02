@@ -35,6 +35,8 @@ rules:
   # without holding a role inside every project.
   - projectrolebindings
   - projectnamespaces
+  # the quota of every project and its usage
+  - projectquotas
   verbs:
   - get
   - list

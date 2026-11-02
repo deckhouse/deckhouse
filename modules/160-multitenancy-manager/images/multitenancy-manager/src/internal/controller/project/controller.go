@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
 	"controller/internal/impersonate"
@@ -98,11 +99,35 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 		))).
 		Watches(&corev1.Namespace{}, namespaceProjectHandler{},
 			builder.WithPredicates(namespaceWatchPredicate{})).
-		Watches(&corev1.ResourceQuota{}, standardFieldHandler(v1alpha3.ProjectQuotaName)).
+		// the handover of a Helm text release waits for d8-project-quota of the main namespace; the
+		// ones of the other namespaces move with every object created there and wake only the
+		// ProjectQuota, whose status the project mirrors
+		Watches(&corev1.ResourceQuota{}, mainNamespaceQuotaHandler()).
+		Watches(&v1alpha1.ProjectQuota{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: object.GetName()}}}
+		})).
 		// a handover of a Helm text release waits for the administrators binding to be Ready, and the
 		// manifests of a template wait for the binding of the user they are applied as
 		Watches(&v1alpha3.ProjectRoleBinding{}, standardFieldHandler(v1alpha3.ProjectAdministratorsBinding, v1alpha3.ProjectManifestsBinding)).
 		Complete(projectController)
+}
+
+// mainNamespaceQuotaHandler wakes the project of the d8-project-quota ResourceQuota of its main
+// namespace.
+func mainNamespaceQuotaHandler() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(_ context.Context, object client.Object) []reconcile.Request {
+		return mainNamespaceQuotaRequests(object)
+	})
+}
+
+// mainNamespaceQuotaRequests is the request for the project of a d8-project-quota in its main
+// namespace, and nothing for any other object.
+func mainNamespaceQuotaRequests(object client.Object) []reconcile.Request {
+	requests := standardFieldRequests(object, v1alpha3.ProjectQuotaName)
+	if len(requests) == 0 || requests[0].Name != object.GetNamespace() {
+		return nil
+	}
+	return requests
 }
 
 // standardFieldHandler wakes the project of a controller-managed object of one of the given names.

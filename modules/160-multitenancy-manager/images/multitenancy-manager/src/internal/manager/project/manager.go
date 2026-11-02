@@ -247,7 +247,8 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 
 	// reconcile standard fields (administrators, quota) regardless of the template
 	m.logger.V(1).Info("reconcile the project standard fields", "project", project.Name)
-	if err := m.reconcileStandardFields(ctx, project); err != nil {
+	conflict, err := m.reconcileStandardFields(ctx, project)
+	if err != nil {
 		m.logger.Error(err, "failed to reconcile the project standard fields", "project", project.Name)
 		project.SetState(v1alpha3.ProjectStateError)
 		project.SetConditionFalse(v1alpha3.ProjectConditionStandardFieldsApplied, err.Error())
@@ -256,7 +257,12 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 		}
 		return ctrl.Result{}, err
 	}
-	project.SetConditionTrue(v1alpha3.ProjectConditionStandardFieldsApplied)
+	if conflict != "" {
+		// the rest of the project, its manifests and its status, is still reconciled
+		project.SetConditionFalse(v1alpha3.ProjectConditionStandardFieldsApplied, conflict)
+	} else {
+		project.SetConditionTrue(v1alpha3.ProjectConditionStandardFieldsApplied)
+	}
 
 	// the objects of spec.manifests of the template, applied as the user of the project
 	manifests, manifestsErr := m.reconcileManifests(ctx, project)
@@ -267,10 +273,17 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 	} else {
 		project.Status.Namespaces = nsStatus
 	}
-	if usage, err := m.collectUsage(ctx, project); err != nil {
+	if usage, within, err := m.collectUsage(ctx, project); err != nil {
 		m.logger.Error(err, "failed to collect the project quota usage", "project", project.Name)
 	} else {
 		project.Status.Usage = usage
+		switch {
+		case within == nil:
+		case within.Status == corev1.ConditionTrue:
+			project.SetConditionTrue(v1alpha3.ProjectConditionQuotaWithinLimits)
+		default:
+			project.SetConditionFalse(v1alpha3.ProjectConditionQuotaWithinLimits, within.Message)
+		}
 	}
 
 	// the objects left from a Helm text release stay listed until they are deleted or unlabelled

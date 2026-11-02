@@ -43,8 +43,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/naming"
+	"controller/internal/quota"
 	"controller/internal/rolebinding"
 )
 
@@ -121,7 +123,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		pns.Status.ObservedGeneration = pns.Generation
 		changed = true
 	}
-	if v1alpha3.SetCondition(&pns.Status.Conditions, v1alpha3.ProjectNamespaceConditionReady, corev1.ConditionTrue, "") {
+	ready, message, err := r.readiness(ctx, resulting)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if v1alpha3.SetCondition(&pns.Status.Conditions, v1alpha3.ProjectNamespaceConditionReady, ready, message) {
 		changed = true
 	}
 	if changed {
@@ -216,7 +222,10 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, pns *v1alpha3.ProjectN
 	name := r.namespaceName(pns)
 
 	existing := &corev1.Namespace{}
+	creating := false
 	switch err := r.Get(ctx, types.NamespacedName{Name: name}, existing); {
+	case k8serrors.IsNotFound(err):
+		creating = true
 	case err == nil:
 		// The namespaces this controller creates carry the project label from the start, and nobody
 		// else may set it (the namespace-ownership ValidatingAdmissionPolicy). A namespace without the
@@ -230,8 +239,16 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, pns *v1alpha3.ProjectN
 		if owner != project {
 			return fmt.Errorf("namespace %q already exists and is owned by project %q", name, owner)
 		}
-	case !k8serrors.IsNotFound(err):
+	default:
 		return fmt.Errorf("get namespace %q: %w", name, err)
+	}
+
+	var quotaLabel string
+	if creating {
+		var err error
+		if quotaLabel, err = r.birthQuotaLabel(ctx, project); err != nil {
+			return err
+		}
 	}
 
 	// The main namespace of a project is named after the project. Without it, or before the renderer
@@ -304,6 +321,11 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, pns *v1alpha3.ProjectN
 		ns.Labels[v1alpha3.ResourceLabelHeritage] = v1alpha3.ResourceHeritageMultitenancy
 		ns.Labels[v1alpha3.ResourceLabelProject] = project
 		ns.Labels[v1alpha3.ResourceLabelProjectNamespace] = pns.Name
+		// Only a create sets the quota label: on an existing namespace the ProjectQuota controller
+		// owns it.
+		if quotaLabel != "" && ns.ResourceVersion == "" {
+			ns.Labels[quota.NamespaceLabel] = quotaLabel
+		}
 		return nil
 	})
 	if err != nil {
@@ -317,6 +339,37 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, pns *v1alpha3.ProjectN
 			name, strings.Join(reverted, ", "))
 	}
 	return nil
+}
+
+// readiness is the Ready condition of a namespace the controller has: not ready while the project
+// quota holds it, until its d8-project-quota ResourceQuota is calculated. The watch on the namespace
+// brings the change of its label back here.
+func (r *Reconciler) readiness(ctx context.Context, name string) (corev1.ConditionStatus, string, error) {
+	ns := &corev1.Namespace{}
+	if err := r.Get(ctx, types.NamespacedName{Name: name}, ns); err != nil {
+		return "", "", fmt.Errorf("get namespace %q: %w", name, err)
+	}
+	if ns.Labels[quota.NamespaceLabel] == quota.LabelPending {
+		return corev1.ConditionFalse, "The quota of the project does not apply in the namespace yet: its d8-project-quota ResourceQuota is not calculated, " +
+			"and objects are refused until it is. The Enforced condition of the ProjectQuota of the project says why.", nil
+	}
+	return corev1.ConditionTrue, "", nil
+}
+
+// birthQuotaLabel is the quota label a new namespace of the project gets in the request that creates
+// it, empty when the project has no ProjectQuota. Labelled pending from the start, the namespace is
+// held by the guard policy of the quota until its d8-project-quota ResourceQuota is there and
+// calculated, so no object the quota counts slips in before it; the ProjectQuota controller then
+// labels it enforced.
+func (r *Reconciler) birthQuotaLabel(ctx context.Context, project string) (string, error) {
+	pq := new(v1alpha1.ProjectQuota)
+	switch err := r.Get(ctx, types.NamespacedName{Name: project}, pq); {
+	case k8serrors.IsNotFound(err):
+		return "", nil
+	case err != nil:
+		return "", fmt.Errorf("get the ProjectQuota of project %q: %w", project, err)
+	}
+	return quota.LabelPending, nil
 }
 
 // deleteNamespace removes the additional namespace, but only when it is still owned by this project.

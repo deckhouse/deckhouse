@@ -1,0 +1,15 @@
+{{- /*
+  What the project quota depends on in the cluster; the controller reads it at run time. Where Deckhouse
+  does not manage the control plane (control-plane-manager is off), the sum of a project is not
+  enforced: the API server may not reach a webhook in the pod network there, and a fail-closed one would
+  close every counted create.
+*/ -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quota-ledger-config
+  namespace: d8-multitenancy-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+data:
+  controlPlaneManaged: {{ include "multitenancy_manager_control_plane_managed" . | quote }}

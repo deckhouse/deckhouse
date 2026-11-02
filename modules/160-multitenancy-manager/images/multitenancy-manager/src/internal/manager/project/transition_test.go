@@ -42,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
@@ -61,7 +62,7 @@ func newTransitionManagerWith(t *testing.T, funcs interceptor.Funcs, objs ...cli
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
 		corev1.AddToScheme, rbacv1.AddToScheme, appsv1.AddToScheme, networkingv1.AddToScheme,
-		v1alpha2.AddToScheme, v1alpha3.AddToScheme,
+		v1alpha1.AddToScheme, v1alpha2.AddToScheme, v1alpha3.AddToScheme,
 	} {
 		require.NoError(t, add(scheme))
 	}
@@ -683,7 +684,26 @@ func TestManager_PrepareUpgradeHandsOverASwitch(t *testing.T) {
 
 	binding := &v1alpha3.ProjectRoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: "proj", Name: v1alpha3.ProjectAdministratorsBinding}}
 	assert.True(t, exists(t, c, binding), "the standard fields exist before the upgrade")
-	assert.True(t, exists(t, c, &corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Namespace: "proj", Name: v1alpha3.ProjectQuotaName}}))
+	assert.True(t, exists(t, c, &v1alpha1.ProjectQuota{ObjectMeta: metav1.ObjectMeta{Name: "proj"}}), "the ProjectQuota the quota of the namespace comes from")
+}
+
+// countedProjectQuota plays the ProjectQuota controller and the resource quota controller of
+// kube-controller-manager: it puts d8-project-quota with the limits of the ProjectQuota of the project
+// into the main namespace, calculated.
+func countedProjectQuota(t *testing.T, c client.Client, project string) {
+	t.Helper()
+	ctx := context.Background()
+	pq := new(v1alpha1.ProjectQuota)
+	require.NoError(t, c.Get(ctx, client.ObjectKey{Name: project}, pq))
+	rq := &corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Namespace: project, Name: v1alpha3.ProjectQuotaName}}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(rq), rq); apierrors.IsNotFound(err) {
+		rq.Spec.Hard = pq.Spec.Hard.DeepCopy()
+		require.NoError(t, c.Create(ctx, rq))
+	} else {
+		require.NoError(t, err)
+	}
+	rq.Status.Hard = rq.Spec.Hard.DeepCopy()
+	require.NoError(t, c.Status().Update(ctx, rq))
 }
 
 // An edit of a Helm text that removes the rules and the quota of the administrators hands them over
@@ -1185,10 +1205,7 @@ func TestHandle_HandsOverAcrossReconciles(t *testing.T) {
 	binding.Status.Conditions = []v1alpha3.Condition{{Type: v1alpha3.ProjectRoleBindingConditionReady, Status: corev1.ConditionTrue,
 		LastTransitionTime: metav1.NewTime(time.Now().Add(-time.Hour))}}
 	require.NoError(t, c.Status().Update(ctx, binding))
-	projectQuota := new(corev1.ResourceQuota)
-	require.NoError(t, c.Get(ctx, client.ObjectKey{Namespace: "proj", Name: v1alpha3.ProjectQuotaName}, projectQuota))
-	projectQuota.Status.Hard = projectQuota.Spec.Hard.DeepCopy()
-	require.NoError(t, c.Status().Update(ctx, projectQuota))
+	countedProjectQuota(t, c, "proj")
 	stored = storedProject(t, c)
 	for i := range stored.Status.Conditions {
 		stored.Status.Conditions[i].LastTransitionTime = metav1.NewTime(time.Now().Add(-time.Hour))

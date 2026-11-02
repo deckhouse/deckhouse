@@ -53,6 +53,10 @@ const (
 	// and with what code, a 403 among them. A project whose template has no manifests and that has
 	// none to delete does not have it.
 	ProjectConditionManifestsApplied = "ManifestsApplied"
+	// ProjectConditionQuotaWithinLimits is True while the usage of the project is within its
+	// ProjectQuota and False while it is above it; a project without a quota does not have it. It is
+	// not phrased as Exceeded=False, because a False condition reads as an error to some consumers.
+	ProjectConditionQuotaWithinLimits = "QuotaWithinLimits"
 
 	ProjectAnnotationRequireSync = "projects.deckhouse.io/require-sync"
 

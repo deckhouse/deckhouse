@@ -70,6 +70,8 @@ var ManagedNamespaceLabels = []string{
 	"projects.deckhouse.io/project-template",
 	"projects.deckhouse.io/project-namespace",
 	NamespaceRoleLabel,
+	// the label the admission policies of the project quota select namespaces by
+	"projects.deckhouse.io/quota",
 	"multitenancy.deckhouse.io/project-managed-by-namespace",
 	"security.deckhouse.io/pod-policy",
 	"extended-monitoring.deckhouse.io/enabled",

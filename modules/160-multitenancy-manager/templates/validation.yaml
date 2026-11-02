@@ -60,7 +60,7 @@ spec:
     # budget, and a fixed list is what a reader of the denial needs anyway. The Go side of the list is
     # naming.ManagedNamespaceLabels/ManagedNamespaceAnnotations; a test keeps the two identical.
     - name: managedLabels
-      expression: '["heritage", "app.kubernetes.io/managed-by", "kubernetes.io/metadata.name", "projects.deckhouse.io/project", "projects.deckhouse.io/project-template", "projects.deckhouse.io/project-namespace", "projects.deckhouse.io/namespace-role", "multitenancy.deckhouse.io/project-managed-by-namespace", "security.deckhouse.io/pod-policy", "extended-monitoring.deckhouse.io/enabled", "security-scanning.deckhouse.io/enabled"]'
+      expression: '["heritage", "app.kubernetes.io/managed-by", "kubernetes.io/metadata.name", "projects.deckhouse.io/project", "projects.deckhouse.io/project-template", "projects.deckhouse.io/project-namespace", "projects.deckhouse.io/namespace-role", "projects.deckhouse.io/quota", "multitenancy.deckhouse.io/project-managed-by-namespace", "security.deckhouse.io/pod-policy", "extended-monitoring.deckhouse.io/enabled", "security-scanning.deckhouse.io/enabled"]'
     - name: managedAnnotations
       expression: '["meta.helm.sh/release-name", "meta.helm.sh/release-namespace", "scheduler.alpha.kubernetes.io/node-selector", "scheduler.alpha.kubernetes.io/defaultTolerations", "projects.deckhouse.io/template-labels"]'
     - name: isNamespaceUpdate
@@ -221,7 +221,7 @@ spec:
     # a namespace the module owned before the request. Same lists as above; the Go side is
     # naming.ManagedNamespaceLabels/ManagedNamespaceAnnotations and a test keeps every copy identical.
     - name: managedLabels
-      expression: '["heritage", "app.kubernetes.io/managed-by", "kubernetes.io/metadata.name", "projects.deckhouse.io/project", "projects.deckhouse.io/project-template", "projects.deckhouse.io/project-namespace", "projects.deckhouse.io/namespace-role", "multitenancy.deckhouse.io/project-managed-by-namespace", "security.deckhouse.io/pod-policy", "extended-monitoring.deckhouse.io/enabled", "security-scanning.deckhouse.io/enabled"]'
+      expression: '["heritage", "app.kubernetes.io/managed-by", "kubernetes.io/metadata.name", "projects.deckhouse.io/project", "projects.deckhouse.io/project-template", "projects.deckhouse.io/project-namespace", "projects.deckhouse.io/namespace-role", "projects.deckhouse.io/quota", "multitenancy.deckhouse.io/project-managed-by-namespace", "security.deckhouse.io/pod-policy", "extended-monitoring.deckhouse.io/enabled", "security-scanning.deckhouse.io/enabled"]'
     - name: managedAnnotations
       expression: '["meta.helm.sh/release-name", "meta.helm.sh/release-namespace", "scheduler.alpha.kubernetes.io/node-selector", "scheduler.alpha.kubernetes.io/defaultTolerations", "projects.deckhouse.io/template-labels"]'
     - name: oldLabels

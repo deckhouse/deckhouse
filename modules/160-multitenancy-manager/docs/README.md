@@ -43,7 +43,7 @@ When creating a [Project](./cr.html#project) resource from a specific [ProjectTe
 1. The project resources are created from the template:
    * in modern templates (`deckhouse.io/v1alpha2`) the settings, such as the pod security profile, network isolation, log collection and node placement, are described by [structured fields](usage.html#structured-templates). The controller itself creates the corresponding objects in every namespace of the project. Other objects go to [`manifests`](usage.html#describing-other-objects-in-manifests) and are applied with the rights of a project administrator;
    * a template with a Helm `resourcesTemplate` is rendered through Helm. This form is deprecated, and so is the `deckhouse.io/v1alpha1` version of ProjectTemplate, which has no other form ([see details](usage.html#template-checks)). No template can get a new `resourcesTemplate`, a template is created through `deckhouse.io/v1alpha2` only, and the field goes away in a future release, so [move such a template](usage.html#moving-a-template-from-a-helm-text) to structured fields and `manifests`;
-1. The standard fields of the project are applied independently of the template: [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota) is reconciled into a `ResourceQuota`, and [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators) into an auto-managed [ProjectRoleBinding](./cr.html#projectrolebinding).
+1. The standard fields of the project are applied independently of the template: [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota) is reconciled into a [ProjectQuota](./cr.html#projectquota) of the project, which puts the `d8-project-quota` ResourceQuota into every namespace of the project, and [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators) into an auto-managed [ProjectRoleBinding](./cr.html#projectrolebinding).
 
 The Project API is served as `deckhouse.io/v1alpha3`. `v1alpha2` manifests keep working through a conversion webhook, and `v1alpha1` is no longer served (see [Project API versions](usage.html#project-api-versions)). The `projectTemplateName` field is optional: when omitted, the `simple` template is used, which only creates the project namespace.
 
@@ -62,7 +62,7 @@ The following automatically applies to the additional namespaces:
 * the project template settings — the pod security profile, network policies, log collection, and other policies are created in every namespace of the project;
 * the access granted via [ProjectRoleBinding](./cr.html#projectrolebinding) and [ClusterProjectRoleBinding](./cr.html#clusterprojectrolebinding), including the automatic access of the project administrators.
 
-The project quota ([`.spec.quota`](./cr.html#project-v1alpha3-spec-quota)) applies in the main namespace.
+The project quota ([`.spec.quota`](./cr.html#project-v1alpha3-spec-quota)) applies in every namespace of the project as one limit on the sum of their usage.
 
 Deleting a project deletes all of its namespaces — both the main and the additional ones. See [the usage examples](usage.html#additional-project-namespaces) for details.
 
@@ -91,7 +91,7 @@ System namespaces (`d8-*`, `kube-*`, `upmeter-*`, `default`, and anything labele
 A namespace alone does not isolate a project. The project adds the following:
 
 - Access to the whole project through [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators), ProjectRoleBinding and ClusterProjectRoleBinding. A plain RoleBinding in one namespace is allowed for delegatable roles.
-- A resource limit through [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota), applied as the `d8-project-quota` ResourceQuota in the main namespace.
+- A resource limit on the whole project through [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota), applied as the `d8-project-quota` ResourceQuota in every namespace of the project and as a limit on the sum of their usage.
 - Network isolation through the [`networkPolicy.mode: Isolated`](./cr.html#projecttemplate-v1alpha2-spec-networkpolicy-mode) field of the template.
 - The pod security profile through the [`podSecurityStandard`](./cr.html#projecttemplate-v1alpha2-spec-podsecuritystandard) field of the template.
 

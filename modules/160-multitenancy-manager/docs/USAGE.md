@@ -149,13 +149,14 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 | `ManifestsApplied` | The objects of the template's [`manifests`](#describing-other-objects-in-manifests) are not applied. The `message` says what they wait for, why none of them is applied, which existing objects they leave alone, or which objects the API server refused, with the code of each refusal (for example, `403 Forbidden`). |
 | `HelmOwnership` | The namespace of the project belongs to another Helm release. The `message` names the release (see [Creating a project automatically for a namespace](#creating-a-project-automatically-for-a-namespace)). |
 | `NamespaceDeleted` | The project is being deleted, and its namespace is still terminating. The `message` says since when and what remains in it. |
+| `QuotaWithinLimits` | The usage of the project is above its [ProjectQuota](#project-quota); the `message` names the limits. A project without a quota does not have the condition. |
 
 The `HandoverPending` condition is read the other way round. It is `True` while AuthorizationRule and ResourceQuota objects kept from a Helm text wait for the standard fields that replace them, and it is removed once they are deleted (see [Switching a project from a Helm text](#switching-a-project-from-a-helm-text)).
 
 Other useful status fields:
 
 - `.status.namespaces`: All namespaces of the project with their kind (`Main` or `Additional`).
-- `.status.usage`: Current quota usage, filled in when `.spec.quota` is set.
+- `.status.usage`: The usage of the project summed over all of its namespaces, taken from its [ProjectQuota](#project-quota).
 - `.status.resources`: State of the individual objects created from the template.
 - `.status.keptObjects`: Objects of a Helm text that were [left in place](#switching-a-project-from-a-helm-text) instead of being deleted.
 - `.status.manifestObjects`: Objects applied from [`manifests`](#describing-other-objects-in-manifests) of the template.
@@ -166,7 +167,8 @@ The controller creates service objects in the project namespaces. They are manag
 
 | Object | Where | Comes from |
 |--------|-------|------------|
-| `ResourceQuota/d8-project-quota` | The main namespace | The [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) field of the project. |
+| `ProjectQuota/<PROJECT_NAME>` | Cluster-scoped | The [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) field of the project. A ProjectQuota created directly is not touched by the field: it is neither overwritten nor deleted, and a quota in the field next to it is refused (see [Project quota](#project-quota)). |
+| `ResourceQuota/d8-project-quota` | Every namespace of the project | The [ProjectQuota](#project-quota) of the project. |
 | `ProjectRoleBinding/d8-administrators` | The main namespace | The [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators) field of the project. |
 | `ProjectRoleBinding/d8-manifests` | The main namespace | The [`manifests`](#describing-other-objects-in-manifests) field of the project template. It grants the `d8:project:admin` role to the user that applies these objects. |
 | `RoleBinding/d8:prb:<name>` | Every namespace of the project | The fan-out of the [ProjectRoleBinding](cr.html#projectrolebinding) named `<name>`. |
@@ -227,12 +229,12 @@ The following automatically applies in **all** namespaces of the project (the ma
 - **Access**: the [ProjectRoleBinding](cr.html#projectrolebinding) and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) bindings, including the automatic access of the project administrators. When a new namespace is added, all existing bindings fan out into it without any user action.
 - **Namespaced template objects**: the network policy (`networkPolicy.mode: Isolated`) and the log collection setup (`logShipping`) are created in every namespace of the project. The network isolation allows traffic between the namespaces of one project. A Helm `resourcesTemplate` creates its objects in the main namespace unless an object names another namespace of the project. So does [`manifests`](#describing-other-objects-in-manifests), whose objects are not applied while one of them names a namespace outside the project.
 - **Cluster-scoped template policies** (`OperationPolicy`, the `SecurityPolicy` from `allowedUIDs`/`allowedGIDs`): they select namespaces by the `projects.deckhouse.io/project` label, that is, they cover the whole project.
+- **The project quota**: the `d8-project-quota` ResourceQuota with the limits of the [ProjectQuota](#project-quota) of the project is created in every namespace of the project.
 - **Inherited labels**: the pod security profile (`security.deckhouse.io/pod-policy`), extended monitoring (`extended-monitoring.deckhouse.io/enabled`), vulnerability scanning (`security-scanning.deckhouse.io/enabled`), the template label (`projects.deckhouse.io/project-template`) and the labels the template sets through `namespaceMetadata.labels` are synced from the main namespace to the additional ones. For a template with `resourcesTemplate`, these are the labels its Helm text puts on the main namespace.
   The sync is complete: if a feature is turned off or a label is removed in the template, the label is removed from the additional namespaces as well. The labels of the template are listed in the `projects.deckhouse.io/template-labels` annotation of each project namespace; they are changed through the Project or its ProjectTemplate, and a direct edit of one on an additional namespace is reverted. Thanks to the template label, the [cluster resource availability rules](#managing-access-to-cluster-wide-resources) also apply in all namespaces of the project.
 
 The following stays in the **main** namespace only:
 
-- The project quota (the `ResourceQuota` from [`.spec.quota`](cr.html#project-v1alpha3-spec-quota))
 - The annotations from the template's `namespaceMetadata`
 - The labels and annotations set on the main namespace directly or by a GitOps tool, including the ones the namespace had before it [became a project](#creating-a-project-automatically-for-a-namespace), other than the pod security, monitoring and scanning labels above
 - The GitOps tracking labels (`app.kubernetes.io/instance`, `argocd.argoproj.io/*`, `kustomize.toolkit.fluxcd.io/*`, `helm.toolkit.fluxcd.io/*`, `kapp.k14s.io/*`), even when the template sets them
@@ -252,6 +254,7 @@ The built-in templates of adopted projects are rewritten by the controller, so a
 | `projects.deckhouse.io/project-namespace: <spec.name>` | — | ✓ | Marks an additional namespace (the name of the ProjectNamespace resource) |
 | `projects.deckhouse.io/project-template: <PROJECT_TEMPLATE_NAME>` | ✓ | ✓ | The project template; the cluster resource availability rules match by it |
 | `heritage: multitenancy-manager` | ✓ | ✓ | The namespace is managed by the project controller: its `spec`, finalizers and the labels listed in this table are changed through the Project; other labels and annotations may be changed directly |
+| `projects.deckhouse.io/quota: pending`, `projects.deckhouse.io/quota: enforced` | ✓ | ✓ | The namespace belongs to a project with a [quota](#project-quota); only the controller sets the label |
 | `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (inherited) | Policies and features from the project template |
 | Labels from the template's `namespaceMetadata.labels` | ✓ | ✓ (inherited) | Labels of the project template. They are listed in the `projects.deckhouse.io/template-labels` annotation of the namespace and changed through the Project or its ProjectTemplate |
 | Any other label set on a namespace directly or by a GitOps tool, including the labels a namespace had before it became a project | — | — | Not set by the module. The project release neither reverts nor restores it, and the additional namespaces do not inherit it |
@@ -345,7 +348,11 @@ If the namespace already has an object of the same kind and name as one that the
 Project administrators and the resource quota are set in fields of the [Project](cr.html#project) and work with any template (including `simple`):
 
 - `.spec.administrators` — a list of subjects (`kind: User` or `kind: Group` and `name`) that receive administrative access to the project. The controller manages this access as an auto-generated [ProjectRoleBinding](cr.html#projectrolebinding) in the project namespace. A name cannot contain control characters or line breaks and cannot start with `system:multitenancy-manager:`, the prefix of the users that the controller [acts as](#describing-other-objects-in-manifests). An update that keeps such a name as it was is accepted with a warning.
-- `.spec.quota` — a map of [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) hard limits (for example, `requests.cpu`, `limits.memory`). The controller maintains a `ResourceQuota` in the project namespace and reports current usage in `.status.usage`. For `memory` and `storage`, a unit suffix is required (for example `2Gi`). Numbers without a unit mean bytes, and all of them except 0 are rejected. An update that leaves such a value as it was is accepted with a warning, so a project whose quota came from bare numbers in `parameters.resourceQuota` stays editable and can still be applied unchanged. A create through `deckhouse.io/v1alpha2` with such numbers in `parameters.resourceQuota` is accepted with a warning as well, so such a manifest can create the project again, for example from a backup.
+- `.spec.quota` — a map of [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) hard limits (for example, `requests.cpu`, `limits.memory`) for the whole project.
+  The controller turns it into the [ProjectQuota](#project-quota) of the project and reports the usage summed over the namespaces of the project in `.status.usage`; clearing the field deletes that ProjectQuota.
+  Changing the field needs the right to write the ProjectQuota of the project, and its keys follow the [rules of a ProjectQuota](#keys-of-a-project-quota).
+  For `memory` and `storage`, a unit suffix is required (for example `2Gi`).
+  Numbers without a unit mean bytes, and all of them except 0 are rejected. An update that leaves such a value as it was is accepted with a warning, so a project whose quota came from bare numbers in `parameters.resourceQuota` stays editable and can still be applied unchanged. A create through `deckhouse.io/v1alpha2` with such numbers in `parameters.resourceQuota` is accepted with a warning as well, so such a manifest can create the project again, for example from a backup.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3
@@ -368,64 +375,85 @@ spec:
 A Helm `resourcesTemplate` that renders a ResourceQuota or an AuthorizationRule keeps rendering it, next to the ResourceQuota and the ProjectRoleBinding that the standard fields create. A pod in such a project has to fit every ResourceQuota of its namespace, and the access such AuthorizationRules grant adds to the access of the standard fields.
 {% endalert %}
 
-## Granting access within a project
+## Project quota
 
-To grant access to project namespaces for users beyond the project administrators, use role bindings that reference cluster-wide roles and fan out into the appropriate project namespaces automatically:
-
-- [ProjectRoleBinding](cr.html#projectrolebinding) (namespaced, short name `prb`) — grants a role within a **single** project. It must be created in the project's main namespace (the namespace whose name equals the project name). The controller creates a RoleBinding in every namespace of that project.
-- [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) (cluster-scoped, short name `cprb`) — grants a role across **all** non-virtual projects. The controller creates a RoleBinding in every namespace of every project and reports the number of bound projects in `.status.boundProjects`.
-
-`roleRef` must reference a ClusterRole whose name starts with one of the allowed prefixes (`d8:project:`, `d8:namespace:`, `d8:project-capability:`, `d8:namespace-capability:`, `d8:custom:`). The roles are described in the [`user-authz` module documentation](/modules/user-authz/).
-
-The following checks apply when bindings are created:
-
-- **Privilege escalation protection**: a binding can only be created by a user who has the right to bind (`bind`) the referenced role, checked by name. A project administrator (`d8:project:admin`) holds `bind` on exactly eight roles: `d8:project:viewer`, `d8:project:user`, `d8:project:manager`, `d8:project:admin`, `d8:namespace:viewer`, `d8:namespace:user`, `d8:namespace:manager` and `d8:namespace:admin`. A binding to any other role — a custom `d8:custom:*` role, a capability, `d8:project:superadmin` — is refused for the project administrator even when the role is narrower than their own permissions, because nothing grants them `bind` on that name. Such bindings are created by a cluster administrator, or the cluster administrator grants `bind` on the custom role to the project administrators with a ClusterRole of their own.
-- The role must exist: a binding to a non-existent role is rejected.
-- A ServiceAccount used as a subject of a ProjectRoleBinding must belong to a namespace of that same project. Its main namespace, its additional namespaces and a namespace a ProjectNamespace of the project has claimed qualify. A namespace that is only named like an additional namespace (`<project>-*`) but belongs to a separate project does not. When the binding is updated, a ServiceAccount the stored binding already has is not refused again. If its namespace is no longer a namespace of the project, the response carries a warning that this ServiceAccount gets no rights from the binding.
-- System and subsystem roles (`d8:system:*`, `d8:subsystem:*`), as well as arbitrary roles outside the listed prefixes, cannot be granted via project bindings.
-- Roles with the `rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"` annotation are forbidden for granting in projects. A cluster administrator can put this annotation on a role to phase it out: existing bindings keep working, but new ones cannot be created. If such a role is used by a project template, the project switches to the `Error` state with an explanation in the `TemplateRolesAllowed` condition.
-
-The controller checks the ServiceAccounts by the same rule every time it updates the RoleBindings of a ProjectRoleBinding, and also when a namespace appears, is deleted or moves to another project. A subject that names ServiceAccounts goes into the RoleBindings only while their namespace is the main namespace of the project, or exists, is not being deleted and carries the `projects.deckhouse.io/project` label with the project name. Besides subjects of the `ServiceAccount` kind, this applies to the `User` subject named `system:serviceaccount:<namespace>:<name>` and the `Group` subject named `system:serviceaccounts:<namespace>`, which RBAC matches to the same ServiceAccounts. Other users and groups are not affected. So a ServiceAccount of a deleted additional namespace gets no rights when a separate project takes the name later.
-
-The left-out subjects stay in `.spec.subjects`. The `SubjectsBound` condition of the binding is `False` and lists them, and the `SubjectsLeftOut` Warning event is sent when the list changes. The `Ready` condition stays `True`, as the binding keeps working for the other subjects. Once the namespace is a namespace of the project again, for example after the deleted ProjectNamespace is created again, the subjects get the rights back without a change to the binding. You can check the condition in the status of the binding:
-
-```shell
-d8 k -n my-project get projectrolebinding ci -o jsonpath='{.status.conditions[?(@.type=="SubjectsBound")]}'
-```
-
-The `d8-administrators` binding created by the controller from the [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators) field is managed by the controller only — it cannot be edited manually. To change the set of administrators, change the `.spec.administrators` field of the project.
-
-The ServiceAccount rule above does not apply to this binding. An administrator given as the `User` `system:serviceaccount:<namespace>:<name>` or the `Group` `system:serviceaccounts:<namespace>` gets the rights in every namespace of the project, whichever project that namespace belongs to, because only those allowed to change the Project set its administrators. Remove such an administrator from the project before its namespace is deleted, as the ServiceAccounts of a namespace created later under the same name would get these rights.
-
-The following bindings give the `viewer@example.com` user the `d8:project:viewer` role in every namespace of `my-project`, and the `platform` group the same role in every project except the virtual ones:
+A [ProjectQuota](cr.html#projectquota) is one limit on the sum of resource usage over all namespaces of a project, the [additional namespaces](#additional-project-namespaces) included. Its name is the name of the project. [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) of a Project becomes the ProjectQuota of the project; a ProjectQuota can also be created directly:
 
 ```yaml
----
-apiVersion: deckhouse.io/v1alpha3
-kind: ProjectRoleBinding
+apiVersion: deckhouse.io/v1alpha1
+kind: ProjectQuota
 metadata:
-  name: viewers
-  namespace: my-project
+  name: my-project
 spec:
-  subjects:
-    - kind: User
-      name: viewer@example.com
-  roleRef:
-    kind: ClusterRole
-    name: d8:project:viewer
----
-apiVersion: deckhouse.io/v1alpha3
-kind: ClusterProjectRoleBinding
-metadata:
-  name: platform-viewers
-spec:
-  subjects:
-    - kind: Group
-      name: platform
-  roleRef:
-    kind: ClusterRole
-    name: d8:project:viewer
+  hard:
+    requests.cpu: "20"
+    requests.memory: 40Gi
+    projectNamespaces: "3"
 ```
+
+A ProjectQuota created directly is never taken over by `.spec.quota`: the field does not overwrite or delete it. Setting `.spec.quota` of a project whose ProjectQuota was created directly is refused, and a project that already has both reports `StandardFieldsApplied` as `False`. Delete the ProjectQuota to let the field make its own ProjectQuota object, or clear the field.
+
+How the quota applies:
+
+- The controller creates the `d8-project-quota` ResourceQuota with the limits of `spec.hard` in every namespace of the project, the ones added later included. This ResourceQuota counts the usage of its namespace, so no namespace alone uses more than the whole project may.
+- A namespace that the quota applies in carries the `projects.deckhouse.io/quota: enforced` label once its `d8-project-quota` is calculated by kube-controller-manager. A namespace created for a ProjectNamespace carries `projects.deckhouse.io/quota: pending` from the start until then, and the main namespace of a project that has not been deployed yet gets it when the quota of the project is applied, so the manifests of the template wait for the quota too, however long the first attempts to deploy the project fail. The main namespace of a project that has been deployed (in the `Deployed` state), as on an upgrade of the module or when a quota is set on a running project, is not held. The label is set by the controller only.
+- In a namespace labelled `projects.deckhouse.io/quota: pending`, the `d8-multitenancy-manager-quota-pending` admission policy refuses the objects of users until `d8-project-quota` is calculated, and the ProjectNamespace reports `Ready=False`.
+  That takes seconds after a namespace is created.
+  In a namespace labelled `projects.deckhouse.io/quota: enforced`, the `d8-multitenancy-manager-quota-guard` admission policy refuses the objects the quota counts while `d8-project-quota` has no limits calculated at all or has scopes.
+  A limit added to a quota that is calculated already does not hold anything back: it applies once kube-controller-manager has calculated it, and `Enforced` is `False` with the `KeyRollout` reason until then.
+- A ProjectQuota is deleted in two steps: its `projects.deckhouse.io/project-quota` finalizer holds it until the controller has taken the label off the namespaces, and only then the `d8-project-quota` ResourceQuota objects go with it. A namespace that is being deleted loses the label at once, so that the objects waiting for a finalizer there, such as the volume claims protected from deletion, can be updated. If the module is disabled before the finalizer is removed, remove it by hand.
+- The status of the ProjectQuota shows the usage summed over the namespaces (`status.used`), the number of namespaces and the 50 namespaces closest to a limit. The usage of every namespace is in its `d8-project-quota` ResourceQuota:
+
+  ```shell
+  d8 k get resourcequota -A -l projects.deckhouse.io/project=my-project
+  ```
+
+- The `Enforced` condition says whether the quota applies in every namespace, and the `Exceeded` condition whether the usage is above a limit. A limit may be lowered below the current usage: the change is accepted with a warning, nothing running is evicted, and `Exceeded` is `True` with the `HardLowered` reason. The [`D8ProjectQuotaExceeded`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-d8projectquotaexceeded) alert fires then.
+
+### Keys of a project quota
+
+A ProjectQuota and `.spec.quota` accept the keys a ResourceQuota counts in a namespace:
+
+- `cpu`, `memory`, `ephemeral-storage`, `pods`, `requests.*` and `limits.*` of CPU, memory and ephemeral storage, `requests.storage`, `requests.hugepages-<SIZE>`, the requests of extended resources (for example, `requests.nvidia.com/gpu`);
+- `services`, `services.loadbalancers`, `services.nodeports`, `persistentvolumeclaims`, `configmaps`, `secrets`, `replicationcontrollers`;
+- `<CLASS>.storageclass.storage.k8s.io/requests.storage` and `<CLASS>.storageclass.storage.k8s.io/persistentvolumeclaims`, `<CLASS>.deviceclass.resource.k8s.io/devices`;
+- `count/<RESOURCE>[.<GROUP>]` for a namespaced resource the API server serves, for example `count/ingresses.networking.k8s.io`;
+- `projectNamespaces`, an alias of `count/projectnamespaces.deckhouse.io`: the number of [ProjectNamespace](cr.html#projectnamespace) objects of the project, that is, of its additional namespaces. The alias is expanded in the ResourceQuota objects, and the object keeps it as written.
+
+Refused are `resourcequotas` and `count/resourcequotas` (`d8-project-quota` takes one in every namespace by itself), the count of a cluster-scoped resource such as `count/namespaces`, a resource misspelled in a served group, a `count/` key of a resource that lacks one of the verbs create, list, watch and delete, the keys with the reserved `projectquota.deckhouse.io/` prefix, and the keys of virtual machines and of load balancers, which the project quota does not count yet.
+A `count/` key of a group the API server does not serve yet is accepted with a warning: nothing counts it until the module that provides the group is enabled, and `Enforced` is `False` with the `KeyNotServed` reason until then.
+A change that keeps a key the object already has is accepted with a warning even when the key would be refused now.
+
+A new key in a live quota starts to apply once `d8-project-quota` of every namespace has it calculated; until then `Enforced` is `False` with the `KeyRollout` reason.
+
+Pods and volume claims with `resource-quota-overrides.deckhouse.io/*` labels set by platform controllers are counted as a ResourceQuota counts them.
+
+### Clusters where Deckhouse Platform does not manage the control plane
+
+The sum over the namespaces of a project is enforced only where Deckhouse Platform manages the control plane of the cluster (the `control-plane-manager` module is enabled).
+Elsewhere the `d8-multitenancy-manager-quota-pending` and `d8-multitenancy-manager-quota-guard` admission policies are not rendered, every ProjectQuota reports `Enforced=False` with the `ControlPlaneNotManaged` reason, and the [`D8ProjectQuotaNotSupported`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-d8projectquotanotsupported) alert says so.
+Each namespace still keeps its `d8-project-quota` ResourceQuota, so no namespace alone uses more than the quota of the whole project.
+
+### Dividing a project quota between namespaces
+
+A project administrator may create ResourceQuota objects of their own in the namespaces of the project. Such a quota only narrows the project quota: an object has to fit every ResourceQuota of its namespace. A quota of a project administrator cannot be named `d8-project-quota` and cannot limit `resourcequotas` or `count/resourcequotas`. A `d8-project-quota` that the controller did not create, or one with scopes, is deleted and created again by the controller.
+
+For example, to keep the `my-project-db` namespace within a quarter of the CPU of the project:
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: db-share
+  namespace: my-project-db
+spec:
+  hard:
+    requests.cpu: "5"
+```
+
+### Who manages the quotas
+
+ProjectQuota objects are created, changed and deleted with the `d8:system-capability:multitenancy-manager:manage_quotas` capability, which the IAM `manager` role and the roles above it include. The same right is needed to change `.spec.quota` of a Project: the Project webhook checks it, so whoever may create and change projects does not choose their quota. The status of a ProjectQuota and the usage in the status of `d8-project-quota` are written by the controller and by Kubernetes only, the latter where Deckhouse Platform manages the control plane.
 
 ### Roles available in a RoleBinding inside a project
 

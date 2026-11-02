@@ -1,0 +1,33 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+    rbac.deckhouse.io/aggregate-to-iam-as: manager
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.multitenancy-manager.manage_quotas"
+    rbac.deckhouse.io/scope: system
+    rbac.deckhouse.io/namespace: d8-multitenancy-manager
+  name: d8:system-capability:multitenancy-manager:manage_quotas
+  annotations:
+    en.meta.deckhouse.io/title: "Module multitenancy-manager: manage project quotas"
+    ru.meta.deckhouse.io/title: "Модуль multitenancy-manager: управление квотами проектов"
+    en.meta.deckhouse.io/description: "Create, change and delete the quotas of projects (ProjectQuota), and set spec.quota of a Project."
+    ru.meta.deckhouse.io/description: "Создание, изменение и удаление квот проектов (ProjectQuota), задание spec.quota у Project."
+rules:
+# A quota is set apart from the right to create and change projects, so that whoever creates projects
+# for themselves does not choose their own quota. The Project webhook asks for this right when a write
+# changes spec.quota, which the controller turns into the ProjectQuota of the project. The status of a
+# ProjectQuota is the controller's alone and is not granted here.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - projectquotas
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection

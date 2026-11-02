@@ -1,0 +1,168 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+    backup.deckhouse.io/cluster-config: "true"
+  name: projectquotas.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: ProjectQuota
+    listKind: ProjectQuotaList
+    plural: projectquotas
+    singular: projectquota
+    shortNames:
+      - pq
+  scope: Cluster
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type=="Enforced")].status
+          name: Enforced
+          type: string
+        - jsonPath: .status.conditions[?(@.type=="Exceeded")].status
+          name: Exceeded
+          type: string
+        - jsonPath: .status.namespaceCount
+          name: Namespaces
+          type: integer
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            One limit on the sum of resource usage over all namespaces of a project.
+
+            The name of the object is the name of the project. The controller puts the `d8-project-quota`
+            ResourceQuota with the limits of `spec.hard` into every namespace of the project, the ones created
+            later included, so that the usage of each namespace is counted by its own ResourceQuota and no namespace
+            alone uses more than the whole project may. The status shows the usage summed over the namespaces.
+
+            `Project.spec.quota`, when set, is turned into the ProjectQuota of the project, and clearing it deletes
+            the corresponding ProjectQuota. A ProjectQuota created directly is neither changed nor deleted when
+            `Project.spec.quota` changes. `Project.spec.quota` also cannot be set until the corresponding
+            ProjectQuota created directly is deleted.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              properties:
+                hard:
+                  description: |
+                    Limits of the project, in the format of `ResourceQuota.spec.hard`, for example `requests.cpu: "100"`.
+
+                    Accepted keys are the ones a ResourceQuota counts in a namespace: `cpu`, `memory`, `requests.*`,
+                    `limits.*`, `pods`, `services`, `services.loadbalancers`, `services.nodeports`, `persistentvolumeclaims`,
+                    `configmaps`, `secrets`, `replicationcontrollers`, `ephemeral-storage`, the storage class and device
+                    class keys, the requests of extended resources and `count/<RESOURCE>[.<GROUP>]` for a namespaced
+                    resource the API server serves. `projectNamespaces` is an alias of
+                    `count/projectnamespaces.deckhouse.io`, the number of ProjectNamespace objects of the project.
+
+                    `resourcequotas`, `count/resourcequotas`, the count of a cluster-scoped resource and a misspelled
+                    resource are refused. A `count/` key of a group the API server does not serve yet is accepted with a
+                    warning and counts nothing until the module that provides the group is enabled.
+                  type: object
+                  additionalProperties:
+                    anyOf:
+                      - type: integer
+                      - type: string
+                    x-kubernetes-int-or-string: true
+            status:
+              type: object
+              properties:
+                hard:
+                  description: Limits the controller applies, `spec.hard` with the alias expanded.
+                  type: object
+                  additionalProperties:
+                    anyOf:
+                      - type: integer
+                      - type: string
+                    x-kubernetes-int-or-string: true
+                used:
+                  description: Usage of the project, summed over all of its namespaces.
+                  type: object
+                  additionalProperties:
+                    anyOf:
+                      - type: integer
+                      - type: string
+                    x-kubernetes-int-or-string: true
+                namespaceCount:
+                  description: Number of namespaces of the project.
+                  type: integer
+                  format: int32
+                topNamespaces:
+                  description: |
+                    Namespaces closest to a limit, at most 50 of them. The usage of every namespace is in its
+                    `d8-project-quota` ResourceQuota.
+                  type: array
+                  maxItems: 50
+                  items:
+                    type: object
+                    required:
+                      - name
+                    properties:
+                      name:
+                        description: Name of the namespace.
+                        type: string
+                      used:
+                        description: Usage of the namespace.
+                        type: object
+                        additionalProperties:
+                          anyOf:
+                            - type: integer
+                            - type: string
+                          x-kubernetes-int-or-string: true
+                observedGeneration:
+                  description: Last generation of the object the controller processed.
+                  type: integer
+                  format: int64
+                conditions:
+                  description: |
+                    State of the quota:
+
+                    - If `Enforced` is `True`, the quota applies in every namespace of the project. If `Enforced` is `False`, `reason` says why:
+                      `ControlPlaneNotManaged` (Deckhouse Platform does not manage the control
+                      plane, so the sum is not enforced), `ProjectNotFound` (there is no project of this name),
+                      `KeyNotServed` (the API server does not serve the resource of a `count/` key yet) or
+                      `KeyRollout` (the `d8-project-quota` ResourceQuota of some namespace is not there or not
+                      calculated with every limit yet).
+                    - If `Exceeded` is `True`, the usage of the project is above the quota on some key. The `reason` says
+                      how the usage got above the quota: `HardLowered` (the limit was set below the usage, by a change
+                      or when the quota was created) or `Overshoot` (the usage grew past the limit).
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                    properties:
+                      type:
+                        description: Condition type.
+                        type: string
+                      status:
+                        description: "Condition state: `True`, `False` or `Unknown`."
+                        type: string
+                      reason:
+                        description: Reason of the condition state.
+                        type: string
+                      message:
+                        description: Message with details of the condition state.
+                        type: string
+                      observedGeneration:
+                        description: Generation of the object the condition was set for.
+                        type: integer
+                        format: int64
+                      lastTransitionTime:
+                        description: Time when the condition last changed.
+                        format: date-time
+                        type: string

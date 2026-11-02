@@ -39,6 +39,7 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
+	projectquota "controller/internal/quota"
 )
 
 // A release rendered from a Helm text holds whatever the text said: rules and bindings, quotas,
@@ -254,7 +255,8 @@ func (m *Manager) prepareUpgrade(ctx context.Context, project *v1alpha3.Project,
 	if !handover {
 		return nil
 	}
-	if err := m.reconcileStandardFields(ctx, project); err != nil {
+	// a directly created ProjectQuota is the quota of the project already, so it does not hold the handover
+	if _, err := m.reconcileStandardFields(ctx, project); err != nil {
 		return fmt.Errorf("apply the standard fields before the handover: %w", err)
 	}
 	return nil
@@ -1073,7 +1075,7 @@ func (m *Manager) standardFieldsWaits(ctx context.Context, project *v1alpha3.Pro
 			waits = append(waits, fmt.Sprintf("the %s ResourceQuota does not exist", key.Name))
 		case err != nil:
 			return nil, since, fmt.Errorf("get the project quota: %w", err)
-		case !sameQuantities(quota.Spec.Hard, project.Spec.Quota):
+		case !sameQuantities(quota.Spec.Hard, projectquota.ResourceQuotaHard(projectquota.Canonical(project.Spec.Quota))):
 			waits = append(waits, fmt.Sprintf("the %s ResourceQuota does not have the limits of the project yet", key.Name))
 		case !sameQuantities(quota.Status.Hard, quota.Spec.Hard):
 			waits = append(waits, fmt.Sprintf("the %s ResourceQuota is not calculated", key.Name))

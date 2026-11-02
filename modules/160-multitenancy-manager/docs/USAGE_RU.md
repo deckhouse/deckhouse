@@ -146,6 +146,7 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 | `ResourcesUpgraded` | Не удалось создать или обновить ресурсы проекта из шаблона (детали — в `message`). |
 | `StandardFieldsApplied` | Не удалось применить [стандартные поля](#стандартные-поля-проекта) (квоту или администраторов). |
 | `TemplateRolesAllowed` | Шаблон создаёт привязку к роли, [запрещённой для выдачи в проектах](#предоставление-доступа-внутри-проекта), — проект переводится в `Error`, в `message` указана роль.|
+| `QuotaWithinLimits` | Потребление проекта выше его [ProjectQuota](#квота-проекта); в `message` названы лимиты. У проекта без квоты этого условия нет. |
 | `ManifestsApplied` | Объекты из [`manifests`](#описание-других-объектов-в-manifests) шаблона не применены. В `message` указано, чего они ждут, почему не применён ни один из них, какие уже существующие объекты они не трогают или какие объекты отклонил API-сервер, с кодом каждого отказа (например, `403 Forbidden`). |
 | `HelmOwnership` | Неймспейс проекта принадлежит другому Helm-релизу. В `message` указан этот релиз (подробнее — [в разделе «Автоматическое создание проекта для неймспейса»](#автоматическое-создание-проекта-для-неймспейса)). |
 | `NamespaceDeleted` | Проект удаляется, а его неймспейс ещё не удалён. В `message` указано, с какого момента идёт удаление и что осталось в неймспейсе. |
@@ -155,7 +156,7 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 Прочие полезные поля статуса:
 
 - `.status.namespaces` — все неймспейсы проекта с указанием их типа (`Main`/`Additional`);
-- `.status.usage` — текущее потребление квоты (заполняется при заданном `.spec.quota`);
+- `.status.usage` — потребление проекта, просуммированное по всем его неймспейсам, из его [ProjectQuota](#квота-проекта);
 - `.status.resources` — состояние отдельных ресурсов, созданных из шаблона;
 - `.status.keptObjects` — объекты Helm-текста, которые [остались на месте](#переход-проекта-с-helm-текста) вместо удаления;
 - `.status.manifestObjects` — объекты, применённые из [`manifests`](#описание-других-объектов-в-manifests) шаблона.
@@ -166,7 +167,8 @@ d8 k get project my-project -o jsonpath='{range .status.conditions[*]}{.type}={.
 
 | Объект | Где | Откуда берётся |
 |--------|-----|----------------|
-| `ResourceQuota/d8-project-quota` | Основной неймспейс | Поле [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) проекта. |
+| `ProjectQuota/<PROJECT_NAME>` | Кластерный объект | Поле [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) проекта. Созданный явно ProjectQuota поле не трогает: он не перезаписывается и не удаляется, а квота в поле рядом с ним отклоняется (подробнее — [в разделе «Квота проекта»](#квота-проекта)). |
+| `ResourceQuota/d8-project-quota` | Каждый неймспейс проекта | [ProjectQuota](#квота-проекта) проекта. |
 | `ProjectRoleBinding/d8-administrators` | Основной неймспейс | Поле [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators) проекта. |
 | `ProjectRoleBinding/d8-manifests` | Основной неймспейс | Поле [`manifests`](#описание-других-объектов-в-manifests) шаблона проекта. Выдаёт роль `d8:project:admin` пользователю, от имени которого применяются эти объекты. |
 | `RoleBinding/d8:prb:<имя>` | Каждый неймспейс проекта | Разворачивание [ProjectRoleBinding](cr.html#projectrolebinding) с именем `<имя>`. |
@@ -227,12 +229,12 @@ d8 k get project my-project -o jsonpath='{.status.namespaces}'
 - **Доступ**: привязки [ProjectRoleBinding](cr.html#projectrolebinding) и [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding), включая автоматический доступ администраторов проекта. При добавлении нового неймспейса все существующие привязки разворачиваются в него без каких-либо действий со стороны пользователя.
 - **Namespaced-объекты шаблона**: сетевая политика (`networkPolicy.mode: Isolated`) и настройка сбора логов (`logShipping`) создаются в каждом неймспейсе проекта. Сетевая изоляция при этом разрешает трафик между неймспейсами одного проекта. Helm-шаблон `resourcesTemplate` создаёт свои объекты в основном неймспейсе, если в объекте не указан другой неймспейс проекта. Так же поступает [`manifests`](#описание-других-объектов-в-manifests), объекты которого не применяются, пока один из них указывает неймспейс вне проекта.
 - **Кластерные политики шаблона** (`OperationPolicy`, `SecurityPolicy` из `allowedUIDs`/`allowedGIDs`): выбирают неймспейсы по лейблу `projects.deckhouse.io/project`, то есть покрывают весь проект.
+- **Квота проекта**: ResourceQuota `d8-project-quota` с лимитами [ProjectQuota](#квота-проекта) проекта создаётся в каждом неймспейсе проекта.
 - **Наследуемые лейблы**: профиль безопасности подов (`security.deckhouse.io/pod-policy`), расширенный мониторинг (`extended-monitoring.deckhouse.io/enabled`), сканирование уязвимостей (`security-scanning.deckhouse.io/enabled`), лейбл шаблона (`projects.deckhouse.io/project-template`) и лейблы, которые шаблон задаёт через `namespaceMetadata.labels`, синхронизируются с основного неймспейса на дополнительные. Для шаблона с `resourcesTemplate` это лейблы, которые его Helm-текст ставит на основной неймспейс.
   Синхронизация полная: если функцию выключили или лейбл убрали в шаблоне, лейбл снимется и с дополнительных неймспейсов. Лейблы шаблона перечислены в аннотации `projects.deckhouse.io/template-labels` каждого неймспейса проекта; их меняют через Project или его ProjectTemplate, а прямая правка такого лейбла на дополнительном неймспейсе откатывается. Благодаря лейблу шаблона [правила доступности cluster-wide-ресурсов](#управление-доступом-к-cluster-wide-ресурсам) тоже действуют во всех неймспейсах проекта.
 
 Действуют только в **основном** неймспейсе:
 
-- квота проекта (`ResourceQuota` из [`.spec.quota`](cr.html#project-v1alpha3-spec-quota));
 - аннотации из `namespaceMetadata` шаблона;
 - лейблы и аннотации, поставленные на основной неймспейс напрямую или GitOps-инструментом, в том числе те, что были на неймспейсе до того, как он [стал проектом](#автоматическое-создание-проекта-для-неймспейса), кроме перечисленных выше лейблов профиля безопасности, мониторинга и сканирования;
 - лейблы отслеживания GitOps-инструментов (`app.kubernetes.io/instance`, `argocd.argoproj.io/*`, `kustomize.toolkit.fluxcd.io/*`, `helm.toolkit.fluxcd.io/*`, `kapp.k14s.io/*`), даже если их задаёт шаблон;
@@ -252,6 +254,7 @@ d8 k get project my-project -o jsonpath='{.status.namespaces}'
 | `projects.deckhouse.io/project-namespace: <spec.name>` | — | ✓ | Признак дополнительного неймспейса (имя ресурса ProjectNamespace) |
 | `projects.deckhouse.io/project-template: <PROJECT_TEMPLATE_NAME>` | ✓ | ✓ | Шаблон проекта; по нему применяются правила доступности cluster-wide-ресурсов |
 | `heritage: multitenancy-manager` | ✓ | ✓ | Неймспейс управляется контроллером проектов: его `spec`, поле `finalizers` и лейблы из этой таблицы меняются через Project; остальные лейблы и аннотации можно менять напрямую |
+| `projects.deckhouse.io/quota: pending`, `projects.deckhouse.io/quota: enforced` | ✓ | ✓ | Неймспейс входит в проект с [квотой](#квота-проекта); лейбл ставит только контроллер |
 | `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (наследуются) | Политики и функции из шаблона проекта |
 | Лейблы из `namespaceMetadata.labels` шаблона | ✓ | ✓ (наследуются) | Лейблы шаблона проекта. Перечислены в аннотации `projects.deckhouse.io/template-labels` неймспейса и меняются через Project или его ProjectTemplate |
 | Любой другой лейбл, поставленный на неймспейс напрямую или GitOps-инструментом, в том числе лейбл, который был на неймспейсе до того, как он стал проектом | — | — | Модуль его не ставит. Релиз проекта не откатывает и не возвращает его, дополнительные неймспейсы его не наследуют |
@@ -345,7 +348,13 @@ d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/
 Администраторы проекта и квота ресурсов задаются в полях [Project](cr.html#project) и работают с любым шаблоном (включая `simple`):
 
 - `.spec.administrators` — список субъектов (`kind: User` или `kind: Group` и `name`), получающих административный доступ к проекту. Контроллер реализует этот доступ через автоматически создаваемый [ProjectRoleBinding](cr.html#projectrolebinding) в неймспейсе проекта. Имя не может содержать управляющие символы и переводы строк и не может начинаться с `system:multitenancy-manager:`, префикса пользователей, от имени которых [действует контроллер](#описание-других-объектов-в-manifests). Обновление, которое оставляет такое имя прежним, принимается с предупреждением.
-- `.spec.quota` — набор жёстких лимитов [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) (например, `requests.cpu`, `limits.memory`). Контроллер поддерживает `ResourceQuota` в неймспейсе проекта и сообщает текущее потребление в `.status.usage`. Для `memory` и `storage` должна быть указана единица измерения (например `2Gi`). Числа без единицы измерения означают байты, и все они, кроме 0, отклоняются. Обновление, которое оставляет такое значение прежним, принимается с предупреждением (admission warning), поэтому проект, квота которого пришла из чисел без единиц в `parameters.resourceQuota`, можно редактировать и по-прежнему применять без изменений. Создание через `deckhouse.io/v1alpha2` с такими числами в `parameters.resourceQuota` тоже принимается с предупреждением, поэтому такой манифест может создать проект заново, например из резервной копии.
+- `.spec.quota` — набор жёстких лимитов [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) (например, `requests.cpu`, `limits.memory`) на весь проект.
+  Контроллер превращает его в [ProjectQuota](#квота-проекта) проекта и сообщает в `.status.usage` потребление, просуммированное по неймспейсам проекта; очистка поля удаляет соответствующий ProjectQuota.
+  Для изменения поля нужно право на запись ProjectQuota проекта, а его ключи подчиняются [правилам ProjectQuota](#ключи-квоты-проекта).
+  Для `memory` и `storage` должна быть указана единица измерения (например `2Gi`).
+  Числа без единицы измерения означают байты, и все они, кроме 0, отклоняются.
+  Обновление, которое оставляет такое значение прежним, принимается с предупреждением (admission warning), поэтому проект, квота которого пришла из чисел без единиц в `parameters.resourceQuota`, можно редактировать и по-прежнему применять без изменений.
+  Создание через `deckhouse.io/v1alpha2` с такими числами в `parameters.resourceQuota` тоже принимается с предупреждением, поэтому такой манифест может создать проект заново, например из резервной копии.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha3
@@ -368,64 +377,85 @@ spec:
 Helm-шаблон в `resourcesTemplate`, который создаёт ResourceQuota или AuthorizationRule, продолжает их создавать рядом с ResourceQuota и ProjectRoleBinding, которые создают стандартные поля. Под в таком проекте должен укладываться в каждую ResourceQuota своего неймспейса, а доступ, который выдают такие AuthorizationRule, добавляется к доступу из стандартных полей.
 {% endalert %}
 
-## Предоставление доступа внутри проекта
+## Квота проекта
 
-Чтобы предоставить доступ к неймспейсам проекта пользователям помимо администраторов проекта, используйте привязки ролей, которые ссылаются на кластерные роли и автоматически разворачиваются в нужные неймспейсы проектов:
-
-- [ProjectRoleBinding](cr.html#projectrolebinding) (namespaced-ресурс, короткое имя `prb`) — предоставляет роль в рамках **одного** проекта. Должен создаваться в главном неймспейсе проекта (имя которого совпадает с именем проекта). Контроллер создаёт RoleBinding в каждом неймспейсе этого проекта.
-- [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) (cluster-wide-ресурс, короткое имя `cprb`) — предоставляет роль во **всех** проектах, кроме виртуальных. Контроллер создаёт RoleBinding в каждом неймспейсе каждого проекта и сообщает количество затронутых проектов в `.status.boundProjects`.
-
-`roleRef` должен ссылаться на ClusterRole, имя которой начинается с одного из разрешённых префиксов (`d8:project:`, `d8:namespace:`, `d8:project-capability:`, `d8:namespace-capability:`, `d8:custom:`). Описание ролей — [в документации модуля `user-authz`](/modules/user-authz/).
-
-При создании привязок действуют следующие проверки:
-
-- **Защита от повышения привилегий**: создать привязку может только пользователь, у которого есть право привязывать (`bind`) указанную роль; право проверяется по имени роли. У администратора проекта (`d8:project:admin`) есть `bind` ровно на восемь ролей: `d8:project:viewer`, `d8:project:user`, `d8:project:manager`, `d8:project:admin`, `d8:namespace:viewer`, `d8:namespace:user`, `d8:namespace:manager` и `d8:namespace:admin`. Привязка к любой другой роли — кастомной `d8:custom:*`, роли-capability (`d8:*-capability:*`), `d8:project:superadmin` — для администратора проекта отклоняется, даже если роль уже его собственных полномочий, потому что право `bind` на это имя ему никто не выдал. Такие привязки создаёт администратор кластера, либо он отдельной ClusterRole выдаёт администраторам проекта право `bind` на собственную роль.
-- Роль должна существовать: привязка к несуществующей роли отклоняется.
-- ServiceAccount в качестве субъекта ProjectRoleBinding должен принадлежать неймспейсу этого же проекта. Подходят основной неймспейс, дополнительные неймспейсы и неймспейс, который занял ресурс ProjectNamespace этого проекта. Неймспейс отдельного проекта, который только называется как дополнительный (`<проект>-*`), не подходит. При обновлении привязки ServiceAccount, который уже есть в сохранённой привязке, повторно не отклоняется. Если его неймспейс больше не относится к проекту, ответ содержит предупреждение, что этот ServiceAccount не получает прав по привязке.
-- Системные и подсистемные роли (`d8:system:*`, `d8:subsystem:*`), а также произвольные роли вне перечисленных префиксов через проектные привязки выдать нельзя.
-- Роли с аннотацией `rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"` запрещены для выдачи в проектах. Эту аннотацию администратор кластера может поставить на роль, чтобы прекратить её использование: при этом существующие привязки продолжают работать, но новые не создаются. Если такую роль использует шаблон проекта, проект переходит в статус `Error` с пояснением в условии `TemplateRolesAllowed`.
-
-Контроллер проверяет ServiceAccount по тому же правилу каждый раз, когда обновляет RoleBinding привязки ProjectRoleBinding, а также когда неймспейс появляется, удаляется или переходит в другой проект. Субъект, который указывает на ServiceAccount, попадает в RoleBinding, только пока неймспейс этих ServiceAccount является основным неймспейсом проекта или существует, не удаляется и несёт лейбл `projects.deckhouse.io/project` с именем проекта. Кроме субъектов вида `ServiceAccount`, это касается субъекта `User` с именем `system:serviceaccount:<неймспейс>:<имя>` и субъекта `Group` с именем `system:serviceaccounts:<неймспейс>`, которые RBAC сопоставляет с теми же ServiceAccount. Остальных пользователей и групп это не касается. Поэтому ServiceAccount удалённого дополнительного неймспейса не получает прав, если имя этого неймспейса позже займёт отдельный проект.
-
-Исключённые субъекты остаются в `.spec.subjects`. Условие `SubjectsBound` привязки принимает значение `False` и перечисляет их, а при изменении этого списка отправляется Warning-событие `SubjectsLeftOut`. Условие `Ready` остаётся `True`, так как для остальных субъектов привязка продолжает работать. Когда неймспейс снова относится к проекту, например после повторного создания удалённого ProjectNamespace, субъекты снова получают права без изменения привязки. Проверить условие можно по статусу привязки:
-
-```shell
-d8 k -n my-project get projectrolebinding ci -o jsonpath='{.status.conditions[?(@.type=="SubjectsBound")]}'
-```
-
-Привязка `d8-administrators`, создаваемая контроллером из поля [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators), управляется только контроллером — редактировать её вручную нельзя. Чтобы изменить состав администраторов, измените поле `.spec.administrators` проекта.
-
-Описанное выше правило для ServiceAccount к этой привязке не применяется. Администратор, заданный как `User` `system:serviceaccount:<неймспейс>:<имя>` или `Group` `system:serviceaccounts:<неймспейс>`, получает права во всех неймспейсах проекта, к какому бы проекту ни относился этот неймспейс, так как администраторов проекта задаёт только тот, кому разрешено изменять Project. Удалите такого администратора из проекта до удаления его неймспейса, иначе права получат ServiceAccount неймспейса, который позже создадут под тем же именем.
-
-Следующие привязки выдают пользователю `viewer@example.com` роль `d8:project:viewer` во всех неймспейсах проекта `my-project`, а группе `platform` — ту же роль во всех проектах, кроме виртуальных:
+[ProjectQuota](cr.html#projectquota) — единый лимит на сумму потребления ресурсов по всем неймспейсам проекта, включая [дополнительные](#дополнительные-неймспейсы-проекта). Имя объекта — имя проекта. Поле [`.spec.quota`](cr.html#project-v1alpha3-spec-quota) проекта превращается в ProjectQuota проекта; ProjectQuota можно создать и напрямую:
 
 ```yaml
----
-apiVersion: deckhouse.io/v1alpha3
-kind: ProjectRoleBinding
+apiVersion: deckhouse.io/v1alpha1
+kind: ProjectQuota
 metadata:
-  name: viewers
-  namespace: my-project
+  name: my-project
 spec:
-  subjects:
-    - kind: User
-      name: viewer@example.com
-  roleRef:
-    kind: ClusterRole
-    name: d8:project:viewer
----
-apiVersion: deckhouse.io/v1alpha3
-kind: ClusterProjectRoleBinding
-metadata:
-  name: platform-viewers
-spec:
-  subjects:
-    - kind: Group
-      name: platform
-  roleRef:
-    kind: ClusterRole
-    name: d8:project:viewer
+  hard:
+    requests.cpu: "20"
+    requests.memory: 40Gi
+    projectNamespaces: "3"
 ```
+
+Созданный явно ProjectQuota `.spec.quota` не перехватывает: поле не перезаписывает и не удаляет этот ProjectQuota. Задать `.spec.quota` у проекта, ProjectQuota которого создан напрямую, нельзя, а проект, у которого уже есть и то и другое, показывает `StandardFieldsApplied` равным `False`. Удалите ProjectQuota, чтобы поле создало свой объект ProjectQuota, или очистите поле.
+
+Как применяется квота:
+
+- Контроллер создаёт ResourceQuota `d8-project-quota` с лимитами `spec.hard` в каждом неймспейсе проекта, в том числе добавленном позже. Этот объект ResourceQuota считает потребление своего неймспейса, поэтому ни один неймспейс в одиночку не использует больше, чем весь проект.
+- Неймспейс, в котором действует квота, получает лейбл `projects.deckhouse.io/quota: enforced`, когда kube-controller-manager рассчитал его `d8-project-quota`. Неймспейс, созданный для ProjectNamespace, до этого с момента создания несёт `projects.deckhouse.io/quota: pending`, а основной неймспейс проекта, который ещё не развёрнут, получает этот лейбл, когда применяется квота проекта, поэтому манифесты шаблона тоже ждут квоту, сколько бы ни длились неудачные первые попытки развернуть проект. Основной неймспейс развёрнутого проекта (в состоянии `Deployed`), например при обновлении модуля или при назначении квоты работающему проекту, не удерживается. Лейбл ставит только контроллер.
+- В неймспейсе с лейблом `projects.deckhouse.io/quota: pending` политика допуска `d8-multitenancy-manager-quota-pending` отклоняет объекты пользователей, пока `d8-project-quota` не рассчитан, а ProjectNamespace показывает `Ready=False`.
+  После создания неймспейса это занимает секунды.
+  В неймспейсе с лейблом `projects.deckhouse.io/quota: enforced` политика допуска `d8-multitenancy-manager-quota-guard` отклоняет объекты, которые считает квота, пока в `d8-project-quota` нет ни одного рассчитанного лимита или пока у него есть `scopes`.
+  Лимит, добавленный в уже рассчитанную квоту, ничего не задерживает: он начинает действовать, когда kube-controller-manager его рассчитал, а до тех пор `Enforced` равно `False` с причиной `KeyRollout`.
+- ProjectQuota удаляется в два шага: финализатор `projects.deckhouse.io/project-quota` держит объект, пока контроллер не снимет лейбл с неймспейсов, и только потом вместе с ним удаляются объекты ResourceQuota `d8-project-quota`. С неймспейса, который удаляется, лейбл снимается сразу, чтобы объекты, ожидающие финализатор, например заявки на тома под защитой от удаления, можно было обновлять. Если модуль отключён раньше, чем финализатор снят, снимите его вручную.
+- В статусе ProjectQuota видны сумма потребления по неймспейсам (`status.used`), число неймспейсов и 50 неймспейсов, ближе всего подошедших к лимиту. Потребление каждого неймспейса — в его ResourceQuota `d8-project-quota`:
+
+  ```shell
+  d8 k get resourcequota -A -l projects.deckhouse.io/project=my-project
+  ```
+
+- Условие `Enforced` говорит, действует ли квота во всех неймспейсах, а условие `Exceeded` — превышен ли какой-то лимит. Лимит можно опустить ниже текущего потребления: изменение принимается с предупреждением, ничто из работающего не вытесняется, а `Exceeded` становится `True` с причиной `HardLowered`. В этом случае срабатывает алерт [`D8ProjectQuotaExceeded`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-d8projectquotaexceeded).
+
+### Ключи квоты проекта
+
+ProjectQuota и `.spec.quota` принимают ключи, которые ResourceQuota считает в неймспейсе:
+
+- `cpu`, `memory`, `ephemeral-storage`, `pods`, `requests.*` и `limits.*` для CPU, памяти и эфемерного хранилища, `requests.storage`, `requests.hugepages-<SIZE>`, запросы расширенных ресурсов (например, `requests.nvidia.com/gpu`);
+- `services`, `services.loadbalancers`, `services.nodeports`, `persistentvolumeclaims`, `configmaps`, `secrets`, `replicationcontrollers`;
+- `<CLASS>.storageclass.storage.k8s.io/requests.storage` и `<CLASS>.storageclass.storage.k8s.io/persistentvolumeclaims`, `<CLASS>.deviceclass.resource.k8s.io/devices`;
+- `count/<RESOURCE>[.<GROUP>]` для namespaced-ресурса, который обслуживает API-сервер, например `count/ingresses.networking.k8s.io`;
+- `projectNamespaces` — псевдоним `count/projectnamespaces.deckhouse.io`: число объектов [ProjectNamespace](cr.html#projectnamespace) проекта, то есть его дополнительных неймспейсов. В ResourceQuota псевдоним раскрывается, а в самом объекте остаётся как записан.
+
+Отклоняются ключи `resourcequotas` и `count/resourcequotas` (`d8-project-quota` сам занимает по одному в каждом неймспейсе), счётчик cluster-wide-ресурса вроде `count/namespaces`, ресурс с опечаткой в обслуживаемой группе, ключ `count/` ресурса, у которого нет одного из глаголов create, list, watch и delete, ключи с зарезервированным префиксом `projectquota.deckhouse.io/` и ключи виртуальных машин и балансировщиков нагрузки, которые квота проекта пока не считает.
+Ключ `count/` группы, которую API-сервер ещё не обслуживает, принимается с предупреждением: его ничто не считает, пока не включён модуль, предоставляющий группу, и до тех пор `Enforced` равно `False` с причиной `KeyNotServed`.
+Изменение, которое сохраняет уже имеющийся у объекта ключ, принимается с предупреждением, даже если сейчас такой ключ был бы отклонён.
+
+Новый ключ в действующей квоте начинает работать, когда `d8-project-quota` каждого неймспейса рассчитан с ним; до тех пор `Enforced` равно `False` с причиной `KeyRollout`.
+
+Поды и заявки на тома с лейблами `resource-quota-overrides.deckhouse.io/*`, которые ставят контроллеры платформы, считаются так, как их считает ResourceQuota.
+
+### Кластеры, в которых Deckhouse Platform не управляет control plane
+
+Сумма по неймспейсам проекта ограничивается только там, где control plane кластера ведёт Deckhouse Platform (включён модуль `control-plane-manager`).
+В остальных кластерах политики допуска `d8-multitenancy-manager-quota-pending` и `d8-multitenancy-manager-quota-guard` не создаются, каждый ProjectQuota сообщает `Enforced=False` с причиной `ControlPlaneNotManaged`, а об этом говорит алерт [`D8ProjectQuotaNotSupported`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-d8projectquotanotsupported).
+У каждого неймспейса при этом остаётся свой ResourceQuota `d8-project-quota`, поэтому ни один неймспейс в одиночку не использует больше квоты всего проекта.
+
+### Как поделить квоту проекта между неймспейсами
+
+Администратор проекта может создавать в неймспейсах проекта свои ResourceQuota. Такая квота только сужает квоту проекта: объект должен укладываться в каждый ResourceQuota своего неймспейса. Квота администратора проекта не может называться `d8-project-quota` и не может ограничивать `resourcequotas` или `count/resourcequotas`. ResourceQuota `d8-project-quota`, созданный не контроллером, или со `scopes` контроллер удаляет и создаёт заново.
+
+Например, чтобы неймспейс `my-project-db` получал не больше четверти CPU проекта:
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: db-share
+  namespace: my-project-db
+spec:
+  hard:
+    requests.cpu: "5"
+```
+
+### Кто управляет квотами
+
+Объекты ProjectQuota создают, меняют и удаляют с capability `d8:system-capability:multitenancy-manager:manage_quotas`, которую включают роль IAM `manager` и роли выше. То же право нужно, чтобы изменить `.spec.quota` проекта: его проверяет вебхук Project, поэтому тот, кто может создавать и менять проекты, не выбирает себе квоту сам. Статус ProjectQuota и потребление в статусе `d8-project-quota` пишут только контроллер и Kubernetes; потребление защищено там, где control plane ведёт Deckhouse Platform.
 
 ### Роли, доступные в RoleBinding внутри проекта
 

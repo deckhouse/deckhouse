@@ -31,6 +31,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
@@ -883,4 +885,35 @@ status: {}
 		assert.Equal(t, v1alpha3.ResourceSourceManifests, object.GetLabels()[v1alpha3.ResourceLabelSource])
 	}
 	assert.Equal(t, "web", objects[1].GetLabels()["app"], "the labels of the author stay")
+}
+
+// A ProjectQuota created directly next to spec.quota keeps spec.quota from being applied, which the
+// project reports; its manifests and its status are still reconciled.
+func TestHandle_GoesOnPastADirectProjectQuota(t *testing.T) {
+	ctx := context.Background()
+	objects := manifestsCluster(manifestsText)
+	for _, object := range objects {
+		if project, ok := object.(*v1alpha3.Project); ok {
+			project.Spec.Quota = corev1.ResourceList{corev1.ResourcePods: resource.MustParse("50")}
+		}
+	}
+	direct := &v1alpha1.ProjectQuota{ObjectMeta: metav1.ObjectMeta{Name: "proj"},
+		Spec: v1alpha1.ProjectQuotaSpec{Hard: corev1.ResourceList{corev1.ResourcePods: resource.MustParse("5")}}}
+	m, c, _ := newManifestsManager(t, append(objects, direct)...)
+
+	_, err := m.Handle(ctx, storedProject(t, c))
+	require.NoError(t, err)
+
+	assert.True(t, exists(t, c, configMap("proj", "settings")), "the manifests are applied")
+	stored := storedProject(t, c)
+	assert.NotEqual(t, v1alpha3.ProjectStateError, stored.Status.State)
+	var applied *v1alpha3.Condition
+	for i := range stored.Status.Conditions {
+		if stored.Status.Conditions[i].Type == v1alpha3.ProjectConditionStandardFieldsApplied {
+			applied = &stored.Status.Conditions[i]
+		}
+	}
+	require.NotNil(t, applied)
+	assert.Equal(t, corev1.ConditionFalse, applied.Status)
+	assert.Contains(t, applied.Message, "created directly")
 }

@@ -51,10 +51,12 @@ import (
 	clusterprojectrolebindingcontroller "controller/internal/controllers/clusterprojectrolebinding"
 	projectnamescontroller "controller/internal/controllers/projectnames"
 	projectnamespacecontroller "controller/internal/controllers/projectnamespace"
+	projectquotacontroller "controller/internal/controllers/projectquota"
 	projectrolebindingcontroller "controller/internal/controllers/projectrolebinding"
 	templategrantscontroller "controller/internal/controllers/templategrants"
 	"controller/internal/helm"
 	"controller/internal/jsonpath"
+	"controller/internal/quota"
 	"controller/internal/rolebinding"
 	"controller/internal/startup"
 	clusterprojectrolebindingwebhook "controller/internal/webhook/clusterprojectrolebinding"
@@ -62,6 +64,7 @@ import (
 	grantableclusterresourcereferencewebhook "controller/internal/webhook/grantableclusterresourcereference"
 	projectwebhook "controller/internal/webhook/project"
 	projectnamespacewebhook "controller/internal/webhook/projectnamespace"
+	projectquotawebhook "controller/internal/webhook/projectquota"
 	projectrolebindingwebhook "controller/internal/webhook/projectrolebinding"
 	templatewebhook "controller/internal/webhook/template"
 	grantwebhooks "controller/internal/webhooks"
@@ -173,8 +176,20 @@ func main() {
 		fatal(logger, err, "register namespace controller")
 	}
 
+	// The keys of a project quota that count objects of a resource are checked against the discovery
+	// of the API server; the cache of the webhooks is invalidated when a resource is not found, so a CRD
+	// installed a moment ago is seen. The controller has a cache of its own, invalidated at most once in
+	// a few seconds: a quota with a key of a group not served yet misses on every reconcile.
+	discoveryClient, err := discovery.NewDiscoveryClientForConfigAndClient(runtimeManager.GetConfig(), runtimeManager.GetHTTPClient())
+	if err != nil {
+		fatal(logger, err, "create discovery client")
+	}
+	quotaKeys := &quota.APIDiscovery{Client: memory.NewMemCacheClient(discoveryClient)}
+	reconcileQuotaKeys := &quota.APIDiscovery{Client: memory.NewMemCacheClient(discoveryClient), InvalidateEvery: quota.ReconcileInvalidateEvery}
+	quotaConfig := &quota.ConfigReader{Reader: runtimeManager.GetAPIReader()}
+
 	// register project webhook
-	projectwebhook.Register(runtimeManager, helmClient)
+	projectwebhook.Register(runtimeManager, helmClient, quotaKeys)
 	// register the webhook that lets a project go only with the right to delete its namespaces
 	projectwebhook.RegisterDelete(runtimeManager)
 
@@ -184,10 +199,6 @@ func main() {
 	// register cluster resource grants: catalog reconciler, binding-status reconcilers and webhooks.
 	// They get their own REST mapper, reset every ResyncInterval and on a list 404 of a granted
 	// kind, so a removed or re-scoped CRD is noticed; the manager's mapper never forgets a mapping.
-	discoveryClient, err := discovery.NewDiscoveryClientForConfigAndClient(runtimeManager.GetConfig(), runtimeManager.GetHTTPClient())
-	if err != nil {
-		fatal(logger, err, "create discovery client")
-	}
 	grantsMapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
 	if err = runtimeManager.Add(&grantcontrollers.MapperReset{Mapper: grantsMapper, Interval: grantcontrollers.ResyncInterval}); err != nil {
 		fatal(logger, err, "add grants REST mapper reset")
@@ -247,6 +258,17 @@ func main() {
 	}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up project namespace reconciler")
 	}
+
+	// register the project quota reconciler and the webhook that checks the keys of a quota
+	if err = (&projectquotacontroller.Reconciler{
+		Client:    runtimeManager.GetClient(),
+		Config:    quotaConfig,
+		Discovery: reconcileQuotaKeys,
+		Recorder:  runtimeManager.GetEventRecorderFor(controllerName),
+	}).SetupWithManager(runtimeManager); err != nil {
+		fatal(logger, err, "set up project quota reconciler")
+	}
+	projectquotawebhook.Register(runtimeManager, quotaKeys)
 
 	// register the reconciler that reports projects named like additional namespaces of other projects
 	if err = (&projectnamescontroller.Reconciler{

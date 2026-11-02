@@ -296,7 +296,11 @@ spec:
                         pattern: '^[^\x00-\x1f\x7f]+$'
                 quota:
                   description: |
-                    Resource quota of the project, applied as the `d8-project-quota` ResourceQuota in the main namespace of the project.
+                    Resource quota of the whole project.
+
+                    The controller turns it into the ProjectQuota object of the project, which puts the `d8-project-quota` ResourceQuota into every namespace of the project and sums the usage over them. Clearing the field deletes the corresponding ProjectQuota.
+
+                    A ProjectQuota created directly is not touched by the field. While a ProjectQuota with the name of the project exists, the field cannot be set. Changing the field needs the right to write the ProjectQuota of the project, and its keys follow the rules of a ProjectQuota.
 
                     Keys and values follow the `ResourceQuota.spec.hard` format, for example `requests.cpu: "100"`.
                     Memory and storage quantities must include an explicit unit suffix (for example `requests.memory: 2Gi`);

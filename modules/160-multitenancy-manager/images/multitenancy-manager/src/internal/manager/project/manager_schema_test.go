@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
@@ -167,13 +168,13 @@ func TestHandleReconcilesWhatTheConversionLeavesInTheParameters(t *testing.T) {
 				assert.Equal(t, tt.administrators, names)
 			}
 
-			quota := new(corev1.ResourceQuota)
-			err = c.Get(ctx, client.ObjectKey{Namespace: "team", Name: v1alpha3.ProjectQuotaName}, quota)
+			quota := new(v1alpha1.ProjectQuota)
+			err = c.Get(ctx, client.ObjectKey{Name: "team"}, quota)
 			if tt.quota == nil {
 				assert.True(t, apierrors.IsNotFound(err), "no project quota: %v", err)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.quota, quota.Spec.Hard)
+				assert.Equal(t, tt.quota, quota.Spec.Hard, "the ProjectQuota takes the quota of the project")
 			}
 
 			want, err := json.Marshal(tt.spec.Parameters)

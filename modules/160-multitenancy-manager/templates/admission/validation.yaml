@@ -4,7 +4,7 @@
   that backend is denying, slow or unreachable, addon-operator retries it forever and the module's
   queue locks. Each webhook here is kept out of that situation in one of three ways:
 
-  - Project and ProjectTemplate: the default failurePolicy: Fail, with system/module writers excluded
+  - Project, ProjectTemplate and ProjectQuota: the default failurePolicy: Fail, with system/module writers excluded
     at the apiserver level (CEL matchConditions, evaluated BEFORE any network call to the webhook
     backend). A release cannot deadlock on them regardless of backend health, while ordinary users are
     still validated.
@@ -24,7 +24,7 @@
   ValidatingAdmissionPolicy exempts -- so an administrator who has to bypass a check does it on
   purpose, by impersonating that user, and the bypass is visible in the audit log.
 
-  The exclusion applies to the Project and ProjectTemplate webhooks only. Nothing in the platform
+  The exclusion applies to the Project, ProjectTemplate and ProjectQuota webhooks only. Nothing in the platform
   renders a ProjectRoleBinding, a ProjectNamespace or a ClusterProjectRoleBinding, so no release can
   deadlock on their webhooks, and the exclusion would only drop the managed-by and escalation checks
   for platform service accounts and system:sudouser. Those three webhooks see every request; their
@@ -99,6 +99,31 @@ webhooks:
         namespace: d8-multitenancy-manager
         port: 9443
         path: /validate/v1alpha3/projects/delete
+  # The keys of a ProjectQuota; the status subresource is not matched, the controller alone writes it.
+  - name: projectquotas.multitenancy-webhook.deckhouse.io
+    rules:
+      - apiGroups:
+          - deckhouse.io
+        apiVersions:
+          - v1alpha1
+        resources:
+          - projectquotas
+        operations:
+          - CREATE
+          - UPDATE
+        scope: Cluster
+    admissionReviewVersions:
+      - v1
+    matchPolicy: Equivalent
+    {{- $excludeSystemWriters | nindent 4 }}
+    sideEffects: None
+    clientConfig:
+      caBundle: {{ .Values.multitenancyManager.internal.admissionWebhookCert.ca | default "" | b64enc }}
+      service:
+        name: multitenancy-manager
+        namespace: d8-multitenancy-manager
+        port: 9443
+        path: /validate/v1alpha1/projectquotas
   - name: projectrolebindings.multitenancy-webhook.deckhouse.io
     rules:
       - apiGroups:

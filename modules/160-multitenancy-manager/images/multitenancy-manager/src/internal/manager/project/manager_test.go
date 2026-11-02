@@ -268,6 +268,7 @@ func TestHandleTemplateRendersOntoTheLiveNamespace(t *testing.T) {
 		project := newProject()
 		scheme := runtime.NewScheme()
 		require.NoError(t, corev1.AddToScheme(scheme))
+		require.NoError(t, v1alpha1.AddToScheme(scheme))
 		require.NoError(t, v1alpha2.AddToScheme(scheme))
 		require.NoError(t, v1alpha3.AddToScheme(scheme))
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tmpl.DeepCopy(), project).
@@ -337,6 +338,7 @@ func TestHandlePreCollectsNamespacesBeforeRender(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, rbacv1.AddToScheme(scheme))
+	require.NoError(t, v1alpha1.AddToScheme(scheme))
 	require.NoError(t, v1alpha2.AddToScheme(scheme))
 	require.NoError(t, v1alpha3.AddToScheme(scheme))
 
@@ -641,7 +643,7 @@ func TestHandle_RequeuesLeftoverWrapWhenNamespaceGetFails(t *testing.T) {
 // must block for as long as "kubectl delete ns" used to.
 func TestDelete_KeepsFinalizerWhileNamespaceExists(t *testing.T) {
 	scheme := runtime.NewScheme()
-	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, v1alpha2.AddToScheme, v1alpha3.AddToScheme} {
+	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, v1alpha1.AddToScheme, v1alpha2.AddToScheme, v1alpha3.AddToScheme} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)
 		}

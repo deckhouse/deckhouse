@@ -1,0 +1,81 @@
+- name: d8.multitenancy-manager.project-quota
+  rules:
+  - alert: D8ProjectQuotaExceeded
+    expr: |
+      max by (project) (d8_multitenancy_project_quota_state{state="exceeded"}) > 0
+    for: 15m
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: multitenancy-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_project_quota_exceeded: "D8ProjectQuotasExceeded,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_project_quota_exceeded: "D8ProjectQuotasExceeded,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Project `{{ $labels.project }}` has a ProjectQuota set below its usage.
+      description: |-
+        The usage of project `{{ $labels.project }}`, summed over all of its namespaces, is above the limits of its ProjectQuota: the limits were set below the usage, by a change of the quota or when it was created (the `HardLowered` reason of the `Exceeded` condition).
+
+        Nothing running is evicted. Creating more of the resources whose limits are exceeded is denied until the usage is back within the limits.
+
+        1. See which limits are exceeded and by how much:
+
+           ```bash
+           d8 k get projectquota {{ $labels.project }} -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.reason}: {.message}{"\n"}{end}'
+           ```
+
+        1. See which namespaces use the most (the usage of every namespace is in its `d8-project-quota` ResourceQuota):
+
+           ```bash
+           d8 k get projectquota {{ $labels.project }} -o jsonpath='{range .status.topNamespaces[*]}{.name}: {.used}{"\n"}{end}'
+           d8 k get resourcequota -A -l projects.deckhouse.io/project={{ $labels.project }}
+           ```
+
+        1. Raise the limits in `spec.hard` of the ProjectQuota (or in `spec.quota` of the Project, if the quota comes from there), or delete what the project does not need.
+
+  - alert: D8ProjectQuotaNotEnforced
+    expr: |
+      max by (project) (d8_multitenancy_project_quota_state{state="not_enforced"}) > 0
+    for: 15m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: multitenancy-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_project_quota_not_enforced: "D8ProjectQuotasNotEnforced,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_project_quota_not_enforced: "D8ProjectQuotasNotEnforced,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The ProjectQuota of project `{{ $labels.project }}` does not apply in every namespace of the project.
+      description: |-
+        The `Enforced` condition of the ProjectQuota of project `{{ $labels.project }}` has been `False` for 15 minutes for one of these reasons:
+
+        - `KeyRollout`: the `d8-project-quota` ResourceQuota of some namespace of the project is missing or not calculated with every limit of the quota. The resource quota controller of kube-controller-manager calculates a new quota within seconds, so a quota that stays uncalculated points at kube-controller-manager or at the multitenancy-manager controller; the message of the condition names the namespaces and the error of the controller, if any. Until it is calculated, the objects of users are refused in a namespace labelled `projects.deckhouse.io/quota: pending`. In a namespace labelled `projects.deckhouse.io/quota: enforced`, the objects the quota counts are refused only while its `d8-project-quota` has no calculated limit at all or has scopes; a limit added to a calculated quota holds nothing back.
+        - `KeyNotServed`: a `count/` key names a resource of an API group that the API server does not serve, so nothing counts it. Enable the module that provides the group, or remove the key.
+        - `ProjectNotFound`: there is no project named after the ProjectQuota.
+
+        Check the condition and the quotas of the namespaces:
+
+        ```bash
+        d8 k get projectquota {{ $labels.project }} -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.reason}: {.message}{"\n"}{end}'
+        d8 k get resourcequota -A -l projects.deckhouse.io/project={{ $labels.project }} -o custom-columns=NAMESPACE:.metadata.namespace,HARD:.spec.hard,CALCULATED:.status.hard
+        ```
+
+  - alert: D8ProjectQuotaNotSupported
+    expr: |
+      max(d8_multitenancy_project_quota_enforcement{mode="NotSupported"}) > 0
+      and on() max(d8_multitenancy_project_quotas) > 0
+    for: 1h
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: multitenancy-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: The sum of a project quota is not enforced, because Deckhouse Platform does not manage the control plane.
+      description: |-
+        The cluster has ProjectQuota objects, but the `control-plane-manager` module is disabled: Deckhouse Platform does not manage the control plane of the cluster. The sum over the namespaces of a project is enforced only where it does. Every ProjectQuota reports `Enforced=False` with the `ControlPlaneNotManaged` reason; the usage is counted and shown, and every namespace is limited by its `d8-project-quota` ResourceQuota, so no namespace alone uses more than the quota of the whole project.
+
+        This is expected on a cluster whose control plane is managed outside Deckhouse Platform, for example by a cloud provider. Silence the alert if that is the case.

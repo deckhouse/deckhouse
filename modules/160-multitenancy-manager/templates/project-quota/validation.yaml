@@ -1,0 +1,222 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $policyName := "d8-multitenancy-manager" }}
+{{- $controller := "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager" }}
+{{- $deckhouse := "system:serviceaccount:d8-system:deckhouse" }}
+{{- if eq (include "multitenancy_manager_control_plane_managed" .) "true" }}
+---
+# The guards of a namespace that the project quota applies in. Such a namespace carries the
+# projects.deckhouse.io/quota label: pending from the request that creates it when the controller makes
+# it for a ProjectNamespace, and enforced once its d8-project-quota ResourceQuota is calculated. Where
+# Deckhouse does not manage the control plane, the sum is not enforced and the guards are not rendered.
+#
+# Left out are the objects that cannot wait for the quota: the quota itself, events and reviews, the
+# kube-root-ca.crt ConfigMap and the default ServiceAccount that kube-controller-manager puts into every
+# new namespace, and the writes of the controller, which makes the quota, and of Deckhouse, whose
+# module releases must not wait for it (multitenancy_manager_quota_guard_match).
+#
+# The guard of a pending namespace refuses every other create: the window is the few seconds between
+# the namespace and its calculated quota. It takes no parameter, so the writers it leaves out pass
+# whatever state the quota is in.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}-quota-pending
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  {{- include "multitenancy_manager_quota_guard_match" . | nindent 2 }}
+  validations:
+    - expression: 'false'
+      reason: Forbidden
+      message: 'The d8-project-quota ResourceQuota of this namespace is not calculated yet, so the quota of the project would not count this object. Retry in a few seconds.'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-quota-pending
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}-quota-pending
+  validationActions: [Deny, Audit]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        projects.deckhouse.io/quota: pending
+---
+# The guard of an enforced namespace takes its d8-project-quota as the parameter. It refuses the objects
+# a key of the quota counts while the quota has scopes, and so counts only part of the pods, or while
+# the resource quota controller has not calculated the quota at all (status.hard is empty). A key added
+# to a quota that is calculated already is not held: the quota plugin of the API server does not count
+# it until the controller has calculated it, and holding every create of the project until then would
+# cost more than the gap; the Enforced condition of the ProjectQuota says KeyRollout meanwhile. A
+# missing quota refuses every create but the objects the match constraints leave out, the quota among
+# them (parameterNotFoundAction: Deny: the API server looks the parameter up before it evaluates the
+# match conditions, so the writers they leave out are refused too); the controller labels the namespace
+# pending before it makes the quota again, and takes the label off a namespace that is being deleted.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}-quota-guard
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  paramKind:
+    apiVersion: v1
+    kind: ResourceQuota
+  {{- include "multitenancy_manager_quota_guard_match" . | nindent 2 }}
+  variables:
+    - name: resource
+      expression: 'request.resource.resource'
+    - name: countKey
+      expression: '"count/" + request.resource.resource + (request.resource.group == "" ? "" : "." + request.resource.group)'
+    # Whether a key of the quota counts the kind of the request: its count/ key, a key of the pod
+    # evaluator for pods, of the volume claim evaluator for claims, of the service evaluator for
+    # services, a bare core resource name, or a device class key for resource claims.
+    - name: counted
+      expression: >-
+        has(params.spec.hard) && params.spec.hard.exists(k, k == variables.countKey
+        || (request.resource.group == "" && (k == variables.resource
+        || (variables.resource == "pods" && (k in ["cpu", "memory", "ephemeral-storage"] || (k.startsWith("requests.") && k != "requests.storage") || k.startsWith("limits.")))
+        || (variables.resource == "persistentvolumeclaims" && (k == "requests.storage" || k.contains(".storageclass.storage.k8s.io/")))
+        || (variables.resource == "services" && k.startsWith("services."))))
+        || (request.resource.group == "resource.k8s.io" && variables.resource == "resourceclaims" && k.endsWith(".deviceclass.resource.k8s.io/devices")))
+  validations:
+    - expression: '!variables.counted || (!has(params.spec.scopes) && !has(params.spec.scopeSelector))'
+      reason: Forbidden
+      message: 'The d8-project-quota ResourceQuota of this namespace has scopes, so it does not count every object. The multitenancy-manager controller replaces it; retry in a few seconds.'
+    - expression: '!variables.counted || (has(params.status) && has(params.status.hard) && size(params.status.hard) > 0)'
+      reason: Forbidden
+      message: 'The d8-project-quota ResourceQuota of this namespace is not calculated yet, so the quota of the project would not count this object. Retry in a few seconds.'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-quota-guard
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}-quota-guard
+  paramRef:
+    name: d8-project-quota
+    parameterNotFoundAction: Deny
+  validationActions: [Deny, Audit]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        projects.deckhouse.io/quota: enforced
+{{- end }}
+---
+# The d8-project-quota ResourceQuota of a project namespace is the controller's. The heritage policy
+# holds the one the controller made, by its labels; this one holds the name, so that nobody creates a
+# d8-project-quota of their own before the controller does, with scopes that leave most pods out. And no
+# ResourceQuota of a project namespace may limit resourcequotas: d8-project-quota takes one of them,
+# and a quota of a project administrator could keep the controller from making it. A project
+# administrator may still make ResourceQuota objects of their own, which only narrow the quota.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}-project-quota
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   [""]
+        apiVersions: ["v1"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["resourcequotas"]
+  # The namespace controller and the garbage collector of kube-controller-manager delete the quota with
+  # its namespace or its ProjectQuota, as service accounts of kube-system or, where
+  # kube-controller-manager does not run a service account for each of its controllers, as
+  # system:kube-controller-manager.
+  matchConditions:
+    - name: 'exclude-owners'
+      expression: '!(request.userInfo.username in ["{{ $controller }}", "{{ $deckhouse }}", "system:sudouser", "system:kube-controller-manager"]) && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:kube-system")'
+  validations:
+    - expression: 'request.name != "d8-project-quota"'
+      reason: Forbidden
+      message: 'd8-project-quota is the quota of the project, which the multitenancy-manager controller keeps in every namespace of the project. Change the limits in the ProjectQuota of the project or in spec.quota of the Project.'
+    - expression: 'request.operation == "DELETE" || !has(object.spec.hard) || !object.spec.hard.exists(k, k == "resourcequotas" || k == "count/resourcequotas")'
+      reason: Forbidden
+      message: 'A ResourceQuota of a project namespace cannot limit resourcequotas: the d8-project-quota ResourceQuota of the project takes one in every namespace.'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-project-quota
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}-project-quota
+  validationActions: [Deny, Audit]
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+        - key: projects.deckhouse.io/project
+          operator: Exists
+---
+# The usage in the status of d8-project-quota is what the quota of the project is checked against, so
+# only the two writers of a quota status may change it: the quota plugin of the API server, which
+# writes the usage when it admits an object, and the resource quota controller of
+# kube-controller-manager, which recounts it. A kube-controller-manager that does not run a service account for each of its controllers
+# writes as system:kube-controller-manager. A cluster administrator is held too; the heritage policy
+# does not see a subresource. Only where Deckhouse manages the control plane are the writers known, and
+# only there is the sum over the namespaces checked against this usage.
+{{- if eq (include "multitenancy_manager_control_plane_managed" .) "true" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}-project-quota-status
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   [""]
+        apiVersions: ["v1"]
+        operations:  ["UPDATE"]
+        resources:   ["resourcequotas/status"]
+  matchConditions:
+    - name: 'the-quota-of-the-project'
+      expression: 'request.name == "d8-project-quota"'
+  validations:
+    - expression: 'request.userInfo.username in ["system:apiserver", "system:serviceaccount:kube-system:resourcequota-controller", "system:kube-controller-manager", "system:sudouser"]'
+      reason: Forbidden
+      message: 'The status of the d8-project-quota ResourceQuota is written by the quota plugin of the API server and the resource quota controller only.'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-project-quota-status
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}-project-quota-status
+  validationActions: [Deny, Audit]
+{{- end }}
+---
+# The status of a ProjectQuota is the controller's.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}-projectquota-status
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["UPDATE"]
+        resources:   ["projectquotas/status"]
+  validations:
+    - expression: 'request.userInfo.username in ["{{ $controller }}", "system:sudouser"]'
+      reason: Forbidden
+      message: 'The status of a ProjectQuota is written by the multitenancy-manager controller only.'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}-projectquota-status
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}-projectquota-status
+  validationActions: [Deny, Audit]
+{{- end }}

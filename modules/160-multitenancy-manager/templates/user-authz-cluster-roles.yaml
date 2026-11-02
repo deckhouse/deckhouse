@@ -55,6 +55,21 @@ rules:
   - deletecollection
   - patch
   - update
+# The quota of a project: whoever writes projects at this level sets their quotas too, through a
+# ProjectQuota or through spec.quota of a Project, which needs the same right.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - projectquotas
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

@@ -46,6 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/yaml"
 
+	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
@@ -516,14 +517,16 @@ func newValidator(t *testing.T, objs ...client.Object) *validator {
 	// the chart the controller ships, so a test renders what the webhook renders in the cluster
 	helmClient, err := helm.NewRenderOnly("../../../helmlib", logr.Discard())
 	require.NoError(t, err)
-	return &validator{client: newClientBuilder(t, objs...).Build(), helmClient: helmClient}
+	// the requester may write the ProjectQuota of every project unless a test says otherwise
+	reviewer := &quotaReviewer{allowed: true}
+	return &validator{client: newClientBuilder(t, objs...).WithInterceptorFuncs(interceptor.Funcs{Create: reviewer.create}).Build(), helmClient: helmClient}
 }
 
 func newClientBuilder(t *testing.T, objs ...client.Object) *fake.ClientBuilder {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{
-		corev1.AddToScheme, authorizationv1.AddToScheme, v1alpha2.AddToScheme, v1alpha3.AddToScheme,
+		corev1.AddToScheme, authorizationv1.AddToScheme, v1alpha1.AddToScheme, v1alpha2.AddToScheme, v1alpha3.AddToScheme,
 	} {
 		if err := add(scheme); err != nil {
 			t.Fatal(err)

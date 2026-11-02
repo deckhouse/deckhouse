@@ -46,7 +46,7 @@ description: Создание изолированных проектов для
 1. Из шаблона создаются ресурсы проекта:
    * для современных шаблонов (`deckhouse.io/v1alpha2`) настройки, например профиль безопасности подов, сетевая изоляция, сбор логов и размещение на узлах, описываются [структурированными полями](usage.html#структурированные-шаблоны). Контроллер сам создаёт из них нужные объекты в каждом неймспейсе проекта. Другие объекты описываются в [`manifests`](usage.html#описание-других-объектов-в-manifests) и применяются с правами администратора проекта;
    * шаблон с Helm-полем `resourcesTemplate` рендерится через Helm. Эта форма устарела, как и версия `deckhouse.io/v1alpha1` ресурса ProjectTemplate, в которой другой формы нет ([подробнее](usage.html#проверки-шаблонов)). Ни один шаблон не может получить новое `resourcesTemplate`, шаблон создаётся только через `deckhouse.io/v1alpha2`, а в одном из следующих релизов поле будет удалено, поэтому [переведите такой шаблон](usage.html#перевод-шаблона-с-helm-текста) на структурированные поля и `manifests`;
-1. Стандартные поля проекта применяются независимо от шаблона: [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota) преобразуется в `ResourceQuota`, а [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators) — в автоматически управляемый [ProjectRoleBinding](./cr.html#projectrolebinding).
+1. Стандартные поля проекта применяются независимо от шаблона: [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota) преобразуется в [ProjectQuota](./cr.html#projectquota) проекта, который создаёт ResourceQuota `d8-project-quota` в каждом неймспейсе проекта, а [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators) — в автоматически управляемый [ProjectRoleBinding](./cr.html#projectrolebinding).
 
 API ресурса Project обслуживается как `deckhouse.io/v1alpha3`. Манифесты `v1alpha2` продолжают работать благодаря вебхуку конвертации, а версия `v1alpha1` больше не обслуживается (подробнее — [в разделе «Версии API ресурса Project»](usage.html#версии-api-ресурса-project)). Поле `projectTemplateName` необязательно: если его не указать, используется шаблон `simple`, создающий только неймспейс проекта.
 
@@ -65,7 +65,7 @@ API ресурса Project обслуживается как `deckhouse.io/v1alp
 * настройки шаблона проекта — профиль безопасности подов, сетевые политики, сбор логов и другие политики создаются в каждом неймспейсе проекта;
 * доступ, выданный через [ProjectRoleBinding](./cr.html#projectrolebinding) и [ClusterProjectRoleBinding](./cr.html#clusterprojectrolebinding), включая автоматический доступ администраторов проекта.
 
-Квота проекта ([`.spec.quota`](./cr.html#project-v1alpha3-spec-quota)) применяется в основном неймспейсе.
+Квота проекта ([`.spec.quota`](./cr.html#project-v1alpha3-spec-quota)) применяется во всех неймспейсах проекта как единый лимит на сумму их потребления.
 
 При удалении проекта удаляются все его неймспейсы — и основной, и дополнительные. Подробнее — [в примерах использования](usage.html#дополнительные-неймспейсы-проекта).
 
@@ -94,7 +94,7 @@ ProjectRoleBinding и ClusterProjectRoleBinding могут выдавать то
 Неймспейс сам по себе не изолирует проект. Проект добавляет следующее:
 
 * доступ ко всему проекту через [`.spec.administrators`](./cr.html#project-v1alpha3-spec-administrators), ProjectRoleBinding и ClusterProjectRoleBinding; обычный RoleBinding в одном неймспейсе допускается для делегируемых ролей;
-* ограничение ресурсов через [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota), которое применяется как ResourceQuota `d8-project-quota` в основном неймспейсе;
+* ограничение ресурсов на весь проект через [`.spec.quota`](./cr.html#project-v1alpha3-spec-quota), которое применяется как ResourceQuota `d8-project-quota` в каждом неймспейсе проекта и как лимит на сумму их потребления;
 * сетевую изоляцию через поле [`networkPolicy.mode: Isolated`](./cr.html#projecttemplate-v1alpha2-spec-networkpolicy-mode) шаблона;
 * профиль безопасности подов через поле [`podSecurityStandard`](./cr.html#projecttemplate-v1alpha2-spec-podsecuritystandard) шаблона.
 

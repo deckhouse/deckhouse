@@ -526,8 +526,10 @@ func compileRenderedPolicy(renderedPolicy string) compiledPolicy {
 	var policy admissionregistrationv1.ValidatingAdmissionPolicy
 	Expect(yaml.UnmarshalStrict([]byte(renderedPolicy), &policy)).To(Succeed())
 
-	validationVars := admissioncel.OptionalVariableDeclarations{HasAuthorizer: true}
-	messageVars := admissioncel.OptionalVariableDeclarations{}
+	// A policy with a paramKind reads its params in the variables and validations.
+	hasParams := policy.Spec.ParamKind != nil
+	validationVars := admissioncel.OptionalVariableDeclarations{HasAuthorizer: true, HasParams: hasParams}
+	messageVars := admissioncel.OptionalVariableDeclarations{HasParams: hasParams}
 
 	// The environment is pinned to the lowest Kubernetes version this branch supports, and the mode
 	// is NewExpressions, the one kube-apiserver validates a freshly submitted policy against: with
@@ -602,6 +604,11 @@ func (p compiledPolicy) validate(kind bindingKind, operation admission.Operation
 // the message of the first validation that refuses it. Match conditions are evaluated first, as
 // kube-apiserver does: a request they do not select never reaches the validations.
 func (p compiledPolicy) admit(attributes admission.Attributes, authz authorizer.Authorizer) (bool, string, error) {
+	return p.admitWithParams(attributes, authz, nil)
+}
+
+// admitWithParams is admit for a policy with a paramKind, params being the object its binding refers to.
+func (p compiledPolicy) admitWithParams(attributes admission.Attributes, authz authorizer.Authorizer, params runtime.Object) (bool, string, error) {
 	versioned, err := admission.NewVersionedAttributes(attributes, attributes.GetKind(), nil)
 	if err != nil {
 		return false, "", err
@@ -614,11 +621,12 @@ func (p compiledPolicy) admit(attributes admission.Attributes, authz authorizer.
 		return true, "", err
 	}
 	results, _, err := p.validations.ForInput(context.Background(), versioned, request,
-		admissioncel.OptionalVariableBindings{Authorizer: authz}, nil, celconfig.RuntimeCELCostBudget)
+		admissioncel.OptionalVariableBindings{Authorizer: authz, VersionedParams: params}, nil, celconfig.RuntimeCELCostBudget)
 	if err != nil {
 		return false, "", err
 	}
-	messages, _, err := p.messages.ForInput(context.Background(), versioned, request, admissioncel.OptionalVariableBindings{}, nil, celconfig.RuntimeCELCostBudget)
+	messages, _, err := p.messages.ForInput(context.Background(), versioned, request, admissioncel.OptionalVariableBindings{VersionedParams: params}, nil,
+		celconfig.RuntimeCELCostBudget)
 	if err != nil {
 		return false, "", err
 	}

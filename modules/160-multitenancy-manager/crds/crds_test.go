@@ -57,6 +57,7 @@ var expectedCRDs = map[string]struct {
 	"clusterprojectrolebindings.yaml":                                    {name: "clusterprojectrolebindings.deckhouse.io", kind: "ClusterProjectRoleBinding"},
 	"projectnamespaces.yaml":                                             {name: "projectnamespaces.deckhouse.io", kind: "ProjectNamespace"},
 	"projectrolebindings.yaml":                                           {name: "projectrolebindings.deckhouse.io", kind: "ProjectRoleBinding"},
+	"projectquotas.yaml":                                                 {name: "projectquotas.deckhouse.io", kind: "ProjectQuota"},
 	"projects.yaml":                                                      {name: "projects.deckhouse.io", kind: "Project"},
 	"projecttemplate.yaml":                                               {name: "projecttemplates.deckhouse.io", kind: "ProjectTemplate"},
 	"multitenancy.deckhouse.io_availableclusterresources.yaml":           {name: "availableclusterresources.multitenancy.deckhouse.io", kind: "AvailableClusterResource"},
