@@ -377,6 +377,67 @@ func TestWaitsForState(t *testing.T) {
 	assert.False(t, waitsForState(Decision{Result: ResultInconsistent}), "a usage that does not match")
 	assert.False(t, waitsForState(Decision{Result: ResultExceeded}))
 }
+
+// canaryBody is a canary write of the status of the canary quota in the namespace, with the nonce.
+func canaryBody(t *testing.T, namespace, nonce string) []byte {
+	t.Helper()
+	dryRun := true
+	object, err := json.Marshal(&corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Name: CanaryName, Namespace: namespace,
+		Annotations: map[string]string{CanaryNonceAnnotation: nonce}}})
+	require.NoError(t, err)
+	body, err := json.Marshal(admissionv1.AdmissionReview{Request: &admissionv1.AdmissionRequest{
+		UID: "uid-c", Name: CanaryName, Namespace: namespace, DryRun: &dryRun,
+		UserInfo: authenticationv1.UserInfo{Username: ControllerUser}, Object: runtime.RawExtension{Raw: object}, OldObject: runtime.RawExtension{Raw: object},
+	}})
+	require.NoError(t, err)
+	return body
+}
+
+func TestHandlerRecordsTheCanary(t *testing.T) {
+	h := newHandler(NewState(), serving)
+	h.Nonces = &Nonces{}
+	_, response := call(t, h, canaryBody(t, Namespace, "n1"))
+	require.NotNil(t, response)
+	assert.True(t, response.Allowed)
+	assert.True(t, h.Nonces.Seen("n1"))
+
+	_, _ = call(t, h, canaryBody(t, "team", "n2"))
+	assert.False(t, h.Nonces.Seen("n2"), "a canary quota of another namespace is no canary")
+
+	// a suspension does not stop the API servers from calling the webhook
+	h.Suspended = func() bool { return true }
+	_, response = call(t, h, canaryBody(t, Namespace, "n3"))
+	require.NotNil(t, response)
+	assert.True(t, response.Allowed)
+	assert.True(t, h.Nonces.Seen("n3"))
+}
+
+// Made-up canary requests do not grow the nonces past their bound.
+func TestNoncesAreBounded(t *testing.T) {
+	n := &Nonces{}
+	now := time.Now()
+	for i := range 10 * maxNonces {
+		n.Record(fmt.Sprintf("forged-%d", i), now.Add(time.Duration(i)*time.Microsecond))
+	}
+	assert.Len(t, n.seen, maxNonces)
+	assert.True(t, n.Seen(fmt.Sprintf("forged-%d", 10*maxNonces-1)), "the newest stays")
+
+	later := now.Add(2 * nonceTTL)
+	n.Record("real", later)
+	assert.True(t, n.Seen("real"))
+	assert.Len(t, n.seen, 1, "the old ones go once the bound is reached")
+}
+
+func TestHandlerSuspended(t *testing.T) {
+	s := state(rl("pods", "10"), rl("pods", "4"), rl("pods", "5"))
+	h := newHandler(s, func() (string, string) { return ResultNotLeader, "test" })
+	h.Suspended = func() bool { return true }
+	_, response := call(t, h, reviewBody(t, "a", 10, rl("pods", "4"), rl("pods", "50")))
+	require.NotNil(t, response)
+	assert.True(t, response.Allowed, "a suspended ledger lets every write through")
+	assert.Zero(t, s.PendingCount())
+}
+
 // The writes of one project that wait for its approvals to be confirmed take the places of their API
 // server that may wait: a write of another project from that API server is still answered, not refused
 // with an overload, and the calls held, the waiting ones included, stay within perSourceLimit.

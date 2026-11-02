@@ -22,8 +22,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -55,16 +58,22 @@ type fixture struct {
 func newFixture(t *testing.T, controlPlaneManaged string, objects ...client.Object) *fixture {
 	t.Helper()
 	scheme := runtime.NewScheme()
-	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, v1alpha1.AddToScheme, v1alpha3.AddToScheme} {
+	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, coordinationv1.AddToScheme, admissionregistrationv1.AddToScheme, v1alpha1.AddToScheme, v1alpha3.AddToScheme} {
 		require.NoError(t, add(scheme))
 	}
 	config := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{Namespace: quota.ConfigNamespace, Name: quota.ConfigMapName},
 		Data:       map[string]string{"controlPlaneManaged": controlPlaneManaged},
 	}
+	// the webhook of the ledger, configured with the CA of its certificate
+	webhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{Name: quota.LedgerWebhookName},
+		Webhooks:   []admissionregistrationv1.ValidatingWebhook{ledgerWebhook()},
+	}
+	certs := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: quota.ConfigNamespace, Name: quota.LedgerCertsSecretName}, Data: map[string][]byte{"ca.crt": []byte("ca")}}
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(append(objects, config)...).
+		WithObjects(append(objects, config, webhook, certs)...).
 		WithStatusSubresource(&v1alpha1.ProjectQuota{}, &corev1.ResourceQuota{}).
 		Build()
 	f := &fixture{t: t, client: c, now: time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)}
@@ -75,6 +84,23 @@ func newFixture(t *testing.T, controlPlaneManaged string, objects ...client.Obje
 		Now:      func() time.Time { return f.now },
 	}
 	return f
+}
+
+// ledgerWebhook is the webhook of the ledger as the module renders it, with the CA of its certificate.
+func ledgerWebhook() admissionregistrationv1.ValidatingWebhook {
+	return admissionregistrationv1.ValidatingWebhook{
+		Name: quota.LedgerWebhookEntryName,
+		ClientConfig: admissionregistrationv1.WebhookClientConfig{CABundle: []byte("ca"), Service: &admissionregistrationv1.ServiceReference{
+			Name: quota.LedgerServiceName, Namespace: quota.ConfigNamespace, Path: ptr.To(quota.LedgerWebhookPath)}},
+		Rules: []admissionregistrationv1.RuleWithOperations{{
+			Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Update},
+			Rule:       admissionregistrationv1.Rule{APIGroups: []string{""}, APIVersions: []string{"v1"}, Resources: []string{"resourcequotas/status"}},
+		}},
+		NamespaceSelector: &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: quota.NamespaceLabel,
+			Operator: metav1.LabelSelectorOpIn, Values: []string{quota.LabelPending, quota.LabelEnforced, quota.LabelCanary}}}},
+		MatchConditions: []admissionregistrationv1.MatchCondition{{Name: "the-quota-plugin-writes-the-project-quota-or-the-canary",
+			Expression: quota.LedgerWebhookMatchCondition}},
+	}
 }
 
 func (f *fixture) reconcile() reconcile.Result {
@@ -633,4 +659,115 @@ func TestReconcileWithoutTheProject(t *testing.T) {
 	pq := f.quota()
 	assert.Empty(t, pq.OwnerReferences)
 	assert.Equal(t, v1alpha1.ProjectQuotaReasonProjectNotFound, condition(pq, v1alpha1.ProjectQuotaConditionEnforced).Reason)
+}
+
+func TestReconcileReportsTheStateOfTheLedger(t *testing.T) {
+	tests := []struct {
+		name   string
+		edit   func(f *fixture)
+		reason string
+	}{
+		{name: "suspended", reason: v1alpha1.ProjectQuotaReasonSuspended, edit: func(f *fixture) {
+			require.NoError(t, f.client.Create(context.Background(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: quota.ConfigNamespace, Name: quota.SuspendConfigMapName}}))
+		}},
+		{name: "a webhook with another CA", reason: v1alpha1.ProjectQuotaReasonWebhookMissing, edit: func(f *fixture) {
+			certs := new(corev1.Secret)
+			require.NoError(t, f.client.Get(context.Background(), client.ObjectKey{Namespace: quota.ConfigNamespace, Name: quota.LedgerCertsSecretName}, certs))
+			certs.Data["ca.crt"] = []byte("another")
+			require.NoError(t, f.client.Update(context.Background(), certs))
+		}},
+		{name: "a webhook the API servers do not call", reason: v1alpha1.ProjectQuotaReasonWebhookNotCalled, edit: func(f *fixture) {
+			require.NoError(t, f.client.Create(context.Background(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: quota.ConfigNamespace, Name: quota.LedgerStateConfigMapName},
+				Data: map[string]string{quota.LedgerStateNotCalledKey: "10.0.0.1:6443"}}))
+		}},
+		{name: "a webhook that leaves the quota namespaces out", reason: v1alpha1.ProjectQuotaReasonWebhookMisconfigured, edit: func(f *fixture) {
+			webhook := new(admissionregistrationv1.ValidatingWebhookConfiguration)
+			require.NoError(t, f.client.Get(context.Background(), client.ObjectKey{Name: quota.LedgerWebhookName}, webhook))
+			webhook.Webhooks[0].NamespaceSelector.MatchExpressions[0].Values = []string{quota.LabelCanary}
+			require.NoError(t, f.client.Update(context.Background(), webhook))
+		}},
+		{name: "no webhook", reason: v1alpha1.ProjectQuotaReasonWebhookMissing, edit: func(f *fixture) {
+			require.NoError(t, f.client.Delete(context.Background(), &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: quota.LedgerWebhookName}}))
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t, "true", project(), projectNamespace(projectName, map[string]string{quota.NamespaceLabel: quota.LabelEnforced}), projectQuota(rl("pods", "10")))
+			tt.edit(f)
+			f.reconcile()
+			f.count(projectName, rl("pods", "0"))
+			f.reconcile()
+			assert.Equal(t, tt.reason, condition(f.quota(), v1alpha1.ProjectQuotaConditionEnforced).Reason)
+		})
+	}
+}
+
+func TestOvershootCause(t *testing.T) {
+	now := time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)
+	enforced := metav1.Condition{Status: metav1.ConditionTrue, Reason: v1alpha1.ProjectQuotaReasonEnforced}
+	notEnforced := metav1.Condition{Status: metav1.ConditionFalse, Reason: v1alpha1.ProjectQuotaReasonWebhookMissing}
+	within := now.Add(-10 * time.Second)
+
+	_, label := overshootCause(quota.Config{LeaderChangedAt: now.Add(-5 * time.Second)}, enforced, &enforced, within)
+	assert.Equal(t, "leader_change", label, "the leader changed since the usage was within the quota")
+	_, label = overshootCause(quota.Config{LeaderChangedAt: now.Add(-time.Minute)}, enforced, &enforced, within)
+	assert.Equal(t, "late_write_or_recalc", label, "the leader changed before the usage was last within the quota")
+	_, label = overshootCause(quota.Config{}, enforced, nil, within)
+	assert.Equal(t, "late_write_or_recalc", label)
+	_, label = overshootCause(quota.Config{LeaderChangedAt: now.Add(-5 * time.Second)}, enforced, nil, time.Time{})
+	assert.Equal(t, "late_write_or_recalc", label, "the usage was never within the quota")
+
+	cause, label := overshootCause(quota.Config{LeaderChangedAt: now.Add(-time.Minute)}, notEnforced, &enforced, within)
+	assert.Equal(t, "not_enforced", label)
+	assert.Equal(t, "the sum of the project was not checked: WebhookMissing", cause)
+	_, label = overshootCause(quota.Config{}, enforced, &notEnforced, within)
+	assert.Equal(t, "not_enforced", label, "the sum was not checked until the previous evaluation")
+}
+
+// A quota that has been within its limits for weeks is not taken for one the leader change of last
+// week pushed over: the controller remembers when it last found the usage within the quota, and after
+// its own restart takes only a change of the leader within the last minute.
+func TestWithinSince(t *testing.T) {
+	now := time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)
+	weeksAgo := &metav1.Condition{Status: metav1.ConditionFalse, LastTransitionTime: metav1.NewTime(now.Add(-21 * 24 * time.Hour))}
+	r := &Reconciler{}
+	r.remember(projectQuota(rl("pods", "10")))
+
+	assert.Equal(t, now.Add(-leaderChangeWindow), r.withinSince(projectName, weeksAgo, now), "after a restart, the window")
+	recent := &metav1.Condition{Status: metav1.ConditionFalse, LastTransitionTime: metav1.NewTime(now.Add(-10 * time.Second))}
+	assert.Equal(t, now.Add(-10*time.Second), r.withinSince(projectName, recent, now))
+	assert.True(t, r.withinSince(projectName, nil, now).IsZero())
+
+	r.lastWithin[projectName] = now.Add(-2 * time.Second)
+	assert.Equal(t, now.Add(-2*time.Second), r.withinSince(projectName, weeksAgo, now), "the last evaluation within the quota")
+}
+
+// The usage that grew while the webhook of the ledger was missing is an overshoot whose cause says
+// the sum was not checked.
+func TestReconcileTellsAnOvershootNotChecked(t *testing.T) {
+	f := newFixture(t, "true", project(), projectNamespace(projectName, nil), projectQuota(rl("pods", "5")))
+	f.reconcile()
+	f.count(projectName, rl("pods", "3"))
+	f.reconcile()
+	require.NoError(t, f.client.Delete(context.Background(), &admissionregistrationv1.ValidatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: quota.LedgerWebhookName}}))
+	f.count(projectName, rl("pods", "8"))
+	f.now = f.now.Add(time.Minute)
+	f.reconcile()
+	exceeded := condition(f.quota(), v1alpha1.ProjectQuotaConditionExceeded)
+	assert.Equal(t, v1alpha1.ProjectQuotaReasonOvershoot, exceeded.Reason)
+	assert.Contains(t, exceeded.Message, "Probable cause: the sum of the project was not checked: WebhookMissing.")
+}
+
+// The replica of the controller that does not lead reconciles nothing and exports no series of the
+// quota, rather than a zero that reads as "no quotas" or "the webhook is missing".
+func TestOnlyTheLeaderExportsTheQuotaSeries(t *testing.T) {
+	quotaCount.Reset()
+	enforcementMode.Reset()
+	assert.Zero(t, testutil.CollectAndCount(quotaCount))
+	assert.Zero(t, testutil.CollectAndCount(enforcementMode))
+
+	f := newFixture(t, "true", project(), projectNamespace(projectName, nil), projectQuota(rl("pods", "10")))
+	f.reconcile()
+	assert.Equal(t, 1, testutil.CollectAndCount(quotaCount))
+	assert.InDelta(t, 1, testutil.ToFloat64(enforcementMode.WithLabelValues("Enforce")), 0)
 }

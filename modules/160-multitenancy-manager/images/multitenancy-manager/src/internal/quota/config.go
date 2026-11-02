@@ -17,11 +17,15 @@ limitations under the License.
 package quota
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,6 +48,24 @@ const (
 	// ConfigNamespace is the namespace of the module.
 	ConfigNamespace = "d8-multitenancy-manager"
 
+	// SuspendConfigMapName is the ConfigMap an administrator creates to suspend the ledger.
+	SuspendConfigMapName = "quota-ledger-suspend"
+	// LedgerWebhookName is the ValidatingWebhookConfiguration of the ledger.
+	LedgerWebhookName = "d8-multitenancy-manager-quota-ledger"
+	// LedgerCertsSecretName is the Secret with the certificate of the ledger.
+	LedgerCertsSecretName = "quota-ledger-certs"
+	// LedgerLeaseName is the lease of the ledger.
+	LedgerLeaseName = "multitenancy-manager-quota-ledger"
+	// LedgerStateConfigMapName is the ConfigMap the leader of the ledger writes what its canary found
+	// into.
+	LedgerStateConfigMapName = "quota-ledger-state"
+	// LedgerStateNotCalledKey lists, comma-separated, the API servers that write the status of the
+	// canary quota without calling the webhook of the ledger.
+	LedgerStateNotCalledKey = "webhookNotCalledBy"
+	// LedgerStateSingleProbesKey holds, as JSON, when a leader last stepped down for each set of API
+	// servers that alone did not reach it, so that the next leader does not step down for it too soon.
+	LedgerStateSingleProbesKey = "singleProbes"
+
 	configControlPlaneManagedKey = "controlPlaneManaged"
 
 	// configTTL bounds how long a read of the ConfigMap is reused: every reconcile asks for it.
@@ -55,12 +77,33 @@ type Config struct {
 	// ControlPlaneManaged is false on a cluster whose control plane Deckhouse does not manage; the sum
 	// of a project is not enforced there.
 	ControlPlaneManaged bool
+	// Suspended is true while the quota-ledger-suspend ConfigMap is there: the ledger lets every write
+	// through uncounted.
+	Suspended bool
+	// WebhookMissing is true where the sum is enforced and the webhook of the ledger is not configured,
+	// or not with the CA of the certificate of the ledger.
+	WebhookMissing bool
+	// WebhookMisconfigured names the field of the webhook of the ledger that keeps writes of
+	// d8-project-quota from reaching it, empty when none does.
+	WebhookMisconfigured string
+	// WebhookNotCalledBy are the API servers that the canary of the ledger found writing the status of
+	// a quota without calling the webhook.
+	WebhookNotCalledBy []string
+	// LeaderChangedAt is when the current holder took the lease of the ledger, zero when unknown.
+	LeaderChangedAt time.Time
 }
 
 // MetricMode is the value of the mode label of the enforcement metric.
 func (c Config) MetricMode() string {
-	if !c.ControlPlaneManaged {
+	switch {
+	case !c.ControlPlaneManaged:
 		return "NotSupported"
+	case c.Suspended:
+		return "Suspended"
+	case c.WebhookMissing:
+		return "WebhookMissing"
+	case c.WebhookMisconfigured != "":
+		return "WebhookMisconfigured"
 	}
 	return "Enforce"
 }
@@ -106,6 +149,87 @@ func (r *ConfigReader) Read(ctx context.Context) (Config, error) {
 	case err != nil:
 		return Config{}, fmt.Errorf("get the %s/%s ConfigMap: %w", ConfigNamespace, ConfigMapName, err)
 	}
-	r.cached, r.readAt = ParseConfig(cm), now()
+	cfg := ParseConfig(cm)
+	if err := r.readLedger(ctx, &cfg); err != nil {
+		return Config{}, err
+	}
+	r.cached, r.readAt = cfg, now()
 	return r.cached, nil
+}
+
+// Invalidate makes the next Read go to the API: an object it reads has changed.
+func (r *ConfigReader) Invalidate() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.readAt = time.Time{}
+}
+
+// IsConfigObject reports whether an object of the namespace and the name is one Read reads: a
+// change of it is a change of the enforcement of every quota.
+func IsConfigObject(namespace, name string) bool {
+	switch {
+	case namespace == "" && name == LedgerWebhookName:
+		return true
+	case namespace != ConfigNamespace:
+		return false
+	}
+	return name == ConfigMapName || name == SuspendConfigMapName || name == LedgerStateConfigMapName || name == LedgerCertsSecretName
+}
+
+// readLedger reads the state of the ledger: the suspend ConfigMap, the webhook and its CA, and when
+// the lease last changed hands.
+func (r *ConfigReader) readLedger(ctx context.Context, cfg *Config) error {
+	suspend := new(corev1.ConfigMap)
+	switch err := r.Reader.Get(ctx, client.ObjectKey{Namespace: ConfigNamespace, Name: SuspendConfigMapName}, suspend); {
+	case err == nil:
+		cfg.Suspended = true
+	case !apierrors.IsNotFound(err):
+		return fmt.Errorf("get the %s ConfigMap: %w", SuspendConfigMapName, err)
+	}
+
+	lease := new(coordinationv1.Lease)
+	switch err := r.Reader.Get(ctx, client.ObjectKey{Namespace: ConfigNamespace, Name: LedgerLeaseName}, lease); {
+	case err == nil:
+		if lease.Spec.AcquireTime != nil {
+			cfg.LeaderChangedAt = lease.Spec.AcquireTime.Time
+		}
+	case !apierrors.IsNotFound(err):
+		return fmt.Errorf("get the %s lease: %w", LedgerLeaseName, err)
+	}
+
+	if !cfg.ControlPlaneManaged {
+		return nil
+	}
+	state := new(corev1.ConfigMap)
+	switch err := r.Reader.Get(ctx, client.ObjectKey{Namespace: ConfigNamespace, Name: LedgerStateConfigMapName}, state); {
+	case err == nil:
+		if notCalled := state.Data[LedgerStateNotCalledKey]; notCalled != "" {
+			cfg.WebhookNotCalledBy = strings.Split(notCalled, ",")
+		}
+	case !apierrors.IsNotFound(err):
+		return fmt.Errorf("get the %s ConfigMap: %w", LedgerStateConfigMapName, err)
+	}
+
+	webhook := new(admissionregistrationv1.ValidatingWebhookConfiguration)
+	switch err := r.Reader.Get(ctx, client.ObjectKey{Name: LedgerWebhookName}, webhook); {
+	case apierrors.IsNotFound(err):
+		cfg.WebhookMissing = true
+		return nil
+	case err != nil:
+		return fmt.Errorf("get the %s webhook: %w", LedgerWebhookName, err)
+	}
+	secret := new(corev1.Secret)
+	if err := r.Reader.Get(ctx, client.ObjectKey{Namespace: ConfigNamespace, Name: LedgerCertsSecretName}, secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			cfg.WebhookMissing = true
+			return nil
+		}
+		return fmt.Errorf("get the %s Secret: %w", LedgerCertsSecretName, err)
+	}
+	entry := ledgerWebhook(webhook)
+	cfg.WebhookMissing = entry == nil || !bytes.Equal(entry.ClientConfig.CABundle, secret.Data["ca.crt"])
+	if entry != nil {
+		cfg.WebhookMisconfigured = webhookDrift(entry)
+	}
+	return nil
 }

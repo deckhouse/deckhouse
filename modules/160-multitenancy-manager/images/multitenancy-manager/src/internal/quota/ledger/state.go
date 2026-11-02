@@ -38,6 +38,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -84,6 +85,11 @@ type State struct {
 	members map[string]map[string]struct{}
 	// projects are the projects with a ProjectQuota.
 	projects map[string]*projectState
+	// refused are the namespaces whose write was refused over the quota of their project, by when.
+	refused map[string]time.Time
+	// released are the projects whose usage went down since the last wake-up, by when it was woken.
+	released map[string]bool
+	woken    map[string]time.Time
 	// changed is closed and made anew whenever the state changes, so that a write waiting for the
 	// approvals of its project to be confirmed wakes up; it has a lock of its own, so that taking it
 	// never waits for a decision. waiting counts those writes per project.
@@ -99,6 +105,9 @@ func NewState() *State {
 		namespaces: map[string]string{},
 		members:    map[string]map[string]struct{}{},
 		projects:   map[string]*projectState{},
+		refused:    map[string]time.Time{},
+		released:   map[string]bool{},
+		woken:      map[string]time.Time{},
 	}
 }
 
@@ -130,6 +139,11 @@ func (s *State) SetQuota(rq *corev1.ResourceQuota) int {
 		return 0
 	}
 	q.uid, q.rv = rq.UID, rv
+	if decreased(q.used, rq.Status.Used) {
+		if project, ok := s.namespaces[rq.Namespace]; ok {
+			s.released[project] = true
+		}
+	}
 	q.used = rq.Status.Used.DeepCopy()
 	q.hard = rq.Status.Hard.DeepCopy()
 	before := len(q.pending)
@@ -405,6 +419,74 @@ func (s *State) Covers(listed []metav1.Object) bool {
 		}
 	}
 	return true
+}
+
+// decreased reports whether some usage went down.
+func decreased(before, after corev1.ResourceList) bool {
+	for key, value := range before {
+		if now := after[key]; now.Cmp(value) < 0 {
+			return true
+		}
+	}
+	return false
+}
+
+const (
+	// wakeWindow is how long after a refusal the quota of a namespace is woken when its project frees
+	// some of its quota: a controller that retries on the events of the quota of its namespace, as
+	// the virtualization module does, learns that it may try again.
+	wakeWindow = 5 * time.Minute
+	// wakeEvery bounds the wake-ups of a project.
+	wakeEvery = 30 * time.Second
+)
+
+// TakeWakes returns the namespaces whose quota to wake: the ones refused in the last few minutes, of
+// the projects whose usage went down, at most once in a while per project.
+func (s *State) TakeWakes(now time.Time) []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []string
+	for namespace, at := range s.refused {
+		if now.Sub(at) > wakeWindow {
+			delete(s.refused, namespace)
+		}
+	}
+	for project := range s.released {
+		if now.Sub(s.woken[project]) < wakeEvery {
+			continue
+		}
+		delete(s.released, project)
+		woke := false
+		for namespace := range s.members[project] {
+			if _, ok := s.refused[namespace]; ok {
+				out = append(out, namespace)
+				woke = true
+			}
+		}
+		if woke {
+			s.woken[project] = now
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+// Drift counts the quotas that a quorum read shows in the version the ledger holds but with another
+// usage. The same version is the same object, so anything but 0 is a bug of the ledger.
+func (s *State) Drift(quotas []corev1.ResourceQuota) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	drift := 0
+	for i := range quotas {
+		q, ok := s.quotas[quotas[i].Namespace]
+		if !ok || q.rv != ParseResourceVersion(quotas[i].ResourceVersion) {
+			continue
+		}
+		if !equality.Semantic.DeepEqual(nonZero(q.used), nonZero(quotas[i].Status.Used)) {
+			drift++
+		}
+	}
+	return drift
 }
 
 // maxWaitingPerProject bounds the writes of one project that wait for room at a time.

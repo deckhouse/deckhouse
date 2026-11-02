@@ -132,9 +132,13 @@ spec:
 
                     - If `Enforced` is `True`, the quota applies in every namespace of the project. If `Enforced` is `False`, `reason` says why:
                       `ControlPlaneNotManaged` (Deckhouse Platform does not manage the control
-                      plane, so the sum is not enforced), `ProjectNotFound` (there is no project of this name),
-                      `KeyNotServed` (the API server does not serve the resource of a `count/` key yet) or
-                      `KeyRollout` (the `d8-project-quota` ResourceQuota of some namespace is not there or not
+                      plane, so the sum is not enforced), `Suspended` (the `quota-ledger-suspend` ConfigMap suspends
+                      the check of the sum), `WebhookMissing` (the webhook of the quota ledger is missing or its
+                      `caBundle` is not the CA of the ledger certificate), `WebhookMisconfigured` (that webhook is
+                      changed so that writes of `d8-project-quota` do not reach the ledger), `WebhookNotCalled` (some
+                      API server admits objects without calling that webhook), `ProjectNotFound` (there is no project
+                      of this name), `KeyNotServed` (the API server does not serve the resource of a `count/` key yet)
+                      or `KeyRollout` (the `d8-project-quota` ResourceQuota of some namespace is not there or not
                       calculated with every limit yet).
                     - If `Exceeded` is `True`, the usage of the project is above the quota on some key. The `reason` says
                       how the usage got above the quota: `HardLowered` (the limit was set below the usage, by a change

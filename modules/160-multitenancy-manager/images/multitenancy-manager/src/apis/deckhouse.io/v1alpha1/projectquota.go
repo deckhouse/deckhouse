@@ -49,6 +49,10 @@ const (
 	ProjectQuotaReasonKeyRollout             = "KeyRollout"
 	ProjectQuotaReasonKeyNotServed           = "KeyNotServed"
 	ProjectQuotaReasonProjectNotFound        = "ProjectNotFound"
+	ProjectQuotaReasonSuspended              = "Suspended"
+	ProjectQuotaReasonWebhookMissing         = "WebhookMissing"
+	ProjectQuotaReasonWebhookMisconfigured   = "WebhookMisconfigured"
+	ProjectQuotaReasonWebhookNotCalled       = "WebhookNotCalled"
 )
 
 // Reasons of the Exceeded condition.

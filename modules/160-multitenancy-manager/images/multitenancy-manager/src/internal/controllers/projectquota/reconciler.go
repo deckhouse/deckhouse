@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -72,16 +73,22 @@ var (
 	}, []string{"project", "state"})
 	enforcementMode = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "d8_multitenancy_project_quota_enforcement",
-		Help: "1 for how the project quota applies: Enforce, or NotSupported where Deckhouse does not manage the control plane.",
+		Help: "1 for how the project quota applies: Enforce; NotSupported where Deckhouse does not manage the control plane; Suspended by the quota-ledger-suspend ConfigMap; WebhookMissing when the webhook of the ledger is missing or does not trust its certificate; WebhookMisconfigured when it is changed so that writes do not reach the ledger. Exported by the replica of the controller that leads.",
 	}, []string{"mode"})
-	quotaCount = prometheus.NewGauge(prometheus.GaugeOpts{
+	// quotaCount is a vector without labels so that the replica that does not lead exports no series
+	// rather than a zero.
+	quotaCount = prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "d8_multitenancy_project_quotas",
-		Help: "The number of ProjectQuota objects.",
-	})
+		Help: "The number of ProjectQuota objects. Exported by the replica of the controller that leads.",
+	}, nil)
+	overshoots = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "d8_multitenancy_quota_ledger_overshoot_total",
+		Help: "Times the usage of a project grew past its quota, by the probable cause: not_enforced (the sum was not checked), leader_change or late_write_or_recalc.",
+	}, []string{"cause"})
 )
 
 func init() {
-	metrics.Registry.MustRegister(quotaState, enforcementMode, quotaCount)
+	metrics.Registry.MustRegister(quotaState, enforcementMode, quotaCount, overshoots)
 }
 
 // Reconciler keeps the ResourceQuota objects, the namespace labels and the status of a ProjectQuota.
@@ -99,6 +106,8 @@ type Reconciler struct {
 	mu        sync.Mutex
 	lastWrite map[string]time.Time
 	known     map[string]struct{}
+	// lastWithin is when the usage of each project was last found within its quota.
+	lastWithin map[string]time.Time
 }
 
 func (r *Reconciler) now() time.Time {
@@ -488,13 +497,70 @@ func (r *Reconciler) desiredStatus(pq *v1alpha1.ProjectQuota, cfg quota.Config, 
 	// some namespace is missing from it, and Exceeded keeps what it said
 	if projectFound && quota.AllCalculated(namespaces) {
 		previous := quota.FindCondition(pq.Status.Conditions, v1alpha1.ProjectQuotaConditionExceeded)
-		conditions = append(conditions, quota.ExceededCondition(previous, pq.Status.Hard, hard, used, pq.Generation))
+		now := r.now()
+		cause, causeLabel := overshootCause(cfg, enforced, quota.FindCondition(pq.Status.Conditions, v1alpha1.ProjectQuotaConditionEnforced),
+			r.withinSince(pq.Name, previous, now))
+		exceeded := quota.ExceededCondition(previous, pq.Status.Hard, hard, used, pq.Generation, cause)
+		if exceeded.Status == metav1.ConditionFalse {
+			r.mu.Lock()
+			if r.lastWithin != nil {
+				r.lastWithin[pq.Name] = now
+			}
+			r.mu.Unlock()
+		}
+		wasOvershoot := previous != nil && previous.Status == metav1.ConditionTrue && previous.Reason == v1alpha1.ProjectQuotaReasonOvershoot
+		if exceeded.Reason == v1alpha1.ProjectQuotaReasonOvershoot && !wasOvershoot {
+			overshoots.WithLabelValues(causeLabel).Inc()
+		}
+		conditions = append(conditions, exceeded)
 	}
 	for _, condition := range conditions {
 		condition.ObservedGeneration = pq.Generation
 		meta.SetStatusCondition(&status.Conditions, condition)
 	}
 	return status
+}
+
+// leaderChangeWindow is how far back a change of the ledger leader is taken for the cause of an
+// overshoot when the controller does not know when the usage was last within the quota, after its
+// own restart: the condition only says when the usage came within the quota, maybe weeks ago.
+const leaderChangeWindow = time.Minute
+
+// withinSince is when the usage of the project was last found within the quota: by this controller,
+// or else, from the previous Exceeded condition, no earlier than leaderChangeWindow ago. Zero when the
+// usage was not within the quota before.
+func (r *Reconciler) withinSince(name string, previous *metav1.Condition, now time.Time) time.Time {
+	r.mu.Lock()
+	at, ok := r.lastWithin[name]
+	r.mu.Unlock()
+	if ok {
+		return at
+	}
+	if previous == nil || previous.Status != metav1.ConditionFalse {
+		return time.Time{}
+	}
+	if window := now.Add(-leaderChangeWindow); previous.LastTransitionTime.Time.Before(window) {
+		return window
+	}
+	return previous.LastTransitionTime.Time
+}
+
+// overshootCause is the probable cause of a usage that grew past the quota: the sum not checked, as
+// the Enforced condition says, now or at the previous evaluation; a change of the ledger leader since
+// the usage was last found within the quota; or else a status write saved late or a recount of
+// kube-controller-manager, which the ledger cannot see.
+func overshootCause(cfg quota.Config, enforced metav1.Condition, previousEnforced *metav1.Condition, withinSince time.Time) (string, string) {
+	notChecked := enforced
+	if previousEnforced != nil && previousEnforced.Status != metav1.ConditionTrue {
+		notChecked = *previousEnforced
+	}
+	if notChecked.Status != metav1.ConditionTrue {
+		return "the sum of the project was not checked: " + notChecked.Reason, "not_enforced"
+	}
+	if !withinSince.IsZero() && cfg.LeaderChangedAt.After(withinSince) {
+		return "the leader of the quota ledger changed since the usage was last found within the quota", "leader_change"
+	}
+	return "a quota status write saved late, or a recount of kube-controller-manager", "late_write_or_recalc"
 }
 
 func (r *Reconciler) writeStatus(ctx context.Context, pq *v1alpha1.ProjectQuota, status *v1alpha1.ProjectQuotaStatus) error {
@@ -523,7 +589,8 @@ func (r *Reconciler) publishState(name string, conditions []metav1.Condition) {
 	}
 	if c := quota.FindCondition(conditions, v1alpha1.ProjectQuotaConditionEnforced); c != nil && c.Status == metav1.ConditionFalse {
 		switch c.Reason {
-		case v1alpha1.ProjectQuotaReasonKeyRollout, v1alpha1.ProjectQuotaReasonKeyNotServed, v1alpha1.ProjectQuotaReasonProjectNotFound:
+		case v1alpha1.ProjectQuotaReasonKeyRollout, v1alpha1.ProjectQuotaReasonKeyNotServed, v1alpha1.ProjectQuotaReasonProjectNotFound,
+			v1alpha1.ProjectQuotaReasonWebhookMissing, v1alpha1.ProjectQuotaReasonWebhookMisconfigured, v1alpha1.ProjectQuotaReasonWebhookNotCalled:
 			states[stateNotEnforced] = true
 		}
 	}
@@ -542,9 +609,10 @@ func (r *Reconciler) remember(pq *v1alpha1.ProjectQuota) {
 	if r.known == nil {
 		r.known = map[string]struct{}{}
 		r.lastWrite = map[string]time.Time{}
+		r.lastWithin = map[string]time.Time{}
 	}
 	r.known[pq.Name] = struct{}{}
-	quotaCount.Set(float64(len(r.known)))
+	quotaCount.WithLabelValues().Set(float64(len(r.known)))
 }
 
 func (r *Reconciler) forget(name string) {
@@ -552,7 +620,8 @@ func (r *Reconciler) forget(name string) {
 	defer r.mu.Unlock()
 	delete(r.known, name)
 	delete(r.lastWrite, name)
-	quotaCount.Set(float64(len(r.known)))
+	delete(r.lastWithin, name)
+	quotaCount.WithLabelValues().Set(float64(len(r.known)))
 	quotaState.DeletePartialMatch(prometheus.Labels{"project": name})
 }
 
@@ -577,12 +646,34 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	isProjectQuotaRQ := predicate.NewPredicateFuncs(func(object client.Object) bool {
 		return object.GetName() == v1alpha3.ProjectQuotaName
 	})
+	// what the enforcement of every quota depends on: the configuration, the suspension and the canary
+	// of the ledger, and its webhook, whose loss or another CA is shown at once rather than at the
+	// next recheck
+	everyQuota := handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, _ client.Object) []reconcile.Request {
+		r.Config.Invalidate()
+		list := new(v1alpha1.ProjectQuotaList)
+		if err := r.List(ctx, list); err != nil {
+			ctrllog.FromContext(ctx).Error(err, "list the project quotas")
+			return nil
+		}
+		requests := make([]reconcile.Request, 0, len(list.Items))
+		for i := range list.Items {
+			requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKey{Name: list.Items[i].Name}})
+		}
+		return requests
+	})
+	isConfig := predicate.NewPredicateFuncs(func(object client.Object) bool {
+		return quota.IsConfigObject(object.GetNamespace(), object.GetName())
+	})
 
 	return ctrl.ControllerManagedBy(mgr).
 		Named("project-quota").
 		For(&v1alpha1.ProjectQuota{}, ctrl.WithPredicates(predicate.Or[client.Object](predicate.GenerationChangedPredicate{}, deletionStarted))).
 		Watches(&corev1.ResourceQuota{}, byProjectLabel, ctrl.WithPredicates(isProjectQuotaRQ)).
 		Watches(&corev1.Namespace{}, byProjectLabel).
+		Watches(&corev1.ConfigMap{}, everyQuota, ctrl.WithPredicates(isConfig)).
+		Watches(&corev1.Secret{}, everyQuota, ctrl.WithPredicates(isConfig)).
+		Watches(&admissionregistrationv1.ValidatingWebhookConfiguration{}, everyQuota, ctrl.WithPredicates(isConfig)).
 		Watches(&v1alpha3.Project{}, byName, ctrl.WithPredicates(predicate.Funcs{
 			// the owner of the quota is set once the project is there, and the namespaces are released
 			// once it goes; nothing in between concerns the quota

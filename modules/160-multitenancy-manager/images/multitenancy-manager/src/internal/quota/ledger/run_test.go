@@ -18,6 +18,9 @@ package ledger
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -43,4 +46,41 @@ func TestLeaderActsOnlyWithinTheFence(t *testing.T) {
 	assert.True(t, r.mayAct())
 	r.stopping.Store(true)
 	assert.False(t, r.mayAct(), "a stopping leader withdrew its address")
+}
+
+// A write of the leader ends with its fence, and a canary report of a leader past its fence is not
+// written.
+func TestLeaderWritesEndWithTheFence(t *testing.T) {
+	clock := time.Now()
+	lock := &FencedLock{Interface: &slowLock{clock: &clock}, Now: func() time.Time { return clock }}
+	r := &runner{timing: DefaultTiming, lock: lock}
+	r.synced.Store(true)
+	require.NoError(t, lock.Update(context.Background(), resourcelock.LeaderElectionRecord{HolderIdentity: "me"}))
+
+	ctx, cancel := r.withinFence(context.Background())
+	defer cancel()
+	deadline, ok := ctx.Deadline()
+	require.True(t, ok)
+	assert.Equal(t, clock.Add(DefaultTiming.Fence), deadline)
+
+	clock = clock.Add(DefaultTiming.Fence)
+	assert.ErrorIs(t, r.reportNotCalled(context.Background(), []string{"10.0.0.1:6443"}), errNotActing)
+}
+
+// A replica that stepped down itself says so to the other one, which then does not step down to it.
+func TestLedgerHealthTellsTheHoldOff(t *testing.T) {
+	r := &runner{}
+	r.ready.Store(true)
+	health := func() map[string]bool {
+		rec := httptest.NewRecorder()
+		r.healthServer().Handler.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/ledger-health", nil))
+		state := map[string]bool{}
+		require.NoError(t, json.NewDecoder(rec.Body).Decode(&state))
+		return state
+	}
+	assert.False(t, health()["holdingOff"])
+
+	r.holdOffTill = time.Now().Add(stepDownHoldOff)
+	assert.True(t, health()["holdingOff"])
+	assert.True(t, health()["ready"])
 }

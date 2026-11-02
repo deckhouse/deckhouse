@@ -67,6 +67,11 @@ type Handler struct {
 	State   *State
 	Gate    GateFunc
 	Metrics *Metrics
+	// Nonces records the canary writes the webhook sees. Optional.
+	Nonces *Nonces
+	// Suspended reports the quota-ledger-suspend ConfigMap: while it is there, every write is let
+	// through without being counted. Optional.
+	Suspended func() bool
 	// Now is time.Now unless a test sets it.
 	Now func() time.Time
 
@@ -133,8 +138,24 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// the canary is answered by the leader alone, also while the ledger is suspended: a suspension does
+	// not mean that the API servers stopped calling the webhook
+	nonce, isCanary := canaryNonce(review.Request)
+	if !isCanary && h.Suspended != nil && h.Suspended() {
+		h.respond(w, review, allow(ResultSuspended), false, start)
+		return
+	}
+
 	if result, cause := h.Gate(); result != "" {
 		h.respond(w, review, unavailable(result, cause, false), true, start)
+		return
+	}
+
+	if isCanary {
+		if h.Nonces != nil {
+			h.Nonces.Record(nonce, h.now())
+		}
+		h.respond(w, review, allow(ResultCanary), false, start)
 		return
 	}
 
@@ -411,6 +432,23 @@ func sourceOf(remoteAddr string) string {
 		return remoteAddr
 	}
 	return host
+}
+
+// canaryNonce returns the nonce of a canary write: a dry run of the status of the canary quota in the
+// namespace of the module by the service account of the module.
+func canaryNonce(req *admissionv1.AdmissionRequest) (string, bool) {
+	if req.Namespace != Namespace || req.Name != CanaryName || req.UserInfo.Username != ControllerUser || req.DryRun == nil || !*req.DryRun {
+		return "", false
+	}
+	var object struct {
+		Metadata struct {
+			Annotations map[string]string `json:"annotations"`
+		} `json:"metadata"`
+	}
+	if err := json.Unmarshal(req.Object.Raw, &object); err != nil {
+		return "", false
+	}
+	return object.Metadata.Annotations[CanaryNonceAnnotation], true
 }
 
 // rqFamily evaluates the quotas the webhook is called for.

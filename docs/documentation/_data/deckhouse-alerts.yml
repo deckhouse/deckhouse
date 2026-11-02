@@ -3880,6 +3880,82 @@ alerts:
         Project {{ $labels.project }} has a ProjectQuota set below its usage.
       severity: "7"
       markupFormat: markdown
+    - name: D8ProjectQuotaLeaderFlapping
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-quota-ledger.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: 'The lease of the ledger changed hands more than three times in ten minutes; every change refuses counted creates for a second or more. The `reason` label of `d8_multitenancy_quota_ledger_handover_total` says why: `expired` points at late renewals (the API server, the `leader-election` priority level), `stepdown` at the canary, `graceful` at restarts of the pods (rollouts, evictions).'
+      summary: |
+        The leader of the project quota ledger changes too often.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8ProjectQuotaLedgerCanaryFailing
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-quota-ledger.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: The canary writes of the ledger do not reach its webhook through most of the API servers. The leader hands the lease over when another replica is ready; this alert says it could not, or that the new leader is not reached either. Check the network from the master nodes to the pods of `d8-multitenancy-manager` and the CNI on the masters. The steps of `D8ProjectQuotaLedgerDown` apply.
+      summary: |
+        Most API servers do not reach the leader of the project quota ledger.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8ProjectQuotaLedgerDown
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-quota-ledger.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: |-
+        No replica of the `quota-ledger` container of the `multitenancy-manager` module holds its lease with synced informers. Creating the objects a ProjectQuota counts in the namespaces of projects with a quota fails with `project quota ledger unavailable`, or with `failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io"`. Deletions, running objects and other namespaces are not affected.
+
+        1. Check the pods, the lease and the route:
+
+           ```bash
+           d8 k -n d8-multitenancy-manager get pods,lease,endpointslices
+           d8 k -n d8-multitenancy-manager logs deploy/multitenancy-manager -c quota-ledger --tail=200
+           ```
+
+           The logs say whether the ledger is `fenced` (its lease renewals are late) or `syncing`.
+
+        1. If the cause cannot be removed quickly, delete the webhook as `system:sudouser`. While no replica holds the route, the API servers reach none of them, so suspending the ledger with the `quota-ledger-suspend` ConfigMap does not help here. The sum check stops at once; Deckhouse puts the webhook back within about 4 minutes, so this buys time rather than switching the check off. Disabling the `multitenancy-manager` module removes the check together with the rest of the module.
+
+           ```bash
+           d8 k --as=system:sudouser delete validatingwebhookconfiguration d8-multitenancy-manager-quota-ledger
+           ```
+      summary: |
+        No replica of the project quota ledger answers.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8ProjectQuotaLedgerDrift
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-quota-ledger.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: The ledger holds the usage of some quota differently from a quorum read of the same version of it. The state of the ledger is inconsistent. Save the logs of the `quota-ledger` container, then restart the pod of the leader once so that another replica takes over. Do not restart it in a loop.
+      summary: |
+        The project quota ledger differs from the API server.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8ProjectQuotaLedgerSlow
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-quota-ledger.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: The 99th percentile of the calls of the ledger webhook, as the API servers see them, is above 100 ms. The ledger answers within 25 ms of its own, so the delay comes from the network or from the CPU of the `quota-ledger` container. Check the CPU of the master nodes and of the container, the `d8_multitenancy_quota_ledger_inflight` and `d8_multitenancy_quota_ledger_requests_total{result="busy"}` series, and other webhooks on `resourcequotas/status`.
+      summary: |
+        The project quota ledger answers slowly.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8ProjectQuotaLedgerUnreachableFromAPIServer
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-quota-ledger.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: The canary writes through the API server `{{ $labels.apiserver }}` fail on the webhook of the ledger, while the other API servers reach it. Counted creates that land on this API server in the namespaces of projects with a quota wait for the webhook timeout and fail. Check the network of that master node to the pods of `d8-multitenancy-manager`; the webhooks of other modules are likely affected the same way.
+      summary: |
+        The API server {{ $labels.apiserver }} does not reach the project quota ledger.
+      severity: "5"
+      markupFormat: markdown
     - name: D8ProjectQuotaNotEnforced
       sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-quota.yaml
       moduleUrl: 160-multitenancy-manager
@@ -3891,6 +3967,9 @@ alerts:
         - `KeyRollout`: the `d8-project-quota` ResourceQuota of some namespace of the project is missing or not calculated with every limit of the quota. The resource quota controller of kube-controller-manager calculates a new quota within seconds, so a quota that stays uncalculated points at kube-controller-manager or at the multitenancy-manager controller; the message of the condition names the namespaces and the error of the controller, if any. Until it is calculated, the objects of users are refused in a namespace labelled `projects.deckhouse.io/quota: pending`. In a namespace labelled `projects.deckhouse.io/quota: enforced`, the objects the quota counts are refused only while its `d8-project-quota` has no calculated limit at all or has scopes; a limit added to a calculated quota holds nothing back.
         - `KeyNotServed`: a `count/` key names a resource of an API group that the API server does not serve, so nothing counts it. Enable the module that provides the group, or remove the key.
         - `ProjectNotFound`: there is no project named after the ProjectQuota.
+        - `WebhookMissing`: the `d8-multitenancy-manager-quota-ledger` webhook is missing or its `caBundle` is not the CA of the `quota-ledger-certs` Secret, so the sum is not checked. Deckhouse puts it back on the next run of the module; see the `D8ProjectQuotaWebhookMisconfigured` alert.
+        - `WebhookMisconfigured`: the `d8-multitenancy-manager-quota-ledger` webhook is changed (its rules, `namespaceSelector`, `objectSelector`, `matchConditions`, `failurePolicy` or service) so that writes of `d8-project-quota` do not reach the ledger. The message of the condition names the field. Deckhouse puts the webhook back on the next run of the module; see the `D8ProjectQuotaWebhookMisconfigured` alert.
+        - `WebhookNotCalled`: the canary of the ledger found API servers that admit objects without calling the `d8-multitenancy-manager-quota-ledger` webhook, so the sum is not checked for what they admit. The message of the condition names them; check the rules, `namespaceSelector` and `matchConditions` of the webhook.
 
         Check the condition and the quotas of the namespaces:
 
@@ -3914,6 +3993,57 @@ alerts:
       summary: |
         The sum of a project quota is not enforced, because Deckhouse Platform does not manage the control plane.
       severity: "8"
+      markupFormat: markdown
+    - name: D8ProjectQuotaOvershoot
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-quota-ledger.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: The usage of project `{{ $labels.project }}` grew past its quota. The ledger allows that only for a status write of a quota saved long after it was approved (a change of the ledger leader at that moment, a stalled etcd, another slow webhook) or when kube-controller-manager recounts a quota, and then by at most a tenth of a limit. The `Exceeded` condition of the ProjectQuota names the keys, the difference and the probable cause. Nothing running is evicted; creating more of these resources is denied until the usage is back within the quota.
+      summary: |
+        Usage of project {{ $labels.project }} has grown past its ProjectQuota.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8ProjectQuotaSuspended
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-quota-ledger.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: |-
+        The `quota-ledger-suspend` ConfigMap in `d8-multitenancy-manager` suspends the ledger: every write passes and the sum of the project quotas is not checked. Find who created it in the audit log and delete it when the reason is gone:
+
+        ```bash
+        d8 k -n d8-multitenancy-manager delete configmap quota-ledger-suspend
+        ```
+      summary: |
+        The project quota ledger is suspended.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8ProjectQuotaWebhookErrors
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-quota-ledger.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: 'For 10 minutes the API servers have been failing to call the webhook of the ledger: connections refused, timeouts or TLS errors. A change of the leader causes such errors for a second or two only. The steps of `D8ProjectQuotaLedgerDown` apply.'
+      summary: |
+        The API servers fail to call the project quota ledger.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8ProjectQuotaWebhookMisconfigured
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-quota-ledger.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: |-
+        The `d8-multitenancy-manager-quota-ledger` ValidatingWebhookConfiguration is missing, does not carry the CA of the `quota-ledger-certs` Secret, is changed so that writes of `d8-project-quota` do not reach the ledger (its rules, `namespaceSelector`, `objectSelector`, `matchConditions`, `failurePolicy` or service), or the API servers let the canary writes through without calling it. The sum of the project quotas is not checked; the `Enforced` condition of every ProjectQuota names the reason (`WebhookMissing`, `WebhookMisconfigured` or `WebhookNotCalled`) and the field or the API servers. Deckhouse puts the webhook back within about 4 minutes; if it does not, contact Deckhouse technical support. Compare the CA:
+
+        ```bash
+        d8 k get validatingwebhookconfiguration d8-multitenancy-manager-quota-ledger -o jsonpath='{.webhooks[0].clientConfig.caBundle}' | base64 -d | openssl x509 -noout -subject
+        d8 k -n d8-multitenancy-manager get secret quota-ledger-certs -o jsonpath='{.data.ca\.crt}' | base64 -d | openssl x509 -noout -subject
+        ```
+      summary: |
+        The webhook of the project quota ledger is missing or misconfigured.
+      severity: "4"
       markupFormat: markdown
     - name: D8RegistryAirGapTransitionHeld
       sourceFile: modules/038-registry/monitoring/prometheus-rules/registry.yaml
@@ -4517,6 +4647,16 @@ alerts:
       summary: |
         An additional registry was refused.
       severity: "6"
+      markupFormat: markdown
+    - name: D8ResourceQuotaAdmissionDegraded
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/project-quota-ledger.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: The 99th percentile of the ResourceQuota admission plugin is above one second. The plugin has a few workers for all creates in the cluster, so this slows down creates everywhere. The cause may be a slow webhook on `resourcequotas/status` (the project quota ledger or another one) or a slow etcd. Find the slow webhook by `apiserver_admission_webhook_admission_duration_seconds` and check `etcd_disk_wal_fsync_duration_seconds`.
+      summary: |
+        The quota admission of the API servers is slow.
+      severity: "4"
       markupFormat: markdown
     - name: D8SecretCopierDeprecatedLabels
       sourceFile: modules/600-secret-copier/monitoring/prometheus-rules/deprecated-label.yaml

@@ -126,12 +126,14 @@ func TestExceededCondition(t *testing.T) {
 		// upgrade with the usage already above the limit: the usage did not grow past it
 		{name: "found above the limit of a new generation", previous: falseCondition, previousHard: rl("pods", "1"), hard: rl("pods", "1"), used: rl("pods", "3"),
 			generation: 2, status: metav1.ConditionTrue, reason: v1alpha1.ProjectQuotaReasonHardLowered},
-		{name: "lowering again overrides a sticky reason", previous: trueWith(v1alpha1.ProjectQuotaReasonOvershoot), previousHard: rl("pods", "10"), hard: rl("pods", "5"),
-			used: rl("pods", "12"), status: metav1.ConditionTrue, reason: v1alpha1.ProjectQuotaReasonHardLowered},
+		{name: "lowering a limit keeps an overshoot", previous: trueWith(v1alpha1.ProjectQuotaReasonOvershoot), previousHard: rl("pods", "10"), hard: rl("pods", "5"),
+			used: rl("pods", "12"), status: metav1.ConditionTrue, reason: v1alpha1.ProjectQuotaReasonOvershoot},
+		{name: "lowering again overrides a sticky HardLowered", previous: trueWith(v1alpha1.ProjectQuotaReasonHardLowered), previousHard: rl("pods", "10"),
+			hard: rl("pods", "5"), used: rl("pods", "12"), status: metav1.ConditionTrue, reason: v1alpha1.ProjectQuotaReasonHardLowered},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ExceededCondition(tt.previous, tt.previousHard, tt.hard, tt.used, tt.generation)
+			got := ExceededCondition(tt.previous, tt.previousHard, tt.hard, tt.used, tt.generation, "")
 			assert.Equal(t, tt.status, got.Status)
 			assert.Equal(t, tt.reason, got.Reason)
 			if tt.status == metav1.ConditionTrue {
@@ -160,6 +162,8 @@ func TestEnforcedCondition(t *testing.T) {
 			status: metav1.ConditionFalse, reason: v1alpha1.ProjectQuotaReasonKeyRollout},
 		{name: "a namespace not labelled", in: EnforcedInput{Config: enforce, ProjectFound: true, Namespaces: []Namespace{{Name: "a", Calculated: true}}},
 			status: metav1.ConditionFalse, reason: v1alpha1.ProjectQuotaReasonKeyRollout},
+		{name: "an API server that does not call the webhook", in: EnforcedInput{Config: Config{ControlPlaneManaged: true, WebhookNotCalledBy: []string{"10.0.0.1:6443"}},
+			ProjectFound: true, Namespaces: ready}, status: metav1.ConditionFalse, reason: v1alpha1.ProjectQuotaReasonWebhookNotCalled},
 		{name: "a namespace without its quota", in: EnforcedInput{Config: enforce, ProjectFound: true, Namespaces: []Namespace{{Name: "a", Labelled: true, Problem: "forbidden"}}},
 			status: metav1.ConditionFalse, reason: v1alpha1.ProjectQuotaReasonKeyRollout},
 	}
@@ -261,4 +265,23 @@ func exceededOver(s *v1alpha1.ProjectQuotaStatus) metav1.Condition {
 		message += fmt.Sprintf(" %s: used %s, hard %s;", key, used.String(), hard.String())
 	}
 	return metav1.Condition{Type: v1alpha1.ProjectQuotaConditionExceeded, Status: metav1.ConditionTrue, Reason: v1alpha1.ProjectQuotaReasonHardLowered, Message: message}
+}
+
+func TestOvershootKeepsItsCause(t *testing.T) {
+	within := &metav1.Condition{Type: v1alpha1.ProjectQuotaConditionExceeded, Status: metav1.ConditionFalse}
+	first := ExceededCondition(within, rl("pods", "10"), rl("pods", "10"), rl("pods", "11"), 0, "the leader changed")
+	assert.Contains(t, first.Message, "Probable cause: the leader changed.")
+	later := ExceededCondition(&first, rl("pods", "10"), rl("pods", "10"), rl("pods", "12"), 0, "something else")
+	assert.Equal(t, v1alpha1.ProjectQuotaReasonOvershoot, later.Reason)
+	assert.Contains(t, later.Message, "pods: used 12")
+	assert.Contains(t, later.Message, "Probable cause: the leader changed.")
+}
+
+func TestEnforcedByTheLedger(t *testing.T) {
+	ready := []Namespace{{Name: "a", Calculated: true, Labelled: true}}
+	got := EnforcedCondition(EnforcedInput{Config: Config{ControlPlaneManaged: true, Suspended: true}, ProjectFound: true, Namespaces: ready})
+	assert.Equal(t, v1alpha1.ProjectQuotaReasonSuspended, got.Reason)
+	got = EnforcedCondition(EnforcedInput{Config: Config{ControlPlaneManaged: true, WebhookMissing: true}, ProjectFound: true, Namespaces: ready})
+	assert.Equal(t, v1alpha1.ProjectQuotaReasonWebhookMissing, got.Reason)
+	assert.Equal(t, "Suspended", Config{ControlPlaneManaged: true, Suspended: true}.MetricMode())
 }

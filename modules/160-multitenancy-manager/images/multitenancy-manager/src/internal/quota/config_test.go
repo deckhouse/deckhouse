@@ -23,11 +23,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 )
 
 func configMap(managed string) *corev1.ConfigMap {
@@ -60,6 +61,8 @@ func TestParseConfig(t *testing.T) {
 func TestConfigReaderReusesARead(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, coordinationv1.AddToScheme(scheme))
+	require.NoError(t, admissionregistrationv1.AddToScheme(scheme))
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap("true")).Build()
 	now := time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)
 	r := &ConfigReader{Reader: c, Now: func() time.Time { return now }}
@@ -77,4 +80,37 @@ func TestConfigReaderReusesARead(t *testing.T) {
 	got, err = r.Read(context.Background())
 	require.NoError(t, err)
 	assert.False(t, got.ControlPlaneManaged)
+
+	require.NoError(t, c.Update(context.Background(), configMap("true")))
+	r.Invalidate()
+	got, err = r.Read(context.Background())
+	require.NoError(t, err)
+	assert.True(t, got.ControlPlaneManaged, "a change of an object it reads drops the reused read")
+}
+
+func TestConfigReaderReadsTheCanaryOfTheLedger(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, coordinationv1.AddToScheme(scheme))
+	require.NoError(t, admissionregistrationv1.AddToScheme(scheme))
+	state := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: ConfigNamespace, Name: LedgerStateConfigMapName},
+		Data: map[string]string{LedgerStateNotCalledKey: "10.0.0.1:6443,10.0.0.2:6443"}}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(configMap("true"), state).Build()
+	got, err := (&ConfigReader{Reader: c}).Read(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, []string{"10.0.0.1:6443", "10.0.0.2:6443"}, got.WebhookNotCalledBy)
+
+	state.Data[LedgerStateNotCalledKey] = ""
+	require.NoError(t, c.Update(context.Background(), state))
+	got, err = (&ConfigReader{Reader: c}).Read(context.Background())
+	require.NoError(t, err)
+	assert.Empty(t, got.WebhookNotCalledBy)
+}
+
+func TestIsConfigObject(t *testing.T) {
+	assert.True(t, IsConfigObject("", LedgerWebhookName))
+	assert.True(t, IsConfigObject(ConfigNamespace, LedgerStateConfigMapName))
+	assert.True(t, IsConfigObject(ConfigNamespace, SuspendConfigMapName))
+	assert.False(t, IsConfigObject("team", SuspendConfigMapName))
+	assert.False(t, IsConfigObject("", "another-webhook"))
 }

@@ -3,6 +3,10 @@ extended-monitoring.deckhouse.io/enabled: ""
 prometheus.deckhouse.io/rules-watcher-enabled: "true"
 security.deckhouse.io/pod-policy: "restricted"
 security.deckhouse.io/enable-security-policy-check: "true"
+{{- if eq (include "multitenancy_manager_control_plane_managed" .) "true" }}
+{{- /* the quota-ledger-canary quota of this namespace goes through the webhook of the ledger */}}
+projects.deckhouse.io/quota: canary
+{{- end }}
 {{- end }}
 ---
 apiVersion: v1

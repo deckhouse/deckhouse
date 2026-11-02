@@ -12,6 +12,20 @@ data:
   tls.key: {{ .Values.multitenancyManager.internal.quotaLedgerCert.key | default "" | b64enc | quote }}
   ca.crt: {{ .Values.multitenancyManager.internal.quotaLedgerCert.ca | default "" | b64enc | quote }}
 ---
+# The canary of the ledger: every couple of seconds the leader writes the status of this quota as a dry
+# run through every API server, with a nonce the webhook records, and so learns whether each of them
+# reaches it. It limits a resource that nothing creates, so the quota plugin never writes its status
+# and no create in this namespace waits for the ledger.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: quota-ledger-canary
+  namespace: d8-multitenancy-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  hard:
+    count/quotaledgercanaries.multitenancy.deckhouse.io: "0"
+---
 # No selector: the leader of the ledger writes its own address into the EndpointSlice of the Service,
 # a follower whose leader stopped renewing the lease takes it out, and an empty slice makes a call fail
 # at once. A route kept by kube-controller-manager would hang the calls for as long as a lost master
@@ -55,10 +69,10 @@ webhooks:
       matchExpressions:
         - key: projects.deckhouse.io/quota
           operator: In
-          values: ["pending", "enforced"]
+          values: ["pending", "enforced", "canary"]
     matchConditions:
-      - name: the-quota-plugin-writes-the-project-quota
-        expression: 'request.userInfo.username == "system:apiserver" && request.name == "d8-project-quota"'
+      - name: the-quota-plugin-writes-the-project-quota-or-the-canary
+        expression: '(request.userInfo.username == "system:apiserver" && request.name == "d8-project-quota") || (request.userInfo.username == "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager" && request.name == "quota-ledger-canary")'
     failurePolicy: Fail
     matchPolicy: Equivalent
     sideEffects: None

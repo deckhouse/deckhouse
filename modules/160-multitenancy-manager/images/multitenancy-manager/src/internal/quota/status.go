@@ -165,8 +165,8 @@ func ExceededKeys(hard, used corev1.ResourceList) []corev1.ResourceName {
 // The reason says how the usage got above the limit: HardLowered when the limit was set below the
 // usage, by a change or when the quota was created, Overshoot when the usage grew past the limit that
 // the previous evaluation of the same generation found it within. A reason sticks while the usage
-// stays above the limit.
-func ExceededCondition(previous *metav1.Condition, previousHard, hard, used corev1.ResourceList, generation int64) metav1.Condition {
+// stays above the limit; a later cut of the limit does not turn an overshoot into HardLowered.
+func ExceededCondition(previous *metav1.Condition, previousHard, hard, used corev1.ResourceList, generation int64, cause string) metav1.Condition {
 	keys := ExceededKeys(hard, used)
 	if len(keys) == 0 {
 		return metav1.Condition{Type: v1alpha1.ProjectQuotaConditionExceeded, Status: metav1.ConditionFalse, Reason: v1alpha1.ProjectQuotaReasonWithinLimits,
@@ -187,6 +187,13 @@ func ExceededCondition(previous *metav1.Condition, previousHard, hard, used core
 
 	reason := v1alpha1.ProjectQuotaReasonOvershoot
 	switch {
+	case previous != nil && previous.Status == metav1.ConditionTrue && previous.Reason == v1alpha1.ProjectQuotaReasonOvershoot:
+		// the cause found when the overshoot came stays with it
+		if lowered {
+			message += " The limit was lowered since."
+		}
+		return metav1.Condition{Type: v1alpha1.ProjectQuotaConditionExceeded, Status: metav1.ConditionTrue, Reason: reason,
+			Message: overshootMessage(message, previous.Message)}
 	case lowered:
 		reason = v1alpha1.ProjectQuotaReasonHardLowered
 	case previous != nil && previous.Status == metav1.ConditionTrue:
@@ -195,7 +202,18 @@ func ExceededCondition(previous *metav1.Condition, previousHard, hard, used core
 		// the usage was found above a limit that is new to the evaluation
 		reason = v1alpha1.ProjectQuotaReasonHardLowered
 	}
+	if reason == v1alpha1.ProjectQuotaReasonOvershoot && cause != "" {
+		message += " Probable cause: " + cause + "."
+	}
 	return metav1.Condition{Type: v1alpha1.ProjectQuotaConditionExceeded, Status: metav1.ConditionTrue, Reason: reason, Message: message}
+}
+
+// overshootMessage keeps the probable cause of the previous message on a new one.
+func overshootMessage(message, previous string) string {
+	if _, cause, ok := strings.Cut(previous, " Probable cause: "); ok {
+		return message + " Probable cause: " + cause
+	}
+	return message
 }
 
 // EnforcedInput is what the Enforced condition depends on.
@@ -216,6 +234,21 @@ func EnforcedCondition(in EnforcedInput) metav1.Condition {
 	case !in.Config.ControlPlaneManaged:
 		return condition(v1alpha1.ProjectQuotaReasonControlPlaneNotManaged,
 			"The control plane of the cluster is not managed by Deckhouse, so the sum over the namespaces of a project is not enforced. Every namespace is still limited by the quota on its own.")
+	case in.Config.Suspended:
+		return condition(v1alpha1.ProjectQuotaReasonSuspended,
+			"The quota-ledger-suspend ConfigMap in d8-multitenancy-manager suspends the ledger: the sum over the namespaces is not checked. Delete the ConfigMap to resume.")
+	case in.Config.WebhookMissing:
+		return condition(v1alpha1.ProjectQuotaReasonWebhookMissing,
+			"The d8-multitenancy-manager-quota-ledger webhook is missing or does not trust the certificate of the ledger, so the sum over the namespaces is not checked.")
+	case in.Config.WebhookMisconfigured != "":
+		return condition(v1alpha1.ProjectQuotaReasonWebhookMisconfigured,
+			"The "+in.Config.WebhookMisconfigured+" of the d8-multitenancy-manager-quota-ledger webhook differs from what the module renders, "+
+				"so writes of the d8-project-quota ResourceQuota do not all reach the ledger and the sum over the namespaces is not checked for them. "+
+				"Deckhouse restores the webhook on the next run of the module.")
+	case len(in.Config.WebhookNotCalledBy) > 0:
+		return condition(v1alpha1.ProjectQuotaReasonWebhookNotCalled,
+			"The API servers "+strings.Join(in.Config.WebhookNotCalledBy, ", ")+" admit objects without calling the d8-multitenancy-manager-quota-ledger webhook, "+
+				"so the sum over the namespaces is not checked for what they admit. Check the rules, namespaceSelector and matchConditions of the webhook.")
 	case !in.ProjectFound:
 		return condition(v1alpha1.ProjectQuotaReasonProjectNotFound, "There is no project of this name; the quota applies once the project is created.")
 	case len(in.NotServed) > 0:

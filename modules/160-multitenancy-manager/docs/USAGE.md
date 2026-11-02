@@ -463,6 +463,104 @@ spec:
 
 ProjectQuota objects are created, changed and deleted with the `d8:system-capability:multitenancy-manager:manage_quotas` capability, which the IAM `manager` role and the roles above it include. The same right is needed to change `.spec.quota` of a Project: the Project webhook checks it, so whoever may create and change projects does not choose their quota. The status of a ProjectQuota and the usage in the status of `d8-project-quota` are written by the controller and by Kubernetes only, the latter where Deckhouse Platform manages the control plane.
 
+### When the project quota refuses
+
+What the response says:
+
+| Response | What it means |
+|---|---|
+| `403 ... exceeded quota: d8-project-quota, project <PROJECT_NAME>: requested: ..., used: ..., limited: ... (<N> namespaces)` | The sum of project `<PROJECT_NAME>` would go over the limits of its ProjectQuota. Raise `spec.hard` or delete what the project does not need; `status.topNamespaces` shows where the usage is. |
+| `403 ... exceeded quota: d8-project-quota, requested: ...` (no `project`) | The usage of this namespace alone, with the object, would go over a limit of the project, which every `d8-project-quota` ResourceQuota contains. The quota plugin of the API server refuses it before the sum of the project is checked. |
+| `503 ... project quota ledger unavailable (<CAUSE>), retry` | The ledger does not answer for a moment, for example while its leader changes. Retry; if it lasts longer than a minute, see the `D8ProjectQuotaLedgerDown` alert. |
+| `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io": ...` | The API server does not reach the ledger: no replica runs, the network, or the certificate. While the Service points at a frozen leader, the quota plugin of the API server retries the call, so each such create waits up to about 8 seconds until the address of the leader is taken out of the Service: in about 3.5 seconds by the other replica, in up to about 15 seconds by Deckhouse when no replica answers. |
+| `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-pending' ...` | The `d8-project-quota` of a new namespace is not calculated yet. Retry in a few seconds; if it lasts, see the `Enforced` condition of the ProjectQuota and check the controller and kube-controller-manager. |
+| `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-guard' ...` | The `d8-project-quota` of the namespace is missing, has scopes or is not calculated at all yet. Retry in a few seconds; otherwise check the controller and kube-controller-manager. |
+| `500 ... resource quota evaluation timed out` | The quota admission of the API server is overloaded; see the `D8ResourceQuotaAdmissionDegraded` alert. |
+
+A new additional namespace refuses the objects of users for the few seconds until its `d8-project-quota` is calculated. A namespace where the quota applies and whose `d8-project-quota` is gone does the same until the controller makes it anew, and refuses the objects of `system:sudouser` too. Of the users, only `system:sudouser` can delete `d8-project-quota`.
+
+If the ledger keeps the objects of projects from being created and the cause cannot be removed quickly, take these steps in order until the creates work again:
+
+1. If the creates fail with `503 ... project quota ledger unavailable`, a replica answers, and suspending the ledger helps. Within a second every running replica lets the writes through uncounted, and every ProjectQuota reports `Enforced=False` with the `Suspended` reason. Deleting the ConfigMap resumes the check; the `D8ProjectQuotaSuspended` alert reminds of it after 15 minutes.
+
+   ```shell
+   d8 k -n d8-multitenancy-manager create configmap quota-ledger-suspend --from-literal=reason="<REASON>"
+   d8 k -n d8-multitenancy-manager delete configmap quota-ledger-suspend
+   ```
+
+   Replace `<REASON>` with why the check is suspended.
+
+1. If the creates fail with `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io"`, the API servers do not reach a replica that answers, as while the `D8ProjectQuotaLedgerDown` alert fires, and the suspension does not help: delete the webhook of the ledger as `system:sudouser`. The check stops within a second, and every ProjectQuota reports `Enforced=False` with the `WebhookMissing` reason. Deckhouse Platform finds the webhook of the module missing and puts it back by itself within about 4 minutes, so this buys time to fix the cause rather than switching the check off.
+
+   ```shell
+   d8 k --as=system:sudouser delete validatingwebhookconfiguration d8-multitenancy-manager-quota-ledger
+   ```
+
+   Check that the webhook is back: `d8 k get validatingwebhookconfiguration d8-multitenancy-manager-quota-ledger`.
+
+1. Disable the `multitenancy-manager` module. The check goes away together with everything else the module does for projects.
+
+Before draining the worker nodes of a cluster with project quotas (evicting the pods from the nodes with `d8 k drain` or on a node update), check that the ledger has a leader (`d8_multitenancy_quota_ledger_leader`) and that the `D8ProjectQuotaLedgerCanaryFailing` alert is not firing: while the ledger does not answer, the pods that replace the evicted ones are not created in the namespaces of projects with a quota.
+
+## Granting access within a project
+
+To grant access to project namespaces for users beyond the project administrators, use role bindings that reference cluster-wide roles and fan out into the appropriate project namespaces automatically:
+
+- [ProjectRoleBinding](cr.html#projectrolebinding) (namespaced, short name `prb`) — grants a role within a **single** project. It must be created in the project's main namespace (the namespace whose name equals the project name). The controller creates a RoleBinding in every namespace of that project.
+- [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) (cluster-scoped, short name `cprb`) — grants a role across **all** non-virtual projects. The controller creates a RoleBinding in every namespace of every project and reports the number of bound projects in `.status.boundProjects`.
+
+`roleRef` must reference a ClusterRole whose name starts with one of the allowed prefixes (`d8:project:`, `d8:namespace:`, `d8:project-capability:`, `d8:namespace-capability:`, `d8:custom:`). The roles are described in the [`user-authz` module documentation](/modules/user-authz/).
+
+The following checks apply when bindings are created:
+
+- **Privilege escalation protection**: a binding can only be created by a user who has the right to bind (`bind`) the referenced role, checked by name. A project administrator (`d8:project:admin`) holds `bind` on exactly eight roles: `d8:project:viewer`, `d8:project:user`, `d8:project:manager`, `d8:project:admin`, `d8:namespace:viewer`, `d8:namespace:user`, `d8:namespace:manager` and `d8:namespace:admin`. A binding to any other role — a custom `d8:custom:*` role, a capability, `d8:project:superadmin` — is refused for the project administrator even when the role is narrower than their own permissions, because nothing grants them `bind` on that name. Such bindings are created by a cluster administrator, or the cluster administrator grants `bind` on the custom role to the project administrators with a ClusterRole of their own.
+- The role must exist: a binding to a non-existent role is rejected.
+- A ServiceAccount used as a subject of a ProjectRoleBinding must belong to a namespace of that same project. Its main namespace, its additional namespaces and a namespace a ProjectNamespace of the project has claimed qualify. A namespace that is only named like an additional namespace (`<project>-*`) but belongs to a separate project does not. When the binding is updated, a ServiceAccount the stored binding already has is not refused again. If its namespace is no longer a namespace of the project, the response carries a warning that this ServiceAccount gets no rights from the binding.
+- System and subsystem roles (`d8:system:*`, `d8:subsystem:*`), as well as arbitrary roles outside the listed prefixes, cannot be granted via project bindings.
+- Roles with the `rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"` annotation are forbidden for granting in projects. A cluster administrator can put this annotation on a role to phase it out: existing bindings keep working, but new ones cannot be created. If such a role is used by a project template, the project switches to the `Error` state with an explanation in the `TemplateRolesAllowed` condition.
+
+The controller checks the ServiceAccounts by the same rule every time it updates the RoleBindings of a ProjectRoleBinding, and also when a namespace appears, is deleted or moves to another project. A subject that names ServiceAccounts goes into the RoleBindings only while their namespace is the main namespace of the project, or exists, is not being deleted and carries the `projects.deckhouse.io/project` label with the project name. Besides subjects of the `ServiceAccount` kind, this applies to the `User` subject named `system:serviceaccount:<namespace>:<name>` and the `Group` subject named `system:serviceaccounts:<namespace>`, which RBAC matches to the same ServiceAccounts. Other users and groups are not affected. So a ServiceAccount of a deleted additional namespace gets no rights when a separate project takes the name later.
+
+The left-out subjects stay in `.spec.subjects`. The `SubjectsBound` condition of the binding is `False` and lists them, and the `SubjectsLeftOut` Warning event is sent when the list changes. The `Ready` condition stays `True`, as the binding keeps working for the other subjects. Once the namespace is a namespace of the project again, for example after the deleted ProjectNamespace is created again, the subjects get the rights back without a change to the binding. You can check the condition in the status of the binding:
+
+```shell
+d8 k -n my-project get projectrolebinding ci -o jsonpath='{.status.conditions[?(@.type=="SubjectsBound")]}'
+```
+
+The `d8-administrators` binding created by the controller from the [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators) field is managed by the controller only — it cannot be edited manually. To change the set of administrators, change the `.spec.administrators` field of the project.
+
+The ServiceAccount rule above does not apply to this binding. An administrator given as the `User` `system:serviceaccount:<namespace>:<name>` or the `Group` `system:serviceaccounts:<namespace>` gets the rights in every namespace of the project, whichever project that namespace belongs to, because only those allowed to change the Project set its administrators. Remove such an administrator from the project before its namespace is deleted, as the ServiceAccounts of a namespace created later under the same name would get these rights.
+
+The following bindings give the `viewer@example.com` user the `d8:project:viewer` role in every namespace of `my-project`, and the `platform` group the same role in every project except the virtual ones:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectRoleBinding
+metadata:
+  name: viewers
+  namespace: my-project
+spec:
+  subjects:
+    - kind: User
+      name: viewer@example.com
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:viewer
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: ClusterProjectRoleBinding
+metadata:
+  name: platform-viewers
+spec:
+  subjects:
+    - kind: Group
+      name: platform
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:viewer
+```
+
 ### Roles available in a RoleBinding inside a project
 
 Besides the project bindings, a plain RoleBinding can also be used inside a project namespace — the role then applies in that single namespace only. However, in projects the set of roles available to a plain RoleBinding is restricted: only cluster roles carrying the `rbac.deckhouse.io/delegatable: "true"` label are allowed. Among the built-in ones these are the `d8:namespace:*` and `d8:project:*` roles, as well as the access-level roles of the basic role model (`user-authz:user`, `user-authz:privileged-user`, `user-authz:editor`, `user-authz:admin`).

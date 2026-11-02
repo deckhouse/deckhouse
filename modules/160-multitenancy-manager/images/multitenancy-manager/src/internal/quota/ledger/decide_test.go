@@ -326,6 +326,31 @@ func TestCovers(t *testing.T) {
 	assert.False(t, s.Covers([]metav1.Object{pq("q", nil)}), "an unknown ProjectQuota")
 }
 
+// A namespace refused over the quota of its project is woken once the project frees some of it, at
+// most every wakeEvery per project and only within wakeWindow of the refusal.
+func TestWakeUps(t *testing.T) {
+	s := state(rl("pods", "10"), rl("pods", "6"), rl("pods", "4"))
+	require.Equal(t, ResultExceeded, s.Decide(write("b", 20, rl("pods", "4"), rl("pods", "5")), testNow, always).Result)
+	assert.Empty(t, s.TakeWakes(testNow), "nothing was freed yet")
+
+	s.SetQuota(rq("a", 11, rl("pods", "5")))
+	assert.Equal(t, []string{"b"}, s.TakeWakes(testNow))
+	assert.Empty(t, s.TakeWakes(testNow), "woken once")
+
+	s.SetQuota(rq("a", 12, rl("pods", "4")))
+	assert.Empty(t, s.TakeWakes(testNow.Add(time.Second)), "not again within the interval")
+	assert.Equal(t, []string{"b"}, s.TakeWakes(testNow.Add(wakeEvery)))
+
+	s.SetQuota(rq("a", 13, rl("pods", "3")))
+	assert.Empty(t, s.TakeWakes(testNow.Add(wakeWindow+time.Minute)), "the refusal is too old")
+}
+
+func TestDrift(t *testing.T) {
+	s := state(rl("pods", "10"), rl("pods", "6"), rl("pods", "4"))
+	assert.Zero(t, s.Drift([]corev1.ResourceQuota{*rq("a", 10, rl("pods", "6")), *rq("b", 21, rl("pods", "9"))}), "a newer version is not drift")
+	assert.Equal(t, 1, s.Drift([]corev1.ResourceQuota{*rq("a", 10, rl("pods", "7"))}))
+}
+
 // The quota plugin writes the keys a request leaves alone as they were, also when a lowered limit or a
 // recount left them above the limit of the quota. Such a key does not make the write inconsistent;
 // a write that raises a key above the limit still does.

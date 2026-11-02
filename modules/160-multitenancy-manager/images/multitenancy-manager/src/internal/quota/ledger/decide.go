@@ -49,6 +49,8 @@ const (
 	ResultFenced           = "fenced"
 	ResultSyncing          = "syncing"
 	ResultBadRequest       = "bad_request"
+	ResultSuspended        = "suspended"
+	ResultCanary           = "canary"
 )
 
 // APIServerUser is the user the quota plugin of the API server writes the status of a quota as.
@@ -160,6 +162,7 @@ func (s *State) Decide(in Input, now time.Time, claim func() bool) Decision {
 		}
 	}
 	if len(over) > 0 {
+		s.refused[in.Namespace] = now
 		return Decision{Code: http.StatusForbidden, Result: ResultExceeded,
 			Message: s.exceededMessageLocked(projectName, p, q, in, over)}
 	}

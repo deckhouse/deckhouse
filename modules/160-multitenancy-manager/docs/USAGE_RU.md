@@ -465,6 +465,104 @@ spec:
 
 Объекты ProjectQuota создают, меняют и удаляют с capability `d8:system-capability:multitenancy-manager:manage_quotas`, которую включают роль IAM `manager` и роли выше. То же право нужно, чтобы изменить `.spec.quota` проекта: его проверяет вебхук Project, поэтому тот, кто может создавать и менять проекты, не выбирает себе квоту сам. Статус ProjectQuota и потребление в статусе `d8-project-quota` пишут только контроллер и Kubernetes; потребление защищено там, где control plane ведёт Deckhouse Platform.
 
+### Когда квота проекта отказывает
+
+Что означает ответ:
+
+| Ответ | Что это значит |
+|---|---|
+| `403 ... exceeded quota: d8-project-quota, project <PROJECT_NAME>: requested: ..., used: ..., limited: ... (<N> namespaces)` | Сумма проекта `<PROJECT_NAME>` вышла бы за квоты в ProjectQuota. Поднимите `spec.hard` или удалите лишнее; `status.topNamespaces` показывает, где потребление. |
+| `403 ... exceeded quota: d8-project-quota, requested: ...` (без `project`) | Потребление одного этого неймспейса вместе с объектом вышло бы за лимит проекта, который содержит каждый ResourceQuota `d8-project-quota`. Плагин квот API-сервера отклоняет объект до проверки суммы проекта. |
+| `503 ... project quota ledger unavailable (<CAUSE>), retry` | Счётчик ненадолго не отвечает, например при смене лидера. Повторите запрос; если это длится дольше минуты, воспользуйтесь описанием алерта `D8ProjectQuotaLedgerDown`. |
+| `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io": ...` | API-сервер не достучался до счётчика: не запущена ни одна реплика, сеть или сертификат. Пока Service указывает на замороженного лидера, плагин квот API-сервера повторяет вызов, поэтому каждое такое создание ждёт примерно до 8 секунд, пока адрес лидера не уберут из Service: примерно за 3,5 секунды это делает вторая реплика, примерно до 15 секунд — Deckhouse, если не отвечает ни одна реплика. |
+| `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-pending' ...` | ResourceQuota `d8-project-quota` нового неймспейса ещё не рассчитан. Повторите через несколько секунд; если это затянулось, посмотрите условие `Enforced` в ProjectQuota и проверьте контроллер и kube-controller-manager. |
+| `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-guard' ...` | ResourceQuota `d8-project-quota` неймспейса отсутствует, имеет `scopes` или ещё совсем не рассчитан. Повторите через несколько секунд; иначе проверьте контроллер и kube-controller-manager. |
+| `500 ... resource quota evaluation timed out` | Перегружена проверка квот в API-сервере, подробнее — в описании алерта `D8ResourceQuotaAdmissionDegraded`. |
+
+Новый дополнительный неймспейс несколько секунд отклоняет объекты пользователей, пока его `d8-project-quota` не рассчитан. То же происходит в неймспейсе, где действует квота, если его `d8-project-quota` пропал: пока контроллер не создаст его заново, отклоняются и объекты `system:sudouser`. Из пользователей удалить `d8-project-quota` может только `system:sudouser`.
+
+Если счётчик не даёт создавать объекты проектов и причину быстро не устранить, выполняйте шаги по порядку, пока создание объектов не заработает:
+
+1. Если создание объектов завершается ошибкой `503 ... project quota ledger unavailable`, реплика отвечает, и приостановка счётчика помогает. В течение секунды каждая запущенная реплика начинает пропускать записи без подсчёта, а каждый ProjectQuota показывает `Enforced=False` с причиной `Suspended`. Удаление ConfigMap возобновляет проверку; через 15 минут о ней напомнит алерт `D8ProjectQuotaSuspended`.
+
+   ```shell
+   d8 k -n d8-multitenancy-manager create configmap quota-ledger-suspend --from-literal=reason="<REASON>"
+   d8 k -n d8-multitenancy-manager delete configmap quota-ledger-suspend
+   ```
+
+   Вместо `<REASON>` укажите, почему проверка приостановлена.
+
+1. Если создание объектов завершается ошибкой `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io"`, API-серверы не достают до отвечающей реплики, как при сработавшем алерте `D8ProjectQuotaLedgerDown`, и приостановка не помогает: удалите вебхук счётчика от имени `system:sudouser`. Проверка прекращается в течение секунды, и каждый ProjectQuota показывает `Enforced=False` с причиной `WebhookMissing`. Deckhouse Platform сам обнаружит, что вебхука модуля нет, и вернёт его примерно за 4 минуты, поэтому это лишь даёт время устранить причину, а не выключает проверку.
+
+   ```shell
+   d8 k --as=system:sudouser delete validatingwebhookconfiguration d8-multitenancy-manager-quota-ledger
+   ```
+
+   Проверьте, что вебхук вернулся: `d8 k get validatingwebhookconfiguration d8-multitenancy-manager-quota-ledger`.
+
+1. Отключите модуль `multitenancy-manager`. Проверка перестаёт действовать вместе со всем остальным, что модуль делает для проектов.
+
+Перед выполнением drain рабочих узлов кластера с квотами проектов (вытеснением подов с узлов командой `d8 k drain` или при обновлении узлов) убедитесь, что у счётчика есть лидер (`d8_multitenancy_quota_ledger_leader`) и не срабатывает алерт `D8ProjectQuotaLedgerCanaryFailing`: пока счётчик не отвечает, поды на замену вытесненным в неймспейсах проектов с квотой не создаются.
+
+## Предоставление доступа внутри проекта
+
+Чтобы предоставить доступ к неймспейсам проекта пользователям помимо администраторов проекта, используйте привязки ролей, которые ссылаются на кластерные роли и автоматически разворачиваются в нужные неймспейсы проектов:
+
+- [ProjectRoleBinding](cr.html#projectrolebinding) (namespaced-ресурс, короткое имя `prb`) — предоставляет роль в рамках **одного** проекта. Должен создаваться в главном неймспейсе проекта (имя которого совпадает с именем проекта). Контроллер создаёт RoleBinding в каждом неймспейсе этого проекта.
+- [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) (cluster-wide-ресурс, короткое имя `cprb`) — предоставляет роль во **всех** проектах, кроме виртуальных. Контроллер создаёт RoleBinding в каждом неймспейсе каждого проекта и сообщает количество затронутых проектов в `.status.boundProjects`.
+
+`roleRef` должен ссылаться на ClusterRole, имя которой начинается с одного из разрешённых префиксов (`d8:project:`, `d8:namespace:`, `d8:project-capability:`, `d8:namespace-capability:`, `d8:custom:`). Описание ролей — [в документации модуля `user-authz`](/modules/user-authz/).
+
+При создании привязок действуют следующие проверки:
+
+- **Защита от повышения привилегий**: создать привязку может только пользователь, у которого есть право привязывать (`bind`) указанную роль; право проверяется по имени роли. У администратора проекта (`d8:project:admin`) есть `bind` ровно на восемь ролей: `d8:project:viewer`, `d8:project:user`, `d8:project:manager`, `d8:project:admin`, `d8:namespace:viewer`, `d8:namespace:user`, `d8:namespace:manager` и `d8:namespace:admin`. Привязка к любой другой роли — кастомной `d8:custom:*`, роли-capability (`d8:*-capability:*`), `d8:project:superadmin` — для администратора проекта отклоняется, даже если роль уже его собственных полномочий, потому что право `bind` на это имя ему никто не выдал. Такие привязки создаёт администратор кластера, либо он отдельной ClusterRole выдаёт администраторам проекта право `bind` на собственную роль.
+- Роль должна существовать: привязка к несуществующей роли отклоняется.
+- ServiceAccount в качестве субъекта ProjectRoleBinding должен принадлежать неймспейсу этого же проекта. Подходят основной неймспейс, дополнительные неймспейсы и неймспейс, который занял ресурс ProjectNamespace этого проекта. Неймспейс отдельного проекта, который только называется как дополнительный (`<проект>-*`), не подходит. При обновлении привязки ServiceAccount, который уже есть в сохранённой привязке, повторно не отклоняется. Если его неймспейс больше не относится к проекту, ответ содержит предупреждение, что этот ServiceAccount не получает прав по привязке.
+- Системные и подсистемные роли (`d8:system:*`, `d8:subsystem:*`), а также произвольные роли вне перечисленных префиксов через проектные привязки выдать нельзя.
+- Роли с аннотацией `rbac.deckhouse.io/disabled-for-direct-use-in-projects: "true"` запрещены для выдачи в проектах. Эту аннотацию администратор кластера может поставить на роль, чтобы прекратить её использование: при этом существующие привязки продолжают работать, но новые не создаются. Если такую роль использует шаблон проекта, проект переходит в статус `Error` с пояснением в условии `TemplateRolesAllowed`.
+
+Контроллер проверяет ServiceAccount по тому же правилу каждый раз, когда обновляет RoleBinding привязки ProjectRoleBinding, а также когда неймспейс появляется, удаляется или переходит в другой проект. Субъект, который указывает на ServiceAccount, попадает в RoleBinding, только пока неймспейс этих ServiceAccount является основным неймспейсом проекта или существует, не удаляется и несёт лейбл `projects.deckhouse.io/project` с именем проекта. Кроме субъектов вида `ServiceAccount`, это касается субъекта `User` с именем `system:serviceaccount:<неймспейс>:<имя>` и субъекта `Group` с именем `system:serviceaccounts:<неймспейс>`, которые RBAC сопоставляет с теми же ServiceAccount. Остальных пользователей и групп это не касается. Поэтому ServiceAccount удалённого дополнительного неймспейса не получает прав, если имя этого неймспейса позже займёт отдельный проект.
+
+Исключённые субъекты остаются в `.spec.subjects`. Условие `SubjectsBound` привязки принимает значение `False` и перечисляет их, а при изменении этого списка отправляется Warning-событие `SubjectsLeftOut`. Условие `Ready` остаётся `True`, так как для остальных субъектов привязка продолжает работать. Когда неймспейс снова относится к проекту, например после повторного создания удалённого ProjectNamespace, субъекты снова получают права без изменения привязки. Проверить условие можно по статусу привязки:
+
+```shell
+d8 k -n my-project get projectrolebinding ci -o jsonpath='{.status.conditions[?(@.type=="SubjectsBound")]}'
+```
+
+Привязка `d8-administrators`, создаваемая контроллером из поля [`.spec.administrators`](cr.html#project-v1alpha3-spec-administrators), управляется только контроллером — редактировать её вручную нельзя. Чтобы изменить состав администраторов, измените поле `.spec.administrators` проекта.
+
+Описанное выше правило для ServiceAccount к этой привязке не применяется. Администратор, заданный как `User` `system:serviceaccount:<неймспейс>:<имя>` или `Group` `system:serviceaccounts:<неймспейс>`, получает права во всех неймспейсах проекта, к какому бы проекту ни относился этот неймспейс, так как администраторов проекта задаёт только тот, кому разрешено изменять Project. Удалите такого администратора из проекта до удаления его неймспейса, иначе права получат ServiceAccount неймспейса, который позже создадут под тем же именем.
+
+Следующие привязки выдают пользователю `viewer@example.com` роль `d8:project:viewer` во всех неймспейсах проекта `my-project`, а группе `platform` — ту же роль во всех проектах, кроме виртуальных:
+
+```yaml
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: ProjectRoleBinding
+metadata:
+  name: viewers
+  namespace: my-project
+spec:
+  subjects:
+    - kind: User
+      name: viewer@example.com
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:viewer
+---
+apiVersion: deckhouse.io/v1alpha3
+kind: ClusterProjectRoleBinding
+metadata:
+  name: platform-viewers
+spec:
+  subjects:
+    - kind: Group
+      name: platform
+  roleRef:
+    kind: ClusterRole
+    name: d8:project:viewer
+```
+
 ### Роли, доступные в RoleBinding внутри проекта
 
 Кроме проектных привязок, внутри неймспейса проекта можно использовать и обычный RoleBinding — тогда роль действует только в этом одном неймспейсе. Но в проектах набор ролей, доступных для обычного RoleBinding, ограничен: разрешены только кластерные роли с лейблом `rbac.deckhouse.io/delegatable: "true"`. Из встроенных это роли `d8:namespace:*` и `d8:project:*`, а также роли уровней доступа упрощённой ролевой модели (`user-authz:user`, `user-authz:privileged-user`, `user-authz:editor`, `user-authz:admin`).

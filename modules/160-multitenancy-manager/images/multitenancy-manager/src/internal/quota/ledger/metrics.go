@@ -37,6 +37,9 @@ type Metrics struct {
 	EndpointWrites   *prometheus.CounterVec
 	// InflightWaits are the writes that waited for the approvals of their project to be confirmed.
 	InflightWaits *prometheus.CounterVec
+	CanaryResults *prometheus.CounterVec
+	Drift         prometheus.Gauge
+	WakeWrites    prometheus.Counter
 }
 
 // NewMetrics registers the series in the registry.
@@ -92,6 +95,18 @@ func NewMetrics(registry prometheus.Registerer) *Metrics {
 			Name: "d8_multitenancy_quota_ledger_endpoint_writes_total",
 			Help: "Writes of the EndpointSlice of the ledger Service by who made them.",
 		}, []string{"actor"}),
+		CanaryResults: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "d8_multitenancy_quota_ledger_canary_result_total",
+			Help: "Canary writes through each API server: ok, ours (failed on the ledger), unknown (failed elsewhere), no_nonce (the webhook was not called).",
+		}, []string{"apiserver", "result"}),
+		Drift: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "d8_multitenancy_quota_ledger_drift",
+			Help: "Namespaces whose quota the ledger holds with a usage different from a quorum read of the same version; anything but 0 is a bug.",
+		}),
+		WakeWrites: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "d8_multitenancy_quota_ledger_wake_writes_total",
+			Help: "Writes that wake the quota of a namespace that was refused, after the project freed some of its quota.",
+		}),
 	}
 	m.InflightWaits = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "d8_multitenancy_quota_ledger_inflight_waits_total",
@@ -99,6 +114,6 @@ func NewMetrics(registry prometheus.Registerer) *Metrics {
 	}, []string{"outcome"})
 	registry.MustRegister(m.InflightWaits)
 	registry.MustRegister(m.Requests, m.HandlerDuration, m.Inflight, m.InflightRatioMax, m.Leader, m.LeaseRenewAge, m.Handovers,
-		m.HandoverDrain, m.Synced, m.Pending, m.PendingResolved, m.EndpointWrites)
+		m.HandoverDrain, m.Synced, m.Pending, m.PendingResolved, m.EndpointWrites, m.CanaryResults, m.Drift, m.WakeWrites)
 	return m
 }

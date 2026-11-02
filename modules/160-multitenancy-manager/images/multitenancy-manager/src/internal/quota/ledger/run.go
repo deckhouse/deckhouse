@@ -24,8 +24,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"path/filepath"
+	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -44,6 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -52,6 +56,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
@@ -65,6 +70,8 @@ const (
 	drainAge = 100 * time.Millisecond
 	// livenessWindow is how old the last tick of the main loop may be before the liveness probe fails.
 	livenessWindow = 60 * time.Second
+	// auditEvery is the interval of the drift audit.
+	auditEvery = 60 * time.Second
 	// relistAfter is how long the informers may take to catch up with a quorum list before it is taken
 	// again.
 	relistAfter = 30 * time.Second
@@ -105,10 +112,20 @@ type runner struct {
 	watchdog  *Watchdog
 	webhook   *http.Server
 
-	leader   atomic.Bool
-	synced   atomic.Bool
-	stopping atomic.Bool
-	lastTick atomic.Int64
+	leader    atomic.Bool
+	synced    atomic.Bool
+	stopping  atomic.Bool
+	ready     atomic.Bool
+	suspended atomic.Bool
+	lastTick  atomic.Int64
+
+	nonces  *Nonces
+	canary  *Canary
+	clients *apiServerClients
+
+	roundMu     sync.Mutex
+	endRound    context.CancelFunc
+	holdOffTill time.Time
 
 	// flagsMu orders the changes of leader and synced by a start of the leadership and by its end.
 	flagsMu sync.Mutex
@@ -188,7 +205,24 @@ func Run(ctx context.Context, opts Options) error {
 		return errors.New("the informers of the ledger did not sync")
 	}
 
-	handler := &Handler{State: r.state, Gate: r.gate, Metrics: r.metrics}
+	r.ready.Store(true)
+	r.nonces = &Nonces{}
+	r.clients = &apiServerClients{config: opts.Config, clients: map[string]kubernetes.Interface{}}
+	r.canary = &Canary{
+		Nonces:    r.nonces,
+		Prober:    r.clients,
+		Servers:   r.apiServers,
+		PeerReady: r.peerReady,
+		StepDown:  r.stepDownVoluntarily,
+		Report:    r.reportNotCalled,
+		Load:      r.loadNotCalled,
+
+		RecordSingle: r.recordSingleProbes,
+		LoadSingle:   r.loadSingleProbes,
+		Metrics:      r.metrics,
+		Log:          r.log.WithName("canary"),
+	}
+	handler := &Handler{State: r.state, Gate: r.gate, Metrics: r.metrics, Nonces: r.nonces, Suspended: r.suspended.Load}
 	mux := http.NewServeMux()
 	mux.Handle("/validate/quota-ledger", handler)
 	r.webhook = &http.Server{
@@ -252,6 +286,10 @@ func newCache(config *rest.Config, scheme *runtime.Scheme) (cache.Cache, error) 
 		ByObject: map[client.Object]cache.ByObject{
 			&corev1.ResourceQuota{}: {Field: fields.OneTermEqualSelector("metadata.name", v1alpha3.ProjectQuotaName)},
 			&corev1.Namespace{}:     {Label: labels.NewSelector().Add(*inProject)},
+			&corev1.ConfigMap{}: {
+				Namespaces: map[string]cache.Config{Namespace: {}},
+				Field:      fields.OneTermEqualSelector("metadata.name", SuspendConfigMap),
+			},
 		},
 		DefaultTransform: cache.TransformStripManagedFields(),
 	})
@@ -284,6 +322,11 @@ func (r *runner) watch(ctx context.Context) error {
 				}
 			},
 		},
+		&corev1.ConfigMap{}: {
+			AddFunc:    func(any) { r.setSuspended(true) },
+			UpdateFunc: func(_, _ any) { r.setSuspended(true) },
+			DeleteFunc: func(any) { r.setSuspended(false) },
+		},
 		&v1alpha1.ProjectQuota{}: {
 			AddFunc:    func(obj any) { r.onProjectQuota(obj) },
 			UpdateFunc: func(_, obj any) { r.onProjectQuota(obj) },
@@ -305,6 +348,12 @@ func (r *runner) watch(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (r *runner) setSuspended(suspended bool) {
+	if r.suspended.Swap(suspended) != suspended {
+		r.log.Info("the quota ledger is suspended by the "+SuspendConfigMap+" ConfigMap: every write passes uncounted", "suspended", suspended)
+	}
 }
 
 func unwrap(obj any) any {
@@ -352,6 +401,16 @@ func (r *runner) gate() (string, string) {
 // becomes a candidate again; client-go returns from Run when the lease is lost.
 func (r *runner) elect(ctx context.Context) {
 	for ctx.Err() == nil {
+		r.roundMu.Lock()
+		wait := time.Until(r.holdOffTill)
+		r.roundMu.Unlock()
+		if wait > 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(wait):
+			}
+		}
 		elector, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
 			Lock:            r.lock,
 			LeaseDuration:   r.timing.Lease,
@@ -368,7 +427,35 @@ func (r *runner) elect(ctx context.Context) {
 			r.log.Error(err, "configure the leader election")
 			return
 		}
-		elector.Run(ctx)
+		round, endRound := context.WithCancel(ctx)
+		r.roundMu.Lock()
+		r.endRound = endRound
+		r.roundMu.Unlock()
+		elector.Run(round)
+		endRound()
+	}
+}
+
+// holdingOff reports whether this replica stepped down lately and does not try to take the lease yet.
+func (r *runner) holdingOff() bool {
+	r.roundMu.Lock()
+	defer r.roundMu.Unlock()
+	return time.Now().Before(r.holdOffTill)
+}
+
+// stepDownVoluntarily hands the lease over without stopping the process, when the API servers do not
+// reach this replica: the handover of a stop, then the lease released, and no new attempt to take it
+// for a while.
+func (r *runner) stepDownVoluntarily(reason string) {
+	r.handOver()
+	r.leader.Store(false)
+	r.metrics.Handovers.WithLabelValues(reason).Inc()
+	r.roundMu.Lock()
+	r.holdOffTill = time.Now().Add(stepDownHoldOff)
+	endRound := r.endRound
+	r.roundMu.Unlock()
+	if endRound != nil {
+		endRound()
 	}
 }
 
@@ -394,17 +481,26 @@ func (r *runner) lead(ctx context.Context) {
 	r.metrics.Synced.Set(1)
 	r.webhook.SetKeepAlivesEnabled(true)
 
+	r.canary.Reset()
+	go r.runCanary(ctx)
+
 	ticker := time.NewTicker(r.timing.Retry)
 	defer ticker.Stop()
+	lastAudit := time.Now()
 	for {
 		if r.mayAct() {
 			fenced, cancel := r.withinFence(ctx)
 			if err := r.endpoints.Publish(fenced, r.mayAct); err != nil {
 				r.log.Error(err, "publish the address of the leader")
 			}
+			r.wake(fenced)
 			cancel()
 		}
 		r.resolve(ctx, time.Now().Add(-confirmAfter), true)
+		if time.Since(lastAudit) >= auditEvery {
+			lastAudit = time.Now()
+			r.audit(ctx)
+		}
 		select {
 		case <-ctx.Done():
 			return
@@ -420,6 +516,9 @@ func (r *runner) lead(ctx context.Context) {
 func (r *runner) mayAct() bool {
 	return !r.stopping.Load() && r.synced.Load() && r.lock.Fresh(r.timing.Fence)
 }
+
+// errNotActing stops a write of a replica that may no longer act as the leader.
+var errNotActing = errors.New("not acting as the leader of the ledger: the lease is not renewed within the fence")
 
 // withinFence bounds a write of the leader by the end of its fence: a call that a slow API server holds
 // past it is cancelled rather than written by a replica that may have lost the lease.
@@ -438,6 +537,204 @@ func (r *runner) whileLeading(ctx context.Context, change func()) bool {
 	return true
 }
 
+// runCanary writes through every API server every few seconds while this replica leads.
+func (r *runner) runCanary(ctx context.Context) {
+	ticker := time.NewTicker(canaryInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+		if r.mayAct() {
+			r.canary.Round(ctx)
+		}
+	}
+}
+
+// reportNotCalled writes the API servers that do not call the webhook into the state ConfigMap of the
+// ledger, which the controller turns into the Enforced condition of every quota.
+func (r *runner) reportNotCalled(ctx context.Context, notCalled []string) error {
+	// a canary round probes every API server and may outlast the fence it started within
+	if !r.mayAct() {
+		return errNotActing
+	}
+	ctx, cancel := r.withinFence(ctx)
+	defer cancel()
+	state := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: Namespace, Name: quota.LedgerStateConfigMapName}}
+	_, err := controllerutil.CreateOrUpdate(ctx, r.reader, state, func() error {
+		if !r.mayAct() {
+			return errNotActing
+		}
+		if state.Data == nil {
+			state.Data = map[string]string{}
+		}
+		state.Data[quota.LedgerStateNotCalledKey] = strings.Join(notCalled, ",")
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("write the %s ConfigMap: %w", quota.LedgerStateConfigMapName, err)
+	}
+	if len(notCalled) > 0 {
+		r.log.Info("API servers admit objects without calling the webhook of the ledger", "servers", notCalled)
+	}
+	return nil
+}
+
+// recordSingleProbes keeps when the leaders last stepped down for each single failing API server.
+func (r *runner) recordSingleProbes(ctx context.Context, probes map[string]time.Time) error {
+	if !r.mayAct() {
+		return errNotActing
+	}
+	value, err := json.Marshal(probes)
+	if err != nil {
+		return fmt.Errorf("encode the single probes: %w", err)
+	}
+	ctx, cancel := r.withinFence(ctx)
+	defer cancel()
+	state := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: Namespace, Name: quota.LedgerStateConfigMapName}}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.reader, state, func() error {
+		if !r.mayAct() {
+			return errNotActing
+		}
+		if state.Data == nil {
+			state.Data = map[string]string{}
+		}
+		state.Data[quota.LedgerStateSingleProbesKey] = string(value)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("write the %s ConfigMap: %w", quota.LedgerStateConfigMapName, err)
+	}
+	return nil
+}
+
+// loadSingleProbes reads when the leaders last stepped down for each single failing API server. A
+// value that cannot be read counts as none.
+func (r *runner) loadSingleProbes(ctx context.Context) (map[string]time.Time, error) {
+	state := new(corev1.ConfigMap)
+	switch err := r.reader.Get(ctx, client.ObjectKey{Namespace: Namespace, Name: quota.LedgerStateConfigMapName}, state); {
+	case apierrors.IsNotFound(err):
+		return nil, nil
+	case err != nil:
+		return nil, fmt.Errorf("get the %s ConfigMap: %w", quota.LedgerStateConfigMapName, err)
+	}
+	probes := map[string]time.Time{}
+	if value := state.Data[quota.LedgerStateSingleProbesKey]; value != "" {
+		if err := json.Unmarshal([]byte(value), &probes); err != nil {
+			r.log.Error(err, "read the single probes of the former leaders; taking none")
+			return map[string]time.Time{}, nil
+		}
+	}
+	return probes, nil
+}
+
+// loadNotCalled reads the API servers that the canary of a former leadership found not calling the
+// webhook.
+func (r *runner) loadNotCalled(ctx context.Context) ([]string, error) {
+	state := new(corev1.ConfigMap)
+	switch err := r.reader.Get(ctx, client.ObjectKey{Namespace: Namespace, Name: quota.LedgerStateConfigMapName}, state); {
+	case apierrors.IsNotFound(err):
+		return nil, nil
+	case err != nil:
+		return nil, fmt.Errorf("get the %s ConfigMap: %w", quota.LedgerStateConfigMapName, err)
+	}
+	if notCalled := state.Data[quota.LedgerStateNotCalledKey]; notCalled != "" {
+		return strings.Split(notCalled, ","), nil
+	}
+	return nil, nil
+}
+
+// wake touches the quota of the namespaces refused lately in the projects that freed some of their
+// quota, so that whatever waits on the events of those quotas tries again.
+func (r *runner) wake(ctx context.Context) {
+	now := time.Now()
+	for _, namespace := range r.state.TakeWakes(now) {
+		rq := &corev1.ResourceQuota{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: v1alpha3.ProjectQuotaName}}
+		patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{%q:%q}}}`, WakeAnnotation, now.UTC().Format(time.RFC3339)))
+		if err := r.reader.Patch(ctx, rq, client.RawPatch(types.MergePatchType, patch)); err != nil {
+			if !apierrors.IsNotFound(err) {
+				r.log.Error(err, "wake the quota of a namespace", "namespace", namespace)
+			}
+			continue
+		}
+		r.metrics.WakeWrites.Inc()
+	}
+}
+
+// audit compares the usage the ledger holds with a quorum read.
+func (r *runner) audit(ctx context.Context) {
+	list := new(corev1.ResourceQuotaList)
+	if err := r.reader.List(ctx, list, client.MatchingFields{"metadata.name": v1alpha3.ProjectQuotaName}); err != nil {
+		r.log.Error(err, "list the quotas for the drift audit")
+		return
+	}
+	drift := r.state.Drift(list.Items)
+	r.metrics.Drift.Set(float64(drift))
+	if drift > 0 {
+		r.log.Error(errors.New("the ledger differs from the API server"), "drift audit", "quotas", drift)
+	}
+}
+
+// apiServers returns the addresses of the API servers from the endpoints of the kubernetes Service.
+func (r *runner) apiServers(ctx context.Context) ([]string, error) {
+	list := new(discoveryv1.EndpointSliceList)
+	if err := r.reader.List(ctx, list, client.InNamespace("default"), client.MatchingLabels{discoveryv1.LabelServiceName: "kubernetes"}); err != nil {
+		return nil, fmt.Errorf("list the endpoints of the kubernetes Service: %w", err)
+	}
+	var out []string
+	for _, slice := range list.Items {
+		port := int32(443)
+		for _, p := range slice.Ports {
+			if p.Port != nil && (p.Name == nil || *p.Name == "https") {
+				port = *p.Port
+			}
+		}
+		for _, endpoint := range slice.Endpoints {
+			for _, address := range endpoint.Addresses {
+				out = append(out, net.JoinHostPort(address, fmt.Sprint(port)))
+			}
+		}
+	}
+	slices.Sort(out)
+	return slices.Compact(out), nil
+}
+
+// peerReady asks the other replicas whether one of them has its informers synced and would take the
+// lease now.
+func (r *runner) peerReady(ctx context.Context) bool {
+	pods := new(corev1.PodList)
+	if err := r.reader.List(ctx, pods, client.InNamespace(Namespace), client.MatchingLabels{"app": "multitenancy-manager"}); err != nil {
+		r.log.Error(err, "list the replicas of the ledger")
+		return false
+	}
+	httpClient := &http.Client{Timeout: 500 * time.Millisecond}
+	for _, pod := range pods.Items {
+		if pod.Name == r.opts.Self.PodName || pod.Status.PodIP == "" {
+			continue
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+net.JoinHostPort(pod.Status.PodIP, "9445")+"/ledger-health", nil)
+		if err != nil {
+			continue
+		}
+		resp, err := httpClient.Do(req)
+		if err != nil {
+			continue
+		}
+		var health struct {
+			Ready      bool `json:"ready"`
+			HoldingOff bool `json:"holdingOff"`
+		}
+		err = json.NewDecoder(resp.Body).Decode(&health)
+		resp.Body.Close()
+		// a replica that stepped down itself a moment ago does not take the lease until its hold-off ends
+		if err == nil && health.Ready && !health.HoldingOff {
+			return true
+		}
+	}
+	return false
+}
+
 // stepDown stops the answers of a replica that lost the lease and closes its idle connections.
 func (r *runner) stepDown() {
 	r.flagsMu.Lock()
@@ -453,6 +750,8 @@ func (r *runner) stepDown() {
 	r.lock.Forget()
 	r.metrics.Leader.WithLabelValues(r.opts.Self.PodName).Set(0)
 	r.metrics.Synced.Set(0)
+	// the drift is the finding of the leader; a former one does not keep pointing at itself
+	r.metrics.Drift.Set(0)
 	r.webhook.SetKeepAlivesEnabled(false)
 	r.log.Info("left the ledger lease", "identity", r.opts.Self.Identity())
 }
@@ -661,7 +960,8 @@ func (r *runner) healthServer() *http.Server {
 	})
 	mux.HandleFunc("/ledger-health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(map[string]bool{"leader": r.leader.Load(), "synced": r.synced.Load()}); err != nil {
+		state := map[string]bool{"leader": r.leader.Load(), "synced": r.synced.Load(), "ready": r.ready.Load(), "holdingOff": r.holdingOff()}
+		if err := json.NewEncoder(w).Encode(state); err != nil {
 			return
 		}
 	})

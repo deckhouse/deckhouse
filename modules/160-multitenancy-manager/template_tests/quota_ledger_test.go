@@ -54,9 +54,15 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: quota ledge
 			Expect(webhook.Get("sideEffects").String()).To(Equal("None"))
 			Expect(webhook.Get("rules.0.resources").String()).To(MatchJSON(`["resourcequotas/status"]`))
 			Expect(webhook.Get("rules.0.operations").String()).To(MatchJSON(`["UPDATE"]`))
-			Expect(webhook.Get("namespaceSelector.matchExpressions.0.values").String()).To(MatchJSON(`["pending","enforced"]`))
+			Expect(webhook.Get("namespaceSelector.matchExpressions.0.values").String()).To(MatchJSON(`["pending","enforced","canary"]`))
 			Expect(webhook.Get("matchConditions.0.expression").String()).To(ContainSubstring(`request.userInfo.username == "system:apiserver"`))
 			Expect(webhook.Get("matchConditions.0.expression").String()).To(ContainSubstring(`request.name == "d8-project-quota"`))
+			Expect(webhook.Get("matchConditions.0.expression").String()).To(ContainSubstring(`request.name == "quota-ledger-canary"`))
+
+			canary := hec.KubernetesResource("ResourceQuota", quotaLedgerNamespace, "quota-ledger-canary")
+			Expect(canary.Field("spec.hard").String()).To(MatchJSON(`{"count/quotaledgercanaries.multitenancy.deckhouse.io":"0"}`),
+				"a resource nothing creates: no create of the module waits for the ledger")
+			Expect(hec.KubernetesGlobalResource("Namespace", quotaLedgerNamespace).Field(`metadata.labels.projects\.deckhouse\.io/quota`).String()).To(Equal("canary"))
 			Expect(webhook.Get("clientConfig.service.name").String()).To(Equal(quotaLedgerService))
 			Expect(webhook.Get("clientConfig.service.path").String()).To(Equal("/validate/quota-ledger"))
 			Expect(webhook.Get("clientConfig.caBundle").String()).To(Equal("bGVkZ2VyLXRlc3Q="), "the CA of the ledger certificate, not of the other webhooks")

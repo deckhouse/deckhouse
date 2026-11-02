@@ -22,10 +22,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	authorizationv1 "k8s.io/api/authorization/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
@@ -34,6 +37,8 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -316,6 +321,9 @@ func newScheme() (*runtime.Scheme, error) {
 		appsv1.AddToScheme,
 		rbacv1.AddToScheme,
 		authorizationv1.AddToScheme,
+		// the controller checks the webhook and the lease of the quota ledger
+		admissionregistrationv1.AddToScheme,
+		coordinationv1.AddToScheme,
 	}
 
 	scheme := runtime.NewScheme()
@@ -346,6 +354,13 @@ func setupRuntimeManager(logger logr.Logger) (ctrl.Manager, error) {
 		GracefulShutdownTimeout:       ptr.To(10 * time.Second),
 		HealthProbeBindAddress:        ":9090",
 		WebhookServer:                 webhook.NewServer(webhook.Options{CertDir: "/certs"}),
+		// the ProjectQuota controller watches the ConfigMaps of the ledger and its certificate; nothing
+		// reads another ConfigMap or Secret through the cache
+		Cache: cache.Options{ByObject: map[client.Object]cache.ByObject{
+			&corev1.ConfigMap{}: {Namespaces: map[string]cache.Config{quota.ConfigNamespace: {}}},
+			&corev1.Secret{}: {Namespaces: map[string]cache.Config{quota.ConfigNamespace: {}},
+				Field: fields.OneTermEqualSelector("metadata.name", quota.LedgerCertsSecretName)},
+		}},
 		// The grant-violation series (d8_cluster_objects_grant_violated), the project-name pairs
 		// (d8_multitenancy_project_named_like_additional_namespace), the handovers that have not
 		// finished (d8_multitenancy_project_handover_pending) and the objects left from Helm text
