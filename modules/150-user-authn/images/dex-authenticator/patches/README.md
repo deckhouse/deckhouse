@@ -101,6 +101,9 @@ Fix CVEs:
 - CVE-2026-84303
 - CVE-2026-84304
 - CVE-2026-84445
+- CVE-2026-116585
+- CVE-2026-116586
+- CVE-2026-116587
 
 GHSA:
 - GHSA-hrxh-6v49-42gf
@@ -137,6 +140,7 @@ It lists the `go.mod` requirements that the patch set changes over the upstream 
 |---|---|---|
 | `cloud.google.com/go/auth/oauth2adapt` | — | v0.2.8 |
 | `cloud.google.com/go/auth` | — | v0.18.2 |
+| `github.com/coreos/go-oidc/v3` | v3.5.0 | v3.11.0 |
 | `github.com/felixge/httpsnoop` | — | v1.0.4 |
 | `github.com/go-jose/go-jose/v4` | v4.1.4 | v4.1.6 |
 | `github.com/go-logr/stdr` | — | v1.2.2 |
