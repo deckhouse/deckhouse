@@ -24,7 +24,7 @@ require (
 	github.com/deckhouse/module-sdk v0.10.4
 	github.com/flant/kube-client v1.6.0
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/go-jose/go-jose/v4 v4.1.4
+	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/go-openapi/spec v0.22.0
 	github.com/go-openapi/strfmt v0.24.0
 	github.com/go-openapi/validate v0.25.0
