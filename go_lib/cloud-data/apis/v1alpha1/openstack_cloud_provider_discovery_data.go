@@ -26,6 +26,7 @@ type OpenStackCloudProviderDiscoveryData struct {
 	MainNetwork              string                                          `json:"mainNetwork"`
 	Zones                    []string                                        `json:"zones"`
 	VolumeTypes              []OpenStackCloudProviderDiscoveryDataVolumeType `json:"volumeTypes"`
+	VolumeAvailabilityZones  []string                                        `json:"volumeAvailabilityZones,omitempty"`
 }
 
 type OpenStackCloudProviderDiscoveryDataVolumeType struct {

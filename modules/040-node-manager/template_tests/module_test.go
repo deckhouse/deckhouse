@@ -468,6 +468,28 @@ internal:
   machineControllerManagerEnabled: true
 `
 
+var (
+	nodeManagerOpenstackRootDisk      = strings.Replace(nodeManagerOpenstack, "      flavorName: m1.large\n", "      flavorName: m1.large\n      rootDiskSize: 50\n", 1)
+	nodeManagerOpenstackRootDiskOneAZ = strings.Replace(nodeManagerOpenstackRootDisk, "      zones:\n      - zonea\n      - zoneb\n", "      zones:\n      - zonea\n", 1)
+)
+
+const openstackTestClusterUUID = "f49dd1c3-a63a-4565-a06c-625e35587eab"
+
+func openstackPublishedChecksum(f *Config, ng string) string {
+	checksums := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "d8-node-manager-capi-instance-class-checksum")
+	return checksums.Field("data." + ng).String()
+}
+
+func openstackTemplateName(ng, zone, checksum string) string {
+	sum := sha256.Sum256([]byte(openstackTestClusterUUID + zone + checksum))
+	return ng + "-" + hex.EncodeToString(sum[:])[:8]
+}
+
+func openstackMachineTemplate(f *Config, ng, zone string) (string, object_store.KubeObject) {
+	name := openstackTemplateName(ng, zone, openstackPublishedChecksum(f, ng))
+	return name, f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", name)
+}
+
 const nodeManagerVsphere = `
 internal:
   capiControllerManagerWebhookCert:
@@ -1495,6 +1517,205 @@ metadata:
 				Expect(openStackCluster.Exists()).To(BeTrue())
 				Expect(openStackCluster.Field("spec.disableAPIServerFloatingIP").Exists()).To(BeFalse())
 				Expect(openStackCluster.Field("spec.controlPlaneEndpoint").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("OpenStack rootVolume availability zone gating", func() {
+			const (
+				rootDiskChecksum   = "5b47d0a1c8ca060d60f449af6a1e2386015dd8d6073e28b74b0450a380ed169b"
+				rootDiskNameZoneA  = "worker-418aa7f4"
+				rootDiskNameZoneB  = "worker-be3726fc"
+				noRootDiskChecksum = "d4829faf5ac0babecf268f0c74a512d3d00f48533af62f337e41bd7ccd12ce23"
+				noRootDiskNameA    = "worker-d03da7ca"
+				noRootDiskNameB    = "worker-3031c553"
+				simpleChecksum     = "06fc1339c280004581ec19e19e6eef8f3ee919931dbc450b60db608cd074feca"
+				simpleName         = "simple-b64d51cc"
+			)
+
+			var (
+				nodeManagerValues string
+				volumeAZs         []string
+			)
+
+			BeforeEach(func() {
+				volumeAZs = nil
+			})
+
+			JustBeforeEach(func() {
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerValues)
+				f.ValuesSet("nodeManager.internal.bootstrapTokens", map[string]string{"worker": "mytoken", "simple": "mytoken"})
+				f.ValuesSet("nodeManager.internal.capiControllerManagerEnabled", true)
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "openstack")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateKind", "OpenStackMachineTemplate")
+				f.ValuesSet("nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+				if volumeAZs != nil {
+					f.ValuesSet("nodeManager.internal.cloudProvider.openstack.volumeAvailabilityZones", volumeAZs)
+				}
+				f.ValuesSet("nodeManager.internal.deployAutoscaler", true)
+				f.ValuesSet("global.discovery.podSubnet", "10.111.0.0/16")
+				f.ValuesSet("nodeManager.internal.autoscalerNodes", []string{
+					"--nodes=2:5:d8-cloud-instance-manager.myprefix-worker-02320933",
+					"--nodes=2:5:d8-cloud-instance-manager.myprefix-worker-6bdb5b0d",
+				})
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			expectBaselineRootVolume := func(ng, zone, wantName string) {
+				name, tpl := openstackMachineTemplate(f, ng, zone)
+				Expect(name).To(Equal(wantName))
+				Expect(tpl.Exists()).To(BeTrue())
+				Expect(tpl.Field("spec.template.spec.rootVolume").String()).To(MatchJSON(`{"availabilityZone":{"from":"Machine"},"sizeGiB":50}`))
+			}
+
+			Context("zone absent in Cinder list", func() {
+				BeforeEach(func() {
+					nodeManagerValues = nodeManagerOpenstackRootDiskOneAZ
+					volumeAZs = []string{"zoneb"}
+				})
+
+				It("omits rootVolume.availabilityZone and renames the template", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					checksum := openstackPublishedChecksum(f, "worker")
+					Expect(checksum).NotTo(BeEmpty())
+					Expect(checksum).NotTo(Equal(rootDiskChecksum))
+
+					name, tpl := openstackMachineTemplate(f, "worker", "zonea")
+					Expect(name).NotTo(Equal(rootDiskNameZoneA))
+					Expect(tpl.Exists()).To(BeTrue())
+					Expect(tpl.Field("spec.template.spec.rootVolume.sizeGiB").Int()).To(BeEquivalentTo(50))
+					Expect(tpl.Field("spec.template.spec.rootVolume.availabilityZone").Exists()).To(BeFalse())
+					Expect(f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", rootDiskNameZoneA).Exists()).To(BeFalse())
+				})
+			})
+
+			Context("zone present in Cinder list", func() {
+				BeforeEach(func() {
+					nodeManagerValues = nodeManagerOpenstackRootDisk
+					volumeAZs = []string{"zonea", "zoneb"}
+				})
+
+				It("keeps AZ pinning, checksum and template names unchanged", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+					Expect(openstackPublishedChecksum(f, "worker")).To(Equal(rootDiskChecksum))
+					expectBaselineRootVolume("worker", "zonea", rootDiskNameZoneA)
+					expectBaselineRootVolume("worker", "zoneb", rootDiskNameZoneB)
+				})
+			})
+
+			Context("empty Cinder list", func() {
+				BeforeEach(func() {
+					nodeManagerValues = nodeManagerOpenstackRootDisk
+					volumeAZs = []string{}
+				})
+
+				It("keeps AZ pinning, checksum and template names unchanged", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+					Expect(openstackPublishedChecksum(f, "worker")).To(Equal(rootDiskChecksum))
+					expectBaselineRootVolume("worker", "zonea", rootDiskNameZoneA)
+					expectBaselineRootVolume("worker", "zoneb", rootDiskNameZoneB)
+				})
+			})
+
+			Context("Cinder list absent", func() {
+				BeforeEach(func() {
+					nodeManagerValues = nodeManagerOpenstackRootDisk
+				})
+
+				It("keeps AZ pinning, checksum and template names unchanged", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+					Expect(openstackPublishedChecksum(f, "worker")).To(Equal(rootDiskChecksum))
+					expectBaselineRootVolume("worker", "zonea", rootDiskNameZoneA)
+					expectBaselineRootVolume("worker", "zoneb", rootDiskNameZoneB)
+				})
+			})
+
+			Context("mixed zones", func() {
+				BeforeEach(func() {
+					nodeManagerValues = nodeManagerOpenstackRootDisk
+					volumeAZs = []string{"zonea"}
+				})
+
+				It("sets the marker per NodeGroup and omits AZ only for the absent zone", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					checksum := openstackPublishedChecksum(f, "worker")
+					Expect(checksum).NotTo(BeEmpty())
+					Expect(checksum).NotTo(Equal(rootDiskChecksum))
+
+					nameA, tplA := openstackMachineTemplate(f, "worker", "zonea")
+					nameB, tplB := openstackMachineTemplate(f, "worker", "zoneb")
+					Expect(nameA).NotTo(Equal(rootDiskNameZoneA))
+					Expect(nameB).NotTo(Equal(rootDiskNameZoneB))
+					Expect(tplA.Exists()).To(BeTrue())
+					Expect(tplB.Exists()).To(BeTrue())
+					Expect(tplA.Field("spec.template.spec.rootVolume").String()).To(MatchJSON(`{"availabilityZone":{"from":"Machine"},"sizeGiB":50}`))
+					Expect(tplB.Field("spec.template.spec.rootVolume").String()).To(MatchJSON(`{"sizeGiB":50}`))
+				})
+			})
+
+			Context("Cinder list changes between renders with the same omitted zone set", func() {
+				checksumsFor := func(azs []string) (string, string) {
+					f.ValuesSet("nodeManager.internal.cloudProvider.openstack.volumeAvailabilityZones", azs)
+					f.HelmRender()
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+					name, _ := openstackMachineTemplate(f, "worker", "zonea")
+					return openstackPublishedChecksum(f, "worker"), name
+				}
+
+				BeforeEach(func() {
+					nodeManagerValues = nodeManagerOpenstackRootDisk
+					volumeAZs = []string{"zonec"}
+				})
+
+				It("changes checksum and template name when a zone stops being omitted", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+					before := openstackPublishedChecksum(f, "worker")
+					nameBefore, _ := openstackMachineTemplate(f, "worker", "zonea")
+					Expect(before).NotTo(BeEmpty())
+
+					after, nameAfter := checksumsFor([]string{"zonea", "zonec"})
+					Expect(after).NotTo(Equal(before))
+					Expect(nameAfter).NotTo(Equal(nameBefore))
+				})
+
+				It("keeps checksum when the omitted zone set is unchanged", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+					before := openstackPublishedChecksum(f, "worker")
+					Expect(before).NotTo(BeEmpty())
+
+					after, _ := checksumsFor([]string{"zoned"})
+					Expect(after).To(Equal(before))
+				})
+			})
+
+			Context("no rootDiskSize", func() {
+				BeforeEach(func() {
+					nodeManagerValues = nodeManagerOpenstack
+					volumeAZs = []string{"zoneb"}
+				})
+
+				It("does not change checksums or template names and renders no rootVolume", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					Expect(openstackPublishedChecksum(f, "worker")).To(Equal(noRootDiskChecksum))
+					Expect(openstackPublishedChecksum(f, "simple")).To(Equal(simpleChecksum))
+
+					for zone, want := range map[string]string{"zonea": noRootDiskNameA, "zoneb": noRootDiskNameB} {
+						name, tpl := openstackMachineTemplate(f, "worker", zone)
+						Expect(name).To(Equal(want))
+						Expect(tpl.Exists()).To(BeTrue())
+						Expect(tpl.Field("spec.template.spec.rootVolume").Exists()).To(BeFalse())
+					}
+
+					name, tpl := openstackMachineTemplate(f, "simple", "zonea")
+					Expect(name).To(Equal(simpleName))
+					Expect(tpl.Exists()).To(BeTrue())
+					Expect(tpl.Field("spec.template.spec.rootVolume").Exists()).To(BeFalse())
+				})
 			})
 		})
 
