@@ -266,3 +266,39 @@ index 01c77371bdf..07b5f873c7a 100644
  	}
  
  	for tn, tc := range testCases {
+diff --git a/test/integration/disruption/disruption_test.go b/test/integration/disruption/disruption_test.go
+index 1b651562549..d705b54cb61 100644
+--- a/test/integration/disruption/disruption_test.go
++++ b/test/integration/disruption/disruption_test.go
+@@ -103,6 +103,7 @@ func setup(ctx context.Context, t *testing.T) (*kubeapiservertesting.TestServer,
+ 		informers.Apps().V1().ReplicaSets(),
+ 		informers.Apps().V1().Deployments(),
+ 		informers.Apps().V1().StatefulSets(),
++		informers.Apps().V1().DaemonSets(),
+ 		client,
+ 		mapper,
+ 		scaleClient,
+diff --git a/test/integration/evictions/evictions_test.go b/test/integration/evictions/evictions_test.go
+index 9fabc44c99f..a65d0ee7ad3 100644
+--- a/test/integration/evictions/evictions_test.go
++++ b/test/integration/evictions/evictions_test.go
+@@ -688,6 +688,7 @@ func rmSetup(ctx context.Context, t *testing.T) (kubeapiservertesting.TearDownFu
+ 		informers.Apps().V1().ReplicaSets(),
+ 		informers.Apps().V1().Deployments(),
+ 		informers.Apps().V1().StatefulSets(),
++		informers.Apps().V1().DaemonSets(),
+ 		client,
+ 		mapper,
+ 		scaleClient,
+diff --git a/test/integration/util/util.go b/test/integration/util/util.go
+index de4b2ae6252..6ce7d6c4831 100644
+--- a/test/integration/util/util.go
++++ b/test/integration/util/util.go
+@@ -685,6 +685,7 @@ func InitDisruptionController(t *testing.T, testCtx *TestContext) *disruption.Di
+ 		informers.Apps().V1().ReplicaSets(),
+ 		informers.Apps().V1().Deployments(),
+ 		informers.Apps().V1().StatefulSets(),
++		informers.Apps().V1().DaemonSets(),
+ 		testCtx.ClientSet,
+ 		mapper,
+ 		scaleClient,

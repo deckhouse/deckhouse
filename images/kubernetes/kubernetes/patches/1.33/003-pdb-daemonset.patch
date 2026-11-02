@@ -202,7 +202,7 @@ index 977e1b8d9e5..0e1833c91c2 100644
 +		"baz": "quux",
 +	}
 +
-+	dc, ps := newFakeDisruptionController()
++	dc, ps := newFakeDisruptionController(context.TODO())
 +
 +	// 34% should round up to 2
 +	pdb, pdbName := newMinAvailablePodDisruptionBudget(t, intstr.FromString("34%"))
@@ -272,3 +272,39 @@ index 977e1b8d9e5..0e1833c91c2 100644
  	}
  
  	for tn, tc := range testCases {
+diff --git a/test/integration/disruption/disruption_test.go b/test/integration/disruption/disruption_test.go
+index 9d6ae3bf2c3..6605e1224ae 100644
+--- a/test/integration/disruption/disruption_test.go
++++ b/test/integration/disruption/disruption_test.go
+@@ -103,6 +103,7 @@ func setup(ctx context.Context, t *testing.T) (*kubeapiservertesting.TestServer,
+ 		informers.Apps().V1().ReplicaSets(),
+ 		informers.Apps().V1().Deployments(),
+ 		informers.Apps().V1().StatefulSets(),
++		informers.Apps().V1().DaemonSets(),
+ 		client,
+ 		mapper,
+ 		scaleClient,
+diff --git a/test/integration/evictions/evictions_test.go b/test/integration/evictions/evictions_test.go
+index 9fabc44c99f..a65d0ee7ad3 100644
+--- a/test/integration/evictions/evictions_test.go
++++ b/test/integration/evictions/evictions_test.go
+@@ -688,6 +688,7 @@ func rmSetup(ctx context.Context, t *testing.T) (kubeapiservertesting.TearDownFu
+ 		informers.Apps().V1().ReplicaSets(),
+ 		informers.Apps().V1().Deployments(),
+ 		informers.Apps().V1().StatefulSets(),
++		informers.Apps().V1().DaemonSets(),
+ 		client,
+ 		mapper,
+ 		scaleClient,
+diff --git a/test/integration/util/util.go b/test/integration/util/util.go
+index ee074067be8..4d13474784f 100644
+--- a/test/integration/util/util.go
++++ b/test/integration/util/util.go
+@@ -683,6 +683,7 @@ func InitDisruptionController(t *testing.T, testCtx *TestContext) *disruption.Di
+ 		informers.Apps().V1().ReplicaSets(),
+ 		informers.Apps().V1().Deployments(),
+ 		informers.Apps().V1().StatefulSets(),
++		informers.Apps().V1().DaemonSets(),
+ 		testCtx.ClientSet,
+ 		mapper,
+ 		scaleClient,

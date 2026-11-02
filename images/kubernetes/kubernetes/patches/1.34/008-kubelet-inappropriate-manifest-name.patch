@@ -68,3 +68,34 @@ index 42d86f86872..53d7bccc60a 100644
  		return nil
  	}
  	var eventType podEventType
+diff --git a/pkg/kubelet/config/file_linux_test.go b/pkg/kubelet/config/file_linux_test.go
+index bcc97de1754..563fc21865c 100644
+--- a/pkg/kubelet/config/file_linux_test.go
++++ b/pkg/kubelet/config/file_linux_test.go
+@@ -240,7 +240,7 @@ func watchFileAdded(watchDir bool, symlink bool, t *testing.T) {
+ 			}
+ 			defer removeAll(dirName, t)
+ 
+-			fileName := fmt.Sprintf("%s_%d", fileNamePre, index)
++			fileName := fmt.Sprintf("%s_%d.yaml", fileNamePre, index)
+ 			var linkedDirName string
+ 			if symlink {
+ 				linkedDirName, err = mkTempDir("linked-dir-test")
+@@ -288,7 +288,7 @@ func watchFileChanged(watchDir bool, symlink bool, period time.Duration, t *test
+ 	for index, testCase := range testCases {
+ 		func() {
+ 			dirName, err := mkTempDir("dir-test")
+-			fileName := fmt.Sprintf("%s_%d", fileNamePre, index)
++			fileName := fmt.Sprintf("%s_%d.yaml", fileNamePre, index)
+ 			if err != nil {
+ 				t.Fatalf("unable to create temp dir: %v", err)
+ 			}
+@@ -349,7 +349,7 @@ func watchFileChanged(watchDir bool, symlink bool, period time.Duration, t *test
+ 			expectUpdate(t, ch, testCase)
+ 
+ 			if watchDir {
+-				go changeFileName(dirName, fileName, fileName+"_ch", t)
++				go changeFileName(dirName, fileName, "ch_"+fileName, t)
+ 				// expect an update by MOVED_FROM inotify event cause changing file name
+ 				expectEmptyUpdate(t, ch)
+ 				// expect an update by MOVED_TO inotify event cause changing file name

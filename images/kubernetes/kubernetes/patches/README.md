@@ -11,20 +11,6 @@ Current bumps on all versions: `golang.org/x/net` v0.62.0 (with `golang.org/x/cr
 
 The patch is carried on 1.33 through 1.37 and must apply first (`000`), before patches that touch `go.work.sum` or source code. Regenerate it with `go get` on the upstream tag with the whole patch set applied. Remove the bumps once the upstream patch release ships the same or newer versions.
 
-### local-init-configuration.patch
-
-We want to include in join data the following:
-
-```yaml
-apiVersion: kubeadm.k8s.io/v1beta2
-kind: InitConfiguration
-localAPIEndpoint:
-  advertiseAddress: { { .nodeIP | quote } }
-  bindPort: 6443
-```
-
-> Consider finding a way to do it without patching the `kubeadm` or make a PR to the upstream.
-
 ### old_certs.patch
 
 Logs a warning from the kube-apiserver x509 client-certificate authenticator

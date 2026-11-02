@@ -6552,3 +6552,116 @@ index eab90b3fa3b..eff7f068cac 100644
  // DefaultContext is a simple implementation of Context for a slice of bytes.
  type DefaultContext []byte
  
+diff --git a/pkg/features/kube_features.go b/pkg/features/kube_features.go
+index d5515d0d845..42cce8015ce 100644
+--- a/pkg/features/kube_features.go
++++ b/pkg/features/kube_features.go
+@@ -1876,6 +1876,10 @@ var defaultVersionedKubernetesFeatureGates = map[featuregate.Feature]featuregate
+ 		{Version: version.MustParse("1.33"), Default: false, PreRelease: featuregate.Deprecated},
+ 	},
+ 
++	apiextensionsfeatures.CRDSensitiveData: {
++		{Version: version.MustParse("1.31"), Default: false, PreRelease: featuregate.Alpha},
++	},
++
+ 	apiextensionsfeatures.CRDValidationRatcheting: {
+ 		{Version: version.MustParse("1.28"), Default: false, PreRelease: featuregate.Alpha},
+ 		{Version: version.MustParse("1.30"), Default: true, PreRelease: featuregate.Beta},
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1.CustomResourceDefinition.json b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1.CustomResourceDefinition.json
+index 6a7d0af89ef..adbd651d67f 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1.CustomResourceDefinition.json
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1.CustomResourceDefinition.json
+@@ -145,7 +145,8 @@
+                 "fieldPath": "fieldPathValue",
+                 "optionalOldSelf": true
+               }
+-            ]
++            ],
++            "x-kubernetes-sensitive-data": true
+           }
+         },
+         "subresources": {
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1.CustomResourceDefinition.pb b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1.CustomResourceDefinition.pb
+index 1d29cdca75122515612ca62f60f31f6ef4e8d5d9..3196498c60d29f7c143f879e55a788abbdb07bd1 100644
+GIT binary patch
+delta 199
+zcmZ3*cZhF-6;l)6Mw=8y#@CY<GM0#Sa&U3xCFZ7vCFYc-3NT7ADs5%s+B8|4=^V4N
+zkmBTt%yMimm>5nm!kL#4%v%tqI8ebWMk6lXf};F_)S{Bi)MD?{N{D7<pxh@$CJx45
+zjFwy?1&JjksYQ7KnCci`On%L5BW%pYmy(*6nU`6TnV*L+1t=TF@`33E(`HxJr;GsT
+C-9NAZ
+
+delta 177
+zcmX@aw~B9q71Jx;jW#KajF%@bWGoT;$j-%?mzbLxmY7qTD!?egs5F<2Yu03KrgO{+
+zLUNN8nB|yHF+%7|Q2G{x7J0>}&&69%lwXiqRFaum?44Q((V*~&k%@!x7o!=MNI_yr
+pNorAE0H&hJ|Cz0X4Y>GHQqwZ?GD|Y^^AHA1&SiPGIga%SBLFe&HQoRK
+
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1.CustomResourceDefinition.yaml b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1.CustomResourceDefinition.yaml
+index 0a10a99c1d1..ada213f89d7 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1.CustomResourceDefinition.yaml
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1.CustomResourceDefinition.yaml
+@@ -127,6 +127,7 @@ spec:
+         x-kubernetes-list-type: x-kubernetes-list-typeValue
+         x-kubernetes-map-type: x-kubernetes-map-typeValue
+         x-kubernetes-preserve-unknown-fields: true
++        x-kubernetes-sensitive-data: true
+         x-kubernetes-validations:
+         - fieldPath: fieldPathValue
+           message: messageValue
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1beta1.CustomResourceDefinition.json b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1beta1.CustomResourceDefinition.json
+index d8c945fc6ed..dade49f200c 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1beta1.CustomResourceDefinition.json
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1beta1.CustomResourceDefinition.json
+@@ -139,7 +139,8 @@
+             "fieldPath": "fieldPathValue",
+             "optionalOldSelf": true
+           }
+-        ]
++        ],
++        "x-kubernetes-sensitive-data": true
+       }
+     },
+     "subresources": {
+@@ -237,7 +238,8 @@
+                 "fieldPath": "fieldPathValue",
+                 "optionalOldSelf": true
+               }
+-            ]
++            ],
++            "x-kubernetes-sensitive-data": true
+           }
+         },
+         "subresources": {
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1beta1.CustomResourceDefinition.pb b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1beta1.CustomResourceDefinition.pb
+index fd44628b7945155cd3a14cd4a047522e9b9daee2..a9202c7a8aa911ed3d0ea019ce802dc060d547ed 100644
+GIT binary patch
+delta 359
+zcmZn?+axx@p7HHQhg3$!Ym=8THnD7F<JvS?hv^)%vXJ8B1ZFw57fcMN7~#xI2<9ya
+zQyi$^6{8UsZ$VLhL26M+W@@o_Y9&OoGEnXlBNGSXFGfo)k%GjMlGLKS08Dj^FDAcX
+zwh=bw;!8<Q%goCx$;{6~m;#gyXZgVNf@!iFYk*iM2N!2vVs2_!VoqtQ0HXw>(qMM-
+J=3^W-OaNcZaIXLW
+
+delta 283
+zcmdla)+9E;o^kI+hg3$!Ws{dNHnGfQ<C-;Dhv^)%f{@%~MP@nXQ;ZP$5|q9Lp+#OX
+z>T~fH6y+DB7L{bC7JH{wLNsuEVr1fA{KaTCIi6h{qIMFCm9PO9UrK6PW?p7VW_}(*
+v_2fL3ca!5;{lz}Ab8+S+=B9=v=9H!iFiJ2g4S-7+wI(O9`fhgRe9H&`tBy|8
+
+diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1beta1.CustomResourceDefinition.yaml b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1beta1.CustomResourceDefinition.yaml
+index b0abff167c0..b16bfefad3a 100644
+--- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1beta1.CustomResourceDefinition.yaml
++++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apis/testdata/HEAD/apiextensions.k8s.io.v1beta1.CustomResourceDefinition.yaml
+@@ -130,6 +130,7 @@ spec:
+       x-kubernetes-list-type: x-kubernetes-list-typeValue
+       x-kubernetes-map-type: x-kubernetes-map-typeValue
+       x-kubernetes-preserve-unknown-fields: true
++      x-kubernetes-sensitive-data: true
+       x-kubernetes-validations:
+       - fieldPath: fieldPathValue
+         message: messageValue
+@@ -207,6 +208,7 @@ spec:
+         x-kubernetes-list-type: x-kubernetes-list-typeValue
+         x-kubernetes-map-type: x-kubernetes-map-typeValue
+         x-kubernetes-preserve-unknown-fields: true
++        x-kubernetes-sensitive-data: true
+         x-kubernetes-validations:
+         - fieldPath: fieldPathValue
+           message: messageValue
