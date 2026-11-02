@@ -13,4 +13,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
 data:
   controlPlaneManaged: {{ include "multitenancy_manager_control_plane_managed" . | quote }}
+  # the families of objects the ledger counts, so that the keys of a family whose module is disabled
+  # report that nothing counts them, also while its resources are still served
+  families: {{ include "multitenancy_manager_quota_ledger_families" . | quote }}
   {{- include "multitenancy_manager_quota_ledger_timing" . | nindent 2 }}

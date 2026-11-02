@@ -19,6 +19,7 @@ package template_tests
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/admission"
@@ -38,6 +39,28 @@ const (
 
 var _ = Describe("Module :: multitenancy-manager :: helm template :: quota ledger ::", func() {
 	hec := SetupHelmConfig("")
+
+	It("calls the ledger on the virtual machines only where the virtualization module is enabled", func() {
+		renderQuota(hec, true)
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+		Expect(hec.KubernetesGlobalResource("ValidatingWebhookConfiguration", quotaLedgerWebhook).Field("webhooks").Array()).To(HaveLen(1))
+		Expect(ledgerEnv(hec, "QUOTA_LEDGER_FAMILIES").Exists()).To(BeFalse())
+
+		hec.ValuesSet("global.enabledModules", []string{"vertical-pod-autoscaler", "control-plane-manager", "virtualization"})
+		hec.HelmRender(WithAPIVersions("admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy", "admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding"))
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+		webhooks := hec.KubernetesGlobalResource("ValidatingWebhookConfiguration", quotaLedgerWebhook).Field("webhooks").Array()
+		Expect(webhooks).To(HaveLen(2))
+		vm := webhooks[1]
+		Expect(vm.Get("name").String()).To(Equal("quota-vm.multitenancy-manager.deckhouse.io"))
+		Expect(vm.Get("failurePolicy").String()).To(Equal("Fail"))
+		Expect(vm.Get("rules.0.apiGroups").String()).To(MatchJSON(`["virtualization.deckhouse.io"]`))
+		Expect(vm.Get("rules.0.resources").String()).To(MatchJSON(`["virtualmachines"]`))
+		Expect(vm.Get("rules.0.operations").String()).To(MatchJSON(`["CREATE","UPDATE"]`))
+		Expect(vm.Get("namespaceSelector").String()).To(MatchJSON(`{"matchLabels":{"quota.projects.deckhouse.io/vm":"enforced"}}`))
+		Expect(vm.Get("clientConfig.service.path").String()).To(Equal("/validate/quota-vm"))
+		Expect(ledgerEnv(hec, "QUOTA_LEDGER_FAMILIES").Get("value").String()).To(Equal("vm"))
+	})
 
 	Context("on a control plane Deckhouse manages", func() {
 		BeforeEach(func() {
@@ -107,6 +130,14 @@ var _ = Describe("Module :: multitenancy-manager :: helm template :: quota ledge
 			Expect(sync.Field("spec.matchingPrecedence").Int()).To(BeNumerically("<", 1000))
 			Expect(sync.Field("spec.priorityLevelConfiguration.name").String()).To(Equal(quotaLedgerFlow))
 			Expect(hec.KubernetesGlobalResource("PriorityLevelConfiguration", quotaLedgerFlow).Exists()).To(BeTrue())
+			// the quorum lists of a new leader cover the objects of the families too
+			var listed []string
+			for _, rule := range sync.Field("spec.rules.0.resourceRules").Array() {
+				for _, resource := range rule.Get("resources").Array() {
+					listed = append(listed, resource.String())
+				}
+			}
+			Expect(listed).To(ContainElements("resourcequotas", "namespaces", "projectquotas", "virtualmachines"))
 		})
 
 		It("lets only the ledger, Deckhouse and kube-system write the route and the lease of the ledger", func() {
@@ -174,4 +205,20 @@ func relabel(resource schema.GroupVersionResource, namespace, name, username str
 	}
 	return admission.NewAttributesRecord(object(labels), object(old), gvk, namespace, name, resource, "", admission.Update, nil, false,
 		&user.DefaultInfo{Name: username, Groups: groupsOf(username)})
+}
+
+// ledgerEnv is the environment variable of the quota-ledger container.
+func ledgerEnv(hec *Config, name string) gjson.Result {
+	deployment := hec.KubernetesResource("Deployment", quotaLedgerNamespace, "multitenancy-manager")
+	for _, container := range deployment.Field("spec.template.spec.containers").Array() {
+		if container.Get("name").String() != "quota-ledger" {
+			continue
+		}
+		for _, env := range container.Get("env").Array() {
+			if env.Get("name").String() == name {
+				return env
+			}
+		}
+	}
+	return gjson.Result{}
 }

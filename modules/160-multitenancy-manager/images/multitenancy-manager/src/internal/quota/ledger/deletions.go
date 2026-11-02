@@ -103,8 +103,11 @@ func (d *deletions) clock() time.Time {
 
 func keyOfDeletion(object metav1.Object) deletionKey {
 	kind := fmt.Sprintf("%T", object)
-	if u, ok := object.(*unstructured.Unstructured); ok {
-		kind = u.GroupVersionKind().GroupKind().String()
+	switch o := object.(type) {
+	case *unstructured.Unstructured:
+		kind = o.GroupVersionKind().GroupKind().String()
+	case *metav1.PartialObjectMetadata:
+		kind = o.GroupVersionKind().GroupKind().String()
 	}
 	return deletionKey{kind: kind, namespace: object.GetNamespace(), name: object.GetName()}
 }

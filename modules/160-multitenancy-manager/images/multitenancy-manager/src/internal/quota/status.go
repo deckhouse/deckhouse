@@ -221,7 +221,9 @@ type EnforcedInput struct {
 	Config       Config
 	ProjectFound bool
 	NotServed    []string
-	Namespaces   []Namespace
+	// NotCounted are keys of a family the ledger does not count, as its module is disabled.
+	NotCounted []string
+	Namespaces []Namespace
 }
 
 // EnforcedCondition evaluates the Enforced condition: True when the quota applies in every namespace
@@ -254,6 +256,9 @@ func EnforcedCondition(in EnforcedInput) metav1.Condition {
 	case len(in.NotServed) > 0:
 		return condition(v1alpha1.ProjectQuotaReasonKeyNotServed,
 			"Nothing counts these keys because the API server does not serve their resources yet: "+strings.Join(in.NotServed, ", ")+".")
+	case len(in.NotCounted) > 0:
+		return condition(v1alpha1.ProjectQuotaReasonKeyNotServed,
+			"Nothing counts these keys because the module that serves their resources is disabled: "+strings.Join(in.NotCounted, ", ")+".")
 	}
 
 	var pending, problems []string

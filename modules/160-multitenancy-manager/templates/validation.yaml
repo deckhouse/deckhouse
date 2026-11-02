@@ -60,7 +60,7 @@ spec:
     # budget, and a fixed list is what a reader of the denial needs anyway. The Go side of the list is
     # naming.ManagedNamespaceLabels/ManagedNamespaceAnnotations; a test keeps the two identical.
     - name: managedLabels
-      expression: '["heritage", "app.kubernetes.io/managed-by", "kubernetes.io/metadata.name", "projects.deckhouse.io/project", "projects.deckhouse.io/project-template", "projects.deckhouse.io/project-namespace", "projects.deckhouse.io/namespace-role", "projects.deckhouse.io/quota", "multitenancy.deckhouse.io/project-managed-by-namespace", "security.deckhouse.io/pod-policy", "extended-monitoring.deckhouse.io/enabled", "security-scanning.deckhouse.io/enabled"]'
+      expression: '["heritage", "app.kubernetes.io/managed-by", "kubernetes.io/metadata.name", "projects.deckhouse.io/project", "projects.deckhouse.io/project-template", "projects.deckhouse.io/project-namespace", "projects.deckhouse.io/namespace-role", "projects.deckhouse.io/quota", "quota.projects.deckhouse.io/vm", "multitenancy.deckhouse.io/project-managed-by-namespace", "security.deckhouse.io/pod-policy", "extended-monitoring.deckhouse.io/enabled", "security-scanning.deckhouse.io/enabled"]'
     - name: managedAnnotations
       expression: '["meta.helm.sh/release-name", "meta.helm.sh/release-namespace", "scheduler.alpha.kubernetes.io/node-selector", "scheduler.alpha.kubernetes.io/defaultTolerations", "projects.deckhouse.io/template-labels"]'
     - name: isNamespaceUpdate
@@ -99,7 +99,7 @@ spec:
       # A cluster-scoped object has no namespace to name, and now that CREATE is matched it reaches
       # this expression as well.
       messageExpression: 'variables.subject.kind == ''Namespace'' ? (variables.isNamespaceUpdate
-            ? ''The namespace belongs to the '' + variables.subject.metadata.name + '' Project: its spec, finalizers, ownerReferences and the labels and annotations the module sets (heritage, projects.deckhouse.io/*, security.deckhouse.io/pod-policy, extended-monitoring.deckhouse.io/enabled, security-scanning.deckhouse.io/enabled, app.kubernetes.io/managed-by, meta.helm.sh/*, scheduler.alpha.kubernetes.io/node-selector, scheduler.alpha.kubernetes.io/defaultTolerations) are changed through the Project and its ProjectTemplate. Other labels and annotations may be changed directly.''
+            ? ''The namespace belongs to the '' + variables.subject.metadata.name + '' Project: its spec, finalizers, ownerReferences and the labels and annotations the module sets (heritage, projects.deckhouse.io/*, quota.projects.deckhouse.io/vm, security.deckhouse.io/pod-policy, extended-monitoring.deckhouse.io/enabled, security-scanning.deckhouse.io/enabled, app.kubernetes.io/managed-by, meta.helm.sh/*, scheduler.alpha.kubernetes.io/node-selector, scheduler.alpha.kubernetes.io/defaultTolerations) are changed through the Project and its ProjectTemplate. Other labels and annotations may be changed directly.''
             : ''This resource is managed by '' + variables.subject.metadata.name + '' Project. Manual modification is forbidden.'')
             : (has(variables.subject.metadata.namespace) && variables.subject.metadata.namespace != ''''
             ? ''This resource is managed by '' + variables.subject.metadata.namespace + '' Project. Manual modification is forbidden.''
@@ -221,7 +221,7 @@ spec:
     # a namespace the module owned before the request. Same lists as above; the Go side is
     # naming.ManagedNamespaceLabels/ManagedNamespaceAnnotations and a test keeps every copy identical.
     - name: managedLabels
-      expression: '["heritage", "app.kubernetes.io/managed-by", "kubernetes.io/metadata.name", "projects.deckhouse.io/project", "projects.deckhouse.io/project-template", "projects.deckhouse.io/project-namespace", "projects.deckhouse.io/namespace-role", "projects.deckhouse.io/quota", "multitenancy.deckhouse.io/project-managed-by-namespace", "security.deckhouse.io/pod-policy", "extended-monitoring.deckhouse.io/enabled", "security-scanning.deckhouse.io/enabled"]'
+      expression: '["heritage", "app.kubernetes.io/managed-by", "kubernetes.io/metadata.name", "projects.deckhouse.io/project", "projects.deckhouse.io/project-template", "projects.deckhouse.io/project-namespace", "projects.deckhouse.io/namespace-role", "projects.deckhouse.io/quota", "quota.projects.deckhouse.io/vm", "multitenancy.deckhouse.io/project-managed-by-namespace", "security.deckhouse.io/pod-policy", "extended-monitoring.deckhouse.io/enabled", "security-scanning.deckhouse.io/enabled"]'
     - name: managedAnnotations
       expression: '["meta.helm.sh/release-name", "meta.helm.sh/release-namespace", "scheduler.alpha.kubernetes.io/node-selector", "scheduler.alpha.kubernetes.io/defaultTolerations", "projects.deckhouse.io/template-labels"]'
     - name: oldLabels
@@ -247,7 +247,7 @@ spec:
     # On a namespace the module owned before this request, the keys the module sets stay as they are.
     - expression: '!variables.wasModuleOwned || variables.managedKeysUntouched'
       reason: Forbidden
-      messageExpression: '''The namespace belongs to the '' + variables.oldOwner + '' Project: the labels and annotations the module sets (heritage, projects.deckhouse.io/*, security.deckhouse.io/pod-policy, extended-monitoring.deckhouse.io/enabled, security-scanning.deckhouse.io/enabled, app.kubernetes.io/managed-by, meta.helm.sh/*, scheduler.alpha.kubernetes.io/node-selector, scheduler.alpha.kubernetes.io/defaultTolerations) are changed through the Project and its ProjectTemplate. Other labels and annotations may be changed directly.'''
+      messageExpression: '''The namespace belongs to the '' + variables.oldOwner + '' Project: the labels and annotations the module sets (heritage, projects.deckhouse.io/*, quota.projects.deckhouse.io/vm, security.deckhouse.io/pod-policy, extended-monitoring.deckhouse.io/enabled, security-scanning.deckhouse.io/enabled, app.kubernetes.io/managed-by, meta.helm.sh/*, scheduler.alpha.kubernetes.io/node-selector, scheduler.alpha.kubernetes.io/defaultTolerations) are changed through the Project and its ProjectTemplate. Other labels and annotations may be changed directly.'''
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding

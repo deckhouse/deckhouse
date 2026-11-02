@@ -28,6 +28,14 @@ spec:
                     namespaced-ресурса, который обслуживает API-сервер. `projectNamespaces` — псевдоним
                     `count/projectnamespaces.deckhouse.io`, число объектов ProjectNamespace проекта.
 
+                    Если включён модуль `virtualization`, виртуальные машины проекта ограничиваются по спецификации
+                    ключами `virtualmachines.virtualization.deckhouse.io/cores`,
+                    `virtualmachines.virtualization.deckhouse.io/cpu`,
+                    `virtualmachines.virtualization.deckhouse.io/memory`,
+                    `virtualmachines.virtualization.deckhouse.io/gpus` и
+                    `<GPU_CLASS>.gpuclass.virtualization.deckhouse.io/gpus`; эти ключи не считает ни один
+                    ResourceQuota, поэтому в `d8-project-quota` они не попадают.
+
                     Ключи `resourcequotas`, `count/resourcequotas`, счётчик cluster-wide-ресурса и ресурс с опечаткой
                     отклоняются. Ключ `count/` группы, которую API-сервер ещё не обслуживает, принимается с
                     предупреждением и ничего не считает, пока не включён модуль, который эту группу предоставляет.
@@ -61,9 +69,10 @@ spec:
                       суммы), `WebhookMissing` (вебхука счётчика квот нет или его `caBundle` не совпадает с CA
                       сертификата счётчика), `WebhookMisconfigured` (вебхук изменён так, что записи `d8-project-quota`
                       не доходят до счётчика), `WebhookNotCalled` (какой-то API-сервер допускает объекты, не вызывая
-                      этот вебхук), `ProjectNotFound` (проекта с таким именем нет), `KeyNotServed` (API-сервер ещё не
-                      обслуживает ресурс ключа `count/`) или `KeyRollout` (ResourceQuota `d8-project-quota` какого-то
-                      неймспейса ещё не создан или не рассчитан со всеми лимитами).
+                      этот вебхук), `ProjectNotFound` (проекта с таким именем нет), `KeyNotServed` (какой-то ключ
+                      ничего не считает: API-сервер ещё не обслуживает ресурс ключа `count/` или модуль, который
+                      обслуживает ресурсы ключа, выключен) или `KeyRollout` (ResourceQuota `d8-project-quota`
+                      какого-то неймспейса ещё не создан или не рассчитан со всеми лимитами).
                     - Если `Exceeded` установлен в `True`, то потребление проекта выше квоты по какому-то ключу. Причина в `reason`
                       показывает, как возникло превышение: `HardLowered` (лимит задан ниже потребления — изменением
                       или при создании квоты) или `Overshoot` (потребление выросло за лимит).

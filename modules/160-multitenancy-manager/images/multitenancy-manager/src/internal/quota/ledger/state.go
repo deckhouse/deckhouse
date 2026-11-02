@@ -41,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
 	"controller/apis/deckhouse.io/v1alpha1"
@@ -72,6 +73,9 @@ type namespaceQuota struct {
 type projectState struct {
 	hard corev1.ResourceList
 	sum  corev1.ResourceList
+	// familyHard and familySum are the limits and the sum of the families of objects, by family.
+	familyHard map[string]corev1.ResourceList
+	familySum  map[string]corev1.ResourceList
 }
 
 // State is the memory of the ledger. The zero value is not usable; use NewState.
@@ -96,6 +100,10 @@ type State struct {
 	signalMu sync.Mutex
 	changed  chan struct{}
 	waiting  map[string]int
+	// objects are the objects of the families of objects, by family and namespace/name.
+	objects map[string]map[string]*objectEntry
+	// newestRV is the newest version of an object the informers showed.
+	newestRV uint64
 }
 
 // NewState returns an empty ledger memory.
@@ -108,6 +116,7 @@ func NewState() *State {
 		refused:    map[string]time.Time{},
 		released:   map[string]bool{},
 		woken:      map[string]time.Time{},
+		objects:    map[string]map[string]*objectEntry{},
 	}
 }
 
@@ -139,6 +148,7 @@ func (s *State) SetQuota(rq *corev1.ResourceQuota) int {
 		return 0
 	}
 	q.uid, q.rv = rq.UID, rv
+	s.seeVersionLocked(rv)
 	if decreased(q.used, rq.Status.Used) {
 		if project, ok := s.namespaces[rq.Namespace]; ok {
 			s.released[project] = true
@@ -189,6 +199,7 @@ func (s *State) SetNamespace(ns *corev1.Namespace) {
 		s.members[project][ns.Name] = struct{}{}
 	}
 	s.recomputeLocked(ns.Name)
+	s.recomputeObjectsInLocked(ns.Name)
 }
 
 // DeleteNamespace forgets a namespace.
@@ -206,8 +217,11 @@ func (s *State) SetProjectQuota(pq *v1alpha1.ProjectQuota) {
 		p = &projectState{}
 		s.projects[pq.Name] = p
 	}
-	p.hard = quota.ResourceQuotaHard(quota.Canonical(pq.Spec.Hard))
+	canonical := quota.Canonical(pq.Spec.Hard)
+	p.hard = quota.ResourceQuotaHard(canonical)
 	s.rebuildLocked(pq.Name)
+	p.familyHard = map[string]corev1.ResourceList{FamilyVM: quota.VMHard(canonical)}
+	s.rebuildFamiliesLocked(pq.Name)
 }
 
 // DeleteProjectQuota forgets the limits of a project.
@@ -219,6 +233,13 @@ func (s *State) DeleteProjectQuota(name string) {
 	for ns := range s.members[name] {
 		if q, ok := s.quotas[ns]; ok {
 			q.eff, q.project = nil, ""
+		}
+	}
+	for _, objects := range s.objects {
+		for _, o := range objects {
+			if o.project == name {
+				o.eff, o.project = nil, ""
+			}
 		}
 	}
 }
@@ -415,6 +436,20 @@ func (s *State) Covers(listed []metav1.Object) bool {
 		case *v1alpha1.ProjectQuota:
 			if _, ok := s.projects[o.Name]; !ok {
 				return false
+			}
+		case *unstructured.Unstructured:
+			if o.GroupVersionKind().Kind == virtualMachineGVK.Kind {
+				entry, ok := s.objects[FamilyVM][objectKey(o.GetNamespace(), o.GetName())]
+				if !ok || entry.rv < ParseResourceVersion(o.GetResourceVersion()) {
+					return false
+				}
+			}
+		case *metav1.PartialObjectMetadata:
+			if o.GroupVersionKind().Kind == virtualMachineGVK.Kind {
+				entry, ok := s.objects[FamilyVM][objectKey(o.Namespace, o.Name)]
+				if !ok || entry.rv < ParseResourceVersion(o.ResourceVersion) {
+					return false
+				}
 			}
 		}
 	}

@@ -58,6 +58,20 @@ func TestParseConfig(t *testing.T) {
 	}
 }
 
+// The families the module renders tell whether the ledger counts the virtual machines; a ConfigMap
+// that does not say is taken as counting them, as before the key was rendered.
+func TestConfigCountsVirtualMachines(t *testing.T) {
+	families := func(value string) *corev1.ConfigMap {
+		cm := configMap("true")
+		cm.Data["families"] = value
+		return cm
+	}
+	assert.True(t, ParseConfig(families("lb,vm")).CountsVirtualMachines())
+	assert.False(t, ParseConfig(families("lb")).CountsVirtualMachines())
+	assert.False(t, ParseConfig(families("")).CountsVirtualMachines())
+	assert.True(t, ParseConfig(configMap("true")).CountsVirtualMachines())
+}
+
 func TestConfigReaderReusesARead(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))

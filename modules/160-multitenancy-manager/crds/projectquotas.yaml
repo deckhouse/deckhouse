@@ -68,6 +68,14 @@ spec:
                     resource the API server serves. `projectNamespaces` is an alias of
                     `count/projectnamespaces.deckhouse.io`, the number of ProjectNamespace objects of the project.
 
+                    Where the `virtualization` module is enabled, the virtual machines of the project are limited by
+                    their specification with `virtualmachines.virtualization.deckhouse.io/cores`,
+                    `virtualmachines.virtualization.deckhouse.io/cpu`,
+                    `virtualmachines.virtualization.deckhouse.io/memory`,
+                    `virtualmachines.virtualization.deckhouse.io/gpus` and
+                    `<GPU_CLASS>.gpuclass.virtualization.deckhouse.io/gpus`; no ResourceQuota counts these keys, so
+                    they do not go into `d8-project-quota`.
+
                     `resourcequotas`, `count/resourcequotas`, the count of a cluster-scoped resource and a misspelled
                     resource are refused. A `count/` key of a group the API server does not serve yet is accepted with a
                     warning and counts nothing until the module that provides the group is enabled.
@@ -137,8 +145,9 @@ spec:
                       `caBundle` is not the CA of the ledger certificate), `WebhookMisconfigured` (that webhook is
                       changed so that writes of `d8-project-quota` do not reach the ledger), `WebhookNotCalled` (some
                       API server admits objects without calling that webhook), `ProjectNotFound` (there is no project
-                      of this name), `KeyNotServed` (the API server does not serve the resource of a `count/` key yet)
-                      or `KeyRollout` (the `d8-project-quota` ResourceQuota of some namespace is not there or not
+                      of this name), `KeyNotServed` (nothing counts a key: the API server does not serve the resource
+                      of a `count/` key yet, or the module that serves the resources of a key is disabled) or
+                      `KeyRollout` (the `d8-project-quota` ResourceQuota of some namespace is not there or not
                       calculated with every limit yet).
                     - If `Exceeded` is `True`, the usage of the project is above the quota on some key. The `reason` says
                       how the usage got above the quota: `HardLowered` (the limit was set below the usage, by a change

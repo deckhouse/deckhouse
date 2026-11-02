@@ -147,6 +147,12 @@ spec:
                   fieldPath: status.podIP
             - name: GOMEMLIMIT
               value: "200MiB"
+            {{- with include "multitenancy_manager_quota_ledger_families" . }}
+            # a change of the families rolls the pod, so that the ledger watches the objects of a
+            # module enabled later
+            - name: QUOTA_LEDGER_FAMILIES
+              value: {{ . | quote }}
+            {{- end }}
           ports:
             - containerPort: 9444
               name: quota-ledger

@@ -32,7 +32,9 @@ import (
 
 // Results of a decision, the values of the result label of the requests metric.
 const (
-	ResultAllowed          = "allowed"
+	ResultAllowed = "allowed"
+	// ResultNotRaised is an update of an object of a family that raises no key of its usage.
+	ResultNotRaised        = "not_raised"
 	ResultExceeded         = "exceeded"
 	ResultInconsistent     = "inconsistent"
 	ResultUnexpected       = "unexpected"

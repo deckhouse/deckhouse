@@ -18,6 +18,7 @@ package main
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -418,7 +419,11 @@ func setupLogging(opts ...zap.Opts) logr.Logger {
 // quotaLedgerMode is the argument that runs the binary as the quota-ledger container of the pod: the
 // webhook that keeps the sum of a project quota, apart from the controllers and their webhooks, so
 // that it has a runtime and a memory limit of its own.
-const quotaLedgerMode = "quota-ledger"
+const (
+	quotaLedgerMode = "quota-ledger"
+	// quotaLedgerFamiliesEnv lists, comma-separated, the families of objects the ledger counts.
+	quotaLedgerFamiliesEnv = "QUOTA_LEDGER_FAMILIES"
+)
 
 func runQuotaLedger() {
 	logger := setupLogging().WithName(quotaLedgerMode)
@@ -440,6 +445,10 @@ func runQuotaLedger() {
 		WebhookAddress: ":9444",
 		HealthAddress:  ":9445",
 		MetricsAddress: "127.0.0.1:9192",
+	}
+	// Helm lists the families of objects whose module is enabled; a change of the list rolls the pod
+	if families := os.Getenv(quotaLedgerFamiliesEnv); families != "" {
+		opts.Families = strings.Split(families, ",")
 	}
 	if err := ledger.Run(ctrl.SetupSignalHandler(), opts); err != nil {
 		fatal(logger, err, "run the quota ledger")

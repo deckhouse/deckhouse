@@ -3,6 +3,15 @@
 {{- has "control-plane-manager" .Values.global.enabledModules | toString -}}
 {{- end -}}
 
+{{- /* The families of objects the quota ledger counts besides the ResourceQuota objects: the ones whose module is enabled, comma-separated. */ -}}
+{{- define "multitenancy_manager_quota_ledger_families" -}}
+{{- $families := list -}}
+{{- if has "virtualization" .Values.global.enabledModules -}}
+{{- $families = append $families "vm" -}}
+{{- end -}}
+{{- join "," $families -}}
+{{- end -}}
+
 {{- /*
   The intervals of the quota ledger. The ledger refuses to start when lease - fence - webhook timeout is
   below 9 seconds, and the webhook of the ledger takes its timeoutSeconds from here, so the two cannot

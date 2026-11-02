@@ -36,6 +36,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime/pkg/builder"
@@ -52,6 +54,7 @@ import (
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/quota"
+	"controller/internal/quota/evaluator"
 )
 
 // recheckInterval is how often a quota is checked without an event: the sum over the namespaces is
@@ -164,20 +167,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	hard := quota.Canonical(pq.Spec.Hard)
 	rqHard := quota.ResourceQuotaHard(hard)
 
-	// a namespace whose quota could not be set up is reported in the status before the error is
-	// returned, so the status does not claim a quota that is not there
-	var namespaces []quota.Namespace
-	var namespacesErr error
-	if projectFound {
-		namespaces, namespacesErr = r.reconcileNamespaces(ctx, pq, rqHard)
-		if namespaces == nil && namespacesErr != nil {
-			return reconcile.Result{}, namespacesErr
-		}
-	} else if err := r.unlabelTerminating(ctx, pq.Name); err != nil {
-		// the namespaces of a project deleted without them, or not owned by it, are going on their own
-		return reconcile.Result{}, err
-	}
-
 	var notServed []string
 	if r.Discovery != nil {
 		check, err := quota.CheckKeys(pq.Spec.Hard, pq.Spec.Hard, r.Discovery)
@@ -186,8 +175,33 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 		notServed = check.NotServed
 	}
+	vm := familyPlan{label: len(quota.VMHard(hard)) > 0}
+	var notCounted []string
+	if vm.label && !cfg.CountsVirtualMachines() {
+		for key := range quota.VMHard(hard) {
+			if !slices.Contains(notServed, string(key)) {
+				notCounted = append(notCounted, string(key))
+			}
+		}
+		slices.Sort(notCounted)
+	}
+	vm.count = vm.label && len(notCounted) == 0 && !slices.ContainsFunc(notServed, func(key string) bool { return evaluator.IsVMKey(corev1.ResourceName(key)) })
 
-	desired := r.desiredStatus(pq, cfg, hard, namespaces, projectFound, notServed)
+	// a namespace whose quota could not be set up is reported in the status before the error is
+	// returned, so the status does not claim a quota that is not there
+	var namespaces []quota.Namespace
+	var namespacesErr error
+	if projectFound {
+		namespaces, namespacesErr = r.reconcileNamespaces(ctx, pq, rqHard, vm)
+		if namespaces == nil && namespacesErr != nil {
+			return reconcile.Result{}, namespacesErr
+		}
+	} else if err := r.unlabelTerminating(ctx, pq.Name); err != nil {
+		// the namespaces of a project deleted without them, or not owned by it, are going on their own
+		return reconcile.Result{}, err
+	}
+
+	desired := r.desiredStatus(pq, cfg, hard, namespaces, projectFound, notServed, notCounted)
 	r.publishState(pq.Name, desired.Conditions)
 
 	now := r.now()
@@ -265,7 +279,7 @@ func (r *Reconciler) ensureOwner(ctx context.Context, pq *v1alpha1.ProjectQuota,
 // returns what it found in each. A namespace that is going is not counted: it loses the label. A
 // namespace that fails is returned with its error, the others are still reconciled, and the errors
 // are joined.
-func (r *Reconciler) reconcileNamespaces(ctx context.Context, pq *v1alpha1.ProjectQuota, rqHard corev1.ResourceList) ([]quota.Namespace, error) {
+func (r *Reconciler) reconcileNamespaces(ctx context.Context, pq *v1alpha1.ProjectQuota, rqHard corev1.ResourceList, vm familyPlan) ([]quota.Namespace, error) {
 	list := new(corev1.NamespaceList)
 	if err := r.List(ctx, list, client.MatchingLabels{v1alpha3.ResourceLabelProject: pq.Name}); err != nil {
 		return nil, fmt.Errorf("list the namespaces of the project: %w", err)
@@ -285,7 +299,7 @@ func (r *Reconciler) reconcileNamespaces(ctx context.Context, pq *v1alpha1.Proje
 			}
 			continue
 		}
-		found, err := r.reconcileNamespace(ctx, pq, ns, rqHard)
+		found, err := r.reconcileNamespace(ctx, pq, ns, rqHard, vm)
 		if err != nil {
 			errs = append(errs, err)
 			found.Problem = err.Error()
@@ -314,8 +328,18 @@ func (r *Reconciler) unlabelTerminating(ctx context.Context, project string) err
 	return errors.Join(errs...)
 }
 
-// reconcileNamespace keeps the ResourceQuota and the label of one namespace.
-func (r *Reconciler) reconcileNamespace(ctx context.Context, pq *v1alpha1.ProjectQuota, ns *corev1.Namespace, rqHard corev1.ResourceList) (quota.Namespace, error) {
+// familyPlan is what the quota of a project asks of its namespaces for a family of objects: the label
+// that calls the webhook of the family, and the count of its objects in the status.
+type familyPlan struct {
+	label bool
+	count bool
+}
+
+// reconcileNamespace keeps the ResourceQuota and the labels of one namespace and finds its usage: the
+// one of the ResourceQuota and the one of the objects of the families.
+func (r *Reconciler) reconcileNamespace(ctx context.Context, pq *v1alpha1.ProjectQuota, ns *corev1.Namespace, rqHard corev1.ResourceList,
+	vm familyPlan,
+) (quota.Namespace, error) {
 	found := quota.Namespace{Name: ns.Name}
 	rq, err := r.ensureResourceQuota(ctx, pq, ns, rqHard)
 	// ensureResourceQuota may have labelled the namespace pending
@@ -323,10 +347,72 @@ func (r *Reconciler) reconcileNamespace(ctx context.Context, pq *v1alpha1.Projec
 	if err != nil {
 		return found, err
 	}
-	found.Used = rq.Status.Used
+	found.Used = rq.Status.Used.DeepCopy()
 	found.Calculated = quota.Calculated(rq, rqHard)
-	found.Labelled, err = r.ensureLabel(ctx, ns, found.Calculated)
-	return found, err
+	// the webhook of the family selects the namespace before it turns enforced: the pending guard holds
+	// the creates until then, and an object made between the two labels would not be checked
+	if err := r.ensureFamilyLabel(ctx, ns, quota.VMLabel, vm.label); err != nil {
+		return found, err
+	}
+	if found.Labelled, err = r.ensureLabel(ctx, ns, found.Calculated); err != nil {
+		return found, err
+	}
+	if vm.count {
+		usage, err := r.virtualMachineUsage(ctx, ns.Name)
+		if err != nil {
+			return found, err
+		}
+		if found.Used == nil {
+			found.Used = corev1.ResourceList{}
+		}
+		maps.Copy(found.Used, usage)
+	}
+	return found, nil
+}
+
+// ensureFamilyLabel puts the label of a family on the namespace, so that the webhook of the family
+// is called there, or takes it off when the quota has no keys of the family.
+func (r *Reconciler) ensureFamilyLabel(ctx context.Context, ns *corev1.Namespace, label string, want bool) error {
+	_, has := ns.Labels[label]
+	if has == want && (!want || ns.Labels[label] == quota.LabelEnforced) {
+		return nil
+	}
+	patch := client.MergeFrom(ns.DeepCopy())
+	if want {
+		if ns.Labels == nil {
+			ns.Labels = map[string]string{}
+		}
+		ns.Labels[label] = quota.LabelEnforced
+	} else {
+		delete(ns.Labels, label)
+	}
+	if err := r.Patch(ctx, ns, patch); err != nil {
+		return fmt.Errorf("label the %s namespace %s: %w", ns.Name, label, err)
+	}
+	return nil
+}
+
+// virtualMachineUsage sums what the virtual machines of a namespace take, by the evaluator the ledger
+// counts them with. The list goes to the API server: the controller keeps no cache of virtual machines.
+func (r *Reconciler) virtualMachineUsage(ctx context.Context, namespace string) (corev1.ResourceList, error) {
+	list := new(unstructured.UnstructuredList)
+	list.SetGroupVersionKind(schema.GroupVersionKind{Group: quota.VirtualMachineGroup, Version: "v1alpha2", Kind: "VirtualMachineList"})
+	if err := r.List(ctx, list, client.InNamespace(namespace)); err != nil {
+		return nil, fmt.Errorf("list the virtual machines of the %s namespace: %w", namespace, err)
+	}
+	total := corev1.ResourceList{}
+	for i := range list.Items {
+		usage, err := evaluator.VirtualMachine{}.Usage(&list.Items[i])
+		if err != nil {
+			continue
+		}
+		for key, value := range usage {
+			sum := total[key]
+			sum.Add(value)
+			total[key] = sum
+		}
+	}
+	return total, nil
 }
 
 // ensureResourceQuota creates or updates d8-project-quota in the namespace. A ResourceQuota of that
@@ -416,13 +502,17 @@ func (r *Reconciler) holdNamespace(ctx context.Context, ns *corev1.Namespace) er
 	return r.setLabel(ctx, ns, quota.LabelPending)
 }
 
-// removeLabel takes the quota label off a namespace, whatever its value.
+// removeLabel takes the quota label and the labels of the families off a namespace, whatever their
+// values.
 func (r *Reconciler) removeLabel(ctx context.Context, ns *corev1.Namespace) error {
-	if _, ok := ns.Labels[quota.NamespaceLabel]; !ok {
+	_, quotaLabel := ns.Labels[quota.NamespaceLabel]
+	_, vmLabel := ns.Labels[quota.VMLabel]
+	if !quotaLabel && !vmLabel {
 		return nil
 	}
 	patch := client.MergeFrom(ns.DeepCopy())
 	delete(ns.Labels, quota.NamespaceLabel)
+	delete(ns.Labels, quota.VMLabel)
 	if err := r.Patch(ctx, ns, patch); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("unlabel the %s namespace: %w", ns.Name, err)
 	}
@@ -474,7 +564,7 @@ func (r *Reconciler) release(ctx context.Context, project string) error {
 
 // desiredStatus is the status the quota should have.
 func (r *Reconciler) desiredStatus(pq *v1alpha1.ProjectQuota, cfg quota.Config, hard corev1.ResourceList, namespaces []quota.Namespace, projectFound bool,
-	notServed []string,
+	notServed, notCounted []string,
 ) *v1alpha1.ProjectQuotaStatus {
 	used := quota.Sum(hard, namespaces)
 	status := &v1alpha1.ProjectQuotaStatus{
@@ -490,6 +580,7 @@ func (r *Reconciler) desiredStatus(pq *v1alpha1.ProjectQuota, cfg quota.Config, 
 		Config:       cfg,
 		ProjectFound: projectFound,
 		NotServed:    notServed,
+		NotCounted:   notCounted,
 		Namespaces:   namespaces,
 	})
 	conditions := []metav1.Condition{enforced}

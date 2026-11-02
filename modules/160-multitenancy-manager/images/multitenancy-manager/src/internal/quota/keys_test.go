@@ -82,7 +82,10 @@ func TestCheckKeys(t *testing.T) {
 		{name: "a resource the controller cannot count", hard: list("count/events.events.k8s.io"), denied: 1, deniedSubstr: "verbs"},
 		{name: "a group not served yet", hard: list("count/dexclients.deckhouse.example"), warnings: 1, notServed: []string{"count/dexclients.deckhouse.example"}},
 		{name: "the reserved prefix", hard: list("projectquota.deckhouse.io/anything"), denied: 1, deniedSubstr: "reserved"},
-		{name: "a family not counted yet", hard: list("virtualmachines.virtualization.deckhouse.io/cores", "default.loadbalancerclass.network.deckhouse.io/services"),
+		{name: "the keys of virtual machines", hard: list("virtualmachines.virtualization.deckhouse.io/cores", "virtualmachines.virtualization.deckhouse.io/cpu",
+			"virtualmachines.virtualization.deckhouse.io/memory", "virtualmachines.virtualization.deckhouse.io/gpus", "h100.gpuclass.virtualization.deckhouse.io/gpus")},
+		{name: "virtual machines and pods limited at once", hard: list("virtualmachines.virtualization.deckhouse.io/cores", "requests.cpu"), warnings: 1},
+		{name: "a family not counted yet", hard: list("virtualmachines.virtualization.deckhouse.io/disks", "default.loadbalancerclass.network.deckhouse.io/services"),
 			denied: 2, deniedSubstr: "family"},
 		{name: "count of virtual machines is a plain count key", hard: list("count/virtualmachines.virtualization.deckhouse.io")},
 		{name: "an unknown key", hard: list("example.com/widgets"), denied: 1, deniedSubstr: "does not count"},
@@ -110,6 +113,19 @@ func TestCheckKeysWithoutDiscovery(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, check.Denied)
 	assert.Empty(t, check.Warnings)
+}
+
+// The keys of virtual machines count nothing until the virtualization module is enabled.
+func TestCheckKeysOfVirtualMachinesWithoutTheModule(t *testing.T) {
+	check, err := CheckKeys(list("virtualmachines.virtualization.deckhouse.io/cores"), nil, fakeDiscovery{})
+	require.NoError(t, err)
+	assert.Empty(t, check.Denied)
+	assert.Equal(t, []string{"virtualmachines.virtualization.deckhouse.io/cores"}, check.NotServed)
+}
+
+func TestVMHard(t *testing.T) {
+	got := VMHard(list("cpu", "virtualmachines.virtualization.deckhouse.io/cores", "a10.gpuclass.virtualization.deckhouse.io/gpus", "count/virtualmachines.virtualization.deckhouse.io"))
+	assert.Equal(t, list("virtualmachines.virtualization.deckhouse.io/cores", "a10.gpuclass.virtualization.deckhouse.io/gpus"), got)
 }
 
 func TestCanonical(t *testing.T) {

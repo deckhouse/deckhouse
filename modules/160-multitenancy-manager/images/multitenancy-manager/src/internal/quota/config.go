@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -42,6 +43,9 @@ const (
 	LabelPending = "pending"
 	// LabelEnforced: the quota applies in the namespace.
 	LabelEnforced = "enforced"
+	// VMLabel marks a namespace of a project whose quota has keys of the vm family: the webhook of the
+	// family is called there. Its value is LabelEnforced.
+	VMLabel = "quota.projects.deckhouse.io/vm"
 
 	// ConfigMapName is the ConfigMap Helm renders with the facts of the cluster the quota depends on.
 	ConfigMapName = "quota-ledger-config"
@@ -67,6 +71,8 @@ const (
 	LedgerStateSingleProbesKey = "singleProbes"
 
 	configControlPlaneManagedKey = "controlPlaneManaged"
+	configFamiliesKey            = "families"
+	familyVirtualMachines        = "vm"
 
 	// configTTL bounds how long a read of the ConfigMap is reused: every reconcile asks for it.
 	configTTL = 5 * time.Second
@@ -91,6 +97,16 @@ type Config struct {
 	WebhookNotCalledBy []string
 	// LeaderChangedAt is when the current holder took the lease of the ledger, zero when unknown.
 	LeaderChangedAt time.Time
+	// Families are the families of objects the ledger counts, as the module renders them; nil when
+	// the ConfigMap does not say.
+	Families []string
+}
+
+// CountsVirtualMachines reports whether the ledger counts the virtual machines: the module that
+// serves them is enabled. Its resources may still be served after it is disabled, and nothing counts
+// them then.
+func (c Config) CountsVirtualMachines() bool {
+	return c.Families == nil || slices.Contains(c.Families, familyVirtualMachines)
 }
 
 // MetricMode is the value of the mode label of the enforcement metric.
@@ -114,7 +130,16 @@ func ParseConfig(cm *corev1.ConfigMap) Config {
 	if cm == nil {
 		return Config{ControlPlaneManaged: true}
 	}
-	return Config{ControlPlaneManaged: cm.Data[configControlPlaneManagedKey] != "false"}
+	cfg := Config{ControlPlaneManaged: cm.Data[configControlPlaneManagedKey] != "false"}
+	if families, ok := cm.Data[configFamiliesKey]; ok {
+		cfg.Families = []string{}
+		for _, family := range strings.Split(families, ",") {
+			if family = strings.TrimSpace(family); family != "" {
+				cfg.Families = append(cfg.Families, family)
+			}
+		}
+	}
+	return cfg
 }
 
 // ConfigReader reads the ConfigMap through the API, reusing a read for a few seconds. The reader is

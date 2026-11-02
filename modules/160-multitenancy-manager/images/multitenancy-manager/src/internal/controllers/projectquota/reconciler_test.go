@@ -31,6 +31,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -770,4 +771,94 @@ func TestOnlyTheLeaderExportsTheQuotaSeries(t *testing.T) {
 	f.reconcile()
 	assert.Equal(t, 1, testutil.CollectAndCount(quotaCount))
 	assert.InDelta(t, 1, testutil.ToFloat64(enforcementMode.WithLabelValues("Enforce")), 0)
+}
+
+// A quota with keys of virtual machines only gives the ResourceQuota no limits. Its namespaces are
+// enforced at once, or a namespace labelled pending at birth would refuse every object for good.
+func TestReconcileEnforcesAQuotaOfVirtualMachinesOnly(t *testing.T) {
+	f := newFixture(t, "true", project(),
+		projectNamespace(projectName, nil),
+		projectNamespace(projectName+"-db", map[string]string{quota.NamespaceLabel: quota.LabelPending}),
+		projectQuota(rl("virtualmachines.virtualization.deckhouse.io/cores", "8")))
+	f.reconcile()
+
+	for _, ns := range []string{projectName, projectName + "-db"} {
+		assert.Empty(t, f.resourceQuota(ns).Spec.Hard)
+		labels := f.namespace(ns).Labels
+		assert.Equal(t, quota.LabelEnforced, labels[quota.NamespaceLabel], ns)
+		assert.Equal(t, quota.LabelEnforced, labels[quota.VMLabel], ns)
+	}
+	enforced := condition(f.quota(), v1alpha1.ProjectQuotaConditionEnforced)
+	assert.Equal(t, metav1.ConditionTrue, enforced.Status, enforced.Message)
+}
+
+// A namespace turns enforced only once the webhook of virtual machines selects it: the pending guard
+// holds the creates until then, and a virtual machine made between the two labels would go unchecked.
+func TestReconcileLabelsTheFamilyBeforeEnforcing(t *testing.T) {
+	f := newFixture(t, "true", project(),
+		projectNamespace(projectName, map[string]string{quota.NamespaceLabel: quota.LabelPending}),
+		projectQuota(rl("virtualmachines.virtualization.deckhouse.io/cores", "8")))
+	var enforcedWithoutFamily []string
+	f.r.Client = interceptor.NewClient(f.client.(client.WithWatch), interceptor.Funcs{
+		Patch: func(ctx context.Context, c client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+			if ns, ok := obj.(*corev1.Namespace); ok && ns.Labels[quota.NamespaceLabel] == quota.LabelEnforced && ns.Labels[quota.VMLabel] != quota.LabelEnforced {
+				enforcedWithoutFamily = append(enforcedWithoutFamily, ns.Name)
+			}
+			return c.Patch(ctx, obj, patch, opts...)
+		},
+	})
+	f.reconcile()
+
+	assert.Equal(t, quota.LabelEnforced, f.namespace(projectName).Labels[quota.NamespaceLabel])
+	assert.Empty(t, enforcedWithoutFamily)
+}
+
+// The resources of virtual machines stay served after the module that serves them is disabled, but the
+// ledger counts them only while it is enabled: the keys then report that nothing counts them.
+func TestReconcileReportsVirtualMachinesNotCounted(t *testing.T) {
+	f := newFixture(t, "true", project(), projectNamespace(projectName, nil),
+		projectQuota(rl("pods", "10", "virtualmachines.virtualization.deckhouse.io/cores", "8")))
+	config := new(corev1.ConfigMap)
+	require.NoError(t, f.client.Get(context.Background(), client.ObjectKey{Namespace: quota.ConfigNamespace, Name: quota.ConfigMapName}, config))
+	config.Data["families"] = "lb"
+	require.NoError(t, f.client.Update(context.Background(), config))
+	f.reconcile()
+	f.count(projectName, rl("pods", "0"))
+	f.reconcile()
+
+	enforced := condition(f.quota(), v1alpha1.ProjectQuotaConditionEnforced)
+	assert.Equal(t, metav1.ConditionFalse, enforced.Status)
+	assert.Equal(t, v1alpha1.ProjectQuotaReasonKeyNotServed, enforced.Reason)
+	assert.Equal(t, "Nothing counts these keys because the module that serves their resources is disabled: virtualmachines.virtualization.deckhouse.io/cores.",
+		enforced.Message)
+}
+
+// A quota with keys of virtual machines labels the namespaces of the project for the webhook of the
+// family and shows the virtual machines in its usage; without such keys the label goes.
+func TestReconcileCountsVirtualMachines(t *testing.T) {
+	vm := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "virtualization.deckhouse.io/v1alpha2", "kind": "VirtualMachine",
+		"metadata": map[string]any{"name": "vm", "namespace": projectName},
+		"spec":     map[string]any{"cpu": map[string]any{"cores": int64(4), "coreFraction": "50%"}, "memory": map[string]any{"size": "2Gi"}},
+	}}
+	f := newFixture(t, "true", project(), projectNamespace(projectName, nil), vm,
+		projectQuota(rl("pods", "10", "virtualmachines.virtualization.deckhouse.io/cores", "8")))
+	f.reconcile()
+	f.count(projectName, rl("pods", "1"))
+	f.reconcile()
+
+	assert.Equal(t, quota.LabelEnforced, f.namespace(projectName).Labels[quota.VMLabel])
+	pq := f.quota()
+	cores := pq.Status.Used["virtualmachines.virtualization.deckhouse.io/cores"]
+	assert.Equal(t, int64(4), cores.Value())
+	pods := pq.Status.Used[corev1.ResourcePods]
+	assert.Equal(t, int64(1), pods.Value())
+	assert.NotContains(t, f.resourceQuota(projectName).Spec.Hard, corev1.ResourceName("virtualmachines.virtualization.deckhouse.io/cores"),
+		"no ResourceQuota counts virtual machines")
+
+	pq.Spec.Hard = rl("pods", "10")
+	pq.Generation++
+	require.NoError(t, f.client.Update(context.Background(), pq))
+	f.reconcile()
+	assert.NotContains(t, f.namespace(projectName).Labels, quota.VMLabel)
 }

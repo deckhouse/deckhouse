@@ -255,6 +255,7 @@ d8 k get project my-project -o jsonpath='{.status.namespaces}'
 | `projects.deckhouse.io/project-template: <PROJECT_TEMPLATE_NAME>` | ✓ | ✓ | Шаблон проекта; по нему применяются правила доступности cluster-wide-ресурсов |
 | `heritage: multitenancy-manager` | ✓ | ✓ | Неймспейс управляется контроллером проектов: его `spec`, поле `finalizers` и лейблы из этой таблицы меняются через Project; остальные лейблы и аннотации можно менять напрямую |
 | `projects.deckhouse.io/quota: pending`, `projects.deckhouse.io/quota: enforced` | ✓ | ✓ | Неймспейс входит в проект с [квотой](#квота-проекта); лейбл ставит только контроллер |
+| `quota.projects.deckhouse.io/vm: enforced` | ✓ | ✓ | В квоте проекта есть ключи [виртуальных машин](#виртуальные-машины-в-квоте-проекта) |
 | `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled` | ✓ | ✓ (наследуются) | Политики и функции из шаблона проекта |
 | Лейблы из `namespaceMetadata.labels` шаблона | ✓ | ✓ (наследуются) | Лейблы шаблона проекта. Перечислены в аннотации `projects.deckhouse.io/template-labels` неймспейса и меняются через Project или его ProjectTemplate |
 | Любой другой лейбл, поставленный на неймспейс напрямую или GitOps-инструментом, в том числе лейбл, который был на неймспейсе до того, как он стал проектом | — | — | Модуль его не ставит. Релиз проекта не откатывает и не возвращает его, дополнительные неймспейсы его не наследуют |
@@ -299,7 +300,8 @@ d8 k get ns -l 'projects.deckhouse.io/project=my-project,!projects.deckhouse.io/
 
 Уже существующие RoleBinding и AuthorizationRule внутри неймспейса после перехода в проект продолжают работать. Namespace Admin **не** копируется в `.spec.administrators` и **не** становится `d8:project:admin`: эта роль ещё управляет ProjectRoleBinding, а это шире, чем Admin внутри одного неймспейса. Чтобы руководитель команды стал администратором проекта, оператор платформы добавляет его в `.spec.administrators` или создаёт ProjectRoleBinding. Роль Admin неймспейса разрешает на объект Namespace только `get`, `list` и `watch`.
 
-Лейблы и аннотации, которые ставит модуль, — `heritage`, `projects.deckhouse.io/*`, `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled`, `app.kubernetes.io/managed-by`, `meta.helm.sh/*`, аннотации node-selector и tolerations — меняются через Project и его шаблон; любой другой лейбл или аннотацию (`istio-injection`, лейбл Pod Security, служебную аннотацию GitOps-инструмента) можно по-прежнему поставить прямо на Namespace, если это позволяет RBAC, и контроллер их не трогает. `spec` и поле `finalizers` объекта Namespace, как и его удаление, остаются за контроллером.
+Лейблы и аннотации, которые ставит модуль, — `heritage`, `projects.deckhouse.io/*`, `quota.projects.deckhouse.io/vm`, `security.deckhouse.io/pod-policy`, `extended-monitoring.deckhouse.io/enabled`, `security-scanning.deckhouse.io/enabled`, `app.kubernetes.io/managed-by`, `meta.helm.sh/*`, аннотации node-selector и tolerations — меняются через Project и его шаблон;
+любой другой лейбл или аннотацию (`istio-injection`, лейбл Pod Security, служебную аннотацию GitOps-инструмента) можно по-прежнему поставить прямо на Namespace, если это позволяет RBAC, и контроллер их не трогает. `spec` и поле `finalizers` объекта Namespace, как и его удаление, остаются за контроллером.
 
 Это относится и к лейблам и аннотациям, которые были на неймспейсе до того, как он стал проектом.
 Они не копируются в проект при его создании, поэтому релиз проекта ими не владеет,
@@ -422,21 +424,42 @@ spec:
 
 ### Ключи квоты проекта
 
-ProjectQuota и `.spec.quota` принимают ключи, которые ResourceQuota считает в неймспейсе:
+ProjectQuota и `.spec.quota` принимают такие ключи:
 
 - `cpu`, `memory`, `ephemeral-storage`, `pods`, `requests.*` и `limits.*` для CPU, памяти и эфемерного хранилища, `requests.storage`, `requests.hugepages-<SIZE>`, запросы расширенных ресурсов (например, `requests.nvidia.com/gpu`);
 - `services`, `services.loadbalancers`, `services.nodeports`, `persistentvolumeclaims`, `configmaps`, `secrets`, `replicationcontrollers`;
 - `<CLASS>.storageclass.storage.k8s.io/requests.storage` и `<CLASS>.storageclass.storage.k8s.io/persistentvolumeclaims`, `<CLASS>.deviceclass.resource.k8s.io/devices`;
 - `count/<RESOURCE>[.<GROUP>]` для namespaced-ресурса, который обслуживает API-сервер, например `count/ingresses.networking.k8s.io`;
 - `projectNamespaces` — псевдоним `count/projectnamespaces.deckhouse.io`: число объектов [ProjectNamespace](cr.html#projectnamespace) проекта, то есть его дополнительных неймспейсов. В ResourceQuota псевдоним раскрывается, а в самом объекте остаётся как записан.
+- ключи [виртуальных машин](#виртуальные-машины-в-квоте-проекта), которые не считает ни один ResourceQuota.
 
-Отклоняются ключи `resourcequotas` и `count/resourcequotas` (`d8-project-quota` сам занимает по одному в каждом неймспейсе), счётчик cluster-wide-ресурса вроде `count/namespaces`, ресурс с опечаткой в обслуживаемой группе, ключ `count/` ресурса, у которого нет одного из глаголов create, list, watch и delete, ключи с зарезервированным префиксом `projectquota.deckhouse.io/` и ключи виртуальных машин и балансировщиков нагрузки, которые квота проекта пока не считает.
+Отклоняются ключи `resourcequotas` и `count/resourcequotas` (`d8-project-quota` сам занимает по одному в каждом неймспейсе), счётчик cluster-wide-ресурса вроде `count/namespaces`, ресурс с опечаткой в обслуживаемой группе, ключ `count/` ресурса, у которого нет одного из глаголов create, list, watch и delete, ключи с зарезервированным префиксом `projectquota.deckhouse.io/` и ключи балансировщиков нагрузки, которые квота проекта пока не считает.
 Ключ `count/` группы, которую API-сервер ещё не обслуживает, принимается с предупреждением: его ничто не считает, пока не включён модуль, предоставляющий группу, и до тех пор `Enforced` равно `False` с причиной `KeyNotServed`.
 Изменение, которое сохраняет уже имеющийся у объекта ключ, принимается с предупреждением, даже если сейчас такой ключ был бы отклонён.
 
 Новый ключ в действующей квоте начинает работать, когда `d8-project-quota` каждого неймспейса рассчитан с ним; до тех пор `Enforced` равно `False` с причиной `KeyRollout`.
 
 Поды и заявки на тома с лейблами `resource-quota-overrides.deckhouse.io/*`, которые ставят контроллеры платформы, считаются так, как их считает ResourceQuota.
+
+### Виртуальные машины в квоте проекта
+
+Если включён модуль `virtualization`, квота проекта ограничивает виртуальные машины проекта по их спецификации. Эти ключи не считает ни один ResourceQuota, поэтому в `d8-project-quota` они не попадают: счётчик квот проверяет каждое создание VirtualMachine и каждое изменение её `spec` в неймспейсах проекта, в квоте которого они есть, и сам считает виртуальные машины по таким ключам:
+
+- `virtualmachines.virtualization.deckhouse.io/cores` — сумма `spec.cpu.cores`;
+- `virtualmachines.virtualization.deckhouse.io/cpu` — гарантированный CPU, сумма ядер × `spec.cpu.coreFraction`; пустое `spec.cpu.coreFraction` или `Auto` считается как целые ядра;
+- `virtualmachines.virtualization.deckhouse.io/memory` — сумма `spec.memory.size`;
+- `virtualmachines.virtualization.deckhouse.io/gpus` — число GPU в `spec.gpus`;
+- `<GPU_CLASS>.gpuclass.virtualization.deckhouse.io/gpus` — число GPU класса GPUClass `<GPU_CLASS>`.
+
+Число виртуальных машин ограничивает обычный ключ `count/virtualmachines.virtualization.deckhouse.io`.
+
+В ключах выше учитывается каждая виртуальная машина, в том числе остановленная: остановленную вручную машину могут запустить в любой момент. В них не учитывается только машина с `runPolicy: AlwaysOff`, которую намеренно держат выключенной; ключ `count/virtualmachines.virtualization.deckhouse.io` считает и такие машины.
+Изменение, которое не увеличивает ни один ключ, например уменьшение машины или её остановка, никогда не отклоняется по квоте и проходит, даже когда счётчик квот не отвечает; остальные создания и изменения `spec` требуют ответа счётчика. Изменение только метаданных машины счётчик не вызывает.
+Уменьшенная спецификация освобождает квоту, только когда машина начинает с ней работать: до перезапуска, который её применяет, машина учитывается с теми ядрами и памятью, с которыми работает (`status.resources`), и с GPU, которые показывают изменения в `status.restartAwaitingChanges`. Пока модуль `virtualization` не обработал изменение спецификации, машина учитывается так же, как до него.
+Неймспейсы такого проекта несут лейбл `quota.projects.deckhouse.io/vm: enforced`, его ставит контроллер.
+Пока модуль `virtualization` выключен, ключи ничего не считают, а `Enforced` равно `False` с причиной `KeyNotServed`. Квота принимается с предупреждением, если API-сервер не обслуживает VirtualMachine.
+
+Под виртуальной машины учитывается и в `requests.*` и `limits.*`, а во время миграции — дважды. Квота, в которой есть и ключи виртуальных машин, и ключи подов (`cpu`, `memory`, `requests.*`, `limits.*`), принимается с предупреждением. Ограничивайте виртуальные машины их ключами, а контейнеры — `requests.*` и `limits.*`.
 
 ### Кластеры, в которых Deckhouse Platform не управляет control plane
 
@@ -474,7 +497,7 @@ spec:
 | `403 ... exceeded quota: d8-project-quota, project <PROJECT_NAME>: requested: ..., used: ..., limited: ... (<N> namespaces)` | Сумма проекта `<PROJECT_NAME>` вышла бы за квоты в ProjectQuota. Поднимите `spec.hard` или удалите лишнее; `status.topNamespaces` показывает, где потребление. |
 | `403 ... exceeded quota: d8-project-quota, requested: ...` (без `project`) | Потребление одного этого неймспейса вместе с объектом вышло бы за лимит проекта, который содержит каждый ResourceQuota `d8-project-quota`. Плагин квот API-сервера отклоняет объект до проверки суммы проекта. |
 | `503 ... project quota ledger unavailable (<CAUSE>), retry` | Счётчик ненадолго не отвечает, например при смене лидера. Повторите запрос; если это длится дольше минуты, воспользуйтесь описанием алерта `D8ProjectQuotaLedgerDown`. |
-| `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io": ...` | API-сервер не достучался до счётчика: не запущена ни одна реплика, сеть или сертификат. Пока Service указывает на замороженного лидера, плагин квот API-сервера повторяет вызов, поэтому каждое такое создание ждёт примерно до 8 секунд, пока адрес лидера не уберут из Service: примерно за 3,5 секунды это делает вторая реплика, примерно до 15 секунд — Deckhouse, если не отвечает ни одна реплика. |
+| `500 ... failed calling webhook "quota-ledger.multitenancy-manager.deckhouse.io": ...` или с `quota-vm.multitenancy-manager.deckhouse.io` | API-сервер не достучался до счётчика: не запущена ни одна реплика, сеть или сертификат. Пока Service указывает на замороженного лидера, плагин квот API-сервера повторяет вызов, поэтому каждое такое создание ждёт примерно до 8 секунд, пока адрес лидера не уберут из Service: примерно за 3,5 секунды это делает вторая реплика, примерно до 15 секунд — Deckhouse, если не отвечает ни одна реплика. |
 | `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-pending' ...` | ResourceQuota `d8-project-quota` нового неймспейса ещё не рассчитан. Повторите через несколько секунд; если это затянулось, посмотрите условие `Enforced` в ProjectQuota и проверьте контроллер и kube-controller-manager. |
 | `403 ... ValidatingAdmissionPolicy 'd8-multitenancy-manager-quota-guard' ...` | ResourceQuota `d8-project-quota` неймспейса отсутствует, имеет `scopes` или ещё совсем не рассчитан. Повторите через несколько секунд; иначе проверьте контроллер и kube-controller-manager. |
 | `500 ... resource quota evaluation timed out` | Перегружена проверка квот в API-сервере, подробнее — в описании алерта `D8ResourceQuotaAdmissionDegraded`. |

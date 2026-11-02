@@ -56,6 +56,9 @@ const (
 	maxReviewBytes = 3 << 20
 	// overloadPeekBytes is how much of a refused body is read for the uid of the request.
 	overloadPeekBytes = 4 << 10
+	// maxVersionLead is how far above the newest version the informers showed the version of the old
+	// object of a write may be: far more versions than a cluster writes while an informer lags.
+	maxVersionLead = 1 << 31
 )
 
 // GateFunc tells whether the ledger answers now: an empty result when it does, otherwise the result
@@ -241,10 +244,15 @@ func waitsForState(d Decision) bool {
 	return false
 }
 
-// decide takes the decision within the deadline. The decision runs aside; whichever of it and the
-// deadline comes first answers, and an approval is recorded only when the decision came first, under
-// the lock of the ledger.
+// decide takes the decision within the deadline.
 func (h *Handler) decide(in Input) Decision {
+	return decideWithin(func(claim func() bool) Decision { return h.State.Decide(in, h.now(), claim) })
+}
+
+// decideWithin takes a decision within the deadline. The decision runs aside; whichever of it and the
+// deadline comes first answers, and an approval is recorded only when the decision came first, under
+// the lock of the ledger: claim says whether it may.
+func decideWithin(decide func(claim func() bool) Decision) Decision {
 	var answered atomic.Int32 // 0: not yet, 1: by the decision, 2: by the deadline
 	claim := func() bool { return answered.CompareAndSwap(0, 1) }
 
@@ -252,7 +260,7 @@ func (h *Handler) decide(in Input) Decision {
 	go func() {
 		started := time.Now()
 		for {
-			d := h.State.Decide(in, h.now(), claim)
+			d := decide(claim)
 			if !d.Retry || time.Since(started) >= retryWindow || answered.Load() != 0 {
 				result <- d
 				return

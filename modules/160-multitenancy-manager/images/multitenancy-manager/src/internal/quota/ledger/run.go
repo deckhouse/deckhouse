@@ -43,11 +43,14 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -61,6 +64,7 @@ import (
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/quota"
+	"controller/internal/quota/evaluator"
 )
 
 const (
@@ -88,6 +92,63 @@ type Options struct {
 	WebhookAddress string
 	HealthAddress  string
 	MetricsAddress string
+	// Families are the families of objects the ledger counts besides the ResourceQuota objects, the
+	// ones whose module is enabled: FamilyVM.
+	Families []string
+}
+
+// virtualMachineGVK is the kind the vm family counts.
+var virtualMachineGVK = schema.GroupVersionKind{Group: "virtualization.deckhouse.io", Version: "v1alpha2", Kind: "VirtualMachine"}
+
+// served reports whether the API server serves the resource of the kind.
+func served(config *rest.Config, gvk schema.GroupVersionKind, resource string) bool {
+	client, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return false
+	}
+	// a failed call is tried again, so that one error does not drop a family until the next check
+	var resources *metav1.APIResourceList
+	for attempt := range servedAttempts {
+		if resources, err = client.ServerResourcesForGroupVersion(gvk.GroupVersion().String()); err == nil || apierrors.IsNotFound(err) {
+			break
+		}
+		if attempt < servedAttempts-1 {
+			time.Sleep(time.Second)
+		}
+	}
+	if err != nil {
+		return false
+	}
+	for _, r := range resources.APIResources {
+		if r.Name == resource {
+			return true
+		}
+	}
+	return false
+}
+
+// countsVirtualMachines reports whether the ledger counts the vm family.
+func (o Options) countsVirtualMachines() bool { return slices.Contains(o.Families, FamilyVM) }
+
+func newVirtualMachine() *unstructured.Unstructured {
+	vm := new(unstructured.Unstructured)
+	vm.SetGroupVersionKind(virtualMachineGVK)
+	return vm
+}
+
+func newVirtualMachineList() *unstructured.UnstructuredList {
+	list := new(unstructured.UnstructuredList)
+	list.SetGroupVersionKind(virtualMachineGVK.GroupVersion().WithKind(virtualMachineGVK.Kind + "List"))
+	return list
+}
+
+// newVirtualMachineMetadataList is a list of the metadata of the virtual machines: the quorum list of
+// catch-up compares only the names and the versions, and the whole machines of a cluster would be the
+// peak of the memory of the ledger at every change of the leader.
+func newVirtualMachineMetadataList() *metav1.PartialObjectMetadataList {
+	list := new(metav1.PartialObjectMetadataList)
+	list.SetGroupVersionKind(virtualMachineGVK.GroupVersion().WithKind(virtualMachineGVK.Kind + "List"))
+	return list
 }
 
 // NewRunID returns a random identifier of this run of the process.
@@ -117,7 +178,10 @@ type runner struct {
 	stopping  atomic.Bool
 	ready     atomic.Bool
 	suspended atomic.Bool
-	lastTick  atomic.Int64
+	// awaitsVirtualMachines tells that the ledger is to count the virtual machines but they were not
+	// served when it started.
+	awaitsVirtualMachines bool
+	lastTick              atomic.Int64
 
 	nonces  *Nonces
 	canary  *Canary
@@ -166,7 +230,36 @@ func Run(ctx context.Context, opts Options) error {
 	r.watchdog = &Watchdog{Reader: reader, Endpoints: r.endpoints}
 	r.lastTick.Store(time.Now().UnixNano())
 
-	if r.cache, err = newCache(opts.Config, scheme); err != nil {
+	// A quorum list of a resource that is not served would fail and keep the ledger from answering
+	// at all. The ledger starts without the family and restarts once the resource is served: the
+	// module that provides it may come up after this one.
+	waitForVM := opts.countsVirtualMachines() && !served(opts.Config, virtualMachineGVK, "virtualmachines")
+	r.awaitsVirtualMachines = waitForVM
+	if waitForVM {
+		opts.Logger.Info("the virtual machines are not served yet; the ledger restarts to count them once they are")
+		opts.Families = slices.DeleteFunc(slices.Clone(opts.Families), func(family string) bool { return family == FamilyVM })
+		r.opts = opts
+	}
+	ctx, restart := context.WithCancelCause(ctx)
+	defer restart(nil)
+	if waitForVM {
+		go func() {
+			ticker := time.NewTicker(servedCheckEvery)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+				}
+				if served(opts.Config, virtualMachineGVK, "virtualmachines") {
+					restart(errFamilyServed)
+					return
+				}
+			}
+		}()
+	}
+	if r.cache, err = newCache(opts.Config, scheme, opts.countsVirtualMachines()); err != nil {
 		return err
 	}
 	if err := r.watch(ctx); err != nil {
@@ -222,9 +315,7 @@ func Run(ctx context.Context, opts Options) error {
 		Metrics:      r.metrics,
 		Log:          r.log.WithName("canary"),
 	}
-	handler := &Handler{State: r.state, Gate: r.gate, Metrics: r.metrics, Nonces: r.nonces, Suspended: r.suspended.Load}
-	mux := http.NewServeMux()
-	mux.Handle("/validate/quota-ledger", handler)
+	mux := r.routes()
 	r.webhook = &http.Server{
 		Addr:              opts.WebhookAddress,
 		Handler:           mux,
@@ -271,17 +362,30 @@ func Run(ctx context.Context, opts Options) error {
 		}
 		cancel()
 	}
+	if errors.Is(context.Cause(ctx), errFamilyServed) {
+		return errFamilyServed
+	}
 	return nil
 }
 
+// errFamilyServed restarts the ledger: a family it waited for is served now.
+var errFamilyServed = errors.New("restart to count the virtual machines, which the API server serves now")
+
+// servedCheckEvery is how often a ledger that waits for a family checks whether it is served.
+const servedCheckEvery = 30 * time.Second
+
+// servedAttempts is how many times a failed discovery call is made before a resource is taken as not
+// served.
+const servedAttempts = 3
+
 // newCache makes the informers of the ledger: only d8-project-quota among the ResourceQuota objects,
 // only the namespaces of projects, and the objects without their managed fields.
-func newCache(config *rest.Config, scheme *runtime.Scheme) (cache.Cache, error) {
+func newCache(config *rest.Config, scheme *runtime.Scheme, countsVirtualMachines bool) (cache.Cache, error) {
 	inProject, err := labels.NewRequirement(v1alpha3.ResourceLabelProject, selection.Exists, nil)
 	if err != nil {
 		return nil, fmt.Errorf("select the namespaces of projects: %w", err)
 	}
-	c, err := cache.New(config, cache.Options{
+	options := cache.Options{
 		Scheme: scheme,
 		ByObject: map[client.Object]cache.ByObject{
 			&corev1.ResourceQuota{}: {Field: fields.OneTermEqualSelector("metadata.name", v1alpha3.ProjectQuotaName)},
@@ -292,7 +396,12 @@ func newCache(config *rest.Config, scheme *runtime.Scheme) (cache.Cache, error) 
 			},
 		},
 		DefaultTransform: cache.TransformStripManagedFields(),
-	})
+	}
+	if countsVirtualMachines {
+		// every virtual machine of the cluster, with only what the vm family counts it by
+		options.ByObject[newVirtualMachine()] = cache.ByObject{Transform: evaluator.TrimVirtualMachine}
+	}
+	c, err := cache.New(config, options)
 	if err != nil {
 		return nil, fmt.Errorf("create the informers of the ledger: %w", err)
 	}
@@ -338,6 +447,18 @@ func (r *runner) watch(ctx context.Context) error {
 			},
 		},
 	}
+	if r.opts.countsVirtualMachines() {
+		handlers[newVirtualMachine()] = toolscache.ResourceEventHandlerFuncs{
+			AddFunc:    func(obj any) { r.onVirtualMachine(obj) },
+			UpdateFunc: func(_, obj any) { r.onVirtualMachine(obj) },
+			DeleteFunc: func(obj any) {
+				if vm, ok := unwrap(obj).(*unstructured.Unstructured); ok {
+					r.state.DeleteObject(FamilyVM, vm.GetNamespace(), vm.GetName())
+					r.deleted.record(vm)
+				}
+			},
+		}
+	}
 	for object, funcs := range handlers {
 		informer, err := r.cache.GetInformer(ctx, object)
 		if err != nil {
@@ -369,6 +490,34 @@ func (r *runner) onQuota(obj any) {
 			r.metrics.PendingResolved.WithLabelValues("confirmed").Add(float64(confirmed))
 		}
 	}
+}
+
+// onVirtualMachine records the usage of a virtual machine. A machine whose usage cannot be read
+// counts as nothing: the webhook refuses a write it cannot read, so only an object written past it
+// can be such.
+func (r *runner) onVirtualMachine(obj any) {
+	vm, ok := unwrap(obj).(*unstructured.Unstructured)
+	if !ok {
+		return
+	}
+	usage, err := evaluator.VirtualMachine{}.Usage(vm)
+	if err != nil {
+		r.log.Error(err, "evaluate a virtual machine", "namespace", vm.GetNamespace(), "name", vm.GetName())
+		usage = corev1.ResourceList{}
+	}
+	// A spec the virtualization module has not processed yet may be smaller than what the machine runs
+	// with, the GPUs above all, which status.resources does not show: the usage does not go down until
+	// the module has said what the change waits for.
+	if evaluator.SpecUnobserved(vm) {
+		if before, ok := r.state.ObjectUsed(FamilyVM, vm.GetNamespace(), vm.GetName()); ok {
+			for key, value := range before {
+				if current, ok := usage[key]; !ok || value.Cmp(current) > 0 {
+					usage[key] = value.DeepCopy()
+				}
+			}
+		}
+	}
+	r.state.SetObject(FamilyVM, vm.GetNamespace(), vm.GetName(), ParseResourceVersion(vm.GetResourceVersion()), usage)
 }
 
 func (r *runner) onNamespace(obj any) {
@@ -497,6 +646,7 @@ func (r *runner) lead(ctx context.Context) {
 			cancel()
 		}
 		r.resolve(ctx, time.Now().Add(-confirmAfter), true)
+		r.resolveObjects(ctx, time.Now().Add(-confirmAfter), true)
 		if time.Since(lastAudit) >= auditEvery {
 			lastAudit = time.Now()
 			r.audit(ctx)
@@ -775,8 +925,9 @@ func (r *runner) handOver() {
 	}
 	// the API server takes an approval for up to the webhook timeout after it was given
 	time.Sleep(r.timing.WebhookTimeout)
-	for r.state.PendingCount() > 0 && time.Since(start) < MinFenceWindow {
+	for r.state.PendingCount()+r.state.ObjectPendingCount() > 0 && time.Since(start) < MinFenceWindow {
 		r.resolve(ctx, time.Now().Add(-drainAge), false)
+		r.resolveObjects(ctx, time.Now().Add(-drainAge), false)
 		time.Sleep(drainAge)
 	}
 	r.metrics.HandoverDrain.Observe(time.Since(start).Seconds())
@@ -804,6 +955,57 @@ func (r *runner) resolve(ctx context.Context, before time.Time, settle bool) {
 		if n := r.state.Resolve(rq, aged.RVOld, before, settle); n > 0 {
 			r.metrics.PendingResolved.WithLabelValues(outcome).Add(float64(n))
 		}
+	}
+}
+
+// routes are the webhooks the ledger answers.
+func (r *runner) routes() *http.ServeMux {
+	handler := &Handler{State: r.state, Gate: r.gate, Metrics: r.metrics, Nonces: r.nonces, Suspended: r.suspended.Load}
+	mux := http.NewServeMux()
+	mux.Handle("/validate/quota-ledger", handler)
+	// The webhook of the virtual machines is there as soon as the module that serves them is enabled,
+	// before the ledger counts them: until it does, it answers that it cannot count them yet rather than
+	// with a missing path.
+	if r.opts.countsVirtualMachines() || r.awaitsVirtualMachines {
+		gate := r.gate
+		if r.awaitsVirtualMachines {
+			gate = func() (string, string) { return ResultSyncing, "the virtual machines are not counted yet" }
+		}
+		mux.Handle("/validate/quota-vm", &ObjectHandler{Family: FamilyVM, Evaluator: evaluator.VirtualMachine{}, State: r.state, Gate: gate,
+			Metrics: r.metrics, Suspended: r.suspended.Load, Sources: &Handler{}})
+	}
+	return mux
+}
+
+// resolveObjects settles the approvals of objects older than the time with a quorum read of the
+// object: the write did not go in, or the informer is late. Without settle only the approvals the
+// read shows written are settled.
+func (r *runner) resolveObjects(ctx context.Context, before time.Time, settle bool) {
+	aged := r.state.AgedObjects(before)
+	if !settle {
+		// no approval is old enough to be taken as failed
+		before = time.Time{}
+	}
+	for _, aged := range aged {
+		if aged.Family != FamilyVM {
+			continue
+		}
+		vm := newVirtualMachine()
+		err := r.reader.Get(ctx, client.ObjectKey{Namespace: aged.Namespace, Name: aged.Name}, vm)
+		switch {
+		case apierrors.IsNotFound(err):
+			r.state.ResolveObject(aged.Family, aged.Namespace, aged.Name, before, false, 0, nil)
+			continue
+		case err != nil:
+			r.log.Error(err, "read the object of a pending approval", "namespace", aged.Namespace, "name", aged.Name)
+			continue
+		}
+		usage, err := evaluator.VirtualMachine{}.Usage(vm)
+		if err != nil {
+			usage = corev1.ResourceList{}
+		}
+		r.state.ResolveObject(aged.Family, aged.Namespace, aged.Name, before, true, ParseResourceVersion(vm.GetResourceVersion()), usage)
+		r.metrics.PendingResolved.WithLabelValues("object").Inc()
 	}
 }
 
@@ -860,6 +1062,13 @@ func (r *runner) quorumLists(ctx context.Context) ([]quorumList, error) {
 		{&corev1.NamespaceList{}, &corev1.NamespaceList{}, []client.ListOption{client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(*inProject)}}},
 		{&v1alpha1.ProjectQuotaList{}, &v1alpha1.ProjectQuotaList{}, nil},
 	}
+	if r.opts.countsVirtualMachines() {
+		kinds = append(kinds, struct {
+			list    client.ObjectList
+			cached  client.ObjectList
+			options []client.ListOption
+		}{newVirtualMachineMetadataList(), newVirtualMachineList(), nil})
+	}
 	out := make([]quorumList, 0, len(kinds))
 	for _, kind := range kinds {
 		if err := r.reader.List(ctx, kind.list, kind.options...); err != nil {
@@ -868,6 +1077,14 @@ func (r *runner) quorumLists(ctx context.Context) ([]quorumList, error) {
 		objects, err := metaObjects(kind.list)
 		if err != nil {
 			return nil, err
+		}
+		if _, ok := kind.list.(*metav1.PartialObjectMetadataList); ok {
+			// the items of a list of metadata come without the kind the list names
+			for _, object := range objects {
+				if item, ok := object.(*metav1.PartialObjectMetadata); ok {
+					item.SetGroupVersionKind(virtualMachineGVK)
+				}
+			}
 		}
 		listMeta, err := meta.ListAccessor(kind.list)
 		if err != nil {
@@ -935,7 +1152,7 @@ func (r *runner) loop(ctx context.Context) {
 				r.log.Error(err, "watch the ledger lease")
 			}
 		}
-		r.metrics.Pending.Set(float64(r.state.PendingCount()))
+		r.metrics.Pending.Set(float64(r.state.PendingCount() + r.state.ObjectPendingCount()))
 		r.metrics.InflightRatioMax.Set(r.state.InflightRatioMax())
 		r.metrics.LeaseRenewAge.Set(r.lock.RenewAge().Seconds())
 		select {

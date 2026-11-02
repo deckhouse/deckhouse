@@ -25,6 +25,8 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+
+	"controller/internal/quota/evaluator"
 )
 
 const (
@@ -38,6 +40,10 @@ const (
 
 	// ReservedPrefix is kept for the project-level keys that no ResourceQuota counts.
 	ReservedPrefix = "projectquota.deckhouse.io/"
+
+	// VirtualMachineGroup and VirtualMachineResource are the objects the vm family counts.
+	VirtualMachineGroup    = "virtualization.deckhouse.io"
+	VirtualMachineResource = "virtualmachines"
 )
 
 // standardKeys are the keys without a slash that a ResourceQuota counts in a namespace. resourcequotas
@@ -63,9 +69,9 @@ var standardKeys = []corev1.ResourceName{
 	corev1.ResourceReplicationControllers,
 }
 
-// futureFamilies are the parts of the keys of the project-level families that the quota is to count
-// later: virtual machines and load balancers. They are refused until then rather than taken for
-// extended resources.
+// futureFamilies are the parts of the keys of the project-level families, which no ResourceQuota
+// counts. The keys of a family the quota counts (evaluator.IsVMKey) are accepted; the others are
+// refused rather than taken for extended resources.
 var futureFamilies = []string{
 	".virtualization.deckhouse.io/",
 	".loadbalancerclass.network.deckhouse.io/",
@@ -143,7 +149,43 @@ func CheckKeys(hard, old corev1.ResourceList, discovery Discovery) (KeyCheck, er
 		}
 		check.Denied = append(check.Denied, fmt.Sprintf("%s: %s", key, reason))
 	}
+	if warning := vmAndPodKeys(hard); warning != "" {
+		check.Warnings = append(check.Warnings, warning)
+	}
 	return check, nil
+}
+
+// vmAndPodKeys warns about a quota that limits virtual machines by their specification and pods by
+// their requests or limits at once: the pod of a virtual machine counts in the keys of the pods too,
+// twice during a migration, so a project with virtual machines reaches such a limit sooner than its
+// virtual machines say.
+func vmAndPodKeys(hard corev1.ResourceList) string {
+	var vm, pod bool
+	for key := range hard {
+		name := string(key)
+		switch {
+		case evaluator.IsVMKey(key):
+			vm = true
+		case key == corev1.ResourceCPU || key == corev1.ResourceMemory || strings.HasPrefix(name, "requests.") || strings.HasPrefix(name, "limits."):
+			pod = true
+		}
+	}
+	if !vm || !pod {
+		return ""
+	}
+	return "the quota limits virtual machines by their specification and pods by their requests or limits: the pod of a virtual machine counts in " +
+		"the keys of pods too, twice while the machine migrates, so the project reaches those limits sooner than its virtual machines say"
+}
+
+// VMHard returns the limits of a canonical quota of the vm family.
+func VMHard(canonical corev1.ResourceList) corev1.ResourceList {
+	out := corev1.ResourceList{}
+	for key, value := range canonical {
+		if evaluator.IsVMKey(key) {
+			out[key] = value.DeepCopy()
+		}
+	}
+	return out
 }
 
 // keyRefusal returns why the key is refused, empty when it is accepted, and how its resource is
@@ -159,6 +201,15 @@ func keyRefusal(key corev1.ResourceName, discovery Discovery) (string, Served, e
 		return "the " + ReservedPrefix + " prefix is reserved and not implemented yet", ServedUnknown, nil
 	case strings.HasPrefix(name, "count/"):
 		return countKeyRefusal(strings.TrimPrefix(name, "count/"), discovery)
+	case evaluator.IsVMKey(key):
+		if discovery == nil {
+			return "", ServedUnknown, nil
+		}
+		served, err := discovery.Lookup(VirtualMachineGroup, VirtualMachineResource)
+		if err != nil {
+			return "", ServedUnknown, fmt.Errorf("look up the virtual machines: %w", err)
+		}
+		return "", served, nil
 	case isFutureFamily(name):
 		return "the project quota does not count this family of keys yet", ServedUnknown, nil
 	case slices.Contains(standardKeys, key),
