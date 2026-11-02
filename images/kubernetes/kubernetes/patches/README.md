@@ -284,3 +284,7 @@ Discovery (`/api`, `/apis`, group versions), `/openapi/*`, `/version` and other 
 While the warning is active, `kubectl --warnings-as-errors` fails on every command that requests resources. A watch gets the warning once, when it starts.
 
 The code is in a new package, `pkg/controlplane/apiserver/licensewarning`, `server.go` and `aggregator.go` only wire it.
+
+### kubelet-host-network-hosts-aliases-first.patch
+
+For `hostNetwork` Pods kubelet builds `/etc/hosts` from a copy of the node's `/etc/hosts` and appends `spec.hostAliases` after it. Resolvers take the first matching line, so an entry added to the node file by hand (for example, a stale address of Dex) shadows the Pod's `hostAliases` and breaks authentication. The patch writes the `hostAliases` block right after the kubelet header, before the node entries. Pods without `hostAliases` and Pods without `hostNetwork` get the same file as before.

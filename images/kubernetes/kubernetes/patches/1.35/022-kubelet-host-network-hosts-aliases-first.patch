@@ -1,0 +1,61 @@
+diff --git a/pkg/kubelet/kubelet_pods.go b/pkg/kubelet/kubelet_pods.go
+index 2c8d0c0..4c88808 100644
+--- a/pkg/kubelet/kubelet_pods.go
++++ b/pkg/kubelet/kubelet_pods.go
+@@ -504,8 +504,9 @@ func nodeHostsFileContent(hostsFilePath string, hostAliases []v1.HostAlias) ([]b
+ 	}
+ 	var buffer bytes.Buffer
+ 	buffer.WriteString(managedHostsHeaderWithHostNetwork)
+-	buffer.Write(hostsFileContent)
++	// HostAliases go first: resolvers take the first match, so stale node entries must not shadow them.
+ 	buffer.Write(hostsEntriesFromHostAliases(hostAliases))
++	buffer.Write(hostsFileContent)
+ 	return buffer.Bytes(), nil
+ }
+ 
+diff --git a/pkg/kubelet/kubelet_pods_test.go b/pkg/kubelet/kubelet_pods_test.go
+index 7678b70..522064a 100644
+--- a/pkg/kubelet/kubelet_pods_test.go
++++ b/pkg/kubelet/kubelet_pods_test.go
+@@ -135,6 +135,9 @@ fe00::2	ip6-allrouters
+ 123.45.67.89	some.domain
+ `,
+ 			expectedHostsFileContent: `# Kubernetes-managed hosts file (host network).
++
++# Entries added by HostAliases.
++123.45.67.89	foo	bar	baz
+ # hosts file for testing.
+ 127.0.0.1	localhost
+ ::1	localhost ip6-localhost ip6-loopback
+@@ -143,9 +146,6 @@ fe00::0	ip6-mcastprefix
+ fe00::1	ip6-allnodes
+ fe00::2	ip6-allrouters
+ 123.45.67.89	some.domain
+-
+-# Entries added by HostAliases.
+-123.45.67.89	foo	bar	baz
+ `,
+ 		},
+ 		{
+@@ -164,6 +164,10 @@ fe00::2	ip6-allrouters
+ 12.34.56.78	another.domain
+ `,
+ 			expectedHostsFileContent: `# Kubernetes-managed hosts file (host network).
++
++# Entries added by HostAliases.
++123.45.67.89	foo	bar	baz
++456.78.90.123	park	doo	boo
+ # another hosts file for testing.
+ 127.0.0.1	localhost
+ ::1	localhost ip6-localhost ip6-loopback
+@@ -172,10 +176,6 @@ fe00::0	ip6-mcastprefix
+ fe00::1	ip6-allnodes
+ fe00::2	ip6-allrouters
+ 12.34.56.78	another.domain
+-
+-# Entries added by HostAliases.
+-123.45.67.89	foo	bar	baz
+-456.78.90.123	park	doo	boo
+ `,
+ 		},
+ 	}
