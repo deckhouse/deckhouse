@@ -39,6 +39,6 @@ shell:
   # is already installed there. nvme happens to be static today, but the flag is what keeps
   # that from silently mattering if it ever stops being.
   - pm install -n nvme-cli -d /src
-  - mkdir -p /opt/deckhouse/bin
+  - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
   - cp -pr /src/usr/sbin/nvme /opt/deckhouse/bin
   {{- include "relocate_and_verify" (dict "resolve" "/src" "smoke" (list "/opt/deckhouse/bin/nvme version")) | nindent 2 }}

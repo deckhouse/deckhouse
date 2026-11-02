@@ -40,7 +40,7 @@ shell:
   # without its loader and the package would ship nothing that starts on a node.
   #
   # lsblk comes from util-linux, which is also where growpart's fdisk and sfdisk come from.
-  - pm install -n util-linux -d /src
-  - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
+  - pm install -n lsblk-static-bin -d /src
+  - mkdir -p /opt/deckhouse/bin
   - cp -pr /src/usr/bin/lsblk /opt/deckhouse/bin
-  {{- include "relocate_and_verify" (dict "resolve" "/src" "smoke" (list "/opt/deckhouse/bin/lsblk --version")) | nindent 2 }}
+  {{- include "relocate_and_verify" (dict "smoke" (list "/opt/deckhouse/bin/lsblk --version")) | nindent 2 }}

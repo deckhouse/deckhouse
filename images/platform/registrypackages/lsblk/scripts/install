@@ -27,8 +27,5 @@ install_files() {
     done' _ "$2" {} +)
 }
 
-mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
-if [ -d opt/deckhouse/lib ]; then
-  install_files opt/deckhouse/lib /opt/deckhouse/lib || exit 1
-fi
+mkdir -p /opt/deckhouse/bin
 install_files opt/deckhouse/bin /opt/deckhouse/bin || exit 1

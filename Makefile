@@ -490,7 +490,6 @@ update-container-factory: ## Download container-factory digests and update candi
 	} > alt_base_images.yml; \
 	rm -f .alt_base_images.full.yml .alt_base_images.prev.yml; \
 	cd ..; \
-	$(MAKE) render-workflow; \
 	echo "Updated candi/alt_base_images.yml to version $$ver"
 
 ##@ Build

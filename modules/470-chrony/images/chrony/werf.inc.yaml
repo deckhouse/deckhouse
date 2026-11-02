@@ -25,7 +25,7 @@ import:
   before: install
 shell:
   beforeInstall:
-  - pm install automake autoconf libtool build-base bison asciidoctor libcap-devel libucontext linux-headers
+  - pm install automake autoconf libtool build-base bison asciidoctor libcap-static libucontext linux-headers
   install:
   - cd /src
   - echo "{{ $version }}" > version.txt

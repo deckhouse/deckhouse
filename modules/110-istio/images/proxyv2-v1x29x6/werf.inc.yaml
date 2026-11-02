@@ -19,7 +19,7 @@
 # Based on https://github.com/istio/istio/blob/1.29.6/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.29.6/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
@@ -40,32 +40,8 @@ import:
   group: 1337
   after: setup
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
-  add: /out/lib64/libc.so.6
-  to: /lib64/libc.so.6
-  before: install
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
-  add: /out/lib64/libm.so.6
-  to: /lib64/libm.so.6
-  before: install
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
-  add: /out/lib64/librt.so.1
-  to: /lib64/librt.so.1
-  before: install
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
-  add: /out/lib64/libdl.so.2
-  to: /lib64/libdl.so.2
-  before: install
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
-  add: /out/lib64/libpthread.so.0
-  to: /lib64/libpthread.so.0
-  before: install
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
-  add: /out/lib64/libresolv.so.2
-  to: /lib64/libresolv.so.2
-  before: install
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
-  add: /out/lib64/ld-linux-x86-64.so.2
-  to: /lib64/ld-linux-x86-64.so.2
+  add: /out/usr/lib
+  to: /usr/lib
   before: install
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-iptables-links-artifact
   add: /relocate

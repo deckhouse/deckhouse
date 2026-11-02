@@ -79,7 +79,7 @@
   for f in $(find /opt/deckhouse/bin -type f); do
     interp="$(patchelf --print-interpreter "$f" 2>/dev/null || true)"
     if [ -n "$interp" ] && [ ! -e "/opt/deckhouse/lib/${interp##*/}" ]; then
-      cp -aL "{{ . }}/lib64/${interp##*/}" "/opt/deckhouse/lib/${interp##*/}"
+      cp -aL "$(find {{ . }} -name "${interp##*/}" | head -1)" "/opt/deckhouse/lib/${interp##*/}"
     fi
   done
 {{- end }}

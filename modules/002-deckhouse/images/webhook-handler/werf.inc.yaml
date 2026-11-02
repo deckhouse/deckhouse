@@ -8,36 +8,29 @@ import:
   The tools this image runs on used to come one by one from candi/base_images.yml —
   tools/bash, tools/jq, tools/sed, tools/grep, tools/gawk, tools/findutils,
   tools/semver, tools/yq, and tools/coreutils with a hundred and eight paths listed by
-  hand. They now come from container-factory in one artifact, and since pm builds all nine
-  of them statically there is no loader and no library to carry.
+  hand. They now come from container-factory through pm_binaries_artifact, which carries the
+  libraries of the dynamic ones next to them.
 
   tini is not among them: it was the entrypoint of the base image this one inherited, and
   nothing has run it since entrypoint.sh started exec'ing webhook-operator directly.
 
-  Of coreutils only the file and text tools are taken, which is what keeps the layer from
-  trebling: pm builds it static against glibc rather than musl, so all 103 binaries come
-  to 116 MB where the 38 kept are 31.
+  Of coreutils only the file and text tools are taken.
 */}}
-{{- /*
-  werf empties the destination before an import, and /usr/bin used to be written by two of
-  them: this artifact and python3 from the wheel artifact, both at the install stage. The
-  tools import is applied last and took python3 out, so every .py hook died on exec — the
-  kernel reports a missing shebang interpreter as "fork/exec ...: no such file or
-  directory" on a file that is plainly there. Listing the files through includePaths did
-  not change it: usr/bin/* is still read as the directory.
-
-  So /usr/bin has one source now. The python binaries are staged into the tools artifact
-  and come in with everything else; the wheel import below keeps the runtime, the libraries
-  and the loader, which live in directories nothing else writes.
-*/}}
-- from: {{ .ModuleName }}/{{ .ImageName }}-tools-artifact
-  add: /relocate/bin
-  to: /bin
+- from: {{ .ModuleName }}/{{ .ImageName }}-pm-artifact
+  add: /relocate-pm
+  to: /
   before: install
-- from: {{ .ModuleName }}/{{ .ImageName }}-tools-artifact
-  add: /relocate/usr/bin
-  to: /usr/bin
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+  add: /
+  to: /
   before: install
+  includePaths:
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/lib*.so*
+  excludePaths:
+  - usr/lib/python*/site-packages/pip-25.3*
+  - usr/lib/python*/test
 {{- /*
   Only the hook frameworks are taken from the shell-operator checkout. The binary used to
   come with them, and so did the Go build that produced it, but nothing runs it: the line
@@ -79,17 +72,6 @@ import:
   add: /webhook-operator
   to: /
   before: setup
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-  add: /
-  to: /
-  before: install
-  includePaths:
-  - lib/ld-musl-x86_64*
-  - usr/lib/python3*
-  - usr/lib/lib*.so*
-  excludePaths:
-  - usr/lib/python*/site-packages/pip-25.3*
-  - usr/lib/python*/test
 {{- include "image mount points" . }}
 git:
 - add: /{{ .ModulePath }}
@@ -165,7 +147,7 @@ shell:
     - chmod 755 /label-converter
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-from: {{ index $.Images "base/python-3.12" }}
+from: {{ index $.Images "builder/distroless" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
@@ -179,6 +161,8 @@ import:
   to: /wheels
   before: install
 shell:
+  beforeInstall:
+  - pm install python@3.12
   install:
   - pip3 install -f file:///wheels --no-index --upgrade pip
   - pip3 install -f file:///wheels --no-index -r /requirements.txt
@@ -218,94 +202,30 @@ git:
   - '**/*.mod'
   - '**/*.sum'
 ---
+{{- include "pm_binaries_artifact" (dict
+      "Images" $.Images
+      "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
+      "packages" "bash findutils gawk grep sed jq yq semver coreutils"
+      "binaries" (print
+        "/usr/bin/bash:/bin/bash"
+        " /usr/bin/find /usr/bin/xargs /usr/bin/awk /usr/bin/gawk"
+        " /usr/bin/egrep /usr/bin/fgrep /usr/bin/grep /usr/bin/pcre2grep /usr/bin/sed"
+        " /usr/bin/jq /usr/bin/yq /usr/bin/semver"
+        " /usr/bin/base64 /usr/bin/basename /usr/bin/cat /usr/bin/chmod /usr/bin/chown /usr/bin/cp"
+        " /usr/bin/cut /usr/bin/date /usr/bin/df /usr/bin/dirname /usr/bin/du /usr/bin/env"
+        " /usr/bin/expr /usr/bin/head /usr/bin/id /usr/bin/ln /usr/bin/ls /usr/bin/mkdir"
+        " /usr/bin/mktemp /usr/bin/mv /usr/bin/printf /usr/bin/pwd /usr/bin/readlink"
+        " /usr/bin/realpath /usr/bin/rm /usr/bin/rmdir /usr/bin/seq /usr/bin/sleep /usr/bin/sort"
+        " /usr/bin/stat /usr/bin/tail /usr/bin/tee /usr/bin/timeout /usr/bin/touch /usr/bin/tr"
+        " /usr/bin/truncate /usr/bin/uniq /usr/bin/wc /usr/bin/whoami")
+      "post" "ln -sf bash /relocate-pm/bin/sh") }}
 {{- /*
-  Everything the image needs besides its own binaries, in one artifact. pm builds all ten
-  statically, so what lands in /relocate is binaries and nothing else — no loader, no
-  libraries, no second runtime next to the musl python this image also carries.
-
+  What the hooks use of coreutils was read off the sources: cat, cut, base64, tr, date, id,
+  seq, sleep, cp and expr in the shell hooks and shell_lib, and nothing at all from the
+  python ones, which only shell out to kubectl. The rest of the list is the ordinary file
+  toolbox, kept because shell-operator's own hook framework is upstream and not visible
+  from here.
 */}}
-image: {{ .ModuleName }}/{{ .ImageName }}-tools-artifact
-final: false
-from: {{ index $.Images "builder/distroless" }}
-{{- /*
-  The python binaries pass through here on their way to the final image, so that its
-  /usr/bin is written by exactly one import. Only the binaries: the runtime under
-  /usr/lib/python3.12, the shared libraries and the musl loader go straight there, each
-  into a directory this artifact does not touch.
-*/}}
-import:
-- from: {{ .ModuleName }}/{{ .ImageName }}-wheel-artifact
-  add: /usr/bin
-  to: /python-bin
-  includePaths:
-  - python3*
-  before: install
-shell:
-  beforeInstall:
-  # -n, because without it pm consults the builder's own package index and skips whatever
-  # is already installed there.
-  - pm install -n bash findutils gawk grep sed jq yq semver -d /src
-  # coreutils goes to a tree of its own because only part of it is wanted; see below.
-  - pm install -n coreutils -d /coreutils
-  install:
-  - mkdir -p /relocate/bin /relocate/usr/bin
-  - cp -pr /src/usr/bin/. /relocate/usr/bin/
-  - mv /relocate/usr/bin/bash /relocate/bin/bash
-  {{- /*
-    Only the file and text tools the hooks reach for, not all 103 of coreutils. pm builds
-    it static against glibc, so every binary carries its own runtime: the whole package is
-    116 MB and the checksum family alone — cksum and the five sha*sum — is 40 MB of that.
-    Nothing here computes a digest in a shell hook.
-
-    What the hooks do use was read off the sources: cat, cut, base64, tr, date, id, seq,
-    sleep, cp and expr in the shell hooks and shell_lib, and nothing at all from the
-    python ones, which only shell out to kubectl. The rest of this list is the ordinary
-    file toolbox, kept because shell-operator's own hook framework is upstream and not
-    visible from here.
-  */}}
-  - |
-    set -eu
-    for b in base64 basename cat chmod chown cp cut date df dirname du env expr head id \
-             ln ls mkdir mktemp mv printf pwd readlink realpath rm rmdir seq sleep sort \
-             stat tail tee timeout touch tr truncate uniq wc whoami; do
-      if [ ! -f "/coreutils/usr/bin/$b" ]; then
-        echo "FATAL: coreutils no longer ships $b" >&2
-        exit 1
-      fi
-      cp -p "/coreutils/usr/bin/$b" /relocate/usr/bin/
-    done
-  # sh is the shell the hook frameworks are run with. The link is relative so that it
-  # resolves inside the artifact: werf drops a symlink it cannot follow.
-  - ln -sf bash /relocate/bin/sh
-  - |
-    set -eu
-    # Nothing here may be dynamic: this image has no glibc, and a binary needing one would
-    # fail the first time a hook called it rather than now.
-    pm install file findutils patchelf
-    for f in $(find /relocate -type f); do
-      if ! file "$f" | grep -q ELF; then
-        continue
-      fi
-      if patchelf --print-interpreter "$f" >/dev/null 2>&1; then
-        echo "FATAL: $f is dynamically linked and this image ships no loader" >&2
-        exit 1
-      fi
-    done
-    echo "tools-artifact: $(find /relocate -type f | wc -l) static binaries"
-  - chown -R 64535:64535 /relocate
-  {{- /*
-    After the check and after the chown: python3 is the one dynamic binary in here, and the
-    wheel import used to leave it owned by root.
-  */}}
-  - |
-    set -eu
-    cp -a /python-bin/. /relocate/usr/bin/
-    for b in python3 python3.12; do
-      if [ ! -e "/relocate/usr/bin/$b" ] && [ ! -L "/relocate/usr/bin/$b" ]; then
-        echo "FATAL: the wheel artifact no longer ships $b" >&2
-        exit 1
-      fi
-    done
 ---
 {{- /*
   Moved here from modules/000-common/images/shell-operator, which had this one importer.

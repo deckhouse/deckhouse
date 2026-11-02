@@ -38,7 +38,5 @@ shell:
   - pm install -n curl -d /src
   - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
   - cp -pr /src/usr/bin/curl /opt/deckhouse/bin/d8-curl
-  - cp -pr /src/usr/lib64/*.so* /opt/deckhouse/lib
   - cp -pr /src/usr/lib/*.so* /opt/deckhouse/lib
-  - cp -pr /src/lib64/*.so* /opt/deckhouse/lib
   {{- include "relocate_and_verify" (dict "smoke" (list "/opt/deckhouse/bin/d8-curl --version")) | nindent 2 }}

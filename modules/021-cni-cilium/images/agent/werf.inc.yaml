@@ -285,31 +285,31 @@ import:
   add: /etc/profile.d/bash_completion.sh
   to: /etc/bashrc.d/bash_completion.sh
 - from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/libm.so.6
+  add: /out/usr/lib/libm.so.6
   to: /usr/lib64/libm.so.6
   before: install
 - from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/libc.so.6
+  add: /out/usr/lib/libc.so.6
   to: /usr/lib64/libc.so.6
   before: install
 - from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/ld-linux-x86-64.so.2
+  add: /out/usr/lib/ld-linux-x86-64.so.2
   to: /usr/lib64/ld-linux-x86-64.so.2
   before: install
 - from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/libpthread.so.0
+  add: /out/usr/lib/libpthread.so.0
   to: /usr/lib64/libpthread.so.0
   before: install
 - from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/libresolv.so.2
+  add: /out/usr/lib/libresolv.so.2
   to: /usr/lib64/libresolv.so.2
   before: install
 - from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/librt.so.1
+  add: /out/usr/lib/librt.so.1
   to: /usr/lib64/librt.so.1
   before: install
 - from: {{ .ModuleName }}/glibc-artifact
-  add: /out/lib64/libdl.so.2
+  add: /out/usr/lib/libdl.so.2
   to: /usr/lib64/libdl.so.2
   before: install
 - from: {{ .ModuleName }}/glibc-artifact
@@ -561,7 +561,7 @@ shell:
 # New Main Agent Image (Distroless)
 ---
 image: {{ .ModuleName }}/agent-distroless
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: {{ .ModuleName }}/agent-binaries-artifact
   add: /relocate

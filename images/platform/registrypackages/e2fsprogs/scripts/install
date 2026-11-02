@@ -29,8 +29,7 @@ install_files() {
     done' _ "$2" {} +)
 }
 
-mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
-install_files opt/deckhouse/lib /opt/deckhouse/lib || exit 1
+mkdir -p /opt/deckhouse/bin
 install_files opt/deckhouse/bin /opt/deckhouse/bin || exit 1
 ln -sf /opt/deckhouse/bin/mke2fs /opt/deckhouse/bin/mkfs.ext4
 ln -sf /opt/deckhouse/bin/mke2fs /opt/deckhouse/bin/mkfs.ext3

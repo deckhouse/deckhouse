@@ -1,10 +1,8 @@
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ index $.Images "builder/distroless" }}
-final: false
-shell:
-  beforeInstall:
-  - pm install conntrack-tools -d /relocate
+{{- include "pm_binaries_artifact" (dict
+      "Images" $.Images
+      "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
+      "packages" "conntrack-tools coreutils"
+      "binaries" "/usr/sbin/conntrack /usr/sbin/conntrackd /usr/sbin/nfct /usr/bin/unlink") }}
 
   {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
@@ -13,10 +11,10 @@ shell:
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /relocate
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-pm-artifact
+  add: /relocate-pm
   to: /
   before: setup
 - from: common/kubernetes-artifact-{{ $image_version }}
@@ -24,6 +22,10 @@ import:
   to: /usr/local/bin/kube-proxy
   before: setup
 {{- include "image mount points" $ }}
+shell:
+  setup:
+  # prevent mounting to /usr/bin due to /sbin is a symlink to /usr/bin in a container
+  - /usr/bin/unlink /sbin
 imageSpec:
   config:
     entrypoint: ["/usr/bin/kube-proxy"]

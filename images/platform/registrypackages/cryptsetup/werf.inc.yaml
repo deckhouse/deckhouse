@@ -38,6 +38,4 @@ shell:
   - cp -pr /src/usr/sbin/veritysetup /opt/deckhouse/bin
   - cp -pr /src/usr/sbin/cryptsetup /opt/deckhouse/bin
   - cp -pr /src/usr/lib/*.so* /opt/deckhouse/lib
-  - cp -pr /src/usr/lib64/*.so* /opt/deckhouse/lib
-  - cp -pr /src/lib64/* /opt/deckhouse/lib
   {{- include "relocate_and_verify" (dict "smoke" (list "/opt/deckhouse/bin/cryptsetup --version" "/opt/deckhouse/bin/veritysetup --version" "/opt/deckhouse/bin/integritysetup --version")) | nindent 2 }}

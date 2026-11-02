@@ -67,6 +67,6 @@ from: {{ index $.Images "builder/distroless" }}
 final: false
 shell:
   beforeInstall:
-  - pm install coreutils -d /coreutils
+  - pm install coreutils-static-bin -d /coreutils
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

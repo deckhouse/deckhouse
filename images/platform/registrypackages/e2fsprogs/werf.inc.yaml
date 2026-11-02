@@ -35,9 +35,9 @@ shell:
   # -n, because without it pm consults the builder's own package index and skips whatever
   # is already installed there — glibc among it. The tree under /src would then come out
   # without its loader and the package would ship nothing that starts on a node.
-  - pm install -n e2fsprogs -d /src
-  - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
-  - cp -pr /src/usr/sbin/mke2fs /src/usr/sbin/fsck /src/usr/sbin/resize2fs /opt/deckhouse/bin
+  - pm install -n e2fsprogs-static-bin fsck-static-bin -d /src
+  - mkdir -p /opt/deckhouse/bin
+  - cp -pr /src/usr/bin/mke2fs /src/usr/bin/fsck /src/usr/bin/resize2fs /opt/deckhouse/bin
   # resize2fs has no invocation that exits 0 — it answers -V, -h and --version alike with
   # its usage and status 1 — so it is left to the library check, which loads it all the same.
-  {{- include "relocate_and_verify" (dict "resolve" "/src" "smoke" (list "/opt/deckhouse/bin/mke2fs -V" "/opt/deckhouse/bin/fsck -V")) | nindent 2 }}
+  {{- include "relocate_and_verify" (dict "smoke" (list "/opt/deckhouse/bin/mke2fs -V" "/opt/deckhouse/bin/fsck -V")) | nindent 2 }}

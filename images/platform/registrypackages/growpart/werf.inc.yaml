@@ -58,12 +58,12 @@ shell:
   # -n, because without it pm consults the builder's own package index and skips whatever
   # is already installed there — glibc among it. The tree under /pm would then come out
   # without its loader and the package would ship nothing that starts on a node.
-  - pm install -n util-linux -d /pm
-  - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
-  - cp -pr /pm/usr/sbin/fdisk /pm/usr/sbin/sfdisk /opt/deckhouse/bin
+  - pm install -n fdisk-static-bin sfdisk-static-bin -d /pm
+  - mkdir -p /opt/deckhouse/bin
+  - cp -pr /pm/usr/bin/fdisk /pm/usr/bin/sfdisk /opt/deckhouse/bin
   - cp -pr /src/cloud-utils/bin/growpart /opt/deckhouse/bin/growpart
   - chmod +x /opt/deckhouse/bin/growpart
   # growpart is a script, so the ELF checks below step over it and nothing else would
   # notice if the clone stopped putting it there.
   - test -x /opt/deckhouse/bin/growpart
-  {{- include "relocate_and_verify" (dict "resolve" "/pm" "smoke" (list "/opt/deckhouse/bin/fdisk -V" "/opt/deckhouse/bin/sfdisk -v")) | nindent 2 }}
+  {{- include "relocate_and_verify" (dict "smoke" (list "/opt/deckhouse/bin/fdisk -V" "/opt/deckhouse/bin/sfdisk -v")) | nindent 2 }}

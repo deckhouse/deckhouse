@@ -68,9 +68,9 @@ import:
 {{- end }}
 shell:
   beforeInstall:
-  # -n, because without it pm consults the builder's own package index and skips whatever
-  # is already installed there. The tree under /out would then come out without its loader
-  # and without the libraries the helpers below happen to share with the packages asked for.
+  # -n: without it this install writes /var/lib/pm of the builder, and the install of patchelf
+  # right below takes libc, coreutils and openssl for already installed and skips them, so
+  # patchelf cannot run, every binary looks static and no library gets staged.
   - pm install -n {{ required "pm_binaries_artifact needs packages" .packages }} -d /out
   - pm install coreutils gawk patchelf
   install:

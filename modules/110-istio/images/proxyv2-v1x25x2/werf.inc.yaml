@@ -14,7 +14,7 @@
 # Based on https://github.com/istio/istio/blob/1.25.2/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.25.2/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
@@ -35,16 +35,8 @@ import:
   group: 1337
   after: setup
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
-  add: /out/lib64/libc.so.6
-  to: /lib64/libc.so.6
-  before: install
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
-  add: /out/lib64/libm.so.6
-  to: /lib64/libm.so.6
-  before: install
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-glibc-artifact
-  add: /out/lib64/ld-linux-x86-64.so.2
-  to: /lib64/ld-linux-x86-64.so.2
+  add: /out/usr/lib
+  to: /usr/lib
   before: install
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-pm-artifact
   add: /relocate-pm
@@ -303,7 +295,7 @@ shell:
 {{- include "pm_binaries_artifact" (dict
       "Images" $.Images
       "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
-      "packages" "bash coreutils curl findutils grep iproute2"
+      "packages" "bash coreutils curl findutils grep iproute2-ss"
       "binaries" "/usr/bin/bash:/bin/bash /usr/bin/sh:/bin/sh /usr/bin/ss:/usr/sbin/ss /usr/bin/echo /usr/bin/sleep /usr/bin/wc /usr/bin/grep /usr/bin/xargs /usr/bin/curl"
       "post" (`mkdir -p "$out/sbin" /sbin
 # The targets live in the final image, not here, and werf drops a symlink it cannot

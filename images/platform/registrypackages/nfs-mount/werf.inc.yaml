@@ -40,8 +40,6 @@ shell:
   - mkdir -p /opt/deckhouse/bin /opt/deckhouse/lib
   # Only the four mount helpers. pm's sbin also carries key.dns_resolver and request-key,
   # which belong to the kernel keyring plumbing and which the install script never links.
-  - cp -pr /src/sbin/mount.nfs /src/sbin/mount.nfs4 /src/sbin/umount.nfs /src/sbin/umount.nfs4 /opt/deckhouse/bin
-  # The idmap backends are opened with dlopen, so no resolution reaches them.
-  - cp -pr /src/usr/lib/libnfsidmap /opt/deckhouse/lib
+  - cp -pr /src/usr/bin/mount.nfs /src/usr/bin/mount.nfs4 /src/usr/bin/umount.nfs /src/usr/bin/umount.nfs4 /opt/deckhouse/bin
   - find /opt/deckhouse/lib -type f \( -name "*.la" -o -name "*.a" \) -delete
   {{- include "relocate_and_verify" (dict "resolve" "/src" "smoke" (list "/opt/deckhouse/bin/mount.nfs -V" "/opt/deckhouse/bin/mount.nfs4 -V")) | nindent 2 }}

@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: {{ .ModuleName }}/{{ .ImageName }}-pm-artifact
   add: /relocate-pm
@@ -22,6 +22,10 @@ import:
   to: /relocate
   before: setup
 {{- include "image mount points" . }}
+shell:
+  setup:
+  # prevent mounting to /usr/bin due to /sbin is a symlink to /usr/bin in a container
+  - /usr/bin/unlink /sbin
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
 final: false
@@ -47,4 +51,4 @@ shell:
       "Images" $.Images
       "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
       "packages" "bash coreutils"
-      "binaries" "/usr/bin/bash:/bin/bash /usr/bin/rm /usr/bin/cp") }}
+      "binaries" "/usr/bin/bash:/bin/bash /usr/bin/rm /usr/bin/cp /usr/bin/unlink") }}

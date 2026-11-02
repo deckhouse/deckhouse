@@ -1,7 +1,11 @@
-{{- $csiBins := list "chmod" "mkdir" "rmdir" "mount" "umount" "findmnt" "lsblk" }}
-{{- $csiSbins := list "blkid" "blkdiscard" "blockdev" "dumpe2fs" "e2fsck" "e2label" "findfs" "fstrim" "fsck" "fsck.ext2" "fsck.ext3" "fsck.ext4" "fsck.xfs" "mke2fs" "mkfs" "mkfs.ext2" "mkfs.ext3" "mkfs.ext4" "mkfs.xfs" "resize2fs" "parted" "xfs_growfs" "xfs_repair" }}
-{{- /* shared libraries needed by the tools above (readelf NEEDED closure) + libparted fs plugin loaded via dlopen; glibc itself (ld-linux, libc, libm) comes with lib64 */}}
-{{- $csiLibs := list "libblkid" "libcom_err" "libdevmapper" "libe2p" "libext2fs" "libmount" "libncursesw" "libparted" "libparted-fs-resize" "libreadline" "libsmartcols" "libtinfo" "libuuid" }}
+{{- $csiFilter := list
+      "/usr/bin/chmod" "/usr/bin/mkdir" "/usr/bin/rmdir" "/usr/bin/mount" "/usr/bin/umount" "/usr/bin/findmnt" "/usr/bin/lsblk"
+      "/usr/sbin/blkid" "/usr/sbin/blkdiscard" "/usr/sbin/blockdev" "/usr/sbin/dumpe2fs" "/usr/sbin/e2fsck" "/usr/sbin/e2label"
+      "/usr/sbin/findfs" "/usr/sbin/fstrim" "/usr/sbin/fsck" "/usr/sbin/fsck.ext2" "/usr/sbin/fsck.ext3" "/usr/sbin/fsck.ext4"
+      "/usr/sbin/mke2fs" "/usr/sbin/mkfs" "/usr/sbin/mkfs.ext2" "/usr/sbin/mkfs.ext3" "/usr/sbin/mkfs.ext4" "/usr/sbin/resize2fs"
+      "/usr/sbin/parted"
+      "/usr/bin/fsck.xfs" "/usr/bin/mkfs.xfs" "/usr/bin/xfs_growfs" "/usr/bin/xfs_repair"
+      "/usr/lib/libparted-fs-resize.so.0" }}
 {{- $version_map := include "get_oss_version_map_by_id_and_condition_key" (list "csi-aws" "k8s" $) | fromYaml }}
 {{- range $key, $value := $version_map }}
   {{- $image_version := toString $key | replace "." "-" }}
@@ -20,21 +24,10 @@ import:
   add: /aws-ebs-csi-driver
   to: /bin/aws-ebs-csi-driver
   before: setup
-- from: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /out
+- from: {{ $.ModuleName }}/{{ $.ImageName }}-pm-artifact
+  add: /relocate-pm
   to: /
   before: install
-  includePaths:
-  - lib64
-{{- range $csiLibs }}
-  - usr/lib*/{{ . }}.so*
-{{- end }}
-{{- range $csiBins }}
-  - usr/bin/{{ . }}
-{{- end }}
-{{- range $csiSbins }}
-  - usr/sbin/{{ . }}
-{{- end }}
 imageSpec:
   config:
     entrypoint: ["/bin/aws-ebs-csi-driver"]
@@ -88,10 +81,8 @@ shell:
   - chmod 0755 /aws-ebs-csi-driver
  {{- end }}
 {{- end }}
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-final: false
-from: {{ index $.Images "builder/distroless" }}
-shell:
-  beforeInstall:
-  - pm install coreutils e2fsprogs xfsprogs util-linux parted libc -d /out
+{{- include "pm_binaries_artifact" (dict
+      "Images" $.Images
+      "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
+      "packages" "coreutils e2fsprogs xfsprogs util-linux parted"
+      "binaries" (join " " $csiFilter)) }}

@@ -41,4 +41,4 @@ shell:
   - pm install -n yq -d /src
   - mkdir -p /opt/deckhouse/bin
   - cp -pr /src/usr/bin/yq /opt/deckhouse/bin
-  {{- include "relocate_and_verify" (dict "resolve" "/src" "smoke" (list "/opt/deckhouse/bin/yq --version")) | nindent 2 }}
+  {{- include "relocate_and_verify" (dict "smoke" (list "/opt/deckhouse/bin/yq --version")) | nindent 2 }}
