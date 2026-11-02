@@ -489,10 +489,9 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 
 	// `istioNetworkName` is `len(clusterDomain) + 19` at worst and nothing bounds
 	// clusterDomain: ClusterConfiguration gives it no maxLength and the discovery values
-	// schema only constrains its charset. Ambient multicluster is the first thing to put
-	// the derived value in a label, on the d8-istio namespace, so it is the first thing
-	// that breaks - and it breaks by making the namespace unapplicable, which takes the
-	// whole module with it.
+	// schema only constrains its charset. Elsewhere an invalid name is simply left out of
+	// the d8-istio namespace label and ztunnel, but ambient multicluster cannot work
+	// without them, so it refuses to render instead of silently running with no network.
 	Context("Ambient multicluster is enabled on a cluster with a long cluster domain", func() {
 		BeforeEach(func() {
 			setUpAmbientMulticluster(f)
@@ -510,9 +509,8 @@ var _ = Describe("Module :: istio :: helm template :: ambient multicluster", fun
 		})
 	})
 
-	// The same cluster domain is fine with the feature off: there the network name is only
-	// ever an env var or a JSON field, so failing the render would break an install that
-	// works today.
+	// The same cluster domain is fine with the feature off: the network name is left out of
+	// the labels, so failing the render would break an install that works today.
 	Context("A long cluster domain without ambient multicluster", func() {
 		BeforeEach(func() {
 			setUpAmbientMulticluster(f)
@@ -889,12 +887,15 @@ yandex.cpi.flant.com/listener-subnet-id: ambient-123
 			// AMBIENT_ENABLE_MULTI_NETWORK in particular would change sidecar behaviour: it
 			// removes istiod's "no gateway means directly reachable" fallback.
 			Expect(istiodEnv(f, "v1x29", "AMBIENT_ENABLE_MULTI_NETWORK")).To(BeEmpty())
+
+			// The network itself does not depend on the mode.
 			Expect(f.KubernetesGlobalResource("Namespace", "d8-istio").
-				Field(`metadata.labels.topology\.istio\.io/network`).Exists()).To(BeFalse())
+				Field(`metadata.labels.topology\.istio\.io/network`).String()).To(Equal(expectedNetworkName))
 
 			ztunnel := f.KubernetesResource("DaemonSet", "d8-istio", "ztunnel")
 			Expect(ztunnel.Exists()).To(BeTrue())
-			Expect(containerEnv(ztunnel.Field("spec.template.spec.containers").Array()[0], "NETWORK")).To(BeEmpty())
+			Expect(containerEnv(ztunnel.Field("spec.template.spec.containers").Array()[0], "NETWORK")).
+				To(Equal(expectedNetworkName))
 
 			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x29").
 				Field("data.mesh").String()).ToNot(ContainSubstring("serviceScopeConfigs"))

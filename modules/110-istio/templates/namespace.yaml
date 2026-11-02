@@ -7,7 +7,9 @@
 }}
 {{- if include "istioAmbientMulticlusterEnabled" . }}
   {{- $_ := include "istioAssertNetworkNameIsLabelValue" . }}
-  {{- $_ = set $namespaceLabels "topology.istio.io/network" (include "istioNetworkName" .) }}
+{{- end }}
+{{- with include "istioNetworkLabel" . }}
+  {{- $_ := set $namespaceLabels "topology.istio.io/network" . }}
 {{- end }}
 ---
 apiVersion: v1
