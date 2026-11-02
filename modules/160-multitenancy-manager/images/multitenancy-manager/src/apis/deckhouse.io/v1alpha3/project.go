@@ -391,7 +391,13 @@ func (p *Project) IsVirtual() bool {
 	if p.Spec.ProjectTemplateName == VirtualProjectTemplateName {
 		return true
 	}
-	return p.Labels[ProjectLabelVirtualProject] == "true" && (p.Name == DefaultProjectName || p.Name == DeckhouseProjectName)
+	return p.Labels[ProjectLabelVirtualProject] == "true" && IsVirtualProjectName(p.Name)
+}
+
+// IsVirtualProjectName reports whether the name is one of the platform's virtual projects. A namespace
+// of that name cannot become a project of its own: the Project of the name is the virtual one.
+func IsVirtualProjectName(name string) bool {
+	return name == DefaultProjectName || name == DeckhouseProjectName
 }
 
 func (p *Project) SetState(state string) {

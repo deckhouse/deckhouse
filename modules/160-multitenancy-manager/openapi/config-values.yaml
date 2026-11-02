@@ -6,6 +6,8 @@ properties:
     description: |
       Whether namespaces can be created directly, outside a Project.
 
+      The parameter decides only who creates namespaces directly. Whatever its value, the controller turns every namespace that is not a system one into a project of its own.
+
       If `true`, anyone allowed to create namespaces can create one directly (`d8 k create namespace`), and the controller turns such a namespace into a project of its own (see [Automatic project creation for namespaces](./#automatic-project-creation-for-namespaces)).
 
       If `false`, users create environments as Project objects, and additional namespaces of a project as ProjectNamespace objects. Only cluster administrators (the `system:masters` group and `system:sudouser`), Deckhouse, the module controller and system components create namespaces directly; the full list is in [Who bypasses admission](usage.html#who-bypasses-admission). Anyone can create the `default` namespace. The check is a ValidatingAdmissionPolicy that the API server evaluates itself, so it does not depend on the module controller being available.

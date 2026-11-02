@@ -108,6 +108,13 @@ func (m *Manager) Adopt(ctx context.Context, namespace *corev1.Namespace) (ctrl.
 	if !namespace.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, nil
 	}
+	// The Project of that name is the virtual one, which has no namespace of its own: the namespace
+	// can never get a project, and a retry would not change that. Nothing is written to the
+	// namespace, as no project is going to own it.
+	if v1alpha3.IsVirtualProjectName(namespace.Name) {
+		m.logger.Info("the namespace is named like a virtual project, so no project of its own can be made for it, create the namespace again under another name", "namespace", namespace.Name)
+		return ctrl.Result{}, nil
+	}
 	if delay := helm.StampHoldoff(namespace); delay > 0 {
 		return ctrl.Result{RequeueAfter: delay}, nil
 	}

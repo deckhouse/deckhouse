@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -117,6 +118,38 @@ func TestAdopt_OldNamespaceAdoptsImmediately(t *testing.T) {
 	updated := new(corev1.Namespace)
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
 	assert.Equal(t, helm.ManagedByHelm, updated.Labels[helm.ResourceLabelManagedBy])
+}
+
+// A namespace named like a virtual project has no project to be adopted into: the Project of that name
+// is the virtual one. Adopt says so, leaves the namespace as it is and does not ask for a retry.
+func TestAdopt_NamespaceNamedLikeVirtualProjectIsLeftAlone(t *testing.T) {
+	for _, name := range []string{v1alpha3.DeckhouseProjectName, v1alpha3.DefaultProjectName} {
+		t.Run(name, func(t *testing.T) {
+			ns := namespace(name, nil, nil)
+			virtual := project(name, map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"}, v1alpha3.VirtualProjectTemplateName)
+			m, c := newManager(t, ns, virtual)
+			var logged []string
+			m.logger = funcr.New(func(prefix, args string) { logged = append(logged, prefix+args) }, funcr.Options{})
+
+			res, err := m.Adopt(context.Background(), ns)
+			require.NoError(t, err)
+			assert.Zero(t, res, "a retry would change nothing")
+
+			require.Len(t, logged, 1)
+			assert.Contains(t, logged[0], "named like a virtual project")
+			assert.Contains(t, logged[0], name)
+
+			got := new(corev1.Namespace)
+			require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: name}, got))
+			assert.Equal(t, ns.Labels, got.Labels, "no project owns the namespace, so Helm is not handed it")
+			assert.Empty(t, got.Annotations[helm.ResourceAnnotationReleaseName])
+
+			projects := new(v1alpha3.ProjectList)
+			require.NoError(t, c.List(context.Background(), projects))
+			require.Len(t, projects.Items, 1)
+			assert.Equal(t, virtual.Spec, projects.Items[0].Spec)
+		})
+	}
 }
 
 func TestAdopt_CreatesFullProject(t *testing.T) {

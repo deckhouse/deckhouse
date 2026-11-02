@@ -25,11 +25,13 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -40,13 +42,17 @@ import (
 
 	"controller/apis/deckhouse.io/v1alpha3"
 	namespacemanager "controller/internal/manager/namespace"
-	projectmanager "controller/internal/manager/project"
 	"controller/internal/namespaces"
 	"controller/internal/startup"
 )
 
 const (
 	controllerName = "d8-namespace-controller"
+
+	// maxRetryDelay caps the delay before a namespace whose adoption failed is tried again. The default
+	// backoff of a controller grows to minutes, and a namespace stays out of its project, raising
+	// D8NamespaceNotAdopted, that long after what refused the adoption is gone.
+	maxRetryDelay = 30 * time.Second
 
 	// upmeterNamespacePrefix covers canary / probe namespaces that are not all
 	// covered by namespaces.IsSystem (that helper only knows upmeter-probe-namespace-).
@@ -63,16 +69,8 @@ func Register(runtimeManager manager.Manager, logger logr.Logger, migration *sta
 
 	r.init.Add(1)
 
-	namespaceController, err := controller.New(controllerName, runtimeManager, controller.Options{
-		Reconciler:              r,
-		MaxConcurrentReconciles: namespacemanager.WorkLimit,
-	})
-	if err != nil {
-		return fmt.Errorf("create namespace controller: %w", err)
-	}
-
 	// init namespace manager
-	if err = runtimeManager.Add(manager.RunnableFunc(func(ctx context.Context) error {
+	if err := runtimeManager.Add(manager.RunnableFunc(func(ctx context.Context) error {
 		return retry.OnError(
 			wait.Backoff{
 				Steps:    10,
@@ -92,11 +90,33 @@ func Register(runtimeManager manager.Manager, logger logr.Logger, migration *sta
 		return fmt.Errorf("init namespace manager: %w", err)
 	}
 
+	if err := runtimeManager.Add(newNotAdoptedReporter(runtimeManager.GetClient(), r.logger)); err != nil {
+		return fmt.Errorf("add the report of the namespaces not adopted: %w", err)
+	}
+
+	// One controller runs the queue, so its options are the ones that apply: the builder makes a
+	// controller of its own around whatever reconciler it is given.
 	r.logger.Info("initialize namespace controller")
 	return ctrl.NewControllerManagedBy(runtimeManager).
+		Named(controllerName).
 		For(&corev1.Namespace{}).
 		WithEventFilter(customPredicate[client.Object]{logger: logger}).
-		Complete(namespaceController)
+		WithOptions(controllerOptions()).
+		Complete(r)
+}
+
+// controllerOptions are the options of the namespace controller.
+func controllerOptions() controller.Options {
+	return controller.Options{MaxConcurrentReconciles: namespacemanager.WorkLimit, RateLimiter: retryLimiter()}
+}
+
+// retryLimiter is the default rate limiter of a controller with the delay of one namespace capped at
+// maxRetryDelay.
+func retryLimiter() workqueue.TypedRateLimiter[reconcile.Request] {
+	return workqueue.NewTypedMaxOfRateLimiter(
+		workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](5*time.Millisecond, maxRetryDelay),
+		&workqueue.TypedBucketRateLimiter[reconcile.Request]{Limiter: rate.NewLimiter(rate.Limit(10), 100)},
+	)
 }
 
 var _ reconcile.Reconciler = &reconciler{}
@@ -148,7 +168,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 // isAdoptionCandidate reports whether a namespace has to be turned into a project of its own.
 func isAdoptionCandidate(obj metav1.Object) bool {
 	name := obj.GetName()
-	if name == projectmanager.DefaultProjectName {
+	// The Project named like the namespace is the virtual one, which lists the namespaces of the
+	// platform: the namespace cannot become a project of its own, so it is not reported as waiting for
+	// adoption either. The namespace-adoption policy refuses to create one named deckhouse.
+	if v1alpha3.IsVirtualProjectName(name) {
 		return false
 	}
 	if len(name) > v1alpha3.ProjectNameMaxLength {

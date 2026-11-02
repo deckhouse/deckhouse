@@ -3033,6 +3033,34 @@ alerts:
         Module {{ $labels.module }} is running {{ $labels.majorReleaseDepth }} major versions behind.
       severity: "9"
       markupFormat: markdown
+    - name: D8NamespaceNotAdopted
+      sourceFile: modules/160-multitenancy-manager/monitoring/prometheus-rules/namespace-adoption.yaml
+      moduleUrl: 160-multitenancy-manager
+      module: multitenancy-manager
+      edition: ce
+      description: |-
+        Namespace `{{ $labels.target_namespace }}` was created directly more than 10 minutes ago and is still not a project. The multitenancy-manager controller turns every namespace outside the system ones into a project of its own within seconds, whatever the `allowNamespacesWithoutProjects` parameter says. Until it does, the objects created in the namespace skip the checks of a project: the availability of cluster-wide resources, the project template with its network and pod security policies, and the quota.
+
+        The controller has no leader, fails to adopt the namespace, or has adopted it into a Project that does not reconcile. Check its pods and logs:
+
+        ```bash
+        d8 k -n d8-multitenancy-manager get pods
+        d8 k -n d8-multitenancy-manager logs deploy/multitenancy-manager -c multitenancy-manager --tail=200 | grep {{ $labels.target_namespace }}
+        ```
+
+        If the controller fails to adopt the namespace, it tries again with a delay of up to 30 seconds, so the namespace becomes a project and the alert resolves soon after the cause is gone, for example an admission policy or webhook that refuses the Project. Once the controller adopts the namespace, check the objects created in it in the meantime.
+
+        If a Project named like the namespace exists already, the controller takes the adoption as done and does not try again, and the logs of the namespace controller show nothing. The project may be in `Error`, for example with the `HelmOwnership` condition when the namespace belongs to another Helm release, and then it never labels the namespace: until the conflict is removed, this Project is not updated at all. Check the project:
+
+        ```bash
+        d8 k get project {{ $labels.target_namespace }} -o jsonpath='{.status.state}{"\n"}{range .status.conditions[*]}{.type}={.status} {.reason}: {.message}{"\n"}{end}'
+        ```
+
+        Remove the cause the condition names, for example the foreign release or its `meta.helm.sh/*` annotations on the namespace, and the project labels the namespace. This also happens to the namespaces that existed before the upgrade.
+      summary: |
+        Namespace {{ $labels.target_namespace }} belongs to no project.
+      severity: "6"
+      markupFormat: markdown
     - name: D8NeedDecreaseEtcdQuotaBackendBytes
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
       moduleUrl: 040-control-plane-manager

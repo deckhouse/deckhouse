@@ -84,7 +84,11 @@ Users can still create namespaces directly (`d8 k create namespace`), unless the
 * the project parameters are filled in from the current state of the namespace, so adopting it changes nothing inside;
 * from then on the project is the source of truth and is edited like any other. The namespace cannot be deleted directly: to remove the environment, delete the Project, and its namespace is deleted with it.
 
-System namespaces (`d8-*`, `kube-*`, `upmeter-*`, `default`, and anything labeled `heritage: deckhouse` or `heritage: upmeter`) are never adopted: they are listed on the virtual `deckhouse` project (except `default`). There is no label that leaves a user namespace without a project. A namespace whose name is longer than 61 characters is also skipped: that is the Project name limit.
+System namespaces (`d8-*`, `kube-*`, `upmeter-*`, `default`, and anything labeled `heritage: deckhouse` or `heritage: upmeter`) are never adopted: they are listed on the virtual `deckhouse` project (except `default`).
+No label leaves a new user namespace without a project: users cannot put the `heritage: upmeter` label on a namespace, and only the module sets the `projects.deckhouse.io/project` label.
+A namespace whose name is longer than 61 characters (the Project name limit) is also skipped, and so is a namespace named `deckhouse`: a Project of that name is the virtual project.
+
+Users cannot create a namespace that could not become a project ([see details](usage.html#creating-a-project-automatically-for-a-namespace)).
 
 ### Isolating a project
 

@@ -82,5 +82,5 @@ func isVirtualInventory(p *v1alpha3.Project) bool {
 	if p.IsVirtual() {
 		return true
 	}
-	return p.Name == DeckhouseProjectName || p.Name == DefaultProjectName
+	return v1alpha3.IsVirtualProjectName(p.Name)
 }

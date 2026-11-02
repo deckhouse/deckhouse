@@ -1,0 +1,65 @@
+{{- /*
+  Every namespace that is not a system one becomes a project: the controller adopts a namespace someone
+  created directly, whatever allowNamespacesWithoutProjects says. A few kinds of namespaces are left out
+  of the adoption, and this policy keeps a writer from creating one of them to stay outside every
+  project: a name longer than 61 characters, the longest name of a project and so of its main
+  namespace; the upmeter- prefix and the heritage: upmeter label, which mark the probe namespaces of the
+  upmeter agent; the name deckhouse, which is the name of the virtual project, so that a project cannot
+  be created around such a namespace. The name default is not reserved: the API server creates that
+  namespace itself. The d8- and kube- prefixes and heritage: deckhouse are kept to Deckhouse by the
+  policies of the deckhouse module. The policy is on whatever the parameter says, with the writers of
+  the namespace-creation policy left out, the upmeter agent among them.
+*/ -}}
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $policyName := "d8-multitenancy-manager-namespace-adoption" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   [""]
+        apiVersions: ["v1"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["namespaces"]
+  matchConditions:
+    - name: exclude-system-writers
+      expression: >-
+        request.userInfo.username != "system:apiserver"
+        && request.userInfo.username != "system:sudouser"
+        && request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
+        && request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
+        && request.userInfo.username != "system:serviceaccount:d8-upmeter:upmeter-agent"
+        && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:masters" || g == "system:nodes")
+  variables:
+    - name: upmeterHeritage
+      expression: 'has(object.metadata.labels) && "heritage" in object.metadata.labels && object.metadata.labels["heritage"] == "upmeter"'
+    - name: hadUpmeterHeritage
+      expression: 'oldObject != null && has(oldObject.metadata.labels) && "heritage" in oldObject.metadata.labels && oldObject.metadata.labels["heritage"] == "upmeter"'
+  validations:
+    - expression: 'request.operation != "CREATE" || size(object.metadata.name) <= 61'
+      reason: Forbidden
+      message: 'The name of a namespace is at most 61 characters long: every namespace outside the system ones becomes a project, and the name of a project is at most 61 characters long.'
+    - expression: 'request.operation != "CREATE" || !object.metadata.name.startsWith("upmeter-")'
+      reason: Forbidden
+      message: 'The upmeter- prefix is reserved for the probe namespaces of the upmeter module.'
+    - expression: 'request.operation != "CREATE" || object.metadata.name != "deckhouse"'
+      reason: Forbidden
+      message: 'The name deckhouse is reserved for the virtual project that lists the system namespaces: a namespace of that name cannot become a project of its own.'
+    - expression: '!variables.upmeterHeritage || variables.hadUpmeterHeritage'
+      reason: Forbidden
+      message: 'The heritage: upmeter label is reserved for the probe namespaces of the upmeter module.'
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "multitenancy-manager")) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+{{- end }}
