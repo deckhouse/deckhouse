@@ -358,6 +358,178 @@ func TestOpenstackPortsRenderedForAllNetworks(t *testing.T) {
 		"machine-level securityGroups must stay absent when no SG is configured in InstanceClass or provider")
 }
 
+func TestOpenstackRootVolumeAZOmittedWhenCinderZoneMissing(t *testing.T) {
+	fixture := fixtureByName(t, "openstack")
+	contract := loadContract(t, fixture.contractPath)
+
+	// Nova AZ (parityZone) is not among Cinder's AZs — the Selectel / zVirt-max case.
+	fixture.providerConfig = deepCopySpec(t, fixture.providerConfig)
+	fixture.providerConfig["volumeAvailabilityZones"] = []any{"nova"}
+
+	obj, err := renderV2Spec(fixture, contract, fixture.instanceClass)
+	require.NoError(t, err)
+
+	rootVolume, ok := obj["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["rootVolume"].(map[string]any)
+	require.True(t, ok, "rootVolume must still be emitted — rootDiskSize is set in the fixture")
+
+	_, azPresent := rootVolume["availabilityZone"]
+	assert.False(t, azPresent,
+		"rootVolume.availabilityZone must be omitted when the Machine's zone is not in Cinder's AZ set; "+
+			"keeping it would reproduce the 'Availability zone … is invalid' HTTP 400 from Cinder")
+
+	// And the inverse: when Cinder exposes the Machine's zone, the block is emitted
+	// (same path as the main parity fixture; asserted here to catch a regression that would make
+	// the two branches indistinguishable).
+	fixture.providerConfig["volumeAvailabilityZones"] = []any{parityZone}
+	obj, err = renderV2Spec(fixture, contract, fixture.instanceClass)
+	require.NoError(t, err)
+	rootVolume = obj["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["rootVolume"].(map[string]any)
+	az, ok := rootVolume["availabilityZone"].(map[string]any)
+	require.True(t, ok, "rootVolume.availabilityZone must be emitted when the Machine's zone is in Cinder's AZ set")
+	assert.Equal(t, "Machine", az["from"])
+}
+
+// TestOpenstackRootVolumeAZKeptWhenCinderZonesUnknown pins the "do no harm on upgrade" half of
+// the gating fix. A missing or empty .provider.volumeAvailabilityZones means the discoverer has
+// not published the list yet — not that Cinder knows no zones. On a cluster still running an
+// older discoverer image, or on the first reconcile right after the deckhouse controller rolls,
+// the registration secret has no volumeAvailabilityZones key, and the template must behave the
+// way it did before this change: emit rootVolume.availabilityZone unchanged. Otherwise every
+// pre-existing CloudEphemeral node on an unrelated cloud would roll on upgrade to a shape that
+// omits the AZ, which is both unnecessary (nothing was broken for them) and churny (fleet-wide
+// recreate).
+func TestOpenstackRootVolumeAZKeptWhenCinderZonesUnknown(t *testing.T) {
+	fixture := fixtureByName(t, "openstack")
+	contract := loadContract(t, fixture.contractPath)
+
+	for _, tc := range []struct {
+		name  string
+		apply func(providerConfig map[string]any)
+	}{
+		{
+			name: "field absent",
+			apply: func(p map[string]any) {
+				delete(p, "volumeAvailabilityZones")
+			},
+		},
+		{
+			name: "field empty",
+			apply: func(p map[string]any) {
+				p["volumeAvailabilityZones"] = []any{}
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := fixture
+			f.providerConfig = deepCopySpec(t, fixture.providerConfig)
+			tc.apply(f.providerConfig)
+
+			obj, err := renderV2Spec(f, contract, f.instanceClass)
+			require.NoError(t, err)
+
+			rootVolume, ok := obj["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["rootVolume"].(map[string]any)
+			require.True(t, ok, "rootVolume must be emitted — rootDiskSize is set in the fixture")
+
+			az, ok := rootVolume["availabilityZone"].(map[string]any)
+			require.True(t, ok,
+				"availabilityZone must be emitted when volumeAvailabilityZones is %s — treating a "+
+					"missing list as 'no information' keeps clusters on an older discoverer "+
+					"rendering the exact same object as before this fix", tc.name)
+			assert.Equal(t, "Machine", az["from"])
+		})
+	}
+}
+
+// TestOpenstackVolumeTypeMapIgnoredWithoutRootDiskSize guards the one combination of fields that
+// would be silently wrong: setting volumeTypeMap on an InstanceClass that has no rootDiskSize.
+// Without rootDiskSize the root volume is local to the hypervisor (not a BFV Cinder volume), so
+// Cinder is not involved and no volume type is ever picked. If the template emitted spec.rootVolume
+// just because volumeTypeMap is present, CAPO would create a Cinder volume the user never asked
+// for and attach a different disk layout than their flavor describes. Keep the volumeTypeMap
+// handling strictly inside the rootDiskSize branch — only there does the field have meaning.
+func TestOpenstackVolumeTypeMapIgnoredWithoutRootDiskSize(t *testing.T) {
+	fixture := fixtureByName(t, "openstack")
+	contract := loadContract(t, fixture.contractPath)
+
+	spec := deepCopySpec(t, fixture.instanceClass)
+	delete(spec, "rootDiskSize")
+	spec["volumeTypeMap"] = map[string]any{
+		parityZone: "fast." + parityZone,
+	}
+
+	obj, err := renderV2Spec(fixture, contract, spec)
+	require.NoError(t, err)
+
+	_, present := obj["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["rootVolume"]
+	assert.False(t, present,
+		"spec.rootVolume must not be emitted when rootDiskSize is unset, even if volumeTypeMap is "+
+			"present — without BFV there is no Cinder volume to type, and conjuring one would "+
+			"silently change the disk layout the user picked through flavor")
+}
+
+// TestOpenstackVolumeTypeMapRendersType pins the second half of the CloudEphemeral AZ fix:
+// OpenStackInstanceClass.spec.volumeTypeMap, the field-level analogue of the long-standing
+// OpenStackClusterConfiguration.nodeGroups[].volumeTypeMap for CloudPermanent. On clouds where
+// a Cinder volume_type is bound to a single AZ through extra_specs.volume_backend_name — a
+// standard multi-AZ pattern, Selectel's `fast.ru-3a` / `fast.ru-3b` is one well-known case —
+// omitting rootVolume.type is not enough: the Cinder default type still picks the wrong AZ.
+// The operator must name the type per zone, and the template must forward it.
+func TestOpenstackVolumeTypeMapRendersType(t *testing.T) {
+	fixture := fixtureByName(t, "openstack")
+	contract := loadContract(t, fixture.contractPath)
+
+	// Zone matches a map entry — type and AZ both get emitted.
+	spec := deepCopySpec(t, fixture.instanceClass)
+	spec["volumeTypeMap"] = map[string]any{
+		parityZone:   "fast." + parityZone,
+		"other-zone": "fast.other-zone",
+	}
+
+	obj, err := renderV2Spec(fixture, contract, spec)
+	require.NoError(t, err)
+
+	rootVolume, ok := obj["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["rootVolume"].(map[string]any)
+	require.True(t, ok, "rootVolume must be emitted — rootDiskSize is set in the fixture")
+
+	assert.Equal(t, "fast."+parityZone, rootVolume["type"],
+		"rootVolume.type must come from volumeTypeMap[.zone] — this is what makes Cinder accept the create "+
+			"on multi-AZ clouds where the default type is bound to one AZ")
+
+	az, ok := rootVolume["availabilityZone"].(map[string]any)
+	require.True(t, ok, "availabilityZone must be pinned to Machine when the operator chose the type explicitly")
+	assert.Equal(t, "Machine", az["from"])
+
+	// Priority: with the map set, the volumeAvailabilityZones gating MUST NOT override. Simulate
+	// an environment where the discoverer did not pick parityZone up (e.g. Selectel's Cinder
+	// list disagreeing with reality) — the map still wins.
+	fixture.providerConfig = deepCopySpec(t, fixture.providerConfig)
+	fixture.providerConfig["volumeAvailabilityZones"] = []any{"nova"} // parityZone deliberately absent
+
+	obj, err = renderV2Spec(fixture, contract, spec)
+	require.NoError(t, err)
+	rootVolume = obj["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["rootVolume"].(map[string]any)
+	assert.Equal(t, "fast."+parityZone, rootVolume["type"],
+		"volumeTypeMap must override the volumeAvailabilityZones gating — explicit operator intent wins")
+	az, ok = rootVolume["availabilityZone"].(map[string]any)
+	require.True(t, ok, "availabilityZone must stay pinned when the map covers this zone, regardless of discoverer")
+	assert.Equal(t, "Machine", az["from"])
+
+	// Map entry missing for this zone — fall back to the gating path. parityZone is not in
+	// volumeAvailabilityZones, so the AZ block must be omitted (TestOpenstackRootVolumeAZOmitted*
+	// covers the same branch without the map; here we verify the map's presence does not break it).
+	spec["volumeTypeMap"] = map[string]any{"different-zone": "fast.different-zone"}
+	obj, err = renderV2Spec(fixture, contract, spec)
+	require.NoError(t, err)
+	rootVolume = obj["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["rootVolume"].(map[string]any)
+	_, typePresent := rootVolume["type"]
+	assert.False(t, typePresent,
+		"rootVolume.type must not be emitted when volumeTypeMap has no entry for the Machine's zone")
+	_, azPresent := rootVolume["availabilityZone"]
+	assert.False(t, azPresent,
+		"availabilityZone must be omitted when neither the map nor volumeAvailabilityZones cover the zone — "+
+			"same fallback that avoids HTTP 400 from Cinder")
+}
+
 // TestProviderRenderParityOnEdgeSpecs runs both engines on the InstanceClass shapes a fixture
 // never has: only the CRD-required fields, and every optional field set to its zero value.
 //

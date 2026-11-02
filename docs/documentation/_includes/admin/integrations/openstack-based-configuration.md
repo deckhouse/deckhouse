@@ -443,6 +443,8 @@ Zones from other regions cannot be used.
 For details on configuring zones for CloudPermanent and CloudEphemeral nodes, see [How do I create NodeGroups in availability zones?](/modules/cloud-provider-openstack/faq.html#how-do-i-create-nodegroups-in-availability-zones) section.
 {% endalert %}
 
+If the instance class of the group sets the [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) parameter, the root disk is created in Cinder. In clouds where volume types are bound to availability zones, set the volume type for each zone in the [`volumeTypeMap`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-volumetypemap) parameter of the OpenStackInstanceClass resource. Otherwise, provisioning a node in a zone where the default volume type is unavailable fails with the `HTTP 400 Availability zone '…' is invalid` error.
+
 {% alert level="warning" %}
 When the module settings are changed, **existing Machine objects in the cluster are NOT recreated**
 (new Machine objects will use the updated parameters).

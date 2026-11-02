@@ -435,6 +435,8 @@ d8 system edit provider-cluster-configuration
 Подробнее о настройке зон для узлов типов CloudPermanent и CloudEphemeral — [в разделе «Как создать NodeGroup в зонах доступности?»](/modules/cloud-provider-openstack/faq.html#как-создать-nodegroup-в-зонах-доступности).
 {% endalert %}
 
+Если в инстанс-классе группы задан параметр [`rootDiskSize`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize), root-диск создаётся в Cinder. В облаках, где типы дисков привязаны к зонам доступности, укажите тип диска для каждой зоны в параметре [`volumeTypeMap`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-volumetypemap) ресурса OpenStackInstanceClass. Иначе заказ узла в зоне, где тип диска по умолчанию недоступен, завершается ошибкой `HTTP 400 Availability zone '…' is invalid`.
+
 {% alert level="warning" %}
 При изменении настроек модуля **пересоздания существующих объектов Machines в кластере НЕ происходит** (новые объекты Machine будут создаваться с новыми параметрами). Пересоздание происходит только при изменении параметров [NodeGroup](/modules/node-manager/cr.html#nodegroup) и [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
 {% endalert %}

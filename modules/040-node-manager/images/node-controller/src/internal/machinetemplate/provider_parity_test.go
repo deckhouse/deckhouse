@@ -201,6 +201,10 @@ func providerFixtures() []providerFixture {
 				// only reaches Nova on Selectel (see the authURL gate in capi/template.yaml). Non-
 				// Selectel behaviour has its own test — TestOpenstackPreemptibleNotEmittedOffSelectel.
 				"connection": map[string]any{"authURL": "https://cloud.api.selcloud.ru/identity/v3"},
+				// volumeAvailabilityZones mirrors Cinder's AZ list; parityZone must be in it so
+				// the v2 template emits rootVolume.availabilityZone (v1 emits it unconditionally).
+				// TestOpenstackRootVolumeAZOmittedWhenCinderZoneMissing covers the mismatch case.
+				"volumeAvailabilityZones": []any{"zone-a"},
 			},
 			instanceClass: map[string]any{
 				"flavorName":               "m1.large",
@@ -221,6 +225,17 @@ func providerFixtures() []providerFixture {
 				// the tag when preemptible is truthy). Same trade-off as `additionalTags`: an
 				// unnecessary rollout in exchange for never losing an edit — see TestEmptyValueDivergence.
 				"preemptible/empty": "v1 gates on truthiness — preemptible:false hashes like missing",
+				// `volumeTypeMap` is new in v2 — CloudEphemeral never had this field under v1 (only
+				// CloudPermanent did, through OpenStackClusterConfiguration). The v1 checksum
+				// template cannot see it, so setting it or emptying it hashes identically to the
+				// pre-existing "missing" state. v2 lists the field in rolloutFields because the
+				// chosen volume type is baked into the root volume at Cinder-create time — changing
+				// it requires recreating the Machine, which is why CloudPermanent's terraform
+				// treats volumeTypeMap as ForceNew. Both differences are "v2 rolls where v1 would
+				// not", a strict superset — no cluster running v1 can regress on upgrade.
+				"volumeTypeMap":       "new field in v2 — v1 checksum never saw it; v2 must roll because the volume type is fixed at creation",
+				"volumeTypeMap/set":   "new field in v2 — v1 checksum never saw it; v2 must roll because the volume type is fixed at creation",
+				"volumeTypeMap/empty": "new field in v2 — v1 checksum never saw it; v2 must roll because the volume type is fixed at creation",
 			},
 		},
 		{
