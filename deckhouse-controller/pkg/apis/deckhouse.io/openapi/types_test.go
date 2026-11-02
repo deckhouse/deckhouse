@@ -200,6 +200,11 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 				Type:            StringOrArray{"integer"},
 				XUISizingMemory: &UISizingMemory{DefaultUnit: "Mi"},
 			},
+			"apiToken": {
+				Type:           StringOrArray{"string"},
+				XUISecureField: true,
+				XUITextArea:    true,
+			},
 		},
 		XValidations: []ValidationRule{
 			{Expression: "self.storageClass != ''", Message: "storageClass must be set"},
@@ -292,6 +297,17 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	}
 	if mem.XUISizingMemory.DefaultUnit != "Mi" {
 		t.Errorf("x-deckhouse-ui-sizing-memory defaultUnit: got %q, want Mi", mem.XUISizingMemory.DefaultUnit)
+	}
+
+	token, ok := restored.Properties["apiToken"]
+	if !ok {
+		t.Fatal("missing apiToken property")
+	}
+	if !token.XUITextArea {
+		t.Errorf("x-deckhouse-ui-text-area: got false, want true")
+	}
+	if !token.XUISecureField {
+		t.Errorf("x-deckhouse-ui-secure-field: got false, want true")
 	}
 }
 

@@ -130,6 +130,16 @@ type OpenAPIV3Schema struct {
 	// +optional
 	XUISizingMemory *UISizingMemory `json:"x-deckhouse-ui-sizing-memory,omitempty"`
 
+	// x-deckhouse-ui-text-area marks a string settings field the web console renders as a
+	// multi-line text area instead of a single-line input.
+	// +optional
+	XUITextArea bool `json:"x-deckhouse-ui-text-area,omitempty"`
+
+	// x-deckhouse-ui-secure-field marks a string or numeric settings field whose input the web
+	// console masks like a password; the settings value itself is stored as is.
+	// +optional
+	XUISecureField bool `json:"x-deckhouse-ui-secure-field,omitempty"`
+
 	// x-deckhouse-enum-switch-settings, declared on a oneOf branch, lists the confirmation
 	// dialogs the web console shows before switching the branch discriminator from a value
 	// of that branch to one of the listed target values.
