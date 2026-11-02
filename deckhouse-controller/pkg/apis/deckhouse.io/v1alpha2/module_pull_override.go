@@ -129,6 +129,13 @@ func (mo *ModulePullOverride) IsRenewRequested() bool {
 	return ok && v == "true"
 }
 
+// HasDeployed reports whether the module pull override has deployed its module: it is
+// Ready, or it keeps the digest of the image it deployed while failing later on. The
+// digest is cleared when the module is disabled.
+func (mo *ModulePullOverride) HasDeployed() bool {
+	return mo.Status.Message == ModulePullOverrideMessageReady || mo.Status.ImageDigest != ""
+}
+
 // +kubebuilder:object:root=true
 
 // ModulePullOverrideList is a list of ModulePullOverride resources

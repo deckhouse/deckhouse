@@ -1,0 +1,61 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
+  finalizers:
+  - modules.deckhouse.io/release-exists
+  name: deckhouse
+  resourceVersion: "999"
+  uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+spec:
+  registry:
+    dockerCfg: dXNlcm5hbWU6cGFzc3dvcmQ=
+    repo: registry.example.com/deckhouse/fe/modules
+    scheme: HTTPS
+status:
+  syncTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  finalizers:
+  - modules.deckhouse.io/exist-on-fs
+  - modules.deckhouse.io/metrics-registered
+  labels:
+    module: sds-local-volume
+    release-checksum: 98d00f741c99e06e6c6c4d18b763c550
+    source: deckhouse
+    status: deployed
+  name: sds-local-volume-v0.3.19
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: deckhouse
+    uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+  resourceVersion: "1000"
+spec:
+  moduleName: sds-local-volume
+  version: 0.3.19
+  weight: 900
+status:
+  approved: false
+  phase: Deployed
+  pullDuration: 0s
+  transitionTime: "2026-10-27T10:00:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: sds-local-volume
+  resourceVersion: "1000"
+properties:
+  source: deckhouse-dev
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: LastReleaseDeployed

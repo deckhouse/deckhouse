@@ -458,9 +458,10 @@ func (r *reconciler) patchManualRelease(ctx context.Context, release *v1alpha1.M
 //   - Readiness state affects whether new releases can be deployed safely
 //
 // Administrative Operations:
-//   - Reload Requests: Triggered by 'reload=true' annotation, forces module re-deployment
-//   - Registry Updates: Handles changes to registry configuration requiring OpenAPI schema refresh
-//   - Both operations trigger immediate Deckhouse restart for module activation
+//   - Reload Requests: Triggered by 'reload=true' annotation, forces module re-deployment and a Deckhouse restart
+//   - Registry Updates: Triggered by the registry-spec-changed annotation, injects the release source registry
+//     into the module values and re-runs the enabled module, without a Deckhouse restart. Skipped while the
+//     embedded copy of the module is shipped, and for a module an override has deployed from another source
 //
 // Resource Ownership and Protection:
 //   - Deployed releases add finalizers to prevent premature deletion
@@ -472,6 +473,8 @@ func (r *reconciler) patchManualRelease(ctx context.Context, release *v1alpha1.M
 //   - ModulePullOverride resources can bypass normal release processing
 //   - When overrides exist, deployed releases skip most maintenance operations
 //   - Override detection prevents conflicts between manual and automated operations
+//   - An override pulls the module from its active source, so registry updates of the release source
+//     reach a module it has deployed only when that is the same source
 //
 // Example Scenarios:
 //
@@ -487,8 +490,8 @@ func (r *reconciler) patchManualRelease(ctx context.Context, release *v1alpha1.M
 //
 //	Scenario 3 - Registry Update Handling:
 //	Input: Deployed v1.68.0 with registrySpecChanged annotation
-//	Flow: Registry Detection→OpenAPI Update→Annotation Cleanup→Update
-//	Result: RequeueAfter via requeue=true, registry changes applied
+//	Flow: Registry Detection→Registry Values Injection→Module Run→Annotation Cleanup→Update
+//	Result: RequeueAfter 1s, registry changes applied (skipped for an override deployed from another source)
 //
 //	Scenario 4 - Override Bypass:
 //	Input: Deployed v1.68.0, ModulePullOverride exists
@@ -570,8 +573,26 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 
 	// check if RegistrySpecChanged annotation is set process it
 	if _, set := release.GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]; set {
-		// the embedded copy renders images from the platform registry, so the source registry must not reach its values
-		if r.installer.IsEmbeddedPresent(release.GetModuleName()) {
+		// A ModulePullOverride pulls the module from its active source, and a release of a previous source
+		// stays Deployed while the module is overridden. The registry of such a release source must not reach
+		// a module the override has deployed: the module would then pull
+		// <releaseSourceRepo>/<module>@<overrideDigest>, which does not exist. An override from the release
+		// source pulls with these very settings, so its module takes them like a module served by the release,
+		// and so does a module the override has not deployed yet. The override check further down comes after
+		// the settings are applied, so they have a check of their own. The annotation is still dropped: skipping
+		// is the handling, and a leftover annotation would be applied by a Deckhouse without this check, for
+		// example after a rollback.
+		var fromAnotherSource bool
+		fromAnotherSource, err = r.overriddenFromAnotherSource(ctx, release)
+		if err != nil {
+			return res, fmt.Errorf("overridden from another source: %w", err)
+		}
+
+		if fromAnotherSource {
+			r.log.Info("module is overridden from another source, skip new registry settings of the release source",
+				slog.String("module", release.GetModuleName()), slog.String("module_source", release.GetModuleSource()))
+		} else if r.installer.IsEmbeddedPresent(release.GetModuleName()) {
+			// the embedded copy renders images from the platform registry, so the source registry must not reach its values
 			r.log.Info("module is still embedded, skip new registry settings", slog.String("module", release.GetModuleName()))
 		} else if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
 			// if module is enabled - push runModule task in the main queue
@@ -1970,4 +1991,27 @@ func (r *reconciler) isModuleReady(ctx context.Context, moduleName string) bool 
 	}
 
 	return module.Status.Phase == v1alpha1.ModulePhaseReady
+}
+
+// overriddenFromAnotherSource reports whether a ModulePullOverride has deployed the module from another source
+// than the release's one. The override pulls from the active source of the module; a module without an active
+// source (or without the Module object) gives nothing to compare with, so it counts as another source. An
+// override that has not deployed the module does not count: nothing of it is on the disk, the release serves
+// the module.
+func (r *reconciler) overriddenFromAnotherSource(ctx context.Context, release *v1alpha1.ModuleRelease) (bool, error) {
+	deployed, err := utils.ModulePullOverrideHasDeployed(ctx, r.client, release.GetModuleName())
+	if err != nil {
+		return false, fmt.Errorf("module pull override has deployed: %w", err)
+	}
+
+	if !deployed {
+		return false, nil
+	}
+
+	module := new(v1alpha1.Module)
+	if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil && !apierrors.IsNotFound(err) {
+		return false, fmt.Errorf("get module: %w", err)
+	}
+
+	return module.Properties.Source != release.GetModuleSource(), nil
 }

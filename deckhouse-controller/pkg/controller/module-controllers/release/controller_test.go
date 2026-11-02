@@ -1131,6 +1131,12 @@ func (suite *ReleaseControllerTestSuite) assembleInitObject(strObj string) clien
 		require.NoError(suite.T(), err)
 		obj = module
 
+	case v1alpha2.ModulePullOverrideGVK.Kind:
+		mpo := new(v1alpha2.ModulePullOverride)
+		err = yaml.Unmarshal(raw, mpo)
+		require.NoError(suite.T(), err)
+		obj = mpo
+
 	case v1alpha1.ModuleDocumentationGVK.Kind:
 		documentation := new(v1alpha1.ModuleDocumentation)
 		err = yaml.Unmarshal(raw, documentation)
@@ -1188,6 +1194,12 @@ func stripDeletionTimestamp(obj client.Object) {
 
 type stubModulesManager struct {
 	modulePhase addonmodules.ModuleRunPhase
+	// pushed, when set, records the modules a run task was pushed for
+	pushed *[]string
+	// modules, when set, keeps the module returned for a name, so the values injected into it can be read back
+	modules map[string]*addonmodules.BasicModule
+	// disabled reports every module as disabled
+	disabled bool
 }
 
 func (s stubModulesManager) AreModulesInited() bool {
@@ -1198,10 +1210,18 @@ func (s stubModulesManager) DisableModuleHooks(_ string) {
 }
 
 func (s stubModulesManager) GetModule(name string) *addonmodules.BasicModule {
+	if bm, ok := s.modules[name]; ok {
+		return bm
+	}
+
 	bm, _ := addonmodules.NewBasicModule(name, "", 900, nil, []byte{}, []byte{}, addonmodules.WithLogger(log.NewNop()))
 	bm.SetPhase(addonmodules.Ready)
 	if s.modulePhase != "" {
 		bm.SetPhase(s.modulePhase)
+	}
+
+	if s.modules != nil {
+		s.modules[name] = bm
 	}
 
 	return bm
@@ -1212,10 +1232,14 @@ func (s stubModulesManager) GetEnabledModuleNames() []string {
 }
 
 func (s stubModulesManager) IsModuleEnabled(_ string) bool {
-	return true
+	return !s.disabled
 }
 
-func (s stubModulesManager) PushRunModuleTask(_ string, _ bool) error {
+func (s stubModulesManager) PushRunModuleTask(name string, _ bool) error {
+	if s.pushed != nil {
+		*s.pushed = append(*s.pushed, name)
+	}
+
 	return nil
 }
 
@@ -1347,6 +1371,159 @@ status:
   phase: Pending
 `
 )
+
+// TestRegistrySpecChanged covers the fan-out of changed source registry settings to a deployed release:
+// the settings reach the module, unless a ModulePullOverride has deployed it from another source.
+// Applying them there made overridden modules pull <releaseSourceRepo>/<module>@<overrideDigest>, which
+// does not exist, every time Deckhouse re-applied the source. An override from the release source pulls
+// with these very settings, so its module keeps getting them. Besides the run task, every case checks
+// which registry reached the module values: the run alone does not tell one source from another.
+func (suite *ReleaseControllerTestSuite) TestRegistrySpecChanged() {
+	const module = "sds-local-volume"
+
+	cases := []struct {
+		name     string
+		file     string
+		embedded bool
+		disabled bool
+		// injected is whether the registry of the release source reaches the module values
+		injected bool
+		pushed   []string
+	}{
+		{name: "settings reach a module served by the release", file: "registry-spec-changed.yaml", injected: true, pushed: []string{module}},
+		{name: "settings skip a module overridden from another source", file: "registry-spec-changed-overridden.yaml"},
+		{name: "settings reach a module overridden from the release source", file: "registry-spec-changed-overridden-same-source.yaml", injected: true, pushed: []string{module}},
+		{name: "settings skip a module whose embedded copy is shipped", file: "registry-spec-changed.yaml", embedded: true},
+		{name: "settings reach a disabled module without running it", file: "registry-spec-changed.yaml", disabled: true, injected: true},
+	}
+
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			suite.setupReleaseController(suite.fetchTestFileData(tc.file), withInstaller(&installermock.Installer{
+				IsEmbeddedPresentFunc: func(string) bool { return tc.embedded },
+			}))
+
+			var pushed []string
+			modules := make(map[string]*addonmodules.BasicModule)
+			suite.ctr.moduleManager = stubModulesManager{pushed: &pushed, modules: modules, disabled: tc.disabled}
+
+			mr := suite.getModuleRelease(suite.testMRName)
+			_, err := suite.ctr.handleRelease(context.TODO(), mr)
+			require.NoError(suite.T(), err)
+
+			assert.Equal(suite.T(), tc.pushed, pushed)
+
+			var want any
+			if tc.injected {
+				source := new(v1alpha1.ModuleSource)
+				require.NoError(suite.T(), suite.client.Get(context.TODO(), client.ObjectKey{Name: mr.GetModuleSource()}, source))
+				want = map[string]any{
+					"base":      source.Spec.Registry.Repo,
+					"dockercfg": source.Spec.Registry.DockerCFG,
+					"scheme":    source.Spec.Registry.Scheme,
+				}
+			}
+			assert.EqualValues(suite.T(), want, injectedRegistry(modules, module), "registry in the module values")
+
+			_, set := suite.getModuleRelease(suite.testMRName).GetAnnotations()[v1alpha1.ModuleReleaseAnnotationRegistrySpecChanged]
+			assert.False(suite.T(), set, "the annotation is handled in every case and must be dropped")
+		})
+	}
+}
+
+// TestOverriddenFromAnotherSource covers the decision behind skipping the registry settings: an override pulls
+// the module from its active source, and a module that does not tell its active source counts as another one.
+// An override that has not deployed the module does not count, a failing one that has deployed it does.
+func (suite *ReleaseControllerTestSuite) TestOverriddenFromAnotherSource() {
+	suite.testDataFileName = ""
+
+	const release = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: sds-local-volume
+    source: deckhouse
+  name: sds-local-volume-v0.3.19
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: deckhouse
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+spec:
+  moduleName: sds-local-volume
+  version: 0.3.19
+status:
+  phase: Deployed
+`
+
+	override := func(message, digest string) string {
+		return fmt.Sprintf(`
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: sds-local-volume
+spec:
+  imageTag: main
+status:
+  message: %q
+  imageDigest: %q
+`, message, digest)
+	}
+
+	deployed := override(v1alpha2.ModulePullOverrideMessageReady, "sha256:cafe")
+	failing := override("Download error: MANIFEST_UNKNOWN", "sha256:cafe")
+	neverDeployed := override("Download error: MANIFEST_UNKNOWN", "")
+
+	module := func(source string) string {
+		return fmt.Sprintf(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: sds-local-volume
+properties:
+  source: %q
+`, source)
+	}
+
+	cases := []struct {
+		name string
+		doc  string
+		want bool
+	}{
+		{name: "no override", doc: release + module("deckhouse-dev"), want: false},
+		{name: "override from the release source", doc: release + module("deckhouse") + deployed, want: false},
+		{name: "override from another source", doc: release + module("deckhouse-dev") + deployed, want: true},
+		{name: "failing override from another source", doc: release + module("deckhouse-dev") + failing, want: true},
+		{name: "override from another source that never deployed", doc: release + module("deckhouse-dev") + neverDeployed, want: false},
+		{name: "override of a module without an active source", doc: release + module("") + deployed, want: true},
+		{name: "override of a module without the Module object", doc: release + deployed, want: true},
+	}
+
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			suite.setupReleaseController(tc.doc)
+
+			got, err := suite.ctr.overriddenFromAnotherSource(context.TODO(), suite.getModuleRelease(suite.testMRName))
+			require.NoError(suite.T(), err)
+			assert.Equal(suite.T(), tc.want, got)
+		})
+	}
+}
+
+// injectedRegistry returns the registry values injected into the module, nil when the module got none
+func injectedRegistry(modules map[string]*addonmodules.BasicModule, name string) any {
+	module, ok := modules[name]
+	if !ok {
+		return nil
+	}
+
+	return module.GetValues(false)["registry"]
+}
 
 func (suite *ReleaseControllerTestSuite) TestRestartLoop() {
 	ctx := suite.Context()

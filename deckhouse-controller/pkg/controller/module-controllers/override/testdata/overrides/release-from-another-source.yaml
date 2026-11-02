@@ -1,0 +1,65 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: test-module
+  uid: 0d9e7f1a-1111-2222-3333-444455556666
+  finalizers:
+  - modules.deckhouse.io/mpo-finalizer
+spec:
+  imageTag: main
+  scanInterval: 15s
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+properties:
+  availableSources:
+  - deckhouse
+  - deckhouse-dev
+  source: deckhouse-dev
+status:
+  conditions:
+  - type: EnabledByModuleConfig
+    status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: deckhouse
+  uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+spec:
+  registry:
+    repo: registry.example.com/deckhouse/modules
+    scheme: HTTPS
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: deckhouse-dev
+  uid: 5a1c4c2e-7777-8888-9999-aaaabbbbcccc
+spec:
+  registry:
+    repo: dev-registry.example.com/deckhouse/modules
+    scheme: HTTPS
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: test-module
+    source: deckhouse
+    status: deployed
+  name: test-module-v1.0.0
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: ModuleSource
+    name: deckhouse
+    uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+spec:
+  moduleName: test-module
+  version: 1.0.0
+status:
+  phase: Deployed

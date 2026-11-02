@@ -53,7 +53,9 @@ type installerCall struct {
 
 // installerCalls captures everything the loader asked the installer to do.
 type installerCalls struct {
-	restore           []installerCall
+	restore []installerCall
+	// restoreSources are the sources Restore was called with, in the order of restore
+	restoreSources    []string
 	stageFromRegistry []installerCall
 	uninstall         []string
 }
@@ -63,8 +65,9 @@ type installerCalls struct {
 func newRecordingInstaller(calls *installerCalls, embedded map[string]bool) *installermock.Installer {
 	return &installermock.Installer{
 		IsEmbeddedPresentFunc: func(module string) bool { return embedded[module] },
-		RestoreFunc: func(_ context.Context, _ *v1alpha1.ModuleSource, module, version string) error {
+		RestoreFunc: func(_ context.Context, source *v1alpha1.ModuleSource, module, version string) error {
 			calls.restore = append(calls.restore, installerCall{module, version})
+			calls.restoreSources = append(calls.restoreSources, source.Name)
 			return nil
 		},
 		StageFromRegistryFunc: func(_ context.Context, _ *v1alpha1.ModuleSource, module, version string) error {
@@ -363,6 +366,170 @@ func TestRestoreModulesByOverrides(t *testing.T) {
 
 		assert.Empty(t, calls.restore, "an override that is not Ready must be skipped")
 	})
+}
+
+// --- both restores, as Sync runs them -------------------------------------
+
+// TestRestoreRegistrySource checks the source a module is restored from at startup and
+// the registry it is pinned to. An override pulls the module from its active source, which
+// a Deployed release of a previous source does not follow, so the release source must not
+// win over it. Without an override the release still serves the module, so its source wins
+// even when the active source is already another one.
+func TestRestoreRegistrySource(t *testing.T) {
+	const (
+		releaseSource = "deckhouse"
+		releaseRepo   = "registry.example.io/deckhouse/modules"
+		otherSource   = "deckhouse-dev"
+	)
+
+	cases := []struct {
+		name         string
+		activeSource string
+		override     bool
+		wantRestore  []installerCall
+		wantSource   string
+		wantRepo     string
+	}{
+		{
+			name:         "no override",
+			activeSource: releaseSource,
+			wantRestore:  []installerCall{{"echo", "v1.0.0"}},
+			wantSource:   releaseSource,
+			wantRepo:     releaseRepo,
+		},
+		{
+			name:         "no override with a switched active source",
+			activeSource: otherSource,
+			wantRestore:  []installerCall{{"echo", "v1.0.0"}},
+			wantSource:   releaseSource,
+			wantRepo:     releaseRepo,
+		},
+		{
+			name:         "override from the release source",
+			activeSource: releaseSource,
+			override:     true,
+			wantRestore:  []installerCall{{"echo", "main"}},
+			wantSource:   releaseSource,
+			wantRepo:     releaseRepo,
+		},
+		{
+			name:         "override from another source",
+			activeSource: otherSource,
+			override:     true,
+			wantRestore:  []installerCall{{"echo", "main"}},
+			wantSource:   otherSource,
+			wantRepo:     testRepo,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("DECKHOUSE_NODE_NAME", testNodeName)
+
+			objects := []client.Object{
+				testModuleSource(releaseSource, releaseRepo),
+				testModuleSource(otherSource, testRepo),
+				enabled(testModule("echo", tc.activeSource, releaseSource, otherSource)),
+				testDeployedRelease("echo", releaseSource, "1.0.0"),
+			}
+			if tc.override {
+				objects = append(objects, testReadyMPO("echo", "main", testNodeName))
+			}
+
+			calls := new(installerCalls)
+			l := newTestLoader(t, newRecordingInstaller(calls, nil), objects...)
+
+			require.NoError(t, l.restoreModulesByOverrides(context.Background()))
+			require.NoError(t, l.restoreModulesByReleases(context.Background()))
+
+			assert.Equal(t, tc.wantRestore, calls.restore, "the module is restored once, by the override if there is one")
+			assert.Equal(t, []string{tc.wantSource}, calls.restoreSources, "the source the module is restored from")
+
+			reg, ok := l.registries["echo"]
+			require.True(t, ok, "the module must be pinned to a registry")
+			assert.Equal(t, tc.wantRepo, reg.Base)
+		})
+	}
+}
+
+// TestRestoreRegistryWithNotReadyOverride covers an override that is not Ready at startup.
+// The module must not be left without a registry: its images would then render from the
+// platform registry. An override that has not deployed the module left nothing on the
+// disk, so the release still serves the module. An override that has deployed it keeps
+// the module as it is: restoring it would reach the registry the override fails on. The
+// module is only pinned to the registry of its active source.
+func TestRestoreRegistryWithNotReadyOverride(t *testing.T) {
+	const (
+		releaseSource = "deckhouse"
+		releaseRepo   = "registry.example.io/deckhouse/modules"
+		otherSource   = "deckhouse-dev"
+	)
+
+	cases := []struct {
+		name         string
+		activeSource string
+		digest       string
+		wantRestore  []installerCall
+		wantSources  []string
+		wantRepo     string
+	}{
+		{
+			name:         "an override that never deployed leaves the module to its release",
+			activeSource: releaseSource,
+			wantRestore:  []installerCall{{"echo", "v1.0.0"}},
+			wantSources:  []string{releaseSource},
+			wantRepo:     releaseRepo,
+		},
+		{
+			name:         "an override from another source that never deployed leaves the module to its release",
+			activeSource: otherSource,
+			wantRestore:  []installerCall{{"echo", "v1.0.0"}},
+			wantSources:  []string{releaseSource},
+			wantRepo:     releaseRepo,
+		},
+		{
+			name:         "an override that deployed before keeps the module on its source",
+			activeSource: releaseSource,
+			digest:       "sha256:cafe",
+			wantRepo:     releaseRepo,
+		},
+		{
+			name:         "an override from another source that deployed before keeps the module on its source",
+			activeSource: otherSource,
+			digest:       "sha256:cafe",
+			wantRepo:     testRepo,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("DECKHOUSE_NODE_NAME", testNodeName)
+
+			mpo := testReadyMPO("echo", "main", testNodeName)
+			mpo.Status.Message = "Download error: MANIFEST_UNKNOWN"
+			mpo.Status.ImageDigest = tc.digest
+
+			calls := new(installerCalls)
+			l := newTestLoader(t, newRecordingInstaller(calls, nil),
+				testModuleSource(releaseSource, releaseRepo),
+				testModuleSource(otherSource, testRepo),
+				enabled(testModule("echo", tc.activeSource, releaseSource, otherSource)),
+				testDeployedRelease("echo", releaseSource, "1.0.0"),
+				mpo,
+			)
+
+			require.NoError(t, l.restoreModulesByOverrides(context.Background()))
+			require.NoError(t, l.restoreModulesByReleases(context.Background()))
+
+			assert.Equal(t, tc.wantRestore, calls.restore, "what is restored")
+			assert.Equal(t, tc.wantSources, calls.restoreSources, "the source it is restored from")
+			assert.Empty(t, calls.uninstall, "the module on the disk is left in place")
+
+			reg, ok := l.registries["echo"]
+			require.True(t, ok, "the module must be pinned to a registry")
+			assert.Equal(t, tc.wantRepo, reg.Base)
+		})
+	}
 }
 
 // --- deleteStaleModuleReleases ---------------------------------------------

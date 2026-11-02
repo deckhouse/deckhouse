@@ -256,6 +256,48 @@ func (suite *OverrideControllerTestSuite) TestHandleModuleOverride() {
 	})
 }
 
+// TestOverrideSource checks the source an override pulls the module from: the active
+// source of the module. A Deployed release of a previous source stays in the cluster while
+// the module is overridden, and its source must not be taken: the release controller and
+// the restore at startup keep the overridden module on the registry of the active source,
+// so the image has to come from there.
+func (suite *OverrideControllerTestSuite) TestOverrideSource() {
+	cases := []struct {
+		name   string
+		file   string
+		source string
+	}{
+		{name: "override from the release source", file: "release-from-active-source.yaml", source: "deckhouse"},
+		{name: "override from another source", file: "release-from-another-source.yaml", source: "deckhouse-dev"},
+	}
+
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			moduleDir := filepath.Join(suite.TmpDir(), "downloaded")
+
+			var digestSources, downloadSources []string
+			suite.setupController(suite.fetchTestFileData(tc.file), withInstaller(&installermock.Installer{
+				GetImageDigestFunc: func(_ context.Context, source *v1alpha1.ModuleSource, _, _ string) (string, error) {
+					digestSources = append(digestSources, source.Name)
+					return testDigest, nil
+				},
+				DownloadFunc: func(_ context.Context, source *v1alpha1.ModuleSource, _, _ string) (string, error) {
+					downloadSources = append(downloadSources, source.Name)
+					// deployModule removes the returned path, so recreate it per download.
+					writeValidModule(suite.T(), moduleDir)
+					return moduleDir, nil
+				},
+			}))
+
+			_, err := suite.ctr.handleModuleOverride(context.TODO(), suite.getMPO(suite.testMPOName))
+			require.NoError(suite.T(), err)
+
+			assert.Equal(suite.T(), []string{tc.source}, digestSources, "the source the image digest is resolved in")
+			assert.Equal(suite.T(), []string{tc.source}, downloadSources, "the source the module is downloaded from")
+		})
+	}
+}
+
 // setupController seeds the fake cluster from a YAML document and builds a reconciler
 // wired with test doubles: a mock installer and a no-op restart hook, so the deploy
 // path never touches a registry or signals PID 1.
@@ -313,6 +355,11 @@ func (suite *OverrideControllerTestSuite) assembleInitObject(manifest string) cl
 		source := new(v1alpha1.ModuleSource)
 		require.NoError(suite.T(), yaml.Unmarshal(raw, source))
 		obj = source
+
+	case v1alpha1.ModuleReleaseGVK.Kind:
+		release := new(v1alpha1.ModuleRelease)
+		require.NoError(suite.T(), yaml.Unmarshal(raw, release))
+		obj = release
 
 	case v1alpha1.ModuleDocumentationGVK.Kind:
 		documentation := new(v1alpha1.ModuleDocumentation)
