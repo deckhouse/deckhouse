@@ -162,7 +162,7 @@ data:
             proxy_intercept_errors  on;
 
             error_page              301 302 307 = @handle_redirects;
-            proxy_pass              https://a66a9089-a440-4797-b768-c64e4820f656.selstorage.ru;
+            proxy_pass              https://55826e7c-84ae-42f3-87ed-204e97edfd86.selstorage.ru;
         }
 
         # Redirect for installer with specific version
@@ -182,7 +182,7 @@ data:
             proxy_intercept_errors  on;
 
             error_page              301 302 307 = @handle_redirects;
-            proxy_pass              https://a66a9089-a440-4797-b768-c64e4820f656.selstorage.ru;
+            proxy_pass              https://55826e7c-84ae-42f3-87ed-204e97edfd86.selstorage.ru;
         }
 
         location ~* ^/downloads/deckhouse-cli/v[0-9]+\.[0-9]+\.[0-9]+/d8-v[0-9]+\.[0-9]+\.[0-9]+-(darwin|linux|windows)-(amd|arm)64.tar.gz(\.sha256sum)?$   {
@@ -239,7 +239,7 @@ data:
             proxy_intercept_errors  on;
 
             error_page              301 302 307 = @handle_redirects;
-            proxy_pass              https://a66a9089-a440-4797-b768-c64e4820f656.selstorage.ru;
+            proxy_pass              https://55826e7c-84ae-42f3-87ed-204e97edfd86.selstorage.ru;
         }
 
         location @handle_redirects {
