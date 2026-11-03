@@ -1,0 +1,178 @@
+admission-policy-engine:
+  fixes:
+    - summary: >-
+        Fixed CVE-2026-116585, CVE-2026-116586 and CVE-2026-116587 in `github.com/go-jose/go-jose/v4`
+        and CVE-2026-78661 and CVE-2026-97045 in `golang.org/x/net`.
+    - summary: Switch ratify to go-jose v4 to fix CVE-2026-116585, CVE-2026-116586, CVE-2026-116587.
+    - summary: >-
+        An unavailable Gatekeeper no longer blocks system components in namespaces that opted into security
+        policy checks, which could deadlock the cluster together with the CNI agent.
+cert-manager:
+  fixes:
+    - summary: >-
+        Bump x/net to v0.62.0 and go-jose to v4.1.6 to fix CVE-2026-78661, CVE-2026-97045, CVE-2026-116585,
+        CVE-2026-116586, CVE-2026-116587.
+ci:
+  fixes:
+    - summary: Svace stages are rebuilt in every svace pipeline.
+cloud-provider-dvp:
+  fixes:
+    - summary: Fixes x/net, x/text and kin-openapi CVEs in all module images.
+cloud-provider-openstack:
+  fixes:
+    - summary: >-
+        Fixes creation of nodes with `rootDiskSize` when the node availability zone does not exist in
+        Cinder.
+    - summary: >-
+        fix CloudEphemeral node creation in non-default availability zones via automatic Cinder-AZ discovery
+        and new OpenStackInstanceClass.volumeTypeMap field
+cni-cilium:
+  features:
+    - summary: >-
+        Added a CVE-2026-98432 mitigation that filters IPv4 TCP SYN packets with IP options in the host
+        and pod network namespaces (`ipv4OptionsGuard`; `Enforce` for new clusters, `Audit` for existing
+        ones).
+      impact: >-
+        Cilium agent pods will be restarted. With DSR, the DSR IPv4 option is stripped before the packet
+        reaches the pod.
+  fixes:
+    - summary: Fixed file descriptor, connection and lock leaks in Cilium found by static analysis.
+cni-flannel:
+  features:
+    - summary: >-
+        Added a CVE-2026-98432 mitigation that filters IPv4 TCP SYN packets with IP options in the host
+        and pod network namespaces (`ipv4OptionsGuard`; `Enforce` for new clusters, `Audit` for existing
+        ones).
+      impact: Flannel pods will be restarted.
+cni-simple-bridge:
+  features:
+    - summary: >-
+        Added a CVE-2026-98432 mitigation that filters IPv4 TCP SYN packets with IP options in the host
+        and pod network namespaces (`ipv4OptionsGuard`; `Enforce` for new clusters, `Audit` for existing
+        ones).
+      impact: simple-bridge pods will be restarted.
+common:
+  fixes:
+    - summary: Bump x/net in kube-rbac-proxy to v0.62.0 to fix CVE-2026-78661 and CVE-2026-97045.
+control-plane-manager:
+  fixes:
+    - summary: >-
+        The basic audit policy records an exec into a pod (`pods/exec`) in all namespaces again, as it
+        did before Deckhouse 1.77.
+    - summary: Fixed a goroutine leak in the helm release deprecation scan when listing releases fails.
+    - summary: >-
+        Updated go-jose, x/net and klauspost/compress in control plane components to fix known vulnerabilities.
+      impact: >-
+        Control plane components (kube-apiserver, kube-controller-manager, kube-scheduler, etcd) and kubelet
+        will be restarted.
+deckhouse:
+  fixes:
+    - summary: >-
+        Resolve `registry.d8-system.svc` to a node running the in-cluster registry proxy during bootstrap,
+        instead of always to `127.0.0.1`.
+      impact: Applying a discovered address restarts the Deckhouse Pod once.
+    - summary: Update runtime dependencies and document unaffected vulnerability paths.
+    - summary: >-
+        The `d8-main` Telemetry no longer references the `deckhouse-tracing` provider when the module
+        doesn't register it.
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Prevent module hooks from running with unavailable snapshots while waiting for Deckhouse to restart
+        after a module update
+    - summary: >-
+        A pending module release no longer loses its Kubernetes, Deckhouse and module requirements, so
+        an update that the cluster does not satisfy stays pending instead of disabling the module.
+dhctl:
+  fixes:
+    - summary: >-
+        Keep the SSH host list and master readiness checks in sync with the infrastructure state during
+        master converge.
+    - summary: Bump go-jose to v4.1.6 to fix CVE-2026-116585, CVE-2026-116586, CVE-2026-116587.
+docs:
+  features:
+    - summary: Add static-routing-manager architecture module section.
+    - summary: Add cni-flannel and cni-simple-bridge modules architecture section.
+  fixes:
+    - summary: Fix docs build config errors in werf includes.
+documentation:
+  fixes:
+    - summary: Fix HTML parser vulnerabilities in docs-builder by updating golang.org/x/net to v0.62.0.
+go_lib:
+  fixes:
+    - summary: Package proxy streams the full package body when the cache skips writing it.
+istio:
+  fixes:
+    - summary: >-
+        Fixed ambient mode on nodes with legacy iptables, where `istio-cni-node` crashed on Istio 1.25
+        and used nftables instead of legacy iptables on Istio 1.27 and later.
+      impact: >-
+        In ambient mode with Istio 1.27 or later, on nodes with legacy iptables, `istio-cni-node` switches
+        from nftables to legacy iptables. Pods that were added to the mesh before the update keep their
+        nftables rules. Restart these pods after the update. Otherwise, removing such a pod from the mesh
+        without a restart leaves its old redirect rules in place, and the pod loses network connectivity.
+kube-proxy:
+  fixes:
+    - summary: Fixed known vulnerabilities in the kube-proxy images.
+      impact: kube-proxy pods will be restarted.
+local-path-provisioner:
+  fixes:
+    - summary: >-
+        `config.json` of the provisioner is serialized from a structure, and the CRD accepts in `spec.path`
+        only an absolute path without quotes, backslashes, whitespace and control characters. A crafted
+        path can no longer add manifests to the module release.
+metallb:
+  fixes:
+    - summary: Fixed CVE-2026-78661 and CVE-2026-97045 in the metallb and l2lb images.
+      impact: The metallb components (controller, speaker, l2lb) will restart after the update.
+multitenancy-manager:
+  fixes:
+    - summary: >-
+        Fixed CVE-2026-116585, CVE-2026-116586 and CVE-2026-116587 in `github.com/go-jose/go-jose/v4`
+        and CVE-2026-78661 and CVE-2026-97045 in `golang.org/x/net`.
+node-manager:
+  fixes:
+    - summary: >-
+        kube-rbac-proxy in capi-controller-manager and node-controller no longer listens on all addresses
+        of a node that has no addresses yet, so it does not take the controller's port.
+    - summary: >-
+        Fixed known vulnerabilities in the integrity-controller and integrity-containerd-configurator
+        images (CSE).
+    - summary: Fixes x/net CVEs in the caps-controller-manager image.
+registry:
+  fixes:
+    - summary: >-
+        Require brackets around IPv6 upstream registry URL hosts and accept bracketed addresses with or
+        without a port.
+registry-packages-proxy:
+  fixes:
+    - summary: >-
+        Fixed registry-packages-proxy hanging after a cache error and serving corrupted packages, which
+        blocked node updates.
+    - summary: Bump go-jose to v4.1.6 to fix CVE-2026-116585, CVE-2026-116586, CVE-2026-116587.
+registrypackages:
+  fixes:
+    - summary: >-
+        Updated go-jose, x/net and klauspost/compress in containerd, runc and crictl to fix known vulnerabilities.
+      impact: containerd will be restarted on all nodes.
+    - summary: Support rebuilding legacy image layers and preserve verity data in CSE.
+service-with-healthchecks:
+  fixes:
+    - summary: Status updates were refactored.
+      impact: The controller and agent pods will be restared.
+user-authn:
+  fixes:
+    - summary: Local users keep the passwords they changed in Dex when the cluster updates from 1.76.
+    - summary: >-
+        Fixed CVE-2026-116585, CVE-2026-116586 and CVE-2026-116587 in `github.com/go-jose/go-jose/v4`
+        and CVE-2026-78661 and CVE-2026-97045 in `golang.org/x/net`.
+    - summary: >-
+        Bump go-oidc in dex-authenticator to v3.11.0 to fix CVE-2026-116585, CVE-2026-116586, CVE-2026-116587.
+user-authz:
+  fixes:
+    - summary: Fixed CVE-2026-78661 and CVE-2026-97045 in `golang.org/x/net`.
+vertical-pod-autoscaler:
+  fixes:
+    - summary: >-
+        Fix a panic in vpa-updater and vpa-admission-controller when a pod with a container without resources
+        is capped to a LimitRange of type Pod.
