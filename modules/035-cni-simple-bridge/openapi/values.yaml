@@ -5,3 +5,14 @@ properties:
   internal:
     type: object
     default: {}
+    x-required-for-helm:
+    - ipv4OptionsGuardMode
+    properties:
+      ipv4OptionsGuardDefaultMode:
+        type: string
+        enum: ["Audit", "Enforce"]
+        description: Default ipv4-options-guard mode, decided once and kept in the ipv4-options-guard ConfigMap of the module.
+      ipv4OptionsGuardMode:
+        type: string
+        enum: ["Audit", "Enforce", "Disabled"]
+        description: Effective ipv4-options-guard mode.

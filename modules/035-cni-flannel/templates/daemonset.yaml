@@ -26,6 +26,19 @@ spec:
       maxAllowed:
         cpu: 50m
         memory: 50Mi
+    - containerName: ipv4-options-guard
+      minAllowed:
+        cpu: 10m
+        memory: 25Mi
+      maxAllowed:
+        cpu: 50m
+        memory: 64Mi
+    - containerName: ipv4-options-guard-kube-rbac-proxy
+      minAllowed:
+        {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 25m
+        memory: 64Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -137,6 +150,114 @@ spec:
 {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "kube_flannel_resources" . | nindent 12 }}
 {{- end }}
+      - name: ipv4-options-guard
+        # CVE-2026-98432 mitigation, settings in templates/ipv4-options-guard/configmap.yaml.
+        image: {{ include "helm_lib_module_common_image" (list . "ipv4OptionsGuard") }}
+        args:
+        - --settings=/etc/ipv4-options-guard/settings.json
+        - --netns-dir=/run/netns
+        - --listen=127.0.0.1:9741
+        - --sbin=/sbin
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: KUBERNETES_SERVICE_HOST
+          value: "127.0.0.1"
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6445"
+        securityContext:
+          # setns into pod netns and writes to their /proc/sys/net need a privileged container.
+          privileged: true
+          allowPrivilegeEscalation: true
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: ipv4-options-guard-settings
+          mountPath: /etc/ipv4-options-guard
+          readOnly: true
+        - name: ipv4-options-guard-netns
+          mountPath: /run/netns
+          # Pod netns are bind-mounted by containerd after the sidecar has started.
+          mountPropagation: HostToContainer
+          readOnly: true
+        - name: ipv4-options-guard-sysctl-d
+          mountPath: /host/etc/sysctl.d
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
+        # iptables-wrapper populated by iptables-wrapper-init: the same legacy/nft decision as kube-flannel.
+        - name: sbin
+          mountPath: /sbin
+        livenessProbe:
+          httpGet:
+            host: 127.0.0.1
+            path: /healthz
+            port: 9741
+          periodSeconds: 30
+        readinessProbe:
+          # Always ok while the process serves: problems go to metrics, never to the agent pod readiness.
+          httpGet:
+            host: 127.0.0.1
+            path: /healthz
+            port: 9741
+          periodSeconds: 30
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 10m
+            memory: 25Mi
+{{- end }}
+        terminationMessagePolicy: FallbackToLogsOnError
+      - name: ipv4-options-guard-kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4261"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:9741/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ .Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: flannel
+        ports:
+        - containerPort: 4261
+          name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4261
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4261
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
+{{- end }}
       volumes:
         - name: run
           hostPath:
@@ -157,3 +278,14 @@ spec:
           emptyDir:
             medium: Memory
             sizeLimit: 16Mi
+        - name: ipv4-options-guard-settings
+          configMap:
+            name: ipv4-options-guard
+        - name: ipv4-options-guard-sysctl-d
+          hostPath:
+            path: /etc/sysctl.d
+            type: DirectoryOrCreate
+        - name: ipv4-options-guard-netns
+          hostPath:
+            path: /run/netns
+            type: DirectoryOrCreate

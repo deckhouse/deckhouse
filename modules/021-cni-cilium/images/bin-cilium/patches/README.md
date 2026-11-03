@@ -188,6 +188,25 @@ and re-lands the bump (<https://github.com/cilium/cilium/pull/42361>,
 ebpf >= v0.21.0**, where `applyConstants()` no longer uses the removed method
 and the probes already tolerate `ErrRestrictedKernel`.
 
+## 022-dsr-strip-ipv4-option.patch
+
+Adds the `bpf-lb-dsr-strip-ipv4-option` agent flag (off by default). With DSR dispatched
+via the IPv4 option, the backend node removes the option in `nodeport_dsr_ingress_ipv4()`
+after the service address is stored in CT/SNAT, so the pod receives a SYN without IP options.
+
+Otherwise every SYN through DSR makes the pod kernel keep the SYN's IP options in the request
+socket (`tcp_v4_save_options()`), which is the object of the CVE-2026-98432 use-after-free,
+and the `ipv4-options-guard` filter in the pod netns would drop service traffic. The flag is
+set by `templates/configmap.yaml` with `bpfLBMode` `DSR` or `Hybrid` (not in VXLAN mode) unless
+`ipv4OptionsGuard.mode` is `Disabled`.
+
+Only the TC datapath is covered. The module never sets `bpf-lb-acceleration`, so `bpf_xdp` is
+not built. If XDP acceleration is ever enabled, rework the patch first: the XDP
+`ctx_adjust_hroom()` cannot shrink the packet (`build_bug_on(len_diff <= 0)`), and with XDP the
+TC program skips the nodeport path, so the option would silently reach the pod.
+
+Not upstream; keep until the fixed kernel is the minimum supported one.
+
 ## vendor/
 
 Patches for vendored dependencies, applied after `go mod vendor`. See `vendor/README.md`.

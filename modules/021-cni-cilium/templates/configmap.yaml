@@ -116,6 +116,11 @@ data:
   {{- else }}
   bpf-lb-mode: {{ .Values.cniCilium.bpfLBMode | lower | quote }}
   {{- end }}
+  {{- if and (ne .Values.cniCilium.internal.ipv4OptionsGuardMode "Disabled") (ne .Values.cniCilium.internal.mode "VXLAN") (has .Values.cniCilium.bpfLBMode (list "DSR" "Hybrid")) }}
+  # Pods must not receive the DSR IPv4 option: it makes the kernel keep IP options of the SYN (CVE-2026-98432).
+  # Set only with DSR, so toggling the guard does not restart the agents in other modes.
+  bpf-lb-dsr-strip-ipv4-option: "true"
+  {{- end }}
   bpf-lb-algorithm: "random"
   bpf-lb-map-max: "512000"
   bpf-lb-external-clusterip: "true"

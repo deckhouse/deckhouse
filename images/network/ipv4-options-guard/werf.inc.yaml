@@ -1,0 +1,78 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+from: {{ index $.Images "builder/src" }}
+final: false
+git:
+- add: /{{ $.ImagePath }}/src
+  to: /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ index $.Images "builder/golang" }}
+final: false
+mount:
+{{ include "mount points for golang builds" . }}
+import:
+- from: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download -x
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /tmp/ipv4-options-guard ./cmd/guard
+  - chmod 0755 /tmp/ipv4-options-guard
+---
+# The same iptables-wrapper and static xtables as iptables-wrapper-init, laid out for /sbin.
+# The guard copies them into its /sbin emptyDir in pods that have no iptables-wrapper-init (cni-cilium).
+image: {{ .ModuleName }}/{{ .ImageName }}-iptables-dist-artifact
+from: {{ index $.Images "builder/distroless" }}
+final: false
+import:
+- from: common/iptables-wrapper
+  add: /iptables-wrapper
+  to: /iptables-dist/iptables-wrapper
+  before: install
+- from: registrypackages/iptables-static-artifact
+  add: /
+  to: /iptables-dist
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: install
+shell:
+  install:
+  - |
+    for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+      ln -sf /sbin/iptables-wrapper "/iptables-dist/${cmd}"
+    done
+    for mode in legacy nft; do
+      for basecmd in iptables ip6tables; do
+        for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
+          ln -sf /sbin/xtables-${mode}-multi "/iptables-dist/${cmd}"
+        done
+      done
+    done
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ index $.Images "base/distroless" }}
+import:
+- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /tmp/ipv4-options-guard
+  to: /ipv4-options-guard
+  before: setup
+- from: {{ .ModuleName }}/{{ .ImageName }}-iptables-dist-artifact
+  add: /iptables-dist
+  to: /iptables-dist
+  before: setup
+# Keeps the image on the node from the cni-cilium safe-agent-updater.
+- from: common/pause
+  add: /pause
+  to: /pause
+  before: install
+imageSpec:
+  config:
+    entrypoint: ["/ipv4-options-guard"]

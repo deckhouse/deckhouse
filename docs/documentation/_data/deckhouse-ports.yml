@@ -377,6 +377,11 @@ groups:
     description:
       en: "`csi-huawei` CSI controller metrics"
       ru: "Метрики CSI-контроллера модуля `csi-huawei`"
+  - ports: "4261"
+    protocol: TCP
+    description:
+      en: "`ipv4-options-guard` metrics of the `cni-flannel` and `cni-simple-bridge` agents"
+      ru: "Метрики `ipv4-options-guard` агентов модулей `cni-flannel` и `cni-simple-bridge`"
   - ports: "4262"
     protocol: TCP
     description:

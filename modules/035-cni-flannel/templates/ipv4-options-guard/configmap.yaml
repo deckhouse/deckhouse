@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ipv4-options-guard
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ipv4-options-guard")) | nindent 2 }}
+data:
+  # Re-read by the ipv4-options-guard sidecar on the fly: changing it does not restart the CNI agent pods.
+  # The mode comes from the hook: when it is not set, the default depends on whether the cluster existed before the guard.
+  settings.json: {{ set (deepCopy (.Values.cniFlannel.ipv4OptionsGuard | default dict)) "mode" .Values.cniFlannel.internal.ipv4OptionsGuardMode | toJson | quote }}
+  # Decided once by the hook and read back by it on the next runs.
+  defaultMode: {{ .Values.cniFlannel.internal.ipv4OptionsGuardDefaultMode | quote }}

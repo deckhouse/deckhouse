@@ -8,6 +8,16 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "flannel")) | nindent 2 }}
 spec:
   securityContext:
+    privileged:
+      allowedValue: true
+      metadata:
+        description: |
+          The ipv4-options-guard sidecar switches into every pod network namespace and writes
+          net.mptcp.enabled there, which needs a privileged container (writable /proc/sys).
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: Implied by privileged for the ipv4-options-guard sidecar.
     runAsNonRoot:
       allowedValue: false
       metadata:
@@ -38,6 +48,11 @@ spec:
         description: |
           Flannel must join the host network namespace to program pod routes and
           VXLAN/host-gw datapath on the node.
+    hostPorts:
+      - port: 4261
+        protocol: TCP
+        metadata:
+          description: HTTPS metrics endpoint of ipv4-options-guard exposed through kube-rbac-proxy.
   volumes:
     types:
       allowedValues:
@@ -60,4 +75,12 @@ spec:
           readOnly: false
           metadata:
             description: Host xtables lock used to serialize iptables updates.
+        - path: /run/netns
+          readOnly: true
+          metadata:
+            description: Pod network namespaces, where ipv4-options-guard installs the CVE-2026-98432 filter.
+        - path: /etc/sysctl.d
+          readOnly: false
+          metadata:
+            description: ipv4-options-guard persists net.mptcp.enabled=0 here so it applies at boot before kubelet starts.
 {{- end }}
