@@ -49,7 +49,7 @@ To create the ServiceAccount and assign a role to it, you need [administrator pe
        namespace: <NAMESPACE>
    roleRef:
      kind: ClusterRole
-     name: d8:use:role:manager
+     name: d8:namespace:manager
      apiGroup: rbac.authorization.k8s.io
    EOF
    ```
