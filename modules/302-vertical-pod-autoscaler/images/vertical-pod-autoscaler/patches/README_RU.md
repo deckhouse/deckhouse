@@ -39,3 +39,13 @@ Webhook-сервер admission-controller обслуживает запросы 
 - `pkg/utils/server` импортирует `net/http/pprof`, а его `init()` регистрирует `GET /debug/pprof/*` в `http.DefaultServeMux`. Webhook-сервер использовал этот mux, поэтому pprof на порту 8000 был доступен любому поду через Service `vpa-webhook` без аутентификации.
 - Обработчики pprof разбирают формы запроса, поэтому уязвимости разбора multipart, например CVE-2026-94440, были доступны любому поду.
 - Профилирование по-прежнему доступно на порту метрик с флагом `--profiling`.
+
+## 007-capping-skip-containers-without-recommendation.patch
+
+Исправляет разыменование nil-указателя в `applyPodLimitRange` (`pkg/utils/vpa/capping.go`). Эта функция ограничивает рекомендации по LimitRange типа `Pod` в admission controller и updater.
+
+- Контейнер без рекомендации и без requests, например sidecar без `resources`, остаётся без рекомендации: `insertRequestsForMissingRecommendations` добавляет requests только тем контейнерам, у которых они заданы.
+- Если сумма пропорциональных limits контейнеров больше `max` из LimitRange или меньше `min`, а сумма рекомендаций при этом не меньше `min`, последний цикл `applyPodLimitRange` записывал масштабированное значение через nil-рекомендацию такого контейнера и падал с panic.
+- Теперь цикл пропускает контейнеры без рекомендации, как это уже делает цикл для `min` выше. Такие контейнеры не меняются, как и сказано в комментарии к этому коду.
+- В `TestApplyPodLimitRange` добавлен случай с таким контейнером; до исправления он падал с panic.
+- Найдено Svace (`DEREF_AFTER_NULL.EX`). В upstream master тот же код.

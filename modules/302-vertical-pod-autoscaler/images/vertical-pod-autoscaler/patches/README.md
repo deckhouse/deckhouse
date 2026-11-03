@@ -39,3 +39,13 @@ Serves the admission-controller webhook from a dedicated `http.ServeMux` instead
 - `pkg/utils/server` imports `net/http/pprof`, whose `init()` registers `GET /debug/pprof/*` on `http.DefaultServeMux`. The webhook server used that mux, so any pod could reach pprof on port 8000 through the `vpa-webhook` Service without authentication.
 - The pprof handlers parse request forms, so multipart parsing issues such as CVE-2026-94440 were reachable from any pod.
 - Profiling is still available on the metrics port with `--profiling`.
+
+## 007-capping-skip-containers-without-recommendation.patch
+
+Fixes a nil pointer dereference in `applyPodLimitRange` (`pkg/utils/vpa/capping.go`), which caps recommendations to a LimitRange of type `Pod` in the admission controller and the updater.
+
+- A container that has no recommendation and no requests, for example a sidecar without `resources`, stays without a recommendation: `insertRequestsForMissingRecommendations` adds requests only for containers that have them.
+- When the sum of the proportional limits of the containers is above `max` of the LimitRange, or below `min` while the sum of the recommendations is not, the last loop of `applyPodLimitRange` wrote the scaled value through the nil recommendation of such a container and panicked.
+- The loop now skips containers without a recommendation, as the `min` loop above it already does. Such containers are left unchanged, as the code comment there says.
+- `TestApplyPodLimitRange` gets a case with such a container; it panicked before the fix.
+- Found by Svace (`DEREF_AFTER_NULL.EX`). Upstream master has the same code.

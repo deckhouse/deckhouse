@@ -1,0 +1,76 @@
+diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/capping.go b/vertical-pod-autoscaler/pkg/utils/vpa/capping.go
+--- a/vertical-pod-autoscaler/pkg/utils/vpa/capping.go
++++ b/vertical-pod-autoscaler/pkg/utils/vpa/capping.go
+@@ -625,14 +625,11 @@ func applyPodLimitRange(resources []vpa_types.RecommendedContainerResources,
+ 		targetTotalLimit = maxLimit
+ 	}
+ 	for _, containerWithRecommendation := range containersWithRecommendations {
+-		var limit resource.Quantity
+ 		if containerWithRecommendation.recommendation == nil {
+ 			// No recommendation, don't change the container
+-			_, limits := resourcehelpers.ContainerRequestsAndLimits(containerWithRecommendation.container.Name, pod)
+-			limit = limits[resourceName]
+-		} else {
+-			limit = (*fieldGetter(*containerWithRecommendation.recommendation))[resourceName]
++			continue
+ 		}
++		limit := (*fieldGetter(*containerWithRecommendation.recommendation))[resourceName]
+ 
+ 		var cappedContainerRequest *resource.Quantity
+ 		if resourceName == corev1.ResourceMemory {
+diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go b/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go
+--- a/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go
++++ b/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go
+@@ -1218,6 +1218,52 @@ func TestApplyPodLimitRange(t *testing.T) {
+ 				},
+ 			},
+ 		},
++		{
++			name: "cap target cpu to pod max with a container without recommendation and resources",
++			resources: []vpa_types.RecommendedContainerResources{
++				{
++					ContainerName: "container1",
++					Target: corev1.ResourceList{
++						corev1.ResourceCPU: resource.MustParse("2"),
++					},
++				},
++			},
++			pod: corev1.Pod{
++				Spec: corev1.PodSpec{
++					Containers: []corev1.Container{
++						{
++							Name: "container1",
++							Resources: corev1.ResourceRequirements{
++								Requests: corev1.ResourceList{
++									corev1.ResourceCPU: resource.MustParse("1"),
++								},
++								Limits: corev1.ResourceList{
++									corev1.ResourceCPU: resource.MustParse("2"),
++								},
++							},
++						},
++						{
++							Name: "container2",
++						},
++					},
++				},
++			},
++			limitRange: corev1.LimitRangeItem{
++				Type: corev1.LimitTypePod,
++				Max: corev1.ResourceList{
++					corev1.ResourceCPU: resource.MustParse("2"),
++				},
++			},
++			resourceName: corev1.ResourceCPU,
++			expect: []vpa_types.RecommendedContainerResources{
++				{
++					ContainerName: "container1",
++					Target: corev1.ResourceList{
++						corev1.ResourceCPU: *resource.NewMilliQuantity(1000, resource.DecimalSI), // floor((2000*2000)/4000)
++					},
++				},
++			},
++		},
+ 	}
+ 	getTarget := func(rl vpa_types.RecommendedContainerResources) *corev1.ResourceList { return &rl.Target }
+ 	for _, tc := range tests {
