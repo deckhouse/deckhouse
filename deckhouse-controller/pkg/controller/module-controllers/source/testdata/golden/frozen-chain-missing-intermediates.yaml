@@ -129,6 +129,8 @@ metadata:
   resourceVersion: "1000"
 spec:
   moduleName: console
+  requirements:
+    kubernetes: '>= 1.27'
   version: 1.55.1
   weight: 900
 status:

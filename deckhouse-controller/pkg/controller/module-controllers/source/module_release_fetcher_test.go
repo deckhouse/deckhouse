@@ -22,8 +22,15 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
+	"github.com/deckhouse/deckhouse/go_lib/project"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -144,4 +151,58 @@ func TestGetNewVersions(t *testing.T) {
 
 	check("actual above target returns empty", "1.33.1", "1.32.3",
 		[]*semver.Version{})
+}
+
+// A pending release refreshed by a later fetch must get the same spec as a created one: a refresh
+// that dropped the requirements let the release controller deploy the release without checking
+// them, and the extenders then disabled the module.
+func TestEnsureModuleReleaseRefreshMatchesCreate(t *testing.T) {
+	scheme, err := project.Scheme()
+	require.NoError(t, err)
+
+	meta := &downloader.ModuleDownloadResult{
+		ModuleVersion: "v1.2.0",
+		ModuleDefinition: &moduletypes.Definition{
+			Name:   "parca",
+			Weight: 900,
+			Requirements: &v1alpha1.ModuleRequirements{
+				ModulePlatformRequirements: v1alpha1.ModulePlatformRequirements{
+					Deckhouse:  ">= 1.70",
+					Kubernetes: ">= 1.33",
+				},
+				ParentModules: map[string]string{"prometheus": ">= 0.0.0"},
+			},
+			Update: &moduletypes.ModuleUpdate{
+				Versions: []moduletypes.ModuleUpdateVersion{{From: "1.0", To: "1.2"}},
+			},
+		},
+	}
+
+	ensure := func(cl client.Client) *v1alpha1.ModuleRelease {
+		f := &ModuleReleaseFetcher{
+			k8sClient:  cl,
+			moduleName: "parca",
+			source:     &v1alpha1.ModuleSource{ObjectMeta: metav1.ObjectMeta{Name: "test-source"}},
+			logger:     log.NewNop(),
+		}
+		require.NoError(t, f.ensureModuleRelease(context.Background(), meta, "step-by-step"))
+
+		release := new(v1alpha1.ModuleRelease)
+		require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: "parca-v1.2.0"}, release))
+
+		return release
+	}
+
+	created := ensure(fake.NewClientBuilder().WithScheme(scheme).Build())
+	require.NotNil(t, created.Spec.Requirements)
+	require.NotNil(t, created.Spec.UpdateSpec)
+
+	pending := created.DeepCopy()
+	pending.ResourceVersion = ""
+	pending.Status.Phase = v1alpha1.ModuleReleasePhasePending
+
+	refreshed := ensure(fake.NewClientBuilder().WithScheme(scheme).WithObjects(pending).Build())
+	require.Equal(t, "check release (step-by-step)", refreshed.Annotations[v1alpha1.ModuleReleaseAnnotationChangeCause])
+
+	assert.Equal(t, created.Spec, refreshed.Spec)
 }

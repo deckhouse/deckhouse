@@ -502,26 +502,7 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 					},
 				},
 			},
-			Spec: v1alpha1.ModuleReleaseSpec{
-				ModuleName: f.moduleName,
-				Version:    semver.MustParse(meta.ModuleVersion).String(),
-				Weight:     meta.ModuleDefinition.Weight,
-				Changelog:  v1alpha1.MakeMappedFields(meta.Changelog),
-			},
-		}
-
-		if meta.ModuleDefinition != nil && meta.ModuleDefinition.Requirements != nil {
-			release.Spec.Requirements = &v1alpha1.ModuleReleaseRequirements{
-				ModuleReleasePlatformRequirements: v1alpha1.ModuleReleasePlatformRequirements{
-					Deckhouse:  meta.ModuleDefinition.Requirements.Deckhouse,
-					Kubernetes: meta.ModuleDefinition.Requirements.Kubernetes,
-				},
-				ParentModules: meta.ModuleDefinition.Requirements.ParentModules,
-			}
-		}
-
-		if meta.ModuleDefinition != nil && meta.ModuleDefinition.Update != nil && len(meta.ModuleDefinition.Update.Versions) > 0 {
-			release.Spec.UpdateSpec = meta.ModuleDefinition.Update.ToV1Alpha1()
+			Spec: f.moduleReleaseSpec(meta),
 		}
 
 		// if it's a first release for a Module, we have to install it immediately
@@ -560,27 +541,41 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 
 	release.Annotations[v1alpha1.ModuleReleaseAnnotationChangeCause] = changeCause
 
-	release.Spec = v1alpha1.ModuleReleaseSpec{
-		ModuleName: f.moduleName,
-		Version:    semver.MustParse(meta.ModuleVersion).String(),
-		Weight:     meta.ModuleDefinition.Weight,
-		Changelog:  v1alpha1.MakeMappedFields(meta.Changelog),
-	}
-
-	if meta.ModuleDefinition != nil && meta.ModuleDefinition.Update != nil && len(meta.ModuleDefinition.Update.Versions) > 0 {
-		constraints := make([]v1alpha1.UpdateConstraint, 0, len(meta.ModuleDefinition.Update.Versions))
-		for _, v := range meta.ModuleDefinition.Update.Versions {
-			// Update constraints from module.yaml into ModuleRelease
-			constraints = append(constraints, v1alpha1.UpdateConstraint{From: v.From, To: v.To})
-		}
-		release.Spec.UpdateSpec = &v1alpha1.UpdateSpec{Versions: constraints}
-	}
+	release.Spec = f.moduleReleaseSpec(meta)
 
 	if err := f.k8sClient.Update(ctx, release); err != nil {
 		return fmt.Errorf("update module release: %w", err)
 	}
 
 	return nil
+}
+
+// moduleReleaseSpec builds the release spec from the module metadata. The creation and the refresh
+// of a pending release both use it: a refresh that drops the requirements lets the release
+// controller deploy the release without checking them.
+func (f *ModuleReleaseFetcher) moduleReleaseSpec(meta *downloader.ModuleDownloadResult) v1alpha1.ModuleReleaseSpec {
+	spec := v1alpha1.ModuleReleaseSpec{
+		ModuleName: f.moduleName,
+		Version:    semver.MustParse(meta.ModuleVersion).String(),
+		Weight:     meta.ModuleDefinition.Weight,
+		Changelog:  v1alpha1.MakeMappedFields(meta.Changelog),
+	}
+
+	if meta.ModuleDefinition != nil && meta.ModuleDefinition.Requirements != nil {
+		spec.Requirements = &v1alpha1.ModuleReleaseRequirements{
+			ModuleReleasePlatformRequirements: v1alpha1.ModuleReleasePlatformRequirements{
+				Deckhouse:  meta.ModuleDefinition.Requirements.Deckhouse,
+				Kubernetes: meta.ModuleDefinition.Requirements.Kubernetes,
+			},
+			ParentModules: meta.ModuleDefinition.Requirements.ParentModules,
+		}
+	}
+
+	if meta.ModuleDefinition != nil && meta.ModuleDefinition.Update != nil && len(meta.ModuleDefinition.Update.Versions) > 0 {
+		spec.UpdateSpec = meta.ModuleDefinition.Update.ToV1Alpha1()
+	}
+
+	return spec
 }
 
 // getNewVersions - getting all last patches from registry for each minor version
