@@ -46,3 +46,13 @@ Lets a container resource policy scale the recommendation by a per-resource fact
 - The webhook and the recommender share the parser `Parse` from `pkg/utils/recommendationfactor`. It checks the range and the precision on the exact Quantity, because `MilliValue()` rounds sub-milli values up and overflows `int64`; a magnitude pre-screen on the `float64` approximation first rejects extreme exponents such as `1e1000000000` at a cost that does not depend on the exponent. Every error it returns carries a short rendering of the rejected value (`ValueOf`), which is what error and log messages print.
 - `isNoopContainerPolicy` from patch 004 treats a container policy with `recommendationFactor` as a real policy, so `UpdateFromPolicy` runs for it and the factor reaches `AggregateContainerState` instead of the policy being skipped as a no-op.
 - `deploy/vpa-v1-crd-gen.yaml` gets the new field and the updated `uncappedTarget` description to stay consistent with the Go types. The module installs its own CRD from `crds/`, which is maintained separately.
+
+## 007-capping-skip-containers-without-recommendation.patch
+
+Fixes a nil pointer dereference in `applyPodLimitRange` (`pkg/utils/vpa/capping.go`), which caps recommendations to a LimitRange of type `Pod` in the admission controller and the updater.
+
+- A container that has no recommendation and no requests, for example a sidecar without `resources`, stays without a recommendation: `insertRequestsForMissingRecommendations` adds requests only for containers that have them.
+- When the sum of the proportional limits of the containers is above `max` of the LimitRange, or below `min` while the sum of the recommendations is not, the last loop of `applyPodLimitRange` wrote the scaled value through the nil recommendation of such a container and panicked.
+- The loop now skips containers without a recommendation, as the `min` loop above it already does. Such containers are left unchanged, as the code comment there says.
+- `TestApplyPodLimitRange` gets a case with such a container; it panicked before the fix.
+- Found by Svace (`DEREF_AFTER_NULL.EX`). Upstream master has the same code.
