@@ -69,3 +69,38 @@
         ```
 
         Settings version 3 rejects `idTokenTTL >= 6h`. A ModuleConfig of an earlier settings version with such a value is still accepted and its value is converted to `5h59m`, so Dex already runs with `5h59m`; this alert keeps firing until the ModuleConfig itself is updated.
+
+  - alert: D8UserAuthnDexProviderTokenExchangeDeprecated
+    expr: |
+      sum by (connector_id) (
+        increase(dex_token_exchange_total{connector_type!="tokenexchange", result="success"}[24h])
+      ) > 0
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: dex
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__d8_user_authn_deprecations: "UserAuthnDeprecations,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authn_deprecations: "UserAuthnDeprecations,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Tokens are exchanged through DexProvider `{{ $labels.connector_id }}`, which is deprecated.
+      description: |
+        In the last 24 hours, Dex exchanged tokens (RFC 8693 token exchange) through the DexProvider `{{ $labels.connector_id }}`. Token exchange through a DexProvider is deprecated. A DexProvider is meant for sign-in, and its connector does not check the audience of the token it exchanges.
+
+        Move the exchange to a TokenExchangeProvider:
+
+        1. Create a TokenExchangeProvider with the `issuer` of the DexProvider, the audience the exchanged tokens carry, and the DexClient that exchanges them in `spec.clients`.
+        1. Set `spec.identity.username` to the claim the DexProvider took the user name from, for example `claim: email`, with a prefix such as `ci:`; the prefix is required.
+        1. Before the switch, add the prefixed subjects to the ClusterAuthorizationRule, AuthorizationRule and RoleBinding objects that grant rights to the old names.
+        1. In the exchange requests, replace `connector_id` with `status.connectorID` of the new object.
+        1. After the switch, remove the old subjects from these objects.
+
+        Find the clients that exchange tokens in the Dex log:
+
+        ```bash
+        d8 k -n d8-user-authn logs deploy/dex -c dex --all-pods=true --since=24h | grep 'token exchange successful' | grep '"connector_id":"{{ $labels.connector_id }}"'
+        ```
+
+        The alert stops 24 hours after the last exchange through the DexProvider.

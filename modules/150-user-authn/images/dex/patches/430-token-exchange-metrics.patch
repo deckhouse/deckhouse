@@ -1,0 +1,270 @@
+diff --git a/server/grants/grants.go b/server/grants/grants.go
+index d507d137..c730901d 100644
+--- a/server/grants/grants.go
++++ b/server/grants/grants.go
+@@ -11,6 +11,8 @@ import (
+ 	"strings"
+ 	"time"
+ 
++	"github.com/prometheus/client_golang/prometheus"
++
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/backchannel"
+ 	"github.com/dexidp/dex/server/connectors"
+@@ -185,6 +187,9 @@ type Handler struct {
+ 	// TokenExchangeDeniedClients are refused the token-exchange grant
+ 	// (Deckhouse).
+ 	TokenExchangeDeniedClients []string
++	// TokenExchanges counts the token exchanges (Deckhouse); nil counts
++	// nothing.
++	TokenExchanges *prometheus.CounterVec
+ 
+ 	grants map[string]Grant
+ }
+@@ -205,7 +210,7 @@ func (h *Handler) Mount(m router.Mux) {
+ 	h.register(h.SupportedGrantTypes,
+ 		&clientCredentials{issuer: h.Issuer, logger: h.Logger},
+ 		&password{issuer: h.Issuer, storage: h.Storage, now: h.Now, logger: h.Logger, connectorID: h.PasswordConnector, lockout: h.Lockout},
+-		&tokenExchange{issuer: h.Issuer, storage: h.Storage, now: h.Now, logger: h.Logger, deniedClients: h.TokenExchangeDeniedClients},
++		&tokenExchange{issuer: h.Issuer, storage: h.Storage, now: h.Now, logger: h.Logger, deniedClients: h.TokenExchangeDeniedClients, exchanges: h.TokenExchanges},
+ 		&authorizationCode{issuer: h.Issuer, storage: h.Storage, sessions: h.Sessions, connectors: h.Connectors, now: h.Now, logger: h.Logger},
+ 		&refresh{storage: h.Storage, issuer: h.Issuer, policy: h.RefreshPolicy, sessions: h.Sessions, sessionsEnabled: h.SessionsEnabled, revocations: h.Revocations, backchannel: h.Backchannel, now: h.Now, logger: h.Logger},
+ 		&deviceCode{storage: h.Storage, now: h.Now, logger: h.Logger},
+diff --git a/server/grants/tokenexchange.go b/server/grants/tokenexchange.go
+index 3f6ab57c..2aaf3bcc 100644
+--- a/server/grants/tokenexchange.go
++++ b/server/grants/tokenexchange.go
+@@ -2,11 +2,14 @@ package grants
+ 
+ import (
+ 	"context"
++	"errors"
+ 	"log/slog"
+ 	"net/http"
+ 	"slices"
+ 	"time"
+ 
++	"github.com/prometheus/client_golang/prometheus"
++
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/server/allowlist"
+ 	"github.com/dexidp/dex/server/connectors"
+@@ -29,6 +32,9 @@ type tokenExchange struct {
+ 	logger  *slog.Logger
+ 	// deniedClients are refused the grant with unauthorized_client.
+ 	deniedClients []string
++	// exchanges counts the exchanges by connector and outcome; nil counts
++	// nothing.
++	exchanges *prometheus.CounterVec
+ }
+ 
+ func (g *tokenExchange) GrantType() string {
+@@ -50,7 +56,33 @@ func (g *tokenExchange) ConnectorID(ctx context.Context, req *Request, client st
+ 	return req.ConnectorID, nil
+ }
+ 
++// Authorize serves the exchange and counts its outcome (Deckhouse).
+ func (g *tokenExchange) Authorize(ctx context.Context, req *Request, client storage.Client, conn connectors.Connector) (Responder, error) {
++	resp, err := g.authorize(ctx, req, client, conn)
++	g.count(req.ConnectorID, conn.Type, err)
++	return resp, err
++}
++
++// count adds the outcome of an exchange to the exchanges metric: success, denied
++// for a refusal of the request (HTTP 4xx), error for a failure of Dex (HTTP
++// 5xx). A subject token the connector could not verify is denied even when the
++// cause is an issuer that is down: the connector reports both alike.
++func (g *tokenExchange) count(connectorID, connectorType string, err error) {
++	if g.exchanges == nil {
++		return
++	}
++	result := "success"
++	if err != nil {
++		result = "error"
++		var oerr *oauth2.Error
++		if errors.As(err, &oerr) && oerr.Status < http.StatusInternalServerError {
++			result = "denied"
++		}
++	}
++	g.exchanges.WithLabelValues(connectorID, connectorType, result).Inc()
++}
++
++func (g *tokenExchange) authorize(ctx context.Context, req *Request, client storage.Client, conn connectors.Connector) (Responder, error) {
+ 	// A client whose secret its users know must not exchange: anyone holding
+ 	// a token of the upstream issuer could get a token of this cluster for it.
+ 	if slices.Contains(g.deniedClients, client.ID) {
+diff --git a/server/grants/tokenexchange_metrics_test.go b/server/grants/tokenexchange_metrics_test.go
+new file mode 100644
+index 00000000..5fa36049
+--- /dev/null
++++ b/server/grants/tokenexchange_metrics_test.go
+@@ -0,0 +1,30 @@
++package grants
++
++import (
++	"errors"
++	"net/http"
++	"testing"
++
++	"github.com/prometheus/client_golang/prometheus"
++	"github.com/prometheus/client_golang/prometheus/testutil"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/server/oauth2"
++)
++
++func TestTokenExchangeCountOutcome(t *testing.T) {
++	counter := prometheus.NewCounterVec(prometheus.CounterOpts{Name: "dex_token_exchange_total"}, []string{"connector_id", "connector_type", "result"})
++	g := &tokenExchange{exchanges: counter}
++
++	g.count("c", "oidc", nil)
++	g.count("c", "oidc", &oauth2.Error{Status: http.StatusUnauthorized})
++	g.count("c", "oidc", &oauth2.Error{Status: http.StatusInternalServerError})
++	g.count("c", "oidc", errors.New("storage is down"))
++
++	require.InDelta(t, 1, testutil.ToFloat64(counter.WithLabelValues("c", "oidc", "success")), 0)
++	require.InDelta(t, 1, testutil.ToFloat64(counter.WithLabelValues("c", "oidc", "denied")), 0)
++	require.InDelta(t, 2, testutil.ToFloat64(counter.WithLabelValues("c", "oidc", "error")), 0)
++
++	// Without a counter nothing is counted and nothing fails.
++	(&tokenExchange{}).count("c", "oidc", nil)
++}
+diff --git a/server/server.go b/server/server.go
+index fd4754b3..937c6b6f 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -13,6 +13,7 @@ import (
+ 	"github.com/prometheus/client_golang/prometheus"
+ 	"github.com/prometheus/client_golang/prometheus/promhttp"
+ 
++	"github.com/dexidp/dex/connector/tokenexchange"
+ 	"github.com/dexidp/dex/pkg/featureflags"
+ 	"github.com/dexidp/dex/server/authflow"
+ 	"github.com/dexidp/dex/server/backchannel"
+@@ -331,6 +332,7 @@ func (s *Server) mount(routes router.Mux, c Config, rc resolvedConfig) {
+ 			Backchannel:         s.backchannel,
+ 
+ 			TokenExchangeDeniedClients: c.TokenExchangeDeniedClients,
++			TokenExchanges:             tokenExchangeCounter(c.PrometheusRegistry, s.storage, s.logger),
+ 		},
+ 		&userinfo.Handler{
+ 			Issuer: s.issuerURL.String(),
+@@ -532,3 +534,47 @@ func (s *Server) startRevokedNotification(ctx context.Context, claimer storage.R
+ func (s *Server) renderError(r *http.Request, w http.ResponseWriter, status int, description string) {
+ 	templates.RenderError(s.templates, s.logger, r, w, status, description)
+ }
++
++// tokenExchangeCounter is dex_token_exchange_total on the registry, or nil
++// without one (Deckhouse). An alert of the platform reads it to find the
++// exchanges that still go through a sign-in provider.
++//
++// The success series of every connector that is not a token-exchange
++// connector starts at zero: a series born at its first exchange starts at 1,
++// and increase() over it misses that exchange. These are the connectors of the
++// config file, which a change of reaches Dex by a restart. increase() sees the
++// first exchange once Prometheus has scraped the zero: an exchange between the
++// start of a pod and its first scrape is still missed.
++func tokenExchangeCounter(registry *prometheus.Registry, s storage.Storage, logger *slog.Logger) *prometheus.CounterVec {
++	if registry == nil {
++		return nil
++	}
++	counter := prometheus.NewCounterVec(prometheus.CounterOpts{
++		Name: "dex_token_exchange_total",
++		Help: "Token exchanges by connector and outcome: success, denied or error.",
++	}, []string{"connector_id", "connector_type", "result"})
++	if err := registry.Register(counter); err != nil {
++		var registered prometheus.AlreadyRegisteredError
++		if errors.As(err, &registered) {
++			if existing, ok := registered.ExistingCollector.(*prometheus.CounterVec); ok {
++				return existing
++			}
++		}
++		logger.Warn("token exchange metric: register, the metric is off", "err", err)
++		return nil
++	}
++
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	conns, err := s.ListConnectors(ctx)
++	if err != nil {
++		logger.Warn("token exchange metric: list connectors to start their series", "err", err)
++		return counter
++	}
++	for _, conn := range conns {
++		if conn.Type != tokenexchange.Type {
++			counter.WithLabelValues(conn.ID, conn.Type, "success").Add(0)
++		}
++	}
++	return counter
++}
+diff --git a/server/server_grant_tokenexchange_metrics_test.go b/server/server_grant_tokenexchange_metrics_test.go
+new file mode 100644
+index 00000000..93e0890c
+--- /dev/null
++++ b/server/server_grant_tokenexchange_metrics_test.go
+@@ -0,0 +1,65 @@
++package server
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"testing"
++
++	"github.com/prometheus/client_golang/prometheus"
++	"github.com/prometheus/client_golang/prometheus/testutil"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/connector/tokenexchange"
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/storage"
++)
++
++// TestTokenExchangeMetrics counts every exchange by connector and outcome.
++func TestTokenExchangeMetrics(t *testing.T) {
++	ctx := t.Context()
++	registry := prometheus.NewRegistry()
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.PrometheusRegistry = registry
++		require.NoError(t, c.Storage.CreateClient(ctx, storage.Client{ID: "ci", Secret: "ci"}))
++		// A token-exchange connector gets no zero series: the alert does not
++		// look at it.
++		require.NoError(t, c.Storage.CreateConnector(ctx, storage.Connector{
++			ID: "tep-ci", Type: tokenexchange.Type, Name: "tep-ci",
++			Config: []byte(`{"issuer":"https://ci.example","keys":{"discovery":{}},"audiences":[{"exact":"dex"}],"identity":{"username":{"claim":"sub"}},"clients":["ci"]}`),
++		}))
++	})
++	defer httpServer.Close()
++
++	exchange := func(subjectTokenType string) {
++		vals := url.Values{}
++		vals.Set("grant_type", oauth2.GrantTypeTokenExchange)
++		vals.Set("connector_id", "mock")
++		vals.Set("scope", "openid")
++		vals.Set("subject_token_type", subjectTokenType)
++		vals.Set("subject_token", "foobar")
++		vals.Set("client_id", "ci")
++		vals.Set("client_secret", "ci")
++		rr := httptest.NewRecorder()
++		req := httptest.NewRequest(http.MethodPost, httpServer.URL+"/token", strings.NewReader(vals.Encode()))
++		req.Header.Set("content-type", "application/x-www-form-urlencoded")
++		s.ServeHTTP(rr, req)
++	}
++
++	// Registering again hands back the counter the server registered.
++	counter := tokenExchangeCounter(registry, s.storage, s.logger)
++	require.NotNil(t, counter)
++
++	// The success series of a sign-in connector exists at zero before any
++	// exchange, so that increase() sees the first one.
++	require.Equal(t, 1, testutil.CollectAndCount(counter, "dex_token_exchange_total"))
++	require.InDelta(t, 0, testutil.ToFloat64(counter.WithLabelValues("mock", "mockCallback", "success")), 0)
++
++	exchange(oauth2.TokenTypeID)
++	exchange(oauth2.TokenTypeID)
++	exchange("urn:example:unsupported")
++
++	require.InDelta(t, 2, testutil.ToFloat64(counter.WithLabelValues("mock", "mockCallback", "success")), 0)
++	require.InDelta(t, 1, testutil.ToFloat64(counter.WithLabelValues("mock", "mockCallback", "denied")), 0)
++}

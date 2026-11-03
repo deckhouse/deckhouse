@@ -1164,6 +1164,37 @@ client, whose secret is the shared one, and the kubeconfig clients:
 
 **Depends on:** none.
 
+### 430-token-exchange-metrics.patch
+
+**Zone:** the metric of token exchanges.
+
+- `dex_token_exchange_total{connector_id, connector_type, result}`: every
+  request of the token-exchange grant that reached its connector, by outcome:
+  `success`, `denied` (a refusal of the request, HTTP 4xx) or `error` (a
+  failure of Dex, HTTP 5xx). A subject token the connector could not verify is
+  `denied` even when the issuer was down: the connector reports both alike.
+  The grant counts in `Authorize`, around the exchange
+  itself; a request refused before it, for an unknown connector or wrong
+  client credentials, is not counted;
+- registered on the Prometheus registry of the server; without one nothing is
+  counted; a failure to register is logged at WARN;
+- at startup the `success` series of every connector that is not
+  `tokenexchange` is created at zero: a series born at its first exchange
+  starts at 1, and `increase()` over it misses that exchange. These are the
+  connectors of the config file, and a change of them restarts Dex.
+  `increase()` sees the first exchange once Prometheus has scraped the zero: an
+  exchange between the start of a pod and its first scrape is still missed.
+
+**Consumer in Deckhouse:** the
+`D8UserAuthnDexProviderTokenExchangeDeprecated` alert
+(`monitoring/prometheus-rules/dex-deprecation.yaml`): a successful exchange
+through a connector that is not `tokenexchange` is an exchange through a
+DexProvider.
+
+**Upstream status:** Deckhouse only.
+
+**Depends on:** 425 (the grant it wraps).
+
 ### 998-fix-cve.patch
 
 **Zone:** dependency bumps only: the modules that the Dex tag pins at a version

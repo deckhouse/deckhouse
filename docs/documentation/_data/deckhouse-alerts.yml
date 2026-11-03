@@ -5439,6 +5439,33 @@ alerts:
         dexclient-controller has unavailable replicas.
       severity: "6"
       markupFormat: markdown
+    - name: D8UserAuthnDexProviderTokenExchangeDeprecated
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex-deprecation.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |
+        In the last 24 hours, Dex exchanged tokens (RFC 8693 token exchange) through the DexProvider `{{ $labels.connector_id }}`. Token exchange through a DexProvider is deprecated. A DexProvider is meant for sign-in, and its connector does not check the audience of the token it exchanges.
+
+        Move the exchange to a TokenExchangeProvider:
+
+        1. Create a TokenExchangeProvider with the `issuer` of the DexProvider, the audience the exchanged tokens carry, and the DexClient that exchanges them in `spec.clients`.
+        1. Set `spec.identity.username` to the claim the DexProvider took the user name from, for example `claim: email`, with a prefix such as `ci:`; the prefix is required.
+        1. Before the switch, add the prefixed subjects to the ClusterAuthorizationRule, AuthorizationRule and RoleBinding objects that grant rights to the old names.
+        1. In the exchange requests, replace `connector_id` with `status.connectorID` of the new object.
+        1. After the switch, remove the old subjects from these objects.
+
+        Find the clients that exchange tokens in the Dex log:
+
+        ```bash
+        d8 k -n d8-user-authn logs deploy/dex -c dex --all-pods=true --since=24h | grep 'token exchange successful' | grep '"connector_id":"{{ $labels.connector_id }}"'
+        ```
+
+        The alert stops 24 hours after the last exchange through the DexProvider.
+      summary: |
+        Tokens are exchanged through DexProvider {{ $labels.connector_id }}, which is deprecated.
+      severity: "8"
+      markupFormat: markdown
     - name: D8UserAuthnIdentityMigrationIncomplete
       sourceFile: modules/150-user-authn/monitoring/prometheus-rules/controller.yaml
       moduleUrl: 150-user-authn
