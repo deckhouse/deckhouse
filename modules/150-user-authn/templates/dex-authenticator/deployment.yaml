@@ -36,7 +36,7 @@ Arguments: the resources section of the CR for the container (may be empty) and 
   {{- $hash := (index $info "hash") }}
   {{- $secretName := (default (printf "dex-authenticator-%s" $crd.name) (index $info "secretName")) }}
   {{- /* spec.highAvailability of the DexAuthenticator overrides the high availability of the cluster. The rollout */}}
-  {{- /* strategy and the PodDisruptionBudget follow the number of replicas it gives. */}}
+  {{- /* strategy, the PodDisruptionBudget and the pod anti-affinity follow the number of replicas it gives. */}}
   {{- $replicas := 1 }}
   {{- if ne $crd.spec.highAvailability nil }}
     {{- if $crd.spec.highAvailability }}
@@ -167,7 +167,20 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $context "system") | nindent 6 }}
 {{- end }}
       {{- include "helm_lib_priority_class" (tuple $context "cluster-low") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator" "name" $crd.name) (dict "revisionScoped" true)) | nindent 6 }}
+      {{- /* helm_lib_pod_anti_affinity_for_ha reads the high availability of the module, which spec.highAvailability */}}
+      {{- /* may override: two replicas of one revision on one node would fail together. */}}
+      {{- if gt $replicas 1 }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: dex-authenticator
+                name: {{ $crd.name | quote }}
+            matchLabelKeys:
+            - pod-template-hash
+            topologyKey: kubernetes.io/hostname
+      {{- end }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       imagePullSecrets:
       - name: registry-dex-authenticator

@@ -305,8 +305,8 @@ var _ = Describe("Module :: user-authn :: helm template :: DexAuthenticator oaut
 	}
 
 	// spec.highAvailability of the DexAuthenticator overrides the high availability of the cluster. The rollout
-	// strategy and the PodDisruptionBudget follow the replicas it gives: a single replica surges, so that a
-	// rollout is not an outage, and may be evicted.
+	// strategy, the PodDisruptionBudget and the pod anti-affinity follow the replicas it gives: a single replica
+	// surges, so that a rollout is not an outage, and may be evicted; two replicas never share a node.
 	for _, tc := range []struct {
 		name            string
 		clusterHA       bool
@@ -337,6 +337,17 @@ var _ = Describe("Module :: user-authn :: helm template :: DexAuthenticator oaut
 			Expect(deployment.Field("spec.strategy.rollingUpdate.maxUnavailable").Int()).To(Equal(tc.maxUnavailable))
 			Expect(tc.replicas+tc.maxSurge-tc.maxUnavailable).To(BeNumerically(">=", 1),
 				"a replica keeps serving during a rollout")
+
+			antiAffinity := deployment.Field("spec.template.spec.affinity.podAntiAffinity")
+			if tc.replicas > 1 {
+				Expect(antiAffinity.Get("requiredDuringSchedulingIgnoredDuringExecution").String()).To(MatchJSON(`[{
+					"labelSelector": {"matchLabels": {"app": "dex-authenticator", "name": "app"}},
+					"matchLabelKeys": ["pod-template-hash"],
+					"topologyKey": "kubernetes.io/hostname"
+				}]`))
+			} else {
+				Expect(deployment.Field("spec.template.spec.affinity").Exists()).To(BeFalse())
+			}
 
 			pdb := hec.KubernetesResource("PodDisruptionBudget", "tenant-ns", "app-dex-authenticator")
 			Expect(pdb.Field("spec.minAvailable").Int()).To(Equal(tc.minAvailable))
