@@ -2,7 +2,11 @@
 <script type="text/javascript" src="/assets/js/codeblock.js?v={{ assetHash }}"></script>
 
 <!--noindex-->
-{% unless site.d8Revision == 'CSE' %}
+{%- comment -%}
+  No d8Revision / site.mode checks in this file: the site is built with d8Revision EE
+  only, and the documentation module replaces this footer with its own
+  (modules/810-documentation/images/web/documentation/_includes).
+{%- endcomment %}
 {% include gdpr.html %}
 {% include form_in_modal.html mode="request_access" %}
 {% include form_in_modal.html mode="request_callback" %}
@@ -10,7 +14,6 @@
 {% include form_in_modal.html mode="request_demo" %}
 {% include form_in_modal.html mode="get_a_report" %}
 {% include form_in_modal.html mode="become_a_partner" %}
-{% endunless %}
 
 <footer class="footer">
     <div class="footer__content container">
@@ -43,6 +46,15 @@
 <!--                <a data-popup="callback">Request a call</a>-->
 <!--              </li>-->
             </ul>
+            {%- comment -%}
+              The En/Ru switch used to sit in the header; it lives here now, as in the
+              Russian footer. language-switch.js rewrites the href on load to the Russian
+              twin of the current address, which also covers the SSI copy of this footer.
+            {%- endcomment %}
+            <a class="lang-switcher footer__lang" hreflang="ru" href="{{ site.urls['ru'] }}/products{%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><g stroke="currentColor" stroke-width="2"><circle cx="16" cy="16" r="12"></circle><path d="M16 4a16.17 16.17 0 0 0 0 24 16.17 16.17 0 0 0 0-24ZM4 16a16.17 16.17 0 0 0 24 0 16.17 16.17 0 0 0-24 0Z"></path></g></svg>
+              <span>Russian</span>
+            </a>
           </div>
         {%- for column in site.data.footer.columns[page.lang] %}
           <div class="footer__col">

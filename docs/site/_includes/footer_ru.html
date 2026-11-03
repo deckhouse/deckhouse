@@ -7,7 +7,6 @@
 <script type="text/javascript" src="/assets/js/codeblock.js?v={{ assetHash }}"></script>
 
 <!--noindex-->
-{% unless site.d8Revision == 'CSE' %}
 {% include gdpr.html %}
 {% include form_in_modal.html mode="request_access" %}
 {% include form_in_modal.html mode="request_callback" %}
@@ -15,7 +14,6 @@
 {% include form_in_modal.html mode="request_demo" %}
 {% include form_in_modal.html mode="get_a_report" %}
 {% include form_in_modal.html mode="become_a_partner" %}
-{% endunless %}
 
 <footer class="footer footer--ru">
   <div class="footer__content container">
@@ -56,6 +54,16 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814ZM9.545 15.568V8.432L15.818 12l-6.273 3.568Z" fill="currentColor"></path></svg>
           </a>
         </div>
+        {%- comment -%}
+          Same href as the switcher in the English footer, pointed the other way.
+          language-switch.js rewrites it on load to the English twin of the current
+          address, which also covers the SSI copy of this footer on docs pages.
+        {%- endcomment %}
+        <a class="lang-switcher footer__lang" lang="en" hreflang="en" href="{{ site.urls['en'] }}/products{%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}">
+          {%- comment -%} DDS icon "System/view-360", redrawn from the Figma geometry. {%- endcomment %}
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true"><g stroke="currentColor" stroke-width="2"><circle cx="16" cy="16" r="12"></circle><path d="M16 4a16.17 16.17 0 0 0 0 24 16.17 16.17 0 0 0 0-24ZM4 16a16.17 16.17 0 0 0 24 0 16.17 16.17 0 0 0-24 0Z"></path></g></svg>
+          <span>English</span>
+        </a>
       </div>
 
       {%- for column in site.data.footer.columns[page.lang] %}

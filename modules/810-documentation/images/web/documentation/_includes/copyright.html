@@ -1,0 +1,22 @@
+{%- assign targetLang = "ru" %}
+{%- assign targetLangName = "Russian" %}
+{%- assign year = "now" | date: "%Y" %}
+{%- assign copyright = "© " | append: year | append: " Deckhouse Platform. All rights reserved." %}
+
+{%- if page.lang == "ru" %}
+  {%- assign targetLang = "en" %}
+  {%- assign targetLangName = "English" %}
+  {%- assign copyright = "© " | append: year | append: " АО «Флант». Все права защищены." %}
+{%- endif -%}
+
+<div class="footer__copyright">
+  {%- if site.d8Revision == 'CSE' %}
+  <span></span>
+  {%- else %}
+    <a class="lang-switcher footer__lang" lang="{{ targetLang }}" hreflang="{{ targetLang }}" href="/{{ targetLang }}{%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true"><g stroke="currentColor" stroke-width="2"><circle cx="16" cy="16" r="12"></circle><path d="M16 4a16.17 16.17 0 0 0 0 24 16.17 16.17 0 0 0 0-24ZM4 16a16.17 16.17 0 0 0 24 0 16.17 16.17 0 0 0-24 0Z"></path></g></svg>
+      <span>{{ targetLangName }}</span>
+    </a>
+  {%- endif %}
+  <span>{{ copyright }}</span>
+</div>
