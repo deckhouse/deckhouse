@@ -414,6 +414,7 @@
  - **[istio]** Fixing the list of requests from istiod to gateway API [#18056](https://github.com/deckhouse/deckhouse/pull/18056)
  - **[istio]** Implement graceful metadata secret renewal for multiclusters. [#20207](https://github.com/deckhouse/deckhouse/pull/20207)
  - **[istio]** Reduce CPU and RAM for regenerate multicluster JWT token and sort ingressGateway [#18567](https://github.com/deckhouse/deckhouse/pull/18567)
+ - **[istio]** Restore Istiod pod anti-affinity for Istio 1.25 installations managed by the Sail Operator. [#22169](https://github.com/deckhouse/deckhouse/pull/22169)
  - **[istio]** added iptables wrapper in cni-v1x21x6 [#18953](https://github.com/deckhouse/deckhouse/pull/18953)
     istio-cni-nodes will be restarted
  - **[istio]** fixed CVE-2026-33186 in v1.21.6 images [#18798](https://github.com/deckhouse/deckhouse/pull/18798)
@@ -506,6 +507,7 @@
  - **[registry]** Updated auth image Go dependencies to fix Go CVEs. [#18233](https://github.com/deckhouse/deckhouse/pull/18233)
     Registry pods will be restarted.
  - **[registrypackages]** Added vex with CVE-2026-33186. [#18751](https://github.com/deckhouse/deckhouse/pull/18751)
+ - **[registrypackages]** Rebuild kubernetes-cni with updated Go dependencies to fix CVEs. [#21966](https://github.com/deckhouse/deckhouse/pull/21966)
  - **[registrypackages]** Update integrity patch for containerd (cse only). [#17000](https://github.com/deckhouse/deckhouse/pull/17000)
  - **[registrypackages]** Upgraded containerd to 1.7.30 and 2.1.6. [#17510](https://github.com/deckhouse/deckhouse/pull/17510)
     Containerd will restart.
@@ -557,6 +559,7 @@
  - **[candi]** Removed insecure kube-apiserver cipher suites `TLS_RSA_WITH_AES_256_GCM_SHA384`, `TLS_RSA_WITH_AES_128_GCM_SHA256`, added fixed names for `TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256`, `TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256`. [#17777](https://github.com/deckhouse/deckhouse/pull/17777)
  - **[candi]** Removed overrides for journald configuration. [#17769](https://github.com/deckhouse/deckhouse/pull/17769)
  - **[candi]** Removed patches for kubernetes 1.30, which is not supported since Deckhouse v1.75.0. [#17998](https://github.com/deckhouse/deckhouse/pull/17998)
+ - **[candi]** Update base images [#22110](https://github.com/deckhouse/deckhouse/pull/22110)
  - **[candi]** Updated documentation in candi. [#16933](https://github.com/deckhouse/deckhouse/pull/16933)
  - **[candi]** Updated static nodes with topology labels via /var/lib/node_labels. [#16816](https://github.com/deckhouse/deckhouse/pull/16816)
  - **[cilium-hubble]** Added vex with CVE-2026-33726 for hubble [#18917](https://github.com/deckhouse/deckhouse/pull/18917)
