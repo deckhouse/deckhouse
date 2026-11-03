@@ -97,7 +97,7 @@ func (g *GC) Collect(ctx context.Context) error {
 		return fmt.Errorf("list revocations: %w", err)
 	}
 	now := g.now()
-	kept := map[string]int{revocation.TypePair: 0, revocation.TypeSession: 0, revocation.TypeGrant: 0}
+	kept := map[string]int{revocation.TypePair: 0, revocation.TypeSession: 0, revocation.TypeGrant: 0, revocation.TypeConnector: 0}
 	deleted := 0
 	for i := range list.Items {
 		item := &list.Items[i]

@@ -17,9 +17,11 @@ limitations under the License.
 // Package revocation reads and writes Dex Revocation objects (dex.coreos.com/v1).
 //
 // A Revocation records that something issued by Dex is no longer valid: everything of a pair of a
-// connector and a user below a generation (type pair), a browser session (type session), or one
-// grant, a refresh token and what was issued from it (type grant). Dex writes them on its logout and
-// RFC 7009 revocation paths, the controller on UserOperation and User deletion. The revocation feed
+// connector and a user below a generation (type pair), a browser session (type session), one
+// grant, a refresh token and what was issued from it (type grant), or every token issued through a
+// token-exchange connector (type connector). Dex writes them on its logout and RFC 7009 revocation
+// paths, the controller on UserOperation and User deletion and on the deletion of a
+// TokenExchangeProvider. The revocation feed
 // of the controller, the user-authz webhook, and basic-auth-proxy read them and refuse what they
 // name. The fields are top-level, as in every Dex storage type.
 package revocation
@@ -30,9 +32,11 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	"user-authn-controller/internal/controller"
 	"user-authn-controller/internal/naming"
@@ -45,11 +49,17 @@ const (
 	TypeSession = "session"
 	// TypeGrant revokes the grant GrantID of ClientID.
 	TypeGrant = "grant"
+	// TypeConnector revokes every token issued through the connector ConnectorID: the
+	// token-exchange connector of a deleted TokenExchangeProvider. The connector IDs carry the UID
+	// of the object, so no later connector reuses one.
+	TypeConnector = "connector"
 
-	// TypeLabel holds the type, PairLabel the name of the pair (naming.OfflineTokenName), and
-	// OperationUIDLabel the UID of the UserOperation that wrote the object.
+	// TypeLabel holds the type, PairLabel the name of the pair (naming.OfflineTokenName),
+	// ConnectorLabel the connector of a revocation of type connector, and OperationUIDLabel the UID
+	// of the UserOperation that wrote the object.
 	TypeLabel         = "user-authn.deckhouse.io/revocation-type"
 	PairLabel         = "user-authn.deckhouse.io/pair"
+	ConnectorLabel    = "user-authn.deckhouse.io/connector"
 	OperationUIDLabel = "user-authn.deckhouse.io/operation-uid"
 
 	// SourceController and SourceDex name the writer.
@@ -67,6 +77,7 @@ const (
 	ReasonLogoutExceptSession = "LogoutExceptSession"
 	ReasonLogoutGrant         = "LogoutGrant"
 	ReasonLogoutExceptGrant   = "LogoutExceptGrant"
+	ReasonProviderDeleted     = "TokenExchangeProviderDeleted"
 )
 
 const (
@@ -134,6 +145,12 @@ func GrantName(id string) string {
 	return "grant-" + id
 }
 
+// ConnectorName is the name of the revocation of the connector id. Object refuses an id that makes
+// no object name; the connector IDs of TokenExchangeProviders always make one.
+func ConnectorName(id string) string {
+	return "connector-" + id
+}
+
 // Subject is the sub claim Dex puts into the tokens of the pair: the protobuf message
 // IDTokenSubject{user_id = 1, conn_id = 2} in unpadded base64url, as Dex's tokens.GenSubject.
 func Subject(userID, connectorID string) string {
@@ -165,12 +182,22 @@ func (r Revocation) Object() (*unstructured.Unstructured, error) {
 	if r.Generation > math.MaxInt64 {
 		return nil, fmt.Errorf("revocation %s: generation %d does not fit the object", r.Name, r.Generation)
 	}
+	if errs := validation.IsDNS1123Subdomain(r.Name); len(errs) != 0 {
+		return nil, fmt.Errorf("revocation %q: not an object name: %s", r.Name, strings.Join(errs, "; "))
+	}
 	obj := controller.Object(controller.RevocationGVK)
 	obj.SetName(r.Name)
 	obj.SetNamespace(naming.DexNamespace)
-	labels := map[string]string{
-		TypeLabel: r.Type,
-		PairLabel: r.Pair(),
+	labels := map[string]string{TypeLabel: r.Type}
+	if r.Type == TypeConnector {
+		// A connector revocation names no user, so it has no pair. The label only helps to find the
+		// object; readers take the connector from the field. One that cannot be a label value is
+		// left out rather than fail the revocation.
+		if len(validation.IsValidLabelValue(r.ConnectorID)) == 0 {
+			labels[ConnectorLabel] = r.ConnectorID
+		}
+	} else {
+		labels[PairLabel] = r.Pair()
 	}
 	if r.OperationUID != "" {
 		labels[OperationUIDLabel] = r.OperationUID

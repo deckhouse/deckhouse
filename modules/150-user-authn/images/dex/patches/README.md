@@ -53,7 +53,9 @@ fields.
   `AuthCode`, `RefreshToken` and `AuthSession` keep the generation of the
   pair at the login (`generation`);
 - `Revocation` (`revocations.dex.coreos.com`): what was revoked (`type`:
-  `pair`, `session` or `grant`), the pair (`connectorID`, `userID`, the
+  `pair`, `session` or `grant`; the user-authn controller also writes
+  `connector`, every token of a token-exchange connector, which Dex does not
+  read), the pair (`connectorID`, `userID`, the
   `subject` of its tokens), `generation`, `sessionID`, `grantID`, `clientID`,
   `clients`, `reason`, `source`, `createdAt`. The optional interface
   `RevocationCreator` is implemented by the kubernetes storage, which names

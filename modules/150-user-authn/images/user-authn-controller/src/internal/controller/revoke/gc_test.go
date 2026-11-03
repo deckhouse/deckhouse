@@ -113,10 +113,10 @@ func TestGC_StartExportsTheGaugeWhileLeading(t *testing.T) {
 	go func() { done <- gc.Start(ctx) }()
 
 	deadline := time.Now().Add(5 * time.Second)
-	for seriesOf(storedGauge) != 3 {
+	for seriesOf(storedGauge) != 4 {
 		if time.Now().After(deadline) {
 			cancel()
-			t.Fatalf("series = %d while leading, want 3", seriesOf(storedGauge))
+			t.Fatalf("series = %d while leading, want 4", seriesOf(storedGauge))
 		}
 		time.Sleep(time.Millisecond)
 	}

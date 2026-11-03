@@ -19,6 +19,7 @@ package revocation
 import (
 	"encoding/base64"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -91,6 +92,39 @@ func TestNames(t *testing.T) {
 	}
 	if got := GrantName("3w4l2zgokgsohvjnqzjrv7lmz"); got != "grant-3w4l2zgokgsohvjnqzjrv7lmz" {
 		t.Errorf("GrantName = %q", got)
+	}
+	if got := ConnectorName("tep-gitlab-ci-1a2b3c4d"); got != "connector-tep-gitlab-ci-1a2b3c4d" {
+		t.Errorf("ConnectorName = %q", got)
+	}
+}
+
+// A connector revocation names no user: it is labelled with the connector, not with a pair.
+func TestConnectorObjectRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	r := Revocation{
+		Name:        ConnectorName("tep-peer-moscow-1a2b3c4d"),
+		Type:        TypeConnector,
+		ConnectorID: "tep-peer-moscow-1a2b3c4d",
+		Clients:     []string{},
+		Reason:      ReasonProviderDeleted,
+		Source:      SourceController,
+		CreatedAt:   time.Date(2026, 11, 2, 12, 0, 0, 0, time.UTC),
+	}
+	obj, err := r.Object()
+	if err != nil {
+		t.Fatalf("Object: %v", err)
+	}
+	expectedLabels := map[string]string{TypeLabel: TypeConnector, ConnectorLabel: "tep-peer-moscow-1a2b3c4d"}
+	if !reflect.DeepEqual(obj.GetLabels(), expectedLabels) {
+		t.Errorf("labels = %v, want %v", obj.GetLabels(), expectedLabels)
+	}
+	back, err := FromObject(obj)
+	if err != nil {
+		t.Fatalf("FromObject: %v", err)
+	}
+	if !reflect.DeepEqual(back, r) {
+		t.Errorf("round trip = %+v, want %+v", back, r)
 	}
 }
 
@@ -205,5 +239,33 @@ func TestSortedClients(t *testing.T) {
 	got := SortedClients([]string{"b", "", "a", "b"})
 	if !reflect.DeepEqual(got, []string{"a", "b"}) {
 		t.Errorf("SortedClients = %v", got)
+	}
+}
+
+// A connector ID that makes no object name fails with a clear error rather than at the API server.
+func TestConnectorObjectWithAnInvalidName(t *testing.T) {
+	t.Parallel()
+
+	id := "Tep_Peer"
+	if _, err := (Revocation{Name: ConnectorName(id), Type: TypeConnector, ConnectorID: id}).Object(); err == nil {
+		t.Fatal("Object accepted the name connector-Tep_Peer")
+	}
+}
+
+// A connector ID too long for a label value still makes a revocation: the readers take the
+// connector from the field, and a failed revocation would leave the connector working.
+func TestConnectorObjectWithALongID(t *testing.T) {
+	t.Parallel()
+
+	id := "tep-" + strings.Repeat("a", 60) + "-1a2b3c4d"
+	obj, err := Revocation{Name: ConnectorName(id), Type: TypeConnector, ConnectorID: id, Clients: []string{}}.Object()
+	if err != nil {
+		t.Fatalf("Object: %v", err)
+	}
+	if _, found := obj.GetLabels()[ConnectorLabel]; found {
+		t.Errorf("a %d-character connector ID was put into a label", len(id))
+	}
+	if obj.Object["connectorID"] != id {
+		t.Errorf("connectorID = %v", obj.Object["connectorID"])
 	}
 }
