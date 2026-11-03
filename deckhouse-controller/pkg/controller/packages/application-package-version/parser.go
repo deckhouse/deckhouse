@@ -79,7 +79,8 @@ type metadataReader struct {
 // parseVersionMetadataByImage extracts package metadata from a tar-formatted image reader.
 // It looks for version.json, package.yaml (definition), changelog.yaml, the openapi
 // schema files (settings.yaml with the config-values.yaml fallback, values.yaml) and
-// the settings conversion files (openapi/conversions/*.yaml). All files are optional — missing files result in zero-value fields in the returned metadata.
+// the settings conversion files (openapi/conversions/v<N>.yaml or v<N>.yml).
+// All files are optional; missing files result in zero-value fields in the returned metadata.
 func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reader) (*packageMetadata, error) {
 	meta := new(packageMetadata)
 

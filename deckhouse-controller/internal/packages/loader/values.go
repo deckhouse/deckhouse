@@ -21,6 +21,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
 const (
@@ -81,7 +82,7 @@ type RawSchemas struct {
 	Settings []byte
 	// Values is openapi/values.yaml; nil when absent.
 	Values []byte
-	// Conversions are the openapi/conversions/*.yaml files, one per file; nil when absent.
+	// Conversions are the openapi/conversions/v<N>.yaml or v<N>.yml files; nil when absent.
 	Conversions [][]byte
 }
 
@@ -121,8 +122,7 @@ func loadRawSchemas(packageDir string) (RawSchemas, error) {
 	return RawSchemas{Settings: settings, Values: values, Conversions: conversions}, nil
 }
 
-// loadRawConversions reads every *.yaml file of the package's openapi/conversions
-// directory, the files loadConversions builds the converter from; nil without the directory.
+// loadRawConversions reads versioned settings conversions; nil without the directory.
 func loadRawConversions(packageDir string) ([][]byte, error) {
 	dir := filepath.Join(packageDir, openAPIDir, conversionsDir)
 
@@ -137,7 +137,7 @@ func loadRawConversions(packageDir string) ([][]byte, error) {
 
 	var conversions [][]byte
 	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".yaml" {
+		if entry.IsDir() || !conversion.IsSettingsConversionFile(entry.Name()) {
 			continue
 		}
 

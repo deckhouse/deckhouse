@@ -17,6 +17,8 @@ limitations under the License.
 package conversion
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -139,4 +141,43 @@ func TestNewConverter(t *testing.T) {
 			t.Fatal("expected an error for the invalid expression")
 		}
 	})
+}
+
+func TestNewConverterFromDirVersionFiles(t *testing.T) {
+	for _, filename := range []string{"v2.yaml", "v2.yml"} {
+		t.Run(filename, func(t *testing.T) {
+			dir := t.TempDir()
+			files := map[string]string{
+				filename: `version: 2
+conversions:
+  - .newField = .oldField | del(.oldField)
+`,
+				"testcases.yaml": "testcases: []\n",
+				"README.yaml":    "not: [valid YAML",
+			}
+			for name, content := range files {
+				if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.Mkdir(filepath.Join(dir, "v3.yaml"), 0755); err != nil {
+				t.Fatal(err)
+			}
+
+			converter, err := NewConverterFromDir(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if converter.IsKnownVersion(0) {
+				t.Fatal("testcases.yaml was loaded as a conversion")
+			}
+			version, settings, err := converter.ConvertToLatest(1, map[string]interface{}{"oldField": "value"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if version != 2 || len(settings) != 1 || settings["newField"] != "value" {
+				t.Fatalf("expected {newField: value} at version 2, got %v at version %d", settings, version)
+			}
+		})
+	}
 }

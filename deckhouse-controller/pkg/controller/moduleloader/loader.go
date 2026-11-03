@@ -804,20 +804,12 @@ func (l *Loader) loadConversions(conversionsDir string) ([]v1alpha1.ModuleSettin
 		return nil, fmt.Errorf("read conversions directory: %w", err)
 	}
 
-	// Regex to match version files like v1.yaml, v2.yaml, etc.
-	versionFileRe := regexp.MustCompile(`^v(\d+)\.yaml$`)
-
 	var allConversions []v1alpha1.ModuleSettingsConversion
 
 	// Process each version file
 	for _, file := range files {
-		if file.IsDir() {
+		if file.IsDir() || !conversion.IsSettingsConversionFile(file.Name()) {
 			continue
-		}
-
-		matches := versionFileRe.FindStringSubmatch(file.Name())
-		if matches == nil {
-			continue // Skip non-version files
 		}
 
 		// Read and parse the conversion file

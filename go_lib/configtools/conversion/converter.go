@@ -22,12 +22,20 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/itchyny/gojq"
 	"sigs.k8s.io/yaml"
 )
+
+var settingsConversionFileName = regexp.MustCompile(`^v[0-9]+\.ya?ml$`)
+
+// IsSettingsConversionFile reports whether a filename names a settings conversion:
+// v<N>.yaml or v<N>.yml.
+func IsSettingsConversionFile(name string) bool {
+	return settingsConversionFileName.MatchString(name)
+}
 
 type Converter struct {
 	latest      int
@@ -36,7 +44,7 @@ type Converter struct {
 
 // NewConverterFromDir reads conversion files from the given directory
 // and builds a Converter that can transform settings between schema versions.
-// Reads any *.yaml file; each file must contain a "version" field and
+// Reads v<N>.yaml and v<N>.yml files; each must contain a "version" field and
 // a "conversions" list of jq expressions.
 func NewConverterFromDir(pathToConversions string) (*Converter, error) {
 	c := &Converter{conversions: make(map[int]string), latest: 1}
@@ -45,7 +53,7 @@ func NewConverterFromDir(pathToConversions string) (*Converter, error) {
 		return nil, fmt.Errorf("read dir: %w", err)
 	}
 	for _, file := range conversionsDir {
-		if file.IsDir() || filepath.Ext(file.Name()) != ".yaml" {
+		if file.IsDir() || !IsSettingsConversionFile(file.Name()) {
 			continue
 		}
 		v, conversion, err := readConversions(path.Join(pathToConversions, file.Name()))

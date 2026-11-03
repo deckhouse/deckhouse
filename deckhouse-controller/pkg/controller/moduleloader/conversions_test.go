@@ -190,3 +190,33 @@ type: object`,
 		})
 	}
 }
+
+func TestLoadConversionsVersionFiles(t *testing.T) {
+	for _, filename := range []string{"v2.yaml", "v2.yml"} {
+		t.Run(filename, func(t *testing.T) {
+			dir := t.TempDir()
+			files := map[string]string{
+				filename: `version: 2
+conversions:
+  - .newField = .oldField | del(.oldField)
+`,
+				"testcases.yaml": "testcases: []\n",
+				"README.yaml":    "not: [valid YAML",
+			}
+			for name, content := range files {
+				if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0644); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			loader := &Loader{}
+			conversions, err := loader.loadConversions(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(conversions) != 1 || len(conversions[0].Expr) != 1 || conversions[0].Expr[0] != ".newField = .oldField | del(.oldField)" {
+				t.Fatalf("expected only the version 2 conversion, got %#v", conversions)
+			}
+		})
+	}
+}

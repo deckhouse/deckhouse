@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
 // SettingsConversionsDir is the package directory, relative to the package root,
@@ -38,11 +39,11 @@ const MaxSettingsConversions = 100
 // IsSettingsConversionFile reports whether a package file path, relative to the
 // package root, is a settings conversion file.
 func IsSettingsConversionFile(name string) bool {
-	return path.Dir(name) == SettingsConversionsDir && path.Ext(name) == ".yaml"
+	return path.Dir(name) == SettingsConversionsDir && conversion.IsSettingsConversionFile(path.Base(name))
 }
 
 // ParsePackageSchemas parses the raw openapi files of a package, and its raw
-// settings conversion files (openapi/conversions/v<N>.yaml), into the status
+// settings conversion files (openapi/conversions/v<N>.yaml or v<N>.yml), into the status
 // schemas, so every writer of the schemas stores one shape. A package without
 // any schema or conversion file yields nil.
 func ParsePackageSchemas(settings, values []byte, conversions [][]byte) (*PackageVersionStatusSchemas, error) {
