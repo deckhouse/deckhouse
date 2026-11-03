@@ -16,12 +16,27 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+// masterNodeState carries the schedulability of a control-plane node.
+// Cordon keeps the control-plane label and does not evict running pods,
+// so a cordoned node stays in the snapshot and the flag is the only way
+// to tell it apart.
+type masterNodeState struct {
+	Name          string `json:"name"`
+	Unschedulable bool   `json:"unschedulable"`
+}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -40,7 +55,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, isHighAvailabilityCluster)
 
 func applyMasterNodeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return obj.GetName(), nil
+	node := new(corev1.Node)
+
+	if err := sdk.FromUnstructured(obj, node); err != nil {
+		return nil, fmt.Errorf("from unstructured: %w", err)
+	}
+
+	return masterNodeState{Name: node.GetName(), Unschedulable: node.Spec.Unschedulable}, nil
 }
 
 func isHighAvailabilityCluster(_ context.Context, input *go_hook.HookInput) error {
@@ -48,7 +69,27 @@ func isHighAvailabilityCluster(_ context.Context, input *go_hook.HookInput) erro
 
 	mastersCount := len(masterNodesSnap)
 
+	// Counted separately from mastersCount: consumers that size a workload by the
+	// nodes it can actually be placed on need the schedulable number, while etcd
+	// and the registry storage need every master, cordoned ones included.
+	schedulableMastersCount := 0
+
+	for masterNode, err := range sdkobjectpatch.SnapshotIter[masterNodeState](masterNodesSnap) {
+		if err != nil {
+			// Undercounting keeps the workloads placeable, so skip the broken entry
+			// instead of failing the hook and leaving every consumer without values.
+			input.Logger.Warn("skip master node snapshot", log.Err(err))
+
+			continue
+		}
+
+		if !masterNode.Unschedulable {
+			schedulableMastersCount++
+		}
+	}
+
 	input.Values.Set("global.discovery.clusterMasterCount", mastersCount)
+	input.Values.Set("global.discovery.clusterSchedulableMasterCount", schedulableMastersCount)
 	input.Values.Set("global.discovery.clusterControlPlaneIsHighlyAvailable", mastersCount > 1)
 
 	return nil
