@@ -69,8 +69,9 @@ func (p *convergeParams) loggerOptions(ctx context.Context) logger.Options {
 }
 
 func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
-	ctx, cancel := operationCtx(server)
-	defer cancel()
+	op := newOperation(server)
+	defer op.close()
+	ctx := op.ctx
 
 	logger.L(ctx).Info("started")
 
@@ -91,7 +92,7 @@ func (s *Service) Converge(server pb.DHCTL_ConvergeServer) error {
 	}
 
 	startReceiver[*pb.ConvergeRequest, *pb.ConvergeResponse](server, receiveCh, doneCh, internalErrCh)
-	startSender[*pb.ConvergeRequest, *pb.ConvergeResponse](server, sendCh, internalErrCh)
+	startOperationSender[*pb.ConvergeRequest, *pb.ConvergeResponse](op, server, sendCh, internalErrCh)
 
 connectionProcessor:
 	for {
@@ -117,7 +118,7 @@ connectionProcessor:
 						logger.Err(err), slog.String("message", fmt.Sprintf("%T", message)))
 					continue connectionProcessor
 				}
-				go func() {
+				op.Go(func() {
 					result := s.convergeSafe(ctx, &convergeParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
@@ -125,7 +126,7 @@ connectionProcessor:
 						sendCh:       sendCh,
 					})
 					_ = sendResponse(server.Context(), sendCh, &pb.ConvergeResponse{Message: &pb.ConvergeResponse_Result{Result: result}})
-				}()
+				})
 
 			case *pb.ConvergeRequest_Continue:
 				err := f.Event("toNextPhase")
@@ -146,7 +147,7 @@ connectionProcessor:
 				}
 
 			case *pb.ConvergeRequest_Cancel:
-				cancel()
+				op.cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
