@@ -249,6 +249,16 @@ spec:
                   subresource: prometheus-metrics
                   name: agent
         {{- end }}
+            - upstream: http://127.0.0.1:9741/metrics
+              path: /ipv4-options-guard/metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ $context.Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: agent
         ports:
         - containerPort: 4241
           name: https-metrics
@@ -268,6 +278,68 @@ spec:
   {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" $context | nindent 12 }}
   {{- end }}
+      - name: ipv4-options-guard
+        # CVE-2026-98432 mitigation, settings in templates/ipv4-options-guard/configmap.yaml.
+        image: {{ include "helm_lib_module_common_image" (list $context "ipv4OptionsGuard") }}
+        args:
+        - --settings=/etc/ipv4-options-guard/settings.json
+        - --netns-dir=/run/netns
+        - --listen=127.0.0.1:9741
+        - --sbin=/sbin
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: KUBERNETES_SERVICE_HOST
+          value: "127.0.0.1"
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6445"
+        securityContext:
+          # setns into pod netns and writes to their /proc/sys/net need a privileged container.
+          privileged: true
+          allowPrivilegeEscalation: true
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: ipv4-options-guard-settings
+          mountPath: /etc/ipv4-options-guard
+          readOnly: true
+        - name: cilium-netns
+          mountPath: /run/netns
+          # Pod netns are bind-mounted by containerd after the sidecar has started.
+          mountPropagation: HostToContainer
+          readOnly: true
+        - name: ipv4-options-guard-sysctl-d
+          mountPath: /host/etc/sysctl.d
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
+        # iptables-wrapper installed by the guard itself: legacy/nft is decided by the wrapper, as in the other modules.
+        - name: ipv4-options-guard-sbin
+          mountPath: /sbin
+        livenessProbe:
+          httpGet:
+            host: 127.0.0.1
+            path: /healthz
+            port: 9741
+          periodSeconds: 30
+        readinessProbe:
+          # Always ok while the process serves: problems go to metrics, never to the agent pod readiness.
+          httpGet:
+            host: 127.0.0.1
+            path: /healthz
+            port: 9741
+          periodSeconds: 30
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 12 }}
+{{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 10m
+            memory: 25Mi
+{{- end }}
+        terminationMessagePolicy: FallbackToLogsOnError
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
@@ -636,4 +708,15 @@ spec:
         emptyDir: {}
       - name: var-lib-cilium-include-bpf
         emptyDir: {}
+      - name: ipv4-options-guard-settings
+        configMap:
+          name: ipv4-options-guard
+      - name: ipv4-options-guard-sysctl-d
+        hostPath:
+          path: /etc/sysctl.d
+          type: DirectoryOrCreate
+      - name: ipv4-options-guard-sbin
+        emptyDir:
+          medium: Memory
+          sizeLimit: 16Mi
 {{- end  }}

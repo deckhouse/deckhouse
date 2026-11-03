@@ -1,2 +1,43 @@
 type: object
-properties: {}
+properties:
+  ipv4OptionsGuard:
+    type: object
+    default: {}
+    description: |
+      Mitigation of [CVE-2026-98432](https://www.cve.org/CVERecord?id=CVE-2026-98432) (use-after-free in the Linux IPv4 TCP handshake triggered by a TCP SYN with IP options).
+
+      A sidecar of the CNI agent installs a filter into the host network namespace and into every pod network namespace on the node, including pods started later. The filter matches IPv4 TCP SYN packets and IPv4 fragments carrying IP options.
+
+      The filter follows the iptables mode (nft or legacy) that iptables-wrapper selects on the node, the same as the other Deckhouse components. In the nft mode, the filter uses native nftables expressions. In the legacy mode, it uses iptables with the `u32` match. No kernel modules are loaded unless `allowKernelModuleLoad` is set. If the kernel modules of the selected mode are not loaded but those of the other mode are, the filter uses the other mode, and the node is reported by the `D8IPv4OptionsGuardBackendMismatch` alert. A node that cannot be protected is reported by the `D8IPv4OptionsGuardNodeUnprotected` alert.
+
+      To exclude a node (for example, a node with CIPSO labeled networking), set the `ipv4-options-guard.deckhouse.io/disabled: "true"` label on it: the changes are reverted on that node.
+
+      The mitigation does not fix the vulnerability: update the node kernel as soon as a fixed version is available.
+    properties:
+      mode:
+        type: string
+        enum: ["Audit", "Enforce", "Disabled"]
+        description: |
+          Operating mode.
+
+          If the mode is not set, it is `Enforce` in clusters installed with the mitigation and `Audit` in clusters that existed before it.
+
+          - `Audit` — matching packets are only counted (the `d8_ipv4_options_guard_matched_packets_total` metric and the `D8IPv4OptionsGuardMatchedTraffic` alert). Use it to check that no workload relies on IP options. While any node is in this mode, the `D8IPv4OptionsGuardAuditMode` alert reminds that the cluster is not protected yet.
+          - `Enforce` — matching packets are dropped, and MPTCP is disabled if `disableMPTCP` is set.
+          - `Disabled` — the filter is removed from all network namespaces, including running pods, and `net.mptcp.enabled` is restored to the value it had before.
+
+          The mode is applied without restarting the CNI agent pods.
+      disableMPTCP:
+        type: boolean
+        default: true
+        description: |
+          In the `Enforce` mode, set `net.mptcp.enabled=0` in the host and in every pod network namespace. This removes the precondition of the published exploit.
+
+          Listeners opened before the change stay MPTCP until the process is restarted. For the host, the setting is also written to `/etc/sysctl.d`, so after a reboot it is applied before kubelet starts.
+      allowKernelModuleLoad:
+        type: boolean
+        default: false
+        description: |
+          The filter needs the `nf_tables` kernel module in the nft mode and the `ip_tables`, `iptable_raw`, `xt_tcpudp` and `xt_u32` kernel modules in the legacy mode.
+
+          By default, kernel modules are not loaded: if a module of the mode selected by iptables-wrapper is not loaded, the filter uses the other mode when its modules are loaded, and the node is reported as unprotected otherwise. Set to `true` to load the modules of the selected mode.

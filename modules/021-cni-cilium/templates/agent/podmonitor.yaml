@@ -38,6 +38,21 @@ spec:
       - targetLabel: job
         replacement: "cilium-agent-extended-metrics"
   {{- end }}
+  - port: https-metrics
+    scheme: https
+    path: /ipv4-options-guard/metrics
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+    - targetLabel: tier
+      replacement: cluster
+    - targetLabel: job
+      replacement: ipv4-options-guard
   selector:
     matchLabels:
       app: agent

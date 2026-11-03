@@ -60,6 +60,8 @@ modules:
 	cniCiliumValues = `
 bpfLBMode: "DSR"
 internal:
+  ipv4OptionsGuardMode: Audit
+  ipv4OptionsGuardDefaultMode: Audit
   mode: "Direct"
   masqueradeMode: "BPF"
   hubble:
@@ -360,6 +362,58 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 			Expect(cm.Field("data.hubble-export-allowlist").Exists()).To(BeFalse())
 			Expect(cm.Field("data.hubble-export-denylist").Exists()).To(BeFalse())
 			Expect(cm.Field("data.hubble-export-fieldmask").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("ipv4-options-guard", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cniCilium", cniCiliumValues)
+		})
+
+		It("runs the sidecar in Audit and strips the DSR option by default", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ds := f.KubernetesResource("DaemonSet", "d8-cni-cilium", "agent")
+			Expect(ds.Field(`spec.template.spec.containers.#(name=="ipv4-options-guard").securityContext.privileged`).Bool()).To(BeTrue())
+			Expect(ds.Field(`spec.template.spec.containers.#(name=="ipv4-options-guard").volumeMounts.#(name=="cilium-netns").mountPropagation`).String()).To(Equal("HostToContainer"))
+			Expect(ds.Field(`spec.template.spec.containers.#(name=="ipv4-options-guard").volumeMounts.#(name=="ipv4-options-guard-sbin").mountPath`).String()).To(Equal("/sbin"))
+			Expect(ds.Field(`spec.template.spec.containers.#(name=="kube-rbac-proxy").env.#(name=="KUBE_RBAC_PROXY_CONFIG").value`).String()).To(ContainSubstring("path: /ipv4-options-guard/metrics"))
+
+			Expect(f.KubernetesResource("ConfigMap", "d8-cni-cilium", "ipv4-options-guard").Field("data.settings\\.json").String()).To(MatchJSON(`{"mode":"Audit"}`))
+			Expect(f.KubernetesResource("ConfigMap", "d8-cni-cilium", "ipv4-options-guard").Field("data.defaultMode").String()).To(Equal("Audit"))
+			Expect(f.KubernetesResource("ConfigMap", "d8-cni-cilium", "cilium-config").Field("data.bpf-lb-dsr-strip-ipv4-option").String()).To(Equal("true"))
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "cilium-agent").Field(`spec.podMetricsEndpoints.#(path=="/ipv4-options-guard/metrics")`).Exists()).To(BeTrue())
+
+			sau := f.KubernetesResource("DaemonSet", "d8-cni-cilium", "safe-agent-updater")
+			Expect(sau.Field(`spec.template.spec.initContainers.#(name=="prepull-image-ipv4-options-guard").image`).String()).To(ContainSubstring("ipv4OptionsGuard"))
+			Expect(sau.Field(`spec.template.spec.containers.#(name=="pause-ipv4-options-guard").command.0`).String()).To(Equal("/pause"))
+		})
+
+		It("passes the settings and stops stripping the DSR option when Disabled", func() {
+			f.ValuesSetFromYaml("cniCilium.ipv4OptionsGuard", `{mode: Disabled, disableMPTCP: true, allowKernelModuleLoad: false}`)
+			f.ValuesSet("cniCilium.internal.ipv4OptionsGuardMode", "Disabled")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("ConfigMap", "d8-cni-cilium", "ipv4-options-guard").Field("data.settings\\.json").String()).
+				To(MatchJSON(`{"mode":"Disabled","disableMPTCP":true,"allowKernelModuleLoad":false}`))
+			Expect(f.KubernetesResource("ConfigMap", "d8-cni-cilium", "cilium-config").Field("data.bpf-lb-dsr-strip-ipv4-option").Exists()).To(BeFalse())
+		})
+
+		It("does not strip the DSR option without DSR", func() {
+			f.ValuesSet("cniCilium.bpfLBMode", "SNAT")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("ConfigMap", "d8-cni-cilium", "cilium-config").Field("data.bpf-lb-dsr-strip-ipv4-option").Exists()).To(BeFalse())
+
+			f.ValuesSet("cniCilium.bpfLBMode", "Hybrid")
+			f.ValuesSet("cniCilium.internal.mode", "VXLAN")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("ConfigMap", "d8-cni-cilium", "cilium-config").Field("data.bpf-lb-dsr-strip-ipv4-option").Exists()).To(BeFalse())
 		})
 	})
 })

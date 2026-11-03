@@ -1,0 +1,153 @@
+# Same rules in cni-cilium, cni-flannel and cni-simple-bridge (only one CNI module is enabled at a time),
+# except the namespace and DaemonSet in D8IPv4OptionsGuardMetricsAbsent.
+- name: d8.ipv4-options-guard
+  rules:
+  - alert: D8IPv4OptionsGuardNodeUnprotected
+    expr: max by (node, reason) (d8_ipv4_options_guard_node_info{protected="false"}) == 1
+    for: 15m
+    labels:
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: The CVE-2026-98432 filter cannot be installed on the node `{{ $labels.node }}`.
+      description: |
+        The ipv4-options-guard sidecar of the CNI agent could not protect the node `{{ $labels.node }}` (reason: `{{ $labels.reason }}`).
+
+        - `iptables_wrapper_failed` — iptables-wrapper could not determine the iptables mode of the node.
+        - `kernel_modules_not_loaded` — the kernel modules of the mode selected by iptables-wrapper are not loaded, and loading them is not allowed.
+
+        The details are in the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+
+        The node remains exposed to CVE-2026-98432 until its kernel is updated.
+
+        Possible actions:
+
+        - Update the node kernel to a version with the fix and reboot the node.
+        - If the node uses legacy iptables and loading the kernel modules named in the reason is acceptable, set `ipv4OptionsGuard.allowKernelModuleLoad: true` in the CNI module settings.
+
+  - alert: D8IPv4OptionsGuardMetricsAbsent
+    expr: |
+      count by (node) (kube_pod_info{namespace="d8-cni-flannel", created_by_name="flannel", node!=""})
+      unless on (node)
+      count by (node) (d8_ipv4_options_guard_node_info{namespace="d8-cni-flannel"})
+    for: 15m
+    labels:
+      severity_level: "4"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: The CVE-2026-98432 filter state is unknown on the node `{{ $labels.node }}`.
+      description: |
+        The CNI agent pod runs on the node `{{ $labels.node }}`, but Prometheus gets no metrics from its `ipv4-options-guard` container.
+
+        Without these metrics, the other `D8IPv4OptionsGuard*` alerts cannot fire for this node, so it may be unprotected unnoticed.
+
+        Check the `ipv4-options-guard` container of the CNI agent pod on that node and the scraping of its metrics.
+
+  - alert: D8IPv4OptionsGuardBackendMismatch
+    expr: max by (node, backend, reason) (d8_ipv4_options_guard_node_info{mismatch="true"}) == 1
+    for: 15m
+    labels:
+      severity_level: "6"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: The CVE-2026-98432 filter on the node `{{ $labels.node }}` uses a different iptables mode than iptables-wrapper selected.
+      description: |
+        The node `{{ $labels.node }}` is protected, but the filter uses `{{ $labels.backend }}`: the kernel modules of the mode selected by iptables-wrapper are not loaded, while those of the other mode are.
+
+        The details are in the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+
+        The filter and the other Deckhouse components use different packet filtering frameworks on this node.
+        Such a security configuration is harder to audit and troubleshoot.
+
+        Possible actions:
+
+        - Find out why the kernel modules of the mode selected by iptables-wrapper are not loaded on the node.
+        - If loading these kernel modules is acceptable, set `ipv4OptionsGuard.allowKernelModuleLoad: true` in the CNI module settings.
+
+  - alert: D8IPv4OptionsGuardReconcileFailed
+    expr: max by (node) (d8_ipv4_options_guard_netns{state="failed"}) > 0
+    for: 15m
+    labels:
+      severity_level: "6"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: The CVE-2026-98432 filter failed in {{ $value }} network namespaces on the node `{{ $labels.node }}`.
+      description: |
+        Some network namespaces on the node `{{ $labels.node }}` are not protected.
+
+        Check the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+
+  - alert: D8IPv4OptionsGuardFilterBypassed
+    expr: max by (node) (d8_ipv4_options_guard_filter_bypassed_netns) > 0
+    for: 15m
+    labels:
+      severity_level: "6"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: Packets can skip the CVE-2026-98432 filter in {{ $value }} network namespaces on the node `{{ $labels.node }}`.
+      description: |
+        The node `{{ $labels.node }}` uses legacy iptables. In {{ $value }} network namespaces, a rule in the `PREROUTING` chain of the `raw` table ahead of the jump to `D8-IPV4OPT-GUARD` can end the traversal of the table (for example, `-j ACCEPT`). Packets accepted by that rule never reach the filter.
+
+        The guard puts its jump first when it installs the filter, but does not move it later, so as not to fight with other software on the node that manages its own rules.
+        The affected network namespaces are named in the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+
+        Possible actions:
+
+        - Find the software that inserted the rule (`iptables-legacy -t raw -S PREROUTING` in the network namespace) and make it append the rule instead, or use a target that does not end the traversal.
+        - Or put the jump first by hand: `iptables-legacy -t raw -I PREROUTING 1 -j D8-IPV4OPT-GUARD`. The guard removes the old jump on its next pass.
+
+  - alert: D8IPv4OptionsGuardMatchedTraffic
+    # In Enforce the packets are already dropped: the alert is only for checking workloads before switching.
+    expr: |
+      sum by (node, rule) (increase(d8_ipv4_options_guard_matched_packets_total[1h])) > 0
+      and on (node)
+      max by (node) (d8_ipv4_options_guard_node_info{mode="Audit"})
+    labels:
+      severity_level: "7"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: IPv4 packets with IP options were seen on the node `{{ $labels.node }}` in the `Audit` mode.
+      description: |
+        Over the last hour, the ipv4-options-guard sidecar matched {{ $value }} IPv4 packets with IP options (rule `{{ $labels.rule }}`) on the node `{{ $labels.node }}`.
+
+        In the `Audit` mode they are only counted. In the `Enforce` mode they would be dropped, and this alert is not raised.
+
+        Legitimate TCP traffic almost never carries IP options. If a workload relies on them (for example, CIPSO labeled networking),
+        exclude the node with the `ipv4-options-guard.deckhouse.io/disabled: "true"` label before switching `ipv4OptionsGuard.mode` to `Enforce`.
+        Otherwise, this may be an attempt to exploit CVE-2026-98432.
+
+  - alert: D8IPv4OptionsGuardAuditMode
+    # One alert per cluster: a reminder that Audit does not protect from CVE-2026-98432.
+    expr: count(max by (node) (d8_ipv4_options_guard_node_info{mode="Audit"})) > 0
+    for: 15m
+    labels:
+      severity_level: "9"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: The CVE-2026-98432 filter only counts packets on {{ $value }} nodes of the cluster.
+      description: |
+        The `ipv4OptionsGuard.mode` of the CNI module is `Audit` on {{ $value }} nodes: packets with IP options are only counted, not dropped, and MPTCP stays enabled.
+        The nodes remain exposed to CVE-2026-98432.
+
+        Clusters that existed before the mitigation get `Audit` by default. Once the `D8IPv4OptionsGuardMatchedTraffic` alert shows that no workload relies on IP options, switch to `Enforce` in the ModuleConfig of the CNI module (`cni-cilium`, `cni-flannel` or `cni-simple-bridge`):
+
+        ```yaml
+        spec:
+          settings:
+            ipv4OptionsGuard:
+              mode: Enforce
+        ```

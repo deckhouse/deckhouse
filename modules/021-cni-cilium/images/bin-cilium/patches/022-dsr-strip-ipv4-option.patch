@@ -1,0 +1,124 @@
+diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
+index 57ca1a32..4b831431 100644
+--- a/bpf/lib/nodeport.h
++++ b/bpf/lib/nodeport.h
+@@ -2003,6 +2003,43 @@ drop_err:
+ 					  CTX_ACT_DROP, METRIC_EGRESS);
+ }
+ 
++#ifdef ENABLE_DSR_STRIP_OPT4
++/* Strip the DSR option once its info is stored in CT/SNAT, so the backend's
++ * TCP stack never sees IPv4 options (CVE-2026-98432).
++ */
++static __always_inline int dsr_strip_opt4(struct __ctx_buff *ctx)
++{
++	void *data, *data_end;
++	struct iphdr *ip4;
++	__u32 iph_old, iph_new;
++	struct dsr_opt_v4 opt;
++	__be32 sum;
++
++	if (!revalidate_data(ctx, &data, &data_end, &ip4))
++		return DROP_INVALID;
++	if (ctx_load_bytes(ctx, ETH_HLEN + sizeof(*ip4), &opt, sizeof(opt)) < 0)
++		return DROP_INVALID;
++	if (opt.type != DSR_IPV4_OPT_TYPE || opt.len != sizeof(opt))
++		return 0;
++
++	iph_old = *(__u32 *)ip4;
++	ip4->ihl -= sizeof(opt) >> 2;
++	ip4->tot_len = bpf_htons(bpf_ntohs(ip4->tot_len) - sizeof(opt));
++	iph_new = *(__u32 *)ip4;
++
++	sum = csum_diff(&iph_old, 4, &iph_new, 4, 0);
++	sum = csum_diff(&opt, sizeof(opt), NULL, 0, sum);
++
++	/* Removes the bytes right after the fixed IPv4 header, where dsr_set_opt4() put the option. */
++	if (ctx_adjust_hroom(ctx, -(__s32)sizeof(opt), BPF_ADJ_ROOM_NET,
++			     ctx_adjust_hroom_flags()))
++		return DROP_INVALID;
++	if (ipv4_csum_update_by_diff(ctx, ETH_HLEN, sum) < 0)
++		return DROP_CSUM_L3;
++	return 0;
++}
++#endif /* ENABLE_DSR_STRIP_OPT4 */
++
+ static __always_inline int
+ nodeport_dsr_ingress_ipv4(struct __ctx_buff *ctx, struct ipv4_ct_tuple *tuple,
+ 			  struct iphdr *ip4, bool has_l4_header, int l4_off,
+@@ -2056,6 +2093,14 @@ create_ct:
+ 		return DROP_UNKNOWN_CT;
+ 	}
+ 
++#ifdef ENABLE_DSR_STRIP_OPT4
++	if (port) {
++		ret = dsr_strip_opt4(ctx);
++		if (IS_ERR(ret))
++			return ret;
++	}
++#endif
++
+ 	return CTX_ACT_OK;
+ }
+ #endif /* ENABLE_DSR */
+diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
+index edf15c9b..6af314d6 100644
+--- a/daemon/cmd/daemon_main.go
++++ b/daemon/cmd/daemon_main.go
+@@ -612,6 +612,9 @@ func InitGlobalFlags(cmd *cobra.Command, vp *viper.Viper) {
+ 	flags.String(option.LoadBalancerDSRDispatch, option.DSRDispatchOption, "BPF load balancing DSR dispatch method (\"opt\", \"ipip\", \"geneve\")")
+ 	option.BindEnv(vp, option.LoadBalancerDSRDispatch)
+ 
++	flags.Bool(option.LoadBalancerDSRStripIPv4Option, false, "Strip the DSR IPv4 option on the backend node before delivering the packet to the pod")
++	option.BindEnv(vp, option.LoadBalancerDSRStripIPv4Option)
++
+ 	flags.String(option.LoadBalancerRSSv4CIDR, "", "BPF load balancing RSS outer source IPv4 CIDR prefix for IPIP")
+ 	option.BindEnv(vp, option.LoadBalancerRSSv4CIDR)
+ 
+diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
+index d5d4d7a7..52449d26 100644
+--- a/pkg/datapath/linux/config/config.go
++++ b/pkg/datapath/linux/config/config.go
+@@ -524,6 +524,9 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
+ 			}
+ 			if option.Config.LoadBalancerDSRDispatch == option.DSRDispatchOption {
+ 				cDefinesMap["DSR_ENCAP_MODE"] = fmt.Sprintf("%d", dsrEncapNone)
++				if option.Config.LoadBalancerDSRStripIPv4Option {
++					cDefinesMap["ENABLE_DSR_STRIP_OPT4"] = "1"
++				}
+ 			} else if option.Config.LoadBalancerDSRDispatch == option.DSRDispatchIPIP {
+ 				cDefinesMap["DSR_ENCAP_MODE"] = fmt.Sprintf("%d", dsrEncapIPIP)
+ 			} else if option.Config.LoadBalancerDSRDispatch == option.DSRDispatchGeneve {
+diff --git a/pkg/option/config.go b/pkg/option/config.go
+index 9d43de68..fb578c38 100644
+--- a/pkg/option/config.go
++++ b/pkg/option/config.go
+@@ -269,6 +269,10 @@ const (
+ 	// level annotation for configuring bpf loadbalancing method (snat vs dsr).
+ 	LoadBalancerModeAnnotation = "bpf-lb-mode-annotation"
+ 
++	// LoadBalancerDSRStripIPv4Option strips the DSR IPv4 option on the backend node
++	// before the packet reaches the pod (CVE-2026-98432 mitigation).
++	LoadBalancerDSRStripIPv4Option = "bpf-lb-dsr-strip-ipv4-option"
++
+ 	// Alias to DSR dispatch method
+ 	LoadBalancerDSRDispatch = "bpf-lb-dsr-dispatch"
+ 
+@@ -1894,6 +1898,9 @@ type DaemonConfig struct {
+ 	// EnableHealthDatapath enables IPIP health probes data path
+ 	EnableHealthDatapath bool
+ 
++	// LoadBalancerDSRStripIPv4Option strips the DSR IPv4 option on the backend node
++	LoadBalancerDSRStripIPv4Option bool
++
+ 	// EnableHostPort enables k8s Pod's hostPort mapping through BPF
+ 	EnableHostPort bool
+ 
+@@ -3037,6 +3044,7 @@ func (c *DaemonConfig) Populate(vp *viper.Viper) {
+ 	c.FragmentsMapEntries = vp.GetInt(FragmentsMapEntriesName)
+ 	c.CRDWaitTimeout = vp.GetDuration(CRDWaitTimeout)
+ 	c.LoadBalancerDSRDispatch = vp.GetString(LoadBalancerDSRDispatch)
++	c.LoadBalancerDSRStripIPv4Option = vp.GetBool(LoadBalancerDSRStripIPv4Option)
+ 	c.LoadBalancerRSSv4CIDR = vp.GetString(LoadBalancerRSSv4CIDR)
+ 	c.LoadBalancerRSSv6CIDR = vp.GetString(LoadBalancerRSSv6CIDR)
+ 	c.InstallNoConntrackIptRules = vp.GetBool(InstallNoConntrackIptRules)

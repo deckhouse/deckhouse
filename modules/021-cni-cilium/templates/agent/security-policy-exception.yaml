@@ -143,4 +143,8 @@ spec:
           readOnly: false
           metadata:
             description: Host xtables lock used to serialize iptables updates.
+        - path: /etc/sysctl.d
+          readOnly: false
+          metadata:
+            description: ipv4-options-guard persists net.mptcp.enabled=0 here so it applies at boot before kubelet starts.
 {{- end }}
