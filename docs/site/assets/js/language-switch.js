@@ -1,6 +1,15 @@
 document.addEventListener('DOMContentLoaded', function () {
+  // Pages without a twin in the other language (CSE documentation, see
+  // docs/documentation/_layouts/default.html) get the switch from the shared
+  // header/footer through SSI anyway; drop it instead of linking to a 404.
+  if (document.querySelector('meta[name="page:lang-switch"][content="disabled"]')) {
+    $('a.lang-switcher').remove();
+    return;
+  }
+
+  // Russian pages have no #language-switch, only the footer link - the
+  // a.lang-switcher rewrite at the bottom must still run for them.
   const mobileLanguageSwitch = document.querySelector('#language-switch');
-  if (!mobileLanguageSwitch) return;
 
   const isRuPath = (pathname) => /^\/ru(\/|$)/.test(pathname);
   const isEnPath = (pathname) => /^\/en(\/|$)/.test(pathname);
@@ -41,29 +50,31 @@ document.addEventListener('DOMContentLoaded', function () {
     return url.toString();
   }
 
-  function mobileSyncCheckedState() {
-    const { pathname, hostname } = new URL(window.location.href);
-    const isRuHost =
-      hostname === 'deckhouse.ru' ||
-      hostname === 'ru.localhost' ||
-      hostname.includes('deckhouse-ru');
+  if (mobileLanguageSwitch) {
+    function mobileSyncCheckedState() {
+      const { pathname, hostname } = new URL(window.location.href);
+      const isRuHost =
+        hostname === 'deckhouse.ru' ||
+        hostname === 'ru.localhost' ||
+        hostname.includes('deckhouse-ru');
 
-    mobileLanguageSwitch.checked = isRuPath(pathname) || isRuHost;
+      mobileLanguageSwitch.checked = isRuPath(pathname) || isRuHost;
+    }
+
+    let mobileIsNavigating = false;
+    mobileLanguageSwitch.removeAttribute('onclick');
+    mobileLanguageSwitch.addEventListener('change', function () {
+      if (window.innerWidth >= 1024 || mobileIsNavigating) return;
+
+      const targetUrl = buildTargetUrl();
+      if (!targetUrl || targetUrl === window.location.href) return;
+
+      mobileIsNavigating = true;
+      window.location.assign(targetUrl);
+    });
+
+    mobileSyncCheckedState();
   }
-
-  let mobileIsNavigating = false;
-  mobileLanguageSwitch.removeAttribute('onclick');
-  mobileLanguageSwitch.addEventListener('change', function () {
-    if (window.innerWidth >= 1024 || mobileIsNavigating) return;
-
-    const targetUrl = buildTargetUrl();
-    if (!targetUrl || targetUrl === window.location.href) return;
-
-    mobileIsNavigating = true;
-    window.location.assign(targetUrl);
-  });
-
-  mobileSyncCheckedState();
 
   const targetUrl = buildTargetUrl();
   if (targetUrl && targetUrl !== window.location.href) {

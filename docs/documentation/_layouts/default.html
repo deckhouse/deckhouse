@@ -8,6 +8,15 @@
   <meta name="page:versioned" content="true">
   {% endif %}
   <meta name="page:url:relative" content="./{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' | regex_replace_once: '/index.html$', '/' }}">
+  {%- if site.d8Revision == 'CSE' %}
+  {%- comment -%}
+    CSE documentation is Russian only, so there is no twin page to switch to.
+    The header and footer come from the public site through SSI, already rendered
+    without any knowledge of the edition, so the switch is removed client-side:
+    language-switch.js drops every a.lang-switcher when this meta is present.
+  {%- endcomment %}
+  <meta name="page:lang-switch" content="disabled">
+  {%- endif %}
   {%- if page.anchors_disabled == true %}
     <script>
         window.anchors_disabled = true;

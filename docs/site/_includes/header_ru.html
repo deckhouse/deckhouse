@@ -8,8 +8,8 @@
   #top-header-nav, data-open-modal) keeps working unchanged. The new look is applied
   through the .header--ru modifier in _sass/components/_header-ru.scss.
 
-  The Ru/En switcher is intentionally absent - the design has none. language-switch.js
-  bails out on a missing #language-switch, so it becomes a no-op on Russian pages.
+  The Ru/En switcher is intentionally absent - the design has none here; it lives in
+  the footer (footer_ru.html), and language-switch.js rewrites that link instead.
 
   Products and Solutions are hardcoded here on purpose. The API feed still sends a
   "Produkty" top-level item, which header-menu-fill-items.html skips by title, and it

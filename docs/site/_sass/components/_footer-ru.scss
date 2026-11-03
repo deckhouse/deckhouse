@@ -193,6 +193,42 @@ $wordmark-width: 417px;
     }
   }
 
+  // ----------- Language switch (Figma 10141:10962) -----------
+  // The column gap is 16px; the design puts the switch 24px (mobile) / 32px
+  // (desktop) below the socials, so the difference goes into margin-top.
+  .footer__lang {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    margin-top: 8px;
+    font-family: 'Onest', sans-serif;
+    font-size: 14px;
+    font-weight: 500; // Heading/Card/S
+    line-height: 16px;
+    text-decoration: none;
+    transition: opacity .15s ease;
+    @include mixins.color($text-inverse-primary);
+
+    @include breakpoints.min-w(m) {
+      margin-top: 16px;
+      font-size: 16px;
+      line-height: 20px;
+    }
+
+    &:hover {
+      opacity: .7;
+    }
+
+    // The globe is drawn inside a 32px box with 3px of air around the circle;
+    // pull it out so the outline lines up with the socials and the text above.
+    svg {
+      display: block;
+      flex-shrink: 0;
+      margin-left: -3px;
+    }
+  }
+
   // ----------- Legal line -----------
   .footer__copyright {
     display: flex;

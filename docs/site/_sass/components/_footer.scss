@@ -185,6 +185,38 @@ body {
     }
   }
 
+  // Language switch under the contacts. The column gap is 12px / 16px; the margin
+  // makes it 24px / 32px, the spacing the Russian footer uses. _footer-ru.scss styles
+  // the same class under .footer--ru with every property set here, so it wins there.
+  &__lang {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    align-self: flex-start;
+    margin-top: 12px;
+    font-size: 14px;
+    line-height: 21px;
+    text-decoration: none;
+    transition: opacity .15s ease;
+    @include mixins.color(mixins.$white);
+
+    @include breakpoints.min-w(m) {
+      margin-top: 16px;
+    }
+
+    &:hover {
+      opacity: .7;
+    }
+
+    // The globe has 2px of air around the circle at this size; pull it out so the
+    // outline lines up with the contact links above.
+    svg {
+      display: block;
+      flex-shrink: 0;
+      margin-left: -2px;
+    }
+  }
+
   &__copyright {
     display: flex;
     flex-direction: column;

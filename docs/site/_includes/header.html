@@ -109,22 +109,6 @@
             <a data-open-modal="request_callback" href="#" class="button button--contact">{{ site.data.i18n.common['contact_us_button'][page.lang] }}</a>
           {%- endunless %}
         </div>
-        {%- unless site.d8Revision == 'CSE' %}
-          <a class="lang-switcher" href="
-            {%- if site.mode == 'module' %}/ru
-              {%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
-            {%- else -%}
-              {%- if page.mode == 'ssi' -%}
-                {{ site.urls['ru'] }}{% raw %}{{ .MenuDocumentationLink }}{{ .CurrentPageURLRelative }}{% endraw %}
-              {%- else -%}
-                {{ site.urls['ru'] }}/products{%- if page_url_without_lang %}{{ page_url_without_lang }}{% else %}/{%- endif %}
-              {%- endif %}
-            {%- endif %}"
-          >
-            <span>En</span>
-            <span>Ru</span>
-          </a>
-        {%- endunless %}
       </div>
       <div class="hamburger hamburger--collapse header__hamburger" type="button">
         <span></span>

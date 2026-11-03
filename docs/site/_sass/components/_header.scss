@@ -1003,6 +1003,9 @@ html {
             .socials {
                 display: flex;
                 align-items: center;
+                // Alone in the row since the En/Ru switch moved to the footer; keep it
+                // on the right, where space-between used to put it.
+                margin-left: auto;
                 gap: 15px;
 
                 a {
