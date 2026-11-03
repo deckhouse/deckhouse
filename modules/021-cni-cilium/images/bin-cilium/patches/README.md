@@ -5,13 +5,13 @@
 Bumps a set of Go module dependencies in `go.mod`/`go.sum` above the versions
 shipped by upstream Cilium v1.17.17 to remediate known CVEs, e.g.:
 
-- `github.com/go-jose/go-jose/v4` -> `v4.1.4`
+- `github.com/go-jose/go-jose/v4` -> `v4.1.6` (CVE-2026-116585, CVE-2026-116586, CVE-2026-116587)
 - `github.com/envoyproxy/go-control-plane/envoy` -> `v1.37.0`
 - `go.mongodb.org/mongo-driver` -> `v1.17.7`
 - `github.com/cilium/ebpf` -> `v0.22.0` (CVE-2026-10722)
-- `golang.org/x/net` -> `v0.60.0` (CVE-2026-78669, CVE-2026-78663, CVE-2026-97032,
-  CVE-2026-78659, CVE-2026-78660); pulls `golang.org/x/crypto` `v0.57.0`,
-  `golang.org/x/text` `v0.42.0`, `golang.org/x/sys` `v0.48.0` and other `golang.org/x/*`
+- `golang.org/x/net` -> `v0.62.0` (CVE-2026-78669, CVE-2026-78663, CVE-2026-97032,
+  CVE-2026-78659, CVE-2026-78660, CVE-2026-78661, CVE-2026-97045); pulls `golang.org/x/crypto` `v0.58.0`,
+  `golang.org/x/text` `v0.43.0`, `golang.org/x/sys` `v0.49.0` and other `golang.org/x/*`
 - `github.com/klauspost/compress` -> `v1.18.7` (CVE-2026-63209)
 
 Regenerate by cloning `cilium v1.17.17`, applying this patch, bumping the
