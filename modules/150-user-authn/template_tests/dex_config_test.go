@@ -82,6 +82,27 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 
 			By("browser sessions stay off")
 			Expect(gjson.GetBytes(jsonConfig, "sessions").Exists()).To(BeFalse())
+
+			By("patch 420: sign-in providers cannot assert the names the API server and peering reserve")
+			Expect(gjson.GetBytes(jsonConfig, "reservedNamePrefixes").Value()).To(Equal([]any{"system:", "peering:"}))
+
+			By("patch 425: the kubeconfig clients, whose secret users know, may not exchange tokens")
+			Expect(gjson.GetBytes(jsonConfig, "tokenExchange.deniedClients").Value()).To(Equal([]any{"kubernetes", "kubeconfig-generator", "kubeconfig-publish-api"}))
+		})
+	})
+
+	Context("With kubeconfigGenerator entries", func() {
+		BeforeEach(func() {
+			hec.ValuesSetFromYaml("userAuthn.kubeconfigGenerator", `[{id: "prod@a:b", masterURI: "https://1.2.3.4:6443", description: Prod}]`)
+			hec.HelmRender()
+		})
+
+		It("Should deny the token exchange to every kubeconfig client", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			jsonConfig := renderedDexConfig(hec)
+			Expect(gjson.GetBytes(jsonConfig, "tokenExchange.deniedClients").Value()).To(Equal([]any{
+				"kubernetes", "kubeconfig-generator", "kubeconfig-publish-api", "kubeconfig-generator-0", "kubeconfig-prod-at-a-b",
+			}))
 		})
 	})
 

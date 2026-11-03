@@ -1060,6 +1060,108 @@ before.
 
 **Depends on:** none.
 
+### 420-token-exchange.patch
+
+**Zone:** a connector that serves the token-exchange grant only, and the name
+prefixes that only such a connector may assert. Upstream exchanges a token
+through the OIDC connector, which does not check the audience of the subject
+token (`SkipClientIDCheck`), reads the keys only through the discovery of the
+`iss` URL, and requires the `name` and `email` claims; none of that fits a
+service account token of another cluster, whose issuer URL every DKP cluster
+shares.
+
+- new connector type `tokenexchange` (`connector/tokenexchange`): no login,
+  only `TokenIdentity` for a subject token of type `id_token`, a JWT. Its config
+  mirrors the spec of a `TokenExchangeProvider`:
+  - `issuer` must equal `iss`;
+  - `keys` is either `discovery` (the issuer's discovery document, optional
+    `url` and `caData`) or `jwks` (public keys pinned in the config; a private
+    key is refused). Discovery is read at the first exchange, not when the
+    connector opens, so an issuer that is down does not hold the startup of
+    Dex. One read runs at a time: the exchanges that come meanwhile wait for
+    it as long as their own request allows, and a failed read answers the
+    exchanges of the next 10 seconds before the issuer is asked again. The
+    HTTP client of the discovery and of the key set times out after 10
+    seconds, so a hung JWKS endpoint does not hold the key refresh forever.
+    `keys.discovery.url` (or the issuer, which gives the default address) and
+    the `jwks_uri` of the discovery document must be https, and the client follows no redirect away from https: keys read over
+    plain http could be swapped on the way;
+  - signature, `iss`, `exp` and `nbf` are checked by go-oidc; `audiences`
+    admits a token whose `aud` matches one `exact` value or `prefix`;
+  - with pinned keys, a token that has `kid` is verified with the key of that
+    `kid` only, even when one key is pinned, as discovery's key set does; a
+    token without `kid` is tried with every pinned key (go-oidc's
+    `StaticKeySet` ignores `kid`);
+  - `subjectTokenMaxLifetime` (a Go duration, 24h by default) refuses a token
+    valid for longer: `exp` minus `iat`, or `exp` minus now when there is no
+    `iat` or it lies more than 5 minutes in the future (go-oidc does not
+    check `iat`; 5 minutes leave room for an issuer clock that runs fast). A
+    leaked long-lived token would otherwise buy fresh Dex tokens until it
+    expires;
+  - `claimValidation` requires claim values: a string equal to `equals`, a
+    boolean or a number that prints as it, or a list that contains it;
+  - `identity` names the subject: `username` (claim and prefix) is required
+    and is also the email unless `email` is mapped, since the API server takes
+    the user name from the email claim; `groups` take a string or list claim,
+    drop the values without `trimPrefix`, and prepend `prefix`. `UserID` is
+    `sub`; `EmailVerified` is true: the mapping vouches for the name;
+  - `clients` lists the clients that may exchange through the connector. The
+    grant asks the connector (`connector.ClientRestrictedConnector`) before
+    the token is verified and refuses the others with `invalid_grant`:
+    `Client.AllowedConnectors` cannot do it, being empty, and so open to every
+    connector, for most clients;
+- `reservedNamePrefixes` in the Dex config: the allow-lists of 200 refuse a user
+  whose email or group starts with a reserved prefix that the connector does
+  not own (rule `reserved_prefix`), on every path they cover (login, password,
+  refresh-token and token-exchange grants). A name under a reserved prefix is
+  allowed only when it starts with one of the `reservedPrefixes` of the
+  connector config that lie under that prefix: a peer connector owns
+  `peering:peer:moscow:`, not all of `peering:`, so it cannot name the subjects
+  of another peer. Only a `tokenexchange` connector has them. A user of a
+  sign-in connector with a group under a reserved prefix is refused as a whole,
+  not stripped of the group: the API server refused such a user before too.
+
+**Consumer in Deckhouse:** `TokenExchangeProvider` (the user-authn controller
+writes the connector to the Dex storage); `reservedNamePrefixes` in
+`templates/dex/config.yaml` (`system:`, `peering:`).
+
+**Upstream status:** Deckhouse only. dexidp/dex#4397 asks upstream for the
+audience check of the OIDC connector.
+
+**Depends on:** 200 (allow-lists).
+
+### 425-token-exchange-denied-clients.patch
+
+**Zone:** the clients that may not use the token-exchange grant. The
+kubeconfig clients share one secret, which the kubeconfig generator gives to
+every user, and the `kubernetes` client trusts them as peers. With the
+token-exchange grant open to them, anyone holding an ID token of the upstream
+issuer of an OIDC provider, issued to any application of that issuer, could
+exchange it for a token of this cluster: the OIDC connector does not check
+the audience of the subject token.
+
+- `tokenExchange.deniedClients` in the Dex config: the grant refuses these
+  clients with `unauthorized_client` (HTTP 400) before it reads the subject
+  token, whatever the connector, and logs `token exchange denied: client may
+  not exchange tokens` at WARN;
+- the list goes through `server.Config.TokenExchangeDeniedClients` to the
+  grant; other grants of these clients are not affected;
+- the grant refuses a cross-client scope (`audience:server:client_id:<peer>`)
+  whose peer does not trust the client with `invalid_scope` (HTTP 400) before
+  the exchange, as the other grants do. Upstream passes the scopes of the
+  exchange through unvalidated, and such a scope failed at the signature with
+  `server_error` (HTTP 500).
+
+**Consumer in Deckhouse:** `templates/dex/config.yaml` lists the `kubernetes`
+client, whose secret is the shared one, and the kubeconfig clients:
+`kubeconfig-generator`, `kubeconfig-generator-<N>`,
+`kubeconfig-publish-api` and `kubeconfig-<id>` of each
+`kubeconfigGenerator` entry.
+
+**Upstream status:** Deckhouse only.
+
+**Depends on:** none.
+
 ### 998-fix-cve.patch
 
 **Zone:** dependency bumps only: the modules that the Dex tag pins at a version

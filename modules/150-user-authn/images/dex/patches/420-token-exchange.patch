@@ -1,0 +1,1777 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+index 3748191d..06526908 100644
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
+@@ -87,6 +87,10 @@ type Config struct {
+ 	// RateLimit limits failed attempts per client address on the login form, the
+ 	// token endpoint and the second factor.
+ 	RateLimit *RateLimit `json:"rateLimit"`
++
++	// ReservedNamePrefixes are the user and group name prefixes that only a
++	// token-exchange connector owning them may assert (server/allowlist).
++	ReservedNamePrefixes []string `json:"reservedNamePrefixes"`
+ }
+ 
+ // MFAConfig holds multi-factor authentication settings.
+diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
+index b1518da0..a7411f40 100644
+--- a/cmd/dex/serve.go
++++ b/cmd/dex/serve.go
+@@ -40,6 +40,7 @@ import (
+ 	"github.com/dexidp/dex/api/v2"
+ 	"github.com/dexidp/dex/pkg/featureflags"
+ 	"github.com/dexidp/dex/server"
++	"github.com/dexidp/dex/server/allowlist"
+ 	"github.com/dexidp/dex/server/apiserver"
+ 	"github.com/dexidp/dex/server/authflow"
+ 	"github.com/dexidp/dex/server/connectors"
+@@ -472,6 +473,11 @@ func runServe(options serveOptions) error {
+ 		logger.Warn(warning, "header", serverConfig.RealIPHeader)
+ 	}
+ 
++	allowlist.SetReservedPrefixes(c.ReservedNamePrefixes)
++	if len(c.ReservedNamePrefixes) > 0 {
++		logger.Info("config reserved name prefixes", "prefixes", c.ReservedNamePrefixes)
++	}
++
+ 	serverConfig.RateLimit = c.RateLimit.config()
+ 	if rl := serverConfig.RateLimit; rl != nil {
+ 		logger.Info("config rate limit of failed attempts per client address",
+diff --git a/connector/connector.go b/connector/connector.go
+index 709c2946..3e328f86 100644
+--- a/connector/connector.go
++++ b/connector/connector.go
+@@ -163,6 +163,13 @@ type RefreshConnector interface {
+ 	Refresh(ctx context.Context, s Scopes, identity Identity) (Identity, error)
+ }
+ 
++// ClientRestrictedConnector is implemented by a connector that admits only some
++// clients to the token-exchange grant (Deckhouse). The grant asks it before
++// the subject token is verified.
++type ClientRestrictedConnector interface {
++	AllowsClient(clientID string) bool
++}
++
+ type TokenIdentityConnector interface {
+ 	TokenIdentity(ctx context.Context, subjectTokenType, subjectToken string) (Identity, error)
+ }
+diff --git a/connector/tokenexchange/tokenexchange.go b/connector/tokenexchange/tokenexchange.go
+new file mode 100644
+index 00000000..b4dcfaa3
+--- /dev/null
++++ b/connector/tokenexchange/tokenexchange.go
+@@ -0,0 +1,643 @@
++// Package tokenexchange implements a connector that serves the token-exchange
++// grant only: it verifies a JWT of a trusted issuer and maps its claims to an
++// identity. Deckhouse renders it from a TokenExchangeProvider; upstream has no
++// equivalent.
++//
++// Unlike the OIDC connector it checks the audience of the subject token, can
++// verify against keys pinned in the config instead of the issuer's discovery
++// (Kubernetes service account issuers of different clusters share one URL),
++// requires claim values, and names the subject with prefixes. It has no login.
++package tokenexchange
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"io"
++	"log/slog"
++	"net/http"
++	"net/url"
++	"slices"
++	"strconv"
++	"strings"
++	"sync"
++	"time"
++
++	"github.com/coreos/go-oidc/v3/oidc"
++	"github.com/go-jose/go-jose/v4"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/pkg/httpclient"
++)
++
++// Type is the connector type in the Dex config and storage.
++const Type = "tokenexchange"
++
++// subjectTokenTypeIDToken is the only subject token type the connector takes:
++// a JWT it verifies itself. An access token would need the issuer's userinfo,
++// which carries no audience to check.
++const subjectTokenTypeIDToken = "urn:ietf:params:oauth:token-type:id_token"
++
++// discoveryTimeout bounds one discovery request, as patch 400 does for the
++// OIDC connector.
++const discoveryTimeout = 10 * time.Second
++
++// clockSkew is how far ahead of the clock of Dex the iat of a subject token
++// may be and still count: the clock of the issuer may run a little fast. It is
++// the leeway go-oidc gives nbf.
++const clockSkew = 5 * time.Minute
++
++// discoveryRetry is how long a failed discovery answers the exchanges that
++// follow before the issuer is asked again: an issuer that is down gets one
++// request per period, not one per exchange.
++const discoveryRetry = 10 * time.Second
++
++// maxDiscoveryBytes bounds the discovery document read into memory.
++const maxDiscoveryBytes = 1 << 20
++
++// defaultSubjectTokenMaxLifetime is the limit of Config.SubjectTokenMaxLifetime
++// when the config sets none.
++const defaultSubjectTokenMaxLifetime = 24 * time.Hour
++
++// supportedSigningAlgs are the algorithms a subject token may be signed with.
++var supportedSigningAlgs = []string{
++	oidc.RS256, oidc.RS384, oidc.RS512,
++	oidc.ES256, oidc.ES384, oidc.ES512,
++	oidc.PS256, oidc.PS384, oidc.PS512,
++	oidc.EdDSA,
++}
++
++// signingAlgs are supportedSigningAlgs for go-jose.
++var signingAlgs = func() []jose.SignatureAlgorithm {
++	algs := make([]jose.SignatureAlgorithm, 0, len(supportedSigningAlgs))
++	for _, alg := range supportedSigningAlgs {
++		algs = append(algs, jose.SignatureAlgorithm(alg))
++	}
++	return algs
++}()
++
++// Config is the connector config. It mirrors the spec of a
++// TokenExchangeProvider.
++type Config struct {
++	// Issuer must equal the iss claim of a subject token.
++	Issuer string `json:"issuer"`
++	// Keys says where the keys that sign subject tokens come from.
++	Keys Keys `json:"keys"`
++	// Audiences admit a subject token whose aud matches at least one of them.
++	Audiences []Audience `json:"audiences"`
++	// ClaimValidation lists claim values a subject token must carry.
++	ClaimValidation []ClaimRule `json:"claimValidation"`
++	// SubjectTokenMaxLifetime bounds how long a subject token may be valid: exp
++	// minus iat, or exp minus now for a token without iat. A Go duration; the
++	// default is 24h.
++	SubjectTokenMaxLifetime string `json:"subjectTokenMaxLifetime"`
++	// Identity maps the claims of a subject token to the identity.
++	Identity IdentityMapping `json:"identity"`
++	// ReservedPrefixes are the prefixes of the names this connector gives
++	// under a reserved name prefix: such a name must start with one of them
++	// (server/allowlist). Only the user-authn controller writes them.
++	ReservedPrefixes []string `json:"reservedPrefixes"`
++	// Clients are the IDs of the clients that may exchange through this
++	// connector; the others are refused before their token is looked at.
++	Clients []string `json:"clients"`
++}
++
++// Keys holds exactly one source of the issuer's keys.
++type Keys struct {
++	// Discovery reads the keys from the issuer's discovery document.
++	Discovery *Discovery `json:"discovery"`
++	// JWKS pins the public keys.
++	JWKS *jose.JSONWebKeySet `json:"jwks"`
++}
++
++// Discovery locates the issuer's discovery document.
++type Discovery struct {
++	// URL of the discovery document; the default is
++	// <issuer>/.well-known/openid-configuration.
++	URL string `json:"url"`
++	// CAData is a PEM bundle that the issuer's certificate chains to, in
++	// addition to the system roots.
++	CAData string `json:"caData"`
++}
++
++// Audience matches an aud value exactly or by prefix.
++type Audience struct {
++	Exact  string `json:"exact"`
++	Prefix string `json:"prefix"`
++}
++
++// ClaimRule requires a claim to carry a value: a string equal to it, a boolean
++// or a number that prints as it, or a list that contains it.
++type ClaimRule struct {
++	Claim  string `json:"claim"`
++	Equals string `json:"equals"`
++}
++
++// IdentityMapping names the subject of a token.
++type IdentityMapping struct {
++	// Username is required. Its value also becomes the email when Email is not
++	// set: the Kubernetes API server takes the user name from the email claim.
++	Username ClaimMapping `json:"username"`
++	// Email is optional.
++	Email *ClaimMapping `json:"email"`
++	// Groups are collected from every mapping in turn.
++	Groups []GroupMapping `json:"groups"`
++}
++
++// ClaimMapping takes a string claim and prepends Prefix.
++type ClaimMapping struct {
++	Claim  string `json:"claim"`
++	Prefix string `json:"prefix"`
++}
++
++// GroupMapping takes a string or a list of strings from Claim. With
++// TrimPrefix, a value without it is dropped and the rest of one with it is
++// kept; Prefix is prepended to every value kept.
++type GroupMapping struct {
++	Claim      string `json:"claim"`
++	TrimPrefix string `json:"trimPrefix"`
++	Prefix     string `json:"prefix"`
++}
++
++// Open validates the config and returns the connector. With discovery it does
++// not fetch anything: the keys are read at the first exchange, so an issuer
++// that is down does not hold the startup of Dex.
++func (c *Config) Open(id string, logger *slog.Logger) (connector.Connector, error) {
++	if err := c.validate(); err != nil {
++		return nil, fmt.Errorf("tokenexchange: %w", err)
++	}
++
++	conn := &tokenExchangeConnector{
++		config:      *c,
++		logger:      logger.With(slog.Group("connector", "type", Type, "id", id)),
++		maxLifetime: defaultSubjectTokenMaxLifetime,
++	}
++	if c.SubjectTokenMaxLifetime != "" {
++		// validate has parsed it already.
++		conn.maxLifetime, _ = time.ParseDuration(c.SubjectTokenMaxLifetime)
++	}
++
++	if c.Keys.JWKS != nil {
++		keys, err := publicKeys(c.Keys.JWKS)
++		if err != nil {
++			return nil, fmt.Errorf("tokenexchange: %w", err)
++		}
++		conn.verifier = newVerifier(c.Issuer, pinnedKeySet{keys: keys})
++		return conn, nil
++	}
++
++	var caData []string
++	if c.Keys.Discovery.CAData != "" {
++		caData = []string{c.Keys.Discovery.CAData}
++	}
++	client, err := httpclient.NewHTTPClient(caData, false)
++	if err != nil {
++		return nil, fmt.Errorf("tokenexchange: http client: %w", err)
++	}
++	// The key set fetches the keys with this client, on a context without a
++	// deadline: the timeout keeps a hung JWKS endpoint from holding it forever.
++	client.Timeout = discoveryTimeout
++	// The keys decide whom Dex trusts: they are read over https only, and a
++	// redirect elsewhere is not followed.
++	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
++		if req.URL.Scheme != "https" {
++			return fmt.Errorf("redirect to %s: only https is followed", req.URL.Redacted())
++		}
++		if len(via) >= 5 {
++			return errors.New("too many redirects")
++		}
++		return nil
++	}
++	conn.httpClient = client
++	conn.discoveryRetry = discoveryRetry
++	return conn, nil
++}
++
++func (c *Config) validate() error {
++	if c.Issuer == "" {
++		return errors.New("issuer is required")
++	}
++	if (c.Keys.Discovery == nil) == (c.Keys.JWKS == nil) {
++		return errors.New("exactly one of keys.discovery and keys.jwks is required")
++	}
++	if c.Keys.Discovery != nil {
++		// Without url the discovery document is read from the issuer, so the
++		// issuer has to be https as well.
++		if c.Keys.Discovery.URL != "" {
++			if err := requireHTTPS(c.Keys.Discovery.URL); err != nil {
++				return fmt.Errorf("keys.discovery.url: %w", err)
++			}
++		} else if err := requireHTTPS(c.Issuer); err != nil {
++			return fmt.Errorf("issuer, read for discovery: %w", err)
++		}
++	}
++	if c.Keys.JWKS != nil && len(c.Keys.JWKS.Keys) == 0 {
++		return errors.New("keys.jwks has no keys")
++	}
++	if len(c.Audiences) == 0 {
++		return errors.New("at least one audience is required")
++	}
++	for i, a := range c.Audiences {
++		if (a.Exact == "") == (a.Prefix == "") {
++			return fmt.Errorf("audiences[%d]: exactly one of exact and prefix is required", i)
++		}
++	}
++	for i, r := range c.ClaimValidation {
++		if r.Claim == "" {
++			return fmt.Errorf("claimValidation[%d]: claim is required", i)
++		}
++	}
++	if c.SubjectTokenMaxLifetime != "" {
++		d, err := time.ParseDuration(c.SubjectTokenMaxLifetime)
++		if err != nil {
++			return fmt.Errorf("subjectTokenMaxLifetime: %w", err)
++		}
++		if d <= 0 {
++			return errors.New("subjectTokenMaxLifetime must be positive")
++		}
++	}
++	if len(c.Clients) == 0 {
++		return errors.New("at least one client is required")
++	}
++	if c.Identity.Username.Claim == "" {
++		return errors.New("identity.username.claim is required")
++	}
++	if c.Identity.Email != nil && c.Identity.Email.Claim == "" {
++		return errors.New("identity.email.claim is required when identity.email is set")
++	}
++	for i, g := range c.Identity.Groups {
++		if g.Claim == "" {
++			return fmt.Errorf("identity.groups[%d]: claim is required", i)
++		}
++	}
++	return nil
++}
++
++// publicKeys returns the public keys of a key set. A private key is refused:
++// the config is not a secret, and a key that can sign has no place in it.
++func publicKeys(set *jose.JSONWebKeySet) ([]jose.JSONWebKey, error) {
++	keys := make([]jose.JSONWebKey, 0, len(set.Keys))
++	for i, k := range set.Keys {
++		if !k.Valid() {
++			return nil, fmt.Errorf("keys.jwks.keys[%d] is not a valid key", i)
++		}
++		if !k.IsPublic() {
++			return nil, fmt.Errorf("keys.jwks.keys[%d] is a private key", i)
++		}
++		keys = append(keys, k)
++	}
++	return keys, nil
++}
++
++// pinnedKeySet verifies a token with the pinned keys. Unlike oidc.StaticKeySet
++// it honors the kid of the token, as the key set of discovery does: a token
++// that names a key is verified with the key of that kid only, even when the set
++// has a single key. A token without kid is tried with every key.
++type pinnedKeySet struct {
++	keys []jose.JSONWebKey
++}
++
++func (s pinnedKeySet) VerifySignature(_ context.Context, jwt string) ([]byte, error) {
++	jws, err := jose.ParseSigned(jwt, signingAlgs)
++	if err != nil {
++		return nil, fmt.Errorf("parse jwt: %w", err)
++	}
++	if len(jws.Signatures) != 1 {
++		return nil, errors.New("jwt must have exactly one signature")
++	}
++	kid := jws.Signatures[0].Header.KeyID
++	for i := range s.keys {
++		if kid != "" && s.keys[i].KeyID != kid {
++			continue
++		}
++		if payload, err := jws.Verify(&s.keys[i]); err == nil {
++			return payload, nil
++		}
++	}
++	if kid != "" {
++		return nil, fmt.Errorf("no pinned key with kid %q verifies the jwt", kid)
++	}
++	return nil, errors.New("no pinned key verifies the jwt")
++}
++
++func newVerifier(issuer string, keySet oidc.KeySet) *oidc.IDTokenVerifier {
++	return oidc.NewVerifier(issuer, keySet, &oidc.Config{
++		// The audience is checked against Config.Audiences instead.
++		SkipClientIDCheck:    true,
++		SupportedSigningAlgs: supportedSigningAlgs,
++	})
++}
++
++var (
++	_ connector.Connector                 = (*tokenExchangeConnector)(nil)
++	_ connector.TokenIdentityConnector    = (*tokenExchangeConnector)(nil)
++	_ connector.ClientRestrictedConnector = (*tokenExchangeConnector)(nil)
++)
++
++type tokenExchangeConnector struct {
++	config     Config
++	logger     *slog.Logger
++	httpClient *http.Client
++
++	// mu guards the fields below. With pinned keys Open sets verifier;
++	// with discovery the first exchange that finds none starts a discovery,
++	// and the others wait for its end without holding mu.
++	mu       sync.Mutex
++	verifier *oidc.IDTokenVerifier
++	// discovering is closed when the discovery in flight ends; nil when none
++	// runs.
++	discovering chan struct{}
++	// discoveryErr is the error of the last failed discovery, returned until
++	// retryAt.
++	discoveryErr   error
++	retryAt        time.Time
++	discoveryRetry time.Duration
++
++	maxLifetime time.Duration
++}
++
++// Close implements connector.Connector; the connector holds nothing to free.
++func (c *tokenExchangeConnector) Close() error { return nil }
++
++// AllowsClient reports whether the client may exchange through the connector.
++func (c *tokenExchangeConnector) AllowsClient(clientID string) bool {
++	return slices.Contains(c.config.Clients, clientID)
++}
++
++// TokenIdentity verifies a subject token and maps its claims to an identity.
++func (c *tokenExchangeConnector) TokenIdentity(ctx context.Context, subjectTokenType, subjectToken string) (connector.Identity, error) {
++	if subjectTokenType != subjectTokenTypeIDToken {
++		return connector.Identity{}, fmt.Errorf("tokenexchange: unsupported subject token type %q", subjectTokenType)
++	}
++
++	verifier, err := c.getVerifier(ctx)
++	if err != nil {
++		return connector.Identity{}, err
++	}
++
++	token, err := verifier.Verify(ctx, subjectToken)
++	if err != nil {
++		return connector.Identity{}, fmt.Errorf("tokenexchange: verify subject token: %w", err)
++	}
++	if err := checkLifetime(token, c.maxLifetime, time.Now()); err != nil {
++		return connector.Identity{}, err
++	}
++	if !audienceAllowed(token.Audience, c.config.Audiences) {
++		return connector.Identity{}, fmt.Errorf("tokenexchange: audience %q is not allowed", token.Audience)
++	}
++
++	var claims map[string]any
++	if err := token.Claims(&claims); err != nil {
++		return connector.Identity{}, fmt.Errorf("tokenexchange: decode claims: %w", err)
++	}
++	for _, rule := range c.config.ClaimValidation {
++		if !claimEquals(claims[rule.Claim], rule.Equals) {
++			return connector.Identity{}, fmt.Errorf("tokenexchange: claim %q does not equal %q", rule.Claim, rule.Equals)
++		}
++	}
++
++	return mapIdentity(claims, c.config.Identity)
++}
++
++// checkLifetime refuses a subject token valid for longer than limit: a leaked
++// long-lived token would otherwise buy fresh Dex tokens until it expires. The
++// verifier has refused a token without exp or past it already.
++//
++// The lifetime counts from iat, or from now when the token has no iat or one
++// more than clockSkew in the future: go-oidc does not check iat, and a token
++// issued "in ten years" for an hour would otherwise pass for ten years.
++func checkLifetime(token *oidc.IDToken, limit time.Duration, now time.Time) error {
++	start := now
++	if !token.IssuedAt.IsZero() && token.IssuedAt.Before(now.Add(clockSkew)) {
++		start = token.IssuedAt
++	}
++	if lifetime := token.Expiry.Sub(start); lifetime > limit {
++		return fmt.Errorf("tokenexchange: subject token is valid for %s from %s, longer than %s",
++			lifetime.Round(time.Second), start.UTC().Format(time.RFC3339), limit)
++	}
++	return nil
++}
++
++// getVerifier returns the verifier, reading the discovery document first if
++// no read succeeded yet. One discovery runs at a time, and the exchanges that
++// come meanwhile wait for it as long as their own context allows. A failed
++// read answers the exchanges of the next discoveryRetry, then the issuer is
++// asked again.
++func (c *tokenExchangeConnector) getVerifier(ctx context.Context) (*oidc.IDTokenVerifier, error) {
++	for {
++		c.mu.Lock()
++		if c.verifier != nil {
++			verifier := c.verifier
++			c.mu.Unlock()
++			return verifier, nil
++		}
++		if c.discoveryErr != nil && time.Now().Before(c.retryAt) {
++			err := c.discoveryErr
++			c.mu.Unlock()
++			return nil, err
++		}
++		if wait := c.discovering; wait != nil {
++			c.mu.Unlock()
++			select {
++			case <-wait:
++				continue
++			case <-ctx.Done():
++				return nil, fmt.Errorf("tokenexchange: wait for discovery: %w", ctx.Err())
++			}
++		}
++		c.discovering = make(chan struct{})
++		c.mu.Unlock()
++		return c.runDiscovery(ctx)
++	}
++}
++
++// runDiscovery reads the discovery document for getVerifier and records the
++// outcome. The deferred release runs even if the discovery panics, so that
++// the waiting exchanges do not wait for a discovery that never ends.
++func (c *tokenExchangeConnector) runDiscovery(ctx context.Context) (verifier *oidc.IDTokenVerifier, err error) {
++	defer func() {
++		c.mu.Lock()
++		defer c.mu.Unlock()
++		switch {
++		case verifier != nil:
++			c.verifier, c.discoveryErr = verifier, nil
++		case err != nil:
++			c.discoveryErr = err
++			c.retryAt = time.Now().Add(c.discoveryRetry)
++		}
++		close(c.discovering)
++		c.discovering = nil
++	}()
++	// The discovery serves every waiting exchange, so the client that started
++	// it going away does not fail it.
++	return c.discoverVerifier(context.WithoutCancel(ctx))
++}
++
++func (c *tokenExchangeConnector) discoverVerifier(ctx context.Context) (*oidc.IDTokenVerifier, error) {
++	discoveryURL := c.config.Keys.Discovery.URL
++	if discoveryURL == "" {
++		discoveryURL = strings.TrimSuffix(c.config.Issuer, "/") + "/.well-known/openid-configuration"
++	}
++	provider, err := c.discover(ctx, discoveryURL)
++	if err != nil {
++		return nil, fmt.Errorf("tokenexchange: discovery %s: %w", discoveryURL, err)
++	}
++
++	// The key set keeps the background context: it refetches the keys of a
++	// rotation long after this exchange ends.
++	keySetCtx := oidc.ClientContext(context.Background(), c.httpClient)
++	return newVerifier(c.config.Issuer, oidc.NewRemoteKeySet(keySetCtx, provider.JWKSURL)), nil
++}
++
++func (c *tokenExchangeConnector) discover(ctx context.Context, discoveryURL string) (oidc.ProviderConfig, error) {
++	ctx, cancel := context.WithTimeout(ctx, discoveryTimeout)
++	defer cancel()
++
++	req, err := http.NewRequestWithContext(ctx, http.MethodGet, discoveryURL, nil)
++	if err != nil {
++		return oidc.ProviderConfig{}, fmt.Errorf("new request: %w", err)
++	}
++	resp, err := c.httpClient.Do(req)
++	if err != nil {
++		return oidc.ProviderConfig{}, fmt.Errorf("get: %w", err)
++	}
++	defer resp.Body.Close()
++	if resp.StatusCode != http.StatusOK {
++		return oidc.ProviderConfig{}, fmt.Errorf("get: status %s", resp.Status)
++	}
++
++	var doc oidc.ProviderConfig
++	if err := json.NewDecoder(io.LimitReader(resp.Body, maxDiscoveryBytes)).Decode(&doc); err != nil {
++		return oidc.ProviderConfig{}, fmt.Errorf("decode: %w", err)
++	}
++	if doc.IssuerURL != c.config.Issuer {
++		return oidc.ProviderConfig{}, fmt.Errorf("issuer %q does not match the configured %q", doc.IssuerURL, c.config.Issuer)
++	}
++	if doc.JWKSURL == "" {
++		return oidc.ProviderConfig{}, errors.New("no jwks_uri")
++	}
++	if err := requireHTTPS(doc.JWKSURL); err != nil {
++		return oidc.ProviderConfig{}, fmt.Errorf("jwks_uri: %w", err)
++	}
++	return doc, nil
++}
++
++// requireHTTPS refuses an address that is not https: the keys of an issuer
++// read over plain http could be swapped on the way.
++func requireHTTPS(address string) error {
++	u, err := url.Parse(address)
++	if err != nil {
++		return fmt.Errorf("parse %q: %w", address, err)
++	}
++	if u.Scheme != "https" || u.Host == "" {
++		return fmt.Errorf("%q is not an https URL", address)
++	}
++	return nil
++}
++
++func audienceAllowed(aud []string, allowed []Audience) bool {
++	for _, value := range aud {
++		for _, a := range allowed {
++			if a.Exact != "" && value == a.Exact {
++				return true
++			}
++			if a.Prefix != "" && strings.HasPrefix(value, a.Prefix) {
++				return true
++			}
++		}
++	}
++	return false
++}
++
++// claimEquals reports whether a claim value carries want. JSON numbers decode
++// as float64 and print without a fraction when they have none.
++func claimEquals(value any, want string) bool {
++	switch v := value.(type) {
++	case string:
++		return v == want
++	case bool:
++		return strconv.FormatBool(v) == want
++	case float64:
++		return strconv.FormatFloat(v, 'f', -1, 64) == want
++	case []any:
++		for _, item := range v {
++			if claimEquals(item, want) {
++				return true
++			}
++		}
++	}
++	return false
++}
++
++func mapIdentity(claims map[string]any, m IdentityMapping) (connector.Identity, error) {
++	subject, ok := claims["sub"].(string)
++	if !ok || subject == "" {
++		return connector.Identity{}, errors.New(`tokenexchange: missing "sub" claim`)
++	}
++
++	username, err := mapClaim(claims, m.Username)
++	if err != nil {
++		return connector.Identity{}, err
++	}
++	email := username
++	if m.Email != nil {
++		if email, err = mapClaim(claims, *m.Email); err != nil {
++			return connector.Identity{}, err
++		}
++	}
++
++	var groups []string
++	for _, g := range m.Groups {
++		for _, value := range stringValues(claims[g.Claim]) {
++			if g.TrimPrefix != "" {
++				rest, found := strings.CutPrefix(value, g.TrimPrefix)
++				if !found {
++					continue
++				}
++				value = rest
++			}
++			if value == "" {
++				continue
++			}
++			groups = append(groups, g.Prefix+value)
++		}
++	}
++
++	return connector.Identity{
++		UserID:            subject,
++		Username:          username,
++		PreferredUsername: username,
++		Email:             email,
++		// The mapping, not the issuer, vouches for the email: it is the name
++		// the cluster knows the subject by.
++		EmailVerified: true,
++		Groups:        groups,
++	}, nil
++}
++
++func mapClaim(claims map[string]any, m ClaimMapping) (string, error) {
++	value, ok := claims[m.Claim].(string)
++	if !ok || value == "" {
++		return "", fmt.Errorf("tokenexchange: missing string claim %q", m.Claim)
++	}
++	return m.Prefix + value, nil
++}
++
++// stringValues returns a string claim as one value and the strings of a list
++// claim; anything else gives none.
++func stringValues(value any) []string {
++	switch v := value.(type) {
++	case string:
++		return []string{v}
++	case []any:
++		values := make([]string, 0, len(v))
++		for _, item := range v {
++			if s, ok := item.(string); ok {
++				values = append(values, s)
++			}
++		}
++		return values
++	}
++	return nil
++}
+diff --git a/connector/tokenexchange/tokenexchange_test.go b/connector/tokenexchange/tokenexchange_test.go
+new file mode 100644
+index 00000000..2a964e30
+--- /dev/null
++++ b/connector/tokenexchange/tokenexchange_test.go
+@@ -0,0 +1,641 @@
++package tokenexchange
++
++import (
++	"context"
++	"crypto/rand"
++	"crypto/rsa"
++	"encoding/json"
++	"encoding/pem"
++	"log/slog"
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"sync"
++	"sync/atomic"
++	"testing"
++	"time"
++
++	"github.com/go-jose/go-jose/v4"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/connector"
++)
++
++// saIssuer is the issuer every DKP cluster gives its service account tokens.
++const saIssuer = "https://kubernetes.default.svc.cluster.local"
++
++type signer struct {
++	key *rsa.PrivateKey
++	kid string
++}
++
++func newSigner(t *testing.T, kid string) signer {
++	t.Helper()
++	key, err := rsa.GenerateKey(rand.Reader, 2048)
++	require.NoError(t, err)
++	return signer{key: key, kid: kid}
++}
++
++func (s signer) publicJWKS() *jose.JSONWebKeySet {
++	return &jose.JSONWebKeySet{Keys: []jose.JSONWebKey{{Key: &s.key.PublicKey, KeyID: s.kid, Algorithm: "RS256", Use: "sig"}}}
++}
++
++func (s signer) sign(t *testing.T, claims map[string]any) string {
++	t.Helper()
++	opts := (&jose.SignerOptions{}).WithType("JWT")
++	if s.kid != "" {
++		opts = opts.WithHeader("kid", s.kid)
++	}
++	sig, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: s.key}, opts)
++	require.NoError(t, err)
++	payload, err := json.Marshal(claims)
++	require.NoError(t, err)
++	jws, err := sig.Sign(payload)
++	require.NoError(t, err)
++	token, err := jws.CompactSerialize()
++	require.NoError(t, err)
++	return token
++}
++
++func saClaims(aud ...string) map[string]any {
++	now := time.Now()
++	return map[string]any{
++		"iss": saIssuer,
++		"sub": "system:serviceaccount:d8-virtualization:virtualization-controller",
++		"aud": aud,
++		"iat": now.Unix(),
++		"exp": now.Add(10 * time.Minute).Unix(),
++	}
++}
++
++// peeringConfig is the config a peering TokenExchangeProvider renders to.
++func peeringConfig(jwks *jose.JSONWebKeySet) Config {
++	return Config{
++		Issuer:    saIssuer,
++		Keys:      Keys{JWKS: jwks},
++		Audiences: []Audience{{Prefix: "peering.deckhouse.io/peer/b-uuid/"}},
++		Identity: IdentityMapping{
++			Username: ClaimMapping{Claim: "sub", Prefix: "peering:peer:moscow:"},
++			Groups: []GroupMapping{{
++				Claim:      "aud",
++				TrimPrefix: "peering.deckhouse.io/peer/b-uuid/cap/",
++				Prefix:     "peering:peer:moscow:cap:",
++			}},
++		},
++		ReservedPrefixes: []string{"peering:peer:moscow:", "peering:peer:moscow:cap:"},
++		Clients:          []string{"peering-receiver"},
++	}
++}
++
++func open(t *testing.T, c Config) connector.TokenIdentityConnector {
++	t.Helper()
++	conn, err := c.Open("tep-test", slog.New(slog.DiscardHandler))
++	require.NoError(t, err)
++	te, ok := conn.(connector.TokenIdentityConnector)
++	require.True(t, ok)
++	return te
++}
++
++func TestTokenIdentityPinnedKeys(t *testing.T) {
++	moscow := newSigner(t, "moscow")
++	conn := open(t, peeringConfig(moscow.publicJWKS()))
++
++	token := moscow.sign(t, saClaims("peering.deckhouse.io/peer/b-uuid/cap/virtualization"))
++	identity, err := conn.TokenIdentity(t.Context(), subjectTokenTypeIDToken, token)
++	require.NoError(t, err)
++	require.Equal(t, connector.Identity{
++		UserID:            "system:serviceaccount:d8-virtualization:virtualization-controller",
++		Username:          "peering:peer:moscow:system:serviceaccount:d8-virtualization:virtualization-controller",
++		PreferredUsername: "peering:peer:moscow:system:serviceaccount:d8-virtualization:virtualization-controller",
++		Email:             "peering:peer:moscow:system:serviceaccount:d8-virtualization:virtualization-controller",
++		EmailVerified:     true,
++		Groups:            []string{"peering:peer:moscow:cap:virtualization"},
++	}, identity)
++}
++
++// Two clusters share the service account issuer URL; each connector accepts
++// only the tokens signed with the keys pinned in it.
++func TestTokenIdentitySameIssuerOtherKeys(t *testing.T) {
++	moscow := newSigner(t, "moscow")
++	spb := newSigner(t, "spb")
++	conn := open(t, peeringConfig(moscow.publicJWKS()))
++
++	token := spb.sign(t, saClaims("peering.deckhouse.io/peer/b-uuid/cap/virtualization"))
++	_, err := conn.TokenIdentity(t.Context(), subjectTokenTypeIDToken, token)
++	require.ErrorContains(t, err, "verify subject token")
++}
++
++func TestTokenIdentityRefusals(t *testing.T) {
++	key := newSigner(t, "k")
++	config := Config{
++		Issuer:          saIssuer,
++		Keys:            Keys{JWKS: key.publicJWKS()},
++		Audiences:       []Audience{{Exact: "https://dex.example.com"}},
++		ClaimValidation: []ClaimRule{{Claim: "namespace_path", Equals: "platform"}, {Claim: "ref_protected", Equals: "true"}},
++		Identity:        IdentityMapping{Username: ClaimMapping{Claim: "sub", Prefix: "gitlab-ci:"}},
++		Clients:         []string{"ci"},
++	}
++	conn := open(t, config)
++
++	valid := func() map[string]any {
++		c := saClaims("https://dex.example.com")
++		c["namespace_path"] = "platform"
++		c["ref_protected"] = true
++		return c
++	}
++
++	tests := []struct {
++		name      string
++		claims    func() map[string]any
++		tokenType string
++		errText   string
++	}{
++		{name: "valid token", claims: valid},
++		{
++			name:      "access token is not taken",
++			claims:    valid,
++			tokenType: "urn:ietf:params:oauth:token-type:access_token",
++			errText:   "unsupported subject token type",
++		},
++		{
++			name:    "other audience",
++			claims:  func() map[string]any { c := valid(); c["aud"] = "https://other.example.com"; return c },
++			errText: "audience",
++		},
++		{
++			name:    "other issuer",
++			claims:  func() map[string]any { c := valid(); c["iss"] = "https://evil.example.com"; return c },
++			errText: "verify subject token",
++		},
++		{
++			name: "expired",
++			claims: func() map[string]any {
++				c := valid()
++				c["exp"] = time.Now().Add(-time.Minute).Unix()
++				return c
++			},
++			errText: "verify subject token",
++		},
++		{
++			name:    "required claim has another value",
++			claims:  func() map[string]any { c := valid(); c["namespace_path"] = "other"; return c },
++			errText: `claim "namespace_path"`,
++		},
++		{
++			name:    "required boolean claim is false",
++			claims:  func() map[string]any { c := valid(); c["ref_protected"] = false; return c },
++			errText: `claim "ref_protected"`,
++		},
++		{
++			name:    "required claim is missing",
++			claims:  func() map[string]any { c := valid(); delete(c, "namespace_path"); return c },
++			errText: `claim "namespace_path"`,
++		},
++		{
++			name:    "no subject",
++			claims:  func() map[string]any { c := valid(); delete(c, "sub"); return c },
++			errText: `missing "sub" claim`,
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			tokenType := tc.tokenType
++			if tokenType == "" {
++				tokenType = subjectTokenTypeIDToken
++			}
++			identity, err := conn.TokenIdentity(t.Context(), tokenType, key.sign(t, tc.claims()))
++			if tc.errText == "" {
++				require.NoError(t, err)
++				require.True(t, strings.HasPrefix(identity.Email, "gitlab-ci:"))
++				return
++			}
++			require.ErrorContains(t, err, tc.errText)
++		})
++	}
++}
++
++func TestTokenIdentityDiscovery(t *testing.T) {
++	key := newSigner(t, "gitlab")
++	var srv *httptest.Server
++	var discoveryCalls atomic.Int32
++	srv = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		switch r.URL.Path {
++		case "/.well-known/openid-configuration":
++			discoveryCalls.Add(1)
++			_ = json.NewEncoder(w).Encode(map[string]string{"issuer": srv.URL, "jwks_uri": srv.URL + "/keys"})
++		case "/keys":
++			_ = json.NewEncoder(w).Encode(key.publicJWKS())
++		default:
++			http.NotFound(w, r)
++		}
++	}))
++	t.Cleanup(srv.Close)
++	ca := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw}))
++
++	conn := open(t, Config{
++		Issuer:    srv.URL,
++		Keys:      Keys{Discovery: &Discovery{CAData: ca}},
++		Audiences: []Audience{{Exact: "https://dex.example.com"}},
++		Identity: IdentityMapping{
++			Username: ClaimMapping{Claim: "sub", Prefix: "ci:"},
++			Email:    &ClaimMapping{Claim: "user_email"},
++			Groups:   []GroupMapping{{Claim: "groups", Prefix: "ci:"}},
++		},
++		Clients: []string{"ci"},
++	})
++	require.Zero(t, discoveryCalls.Load(), "Open must not fetch the discovery document")
++
++	claims := map[string]any{
++		"iss":        srv.URL,
++		"sub":        "project_path:platform/app:ref_type:branch:ref:main",
++		"aud":        "https://dex.example.com",
++		"exp":        time.Now().Add(time.Minute).Unix(),
++		"user_email": "jane@example.com",
++		"groups":     []string{"deploy", "dev"},
++	}
++	for range 2 {
++		identity, err := conn.TokenIdentity(t.Context(), subjectTokenTypeIDToken, key.sign(t, claims))
++		require.NoError(t, err)
++		require.Equal(t, "ci:project_path:platform/app:ref_type:branch:ref:main", identity.Username)
++		require.Equal(t, "jane@example.com", identity.Email)
++		require.Equal(t, []string{"ci:deploy", "ci:dev"}, identity.Groups)
++	}
++	require.EqualValues(t, 1, discoveryCalls.Load(), "a successful discovery is kept")
++
++	// The key set of discovery verifies a token with the key its kid names.
++	otherKid := signer{key: key.key, kid: "other"}
++	_, err := conn.TokenIdentity(t.Context(), subjectTokenTypeIDToken, otherKid.sign(t, claims))
++	require.ErrorContains(t, err, "verify subject token")
++}
++
++// A token that names a key is verified with that key only, even when the set
++// pins a single key; a token without kid is tried with every pinned key.
++func TestTokenIdentityKeyID(t *testing.T) {
++	moscow := newSigner(t, "moscow")
++	spb := newSigner(t, "spb")
++	claims := saClaims("peering.deckhouse.io/peer/b-uuid/cap/virtualization")
++	bothKeys := &jose.JSONWebKeySet{Keys: append(moscow.publicJWKS().Keys, spb.publicJWKS().Keys...)}
++	noKid := &jose.JSONWebKeySet{Keys: []jose.JSONWebKey{{Key: &moscow.key.PublicKey, Algorithm: "RS256", Use: "sig"}}}
++
++	tests := []struct {
++		name    string
++		jwks    *jose.JSONWebKeySet
++		token   signer
++		errText string
++	}{
++		{name: "kid of the only key", jwks: moscow.publicJWKS(), token: moscow},
++		{name: "no kid, one key", jwks: moscow.publicJWKS(), token: signer{key: moscow.key}},
++		{name: "no kid, two keys", jwks: bothKeys, token: signer{key: spb.key}},
++		{name: "kid of the second key", jwks: bothKeys, token: spb},
++		{
++			name:    "other kid, the only key signed it",
++			jwks:    moscow.publicJWKS(),
++			token:   signer{key: moscow.key, kid: "rotated"},
++			errText: `no pinned key with kid "rotated"`,
++		},
++		{
++			name:    "kid of one key, signed by the other",
++			jwks:    bothKeys,
++			token:   signer{key: spb.key, kid: "moscow"},
++			errText: `no pinned key with kid "moscow"`,
++		},
++		{
++			name:    "kid, the pinned key has none",
++			jwks:    noKid,
++			token:   moscow,
++			errText: `no pinned key with kid "moscow"`,
++		},
++		{
++			name:    "no kid, no key signed it",
++			jwks:    moscow.publicJWKS(),
++			token:   signer{key: spb.key},
++			errText: "no pinned key verifies",
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			conn := open(t, peeringConfig(tc.jwks))
++			_, err := conn.TokenIdentity(t.Context(), subjectTokenTypeIDToken, tc.token.sign(t, claims))
++			if tc.errText == "" {
++				require.NoError(t, err)
++				return
++			}
++			require.ErrorContains(t, err, tc.errText)
++		})
++	}
++}
++
++func TestTokenIdentityLifetime(t *testing.T) {
++	key := newSigner(t, "k")
++	now := time.Now()
++	claims := func(iat, exp time.Duration) map[string]any {
++		c := saClaims("peering.deckhouse.io/peer/b-uuid/cap/virtualization")
++		c["iat"] = now.Add(iat).Unix()
++		c["exp"] = now.Add(exp).Unix()
++		return c
++	}
++	noIat := func(exp time.Duration) map[string]any {
++		c := claims(0, exp)
++		delete(c, "iat")
++		return c
++	}
++
++	tests := []struct {
++		name     string
++		lifetime string
++		claims   map[string]any
++		errText  string
++	}{
++		{name: "default limit, 24h", claims: claims(0, 24*time.Hour)},
++		{name: "default limit, longer than 24h", claims: claims(0, 24*time.Hour+time.Second), errText: "longer than 24h0m0s"},
++		{name: "issued long ago", claims: claims(-23*time.Hour, 2*time.Hour), errText: "valid for 25h0m0s"},
++		{name: "no iat, expires within the limit", claims: noIat(23 * time.Hour)},
++		{name: "no iat, expires after the limit", claims: noIat(25 * time.Hour), errText: "longer than 24h0m0s"},
++		{name: "iat in the future", claims: claims(10*365*24*time.Hour, 10*365*24*time.Hour+time.Hour), errText: "longer than 24h0m0s"},
++		{name: "iat a little ahead of the clock", claims: claims(time.Minute, time.Hour)},
++		{name: "iat a little ahead, valid for the whole limit", claims: claims(5*time.Second, 5*time.Second+24*time.Hour)},
++		{name: "no exp", claims: func() map[string]any { c := claims(0, 0); delete(c, "exp"); return c }(), errText: "verify subject token"},
++		{name: "own limit", lifetime: "1h", claims: claims(0, 30*time.Minute)},
++		{name: "own limit, longer", lifetime: "1h", claims: claims(0, 2*time.Hour), errText: "longer than 1h0m0s"},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			config := peeringConfig(key.publicJWKS())
++			config.SubjectTokenMaxLifetime = tc.lifetime
++			conn := open(t, config)
++			_, err := conn.TokenIdentity(t.Context(), subjectTokenTypeIDToken, key.sign(t, tc.claims))
++			if tc.errText == "" {
++				require.NoError(t, err)
++				return
++			}
++			require.ErrorContains(t, err, tc.errText)
++		})
++	}
++}
++
++func TestTokenIdentityDiscoveryRetries(t *testing.T) {
++	key := newSigner(t, "k")
++	var up atomic.Bool
++	var srv *httptest.Server
++	srv = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		if !up.Load() {
++			http.Error(w, "down", http.StatusServiceUnavailable)
++			return
++		}
++		switch r.URL.Path {
++		case "/.well-known/openid-configuration":
++			_ = json.NewEncoder(w).Encode(map[string]string{"issuer": srv.URL, "jwks_uri": srv.URL + "/keys"})
++		case "/keys":
++			_ = json.NewEncoder(w).Encode(key.publicJWKS())
++		}
++	}))
++	t.Cleanup(srv.Close)
++	ca := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw}))
++
++	conn := open(t, Config{
++		Issuer:    srv.URL,
++		Keys:      Keys{Discovery: &Discovery{CAData: ca}},
++		Audiences: []Audience{{Exact: "dex"}},
++		Identity:  IdentityMapping{Username: ClaimMapping{Claim: "sub"}},
++		Clients:   []string{"ci"},
++	})
++	token := key.sign(t, map[string]any{"iss": srv.URL, "sub": "x", "aud": "dex", "exp": time.Now().Add(time.Minute).Unix()})
++
++	_, err := conn.TokenIdentity(t.Context(), subjectTokenTypeIDToken, token)
++	require.ErrorContains(t, err, "discovery")
++
++	// Until the retry period ends, the failure answers without asking again.
++	up.Store(true)
++	_, err = conn.TokenIdentity(t.Context(), subjectTokenTypeIDToken, token)
++	require.ErrorContains(t, err, "discovery")
++
++	expireDiscoveryFailure(conn)
++	_, err = conn.TokenIdentity(t.Context(), subjectTokenTypeIDToken, token)
++	require.NoError(t, err)
++}
++
++func expireDiscoveryFailure(conn connector.TokenIdentityConnector) {
++	c := conn.(*tokenExchangeConnector)
++	c.mu.Lock()
++	c.retryAt = time.Time{}
++	c.mu.Unlock()
++}
++
++// Exchanges that come while the issuer is slow wait for one discovery, not
++// for one each in turn.
++func TestTokenIdentityDiscoveryOnce(t *testing.T) {
++	var calls atomic.Int32
++	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
++		calls.Add(1)
++		time.Sleep(500 * time.Millisecond)
++		http.Error(w, "down", http.StatusServiceUnavailable)
++	}))
++	t.Cleanup(srv.Close)
++	ca := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw}))
++
++	conn := open(t, Config{
++		Issuer:    srv.URL,
++		Keys:      Keys{Discovery: &Discovery{CAData: ca}},
++		Audiences: []Audience{{Exact: "dex"}},
++		Identity:  IdentityMapping{Username: ClaimMapping{Claim: "sub"}},
++		Clients:   []string{"ci"},
++	})
++
++	start := time.Now()
++	var wg sync.WaitGroup
++	for range 5 {
++		wg.Go(func() {
++			_, err := conn.TokenIdentity(t.Context(), subjectTokenTypeIDToken, "a.b.c")
++			assert.ErrorContains(t, err, "discovery")
++		})
++	}
++	wg.Wait()
++	require.Less(t, time.Since(start), 2*time.Second)
++	require.EqualValues(t, 1, calls.Load())
++
++	// A waiting exchange gives up with its own context.
++	expireDiscoveryFailure(conn)
++	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
++	defer cancel()
++	go func() { _, _ = conn.TokenIdentity(t.Context(), subjectTokenTypeIDToken, "a.b.c") }()
++	time.Sleep(10 * time.Millisecond)
++	_, err := conn.TokenIdentity(ctx, subjectTokenTypeIDToken, "a.b.c")
++	require.ErrorIs(t, err, context.DeadlineExceeded)
++}
++
++func TestOpenValidation(t *testing.T) {
++	key := newSigner(t, "k")
++	private := &jose.JSONWebKeySet{Keys: []jose.JSONWebKey{{Key: key.key, KeyID: "k"}}}
++	base := func() Config {
++		return Config{
++			Issuer:    saIssuer,
++			Keys:      Keys{JWKS: key.publicJWKS()},
++			Audiences: []Audience{{Exact: "a"}},
++			Identity:  IdentityMapping{Username: ClaimMapping{Claim: "sub"}},
++			Clients:   []string{"ci"},
++		}
++	}
++
++	tests := []struct {
++		name    string
++		mutate  func(*Config)
++		errText string
++	}{
++		{name: "no issuer", mutate: func(c *Config) { c.Issuer = "" }, errText: "issuer is required"},
++		{name: "no keys", mutate: func(c *Config) { c.Keys = Keys{} }, errText: "exactly one of keys"},
++		{name: "both key sources", mutate: func(c *Config) { c.Keys.Discovery = &Discovery{} }, errText: "exactly one of keys"},
++		{name: "empty jwks", mutate: func(c *Config) { c.Keys.JWKS = &jose.JSONWebKeySet{} }, errText: "no keys"},
++		{name: "private key", mutate: func(c *Config) { c.Keys.JWKS = private }, errText: "private key"},
++		{name: "no audiences", mutate: func(c *Config) { c.Audiences = nil }, errText: "audience is required"},
++		{name: "audience with both forms", mutate: func(c *Config) { c.Audiences = []Audience{{Exact: "a", Prefix: "b"}} }, errText: "audiences[0]"},
++		{name: "claim rule without claim", mutate: func(c *Config) { c.ClaimValidation = []ClaimRule{{Equals: "x"}} }, errText: "claimValidation[0]"},
++		{name: "no clients", mutate: func(c *Config) { c.Clients = nil }, errText: "client is required"},
++		{name: "no username claim", mutate: func(c *Config) { c.Identity.Username.Claim = "" }, errText: "identity.username.claim"},
++		{name: "group without claim", mutate: func(c *Config) { c.Identity.Groups = []GroupMapping{{Prefix: "x"}} }, errText: "identity.groups[0]"},
++		{name: "discovery over plain http", mutate: func(c *Config) {
++			c.Keys = Keys{Discovery: &Discovery{URL: "http://issuer.example.com/.well-known/openid-configuration"}}
++		}, errText: "is not an https URL"},
++		{name: "discovery from a plain http issuer", mutate: func(c *Config) {
++			c.Issuer = "http://issuer.example.com"
++			c.Keys = Keys{Discovery: &Discovery{}}
++		}, errText: "issuer, read for discovery"},
++		{name: "lifetime is not a duration", mutate: func(c *Config) { c.SubjectTokenMaxLifetime = "1d" }, errText: "subjectTokenMaxLifetime"},
++		{name: "lifetime is not positive", mutate: func(c *Config) { c.SubjectTokenMaxLifetime = "0s" }, errText: "must be positive"},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			c := base()
++			tc.mutate(&c)
++			_, err := c.Open("tep-test", slog.New(slog.DiscardHandler))
++			require.ErrorContains(t, err, tc.errText)
++		})
++	}
++}
++
++func TestMapIdentityGroups(t *testing.T) {
++	claims := map[string]any{
++		"sub": "s",
++		"aud": []any{"peering.deckhouse.io/peer/b/cap/vm", "peering.deckhouse.io/peer/b/cap/", "other"},
++	}
++	identity, err := mapIdentity(claims, IdentityMapping{
++		Username: ClaimMapping{Claim: "sub"},
++		Groups:   []GroupMapping{{Claim: "aud", TrimPrefix: "peering.deckhouse.io/peer/b/cap/", Prefix: "cap:"}},
++	})
++	require.NoError(t, err)
++	// A value without the prefix and an empty remainder are dropped.
++	require.Equal(t, []string{"cap:vm"}, identity.Groups)
++}
++
++// FuzzTokenIdentity feeds arbitrary subject tokens to a connector with pinned
++// keys: whatever arrives at /token must be refused or mapped, never panic.
++func FuzzTokenIdentity(f *testing.F) {
++	key, err := rsa.GenerateKey(rand.Reader, 2048)
++	if err != nil {
++		f.Fatal(err)
++	}
++	s := signer{key: key, kid: "k"}
++	conn, err := (&Config{
++		Issuer:    saIssuer,
++		Keys:      Keys{JWKS: s.publicJWKS()},
++		Audiences: []Audience{{Prefix: "a"}},
++		Identity: IdentityMapping{
++			Username: ClaimMapping{Claim: "sub"},
++			Groups:   []GroupMapping{{Claim: "aud", TrimPrefix: "a"}},
++		},
++		Clients: []string{"fuzz"},
++	}).Open("fuzz", slog.New(slog.DiscardHandler))
++	if err != nil {
++		f.Fatal(err)
++	}
++	te := conn.(connector.TokenIdentityConnector)
++
++	f.Add("")
++	f.Add("a.b.c")
++	f.Add("eyJhbGciOiJub25lIn0.e30.")
++	f.Fuzz(func(t *testing.T, token string) {
++		_, _ = te.TokenIdentity(t.Context(), subjectTokenTypeIDToken, token)
++	})
++}
++
++func TestAllowsClient(t *testing.T) {
++	conn, err := (&Config{
++		Issuer:    saIssuer,
++		Keys:      Keys{JWKS: newSigner(t, "k").publicJWKS()},
++		Audiences: []Audience{{Exact: "a"}},
++		Identity:  IdentityMapping{Username: ClaimMapping{Claim: "sub"}},
++		Clients:   []string{"dex-client-receiver@d8-peering"},
++	}).Open("tep-test", slog.New(slog.DiscardHandler))
++	require.NoError(t, err)
++	restricted, ok := conn.(connector.ClientRestrictedConnector)
++	require.True(t, ok)
++	require.True(t, restricted.AllowsClient("dex-client-receiver@d8-peering"))
++	require.False(t, restricted.AllowsClient("kubeconfig-generator"))
++}
++
++// A discovery that panics still lets the next exchanges through: they do not
++// wait for it until their deadline.
++func TestTokenIdentityDiscoveryPanic(t *testing.T) {
++	conn := open(t, Config{
++		Issuer:    "https://issuer.example.com",
++		Keys:      Keys{Discovery: &Discovery{}},
++		Audiences: []Audience{{Exact: "dex"}},
++		Identity:  IdentityMapping{Username: ClaimMapping{Claim: "sub"}},
++		Clients:   []string{"ci"},
++	})
++	c := conn.(*tokenExchangeConnector)
++	c.httpClient = nil // makes the discovery panic
++
++	func() {
++		defer func() { require.NotNil(t, recover()) }()
++		_, _ = conn.TokenIdentity(t.Context(), subjectTokenTypeIDToken, "a.b.c")
++	}()
++
++	c.mu.Lock()
++	require.Nil(t, c.discovering)
++	c.mu.Unlock()
++}
++
++// The keys of an issuer are read over https only: neither a plain http
++// jwks_uri nor a redirect to plain http is followed.
++func TestTokenIdentityKeysOverHTTPSOnly(t *testing.T) {
++	key := newSigner(t, "k")
++	plain := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
++		_ = json.NewEncoder(w).Encode(key.publicJWKS())
++	}))
++	t.Cleanup(plain.Close)
++
++	tests := []struct {
++		name    string
++		jwksURI func(srv *httptest.Server) string
++		errText string
++	}{
++		{name: "plain http jwks_uri", jwksURI: func(*httptest.Server) string { return plain.URL + "/keys" }, errText: "jwks_uri"},
++		{name: "redirect to plain http", jwksURI: func(srv *httptest.Server) string { return srv.URL + "/redirect" }, errText: "verify subject token"},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			var srv *httptest.Server
++			srv = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++				switch r.URL.Path {
++				case "/.well-known/openid-configuration":
++					_ = json.NewEncoder(w).Encode(map[string]string{"issuer": srv.URL, "jwks_uri": tc.jwksURI(srv)})
++				case "/redirect":
++					http.Redirect(w, r, plain.URL+"/keys", http.StatusFound)
++				}
++			}))
++			t.Cleanup(srv.Close)
++			ca := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw}))
++			conn := open(t, Config{
++				Issuer:    srv.URL,
++				Keys:      Keys{Discovery: &Discovery{CAData: ca}},
++				Audiences: []Audience{{Exact: "dex"}},
++				Identity:  IdentityMapping{Username: ClaimMapping{Claim: "sub"}},
++				Clients:   []string{"ci"},
++			})
++			token := key.sign(t, map[string]any{"iss": srv.URL, "sub": "x", "aud": "dex", "exp": time.Now().Add(time.Minute).Unix()})
++			_, err := conn.TokenIdentity(t.Context(), subjectTokenTypeIDToken, token)
++			require.ErrorContains(t, err, tc.errText)
++		})
++	}
++}
+diff --git a/server/allowlist/allowlist.go b/server/allowlist/allowlist.go
+index c23640cd..26191d4c 100644
+--- a/server/allowlist/allowlist.go
++++ b/server/allowlist/allowlist.go
+@@ -33,6 +33,9 @@ const (
+ 	ConnectorGroups Rule = "connector_allowed_groups"
+ 	// ConnectorNotFound refuses a user of a connector that is gone from storage.
+ 	ConnectorNotFound Rule = "connector_not_found"
++	// ReservedPrefix refuses a user whose email or group starts with a reserved
++	// prefix that the connector does not own (reserved.go).
++	ReservedPrefix Rule = "reserved_prefix"
+ )
+ 
+ // NotAllowedError refuses a user that an allow-list does not admit.
+@@ -70,7 +73,7 @@ func Apply(ctx context.Context, s storage.Storage, client storage.Client, connec
+ 			e.AllowedGroups = client.AllowedGroups
+ 		case ConnectorGroups:
+ 			e.AllowedGroups = conn.AllowedGroups
+-		case ClientEmails, ConnectorEmails, ConnectorNotFound:
++		case ClientEmails, ConnectorEmails, ConnectorNotFound, ReservedPrefix:
+ 			return e
+ 		}
+ 		e.UserGroups = slices.Clone(claims.Groups)
+@@ -90,6 +93,10 @@ func Apply(ctx context.Context, s storage.Storage, client storage.Client, connec
+ 		return fmt.Errorf("get connector %q: %w", connectorID, err)
+ 	}
+ 
++	if reservedNameUsed(conn, claims.Email, claims.Groups) != "" {
++		return refuse(ReservedPrefix, conn)
++	}
++
+ 	admitted, rule = admitByConnector(conn, claims.Email, admitted)
+ 	if rule != "" {
+ 		return refuse(rule, conn)
+diff --git a/server/allowlist/reserved.go b/server/allowlist/reserved.go
+new file mode 100644
+index 00000000..3f5f2035
+--- /dev/null
++++ b/server/allowlist/reserved.go
+@@ -0,0 +1,79 @@
++package allowlist
++
++import (
++	"encoding/json"
++	"slices"
++	"strings"
++	"sync/atomic"
++
++	"github.com/dexidp/dex/connector/tokenexchange"
++	"github.com/dexidp/dex/storage"
++)
++
++// reservedPrefixes are the name prefixes that only their owners may assert:
++// the Kubernetes API server grants rights by user and group names, and a
++// prefix such as "peering:" belongs to the module that names its subjects
++// with it. Dex serves one config, so the list is set once at startup.
++var reservedPrefixes atomic.Pointer[[]string]
++
++// SetReservedPrefixes sets the reserved name prefixes (the reservedNamePrefixes
++// of the Dex config). An empty list reserves nothing.
++func SetReservedPrefixes(prefixes []string) {
++	p := slices.Clone(prefixes)
++	reservedPrefixes.Store(&p)
++}
++
++// reservedNameUsed returns the first reserved prefix that the email or a group
++// of a user starts with outside the names the connector owns, or "".
++//
++// These are the names the API server takes: the user name from the email
++// claim and the groups. A connector owns the names that start with one of the
++// reservedPrefixes of its config lying under the reserved prefix: a peer
++// connector owns "peering:peer:moscow:", not all of "peering:", so it cannot
++// name the subjects of another peer. Only a token-exchange connector has
++// them, and only the user-authn controller writes that config.
++func reservedNameUsed(conn storage.Connector, email string, groups []string) string {
++	p := reservedPrefixes.Load()
++	if p == nil || len(*p) == 0 {
++		return ""
++	}
++
++	owned := ownedPrefixes(conn)
++	used := func(name string) string {
++		for _, prefix := range *p {
++			if prefix == "" || !strings.HasPrefix(name, prefix) {
++				continue
++			}
++			if !slices.ContainsFunc(owned, func(o string) bool {
++				return strings.HasPrefix(o, prefix) && strings.HasPrefix(name, o)
++			}) {
++				return prefix
++			}
++		}
++		return ""
++	}
++	if prefix := used(email); prefix != "" {
++		return prefix
++	}
++	for _, g := range groups {
++		if prefix := used(g); prefix != "" {
++			return prefix
++		}
++	}
++	return ""
++}
++
++// ownedPrefixes reads the owned prefixes from the config of a token-exchange
++// connector. A config that does not parse owns none.
++func ownedPrefixes(conn storage.Connector) []string {
++	if conn.Type != tokenexchange.Type {
++		return nil
++	}
++	var config struct {
++		ReservedPrefixes []string `json:"reservedPrefixes"`
++	}
++	if err := json.Unmarshal(conn.Config, &config); err != nil {
++		return nil
++	}
++	return config.ReservedPrefixes
++}
+diff --git a/server/allowlist/reserved_test.go b/server/allowlist/reserved_test.go
+new file mode 100644
+index 00000000..9bb5a430
+--- /dev/null
++++ b/server/allowlist/reserved_test.go
+@@ -0,0 +1,114 @@
++package allowlist
++
++import (
++	"errors"
++	"log/slog"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/connector/tokenexchange"
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++func TestApplyReservedPrefixes(t *testing.T) {
++	SetReservedPrefixes([]string{"system:", "peering:"})
++	t.Cleanup(func() { SetReservedPrefixes(nil) })
++
++	ctx := t.Context()
++	s := memory.New(slog.New(slog.DiscardHandler))
++	require.NoError(t, s.CreateConnector(ctx, storage.Connector{ID: "corp", Type: "oidc", Name: "Corp"}))
++	require.NoError(t, s.CreateConnector(ctx, storage.Connector{
++		ID: "tep-peer", Type: tokenexchange.Type, Name: "peer",
++		Config: []byte(`{"reservedPrefixes":["peering:peer:moscow:","peering:peer:moscow:cap:"]}`),
++	}))
++	require.NoError(t, s.CreateConnector(ctx, storage.Connector{
++		ID: "tep-ci", Type: tokenexchange.Type, Name: "ci",
++		Config: []byte(`{"issuer":"https://ci.example"}`),
++	}))
++	require.NoError(t, s.CreateConnector(ctx, storage.Connector{
++		// Ownership is read from token-exchange connectors only.
++		ID: "oidc-claims-owner", Type: "oidc", Name: "oidc",
++		Config: []byte(`{"reservedPrefixes":["peering:"]}`),
++	}))
++
++	tests := []struct {
++		name        string
++		connectorID string
++		claims      storage.Claims
++		refused     bool
++	}{
++		{
++			name:        "ordinary names pass",
++			connectorID: "corp",
++			claims:      storage.Claims{Email: "jane@example.com", Groups: []string{"staff"}},
++		},
++		{
++			name:        "login connector cannot assert a reserved email",
++			connectorID: "corp",
++			claims:      storage.Claims{Email: "peering:peer:moscow:x"},
++			refused:     true,
++		},
++		{
++			name:        "login connector cannot assert a reserved group",
++			connectorID: "corp",
++			claims:      storage.Claims{Email: "jane@example.com", Groups: []string{"staff", "system:masters"}},
++			refused:     true,
++		},
++		{
++			name:        "owner asserts its prefix",
++			connectorID: "tep-peer",
++			claims:      storage.Claims{Email: "peering:peer:moscow:sa", Groups: []string{"peering:peer:moscow:cap:vm"}},
++		},
++		{
++			name:        "owner cannot assert the names of another peer",
++			connectorID: "tep-peer",
++			claims:      storage.Claims{Email: "peering:peer:moscow:sa", Groups: []string{"peering:peer:spb:cap:vm"}},
++			refused:     true,
++		},
++		{
++			name:        "owner of one prefix cannot assert another",
++			connectorID: "tep-peer",
++			claims:      storage.Claims{Email: "peering:peer:moscow:sa", Groups: []string{"system:masters"}},
++			refused:     true,
++		},
++		{
++			name:        "token-exchange connector without ownership is refused",
++			connectorID: "tep-ci",
++			claims:      storage.Claims{Email: "peering:peer:moscow:sa"},
++			refused:     true,
++		},
++		{
++			name:        "ownership in the config of another connector type is ignored",
++			connectorID: "oidc-claims-owner",
++			claims:      storage.Claims{Email: "peering:peer:moscow:sa"},
++			refused:     true,
++		},
++	}
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			claims := tc.claims
++			err := Apply(ctx, s, storage.Client{ID: "app"}, tc.connectorID, &claims)
++			if !tc.refused {
++				require.NoError(t, err)
++				return
++			}
++			var notAllowed *NotAllowedError
++			require.True(t, errors.As(err, &notAllowed))
++			require.Equal(t, ReservedPrefix, notAllowed.Rule)
++			require.Equal(t, tc.connectorID, notAllowed.ConnectorID)
++		})
++	}
++}
++
++func TestApplyNoReservedPrefixes(t *testing.T) {
++	SetReservedPrefixes(nil)
++
++	ctx := t.Context()
++	s := memory.New(slog.New(slog.DiscardHandler))
++	require.NoError(t, s.CreateConnector(ctx, storage.Connector{ID: "corp", Type: "oidc", Name: "Corp"}))
++
++	claims := storage.Claims{Email: "peering:peer:x", Groups: []string{"system:masters"}}
++	require.NoError(t, Apply(ctx, s, storage.Client{ID: "app"}, "corp", &claims))
++}
+diff --git a/server/connector.go b/server/connector.go
+index 172031c6..32b99bba 100644
+--- a/server/connector.go
++++ b/server/connector.go
+@@ -17,6 +17,7 @@ import (
+ 	"github.com/dexidp/dex/connector/oidc"
+ 	"github.com/dexidp/dex/connector/openshift"
+ 	"github.com/dexidp/dex/connector/saml"
++	"github.com/dexidp/dex/connector/tokenexchange"
+ 	"github.com/dexidp/dex/server/connectors"
+ )
+ 
+@@ -33,6 +34,7 @@ var ConnectorsConfig = map[string]func() connectors.ConnectorConfig{
+ 	"gitlab":          func() connectors.ConnectorConfig { return new(gitlab.Config) },
+ 	"google":          func() connectors.ConnectorConfig { return new(google.Config) },
+ 	"oidc":            func() connectors.ConnectorConfig { return new(oidc.Config) },
++	"tokenexchange":   func() connectors.ConnectorConfig { return new(tokenexchange.Config) },
+ 	"oauth":           func() connectors.ConnectorConfig { return new(oauth.Config) },
+ 	"saml":            func() connectors.ConnectorConfig { return new(saml.Config) },
+ 	"authproxy":       func() connectors.ConnectorConfig { return new(authproxy.Config) },
+diff --git a/server/grants/tokenexchange.go b/server/grants/tokenexchange.go
+index 15c85057..1dfe2b16 100644
+--- a/server/grants/tokenexchange.go
++++ b/server/grants/tokenexchange.go
+@@ -62,6 +62,14 @@ func (g *tokenExchange) Authorize(ctx context.Context, req *Request, client stor
+ 		g.logger.ErrorContext(ctx, "connector doesn't implement token exchange", "connector_id", req.ConnectorID)
+ 		return nil, &oauth2.Error{Type: oauth2.InvalidRequest, Description: "Requested connector does not exist.", Status: http.StatusBadRequest}
+ 	}
++	// A connector that names its clients refuses the others before it looks at
++	// the token: Client.AllowedConnectors is empty, and so open to every
++	// connector, for most clients.
++	if restricted, ok := conn.Connector.(connector.ClientRestrictedConnector); ok && !restricted.AllowsClient(client.ID) {
++		g.logger.WarnContext(ctx, "token exchange denied: client not allowed by the connector",
++			"connector_id", req.ConnectorID, "client_id", client.ID)
++		return nil, &oauth2.Error{Type: oauth2.InvalidGrant, Description: "Connector not allowed for this client.", Status: http.StatusBadRequest}
++	}
+ 	identity, err := teConn.TokenIdentity(ctx, req.SubjectTokenType, req.SubjectToken)
+ 	if err != nil {
+ 		g.logger.ErrorContext(ctx, "failed to verify subject token", "err", err)
+diff --git a/server/server_grant_tokenexchange_connector_test.go b/server/server_grant_tokenexchange_connector_test.go
+new file mode 100644
+index 00000000..7f342d0a
+--- /dev/null
++++ b/server/server_grant_tokenexchange_connector_test.go
+@@ -0,0 +1,140 @@
++package server
++
++import (
++	"crypto/rand"
++	"crypto/rsa"
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/go-jose/go-jose/v4"
++	"github.com/stretchr/testify/require"
++
++	"github.com/dexidp/dex/connector/tokenexchange"
++	"github.com/dexidp/dex/server/allowlist"
++	"github.com/dexidp/dex/server/oauth2"
++	"github.com/dexidp/dex/server/tokens"
++	"github.com/dexidp/dex/storage"
++)
++
++// TestTokenExchangeConnectorFromStorage exchanges a service account token of
++// another cluster through a token-exchange connector that is written to
++// storage while the server runs, as the user-authn controller does.
++func TestTokenExchangeConnectorFromStorage(t *testing.T) {
++	allowlist.SetReservedPrefixes([]string{"system:", "peering:"})
++	t.Cleanup(func() { allowlist.SetReservedPrefixes(nil) })
++
++	key, err := rsa.GenerateKey(rand.Reader, 2048)
++	require.NoError(t, err)
++	jwks := jose.JSONWebKeySet{Keys: []jose.JSONWebKey{{Key: &key.PublicKey, KeyID: "moscow", Algorithm: "RS256", Use: "sig"}}}
++
++	ctx := t.Context()
++	httpServer, s := newTestServer(t, func(c *Config) {
++		require.NoError(t, c.Storage.CreateClient(ctx, storage.Client{
++			ID: "peering-receiver", Secret: "secret", AllowedConnectors: []string{"tep-moscow", "tep-unowned"},
++		}))
++		require.NoError(t, c.Storage.CreateClient(ctx, storage.Client{
++			ID: "kubernetes", Secret: "k8s", TrustedPeers: []string{"peering-receiver", "other"},
++		}))
++		// A client with no AllowedConnectors, as most clients are.
++		require.NoError(t, c.Storage.CreateClient(ctx, storage.Client{ID: "other", Secret: "other"}))
++	})
++	defer httpServer.Close()
++
++	createConnector := func(id string, reserved []string) {
++		config, err := json.Marshal(tokenexchange.Config{
++			Issuer:    "https://kubernetes.default.svc.cluster.local",
++			Keys:      tokenexchange.Keys{JWKS: &jwks},
++			Audiences: []tokenexchange.Audience{{Prefix: "peering.deckhouse.io/peer/b/"}},
++			Identity: tokenexchange.IdentityMapping{
++				Username: tokenexchange.ClaimMapping{Claim: "sub", Prefix: "peering:peer:moscow:"},
++				Groups: []tokenexchange.GroupMapping{{
++					Claim: "aud", TrimPrefix: "peering.deckhouse.io/peer/b/cap/", Prefix: "peering:peer:moscow:cap:",
++				}},
++			},
++			ReservedPrefixes: reserved,
++			Clients:          []string{"peering-receiver"},
++		})
++		require.NoError(t, err)
++		require.NoError(t, s.storage.CreateConnector(ctx, storage.Connector{
++			ID: id, Type: tokenexchange.Type, Name: id, Config: config,
++			GrantTypes: []string{oauth2.GrantTypeTokenExchange},
++		}))
++	}
++	createConnector("tep-moscow", []string{"peering:peer:moscow:", "peering:peer:moscow:cap:"})
++	createConnector("tep-unowned", nil)
++
++	subjectToken := signJWT(t, key, "moscow", map[string]any{
++		"iss": "https://kubernetes.default.svc.cluster.local",
++		"sub": "system:serviceaccount:d8-virtualization:virtualization-controller",
++		"aud": []string{"peering.deckhouse.io/peer/b/cap/virtualization"},
++		"exp": time.Now().Add(10 * time.Minute).Unix(),
++	})
++
++	exchange := func(connectorID string, clientCreds ...string) *httptest.ResponseRecorder {
++		clientID, clientSecret := "peering-receiver", "secret"
++		if len(clientCreds) == 2 {
++			clientID, clientSecret = clientCreds[0], clientCreds[1]
++		}
++		vals := url.Values{}
++		vals.Set("grant_type", oauth2.GrantTypeTokenExchange)
++		vals.Set("connector_id", connectorID)
++		vals.Set("scope", "openid email groups federated:id audience:server:client_id:kubernetes")
++		vals.Set("requested_token_type", oauth2.TokenTypeID)
++		vals.Set("subject_token_type", oauth2.TokenTypeID)
++		vals.Set("subject_token", subjectToken)
++		vals.Set("client_id", clientID)
++		vals.Set("client_secret", clientSecret)
++		rr := httptest.NewRecorder()
++		req := httptest.NewRequest(http.MethodPost, httpServer.URL+"/token", strings.NewReader(vals.Encode()))
++		req.Header.Set("content-type", "application/x-www-form-urlencoded")
++		s.ServeHTTP(rr, req)
++		return rr
++	}
++
++	rr := exchange("tep-moscow")
++	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
++	var res tokens.Response
++	require.NoError(t, json.NewDecoder(rr.Body).Decode(&res))
++	claims := jwtPayload(t, res.AccessToken)
++	require.Equal(t, "peering:peer:moscow:system:serviceaccount:d8-virtualization:virtualization-controller", claims["email"])
++	require.Equal(t, []any{"peering:peer:moscow:cap:virtualization"}, claims["groups"])
++	require.Contains(t, claims["aud"], "kubernetes")
++
++	// The same names through a connector that does not own the prefix.
++	rr = exchange("tep-unowned")
++	require.NotEqual(t, http.StatusOK, rr.Code, rr.Body.String())
++
++	// A client the connector does not name, though its AllowedConnectors is open.
++	rr = exchange("tep-moscow", "other", "other")
++	require.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
++	require.Contains(t, rr.Body.String(), "Connector not allowed for this client.")
++}
++
++func signJWT(t *testing.T, key *rsa.PrivateKey, kid string, claims map[string]any) string {
++	t.Helper()
++	sig, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: key}, (&jose.SignerOptions{}).WithHeader("kid", kid))
++	require.NoError(t, err)
++	payload, err := json.Marshal(claims)
++	require.NoError(t, err)
++	jws, err := sig.Sign(payload)
++	require.NoError(t, err)
++	token, err := jws.CompactSerialize()
++	require.NoError(t, err)
++	return token
++}
++
++// jwtPayload decodes the claims of a token without verifying it: the test
++// checks what Dex issued, not its signature.
++func jwtPayload(t *testing.T, token string) map[string]any {
++	t.Helper()
++	jws, err := jose.ParseSigned(token, []jose.SignatureAlgorithm{jose.RS256, jose.ES256})
++	require.NoError(t, err)
++	var claims map[string]any
++	require.NoError(t, json.Unmarshal(jws.UnsafePayloadWithoutVerification(), &claims))
++	return claims
++}

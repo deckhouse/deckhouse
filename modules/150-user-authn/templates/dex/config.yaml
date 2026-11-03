@@ -104,6 +104,24 @@ fields when it decides who may write the provider. Rendered right after the conn
     {{- end }}
   {{- end }}
   {{- end }}
+  {{- /* Patch 420: no provider of sign-in may assert a user or group name with these prefixes; only a
+         TokenExchangeProvider that owns one may. The API server grants rights by these names, and peering
+         names the clusters it pairs with "peering:". */}}
+  reservedNamePrefixes:
+  - "system:"
+  - "peering:"
+  {{- /* Patch 425: the kubeconfig clients share a secret their users know, so they may not exchange tokens.
+         The list is the kubernetes client, whose secret is that shared one, and its kubeconfig peers
+         (templates/dex/kubernetes-oauth2client.yaml). */}}
+  tokenExchange:
+    deniedClients:
+    - kubernetes
+    - kubeconfig-generator
+    - kubeconfig-publish-api
+    {{- range $index, $cluster := $context.Values.userAuthn.kubeconfigGenerator }}
+    - {{ printf "kubeconfig-generator-%d" $index | quote }}
+    - {{ printf "kubeconfig-%s" ($cluster.id | replace "@" "-at-" | replace ":" "-") | quote }}
+    {{- end }}
   {{- with $context.Values.userAuthn.rateLimit }}
   {{- if .enabled }}
   rateLimit:
