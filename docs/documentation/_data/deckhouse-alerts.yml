@@ -5454,6 +5454,7 @@ alerts:
         1. Before the switch, add the prefixed subjects to the ClusterAuthorizationRule, AuthorizationRule and RoleBinding objects that grant rights to the old names.
         1. In the exchange requests, replace `connector_id` with `status.connectorID` of the new object.
         1. After the switch, remove the old subjects from these objects.
+        1. Turn off token exchange through the DexProvider by setting `spec.tokenExchange.enabled: false`. It cannot be turned on again, and token exchange through a DexProvider will be removed after the next LTS release.
 
         Find the clients that exchange tokens in the Dex log:
 

@@ -68,6 +68,9 @@ rules:
   - get
   - list
   - watch
+  # The migration sets spec.tokenExchange.enabled once on the DexProviders that existed before the field
+  # (internal/migration/README.md).
+  - update
 # TokenExchangeProviders: the controller keeps their Dex connectors and holds them with a finalizer
 # until the tokens of the connector are revoked.
 - apiGroups:
@@ -281,6 +284,14 @@ rules:
   - get
   - list
   - watch
+# The marker of the DexProvider token exchange migration (internal/migration/README.md). A create cannot be
+# narrowed by resourceNames: the name is in the body, not in the URL.
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
 # Revocation objects live in this namespace only: the controller writes the revocations of
 # UserOperations and deleted Users, the revocation feed reads them all, and the leader deletes them
 # past retention.

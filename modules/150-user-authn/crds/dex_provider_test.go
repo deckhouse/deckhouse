@@ -131,3 +131,50 @@ func TestDexProviderKerberosRequiresKeytab(t *testing.T) {
 		}
 	}
 }
+
+// Only the providers whose connectors exchange tokens in Dex may have token exchange enabled.
+func TestDexProviderTokenExchangeTypes(t *testing.T) {
+	t.Parallel()
+
+	oidc := func(tokenExchange map[string]any) map[string]any {
+		spec := map[string]any{
+			"type": "OIDC", "displayName": "OIDC",
+			"oidc": map[string]any{"issuer": "https://idp.example.com", "clientID": "dex", "clientSecret": "plainstring"},
+		}
+		if tokenExchange != nil {
+			spec["tokenExchange"] = tokenExchange
+		}
+		return spec
+	}
+	ldap := func(tokenExchange map[string]any) map[string]any {
+		spec := ldapProviderSpec(nil)
+		spec["tokenExchange"] = tokenExchange
+		return spec
+	}
+
+	for version, schema := range providerSchemas(t) {
+		for _, tc := range []struct {
+			name    string
+			spec    map[string]any
+			refused bool
+		}{
+			{name: "OIDC without the field", spec: oidc(nil)},
+			{name: "OIDC with exchange", spec: oidc(map[string]any{"enabled": true})},
+			{name: "OIDC without exchange", spec: oidc(map[string]any{"enabled": false})},
+			{name: "LDAP without exchange", spec: ldap(map[string]any{"enabled": false})},
+			{name: "LDAP with exchange", spec: ldap(map[string]any{"enabled": true}), refused: true},
+		} {
+			t.Run(version+"/"+tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				errs := validateProvider(t, version, schema, tc.spec)
+				if !tc.refused {
+					require.Empty(t, errs)
+					return
+				}
+				require.Len(t, errs, 1)
+				require.Contains(t, errs[0].Detail, "Only OIDC and Gitlab providers can exchange tokens")
+			})
+		}
+	}
+}

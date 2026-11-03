@@ -145,6 +145,52 @@ spec:
   policyName: {{ $passwordPolicyName }}
   validationActions: [Deny]
 {{- end }}
+{{- $dexProviderTokenExchangePolicyName := "dexprovider-token-exchange.deckhouse.io" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $dexProviderTokenExchangePolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["dexproviders"]
+  matchConditions:
+    # The emergency users of the platform, as in modules/002-deckhouse/templates/validation.yaml.
+    - name: 'exclude-users'
+      expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl"].exists(e, (e == request.userInfo.username)))'
+    # The user-authn controller sets the flag once on the providers that existed before it, whenever
+    # this policy is deployed relative to the migration.
+    - name: 'exclude-user-authn-controller'
+      expression: 'request.userInfo.username != "system:serviceaccount:d8-user-authn:controller"'
+  variables:
+    - name: enabled
+      expression: >-
+        has(object.spec.tokenExchange) && has(object.spec.tokenExchange.enabled) && object.spec.tokenExchange.enabled
+    - name: wasEnabled
+      expression: >-
+        request.operation == 'UPDATE' && has(oldObject.spec.tokenExchange) &&
+        has(oldObject.spec.tokenExchange.enabled) && oldObject.spec.tokenExchange.enabled
+  validations:
+    # Token exchange through a DexProvider can only be turned off: its connector does not check the audience of the
+    # exchanged token. Tokens of other issuers are exchanged through a TokenExchangeProvider.
+    - expression: '!variables.enabled || variables.wasEnabled'
+      messageExpression: "'Token exchange through a DexProvider can only be turned off; exchange tokens through a TokenExchangeProvider.'"
+      reason: Forbidden
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $dexProviderTokenExchangePolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  policyName: {{ $dexProviderTokenExchangePolicyName }}
+  validationActions: [Deny]
 {{- /* A TokenExchangeProvider may name its subjects with a reserved prefix only if the owner of the
        prefix creates it: the API server grants rights by these names, and Dex lets the connector of
        such a provider assert them (patch 420, reservedNamePrefixes in templates/dex/config.yaml).

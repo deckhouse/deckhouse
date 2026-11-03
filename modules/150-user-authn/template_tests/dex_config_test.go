@@ -241,6 +241,56 @@ var _ = Describe("Module :: user-authn :: helm template :: dex-config", func() {
 			Expect(config).To(ContainSubstring("enablePasswordDB: true"))
 		})
 	})
+
+	Context("With DexProviders and the token exchange flag", func() {
+		const providers = `
+- id: oidc-unset
+  displayName: oidc-unset
+  type: OIDC
+  oidc: {issuer: "https://idp.example.com", clientID: dex, clientSecret: plainstring}
+- id: oidc-on
+  displayName: oidc-on
+  type: OIDC
+  tokenExchange: {enabled: true}
+  oidc: {issuer: "https://idp.example.com", clientID: dex, clientSecret: plainstring}
+- id: gitlab-off
+  displayName: gitlab-off
+  type: Gitlab
+  tokenExchange: {enabled: false}
+  gitlab: {clientID: clientID, clientSecret: secret, baseURL: "https://gitlab.example.com"}
+- id: github
+  displayName: github
+  type: Github
+  github: {clientID: clientID, clientSecret: secret}`
+
+		signIn := []any{"authorization_code", "refresh_token", "implicit", "password", "urn:ietf:params:oauth:grant-type:device_code"}
+		withExchange := append(append([]any{}, signIn...), "urn:ietf:params:oauth:grant-type:token-exchange")
+		grants := func(id string) any {
+			return gjson.GetBytes(renderedDexConfig(hec), `connectors.#(id=="`+id+`").grantTypes`).Value()
+		}
+
+		It("Before the migration, a provider without the field keeps exchanging tokens", func() {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", providers)
+			hec.ValuesSet("userAuthn.internal.dexProviderTokenExchangeMigrated", false)
+			hec.HelmRender()
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(grants("oidc-unset")).To(Equal(withExchange))
+			Expect(grants("oidc-on")).To(Equal(withExchange))
+			Expect(grants("gitlab-off")).To(Equal(signIn))
+			Expect(grants("github")).To(Equal(signIn))
+		})
+
+		It("After the migration, only a provider with the flag exchanges tokens", func() {
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", providers)
+			hec.ValuesSet("userAuthn.internal.dexProviderTokenExchangeMigrated", true)
+			hec.HelmRender()
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(grants("oidc-unset")).To(Equal(signIn))
+			Expect(grants("oidc-on")).To(Equal(withExchange))
+			Expect(grants("gitlab-off")).To(Equal(signIn))
+			Expect(grants("github")).To(Equal(signIn))
+		})
+	})
 })
 
 // renderedDexConfig returns the Dex config of the rendered dex Secret as JSON.

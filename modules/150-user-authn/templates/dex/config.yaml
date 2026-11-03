@@ -31,6 +31,37 @@ fields when it decides who may write the provider. Rendered right after the conn
   {{- end }}
 {{- end }}
 
+{{- /* The grants the connector of a DexProvider serves (connector grantTypes, Dex #4619): every grant of Dex, and
+       token exchange only when spec.tokenExchange.enabled is true. The connector of a DexProvider does not check the
+       audience of the exchanged token; tokens of other issuers are exchanged through a TokenExchangeProvider. Only the
+       OIDC and Gitlab connectors exchange tokens in Dex.
+
+       Until the user-authn controller has set the field on the providers that existed before it
+       (internal.dexProviderTokenExchangeMigrated), a provider without the field keeps exchanging tokens, as it did:
+       the config is rendered on the upgrade before the controller runs. Called with (list $provider $migrated). */ -}}
+{{- define "dex_connector_grants" }}
+  {{- $provider := index . 0 }}
+  {{- $migrated := index . 1 }}
+  {{- $exchange := false }}
+  {{- if has $provider.type (list "OIDC" "Gitlab") }}
+    {{- $enabled := dig "tokenExchange" "enabled" "" $provider }}
+    {{- if kindIs "bool" $enabled }}
+      {{- $exchange = $enabled }}
+    {{- else }}
+      {{- $exchange = not $migrated }}
+    {{- end }}
+  {{- end }}
+      grantTypes:
+      - authorization_code
+      - refresh_token
+      - implicit
+      - password
+      - urn:ietf:params:oauth:grant-type:device_code
+  {{- if $exchange }}
+      - urn:ietf:params:oauth:grant-type:token-exchange
+  {{- end }}
+{{- end }}
+
 {{- define "dex_conf" }}
   {{- $context := . }}
   issuer: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/
@@ -222,6 +253,7 @@ fields when it decides who may write the provider. Rendered right after the conn
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
       {{- include "dex_connector_identity_limits" $provider }}
+      {{- include "dex_connector_grants" (list $provider $context.Values.userAuthn.internal.dexProviderTokenExchangeMigrated) }}
       config:
         clientID: {{ $provider.github.clientID | quote }}
         clientSecret: {{ $provider.github.clientSecret | quote }}
@@ -248,6 +280,7 @@ fields when it decides who may write the provider. Rendered right after the conn
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
       {{- include "dex_connector_identity_limits" $provider }}
+      {{- include "dex_connector_grants" (list $provider $context.Values.userAuthn.internal.dexProviderTokenExchangeMigrated) }}
       config:
         baseURL: {{ $provider.gitlab.baseURL | quote }}
         clientID: {{ $provider.gitlab.clientID | quote }}
@@ -270,6 +303,7 @@ fields when it decides who may write the provider. Rendered right after the conn
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
       {{- include "dex_connector_identity_limits" $provider }}
+      {{- include "dex_connector_grants" (list $provider $context.Values.userAuthn.internal.dexProviderTokenExchangeMigrated) }}
       config:
         clientID: {{ $provider.bitbucketCloud.clientID | quote }}
         clientSecret: {{ $provider.bitbucketCloud.clientSecret | quote }}
@@ -289,6 +323,7 @@ fields when it decides who may write the provider. Rendered right after the conn
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
       {{- include "dex_connector_identity_limits" $provider }}
+      {{- include "dex_connector_grants" (list $provider $context.Values.userAuthn.internal.dexProviderTokenExchangeMigrated) }}
       config:
         host: {{ $provider.ldap.host | quote }}
         {{- if $provider.ldap.insecureSkipVerify }}
@@ -342,6 +377,7 @@ fields when it decides who may write the provider. Rendered right after the conn
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
       {{- include "dex_connector_identity_limits" $provider }}
+      {{- include "dex_connector_grants" (list $provider $context.Values.userAuthn.internal.dexProviderTokenExchangeMigrated) }}
       config:
         issuer: {{ $provider.oidc.issuer | quote }}
         clientID: {{ $provider.oidc.clientID | quote }}
@@ -406,6 +442,7 @@ fields when it decides who may write the provider. Rendered right after the conn
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
       {{- include "dex_connector_identity_limits" $provider }}
+      {{- include "dex_connector_grants" (list $provider $context.Values.userAuthn.internal.dexProviderTokenExchangeMigrated) }}
       config:
         baseURL: {{ $provider.crowd.baseURL | quote }}
         clientID: {{ $provider.crowd.clientID | quote }}
@@ -424,6 +461,7 @@ fields when it decides who may write the provider. Rendered right after the conn
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
       {{- include "dex_connector_identity_limits" $provider }}
+      {{- include "dex_connector_grants" (list $provider $context.Values.userAuthn.internal.dexProviderTokenExchangeMigrated) }}
       config:
         ssoURL: {{ $provider.saml.ssoURL | quote }}
         {{- if $provider.saml.rootCAData }}

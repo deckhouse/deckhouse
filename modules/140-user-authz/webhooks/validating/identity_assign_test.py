@@ -894,8 +894,8 @@ def oidc(**extra):
             "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "s",
                      "scopes": ["openid", "email", "groups"]}}
     for k, v in extra.items():
-        if k == "allowedIdentities":
-            spec["allowedIdentities"] = v
+        if k in ("allowedIdentities", "tokenExchange"):
+            spec[k] = v
         else:
             spec["oidc"][k] = v
     return spec
@@ -1186,6 +1186,13 @@ class TestDexAllowedIdentitiesCombinations(unittest.TestCase):
 class TestDexBenignUpdate(unittest.TestCase):
     def test_identical_is_benign(self):
         self.assertTrue(assign.dex_benign_update(oidc(), oidc()))
+
+    def test_token_exchange_flag_is_benign(self):
+        # The user-authn controller sets the flag on providers that existed before it; administrators turn it off.
+        self.assertTrue(assign.dex_benign_update(oidc(), oidc(tokenExchange={"enabled": True})))
+        self.assertTrue(assign.dex_benign_update(oidc(tokenExchange={"enabled": True}), oidc(tokenExchange={"enabled": False})))
+        # The flag does not hide another change.
+        self.assertFalse(assign.dex_benign_update(oidc(), oidc(tokenExchange={"enabled": True}, issuer="https://other.example.com")))
 
     def test_credential_rotation_is_benign(self):
         self.assertTrue(assign.dex_benign_update(oidc(clientSecret="old"), oidc(clientSecret="new")))

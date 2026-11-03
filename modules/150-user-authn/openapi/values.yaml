@@ -240,6 +240,13 @@ properties:
           properties:
             name:
               type: string
+      dexProviderTokenExchangeMigrated:
+        type: boolean
+        default: false
+        description: |
+          The user-authn controller has set spec.tokenExchange.enabled on the DexProviders that existed before the field
+          (the ConfigMap d8-user-authn/dexprovider-token-exchange-migration). Until then a provider without the field
+          keeps exchanging tokens, as before the field existed.
       providers:
         type: array
         default: []
@@ -367,6 +374,11 @@ properties:
             enabled:
               type: boolean
               default: true
+            tokenExchange:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
             allowedIdentities:
               type: object
               properties:

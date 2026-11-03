@@ -61,3 +61,36 @@ see [`internal/adoption`](../adoption/README.md).
   removed only if it still names the same refresh token, so a restart halfway does the rest, and a
   later start finds nothing to do and returns.
 - **Introduced in:** !910.
+
+## Token exchange of DexProviders
+
+- **Code:** `DexProviderTokenExchange` in this package; the marker is read by the module hook
+  `hooks/discover_dexprovider_token_exchange_migration.go`.
+- **From:** OIDC and Gitlab DexProviders without `spec.tokenExchange.enabled`. Before the field existed,
+  every connector of a DexProvider served the token-exchange grant.
+- **To:** `spec.tokenExchange.enabled` set on each of them: `true` while some DexClient carries
+  `dexclient.deckhouse.io/allow-access-to-kubernetes: "true"` and is not being deleted, `false` otherwise. Such
+  a client is a trusted peer of the `kubernetes` client and could exchange a token of the provider's issuer for
+  one the Kubernetes API accepts, so a cluster that may be doing it keeps it; one that cannot loses nothing.
+  DexClient has no `allowedConnectors`, so an annotated client may use every provider. Other types are not
+  touched: their connectors do not exchange tokens. Then the ConfigMap
+  `d8-user-authn/dexprovider-token-exchange-migration`, which lists the providers turned on and off and the
+  annotated clients.
+- **Not counted:** the other trusted peers of the `kubernetes` client. A DexAuthenticator with
+  `dexauthenticator.deckhouse.io/allow-access-to-kubernetes: "true"` is one, and patch 425 does not refuse it,
+  but its oauth2-proxy never exchanges tokens: only someone who took its client secret from the Secret in the
+  namespace of the application could, and the migration does not keep that path open. The peers of the module
+  configuration are kubeconfig clients, to which patch 425 refuses token exchange.
+- **Why:** the connector of a DexProvider does not check the audience of the exchanged token, so token
+  exchange through it is off by default and can only be turned off (the ValidatingAdmissionPolicy
+  `dexprovider-token-exchange.deckhouse.io`, which lets the controller through by its exact name). The
+  migration keeps it for the clusters that may use it, until it is removed after the next LTS release.
+- **How it applies:** on the leader at start, unless the marker exists. Until the marker exists, the Dex
+  config lets a provider without the field exchange tokens, as before; the config is rendered on the
+  upgrade before the controller runs, so pipelines get no 400 in between. A provider created during that
+  window is migrated with the others. After the marker, a provider without the field does not exchange
+  tokens.
+- **Running again:** a provider that has the field is skipped, so one an administrator turned off stays
+  off; the update carries the resourceVersion read, and a provider changed meanwhile is read again at the
+  next pass, 30 seconds later. Once the marker exists, the migration does nothing.
+- **Introduced in:** the merge request that added `spec.tokenExchange` to DexProvider.

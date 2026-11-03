@@ -521,7 +521,7 @@ Exchange `CI_TOKEN` as in the [token exchange request](#token-exchange-request).
 
 ### Migration from DexProvider
 
-Earlier, a token was exchanged through a DexProvider of OIDC type, and the exchange request named it in `connector_id`. This way is deprecated. While a cluster exchanges tokens through a DexProvider, the `D8UserAuthnDexProviderTokenExchangeDeprecated` alert fires.
+Earlier, a token was exchanged through a DexProvider of OIDC type, and the exchange request named it in `connector_id`. This method is deprecated and off by default. A DexProvider exchanges tokens only with `spec.tokenExchange.enabled: true`. The module set this value during the upgrade in clusters that had a DexClient with the `dexclient.deckhouse.io/allow-access-to-kubernetes` annotation. The parameter can only be turned off. It will be removed after the next LTS release, together with this method. While a cluster exchanges tokens through a DexProvider, the `D8UserAuthnDexProviderTokenExchangeDeprecated` alert fires.
 
 To migrate, follow these steps:
 
@@ -534,6 +534,7 @@ To migrate, follow these steps:
 1. Before the switch, add the prefixed subjects to the ClusterAuthorizationRule, AuthorizationRule and RoleBinding objects that grant rights to the old names, for example `gitlab-ci:deployer@example.com` next to `deployer@example.com`.
 1. In the exchange request, replace `connector_id` with `status.connectorID` of the new object.
 1. After the switch, remove the old subjects from these objects.
+1. Turn off token exchange through the DexProvider by setting `spec.tokenExchange.enabled: false`. It cannot be turned on again.
 
 A TokenExchangeProvider accepts JWT ID tokens only. A pipeline that exchanged an access token, for example one of Keycloak, has to request an ID token of the issuer instead.
 

@@ -522,7 +522,7 @@ steps:
 
 ### Переход с DexProvider
 
-Раньше токен обменивался через DexProvider типа OIDC, и запрос обмена указывал его в `connector_id`. Этот способ устарел. Пока в кластере идёт обмен через DexProvider, срабатывает алерт `D8UserAuthnDexProviderTokenExchangeDeprecated`.
+Раньше токен обменивался через DexProvider типа OIDC, и запрос обмена указывал его в `connector_id`. Этот способ устарел и по умолчанию выключен. DexProvider обменивает токены, только если задано `spec.tokenExchange.enabled: true`. Модуль выставил это значение при обновлении в кластерах, где был DexClient с аннотацией `dexclient.deckhouse.io/allow-access-to-kubernetes`. Параметр можно только выключить. Он будет удалён после следующего LTS-релиза вместе с этим способом. Пока в кластере идёт обмен через DexProvider, срабатывает алерт `D8UserAuthnDexProviderTokenExchangeDeprecated`.
 
 Для перехода выполните следующие шаги:
 
@@ -535,6 +535,7 @@ steps:
 1. До переключения добавьте субъектов с префиксом в объекты ClusterAuthorizationRule, AuthorizationRule и RoleBinding, которые выдают права старым именам, например `gitlab-ci:deployer@example.com` рядом с `deployer@example.com`.
 1. В запросе обмена замените `connector_id` на `status.connectorID` нового объекта.
 1. После переключения удалите старых субъектов из этих объектов.
+1. Выключите обмен токенов через DexProvider, установив `spec.tokenExchange.enabled: false`. Включить его снова нельзя.
 
 TokenExchangeProvider принимает только ID-токены в формате JWT. Пайплайн, который обменивал access-токен, например Keycloak, должен запрашивать у издателя ID-токен.
 

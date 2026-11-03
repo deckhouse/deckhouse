@@ -1209,16 +1209,20 @@ def _subset(new: Optional[frozenset], old: Optional[frozenset]) -> bool:
 def dex_benign_update(old_spec: Any, new_spec: Any) -> bool:
     """Whether an UPDATE can be admitted without recomputing targets.
 
-    Benign: credential rotation, display name, enabled, a no-op re-apply, or a
-    change that only narrows the identity space. Anything else may move the
-    identity source or widen the space and is checked as a fresh connection.
+    Benign: credential rotation, display name, enabled, tokenExchange, a no-op
+    re-apply, or a change that only narrows the identity space. Anything else may
+    move the identity source or widen the space and is checked as a fresh
+    connection. tokenExchange leaves the space alone: the allow-lists of the
+    connector apply to exchanged tokens too, and the dexprovider-token-exchange
+    ValidatingAdmissionPolicy of user-authn lets it only be turned off, but for
+    the one-time migration of its controller.
     """
     old = _dict(old_spec)
     new = _dict(new_spec)
     if _dex_enabled(new) and not _dex_enabled(old):
         return False
-    old = {k: v for k, v in old.items() if k != "enabled"}
-    new = {k: v for k, v in new.items() if k != "enabled"}
+    old = {k: v for k, v in old.items() if k not in ("enabled", "tokenExchange")}
+    new = {k: v for k, v in new.items() if k not in ("enabled", "tokenExchange")}
     if _dex_normalize(_dex_strip(old, limiters=False)) == _dex_normalize(_dex_strip(new, limiters=False)):
         return True
     if _dex_normalize(_dex_strip(old, limiters=True)) != _dex_normalize(_dex_strip(new, limiters=True)):

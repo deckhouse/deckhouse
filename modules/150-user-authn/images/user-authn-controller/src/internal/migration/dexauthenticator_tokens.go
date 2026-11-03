@@ -85,6 +85,10 @@ func Register(mgr manager.Manager) error {
 	if err := mgr.Add(m); err != nil {
 		return fmt.Errorf("add dex-authenticator-tokens migration: %w", err)
 	}
+	exchange := NewDexProviderTokenExchange(mgr.GetClient(), mgr.GetAPIReader(), mgr.GetLogger().WithName("migration").WithName("dexprovider-token-exchange"), 0)
+	if err := mgr.Add(exchange); err != nil {
+		return fmt.Errorf("add dexprovider-token-exchange migration: %w", err)
+	}
 	return nil
 }
 

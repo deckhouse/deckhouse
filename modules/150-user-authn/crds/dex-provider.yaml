@@ -37,6 +37,9 @@ spec:
             spec:
               type: object
               required: ['displayName', 'type']
+              x-kubernetes-validations:
+                - rule: "!has(self.tokenExchange) || !has(self.tokenExchange.enabled) || !self.tokenExchange.enabled || self.type in ['OIDC', 'Gitlab']"
+                  message: "Only OIDC and Gitlab providers can exchange tokens: spec.tokenExchange.enabled must not be true for another type."
               properties:
                 enabled:
                   type: boolean
@@ -45,6 +48,19 @@ spec:
                     Whether the provider is enabled.
 
                     A disabled provider is not shown on the sign-in page, and users cannot sign in through it. The DexProvider and its settings are kept.
+                tokenExchange:
+                  type: object
+                  description: |
+                    Settings of token exchange (RFC 8693) through the provider. Dex exchanges an ID token of the provider's issuer for its own token. Only `OIDC` and `Gitlab` providers can exchange tokens.
+
+                    The provider's connector does not check the audience of the exchanged token, so any application of the issuer could get a cluster token. Exchange tokens through a [TokenExchangeProvider](cr.html#tokenexchangeprovider) instead. The field is temporary and will be removed after the next LTS release, together with token exchange through a DexProvider.
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: |
+                        Whether the provider exchanges tokens. Absent means `false`.
+
+                        Exchange can only be turned off. An administrator cannot set `true`, either when creating the provider or when changing it. During the upgrade from a release without this field, `user-authn` sets it once on every existing `OIDC` and `Gitlab` provider. It sets `true` on all of them if at least one DexClient has the `dexclient.deckhouse.io/allow-access-to-kubernetes: "true"` annotation, and `false` on all of them otherwise. A DexAuthenticator with access to Kubernetes does not count. Its oauth2-proxy never exchanges tokens, and exchange with its client secret, taken from the Secret in the namespace of the application, is not kept.
                 type:
                   type: string
                   description: 'Type of authentication provider.'
@@ -780,6 +796,9 @@ spec:
             spec:
               type: object
               required: ['displayName', 'type']
+              x-kubernetes-validations:
+                - rule: "!has(self.tokenExchange) || !has(self.tokenExchange.enabled) || !self.tokenExchange.enabled || self.type in ['OIDC', 'Gitlab']"
+                  message: "Only OIDC and Gitlab providers can exchange tokens: spec.tokenExchange.enabled must not be true for another type."
               properties:
                 enabled:
                   type: boolean
@@ -788,6 +807,19 @@ spec:
                     Whether the provider is enabled.
 
                     A disabled provider is not shown on the sign-in page, and users cannot sign in through it. The DexProvider and its settings are kept.
+                tokenExchange:
+                  type: object
+                  description: |
+                    Settings of token exchange (RFC 8693) through the provider. Dex exchanges an ID token of the provider's issuer for its own token. Only `OIDC` and `Gitlab` providers can exchange tokens.
+
+                    The provider's connector does not check the audience of the exchanged token, so any application of the issuer could get a cluster token. Exchange tokens through a [TokenExchangeProvider](cr.html#tokenexchangeprovider) instead. The field is temporary and will be removed after the next LTS release, together with token exchange through a DexProvider.
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: |
+                        Whether the provider exchanges tokens. Absent means `false`.
+
+                        Exchange can only be turned off. An administrator cannot set `true`, either when creating the provider or when changing it. During the upgrade from a release without this field, `user-authn` sets it once on every existing `OIDC` and `Gitlab` provider. It sets `true` on all of them if at least one DexClient has the `dexclient.deckhouse.io/allow-access-to-kubernetes: "true"` annotation, and `false` on all of them otherwise. A DexAuthenticator with access to Kubernetes does not count. Its oauth2-proxy never exchanges tokens, and exchange with its client secret, taken from the Secret in the namespace of the application, is not kept.
                 type:
                   type: string
                   description: 'Type of authentication provider.'

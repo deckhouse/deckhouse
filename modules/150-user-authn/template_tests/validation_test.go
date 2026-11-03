@@ -225,6 +225,40 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 			}
 		})
 
+		It("Should let token exchange through a DexProvider be turned off only", func() {
+			const name = "dexprovider-token-exchange.deckhouse.io"
+			Expect(hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", name).Exists()).To(BeTrue())
+			policy := compileRenderedPolicy(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", name).ToYaml())
+
+			on := map[string]interface{}{"enabled": true}
+			off := map[string]interface{}{"enabled": false}
+			for _, tc := range []struct {
+				name     string
+				username string
+				old      map[string]interface{}
+				new      map[string]interface{}
+				create   bool
+				allowed  bool
+			}{
+				{name: "create without the flag", username: "admin@example.com", create: true, allowed: true},
+				{name: "create turned off", username: "admin@example.com", new: off, create: true, allowed: true},
+				{name: "create turned on", username: "admin@example.com", new: on, create: true, allowed: false},
+				{name: "turn off", username: "admin@example.com", old: on, new: off, allowed: true},
+				{name: "keep on and change the rest", username: "admin@example.com", old: on, new: on, allowed: true},
+				{name: "remove the flag", username: "admin@example.com", old: on, allowed: true},
+				{name: "turn on", username: "admin@example.com", old: off, new: on, allowed: false},
+				{name: "turn on a provider without the flag", username: "admin@example.com", new: on, allowed: false},
+				{name: "the controller migrates", username: "system:serviceaccount:d8-user-authn:controller", new: on, allowed: true},
+				{name: "another service account of d8-user-authn", username: "system:serviceaccount:d8-user-authn:dex", new: on, allowed: false},
+				{name: "an emergency user", username: "system:sudouser", old: off, new: on, allowed: true},
+			} {
+				By(tc.name)
+				allowed, err := dexProviderAdmitted(policy, tc.username, tc.create, tc.old, tc.new)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(allowed).To(Equal(tc.allowed))
+			}
+		})
+
 		It("Should keep rendering the pre-existing user validation policy", func() {
 			Expect(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", "system-users.deckhouse.io").Exists()).To(BeTrue())
 			Expect(hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "system-users.deckhouse.io").Exists()).To(BeTrue())
@@ -775,6 +809,43 @@ func (p compiledPolicy) validate(input dexAdmissionInput) (bool, error) {
 	}
 
 	return p.evaluate(p.validations, versionedAttributes, request, bindings)
+}
+
+// dexProviderAdmitted reports whether the policy admits the creation (create) or an update of an OIDC
+// DexProvider by the user, with oldTokenExchange and newTokenExchange as spec.tokenExchange; nil leaves it out.
+func dexProviderAdmitted(p compiledPolicy, username string, create bool, oldTokenExchange, newTokenExchange map[string]interface{}) (bool, error) {
+	gvk := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "DexProvider"}
+	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "dexproviders"}
+	provider := func(tokenExchange map[string]interface{}) *unstructured.Unstructured {
+		object := &unstructured.Unstructured{}
+		object.SetGroupVersionKind(gvk)
+		object.SetName("corp")
+		spec := map[string]interface{}{"type": "OIDC", "displayName": "Corp", "oidc": map[string]interface{}{"issuer": "https://idp.example.com"}}
+		if tokenExchange != nil {
+			spec["tokenExchange"] = tokenExchange
+		}
+		object.Object["spec"] = spec
+		return object
+	}
+
+	// The old object has to stay a nil interface on create: a typed nil pointer is treated as present.
+	operation, oldObject := admission.Create, runtime.Object(nil)
+	if !create {
+		operation, oldObject = admission.Update, provider(oldTokenExchange)
+	}
+	attributes := admission.NewAttributesRecord(provider(newTokenExchange), oldObject, gvk, "", "corp", gvr, "", operation, nil, false,
+		&user.DefaultInfo{Name: username, Groups: defaultGroups(username)})
+	versionedAttributes, err := admission.NewVersionedAttributes(attributes, gvk, nil)
+	if err != nil {
+		return false, err
+	}
+	request := admissioncel.CreateAdmissionRequest(attributes, metav1.GroupVersionResource(gvr), metav1.GroupVersionKind(gvk))
+
+	selected, err := p.evaluate(p.matchConditions, versionedAttributes, request, admissioncel.OptionalVariableBindings{})
+	if err != nil || !selected {
+		return true, err
+	}
+	return p.evaluate(p.validations, versionedAttributes, request, admissioncel.OptionalVariableBindings{})
 }
 
 // tokenExchangeProviderAdmitted reports whether the policy admits the creation of a
