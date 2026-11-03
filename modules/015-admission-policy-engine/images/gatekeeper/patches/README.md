@@ -8,6 +8,7 @@ Fix CVEs:
 - CVE-2026-56855
 - CVE-2026-78659
 - CVE-2026-78660
+- CVE-2026-78661
 - CVE-2026-78662
 - CVE-2026-78663
 - CVE-2026-78669
@@ -16,6 +17,7 @@ Fix CVEs:
 - CVE-2026-84304
 - CVE-2026-84445
 - CVE-2026-97032
+- CVE-2026-97045
 
 GHSA:
 - GHSA-2v4p-qf9q-27wj
@@ -50,12 +52,12 @@ It lists the `go.mod` requirements that the patch set changes over the upstream 
 | `go.opentelemetry.io/otel/trace` | v1.44.0 | v1.45.0 |
 | `go.opentelemetry.io/otel` | v1.44.0 | v1.45.0 |
 | `go.opentelemetry.io/proto/otlp` | v1.10.0 | v1.11.0 |
-| `golang.org/x/crypto` | v0.53.0 | v0.57.0 |
-| `golang.org/x/net` | v0.56.0 | v0.60.0 |
-| `golang.org/x/sync` | v0.22.0 | v0.23.0 |
-| `golang.org/x/sys` | v0.46.0 | v0.48.0 |
-| `golang.org/x/term` | v0.44.0 | v0.46.0 |
-| `golang.org/x/text` | v0.39.0 | v0.42.0 |
+| `golang.org/x/crypto` | v0.53.0 | v0.58.0 |
+| `golang.org/x/net` | v0.56.0 | v0.62.0 |
+| `golang.org/x/sync` | v0.22.0 | v0.24.0 |
+| `golang.org/x/sys` | v0.46.0 | v0.49.0 |
+| `golang.org/x/term` | v0.44.0 | v0.47.0 |
+| `golang.org/x/text` | v0.39.0 | v0.43.0 |
 | `google.golang.org/api` | v0.189.0 | v0.264.0 |
 | `google.golang.org/genproto/googleapis/api` | v0.0.0-20260526163538-3dc84a4a5aaa | v0.0.0-20260803160001-6ac0973c030d |
 | `google.golang.org/genproto/googleapis/rpc` | v0.0.0-20260526163538-3dc84a4a5aaa | v0.0.0-20260803160001-6ac0973c030d |

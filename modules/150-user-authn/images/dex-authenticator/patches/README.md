@@ -223,7 +223,8 @@ The security events of `templates/security-events.yaml` are built from these lin
   # Find the vulnerable modules that a newer version fixes.
   govulncheck ./...
   # Bump each of them (the current list is below), then tidy and build.
-  go get golang.org/x/net@v0.60.0
+  go get golang.org/x/net@v0.62.0
+  go get github.com/go-jose/go-jose/v4@v4.1.6
   go get github.com/redis/go-redis/v9@v9.23.0
   go mod tidy && go build ./...
   git diff -- go.mod go.sum > /path/to/patches/998-fix-cve.patch
@@ -232,14 +233,18 @@ The security events of `templates/security-events.yaml` are built from these lin
   Drop a bump once the tag requires that version or newer. State the reason for every bump below.
 - **Current bumps:**
 
-  - `golang.org/x/net` v0.60.0 — GO-2026-6603, GO-2026-6610, GO-2026-6611, GO-2026-6612, GO-2026-6617.
+  - `golang.org/x/net` v0.62.0 — GO-2026-6603, GO-2026-6610, GO-2026-6611, GO-2026-6612, GO-2026-6617,
+    CVE-2026-78661, CVE-2026-97045.
+  - `github.com/go-jose/go-jose/v4` v4.1.6 — CVE-2026-116585, CVE-2026-116586, CVE-2026-116587.
   - `github.com/redis/go-redis/v9` v9.23.0 — panic in the `AggMin` and `AggMax` aggregators. In v9.22.0 the branch
     that handles a failed `toFloat64` conversion calls `a.err.CompareAndSwap(nil, err)`, where `err` is nil, because
     the method returns earlier when it is not. `atomic.Value.CompareAndSwap` panics on a nil value, so a shard reply
     that is not numeric, for a command with the `agg_min` or `agg_max` response policy, panics instead of returning
     an error from `Result()`. Fixed upstream in redis/go-redis#4056 and released in v9.23.0.
 
-  Minimal version selection also moves `go.uber.org/atomic` to v1.12.0 and `github.com/klauspost/cpuid/v2` to v2.4.0.
+  Minimal version selection also moves `go.uber.org/atomic` to v1.12.0, `github.com/klauspost/cpuid/v2` to v2.4.0,
+  `golang.org/x/crypto` to v0.58.0, `golang.org/x/sync` to v0.24.0, `golang.org/x/sys` to v0.49.0,
+  `golang.org/x/text` to v0.43.0 and `golang.org/x/tools` to v0.51.0.
 - **Not covered by the patch:** the advisories of the Go standard library are fixed by the Go version of the builder
   image; GO-2026-5932 (`golang.org/x/crypto/openpgp`, no fix) is not reachable and is described in
   `known_vulnerabilities.vex`.
@@ -277,5 +282,6 @@ It lists the `go.mod` requirements that the patch set changes over the upstream 
 
 | Module | Upstream | Patched |
 |---|---|---|
-| `golang.org/x/net` | v0.59.0 | v0.60.0 |
+| `github.com/go-jose/go-jose/v4` | v4.1.5 | v4.1.6 |
+| `golang.org/x/net` | v0.59.0 | v0.62.0 |
 <!-- cvefix:end -->
