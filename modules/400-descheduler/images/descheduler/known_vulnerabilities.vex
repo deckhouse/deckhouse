@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-cf67c1d15ba9b2b3a76640921b70d3ec428d80b094749baab315f0035d5a1fc0",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 6,
+  "version": 7,
   "statements": [
     {
       "vulnerability": {
@@ -129,7 +129,35 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимость находится в серверной части собственной реализации HTTP/2 модуля golang.org/x/net. При обработке кадра SETTINGS со значением SETTINGS_HEADER_TABLE_SIZE serverConn меняет размер таблицы HPACK-кодировщика без синхронизации, пока другая горутина кодирует тем же кодировщиком кадр HEADERS ответа, поэтому злонамеренный клиент может вызвать аварийное завершение сервера. Исправление в x/net v0.60.0 затрагивает только http2/server.go: изменение размера таблицы откладывается до записи следующего кадра (serverConn.processSetting, serverConn.startFrameWrite). В x/net v0.58.0 этот файл и связанные с ним (http2/transport.go, writesched*.go, config.go) собираются только при условии !(go1.27 && !http2legacy). Descheduler собирается Go 1.27 без тега http2legacy, поэтому вместо них компилируются обёртки server_wrap.go и transport_wrap.go, которые передают работу встроенной реализации HTTP/2 из net/http. В бинарном файле нет символов serverConn из golang.org/x/net/http2 (проверено go tool nm на сборке descheduler v0.36.0 с наложенными патчами модуля). Обёртка Server.ServeConn из server_wrap.go, которую вызывает k8s.io/apiserver, передаёт соединение серверу net/http. Разбор кадров (Framer) и пакет golang.org/x/net/http2/hpack, которые использует gRPC-транспорт, исправлением не затрагиваются: hpack между v0.58.0 и v0.60.0 не менялся. Та же проблема во встроенной реализации стандартной библиотеки исправлена в Go 1.27.2, которым собирается образ. Уязвимый код x/net в образе отсутствует.",
       "timestamp": "2026-10-16T09:01:53.631906Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78661"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в HTML-парсере golang.org/x/net/html: при слиянии соседних текстовых узлов методы parser.addText и parser.fosterParent дописывали текст к существующему узлу конкатенацией строк, поэтому документ из множества коротких текстовых фрагментов, разделённых игнорируемыми закрывающими тегами, вызывает квадратичное число аллокаций и копирований в html.Parse и html.ParseFragment. Пакет golang.org/x/net/html не входит в граф зависимостей собираемого бинарного файла descheduler: из модуля golang.org/x/net v0.58.0 в сборку попадают только idna, http2, http2/hpack, http/httpguts, http/httpproxy, internal/httpcommon, internal/httpsfv, internal/timeseries, trace и websocket (проверено go list -deps для cmd/descheduler на v0.36.0 с наложенными патчами модуля). Разбор HTML компонент не выполняет, уязвимый код в образе отсутствует.",
+      "timestamp": "2026-11-02T08:48:54.816975Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97045"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в HTML-сериализаторе golang.org/x/net/html: функция childTextNodesAreLiteral, по которой html.Render решает, выводить ли без экранирования текст внутри элементов script, style, iframe, noscript, xmp и подобных, проверяла предков только до ближайшего элемента внешнего пространства имён и, если он оказывался точкой интеграции HTML, считала текст безопасным. Сама точка интеграции может находиться внутри элемента, перенесённого во внешнее пространство имён при foster parenting (например, <mglyph> или <malignmark> под <mtext>), и тогда при повторном разборе выведенного без экранирования текста поддерево попадает в другое пространство имён, что позволяет обойти санитайзеры, которые разбирают и заново сериализуют HTML. Пакет golang.org/x/net/html не входит в граф зависимостей собираемого бинарного файла descheduler: из модуля golang.org/x/net v0.58.0 в сборку попадают только idna, http2, http2/hpack, http/httpguts, http/httpproxy, internal/httpcommon, internal/httpsfv, internal/timeseries, trace и websocket (проверено go list -deps для cmd/descheduler на v0.36.0 с наложенными патчами модуля). HTML-документы компонент не строит и не сериализует, уязвимый код в образе отсутствует.",
+      "timestamp": "2026-11-02T08:49:51.176329Z"
     }
   ],
-  "timestamp": "2026-10-16T09:01:59Z"
+  "timestamp": "2026-11-02T08:49:55Z"
 }

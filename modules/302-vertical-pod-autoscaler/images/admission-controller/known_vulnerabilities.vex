@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-9325a4086a67a79185628f647a2af019abc5eb9c58b8707242fcdc2a732ecc58",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 6,
+  "version": 7,
   "statements": [
     {
       "vulnerability": {
@@ -115,7 +115,35 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимость находится в пакете golang.org/x/text/secure/precis: профиль Nickname может аварийно завершиться с выходом за границы среза при преобразовании специально подобранной строки в короткий буфер. Admission-controller не использует профили PRECIS: пакета secure/precis нет в графе зависимостей сборки (go list -deps), и его символов нет в бинарном файле (go tool nm на сборке vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Из golang.org/x/text в сборку попадают только пакеты, которые использует golang.org/x/net/idna: transform, unicode/bidi, unicode/norm и secure/bidirule. Уязвимый код в образе отсутствует.",
       "timestamp": "2026-10-15T13:13:11.528546Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78661"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в HTML-парсере golang.org/x/net/html: при слиянии соседних текстовых узлов методы parser.addText и parser.fosterParent дописывали текст к существующему узлу конкатенацией строк, поэтому документ из множества коротких текстовых фрагментов, разделённых игнорируемыми закрывающими тегами, вызывает квадратичное число аллокаций и копирований в html.Parse и html.ParseFragment. Пакет golang.org/x/net/html не входит в граф зависимостей собираемого бинарного файла admission-controller: из модуля golang.org/x/net v0.55.0 в сборку попадают только idna, http2, http2/hpack, http/httpguts, internal/httpcommon и internal/httpsfv (проверено go list -deps для pkg/admission-controller на vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). Разбор HTML компонент не выполняет, уязвимый код в образе отсутствует.",
+      "timestamp": "2026-11-02T08:50:32.122432Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-97045"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость находится в HTML-сериализаторе golang.org/x/net/html: функция childTextNodesAreLiteral, по которой html.Render решает, выводить ли без экранирования текст внутри элементов script, style, iframe, noscript, xmp и подобных, проверяла предков только до ближайшего элемента внешнего пространства имён и, если он оказывался точкой интеграции HTML, считала текст безопасным. Сама точка интеграции может находиться внутри элемента, перенесённого во внешнее пространство имён при foster parenting (например, <mglyph> или <malignmark> под <mtext>), и тогда при повторном разборе выведенного без экранирования текста поддерево попадает в другое пространство имён, что позволяет обойти санитайзеры, которые разбирают и заново сериализуют HTML. Пакет golang.org/x/net/html не входит в граф зависимостей собираемого бинарного файла admission-controller: из модуля golang.org/x/net v0.55.0 в сборку попадают только idna, http2, http2/hpack, http/httpguts, internal/httpcommon и internal/httpsfv (проверено go list -deps для pkg/admission-controller на vertical-pod-autoscaler-1.7.0 с наложенными патчами модуля). HTML-документы компонент не строит и не сериализует, уязвимый код в образе отсутствует.",
+      "timestamp": "2026-11-02T08:50:52.045819Z"
     }
   ],
-  "timestamp": "2026-10-16T09:09:07Z"
+  "timestamp": "2026-11-02T08:51:03Z"
 }
