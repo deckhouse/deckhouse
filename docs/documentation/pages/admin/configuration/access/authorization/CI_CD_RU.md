@@ -289,28 +289,24 @@ deploy:
 
 ## Обмен токена (token exchange)
 
-Пайплайн получает токен от IdP, обменивает его в Dex на токен с `aud=kubernetes` и обращается с ним к API.
+Пайплайн получает токен от CI-системы, обменивает его в Dex на токен с `aud=kubernetes` и обращается с ним к API.
 
 {% alert level="info" %}
 Рекомендуется для GitLab CI и GitHub Actions.
 {% endalert %}
 
-DP/Dex не получает пароль пользователя. Способ получения `IDP_TOKEN` зависит от IdP: OIDC job token (GitLab/GitHub) или эндпоинт токена IdP (client_credentials).
+DP/Dex не получает пароль. Dex доверяет CI-системе как [TokenExchangeProvider](/modules/user-authn/cr.html#tokenexchangeprovider). Dex проверяет подпись, издателя, срок действия и аудиторию токена, а также обязательные claims, и называет пайплайн в кластере по claim токена.
 
 ### Предварительные требования
 
 Для настройки Token Exchange должны быть соблюдены следующие требования:
 
 - [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) модуля `control-plane-manager` включён.
-- [DexProvider](/modules/user-authn/cr.html#dexprovider) настроен как **тип OIDC**.
-
-{% alert level="warning" %}
-Token exchange не работает с коннекторами `type: GitLab` или `type: GitHub`. Настройте GitLab/GitHub как OIDC-провайдеры.
-{% endalert %}
+- CI-система выпускает подписанные JWT ID-токены (`id_tokens` в GitLab CI, OIDC в GitHub Actions) и публикует discovery-документ, либо у вас есть её открытые ключи.
 
 ### Создание DexClient
 
-Для создания DexClient используйте команду:
+Для создания DexClient выполните команду:
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -325,17 +321,17 @@ spec: {}
 EOF
 ```
 
-Аннотация `dexclient.deckhouse.io/allow-access-to-kubernetes` позволяет клиенту запрашивать токены с `aud=kubernetes`.
+Аннотация `dexclient.deckhouse.io/allow-access-to-kubernetes` разрешает клиенту запрашивать токены с `aud=kubernetes`.
 
 {% alert level="warning" %}
-Предоставляемый таким образом доступ к Kubernetes API действует на уровне всего кластера. По этой причине для добавления аннотации или изменения её значения на `"true"` необходимо право `create` на подресурс `dexclients/allow-access-to-kubernetes` группы API `deckhouse.io` в неймспейсе DexClient. В упрощённой ролевой модели это право есть начиная с уровня `ClusterAdmin`. В гранулярной модели его дают роль `d8:subsystem:iam:manager` и роли, которые её включают, например `d8:system:manager`. Прав на создание DexClient в отдельном неймспейсе недостаточно: admission-политика отклонит запрос с сообщением, содержащим имя аннотации.
+Это даёт доступ к API Kubernetes на уровне всего кластера. Поэтому для добавления аннотации или изменения её значения на `"true"` необходимо право `create` на подресурс `dexclients/allow-access-to-kubernetes` группы API `deckhouse.io` в неймспейсе DexClient. В упрощённой ролевой модели это право выдаётся на уровне `ClusterAdmin` и выше. В гранулярной модели его выдаёт роль `d8:subsystem:iam:manager` и включающие её роли, например `d8:system:manager`. Роли уровня неймспейса, разрешающей создавать DexClient, недостаточно: политика admission отклонит запрос с сообщением, в котором названа аннотация.
 
-Добавление аннотации ограничено независимо от указанного значения, включая `"false"`. Это необходимо для совместимости с предыдущими версиями DP, в которых доступ предоставляется при наличии аннотации независимо от её значения.
+Добавление аннотации ограничено независимо от указанного значения, включая `"false"`. Это нужно для совместимости с предыдущими версиями DP, в которых доступ выдавался при наличии аннотации, независимо от её значения.
 
-Ограничение не распространяется на объект, у которого аннотация уже установлена. Удаление и повторное создание DexClient считается повторным добавлением аннотации. Поэтому GitOps-контроллеру, который пересоздаёт объект вместо его обновления, требуется то же право `create` на подресурс `dexclients/allow-access-to-kubernetes`.
+Ограничение не действует для объекта, у которого аннотация уже есть. Удаление и повторное создание DexClient считается новым добавлением аннотации, поэтому GitOps-контроллеру, который пересоздаёт объект, а не изменяет его, нужно то же право `create` на подресурс `dexclients/allow-access-to-kubernetes`.
 {% endalert %}
 
-Получение client secret:
+Получите секрет клиента:
 
 ```shell
 d8 k -n d8-user-authn get secret dex-client-ci-token-exchange -o jsonpath='{.data.clientSecret}' | base64 -d
@@ -343,9 +339,56 @@ d8 k -n d8-user-authn get secret dex-client-ci-token-exchange -o jsonpath='{.dat
 
 Формат **client_id**: `dex-client-ci-token-exchange@d8-user-authn`.
 
+### Создание TokenExchangeProvider
+
+TokenExchangeProvider задаёт, какие токены принимает Dex и какому DexClient разрешено их обменивать. Пример для GitLab CI:
+
+```shell
+cat <<EOF | d8 k apply -f -
+apiVersion: deckhouse.io/v1alpha1
+kind: TokenExchangeProvider
+metadata:
+  name: gitlab-ci
+spec:
+  issuer: https://gitlab.example.com
+  keys:
+    discovery: {}
+  audiences:
+  - exact: https://<DEX_HOST>/
+  claimValidation:
+  - claim: namespace_path
+    equals: platform
+  - claim: ref_protected
+    equals: "true"
+  identity:
+    username:
+      claim: sub
+      prefix: "gitlab-ci:"
+  clients:
+  - dexClient:
+      name: ci-token-exchange
+      namespace: d8-user-authn
+EOF
+```
+
+Параметры:
+
+- `issuer` — URL-адрес инсталляции GitLab, как в claim `iss` её ID-токенов.
+- `audiences` — значение `aud`, которое задание указывает в `id_tokens`. Токен, выпущенный для другого сервиса, отклоняется.
+- `claimValidation` — claims, которые обязан нести токен. В примере принимаются только защищённые ветки проектов группы `platform`.
+- `identity.username` — имя пользователя в кластере, например `gitlab-ci:project_path:platform/app:ref_type:branch:ref:main` для ветки `main` проекта `platform/app`.
+
+Получите идентификатор коннектора для запроса обмена:
+
+```shell
+CONNECTOR_ID=$(d8 k get tokenexchangeprovider gitlab-ci -o jsonpath='{.status.connectorID}')
+```
+
+Сохраните его в переменной CI. Идентификатор меняется, если объект удалить и создать заново, а также если провайдер получает коннектор обратно после `PrefixConflict`. В этих случаях обновите переменную, иначе Dex ответит 400 `Requested connector does not exist`.
+
 ### Получение URL Dex и API
 
-Для получения URL Dex и API используйте команды:
+Для получения URL Dex и API выполните команды:
 
 ```shell
 DEX_HOST=$(d8 k -n d8-user-authn get ingress dex -o jsonpath='{.spec.rules[0].host}')
@@ -354,9 +397,7 @@ API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.
 
 ### Выдача RBAC
 
-DP настраивает kube-apiserver на проверку токенов Dex. Claims `email` и `groups` из токена используются для RBAC.
-
-Набор claims, которые требуются kube-apiserver для аутентификации, зависит от конфигурации. Если kube-apiserver требует `name`, добавьте scope `profile`.
+DP настраивает kube-apiserver на проверку токенов Dex. Имя пользователя — то, что задаёт в TokenExchangeProvider `identity.email`, если он указан, а иначе `identity.username`; группы берутся из `identity.groups`.
 
 Подробнее о выдаче прав — в разделе [«Выдача прав пользователям и сервисным аккаунтам»](granting.html).
 
@@ -371,12 +412,12 @@ metadata:
 spec:
   subjects:
   - kind: User
-    name: deployer@example.com
+    name: "gitlab-ci:project_path:platform/app:ref_type:branch:ref:main"
   accessLevel: Admin
 EOF
 ```
 
-Для гранулярной ролевой модели выдайте роль `d8:project:admin` во всех проектах с помощью [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding). Чтобы выдать доступ только к одному неймспейсу, вместо этого создайте в нём RoleBinding на роль `d8:namespace:admin`:
+Для гранулярной ролевой модели выдайте роль `d8:project:admin` во всех проектах с помощью [ClusterProjectRoleBinding](/modules/multitenancy-manager/cr.html#clusterprojectrolebinding). Чтобы выдать доступ только к одному неймспейсу, создайте в нём RoleBinding на роль `d8:namespace:admin`:
 
 ```shell
 cat <<EOF | d8 k apply -f -
@@ -387,7 +428,7 @@ metadata:
 spec:
   subjects:
   - kind: User
-    name: deployer@example.com
+    name: "gitlab-ci:project_path:platform/app:ref_type:branch:ref:main"
   roleRef:
     kind: ClusterRole
     name: d8:project:admin
@@ -396,35 +437,38 @@ EOF
 
 ### Запрос обмена токена
 
-Пример запроса на обмен токена:
+Пример запроса обмена токена:
 
 ```shell
 RESPONSE=$(curl -q -s -X POST "https://${DEX_HOST}/token" \
   -u "${DEX_CLIENT_ID}:${DEX_CLIENT_SECRET}" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
-  -d "subject_token=${IDP_TOKEN}" \
+  -d "subject_token=${CI_TOKEN}" \
   -d "subject_token_type=urn:ietf:params:oauth:token-type:id_token" \
   -d "connector_id=${CONNECTOR_ID}" \
-  -d "scope=openid profile email groups audience:server:client_id:kubernetes" \
+  -d "scope=openid email groups federated:id audience:server:client_id:kubernetes" \
   -d "requested_token_type=urn:ietf:params:oauth:token-type:id_token")
 
 DEX_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
 ```
 
 Параметры:
-- `subject_token` — токен от IdP.
-- `subject_token_type` — `id_token` (GitLab/GitHub) или `access_token` (Keycloak).
-- `connector_id` — `metadata.name` ресурса DexProvider.
-- `scope` — обязательно `audience:server:client_id:kubernetes` и `profile`.
 
-{% alert level="info" %}
-Ожидаемая audience всегда `kubernetes`. Если API возвращает 401 с ошибкой несоответствия audience, убедитесь что scope содержит `audience:server:client_id:kubernetes`.
-{% endalert %}
+- `subject_token` — ID-токен CI-системы. Access-токены не принимаются.
+- `connector_id` — `status.connectorID` объекта TokenExchangeProvider.
+- `scope` — должен содержать следующие значения:
+  - `openid` — нужен для ID-токена;
+  - `email` — kube-apiserver берёт имя пользователя из claim `email`, без него API ответит 401;
+  - `audience:server:client_id:kubernetes` — токен выпускается для kube-apiserver;
+  - `groups` — нужен, если RBAC выдаёт права группам;
+  - `federated:id` — показывает TokenExchangeProvider токена в `d8 k auth whoami` (атрибут extra `user-authn.deckhouse.io/dex-provider`).
+
+Токен Dex действует в течение `idTokenTTL` модуля `user-authn` (по умолчанию 10 минут). Для более долгого задания запросите новый токен.
 
 ### GitLab CI
 
-Пример запроса токена для GitLab CI:
+Пример запроса токена в GitLab CI:
 
 {% raw %}
 
@@ -441,8 +485,8 @@ deploy:
         -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
         -d "subject_token=${GITLAB_OIDC_TOKEN}" \
         -d "subject_token_type=urn:ietf:params:oauth:token-type:id_token" \
-        -d "connector_id=gitlab" \
-        -d "scope=openid profile email groups audience:server:client_id:kubernetes" \
+        -d "connector_id=${CONNECTOR_ID}" \
+        -d "scope=openid email groups federated:id audience:server:client_id:kubernetes" \
         -d "requested_token_type=urn:ietf:params:oauth:token-type:id_token")
       DEX_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
       d8 k --server="${K8S_SERVER}" --token="${DEX_TOKEN}" auth whoami
@@ -450,38 +494,49 @@ deploy:
 
 {% endraw %}
 
-### Keycloak
+### GitHub Actions
 
-Получение токена из Keycloak:
+Для GitHub Actions задайте в TokenExchangeProvider:
 
-```shell
-KEYCLOAK_TOKEN=$(curl -q -s -X POST "https://<KEYCLOAK_HOST>/realms/<REALM>/protocol/openid-connect/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=client_credentials" \
-  -d "client_id=<KEYCLOAK_CLIENT_ID>" \
-  -d "client_secret=<KEYCLOAK_CLIENT_SECRET>" | jq -r '.access_token')
+- `issuer` — `https://token.actions.githubusercontent.com`.
+- `audiences` — значение, которое рабочий процесс передаёт как `audience`.
+- `claimValidation` — `repository_owner_id` и при необходимости `ref`. GitHub рекомендует проверять неизменяемые идентификаторы. Имя переименованной или удалённой организации может занять кто-то другой.
+- `identity.username` — `claim: sub` с префиксом, например `github:`. Имя пользователя будет вида `github:repo:my-org/app:ref:refs/heads/main`.
+
+Чтобы запросить токен, добавьте в рабочий процесс право `id-token: write`:
+
+{% raw %}
+
+```yaml
+permissions:
+  id-token: write
+steps:
+  - run: |
+      CI_TOKEN=$(curl -sS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+        "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://<DEX_HOST>/" | jq -r '.value')
 ```
 
-Обмен в Dex (для Keycloak используется `subject_token_type=access_token`):
+{% endraw %}
 
-{% alert level="info" %}
-Для обмена access_token в DexProvider требуется `getUserInfo: true`.
-{% endalert %}
+Обменяйте `CI_TOKEN`, как описано в разделе [«Запрос обмена токена»](#запрос-обмена-токена).
 
-```shell
-RESPONSE=$(curl -q -s -X POST "https://${DEX_HOST}/token" \
-  -u "${DEX_CLIENT_ID}:${DEX_CLIENT_SECRET}" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
-  -d "subject_token=${KEYCLOAK_TOKEN}" \
-  -d "subject_token_type=urn:ietf:params:oauth:token-type:access_token" \
-  -d "connector_id=keycloak" \
-  -d "scope=openid profile email groups audience:server:client_id:kubernetes" \
-  -d "requested_token_type=urn:ietf:params:oauth:token-type:id_token")
+### Переход с DexProvider
 
-DEX_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
-d8 k --server="https://${API_HOST}" --token="${DEX_TOKEN}" auth whoami
-```
+Раньше токен обменивался через DexProvider типа OIDC, и запрос обмена указывал его в `connector_id`. Этот способ устарел. Пока в кластере идёт обмен через DexProvider, срабатывает алерт `D8UserAuthnDexProviderTokenExchangeDeprecated`.
+
+Для перехода выполните следующие шаги:
+
+1. Создайте TokenExchangeProvider с `issuer` объекта DexProvider и аудиторией, которую несут токены вашей CI-системы.
+1. Задайте в `identity.username` claim, из которого DexProvider брал имя пользователя, например `claim: user_email` для GitLab CI, с префиксом, например `gitlab-ci:`; группам тоже задайте префикс. Префикс обязателен. Он отделяет субъектов провайдера от людей и от субъектов других провайдеров.
+1. Сохраните проверки DexProvider:
+   - DexProvider принимал только токен с `email_verified: true`, если не был задан `insecureSkipEmailVerified`. Если имя пользователя берётся из email, добавьте `claimValidation: [{claim: email_verified, equals: "true"}]`.
+   - Перенесите `allowedEmails`, `allowedEmailDomains` и `allowedGroups` в `allowedIdentities`. Dex применяет их к именам с добавленными префиксами, например `gitlab-ci:deployer@example.com`. Добавьте префиксы из `identity` к `allowedEmails` и `allowedGroups`. Значения `allowedEmailDomains` перенесите без изменений, потому что домен — часть после последнего `@`.
+   - Для `allowedGroups` нужен `identity.groups`. Без групп любой обмен отклоняется.
+1. До переключения добавьте субъектов с префиксом в объекты ClusterAuthorizationRule, AuthorizationRule и RoleBinding, которые выдают права старым именам, например `gitlab-ci:deployer@example.com` рядом с `deployer@example.com`.
+1. В запросе обмена замените `connector_id` на `status.connectorID` нового объекта.
+1. После переключения удалите старых субъектов из этих объектов.
+
+TokenExchangeProvider принимает только ID-токены в формате JWT. Пайплайн, который обменивал access-токен, например Keycloak, должен запрашивать у издателя ID-токен.
 
 ### Устранение неполадок
 
@@ -497,16 +552,27 @@ d8 k --server="https://${API_HOST}" --token="${DEX_TOKEN}" auth whoami -v=8
 
 В выводе будет видно какой Authorization заголовок отправляется. Для надёжной работы с токеном используйте минимальный kubeconfig только с `server` и `token`, без `auth-provider`/`exec`.
 
-**Dex 400** — неверный `subject_token`, `subject_token_type` или `connector_id`.
+**TokenExchangeProvider не готов** — проверьте условие `Ready` объекта:
 
-**Dex 401** — неверные учётные данные клиента или невалидный subject token.
+```shell
+d8 k get tokenexchangeprovider gitlab-ci -o jsonpath='{.status.conditions}'
+```
+
+**Dex 400** — одна из причин:
+
+- неизвестный `subject_token_type` или неверный `connector_id` (`Requested connector does not exist`);
+- DexClient не указан в `spec.clients` (`Connector not allowed for this client.`);
+- `invalid_scope` — у DexClient нет аннотации `dexclient.deckhouse.io/allow-access-to-kubernetes`, поэтому он не может запрашивать `audience:server:client_id:kubernetes`. Если аннотации нет, проверьте, не отклонил ли admission-контроллер запрос, который должен был её добавить, и не пересоздал ли GitOps-контроллер объект без неё. Для добавления аннотации необходимо право `create` на подресурс `dexclients/allow-access-to-kubernetes` группы API `deckhouse.io` в неймспейсе DexClient;
+- `unauthorized_client` — клиент является kubeconfig-клиентом или `kubernetes`, им обмен токенов запрещён.
+
+**Dex 401** — неверные учётные данные клиента, либо токен отклонён: access-токен вместо ID-токена, неверная подпись или издатель, `kid` не совпал ни с одним заданным ключом, истёк срок или срок действия дольше `subjectTokenMaxLifetime`, другая аудитория, не совпал обязательный claim или имена с добавленными префиксами не входят в `allowedIdentities` (`User is not allowed.`). Причина записывается в журнал Dex.
 
 **API 401** — токен не прошёл проверку. Проверьте:
-- Аннотация `dexclient.deckhouse.io/allow-access-to-kubernetes` на DexClient. Если её нет, проверьте, не отклонил ли admission-контроллер запрос, который должен был её добавить, и не пересоздал ли GitOps-контроллер объект без неё. Для добавления аннотации необходимо право `create` на подресурс `dexclients/allow-access-to-kubernetes` группы API `deckhouse.io` в неймспейсе DexClient.
-- Scope содержит `audience:server:client_id:kubernetes` и `profile`.
+
+- Параметр `scope` содержит `email` и `audience:server:client_id:kubernetes`.
 - Синхронизация времени между CI-раннером и кластером.
 
-**API 403** — аутентификация прошла, но RBAC не разрешает доступ для пользователя или группы из токена.
+**API 403** — аутентификация прошла, но RBAC не разрешает доступ для пользователя или группы из токена, либо TokenExchangeProvider удалён или потерял коннектор (`PrefixConflict`). В этом случае все выданные через него токены отклоняются, если в модуле `user-authz` включён параметр `enableMultiTenancy` и в кластере работает Kubernetes 1.34 или новее.
 
 Декодирование токена для проверки claims:
 

@@ -288,24 +288,20 @@ Variables `K8S_SERVER`, `K8S_USER`, `K8S_PASSWORD` are set in the [project](../.
 
 ## Token Exchange
 
-The pipeline obtains a token from the IdP, exchanges it at Dex for a token with `aud=kubernetes`, and uses it to access the API.
+The pipeline gets a token from its CI system, exchanges it at Dex for a token with `aud=kubernetes`, and uses it to access the API.
 
 {% alert level="info" %}
 Recommended for GitLab CI and GitHub Actions.
 {% endalert %}
 
-DP/Dex does not receive the user password. How `IDP_TOKEN` is obtained depends on the IdP: OIDC job token (GitLab/GitHub) or IdP token endpoint (client_credentials).
+DP/Dex receives no password. Dex trusts the CI system as a [TokenExchangeProvider](/modules/user-authn/cr.html#tokenexchangeprovider). It checks the signature, the issuer, the expiry and the audience of the token and the required claims, and names the pipeline in the cluster by a claim of the token.
 
 ### Prerequisites
 
 The following requirements must be met to configure Token Exchange:
 
 - [apiserver.publishAPI](/modules/control-plane-manager/configuration.html#parameters-apiserver-publishapi) of the `control-plane-manager` module enabled.
-- [DexProvider](/modules/user-authn/cr.html#dexprovider) configured as **OIDC type**.
-
-{% alert level="warning" %}
-Token exchange does not work with `type: GitLab` or `type: GitHub` connectors. Configure GitLab/GitHub as OIDC providers instead.
-{% endalert %}
+- The CI system issues signed JWT ID tokens (GitLab CI `id_tokens`, GitHub Actions OIDC) and publishes its discovery document, or you have its public keys.
 
 ### Create DexClient
 
@@ -342,6 +338,53 @@ d8 k -n d8-user-authn get secret dex-client-ci-token-exchange -o jsonpath='{.dat
 
 **client_id** format: `dex-client-ci-token-exchange@d8-user-authn`.
 
+### Create TokenExchangeProvider
+
+TokenExchangeProvider tells Dex which tokens to accept and which DexClient may exchange them. Example for GitLab CI:
+
+```shell
+cat <<EOF | d8 k apply -f -
+apiVersion: deckhouse.io/v1alpha1
+kind: TokenExchangeProvider
+metadata:
+  name: gitlab-ci
+spec:
+  issuer: https://gitlab.example.com
+  keys:
+    discovery: {}
+  audiences:
+  - exact: https://<DEX_HOST>/
+  claimValidation:
+  - claim: namespace_path
+    equals: platform
+  - claim: ref_protected
+    equals: "true"
+  identity:
+    username:
+      claim: sub
+      prefix: "gitlab-ci:"
+  clients:
+  - dexClient:
+      name: ci-token-exchange
+      namespace: d8-user-authn
+EOF
+```
+
+Parameters:
+
+- `issuer`: URL of the GitLab instance, as in the `iss` claim of its ID tokens.
+- `audiences`: Value of `aud` that the job sets in `id_tokens`. A token issued for another service is refused.
+- `claimValidation`: Claims that a token must carry. In the example, only protected branches of projects in the `platform` group are accepted.
+- `identity.username`: User name in the cluster, for example `gitlab-ci:project_path:platform/app:ref_type:branch:ref:main` for the `main` branch of `platform/app`.
+
+Get the connector ID for the exchange request:
+
+```shell
+CONNECTOR_ID=$(d8 k get tokenexchangeprovider gitlab-ci -o jsonpath='{.status.connectorID}')
+```
+
+Store it as a CI variable. The ID changes if the object is deleted and created again, or if the provider gets its connector back after a `PrefixConflict`. In these cases, update the variable, otherwise Dex answers with 400 `Requested connector does not exist`.
+
 ### Get Dex and API URLs
 
 To get the Dex URL and API, use the following commands:
@@ -353,9 +396,7 @@ API_HOST=$(d8 k -n d8-user-authn get ingress kubernetes-api -o jsonpath='{.spec.
 
 ### Grant RBAC
 
-DP configures kube-apiserver to validate Dex tokens. The `email` and `groups` claims from the token are used for RBAC.
-
-The set of claims required by kube-apiserver for authentication depends on configuration. If kube-apiserver requires the `name` claim, add the `profile` scope.
+DP configures kube-apiserver to validate Dex tokens. The user name is the one TokenExchangeProvider sets in `identity.email` if it is set, and in `identity.username` otherwise; groups are taken from `identity.groups`.
 
 For details on granting permissions, see [Granting permissions to users and service accounts](granting.html).
 
@@ -370,7 +411,7 @@ metadata:
 spec:
   subjects:
   - kind: User
-    name: deployer@example.com
+    name: "gitlab-ci:project_path:platform/app:ref_type:branch:ref:main"
   accessLevel: Admin
 EOF
 ```
@@ -386,7 +427,7 @@ metadata:
 spec:
   subjects:
   - kind: User
-    name: deployer@example.com
+    name: "gitlab-ci:project_path:platform/app:ref_type:branch:ref:main"
   roleRef:
     kind: ClusterRole
     name: d8:project:admin
@@ -402,24 +443,27 @@ RESPONSE=$(curl -q -s -X POST "https://${DEX_HOST}/token" \
   -u "${DEX_CLIENT_ID}:${DEX_CLIENT_SECRET}" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
-  -d "subject_token=${IDP_TOKEN}" \
+  -d "subject_token=${CI_TOKEN}" \
   -d "subject_token_type=urn:ietf:params:oauth:token-type:id_token" \
   -d "connector_id=${CONNECTOR_ID}" \
-  -d "scope=openid profile email groups audience:server:client_id:kubernetes" \
+  -d "scope=openid email groups federated:id audience:server:client_id:kubernetes" \
   -d "requested_token_type=urn:ietf:params:oauth:token-type:id_token")
 
 DEX_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
 ```
 
 Parameters:
-- `subject_token` — token from IdP
-- `subject_token_type` — `id_token` (GitLab/GitHub) or `access_token` (Keycloak)
-- `connector_id` — `metadata.name` of the DexProvider resource
-- `scope` — must include `audience:server:client_id:kubernetes` and `profile`
 
-{% alert level="info" %}
-The expected audience is always `kubernetes`. If the API returns 401 with an audience mismatch error, verify that the scope includes `audience:server:client_id:kubernetes`.
-{% endalert %}
+- `subject_token`: ID token of the CI system. Access tokens are not accepted.
+- `connector_id`: `status.connectorID` of TokenExchangeProvider.
+- `scope`: Must include the following values:
+  - `openid`: Required for an ID token.
+  - `email`: kube-apiserver takes the user name from the `email` claim. Without it, the API answers 401.
+  - `audience:server:client_id:kubernetes`: The token is issued for kube-apiserver.
+  - `groups`: Required if RBAC grants rights to groups.
+  - `federated:id`: Shows the TokenExchangeProvider of a token in `d8 k auth whoami` (the `user-authn.deckhouse.io/dex-provider` extra).
+
+The Dex token lives as long as `idTokenTTL` of the `user-authn` module (10 minutes by default). Request a new one for a longer job.
 
 ### GitLab CI
 
@@ -440,8 +484,8 @@ deploy:
         -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
         -d "subject_token=${GITLAB_OIDC_TOKEN}" \
         -d "subject_token_type=urn:ietf:params:oauth:token-type:id_token" \
-        -d "connector_id=gitlab" \
-        -d "scope=openid profile email groups audience:server:client_id:kubernetes" \
+        -d "connector_id=${CONNECTOR_ID}" \
+        -d "scope=openid email groups federated:id audience:server:client_id:kubernetes" \
         -d "requested_token_type=urn:ietf:params:oauth:token-type:id_token")
       DEX_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
       d8 k --server="${K8S_SERVER}" --token="${DEX_TOKEN}" auth whoami
@@ -449,38 +493,49 @@ deploy:
 
 {% endraw %}
 
-### Keycloak
+### GitHub Actions
 
-Get token from Keycloak:
+For GitHub Actions, set the following in TokenExchangeProvider:
 
-```shell
-KEYCLOAK_TOKEN=$(curl -q -s -X POST "https://<KEYCLOAK_HOST>/realms/<REALM>/protocol/openid-connect/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=client_credentials" \
-  -d "client_id=<KEYCLOAK_CLIENT_ID>" \
-  -d "client_secret=<KEYCLOAK_CLIENT_SECRET>" | jq -r '.access_token')
+- `issuer`: `https://token.actions.githubusercontent.com`.
+- `audiences`: Value that the workflow passes as `audience`.
+- `claimValidation`: `repository_owner_id` and, if needed, `ref`. GitHub recommends checking the IDs, which never change. The name of a renamed or deleted organization can be taken by someone else.
+- `identity.username`: `claim: sub` with a prefix, for example `github:`. The user name becomes `github:repo:my-org/app:ref:refs/heads/main`.
+
+To request the token, add the `id-token: write` permission to the workflow:
+
+{% raw %}
+
+```yaml
+permissions:
+  id-token: write
+steps:
+  - run: |
+      CI_TOKEN=$(curl -sS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+        "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=https://<DEX_HOST>/" | jq -r '.value')
 ```
 
-Exchange at Dex (for Keycloak, use `subject_token_type=access_token`):
+{% endraw %}
 
-{% alert level="info" %}
-For access_token exchange, DexProvider requires `getUserInfo: true`.
-{% endalert %}
+Exchange `CI_TOKEN` as in the [token exchange request](#token-exchange-request).
 
-```shell
-RESPONSE=$(curl -q -s -X POST "https://${DEX_HOST}/token" \
-  -u "${DEX_CLIENT_ID}:${DEX_CLIENT_SECRET}" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
-  -d "subject_token=${KEYCLOAK_TOKEN}" \
-  -d "subject_token_type=urn:ietf:params:oauth:token-type:access_token" \
-  -d "connector_id=keycloak" \
-  -d "scope=openid profile email groups audience:server:client_id:kubernetes" \
-  -d "requested_token_type=urn:ietf:params:oauth:token-type:id_token")
+### Migration from DexProvider
 
-DEX_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
-d8 k --server="https://${API_HOST}" --token="${DEX_TOKEN}" auth whoami
-```
+Earlier, a token was exchanged through a DexProvider of OIDC type, and the exchange request named it in `connector_id`. This way is deprecated. While a cluster exchanges tokens through a DexProvider, the `D8UserAuthnDexProviderTokenExchangeDeprecated` alert fires.
+
+To migrate, follow these steps:
+
+1. Create a TokenExchangeProvider with the `issuer` of the DexProvider and the audience your CI tokens carry.
+1. Set `identity.username` to the claim the DexProvider took the user name from, for example `claim: user_email` for GitLab CI, with a prefix such as `gitlab-ci:`; give the groups a prefix too. The prefix is required. It sets the subjects of the provider apart from people and from the subjects of other providers.
+1. Keep the checks of the DexProvider:
+   - A DexProvider accepted only a token with `email_verified: true`, unless `insecureSkipEmailVerified` was set. If the user name comes from an email, add `claimValidation: [{claim: email_verified, equals: "true"}]`.
+   - Move `allowedEmails`, `allowedEmailDomains` and `allowedGroups` to `allowedIdentities`. Dex applies them to the names with the prefixes added, such as `gitlab-ci:deployer@example.com`. Add the prefixes of `identity` to `allowedEmails` and `allowedGroups`. Move `allowedEmailDomains` as they are, because the domain is the part after the last `@`.
+   - `allowedGroups` needs `identity.groups`. Without groups, every exchange is refused.
+1. Before the switch, add the prefixed subjects to the ClusterAuthorizationRule, AuthorizationRule and RoleBinding objects that grant rights to the old names, for example `gitlab-ci:deployer@example.com` next to `deployer@example.com`.
+1. In the exchange request, replace `connector_id` with `status.connectorID` of the new object.
+1. After the switch, remove the old subjects from these objects.
+
+A TokenExchangeProvider accepts JWT ID tokens only. A pipeline that exchanged an access token, for example one of Keycloak, has to request an ID token of the issuer instead.
 
 ### Diagnostics
 
@@ -496,16 +551,27 @@ d8 k --server="https://${API_HOST}" --token="${DEX_TOKEN}" auth whoami -v=8
 
 The output shows which Authorization header is sent. For reliable token usage, use a minimal kubeconfig with only `server` and `token`, without `auth-provider`/`exec`.
 
-**Dex 400** — invalid `subject_token`, `subject_token_type`, or `connector_id`.
+**TokenExchangeProvider is not ready** — check the `Ready` condition of the object:
 
-**Dex 401** — invalid client credentials or invalid subject token.
+```shell
+d8 k get tokenexchangeprovider gitlab-ci -o jsonpath='{.status.conditions}'
+```
+
+**Dex 400** — one of the following:
+
+- An unknown `subject_token_type`, or a wrong `connector_id` (`Requested connector does not exist`).
+- The DexClient is not listed in `spec.clients` (`Connector not allowed for this client.`).
+- `invalid_scope`: The DexClient has no `dexclient.deckhouse.io/allow-access-to-kubernetes` annotation, so it may not request `audience:server:client_id:kubernetes`. If the annotation is gone, check whether the admission-controller rejected the request that was supposed to add it, or whether a GitOps controller recreated the object without it. Adding the annotation requires the `create` permission on the `dexclients/allow-access-to-kubernetes` subresource of the `deckhouse.io` API group in the DexClient namespace.
+- `unauthorized_client`: The client is a kubeconfig client or `kubernetes`, which may not exchange tokens.
+
+**Dex 401** — invalid client credentials, or the token is refused: an access token instead of an ID token, wrong signature or issuer, a `kid` of no pinned key, expired or valid for longer than `subjectTokenMaxLifetime`, another audience, a required claim does not match, or the names with the prefixes added are not in `allowedIdentities` (`User is not allowed.`). The Dex log names the reason.
 
 **API 401** — token validation failed. Check:
-- Annotation `dexclient.deckhouse.io/allow-access-to-kubernetes` on DexClient. If it is gone, check whether the admission-controller rejected the request that was supposed to add it, or whether a GitOps controller recreated the object without it: adding the annotation requires the `create` permission on the `dexclients/allow-access-to-kubernetes` subresource of the `deckhouse.io` API group in the DexClient namespace.
-- Scope contains `audience:server:client_id:kubernetes` and `profile`.
+
+- `scope` contains `email` and `audience:server:client_id:kubernetes`.
 - Time synchronization between CI runner and cluster.
 
-**API 403** — authentication succeeded but RBAC does not allow access for the user or group from the token.
+**API 403** — authentication succeeded but RBAC does not allow access for the user or group from the token, or TokenExchangeProvider was deleted or lost its connector (`PrefixConflict`). In this case, every token issued through it is refused if the `enableMultiTenancy` parameter of the `user-authz` module is enabled and the cluster runs Kubernetes 1.34 or later.
 
 Decode token to check claims:
 

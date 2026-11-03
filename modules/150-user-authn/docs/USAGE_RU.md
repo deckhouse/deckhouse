@@ -597,6 +597,71 @@ spec:
 Ограничение не распространяется на ресурсы, у которых аннотация уже установлена. Пользователь с правами на изменение такого ресурса может продолжать изменять его, в том числе удалить аннотацию или изменить значение так, чтобы доступ был отключён.
 {% endalert %}
 
+## Обмен токенов других издателей
+
+[TokenExchangeProvider](cr.html#tokenexchangeprovider) позволяет Dex обменивать токен другого издателя на свой токен (обмен токенов по RFC 8693). API-сервер Kubernetes принимает токен Dex так же, как токен любого другого пользователя Dex. Типичные издатели — CI-системы, Dex соседнего кластера и издатель токенов ServiceAccount другого кластера.
+
+Dex принимает токен, если выполнены все условия:
+
+* Подпись проверяется ключами издателя из его discovery-документа (`keys.discovery`) или заданными в объекте (`keys.jwks`).
+* Если в заголовке токена есть `kid`, подпись проверяется только ключом с этим `kid`.
+* Claim `iss` равен `issuer`, и срок действия токена не истёк.
+* Токен действует не дольше `subjectTokenMaxLifetime` (по умолчанию 24 часа), считая от `iat` до `exp`, а у токена без `iat` — от текущего момента до `exp`. Claim `exp` обязателен.
+* Claim `aud` совпадает с одной из записей `audiences`.
+* Claims из `claimValidation` несут требуемые значения.
+* DexClient, который отправляет запрос, указан в `clients`.
+
+Субъект называется по `identity`. Имя пользователя состоит из префикса и значения claim, группы берутся из claims так же. API-сервер берёт имя пользователя из claim `email`. Без `identity.email` именем пользователя в кластере становится результат `identity.username`, с `identity.email` — результат `identity.email`. Субъекты RBAC указывают это имя.
+
+Пример для пользователей соседнего кластера A. Dex кластера A выпускает токены для своего DexClient `cluster-b` в неймспейсе `d8-user-authn`, поэтому `aud` равен `dex-client-cluster-b@d8-user-authn`. В кластере B DexClient `cluster-a-exchange`, который их обменивает, должен иметь аннотацию `dexclient.deckhouse.io/allow-access-to-kubernetes`. Примените в кластере B следующий манифест:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: TokenExchangeProvider
+metadata:
+  name: cluster-a
+spec:
+  issuer: https://dex.cluster-a.example.com/
+  keys:
+    discovery:
+      caData: |
+        -----BEGIN CERTIFICATE-----
+        <CA_OF_CLUSTER_A>
+        -----END CERTIFICATE-----
+  audiences:
+  - exact: dex-client-cluster-b@d8-user-authn
+  identity:
+    username:
+      claim: email
+      prefix: "cluster-a:"
+    groups:
+    - claim: groups
+      prefix: "cluster-a:"
+  allowedIdentities:
+    emailDomains:
+    - example.com
+  clients:
+  - dexClient:
+      name: cluster-a-exchange
+      namespace: d8-user-authn
+```
+
+Клиент обменивает токен через эндпоинт `/token` Dex, указывая в `connector_id` значение `status.connectorID` объекта. Пример для CI-систем — в разделе [«Доступ для CI/CD»](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/ci_cd.html#обмен-токена-token-exchange).
+
+Особенности TokenExchangeProvider:
+
+* Служит только для обмена токенов и не показывается на странице входа.
+* Токен издателя принимается только как JWT ID-токен. Access-токены не принимаются.
+* Изменение объекта применяется без перезапуска Dex и действует на новые обмены. Токены Dex, выданные раньше, действуют до истечения срока. Досрочно они отклоняются, если провайдер теряет коннектор, то есть если объект удалён или создан заново с тем же именем либо провайдер уступил имена провайдеру, созданному раньше (`PrefixConflict`). Отклонение действует при том же условии, что и после удаления объекта (условие описано ниже). Когда `PrefixConflict` снят, провайдер получает коннектор с новым `status.connectorID`.
+* Изменение, отклонённое как неверное (`InvalidSpec`, например некорректный ключ или `caData` без сертификата), не применяется. Провайдер работает с прежней спецификацией, пока её не исправят.
+* Каждый префикс обязателен и заканчивается двоеточием. Префикс отделяет субъектов провайдера от людей и от субъектов других провайдеров. Два провайдера не могут выдавать одинаковые имена. Провайдер, у которого префикс имени пользователя или группы пересекается с префиксом провайдера, созданного раньше, не готов (`PrefixConflict`) и ничего не обменивает, пока конфликт не устранён.
+* С `keys.discovery` провайдер становится готовым только после того, как прочитаны discovery-документ и ключи издателя. Иначе он не готов (`DiscoveryFailed`) и проверяется снова раз в минуту; коннектор при этом всё равно записывается, поэтому изменение, сужающее доступ, применяется сразу. Discovery-документ читается только по https.
+* После удаления объекта API Kubernetes в течение нескольких секунд отклоняет все токены, выданные через него, если в модуле `user-authz` включён параметр [`enableMultiTenancy`](/modules/user-authz/configuration.html#parameters-enablemultitenancy) и в кластере работает Kubernetes 1.34 или новее. В остальных случаях эти токены действуют до истечения срока (параметр [`idTokenTTL`](configuration.html#parameters-idtokenttl)).
+* Имена пользователей и групп с префиксом `peering:` зарезервированы для ServiceAccount неймспейса `d8-peering`. Их не может утверждать ни DexProvider, ни другой TokenExchangeProvider.
+* Объектами TokenExchangeProvider управляет роль `d8:system-capability:user-authn:edit`, которую несут роль `d8:subsystem:iam:manager` и включающие её роли, а в упрощённой ролевой модели — уровень доступа `ClusterAdmin`. Тот, кто создаёт TokenExchangeProvider, выбирает издателя, его ключи и имена, а значит может получить токен за любого пользователя или группу вне зарезервированных префиксов. Это право равносильно праву действовать от имени любого пользователя. Выдавайте его только администраторам кластера. Коннекторы и отзывы Dex в неймспейсе `d8-user-authn` пишет модуль; изменять их может только администратор кластера.
+
+Обмен токенов через DexProvider устарел. Пока он используется, срабатывает алерт `D8UserAuthnDexProviderTokenExchangeDeprecated`. Перенесите обмен на TokenExchangeProvider, как описано в разделе [«Переход с DexProvider»](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/ci_cd.html#переход-с-dexprovider).
+
 ## Браузерные сессии Dex
 
 По умолчанию Dex не запоминает пользователя между входами: каждое приложение, отправляющее пользователя в Dex, получает

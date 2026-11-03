@@ -45,7 +45,9 @@ spec:
 
             Dex checks the signature, the issuer, the expiry and the audience of the token and the required claims, then names the subject as `spec.identity` says. The provider serves token exchange only and is never shown on the sign-in page.
 
-            Deleting the object revokes every token issued through it at the next request on Kubernetes 1.34 and later (requires the `user-authz` module); on earlier versions the tokens expire with `idTokenTTL`.
+            > **Warning.** Whoever may create the object chooses the issuer, its keys and the names, and so can get a token for any user or group outside the reserved prefixes. This right is equivalent to the right to impersonate users. Grant it to cluster administrators only.
+
+            Deleting the object makes the Kubernetes API refuse every token issued through it within seconds if the `enableMultiTenancy` parameter of the `user-authz` module is enabled and the cluster runs Kubernetes 1.34 or later. Otherwise these tokens stay valid until they expire (the `idTokenTTL` parameter of the module).
           properties:
             spec:
               type: object

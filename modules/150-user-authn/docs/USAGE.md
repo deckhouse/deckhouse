@@ -597,6 +597,71 @@ Adding the annotation is restricted regardless of its value, including `"false"`
 The restriction does not apply to resources that already have the annotation. A user with permissions to modify such a resource can continue to modify it, including removing the annotation or changing its value to disable access.
 {% endalert %}
 
+## Exchanging tokens of other issuers
+
+A [TokenExchangeProvider](cr.html#tokenexchangeprovider) lets Dex exchange a token of another issuer for its own token (RFC 8693 token exchange). The Kubernetes API server accepts the Dex token like the token of any other Dex user. Typical issuers are CI systems, the Dex of a neighbouring cluster and the ServiceAccount token issuer of another cluster.
+
+Dex accepts a token if all of the following hold:
+
+* The signature verifies with the keys of the issuer, from its discovery document (`keys.discovery`) or given in the object (`keys.jwks`).
+* If the token header has `kid`, the signature is checked with the key of that `kid` only.
+* The `iss` claim equals `issuer`, and the token has not expired.
+* The token is valid for no longer than `subjectTokenMaxLifetime` (24 hours by default), counted from `iat` to `exp`, or from now to `exp` for a token without `iat`. The `exp` claim is required.
+* The `aud` claim matches an entry of `audiences`.
+* The claims listed in `claimValidation` carry the required values.
+* The DexClient that sends the request is listed in `clients`.
+
+The subject is named by `identity`. The user name is a prefix followed by the value of a claim, and groups are taken from claims in the same way. The API server takes the user name from the `email` claim. Without `identity.email`, the user name in the cluster is the result of `identity.username`; with `identity.email`, it is the result of `identity.email`. RBAC subjects use this name.
+
+Example for users of a neighbouring cluster A. The Dex of cluster A issues the tokens for its DexClient `cluster-b` in the `d8-user-authn` namespace, so `aud` is `dex-client-cluster-b@d8-user-authn`. In cluster B, the DexClient `cluster-a-exchange` that exchanges them needs the `dexclient.deckhouse.io/allow-access-to-kubernetes` annotation. Apply the following manifest in cluster B:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: TokenExchangeProvider
+metadata:
+  name: cluster-a
+spec:
+  issuer: https://dex.cluster-a.example.com/
+  keys:
+    discovery:
+      caData: |
+        -----BEGIN CERTIFICATE-----
+        <CA_OF_CLUSTER_A>
+        -----END CERTIFICATE-----
+  audiences:
+  - exact: dex-client-cluster-b@d8-user-authn
+  identity:
+    username:
+      claim: email
+      prefix: "cluster-a:"
+    groups:
+    - claim: groups
+      prefix: "cluster-a:"
+  allowedIdentities:
+    emailDomains:
+    - example.com
+  clients:
+  - dexClient:
+      name: cluster-a-exchange
+      namespace: d8-user-authn
+```
+
+The client exchanges a token at the Dex token endpoint with `connector_id` set to `status.connectorID` of the object. An example for CI systems is in [Access for CI/CD](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/ci_cd.html#token-exchange).
+
+A TokenExchangeProvider has the following features:
+
+* It serves token exchange only and is not shown on the sign-in page.
+* A token of the issuer is accepted only as a JWT ID token. Access tokens are not accepted.
+* A change of the object takes effect without a restart of Dex and applies to new exchanges. Dex tokens issued earlier stay valid until they expire. They are refused earlier if the provider loses its connector, that is, if the object is deleted or created again under the same name, or if the provider gives way to an earlier one (`PrefixConflict`). The refusal works under the same condition as for a deleted object, described below. After `PrefixConflict` is gone, the provider gets a connector with a new `status.connectorID`.
+* A change refused as invalid (`InvalidSpec`, for example a malformed key or `caData` without a certificate) is not applied. The provider keeps working with its previous spec until the spec is fixed.
+* Every prefix is required and ends with a colon. The prefix sets the subjects of the provider apart from people and from the subjects of other providers. Two providers cannot give the same names. A provider whose user name or group prefix overlaps one of a provider created earlier is not ready (`PrefixConflict`) and exchanges nothing until the conflict is removed.
+* With `keys.discovery`, the provider becomes ready only after the discovery document and the keys of the issuer are read. Otherwise it is not ready (`DiscoveryFailed`) and is checked again every minute; its connector is written all the same, so a change that narrows the provider applies at once. The discovery document is read over https only.
+* Deleting the object makes the Kubernetes API refuse every token issued through it within seconds if the [`enableMultiTenancy`](/modules/user-authz/configuration.html#parameters-enablemultitenancy) parameter of the `user-authz` module is enabled and the cluster runs Kubernetes 1.34 or later. Otherwise these tokens stay valid until they expire (the [`idTokenTTL`](configuration.html#parameters-idtokenttl) parameter).
+* User and group names starting with `peering:` are reserved for the ServiceAccounts of the `d8-peering` namespace. No DexProvider and no other TokenExchangeProvider can assert them.
+* TokenExchangeProvider objects are managed by the `d8:system-capability:user-authn:edit` role, which the `d8:subsystem:iam:manager` role and the roles that include it carry, and in the basic role model by the `ClusterAdmin` access level. Whoever creates a TokenExchangeProvider chooses the issuer, its keys and the names, and so can get a token for any user or group outside the reserved prefixes. This right is equivalent to the right to impersonate users. Grant it to cluster administrators only. The module writes the Dex connectors and revocations in the `d8-user-authn` namespace; only a cluster administrator can change them.
+
+Token exchange through a DexProvider is deprecated. While it is used, the `D8UserAuthnDexProviderTokenExchangeDeprecated` alert fires. Move it to a TokenExchangeProvider as described in [Migration from DexProvider](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/ci_cd.html#migration-from-dexprovider).
+
 ## Browser sessions of Dex
 
 By default, Dex does not remember a user between sign-ins: every application that sends the user to Dex gets the
