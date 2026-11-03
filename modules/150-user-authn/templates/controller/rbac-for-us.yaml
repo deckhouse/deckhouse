@@ -68,6 +68,25 @@ rules:
   - get
   - list
   - watch
+# TokenExchangeProviders: the controller keeps their Dex connectors and holds them with a finalizer
+# until the tokens of the connector are revoked.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - tokenexchangeproviders
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - tokenexchangeproviders/status
+  verbs:
+  - update
+  - patch
 - apiGroups:
   - deckhouse.io
   resources:
@@ -240,6 +259,19 @@ rules:
   - secrets
   verbs:
   - get
+# The token-exchange connectors of TokenExchangeProviders, written to the Dex storage; Dex reads
+# them on every request. The connectors of the Dex config are not stored here.
+- apiGroups:
+  - dex.coreos.com
+  resources:
+  - connectors
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - delete
 # The static trustedPeers of the kubernetes OAuth2Client.
 - apiGroups:
   - ""

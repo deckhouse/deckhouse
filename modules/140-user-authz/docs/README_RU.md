@@ -834,6 +834,7 @@ read-write:
     - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/projectquotas
     - deckhouse.io/sshcredentials
+    - deckhouse.io/tokenexchangeproviders
     - deckhouse.io/useraccounts
     - deckhouse.io/useroperations
     - deckhouse.io/users

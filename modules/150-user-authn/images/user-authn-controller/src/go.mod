@@ -3,6 +3,7 @@ module user-authn-controller
 go 1.26.0
 
 require (
+	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/go-ldap/ldap/v3 v3.4.13
 	github.com/go-logr/logr v1.4.3
 	github.com/prometheus/client_golang v1.23.2

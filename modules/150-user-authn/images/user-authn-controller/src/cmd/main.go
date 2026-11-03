@@ -46,6 +46,7 @@ import (
 	"user-authn-controller/internal/controller/providercheck"
 	"user-authn-controller/internal/controller/revoke"
 	"user-authn-controller/internal/controller/tlsconflict"
+	"user-authn-controller/internal/controller/tokenexchangeprovider"
 	"user-authn-controller/internal/controller/user"
 	"user-authn-controller/internal/controller/useraccount"
 	"user-authn-controller/internal/controller/userexpire"
@@ -218,6 +219,9 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 	if err = kubernetesclient.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register kubernetesclient controller: %w", err)
 	}
+	if err = tokenexchangeprovider.Register(runtimeManager); err != nil {
+		return nil, fmt.Errorf("register tokenexchangeprovider controller: %w", err)
+	}
 	if err = migration.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register migrations: %w", err)
 	}
@@ -329,6 +333,7 @@ func newManagerOptions(scheme *runtime.Scheme) (manager.Options, error) {
 	byObject, err := controller.MergeCacheByObject(
 		controller.InformerCacheByObject(),
 		kubernetesclient.InformerCacheByObject(),
+		tokenexchangeprovider.InformerCacheByObject(),
 		map[client.Object]cache.ByObject{clients: clientCache},
 	)
 	if err != nil {

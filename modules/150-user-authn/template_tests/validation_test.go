@@ -151,6 +151,80 @@ var _ = Describe("Module :: user-authn :: helm template :: validation", func() {
 			Expect(binding.Field("spec.validationActions").String()).To(MatchJSON(`["Deny"]`))
 		})
 
+		It("Should reserve the peering: prefix of TokenExchangeProviders for the peering module", func() {
+			const name = "token-exchange-provider-reserved-prefixes.deckhouse.io"
+			Expect(hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", name).Exists()).To(BeTrue())
+			policy := compileRenderedPolicy(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", name).ToYaml())
+
+			peeringIdentity := map[string]interface{}{
+				"username": map[string]interface{}{"claim": "sub", "prefix": "peering:peer:moscow:"},
+			}
+			groupOnly := map[string]interface{}{
+				"username": map[string]interface{}{"claim": "sub"},
+				"groups":   []interface{}{map[string]interface{}{"claim": "aud", "prefix": "peering:peer:moscow:cap:"}},
+			}
+			ciIdentity := map[string]interface{}{
+				"username": map[string]interface{}{"claim": "sub", "prefix": "gitlab-ci:"},
+				"email":    map[string]interface{}{"claim": "user_email"},
+			}
+			for _, tc := range []struct {
+				name     string
+				username string
+				identity map[string]interface{}
+				allowed  bool
+			}{
+				{name: "peering creates its provider", username: "system:serviceaccount:d8-peering:peering-controller", identity: peeringIdentity, allowed: true},
+				{name: "an administrator cannot take the peering: prefix", username: "admin@example.com", identity: peeringIdentity, allowed: false},
+				{name: "the prefix of a group is checked too", username: "admin@example.com", identity: groupOnly, allowed: false},
+				{name: "an administrator creates a CI provider", username: "admin@example.com", identity: ciIdentity, allowed: true},
+			} {
+				By(tc.name)
+				allowed, err := tokenExchangeProviderAdmitted(policy, tc.username, tc.identity)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(allowed).To(Equal(tc.allowed))
+			}
+
+			peeringSpec := map[string]interface{}{"issuer": "https://issuer.example.com", "identity": peeringIdentity}
+			otherKeys := map[string]interface{}{"issuer": "https://evil.example.com", "identity": peeringIdentity}
+			for _, tc := range []struct {
+				name     string
+				username string
+				newSpec  map[string]interface{}
+				allowed  bool
+			}{
+				{name: "the controller adds its finalizer", username: "system:serviceaccount:d8-user-authn:controller", newSpec: peeringSpec, allowed: true},
+				{name: "an administrator changes only the metadata", username: "admin@example.com", newSpec: peeringSpec, allowed: true},
+				{name: "an administrator cannot change the spec under peering:", username: "admin@example.com", newSpec: otherKeys, allowed: false},
+				{name: "peering changes its spec", username: "system:serviceaccount:d8-peering:peering-controller", newSpec: otherKeys, allowed: true},
+				{name: "an administrator cannot move the provider out of peering:", username: "admin@example.com", newSpec: map[string]interface{}{
+					"issuer": "https://evil.example.com", "identity": ciIdentity,
+				}, allowed: false},
+			} {
+				By(tc.name)
+				allowed, err := tokenExchangeProviderUpdateAdmitted(policy, tc.username, peeringSpec, tc.newSpec)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(allowed).To(Equal(tc.allowed))
+			}
+
+			ciSpec := map[string]interface{}{"issuer": "https://gitlab.example.com", "identity": ciIdentity}
+			for _, tc := range []struct {
+				name     string
+				username string
+				spec     map[string]interface{}
+				allowed  bool
+			}{
+				{name: "an administrator cannot delete a peering provider", username: "admin@example.com", spec: peeringSpec, allowed: false},
+				{name: "peering deletes its provider", username: "system:serviceaccount:d8-peering:peering-controller", spec: peeringSpec, allowed: true},
+				{name: "an emergency user deletes a peering provider", username: "system:sudouser", spec: peeringSpec, allowed: true},
+				{name: "an administrator deletes a CI provider", username: "admin@example.com", spec: ciSpec, allowed: true},
+			} {
+				By(tc.name)
+				allowed, err := tokenExchangeProviderDeleteAdmitted(policy, tc.username, tc.spec)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(allowed).To(Equal(tc.allowed))
+			}
+		})
+
 		It("Should keep rendering the pre-existing user validation policy", func() {
 			Expect(hec.KubernetesGlobalResource("ValidatingAdmissionPolicy", "system-users.deckhouse.io").Exists()).To(BeTrue())
 			Expect(hec.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "system-users.deckhouse.io").Exists()).To(BeTrue())
@@ -701,6 +775,73 @@ func (p compiledPolicy) validate(input dexAdmissionInput) (bool, error) {
 	}
 
 	return p.evaluate(p.validations, versionedAttributes, request, bindings)
+}
+
+// tokenExchangeProviderAdmitted reports whether the policy admits the creation of a
+// TokenExchangeProvider with the identity mapping by the user.
+func tokenExchangeProviderAdmitted(p compiledPolicy, username string, identity map[string]interface{}) (bool, error) {
+	gvk := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "TokenExchangeProvider"}
+	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "tokenexchangeproviders"}
+	object := &unstructured.Unstructured{}
+	object.SetGroupVersionKind(gvk)
+	object.SetName("provider")
+	object.Object["spec"] = map[string]interface{}{"issuer": "https://issuer.example.com", "identity": identity}
+
+	attributes := admission.NewAttributesRecord(object, nil, gvk, "", "provider", gvr, "", admission.Create, nil, false,
+		&user.DefaultInfo{Name: username, Groups: defaultGroups(username)})
+	versionedAttributes, err := admission.NewVersionedAttributes(attributes, gvk, nil)
+	if err != nil {
+		return false, err
+	}
+	request := admissioncel.CreateAdmissionRequest(attributes, metav1.GroupVersionResource(gvr), metav1.GroupVersionKind(gvk))
+	return p.evaluate(p.validations, versionedAttributes, request, admissioncel.OptionalVariableBindings{})
+}
+
+// tokenExchangeProviderUpdateAdmitted reports whether the policy admits an update of a
+// TokenExchangeProvider from oldSpec to newSpec by the user; the update also adds a finalizer.
+func tokenExchangeProviderUpdateAdmitted(p compiledPolicy, username string, oldSpec, newSpec map[string]interface{}) (bool, error) {
+	gvk := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "TokenExchangeProvider"}
+	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "tokenexchangeproviders"}
+	oldObject := &unstructured.Unstructured{}
+	oldObject.SetGroupVersionKind(gvk)
+	oldObject.SetName("provider")
+	oldObject.Object["spec"] = oldSpec
+	object := oldObject.DeepCopy()
+	object.Object["spec"] = newSpec
+	object.SetFinalizers([]string{"user-authn.deckhouse.io/token-exchange-provider"})
+
+	attributes := admission.NewAttributesRecord(object, oldObject, gvk, "", "provider", gvr, "", admission.Update, nil, false,
+		&user.DefaultInfo{Name: username, Groups: defaultGroups(username)})
+	versionedAttributes, err := admission.NewVersionedAttributes(attributes, gvk, nil)
+	if err != nil {
+		return false, err
+	}
+	request := admissioncel.CreateAdmissionRequest(attributes, metav1.GroupVersionResource(gvr), metav1.GroupVersionKind(gvk))
+	return p.evaluate(p.validations, versionedAttributes, request, admissioncel.OptionalVariableBindings{})
+}
+
+// tokenExchangeProviderDeleteAdmitted reports whether the policy admits the deletion of a
+// TokenExchangeProvider with the spec by the user, match conditions first.
+func tokenExchangeProviderDeleteAdmitted(p compiledPolicy, username string, spec map[string]interface{}) (bool, error) {
+	gvk := schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: "TokenExchangeProvider"}
+	gvr := schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1alpha1", Resource: "tokenexchangeproviders"}
+	oldObject := &unstructured.Unstructured{}
+	oldObject.SetGroupVersionKind(gvk)
+	oldObject.SetName("provider")
+	oldObject.Object["spec"] = spec
+
+	attributes := admission.NewAttributesRecord(nil, oldObject, gvk, "", "provider", gvr, "", admission.Delete, nil, false,
+		&user.DefaultInfo{Name: username, Groups: defaultGroups(username)})
+	versionedAttributes, err := admission.NewVersionedAttributes(attributes, gvk, nil)
+	if err != nil {
+		return false, err
+	}
+	request := admissioncel.CreateAdmissionRequest(attributes, metav1.GroupVersionResource(gvr), metav1.GroupVersionKind(gvk))
+	selected, err := p.evaluate(p.matchConditions, versionedAttributes, request, admissioncel.OptionalVariableBindings{})
+	if err != nil || !selected {
+		return true, err
+	}
+	return p.evaluate(p.validations, versionedAttributes, request, admissioncel.OptionalVariableBindings{})
 }
 
 // defaultGroups returns the groups kube-apiserver attaches to the subject. Service accounts get

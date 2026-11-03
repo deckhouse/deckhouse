@@ -52,6 +52,7 @@ rules:
   - groups
   - dexproviderchecks
   - dexproviders
+  - tokenexchangeproviders
   - useroperations
   - useraccounts
   verbs:

@@ -23,6 +23,7 @@ rules:
   - dexproviderchecks
   - dexproviders
   - groups
+  - tokenexchangeproviders
   - useraccounts
   - users
   verbs:

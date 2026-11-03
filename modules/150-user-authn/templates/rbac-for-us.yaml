@@ -13,6 +13,7 @@ rules:
   - dexproviderchecks
   - dexproviders
   - groups
+  - tokenexchangeproviders
   - useroperations
   - users
   verbs:

@@ -19,6 +19,7 @@ Some hooks (e.g. UserOperation / 2FA reset logic) subscribe to Dex storage objec
 - `offlinesessionses.dex.coreos.com`
 - `refreshtokens.dex.coreos.com`
 - `useridentities.dex.coreos.com` (the controller copies OfflineSessions and Password data into it)
+- `connectors.dex.coreos.com` (the controller writes the token-exchange connectors of TokenExchangeProviders)
 
 On fresh clusters these CRDs may be absent at the moment hooks start. Shipping Dex CRDs with the module
 prevents bootstrap issues like “CRD ... not found”.

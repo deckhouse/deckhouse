@@ -1,0 +1,305 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: tokenexchangeproviders.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: user-authn
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: tokenexchangeproviders
+    singular: tokenexchangeprovider
+    kind: TokenExchangeProvider
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Issuer
+          type: string
+          jsonPath: .spec.issuer
+        - name: Ready
+          type: string
+          jsonPath: .status.conditions[?(@.type=="Ready")].status
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: ['spec']
+          x-kubernetes-validations:
+            - rule: "size(self.metadata.name) <= 50"
+              message: "The name of a TokenExchangeProvider must be at most 50 characters: it is part of the ID of its Dex connector."
+          description: |
+            Defines a trusted issuer of tokens that Dex exchanges for its own tokens (RFC 8693 token exchange).
+
+            The name of the object is at most 50 characters.
+
+            A client named in `spec.clients` sends a token of the issuer to the Dex token endpoint and gets a Dex token for the cluster, which the Kubernetes API server accepts like the token of any other Dex user. Typical issuers are CI systems (GitLab CI `id_tokens`, GitHub Actions), the Dex of a neighbouring cluster, and the ServiceAccount token issuer of another cluster.
+
+            Dex checks the signature, the issuer, the expiry and the audience of the token and the required claims, then names the subject as `spec.identity` says. The provider serves token exchange only and is never shown on the sign-in page.
+
+            Deleting the object revokes every token issued through it at the next request on Kubernetes 1.34 and later (requires the `user-authz` module); on earlier versions the tokens expire with `idTokenTTL`.
+          properties:
+            spec:
+              type: object
+              required: ['issuer', 'keys', 'audiences', 'identity', 'clients']
+              properties:
+                issuer:
+                  type: string
+                  minLength: 1
+                  x-kubernetes-validations:
+                    - rule: "isURL(self) && url(self).getScheme() == 'https' && url(self).getHostname() != '' && url(self).getQuery().size() == 0 && !self.contains('#')"
+                      message: "The issuer must be an https URL without a query or fragment, as OpenID Connect requires for the iss claim."
+                  description: |
+                    Issuer of the tokens. It must equal the `iss` claim of a token.
+
+                    An https URL without a query or fragment.
+                  x-doc-examples: ['https://gitlab.example.com']
+                keys:
+                  type: object
+                  description: |
+                    Source of the keys that sign the tokens, either the discovery document of the issuer or public keys given here.
+                  x-kubernetes-validations:
+                    - rule: "has(self.discovery) != has(self.jwks)"
+                      message: "Exactly one of spec.keys.discovery and spec.keys.jwks is required."
+                  properties:
+                    discovery:
+                      type: object
+                      description: |
+                        Settings for reading the keys from the discovery document of the issuer. Dex reads it at the first exchange and again after a failure.
+                      properties:
+                        url:
+                          type: string
+                          x-kubernetes-validations:
+                            - rule: "isURL(self) && url(self).getScheme() == 'https' && url(self).getHostname() != ''"
+                              message: "The discovery document must be read over https."
+                          description: |
+                            HTTPS address of the discovery document.
+
+                            If not set, `<ISSUER>/.well-known/openid-configuration` is used, where `<ISSUER>` is the value of `spec.issuer`.
+                        caData:
+                          type: string
+                          description: |
+                            PEM bundle of the CA that the certificate of the issuer chains to, in addition to the system roots.
+                    jwks:
+                      type: object
+                      required: ['keys']
+                      description: |
+                        Public keys of the issuer (JWK Set, RFC 7517). Use it when the issuer has no discovery document reachable from the cluster, or when several issuers share one URL, such as the ServiceAccount token issuers of different clusters. Private keys are refused. A token that names a key in its `kid` header is verified with the key of that `kid` only, even when the set has one key.
+                      properties:
+                        keys:
+                          type: array
+                          minItems: 1
+                          description: Public keys in JWK format.
+                          items:
+                            type: object
+                            required: ['kty']
+                            x-kubernetes-preserve-unknown-fields: true
+                            properties:
+                              kty:
+                                type: string
+                                description: Key type, such as `RSA` or `EC`.
+                audiences:
+                  type: array
+                  minItems: 1
+                  description: |
+                    Audiences a token is accepted for. A token is accepted if its `aud` claim matches at least one entry.
+                  items:
+                    type: object
+                    x-kubernetes-validations:
+                      - rule: "has(self.exact) != has(self.prefix)"
+                        message: "Exactly one of exact and prefix is required in an audience."
+                    properties:
+                      exact:
+                        type: string
+                        minLength: 1
+                        description: Value that `aud` must equal.
+                      prefix:
+                        type: string
+                        minLength: 1
+                        description: Prefix that `aud` must start with.
+                claimValidation:
+                  type: array
+                  description: |
+                    Claim values a token must carry.
+
+                    A string claim must equal `equals`. A boolean or a number must equal `equals` when written as a string. A list must contain `equals`.
+                  items:
+                    type: object
+                    required: ['claim', 'equals']
+                    properties:
+                      claim:
+                        type: string
+                        minLength: 1
+                        description: Name of the claim to check.
+                      equals:
+                        type: string
+                        description: Value the claim must have.
+                subjectTokenMaxLifetime:
+                  type: string
+                  default: 24h
+                  minLength: 2
+                  maxLength: 16
+                  x-kubernetes-validations:
+                    - rule: "self.matches('^([0-9]+h)?([0-9]+m)?([0-9]+s)?$') && self != '' && duration(self) > duration('0s')"
+                      message: "subjectTokenMaxLifetime must be a positive duration in hours, minutes and seconds, such as 24h or 1h30m; days such as 1d are not accepted."
+                  description: |
+                    Longest time a token may be valid, counted from `iat` to `exp`, or from now to `exp` for a token without `iat`.
+
+                    A token valid for longer is refused, so that a leaked long-lived token cannot be exchanged for new Dex tokens until it expires. The value is set in hours, minutes and seconds, such as `24h` or `1h30m`.
+                identity:
+                  type: object
+                  required: ['username']
+                  description: |
+                    How the subject of a token is named in the cluster. The Kubernetes API server takes the user name from the email, so the email is the user name unless `email` is set.
+                  properties:
+                    username:
+                      type: object
+                      required: ['claim']
+                      description: User name of the subject, made of `prefix` and the value of the string claim `claim`. The prefix is required and ends with a colon.
+                      x-kubernetes-validations:
+                        - rule: "!has(self.prefix) || !self.prefix.startsWith('system:')"
+                          message: "A prefix must not start with system:."
+                        - rule: "has(self.prefix) && size(self.prefix) > 1 && self.prefix.endsWith(':')"
+                          message: "A prefix is required and ends with a colon, such as ci:. It sets the subjects of the provider apart from people and from the subjects of other providers; the colon keeps tep-a: and tep-ab: from running into each other."
+                      properties:
+                        claim:
+                          type: string
+                          minLength: 1
+                          description: Name of the string claim whose value follows the prefix.
+                        prefix:
+                          type: string
+                          description: Prefix added to the value of the claim. It is required and ends with a colon, such as `ci:`.
+                    email:
+                      type: object
+                      required: ['claim']
+                      description: Email of the subject, made of `prefix` and the value of the string claim `claim`. The prefix is required and ends with a colon.
+                      x-kubernetes-validations:
+                        - rule: "!has(self.prefix) || !self.prefix.startsWith('system:')"
+                          message: "A prefix must not start with system:."
+                        - rule: "has(self.prefix) && size(self.prefix) > 1 && self.prefix.endsWith(':')"
+                          message: "A prefix is required and ends with a colon, such as ci:. It sets the subjects of the provider apart from people and from the subjects of other providers; the colon keeps tep-a: and tep-ab: from running into each other."
+                      properties:
+                        claim:
+                          type: string
+                          minLength: 1
+                          description: Name of the string claim whose value follows the prefix.
+                        prefix:
+                          type: string
+                          description: Prefix added to the value of the claim. It is required and ends with a colon, such as `ci:`.
+                    groups:
+                      type: array
+                      description: |
+                        Groups of the subject, taken from string or list claims.
+
+                        With `trimPrefix`, values that do not start with it are dropped, and it is removed from the others. Then `prefix` is added to every remaining value. It is required and ends with a colon.
+                      items:
+                        type: object
+                        required: ['claim']
+                        x-kubernetes-validations:
+                          - rule: "!has(self.prefix) || !self.prefix.startsWith('system:')"
+                            message: "A prefix must not start with system:."
+                          - rule: "has(self.prefix) && size(self.prefix) > 1 && self.prefix.endsWith(':')"
+                            message: "A prefix is required and ends with a colon, such as ci:. It sets the subjects of the provider apart from people and from the subjects of other providers; the colon keeps tep-a: and tep-ab: from running into each other."
+                        properties:
+                          claim:
+                            type: string
+                            minLength: 1
+                            description: Name of the string or list claim that holds the groups.
+                          trimPrefix:
+                            type: string
+                            description: Prefix that group values must start with. It is removed from them, and values without it are dropped.
+                          prefix:
+                            type: string
+                            description: Prefix added to every group. It is required and ends with a colon, such as `ci:`.
+                allowedIdentities:
+                  type: object
+                  description: |
+                    Limits the identities this provider may assert, as in DexProvider. Dex refuses a subject whose email is outside `emails` and `emailDomains` when either is set, and keeps only the groups listed in `groups` when it is set.
+                  properties:
+                    emails:
+                      type: array
+                      description: Allowed email addresses.
+                      items:
+                        type: string
+                    emailDomains:
+                      type: array
+                      description: Allowed email domains.
+                      items:
+                        type: string
+                    groups:
+                      type: array
+                      description: Allowed groups. The other groups are removed from the subject.
+                      items:
+                        type: string
+                clients:
+                  type: array
+                  minItems: 1
+                  description: |
+                    Dex clients that may exchange tokens through this provider. Other clients are refused before their token is checked.
+                  items:
+                    type: object
+                    required: ['dexClient']
+                    properties:
+                      dexClient:
+                        type: object
+                        required: ['name', 'namespace']
+                        description: DexClient that may exchange tokens. Its client ID is `dex-client-<DEXCLIENT_NAME>@<DEXCLIENT_NAMESPACE>`.
+                        properties:
+                          name:
+                            type: string
+                            minLength: 1
+                            description: Name of the DexClient.
+                          namespace:
+                            type: string
+                            minLength: 1
+                            description: Namespace of the DexClient.
+            status:
+              type: object
+              description: |
+                Status of the provider.
+
+                While `metadata.deletionTimestamp` is set, the provider is being revoked, and a client must stop using the tokens it got through it.
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: Generation of the object that the controller processed last.
+                connectorID:
+                  type: string
+                  description: |
+                    ID of the Dex connector of the provider. Use it as `connector_id` in the exchange request. Tokens issued through it carry it in the `user-authn.deckhouse.io/dex-provider` extra of the user.
+                conditions:
+                  type: array
+                  description: Conditions of the provider. The `Ready` condition shows whether the provider exchanges tokens, and its `reason` tells why it does not.
+                  items:
+                    type: object
+                    required: ['type', 'status']
+                    properties:
+                      type:
+                        type: string
+                        description: Type of the condition, such as `Ready`.
+                      status:
+                        type: string
+                        description: Status of the condition, `True`, `False` or `Unknown`.
+                      reason:
+                        type: string
+                        description: Reason for the status, such as `PrefixConflict`.
+                      message:
+                        type: string
+                        description: Details of the status.
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: Time the status last changed.
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        description: Generation of the object that the condition was set for.

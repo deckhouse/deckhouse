@@ -145,4 +145,64 @@ spec:
   policyName: {{ $passwordPolicyName }}
   validationActions: [Deny]
 {{- end }}
+{{- /* A TokenExchangeProvider may name its subjects with a reserved prefix only if the owner of the
+       prefix creates it: the API server grants rights by these names, and Dex lets the connector of
+       such a provider assert them (patch 420, reservedNamePrefixes in templates/dex/config.yaml).
+       "system:" is refused by the CRD schema for everybody. */}}
+{{- $tokenExchangePolicyName := "token-exchange-provider-reserved-prefixes.deckhouse.io" }}
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $tokenExchangePolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["tokenexchangeproviders"]
+  matchConditions:
+    # The emergency users of the platform, as in modules/002-deckhouse/templates/validation.yaml.
+    - name: 'exclude-users'
+      expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl"].exists(e, (e == request.userInfo.username)))'
+  variables:
+    # The object the request is about: the one being deleted on DELETE.
+    - name: current
+      expression: "request.operation == 'DELETE' ? oldObject : object"
+    # The prefixes of that object and, on an update, of the object before it: moving a provider
+    # out of peering: takes it from the peering module as much as moving one in gives it, and so
+    # does deleting it.
+    - name: prefixes
+      expression: >-
+        [has(variables.current.spec.identity.username.prefix) ? variables.current.spec.identity.username.prefix : ''] +
+        (has(variables.current.spec.identity.email) && has(variables.current.spec.identity.email.prefix) ? [variables.current.spec.identity.email.prefix] : []) +
+        (has(variables.current.spec.identity.groups) ? variables.current.spec.identity.groups.map(g, has(g.prefix) ? g.prefix : '') : []) +
+        (request.operation == 'UPDATE' ?
+          [has(oldObject.spec.identity.username.prefix) ? oldObject.spec.identity.username.prefix : ''] +
+          (has(oldObject.spec.identity.email) && has(oldObject.spec.identity.email.prefix) ? [oldObject.spec.identity.email.prefix] : []) +
+          (has(oldObject.spec.identity.groups) ? oldObject.spec.identity.groups.map(g, has(g.prefix) ? g.prefix : '') : [])
+          : [])
+  validations:
+    # peering: belongs to the peering module, which names the clusters it pairs with it. An update
+    # that leaves the spec alone, such as the finalizer the user-authn controller adds and removes,
+    # names no one. Any change of the spec is checked: keys, issuer or clients under a peering:
+    # prefix are the peering module's too, and deleting such a provider ends a pairing.
+    - expression: >-
+        (request.operation == 'UPDATE' && oldObject.spec == object.spec) ||
+        !variables.prefixes.exists(p, p.startsWith('peering:')) ||
+        request.userInfo.username.startsWith('system:serviceaccount:d8-peering:')
+      messageExpression: "'The prefix peering: is reserved for the peering module.'"
+      reason: Forbidden
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $tokenExchangePolicyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
+spec:
+  policyName: {{ $tokenExchangePolicyName }}
+  validationActions: [Deny]
 {{- end }}

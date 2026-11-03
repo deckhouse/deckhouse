@@ -1,0 +1,154 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет доверенного издателя токенов, которые Dex обменивает на свои токены (обмен токенов по RFC 8693).
+
+            Имя объекта — не длиннее 50 символов.
+
+            Клиент из `spec.clients` отправляет токен издателя на эндпоинт `/token` Dex и получает токен Dex для кластера. API-сервер Kubernetes принимает его так же, как токен любого другого пользователя Dex. Типичные издатели — CI-системы (`id_tokens` в GitLab CI, GitHub Actions), Dex соседнего кластера и издатель токенов ServiceAccount другого кластера.
+
+            Dex проверяет подпись, издателя, срок действия и аудиторию токена, а также обязательные claims. Затем называет субъекта так, как задано в `spec.identity`. Провайдер служит только для обмена токенов и не показывается на странице входа.
+
+            Удаление объекта отзывает все токены, выданные через него, на следующем же запросе в Kubernetes 1.34 и новее (нужен модуль `user-authz`). В более ранних версиях токены истекают через `idTokenTTL`.
+          properties:
+            spec:
+              properties:
+                issuer:
+                  description: |
+                    Издатель токенов. Должен совпадать с claim `iss` токена.
+
+                    URL-адрес со схемой https без query и fragment.
+                keys:
+                  description: |
+                    Источник ключей, которыми подписаны токены, — discovery-документ издателя или открытые ключи, заданные здесь.
+                  properties:
+                    discovery:
+                      description: |
+                        Настройки чтения ключей из discovery-документа издателя. Dex читает его при первом обмене и повторно после ошибки.
+                      properties:
+                        url:
+                          description: |
+                            HTTPS-адрес discovery-документа.
+
+                            Если параметр не задан, используется `<ISSUER>/.well-known/openid-configuration`, где `<ISSUER>` — значение `spec.issuer`.
+                        caData:
+                          description: |
+                            PEM-бандл CA, к которому ведёт цепочка сертификата издателя, в дополнение к системным корневым.
+                    jwks:
+                      description: |
+                        Открытые ключи издателя (JWK Set, RFC 7517). Используйте, когда discovery-документ издателя недоступен из кластера или когда у нескольких издателей один URL-адрес, например у издателей токенов ServiceAccount разных кластеров. Закрытые ключи отклоняются. Токен, который называет ключ в заголовке `kid`, проверяется только ключом с этим `kid`, даже если ключ в наборе один.
+                      properties:
+                        keys:
+                          description: Открытые ключи в формате JWK.
+                          items:
+                            properties:
+                              kty:
+                                description: Тип ключа, например `RSA` или `EC`.
+                audiences:
+                  description: |
+                    Аудитории, для которых принимается токен. Токен принимается, если его claim `aud` совпадает хотя бы с одной записью.
+                  items:
+                    properties:
+                      exact:
+                        description: Значение, которому должен быть равен `aud`.
+                      prefix:
+                        description: Префикс, с которого должен начинаться `aud`.
+                claimValidation:
+                  description: |
+                    Значения claims, которые обязан нести токен.
+
+                    Строковый claim должен быть равен `equals`. Булев или числовой claim в строковой записи должен быть равен `equals`. Список должен содержать `equals`.
+                  items:
+                    properties:
+                      claim:
+                        description: Имя проверяемого claim.
+                      equals:
+                        description: Значение, которое должен иметь claim.
+                subjectTokenMaxLifetime:
+                  description: |
+                    Наибольший срок действия токена, считая от `iat` до `exp`, а у токена без `iat` — от текущего момента до `exp`.
+
+                    Токен с бо́льшим сроком отклоняется, чтобы утёкший долгоживущий токен нельзя было обменивать на новые токены Dex, пока он не истечёт. Значение задаётся в часах, минутах и секундах, например `24h` или `1h30m`.
+                identity:
+                  description: |
+                    Как субъект токена называется в кластере. API-сервер Kubernetes берёт имя пользователя из email, поэтому email совпадает с именем пользователя, если не задан `email`.
+                  properties:
+                    username:
+                      description: Имя пользователя субъекта, составленное из `prefix` и значения строкового claim `claim`. Префикс обязателен и заканчивается двоеточием.
+                      properties:
+                        claim:
+                          description: Имя строкового claim, значение которого идёт после префикса.
+                        prefix:
+                          description: Префикс, который добавляется к значению claim. Обязателен и заканчивается двоеточием, например `ci:`.
+                    email:
+                      description: Email субъекта, составленный из `prefix` и значения строкового claim `claim`. Префикс обязателен и заканчивается двоеточием.
+                      properties:
+                        claim:
+                          description: Имя строкового claim, значение которого идёт после префикса.
+                        prefix:
+                          description: Префикс, который добавляется к значению claim. Обязателен и заканчивается двоеточием, например `ci:`.
+                    groups:
+                      description: |
+                        Группы субъекта, взятые из строковых claims или claims-списков.
+
+                        С `trimPrefix` значения, которые с него не начинаются, отбрасываются, а у остальных он удаляется. Затем ко всем оставшимся значениям добавляется `prefix`. Он обязателен и заканчивается двоеточием.
+                      items:
+                        properties:
+                          claim:
+                            description: Имя строкового claim или claim-списка с группами.
+                          trimPrefix:
+                            description: Префикс, с которого должны начинаться значения групп. Он удаляется из них, а значения без него отбрасываются.
+                          prefix:
+                            description: Префикс, который добавляется к каждой группе. Обязателен и заканчивается двоеточием, например `ci:`.
+                allowedIdentities:
+                  description: |
+                    Ограничивает субъектов, которых может утверждать провайдер, как в DexProvider. Dex отказывает субъекту, чей email не входит в `emails` и `emailDomains`, если задано хотя бы одно из полей, и оставляет только группы из `groups`, если оно задано.
+                  properties:
+                    emails:
+                      description: Разрешённые адреса email.
+                    emailDomains:
+                      description: Разрешённые домены email.
+                    groups:
+                      description: Разрешённые группы. Остальные группы удаляются у субъекта.
+                clients:
+                  description: |
+                    Клиенты Dex, которым разрешено обменивать токены через этот провайдер. Остальным клиентам отказывается до проверки токена.
+                  items:
+                    properties:
+                      dexClient:
+                        description: DexClient, которому разрешён обмен токенов. Его идентификатор клиента — `dex-client-<DEXCLIENT_NAME>@<DEXCLIENT_NAMESPACE>`.
+                        properties:
+                          name:
+                            description: Имя DexClient.
+                          namespace:
+                            description: Неймспейс DexClient.
+            status:
+              description: |
+                Состояние провайдера.
+
+                Пока задан `metadata.deletionTimestamp`, провайдер отзывается, и клиент должен перестать использовать полученные через него токены.
+              properties:
+                observedGeneration:
+                  description: Поколение объекта, которое контроллер обработал последним.
+                connectorID:
+                  description: |
+                    Идентификатор коннектора Dex для этого провайдера. Передавайте его как `connector_id` в запросе обмена. Токены, выданные через него, несут его в extra пользователя `user-authn.deckhouse.io/dex-provider`.
+                conditions:
+                  description: Условия провайдера. Условие `Ready` показывает, обменивает ли провайдер токены, а его `reason` — почему нет.
+                  items:
+                    properties:
+                      type:
+                        description: Тип условия, например `Ready`.
+                      status:
+                        description: Статус условия, `True`, `False` или `Unknown`.
+                      reason:
+                        description: Причина статуса, например `PrefixConflict`.
+                      message:
+                        description: Подробности статуса.
+                      lastTransitionTime:
+                        description: Время последнего изменения статуса.
+                      observedGeneration:
+                        description: Поколение объекта, для которого установлено условие.

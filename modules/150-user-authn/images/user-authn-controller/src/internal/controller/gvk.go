@@ -70,6 +70,19 @@ var (
 		Version: "v1",
 		Kind:    "Revocation",
 	}
+	// ConnectorGVK is a Dex connector kept in the Dex storage. The controller writes the
+	// token-exchange connectors of TokenExchangeProviders; Dex reads one on every request to it.
+	ConnectorGVK = schema.GroupVersionKind{
+		Group:   "dex.coreos.com",
+		Version: "v1",
+		Kind:    "Connector",
+	}
+	// TokenExchangeProviderGVK is a trusted issuer whose tokens Dex exchanges for its own.
+	TokenExchangeProviderGVK = schema.GroupVersionKind{
+		Group:   "deckhouse.io",
+		Version: "v1alpha1",
+		Kind:    "TokenExchangeProvider",
+	}
 	// OAuth2ClientGVK is a Dex client. The revocation feed authenticates the clients of
 	// DexAuthenticators with it; user-authn-controller writes the kubernetes client, and
 	// dexclient-controller the clients of DexClients.
