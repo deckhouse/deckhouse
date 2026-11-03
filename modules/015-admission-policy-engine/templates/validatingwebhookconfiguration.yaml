@@ -1,13 +1,23 @@
+{{/*
+  validating.webhook.config renders the fields every webhook of this configuration shares.
+  Usage: include "validating.webhook.config" (list $context) — failurePolicy defaults to Fail;
+  pass it explicitly as the second element to override, as the security-policy-exception webhook does.
+*/}}
 {{- define "validating.webhook.config" }}
+{{- $context := index . 0 }}
+{{- $failurePolicy := "Fail" }}
+{{- if gt (len .) 1 }}
+  {{- $failurePolicy = index . 1 }}
+{{- end }}
 admissionReviewVersions:
   - v1
 clientConfig:
-  caBundle: {{ .Values.admissionPolicyEngine.internal.webhook.ca | b64enc | quote }}
+  caBundle: {{ $context.Values.admissionPolicyEngine.internal.webhook.ca | b64enc | quote }}
   service:
     name: gatekeeper-webhook-service
     namespace: d8-admission-policy-engine
     path: /v1/admit
-failurePolicy: Fail
+failurePolicy: {{ $failurePolicy }}
 matchPolicy: Exact
 sideEffects: None
 {{- end }}
@@ -100,7 +110,7 @@ webhooks:
       expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
 {{- end }}
   timeoutSeconds: 15
-  {{- include "validating.webhook.config" . | nindent 2 }}
+  {{- include "validating.webhook.config" (list .) | nindent 2 }}
 {{- end }}
 
 {{/*
@@ -134,7 +144,7 @@ webhooks:
       expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
 {{- end }}
   timeoutSeconds: 15
-  {{- include "validating.webhook.config" . | nindent 2 }}
+  {{- include "validating.webhook.config" (list .) | nindent 2 }}
 {{- end }}
 
 {{/* Webhook for deny-exec in namespaces whose names start with d8- or kube- (main webhook excludes them by heritage label) */}}
@@ -149,7 +159,7 @@ webhooks:
     resources: ["pods/exec", "pods/attach"]
     operations: ["CONNECT"]
   timeoutSeconds: 15
-  {{- include "validating.webhook.config" . | nindent 2 }}
+  {{- include "validating.webhook.config" (list .) | nindent 2 }}
 {{- end }}
 
 {{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
@@ -181,8 +191,13 @@ webhooks:
     - name: 'exclude-virtualization'
       expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
 {{- end }}
-  timeoutSeconds: 15
-  {{- include "validating.webhook.config" . | nindent 2 }}
+  {{/* `failurePolicy: Ignore` and a short timeout: this webhook serves the platform's own namespaces,
+       including those of components Gatekeeper itself depends on, such as the CNI agent in
+       `d8-sdn`. With `Fail`, an unavailable Gatekeeper blocks those components from starting, and
+       Gatekeeper in turn cannot start without them, which deadlocks the cluster. The cost is that
+       the checks are skipped while Gatekeeper is unavailable. */}}
+  timeoutSeconds: 5
+  {{- include "validating.webhook.config" (list . "Ignore") | nindent 2 }}
 {{- end }}
 
 {{/* Exec and attach in the namespaces of the webhook above, split out for the same reason as `exec-attach` */}}
@@ -207,7 +222,7 @@ webhooks:
       expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
 {{- end }}
   timeoutSeconds: 15
-  {{- include "validating.webhook.config" . | nindent 2 }}
+  {{- include "validating.webhook.config" (list .) | nindent 2 }}
 {{- end }}
 {{/* #### end of TODO */}}
 

@@ -361,6 +361,17 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			}
 		})
 
+		It("Does not block system components on the security-policy-exception webhook while Gatekeeper is unavailable", func() {
+			// The webhook serves the platform's own namespaces, including those of components
+			// Gatekeeper depends on, such as the CNI agent in `d8-sdn`. With `Fail` an unavailable
+			// Gatekeeper cannot start, because they cannot start without it.
+			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
+			Expect(vw.Field("webhooks.3.name").String()).To(Equal("security-policy-exception.admission-policy-engine.deckhouse.io"))
+			Expect(vw.Field("webhooks.3.failurePolicy").String()).To(Equal("Ignore"))
+			Expect(vw.Field("webhooks.3.timeoutSeconds").Int()).To(Equal(int64(5)))
+			Expect(vw.Field("webhooks.0.failurePolicy").String()).To(Equal("Fail"))
+		})
+
 		It("Routes exec and attach only through webhooks without an objectSelector", func() {
 			// The object of an exec or attach request cannot have labels, and the API server skips a
 			// webhook with a non-empty objectSelector for such an object. A selector on any webhook
