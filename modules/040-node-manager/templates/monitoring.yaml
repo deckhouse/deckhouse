@@ -16,6 +16,10 @@
   {{- $prometheusRules = append $prometheusRules "monitoring/prometheus-rules/cluster-autoscaler.tpl" }}
 {{- end }}
 
+{{- if include "capi_controller_manager_enabled" . }}
+  {{- $prometheusRules = append $prometheusRules "monitoring/prometheus-rules/capi-controller-manager.yaml" }}
+{{- end }}
+
 {{- if include "machine_controller_manager_enabled" . }}
   {{- $prometheusRules = append $prometheusRules "monitoring/prometheus-rules/machine-controller-manager.tpl" }}
 {{- end }}

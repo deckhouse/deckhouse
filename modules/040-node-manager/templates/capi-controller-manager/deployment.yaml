@@ -49,7 +49,11 @@ metadata:
   namespace: d8-cloud-instance-manager
   annotations:
     werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    {{- /* After bootstrap the webhooks already serve from the running replicas, and waiting for every replica */}}
+    {{- /* would hold the Deckhouse queue for as long as one master cannot take a replica. */}}
+    {{- if not .Values.global.clusterIsBootstrapped }}
     werf.io/track-termination-mode: WaitUntilResourceReady
+    {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
 spec:
   {{- include "node_manager_master_controller_strategy_and_replicas" . | nindent 2 }}

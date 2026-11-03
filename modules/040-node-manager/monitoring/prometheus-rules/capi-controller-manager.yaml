@@ -1,0 +1,60 @@
+- name: d8.capi-controller-manager
+  rules:
+    - alert: D8CAPIControllerManagerNotAvailable
+      expr: |
+        max by (namespace, deployment) (
+          kube_deployment_status_replicas_available{
+            namespace="d8-cloud-instance-manager",
+            deployment="capi-controller-manager"
+          }
+        ) == 0
+      for: 5m
+      labels:
+        tier: cluster
+        severity_level: "4"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: No capi-controller-manager replica is available.
+        description: |
+          No replica of `capi-controller-manager` has been available for more than 5 minutes.
+
+          Its admission webhooks reject changes to Cluster API objects, so node groups served by Cluster API do not create or remove nodes.
+
+          To inspect the pods:
+
+          ```bash
+          d8 k -n d8-cloud-instance-manager get pods -l app=capi-controller-manager -o wide
+          ```
+
+    - alert: D8CAPIControllerManagerReplicasUnavailable
+      expr: |
+        max by (namespace, deployment) (
+            kube_deployment_spec_replicas{
+              namespace="d8-cloud-instance-manager",
+              deployment="capi-controller-manager"
+            }
+          -
+            kube_deployment_status_replicas_available{
+              namespace="d8-cloud-instance-manager",
+              deployment="capi-controller-manager"
+            }
+        ) > 0
+      for: 30m
+      labels:
+        tier: cluster
+        severity_level: "7"
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: Part of the capi-controller-manager replicas is unavailable.
+        description: |
+          Some replicas of `capi-controller-manager` have been unavailable for more than 30 minutes.
+
+          The controller keeps working while at least one replica is available. Usually a master is down, cordoned, or its port is taken.
+
+          To inspect the pods:
+
+          ```bash
+          d8 k -n d8-cloud-instance-manager get pods -l app=capi-controller-manager -o wide
+          ```

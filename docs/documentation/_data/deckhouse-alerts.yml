@@ -564,6 +564,44 @@ alerts:
         Bashible-apiserver has been locked for too long.
       severity: "6"
       markupFormat: markdown
+    - name: D8CAPIControllerManagerNotAvailable
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/capi-controller-manager.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        No replica of `capi-controller-manager` has been available for more than 5 minutes.
+
+        Its admission webhooks reject changes to Cluster API objects, so node groups served by Cluster API do not create or remove nodes.
+
+        To inspect the pods:
+
+        ```bash
+        d8 k -n d8-cloud-instance-manager get pods -l app=capi-controller-manager -o wide
+        ```
+      summary: |
+        No capi-controller-manager replica is available.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8CAPIControllerManagerReplicasUnavailable
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/capi-controller-manager.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Some replicas of `capi-controller-manager` have been unavailable for more than 30 minutes.
+
+        The controller keeps working while at least one replica is available. Usually a master is down, cordoned, or its port is taken.
+
+        To inspect the pods:
+
+        ```bash
+        d8 k -n d8-cloud-instance-manager get pods -l app=capi-controller-manager -o wide
+        ```
+      summary: |
+        Part of the capi-controller-manager replicas is unavailable.
+      severity: "7"
+      markupFormat: markdown
     - name: D8CloudDataDiscovererCloudRequestError
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cloud-data-discovery.tpl
       moduleUrl: 040-node-manager

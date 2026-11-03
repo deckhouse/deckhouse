@@ -1,10 +1,16 @@
 {{- if include "capi_controller_manager_enabled" . }}
+{{- /* Nothing the chart applies goes through these webhooks, and controllers retry. A release that changes the CAPI contract */}}
+{{- /* must restore state=ready: an old pod would serve the new webhooks until the rollout ends. */}}
+{{- $capiDeploymentState := "ready" }}
+{{- if .Values.global.clusterIsBootstrapped }}
+  {{- $capiDeploymentState = "present" }}
+{{- end }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   annotations:
-    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capi-controller-manager,namespace=d8-cloud-instance-manager
+    werf.io/deploy-dependency-deployment: state={{ $capiDeploymentState }},kind=Deployment,name=capi-controller-manager,namespace=d8-cloud-instance-manager
     werf.io/deploy-dependency-service: state=present,kind=Service,name=capi-webhook-service,namespace=d8-cloud-instance-manager
     werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
     werf.io/track-termination-mode: WaitUntilResourceReady
@@ -223,7 +229,7 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   annotations:
-    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capi-controller-manager,namespace=d8-cloud-instance-manager
+    werf.io/deploy-dependency-deployment: state={{ $capiDeploymentState }},kind=Deployment,name=capi-controller-manager,namespace=d8-cloud-instance-manager
     werf.io/deploy-dependency-service: state=present,kind=Service,name=capi-webhook-service,namespace=d8-cloud-instance-manager
     werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
     werf.io/track-termination-mode: WaitUntilResourceReady
