@@ -64,7 +64,7 @@ metadata:
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list $ (dict "app" "registry-storage")) | nindent 2 }}
 spec:
-  maxUnavailable: {{ include "helm_lib_is_ha_to_value" (list $ 1 0) }}
+  maxUnavailable: {{ if include "registry_single_master" $ }}0{{ else }}1{{ end }}
   selector:
     matchLabels:
       app: registry-storage
@@ -114,7 +114,9 @@ spec:
     spec:
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple $ "any-node" "with-uninitialized") | nindent 6 }}
+      # Stays bound to an unreachable master: a Terminating replica counts as absent, and the
+      # storage update controller then refuses to replace any other one.
+      {{- include "registry_master_tolerations" (dict "context" $ "leaveUnreachableNode" false) | nindent 6 }}
       # Root, explicitly, and the same choice the previous implementation made for the same
       # component.
       #
