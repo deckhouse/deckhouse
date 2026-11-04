@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index dd87b43..95c7ecb 100644
+index dd87b43..cd24804 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -31,11 +31,11 @@ require (
@@ -102,7 +102,7 @@ index dd87b43..95c7ecb 100644
  	github.com/aws/aws-sdk-go-v2/service/signin v1.0.8 // indirect
  	github.com/aws/aws-sdk-go-v2/service/sns v1.39.13 // indirect
  	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.24 // indirect
-@@ -179,12 +179,12 @@ require (
+@@ -179,17 +179,17 @@ require (
  	github.com/cli/safeexec v1.0.0 // indirect
  	github.com/cli/shurcooL-graphql v0.0.2 // indirect
  	github.com/cloudflare/circl v1.6.3 // indirect
@@ -118,6 +118,12 @@ index dd87b43..95c7ecb 100644
  	github.com/fatih/color v1.18.0 // indirect
  	github.com/felixge/httpsnoop v1.0.4 // indirect
  	github.com/fsnotify/fsnotify v1.5.4 // indirect
+ 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
+-	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
++	github.com/go-jose/go-jose/v4 v4.1.6 // indirect
+ 	github.com/go-logr/logr v1.4.3 // indirect
+ 	github.com/go-openapi/errors v0.20.2 // indirect
+ 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 @@ -228,7 +228,7 @@ require (
  	github.com/josharian/intern v1.0.0 // indirect
  	github.com/json-iterator/go v1.1.12 // indirect
@@ -180,7 +186,7 @@ index dd87b43..95c7ecb 100644
  	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
  	gopkg.in/inf.v0 v0.9.1 // indirect
 diff --git a/go.sum b/go.sum
-index 1ed1a91..f5d34cb 100644
+index 1ed1a91..8e32013 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -52,8 +52,8 @@ github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.2.0/go.mod h
@@ -312,6 +318,17 @@ index 1ed1a91..f5d34cb 100644
  github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
  github.com/fatih/color v1.9.0/go.mod h1:eQcE1qtQxscV5RaZvpXrrb8Drkc3/DdQ+uUYCNjL+zU=
  github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
+@@ -293,8 +294,8 @@ github.com/fxamacker/cbor/v2 v2.9.0 h1:NpKPmjDBgUfBms6tr6JZkTHtfFGcMKsw3eGcmD/sa
+ github.com/fxamacker/cbor/v2 v2.9.0/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
+ github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
+ github.com/go-gl/glfw v0.0.0-20190409004039-e6da0acd62b1/go.mod h1:vR7hzQXu2zJy9AVAgeJqvqgH9Q5CA+iKCZ2gyEVpxRU=
+-github.com/go-jose/go-jose/v4 v4.1.4 h1:moDMcTHmvE6Groj34emNPLs/qtYXRVcd6S7NHbHz3kA=
+-github.com/go-jose/go-jose/v4 v4.1.4/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
++github.com/go-jose/go-jose/v4 v4.1.6 h1:sNRkftxFJxwsILiQukqp5z83QBSmntVwmgRY7AqBDO4=
++github.com/go-jose/go-jose/v4 v4.1.6/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
+ github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
+ github.com/go-kit/kit v0.9.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
+ github.com/go-kit/log v0.1.0/go.mod h1:zbhenjAZHb184qTLMA9ZjW7ThYL0H2mk7Q6pNt4vbaY=
 @@ -548,8 +549,8 @@ github.com/keybase/go-keychain v0.0.1/go.mod h1:PdEILRW3i9D8JcdM+FmY6RwkHGnhHxXw
  github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
  github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=

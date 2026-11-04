@@ -1,4 +1,4 @@
-{{- $version := "flant-1.0.0"}}
+{{- $version := "flant-1.0.1"}}
 {{- $repo := "deckhouse/cluster-and-infrastructure/fork/docker-auth.git" }}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
