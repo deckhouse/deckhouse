@@ -540,12 +540,12 @@ spec:
                     type: array
                 type: object
               urls:
-                description: Application endpoint URLs obtained from Ingress resources
-                  in the application chart with the `packages.deckhouse.io/application-endpoint-description`
+                description: Application endpoint URLs obtained from Ingress and HTTPRoute
+                  resources in the application chart with the `packages.deckhouse.io/application-endpoint-description`
                   annotation.
                 items:
-                  description: Application endpoint defined by an Ingress resource
-                    in the application chart.
+                  description: Application endpoint defined by an Ingress or HTTPRoute
+                    resource in the application chart.
                   properties:
                     description:
                       description: |-

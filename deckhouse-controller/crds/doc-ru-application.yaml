@@ -289,10 +289,10 @@ spec:
                         Версия, которую автоматическое обновление установит следующей. Меняется только после того, как предыдущая установлена и готова. Пусто в режиме обновления `Manual`.
                 urls:
                   description: |
-                    URL-адреса эндпоинтов приложения, полученные из Ingress-ресурсов чарта приложения с аннотацией `packages.deckhouse.io/application-endpoint-description`.
+                    URL-адреса эндпоинтов приложения, полученные из ресурсов Ingress и HTTPRoute чарта приложения с аннотацией `packages.deckhouse.io/application-endpoint-description`.
                   items:
                     description: |
-                      Эндпоинт приложения, построенный на основе Ingress-ресурса чарта приложения.
+                      Эндпоинт приложения, построенный на основе ресурса Ingress или HTTPRoute чарта приложения.
                     properties:
                       description:
                         description: |

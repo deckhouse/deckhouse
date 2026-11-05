@@ -235,6 +235,276 @@ spec:
 `,
 			expected: []observed.URL{{URL: "http://app.example.com/ui"}},
 		},
+		{
+			name: "annotated httproute on an https listener of a rendered listenerset",
+			rendered: `
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: app
+spec:
+  parentRef:
+    name: public-gw
+    namespace: d8-alb
+  listeners:
+  - name: web
+    port: 443
+    protocol: HTTPS
+    hostname: app.example.com
+  - name: web-redirect
+    port: 80
+    protocol: HTTP
+    hostname: app.example.com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "Web UI"
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: app
+    sectionName: web
+  hostnames:
+  - app.example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /ui
+    - path:
+        type: Exact
+        value: /api
+`,
+			expected: []observed.URL{
+				{URL: "https://app.example.com/api", Description: "Web UI"},
+				{URL: "https://app.example.com/ui", Description: "Web UI"},
+			},
+		},
+		{
+			name: "httproute before its listenerset takes the listener hostnames",
+			rendered: `
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "true"
+spec:
+  parentRefs:
+  - kind: ListenerSet
+    name: app
+  rules:
+  - backendRefs:
+    - name: app
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: app
+spec:
+  listeners:
+  - name: web
+    port: 443
+    protocol: HTTPS
+    hostname: app.example.com
+  - name: web-redirect
+    port: 80
+    protocol: HTTP
+    hostname: app.example.com
+`,
+			expected: []observed.URL{{URL: "https://app.example.com/"}},
+		},
+		{
+			name: "sectionName and port pick the http listener",
+			rendered: `
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: app
+spec:
+  listeners:
+  - name: web
+    port: 443
+    protocol: HTTPS
+    hostname: app.example.com
+  - name: web-redirect
+    port: 80
+    protocol: HTTP
+    hostname: app.example.com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "true"
+spec:
+  parentRefs:
+  - kind: ListenerSet
+    name: app
+    sectionName: web-redirect
+  hostnames:
+  - a.example.com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "true"
+spec:
+  parentRefs:
+  - kind: ListenerSet
+    name: app
+    port: 80
+  hostnames:
+  - b.example.com
+`,
+			expected: []observed.URL{
+				{URL: "http://a.example.com/"},
+				{URL: "http://b.example.com/"},
+			},
+		},
+		{
+			name: "httproute without a rendered listenerset yields http",
+			rendered: `
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: app
+  namespace: app-ns
+spec:
+  listeners:
+  - name: web
+    port: 443
+    protocol: HTTPS
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "Gateway"
+spec:
+  parentRefs:
+  - name: public-gw
+    namespace: d8-alb
+    sectionName: d8-https
+  hostnames:
+  - a.example.com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "Other namespace"
+spec:
+  parentRefs:
+  - kind: ListenerSet
+    name: app
+    namespace: other-ns
+  hostnames:
+  - b.example.com
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "No hostnames"
+spec:
+  parentRefs:
+  - name: public-gw
+    namespace: d8-alb
+`,
+			expected: []observed.URL{
+				{URL: "http://a.example.com/", Description: "Gateway"},
+				{URL: "http://b.example.com/", Description: "Other namespace"},
+			},
+		},
+		{
+			name: "wildcard listener hostname covers the route host",
+			rendered: `
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: app
+spec:
+  listeners:
+  - name: web
+    port: 443
+    protocol: HTTPS
+    hostname: "*.example.com"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "true"
+spec:
+  parentRefs:
+  - kind: ListenerSet
+    name: app
+  hostnames:
+  - app.example.com
+  - example.com
+`,
+			expected: []observed.URL{
+				{URL: "http://example.com/"},
+				{URL: "https://app.example.com/"},
+			},
+		},
+		{
+			name: "regular expression match is skipped, a match without a path is the root",
+			rendered: `
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "true"
+spec:
+  hostnames:
+  - app.example.com
+  rules:
+  - matches:
+    - path:
+        type: RegularExpression
+        value: /v[0-9]+
+    - headers:
+      - name: x-version
+        value: "2"
+  - matches:
+    - path:
+        type: PathPrefix
+        value: api
+`,
+			expected: []observed.URL{
+				{URL: "http://app.example.com/"},
+				{URL: "http://app.example.com/api"},
+			},
+		},
+		{
+			name: "httproute without annotation or of another group is skipped",
+			rendered: `
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app
+spec:
+  hostnames:
+  - a.example.com
+---
+apiVersion: example.io/v1
+kind: HTTPRoute
+metadata:
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "true"
+spec:
+  hostnames:
+  - b.example.com
+`,
+			expected: nil,
+		},
 	}
 
 	for _, tt := range tests {

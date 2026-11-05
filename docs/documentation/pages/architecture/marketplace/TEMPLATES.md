@@ -1,7 +1,7 @@
 ---
 title: Templates
 permalink: en/architecture/marketplace/templates.html
-description: "Helm templates of an Application package: template values, object naming, container images and container registry access, Ingress and application endpoints, credentials in the web interface, labels, and workload health."
+description: "Helm templates of an Application package: template values, object naming, container images and container registry access, Ingress, HTTPRoute and application endpoints, credentials in the web interface, labels, and workload health."
 ---
 
 {% raw %}
@@ -180,12 +180,13 @@ The package skeleton created by `d8 package bootstrap app` contains helpers for 
 
 ## Application endpoints
 
-To show the addresses of an Ingress in the [`status.urls`](../../reference/api/cr.html#application-v1alpha1-status-urls) field of the Application (for example, the web interface shows them as links to the application), add the `packages.deckhouse.io/application-endpoint-description` annotation to the Ingress:
+To show the addresses of an application in the [`status.urls`](../../reference/api/cr.html#application-v1alpha1-status-urls) field of the Application (for example, the web interface shows them as links to the application), add the `packages.deckhouse.io/application-endpoint-description` annotation to an Ingress or, if the application is published through the [`alb`](/modules/alb/) module, to an HTTPRoute:
 
-- The annotation value is the endpoint description. The `"true"` value adds the endpoint without a description, and the `"false"` value excludes the Ingress.
-- DP builds a URL for every `host` and `path` pair of `spec.rules`. The scheme is `https` if the host is listed in `spec.tls`, and `http` otherwise. A rule without paths gives the `<SCHEME>://<HOST>/` URL. Rules without `host` are skipped.
-- Only Ingresses of the `networking.k8s.io` API group rendered by the templates are taken into account.
-- DP updates `status.urls` after every successful apply of the templates.
+- The annotation value is the endpoint description. The `"true"` value adds the endpoint without a description, and the `"false"` value excludes the object.
+- Only objects rendered by the templates are taken into account: Ingress objects of the `networking.k8s.io` API group and HTTPRoute objects of the `gateway.networking.k8s.io` API group.
+- Deckhouse Platform updates `status.urls` after every successful apply of the templates.
+
+For an Ingress, Deckhouse Platform builds a URL for every `host` and `path` pair of `spec.rules`. The scheme is `https` if the host is listed in `spec.tls`, and `http` otherwise. A rule without paths gives the `<SCHEME>://<HOST>/` URL. Rules without `host` are skipped.
 
 Example status of an Application with the Ingress from the previous section:
 
@@ -195,6 +196,70 @@ status:
     - url: https://myapp.my-namespace.apps.example.com/
       description: Web UI
 ```
+
+### HTTPRoute endpoints
+
+For an HTTPRoute, Deckhouse Platform builds a URL for every host name of `spec.hostnames` and every path of `spec.rules`:
+
+- The path is the value of a `PathPrefix` or `Exact` match. A rule without matches and a match without a path give the `/` path. Matches of the `RegularExpression` type are skipped.
+- If `spec.hostnames` is empty, Deckhouse Platform takes the host names of the listeners the HTTPRoute is attached to.
+- The scheme is `https` if the HTTPRoute is attached to an `HTTPS` listener that serves the host name, and `http` otherwise. Deckhouse Platform takes into account only the listeners of ListenerSet objects rendered by the templates. For an HTTPRoute attached directly to a Gateway or to a ListenerSet created outside the templates, the scheme is `http`.
+
+Example ListenerSet and HTTPRoute:
+
+```yaml
+{{- $applications := .Platform.applications }}
+{{- if $applications.publicDomainTemplate }}
+{{- $host := printf $applications.publicDomainTemplate .Application.Instance.Name .Application.Instance.Namespace }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: d8a-{{ .Application.Instance.Name }}-web
+spec:
+  parentRef:
+    name: <GATEWAY_NAME>
+    namespace: <GATEWAY_NAMESPACE>
+  listeners:
+    - name: web
+      port: 443
+      protocol: HTTPS
+      hostname: {{ $host }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: d8a-{{ .Application.Instance.Name }}-web-tls
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: d8a-{{ .Application.Instance.Name }}-web
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "Web UI"
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: d8a-{{ .Application.Instance.Name }}-web
+      sectionName: web
+  hostnames:
+    - {{ $host }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: d8a-{{ .Application.Instance.Name }}-server
+          port: 80
+{{- end }}
+```
+
+where:
+
+- `<GATEWAY_NAME>` and `<GATEWAY_NAMESPACE>` are the name and namespace of the Gateway object that the cluster administrator provides for publishing applications;
+- `d8a-{{ .Application.Instance.Name }}-web-tls` is a Secret with the TLS certificate for the host name, for example, issued by cert-manager. For details, refer to the [`alb` module documentation](/modules/alb/).
+
+For this HTTPRoute, Deckhouse Platform adds the same endpoint to `status.urls` as for the example Ingress: `https://myapp.my-namespace.apps.example.com/` with the `Web UI` description.
 
 ## Credentials in the web interface
 
@@ -217,11 +282,11 @@ data:
 
 The web interface finds the credentials as follows:
 
-- The `packages.deckhouse.io/application-instance` label with the instance name is required. The web interface looks for credentials only among the Secrets with this label in the namespace of the application. DP doesn't add this label to the objects, and the `packages.deckhouse.io/instance` label that DP adds (for details, refer to ["Labels and object protection"](#labels-and-object-protection)) is not taken into account.
-- The `packages.deckhouse.io/application-ingress` label binds the Secret to an Ingress from the templates by its name. The web interface shows the credentials next to the endpoints with the description of this Ingress. A label value can't be longer than 63 characters, so the name of the Ingress must fit this limit.
-- Instead of the label, you can set the endpoint description in the `packages.deckhouse.io/application-endpoint-description` annotation of the Secret. If both are set, the description of the Ingress is used.
-- The web interface shows the credentials only if the application has endpoints with a matching description. Endpoints without a description don't get credentials, so set a description in the annotation of the Ingress instead of `"true"`.
-- The `packages.deckhouse.io/initial-secret` label marks the Secret as one-time credentials. DP creates such a Secret once and doesn't update it afterwards: it adds the `werf.io/resource-policy: skip-update` annotation to the Secret (an existing policy is kept, for example, `skip-delete` becomes `skip-delete,skip-update`). The admission policies let users change such a Secret, so the web interface can mark it as shown, and users can change the credentials. Without this label, the policies deny the change, and the credentials can be requested again. DP checks only that the label is present, its value doesn't matter.
+- The `packages.deckhouse.io/application-instance` label with the instance name is required. The web interface looks for credentials only among the Secrets with this label in the namespace of the application. Deckhouse Platform doesn't add this label to the objects, and the `packages.deckhouse.io/instance` label that Deckhouse Platform adds (for details, refer to ["Labels and object protection"](#labels-and-object-protection)) is not taken into account.
+- The `packages.deckhouse.io/application-ingress` label binds the Secret to an Ingress from the templates by its name. For an application published through the [`alb`](/modules/alb/) module, use the `packages.deckhouse.io/application-alb` label with the name of an HTTPRoute from the templates instead. The web interface shows the credentials next to the endpoints with the description of this object. A label value can't be longer than 63 characters, so the name of the Ingress or HTTPRoute must fit this limit.
+- Instead of the label, you can set the endpoint description in the `packages.deckhouse.io/application-endpoint-description` annotation of the Secret. If both are set, the description of the Ingress or HTTPRoute is used.
+- The web interface shows the credentials only if the application has endpoints with a matching description. Endpoints without a description don't get credentials, so set a description in the annotation of the Ingress or HTTPRoute instead of `"true"`.
+- The `packages.deckhouse.io/initial-secret` label marks the Secret as one-time credentials. Deckhouse Platform creates such a Secret once and doesn't update it afterwards: it adds the `werf.io/resource-policy: skip-update` annotation to the Secret (an existing policy is kept, for example, `skip-delete` becomes `skip-delete,skip-update`). The admission policies let users change such a Secret, so the web interface can mark it as shown, and users can change the credentials. Without this label, the policies deny the change, and the credentials can be requested again. Deckhouse Platform checks only that the label is present, its value doesn't matter.
 
 Put the login into the `login` key and the password into the `password` key. The web interface shows every key of `data` as a separate field named after the key, so don't store other data in this Secret.
 
@@ -245,6 +310,51 @@ By default, `d8 package verify` also requires that:
 - Services refer to container ports by name in `targetPort` (the `service-port` rule).
 
 You can lower the severity of these rules in `.pkglint.yaml` (for details, refer to ["Linting"](application-development.html#linting)).
+
+## Replica limits
+
+The user can change the number of replicas of a Deployment, StatefulSet, or ReplicaSet in the [`spec.resourceRequests`](../../reference/api/cr.html#application-v1alpha1-spec-resourcerequests) field of the Application. If the application can't run with an arbitrary number of replicas, add one of the following annotations to the workload in the templates:
+
+- `packages.deckhouse.io/scale-disabled: "true"`: The number of replicas can't be changed.
+- `packages.deckhouse.io/scale-down-disabled: "true"`: The number of replicas can't be lower than the number set in the templates.
+
+The limits are counted from `spec.replicas` of the workload rendered from the templates (`1` if the field isn't set), not from the current number of replicas. For example, if the templates set `replicas: 2` and `scale-down-disabled`, the user can scale the workload to 4 replicas and back to 2, but not to 1. Only the `"true"` value enables a limit.
+
+If a HorizontalPodAutoscaler from the templates manages the replicas of the workload, add the annotation to the HorizontalPodAutoscaler. Deckhouse Platform sets both `minReplicas` and `maxReplicas` of such a HorizontalPodAutoscaler to the requested number of replicas, and the annotations limit this number:
+
+- `scale-disabled`: The number must be equal to both `minReplicas` and `maxReplicas`. If they differ, the number of replicas can't be changed.
+- `scale-down-disabled`: The number can't be lower than `minReplicas` (`1` if the field isn't set).
+
+Example:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: d8a-{{ .Application.Instance.Name }}-web
+  annotations:
+    packages.deckhouse.io/scale-down-disabled: "true"
+spec:
+  replicas: 2
+  # ...
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: d8a-{{ .Application.Instance.Name }}-api
+  annotations:
+    packages.deckhouse.io/scale-down-disabled: "true"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: d8a-{{ .Application.Instance.Name }}-api
+  minReplicas: 2
+  maxReplicas: 10
+  # ...
+```
+
+If `spec.resourceRequests` requests a forbidden number of replicas, Deckhouse Platform doesn't apply the templates, and the objects of the application stay as they were. The Application itself is accepted, because Deckhouse Platform checks the limits when it renders the templates. The conditions of the Application get the `ScalingForbidden` reason, and the condition message names the workload, for example: `Deployment 'd8a-myapp-web' does not allow its replicas to go below 2`.
 
 ## Workload health
 

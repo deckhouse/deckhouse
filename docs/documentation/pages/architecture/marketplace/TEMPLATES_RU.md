@@ -1,9 +1,9 @@
 ---
 title: Шаблоны
 permalink: ru/architecture/marketplace/templates.html
-description: "Helm-шаблоны пакета Application: значения шаблонов, именование объектов, образы контейнеров и доступ к хранилищу образов, Ingress и адреса приложения, учётные данные в веб-интерфейсе, метки и состояние рабочих нагрузок."
+description: "Helm-шаблоны пакета Application: значения шаблонов, именование объектов, образы контейнеров и доступ к хранилищу образов, Ingress, HTTPRoute и адреса приложения, учётные данные в веб-интерфейсе, метки и состояние рабочих нагрузок."
 lang: ru
-search: application templates, d8a prefix, Application.Instance, Platform.applications, application-endpoint-description, application-ingress, application-instance, initial-secret, showed-credentials, шаблоны приложения, имена объектов, образы пакета, учётные данные приложения
+search: application templates, d8a prefix, Application.Instance, Platform.applications, application-endpoint-description, application-ingress, application-alb, application-instance, initial-secret, showed-credentials, HTTPRoute, ListenerSet, шаблоны приложения, имена объектов, образы пакета, учётные данные приложения
 ---
 
 {% raw %}
@@ -182,12 +182,13 @@ spec:
 
 ## Адреса приложения
 
-Чтобы адреса Ingress отображались [в поле `status.urls`](../../reference/api/cr.html#application-v1alpha1-status-urls) ресурса Application (например, веб-интерфейс показывает их как ссылки на приложение), добавьте к Ingress аннотацию `packages.deckhouse.io/application-endpoint-description`:
+Чтобы адреса приложения отображались [в поле `status.urls`](../../reference/api/cr.html#application-v1alpha1-status-urls) ресурса Application (например, веб-интерфейс показывает их как ссылки на приложение), добавьте аннотацию `packages.deckhouse.io/application-endpoint-description` к Ingress или, если приложение публикуется через модуль [`alb`](/modules/alb/), к HTTPRoute:
 
-- Значение аннотации — описание адреса. Значение `"true"` добавляет адрес без описания, а значение `"false"` исключает Ingress.
-- DP формирует URL-адрес для каждой пары `host` и `path` из `spec.rules`. Схема — `https`, если хост указан в `spec.tls`, иначе `http`. Правило без путей даёт URL-адрес `<SCHEME>://<HOST>/`. Правила без `host` пропускаются.
-- Учитываются только Ingress группы API `networking.k8s.io`, отрендеренные из шаблонов.
-- DP обновляет `status.urls` после каждого успешного применения шаблонов.
+- Значение аннотации — описание адреса. Значение `"true"` добавляет адрес без описания, а значение `"false"` исключает объект.
+- Учитываются только объекты из шаблонов: Ingress группы API `networking.k8s.io` и HTTPRoute группы API `gateway.networking.k8s.io`.
+- Deckhouse Platform обновляет `status.urls` после каждого успешного применения шаблонов.
+
+Для Ingress Deckhouse Platform формирует URL-адрес для каждой пары `host` и `path` из `spec.rules`. Схема — `https`, если хост указан в `spec.tls`, иначе `http`. Правило без путей даёт URL-адрес `<SCHEME>://<HOST>/`. Правила без `host` пропускаются.
 
 Пример статуса Application с Ingress из предыдущего раздела:
 
@@ -197,6 +198,70 @@ status:
     - url: https://myapp.my-namespace.apps.example.com/
       description: Web UI
 ```
+
+### Адреса HTTPRoute
+
+Для HTTPRoute Deckhouse Platform формирует URL-адрес для каждого имени хоста из `spec.hostnames` и каждого пути из `spec.rules`:
+
+- Путь — значение условия `PathPrefix` или `Exact`. Правило без условий и условие без пути дают путь `/`. Условия типа `RegularExpression` пропускаются.
+- Если `spec.hostnames` пуст, Deckhouse Platform берёт имена хостов слушателей, к которым привязан HTTPRoute.
+- Схема — `https`, если HTTPRoute привязан к слушателю `HTTPS`, который обслуживает это имя хоста, иначе `http`. Deckhouse Platform учитывает только слушателей ListenerSet из шаблонов. Для HTTPRoute, привязанного напрямую к Gateway или к ListenerSet, созданному вне шаблонов, схема — `http`.
+
+Пример ListenerSet и HTTPRoute:
+
+```yaml
+{{- $applications := .Platform.applications }}
+{{- if $applications.publicDomainTemplate }}
+{{- $host := printf $applications.publicDomainTemplate .Application.Instance.Name .Application.Instance.Namespace }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: d8a-{{ .Application.Instance.Name }}-web
+spec:
+  parentRef:
+    name: <GATEWAY_NAME>
+    namespace: <GATEWAY_NAMESPACE>
+  listeners:
+    - name: web
+      port: 443
+      protocol: HTTPS
+      hostname: {{ $host }}
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: d8a-{{ .Application.Instance.Name }}-web-tls
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: d8a-{{ .Application.Instance.Name }}-web
+  annotations:
+    packages.deckhouse.io/application-endpoint-description: "Web UI"
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: d8a-{{ .Application.Instance.Name }}-web
+      sectionName: web
+  hostnames:
+    - {{ $host }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: d8a-{{ .Application.Instance.Name }}-server
+          port: 80
+{{- end }}
+```
+
+где:
+
+- `<GATEWAY_NAME>` и `<GATEWAY_NAMESPACE>` — имя и неймспейс объекта Gateway, который администратор кластера выделил для публикации приложений;
+- `d8a-{{ .Application.Instance.Name }}-web-tls` — Secret с TLS-сертификатом для имени хоста, выпущенным, например, с помощью cert-manager. Подробнее — [в документации модуля `alb`](/modules/alb/).
+
+Для этого HTTPRoute Deckhouse Platform добавляет в `status.urls` тот же адрес, что и для примера Ingress: `https://myapp.my-namespace.apps.example.com/` с описанием `Web UI`.
 
 ## Учётные данные в веб-интерфейсе
 
@@ -220,9 +285,9 @@ data:
 Веб-интерфейс находит учётные данные следующим образом:
 
 - Лейбл `packages.deckhouse.io/application-instance` с именем экземпляра обязателен. Веб-интерфейс ищет учётные данные только среди Secret с этим лейблом в неймспейсе приложения. DP не добавляет этот лейбл к объектам, а лейбл `packages.deckhouse.io/instance`, который DP добавляет (подробнее — [в разделе «Лейблы и защита объектов»](#лейблы-и-защита-объектов)), не учитывается.
-- Лейбл `packages.deckhouse.io/application-ingress` привязывает Secret к Ingress из шаблонов по имени. Веб-интерфейс показывает учётные данные рядом с адресами, у которых описание этого Ingress. Значение лейбла не может быть длиннее 63 символов, поэтому имя Ingress должно укладываться в это ограничение.
-- Вместо лейбла можно указать описание адреса в аннотации `packages.deckhouse.io/application-endpoint-description` у Secret. Если заданы и лейбл, и аннотация, используется описание Ingress.
-- Веб-интерфейс показывает учётные данные, только если у приложения есть адреса с подходящим описанием. К адресам без описания учётные данные не привязываются, поэтому указывайте в аннотации Ingress описание, а не `"true"`.
+- Лейбл `packages.deckhouse.io/application-ingress` привязывает Secret к Ingress из шаблонов по имени. Для приложения, которое публикуется через модуль [`alb`](/modules/alb/), вместо него используйте лейбл `packages.deckhouse.io/application-alb` с именем HTTPRoute из шаблонов. Веб-интерфейс показывает учётные данные рядом с адресами, у которых описание этого объекта. Значение лейбла не может быть длиннее 63 символов, поэтому имя Ingress или HTTPRoute должно укладываться в это ограничение.
+- Вместо лейбла можно указать описание адреса в аннотации `packages.deckhouse.io/application-endpoint-description` у Secret. Если заданы и лейбл, и аннотация, используется описание Ingress или HTTPRoute.
+- Веб-интерфейс показывает учётные данные, только если у приложения есть адреса с подходящим описанием. К адресам без описания учётные данные не привязываются, поэтому указывайте в аннотации Ingress или HTTPRoute описание, а не `"true"`.
 - Лейбл `packages.deckhouse.io/initial-secret` помечает Secret как одноразовые учётные данные. DP создаёт такой Secret один раз и больше его не обновляет: он добавляет к Secret аннотацию `werf.io/resource-policy: skip-update` (уже заданная политика сохраняется, например `skip-delete` превращается в `skip-delete,skip-update`). Admission-политики разрешают пользователям изменять такой Secret, поэтому веб-интерфейс может отметить его как показанный, а пользователи — сменить учётные данные. Без этого лейбла политики запрещают изменение, и учётные данные можно запросить повторно. DP проверяет только наличие лейбла, его значение не важно.
 
 Укажите логин в ключе `login`, а пароль — в ключе `password`. Веб-интерфейс показывает каждый ключ `data` отдельным полем с именем ключа, поэтому не храните в этом Secret другие данные.
@@ -247,6 +312,51 @@ data:
 - в Service порты контейнеров указывались в `targetPort` по имени (правило `service-port`).
 
 Строгость этих правил можно понизить в `.pkglint.yaml` (подробнее — [в подразделе «Проверка пакета»](application-development.html#проверка-пакета)).
+
+## Ограничение числа реплик
+
+Пользователь может изменить число реплик Deployment, StatefulSet или ReplicaSet [в поле `spec.resourceRequests`](../../reference/api/cr.html#application-v1alpha1-spec-resourcerequests) ресурса Application. Если приложение не может работать с произвольным числом реплик, добавьте к рабочей нагрузке в шаблонах одну из аннотаций:
+
+- `packages.deckhouse.io/scale-disabled: "true"` — число реплик нельзя изменить;
+- `packages.deckhouse.io/scale-down-disabled: "true"` — число реплик нельзя сделать меньше заданного в шаблонах.
+
+Ограничения отсчитываются от значения `spec.replicas` рабочей нагрузки в шаблонах (`1`, если поле не задано), а не от текущего числа реплик. Например, если в шаблонах заданы `replicas: 2` и `scale-down-disabled`, пользователь может увеличить число реплик до 4 и вернуть его к 2, но не может уменьшить до 1. Ограничение включает только значение `"true"`.
+
+Если репликами рабочей нагрузки управляет HorizontalPodAutoscaler из шаблонов, добавьте аннотацию к HorizontalPodAutoscaler. Deckhouse Platform задаёт запрошенное число реплик и в `minReplicas`, и в `maxReplicas` такого HorizontalPodAutoscaler, а аннотации ограничивают это число:
+
+- `scale-disabled` — число должно совпадать и с `minReplicas`, и с `maxReplicas`. Если они различаются, число реплик изменить нельзя;
+- `scale-down-disabled` — число не может быть меньше `minReplicas` (`1`, если поле не задано).
+
+Пример:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: d8a-{{ .Application.Instance.Name }}-web
+  annotations:
+    packages.deckhouse.io/scale-down-disabled: "true"
+spec:
+  replicas: 2
+  # ...
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: d8a-{{ .Application.Instance.Name }}-api
+  annotations:
+    packages.deckhouse.io/scale-down-disabled: "true"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: d8a-{{ .Application.Instance.Name }}-api
+  minReplicas: 2
+  maxReplicas: 10
+  # ...
+```
+
+Если в `spec.resourceRequests` запрошено запрещённое число реплик, Deckhouse Platform не применяет шаблоны, и объекты приложения остаются прежними. Сам ресурс Application при этом принимается: Deckhouse Platform проверяет ограничения при рендеринге шаблонов. Условия Application получают причину `ScalingForbidden`, а сообщение условия называет рабочую нагрузку, например: `Deployment 'd8a-myapp-web' does not allow its replicas to go below 2`.
 
 ## Состояние рабочих нагрузок
 

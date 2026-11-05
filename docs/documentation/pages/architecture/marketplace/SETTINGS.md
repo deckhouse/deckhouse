@@ -178,6 +178,9 @@ The web interface builds the application settings form from `openapi/settings.ya
 | `x-deckhouse-ui-advanced` | `true` | The field is hidden behind the advanced settings toggle. The extension is taken into account only for top-level fields |
 | `x-deckhouse-ui-validation-message` | String | The message shown under the field instead of the schema validation error, for example, instead of a regular expression that the value doesn't match |
 | `x-deckhouse-ui-resource-name` | Object with the `apiVersion` and `kind` fields and an optional `labelSelector` field | For a field of type `string`: a drop-down list with the names of resources of the specified kind from the application namespace. `labelSelector` is a standard Kubernetes label selector that narrows the list |
+| `x-deckhouse-ui-text-area` | `true` | For a field of type `string`: a multi-line text field instead of a single-line one. See ["Multi-line and masked fields"](#multi-line-and-masked-fields) |
+| `x-deckhouse-ui-secure-field` | `true` | For a field of type `string`, `integer`, or `number`: the input is masked like a password. The value is stored in the settings as is. See ["Multi-line and masked fields"](#multi-line-and-masked-fields) |
+| `x-deckhouse-ui-sizing-memory` | Object with the `defaultUnit` field | For a field of type `integer` that stores a memory size in bytes: the size is entered with a unit, for example, `512Mi`. See ["Memory size fields"](#memory-size-fields) |
 | `x-deckhouse-enum-switch-settings` | List, declared on a `oneOf` branch | Confirmation dialogs shown before switching to another branch. See [the next section](#confirmation-before-switching-a-mode) |
 
 Example `openapi/settings.yaml` with form extensions:
@@ -252,3 +255,80 @@ properties:
             enum: [External]
         required: [url]
 ```
+
+### Multi-line and masked fields
+
+The `x-deckhouse-ui-text-area` and `x-deckhouse-ui-secure-field` extensions change only how the web interface shows the input of a field:
+
+- `x-deckhouse-ui-text-area: true`: A field of type `string` is shown as a multi-line text field, for example, for a configuration fragment or a certificate.
+- `x-deckhouse-ui-secure-field: true`: The input of a field of type `string`, `integer`, or `number` is masked like a password.
+
+A field of type `string` with both extensions is a multi-line text field with masked input. Fields with `enum` ignore both extensions. The extensions take effect only with the boolean `true` value. If the value is a string, for example, `"true"`, Deckhouse Platform can't load the package version.
+
+Example `openapi/settings.yaml` with `x-deckhouse-ui-text-area` and `x-deckhouse-ui-secure-field`:
+
+```yaml
+type: object
+properties:
+  adminPassword:
+    type: string
+    minLength: 12
+    x-deckhouse-ui-secure-field: true
+  guestPin:
+    type: integer
+    minimum: 100000
+    maximum: 999999
+    x-deckhouse-ui-secure-field: true
+  welcomeMessage:
+    type: string
+    x-deckhouse-ui-text-area: true
+  sshPrivateKey:
+    type: string
+    x-deckhouse-ui-text-area: true
+    x-deckhouse-ui-secure-field: true
+```
+
+{% alert level="warning" %}
+The `x-deckhouse-ui-secure-field` extension doesn't protect the value. The value is stored in the `spec.settings` field of the Application as is and is available to everyone who can read the Application. To pass a secret, let the user create a Secret and select it in the form with the `x-deckhouse-ui-resource-name` extension.
+{% endalert %}
+
+### Memory size fields
+
+To let the user enter a memory size with a unit, for example, a cache limit, add the `x-deckhouse-ui-sizing-memory` extension to the field. The field must be of type `integer` and store the size in bytes. The `default`, `minimum`, and `maximum` values of the field are specified in bytes too.
+
+The extension value is an object with the `defaultUnit` field. This field sets the unit in which the web interface shows the value when the form is opened: `Ki`, `Mi`, `Gi`, or `Ti`. These are the binary suffixes that Kubernetes uses for resource quantities: 1 Ki is 1024 bytes. If the extension value is not an object, for example, `x-deckhouse-ui-sizing-memory: Mi`, Deckhouse Platform can't load the package version.
+
+The field works as follows:
+
+- The user enters a size with a suffix, for example, `512Mi` or `2Gi`. A number without a suffix is a number of bytes. The web interface saves the size to the settings in bytes: `512Mi` becomes `536870912`. Fractional bytes are rounded.
+- When the form is opened, the field shows the value in `defaultUnit` if the value is a whole number in this unit. Otherwise, the field shows the value in the largest unit in which it is a whole number: for example, with `defaultUnit: Gi`, `1610612736` is shown as `1536Mi`. A value that is not a multiple of 1024 is shown in bytes.
+- For fields of other types, fields with `enum`, and `defaultUnit` values not listed above, the extension is ignored, and the field is shown as a regular number field.
+
+Example `openapi/settings.yaml` with `x-deckhouse-ui-sizing-memory`:
+
+```yaml
+type: object
+properties:
+  cache:
+    type: object
+    default: {}
+    properties:
+      maxMemory:
+        type: integer
+        default: 536870912
+        minimum: 67108864
+        x-deckhouse-ui-sizing-memory:
+          defaultUnit: Mi
+```
+
+In the templates, the size is a number. Print it with the `int64` function: otherwise, a large number is printed in exponential notation, for example, `1.073741824e+09`:
+
+{% raw %}
+
+```yaml
+env:
+  - name: CACHE_MAX_MEMORY
+    value: "{{ .Values.cache.maxMemory | int64 }}"
+```
+
+{% endraw %}
