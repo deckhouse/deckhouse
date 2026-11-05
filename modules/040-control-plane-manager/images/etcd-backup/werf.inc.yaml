@@ -10,34 +10,16 @@ import:
   add: /etcdctl
   to: /bin/etcdctl
   before: setup
-- from: {{ .ModuleName }}/{{ .ImageName }}-artifact
-  add: /
+- from: {{ .ModuleName }}/{{ .ImageName }}-pm-artifact
+  add: /relocate-pm
   to: /
-  includePaths:
-  # Dynamically linked runtime libraries.
-  - usr/lib/libc.so*
-  - usr/lib/ld-linux-x86-64.so*
-  # Programs used by entrypoint.sh.
-  - usr/bin/sh
-  - usr/bin/bash
-  - usr/bin/awk
-  - usr/bin/gawk
-  - usr/bin/gzip # dynamic
-  - usr/bin/tar
-  - usr/bin/chmod
-  - usr/bin/df
-  - usr/bin/mv
-  - usr/bin/sleep
-  - usr/bin/tail
   before: setup
 imageSpec:
   config:
     entrypoint: ["/entrypoint.sh"]
----
-image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ index $.Images "builder/distroless" }}
-final: false
-shell:
-  beforeInstall:
-  - pm install bash gzip tar gawk coreutils
+{{- include "pm_binaries_artifact" (dict
+      "Images" $.Images
+      "name" (printf "%s/%s-pm-artifact" $.ModuleName $.ImageName)
+      "packages" "bash gzip tar gawk coreutils"
+      "binaries" "/usr/bin/bash:/usr/bin/sh /usr/bin/gawk:/usr/bin/awk /usr/bin/gzip /usr/bin/tar /usr/bin/chmod /usr/bin/df /usr/bin/mv /usr/bin/sleep /usr/bin/tail") }}
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
