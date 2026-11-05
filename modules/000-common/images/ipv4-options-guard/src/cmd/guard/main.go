@@ -40,7 +40,7 @@ func main() {
 		settings     = flag.String("settings", "/etc/ipv4-options-guard/settings.json", "settings file from the CNI module ConfigMap")
 		netnsDir     = flag.String("netns-dir", "/run/netns", "directory with pod netns bind mounts")
 		hostNetNS    = flag.String("host-netns", "/proc/self/ns/net", "host netns path")
-		hostSysctl   = flag.String("host-sysctl-file", "/host/etc/sysctl.d/90-d8-ipv4-options-guard.conf", "host sysctl.d file; empty to skip")
+		hostState    = flag.String("host-mptcp-state", "/run/ipv4-options-guard/host-mptcp-original-state", "host net.mptcp.enabled from before the guard, on the host /run; empty to leave the host value alone")
 		sbin         = flag.String("sbin", "/sbin", "iptables-wrapper directory (shared with iptables-wrapper-init where the pod has it)")
 		iptablesDist = flag.String("iptables-dist", "/iptables-dist", "iptables-wrapper and xtables binaries to install into -sbin if it is empty")
 		resync       = flag.Duration("resync", time.Minute, "full resync interval")
@@ -65,12 +65,12 @@ func main() {
 	}()
 
 	cfg := guard.Config{
-		SettingsFile:   *settings,
-		NetNSDir:       *netnsDir,
-		HostNetNSPath:  *hostNetNS,
-		HostSysctlFile: *hostSysctl,
-		Iptables:       guard.Iptables{Sbin: *sbin, Dist: *iptablesDist},
-		Resync:         *resync,
+		SettingsFile:       *settings,
+		NetNSDir:           *netnsDir,
+		HostNetNSPath:      *hostNetNS,
+		HostMPTCPStateFile: *hostState,
+		Iptables:           guard.Iptables{Sbin: *sbin, Dist: *iptablesDist},
+		Resync:             *resync,
 	}
 	if node := os.Getenv("NODE_NAME"); node != "" {
 		if nl, err := guard.NewNodeLabels(node); err != nil {

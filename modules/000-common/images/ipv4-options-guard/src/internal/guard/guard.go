@@ -38,8 +38,9 @@ type Config struct {
 	NetNSDir string
 	// Host netns: the CNI agent pods run with hostNetwork, so it is our own netns.
 	HostNetNSPath string
-	// net.mptcp.enabled=0 here is applied at boot before kubelet starts.
-	HostSysctlFile string
+	// HostMPTCPStateFile keeps the host net.mptcp.enabled from before the guard; on the host /run,
+	// so a reboot clears it together with the change. Empty means the host value is not managed.
+	HostMPTCPStateFile string
 	// HostMPTCPSysctl is net.mptcp.enabled of the host netns; empty means /proc/sys/net/mptcp/enabled.
 	HostMPTCPSysctl string
 	Iptables        Iptables
@@ -303,7 +304,7 @@ func (g *Guard) reconcileOne(name, path string) (err error) {
 		return err
 	}
 	defer ns.Close()
-	// The host MPTCP value is managed by syncHostMPTCP through the sysctl.d file.
+	// The host MPTCP value is managed by syncHostMPTCP through its state file.
 	podMPTCP := name != hostNetNS
 
 	if st.Mode == ModeDisabled {

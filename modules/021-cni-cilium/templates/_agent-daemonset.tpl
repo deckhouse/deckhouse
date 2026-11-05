@@ -312,8 +312,8 @@ spec:
           # Pod netns are bind-mounted by containerd after the sidecar has started.
           mountPropagation: HostToContainer
           readOnly: true
-        - name: ipv4-options-guard-sysctl-d
-          mountPath: /host/etc/sysctl.d
+        - name: ipv4-options-guard-state
+          mountPath: /run/ipv4-options-guard
         - name: xtables-lock
           mountPath: /run/xtables.lock
         # iptables-wrapper installed by the guard itself: legacy/nft is decided by the wrapper, as in the other modules.
@@ -711,9 +711,9 @@ spec:
       - name: ipv4-options-guard-settings
         configMap:
           name: ipv4-options-guard
-      - name: ipv4-options-guard-sysctl-d
+      - name: ipv4-options-guard-state
         hostPath:
-          path: /etc/sysctl.d
+          path: /run/ipv4-options-guard
           type: DirectoryOrCreate
       - name: ipv4-options-guard-sbin
         emptyDir:

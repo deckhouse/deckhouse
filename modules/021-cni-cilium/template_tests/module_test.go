@@ -368,6 +368,8 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 	Context("ipv4-options-guard", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
+			// Renders the SecurityPolicyException the sidecar host paths are checked against.
+			f.ValuesSetFromYaml("global.enabledModules", `[vertical-pod-autoscaler, prometheus, operator-prometheus, admission-policy-engine]`)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cniCilium", cniCiliumValues)
 		})
@@ -379,6 +381,22 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 			ds := f.KubernetesResource("DaemonSet", "d8-cni-cilium", "agent")
 			Expect(ds.Field(`spec.template.spec.containers.#(name=="ipv4-options-guard").securityContext.privileged`).Bool()).To(BeTrue())
 			Expect(ds.Field(`spec.template.spec.containers.#(name=="ipv4-options-guard").volumeMounts.#(name=="cilium-netns").mountPropagation`).String()).To(Equal("HostToContainer"))
+			// The state is kept on the host /run, and nothing comes from the host /etc: it is read-only
+			// on Deckhouse Engine, where a hostPath there keeps the whole CNI agent pod from starting.
+			Expect(ds.Field(`spec.template.spec.volumes.#(name=="ipv4-options-guard-state").hostPath.path`).String()).To(Equal("/run/ipv4-options-guard"))
+			Expect(ds.Field(`spec.template.spec.containers.#(name=="ipv4-options-guard").volumeMounts.#(name=="ipv4-options-guard-state").mountPath`).String()).To(Equal("/run/ipv4-options-guard"))
+			var allowedHostPaths []string
+			for _, allowed := range f.KubernetesResource("SecurityPolicyException", "d8-cni-cilium", "agent").Field("spec.volumes.hostPath.allowedValues.#.path").Array() {
+				allowedHostPaths = append(allowedHostPaths, allowed.String())
+			}
+			for _, mount := range ds.Field(`spec.template.spec.containers.#(name=="ipv4-options-guard").volumeMounts.#.name`).Array() {
+				hostPath := ds.Field(`spec.template.spec.volumes.#(name=="` + mount.String() + `").hostPath.path`)
+				if !hostPath.Exists() {
+					continue
+				}
+				Expect(hostPath.String()).NotTo(HavePrefix("/etc"), "volume %s", mount.String())
+				Expect(allowedHostPaths).To(ContainElement(hostPath.String()), "volume %s", mount.String())
+			}
 			Expect(ds.Field(`spec.template.spec.containers.#(name=="ipv4-options-guard").volumeMounts.#(name=="ipv4-options-guard-sbin").mountPath`).String()).To(Equal("/sbin"))
 			Expect(ds.Field(`spec.template.spec.containers.#(name=="kube-rbac-proxy").env.#(name=="KUBE_RBAC_PROXY_CONFIG").value`).String()).To(ContainSubstring("path: /ipv4-options-guard/metrics"))
 
