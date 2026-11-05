@@ -73,6 +73,7 @@ import:
   add: /pause
   to: /pause
   before: install
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/ipv4-options-guard"]

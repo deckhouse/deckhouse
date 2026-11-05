@@ -79,8 +79,8 @@ spec:
           readOnly: true
           metadata:
             description: Pod network namespaces, where ipv4-options-guard installs the CVE-2026-98432 filter.
-        - path: /etc/sysctl.d
+        - path: /run/ipv4-options-guard
           readOnly: false
           metadata:
-            description: ipv4-options-guard persists net.mptcp.enabled=0 here so it applies at boot before kubelet starts.
+            description: ipv4-options-guard keeps the host net.mptcp.enabled value from before it disabled MPTCP, to restore it.
 {{- end }}
