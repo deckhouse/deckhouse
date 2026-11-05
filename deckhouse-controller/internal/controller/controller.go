@@ -52,6 +52,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
@@ -224,6 +225,11 @@ func Build(ctx context.Context, client *klient.Client, ms metricsstorage.Storage
 		)
 	}
 
+	err = registerLicensing(runtime, dc, ms, logger.Named("licensing-controller"))
+	if err != nil {
+		return nil, fmt.Errorf("register licensing controller: %w", err)
+	}
+
 	return &Controller{
 		ctrl: runtime,
 		sync: synced,
@@ -321,6 +327,11 @@ func buildCacheByObject() map[client.Object]cache.ByObject {
 					LabelSelector: labels.SelectorFromSet(map[string]string{"heritage": "deckhouse"}),
 				},
 			},
+		},
+		// for the licensing controller and the ClusterConfiguration webhook; every node is
+		// cached, so without the parts neither of them reads
+		&corev1.Node{}: {
+			Transform: ctrlutils.TransformStripNode,
 		},
 		// for deckhouse.io apis
 		&v1alpha1.Module{}:                     {},

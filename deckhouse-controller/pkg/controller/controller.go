@@ -60,6 +60,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1beta1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	moduleconfig "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/config"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
@@ -204,6 +205,11 @@ func NewDeckhouseController(
 							FieldSelector: fields.SelectorFromSet(fields.Set{"metadata.name": "d8-cluster-kubernetes"}),
 						},
 					},
+				},
+				// for the licensing controller and the ClusterConfiguration webhook; every node is
+				// cached, so without the parts neither of them reads
+				&corev1.Node{}: {
+					Transform: ctrlutils.TransformStripNode,
 				},
 				// for deckhouse.io apis
 				&v1alpha1.Module{}:              {},
@@ -375,6 +381,11 @@ func NewDeckhouseController(
 	err = objectkeeper.RegisterController(runtimeManager, dc, logger.Named("objectkeeper-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
+	}
+
+	err = registerLicensing(runtimeManager, dc, operator.MetricStorage, logger.Named("licensing-controller"))
+	if err != nil {
+		return nil, fmt.Errorf("register licensing controller: %w", err)
 	}
 
 	// The engine's rules read addon-operator's state, which is no input of any node: the first

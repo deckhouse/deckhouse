@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"time"
 
@@ -40,6 +41,32 @@ const (
 	secretCopierEnableKey            = "secret-copier.deckhouse.io/enabled"
 	secretCopierNamespaceSelectorKey = "secret-copier.deckhouse.io/target-namespace-selector"
 )
+
+// protectedSecrets are never created, updated or deleted by the hook, whatever
+// the Secrets in `default` say. The hook runs as the deckhouse service account,
+// which the admission policies guarding these Secrets trust, so anybody who can
+// create a Secret in `default` could otherwise plant, replace or delete them:
+// d8-system/cluster-key holds the cluster key of licensing, its identity.
+var protectedSecrets = map[string]bool{
+	"d8-system/cluster-key": true,
+}
+
+// isCopyable tells a Secret in `default` the hook copies. A bootstrap token is
+// never copied: kube-apiserver accepts one found in kube-system as credentials
+// (--enable-bootstrap-token-auth), and the hook would plant it there for anybody
+// who can create a Secret in `default`. Its copies made before are deleted as
+// no longer desired.
+func isCopyable(secret Secret) bool {
+	return secret.Type != v1.SecretTypeBootstrapToken
+}
+
+// isCopy tells a copy the hook made from a Secret of the same name that is
+// somebody else's: every copy carries the label of its source. The hook updates
+// and deletes copies only.
+func isCopy(secret *v1.Secret) bool {
+	_, ok := secret.Labels[secretCopierEnableKey]
+	return ok
+}
 
 type Secret struct {
 	Name        string
@@ -184,6 +211,9 @@ func copierHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Co
 			secretsExists[path] = secret
 			continue
 		}
+		if !isCopyable(secret) {
+			continue
+		}
 
 		namespaceLabelSelector := namespaceSelector(secret)
 
@@ -204,22 +234,28 @@ func copierHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Co
 				Data:      secret.Data,
 			}
 			path := SecretPath(secretDesired)
+			if protectedSecrets[path] {
+				continue
+			}
 			secretsDesired[path] = secretDesired
 		}
 	}
 
 	for path, secretExist := range secretsExists {
+		if protectedSecrets[path] {
+			continue
+		}
 		secretDesired, desired := secretsDesired[path]
 		if !desired {
 			// Secret exists, but not desired - delete it.
-			if err := deleteSecret(k8, secretExist); err != nil {
+			if err := deleteSecret(k8, input.Logger, secretExist); err != nil {
 				return err
 			}
 			continue
 		}
 		if !reflect.DeepEqual(secretDesired, secretExist) {
 			// Secret changed - update it.
-			if err := createOrUpdateSecret(k8, secretDesired); err != nil {
+			if err := createOrUpdateSecret(k8, input.Logger, secretDesired); err != nil {
 				return err
 			}
 		}
@@ -229,7 +265,7 @@ func copierHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Co
 			continue
 		}
 		// Secret not exists, create it.
-		if err := createOrUpdateSecret(k8, secretDesired); err != nil {
+		if err := createOrUpdateSecret(k8, input.Logger, secretDesired); err != nil {
 			return err
 		}
 	}
@@ -238,15 +274,19 @@ func copierHandler(_ context.Context, input *go_hook.HookInput, dc dependency.Co
 }
 
 // todo(31337Ghost) consider switching to separate create/update functions after a bug is fixed in shell-operator that causes missing Secrets in snapshots
-func createOrUpdateSecret(k8 k8s.Client, secret Secret) error {
-	_, err := k8.CoreV1().Secrets(secret.Namespace).Get(context.TODO(), secret.Name, metav1.GetOptions{})
+func createOrUpdateSecret(k8 k8s.Client, logger go_hook.Logger, secret Secret) error {
+	existing, err := k8.CoreV1().Secrets(secret.Namespace).Get(context.TODO(), secret.Name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
 		return createSecret(k8, secret)
 	} else if err != nil {
 		return err
 	}
+	if !isCopy(existing) {
+		logSkippedSecret(logger, secret)
+		return nil
+	}
 
-	return updateSecret(k8, secret)
+	return updateSecret(k8, existing, secret)
 }
 
 func createSecret(k8 k8s.Client, secret Secret) error {
@@ -277,24 +317,54 @@ func createSecret(k8 k8s.Client, secret Secret) error {
 	return nil
 }
 
-func deleteSecret(k8 k8s.Client, secret Secret) error {
-	if err := k8.CoreV1().Secrets(secret.Namespace).Delete(context.TODO(), secret.Name, metav1.DeleteOptions{}); err != nil {
+// deleteSecret deletes a copy that is no longer desired. The snapshot may lag
+// behind, so the Secret is read again: one that took the place of the copy
+// since is not the hook's to delete.
+func deleteSecret(k8 k8s.Client, logger go_hook.Logger, secret Secret) error {
+	existing, err := k8.CoreV1().Secrets(secret.Namespace).Get(context.TODO(), secret.Name, metav1.GetOptions{})
+	if errors.IsNotFound(err) {
+		return nil
+	} else if err != nil {
+		return formatSecretOperationError(secret, err, "get")
+	}
+	if !isCopy(existing) {
+		logSkippedSecret(logger, secret)
+		return nil
+	}
+
+	if err := deleteCopy(k8, existing); err != nil {
 		return formatSecretOperationError(secret, err, "delete")
 	}
 
 	return nil
 }
 
-func updateSecret(k8 k8s.Client, secret Secret) error {
+// deleteCopy deletes the very Secret that was checked to be a copy: the
+// preconditions fail the request if another one took its place since.
+func deleteCopy(k8 k8s.Client, existing *v1.Secret) error {
+	return k8.CoreV1().Secrets(existing.Namespace).Delete(context.TODO(), existing.Name, metav1.DeleteOptions{
+		Preconditions: &metav1.Preconditions{UID: &existing.UID, ResourceVersion: &existing.ResourceVersion},
+	})
+}
+
+func logSkippedSecret(logger go_hook.Logger, secret Secret) {
+	logger.Warn("Leave the Secret as is: it has the name of a copy, but secret-copier did not create it", slog.String("secret", SecretPath(secret)))
+}
+
+// updateSecret writes the desired content over existing, the copy that was
+// read. Pinned to its resource version, neither the update nor the delete of a
+// recreate touches a Secret that took the place of the copy since.
+func updateSecret(k8 k8s.Client, existing *v1.Secret, secret Secret) error {
 	s := v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "v1",
 			Kind:       "Secret",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secret.Name,
-			Namespace: secret.Namespace,
-			Labels:    secret.Labels,
+			Name:            secret.Name,
+			Namespace:       secret.Namespace,
+			ResourceVersion: existing.ResourceVersion,
+			Labels:          secret.Labels,
 			Annotations: map[string]string{
 				"secret-copier.deckhouse.io/updated-at": time.Now().UTC().Format(time.RFC3339),
 			},
@@ -307,7 +377,7 @@ func updateSecret(k8 k8s.Client, secret Secret) error {
 		// deleting and create Secret if its validation fails
 		// usually means that we are trying to change an immutable field
 		if errors.IsInvalid(err) {
-			err := deleteSecret(k8, secret)
+			err := deleteCopy(k8, existing)
 			if err != nil {
 				return formatSecretOperationError(secret, err, "delete on recreate")
 			}

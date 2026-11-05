@@ -128,4 +128,18 @@ const (
 
 	// LabelNamespace is the label key for the namespace.
 	LabelNamespace = "namespace"
+
+	// Licensing labels.
+
+	LabelBilling = "billing"
+
+	LabelRecordID = "record_id"
+
+	LabelLicense = "license"
+
+	LabelType = "type"
+
+	LabelStatus = "status"
+
+	LabelReason = "reason"
 )

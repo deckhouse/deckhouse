@@ -85,6 +85,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ModulePackageVersionList{},
 		&ModulePackage{},
 		&ModulePackageList{},
+		&ClusterLicense{},
+		&ClusterLicenseList{},
+		&EffectiveLicense{},
+		&EffectiveLicenseList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)

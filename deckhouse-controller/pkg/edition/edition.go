@@ -47,3 +47,8 @@ func Parse() (*Edition, error) {
 
 	return edition, nil
 }
+
+// LicensingEnabled reports whether this deckhouse runs licensing, as settled at
+// its start (app.LicensingEnabled). The module hooks read it here: they cannot
+// import an internal package.
+func LicensingEnabled() bool { return app.LicensingEnabled() }

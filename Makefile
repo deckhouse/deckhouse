@@ -184,6 +184,14 @@ tests-openapi: ## Run tests against modules openapi values schemas.
 
 tests-controller: gotestsum ## Run deckhouse-controller unit tests.
 	$(GOTESTSUM) -- -cover -race -timeout=${TESTS_TIMEOUT} ./deckhouse-controller/... -v
+	@# The CE and FE builds carry their own licensing gate (editions.yaml goBuildTags).
+	$(GOTESTSUM) -- -timeout=${TESTS_TIMEOUT} -tags=nolicensing ./deckhouse-controller/internal/app/ ./deckhouse-controller/pkg/apis/
+ifneq ($(wildcard deckhouse-controller/pkg/licensing),)
+	@# The licensing packages are not in the public mirror (copy.bara.sky).
+	$(GOTESTSUM) -- -timeout=${TESTS_TIMEOUT} -tags=licensing_optin ./deckhouse-controller/internal/app/ ./deckhouse-controller/pkg/apis/ ./deckhouse-controller/pkg/controller/licensing/
+	@# Development builds embed the test vendor key (deckhouse-controller/go-build.sh).
+	$(GOTESTSUM) -- -timeout=${TESTS_TIMEOUT} -tags=licensing_testkey ./deckhouse-controller/pkg/licensing/
+endif
 
 tests-webhooks: bin/yq ## Run python webhooks unit tests.
 	./testing/webhooks/run.sh

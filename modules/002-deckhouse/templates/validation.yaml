@@ -534,4 +534,155 @@ spec:
   policyName: {{ $policyName }}
   validationActions: [Deny, Audit]
 
+---
+{{- /* CE has no licensing: deckhouse-controller is built without it (editions.yaml goBuildTags). */}}
+{{- if ne .Values.global.deckhouseEdition "CE" }}
+{{- $policyName := "licensing.deckhouse.io" }}
+# The licensing state is computed by the deckhouse controller and read by the
+# license server: EffectiveLicense is its output in full, and the status of a
+# ClusterLicense is its verdict on one key. Neither is a knob. ClusterLicense
+# itself stays open, that is how a customer installs a key.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["effectivelicenses", "effectivelicenses/status"]
+      - apiGroups: ["deckhouse.io"]
+        apiVersions: ["*"]
+        operations:  ["UPDATE"]
+        resources:   ["clusterlicenses/status"]
+  validations:
+    # Strictly one writer: unlike the policies above, no other system account
+    # and no dhctl has any business writing the licensing state.
+    - expression: 'request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"'
+      reason: Forbidden
+      messageExpression: "'Only Deckhouse writes the licensing state. To change the license, upload a new license key in the Console section Licensing.'"
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change the licensing state'"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+
+---
+{{- $policyName := "licensing-storage.deckhouse.io" }}
+# The same writer, for the two objects the licensing state is kept in: the
+# cluster identity and the registration counter. They are guarded by their own
+# policy rather than by a third rule of the one above, because matchConditions are
+# ANDed across the whole policy and a condition on the object name would switch
+# the rules for the custom resources off along with it.
+#
+# Unlike the custom resources, which the controller recomputes, these two come
+# back from a backup: a rebuilt cluster gets a new cluster key, and only the old
+# one keeps the license keys issued for the cluster. So the break-glass account
+# system:sudouser may write them too; a backup tool acting on its own account may
+# not, the administrator restores them by hand (backup-and-restore.html in the
+# documentation).
+#
+# The `heritage: deckhouse` label these objects carry puts them under
+# label-objects.deckhouse.io as well, but that one is off in dev clusters and lets
+# every d8-system service account through; this one lets through no one but
+# Deckhouse and system:sudouser.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["secrets", "configmaps"]
+  matchConditions:
+    # The binding already selects the namespace by label; a request carries its
+    # own namespace, so the policy does not have to trust that alone.
+    - name: 'only-system-namespace'
+      expression: 'request.namespace == "d8-system"'
+    # A DELETE has no new object, so the name is read off whichever side exists.
+    - name: 'only-licensing-storage'
+      expression: '(object == null ? oldObject : object).metadata.name in ["cluster-key", "license-registration"]'
+  validations:
+    - expression: 'request.userInfo.username in ["system:serviceaccount:d8-system:deckhouse", "system:sudouser"]'
+      reason: Forbidden
+      messageExpression: "'Only Deckhouse writes the licensing state. To change the license, upload a new license key in the Console section Licensing.'"
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change the licensing state'"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: d8-system
+
+---
+{{- /* Only where licensing runs: FE with licensing turned off leaves these CRDs behind, and the administrator deletes them (internal/app/licensing_fe.go). */}}
+{{- if .Values.deckhouse.internal.licensingEnabled }}
+{{- $policyName := "licensing-crds.deckhouse.io" }}
+# The CRDs of the licensing state are part of it: deleting effectivelicenses
+# deletes the object with the marks of an over-limit episode, and the controller
+# would start the episode over. Deckhouse installs and updates these CRDs itself;
+# nobody else changes or deletes them. The status subresource stays out of the
+# rule, the apiserver writes it.
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["apiextensions.k8s.io"]
+        apiVersions: ["*"]
+        operations:  ["UPDATE", "DELETE"]
+        resources:   ["customresourcedefinitions"]
+  matchConditions:
+    - name: 'only-licensing-crds'
+      expression: '(object == null ? oldObject : object).metadata.name in ["clusterlicenses.deckhouse.io", "effectivelicenses.deckhouse.io"]'
+  validations:
+    - expression: 'request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"'
+      reason: Forbidden
+      messageExpression: "'Only Deckhouse changes the licensing CRDs. To change the license, upload a new license key in the Console section Licensing.'"
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change a licensing CRD'"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny, Audit]
+
+{{- end }}
+
+{{- end }}
+
 {{- end }}

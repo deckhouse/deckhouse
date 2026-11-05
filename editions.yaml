@@ -18,6 +18,11 @@ editions:
   # skip adding fix imports for release. need only for CE edition in general case
   skipFixingImports: true
 
+  # go build tags of deckhouse-controller. Licensing is on in a build without tags;
+  # `nolicensing` takes it out (CE), `licensing_optin` makes it opt-in through an
+  # annotation on ModuleConfig/deckhouse (FE). See deckhouse-controller/internal/app/licensing_ee.go.
+  goBuildTags: nolicensing
+
   # skip collect images. Unfortunately we cannot handle error from .Files.Glob
   # for some editions we cannot have any images
   # skipCollectImages: true
@@ -57,6 +62,7 @@ editions:
 
 - name: FE
   modulesDir: "ee/fe/modules"
+  goBuildTags: licensing_optin
 
 - name: CSE
   versionMapFile: "ee/cse/candi/version_map.yml"

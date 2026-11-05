@@ -20,7 +20,9 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  - clusterlicenses
   - deckhousereleases
+  - effectivelicenses
   - moduleconfigs
   - moduledocumentations
   - modulepulloverrides

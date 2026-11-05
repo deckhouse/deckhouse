@@ -69,6 +69,25 @@ const (
 	// ============================================================================
 	// Module Release Controller Metrics
 	// ============================================================================
+	// ============================================================================
+	// Licensing Controller Metrics
+	// ============================================================================
+	D8LicenseComplianceState        = "d8_license_compliance_state"
+	D8LicenseLicensed               = "d8_license_licensed"
+	D8LicenseLimit                  = "d8_license_limit"
+	D8LicenseConsumption            = "d8_license_consumption"
+	D8LicenseNodes                  = "d8_license_nodes"
+	D8LicenseUnlicensedVCPU         = "d8_license_unlicensed_vcpu"
+	D8LicenseKeyExpiresInSeconds    = "d8_license_key_expires_in_seconds"
+	D8LicenseOverLimitSeconds       = "d8_license_over_limit_seconds"
+	D8LicenseRecords                = "d8_license_records"
+	D8LicenseRejectedKeys           = "d8_license_rejected_keys"
+	D8LicenseRecordActive           = "d8_license_record_active"
+	D8LicenseRecordAccepted         = "d8_license_record_accepted"
+	D8LicenseRecordGrant            = "d8_license_record_grant"
+	D8LicenseRecordExpiresInSeconds = "d8_license_record_expires_in_seconds"
+	D8LicenseClusterKeyValid        = "d8_license_cluster_key_valid"
+
 	ModulePullSecondsTotal     = "deckhouse_module_pull_seconds_total"
 	ModuleSizeBytesTotal       = "deckhouse_module_size_bytes_total"
 	ModuleUpdatePolicyNotFound = "deckhouse_module_update_policy_not_found"
@@ -84,6 +103,10 @@ const (
 	D8Updating                       = "d8_updating"
 	D8ModuleUpdatingGroup            = "d8_module_updating_group"
 	ModuleReleaseGroup               = "module_release_group"
+	// LicensingGroup holds every licensing gauge, so that a series for a record
+	// or a resource that disappeared from the policy expires with the group
+	// instead of being exported forever at its last value.
+	LicensingGroup = "d8_licensing"
 )
 
 // Prefix is what every deckhouse-controller metric name starts with; the libraries' "{PREFIX}"
@@ -130,6 +153,44 @@ func RegisterDeckhouseControllerMetrics(metricStorage metricsstorage.Storage) er
 
 	if err := registerModuleControllerMetrics(metricStorage); err != nil {
 		return fmt.Errorf("register module controller metrics: %w", err)
+	}
+
+	if err := RegisterLicensingMetrics(metricStorage); err != nil {
+		return fmt.Errorf("register licensing metrics: %w", err)
+	}
+
+	return nil
+}
+
+// RegisterLicensingMetrics registers the gauges published by the licensing
+// controller. The names are the contract of the licensing alerts.
+func RegisterLicensingMetrics(metricStorage metricsstorage.Storage) error {
+	gauges := []struct {
+		name   string
+		labels []string
+		help   string
+	}{
+		{D8LicenseComplianceState, []string{LabelReason}, "Compliance state of the license policy (0 = Valid, 1 = Warning, 2 = Grace, 3 = Violation, 4 = NoUpdateRight); reason carries the check that produced it, empty while Valid"},
+		{D8LicenseLicensed, nil, "Whether the cluster is licensed (1.0 = yes, that is the state is Valid or Warning)"},
+		{D8LicenseLimit, []string{LabelResource}, "Current quota of a metric; always a number. servers, vCPU and cores are always exported, 0 when no license record in force names them; any other metric while a record in force names it"},
+		{D8LicenseConsumption, []string{LabelResource}, "Consumption of a metric over the licensable nodes"},
+		{D8LicenseNodes, []string{LabelBilling}, "Number of nodes by billing group (Server, VCPU, Cores, CoresVCPU, Unlicensed)"},
+		{D8LicenseUnlicensedVCPU, nil, "vCPU of the nodes that are not covered by the license"},
+		{D8LicenseKeyExpiresInSeconds, nil, "Seconds until the license key expires; the series is absent for a key that never expires"},
+		{D8LicenseOverLimitSeconds, nil, "Seconds since the over-limit episode began, 0 outside an episode"},
+		{D8LicenseRecords, []string{LabelType, LabelStatus}, "Number of license records by type and status (accepted or the rejection reason)"},
+		{D8LicenseRejectedKeys, nil, "Number of installed license keys rejected as a whole: bad signature, malformed, wrong type or unsupported version; they carry no records"},
+		{D8LicenseRecordActive, []string{LabelRecordID, LabelLicense}, "Whether a license record contributes to the policy right now (1.0 = yes)"},
+		{D8LicenseRecordAccepted, []string{LabelRecordID, LabelLicense}, "Whether a license record passed every check (1.0 = yes)"},
+		{D8LicenseRecordGrant, []string{LabelRecordID, LabelLicense, LabelResource}, "Quota a single license record grants for a metric it names; always a number"},
+		{D8LicenseRecordExpiresInSeconds, []string{LabelRecordID, LabelLicense}, "Seconds until an active license record expires"},
+		{D8LicenseClusterKeyValid, nil, "Whether the Secret d8-system/cluster-key holds a usable cluster key (1.0 = yes); without one the policy is still computed, but the cluster data file is not rebuilt and records bound to the cluster key are not accepted"},
+	}
+
+	for _, g := range gauges {
+		if _, err := metricStorage.RegisterGauge(g.name, g.labels, options.WithHelp(g.help)); err != nil {
+			return fmt.Errorf("failed to register %s: %w", g.name, err)
+		}
 	}
 
 	return nil

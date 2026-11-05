@@ -407,7 +407,7 @@ func (v APIEndpoint) String() string {
 // ANCHOR_END: APIEndpoint
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:path=clusters,shortName=cl,scope=Namespaced,categories=cluster-api
+// +kubebuilder:resource:path=clusters,scope=Namespaced,categories=cluster-api
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase",description="Cluster status such as Pending/Provisioning/Provisioned/Deleting/Failed"

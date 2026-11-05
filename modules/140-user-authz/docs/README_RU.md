@@ -811,6 +811,7 @@ proxy:
     - nodes
 read:
     - control-plane.deckhouse.io/controlplaneoperations
+    - deckhouse.io/effectivelicenses
     - deckhouse.io/modulesettingsdefinitions
     - deckhouse.io/nodestaticpodrequests
     - nfd.k8s-sigs.io/nodefeaturegroups
@@ -818,6 +819,7 @@ read:
     - nfd.k8s-sigs.io/nodefeatures
 read-write:
     - deckhouse.io/clusterauthorizationrules
+    - deckhouse.io/clusterlicenses
     - deckhouse.io/deckhousereleases
     - deckhouse.io/dexproviderchecks
     - deckhouse.io/dexproviders

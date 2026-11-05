@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -34,6 +35,10 @@ import (
 // list of CRDs to delete, like "externalmodulesources.deckhouse.io"
 var deprecatedCRDs = []string{}
 
+// licensingCRDs are the CRD files installed only where licensing runs (see
+// app.LicensingEnabled): without them the Console has no licensing section.
+var licensingCRDs = []string{"clusterlicense.yaml", "effectivelicense.yaml"}
+
 type kubeClient interface {
 	kubernetes.Interface
 	Dynamic() dynamic.Interface
@@ -44,6 +49,16 @@ var defaultLabels = map[string]string{
 	crdinstaller.LabelHeritage: "deckhouse",
 }
 
+// installCRDFile picks the CRD manifests to install: no translated docs, and no
+// licensing CRDs where licensing does not run.
+func installCRDFile(crdFilePath string) bool {
+	name := filepath.Base(crdFilePath)
+	if !app.LicensingEnabled() && slices.Contains(licensingCRDs, name) {
+		return false
+	}
+	return !strings.HasPrefix(name, "doc-")
+}
+
 // EnsureCRDs installs or update primary CRDs for deckhouse-controller
 func EnsureCRDs(ctx context.Context, client kubeClient) error {
 	crds, err := filepath.Glob(app.PathDeckhouseCRDs)
@@ -51,13 +66,15 @@ func EnsureCRDs(ctx context.Context, client kubeClient) error {
 		return fmt.Errorf("glob %q: %w", app.PathDeckhouseCRDs, err)
 	}
 
+	// The first thing deckhouse-controller does on start, so licensing is settled
+	// here once for the CRDs below and for the licensing controller registered later.
+	app.ResolveLicensing(ctx, client.Dynamic())
+
 	inst := crdinstaller.NewCRDsInstaller(
 		client.Dynamic(),
 		crds,
 		crdinstaller.WithExtraLabels(defaultLabels),
-		crdinstaller.WithFileFilter(func(crdFilePath string) bool {
-			return !strings.HasPrefix(filepath.Base(crdFilePath), "doc-")
-		}),
+		crdinstaller.WithFileFilter(installCRDFile),
 		crdinstaller.WithMutateFunc(func(crd *unstructured.Unstructured) error {
 			if crd.GetName() != "modules.deckhouse.io" || !app.ModuleV2Enabled() {
 				return nil

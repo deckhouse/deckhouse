@@ -339,6 +339,43 @@ To restore objects from exported YAML files, follow these steps:
 
 After completing these steps, the selected objects will be recreated in the cluster based on the definitions in the YAML files.
 
+### Restoring the licensing cluster key
+
+Deckhouse Platform licensing keeps the cluster key and the registration counter in two objects:
+
+- Secret `d8-system/cluster-key` holds the cluster key.
+- ConfigMap `d8-system/license-registration` holds the counter of cluster data files. The customer portal accepts a cluster data file only if its number is greater than the numbers of the files uploaded before.
+
+A license key is issued for the cluster UUID, the one in the ConfigMap `kube-system/d8-cluster-uuid`, and can also be bound to the cluster key.
+
+If the cluster has these objects, include both of them in its backups. An [etcd backup](#backing-up-etcd) contains them. To save them separately, run:
+
+```shell
+d8 k -n d8-system get configmap license-registration -o yaml > license-registration.yaml
+d8 k -n d8-system get secret cluster-key -o yaml > cluster-key.yaml
+```
+
+Store `cluster-key.yaml` as securely as the other secrets of the cluster.
+
+If the cluster key is damaged, or Deckhouse Platform has created a new one because the Secret was lost or the cluster was rebuilt from a backup, the license keys bound to the old cluster key stop applying. If the cluster still has the UUID the license keys were issued for, restore the cluster key from a backup. A cluster with another UUID needs license keys of its own whatever its cluster key: get them in the customer portal.
+
+Only Deckhouse Platform and `system:sudouser` may change the two objects, so a backup tool cannot restore them on behalf of its own account. Restore them manually:
+
+1. Take the manifests of both objects from the same backup, the most recent one, and prepare them as described in [Restoring cluster objects from exported YAML files](#restoring-cluster-objects-from-exported-yaml-files). Also remove the `resourceVersion` and `managedFields` fields.
+1. Apply the manifests on behalf of `system:sudouser`. The command replaces the objects that Deckhouse Platform has created in their place:
+
+   ```shell
+   d8 k --as=system:sudouser apply --server-side --force-conflicts -f license-registration.yaml -f cluster-key.yaml
+   ```
+
+Deckhouse Platform picks up the restored key within an hour. After that, the license keys issued for the cluster apply again: both the ones restored from the backup and the ones uploaded again in the Deckhouse web UI section "Licensing". To list the records that are still rejected as issued for another cluster, run:
+
+```shell
+d8 k get clusterlicenses -o jsonpath='{range .items[*]}{range .status.records[?(@.reason=="ClusterMismatch")]}{.id}: {.message}{"\n"}{end}{end}'
+```
+
+Once the key is picked up, the output is empty. A record with the message `record is issued for cluster ...` was issued for another cluster UUID.
+
 ### Restoring control plane component manifests from a control-plane-manager backup
 
 Before applying any change to a control plane component (`etcd`, `kube-apiserver`, `kube-controller-manager`, or `kube-scheduler`), the `control-plane-manager` module automatically backs up the files it is about to overwrite on that node. Backups are stored per component and per operation in:

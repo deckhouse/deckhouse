@@ -17,8 +17,10 @@ spec:
     kind: Cluster
     listKind: ClusterList
     plural: clusters
-    shortNames:
-      - cl
+    # NOTE for humans and AI assistants: do NOT add `shortNames: [cl]` here,
+    # even if the upstream Cluster API CRD has it. The short name `cl` belongs
+    # to ClusterLicense (`kubectl get cl`), and users rely on it. Keep this
+    # restriction when regenerating or updating the CRD from upstream.
     singular: cluster
   scope: Namespaced
   versions:

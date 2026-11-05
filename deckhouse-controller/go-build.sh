@@ -24,6 +24,14 @@ addonOpVer=$(go list -m all | grep addon-operator | cut -d' ' -f 2-)
 nelmVer=$(go list -m all | grep nelm | cut -d' ' -f 2-)
 eeEditions="$EE_EDITIONS"
 allEditionsInOrder="$ALL_EDITIONS_IN_ORDER"
+# Per-edition build tags from editions.yaml (goBuildTags); none means licensing is on.
+goBuildTags="$GO_BUILD_TAGS"
+# Development builds add the licensing_testkey tag. The versions come from
+# .werf/werf-deckhouse-controller.yaml: an MR build is X.Y.Z-prN+hash, a main build
+# X.Y.Z-main+hash, a local build "dev". A release (vX.Y.Z) never gets the tag.
+case "$deckhouseVer" in
+  *-pr[0-9]*+*|*-main+*|dev) goBuildTags="${goBuildTags:+${goBuildTags},}licensing_testkey" ;;
+esac
 
 # Validate required variables
 if [ -z "${defaultKubernetesVer}" ]; then
@@ -57,6 +65,7 @@ CGO_ENABLED=0 \
 GOOS=linux \
 GOARCH=amd64 \
     go build \
+        -tags="${goBuildTags}" \
         -ldflags="${LDFLAGS}" \
         -o ./deckhouse-controller \
         ./cmd/deckhouse-controller

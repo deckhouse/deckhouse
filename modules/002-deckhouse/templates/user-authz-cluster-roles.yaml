@@ -57,6 +57,7 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  - clusterlicenses
   - deckhousereleases
   - moduleconfigs
   - moduledocumentations
@@ -83,6 +84,15 @@ rules:
   - deckhouse.io
   resources:
   - modulesettingsdefinitions
+  verbs:
+  - get
+  - list
+  - watch
+# Only Deckhouse writes EffectiveLicense (licensing.deckhouse.io in validation.yaml).
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - effectivelicenses
   verbs:
   - get
   - list

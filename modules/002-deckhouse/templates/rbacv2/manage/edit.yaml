@@ -20,6 +20,7 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  - clusterlicenses
   - deckhousereleases
   - moduleconfigs
   - moduledocumentations

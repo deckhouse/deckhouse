@@ -46,7 +46,10 @@ func (d *DiffInfo) Dump() string {
 type DiffFileInfo struct {
 	NewFileName string
 	OldFileName string
-	Lines       []string
+	// HeaderFileName is the b/ path of the "diff --git" line. Unlike NewFileName it
+	// is set when the diff carries no ---/+++ lines: a pure rename or a mode change.
+	HeaderFileName string
+	Lines          []string
 }
 
 func (d *DiffFileInfo) IsAdded() bool {
@@ -95,7 +98,7 @@ func ParseDiffOutput(r io.Reader) (*DiffInfo, error) {
 	for scanner.Scan() {
 		text := scanner.Text()
 
-		if diffStartRe.MatchString(text) {
+		if header := diffStartRe.FindStringSubmatch(text); header != nil {
 			if firstLine {
 				firstLine = false
 			} else {
@@ -103,6 +106,7 @@ func ParseDiffOutput(r io.Reader) (*DiffInfo, error) {
 				res.Files = append(res.Files, tmp)
 				tmp = NewDiffFileInfo()
 			}
+			tmp.HeaderFileName = header[2]
 			metadataBlock = true
 			continue
 		}

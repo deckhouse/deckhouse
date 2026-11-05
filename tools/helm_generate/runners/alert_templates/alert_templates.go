@@ -59,6 +59,14 @@ const (
 
 var deckhouseRoot = ""
 
+// editionBySourceFile overrides the module edition for a rules file whose
+// alerts exist in fewer editions than its module: licensing runs from BE up,
+// while its rules live in the CE module 002-deckhouse. A key is the sourceFile
+// of the generated docs/documentation/_data/deckhouse-alerts.yml.
+var editionBySourceFile = map[string]edition{
+	"modules/002-deckhouse/monitoring/prometheus-rules/licensing.yaml": be,
+}
+
 type edition string
 
 type module struct {
@@ -175,6 +183,10 @@ func run() error {
 }
 
 func getAlertsFromTemplate(templateContent []byte, moduleName, moduleUrlName, edition, sourceFile string) (alerts []moduleAlert, err error) {
+	if override, ok := editionBySourceFile[filepath.ToSlash(sourceFile)]; ok {
+		edition = string(override)
+	}
+
 	var values []map[string]interface{}
 
 	err = yaml.Unmarshal(templateContent, &values)

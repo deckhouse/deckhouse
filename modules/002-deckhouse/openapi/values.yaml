@@ -18,6 +18,12 @@ properties:
       chrootMode:
         type: boolean
         default: false
+      licensingEnabled:
+        type: boolean
+        default: false
+        description: |
+          Whether this deckhouse runs licensing, as settled at its start: always in the paid editions,
+          never in CE, in FE only on request. Set by hooks/set_licensing_enabled.go.
       reservedPublicHosts:
         type: object
         default: {}

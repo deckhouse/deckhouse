@@ -3238,6 +3238,171 @@ alerts:
         Kubernetes version {{ $labels.k8s_version }} is deprecated.
       severity: "7"
       markupFormat: markdown
+    - name: D8LicenseClusterKeyInvalid
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/licensing.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: be
+      description: |
+        The Secret `d8-system/cluster-key` does not hold a valid cluster key. Deckhouse Platform keeps computing
+        the license state, but it cannot sign the cluster data file for the customer portal, and license
+        records bound to the cluster key are not accepted.
+
+        Deckhouse Platform does not replace a damaged key on its own: a new key is a new cluster identity, and the
+        license keys issued for the old one may stop applying. Apart from Deckhouse Platform, only `system:sudouser`
+        may change the Secret.
+
+        If a backup of the Secret is available, restore it as described in the [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#restoring-the-licensing-cluster-key).
+        Otherwise delete the Secret, and Deckhouse Platform creates a new cluster key:
+
+        ```bash
+        d8 k --as=system:sudouser -n d8-system delete secret cluster-key
+        ```
+
+        After a new key is created:
+
+        1. Download the cluster data in the Deckhouse web UI section "Licensing".
+        2. Upload the file to the customer portal (https://lk.deckhouse.ru) and issue a new key there.
+        3. Upload the key in the same Deckhouse web UI section.
+      summary: |
+        The cluster licensing key is damaged.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8LicenseComplianceGrace
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/licensing.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: be
+      description: |
+        The license keys of the cluster have expired, and the grace period is running.
+        When it ends, the license state becomes `Violation`.
+
+        To check the number of remaining grace days in the period, run the following command:
+
+        ```bash
+        d8 k get effectivelicense deckhouse-platform -o jsonpath='{.status.key.graceDays}{"\n"}'
+        ```
+
+        To renew the license:
+
+        1. Download the cluster data in the Deckhouse web UI section "Licensing".
+        2. Upload the file to the customer portal (https://lk.deckhouse.ru) and issue a new key there.
+        3. Upload the key in the same Deckhouse web UI section.
+      summary: |
+        The cluster license is in the grace period.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8LicenseComplianceViolation
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/licensing.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: be
+      description: |
+        The cluster license has been violated: the license keys expired, and the grace period ended (if the key had
+        one).
+
+        Uncovered nodes are reported by the `D8LicenseUnlicensedNodes` alert.
+
+        Deckhouse Platform and the workloads keep running.
+
+        To restore the license, get a new license key:
+
+        1. Download the cluster data in the Deckhouse web UI section "Licensing".
+        2. Upload the file to the customer portal (https://lk.deckhouse.ru) and issue a new key there.
+        3. Upload the key in the same Deckhouse web UI section.
+      summary: |
+        The cluster license is violated.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8LicenseKeyExpiresSoon
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/licensing.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: be
+      description: |
+        The license key of the cluster expires within 7 days.
+
+        To renew the license:
+
+        1. Download the cluster data in the Deckhouse web UI section "Licensing".
+        2. Upload the file to the customer portal (https://lk.deckhouse.ru) and issue a new key there.
+        3. Upload the key in the same Deckhouse web UI section.
+
+        To check the expiry date of a key, run the following command:
+
+        ```bash
+        d8 k get effectivelicense deckhouse-platform -o jsonpath='{.status.key.validUntil}{"\n"}'
+        ```
+      summary: |
+        The cluster license expires soon.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8LicenseRejectedRecords
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/licensing.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: be
+      description: |
+        A record of an installed license key, or a whole key, was rejected. It grants nothing until it
+        is fixed. Possible causes:
+
+        - The key has been damaged, it is not a Deckhouse Platform license key or was not signed by Deckhouse Platform.
+        - The key requires a newer Deckhouse Platform version.
+        - The key was issued for another cluster.
+        - The same record has already been installed with another key.
+        - The record does not match the key format.
+
+        Replaced, expired and future records, and records of a type this Deckhouse Platform version does not
+        know, are counted separately and do not fire the alert.
+
+        The Deckhouse web UI section "Licensing" shows the cause next to each key in the "License keys" table.
+        To obtain the cause via the command line, run the following command:
+
+        ```bash
+        d8 k get clusterlicenses -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{range .status.records[?(@.reason)]}  {.id}: {.reason} {.message}{"\n"}{end}{end}'
+        ```
+
+        To replace the key, issue a new one in the customer portal (https://lk.deckhouse.ru).
+      summary: |
+        There are rejected license records or keys.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8LicenseUnlicensedNodes
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/licensing.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: be
+      description: |
+        The cluster has nodes that the installed license keys do not cover, and the license state is
+        `Violation`.
+
+        The state changes only after nodes have stayed uncovered for an hour without a break. During
+        a node replacement the new node joins before the old one leaves, and for that short time one
+        node is uncovered. The delay keeps such a replacement silent.
+
+        Removing the extra nodes ends the violation at once. If nodes go over the limit again within
+        24 hours after that, the violation ends only after every node has stayed covered for 8 hours,
+        and after 24 hours for every further repeat. While every node is covered and a repeat still goes
+        on, `status.overLimitEndsAt` names the moment it ends.
+
+        To identify the moment the over-limit episode began:
+
+        ```bash
+        d8 k get effectivelicense deckhouse-platform -o jsonpath='{.status.overLimitSince}{"\n"}'
+        ```
+
+        The Deckhouse web UI section "Licensing" lists the uncovered nodes in the "License required" group
+        and shows what to add to the license.
+
+        To cover the nodes, get a license key for the current cluster size:
+
+        1. Download the cluster data in the Deckhouse web UI section "Licensing".
+        2. Upload the file to the customer portal (https://lk.deckhouse.ru) and issue a new key there.
+        3. Upload the key in the same Deckhouse web UI section.
+      summary: |
+        The cluster license is violated because of unlicensed nodes.
+      severity: "4"
+      markupFormat: markdown
     - name: D8MachineControllerManagerPodIsNotReady
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/machine-controller-manager.tpl
       moduleUrl: 040-node-manager

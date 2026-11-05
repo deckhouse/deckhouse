@@ -25,6 +25,9 @@ This module monitors the Secrets (with the `secret-copier.deckhouse.io/enabled: 
 * When a Secret is deleted, its copies are deleted from all namespaces.
 * The module restores the original content of a copy of a Secret in the application namespace if it gets modified.
 * The module copies all the Secrets (that have the `secret-copier.deckhouse.io/enabled: ""` label) of the `default` namespace to any newly created namespace.
+* The module never creates, updates or deletes the Secret `d8-system/cluster-key`, which holds the cluster key of Deckhouse Platform licensing.
+* The module does not copy Secrets of the `bootstrap.kubernetes.io/token` type. The copies of such Secrets that earlier versions of the module made are deleted.
+* The module updates and deletes only its own copies. If a namespace already has a Secret with the same name that the module did not create, the module leaves it as is and does not copy the Secret into that namespace.
 
 Additionally, it synchronizes the Secrets every night, ensuring they are identical to those in the `default` namespace.
 

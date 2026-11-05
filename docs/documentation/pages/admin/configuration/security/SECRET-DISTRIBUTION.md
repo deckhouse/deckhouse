@@ -20,6 +20,9 @@ when pulling container images or working with Ceph RBD storage.
 - When new namespaces are created,
   all secrets from `default` labeled with `secret-copier.deckhouse.io/enabled: ""` are automatically copied into them.
 - There's a regular nightly synchronization that ensures all secrets remain up to date.
+- Deckhouse Platform never creates, updates or deletes the secret `d8-system/cluster-key` this way: it holds the cluster key of Deckhouse Platform licensing.
+- Secrets of the `bootstrap.kubernetes.io/token` type are not copied. The copies of such secrets that earlier Deckhouse Platform versions made are deleted.
+- Deckhouse Platform updates and deletes only the copies it made. If a namespace already has a secret with the same name that Deckhouse Platform did not create, the secret is left as is and is not copied into that namespace.
 
 ### Incompatibility with multitenancy mode
 
