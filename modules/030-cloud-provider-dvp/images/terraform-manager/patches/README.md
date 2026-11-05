@@ -1,6 +1,8 @@
 # 001-go-mod.patch
 
-Bump go.mod dependencies to fix known CVEs.
+Bump go.mod dependencies to fix known CVEs, including `github.com/getkin/kin-openapi` to v0.149.0 (code adaptation is in `007-kin-openapi-0149.patch`).
+
+go.mod/go.sum are maintained by hand: `go mod tidy` does not work on this tree, so `gen-go-mod-patch.sh` is not used. The patch is the diff of upstream v2.38.0 go.mod/go.sum to the final state and must stay first in order.
 
 # 002-add-config-data-base64.patch
 Add argument config_data_base64 to the provider configuration
@@ -264,6 +266,13 @@ Default TTL 10 min — long enough to span base-infra + master pipelines, short 
 Replaces the monolithic `/openapi/v2` fetch with lazy per-group `/openapi/v3/apis/<group>/<version>` requests (`manifest/openapi/multi_v3.go` + `manifest/provider/clients.go`). A typical bootstrap touches only a few groups, dropping schema traffic from ~10 MB to <1 MB. Compiled `tftypes.Type`s are kept in a process-wide `globalTypeCache` and mirrored to disk under `/tmp/dhctl/openapi-tftype-cache/`, so repeat lookups for the same GVK are microseconds. When v3 is active `TFTypeFromOpenAPI` also skips the cluster-wide `fetchCRDs()` list (~16 s on populated clusters) and only falls back to it for legacy CRDs without a structural schema. v3 is now the default; opt out via `KUBE_PROVIDER_OPENAPI=v2` (k8s < 1.27); `KUBE_PROVIDER_SKIP_OPENAPI=1` remains as an emergency stub-foundry bypass.
 
 `main.go` adds `-reattach-file=PATH`: the provider runs in `tf5server.WithDebug` mode and atomically writes the `TF_REATTACH_PROVIDERS` JSON (under both `registry.terraform.io/...` and `registry.opentofu.org/...` keys) so dhctl can spawn it once per bootstrap and reuse the same warm gRPC connection across every `tofu init/plan/show/apply` instead of cold-spawning 5-6 fresh provider processes per pipeline. Measured effect on DKP-on-DVP bootstrap: base-infra plan 12.9s → 5.8s, master plan 12.2s → 3.5s, total cloud infrastructure 161s → 85s (-47%).
+
+# 007-kin-openapi-0149.patch
+Adapts `manifest/openapi` to `kin-openapi` v0.149.0 (CVE fixes, see 001). API changes handled: `Schema.Type` is a `*Types` list, `AdditionalProperties` is a struct (`Has`/`Schema`), `Extensions` hold decoded values instead of `json.RawMessage` (`x-kubernetes-preserve-unknown-fields`, `x-kubernetes-int-or-string`, `x-kubernetes-group-version-kind`), `openapi2.T.Definitions` uses a distinct schema type (replaced by a local `v2Doc`), `openapi3.T.Components` is a pointer (`loadV3Doc` normalizes nil).
+
+Tests: `manifest/openapi/kin_compat_test.go` and `testdata/gvk-types.golden` (types and hints for all GVKs of `k8s-swagger.json`, generated on kin-openapi v0.111.0 with the unmodified code, rewrite with `UPDATE_GOLDEN=1`). werf removes only `manifest/test/`, so these tests are not run during the image build.
+
+Must be applied after 006 (creates `multi_v3.go`) and before 099.
 
 # 099-node-taint-resource-test-fix.patch
 This patch uses for improve developer experience and not affect provider logic. 
