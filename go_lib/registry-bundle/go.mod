@@ -23,7 +23,7 @@ require (
 	github.com/dsnet/compress v0.0.2-0.20230904184137-39efe44ab707 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.18.5 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/mikelolasagasti/xz v1.0.1 // indirect
 	github.com/minio/minlz v1.1.0 // indirect
@@ -35,7 +35,7 @@ require (
 	github.com/ulikunitz/xz v0.5.15 // indirect
 	github.com/vbatts/tar-split v0.11.6 // indirect
 	go4.org v0.0.0-20260112195520-a5071408f32f // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

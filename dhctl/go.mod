@@ -26,7 +26,7 @@ require (
 	github.com/deckhouse/module-sdk v0.12.2
 	github.com/flant/kube-client v1.6.0
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/go-jose/go-jose/v4 v4.1.4
+	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/go-openapi/spec v0.22.9
 	github.com/go-openapi/strfmt v0.27.0
 	github.com/go-openapi/validate v0.26.1
@@ -62,10 +62,10 @@ require (
 	go.opentelemetry.io/otel/sdk/log v0.22.0
 	go.opentelemetry.io/otel/sdk/metric v1.46.0
 	go.opentelemetry.io/otel/trace v1.46.0
-	golang.org/x/crypto v0.56.0
-	golang.org/x/net v0.58.0
-	golang.org/x/sync v0.22.0
-	golang.org/x/term v0.45.0
+	golang.org/x/crypto v0.58.0
+	golang.org/x/net v0.62.0
+	golang.org/x/sync v0.24.0
+	golang.org/x/term v0.47.0
 	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v2 v2.4.0
@@ -165,7 +165,7 @@ require (
 	github.com/jellydator/ttlcache/v3 v3.4.0 // indirect
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.18.5 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -231,8 +231,8 @@ require (
 	go4.org v0.0.0-20260112195520-a5071408f32f // indirect
 	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260819154853-08b0e4226688 // indirect

@@ -1,14 +1,12 @@
 module github.com/deckhouse/deckhouse/go_lib/registry
 
-go 1.24.0
-
-toolchain go1.24.2
+go 1.26.0
 
 require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/crypto v0.36.0
+	golang.org/x/crypto v0.58.0
 	gotest.tools/v3 v3.0.3
 )
 
@@ -30,10 +28,12 @@ require (
 	github.com/weppos/publicsuffix-go v0.30.0 // indirect
 	github.com/zmap/zcrypto v0.0.0-20230310154051-c8b263fd8300 // indirect
 	github.com/zmap/zlint/v3 v3.5.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 )
+
+godebug default=go1.24
