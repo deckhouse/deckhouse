@@ -1,0 +1,76 @@
+# Test identities, used through impersonation (Impersonate-User / --as):
+#   scope-toy-ns-reader       get/list/watch gizmos in scope-toy-a only (Role)
+#   scope-toy-cluster-reader  get/list/watch gizmos everywhere (ClusterRole)
+#   scope-toy-watcher         like ns-reader; the e2e revokes its binding
+#   scope-toy-denied          no access at all (nothing bound)
+#
+# The test namespaces are projects of multitenancy-manager, which lets a RoleBinding
+# there reference only ClusterRoles granted to the project. The namespace readers
+# therefore use a Role of their own namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: scope-toy:gizmo-reader
+rules:
+  - apiGroups: ["scopetoy.deckhouse.io"]
+    resources: ["gizmos"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: scope-toy:gizmo-reader
+  namespace: scope-toy-a
+rules:
+  - apiGroups: ["scopetoy.deckhouse.io"]
+    resources: ["gizmos"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: scope-toy:ns-reader
+  namespace: scope-toy-a
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: scope-toy:gizmo-reader
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: scope-toy-ns-reader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: scope-toy:watcher
+  namespace: scope-toy-a
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: scope-toy:gizmo-reader
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: scope-toy-watcher
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: scope-toy:cluster-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: scope-toy:gizmo-reader
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: scope-toy-cluster-reader
+---
+# A ServiceAccount without any gizmo access, for direct calls to the Service
+# with a bearer token (spoofing test).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: scope-toy-probe
+  namespace: scope-toy

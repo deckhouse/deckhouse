@@ -1,0 +1,20 @@
+# The toy server namespace and three test namespaces the gizmos are seeded in.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: scope-toy
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: scope-toy-a
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: scope-toy-b
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: scope-toy-c

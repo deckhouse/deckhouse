@@ -72,7 +72,7 @@ d8 k get pods -A --scope=accessible -w
 
 Details:
 
-- Using `--scope` without the `-A` flag is rejected with an error because filtering a single namespace's listing is meaningless.
+- Deckhouse CLI rejects `--scope` without the `-A` flag and together with the `-n` (`--namespace`) flag: in a single namespace, the flag could only narrow that namespace's listing, usually to an empty one, instead of returning the `403 Forbidden` error. The [HTTP API](#using-from-your-own-code-http-api) accepts the headers for a single namespace as well.
 - If the `d8 k get <resource> -A` command without `--scope` fails with `403 Forbidden`, [Deckhouse CLI](../../../../glossary.html#deckhouse-cli) suggests suitable `--scope` variants.
 - Shell completion works for the `--scope` flag values, including the names of
   existing projects (`--scope=project:<TAB>`).
@@ -169,12 +169,15 @@ or any other client, set the headers yourself.
 | `X-Deckhouse-Scope` | `accessible` \| `projects` \| `system` \| `project` | Always (enables the mechanism) |
 | `X-Deckhouse-Project` | Project name | Only together with `X-Deckhouse-Scope: project` |
 
-The headers only affect read operations (`list`, `get`, `watch`) of a top-level
-namespaced resources without a subresource, on a cluster-scoped URL (a path
-without `namespaces/<name>`, which is produced when the `-A` flag is used).
+The headers only affect read operations (`list`, `get`, `watch`) of top-level
+namespaced resources without a subresource. They apply both on a cluster-scoped URL (a path
+without `namespaces/<name>`, which is produced when the `-A` flag is used) and on the URL of one namespace
+(`namespaces/<name>/...`). On the URL of one namespace, objects are returned only if that namespace is in the
+resulting set of namespaces: while it is outside the set, `list` and `watch` return no objects, and `get` returns `404 Not Found`.
 
-In every other case
-(mutating requests, requests to subresources and cluster-scoped resources) headers are ignored.
+Mutating requests and requests to subresources ignore the headers, whatever their value.
+For reads of cluster-scoped resources, a valid header has no effect, while an invalid value
+is rejected with the `400 Bad Request` error, as for any other read.
 
 Example of listing the pods available to a service account:
 
@@ -249,7 +252,32 @@ When using client-go, add the headers via `rest.Config.WrapTransport`.
    If the `multitenancy-manager` module is disabled while a watch with the `projects` or `project` scope is open, the stream sends a `400 Bad Request` error and closes at once.
    If `permission-browser` answers that the user may now perform the request in the whole cluster, the stream sends `410 Gone` and closes, and the client lists again.
 
-The mechanism supports all built-in namespaced Kubernetes resources and namespaced resources defined via CRD.
+The mechanism supports all built-in namespaced Kubernetes resources and namespaced resources defined via CRD. Resources of aggregated APIs take part only when their `APIService` opts in, see below.
+
+## Aggregated APIs
+
+A resource served by an aggregated API server (an `APIService` with `spec.service`) takes part in the mechanism only when its `APIService` lists it in the `scope.deckhouse.io/resources` annotation, a comma-separated list of resource names:
+
+```yaml
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1.example.deckhouse.io
+  annotations:
+    scope.deckhouse.io/resources: widgets,gadgets
+```
+
+Without the annotation a read with a scope that RBAC denied gets `403 Forbidden`, as before. Setting the annotation is a cluster administrator decision: the aggregated API server then receives scoped reads and must filter its answers itself.
+
+How a scoped read of an opted-in resource works:
+
+- kube-apiserver computes the resulting set of namespaces as for a built-in resource and sends it to the aggregated API server in the `X-Deckhouse-Scope-Namespaces` header, with `X-Deckhouse-Scope-Mode: filtered` (RBAC denied the read) or `narrowed` (RBAC allowed it, the set only narrows the answer). Copies of these headers sent by the client are removed. The aggregated API server must trust them only from a request authenticated with the front proxy client certificate of kube-apiserver.
+- `get` of an object in a namespace outside the set is answered by kube-apiserver with `404 Not Found`, without a request to the aggregated API server.
+- A set that does not fit the request header limit of the aggregated API server (1 MiB) is answered with `400 Bad Request`; use a narrower scope.
+- Local `APIService` objects (built-in groups and CRDs) and the `authorization.deckhouse.io` API ignore the annotation.
+- `permission-browser` follows the annotation through a watch on `APIService` objects, so adding or removing it takes effect within seconds.
+
+A watch of an opted-in resource gets the set once, when it opens. kube-apiserver caps its `timeoutSeconds` at 5 minutes, recomputes the set every second while the stream is open, and ends the stream when the set changes, when the annotation is removed, or when the set cannot be recomputed for 60 seconds. It does not synthesize `ADDED` and `DELETED` events as for a built-in resource. Over HTTP, a JSON or protobuf stream ends with a `410 Gone` error event, so a client-go informer lists again and gets objects of the new set. A stream in another encoding (for example, CBOR), a compressed stream, a stream with an event larger than 16 MiB, or one kube-apiserver cannot split into events is closed without that event. A WebSocket watch is closed without that event: a client that watches over WebSocket must list again after the connection closes.
 
 ## Security model
 
@@ -317,10 +345,13 @@ kube-apiserver exports the following metrics of the mechanism:
 
 | Metric | Meaning |
 |---|---|
-| `apiserver_scopefilter_allowed_set_failures_total` | Requests answered with an error because the access boundary could not be computed, by the `operation` label (`list`, `get`, `watch`) and the `reason` label: `unavailable` (`permission-browser` cannot answer now, the request got `503 Service Unavailable`) or `denied` (any other failure, the request got `403 Forbidden`) |
+| `apiserver_scopefilter_allowed_set_failures_total` | Requests answered with an error because the access boundary could not be computed, by the `operation` label (`list`, `get`, `watch`) and the `reason` label: `unavailable` (`permission-browser` cannot answer now, the request got `503 Service Unavailable`), `no_resolvers` (kube-apiserver started without the mechanism wired for aggregated APIs, the request got `403 Forbidden`) or `denied` (any other failure, the request got `403 Forbidden`) |
 | `apiserver_scopefilter_cluster_disagreements_total` | Requests kube-apiserver denied while `permission-browser` allowed them in the whole cluster, answered with `403 Forbidden` |
 | `apiserver_scopefilter_watch_refresh_failures_total` | Failed refreshes of the namespace set of an open watch, timeouts included |
 | `apiserver_scopefilter_watch_closed_total` | Watches closed by the mechanism, by the `reason` label: `refresh_failures` (the set could not be refreshed for 60 seconds), `overflow` (the client did not read the events in time), `multitenancy_disabled` (the `projects` and `project` scopes are no longer served) or `access_changed` (the user may now perform the request in the whole cluster) |
+| `apiserver_scopefilter_proxied_namespaces` | Size of the namespace set sent to an aggregated API server with a scoped read |
+| `apiserver_scopefilter_proxied_watch_closed_total` | Scoped watches of an aggregated API ended so that the client reconnects with a new set, by the `reason` label: `set_changed` (the set changed or the read is no longer filtered), `opt_in_withdrawn` (the `APIService` was deleted or no longer lists the resource) or `refresh_failed` (the set could not be recomputed for 60 seconds) |
+| `apiserver_scopefilter_proxied_header_limit_rejections_total` | Scoped reads of an aggregated API answered with `400 Bad Request` because the set does not fit the header limit |
 
 ## Components involved
 

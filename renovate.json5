@@ -24,6 +24,11 @@
       "enabled": false
     },
     {
+      "description": "Skip updates of the toy extension of the scoped reads stand test: it pins the Kubernetes version of the stand",
+      "matchFileNames": ["modules/140-user-authz/docs/internal/scope-aggregated-api-e2e/**"],
+      "enabled": false
+    },
+    {
       "description": "Group 000-common dependency updates, with the images that left it for images/<scope>",
       "matchFileNames": ["**/modules/000-common/**", "images/**", "ee/images/**"],
       "groupName": "000-common dependencies",

@@ -1,0 +1,115 @@
+# In-cluster build variant: no image registry needed.
+# The sources (this directory and pkg/api-extension-sdk, which the toy uses through a
+# replace directive) are shipped in the ConfigMap scope-toy-src (key src.tgz),
+# created from the repository root by
+#   tar --exclude=bin -czf /tmp/scope-toy-src.tgz pkg/api-extension-sdk modules/140-user-authz/docs/internal/scope-aggregated-api-e2e &&
+#   d8 k -n scope-toy create configmap scope-toy-src --from-file=src.tgz=/tmp/scope-toy-src.tgz
+# An init container builds the binary with golang:1.26 into an emptyDir; the main
+# container runs it from the same image.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scope-toy
+  namespace: scope-toy
+  labels:
+    app: scope-toy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scope-toy
+  template:
+    metadata:
+      labels:
+        app: scope-toy
+    spec:
+      serviceAccountName: scope-toy
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: build
+          image: golang:1.26@sha256:670bb5aa5349ae03b8516764718486f4f16399134bdc9acd0c46a23f043ab05c
+          command:
+            - sh
+            - -ec
+            - |
+              mkdir -p /work/src /work/bin
+              tar -xzf /src/src.tgz -C /work/src
+              cd /work/src/modules/140-user-authz/docs/internal/scope-aggregated-api-e2e
+              CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /work/bin/toy-apiserver ./cmd/toy-apiserver
+          env:
+            - name: HOME
+              value: /work
+            - name: GOCACHE
+              value: /work/cache
+            - name: GOMODCACHE
+              value: /work/mod
+            - name: GOFLAGS
+              value: -mod=mod
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: src
+              mountPath: /src
+            - name: work
+              mountPath: /work
+      containers:
+        - name: toy-apiserver
+          image: golang:1.26@sha256:670bb5aa5349ae03b8516764718486f4f16399134bdc9acd0c46a23f043ab05c
+          command: ["/work/bin/toy-apiserver"]
+          args:
+            - --secure-port=8443
+            - --cert-dir=/tmp/certs
+            - --seed=scope-toy-a,scope-toy-b,scope-toy-c,kube-system,default
+            - --v=2
+          ports:
+            - name: https
+              containerPort: 8443
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: https
+              scheme: HTTPS
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: https
+              scheme: HTTPS
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: work
+              mountPath: /work
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: src
+          configMap:
+            name: scope-toy-src
+        - name: work
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

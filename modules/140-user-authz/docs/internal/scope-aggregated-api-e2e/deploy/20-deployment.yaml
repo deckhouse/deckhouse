@@ -1,0 +1,65 @@
+# Replace ${IMAGE} before applying, e.g.:
+#   IMAGE=<registry>/scope-toy:dev envsubst < deploy/20-deployment.yaml | d8 k apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scope-toy
+  namespace: scope-toy
+  labels:
+    app: scope-toy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scope-toy
+  template:
+    metadata:
+      labels:
+        app: scope-toy
+    spec:
+      serviceAccountName: scope-toy
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: toy-apiserver
+          image: ${IMAGE}
+          imagePullPolicy: Always
+          args:
+            - --secure-port=8443
+            - --cert-dir=/tmp/certs
+            - --seed=scope-toy-a,scope-toy-b,scope-toy-c,kube-system,default
+            - --v=2
+          ports:
+            - name: https
+              containerPort: 8443
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: https
+              scheme: HTTPS
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: https
+              scheme: HTTPS
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

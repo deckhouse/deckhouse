@@ -900,16 +900,16 @@ index e67cedeb15e..d8dc3c3bdf2 100644
  	store := &genericregistry.Store{
  		NewFunc:                   func() runtime.Object { return &api.Namespace{} },
  		NewListFunc:               func() runtime.Object { return &api.NamespaceList{} },
-@@ -87,6 +87,9 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
- 	finalizeStore := *store
+@@ -88,6 +88,9 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST, *Finaliz
  	finalizeStore.UpdateStrategy = namespace.FinalizeStrategy
  	finalizeStore.ResetFieldsStrategy = namespace.FinalizeStrategy
-+
+ 
 +	// Deckhouse: the namespace list ACL filter, see storage_scopefilter.go.
 +	store.ScopeFilter = newScopeFilter(store, opts)
- 
++
  	return &REST{store: store, status: &statusStore}, &StatusREST{store: &statusStore}, &FinalizeREST{store: &finalizeStore}, nil
  }
+ 
 diff --git a/pkg/registry/core/namespace/storage/storage_scopefilter.go b/pkg/registry/core/namespace/storage/storage_scopefilter.go
 new file mode 100644
 index 00000000000..104679e4b19
@@ -1070,7 +1070,7 @@ index 9d82ca85633..5f9d7425e29 100644
  		return genericapiserver.APIGroupInfo{}, err
  	}
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
-index e27495de54e..82024f68ef4 100644
+index e27495de54e..17017752a17 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/apiserver.go
 @@ -203,6 +203,10 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
@@ -1085,7 +1085,7 @@ index e27495de54e..82024f68ef4 100644
  	s.GenericAPIServer.Handler.NonGoRestfulMux.HandlePrefix("/apis/", crdHandler)
  	s.GenericAPIServer.RegisterDestroyFunc(crdHandler.destroy)
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
-index c252e7fe75b..1fc4d08d7b0 100644
+index c252e7fe75b..49dff371a12 100644
 --- a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 +++ b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_handler.go
 @@ -74,6 +74,7 @@ import (
@@ -1135,21 +1135,20 @@ index c252e7fe75b..1fc4d08d7b0 100644
  	for _, v := range crd.Spec.Versions {
  		// Do not construct storage if version is neither served nor stored
  		if !v.Storage && !v.Served {
-@@ -886,6 +905,9 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
- 		}
+@@ -887,6 +906,9 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  
  		clusterScoped := crd.Spec.Scope == apiextensionsv1.ClusterScoped
-+
+ 
 +		// Deckhouse: wire the scope filter, see customresource_scopefilter.go.
 +		scopeFilterWired = r.wireScopeFilter(storages[v.Name].CustomResource.Store, resource, clusterScoped) || scopeFilterWired
- 
++
  		// CRDs explicitly do not support protobuf, but some objects returned by the API server do
  		streamingCollections := utilfeature.DefaultFeatureGate.Enabled(features.StreamingCollectionEncodingToJSON)
-@@ -1074,6 +1096,15 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
- 
+ 		negotiatedSerializer := unstructuredNegotiatedSerializer{
+@@ -1075,6 +1097,15 @@ func (r *crdHandler) getOrCreateServingInfoFor(uid types.UID, name string) (*crd
  	storageMap2[crd.UID] = ret
  	r.customStorage.Store(storageMap2)
-+
+ 
 +	// Deckhouse: register in the shared scopefilter registry only now that
 +	// every version's storage was built successfully and the crdInfo is
 +	// cached -- so IsRegistered never says true for a resource that failed
@@ -1158,9 +1157,10 @@ index c252e7fe75b..1fc4d08d7b0 100644
 +	if scopeFilterWired {
 +		scopefilter.Register(schema.GroupResource{Group: crd.Spec.Group, Resource: crd.Status.AcceptedNames.Plural})
 +	}
- 
++
  	return ret, nil
  }
+ 
 diff --git a/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_scopefilter.go b/staging/src/k8s.io/apiextensions-apiserver/pkg/apiserver/customresource_scopefilter.go
 new file mode 100644
 index 00000000000..84ed433c5d2
@@ -1351,7 +1351,7 @@ index 439696d07ab..b9348973d0d 100644
  		authorized, reason, err := a.Authorize(ctx, attributes)
  
  		authorizationFinish := time.Now()
-@@ -81,12 +87,20 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
+@@ -81,6 +87,8 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
  			audit.AddAuditAnnotations(ctx,
  				decisionAnnotationKey, decisionAllow,
  				reasonAnnotationKey, reason)
@@ -1360,18 +1360,19 @@ index 439696d07ab..b9348973d0d 100644
  			handler.ServeHTTP(w, req)
  			return
  		}
- 		if err != nil {
- 			audit.AddAuditAnnotation(ctx, reasonAnnotationKey, reasonError)
- 			responsewriters.InternalError(w, req, err)
-+			return
-+		}
-+
-+		// Deckhouse: serve a filtered read instead of the 403, see authorization_scopefilter.go.
-+		if bypassed, ok := withScopeBypass(req, reason); ok {
-+			handler.ServeHTTP(w, bypassed)
+@@ -90,6 +98,12 @@ func withAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
  			return
  		}
  
++		// Deckhouse: serve a filtered read instead of the 403, see authorization_scopefilter.go.
++		if bypassed, ok := withScopeBypass(req, reason); ok {
++			handler.ServeHTTP(w, bypassed)
++			return
++		}
++
+ 		klog.V(4).InfoS("Forbidden", "URI", req.RequestURI, "reason", reason)
+ 		audit.AddAuditAnnotations(ctx,
+ 			decisionAnnotationKey, decisionForbid,
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_identity_test.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization_identity_test.go
 new file mode 100644
 index 00000000000..62afedbaeb5
@@ -2339,17 +2340,17 @@ index 722a312270a..3b56fb52f55 100644
  	"k8s.io/apiserver/pkg/registry/rest"
  	"k8s.io/apiserver/pkg/storage"
  	storeerr "k8s.io/apiserver/pkg/storage/errors"
-@@ -147,6 +148,10 @@ type Store struct {
- 	// and fields. The SelectionPredicate returned should return true if the
+@@ -148,6 +149,10 @@ type Store struct {
  	// object matches the given field and label selectors.
  	PredicateFunc func(label labels.Selector, field fields.Selector) storage.SelectionPredicate
-+
+ 
 +	// Deckhouse: ScopeFilter, when non-nil, filters List/Get/Watch for the
 +	// scope filter; see store_scopefilter.go.
 +	ScopeFilter *scopefilter.Decorator
- 
++
  	// EnableGarbageCollection affects the handling of Update and Delete
  	// requests. Enabling garbage collection allows finalizers to do work to
+ 	// finalize this object before the store deletes it.
 @@ -366,6 +371,10 @@ func (e *Store) GetCorruptObjDeleter() rest.GracefulDeleter {
  // List returns a list of items matching labels and field according to the
  // store's PredicateFunc.
@@ -5716,10 +5717,10 @@ index 00000000000..c91509735f4
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/integration_test.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/integration_test.go
 new file mode 100644
-index 00000000000..67e83a9ce25
+index 00000000000..efeca929f2b
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/integration_test.go
-@@ -0,0 +1,993 @@
+@@ -0,0 +1,1059 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -6433,6 +6434,72 @@ index 00000000000..67e83a9ce25
 +
 +	if _, err := decorator.List(ctx, nil); !apierrors.IsForbidden(err) {
 +		t.Fatalf("List error = %v, want Forbidden", err)
++	}
++}
++
++// TestIntegration_Floor_DeniedAnswerGrantsNothing: a result that is not
++// allowed grants nothing, whatever namespaces or cluster flag it carries. The
++// permission service never sends such a result, so it is a disagreement, and
++// it is answered as the denial it says it is: no namespaces -- never the
++// namespaces it names, and never every namespace for the cluster flag.
++func TestIntegration_Floor_DeniedAnswerGrantsNothing(t *testing.T) {
++	answers := []struct {
++		name   string
++		result reviewResult
++	}{
++		{name: "namespaces", result: reviewResult{Namespaces: []string{"ns-a"}}},
++		{name: "cluster", result: reviewResult{Cluster: true}},
++		{name: "cluster and namespaces", result: reviewResult{Cluster: true, Namespaces: []string{"ns-a"}}},
++	}
++	for _, answer := range answers {
++		t.Run(answer.name, func(t *testing.T) {
++			store, destroy := newIntegrationStore(t)
++			defer destroy()
++			seedPod(t, store, "ns-a", "pod-a")
++
++			mux := http.NewServeMux()
++			mux.HandleFunc("/apis/authorization.deckhouse.io/v1alpha1/selfscopedaccessreviews", func(w http.ResponseWriter, r *http.Request) {
++				review, err := decodeReview(r)
++				if err != nil {
++					http.Error(w, err.Error(), http.StatusBadRequest)
++					return
++				}
++				review.Status.Results = []reviewResult{answer.result}
++				writeReview(t, w, review)
++			})
++			srv := httptest.NewServer(mux)
++			t.Cleanup(srv.Close)
++			cfg := &restclient.Config{Host: srv.URL}
++			alice := &user.DefaultInfo{Name: "alice"}
++
++			fetcher, err := scopefilter.NewLoopbackAccessibleNamespaceFetcher(cfg)
++			if err != nil {
++				t.Fatalf("NewLoopbackAccessibleNamespaceFetcher: %v", err)
++			}
++			names, err := fetcher.FetchAccessibleNamespaces(context.Background(), alice)
++			if err != nil || len(names) != 0 {
++				t.Fatalf("FetchAccessibleNamespaces = %v, %v; want no namespaces and no error", names, err)
++			}
++
++			floor, err := scopefilter.NewLoopbackRBACFloorResolver(cfg)
++			if err != nil {
++				t.Fatalf("NewLoopbackRBACFloorResolver: %v", err)
++			}
++			set, err := floor.Resolve(context.Background(), alice, schema.GroupVersionResource{Version: "v1", Resource: "pods"}, "", "list")
++			if err != nil || len(set) != 0 {
++				t.Fatalf("Resolve = %v, %v; want no namespaces and no error", set, err)
++			}
++
++			decorator := buildDecorator(t, store, srv)
++			ctx := scopeCtx(t, decorator, scopefilter.Request{Kind: scopefilter.KindAccessible}, true)
++			out, err := decorator.List(ctx, nil)
++			if err != nil {
++				t.Fatalf("List: %v", err)
++			}
++			if got := podNames(t, out); len(got) != 0 {
++				t.Fatalf("got %v, want nothing: the answer denies the action", got)
++			}
++		})
 +	}
 +}
 +
@@ -8057,10 +8124,10 @@ index 00000000000..5ba33bf4f12
 +}
 diff --git a/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/review.go b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/review.go
 new file mode 100644
-index 00000000000..28a031b1286
+index 00000000000..d8f8ea6ab0e
 --- /dev/null
 +++ b/staging/src/k8s.io/apiserver/pkg/registry/generic/scopefilter/review.go
-@@ -0,0 +1,233 @@
+@@ -0,0 +1,242 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -8213,7 +8280,8 @@ index 00000000000..28a031b1286
 +}
 +
 +// namespacesWhere returns the namespaces the caller u may see where item is
-+// allowed, from one review with one request. It returns ErrClusterWideAccess
++// allowed, from one review with one request. A result that is not allowed is
++// an empty list, whatever namespaces it names. It returns ErrClusterWideAccess
 +// when the action is allowed in the whole cluster,
 +// ErrPermissionServiceUnavailable when the service cannot answer for now (a
 +// timeout, 429 or 5xx), and an error for anything else that is not a list of
@@ -8277,10 +8345,18 @@ index 00000000000..28a031b1286
 +	switch {
 +	case result.EvaluationError != "":
 +		return nil, fmt.Errorf("SelfScopedAccessReview for user %q: %s", u.GetName(), result.EvaluationError)
-+	case result.Cluster:
-+		return nil, fmt.Errorf("SelfScopedAccessReview for user %q on %s/%s %s: %w", u.GetName(), item.Resource, item.Subresource, item.Verb, ErrClusterWideAccess)
 +	case result.Reason != "":
 +		return nil, fmt.Errorf("SelfScopedAccessReview for user %q: %s/%s is not filtered: %s", u.GetName(), item.Resource, item.Subresource, result.Reason)
++	case !result.Allowed:
++		// A denied answer grants nothing, whatever else it carries: the
++		// permission service sets allowed whenever the action is allowed in
++		// the whole cluster or in at least one namespace, so namespaces or
++		// cluster next to allowed:false contradict it. This case comes
++		// before the cluster one on purpose: a caller of the namespaces
++		// identity reads ErrClusterWideAccess as every namespace.
++		return []string{}, nil
++	case result.Cluster:
++		return nil, fmt.Errorf("SelfScopedAccessReview for user %q on %s/%s %s: %w", u.GetName(), item.Resource, item.Subresource, item.Verb, ErrClusterWideAccess)
 +	}
 +	return result.Namespaces, nil
 +}

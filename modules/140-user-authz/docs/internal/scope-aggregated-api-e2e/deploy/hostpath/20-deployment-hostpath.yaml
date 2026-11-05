@@ -1,0 +1,67 @@
+# Fallback without an image registry: run the binary built by hack/build.sh
+# from a hostPath on one node. Copy it first:
+#   scp bin/toy-apiserver <node>:/opt/scope-toy/toy-apiserver
+#   ssh <node> chmod 0755 /opt/scope-toy/toy-apiserver
+# Replace ${NODE} with that node's name and ${BASE_IMAGE} with any image the
+# node can already pull or has cached (the binary is static; the image only
+# provides a root filesystem). Apply instead of 20-deployment.yaml.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scope-toy
+  namespace: scope-toy
+  labels:
+    app: scope-toy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: scope-toy
+  template:
+    metadata:
+      labels:
+        app: scope-toy
+    spec:
+      serviceAccountName: scope-toy
+      nodeName: ${NODE}
+      tolerations:
+        - operator: Exists
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+      containers:
+        - name: toy-apiserver
+          image: ${BASE_IMAGE}
+          command: ["/opt/scope-toy/toy-apiserver"]
+          args:
+            - --secure-port=8443
+            - --cert-dir=/tmp/certs
+            - --seed=scope-toy-a,scope-toy-b,scope-toy-c,kube-system,default
+            - --v=2
+          ports:
+            - name: https
+              containerPort: 8443
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: https
+              scheme: HTTPS
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: bin
+              mountPath: /opt/scope-toy
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: bin
+          hostPath:
+            path: /opt/scope-toy
+            type: Directory
+        - name: tmp
+          emptyDir: {}

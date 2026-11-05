@@ -1,0 +1,149 @@
+# Temporary identity for test/e2e.sh. Delete after the run:
+#   d8 k delete -f deploy/50-e2e-runner.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: scope-toy-e2e
+  namespace: scope-toy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: scope-toy:e2e-runner
+rules:
+  # Only the test users of deploy/40-test-users.yaml.
+  - apiGroups: [""]
+    resources: ["users"]
+    resourceNames: ["scope-toy-ns-reader", "scope-toy-cluster-reader", "scope-toy-watcher", "scope-toy-denied"]
+    verbs: ["impersonate"]
+  - apiGroups: ["apiregistration.k8s.io"]
+    resources: ["apiservices"]
+    resourceNames: ["v1.scopetoy.deckhouse.io"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["clusterroles"]
+    resourceNames: ["scope-toy:gizmo-reader"]
+    verbs: ["bind"]
+  # The per-event watch case creates and deletes gizmos as the runner itself.
+  - apiGroups: ["scopetoy.deckhouse.io"]
+    resources: ["gizmos"]
+    verbs: ["create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: scope-toy:e2e-runner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: scope-toy:e2e-runner
+subjects:
+  - kind: ServiceAccount
+    name: scope-toy-e2e
+    namespace: scope-toy
+---
+# The "privileged caller sent directly to the Service" case needs a token that may
+# read gizmos itself; every other case impersonates the test users.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: scope-toy:e2e-runner-gizmo-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: scope-toy:gizmo-reader
+subjects:
+  - kind: ServiceAccount
+    name: scope-toy-e2e
+    namespace: scope-toy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: scope-toy:e2e-runner
+  namespace: scope-toy
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/portforward"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["serviceaccounts/token"]
+    resourceNames: ["scope-toy-probe"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: scope-toy:e2e-runner
+  namespace: scope-toy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: scope-toy:e2e-runner
+subjects:
+  - kind: ServiceAccount
+    name: scope-toy-e2e
+    namespace: scope-toy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: scope-toy:e2e-runner
+  namespace: scope-toy-a
+rules:
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["rolebindings"]
+    verbs: ["get", "create", "delete", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: scope-toy:e2e-runner
+  namespace: scope-toy-a
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: scope-toy:e2e-runner
+subjects:
+  - kind: ServiceAccount
+    name: scope-toy-e2e
+    namespace: scope-toy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: scope-toy:e2e-runner
+  namespace: kube-system
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["extension-apiserver-authentication"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: scope-toy:e2e-runner
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: scope-toy:e2e-runner
+subjects:
+  - kind: ServiceAccount
+    name: scope-toy-e2e
+    namespace: scope-toy

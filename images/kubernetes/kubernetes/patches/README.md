@@ -60,25 +60,37 @@ namespaces` receive an ACL-filtered response for `GET /api/v1/namespaces`,
 `GET /api/v1/namespaces/{name}` and `WATCH /api/v1/namespaces` instead of a
 flat 403. The kube-apiserver authorization filter bypasses the initial 403
 for these three verbs and delegates filtering to the Namespace storage, which
-queries the aggregated extension API `authorization.deckhouse.io/v1alpha1`
-resource `accessiblenamespaces` served by `permission-browser-apiserver`
-(APIService `v1alpha1.authorization.deckhouse.io`) and returns only
-accessible namespaces. `watch` synthesizes `ADDED`/`DELETED` events when the
-user's accessible-namespace set changes mid-watch (polling
-`accessiblenamespaces`, ~1s cadence) -- the canonical OpenShift
-`userProjectWatcher` pattern.
+asks `permission-browser-apiserver` (APIService
+`v1alpha1.authorization.deckhouse.io`) for the access boundary of `list
+namespaces` (see below) and returns only the namespaces in it. permission-browser
+answers that read with the same set its `accessiblenamespaces` resource serves;
+kube-apiserver itself no longer calls `accessiblenamespaces`. `watch`
+synthesizes `ADDED`/`DELETED` events when the user's accessible-namespace set
+changes mid-watch (re-asking, ~1s cadence) -- the canonical OpenShift
+`userProjectWatcher` pattern. `deckhouse.io` `projects` are filtered the same
+way (a project is visible when any of its namespaces is).
 
 **Generic `-A --scope=<kind>` (opt-in, every built-in namespaced resource).**
 The same mechanism generalized to arbitrary namespaced resources, gated by two
 request headers (`X-Deckhouse-Scope`, `X-Deckhouse-Project`) rather than being
 unconditional: absent header, absent bypass, byte-for-byte vanilla behavior.
-`scope=accessible` reproduces the namespaces mechanism's RBAC-floor
-semantics for any resource; `scope=projects|project:<name>` additionally
-classify by the `projects.deckhouse.io/project` namespace label
+When RBAC denied the read, the result is limited to the RBAC floor: the access
+boundary of the request's exact group, resource, subresource and verb.
+`scope=accessible` applies only that floor; `scope=projects|project:<name>`
+additionally classify by the `projects.deckhouse.io/project` namespace label
 (multitenancy-manager's Project CRD), and `scope=system` by a fixed name-based
 allowlist (`default`, `d8-*`, `kube-*`) independent of that label -- both
-resolved via a direct loopback `Namespace LIST` rather than a new
-permission-browser endpoint.
+resolved via a direct loopback `Namespace LIST` rather than a
+permission-browser call.
+
+**Access boundary.** One `SelfScopedAccessReview` through the loopback client,
+impersonating the caller: `scope: accessible` (kube-apiserver intersects the
+classification itself) and a single request with `includeNamespaces: true`. The
+result maps, in order: `evaluationError` or `reason` is an error (403);
+`allowed: false` grants nothing, whatever `namespaces`/`cluster` it carries;
+`cluster: true` on a denied request is a disagreement of the two authorization
+chains and is refused with 403 (a namespace `get`/`watch` is then not
+restricted, the projects listing shows every project); otherwise `namespaces`.
 
 Coverage is wired centrally in `pkg/controlplane/apiserver`'s `InstallAPIs`,
 which walks every built-in API group's storage map and attaches the filter to
@@ -105,18 +117,42 @@ keeps its per-version number (`005` on 1.33/1.34, `007` on 1.35/1.36/1.37)
 since its position in each version's chain differs; the `010` re-roll applies
 per version too.
 
-The filter's `RBACFloor`/`Classify` loopback calls are served through a shared
-TTL cache (default 1s, `SCOPEFILTER_RESOLVE_CACHE_TTL` /
+The filter's loopback calls (the review and the `Namespace LIST`) are served
+through a shared TTL cache (default 1s, `SCOPEFILTER_RESOLVE_CACHE_TTL` /
 `SCOPEFILTER_WATCH_POLL_INTERVAL` to tune) with singleflight de-duplication, so
-many concurrent `--scope` watches collapse to ~one `permission-browser` resolve
-per key per TTL instead of one per watch per poll tick.
+many concurrent `--scope` watches collapse to ~one review per key per TTL
+instead of one per watch per poll tick.
 
 See `k8s.io/apiserver/pkg/registry/generic/scopefilter` (staging) for the
 shared implementation both mechanisms build on.
 
-If `permission-browser-apiserver` is not present/unavailable (APIService is
-not `Available=True` or a request fails), both mechanisms fall back to
-vanilla Kubernetes (403 for users without permissions).
+Without the access boundary a denied read serves no objects (fail closed): a
+review that times out or gets 429 or a 5xx (also when the APIService is not
+`Available=True`) answers 503 with `Retry-After`, any other failure 403. Only
+when the filter was not built (no loopback config, resolvers failed) do the
+reads behave as in vanilla Kubernetes.
+
+### scope-aggregated-api.patch
+
+Extends the generic `-A --scope=<kind>` mechanism of `namespace-list-acl-filtering.patch` to
+resources served by aggregated API servers, which have no storage in kube-apiserver. An `APIService`
+opts resources in with the `scope.deckhouse.io/resources` annotation (comma-separated plural names
+within `spec.group`; refused for `authorization.deckhouse.io` and for local APIServices). For a scoped
+`list/get/watch` of such a resource the authorization filter lets an RBAC-denied read through, and
+kube-aggregator computes the allowed set of namespaces with the same decision as the storage filter
+(classification ∩ RBAC floor from `SelfScopedAccessReview`) and sends it to the extension server in
+the trusted headers `X-Deckhouse-Scope-Mode` (`filtered`/`narrowed`) and
+`X-Deckhouse-Scope-Namespaces`; the extension filters. kube-aggregator strips client copies of these
+headers from every proxied request, answers a denied `get` outside the set with 404 itself, refuses a
+set that does not fit the 1 MiB header limit with 400, and fails closed (403/503) when the set cannot
+be computed. A scoped watch is ended when its set changes or the opt-in is removed; over HTTP it first gets a
+`410 Gone` error event, so the client lists again with the new set.
+Without the annotation, behavior is unchanged.
+
+The patch depends on `namespace-list-acl-filtering.patch` and applies after it. It is carried on
+1.33 (`023`), 1.34 (`024`), 1.35 (`023`), 1.36 (`022`) and 1.37 (`021`). The contract an extension server must implement (trust the headers only on front-proxy
+authenticated requests, and so on), watch semantics, metrics and tests are described in
+[SCOPE_AGGREGATED_API.md](../../../../modules/140-user-authz/docs/internal/SCOPE_AGGREGATED_API.md).
 
 ### kubelet-inappropriate-manifest-name.patch
 
