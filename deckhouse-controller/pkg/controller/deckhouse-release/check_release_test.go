@@ -22,7 +22,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
+	"slices"
 	"sort"
 	"strconv"
 	"testing"
@@ -32,6 +34,8 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/google/go-containerregistry/pkg/v1/static"
+	crtypes "github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/iancoleman/strcase"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -941,8 +945,6 @@ func ManifestStub() (*v1.Manifest, error) {
 }
 
 type fakeLayer struct {
-	v1.Layer
-
 	FilesContent map[string]string // pair: filename - file content
 }
 
@@ -958,8 +960,9 @@ func (fl fakeLayer) Uncompressed() (io.ReadCloser, error) {
 
 	wr := tar.NewWriter(result)
 
-	// create files in a single layer
-	for filename, content := range fl.FilesContent {
+	// create files in a single layer, in the same order every time to keep the digest
+	for _, filename := range slices.Sorted(maps.Keys(fl.FilesContent)) {
+		content := fl.FilesContent[filename]
 		hdr := &tar.Header{
 			Name: filename,
 			Mode: 0600,
@@ -973,8 +976,33 @@ func (fl fakeLayer) Uncompressed() (io.ReadCloser, error) {
 	return io.NopCloser(result), nil
 }
 
+// layer serves the content as an uncompressed layer, so an image of fake layers
+// can be copied like an image from a registry
+func (fl fakeLayer) layer() v1.Layer {
+	rc, _ := fl.Uncompressed()
+	content, _ := io.ReadAll(rc)
+
+	return static.NewLayer(content, crtypes.OCIUncompressedLayer)
+}
+
+func (fl fakeLayer) Digest() (v1.Hash, error) {
+	return fl.layer().Digest()
+}
+
+func (fl fakeLayer) DiffID() (v1.Hash, error) {
+	return fl.layer().DiffID()
+}
+
+func (fl fakeLayer) Compressed() (io.ReadCloser, error) {
+	return fl.layer().Compressed()
+}
+
 func (fl fakeLayer) Size() (int64, error) {
-	return int64(len(fl.FilesContent)), nil
+	return fl.layer().Size()
+}
+
+func (fl fakeLayer) MediaType() (crtypes.MediaType, error) {
+	return fl.layer().MediaType()
 }
 
 func TestSort(t *testing.T) {

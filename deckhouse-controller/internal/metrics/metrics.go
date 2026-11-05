@@ -106,6 +106,12 @@ const (
 	// ApplicationHorizontalPodAutoscalerPinned and ApplicationVerticalPodAutoscalerPinned
 	// alerts fire on it.
 	ApplicationAutoscalerPinned = "deckhouse_application_autoscaler_pinned"
+
+	// ============================================================================
+	// Module Installer Metrics
+	// ============================================================================
+	// Module image downloads interrupted while the erofs image was built from them
+	D8ModuleImageDownloadInterrupted = "d8_module_image_download_interrupted"
 )
 
 // ============================================================================
@@ -129,8 +135,9 @@ const Prefix = "deckhouse_"
 
 // Group templates for dynamic metric names using fmt.Sprintf
 const (
-	ObsoleteConfigMetricGroupTemplate = "obsoleteVersion_%s"
-	ModuleConflictMetricGroupTemplate = "module_%s_at_conflict"
+	ObsoleteConfigMetricGroupTemplate      = "obsoleteVersion_%s"
+	ModuleConflictMetricGroupTemplate      = "module_%s_at_conflict"
+	ModuleImageDownloadMetricGroupTemplate = "module_%s_image_download"
 )
 
 // ModuleReleaseMetricsGroupName returns the unique metrics group name for a module release.
@@ -175,6 +182,10 @@ func RegisterDeckhouseControllerMetrics(metricStorage metricsstorage.Storage) er
 
 	if err := registerApplicationMetrics(metricStorage); err != nil {
 		return fmt.Errorf("register application metrics: %w", err)
+	}
+
+	if err := registerModuleInstallerMetrics(metricStorage); err != nil {
+		return fmt.Errorf("register module installer metrics: %w", err)
 	}
 
 	return nil
@@ -460,6 +471,20 @@ func registerApplicationMetrics(metricStorage metricsstorage.Storage) error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed to register %s: %w", ApplicationAutoscalerPinned, err)
+	}
+
+	return nil
+}
+
+// registerModuleInstallerMetrics registers metrics for putting module images on the filesystem.
+func registerModuleInstallerMetrics(metricStorage metricsstorage.Storage) error {
+	_, err := metricStorage.RegisterGauge(
+		D8ModuleImageDownloadInterrupted,
+		[]string{LabelModule, LabelVersion},
+		options.WithHelp("Gauge indicating modules whose image download was interrupted while the erofs image was built (1.0 = interrupted)"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to register %s: %w", D8ModuleImageDownloadInterrupted, err)
 	}
 
 	return nil

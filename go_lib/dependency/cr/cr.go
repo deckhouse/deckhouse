@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -34,6 +35,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
+	crmutate "github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	ocitools "github.com/sylabs/oci-tools/pkg/mutate"
 	"github.com/tidwall/gjson"
@@ -47,6 +51,9 @@ const (
 
 	tracerName = "container-registry-client"
 )
+
+// ErrImageDownload marks a failed download of the image layers by Extract
+var ErrImageDownload = errors.New("download image layers")
 
 type Client interface {
 	Image(ctx context.Context, tag string) (crv1.Image, error)
@@ -417,9 +424,32 @@ func parse(rawURL string) (*url.URL, error) {
 	return result, nil
 }
 
-// Extract flattens the image to a single layer and returns ReadCloser for fetching the content
+// Extract flattens the image to a single layer and returns ReadCloser for fetching the content.
+// The image is copied to a temporary dir first, closing the reader removes the copy.
 func Extract(image crv1.Image) (io.ReadCloser, error) {
-	flattenedImage, err := ocitools.Squash(image)
+	// Squash reads every layer three times: twice to compute the digest and the diff ID of the
+	// flattened layer, and once more for its content. Over a remote image each read is a download,
+	// all of them bound by the single deadline of the registry client, so the content got only what
+	// the first two downloads left of it. The copy makes the registry serve each layer once, and the
+	// content is read from the disk at the pace of its reader.
+	dir, err := os.MkdirTemp("", "extract-image-*")
+	if err != nil {
+		return nil, fmt.Errorf("create image copy dir: %w", err)
+	}
+
+	cleanup := true
+	defer func() {
+		if cleanup {
+			_ = os.RemoveAll(dir)
+		}
+	}()
+
+	local, err := copyImage(image, dir)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrImageDownload, err)
+	}
+
+	flattenedImage, err := ocitools.Squash(local)
 	if err != nil {
 		return nil, fmt.Errorf("flattening image to a single layer: %w", err)
 	}
@@ -438,7 +468,40 @@ func Extract(image crv1.Image) (io.ReadCloser, error) {
 		return nil, fmt.Errorf("uncompress the layer: %w", err)
 	}
 
-	return &completeReader{rc: rc}, nil
+	cleanup = false
+
+	return &completeReader{rc: rc, dir: dir}, nil
+}
+
+// copyImage writes the layers of the image to an OCI layout in dir, as the registry serves them,
+// and returns the image read from the layout. The copy holds the layers alone: Squash needs
+// nothing else from the image.
+func copyImage(image crv1.Image, dir string) (crv1.Image, error) {
+	layers, err := image.Layers()
+	if err != nil {
+		return nil, fmt.Errorf("get layers: %w", err)
+	}
+
+	layersImage, err := crmutate.AppendLayers(empty.Image, layers...)
+	if err != nil {
+		return nil, fmt.Errorf("build image of layers: %w", err)
+	}
+
+	path, err := layout.Write(dir, empty.Index)
+	if err != nil {
+		return nil, fmt.Errorf("create layout: %w", err)
+	}
+
+	if err = path.AppendImage(layersImage); err != nil {
+		return nil, fmt.Errorf("write image: %w", err)
+	}
+
+	digest, err := layersImage.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("get image digest: %w", err)
+	}
+
+	return path.Image(digest)
 }
 
 // completeReader withholds the final byte of a flattened image stream until the
@@ -459,6 +522,8 @@ type completeReader struct {
 	tail    byte  // last byte read from rc, released only on a clean end of stream
 	hasTail bool  // whether tail holds a byte
 	err     error // terminal state of rc, once reached
+
+	dir string // the copy of the image, removed on Close
 }
 
 func (r *completeReader) Read(p []byte) (int, error) {
@@ -511,5 +576,5 @@ func (r *completeReader) Read(p []byte) (int, error) {
 }
 
 func (r *completeReader) Close() error {
-	return r.rc.Close()
+	return errors.Join(r.rc.Close(), os.RemoveAll(r.dir))
 }

@@ -1480,6 +1480,48 @@ alerts:
         The {{ $labels.module }}/{{ $labels.hook }} Deckhouse hook is crashing too frequently.
       severity: "9"
       markupFormat: markdown
+    - name: D8DeckhouseModuleImageDownloadInterrupted
+      sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
+      moduleUrl: 002-deckhouse
+      module: deckhouse
+      edition: ce
+      description: |
+        Deckhouse Platform was downloading the image of the `{{ $labels.module }}` module, version `{{ $labels.version }}`, from the container registry to build its erofs image, and the download was interrupted. The module version isn't put on the node running Deckhouse Platform until a download completes.
+
+        The download is interrupted when it doesn't finish within the registry request timeout, 2 minutes by default, or when the connection to the container registry drops. A slow connection to the container registry is the usual cause.
+
+        To investigate the issue, follow these steps:
+
+        1. Find the reason in the logs. A timeout reads as `context deadline exceeded`, a dropped connection as `unexpected EOF` or `connection reset by peer`:
+
+           ```bash
+           d8 k -n d8-system logs -l app=deckhouse --tail=1000 | grep 'download image layers'
+           ```
+
+        1. Find the ModuleSource the module is downloaded from and the address of its container registry:
+
+           ```bash
+           d8 k get module {{ $labels.module }} -o jsonpath='{.properties.source}'
+           d8 k get modulesource <SOURCE_NAME> -o jsonpath='{.spec.registry.repo}'
+           ```
+
+        1. Check that the image of version `{{ $labels.version }}` is in the container registry:
+
+           ```bash
+           d8 cr ls <REGISTRY_ADDRESS>/{{ $labels.module }}
+           ```
+
+           For a private registry, pass the credentials from the ModuleSource:
+
+           ```bash
+           d8 cr ls -u <USERNAME> -p <PASSWORD> <REGISTRY_ADDRESS>/{{ $labels.module }}
+           ```
+
+        1. Check that the node running Deckhouse Platform reaches the container registry and downloads from it fast enough, for example, through a proxy or a firewall rule that changed.
+      summary: |
+        Download of the {{ $labels.module }} module image was interrupted.
+      severity: "4"
+      markupFormat: markdown
     - name: D8DeckhouseModuleUpdatePolicyNotFound
       sourceFile: modules/002-deckhouse/monitoring/prometheus-rules/deckhouse.yaml
       moduleUrl: 002-deckhouse

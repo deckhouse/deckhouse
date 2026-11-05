@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 type Installer struct {
@@ -43,6 +44,10 @@ type Installer struct {
 
 type installer interface {
 	Restore(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
+	// RestoreFromRegistry downloads the module and activates it. The module on the filesystem
+	// is replaced only by a complete download and is activated when the download fails, the
+	// result reports whether the download completed.
+	RestoreFromRegistry(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (bool, error)
 	Install(ctx context.Context, module, version, tempModulePath string) error
 	Uninstall(ctx context.Context, module string) error
 	// Stage materializes a module on the filesystem from a temp dir without
@@ -54,7 +59,7 @@ type installer interface {
 	StageFromRegistry(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
 }
 
-func New(dc dependency.Container, logger *log.Logger) *Installer {
+func New(dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) *Installer {
 	i := new(Installer)
 
 	i.downloaded = app.DownloadedModulesDir()
@@ -64,7 +69,7 @@ func New(dc dependency.Container, logger *log.Logger) *Installer {
 
 	if verity.IsSupported() {
 		logger.Info("erofs supported, use erofs installer")
-		i.installer = erofs.NewInstaller(i.registry, logger)
+		i.installer = erofs.NewInstaller(i.registry, metricStorage, logger)
 	}
 
 	return i
@@ -187,6 +192,15 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	i.deleteWeightedModuleSymlinks(module)
 
 	return i.installer.Restore(ctx, ms, module, version)
+}
+
+// RestoreFromRegistry downloads the module and activates it. The module on the filesystem
+// is replaced only by a complete download and is activated when the download fails, the
+// result reports whether the download completed.
+func (i *Installer) RestoreFromRegistry(ctx context.Context, ms *v1alpha1.ModuleSource, module, version string) (bool, error) {
+	i.deleteWeightedModuleSymlinks(module)
+
+	return i.installer.RestoreFromRegistry(ctx, ms, module, version)
 }
 
 // deleteModuleSymlink walks over the modules dir and deletes module symlinks by regexp

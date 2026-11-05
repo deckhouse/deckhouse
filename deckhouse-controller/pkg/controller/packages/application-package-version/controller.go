@@ -167,6 +167,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 
 		return fmt.Errorf("get image for '%s': %w", apv.Name, err)
 	}
+	defer img.Close()
 
 	meta, err := r.parseVersionMetadataByImage(ctx, img)
 	if err != nil {

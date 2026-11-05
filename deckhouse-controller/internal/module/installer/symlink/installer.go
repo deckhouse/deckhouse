@@ -308,6 +308,60 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	return nil
 }
 
+// RestoreFromRegistry downloads the module and creates the symlink. The module on the filesystem
+// is replaced only by a complete download and is linked when the download fails, the result
+// reports whether the download completed.
+func (i *Installer) RestoreFromRegistry(ctx context.Context, ms *v1alpha1.ModuleSource, module, version string) (bool, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "RestoreFromRegistry")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", module))
+	span.SetAttributes(attribute.String("version", version))
+	span.SetAttributes(attribute.String("source", ms.GetName()))
+
+	logger := i.logger.With(slog.String("name", module), slog.String("version", version))
+	logger.Debug("restore module from registry")
+
+	// Create permanent module directory: /deckhouse/downloaded/<module>
+	modulePath := filepath.Join(i.downloaded, module)
+	if err := os.MkdirAll(modulePath, 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return false, fmt.Errorf("create module dir '%s': %w", modulePath, err)
+	}
+
+	// Prepare symlink location: /deckhouse/downloaded/modules/<module>
+	symlinkPoint := filepath.Join(i.symlinkDir, module)
+
+	// Remove old symlink if exists (for atomic update)
+	// Use Lstat to avoid following the symlink
+	if _, err := os.Lstat(symlinkPoint); err == nil {
+		if err = os.Remove(symlinkPoint); err != nil {
+			return false, fmt.Errorf("delete old symlink '%s': %w", symlinkPoint, err)
+		}
+	}
+
+	// /deckhouse/downloaded/<module>/<version>, the download replaces it only once complete
+	versionPath := filepath.Join(modulePath, version)
+
+	downloadErr := i.registry.Download(ctx, registry.BuildRemote(ms), versionPath, module, version)
+	if downloadErr != nil && !moduleComplete(versionPath) {
+		span.SetStatus(codes.Error, downloadErr.Error())
+		return false, fmt.Errorf("download module '%s': %w", module, downloadErr)
+	}
+
+	if downloadErr != nil {
+		logger.Warn("download module failed, link the module on the filesystem", log.Err(downloadErr))
+	}
+
+	// Create symlink pointing to permanent location
+	if err := os.Symlink(versionPath, symlinkPoint); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return false, fmt.Errorf("create symlink '%s': %w", modulePath, err)
+	}
+
+	return downloadErr == nil, nil
+}
+
 // atomicCopyDir copies the contents of src into a temporary sibling of dst on the
 // same filesystem and then renames it onto dst. Because the rename is the only
 // operation that publishes dst, an interrupted copy leaves dst either untouched or

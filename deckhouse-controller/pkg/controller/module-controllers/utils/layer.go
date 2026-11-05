@@ -18,14 +18,16 @@ import (
 	"archive/tar"
 	"bytes"
 	"io"
+	"maps"
+	"slices"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/static"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 type FakeLayer struct {
-	v1.Layer
-
 	FilesContent map[string]string // pair: filename - file content
 }
 
@@ -41,8 +43,9 @@ func (fl FakeLayer) Uncompressed() (io.ReadCloser, error) {
 
 	wr := tar.NewWriter(result)
 
-	// create files in a single layer
-	for filename, content := range fl.FilesContent {
+	// create files in a single layer, in the same order every time to keep the digest
+	for _, filename := range slices.Sorted(maps.Keys(fl.FilesContent)) {
+		content := fl.FilesContent[filename]
 		if strings.Contains(filename, "/") {
 			dirs := strings.Split(filename, "/")
 			for i := 0; i < len(dirs)-1; i++ {
@@ -69,6 +72,31 @@ func (fl FakeLayer) Uncompressed() (io.ReadCloser, error) {
 	return io.NopCloser(result), nil
 }
 
+// layer serves the content as an uncompressed layer, so an image of fake layers
+// can be copied like an image from a registry
+func (fl FakeLayer) layer() v1.Layer {
+	rc, _ := fl.Uncompressed()
+	content, _ := io.ReadAll(rc)
+
+	return static.NewLayer(content, types.OCIUncompressedLayer)
+}
+
+func (fl FakeLayer) Digest() (v1.Hash, error) {
+	return fl.layer().Digest()
+}
+
+func (fl FakeLayer) DiffID() (v1.Hash, error) {
+	return fl.layer().DiffID()
+}
+
+func (fl FakeLayer) Compressed() (io.ReadCloser, error) {
+	return fl.layer().Compressed()
+}
+
 func (fl FakeLayer) Size() (int64, error) {
-	return int64(len(fl.FilesContent)), nil
+	return fl.layer().Size()
+}
+
+func (fl FakeLayer) MediaType() (types.MediaType, error) {
+	return fl.layer().MediaType()
 }

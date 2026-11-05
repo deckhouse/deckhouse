@@ -18,10 +18,12 @@ package erofs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -29,10 +31,13 @@ import (
 	"go.opentelemetry.io/otel/codes"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -48,17 +53,24 @@ type Installer struct {
 
 	registry *registry.Service
 
+	metricStorage metricsstorage.Storage
+
+	// mountMapper mounts the device mapper of a module image, tests replace it
+	mountMapper func(ctx context.Context, name, mountPath string) error
+
 	logger *log.Logger
 }
 
-func NewInstaller(registry *registry.Service, logger *log.Logger) *Installer {
+func NewInstaller(registry *registry.Service, metricStorage metricsstorage.Storage, logger *log.Logger) *Installer {
 	downloaded := app.DownloadedModulesDir()
 
 	return &Installer{
-		downloaded: downloaded,
-		mount:      filepath.Join(downloaded, "modules"),
-		registry:   registry,
-		logger:     logger.Named("erofs-installer"),
+		downloaded:    downloaded,
+		mount:         filepath.Join(downloaded, "modules"),
+		registry:      registry,
+		metricStorage: metricStorage,
+		mountMapper:   verity.Mount,
+		logger:        logger.Named("erofs-installer"),
 	}
 }
 
@@ -107,7 +119,10 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 	imagePath := filepath.Join(modulePath, image)
 
 	logger.Debug("create erofs image", slog.String("path", imagePath))
-	if err := verity.CreateImage(ctx, tempModulePath, imagePath); err != nil {
+	err := buildImage(modulePath, version, func(path string) error {
+		return verity.CreateImage(ctx, tempModulePath, path)
+	})
+	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create image from the temp path '%s': %w", tempModulePath, err)
 	}
@@ -126,7 +141,7 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 	}
 
 	logger.Debug("mount erofs image mapper")
-	if err = verity.Mount(ctx, module, mountPoint); err != nil {
+	if err = i.mountMapper(ctx, module, mountPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("mount erofs image: %w", err)
 	}
@@ -166,7 +181,10 @@ func (i *Installer) Stage(ctx context.Context, module, version, tempModulePath s
 	imagePath := filepath.Join(modulePath, image)
 
 	logger.Debug("create erofs image", slog.String("path", imagePath))
-	if err := verity.CreateImage(ctx, tempModulePath, imagePath); err != nil {
+	err := buildImage(modulePath, version, func(path string) error {
+		return verity.CreateImage(ctx, tempModulePath, path)
+	})
+	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create image from the temp path '%s': %w", tempModulePath, err)
 	}
@@ -190,6 +208,8 @@ func (i *Installer) StageFromRegistry(ctx context.Context, ms *v1alpha1.ModuleSo
 	logger := i.logger.With(slog.String("name", module), slog.String("version", version))
 	logger.Debug("stage module from registry without mount")
 
+	i.clearDownloadInterruptedMetric(module)
+
 	// /deckhouse/downloaded/<module>
 	modulePath := filepath.Join(i.downloaded, module)
 	if err := os.MkdirAll(modulePath, 0755); err != nil {
@@ -208,17 +228,9 @@ func (i *Installer) StageFromRegistry(ctx context.Context, ms *v1alpha1.ModuleSo
 		return nil
 	}
 
-	img, err := i.registry.GetImageReader(ctx, registry.BuildRemote(ms), module, version)
-	if err != nil {
+	if err := i.downloadImage(ctx, logger, ms, module, version, modulePath); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("download module image: %w", err)
-	}
-	defer img.Close()
-
-	logger.Debug("create erofs image from module image", slog.String("path", imagePath))
-	if err = verity.CreateImageByTar(ctx, img, imagePath); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("extract module image to erofs: %w", err)
+		return err
 	}
 
 	logger.Debug("module staged")
@@ -292,19 +304,13 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	logger := i.logger.With(slog.String("name", module), slog.String("version", version))
 	logger.Debug("restore module")
 
+	i.clearDownloadInterruptedMetric(module)
+
 	// /deckhouse/downloaded/modules/<module>
 	mountPoint := filepath.Join(i.mount, module)
-
-	logger.Debug("unmount old erofs image", slog.String("path", mountPoint))
-	if err := verity.Unmount(ctx, mountPoint); err != nil {
+	if err := unmountImage(ctx, logger, module, mountPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("unmount old erofs image '%s': %w", mountPoint, err)
-	}
-
-	logger.Debug("close old device mapper")
-	if err := verity.CloseMapper(ctx, module); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("close module mapper: %w", err)
+		return err
 	}
 
 	// /deckhouse/downloaded/<module>
@@ -325,69 +331,269 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 		return fmt.Errorf("get image root hash: %w", err)
 	}
 
-	logger.Debug("verify module")
-	if err = i.verifyModule(ctx, module, version, rootHash); err == nil {
-		logger.Debug("module verified")
+	mounted, err := i.mountExistingImage(ctx, logger, module, version, rootHash, imagePath, mountPoint)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
 
-		// TODO(ipaqsa): temp solution before all modules have hash
-		logger.Debug("compute erofs image hash", slog.String("path", imagePath))
-		if rootHash, err = verity.CreateImageHash(ctx, imagePath); err != nil {
-			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("create image hash: %w", err)
-		}
-
-		logger.Debug("create device mapper", slog.String("path", imagePath))
-		if err = verity.CreateMapper(ctx, module, imagePath, rootHash); err != nil {
-			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("create device mapper: %w", err)
-		}
-
-		logger.Debug("mount erofs image mapper", slog.String("path", imagePath))
-		if err = verity.Mount(ctx, module, mountPoint); err != nil {
-			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("mount erofs image: %w", err)
-		}
-
+	if mounted {
 		return nil
 	}
 
-	logger.Warn("verify module failed", log.Err(err))
-
-	img, err := i.registry.GetImageReader(ctx, registry.BuildRemote(ms), module, version)
-	if err != nil {
+	if err = i.downloadImage(ctx, logger, ms, module, version, modulePath); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("download module image: %w", err)
-	}
-	defer img.Close()
-
-	logger.Debug("create erofs image from module image", slog.String("path", imagePath))
-	if err = verity.CreateImageByTar(ctx, img, imagePath); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("extract module image to erofs: %w", err)
+		return err
 	}
 
-	logger.Debug("compute erofs image hash", slog.String("path", imagePath))
-	hash, err := verity.CreateImageHash(ctx, imagePath)
-	if err != nil {
+	if err = i.mountImage(ctx, logger, module, imagePath, mountPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("create image hash: %w", err)
-	}
-
-	logger.Debug("create device mapper")
-	if err = verity.CreateMapper(ctx, module, imagePath, hash); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("create device mapper: %w", err)
-	}
-
-	logger.Debug("mount erofs image mapper")
-	if err = verity.Mount(ctx, module, mountPoint); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("mount erofs image: %w", err)
+		return err
 	}
 
 	logger.Debug("module restored")
 
 	return nil
+}
+
+// RestoreFromRegistry downloads the module image and mounts it. The image on the filesystem
+// is replaced only by a complete download and is mounted when the download fails. The result
+// reports whether the download completed.
+func (i *Installer) RestoreFromRegistry(ctx context.Context, ms *v1alpha1.ModuleSource, module, version string) (bool, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "RestoreFromRegistry")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", module))
+	span.SetAttributes(attribute.String("version", version))
+	span.SetAttributes(attribute.String("source", ms.GetName()))
+
+	logger := i.logger.With(slog.String("name", module), slog.String("version", version))
+	logger.Debug("restore module from registry")
+
+	i.clearDownloadInterruptedMetric(module)
+
+	// /deckhouse/downloaded/modules/<module>
+	mountPoint := filepath.Join(i.mount, module)
+	if err := unmountImage(ctx, logger, module, mountPoint); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return false, err
+	}
+
+	// /deckhouse/downloaded/<module>
+	modulePath := filepath.Join(i.downloaded, module)
+	if err := os.MkdirAll(modulePath, 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return false, fmt.Errorf("create module dir '%s': %w", modulePath, err)
+	}
+
+	// <version>.erofs
+	image := fmt.Sprintf("%s.erofs", version)
+	// /deckhouse/downloaded/<module>/<version>.erofs
+	imagePath := filepath.Join(modulePath, image)
+
+	if downloadErr := i.downloadImage(ctx, logger, ms, module, version, modulePath); downloadErr != nil {
+		err := i.mountOldImage(ctx, logger, module, version, imagePath, mountPoint, downloadErr)
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+		}
+
+		return false, err
+	}
+
+	if err := i.mountImage(ctx, logger, module, imagePath, mountPoint); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return false, err
+	}
+
+	logger.Debug("module restored from registry")
+
+	return true, nil
+}
+
+// mountOldImage mounts the image on the filesystem that the failed download didn't replace.
+// It returns the download error when there is no image to mount.
+func (i *Installer) mountOldImage(ctx context.Context, logger *log.Logger, module, version, imagePath, mountPoint string, downloadErr error) error {
+	logger.Warn("download module image failed, mount the image on the filesystem", log.Err(downloadErr))
+
+	// the image is an earlier build, the root hash of the version in the registry doesn't describe it
+	mounted, err := i.mountExistingImage(ctx, logger, module, version, "", imagePath, mountPoint)
+	if err != nil {
+		return err
+	}
+
+	if !mounted {
+		return downloadErr
+	}
+
+	return nil
+}
+
+// unmountImage unmounts the module image and closes its device mapper
+func unmountImage(ctx context.Context, logger *log.Logger, module, mountPoint string) error {
+	logger.Debug("unmount old erofs image", slog.String("path", mountPoint))
+	if err := verity.Unmount(ctx, mountPoint); err != nil {
+		return fmt.Errorf("unmount old erofs image '%s': %w", mountPoint, err)
+	}
+
+	logger.Debug("close old device mapper")
+	if err := verity.CloseMapper(ctx, module); err != nil {
+		return fmt.Errorf("close module mapper: %w", err)
+	}
+
+	return nil
+}
+
+// downloadImage downloads the module image and builds the erofs image of the version from it.
+// The image on the filesystem is replaced only once the new one is complete.
+func (i *Installer) downloadImage(ctx context.Context, logger *log.Logger, ms *v1alpha1.ModuleSource, module, version, modulePath string) error {
+	img, err := i.registry.GetImageReader(ctx, registry.BuildRemote(ms), module, version)
+	if err != nil {
+		i.setDownloadInterruptedMetric(module, version, err)
+		return fmt.Errorf("download module image: %w", err)
+	}
+	defer img.Close()
+
+	logger.Debug("create erofs image from module image", slog.String("path", modulePath))
+	err = buildImage(modulePath, version, func(path string) error {
+		return verity.CreateImageByTar(ctx, img, path)
+	})
+	if err != nil {
+		return fmt.Errorf("extract module image to erofs: %w", err)
+	}
+
+	return nil
+}
+
+// mountExistingImage mounts the image already on the filesystem. It reports false when the image
+// is missing or broken.
+func (i *Installer) mountExistingImage(ctx context.Context, logger *log.Logger, module, version, rootHash, imagePath, mountPoint string) (bool, error) {
+	logger.Debug("verify module")
+	if err := i.verifyModule(ctx, module, version, rootHash); err != nil {
+		logger.Warn("verify module failed", log.Err(err))
+		return false, nil
+	}
+
+	logger.Debug("module verified")
+
+	err := i.mountImage(ctx, logger, module, imagePath, mountPoint)
+	if err == nil {
+		return true, nil
+	}
+
+	// the image can be left broken on the filesystem, e.g. by a build interrupted before builds
+	// went through a temporary file, so a failed mount reports a broken image instead of failing
+	logger.Warn("mount module image failed", log.Err(err))
+
+	if err = verity.CloseMapper(ctx, module); err != nil {
+		return false, fmt.Errorf("close module mapper: %w", err)
+	}
+
+	return false, nil
+}
+
+// mountImage computes the hash tree of the image, creates the device mapper over the image and mounts it
+func (i *Installer) mountImage(ctx context.Context, logger *log.Logger, module, imagePath, mountPoint string) error {
+	// TODO(ipaqsa): temp solution before all modules have hash
+	logger.Debug("compute erofs image hash", slog.String("path", imagePath))
+	hash, err := verity.CreateImageHash(ctx, imagePath)
+	if err != nil {
+		return fmt.Errorf("create image hash: %w", err)
+	}
+
+	logger.Debug("create device mapper", slog.String("path", imagePath))
+	if err = verity.CreateMapper(ctx, module, imagePath, hash); err != nil {
+		return fmt.Errorf("create device mapper: %w", err)
+	}
+
+	logger.Debug("mount erofs image mapper", slog.String("path", imagePath))
+	if err = i.mountMapper(ctx, module, mountPoint); err != nil {
+		return fmt.Errorf("mount erofs image: %w", err)
+	}
+
+	return nil
+}
+
+// buildImage builds the image of the module version through a temporary file in the module dir
+// and renames it onto <version>.erofs once complete. An interrupted build leaves only a temporary
+// file, which the next build of the version removes, never a partial image that a restore takes
+// for a complete one.
+func buildImage(modulePath, version string, build func(path string) error) error {
+	if err := removeTempImages(modulePath, version); err != nil {
+		return fmt.Errorf("remove temporary images: %w", err)
+	}
+
+	file, err := os.CreateTemp(modulePath, tempImagePrefix(version))
+	if err != nil {
+		return fmt.Errorf("create temporary image: %w", err)
+	}
+
+	// only the unique name is needed, mkfs.erofs creates the file itself
+	tempPath := file.Name()
+	_ = file.Close()
+	if err = os.Remove(tempPath); err != nil {
+		return fmt.Errorf("reserve temporary image: %w", err)
+	}
+
+	if err = build(tempPath); err != nil {
+		_ = os.Remove(tempPath)
+		return err
+	}
+
+	// /deckhouse/downloaded/<module>/<version>.erofs
+	imagePath := filepath.Join(modulePath, fmt.Sprintf("%s.erofs", version))
+	if err = os.Rename(tempPath, imagePath); err != nil {
+		_ = os.Remove(tempPath)
+		return fmt.Errorf("store image '%s': %w", imagePath, err)
+	}
+
+	return nil
+}
+
+// removeTempImages removes the temporary images of the version left by interrupted builds
+func removeTempImages(modulePath, version string) error {
+	entries, err := os.ReadDir(modulePath)
+	if err != nil {
+		return err
+	}
+
+	prefix := tempImagePrefix(version)
+	for _, entry := range entries {
+		if !strings.HasPrefix(entry.Name(), prefix) {
+			continue
+		}
+
+		if err = os.Remove(filepath.Join(modulePath, entry.Name())); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// tempImagePrefix returns the name prefix of the temporary images of the version
+func tempImagePrefix(version string) string {
+	return fmt.Sprintf(".%s.erofs.tmp-", version)
+}
+
+// clearDownloadInterruptedMetric expires the metric behind the D8DeckhouseModuleImageDownloadInterrupted
+// alert for the module. It runs when an attempt to put the module image on the filesystem starts,
+// so the metric reflects the last attempt however it ends.
+func (i *Installer) clearDownloadInterruptedMetric(module string) {
+	i.metricStorage.Grouped().ExpireGroupMetrics(fmt.Sprintf(metrics.ModuleImageDownloadMetricGroupTemplate, module))
+}
+
+// setDownloadInterruptedMetric sets the metric behind the D8DeckhouseModuleImageDownloadInterrupted
+// alert when the download of the module image layers was interrupted. The image is built from
+// the downloaded copy, so a failed build isn't an interrupted download.
+func (i *Installer) setDownloadInterruptedMetric(module, version string, err error) {
+	if !errors.Is(err, cr.ErrImageDownload) {
+		return
+	}
+
+	i.metricStorage.Grouped().GaugeSet(fmt.Sprintf(metrics.ModuleImageDownloadMetricGroupTemplate, module), metrics.D8ModuleImageDownloadInterrupted, 1, map[string]string{
+		metrics.LabelModule:  module,
+		metrics.LabelVersion: version,
+	})
 }
 
 // verifyModule checks that the image and hash exist and verified

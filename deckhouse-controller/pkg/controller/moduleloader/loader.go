@@ -51,6 +51,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -89,6 +90,7 @@ type Installer interface {
 	Stage(ctx context.Context, module, version, tempModulePath string) error
 	StageFromRegistry(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
 	Restore(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
+	RestoreFromRegistry(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (bool, error)
 	IsEmbeddedPresent(module string) bool
 	Uninstall(ctx context.Context, module string) error
 }
@@ -115,14 +117,14 @@ type Loader struct {
 	conversionsStore     *conversion.ConversionsStore
 }
 
-func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts extenders.IExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, conversionsStore *conversion.ConversionsStore, logger *log.Logger) *Loader {
+func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts extenders.IExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, conversionsStore *conversion.ConversionsStore, metricStorage metricsstorage.Storage, logger *log.Logger) *Loader {
 	return &Loader{
 		client:               client,
 		logger:               logger,
 		modulesDirs:          addonutils.SplitToPaths(modulesDir),
 		globalDir:            globalDir,
 		downloadedModulesDir: app.DownloadedModulesDir(),
-		installer:            installer.New(dc, logger),
+		installer:            installer.New(dc, metricStorage, logger),
 		symlinksDir:          filepath.Join(app.DownloadedModulesDir(), "modules"),
 		modules:              make(map[string]*moduletypes.Module),
 		registries:           make(map[string]*addonmodules.Registry),

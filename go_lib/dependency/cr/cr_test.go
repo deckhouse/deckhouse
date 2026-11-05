@@ -25,17 +25,23 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync/atomic"
 	"testing"
+	"testing/iotest"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -725,16 +731,7 @@ func (f *flakyReader) Read(p []byte) (int, error) {
 func testLayer(t *testing.T, files map[string]string, fail *atomic.Bool, failErr error, openErr bool) crv1.Layer {
 	t.Helper()
 
-	var buf bytes.Buffer
-	tw := tar.NewWriter(&buf)
-	for name, body := range files {
-		require.NoError(t, tw.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(body))}))
-		_, err := io.WriteString(tw, body)
-		require.NoError(t, err)
-	}
-	require.NoError(t, tw.Close())
-
-	data := buf.Bytes()
+	data := tarArchive(t, files)
 	layer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
 		switch {
 		case fail == nil:
@@ -750,17 +747,31 @@ func testLayer(t *testing.T, files map[string]string, fail *atomic.Bool, failErr
 	return layer
 }
 
+// tarArchive builds a tar archive of the files.
+func tarArchive(t *testing.T, files map[string]string) []byte {
+	t.Helper()
+
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	for file, body := range files {
+		require.NoError(t, tw.WriteHeader(&tar.Header{Name: file, Mode: 0o644, Size: int64(len(body))}))
+		_, err := io.WriteString(tw, body)
+		require.NoError(t, err)
+	}
+	require.NoError(t, tw.Close())
+
+	return buf.Bytes()
+}
+
 // TestExtract_LayerReadFailure pins the failure mode behind silently truncated
-// modules: image flattening closes its tar.Writer from a deferred call, so a
-// layer blob that fails mid-flatten still emits the tar trailer. The consumer
-// then reads a well-formed but truncated archive, sees io.EOF and treats the
-// partial image as fully extracted. Extract must report the error instead.
+// modules: a layer blob that fails to download must not yield an archive.
+// Extract copies the image before flattening it, so the failure surfaces from
+// Extract itself, and the partial copy is removed.
 //
 // The wrapped-io.EOF case is the trap: net/http reports a registry that closed
 // the connection before responding as url.Error{Err: io.EOF} out of the blob
 // open, so a guard that matches the terminal error with errors.Is takes the
-// most common transient network failure for a clean end of stream. Only the
-// io.EOF sentinel itself may complete the stream.
+// most common transient network failure for a clean end of stream.
 func TestExtract_LayerReadFailure(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -773,39 +784,132 @@ func TestExtract_LayerReadFailure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tmp := t.TempDir()
+			t.Setenv("TMPDIR", tmp)
+
 			var fail atomic.Bool
 
-			// Flattening walks the layers top down, so the upper layer is delivered
-			// in full and everything below the broken layer goes missing.
 			upper := testLayer(t, map[string]string{"module.yaml": "m", "version.json": "v"}, nil, nil, false)
 			lower := testLayer(t, map[string]string{"Chart.yaml": "c", "templates/deploy.yaml": "d"}, &fail, tt.failErr, tt.openErr)
 
 			img, err := mutate.AppendLayers(empty.Image, lower, upper)
 			require.NoError(t, err)
 
-			rc, err := Extract(img)
-			require.NoError(t, err)
-			defer rc.Close()
-
-			// Extract already read every layer to compute the flattened digest, so
-			// from here the only read left is the one the consumer drives.
 			fail.Store(true)
 
-			var names []string
-			tr := tar.NewReader(rc)
-			for {
-				hdr, nextErr := tr.Next()
-				if nextErr != nil {
-					err = nextErr
-
-					break
-				}
-
-				names = append(names, hdr.Name)
-			}
-
-			assert.ErrorIs(t, err, errLayerRead, "a truncated archive must not look like a complete one")
-			assert.NotContains(t, names, "Chart.yaml", "content below the broken layer must not be delivered")
+			rc, err := Extract(img)
+			assert.ErrorIs(t, err, errLayerRead, "a broken layer must not yield an archive")
+			assert.ErrorIs(t, err, ErrImageDownload)
+			assert.Nil(t, rc)
+			assertEmptyDir(t, tmp)
 		})
 	}
+}
+
+// TestCompleteReader pins how the flattened stream ends: the tar trailer is held back
+// until the stream ends with the io.EOF sentinel itself, so a stream that breaks right
+// after a complete-looking archive surfaces its error to a tar reader instead of io.EOF.
+// A wrapped io.EOF is a failure too.
+func TestCompleteReader(t *testing.T) {
+	archive := tarArchive(t, map[string]string{"module.yaml": "m"})
+
+	tests := []struct {
+		name    string
+		end     error
+		wantErr error
+	}{
+		{name: "clean end", end: io.EOF, wantErr: io.EOF},
+		{name: "read fails after the trailer", end: errLayerRead, wantErr: errLayerRead},
+		{name: "wrapped io.EOF after the trailer", end: fmt.Errorf("get blob: %w: %w", errLayerRead, io.EOF), wantErr: errLayerRead},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rc := &completeReader{rc: io.NopCloser(io.MultiReader(bytes.NewReader(archive), iotest.ErrReader(tt.end)))}
+
+			var err error
+			tr := tar.NewReader(rc)
+			for err == nil {
+				_, err = tr.Next()
+			}
+
+			assert.ErrorIs(t, err, tt.wantErr)
+		})
+	}
+}
+
+// TestExtract_DownloadsLayersOnce guards against flattening that reads every layer
+// three times, twice to compute the digest and the diff ID and once more for the
+// content. For a remote image each read is a download.
+func TestExtract_DownloadsLayersOnce(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+
+	var opens atomic.Int32
+	data := tarArchive(t, map[string]string{"module.yaml": "m"})
+	layer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+		opens.Add(1)
+		return io.NopCloser(bytes.NewReader(data)), nil
+	})
+	require.NoError(t, err)
+
+	img, err := mutate.AppendLayers(empty.Image, layer)
+	require.NoError(t, err)
+
+	// building the layer read it to compute its digests
+	opens.Store(0)
+
+	rc, err := Extract(img)
+	require.NoError(t, err)
+
+	_, err = io.Copy(io.Discard, rc)
+	require.NoError(t, err)
+	require.NoError(t, rc.Close())
+
+	assert.EqualValues(t, 1, opens.Load())
+}
+
+// TestExtract_ContentOutlivesRegistryDeadline guards against the deadline of the registry
+// client cutting the content off. The deadline bounds every read of a remote image, while
+// the content is read at the pace of its consumer, e.g. mkfs.erofs, after the download.
+func TestExtract_ContentOutlivesRegistryDeadline(t *testing.T) {
+	tmp := t.TempDir()
+	t.Setenv("TMPDIR", tmp)
+
+	srv := httptest.NewServer(registry.New(registry.Logger(log.New(io.Discard, "", 0))))
+	t.Cleanup(srv.Close)
+
+	repo := strings.TrimPrefix(srv.URL, "http://") + "/modules/test"
+
+	img, err := random.Image(512<<10, 2)
+	require.NoError(t, err)
+	ref, err := name.ParseReference(repo+":main", name.Insecure)
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(ref, img))
+
+	client, err := NewClient(repo, WithInsecureSchema(true), WithTimeout(2*time.Second))
+	require.NoError(t, err)
+
+	remoteImg, err := client.Image(context.Background(), "main")
+	require.NoError(t, err)
+
+	rc, err := Extract(remoteImg)
+	require.NoError(t, err)
+
+	// the consumer gets to the content after the deadline of the client
+	time.Sleep(2500 * time.Millisecond)
+
+	_, err = io.Copy(io.Discard, rc)
+	require.NoError(t, err)
+
+	require.NoError(t, rc.Close())
+	assertEmptyDir(t, tmp)
+}
+
+// assertEmptyDir checks that nothing is left in dir.
+func assertEmptyDir(t *testing.T, dir string) {
+	t.Helper()
+
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	assert.Empty(t, entries)
 }

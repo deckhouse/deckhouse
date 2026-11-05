@@ -16,13 +16,19 @@ package symlink
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -112,6 +118,76 @@ func TestInstall(t *testing.T) {
 	assertFileContent(t, filepath.Join(versionPath, "module.yaml"), "name: mod2\n")
 	assert.NoFileExists(t, filepath.Join(versionPath, "images_digests.json"))
 	assertNoScratch(t, filepath.Join(downloaded, "mod"))
+}
+
+// TestRestoreFromRegistry checks that the module is downloaded even when a module is on the
+// filesystem, and that the module on the filesystem is kept and linked when the download fails.
+func TestRestoreFromRegistry(t *testing.T) {
+	img, err := random.Image(1024, 1)
+	require.NoError(t, err)
+
+	errNoImage := errors.New("manifest unknown")
+
+	tests := []struct {
+		name           string
+		onFilesystem   bool // whether a module is on the filesystem before the restore
+		image          crv1.Image
+		imageErr       error
+		wantDownloaded bool
+		wantErr        error
+		wantOld        bool // whether the module on the filesystem is kept
+		wantLinked     bool
+	}{
+		{name: "complete download replaces the module", onFilesystem: true, image: img, wantDownloaded: true, wantLinked: true},
+		{name: "failed download links the module on the filesystem", onFilesystem: true, imageErr: errNoImage, wantOld: true, wantLinked: true},
+		{name: "failed download without a module fails", imageErr: errNoImage, wantErr: errNoImage},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dc := dependency.NewMockedContainer()
+			dc.CRClient.ImageMock.Return(tt.image, tt.imageErr)
+
+			downloaded := t.TempDir()
+			inst := &Installer{
+				downloaded: downloaded,
+				symlinkDir: filepath.Join(downloaded, "modules"),
+				registry:   registry.NewService(dc, log.NewNop()),
+				logger:     log.NewNop(),
+			}
+			require.NoError(t, os.MkdirAll(inst.symlinkDir, 0o755))
+
+			versionPath := filepath.Join(downloaded, "mod", "main")
+			oldModule := filepath.Join(versionPath, "module.yaml")
+			if tt.onFilesystem {
+				require.NoError(t, os.MkdirAll(versionPath, 0o755))
+				require.NoError(t, os.WriteFile(oldModule, []byte("name: mod\n"), 0o600))
+			}
+
+			source := &v1alpha1.ModuleSource{
+				Spec: v1alpha1.ModuleSourceSpec{
+					Registry: v1alpha1.ModuleSourceSpecRegistry{Repo: "registry.example.com/modules"},
+				},
+			}
+
+			got, err := inst.RestoreFromRegistry(context.Background(), source, "mod", "main")
+			require.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, tt.wantDownloaded, got)
+
+			_, err = os.Stat(oldModule)
+			assert.Equal(t, tt.wantOld, err == nil, "the module on the filesystem kept")
+
+			wantTarget := ""
+			if tt.wantLinked {
+				wantTarget = versionPath
+				assert.True(t, moduleComplete(versionPath), "the linked module must be complete")
+			}
+
+			target, _ := os.Readlink(filepath.Join(inst.symlinkDir, "mod"))
+			assert.Equal(t, wantTarget, target)
+			assertNoScratch(t, filepath.Join(downloaded, "mod"))
+		})
+	}
 }
 
 func assertFileContent(t *testing.T, path, want string) {

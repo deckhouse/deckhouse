@@ -16,6 +16,7 @@ package moduleloader
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -55,9 +56,10 @@ type installerCall struct {
 type installerCalls struct {
 	restore []installerCall
 	// restoreSources are the sources Restore was called with, in the order of restore
-	restoreSources    []string
-	stageFromRegistry []installerCall
-	uninstall         []string
+	restoreSources      []string
+	restoreFromRegistry []installerCall
+	stageFromRegistry   []installerCall
+	uninstall           []string
 }
 
 // newRecordingInstaller returns a mock installer that records its calls and reports
@@ -69,6 +71,10 @@ func newRecordingInstaller(calls *installerCalls, embedded map[string]bool) *ins
 			calls.restore = append(calls.restore, installerCall{module, version})
 			calls.restoreSources = append(calls.restoreSources, source.Name)
 			return nil
+		},
+		RestoreFromRegistryFunc: func(_ context.Context, _ *v1alpha1.ModuleSource, module, version string) (bool, error) {
+			calls.restoreFromRegistry = append(calls.restoreFromRegistry, installerCall{module, version})
+			return true, nil
 		},
 		StageFromRegistryFunc: func(_ context.Context, _ *v1alpha1.ModuleSource, module, version string) error {
 			calls.stageFromRegistry = append(calls.stageFromRegistry, installerCall{module, version})
@@ -179,6 +185,13 @@ func getModule(t *testing.T, l *Loader, name string) *v1alpha1.Module {
 	module := new(v1alpha1.Module)
 	require.NoError(t, l.client.Get(context.Background(), client.ObjectKey{Name: name}, module))
 	return module
+}
+
+func getDeployedOn(t *testing.T, l *Loader, name string) string {
+	t.Helper()
+	mpo := new(v1alpha2.ModulePullOverride)
+	require.NoError(t, l.client.Get(context.Background(), client.ObjectKey{Name: name}, mpo))
+	return mpo.GetAnnotations()[v1alpha2.ModulePullOverrideAnnotationDeployedOn]
 }
 
 func getRelease(t *testing.T, l *Loader, name string) *v1alpha1.ModuleRelease {
@@ -333,7 +346,7 @@ func TestRestoreModulesByOverrides(t *testing.T) {
 		assert.Empty(t, calls.restore, "embedded module must not be restored from a pull override")
 	})
 
-	t.Run("stale deployed-on annotation triggers a reinstall", func(t *testing.T) {
+	t.Run("stale deployed-on annotation downloads the module again", func(t *testing.T) {
 		t.Setenv("DECKHOUSE_NODE_NAME", testNodeName)
 
 		calls := new(installerCalls)
@@ -345,8 +358,54 @@ func TestRestoreModulesByOverrides(t *testing.T) {
 
 		require.NoError(t, l.restoreModulesByOverrides(context.Background()))
 
-		assert.Equal(t, []string{"echo"}, calls.uninstall, "stale deployed-on must trigger uninstall")
-		assert.Equal(t, []installerCall{{"echo", "v1.0.0"}}, calls.restore)
+		assert.Equal(t, []installerCall{{"echo", "v1.0.0"}}, calls.restoreFromRegistry, "stale deployed-on must download the module")
+		assert.Empty(t, calls.restore)
+		assert.Empty(t, calls.uninstall, "the module on the filesystem is kept until the download completes")
+		assert.Equal(t, testNodeName, getDeployedOn(t, l, "echo"))
+
+		_, ok := l.registries["echo"]
+		assert.True(t, ok)
+	})
+
+	t.Run("stale deployed-on annotation stays when the module falls back to the filesystem", func(t *testing.T) {
+		t.Setenv("DECKHOUSE_NODE_NAME", testNodeName)
+
+		inst := newRecordingInstaller(new(installerCalls), nil)
+		inst.RestoreFromRegistryFunc = func(context.Context, *v1alpha1.ModuleSource, string, string) (bool, error) {
+			return false, nil
+		}
+
+		l := newTestLoader(t, inst,
+			testModuleSource("example", testRepo),
+			enabled(testModule("echo", "example", "example")),
+			testReadyMPO("echo", "v1.0.0", "some-old-master"),
+		)
+
+		require.NoError(t, l.restoreModulesByOverrides(context.Background()))
+
+		assert.Equal(t, "some-old-master", getDeployedOn(t, l, "echo"), "the next start must download the module again")
+
+		_, ok := l.registries["echo"]
+		assert.True(t, ok, "the module on the filesystem serves the module")
+	})
+
+	t.Run("failed restore from the registry fails the restore", func(t *testing.T) {
+		t.Setenv("DECKHOUSE_NODE_NAME", testNodeName)
+
+		errRegistry := errors.New("manifest unknown")
+		inst := newRecordingInstaller(new(installerCalls), nil)
+		inst.RestoreFromRegistryFunc = func(context.Context, *v1alpha1.ModuleSource, string, string) (bool, error) {
+			return false, errRegistry
+		}
+
+		l := newTestLoader(t, inst,
+			testModuleSource("example", testRepo),
+			enabled(testModule("echo", "example", "example")),
+			testReadyMPO("echo", "v1.0.0", "some-old-master"),
+		)
+
+		require.ErrorIs(t, l.restoreModulesByOverrides(context.Background()), errRegistry)
+		assert.Equal(t, "some-old-master", getDeployedOn(t, l, "echo"))
 	})
 
 	t.Run("not-ready override is skipped", func(t *testing.T) {

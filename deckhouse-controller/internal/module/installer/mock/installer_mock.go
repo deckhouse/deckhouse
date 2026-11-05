@@ -24,16 +24,17 @@ import (
 // default behavior, so a zero-value &Installer{} keeps the historical stub
 // semantics used across the existing tests.
 type Installer struct {
-	InstallFunc           func(ctx context.Context, module, version, tempModulePath string) error
-	StageFunc             func(ctx context.Context, module, version, tempModulePath string) error
-	StageFromRegistryFunc func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
-	RestoreFunc           func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
-	IsEmbeddedPresentFunc func(module string) bool
-	UninstallFunc         func(ctx context.Context, module string) error
-	DownloadFunc          func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (string, error)
-	GetImageDigestFunc    func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (string, error)
-	GetInstalledFunc      func() (map[string]struct{}, error)
-	SetClusterUUIDFunc    func(id string)
+	InstallFunc             func(ctx context.Context, module, version, tempModulePath string) error
+	StageFunc               func(ctx context.Context, module, version, tempModulePath string) error
+	StageFromRegistryFunc   func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
+	RestoreFunc             func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) error
+	RestoreFromRegistryFunc func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (bool, error)
+	IsEmbeddedPresentFunc   func(module string) bool
+	UninstallFunc           func(ctx context.Context, module string) error
+	DownloadFunc            func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (string, error)
+	GetImageDigestFunc      func(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (string, error)
+	GetInstalledFunc        func() (map[string]struct{}, error)
+	SetClusterUUIDFunc      func(id string)
 }
 
 func (i *Installer) Install(ctx context.Context, module, version, tempModulePath string) error {
@@ -62,6 +63,13 @@ func (i *Installer) Restore(ctx context.Context, source *v1alpha1.ModuleSource, 
 		return i.RestoreFunc(ctx, source, module, version)
 	}
 	return nil
+}
+
+func (i *Installer) RestoreFromRegistry(ctx context.Context, source *v1alpha1.ModuleSource, module, version string) (bool, error) {
+	if i.RestoreFromRegistryFunc != nil {
+		return i.RestoreFromRegistryFunc(ctx, source, module, version)
+	}
+	return true, nil
 }
 
 func (i *Installer) IsEmbeddedPresent(module string) bool {

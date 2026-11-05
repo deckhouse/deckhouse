@@ -984,6 +984,53 @@
           ```bash
           d8 k -n d8-system logs -f -l app=deckhouse
           ```
+  - alert: D8DeckhouseModuleImageDownloadInterrupted
+    expr: max by (module, version) (d8_module_image_download_interrupted) > 0
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: deckhouse
+      d8_component: deckhouse
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_deckhouse_malfunctioning: "D8DeckhouseMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "module,version"
+      summary: Download of the {{ $labels.module }} module image was interrupted.
+      description: |
+        Deckhouse Platform was downloading the image of the `{{ $labels.module }}` module, version `{{ $labels.version }}`, from the container registry to build its erofs image, and the download was interrupted. The module version isn't put on the node running Deckhouse Platform until a download completes.
+
+        The download is interrupted when it doesn't finish within the registry request timeout, 2 minutes by default, or when the connection to the container registry drops. A slow connection to the container registry is the usual cause.
+
+        To investigate the issue, follow these steps:
+
+        1. Find the reason in the logs. A timeout reads as `context deadline exceeded`, a dropped connection as `unexpected EOF` or `connection reset by peer`:
+
+           ```bash
+           d8 k -n d8-system logs -l app=deckhouse --tail=1000 | grep 'download image layers'
+           ```
+
+        1. Find the ModuleSource the module is downloaded from and the address of its container registry:
+
+           ```bash
+           d8 k get module {{ $labels.module }} -o jsonpath='{.properties.source}'
+           d8 k get modulesource <SOURCE_NAME> -o jsonpath='{.spec.registry.repo}'
+           ```
+
+        1. Check that the image of version `{{ $labels.version }}` is in the container registry:
+
+           ```bash
+           d8 cr ls <REGISTRY_ADDRESS>/{{ $labels.module }}
+           ```
+
+           For a private registry, pass the credentials from the ModuleSource:
+
+           ```bash
+           d8 cr ls -u <USERNAME> -p <PASSWORD> <REGISTRY_ADDRESS>/{{ $labels.module }}
+           ```
+
+        1. Check that the node running Deckhouse Platform reaches the container registry and downloads from it fast enough, for example, through a proxy or a firewall rule that changed.
   - alert: DeckhouseEditionNotFound
     expr: |
       d8_edition_not_found > 0
