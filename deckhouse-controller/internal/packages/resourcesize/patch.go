@@ -20,7 +20,10 @@
 //
 // The footprint goes into the workload and into the autoscalers of the release
 // that target it: a HorizontalPodAutoscaler or a VerticalPodAutoscaler is pinned
-// to the requested values, so it keeps them instead of overriding them.
+// to the requested values, so it keeps them instead of overriding them. A
+// requested range goes into the autoscalers alone, which keep scaling the
+// workload within it; a range no autoscaler of the release applies falls back
+// to fixed values in the workload instead (FallbackPatches).
 //
 // It knows nothing of the CR types: callers hand it plain requests.
 package resourcesize
@@ -29,6 +32,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/itchyny/gojq"
@@ -36,13 +40,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-// Request pins the resource footprint of one workload a package deploys. Kind
-// and Name address the workload; both are required and together they are unique,
-// which the CR schema enforces with a keyed list.
+// Request pins or bounds the resource footprint of one workload a package
+// deploys. Kind and Name address the workload; both are required and together
+// they are unique, which the CR schema enforces with a keyed list.
 //
-// The field added for disks is omitted when empty, so a request that does not
-// use it encodes as before and the settings checksum built from it does not
-// change.
+// The fields added for disks and ranges are omitted when empty, so a request
+// that does not use them encodes as before and the settings checksum built from
+// it does not change.
 type Request struct {
 	// Kind of the workload, one of the kinds in podSpecPaths.
 	Kind string `json:"kind"`
@@ -51,6 +55,13 @@ type Request struct {
 	// Replicas to run, nil to keep what the chart renders. Only meaningful for
 	// the kinds in replicaKinds.
 	Replicas *int32 `json:"replicas,omitempty"`
+	// MinReplicas and MaxReplicas bound the replicas a HorizontalPodAutoscaler
+	// of the workload picks, nil to keep the autoscaler's own bound. They
+	// exclude Replicas and leave the workload's replicas as the chart renders
+	// them, unless no autoscaler scales the workload: it then runs MinReplicas.
+	// Only meaningful for the kinds in replicaKinds.
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
 	// Containers to resize, addressed by name.
 	Containers []Container `json:"containers"`
 	// VolumeClaimTemplates to resize, addressed by name. Only meaningful for a
@@ -74,10 +85,17 @@ type VolumeClaimTemplate struct {
 // merged key by key into whatever the chart rendered, so setting only memory
 // leaves the chart's cpu alone; there is no way to unset a resource the chart
 // declares.
+//
+// Min and Max bound the cpu and memory requests a VerticalPodAutoscaler of the
+// workload picks for the container, keyed and valued the same way. They reach
+// the autoscaler alone, unless none sizes the container: Min then becomes its
+// request and Max its limit. They exclude cpu and memory in Requests and Limits.
 type Container struct {
 	Name     string            `json:"name"`
 	Requests map[string]string `json:"requests,omitempty"`
 	Limits   map[string]string `json:"limits,omitempty"`
+	Min      map[string]string `json:"min,omitempty"`
+	Max      map[string]string `json:"max,omitempty"`
 }
 
 // podSpecPaths maps a workload kind to the jq path of the pod spec inside it. A
@@ -124,20 +142,30 @@ elif $annotations[%[3]q] == "true" and %[1]d < $current
 then error({%[4]q: "\(.kind) '\(.metadata.name)' does not allow its replicas to go below \($current)"})
 else .spec.replicas = %[1]d end)`
 
-// hpaProgram runs %[4]s on every HorizontalPodAutoscaler that targets the workload of kind %[1]s
-// and name %[2]s, to give the workload %[3]d replicas. Like replicasProgram, it fails the render
-// with a scaling error when the autoscaler forbids that by annotation. The autoscaler's bounds,
-// minReplicas 1 when unset as in Kubernetes, are the baseline; asking for the replicas both bounds
-// already hold is not scaling.
+// hpaProgram runs %[5]s on every HorizontalPodAutoscaler that targets the workload of kind %[1]s
+// and name %[2]s, to keep the workload's replicas between %[3]s and %[4]s, jq expressions that may
+// read the autoscaler's own minimum as $min. Like replicasProgram, it fails the render with a
+// scaling error when the autoscaler forbids that by annotation. The autoscaler's bounds,
+// minReplicas 1 when unset as in Kubernetes, are the baseline; asking for the bounds it already
+// holds is not scaling.
 const hpaProgram = `if .spec.scaleTargetRef.kind == %[1]s and .spec.scaleTargetRef.name == %[2]s
 then ((.metadata.annotations // {}) as $annotations | (.spec.minReplicas // 1) as $min |
+(%[3]s) as $lower | (%[4]s) as $upper |
 "\(.kind) '\(.metadata.name)' does not allow the replicas of \(.spec.scaleTargetRef.kind) '\(.spec.scaleTargetRef.name)'" as $forbidden |
-if $annotations[%[5]q] == "true" and (%[3]d != $min or %[3]d != .spec.maxReplicas)
-then error({%[7]q: "\($forbidden) to change"})
-elif $annotations[%[6]q] == "true" and %[3]d < $min
-then error({%[7]q: "\($forbidden) to go below \($min)"})
-else %[4]s end)
+if $annotations[%[6]q] == "true" and ($lower != $min or $upper != .spec.maxReplicas)
+then error({%[8]q: "\($forbidden) to change"})
+elif $annotations[%[7]q] == "true" and $lower < $min
+then error({%[8]q: "\($forbidden) to go below \($min)"})
+else %[5]s end)
 else . end`
+
+// hpaBounds is what a HorizontalPodAutoscaler is to hold, as jq for hpaProgram: the lower and the
+// upper bound of its workload's replicas and the steps that set them.
+type hpaBounds struct {
+	lower string
+	upper string
+	set   string
+}
 
 // vpaProgram runs the steps %[3]s on every VerticalPodAutoscaler that targets the workload of
 // kind %[1]s and name %[2]s.
@@ -173,9 +201,9 @@ func ScalingError(err error) string {
 	return message
 }
 
-// Patches translates the requests into nelm render patches: for each request that
-// changes anything, one for its workload and one for each kind of autoscaler that
-// may target it.
+// Patches translates the requests into nelm render patches: for each request, one
+// for its workload when the request changes it, and one for each kind of
+// autoscaler the request pins or bounds.
 //
 // A request whose name holds a slash is left out: no Kubernetes object can be
 // named that way, and nelm would read a name wrapped in slashes as a regexp,
@@ -193,19 +221,14 @@ func Patches(requests []Request) ([]spec.Patch, error) {
 			return nil, fmt.Errorf("resize %s '%s': %w", request.Kind, request.Name, err)
 		}
 
-		if program == "" {
-			continue
+		// A request that only gives ranges leaves the workload as the chart renders it.
+		if program != "" {
+			patches = append(patches, workloadPatch(request, program))
 		}
-
-		patches = append(patches, spec.Patch{
-			Match: spec.ResourceMatcher{Kinds: []string{request.Kind}, Names: []string{request.Name}},
-			Type:  spec.PatchTypeJQ,
-			Patch: program,
-		})
 
 		autoscalers, err := autoscalerPatches(request)
 		if err != nil {
-			return nil, fmt.Errorf("pin autoscalers of %s '%s': %w", request.Kind, request.Name, err)
+			return nil, fmt.Errorf("patch autoscalers of %s '%s': %w", request.Kind, request.Name, err)
 		}
 
 		patches = append(patches, autoscalers...)
@@ -214,16 +237,25 @@ func Patches(requests []Request) ([]spec.Patch, error) {
 	return patches, nil
 }
 
-// autoscalerPatches builds the patches that pin the autoscalers targeting the
-// request's workload to the values the request gives it: a HorizontalPodAutoscaler
-// to the replicas, a VerticalPodAutoscaler to the cpu and memory requests. A
-// HorizontalPodAutoscaler guards the replicas with the same annotations as a
-// workload.
+// workloadPatch runs program on the workload the request addresses.
+func workloadPatch(request Request, program string) spec.Patch {
+	return spec.Patch{
+		Match: spec.ResourceMatcher{Kinds: []string{request.Kind}, Names: []string{request.Name}},
+		Type:  spec.PatchTypeJQ,
+		Patch: program,
+	}
+}
+
+// autoscalerPatches builds the patches for the autoscalers targeting the request's
+// workload: a HorizontalPodAutoscaler is pinned to the replicas or bounded by the
+// replicas range, a VerticalPodAutoscaler is pinned to the cpu and memory requests
+// or bounded by the range of each container. A HorizontalPodAutoscaler guards the
+// replicas with the same annotations as a workload.
 //
-// The workload keeps the values too, so they hold when the chart renders no
-// autoscaler for it. A matcher cannot address an object by what it targets, so
-// these patches match every autoscaler of a kind and the programs select their
-// targets themselves.
+// The workload keeps pinned values too, so they hold when the chart renders no
+// autoscaler for it; a range reaches the autoscalers alone. A matcher cannot
+// address an object by what it targets, so these patches match every autoscaler
+// of a kind and the programs select their targets themselves.
 func autoscalerPatches(request Request) ([]spec.Patch, error) {
 	kind, err := json.Marshal(request.Kind)
 	if err != nil {
@@ -237,21 +269,16 @@ func autoscalerPatches(request Request) ([]spec.Patch, error) {
 
 	var patches []spec.Patch
 
-	if request.Replicas != nil {
-		replicas := *request.Replicas
+	bounds, ok, err := replicaBounds(request)
+	if err != nil {
+		return nil, err
+	}
 
-		// A HorizontalPodAutoscaler cannot go below one replica, so zero goes to the
-		// workload alone: the autoscaler does not scale a target that runs none. Its
-		// guards still apply, as zero replicas change the workload all the same.
-		pin := "."
-		if replicas > 0 {
-			pin = fmt.Sprintf("(.spec.minReplicas = %[1]d | .spec.maxReplicas = %[1]d)", replicas)
-		}
-
+	if ok {
 		patches = append(patches, spec.Patch{
 			Match: spec.ResourceMatcher{Groups: []string{"autoscaling"}, Kinds: []string{"HorizontalPodAutoscaler"}},
 			Type:  spec.PatchTypeJQ,
-			Patch: fmt.Sprintf(hpaProgram, kind, name, replicas, pin, annotationScaleDisabled, annotationScaleDownDisabled, scalingErrorKey),
+			Patch: fmt.Sprintf(hpaProgram, kind, name, bounds.lower, bounds.upper, bounds.set, annotationScaleDisabled, annotationScaleDownDisabled, scalingErrorKey),
 		})
 	}
 
@@ -271,29 +298,111 @@ func autoscalerPatches(request Request) ([]spec.Patch, error) {
 	return patches, nil
 }
 
-// vpaSteps builds the jq steps that pin the containers' resources in a
+// replicaBounds returns what a HorizontalPodAutoscaler of the request's workload is
+// to hold, false when the request leaves the replicas alone. Replicas pin both
+// bounds; a range sets the bounds it gives and keeps the autoscaler's own for the
+// rest.
+//
+// The CR schema rejects a range on a kind without replicas and a range next to
+// replicas; the guards keep the patch honest if a request reaches it from
+// somewhere else.
+func replicaBounds(request Request) (hpaBounds, bool, error) {
+	ranged := request.MinReplicas != nil || request.MaxReplicas != nil
+
+	if ranged && request.Replicas != nil {
+		return hpaBounds{}, false, errors.New("replicas are set together with a replicas range")
+	}
+
+	if request.Replicas != nil {
+		replicas := strconv.Itoa(int(*request.Replicas))
+
+		// A HorizontalPodAutoscaler cannot go below one replica, so zero goes to the
+		// workload alone: the autoscaler does not scale a target that runs none. Its
+		// guards still apply, as zero replicas change the workload all the same.
+		set := "."
+		if *request.Replicas > 0 {
+			set = fmt.Sprintf("(.spec.minReplicas = %[1]s | .spec.maxReplicas = %[1]s)", replicas)
+		}
+
+		return hpaBounds{lower: replicas, upper: replicas, set: set}, true, nil
+	}
+
+	if !ranged {
+		return hpaBounds{}, false, nil
+	}
+
+	if _, ok := replicaKinds[request.Kind]; !ok {
+		return hpaBounds{}, false, errors.New("kind does not have replicas")
+	}
+
+	bounds := hpaBounds{lower: "$min", upper: ".spec.maxReplicas"}
+
+	var steps []string
+
+	if request.MinReplicas != nil {
+		bounds.lower = strconv.Itoa(int(*request.MinReplicas))
+		steps = append(steps, ".spec.minReplicas = "+bounds.lower)
+	}
+
+	if request.MaxReplicas != nil {
+		bounds.upper = strconv.Itoa(int(*request.MaxReplicas))
+		steps = append(steps, ".spec.maxReplicas = "+bounds.upper)
+	}
+
+	bounds.set = "(" + strings.Join(steps, " | ") + ")"
+
+	return bounds, true, nil
+}
+
+// vpaSteps builds the jq steps that pin or bound the containers' resources in a
 // VerticalPodAutoscaler, one per container that sets a resource VPA controls.
 //
 // A cpu or memory request becomes both minAllowed and maxAllowed, so VPA keeps it
-// as it is. VPA scales a limit together with its request, keeping the ratio from
-// the pod template, so a container that sets a cpu or memory limit makes VPA leave
-// its limits alone. A container the workload does not have gets a policy VPA has
-// no use for.
+// as it is; a range becomes the bounds it gives, within which VPA keeps picking
+// the request. VPA scales a limit together with its request, keeping the ratio
+// from the pod template, so a container that sets a cpu or memory limit makes VPA
+// leave its limits alone. A container the workload does not have gets a policy
+// VPA has no use for.
 func vpaSteps(containers []Container) ([]string, error) {
 	var steps []string
 
 	for _, container := range containers {
-		pinned := make(map[string]string)
+		// The CR schema rejects cpu and memory requests and limits next to a
+		// range, as VPA picks the requests within it; the guard keeps a request
+		// that reached here another way from both pinning and ranging them.
+		if (controlsAny(container.Min) || controlsAny(container.Max)) && (controlsAny(container.Requests) || controlsAny(container.Limits)) {
+			return nil, fmt.Errorf("container '%s' sets cpu or memory requests or limits together with a range", container.Name)
+		}
+
+		minAllowed := make(map[string]string)
+		maxAllowed := make(map[string]string)
 		limited := false
 
+		lists := []struct {
+			name       string
+			quantities map[string]string
+			bounds     []map[string]string
+		}{
+			{"request", container.Requests, []map[string]string{minAllowed, maxAllowed}},
+			{"min", container.Min, []map[string]string{minAllowed}},
+			{"max", container.Max, []map[string]string{maxAllowed}},
+		}
+
 		for resourceName, scale := range vpaScales {
-			if quantity, ok := container.Requests[resourceName]; ok {
-				bound, err := vpaBound(quantity, scale)
-				if err != nil {
-					return nil, fmt.Errorf("container '%s' %s request: %w", container.Name, resourceName, err)
+			for _, list := range lists {
+				quantity, ok := list.quantities[resourceName]
+				if !ok {
+					continue
 				}
 
-				pinned[resourceName] = bound
+				bound, err := vpaBound(quantity, scale)
+				if err != nil {
+					return nil, fmt.Errorf("container '%s' %s %s: %w", container.Name, resourceName, list.name, err)
+				}
+
+				for _, bounds := range list.bounds {
+					bounds[resourceName] = bound
+				}
 			}
 
 			if _, ok := container.Limits[resourceName]; ok {
@@ -303,13 +412,23 @@ func vpaSteps(containers []Container) ([]string, error) {
 
 		var changes []string
 
-		if len(pinned) > 0 {
-			literal, err := json.Marshal(pinned)
-			if err != nil {
-				return nil, fmt.Errorf("encode container '%s' requests: %w", container.Name, err)
+		for _, policy := range []struct {
+			field  string
+			bounds map[string]string
+		}{
+			{"minAllowed", minAllowed},
+			{"maxAllowed", maxAllowed},
+		} {
+			if len(policy.bounds) == 0 {
+				continue
 			}
 
-			changes = append(changes, fmt.Sprintf(".minAllowed += %s | .maxAllowed += %s", literal, literal))
+			literal, err := json.Marshal(policy.bounds)
+			if err != nil {
+				return nil, fmt.Errorf("encode container '%s' %s: %w", container.Name, policy.field, err)
+			}
+
+			changes = append(changes, fmt.Sprintf(".%s += %s", policy.field, literal))
 		}
 
 		if limited {
@@ -343,6 +462,17 @@ func vpaBound(value string, scale resource.Scale) (string, error) {
 	quantity.RoundUp(scale)
 
 	return quantity.String(), nil
+}
+
+// controlsAny reports whether the quantities give a resource VPA controls.
+func controlsAny(quantities map[string]string) bool {
+	for resourceName := range vpaScales {
+		if _, ok := quantities[resourceName]; ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 // jqProgram builds the jq program that overlays one request onto the workload it

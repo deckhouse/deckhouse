@@ -617,6 +617,8 @@ func toResourceRequests(requests []v1alpha1.ApplicationResourceRequest) []resour
 					Name:     container.Name,
 					Requests: toQuantities(container.Resources.Requests),
 					Limits:   toQuantities(container.Resources.Limits),
+					Min:      toBounds(container.Resources.Min),
+					Max:      toBounds(container.Resources.Max),
 				})
 			}
 		}
@@ -633,22 +635,49 @@ func toResourceRequests(requests []v1alpha1.ApplicationResourceRequest) []resour
 			}
 		}
 
-		var replicas *int32
-		if request.Replicas != nil {
-			value := *request.Replicas
-			replicas = &value
-		}
-
 		out = append(out, resourcesize.Request{
 			Kind:                 request.Kind,
 			Name:                 request.Name,
-			Replicas:             replicas,
+			Replicas:             copyReplicas(request.Replicas),
+			MinReplicas:          copyReplicas(request.MinReplicas),
+			MaxReplicas:          copyReplicas(request.MaxReplicas),
 			Containers:           containers,
 			VolumeClaimTemplates: claimTemplates,
 		})
 	}
 
 	return out
+}
+
+// copyReplicas copies a replica count, so the result does not alias the CR.
+func copyReplicas(replicas *int32) *int32 {
+	if replicas == nil {
+		return nil
+	}
+
+	value := *replicas
+
+	return &value
+}
+
+// toBounds flattens the bounds of a container range like toQuantities, returning
+// nil when the range gives none.
+func toBounds(bounds *v1alpha1.ApplicationContainerResourceBounds) map[string]string {
+	if bounds == nil {
+		return nil
+	}
+
+	list := corev1.ResourceList{}
+
+	if bounds.CPU != nil {
+		list[corev1.ResourceCPU] = *bounds.CPU
+	}
+
+	if bounds.Memory != nil {
+		list[corev1.ResourceMemory] = *bounds.Memory
+	}
+
+	return toQuantities(list)
 }
 
 // toQuantities flattens a ResourceList into resource name to canonical quantity

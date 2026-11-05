@@ -253,7 +253,7 @@ func (s *Service) Render(ctx context.Context, namespace string, pkg Package) (st
 	// Render what the package actually gets: the runtime dump reads this, and it
 	// would be misleading if it showed the chart's own sizing rather than the
 	// patched one the install applies.
-	rendered, err := s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
+	rendered, _, _, err := s.renderWithFallbacks(ctx, namespace, pkg, nelm.InstallOptions{
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
 		RootValues:  pkg.GetRuntimeValues(),
@@ -287,7 +287,13 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 	err := s.client.Delete(ctx, namespace, name, s.trackUninstall)
 	s.observeOperation(operationDelete, namespace, name, started)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	s.expireAutoscaling(name)
+
+	return nil
 }
 
 // Upgrade installs or upgrades a Helm release for a package.
@@ -405,7 +411,8 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, ap
 		slog.String("namespace", namespace))
 
 	// The checksum, the absent-resources monitor and the install all have to see
-	// the same manifests, so the same patches go to the render and the install.
+	// the same manifests, so the same patches go to the render and the install,
+	// the fallbacks of the ranges no autoscaler applies included.
 	patches, err := renderPatches(pkg)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -414,7 +421,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, ap
 
 	// Render chart to get manifests for checksum calculation
 	renderStarted := time.Now()
-	renderedManifests, err := s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
+	renderedManifests, patches, autoscalers, err := s.renderWithFallbacks(ctx, namespace, pkg, nelm.InstallOptions{
 		Path:            pkg.GetPath(),
 		ValuesPaths:     []string{valuesPath},
 		RootValues:      pkg.GetRuntimeValues(),
@@ -433,6 +440,8 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, ap
 
 		return newReasonError(reasonRenderFailed, err)
 	}
+
+	s.publishAutoscaling(namespace, pkg, autoscalers)
 
 	// Collect application endpoint URLs from the rendered manifests. Done
 	// before the shouldUpgrade check so URLs are refreshed even when the

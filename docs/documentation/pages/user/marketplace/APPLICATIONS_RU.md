@@ -1,9 +1,9 @@
 ---
 title: Установка и управление приложениями
 permalink: ru/user/marketplace/applications.html
-description: "Установка, обновление и удаление приложений в Deckhouse Platform Marketplace. Просмотр доступных версий пакетов, создание Application, проверка условий статуса и управление несколькими экземплярами."
+description: "Установка, обновление и удаление приложений в Deckhouse Platform Marketplace. Просмотр доступных версий пакетов, создание Application, проверка условий статуса, управление несколькими экземплярами и настройка ресурсов и автомасштабирования рабочих нагрузок."
 lang: ru
-search: Application, install application, application conditions, установка приложения, условия приложения, обновление приложения, удаление приложения
+search: Application, install application, application conditions, установка приложения, условия приложения, обновление приложения, удаление приложения, resourceRequests, ресурсы рабочих нагрузок, автомасштабирование, minReplicas, maxReplicas, HorizontalPodAutoscaler, VerticalPodAutoscaler
 ---
 
 В этом разделе описан порядок просмотра доступных версий [пакетов](../../glossary.html#marketplace-package) а также, установка, обновление и удаление приложений.
@@ -180,6 +180,78 @@ spec:
 ```
 
 Объекты каждого экземпляра называются в формате `d8a-<INSTANCE_NAME>-<SUFFIX>`. Например, `d8a-redis-cache-server` и `d8a-redis-sessions-server`. Благодаря этому, имена не конфликтуют.
+
+## Настройка ресурсов рабочих нагрузок
+
+[Параметр `spec.resourceRequests`](../../reference/api/cr.html#application-v1alpha1-spec-resourcerequests) переопределяет количество реплик, ресурсы контейнеров и размеры дисков, которые пакет задаёт рабочим нагрузкам приложения. Каждая запись определяет нагрузку по типу (`kind`) и имени объекта (`name`) в формате `d8a-<INSTANCE_NAME>-<SUFFIX>`. Для нагрузок, контейнеров и дисков, не перечисленных в параметре, сохраняются настройки из пакета. Подробнее о параметрах — в описании [Application](../../reference/api/cr.html#application).
+
+### Автомасштабирование
+
+Если пакет развёртывает для нагрузки HorizontalPodAutoscaler или VerticalPodAutoscaler, можно либо закрепить значения, которые он поддерживает, либо задать для них диапазон:
+
+- `replicas` и запросы `cpu` и `memory` в `resources.requests` — фиксированные значения. Deckhouse Platform записывает их в нагрузку и в обе границы HorizontalPodAutoscaler или VerticalPodAutoscaler, поэтому они не меняются. При этом срабатывает алерт `ApplicationHorizontalPodAutoscalerPinned` или `ApplicationVerticalPodAutoscalerPinned`.
+- `minReplicas` и `maxReplicas` задают диапазон количества реплик для HorizontalPodAutoscaler. `resources.min` и `resources.max` задают диапазон запросов `cpu` и `memory` контейнера для VerticalPodAutoscaler. Deckhouse Platform записывает диапазон только в HorizontalPodAutoscaler или VerticalPodAutoscaler, и тот продолжает менять нагрузку в его пределах.
+
+Пример манифеста, в котором HorizontalPodAutoscaler поддерживает от 2 до 10 реплик Deployment `d8a-shop-backend`, VerticalPodAutoscaler выбирает запросы контейнера `backend` в пределах диапазона, а у контейнера `proxy` фиксированные запросы и ограничения:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
+metadata:
+  name: shop
+  namespace: my-app
+spec:
+  packageName: shop
+  packageVersion: "v1.4.0"
+  packageRepositoryName: my-registry
+  resourceRequests:
+    - kind: Deployment
+      name: d8a-shop-backend
+      minReplicas: 2
+      maxReplicas: 10
+      containers:
+        - name: backend
+          resources:
+            min:
+              cpu: 250m
+              memory: 256Mi
+            max:
+              cpu: "2"
+              memory: 2Gi
+        - name: proxy
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+```
+
+Диапазон всегда задаётся обеими границами и заменяет фиксированные значения, которые он ограничивает, поэтому Application отклоняется, если:
+
+- `minReplicas` указан без `maxReplicas` или наоборот;
+- `min` и `max` контейнера заданы не вместе или для разных ресурсов;
+- `replicas` указан вместе с `minReplicas` и `maxReplicas`;
+- `minReplicas` больше `maxReplicas` или диапазон реплик задан для нагрузки, отличной от Deployment, StatefulSet и ReplicaSet;
+- для контейнера с `min` и `max` заданы запросы или ограничения `cpu` или `memory` (`ephemeral-storage` задавать можно: VerticalPodAutoscaler им не управляет);
+- `min` ресурса больше его `max`.
+
+В ошибке указаны нагрузка и контейнер и объяснено, как исправить проблему. Например:
+
+```console
+Application 'my-app/shop' has invalid spec.resourceRequests: Deployment 'd8a-shop-backend', container 'backend': set both min and max: a range needs both bounds, but only min is set
+```
+
+Чтобы закрепить ресурс контейнера с диапазоном на одном значении, укажите одинаковое значение в `min` и `max`.
+
+Особенности диапазонов:
+
+- Deckhouse Platform не меняет количество реплик в самой нагрузке: в пределах диапазона его выбирает HorizontalPodAutoscaler.
+- Пока у VerticalPodAutoscaler нет первой рекомендации, поды работают с запросами из пакета.
+
+Если диапазон не применяет ни один HorizontalPodAutoscaler или VerticalPodAutoscaler приложения (например, пакет не развёртывает HorizontalPodAutoscaler для нагрузки или модуль `vertical-pod-autoscaler` выключен), Deckhouse Platform применяет диапазон как фиксированные значения: у нагрузки устанавливается `minReplicas` реплик, а контейнер получает `min` как запрос и `max` как ограничение ресурса. При этом срабатывает алерт `ApplicationHorizontalPodAutoscalerMissing` или `ApplicationVerticalPodAutoscalerMissing`. Чтобы исправить это, сделайте HorizontalPodAutoscaler или VerticalPodAutoscaler доступным или замените диапазон фиксированными значениями.
+
+Если пакет не разрешает менять количество реплик нагрузки, Deckhouse Platform не применяет изменение: в условиях Application появляется причина `ScalingForbidden`, а в сообщении указана нагрузка. Чтобы исправить это, измените или удалите количество реплик или диапазон нагрузки в `spec.resourceRequests`.
 
 ## Обновление приложения
 

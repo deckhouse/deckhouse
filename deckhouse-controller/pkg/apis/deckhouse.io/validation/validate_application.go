@@ -39,6 +39,7 @@ import (
 	packageschema "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/addonutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation/resourcerequests"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 )
 
@@ -77,6 +78,13 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 
 		if len(app.Name) > maxApplicationNameLength {
 			return rejectResult(fmt.Sprintf("Application name '%s' must be no longer than %d characters", app.Name, maxApplicationNameLength))
+		}
+
+		// The autoscaling ranges relate several fields, so they are checked here rather than in
+		// the CRD schema: the error names the workload and says how to fix it.
+		if problems := resourcerequests.Validate(app.Spec.ResourceRequests); len(problems) > 0 {
+			return rejectResult(fmt.Sprintf("Application '%s/%s' has invalid spec.resourceRequests: %s",
+				app.Namespace, app.Name, strings.Join(problems, "; ")))
 		}
 
 		ap := new(v1alpha1.ApplicationPackage)

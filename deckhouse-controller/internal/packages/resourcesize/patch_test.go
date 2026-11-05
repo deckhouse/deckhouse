@@ -39,6 +39,14 @@ func apply(t *testing.T, resources []*unstructured.Unstructured, requests []Requ
 		return err
 	}
 
+	return applyPatches(t, resources, patches)
+}
+
+// applyPatches runs patches over resources the way nelm does on render, replacing each
+// resource's content with the patched one, and returns the first error applying them.
+func applyPatches(t *testing.T, resources []*unstructured.Unstructured, patches []spec.Patch) error {
+	t.Helper()
+
 	compiled, err := spec.CompilePatches(patches)
 	require.NoError(t, err)
 
@@ -423,10 +431,10 @@ func TestPatchesRejectVolumeClaimTemplatesOfOtherKinds(t *testing.T) {
 }
 
 // The checksum of the accepted configuration is built from the encoded requests,
-// so a request that does not use the disk field must encode exactly as it did
-// before it existed: otherwise every Application with resource requests would
-// see its configuration change on upgrade and run again.
-func TestRequestWithoutDisksEncodesAsBefore(t *testing.T) {
+// so a request that does not use the disk and range fields must encode exactly as
+// it did before they existed: otherwise every Application with resource requests
+// would see its configuration change on upgrade and run again.
+func TestRequestWithoutDisksOrRangesEncodesAsBefore(t *testing.T) {
 	encoded, err := json.Marshal(Request{
 		Kind:       "Deployment",
 		Name:       "controller",
@@ -1007,4 +1015,213 @@ func TestPatchesIgnoreGuardsOfOtherHorizontalPodAutoscalers(t *testing.T) {
 
 	require.NoError(t, scaleController(t, 1, other, autoscaler))
 	requirePinned(t, autoscaler, 1)
+}
+
+// rangeController asks for a replicas range of deploymentManifest's workload, nil
+// for a bound it leaves out, rendered together with the autoscalers.
+func rangeController(t *testing.T, minReplicas, maxReplicas *int32, autoscalers ...*unstructured.Unstructured) error {
+	t.Helper()
+
+	return apply(t, append([]*unstructured.Unstructured{parse(t, deploymentManifest)}, autoscalers...), []Request{{
+		Kind:        "Deployment",
+		Name:        "controller",
+		MinReplicas: minReplicas,
+		MaxReplicas: maxReplicas,
+	}})
+}
+
+// requireBounds asserts a patched HorizontalPodAutoscaler holds the bounds.
+func requireBounds(t *testing.T, autoscaler *unstructured.Unstructured, minReplicas, maxReplicas int64) {
+	t.Helper()
+
+	gotMin, gotMax := hpaReplicas(t, autoscaler)
+	require.Equal(t, minReplicas, gotMin)
+	require.Equal(t, maxReplicas, gotMax)
+}
+
+// A range goes into the autoscaler alone: the workload keeps the replicas the
+// chart renders, and the autoscaler scales it within the range.
+func TestPatchesBoundHorizontalPodAutoscalers(t *testing.T) {
+	for _, apiVersion := range []string{"autoscaling/v1", "autoscaling/v2"} {
+		deployment := parse(t, deploymentManifest)
+		before := deployment.DeepCopy()
+		autoscaler := hpa(t, apiVersion, "Deployment", "controller")
+
+		err := apply(t, []*unstructured.Unstructured{deployment, autoscaler}, []Request{{
+			Kind:        "Deployment",
+			Name:        "controller",
+			MinReplicas: int32Ptr(3),
+			MaxReplicas: int32Ptr(7),
+		}})
+		require.NoError(t, err, apiVersion)
+
+		requireBounds(t, autoscaler, 3, 7)
+		require.Equal(t, before, deployment, apiVersion)
+	}
+}
+
+// A bound the range leaves out stays as the autoscaler has it, an unset
+// minReplicas included.
+func TestPatchesKeepHorizontalPodAutoscalerBoundsTheRangeLeavesOut(t *testing.T) {
+	autoscaler := hpa(t, "autoscaling/v2", "Deployment", "controller")
+	require.NoError(t, rangeController(t, nil, int32Ptr(20), autoscaler))
+	requireBounds(t, autoscaler, 2, 20)
+
+	autoscaler = hpa(t, "autoscaling/v2", "Deployment", "controller")
+	require.NoError(t, rangeController(t, int32Ptr(4), nil, autoscaler))
+	requireBounds(t, autoscaler, 4, 10)
+
+	autoscaler = hpa(t, "autoscaling/v2", "Deployment", "controller")
+	unstructured.RemoveNestedField(autoscaler.Object, "spec", "minReplicas")
+	require.NoError(t, rangeController(t, nil, int32Ptr(20), autoscaler))
+
+	_, found, err := unstructured.NestedInt64(autoscaler.Object, "spec", "minReplicas")
+	require.NoError(t, err)
+	require.False(t, found)
+}
+
+// A range changes the bounds unless it gives the ones the autoscaler holds already.
+func TestPatchesRefuseRangeWhenHorizontalPodAutoscalerScaleDisabled(t *testing.T) {
+	for _, bounds := range [][2]*int32{{int32Ptr(3), nil}, {nil, int32Ptr(5)}, {int32Ptr(2), int32Ptr(20)}} {
+		err := rangeController(t, bounds[0], bounds[1], guardedHPA(t, map[string]string{annotationScaleDisabled: "true"}))
+		requireScalingError(t, err, "HorizontalPodAutoscaler 'autoscaler' does not allow the replicas of Deployment 'controller' to change")
+	}
+}
+
+func TestPatchesRefuseRangeBelowHorizontalPodAutoscalerMinimum(t *testing.T) {
+	err := rangeController(t, int32Ptr(1), int32Ptr(10), guardedHPA(t, map[string]string{annotationScaleDownDisabled: "true"}))
+	requireScalingError(t, err, "HorizontalPodAutoscaler 'autoscaler' does not allow the replicas of Deployment 'controller' to go below 2")
+}
+
+// Scaling down disabled guards the minimum alone, as it does for pinned replicas:
+// a range that leaves it out keeps it.
+func TestPatchesBoundHorizontalPodAutoscalerWhenScaleDownDisabled(t *testing.T) {
+	autoscaler := guardedHPA(t, map[string]string{annotationScaleDownDisabled: "true"})
+	require.NoError(t, rangeController(t, int32Ptr(3), int32Ptr(5), autoscaler))
+	requireBounds(t, autoscaler, 3, 5)
+
+	autoscaler = guardedHPA(t, map[string]string{annotationScaleDownDisabled: "true"})
+	require.NoError(t, rangeController(t, nil, int32Ptr(20), autoscaler))
+	requireBounds(t, autoscaler, 2, 20)
+}
+
+// Asking for the bounds the autoscaler holds, or for one of them alone, changes
+// nothing, so neither guard objects.
+func TestPatchesKeepHorizontalPodAutoscalerRangeUnderGuards(t *testing.T) {
+	for _, annotation := range []string{annotationScaleDisabled, annotationScaleDownDisabled} {
+		for _, bounds := range [][2]*int32{{int32Ptr(2), int32Ptr(10)}, {int32Ptr(2), nil}, {nil, int32Ptr(10)}} {
+			autoscaler := guardedHPA(t, map[string]string{annotation: "true"})
+
+			require.NoError(t, rangeController(t, bounds[0], bounds[1], autoscaler))
+			requireBounds(t, autoscaler, 2, 10)
+		}
+	}
+}
+
+// The CR schema rejects a replicas range on a kind without replicas and next to
+// replicas; the patches refuse them too.
+func TestPatchesRejectInvalidReplicasRanges(t *testing.T) {
+	_, err := Patches([]Request{{Kind: "DaemonSet", Name: "agent", MaxReplicas: int32Ptr(3)}})
+	require.ErrorContains(t, err, "kind does not have replicas")
+
+	_, err = Patches([]Request{{Kind: "Deployment", Name: "controller", Replicas: int32Ptr(3), MinReplicas: int32Ptr(2)}})
+	require.ErrorContains(t, err, "replicas are set together with a replicas range")
+}
+
+// A range becomes the bounds of the container's policy, within which VPA keeps
+// picking the requests; the bounds it leaves out and the workload stay as the
+// chart sets them.
+func TestPatchesBoundVerticalPodAutoscalerRanges(t *testing.T) {
+	deployment := parse(t, deploymentManifest)
+	before := deployment.DeepCopy()
+	autoscaler := vpa(t, "Deployment", "controller", controllerPolicies)
+	proxyPolicy := vpaPolicy(t, autoscaler.DeepCopy(), "kube-rbac-proxy")
+
+	err := apply(t, []*unstructured.Unstructured{deployment, autoscaler}, []Request{{
+		Kind: "Deployment",
+		Name: "controller",
+		Containers: []Container{{
+			Name: "controller",
+			Min:  map[string]string{"cpu": "100m"},
+			Max:  map[string]string{"cpu": "2", "memory": "2Gi"},
+		}},
+	}})
+	require.NoError(t, err)
+
+	require.Equal(t, map[string]any{
+		"containerName": "controller",
+		"minAllowed":    map[string]any{"cpu": "100m", "memory": "32Mi"},
+		"maxAllowed":    map[string]any{"cpu": "2", "memory": "2Gi"},
+	}, vpaPolicy(t, autoscaler, "controller"))
+	require.Equal(t, proxyPolicy, vpaPolicy(t, autoscaler, "kube-rbac-proxy"))
+	require.Equal(t, before, deployment)
+}
+
+// VPA does not control ephemeral-storage, so a container with a range still sizes
+// it in the workload, and its limit does not keep VPA off the other limits.
+func TestPatchesSizeEphemeralStorageNextToRange(t *testing.T) {
+	deployment := parse(t, deploymentManifest)
+	autoscaler := vpa(t, "Deployment", "controller", "")
+
+	err := apply(t, []*unstructured.Unstructured{deployment, autoscaler}, []Request{{
+		Kind: "Deployment",
+		Name: "controller",
+		Containers: []Container{{
+			Name:     "controller",
+			Requests: map[string]string{"ephemeral-storage": "1Gi"},
+			Limits:   map[string]string{"ephemeral-storage": "2Gi"},
+			Max:      map[string]string{"memory": "1Gi"},
+		}},
+	}})
+	require.NoError(t, err)
+
+	require.Equal(t, []any{map[string]any{
+		"containerName": "controller",
+		"maxAllowed":    map[string]any{"memory": "1Gi"},
+	}}, vpaPolicies(t, autoscaler))
+
+	resources := containerResources(t, deployment, "controller", "spec", "template", "spec")
+	require.Equal(t, map[string]any{"cpu": "10m", "memory": "32Mi", "ephemeral-storage": "1Gi"}, resources["requests"])
+	require.Equal(t, map[string]any{"ephemeral-storage": "2Gi"}, resources["limits"])
+}
+
+// The bounds of a range are rounded up to what VPA accepts, like pinned requests.
+func TestPatchesRoundVerticalPodAutoscalerRangeUp(t *testing.T) {
+	autoscaler := vpa(t, "Deployment", "controller", "")
+
+	err := apply(t, []*unstructured.Unstructured{parse(t, deploymentManifest), autoscaler}, []Request{{
+		Kind: "Deployment",
+		Name: "controller",
+		Containers: []Container{{
+			Name: "controller",
+			Min:  map[string]string{"cpu": "0.5m"},
+			Max:  map[string]string{"memory": "1.2Gi"},
+		}},
+	}})
+	require.NoError(t, err)
+
+	policy := vpaPolicy(t, autoscaler, "controller")
+	require.Equal(t, map[string]any{"cpu": "1m"}, policy["minAllowed"])
+	require.Equal(t, map[string]any{"memory": "1288490189"}, policy["maxAllowed"])
+}
+
+// The CR schema rejects cpu and memory requests and limits next to a range; the
+// patches refuse them too, rather than both pin and range a resource.
+func TestPatchesRejectFixedResourcesNextToRange(t *testing.T) {
+	for _, container := range []Container{
+		{Name: "controller", Min: map[string]string{"cpu": "100m"}, Requests: map[string]string{"cpu": "200m"}},
+		{Name: "controller", Max: map[string]string{"memory": "1Gi"}, Limits: map[string]string{"cpu": "1"}},
+	} {
+		_, err := Patches([]Request{{Kind: "Deployment", Name: "controller", Containers: []Container{container}}})
+		require.ErrorContains(t, err, "container 'controller' sets cpu or memory requests or limits together with a range")
+	}
+}
+
+func TestPatchesRejectMalformedVerticalPodAutoscalerRange(t *testing.T) {
+	_, err := Patches([]Request{{
+		Kind:       "Deployment",
+		Name:       "controller",
+		Containers: []Container{{Name: "controller", Max: map[string]string{"cpu": "lots"}}},
+	}})
+	require.ErrorContains(t, err, "container 'controller' cpu max")
 }

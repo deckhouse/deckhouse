@@ -265,6 +265,93 @@
         d8 k patch application {{ $labels.name }} -n {{ $labels.namespace }} --type=json -p='[{"op": "remove", "path": "/spec/maintenance"}]'
         ```
 
+  - alert: ApplicationHorizontalPodAutoscalerMissing
+    expr: max by (namespace, name, kind, workload) (deckhouse_application_autoscaler_missing{autoscaler="HorizontalPodAutoscaler"}) > 0
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` has no HorizontalPodAutoscaler for {{ $labels.kind }} `{{ $labels.workload }}`.
+      description: |
+        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` sets a replicas range (`minReplicas` and `maxReplicas`) for {{ $labels.kind }} `{{ $labels.workload }}`, but the application deploys no HorizontalPodAutoscaler for this workload. Deckhouse Platform runs the workload with `minReplicas` replicas instead.
+
+        To fix the issue, do one of the following:
+
+        - Check the application settings: a package can deploy HorizontalPodAutoscaler only when a setting enables it.
+        - Replace the range with a fixed number of replicas: set `replicas` instead of `minReplicas` and `maxReplicas`.
+
+        To view the resource settings of the application, run the following command:
+
+        ```bash
+        d8 k get application {{ $labels.name }} -n {{ $labels.namespace }} -o jsonpath='{.spec.resourceRequests}'
+        ```
+
+  - alert: ApplicationVerticalPodAutoscalerMissing
+    expr: max by (namespace, name, kind, workload, container) (deckhouse_application_autoscaler_missing{autoscaler="VerticalPodAutoscaler"}) > 0
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        VerticalPodAutoscaler is disabled for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}` of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}`.
+      description: |
+        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` sets a resource range (`min` and `max`) for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}`, but no VerticalPodAutoscaler of the application sets the resources of this container. Deckhouse Platform applies the range as fixed resources instead: the container gets `min` as the requests and `max` as the limits.
+
+        To fix the issue, do one of the following:
+
+        - Check that the `vertical-pod-autoscaler` module is enabled: an application deploys VerticalPodAutoscaler only when the module is enabled.
+        - Check the VerticalPodAutoscaler of the workload: it doesn't set the resources in the `Off` update mode, for a container whose policy mode is `Off`, for a resource missing from `controlledResources` of the policy, and for init containers.
+        - Replace the range with fixed resources: set `requests` and `limits` instead of `min` and `max`.
+
+        To view the resource settings of the application, run the following command:
+
+        ```bash
+        d8 k get application {{ $labels.name }} -n {{ $labels.namespace }} -o jsonpath='{.spec.resourceRequests}'
+        ```
+
+  - alert: ApplicationHorizontalPodAutoscalerPinned
+    expr: max by (namespace, name, kind, workload) (deckhouse_application_autoscaler_pinned{autoscaler="HorizontalPodAutoscaler"}) > 0
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        HorizontalPodAutoscaler of {{ $labels.kind }} `{{ $labels.workload }}` of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` doesn't scale the workload.
+      description: |
+        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` sets a fixed number of replicas (`replicas`) for {{ $labels.kind }} `{{ $labels.workload }}`, which a HorizontalPodAutoscaler of the application scales. Deckhouse Platform sets both bounds of the HorizontalPodAutoscaler to this number, so it doesn't scale the workload.
+
+        To let HorizontalPodAutoscaler scale the workload, replace `replicas` with a range: set `minReplicas` and `maxReplicas`.
+
+        To view the resource settings of the application, run the following command:
+
+        ```bash
+        d8 k get application {{ $labels.name }} -n {{ $labels.namespace }} -o jsonpath='{.spec.resourceRequests}'
+        ```
+
+  - alert: ApplicationVerticalPodAutoscalerPinned
+    expr: max by (namespace, name, kind, workload, container) (deckhouse_application_autoscaler_pinned{autoscaler="VerticalPodAutoscaler"}) > 0
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      summary: |
+        VerticalPodAutoscaler doesn't change the resources of container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}` of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}`.
+      description: |
+        The `spec.resourceRequests` parameter of Application `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` sets fixed `cpu` or `memory` resources (`requests` or `limits`) for container `{{ $labels.container }}` of {{ $labels.kind }} `{{ $labels.workload }}`, which a VerticalPodAutoscaler of the application sizes. Deckhouse Platform sets both bounds of the VerticalPodAutoscaler to the requests, so it doesn't change them.
+
+        To let VerticalPodAutoscaler change the resources, replace the fixed `cpu` and `memory` requests and limits with a range: set `min` and `max`.
+
+        To view the resource settings of the application, run the following command:
+
+        ```bash
+        d8 k get application {{ $labels.name }} -n {{ $labels.namespace }} -o jsonpath='{.spec.resourceRequests}'
+        ```
+
   - alert: DeckhouseReleaseNotificationNotSent
     expr: sum by (name) (d8_release_info{notificationNotSent="true"})
     labels:

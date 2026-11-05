@@ -177,6 +177,26 @@ func (s *applicationValidationHandlerSuite) TestRequirementsAreCheckedOnCreate()
 	s.True(manager.checkCalled)
 }
 
+// TestInvalidResourceRequestsAreRejected: a replicas range next to the replicas it bounds is
+// rejected with a message naming the workload, before the package is consulted.
+func (s *applicationValidationHandlerSuite) TestInvalidResourceRequestsAreRejected() {
+	app := newApplication("repo", "pkg", "v1.0.0")
+	app.Spec.ResourceRequests = []v1alpha1.ApplicationResourceRequest{{
+		Kind:        "Deployment",
+		Name:        "d8a-test-backend",
+		Replicas:    new(int32(3)),
+		MinReplicas: new(int32(2)),
+		MaxReplicas: new(int32(10)),
+	}}
+	manager := &fakePackageManager{}
+
+	response := s.submit("CREATE", app, nil, newAPV(apvNameOf(app), false, nil), manager)
+
+	s.False(response.Allowed)
+	s.False(manager.checkCalled)
+	s.Contains(response.Result.Message, "Deployment 'd8a-test-backend': replicas cannot be set together with minReplicas and maxReplicas")
+}
+
 // TestEmptyCheckpointCountsAsRun: lastAppliedConfiguration {} (a package without settings) is a
 // checkpoint like any other, and an update over it passes a schema without immutable fields.
 func (s *applicationValidationHandlerSuite) TestEmptyCheckpointCountsAsRun() {

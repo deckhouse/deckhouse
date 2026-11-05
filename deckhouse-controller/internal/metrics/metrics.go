@@ -92,6 +92,20 @@ const (
 	ModuleSizeBytesTotal       = "deckhouse_module_size_bytes_total"
 	ModuleUpdatePolicyNotFound = "deckhouse_module_update_policy_not_found"
 	ModuleConfigurationError   = "deckhouse_module_configuration_error"
+
+	// ============================================================================
+	// Application Metrics
+	// ============================================================================
+	// ApplicationAutoscalerMissing is 1 for each range of an application's resource
+	// requests that no autoscaler applies, so it falls back to fixed values; the
+	// ApplicationHorizontalPodAutoscalerMissing and ApplicationVerticalPodAutoscalerMissing
+	// alerts fire on it.
+	ApplicationAutoscalerMissing = "deckhouse_application_autoscaler_missing"
+	// ApplicationAutoscalerPinned is 1 for each fixed value of an application's resource
+	// requests that an autoscaler scales, so the autoscaler is pinned to it; the
+	// ApplicationHorizontalPodAutoscalerPinned and ApplicationVerticalPodAutoscalerPinned
+	// alerts fire on it.
+	ApplicationAutoscalerPinned = "deckhouse_application_autoscaler_pinned"
 )
 
 // ============================================================================
@@ -155,16 +169,20 @@ func RegisterDeckhouseControllerMetrics(metricStorage metricsstorage.Storage) er
 		return fmt.Errorf("register module controller metrics: %w", err)
 	}
 
-	if err := RegisterLicensingMetrics(metricStorage); err != nil {
+	if err := registerLicensingMetrics(metricStorage); err != nil {
 		return fmt.Errorf("register licensing metrics: %w", err)
+	}
+
+	if err := registerApplicationMetrics(metricStorage); err != nil {
+		return fmt.Errorf("register application metrics: %w", err)
 	}
 
 	return nil
 }
 
-// RegisterLicensingMetrics registers the gauges published by the licensing
+// registerLicensingMetrics registers the gauges published by the licensing
 // controller. The names are the contract of the licensing alerts.
-func RegisterLicensingMetrics(metricStorage metricsstorage.Storage) error {
+func registerLicensingMetrics(metricStorage metricsstorage.Storage) error {
 	gauges := []struct {
 		name   string
 		labels []string
@@ -416,6 +434,32 @@ func registerModuleControllerMetrics(metricStorage metricsstorage.Storage) error
 	)
 	if err != nil {
 		return fmt.Errorf("failed to register %s: %w", D8ModuleUpdatingBrokenSequence, err)
+	}
+
+	return nil
+}
+
+// registerApplicationMetrics registers the metrics the package engine publishes about
+// applications.
+func registerApplicationMetrics(metricStorage metricsstorage.Storage) error {
+	autoscalerLabels := []string{LabelNamespace, LabelName, LabelKind, LabelWorkload, LabelContainer, LabelResource, LabelAutoscaler}
+
+	_, err := metricStorage.RegisterGauge(
+		ApplicationAutoscalerMissing,
+		autoscalerLabels,
+		options.WithHelp("Gauge indicating a resource range of an application that no autoscaler applies, so it falls back to fixed values (1.0 = falls back)"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to register %s: %w", ApplicationAutoscalerMissing, err)
+	}
+
+	_, err = metricStorage.RegisterGauge(
+		ApplicationAutoscalerPinned,
+		autoscalerLabels,
+		options.WithHelp("Gauge indicating a fixed resource value of an application that an autoscaler scales, so the autoscaler is pinned to it (1.0 = pinned)"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to register %s: %w", ApplicationAutoscalerPinned, err)
 	}
 
 	return nil

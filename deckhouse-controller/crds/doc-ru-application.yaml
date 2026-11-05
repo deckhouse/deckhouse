@@ -65,9 +65,23 @@ spec:
                         description: |
                           Количество реплик нагрузки.
 
-                          Применяется только к нагрузкам, поддерживающим управление количеством реплик: Deployment, StatefulSet и ReplicaSet.
+                          Применяется только к нагрузкам, поддерживающим управление количеством реплик: Deployment, StatefulSet и ReplicaSet. Нельзя задать вместе с `minReplicas` или `maxReplicas`.
 
-                          Если приложение развёртывает для нагрузки HorizontalPodAutoscaler, его параметрам `minReplicas` и `maxReplicas` присваивается это значение, поэтому количество реплик не меняется. Значение `0` применяется только к нагрузке: HorizontalPodAutoscaler не масштабирует нагрузку без реплик.
+                          Если приложение развёртывает для нагрузки HorizontalPodAutoscaler, его параметрам `minReplicas` и `maxReplicas` присваивается это значение, поэтому количество реплик не меняется, и срабатывает алерт [`ApplicationHorizontalPodAutoscalerPinned`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationhorizontalpodautoscalerpinned). Чтобы HorizontalPodAutoscaler масштабировал нагрузку, укажите вместо этого `minReplicas` и `maxReplicas`. Значение `0` применяется только к нагрузке: HorizontalPodAutoscaler не масштабирует нагрузку без реплик.
+                      minReplicas:
+                        description: |
+                          Минимальное количество реплик нагрузки для HorizontalPodAutoscaler, который приложение развёртывает для нагрузки.
+
+                          Применяется только к Deployment, StatefulSet и ReplicaSet. Задаётся вместе с `maxReplicas`. Нельзя задать вместе с `replicas`: в пределах диапазона количество реплик выбирает HorizontalPodAutoscaler. Не может быть больше `maxReplicas`.
+
+                          Если приложение не развёртывает HorizontalPodAutoscaler для нагрузки, у нагрузки устанавливается `minReplicas` реплик и срабатывает алерт [`ApplicationHorizontalPodAutoscalerMissing`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationhorizontalpodautoscalermissing).
+                      maxReplicas:
+                        description: |
+                          Максимальное количество реплик нагрузки для HorizontalPodAutoscaler, который приложение развёртывает для нагрузки.
+
+                          Применяется только к Deployment, StatefulSet и ReplicaSet. Задаётся вместе с `minReplicas`. Нельзя задать вместе с `replicas`: в пределах диапазона количество реплик выбирает HorizontalPodAutoscaler.
+
+                          Если приложение не развёртывает HorizontalPodAutoscaler для нагрузки, у нагрузки устанавливается `minReplicas` реплик и срабатывает алерт [`ApplicationHorizontalPodAutoscalerMissing`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationhorizontalpodautoscalermissing).
                       containers:
                         description: |
                           Настройки вычислительных ресурсов контейнеров нагрузки.
@@ -82,15 +96,17 @@ spec:
                                 Имя контейнера в составе нагрузки.
                             resources:
                               description: |
-                                Вычислительные ресурсы, которые контейнер запрашивает и которыми ограничен.
+                                Вычислительные ресурсы, которые контейнер запрашивает и которыми ограничен, или диапазон, в котором VerticalPodAutoscaler задаёт запросы контейнера.
 
-                                Используется формат поля `resources` контейнера пода. Поддерживаются `cpu`, `memory` и `ephemeral-storage`.
+                                Запросы и ограничения задаются в формате поля `resources` контейнера пода. Поддерживаются `cpu`, `memory` и `ephemeral-storage`.
 
                                 Указанные значения объединяются с настройками из пакета приложения отдельно для каждого ресурса. Например, если указать только `memory`, значение `cpu` из пакета сохранится.
 
                                 Удалить ограничение или запрос ресурсов, заданный в пакете, нельзя — можно только изменить его значение.
 
-                                Если приложение развёртывает для нагрузки VerticalPodAutoscaler, указанные запросы `cpu` и `memory` записываются в его политику для контейнера одновременно как `minAllowed` и `maxAllowed`, поэтому VPA их не меняет. Если указаны ограничения `cpu` или `memory`, VPA не меняет ограничения контейнера (`controlledValues: RequestsOnly`).
+                                Если приложение развёртывает для нагрузки VerticalPodAutoscaler, указанные запросы `cpu` и `memory` записываются в его политику для контейнера одновременно как `minAllowed` и `maxAllowed`, поэтому VPA их не меняет, и срабатывает алерт [`ApplicationVerticalPodAutoscalerPinned`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationverticalpodautoscalerpinned). Если указаны ограничения `cpu` или `memory`, VPA не меняет ограничения контейнера (`controlledValues: RequestsOnly`).
+
+                                Чтобы VPA мог менять запросы `cpu` и `memory` контейнера, укажите вместо них диапазон в `min` и `max`. Для контейнера с `min` или `max` нельзя задать запросы и ограничения `cpu` и `memory`.
                               properties:
                                 claims:
                                   description: |-
@@ -124,6 +140,34 @@ spec:
                                 limits:
                                   description: |
                                     Максимальный объём вычислительных ресурсов, доступный контейнеру.
+                                min:
+                                  description: |
+                                    Нижняя граница запросов `cpu` и `memory` контейнера, которые задаёт VerticalPodAutoscaler (`minAllowed` в его политике для контейнера).
+
+                                    Задаётся вместе с `max` для тех же ресурсов. В пределах диапазона запросы выбирает VPA, поэтому для контейнера с `min` и `max` нельзя задать запросы и ограничения `cpu` и `memory`. Чтобы закрепить ресурс на одном значении, укажите одинаковое значение в `min` и `max`.
+
+                                    Если ни один VerticalPodAutoscaler приложения не задаёт ресурс контейнера (например, потому что модуль `vertical-pod-autoscaler` выключен), контейнер получает `min` как запрос и `max` как ограничение этого ресурса, и срабатывает алерт [`ApplicationVerticalPodAutoscalerMissing`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationverticalpodautoscalermissing).
+                                  properties:
+                                    cpu:
+                                      description: |
+                                        Граница запроса `cpu`.
+                                    memory:
+                                      description: |
+                                        Граница запроса `memory`.
+                                max:
+                                  description: |
+                                    Верхняя граница запросов `cpu` и `memory` контейнера, которые задаёт VerticalPodAutoscaler (`maxAllowed` в его политике для контейнера).
+
+                                    Задаётся вместе с `min` для тех же ресурсов. В пределах диапазона запросы выбирает VPA, поэтому для контейнера с `min` и `max` нельзя задать запросы и ограничения `cpu` и `memory`. Граница ресурса не может быть меньше, чем в `min`.
+
+                                    Если ни один VerticalPodAutoscaler приложения не задаёт ресурс контейнера (например, потому что модуль `vertical-pod-autoscaler` выключен), контейнер получает `min` как запрос и `max` как ограничение этого ресурса, и срабатывает алерт [`ApplicationVerticalPodAutoscalerMissing`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationverticalpodautoscalermissing).
+                                  properties:
+                                    cpu:
+                                      description: |
+                                        Граница запроса `cpu`.
+                                    memory:
+                                      description: |
+                                        Граница запроса `memory`.
                       volumeClaimTemplates:
                         description: |
                           Размеры дисков, которые StatefulSet создаёт по шаблонам `volumeClaimTemplates`.

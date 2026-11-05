@@ -129,6 +129,20 @@ const (
 	// LabelNamespace is the label key for the namespace.
 	LabelNamespace = "namespace"
 
+	// ============================================================================
+	// Application Label Keys
+	// Used in the ApplicationAutoscalerMissing and ApplicationAutoscalerPinned metrics.
+	// ============================================================================
+
+	// LabelWorkload is the label key for the name of an application workload.
+	LabelWorkload = "workload"
+
+	// LabelContainer is the label key for the name of a workload container.
+	LabelContainer = "container"
+
+	// LabelAutoscaler is the label key for the kind of autoscaler.
+	LabelAutoscaler = "autoscaler"
+
 	// Licensing labels.
 
 	LabelBilling = "billing"

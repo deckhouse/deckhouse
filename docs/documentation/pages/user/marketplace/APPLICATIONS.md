@@ -1,9 +1,9 @@
 ---
 title: Installing and managing applications
 permalink: en/user/marketplace/applications.html
-description: "Install, update, and delete applications in Deckhouse Platform Marketplace. Browse available package versions, create Application, check status conditions, and manage multiple instances."
+description: "Install, update, and delete applications in Deckhouse Platform Marketplace. Browse available package versions, create Application, check status conditions, manage multiple instances, and configure workload resources and autoscaling."
 lang: en
-search: Application, install application, application conditions, installing application, updating application, deleting application
+search: Application, install application, application conditions, installing application, updating application, deleting application, resourceRequests, workload resources, autoscaling, minReplicas, maxReplicas, HorizontalPodAutoscaler, VerticalPodAutoscaler
 ---
 
 This section describes how to browse available [package](../../glossary.html#marketplace-package) versions, as well as how to install, update, and delete applications.
@@ -180,6 +180,78 @@ spec:
 ```
 
 The objects of each instance are named in the format `d8a-<INSTANCE_NAME>-<SUFFIX>`. For example, `d8a-redis-cache-server` and `d8a-redis-sessions-server`. This prevents any name conflicts.
+
+## Configuring workload resources
+
+The [`spec.resourceRequests`](../../reference/api/cr.html#application-v1alpha1-spec-resourcerequests) parameter overrides the number of replicas, the container resources, and the disk sizes that the package sets for the application workloads. Each entry addresses a workload by its kind (`kind`) and its object name (`name`) in the format `d8a-<INSTANCE_NAME>-<SUFFIX>`. Workloads, containers, and disks that aren't listed keep the package settings. For details on the parameters, refer to the [Application](../../reference/api/cr.html#application) reference.
+
+### Autoscaling
+
+If the package deploys a HorizontalPodAutoscaler or a VerticalPodAutoscaler for a workload, you can either fix the values the autoscaler maintains or set a range for them:
+
+- `replicas` and the `cpu` and `memory` requests in `resources.requests` are fixed values. Deckhouse Platform sets them in the workload and as both bounds of the autoscaler, so the autoscaler doesn't change them. In this case, the `ApplicationHorizontalPodAutoscalerPinned` or `ApplicationVerticalPodAutoscalerPinned` alert is triggered.
+- `minReplicas` and `maxReplicas` set the range of replicas for HorizontalPodAutoscaler. `resources.min` and `resources.max` set the range of the container's `cpu` and `memory` requests for VerticalPodAutoscaler. Deckhouse Platform sets a range only in the autoscaler, which keeps changing the workload within it.
+
+Example manifest where HorizontalPodAutoscaler keeps from 2 to 10 replicas of the `d8a-shop-backend` Deployment, VerticalPodAutoscaler chooses the requests of the `backend` container within the range, and the `proxy` container has fixed requests and limits:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
+metadata:
+  name: shop
+  namespace: my-app
+spec:
+  packageName: shop
+  packageVersion: "v1.4.0"
+  packageRepositoryName: my-registry
+  resourceRequests:
+    - kind: Deployment
+      name: d8a-shop-backend
+      minReplicas: 2
+      maxReplicas: 10
+      containers:
+        - name: backend
+          resources:
+            min:
+              cpu: 250m
+              memory: 256Mi
+            max:
+              cpu: "2"
+              memory: 2Gi
+        - name: proxy
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+```
+
+A range always has both bounds and takes the place of the fixed values it bounds, so an Application is rejected if:
+
+- `minReplicas` is set without `maxReplicas`, or the other way round;
+- `min` and `max` of a container are not set together for the same resources;
+- `replicas` is set together with `minReplicas` and `maxReplicas`;
+- `minReplicas` is greater than `maxReplicas`, or a replicas range is set for a workload other than Deployment, StatefulSet, or ReplicaSet;
+- a container with `min` and `max` has `cpu` or `memory` requests or limits (`ephemeral-storage` is allowed, since VerticalPodAutoscaler doesn't manage it);
+- `min` of a resource is greater than its `max`.
+
+The error names the workload and the container and explains how to fix the problem. For example:
+
+```console
+Application 'my-app/shop' has invalid spec.resourceRequests: Deployment 'd8a-shop-backend', container 'backend': set both min and max: a range needs both bounds, but only min is set
+```
+
+To fix a resource of a container with a range at one value, specify the same value in `min` and `max`.
+
+Specifics of ranges:
+
+- Deckhouse Platform doesn't change the number of replicas in the workload itself: within the range, HorizontalPodAutoscaler chooses it.
+- Until VerticalPodAutoscaler makes its first recommendation, the pods run with the requests from the package.
+
+If no autoscaler of the application applies a range, for example, because the package doesn't deploy a HorizontalPodAutoscaler for the workload or the `vertical-pod-autoscaler` module is disabled, Deckhouse Platform applies the range as fixed values: the workload runs `minReplicas` replicas, and the container gets `min` as the request and `max` as the limit of the resource. In this case, the `ApplicationHorizontalPodAutoscalerMissing` or `ApplicationVerticalPodAutoscalerMissing` alert is triggered. To fix it, make the autoscaler available or replace the range with fixed values.
+
+If the package doesn't allow changing the number of replicas of a workload, Deckhouse Platform doesn't apply the change: the Application conditions get the `ScalingForbidden` reason, and the message names the workload. To fix it, change or remove the replicas or the range of the workload in `spec.resourceRequests`.
 
 ## Updating an application
 

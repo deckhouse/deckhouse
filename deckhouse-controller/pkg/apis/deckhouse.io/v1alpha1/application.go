@@ -242,13 +242,33 @@ type ApplicationResourceRequest struct {
 
 	// Number of workload replicas.
 	//
-	// Applies only to workloads that support replica management: Deployment, StatefulSet, and ReplicaSet.
+	// Applies only to workloads that support replica management: Deployment, StatefulSet, and ReplicaSet. Cannot be set together with `minReplicas` or `maxReplicas`.
 	//
-	// If the application deploys a HorizontalPodAutoscaler for the workload, its `minReplicas` and `maxReplicas` are set to this value, so the number of replicas does not change. The value `0` applies only to the workload: HorizontalPodAutoscaler does not scale a workload with no replicas.
+	// If the application deploys a HorizontalPodAutoscaler for the workload, its `minReplicas` and `maxReplicas` are set to this value, so the number of replicas does not change, and the [`ApplicationHorizontalPodAutoscalerPinned`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationhorizontalpodautoscalerpinned) alert is triggered. To let HorizontalPodAutoscaler scale the workload, set `minReplicas` and `maxReplicas` instead. The value `0` applies only to the workload: HorizontalPodAutoscaler does not scale a workload with no replicas.
 	// +kubebuilder:validation:Minimum=0
 	// +optional
 	// +crd-enricher:deckhouse:documentation:examples=3
 	Replicas *int32 `json:"replicas,omitempty"`
+
+	// Minimum number of workload replicas for the HorizontalPodAutoscaler that the application deploys for the workload.
+	//
+	// Applies only to Deployment, StatefulSet, and ReplicaSet. Set together with `maxReplicas`. Cannot be set together with `replicas`: within the range, the number of replicas is chosen by the HorizontalPodAutoscaler. Cannot be greater than `maxReplicas`.
+	//
+	// If the application does not deploy a HorizontalPodAutoscaler for the workload, the workload runs `minReplicas` replicas, and the [`ApplicationHorizontalPodAutoscalerMissing`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationhorizontalpodautoscalermissing) alert is triggered.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=2
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+
+	// Maximum number of workload replicas for the HorizontalPodAutoscaler that the application deploys for the workload.
+	//
+	// Applies only to Deployment, StatefulSet, and ReplicaSet. Set together with `minReplicas`. Cannot be set together with `replicas`: within the range, the number of replicas is chosen by the HorizontalPodAutoscaler.
+	//
+	// If the application does not deploy a HorizontalPodAutoscaler for the workload, the workload runs `minReplicas` replicas, and the [`ApplicationHorizontalPodAutoscalerMissing`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationhorizontalpodautoscalermissing) alert is triggered.
+	// +kubebuilder:validation:Minimum=1
+	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=10
+	MaxReplicas *int32 `json:"maxReplicas,omitempty"`
 
 	// Compute resources of the workload's containers.
 	//
@@ -288,15 +308,17 @@ type ApplicationContainerResourceRequest struct {
 	// +crd-enricher:deckhouse:documentation:examples=controller
 	Name string `json:"name"`
 
-	// Container resource requests and limits.
+	// Container resource requests and limits, or the range within which VerticalPodAutoscaler sets the container's requests.
 	//
-	// Uses the same format as the `resources` field of a Pod container. Supports `cpu`, `memory`, and `ephemeral-storage`.
+	// Requests and limits use the same format as the `resources` field of a Pod container. Supports `cpu`, `memory`, and `ephemeral-storage`.
 	//
 	// Specified values are merged with the settings from the application package separately for each resource. For example, if only `memory` is specified, the `cpu` value from the package is retained.
 	//
 	// Resource requests or limits defined in the package cannot be removed. Their values can only be overridden.
 	//
-	// If the application deploys a VerticalPodAutoscaler for the workload, the specified `cpu` and `memory` requests are set as both `minAllowed` and `maxAllowed` in its policy for the container, so VPA does not change them. If `cpu` or `memory` limits are specified, VPA does not change the container's limits (`controlledValues: RequestsOnly`).
+	// If the application deploys a VerticalPodAutoscaler for the workload, the specified `cpu` and `memory` requests are set as both `minAllowed` and `maxAllowed` in its policy for the container, so VPA does not change them, and the [`ApplicationVerticalPodAutoscalerPinned`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationverticalpodautoscalerpinned) alert is triggered. If `cpu` or `memory` limits are specified, VPA does not change the container's limits (`controlledValues: RequestsOnly`).
+	//
+	// To let VPA change the container's `cpu` and `memory` requests, specify the range in `min` and `max` instead. A container with `min` or `max` cannot have `cpu` or `memory` requests or limits.
 	// +optional
 	// +crd-enricher:raw:properties.claims.description="List of resource claims used by the container.\n\nEach entry references a resource claim defined in `pod.spec.resourceClaims`. Requires the `DynamicResourceAllocation` feature gate to be enabled.\n\nThis field is immutable. It can only be set for containers."
 	// +crd-enricher:raw:properties.claims.items.description="Resource claim used by the container."
@@ -304,7 +326,41 @@ type ApplicationContainerResourceRequest struct {
 	// +crd-enricher:raw:properties.claims.items.properties.request.description="Name of a request defined in the referenced resource claim.\n\nIf specified, only the resources allocated for this request are made available to the container. If omitted, all resources allocated for the claim are made available."
 	// +crd-enricher:raw:properties.limits.description="Maximum amount of compute resources available to the container."
 	// +crd-enricher:raw:properties.requests.description="Minimum amount of compute resources required by the container.\n\nIf this parameter is not specified, the `limits` value is used if explicitly set. Otherwise, the value is implementation-defined.\n\nThe `requests` value cannot exceed `limits`."
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	Resources ApplicationContainerResources `json:"resources,omitempty"`
+}
+
+// Compute resources of a single workload container.
+type ApplicationContainerResources struct {
+	corev1.ResourceRequirements `json:",inline"`
+
+	// Lower bound of the container's `cpu` and `memory` requests that VerticalPodAutoscaler sets (`minAllowed` in its policy for the container).
+	//
+	// Set together with `max` for the same resources. Within the range, the requests are chosen by VPA, so a container with `min` and `max` cannot have `cpu` or `memory` requests or limits. To fix a resource at one value, specify the same value in `min` and `max`.
+	//
+	// If no VerticalPodAutoscaler of the application sets a resource of the container, for example, because the `vertical-pod-autoscaler` module is disabled, the container gets `min` as the request and `max` as the limit of the resource, and the [`ApplicationVerticalPodAutoscalerMissing`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationverticalpodautoscalermissing) alert is triggered.
+	// +optional
+	Min *ApplicationContainerResourceBounds `json:"min,omitempty"`
+
+	// Upper bound of the container's `cpu` and `memory` requests that VerticalPodAutoscaler sets (`maxAllowed` in its policy for the container).
+	//
+	// Set together with `min` for the same resources. Within the range, the requests are chosen by VPA, so a container with `min` and `max` cannot have `cpu` or `memory` requests or limits. A resource bound cannot be less than in `min`.
+	//
+	// If no VerticalPodAutoscaler of the application sets a resource of the container, for example, because the `vertical-pod-autoscaler` module is disabled, the container gets `min` as the request and `max` as the limit of the resource, and the [`ApplicationVerticalPodAutoscalerMissing`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#deckhouse-applicationverticalpodautoscalermissing) alert is triggered.
+	// +optional
+	Max *ApplicationContainerResourceBounds `json:"max,omitempty"`
+}
+
+// Bounds of the container's requests for VerticalPodAutoscaler.
+type ApplicationContainerResourceBounds struct {
+	// Bound of the `cpu` request.
+	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=250m
+	CPU *resource.Quantity `json:"cpu,omitempty"`
+
+	// Bound of the `memory` request.
+	// +optional
+	// +crd-enricher:deckhouse:documentation:examples=256Mi
+	Memory *resource.Quantity `json:"memory,omitempty"`
 }
 
 type ApplicationStatus struct {
