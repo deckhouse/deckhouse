@@ -1,0 +1,7 @@
+dirs:
+- /etc/ipv4-options-guard
+- /run/netns
+- /run/ipv4-options-guard
+- /sbin
+files:
+- /run/xtables.lock

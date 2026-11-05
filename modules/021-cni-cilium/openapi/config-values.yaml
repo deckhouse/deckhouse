@@ -363,7 +363,7 @@ properties:
         description: |
           In the `Enforce` mode, set `net.mptcp.enabled=0` in the host and in every pod network namespace. This removes the precondition of the published exploit.
 
-          Listeners opened before the change stay MPTCP until the process is restarted. For the host, the setting is also written to `/etc/sysctl.d`, so after a reboot it is applied before kubelet starts.
+          Listeners opened before the change stay MPTCP until the process is restarted. After a node reboot, MPTCP on the host is disabled again once the CNI agent starts.
       allowKernelModuleLoad:
         type: boolean
         default: false

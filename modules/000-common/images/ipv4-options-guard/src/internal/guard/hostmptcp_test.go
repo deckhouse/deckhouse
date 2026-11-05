@@ -27,20 +27,26 @@ import (
 
 type hostEnv struct {
 	g       *Guard
-	file    string
+	dir     string
+	state   string
 	sysctl  string
 	enforce Settings
 }
 
 func newHostEnv(t *testing.T, cur string) *hostEnv {
 	dir := t.TempDir()
+	run := filepath.Join(dir, "run")
+	if err := os.Mkdir(run, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	e := &hostEnv{
-		file:    filepath.Join(dir, "90-d8-ipv4-options-guard.conf"),
+		dir:     run,
+		state:   filepath.Join(run, "host-mptcp-original-state"),
 		sysctl:  filepath.Join(dir, "mptcp_enabled"),
 		enforce: Settings{Mode: ModeEnforce, DisableMPTCP: true},
 	}
 	e.g = &Guard{
-		cfg: Config{HostSysctlFile: e.file, HostMPTCPSysctl: e.sysctl},
+		cfg: Config{HostMPTCPStateFile: e.state, HostMPTCPSysctl: e.sysctl},
 		log: slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
 	e.setCur(t, cur)
@@ -61,37 +67,81 @@ func (e *hostEnv) cur(t *testing.T) string {
 	return strings.TrimSpace(string(b))
 }
 
-func (e *hostEnv) fileExists() bool {
-	_, err := os.Stat(e.file)
-	return err == nil
+// recorded returns the original value in the state file, or "" when there is none.
+func (e *hostEnv) recorded(t *testing.T) string {
+	b, err := os.ReadFile(e.state)
+	if os.IsNotExist(err) {
+		return ""
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.TrimSpace(string(b))
 }
 
-func TestHostMPTCPRestoredAfterReboot(t *testing.T) {
+// reboot clears the host /run and brings the OS value back.
+func (e *hostEnv) reboot(t *testing.T, osValue string) {
+	if err := os.RemoveAll(e.dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(e.dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	e.setCur(t, osValue)
+}
+
+func TestHostMPTCPEnforceAndRestore(t *testing.T) {
 	e := newHostEnv(t, "1")
 	e.g.syncHostMPTCP(e.enforce, true)
-	if e.cur(t) != "0" || !e.fileExists() {
-		t.Fatalf("Enforce: cur=%s file=%v", e.cur(t), e.fileExists())
+	if e.cur(t) != "0" || e.recorded(t) != "1" {
+		t.Fatalf("Enforce: cur=%s recorded=%q, want 0 and 1", e.cur(t), e.recorded(t))
 	}
 
-	// Reboot: systemd-sysctl applied the file, the guard state is gone.
-	e.setCur(t, "0")
+	// A resync in the same mode changes nothing.
 	e.g.syncHostMPTCP(e.enforce, true)
-	if orig, _, _ := readHostSysctl(e.file); orig != "1" {
-		t.Fatalf("the original value must survive the reboot, got %q", orig)
+	if e.cur(t) != "0" || e.recorded(t) != "1" {
+		t.Fatalf("Enforce resync: cur=%s recorded=%q", e.cur(t), e.recorded(t))
 	}
 
 	e.g.syncHostMPTCP(Settings{Mode: ModeAudit, DisableMPTCP: true}, true)
-	if e.cur(t) != "1" || e.fileExists() {
-		t.Fatalf("Audit after reboot: cur=%s file=%v, want 1 and no file", e.cur(t), e.fileExists())
+	if e.cur(t) != "1" || e.recorded(t) != "" {
+		t.Fatalf("Audit: cur=%s recorded=%q, want 1 and no record", e.cur(t), e.recorded(t))
+	}
+	entries, err := os.ReadDir(e.dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("the state directory must be left empty, found %v", entries)
+	}
+}
+
+func TestHostMPTCPAfterReboot(t *testing.T) {
+	e := newHostEnv(t, "1")
+	e.g.syncHostMPTCP(e.enforce, true)
+
+	// Reboot: /run is cleared and the kernel starts with the OS value.
+	e.reboot(t, "1")
+	e.g.syncHostMPTCP(e.enforce, true)
+	if e.cur(t) != "0" || e.recorded(t) != "1" {
+		t.Fatalf("Enforce after reboot: cur=%s recorded=%q, want 0 and 1", e.cur(t), e.recorded(t))
+	}
+
+	e.g.syncHostMPTCP(Settings{Mode: ModeDisabled}, true)
+	if e.cur(t) != "1" || e.recorded(t) != "" {
+		t.Fatalf("Disabled after reboot: cur=%s recorded=%q, want 1 and no record", e.cur(t), e.recorded(t))
 	}
 }
 
 func TestHostMPTCPKeepsAdminDisabledValue(t *testing.T) {
 	e := newHostEnv(t, "0")
 	e.g.syncHostMPTCP(e.enforce, true)
+	if e.recorded(t) != "0" {
+		t.Fatalf("recorded=%q, want 0", e.recorded(t))
+	}
 	e.g.syncHostMPTCP(Settings{Mode: ModeDisabled}, true)
-	if e.cur(t) != "0" || e.fileExists() {
-		t.Fatalf("an admin-disabled MPTCP must stay 0: cur=%s file=%v", e.cur(t), e.fileExists())
+	if e.cur(t) != "0" || e.recorded(t) != "" {
+		t.Fatalf("an admin-disabled MPTCP must stay 0: cur=%s recorded=%q", e.cur(t), e.recorded(t))
 	}
 }
 
@@ -101,16 +151,16 @@ func TestHostMPTCPCleanupWithoutBackend(t *testing.T) {
 
 	// Restarted sidecar cannot detect the iptables mode, the module is switched to Disabled.
 	e.g.syncHostMPTCP(Settings{Mode: ModeDisabled}, false)
-	if e.cur(t) != "1" || e.fileExists() {
-		t.Fatalf("Disabled without a backend: cur=%s file=%v, want 1 and no file", e.cur(t), e.fileExists())
+	if e.cur(t) != "1" || e.recorded(t) != "" {
+		t.Fatalf("Disabled without a backend: cur=%s recorded=%q, want 1 and no record", e.cur(t), e.recorded(t))
 	}
 }
 
 func TestHostMPTCPUntouchedWhenUnprotected(t *testing.T) {
 	e := newHostEnv(t, "1")
 	e.g.syncHostMPTCP(e.enforce, false)
-	if e.cur(t) != "1" || e.fileExists() {
-		t.Fatalf("no filter, no MPTCP change: cur=%s file=%v", e.cur(t), e.fileExists())
+	if e.cur(t) != "1" || e.recorded(t) != "" {
+		t.Fatalf("no filter, no MPTCP change: cur=%s recorded=%q", e.cur(t), e.recorded(t))
 	}
 }
 
@@ -118,20 +168,35 @@ func TestHostMPTCPKeptWhileBackendUnknown(t *testing.T) {
 	e := newHostEnv(t, "1")
 	e.g.syncHostMPTCP(e.enforce, true)
 
-	// After a reboot the file has already set 0, the backend is not detected yet.
+	// The sidecar restarted on the same boot and has not detected the backend yet.
 	e.g.syncHostMPTCP(e.enforce, false)
-	if e.cur(t) != "0" || !e.fileExists() {
-		t.Fatalf("Enforce without a detected backend: cur=%s file=%v, want 0 and the file kept", e.cur(t), e.fileExists())
+	if e.cur(t) != "0" || e.recorded(t) != "1" {
+		t.Fatalf("Enforce without a detected backend: cur=%s recorded=%q, want 0 and 1 kept", e.cur(t), e.recorded(t))
 	}
 }
 
-func TestHostSysctlFromOlderGuard(t *testing.T) {
+func TestHostMPTCPNotChangedWithoutRecord(t *testing.T) {
+	e := newHostEnv(t, "1")
+	// The state directory is not mounted: the value is not changed when it cannot be recorded.
+	e.g.cfg.HostMPTCPStateFile = filepath.Join(e.dir, "missing", "host-mptcp-original-state")
+	e.g.syncHostMPTCP(e.enforce, true)
+	if e.cur(t) != "1" {
+		t.Fatalf("cur=%s, want 1 when the original value cannot be recorded", e.cur(t))
+	}
+}
+
+func TestHostMPTCPInvalidRecord(t *testing.T) {
 	e := newHostEnv(t, "0")
-	if err := os.WriteFile(e.file, []byte("# Managed by the d8 ipv4-options-guard (CNI module settings).\nnet.mptcp.enabled = 0\n"), 0o644); err != nil {
+	if err := os.WriteFile(e.state, []byte("garbage\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	e.g.syncHostMPTCP(Settings{Mode: ModeAudit}, true)
-	if e.cur(t) != "1" || e.fileExists() {
-		t.Fatalf("a file without the original value restores the OS default: cur=%s file=%v", e.cur(t), e.fileExists())
+	// An unreadable record is not guessed at: neither restored nor overwritten.
+	e.g.syncHostMPTCP(Settings{Mode: ModeDisabled}, true)
+	if e.cur(t) != "0" || e.recorded(t) != "garbage" {
+		t.Fatalf("Disabled with an invalid record: cur=%s recorded=%q", e.cur(t), e.recorded(t))
+	}
+	e.g.syncHostMPTCP(e.enforce, true)
+	if e.cur(t) != "0" || e.recorded(t) != "garbage" {
+		t.Fatalf("Enforce with an invalid record: cur=%s recorded=%q", e.cur(t), e.recorded(t))
 	}
 }
