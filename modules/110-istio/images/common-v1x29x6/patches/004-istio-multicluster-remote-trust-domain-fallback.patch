@@ -1,0 +1,37 @@
+diff --git a/pilot/pkg/serviceregistry/kube/controller/multicluster.go b/pilot/pkg/serviceregistry/kube/controller/multicluster.go
+index 00902cd..0bdaefa 100644
+--- a/pilot/pkg/serviceregistry/kube/controller/multicluster.go
++++ b/pilot/pkg/serviceregistry/kube/controller/multicluster.go
+@@ -150,7 +150,7 @@ func NewMulticluster(
+ 				kubemesh.MeshConfigKey,
+ 				krt.NewOptionsBuilder(stop, "", nil),
+ 			)
+-			remoteMeshCollection := meshwatcher.NewCollection(
++			remoteMeshCollection := newRemoteMeshCollection(
+ 				krt.NewOptionsBuilder(stop, "", nil),
+ 				meshSource,
+ 			)
+@@ -183,6 +183,23 @@ func NewMulticluster(
+ 	return mc
+ }
+ 
++// newRemoteMeshCollection builds the mesh config of a remote cluster from its mesh ConfigMap.
++// Unlike meshwatcher.NewCollection, it has no value while the ConfigMap is missing or unreadable
++// (e.g. the remote cluster has no control plane of this revision), instead of the default mesh config.
++// This way the controller falls back to the config cluster's mesh config (ConfigClusterMeshWatcher)
++// and does not expect the default "cluster.local" trust domain from the remote workloads.
++func newRemoteMeshCollection(opts krt.OptionsBuilder, source meshwatcher.MeshConfigSource) krt.Singleton[meshwatcher.MeshConfigResource] {
++	meshCollection := meshwatcher.NewCollection(opts, source)
++	return krt.NewSingleton[meshwatcher.MeshConfigResource](
++		func(ctx krt.HandlerContext) *meshwatcher.MeshConfigResource {
++			if krt.FetchOne(ctx, source.AsCollection()) == nil {
++				return nil
++			}
++			return krt.FetchOne(ctx, meshCollection.AsCollection())
++		}, opts.WithName("RemoteMeshConfig")...,
++	)
++}
++
+ // getMeshConfigMapName returns the mesh ConfigMap name based on the revision
+ func (m *Multicluster) getMeshConfigMapName() string {
+ 	name := "istio"
