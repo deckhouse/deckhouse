@@ -72,19 +72,20 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless" }}
 import:
-  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-    add: /tmp/ipv4-options-guard
-    to: /ipv4-options-guard
-    before: setup
-  - image: {{ .ModuleName }}/{{ .ImageName }}-iptables-dist-artifact
-    add: /iptables-dist
-    to: /iptables-dist
-    before: setup
-  # Keeps the image on the node from the cni-cilium safe-agent-updater.
-  - image: common/pause
-    add: /pause
-    to: /pause
-    before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /tmp/ipv4-options-guard
+  to: /ipv4-options-guard
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-iptables-dist-artifact
+  add: /iptables-dist
+  to: /iptables-dist
+  before: setup
+# Keeps the image on the node from the cni-cilium safe-agent-updater.
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: install
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/ipv4-options-guard"]
