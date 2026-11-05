@@ -109,6 +109,17 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+      - name: prepull-image-ipv4-options-guard
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "ipv4OptionsGuard") }}
+        # Prints usage and exits 0: the image only has to be pulled before the agent is restarted.
+        command:
+        - /ipv4-options-guard
+        - -h
+        terminationMessagePolicy: FallbackToLogsOnError
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
       - name: safe-agent-updater
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "safeAgentUpdater") }}
@@ -158,6 +169,16 @@ spec:
       - name: pause-kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "kubeRbacProxy") }}
+        command:
+        - /pause
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "1Mi"
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+      - name: pause-ipv4-options-guard
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "ipv4OptionsGuard") }}
         command:
         - /pause
         resources:

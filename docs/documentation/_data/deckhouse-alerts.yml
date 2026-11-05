@@ -1627,6 +1627,393 @@ alerts:
         Prometheus can't scrape metrics of image-availability-exporter.
       severity: "8"
       markupFormat: markdown
+    - name: D8IPv4OptionsGuardAuditMode
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ce
+      description: |
+        The `ipv4OptionsGuard.mode` of the CNI module is `Audit` on {{ $value }} nodes: packets with IP options are only counted, not dropped, and MPTCP stays enabled.
+        The nodes remain exposed to CVE-2026-98432.
+
+        Clusters that existed before the mitigation get `Audit` by default. Once the `D8IPv4OptionsGuardMatchedTraffic` alert shows that no workload relies on IP options, switch to `Enforce` in the ModuleConfig of the CNI module (`cni-cilium`, `cni-flannel` or `cni-simple-bridge`):
+
+        ```yaml
+        spec:
+          settings:
+            ipv4OptionsGuard:
+              mode: Enforce
+        ```
+      summary: |
+        The CVE-2026-98432 filter only counts packets on {{ $value }} nodes of the cluster.
+      severity: "9"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardAuditMode
+      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-flannel
+      module: cni-flannel
+      edition: ce
+      description: |
+        The `ipv4OptionsGuard.mode` of the CNI module is `Audit` on {{ $value }} nodes: packets with IP options are only counted, not dropped, and MPTCP stays enabled.
+        The nodes remain exposed to CVE-2026-98432.
+
+        Clusters that existed before the mitigation get `Audit` by default. Once the `D8IPv4OptionsGuardMatchedTraffic` alert shows that no workload relies on IP options, switch to `Enforce` in the ModuleConfig of the CNI module (`cni-cilium`, `cni-flannel` or `cni-simple-bridge`):
+
+        ```yaml
+        spec:
+          settings:
+            ipv4OptionsGuard:
+              mode: Enforce
+        ```
+      summary: |
+        The CVE-2026-98432 filter only counts packets on {{ $value }} nodes of the cluster.
+      severity: "9"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardAuditMode
+      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-simple-bridge
+      module: cni-simple-bridge
+      edition: ce
+      description: |
+        The `ipv4OptionsGuard.mode` of the CNI module is `Audit` on {{ $value }} nodes: packets with IP options are only counted, not dropped, and MPTCP stays enabled.
+        The nodes remain exposed to CVE-2026-98432.
+
+        Clusters that existed before the mitigation get `Audit` by default. Once the `D8IPv4OptionsGuardMatchedTraffic` alert shows that no workload relies on IP options, switch to `Enforce` in the ModuleConfig of the CNI module (`cni-cilium`, `cni-flannel` or `cni-simple-bridge`):
+
+        ```yaml
+        spec:
+          settings:
+            ipv4OptionsGuard:
+              mode: Enforce
+        ```
+      summary: |
+        The CVE-2026-98432 filter only counts packets on {{ $value }} nodes of the cluster.
+      severity: "9"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardBackendMismatch
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ce
+      description: |
+        The node `{{ $labels.node }}` is protected, but the filter uses `{{ $labels.backend }}`: the kernel modules of the mode selected by iptables-wrapper are not loaded, while those of the other mode are.
+
+        The details are in the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+
+        The filter and the other Deckhouse components use different packet filtering frameworks on this node.
+        Such a security configuration is harder to audit and troubleshoot.
+
+        Possible actions:
+
+        - Find out why the kernel modules of the mode selected by iptables-wrapper are not loaded on the node.
+        - If loading these kernel modules is acceptable, set `ipv4OptionsGuard.allowKernelModuleLoad: true` in the CNI module settings.
+      summary: |
+        The CVE-2026-98432 filter on the node {{ $labels.node }} uses a different iptables mode than iptables-wrapper selected.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardBackendMismatch
+      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-flannel
+      module: cni-flannel
+      edition: ce
+      description: |
+        The node `{{ $labels.node }}` is protected, but the filter uses `{{ $labels.backend }}`: the kernel modules of the mode selected by iptables-wrapper are not loaded, while those of the other mode are.
+
+        The details are in the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+
+        The filter and the other Deckhouse components use different packet filtering frameworks on this node.
+        Such a security configuration is harder to audit and troubleshoot.
+
+        Possible actions:
+
+        - Find out why the kernel modules of the mode selected by iptables-wrapper are not loaded on the node.
+        - If loading these kernel modules is acceptable, set `ipv4OptionsGuard.allowKernelModuleLoad: true` in the CNI module settings.
+      summary: |
+        The CVE-2026-98432 filter on the node {{ $labels.node }} uses a different iptables mode than iptables-wrapper selected.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardBackendMismatch
+      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-simple-bridge
+      module: cni-simple-bridge
+      edition: ce
+      description: |
+        The node `{{ $labels.node }}` is protected, but the filter uses `{{ $labels.backend }}`: the kernel modules of the mode selected by iptables-wrapper are not loaded, while those of the other mode are.
+
+        The details are in the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+
+        The filter and the other Deckhouse components use different packet filtering frameworks on this node.
+        Such a security configuration is harder to audit and troubleshoot.
+
+        Possible actions:
+
+        - Find out why the kernel modules of the mode selected by iptables-wrapper are not loaded on the node.
+        - If loading these kernel modules is acceptable, set `ipv4OptionsGuard.allowKernelModuleLoad: true` in the CNI module settings.
+      summary: |
+        The CVE-2026-98432 filter on the node {{ $labels.node }} uses a different iptables mode than iptables-wrapper selected.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardFilterBypassed
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ce
+      description: |
+        The node `{{ $labels.node }}` uses legacy iptables. In {{ $value }} network namespaces, a rule in the `PREROUTING` chain of the `raw` table ahead of the jump to `D8-IPV4OPT-GUARD` can end the traversal of the table (for example, `-j ACCEPT`). Packets accepted by that rule never reach the filter.
+
+        The guard puts its jump first when it installs the filter, but does not move it later, so as not to fight with other software on the node that manages its own rules.
+        The affected network namespaces are named in the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+
+        Possible actions:
+
+        - Find the software that inserted the rule (`iptables-legacy -t raw -S PREROUTING` in the network namespace) and make it append the rule instead, or use a target that does not end the traversal.
+        - Or put the jump first by hand: `iptables-legacy -t raw -I PREROUTING 1 -j D8-IPV4OPT-GUARD`. The guard removes the old jump on its next pass.
+      summary: |
+        Packets can skip the CVE-2026-98432 filter in {{ $value }} network namespaces on the node {{ $labels.node }}.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardFilterBypassed
+      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-flannel
+      module: cni-flannel
+      edition: ce
+      description: |
+        The node `{{ $labels.node }}` uses legacy iptables. In {{ $value }} network namespaces, a rule in the `PREROUTING` chain of the `raw` table ahead of the jump to `D8-IPV4OPT-GUARD` can end the traversal of the table (for example, `-j ACCEPT`). Packets accepted by that rule never reach the filter.
+
+        The guard puts its jump first when it installs the filter, but does not move it later, so as not to fight with other software on the node that manages its own rules.
+        The affected network namespaces are named in the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+
+        Possible actions:
+
+        - Find the software that inserted the rule (`iptables-legacy -t raw -S PREROUTING` in the network namespace) and make it append the rule instead, or use a target that does not end the traversal.
+        - Or put the jump first by hand: `iptables-legacy -t raw -I PREROUTING 1 -j D8-IPV4OPT-GUARD`. The guard removes the old jump on its next pass.
+      summary: |
+        Packets can skip the CVE-2026-98432 filter in {{ $value }} network namespaces on the node {{ $labels.node }}.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardFilterBypassed
+      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-simple-bridge
+      module: cni-simple-bridge
+      edition: ce
+      description: |
+        The node `{{ $labels.node }}` uses legacy iptables. In {{ $value }} network namespaces, a rule in the `PREROUTING` chain of the `raw` table ahead of the jump to `D8-IPV4OPT-GUARD` can end the traversal of the table (for example, `-j ACCEPT`). Packets accepted by that rule never reach the filter.
+
+        The guard puts its jump first when it installs the filter, but does not move it later, so as not to fight with other software on the node that manages its own rules.
+        The affected network namespaces are named in the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+
+        Possible actions:
+
+        - Find the software that inserted the rule (`iptables-legacy -t raw -S PREROUTING` in the network namespace) and make it append the rule instead, or use a target that does not end the traversal.
+        - Or put the jump first by hand: `iptables-legacy -t raw -I PREROUTING 1 -j D8-IPV4OPT-GUARD`. The guard removes the old jump on its next pass.
+      summary: |
+        Packets can skip the CVE-2026-98432 filter in {{ $value }} network namespaces on the node {{ $labels.node }}.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardMatchedTraffic
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ce
+      description: |
+        Over the last hour, the ipv4-options-guard sidecar matched {{ $value }} IPv4 packets with IP options (rule `{{ $labels.rule }}`) on the node `{{ $labels.node }}`.
+
+        In the `Audit` mode they are only counted. In the `Enforce` mode they would be dropped, and this alert is not raised.
+
+        Legitimate TCP traffic almost never carries IP options. If a workload relies on them (for example, CIPSO labeled networking),
+        exclude the node with the `ipv4-options-guard.deckhouse.io/disabled: "true"` label before switching `ipv4OptionsGuard.mode` to `Enforce`.
+        Otherwise, this may be an attempt to exploit CVE-2026-98432.
+      summary: |
+        IPv4 packets with IP options were seen on the node {{ $labels.node }} in the Audit mode.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardMatchedTraffic
+      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-flannel
+      module: cni-flannel
+      edition: ce
+      description: |
+        Over the last hour, the ipv4-options-guard sidecar matched {{ $value }} IPv4 packets with IP options (rule `{{ $labels.rule }}`) on the node `{{ $labels.node }}`.
+
+        In the `Audit` mode they are only counted. In the `Enforce` mode they would be dropped, and this alert is not raised.
+
+        Legitimate TCP traffic almost never carries IP options. If a workload relies on them (for example, CIPSO labeled networking),
+        exclude the node with the `ipv4-options-guard.deckhouse.io/disabled: "true"` label before switching `ipv4OptionsGuard.mode` to `Enforce`.
+        Otherwise, this may be an attempt to exploit CVE-2026-98432.
+      summary: |
+        IPv4 packets with IP options were seen on the node {{ $labels.node }} in the Audit mode.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardMatchedTraffic
+      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-simple-bridge
+      module: cni-simple-bridge
+      edition: ce
+      description: |
+        Over the last hour, the ipv4-options-guard sidecar matched {{ $value }} IPv4 packets with IP options (rule `{{ $labels.rule }}`) on the node `{{ $labels.node }}`.
+
+        In the `Audit` mode they are only counted. In the `Enforce` mode they would be dropped, and this alert is not raised.
+
+        Legitimate TCP traffic almost never carries IP options. If a workload relies on them (for example, CIPSO labeled networking),
+        exclude the node with the `ipv4-options-guard.deckhouse.io/disabled: "true"` label before switching `ipv4OptionsGuard.mode` to `Enforce`.
+        Otherwise, this may be an attempt to exploit CVE-2026-98432.
+      summary: |
+        IPv4 packets with IP options were seen on the node {{ $labels.node }} in the Audit mode.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardMetricsAbsent
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ce
+      description: |
+        The CNI agent pod runs on the node `{{ $labels.node }}`, but Prometheus gets no metrics from its `ipv4-options-guard` container.
+
+        Without these metrics, the other `D8IPv4OptionsGuard*` alerts cannot fire for this node, so it may be unprotected unnoticed.
+
+        Check the `ipv4-options-guard` container of the CNI agent pod on that node and the scraping of its metrics.
+      summary: |
+        The CVE-2026-98432 filter state is unknown on the node {{ $labels.node }}.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardMetricsAbsent
+      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-flannel
+      module: cni-flannel
+      edition: ce
+      description: |
+        The CNI agent pod runs on the node `{{ $labels.node }}`, but Prometheus gets no metrics from its `ipv4-options-guard` container.
+
+        Without these metrics, the other `D8IPv4OptionsGuard*` alerts cannot fire for this node, so it may be unprotected unnoticed.
+
+        Check the `ipv4-options-guard` container of the CNI agent pod on that node and the scraping of its metrics.
+      summary: |
+        The CVE-2026-98432 filter state is unknown on the node {{ $labels.node }}.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardMetricsAbsent
+      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-simple-bridge
+      module: cni-simple-bridge
+      edition: ce
+      description: |
+        The CNI agent pod runs on the node `{{ $labels.node }}`, but Prometheus gets no metrics from its `ipv4-options-guard` container.
+
+        Without these metrics, the other `D8IPv4OptionsGuard*` alerts cannot fire for this node, so it may be unprotected unnoticed.
+
+        Check the `ipv4-options-guard` container of the CNI agent pod on that node and the scraping of its metrics.
+      summary: |
+        The CVE-2026-98432 filter state is unknown on the node {{ $labels.node }}.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardNodeUnprotected
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ce
+      description: |
+        The ipv4-options-guard sidecar of the CNI agent could not protect the node `{{ $labels.node }}` (reason: `{{ $labels.reason }}`).
+
+        - `iptables_wrapper_failed` — iptables-wrapper could not determine the iptables mode of the node.
+        - `kernel_modules_not_loaded` — the kernel modules of the mode selected by iptables-wrapper are not loaded, and loading them is not allowed.
+
+        The details are in the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+
+        The node remains exposed to CVE-2026-98432 until its kernel is updated.
+
+        Possible actions:
+
+        - Update the node kernel to a version with the fix and reboot the node.
+        - If the node uses legacy iptables and loading the kernel modules named in the reason is acceptable, set `ipv4OptionsGuard.allowKernelModuleLoad: true` in the CNI module settings.
+      summary: |
+        The CVE-2026-98432 filter cannot be installed on the node {{ $labels.node }}.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardNodeUnprotected
+      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-flannel
+      module: cni-flannel
+      edition: ce
+      description: |
+        The ipv4-options-guard sidecar of the CNI agent could not protect the node `{{ $labels.node }}` (reason: `{{ $labels.reason }}`).
+
+        - `iptables_wrapper_failed` — iptables-wrapper could not determine the iptables mode of the node.
+        - `kernel_modules_not_loaded` — the kernel modules of the mode selected by iptables-wrapper are not loaded, and loading them is not allowed.
+
+        The details are in the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+
+        The node remains exposed to CVE-2026-98432 until its kernel is updated.
+
+        Possible actions:
+
+        - Update the node kernel to a version with the fix and reboot the node.
+        - If the node uses legacy iptables and loading the kernel modules named in the reason is acceptable, set `ipv4OptionsGuard.allowKernelModuleLoad: true` in the CNI module settings.
+      summary: |
+        The CVE-2026-98432 filter cannot be installed on the node {{ $labels.node }}.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardNodeUnprotected
+      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-simple-bridge
+      module: cni-simple-bridge
+      edition: ce
+      description: |
+        The ipv4-options-guard sidecar of the CNI agent could not protect the node `{{ $labels.node }}` (reason: `{{ $labels.reason }}`).
+
+        - `iptables_wrapper_failed` — iptables-wrapper could not determine the iptables mode of the node.
+        - `kernel_modules_not_loaded` — the kernel modules of the mode selected by iptables-wrapper are not loaded, and loading them is not allowed.
+
+        The details are in the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+
+        The node remains exposed to CVE-2026-98432 until its kernel is updated.
+
+        Possible actions:
+
+        - Update the node kernel to a version with the fix and reboot the node.
+        - If the node uses legacy iptables and loading the kernel modules named in the reason is acceptable, set `ipv4OptionsGuard.allowKernelModuleLoad: true` in the CNI module settings.
+      summary: |
+        The CVE-2026-98432 filter cannot be installed on the node {{ $labels.node }}.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardReconcileFailed
+      sourceFile: modules/021-cni-cilium/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 021-cni-cilium
+      module: cni-cilium
+      edition: ce
+      description: |
+        Some network namespaces on the node `{{ $labels.node }}` are not protected.
+
+        Check the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+      summary: |
+        The CVE-2026-98432 filter failed in {{ $value }} network namespaces on the node {{ $labels.node }}.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardReconcileFailed
+      sourceFile: modules/035-cni-flannel/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-flannel
+      module: cni-flannel
+      edition: ce
+      description: |
+        Some network namespaces on the node `{{ $labels.node }}` are not protected.
+
+        Check the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+      summary: |
+        The CVE-2026-98432 filter failed in {{ $value }} network namespaces on the node {{ $labels.node }}.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8IPv4OptionsGuardReconcileFailed
+      sourceFile: modules/035-cni-simple-bridge/monitoring/prometheus-rules/ipv4-options-guard.yaml
+      moduleUrl: 035-cni-simple-bridge
+      module: cni-simple-bridge
+      edition: ce
+      description: |
+        Some network namespaces on the node `{{ $labels.node }}` are not protected.
+
+        Check the logs of the `ipv4-options-guard` container of the CNI agent pod on that node.
+      summary: |
+        The CVE-2026-98432 filter failed in {{ $value }} network namespaces on the node {{ $labels.node }}.
+      severity: "6"
+      markupFormat: markdown
     - name: D8IstioActualDataPlaneVersionNotEqualDesired
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
       moduleUrl: 110-istio
@@ -7292,6 +7679,8 @@ modules-having-alerts:
     - cloud-provider-huaweicloud
     - cloud-provider-yandex
     - cni-cilium
+    - cni-flannel
+    - cni-simple-bridge
     - control-plane-manager
     - documentation
     - extended-monitoring
