@@ -2318,6 +2318,7 @@ subsystems:
     - descheduler
     - documentation
     - node-manager
+    - pod-reloader
     - registry
     - registry-packages-proxy
     - terraform-manager
@@ -2345,7 +2346,6 @@ subsystems:
     modules:
     - delivery-kit
     - operator-argo
-    - pod-reloader
     namespaces: []
   network:
     modules:
