@@ -11,7 +11,7 @@
     {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 fromCacheVersion: "patch-refresh-1"
 import:
 - from: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}

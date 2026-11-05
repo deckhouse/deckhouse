@@ -106,7 +106,9 @@ shell:
       # --list prints the transitive set, one "soname => path" per line. LD_LIBRARY_PATH
       # points the resolution at /out so it answers with the libraries just installed
       # rather than the builder's own.
-      LD_LIBRARY_PATH=/out/usr/lib:/out/usr/lib64:/out/lib64 \
+      # /out/usr/lib/systemd is listed because private libraries of systemd/udev
+      # (e.g. libsystemd-shared, needed by scsi_id) live there and are not found otherwise.
+      LD_LIBRARY_PATH=/out/usr/lib:/out/usr/lib64:/out/lib64:/out/usr/lib/systemd \
         "$loader" --list "$1" \
         | awk '{ for (i = 1; i <= NF; i++) if ($i ~ /^\/out\//) print $i }' \
         | sort -u \
