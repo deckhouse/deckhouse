@@ -97,7 +97,12 @@ which walks every built-in API group's storage map and attaches the filter to
 each namespaced, non-subresource resource backed by a `*genericregistry.Store`
 (via the promoted `DeckhouseScopeStore` method). No per-resource storage.go
 edits. `namespaces` is excluded structurally (it wraps rather than embeds its
-Store and keeps its own unconditional filter above).
+Store and keeps its own unconditional filter above). `roles` and
+`rolebindings` are served through `policybased.Storage`, which embeds the
+`rest.StandardStorage` interface and so hides the method: the wiring unwraps
+it (the exported `StandardStorage` field) and attaches the filter to the inner
+Store. The wrapper only adds escalation checks to create and update, so reads
+go through the inner Store unchanged.
 
 Namespaced **CustomResourceDefinitions** are covered too, wired analogously in
 apiextensions-apiserver's `crdHandler.getOrCreateServingInfoFor` as each CRD

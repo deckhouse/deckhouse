@@ -35,10 +35,10 @@ index aadd43af7f5..1fd85160f88 100644
  }
 diff --git a/pkg/controlplane/apiserver/scopefilter_wiring.go b/pkg/controlplane/apiserver/scopefilter_wiring.go
 new file mode 100644
-index 00000000000..a95900f502c
+index 00000000000..3c477a1cfba
 --- /dev/null
 +++ b/pkg/controlplane/apiserver/scopefilter_wiring.go
-@@ -0,0 +1,113 @@
+@@ -0,0 +1,137 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -67,6 +67,8 @@ index 00000000000..a95900f502c
 +	genericapiserver "k8s.io/apiserver/pkg/server"
 +	restclient "k8s.io/client-go/rest"
 +	"k8s.io/klog/v2"
++	rolepolicybased "k8s.io/kubernetes/pkg/registry/rbac/role/policybased"
++	rolebindingpolicybased "k8s.io/kubernetes/pkg/registry/rbac/rolebinding/policybased"
 +)
 +
 +// newScopeResolvers returns the shared scope-filter resolver bundle that every
@@ -99,6 +101,29 @@ index 00000000000..a95900f502c
 +// is left untouched.
 +type scopeStoreProvider interface {
 +	DeckhouseScopeStore() *genericregistry.Store
++}
++
++// scopeStoreOf returns the *genericregistry.Store a scope filter is attached
++// to for storageObj. The storage of roles and rolebindings is a
++// policybased.Storage, which embeds the rest.StandardStorage interface rather
++// than the Store, so DeckhouseScopeStore is not promoted through it; its
++// exported StandardStorage field holds the Store-embedding REST. The wrapper
++// adds privilege escalation checks to create and update only and passes get,
++// list and watch through, so filtering the inner Store filters the reads of
++// the wrapper. The cluster-scoped wrappers (clusterroles,
++// clusterrolebindings) are never reached: they are not namespaced.
++func scopeStoreOf(storageObj rest.Storage) (*genericregistry.Store, bool) {
++	switch wrapper := storageObj.(type) {
++	case *rolepolicybased.Storage:
++		storageObj = wrapper.StandardStorage
++	case *rolebindingpolicybased.Storage:
++		storageObj = wrapper.StandardStorage
++	}
++	provider, ok := storageObj.(scopeStoreProvider)
++	if !ok {
++		return nil, false
++	}
++	return provider.DeckhouseScopeStore(), true
 +}
 +
 +// wireScopeFilterForGroup is Deckhouse's central choke point for attaching
@@ -139,12 +164,11 @@ index 00000000000..a95900f502c
 +			if !ok || !scoper.NamespaceScoped() {
 +				continue // cluster-scoped (nodes, namespaces, clusterroles, …)
 +			}
-+			provider, ok := storageObj.(scopeStoreProvider)
++			store, ok := scopeStoreOf(storageObj)
 +			if !ok {
 +				continue // does not embed *genericregistry.Store
 +			}
 +
-+			store := provider.DeckhouseScopeStore()
 +			gvr := schema.GroupVersionResource{Group: group, Version: version, Resource: name}
 +			store.ScopeFilter = r.NewDecorator(store, store.PredicateFunc, store.Decorator, gvr)
 +			scopefilter.Register(gvr.GroupResource())
@@ -154,10 +178,10 @@ index 00000000000..a95900f502c
 +}
 diff --git a/pkg/controlplane/apiserver/scopefilter_wiring_test.go b/pkg/controlplane/apiserver/scopefilter_wiring_test.go
 new file mode 100644
-index 00000000000..42a8cdeed49
+index 00000000000..5beae1a55a5
 --- /dev/null
 +++ b/pkg/controlplane/apiserver/scopefilter_wiring_test.go
-@@ -0,0 +1,116 @@
+@@ -0,0 +1,157 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -188,6 +212,9 @@ index 00000000000..42a8cdeed49
 +	"k8s.io/apiserver/pkg/registry/rest"
 +	genericapiserver "k8s.io/apiserver/pkg/server"
 +	"k8s.io/apiserver/pkg/storage"
++	clusterrolepolicybased "k8s.io/kubernetes/pkg/registry/rbac/clusterrole/policybased"
++	rolepolicybased "k8s.io/kubernetes/pkg/registry/rbac/role/policybased"
++	rolebindingpolicybased "k8s.io/kubernetes/pkg/registry/rbac/rolebinding/policybased"
 +)
 +
 +func minimalStore() *registry.Store {
@@ -272,6 +299,44 @@ index 00000000000..42a8cdeed49
 +	wireScopeFilterForGroup(info, nil)
 +	if scopefilter.IsRegistered(schema.GroupResource{Group: "batch", Resource: "cronjobs"}) {
 +		t.Fatal("nil resolvers must register nothing")
++	}
++}
++
++// TestWireScopeFilterForGroup_UnwrapsRBACPolicyBasedStorage: roles and
++// rolebindings are served through policybased.Storage, which embeds the
++// rest.StandardStorage interface and so does not promote DeckhouseScopeStore.
++// Their inner Store must still be wired; the cluster-scoped wrappers must not.
++func TestWireScopeFilterForGroup_UnwrapsRBACPolicyBasedStorage(t *testing.T) {
++	roles, roleBindings, clusterRoles := minimalStore(), minimalStore(), minimalStore()
++	info := &genericapiserver.APIGroupInfo{
++		PrioritizedVersions: []schema.GroupVersion{{Group: "rbac.authorization.k8s.io", Version: "v1"}},
++		VersionedResourcesStorageMap: map[string]map[string]rest.Storage{
++			"v1": {
++				"roles":        rolepolicybased.NewStorage(nsEmbed{roles}, nil, nil),
++				"rolebindings": rolebindingpolicybased.NewStorage(nsEmbed{roleBindings}, nil, nil),
++				"clusterroles": clusterrolepolicybased.NewStorage(clusterEmbed{clusterRoles}, nil, nil),
++			},
++		},
++	}
++
++	wireScopeFilterForGroup(info, &scopefilter.Resolvers{})
++
++	for _, tc := range []struct {
++		resource string
++		store    *registry.Store
++		want     bool
++	}{
++		{"roles", roles, true},
++		{"rolebindings", roleBindings, true},
++		{"clusterroles", clusterRoles, false},
++	} {
++		gr := schema.GroupResource{Group: "rbac.authorization.k8s.io", Resource: tc.resource}
++		if got := scopefilter.IsRegistered(gr); got != tc.want {
++			t.Errorf("IsRegistered(%v) = %v, want %v", gr, got, tc.want)
++		}
++		if got := tc.store.ScopeFilter != nil; got != tc.want {
++			t.Errorf("inner Store of %s has a scope filter: %v, want %v", tc.resource, got, tc.want)
++		}
 +	}
 +}
 diff --git a/pkg/registry/core/namespace/storage/filtering_test.go b/pkg/registry/core/namespace/storage/filtering_test.go
@@ -9580,6 +9645,484 @@ index 00000000000..8a69da28403
 +
 +func TestMain(m *testing.M) {
 +	framework.EtcdMain(m.Run)
++}
+diff --git a/test/integration/scopefilter/scope_rbac_test.go b/test/integration/scopefilter/scope_rbac_test.go
+new file mode 100644
+index 00000000000..bf2957e4ee6
+--- /dev/null
++++ b/test/integration/scopefilter/scope_rbac_test.go
+@@ -0,0 +1,472 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package scopefilter
++
++import (
++	"bufio"
++	"context"
++	"crypto/tls"
++	"encoding/json"
++	"fmt"
++	"io"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"sort"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	corev1 "k8s.io/api/core/v1"
++	rbacv1 "k8s.io/api/rbac/v1"
++	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	"k8s.io/apimachinery/pkg/util/wait"
++	clientset "k8s.io/client-go/kubernetes"
++	restclient "k8s.io/client-go/rest"
++	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
++	aggregatorclient "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
++	"k8s.io/kubernetes/cmd/kube-apiserver/app"
++	kubeapiservertesting "k8s.io/kubernetes/cmd/kube-apiserver/app/testing"
++	"k8s.io/kubernetes/test/integration/framework"
++)
++
++// The storage of roles and rolebindings is wrapped in policybased.Storage,
++// which hides the Store from the scope filter wiring unless it is unwrapped.
++// This test reads them as a user allowed in one namespace only, with the
++// RBAC floor answered by a fake permission-browser.
++
++const (
++	rbacScopeGroup      = "authorization.deckhouse.io"
++	rbacScopeVersion    = "v1alpha1"
++	rbacScopeReviews    = "selfscopedaccessreviews"
++	rbacScopeBackendNS  = "rbacscope-backend"
++	rbacScopeService    = "permission-browser"
++	rbacScopeReader     = "rbacscope-reader"
++	rbacScopeProbe      = "rbacscope-probe"
++	rbacScopeAlpha      = "rbacscope-alpha"
++	rbacScopeBeta       = "rbacscope-beta"
++	rbacScopeOrphan     = "rbacscope-orphan"
++	rbacScopeRBACPrefix = "/apis/rbac.authorization.k8s.io/v1"
++)
++
++// rbacScopeReview is the wire shape of a SelfScopedAccessReview.
++type rbacScopeReview struct {
++	APIVersion string `json:"apiVersion"`
++	Kind       string `json:"kind"`
++	Spec       struct {
++		Scope    string `json:"scope"`
++		Requests []struct {
++			Group             string   `json:"group,omitempty"`
++			Resource          string   `json:"resource"`
++			Subresource       string   `json:"subresource,omitempty"`
++			Verbs             []string `json:"verbs"`
++			IncludeNamespaces bool     `json:"includeNamespaces"`
++		} `json:"requests"`
++	} `json:"spec"`
++	Status struct {
++		Results []rbacScopeResult `json:"results"`
++	} `json:"status"`
++}
++
++type rbacScopeResult struct {
++	Allowed    bool     `json:"allowed"`
++	Namespaces []string `json:"namespaces"`
++}
++
++// rbacScopePermissionBrowser answers every review of rbacScopeReader with
++// the namespaces of floor and every other review with nothing, and records
++// the resources and verbs it was asked about.
++type rbacScopePermissionBrowser struct {
++	srv   *httptest.Server
++	floor []string
++
++	mu    sync.Mutex
++	asked map[string]bool
++}
++
++func (b *rbacScopePermissionBrowser) serve(w http.ResponseWriter, r *http.Request) {
++	base := "/apis/" + rbacScopeGroup + "/" + rbacScopeVersion
++	switch {
++	case r.URL.Path == base && r.Method == http.MethodGet:
++		rbacScopeWriteJSON(w, http.StatusOK, metav1.APIResourceList{
++			TypeMeta:     metav1.TypeMeta{Kind: "APIResourceList", APIVersion: "v1"},
++			GroupVersion: rbacScopeGroup + "/" + rbacScopeVersion,
++			APIResources: []metav1.APIResource{{
++				Name:         rbacScopeReviews,
++				SingularName: "selfscopedaccessreview",
++				Kind:         "SelfScopedAccessReview",
++				Verbs:        metav1.Verbs{"create"},
++			}},
++		})
++		return
++	case r.URL.Path == base+"/"+rbacScopeReviews && r.Method == http.MethodPost:
++	default:
++		http.NotFound(w, r)
++		return
++	}
++	var review rbacScopeReview
++	if err := json.NewDecoder(r.Body).Decode(&review); err != nil {
++		http.Error(w, err.Error(), http.StatusBadRequest)
++		return
++	}
++	result := rbacScopeResult{Namespaces: []string{}}
++	if r.Header.Get("X-Remote-User") == rbacScopeReader {
++		result = rbacScopeResult{Allowed: true, Namespaces: b.floor}
++		b.mu.Lock()
++		for _, req := range review.Spec.Requests {
++			for _, verb := range req.Verbs {
++				b.asked[req.Group+"/"+req.Resource+"/"+verb] = true
++			}
++		}
++		b.mu.Unlock()
++	}
++	review.Status.Results = nil
++	for range review.Spec.Requests {
++		review.Status.Results = append(review.Status.Results, result)
++	}
++	rbacScopeWriteJSON(w, http.StatusCreated, review)
++}
++
++func (b *rbacScopePermissionBrowser) wasAsked(group, resource, verb string) bool {
++	b.mu.Lock()
++	defer b.mu.Unlock()
++	return b.asked[group+"/"+resource+"/"+verb]
++}
++
++type rbacScopeResolver string
++
++func (r rbacScopeResolver) ResolveEndpoint(namespace, name string, port int32) (*url.URL, error) {
++	if namespace != rbacScopeBackendNS || name != rbacScopeService {
++		return nil, fmt.Errorf("no test backend for service %s/%s", namespace, name)
++	}
++	return url.Parse(string(r))
++}
++
++func TestScopeFilterRBACRoles(t *testing.T) {
++	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
++	defer cancel()
++
++	pb := &rbacScopePermissionBrowser{floor: []string{rbacScopeAlpha}, asked: map[string]bool{}}
++	pb.srv = httptest.NewUnstartedServer(http.HandlerFunc(pb.serve))
++	pb.srv.TLS = &tls.Config{ClientAuth: tls.RequestClientCert}
++	t.Cleanup(func() {
++		pb.srv.CloseClientConnections()
++		pb.srv.Close()
++	})
++	// The resolver is global: set before the server starts, and this test
++	// must not run in parallel with others using it.
++	t.Cleanup(app.SetServiceResolverForTests(rbacScopeResolver("https://" + pb.srv.Listener.Addr().String())))
++	pb.srv.StartTLS()
++
++	server := kubeapiservertesting.StartTestServerOrDie(t, nil,
++		append(framework.DefaultTestServerFlags(), "--authorization-mode=RBAC"),
++		framework.SharedEtcd())
++	defer server.TearDownFn()
++
++	admin := clientset.NewForConfigOrDie(server.ClientConfig)
++	aggregator := aggregatorclient.NewForConfigOrDie(server.ClientConfig)
++
++	for ns, labels := range map[string]map[string]string{
++		rbacScopeAlpha:     {projectLabel: "alpha"},
++		rbacScopeBeta:      {projectLabel: "beta"},
++		rbacScopeOrphan:    nil,
++		rbacScopeBackendNS: nil,
++	} {
++		if _, err := admin.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
++			ObjectMeta: metav1.ObjectMeta{Name: ns, Labels: labels},
++		}, metav1.CreateOptions{}); err != nil {
++			t.Fatalf("create namespace %s: %v", ns, err)
++		}
++	}
++	if _, err := admin.CoreV1().Services(rbacScopeBackendNS).Create(ctx, &corev1.Service{
++		ObjectMeta: metav1.ObjectMeta{Name: rbacScopeService},
++		Spec:       corev1.ServiceSpec{Type: corev1.ServiceTypeExternalName, ExternalName: "needs-to-be-non-empty"},
++	}, metav1.CreateOptions{}); err != nil {
++		t.Fatalf("create service: %v", err)
++	}
++
++	// Every authenticated user may create reviews, as in Deckhouse. The reader
++	// may read roles and rolebindings in rbacscope-alpha only.
++	if _, err := admin.RbacV1().ClusterRoles().Create(ctx, &rbacv1.ClusterRole{
++		ObjectMeta: metav1.ObjectMeta{Name: "rbacscope-review"},
++		Rules:      []rbacv1.PolicyRule{{APIGroups: []string{rbacScopeGroup}, Resources: []string{rbacScopeReviews}, Verbs: []string{"create"}}},
++	}, metav1.CreateOptions{}); err != nil {
++		t.Fatalf("create ClusterRole: %v", err)
++	}
++	if _, err := admin.RbacV1().ClusterRoleBindings().Create(ctx, &rbacv1.ClusterRoleBinding{
++		ObjectMeta: metav1.ObjectMeta{Name: "rbacscope-review"},
++		RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "rbacscope-review"},
++		Subjects:   []rbacv1.Subject{{APIGroup: rbacv1.GroupName, Kind: rbacv1.GroupKind, Name: "system:authenticated"}},
++	}, metav1.CreateOptions{}); err != nil {
++		t.Fatalf("create ClusterRoleBinding: %v", err)
++	}
++	if _, err := admin.RbacV1().Roles(rbacScopeAlpha).Create(ctx, &rbacv1.Role{
++		ObjectMeta: metav1.ObjectMeta{Name: "rbacscope-reader"},
++		Rules: []rbacv1.PolicyRule{{
++			APIGroups: []string{rbacv1.GroupName},
++			Resources: []string{"roles", "rolebindings"},
++			Verbs:     []string{"get", "list", "watch"},
++		}},
++	}, metav1.CreateOptions{}); err != nil {
++		t.Fatalf("create Role: %v", err)
++	}
++	if _, err := admin.RbacV1().RoleBindings(rbacScopeAlpha).Create(ctx, &rbacv1.RoleBinding{
++		ObjectMeta: metav1.ObjectMeta{Name: "rbacscope-reader"},
++		RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "Role", Name: "rbacscope-reader"},
++		Subjects:   []rbacv1.Subject{{APIGroup: rbacv1.GroupName, Kind: rbacv1.UserKind, Name: rbacScopeReader}},
++	}, metav1.CreateOptions{}); err != nil {
++		t.Fatalf("create RoleBinding: %v", err)
++	}
++
++	// One probe Role and RoleBinding in every fixture namespace.
++	for _, ns := range []string{rbacScopeAlpha, rbacScopeBeta, rbacScopeOrphan} {
++		if _, err := admin.RbacV1().Roles(ns).Create(ctx, &rbacv1.Role{
++			ObjectMeta: metav1.ObjectMeta{Name: rbacScopeProbe},
++		}, metav1.CreateOptions{}); err != nil {
++			t.Fatalf("create probe Role in %s: %v", ns, err)
++		}
++		if _, err := admin.RbacV1().RoleBindings(ns).Create(ctx, &rbacv1.RoleBinding{
++			ObjectMeta: metav1.ObjectMeta{Name: rbacScopeProbe},
++			RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "Role", Name: rbacScopeProbe},
++		}, metav1.CreateOptions{}); err != nil {
++			t.Fatalf("create probe RoleBinding in %s: %v", ns, err)
++		}
++	}
++
++	port := int32(443)
++	apiService := &apiregistrationv1.APIService{
++		ObjectMeta: metav1.ObjectMeta{Name: rbacScopeVersion + "." + rbacScopeGroup},
++		Spec: apiregistrationv1.APIServiceSpec{
++			Service:              &apiregistrationv1.ServiceReference{Namespace: rbacScopeBackendNS, Name: rbacScopeService, Port: &port},
++			Group:                rbacScopeGroup,
++			Version:              rbacScopeVersion,
++			GroupPriorityMinimum: 1000,
++			VersionPriority:      15,
++			// The httptest certificate does not name the Service.
++			InsecureSkipTLSVerify: true,
++		},
++	}
++	if _, err := aggregator.ApiregistrationV1().APIServices().Create(ctx, apiService, metav1.CreateOptions{}); err != nil {
++		t.Fatalf("create APIService: %v", err)
++	}
++
++	reader := rbacScopeNewCaller(t, server.ClientConfig, rbacScopeReader)
++	adminCaller := rbacScopeNewCaller(t, server.ClientConfig, "")
++	accessible := map[string]string{scopeHeader: "accessible"}
++
++	// Readiness: the APIService is available and the reader's RBAC is in
++	// effect, so a scoped list answers 200.
++	rbacScopePoll(ctx, t, "a scoped list of roles to answer 200", func() (bool, string) {
++		status, body := reader.get(ctx, rbacScopeRBACPrefix+"/roles", accessible)
++		return status == http.StatusOK, fmt.Sprintf("status %d: %s", status, body)
++	})
++
++	for _, resource := range []string{"roles", "rolebindings"} {
++		t.Run(resource, func(t *testing.T) {
++			t.Run("ClusterWideListWithoutScopeIs403", func(t *testing.T) {
++				status, body := reader.get(ctx, rbacScopeRBACPrefix+"/"+resource, nil)
++				if status != http.StatusForbidden {
++					t.Fatalf("status %d, want 403: %s", status, body)
++				}
++			})
++
++			t.Run("AccessibleListIsTheReaderNamespace", func(t *testing.T) {
++				status, body := reader.get(ctx, rbacScopeRBACPrefix+"/"+resource, accessible)
++				if status != http.StatusOK {
++					t.Fatalf("status %d: %s", status, body)
++				}
++				rbacScopeRequireProbes(t, body, rbacScopeAlpha)
++				if !pb.wasAsked(rbacv1.GroupName, resource, "list") {
++					t.Errorf("the permission-browser was not asked about list of %s", resource)
++				}
++			})
++
++			t.Run("AllowedCallerIsNarrowedByClassification", func(t *testing.T) {
++				status, body := adminCaller.get(ctx, rbacScopeRBACPrefix+"/"+resource, map[string]string{scopeHeader: "projects"})
++				if status != http.StatusOK {
++					t.Fatalf("status %d: %s", status, body)
++				}
++				rbacScopeRequireProbes(t, body, rbacScopeAlpha, rbacScopeBeta)
++			})
++
++			t.Run("GetOutsideTheSetIs404", func(t *testing.T) {
++				status, body := reader.get(ctx, rbacScopeRBACPrefix+"/namespaces/"+rbacScopeBeta+"/"+resource+"/"+rbacScopeProbe, accessible)
++				if status != http.StatusNotFound {
++					t.Fatalf("status %d, want 404: %s", status, body)
++				}
++				status, body = reader.get(ctx, rbacScopeRBACPrefix+"/namespaces/"+rbacScopeAlpha+"/"+resource+"/"+rbacScopeProbe, accessible)
++				if status != http.StatusOK {
++					t.Fatalf("get inside the set: status %d: %s", status, body)
++				}
++			})
++		})
++	}
++
++	t.Run("WatchSeesOnlyEventsOfTheSet", func(t *testing.T) {
++		list, err := admin.RbacV1().RoleBindings("").List(ctx, metav1.ListOptions{})
++		if err != nil {
++			t.Fatalf("list rolebindings: %v", err)
++		}
++		watchCtx, stop := context.WithCancel(ctx)
++		defer stop()
++		resp, err := reader.do(watchCtx, rbacScopeRBACPrefix+"/rolebindings?watch=1&resourceVersion="+list.ResourceVersion, accessible)
++		if err != nil {
++			t.Fatalf("open watch: %v", err)
++		}
++		defer func() { _ = resp.Body.Close() }()
++		if resp.StatusCode != http.StatusOK {
++			body, _ := io.ReadAll(resp.Body)
++			t.Fatalf("open watch: status %d: %s", resp.StatusCode, body)
++		}
++		events := make(chan string, 16)
++		go func() {
++			defer close(events)
++			scanner := bufio.NewScanner(resp.Body)
++			for scanner.Scan() {
++				var ev struct {
++					Type   string `json:"type"`
++					Object struct {
++						Metadata struct {
++							Namespace string `json:"namespace"`
++							Name      string `json:"name"`
++						} `json:"metadata"`
++					} `json:"object"`
++				}
++				if json.Unmarshal(scanner.Bytes(), &ev) == nil {
++					events <- ev.Type + " " + ev.Object.Metadata.Namespace + "/" + ev.Object.Metadata.Name
++				}
++			}
++		}()
++		// Outside the set first, so an event of it would arrive before the
++		// one inside.
++		for _, ns := range []string{rbacScopeBeta, rbacScopeAlpha} {
++			if _, err := admin.RbacV1().RoleBindings(ns).Create(ctx, &rbacv1.RoleBinding{
++				ObjectMeta: metav1.ObjectMeta{Name: "rbacscope-watched"},
++				RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "Role", Name: rbacScopeProbe},
++			}, metav1.CreateOptions{}); err != nil {
++				t.Fatalf("create RoleBinding in %s: %v", ns, err)
++			}
++		}
++		select {
++		case got, ok := <-events:
++			if !ok {
++				t.Fatal("the watch ended before any event")
++			}
++			if want := "ADDED " + rbacScopeAlpha + "/rbacscope-watched"; got != want {
++				t.Fatalf("first event %q, want %q", got, want)
++			}
++		case <-time.After(30 * time.Second):
++			t.Fatal("no event within 30s")
++		}
++		if !pb.wasAsked(rbacv1.GroupName, "rolebindings", "watch") {
++			t.Error("the permission-browser was not asked about watch of rolebindings")
++		}
++	})
++}
++
++// rbacScopeCaller sends JSON requests as one impersonated user, or as the
++// superuser when the user is empty.
++type rbacScopeCaller struct {
++	client *http.Client
++	host   string
++}
++
++func rbacScopeNewCaller(t *testing.T, base *restclient.Config, user string) *rbacScopeCaller {
++	t.Helper()
++	cfg := restclient.CopyConfig(base)
++	if user != "" {
++		cfg.Impersonate = restclient.ImpersonationConfig{UserName: user}
++	}
++	client, err := restclient.HTTPClientFor(cfg)
++	if err != nil {
++		t.Fatalf("build client for %q: %v", user, err)
++	}
++	host := cfg.Host
++	if !strings.Contains(host, "://") {
++		host = "https://" + host
++	}
++	return &rbacScopeCaller{client: client, host: strings.TrimSuffix(host, "/")}
++}
++
++func (c *rbacScopeCaller) do(ctx context.Context, path string, headers map[string]string) (*http.Response, error) {
++	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.host+path, nil)
++	if err != nil {
++		return nil, err
++	}
++	req.Header.Set("Accept", "application/json")
++	for k, v := range headers {
++		req.Header.Set(k, v)
++	}
++	return c.client.Do(req)
++}
++
++func (c *rbacScopeCaller) get(ctx context.Context, path string, headers map[string]string) (int, string) {
++	resp, err := c.do(ctx, path, headers)
++	if err != nil {
++		return 0, err.Error()
++	}
++	defer func() { _ = resp.Body.Close() }()
++	body, _ := io.ReadAll(resp.Body)
++	return resp.StatusCode, string(body)
++}
++
++// rbacScopeRequireProbes requires that the probe objects of the list body are
++// exactly those of the namespaces.
++func rbacScopeRequireProbes(t *testing.T, body string, namespaces ...string) {
++	t.Helper()
++	var list struct {
++		Items []struct {
++			Metadata struct {
++				Namespace string `json:"namespace"`
++				Name      string `json:"name"`
++			} `json:"metadata"`
++		} `json:"items"`
++	}
++	if err := json.Unmarshal([]byte(body), &list); err != nil {
++		t.Fatalf("decode list: %v: %s", err, body)
++	}
++	var got []string
++	for _, item := range list.Items {
++		if item.Metadata.Name == rbacScopeProbe {
++			got = append(got, item.Metadata.Namespace)
++		}
++	}
++	sort.Strings(got)
++	sort.Strings(namespaces)
++	if strings.Join(got, ",") != strings.Join(namespaces, ",") {
++		t.Fatalf("probe namespaces %v, want %v", got, namespaces)
++	}
++}
++
++func rbacScopeWriteJSON(w http.ResponseWriter, status int, v any) {
++	w.Header().Set("Content-Type", "application/json")
++	w.WriteHeader(status)
++	_ = json.NewEncoder(w).Encode(v)
++}
++
++func rbacScopePoll(ctx context.Context, t *testing.T, what string, cond func() (bool, string)) {
++	t.Helper()
++	var last string
++	if err := wait.PollUntilContextTimeout(ctx, 250*time.Millisecond, time.Minute, true, func(context.Context) (bool, error) {
++		ok, detail := cond()
++		last = detail
++		return ok, nil
++	}); err != nil {
++		t.Fatalf("waiting for %s: %v; last: %s", what, err, last)
++	}
 +}
 diff --git a/test/integration/scopefilter/scope_test.go b/test/integration/scopefilter/scope_test.go
 new file mode 100644
