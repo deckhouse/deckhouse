@@ -370,13 +370,13 @@ d8 k -n d8-system get secret cluster-key -o yaml > cluster-key.yaml
    d8 k --as=system:sudouser apply --server-side --force-conflicts -f license-registration.yaml -f cluster-key.yaml
    ```
 
-Deckhouse Platform подхватывает восстановленный ключ в течение часа. После этого лицензионные ключи, выпущенные для кластера, снова действуют: и восстановленные из резервной копии, и заново загруженные в разделе «Лицензирование» веб-интерфейса Deckhouse. Чтобы вывести записи, которые всё ещё отклонены как выпущенные для другого кластера, выполните:
+Deckhouse Platform подхватывает восстановленный ключ в течение часа. После этого лицензионные ключи, выпущенные для кластера, снова действуют: и восстановленные из резервной копии, и заново загруженные в разделе «Лицензирование» веб-интерфейса Deckhouse. Чтобы вывести записи, которые всё ещё отклонены как выпущенные под другой ключ кластера, выполните:
 
 ```shell
-d8 k get clusterlicenses -o jsonpath='{range .items[*]}{range .status.records[?(@.reason=="ClusterMismatch")]}{.id}: {.message}{"\n"}{end}{end}'
+d8 k get clusterlicenses -o jsonpath='{range .items[*]}{range .status.records[?(@.reason=="ClusterKeyMismatch")]}{.id}: {.message}{"\n"}{end}{range .status.records[?(@.reason=="ClusterKeyMissing")]}{.id}: {.message}{"\n"}{end}{end}'
 ```
 
-Когда ключ подхвачен, вывод пуст. Запись с сообщением `record is issued for cluster ...` выпущена для другого UUID кластера.
+Когда ключ подхвачен, вывод пуст. Запись с причиной `ClusterMismatch` выпущена для другого UUID кластера, восстановление ключа её не меняет.
 
 ### Восстановление манифестов компонентов control plane из резервной копии control-plane-manager
 

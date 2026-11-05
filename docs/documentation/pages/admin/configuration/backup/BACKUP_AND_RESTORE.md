@@ -368,13 +368,13 @@ Only Deckhouse Platform and `system:sudouser` may change the two objects, so a b
    d8 k --as=system:sudouser apply --server-side --force-conflicts -f license-registration.yaml -f cluster-key.yaml
    ```
 
-Deckhouse Platform picks up the restored key within an hour. After that, the license keys issued for the cluster apply again: both the ones restored from the backup and the ones uploaded again in the Deckhouse web UI section "Licensing". To list the records that are still rejected as issued for another cluster, run:
+Deckhouse Platform picks up the restored key within an hour. After that, the license keys issued for the cluster apply again: both the ones restored from the backup and the ones uploaded again in the Deckhouse web UI section "Licensing". To list the records that are still rejected as issued for another cluster key, run:
 
 ```shell
-d8 k get clusterlicenses -o jsonpath='{range .items[*]}{range .status.records[?(@.reason=="ClusterMismatch")]}{.id}: {.message}{"\n"}{end}{end}'
+d8 k get clusterlicenses -o jsonpath='{range .items[*]}{range .status.records[?(@.reason=="ClusterKeyMismatch")]}{.id}: {.message}{"\n"}{end}{range .status.records[?(@.reason=="ClusterKeyMissing")]}{.id}: {.message}{"\n"}{end}{end}'
 ```
 
-Once the key is picked up, the output is empty. A record with the message `record is issued for cluster ...` was issued for another cluster UUID.
+Once the key is picked up, the output is empty. A record rejected with the reason `ClusterMismatch` was issued for another cluster UUID, and restoring the key does not change it.
 
 ### Restoring control plane component manifests from a control-plane-manager backup
 

@@ -38,8 +38,14 @@ const (
 	LicenseRecordDuplicate LicenseRecordReason = "Duplicate"
 	// LicenseRecordNotYetValid - startAt is in the future.
 	LicenseRecordNotYetValid LicenseRecordReason = "NotYetValid"
-	// LicenseRecordClusterMismatch - the record is issued for another cluster or another cluster key.
+	// LicenseRecordClusterMismatch - the record is issued for another cluster.
 	LicenseRecordClusterMismatch LicenseRecordReason = "ClusterMismatch"
+	// LicenseRecordClusterKeyMismatch - the record is issued for this cluster, but for another cluster key:
+	// the cluster was recreated, or Secret d8-system/cluster-key was not restored from a backup.
+	LicenseRecordClusterKeyMismatch LicenseRecordReason = "ClusterKeyMismatch"
+	// LicenseRecordClusterKeyMissing - the record is bound to a cluster key, and the cluster has no usable one:
+	// Secret d8-system/cluster-key is damaged or deleted.
+	LicenseRecordClusterKeyMissing LicenseRecordReason = "ClusterKeyMissing"
 	// LicenseRecordSchemaViolation - a field of the record has an unexpected shape.
 	LicenseRecordSchemaViolation LicenseRecordReason = "SchemaViolation"
 	// LicenseRecordUnsupportedType - the record type is unknown to this version of Deckhouse.
@@ -102,6 +108,11 @@ type ClusterLicenseStatus struct {
 	// PackageJti is the jti claim of the package, it identifies the key itself.
 	// +optional
 	PackageJti string `json:"packageJti,omitempty"`
+
+	// Issuer is the iss claim of a key rejected because another service issued it
+	// (reason WrongIssuer of the Valid condition). Empty otherwise.
+	// +optional
+	Issuer string `json:"issuer,omitempty"`
 
 	// Message is a human readable summary of the key state.
 	// +optional
