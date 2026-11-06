@@ -45,6 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/crd"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/hookcache"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer"
 	erofsdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/erofs"
@@ -383,7 +384,9 @@ func (r *Runtime) buildKubeEventsManager() error {
 		return fmt.Errorf("initialize kube events manager client: %w", err)
 	}
 
-	r.kubeEventsManager = kubeeventsmanager.NewKubeEventsManager(context.Background(), client, r.logger.Named("kube-events-manager"))
+	kubeEventsManager := kubeeventsmanager.NewKubeEventsManager(context.Background(), client, r.logger.Named("kube-events-manager"))
+	kubeEventsManager.WithObjectTransform(hookcache.StripUnusedFields)
+	r.kubeEventsManager = kubeEventsManager
 
 	// Initialize metric storage for the kube events manager
 	// This is required to record metrics during hook initialization and execution

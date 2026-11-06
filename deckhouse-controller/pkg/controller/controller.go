@@ -155,6 +155,7 @@ func NewDeckhouseController(
 		},
 		GracefulShutdownTimeout: ptr.To(gracefulShutdownTimeout),
 		Cache: cache.Options{
+			DefaultTransform: cache.TransformStripManagedFields(),
 			ByObject: map[client.Object]cache.ByObject{
 				// for ModuleDocumentation controller
 				&coordv1.Lease{}: {

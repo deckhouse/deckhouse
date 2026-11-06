@@ -10,9 +10,9 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.19.0 // indirect
-	github.com/flant/addon-operator v1.26.4
+	github.com/flant/addon-operator v1.26.5
 	github.com/flant/kube-client v1.10.0
-	github.com/flant/shell-operator v1.21.3
+	github.com/flant/shell-operator v1.21.5
 	github.com/go-openapi/spec v0.22.1
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/google/go-cmp v0.7.0
@@ -80,7 +80,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/slok/kubewebhook/v2 v2.5.0
 	github.com/sylabs/oci-tools v0.19.0
-	github.com/werf/nelm/v2 v2.2.1
+	github.com/werf/nelm/v2 v2.3.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.45.0
@@ -316,7 +316,7 @@ require (
 	github.com/wI2L/jsondiff v0.7.0 // indirect
 	github.com/weppos/publicsuffix-go v0.50.1-0.20250829105427-5340293a34a1 // indirect
 	github.com/werf/common-go v0.0.0-20260831162604-46c3b45163be // indirect
-	github.com/werf/kubedog v0.13.1-0.20260915153156-438ef109f804 // indirect
+	github.com/werf/kubedog v0.13.1-0.20261103160714-1ed920dee18b // indirect
 	github.com/werf/lockgate v0.1.1 // indirect
 	github.com/werf/logboek v0.6.1 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
@@ -393,7 +393,7 @@ replace github.com/deckhouse/deckhouse/go_lib/controlplane => ./go_lib/controlpl
 replace (
 	github.com/deckhouse/module-sdk => github.com/deckhouse/module-sdk v0.12.4
 	github.com/flant/kube-client => github.com/flant/kube-client v1.9.2
-	github.com/flant/shell-operator => github.com/flant/shell-operator v1.20.5
+	github.com/flant/shell-operator => github.com/flant/shell-operator v1.20.8
 	github.com/fluxcd/cli-utils => github.com/fluxcd/cli-utils v0.36.0-flux.15
 	helm.sh/helm/v3 => helm.sh/helm/v3 v3.19.5
 	k8s.io/api => k8s.io/api v0.34.8
