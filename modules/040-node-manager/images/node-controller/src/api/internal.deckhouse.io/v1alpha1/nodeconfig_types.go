@@ -589,11 +589,11 @@ type Kubelet struct {
 	// false: nothing approves serving certificate requests until Deckhouse is installed.
 	ServerTLSBootstrap *bool `json:"serverTLSBootstrap,omitempty"`
 	// ResourceReservation controls how much CPU, memory and disk are held back from pods
-	// for the system itself (kubeReserved).
+	// for the system itself (systemReserved).
 	ResourceReservation *ResourceReservation `json:"resourceReservation,omitempty"`
 }
 
-// ResourceReservation is the kubeReserved policy of the node.
+// ResourceReservation is the systemReserved policy of the node.
 type ResourceReservation struct {
 	// Mode is the reservation policy: Auto, the default, computes it from the node's capacity,
 	// and Off reserves nothing.

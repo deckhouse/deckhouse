@@ -291,7 +291,7 @@ spec:
 
                       Defaults to `4` when unset.
                     maximum: 1000
-                    minimum: 1
+                    minimum: 2
                     type: integer
                   containerLogMaxSize:
                     description: |-
@@ -363,7 +363,7 @@ spec:
                   resourceReservation:
                     description: |-
                       ResourceReservation controls how much CPU, memory and disk are held back
-                      from pods for the system itself (kubeReserved).
+                      from pods for the system itself (systemReserved).
                     properties:
                       mode:
                         description: |-
@@ -1052,9 +1052,35 @@ spec:
                     - `True`: The reason is `ReconcileSucceeded`.
                     - `False`: The message gives the cause. The reason is `Pending` while the subsystem
                       waits for something outside the node, otherwise `ReconcileFailed` or a more
-                      specific reason of the subsystem.
+                      specific reason of the subsystem listed below.
                     - `Unknown`: The subsystem did not run in this pass. The reason is
                       `ReconcileSkipped`.
+
+                    Specific reasons with `False` that mean a failure:
+
+                    - `StaticPodFailed` (`StaticPodsReady`): A static pod manifest is not written or
+                      not removed. The `staticPods` entry gives the cause.
+                    - `OSImageRolledBack` (`OSImageUpToDate`): The node rolled back from the image or
+                      refused it before. The image is not tried again.
+                    - `OSImageRejected` (`OSImageUpToDate`): The kernel refused the root hash
+                      signature of the image. The image is not tried again.
+                    - `OSImageRootHashMismatch` (`OSImageUpToDate`): The image does not carry the
+                      root hash the configuration declares. The image is not tried again.
+                    - `OSImageDownloadFailed` (`OSImageUpToDate`): The node could not download the
+                      image. The node retries.
+                    - `OSImageStaged` (`OSImageUpToDate`): The image is staged for the next boot, but
+                      the node could not request the reboot.
+                    - `OSImageOnTrial` (`OSImageUpToDate`): The node did not confirm the new image in
+                      time and could not request the reboot that tries it again.
+
+                    Waits of `OSImageUpToDate` are published with the reason `Pending`, and the
+                    message tells them apart:
+
+                    - `OSImageBaselineUnknown`: The node has no record of the image it runs and cannot
+                      update it until it is reinstalled.
+                    - `OSImageUpdateDeferred`: The update waits for the update window.
+                    - `OSImageStaged`, `OSImageOnTrial`: The node reboots into the new image or waits
+                      for its subsystems before it confirms the image.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
