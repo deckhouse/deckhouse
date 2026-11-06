@@ -73,12 +73,13 @@ type IsGrantedValidator struct {
 	factory jsonpath.Factory
 }
 
-// NewIsGrantedValidator builds the /is-granted validating webhook. cl is a direct (uncached) API reader
-// on purpose: the cache-backed client lazily starts an informer on first read of a type and blocks on
-// its sync inside the admission request; on a large cluster that first sync can exceed the webhook
+// NewIsGrantedValidator builds the /is-granted validating webhook. cl must never wait for an informer
+// sync: the manager's cache-backed client lazily starts an informer on first read of a type and blocks
+// on its sync inside the admission request; on a large cluster that first sync can exceed the webhook
 // deadline, and the per-request cancellation prevents it from ever completing — every call then times
-// out and (with failurePolicy: Fail) piles up retries into a queue lock. A direct reader never depends
-// on informer sync, so reads are bounded and the webhook cannot hang.
+// out and (with failurePolicy: Fail) piles up retries into a queue lock. The controller passes the
+// direct API reader, wrapped by grantcache for the granted objects, which answers from the API server
+// until its informer has synced.
 func NewIsGrantedValidator(log logr.Logger, cl client.Reader, mapper meta.RESTMapper, factory jsonpath.Factory) *IsGrantedValidator {
 	return &IsGrantedValidator{log: log.WithValues("component", "is-granted"), cl: cl, mapper: mapper, factory: factory}
 }
@@ -171,9 +172,10 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 		}
 	}
 
-	// Resolve availability once per definition (several references may share one). unresolvable holds
-	// the definitions skipped for a configuration error, so each is logged once per request.
-	resolvedByDef := map[string]*resolve.Resolved{}
+	// unresolvable holds the definitions skipped for a configuration error, so each is logged once per
+	// request. Availability is resolved per reference for the names it adds only (DecideNames): one
+	// read per name instead of a list of every granted object, so the decision does not slow down as
+	// the granted objects grow in number.
 	unresolvable := map[string]struct{}{}
 
 	for _, mr := range refs {
@@ -219,40 +221,40 @@ func (v *IsGrantedValidator) decide(ctx context.Context, req *admissionv1.Admiss
 			}
 		}
 
+		// Only the values the request adds are checked.
+		var added []string
+		for _, name := range names {
+			if _, grandfathered := old[name]; name != "" && !grandfathered {
+				added = append(added, name)
+			}
+		}
+		if len(added) == 0 {
+			continue
+		}
+
 		def := mr.Definition
 		if _, skip := unresolvable[def.Name]; skip {
 			continue
 		}
-		resolved := resolvedByDef[def.Name]
-		if resolved == nil {
-			resolved, err = resolve.Resolve(ctx, v.cl, v.mapper, def, resolve.EntriesFor(grants, def.Name))
-			if resolve.IsConfigurationError(err) {
-				// A definition that cannot be resolved for a configuration reason (a namespaced
-				// grantedResource, or a kind the apiserver does not serve) makes its references inert,
-				// deliberately, by the same rule as a broken path above. Retrying cannot fix it, and
-				// failing the request under failurePolicy: Fail would block every CREATE/UPDATE of the
-				// reference's rule in every project because of one bad registration. The other
-				// references are still enforced, and the breakage stays visible in this log and in the
-				// definition's GrantedResourceValid condition. Any other Resolve error still fails the
-				// request below.
-				log.Error(err, "skipping reference: definition cannot be resolved",
-					"definition", def.Name, "reference", mr.Reference.Name)
-				unresolvable[def.Name] = struct{}{}
-				continue
-			}
-			if err != nil {
-				return nil, fmt.Errorf("resolve %s: %w", def.Name, err)
-			}
-			resolvedByDef[def.Name] = resolved
+		resolved, err := resolve.DecideNames(ctx, v.cl, v.mapper, def, resolve.EntriesFor(grants, def.Name), added)
+		if resolve.IsConfigurationError(err) {
+			// A definition that cannot be resolved for a configuration reason (a namespaced
+			// grantedResource, or a kind the apiserver does not serve) makes its references inert,
+			// deliberately, by the same rule as a broken path above. Retrying cannot fix it, and
+			// failing the request under failurePolicy: Fail would block every CREATE/UPDATE of the
+			// reference's rule in every project because of one bad registration. The other
+			// references are still enforced, and the breakage stays visible in this log and in the
+			// definition's GrantedResourceValid condition. Any other Resolve error still fails the
+			// request below.
+			log.Error(err, "skipping reference: definition cannot be resolved",
+				"definition", def.Name, "reference", mr.Reference.Name)
+			unresolvable[def.Name] = struct{}{}
+			continue
 		}
-
-		for _, name := range names {
-			if name == "" {
-				continue
-			}
-			if _, grandfathered := old[name]; grandfathered {
-				continue
-			}
+		if err != nil {
+			return nil, fmt.Errorf("resolve %s: %w", def.Name, err)
+		}
+		for _, name := range added {
 			if !resolved.Decide(name) {
 				msg := fmt.Sprintf(
 					"[multitenancy] %s %q references %q which is not available to project %q. "+

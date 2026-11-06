@@ -50,8 +50,11 @@ type AvailableClusterResourceStatus struct {
 	GrantedResourceKind string `json:"grantedResourceKind,omitempty"`
 
 	// Available lists the granted names available in this project, with the default flagged.
-	// +listType=map
-	// +listMapKey=name
+	//
+	// The list is atomic: the controller writes it whole, and its managed fields then hold one entry
+	// for the list instead of one per name, which would store every name a second time and shrink the
+	// number of names the object fits in the etcd request limit by half or more.
+	// +listType=atomic
 	// +optional
 	Available []AvailableObject `json:"available"`
 

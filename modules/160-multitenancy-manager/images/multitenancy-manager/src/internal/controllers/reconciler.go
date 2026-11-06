@@ -44,6 +44,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"controller/api/v1alpha1"
 	grantsv1alpha2 "controller/api/v1alpha2"
@@ -55,8 +56,9 @@ import (
 	"controller/internal/resolve"
 )
 
-// ResyncInterval is the period at which a project namespace is re-reconciled so the catalog
-// (recomputed from live granted objects, not all watched) does not drift unbounded.
+// ResyncInterval is the period at which a project namespace is re-reconciled. The catalog follows the
+// granted objects through Changes; the resync is its safety net and recounts the violations, whose
+// usage objects are not watched.
 const ResyncInterval = 2 * time.Minute
 
 // MapperReset drops the mappings of the grants REST mapper every Interval. A mapper never forgets a
@@ -98,6 +100,15 @@ type ProjectReconciler struct {
 	// Recorder receives the CatalogFieldsSkipped warnings on the definition. When nil, the skips are
 	// only logged.
 	Recorder record.EventRecorder
+	// Granted reads the granted objects (see grantcache); when nil, the Client does, straight from
+	// the API server.
+	Granted client.Reader
+	// Memo shares the catalog field projection of an object between the catalogs of all project
+	// namespaces; when nil, every catalog projects every object.
+	Memo *resolve.FieldsMemo
+	// Changes delivers an event when granted objects change (see grantcache.Trigger); every project
+	// namespace is then reconciled. When nil, the catalogs follow the objects on the resync only.
+	Changes <-chan event.GenericEvent
 
 	// loggedSkips holds, per namespace and definition, the fingerprint of the skip set last logged, so
 	// the log is written when the set changes rather than on every pass of every project. Lazily
@@ -113,6 +124,14 @@ const ReasonCatalogFieldsSkipped = "CatalogFieldsSkipped"
 // maxSkippedSample bounds the "<object>/<field>" names an event and the Info log line list; the V(1)
 // log line carries all of them.
 const maxSkippedSample = 5
+
+// granted returns the reader of the granted objects.
+func (r *ProjectReconciler) granted() client.Reader {
+	if r.Granted != nil {
+		return r.Granted
+	}
+	return r.Client
+}
 
 // Reconcile reconciles a single (project) namespace.
 func (r *ProjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -230,7 +249,7 @@ func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Nam
 		// The violation metric is secondary to the catalog: a scan failure (a failed resolve or list
 		// of the governed objects) keeps the previous metric values but must not hold the catalog
 		// back. A registration with a configuration error is skipped by the scan itself.
-		violations, err := scanViolations(ctx, r.Client, r.Usage, r.Mapper, r.Factory, ns.Name, grants, regList.Items)
+		violations, err := scanViolations(ctx, r.granted(), r.Usage, r.Mapper, r.Factory, ns.Name, grants, regList.Items)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("scan grant violations: %w", err))
 		} else {
@@ -245,10 +264,15 @@ func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Nam
 	// both the set and the upserts: its catalog goes when the deletion is requested, not when the
 	// object finally disappears.
 	registered := make(map[string]struct{}, len(regList.Items))
+	uids := make(map[types.UID]struct{}, len(regList.Items))
 	for i := range regList.Items {
 		if regList.Items[i].DeletionTimestamp == nil {
 			registered[regList.Items[i].Name] = struct{}{}
+			uids[regList.Items[i].UID] = struct{}{}
 		}
+	}
+	if r.Memo != nil {
+		r.Memo.Forget(uids)
 	}
 	for i := range regList.Items {
 		reg := &regList.Items[i]
@@ -281,11 +305,11 @@ func (r *ProjectReconciler) reconcileCatalog(ctx context.Context, ns *corev1.Nam
 
 // reconcileRegistration resolves one registration for the namespace and upserts its catalog.
 func (r *ProjectReconciler) reconcileRegistration(ctx context.Context, ns, project string, grants []*grantsv1alpha2.ClusterResourceGrantPolicy, reg *v1alpha1.GrantableClusterResourceDefinition) error {
-	resolved, err := resolve.Resolve(ctx, r.Client, r.Mapper, reg, resolve.EntriesFor(grants, reg.Name))
+	resolved, err := resolve.Resolve(ctx, r.granted(), r.Mapper, reg, resolve.EntriesFor(grants, reg.Name))
 	if err != nil {
 		return err
 	}
-	available, skips := resolved.AvailableWithFields(r.Factory)
+	available, skips := resolved.AvailableWithFieldsMemo(r.Factory, r.Memo)
 	r.reportSkips(ctx, ns, reg, skips)
 	if available == nil {
 		// An empty catalog is kept as an object with an empty list: a reader (the Console
@@ -451,7 +475,7 @@ func (r *ProjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	)
 
-	return ctrl.NewControllerManagedBy(mgr).
+	b := ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Namespace{}).
 		// The catalogs follow the spec of a policy, never its status: the policy reconciler writes
 		// conditions there, and each write would otherwise send every project namespace through here.
@@ -464,8 +488,13 @@ func (r *ProjectReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// here, hence the label predicate.
 		Watches(&v1alpha3.Project{}, handler.EnqueueRequestsFromMapFunc(r.namespacesOfProject),
 			builder.WithPredicates(predicate.LabelChangedPredicate{})).
-		Named("project-grants").
-		Complete(r)
+		Named("project-grants")
+	if r.Changes != nil {
+		// A change of granted objects (debounced, see grantcache.Trigger) refreshes every catalog
+		// instead of waiting for the resync.
+		b = b.WatchesRawSource(source.Channel(r.Changes, enqueueProjectNamespaces))
+	}
+	return b.Complete(r)
 }
 
 // policySpecChanged passes a policy update when its spec changed. The generation alone is not enough:

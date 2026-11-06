@@ -29,6 +29,7 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -62,11 +63,13 @@ import (
 	projectquotacontroller "controller/internal/controllers/projectquota"
 	projectrolebindingcontroller "controller/internal/controllers/projectrolebinding"
 	templategrantscontroller "controller/internal/controllers/templategrants"
+	"controller/internal/grantcache"
 	"controller/internal/helm"
 	"controller/internal/jsonpath"
 	"controller/internal/quota"
 	"controller/internal/quota/evaluator"
 	"controller/internal/quota/ledger"
+	"controller/internal/resolve"
 	"controller/internal/rolebinding"
 	"controller/internal/startup"
 	clusterprojectrolebindingwebhook "controller/internal/webhook/clusterprojectrolebinding"
@@ -229,9 +232,30 @@ func main() {
 		fatal(logger, err, "add grants REST mapper reset")
 	}
 	jsonpathFactory := jsonpath.NewWithCache()
+	// The granted objects are read from informers of a cache of their own, on every replica: the
+	// catalogs of all project namespaces and the webhooks would otherwise each list the whole granted
+	// kind from the API server. Until an informer has synced, the reads go to the API server.
+	grantObjects, err := newGrantObjectsCache(runtimeManager, grantsMapper)
+	if err != nil {
+		fatal(logger, err, "set up the granted objects cache")
+	}
+	grantChanges := &grantcache.Trigger{Delay: grantChangesDelay, MinInterval: grantChangesMinInterval}
+	grantObjects.OnChange(grantChanges.Kick)
+	// A granted kind whose CRD was deleted: the grants mapper forgets it at once instead of on its
+	// next reset, and the catalogs are refreshed, so they treat the definition as not served.
+	grantObjects.OnNotServed(func() {
+		grantsMapper.Reset()
+		grantChanges.Kick()
+	})
+	if err = runtimeManager.Add(grantChanges); err != nil {
+		fatal(logger, err, "add the granted objects change trigger")
+	}
 	if err = (&grantcontrollers.ProjectReconciler{
-		Client: runtimeManager.GetClient(),
-		Mapper: grantsMapper,
+		Client:  runtimeManager.GetClient(),
+		Granted: grantObjects.Reader(runtimeManager.GetClient()),
+		Memo:    &resolve.FieldsMemo{},
+		Changes: grantChanges.Events(),
+		Mapper:  grantsMapper,
 		// Usage objects are of whatever kinds the references name; the uncached reader keeps the
 		// two-minute recount from starting an informer per kind.
 		Usage:    runtimeManager.GetAPIReader(),
@@ -246,14 +270,17 @@ func main() {
 	if err = (&grantcontrollers.DefinitionReconciler{Client: runtimeManager.GetClient(), Factory: jsonpathFactory, Mapper: grantsMapper}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant definition reconciler")
 	}
-	if err = (&grantcontrollers.PolicyReconciler{Client: runtimeManager.GetClient(), Mapper: grantsMapper}).SetupWithManager(runtimeManager); err != nil {
+	if err = (&grantcontrollers.PolicyReconciler{Client: runtimeManager.GetClient(), Granted: grantObjects.Reader(runtimeManager.GetClient()), Mapper: grantsMapper}).SetupWithManager(runtimeManager); err != nil {
 		fatal(logger, err, "set up grant policy reconciler")
 	}
-	// Use the direct (uncached) API reader for the admission webhooks: a cache-backed read lazily
-	// starts an informer and blocks on its sync inside the request, which can exceed the webhook
-	// deadline and pile up into a queue lock. A direct reader keeps reads bounded.
-	grantwebhooks.NewIsGrantedValidator(logger, runtimeManager.GetAPIReader(), grantsMapper, jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
-	grantwebhooks.NewDefaultsMutator(logger, runtimeManager.GetAPIReader(), grantsMapper, jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
+	// The admission webhooks read the grant model with the direct (uncached) API reader: a read of the
+	// manager's cache lazily starts an informer and blocks on its sync inside the request, which can
+	// exceed the webhook deadline and pile up into a queue lock. The granted objects come from the
+	// granted objects cache, which never waits for a sync: it answers from the API server until its
+	// informer has synced.
+	grantWebhookReader := grantObjects.Reader(runtimeManager.GetAPIReader())
+	grantwebhooks.NewIsGrantedValidator(logger, grantWebhookReader, grantsMapper, jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
+	grantwebhooks.NewDefaultsMutator(logger, grantWebhookReader, grantsMapper, jsonpathFactory).InstallInto(runtimeManager.GetWebhookServer())
 	grantwebhooks.NewProtectValidator(logger, serviceAccount).InstallInto(runtimeManager.GetWebhookServer())
 	// Reject a GrantableClusterResourceReference whose paths /is-granted cannot compile, whose
 	// defaulting path the /defaults mutator cannot write to, or whose fieldPaths scopes stray outside
@@ -312,6 +339,43 @@ func main() {
 	if err = runtimeManager.Start(ctrl.SetupSignalHandler()); err != nil {
 		fatal(logger, err, "start runtime manager")
 	}
+}
+
+// The changes of granted objects are folded into one refresh of the catalogs per grantChangesDelay,
+// and the refreshes are at least grantChangesMinInterval apart: each one may rewrite the catalog of
+// every project namespace.
+const (
+	grantChangesDelay       = 5 * time.Second
+	grantChangesMinInterval = 30 * time.Second
+)
+
+// newGrantObjectsCache makes the cache of the granted objects (see grantcache) and adds it, with the
+// sweep of the informers no definition needs, to the manager. The objects keep everything but their
+// managedFields: catalogFields, selectors and defaultFrom may read any other part of them.
+func newGrantObjectsCache(mgr ctrl.Manager, grantsMapper meta.RESTMapper) (*grantcache.Cache, error) {
+	// The definitions are read with the direct reader: on a replica that is not the leader nothing
+	// starts the manager's informer of them, and a webhook must not wait for its sync.
+	objects, err := grantcache.Build(mgr.GetConfig(), cache.Options{
+		HTTPClient:       mgr.GetHTTPClient(),
+		Scheme:           mgr.GetScheme(),
+		Mapper:           mgr.GetRESTMapper(),
+		DefaultTransform: cache.TransformStripManagedFields(),
+	}, mgr.GetAPIReader(), mgr.GetAPIReader())
+	if err != nil {
+		return nil, err
+	}
+	if err := mgr.Add(objects); err != nil {
+		return nil, err
+	}
+	sweeper := &grantcache.Sweeper{
+		Cache:    objects,
+		Mapper:   grantsMapper,
+		Interval: grantcontrollers.ResyncInterval,
+	}
+	if err := mgr.Add(sweeper); err != nil {
+		return nil, err
+	}
+	return objects, nil
 }
 
 // fatal logs the error with context and terminates the process; used for unrecoverable startup

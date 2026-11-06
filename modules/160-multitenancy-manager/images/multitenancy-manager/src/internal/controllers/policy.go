@@ -77,6 +77,9 @@ type PolicyReconciler struct {
 	// Mapper resolves the granted resources of the definitions the policy names; the same resolver
 	// the webhooks use answers whether an allowed name would be granted.
 	Mapper apimeta.RESTMapper
+	// Granted reads the granted objects (see grantcache); when nil, the Client does, straight from
+	// the API server.
+	Granted client.Reader
 }
 
 // Reconcile validates the policy and records the outcome as conditions.
@@ -420,7 +423,11 @@ func (r *PolicyReconciler) ineffectiveAllowed(ctx context.Context, policy *grant
 		if def.IsValueBacked() || len(def.Spec.Excluded) == 0 {
 			continue
 		}
-		resolved, err := resolve.Resolve(ctx, r.Client, r.Mapper, def, []v1alpha1.GrantResource{entry})
+		granted := r.Granted
+		if granted == nil {
+			granted = r.Client
+		}
+		resolved, err := resolve.DecideNames(ctx, granted, r.Mapper, def, []v1alpha1.GrantResource{entry}, entry.Allowed)
 		if err != nil {
 			// The granted kind is not served (its CRD is absent) or is namespaced, which is refused:
 			// nothing can be said about the names.

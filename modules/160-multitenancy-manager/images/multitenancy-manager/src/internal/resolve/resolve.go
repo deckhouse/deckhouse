@@ -24,16 +24,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
+	"sync"
 
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"controller/api/v1alpha1"
@@ -187,9 +191,14 @@ type Resolved struct {
 	liveNames []string
 	// liveObjects are the listed granted objects by name, kept for the catalog field projection.
 	liveObjects map[string]map[string]any
-	anyAll      bool
-	anyNone     bool
-	def         string
+	// complete is set when liveObjects holds every granted object (Resolve), not a few read by name
+	// (ResolveNames); only then may the catalog field memo forget the objects missing from it.
+	complete bool
+	// missing are the names ResolveNames found no object for.
+	missing map[string]struct{}
+	anyAll  bool
+	anyNone bool
+	def     string
 
 	// availableSet/availableObjs memoize the available catalog, which is recomputed several times
 	// per webhook/reconcile request otherwise. They are filled lazily and never change after Resolve
@@ -278,10 +287,24 @@ func (r *Resolved) Available() []v1alpha1.AvailableObject {
 // engine.MaxCatalogFieldsBytes (see engine.CatalogSize), no entry carries any: all or nothing, so the
 // result depends only on the catalog and not on the order the objects are visited in.
 func (r *Resolved) AvailableWithFields(factory jsonpath.Factory) ([]v1alpha1.AvailableObject, engine.CatalogSkips) {
+	return r.AvailableWithFieldsMemo(factory, nil)
+}
+
+// AvailableWithFieldsMemo is AvailableWithFields that takes the projection of an object from memo
+// when the object has not changed since it was projected, so a pass over every project namespace
+// projects each object once rather than once per namespace. A nil memo projects every time.
+func (r *Resolved) AvailableWithFieldsMemo(factory jsonpath.Factory, memo *FieldsMemo) ([]v1alpha1.AvailableObject, engine.CatalogSkips) {
 	var skips engine.CatalogSkips
 	available := r.Available()
 	if factory == nil || len(r.Reg.Spec.CatalogFields) == 0 || len(r.liveObjects) == 0 {
 		return available, skips
+	}
+	project := func(name string, obj map[string]any) (map[string]apiextensionsv1.JSON, []string) {
+		return engine.ProjectCatalogFields(factory, r.Reg.Spec.CatalogFields, obj)
+	}
+	if memo != nil {
+		project = memo.begin(r, factory)
+		defer memo.end()
 	}
 	out := slices.Clone(available)
 	for i := range out {
@@ -289,7 +312,7 @@ func (r *Resolved) AvailableWithFields(factory jsonpath.Factory) ([]v1alpha1.Ava
 		if !ok {
 			continue
 		}
-		fields, oversized := engine.ProjectCatalogFields(factory, r.Reg.Spec.CatalogFields, obj)
+		fields, oversized := project(out[i].Name, obj)
 		out[i].Fields = fields
 		for _, name := range oversized {
 			skips.Oversized = append(skips.Oversized, out[i].Name+"/"+name)
@@ -304,8 +327,78 @@ func (r *Resolved) AvailableWithFields(factory jsonpath.Factory) ([]v1alpha1.Ava
 	return out, skips
 }
 
+// FieldsMemo keeps the catalog field projection of every granted object per definition, keyed by
+// the resourceVersion of the object and the generation of the definition, so an object is projected
+// again only when it or the catalogFields change. Every catalog gets its own copy of the field map.
+// Safe for concurrent use.
+type FieldsMemo struct {
+	mu   sync.Mutex
+	defs map[types.UID]*definitionFields
+}
+
+type definitionFields struct {
+	generation int64
+	objects    map[string]projectedFields
+}
+
+type projectedFields struct {
+	resourceVersion string
+	fields          map[string]apiextensionsv1.JSON
+	oversized       []string
+}
+
+// begin locks the memo for one catalog and returns the projection of an object through it. On a
+// Resolved that holds every granted object, the objects that are gone are forgotten first.
+func (m *FieldsMemo) begin(r *Resolved, factory jsonpath.Factory) func(string, map[string]any) (map[string]apiextensionsv1.JSON, []string) {
+	m.mu.Lock()
+	if m.defs == nil {
+		m.defs = map[types.UID]*definitionFields{}
+	}
+	d := m.defs[r.Reg.UID]
+	if d == nil || d.generation != r.Reg.Generation {
+		d = &definitionFields{generation: r.Reg.Generation, objects: map[string]projectedFields{}}
+		m.defs[r.Reg.UID] = d
+	}
+	if r.complete {
+		for name := range d.objects {
+			if _, ok := r.liveObjects[name]; !ok {
+				delete(d.objects, name)
+			}
+		}
+	}
+	return func(name string, obj map[string]any) (map[string]apiextensionsv1.JSON, []string) {
+		rv, _, _ := unstructured.NestedString(obj, "metadata", "resourceVersion")
+		p, ok := d.objects[name]
+		if !ok || rv == "" || p.resourceVersion != rv {
+			fields, oversized := engine.ProjectCatalogFields(factory, r.Reg.Spec.CatalogFields, obj)
+			p = projectedFields{resourceVersion: rv, fields: fields, oversized: oversized}
+			d.objects[name] = p
+		}
+		// The catalog gets a map of its own: a status update decodes the response of the API server
+		// into the catalog, and with it into this map. The values are not decoded into in place.
+		return maps.Clone(p.fields), p.oversized
+	}
+}
+
+func (m *FieldsMemo) end() { m.mu.Unlock() }
+
+// Forget drops the projections of the definitions that are not in keep (by UID).
+func (m *FieldsMemo) Forget(keep map[types.UID]struct{}) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for uid := range m.defs {
+		if _, ok := keep[uid]; !ok {
+			delete(m.defs, uid)
+		}
+	}
+}
+
 // Resolve builds the resolved availability for a registration given the applicable grant entries. For
 // object-backed resources it lists the live granted objects to expand allowed/denied/excluded selectors.
+//
+// cl serves the granted objects; the controller passes a cache-backed reader (see grantcache), so the
+// list is read with UnsafeDisableDeepCopy: the objects are only read, never changed or kept beyond
+// the Resolved.
 func Resolve(
 	ctx context.Context,
 	cl client.Reader,
@@ -313,6 +406,188 @@ func Resolve(
 	reg *v1alpha1.GrantableClusterResourceDefinition,
 	entries []v1alpha1.GrantResource,
 ) (*Resolved, error) {
+	r := newResolved(reg, entries)
+
+	// Object-backed: list live objects and expand selectors.
+	if !reg.IsValueBacked() {
+		gvk, err := grantedGVK(mapper, reg)
+		if err != nil {
+			return nil, err
+		}
+		m, err := newLiveMatcher(reg, entries)
+		if err != nil {
+			return nil, err
+		}
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind + "List"})
+		if err := cl.List(ctx, list, client.UnsafeDisableDeepCopy); err != nil {
+			if k8serrors.IsNotFound(err) {
+				// A list has no name to be absent, so a 404 means the kind is no longer served (its
+				// CRD was deleted) while the mapper still maps it. Drop the stale mapping, so the next
+				// resolve sees the kind as unknown, or with its new scope if it was re-created.
+				if rm, ok := mapper.(meta.ResettableRESTMapper); ok {
+					rm.Reset()
+				}
+				return nil, fmt.Errorf("list granted resource %s: %w: %w", reg.Spec.GrantedResource.Kind, ErrGrantedResourceNotServed, err)
+			}
+			return nil, fmt.Errorf("list granted resource %s: %w", reg.Spec.GrantedResource.Kind, err)
+		}
+		r.liveNames = slices.Grow(r.liveNames, len(list.Items))
+		r.liveObjects = make(map[string]map[string]any, len(list.Items))
+		r.complete = true
+		for i := range list.Items {
+			r.addLive(m, &list.Items[i])
+		}
+		slices.Sort(r.liveNames)
+	}
+
+	if err := r.settleDefault(ctx, cl, mapper, nil); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+// ResolveNames is Resolve narrowed to the given names: instead of listing every granted object it
+// reads only the objects of these names, one Get each, so its cost does not grow with the number of
+// granted objects. Decide answers for each of the names exactly as on the Resolve of the same
+// registration and entries, and so does membership in Available; the effective Default is the same
+// too, its object being read alongside. Available lists only these names (plus explicitly allowed
+// ones), and a catalog field projection makes no sense on the result, so it is for the webhooks and
+// checks that decide on a known set of names.
+//
+// A name without an object is decided by the literal lists and the baselines alone, as in Resolve,
+// where selectors only ever see listed objects: matching them against an empty label set would let a
+// NotIn or DoesNotExist selector decide about an object that does not exist.
+//
+// A kind the API server does not serve any more (its CRD was deleted while the mapper still maps it)
+// is reported with ErrGrantedResourceNotServed and the mapper is reset, as Resolve does on its list.
+func ResolveNames(
+	ctx context.Context,
+	cl client.Reader,
+	mapper meta.RESTMapper,
+	reg *v1alpha1.GrantableClusterResourceDefinition,
+	entries []v1alpha1.GrantResource,
+	names []string,
+) (*Resolved, error) {
+	return resolveNames(ctx, cl, mapper, reg, entries, names, true)
+}
+
+// DecideNames is ResolveNames for a caller that only decides on the names: it leaves the default
+// unresolved (Default returns ""), which spares the list of the whole kind that defaultFrom takes.
+// Decide and IsAvailable answer for the names exactly as on ResolveNames.
+func DecideNames(
+	ctx context.Context,
+	cl client.Reader,
+	mapper meta.RESTMapper,
+	reg *v1alpha1.GrantableClusterResourceDefinition,
+	entries []v1alpha1.GrantResource,
+	names []string,
+) (*Resolved, error) {
+	return resolveNames(ctx, cl, mapper, reg, entries, names, false)
+}
+
+func resolveNames(
+	ctx context.Context,
+	cl client.Reader,
+	mapper meta.RESTMapper,
+	reg *v1alpha1.GrantableClusterResourceDefinition,
+	entries []v1alpha1.GrantResource,
+	names []string,
+	withDefault bool,
+) (*Resolved, error) {
+	r := newResolved(reg, entries)
+	if !withDefault {
+		r.def = ""
+	}
+	if reg.IsValueBacked() {
+		if withDefault {
+			if err := r.settleDefault(ctx, cl, mapper, nil); err != nil {
+				return nil, err
+			}
+		}
+		return r, nil
+	}
+	gvk, err := grantedGVK(mapper, reg)
+	if err != nil {
+		return nil, err
+	}
+	m, err := newLiveMatcher(reg, entries)
+	if err != nil {
+		return nil, err
+	}
+	r.liveObjects = map[string]map[string]any{}
+	fetch := func(name string) error {
+		if name == "" {
+			return nil
+		}
+		if _, done := r.liveObjects[name]; done {
+			return nil
+		}
+		if _, missing := r.missing[name]; missing {
+			return nil
+		}
+		obj := &unstructured.Unstructured{}
+		obj.SetGroupVersionKind(gvk)
+		if err := cl.Get(ctx, client.ObjectKey{Name: name}, obj); err != nil {
+			if k8serrors.IsNotFound(err) && !objectNotFound(err, name) {
+				// The 404 names no object: the kind itself is not served. Drop the stale mapping, as
+				// Resolve does on a 404 of its list.
+				if rm, ok := mapper.(meta.ResettableRESTMapper); ok {
+					rm.Reset()
+				}
+				return fmt.Errorf("get granted resource %s %q: %w: %w", reg.Spec.GrantedResource.Kind, name, ErrGrantedResourceNotServed, err)
+			}
+			if k8serrors.IsNotFound(err) {
+				if r.missing == nil {
+					r.missing = map[string]struct{}{}
+				}
+				r.missing[name] = struct{}{}
+				return nil
+			}
+			return fmt.Errorf("get granted resource %s %q: %w", reg.Spec.GrantedResource.Kind, name, err)
+		}
+		r.addLive(m, obj)
+		return nil
+	}
+	for _, name := range names {
+		if err := fetch(name); err != nil {
+			return nil, err
+		}
+	}
+	if withDefault {
+		if err := r.settleDefault(ctx, cl, mapper, fetch); err != nil {
+			return nil, err
+		}
+	}
+	slices.Sort(r.liveNames)
+	return r, nil
+}
+
+// objectNotFound reports whether a 404 is about the object of the given name, rather than about the
+// resource. A missing object is a Status from the resource handler naming the object. A resource that
+// is not served (its CRD deleted) is answered by the fallback handler of the API server with a plain
+// "404 page not found", which client-go turns into an error marked as an unexpected server response;
+// it fills in the requested name all the same, so the name alone does not tell the two apart.
+func objectNotFound(err error, name string) bool {
+	var status k8serrors.APIStatus
+	if !errors.As(err, &status) {
+		return false
+	}
+	details := status.Status().Details
+	if details == nil || details.Name != name {
+		return false
+	}
+	for _, cause := range details.Causes {
+		if cause.Type == metav1.CauseTypeUnexpectedServerResponse {
+			return false
+		}
+	}
+	return true
+}
+
+// newResolved collects what the entries and the registration say by name: the literal allowed and
+// denied names, the first explicit default, the baselines and the excluded names.
+func newResolved(reg *v1alpha1.GrantableClusterResourceDefinition, entries []v1alpha1.GrantResource) *Resolved {
 	r := &Resolved{
 		Reg:      reg,
 		allowed:  map[string]struct{}{},
@@ -353,76 +628,76 @@ func Resolve(
 			r.excluded[n] = struct{}{}
 		}
 	}
+	return r
+}
 
-	// Object-backed: list live objects and expand selectors.
-	if !reg.IsValueBacked() {
-		gvk, err := grantedGVK(mapper, reg)
+// liveMatcher holds the selectors a live granted object is matched against, compiled once per
+// resolve instead of per object, so the match is O(objects × entries) comparisons rather than
+// recompilations.
+type liveMatcher struct {
+	excluded []labels.Selector
+	allowed  []labels.Selector
+	denied   []labels.Selector
+}
+
+func newLiveMatcher(reg *v1alpha1.GrantableClusterResourceDefinition, entries []v1alpha1.GrantResource) (*liveMatcher, error) {
+	m := &liveMatcher{
+		excluded: make([]labels.Selector, 0, len(reg.Spec.Excluded)),
+		allowed:  make([]labels.Selector, len(entries)),
+		denied:   make([]labels.Selector, len(entries)),
+	}
+	for i := range reg.Spec.Excluded {
+		sel, err := filterSelector(&reg.Spec.Excluded[i])
 		if err != nil {
 			return nil, err
 		}
-		list := &unstructured.UnstructuredList{}
-		list.SetGroupVersionKind(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind + "List"})
-		if err := cl.List(ctx, list); err != nil {
-			if k8serrors.IsNotFound(err) {
-				// A list has no name to be absent, so a 404 means the kind is no longer served (its
-				// CRD was deleted) while the mapper still maps it. Drop the stale mapping, so the next
-				// resolve sees the kind as unknown, or with its new scope if it was re-created.
-				if rm, ok := mapper.(meta.ResettableRESTMapper); ok {
-					rm.Reset()
-				}
-				return nil, fmt.Errorf("list granted resource %s: %w: %w", reg.Spec.GrantedResource.Kind, ErrGrantedResourceNotServed, err)
-			}
-			return nil, fmt.Errorf("list granted resource %s: %w", reg.Spec.GrantedResource.Kind, err)
+		if sel != nil {
+			m.excluded = append(m.excluded, sel)
 		}
-
-		excludedSels := make([]labels.Selector, 0, len(reg.Spec.Excluded))
-		for i := range reg.Spec.Excluded {
-			sel, err := filterSelector(&reg.Spec.Excluded[i])
-			if err != nil {
-				return nil, err
-			}
-			if sel != nil {
-				excludedSels = append(excludedSels, sel)
-			}
-		}
-		// Compile each entry's allowed/denied selectors once instead of per live object, so the
-		// match loop below is O(objects × entries) comparisons rather than recompilations.
-		allowedSels := make([]labels.Selector, len(entries))
-		deniedSels := make([]labels.Selector, len(entries))
-		for j := range entries {
-			allowedSels[j] = compiledSelector(entries[j].AllowedSelector)
-			deniedSels[j] = compiledSelector(entries[j].DeniedSelector)
-		}
-		r.liveNames = slices.Grow(r.liveNames, len(list.Items))
-		r.liveObjects = make(map[string]map[string]any, len(list.Items))
-		for i := range list.Items {
-			name := list.Items[i].GetName()
-			objLabels := labels.Set(list.Items[i].GetLabels())
-			r.liveNames = append(r.liveNames, name)
-			r.liveObjects[name] = list.Items[i].Object
-			for _, sel := range excludedSels {
-				if sel.Matches(objLabels) {
-					r.excluded[name] = struct{}{}
-					break
-				}
-			}
-			for j := range entries {
-				if deniedSels[j] != nil && deniedSels[j].Matches(objLabels) {
-					r.denied[name] = struct{}{}
-				}
-				if allowedSels[j] != nil && allowedSels[j].Matches(objLabels) {
-					r.allowed[name] = struct{}{}
-				}
-			}
-		}
-		slices.Sort(r.liveNames)
 	}
+	for j := range entries {
+		m.allowed[j] = compiledSelector(entries[j].AllowedSelector)
+		m.denied[j] = compiledSelector(entries[j].DeniedSelector)
+	}
+	return m, nil
+}
 
+// addLive records a live granted object and expands the selectors against its labels.
+func (r *Resolved) addLive(m *liveMatcher, obj *unstructured.Unstructured) {
+	name := obj.GetName()
+	objLabels := labels.Set(obj.GetLabels())
+	r.liveNames = append(r.liveNames, name)
+	r.liveObjects[name] = obj.Object
+	for _, sel := range m.excluded {
+		if sel.Matches(objLabels) {
+			r.excluded[name] = struct{}{}
+			break
+		}
+	}
+	for j := range m.allowed {
+		if m.denied[j] != nil && m.denied[j].Matches(objLabels) {
+			r.denied[name] = struct{}{}
+		}
+		if m.allowed[j] != nil && m.allowed[j].Matches(objLabels) {
+			r.allowed[name] = struct{}{}
+		}
+	}
+}
+
+// settleDefault finishes the effective default: it falls back to the registration's defaultFrom
+// annotation, and is dropped when the project cannot use it. fetch, when set, reads the object of the
+// default first (ResolveNames), so its availability is decided on the object as in Resolve.
+func (r *Resolved) settleDefault(ctx context.Context, cl client.Reader, mapper meta.RESTMapper, fetch func(string) error) error {
 	// Effective default falls back to the registration's defaultFrom annotation.
-	if r.def == "" && !reg.IsValueBacked() && reg.Spec.DefaultFrom != nil && reg.Spec.DefaultFrom.AnnotationKey != "" {
-		def, err := defaultFromAnnotation(ctx, cl, mapper, reg)
+	if r.def == "" && !r.Reg.IsValueBacked() && r.Reg.Spec.DefaultFrom != nil && r.Reg.Spec.DefaultFrom.AnnotationKey != "" {
+		def, err := defaultFromAnnotation(ctx, cl, mapper, r.Reg)
 		if err == nil {
 			r.def = def
+		}
+	}
+	if r.def != "" && fetch != nil {
+		if err := fetch(r.def); err != nil {
+			return err
 		}
 	}
 
@@ -433,8 +708,12 @@ func Resolve(
 	if r.def != "" && !r.isAvailable(r.def) {
 		r.def = ""
 	}
-	return r, nil
+	return nil
 }
+
+// IsAvailable reports whether a name is in the project's available set, the set Available lists.
+// Unlike Decide, a name without a live object is available only when explicitly allowed.
+func (r *Resolved) IsAvailable(name string) bool { return r.isAvailable(name) }
 
 // isAvailable reports whether a name is in the project's available set.
 func (r *Resolved) isAvailable(name string) bool {
@@ -526,7 +805,7 @@ func defaultFromAnnotation(ctx context.Context, cl client.Reader, mapper meta.RE
 	}
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind + "List"})
-	if err := cl.List(ctx, list); err != nil {
+	if err := cl.List(ctx, list, client.UnsafeDisableDeepCopy); err != nil {
 		return "", err
 	}
 	// The annotation has to say "true": the Kubernetes convention marks a class that is NOT the

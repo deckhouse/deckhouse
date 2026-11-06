@@ -20,7 +20,7 @@ spec:
               description: Состояние доступности cluster-wide-ресурсов для проекта.
               properties:
                 available:
-                  description: Список доступных проекту cluster-wide-ресурсов с указанием значения, используемого по умолчанию.
+                  description: Список доступных проекту cluster-wide-ресурсов с указанием значения, используемого по умолчанию. Каждый ресурс указан в списке один раз.
                   items:
                     description: Информация о доступном проекту cluster-wide-ресурсе.
                     properties:

@@ -50,10 +50,8 @@ type DefaultsMutator struct {
 	factory jsonpath.Factory
 }
 
-// NewDefaultsMutator builds the /defaults mutating webhook. cl is a direct (uncached) API reader for the
-// same reason as the /is-granted validator: a cache-backed read lazily starts an informer and blocks on
-// its sync inside the admission request, which can exceed the webhook deadline and pile up into a queue
-// lock. A direct reader keeps reads bounded so the webhook cannot hang.
+// NewDefaultsMutator builds the /defaults mutating webhook. cl must never wait for an informer sync,
+// for the same reason as in the /is-granted validator (see NewIsGrantedValidator).
 func NewDefaultsMutator(log logr.Logger, cl client.Reader, mapper meta.RESTMapper, factory jsonpath.Factory) *DefaultsMutator {
 	return &DefaultsMutator{log: log.WithValues("component", "defaults"), cl: cl, mapper: mapper, factory: factory}
 }
@@ -130,8 +128,6 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		return nil, fmt.Errorf("decode object: %w", err)
 	}
 
-	resolvedByDef := map[string]*resolve.Resolved{}
-	availByDef := map[string]map[string]bool{}
 	unresolvable := map[string]struct{}{}
 
 	var patches []jsonPatchOperation
@@ -167,28 +163,20 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		if _, skip := unresolvable[def.Name]; skip {
 			continue
 		}
-		resolved := resolvedByDef[def.Name]
-		if resolved == nil {
-			resolved, err = resolve.Resolve(ctx, m.cl, m.mapper, def, resolve.EntriesFor(grants, def.Name))
-			if resolve.IsConfigurationError(err) {
-				// Inert, as in /is-granted: a definition that cannot be resolved for a configuration
-				// reason defaults nothing instead of failing every CREATE of the reference's rule in every
-				// project under failurePolicy: Fail. Any other Resolve error still fails the request.
-				m.log.Error(err, "skipping reference: definition cannot be resolved",
-					"namespace", req.Namespace, "name", req.Name,
-					"definition", def.Name, "reference", mr.Reference.Name)
-				unresolvable[def.Name] = struct{}{}
-				continue
-			}
-			if err != nil {
-				return nil, fmt.Errorf("resolve %s: %w", def.Name, err)
-			}
-			resolvedByDef[def.Name] = resolved
-			avail := make(map[string]bool, len(resolved.Available()))
-			for _, a := range resolved.Available() {
-				avail[a.Name] = true
-			}
-			availByDef[def.Name] = avail
+		// Only the current value and the default are looked at (ResolveNames), not every granted object.
+		resolved, err := resolve.ResolveNames(ctx, m.cl, m.mapper, def, resolve.EntriesFor(grants, def.Name), []string{value})
+		if resolve.IsConfigurationError(err) {
+			// Inert, as in /is-granted: a definition that cannot be resolved for a configuration
+			// reason defaults nothing instead of failing every CREATE of the reference's rule in every
+			// project under failurePolicy: Fail. Any other Resolve error still fails the request.
+			m.log.Error(err, "skipping reference: definition cannot be resolved",
+				"namespace", req.Namespace, "name", req.Name,
+				"definition", def.Name, "reference", mr.Reference.Name)
+			unresolvable[def.Name] = struct{}{}
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("resolve %s: %w", def.Name, err)
 		}
 		defName := resolved.Default()
 		if defName == "" {
@@ -199,7 +187,7 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 		// FillEmpty injects only into an empty field. Coerce also rewrites a non-empty value that is not
 		// available to the project (for fields a built-in admission controller pre-fills).
 		shouldDefault := value == "" ||
-			(fp.Defaulting == v1alpha1.DefaultingCoerce && !availByDef[def.Name][value])
+			(fp.Defaulting == v1alpha1.DefaultingCoerce && !resolved.IsAvailable(value))
 		if shouldDefault {
 			patches = append(patches, jsonPatchOperation{Op: "add", Path: jsonPointer(segs), Value: defName})
 			if value != "" {

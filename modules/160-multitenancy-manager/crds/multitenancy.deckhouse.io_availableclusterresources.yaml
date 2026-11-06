@@ -72,7 +72,7 @@ spec:
             description: Cluster-wide resource availability status for the project.
             properties:
               available:
-                description: List of cluster-wide resources available to the project, indicating the resource used by default.
+                description: List of cluster-wide resources available to the project, indicating the resource used by default. Each resource is listed once.
                 items:
                   description: Information about a cluster-wide resource available to the project.
                   properties:
@@ -95,9 +95,7 @@ spec:
                   - name
                   type: object
                 type: array
-                x-kubernetes-list-map-keys:
-                - name
-                x-kubernetes-list-type: map
+                x-kubernetes-list-type: atomic
               availableCount:
                 description: |-
                   Number of cluster-wide resources available to the project.

@@ -353,8 +353,60 @@ Rules (the projection lives in `internal/engine/catalog.go`):
   shipped `storageclasses` definition leaves out `parameters`, which is driver-specific, can be large
   and may name secrets.
 
-The values are refreshed on each catalog reconcile; the granted objects themselves are not watched,
-so a changed value shows up within `ResyncInterval` (2 minutes).
+The values are refreshed on each catalog reconcile, see [Reading the granted objects](#reading-the-granted-objects).
+
+### Reading the granted objects
+
+The catalog of every project namespace, the violation recount, `/is-granted` and `/defaults` all need
+the granted objects. Listing the whole granted kind from the API server for each of them made the cost
+of a pass `namespaces × objects`: at 200 projects and 5000 objects a pass outgrew `ResyncInterval`,
+the API server grew by gigabytes and `/is-granted` took over a second.
+
+- The granted objects come from informers of a cache of their own (`internal/grantcache`), on every
+  replica, apart from the manager's cache. Only a kind some definition grants gets an informer; any
+  other unstructured read still goes to the API server. The set of granted kinds is listed in the
+  background at most every 10 seconds, with a timeout of its own, so a read never waits for it; a
+  failed list keeps the last set. An informer starts the first time its kind is read. The sweep, every `ResyncInterval`,
+  removes it once no definition grants the kind or the grants mapper says for sure (no match, or
+  namespaced) that the kind is not served; any other mapper error leaves every informer in place. The
+  objects are kept without `managedFields`.
+- Reads never wait for an informer: until it has synced, while another read of the kind is setting it
+  up, and for 10 seconds after a failed setup, they go to the API server. The cache is made with
+  `ReaderFailOnMissingInformer`, so a read never creates an informer itself, and an informer found
+  stopped (removed while a read was setting it up) is replaced.
+- The cache lags the API server by the latency of the watch. A Get the synced cache answers with
+  NotFound is asked again from the API server, so an object created a moment ago is not refused. The
+  other way round is accepted: for that latency, an object changed a moment ago (say, a ClusterRole
+  that lost its `rbac.deckhouse.io/delegatable` label) is still judged as it was.
+- A granted kind whose CRD is deleted: the 404 of its list or watch drops the informer, resets the
+  grants mapper and refreshes the catalogs. The kind is then read from the API server for 2 minutes,
+  which reports it as not served (`ErrGrantedResourceNotServed`, as before the cache), so the catalogs
+  keep their last state and the webhooks leave the references inert. `ResolveNames` tells such a 404
+  (the plain "404 page not found" of the API server, an unexpected server response to client-go) from
+  the 404 Status of a missing object.
+- A change of a granted object, after the initial list, reconciles every project namespace: the
+  changes are collected for 5 seconds, and two such refreshes are at least 30 seconds apart, since
+  each may rewrite the catalog of every project namespace. `ResyncInterval` stays as the safety net and for the
+  violation recount, whose usage objects are not watched.
+- The catalog field projection of an object is kept per definition (`resolve.FieldsMemo`) and is redone
+  only when the `resourceVersion` of the object or the `generation` of the definition changes, so a pass
+  projects each object once, not once per project namespace.
+- `/is-granted` and `/defaults` resolve only the names the request carries (`resolve.DecideNames` and
+  `resolve.ResolveNames`): one read per name instead of the whole kind, so their latency does not
+  depend on the number of granted objects. `DecideNames`, used by `/is-granted` and the policy
+  reconciler, skips the default and with it the list `defaultFrom` takes. For each of these names `ResolveNames` gives the same `Decide`, the same membership
+  in the available set and the same default as the full `Resolve`; a name without an object is decided
+  by the literal lists and the baselines only, since selectors are never matched against an object that
+  does not exist. Only `defaultFrom` in `/defaults` still lists the kind, from the cache.
+- `status.available` is an atomic list (`x-kubernetes-list-type: atomic`). As a map list keyed by
+  `name`, its managed fields held an entry per name, about 40 bytes plus the name again: a catalog of
+  names of 37 characters took 127 bytes per name instead of 49, and at about 12k names the status write
+  overflowed the etcd request limit (measured: the API server then retries the write without the
+  managed fields of the object). Atomic, the managed fields hold one entry for the whole list; the
+  catalog is 2.6 times smaller for such names, and only the names themselves meet the limit, at about
+  30k names of 37 characters (`12 + length` bytes per name).
+- What is not solved: every project namespace stores its catalog, so a change of any granted object
+  rewrites the status of the catalog in every project namespace.
 
 What is checked where:
 
