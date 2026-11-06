@@ -1,0 +1,26 @@
+# CAs that components in the cluster (e.g. containerd) trust when they verify signatures on our images and binaries:
+# comma separated base64-encoded PEM from .werf/signature-ca/<name>.pem, picked by the edition.
+# A release build (from a tag) trusts its edition's CA: cse-int-ca in CSE, prod-int-ca in the others.
+# Any other build (MR, main, release branch, local) trusts dev-int-ca and prod-int-ca.
+# A release is detected as in the build job: a tag means BUILD_MODE=release (detect_build_mode in .gitlab/helpers.yml),
+# and .gitlab/build.yml signs it with the prod key, any other build with the dev key.
+# A component gets the set at build time (e.g. through -ldflags -X) instead of embedding a fixed CA.
+# . is the root context or a dict with Files and Env.
+{{- define "signature ca certs" -}}
+  {{- $tag := env "CI_COMMIT_TAG" "" -}}
+  {{- $names := list "dev-int-ca" "prod-int-ca" -}}
+  {{- if and $tag (eq .Env "CSE") -}}
+    {{- $names = list "cse-int-ca" -}}
+  {{- else if $tag -}}
+    {{- $names = list "prod-int-ca" -}}
+  {{- end -}}
+  {{- $caCerts := list -}}
+  {{- range $_, $name := $names -}}
+    {{- $pem := $.Files.Get (printf ".werf/signature-ca/%s.pem" $name) -}}
+    {{- if not $pem -}}
+      {{- fail (printf "no .werf/signature-ca/%s.pem" $name) -}}
+    {{- end -}}
+    {{- $caCerts = append $caCerts ($pem | b64enc) -}}
+  {{- end -}}
+  {{- join "," $caCerts -}}
+{{- end }}
