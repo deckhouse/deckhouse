@@ -31,6 +31,52 @@ import (
 	"control-plane-manager/internal/constants"
 )
 
+// maxPublishedDiffBytes caps a diff published to the operation status, the same as a condition message limit.
+// Must not exceed +kubebuilder:validation:MaxLength of ChangedFile.Diff, or the API server rejects the status patch.
+const maxPublishedDiffBytes = 32768
+
+// diffTruncatedNote ends a diff cut to maxPublishedDiffBytes: the status has no separate flag for the cut.
+const diffTruncatedNote = "[diff truncated, full diff on the node in " + constants.DiffBasePath + "]\n"
+
+// publishedExtraFiles are the extra-files without sensitive data, whose diffs are published to the operation status.
+// An allowlist, so that a new extra-file with sensitive data is not published by default:
+// TestExtraFilesClassified fails until the new extra-file is added here or to its sensitive list.
+var publishedExtraFiles = map[string]bool{
+	"admission-control-config.yaml":  true,
+	"authorization-config.yaml":      true,
+	"event-rate-limit-config.yaml":   true,
+	"revocation-webhook-config.yaml": true,
+}
+
+// recordChangedFiles publishes the changed files to the operation status.
+// Diffs are published for the static pod manifest and publishedExtraFiles only, the other files get just their paths.
+func recordChangedFiles(state *controlplanev1alpha1.OperationState, results []fileWriteResult) {
+	for i := range results {
+		res := results[i]
+		if !res.Changed {
+			continue
+		}
+		file := controlplanev1alpha1.ChangedFile{Path: res.Path}
+		dir := filepath.Dir(res.Path)
+		if dir == constants.ManifestsPath || dir == constants.ExtraFilesPath && publishedExtraFiles[filepath.Base(res.Path)] {
+			file.Diff = truncateDiff(res.Diff)
+		}
+		state.SetChangedFile(file)
+	}
+}
+
+// truncateDiff cuts diff to at most maxPublishedDiffBytes, at a line boundary when there is one, and ends it with diffTruncatedNote.
+func truncateDiff(diff string) string {
+	if len(diff) <= maxPublishedDiffBytes {
+		return diff
+	}
+	cut := diff[:maxPublishedDiffBytes-len(diffTruncatedNote)]
+	if i := strings.LastIndexByte(cut, '\n'); i >= 0 {
+		cut = cut[:i+1]
+	}
+	return cut + diffTruncatedNote
+}
+
 func saveDiffResults(component controlplanev1alpha1.OperationComponent, operationName string, results []fileWriteResult, logger *log.Logger) {
 	for i := range results {
 		res := results[i]
@@ -93,8 +139,8 @@ func diffSubdirForPath(path string) string {
 
 func computeUnifiedDiff(oldContent, newContent, filename string) string {
 	diff, err := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
-		A:        difflib.SplitLines(normalizeDiffInput(oldContent)),
-		B:        difflib.SplitLines(normalizeDiffInput(newContent)),
+		A:        splitDiffLines(oldContent),
+		B:        splitDiffLines(newContent),
 		FromFile: filename,
 		ToFile:   filename + " (new)",
 		Context:  3,
@@ -103,6 +149,13 @@ func computeUnifiedDiff(oldContent, newContent, filename string) string {
 		return ""
 	}
 	return diff
+}
+
+// splitDiffLines splits content into lines. difflib.SplitLines is not used: it appends a phantom
+// empty last line, which shows up as a " " context line and makes kubectl print the diff as a quoted string.
+func splitDiffLines(content string) []string {
+	lines := strings.SplitAfter(normalizeDiffInput(content), "\n")
+	return lines[:len(lines)-1]
 }
 
 func normalizeDiffInput(content string) string {

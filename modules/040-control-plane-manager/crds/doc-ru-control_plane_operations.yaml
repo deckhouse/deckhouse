@@ -3,7 +3,7 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: |            
+          description: |
             Описывает операцию обновления компонента control plane на конкретном узле — например, перевыпуск сертификатов или применение нового манифеста.
 
             Ресурс создаётся и обновляется модулем `control-plane-manager` автоматически. Создавать и редактировать его вручную не требуется.
@@ -29,10 +29,10 @@ spec:
                     * `SyncCA` — синхронизация CA-сертификатов (`ca.crt`, `ca.key`) с актуальной версией секрета `d8-pki`;
                     * `RenewPKICerts` — перевыпуск сертификатов компонента (`server`, `peer`, `client`);
                     * `RenewKubeconfigs` — перевыпуск kubeconfig-файлов, с помощью которых компонент аутентифицируется в API;
-                    * `SyncManifests` — обновление манифеста статического пода и сопутствующих файлов (`/etc/kubernetes/manifests`, связанные конфигурационные файлы) а так же фиксация изменений сопутствующих файлов в папку `/etc/kubernetes/deckhouse/diffs`;
-                    * `JoinEtcdCluster` — присоединение нового члена к etcd-кластеру;
+                    * `SyncManifests` — обновление манифеста статического пода и сопутствующих файлов (`/etc/kubernetes/manifests`, связанные конфигурационные файлы) а также фиксация изменений сопутствующих файлов в папку `/etc/kubernetes/deckhouse/diffs` и в `status.changedFiles`;
+                    * `JoinEtcdCluster` — присоединение нового участника к etcd-кластеру;
                     * `WaitPodReady` — ожидание готовности статического пода после перезагрузки;
-                    * `CertObserve` — сбор данных о текущих сроках действия сертификатов компонента и их публикация в `status.observedState`.
+                    * `CertObserve` — сбор данных о текущих сроках действия сертификатов компонента и их публикация в `status.observedState`;
                     * `RenewSignature` — перевыпуск ключа подписи для kube-apiserver (CSE).
                   items:
                     description: |
@@ -62,6 +62,23 @@ spec:
               description: |
                 Наблюдаемое состояние операции.
               properties:
+                changedFiles:
+                  description: |
+                    Файлы, изменённые на узле этапом `SyncManifests`.
+
+                    Полные данные об изменениях всех файлов хранятся на узле в `/etc/kubernetes/deckhouse/diffs`.
+                  items:
+                    description: |
+                      Файл, изменённый операцией на узле.
+                    properties:
+                      path:
+                        description: |
+                          Абсолютный путь к файлу на узле.
+                      diff:
+                        description: |
+                          Различия между версиями файла в формате unified diff. Не публикуется для файлов, которые могут содержать чувствительные данные.
+
+                          Данные об изменениях размером более 32 КиБ обрезается по границе строки и заканчивается строкой с пометкой об этом.
                 conditions:
                   description: |
                     Список условий, отражающих ход выполнения операции.
@@ -76,7 +93,7 @@ spec:
                       type:
                         description: |
                           Тип условия.
-                          
+
                           Помимо общего `Completed` для каждого выполненного этапа создаётся отдельное условие с именем этапа (например, `RenewPKICerts`, `SyncManifests`).
                       status:
                         description: |
@@ -96,7 +113,7 @@ spec:
                 observedState:
                   description: |
                     Состояние компонента, наблюдаемое на этапе `CertObserve`.
-                    
+
                     Заполняется только для статических подов компонентов (etcd, kube-apiserver, kube-controller-manager, kube-scheduler).
                   properties:
                     certificatesExpirationTime:

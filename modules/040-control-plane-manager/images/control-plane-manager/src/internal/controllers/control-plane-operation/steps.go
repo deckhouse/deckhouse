@@ -206,6 +206,7 @@ func (c *joinEtcdClusterStep) Execute(ctx context.Context, env *StepEnv, logger 
 			return StepResult{}, err
 		}
 		saveDiffResults(op.Spec.Component, op.Name, results, logger)
+		recordChangedFiles(env.State, results)
 		if !hasChangedFiles(results) {
 			logger.Info("sync manifests no-op: desired content already on disk")
 		}
@@ -269,6 +270,7 @@ func (c *syncManifestsStep) Execute(ctx context.Context, env *StepEnv, logger *l
 	}
 
 	saveDiffResults(component, op.Name, results, logger)
+	recordChangedFiles(env.State, results)
 	if !hasChangedFiles(results) {
 		logger.Info("sync manifests no-op: desired content already on disk")
 	}

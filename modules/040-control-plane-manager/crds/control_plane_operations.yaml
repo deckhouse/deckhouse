@@ -96,7 +96,7 @@ spec:
                 type: string
               desiredPkiChecksum:
                 description: |-
-                  Expected component PKI fingerprint
+                  Expected component PKI checksum
                   (`certSANs`, `encryption-algorithm`) once the operation completes.
 
                   Populated only for steps that change PKI (`RenewPKICerts` and related).
@@ -115,7 +115,7 @@ spec:
                   - `SyncCA`: Synchronizes CA certificates (`ca.crt`, `ca.key`) with the current `d8-pki` Secret.
                   - `RenewPKICerts`: Re-issues component certificates (`server`, `peer`, `client`).
                   - `RenewKubeconfigs`: Re-issues kubeconfig files used by the component to authenticate against the API.
-                  - `SyncManifests`: Updates the static pod manifest and accompanying files (`/etc/kubernetes/manifests`, associated configuration files) and records changes in `/etc/kubernetes/deckhouse/diffs`.
+                  - `SyncManifests`: Updates the static pod manifest and accompanying files (`/etc/kubernetes/manifests`, associated configuration files) and records changes in `/etc/kubernetes/deckhouse/diffs` and `status.changedFiles`.
                   - `JoinEtcdCluster`: Joins a new member to the etcd cluster.
                   - `DefragEtcd`: Defragments the etcd data store on the target node to reclaim disk space.
                   - `WaitPodReady`: Waits for the component static pod to become `Ready` after a restart.
@@ -147,6 +147,31 @@ spec:
           status:
             description: Observed state of an operation.
             properties:
+              changedFiles:
+                description: |-
+                  Files that the `SyncManifests` step changed on the node.
+
+                  Full diffs of all files are kept on the node in `/etc/kubernetes/deckhouse/diffs`.
+                items:
+                  description: File changed by an operation on the node.
+                  properties:
+                    diff:
+                      description: |-
+                        Unified diff of the file. Not published for files that may contain sensitive data.
+
+                        A diff larger than 32 KiB is truncated at a line boundary and ends with a line that says so.
+                      maxLength: 32768
+                      type: string
+                    path:
+                      description: Absolute path of the file on the node.
+                      type: string
+                  required:
+                  - path
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - path
+                x-kubernetes-list-type: map
               conditions:
                 description: |-
                   Reflects the operation progress.

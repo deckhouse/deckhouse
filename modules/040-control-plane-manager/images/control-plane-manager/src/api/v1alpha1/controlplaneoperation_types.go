@@ -27,7 +27,7 @@ import (
 //   - SyncCA           — synchronizes CA certificates (ca.crt, ca.key) with the current d8-pki secret.
 //   - RenewPKICerts    — re-issues component certificates (server, peer, client).
 //   - RenewKubeconfigs — re-issues kubeconfig files used by the component to authenticate against the API.
-//   - SyncManifests    — updates the static pod manifest and accompanying files (/etc/kubernetes/manifests, extra-files) and records changes in /etc/kubernetes/deckhouse/diffs.
+//   - SyncManifests    — updates the static pod manifest and accompanying files (/etc/kubernetes/manifests, extra-files) and records changes in /etc/kubernetes/deckhouse/diffs and status.changedFiles.
 //   - JoinEtcdCluster  — joins a new member to the etcd cluster.
 //   - DefragEtcd       — defragments the etcd data store on the target node to reclaim disk space.
 //   - WaitPodReady     — waits for the component static pod to become Ready after restart.
@@ -213,6 +213,26 @@ type ControlPlaneOperationStatus struct {
 	// Populated only for static pod components (etcd, kube-apiserver, kube-controller-manager, kube-scheduler).
 	// +optional
 	ObservedState *ObservedComponentState `json:"observedState,omitempty"`
+
+	// ChangedFiles lists the files the SyncManifests step changed on the node.
+	// Full diffs of all files are kept on the node in /etc/kubernetes/deckhouse/diffs.
+	// +optional
+	// +listType=map
+	// +listMapKey=path
+	ChangedFiles []ChangedFile `json:"changedFiles,omitempty"`
+}
+
+// ChangedFile describes a file changed by an operation on the node.
+type ChangedFile struct {
+	// Path is the absolute path of the file on the node.
+	// +kubebuilder:validation:Required
+	Path string `json:"path"`
+
+	// Diff is the unified diff of the file. Not published for files that may hold sensitive data.
+	// A diff over 32 KiB is cut at a line boundary and ends with a line that says so.
+	// +optional
+	// +kubebuilder:validation:MaxLength=32768
+	Diff string `json:"diff,omitempty"`
 }
 
 // +kubebuilder:object:root=true

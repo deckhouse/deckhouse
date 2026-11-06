@@ -195,6 +195,17 @@ func (s *OperationState) SetObservedState(state *ObservedComponentState) {
 	s.op.Status.ObservedState = state
 }
 
+// SetChangedFile adds file to status.changedFiles or replaces the entry with the same path.
+func (s *OperationState) SetChangedFile(file ChangedFile) {
+	for i := range s.op.Status.ChangedFiles {
+		if s.op.Status.ChangedFiles[i].Path == file.Path {
+			s.op.Status.ChangedFiles[i] = file
+			return
+		}
+	}
+	s.op.Status.ChangedFiles = append(s.op.Status.ChangedFiles, file)
+}
+
 func (s *OperationState) markCurrentInProgressStep(reason, message string) {
 	for _, name := range s.op.Spec.Steps {
 		cond := s.op.GetCondition(StepConditionType(name))
