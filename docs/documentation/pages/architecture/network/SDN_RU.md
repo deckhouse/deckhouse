@@ -10,7 +10,7 @@ description: Архитектура модуля sdn в Deckhouse Platform.
 
 - настройку сетевых интерфейсов на узлах;
 - [дополнительные сети](../../glossary.html#additional-network) для подов и виртуальных машин;
-- [IPAM](../../glossary.html#sdn-ipam) (IP Address Management) для дополнительных сетей. Механизм IPAM  позволяет выделять IPv4-адреса из пулов и назначать их на дополнительные сетевые интерфейсы подов, подключаемых к [кластерным сетям](../../glossary.html#cluster-network) (ClusterNetwork) и [сетям проекта](../../glossary.html#project-network) (Network);
+- [IPAM](../../glossary.html#ipam) (IP Address Management) для дополнительных сетей. Механизм IPAM  позволяет выделять IPv4-адреса из пулов и назначать их на дополнительные сетевые интерфейсы подов, подключаемых к [кластерным сетям](../../glossary.html#cluster-network) (ClusterNetwork) и [сетям проекта](../../glossary.html#project-network) (Network);
 - [underlay-сети](../../glossary.html#underlay-network) для проброса аппаратных сетевых устройств;
 - [системные сети](../../glossary.html#system-network) для служебного трафика на узлах.
 

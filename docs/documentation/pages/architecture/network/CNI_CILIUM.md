@@ -45,7 +45,7 @@ The module consists of the following components:
 
    * **Network policies enforcement**: Calculates and applies network policies rules set in the cluster. Cilium uses the identity-based policies concept: the rules are based not on IP addresses, but on the security identity of the pod. The agent converts these rules into data structures (BPF maps) that the Linux kernel uses to filter traffic.
 
-   * **IP Address Management ([IPAM](../../glossary.html#sdn-ipam))**: Allocates IP addresses for pods scheduled on its node using IP address ranges from the `spec.podCIDRs` or `spec.PodCidr` fields of the specification of the corresponding Node resource.
+   * **IP Address Management ([IPAM](../../glossary.html#ipam))**: Allocates IP addresses for pods scheduled on its node using IP address ranges from the `spec.podCIDRs` or `spec.PodCidr` fields of the specification of the corresponding Node resource.
 
    * **Datapath Orchestration**: Compiles, loads eBPF programs into the Linux kernel and binds them to network interfaces. It is these programs in the kernel that perform real packet processing: forwarding, policy filtering, connection tracking, NAT and load balancing.
 

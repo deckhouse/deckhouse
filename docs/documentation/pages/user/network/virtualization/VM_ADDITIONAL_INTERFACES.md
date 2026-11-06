@@ -26,7 +26,7 @@ Specifics of additional network interfaces:
 - adding or removing the main network (`type: Main`) still requires a VM reboot, because it's bound to the main network interface of the pod and can't be changed on a running pod;
 - to preserve the order of network interfaces inside the guest operating system, add new networks to the end of the [`.spec.networks`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks) list and don't change the order of existing ones;
 - network security policies (NetworkPolicy) don't apply to additional network interfaces;
-- the network parameters (IP addresses, gateways, DNS, and so on) for additional networks are configured manually from inside the guest OS (for example, with Cloud-Init), unless [IPAM](../../../glossary.html#sdn-ipam) is configured for the network, as covered in [IPAM for additional network interfaces](#ipam-for-additional-network-interfaces).
+- the network parameters (IP addresses, gateways, DNS, and so on) for additional networks are configured manually from inside the guest OS (for example, with Cloud-Init), unless [IPAM](../../../glossary.html#ipam) is configured for the network, as covered in [IPAM for additional network interfaces](#ipam-for-additional-network-interfaces).
 
 For each additional network interface, a unique MAC address is created and reserved automatically, which prevents MAC address collisions. The [VirtualMachineMACAddress](/modules/virtualization/cr.html#virtualmachinemacaddress) (`vmmac`) and [VirtualMachineMACAddressLease](/modules/virtualization/cr.html#virtualmachinemacaddresslease) (`vmmacl`) resources are used for this.
 
@@ -194,7 +194,7 @@ Two modes are supported:
 
 - **Static**: If the [`ipAddressName` field](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks-ipaddressname) is specified in [`.spec.networks[]`](/modules/virtualization/cr.html#virtualmachine-v1alpha2-spec-networks), the controller uses the IPAddress resource provided by the user (of the `Static` type, `network.deckhouse.io/v1alpha1`). The address is defined by the user and doesn't change automatically.
 
-If an additional network has no [IPAM](../../../glossary.html#sdn-ipam) pool configured, the IPAM feature isn't enabled. The interface works in L2-only mode, and IP addressing has to be configured manually in the guest OS.
+If an additional network has no [IPAM](../../../glossary.html#ipam) pool configured, the IPAM feature isn't enabled. The interface works in L2-only mode, and IP addressing has to be configured manually in the guest OS.
 
 {% alert level="warning" %}
 If an IPAM pool is configured for an additional network, don't configure a static IP address on the additional interface in the guest OS manually (through Cloud-Init). Use the automatic (DHCP) or static (`ipAddressName`) mode to avoid address conflicts.

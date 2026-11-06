@@ -9,7 +9,7 @@ The [`sdn`](/modules/sdn/) module provides software-defined networking ([SDN](..
 
 - Configuring network interfaces on nodes.
 - [Additional networks](../../glossary.html#additional-network) for pods and virtual machines.
-- [IPAM](../../glossary.html#sdn-ipam) (IP Address Management) for additional networks. The IPAM mechanism allocates IPv4 addresses from pools and assigns them to additional network interfaces of pods connected to [cluster networks](../../glossary.html#cluster-network) (ClusterNetwork) and [project networks](../../glossary.html#project-network) (Network).
+- [IPAM](../../glossary.html#ipam) (IP Address Management) for additional networks. The IPAM mechanism allocates IPv4 addresses from pools and assigns them to additional network interfaces of pods connected to [cluster networks](../../glossary.html#cluster-network) (ClusterNetwork) and [project networks](../../glossary.html#project-network) (Network).
 - [Underlay networks](../../glossary.html#underlay-network) for passing through hardware network devices.
 - [System networks](../../glossary.html#system-network) for node-level service traffic.
 

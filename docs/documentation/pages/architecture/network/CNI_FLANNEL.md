@@ -41,7 +41,7 @@ The module consists of the following components:
 
 1. **Flannel (CNI plugin)**: An executable file run by the containerd component according to the [CNI specification](https://www.cni.dev/docs/spec/#cni-operations), for example ADD when creating a pod's network namespace and DEL when removing it.
 
-   On startup, the component reads the subnet parameters from the `/run/flannel/subnet.env` file and delegates creation of the pod's network interface to the `bridge` CNI plugin, which in turn requests an IP address from the `host-local` IP Address Management ([IPAM](../../glossary.html#sdn-ipam)) plugin. Both `bridge` and `host-local` are standard [Open Source CNI plugins](https://github.com/containernetworking/plugins), installed on every cluster node independently of this module, as part of kubelet installation.
+   On startup, the component reads the subnet parameters from the `/run/flannel/subnet.env` file and delegates creation of the pod's network interface to the `bridge` CNI plugin, which in turn requests an IP address from the `host-local` IP Address Management ([IPAM](../../glossary.html#ipam)) plugin. Both `bridge` and `host-local` are standard [Open Source CNI plugins](https://github.com/containernetworking/plugins), installed on every cluster node independently of this module, as part of kubelet installation.
 
 ## Module interactions
 

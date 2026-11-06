@@ -102,7 +102,7 @@ spec:
 
 ## IPAM for additional networks (IP allocation and assignment)
 
-The [IPAM](../../../glossary.html#sdn-ipam) (IP Address Management) mechanism allows you to allocate IP addresses (IPv4 addresses are supported) from pools and assign them to additional network interfaces of pods connected to cluster networks and [project networks](../../../glossary.html#project-network).
+The [IPAM](../../../glossary.html#ipam) (IP Address Management) mechanism allows you to allocate IP addresses (IPv4 addresses are supported) from pools and assign them to additional network interfaces of pods connected to cluster networks and [project networks](../../../glossary.html#project-network).
 
 The cluster administrator is responsible for allocating IP addresses for connection to cluster networks. They enable and configure IPAM for networks and define the IP address pool for them. Users can assign addresses and configure IPAM in project networks.
 

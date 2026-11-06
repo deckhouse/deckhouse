@@ -377,7 +377,7 @@ right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b2
 
 ### IPAM: IP address pools for additional networks
 
-The [IPAM](../../../../glossary.html#sdn-ipam) mechanism allows you to automatically allocate and assign **IPv4 addresses** for additional network interfaces of pods connected to [cluster networks](#creating-a-publicly-accessible-network-cluster) and [project networks](#creating-a-project-network-user-network).
+The [IPAM](../../../../glossary.html#ipam) mechanism allows you to automatically allocate and assign **IPv4 addresses** for additional network interfaces of pods connected to [cluster networks](#creating-a-publicly-accessible-network-cluster) and [project networks](#creating-a-project-network-user-network).
 
 #### Principles and features of IPAM in DP
 
@@ -717,7 +717,7 @@ d8 k label namespace mydpdk direct-nic-access.network.deckhouse.io/enabled=""
 
 [System networks](../../../../glossary.html#system-network) (service networks) are intended for internal traffic at the node level (e.g., for storage, management, etc.) and are not used as additional pod networks.
 
-Additional service networks are created on cluster nodes on top of existing [underlay networks](../../../../glossary.html#underlay-network). The custom resource [SystemNetwork](/modules/sdn/cr.html#systemnetwork) is used for this purpose. System networks obtain IP addresses from the [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) during [IPAM](../../../../glossary.html#sdn-ipam) configuration.
+Additional service networks are created on cluster nodes on top of existing [underlay networks](../../../../glossary.html#underlay-network). The custom resource [SystemNetwork](/modules/sdn/cr.html#systemnetwork) is used for this purpose. System networks obtain IP addresses from the [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) during [IPAM](../../../../glossary.html#ipam) configuration.
 
 Principles and features of system networks:
 
