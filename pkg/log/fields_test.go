@@ -16,6 +16,7 @@ package log_test
 
 import (
 	"errors"
+	"io"
 	"log/slog"
 	"testing"
 
@@ -93,8 +94,10 @@ func TestRawJSON(t *testing.T) {
 	validJSON := `{"key": "value"}`
 	attr := log.RawJSON("data", validJSON)
 	assert.Equal(t, "data", attr.Key)
-	// The value should be slog.AnyValue with the map
-	val := attr.Value
+	// Not parsed until the record is written
+	assert.Equal(t, slog.KindLogValuer, attr.Value.Kind())
+	// The resolved value should be slog.AnyValue with the map
+	val := attr.Value.Resolve()
 	assert.Equal(t, slog.KindAny, val.Kind())
 	m := val.Any().(map[string]any)
 	assert.Equal(t, "value", m["key"])
@@ -103,8 +106,8 @@ func TestRawJSON(t *testing.T) {
 	invalidJSON := `{"key": "value"`
 	attr = log.RawJSON("data", invalidJSON)
 	assert.Equal(t, "data", attr.Key)
-	assert.Equal(t, slog.KindString, attr.Value.Kind())
-	assert.Equal(t, invalidJSON, attr.Value.String())
+	assert.Equal(t, slog.KindString, attr.Value.Resolve().Kind())
+	assert.Equal(t, invalidJSON, attr.Value.Resolve().String())
 }
 
 func TestRawYAML(t *testing.T) {
@@ -114,7 +117,9 @@ func TestRawYAML(t *testing.T) {
 	validYAML := `key: value`
 	attr := log.RawYAML("data", validYAML)
 	assert.Equal(t, "data", attr.Key)
-	val := attr.Value
+	// Not parsed until the record is written
+	assert.Equal(t, slog.KindLogValuer, attr.Value.Kind())
+	val := attr.Value.Resolve()
 	assert.Equal(t, slog.KindAny, val.Kind())
 	m := val.Any().(map[string]any)
 	assert.Equal(t, "value", m["key"])
@@ -123,8 +128,20 @@ func TestRawYAML(t *testing.T) {
 	invalidYAML := `key: value:`
 	attr = log.RawYAML("data", invalidYAML)
 	assert.Equal(t, "data", attr.Key)
-	assert.Equal(t, slog.KindString, attr.Value.Kind())
-	assert.Equal(t, invalidYAML, attr.Value.String())
+	assert.Equal(t, slog.KindString, attr.Value.Resolve().Kind())
+	assert.Equal(t, invalidYAML, attr.Value.Resolve().String())
+}
+
+// Values for Debug used to be parsed even when Debug was off.
+func TestRawIsNotParsedForDisabledLevel(t *testing.T) {
+	l := log.NewLogger(log.WithLevel(slog.LevelInfo), log.WithOutput(io.Discard))
+
+	allocs := testing.AllocsPerRun(100, func() {
+		l.Debug("values", log.RawJSON("json", `{"a": [1, 2, 3], "b": {"c": "d"}}`), log.RawYAML("yaml", "a:\n  b: [1, 2, 3]\n"))
+	})
+
+	// parsing takes about a hundred allocations; creating and passing the two attributes takes a few
+	assert.Less(t, allocs, float64(10))
 }
 
 func TestNewJSONRaw(t *testing.T) {

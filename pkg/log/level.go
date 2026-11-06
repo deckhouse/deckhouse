@@ -17,6 +17,7 @@ package log
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 )
 
 var _ slog.Leveler = (*Level)(nil)
@@ -58,4 +59,44 @@ func (l Level) String() string {
 	default:
 		return str("fatal", l-LevelFatal)
 	}
+}
+
+// levelString is Level.String in lower case without allocating for the named levels.
+func levelString(l slog.Level) string {
+	switch Level(l) {
+	case LevelTrace:
+		return "trace"
+	case LevelDebug:
+		return "debug"
+	case LevelInfo:
+		return "info"
+	case LevelWarn:
+		return "warn"
+	case LevelError:
+		return "error"
+	case LevelFatal:
+		return "fatal"
+	}
+
+	return strings.ToLower(Level(l).String())
+}
+
+// levelTextString is Level.String in upper case without allocating for the named levels.
+func levelTextString(l slog.Level) string {
+	switch Level(l) {
+	case LevelTrace:
+		return "TRACE"
+	case LevelDebug:
+		return "DEBUG"
+	case LevelInfo:
+		return "INFO"
+	case LevelWarn:
+		return "WARN"
+	case LevelError:
+		return "ERROR"
+	case LevelFatal:
+		return "FATAL"
+	}
+
+	return strings.ToUpper(Level(l).String())
 }

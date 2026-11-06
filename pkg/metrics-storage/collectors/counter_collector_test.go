@@ -222,13 +222,29 @@ func TestConstCounterCollector_AddEdgeCases(t *testing.T) {
 			LabelNames: []string{},
 		})
 
-		// Counter should handle fractional values correctly
+		// Counter keeps fractions, they used to be cut off on every add
 		collector.Add(3.7, nil)
 		collector.Add(2.9, nil)
 
 		metrics := collectCounterMetrics(t, collector)
 		require.Len(t, metrics, 1)
-		verifyCounterValue(t, metrics[0], 5)
+		assert.InDelta(t, 6.6, getCounterValue(t, metrics[0]), 1e-9)
+	})
+
+	t.Run("add many fractions below one", func(t *testing.T) {
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "test_counter",
+			LabelNames: []string{},
+		})
+
+		// durations in seconds: every add used to count as zero
+		for range 10 {
+			collector.Add(0.9, nil)
+		}
+
+		metrics := collectCounterMetrics(t, collector)
+		require.Len(t, metrics, 1)
+		assert.InDelta(t, 9, getCounterValue(t, metrics[0]), 1e-9)
 	})
 
 	t.Run("add negative value", func(t *testing.T) {
@@ -237,12 +253,19 @@ func TestConstCounterCollector_AddEdgeCases(t *testing.T) {
 			LabelNames: []string{},
 		})
 
-		// This should not panic, but behavior depends on implementation
+		// A negative value adds nothing, the series is created as with zero
 		collector.Add(-1, nil)
 
 		metrics := collectCounterMetrics(t, collector)
 		require.Len(t, metrics, 1)
-		// The exact value depends on how negative values are handled
+		verifyCounterValue(t, metrics[0], 0)
+
+		collector.Add(2.5, nil)
+		collector.Add(-1, nil)
+
+		metrics = collectCounterMetrics(t, collector)
+		require.Len(t, metrics, 1)
+		verifyCounterValue(t, metrics[0], 2.5)
 	})
 
 	t.Run("add special float values", func(t *testing.T) {

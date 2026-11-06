@@ -16,6 +16,12 @@ package log
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"strings"
+	"sync"
 	"sync/atomic"
 )
 
@@ -33,4 +39,70 @@ func (v *AddSourceVar) Set(b bool) {
 
 func (v *AddSourceVar) String() string {
 	return fmt.Sprintf("AddSourceVar(%t)", *v.Source())
+}
+
+// sourceCache keeps the formatted "file:line" of every call site: resolving a PC
+// to a file and line is the expensive part of a source, and call sites are fixed.
+type sourceCache struct {
+	binaryPath string
+	format     func(file string, line int) string
+
+	mu sync.RWMutex
+	m  map[uintptr]string
+}
+
+func newSourceCache() *sourceCache {
+	// getting absolute binary path
+	binaryPath := filepath.Dir(os.Args[0])
+	// if it's go-build temporary folder
+	if strings.Contains(binaryPath, "go-build") {
+		binaryPath, _ = filepath.Abs("./../")
+	}
+
+	format := func(file string, line int) string {
+		return file + ":" + strconv.Itoa(line)
+	}
+
+	if os.Getenv("IDEA_DEVELOPMENT") != "" {
+		format = func(file string, line int) string {
+			return " " + file + ":" + strconv.Itoa(line) + " "
+		}
+	}
+
+	return &sourceCache{
+		binaryPath: binaryPath,
+		format:     format,
+		m:          make(map[uintptr]string),
+	}
+}
+
+func (c *sourceCache) get(pc uintptr) string {
+	if pc == 0 {
+		return ""
+	}
+
+	c.mu.RLock()
+	s, ok := c.m[pc]
+	c.mu.RUnlock()
+
+	if ok {
+		return s
+	}
+
+	frame, _ := runtime.CallersFrames([]uintptr{pc}).Next()
+
+	// trim all folders before project root
+	file := strings.TrimPrefix(frame.File, c.binaryPath)
+	if file == "" {
+		return ""
+	}
+
+	// trim first '/'
+	s = c.format(file[1:], frame.Line)
+
+	c.mu.Lock()
+	c.m[pc] = s
+	c.mu.Unlock()
+
+	return s
 }

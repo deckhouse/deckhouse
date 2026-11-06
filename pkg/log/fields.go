@@ -60,17 +60,21 @@ func Err(err error) slog.Attr {
 
 var _ slog.LogValuer = (*raw)(nil)
 
+// RawJSON is parsed when a record is written, not when the attribute is created,
+// so a disabled level costs nothing.
 func RawJSON(key, text string) slog.Attr {
 	return slog.Attr{
 		Key:   key,
-		Value: NewJSONRaw(text).LogValue(),
+		Value: slog.AnyValue(NewJSONRaw(text)),
 	}
 }
 
+// RawYAML is parsed when a record is written, not when the attribute is created,
+// so a disabled level costs nothing.
 func RawYAML(key, text string) slog.Attr {
 	return slog.Attr{
 		Key:   key,
-		Value: NewYAMLRaw(text).LogValue(),
+		Value: slog.AnyValue(NewYAMLRaw(text)),
 	}
 }
 

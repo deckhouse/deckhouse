@@ -15,6 +15,7 @@
 package collectors
 
 import (
+	"maps"
 	"sort"
 	"sync"
 
@@ -39,7 +40,12 @@ type ConstGaugeCollector struct {
 	name       string
 	labelNames []string
 	desc       *prometheus.Desc
+	labelPairs *labelPairsTemplate
 	collection map[uint64]GroupedGaugeMetric
+
+	// help and constLabels rebuild desc when labels are added
+	help        string
+	constLabels map[string]string
 }
 
 func NewConstGaugeCollector(desc *MetricDescription) *ConstGaugeCollector {
@@ -51,10 +57,13 @@ func NewConstGaugeCollector(desc *MetricDescription) *ConstGaugeCollector {
 	)
 
 	return &ConstGaugeCollector{
-		name:       desc.Name,
-		labelNames: desc.LabelNames,
-		desc:       d,
-		collection: make(map[uint64]GroupedGaugeMetric),
+		name:        desc.Name,
+		labelNames:  desc.LabelNames,
+		desc:        d,
+		labelPairs:  newLabelPairsTemplate(d, desc.LabelNames),
+		help:        desc.Help,
+		constLabels: maps.Clone(desc.ConstLabels),
+		collection:  make(map[uint64]GroupedGaugeMetric),
 	}
 }
 
@@ -112,7 +121,7 @@ func (c *ConstGaugeCollector) Collect(ch chan<- prometheus.Metric) {
 	defer c.mtx.RUnlock()
 
 	for _, s := range c.collection {
-		ch <- prometheus.MustNewConstMetric(c.desc, prometheus.GaugeValue, s.Value.Get(), s.LabelValues...)
+		ch <- newGaugeMetric(c.desc, c.labelPairs, s.Value.Get(), s.LabelValues)
 	}
 }
 
@@ -170,7 +179,8 @@ func (c *ConstGaugeCollector) UpdateLabels(labels []string) {
 	sort.Strings(c.labelNames)
 
 	// Create new description and collection with updated labels
-	c.desc = prometheus.NewDesc(c.name, c.name, c.labelNames, nil)
+	c.desc = prometheus.NewDesc(c.name, c.help, c.labelNames, descConstLabels(c.constLabels, c.labelNames))
+	c.labelPairs = newLabelPairsTemplate(c.desc, c.labelNames)
 	newCollection := make(map[uint64]GroupedGaugeMetric)
 
 	// Update each metric in the collection
@@ -178,10 +188,11 @@ func (c *ConstGaugeCollector) UpdateLabels(labels []string) {
 		newLabelsValues := make([]string, len(c.labelNames))
 
 		for i, labelName := range c.labelNames {
+			// a new label is empty, a constant label that became a variable one keeps its value
+			newLabelsValues[i] = c.constLabels[labelName]
+
 			if idx, found := previousLabelsMap[labelName]; found && idx < len(metric.LabelValues) {
 				newLabelsValues[i] = metric.LabelValues[idx]
-			} else {
-				newLabelsValues[i] = ""
 			}
 		}
 

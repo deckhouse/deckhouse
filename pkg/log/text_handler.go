@@ -15,154 +15,146 @@
 package log
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
-	"runtime"
-	"sync"
+	"math"
+	"strconv"
+	"strings"
 	"time"
-
-	logContext "github.com/deckhouse/deckhouse/pkg/log/context"
+	"unicode/utf8"
 )
 
-var _ slog.Handler = (*SlogTextHandler)(nil)
+// SlogTextHandler writes records as text lines.
+type SlogTextHandler = handler
 
-type SlogTextHandler struct {
-	slog.Handler
-
-	// output
-	w io.Writer
-	// buffer for default slog handler
-	b *bytes.Buffer
-	m *sync.Mutex
-
-	// aggregate logger name
-	name string
-
-	// for testing purpose
-	timeFn func(t time.Time) time.Time
-}
-
-func NewSlogTextHandler(handler slog.Handler) *SlogTextHandler {
-	return &SlogTextHandler{
-		Handler: handler,
-	}
-}
-
-func (h *SlogTextHandler) Handle(ctx context.Context, r slog.Record) error {
-	h.m.Lock()
-
-	defer func() {
-		h.b.Reset()
-		h.m.Unlock()
-	}()
-
-	var (
-		tracePtr *string
-	)
-
-	isCustom := logContext.GetCustomKeyContext(ctx)
-	if isCustom {
-		var pc uintptr
-		var pcs [1]uintptr
-		// skip [runtime.Callers, this function, this function's caller]
-		runtime.Callers(5, pcs[:])
-		pc = pcs[0]
-		r.PC = pc
-
-		tracePtr = logContext.GetStackTraceContext(ctx)
-	}
-
-	if err := h.Handler.Handle(ctx, r); err != nil {
-		return err
-	}
-
-	attrs := map[string]any{}
-	if err := json.Unmarshal(h.b.Bytes(), &attrs); err != nil {
-		return err
-	}
-
-	logOutput := &LogOutput{
-		Level:   Level(r.Level).String(),
-		Time:    h.timeFn(r.Time).Format(time.RFC3339),
-		Message: r.Message,
-		Name:    h.name,
-	}
-
-	// if logger was traced - remove source
-	if tracePtr != nil {
-		logOutput.Stacktrace = *tracePtr
-
-		delete(attrs, "source")
-	}
-
-	fieldSource, ok := attrs["source"]
-	if ok {
-		logOutput.Source = fieldSource.(string)
-
-		delete(attrs, "source")
-	}
-
-	if len(attrs) > 0 {
-		logOutput.Fields = attrs
-	}
-
-	b, err := logOutput.Text()
-	if err != nil {
-		fmt.Printf(`{"error":"bad encode","errmsg":%#v,"logOutput":%#v}`+"\n", err.Error(), logOutput)
-		return err
-	}
-
-	h.w.Write(b)
-
-	return nil
-}
-
-func (h *SlogTextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	if len(attrs) < 1 {
-		return h
-	}
-
-	h2 := *h
-	h2.Handler = h.Handler.WithAttrs(attrs)
-
-	return &h2
-}
-
-func (h *SlogTextHandler) WithGroup(name string) slog.Handler {
-	h2 := *h
-	h2.Handler = h.Handler.WithGroup(name)
-
-	return &h2
-}
-
-func (h *SlogTextHandler) Named(name string) slog.Handler {
-	currName := name
-	if h.name != "" {
-		currName = fmt.Sprintf("%s.%s", h.name, name)
-	}
-
-	h2 := *h
-	h2.name = currName
-
-	return &h2
-}
-
-func (h *SlogTextHandler) SetOutput(w io.Writer) {
-	h.w = w
-}
-
+// NewTextHandler returns a handler writing text lines to out. Only Level and AddSource of opts are used.
 func NewTextHandler(out io.Writer, opts *slog.HandlerOptions, timeFn func(t time.Time) time.Time) *SlogTextHandler {
-	b := new(bytes.Buffer)
+	return newHandler(out, newHandlerConfig(opts, timeFn, true))
+}
 
-	return &SlogTextHandler{
-		Handler: slog.NewJSONHandler(b, opts),
-		b:       b,
-		m:       &sync.Mutex{},
-		w:       out,
-		timeFn:  timeFn,
+func (e *encoder) appendText(h *handler, r slog.Record, source string, fields []field, stack *string) {
+	render := Render{buf: e.buf}
+
+	render.buf = h.cfg.timeFn(r.Time).AppendFormat(render.buf, time.RFC3339)
+	render.buf = append(render.buf, ' ')
+
+	render.buf = append(render.buf, levelTextString(r.Level)...)
+	render.buf = append(render.buf, ' ')
+
+	if h.name != "" {
+		render.TextKeyValue(LoggerNameKey, h.name)
+		render.buf = append(render.buf, ' ')
 	}
+
+	render.TextQuotedKeyValue(slog.MessageKey, r.Message)
+	render.buf = append(render.buf, ' ')
+
+	if source != "" {
+		render.TextKeyValue(slog.SourceKey, source)
+		render.buf = append(render.buf, ' ')
+	}
+
+	if len(fields) > 0 {
+		render.textFields(fields, "")
+		render.buf = append(render.buf, ' ')
+	}
+
+	if stack != nil && *stack != "" {
+		render.TextKeyValue(StacktraceKey, *stack)
+	}
+
+	render.buf = append(render.buf, '\n')
+
+	e.buf = render.buf
+}
+
+func (r *Render) textFields(fs []field, prefix string) {
+	for i, f := range fs {
+		if i > 0 {
+			r.buf = append(r.buf, ' ')
+		}
+
+		key := validUTF8(f.key)
+		if prefix != "" {
+			key = prefix + "." + key
+		}
+
+		if f.group {
+			r.textFields(f.kids, key)
+			continue
+		}
+
+		r.textValue(key, f.value)
+	}
+}
+
+func (r *Render) textValue(key string, v slog.Value) {
+	switch v.Kind() {
+	case slog.KindString:
+		r.TextQuotedKeyValue(key, validUTF8(v.String()))
+		return
+	case slog.KindTime:
+		r.TextQuotedKeyValue(key, v.Time().Format(time.RFC3339Nano))
+		return
+	case slog.KindAny:
+		r.textAny(key, v.Any())
+		return
+	case slog.KindFloat64:
+		if f := v.Float64(); math.IsNaN(f) || math.IsInf(f, 0) {
+			r.TextQuotedKeyValue(key, unsupportedFloat(f))
+			return
+		}
+	}
+
+	r.string(key)
+	r.buf = append(r.buf, '=', '\'')
+
+	switch v.Kind() {
+	case slog.KindInt64:
+		r.buf = strconv.AppendInt(r.buf, v.Int64(), 10)
+	case slog.KindUint64:
+		r.buf = strconv.AppendUint(r.buf, v.Uint64(), 10)
+	case slog.KindFloat64:
+		r.buf = strconv.AppendFloat(r.buf, v.Float64(), 'f', -1, 64)
+	case slog.KindBool:
+		r.buf = strconv.AppendBool(r.buf, v.Bool())
+	case slog.KindDuration:
+		r.buf = strconv.AppendInt(r.buf, int64(v.Duration()), 10)
+	}
+
+	r.buf = append(r.buf, '\'')
+}
+
+func (r *Render) textAny(key string, a any) {
+	if a == nil {
+		r.FieldsToString(nil, key)
+		return
+	}
+
+	if s, ok := errorString(a); ok {
+		r.TextQuotedKeyValue(key, validUTF8(s))
+		return
+	}
+
+	decoded, err := decodeAny(a)
+	if err != nil {
+		r.TextQuotedKeyValue(key, "!ERROR:"+err.Error())
+		return
+	}
+
+	r.FieldsToString(decoded, key)
+}
+
+// validUTF8 replaces every invalid byte with U+FFFD, as the JSON round trip did.
+func validUTF8(s string) string {
+	if utf8.ValidString(s) {
+		return s
+	}
+
+	var sb strings.Builder
+	for _, c := range s {
+		sb.WriteRune(c)
+	}
+
+	return sb.String()
 }

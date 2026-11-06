@@ -15,6 +15,7 @@
 package collectors
 
 import (
+	"maps"
 	"sort"
 	"sync"
 
@@ -28,7 +29,7 @@ var (
 )
 
 type GroupedCounterMetric struct {
-	Value       *MetricValue[uint64]
+	Value       *MetricValue[float64]
 	LabelValues []string
 	Group       string
 }
@@ -38,8 +39,13 @@ type ConstCounterCollector struct {
 
 	collection map[uint64]GroupedCounterMetric
 	desc       *prometheus.Desc
+	labelPairs *labelPairsTemplate
 	name       string
 	labelNames []string
+
+	// help and constLabels rebuild desc when labels are added
+	help        string
+	constLabels map[string]string
 }
 
 func NewConstCounterCollector(desc MetricDescription) *ConstCounterCollector {
@@ -51,15 +57,21 @@ func NewConstCounterCollector(desc MetricDescription) *ConstCounterCollector {
 	)
 
 	return &ConstCounterCollector{
-		name:       desc.Name,
-		labelNames: desc.LabelNames,
-		desc:       d,
-		collection: make(map[uint64]GroupedCounterMetric),
+		name:        desc.Name,
+		labelNames:  desc.LabelNames,
+		desc:        d,
+		labelPairs:  newLabelPairsTemplate(d, desc.LabelNames),
+		help:        desc.Help,
+		constLabels: maps.Clone(desc.ConstLabels),
+		collection:  make(map[uint64]GroupedCounterMetric),
 	}
 }
 
 // Add increases a counter metric by a value. Metric is identified by label values and a group.
+// A negative value adds nothing: a counter cannot decrease.
 func (c *ConstCounterCollector) Add(value float64, labels map[string]string, opts ...ConstCollectorOption) {
+	value = max(value, 0)
+
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
@@ -68,18 +80,16 @@ func (c *ConstCounterCollector) Add(value float64, labels map[string]string, opt
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
 	metricHash := HashMetric(options.Group, labelValues)
 
-	storedMetric, ok := c.collection[metricHash]
-	if !ok {
-		storedMetric = GroupedCounterMetric{
-			Value:       NewMetricValue(uint64(value)),
-			LabelValues: labelValues,
-			Group:       options.Group,
-		}
-	} else {
-		storedMetric.Value.Add(uint64(value))
+	if storedMetric, ok := c.collection[metricHash]; ok {
+		storedMetric.Value.Add(value)
+		return
 	}
 
-	c.collection[metricHash] = storedMetric
+	c.collection[metricHash] = GroupedCounterMetric{
+		Value:       NewMetricValue(value),
+		LabelValues: labelValues,
+		Group:       options.Group,
+	}
 }
 
 func (c *ConstCounterCollector) Describe(ch chan<- *prometheus.Desc) {
@@ -91,7 +101,7 @@ func (c *ConstCounterCollector) Collect(ch chan<- prometheus.Metric) {
 	defer c.mtx.RUnlock()
 
 	for _, s := range c.collection {
-		ch <- prometheus.MustNewConstMetric(c.desc, prometheus.CounterValue, float64(s.Value.Get()), s.LabelValues...)
+		ch <- newCounterMetric(c.desc, c.labelPairs, s.Value.Get(), s.LabelValues)
 	}
 }
 
@@ -149,7 +159,8 @@ func (c *ConstCounterCollector) UpdateLabels(labels []string) {
 	sort.Strings(c.labelNames)
 
 	// Create new description and collection with updated labels
-	c.desc = prometheus.NewDesc(c.name, c.name, c.labelNames, nil)
+	c.desc = prometheus.NewDesc(c.name, c.help, c.labelNames, descConstLabels(c.constLabels, c.labelNames))
+	c.labelPairs = newLabelPairsTemplate(c.desc, c.labelNames)
 	newCollection := make(map[uint64]GroupedCounterMetric)
 
 	// Update each metric in the collection
@@ -157,10 +168,11 @@ func (c *ConstCounterCollector) UpdateLabels(labels []string) {
 		newLabelsValues := make([]string, len(c.labelNames))
 
 		for i, labelName := range c.labelNames {
+			// a new label is empty, a constant label that became a variable one keeps its value
+			newLabelsValues[i] = c.constLabels[labelName]
+
 			if idx, found := previousLabelsMap[labelName]; found && idx < len(metric.LabelValues) {
 				newLabelsValues[i] = metric.LabelValues[idx]
-			} else {
-				newLabelsValues[i] = ""
 			}
 		}
 

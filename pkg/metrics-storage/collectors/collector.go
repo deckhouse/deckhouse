@@ -69,6 +69,26 @@ type MetricDescription struct {
 	ConstLabels map[string]string
 }
 
+// descConstLabels returns the constant labels for a desc with these variable labels.
+// A constant label that became a variable one is dropped: a desc cannot have both, and an
+// invalid desc would make Collect panic.
+func descConstLabels(constLabels map[string]string, labelNames []string) prometheus.Labels {
+	if len(constLabels) == 0 {
+		return nil
+	}
+
+	labels := make(prometheus.Labels, len(constLabels))
+	for name, value := range constLabels {
+		labels[name] = value
+	}
+
+	for _, name := range labelNames {
+		delete(labels, name)
+	}
+
+	return labels
+}
+
 const labelsSeparator = byte(255)
 
 func HashMetric(group string, labelValues []string) uint64 {

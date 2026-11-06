@@ -16,6 +16,7 @@ package collectors_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -237,4 +238,84 @@ func collectMetrics(collector collectors.ConstCollector) []prometheus.Metric {
 	}
 
 	return metrics
+}
+
+// Adding a label used to rebuild the desc with the metric name as help and without constant labels.
+func TestUpdateLabelsKeepsHelpAndConstLabels(t *testing.T) {
+	for name, newCollector := range map[string]func(desc collectors.MetricDescription) updatableCollector{
+		"counter": func(desc collectors.MetricDescription) updatableCollector {
+			c := collectors.NewConstCounterCollector(desc)
+			return updatableCollector{c, func(labels map[string]string) { c.Add(1, labels) }}
+		},
+		"gauge": func(desc collectors.MetricDescription) updatableCollector {
+			c := collectors.NewConstGaugeCollector(&desc)
+			return updatableCollector{c, func(labels map[string]string) { c.Set(1, labels) }}
+		},
+		"histogram": func(desc collectors.MetricDescription) updatableCollector {
+			c := collectors.NewConstHistogramCollector(&desc, []float64{1})
+			return updatableCollector{c, func(labels map[string]string) { c.Observe(1, labels) }}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			c := newCollector(collectors.MetricDescription{
+				Name:        "test_metric",
+				Help:        "Test help.",
+				LabelNames:  []string{"module"},
+				ConstLabels: map[string]string{"env": "prod", "zone": "a"},
+			})
+			c.update(map[string]string{"module": "a"})
+
+			c.UpdateLabels([]string{"module", "binding"})
+			c.update(map[string]string{"module": "a", "binding": "schedule"})
+
+			help, series := gatherSeries(t, c)
+			assert.Equal(t, "Test help.", help)
+			assert.ElementsMatch(t, []string{
+				"binding=,env=prod,module=a,zone=a",
+				"binding=schedule,env=prod,module=a,zone=a",
+			}, series)
+
+			// a constant label that becomes a variable one is dropped instead of making the desc invalid,
+			// and the series that had it keep its value
+			c.UpdateLabels([]string{"module", "binding", "zone"})
+			c.update(map[string]string{"module": "b", "binding": "", "zone": "b"})
+
+			help, series = gatherSeries(t, c)
+			assert.Equal(t, "Test help.", help)
+			assert.ElementsMatch(t, []string{
+				"binding=,env=prod,module=a,zone=a",
+				"binding=schedule,env=prod,module=a,zone=a",
+				"binding=,env=prod,module=b,zone=b",
+			}, series)
+		})
+	}
+}
+
+type updatableCollector struct {
+	collectors.ConstCollector
+	update func(labels map[string]string)
+}
+
+// gatherSeries returns the help of the only metric family and the label sets of its series.
+func gatherSeries(t *testing.T, c prometheus.Collector) (string, []string) {
+	t.Helper()
+
+	registry := prometheus.NewRegistry()
+	require.NoError(t, registry.Register(c))
+
+	families, err := registry.Gather()
+	require.NoError(t, err)
+	require.Len(t, families, 1)
+
+	series := make([]string, 0, len(families[0].GetMetric()))
+	for _, m := range families[0].GetMetric() {
+		pairs := make([]string, 0, len(m.GetLabel()))
+		for _, l := range m.GetLabel() {
+			pairs = append(pairs, l.GetName()+"="+l.GetValue())
+		}
+
+		series = append(series, strings.Join(pairs, ","))
+	}
+
+	return families[0].GetHelp(), series
 }

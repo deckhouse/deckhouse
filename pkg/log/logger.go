@@ -19,11 +19,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -125,58 +123,13 @@ func NewLogger(opts ...Option) *Logger {
 
 	l.SetLevel(Level(options.Level))
 
-	// getting absolute binary path
-	binaryPath := filepath.Dir(os.Args[0])
-	// if it's go-build temporary folder
-	if strings.Contains(binaryPath, "go-build") {
-		binaryPath, _ = filepath.Abs("./../")
-	}
-
-	sourceFormat := "%s:%d"
-	if os.Getenv("IDEA_DEVELOPMENT") != "" {
-		sourceFormat = " %s:%d "
-	}
-
-	handlerOpts := &slog.HandlerOptions{
-		AddSource: true,
-		Level:     l.level,
-		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
-			switch a.Key {
-			// skip standard fields
-			case slog.LevelKey, slog.MessageKey, slog.TimeKey:
-				return slog.Attr{}
-			case slog.SourceKey:
-				if !*l.addSourceVar.Source() {
-					return slog.Attr{}
-				}
-
-				s, ok := a.Value.Any().(*slog.Source)
-				if !ok {
-					a.Key = "_source"
-
-					return a
-				}
-
-				a.Value = slog.StringValue(fmt.Sprintf(sourceFormat,
-					// trim all folders before project root
-					// trim first '/'
-					strings.TrimPrefix(s.File, binaryPath)[1:],
-					s.Line,
-				))
-			}
-
-			return a
-		},
-	}
-
-	switch options.HandlerType {
-	case JSONHandlerType:
-		l.slogHandler = NewJSONHandler(options.Output, handlerOpts, options.TimeFunc)
-	case TextHandlerType:
-		l.slogHandler = NewTextHandler(options.Output, handlerOpts, options.TimeFunc)
-	default:
-		l.slogHandler = NewJSONHandler(options.Output, handlerOpts, options.TimeFunc)
-	}
+	l.slogHandler = newHandler(options.Output, &handlerConfig{
+		level:     l.level,
+		addSource: l.addSourceVar,
+		timeFn:    options.TimeFunc,
+		text:      options.HandlerType == TextHandlerType,
+		sources:   newSourceCache(),
+	})
 
 	l.logger = slog.New(l.slogHandler.WithAttrs(nil))
 

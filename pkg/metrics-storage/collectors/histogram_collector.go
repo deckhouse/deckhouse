@@ -15,6 +15,7 @@
 package collectors
 
 import (
+	"maps"
 	"sort"
 	"sync"
 
@@ -41,9 +42,14 @@ type ConstHistogramCollector struct {
 	name       string
 	labelNames []string
 	desc       *prometheus.Desc
+	labelPairs *labelPairsTemplate
 	buckets    []float64
 	collection map[uint64]GroupedHistogramMetric
 	bucketsMtx sync.RWMutex
+
+	// help and constLabels rebuild desc when labels are added
+	help        string
+	constLabels map[string]string
 }
 
 func NewConstHistogramCollector(desc *MetricDescription, buckets []float64) *ConstHistogramCollector {
@@ -64,11 +70,14 @@ func NewConstHistogramCollector(desc *MetricDescription, buckets []float64) *Con
 	)
 
 	return &ConstHistogramCollector{
-		name:       desc.Name,
-		labelNames: desc.LabelNames,
-		desc:       d,
-		buckets:    sortedBuckets,
-		collection: make(map[uint64]GroupedHistogramMetric),
+		name:        desc.Name,
+		labelNames:  desc.LabelNames,
+		desc:        d,
+		labelPairs:  newLabelPairsTemplate(d, desc.LabelNames),
+		help:        desc.Help,
+		constLabels: maps.Clone(desc.ConstLabels),
+		buckets:     sortedBuckets,
+		collection:  make(map[uint64]GroupedHistogramMetric),
 	}
 }
 
@@ -122,21 +131,7 @@ func (c *ConstHistogramCollector) Collect(ch chan<- prometheus.Metric) {
 	defer c.mtx.RUnlock()
 
 	for _, metric := range c.collection {
-		// Convert uint64 buckets to map[float64]uint64 for prometheus
-		buckets := make(map[float64]uint64)
-		for i, bucket := range c.buckets {
-			buckets[bucket] = metric.Buckets[i]
-		}
-
-		// Create histogram metric
-		h := prometheus.MustNewConstHistogram(
-			c.desc,
-			metric.Count.Get(),
-			metric.Sum.Get(),
-			buckets,
-			metric.LabelValues...,
-		)
-		ch <- h
+		ch <- newHistogramMetric(c.desc, c.labelPairs, metric.Count.Get(), metric.Sum.Get(), c.buckets, metric.Buckets, metric.LabelValues)
 	}
 }
 
@@ -267,7 +262,8 @@ func (c *ConstHistogramCollector) UpdateLabels(labels []string) {
 	sort.Strings(c.labelNames)
 
 	// Create new description and collection with updated labels
-	c.desc = prometheus.NewDesc(c.name, c.name, c.labelNames, nil)
+	c.desc = prometheus.NewDesc(c.name, c.help, c.labelNames, descConstLabels(c.constLabels, c.labelNames))
+	c.labelPairs = newLabelPairsTemplate(c.desc, c.labelNames)
 	newCollection := make(map[uint64]GroupedHistogramMetric)
 
 	// Update each metric in the collection
@@ -275,10 +271,11 @@ func (c *ConstHistogramCollector) UpdateLabels(labels []string) {
 		newLabelsValues := make([]string, len(c.labelNames))
 
 		for i, labelName := range c.labelNames {
+			// a new label is empty, a constant label that became a variable one keeps its value
+			newLabelsValues[i] = c.constLabels[labelName]
+
 			if idx, found := previousLabelsMap[labelName]; found && idx < len(metric.LabelValues) {
 				newLabelsValues[i] = metric.LabelValues[idx]
-			} else {
-				newLabelsValues[i] = ""
 			}
 		}
 
