@@ -9,7 +9,7 @@ that we include for now to support in-tree Ceph Volume Provisioner
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: common/pause
   add: /pause

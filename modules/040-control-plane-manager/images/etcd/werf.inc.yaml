@@ -23,7 +23,7 @@ shell:
   - rm -rf tools
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: common/pause
   add: /pause

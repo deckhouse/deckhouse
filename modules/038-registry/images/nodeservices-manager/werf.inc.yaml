@@ -33,7 +33,7 @@ shell:
     - chmod 0755 /manager
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
   add: /manager

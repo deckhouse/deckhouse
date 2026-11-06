@@ -37,7 +37,7 @@ shell:
     - chmod 0755 /mirrorer
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - from: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
   add: /src/tmp

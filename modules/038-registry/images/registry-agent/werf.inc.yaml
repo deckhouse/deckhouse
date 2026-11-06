@@ -48,7 +48,7 @@ shell:
     - chmod 0755 /registry-agent
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
-from: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
   - from: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /registry-agent
