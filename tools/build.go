@@ -80,6 +80,7 @@ var defaultModulesExcludes = []string{
 	".namespace",
 	"values_matrix_test.yaml",
 	".build.yaml",
+	"e2e",
 }
 
 var nothingButGoHooksExcludes = []string{
