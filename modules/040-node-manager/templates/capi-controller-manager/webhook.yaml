@@ -1,10 +1,13 @@
 {{- if include "capi_controller_manager_enabled" . }}
+{{- /* A release waits for capi only when these webhooks change, and any change of the capi pods changes them through the checksum. */}}
+{{- $capiPodTemplateChecksum := include "capi_controller_manager_pod_template" . | sha256sum }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   annotations:
-    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capi-controller-manager,namespace=d8-cloud-instance-manager
+    node-manager.deckhouse.io/capi-pod-template: {{ $capiPodTemplateChecksum | quote }}
+    werf.io/deploy-dependency-deployment: state=ready,group=apps,version=v1,kind=Deployment,name=capi-controller-manager,namespace=d8-cloud-instance-manager,external=true
     werf.io/deploy-dependency-service: state=present,kind=Service,name=capi-webhook-service,namespace=d8-cloud-instance-manager
     werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
     werf.io/track-termination-mode: WaitUntilResourceReady
@@ -223,7 +226,8 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   annotations:
-    werf.io/deploy-dependency-deployment: state=ready,kind=Deployment,name=capi-controller-manager,namespace=d8-cloud-instance-manager
+    node-manager.deckhouse.io/capi-pod-template: {{ $capiPodTemplateChecksum | quote }}
+    werf.io/deploy-dependency-deployment: state=ready,group=apps,version=v1,kind=Deployment,name=capi-controller-manager,namespace=d8-cloud-instance-manager,external=true
     werf.io/deploy-dependency-service: state=present,kind=Service,name=capi-webhook-service,namespace=d8-cloud-instance-manager
     werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
     werf.io/track-termination-mode: WaitUntilResourceReady

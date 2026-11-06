@@ -50,6 +50,7 @@ metadata:
   annotations:
     werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
     werf.io/track-termination-mode: WaitUntilResourceReady
+    werf.io/fail-mode: FailWholeDeployProcessImmediately
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
@@ -59,6 +60,11 @@ spec:
       app: capi-controller-manager
       cluster.x-k8s.io/provider: cluster-api
       control-plane: controller-manager
+  {{- include "capi_controller_manager_pod_template" . }}
+{{- end }}
+
+{{- /* The pod template, and the input of the checksum on the capi webhooks. Replicas stay out of it. */}}
+{{- define "capi_controller_manager_pod_template" }}
   template:
     metadata:
       annotations:
